@@ -2595,7 +2595,7 @@ void AXObjectCache::handleActiveDescendantChange(Element& element, const AtomStr
     else {
         // Check to see if the active descendant is a descendant of an object controlled by this object.
         // In that case, the controlled object will be the target for the notification.
-        auto controlledObjects = object->relatedObjects(AXRelationType::ControllerFor);
+        auto controlledObjects = object->relatedObjects(AXRelation::ControllerFor);
         if (controlledObjects.size()) {
             target = Accessibility::findAncestor(*activeDescendant, false, [&controlledObjects] (const auto& activeDescendantAncestor) {
                 return controlledObjects.contains(Ref { activeDescendantAncestor });
@@ -3010,7 +3010,7 @@ void AXObjectCache::handleLabelChanged(AccessibilityObject* object)
 
 void AXObjectCache::updateLabelFor(HTMLLabelElement& label)
 {
-    removeRelation(label, AXRelationType::LabelFor);
+    removeRelation(label, AXRelation::LabelFor);
     addLabelForRelation(label);
 }
 
@@ -3019,7 +3019,7 @@ void AXObjectCache::updateLabeledBy(Element* element)
     if (!element)
         return;
 
-    bool changedRelation = removeRelation(*element, AXRelationType::LabeledBy);
+    bool changedRelation = removeRelation(*element, AXRelation::LabeledBy);
     changedRelation |= addRelation(*element, aria_labelledbyAttr);
     if (changedRelation)
         dirtyIsolatedTreeRelations();
@@ -5101,99 +5101,99 @@ Vector<QualifiedName>& AXObjectCache::relationAttributes()
     return relationAttributes;
 }
 
-AXRelationType AXObjectCache::symmetricRelation(AXRelationType relationType)
+AXRelation AXObjectCache::symmetricRelation(AXRelation relation)
 {
-    switch (relationType) {
-    case AXRelationType::ActiveDescendant:
-        return AXRelationType::ActiveDescendantOf;
-    case AXRelationType::ActiveDescendantOf:
-        return AXRelationType::ActiveDescendant;
-    case AXRelationType::ControlledBy:
-        return AXRelationType::ControllerFor;
-    case AXRelationType::ControllerFor:
-        return AXRelationType::ControlledBy;
-    case AXRelationType::DescribedBy:
-        return AXRelationType::DescriptionFor;
-    case AXRelationType::DescriptionFor:
-        return AXRelationType::DescribedBy;
-    case AXRelationType::Details:
-        return AXRelationType::DetailsFor;
-    case AXRelationType::DetailsFor:
-        return AXRelationType::Details;
-    case AXRelationType::ErrorMessage:
-        return AXRelationType::ErrorMessageFor;
-    case AXRelationType::ErrorMessageFor:
-        return AXRelationType::ErrorMessage;
-    case AXRelationType::FlowsFrom:
-        return AXRelationType::FlowsTo;
-    case AXRelationType::FlowsTo:
-        return AXRelationType::FlowsFrom;
-    case AXRelationType::Headers:
-        return AXRelationType::HeaderFor;
-    case AXRelationType::HeaderFor:
-        return AXRelationType::Headers;
-    case AXRelationType::LabeledBy:
-        return AXRelationType::LabelFor;
-    case AXRelationType::LabelFor:
-        return AXRelationType::LabeledBy;
-    case AXRelationType::OwnedBy:
-        return AXRelationType::OwnerFor;
-    case AXRelationType::OwnerFor:
-        return AXRelationType::OwnedBy;
-    case AXRelationType::None:
-        return AXRelationType::None;
+    switch (relation) {
+    case AXRelation::ActiveDescendant:
+        return AXRelation::ActiveDescendantOf;
+    case AXRelation::ActiveDescendantOf:
+        return AXRelation::ActiveDescendant;
+    case AXRelation::ControlledBy:
+        return AXRelation::ControllerFor;
+    case AXRelation::ControllerFor:
+        return AXRelation::ControlledBy;
+    case AXRelation::DescribedBy:
+        return AXRelation::DescriptionFor;
+    case AXRelation::DescriptionFor:
+        return AXRelation::DescribedBy;
+    case AXRelation::Details:
+        return AXRelation::DetailsFor;
+    case AXRelation::DetailsFor:
+        return AXRelation::Details;
+    case AXRelation::ErrorMessage:
+        return AXRelation::ErrorMessageFor;
+    case AXRelation::ErrorMessageFor:
+        return AXRelation::ErrorMessage;
+    case AXRelation::FlowsFrom:
+        return AXRelation::FlowsTo;
+    case AXRelation::FlowsTo:
+        return AXRelation::FlowsFrom;
+    case AXRelation::Headers:
+        return AXRelation::HeaderFor;
+    case AXRelation::HeaderFor:
+        return AXRelation::Headers;
+    case AXRelation::LabeledBy:
+        return AXRelation::LabelFor;
+    case AXRelation::LabelFor:
+        return AXRelation::LabeledBy;
+    case AXRelation::OwnedBy:
+        return AXRelation::OwnerFor;
+    case AXRelation::OwnerFor:
+        return AXRelation::OwnedBy;
+    case AXRelation::None:
+        return AXRelation::None;
     }
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-AXRelationType AXObjectCache::attributeToRelationType(const QualifiedName& attribute)
+AXRelation AXObjectCache::attributeToRelationType(const QualifiedName& attribute)
 {
     if (attribute == aria_activedescendantAttr)
-        return AXRelationType::ActiveDescendant;
+        return AXRelation::ActiveDescendant;
     if (attribute == aria_controlsAttr || attribute == commandforAttr || attribute == popovertargetAttr)
-        return AXRelationType::ControllerFor;
+        return AXRelation::ControllerFor;
     if (attribute == aria_describedbyAttr)
-        return AXRelationType::DescribedBy;
+        return AXRelation::DescribedBy;
     if (attribute == aria_detailsAttr)
-        return AXRelationType::Details;
+        return AXRelation::Details;
     if (attribute == aria_errormessageAttr)
-        return AXRelationType::ErrorMessage;
+        return AXRelation::ErrorMessage;
     if (attribute == aria_flowtoAttr)
-        return AXRelationType::FlowsTo;
+        return AXRelation::FlowsTo;
     if (attribute == aria_labelledbyAttr || attribute == aria_labeledbyAttr)
-        return AXRelationType::LabeledBy;
+        return AXRelation::LabeledBy;
     if (attribute == aria_ownsAttr)
-        return AXRelationType::OwnerFor;
+        return AXRelation::OwnerFor;
     if (attribute == headersAttr)
-        return AXRelationType::Headers;
-    return AXRelationType::None;
+        return AXRelation::Headers;
+    return AXRelation::None;
 }
 
-static bool validRelation(void* origin, void* target, AXRelationType relationType)
+static bool validRelation(void* origin, void* target, AXRelation relation)
 {
-    if (!origin || !target || relationType == AXRelationType::None)
+    if (!origin || !target || relation == AXRelation::None)
         return false;
-    return origin != target || relationType == AXRelationType::LabeledBy;
+    return origin != target || relation == AXRelation::LabeledBy;
 }
 
-static bool validRelation(Element& origin, Element& target, AXRelationType relationType)
+static bool validRelation(Element& origin, Element& target, AXRelation relation)
 {
-    if (relationType == AXRelationType::None)
+    if (relation == AXRelation::None)
         return false;
-    return &origin != &target || relationType == AXRelationType::LabeledBy;
+    return &origin != &target || relation == AXRelation::LabeledBy;
 }
 
-bool AXObjectCache::addRelation(Element& origin, Element& target, AXRelationType relationType)
+bool AXObjectCache::addRelation(Element& origin, Element& target, AXRelation relation)
 {
     AXTRACE("AXObjectCache::addRelation"_s);
-    AXLOG(makeString("origin: "_s, origin.debugDescription(), " target: "_s, target.debugDescription(), " relationType "_s, static_cast<uint8_t>(relationType)));
+    AXLOG(makeString("origin: "_s, origin.debugDescription(), " target: "_s, target.debugDescription(), " relation "_s, static_cast<uint8_t>(relation)));
 
-    if (!validRelation(origin, target, relationType)) {
+    if (!validRelation(origin, target, relation)) {
         ASSERT_NOT_REACHED();
         return false;
     }
 
-    if (relationType == AXRelationType::LabelFor) {
+    if (relation == AXRelation::LabelFor) {
         // Add a LabelFor relation if the target doesn't have an ARIA label which should take precedence.
         if (target.hasAttributeWithoutSynchronization(aria_labelAttr)
             || target.hasAttributeWithoutSynchronization(aria_labelledbyAttr)
@@ -5201,7 +5201,7 @@ bool AXObjectCache::addRelation(Element& origin, Element& target, AXRelationType
             return false;
     }
 
-    return addRelation(RefPtr { getOrCreate(origin, IsPartOfRelation::Yes) }.get(), RefPtr { getOrCreate(target, IsPartOfRelation::Yes) }.get(), relationType);
+    return addRelation(RefPtr { getOrCreate(origin, IsPartOfRelation::Yes) }.get(), RefPtr { getOrCreate(target, IsPartOfRelation::Yes) }.get(), relation);
 }
 
 static bool canHaveRelations(Element& element)
@@ -5209,15 +5209,15 @@ static bool canHaveRelations(Element& element)
     return !(element.hasTagName(metaTag) || element.hasTagName(headTag) || element.hasTagName(scriptTag) || element.hasTagName(htmlTag) || element.hasTagName(styleTag));
 }
 
-static bool relationCausesCycle(AccessibilityObject* origin, AccessibilityObject* target, AXRelationType relationType)
+static bool relationCausesCycle(AccessibilityObject* origin, AccessibilityObject* target, AXRelation relation)
 {
     // Validate that we're not creating an aria-owns cycle.
-    if (relationType == AXRelationType::OwnerFor) {
+    if (relation == AXRelation::OwnerFor) {
         for (auto* verifyOrigin = origin; verifyOrigin; verifyOrigin = verifyOrigin->parentObject()) {
             if (verifyOrigin == target)
                 return true;
         }
-    } else if (relationType == AXRelationType::OwnedBy) {
+    } else if (relation == AXRelation::OwnedBy) {
         for (auto* verifyTarget = target; verifyTarget; verifyTarget = verifyTarget->parentObject()) {
             if (verifyTarget == origin)
                 return true;
@@ -5227,20 +5227,20 @@ static bool relationCausesCycle(AccessibilityObject* origin, AccessibilityObject
     return false;
 }
 
-bool AXObjectCache::addRelation(AccessibilityObject* origin, AccessibilityObject* target, AXRelationType relationType, AddSymmetricRelation addSymmetricRelation)
+bool AXObjectCache::addRelation(AccessibilityObject* origin, AccessibilityObject* target, AXRelation relation, AddSymmetricRelation addSymmetricRelation)
 {
     AXTRACE("AXObjectCache::addRelation"_s);
     AXLOG(origin);
     AXLOG(target);
-    AXLOG(relationType);
+    AXLOG(relation);
 
-    if (!validRelation(origin, target, relationType))
+    if (!validRelation(origin, target, relation))
         return false;
 
-    if (relationCausesCycle(origin, target, relationType))
+    if (relationCausesCycle(origin, target, relation))
         return false;
 
-    if (relationType == AXRelationType::OwnerFor) {
+    if (relation == AXRelation::OwnerFor) {
         // Before adding the new OwnerFor relationship, that alters the AX parent-child hierarchy, notify the current target-s parent that one child is being removed.
         // FIXME: This kicks off children-changed notifications every time relations are dirtied and cleaned,
         // even if this specific relationship existed before, incurring unnecessary work.
@@ -5254,14 +5254,14 @@ bool AXObjectCache::addRelation(AccessibilityObject* origin, AccessibilityObject
     auto relationsIterator = m_relations.find(originID);
     if (relationsIterator == m_relations.end()) {
         // No relations for this object, add the first one.
-        m_relations.add(originID, AXRelations { { enumToUnderlyingType(relationType), { targetID } } });
-    } else if (auto targetsIterator = relationsIterator->value.find(enumToUnderlyingType(relationType)); targetsIterator == relationsIterator->value.end()) {
+        m_relations.add(originID, AXRelations { { enumToUnderlyingType(relation), { targetID } } });
+    } else if (auto targetsIterator = relationsIterator->value.find(enumToUnderlyingType(relation)); targetsIterator == relationsIterator->value.end()) {
         // No relation of this type for this object, add the first one.
-        relationsIterator->value.add(enumToUnderlyingType(relationType), ListHashSet { targetID });
+        relationsIterator->value.add(enumToUnderlyingType(relation), ListHashSet { targetID });
     } else {
         // There are already relations of this type for the object. Add the new relation.
-        if (relationType == AXRelationType::ActiveDescendant
-            || relationType == AXRelationType::OwnedBy) {
+        if (relation == AXRelation::ActiveDescendant
+            || relation == AXRelation::OwnedBy) {
             // There should be only one active descendant and only one owner. Enforce that by removing any existing targets.
             targetsIterator->value.clear();
         }
@@ -5269,17 +5269,17 @@ bool AXObjectCache::addRelation(AccessibilityObject* origin, AccessibilityObject
     }
     m_relationTargets.add(targetID);
 
-    if (relationType == AXRelationType::OwnerFor) {
+    if (relation == AXRelation::OwnerFor) {
         // First find and clear the old owner.
         for (auto oldOwnerIterator = m_relations.begin(); oldOwnerIterator != m_relations.end(); ++oldOwnerIterator) {
             if (oldOwnerIterator->key == originID)
                 continue;
 
-            removeRelationByID(oldOwnerIterator->key, targetID, AXRelationType::OwnerFor);
+            removeRelationByID(oldOwnerIterator->key, targetID, AXRelation::OwnerFor);
         }
 
         childrenChanged(origin);
-    } else if (relationType == AXRelationType::OwnedBy) {
+    } else if (relation == AXRelation::OwnedBy) {
         if (auto* parentObject = origin->parentObjectUnignored())
             childrenChanged(parentObject);
     }
@@ -5287,7 +5287,7 @@ bool AXObjectCache::addRelation(AccessibilityObject* origin, AccessibilityObject
     if (addSymmetricRelation == AddSymmetricRelation::Yes
         && m_objects.contains(originID) && m_objects.contains(targetID)) {
         // If the IDs are still in the m_objects map, the objects should be still alive.
-        if (auto symmetric = symmetricRelation(relationType); symmetric != AXRelationType::None)
+        if (auto symmetric = symmetricRelation(relation); symmetric != AXRelation::None)
             addRelation(target, origin, symmetric, AddSymmetricRelation::No);
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
@@ -5313,12 +5313,12 @@ void AXObjectCache::removeAllRelations(AXID axID)
 
     m_recentlyRemovedRelations.add(axID, it->value);
 
-    for (auto relationType : it->value.keys()) {
-        auto symmetric = symmetricRelation(static_cast<AXRelationType>(relationType));
-        if (symmetric == AXRelationType::None)
+    for (auto relation : it->value.keys()) {
+        auto symmetric = symmetricRelation(static_cast<AXRelation>(relation));
+        if (symmetric == AXRelation::None)
             continue;
 
-        auto targetIDs = it->value.get(static_cast<uint8_t>(relationType));
+        auto targetIDs = it->value.get(static_cast<uint8_t>(relation));
         for (AXID targetID : targetIDs)
             removeRelationByID(targetID, axID, symmetric);
     }
@@ -5327,10 +5327,10 @@ void AXObjectCache::removeAllRelations(AXID axID)
     dirtyIsolatedTreeRelations();
 }
 
-bool AXObjectCache::removeRelation(Element& origin, AXRelationType relationType)
+bool AXObjectCache::removeRelation(Element& origin, AXRelation relation)
 {
     AXTRACE(makeString("AXObjectCache::removeRelations for "_s, origin.debugDescription()));
-    AXLOG(relationType);
+    AXLOG(relation);
 
     auto* object = get(&origin);
     if (!object)
@@ -5340,32 +5340,32 @@ bool AXObjectCache::removeRelation(Element& origin, AXRelationType relationType)
     if (relationsIterator == m_relations.end())
         return false;
 
-    auto targetIDs = relationsIterator->value.take(enumToUnderlyingType(relationType));
+    auto targetIDs = relationsIterator->value.take(enumToUnderlyingType(relation));
     bool removedRelation = !targetIDs.isEmpty();
 
-    auto symmetric = symmetricRelation(relationType);
-    if (symmetric != AXRelationType::None) {
+    auto symmetric = symmetricRelation(relation);
+    if (symmetric != AXRelation::None) {
         for (AXID targetID : targetIDs)
             removeRelationByID(targetID, object->objectID(), symmetric);
     }
 
-    if (removedRelation && relationType == AXRelationType::OwnerFor)
+    if (removedRelation && relation == AXRelation::OwnerFor)
         childrenChanged(object);
 
     return removedRelation;
 }
 
-void AXObjectCache::removeRelationByID(AXID originID, AXID targetID, AXRelationType relationType)
+void AXObjectCache::removeRelationByID(AXID originID, AXID targetID, AXRelation relation)
 {
     AXTRACE("AXObjectCache::removeRelationByID"_s);
     AXLOG(makeString("originID "_s, originID.loggingString(), " targetID "_s, targetID.loggingString()));
-    AXLOG(relationType);
+    AXLOG(relation);
 
     auto relationsIterator = m_relations.find(originID);
     if (relationsIterator == m_relations.end())
         return;
 
-    auto targetsIterator = relationsIterator->value.find(enumToUnderlyingType(relationType));
+    auto targetsIterator = relationsIterator->value.find(enumToUnderlyingType(relation));
     if (targetsIterator == relationsIterator->value.end())
         return;
     targetsIterator->value.remove(targetID);
@@ -5414,16 +5414,16 @@ bool AXObjectCache::addRelation(Element& origin, const QualifiedName& attribute)
     }
 
     bool addedRelation = false;
-    auto relationType = attributeToRelationType(attribute);
+    auto relation = attributeToRelationType(attribute);
     if (!m_document)
         return false;
     if (Element::isElementReflectionAttribute(Ref { m_document->settings() }, attribute)) {
         if (auto reflectedElement = origin.elementForAttributeInternal(attribute))
-            return addRelation(origin, *reflectedElement, relationType);
+            return addRelation(origin, *reflectedElement, relation);
     } else if (Element::isElementsArrayReflectionAttribute(attribute)) {
         if (auto reflectedElements = origin.elementsArrayForAttributeInternal(attribute)) {
             for (auto reflectedElement : reflectedElements.value()) {
-                if (addRelation(origin, reflectedElement, relationType))
+                if (addRelation(origin, reflectedElement, relation))
                     addedRelation = true;
             }
             return addedRelation;
@@ -5434,7 +5434,7 @@ bool AXObjectCache::addRelation(Element& origin, const QualifiedName& attribute)
     if (value.isNull()) {
         if (auto* defaultARIA = origin.customElementDefaultARIAIfExists()) {
             for (auto& target : defaultARIA->elementsForAttribute(origin, attribute)) {
-                if (addRelation(origin, target, relationType))
+                if (addRelation(origin, target, relation))
                     addedRelation = true;
             }
         }
@@ -5447,7 +5447,7 @@ bool AXObjectCache::addRelation(Element& origin, const QualifiedName& attribute)
         if (!target || target == &origin)
             continue;
 
-        if (addRelation(origin, *target, relationType))
+        if (addRelation(origin, *target, relation))
             addedRelation = true;
     }
 
@@ -5461,11 +5461,11 @@ void AXObjectCache::addLabelForRelation(Element& origin)
     // LabelFor relations are established for <label for=...> and for <figcaption> elements.
     if (RefPtr label = dynamicDowncast<HTMLLabelElement>(origin)) {
         if (RefPtr control = Accessibility::controlForLabelElement(*label))
-            addedRelation = addRelation(origin, *control, AXRelationType::LabelFor);
+            addedRelation = addRelation(origin, *control, AXRelation::LabelFor);
     } else if (origin.hasTagName(figcaptionTag)) {
         RefPtr parent = origin.parentNode();
         if (parent && parent->hasTagName(figureTag))
-            addedRelation = addRelation(RefPtr { getOrCreate(origin) }.get(), RefPtr { getOrCreate(*parent) }.get(), AXRelationType::LabelFor);
+            addedRelation = addRelation(RefPtr { getOrCreate(origin) }.get(), RefPtr { getOrCreate(*parent) }.get(), AXRelation::LabelFor);
     }
 
     if (addedRelation)
@@ -5477,8 +5477,8 @@ void AXObjectCache::updateRelations(Element& origin, const QualifiedName& attrib
     if (!canHaveRelations(origin))
         return;
 
-    auto relationType = attributeToRelationType(attribute);
-    if (relationType == AXRelationType::None) {
+    auto relation = attributeToRelationType(attribute);
+    if (relation == AXRelation::None) {
         ASSERT_NOT_REACHED();
         return;
     }
@@ -5491,7 +5491,7 @@ void AXObjectCache::updateRelations(Element& origin, const QualifiedName& attrib
     if (UNLIKELY(attribute == popovertargetAttr) && !is<HTMLInputElement>(origin) && !is<HTMLButtonElement>(origin))
         return;
 
-    bool changedRelation = removeRelation(origin, relationType);
+    bool changedRelation = removeRelation(origin, relation);
     changedRelation |= addRelation(origin, attribute);
     if (changedRelation)
         dirtyIsolatedTreeRelations();
@@ -5527,7 +5527,7 @@ bool AXObjectCache::isDescendantOfRelatedNode(Node& node)
     return false;
 }
 
-std::optional<ListHashSet<AXID>> AXObjectCache::relatedObjectIDsFor(const AXCoreObject& object, AXRelationType relationType, UpdateRelations updateRelations)
+std::optional<ListHashSet<AXID>> AXObjectCache::relatedObjectIDsFor(const AXCoreObject& object, AXRelation relation, UpdateRelations updateRelations)
 {
     if (updateRelations == UpdateRelations::Yes)
         updateRelationsIfNeeded();
@@ -5536,7 +5536,7 @@ std::optional<ListHashSet<AXID>> AXObjectCache::relatedObjectIDsFor(const AXCore
     if (relationsIterator == m_relations.end())
         return std::nullopt;
 
-    auto targetsIterator = relationsIterator->value.find(enumToUnderlyingType(relationType));
+    auto targetsIterator = relationsIterator->value.find(enumToUnderlyingType(relation));
     if (targetsIterator == relationsIterator->value.end())
         return std::nullopt;
     return targetsIterator->value;

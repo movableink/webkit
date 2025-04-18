@@ -2162,9 +2162,9 @@ ScrollView* AXIsolatedObject::scrollView() const
     return nullptr;
 }
 
-AXCoreObject::AccessibilityChildrenVector AXIsolatedObject::relatedObjects(AXRelationType relationType) const
+AXCoreObject::AccessibilityChildrenVector AXIsolatedObject::relatedObjects(AXRelation relation) const
 {
-    if (auto relatedObjectIDs = tree()->relatedObjectIDsFor(*this, relationType))
+    if (auto relatedObjectIDs = tree()->relatedObjectIDsFor(*this, relation))
         return tree()->objectsForIDs(*relatedObjectIDs);
     return { };
 }

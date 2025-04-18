@@ -886,7 +886,7 @@ AXCoreObject::AccessibilityChildrenVector AXCoreObject::columnHeaders()
             return { };
 
         // Choose columnHeaders as the place where the "headers" attribute is reported.
-        headers = relatedObjects(AXRelationType::Headers);
+        headers = relatedObjects(AXRelation::Headers);
         // If the headers attribute returned valid values, then do not further search for column headers.
         if (!headers.isEmpty())
             return headers;
@@ -1099,7 +1099,7 @@ bool AXCoreObject::supportsActiveDescendant() const
 
 AXCoreObject* AXCoreObject::activeDescendant() const
 {
-    auto activeDescendants = relatedObjects(AXRelationType::ActiveDescendant);
+    auto activeDescendants = relatedObjects(AXRelation::ActiveDescendant);
     ASSERT(activeDescendants.size() <= 1);
     if (!activeDescendants.isEmpty())
         return activeDescendants[0].ptr();
@@ -1292,7 +1292,7 @@ String AXCoreObject::helpTextAttributeValue() const
 
 AXCoreObject* AXCoreObject::titleUIElement() const
 {
-    auto labels = relatedObjects(AXRelationType::LabeledBy);
+    auto labels = relatedObjects(AXRelation::LabeledBy);
 #if PLATFORM(COCOA)
     // We impose the restriction that if there is more than one label, then we should return none.
     // FIXME: the behavior should be the same in all platforms.

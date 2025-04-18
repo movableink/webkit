@@ -681,7 +681,7 @@ enum class AccessibilityMathMultiscriptObjectType { PreSubscript, PreSuperscript
 enum class CompositionState : uint8_t { Started, InProgress, Ended };
 
 // Relationships between AX objects.
-enum class AXRelationType : uint8_t {
+enum class AXRelation : uint8_t {
     None,
     ActiveDescendant,
     ActiveDescendantOf,
@@ -702,7 +702,7 @@ enum class AXRelationType : uint8_t {
     OwnedBy,
     OwnerFor,
 };
-using AXRelations = UncheckedKeyHashMap<AXRelationType, ListHashSet<AXID>, DefaultHash<uint8_t>, WTF::UnsignedWithZeroKeyHashTraits<uint8_t>>;
+using AXRelations = UncheckedKeyHashMap<AXRelation, ListHashSet<AXID>, DefaultHash<uint8_t>, WTF::UnsignedWithZeroKeyHashTraits<uint8_t>>;
 
 enum class SpinButtonType : bool {
     // The spin button is standalone. It has no separate controls, and should receive and perform actions itself.
@@ -1029,22 +1029,22 @@ public:
 
     // Retrieval of related objects.
     AXCoreObject* activeDescendant() const;
-    AccessibilityChildrenVector activeDescendantOfObjects() const { return relatedObjects(AXRelationType::ActiveDescendantOf); }
-    AccessibilityChildrenVector controlledObjects() const { return relatedObjects(AXRelationType::ControllerFor); }
-    AccessibilityChildrenVector controllers() const { return relatedObjects(AXRelationType::ControlledBy); }
-    AccessibilityChildrenVector describedByObjects() const { return relatedObjects(AXRelationType::DescribedBy); }
-    AccessibilityChildrenVector descriptionForObjects() const { return relatedObjects(AXRelationType::DescriptionFor); }
-    AccessibilityChildrenVector detailedByObjects() const { return relatedObjects(AXRelationType::Details); }
-    AccessibilityChildrenVector detailsForObjects() const { return relatedObjects(AXRelationType::DetailsFor); }
-    AccessibilityChildrenVector errorMessageObjects() const { return relatedObjects(AXRelationType::ErrorMessage); }
-    AccessibilityChildrenVector errorMessageForObjects() const { return relatedObjects(AXRelationType::ErrorMessageFor); }
-    AccessibilityChildrenVector flowToObjects() const { return relatedObjects(AXRelationType::FlowsTo); }
-    AccessibilityChildrenVector flowFromObjects() const { return relatedObjects(AXRelationType::FlowsFrom); }
-    AccessibilityChildrenVector labeledByObjects() const { return relatedObjects(AXRelationType::LabeledBy); }
-    AccessibilityChildrenVector labelForObjects() const { return relatedObjects(AXRelationType::LabelFor); }
-    AccessibilityChildrenVector ownedObjects() const { return relatedObjects(AXRelationType::OwnerFor); }
-    AccessibilityChildrenVector owners() const { return relatedObjects(AXRelationType::OwnedBy); }
-    virtual AccessibilityChildrenVector relatedObjects(AXRelationType) const = 0;
+    AccessibilityChildrenVector activeDescendantOfObjects() const { return relatedObjects(AXRelation::ActiveDescendantOf); }
+    AccessibilityChildrenVector controlledObjects() const { return relatedObjects(AXRelation::ControllerFor); }
+    AccessibilityChildrenVector controllers() const { return relatedObjects(AXRelation::ControlledBy); }
+    AccessibilityChildrenVector describedByObjects() const { return relatedObjects(AXRelation::DescribedBy); }
+    AccessibilityChildrenVector descriptionForObjects() const { return relatedObjects(AXRelation::DescriptionFor); }
+    AccessibilityChildrenVector detailedByObjects() const { return relatedObjects(AXRelation::Details); }
+    AccessibilityChildrenVector detailsForObjects() const { return relatedObjects(AXRelation::DetailsFor); }
+    AccessibilityChildrenVector errorMessageObjects() const { return relatedObjects(AXRelation::ErrorMessage); }
+    AccessibilityChildrenVector errorMessageForObjects() const { return relatedObjects(AXRelation::ErrorMessageFor); }
+    AccessibilityChildrenVector flowToObjects() const { return relatedObjects(AXRelation::FlowsTo); }
+    AccessibilityChildrenVector flowFromObjects() const { return relatedObjects(AXRelation::FlowsFrom); }
+    AccessibilityChildrenVector labeledByObjects() const { return relatedObjects(AXRelation::LabeledBy); }
+    AccessibilityChildrenVector labelForObjects() const { return relatedObjects(AXRelation::LabelFor); }
+    AccessibilityChildrenVector ownedObjects() const { return relatedObjects(AXRelation::OwnerFor); }
+    AccessibilityChildrenVector owners() const { return relatedObjects(AXRelation::OwnedBy); }
+    virtual AccessibilityChildrenVector relatedObjects(AXRelation) const = 0;
 
     virtual AXCoreObject* internalLinkElement() const = 0;
     void appendRadioButtonGroupMembers(AccessibilityChildrenVector& linkedUIElements) const;
@@ -1740,9 +1740,9 @@ T* highestEditableAncestor(T& startObject)
 }
 
 template<typename T>
-T* findRelatedObjectInAncestry(const T& object, AXRelationType relationType, const T& descendant)
+T* findRelatedObjectInAncestry(const T& object, AXRelation relation, const T& descendant)
 {
-    auto relatedObjects = object.relatedObjects(relationType);
+    auto relatedObjects = object.relatedObjects(relation);
     for (const auto& relatedObject : relatedObjects) {
         auto* ancestor = findAncestor(descendant, false, [&relatedObject] (const auto& ancestor) {
             return relatedObject.get() == &ancestor;
@@ -1895,7 +1895,7 @@ WTF::TextStream& operator<<(WTF::TextStream&, AccessibilityObjectInclusion);
 WTF::TextStream& operator<<(WTF::TextStream&, const AXCoreObject&);
 WTF::TextStream& operator<<(WTF::TextStream&, AccessibilityText);
 WTF::TextStream& operator<<(WTF::TextStream&, AccessibilityTextSource);
-WTF::TextStream& operator<<(WTF::TextStream&, AXRelationType);
+WTF::TextStream& operator<<(WTF::TextStream&, AXRelation);
 WTF::TextStream& operator<<(WTF::TextStream&, const TextUnderElementMode&);
 
 } // namespace WebCore

@@ -773,7 +773,7 @@ public:
 
     AccessibilityChildrenVector documentLinks() override { return AccessibilityChildrenVector(); }
 
-    AccessibilityChildrenVector relatedObjects(AXRelationType) const final;
+    AccessibilityChildrenVector relatedObjects(AXRelation) const final;
 
     String innerHTML() const final;
     String outerHTML() const final;

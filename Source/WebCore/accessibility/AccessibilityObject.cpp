@@ -4082,13 +4082,13 @@ bool AccessibilityObject::isContainedBySecureField() const
     return input && input->isSecureField();
 }
 
-AXCoreObject::AccessibilityChildrenVector AccessibilityObject::relatedObjects(AXRelationType relationType) const
+AXCoreObject::AccessibilityChildrenVector AccessibilityObject::relatedObjects(AXRelation relation) const
 {
     auto* cache = axObjectCache();
     if (!cache)
         return { };
 
-    auto relatedObjectIDs = cache->relatedObjectIDsFor(*this, relationType);
+    auto relatedObjectIDs = cache->relatedObjectIDsFor(*this, relation);
     if (!relatedObjectIDs)
         return { };
     return cache->objectsForIDs(*relatedObjectIDs);

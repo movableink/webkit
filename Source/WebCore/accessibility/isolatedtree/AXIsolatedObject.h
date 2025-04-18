@@ -507,7 +507,7 @@ private:
     Node* node() const final;
     RenderObject* renderer() const final;
 
-    AccessibilityChildrenVector relatedObjects(AXRelationType) const final;
+    AccessibilityChildrenVector relatedObjects(AXRelation) const final;
 
     bool supportsHasPopup() const final;
     bool supportsChecked() const final;

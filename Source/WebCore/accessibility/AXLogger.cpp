@@ -196,13 +196,13 @@ void AXLogger::log(AccessibilityObjectInclusion inclusion)
     LOG(Accessibility, "%s", stream.release().utf8().data());
 }
 
-void AXLogger::log(AXRelationType relationType)
+void AXLogger::log(AXRelation relation)
 {
     if (!shouldLog())
         return;
 
     TextStream stream(TextStream::LineMode::SingleLine);
-    stream.dumpProperty("RelationType"_s, relationType);
+    stream.dumpProperty("RelationType"_s, relation);
     LOG(Accessibility, "%s", stream.release().utf8().data());
 }
 
@@ -496,64 +496,64 @@ TextStream& operator<<(TextStream& stream, AccessibilityObjectInclusion inclusio
     return stream;
 }
 
-TextStream& operator<<(TextStream& stream, AXRelationType relationType)
+TextStream& operator<<(TextStream& stream, AXRelation relation)
 {
-    switch (relationType) {
-    case AXRelationType::None:
+    switch (relation) {
+    case AXRelation::None:
         stream << "None";
         break;
-    case AXRelationType::ActiveDescendant:
+    case AXRelation::ActiveDescendant:
         stream << "ActiveDescendant";
         break;
-    case AXRelationType::ActiveDescendantOf:
+    case AXRelation::ActiveDescendantOf:
         stream << "ActiveDescendantOf";
         break;
-    case AXRelationType::ControlledBy:
+    case AXRelation::ControlledBy:
         stream << "ControlledBy";
         break;
-    case AXRelationType::ControllerFor:
+    case AXRelation::ControllerFor:
         stream << "ControllerFor";
         break;
-    case AXRelationType::DescribedBy:
+    case AXRelation::DescribedBy:
         stream << "DescribedBy";
         break;
-    case AXRelationType::DescriptionFor:
+    case AXRelation::DescriptionFor:
         stream << "DescriptionFor";
         break;
-    case AXRelationType::Details:
+    case AXRelation::Details:
         stream << "Details";
         break;
-    case AXRelationType::DetailsFor:
+    case AXRelation::DetailsFor:
         stream << "DetailsFor";
         break;
-    case AXRelationType::ErrorMessage:
+    case AXRelation::ErrorMessage:
         stream << "ErrorMessage";
         break;
-    case AXRelationType::ErrorMessageFor:
+    case AXRelation::ErrorMessageFor:
         stream << "ErrorMessageFor";
         break;
-    case AXRelationType::FlowsFrom:
+    case AXRelation::FlowsFrom:
         stream << "FlowsFrom";
         break;
-    case AXRelationType::FlowsTo:
+    case AXRelation::FlowsTo:
         stream << "FlowsTo";
         break;
-    case AXRelationType::Headers:
+    case AXRelation::Headers:
         stream << "Headers";
         break;
-    case AXRelationType::HeaderFor:
+    case AXRelation::HeaderFor:
         stream << "HeaderFor";
         break;
-    case AXRelationType::LabeledBy:
+    case AXRelation::LabeledBy:
         stream << "LabeledBy";
         break;
-    case AXRelationType::LabelFor:
+    case AXRelation::LabelFor:
         stream << "LabelFor";
         break;
-    case AXRelationType::OwnedBy:
+    case AXRelation::OwnedBy:
         stream << "OwnedBy";
         break;
-    case AXRelationType::OwnerFor:
+    case AXRelation::OwnerFor:
         stream << "OwnerFor";
         break;
     }

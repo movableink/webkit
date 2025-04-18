@@ -463,7 +463,7 @@ public:
     void applyPendingRootNode();
 
     // Relationships between objects.
-    std::optional<ListHashSet<AXID>> relatedObjectIDsFor(const AXIsolatedObject&, AXRelationType);
+    std::optional<ListHashSet<AXID>> relatedObjectIDsFor(const AXIsolatedObject&, AXRelation);
     void relationsNeedUpdate(bool needUpdate) { m_relationsNeedUpdate = needUpdate; }
     void updateRelations(const UncheckedKeyHashMap<AXID, AXRelations>&);
 

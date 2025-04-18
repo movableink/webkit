@@ -620,7 +620,7 @@ public:
 
     enum class UpdateRelations : bool { No, Yes };
     // Returns the IDs of the objects that relate to the given object with the specified relationship.
-    std::optional<ListHashSet<AXID>> relatedObjectIDsFor(const AXCoreObject&, AXRelationType, UpdateRelations = UpdateRelations::Yes);
+    std::optional<ListHashSet<AXID>> relatedObjectIDsFor(const AXCoreObject&, AXRelation, UpdateRelations = UpdateRelations::Yes);
     void updateRelations(Element&, const QualifiedName&);
 
 #if PLATFORM(IOS_FAMILY)
@@ -781,16 +781,16 @@ private:
 
     // Relationships between objects.
     static Vector<QualifiedName>& relationAttributes();
-    static AXRelationType attributeToRelationType(const QualifiedName&);
+    static AXRelation attributeToRelationType(const QualifiedName&);
     enum class AddSymmetricRelation : bool { No, Yes };
-    static AXRelationType symmetricRelation(AXRelationType);
-    bool addRelation(Element&, Element&, AXRelationType);
-    bool addRelation(AccessibilityObject*, AccessibilityObject*, AXRelationType, AddSymmetricRelation = AddSymmetricRelation::Yes);
+    static AXRelation symmetricRelation(AXRelation);
+    bool addRelation(Element&, Element&, AXRelation);
+    bool addRelation(AccessibilityObject*, AccessibilityObject*, AXRelation, AddSymmetricRelation = AddSymmetricRelation::Yes);
     bool addRelation(Element&, const QualifiedName&);
     void addLabelForRelation(Element&);
-    bool removeRelation(Element&, AXRelationType);
+    bool removeRelation(Element&, AXRelation);
     void removeAllRelations(AXID);
-    void removeRelationByID(AXID originID, AXID targetID, AXRelationType);
+    void removeRelationByID(AXID originID, AXID targetID, AXRelation);
     void updateLabelFor(HTMLLabelElement&);
     void updateLabeledBy(Element*);
     void updateRelationsIfNeeded();
