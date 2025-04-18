@@ -595,6 +595,7 @@ extern NSString * const UIPresentationControllerDismissalTransitionDidEndNotific
 extern NSString * const UIPresentationControllerDismissalTransitionDidEndCompletedKey;
 
 @interface _UIViewControllerTransitionContext : NSObject <UIViewControllerContextTransitioning>
+- (id <UIViewControllerTransitionCoordinator>)_transitionCoordinator;
 @end
 
 // FIXME: Separate the parts we are simply re-declaring from the ones we are overriding.

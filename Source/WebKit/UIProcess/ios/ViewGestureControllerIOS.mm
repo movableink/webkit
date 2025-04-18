@@ -54,10 +54,6 @@
 - (_UINavigationInteractiveTransitionBase *)transitionForDirection:(WebKit::ViewGestureController::SwipeDirection)direction;
 @end
 
-@interface _UIViewControllerTransitionContext (WKDetails)
-@property (nonatomic, copy, setter=_setInteractiveUpdateHandler:)  void (^_interactiveUpdateHandler)(BOOL interactionIsOver, CGFloat percentComplete, BOOL transitionCompleted, _UIViewControllerTransitionContext *);
-@end
-
 @implementation WKSwipeTransitionController
 {
     WebKit::ViewGestureController *_gestureController;
@@ -283,9 +279,9 @@ void ViewGestureController::beginSwipeGesture(_UINavigationInteractiveTransition
     m_didCallWillEndSwipeGesture = false;
     m_didCallEndSwipeGesture = false;
     m_removeSnapshotImmediatelyWhenGestureEnds = false;
-    [m_swipeTransitionContext _setInteractiveUpdateHandler:^(BOOL finish, CGFloat percent, BOOL transitionCompleted, _UIViewControllerTransitionContext *) {
-        if (finish)
-            willEndSwipeGesture(*targetItem, !transitionCompleted);
+    [[m_swipeTransitionContext _transitionCoordinator] notifyWhenInteractionChangesUsingBlock:^(id<UIViewControllerTransitionCoordinatorContext> context) {
+        if (!context.interactive)
+            willEndSwipeGesture(*targetItem, context.cancelled);
     }];
     auto pageID = page->identifier();
     GestureID gestureID = m_currentGestureID;
