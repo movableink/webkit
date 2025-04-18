@@ -432,6 +432,49 @@ static UnicodeBidi forceBidiIsolationForRuby(UnicodeBidi unicodeBidi)
     return UnicodeBidi::Isolate;
 }
 
+static bool shouldTreatAutoZIndexAsZero(const RenderStyle& style)
+{
+    return style.hasOpacity()
+        || style.hasTransformRelatedProperty()
+        || style.hasMask()
+        || style.clipPath()
+        || style.boxReflect()
+        || style.hasFilter()
+        || style.hasBackdropFilter()
+#if HAVE(CORE_MATERIAL)
+        || style.hasAppleVisualEffect()
+#endif
+        || style.hasBlendMode()
+        || style.hasIsolation()
+        || style.position() == PositionType::Sticky
+        || style.position() == PositionType::Fixed
+        || style.willChangeCreatesStackingContext();
+}
+
+void Adjuster::adjustFromBuilder(RenderStyle& style)
+{
+    // Do some adjustments that don't depend on element or parent style and are safe to cache.
+    // This allows copy-on-write to trigger before caching.
+
+    if (style.hasAutoSpecifiedZIndex()) {
+        if (shouldTreatAutoZIndexAsZero(style))
+            style.setUsedZIndex(0);
+    } else if (style.position() != PositionType::Static)
+        style.setUsedZIndex(style.specifiedZIndex());
+
+    // Cull out any useless layers and also repeat patterns into additional layers.
+    style.adjustBackgroundLayers();
+    style.adjustMaskLayers();
+
+    // Do the same for animations and transitions.
+    style.adjustAnimations();
+    style.adjustTransitions();
+
+    // Do the same for scroll-timeline and view-timeline longhands.
+    style.adjustScrollTimelines();
+    style.adjustViewTimelines();
+}
+
 void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearanceStyle) const
 {
     if (style.display() == DisplayType::Contents)
@@ -534,10 +577,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
         return style.position() == PositionType::Static && !parentBoxStyle.isDisplayFlexibleOrGridBox();
     };
 
-    if (hasAutoZIndex(style, m_parentBoxStyle, m_element.get()))
-        style.setHasAutoUsedZIndex();
-    else
-        style.setUsedZIndex(style.specifiedZIndex());
+    bool hasAutoSpecifiedZIndex = hasAutoZIndex(style, m_parentBoxStyle, m_element.get());
 
     // For SVG compatibility purposes we have to consider the 'animatedLocalTransform' besides the RenderStyle to query
     // if an element has a transform. SVG transforms are not stored on the RenderStyle, and thus we need a special case here.
@@ -562,26 +602,16 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     // Auto z-index becomes 0 for the root element and transparent objects. This prevents
     // cases where objects that should be blended as a single unit end up with a non-transparent
     // object wedged in between them. Auto z-index also becomes 0 for objects that specify transforms/masks/reflections.
-    if (style.hasAutoUsedZIndex()) {
+    if (hasAutoSpecifiedZIndex) {
         if ((m_element && m_document->documentElement() == m_element.get())
-            || style.hasOpacity()
             || hasTransformRelatedProperty(style, m_element.get(), m_parentStyle)
-            || style.hasMask()
-            || style.clipPath()
-            || style.boxReflect()
-            || style.hasFilter()
-            || style.hasBackdropFilter()
-#if HAVE(CORE_MATERIAL)
-            || style.hasAppleVisualEffect()
-#endif
-            || style.hasBlendMode()
-            || style.hasIsolation()
-            || style.position() == PositionType::Sticky
-            || style.position() == PositionType::Fixed
-            || style.willChangeCreatesStackingContext()
+            || shouldTreatAutoZIndexAsZero(style)
             || isInTopLayerOrBackdrop(style, m_element.get()))
             style.setUsedZIndex(0);
-    }
+        else
+            style.setHasAutoUsedZIndex();
+    } else
+        style.setUsedZIndex(style.specifiedZIndex());
 
     if (RefPtr element = m_element) {
         // Textarea considers overflow visible as auto.
@@ -668,18 +698,6 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     if (style.hasAutoUsedZIndex() && style.useTouchOverflowScrolling() && (isScrollableOverflow(style.overflowX()) || isScrollableOverflow(style.overflowY())))
         style.setUsedZIndex(0);
 #endif
-
-    // Cull out any useless layers and also repeat patterns into additional layers.
-    style.adjustBackgroundLayers();
-    style.adjustMaskLayers();
-
-    // Do the same for animations and transitions.
-    style.adjustAnimations();
-    style.adjustTransitions();
-
-    // Do the same for scroll-timeline and view-timeline longhands.
-    style.adjustScrollTimelines();
-    style.adjustViewTimelines();
 
 #if PLATFORM(COCOA)
     static const bool shouldAddIntrinsicMarginToFormControls = !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::DoesNotAddIntrinsicMarginsToFormControls);

@@ -172,19 +172,32 @@ ResolvedStyle TreeResolver::styleForStyleable(const Styleable& styleable, Resolu
         return { WTFMove(style) };
     }
 
-    if (resolutionType == ResolutionType::FullWithMatchResultCache) {
-        if (auto cachedMatchResult = m_document->styleScope().matchResultCache().get(element))
-            return scope().resolver->styleForElementWithCachedMatchResult(element, resolutionContext, *cachedMatchResult, *existingStyle);
-    }
+    auto unadjustedStyle = [&] {
+        if (resolutionType == ResolutionType::FullWithMatchResultCache) {
+            if (auto cachedResult = m_document->styleScope().matchResultCache().resultWithCurrentInlineStyle(element)) {
+                auto result = scope().resolver->unadjustedStyleForCachedMatchResult(element, resolutionContext, WTFMove(*cachedResult));
+                MatchResultCache::update(*cachedResult, *result.style);
+                return result;
+            }
+        }
+        auto result = scope().resolver->unadjustedStyleForElement(element, resolutionContext);
+        m_document->styleScope().matchResultCache().set(element, result);
+        return result;
+    }();
 
-    auto elementStyle = scope().resolver->styleForElement(element, resolutionContext);
+    if (unadjustedStyle.relations)
+        commitRelations(WTFMove(unadjustedStyle.relations), *m_update);
 
-    if (elementStyle.relations)
-        commitRelations(WTFMove(elementStyle.relations), *m_update);
+    auto style = WTFMove(unadjustedStyle.style);
 
-    m_document->styleScope().matchResultCache().update(element, *elementStyle.matchResult);
+    Adjuster adjuster(m_document, *resolutionContext.parentStyle, resolutionContext.parentBoxStyle, &element);
+    adjuster.adjust(*style, unadjustedStyle.userAgentAppearanceStyle.get());
 
-    return elementStyle;
+    return {
+        .style = WTFMove(style),
+        .relations = { },
+        .matchResult = WTFMove(unadjustedStyle.matchResult)
+    };
 }
 
 static void resetStyleForNonRenderedDescendants(Element& current)
@@ -822,7 +835,7 @@ std::unique_ptr<RenderStyle> TreeResolver::resolveStartingStyle(const ResolvedSt
     // We now resolve the starting style by applying all rules (including @starting-style ones) again.
     // We could compute it along with the primary style and include it in MatchedPropertiesCache but it is not
     // clear this would be benefitial as it is typically only used once.
-    return resolveAgainInDifferentContext(resolvedStyle, styleable, parentStyle, PropertyCascade::startingStyleProperties(), { }, resolutionContext);
+    return resolveAgainInDifferentContext(resolvedStyle, styleable, parentStyle, PropertyCascade::startingStylePropertyTypes(), { }, resolutionContext);
 }
 
 std::unique_ptr<RenderStyle> TreeResolver::resolveAfterChangeStyleForNonAnimated(const ResolvedStyle& resolvedStyle, const Styleable& styleable, const ResolutionContext& resolutionContext)
@@ -843,7 +856,7 @@ std::unique_ptr<RenderStyle> TreeResolver::resolveAfterChangeStyleForNonAnimated
 
     // "Likewise, define the after-change style as.. and inheriting from the after-change style of the parent."
     auto& parentStyle = parentAfterChangeStyle(styleable, resolutionContext);
-    return resolveAgainInDifferentContext(resolvedStyle, styleable, parentStyle, PropertyCascade::normalProperties(), { }, resolutionContext);
+    return resolveAgainInDifferentContext(resolvedStyle, styleable, parentStyle, PropertyCascade::normalPropertyTypes(), { }, resolutionContext);
 }
 
 std::unique_ptr<RenderStyle> TreeResolver::resolveAgainInDifferentContext(const ResolvedStyle& resolvedStyle, const Styleable& styleable, const RenderStyle& parentStyle, OptionSet<PropertyCascade::PropertyType> properties, std::optional<BuilderPositionTryFallback>&& positionTryFallback, const ResolutionContext& resolutionContext)
@@ -870,7 +883,7 @@ std::unique_ptr<RenderStyle> TreeResolver::resolveAgainInDifferentContext(const 
         WTFMove(builderContext),
         *resolvedStyle.matchResult,
         CascadeLevel::Author,
-        properties
+        { properties }
     };
 
     styleBuilder.applyAllProperties();
@@ -908,7 +921,7 @@ UncheckedKeyHashSet<AnimatableCSSProperty> TreeResolver::applyCascadeAfterAnimat
         WTFMove(builderContext),
         matchResult,
         CascadeLevel::Author,
-        isTransition ? PropertyCascade::PropertyType::AfterTransition : PropertyCascade::PropertyType::AfterAnimation,
+        { isTransition ? PropertyCascade::PropertyType::AfterTransition : PropertyCascade::PropertyType::AfterAnimation },
         &animatedProperties
     };
 
@@ -1395,7 +1408,7 @@ std::unique_ptr<RenderStyle> TreeResolver::generatePositionOption(const Position
         .tactics = fallback.tactics
     };
 
-    return resolveAgainInDifferentContext(resolvedStyle, styleable, *resolutionContext.parentStyle, PropertyCascade::normalProperties(), WTFMove(builderFallback), resolutionContext);
+    return resolveAgainInDifferentContext(resolvedStyle, styleable, *resolutionContext.parentStyle, PropertyCascade::normalPropertyTypes(), WTFMove(builderFallback), resolutionContext);
 }
 
 void TreeResolver::sortPositionOptionsIfNeeded(PositionOptions& options, const Styleable& styleable)
