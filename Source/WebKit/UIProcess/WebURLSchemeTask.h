@@ -103,7 +103,7 @@ private:
     Markable<WebPageProxyIdentifier> m_pageProxyID;
     Markable<WebCore::PageIdentifier> m_webPageID;
     WebCore::ResourceRequest m_request WTF_GUARDED_BY_LOCK(m_requestLock);
-    Ref<API::FrameInfo> m_frameInfo;
+    const Ref<API::FrameInfo> m_frameInfo;
     mutable Lock m_requestLock;
     bool m_stopped { false };
     bool m_responseSent { false };
