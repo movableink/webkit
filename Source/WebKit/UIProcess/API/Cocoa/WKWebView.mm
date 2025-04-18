@@ -551,9 +551,6 @@ static void addBrowsingContextControllerMethodStubIfNeeded()
         if (linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::BrowsingContextControllerMethodStubRemoved))
             return;
 
-        if (!WTF::IOSApplication::isChinaConstructionBank() && !WTF::IOSApplication::isKanbawzaBank())
-            return;
-
         class_addMethod(WKWebView.class, NSSelectorFromString(@"browsingContextController"), reinterpret_cast<IMP>(browsingContextControllerMethodStub), "@@:");
     });
 }
