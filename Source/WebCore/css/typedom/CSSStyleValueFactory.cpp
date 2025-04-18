@@ -103,9 +103,6 @@ ExceptionOr<RefPtr<CSSStyleValue>> CSSStyleValueFactory::extractShorthandCSSValu
 
 ExceptionOr<Ref<CSSUnparsedValue>> CSSStyleValueFactory::extractCustomCSSValues(const String& cssText)
 {
-    if (cssText.isEmpty())
-        return Exception { ExceptionCode::TypeError, "Value cannot be parsed"_s };
-
     CSSTokenizer tokenizer(cssText);
     return { CSSUnparsedValue::create(tokenizer.tokenRange()) };
 }
@@ -113,6 +110,9 @@ ExceptionOr<Ref<CSSUnparsedValue>> CSSStyleValueFactory::extractCustomCSSValues(
 // https://www.w3.org/TR/css-typed-om-1/#cssstylevalue
 ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValueFactory::parseStyleValue(Document& document, const AtomString& cssProperty, const String& cssText, bool parseMultiple)
 {
+    if (cssText.isEmpty())
+        return Exception { ExceptionCode::TypeError, "Value cannot be parsed."_s };
+
     // Extract the CSSValue from cssText given cssProperty
     if (isCustomPropertyName(cssProperty)) {
         auto result = extractCustomCSSValues(cssText);
