@@ -550,26 +550,19 @@ ExceptionOr<void> ViewTransition::captureOldState()
     return { };
 }
 
-bool ViewTransition::updatePropertiesForRenderer(CapturedElement& capturedElement, RenderBoxModelObject* renderer, const AtomString& name)
+bool ViewTransition::updatePropertiesForGroupPseudo(CapturedElement& capturedElement, const AtomString& name)
 {
-    RefPtr<MutableStyleProperties> properties;
-    if (renderer) {
-        bool initiallyIntersectsViewport;
-        properties = copyElementBaseProperties(*renderer, capturedElement.newSize, capturedElement.newOverflowRect, initiallyIntersectsViewport);
-    } else
-        properties = capturedElement.oldProperties;
-
-    bool changed = false;
+    RefPtr properties = capturedElement.newProperties ? capturedElement.newProperties : capturedElement.oldProperties;
     if (properties) {
         // group styles rule
         if (!capturedElement.groupStyleProperties) {
             capturedElement.groupStyleProperties = properties;
-            protectedDocument()->styleScope().protectedResolver()->setViewTransitionStyles(CSSSelector::PseudoElement::ViewTransitionGroup, name, *properties);
-            changed = true;
-        } else
-            changed |= RefPtr { capturedElement.groupStyleProperties }->mergeAndOverrideOnConflict(*properties);
+            protectedDocument()->styleScope(). protectedResolver()->setViewTransitionStyles(CSSSelector::PseudoElement::ViewTransitionGroup, name, *properties);
+            return true;
+        }
+        return Ref { *capturedElement.groupStyleProperties }->mergeAndOverrideOnConflict(*properties);
     }
-    return changed;
+    return false;
 }
 
 // https://drafts.csswg.org/css-view-transitions/#capture-new-state-algorithm
@@ -597,7 +590,12 @@ ExceptionOr<void> ViewTransition::captureNewState()
                 namedElement->classList = effectiveViewTransitionClassList(renderer, element, document()->styleScope());
                 namedElement->newElement = *styleable;
 
-                updatePropertiesForRenderer(*namedElement, dynamicDowncast<RenderBoxModelObject>(renderer), name);
+                // Do the work on updatePseudoElementStylesRead now
+                // to avoid needing an extra iteration later on.
+                if (CheckedPtr box = dynamicDowncast<RenderBoxModelObject>(renderer)) {
+                    bool initiallyIntersectsViewport;
+                    namedElement->newProperties = copyElementBaseProperties(*box, namedElement->newSize, namedElement->newOverflowRect, initiallyIntersectsViewport);
+                }
             }
             return { };
         }, *view->layer());
@@ -683,12 +681,6 @@ void ViewTransition::setupTransitionPseudoElements()
 
     for (auto& [name, capturedElement] : m_namedElements.map())
         setupDynamicStyleSheet(name, capturedElement);
-
-    if (RefPtr documentElement = document()->documentElement())
-        documentElement->invalidateStyleInternal();
-
-    // Ensure style & render tree are up-to-date.
-    protectedDocument()->updateStyleIfNeeded();
 }
 
 ExceptionOr<void> ViewTransition::checkForViewportSizeChange()
@@ -733,11 +725,15 @@ void ViewTransition::activateViewTransition()
             newStyleable->setCapturedInViewTransition(name);
     }
 
+    if (RefPtr documentElement = document()->documentElement())
+        documentElement->invalidateStyleInternal();
+
     m_phase = ViewTransitionPhase::Animating;
 
-    // No need to update pseudo element styles, since we did it as part
-    // of capture new state.
-    updatePseudoElementSizes();
+    // Don't read pseudo-element styles, since that happened
+    // as part of captureNewState.
+    updatePseudoElementStylesWrite();
+    updatePseudoElementRenderers();
 
     Ref { m_ready.second }->resolve();
 }
@@ -791,8 +787,9 @@ void ViewTransition::handleTransitionFrame()
         return;
     }
 
-    updatePseudoElementStyles();
-    updatePseudoElementSizes();
+    updatePseudoElementStylesRead();
+    updatePseudoElementStylesWrite();
+    updatePseudoElementRenderers();
 }
 
 // https://drafts.csswg.org/css-view-transitions/#clear-view-transition-algorithm
@@ -883,27 +880,44 @@ Ref<MutableStyleProperties> ViewTransition::copyElementBaseProperties(RenderLaye
 }
 
 // https://drafts.csswg.org/css-view-transitions-1/#update-pseudo-element-styles
-void ViewTransition::updatePseudoElementStyles()
+// Perform all reads required without making any mutations
+void ViewTransition::updatePseudoElementStylesRead()
+{
+    RefPtr document = this->document();
+    if (!document)
+        return;
+
+    for (auto& [name, capturedElement] : m_namedElements.map()) {
+        if (auto newStyleable = capturedElement->newElement.styleable()) {
+            if (CheckedPtr renderer = dynamicDowncast<RenderBoxModelObject>(newStyleable->renderer())) {
+                bool initiallyIntersectsViewport;
+                capturedElement->newProperties = copyElementBaseProperties(*renderer, capturedElement->newSize, capturedElement->newOverflowRect, initiallyIntersectsViewport);
+                continue;
+            }
+            capturedElement->newProperties = nullptr;
+        }
+    }
+}
+
+// https://drafts.csswg.org/css-view-transitions-1/#update-pseudo-element-styles
+// Writes all the new styles using the data from the read pass.
+void ViewTransition::updatePseudoElementStylesWrite()
 {
     RefPtr document = this->document();
     if (!document)
         return;
 
     bool changed = false;
+    for (auto& [name, capturedElement] : m_namedElements.map())
+        changed |= updatePropertiesForGroupPseudo(*capturedElement, name);
 
-    for (auto& [name, capturedElement] : m_namedElements.map()) {
-        if (auto newStyleable = capturedElement->newElement.styleable()) {
-            CheckedPtr renderer = dynamicDowncast<RenderBoxModelObject>(newStyleable->renderer());
-            changed |= updatePropertiesForRenderer(*capturedElement, renderer.get(), name);
-        } else
-            changed |= updatePropertiesForRenderer(*capturedElement, nullptr, name);
+    if (changed) {
+        if (RefPtr documentElement = document->documentElement())
+            documentElement->invalidateStyleInternal();
     }
-
-    if (changed)
-        protectedDocument()->styleScope().didChangeStyleSheetContents();
 }
 
-ExceptionOr<void> ViewTransition::updatePseudoElementSizes()
+ExceptionOr<void> ViewTransition::updatePseudoElementRenderers()
 {
     RefPtr document = this->document();
     if (!document)
@@ -913,7 +927,8 @@ ExceptionOr<void> ViewTransition::updatePseudoElementSizes()
     if (!documentElement)
         return { };
 
-    bool changed = false;
+    document->updateStyleIfNeeded();
+
     for (auto& [name, capturedElement] : m_namedElements.map()) {
         if (auto newStyleable = capturedElement->newElement.styleable()) {
             // FIXME: Also check fragmented content here.
@@ -934,15 +949,8 @@ ExceptionOr<void> ViewTransition::updatePseudoElementSizes()
                     layer->setNeedsCompositingGeometryUpdate();
                 viewTransitionCapture->setImage(image);
             }
-        } else if (!capturedElement->groupStyleProperties) {
-            // If we haven't yet initialized the properties for a transition without
-            // a new element, do it now.
-            changed |= updatePropertiesForRenderer(*capturedElement, nullptr, name);
         }
     }
-
-    if (changed)
-        document->styleScope().didChangeStyleSheetContents();
 
     return { };
 }

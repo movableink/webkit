@@ -79,6 +79,7 @@ public:
     WeakStyleable newElement;
     LayoutRect newOverflowRect;
     LayoutSize newSize;
+    RefPtr<MutableStyleProperties> newProperties;
 
     Vector<AtomString> classList;
     RefPtr<MutableStyleProperties> groupStyleProperties;
@@ -208,7 +209,7 @@ private:
     ViewTransition(Document&, Vector<AtomString>&&);
 
     Ref<MutableStyleProperties> copyElementBaseProperties(RenderLayerModelObject&, LayoutSize&, LayoutRect& overflowRect, bool& intersectsViewport);
-    bool updatePropertiesForRenderer(CapturedElement&, RenderBoxModelObject*, const AtomString&);
+    bool updatePropertiesForGroupPseudo(CapturedElement&, const AtomString&);
 
     // Setup view transition sub-algorithms.
     ExceptionOr<void> captureOldState();
@@ -218,8 +219,9 @@ private:
 
     void callUpdateCallback();
 
-    void updatePseudoElementStyles();
-    ExceptionOr<void> updatePseudoElementSizes();
+    void updatePseudoElementStylesRead();
+    void updatePseudoElementStylesWrite();
+    ExceptionOr<void> updatePseudoElementRenderers();
     ExceptionOr<void> checkForViewportSizeChange();
 
     void clearViewTransition();
