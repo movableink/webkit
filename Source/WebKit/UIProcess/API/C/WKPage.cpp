@@ -417,12 +417,12 @@ bool WKPageCanGoForward(WKPageRef pageRef)
 void WKPageGoBack(WKPageRef pageRef)
 {
     CRASH_IF_SUSPENDED;
-    auto& page = *toImpl(pageRef);
-    if (RefPtr pageClient = page.pageClient(); pageClient->hasBrowsingWarning()) {
+    Ref page = *toImpl(pageRef);
+    if (RefPtr pageClient = page->pageClient(); pageClient->hasBrowsingWarning()) {
         WKPageReload(pageRef);
         return;
     }
-    page.goBack();
+    page->goBack();
 }
 
 bool WKPageCanGoBack(WKPageRef pageRef)
@@ -560,14 +560,14 @@ void WKPageResetStateBetweenTests(WKPageRef pageRef)
 
 WKStringRef WKPageGetSessionHistoryURLValueType()
 {
-    static auto& sessionHistoryURLValueType = API::String::create("SessionHistoryURL"_s).leakRef();
-    return toAPI(&sessionHistoryURLValueType);
+    static NeverDestroyed<Ref<API::String>> sessionHistoryURLValueType = API::String::create("SessionHistoryURL"_s);
+    return toAPI(sessionHistoryURLValueType.get().ptr());
 }
 
 WKStringRef WKPageGetSessionBackForwardListItemValueType()
 {
-    static auto& sessionBackForwardListValueType = API::String::create("SessionBackForwardListItem"_s).leakRef();
-    return toAPI(&sessionBackForwardListValueType);
+    static NeverDestroyed<Ref<API::String>> sessionBackForwardListValueType = API::String::create("SessionBackForwardListItem"_s);
+    return toAPI(sessionBackForwardListValueType.get().ptr());
 }
 
 WKTypeRef WKPageCopySessionState(WKPageRef pageRef, void* context, WKPageSessionStateFilterCallback filter)
@@ -1037,13 +1037,13 @@ void WKPageSetPageContextMenuClient(WKPageRef pageRef, const WKPageContextMenuCl
             size_t newSize = array ? array->size() : 0;
             customMenu.reserveInitialCapacity(newSize);
             for (size_t i = 0; i < newSize; ++i) {
-                WebContextMenuItem* item = array->at<WebContextMenuItem>(i);
+                RefPtr item = array->at<WebContextMenuItem>(i);
                 if (!item) {
                     LOG(ContextMenu, "New menu entry at index %i is not a WebContextMenuItem", (int)i);
                     continue;
                 }
 
-                customMenu.append(*item);
+                customMenu.append(item.releaseNonNull());
             }
 
             contextMenuListener.useContextMenuItems(WTFMove(customMenu));
@@ -1422,7 +1422,7 @@ void WKPageSetPageLoaderClient(WKPageRef pageRef, const WKPageLoaderClientBase* 
         }
     };
 
-    WebPageProxy* webPageProxy = toImpl(pageRef);
+    RefPtr webPageProxy = toImpl(pageRef);
 
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     // GCC 10 gets confused here and warns that WKPageSetPagePolicyClient is deprecated when we call
@@ -2574,9 +2574,7 @@ void WKPageSetPageNavigationClient(WKPageRef pageRef, const WKPageNavigationClie
 #endif
     };
 
-    WebPageProxy* webPageProxy = toImpl(pageRef);
-
-    webPageProxy->setNavigationClient(makeUniqueRef<NavigationClient>(wkClient));
+    toProtectedImpl(pageRef)->setNavigationClient(makeUniqueRef<NavigationClient>(wkClient));
 }
 
 class StateClient final : public RefCounted<StateClient>, public API::Client<WKPageStateClientBase>, public PageLoadState::Observer {
@@ -3067,12 +3065,12 @@ WKArrayRef WKPageCopyRelatedPages(WKPageRef pageRef)
 
 WKFrameRef WKPageLookUpFrameFromHandle(WKPageRef pageRef, WKFrameHandleRef handleRef)
 {
-    auto page = toImpl(pageRef);
-    auto frame = WebFrameProxy::webFrame(toImpl(handleRef)->frameID());
-    if (!frame || frame->page() != page)
+    RefPtr page = toImpl(pageRef);
+    RefPtr frame = WebFrameProxy::webFrame(toImpl(handleRef)->frameID());
+    if (!frame || frame->page() != page.get())
         return nullptr;
 
-    return toAPI(frame);
+    return toAPI(frame.get());
 }
 
 void WKPageSetMayStartMediaWhenInWindow(WKPageRef pageRef, bool mayStartMedia)

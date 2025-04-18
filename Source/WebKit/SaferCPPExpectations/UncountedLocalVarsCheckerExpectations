@@ -1,14 +1,3 @@
-UIProcess/API/C/WKContext.cpp
-UIProcess/API/C/WKContextMenuListener.cpp
-UIProcess/API/C/WKInspector.cpp
-UIProcess/API/C/WKPage.cpp
-UIProcess/API/C/WKUserScriptRef.cpp
-UIProcess/API/C/WKWebsiteDataStoreRef.cpp
-UIProcess/API/C/mac/WKPagePrivateMac.mm
-UIProcess/API/Cocoa/WKFrameInfo.mm
-UIProcess/API/Cocoa/WKNSURLAuthenticationChallenge.mm
-UIProcess/API/Cocoa/WKWebViewTesting.mm
-UIProcess/API/Cocoa/_WKDataTask.mm
 WebProcess/Automation/WebAutomationSessionProxy.cpp
 WebProcess/EncryptedMedia/MediaKeySystemPermissionRequestManager.cpp
 WebProcess/Extensions/Bindings/JSWebExtensionWrapper.cpp

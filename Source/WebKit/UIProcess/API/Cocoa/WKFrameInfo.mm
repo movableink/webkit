@@ -72,7 +72,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 
 - (WKWebView *)webView
 {
-    auto page = _frameInfo->page();
+    RefPtr page = _frameInfo->page();
     return page ? page->cocoaView().autorelease() : nil;
 }
 

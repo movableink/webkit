@@ -126,7 +126,7 @@ private:
 
 - (WKWebView *)webView
 {
-    auto* page = _dataTask->page();
+    RefPtr page = _dataTask->page();
     if (!page)
         return nil;
     return page->cocoaView().get();

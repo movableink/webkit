@@ -50,11 +50,11 @@ void WKContextMenuListenerUseContextMenuItems(WKContextMenuListenerRef listenerR
     Vector<Ref<WebContextMenuItem>> items;
     items.reserveInitialCapacity(newSize);
     for (size_t i = 0; i < newSize; ++i) {
-        WebContextMenuItem* item = array->at<WebContextMenuItem>(i);
+        RefPtr item = array->at<WebContextMenuItem>(i);
         if (!item)
             continue;
         
-        items.append(*item);
+        items.append(item.releaseNonNull());
     }
 
     toImpl(listenerRef)->useContextMenuItems(WTFMove(items));

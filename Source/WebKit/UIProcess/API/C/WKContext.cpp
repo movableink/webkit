@@ -160,12 +160,12 @@ void WKContextSetHistoryClient(WKContextRef contextRef, const WKContextHistoryCl
         }
     };
 
-    WebKit::WebProcessPool& processPool = *WebKit::toImpl(contextRef);
-    processPool.setHistoryClient(makeUnique<HistoryClient>(wkClient));
+    Ref processPool = *WebKit::toImpl(contextRef);
+    processPool->setHistoryClient(makeUnique<HistoryClient>(wkClient));
 
-    bool addsVisitedLinks = processPool.historyClient().addsVisitedLinks();
+    bool addsVisitedLinks = processPool->historyClient().addsVisitedLinks();
 
-    for (Ref process : processPool.processes()) {
+    for (Ref process : processPool->processes()) {
         for (Ref page : process->pages())
             page->setAddsVisitedLinks(addsVisitedLinks);
     }

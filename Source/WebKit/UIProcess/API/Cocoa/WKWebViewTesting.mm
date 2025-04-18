@@ -209,7 +209,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 - (NSDictionary *)_contentsOfUserInterfaceItem:(NSString *)userInterfaceItem
 {
     if ([userInterfaceItem isEqualToString:@"validationBubble"]) {
-        auto* validationBubble = _page->validationBubble();
+        RefPtr validationBubble = _page->validationBubble();
         String message = validationBubble ? validationBubble->message() : emptyString();
         double fontSize = validationBubble ? validationBubble->fontSize() : 0;
         return @{ userInterfaceItem: @{ @"message": message.createNSString().get(), @"fontSize": @(fontSize) } };
@@ -288,7 +288,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 
 - (unsigned long)_countOfUpdatesWithLayerChanges
 {
-    if (auto* drawingAreaProxy = dynamicDowncast<WebKit::RemoteLayerTreeDrawingAreaProxy>(_page->drawingArea()))
+    if (RefPtr drawingAreaProxy = dynamicDowncast<WebKit::RemoteLayerTreeDrawingAreaProxy>(_page->drawingArea()))
         return drawingAreaProxy->countOfTransactionsWithNonEmptyLayerChanges();
 
     return 0;
@@ -329,7 +329,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 - (void)_resetNavigationGestureStateForTesting
 {
 #if PLATFORM(MAC)
-    if (auto gestureController = _impl->gestureController())
+    if (RefPtr gestureController = _impl->gestureController())
         gestureController->reset();
 #else
     if (_gestureController)
@@ -429,7 +429,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 - (BOOL)_wirelessVideoPlaybackDisabled
 {
 #if ENABLE(VIDEO_PRESENTATION_MODE)
-    if (auto* playbackSessionManager = _page->playbackSessionManager())
+    if (RefPtr playbackSessionManager = _page->playbackSessionManager())
         return playbackSessionManager->wirelessVideoPlaybackDisabled();
 #endif
     return false;
