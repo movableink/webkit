@@ -253,8 +253,9 @@ void EventDispatcher::touchEvent(PageIdentifier pageID, FrameIdentifier frameID,
     }
 
     if (updateListWasEmpty) {
-        RunLoop::protectedMain()->dispatch([this] {
-            dispatchTouchEvents();
+        RunLoop::protectedMain()->dispatch([weakThis = WeakPtr { *this }] {
+            if (RefPtr protectedThis = weakThis.get())
+                protectedThis->dispatchTouchEvents();
         });
     }
 }
@@ -272,6 +273,11 @@ void EventDispatcher::dispatchTouchEvents()
     for (auto& slot : localCopy) {
         if (RefPtr webPage = WebProcess::singleton().webPage(slot.key))
             webPage->dispatchAsynchronousTouchEvents(WTFMove(slot.value));
+        else {
+            for (auto& data : slot.value.get())
+                data.completionHandler(false, std::nullopt);
+            ASSERT_NOT_REACHED();
+        }
     }
 }
 #endif

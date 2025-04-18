@@ -80,7 +80,7 @@ class EventDispatcher final :
 #if ENABLE(MOMENTUM_EVENT_DISPATCHER)
     public MomentumEventDispatcher::Client,
 #endif
-    private IPC::MessageReceiver {
+    public IPC::MessageReceiver {
     WTF_MAKE_FAST_ALLOCATED;
 #if ENABLE(MOMENTUM_EVENT_DISPATCHER)
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(EventDispatcher);
