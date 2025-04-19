@@ -598,7 +598,7 @@ void Buffer::takeSlowIndirectValidationPath(CommandBuffer& commandBuffer, uint64
             .vertexStart = args.vertexStart,
             .baseInstance = args.baseInstance
         };
-        auto newDataSpan = unsafeMakeSpan(static_cast<uint8_t*>(static_cast<void*>(&data)), sizeof(data));
+        auto newDataSpan = asMutableByteSpan(data);
         queue->writeBuffer(m_buffer, indirectOffset, newDataSpan);
         queue->finalizeBlitCommandEncoder();
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)

@@ -145,7 +145,7 @@ template<typename T>
 inline void Encoder::encodeObject(const T& object)
 {
     static_assert(std::is_trivially_copyable_v<T>);
-    encodeSpan(unsafeMakeSpan(std::addressof(object), 1));
+    encodeSpan(singleElementSpan(object));
 }
 
 } // namespace IPC
