@@ -154,7 +154,7 @@
 		0735F3202D3761A10003D029 /* WKIntelligenceReplacementTextEffectCoordinator.h in Headers */ = {isa = PBXBuildFile; fileRef = 0735F31F2D3761A10003D029 /* WKIntelligenceReplacementTextEffectCoordinator.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		0735F3222D38B09E0003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0735F3212D38B09E0003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.swift */; };
 		0735F3242D38C7790003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.h in Headers */ = {isa = PBXBuildFile; fileRef = 0735F3232D38C7790003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		07438C722D4C645600BD1E68 /* _WebKit_SwiftUI.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = 07275C4F2D00C934002315A5 /* _WebKit_SwiftUI.framework */; };
+		07438C722D4C645600BD1E68 /* _WebKit_SwiftUI.framework in Product Dependencies */ = {isa = PBXBuildFile; fileRef = 07275C4F2D00C934002315A5 /* _WebKit_SwiftUI.framework */; };
 		0744DA552CE05FE400AACC81 /* WebKitInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = 0744DA542CE05FE400AACC81 /* WebKitInternal.h */; };
 		074A6FC72D5F1FAF0027F958 /* KeyEventInterpretationContext.h in Headers */ = {isa = PBXBuildFile; fileRef = 074A6FC52D5F1DEA0027F958 /* KeyEventInterpretationContext.h */; };
 		074E75FE1DF2211900D318EC /* UserMediaProcessManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 074E75FB1DF1FD1300D318EC /* UserMediaProcessManager.h */; };
@@ -1987,7 +1987,7 @@
 		A7F35F5F2B1959C000E43D98 /* RemoteLayerWithInProcessRenderingBackingStore.h in Headers */ = {isa = PBXBuildFile; fileRef = A7F35F5E2B1959B300E43D98 /* RemoteLayerWithInProcessRenderingBackingStore.h */; };
 		AAB145E6223F931200E489D8 /* PrefetchCache.h in Headers */ = {isa = PBXBuildFile; fileRef = AAB145E4223F931200E489D8 /* PrefetchCache.h */; };
 		AAFA634F234F7C6400FFA864 /* AsyncRevalidation.h in Headers */ = {isa = PBXBuildFile; fileRef = AAFA634E234F7C6300FFA864 /* AsyncRevalidation.h */; };
-		AE5E15BD2D935B9D00BB117E /* AuthenticationServices.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = AE5E15BC2D935B9D00BB117E /* AuthenticationServices.framework */; };
+		AE5E15BD2D935B9D00BB117E /* AuthenticationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE5E15BC2D935B9D00BB117E /* AuthenticationServices.framework */; };
 		AE9552882D756E920039B9F9 /* CredentialUpdaterShim.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE9552872D756E920039B9F9 /* CredentialUpdaterShim.swift */; };
 		B6058CEC2B6D636E006D4C77 /* WKWebExtensionDataRecord.h in Headers */ = {isa = PBXBuildFile; fileRef = 1CC44A9B2AD7477200E20494 /* WKWebExtensionDataRecord.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		B6058CED2B6D6379006D4C77 /* WKWebExtensionDataRecord.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1CC44A9D2AD7483400E20494 /* WKWebExtensionDataRecord.mm */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
@@ -2321,6 +2321,7 @@
 		DD8CD365296D097300C04CA1 /* APIFeature.h in Headers */ = {isa = PBXBuildFile; fileRef = 317FE7C21C487A6600A0CA89 /* APIFeature.h */; };
 		DDAB377628234B3900890546 /* AuthenticationServicesCore.framework in Product Dependencies */ = {isa = PBXBuildFile; fileRef = DDAB377528234B2100890546 /* AuthenticationServicesCore.framework */; };
 		DDB04F3F278E55F1008D3678 /* JavaScriptCore.framework in Product Dependencies */ = {isa = PBXBuildFile; fileRef = 1AA1C7DE100E846E0078DEBC /* JavaScriptCore.framework */; };
+		DDC7AB872DB2DE4800A38D68 /* _AuthenticationServices_SwiftUI.framework in Product Dependencies */ = {isa = PBXBuildFile; fileRef = DDC7AB862DB2DE4800A38D68 /* _AuthenticationServices_SwiftUI.framework */; };
 		DDCED3A729F82DB200512877 /* WebContentProcessExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C139DB929DB847E00D5117B /* WebContentProcessExtension.swift */; };
 		DDCED3AB29F82DB400512877 /* WebContentProcessExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C139DB929DB847E00D5117B /* WebContentProcessExtension.swift */; };
 		DDDFE827284699EC006F1EE5 /* SafariServicesSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = DDDFE826284699E6006F1EE5 /* SafariServicesSPI.h */; };
@@ -3013,15 +3014,16 @@
 			name = "Install SwiftUI Cross Import Overlay";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		07438C702D4C632500BD1E68 /* CopyFiles */ = {
+		07438C702D4C632500BD1E68 /* Product Dependencies */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 16;
 			files = (
-				07438C722D4C645600BD1E68 /* _WebKit_SwiftUI.framework in CopyFiles */,
-				AE5E15BD2D935B9D00BB117E /* AuthenticationServices.framework in CopyFiles */,
+				DDC7AB872DB2DE4800A38D68 /* _AuthenticationServices_SwiftUI.framework in Product Dependencies */,
+				07438C722D4C645600BD1E68 /* _WebKit_SwiftUI.framework in Product Dependencies */,
 			);
+			name = "Product Dependencies";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		0FB94836239F31B700926A8F /* Copy Testing Headers */ = {
@@ -8082,6 +8084,7 @@
 		DD8CD360296D03A300C04CA1 /* _WKFeature.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _WKFeature.h; sourceTree = "<group>"; };
 		DD8CD361296D03A400C04CA1 /* _WKFeatureInternal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _WKFeatureInternal.h; sourceTree = "<group>"; };
 		DDAB377528234B2100890546 /* AuthenticationServicesCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AuthenticationServicesCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		DDC7AB862DB2DE4800A38D68 /* _AuthenticationServices_SwiftUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = _AuthenticationServices_SwiftUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		DDC907B6298B43D700ECA4D6 /* MigratedHeaders-output.xcfilelist */ = {isa = PBXFileReference; lastKnownFileType = text.xcfilelist; path = "MigratedHeaders-output.xcfilelist"; sourceTree = "<group>"; };
 		DDC907B7298B43D700ECA4D6 /* MigratedHeaders-input.xcfilelist */ = {isa = PBXFileReference; lastKnownFileType = text.xcfilelist; path = "MigratedHeaders-input.xcfilelist"; sourceTree = "<group>"; };
 		DDDFE826284699E6006F1EE5 /* SafariServicesSPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SafariServicesSPI.h; sourceTree = "<group>"; };
@@ -8514,26 +8517,26 @@
 		FA580B102DA64085005E4965 /* UnifiedSource158.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource158.cpp; sourceTree = "<group>"; };
 		FA580B112DA64085005E4965 /* UnifiedSource159.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource159.cpp; sourceTree = "<group>"; };
 		FA580B122DA64085005E4965 /* UnifiedSource160.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource160.cpp; sourceTree = "<group>"; };
-		FA580B272DA64B5F005E4965 /* UnifiedSource161.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource161.cpp; path = "UnifiedSource161.cpp"; sourceTree = "<group>"; };
-		FA580B282DA64B5F005E4965 /* UnifiedSource162.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource162.cpp; path = "UnifiedSource162.cpp"; sourceTree = "<group>"; };
-		FA580B292DA64B5F005E4965 /* UnifiedSource163.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource163.cpp; path = "UnifiedSource163.cpp"; sourceTree = "<group>"; };
-		FA580B2A2DA64B5F005E4965 /* UnifiedSource164.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource164.cpp; path = "UnifiedSource164.cpp"; sourceTree = "<group>"; };
-		FA580B2B2DA64B5F005E4965 /* UnifiedSource165.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource165.cpp; path = "UnifiedSource165.cpp"; sourceTree = "<group>"; };
-		FA580B2C2DA64B5F005E4965 /* UnifiedSource166.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource166.cpp; path = "UnifiedSource166.cpp"; sourceTree = "<group>"; };
-		FA580B2D2DA64B5F005E4965 /* UnifiedSource167.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource167.cpp; path = "UnifiedSource167.cpp"; sourceTree = "<group>"; };
-		FA580B2E2DA64B5F005E4965 /* UnifiedSource168.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource168.cpp; path = "UnifiedSource168.cpp"; sourceTree = "<group>"; };
-		FA580B2F2DA64B5F005E4965 /* UnifiedSource169.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource169.cpp; path = "UnifiedSource169.cpp"; sourceTree = "<group>"; };
-		FA580B302DA64B5F005E4965 /* UnifiedSource170.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource170.cpp; path = "UnifiedSource170.cpp"; sourceTree = "<group>"; };
-		FA580B312DA64B5F005E4965 /* UnifiedSource171.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource171.cpp; path = "UnifiedSource171.cpp"; sourceTree = "<group>"; };
-		FA580B322DA64B5F005E4965 /* UnifiedSource172.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource172.cpp; path = "UnifiedSource172.cpp"; sourceTree = "<group>"; };
-		FA580B332DA64B5F005E4965 /* UnifiedSource173.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource173.cpp; path = "UnifiedSource173.cpp"; sourceTree = "<group>"; };
-		FA580B342DA64B5F005E4965 /* UnifiedSource174.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource174.cpp; path = "UnifiedSource174.cpp"; sourceTree = "<group>"; };
-		FA580B352DA64B5F005E4965 /* UnifiedSource175.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource175.cpp; path = "UnifiedSource175.cpp"; sourceTree = "<group>"; };
-		FA580B362DA64B5F005E4965 /* UnifiedSource176.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource176.cpp; path = "UnifiedSource176.cpp"; sourceTree = "<group>"; };
-		FA580B372DA64B5F005E4965 /* UnifiedSource177.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource177.cpp; path = "UnifiedSource177.cpp"; sourceTree = "<group>"; };
-		FA580B382DA64B5F005E4965 /* UnifiedSource178.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource178.cpp; path = "UnifiedSource178.cpp"; sourceTree = "<group>"; };
-		FA580B392DA64B5F005E4965 /* UnifiedSource179.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource179.cpp; path = "UnifiedSource179.cpp"; sourceTree = "<group>"; };
-		FA580B3A2DA64B5F005E4965 /* UnifiedSource180.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource180.cpp; path = "UnifiedSource180.cpp"; sourceTree = "<group>"; };
+		FA580B272DA64B5F005E4965 /* UnifiedSource161.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource161.cpp; sourceTree = "<group>"; };
+		FA580B282DA64B5F005E4965 /* UnifiedSource162.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource162.cpp; sourceTree = "<group>"; };
+		FA580B292DA64B5F005E4965 /* UnifiedSource163.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource163.cpp; sourceTree = "<group>"; };
+		FA580B2A2DA64B5F005E4965 /* UnifiedSource164.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource164.cpp; sourceTree = "<group>"; };
+		FA580B2B2DA64B5F005E4965 /* UnifiedSource165.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource165.cpp; sourceTree = "<group>"; };
+		FA580B2C2DA64B5F005E4965 /* UnifiedSource166.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource166.cpp; sourceTree = "<group>"; };
+		FA580B2D2DA64B5F005E4965 /* UnifiedSource167.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource167.cpp; sourceTree = "<group>"; };
+		FA580B2E2DA64B5F005E4965 /* UnifiedSource168.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource168.cpp; sourceTree = "<group>"; };
+		FA580B2F2DA64B5F005E4965 /* UnifiedSource169.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource169.cpp; sourceTree = "<group>"; };
+		FA580B302DA64B5F005E4965 /* UnifiedSource170.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource170.cpp; sourceTree = "<group>"; };
+		FA580B312DA64B5F005E4965 /* UnifiedSource171.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource171.cpp; sourceTree = "<group>"; };
+		FA580B322DA64B5F005E4965 /* UnifiedSource172.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource172.cpp; sourceTree = "<group>"; };
+		FA580B332DA64B5F005E4965 /* UnifiedSource173.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource173.cpp; sourceTree = "<group>"; };
+		FA580B342DA64B5F005E4965 /* UnifiedSource174.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource174.cpp; sourceTree = "<group>"; };
+		FA580B352DA64B5F005E4965 /* UnifiedSource175.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource175.cpp; sourceTree = "<group>"; };
+		FA580B362DA64B5F005E4965 /* UnifiedSource176.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource176.cpp; sourceTree = "<group>"; };
+		FA580B372DA64B5F005E4965 /* UnifiedSource177.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource177.cpp; sourceTree = "<group>"; };
+		FA580B382DA64B5F005E4965 /* UnifiedSource178.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource178.cpp; sourceTree = "<group>"; };
+		FA580B392DA64B5F005E4965 /* UnifiedSource179.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource179.cpp; sourceTree = "<group>"; };
+		FA580B3A2DA64B5F005E4965 /* UnifiedSource180.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource180.cpp; sourceTree = "<group>"; };
 		FA6342192D9D98D300A6BECE /* WebFrame.messages.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = WebFrame.messages.in; sourceTree = "<group>"; };
 		FA63421A2D9D990400A6BECE /* WebFrameProxy.messages.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = WebFrameProxy.messages.in; sourceTree = "<group>"; };
 		FA651BAE2AA3E5FB00747576 /* WebTransportSendStreamSink.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = WebTransportSendStreamSink.h; path = Network/WebTransportSendStreamSink.h; sourceTree = "<group>"; };
@@ -8738,6 +8741,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AE5E15BD2D935B9D00BB117E /* AuthenticationServices.framework in Frameworks */,
 				F441AFEA2B8DA15F00F300B7 /* WebKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -13212,6 +13216,7 @@
 		5750F3292032D4E300389347 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				DDC7AB862DB2DE4800A38D68 /* _AuthenticationServices_SwiftUI.framework */,
 				AE5E15BC2D935B9D00BB117E /* AuthenticationServices.framework */,
 				DDAB377528234B2100890546 /* AuthenticationServicesCore.framework */,
 				52A69BE9286CFFAC00893E8F /* CryptoTokenKit.framework */,
@@ -18751,7 +18756,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = CD95493B26159004008372D9 /* Build configuration list for PBXNativeTarget "WebKitSwift" */;
 			buildPhases = (
-				07438C702D4C632500BD1E68 /* CopyFiles */,
+				07438C702D4C632500BD1E68 /* Product Dependencies */,
 				CD95493126159004008372D9 /* Headers */,
 				CD95493226159004008372D9 /* Sources */,
 				CD95493326159004008372D9 /* Frameworks */,
