@@ -2350,12 +2350,8 @@ void LocalDOMWindow::dispatchLoadEvent()
     }
 
     // Send a separate load event to the element that owns this frame.
-    if (RefPtr ownerFrame = frame()) {
-        if (is<RemoteFrame>(ownerFrame->tree().parent()))
-            ownerFrame->protectedLoader()->client().dispatchLoadEventToOwnerElementInAnotherProcess();
-        else if (RefPtr owner = ownerFrame->ownerElement())
-            owner->dispatchEvent(Event::create(eventNames().loadEvent, Event::CanBubble::No, Event::IsCancelable::No));
-    }
+    if (RefPtr frame = this->frame())
+        frame->dispatchLoadEventToParent();
 
     InspectorInstrumentation::loadEventFired(protectedFrame().get());
 }

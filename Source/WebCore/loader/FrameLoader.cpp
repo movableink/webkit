@@ -1332,10 +1332,12 @@ void FrameLoader::loadInSameDocument(URL url, RefPtr<SerializedScriptValue> stat
         m_client->dispatchDidChangeLocationWithinPage();
     }
 
-    if (RefPtr parentFrame = dynamicDowncast<LocalFrame>(m_frame->tree().parent()); parentFrame
+    RefPtr parentFrame = m_frame->tree().parent();
+    RefPtr localParentFrame = dynamicDowncast<LocalFrame>(parentFrame.get());
+    if (parentFrame
         && (document->processingLoadEvent() || document->loadEventFinished())
-        && !document->protectedSecurityOrigin()->isSameOriginAs(parentFrame->protectedDocument()->protectedSecurityOrigin()))
-        m_frame->protectedOwnerElement()->dispatchEvent(Event::create(eventNames().loadEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        && (!localParentFrame || !document->protectedSecurityOrigin()->isSameOriginAs(localParentFrame->protectedDocument()->protectedSecurityOrigin())))
+        protectedFrame()->dispatchLoadEventToParent();
 
     // LocalFrameLoaderClient::didFinishLoad() tells the internal load delegate the load finished with no error
     m_client->didFinishLoad();

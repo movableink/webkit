@@ -1291,6 +1291,14 @@ void LocalFrame::documentURLOrOriginDidChange()
         page->setMainFrameURLAndOrigin(document->url(), document->protectedSecurityOrigin());
 }
 
+void LocalFrame::dispatchLoadEventToParent()
+{
+    if (is<RemoteFrame>(tree().parent()))
+        protectedLoader()->client().dispatchLoadEventToOwnerElementInAnotherProcess();
+    else if (RefPtr owner = ownerElement())
+        owner->dispatchEvent(Event::create(eventNames().loadEvent, Event::CanBubble::No, Event::IsCancelable::No));
+}
+
 #if ENABLE(DATA_DETECTION)
 
 DataDetectionResultsStorage& LocalFrame::dataDetectionResults()

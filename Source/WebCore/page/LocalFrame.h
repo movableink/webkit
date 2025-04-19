@@ -310,6 +310,7 @@ public:
     void selfOnlyDeref();
 
     void documentURLOrOriginDidChange();
+    void dispatchLoadEventToParent();
 
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
     void didAccessWindowProxyPropertyViaOpener(WindowProxyProperty);
