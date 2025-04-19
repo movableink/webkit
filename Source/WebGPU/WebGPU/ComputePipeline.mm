@@ -121,10 +121,6 @@ std::pair<Ref<ComputePipeline>, NSString*> Device::createComputePipeline(const W
     if (!size.width || size.width > deviceLimits.maxComputeWorkgroupSizeX || !size.height || size.height > deviceLimits.maxComputeWorkgroupSizeY || !size.depth || size.depth > deviceLimits.maxComputeWorkgroupSizeZ || size.width * size.height * size.depth > deviceLimits.maxComputeInvocationsPerWorkgroup)
         return returnInvalidComputePipeline(*this, isAsync);
 
-    if (m_computePipelineId == Device::maxPipelines) {
-        loseTheDevice(WGPUDeviceLostReason_Undefined);
-        return returnInvalidComputePipeline(*this, isAsync, @"too many compute pipelines");
-    }
     if (pipelineLayout->isAutoLayout() && entryPointInformation.defaultLayout) {
         Vector<Vector<WGPUBindGroupLayoutEntry>> bindGroupEntries;
         if (NSString* error = addPipelineLayouts(bindGroupEntries, entryPointInformation.defaultLayout))
@@ -134,11 +130,11 @@ std::pair<Ref<ComputePipeline>, NSString*> Device::createComputePipeline(const W
         if (!generatedPipelineLayout->isValid())
             return returnInvalidComputePipeline(*this, isAsync);
         auto computePipelineState = createComputePipelineState(m_device, function, generatedPipelineLayout, size, label.get(), shaderValidationState());
-        return std::make_pair(ComputePipeline::create(computePipelineState, WTFMove(generatedPipelineLayout), size, WTFMove(minimumBufferSizes), ++m_computePipelineId, *this), nil);
+        return std::make_pair(ComputePipeline::create(computePipelineState, WTFMove(generatedPipelineLayout), size, WTFMove(minimumBufferSizes), *this), nil);
     }
 
     auto computePipelineState = createComputePipelineState(m_device, function, pipelineLayout, size, label.get(), shaderValidationState());
-    return std::make_pair(ComputePipeline::create(computePipelineState, WTFMove(pipelineLayout), size, WTFMove(minimumBufferSizes), ++m_computePipelineId, *this), nil);
+    return std::make_pair(ComputePipeline::create(computePipelineState, WTFMove(pipelineLayout), size, WTFMove(minimumBufferSizes), *this), nil);
 }
 
 void Device::createComputePipelineAsync(const WGPUComputePipelineDescriptor& descriptor, CompletionHandler<void(WGPUCreatePipelineAsyncStatus, Ref<ComputePipeline>&&, String&& message)>&& callback)
@@ -154,13 +150,12 @@ void Device::createComputePipelineAsync(const WGPUComputePipelineDescriptor& des
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ComputePipeline);
 
-ComputePipeline::ComputePipeline(id<MTLComputePipelineState> computePipelineState, Ref<PipelineLayout>&& pipelineLayout, MTLSize threadsPerThreadgroup, BufferBindingSizesForPipeline&& minimumBufferSizes, uint64_t uniqueId, Device& device)
+ComputePipeline::ComputePipeline(id<MTLComputePipelineState> computePipelineState, Ref<PipelineLayout>&& pipelineLayout, MTLSize threadsPerThreadgroup, BufferBindingSizesForPipeline&& minimumBufferSizes, Device& device)
     : m_computePipelineState(computePipelineState)
     , m_device(device)
     , m_threadsPerThreadgroup(threadsPerThreadgroup)
     , m_pipelineLayout(WTFMove(pipelineLayout))
     , m_minimumBufferSizes(WTFMove(minimumBufferSizes))
-    , m_uniqueId(uniqueId)
 {
 }
 

@@ -71,12 +71,16 @@ void ComputePassEncoderImpl::end()
 void ComputePassEncoderImpl::setBindGroup(Index32 index, const BindGroup& bindGroup,
     std::optional<Vector<BufferDynamicOffset>>&& offsets)
 {
-    wgpuComputePassEncoderSetBindGroup(m_backing.get(), index, protectedConvertToBackingContext()->convertToBacking(bindGroup), WTFMove(offsets));
+    auto backingOffsets = valueOrDefault(offsets);
+    wgpuComputePassEncoderSetBindGroup(m_backing.get(), index, protectedConvertToBackingContext()->convertToBacking(bindGroup), static_cast<uint32_t>(backingOffsets.size()), backingOffsets.data());
 }
 
-void ComputePassEncoderImpl::setBindGroup(Index32, const BindGroup&, std::span<const uint32_t>, Size64, Size32)
+void ComputePassEncoderImpl::setBindGroup(Index32 index, const BindGroup& bindGroup,
+    std::span<const uint32_t> dynamicOffsetsArrayBuffer,
+    Size64 dynamicOffsetsDataStart,
+    Size32 dynamicOffsetsDataLength)
 {
-    RELEASE_ASSERT_NOT_REACHED();
+    wgpuComputePassEncoderSetBindGroup(m_backing.get(), index, protectedConvertToBackingContext()->convertToBacking(bindGroup), dynamicOffsetsDataLength, dynamicOffsetsArrayBuffer.subspan(dynamicOffsetsDataStart).data());
 }
 
 void ComputePassEncoderImpl::pushDebugGroup(String&& groupLabel)

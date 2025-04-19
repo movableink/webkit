@@ -25,7 +25,6 @@
 
 #pragma once
 
-#import "BindableResource.h"
 #import "Instance.h"
 #import "SwiftCXXThunk.h"
 #import "WebGPU.h"
@@ -41,6 +40,7 @@
 #import <wtf/RefCountedAndCanMakeWeakPtr.h>
 #import <wtf/RetainReleaseSwift.h>
 #import <wtf/TZoneMalloc.h>
+#import <wtf/WeakHashSet.h>
 #import <wtf/WeakPtr.h>
 
 struct WGPUBufferImpl {
@@ -112,9 +112,9 @@ public:
     void indirectBufferRecomputed(uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount);
     void indirectIndexedBufferRecomputed(MTLIndexType, NSUInteger indexBufferOffsetInBytes, uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount);
 
-    std::optional<DrawIndexCacheContainerIterator> canSkipDrawIndexedValidation(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, uint32_t instanceCount, MTLIndexType, uint32_t firstInstance, uint32_t baseVertex, uint32_t primitiveOffset, uint32_t minInstanceCount, id<MTLIndirectCommandBuffer> = nil) const;
-    void drawIndexedValidated(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, uint32_t instanceCount, MTLIndexType, uint32_t firstInstance, uint32_t baseVertex, uint32_t primitiveOffset, uint32_t minInstanceCount, id<MTLIndirectCommandBuffer> = nil);
-    void skippedDrawIndexedValidation(CommandEncoder&, DrawIndexCacheContainerIterator);
+    bool canSkipDrawIndexedValidation(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, MTLIndexType, uint32_t firstInstance, id<MTLIndirectCommandBuffer> = nil) const;
+    void drawIndexedValidated(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, MTLIndexType, uint32_t firstInstance, id<MTLIndirectCommandBuffer> = nil);
+    void skippedDrawIndexedValidation(CommandEncoder&, uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, uint32_t instanceCount, MTLIndexType, uint32_t firstInstance, uint32_t baseVertex, uint32_t minInstanceCount, uint32_t primitiveOffset, id<MTLIndirectCommandBuffer> = nil);
     void skippedDrawIndirectIndexedValidation(CommandEncoder&, Buffer*, MTLIndexType, uint32_t indexBufferOffsetInBytes, uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount, MTLPrimitiveType);
     void skippedDrawIndirectValidation(CommandEncoder&, uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount);
 
@@ -126,10 +126,6 @@ public:
 #if ENABLE(WEBGPU_SWIFT)
     void copyFrom(const std::span<const uint8_t>, const size_t offset) HAS_SWIFTCXX_THUNK;
 #endif
-    void removeSkippedValidationCommandEncoder(uint64_t);
-    bool mustTakeSlowIndexValidationPath() const { return m_mustTakeSlowIndexValidationPath; }
-    void clearMustTakeSlowIndexValidationPath() { m_mustTakeSlowIndexValidationPath = false; }
-    void takeSlowIndexValidationPath(CommandBuffer&, uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, uint32_t instanceCount, MTLIndexType, uint32_t firstInstance, uint32_t baseVertex, uint32_t minInstanceCount, uint32_t primitiveOffset);
 
 private:
     Buffer(id<MTLBuffer>, uint64_t initialSize, WGPUBufferUsageFlags, State initialState, MappingRange initialMappingRange, Device&);
@@ -145,6 +141,8 @@ private:
     void setState(State);
     void incrementBufferMapCount();
     void decrementBufferMapCount();
+    uint64_t mapGPUAddress(MTLResourceID, uint32_t firstInstance) const;
+    void takeSlowIndexValidationPath(CommandBuffer&, uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, uint32_t instanceCount, MTLIndexType, uint32_t firstInstance, uint32_t baseVertex, uint32_t minInstanceCount, uint32_t primitiveOffset);
     void takeSlowIndirectIndexValidationPath(CommandBuffer&, Buffer&, MTLIndexType, uint32_t indexBufferOffsetInBytes, uint32_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount, MTLPrimitiveType);
     void takeSlowIndirectValidationPath(CommandBuffer&, uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount);
 
@@ -179,12 +177,13 @@ private:
         } drawType { NoDraw };
     } m_indirectCache;
 
-    DrawIndexCacheContainer m_drawIndexedCache;
+    using DrawIndexCacheContainer = HashMap<uint64_t, uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>>;
+    HashMap<uint64_t, DrawIndexCacheContainer, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_drawIndexedCache;
 
     const Ref<Device> m_device;
     mutable Vector<uint64_t> m_commandEncoders; // NOLINT - https://bugs.webkit.org/show_bug.cgi?id=289718
     mutable HashMap<uint64_t, uint32_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_gpuResourceMap;
-    HashSet<uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_skippedValidationCommandEncoders;
+    WeakHashSet<CommandEncoder> m_skippedValidationCommandEncoders;
     bool m_mustTakeSlowIndexValidationPath { false };
 #if CPU(X86_64)
     bool m_mappedAtCreation { false };

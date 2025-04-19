@@ -91,12 +91,17 @@ void RenderPassEncoderImpl::drawIndexedIndirect(const Buffer& indirectBuffer, Si
 void RenderPassEncoderImpl::setBindGroup(Index32 index, const BindGroup& bindGroup,
     std::optional<Vector<BufferDynamicOffset>>&& dynamicOffsets)
 {
-    wgpuRenderPassEncoderSetBindGroup(m_backing.get(), index, protectedConvertToBackingContext()->convertToBacking(bindGroup), WTFMove(dynamicOffsets));
+    auto backingOffsets = valueOrDefault(dynamicOffsets);
+    wgpuRenderPassEncoderSetBindGroup(m_backing.get(), index, protectedConvertToBackingContext()->convertToBacking(bindGroup), backingOffsets.size(), backingOffsets.data());
 }
 
-void RenderPassEncoderImpl::setBindGroup(Index32, const BindGroup&, std::span<const uint32_t>, Size64, Size32)
+void RenderPassEncoderImpl::setBindGroup(Index32 index, const BindGroup& bindGroup,
+    std::span<const uint32_t> dynamicOffsetsArrayBuffer,
+    Size64 dynamicOffsetsDataStart,
+    Size32 dynamicOffsetsDataLength)
 {
-    RELEASE_ASSERT_NOT_REACHED();
+    // FIXME: Use checked algebra.
+    wgpuRenderPassEncoderSetBindGroup(m_backing.get(), index, protectedConvertToBackingContext()->convertToBacking(bindGroup), dynamicOffsetsDataLength, dynamicOffsetsArrayBuffer.subspan(dynamicOffsetsDataStart).data());
 }
 
 void RenderPassEncoderImpl::pushDebugGroup(String&& groupLabel)

@@ -50,9 +50,9 @@ class PipelineLayout;
 class ComputePipeline : public RefCountedAndCanMakeWeakPtr<ComputePipeline>, public WGPUComputePipelineImpl {
     WTF_MAKE_TZONE_ALLOCATED(ComputePipeline);
 public:
-    static Ref<ComputePipeline> create(id<MTLComputePipelineState> computePipelineState, Ref<PipelineLayout>&& pipelineLayout, MTLSize threadsPerThreadgroup, BufferBindingSizesForPipeline&& minimumBufferSizes, uint64_t uniqueId, Device& device)
+    static Ref<ComputePipeline> create(id<MTLComputePipelineState> computePipelineState, Ref<PipelineLayout>&& pipelineLayout, MTLSize threadsPerThreadgroup, BufferBindingSizesForPipeline&& minimumBufferSizes, Device& device)
     {
-        return adoptRef(*new ComputePipeline(computePipelineState, WTFMove(pipelineLayout), threadsPerThreadgroup, WTFMove(minimumBufferSizes), uniqueId, device));
+        return adoptRef(*new ComputePipeline(computePipelineState, WTFMove(pipelineLayout), threadsPerThreadgroup, WTFMove(minimumBufferSizes), device));
     }
     static Ref<ComputePipeline> createInvalid(Device& device)
     {
@@ -75,9 +75,9 @@ public:
     Ref<PipelineLayout> protectedPipelineLayout() const { return m_pipelineLayout; }
 
     const BufferBindingSizesForBindGroup* minimumBufferSizes(uint32_t) const;
-    uint64_t uniqueId() const { return m_uniqueId; }
+
 private:
-    ComputePipeline(id<MTLComputePipelineState>, Ref<PipelineLayout>&&, MTLSize, BufferBindingSizesForPipeline&&, uint64_t uniqueId, Device&);
+    ComputePipeline(id<MTLComputePipelineState>, Ref<PipelineLayout>&&, MTLSize, BufferBindingSizesForPipeline&&, Device&);
     ComputePipeline(Device&);
 
     const id<MTLComputePipelineState> m_computePipelineState { nil };
@@ -86,7 +86,6 @@ private:
     const MTLSize m_threadsPerThreadgroup;
     const Ref<PipelineLayout> m_pipelineLayout;
     const BufferBindingSizesForPipeline m_minimumBufferSizes;
-    const uint64_t m_uniqueId { 0 };
 };
 
 } // namespace WebGPU
