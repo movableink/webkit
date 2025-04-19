@@ -3623,6 +3623,9 @@ void RenderLayer::paintLayerContents(GraphicsContext& context, const LayerPainti
     bool isSelfPaintingLayer = this->isSelfPaintingLayer();
 
     auto hasVisibleContent = [&]() -> bool {
+        if (renderer().isSkippedContent())
+            return false;
+
         if (!m_hasVisibleContent)
             return false;
 
