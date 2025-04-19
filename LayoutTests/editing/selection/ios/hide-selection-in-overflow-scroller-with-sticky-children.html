@@ -3,6 +3,7 @@
 <script src="../../../resources/ui-helper.js"></script>
 <script src="../../../resources/js-test.js"></script>
 <head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body, html {
@@ -18,8 +19,8 @@ body, html {
     border: 1px solid tomato;
 }
 
-.tall-content {
-    height: 5000px;
+.tall {
+    height: 200px;
 }
 
 .start {
@@ -29,12 +30,25 @@ body, html {
 .end {
     border: 1px solid teal;
 }
+
+.sticky {
+    bottom: 200px;
+    left: 200px;
+    width: 100px;
+    height: 100px;
+    border: solid 1px black;
+    border-radius: 1em;
+    position: sticky;
+    line-height: 100px;
+    text-align: center;
+    background: white;
+}
 </style>
 <script>
 jsTestIsAsync = true;
 
 addEventListener("load", async () => {
-    description("This test verifies that selection rects are hidden when scrolling an overflow scrollable container, if the selection spans across separate scroll views. To manually test, select the text below and scroll the red box; the selection should hide when scrolling and reappear when scrolling ends.")
+    description("This test verifies that selection rects are hidden when scrolling an overflow scrollable container, if the selection covers a stickily-positioned container. To manually test, select the text below and scroll the red box; the selection should hide when scrolling and reappear when scrolling ends.")
     if (!window.testRunner)
         return;
 
@@ -67,12 +81,14 @@ addEventListener("load", async () => {
 </script>
 </head>
 <body>
-    <p><span class="start">Select</span> me</p>
     <div class="scroller">
+        <div class="tall"></div>
+        <p><span class="start">Select</span> me</p>
+        <div class="sticky">Sticky</div>
+        <div class="tall"></div>
         <p>More <span class="end">text</span></p>
-        <div class="tall-content"></div>
     </div>
-    <pre id="description"></pre>
-    <pre id="console"></pre>
+    <p id="description"></p>
+    <p id="console"></p>
 </body>
 </html>

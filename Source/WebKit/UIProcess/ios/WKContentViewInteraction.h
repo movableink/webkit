@@ -513,6 +513,7 @@ struct ImageAnalysisContextMenuActionData {
     CGPoint _lastInteractionLocation;
     std::optional<WebKit::TransactionID> _layerTreeTransactionIdAtLastInteractionStart;
 
+    __weak UIView *_cachedSelectionContainerView;
     __weak UIView *_lastSiblingBeforeSelectionHighlight;
     WebKit::WKSelectionDrawingInfo _lastSelectionDrawingInfo;
     RetainPtr<WKTextRange> _cachedSelectedTextRange;

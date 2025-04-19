@@ -6144,9 +6144,6 @@ void WebPage::computeEnclosingLayerID(EditorState& state, const VisibleSelection
         }
     }
 
-    if (!state.visualData->enclosingScrollingNodeID)
-        return;
-
     if (selection.isCaret()) {
         state.visualData->scrollingNodeIDAtStart = state.visualData->enclosingScrollingNodeID;
         state.visualData->scrollingNodeIDAtEnd = state.visualData->enclosingScrollingNodeID;

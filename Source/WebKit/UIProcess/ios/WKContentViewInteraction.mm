@@ -1698,6 +1698,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     _cachedHasCustomTintColor = std::nullopt;
     _cachedSelectedTextRange = nil;
+    _cachedSelectionContainerView = nil;
 }
 
 - (void)cleanUpInteractionPreviewContainers
@@ -9268,6 +9269,7 @@ static bool canUseQuickboardControllerFor(UITextContentType type)
 
     [self _updateSelectionAssistantSuppressionState];
 
+    _cachedSelectionContainerView = nil;
     _cachedSelectedTextRange = nil;
     _selectionNeedsUpdate = YES;
     // If we are changing the selection with a gesture there is no need
@@ -14116,13 +14118,29 @@ static inline WKTextAnimationType toWKTextAnimationType(WebCore::TextAnimationTy
 
 - (UIView *)_selectionContainerViewInternal
 {
-    if (!self.selectionHonorsOverflowScrolling)
-        return self;
+    if (_cachedSelectionContainerView)
+        return _cachedSelectionContainerView;
 
-    if (!_page->editorState().hasVisualData())
-        return self;
+    _cachedSelectionContainerView = [&] -> UIView * {
+        if (!self.selectionHonorsOverflowScrolling)
+            return self;
 
-    return [self _viewForLayerID:_page->editorState().visualData->enclosingLayerID] ?: self;
+        if (!_page->editorState().hasVisualData())
+            return self;
+
+        RetainPtr enclosingView = [self _viewForLayerID:_page->editorState().visualData->enclosingLayerID];
+        if (!enclosingView)
+            return self;
+
+        for (UIView *selectedView in self.allViewsIntersectingSelectionRange) {
+            if (enclosingView != selectedView && ![enclosingView _wk_isAncestorOf:selectedView])
+                return self;
+        }
+        return enclosingView.get();
+    }();
+
+    ASSERT(_cachedSelectionContainerView);
+    return _cachedSelectionContainerView;
 }
 
 - (UIView *)_viewForLayerID:(std::optional<WebCore::PlatformLayerIdentifier>)layerID
@@ -14153,7 +14171,7 @@ static inline WKTextAnimationType toWKTextAnimationType(WebCore::TextAnimationTy
 
 - (BOOL)_shouldHideSelectionDuringOverflowScroll:(UIScrollView *)scrollView
 {
-    if (!self.selectionHonorsOverflowScrolling)
+    if (self._selectionContainerViewInternal == self)
         return YES;
 
     auto& state = _page->editorState();
@@ -14161,7 +14179,7 @@ static inline WKTextAnimationType toWKTextAnimationType(WebCore::TextAnimationTy
         return NO;
 
     auto enclosingScrollingNodeID = state.visualData->enclosingScrollingNodeID;
-    RetainPtr enclosingScroller = [self _scrollViewForScrollingNodeID:enclosingScrollingNodeID];
+    RetainPtr enclosingScroller = [self _scrollViewForScrollingNodeID:enclosingScrollingNodeID] ?: self._scroller;
     if (!enclosingScroller || ![enclosingScroller _wk_isAncestorOf:scrollView])
         return NO;
 
@@ -14169,7 +14187,7 @@ static inline WKTextAnimationType toWKTextAnimationType(WebCore::TextAnimationTy
         if (endpointScrollingNodeID == enclosingScrollingNodeID)
             return false;
 
-        RetainPtr endpointScroller = [self _scrollViewForScrollingNodeID:endpointScrollingNodeID];
+        RetainPtr endpointScroller = [self _scrollViewForScrollingNodeID:endpointScrollingNodeID] ?: self._scroller;
         return endpointScroller == scrollView || [scrollView _wk_isAncestorOf:endpointScroller.get()];
     };
 
