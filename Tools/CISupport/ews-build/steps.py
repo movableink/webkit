@@ -886,6 +886,27 @@ class CheckOutSpecificRevision(shell.ShellCommandNewStyle):
         return super().run()
 
 
+class SetCredentialHelper(steps.ShellSequence, ShellMixin):
+    name = 'set-credential-helper'
+    descriptionDone = ['Set credential helper']
+    flunkOnFailure = False
+    haltOnFailure = False
+    warnOnFailure = False
+
+    def __init__(self, **kwargs):
+        super().__init__(timeout=5 * 60, logEnviron=False, **kwargs)
+
+    def doStepIf(self, step):
+        return self.getProperty('sensitive', True)
+
+    def run(self):
+        self.commands = [
+            util.ShellArg(command=['git', 'config', '--global', 'credential.helper', '!echo_credentials() { sleep 1; echo "username=${GIT_USER}"; echo "password=${GIT_PASSWORD}"; }; echo_credentials'], logname='stdio'),
+        ]
+
+        return super().run()
+
+
 class FetchBranches(steps.ShellSequence, ShellMixin):
     name = 'fetch-branch-references'
     descriptionDone = ['Updated branch information']
@@ -898,7 +919,6 @@ class FetchBranches(steps.ShellSequence, ShellMixin):
     def run(self):
         self.commands = [
             util.ShellArg(command=['git', 'fetch', DEFAULT_REMOTE, '--prune'], logname='stdio'),
-            util.ShellArg(command=['git', 'config', 'credential.helper', '!echo_credentials() { sleep 1; echo "username=${GIT_USER}"; echo "password=${GIT_PASSWORD}"; }; echo_credentials'], logname='stdio'),
         ]
 
         project = self.getProperty('project', GITHUB_PROJECTS[0])

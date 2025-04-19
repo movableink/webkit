@@ -3854,7 +3854,7 @@ class TestCheckOutPullRequest(BuildStepMixinAdditions, unittest.TestCase):
                 logEnviron=False,
                 env=self.ENV,
                 command=['git', 'cherry-pick', '--allow-empty', 'HEAD..remotes/Contributor/eng/pull-request-branch'],
-            ) + 0,
+            ) + 0
         )
         self.expectOutcome(result=SUCCESS, state_string='Checked out pull request')
         return self.runStep()
@@ -3905,8 +3905,8 @@ class TestCheckOutPullRequest(BuildStepMixinAdditions, unittest.TestCase):
                 timeout=600,
                 logEnviron=False,
                 env=self.ENV,
-                command=['git', 'cherry-pick', '--allow-empty', 'HEAD..remotes/Contributor-apple/eng/pull-request-branch'],
-            ) + 0,
+                command=['git', 'cherry-pick', '--allow-empty', 'HEAD..remotes/Contributor-apple/eng/pull-request-branch']
+            ) + 0
         )
         self.expectOutcome(result=SUCCESS, state_string='Checked out pull request')
         return self.runStep()
@@ -3986,7 +3986,8 @@ class TestCheckOutPullRequest(BuildStepMixinAdditions, unittest.TestCase):
                 logEnviron=False,
                 env=self.ENV,
                 command=['sh', '-c', 'git remote add Contributor https://github.com/Contributor/WebKit.git || exit 0'],
-            ) + 0, ExpectShell(
+            ) + 0,
+            ExpectShell(
                 workdir='wkdir',
                 timeout=600,
                 logEnviron=False,
@@ -4043,12 +4044,6 @@ class TestCheckOutPullRequest(BuildStepMixinAdditions, unittest.TestCase):
                 logEnviron=False,
                 env=self.ENV,
                 command=['git', 'remote', 'set-url', 'Contributor', 'https://github.com/Contributor/WebKit.git'],
-            ) + 0, ExpectShell(
-                workdir='wkdir',
-                timeout=600,
-                logEnviron=False,
-                env=self.ENV,
-                command=['git', 'fetch', 'Contributor', 'eng/pull-request-branch'],
             ) + 1,
         )
         self.expectOutcome(result=FAILURE, state_string='Failed to checkout and rebase branch from PR 1234')
@@ -7606,6 +7601,28 @@ class TestInstallHooks(BuildStepMixinAdditions, unittest.TestCase):
         return self.runStep()
 
 
+class TestSetCredentialHelper(BuildStepMixinAdditions, unittest.TestCase):
+    def setUp(self):
+        self.longMessage = True
+        return self.setUpBuildStep()
+
+    def tearDown(self):
+        return self.tearDownBuildStep()
+
+    def test_success(self):
+        self.setupStep(SetCredentialHelper())
+        self.expectRemoteCommands(
+            ExpectShell(
+                workdir='wkdir',
+                timeout=300,
+                logEnviron=False,
+                command=['git', 'config', '--global', 'credential.helper', '!echo_credentials() { sleep 1; echo "username=${GIT_USER}"; echo "password=${GIT_PASSWORD}"; }; echo_credentials'],
+            ) + 0,
+        )
+        self.expectOutcome(result=SUCCESS)
+        return self.runStep()
+
+
 class TestFetchBranches(BuildStepMixinAdditions, unittest.TestCase):
     def setUp(self):
         self.longMessage = True
@@ -7622,12 +7639,7 @@ class TestFetchBranches(BuildStepMixinAdditions, unittest.TestCase):
                         logEnviron=False,
                         command=['git', 'fetch', 'origin', '--prune']) +
             ExpectShell.log('stdio', stdout='   fb192c1de607..afb17ed1708b  main       -> origin/main\n') +
-            0, ExpectShell(
-                workdir='wkdir',
-                timeout=300,
-                logEnviron=False,
-                command=['git', 'config', 'credential.helper', '!echo_credentials() { sleep 1; echo "username=${GIT_USER}"; echo "password=${GIT_PASSWORD}"; }; echo_credentials'],
-            ) + 0,
+            0,
         )
         self.expectOutcome(result=SUCCESS)
         return self.runStep()
@@ -7646,12 +7658,6 @@ class TestFetchBranches(BuildStepMixinAdditions, unittest.TestCase):
                 logEnviron=False,
                 env=env,
                 command=['git', 'fetch', 'origin', '--prune'],
-            ) + 0, ExpectShell(
-                workdir='wkdir',
-                timeout=300,
-                logEnviron=False,
-                env=env,
-                command=['git', 'config', 'credential.helper', '!echo_credentials() { sleep 1; echo "username=${GIT_USER}"; echo "password=${GIT_PASSWORD}"; }; echo_credentials'],
             ) + 0, ExpectShell(
                 workdir='wkdir',
                 timeout=300,
@@ -7683,12 +7689,7 @@ class TestFetchBranches(BuildStepMixinAdditions, unittest.TestCase):
                         logEnviron=False,
                         command=['git', 'fetch',  'origin', '--prune']) +
             ExpectShell.log('stdio', stdout="fatal: unable to access 'https://github.com/WebKit/WebKit/': Could not resolve host: github.com\n") +
-            2, ExpectShell(
-                workdir='wkdir',
-                timeout=300,
-                logEnviron=False,
-                command=['git', 'config', 'credential.helper', '!echo_credentials() { sleep 1; echo "username=${GIT_USER}"; echo "password=${GIT_PASSWORD}"; }; echo_credentials'],
-            ) + 0,
+            2,
         )
         self.expectOutcome(result=FAILURE)
         return self.runStep()
