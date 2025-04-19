@@ -618,11 +618,13 @@ void WebPushDaemon::notifyClientPushMessageIsAvailable(const WebCore::PushSubscr
         const NSString *URLPrefix = @"webapp://web-push/";
         RetainPtr launchURL = adoptNS([[NSURL alloc] initWithString:[URLPrefix stringByAppendingFormat:@"%@", subscriptionSetIdentifier.pushPartition.createNSString().get()]]);
 
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         NSDictionary *options = @{
             FBSOpenApplicationOptionKeyActivateForEvent: @{ FBSActivateForEventOptionTypeBackgroundContentFetching: @{ } },
             FBSOpenApplicationOptionKeyPayloadURL : launchURL.get(),
             FBSOpenApplicationOptionKeyPayloadOptions : @{ UIApplicationLaunchOptionsSourceApplicationKey : @"com.apple.WebKit.webpushd" },
         };
+ALLOW_DEPRECATED_DECLARATIONS_END
 
         RetainPtr configuration = adoptNS([[_LSOpenConfiguration alloc] init]);
         configuration.get().sensitive = YES;
@@ -652,12 +654,14 @@ void WebPushDaemon::notifyClientPushMessageIsAvailable(const WebCore::PushSubscr
 
     RetainPtr action = adoptNS([[BSAction alloc] initWithInfo:bsSettings.get() responder:bsResponder.get()]);
 
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     FBSOpenApplicationOptions *options = [FBSOpenApplicationOptions optionsWithDictionary:@{
         FBSOpenApplicationOptionKeyActivateForEvent: @{ FBSActivateForEventOptionTypeBackgroundContentFetching: @{ } },
         FBSOpenApplicationOptionKeyActivateSuspended : @YES,
         FBSOpenApplicationOptionKeyActions : @[ action.get() ],
         FBSOpenApplicationOptionKeyPayloadOptions : @{ UIApplicationLaunchOptionsSourceApplicationKey : @"com.apple.WebKit.webpushd" },
     }];
+ALLOW_DEPRECATED_DECLARATIONS_END
 
     // This function doesn't actually follow the create rule, therefore we don't use adoptNS on it.
     if (!m_openService)
