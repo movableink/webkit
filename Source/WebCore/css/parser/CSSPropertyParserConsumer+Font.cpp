@@ -288,12 +288,12 @@ static std::optional<CSSValueID> consumeGenericFamilyUnresolved(CSSParserTokenRa
     return consumeIdentRaw<CSSValueSerif, CSSValueSansSerif, CSSValueCursive, CSSValueFantasy, CSSValueMonospace, CSSValueWebkitBody, CSSValueWebkitPictograph, CSSValueSystemUi>(range);
 }
 
-static RefPtr<CSSValue> consumeGenericFamily(CSSParserTokenRange& range)
+static RefPtr<CSSValue> consumeGenericFamily(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     if (auto familyName = consumeGenericFamilyUnresolved(range)) {
         // FIXME: Remove special case for system-ui.
         if (*familyName == CSSValueSystemUi)
-            return CSSValuePool::singleton().createFontFamilyValue(nameString(*familyName));
+            return state.pool.createFontFamilyValue(nameString(*familyName));
         return CSSPrimitiveValue::create(*familyName);
     }
     return nullptr;
@@ -318,14 +318,14 @@ static std::optional<UnresolvedFontFamily> consumeFontFamilyUnresolved(CSSParser
     return list;
 }
 
-RefPtr<CSSValue> consumeFamilyName(CSSParserTokenRange& range, CSS::PropertyParserState&)
+RefPtr<CSSValue> consumeFamilyName(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // https://drafts.csswg.org/css-fonts-4/#family-name-syntax
 
     auto familyName = consumeFamilyNameUnresolved(range);
     if (familyName.isNull())
         return nullptr;
-    return CSSValuePool::singleton().createFontFamilyValue(familyName);
+    return state.pool.createFontFamilyValue(familyName);
 }
 
 RefPtr<CSSValue> consumeFontFamily(CSSParserTokenRange& range, CSS::PropertyParserState& state)
@@ -334,7 +334,7 @@ RefPtr<CSSValue> consumeFontFamily(CSSParserTokenRange& range, CSS::PropertyPars
     // https://drafts.csswg.org/css-fonts-4/#font-family-prop
 
     return consumeListSeparatedBy<',', OneOrMore>(range, [&](auto& range) -> RefPtr<CSSValue> {
-        if (auto parsedValue = consumeGenericFamily(range))
+        if (auto parsedValue = consumeGenericFamily(range, state))
             return parsedValue;
         return consumeFamilyName(range, state);
     });
@@ -458,14 +458,15 @@ static std::optional<UnresolvedFont> consumeUnresolvedFont(CSSParserTokenRange& 
     };
 }
 
-std::optional<UnresolvedFont> parseUnresolvedFont(const String& string, const CSSParserContext& parserContext)
+std::optional<UnresolvedFont> parseUnresolvedFont(const String& string, ScriptExecutionContext& context, std::optional<CSSParserMode> parserModeOverride)
 {
+    auto parserContext = CSSParserContext(parserModeOverride ? *parserModeOverride : parserMode(context));
     auto tokenizer = CSSTokenizer(string);
     auto range = tokenizer.tokenRange();
 
     range.consumeWhitespace();
 
-    auto state = CSS::PropertyParserState { .context = parserContext };
+    auto state = CSS::PropertyParserState { .context = parserContext, .pool = context.cssValuePool() };
     return consumeUnresolvedFont(range, state);
 }
 
@@ -492,21 +493,27 @@ RefPtr<CSSValue> consumeFontSizeAdjust(CSSParserTokenRange& range, CSS::Property
 // MARK: - @font-face
 
 // MARK: @font-face 'font-family'
-RefPtr<CSSValue> consumeFontFaceFontFamily(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+
+RefPtr<CSSValue> parseFontFaceFontFamily(const String& string, ScriptExecutionContext& context)
 {
     // <'font-family'> = <family-name>
     // https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-family
 
-    auto name = consumeFamilyName(range, state);
-    if (!name || !range.atEnd())
+    CSSParserContext parserContext(parserMode(context));
+    CSSParser parser(parserContext, string);
+    CSSParserTokenRange range = parser.tokenizer()->tokenRange();
+
+    range.consumeWhitespace();
+
+    if (range.atEnd())
         return nullptr;
 
-    // FIXME-NEWPARSER: https://bugs.webkit.org/show_bug.cgi?id=196381 For compatibility with the old parser, we have to make
-    // a list here, even though the list always contains only a single family name.
-    // Once the old parser is gone, we can delete this function, make the caller
-    // use consumeFamilyName instead, and then patch the @font-face code to
-    // not expect a list with a single name in it.
-    return CSSValueList::createCommaSeparated(name.releaseNonNull());
+    auto state = CSS::PropertyParserState { .context = parserContext, .pool = context.cssValuePool() };
+    auto parsedValue = CSSPropertyParsing::consumeFontFaceFontFamily(range, state);
+    if (!parsedValue || !range.atEnd())
+        return nullptr;
+
+    return parsedValue;
 }
 
 // MARK: @font-face 'src'
@@ -665,7 +672,7 @@ RefPtr<CSSValueList> parseFontFaceSrc(const String& string, ScriptExecutionConte
     if (range.atEnd())
         return nullptr;
 
-    auto state = CSS::PropertyParserState { .context = parserContext };
+    auto state = CSS::PropertyParserState { .context = parserContext, .pool = context.cssValuePool() };
     auto parsedValue = consumeFontFaceSrc(range, state);
     if (!parsedValue || !range.atEnd())
         return nullptr;
@@ -689,7 +696,7 @@ RefPtr<CSSValue> parseFontFaceSizeAdjust(const String& string, ScriptExecutionCo
     if (range.atEnd())
         return nullptr;
 
-    auto state = CSS::PropertyParserState { .context = parserContext };
+    auto state = CSS::PropertyParserState { .context = parserContext, .pool = context.cssValuePool() };
     auto parsedValue = CSSPropertyParsing::consumeFontFaceSizeAdjust(range, state);
     if (!parsedValue || !range.atEnd())
         return nullptr;
@@ -761,7 +768,7 @@ RefPtr<CSSValue> parseFontFaceFontStyle(const String& string, ScriptExecutionCon
     if (range.atEnd())
         return nullptr;
 
-    auto state = CSS::PropertyParserState { .context = parserContext };
+    auto state = CSS::PropertyParserState { .context = parserContext, .pool = context.cssValuePool() };
     auto parsedValue = consumeFontFaceFontStyle(range, state);
     if (!parsedValue || !range.atEnd())
         return nullptr;
@@ -894,7 +901,7 @@ RefPtr<CSSValue> parseFontFaceFeatureSettings(const String& string, ScriptExecut
     if (range.atEnd())
         return nullptr;
 
-    auto state = CSS::PropertyParserState { .context = parserContext };
+    auto state = CSS::PropertyParserState { .context = parserContext, .pool = context.cssValuePool() };
     auto parsedValue = CSSPropertyParsing::consumeFontFeatureSettings(range, state);
     if (!parsedValue || !range.atEnd())
         return nullptr;
@@ -940,7 +947,7 @@ RefPtr<CSSValue> parseFontFaceFontWidth(const String& string, ScriptExecutionCon
     if (range.atEnd())
         return nullptr;
 
-    auto state = CSS::PropertyParserState { .context = parserContext };
+    auto state = CSS::PropertyParserState { .context = parserContext, .pool = context.cssValuePool() };
     auto parsedValue = CSSPropertyParsing::consumeFontFaceFontWidth(range, state);
     if (!parsedValue || !range.atEnd())
         return nullptr;
@@ -964,7 +971,7 @@ RefPtr<CSSValue> parseFontFaceFontWeight(const String& string, ScriptExecutionCo
     if (range.atEnd())
         return nullptr;
 
-    auto state = CSS::PropertyParserState { .context = parserContext };
+    auto state = CSS::PropertyParserState { .context = parserContext, .pool = context.cssValuePool() };
     auto parsedValue = CSSPropertyParsing::consumeFontFaceFontWeight(range, state);
     if (!parsedValue || !range.atEnd())
         return nullptr;

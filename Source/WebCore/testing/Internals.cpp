@@ -2300,7 +2300,7 @@ ExceptionOr<void> Internals::setUnderPageBackgroundColorOverride(const String& c
     if (!document || !document->page())
         return Exception { ExceptionCode::InvalidAccessError };
 
-    auto color = CSSPropertyParserHelpers::parseColorRaw(colorValue, document->cssParserContext(), [] {
+    auto color = CSSPropertyParserHelpers::parseColorRaw(colorValue, document->cssParserContext(), *document, [] {
         return LazySlowPathColorParsingParameters { { }, { }, std::nullopt };
     });
     if (!color.isValid())

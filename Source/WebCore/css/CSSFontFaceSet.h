@@ -86,7 +86,7 @@ public:
 
     CSSFontFace* lookUpByCSSConnection(StyleRuleFontFace&);
 
-    ExceptionOr<bool> check(const String& font, const String& text);
+    ExceptionOr<bool> check(ScriptExecutionContext&, const String& font, const String& text);
 
     CSSSegmentedFontFace* fontFace(FontSelectionRequest, const AtomString& family);
 
@@ -97,7 +97,7 @@ public:
 
     size_t facesPartitionIndex() const { return m_facesPartitionIndex; }
 
-    ExceptionOr<Vector<std::reference_wrapper<CSSFontFace>>> matchingFacesExcludingPreinstalledFonts(const String& font, const String& text);
+    ExceptionOr<Vector<std::reference_wrapper<CSSFontFace>>> matchingFacesExcludingPreinstalledFonts(ScriptExecutionContext&, const String& font, const String& text);
 
     // FIXME: Should this be implemented?
     void updateStyleIfNeeded(CSSFontFace&) final { }
@@ -105,14 +105,14 @@ public:
 private:
     CSSFontFaceSet(CSSFontSelector*);
 
-    void removeFromFacesLookupTable(const CSSFontFace&, const CSSValueList& familiesToSearchFor);
+    void removeFromFacesLookupTable(const CSSFontFace&, const CSSValue& familyToSearchFor);
     void addToFacesLookupTable(CSSFontFace&);
 
     void incrementActiveCount();
     void decrementActiveCount();
 
     void fontStateChanged(CSSFontFace&, CSSFontFace::Status oldState, CSSFontFace::Status newState) final;
-    void fontPropertyChanged(CSSFontFace&, CSSValueList* oldFamilies = nullptr) final;
+    void fontPropertyChanged(CSSFontFace&, CSSValue* oldFamily = nullptr) final;
 
     void ensureLocalFontFacesForFamilyRegistered(const AtomString&);
 

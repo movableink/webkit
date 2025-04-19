@@ -869,9 +869,9 @@ RefPtr<CSSValue> consumeColor(CSSParserTokenRange& range, CSS::PropertyParserSta
         if (auto keyword = color->keyword())
             return CSSPrimitiveValue::create(keyword->valueID);
         if (auto hex = color->hex())
-            return CSSValuePool::singleton().createColorValue(Color { hex->value });
+            return propertyParserState.pool.createColorValue(Color { hex->value });
         if (auto resolved = color->resolved())
-            return CSSValuePool::singleton().createColorValue(WTFMove(resolved->value));
+            return propertyParserState.pool.createColorValue(WTFMove(resolved->value));
 
         return CSSColorValue::create(WTFMove(*color));
     }
@@ -892,7 +892,7 @@ Color consumeColorRaw(CSSParserTokenRange& range, CSS::PropertyParserState& prop
 
 // MARK: - Raw parsing entry points
 
-Color parseColorRawSlow(const String& string, const CSSParserContext& context, const CSSColorParsingOptions& options, CSS::PlatformColorResolutionState& eagerResolutionState)
+Color parseColorRawSlow(const String& string, const CSSParserContext& context, ScriptExecutionContext& scriptExecutionContext, const CSSColorParsingOptions& options, CSS::PlatformColorResolutionState& eagerResolutionState)
 {
     CSSTokenizer tokenizer(string);
     CSSParserTokenRange range(tokenizer.tokenRange());
@@ -900,7 +900,7 @@ Color parseColorRawSlow(const String& string, const CSSParserContext& context, c
     // Handle leading whitespace.
     range.consumeWhitespace();
 
-    auto state = CSS::PropertyParserState { .context = context };
+    auto state = CSS::PropertyParserState { .context = context, .pool = scriptExecutionContext.cssValuePool() };
     auto result = consumeUnresolvedColor(range, state, options);
 
     // Handle trailing whitespace.

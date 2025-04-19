@@ -33,7 +33,7 @@ namespace CSSPropertyParserHelpers {
 
 // MARK: <color> parsing (raw)
 
-template<typename F> WebCore::Color parseColorRaw(const String& string, const CSSParserContext& context, NOESCAPE const F& lazySlowPathOptionsFunctor)
+template<typename F> WebCore::Color parseColorRaw(const String& string, const CSSParserContext& context, ScriptExecutionContext& scriptExecutionContext, NOESCAPE const F& lazySlowPathOptionsFunctor)
 {
     if (auto color = CSSParserFastPaths::parseSimpleColor(string, context))
         return *color;
@@ -47,7 +47,7 @@ template<typename F> WebCore::Color parseColorRaw(const String& string, const CS
     if (eagerResolutionDelegate)
         eagerResolutionState.delegate = &eagerResolutionDelegate.value();
 
-    return parseColorRawSlow(string, context, options, eagerResolutionState);
+    return parseColorRawSlow(string, context, scriptExecutionContext, options, eagerResolutionState);
 }
 
 } // namespace CSSPropertyParserHelpers

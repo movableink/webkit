@@ -71,7 +71,7 @@ Color CanvasStyleColorResolutionDelegate::currentColor() const
         return Color::black;
 
     auto colorString = m_canvasElement->inlineStyle()->getPropertyValue(CSSPropertyColor);
-    auto color = CSSPropertyParserHelpers::parseColorRaw(WTFMove(colorString), m_canvasElement->cssParserContext(), [] {
+    auto color = CSSPropertyParserHelpers::parseColorRaw(WTFMove(colorString), m_canvasElement->cssParserContext(), m_canvasElement->document(), [] {
         return LazySlowPathColorParsingParameters { { }, { }, std::nullopt };
     });
     if (!color.isValid())
@@ -118,7 +118,7 @@ static LazySlowPathColorParsingParameters colorParsingParameters(CanvasBase& can
 
 Color parseColor(const String& colorString, CanvasBase& canvasBase)
 {
-    return CSSPropertyParserHelpers::parseColorRaw(colorString, canvasBase.cssParserContext(), [&] {
+    return CSSPropertyParserHelpers::parseColorRaw(colorString, canvasBase.cssParserContext(), *canvasBase.scriptExecutionContext(), [&] {
         return colorParsingParameters(canvasBase);
     });
 }
@@ -128,7 +128,7 @@ Color parseColor(const String& colorString, ScriptExecutionContext& scriptExecut
     // FIXME: Add constructor for CSSParserContext that takes a ScriptExecutionContext to allow preferences to be
     //        checked correctly.
 
-    return CSSPropertyParserHelpers::parseColorRaw(colorString, CSSParserContext(HTMLStandardMode), [&] {
+    return CSSPropertyParserHelpers::parseColorRaw(colorString, CSSParserContext(HTMLStandardMode), scriptExecutionContext, [&] {
         return elementlessColorParsingParameters(&scriptExecutionContext);
     });
 }

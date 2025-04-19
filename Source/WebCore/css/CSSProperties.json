@@ -12217,9 +12217,8 @@
         "@font-face": {
             "font-family": {
                 "codegen-properties": {
-                    "parser-function": "consumeFontFaceFontFamily",
-                    "parser-grammar-unused": "<family-name>",
-                    "parser-grammar-unused-reason": "Needs support for primitive <family-name>."
+                    "parser-grammar": "<family-name>",
+                    "parser-exported": true
                 },
                 "specification": {
                     "category": "css-fonts-4",

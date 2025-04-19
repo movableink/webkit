@@ -107,9 +107,10 @@ static std::optional<Color> parseColorValue(StringView string, HTMLInputElement&
     if (context.colorSpace().isNull())
         return parseSimpleColorValue(string);
 
-    auto parserContext = context.protectedDocument()->cssParserContext();
+    auto document = context.protectedDocument();
+    auto parserContext = document->cssParserContext();
     parserContext.mode = HTMLStandardMode;
-    auto color = CSSPropertyParserHelpers::parseColorRaw(string.toString(), parserContext, [] {
+    auto color = CSSPropertyParserHelpers::parseColorRaw(string.toString(), parserContext, document, [] {
         return colorParsingParameters();
     });
 

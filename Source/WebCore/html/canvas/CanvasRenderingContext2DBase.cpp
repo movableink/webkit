@@ -3177,9 +3177,7 @@ void CanvasRenderingContext2DBase::setLetterSpacing(const String& letterSpacing)
     tokenRange.consumeWhitespace();
 
     auto parserContext = CSSParserContext { HTMLStandardMode };
-    auto parserState = CSS::PropertyParserState {
-        .context = parserContext,
-    };
+    auto parserState = CSS::PropertyParserState { .context = parserContext, .pool = canvasBase().scriptExecutionContext()->cssValuePool() };
 
     auto parsedValue = CSSPropertyParserHelpers::MetaConsumer<CSS::Length<>>::consume(tokenRange, parserState);
     if (!parsedValue)
@@ -3207,9 +3205,7 @@ void CanvasRenderingContext2DBase::setWordSpacing(const String& wordSpacing)
     tokenRange.consumeWhitespace();
 
     auto parserContext = CSSParserContext { HTMLStandardMode };
-    auto parserState = CSS::PropertyParserState {
-        .context = parserContext,
-    };
+    auto parserState = CSS::PropertyParserState { .context = parserContext, .pool = canvasBase().scriptExecutionContext()->cssValuePool() };
 
     auto parsedValue = CSSPropertyParserHelpers::MetaConsumer<CSS::Length<>>::consume(tokenRange, parserState);
     if (!parsedValue)

@@ -653,7 +653,7 @@ static std::optional<Random::SharingFixed> consumeOptionalRandomSharingFixed(CSS
 
     // Use a non-property parsing state for the fixed number value to disconnect it from the current parse.
     // FIXME: Add a mechanism to pass along the depth count when doing this so that we can limit stack usage.
-    auto numberParsingState = CSS::PropertyParserState { .context = state.propertyParserState.context };
+    auto numberParsingState = CSS::PropertyParserState { .context = state.propertyParserState.context, .pool = state.propertyParserState.pool };
     auto number = CSSPropertyParserHelpers::MetaConsumer<CSS::Number<CSS::ClosedUnitRange>>::consume(tokens, numberParsingState);
     if (!number)
         return { };

@@ -26,6 +26,7 @@
 
 #include "CSSProperty.h"
 #include "CSSPropertyNames.h"
+#include "CSSValuePool.h"
 #include "StyleRuleType.h"
 
 namespace WebCore {
@@ -36,6 +37,7 @@ namespace CSS {
 
 struct PropertyParserState {
     const CSSParserContext& context;
+    CSSValuePool& pool { CSSValuePool::singleton() };
 
     StyleRuleType currentRule { StyleRuleType::Style };
     CSSPropertyID currentProperty { CSSPropertyInvalid };

@@ -99,7 +99,7 @@ struct UnresolvedFont {
 
 // MARK: 'font' (shorthand)
 // https://drafts.csswg.org/css-fonts-4/#font-prop
-std::optional<UnresolvedFont> parseUnresolvedFont(const String&, const CSSParserContext&);
+std::optional<UnresolvedFont> parseUnresolvedFont(const String&, ScriptExecutionContext&, std::optional<CSSParserMode> parserModeOverride = std::nullopt);
 
 // MARK: 'font-style'
 // https://drafts.csswg.org/css-fonts-4/#font-style-prop
@@ -124,7 +124,7 @@ RefPtr<CSSValue> consumeFontSizeAdjust(CSSParserTokenRange&, CSS::PropertyParser
 
 // MARK: @font-face 'font-family'
 // https://drafts.csswg.org/css-fonts-4/#font-family-desc
-RefPtr<CSSValue> consumeFontFaceFontFamily(CSSParserTokenRange&, CSS::PropertyParserState&);
+RefPtr<CSSValue> parseFontFaceFontFamily(const String&, ScriptExecutionContext&);
 
 // MARK: @font-face 'src'
 // https://drafts.csswg.org/css-fonts-4/#src-desc

@@ -35,6 +35,7 @@ namespace WebCore {
 class Color;
 class CSSParserTokenRange;
 class CSSValue;
+class ScriptExecutionContext;
 struct CSSParserContext;
 enum CSSValueID : uint16_t;
 
@@ -65,10 +66,10 @@ RefPtr<CSSValue> consumeColor(CSSParserTokenRange&, CSS::PropertyParserState&, c
 WebCore::Color consumeColorRaw(CSSParserTokenRange&, CSS::PropertyParserState&, const CSSColorParsingOptions&, CSS::PlatformColorResolutionState&);
 
 // MARK: <color> parsing (raw)
-WEBCORE_EXPORT WebCore::Color parseColorRawSlow(const String&, const CSSParserContext&, const CSSColorParsingOptions&, CSS::PlatformColorResolutionState&);
+WEBCORE_EXPORT WebCore::Color parseColorRawSlow(const String&, const CSSParserContext&, ScriptExecutionContext&, const CSSColorParsingOptions&, CSS::PlatformColorResolutionState&);
 
 // NOTE: Callers must include CSSPropertyParserConsumer+ColorInlines.h to use this.
-template<typename F> WebCore::Color parseColorRaw(const String&, const CSSParserContext&, NOESCAPE const F& lazySlowPathOptionsFunctor);
+template<typename F> WebCore::Color parseColorRaw(const String&, const CSSParserContext&, ScriptExecutionContext&, NOESCAPE const F& lazySlowPathOptionsFunctor);
 
 // FIXME: All callers are not getting the right Settings, keyword resolution and calc resolution
 // when using this function and should switch to parseColorRaw().

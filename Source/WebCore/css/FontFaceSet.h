@@ -55,8 +55,8 @@ public:
     void clear();
 
     using LoadPromise = DOMPromiseDeferred<IDLSequence<IDLInterface<FontFace>>>;
-    void load(const String& font, const String& text, LoadPromise&&);
-    ExceptionOr<bool> check(const String& font, const String& text);
+    void load(ScriptExecutionContext&, const String& font, const String& text, LoadPromise&&);
+    ExceptionOr<bool> check(ScriptExecutionContext&, const String& font, const String& text);
 
     enum class LoadStatus { Loading, Loaded };
     LoadStatus status() const;

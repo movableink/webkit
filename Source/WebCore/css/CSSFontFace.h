@@ -75,7 +75,7 @@ public:
     static Ref<CSSFontFace> create(CSSFontSelector&, StyleRuleFontFace* cssConnection = nullptr, FontFace* wrapper = nullptr, bool isLocalFallback = false);
     virtual ~CSSFontFace();
 
-    void setFamilies(CSSValueList&);
+    void setFamily(CSSValue&);
     void setStyle(CSSValue&);
     void setWeight(CSSValue&);
     void setWidth(CSSValue&);
@@ -104,10 +104,16 @@ public:
     //             Success    Failure
     enum class Status : uint8_t { Pending, Loading, TimedOut, Success, Failure };
 
-    struct UnicodeRange;
+    struct UnicodeRange {
+        char32_t from;
+        char32_t to;
 
-    RefPtr<CSSValueList> families() const;
+        bool operator==(const UnicodeRange&) const = default;
+    };
+
     std::span<const UnicodeRange> ranges() const { ASSERT(m_status != Status::Failure); return m_ranges.span(); }
+
+    RefPtr<CSSValue> familyCSSValue() const;
 
     void setFontSelectionCapabilities(FontSelectionCapabilities capabilities) { m_fontSelectionCapabilities = capabilities; }
     FontSelectionCapabilities fontSelectionCapabilities() const { ASSERT(m_status != Status::Failure); return m_fontSelectionCapabilities.computeFontSelectionCapabilities(); }
@@ -134,12 +140,6 @@ public:
     RefPtr<Font> font(const FontDescription&, bool syntheticBold, bool syntheticItalic, ExternalResourceDownloadPolicy, const FontPaletteValues&, RefPtr<FontFeatureValues>);
 
     static void appendSources(CSSFontFace&, CSSValueList&, ScriptExecutionContext*, bool isInitiatingElementInUserAgentShadowTree);
-
-    struct UnicodeRange {
-        char32_t from;
-        char32_t to;
-        friend bool operator==(const UnicodeRange&, const UnicodeRange&) = default;
-    };
 
     bool rangesMatchCodePoint(char32_t) const;
 
@@ -182,7 +182,7 @@ private:
     Document* document();
 
     const Variant<Ref<MutableStyleProperties>, Ref<StyleRuleFontFace>> m_propertiesOrCSSConnection;
-    RefPtr<CSSValueList> m_families;
+    RefPtr<CSSValue> m_family;
     Vector<UnicodeRange> m_ranges;
 
     FontFeatureSettings m_featureSettings;
@@ -211,7 +211,7 @@ public:
     virtual ~CSSFontFaceClient() = default;
     virtual void fontLoaded(CSSFontFace&) { }
     virtual void fontStateChanged(CSSFontFace&, CSSFontFace::Status /*oldState*/, CSSFontFace::Status /*newState*/) { }
-    virtual void fontPropertyChanged(CSSFontFace&, CSSValueList* /*oldFamilies*/ = nullptr) { }
+    virtual void fontPropertyChanged(CSSFontFace&, CSSValue* /*oldFamily*/ = nullptr) { }
     virtual void updateStyleIfNeeded(CSSFontFace&) { }
 };
 

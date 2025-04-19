@@ -101,7 +101,7 @@ void OffscreenCanvasRenderingContext2D::setFont(const String& newFont)
 
     // According to http://lists.w3.org/Archives/Public/public-html/2009Jul/0947.html,
     // the "inherit" and "initial" values must be ignored. CSSPropertyParserHelpers::parseFont() ignores these.
-    auto unresolvedFont = CSSPropertyParserHelpers::parseUnresolvedFont(newFont, strictToCSSParserMode(!usesCSSCompatibilityParseMode()));
+    auto unresolvedFont = CSSPropertyParserHelpers::parseUnresolvedFont(newFont, context, strictToCSSParserMode(!usesCSSCompatibilityParseMode()));
     if (!unresolvedFont)
         return;
 
