@@ -33,6 +33,7 @@
 #import <WebCore/RevealUtilities.h>
 
 #if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
+#import <pal/spi/mac/NSImageSPI.h>
 #import <pal/spi/mac/NSMenuSPI.h>
 #endif
 
@@ -159,9 +160,8 @@ RetainPtr<NSMenu> menuForTelephoneNumber(const String& telephoneNumber, NSView *
 
 #if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
 
-NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useAlternateImage)
+static NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useAlternateImage)
 {
-    // FIXME: <rdar://142002509> The chosen images need to be reviewed.
     if (![NSMenuItem respondsToSelector:@selector(_systemImageNameForAction:)])
         return nil;
 
@@ -177,6 +177,8 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
     case WebCore::ContextMenuItemPDFTwoPagesContinuous:
     case WebCore::ContextMenuItemTagCheckGrammarWithSpelling:
     case WebCore::ContextMenuItemTagCheckSpellingWhileTyping:
+    case WebCore::ContextMenuItemTagCopyLinkWithHighlight:
+    case WebCore::ContextMenuItemTagCopySubject:
     case WebCore::ContextMenuItemTagCorrectSpellingAutomatically:
     case WebCore::ContextMenuItemTagDictationAlternative:
     case WebCore::ContextMenuItemTagFontMenu:
@@ -186,7 +188,6 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
     case WebCore::ContextMenuItemTagOutline:
     case WebCore::ContextMenuItemTagPDFFacingPagesScrolling:
     case WebCore::ContextMenuItemTagPDFSinglePageScrolling:
-    case WebCore::ContextMenuItemTagShowMediaStats:
     case WebCore::ContextMenuItemTagSmartCopyPaste:
     case WebCore::ContextMenuItemTagSmartDashes:
     case WebCore::ContextMenuItemTagSmartLinks:
@@ -207,9 +208,9 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
     case WebCore::ContextMenuItemPDFActualSize:
         return @"text.magnifyingglass";
     case WebCore::ContextMenuItemPDFNextPage:
-        return @"chevron.right";
+        return @"chevron.down";
     case WebCore::ContextMenuItemPDFPreviousPage:
-        return @"chevron.left";
+        return @"chevron.up";
     case WebCore::ContextMenuItemPDFZoomIn:
         return @"plus.magnifyingglass";
     case WebCore::ContextMenuItemPDFZoomOut:
@@ -230,10 +231,6 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
     case WebCore::ContextMenuItemTagCopyLinkToClipboard:
     case WebCore::ContextMenuItemTagCopyMediaLinkToClipboard:
         return [NSMenuItem _systemImageNameForAction:@selector(copy:)];
-    case WebCore::ContextMenuItemTagCopyLinkWithHighlight:
-        return @"text.quote";
-    case WebCore::ContextMenuItemTagCopySubject:
-        return @"circle.dashed.rectangle";
     case WebCore::ContextMenuItemTagCut:
         return [NSMenuItem _systemImageNameForAction:@selector(cut:)];
     case WebCore::ContextMenuItemTagDefaultDirection:
@@ -253,7 +250,7 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
     case WebCore::ContextMenuItemTagIgnoreSpelling:
         return @"checkmark.circle";
     case WebCore::ContextMenuItemTagInspectElement:
-        return @"doc.badge.gearshape";
+        return @"gear";
     case WebCore::ContextMenuItemTagItalic:
         return @"italic";
     case WebCore::ContextMenuItemTagLearnSpelling:
@@ -261,8 +258,7 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
     case WebCore::ContextMenuItemTagLeftToRight:
         return [NSMenuItem _systemImageNameForAction:@selector(makeTextWritingDirectionLeftToRight:)];
     case WebCore::ContextMenuItemTagLookUpImage:
-    case WebCore::ContextMenuItemTagSearchWeb:
-        return @"magnifyingglass";
+        return @"info.circle.badge.sparkles";
     case WebCore::ContextMenuItemTagLookUpInDictionary:
         return @"character.book.closed";
     case WebCore::ContextMenuItemTagMakeLowerCase:
@@ -296,12 +292,16 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
         return @"arrow.clockwise";
     case WebCore::ContextMenuItemTagRightToLeft:
         return [NSMenuItem _systemImageNameForAction:@selector(makeTextWritingDirectionRightToLeft:)];
+    case WebCore::ContextMenuItemTagSearchWeb:
+        return @"magnifyingglass";
     case WebCore::ContextMenuItemTagShareMenu:
         return @"square.and.arrow.up";
     case WebCore::ContextMenuItemTagShowColors:
         return @"paintpalette";
     case WebCore::ContextMenuItemTagShowFonts:
         return @"text.and.command.macwindow";
+    case WebCore::ContextMenuItemTagShowMediaStats:
+        return @"info.circle";
     case WebCore::ContextMenuItemTagShowSpellingPanel:
     case WebCore::ContextMenuItemTagShowSubstitutions:
         return useAlternateImage ? @"eye.slash" : @"text.and.command.macwindow";
@@ -331,6 +331,17 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
     }
 
     return nil;
+}
+
+void addImageToMenuItem(NSMenuItem *item, const WebCore::ContextMenuAction action, bool useAlternateImage)
+{
+    RetainPtr symbolName = symbolNameForAction(action, useAlternateImage);
+    auto isPrivate = action == WebCore::ContextMenuItemTagLookUpImage;
+
+    if (isPrivate)
+        [item _setActionImage:[NSImage imageWithPrivateSystemSymbolName:symbolName.get() accessibilityDescription:nil]];
+    else
+        [item _setActionImage:[NSImage imageWithSystemSymbolName:symbolName.get() accessibilityDescription:nil]];
 }
 
 #endif

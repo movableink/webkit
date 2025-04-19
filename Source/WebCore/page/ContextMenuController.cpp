@@ -1043,6 +1043,10 @@ void ContextMenuController::populate()
         appendItem(translateItem, m_contextMenu.get());
 #endif
 
+#if PLATFORM(COCOA)
+        appendItem(*separatorItem(), m_contextMenu.get());
+#endif
+
 #if !PLATFORM(GTK)
         appendItem(SearchWebItem, m_contextMenu.get());
         appendItem(*separatorItem(), m_contextMenu.get());

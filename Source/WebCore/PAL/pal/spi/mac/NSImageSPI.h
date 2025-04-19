@@ -45,7 +45,7 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 @interface NSImage (NSSystemSymbols)
-+ (nullable NSImage *)_imageWithSystemSymbolName:(NSString *) symbolName;
++ (nullable instancetype)imageWithPrivateSystemSymbolName:(NSString *)name accessibilityDescription:(nullable NSString *)description;
 @end
 
 NS_ASSUME_NONNULL_END

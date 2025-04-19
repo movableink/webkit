@@ -2568,9 +2568,9 @@ Vector<PDFContextMenuItem> UnifiedPDFPlugin::selectionContextMenuItems(const Int
         return { };
 
     Vector<PDFContextMenuItem> items {
-        contextMenuItem(ContextMenuItemTag::WebSearch),
-        separatorContextMenuItem(),
         contextMenuItem(ContextMenuItemTag::DictionaryLookup),
+        separatorContextMenuItem(),
+        contextMenuItem(ContextMenuItemTag::WebSearch),
         separatorContextMenuItem(),
         contextMenuItem(ContextMenuItemTag::Copy),
     };

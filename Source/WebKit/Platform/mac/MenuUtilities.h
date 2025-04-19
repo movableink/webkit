@@ -41,7 +41,7 @@ NSString *menuItemTitleForTelephoneNumberGroup();
 #endif
 
 #if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
-NSString *symbolNameForAction(const WebCore::ContextMenuAction, bool);
+void addImageToMenuItem(NSMenuItem*, const WebCore::ContextMenuAction, bool);
 #endif
 
 #endif

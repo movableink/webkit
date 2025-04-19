@@ -621,7 +621,7 @@ void WebPageProxy::showPDFContextMenu(const WebKit::PDFContextMenu& contextMenu,
         [nsItem setState:item.state];
 #if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
         if (shouldSetImage && ![nsItem _hasActionImage])
-            [nsItem _setActionImage:[NSImage imageWithSystemSymbolName:symbolNameForAction(item.action, false) accessibilityDescription:nil]];
+            addImageToMenuItem(nsItem.get(), item.action, false);
 #endif
         if (item.hasAction == ContextMenuItemHasAction::Yes) {
             [nsItem setTarget:menuTarget.get()];

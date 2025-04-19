@@ -465,7 +465,7 @@ static void updateMenuItemImage(NSMenuItem *menuItem, const WebContextMenuItemDa
         break;
     }
 
-    [menuItem _setActionImage:[NSImage imageWithSystemSymbolName:symbolNameForAction(webMenuItem.action(), useAlternateImage) accessibilityDescription:nil]];
+    addImageToMenuItem(menuItem, webMenuItem.action(), useAlternateImage);
 }
 #endif
 
@@ -523,11 +523,6 @@ RetainPtr<NSMenuItem> WebContextMenuProxyMac::createShareMenuItem(ShareMenuItemT
         [shareMenuItem setTarget:[WKMenuTarget sharedMenuTarget]];
     } else
         [shareMenuItem setRepresentedObject:sharingServicePicker.get()];
-
-#if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
-    if (page()->protectedPreferences()->contextMenuImagesForInternalClientsEnabled() && ![shareMenuItem _hasActionImage])
-        [shareMenuItem _setActionImage:[NSImage imageWithSystemSymbolName:@"square.and.arrow.up" accessibilityDescription:nil]];
-#endif
 
     [shareMenuItem setIdentifier:_WKMenuItemIdentifierShareMenu];
     return shareMenuItem;
@@ -895,10 +890,6 @@ void WebContextMenuProxyMac::getContextMenuItem(const WebContextMenuItemData& it
         if ([NSMenuItem.class respondsToSelector:@selector(standardWritingToolsMenuItem)]) {
             RetainPtr menuItem = [NSMenuItem standardWritingToolsMenuItem];
             [[menuItem submenu] setAutoenablesItems:NO];
-#if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
-            if (page()->protectedPreferences()->contextMenuImagesForInternalClientsEnabled() && ![menuItem _hasActionImage])
-                [menuItem _setActionImage:[NSImage imageWithSystemSymbolName:@"apple.intelligence" accessibilityDescription:nil]];
-#endif
 
             for (NSMenuItem *subItem in [menuItem submenu].itemArray) {
                 if (subItem.isSeparatorItem)

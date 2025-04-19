@@ -341,9 +341,11 @@ static NSArray<NSString *> *controlArray()
     if (iconImage)
         return iconImage.autorelease();
 
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    iconImage = [NSImage _imageWithSystemSymbolName:control];
-ALLOW_DEPRECATED_DECLARATIONS_END
+    if ([control isEqualToString:PDFHUDLaunchPreviewControl])
+        iconImage = [NSImage imageWithPrivateSystemSymbolName:control accessibilityDescription:nil];
+    else
+        iconImage = [NSImage imageWithSystemSymbolName:control accessibilityDescription:nil];
+
     if (!iconImage)
         return nil;
 
