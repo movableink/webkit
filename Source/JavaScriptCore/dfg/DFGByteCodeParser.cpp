@@ -3163,7 +3163,7 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
             Node* regExpObject = get(virtualRegisterForArgumentIncludingThis(0, registerOffset));
             addToGraph(Check, Edge(regExpObject, RegExpObjectUse));
 
-            // Check that regExpObject's exec is actually the primodial RegExp.prototype.exec.
+            // Check that regExpObject's exec is actually the primordial RegExp.prototype.exec.
             UniquedStringImpl* execPropertyID = m_vm->propertyNames->exec.impl();
             m_graph.identifiers().ensure(execPropertyID);
             auto* data = m_graph.m_getByIdData.add(GetByIdData { CacheableIdentifier::createFromImmortalIdentifier(execPropertyID), CacheType::GetByIdPrototype });
