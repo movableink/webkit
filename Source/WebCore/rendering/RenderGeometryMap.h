@@ -79,11 +79,6 @@ public:
 
     OptionSet<MapCoordinatesMode> mapCoordinatesFlags() const { return m_mapCoordinatesFlags; }
 
-    FloatPoint absolutePoint(const FloatPoint& p) const
-    {
-        return mapToContainer(p, nullptr);
-    }
-
     FloatRect absoluteRect(const FloatRect& rect) const
     {
         return mapToContainer(rect, nullptr).boundingBox();
