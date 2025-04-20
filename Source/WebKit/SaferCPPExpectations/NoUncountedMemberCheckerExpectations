@@ -1,5 +1,6 @@
 AutomationFrontendDispatchers.h
 NetworkConnectionToWebProcessMessages.h
+Platform/IPC/StreamClientConnection.h
 Shared/API/Cocoa/_WKRemoteObjectRegistryInternal.h
 Shared/Cocoa/WKObject.h
 UIProcess/API/Cocoa/WKBackForwardListItemInternal.h

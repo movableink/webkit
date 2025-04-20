@@ -24,6 +24,9 @@ Modules/indexeddb/IDBObjectStore.cpp
 Modules/indexeddb/IDBTransaction.cpp
 Modules/indexeddb/WindowOrWorkerGlobalScopeIndexedDatabase.cpp
 Modules/indexeddb/client/IDBConnectionProxy.cpp
+Modules/indexeddb/server/MemoryBackingStoreTransaction.cpp
+Modules/indexeddb/server/MemoryIDBBackingStore.cpp
+Modules/indexeddb/server/MemoryObjectStore.cpp
 Modules/mediacapabilities/MediaCapabilities.cpp
 Modules/mediacontrols/MediaControlsHost.cpp
 Modules/mediarecorder/MediaRecorder.cpp
@@ -326,6 +329,7 @@ editing/cocoa/EditorCocoa.mm
 editing/cocoa/HTMLConverter.mm
 editing/cocoa/WebContentReaderCocoa.mm
 editing/mac/EditorMac.mm
+editing/mac/FrameSelectionMac.mm
 editing/markup.cpp
 fileapi/Blob.cpp
 fileapi/BlobURL.cpp
@@ -347,15 +351,19 @@ html/HTMLAttachmentElement.cpp
 html/HTMLCanvasElement.cpp
 html/HTMLCollection.cpp
 html/HTMLDocument.cpp
+html/HTMLEmbedElement.cpp
 html/HTMLFieldSetElement.cpp
 html/HTMLFormControlsCollection.cpp
 html/HTMLFormElement.cpp
+html/HTMLFrameElement.cpp
+html/HTMLFrameElementBase.cpp
 html/HTMLImageElement.cpp
 html/HTMLInputElement.cpp
 html/HTMLLabelElement.cpp
 html/HTMLMapElement.cpp
 html/HTMLMediaElement.cpp
 html/HTMLPictureElement.cpp
+html/HTMLPlugInElement.cpp
 html/HTMLSlotElement.cpp
 html/HTMLTableElement.cpp
 html/HTMLTableRowElement.cpp
@@ -447,6 +455,7 @@ layout/integration/inline/LayoutIntegrationLineLayout.cpp
 layout/layouttree/LayoutTreeBuilder.cpp
 loader/ApplicationManifestLoader.cpp
 loader/DocumentLoader.cpp
+loader/EmptyClients.cpp
 loader/NavigationAction.cpp
 loader/NavigationScheduler.cpp
 loader/ThreadableLoader.cpp
@@ -489,6 +498,7 @@ page/PageColorSampler.cpp
 page/PageConsoleClient.cpp
 page/PageGroup.cpp
 page/PageGroupLoadDeferrer.cpp
+page/PageOverlay.cpp
 page/PageOverlayController.cpp
 page/PageSerializer.cpp
 page/Performance.cpp
@@ -505,6 +515,7 @@ page/RemoteDOMWindow.cpp
 page/RemoteFrame.cpp
 page/ResizeObservation.cpp
 page/ResizeObserver.cpp
+page/ResourceUsageOverlay.cpp
 page/ScreenOrientation.cpp
 page/ScrollBehavior.cpp
 page/SettingsBase.cpp
@@ -540,6 +551,7 @@ platform/ScrollableArea.cpp
 platform/ScrollbarsController.cpp
 platform/ThreadGlobalData.cpp
 platform/ThreadGlobalData.h
+platform/Widget.cpp
 platform/animation/AcceleratedEffect.cpp
 platform/animation/AcceleratedEffectValues.cpp
 platform/audio/PlatformMediaSessionManager.cpp
@@ -564,12 +576,15 @@ platform/graphics/ca/cocoa/PlatformCALayerCocoa.mm
 platform/graphics/cocoa/controls/ApplePayButtonCocoa.mm
 platform/graphics/coretext/ComplexTextControllerCoreText.mm
 platform/graphics/displaylists/DisplayListItems.cpp
+platform/graphics/displaylists/DisplayListRecorder.cpp
 platform/graphics/displaylists/DisplayListRecorderImpl.cpp
 platform/graphics/filters/FilterOperations.cpp
+platform/graphics/mac/controls/ImageControlsButtonMac.mm
 platform/graphics/mac/controls/MeterMac.mm
 platform/graphics/mac/controls/ProgressBarMac.mm
 platform/graphics/mac/controls/SliderTrackMac.mm
 platform/graphics/transforms/RotateTransformOperation.cpp
+platform/mac/PlatformScreenMac.mm
 platform/mac/ScrollAnimatorMac.mm
 platform/mac/ScrollbarsControllerMac.mm
 platform/mac/WidgetMac.mm
@@ -612,6 +627,7 @@ rendering/RenderObject.cpp
 rendering/RenderProgress.cpp
 rendering/RenderQuote.cpp
 rendering/RenderReplaced.cpp
+rendering/RenderScrollbar.cpp
 rendering/RenderSlider.cpp
 rendering/RenderTableCell.cpp
 rendering/RenderTextControl.cpp

@@ -1,10 +1,14 @@
 Modules/WebGPU/GPUPresentationContextDescriptor.h
 Modules/encryptedmedia/MediaKeyStatusMap.h
+Modules/encryptedmedia/legacy/WebKitMediaKeySession.h
 Modules/mediastream/RTCPeerConnection.h
 Modules/mediastream/libwebrtc/LibWebRTCObservers.h
 Modules/notifications/NotificationResourcesLoader.h
+Modules/permissions/NavigatorPermissions.h
+Modules/permissions/WorkerNavigatorPermissions.h
 Modules/push-api/PushManager.h
 Modules/push-api/ServiceWorkerRegistrationPushAPI.h
+Modules/screen-wake-lock/NavigatorScreenWakeLock.h
 Modules/storage/StorageManager.cpp
 Modules/webdatabase/DatabaseTask.h
 Modules/webdatabase/SQLTransactionBackend.h
@@ -47,6 +51,7 @@ inspector/agents/worker/WorkerAuditAgent.h
 layout/formattingContexts/inline/InlineItemsBuilder.h
 loader/appcache/ApplicationCacheStorage.cpp
 page/FrameSnapshotting.cpp
+page/NavigatorLoginStatus.h
 page/PerformanceLogging.h
 page/PointerLockController.h
 page/RenderingUpdateScheduler.h
@@ -67,6 +72,9 @@ platform/graphics/avfoundation/objc/WebCoreAVFResourceLoader.mm
 platform/graphics/ca/TileController.h
 platform/graphics/controls/PlatformControl.h
 platform/graphics/coretext/DrawGlyphsRecorder.h
+platform/ios/WebAVPlayerController.h
+platform/mac/VideoPresentationInterfaceMac.mm
+platform/mac/WebPlaybackControlsManager.h
 platform/mediarecorder/MediaRecorderPrivate.h
 platform/mediastream/AudioMediaStreamTrackRenderer.h
 platform/mediastream/mac/CoreAudioCaptureSource.h
@@ -94,6 +102,7 @@ workers/WorkerConsoleClient.h
 workers/WorkerMessagingProxy.h
 workers/WorkerNotificationClient.h
 workers/WorkerOrWorkletGlobalScope.h
+workers/service/ServiceWorkerContainer.h
 workers/service/background-fetch/ServiceWorkerRegistrationBackgroundFetchAPI.h
 xml/XMLHttpRequestProgressEventThrottle.h
 xml/XMLHttpRequestUpload.h

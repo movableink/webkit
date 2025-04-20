@@ -88,6 +88,7 @@ Modules/indexeddb/IDBTransaction.cpp
 Modules/indexeddb/client/IDBConnectionProxy.cpp
 Modules/indexeddb/client/IDBConnectionToServer.cpp
 Modules/indexeddb/client/TransactionOperation.h
+Modules/indexeddb/server/MemoryObjectStore.cpp
 Modules/mediacontrols/MediaControlsHost.cpp
 Modules/mediasession/MediaMetadata.cpp
 Modules/mediasession/MediaSession.cpp
@@ -135,7 +136,9 @@ Modules/paymentrequest/PaymentRequest.cpp
 Modules/paymentrequest/PaymentRequestUpdateEvent.cpp
 Modules/paymentrequest/PaymentResponse.cpp
 Modules/permissions/MainThreadPermissionObserver.cpp
+Modules/permissions/NavigatorPermissions.cpp
 Modules/permissions/Permissions.cpp
+Modules/permissions/WorkerNavigatorPermissions.cpp
 Modules/pictureinpicture/HTMLVideoElementPictureInPicture.cpp
 Modules/push-api/PushDatabase.cpp
 Modules/push-api/PushManager.cpp
@@ -336,6 +339,7 @@ bindings/js/JSMessageChannelCustom.cpp
 bindings/js/JSMessagePortCustom.cpp
 bindings/js/JSMutationObserverCustom.cpp
 bindings/js/JSMutationRecordCustom.cpp
+bindings/js/JSNavigatorCustom.cpp
 bindings/js/JSNodeCustom.cpp
 bindings/js/JSNodeListCustom.cpp
 bindings/js/JSNodeListCustom.h
@@ -366,6 +370,7 @@ bindings/js/JSWebGLRenderingContextCustom.cpp
 bindings/js/JSWindowProxy.cpp
 bindings/js/JSWorkerGlobalScopeBase.cpp
 bindings/js/JSWorkerGlobalScopeCustom.cpp
+bindings/js/JSWorkerNavigatorCustom.cpp
 bindings/js/JSWorkletGlobalScopeBase.cpp
 bindings/js/JSXMLHttpRequestCustom.cpp
 bindings/js/ScheduledAction.cpp
@@ -468,6 +473,7 @@ css/StyleRuleImport.h
 css/StyleSheetContents.cpp
 css/StyleSheetList.cpp
 css/query/GenericMediaQuerySerialization.cpp
+css/query/MediaQueryFeatures.cpp
 css/typedom/CSSOMVariableReferenceValue.cpp
 css/typedom/CSSStyleImageValue.cpp
 css/typedom/CSSStyleImageValue.h
@@ -804,6 +810,7 @@ inspector/agents/page/PageDOMDebuggerAgent.cpp
 inspector/agents/page/PageDebuggerAgent.cpp
 inspector/agents/page/PageNetworkAgent.cpp
 inspector/agents/page/PageRuntimeAgent.cpp
+inspector/agents/page/PageTimelineAgent.cpp
 inspector/agents/worker/ServiceWorkerAgent.cpp
 inspector/agents/worker/WorkerNetworkAgent.cpp
 inspector/agents/worker/WorkerRuntimeAgent.cpp
@@ -871,12 +878,14 @@ page/LocalDOMWindow.cpp
 page/LocalFrame.cpp
 page/LocalFrameView.cpp
 page/Location.cpp
+page/NavigateEvent.cpp
 page/NavigationDestination.cpp
 page/NavigationDestination.h
 page/NavigationTransition.cpp
 page/Navigator.cpp
 page/NavigatorLoginStatus.cpp
 page/Page.cpp
+page/PageColorSampler.cpp
 page/PageConsoleClient.cpp
 page/PageOverlay.cpp
 page/PageOverlayController.cpp
@@ -901,6 +910,7 @@ page/ResourceUsageOverlay.cpp
 page/Screen.cpp
 page/ScrollBehavior.cpp
 page/SettingsBase.cpp
+page/SpatialNavigation.cpp
 page/UndoItem.cpp
 page/UserMessageHandler.cpp
 page/UserMessageHandlersNamespace.cpp
@@ -942,6 +952,7 @@ platform/ScrollAnimator.cpp
 platform/ScrollView.cpp
 platform/ScrollableArea.cpp
 platform/ShareableResource.cpp
+platform/Widget.cpp
 platform/animation/AcceleratedEffectValues.cpp
 platform/animation/Animation.cpp
 platform/animation/AnimationList.cpp
@@ -1028,6 +1039,9 @@ platform/mac/DataDetectorHighlight.mm
 platform/mac/PasteboardMac.mm
 platform/mac/PasteboardWriter.mm
 platform/mac/ScrollbarsControllerMac.mm
+platform/mac/VideoPresentationInterfaceMac.h
+platform/mac/VideoPresentationInterfaceMac.mm
+platform/mac/WebPlaybackControlsManager.mm
 platform/mediarecorder/MediaRecorderPrivate.h
 platform/mediarecorder/MediaRecorderPrivateAVFImpl.cpp
 platform/mediarecorder/MediaRecorderPrivateMock.cpp
@@ -1100,6 +1114,7 @@ rendering/RenderListMarker.cpp
 rendering/RenderMedia.cpp
 rendering/RenderMenuList.cpp
 rendering/RenderMeter.cpp
+rendering/RenderMultiColumnFlow.cpp
 rendering/RenderMultiColumnSet.cpp
 rendering/RenderObject.cpp
 rendering/RenderObject.h
@@ -1171,6 +1186,7 @@ rendering/svg/RenderSVGRoot.cpp
 rendering/svg/RenderSVGText.cpp
 rendering/svg/RenderSVGTextPath.cpp
 rendering/svg/SVGLayerTransformComputation.h
+rendering/svg/SVGPaintServerHandling.h
 rendering/svg/SVGRenderTreeAsText.cpp
 rendering/svg/SVGRenderingContext.cpp
 rendering/svg/SVGTextBoxPainter.cpp
@@ -1180,6 +1196,7 @@ rendering/svg/legacy/LegacyRenderSVGImage.cpp
 rendering/svg/legacy/LegacyRenderSVGModelObject.cpp
 rendering/svg/legacy/LegacyRenderSVGPath.cpp
 rendering/svg/legacy/LegacyRenderSVGRect.cpp
+rendering/svg/legacy/LegacyRenderSVGResource.cpp
 rendering/svg/legacy/LegacyRenderSVGResourceClipper.cpp
 rendering/svg/legacy/LegacyRenderSVGResourceClipperInlines.h
 rendering/svg/legacy/LegacyRenderSVGResourceContainer.cpp
@@ -1192,6 +1209,7 @@ rendering/svg/legacy/LegacyRenderSVGResourceMarkerInlines.h
 rendering/svg/legacy/LegacyRenderSVGResourceMasker.cpp
 rendering/svg/legacy/LegacyRenderSVGResourceMaskerInlines.h
 rendering/svg/legacy/LegacyRenderSVGResourcePattern.cpp
+rendering/svg/legacy/LegacyRenderSVGResourceSolidColor.cpp
 rendering/svg/legacy/LegacyRenderSVGRoot.cpp
 rendering/svg/legacy/LegacyRenderSVGShape.cpp
 rendering/svg/legacy/LegacyRenderSVGViewportContainer.cpp
@@ -1346,6 +1364,7 @@ svg/properties/SVGValuePropertyAnimator.h
 svg/properties/SVGValuePropertyListAnimatorImpl.h
 testing/InternalSettings.cpp
 testing/Internals.cpp
+testing/Internals.mm
 testing/LegacyMockCDM.cpp
 testing/MockMediaSessionCoordinator.cpp
 testing/MockPageOverlay.cpp
@@ -1372,6 +1391,7 @@ workers/service/ServiceWorker.cpp
 workers/service/ServiceWorkerClientData.cpp
 workers/service/ServiceWorkerContainer.cpp
 workers/service/ServiceWorkerGlobalScope.cpp
+workers/service/ServiceWorkerJob.cpp
 workers/service/ServiceWorkerRegistration.cpp
 workers/service/ServiceWorkerWindowClient.cpp
 workers/service/background-fetch/BackgroundFetch.cpp

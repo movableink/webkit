@@ -1,3 +1,7 @@
+NetworkProcess/NetworkConnectionToWebProcess.cpp
+NetworkProcess/NetworkProcess.cpp
+NetworkProcess/ServiceWorker/WebSWServerConnection.cpp
+NetworkProcess/ServiceWorker/WebSWServerToContextConnection.cpp
 WebProcess/Automation/WebAutomationSessionProxy.cpp
 WebProcess/EncryptedMedia/MediaKeySystemPermissionRequestManager.cpp
 WebProcess/Extensions/Bindings/JSWebExtensionWrapper.cpp
@@ -40,13 +44,17 @@ WebProcess/WebCoreSupport/WebRemoteFrameClient.cpp
 WebProcess/WebCoreSupport/WebResourceLoadObserver.cpp
 WebProcess/WebCoreSupport/WebSpeechSynthesisClient.cpp
 WebProcess/WebCoreSupport/mac/WebDragClientMac.mm
+WebProcess/WebPage/RemoteLayerTree/GraphicsLayerCARemote.mm
 WebProcess/WebPage/RemoteLayerTree/PlatformCALayerRemote.mm
 WebProcess/WebPage/RemoteLayerTree/RemoteLayerTreeContext.mm
+WebProcess/WebPage/RemoteLayerTree/RemoteScrollingCoordinator.mm
 WebProcess/WebPage/ViewUpdateDispatcher.cpp
+WebProcess/WebPage/WebFrame.cpp
 WebProcess/WebPage/WebPage.cpp
 WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm
 WebProcess/WebPage/mac/WKAccessibilityWebPageObjectBase.mm
 WebProcess/WebPage/mac/WKAccessibilityWebPageObjectMac.mm
+WebProcess/WebProcess.cpp
 WebProcess/WebSleepDisablerClient.cpp
 WebProcess/WebStorage/StorageAreaMap.cpp
 WebProcess/cocoa/TextTrackRepresentationCocoa.mm

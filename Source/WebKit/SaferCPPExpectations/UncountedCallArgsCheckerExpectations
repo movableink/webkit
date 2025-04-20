@@ -3,6 +3,9 @@ AutomationFrontendDispatchers.cpp
 AutomationProtocolObjects.h
 GeneratedSerializers.mm
 NetworkConnectionToWebProcessMessages.h
+NetworkProcess/CustomProtocols/LegacyCustomProtocolManager.cpp
+NetworkProcess/NetworkSession.cpp
+NetworkProcess/cocoa/NetworkSessionCocoa.mm
 Platform/IPC/ArgumentCoders.h
 Platform/IPC/Connection.cpp
 Platform/IPC/Connection.h
@@ -79,6 +82,8 @@ UIProcess/API/Cocoa/_WKUserInitiatedAction.mm
 UIProcess/API/Cocoa/_WKUserStyleSheet.mm
 UIProcess/API/Cocoa/_WKWebAuthenticationAssertionResponse.mm
 UIProcess/API/Cocoa/_WKWebsiteDataStoreConfiguration.mm
+UIProcess/Cocoa/VideoPresentationManagerProxy.mm
+UIProcess/RemoteLayerTree/mac/RemoteScrollingCoordinatorProxyMac.mm
 WebDriverBidiBackendDispatchers.cpp
 WebDriverBidiFrontendDispatchers.cpp
 WebDriverBidiProtocolObjects.h
@@ -86,6 +91,7 @@ WebProcess/ApplePay/WebPaymentCoordinator.cpp
 WebProcess/Automation/WebAutomationDOMWindowObserver.cpp
 WebProcess/Cache/WebCacheStorageConnection.cpp
 WebProcess/Cache/WebCacheStorageProvider.cpp
+WebProcess/Databases/IndexedDB/WebIDBConnectionToServer.cpp
 WebProcess/Extensions/API/Cocoa/WebExtensionAPIAlarmsCocoa.mm
 WebProcess/Extensions/API/Cocoa/WebExtensionAPIDeclarativeNetRequestCocoa.mm
 WebProcess/Extensions/API/Cocoa/WebExtensionAPIDevToolsInspectedWindowCocoa.mm
@@ -102,6 +108,9 @@ WebProcess/Extensions/API/Cocoa/WebExtensionAPIWindowsCocoa.mm
 WebProcess/Extensions/API/Cocoa/WebExtensionAPIWindowsEventCocoa.mm
 WebProcess/Extensions/Bindings/Cocoa/JSWebExtensionWrapperCocoa.mm
 WebProcess/FullScreen/WebFullScreenManager.cpp
+WebProcess/GPU/ShapeDetection/RemoteBarcodeDetectorProxy.cpp
+WebProcess/GPU/ShapeDetection/RemoteTextDetectorProxy.cpp
+WebProcess/GPU/graphics/RemoteRenderingBackendProxy.cpp
 WebProcess/GPU/media/MediaPlayerPrivateRemote.cpp
 WebProcess/GPU/media/RemoteAudioHardwareListener.cpp
 WebProcess/GPU/media/RemoteImageDecoderAVFManager.cpp

@@ -1,7 +1,9 @@
+Storage/InProcessIDBServer.cpp
 Storage/StorageAreaImpl.cpp
 Storage/StorageAreaSync.cpp
 Storage/StorageNamespaceImpl.cpp
 Storage/StorageThread.cpp
+Storage/WebDatabaseProvider.cpp
 Storage/WebStorageNamespaceProvider.cpp
 WebCoreSupport/PageStorageSessionProvider.h
 WebCoreSupport/PingHandle.h
