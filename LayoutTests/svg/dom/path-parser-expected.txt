@@ -7,6 +7,8 @@ CONSOLE MESSAGE: Error: Problem parsing d="M1,2x"
 CONSOLE MESSAGE: Error: Problem parsing d="M1,2 L40,0#90"
 CONSOLE MESSAGE: Error: Problem parsing d="x"
 CONSOLE MESSAGE: Error: Problem parsing d="L1,2"
+CONSOLE MESSAGE: Error: Problem parsing d="M0,50 h1e-.5"
+CONSOLE MESSAGE: Error: Problem parsing d="M0,50 h1e+.5"
 This tests the SVG path parser by parsing and then re-serializing various paths.
 
 On success, you will see a series of "PASS" messages, followed by "TEST COMPLETE".
@@ -69,6 +71,16 @@ PASS parsePath(' ') is ''
 PASS parsePath('x') is ''
 PASS parsePath('L1,2') is ''
 PASS parsePath('M.1 .2 L.3 .4 .5 .6') is 'M0.1,0.2 L0.3,0.4 L0.5,0.6'
+PASS parsePath('M1e2,10e1') is 'M100,100'
+PASS parsePath('M100e0,100') is 'M100,100'
+PASS parsePath('M1e+2,1000e-1') is 'M100,100'
+PASS parsePath('M1e2.5') is 'M100,0.5'
+PASS parsePath('M0.00000001e10 100') is 'M100,100'
+PASS parsePath('M0,50 h1e-1234567891234567891238') is 'M0,50 h0'
+PASS parsePath('M0,50 h1e39') is 'M0,50 h0'
+PASS parsePath('M0,50 h1e123456789123456789123') is 'M0,50 h0'
+PASS parsePath('M0,50 h1e-.5') is 'M0,50'
+PASS parsePath('M0,50 h1e+.5') is 'M0,50'
 PASS successfullyParsed is true
 
 TEST COMPLETE

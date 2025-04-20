@@ -3,7 +3,7 @@
  * Copyright (C) 2006 Alexander Kellett <lypanov@kde.org>
  * Copyright (C) 2006, 2007 Rob Buis <buis@kde.org>
  * Copyright (C) 2007-2024 Apple Inc. All rights reserved.
- * Copyright (C) 2016 Google Inc. All rights reserved.
+ * Copyright (C) 2016-2018 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-template <typename FloatType> static inline bool isValidRange(const FloatType& x)
+template <typename FloatType> static inline bool isValidRange(const FloatType x)
 {
     static const FloatType max = std::numeric_limits<FloatType>::max();
     return x >= -max && x <= max;
@@ -45,15 +45,8 @@ template <typename FloatType> static inline bool isValidRange(const FloatType& x
 // FIXME: Can this be shared/replaced with number parsing in WTF?
 template <typename CharacterType, typename FloatType = float> static std::optional<FloatType> genericParseNumber(StringParsingBuffer<CharacterType>& buffer, SuffixSkippingPolicy skip = SuffixSkippingPolicy::Skip)
 {
-    FloatType number = 0;
-    FloatType integer = 0;
-    FloatType decimal = 0;
-    FloatType frac = 1;
-    FloatType exponent = 0;
-    int sign = 1;
-    int expsign = 1;
-
     // read the sign
+    int sign = 1;
     if (buffer.hasCharactersRemaining() && *buffer == '+')
         ++buffer;
     else if (buffer.hasCharactersRemaining() && *buffer == '-') {
@@ -70,6 +63,7 @@ template <typename CharacterType, typename FloatType = float> static std::option
     // Advance to first non-digit.
     skipWhile<isASCIIDigit>(buffer);
 
+    FloatType integer = 0;
     if (buffer.position() > spanDigitsStart.data()) {
         size_t indexScanIntPart = buffer.position() - spanDigitsStart.data();
         FloatType multiplier = 1;
@@ -83,6 +77,7 @@ template <typename CharacterType, typename FloatType = float> static std::option
     }
 
     // read the decimals
+    FloatType decimal = 0;
     if (buffer.hasCharactersRemaining() && *buffer == '.') {
         ++buffer;
         
@@ -90,13 +85,20 @@ template <typename CharacterType, typename FloatType = float> static std::option
         if (buffer.atEnd() || !isASCIIDigit(*buffer))
             return std::nullopt;
         
-        while (buffer.hasCharactersRemaining() && isASCIIDigit(*buffer))
-            decimal += (*(buffer++) - '0') * (frac *= static_cast<FloatType>(0.1));
+        FloatType frac = 1;
+        while (buffer.hasCharactersRemaining() && isASCIIDigit(*buffer)) {
+            frac *= static_cast<FloatType>(0.1);
+            decimal += (*(buffer++) - '0') * frac;
+        }
     }
 
     // When we get here we should have consumed either a digit for the integer
     // part or a fractional part (with at least one digit after the '.'.)
     ASSERT(spanDigitsStart.data() != buffer.position());
+
+    FloatType number = 0;
+    number = integer + decimal;
+    number *= sign;
 
     // read the exponent part
     if (buffer.span().size() > 1 && (*buffer == 'e' || *buffer == 'E')
@@ -104,31 +106,39 @@ template <typename CharacterType, typename FloatType = float> static std::option
         ++buffer;
 
         // read the sign of the exponent
+        bool exponentIsNegative = false;
         if (*buffer == '+')
             ++buffer;
         else if (*buffer == '-') {
             ++buffer;
-            expsign = -1;
+            exponentIsNegative = true;
         }
-        
+
         // There must be an exponent
         if (buffer.atEnd() || !isASCIIDigit(*buffer))
             return std::nullopt;
 
+        FloatType exponent = 0;
         while (buffer.hasCharactersRemaining() && isASCIIDigit(*buffer)) {
             exponent *= static_cast<FloatType>(10);
             exponent += *buffer++ - '0';
         }
-        // Make sure exponent is valid.
-        if (!isValidRange(exponent) || exponent > std::numeric_limits<FloatType>::max_exponent)
-            return std::nullopt;
+
+        // FIXME: This is unnecessairly strict - the position of the decimal point
+        // is not taken into account when limiting 'exponent'.
+        if (exponentIsNegative)
+            exponent = -exponent;
+        // Fail if the exponent is greater than the largest positive power of ten
+        // (that would yield a representable float).
+        if (exponent > std::numeric_limits<FloatType>::max_exponent10)
+            return false;
+
+        // If the exponent is smaller than smallest negative power of 10 (that
+        // would yield a representable float), then rely on the pow()+rounding to
+        // produce a reasonable result (likely zero.)
+        if (exponent)
+            number *= static_cast<FloatType>(std::pow(10.0, exponent));
     }
-
-    number = integer + decimal;
-    number *= sign;
-
-    if (exponent)
-        number *= static_cast<FloatType>(pow(10.0, expsign * static_cast<int>(exponent)));
 
     // Don't return Infinity() or NaN().
     if (!isValidRange(number))

@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 <html>
 <head>
-<script src="../../resources/js-test-pre.js"></script>
+<script src="../../resources/js-test.js"></script>
 </head>
 <body>
 <p id="description"></p>
@@ -140,8 +140,18 @@ shouldBe("parsePath('x')", "''");
 shouldBe("parsePath('L1,2')", "''");
 shouldBe("parsePath('M.1 .2 L.3 .4 .5 .6')", "'M0.1,0.2 L0.3,0.4 L0.5,0.6'");
 
+shouldBe("parsePath('M1e2,10e1')", "'M100,100'");
+shouldBe("parsePath('M100e0,100')", "'M100,100'");
+shouldBe("parsePath('M1e+2,1000e-1')", "'M100,100'");
+shouldBe("parsePath('M1e2.5')", "'M100,0.5'");
+shouldBe("parsePath('M0.00000001e10 100')", "'M100,100'");
+shouldBe("parsePath('M0,50 h1e-1234567891234567891238')", "'M0,50 h0'");
+shouldBe("parsePath('M0,50 h1e39')", "'M0,50 h0'");
+shouldBe("parsePath('M0,50 h1e123456789123456789123')", "'M0,50 h0'");
+shouldBe("parsePath('M0,50 h1e-.5')", "'M0,50'");
+shouldBe("parsePath('M0,50 h1e+.5')", "'M0,50'");
+
 successfullyParsed = true;
 </script>
-<script src="../../resources/js-test-post.js"></script>
 </body>
 </html>
