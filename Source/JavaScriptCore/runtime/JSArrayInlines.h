@@ -80,7 +80,6 @@ ALWAYS_INLINE bool JSArray::holesMustForwardToPrototype() const
 {
     Structure* structure = this->structure();
     if (LIKELY(type() == ArrayType)) {
-        ASSERT(!structure->mayInterceptIndexedAccesses());
         JSGlobalObject* globalObject = structure->globalObject();
         if (LIKELY(structure->hasMonoProto() && structure->storedPrototype() == globalObject->arrayPrototype() && globalObject->arrayPrototypeChainIsSane()))
             return false;
