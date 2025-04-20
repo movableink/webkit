@@ -1902,7 +1902,14 @@ static bool isHiddenOrNearlyTransparent(const RenderBox& box)
 {
     if (CheckedPtr layer = box.checkedLayer(); layer && layer->isVisibilityHiddenOrOpacityZero())
         return true;
-    return box.opacity() < PageColorSampler::nearlyTransparentAlphaThreshold;
+
+    if (box.opacity() < PageColorSampler::nearlyTransparentAlphaThreshold)
+        return true;
+
+    if (!box.hasBackground() && !box.firstChild())
+        return true;
+
+    return false;
 }
 
 FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
@@ -1930,6 +1937,7 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
     struct FixedContainerResult {
         RefPtr<Element> container;
         bool foundBackdropFilter { false };
+        bool retryHonoringPointerEvents { false };
         Color backgroundColor;
     };
 
@@ -2000,31 +2008,40 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
         return styleColor.resolvedColor();
     };
 
-    auto isContainerEdgeCandidate = [](const RenderElement& renderer) {
+    enum class ContainerEdgeCandidateResult : uint8_t {
+        NoLayer,
+        NotFixedOrSticky,
+        IsHiddenOrTransparent,
+        IsScrollable,
+        IsCandidate,
+    };
+    using enum ContainerEdgeCandidateResult;
+
+    auto containerEdgeCandidateResult = [](const RenderElement& renderer) {
         if (!renderer.hasLayer())
-            return false;
+            return NoLayer;
 
         if (!renderer.isFixedPositioned() && !renderer.isStickilyPositioned())
-            return false;
+            return NotFixedOrSticky;
 
         if (CheckedPtr box = dynamicDowncast<RenderBox>(renderer)) {
             if (isHiddenOrNearlyTransparent(*box))
-                return false;
+                return IsHiddenOrTransparent;
 
             if (box->canBeScrolledAndHasScrollableArea())
-                return false;
+                return IsScrollable;
         }
 
-        return true;
+        return IsCandidate;
     };
 
-    auto findFixedContainer = [&](BoxSide side) -> FixedContainerResult {
+    enum class IgnoreCSSPointerEvents : bool { No, Yes };
+    auto findFixedContainer = [&](BoxSide side, IgnoreCSSPointerEvents ignoreCSSPointerEvents) -> FixedContainerResult {
         using enum HitTestRequest::Type;
         static constexpr OptionSet commonHitTestOptions {
             ReadOnly,
             DisallowUserAgentShadowContent,
             IgnoreClipping,
-            IgnoreCSSPointerEventsProperty,
             ForFixedContainerSampling,
         };
 
@@ -2032,6 +2049,8 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
         auto hitTestOptions = commonHitTestOptions;
         if (result.isRectBasedTest())
             hitTestOptions.add(CollectMultipleElements);
+        if (ignoreCSSPointerEvents == IgnoreCSSPointerEvents::Yes)
+            hitTestOptions.add(IgnoreCSSPointerEventsProperty);
 
         document->hitTest({ HitTestSource::User, hitTestOptions }, result);
 
@@ -2055,6 +2074,7 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
         bool hasMultipleBackgroundColors = false;
         Color primaryBackgroundColor;
         bool foundBackdropFilter = false;
+        bool hitInvisiblePointerEventsNoneContainer = false;
         for (CheckedRef ancestor : lineageOfType<RenderElement>(*renderer)) {
             if (ancestor->hasBackdropFilter())
                 foundBackdropFilter = true;
@@ -2065,17 +2085,33 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
                     hasMultipleBackgroundColors = true;
             }
 
-            if (!isContainerEdgeCandidate(ancestor))
-                continue;
-
-            return {
-                .container = { ancestor->element() },
-                .foundBackdropFilter = foundBackdropFilter,
-                .backgroundColor = hasMultipleBackgroundColors ? Color { } : WTFMove(primaryBackgroundColor)
-            };
+            auto candidateResult = containerEdgeCandidateResult(ancestor);
+            switch (candidateResult) {
+            case NoLayer:
+            case NotFixedOrSticky:
+            case IsScrollable:
+                break;
+            case IsHiddenOrTransparent: {
+                hitInvisiblePointerEventsNoneContainer = ancestor->usedPointerEvents() == PointerEvents::None;
+                break;
+            }
+            case IsCandidate: {
+                return {
+                    .container = { ancestor->element() },
+                    .foundBackdropFilter = foundBackdropFilter,
+                    .retryHonoringPointerEvents = false,
+                    .backgroundColor = hasMultipleBackgroundColors ? Color { } : WTFMove(primaryBackgroundColor),
+                };
+            }
+            }
         }
 
-        return { };
+        return {
+            .container = { },
+            .foundBackdropFilter = foundBackdropFilter,
+            .retryHonoringPointerEvents = hitInvisiblePointerEventsNoneContainer,
+            .backgroundColor = { },
+        };
     };
 
     auto computeSamplingRect = [&](const RenderStyle* style, BoxSide side) -> LayoutRect {
@@ -2151,21 +2187,24 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
 
     for (auto sideFlag : sides) {
         auto side = boxSideFromFlag(sideFlag);
-        auto [container, foundBackdropFilter, backgroundColor] = findFixedContainer(side);
-        if (!container)
+        auto result = findFixedContainer(side, IgnoreCSSPointerEvents::Yes);
+        if (result.retryHonoringPointerEvents)
+            result = findFixedContainer(side, IgnoreCSSPointerEvents::No);
+
+        if (!result.container)
             continue;
 
-        if (foundBackdropFilter) {
+        if (result.foundBackdropFilter) {
             edges.colors.setAt(side, PredominantColorType::Multiple);
             continue;
         }
 
-        if (backgroundColor.isVisible()) {
-            edges.colors.setAt(side, WTFMove(backgroundColor));
+        if (result.backgroundColor.isVisible()) {
+            edges.colors.setAt(side, WTFMove(result.backgroundColor));
             continue;
         }
 
-        edges.colors.setAt(side, PageColorSampler::predominantColor(*page, computeSamplingRect(container->renderStyle(), side)));
+        edges.colors.setAt(side, PageColorSampler::predominantColor(*page, computeSamplingRect(result.container->renderStyle(), side)));
     }
 
     return edges;
