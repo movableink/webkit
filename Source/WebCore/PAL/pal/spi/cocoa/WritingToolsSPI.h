@@ -184,40 +184,4 @@ typedef NS_ENUM(NSInteger, WTAction) {
 
 #endif // USE(APPLE_INTERNAL_SDK)
 
-// MARK: Platform-agnostic types.
-
-#if PLATFORM(IOS_FAMILY)
-
-using PlatformWritingToolsBehavior = UIWritingToolsBehavior;
-
-constexpr auto PlatformWritingToolsBehaviorNone = UIWritingToolsBehaviorNone;
-constexpr auto PlatformWritingToolsBehaviorDefault = UIWritingToolsBehaviorDefault;
-constexpr auto PlatformWritingToolsBehaviorLimited = UIWritingToolsBehaviorLimited;
-constexpr auto PlatformWritingToolsBehaviorComplete = UIWritingToolsBehaviorComplete;
-
-using PlatformWritingToolsResultOptions = UIWritingToolsResultOptions;
-
-constexpr auto PlatformWritingToolsResultPlainText = UIWritingToolsResultPlainText;
-constexpr auto PlatformWritingToolsResultRichText = UIWritingToolsResultRichText;
-constexpr auto PlatformWritingToolsResultList = UIWritingToolsResultList;
-constexpr auto PlatformWritingToolsResultTable = UIWritingToolsResultTable;
-
-#else
-
-using PlatformWritingToolsBehavior = NSWritingToolsBehavior;
-
-constexpr auto PlatformWritingToolsBehaviorNone = NSWritingToolsBehaviorNone;
-constexpr auto PlatformWritingToolsBehaviorDefault = NSWritingToolsBehaviorDefault;
-constexpr auto PlatformWritingToolsBehaviorLimited = NSWritingToolsBehaviorLimited;
-constexpr auto PlatformWritingToolsBehaviorComplete = NSWritingToolsBehaviorComplete;
-
-using PlatformWritingToolsResultOptions = NSWritingToolsResultOptions;
-
-constexpr auto PlatformWritingToolsResultPlainText = NSWritingToolsResultPlainText;
-constexpr auto PlatformWritingToolsResultRichText = NSWritingToolsResultRichText;
-constexpr auto PlatformWritingToolsResultList = NSWritingToolsResultList;
-constexpr auto PlatformWritingToolsResultTable = NSWritingToolsResultTable;
-
-#endif // PLATFORM(IOS_FAMILY)
-
 #endif // ENABLE(WRITING_TOOLS)

@@ -616,14 +616,14 @@ static NSString *defaultApplicationNameForUserAgent()
     return [self _multiRepresentationHEICInsertionEnabled];
 }
 
-- (void)setWritingToolsBehavior:(PlatformWritingToolsBehavior)writingToolsBehavior
+- (void)setWritingToolsBehavior:(CocoaWritingToolsBehavior)writingToolsBehavior
 {
     _pageConfiguration->setWritingToolsBehavior(WebKit::convertToWebWritingToolsBehavior(writingToolsBehavior));
 }
 
-- (PlatformWritingToolsBehavior)writingToolsBehavior
+- (CocoaWritingToolsBehavior)writingToolsBehavior
 {
-    return WebKit::convertToPlatformWritingToolsBehavior(_pageConfiguration->writingToolsBehavior());
+    return WebKit::convertToCocoaWritingToolsBehavior(_pageConfiguration->writingToolsBehavior());
 }
 
 #endif // ENABLE(WRITING_TOOLS)

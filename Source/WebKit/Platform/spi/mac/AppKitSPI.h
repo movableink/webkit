@@ -64,7 +64,14 @@ DECLARE_SYSTEM_HEADER
 @end
 #endif
 
+@class NSTextPlaceholder;
+
 @protocol NSTextInputClient_Async
+@optional
+
+- (void)insertTextPlaceholderWithSize:(CGSize)size completionHandler:(void (^)(NSTextPlaceholder *))completionHandler;
+
+- (void)removeTextPlaceholder:(NSTextPlaceholder *)placeholder willInsertText:(BOOL)willInsertText completionHandler:(void (^)(void))completionHandler;
 @end
 
 typedef NS_OPTIONS(NSUInteger, NSWindowShadowOptions) {

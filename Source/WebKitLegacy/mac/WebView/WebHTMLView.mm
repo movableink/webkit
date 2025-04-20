@@ -7156,9 +7156,9 @@ static CGImageRef selectionImage(WebCore::LocalFrame* frame, bool forceBlackText
 
 // Disable Writing Tools in WebKitLegacy.
 
-- (NSInteger /* PlatformWritingToolsBehavior */)writingToolsBehavior
+- (NSInteger /* CocoaWritingToolsBehavior */)writingToolsBehavior
 {
-    return -1; // PlatformWritingToolsBehaviorNone
+    return -1; // CocoaWritingToolsBehaviorNone
 }
 
 - (BOOL)providesWritingToolsContextMenu

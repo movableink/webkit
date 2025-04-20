@@ -13992,7 +13992,7 @@ inline static NSString *extendSelectionCommand(UITextLayoutDirection direction)
     [self reloadInputViews];
 }
 
-- (PlatformWritingToolsResultOptions)allowedWritingToolsResultOptions
+- (CocoaWritingToolsResultOptions)allowedWritingToolsResultOptions
 {
     return [_webView allowedWritingToolsResultOptions];
 }

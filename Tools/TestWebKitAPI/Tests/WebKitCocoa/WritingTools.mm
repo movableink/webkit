@@ -39,6 +39,7 @@
 #import "WKWebViewConfigurationExtras.h"
 #import <SoftLinking/WeakLinking.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
+#import <WebCore/CocoaWritingToolsTypes.h>
 #import <WebCore/ColorCocoa.h>
 #import <WebCore/FloatRect.h>
 #import <WebCore/IntRect.h>
@@ -153,15 +154,15 @@ using PlatformTextPlaceholder = NSTextPlaceholder;
 
 - (instancetype)initWithHTMLString:(NSString *)string
 {
-    return [self initWithHTMLString:string writingToolsBehavior:PlatformWritingToolsBehaviorComplete];
+    return [self initWithHTMLString:string writingToolsBehavior:CocoaWritingToolsBehaviorComplete];
 }
 
-- (instancetype)initWithHTMLString:(NSString *)string writingToolsBehavior:(PlatformWritingToolsBehavior)behavior
+- (instancetype)initWithHTMLString:(NSString *)string writingToolsBehavior:(CocoaWritingToolsBehavior)behavior
 {
     return [self initWithHTMLString:string writingToolsBehavior:behavior attachmentElementEnabled:NO];
 }
 
-- (instancetype)initWithHTMLString:(NSString *)string writingToolsBehavior:(PlatformWritingToolsBehavior)behavior attachmentElementEnabled:(BOOL)attachmentElementEnabled
+- (instancetype)initWithHTMLString:(NSString *)string writingToolsBehavior:(CocoaWritingToolsBehavior)behavior attachmentElementEnabled:(BOOL)attachmentElementEnabled
 {
     auto configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
     [configuration setWritingToolsBehavior:behavior];
@@ -206,7 +207,7 @@ using PlatformTextPlaceholder = NSTextPlaceholder;
 #endif
 }
 
-- (PlatformWritingToolsResultOptions)allowedWritingToolsResultOptionsForTesting
+- (CocoaWritingToolsResultOptions)allowedWritingToolsResultOptionsForTesting
 {
 #if PLATFORM(IOS_FAMILY)
     return [[self textInputContentView] allowedWritingToolsResultOptions];
@@ -215,7 +216,7 @@ using PlatformTextPlaceholder = NSTextPlaceholder;
 #endif
 }
 
-- (PlatformWritingToolsBehavior)writingToolsBehaviorForTesting
+- (CocoaWritingToolsBehavior)writingToolsBehaviorForTesting
 {
 #if PLATFORM(IOS_FAMILY)
     return [[self textInputContentView] writingToolsBehavior];
@@ -802,7 +803,7 @@ TEST(WritingTools, ProofreadingWithUntitledImageAttachment)
         "    <p>Hello<img src='sunset-in-cupertino-200px.png'></img></p>"
         "  </body>"
         "</html>";
-    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:markupString.get() writingToolsBehavior:PlatformWritingToolsBehaviorComplete attachmentElementEnabled:YES]);
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:markupString.get() writingToolsBehavior:CocoaWritingToolsBehaviorComplete attachmentElementEnabled:YES]);
     [webView focusDocumentBodyAndSelectAll];
     [webView stringByEvaluatingJavaScript:@"HTMLAttachmentElement.getAttachmentIdentifier(document.querySelector('img'))"];
 
@@ -1794,7 +1795,7 @@ TEST(WritingTools, CompositionWithImageAttachmentRoundTrip)
 {
     auto session = adoptNS([[WTSession alloc] initWithType:WTSessionTypeComposition textViewDelegate:nil]);
 
-    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<p>AAAA BBBB</p><img src='sunset-in-cupertino-200px.png'></img><p>CCCC DDDD</p>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete attachmentElementEnabled:YES]);
+    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<p>AAAA BBBB</p><img src='sunset-in-cupertino-200px.png'></img><p>CCCC DDDD</p>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete attachmentElementEnabled:YES]);
 
     [webView selectAll:nil];
 
@@ -1835,7 +1836,7 @@ TEST(WritingTools, CompositionWithNonImageAttachmentRoundTrip)
 {
     auto session = adoptNS([[WTSession alloc] initWithType:WTSessionTypeComposition textViewDelegate:nil]);
 
-    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body id='p' contenteditable><p id='first'>AAAA BBBB CCCC</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete attachmentElementEnabled:YES]);
+    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body id='p' contenteditable><p id='first'>AAAA BBBB CCCC</p></body>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete attachmentElementEnabled:YES]);
 
     __auto_type modifySelection = ^(unsigned start, unsigned end) {
         NSString *modifySelectionJavascript = [NSString stringWithFormat:@""
@@ -2355,45 +2356,45 @@ TEST(WritingTools, ShowDetailsForSuggestions)
 
 TEST(WritingTools, WantsInlineEditing)
 {
-    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable>Hello World</body>" writingToolsBehavior:PlatformWritingToolsBehaviorDefault]);
+    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable>Hello World</body>" writingToolsBehavior:CocoaWritingToolsBehaviorDefault]);
 
     [webView _setEditable:NO];
-    EXPECT_EQ([webView writingToolsBehaviorForTesting], PlatformWritingToolsBehaviorNone);
+    EXPECT_EQ([webView writingToolsBehaviorForTesting], CocoaWritingToolsBehaviorNone);
 
     [webView _setEditable:YES];
-    EXPECT_EQ([webView writingToolsBehaviorForTesting], PlatformWritingToolsBehaviorComplete);
+    EXPECT_EQ([webView writingToolsBehaviorForTesting], CocoaWritingToolsBehaviorComplete);
 }
 
 TEST(WritingTools, WritingToolsBehaviorNonEditableWithSelection)
 {
-    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body>Hello World</body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body>Hello World</body>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete]);
 
     [webView selectAll:nil];
     [webView waitForNextPresentationUpdate];
 
-    EXPECT_EQ([webView writingToolsBehaviorForTesting], PlatformWritingToolsBehaviorLimited);
+    EXPECT_EQ([webView writingToolsBehaviorForTesting], CocoaWritingToolsBehaviorLimited);
 }
 
 TEST(WritingTools, WritingToolsBehaviorWithNoSelection)
 {
-    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable>Hello World</body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable>Hello World</body>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete]);
 
-    EXPECT_EQ([webView writingToolsBehaviorForTesting], PlatformWritingToolsBehaviorNone);
+    EXPECT_EQ([webView writingToolsBehaviorForTesting], CocoaWritingToolsBehaviorNone);
 }
 
 TEST(WritingTools, WritingToolsBehaviorEditableWithSelection)
 {
-    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable>Hello World</body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable>Hello World</body>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete]);
     [webView focusDocumentBodyAndSelectAll];
 
-    EXPECT_EQ([webView writingToolsBehaviorForTesting], PlatformWritingToolsBehaviorComplete);
+    EXPECT_EQ([webView writingToolsBehaviorForTesting], CocoaWritingToolsBehaviorComplete);
 }
 
 TEST(WritingTools, AllowedInputOptionsNonEditable)
 {
     auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body></body>"]);
 
-    EXPECT_EQ(PlatformWritingToolsResultPlainText | PlatformWritingToolsResultRichText | PlatformWritingToolsResultList | PlatformWritingToolsResultTable, [webView allowedWritingToolsResultOptionsForTesting]);
+    EXPECT_EQ(CocoaWritingToolsResultPlainText | CocoaWritingToolsResultRichText | CocoaWritingToolsResultList | CocoaWritingToolsResultTable, [webView allowedWritingToolsResultOptionsForTesting]);
 }
 
 TEST(WritingTools, AllowedInputOptionsEditable)
@@ -2402,7 +2403,7 @@ TEST(WritingTools, AllowedInputOptionsEditable)
     [webView _setEditable:YES];
     [webView focusDocumentBodyAndSelectAll];
 
-    EXPECT_EQ(PlatformWritingToolsResultPlainText | PlatformWritingToolsResultRichText | PlatformWritingToolsResultList | PlatformWritingToolsResultTable, [webView allowedWritingToolsResultOptionsForTesting]);
+    EXPECT_EQ(CocoaWritingToolsResultPlainText | CocoaWritingToolsResultRichText | CocoaWritingToolsResultList | CocoaWritingToolsResultTable, [webView allowedWritingToolsResultOptionsForTesting]);
 }
 
 TEST(WritingTools, AllowedInputOptionsRichText)
@@ -2410,7 +2411,7 @@ TEST(WritingTools, AllowedInputOptionsRichText)
     auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable></body>"]);
     [webView focusDocumentBodyAndSelectAll];
 
-    EXPECT_EQ(PlatformWritingToolsResultPlainText | PlatformWritingToolsResultRichText | PlatformWritingToolsResultList | PlatformWritingToolsResultTable, [webView allowedWritingToolsResultOptionsForTesting]);
+    EXPECT_EQ(CocoaWritingToolsResultPlainText | CocoaWritingToolsResultRichText | CocoaWritingToolsResultList | CocoaWritingToolsResultTable, [webView allowedWritingToolsResultOptionsForTesting]);
 }
 
 TEST(WritingTools, AllowedInputOptionsPlainText)
@@ -2418,12 +2419,12 @@ TEST(WritingTools, AllowedInputOptionsPlainText)
     auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable=\"plaintext-only\"></body>"]);
     [webView focusDocumentBodyAndSelectAll];
 
-    EXPECT_EQ(PlatformWritingToolsResultPlainText, [webView allowedWritingToolsResultOptionsForTesting]);
+    EXPECT_EQ(CocoaWritingToolsResultPlainText, [webView allowedWritingToolsResultOptionsForTesting]);
 }
 
 TEST(WritingTools, EphemeralSessionWithDifferingTextLengths)
 {
-    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<p>AAAA BBBB CCCC DDDD</p><img src='sunset-in-cupertino-200px.png'></img><p>CCCC DDDD</p>" writingToolsBehavior:PlatformWritingToolsBehaviorDefault]);
+    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<p>AAAA BBBB CCCC DDDD</p><img src='sunset-in-cupertino-200px.png'></img><p>CCCC DDDD</p>" writingToolsBehavior:CocoaWritingToolsBehaviorDefault]);
     [webView _setEditable:NO];
     [webView selectAll:nil];
 
@@ -2447,7 +2448,7 @@ TEST(WritingTools, EphemeralSessionWithDeeplyNestedContent)
 {
     NSString *text = @"The oceanic whitetip shark is a large requiem shark inhabiting tropical and warm temperate seas. It has a stocky body with long, white-tipped, rounded fins. The species is typically solitary but can congregate around food concentrations.";
 
-    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:[NSString stringWithFormat:@"<body><div><div><div><div><div><div><div><div><div><div><p>%@</p></div></div></div></div></div></div></div></div></div></div></body>", text] writingToolsBehavior:PlatformWritingToolsBehaviorDefault]);
+    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:[NSString stringWithFormat:@"<body><div><div><div><div><div><div><div><div><div><div><p>%@</p></div></div></div></div></div></div></div></div></div></div></body>", text] writingToolsBehavior:CocoaWritingToolsBehaviorDefault]);
     [webView selectAll:nil];
 
     [webView waitForNextPresentationUpdate];
@@ -2621,7 +2622,7 @@ static void expectScheduleShowAffordanceForSelectionRectCalled(bool expectation)
 
 TEST(WritingTools, APIWithBehaviorNone)
 {
-    // If `PlatformWritingToolsBehaviorNone`, there should be no affordance, no context menu item, and no inline editing support.
+    // If `CocoaWritingToolsBehaviorNone`, there should be no affordance, no context menu item, and no inline editing support.
 
 #if PLATFORM(MAC)
     InstanceMethodSwizzler swizzler(PAL::getWTWritingToolsClass(), @selector(scheduleShowAffordanceForSelectionRect:ofView:forDelegate:), imp_implementationWithBlock(^(id object, NSRect rect, NSView *view, id delegate) {
@@ -2641,7 +2642,7 @@ TEST(WritingTools, APIWithBehaviorNone)
     }];
 #endif
 
-    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body id='p' contenteditable><p id='first'>AAAA BBBB CCCC</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorNone]);
+    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body id='p' contenteditable><p id='first'>AAAA BBBB CCCC</p></body>" writingToolsBehavior:CocoaWritingToolsBehaviorNone]);
     [webView setUIDelegate:delegate.get()];
 
     [webView focusDocumentBodyAndSelectAll];
@@ -2650,7 +2651,7 @@ TEST(WritingTools, APIWithBehaviorNone)
 
     [webView waitForNextPresentationUpdate];
 
-    EXPECT_EQ([webView writingToolsBehaviorForTesting], PlatformWritingToolsBehaviorNone);
+    EXPECT_EQ([webView writingToolsBehaviorForTesting], CocoaWritingToolsBehaviorNone);
 
 #if PLATFORM(MAC)
     [webView mouseDownAtPoint:NSMakePoint(10, 10) simulatePressure:NO withFlags:0 eventType:NSEventTypeRightMouseDown];
@@ -2664,7 +2665,7 @@ TEST(WritingTools, APIWithBehaviorNone)
 
 TEST(WritingTools, APIWithBehaviorDefault)
 {
-    // If `PlatformWritingToolsBehaviorDefault` (or `Limited`), there should be a context menu item, but no affordance nor inline editing support.
+    // If `CocoaWritingToolsBehaviorDefault` (or `Limited`), there should be a context menu item, but no affordance nor inline editing support.
 
 #if PLATFORM(MAC)
     if (![PAL::getWTWritingToolsViewControllerClass() isAvailable])
@@ -2687,7 +2688,7 @@ TEST(WritingTools, APIWithBehaviorDefault)
     }];
 #endif
 
-    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body id='p' contenteditable><p id='first'>AAAA BBBB CCCC</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorDefault]);
+    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body id='p' contenteditable><p id='first'>AAAA BBBB CCCC</p></body>" writingToolsBehavior:CocoaWritingToolsBehaviorDefault]);
     [webView setUIDelegate:delegate.get()];
 
     [webView focusDocumentBodyAndSelectAll];
@@ -2696,7 +2697,7 @@ TEST(WritingTools, APIWithBehaviorDefault)
 
     [webView waitForNextPresentationUpdate];
 
-    EXPECT_EQ([webView writingToolsBehaviorForTesting], PlatformWritingToolsBehaviorLimited);
+    EXPECT_EQ([webView writingToolsBehaviorForTesting], CocoaWritingToolsBehaviorLimited);
 
 #if PLATFORM(MAC)
     [webView mouseDownAtPoint:NSMakePoint(10, 10) simulatePressure:NO withFlags:0 eventType:NSEventTypeRightMouseDown];
@@ -2710,7 +2711,7 @@ TEST(WritingTools, APIWithBehaviorDefault)
 
 TEST(WritingTools, APIWithBehaviorComplete)
 {
-    // If `PlatformWritingToolsBehaviorComplete`, there should be a context menu item, an affordance, and inline editing support.
+    // If `CocoaWritingToolsBehaviorComplete`, there should be a context menu item, an affordance, and inline editing support.
 
 #if PLATFORM(MAC)
     if (![PAL::getWTWritingToolsViewControllerClass() isAvailable])
@@ -2733,7 +2734,7 @@ TEST(WritingTools, APIWithBehaviorComplete)
     }];
 #endif
 
-    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body id='p' contenteditable><p id='first'>AAAA BBBB CCCC</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body id='p' contenteditable><p id='first'>AAAA BBBB CCCC</p></body>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete]);
     [webView setUIDelegate:delegate.get()];
 
     [webView focusDocumentBodyAndSelectAll];
@@ -2742,7 +2743,7 @@ TEST(WritingTools, APIWithBehaviorComplete)
 
     [webView waitForNextPresentationUpdate];
 
-    EXPECT_EQ([webView writingToolsBehaviorForTesting], PlatformWritingToolsBehaviorComplete);
+    EXPECT_EQ([webView writingToolsBehaviorForTesting], CocoaWritingToolsBehaviorComplete);
 
 #if PLATFORM(MAC)
     [webView mouseDownAtPoint:NSMakePoint(10, 10) simulatePressure:NO withFlags:0 eventType:NSEventTypeRightMouseDown];
@@ -2894,7 +2895,7 @@ TEST(WritingTools, ShowAffordance)
         didCallScheduleShowAffordanceForSelectionRect = true;
     }));
 
-    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body id='p' contenteditable><p id='first'>AAAA BBBB CCCC</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body id='p' contenteditable><p id='first'>AAAA BBBB CCCC</p></body>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete]);
     [webView focusDocumentBodyAndSelectAll];
 
     expectScheduleShowAffordanceForSelectionRectCalled(true);
@@ -2940,7 +2941,7 @@ TEST(WritingTools, ShowAffordanceForMultipleLines)
         count++;
     }));
 
-    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p id='first'>AAAA BBBB CCCC</p><p>DDDD</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+    auto webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p id='first'>AAAA BBBB CCCC</p><p>DDDD</p></body>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete]);
     [webView focusDocumentBodyAndSelectAll];
 
     expectScheduleShowAffordanceForSelectionRectCalled(true);
@@ -2961,7 +2962,7 @@ TEST(WritingTools, ShowPanelWithNoSelection)
         done = true;
     }));
 
-    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p id='text'>This is some content that should be rewritten.</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p id='text'>This is some content that should be rewritten.</p></body>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete]);
 
     [webView _showWritingTools];
 
@@ -2987,7 +2988,7 @@ TEST(WritingTools, ShowPanelWithCaretSelection)
         done = true;
     }));
 
-    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p id='text'>This is some content that should be rewritten.</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p id='text'>This is some content that should be rewritten.</p></body>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete]);
     [webView focusDocumentBodyAndSelectAll];
 
     NSString *setSelectionJavaScript = @""
@@ -3029,7 +3030,7 @@ TEST(WritingTools, ShowPanelWithRangedSelection)
         done = true;
     }));
 
-    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p id='text'>This is some content that should be rewritten.</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p id='text'>This is some content that should be rewritten.</p></body>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete]);
     [webView focusDocumentBodyAndSelectAll];
 
     [webView _showWritingTools];
@@ -3055,7 +3056,7 @@ TEST(WritingTools, DISABLED_ShowToolWithRangedSelection)
         done = true;
     }));
 
-    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p id='text'>This is some content that should be rewritten.</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p id='text'>This is some content that should be rewritten.</p></body>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete]);
     [webView focusDocumentBodyAndSelectAll];
 
     RetainPtr menuItem = adoptNS([[NSMenuItem alloc] initWithTitle:@"Test" action:nil keyEquivalent:@""]);
@@ -3083,7 +3084,7 @@ TEST(WritingTools, DISABLED_ShowInvalidToolWithRangedSelection)
         done = true;
     }));
 
-    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p id='text'>This is some content that should be rewritten.</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p id='text'>This is some content that should be rewritten.</p></body>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete]);
     [webView focusDocumentBodyAndSelectAll];
 
     RetainPtr menuItem = adoptNS([[NSMenuItem alloc] initWithTitle:@"Test" action:nil keyEquivalent:@""]);
@@ -3199,7 +3200,7 @@ TEST(WritingTools, DISABLED_ContextMenuItemsNonEditable)
         gotProposedMenu = true;
     }];
 
-    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body><p>AAAA BBBB CCCC</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body><p>AAAA BBBB CCCC</p></body>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete]);
     [webView setUIDelegate:delegate.get()];
 
     [webView focusDocumentBodyAndSelectAll];
@@ -3235,7 +3236,7 @@ TEST(WritingTools, DISABLED_ContextMenuItemsEditable)
         gotProposedMenu = true;
     }];
 
-    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p>AAAA BBBB CCCC</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p>AAAA BBBB CCCC</p></body>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete]);
     [webView setUIDelegate:delegate.get()];
 
     [webView focusDocumentBodyAndSelectAll];
@@ -3271,7 +3272,7 @@ TEST(WritingTools, DISABLED_ContextMenuItemsEditableEmpty)
         gotProposedMenu = true;
     }];
 
-    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable></body>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete]);
     [webView setUIDelegate:delegate.get()];
 
     [webView focusDocumentBodyAndSelectAll];
@@ -3296,7 +3297,7 @@ TEST(WritingTools, DISABLED_ContextMenuItemsEditableEmpty)
 
 TEST(WritingTools, AppMenuNonEditable)
 {
-    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body><p>AAAA BBBB CCCC</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body><p>AAAA BBBB CCCC</p></body>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete]);
 
     [webView focusDocumentBodyAndSelectAll];
 
@@ -3316,7 +3317,7 @@ TEST(WritingTools, AppMenuNonEditable)
 
 TEST(WritingTools, AppMenuEditable)
 {
-    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p>AAAA BBBB CCCC</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p>AAAA BBBB CCCC</p></body>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete]);
 
     [webView focusDocumentBodyAndSelectAll];
 
@@ -3336,7 +3337,7 @@ TEST(WritingTools, AppMenuEditable)
 
 TEST(WritingTools, AppMenuEditableEmpty)
 {
-    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable></body>" writingToolsBehavior:CocoaWritingToolsBehaviorComplete]);
 
     [webView focusDocumentBodyAndSelectAll];
 
@@ -4069,7 +4070,7 @@ TEST(WritingTools, PDFTextSelections)
 
     selectAllText(webView.get());
     [webView waitForNextPresentationUpdate];
-    EXPECT_EQ([webView writingToolsBehaviorForTesting], PlatformWritingToolsBehaviorNone);
+    EXPECT_EQ([webView writingToolsBehaviorForTesting], CocoaWritingToolsBehaviorNone);
 }
 #endif
 

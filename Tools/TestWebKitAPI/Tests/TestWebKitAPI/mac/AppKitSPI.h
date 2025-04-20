@@ -52,8 +52,6 @@ DECLARE_SYSTEM_HEADER
 - (void)hasMarkedTextWithCompletionHandler:(void(^)(BOOL hasMarkedText))completionHandler;
 - (void)attributedSubstringForProposedRange:(NSRange)range completionHandler:(void(^)(NSAttributedString *, NSRange actualRange))completionHandler;
 - (void)firstRectForCharacterRange:(NSRange)range completionHandler:(void(^)(NSRect firstRect, NSRange actualRange))completionHandler;
-- (void)insertTextPlaceholderWithSize:(CGSize)size completionHandler:(void (^)(NSTextPlaceholder *))completionHandler;
-- (void)removeTextPlaceholder:(NSTextPlaceholder *)placeholder willInsertText:(BOOL)willInsertText completionHandler:(void (^)(void))completionHandler;
 @end
 
 @protocol NSInspectorBarClient <NSObject>

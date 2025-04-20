@@ -28,11 +28,8 @@
 #ifdef __cplusplus
 
 #import "PDFPluginIdentifier.h"
-#import "WKIntelligenceReplacementTextEffectCoordinator.h"
-#import "WKIntelligenceSmartReplyTextEffectCoordinator.h"
-#import "WKIntelligenceTextEffectCoordinator.h"
-#import "WKTextAnimationType.h"
 #import <WebCore/CocoaView.h>
+#import <WebCore/CocoaWritingToolsTypes.h>
 #import <WebCore/FixedContainerEdges.h>
 #import <WebKit/WKShareSheet.h>
 #import <WebKit/WKWebViewConfiguration.h>
@@ -73,9 +70,9 @@
 #define WK_WEB_VIEW_PROTOCOLS <WKBEScrollViewDelegate, WTWritingToolsDelegate, UITextInputTraits>
 #else
 #define WK_WEB_VIEW_PROTOCOLS <WKBEScrollViewDelegate>
-#endif
+#endif // ENABLE(WRITING_TOOLS)
 
-#endif
+#endif // PLATFORM(IOS_FAMILY)
 
 #if PLATFORM(MAC)
 
@@ -83,9 +80,9 @@
 #define WK_WEB_VIEW_PROTOCOLS <WKShareSheetDelegate, WTWritingToolsDelegate, NSTextInputTraits>
 #else
 #define WK_WEB_VIEW_PROTOCOLS <WKShareSheetDelegate>
-#endif
+#endif // ENABLE(WRITING_TOOLS)
 
-#endif
+#endif // PLATFORM(MAC)
 
 #if !defined(WK_WEB_VIEW_PROTOCOLS)
 #define WK_WEB_VIEW_PROTOCOLS
@@ -148,6 +145,7 @@ class ViewGestureController;
 #if ENABLE(WRITING_TOOLS)
 @class WTTextSuggestion;
 @class WTSession;
+@protocol WKIntelligenceTextEffectCoordinating;
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -479,7 +477,7 @@ struct PerWebProcessState {
 
 - (void)_proofreadingSessionUpdateState:(WebCore::WritingTools::TextSuggestionState)state forSuggestionWithUUID:(NSUUID *)replacementUUID;
 
-- (PlatformWritingToolsResultOptions)allowedWritingToolsResultOptions;
+- (CocoaWritingToolsResultOptions)allowedWritingToolsResultOptions;
 
 - (void)_didEndPartialIntelligenceTextAnimation;
 - (BOOL)_writingToolsTextReplacementsFinished;
