@@ -2032,6 +2032,9 @@ webkit.org/b/288404 [ Sonoma+ Release ] fast/text/canvas-color-fonts/stroke-grad
 # webkit.org/b/287012 PDF tests crashing at WTF::Lock::assertIsOwner() under PDFPluginBase::streamedBytesForDebugLogging()
 [ Debug ] http/tests/pdf/linearized-pdf-in-iframe.html [ Pass Crash ]
 [ Debug ] http/tests/pdf/linearized-pdf-in-display-none-iframe.html [ Pass Crash ]
+[ Debug ] pdf/annotations/checkbox-set-active.html [ Pass Crash ]
+[ Debug ] pdf/annotations/dropdown-select-second-option.html [ Pass Crash ]
+[ Debug ] pdf/annotations/radio-buttons-select-second.html [ Pass Crash ]
 
 webkit.org/b/288411 [ Sequoia x86_64 ] imported/w3c/web-platform-tests/webrtc/simulcast/getStats.https.html [ Failure ]
 
