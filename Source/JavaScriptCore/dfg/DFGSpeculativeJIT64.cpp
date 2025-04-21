@@ -4258,31 +4258,23 @@ void SpeculativeJIT::compile(Node* node)
             
         case Array::ArrayStorage: {
             load32(Address(storageGPR, ArrayStorage::lengthOffset()), storageLengthGPR);
-        
-            Jump undefinedCase =
-                branchTest32(Zero, storageLengthGPR);
-        
-            sub32(TrustedImm32(1), storageLengthGPR);
-        
+
             JumpList slowCases;
+            slowCases.append(branchTest32(Zero, storageLengthGPR));
+
+            sub32(TrustedImm32(1), storageLengthGPR);
+
             slowCases.append(branch32(AboveOrEqual, storageLengthGPR, Address(storageGPR, ArrayStorage::vectorLengthOffset())));
-        
+
             load64(BaseIndex(storageGPR, storageLengthGPR, TimesEight, ArrayStorage::vectorOffset()), valueGPR);
             slowCases.append(branchIfEmpty(valueGPR));
-        
+
             store32(storageLengthGPR, Address(storageGPR, ArrayStorage::lengthOffset()));
-        
+
             store64(TrustedImm64((int64_t)0), BaseIndex(storageGPR, storageLengthGPR, TimesEight,  ArrayStorage::vectorOffset()));
             sub32(TrustedImm32(1), Address(storageGPR, OBJECT_OFFSETOF(ArrayStorage, m_numValuesInVector)));
-        
-            addSlowPathGenerator(
-                slowPathMove(
-                    undefinedCase, this,
-                    TrustedImm64(JSValue::encode(jsUndefined())), valueGPR));
-        
-            addSlowPathGenerator(
-                slowPathCall(
-                    slowCases, this, operationArrayPop, valueGPR, LinkableConstant::globalObject(*this, node), baseGPR));
+
+            addSlowPathGenerator(slowPathCall(slowCases, this, operationArrayPop, valueGPR, LinkableConstant::globalObject(*this, node), baseGPR));
 
             jsValueResult(valueGPR, node);
             break;
