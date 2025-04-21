@@ -560,7 +560,6 @@ platform/graphics/ComplexTextController.cpp
 platform/graphics/DisplayRefreshMonitorManager.cpp
 platform/graphics/FontCache.cpp
 platform/graphics/FontRanges.cpp
-platform/graphics/GlyphBuffer.h
 platform/graphics/GraphicsLayer.cpp
 platform/graphics/Image.cpp
 platform/graphics/Path.cpp

@@ -253,25 +253,11 @@ public:
 private:
     void swap(unsigned index1, unsigned index2)
     {
-        auto font = m_fonts[index1];
-        m_fonts[index1] = m_fonts[index2];
-        m_fonts[index2] = font;
-
-        auto glyph = m_glyphs[index1];
-        m_glyphs[index1] = m_glyphs[index2];
-        m_glyphs[index2] = glyph;
-
-        auto advance = m_advances[index1];
-        m_advances[index1] = m_advances[index2];
-        m_advances[index2] = advance;
-
-        auto origin = m_origins[index1];
-        m_origins[index1] = m_origins[index2];
-        m_origins[index2] = origin;
-
-        auto offset = m_offsetsInString[index1];
-        m_offsetsInString[index1] = m_offsetsInString[index2];
-        m_offsetsInString[index2] = offset;
+        std::swap(m_fonts[index1], m_fonts[index2]);
+        std::swap(m_glyphs[index1], m_glyphs[index2]);
+        std::swap(m_advances[index1], m_advances[index2]);
+        std::swap(m_origins[index1], m_origins[index2]);
+        std::swap(m_offsetsInString[index1], m_offsetsInString[index2]);
     }
 
     Vector<const Font*, 1024> m_fonts;
