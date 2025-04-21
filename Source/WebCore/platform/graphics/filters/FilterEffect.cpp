@@ -50,7 +50,17 @@ bool FilterEffect::operator==(const FilterEffect& other) const
 FilterImageVector FilterEffect::takeImageInputs(FilterImageVector& stack) const
 {
     unsigned inputsSize = numberOfImageInputs();
-    ASSERT(stack.size() >= inputsSize);
+
+    if (stack.size() < inputsSize) {
+        LOG_WITH_STREAM(Filters, stream
+            << "FilterEffect " << filterName() << " " << this << " takeImageInputs(): " << *this
+            << "Not enough inputs. Needed "
+            << inputsSize
+            << ", stack size "
+            << stack.size());
+        return { };
+    }
+
     if (!inputsSize)
         return { };
 
@@ -147,7 +157,8 @@ RefPtr<FilterImage> FilterEffect::apply(const Filter& filter, FilterImage& input
 
 RefPtr<FilterImage> FilterEffect::apply(const Filter& filter, const FilterImageVector& inputs, FilterResults& results, const std::optional<FilterEffectGeometry>& geometry)
 {
-    ASSERT(inputs.size() == numberOfImageInputs());
+    if (inputs.size() != numberOfImageInputs())
+        return nullptr;
 
     if (RefPtr result = results.effectResult(*this))
         return result;
