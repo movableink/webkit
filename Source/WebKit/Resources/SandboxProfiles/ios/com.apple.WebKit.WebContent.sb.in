@@ -40,11 +40,6 @@
 (deny file-read-metadata
     (literal "/private/var/db/MobileIdentityData/Version.plist"))
 
-;;;
-;;; The following rules were originally contained in 'common.sb'. We are duplicating them here so we can
-;;; remove unneeded sandbox extensions.
-;;;
-
 (define-once (framebuffer-access)
     (deny iokit-open-user-client (with telemetry-backtrace)
         (iokit-user-client-class "IOMobileFramebufferUserClient"))
@@ -521,10 +516,6 @@
 (allow process-info-setcontrol (target self))
 (allow process-info-dirtycontrol (target self))
 (allow process-info-rusage (target self))
-
-;;;
-;;; End common.sb content
-;;;
 
 (deny mach-lookup (xpc-service-name-prefix ""))
 (deny iokit-get-properties)
