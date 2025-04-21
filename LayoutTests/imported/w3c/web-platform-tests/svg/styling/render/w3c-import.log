@@ -14,8 +14,13 @@ Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
 List of files:
+/LayoutTests/imported/w3c/web-platform-tests/svg/styling/render/transform-box-expected.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/styling/render/transform-box-ref.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/styling/render/transform-box.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/styling/render/transform-expected.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/styling/render/transform-origin-expected.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/styling/render/transform-origin-not-explicit-style-visual-ref.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/styling/render/transform-origin-not-explicit-style-visual.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/styling/render/transform-origin-ref.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/styling/render/transform-origin.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/styling/render/transform-ref.svg
