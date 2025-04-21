@@ -24,8 +24,9 @@
  */
 
 #import <Foundation/Foundation.h>
+#import <wtf/Platform.h>
 
-#if !TARGET_OS_WATCH && !TARGET_OS_TV && __has_include(<WritingTools/WritingTools.h>)
+#if ENABLE(WRITING_TOOLS)
 
 #if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
 #import <UIKit/UIKit.h>
@@ -91,4 +92,4 @@ NS_SWIFT_UI_ACTOR
 
 NS_ASSUME_NONNULL_END
 
-#endif
+#endif // ENABLE(WRITING_TOOLS)

@@ -21,7 +21,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if HAVE_WRITING_TOOLS_FRAMEWORK
+#if ENABLE_WRITING_TOOLS
 
 import Foundation
 import WebKit
@@ -425,4 +425,4 @@ func platformTextPreview(from source: [_WKTextPreview], suggestionRects: [NSValu
 }
 #endif
 
-#endif
+#endif // ENABLE_WRITING_TOOLS

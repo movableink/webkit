@@ -26,7 +26,7 @@
 #import <Foundation/Foundation.h>
 #import <wtf/Platform.h>
 
-#if !TARGET_OS_WATCH && !TARGET_OS_TV && HAVE(WRITING_TOOLS_FRAMEWORK)
+#if ENABLE(WRITING_TOOLS)
 
 #import "WKIntelligenceTextEffectCoordinator.h"
 
@@ -41,4 +41,4 @@ NS_SWIFT_UI_ACTOR
 
 NS_ASSUME_NONNULL_END
 
-#endif
+#endif // ENABLE(WRITING_TOOLS)
