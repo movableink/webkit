@@ -7,8 +7,12 @@
 import OSLog
 import WebKit
 import WebKitSwift
-internal import UIKit_Private
+
+#if USE_APPLE_INTERNAL_SDK
 @_spi(TextEffects) import UIKit
+#else
+import UIKit_SPI
+#endif // USE_APPLE_INTERNAL_SDK
 
 @objc public enum WKTextAnimationType: Int {
     case initial

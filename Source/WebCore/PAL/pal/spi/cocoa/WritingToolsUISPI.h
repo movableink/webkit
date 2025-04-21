@@ -39,6 +39,7 @@ DECLARE_SYSTEM_HEADER
 
 #else
 
+#import <AppKit/AppKit.h>
 #import <CoreGraphics/CoreGraphics.h>
 
 // MARK: Forward-declared Writing Tools types

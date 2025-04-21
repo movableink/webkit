@@ -27,6 +27,7 @@
 
 #if ENABLE(WRITING_TOOLS)
 
+#import "AppKitSPI.h"
 #import "InstanceMethodSwizzler.h"
 #import "PlatformUtilities.h"
 #import "Test.h"

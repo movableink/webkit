@@ -3194,6 +3194,7 @@
 		07275C662D00E3CA002315A5 /* SwiftUI.swiftoverlay */ = {isa = PBXFileReference; lastKnownFileType = text; path = SwiftUI.swiftoverlay; sourceTree = "<group>"; };
 		07275C832D00F782002315A5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		07275C8E2D011396002315A5 /* Empty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Empty.swift; sourceTree = "<group>"; };
+		0728820E2DB53C02006F4A2B /* UIKit_SPI.swiftinterface */ = {isa = PBXFileReference; lastKnownFileType = text; path = UIKit_SPI.swiftinterface; sourceTree = "<group>"; };
 		07297F9C1C1711EA003F0735 /* DeviceIdHashSaltStorage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DeviceIdHashSaltStorage.cpp; sourceTree = "<group>"; };
 		07297F9C1C17BBEA003F0735 /* UserMediaPermissionCheckProxy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = UserMediaPermissionCheckProxy.cpp; sourceTree = "<group>"; };
 		07297F9D1C17BBEA003F0735 /* UserMediaPermissionCheckProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UserMediaPermissionCheckProxy.h; sourceTree = "<group>"; };
@@ -16251,6 +16252,7 @@
 				DDDFE826284699E6006F1EE5 /* SafariServicesSPI.h */,
 				079D1D9926960CD300883577 /* SystemStatusSPI.h */,
 				CE1A0BD11A48E6C60054EF74 /* TextInputSPI.h */,
+				0728820E2DB53C02006F4A2B /* UIKit_SPI.swiftinterface */,
 				CEE4AE2A1A5DCF430002F49B /* UIKitSPI.h */,
 			);
 			path = ios;

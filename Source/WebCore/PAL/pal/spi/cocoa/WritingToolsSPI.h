@@ -143,6 +143,12 @@ typedef NS_ENUM(NSInteger, WTTextSuggestionState) {
 
 // MARK: WTTextViewDelegate
 
+#if PLATFORM(IOS_FAMILY)
+@class UIView;
+#else
+@class NSView;
+#endif
+
 @protocol WTTextViewDelegate
 
 - (void)proofreadingSessionWithUUID:(NSUUID *)sessionUUID updateState:(WTTextSuggestionState)state forSuggestionWithUUID:(NSUUID *)suggestionUUID;
