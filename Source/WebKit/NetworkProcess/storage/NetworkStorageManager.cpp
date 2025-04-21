@@ -1772,14 +1772,16 @@ void NetworkStorageManager::didGenerateIndexKeyForRecord(const WebCore::IDBResou
         transaction->didGenerateIndexKeyForRecord(requestIdentifier, indexInfo, key, indexKey, recordID);
 }
 
-void NetworkStorageManager::abortTransaction(const WebCore::IDBResourceIdentifier& transactionIdentifier)
+void NetworkStorageManager::abortTransaction(IPC::Connection& connection, const WebCore::IDBResourceIdentifier& transactionIdentifier)
 {
+    MESSAGE_CHECK(transactionIdentifier.connectionIdentifier(), connection);
     if (RefPtr transaction = m_idbStorageRegistry->transaction(transactionIdentifier))
         transaction->abort();
 }
 
-void NetworkStorageManager::commitTransaction(const WebCore::IDBResourceIdentifier& transactionIdentifier, uint64_t handledRequestResultsCount)
+void NetworkStorageManager::commitTransaction(IPC::Connection& connection, const WebCore::IDBResourceIdentifier& transactionIdentifier, uint64_t handledRequestResultsCount)
 {
+    MESSAGE_CHECK(transactionIdentifier.connectionIdentifier(), connection);
     if (RefPtr transaction = m_idbStorageRegistry->transaction(transactionIdentifier))
         transaction->commit(handledRequestResultsCount);
 }
