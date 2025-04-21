@@ -1,5 +1,3 @@
-//@ skip
-
 description(
 "This tests that we can correctly call Function.prototype.apply"
 );
@@ -49,18 +47,34 @@ shouldBe("myFunctionWithApply.aliasedApply(myObject, arg1Array)", '[myObject, "m
 // Let's make sure that shouldThrow() is compiled before we do crazy.
 shouldThrow("throw 42");
 
-function stackOverflowTest() {
+function testWithSmallStack1() {
+    if (testWithSmallStack1.called)
+        return;
+    // Blow the stack with a sparse array
+    shouldThrow("myFunction.apply(null, new Array(5000000))");
+    testWithSmallStack1.called = true;
+}
+
+function testWithSmallStack2() {
+    if (testWithSmallStack2.called)
+        return;
+    // Blow the stack with a sparse array that is sufficiently large to cause int overflow
+    shouldThrow("myFunction.apply(null, new Array(1 << 30))");
+    testWithSmallStack2.called = true;
+}
+
+function stackOverflowTest(func) {
     try {
         var a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z;
-        stackOverflowTest();
+        stackOverflowTest(func);
     } catch(e) {
-        // Blow the stack with a sparse array
-        shouldThrow("myFunction.apply(null, new Array(5000000))");
-        // Blow the stack with a sparse array that is sufficiently large to cause int overflow
-        shouldThrow("myFunction.apply(null, new Array(1 << 30))");
+        func();
     }
 }
-stackOverflowTest();
+stackOverflowTest(function () {
+    testWithSmallStack1();
+    testWithSmallStack2();
+});
 
 // Blow the stack recursing with arguments
 shouldThrow("recurseArguments.apply(null, new Array(50000))");
