@@ -2136,3 +2136,5 @@ webkit.org/b/291236 [ Debug ] http/tests/pdf/page-in-window-update-with-lineariz
 webkit.org/b/291394 [ Debug ] imported/w3c/web-platform-tests/wasm/webapi/esm-integration/script-src-blocks-wasm.tentative.sub.html [ Pass Failure ]
 
 webkit.org/b/291710 [ Debug ] swipe/basic-cached-back-swipe.html [ Pass Timeout ]
+
+webkit.org/b/291861 [ Release x86_64 ] media/media-vp8-hiddenframes.html [ Pass ImageOnlyFailure ]
