@@ -117,7 +117,7 @@ inline JSArrayBufferView* speciesConstruct(JSGlobalObject* globalObject, ViewCla
     if (constructorValue.isUndefined())
         RELEASE_AND_RETURN(scope, defaultConstructor());
 
-    if (!constructorValue.isObject()) {
+    if (UNLIKELY(!constructorValue.isObject())) {
         throwTypeError(globalObject, scope, "constructor Property should not be null"_s);
         return nullptr;
     }
@@ -147,8 +147,8 @@ inline JSArrayBufferView* speciesConstruct(JSGlobalObject* globalObject, ViewCla
     JSValue result = construct(globalObject, species, args, "species is not a constructor"_s);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
-    if (JSArrayBufferView* view = jsDynamicCast<JSArrayBufferView*>(result)) {
-        if (view->type() == DataViewType) {
+    if (JSArrayBufferView* view = jsDynamicCast<JSArrayBufferView*>(result); LIKELY(view)) {
+        if (UNLIKELY(view->type() == DataViewType)) {
             throwTypeError(globalObject, scope, "species constructor did not return a TypedArray View"_s);
             return nullptr;
         }
@@ -200,6 +200,45 @@ inline size_t argumentClampedIndexFromStartOrEnd(JSGlobalObject* globalObject, J
         return indexDouble < 0 ? 0 : static_cast<size_t>(indexDouble);
     }
     return indexDouble > length ? length : static_cast<size_t>(indexDouble);
+}
+
+template<typename ViewClass, typename Functor>
+static ALWAYS_INLINE void typedArrayViewForEachImpl(JSGlobalObject* globalObject, VM& vm, ViewClass* thisObject, size_t length, NOESCAPE const Functor& functor)
+{
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (LIKELY(!thisObject->isResizableNonShared())) {
+        // Including GrowableShared. The key invariant here is that we can access element via array[index] if we check isDetached.
+        auto* array = thisObject->typedVector();
+        for (size_t index = 0; index < length; ++index) {
+            JSValue element = jsUndefined();
+            if (LIKELY(!thisObject->isDetached())) {
+                auto nativeValue = array[index];
+                element = ViewClass::Adaptor::toJSValue(globalObject, nativeValue);
+                RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, void());
+            }
+
+            auto status = functor(element, index);
+            RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, void());
+            if (IterationStatus::Done == status)
+                return;
+        }
+        return;
+    }
+
+    for (size_t index = 0; index < length; ++index) {
+        JSValue element = jsUndefined();
+        if (LIKELY(!thisObject->isDetached() && thisObject->inBounds(index))) {
+            auto nativeValue = thisObject->typedVector()[index];
+            element = ViewClass::Adaptor::toJSValue(globalObject, nativeValue);
+            RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, void());
+        }
+
+        auto status = functor(element, index);
+        RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, void());
+        if (IterationStatus::Done == status)
+            return;
+    }
 }
 
 template<typename ViewClass>
@@ -691,6 +730,60 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoGetterFuncByteOffset(VM&,
 }
 
 template<typename ViewClass>
+ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncForEach(VM& vm, JSGlobalObject* globalObject, CallFrame* callFrame)
+{
+    // https://tc39.es/ecma262/#sec-%typedarray%.prototype.foreach
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    ViewClass* thisObject = jsCast<ViewClass*>(callFrame->thisValue());
+    validateTypedArray(globalObject, thisObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    size_t length = thisObject->length();
+
+    JSValue functorValue = callFrame->argument(0);
+    auto callData = JSC::getCallData(functorValue);
+    if (UNLIKELY(callData.type == CallData::Type::None))
+        return throwVMTypeError(globalObject, scope, "TypedArray.prototype.forEach callback must be a function"_s);
+
+    JSValue thisArg = callFrame->argument(1);
+
+    if (LIKELY(callData.type == CallData::Type::JS)) {
+        CachedCall cachedCall(globalObject, jsCast<JSFunction*>(functorValue), 3);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        scope.release();
+        typedArrayViewForEachImpl(globalObject, vm, thisObject, length, [&](JSValue element, size_t index) ALWAYS_INLINE_LAMBDA {
+            cachedCall.callWithArguments(globalObject, thisArg, element, jsNumber(index), thisObject);
+            return IterationStatus::Continue;
+        });
+        return JSValue::encode(jsUndefined());
+    }
+
+    MarkedArgumentBuffer args;
+
+    scope.release();
+    typedArrayViewForEachImpl(globalObject, vm, thisObject, length, [&](JSValue element, size_t index) ALWAYS_INLINE_LAMBDA {
+        auto scope = DECLARE_THROW_SCOPE(vm);
+
+        args.clear();
+
+        args.append(element);
+        args.append(jsNumber(index));
+        args.append(thisObject);
+        if (UNLIKELY(args.hasOverflowed())) {
+            throwOutOfMemoryError(globalObject, scope);
+            return IterationStatus::Continue;
+        }
+
+        scope.release();
+        call(globalObject, functorValue, callData, thisArg, args);
+        return IterationStatus::Continue;
+    });
+    return JSValue::encode(jsUndefined());
+}
+
+template<typename ViewClass>
 ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncReverse(VM& vm, JSGlobalObject* globalObject, CallFrame* callFrame)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -835,7 +928,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncSort(VM& vm, JSGlobal
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue comparatorValue = callFrame->argument(0);
-    if (!comparatorValue.isUndefined() && !comparatorValue.isCallable())
+    if (UNLIKELY(!comparatorValue.isUndefined() && !comparatorValue.isCallable()))
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.sort requires the comparator argument to be a function or undefined"_s);
 
     // https://tc39.es/ecma262/#sec-%typedarray%.prototype.sort
@@ -854,7 +947,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncToSorted(VM& vm, JSGl
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue comparatorValue = callFrame->argument(0);
-    if (!comparatorValue.isUndefined() && !comparatorValue.isCallable())
+    if (UNLIKELY(!comparatorValue.isUndefined() && !comparatorValue.isCallable()))
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.toSorted requires the comparator argument to be a function or undefined"_s);
 
     ViewClass* thisObject = jsCast<ViewClass*>(callFrame->thisValue());
@@ -1191,7 +1284,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncWith(VM& vm, JSGlobal
         // If TypedArray is shrunk, remaining part will be filled with NativeValue(undefined).
         // But BigInt64Array / BigUint64Array throws a TypeError since undefined cannot be converted to BigInt.
         if constexpr (ViewClass::Adaptor::isBigInt) {
-            if (thisLength > updatedLength)
+            if (UNLIKELY(thisLength > updatedLength))
                 return throwVMTypeError(globalObject, scope, "Cannot convert undefined to BigInt"_s);
         }
 

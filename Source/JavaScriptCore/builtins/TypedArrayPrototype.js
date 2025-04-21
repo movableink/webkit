@@ -135,19 +135,6 @@ function findLastIndex(callback /* [, thisArg] */)
     return -1;
 }
 
-function forEach(callback /* [, thisArg] */)
-{
-    "use strict";
-    var length = @typedArrayLength(this);
-    var thisArg = @argument(1);
-
-    if (!@isCallable(callback))
-        @throwTypeError("TypedArray.prototype.forEach callback must be a function");
-
-    for (var i = 0; i < length; i++)
-        callback.@call(thisArg, this[i], i, this);
-}
-
 function some(callback /* [, thisArg] */)
 {
     // 22.2.3.24
