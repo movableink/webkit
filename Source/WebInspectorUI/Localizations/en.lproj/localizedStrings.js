@@ -1221,7 +1221,7 @@ localizedStrings["Options"] = "Options";
 localizedStrings["Order Numbers @ Layout Panel Overlay Options"] = "Order Numbers";
 /* Property value for `font-variant-numeric: ordinal`. */
 localizedStrings["Ordinal Letter Forms @ Font Details Sidebar Property Value"] = "Ordinal Letter Forms";
-localizedStrings["Original formatting"] = "Original formatting";
+localizedStrings["Click to show original formatting"] = "Click to show original formatting";
 localizedStrings["Originally %s"] = "Originally %s";
 localizedStrings["Originator"] = "Originator";
 localizedStrings["Other"] = "Other";
@@ -1302,7 +1302,7 @@ localizedStrings["Press %s to start running the audit."] = "Press %s to start ru
 localizedStrings["Press %s to stop editing audits."] = "Press %s to stop editing audits.";
 localizedStrings["Press %s to stop running."] = "Press %s to stop running.";
 localizedStrings["Pressed"] = "Pressed";
-localizedStrings["Pretty print"] = "Pretty print";
+localizedStrings["Click to pretty print"] = "Click to pretty print";
 localizedStrings["Preview"] = "Preview";
 /* A submenu item of 'Add' to add DOM nodes before the selected DOM node */
 localizedStrings["Previous Sibling"] = "Previous Sibling";
