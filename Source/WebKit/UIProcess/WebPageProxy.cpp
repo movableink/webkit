@@ -8855,6 +8855,12 @@ void WebPageProxy::runBeforeUnloadConfirmPanel(IPC::Connection& connection, Fram
     if (!frame)
         return;
 
+    Ref webProcess = WebProcessProxy::fromConnection(connection);
+    if (&frame->frameProcess().process() != webProcess.ptr()) {
+        reply(true);
+        return;
+    }
+
     // Per §18 User Prompts in the WebDriver spec, "User prompts that are spawned from beforeunload
     // event handlers, are dismissed implicitly upon navigation or close window, regardless of the
     // defined user prompt handler." So, always allow the unload to proceed if the page is being automated.
@@ -8866,7 +8872,7 @@ void WebPageProxy::runBeforeUnloadConfirmPanel(IPC::Connection& connection, Fram
     }
 
     // Since runBeforeUnloadConfirmPanel() can spin a nested run loop we need to turn off the responsiveness timer and the tryClose timer.
-    WebProcessProxy::fromConnection(connection)->stopResponsivenessTimer();
+    webProcess->stopResponsivenessTimer();
     bool shouldResumeTimerAfterPrompt = internals().tryCloseTimeoutTimer.isActive();
     internals().tryCloseTimeoutTimer.stop();
     m_uiClient->runBeforeUnloadConfirmPanel(*this, message, frame.get(), WTFMove(frameInfo),
