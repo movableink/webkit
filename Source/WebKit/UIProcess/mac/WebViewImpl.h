@@ -1079,6 +1079,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
     RetainPtr<WKNSContentInsetFillView> m_topContentInsetFillView;
+    RetainPtr<NSView> m_topContentInsetOverlayView;
 #endif
 
 #if HAVE(INLINE_PREDICTIONS)
