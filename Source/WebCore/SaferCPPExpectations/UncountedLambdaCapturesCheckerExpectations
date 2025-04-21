@@ -91,7 +91,6 @@ platform/Timer.h
 platform/cocoa/NetworkExtensionContentFilter.mm
 platform/encryptedmedia/CDMProxy.cpp
 platform/encryptedmedia/clearkey/CDMClearKey.cpp
-platform/graphics/FontCache.cpp
 platform/graphics/FontCascadeFonts.cpp
 platform/graphics/ShadowBlur.cpp
 platform/graphics/avfoundation/InbandTextTrackPrivateAVF.cpp

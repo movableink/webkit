@@ -213,8 +213,8 @@ FontPlatformData* FontCache::cachedFontPlatformData(const FontDescription& fontD
 #endif
 
     static std::once_flag onceFlag;
-    std::call_once(onceFlag, [&]() {
-        platformInit();
+    std::call_once(onceFlag, [checkedThis = CheckedPtr { this }]() {
+        checkedThis->platformInit();
     });
 
     FontPlatformDataCacheKey key { fontDescription, { familyName }, fontCreationContext };
