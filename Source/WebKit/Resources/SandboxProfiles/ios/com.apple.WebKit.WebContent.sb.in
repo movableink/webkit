@@ -530,11 +530,6 @@
 (deny iokit-get-properties)
 (deny lsopen)
 
-;;;
-;;; The following rules were originally contained in 'UIKit-apps.sb'. We are duplicating them here so we can
-;;; remove unneeded sandbox extensions.
-;;;
-
 ;; Any app can play audio & movies.
 (play-media)
 
@@ -617,10 +612,6 @@
 
 ;; <rdar://problem/34986314>
 (mobile-preferences-read "com.apple.indigo")
-
-;;;
-;;; End UIKit-apps.sb content
-;;;
 
 (mobile-preferences-read "com.apple.AdLib.plist")
 
