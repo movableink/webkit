@@ -520,6 +520,15 @@ AccessibilityObject* AccessibilityRenderObject::parentObject() const
         if (auto* parent = cache->getOrCreate(*parentNode))
             return parent;
     }
+
+    if (CheckedPtr renderElement = dynamicDowncast<RenderElement>(m_renderer.get()); renderElement && renderElement->isBeforeOrAfterContent()) {
+        // In AccessibilityRenderObject::addChildren(), we make the generating element add ::before
+        // and ::after as children, so we must match that here by making sure ::before and ::after regard the
+        // generating element as their parent rather than their "natural" render tree parent. This avoids
+        // a parent-child mismatch which can cause issues for ATs.
+        if (auto* parent = cache->getOrCreate(renderElement->generatingElement()))
+            return parent;
+    }
 #endif // !USE(ATSPI)
 
     // Expose markers that are not direct children of a list item too.
@@ -2595,13 +2604,10 @@ void AccessibilityRenderObject::addChildren()
         m_subtreeDirty = false;
     });
 
-    if (!canHaveChildren())
-        return;
-
     auto addChildIfNeeded = [this](AccessibilityObject& object) {
 #if USE(ATSPI)
         // FIXME: Consider removing this ATSPI-only branch with https://bugs.webkit.org/show_bug.cgi?id=282117.
-        if (object.renderer()->isRenderListMarker())
+        if (object.renderer() && object.renderer()->isRenderListMarker())
             return;
 #endif
         addChild(object);

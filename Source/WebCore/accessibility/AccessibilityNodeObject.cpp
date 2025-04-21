@@ -591,7 +591,7 @@ void AccessibilityNodeObject::addChildren()
     });
 
     RefPtr node = this->node();
-    if (!node || !canHaveChildren())
+    if (!node)
         return;
 
     // The only time we add children from the DOM tree to a node with a renderer is when it's a canvas.
