@@ -156,6 +156,7 @@ Node* CloneHelper::cloneNodeImpl(BasicBlock* into, Node* node)
 
 BasicBlock* CloneHelper::blockClone(BasicBlock* block)
 {
+    ASSERT(block);
     auto iter = m_blockClones.find(block);
     if (iter != m_blockClones.end())
         return iter->value;
