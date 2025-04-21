@@ -215,6 +215,7 @@ void RenderTreeBuilder::Inline::attachIgnoringContinuation(RenderInline& parent,
 
 void RenderTreeBuilder::Inline::splitFlow(RenderInline& parent, RenderObject* beforeChild, RenderPtr<RenderBlock> newBlockBox, RenderPtr<RenderObject> child, RenderBoxModelObject* oldCont)
 {
+    ASSERT(newBlockBox);
     auto& addedBlockBox = *newBlockBox;
     RenderBlock* pre = nullptr;
     RenderBlock* block = parent.containingBlock();
@@ -224,14 +225,14 @@ void RenderTreeBuilder::Inline::splitFlow(RenderInline& parent, RenderObject* be
 
     RenderPtr<RenderBlock> createdPre;
     bool madeNewBeforeBlock = false;
-    auto canResueContainingBlockAsPreBlock = [&] {
+    auto canReuseContainingBlockAsPreBlock = [&] {
         if (!block->isAnonymousBlock())
             return false;
         if (auto* containingBlockParent = block->parent())
             return !containingBlockParent->createsAnonymousWrapper() && !containingBlockParent->isRenderDeprecatedFlexibleBox();
         return false;
     };
-    if (canResueContainingBlockAsPreBlock()) {
+    if (canReuseContainingBlockAsPreBlock()) {
         // We can reuse this block and make it the preBlock of the next continuation.
         pre = block;
         pre->removePositionedObjects(nullptr);
