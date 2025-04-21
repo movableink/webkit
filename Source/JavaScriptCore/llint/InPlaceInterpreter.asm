@@ -348,8 +348,8 @@ end
 
 macro operationCallMayThrow(fn)
     loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
-    negq t0
-    addq PC, t0
+    negp t0
+    addp PC, t0
     storei t0, CallSiteIndex[cfr]
 
     move wasmInstance, a0
@@ -360,7 +360,7 @@ macro operationCallMayThrow(fn)
         push PL, IB
     end
     fn()
-    bqneq r0, 1, .continuation
+    bpneq r0, (constexpr JSC::IPInt::SlowPathExceptionTag), .continuation
     storei r1, ArgumentCountIncludingThis + PayloadOffset[cfr]
     jmp _wasm_throw_from_slow_path_trampoline
 .continuation:
