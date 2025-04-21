@@ -20,8 +20,18 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/currentScale.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/gradient-in-symbol-expected.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/gradient-in-symbol.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/inner-svg-css-transform-expected.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/inner-svg-css-transform.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/inner-svg-rotate-transform-expected.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/inner-svg-rotate-transform.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/inner-svg-transform-and-viewbox-expected.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/inner-svg-transform-and-viewbox.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/inner-svg-transform-expected.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/inner-svg-transform.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/nested-svg-through-display-contents-expected.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/nested-svg-through-display-contents.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/outer-svg-transform-expected.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/outer-svg-transform.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/requiredextensions-empty-string-expected.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/requiredextensions-empty-string.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/requiredextensions-xhtml.tentative-expected.svg
@@ -56,6 +66,8 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/use-external-resource-target-pseudo-002.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/use-external-resource-with-revalidation.tentative-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/use-external-resource-with-revalidation.tentative.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/use-external-svg-resource-no-fragment-id-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/use-external-svg-resource-no-fragment-id.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/use-inheritance-001-expected.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/use-inheritance-001.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/use-inheritance-nth-child-of-expected.svg

@@ -16,3 +16,7 @@ None
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/reference/green-100x100.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/reference/green-100x100.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/reference/inner-svg-rotate-transform-ref.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/reference/inner-svg-transform-and-viewbox-ref.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/reference/inner-svg-transform-ref.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/reference/outer-svg-transform-ref.svg

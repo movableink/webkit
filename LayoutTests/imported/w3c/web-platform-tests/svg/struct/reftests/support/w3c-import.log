@@ -24,4 +24,5 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/support/red-rect.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/support/sprites-stacked.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/support/sprites-target.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/support/sprites-without-id.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/support/sprites.svg
