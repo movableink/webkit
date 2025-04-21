@@ -187,11 +187,6 @@ CSSUnitType CSSCalcValue::primitiveType() const
     return CSSUnitType::CSS_NUMBER;
 }
 
-bool CSSCalcValue::requiresConversionData() const
-{
-    return m_tree.requiresConversionData;
-}
-
 void CSSCalcValue::collectComputedStyleDependencies(ComputedStyleDependencies& dependencies) const
 {
     CSSCalc::collectComputedStyleDependencies(m_tree, dependencies);

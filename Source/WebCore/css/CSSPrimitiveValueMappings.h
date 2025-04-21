@@ -97,39 +97,39 @@ public:
 
     operator unsigned short() const
     {
-        return numericValue().resolveAsNumber<unsigned short>(m_builderState.cssToLengthConversionData());
+        return protectedNumericValue()->resolveAsNumber<unsigned short>(m_builderState.cssToLengthConversionData());
     }
 
     operator int() const
     {
-        return numericValue().resolveAsNumber<int>(m_builderState.cssToLengthConversionData());
+        return protectedNumericValue()->resolveAsNumber<int>(m_builderState.cssToLengthConversionData());
     }
 
     operator unsigned() const
     {
-        return numericValue().resolveAsNumber<unsigned>(m_builderState.cssToLengthConversionData());
+        return protectedNumericValue()->resolveAsNumber<unsigned>(m_builderState.cssToLengthConversionData());
     }
 
     operator float() const
     {
-        return numericValue().resolveAsNumber<float>(m_builderState.cssToLengthConversionData());
+        return protectedNumericValue()->resolveAsNumber<float>(m_builderState.cssToLengthConversionData());
     }
 
     operator double() const
     {
-        return numericValue().resolveAsNumber<double>(m_builderState.cssToLengthConversionData());
+        return protectedNumericValue()->resolveAsNumber<double>(m_builderState.cssToLengthConversionData());
     }
 
 private:
-    const CSSPrimitiveValue& numericValue() const
+    Ref<const CSSPrimitiveValue> protectedNumericValue() const
     {
-        auto& value = downcast<CSSPrimitiveValue>(m_value);
-        ASSERT(value.isNumberOrInteger());
+        Ref value = downcast<const CSSPrimitiveValue>(m_value);
+        ASSERT(value->isNumberOrInteger());
         return value;
     }
 
     const Style::BuilderState& m_builderState;
-    const CSSValue& m_value;
+    Ref<const CSSValue> m_value;
 };
 
 inline TypeDeducingCSSValueMapper fromCSSValueDeducingType(const Style::BuilderState& builderState, const CSSValue& value)
@@ -2182,7 +2182,7 @@ template<int supported> Length CSSPrimitiveValue::convertToLength(const CSSToLen
     if ((supported & AutoConversion) && valueID() == CSSValueAuto)
         return Length(LengthType::Auto);
     if ((supported & CalculatedConversion) && isCalculated())
-        return Length(cssCalcValue()->createCalculationValue(conversionData, CSSCalcSymbolTable { }));
+        return Length(protectedCssCalcValue()->createCalculationValue(conversionData, CSSCalcSymbolTable { }));
     return Length(LengthType::Undefined);
 }
 

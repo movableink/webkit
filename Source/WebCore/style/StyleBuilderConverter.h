@@ -1380,7 +1380,7 @@ inline ScrollbarGutter BuilderConverter::convertScrollbarGutter(BuilderState&, c
 
 inline ScrollbarWidth BuilderConverter::convertScrollbarWidth(BuilderState& builderState, const CSSValue& value)
 {
-    ScrollbarWidth scrollbarWidth = fromCSSValueDeducingType(builderState, value);
+    auto scrollbarWidth = fromCSSValue<ScrollbarWidth>(value);
     if (scrollbarWidth == ScrollbarWidth::Thin && builderState.document().quirks().needsScrollbarWidthThinDisabledQuirk())
         return ScrollbarWidth::Auto;
 

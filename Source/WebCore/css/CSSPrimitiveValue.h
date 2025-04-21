@@ -22,6 +22,7 @@
 #pragma once
 
 #include "CSSAttrValue.h"
+#include "CSSCalcValue.h"
 #include "CSSPrimitiveNumericUnits.h"
 #include "CSSPropertyNames.h"
 #include "CSSValue.h"
@@ -34,7 +35,6 @@
 
 namespace WebCore {
 
-class CSSCalcValue;
 class CSSToLengthConversionData;
 class FontCascade;
 class RenderStyle;
@@ -199,7 +199,9 @@ public:
 
     WEBCORE_EXPORT String stringValue() const;
     const CSSCalcValue* cssCalcValue() const { return isCalculated() ? m_value.calc : nullptr; }
+    RefPtr<const CSSCalcValue> protectedCssCalcValue() const { return cssCalcValue(); }
     const CSSAttrValue* cssAttrValue() const { return isAttr() ? m_value.attr : nullptr; }
+    RefPtr<const CSSAttrValue> protectedCssAttrValue() const { return cssAttrValue(); }
 
     String customCSSText(const CSS::SerializationContext&) const;
 

@@ -426,8 +426,6 @@ css/CSSOffsetRotateValue.cpp
 css/CSSOffsetRotateValue.h
 css/CSSPageRule.cpp
 css/CSSPendingSubstitutionValue.cpp
-css/CSSPrimitiveValue.cpp
-css/CSSPrimitiveValueMappings.h
 css/CSSProperty.h
 css/CSSPropertyRule.cpp
 css/CSSReflectValue.cpp

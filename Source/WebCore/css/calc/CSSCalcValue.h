@@ -84,7 +84,7 @@ public:
     CSSUnitType primitiveType() const;
 
     // Returns whether the CSSCalc::Tree requires `CSSToLengthConversionData` to fully resolve.
-    bool requiresConversionData() const;
+    bool requiresConversionData() const { return m_tree.requiresConversionData; };
 
     double doubleValue(const CSSToLengthConversionData&) const;
     double doubleValue(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;

@@ -254,10 +254,10 @@ CSSUnitType CSSPrimitiveValue::primitiveType() const
         // so we need to map our internal CSSUnitType::CSS_FONT_FAMILY type here.
         return CSSUnitType::CSS_STRING;
     default:
-        if (!isCalculated())
-            return type;
+        if (RefPtr calcValue = cssCalcValue())
+            return calcValue->primitiveType();
 
-        return m_value.calc->primitiveType();
+        return type;
     }
 }
 
@@ -436,8 +436,8 @@ static CSSPrimitiveValue* valueFromPool(std::span<LazyNeverDestroyed<CSSPrimitiv
 
 Ref<CSSPrimitiveValue> CSSPrimitiveValue::create(double value)
 {
-    if (auto* result = valueFromPool(staticCSSValuePool->m_numberValues, value))
-        return *result;
+    if (RefPtr result = valueFromPool(staticCSSValuePool->m_numberValues, value))
+        return result.releaseNonNull();
     return adoptRef(*new CSSPrimitiveValue(value, CSSUnitType::CSS_NUMBER));
 }
 
@@ -445,16 +445,16 @@ Ref<CSSPrimitiveValue> CSSPrimitiveValue::create(double value, CSSUnitType type)
 {
     switch (type) {
     case CSSUnitType::CSS_NUMBER:
-        if (auto* result = valueFromPool(staticCSSValuePool->m_numberValues, value))
-            return *result;
+        if (RefPtr result = valueFromPool(staticCSSValuePool->m_numberValues, value))
+            return result.releaseNonNull();
         break;
     case CSSUnitType::CSS_PERCENTAGE:
-        if (auto* result = valueFromPool(staticCSSValuePool->m_percentageValues, value))
-            return *result;
+        if (RefPtr result = valueFromPool(staticCSSValuePool->m_percentageValues, value))
+            return result.releaseNonNull();
         break;
     case CSSUnitType::CSS_PX:
-        if (auto* result = valueFromPool(staticCSSValuePool->m_pixelValues, value))
-            return *result;
+        if (RefPtr result = valueFromPool(staticCSSValuePool->m_pixelValues, value))
+            return result.releaseNonNull();
         break;
     default:
         break;
@@ -518,7 +518,7 @@ Ref<CSSPrimitiveValue> CSSPrimitiveValue::create(const Length& length, const Ren
     case LengthType::Fixed:
         return create(adjustFloatForAbsoluteZoom(length.value(), style), CSSUnitType::CSS_PX);
     case LengthType::Calculated:
-        return create(CSSCalcValue::create(length.calculationValue(), style));
+        return create(CSSCalcValue::create(length.protectedCalculationValue(), style));
     case LengthType::Relative:
     case LengthType::Undefined:
         break;
@@ -600,9 +600,9 @@ template<> LayoutUnit CSSPrimitiveValue::resolveAsLength(const CSSToLengthConver
 
 double CSSPrimitiveValue::resolveAsLengthDouble(const CSSToLengthConversionData& conversionData) const
 {
-    if (isCalculated()) {
+    if (RefPtr calcValue = cssCalcValue()) {
         // The multiplier and factor is applied to each value in the calc expression individually
-        return m_value.calc->computeLengthPx(conversionData, CSSCalcSymbolTable { });
+        return calcValue->computeLengthPx(conversionData, CSSCalcSymbolTable { });
     }
 
     auto lengthUnit = CSS::toLengthUnit(primitiveType());
@@ -689,12 +689,16 @@ double CSSPrimitiveValue::doubleValueDeprecated(CSSUnitType targetUnit) const
 
 double CSSPrimitiveValue::doubleValue(const CSSToLengthConversionData& conversionData) const
 {
-    return isCalculated() ? m_value.calc->doubleValue(conversionData, { }) : m_value.number;
+    if (RefPtr calcValue = cssCalcValue())
+        return calcValue->doubleValue(conversionData, { });
+    return m_value.number;
 }
 
 double CSSPrimitiveValue::doubleValueDeprecated() const
 {
-    return isCalculated() ? m_value.calc->doubleValueDeprecated() : m_value.number;
+    if (RefPtr calcValue = cssCalcValue())
+        return calcValue->doubleValueDeprecated();
+    return m_value.number;
 }
 
 // MARK: `doubleValueDividingBy100IfPercentage`.
@@ -703,8 +707,8 @@ double CSSPrimitiveValue::doubleValueDividingBy100IfPercentage(const CSSToLength
 {
     ASSERT(isNumberOrInteger() || isPercentage());
 
-    if (isCalculated())
-        return m_value.calc->primitiveType() == CSSUnitType::CSS_PERCENTAGE ? m_value.calc->doubleValue(conversionData, { }) / 100.0 : m_value.calc->doubleValue(conversionData, { });
+    if (RefPtr calcValue = cssCalcValue())
+        return calcValue->primitiveType() == CSSUnitType::CSS_PERCENTAGE ? calcValue->doubleValue(conversionData, { }) / 100.0 : calcValue->doubleValue(conversionData, { });
     if (isPercentage())
         return m_value.number / 100.0;
     return m_value.number;
@@ -724,8 +728,8 @@ double CSSPrimitiveValue::doubleValueDividingBy100IfPercentageDeprecated() const
 {
     ASSERT(isNumberOrInteger() || isPercentage());
 
-    if (isCalculated())
-        return m_value.calc->primitiveType() == CSSUnitType::CSS_PERCENTAGE ? m_value.calc->doubleValueDeprecated() / 100.0 : m_value.calc->doubleValueDeprecated();
+    if (RefPtr calcValue = cssCalcValue())
+        return calcValue->primitiveType() == CSSUnitType::CSS_PERCENTAGE ? calcValue->doubleValueDeprecated() / 100.0 : calcValue->doubleValueDeprecated();
     if (isPercentage())
         return m_value.number / 100.0;
     return m_value.number;
@@ -893,7 +897,7 @@ String CSSPrimitiveValue::stringValue() const
     case CSSUnitType::CSS_PROPERTY_ID:
         return nameString(m_value.propertyID);
     case CSSUnitType::CSS_ATTR:
-        return m_value.attr->cssText(CSS::defaultSerializationContext());
+        return protectedCssAttrValue()->cssText(CSS::defaultSerializationContext());
     default:
         return String();
     }
@@ -1069,9 +1073,9 @@ ALWAYS_INLINE String CSSPrimitiveValue::serializeInternal(const CSS::Serializati
     case CSSUnitType::CSS_X:
         return formatNumberValue(unitTypeString(type));
     case CSSUnitType::CSS_ATTR:
-        return m_value.attr->cssText(context);
+        return protectedCssAttrValue()->cssText(context);
     case CSSUnitType::CSS_CALC:
-        return m_value.calc->cssText(context);
+        return protectedCssCalcValue()->cssText(context);
     case CSSUnitType::CSS_DIMENSION:
         // FIXME: This isn't correct.
         return formatNumberValue(""_s);
@@ -1207,9 +1211,9 @@ bool CSSPrimitiveValue::equals(const CSSPrimitiveValue& other) const
     case CSSUnitType::CSS_FONT_FAMILY:
         return equal(m_value.string, other.m_value.string);
     case CSSUnitType::CSS_ATTR:
-        return m_value.attr->equals(*other.m_value.attr);
+        return protectedCssAttrValue()->equals(*other.protectedCssAttrValue());
     case CSSUnitType::CSS_CALC:
-        return m_value.calc->equals(*other.m_value.calc);
+        return protectedCssCalcValue()->equals(*other.protectedCssCalcValue());
     case CSSUnitType::CSS_IDENT:
     case CSSUnitType::CSS_CALC_PERCENTAGE_WITH_ANGLE:
     case CSSUnitType::CSS_CALC_PERCENTAGE_WITH_LENGTH:
@@ -1326,13 +1330,12 @@ bool CSSPrimitiveValue::addDerivedHash(Hasher& hasher) const
 // https://drafts.css-houdini.org/css-properties-values-api/#dependency-cycles
 void CSSPrimitiveValue::collectComputedStyleDependencies(ComputedStyleDependencies& dependencies) const
 {
-    auto unit = primitiveUnitType();
-    if (unit == CSSUnitType::CSS_CALC) {
-        m_value.calc->collectComputedStyleDependencies(dependencies);
+    if (RefPtr calcValue = cssCalcValue()) {
+        calcValue->collectComputedStyleDependencies(dependencies);
         return;
     }
 
-    if (auto lengthUnit = CSS::toLengthUnit(unit))
+    if (auto lengthUnit = CSS::toLengthUnit(primitiveUnitType()))
         CSS::collectComputedStyleDependencies(dependencies, *lengthUnit);
 }
 
@@ -1351,7 +1354,7 @@ bool CSSPrimitiveValue::convertingToLengthHasRequiredConversionData(int lengthCo
 
 IterationStatus CSSPrimitiveValue::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
-    if (auto* calc = cssCalcValue()) {
+    if (RefPtr calc = cssCalcValue()) {
         if (func(const_cast<CSSCalcValue&>(*calc)) == IterationStatus::Done)
             return IterationStatus::Done;
     }

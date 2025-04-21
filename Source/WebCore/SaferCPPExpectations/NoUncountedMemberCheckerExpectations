@@ -17,7 +17,6 @@ accessibility/AXSearchManager.h
 bindings/js/JSEventTargetCustom.h
 bindings/js/JSLazyEventListener.cpp
 css/CSSFontSelector.h
-css/CSSPrimitiveValueMappings.h
 css/CSSRuleList.h
 css/CSSStyleProperties.h
 css/CSSValueList.h
