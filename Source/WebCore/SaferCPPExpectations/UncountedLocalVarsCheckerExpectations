@@ -44,7 +44,6 @@ Modules/model-element/HTMLModelElement.cpp
 Modules/notifications/Notification.cpp
 Modules/paymentrequest/PaymentRequest.cpp
 Modules/permissions/Permissions.cpp
-Modules/pictureinpicture/DocumentPictureInPicture.cpp
 Modules/speech/SpeechRecognition.cpp
 Modules/speech/SpeechSynthesis.cpp
 Modules/storage/WorkerStorageConnection.cpp

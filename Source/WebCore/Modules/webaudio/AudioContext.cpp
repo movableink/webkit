@@ -162,6 +162,8 @@ void AudioContext::constructCommon()
 
 AudioContext::~AudioContext()
 {
+    m_mediaSession->invalidateClient();
+
     if (RefPtr document = this->document())
         document->removeAudioProducer(*this);
 }

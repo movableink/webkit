@@ -56,17 +56,17 @@ void RenderMedia::layout()
     LayoutSize oldSize = size();
     RenderImage::layout();
     if (oldSize != size())
-        mediaElement().layoutSizeChanged();
+        protectedMediaElement()->layoutSizeChanged();
 }
 
 void RenderMedia::styleDidChange(StyleDifference difference, const RenderStyle* oldStyle)
 {
     RenderImage::styleDidChange(difference, oldStyle);
     if (!oldStyle || style().usedVisibility() != oldStyle->usedVisibility())
-        mediaElement().visibilityDidChange();
+        protectedMediaElement()->visibilityDidChange();
 
     if (!oldStyle || style().dynamicRangeLimit() != oldStyle->dynamicRangeLimit())
-        mediaElement().dynamicRangeLimitDidChange(style().dynamicRangeLimit().toPlatformDynamicRangeLimit());
+        protectedMediaElement()->dynamicRangeLimitDidChange(style().dynamicRangeLimit().toPlatformDynamicRangeLimit());
 }
 
 } // namespace WebCore

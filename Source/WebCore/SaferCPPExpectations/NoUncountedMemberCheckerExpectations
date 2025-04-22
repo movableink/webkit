@@ -35,7 +35,6 @@ dom/QualifiedName.h
 dom/TreeScope.h
 editing/cocoa/HTMLConverter.mm
 html/FormListedElement.cpp
-html/MediaElementSession.h
 html/parser/HTMLTreeBuilder.h
 html/track/TrackBase.h
 html/track/WebVTTParser.h

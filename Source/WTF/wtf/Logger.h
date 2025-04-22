@@ -422,6 +422,8 @@ private:
     const void* m_owner;
 };
 
+WTF_EXPORT_PRIVATE const Logger& emptyLogger();
+
 template<> struct LogArgument<Logger::LogSiteIdentifier> {
     static String toString(const Logger::LogSiteIdentifier& value) { return value.toString(); }
 };
@@ -444,3 +446,4 @@ template<> struct LogArgument<id> {
 
 using WTF::Logger;
 using WTF::JSONLogValue;
+using WTF::emptyLogger;

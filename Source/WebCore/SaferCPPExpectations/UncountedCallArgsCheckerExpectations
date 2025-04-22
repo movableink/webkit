@@ -1108,7 +1108,6 @@ rendering/RenderLayerScrollableArea.cpp
 rendering/RenderListBox.cpp
 rendering/RenderListItem.cpp
 rendering/RenderListMarker.cpp
-rendering/RenderMedia.cpp
 rendering/RenderMenuList.cpp
 rendering/RenderMeter.cpp
 rendering/RenderMultiColumnFlow.cpp

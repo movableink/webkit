@@ -40,6 +40,7 @@ public:
     virtual ~RenderMedia();
 
     HTMLMediaElement& mediaElement() const { return downcast<HTMLMediaElement>(nodeForNonAnonymous()); }
+    Ref<HTMLMediaElement> protectedMediaElement() const { return mediaElement(); }
 
     bool shouldDisplayBrokenImageIcon() const final { return false; }
 

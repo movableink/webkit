@@ -153,15 +153,15 @@ void WebKitMediaKeys::setMediaElement(HTMLMediaElement* element)
 
 RefPtr<MediaPlayer> WebKitMediaKeys::cdmMediaPlayer(const LegacyCDM*) const
 {
-    if (!m_mediaElement)
-        return nullptr;
-    return m_mediaElement->player();
+    if (RefPtr mediaElement = m_mediaElement.get())
+        return mediaElement->player();
+    return nullptr;
 }
 
 void WebKitMediaKeys::keyAdded()
 {
-    if (m_mediaElement)
-        m_mediaElement->keyAdded();
+    if (RefPtr mediaElement = m_mediaElement.get())
+        mediaElement->keyAdded();
 }
 
 RefPtr<ArrayBuffer> WebKitMediaKeys::cachedKeyForKeyId(const String& keyId) const

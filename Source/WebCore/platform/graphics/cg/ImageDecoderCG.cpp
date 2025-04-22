@@ -44,6 +44,7 @@
 #include <pal/spi/cg/CoreGraphicsSPI.h>
 #include <wtf/FlipBytes.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/cf/TypeCastsCF.h>
 
 #include "MediaAccessibilitySoftLink.h"
 #if ENABLE(QUICKLOOK_FULLSCREEN)

@@ -2390,6 +2390,7 @@ platform/audio/IIRFilter.cpp
 platform/audio/MultiChannelResampler.cpp
 platform/audio/Panner.cpp
 platform/audio/PlatformMediaSession.cpp
+platform/audio/PlatformMediaSessionInterface.cpp
 platform/audio/PlatformMediaSessionManager.cpp
 platform/audio/PlatformRawAudioData.cpp
 platform/audio/PushPullFIFO.cpp

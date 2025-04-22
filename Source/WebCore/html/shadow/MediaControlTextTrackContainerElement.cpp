@@ -81,6 +81,11 @@ MediaControlTextTrackContainerElement::MediaControlTextTrackContainerElement(Doc
 {
 }
 
+RefPtr<HTMLMediaElement> MediaControlTextTrackContainerElement::protectedMediaElement() const
+{
+    return m_mediaElement.get();
+}
+
 RenderPtr<RenderElement> MediaControlTextTrackContainerElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     return createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, *this, WTFMove(style));
@@ -93,17 +98,18 @@ static bool compareCueIntervalForDisplay(const CueInterval& one, const CueInterv
 
 void MediaControlTextTrackContainerElement::updateDisplay()
 {
-    if (m_mediaElement && !m_mediaElement->closedCaptionsVisible())
+    RefPtr mediaElement = protectedMediaElement();
+    if (mediaElement && !mediaElement->closedCaptionsVisible())
         removeChildren();
 
     // 1. If the media element is an audio element, or is another playback
     // mechanism with no rendering area, abort these steps. There is nothing to
     // render.
-    if (!m_mediaElement || m_videoDisplaySize.size().isEmpty())
+    if (!mediaElement || m_videoDisplaySize.size().isEmpty())
         return;
 
     // 2. Let video be the media element or other playback mechanism.
-    RefPtr video = dynamicDowncast<HTMLVideoElement>(*m_mediaElement);
+    RefPtr video = dynamicDowncast<HTMLVideoElement>(*mediaElement);
     if (!video)
         return;
 
@@ -170,7 +176,7 @@ void MediaControlTextTrackContainerElement::updateDisplay()
     // so that the newest captions appear at the bottom.
     std::sort(activeCues.begin(), activeCues.end(), &compareCueIntervalForDisplay);
 
-    if (m_mediaElement->closedCaptionsVisible()) {
+    if (mediaElement->closedCaptionsVisible()) {
         // 10. For each text track cue in cues that has not yet had
         // corresponding CSS boxes added to output, in text track cue order, run the
         // following substeps:
@@ -246,7 +252,8 @@ void MediaControlTextTrackContainerElement::updateActiveCuesFontSize()
     if (!document().page())
         return;
 
-    if (!m_mediaElement)
+    RefPtr mediaElement = protectedMediaElement();
+    if (!mediaElement)
         return;
 
     float fontScale = document().page()->group().ensureCaptionPreferences().captionFontSizeScaleAndImportance(m_fontSizeIsImportant);
@@ -256,7 +263,7 @@ void MediaControlTextTrackContainerElement::updateActiveCuesFontSize()
     // the scale factor by 100 to achive the final font size.
     m_fontSize = lroundf(100 * fontScale);
 
-    for (auto& activeCue : m_mediaElement->currentlyActiveCues()) {
+    for (auto& activeCue : mediaElement->currentlyActiveCues()) {
         RefPtr cue = activeCue.data();
         if (cue->isRenderable())
             cue->setFontSize(m_fontSize, m_fontSizeIsImportant);
@@ -268,7 +275,8 @@ void MediaControlTextTrackContainerElement::updateTextStrokeStyle()
     if (!document().page())
         return;
 
-    if (!m_mediaElement)
+    RefPtr mediaElement = protectedMediaElement();
+    if (!mediaElement)
         return;
     
     String language;
@@ -276,7 +284,7 @@ void MediaControlTextTrackContainerElement::updateTextStrokeStyle()
     // FIXME: Since it is possible to have more than one text track enabled, the following code may not find the correct language.
     // The default UI only allows a user to enable one track at a time, so it should be OK for now, but we should consider doing
     // this differently, see <https://bugs.webkit.org/show_bug.cgi?id=169875>.
-    if (RefPtr tracks = m_mediaElement->textTracks()) {
+    if (RefPtr tracks = mediaElement->textTracks()) {
         for (unsigned i = 0; i < tracks->length(); ++i) {
             RefPtr track = tracks->item(i);
             if (track && track->mode() == TextTrack::Mode::Showing) {
@@ -296,10 +304,11 @@ void MediaControlTextTrackContainerElement::updateTextStrokeStyle()
 
 void MediaControlTextTrackContainerElement::updateTextTrackRepresentationIfNeeded()
 {
-    if (!m_mediaElement)
+    RefPtr mediaElement = protectedMediaElement();
+    if (!mediaElement)
         return;
 
-    auto requiresTextTrackRepresentation = m_mediaElement->requiresTextTrackRepresentation();
+    auto requiresTextTrackRepresentation = mediaElement->requiresTextTrackRepresentation();
     if (!hasChildNodes() || !requiresTextTrackRepresentation) {
         if (m_textTrackRepresentation) {
             if (!requiresTextTrackRepresentation)
@@ -313,10 +322,10 @@ void MediaControlTextTrackContainerElement::updateTextTrackRepresentationIfNeede
     if (!m_textTrackRepresentation) {
         ALWAYS_LOG(LOGIDENTIFIER);
 
-        m_textTrackRepresentation = TextTrackRepresentation::create(*this, *m_mediaElement);
+        m_textTrackRepresentation = TextTrackRepresentation::create(*this, *mediaElement);
         if (document().page())
             m_textTrackRepresentation->setContentScale(document().page()->deviceScaleFactor());
-        m_mediaElement->setTextTrackRepresentation(m_textTrackRepresentation.get());
+        mediaElement->setTextTrackRepresentation(m_textTrackRepresentation.get());
     }
 
     m_needsToGenerateTextTrackRepresentation = true;
@@ -330,8 +339,8 @@ void MediaControlTextTrackContainerElement::clearTextTrackRepresentation()
     ALWAYS_LOG(LOGIDENTIFIER);
 
     m_textTrackRepresentation = nullptr;
-    if (m_mediaElement)
-        m_mediaElement->setTextTrackRepresentation(nullptr);
+    if (RefPtr mediaElement = protectedMediaElement())
+        mediaElement->setTextTrackRepresentation(nullptr);
 }
 
 void MediaControlTextTrackContainerElement::updateTextTrackStyle()
@@ -375,14 +384,15 @@ bool MediaControlTextTrackContainerElement::updateVideoDisplaySize()
     if (!document().page())
         return false;
 
-    if (!m_mediaElement)
+    RefPtr mediaElement = protectedMediaElement();
+    if (!mediaElement)
         return false;
 
     IntRect videoBox;
     if (m_textTrackRepresentation)
         videoBox = m_textTrackRepresentation->bounds();
     else {
-        if (auto* renderVideo = dynamicDowncast<RenderVideo>(m_mediaElement->renderer()))
+        if (auto* renderVideo = dynamicDowncast<RenderVideo>(mediaElement->renderer()))
             videoBox = renderVideo->videoBox();
         else
             return false;
@@ -400,14 +410,15 @@ void MediaControlTextTrackContainerElement::updateSizes(ForceUpdate force)
     if (!updateVideoDisplaySize() && force != ForceUpdate::Yes)
         return;
 
-    if (!document().page() || !m_mediaElement)
+    RefPtr mediaElement = protectedMediaElement();
+    if (!document().page() || !mediaElement)
         return;
 
-    m_mediaElement->syncTextTrackBounds();
+    mediaElement->syncTextTrackBounds();
 
     updateActiveCuesFontSize();
     updateTextStrokeStyle();
-    for (auto& activeCue : m_mediaElement->currentlyActiveCues())
+    for (auto& activeCue : mediaElement->currentlyActiveCues())
         activeCue.data()->recalculateStyles();
 
     document().eventLoop().queueTask(TaskSource::MediaElement, [weakThis = WeakPtr { *this }] () {
@@ -491,8 +502,11 @@ const Logger& MediaControlTextTrackContainerElement::logger() const
 
 uint64_t MediaControlTextTrackContainerElement::logIdentifier() const
 {
-    if (!m_logIdentifier && m_mediaElement)
-        m_logIdentifier = m_mediaElement->logIdentifier();
+    if (m_logIdentifier)
+        return m_logIdentifier;
+
+    if (RefPtr mediaElement = protectedMediaElement())
+        m_logIdentifier = mediaElement->logIdentifier();
 
     return m_logIdentifier;
 }

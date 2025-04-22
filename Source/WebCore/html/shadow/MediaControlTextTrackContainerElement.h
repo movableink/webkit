@@ -88,6 +88,8 @@ private:
     void show();
     bool isShowing() const;
 
+    RefPtr<HTMLMediaElement> protectedMediaElement() const;
+
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final;
     uint64_t logIdentifier() const final;

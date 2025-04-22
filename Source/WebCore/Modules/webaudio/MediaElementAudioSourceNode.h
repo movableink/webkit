@@ -71,7 +71,7 @@ private:
 
     bool wouldTaintOrigin();
 
-    Ref<HTMLMediaElement> m_mediaElement;
+    const Ref<HTMLMediaElement> m_mediaElement;
     Lock m_processLock;
 
     unsigned m_sourceNumberOfChannels WTF_GUARDED_BY_LOCK(m_processLock) { 0 };

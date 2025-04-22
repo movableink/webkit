@@ -129,8 +129,10 @@ struct PlatformMediaSessionRemoteCommandArgument {
     std::optional<bool> fastSeek;
 };
 
-class PlatformMediaSessionClient {
+class PlatformMediaSessionClient : public CanMakeCheckedPtr<PlatformMediaSessionClient> {
     WTF_MAKE_NONCOPYABLE(PlatformMediaSessionClient);
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PlatformMediaSessionClient);
 public:
     PlatformMediaSessionClient() = default;
 
@@ -189,6 +191,8 @@ public:
 protected:
     virtual ~PlatformMediaSessionClient() = default;
 };
+
+PlatformMediaSessionClient& emptyPlatformMediaSessionClient();
 
 class AudioCaptureSource : public CanMakeWeakPtr<AudioCaptureSource> {
 public:
@@ -309,6 +313,7 @@ public:
     virtual String description() const = 0;
 #endif
 
+    void invalidateClient() { m_client = emptyPlatformMediaSessionClient(); }
     PlatformMediaSessionClient& client() const { return m_client; }
 
 #if !RELEASE_LOG_DISABLED
@@ -327,7 +332,7 @@ protected:
     }
 
 private:
-    PlatformMediaSessionClient& m_client;
+    CheckedRef<PlatformMediaSessionClient> m_client;
     MediaSessionIdentifier m_mediaSessionIdentifier;
     bool m_hasPlayedAudiblySinceLastInterruption { false };
 };

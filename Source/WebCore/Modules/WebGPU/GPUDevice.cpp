@@ -301,8 +301,8 @@ GPUExternalTexture* GPUDevice::externalTextureForDescriptor(const GPUExternalTex
 #endif
         if (!videoElement->get())
             return nullptr;
-        HTMLVideoElement& v = *videoElement->get();
-        if (m_previouslyImportedExternalTexture.first.get() == &v)
+        Ref v = *videoElement->get();
+        if (m_previouslyImportedExternalTexture.first.get() == v.ptr())
             return m_previouslyImportedExternalTexture.second.get();
 
         auto it = m_videoElementToExternalTextureMap.find(v);
@@ -334,11 +334,12 @@ private:
 
     CallbackResult<void> invoke(double, const VideoFrameMetadata&) override
     {
-        if (!m_videoElement)
+        RefPtr videoElement = m_videoElement.get();
+        if (!videoElement)
             return { };
         if (!m_gpuDevice)
             return { };
-        auto texture = m_gpuDevice->takeExternalTextureForVideoElement(*m_videoElement);
+        auto texture = m_gpuDevice->takeExternalTextureForVideoElement(*videoElement);
         if (!texture)
             return { };
         if (texture.get() == m_externalTexture.ptr())

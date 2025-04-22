@@ -360,11 +360,12 @@ public:
     TrackDisplayUpdateScope(HTMLMediaElement& element)
         : m_element(element)
     {
-        m_element->beginIgnoringTrackDisplayUpdateRequests();
+        element.beginIgnoringTrackDisplayUpdateRequests();
     }
     ~TrackDisplayUpdateScope()
     {
-        m_element->endIgnoringTrackDisplayUpdateRequests();
+        if (RefPtr element = m_element.ptr())
+            element->endIgnoringTrackDisplayUpdateRequests();
     }
 
 private:
@@ -407,18 +408,20 @@ struct MediaElementSessionInfo {
 
 static MediaElementSessionInfo mediaElementSessionInfoForSession(const MediaElementSession& session, MediaElementSession::PlaybackControlsPurpose purpose)
 {
-    Ref element = session.element();
-    return {
-        &session,
-        purpose,
-        session.mostRecentUserInteractionTime(),
-        session.canShowControlsManager(purpose),
-        element->isFullscreen() || element->isVisibleInViewport(),
-        session.isLargeEnoughForMainContent(MediaSessionMainContentPurpose::MediaControls),
-        session.isLongEnoughForMainContent(),
-        element->isPlaying() && element->hasAudio() && !element->muted(),
-        element->hasEverNotifiedAboutPlaying()
-    };
+    if (RefPtr element = session.protectedElement()) {
+        return {
+            &session,
+            purpose,
+            session.mostRecentUserInteractionTime(),
+            session.canShowControlsManager(purpose),
+            element->isFullscreen() || element->isVisibleInViewport(),
+            session.isLargeEnoughForMainContent(MediaSessionMainContentPurpose::MediaControls),
+            session.isLongEnoughForMainContent(),
+            element->isPlaying() && element->hasAudio() && !element->muted(),
+            element->hasEverNotifiedAboutPlaying()
+        };
+    }
+    return { };
 }
 
 static bool preferMediaControlsForCandidateSessionOverOtherCandidateSession(const MediaElementSessionInfo& session, const MediaElementSessionInfo& otherSession)
@@ -780,7 +783,10 @@ HTMLMediaElement::~HTMLMediaElement()
         m_player = nullptr;
     }
 
-    m_mediaSession = nullptr;
+    if (m_mediaSession) {
+        m_mediaSession->invalidateClient();
+        m_mediaSession = nullptr;
+    }
     schedulePlaybackControlsManagerUpdate();
 }
 
@@ -793,10 +799,19 @@ RefPtr<HTMLMediaElement> HTMLMediaElement::bestMediaElementForRemoteControls(Med
 {
     auto selectedSession = PlatformMediaSessionManager::singleton().bestEligibleSessionForRemoteControls([&document] (auto& session) {
         auto* mediaElementSession = dynamicDowncast<MediaElementSession>(session);
-        return mediaElementSession && (!document || &mediaElementSession->element().document() == document);
+        if (!mediaElementSession)
+            return false;
+
+        RefPtr element = mediaElementSession->protectedElement();
+        if (!element)
+            return false;
+
+        return !document || &element->document() == document;
     }, purpose);
 
-    return selectedSession ? RefPtr { &downcast<MediaElementSession>(selectedSession.get())->element() } : nullptr;
+    if (auto* mediaElementSession = dynamicDowncast<MediaElementSession>(selectedSession.get()))
+        return mediaElementSession->protectedElement();
+    return nullptr;
 }
 
 bool HTMLMediaElement::isNowPlayingEligible() const

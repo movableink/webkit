@@ -160,7 +160,8 @@ public:
     WEBCORE_EXPORT void removeBehaviorRestriction(BehaviorRestrictions);
     bool hasBehaviorRestriction(BehaviorRestrictions restriction) const { return restriction & m_restrictions; }
 
-    HTMLMediaElement& element() const { return m_element; }
+    WeakPtr<HTMLMediaElement> element() const { return m_element; }
+    RefPtr<HTMLMediaElement> protectedElement() const;
 
     bool wantsToObserveViewportVisibilityForMediaControls() const;
     bool wantsToObserveViewportVisibilityForAutoplay() const;
@@ -228,7 +229,7 @@ private:
 
     void addMediaUsageManagerSessionIfNecessary();
 
-    HTMLMediaElement& m_element;
+    WeakPtr<HTMLMediaElement> m_element;
     BehaviorRestrictions m_restrictions;
 
     std::optional<MediaUsageInfo> m_mediaUsageInfo;

@@ -632,8 +632,8 @@ static bool hasAudibleMedia(const Element& element)
     if (RefPtr media = dynamicDowncast<HTMLMediaElement>(element))
         return media->isAudible();
 
-    for (auto& media : descendantsOfType<HTMLMediaElement>(element)) {
-        if (media.isAudible())
+    for (Ref media : descendantsOfType<HTMLMediaElement>(element)) {
+        if (media->isAudible())
             return true;
     }
 

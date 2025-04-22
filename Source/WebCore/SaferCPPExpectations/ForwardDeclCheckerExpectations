@@ -62,7 +62,6 @@ editing/Editor.h
 editing/TextIterator.cpp
 editing/VisibleUnits.cpp
 html/HTMLMediaElement.cpp
-html/MediaElementSession.h
 html/canvas/PlaceholderRenderingContext.cpp
 html/parser/HTMLConstructionSite.cpp
 html/parser/HTMLDocumentParser.cpp

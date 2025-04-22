@@ -133,6 +133,8 @@ private:
     void savePreviouslySelectedTextTrackIfNecessary();
     void restorePreviouslySelectedTextTrackIfNecessary();
 
+    RefPtr<HTMLMediaElement> protectedElement() const { return m_mediaElement.ptr(); }
+
 #if ENABLE(MEDIA_SESSION)
     RefPtr<MediaSession> mediaSession() const;
 
@@ -140,7 +142,7 @@ private:
     void metadataChanged(const RefPtr<MediaMetadata>&) final;
 #endif
 
-    WeakPtr<HTMLMediaElement> m_mediaElement;
+    WeakRef<HTMLMediaElement> m_mediaElement;
     RefPtr<MediaControlTextTrackContainerElement> m_textTrackContainer;
     RefPtr<TextTrack> m_previouslySelectedTextTrack;
 

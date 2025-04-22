@@ -294,8 +294,8 @@ void RemotePlayback::shouldPlayToRemoteTargetChanged(bool shouldPlayToRemoteTarg
     else
         disconnect();
 
-    if (m_mediaElement)
-        m_mediaElement->remoteHasAvailabilityCallbacksChanged();
+    if (RefPtr mediaElement = m_mediaElement.get())
+        mediaElement->remoteHasAvailabilityCallbacksChanged();
 }
 
 void RemotePlayback::setState(State state)
@@ -386,8 +386,8 @@ void RemotePlayback::playbackTargetPickerWasDismissed()
     for (auto& promise : std::exchange(m_promptPromises, { }))
         promise->reject(ExceptionCode::NotAllowedError);
 
-    if (m_mediaElement)
-        m_mediaElement->remoteHasAvailabilityCallbacksChanged();
+    if (RefPtr mediaElement = m_mediaElement.get())
+        mediaElement->remoteHasAvailabilityCallbacksChanged();
 }
 
 void RemotePlayback::isPlayingToRemoteTargetChanged(bool isPlayingToTarget)

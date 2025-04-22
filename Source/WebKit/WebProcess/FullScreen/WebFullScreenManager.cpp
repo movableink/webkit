@@ -267,7 +267,7 @@ void WebFullScreenManager::enterFullScreenForElement(Element& element, HTMLMedia
         return;
     }
 
-    if (auto* currentPlaybackControlsElement = m_page->playbackSessionManager().currentPlaybackControlsElement())
+    if (RefPtr currentPlaybackControlsElement = m_page->playbackSessionManager().currentPlaybackControlsElement())
         currentPlaybackControlsElement->prepareForVideoFullscreenStandby();
 #endif
 
@@ -420,8 +420,8 @@ void WebFullScreenManager::didEnterFullScreen(CompletionHandler<bool(bool)>&& co
 #endif
 
 #if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
-    auto* currentPlaybackControlsElement = m_page->playbackSessionManager().currentPlaybackControlsElement();
-    setPIPStandbyElement(dynamicDowncast<WebCore::HTMLVideoElement>(currentPlaybackControlsElement));
+    RefPtr currentPlaybackControlsElement = m_page->playbackSessionManager().currentPlaybackControlsElement();
+    setPIPStandbyElement(dynamicDowncast<WebCore::HTMLVideoElement>(currentPlaybackControlsElement.get()));
 #endif
 
 #if ENABLE(VIDEO)
@@ -442,8 +442,8 @@ void WebFullScreenManager::updateMainVideoElement()
 
         RefPtr<WebCore::HTMLVideoElement> mainVideo;
         WebCore::FloatRect mainVideoBounds;
-        for (auto& video : WebCore::descendantsOfType<WebCore::HTMLVideoElement>(*m_element)) {
-            auto rendererAndBounds = video.boundingAbsoluteRectWithoutLayout();
+        for (Ref video : WebCore::descendantsOfType<WebCore::HTMLVideoElement>(*m_element)) {
+            auto rendererAndBounds = video->boundingAbsoluteRectWithoutLayout();
             if (!rendererAndBounds)
                 continue;
 
@@ -455,7 +455,7 @@ void WebFullScreenManager::updateMainVideoElement()
                 continue;
 
             mainVideoBounds = bounds;
-            mainVideo = &video;
+            mainVideo = video.ptr();
         }
         return mainVideo;
     }());
