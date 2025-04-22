@@ -654,8 +654,6 @@ js/slow-stress [ Skip ]
 workers/wasm-hashset-many-2.html [ Skip ] # Timeout
 workers/wasm-hashset-many.html [ Skip ] # Timeout
 
-workers/wasm-references.html [ Skip ] # Crash
-
 #//////////////////////////////////////////////////////////////////////////////////////////
 # http
 #//////////////////////////////////////////////////////////////////////////////////////////
@@ -1913,35 +1911,6 @@ fast/cookies [ Skip ]
 fast/encoding [ Skip ]
 fast/files [ Skip ]
 
-fast/flexbox/001.html [ Skip ] # Failure
-fast/flexbox/002.html [ Skip ] # Failure
-fast/flexbox/003.html [ Skip ] # Failure
-fast/flexbox/004.html [ Skip ] # Failure
-fast/flexbox/005.html [ Skip ] # Failure
-fast/flexbox/006.html [ Skip ] # Failure
-fast/flexbox/007.html [ Skip ] # Failure
-fast/flexbox/008.html [ Skip ] # Failure
-fast/flexbox/009.html [ Skip ] # Failure
-fast/flexbox/010.html [ Skip ] # Failure
-fast/flexbox/011.html [ Skip ] # Failure
-fast/flexbox/012.html [ Skip ] # Failure
-fast/flexbox/013.html [ Skip ] # Failure
-fast/flexbox/014.html [ Skip ] # Failure
-fast/flexbox/015.html [ Skip ] # Failure
-fast/flexbox/016.html [ Skip ] # Failure
-fast/flexbox/017.html [ Skip ] # Failure
-fast/flexbox/018.html [ Skip ] # Failure
-fast/flexbox/019.html [ Skip ] # Failure
-fast/flexbox/020.html [ Skip ] # Failure
-fast/flexbox/022.html [ Skip ] # Failure
-fast/flexbox/023.html [ Skip ] # Failure
-fast/flexbox/024.html [ Skip ] # Failure
-fast/flexbox/025.html [ Skip ] # Failure
-fast/flexbox/026.html [ Skip ] # Failure
-fast/flexbox/clear-overflow-before-scroll-update.html [ Skip ] # Failure
-fast/flexbox/line-clamp-with-anchor-content-only.html [ Skip ] # ImageOnlyFailure
-
-
 fast/frames [ Skip ]
 fast/hidpi [ Skip ]
 fast/history [ Skip ]
@@ -2135,20 +2104,7 @@ imported/w3c/web-platform-tests/css/mediaqueries [ Skip ]
 imported/w3c/web-platform-tests/css/motion [ Skip ]
 imported/w3c/web-platform-tests/css/reference [ Skip ]
 
-imported/w3c/web-platform-tests/css/selectors/dir-pseudo-on-input-element.html [ Skip ] # Failure
-imported/w3c/web-platform-tests/css/selectors/focus-visible-007.html [ Skip ] # Failure
-imported/w3c/web-platform-tests/css/selectors/focus-visible-011.html [ Skip ] # Failure
-imported/w3c/web-platform-tests/css/selectors/focus-visible-013.html [ Skip ] # Failure
 imported/w3c/web-platform-tests/css/selectors/focus-visible-022.tentative.html [ Skip ] # Failure
-imported/w3c/web-platform-tests/css/selectors/invalidation/lang-pseudo-class-in-has-multiple-document-elements.html [ Skip ] # ImageOnlyFailure
-imported/w3c/web-platform-tests/css/selectors/invalidation/media-loading-pseudo-classes-in-has.html [ Skip ] # Failure
-imported/w3c/web-platform-tests/css/selectors/nth-child-of-pseudo.html [ Skip ] # ImageOnlyFailure
-imported/w3c/web-platform-tests/css/selectors/nth-last-child-of-no-space-after-of.html [ Skip ] # ImageOnlyFailure
-imported/w3c/web-platform-tests/css/selectors/nth-last-child-of-style-sharing-1.html [ Skip ] # ImageOnlyFailure
-imported/w3c/web-platform-tests/css/selectors/nth-last-child-of-style-sharing-2.html [ Skip ] # ImageOnlyFailure
-imported/w3c/web-platform-tests/css/selectors/nth-last-child-of-tagname.html [ Skip ] # ImageOnlyFailure
-imported/w3c/web-platform-tests/css/selectors/selector-placeholder-shown-type-change-002.html [ Skip ] # ImageOnlyFailure
-imported/w3c/web-platform-tests/css/selectors/selector-placeholder-shown-type-change-003.html [ Skip ] # ImageOnlyFailure
 imported/w3c/web-platform-tests/css/selectors/user-invalid.html [ Skip ] # Failure
 imported/w3c/web-platform-tests/css/selectors/user-valid.html [ Skip ] # Failure
 
@@ -3538,6 +3494,32 @@ fast/events/updateLayoutForHitTest.html [ Skip ]
 fast/events/wheel/first-wheel-event-cancelable.html [ Skip ]
 fast/fast-mobile-scrolling/fixed-position-element.html [ Skip ]
 fast/fast-mobile-scrolling/no-fixed-position-elements.html [ Skip ]
+fast/flexbox/001.html [ Skip ]
+fast/flexbox/002.html [ Skip ]
+fast/flexbox/003.html [ Skip ]
+fast/flexbox/004.html [ Skip ]
+fast/flexbox/005.html [ Skip ]
+fast/flexbox/006.html [ Skip ]
+fast/flexbox/007.html [ Skip ]
+fast/flexbox/008.html [ Skip ]
+fast/flexbox/009.html [ Skip ]
+fast/flexbox/010.html [ Skip ]
+fast/flexbox/011.html [ Skip ]
+fast/flexbox/012.html [ Skip ]
+fast/flexbox/013.html [ Skip ]
+fast/flexbox/014.html [ Skip ]
+fast/flexbox/015.html [ Skip ]
+fast/flexbox/016.html [ Skip ]
+fast/flexbox/017.html [ Skip ]
+fast/flexbox/018.html [ Skip ]
+fast/flexbox/019.html [ Skip ]
+fast/flexbox/020.html [ Skip ]
+fast/flexbox/022.html [ Skip ]
+fast/flexbox/023.html [ Skip ]
+fast/flexbox/024.html [ Skip ]
+fast/flexbox/025.html [ Skip ]
+fast/flexbox/026.html [ Skip ]
+fast/flexbox/clear-overflow-before-scroll-update.html [ Skip ]
 fast/gradients/crash-on-zero-radius.html [ Skip ]
 fast/gradients/generated-gradients.html [ Skip ]
 fast/gradients/list-item-gradient.html [ Skip ]
