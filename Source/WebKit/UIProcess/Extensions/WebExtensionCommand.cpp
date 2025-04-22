@@ -38,9 +38,9 @@ WebExtensionCommand::WebExtensionCommand(WebExtensionContext& extensionContext, 
     : m_extensionContext(extensionContext)
     , m_identifier(data.identifier)
     , m_description(data.description)
-    , m_activationKey(data.activationKey)
     , m_modifierFlags(data.modifierFlags)
 {
+    setActivationKey(data.activationKey, SuppressEvents::Yes);
 }
 
 bool WebExtensionCommand::operator==(const WebExtensionCommand& other) const

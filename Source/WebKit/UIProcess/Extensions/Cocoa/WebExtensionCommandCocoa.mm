@@ -102,7 +102,7 @@ void WebExtensionCommand::dispatchChangedEventSoonIfNeeded()
     }).get());
 }
 
-bool WebExtensionCommand::setActivationKey(String activationKey)
+bool WebExtensionCommand::setActivationKey(String activationKey, SuppressEvents suppressEvents)
 {
     if (activationKey.isEmpty()) {
         m_activationKey = nullString();
@@ -132,9 +132,14 @@ bool WebExtensionCommand::setActivationKey(String activationKey)
     if ([activationKey.createNSString() rangeOfCharacterFromSet:notAllowedCharacterSet].location != NSNotFound)
         return false;
 
-    dispatchChangedEventSoonIfNeeded();
+    if (suppressEvents == SuppressEvents::No)
+        dispatchChangedEventSoonIfNeeded();
 
+#if PLATFORM(IOS_FAMILY)
+    m_activationKey = activationKey.convertToASCIIUppercase();
+#else
     m_activationKey = activationKey.convertToASCIILowercase();
+#endif
 
     return true;
 }

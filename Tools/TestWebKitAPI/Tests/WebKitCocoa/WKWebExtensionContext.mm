@@ -766,18 +766,20 @@ TEST(WKWebExtensionContext, CommandsParsing)
             testCommand = command;
 
             EXPECT_NS_EQUAL(command.title, @"Send A Thing");
-            EXPECT_NS_EQUAL(command.activationKey, @"u");
 #if PLATFORM(MAC)
+            EXPECT_NS_EQUAL(command.activationKey, @"u");
             EXPECT_EQ(command.modifierFlags, NSEventModifierFlagOption | NSEventModifierFlagShift);
 #else
+            EXPECT_NS_EQUAL(command.activationKey, @"U");
             EXPECT_EQ(command.modifierFlags, UIKeyModifierAlternate | UIKeyModifierShift);
 #endif
         } else if ([command.identifier isEqualToString:@"do-another-thing"]) {
             EXPECT_NS_EQUAL(command.title, @"Find A Thing");
-            EXPECT_NS_EQUAL(command.activationKey, @"y");
 #if PLATFORM(MAC)
+            EXPECT_NS_EQUAL(command.activationKey, @"y");
             EXPECT_EQ(command.modifierFlags, NSEventModifierFlagCommand | NSEventModifierFlagShift);
 #else
+            EXPECT_NS_EQUAL(command.activationKey, @"Y");
             EXPECT_EQ(command.modifierFlags, UIKeyModifierCommand | UIKeyModifierShift);
 #endif
         } else if ([command.identifier isEqualToString:@"special-command"]) {
@@ -825,10 +827,11 @@ TEST(WKWebExtensionContext, CommandsParsing)
 
     testCommand.activationKey = @"M";
 
-    EXPECT_NS_EQUAL(testCommand.activationKey, @"m");
 #if PLATFORM(MAC)
+    EXPECT_NS_EQUAL(testCommand.activationKey, @"m");
     EXPECT_EQ(testCommand.modifierFlags, NSEventModifierFlagOption | NSEventModifierFlagShift);
 #else
+    EXPECT_NS_EQUAL(testCommand.activationKey, @"M");
     EXPECT_EQ(testCommand.modifierFlags, UIKeyModifierAlternate | UIKeyModifierShift);
 #endif
 
@@ -843,10 +846,11 @@ TEST(WKWebExtensionContext, CommandsParsing)
     testCommand.modifierFlags = UIKeyModifierCommand | UIKeyModifierShift;
 #endif
 
-    EXPECT_NS_EQUAL(testCommand.activationKey, @"m");
 #if PLATFORM(MAC)
+    EXPECT_NS_EQUAL(testCommand.activationKey, @"m");
     EXPECT_EQ(testCommand.modifierFlags, NSEventModifierFlagCommand | NSEventModifierFlagShift);
 #else
+    EXPECT_NS_EQUAL(testCommand.activationKey, @"M");
     EXPECT_EQ(testCommand.modifierFlags, UIKeyModifierCommand | UIKeyModifierShift);
 #endif
 
@@ -855,7 +859,11 @@ TEST(WKWebExtensionContext, CommandsParsing)
     } @catch (NSException *exception) {
         EXPECT_NS_EQUAL(exception.name, NSInternalInconsistencyException);
     } @finally {
+#if PLATFORM(MAC)
         EXPECT_NS_EQUAL(testCommand.activationKey, @"m");
+#else
+        EXPECT_NS_EQUAL(testCommand.activationKey, @"M");
+#endif
     }
 
     @try {
