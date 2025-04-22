@@ -63,8 +63,13 @@ public:
             return nullptr;
         }
 
-        BasicBlock*& loopTarget(BasicBlock* tail) const { return tail->successor(inverseCondition); }
-        BasicBlock*& exitTarget(BasicBlock* tail) const { return tail->successor(!inverseCondition); }
+        bool shouldInvertCondition() const
+        {
+            ASSERT(invertCondition.has_value());
+            return *invertCondition;
+        }
+        BasicBlock*& loopTarget(BasicBlock* tail) const { return tail->successor(shouldInvertCondition()); }
+        BasicBlock*& exitTarget(BasicBlock* tail) const { return tail->successor(!shouldInvertCondition()); }
 
         bool isInductionVariable(Node* node) { return node->operand() == inductionVariable->operand(); }
         void dump(PrintStream& out) const;
@@ -82,7 +87,7 @@ public:
         CheckedInt32 updateValue { INT_MIN };
         CheckedUint32 iterationCount { 0 };
 
-        bool inverseCondition { false };
+        std::optional<bool> invertCondition { };
 
         uint32_t loopBodySize { 0 };
     };
@@ -318,7 +323,6 @@ public:
             data.next = loopAnalysisSuccessor(successor);
         }
         data.tail = tail;
-        ASSERT(tail->terminal()->op() == Branch && data.loopTarget(tail)->isJumpPad());
 
         // PreHeader
         //  |
@@ -331,8 +335,10 @@ public:
         // Next
         //
         // Determine if the condition should be inverted based on whether the "not taken" branch points into the loop.
-        data.inverseCondition = data.loop->contains(tail->successor(1));
-        ASSERT(data.loop->contains(tail->successor(0)) == !data.inverseCondition);
+        data.invertCondition = data.loop->contains(tail->successor(1));
+        ASSERT(data.loop->contains(tail->successor(0)) == !data.shouldInvertCondition());
+
+        ASSERT(tail->terminal()->op() == Branch && data.loopTarget(tail)->isJumpPad());
         return true;
     }
 
@@ -423,7 +429,7 @@ public:
         // Compute the number of iterations in the loop, if it has a constant iteration count.
         if (data.shouldFullyUnroll()) {
             CheckedUint32 iterationCount = 0;
-            auto compare = comparisonFunction(condition, data.inverseCondition);
+            auto compare = comparisonFunction(condition, data.shouldInvertCondition());
             auto update = updateFunction(data.update);
             for (CheckedInt32 i = std::get<CheckedInt32>(data.initialValue); compare(i, std::get<CheckedInt32>(data.operand));) {
                 if (iterationCount > Options::maxLoopUnrollingIterationCount()) {
@@ -635,7 +641,10 @@ void LoopUnrollingPhase::LoopData::dump(PrintStream& out) const
 
     out.print("iterationCount=", iterationCount, ", ");
 
-    out.print("inverseCondition=", inverseCondition, ", ");
+    if (invertCondition.has_value())
+        out.print("inverseCondition=", shouldInvertCondition(), ", ");
+    else
+        out.print("inverseCondition=<NULL>, ");
 
     out.print("loopBodySize=", loopBodySize);
 }
@@ -669,7 +678,7 @@ bool LoopUnrollingPhase::isSupportedUpdateOp(NodeType op)
     }
 }
 
-LoopUnrollingPhase::ComparisonFunction LoopUnrollingPhase::comparisonFunction(Node* condition, bool inverseCondition)
+LoopUnrollingPhase::ComparisonFunction LoopUnrollingPhase::comparisonFunction(Node* condition, bool inverse)
 {
     static const ComparisonFunction less = [](auto a, auto b) { return a < b; };
     static const ComparisonFunction lessEq = [](auto a, auto b) { return a <= b; };
@@ -680,16 +689,16 @@ LoopUnrollingPhase::ComparisonFunction LoopUnrollingPhase::comparisonFunction(No
 
     switch (condition->op()) {
     case CompareLess:
-        return inverseCondition ? greaterEq : less;
+        return inverse ? greaterEq : less;
     case CompareLessEq:
-        return inverseCondition ? greater : lessEq;
+        return inverse ? greater : lessEq;
     case CompareGreater:
-        return inverseCondition ? lessEq : greater;
+        return inverse ? lessEq : greater;
     case CompareGreaterEq:
-        return inverseCondition ? less : greaterEq;
+        return inverse ? less : greaterEq;
     case CompareEq:
     case CompareStrictEq:
-        return inverseCondition ? notEqual : equal;
+        return inverse ? notEqual : equal;
     default:
         RELEASE_ASSERT_NOT_REACHED();
         return [](auto, auto) { return false; };
