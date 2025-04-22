@@ -2138,3 +2138,5 @@ webkit.org/b/291394 [ Debug ] imported/w3c/web-platform-tests/wasm/webapi/esm-in
 webkit.org/b/291710 [ Debug ] swipe/basic-cached-back-swipe.html [ Pass Timeout ]
 
 webkit.org/b/291861 [ Release x86_64 ] media/media-vp8-hiddenframes.html [ Pass ImageOnlyFailure ]
+
+webkit.org/b/291878 [ Sequoia Release arm64 ] http/tests/webgpu/webgpu/shader/validation/expression/call/builtin/textureSampleBias.html [ Failure ]
