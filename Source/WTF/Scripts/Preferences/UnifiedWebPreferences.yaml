@@ -1135,16 +1135,16 @@ CSSColorLayersEnabled:
 CSSContainerProgressFunctionEnabled:
   type: bool
   category: css
-  status: stable
+  status: testable
   humanReadableName: "CSS container-progress()"
   humanReadableDescription: "Enable support for CSS Values and Units Module Level 5 container-progress()"
   defaultValue:
     WebKitLegacy:
-      default: true
+      default: false
     WebKit:
-      default: true
+      default: false
     WebCore:
-      default: true
+      default: false
 
 CSSContentVisibilityEnabled:
   type: bool
@@ -1345,16 +1345,16 @@ CSSMarginTrimEnabled:
 CSSMediaProgressFunctionEnabled:
   type: bool
   category: css
-  status: stable
+  status: testable
   humanReadableName: "CSS media-progress()"
   humanReadableDescription: "Enable support for CSS Values and Units Module Level 5 media-progress()"
   defaultValue:
     WebKitLegacy:
-      default: true
+      default: false
     WebKit:
-      default: true
+      default: false
     WebCore:
-      default: true
+      default: false
 
 CSSMotionPathEnabled:
   type: bool
