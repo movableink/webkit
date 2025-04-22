@@ -1,5 +1,7 @@
 // RUN: %metal-compile main
 
+enable f16;
+
 struct S {
     @size(16) x: f32,
     @align(16) y: i32,

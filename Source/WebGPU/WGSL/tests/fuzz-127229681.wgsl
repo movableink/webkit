@@ -1,5 +1,7 @@
 // RUN: %wgslc
 
+enable f16;
+
 struct S {
   x: array<f32>,
 }

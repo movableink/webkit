@@ -204,6 +204,7 @@ private:
     const Type* infer(AST::Expression&, Evaluation, DiscardResult = DiscardResult::No);
     const Type* resolve(AST::Expression&);
     const Type* lookupType(const AST::Identifier&);
+    void validateF16Usage(const SourceSpan&, const Type*);
     void inferred(const Type*);
     bool unify(const Type*, const Type*) WARN_UNUSED_RETURN;
     bool isBottom(const Type*) const;
@@ -1254,6 +1255,7 @@ void TypeChecker::visit(AST::CallExpression& call)
     if (targetBinding) {
         target.m_inferredType = targetBinding->type;
         if (targetBinding->kind == Binding::Type) {
+            validateF16Usage(call.span(), targetBinding->type);
             call.m_isConstructor = true;
             if (auto* structType = std::get_if<Types::Struct>(targetBinding->type)) {
                 if (!targetBinding->type->isConstructible()) {
@@ -1824,7 +1826,23 @@ const Type* TypeChecker::lookupType(const AST::Identifier& name)
         return m_types.bottomType();
     }
 
+    validateF16Usage(name.span(), binding->type);
+
     return binding->type;
+}
+
+void TypeChecker::validateF16Usage(const SourceSpan& span, const Type* type)
+{
+    if (m_shaderModule.enabledExtensions().contains(Extension::F16))
+        return;
+
+    if (auto* matrix = std::get_if<Types::Matrix>(type))
+        type = matrix->element;
+    else if (auto* vector = std::get_if<Types::Vector>(type))
+        type = vector->element;
+
+    if (type == m_types.f16Type())
+        typeError(InferBottom::No, span, "f16 type used without f16 extension enabled"_s);
 }
 
 void TypeChecker::visit(AST::ElaboratedTypeExpression& type)

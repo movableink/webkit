@@ -1,5 +1,7 @@
 // RUN: %wgslc
 
+enable f16;
+
 // 8.6. Logical Expressions (https://gpuweb.github.io/gpuweb/wgsl/#logical-expr)
 
 // RUN: %metal-compile testLogicalNegation

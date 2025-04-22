@@ -1806,6 +1806,8 @@ Result<AST::Expression::Ref> Parser<Lexer>::parsePrimaryExpression()
         RETURN_ARENA_NODE(Float32Literal, lit.floatValue);
     }
     case TokenType::HalfLiteral: {
+        if (!m_shaderModule.enabledExtensions().contains(Extension::F16))
+            FAIL("f16 literal used without f16 extension enabled"_s);
         CONSUME_TYPE_NAMED(lit, HalfLiteral);
         RETURN_ARENA_NODE(Float16Literal, lit.floatValue);
     }

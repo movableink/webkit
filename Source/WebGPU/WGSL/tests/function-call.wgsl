@@ -1,5 +1,7 @@
 // RUN: %not %wgslc | %check
 
+enable f16;
+
 fn f1(x: f32) -> f32 {
     // CHECK-L: missing return at end of function
 }
