@@ -149,10 +149,10 @@ bool HTMLPlugInImageElement::childShouldCreateRenderer(const Node& child) const
     return HTMLPlugInElement::childShouldCreateRenderer(child);
 }
 
-void HTMLPlugInImageElement::willRecalcStyle(Style::Change change)
+void HTMLPlugInImageElement::willRecalcStyle(OptionSet<Style::Change> change)
 {
     // Make sure style recalcs scheduled by a child shadow tree don't trigger reconstruction and cause flicker.
-    if (change == Style::Change::None && styleValidity() == Style::Validity::Valid)
+    if (!change && styleValidity() == Style::Validity::Valid)
         return;
 
     // FIXME: There shoudn't be need to force render tree reconstruction here.
@@ -161,7 +161,7 @@ void HTMLPlugInImageElement::willRecalcStyle(Style::Change change)
         invalidateStyleAndRenderersForSubtree();
 }
 
-void HTMLPlugInImageElement::didRecalcStyle(Style::Change styleChange)
+void HTMLPlugInImageElement::didRecalcStyle(OptionSet<Style::Change> styleChange)
 {
     scheduleUpdateForAfterStyleResolution();
 

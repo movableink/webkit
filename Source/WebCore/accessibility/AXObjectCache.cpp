@@ -1992,9 +1992,9 @@ void AXObjectCache::onSlottedContentChange(const HTMLSlotElement& slot)
     childrenChanged(get(const_cast<HTMLSlotElement&>(slot)));
 }
 
-void AXObjectCache::onStyleChange(Element& element, Style::Change change, const RenderStyle* oldStyle, const RenderStyle* newStyle)
+void AXObjectCache::onStyleChange(Element& element, OptionSet<Style::Change> change, const RenderStyle* oldStyle, const RenderStyle* newStyle)
 {
-    if (change == Style::Change::None || !oldStyle || !newStyle)
+    if (!change || !oldStyle || !newStyle)
         return;
 
     RefPtr object = get(element);

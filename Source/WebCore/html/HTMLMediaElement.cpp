@@ -1206,7 +1206,7 @@ void HTMLMediaElement::didDetachRenderers()
     });
 }
 
-void HTMLMediaElement::didRecalcStyle(Style::Change)
+void HTMLMediaElement::didRecalcStyle(OptionSet<Style::Change>)
 {
     updateRenderer();
 }

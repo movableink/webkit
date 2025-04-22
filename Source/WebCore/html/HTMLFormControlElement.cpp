@@ -225,7 +225,7 @@ void HTMLFormControlElement::dispatchFormControlInputEvent()
     dispatchInputEvent();
 }
 
-void HTMLFormControlElement::didRecalcStyle(Style::Change)
+void HTMLFormControlElement::didRecalcStyle(OptionSet<Style::Change>)
 {
     // updateFromElement() can cause the selection to change, and in turn
     // trigger synchronous layout, so it must not be called during style recalc.

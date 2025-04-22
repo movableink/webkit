@@ -194,7 +194,7 @@ protected:
     void updateRelativeLengthsInformation();
     void updateRelativeLengthsInformationForChild(bool hasRelativeLengths, SVGElement&);
 
-    void willRecalcStyle(Style::Change) override;
+    void willRecalcStyle(OptionSet<Style::Change>) override;
 
 private:
     virtual void clearTarget() { }

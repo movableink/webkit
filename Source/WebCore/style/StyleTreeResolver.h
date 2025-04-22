@@ -77,11 +77,11 @@ private:
     enum class LayoutInterleavingAction : uint8_t { None, SkipDescendants };
     enum class DescendantsToResolve : uint8_t { None, RebuildAllUsingExisting, ChildrenWithExplicitInherit, Children, All };
 
-    LayoutInterleavingAction updateStateForQueryContainer(Element&, const RenderStyle*, Change&, DescendantsToResolve&);
+    LayoutInterleavingAction updateStateForQueryContainer(Element&, const RenderStyle*, OptionSet<Change>&, DescendantsToResolve&);
 
     std::pair<ElementUpdate, DescendantsToResolve> resolveElement(Element&, const RenderStyle* existingStyle, ResolutionType);
 
-    ElementUpdate createAnimatedElementUpdate(ResolvedStyle&&, const Styleable&, Change, const ResolutionContext&, IsInDisplayNoneTree = IsInDisplayNoneTree::No);
+    ElementUpdate createAnimatedElementUpdate(ResolvedStyle&&, const Styleable&, OptionSet<Change>, const ResolutionContext&, IsInDisplayNoneTree = IsInDisplayNoneTree::No);
     std::unique_ptr<RenderStyle> resolveStartingStyle(const ResolvedStyle&, const Styleable&, const ResolutionContext&);
     std::unique_ptr<RenderStyle> resolveAfterChangeStyleForNonAnimated(const ResolvedStyle&, const Styleable&, const ResolutionContext&);
     std::unique_ptr<RenderStyle> resolveAgainInDifferentContext(const ResolvedStyle&, const Styleable&, const RenderStyle& parentStyle,  OptionSet<PropertyCascade::PropertyType>, std::optional<BuilderPositionTryFallback>&&, const ResolutionContext&);
@@ -109,7 +109,7 @@ private:
     struct Parent {
         Element* element;
         const RenderStyle& style;
-        Change change { Change::None };
+        OptionSet<Change> changes;
         DescendantsToResolve descendantsToResolve { DescendantsToResolve::None };
         bool didPushScope { false };
         bool resolvedFirstLineAndLetterChild { false };
@@ -117,7 +117,7 @@ private:
         IsInDisplayNoneTree isInDisplayNoneTree { IsInDisplayNoneTree::No };
 
         Parent(Document&);
-        Parent(Element&, const RenderStyle&, Change, DescendantsToResolve, IsInDisplayNoneTree);
+        Parent(Element&, const RenderStyle&, OptionSet<Change>, DescendantsToResolve, IsInDisplayNoneTree);
     };
 
     Scope& scope() { return m_scopeStack.last(); }
@@ -130,12 +130,12 @@ private:
     void pushEnclosingScope();
     void popScope();
 
-    void pushParent(Element&, const RenderStyle&, Change, DescendantsToResolve, IsInDisplayNoneTree);
+    void pushParent(Element&, const RenderStyle&, OptionSet<Change>, DescendantsToResolve, IsInDisplayNoneTree);
     void popParent();
     void popParentsToDepth(unsigned depth);
 
     DescendantsToResolve computeDescendantsToResolve(const ElementUpdate&, const RenderStyle* existingStyle, Validity) const;
-    static std::optional<ResolutionType> determineResolutionType(const Element&, const RenderStyle*, DescendantsToResolve, Change parentChange);
+    static std::optional<ResolutionType> determineResolutionType(const Element&, const RenderStyle*, DescendantsToResolve, OptionSet<Change> parentChange);
     static void resetDescendantStyleRelations(Element&, DescendantsToResolve);
 
     ResolutionContext makeResolutionContext();
@@ -145,7 +145,7 @@ private:
     const RenderStyle* parentBoxStyle() const;
     const RenderStyle* parentBoxStyleForPseudoElement(const ElementUpdate&) const;
 
-    LayoutInterleavingAction updateAnchorPositioningState(Element&, const RenderStyle*, Change);
+    LayoutInterleavingAction updateAnchorPositioningState(Element&, const RenderStyle*, OptionSet<Change>);
 
     void generatePositionOptionsIfNeeded(const ResolvedStyle&, const Styleable&, const ResolutionContext&);
     std::unique_ptr<RenderStyle> generatePositionOption(const PositionTryFallback&, const ResolvedStyle&, const Styleable&, const ResolutionContext&);
@@ -161,7 +161,7 @@ private:
     bool hasUnresolvedAnchorPosition(const Element&) const;
 
     struct QueryContainerState {
-        Change change { Change::None };
+        OptionSet<Change> changes;
         DescendantsToResolve descendantsToResolve { DescendantsToResolve::None };
         bool invalidated { false };
     };

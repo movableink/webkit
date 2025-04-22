@@ -98,7 +98,7 @@ Ref<HTMLSelectElement> HTMLSelectElement::create(Document& document)
     return adoptRef(*new HTMLSelectElement(selectTag, document, nullptr));
 }
 
-void HTMLSelectElement::didRecalcStyle(Style::Change styleChange)
+void HTMLSelectElement::didRecalcStyle(OptionSet<Style::Change> styleChange)
 {
     // Even though the options didn't necessarily change, we will call setOptionsChangedOnRenderer for its side effect
     // of recomputing the width of the element. We need to do that if the style change included a change in zoom level.

@@ -2777,8 +2777,8 @@ void Document::resolveStyle(ResolveStyleType type)
 
             auto newStyle = Style::resolveForDocument(*this);
 
-            auto documentChange = m_initialContainingBlockStyle ? Style::determineChange(newStyle, *m_initialContainingBlockStyle) : Style::Change::Renderer;
-            if (documentChange != Style::Change::None) {
+            auto documentChanges = m_initialContainingBlockStyle ? Style::determineChanges(newStyle, *m_initialContainingBlockStyle) : Style::Change::Renderer;
+            if (documentChanges) {
                 m_initialContainingBlockStyle = RenderStyle::clonePtr(newStyle);
                 // The used style may end up differing from the computed style due to propagation of properties from elements.
                 renderView()->setStyle(WTFMove(newStyle));

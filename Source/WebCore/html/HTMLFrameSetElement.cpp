@@ -191,7 +191,7 @@ void HTMLFrameSetElement::defaultEventHandler(Event& event)
     HTMLElement::defaultEventHandler(event);
 }
 
-void HTMLFrameSetElement::willRecalcStyle(Style::Change)
+void HTMLFrameSetElement::willRecalcStyle(OptionSet<Style::Change>)
 {
     if (needsStyleRecalc() && renderer())
         renderer()->setNeedsLayout();

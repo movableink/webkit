@@ -155,7 +155,7 @@ private:
 
     void dispatchChangeEventForMenuList();
 
-    void didRecalcStyle(Style::Change) final;
+    void didRecalcStyle(OptionSet<Style::Change>) final;
 
     void recalcListItems(bool updateSelectedStates = true, AllowStyleInvalidation = AllowStyleInvalidation::Yes) const;
 

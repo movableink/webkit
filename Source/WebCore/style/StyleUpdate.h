@@ -45,7 +45,7 @@ namespace Style {
 
 struct ElementUpdate {
     std::unique_ptr<RenderStyle> style;
-    Change change { Change::None };
+    OptionSet<Change> changes { };
     bool recompositeLayer { false };
     bool mayNeedRebuildRoot { false };
 };

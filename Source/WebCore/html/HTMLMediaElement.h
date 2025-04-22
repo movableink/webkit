@@ -806,7 +806,7 @@ private:
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
     void didFinishInsertingNode() override;
     void removedFromAncestor(RemovalType, ContainerNode&) override;
-    void didRecalcStyle(Style::Change) override;
+    void didRecalcStyle(OptionSet<Style::Change>) override;
     bool canStartSelection() const override { return false; } 
     bool isInteractiveContent() const override;
 

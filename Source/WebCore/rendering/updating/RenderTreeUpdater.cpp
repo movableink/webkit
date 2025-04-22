@@ -165,9 +165,9 @@ void RenderTreeUpdater::updateRebuildRoots()
     auto addForRebuild = [&](auto& element) {
         auto* existingUpdate = m_styleUpdate->elementUpdate(element);
         if (existingUpdate) {
-            if (existingUpdate->change == Style::Change::Renderer)
+            if (existingUpdate->changes.contains(Style::Change::Renderer))
                 return false;
-            existingUpdate->change = Style::Change::Renderer;
+            existingUpdate->changes.add(Style::Change::Renderer);
             return true;
         }
 
@@ -248,7 +248,7 @@ void RenderTreeUpdater::updateRenderTree(ContainerNode& root)
 
         if (auto* text = dynamicDowncast<Text>(node)) {
             auto* textUpdate = m_styleUpdate->textUpdate(*text);
-            bool didCreateParent = parent().update && parent().update->change == Style::Change::Renderer;
+            bool didCreateParent = parent().update && parent().update->changes.contains(Style::Change::Renderer);
             bool mayNeedUpdateWhitespaceOnlyRenderer = renderingParent().didCreateOrDestroyChildRenderer && text->containsOnlyASCIIWhitespace();
             if (didCreateParent || textUpdate || mayNeedUpdateWhitespaceOnlyRenderer)
                 updateTextRenderer(*text, textUpdate, { });
@@ -369,7 +369,7 @@ void RenderTreeUpdater::updateAfterDescendants(Element& element, const Style::El
 
     m_builder.updateAfterDescendants(*renderer);
 
-    if (element.hasCustomStyleResolveCallbacks() && update && update->change == Style::Change::Renderer)
+    if (element.hasCustomStyleResolveCallbacks() && update && update->changes.contains(Style::Change::Renderer))
         element.didAttachRenderers();
 }
 
@@ -430,9 +430,9 @@ void RenderTreeUpdater::updateElementRenderer(Element& element, const Style::Ele
     auto elementUpdateStyle = RenderStyle::cloneIncludingPseudoElements(*elementUpdate.style);
 
     bool shouldTearDownRenderers = [&]() {
-        if (element.isInTopLayer() && elementUpdate.change == Style::Change::Inherited && elementUpdate.style->isSkippedRootOrSkippedContent())
+        if (element.isInTopLayer() && elementUpdate.changes.contains(Style::Change::Inherited) && elementUpdate.style->isSkippedRootOrSkippedContent())
             return true;
-        return elementUpdate.change == Style::Change::Renderer && (element.renderer() || element.hasDisplayContents());
+        return elementUpdate.changes.contains(Style::Change::Renderer) && (element.renderer() || element.hasDisplayContents());
     }();
 
     if (shouldTearDownRenderers) {
@@ -497,7 +497,7 @@ void RenderTreeUpdater::updateElementRenderer(Element& element, const Style::Ele
         return;
     }
 
-    if (elementUpdate.change == Style::Change::None) {
+    if (!elementUpdate.changes) {
         if (pseudoStyleCacheIsInvalid(&renderer, &elementUpdateStyle)) {
             updateRendererStyle(renderer, WTFMove(elementUpdateStyle), StyleDifference::Equal);
             return;

@@ -179,7 +179,7 @@ void RenderTreeBuilder::FirstLetter::updateStyle(RenderBlock& firstLetterBlock, 
 
     ASSERT(firstLetter->isFloating() || firstLetter->isInline());
 
-    if (Style::determineChange(firstLetter->style(), *pseudoStyle) == Style::Change::Renderer) {
+    if (Style::determineChanges(firstLetter->style(), *pseudoStyle).contains(Style::Change::Renderer)) {
         // The first-letter renderer needs to be replaced. Create a new renderer of the right type.
         RenderPtr<RenderBoxModelObject> newFirstLetter;
         if (pseudoStyle->display() == DisplayType::Inline)

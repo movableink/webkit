@@ -384,7 +384,7 @@ public:
     void onScrollbarFrameRectChange(const Scrollbar&);
     void onSelectedChanged(Element&);
     void onSlottedContentChange(const HTMLSlotElement&);
-    void onStyleChange(Element&, Style::Change, const RenderStyle* oldStyle, const RenderStyle* newStyle);
+    void onStyleChange(Element&, OptionSet<Style::Change>, const RenderStyle* oldStyle, const RenderStyle* newStyle);
     void onStyleChange(RenderText&, StyleDifference, const RenderStyle* oldStyle, const RenderStyle& newStyle);
     void onTextSecurityChanged(HTMLInputElement&);
     void onTitleChange(Document&);

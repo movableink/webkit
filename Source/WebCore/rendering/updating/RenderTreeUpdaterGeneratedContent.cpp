@@ -163,8 +163,8 @@ void RenderTreeUpdater::GeneratedContent::updatePseudoElement(Element& current, 
 
     auto* existingStyle = pseudoElement ? pseudoElement->renderOrDisplayContentsStyle() : nullptr;
 
-    auto styleChange = existingStyle ? Style::determineChange(*updateStyle, *existingStyle) : Style::Change::Renderer;
-    if (styleChange == Style::Change::None)
+    auto styleChanges = existingStyle ? Style::determineChanges(*updateStyle, *existingStyle) : Style::Change::Renderer;
+    if (!styleChanges)
         return;
 
     pseudoElement = &current.ensurePseudoElement(pseudoId);
@@ -178,13 +178,13 @@ void RenderTreeUpdater::GeneratedContent::updatePseudoElement(Element& current, 
         contentsStyle->copyContentFrom(*updateStyle);
         contentsStyle->copyPseudoElementsFrom(*updateStyle);
 
-        Style::ElementUpdate contentsUpdate { WTFMove(contentsStyle), styleChange, elementUpdate.recompositeLayer };
+        Style::ElementUpdate contentsUpdate { WTFMove(contentsStyle), styleChanges, elementUpdate.recompositeLayer };
         m_updater.updateElementRenderer(*pseudoElement, WTFMove(contentsUpdate));
         auto pseudoElementUpdateStyle = RenderStyle::cloneIncludingPseudoElements(*updateStyle);
         pseudoElement->storeDisplayContentsOrNoneStyle(makeUnique<RenderStyle>(WTFMove(pseudoElementUpdateStyle)));
     } else {
         auto pseudoElementUpdateStyle = RenderStyle::cloneIncludingPseudoElements(*updateStyle);
-        Style::ElementUpdate pseudoElementUpdate { makeUnique<RenderStyle>(WTFMove(pseudoElementUpdateStyle)), styleChange, elementUpdate.recompositeLayer };
+        Style::ElementUpdate pseudoElementUpdate { makeUnique<RenderStyle>(WTFMove(pseudoElementUpdateStyle)), styleChanges, elementUpdate.recompositeLayer };
         m_updater.updateElementRenderer(*pseudoElement, WTFMove(pseudoElementUpdate));
         if (updateStyle->display() == DisplayType::None) {
             auto pseudoElementUpdateStyle = RenderStyle::cloneIncludingPseudoElements(*updateStyle);
@@ -197,7 +197,7 @@ void RenderTreeUpdater::GeneratedContent::updatePseudoElement(Element& current, 
     if (!pseudoElementRenderer)
         return;
 
-    if (styleChange == Style::Change::Renderer)
+    if (styleChanges.contains(Style::Change::Renderer))
         createContentRenderers(m_updater.m_builder, *pseudoElementRenderer, *updateStyle, pseudoId);
     else
         updateStyleForContentRenderers(*pseudoElementRenderer, *updateStyle);
