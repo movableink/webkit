@@ -2710,7 +2710,7 @@ void FunctionDefinitionWriter::visit(AST::SwitchStatement& statement)
         m_body.append('\n', m_indent, "break;"_s);
     };
 
-    m_body.append("switch ("_s);
+    m_body.append("\n#if __wgslMetalAppleGPUFamily >= 9\n{ " DECLARE_FORWARD_PROGRESS "\n#endif\nswitch ("_s);
     visit(statement.value());
     m_body.append(") {"_s);
     for (auto& clause : statement.clauses())
@@ -2732,6 +2732,7 @@ void FunctionDefinitionWriter::visit(AST::SwitchStatement& statement)
         }
         m_body.append('\n', m_indent, '}');
     }
+    m_body.append('\n', m_indent, "\n#if __wgslMetalAppleGPUFamily >= 9\n}\n#endif\n"_s);
 }
 
 void FunctionDefinitionWriter::visit(AST::BreakStatement&)
