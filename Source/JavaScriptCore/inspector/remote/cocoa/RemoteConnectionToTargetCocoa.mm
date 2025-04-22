@@ -185,7 +185,7 @@ bool RemoteConnectionToTarget::setup(bool isAutomaticInspection, bool automatica
         else if (auto* automationTarget = dynamicDowncast<RemoteAutomationTarget>(target.get()))
             automationTarget->connect(*this);
 
-        m_connected = true;
+        m_connectionState = ConnectionState::Connected;
         RemoteInspector::singleton().updateTargetListing(targetIdentifier);
         RemoteInspector::singleton().setupCompleted(targetIdentifier);
     });
@@ -196,7 +196,7 @@ bool RemoteConnectionToTarget::setup(bool isAutomaticInspection, bool automatica
 void RemoteConnectionToTarget::targetClosed()
 {
     Locker locker { m_targetMutex };
-
+    m_connectionState = ConnectionState::Closed;
     m_target = nullptr;
 }
 
@@ -212,7 +212,7 @@ void RemoteConnectionToTarget::close()
     dispatchAsyncOnTarget([this, targetIdentifier, protectedThis = Ref { *this }]() {
         Locker locker { m_targetMutex };
         if (RefPtr target = m_target.get()) {
-            if (m_connected)
+            if (m_connectionState.exchange(ConnectionState::Closed) == ConnectionState::Connected)
                 target->disconnect(*this);
 
             m_target = nullptr;
@@ -225,6 +225,9 @@ void RemoteConnectionToTarget::close()
 
 void RemoteConnectionToTarget::sendMessageToTarget(NSString *message)
 {
+    if (m_connectionState == ConnectionState::Closed)
+        return;
+
     dispatchAsyncOnTarget([this, strongMessage = retainPtr(message), protectedThis = Ref { *this }]() {
         RefPtr<RemoteControllableTarget> target;
         {
@@ -238,6 +241,9 @@ void RemoteConnectionToTarget::sendMessageToTarget(NSString *message)
 
 void RemoteConnectionToTarget::sendMessageToFrontend(const String& message)
 {
+    if (m_connectionState == ConnectionState::Closed)
+        return;
+
     std::optional<TargetID> targetIdentifier;
     {
         Locker locker { m_targetMutex };
