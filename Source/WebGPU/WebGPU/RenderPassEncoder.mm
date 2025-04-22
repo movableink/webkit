@@ -747,8 +747,8 @@ std::pair<uint32_t, uint32_t> RenderPassEncoder::computeMininumVertexInstanceCou
 
 void RenderPassEncoder::emitMemoryBarrier(id<MTLRenderCommandEncoder> renderCommandEncoder)
 {
-    ++m_memoryBarrierCount;
-    [renderCommandEncoder memoryBarrierWithScope:MTLBarrierScopeBuffers afterStages:MTLRenderStageVertex beforeStages:MTLRenderStageVertex];
+    if (++m_memoryBarrierCount < m_device->baseCapabilities().memoryBarrierLimit)
+        [renderCommandEncoder memoryBarrierWithScope:MTLBarrierScopeBuffers afterStages:MTLRenderStageVertex beforeStages:MTLRenderStageVertex];
 }
 
 std::pair<RenderPassEncoder::IndexCall, id<MTLBuffer>> RenderPassEncoder::clampIndexBufferToValidValues(uint32_t indexCount, uint32_t instanceCount, int32_t baseVertex, uint32_t firstInstance, MTLIndexType indexType, NSUInteger indexBufferOffsetInBytes, Buffer* apiIndexBuffer, uint32_t minVertexCount, uint32_t minInstanceCount, RenderPassEncoder& encoder, Device& device, uint32_t rasterSampleCount, MTLPrimitiveType primitiveType)
@@ -881,8 +881,11 @@ std::pair<id<MTLBuffer>, uint64_t> RenderPassEncoder::clampIndirectIndexBufferTo
     [renderCommandEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:1];
     encoder.emitMemoryBarrier(renderCommandEncoder);
 
+    if (encoder.splitRenderPass())
+        renderCommandEncoder = encoder.renderCommandEncoder();
     CHECKED_SET_PSO(renderCommandEncoder, device.indexBufferClampPipeline(indexType, rasterSampleCount), std::make_pair(nil, 0ull));
     encoder.setVertexBuffer(renderCommandEncoder, indexBuffer, indexBufferOffsetInBytes, 0);
+    encoder.setVertexBuffer(renderCommandEncoder, indexedIndirectBuffer.indirectIndexedBuffer(), 0, 1);
     auto primitiveOffset = primitiveType == MTLPrimitiveTypeLineStrip || primitiveType == MTLPrimitiveTypeTriangleStrip ? 1u : 0u;
     uint32_t data[] = { minVertexCount == RenderBundleEncoder::invalidVertexInstanceCount ? minVertexCount - primitiveOffset : minVertexCount, primitiveOffset, indexBufferCount - 1 };
     encoder.setVertexBytes(renderCommandEncoder, asByteSpan(data), 2);
