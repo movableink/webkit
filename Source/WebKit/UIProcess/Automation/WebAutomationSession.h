@@ -81,7 +81,6 @@ class OpenPanelParameters;
 namespace WebKit {
 
 class ViewSnapshot;
-class WebAutomationSessionClient;
 class WebFrameProxy;
 class WebOpenPanelResultListenerProxy;
 class WebPageProxy;
@@ -166,7 +165,7 @@ public:
     void wheelEventsFlushedForPage(const WebPageProxy&);
     void willClosePage(const WebPageProxy&);
     void handleRunOpenPanel(const WebPageProxy&, const WebFrameProxy&, const API::OpenPanelParameters&, WebOpenPanelResultListenerProxy&);
-    void willShowJavaScriptDialog(WebPageProxy&);
+    void willShowJavaScriptDialog(WebPageProxy&, const String& message, std::optional<String>&& defaultValue);
     void didEnterFullScreenForPage(const WebPageProxy&);
     void didExitFullScreenForPage(const WebPageProxy&);
 

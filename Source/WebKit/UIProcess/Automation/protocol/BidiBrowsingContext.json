@@ -46,6 +46,13 @@
             "spec": "https://w3c.github.io/webdriver-bidi/#type-browsingContext-ReadinessState",
             "type": "string",
             "enum": ["none", "interactive", "complete"]
+        },
+        {
+            "id": "UserPromptType",
+            "description": "Represents the possible user prompt types.",
+            "spec": "https://w3c.github.io/webdriver-bidi/#type-browsingContext-UserPromptType",
+            "type": "string",
+            "enum": [ "alert", "beforeunload", "confirm", "prompt" ]
         }
     ],
     "commands": [
@@ -84,6 +91,18 @@
             ],
             "returns": [
                 { "name": "context", "$ref": "BidiBrowsingContext.BrowsingContext", "description": "The identifier of the browsing context to close. It is an error to pass a non-top level traversable." }
+            ]
+        },
+        {
+            "name": "handleUserPrompt",
+            "description": "Allows closing an open prompt.",
+            "spec": "https://w3c.github.io/webdriver-bidi/#command-browsingContext-create",
+            "wpt": "https://github.com/web-platform-tests/wpt/tree/master/webdriver/tests/bidi/browsing_context/create",
+            "async": true,
+            "parameters": [
+                { "name": "context", "$ref": "BidiBrowsingContext.BrowsingContext", "description": "The identifier of the browsing context in which to handle a user prompt.  It is an error to pass a non-top level traversable." },
+                { "name": "accept", "type": "boolean", "optional": true },
+                { "name": "userText", "type": "string", "optional": true }
             ]
         },
         {
@@ -130,6 +149,33 @@
             "returns": [
                 { "name": "url", "type": "string", "description": "The URL the browsing context navigated to." },
                 { "name": "navigation", "$ref": "BidiBrowsingContext.Navigation", "optional": true, "description": "The navigation ID, or null if not applicable." }
+            ]
+        }
+    ],
+    "events": [
+        {
+            "name": "userPromptClosed",
+            "description": "Event fired when a user prompt is dismissed in a navigable.",
+            "spec": "https://w3c.github.io/webdriver-bidi/#event-browsingContext-userPromptClosed",
+            "wpt": "https://github.com/web-platform-tests/wpt/tree/master/webdriver/tests/bidi/browsing_context/user_prompt_closed",
+            "parameters": [
+                { "name": "context", "$ref": "BidiBrowsingContext.BrowsingContext", "description": "The identifier of the navigable that triggered the user prompt." },
+                { "name": "type", "$ref": "BidiBrowsingContext.UserPromptType" },
+                { "name": "accepted", "type": "boolean" },
+                { "name": "userText", "type": "string", "optional": true }
+            ]
+        },
+        {
+            "name": "userPromptOpened",
+            "description": "Event fired when a user prompt is shown in a navigable.",
+            "spec": "https://w3c.github.io/webdriver-bidi/#event-browsingContext-userPromptOpened",
+            "wpt": "https://github.com/web-platform-tests/wpt/tree/master/webdriver/tests/bidi/browsing_context/user_prompt_opened",
+            "parameters": [
+                { "name": "context", "$ref": "BidiBrowsingContext.BrowsingContext", "description": "The identifier of the navigable that triggered the user prompt." },
+                { "name": "type", "$ref": "BidiBrowsingContext.UserPromptType" },
+                { "name": "handler", "$ref": "BidiSession.UserPromptHandlerType" },
+                { "name": "message", "type": "string" },
+                { "name": "defaultValue", "type": "string", "optional": true }
             ]
         }
     ]

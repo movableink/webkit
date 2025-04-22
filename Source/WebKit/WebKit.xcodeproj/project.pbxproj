@@ -7148,6 +7148,7 @@
 		9979659B25310A4800B31AE3 /* WebInspectorUIExtensionControllerMessageReceiver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebInspectorUIExtensionControllerMessageReceiver.cpp; sourceTree = "<group>"; };
 		997965A2253128C700B31AE3 /* _WKInspectorExtensionHost.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _WKInspectorExtensionHost.h; sourceTree = "<group>"; };
 		9979CA57237F49F00039EC05 /* _WKInspectorPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _WKInspectorPrivate.h; sourceTree = "<group>"; };
+		99965A552DA096EF0039DFF5 /* BidiSession.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = BidiSession.json; sourceTree = "<group>"; };
 		99996A9D25004BCB004F7559 /* _WKInspectorPrivateForTesting.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _WKInspectorPrivateForTesting.h; sourceTree = "<group>"; };
 		99996A9E25004BCB004F7559 /* _WKInspectorTesting.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = _WKInspectorTesting.mm; sourceTree = "<group>"; };
 		999B7ED82550E4A800F450A4 /* InspectorExtensionTypes.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = InspectorExtensionTypes.cpp; sourceTree = "<group>"; };
@@ -14077,6 +14078,7 @@
 				996D00412D7AA0CD0049C7D8 /* BidiBrowsingContext.json */,
 				996D00422D7AA0CD0049C7D8 /* BidiLog.json */,
 				996D00432D7AA0CD0049C7D8 /* BidiScript.json */,
+				99965A552DA096EF0039DFF5 /* BidiSession.json */,
 			);
 			path = protocol;
 			sourceTree = "<group>";

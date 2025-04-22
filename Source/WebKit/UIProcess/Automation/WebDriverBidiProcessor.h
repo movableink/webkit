@@ -38,6 +38,7 @@ namespace WebKit {
 
 class BidiBrowserAgent;
 class WebAutomationSession;
+class WebPageProxy;
 
 class WebDriverBidiProcessor final
     : public Inspector::FrontendChannel
@@ -61,6 +62,7 @@ public:
     void close(const Inspector::Protocol::BidiBrowsingContext::BrowsingContext&, std::optional<bool>&& optionalPromptUnload, Inspector::CommandCallback<void>&&) override;
     void create(Inspector::Protocol::BidiBrowsingContext::CreateType, const Inspector::Protocol::BidiBrowsingContext::BrowsingContext& optionalReferenceContext, std::optional<bool>&& optionalBackground, const String& optionalUserContext, Inspector::CommandCallback<String>&&) override;
     void getTree(const Inspector::Protocol::BidiBrowsingContext::BrowsingContext& optionalRoot, std::optional<double>&& optionalMaxDepth, Inspector::CommandCallback<Ref<JSON::ArrayOf<Inspector::Protocol::BidiBrowsingContext::Info>>>&&) override;
+    void handleUserPrompt(const Inspector::Protocol::BidiBrowsingContext::BrowsingContext&, std::optional<bool>&& optionalShouldAccept, const String& userText, Inspector::CommandCallback<void>&&) override;
     void navigate(const Inspector::Protocol::BidiBrowsingContext::BrowsingContext&, const String& url, std::optional<Inspector::Protocol::BidiBrowsingContext::ReadinessState>&&, Inspector::CommandCallbackOf<String, Inspector::Protocol::BidiBrowsingContext::Navigation>&&) override;
     void reload(const Inspector::Protocol::BidiBrowsingContext::BrowsingContext&, std::optional<bool>&& optionalIgnoreCache, std::optional<Inspector::Protocol::BidiBrowsingContext::ReadinessState>&& optionalWait, Inspector::CommandCallbackOf<String, String>&&) override;
 
@@ -70,7 +72,8 @@ public:
 
     // Event entry points called from the owning WebAutomationSession.
     void logEntryAdded(const String& level, const String& source, const String& message, double timestamp, const String& type, const String& method);
-
+    void userPromptOpenedOnPage(WebPageProxy&, const Inspector::Protocol::BidiBrowsingContext::UserPromptType&, const Inspector::Protocol::BidiSession::UserPromptHandlerType&, const String& message, std::optional<String>&& defaultValue);
+    void userPromptClosedOnPage(WebPageProxy&, const Inspector::Protocol::BidiBrowsingContext::UserPromptType&, bool accepted, std::optional<String>&& userText);
 private:
     Ref<Inspector::FrontendRouter> protectedFrontendRouter() const;
     Ref<Inspector::BackendDispatcher> protectedBackendDispatcher() const;
@@ -84,7 +87,7 @@ private:
     Ref<Inspector::BidiScriptBackendDispatcher> m_scriptDomainDispatcher;
 
     std::unique_ptr<BidiBrowserAgent> m_browserAgent;
-
+    std::unique_ptr<Inspector::BidiBrowsingContextFrontendDispatcher> m_browsingContextDomainNotifier;
     std::unique_ptr<Inspector::BidiLogFrontendDispatcher> m_logDomainNotifier;
 };
 

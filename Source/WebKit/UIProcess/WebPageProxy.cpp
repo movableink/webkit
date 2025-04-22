@@ -8679,7 +8679,7 @@ void WebPageProxy::runJavaScriptAlert(IPC::Connection& connection, FrameIdentifi
 
     if (m_controlledByAutomation) {
         if (RefPtr automationSession = configuration().processPool().automationSession())
-            automationSession->willShowJavaScriptDialog(*this);
+            automationSession->willShowJavaScriptDialog(*this, message, std::nullopt);
     }
 
     runModalJavaScriptDialog(WTFMove(frame), WTFMove(frameInfo), message, [reply = WTFMove(reply)](WebPageProxy& page, WebFrameProxy* frame, FrameInfoData&& frameInfo, const String& message, CompletionHandler<void()>&& completion) mutable {
@@ -8703,7 +8703,7 @@ void WebPageProxy::runJavaScriptConfirm(IPC::Connection& connection, FrameIdenti
 
     if (m_controlledByAutomation) {
         if (RefPtr automationSession = configuration().processPool().automationSession())
-            automationSession->willShowJavaScriptDialog(*this);
+            automationSession->willShowJavaScriptDialog(*this, message, std::nullopt);
     }
 
     runModalJavaScriptDialog(WTFMove(frame), WTFMove(frameInfo), message, [reply = WTFMove(reply)](WebPageProxy& page, WebFrameProxy* frame, FrameInfoData&& frameInfo, const String& message, CompletionHandler<void()>&& completion) mutable {
@@ -8727,7 +8727,7 @@ void WebPageProxy::runJavaScriptPrompt(IPC::Connection& connection, FrameIdentif
 
     if (m_controlledByAutomation) {
         if (RefPtr automationSession = configuration().processPool().automationSession())
-            automationSession->willShowJavaScriptDialog(*this);
+            automationSession->willShowJavaScriptDialog(*this, message, defaultValue);
     }
 
     runModalJavaScriptDialog(WTFMove(frame), WTFMove(frameInfo), message, [reply = WTFMove(reply), defaultValue](WebPageProxy& page, WebFrameProxy* frame, FrameInfoData&& frameInfo, const String& message, CompletionHandler<void()>&& completion) mutable {
