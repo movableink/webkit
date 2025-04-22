@@ -1266,7 +1266,7 @@ TEST_F(WKContentRuleListStoreTest, MainResourceCrossOriginRedirectFromLoadedPage
 {
     using namespace TestWebKitAPI;
     HTTPServer server({
-        { "/example"_s, { "<script>alert('original page loaded')</script>"_s } },
+        { "/example"_s, { "<script>addEventListener('pageshow', () => { alert('original page loaded') });</script>"_s } },
         { "/after_redirect"_s, { "<script>alert('loaded replacement successfully: ' + window.location.href)</script>"_s } }
     }, HTTPServer::Protocol::HttpsProxy);
 
@@ -1294,7 +1294,8 @@ TEST_F(WKContentRuleListStoreTest, MainResourceCrossOriginRedirectFromLoadedPage
     EXPECT_WK_STREQ([webView _test_waitForAlert], "original page loaded");
     [webView evaluateJavaScript:@"window.location = 'https://webkit.org/before_redirect'" completionHandler:nil];
     EXPECT_WK_STREQ([webView _test_waitForAlert], "loaded replacement successfully: https://apple.com/after_redirect");
-    // FIXME: <rdar://149306346> going back should arrive back at the original page.
+    [webView goBack];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "original page loaded");
 }
 
 TEST_F(WKContentRuleListStoreTest, NullPatternSet)
