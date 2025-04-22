@@ -74,6 +74,7 @@
 #include "WasmCallingConvention.h"
 #include "WasmFunctionCodeBlockGenerator.h"
 #include "WasmIPIntGenerator.h"
+#include "WasmIPIntSlowPaths.h"
 #include "Watchdog.h"
 #include "WebAssemblyFunction.h"
 #include <stdio.h>
