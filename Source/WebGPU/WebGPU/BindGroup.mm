@@ -938,7 +938,8 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
     BindGroup::ShaderStageArray<BindGroupLayout::ArgumentIndices> argumentIndices;
     for (ShaderStage stage : stages) {
         auto encodedLength = bindGroupLayout->encodedLength(stage);
-        argumentBuffer[stage] = encodedLength ? safeCreateBuffer(encodedLength, MTLStorageModeShared) : nil;
+        if (encodedLength)
+            argumentBuffer[stage] = safeCreateBuffer(encodedLength, MTLStorageModeShared);
         [argumentEncoder[stage] setArgumentBuffer:argumentBuffer[stage] offset:0];
         argumentIndices[stage] = bindGroupLayout->argumentIndices(stage);
     }
@@ -998,7 +999,7 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
                 bool isDestroyed = apiBuffer->isDestroyed();
                 if (isDestroyed && stage != ShaderStage::Undefined) {
                     argumentEncoder[stage] = nil;
-                    argumentBuffer[stage] = nil;
+                    argumentBuffer[stage] = { };
                 }
 
                 auto entryOffset = isDestroyed ? 0 : entry.offset;
@@ -1142,7 +1143,7 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
                     }
                 } else if (stage != ShaderStage::Undefined) {
                     argumentEncoder[stage] = nil;
-                    argumentBuffer[stage] = nil;
+                    argumentBuffer[stage] = { };
                 }
 
                 if (stage != ShaderStage::Undefined) {
@@ -1235,7 +1236,13 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
     std::sort(dynamicBuffers.begin(), dynamicBuffers.end(), [](const BindGroup::BufferAndType& a, const BindGroup::BufferAndType& b) {
         return a.bindingIndex < b.bindingIndex;
     });
-    return BindGroup::create(argumentBuffer[ShaderStage::Vertex], argumentBuffer[ShaderStage::Fragment], argumentBuffer[ShaderStage::Compute], WTFMove(resources), bindGroupLayout, WTFMove(dynamicBuffers), WTFMove(samplersSet), WTFMove(externalTextureIndices), *this);
+
+    if (m_bindGroupId == std::numeric_limits<decltype(m_bindGroupId)>::max()) {
+        loseTheDevice(WGPUDeviceLostReason_Undefined);
+        return BindGroup::createInvalid(*this);
+    }
+
+    return BindGroup::create(argumentBuffer[ShaderStage::Vertex], argumentBuffer[ShaderStage::Fragment], argumentBuffer[ShaderStage::Compute], WTFMove(resources), bindGroupLayout, WTFMove(dynamicBuffers), WTFMove(samplersSet), WTFMove(externalTextureIndices), ++m_bindGroupId, *this);
 #undef VALIDATION_ERROR
 #undef INTERNAL_ERROR_STRING
 }
@@ -1245,7 +1252,7 @@ bool BindGroup::isValid() const
     return !!bindGroupLayout();
 }
 
-BindGroup::BindGroup(id<MTLBuffer> vertexArgumentBuffer, id<MTLBuffer> fragmentArgumentBuffer, id<MTLBuffer> computeArgumentBuffer, Vector<BindableResources>&& resources, const BindGroupLayout& bindGroupLayout, DynamicBuffersContainer&& dynamicBuffers, SamplersContainer&& samplers, ShaderStageArray<ExternalTextureIndices>&& externalTextureIndices, Device& device)
+BindGroup::BindGroup(id<MTLBuffer> vertexArgumentBuffer, id<MTLBuffer> fragmentArgumentBuffer, id<MTLBuffer> computeArgumentBuffer, Vector<BindableResources>&& resources, const BindGroupLayout& bindGroupLayout, DynamicBuffersContainer&& dynamicBuffers, SamplersContainer&& samplers, ShaderStageArray<ExternalTextureIndices>&& externalTextureIndices, uint32_t uniqueIdentifier, Device& device)
     : m_vertexArgumentBuffer(vertexArgumentBuffer)
     , m_fragmentArgumentBuffer(fragmentArgumentBuffer)
     , m_computeArgumentBuffer(computeArgumentBuffer)
@@ -1255,6 +1262,7 @@ BindGroup::BindGroup(id<MTLBuffer> vertexArgumentBuffer, id<MTLBuffer> fragmentA
     , m_dynamicBuffers(WTFMove(dynamicBuffers))
     , m_samplers(WTFMove(samplers))
     , m_externalTextureIndices(WTFMove(externalTextureIndices))
+    , m_uniqueIdentifier(uniqueIdentifier)
 {
     for (size_t index = 0, maxIndex = m_dynamicBuffers.size(); index < maxIndex; ++index)
         m_dynamicOffsetsIndices.add(m_dynamicBuffers[index].bindingIndex, index);
@@ -1441,6 +1449,23 @@ bool BindGroup::makeSubmitInvalid(ShaderStage stage, const BindGroupLayout* pipe
     }
 
     return true;
+}
+
+static uint64_t makePipelineBindGroupKey(uint32_t groupIndex, uint64_t pipelineIndex)
+{
+    return static_cast<uint64_t>(groupIndex) | (pipelineIndex << Device::maxBindGroups);
+}
+
+void BindGroup::validatedSuccessfully(uint32_t groupIndex, uint64_t pipelineIndex, uint32_t maxOffset) const
+{
+    auto it = m_validatedBindGroup.add(makePipelineBindGroupKey(groupIndex, pipelineIndex), maxOffset).iterator;
+    it->value = std::max(it->value, maxOffset);
+}
+
+bool BindGroup::previouslyValidatedBindGroup(uint32_t groupIndex, uint64_t pipelineIndex, uint32_t maxOffset) const
+{
+    auto it = m_validatedBindGroup.find(makePipelineBindGroupKey(groupIndex, pipelineIndex));
+    return it != m_validatedBindGroup.end() && it->value >= maxOffset;
 }
 
 } // namespace WebGPU

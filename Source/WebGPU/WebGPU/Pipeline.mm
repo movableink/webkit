@@ -208,9 +208,9 @@ NSString* errorValidatingBindGroup(const BindGroup& bindGroup, const BufferBindi
                 if (checkedTotalOffset.hasOverflowed())
                     return [NSString stringWithFormat:@"resourceOffset(%llu) + dynamicOffset(%u) overflows uint64_t", resource.entryOffset, dynamicOffset];
                 auto totalOffset = checkedTotalOffset.value();
-                auto mtlBufferLength = buffer->get()->buffer().length;
+                auto mtlBufferLength = buffer->get()->currentSize();
                 if (totalOffset > mtlBufferLength || (mtlBufferLength - totalOffset) < bufferSize || bufferSize > resource.entrySize)
-                    return [NSString stringWithFormat:@"buffer length(%zu) minus offset(%llu), (resourceOffset(%llu) + dynamicOffset(%u)), is less than required bufferSize(%llu)", mtlBufferLength, totalOffset, resource.entryOffset, dynamicOffset, bufferSize];
+                    return [NSString stringWithFormat:@"buffer length(%llu) minus offset(%llu), (resourceOffset(%llu) + dynamicOffset(%u)), is less than required bufferSize(%llu)", mtlBufferLength, totalOffset, resource.entryOffset, dynamicOffset, bufferSize];
             }
         }
     }

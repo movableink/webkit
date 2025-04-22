@@ -27,6 +27,7 @@
 
 #import "API.h"
 #import "Adapter.h"
+#import "BindableResource.h"
 #import "HardwareCapabilities.h"
 #import "Queue.h"
 #import "WebGPU.h"
@@ -184,6 +185,7 @@ public:
     static bool isStencilOnlyFormat(MTLPixelFormat);
     bool shouldStopCaptureAfterSubmit();
     id<MTLBuffer> placeholderBuffer() const { return m_placeholderBuffer; }
+    uint64_t placeholderBufferUniqueId() const { return m_placeholderBuffer.gpuAddress; }
 
     id<MTLTexture> placeholderTexture(WGPUTextureFormat) const;
     bool isDestroyed() const;
@@ -243,6 +245,18 @@ public:
         m_commandEncoderMap.remove(identifier);
     }
     bool supportsResidencySets() { return m_capabilities.baseCapabilities.supportsResidencySets; }
+    bool isCachedCompatibile(const BindGroupLayout&, const BindGroupLayout&) const;
+    void setCachedCompatibile(const BindGroupLayout&, const BindGroupLayout&) const;
+    void removeCachedBindGroupLayout(const BindGroupLayout&) const;
+    static constexpr uint64_t maxPipelines = (1ull << (64 - 5));
+    static constexpr uint64_t maxBindGroups = (1ull << 5);
+    Buffer* lookupBuffer(uint64_t address)
+    {
+        if (auto it = m_bufferMap.find(address); it != m_bufferMap.end())
+            return it->value;
+        return nullptr;
+    }
+    void removeBufferFromCache(uint64_t address) { m_bufferMap.remove(address); }
 private:
     Device(id<MTLDevice>, id<MTLCommandQueue> defaultQueue, HardwareCapabilities&&, Adapter&);
     Device(Adapter&);
@@ -288,7 +302,7 @@ private:
 
     HardwareCapabilities m_capabilities { };
 
-    id<MTLBuffer> m_placeholderBuffer { nil };
+    id<MTLBuffer> m_placeholderBuffer { };
     id<MTLTexture> m_placeholderTexture { nil };
     id<MTLTexture> m_placeholderDepthStencilTexture { nil };
     id<MTLBuffer> m_dispatchCallBuffer { nil };
@@ -319,7 +333,14 @@ private:
     NSMapTable<id<MTLCommandBuffer>, NSMutableArray<id<MTLBuffer>>*>* m_resolvedSampleCounterBuffers;
     id<MTLSharedEvent> m_resolveTimestampsSharedEvent { nil };
     HashMap<uint64_t, CommandEncoder*, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_commandEncoderMap;
+    HashMap<uint64_t, Buffer*, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_bufferMap;
+    mutable HashSet<uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_bindGroupCompatibilityCache;
     uint64_t m_commandEncoderId { 0 };
+    uint64_t m_pipelineLayoutId { 0 };
+    uint64_t m_renderPipelineId { 0 };
+    uint64_t m_computePipelineId { 0 };
+    uint32_t m_bindGroupLayoutId { 0 };
+    uint32_t m_bindGroupId { 0 };
     bool m_supressAllErrors { false };
     const uint32_t m_maxVerticesPerDrawCall { 0 };
     bool m_shaderValidationEnabled { true };

@@ -26,6 +26,7 @@
 #pragma once
 
 #import <Metal/Metal.h>
+#import <wtf/HashMap.h>
 #import <wtf/OptionSet.h>
 #import <wtf/RefPtr.h>
 #import <wtf/Vector.h>
@@ -94,5 +95,37 @@ struct IndexBufferAndIndexData {
     NSUInteger indexBufferOffsetInBytes { 0 };
     IndexData indexData;
 };
+
+using DrawIndexCacheContainerKey = std::pair<uint32_t, std::pair<uint32_t, std::pair<uint32_t, std::pair<uint32_t, std::pair<uint32_t, std::pair<uint32_t, std::pair<uint32_t, std::pair<uint32_t, uint64_t>>>>>>>>;
+
+struct DrawIndexCacheContainerValue {
+    uint32_t firstIndex { 0 };
+    uint32_t indexCount { 0 };
+    uint32_t vertexCount { 0 };
+    uint32_t instanceCount { 0 };
+    uint32_t firstInstance { 0 };
+    uint32_t baseVertex { 0 };
+    uint32_t minInstanceCount { 0 };
+    uint32_t primitiveOffsetWithIndexType { 0 };
+    uint64_t icb { 0 };
+    DrawIndexCacheContainerValue() { }
+    DrawIndexCacheContainerValue(const DrawIndexCacheContainerKey& key)
+        : firstIndex(key.first)
+        , indexCount(key.second.first)
+        , vertexCount(key.second.second.first)
+        , instanceCount(key.second.second.second.first)
+        , firstInstance(key.second.second.second.second.first)
+        , baseVertex(key.second.second.second.second.second.first)
+        , minInstanceCount(key.second.second.second.second.second.second.first)
+        , primitiveOffsetWithIndexType(key.second.second.second.second.second.second.second.first)
+        , icb(key.second.second.second.second.second.second.second.second)
+    {
+    }
+    uint32_t primitiveOffset() { return static_cast<MTLIndexType>(primitiveOffsetWithIndexType & 0x1); }
+    MTLIndexType indexType() { return static_cast<MTLIndexType>(primitiveOffsetWithIndexType & 0x2); }
+};
+
+using DrawIndexCacheContainer = HashMap<DrawIndexCacheContainerKey, bool>;
+using DrawIndexCacheContainerIterator = DrawIndexCacheContainer::const_iterator;
 
 } // namespace WebGPU

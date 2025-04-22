@@ -116,9 +116,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     // FIXME(PERFORMANCE): Run the asynchronous version of this
     id<MTLLibrary> library = [device newLibraryWithSource:msl.createNSString().get() options:options error:error];
     if (error && *error) {
+        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=250442
         WTFLogAlways("MSL compilation error: %@", [*error localizedDescription]);
         *error = [NSError errorWithDomain:@"WebGPU" code:1 userInfo:@{ NSLocalizedDescriptionKey: adoptNS([[NSString alloc] initWithFormat:@"Failed to compile the shader source, generated metal:\n%@ - error %@", msl.createNSString().get(), [*error localizedDescription]]).get() }];
-
         return nil;
     }
     library.label = label.createNSString().get();
