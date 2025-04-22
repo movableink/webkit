@@ -1596,7 +1596,8 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
     }
 
     case StringValueOf: {
-        clobberWorld();
+        if (node->child1().useKind() == UntypedUse)
+            clobberWorld();
         setTypeForNode(node, SpecString);
         break;
     }

@@ -10264,12 +10264,25 @@ IGNORE_CLANG_WARNINGS_END
             LBasicBlock nullCase = m_out.newBlock();
             LBasicBlock continuation = m_out.newBlock();
 
-            m_out.branch(isCell(value, provenType(edge)), unsure(cellCase), unsure(notCellCase));
+            m_out.branch(isCell(value, provenType(edge)),
+                m_node->op() == StringValueOf ? usually(cellCase) : unsure(cellCase),
+                m_node->op() == StringValueOf ? rarely(notCellCase) : unsure(notCellCase));
 
             LBasicBlock lastNext = m_out.appendTo(cellCase, notCellCase);
             FTL_TYPE_CHECK(jsValueValue(value), edge, (~SpecCellCheck) | SpecString, isNotString(value));
             ValueFromBlock simpleResult = m_out.anchor(value);
             m_out.jump(continuation);
+
+            if (m_node->op() == StringValueOf) {
+                m_out.appendTo(notCellCase, continuation);
+                FTL_TYPE_CHECK(jsValueValue(value), edge, SpecCellCheck | SpecOther, isNotOther(value, provenType(edge)));
+                ValueFromBlock errorResult = m_out.anchor(vmCall(Int64, operationStringValueOf, weakPointer(globalObject), value));
+                m_out.jump(continuation);
+
+                m_out.appendTo(continuation, lastNext);
+                setJSValue(m_out.phi(pointerType(), simpleResult, errorResult));
+                return;
+            }
 
             m_out.appendTo(notCellCase, undefinedCase);
             m_out.branch(m_out.equal(value, m_out.constInt64(JSValue::ValueUndefined)), unsure(undefinedCase), unsure(nullCase));

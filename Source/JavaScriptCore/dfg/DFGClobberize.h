@@ -806,7 +806,6 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case CreateAsyncGenerator:
     case InstanceOf:
     case InstanceOfMegamorphic:
-    case StringValueOf:
     case ObjectKeys:
     case ObjectGetOwnPropertyNames:
     case ObjectGetOwnPropertySymbols:
@@ -814,6 +813,18 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case ReflectOwnKeys:
         clobberTop();
         return;
+
+    case StringValueOf:
+        switch (node->child1().useKind()) {
+        case StringOrOtherUse:
+            read(World);
+            write(SideState);
+            def(PureValue(node));
+            return;
+        default:
+            clobberTop();
+            return;
+        }
 
     case ToNumber:
         switch (node->child1().useKind()) {
