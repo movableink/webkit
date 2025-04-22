@@ -36,11 +36,11 @@
 
 namespace WebKit {
 
+class BidiBrowserAgent;
 class WebAutomationSession;
 
 class WebDriverBidiProcessor final
     : public Inspector::FrontendChannel
-    , public Inspector::BidiBrowserBackendDispatcherHandler
     , public Inspector::BidiBrowsingContextBackendDispatcherHandler
     , public Inspector::BidiScriptBackendDispatcherHandler {
     WTF_MAKE_TZONE_ALLOCATED(WebDriverBidiProcessor);
@@ -64,9 +64,6 @@ public:
     void navigate(const Inspector::Protocol::BidiBrowsingContext::BrowsingContext&, const String& url, std::optional<Inspector::Protocol::BidiBrowsingContext::ReadinessState>&&, Inspector::CommandCallbackOf<String, Inspector::Protocol::BidiBrowsingContext::Navigation>&&) override;
     void reload(const Inspector::Protocol::BidiBrowsingContext::BrowsingContext&, std::optional<bool>&& optionalIgnoreCache, std::optional<Inspector::Protocol::BidiBrowsingContext::ReadinessState>&& optionalWait, Inspector::CommandCallbackOf<String, String>&&) override;
 
-    // Inspector::BidiBrowserBackendDispatcherHandler methods.
-    Inspector::Protocol::ErrorStringOr<void> close() override;
-
     // Inspector::BidiScriptBackendDispatcherHandler methods.
     void callFunction(const String& functionDeclaration, bool awaitPromise, Ref<JSON::Object>&& target, RefPtr<JSON::Array>&& optionalArguments, std::optional<Inspector::Protocol::BidiScript::ResultOwnership>&&, RefPtr<JSON::Object>&& optionalSerializationOptions, RefPtr<JSON::Object>&& optionalThis, std::optional<bool>&& optionalUserActivation, Inspector::CommandCallbackOf<Inspector::Protocol::BidiScript::EvaluateResultType, String, RefPtr<Inspector::Protocol::BidiScript::RemoteValue>, RefPtr<Inspector::Protocol::BidiScript::ExceptionDetails>>&&) override;
     void evaluate(const String& expression, bool awaitPromise, Ref<JSON::Object>&& target, std::optional<Inspector::Protocol::BidiScript::ResultOwnership>&&, RefPtr<JSON::Object>&& optionalSerializationOptions,  std::optional<bool>&& optionalUserActivation, Inspector::CommandCallbackOf<Inspector::Protocol::BidiScript::EvaluateResultType, String, RefPtr<Inspector::Protocol::BidiScript::RemoteValue>, RefPtr<Inspector::Protocol::BidiScript::ExceptionDetails>>&&) override;
@@ -83,9 +80,10 @@ private:
     Ref<Inspector::FrontendRouter> m_frontendRouter;
     Ref<Inspector::BackendDispatcher> m_backendDispatcher;
 
-    Ref<Inspector::BidiBrowserBackendDispatcher> m_browserDomainDispatcher;
     Ref<Inspector::BidiBrowsingContextBackendDispatcher> m_browsingContextDomainDispatcher;
     Ref<Inspector::BidiScriptBackendDispatcher> m_scriptDomainDispatcher;
+
+    std::unique_ptr<BidiBrowserAgent> m_browserAgent;
 
     std::unique_ptr<Inspector::BidiLogFrontendDispatcher> m_logDomainNotifier;
 };

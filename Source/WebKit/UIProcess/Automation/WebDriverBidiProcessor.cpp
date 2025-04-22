@@ -30,6 +30,7 @@
 
 // For AutomationError codes.
 #include "AutomationProtocolObjects.h"
+#include "BidiBrowserAgent.h"
 #include "Logging.h"
 #include "PageLoadState.h"
 #include "WebAutomationSession.h"
@@ -57,9 +58,9 @@ WebDriverBidiProcessor::WebDriverBidiProcessor(WebAutomationSession& session)
     : m_session(session)
     , m_frontendRouter(FrontendRouter::create())
     , m_backendDispatcher(BackendDispatcher::create(m_frontendRouter.copyRef()))
-    , m_browserDomainDispatcher(BidiBrowserBackendDispatcher::create(m_backendDispatcher, this))
     , m_browsingContextDomainDispatcher(BidiBrowsingContextBackendDispatcher::create(m_backendDispatcher, this))
     , m_scriptDomainDispatcher(BidiScriptBackendDispatcher::create(m_backendDispatcher, this))
+    , m_browserAgent(makeUnique<BidiBrowserAgent>(session, m_backendDispatcher))
     , m_logDomainNotifier(makeUnique<BidiLogFrontendDispatcher>(m_frontendRouter))
 {
     protectedFrontendRouter()->connectFrontend(*this);
@@ -275,18 +276,6 @@ void WebDriverBidiProcessor::reload(const BrowsingContext& browsingContext, std:
         // FIXME: keep track of navigation IDs that we hand out.
         callback({ { webPageProxy->currentURL(), "placeholder_navigation"_s } });
     });
-}
-
-// MARK: Inspector::BidiBrowserDispatcherHandler methods.
-
-Inspector::Protocol::ErrorStringOr<void> WebDriverBidiProcessor::close()
-{
-    RefPtr session = m_session.get();
-    SYNC_FAIL_WITH_PREDEFINED_ERROR_IF(!session, InternalError);
-
-    session->terminate();
-
-    return { };
 }
 
 // MARK: Log domain.
