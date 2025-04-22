@@ -38,7 +38,7 @@ class RenderBoxFragmentInfo;
 class RenderFragmentContainer;
 class RoundedRectRadii;
 struct PaintInfo;
-struct PositionedLayoutConstraints;
+class PositionedLayoutConstraints;
 
 enum class AvailableLogicalHeightType : bool { ExcludeMarginBorderPadding, IncludeMarginBorderPadding };
 

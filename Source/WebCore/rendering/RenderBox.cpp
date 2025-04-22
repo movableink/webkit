@@ -3559,9 +3559,10 @@ LayoutUnit RenderBox::computeReplacedLogicalWidthUsing(SizeType widthType, Lengt
     case LengthType::Percent:
     case LengthType::Calculated: {
         LayoutUnit containerWidth;
-        if (isOutOfFlowPositioned())
-            containerWidth = containingBlockLogicalWidthForPositioned(downcast<RenderBoxModelObject>(*container()));
-        else if (isHorizontalWritingMode() == containingBlock()->isHorizontalWritingMode())
+        if (isOutOfFlowPositioned()) {
+            PositionedLayoutConstraints constraints(*this, LogicalBoxAxis::Inline);
+            containerWidth = constraints.containingSize();
+        } else if (isHorizontalWritingMode() == containingBlock()->isHorizontalWritingMode())
             containerWidth = containingBlockLogicalWidthForContent();
         else
             containerWidth = perpendicularContainingBlockLogicalHeight();
@@ -3742,9 +3743,10 @@ LayoutUnit RenderBox::computeReplacedLogicalHeightUsing(SizeType heightType, Len
         }
         
         LayoutUnit availableHeight;
-        if (isOutOfFlowPositioned())
-            availableHeight = containingBlockLogicalHeightForPositioned(downcast<RenderBoxModelObject>(*container));
-        else if (stretchedHeight)
+        if (isOutOfFlowPositioned()) {
+            PositionedLayoutConstraints constraints(*this, LogicalBoxAxis::Block);
+            availableHeight = constraints.containingSize();
+        } else if (stretchedHeight)
             availableHeight = stretchedHeight.value();
         else if (auto gridAreaLogicalHeight = isGridItem() ? this->gridAreaContentLogicalHeight() : std::nullopt; gridAreaLogicalHeight && *gridAreaLogicalHeight)
             availableHeight = gridAreaLogicalHeight->value();
@@ -3807,9 +3809,8 @@ LayoutUnit RenderBox::availableLogicalHeightUsing(const Length& h, AvailableLogi
     }
 
     if (h.isPercentOrCalculated() && isOutOfFlowPositioned() && !isRenderFragmentedFlow()) {
-        // FIXME: This is wrong if the containingBlock has a perpendicular writing mode.
-        LayoutUnit availableHeight = containingBlockLogicalHeightForPositioned(*containingBlock());
-        return adjustContentBoxLogicalHeightForBoxSizing(valueForLength(h, availableHeight));
+        PositionedLayoutConstraints constraints(*this, LogicalBoxAxis::Block);
+        return adjustContentBoxLogicalHeightForBoxSizing(valueForLength(h, constraints.containingSize()));
     }
 
     if (std::optional<LayoutUnit> heightIncludingScrollbar = computeContentAndScrollbarLogicalHeightUsing(SizeType::MainOrPreferredSize, h, std::nullopt))
@@ -3883,11 +3884,6 @@ LayoutUnit RenderBox::containingBlockLogicalWidthForPositioned(const RenderBoxMo
     if (checkForPerpendicularWritingMode && containingBlock.isHorizontalWritingMode() != isHorizontalWritingMode())
         return containingBlockLogicalHeightForPositioned(containingBlock, false);
 
-    if (is<RenderGrid>(containingBlock)) {
-        if (auto containingBlockContentLogicalWidth = gridAreaContentLogicalWidth(); containingBlockContentLogicalWidth && *containingBlockContentLogicalWidth)
-            return containingBlockContentLogicalWidth->value();
-    }
-
     if (CheckedPtr inlineBox = containingBlock.inlineContinuation()) {
         auto relativelyPositionedInlineBoxAncestor = [&] {
             // Since we stop splitting inlines over 200 nested boxes (see RenderTreeBuilder::Inline::splitInlines), we may not be able to find the real containing block here.
@@ -3939,11 +3935,6 @@ LayoutUnit RenderBox::containingBlockLogicalHeightForPositioned(const RenderBoxM
 
     if (checkForPerpendicularWritingMode && containingBlock.isHorizontalWritingMode() != isHorizontalWritingMode())
         return containingBlockLogicalWidthForPositioned(containingBlock, false);
-
-    if (is<RenderGrid>(containingBlock)) {
-        if (auto containingBlockContentLogicalHeight = gridAreaContentLogicalHeight(); containingBlockContentLogicalHeight && *containingBlockContentLogicalHeight)
-            return containingBlockContentLogicalHeight->value();
-    }
 
     if (auto* box = dynamicDowncast<RenderBox>(containingBlock)) {
         bool isFixedPosition = isFixedPositioned();

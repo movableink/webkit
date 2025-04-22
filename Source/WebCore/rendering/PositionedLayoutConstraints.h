@@ -28,13 +28,14 @@
 #include "BoxSides.h"
 #include "LayoutRange.h"
 #include "RenderBox.h"
+#include "StyleSelfAlignmentData.h"
 
 namespace WebCore {
 
-struct PositionedLayoutConstraints {
+class PositionedLayoutConstraints {
 public:
-    PositionedLayoutConstraints(const RenderBox&, const RenderStyle&, LogicalBoxAxis);
-    PositionedLayoutConstraints(const RenderBox&, LogicalBoxAxis);
+    PositionedLayoutConstraints(const RenderBox&, LogicalBoxAxis selfAxis);
+    PositionedLayoutConstraints(const RenderBox&, const RenderStyle& selfStyleOverride, LogicalBoxAxis selfAxis);
 
     // Logical top or left wrt containing block.
     Length marginBefore() const { return m_marginBefore; }
@@ -75,36 +76,34 @@ public:
 
 private:
     void captureInsets(const RenderBox&, const LogicalBoxAxis selfAxis);
-    void computeAnchorGeometry(const RenderBox&);
+    void captureGridArea(const RenderBox&);
+    void captureAnchorGeometry(const RenderBox&);
     LayoutRange adjustForPositionArea(const LayoutRange rangeToAdjust, const LayoutRange anchorArea, const BoxAxis containerAxis);
 
+    void computeStaticPosition(const RenderBox&, LogicalBoxAxis selfAxis);
     void computeInlineStaticDistance(const RenderBox&);
     void computeBlockStaticDistance(const RenderBox&);
 
-private:
-    // These values are captured by the constructor and may be tweaked by the user.
-    Length m_marginBefore;
-    Length m_marginAfter;
-    Length m_insetBefore;
-    Length m_insetAfter;
-
-    // These values are calculated by the constructor.
-    LayoutRange m_containingRange;
-    LayoutRange m_originalContainingRange;
-    LayoutRange m_insetModifiedContainingRange;
-    LayoutUnit m_marginPercentageBasis;
     CheckedPtr<const RenderBoxModelObject> m_container;
     const WritingMode m_containingWritingMode;
     const WritingMode m_writingMode;
     const BoxAxis m_physicalAxis;
     const LogicalBoxAxis m_containingAxis;
-    const StyleSelfAlignmentData& m_alignment;
     const RenderStyle& m_style;
+    StyleSelfAlignmentData m_alignment;
     const CheckedPtr<const RenderBoxModelObject> m_defaultAnchorBox; // Only set if needed.
-    LayoutRange m_anchorArea; // Only valid if defaultAnchor exists.
 
-    // These values are cached by the constructor, and should not be changed afterwards.
+    LayoutRange m_anchorArea; // Only valid if defaultAnchor exists.
+    LayoutRange m_containingRange;
+    LayoutRange m_originalContainingRange;
+    LayoutRange m_insetModifiedContainingRange;
+    LayoutUnit m_marginPercentageBasis;
+
     LayoutUnit m_bordersPlusPadding;
+    Length m_marginBefore;
+    Length m_marginAfter;
+    Length m_insetBefore;
+    Length m_insetAfter;
     bool m_useStaticPosition { false };
 };
 

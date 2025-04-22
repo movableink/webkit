@@ -54,17 +54,18 @@ static bool shouldFlipStaticPositionInParent(const RenderBox& outOfFlowBox, cons
     return parent->writingMode().isBlockFlipped() && parent->isWritingModeRoot();
 }
 
-PositionedLayoutConstraints::PositionedLayoutConstraints(const RenderBox& renderer, const RenderStyle& style, LogicalBoxAxis logicalAxis)
+PositionedLayoutConstraints::PositionedLayoutConstraints(const RenderBox& renderer, const RenderStyle& style, LogicalBoxAxis selfAxis)
     : m_container(downcast<RenderBoxModelObject>(*renderer.container())) // Using containingBlock() would be wrong for relpositioned inlines.
     , m_containingWritingMode(m_container->writingMode())
     , m_writingMode(style.writingMode())
-    , m_physicalAxis(logicalAxis == LogicalBoxAxis::Inline ? m_writingMode.inlineAxis() : m_writingMode.blockAxis())
-    , m_containingAxis(!isOrthogonal() ? logicalAxis : oppositeAxis(logicalAxis))
-    , m_alignment(m_containingAxis == LogicalBoxAxis::Inline ? style.justifySelf() : style.alignSelf())
+    , m_physicalAxis(selfAxis == LogicalBoxAxis::Inline ? m_writingMode.inlineAxis() : m_writingMode.blockAxis())
+    , m_containingAxis(!isOrthogonal() ? selfAxis : oppositeAxis(selfAxis))
     , m_style(style)
+    , m_alignment(m_containingAxis == LogicalBoxAxis::Inline ? style.justifySelf() : style.alignSelf())
     , m_defaultAnchorBox(needsAnchor() ? dynamicDowncast<const RenderBoxModelObject>(renderer.defaultAnchorRenderer()) : nullptr)
 {
-    // Compute the baseline containing block info.
+
+    // Compute basic containing block info.
     auto containingWidth = renderer.containingBlockLogicalWidthForPositioned(*m_container, false);
     if (LogicalBoxAxis::Inline == m_containingAxis)
         m_containingRange.set(m_container->borderLogicalLeft(), containingWidth);
@@ -73,22 +74,32 @@ PositionedLayoutConstraints::PositionedLayoutConstraints(const RenderBox& render
     m_marginPercentageBasis = containingWidth;
     m_originalContainingRange = m_containingRange;
 
-    computeAnchorGeometry(renderer);
+    // Adjust for grid-area.
+    captureGridArea(renderer);
 
-    captureInsets(renderer, logicalAxis);
+    // Capture the anchor geometry and adjust for position-area.
+    captureAnchorGeometry(renderer);
 
-    if (logicalAxis == LogicalBoxAxis::Inline)
-        computeInlineStaticDistance(renderer);
-    else
-        computeBlockStaticDistance(renderer);
+    // Cache insets and margins, etc.
+    captureInsets(renderer, selfAxis);
 
+    if (m_useStaticPosition)
+        computeStaticPosition(renderer, selfAxis);
+
+    if (containingCoordsAreFlipped()) {
+        // Ideally this check is incorporated into captureInsets() but currently it needs to happen after computeStaticPosition() because containingCoordsAreFlipped() depends on m_useStaticPosition.
+        std::swap(m_marginBefore, m_marginAfter);
+        std::swap(m_insetBefore, m_insetAfter);
+    }
+
+    // Compute the inset-modified containing block.
     m_insetModifiedContainingRange = m_containingRange;
     m_insetModifiedContainingRange.shiftMinEdgeBy(insetBeforeValue());
     m_insetModifiedContainingRange.shiftMaxEdgeBy(-insetAfterValue());
 }
 
-PositionedLayoutConstraints::PositionedLayoutConstraints(const RenderBox& renderer, LogicalBoxAxis logicalAxis)
-    : PositionedLayoutConstraints(renderer, renderer.style(), logicalAxis)
+PositionedLayoutConstraints::PositionedLayoutConstraints(const RenderBox& renderer, LogicalBoxAxis selfAxis)
+    : PositionedLayoutConstraints(renderer, renderer.style(), selfAxis)
 {
 }
 
@@ -128,11 +139,6 @@ void PositionedLayoutConstraints::captureInsets(const RenderBox& renderer, const
         m_insetAfter = m_style.logicalBottom();
     }
 
-    if (containingCoordsAreFlipped()) {
-        std::swap(m_marginBefore, m_marginAfter);
-        std::swap(m_insetBefore, m_insetAfter);
-    }
-
     if (m_defaultAnchorBox) {
         // If the box uses anchor-center and does have a default anchor box,
         // any auto insets are set to zero.
@@ -140,10 +146,34 @@ void PositionedLayoutConstraints::captureInsets(const RenderBox& renderer, const
             m_insetBefore = Length(0, LengthType::Fixed);
         if (m_insetAfter.isAuto())
             m_insetAfter = Length(0, LengthType::Fixed);
+        m_useStaticPosition = false;
     }
 }
 
-void PositionedLayoutConstraints::computeAnchorGeometry(const RenderBox& renderer)
+// MARK: - Adjustments to the containing block.
+
+void PositionedLayoutConstraints::captureGridArea(const RenderBox& renderer)
+{
+    const CheckedPtr gridContainer = dynamicDowncast<RenderGrid>(m_container.get());
+    if (!gridContainer)
+        return;
+
+    if (LogicalBoxAxis::Inline == m_containingAxis) {
+        m_containingRange = gridContainer->gridAreaColumnRangeForOutOfFlow(renderer);
+        m_marginPercentageBasis = m_containingRange.size();
+    } else {
+        m_containingRange = gridContainer->gridAreaRowRangeForOutOfFlow(renderer);
+        m_marginPercentageBasis = gridContainer->gridAreaColumnRangeForOutOfFlow(renderer).size();
+    }
+
+    if (!startIsBefore()) {
+        auto containerSize = BoxAxis::Horizontal == m_physicalAxis
+            ? gridContainer->width() : gridContainer->height();
+        m_containingRange.moveTo(containerSize - m_containingRange.max());
+    }
+}
+
+void PositionedLayoutConstraints::captureAnchorGeometry(const RenderBox& renderer)
 {
     if (!m_defaultAnchorBox)
         return;
@@ -213,6 +243,8 @@ LayoutRange PositionedLayoutConstraints::adjustForPositionArea(const LayoutRange
         return adjustedRange;
     };
 }
+
+// MARK: - Resolving margins and alignment (after sizing).
 
 void PositionedLayoutConstraints::resolvePosition(RenderBox::LogicalExtentComputedValues& computedValues) const
 {
@@ -344,25 +376,54 @@ bool PositionedLayoutConstraints::alignmentAppliesStretch(ItemPosition normalAli
     return ItemPosition::Stretch == alignmentPosition;
 }
 
+// MARK: - Static Position Computation
+
+void PositionedLayoutConstraints::computeStaticPosition(const RenderBox& renderer, LogicalBoxAxis selfAxis)
+{
+    ASSERT(m_useStaticPosition);
+
+    if (is<RenderGrid>(m_container)) {
+        // Grid Containers have special behavior, see https://www.w3.org/TR/css-grid/#abspos
+        if (m_container.get() == renderer.parent()) {
+            // Fake the static layout right here so it integrates with grid-area properly.
+            m_useStaticPosition = false; // Avoid the static position code path.
+            m_insetBefore = Length(0, LengthType::Fixed);
+            m_insetAfter = Length(0, LengthType::Fixed);
+
+            if (ItemPosition::Auto == m_alignment.position()) {
+                if (LogicalBoxAxis::Inline == m_containingAxis) {
+                    auto justifyItems = m_container->style().justifyItems();
+                    if (ItemPosition::Legacy != justifyItems.position())
+                        m_alignment = justifyItems;
+                } else
+                    m_alignment = m_container->style().alignItems();
+            }
+            if (ItemPosition::Auto == m_alignment.position() || ItemPosition::Normal == m_alignment.position())
+                m_alignment.setPosition(ItemPosition::Start);
+            if (OverflowAlignment::Default == m_alignment.overflow())
+                m_alignment.setOverflow(OverflowAlignment::Unsafe);
+
+            // Unclear if this is spec-compliant, but it is the current interop behavior.
+            if (m_marginBefore.isAuto())
+                m_marginBefore = Length(0, LengthType::Fixed);
+            if (m_marginAfter.isAuto())
+                m_marginAfter = Length(0, LengthType::Fixed);
+            return;
+        }
+        // Rewind grid-area adjustments and fall through to the existing static position code.
+        m_containingRange.moveTo(m_originalContainingRange.min());
+    }
+
+    if (selfAxis == LogicalBoxAxis::Inline)
+        computeInlineStaticDistance(renderer);
+    else
+        computeBlockStaticDistance(renderer);
+}
+
 void PositionedLayoutConstraints::computeInlineStaticDistance(const RenderBox& renderer)
 {
-    if (!m_useStaticPosition)
-        return;
-
     auto* parent = renderer.parent();
     auto parentWritingMode = parent->writingMode();
-
-    // This method is using enclosingBox() which is wrong for absolutely
-    // positioned grid items, as they rely on the grid area. So for grid items if
-    // both "left" and "right" properties are "auto", we can consider that one of
-    // them (depending on the direction) is simply "0".
-    if (is<RenderGrid>(parent) && parent == renderer.containingBlock()) {
-        if (parentWritingMode.isLogicalLeftInlineStart())
-            m_insetBefore.setValue(LengthType::Fixed, 0);
-        else
-            m_insetAfter.setValue(LengthType::Fixed, 0);
-        return;
-    }
 
     // For orthogonal flows we don't care whether the parent is LTR or RTL because it does not affect the position in our inline axis.
     bool haveOrthogonalWritingModes = parentWritingMode.isOrthogonal(m_writingMode);
@@ -407,9 +468,6 @@ void PositionedLayoutConstraints::computeInlineStaticDistance(const RenderBox& r
 
 void PositionedLayoutConstraints::computeBlockStaticDistance(const RenderBox& renderer)
 {
-    if (!m_useStaticPosition)
-        return;
-
     auto* parent = renderer.parent();
     bool haveOrthogonalWritingModes = parent->writingMode().isOrthogonal(m_writingMode);
     // The static positions from the child's layer are relative to the container block's coordinate space (which is determined
