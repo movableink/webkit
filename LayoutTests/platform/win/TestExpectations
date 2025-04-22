@@ -654,6 +654,8 @@ js/slow-stress [ Skip ]
 workers/wasm-hashset-many-2.html [ Skip ] # Timeout
 workers/wasm-hashset-many.html [ Skip ] # Timeout
 
+workers/wasm-references.html [ Skip ] # Crash
+
 #//////////////////////////////////////////////////////////////////////////////////////////
 # http
 #//////////////////////////////////////////////////////////////////////////////////////////
@@ -3266,6 +3268,7 @@ fast/css/beforeSelectorOnCodeElement.html [ Skip ]
 fast/css/begin-end-contain-selector-empty-value.html [ Skip ]
 fast/css/border-height.html [ Skip ]
 fast/css/border-radius-outline-offset.html [ Skip ]
+fast/css/bug4860-absolute-block-child-does-not-inherit-alignment.html [ Skip ]
 fast/css/child-style-can-override-visited-style.html [ Skip ]
 fast/css/clip-text-in-scaled-div.html [ Skip ]
 fast/css/clip-zooming.html [ Skip ]
@@ -3616,6 +3619,7 @@ fast/inline-block/contenteditable-baseline.html [ Skip ]
 fast/inline-block/inline-block-vertical-align.html [ Skip ]
 fast/inline-block/overflow-clip.html [ Skip ]
 fast/inline-block/tricky-baseline.html [ Skip ]
+fast/line-grid/line-align-left-edges.html [ Skip ]
 fast/line-grid/line-grid-contains-value.html [ Skip ]
 fast/line-grid/line-grid-floating.html [ Skip ]
 fast/line-grid/line-grid-inside-columns.html [ Skip ]
@@ -3628,6 +3632,7 @@ fast/reflections/opacity-reflection-transform.html [ Skip ]
 fast/reflections/reflection-direction.html [ Skip ]
 fast/reflections/reflection-nesting.html [ Skip ]
 fast/reflections/reflection-overflow-hidden.html [ Skip ]
+fast/reflections/reflection-with-zoom.html [ Skip ]
 fast/reflections/transparent-reflected-sublayers.html [ Skip ]
 fast/text/arabic-times-new-roman.html [ Skip ]
 fast/text/atsui-kerning-and-ligatures.html [ Skip ]
