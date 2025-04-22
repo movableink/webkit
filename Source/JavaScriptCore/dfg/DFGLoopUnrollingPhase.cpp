@@ -37,6 +37,7 @@
 #include "DFGNodeOrigin.h"
 #include "DFGNodeType.h"
 #include "DFGPhase.h"
+#include "FunctionAllowlist.h"
 #include <wtf/IndexMap.h>
 
 namespace JSC {
@@ -101,6 +102,9 @@ public:
     bool run()
     {
         ASSERT(m_graph.m_form == ThreadedCPS);
+
+        if (UNLIKELY(!functionAllowlist().contains(m_graph.m_codeBlock)))
+            return false;
 
         dataLogIf(Options::verboseLoopUnrolling(), "Graph before Loop Unrolling Phase:\n", m_graph);
 
@@ -573,6 +577,8 @@ public:
     // Used to estimate unrolling cost more precisely, skipping Phantom-like ops.
     bool isMaterialNode(Node*);
 
+    FunctionAllowlist& functionAllowlist();
+
 private:
     CloneHelper m_cloneHelper;
     UncheckedKeyHashSet<BasicBlock*> m_unrolledLoopHeaders;
@@ -769,6 +775,17 @@ bool LoopUnrollingPhase::isMaterialNode(Node* node)
         break;
     }
     return true;
+}
+
+FunctionAllowlist& LoopUnrollingPhase::functionAllowlist()
+{
+    static LazyNeverDestroyed<FunctionAllowlist> allowList;
+    static std::once_flag initializeAllowlistFlag;
+    std::call_once(initializeAllowlistFlag, [] {
+        const char* functionAllowlistFile = Options::loopUnrollingAllowlist();
+        allowList.construct(functionAllowlistFile);
+    });
+    return allowList;
 }
 
 }
