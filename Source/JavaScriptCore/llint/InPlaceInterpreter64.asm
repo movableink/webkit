@@ -844,7 +844,7 @@ instructionLabel(_table_get)
 
     operationCallMayThrow(macro() cCall3(_ipint_extern_table_get) end)
 
-    pushQuad(t1)
+    pushQuad(t0)
 
     loadb IPInt::Const32Metadata::instructionLength[MC], t0
 
@@ -2816,12 +2816,16 @@ instructionLabel(_i64_reinterpret_f64)
     nextIPIntInstruction()
 
 instructionLabel(_f32_reinterpret_i32)
-    # nop because of stack layout
+    pushInt32(t0)
+    fi2f t0, ft0
+    popFloat32(ft0)
     advancePC(1)
     nextIPIntInstruction()
 
 instructionLabel(_f64_reinterpret_i64)
-    # nop because of stack layout
+    pushInt64(t0)
+    fq2d t0, ft0
+    popFloat64(ft0)
     advancePC(1)
     nextIPIntInstruction()
 
@@ -2900,7 +2904,7 @@ instructionLabel(_ref_func)
     move wasmInstance, a0
     loadi IPInt::Const32Metadata::value[MC], a1
     operationCall(macro() cCall2(_ipint_extern_ref_func) end)
-    pushQuad(t1)
+    pushQuad(t0)
     loadb IPInt::Const32Metadata::instructionLength[MC], t0
     advancePC(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
@@ -3619,7 +3623,7 @@ instructionLabel(_i64_trunc_sat_f32_s)
     nextIPIntInstruction()
 
 .ipint_i64_trunc_sat_f32_s_outOfBoundsTruncSatMinOrNaN:
-    bfeq ft0, ft0, .ipint_i64_trunc_sat_f32_s_outOfBoundsTruncSatMin
+    bfeq ft0, ft0, .ipint_i64_trunc_sat_f32_s_outOfBoundsTruncSatMax
     move 0, t0
     pushInt64(t0)
 
@@ -3630,15 +3634,6 @@ instructionLabel(_i64_trunc_sat_f32_s)
 
 .ipint_i64_trunc_sat_f32_s_outOfBoundsTruncSatMax:
     move (constexpr INT64_MAX), t0
-    pushInt64(t0)
-
-    loadb IPInt::InstructionLengthMetadata::length[MC], t0
-    advancePCByReg(t0)
-    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
-    nextIPIntInstruction()
-
-.ipint_i64_trunc_sat_f32_s_outOfBoundsTruncSatMin:
-    move (constexpr INT64_MIN), t0
     pushInt64(t0)
 
     loadb IPInt::InstructionLengthMetadata::length[MC], t0
