@@ -134,6 +134,7 @@ ItemPosition PositionArea::defaultAlignmentForAxis(BoxAxis physicalAxis, Writing
         alignment = ItemPosition::Start;
         break;
     case PositionAreaTrack::Center:
+        return ItemPosition::Center;
     case PositionAreaTrack::SpanAll:
         return ItemPosition::AnchorCenter;
     }
