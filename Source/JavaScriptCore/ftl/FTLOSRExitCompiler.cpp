@@ -110,9 +110,11 @@ static void compileRecovery(
     const UncheckedKeyHashMap<ExitTimeObjectMaterialization*, EncodedJSValue*>& materializationToPointer)
 {
     switch (value.kind()) {
-    case ExitValueDead:
-        jit.move(MacroAssembler::TrustedImm64(JSValue::encode(jsUndefined())), GPRInfo::regT0);
+    case ExitValueDead: {
+        EncodedJSValue deadValue = Options::poisonDeadOSRExitVariables() ? poisonedDeadOSRExitValue : encodedJSUndefined();
+        jit.move(MacroAssembler::TrustedImm64(deadValue), GPRInfo::regT0);
         break;
+    }
             
     case ExitValueConstant:
         jit.move(MacroAssembler::TrustedImm64(JSValue::encode(value.constant())), GPRInfo::regT0);
@@ -386,6 +388,12 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
             if (value.dataFormat() == DataFormatJS) {
                 switch (value.kind()) {
                 case ExitValueDead:
+                    if (UNLIKELY(Options::poisonDeadOSRExitVariables())) {
+                        spooler.moveConstant(poisonedDeadOSRExitValue);
+                        spooler.storeGPR(index * sizeof(EncodedJSValue));
+                        break;
+                    }
+
                     if (UNLIKELY(!undefinedGPR)) {
                         jit.move(CCallHelpers::TrustedImm64(JSValue::encode(jsUndefined())), GPRInfo::regT4);
                         undefinedGPR = GPRInfo::regT4;
