@@ -138,6 +138,11 @@ enum class TapHandlingResult : uint8_t;
 - (void)replace:(id)sender;
 - (void)_translate:(id)sender;
 
+- (IBAction)alignCenter:(id)sender;
+- (IBAction)alignJustified:(id)sender;
+- (IBAction)alignLeft:(id)sender;
+- (IBAction)alignRight:(id)sender;
+
 #if HAVE(UIFINDINTERACTION)
 - (void)find:(id)sender;
 - (void)findNext:(id)sender;

@@ -4708,6 +4708,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     // FIXME: Some of the following checks should be removed once internal clients move to the underscore-prefixed versions.
     if (action == @selector(toggleBoldface:) || action == @selector(toggleItalics:) || action == @selector(toggleUnderline:) || action == @selector(_toggleStrikeThrough:)
         || action == @selector(_alignLeft:) || action == @selector(_alignRight:) || action == @selector(_alignCenter:) || action == @selector(_alignJustified:)
+        || action == @selector(alignLeft:) || action == @selector(alignRight:) || action == @selector(alignCenter:) || action == @selector(alignJustified:)
         || action == @selector(_setTextColor:sender:) || action == @selector(_setFont:sender:) || action == @selector(_setFontSize:sender:)
         || action == @selector(_insertOrderedList:) || action == @selector(_insertUnorderedList:) || action == @selector(_insertNestedOrderedList:) || action == @selector(_insertNestedUnorderedList:)
         || action == @selector(_increaseListLevel:) || action == @selector(_decreaseListLevel:) || action == @selector(_changeListType:) || action == @selector(_indent:) || action == @selector(_outdent:)

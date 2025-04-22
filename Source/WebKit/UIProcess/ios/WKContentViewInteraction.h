@@ -226,13 +226,13 @@ typedef std::pair<WebKit::InteractionInformationRequest, InteractionInformationC
     M(pasteAndMatchStyle) \
     M(makeTextWritingDirectionNatural) \
     M(makeTextWritingDirectionLeftToRight) \
-    M(makeTextWritingDirectionRightToLeft)
+    M(makeTextWritingDirectionRightToLeft) \
+    M(alignCenter) \
+    M(alignJustified) \
+    M(alignLeft) \
+    M(alignRight)
 
 #define FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(M) \
-    M(_alignCenter) \
-    M(_alignJustified) \
-    M(_alignLeft) \
-    M(_alignRight) \
     M(_indent) \
     M(_outdent) \
     M(_toggleStrikeThrough) \

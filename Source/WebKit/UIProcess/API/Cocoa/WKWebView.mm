@@ -3367,6 +3367,26 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(FORWARD_ACTION_TO_WKCONTENTVIEW)
 
 #undef FORWARD_ACTION_TO_WKCONTENTVIEW
 
+- (IBAction)_alignCenter:(id)sender
+{
+    [self alignCenter:sender];
+}
+
+- (IBAction)_alignJustified:(id)sender
+{
+    [self alignJustified:sender];
+}
+
+- (IBAction)_alignLeft:(id)sender
+{
+    [self alignLeft:sender];
+}
+
+- (IBAction)_alignRight:(id)sender
+{
+    [self alignRight:sender];
+}
+
 - (UIView *)inputAccessoryView
 {
     return [_contentView inputAccessoryViewForWebView];
