@@ -2,7 +2,7 @@
 // Copyright (C) 2024 Apple Inc. All rights reserved.
 //
 
-#if canImport(WritingTools) && canImport(UIKit)
+#if ENABLE_WRITING_TOOLS && canImport(UIKit)
 
 import OSLog
 import WebKit

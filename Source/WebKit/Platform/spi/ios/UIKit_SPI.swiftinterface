@@ -4,20 +4,12 @@ import _Concurrency
 import Foundation
 import Swift
 @_exported import UIKit
-@_inheritsConvenienceInitializers @available(iOS 18.0, visionOS 2.0, *)
-@available(tvOS, unavailable)
-@available(watchOS, unavailable)
+@_inheritsConvenienceInitializers
 @objc open class UITextEffectTextChunk : ObjectiveC.NSObject, Swift.Identifiable {
   @objc override dynamic public init()
-  @available(iOS 18.0, visionOS 2.0, *)
-  @available(tvOS, unavailable)
-  @available(watchOS, unavailable)
   public typealias ID = Swift.ObjectIdentifier
   @objc deinit
 }
-@available(iOS 18.0, visionOS 2.0, *)
-@available(tvOS, unavailable)
-@available(watchOS, unavailable)
 @objc public protocol UITextEffectViewSource {
   @objc func targetedPreview(for chunk: UIKit_SPI.UITextEffectTextChunk) async -> UIKit.UITargetedPreview
   @objc optional func canGenerateTargetedPreviews() async -> Swift.Bool
@@ -25,14 +17,9 @@ import Swift
   @objc func updateTextChunkVisibilityForAnimation(_ chunk: UIKit_SPI.UITextEffectTextChunk, visible: Swift.Bool) async
   @objc optional func updatedTargetedPreviewGeometry(for chunk: UIKit_SPI.UITextEffectTextChunk, previous: CoreFoundation.CGRect) async -> CoreFoundation.CGRect
 }
-@objc @_hasMissingDesignatedInitializers @available(iOS 18.0, visionOS 2.0, *)
-@available(tvOS, unavailable)
-@available(watchOS, unavailable)
+@objc @_hasMissingDesignatedInitializers
 @_Concurrency.MainActor public class UITextEffectView : UIKit.UIView {
   @_Concurrency.MainActor weak public var source: (any UIKit_SPI.UITextEffectViewSource)?
-  @available(iOS 18.1, visionOS 2.1, *)
-  @available(tvOS, unavailable)
-  @available(watchOS, unavailable)
   @_Concurrency.MainActor public var hasActiveEffects: Swift.Bool {
     get
   }
@@ -54,9 +41,6 @@ import Swift
   }
   @objc deinit
 }
-@available(iOS 18.0, visionOS 2.0, *)
-@available(tvOS, unavailable)
-@available(watchOS, unavailable)
 extension UIKit_SPI.UITextEffectView {
   @_Concurrency.MainActor public protocol TextEffect {
     @_Concurrency.MainActor var id: UIKit_SPI.UITextEffectView.EffectID { get }
@@ -64,13 +48,7 @@ extension UIKit_SPI.UITextEffectView {
     @_Concurrency.MainActor var view: UIKit_SPI.UITextEffectView? { get }
   }
 }
-@available(iOS 18.0, visionOS 2.0, *)
-@available(tvOS, unavailable)
-@available(watchOS, unavailable)
 extension UIKit_SPI.UITextEffectView {
-  @available(iOS 18.0, visionOS 2.0, *)
-  @available(tvOS, unavailable)
-  @available(watchOS, unavailable)
   @_Concurrency.MainActor public class ReplacementTextEffect : UIKit_SPI.UITextEffectView.TextEffect {
     @_Concurrency.MainActor public var view: UIKit_SPI.UITextEffectView?
     @_Concurrency.MainActor public var chunk: UIKit_SPI.UITextEffectTextChunk
@@ -93,13 +71,7 @@ extension UIKit_SPI.UITextEffectView.ReplacementTextEffect.Delegate {
   public func performReplacementAndGeneratePreview(for chunk: UIKit_SPI.UITextEffectTextChunk, effect: UIKit_SPI.UITextEffectView.ReplacementTextEffect, animation: UIKit_SPI.UITextEffectView.ReplacementTextEffect.AnimationParameters) async -> UIKit.UITargetedPreview?
   public func performReplacement(for chunk: UIKit_SPI.UITextEffectTextChunk, effect: UIKit_SPI.UITextEffectView.ReplacementTextEffect, animation: UIKit_SPI.UITextEffectView.ReplacementTextEffect.AnimationParameters) async
 }
-@available(iOS 18.0, visionOS 2.0, *)
-@available(tvOS, unavailable)
-@available(watchOS, unavailable)
 extension UIKit_SPI.UITextEffectView {
-  @available(iOS 18.0, visionOS 2.0, *)
-  @available(tvOS, unavailable)
-  @available(watchOS, unavailable)
   @_Concurrency.MainActor public class PonderingEffect : UIKit_SPI.UITextEffectView.TextEffect {
     @_Concurrency.MainActor final public let chunk: UIKit_SPI.UITextEffectTextChunk
     @_Concurrency.MainActor weak public var view: UIKit_SPI.UITextEffectView?
@@ -109,24 +81,16 @@ extension UIKit_SPI.UITextEffectView {
     @objc deinit
   }
 }
-@objc @_hasMissingDesignatedInitializers @available(iOS 18.0, visionOS 2.0, *)
-@available(tvOS, unavailable)
-@available(watchOS, unavailable)
+@objc @_hasMissingDesignatedInitializers
 @_Concurrency.MainActor public class UIDirectionalLightEffectView : UIKit.UIView {
   @objc deinit
 }
-@available(iOS 18.0, visionOS 2.0, *)
-@available(tvOS, unavailable)
-@available(watchOS, unavailable)
 extension UIKit_SPI.UIDirectionalLightEffectView {
   public struct Configuration {
     public let fillColor: UIKit.UIColor
     public static let pondering: UIKit_SPI.UIDirectionalLightEffectView.Configuration
   }
 }
-@available(iOS 18.1, visionOS 2.1, *)
-@available(tvOS, unavailable)
-@available(watchOS, unavailable)
 extension UIKit.UIColor {
   public static var ponderingFill: UIKit.UIColor {
     get

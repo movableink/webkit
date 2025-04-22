@@ -3195,6 +3195,10 @@
 		07275C832D00F782002315A5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		07275C8E2D011396002315A5 /* Empty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Empty.swift; sourceTree = "<group>"; };
 		0728820E2DB53C02006F4A2B /* UIKit_SPI.swiftinterface */ = {isa = PBXFileReference; lastKnownFileType = text; path = UIKit_SPI.swiftinterface; sourceTree = "<group>"; };
+		0728821D2DB58B3F006F4A2B /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
+		0728821E2DB58B48006F4A2B /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
+		072882262DB5C2A1006F4A2B /* WritingToolsSPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WritingToolsSPI.h; sourceTree = "<group>"; };
+		072882272DB5C34C006F4A2B /* WritingToolsUISPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WritingToolsUISPI.h; sourceTree = "<group>"; };
 		07297F9C1C1711EA003F0735 /* DeviceIdHashSaltStorage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DeviceIdHashSaltStorage.cpp; sourceTree = "<group>"; };
 		07297F9C1C17BBEA003F0735 /* UserMediaPermissionCheckProxy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = UserMediaPermissionCheckProxy.cpp; sourceTree = "<group>"; };
 		07297F9D1C17BBEA003F0735 /* UserMediaPermissionCheckProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UserMediaPermissionCheckProxy.h; sourceTree = "<group>"; };
@@ -8515,7 +8519,6 @@
 		FA580B102DA64085005E4965 /* UnifiedSource158.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource158.cpp; sourceTree = "<group>"; };
 		FA580B112DA64085005E4965 /* UnifiedSource159.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource159.cpp; sourceTree = "<group>"; };
 		FA580B122DA64085005E4965 /* UnifiedSource160.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource160.cpp; sourceTree = "<group>"; };
-		FA580B272DA64B5F005E4965 /* UnifiedSource161.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource161.cpp; path = "UnifiedSource161.cpp"; sourceTree = "<group>"; };
 		FA580B282DA64B5F005E4965 /* UnifiedSource162.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource162.cpp; path = "UnifiedSource162.cpp"; sourceTree = "<group>"; };
 		FA580B292DA64B5F005E4965 /* UnifiedSource163.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource163.cpp; path = "UnifiedSource163.cpp"; sourceTree = "<group>"; };
 		FA580B2A2DA64B5F005E4965 /* UnifiedSource164.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource164.cpp; path = "UnifiedSource164.cpp"; sourceTree = "<group>"; };
@@ -8783,6 +8786,33 @@
 				07275C832D00F782002315A5 /* Info.plist */,
 			);
 			path = _WebKit_SwiftUI;
+			sourceTree = "<group>";
+		};
+		0728821A2DB58AA3006F4A2B /* Modules */ = {
+			isa = PBXGroup;
+			children = (
+				0728821B2DB58AC2006F4A2B /* WritingTools */,
+				0728821C2DB58AFD006F4A2B /* WritingToolsUI */,
+			);
+			path = Modules;
+			sourceTree = "<group>";
+		};
+		0728821B2DB58AC2006F4A2B /* WritingTools */ = {
+			isa = PBXGroup;
+			children = (
+				0728821D2DB58B3F006F4A2B /* module.modulemap */,
+				072882262DB5C2A1006F4A2B /* WritingToolsSPI.h */,
+			);
+			path = WritingTools;
+			sourceTree = "<group>";
+		};
+		0728821C2DB58AFD006F4A2B /* WritingToolsUI */ = {
+			isa = PBXGroup;
+			children = (
+				0728821E2DB58B48006F4A2B /* module.modulemap */,
+				072882272DB5C34C006F4A2B /* WritingToolsUISPI.h */,
+			);
+			path = WritingToolsUI;
 			sourceTree = "<group>";
 		};
 		0736B752260D039F00E06994 /* MediaSession */ = {
@@ -11771,6 +11801,7 @@
 		3754D5411B3A2998003A4C7F /* Cocoa */ = {
 			isa = PBXGroup;
 			children = (
+				0728821A2DB58AA3006F4A2B /* Modules */,
 				E3CAAA432413278A00CED2E2 /* AccessibilitySupportSPI.h */,
 				E3B8F7F72BA8AC4D006E97B6 /* AccessibilityUtilitiesSPI.h */,
 				9565083726D87A2B00E15CB7 /* AppleMediaServicesSPI.h */,
