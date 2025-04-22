@@ -134,7 +134,7 @@ struct FontCache::FontDataCaches {
 #endif
 };
 
-FontCache& FontCache::forCurrentThread()
+CheckedRef<FontCache> FontCache::forCurrentThread()
 {
     return threadGlobalData().fontCache();
 }
@@ -423,7 +423,7 @@ static void dispatchToAllFontCaches(F function)
 {
     ASSERT(isMainThread());
 
-    function(FontCache::forCurrentThread());
+    function(FontCache::forCurrentThread().get());
 
     for (auto& thread : WorkerOrWorkletThread::workerOrWorkletThreads()) {
         thread.runLoop().postTask([function](ScriptExecutionContext&) {

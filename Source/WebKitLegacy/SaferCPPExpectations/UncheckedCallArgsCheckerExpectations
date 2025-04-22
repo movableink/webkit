@@ -84,7 +84,6 @@ mac/DOM/DOMTreeWalker.mm
 mac/DOM/DOMXPathExpression.mm
 mac/DOM/DOMXPathResult.mm
 mac/DOM/WebDOMOperations.mm
-mac/Misc/WebCoreStatistics.mm
 mac/Misc/WebElementDictionary.mm
 mac/Misc/WebNSPasteboardExtras.mm
 mac/Misc/WebSharingServicePickerController.mm

@@ -274,7 +274,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
                         continue;
                     }
                     FontPlatformData runFontPlatformData(runCTFont, CTFontGetSize(runCTFont));
-                    runFont = FontCache::forCurrentThread().fontForPlatformData(runFontPlatformData).ptr();
+                    runFont = FontCache::forCurrentThread()->fontForPlatformData(runFontPlatformData).ptr();
                 }
                 if (m_fallbackFonts && runFont != m_fontCascade.primaryFont().ptr())
                     m_fallbackFonts->add(*runFont);

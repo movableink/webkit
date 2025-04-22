@@ -41,7 +41,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(SystemFallbackFontCache);
 
 SystemFallbackFontCache& SystemFallbackFontCache::forCurrentThread()
 {
-    return FontCache::forCurrentThread().systemFallbackFontCache();
+    return FontCache::forCurrentThread()->systemFallbackFontCache();
 }
 
 SystemFallbackFontCache* SystemFallbackFontCache::forCurrentThreadIfExists()
@@ -79,7 +79,7 @@ RefPtr<Font> SystemFallbackFontCache::systemFallbackFontForCharacterCluster(cons
             break;
         }
 
-        RefPtr fallbackFont = FontCache::forCurrentThread().systemFallbackForCharacterCluster(description, *font, isForPlatformFont, FontCache::PreferColoredFont::No, stringBuilder);
+        RefPtr fallbackFont = FontCache::forCurrentThread()->systemFallbackForCharacterCluster(description, *font, isForPlatformFont, FontCache::PreferColoredFont::No, stringBuilder);
         if (fallbackFont)
             fallbackFont->setIsUsedInSystemFallbackFontCache();
         return fallbackFont.get();

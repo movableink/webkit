@@ -105,7 +105,7 @@ DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FontCascadeFonts);
 
 FontCascadeFonts::FontCascadeFonts()
     : m_cachedPrimaryFont(nullptr)
-    , m_generation(FontCache::forCurrentThread().generation())
+    , m_generation(FontCache::forCurrentThread()->generation())
 {
 #if ASSERT_ENABLED
     if (!isMainThread())
@@ -115,10 +115,10 @@ FontCascadeFonts::FontCascadeFonts()
 
 FontCascadeFonts::FontCascadeFonts(const FontPlatformData& platformData)
     : m_cachedPrimaryFont(nullptr)
-    , m_generation(FontCache::forCurrentThread().generation())
+    , m_generation(FontCache::forCurrentThread()->generation())
     , m_isForPlatformFont(true)
 {
-    m_realizedFallbackRanges.append(FontRanges(FontCache::forCurrentThread().fontForPlatformData(platformData)));
+    m_realizedFallbackRanges.append(FontRanges(FontCache::forCurrentThread()->fontForPlatformData(platformData)));
 }
 
 FontCascadeFonts::~FontCascadeFonts() = default;
@@ -162,7 +162,7 @@ static FontRanges realizeNextFallback(const FontCascadeDescription& description,
 {
     ASSERT(index < description.effectiveFamilyCount());
 
-    auto& fontCache = FontCache::forCurrentThread();
+    CheckedRef fontCache = FontCache::forCurrentThread();
     while (index < description.effectiveFamilyCount()) {
         auto visitor = WTF::makeVisitor([&, fontSelector = RefPtr { fontSelector }](const AtomString& family) -> FontRanges {
             if (family.isNull())
@@ -172,7 +172,7 @@ static FontRanges realizeNextFallback(const FontCascadeDescription& description,
                 if (!ranges.isNull())
                     return ranges;
             }
-            if (auto font = fontCache.fontForFamily(description, family))
+            if (auto font = fontCache->fontForFamily(description, family))
                 return FontRanges(WTFMove(font));
             return FontRanges();
         }, [&](const FontFamilyPlatformSpecification& fontFamilySpecification) -> FontRanges {
@@ -187,7 +187,7 @@ static FontRanges realizeNextFallback(const FontCascadeDescription& description,
     // For example on OS X, we know to map any families containing the words Arabic, Pashto, or Urdu to the
     // Geeza Pro font.
     for (auto& family : description.families()) {
-        if (auto font = fontCache.similarFont(description, family))
+        if (auto font = fontCache->similarFont(description, family))
             return FontRanges(WTFMove(font));
     }
     return { };
@@ -199,7 +199,7 @@ const FontRanges& FontCascadeFonts::realizeFallbackRangesAt(const FontCascadeDes
         return m_realizedFallbackRanges[index];
 
     ASSERT(index == m_realizedFallbackRanges.size());
-    ASSERT(FontCache::forCurrentThread().generation() == m_generation);
+    ASSERT(FontCache::forCurrentThread()->generation() == m_generation);
 
     m_realizedFallbackRanges.append(FontRanges());
     auto& fontRanges = m_realizedFallbackRanges.last();
@@ -209,7 +209,7 @@ const FontRanges& FontCascadeFonts::realizeFallbackRangesAt(const FontCascadeDes
         if (fontRanges.isNull() && fontSelector)
             fontRanges = fontSelector->fontRangesForFamily(description, familyNamesData->at(FamilyNamesIndex::StandardFamily));
         if (fontRanges.isNull())
-            fontRanges = FontRanges(FontCache::forCurrentThread().lastResortFallbackFont(description));
+            fontRanges = FontRanges(FontCache::forCurrentThread()->lastResortFallbackFont(description));
         return fontRanges;
     }
 

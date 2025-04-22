@@ -120,7 +120,7 @@ class FontCache : public CanMakeCheckedPtr<FontCache> {
     WTF_MAKE_NONCOPYABLE(FontCache);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FontCache);
 public:
-    WEBCORE_EXPORT static FontCache& forCurrentThread();
+    WEBCORE_EXPORT static CheckedRef<FontCache> forCurrentThread();
     static FontCache* forCurrentThreadIfExists();
     static FontCache* forCurrentThreadIfNotDestroyed();
 

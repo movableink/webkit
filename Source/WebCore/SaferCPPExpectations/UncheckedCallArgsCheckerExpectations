@@ -136,9 +136,6 @@ contentextensions/ContentExtensionsBackend.cpp
 css/CSSComputedStyleDeclaration.cpp
 css/CSSCustomPropertyValue.cpp
 css/CSSFontFace.cpp
-css/CSSFontFaceSet.cpp
-css/CSSFontFaceSource.cpp
-css/CSSFontSelector.cpp
 css/CSSImageValue.cpp
 css/CSSStyleProperties.cpp
 css/CSSStyleSheet.cpp
@@ -272,7 +269,6 @@ editing/VisibleSelection.cpp
 editing/VisibleUnits.cpp
 editing/cocoa/AutofillElements.cpp
 editing/cocoa/EditorCocoa.mm
-editing/cocoa/FontAttributeChangesCocoa.mm
 editing/cocoa/HTMLConverter.mm
 editing/cocoa/WebContentReaderCocoa.mm
 editing/mac/EditorMac.mm
@@ -579,7 +575,6 @@ page/PerformanceMonitor.cpp
 page/PointerCaptureController.cpp
 page/PointerLockController.cpp
 page/PrintContext.cpp
-page/ProcessWarming.cpp
 page/Quirks.cpp
 page/RemoteFrame.cpp
 page/ResizeObservation.cpp
@@ -620,12 +615,7 @@ platform/cocoa/LowPowerModeNotifier.mm
 platform/cocoa/VideoPresentationModelVideoElement.mm
 platform/cocoa/WebAVPlayerLayer.mm
 platform/graphics/ComplexTextController.cpp
-platform/graphics/FontCache.cpp
-platform/graphics/FontCascade.cpp
 platform/graphics/FontCascade.h
-platform/graphics/FontCascadeFonts.cpp
-platform/graphics/FontPlatformData.cpp
-platform/graphics/SystemFallbackFontCache.cpp
 platform/graphics/WidthIterator.cpp
 platform/graphics/ca/GraphicsLayerCA.cpp
 platform/graphics/ca/PlatformCALayer.mm
@@ -634,7 +624,6 @@ platform/graphics/ca/TileCoverageMap.cpp
 platform/graphics/ca/TileGrid.cpp
 platform/graphics/ca/cocoa/WebTiledBackingLayer.mm
 platform/graphics/cg/CGSubimageCacheWithTimer.cpp
-platform/graphics/cocoa/FontFamilySpecificationCoreText.cpp
 platform/graphics/coretext/ComplexTextControllerCoreText.mm
 platform/ios/PlaybackSessionInterfaceIOS.mm
 platform/ios/WebAVPlayerController.mm

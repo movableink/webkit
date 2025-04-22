@@ -89,7 +89,7 @@ CSSFontSelector::CSSFontSelector(ScriptExecutionContext& context)
         });
     }
 
-    FontCache::forCurrentThread().addClient(*this);
+    FontCache::forCurrentThread()->addClient(*this);
     m_cssFontFaceSet->addFontModifiedObserver(m_fontModifiedObserver);
     LOG(Fonts, "CSSFontSelector %p ctor", this);
 }
@@ -405,7 +405,7 @@ FontRanges CSSFontSelector::fontRangesForFamily(const FontDescription& fontDescr
     if (!resolveGenericFamilyFirst)
         resolveAndAssignGenericFamily();
 
-    auto font = FontCache::forCurrentThread().fontForFamily(*fontDescriptionForLookup, familyForLookup, { { }, { }, fontPaletteValues, fontFeatureValues, 1.0 });
+    auto font = FontCache::forCurrentThread()->fontForFamily(*fontDescriptionForLookup, familyForLookup, { { }, { }, fontPaletteValues, fontFeatureValues, 1.0 });
     if (document && document->settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logFontLoad(*document, familyForLookup.string(), !!font);
     return { FontRanges { WTFMove(font) }, isGenericFontFamily };
@@ -436,7 +436,7 @@ RefPtr<Font> CSSFontSelector::fallbackFontAt(const FontDescription& fontDescript
     if (!m_context->settingsValues().fontFallbackPrefersPictographs)
         return nullptr;
     auto& pictographFontFamily = m_context->settingsValues().fontGenericFamilies.pictographFontFamily();
-    auto font = FontCache::forCurrentThread().fontForFamily(fontDescription, pictographFontFamily);
+    auto font = FontCache::forCurrentThread()->fontForFamily(fontDescription, pictographFontFamily);
     if (auto* document = dynamicDowncast<Document>(m_context.get()); document && document->settingsValues().webAPIStatisticsEnabled)
         ResourceLoadObserver::shared().logFontLoad(*document, pictographFontFamily, !!font);
 
