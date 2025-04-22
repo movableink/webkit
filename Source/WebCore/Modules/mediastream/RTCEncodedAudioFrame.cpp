@@ -32,6 +32,14 @@
 
 namespace WebCore {
 
+Ref<RTCEncodedAudioFrame> RTCEncodedAudioFrame::create(RTCEncodedAudioFrame& frame, const Options& options)
+{
+    auto rtcFrame = frame.serialize();
+    if (options.metadata)
+        rtcFrame->setOptions(*options.metadata);
+    return create(WTFMove(rtcFrame));
+}
+
 RTCEncodedAudioFrame::RTCEncodedAudioFrame(Ref<RTCRtpTransformableFrame>&& frame)
     : RTCEncodedFrame(WTFMove(frame))
 {

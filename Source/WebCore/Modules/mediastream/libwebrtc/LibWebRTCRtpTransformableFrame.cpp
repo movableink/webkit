@@ -138,6 +138,47 @@ Ref<RTCRtpTransformableFrame> LibWebRTCRtpTransformableFrame::clone()
     return adoptRef(*new LibWebRTCRtpTransformableFrame(WTFMove(rtcClone), m_isAudio));
 }
 
+void LibWebRTCRtpTransformableFrame::setOptions(const RTCEncodedAudioFrameMetadata& metadata)
+{
+    ASSERT(m_isAudio);
+    // FIXME: Support more metadata.
+    if (metadata.rtpTimestamp)
+        m_rtcFrame->SetRTPTimestamp(*metadata.rtpTimestamp);
+}
+
+void LibWebRTCRtpTransformableFrame::setOptions(const RTCEncodedVideoFrameMetadata& newMetadata)
+{
+    ASSERT(!m_isAudio);
+    auto rtcMetadata = static_cast<webrtc::TransformableVideoFrameInterface*>(m_rtcFrame.get())->Metadata();
+
+    if (newMetadata.frameId)
+        rtcMetadata.SetFrameId(*newMetadata.frameId);
+    if (newMetadata.dependencies)
+        rtcMetadata.SetFrameDependencies({ newMetadata.dependencies->data(), newMetadata.dependencies->size() });
+    if (newMetadata.width)
+        rtcMetadata.SetWidth(*newMetadata.width);
+    if (newMetadata.height)
+        rtcMetadata.SetHeight(*newMetadata.height);
+    if (newMetadata.spatialIndex)
+        rtcMetadata.SetSpatialIndex(*newMetadata.spatialIndex);
+    if (newMetadata.temporalIndex)
+        rtcMetadata.SetTemporalIndex(*newMetadata.temporalIndex);
+    if (newMetadata.synchronizationSource)
+        rtcMetadata.SetSsrc(*newMetadata.synchronizationSource);
+    // FIXME: newMetadata.payloadType
+    if (newMetadata.contributingSources) {
+        std::vector<uint32_t> csrcs(newMetadata.contributingSources->size());
+        for (auto& csrc : *newMetadata.contributingSources)
+            csrcs.push_back(csrc);
+        rtcMetadata.SetCsrcs(WTFMove(csrcs));
+    }
+    if (newMetadata.rtpTimestamp)
+        m_rtcFrame->SetRTPTimestamp(*newMetadata.rtpTimestamp);
+    // FIXME: newMetadata.mimeType
+
+    static_cast<webrtc::TransformableVideoFrameInterface*>(m_rtcFrame.get())->SetMetadata(WTFMove(rtcMetadata));
+}
+
 } // namespace WebCore
 
 #endif // ENABLE(WEB_RTC) && USE(LIBWEBRTC)

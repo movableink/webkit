@@ -32,6 +32,7 @@ enum RTCEncodedVideoFrameType { "empty", "key", "delta" };
 [
     Conditional=WEB_RTC,
     JSGenerateToJSObject,
+    JSGenerateToNativeObject,
 ]
 dictionary RTCEncodedVideoFrameMetadata {
     long long frameId;
@@ -52,6 +53,13 @@ dictionary RTCEncodedVideoFrameMetadata {
     DOMString mimeType;
 };
 
+[
+    Conditional=WEB_RTC,
+]
+dictionary RTCEncodedVideoFrameOptions {
+    RTCEncodedVideoFrameMetadata metadata;
+};
+
 // https://w3c.github.io/webrtc-encoded-transform/#RTCEncodedVideoFrame-interface
 
 [
@@ -59,6 +67,8 @@ dictionary RTCEncodedVideoFrameMetadata {
     EnabledBySetting=WebRTCEncodedTransformEnabled,
     Exposed=(Window,DedicatedWorker),
 ] interface RTCEncodedVideoFrame {
+    constructor(RTCEncodedVideoFrame originalFrame, optional RTCEncodedVideoFrameOptions options = {});
+
     readonly attribute RTCEncodedVideoFrameType type;
     readonly attribute unsigned long long timestamp;
     attribute ArrayBuffer data;

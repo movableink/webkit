@@ -113,6 +113,11 @@ ExceptionOr<Ref<WritableStream>> RTCRtpScriptTransformer::writable()
                 return value->rtcFrame(vm);
             });
 
+            if (!rtcFrame->isFromTransformer(transformer.get())) {
+                RELEASE_LOG_ERROR(WebRTC, "Trying to enqueue a foreign frame");
+                return { };
+            }
+
             // If no data, skip the frame since there is nothing to packetize or decode.
             if (rtcFrame->data().data()) {
 #if !RELEASE_LOG_DISABLED
@@ -143,8 +148,12 @@ void RTCRtpScriptTransformer::start(Ref<RTCRtpTransformBackend>&& backend)
     auto& context = downcast<WorkerGlobalScope>(*scriptExecutionContext());
     m_backend->setTransformableFrameCallback([weakThis = WeakPtr { *this }, thread = Ref { context.thread() }](Ref<RTCRtpTransformableFrame>&& frame) mutable {
         thread->runLoop().postTaskForMode([weakThis, frame = WTFMove(frame)](auto& context) mutable {
-            if (weakThis)
-                weakThis->enqueueFrame(context, WTFMove(frame));
+            RefPtr protectedThis = weakThis.get();
+            if (!protectedThis)
+                return;
+
+            frame->setTransformer(*protectedThis);
+            protectedThis->enqueueFrame(context, WTFMove(frame));
         }, WorkerRunLoop::defaultMode());
     });
 }

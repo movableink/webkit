@@ -38,6 +38,7 @@ async function createConnectionWithTransform(test, script, gumOptions) {
   const [senderTransform, receiverTransform] = await createTransforms(script);
 
   const localStream = await navigator.mediaDevices.getUserMedia(gumOptions);
+  test.add_cleanup(() => localStream.getTracks()[0].stop());
 
   let senderPc, receiverPc, sender, receiver;
 
@@ -55,6 +56,9 @@ async function createConnectionWithTransform(test, script, gumOptions) {
 
   assert_true(!!sender, "sender should be set");
   assert_true(!!receiver, "receiver should be set");
+
+  test.add_cleanup(() => senderPc.close());
+  test.add_cleanup(() => receiverPc.close());
 
   return {sender, receiver, senderPc, receiverPc};
 }

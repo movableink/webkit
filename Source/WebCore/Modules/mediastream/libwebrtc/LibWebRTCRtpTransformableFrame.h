@@ -55,6 +55,8 @@ private:
     RTCEncodedAudioFrameMetadata audioMetadata() const final;
     RTCEncodedVideoFrameMetadata videoMetadata() const final;
     Ref<RTCRtpTransformableFrame> clone() final;
+    void setOptions(const RTCEncodedAudioFrameMetadata&) final;
+    void setOptions(const RTCEncodedVideoFrameMetadata&) final;
 
     std::unique_ptr<webrtc::TransformableFrameInterface> m_rtcFrame;
     bool m_isAudio;

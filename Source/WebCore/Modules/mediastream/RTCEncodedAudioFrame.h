@@ -33,6 +33,10 @@ namespace WebCore {
 
 class RTCEncodedAudioFrame : public RTCEncodedFrame {
 public:
+    struct Options {
+        std::optional<RTCEncodedAudioFrameMetadata> metadata;
+    };
+    static Ref<RTCEncodedAudioFrame> create(RTCEncodedAudioFrame&, const Options&);
     static Ref<RTCEncodedAudioFrame> create(Ref<RTCRtpTransformableFrame>&& frame) { return adoptRef(*new RTCEncodedAudioFrame(WTFMove(frame))); }
     ~RTCEncodedAudioFrame();
 
