@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-float PlatformDynamicRangeLimit::normalizedAverage(float standardPercent, float constrainedHighPercent, float noLimitPercent)
+PlatformDynamicRangeLimit::ValueType PlatformDynamicRangeLimit::normalizedAverage(float standardPercent, float constrainedHighPercent, float noLimitPercent)
 {
     if (!std::isfinite(standardPercent) || standardPercent < 0 || standardPercent > 100 || !std::isfinite(constrainedHighPercent) || constrainedHighPercent < 0 || constrainedHighPercent > 100 || !std::isfinite(noLimitPercent) || noLimitPercent < 0 || noLimitPercent > 100) {
         ASSERT(std::isfinite(standardPercent));

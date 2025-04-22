@@ -40,6 +40,8 @@ struct DynamicRangeLimit;
 
 class PlatformDynamicRangeLimit {
 public:
+    using ValueType = float;
+
     static constexpr PlatformDynamicRangeLimit standard() { return PlatformDynamicRangeLimit(standardValue); }
     static constexpr PlatformDynamicRangeLimit constrainedHigh() { return PlatformDynamicRangeLimit(constrainedHighValue); }
     static constexpr PlatformDynamicRangeLimit noLimit() { return PlatformDynamicRangeLimit(noLimitValue); }
@@ -53,7 +55,7 @@ public:
     // `dynamic-range-limit` mapped to PlatformDynamicRangeLimit.value():
     // ["standard", "constrainedHigh"] -> [standard().value(), constrainedHigh().value()],
     // ["constrainedHigh", "noLimit"] -> [constrainedHigh().value(), noLimit().value()]
-    constexpr float value() const { return m_value; }
+    constexpr ValueType value() const { return m_value; }
 
     constexpr auto operator<=>(const PlatformDynamicRangeLimit&) const = default;
 
@@ -61,18 +63,18 @@ private:
     friend struct IPC::ArgumentCoder<WebCore::PlatformDynamicRangeLimit, void>;
     friend Style::DynamicRangeLimit;
 
-    constexpr PlatformDynamicRangeLimit(float value) : m_value(std::clamp(value, 0.0f, 1.0f)) { }
+    constexpr PlatformDynamicRangeLimit(ValueType value) : m_value(std::clamp(value, 0.0f, 1.0f)) { }
 
     PlatformDynamicRangeLimit(float standardPercent, float constrainedHighPercent, float noLimitPercent)
         : m_value(normalizedAverage(standardPercent, constrainedHighPercent, noLimitPercent)) { }
 
-    static float normalizedAverage(float standardPercent, float constrainedHighPercent, float noLimitPercent);
+    static ValueType normalizedAverage(float standardPercent, float constrainedHighPercent, float noLimitPercent);
 
-    static constexpr float standardValue = 0;
-    static constexpr float constrainedHighValue = 0.5;
-    static constexpr float noLimitValue = 1;
+    static constexpr ValueType standardValue = 0;
+    static constexpr ValueType constrainedHighValue = 0.5;
+    static constexpr ValueType noLimitValue = 1;
 
-    float m_value { constrainedHighValue };
+    ValueType m_value { constrainedHighValue };
 };
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, PlatformDynamicRangeLimit);

@@ -33,6 +33,8 @@
 namespace TestWebKitAPI {
 
 // Tests rely on these assumptions:
+static_assert(std::is_same_v<WebCore::PlatformDynamicRangeLimit::ValueType, float>);
+static_assert(std::is_same_v<decltype(WebCore::PlatformDynamicRangeLimit::standard().value()), float>);
 static_assert(WebCore::PlatformDynamicRangeLimit::standard().value() == 0.0f);
 static_assert(WebCore::PlatformDynamicRangeLimit::constrainedHigh().value() == 0.5f);
 static_assert(WebCore::PlatformDynamicRangeLimit::noLimit().value() == 1.0f);
