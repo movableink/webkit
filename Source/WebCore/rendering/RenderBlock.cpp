@@ -1537,7 +1537,8 @@ bool RenderBlock::isSelectionRoot() const
         || isRenderTableCell() || isNonReplacedAtomicInline()
         || isTransformed() || hasReflection() || hasMask() || isWritingModeRoot()
         || isRenderFragmentedFlow() || style().columnSpan() == ColumnSpan::All
-        || isFlexItemIncludingDeprecated() || isGridItem())
+        || isFlexItemIncludingDeprecated() || isGridItem()
+        || is<RenderFlexibleBox>(*this) || is<RenderDeprecatedFlexibleBox>(*this) || is<RenderGrid>(*this))
         return true;
     
     if (view().selection().start()) {
@@ -1650,8 +1651,10 @@ GapRects RenderBlock::selectionGaps(RenderBlock& rootBlock, const LayoutPoint& r
     // FIXME: overflow: auto/scroll fragments need more math here, since painting in the border box is different from painting in the padding box (one is scrolled, the other is
     // fixed).
     GapRects result;
-    if (!isRenderBlockFlow()) // FIXME: Make multi-column selection gap filling work someday.
+    if (!is<RenderBlockFlow>(*this) && !is<RenderFlexibleBox>(*this) && !is<RenderDeprecatedFlexibleBox>(*this) && !is<RenderGrid>(*this)) {
+        // FIXME: Make multi-column selection gap filling work someday.
         return result;
+    }
 
     if (isTransformed() || style().columnSpan() == ColumnSpan::All || isRenderFragmentedFlow()) {
         // FIXME: We should learn how to gap fill multiple columns and transforms eventually.

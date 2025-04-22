@@ -1,0 +1,22 @@
+<style>
+.container {
+  font-family: Monospace;
+  position: absolute;
+  width: 600px;
+}
+.content {
+  line-height: 20px;
+  margin-top: 40px;
+}
+</style>
+<div class=container>
+  <div id=selection_start class=content>Start selecting this line and continue with the next one</div>
+  <div id=selection_end class=content>pass if there's no selection hairline above this.</div>
+</div>
+<script>
+const selection = window.getSelection();
+const range = document.createRange();
+range.setStart(selection_start, 0);
+range.setEnd(selection_end, 1);
+selection.addRange(range);
+</script>
