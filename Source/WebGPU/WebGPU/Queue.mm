@@ -287,15 +287,11 @@ void Queue::commitMTLCommandBuffer(id<MTLCommandBuffer> commandBuffer)
             loseTheDevice = !error || error.code != MTLCommandBufferErrorNotPermitted;
             if (loseTheDevice) {
                 NSError* underlyingError = error.userInfo[NSUnderlyingErrorKey];
-                if (underlyingError.code == 0x10a)
+                if (underlyingError.code == 0x10a || underlyingError.code == 0x5)
                     loseTheDevice = false;
                 else {
-                    WTFLogAlways("Encountered fatal command buffer error %@, underlying error %@", error, underlyingError);
                     bool fatal = false;
                     switch (underlyingError.code) {
-                    case 2: // kIOGPUCommandBufferCallbackErrorTimeout = 2,
-                    case 3: // kIOGPUCommandBufferCallbackErrorHang = 3,
-                    case 4: // kIOGPUCommandBufferCallbackErrorSubmissionsIgnored = 4,
                     case 8: // kIOGPUCommandBufferCallbackErrorOutOfMemory = 8,
                     case 9: // kIOGPUCommandBufferCallbackErrorInvalidResource = 9,
                     case 10: // kIOGPUCommandBufferCallbackErrorInvalidInput = 10,
@@ -309,6 +305,8 @@ void Queue::commitMTLCommandBuffer(id<MTLCommandBuffer> commandBuffer)
                     default:
                         break;
                     }
+                    if (fatal)
+                        WTFLogAlways("Encountered fatal command buffer error %@, underlying error %@", error, underlyingError); // NOLINT
                     RELEASE_ASSERT(!fatal);
                 }
             }
