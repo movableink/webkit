@@ -4068,7 +4068,8 @@ std::optional<FocusedElementInformation> WebPage::focusedElementInformation()
 
     FocusedElementInformation information;
 
-    information.frameID = focusedOrMainFrame->frameID();
+    if (RefPtr webFrame = WebProcess::singleton().webFrame(focusedOrMainFrame->frameID()))
+        information.frame = webFrame->info();
 
     information.lastInteractionLocation = m_lastInteractionLocation;
     if (auto elementContext = contextForElement(*focusedElement))

@@ -27,6 +27,7 @@
 
 #include "ArgumentCoders.h"
 #include "ColorControlSupportsAlpha.h"
+#include "FrameInfoData.h"
 #include "IdentifierTypes.h"
 #include <WebCore/AutocapitalizeTypes.h>
 #include <WebCore/Autofill.h>
@@ -140,7 +141,7 @@ struct FocusedElementInformation {
     FocusedElementInformationIdentifier identifier;
     Markable<WebCore::ScrollingNodeID> containerScrollingNodeID;
 
-    Markable<WebCore::FrameIdentifier> frameID;
+    std::optional<FrameInfoData> frame;
 };
 #endif
 

@@ -757,7 +757,10 @@ TEST(KeyboardInputTests, TestWebViewAdditionalContextForStrongPasswordAssistance
         return expected;
     }];
 
-    [inputDelegate setFocusRequiresStrongPasswordAssistanceHandler:[&] (WKWebView *, id<_WKFocusedElementInfo>, void(^completionHandler)(BOOL)) {
+    bool verifiedFrame { false };
+    [inputDelegate setFocusRequiresStrongPasswordAssistanceHandler:[&] (WKWebView *, id<_WKFocusedElementInfo> info, void(^completionHandler)(BOOL)) {
+        EXPECT_NOT_NULL(info.frame);
+        verifiedFrame = true;
         completionHandler(YES);
     }];
 
@@ -769,6 +772,7 @@ TEST(KeyboardInputTests, TestWebViewAdditionalContextForStrongPasswordAssistance
     NSDictionary *actual = [[webView textInputContentView] _autofillContext];
     EXPECT_TRUE([[actual allValues] containsObject:expected]);
     EXPECT_TRUE([actual[@"_automaticPasswordKeyboard"] boolValue]);
+    EXPECT_TRUE(verifiedFrame);
 }
 
 TEST(KeyboardInputTests, TestWebViewAdditionalContextForNonAutofillCredentialType)
