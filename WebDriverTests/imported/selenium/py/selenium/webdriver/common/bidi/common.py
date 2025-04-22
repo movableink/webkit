@@ -15,5 +15,24 @@
 # specific language governing permissions and limitations
 # under the License.
 
+from typing import Dict
 
-__version__ = "4.32.0.202504060755"
+
+def command_builder(method: str, params: Dict = None) -> Dict:
+    """Build a command iterator to send to the BiDi protocol.
+
+    Parameters:
+    -----------
+        method: The method to execute.
+        params: The parameters to pass to the method. Default is None.
+
+    Returns:
+    --------
+        The response from the command execution.
+    """
+    if params is None:
+        params = {}
+
+    command = {"method": method, "params": params}
+    cmd = yield command
+    return cmd

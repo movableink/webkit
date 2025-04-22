@@ -28,6 +28,7 @@ def test_get_downloadable_files(driver, pages):
 
     assert "file_1.txt" in file_names
     assert "file_2.jpg" in file_names
+    assert type(file_names) is list
 
 
 def test_download_file(driver, pages):

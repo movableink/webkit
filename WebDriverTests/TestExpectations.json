@@ -28,6 +28,28 @@
     "imported/selenium/py/test/selenium/webdriver/common/appcache_tests.py": {
         "expected": {"all": {"status": ["SKIP"]}}
     },
+
+    "imported/selenium/py/test/selenium/webdriver/common/bidi_browser_tests.py": {
+        "subtests": {
+            "test_create_user_context": { "expected": { "all": { "status": ["FAIL"], "bug": "webkit.org/b/288104"}}},
+            "test_get_user_contexts": { "expected": { "all": { "status": ["FAIL"], "bug": "webkit.org/b/288107"}}},
+            "test_remove_user_context": { "expected": { "all": { "status": ["FAIL"], "bug": "webkit.org/b/288108"}}},
+            "test_get_client_windows": { "expected": { "all": { "status": ["FAIL"], "bug": "webkit.org/b/288106"}}}
+        }
+    },
+
+    "imported/selenium/py/test/selenium/webdriver/common/bidi_network_tests.py": {
+        "subtests": {
+            "test_add_intercept":  { "expected": { "all": { "status": ["FAIL"], "bug": "webkit.org/b/288087"}}},
+            "test_remove_intercept":  { "expected": { "all": { "status": ["FAIL"], "bug": "webkit.org/b/288094"}}},
+            "test_add_and_remove_request_handler":  { "expected": { "all": { "status": ["FAIL"], "bug": "webkit.org/b/288087"}}},
+            "test_clear_request_handlers":  { "expected": { "all": { "status": ["FAIL"], "bug": "webkit.org/b/288094"}}},
+            "test_continue_request":  { "expected": { "all": { "status": ["FAIL"], "bug": "webkit.org/b/288088"}}},
+            "test_continue_with_auth":  { "expected": { "all": { "status": ["FAIL"], "bug": "webkit.org/b/288091"}}},
+            "test_remove_auth_handler":  { "expected": { "all": { "status": ["FAIL"], "bug": "webkit.org/b/288094"}}}
+        }
+    },
+
     "imported/selenium/py/test/selenium/webdriver/common/fedcm_tests.py": {
         "expected": {"all": {"status": ["SKIP"], "note": "FEDCM is not supported in WebKit"}}
     },
@@ -70,35 +92,74 @@
             },
             "test_should_not_delete_cookies_with_asimilar_name": {
                 "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/279079"}}
+            },
+            "test_delete_cookie_raises_value_error_for_empty_name": {
+                "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/279079"}}
             }
         }
     },
+
+    "imported/selenium/py/test/selenium/webdriver/common/element_attribute_tests.py": {
+        "subtests": {
+            "test_can_retrieve_the_current_value_of_atext_form_field_email_input": {
+                "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/212953"}}
+            },
+            "test_should_get_unicode_chars_from_attribute": {
+                "expected": {"all": {"status": ["FAIL"], "note": "Likely issue in upstream test, failing other browsers too"}}
+            },
+            "test_should_get_values_and_not_miss_items": {
+                "expected": {"all": {"status": ["FAIL"], "note": "Likely issue in upstream test, failing other browsers too"}}
+            }
+        }
+    },
+
+    "imported/selenium/py/test/selenium/webdriver/common/form_handling_tests.py": {
+        "subtests": {
+            "test_should_be_able_to_enter_text_into_atext_area_by_setting_its_value": {
+                "expected": {"wpe": {"status": ["FAIL"], "bug": "webkit.org/b/279342"}}
+            },
+            "test_sending_keyboard_events_should_append_text_in_inputs": {
+                "expected": {"wpe": {"status": ["FAIL"], "bug": "webkit.org/b/279342"}}
+            }
+        }
+    },
+
     "imported/selenium/py/test/selenium/webdriver/common/frame_switching_tests.py": {
         "subtests": {
-            "testShouldNotSwitchMagicallyToTheTopWindow": {
-                "expected": {"all": {"slow": true}}
-            },
-            "testShouldFocusOnTheReplacementWhenAFrameFollowsALinkToA_TopTargetedPage": {
-                "expected": {"all": {"status": ["FAIL"], "reason": "Marked fail upstream through annotations for remote and safari."}}
-            },
-            "testShouldNotBeAbleToDoAnythingTheFrameIsDeletedFromUnderUs": {
-                "expected": {"all": {"status": ["FAIL"], "reason": "Marked fail upstream through annotations for gtk and safari."}}
+            "test_should_focus_on_the_replacement_when_aframe_follows_alink_to_a_top_targeted_page": {
+                "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/291586"}}
             }
         }
     },
+
     "imported/selenium/py/test/selenium/webdriver/common/interactions_tests.py": {
         "subtests": {
-            "testClickingOnFormElements": {
+            "test_clicking_on_form_elements": {
                 "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/184967"}}
             },
-            "testDoubleClick": {
+            "test_context_click": {
+                "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/291615"}}
+            },
+            "test_double_click": {
                 "expected": {"wpe": {"status": ["FAIL"], "bug": "webkit.org/b/174674"}}
             },
-            "testSelectingMultipleItems": {
+            "test_drag_and_drop": {
+                "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/291615"}}
+            },
+            "test_dragging_element_with_mouse_fires_events": {
+                "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/291615"}}
+            },
+            "test_dragging_element_with_mouse_moves_it_to_another_list": {
+                "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/291615"}}
+            },
+            "test_move_and_click": {
+                "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/291615"}}
+            },
+            "test_selecting_multiple_items": {
                 "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/184967"}}
             },
-            "testSendingKeysToActiveElementWithModifier": {
-                "expected": {"wpe": {"status": ["FAIL"], "bug": "webkit.org/b/215588"}}
+            "test_sending_keys_to_active_element_with_modifier": {
+                "expected": {"wpe": {"status": ["FAIL"], "bug": "webkit.org/b/279342"}}
             }
         }
     },

@@ -155,19 +155,19 @@ class BaseOptions(metaclass=ABCMeta):
     browser_version = _BaseOptionsDescriptor("browserVersion")
     """Gets and Sets the version of the browser.
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.browser_version`
     - Set
         - `self.browser_version` = `value`
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     `value`: `str`
 
-    Returns
-    -------
+    Returns:
+    --------
     - Get
         - `str`
     - Set
@@ -177,19 +177,19 @@ class BaseOptions(metaclass=ABCMeta):
     platform_name = _BaseOptionsDescriptor("platformName")
     """Gets and Sets name of the platform.
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.platform_name`
     - Set
         - `self.platform_name` = `value`
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     `value`: `str`
 
-    Returns
-    -------
+    Returns:
+    --------
     - Get
         - `str`
     - Set
@@ -199,19 +199,19 @@ class BaseOptions(metaclass=ABCMeta):
     accept_insecure_certs = _BaseOptionsDescriptor("acceptInsecureCerts")
     """Gets and Set whether the session accepts insecure certificates.
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.accept_insecure_certs`
     - Set
         - `self.accept_insecure_certs` = `value`
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     `value`: `bool`
 
-    Returns
-    -------
+    Returns:
+    --------
     - Get
         - `bool`
     - Set
@@ -221,19 +221,19 @@ class BaseOptions(metaclass=ABCMeta):
     strict_file_interactability = _BaseOptionsDescriptor("strictFileInteractability")
     """Gets and Sets whether session is about file interactability.
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.strict_file_interactability`
     - Set
         - `self.strict_file_interactability` = `value`
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     `value`: `bool`
 
-    Returns
-    -------
+    Returns:
+    --------
     - Get
         - `bool`
     - Set
@@ -243,19 +243,19 @@ class BaseOptions(metaclass=ABCMeta):
     set_window_rect = _BaseOptionsDescriptor("setWindowRect")
     """Gets and Sets window size and position.
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.set_window_rect`
     - Set
         - `self.set_window_rect` = `value`
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     `value`: `bool`
 
-    Returns
-    -------
+    Returns:
+    --------
     - Get
         - `bool`
     - Set
@@ -265,43 +265,21 @@ class BaseOptions(metaclass=ABCMeta):
     enable_bidi = _BaseOptionsDescriptor("enableBidi")
     """Gets and Set whether the session has WebDriverBiDi enabled.
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.enable_bidi`
     - Set
         - `self.enable_bidi` = `value`
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     `value`: `bool`
 
-    Returns
-    -------
+    Returns:
+    --------
     - Get
         - `bool`
-    - Set
-        - `None`
-    """
-
-    web_socket_url = _BaseOptionsDescriptor("webSocketUrl")
-    """Gets and Set whether the session accepts insecure certificates.
-
-    Usage
-    -----
-    - Get
-        - `self.web_socket_url`
-    - Set
-        - `self.web_socket_url` = `value`
-
-    Parameters
-    ----------
-    `value`: `str`
-
-    Returns
-    -------
-    - Get
-        - `str` or `None`
     - Set
         - `None`
     """
@@ -309,19 +287,19 @@ class BaseOptions(metaclass=ABCMeta):
     page_load_strategy = _PageLoadStrategyDescriptor("pageLoadStrategy")
     """:Gets and Sets page load strategy, the default is "normal".
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.page_load_strategy`
     - Set
         - `self.page_load_strategy` = `value`
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     `value`: `str`
 
-    Returns
-    -------
+    Returns:
+    --------
     - Get
         - `str`
     - Set
@@ -332,19 +310,19 @@ class BaseOptions(metaclass=ABCMeta):
     """:Gets and Sets unhandled prompt behavior, the default is "dismiss and
     notify".
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.unhandled_prompt_behavior`
     - Set
         - `self.unhandled_prompt_behavior` = `value`
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     `value`: `str`
 
-    Returns
-    -------
+    Returns:
+    --------
     - Get
         - `str`
     - Set
@@ -355,19 +333,19 @@ class BaseOptions(metaclass=ABCMeta):
     """:Gets and Sets implicit timeout, pageLoad timeout and script timeout if
     set (in milliseconds)
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.timeouts`
     - Set
         - `self.timeouts` = `value`
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     `value`: `dict`
 
-    Returns
-    -------
+    Returns:
+    --------
     - Get
         - `dict`
     - Set
@@ -377,19 +355,19 @@ class BaseOptions(metaclass=ABCMeta):
     proxy = _ProxyDescriptor("proxy")
     """Sets and Gets Proxy.
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.proxy`
     - Set
         - `self.proxy` = `value`
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     `value`: `Proxy`
 
-    Returns
-    -------
+    Returns:
+    --------
     - Get
         - `Proxy`
     - Set
@@ -399,19 +377,19 @@ class BaseOptions(metaclass=ABCMeta):
     enable_downloads = _BaseOptionsDescriptor("se:downloadsEnabled")
     """Gets and Sets whether session can download files.
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.enable_downloads`
     - Set
         - `self.enable_downloads` = `value`
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     `value`: `bool`
 
-    Returns
-    -------
+    Returns:
+    --------
     - Get
         - `bool`
     - Set
@@ -421,19 +399,19 @@ class BaseOptions(metaclass=ABCMeta):
     web_socket_url = _BaseOptionsDescriptor("webSocketUrl")
     """Gets and Sets WebSocket URL.
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.web_socket_url`
     - Set
         - `self.web_socket_url` = `value`
 
-    Parameters
-    ----------
-    `value`: `bool`
+    Parameters:
+    -----------
+    `value`: `str`
 
-    Returns
-    -------
+    Returns:
+    --------
     - Get
         - `bool`
     - Set

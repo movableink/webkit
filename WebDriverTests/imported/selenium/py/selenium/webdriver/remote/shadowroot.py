@@ -44,7 +44,7 @@ class ShadowRoot:
         locator.
 
         Parameters:
-        ----------
+        -----------
         by : selenium.webdriver.common.by.By
             The locating strategy to use. Default is `By.ID`. Supported values include:
             - By.ID: Locate by element ID.
@@ -82,7 +82,7 @@ class ShadowRoot:
         """Find elements inside a shadow root given a By strategy and locator.
 
         Parameters:
-        ----------
+        -----------
         by : selenium.webdriver.common.by.By
             The locating strategy to use. Default is `By.ID`. Supported values include:
             - By.ID: Locate by element ID.
@@ -97,11 +97,11 @@ class ShadowRoot:
 
         Example:
         --------
-        element = driver.find_element(By.ID, 'foo')
+        element = driver.find_elements(By.ID, 'foo')
 
         Returns:
         -------
-        WebElement
+        List[WebElement]
             list of `WebElements` matching locator strategy found on the page.
         """
         if by == By.ID:

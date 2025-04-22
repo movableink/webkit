@@ -104,6 +104,10 @@ def is_connectable(port: int, host: Optional[str] = "localhost") -> bool:
         result = False
     finally:
         if socket_:
+            try:
+                socket_.shutdown(socket.SHUT_RDWR)
+            except Exception:
+                pass
             socket_.close()
     return result
 

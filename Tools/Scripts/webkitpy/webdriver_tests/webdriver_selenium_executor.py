@@ -43,7 +43,7 @@ class WebDriverSeleniumExecutor(object):
 
         self._args = []
         if self._port.get_option('enable_webdriver_bidi'):
-            self._args.append('--bidi=1')
+            self._args.append('--bidi')
 
         self._args.extend(['--driver=%s' % self._driver_name, '--driver-binary=%s' % driver.binary_path()])
         browser_path = driver.browser_path()
