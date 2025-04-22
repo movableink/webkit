@@ -673,6 +673,9 @@ Document::Document(LocalFrame* frame, const Settings& settings, const URL& url, 
     if ((frame && frame->ownerElement()) || !url.isEmpty())
         setURL(url);
 
+    if (!frame)
+        setUsesNullCustomElementRegistry();
+
     initSecurityContext();
 
     InspectorInstrumentation::addEventListenersToNode(*this);
@@ -1471,13 +1474,18 @@ static ALWAYS_INLINE bool isStandardElementName(const AtomString& localName);
 static ALWAYS_INLINE Ref<HTMLElement> createUpgradeCandidateElement(Document& document, CustomElementRegistry* registry, const QualifiedName& name)
 {
     ASSERT(!isStandardElementName(name.localName())); // HTMLTagNames.in lists builtin SVG/MathML elements with "-" in their names explicitly as HTMLUnknownElement.
-    if (validateCustomElementNameWithoutCheckingStandardElementNames(name.localName()) != CustomElementNameValidationStatus::Valid)
-        return HTMLUnknownElement::create(name, document);
+
+    if (validateCustomElementNameWithoutCheckingStandardElementNames(name.localName()) != CustomElementNameValidationStatus::Valid) {
+        Ref element = HTMLUnknownElement::create(name, document);
+        if (!registry && document.usesNullCustomElementRegistry())
+            element->setUsesNullCustomElementRegistry();
+        return element;
+    }
 
     Ref element = HTMLMaybeFormAssociatedCustomElement::create(name, document);
 
-    if (!registry)
-        registry = document.customElementRegistry();
+    if (!registry && document.usesNullCustomElementRegistry())
+        element->setUsesNullCustomElementRegistry();
 
     element->setIsCustomElementUpgradeCandidate();
 
@@ -1539,7 +1547,7 @@ ExceptionOr<Ref<Element>> Document::createElementForBindings(const AtomString& n
         if (!document->isValidName(name))
             return Exception { ExceptionCode::InvalidCharacterError, makeString("Invalid qualified name: '"_s, name, '\'') };
 
-        return createElement(QualifiedName(nullAtom(), name, nullAtom()), false);
+        return createElement(QualifiedName(nullAtom(), name, nullAtom()), false, registry.get());
     }();
 
     if (result.hasException())
@@ -1738,7 +1746,7 @@ Ref<Element> Document::createElement(const QualifiedName& name, bool createdByPa
     if (UNLIKELY(registry && registry->isScoped()))
         CustomElementRegistry::addToScopedCustomElementRegistryMap(*element, *registry);
 
-    if (createdByParser && !registry)
+    if (!registry && usesNullCustomElementRegistry())
         element->setUsesNullCustomElementRegistry();
 
     // <image> uses imgTag so we need a special rule.
@@ -1781,7 +1789,7 @@ RefPtr<CustomElementRegistry> Document::customElementRegistryForBindings()
 {
     if (RefPtr window = document().domWindow())
         return &window->ensureCustomElementRegistry();
-    return nullptr;
+    return customElementRegistry();
 }
 
 static inline bool isPotentialCustomElementNameCharacter(char32_t character)
@@ -1965,7 +1973,7 @@ ExceptionOr<Ref<Element>> Document::createElementNS(const AtomString& namespaceU
         if (parsedName.namespaceURI() == xhtmlNamespaceURI)
             return createHTMLElementWithNameValidation(document, parsedName, registry.get());
 
-        return createElement(parsedName, false);
+        return createElement(parsedName, false, registry.get());
     }();
 
     if (result.hasException())

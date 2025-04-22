@@ -41,6 +41,8 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DocumentFragment);
 DocumentFragment::DocumentFragment(Document& document, OptionSet<TypeFlag> typeFlags)
     : ContainerNode(document, DOCUMENT_FRAGMENT_NODE, typeFlags)
 {
+    if (document.usesNullCustomElementRegistry())
+        setUsesNullCustomElementRegistry();
 }
 
 Ref<DocumentFragment> DocumentFragment::create(Document& document)

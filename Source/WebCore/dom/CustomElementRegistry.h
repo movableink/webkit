@@ -79,7 +79,7 @@ public:
     static CustomElementRegistry* registryForNodeOrTreeScope(const Node& node, const TreeScope& treeScope)
     {
         if (node.usesNullCustomElementRegistry()) {
-            ASSERT(is<Element>(node));
+            ASSERT(is<Element>(node) || node.isTreeScope() || node.isDocumentFragment());
             return nullptr;
         }
         if (auto* element = dynamicDowncast<Element>(node); UNLIKELY(element && element->usesScopedCustomElementRegistryMap()))
