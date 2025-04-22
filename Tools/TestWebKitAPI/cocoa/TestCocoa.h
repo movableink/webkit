@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,6 +51,8 @@ void instantiateUIApplicationIfNeeded(Class customApplicationClass = nil);
 
 #if USE(CG)
 
+std::ostream& operator<<(std::ostream&, const CGPoint&);
+bool operator==(const CGPoint&, const CGPoint&);
 std::ostream& operator<<(std::ostream&, const CGRect&);
 bool operator==(const CGRect&, const CGRect&);
 
@@ -61,6 +63,8 @@ constexpr CGFloat blueColorComponents[4] = { 0, 0, 1, 1 };
 
 #if PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)
 
+std::ostream& operator<<(std::ostream&, const NSPoint&);
+bool operator==(const NSPoint&, const NSPoint&);
 std::ostream& operator<<(std::ostream&, const NSRect&);
 bool operator==(const NSRect&, const NSRect&);
 

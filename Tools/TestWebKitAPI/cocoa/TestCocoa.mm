@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,10 +33,26 @@
 template<typename T>
 static inline std::ostream& ostreamRectCommon(std::ostream& os, const T& rect)
 {
-    return os << "(origin = (x = " << rect.origin.x << ", y = " << rect.origin.y << "), size = (width = " << rect.size.width << ", height = " << rect.size.height << "))";
+    return os << "(origin = " << rect.origin << ", size = (width = " << rect.size.width << ", height = " << rect.size.height << "))";
+}
+
+template<typename T>
+static inline std::ostream& ostreamPointCommon(std::ostream& os, const T& point)
+{
+    return os << "(x = " << point.x << ", y = " << point.y << ")";
 }
 
 #if USE(CG)
+
+std::ostream& operator<<(std::ostream& os, const CGPoint& point)
+{
+    return ostreamPointCommon(os, point);
+}
+
+bool operator==(const CGPoint& a, const CGPoint& b)
+{
+    return CGPointEqualToPoint(a, b);
+}
 
 std::ostream& operator<<(std::ostream& os, const CGRect& rect)
 {
@@ -51,6 +67,16 @@ bool operator==(const CGRect& a, const CGRect& b)
 #endif
 
 #if PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)
+
+std::ostream& operator<<(std::ostream& os, const NSPoint& point)
+{
+    return ostreamPointCommon(os, point);
+}
+
+bool operator==(const NSPoint& a, const NSPoint& b)
+{
+    return NSEqualPoints(a, b);
+}
 
 std::ostream& operator<<(std::ostream& os, const NSRect& rect)
 {
