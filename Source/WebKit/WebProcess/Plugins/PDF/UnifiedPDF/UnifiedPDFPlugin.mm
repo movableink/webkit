@@ -1234,7 +1234,10 @@ void UnifiedPDFPlugin::setPageScaleFactor(double scale, std::optional<WebCore::I
 
 void UnifiedPDFPlugin::mainFramePageScaleFactorDidChange()
 {
-    ASSERT(!handlesPageScaleFactor());
+    if (handlesPageScaleFactor()) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
     updateScrollingExtents();
 }
 
@@ -1710,6 +1713,9 @@ void UnifiedPDFPlugin::updateScrollingExtents()
 
     CheckedPtr renderer = m_element->renderer();
     if (!renderer)
+        return;
+
+    if (!m_scrollContainerLayer)
         return;
 
     EventRegion eventRegion;
