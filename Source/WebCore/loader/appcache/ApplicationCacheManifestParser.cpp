@@ -36,7 +36,7 @@ namespace WebCore {
 
 enum class ApplicationCacheParserMode { Explicit, Fallback, OnlineAllowlist, Unknown };
 
-static StringView manifestPath(const URL& manifestURL)
+static StringView manifestPath(const URL& manifestURL LIFETIME_BOUND)
 {
     auto manifestPath = manifestURL.path();
     ASSERT(manifestPath[0] == '/');

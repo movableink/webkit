@@ -81,7 +81,7 @@ public:
     bool isEmpty() const { return !m_length; }
     unsigned length() const;
 
-    operator StringView() const;
+    operator StringView() const LIFETIME_BOUND;
     UChar operator[](unsigned i) const;
 
     bool is8Bit() const;
