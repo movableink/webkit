@@ -677,6 +677,7 @@ imported/w3c/web-platform-tests/navigation-api/navigation-history-entry/key-id-b
 # https://bugs.webkit.org/show_bug.cgi?id=282117
 # https://github.com/WebKit/WebKit/blob/e666928e70449224996d14a5868c902134facf30/Source/WebCore/accessibility/atspi/AccessibilityObjectAtspi.cpp#L1395#L1397
 accessibility/opacity-0-bounding-box.html [ Skip ]
+accessibility/clip-path-bounding-box.html [ Skip ]
 
 # AXObjectCache::announce not implemented.
 accessibility/announcement-notification.html [ Skip ]

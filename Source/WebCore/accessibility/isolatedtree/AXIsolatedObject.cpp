@@ -1482,10 +1482,11 @@ FloatRect AXIsolatedObject::relativeFrame() const
         });
     }
 
+    bool isControl = this->isControl();
     // Having an empty relative frame at this point means a frame hasn't been cached yet.
     if (relativeFrame.isEmpty()) {
         std::optional<IntRect> rectFromLabels;
-        if (isControl()) {
+        if (isControl) {
             // For controls, we can try to use the frame of any associated labels.
             auto labels = labeledByObjects();
             for (const auto& label : labels) {
@@ -1524,8 +1525,17 @@ FloatRect AXIsolatedObject::relativeFrame() const
         if (relativeFrame.y() < 0)
             relativeFrame.setY(0);
     }
-
     relativeFrame.moveBy({ remoteFrameOffset() });
+
+    if (isControl) {
+        // It's very common for web developers to have a "screenreader only" CSS class that makes important
+        // elements like controls unrendered (e.g. via opacity:0 or CSS clipping) with a width and height
+        // of 1px. VoiceOver on macOS won't draw a cursor for 1px-large elements, so enforce a minimum size of 2px.
+        if (relativeFrame.width() == 1)
+            relativeFrame.setWidth(2);
+        if (relativeFrame.height() == 1)
+            relativeFrame.setHeight(2);
+    }
     return relativeFrame;
 }
 

@@ -3463,8 +3463,8 @@ std::pair<Path, WindRule> RenderLayer::computeClipPath(const LayoutSize& offsetF
 
 void RenderLayer::setupClipPath(GraphicsContext& context, GraphicsContextStateSaver& stateSaver, RegionContextStateSaver& regionContextStateSaver, const LayerPaintingInfo& paintingInfo, OptionSet<PaintLayerFlag>& paintFlags, const LayoutSize& offsetFromRoot)
 {
-    bool isCollectingRegions = paintFlags.contains(PaintLayerFlag::CollectingEventRegion) || is<AccessibilityRegionContext>(paintingInfo.regionContext);
-    if (!renderer().hasClipPath() || (context.paintingDisabled() && !isCollectingRegions) || paintingInfo.paintDirtyRect.isEmpty())
+    bool isCollectingEventRegion = paintFlags.contains(PaintLayerFlag::CollectingEventRegion);
+    if (!renderer().hasClipPath() || (context.paintingDisabled() && !isCollectingEventRegion) || paintingInfo.paintDirtyRect.isEmpty())
         return;
 
     // Applying clip-path on <clipPath> enforces us to use mask based clipping, so return false here to disable path based clipping.
@@ -3485,7 +3485,7 @@ void RenderLayer::setupClipPath(GraphicsContext& context, GraphicsContextStateSa
         // clippedContentBounds is used as the reference box for inlines, which is also poorly specified: https://github.com/w3c/csswg-drafts/issues/6383.
         auto [path, windRule] = computeClipPath(paintingOffsetFromRoot, clippedContentBounds);
 
-        if (isCollectingRegions) {
+        if (isCollectingEventRegion) {
             regionContextStateSaver.pushClip(path);
             return;
         }
