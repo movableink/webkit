@@ -43,6 +43,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, readonly) WKWebView *webView;
 @property (nonatomic, weak) id <WKInspectorViewControllerDelegate> delegate;
+@property (nonatomic) BOOL isAttached;
 
 - (instancetype)initWithConfiguration:(_WKInspectorConfiguration *)configuration inspectedPage:(NakedPtr<WebKit::WebPageProxy>)inspectedPage;
 

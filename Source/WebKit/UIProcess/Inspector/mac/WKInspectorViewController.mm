@@ -100,6 +100,21 @@ static void* const safeAreaInsetsKVOContext = (void*)&safeAreaInsetsKVOContext;
     return _delegate.getAutoreleased();
 }
 
+- (void)setIsAttached:(BOOL)newIsAttached
+{
+    if (newIsAttached == _isAttached)
+        return;
+
+    _isAttached = newIsAttached;
+    if (newIsAttached) {
+        [self.webView _setObscuredContentInsets:self.webView.safeAreaInsets immediate:NO];
+        [self.webView addObserver:self forKeyPath:safeAreaInsetsKVOKey options:0 context:safeAreaInsetsKVOContext];
+    } else {
+        [self.webView removeObserver:self forKeyPath:safeAreaInsetsKVOKey];
+        [self.webView _setObscuredContentInsets:NSEdgeInsets { } immediate:NO];
+    }
+}
+
 - (WKWebView *)webView
 {
     // Construct lazily so the client can set the delegate before the WebView is created.
@@ -113,9 +128,6 @@ static void* const safeAreaInsetsKVOContext = (void*)&safeAreaInsetsKVOContext;
         [_webView _setAutomaticallyAdjustsContentInsets:NO];
         [_webView _setUseSystemAppearance:YES];
         [_webView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-
-        [_webView _setObscuredContentInsets:self.webView.safeAreaInsets immediate:NO];
-        [_webView addObserver:self forKeyPath:safeAreaInsetsKVOKey options:0 context:safeAreaInsetsKVOContext];
     }
 
     return _webView.get();
@@ -288,7 +300,7 @@ static void* const safeAreaInsetsKVOContext = (void*)&safeAreaInsetsKVOContext;
     if (!!_delegate && [_delegate respondsToSelector:@selector(inspectorViewControllerInspectorDidCrash:)])
         [_delegate inspectorViewControllerInspectorDidCrash:self];
 
-    [webView removeObserver:self forKeyPath:safeAreaInsetsKVOKey];
+    self.isAttached = NO;
 }
 
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler
