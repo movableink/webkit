@@ -91,7 +91,6 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case Branch:
     case Unreachable:
     case DoubleRep:
-    case Int52Rep:
     case ValueRep:
     case PurifyNaN:
     case ExtractOSREntryLocal:
@@ -123,6 +122,16 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case CompareBelow:
     case CompareBelowEq:
     case CompareEqPtr:
+        break;
+
+    case Int52Rep:
+        switch (node->child1().useKind()) {
+        case RealNumberUse:
+        case DoubleRepRealUse:
+            return Exits;
+        default:
+            break;
+        }
         break;
 
     case GetByOffset:

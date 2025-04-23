@@ -5430,17 +5430,29 @@ private:
                                 indexForChecks, SpecInt52Any, Int52Constant, originForChecks,
                                 OpInfo(edge->constant()));
                         } else if (edge->hasDoubleResult()) {
-                            result = m_insertionSet.insertNode(
-                                indexForChecks, SpecInt52Any, Int52Rep, originForChecks,
-                                Edge(edge.node(), DoubleRepAnyIntUse));
+                            if (bytecodeCanIgnoreNegativeZero(node->arithNodeFlags())) {
+                                result = m_insertionSet.insertNode(
+                                    indexForChecks, SpecInt52Any, Int52Rep, originForChecks,
+                                    Edge(edge.node(), DoubleRepRealUse));
+                            } else {
+                                result = m_insertionSet.insertNode(
+                                    indexForChecks, SpecInt52Any, Int52Rep, originForChecks,
+                                    Edge(edge.node(), DoubleRepAnyIntUse));
+                            }
                         } else if (edge->shouldSpeculateInt32ForArithmetic()) {
                             result = m_insertionSet.insertNode(
                                 indexForChecks, SpecInt32Only, Int52Rep, originForChecks,
                                 Edge(edge.node(), Int32Use));
                         } else {
-                            result = m_insertionSet.insertNode(
-                                indexForChecks, SpecInt52Any, Int52Rep, originForChecks,
-                                Edge(edge.node(), AnyIntUse));
+                            if (bytecodeCanIgnoreNegativeZero(node->arithNodeFlags())) {
+                                result = m_insertionSet.insertNode(
+                                    indexForChecks, SpecInt52Any, Int52Rep, originForChecks,
+                                    Edge(edge.node(), RealNumberUse));
+                            } else {
+                                result = m_insertionSet.insertNode(
+                                    indexForChecks, SpecInt52Any, Int52Rep, originForChecks,
+                                    Edge(edge.node(), AnyIntUse));
+                            }
                         }
 
                         edge.setNode(result);
