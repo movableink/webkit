@@ -681,6 +681,12 @@ void ViewTransition::setupTransitionPseudoElements()
 
     for (auto& [name, capturedElement] : m_namedElements.map())
         setupDynamicStyleSheet(name, capturedElement);
+
+    if (RefPtr documentElement = document()->documentElement())
+        documentElement->invalidateStyleInternal();
+
+    // Ensure style & render tree are up-to-date.
+    protectedDocument()->updateStyleIfNeeded();
 }
 
 ExceptionOr<void> ViewTransition::checkForViewportSizeChange()

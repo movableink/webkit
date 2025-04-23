@@ -7852,7 +7852,3 @@ webkit.org/b/291456 fast/forms/state-restore-per-form.html [ Pass Timeout ]
 webkit.org/b/291459 imported/w3c/web-platform-tests/css/css-shapes/shape-outside/shape-image/shape-image-018.html [ Pass Failure ]
 
 webkit.org/b/291767 media/video-aspect-ratio.html [ Pass Failure ]
-
-# webkit.org/b/291904 REGRESSION(293851@main):[iOS MacOS Debug] ASSERTION FAILED: !layer || !layer->hasAncestor in fast/css/view-transitions-hide-under-page-background-color.html (flaky in EWS)
-[ Debug ] fast/css/view-transition-pseudo-element-styles-crash.html [ Skip ]
-[ Debug ] fast/css/view-transitions-hide-under-page-background-color.html [ Skip ]
