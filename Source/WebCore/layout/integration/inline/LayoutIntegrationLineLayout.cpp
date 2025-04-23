@@ -1125,10 +1125,29 @@ static LayoutRect flippedRectForWritingMode(const RenderBlockFlow& root, const F
     return flippedRect;
 }
 
+bool LineLayout::isContentConsideredStale() const
+{
+    auto* rootRenderer = m_rootLayoutBox->rendererForIntegration();
+    if (!rootRenderer)
+        return true;
+    if (rootRenderer->needsLayout())
+        return true;
+    if (rootRenderer->style().isSkippedRootOrSkippedContent())
+        return true;
+    if (m_lineDamage && m_lineDamage->hasDetachedContent())
+        return true;
+    return false;
+}
+
 void LineLayout::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, const RenderInline* layerRenderer)
 {
     if (!m_inlineContent)
         return;
+
+    if (isContentConsideredStale()) {
+        ASSERT_NOT_REACHED_WITH_SECURITY_IMPLICATION();
+        return;
+    }
 
     auto shouldPaintForPhase = [&] {
         switch (paintInfo.phase) {
@@ -1159,6 +1178,11 @@ bool LineLayout::hitTest(const HitTestRequest& request, HitTestResult& result, c
 
     if (!m_inlineContent)
         return false;
+
+    if (isContentConsideredStale()) {
+        ASSERT_NOT_REACHED_WITH_SECURITY_IMPLICATION();
+        return false;
+    }
 
     auto hitTestBoundingBox = locationInContainer.boundingBox();
     hitTestBoundingBox.moveBy(-accumulatedOffset);

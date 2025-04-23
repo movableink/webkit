@@ -161,7 +161,10 @@ private:
     void releaseCachesAndResetDamage();
 
     LayoutUnit physicalBaselineForLine(const InlineDisplay::Line&) const;
-    
+
+    bool isContentConsideredStale() const;
+
+private:
     CheckedPtr<Layout::ElementBox> m_rootLayoutBox;
     WeakPtr<Layout::LayoutState> m_layoutState;
     Layout::BlockFormattingState& m_blockFormattingState;
