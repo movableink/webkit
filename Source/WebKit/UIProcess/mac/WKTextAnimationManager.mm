@@ -167,6 +167,9 @@
 
     ASSERT(effect);
 
+    if (data.style == WebCore::TextAnimationType::Initial)
+        [_effectView setFrame:_webView->view().bounds];
+
     if (![_effectView superview])
         [_webView->view() addSubview:_effectView.get()];
 

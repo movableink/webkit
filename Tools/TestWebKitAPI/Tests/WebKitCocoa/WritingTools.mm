@@ -3183,6 +3183,76 @@ TEST(WritingTools, FocusWebViewAfterProofreadingAnimation)
     EXPECT_EQ([[webView window] firstResponder], webView.get());
 }
 
+TEST(WritingTools, CompositionAnimationSizing)
+{
+    RetainPtr session = adoptNS([[WTSession alloc] initWithType:WTSessionTypeComposition textViewDelegate:nil]);
+
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body id='p' contenteditable><p id='first'>AAAA BBBB CCCC</p></body>"]);
+    [webView focusDocumentBodyAndSelectAll];
+
+    __block bool finished = false;
+
+    [[webView writingToolsDelegate] willBeginWritingToolsSession:session.get() requestContexts:^(NSArray<WTContext *> *contexts) {
+        EXPECT_EQ(1UL, contexts.count);
+
+        EXPECT_WK_STREQ(@"AAAA BBBB CCCC", contexts.firstObject.attributedText.string);
+
+        [[webView writingToolsDelegate] writingToolsSession:session.get() didReceiveAction:WTActionCompositionRestart];
+
+        EXPECT_WK_STREQ(@"AAAA BBBB CCCC", [webView contentsAsStringWithoutNBSP]);
+
+        RetainPtr attributedText = adoptNS([[NSAttributedString alloc] initWithString:@"ZZZZ"]);
+
+        [[webView writingToolsDelegate] compositionSession:session.get() didReceiveText:attributedText.get() replacementRange:NSMakeRange(5, 4) inContext:contexts.firstObject finished:NO];
+
+        [webView waitForContentValue:@"AAAA ZZZZ CCCC"];
+
+        [[webView writingToolsDelegate] compositionSession:session.get() didReceiveText:attributedText.get() replacementRange:NSMakeRange(5, 4) inContext:contexts.firstObject finished:YES];
+
+        [webView waitForNextPresentationUpdate];
+
+        EXPECT_WK_STREQ(@"AAAA ZZZZ CCCC", [webView contentsAsStringWithoutNBSP]);
+
+        [webView _synchronouslyExecuteEditCommand:@"Undo" argument:@""];
+
+        EXPECT_WK_STREQ(@"AAAA BBBB CCCC", [webView contentsAsStringWithoutNBSP]);
+
+        auto frame = [webView frame];
+        frame.size.width = 800;
+        [webView setFrame:frame];
+
+        [[webView writingToolsDelegate] writingToolsSession:session.get() didReceiveAction:WTActionCompositionRestart];
+
+        EXPECT_WK_STREQ(@"AAAA BBBB CCCC", [webView contentsAsStringWithoutNBSP]);
+
+        [[webView writingToolsDelegate] compositionSession:session.get() didReceiveText:attributedText.get() replacementRange:NSMakeRange(5, 4) inContext:contexts.firstObject finished:NO];
+
+        [webView waitForContentValue:@"AAAA ZZZZ CCCC"];
+
+        bool foundEffectView = false;
+        for (NSView *subview in [webView subviews]) {
+            if ([subview isKindOfClass:[_WTTextEffectView class]]) {
+                foundEffectView = true;
+                EXPECT_EQ(subview.frame, NSMakeRect(0, 0, 800, 568));
+                break;
+            }
+        }
+        EXPECT_TRUE(foundEffectView);
+
+        [[webView writingToolsDelegate] compositionSession:session.get() didReceiveText:attributedText.get() replacementRange:NSMakeRange(5, 4) inContext:contexts.firstObject finished:YES];
+
+        [webView waitForNextPresentationUpdate];
+
+        EXPECT_WK_STREQ(@"AAAA ZZZZ CCCC", [webView contentsAsStringWithoutNBSP]);
+
+        [[webView writingToolsDelegate] didEndWritingToolsSession:session.get() accepted:YES];
+
+        finished = true;
+    }];
+
+    TestWebKitAPI::Util::run(&finished);
+}
+
 // rdar://144725722 (Disable 6x TestWebKitAPI.WritingTools.* (api-tests))
 TEST(WritingTools, DISABLED_ContextMenuItemsNonEditable)
 {
