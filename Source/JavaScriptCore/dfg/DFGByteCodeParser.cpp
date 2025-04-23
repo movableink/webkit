@@ -1771,6 +1771,8 @@ void ByteCodeParser::inlineCall(Node* callTargetNode, Operand result, CallVarian
     CodeBlock* codeBlock = callee.functionExecutable()->baselineCodeBlockFor(specializationKind);
     insertChecks(codeBlock);
 
+    dataLogLnIf(Options::printEachDFGFTLInlineCall(), "[InlineCall] JITType: ", m_graph.m_plan.jitType(), " | Callee: ", codeBlock->inferredNameWithHash(), " -> Caller: ", m_graph.m_codeBlock->inferredNameWithHash());
+
     // FIXME: Don't flush constants!
 
     // arityFixupCount and numberOfStackPaddingSlots are different. While arityFixupCount does not consider about stack alignment,
