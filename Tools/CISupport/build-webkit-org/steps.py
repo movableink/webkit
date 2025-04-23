@@ -310,16 +310,6 @@ class KillOldProcesses(shell.Compile):
     command = ["python3", "Tools/CISupport/kill-old-processes", "buildbot"]
 
 
-class PruneCoreSymbolicationdCacheIfTooLarge(shell.ShellCommandNewStyle):
-    name = "prune-coresymbolicationd-cache-if-too-large"
-    description = ["pruning coresymbolicationd cache to < 10GB"]
-    descriptionDone = ["pruned coresymbolicationd cache"]
-    flunkOnFailure = False
-    haltOnFailure = False
-    command = ["sudo", "python3", "Tools/Scripts/delete-if-too-large",
-               "/System/Library/Caches/com.apple.coresymbolicationd"]
-
-
 class TriggerCrashLogSubmission(shell.Compile):
     name = "trigger-crash-log-submission"
     description = ["triggering crash log submission"]

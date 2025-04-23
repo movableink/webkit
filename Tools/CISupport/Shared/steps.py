@@ -311,3 +311,13 @@ class PrintClangVersionAfterUpdate(PrintClangVersion, ShellMixin):
         if self.results != SUCCESS:
             self.build.buildFinished(['Failed to set up analyzer, retrying build'], RETRY)
         return super().getResultSummary()
+
+
+class PruneCoreSymbolicationdCacheIfTooLarge(shell.ShellCommandNewStyle):
+    name = "prune-coresymbolicationd-cache-if-too-large"
+    description = ["pruning coresymbolicationd cache to < 10GB"]
+    descriptionDone = ["pruned coresymbolicationd cache"]
+    flunkOnFailure = False
+    haltOnFailure = False
+    command = ["sudo", "python3", "Tools/Scripts/delete-if-too-large",
+               "/System/Library/Caches/com.apple.coresymbolicationd"]

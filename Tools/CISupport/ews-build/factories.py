@@ -41,6 +41,8 @@ class Factory(factory.BuildFactory):
         self.addStep(ValidateChange(branches=self.branches))
         self.addStep(PrintConfiguration())
         self.addStep(CleanGitRepo())
+        if platform.startswith('mac'):
+            self.addStep(PruneCoreSymbolicationdCacheIfTooLarge())
         self.addStep(SetCredentialHelper())
         self.addStep(CheckOutSource())
         self.addStep(FetchBranches())
