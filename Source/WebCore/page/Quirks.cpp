@@ -1454,8 +1454,16 @@ bool Quirks::needsIPhoneUserAgent(const URL& url)
 
 std::optional<String> Quirks::needsCustomUserAgentOverride(const URL& url, const String& applicationNameForUserAgent)
 {
-#if PLATFORM(COCOA)
+
     auto hostDomain = RegistrableDomain(url);
+    auto firefoxUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:139.0) Gecko/20100101 Firefox/139.0"_s;
+    // FIXME(rdar://83078414): Remove once 101edu.co and aktiv.com removes the unsupported message.
+    if (hostDomain.string() == "app.101edu.co")
+        return firefoxUserAgent;
+    if (hostDomain.string() == "app.aktiv.com")
+        return firefoxUserAgent;
+
+#if PLATFORM(COCOA)
     // FIXME(rdar://148759791): Remove this once TikTok removes the outdated error message.
     if (hostDomain.string() == "tiktok.com"_s)
         return makeStringByReplacingAll(standardUserAgentWithApplicationName(applicationNameForUserAgent), "like Gecko"_s, "like Gecko, like Chrome/136."_s);
