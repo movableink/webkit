@@ -83,7 +83,7 @@ WK_NO_STATIC_INITIALIZERS_Production__ = $(WK_ERROR_WHEN_LINKING_WITH_STATIC_INI
 WK_NO_STATIC_INITIALIZERS_Production_NO_ = $(WK_ERROR_WHEN_LINKING_WITH_STATIC_INITIALIZERS);
 
 // Work around rdar://139232237 by hiding all exported symbols from the "Cxx" module.
-UNEXPORT_SWIFT_CXX_LDFLAGS = -Wl,-unexported_symbol,_$s*3Cxx*;
+UNEXPORT_SWIFT_CXX_LDFLAGS = -Wl,-unexported_symbol,_$s*3Cxx* -Wl,-unexported_symbol,_$s*defaultArg*;
 
 OTHER_LDFLAGS = $(inherited) $(UNEXPORT_SWIFT_CXX_LDFLAGS) $(SOURCE_VERSION_LDFLAGS) $(WK_NO_STATIC_INITIALIZERS);
 
