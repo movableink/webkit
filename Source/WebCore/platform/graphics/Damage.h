@@ -354,7 +354,7 @@ private:
 };
 
 class FrameDamageHistory {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FrameDamageHistory);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     const Vector<Region>& damageInformation() const { return m_damageInfo; }
 
