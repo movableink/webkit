@@ -1,0 +1,14 @@
+Start outside shadow DOM
+outerHost
+End outside shadow DOM
+
+PASS If selection crosses shadow boundaries, getRangeAt(0) should throw an IndexSizeError because the end is not in the document tree.
+FAIL modify getRangeAt() range: setStart() to disconnected node will collapse and remove the live range from the selection. assert_true: expected true got false
+FAIL modify getRangeAt() range: setEnd() crosses shadow boundary into the shadow DOM and after start, which collapses live range. Composed selection range is not collapsed. Type error
+FAIL modify getRangeAt() range: setStart() crosses shadow boundary into the shadow DOM and before end, which collapses live range. Composed selection range is not collapsed. Type error
+FAIL modify getRangeAt() range: setStart() crosses shadow boundary into the shadow DOM and after end, which collapses both live range and composed selection range. Type error
+FAIL modify getRangeAt() range: selectNode() innerHost for all ranges. Type error
+FAIL modify getRangeAt() range: collapse() collapses all ranges. Type error
+FAIL modify createRange() range: adding to selection sets the selection Type error
+FAIL modify createRange() range: added to selection before setStart/setEnd calls. Type error
+

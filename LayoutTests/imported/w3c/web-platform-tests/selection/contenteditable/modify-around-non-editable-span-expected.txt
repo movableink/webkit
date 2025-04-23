@@ -1,0 +1,4 @@
+non-editableeditablenon-editable
+
+FAIL getSelection().modify("move", "forward", "character") when " []<span contenteditable=false>" EditorTestUtils.getRangeDescription is not a function. (In 'EditorTestUtils.getRangeDescription(getSelection().getRangeAt(0))', 'EditorTestUtils.getRangeDescription' is undefined)
+

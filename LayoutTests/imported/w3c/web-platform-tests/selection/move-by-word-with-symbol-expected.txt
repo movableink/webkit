@@ -1,0 +1,10 @@
+~>>>>>p+++
+
+
+FAIL Symbols should be included while moving backward by word assert_equals: Caret should move to the beginning expected 0 but got 5
+FAIL Symbols should be included while moving forward by word assert_equals: Caret should move to the end expected 10 but got 8
+FAIL Symbols should be included while moving backward by word in textarea element promise_test: Unhandled rejection with value: object "TypeError: utils.sendMoveWordLeftKey is not a function. (In 'utils.sendMoveWordLeftKey()', 'utils.sendMoveWordLeftKey' is undefined)"
+FAIL Symbols should be included while moving forward by word in textarea element promise_test: Unhandled rejection with value: object "TypeError: utils.sendMoveWordRightKey is not a function. (In 'utils.sendMoveWordRightKey()', 'utils.sendMoveWordRightKey' is undefined)"
+FAIL Symbols should be included while moving backward by word in input element promise_test: Unhandled rejection with value: object "TypeError: utils.sendMoveWordLeftKey is not a function. (In 'utils.sendMoveWordLeftKey()', 'utils.sendMoveWordLeftKey' is undefined)"
+FAIL Symbols should be included while moving forward by word in input element promise_test: Unhandled rejection with value: object "TypeError: utils.sendMoveWordRightKey is not a function. (In 'utils.sendMoveWordRightKey()', 'utils.sendMoveWordRightKey' is undefined)"
+

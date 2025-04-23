@@ -982,6 +982,12 @@ webkit.org/b/286131 imported/w3c/web-platform-tests/css/css-transforms/transform
 webkit.org/b/286132 inspector/debugger/breakpoints/resolved-dump-all-inline-script-pause-locations.html [ Crash ]
 webkit.org/b/286133 imported/w3c/web-platform-tests/css/css-view-transitions/transition-in-hidden-page.html [ Crash ]
 
+imported/w3c/web-platform-tests/selection/shadow-dom/cross-shadow-boundary-6.html [ Skip ]
+imported/w3c/web-platform-tests/selection/shadow-dom/tentative/Range-isPointInRange.html [ Skip ]
+imported/w3c/web-platform-tests/selection/shadow-dom/tentative/Selection-getComposedRanges-range-update.html [ Skip ]
+imported/w3c/web-platform-tests/selection/shadow-dom/tentative/Selection-getComposedRanges.html [ Skip ]
+imported/w3c/web-platform-tests/selection/shadow-dom/tentative/Selection-isCollapsed.html [ Skip ]
+
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Crashing tests
 #////////////////////////////////////////////////////////////////////////////////////////

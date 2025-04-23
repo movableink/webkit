@@ -14,10 +14,16 @@ Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
 List of files:
+/LayoutTests/imported/w3c/web-platform-tests/selection/caret/after-designMode-off-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/caret/after-designMode-off-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/caret/after-designMode-off.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/caret/collapse-pre-linestart-1-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/caret/collapse-pre-linestart-1.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/caret/collapse-pre-linestart-2-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/caret/collapse-pre-linestart-2.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/caret/collapse-pre-linestart-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/caret/editing-host-has-only-invisible-br-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/caret/editing-host-has-only-invisible-br-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/caret/editing-host-has-only-invisible-br.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/caret/empty-elements.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/caret/move-around-contenteditable-false.html

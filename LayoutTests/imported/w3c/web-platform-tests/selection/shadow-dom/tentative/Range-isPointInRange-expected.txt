@@ -1,0 +1,5 @@
+
+FAIL isPointInRange() test for collapsed selection Type error
+PASS isPointInRange() test for non-collapsed selection
+Start
+End

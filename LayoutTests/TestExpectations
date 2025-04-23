@@ -424,7 +424,6 @@ imported/w3c/web-platform-tests/referrer-policy/generic/unsupported-csp-referrer
 
 # These tests times out. We should fix that.
 imported/w3c/web-platform-tests/selection/collapse-30.html [ Skip ]
-imported/w3c/web-platform-tests/selection/dir-manual.html [ Skip ]
 imported/w3c/web-platform-tests/editing/crashtests/inserthorizontalrule-in-textarea-in-editor-and-undo-on-error-events.html [ Skip ]
 imported/w3c/web-platform-tests/editing/crashtests/designMode-caret-change.html [ Skip ]
 imported/w3c/web-platform-tests/editing/crashtests/insertparagraph-in-listitem-in-svg-followed-by-collapsible-spaces.html [ Skip ]
@@ -433,6 +432,11 @@ imported/w3c/web-platform-tests/selection/caret/move-around-contenteditable-fals
 
 # This crash test is a timeout.
 imported/w3c/web-platform-tests/selection/crashtests/selectall-and-find-svg-text-on-selectstart.html [ Timeout ]
+
+imported/w3c/web-platform-tests/selection/shadow-dom/cross-shadow-boundary-1.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/selection/shadow-dom/cross-shadow-boundary-select-document.html [ ImageOnlyFailure ]
+
+imported/w3c/web-platform-tests/selection/fire-selectionchange-event-on-pressing-backspace.html [ Pass Failure ]
 
 # This test hits a debug assertion in WebKit
 webkit.org/b/266465 imported/w3c/web-platform-tests/editing/run/delete.html?6001-7000 [ Skip ]

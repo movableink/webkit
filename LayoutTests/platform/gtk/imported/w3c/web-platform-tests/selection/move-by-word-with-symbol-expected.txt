@@ -1,0 +1,10 @@
+~>>>>>p+++
+
+
+PASS Symbols should be included while moving backward by word
+PASS Symbols should be included while moving forward by word
+FAIL Symbols should be included while moving backward by word in textarea element promise_test: Unhandled rejection with value: object "TypeError: utils.sendMoveWordLeftKey is not a function. (In 'utils.sendMoveWordLeftKey()', 'utils.sendMoveWordLeftKey' is undefined)"
+FAIL Symbols should be included while moving forward by word in textarea element promise_test: Unhandled rejection with value: object "TypeError: utils.sendMoveWordRightKey is not a function. (In 'utils.sendMoveWordRightKey()', 'utils.sendMoveWordRightKey' is undefined)"
+FAIL Symbols should be included while moving backward by word in input element promise_test: Unhandled rejection with value: object "TypeError: utils.sendMoveWordLeftKey is not a function. (In 'utils.sendMoveWordLeftKey()', 'utils.sendMoveWordLeftKey' is undefined)"
+FAIL Symbols should be included while moving forward by word in input element promise_test: Unhandled rejection with value: object "TypeError: utils.sendMoveWordRightKey is not a function. (In 'utils.sendMoveWordRightKey()', 'utils.sendMoveWordRightKey' is undefined)"
+

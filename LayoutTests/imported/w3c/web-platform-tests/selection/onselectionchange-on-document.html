@@ -11,7 +11,7 @@ promise_test(() => {
   return new Promise(resolve => {
     let didFireSelectionChangeEvent = false;
     document.addEventListener("selectionchange", () => { didFireSelectionChangeEvent = true; resolve(); }, {once: true});
-    getSelection().setPosition(container, 0);
+    getSelection().setPosition(container, 1);
     assert_false(didFireSelectionChangeEvent);
   });
 }, "selectionchange event on document fires");
@@ -21,11 +21,11 @@ promise_test(() => {
     let selectionChangeCount = 0;
     document.addEventListener("selectionchange", () => ++selectionChangeCount);
     container.innerHTML = '<span><br></span><span><br></span>';
-    getSelection().setPosition(container, 0);
+    getSelection().setPosition(container, 1);
     assert_equals(selectionChangeCount, 0);
     getSelection().setPosition(container, 2);
     assert_equals(selectionChangeCount, 0);
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise(setTimeout);
     assert_equals(selectionChangeCount, 1);
   })();
 }, "selectionchange event on document fires once");
@@ -35,17 +35,17 @@ promise_test(() => {
     let selectionChangeCount = 0;
     document.addEventListener("selectionchange", () => ++selectionChangeCount);
     container.innerHTML = '<span><br></span><span><br></span>';
-    getSelection().setPosition(container, 0);
+    getSelection().setPosition(container, 1);
     assert_equals(selectionChangeCount, 0);
     getSelection().setPosition(container, 2);
     assert_equals(selectionChangeCount, 0);
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise(setTimeout);
     assert_equals(selectionChangeCount, 1);
     getSelection().setPosition(container, 0);
     assert_equals(selectionChangeCount, 1);
     getSelection().setPosition(container, 2);
     assert_equals(selectionChangeCount, 1);
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise(setTimeout);
     assert_equals(selectionChangeCount, 2);
   })();
 }, "task to fire selectionchange event gets queued each time selection is mutated");
@@ -61,11 +61,11 @@ promise_test(() => {
       ++selectionChangeCount;
     });
     container.innerHTML = '<b><br></b><b><br></b>';
-    getSelection().setPosition(container, 0);
+    getSelection().setPosition(container, 1);
     assert_equals(selectionChangeCount, 0);
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise(setTimeout);
     assert_equals(selectionChangeCount, 1);
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise(setTimeout);
     assert_equals(selectionChangeCount, 2);
   })();
 }, "has scheduled selectionchange event is set to false at the beginning of a task to fire selectionchange event");
