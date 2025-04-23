@@ -4132,7 +4132,7 @@ template <typename LexerType>
 template <typename TreeBuilder> bool Parser<LexerType>::isSimpleAssignmentTarget(TreeBuilder& context, TreeExpression expr, bool ignoreStrictCheck)
 {
     // Web compatibility concerns prevent us from handling a function call LHS as an early error in sloppy mode.
-    // This behavior is currently unspecified, but see: https://github.com/tc39/ecma262/issues/257#issuecomment-195106880
+    // See https://github.com/tc39/ecma262/pull/3568 for details.
     return context.isLocation(expr) || (!(strictMode() || ignoreStrictCheck) && context.isFunctionCall(expr));
 }
 

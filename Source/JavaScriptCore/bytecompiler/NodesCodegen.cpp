@@ -2977,6 +2977,7 @@ RegisterID* PostfixNode::emitBytecode(BytecodeGenerator& generator, RegisterID* 
         return emitDot(generator, dst);
 
     ASSERT(m_expr->isFunctionCall());
+    generator.emitNode(m_expr);
     return emitThrowReferenceError(generator, m_operator == Operator::PlusPlus
         ? "Postfix ++ operator applied to value that is not a reference."_s
         : "Postfix -- operator applied to value that is not a reference."_s,
@@ -3267,6 +3268,7 @@ RegisterID* PrefixNode::emitBytecode(BytecodeGenerator& generator, RegisterID* d
         return emitDot(generator, dst);
 
     ASSERT(m_expr->isFunctionCall());
+    generator.emitNode(m_expr);
     return emitThrowReferenceError(generator, m_operator == Operator::PlusPlus
         ? "Prefix ++ operator applied to value that is not a reference."_s
         : "Prefix -- operator applied to value that is not a reference."_s,
@@ -4151,6 +4153,8 @@ RegisterID* ShortCircuitReadModifyDotNode::emitBytecode(BytecodeGenerator& gener
 
 RegisterID* AssignErrorNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 {
+    ASSERT(m_left->isFunctionCall());
+    generator.emitNode(m_left);
     return emitThrowReferenceError(generator, "Left side of assignment is not a reference."_s, dst);
 }
 
@@ -4658,6 +4662,8 @@ void ForInNode::emitLoopHeader(BytecodeGenerator& generator, RegisterID* propert
 void ForInNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 {
     if (!m_lexpr->isAssignResolveNode() && !m_lexpr->isAssignmentLocation()) {
+        ASSERT(m_lexpr->isFunctionCall());
+        generator.emitNode(m_lexpr);
         emitThrowReferenceError(generator, "Left side of for-in statement is not a reference."_s);
         return;
     }
@@ -4722,6 +4728,8 @@ void ForInNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 void ForOfNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 {
     if (!m_lexpr->isAssignmentLocation()) {
+        ASSERT(m_lexpr->isFunctionCall());
+        generator.emitNode(m_lexpr);
         emitThrowReferenceError(generator, "Left side of for-of statement is not a reference."_s);
         return;
     }

@@ -1617,10 +1617,12 @@ namespace JSC {
 
     class AssignErrorNode final : public ExpressionNode, public ThrowableExpressionData {
     public:
-        AssignErrorNode(const JSTokenLocation&, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd);
+        AssignErrorNode(const JSTokenLocation&, ExpressionNode*, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd);
 
     private:
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = nullptr) final;
+
+        ExpressionNode* m_left;
     };
     
     class CommaNode final : public ExpressionNode {
