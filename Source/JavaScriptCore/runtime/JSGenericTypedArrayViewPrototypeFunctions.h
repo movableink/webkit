@@ -784,6 +784,152 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncForEach(VM& vm, JSGlo
 }
 
 template<typename ViewClass>
+ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncFind(VM& vm, JSGlobalObject* globalObject, CallFrame* callFrame)
+{
+    // https://tc39.es/ecma262/#sec-%typedarray%.prototype.find
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    ViewClass* thisObject = jsCast<ViewClass*>(callFrame->thisValue());
+    validateTypedArray(globalObject, thisObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    size_t length = thisObject->length();
+
+    JSValue functorValue = callFrame->argument(0);
+    auto callData = JSC::getCallData(functorValue);
+    if (UNLIKELY(callData.type == CallData::Type::None))
+        return throwVMTypeError(globalObject, scope, "TypedArray.prototype.find callback must be a function"_s);
+
+    JSValue thisArg = callFrame->argument(1);
+
+    if (LIKELY(callData.type == CallData::Type::JS)) {
+        CachedCall cachedCall(globalObject, jsCast<JSFunction*>(functorValue), 3);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        scope.release();
+
+        JSValue found = jsUndefined();
+        typedArrayViewForEachImpl(globalObject, vm, thisObject, length, [&](JSValue element, size_t index) ALWAYS_INLINE_LAMBDA -> IterationStatus {
+            auto scope = DECLARE_THROW_SCOPE(vm);
+
+            JSValue result = cachedCall.callWithArguments(globalObject, thisArg, element, jsNumber(index), thisObject);
+            RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, { });
+
+            scope.release();
+            if (result.toBoolean(globalObject)) {
+                found = element;
+                return IterationStatus::Done;
+            }
+            return IterationStatus::Continue;
+        });
+        return JSValue::encode(found);
+    }
+
+    MarkedArgumentBuffer args;
+
+    scope.release();
+
+    JSValue found = jsUndefined();
+    typedArrayViewForEachImpl(globalObject, vm, thisObject, length, [&](JSValue element, size_t index) ALWAYS_INLINE_LAMBDA -> IterationStatus {
+        auto scope = DECLARE_THROW_SCOPE(vm);
+
+        args.clear();
+
+        args.append(element);
+        args.append(jsNumber(index));
+        args.append(thisObject);
+        if (UNLIKELY(args.hasOverflowed())) {
+            throwOutOfMemoryError(globalObject, scope);
+            return IterationStatus::Continue;
+        }
+
+        JSValue result = call(globalObject, functorValue, callData, thisArg, args);
+        RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, { });
+
+        scope.release();
+        if (result.toBoolean(globalObject)) {
+            found = element;
+            return IterationStatus::Done;
+        }
+        return IterationStatus::Continue;
+    });
+    return JSValue::encode(found);
+}
+
+template<typename ViewClass>
+ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncFindIndex(VM& vm, JSGlobalObject* globalObject, CallFrame* callFrame)
+{
+    // https://tc39.es/ecma262/#sec-%typedarray%.prototype.findindex
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    ViewClass* thisObject = jsCast<ViewClass*>(callFrame->thisValue());
+    validateTypedArray(globalObject, thisObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    size_t length = thisObject->length();
+
+    JSValue functorValue = callFrame->argument(0);
+    auto callData = JSC::getCallData(functorValue);
+    if (UNLIKELY(callData.type == CallData::Type::None))
+        return throwVMTypeError(globalObject, scope, "TypedArray.prototype.findIndex callback must be a function"_s);
+
+    JSValue thisArg = callFrame->argument(1);
+
+    if (LIKELY(callData.type == CallData::Type::JS)) {
+        CachedCall cachedCall(globalObject, jsCast<JSFunction*>(functorValue), 3);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        scope.release();
+
+        JSValue found = jsNumber(-1);
+        typedArrayViewForEachImpl(globalObject, vm, thisObject, length, [&](JSValue element, size_t index) ALWAYS_INLINE_LAMBDA -> IterationStatus {
+            auto scope = DECLARE_THROW_SCOPE(vm);
+
+            JSValue result = cachedCall.callWithArguments(globalObject, thisArg, element, jsNumber(index), thisObject);
+            RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, { });
+
+            scope.release();
+            if (result.toBoolean(globalObject)) {
+                found = jsNumber(index);
+                return IterationStatus::Done;
+            }
+            return IterationStatus::Continue;
+        });
+        return JSValue::encode(found);
+    }
+
+    MarkedArgumentBuffer args;
+
+    scope.release();
+
+    JSValue found = jsNumber(-1);
+    typedArrayViewForEachImpl(globalObject, vm, thisObject, length, [&](JSValue element, size_t index) ALWAYS_INLINE_LAMBDA -> IterationStatus {
+        auto scope = DECLARE_THROW_SCOPE(vm);
+
+        args.clear();
+
+        args.append(element);
+        args.append(jsNumber(index));
+        args.append(thisObject);
+        if (UNLIKELY(args.hasOverflowed())) {
+            throwOutOfMemoryError(globalObject, scope);
+            return IterationStatus::Continue;
+        }
+
+        JSValue result = call(globalObject, functorValue, callData, thisArg, args);
+        RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, { });
+
+        scope.release();
+        if (result.toBoolean(globalObject)) {
+            found = jsNumber(index);
+            return IterationStatus::Done;
+        }
+        return IterationStatus::Continue;
+    });
+    return JSValue::encode(found);
+}
+
+template<typename ViewClass>
 ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncReverse(VM& vm, JSGlobalObject* globalObject, CallFrame* callFrame)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
