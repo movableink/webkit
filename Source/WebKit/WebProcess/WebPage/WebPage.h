@@ -2028,6 +2028,7 @@ private:
     void scheduleEditorStateUpdateAfterAnimationIfNeeded(const WebCore::Element&);
     void computeEnclosingLayerID(EditorState&, const WebCore::VisibleSelection&) const;
     bool mainFramePlugInDefersScalingToViewport() const;
+    bool mainFramePlugInRejectsZeroViewLayoutSizeUpdates() const;
 
     void addTextInteractionSources(OptionSet<TextInteractionSource>);
     void removeTextInteractionSources(OptionSet<TextInteractionSource>);

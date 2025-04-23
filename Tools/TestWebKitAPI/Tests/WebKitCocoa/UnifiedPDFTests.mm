@@ -493,6 +493,34 @@ UNIFIED_PDF_TEST(KeepScrollPositionAtOriginAfterAnimatedResize)
     checkOffsetsAreApproximatelyEqual(offsetsAfterResizing[1], offsetsAfterResizing[3]);
 }
 
+UNIFIED_PDF_TEST(ScrollOffsetUnchangedWithZeroSizeViewportUpdate)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 600, 800) configuration:configurationForWebViewTestingUnifiedPDF().get()]);
+    RetainPtr request = [NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"multiple-pages" withExtension:@"pdf"]];
+    [webView synchronouslyLoadRequest:request.get()];
+    [webView waitForNextPresentationUpdate];
+
+    auto expectedScrollOffset = CGPointMake(0, 400);
+    [[webView scrollView] setContentOffset:expectedScrollOffset];
+    [webView waitForNextVisibleContentRectUpdate];
+    [webView waitForNextPresentationUpdate];
+
+    EXPECT_EQ([webView scrollView].contentOffset, expectedScrollOffset);
+
+    auto previousLayoutSize = [webView scrollView].bounds.size;
+    [webView _overrideLayoutParametersWithMinimumLayoutSize:CGSizeZero minimumUnobscuredSizeOverride:CGSizeZero maximumUnobscuredSizeOverride:CGSizeZero];
+    [webView waitForNextVisibleContentRectUpdate];
+    [webView waitForNextPresentationUpdate];
+
+    EXPECT_EQ([webView scrollView].contentOffset, expectedScrollOffset);
+
+    [webView _overrideLayoutParametersWithMinimumLayoutSize:previousLayoutSize minimumUnobscuredSizeOverride:previousLayoutSize maximumUnobscuredSizeOverride:previousLayoutSize];
+    [webView waitForNextVisibleContentRectUpdate];
+    [webView waitForNextPresentationUpdate];
+
+    EXPECT_EQ([webView scrollView].contentOffset, expectedScrollOffset);
+}
+
 #endif // PLATFORM(IOS_FAMILY)
 
 #if HAVE(UIKIT_WITH_MOUSE_SUPPORT)

@@ -4288,6 +4288,9 @@ void WebPage::setViewportConfigurationViewLayoutSize(const FloatSize& size, doub
     if (!m_viewportConfiguration.isKnownToLayOutWiderThanViewport())
         m_viewportConfiguration.setMinimumEffectiveDeviceWidthForShrinkToFit(0);
 
+    if (size.isZero() && mainFramePlugInRejectsZeroViewLayoutSizeUpdates())
+        return;
+
     bool mainFramePluginOverridesViewScale = mainFramePlugInDefersScalingToViewport();
 
     m_baseViewportLayoutSizeScaleFactor = [&] {
@@ -4761,6 +4764,15 @@ bool WebPage::shouldIgnoreMetaViewport() const
 }
 
 bool WebPage::mainFramePlugInDefersScalingToViewport() const
+{
+#if ENABLE(PDF_PLUGIN)
+    if (RefPtr plugin = mainFramePlugIn(); plugin && !plugin->pluginHandlesPageScaleFactor())
+        return true;
+#endif
+    return false;
+}
+
+bool WebPage::mainFramePlugInRejectsZeroViewLayoutSizeUpdates() const
 {
 #if ENABLE(PDF_PLUGIN)
     if (RefPtr plugin = mainFramePlugIn(); plugin && !plugin->pluginHandlesPageScaleFactor())
