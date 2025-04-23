@@ -30,6 +30,7 @@
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(COCOA)
+#include "CocoaView.h"
 #include <wtf/RetainPtr.h>
 #include <wtf/WeakObjCPtr.h>
 #endif
@@ -43,12 +44,8 @@ OBJC_CLASS WebValidationBubbleTapRecognizer;
 OBJC_CLASS WebValidationBubbleViewController;
 #endif
 
-#if PLATFORM(MAC)
-OBJC_CLASS NSView;
-using PlatformView = NSView;
-#elif PLATFORM(IOS_FAMILY)
-OBJC_CLASS UIView;
-using PlatformView = UIView;
+#if PLATFORM(COCOA)
+using PlatformView = CocoaView;
 #elif PLATFORM(GTK)
 using PlatformView = GtkWidget;
 #else

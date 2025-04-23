@@ -530,7 +530,7 @@ public:
     void setShouldPlayToPlaybackTarget(WebCore::PlaybackTargetClientContextIdentifier, bool) final;
     void playbackTargetPickerWasDismissed(WebCore::PlaybackTargetClientContextIdentifier) final;
     bool alwaysOnLoggingAllowed() const final { return protectedPage()->isAlwaysOnLoggingAllowed(); }
-    RetainPtr<PlatformView> platformView() const final;
+    RetainPtr<CocoaView> platformView() const final;
 #endif
 
     Ref<PageLoadState> protectedPageLoadState() { return pageLoadState; }

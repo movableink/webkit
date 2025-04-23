@@ -45,7 +45,7 @@ static void *boundsObservationContext = &boundsObservationContext;
 const void* const webViewVisualIdentificationOverlayKey = &webViewVisualIdentificationOverlayKey;
 
 @implementation WebViewVisualIdentificationOverlay {
-    RetainPtr<PlatformView> _view;
+    RetainPtr<CocoaView> _view;
 
     RetainPtr<CALayer> _layer;
     RetainPtr<NSString> _kind;
@@ -59,7 +59,7 @@ const void* const webViewVisualIdentificationOverlayKey = &webViewVisualIdentifi
     return *shouldIdentifyWebViews;
 }
 
-+ (void)installForWebViewIfNeeded:(PlatformView *)view kind:(NSString *)kind deprecated:(BOOL)isDeprecated
++ (void)installForWebViewIfNeeded:(CocoaView *)view kind:(NSString *)kind deprecated:(BOOL)isDeprecated
 {
     if (![self shouldIdentifyWebViews])
         return;
@@ -67,7 +67,7 @@ const void* const webViewVisualIdentificationOverlayKey = &webViewVisualIdentifi
     objc_setAssociatedObject(self, webViewVisualIdentificationOverlayKey, overlay.get(), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
-- (instancetype)initWithWebView:(PlatformView *)webView kind:(NSString *)kind deprecated:(BOOL)isDeprecated
+- (instancetype)initWithWebView:(CocoaView *)webView kind:(NSString *)kind deprecated:(BOOL)isDeprecated
 {
     self = [super init];
     if (!self)

@@ -80,10 +80,10 @@
 
 #define MESSAGE_CHECK(assertion) MESSAGE_CHECK_BASE(assertion, m_page->legacyMainFrameProcess().connection())
 
-@interface WKLayerHostView : PlatformView
+@interface WKLayerHostView : CocoaView
 @property (nonatomic, assign) uint32_t contextID;
 #if USE(EXTENSIONKIT)
-@property (nonatomic, strong) PlatformView *visibilityPropagationView;
+@property (nonatomic, strong) CocoaView *visibilityPropagationView;
 #endif
 @end
 
@@ -92,7 +92,7 @@
     WeakObjCPtr<UIWindow> _window;
 #endif
 #if USE(EXTENSIONKIT)
-    RetainPtr<PlatformView> _visibilityPropagationView;
+    RetainPtr<CocoaView> _visibilityPropagationView;
 @public
     RetainPtr<BELayerHierarchyHostingView> _hostingView;
 #endif
@@ -139,12 +139,12 @@
 #endif
 
 #if USE(EXTENSIONKIT)
-- (PlatformView *)visibilityPropagationView
+- (CocoaView *)visibilityPropagationView
 {
     return _visibilityPropagationView.get();
 }
 
-- (void)setVisibilityPropagationView:(PlatformView *)visibilityPropagationView
+- (void)setVisibilityPropagationView:(CocoaView *)visibilityPropagationView
 {
     [_visibilityPropagationView removeFromSuperview];
     _visibilityPropagationView = visibilityPropagationView;

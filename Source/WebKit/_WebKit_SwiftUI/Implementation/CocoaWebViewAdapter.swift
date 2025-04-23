@@ -25,13 +25,13 @@ public import SwiftUI
 @_spi(Private) @_spi(CrossImportOverlay) import WebKit
 
 #if canImport(UIKit)
-typealias PlatformView = UIView
+typealias CocoaView = UIView
 #else
-typealias PlatformView = NSView
+typealias CocoaView = NSView
 #endif
 
 @MainActor
-class CocoaWebViewAdapter: PlatformView, PlatformTextSearching {
+class CocoaWebViewAdapter: CocoaView, PlatformTextSearching {
     // MARK: PlatformTextSearching conformance
 
 #if os(macOS)
@@ -83,7 +83,7 @@ class CocoaWebViewAdapter: PlatformView, PlatformTextSearching {
         }
     }
 
-    var findBarView: PlatformView? = nil
+    var findBarView: CocoaView? = nil
 #endif
 
     // MARK: Find-in-Page support
@@ -225,7 +225,7 @@ class CocoaWebViewAdapter: PlatformView, PlatformTextSearching {
 
 #if os(macOS)
 extension CocoaWebViewAdapter: @preconcurrency NSTextFinderBarContainer {
-    func contentView() -> PlatformView? {
+    func contentView() -> CocoaView? {
         webView
     }
 

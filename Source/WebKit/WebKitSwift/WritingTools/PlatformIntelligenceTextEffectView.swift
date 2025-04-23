@@ -58,11 +58,11 @@ internal import SwiftUI
 // MARK: Platform abstraction type aliases
 
 #if canImport(AppKit) && !targetEnvironment(macCatalyst)
-typealias PlatformView = NSView
+typealias CocoaView = NSView
 typealias PlatformBounds = NSRect
 typealias PlatformTextPreview = [_WTTextPreview]
 #else
-typealias PlatformView = UIView
+typealias CocoaView = UIView
 typealias PlatformBounds = CGRect
 typealias PlatformTextPreview = UITargetedPreview
 #endif
@@ -284,7 +284,7 @@ struct PlatformIntelligenceTextEffectID: Hashable {
 }
 
 /// A platform-agnostic view to control intelligence text effects given a particular source.
-@MainActor final class PlatformIntelligenceTextEffectView<Source>: PlatformView where Source: PlatformIntelligenceTextEffectViewSource {
+@MainActor final class PlatformIntelligenceTextEffectView<Source>: CocoaView where Source: PlatformIntelligenceTextEffectViewSource {
 #if canImport(UIKit)
     fileprivate typealias SourceAdapter = UITextEffectViewSourceAdapter<Source>
     fileprivate typealias Wrapped = UITextEffectView
@@ -475,7 +475,7 @@ struct PlatformIntelligenceTextEffectID: Hashable {
         // Create an empty view with the source frame, and set its layer's contents to the image
         // of the remaining text content.
 
-        let remainderView = PlatformView(frame: remainderViewSourceFrame)
+        let remainderView = CocoaView(frame: remainderViewSourceFrame)
 
 #if canImport(UIKit)
         remainderView.layer.contents = remainderPreviewImage

@@ -31,10 +31,10 @@
 #include "MessageReceiver.h"
 #include "PlaybackSessionContextIdentifier.h"
 #include <WebCore/AudioSession.h>
+#include <WebCore/CocoaView.h>
 #include <WebCore/MediaPlayerIdentifier.h>
 #include <WebCore/PlatformLayer.h>
 #include <WebCore/PlatformVideoPresentationInterface.h>
-#include <WebCore/PlatformView.h>
 #include <WebCore/ShareableBitmap.h>
 #include <WebCore/SpatialVideoMetadata.h>
 #include <WebCore/VideoPresentationModel.h>

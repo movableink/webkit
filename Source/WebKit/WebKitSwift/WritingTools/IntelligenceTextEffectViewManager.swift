@@ -35,13 +35,13 @@ protocol IntelligenceTextEffectViewManagerDelegate  {
 
 @MainActor
 class IntelligenceTextEffectViewManager<Source> where Source: IntelligenceTextEffectViewManagerDelegate, Source: PlatformIntelligenceTextEffectViewSource, Source.Chunk == IntelligenceTextEffectChunk {
-    init(source: Source? = nil, contentView: PlatformView) {
+    init(source: Source? = nil, contentView: CocoaView) {
         self.source = source
         self.contentView = contentView
     }
 
     private weak var source: Source?
-    private let contentView: PlatformView
+    private let contentView: CocoaView
 
     private var effectView: PlatformIntelligenceTextEffectView<Source>? = nil
 
