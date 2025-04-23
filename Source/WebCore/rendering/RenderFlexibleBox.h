@@ -52,8 +52,6 @@ public:
 
     using Direction = FlowDirection;
 
-    enum class Damage : uint8_t { NoLongerStretching = 1 << 0 };
-
     ASCIILiteral renderName() const override;
 
     bool canDropAnonymousBlockChild() const final { return false; }
@@ -108,7 +106,6 @@ public:
     LayoutUnit cachedFlexItemIntrinsicContentLogicalHeight(const RenderBox& flexItem) const;
     void setCachedFlexItemIntrinsicContentLogicalHeight(const RenderBox& flexItem, LayoutUnit);
     void clearCachedFlexItemIntrinsicContentLogicalHeight(const RenderBox& flexItem);
-    void removePercentLogicalHeightFlexItemsFromIntrinsicLogicalHeightCache();
 
     LayoutUnit staticMainAxisPositionForPositionedFlexItem(const RenderBox&);
     LayoutUnit staticCrossAxisPositionForPositionedFlexItem(const RenderBox&);
@@ -128,9 +125,6 @@ public:
     bool isComputingFlexBaseSizes() const { return m_isComputingFlexBaseSizes; }
 
     static std::optional<TextDirection> leftRightAxisDirectionFromStyle(const RenderStyle&);
-
-    void clearNeedsLayout();
-    void setNoLongerStretching();
 
     bool hasModernLayout() const { return m_hasFlexFormattingContextLayout && *m_hasFlexFormattingContextLayout; }
 
@@ -313,8 +307,6 @@ private:
     bool m_shouldResetFlexItemLogicalHeightBeforeLayout { false };
     bool m_isComputingFlexBaseSizes { false };
     std::optional<bool> m_hasFlexFormattingContextLayout;
-
-    OptionSet<Damage> m_flexLayoutDamage;
 };
 
 } // namespace WebCore

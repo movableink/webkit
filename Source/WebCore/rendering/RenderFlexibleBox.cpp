@@ -233,6 +233,17 @@ private:
     std::optional<LayoutUnit> m_overridingHeight;
 };
 
+static void updateFlexItemDirtyBitsBeforeLayout(bool relayoutFlexItem, RenderBox& flexItem)
+{
+    if (flexItem.isOutOfFlowPositioned())
+        return;
+
+    // FIXME: Technically percentage height objects only need a relayout if their percentage isn't going to be turned into
+    // an auto value. Add a method to determine this, so that we can avoid the relayout.
+    if (relayoutFlexItem || flexItem.hasRelativeLogicalHeight())
+        flexItem.setChildNeedsLayout(MarkOnlyThis);
+}
+
 void RenderFlexibleBox::computeChildIntrinsicLogicalWidths(RenderBox& flexBoxChild, LayoutUnit& minPreferredLogicalWidth, LayoutUnit& maxPreferredLogicalWidth) const
 {
     // Children excluded from normal layout are handled here too (e.g. legend when fieldset is set to flex).
@@ -333,24 +344,16 @@ void RenderFlexibleBox::styleDidChange(StyleDifference diff, const RenderStyle* 
     if (!oldStyle || diff != StyleDifference::Layout)
         return;
 
-    auto& newStyle = style();
     auto oldStyleAlignItemsIsStretch = oldStyle->resolvedAlignItems(selfAlignmentNormalBehavior()).position() == ItemPosition::Stretch;
-    auto logicalHeightIsDifferent = oldStyle->logicalHeight() != newStyle.logicalHeight();
     for (auto& flexItem : childrenOfType<RenderBox>(*this)) {
-        if (logicalHeightIsDifferent)
-            removePercentLogicalHeightFlexItemsFromIntrinsicLogicalHeightCache();
-
         // Flex items that were previously stretching need to be relayed out so we
         // can compute new available cross axis space. This is only necessary for
         // stretching since other alignment values don't change the size of the
         // box.
         if (oldStyleAlignItemsIsStretch) {
             ItemPosition previousAlignment = flexItem.style().resolvedAlignSelf(oldStyle, selfAlignmentNormalBehavior()).position();
-            if (previousAlignment == ItemPosition::Stretch && previousAlignment != flexItem.style().resolvedAlignSelf(&newStyle, selfAlignmentNormalBehavior()).position()) {
+            if (previousAlignment == ItemPosition::Stretch && previousAlignment != flexItem.style().resolvedAlignSelf(&style(), selfAlignmentNormalBehavior()).position())
                 flexItem.setChildNeedsLayout(MarkOnlyThis);
-                if (auto* renderFlexibleBox = dynamicDowncast<RenderFlexibleBox>(flexItem))
-                    renderFlexibleBox->setNoLongerStretching();
-            }
         }
     }
 }
@@ -395,9 +398,6 @@ void RenderFlexibleBox::layoutBlock(RelayoutChildren relayoutChildren, LayoutUni
     }
 
     LayoutRepainter repainter(*this);
-
-    if (m_flexLayoutDamage.contains(Damage::NoLongerStretching))
-        removePercentLogicalHeightFlexItemsFromIntrinsicLogicalHeightCache();
 
     resetLogicalHeightBeforeLayoutIfNeeded();
     m_relaidOutFlexItems.clear();
@@ -470,8 +470,6 @@ void RenderFlexibleBox::layoutBlock(RelayoutChildren relayoutChildren, LayoutUni
     clearNeedsLayout();
     
     m_inLayout = oldInLayout;
-
-    ASSERT(m_flexLayoutDamage.isEmpty());
 }
 
 void RenderFlexibleBox::appendFlexItemFrameRects(FlexItemFrameRects& flexItemFrameRects)
@@ -613,13 +611,6 @@ void RenderFlexibleBox::clearCachedFlexItemIntrinsicContentLogicalHeight(const R
     if (flexItem.isRenderReplaced())
         return; // Replaced elements know their intrinsic height already, so nothing to do.
     m_intrinsicContentLogicalHeights.remove(flexItem);
-}
-
-void RenderFlexibleBox::removePercentLogicalHeightFlexItemsFromIntrinsicLogicalHeightCache()
-{
-    m_intrinsicContentLogicalHeights.removeIf([](auto& keyValue) {
-        return keyValue.key->hasRelativeLogicalHeight();
-    });
 }
 
 LayoutUnit RenderFlexibleBox::flexItemIntrinsicLogicalHeight(RenderBox& flexItem) const
@@ -2291,22 +2282,7 @@ void RenderFlexibleBox::layoutAndPlaceFlexItems(LayoutUnit& crossAxisOffset, Fle
             // So, redo it here.
             forceFlexItemRelayout = true;
         }
-
-        auto shouldRelayoutRelativeLogicalHeightFlexItem = [&] {
-            if (!flexItem.hasRelativeLogicalHeight())
-                return false;
-            // If we do not have a definite logical height constraint, then the flex item's
-            // percentage logical height will behave as auto. If that is the case we may
-            // have a previously cached logical height that will end up being used
-            // through crossAxisIntrinsicExtentForFlexItem.
-            if (mainAxisIsFlexItemInlineAxis(flexItem))
-                return hasDefiniteLogicalHeight() || !m_intrinsicContentLogicalHeights.contains(flexItem);
-            return true;
-        };
-
-        if (forceFlexItemRelayout || shouldRelayoutRelativeLogicalHeightFlexItem())
-            flexItem.setChildNeedsLayout(MarkOnlyThis);
-
+        updateFlexItemDirtyBitsBeforeLayout(forceFlexItemRelayout, flexItem);
         if (!flexItem.needsLayout())
             flexItem.markForPaginationRelayoutIfNeeded();
         if (flexItem.needsLayout())
@@ -2319,9 +2295,10 @@ void RenderFlexibleBox::layoutAndPlaceFlexItems(LayoutUnit& crossAxisOffset, Fle
 
         updateAutoMarginsInMainAxis(flexItem, autoMarginOffset);
 
+        LayoutUnit flexItemCrossAxisMarginBoxExtent;
+
         auto alignment = alignmentForFlexItem(flexItem);
-        bool isFlexItemBaselineAligned = (alignment == ItemPosition::Baseline || alignment == ItemPosition::LastBaseline) && !hasAutoMarginsInCrossAxis(flexItem);
-        if (isFlexItemBaselineAligned) {
+        if ((alignment == ItemPosition::Baseline || alignment == ItemPosition::LastBaseline) && !hasAutoMarginsInCrossAxis(flexItem)) {
             LayoutUnit ascent = marginBoxAscentForFlexItem(flexItem);
             LayoutUnit descent = (crossAxisMarginExtentForFlexItem(flexItem) + crossAxisExtentForFlexItem(flexItem)) - ascent;
             maxDescent = std::max(maxDescent, descent);
@@ -2333,17 +2310,14 @@ void RenderFlexibleBox::layoutAndPlaceFlexItems(LayoutUnit& crossAxisOffset, Fle
 
             if (alignment == ItemPosition::Baseline) {
                 maxAscent =  std::max(maxAscent, ascent);
+                flexItemCrossAxisMarginBoxExtent = maxAscent + maxDescent;
             } else {
                 lastBaselineMaxAscent = std::max(lastBaselineMaxAscent, ascent);
+                flexItemCrossAxisMarginBoxExtent = lastBaselineMaxAscent + maxDescent;
             }
-        }
 
-        auto flexItemCrossAxisMarginBoxExtent = [&] {
-            if (isFlexItemBaselineAligned)
-                return alignment == ItemPosition::Baseline ? maxAscent + maxDescent : lastBaselineMaxAscent + maxDescent;
-            return crossAxisIntrinsicExtentForFlexItem(flexItem) + crossAxisMarginExtentForFlexItem(flexItem);
-        }();
-
+        } else
+            flexItemCrossAxisMarginBoxExtent = crossAxisIntrinsicExtentForFlexItem(flexItem) + crossAxisMarginExtentForFlexItem(flexItem);
 
         if (!isColumnFlow())
             setLogicalHeight(std::max(logicalHeight(), crossAxisOffset + flowAwareBorderAfter() + flowAwarePaddingAfter() + flexItemCrossAxisMarginBoxExtent + crossAxisScrollbarExtent()));
@@ -2824,17 +2798,6 @@ const RenderBox* RenderFlexibleBox::flexItemForLastBaseline() const
     }
     // Logically first (but visually last) item on logically last (but visually first) line.
     return firstBaselineCandidateOnLine(m_orderIterator, ItemPosition::LastBaseline, m_numberOfFlexItemsOnFirstLine);
-}
-
-void RenderFlexibleBox::clearNeedsLayout()
-{
-    m_flexLayoutDamage = { };
-    RenderObject::clearNeedsLayout();
-}
-
-void RenderFlexibleBox::setNoLongerStretching()
-{
-    m_flexLayoutDamage.add(Damage::NoLongerStretching);
 }
 
 }

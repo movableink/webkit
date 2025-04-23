@@ -35,7 +35,6 @@
 #include "LayoutRepainter.h"
 #include "RenderChildIterator.h"
 #include "RenderElementInlines.h"
-#include "RenderFlexibleBox.h"
 #include "RenderLayer.h"
 #include "RenderLayoutState.h"
 #include "RenderTreeBuilder.h"
@@ -155,13 +154,12 @@ void RenderGrid::styleDidChange(StyleDifference diff, const RenderStyle* oldStyl
         for (auto& gridItem : childrenOfType<RenderBox>(*this)) {
             if (gridItem.isOutOfFlowPositioned())
                 continue;
-            if (selfAlignmentChangedToStretch(GridTrackSizingDirection::ForColumns, *oldStyle, newStyle, gridItem) || selfAlignmentChangedToStretch(GridTrackSizingDirection::ForRows, *oldStyle, newStyle, gridItem))
-                gridItem.setNeedsLayout();
 
-            if (selfAlignmentChangedFromStretch(GridTrackSizingDirection::ForColumns, *oldStyle, newStyle, gridItem) || selfAlignmentChangedFromStretch(GridTrackSizingDirection::ForRows, *oldStyle, newStyle, gridItem)) {
+            if (selfAlignmentChangedToStretch(GridTrackSizingDirection::ForColumns, *oldStyle, newStyle, gridItem)
+                || selfAlignmentChangedFromStretch(GridTrackSizingDirection::ForColumns, *oldStyle, newStyle, gridItem)
+                || selfAlignmentChangedToStretch(GridTrackSizingDirection::ForRows, *oldStyle, newStyle, gridItem)
+                || selfAlignmentChangedFromStretch(GridTrackSizingDirection::ForRows, *oldStyle, newStyle, gridItem)) {
                 gridItem.setNeedsLayout();
-                if (auto* renderFleixbleBox = dynamicDowncast<RenderFlexibleBox>(gridItem))
-                    renderFleixbleBox->setNoLongerStretching();
             }
         }
     }
