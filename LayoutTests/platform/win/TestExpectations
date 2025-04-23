@@ -2108,6 +2108,8 @@ imported/w3c/web-platform-tests/css/selectors/focus-visible-022.tentative.html [
 imported/w3c/web-platform-tests/css/selectors/user-invalid.html [ Skip ] # Failure
 imported/w3c/web-platform-tests/css/selectors/user-valid.html [ Skip ] # Failure
 
+imported/w3c/web-platform-tests/css/selectors/invalidation/media-loading-pseudo-classes-in-has.html [ Skip ] # Failure on Buildbot
+
 imported/w3c/web-platform-tests/css/support [ Skip ]
 imported/w3c/web-platform-tests/css/WOFF2 [ Skip ]
 
