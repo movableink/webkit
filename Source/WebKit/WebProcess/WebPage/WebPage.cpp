@@ -2150,8 +2150,8 @@ void WebPage::loadRequest(LoadParameters&& loadParameters)
     if (loadParameters.effectiveSandboxFlags)
         localFrame->updateSandboxFlags(loadParameters.effectiveSandboxFlags, Frame::NotifyUIProcess::No);
 
-    if (auto onwerPermissionsPolicy = std::exchange(loadParameters.ownerPermissionsPolicy, { }))
-        localFrame->setOwnerPermissionsPolicy(WTFMove(*onwerPermissionsPolicy));
+    if (auto ownerPermissionsPolicy = std::exchange(loadParameters.ownerPermissionsPolicy, { }))
+        localFrame->setOwnerPermissionsPolicy(WTFMove(*ownerPermissionsPolicy));
 
     localFrame->loader().setHTTPFallbackInProgress(loadParameters.isPerformingHTTPFallback);
     localFrame->loader().setRequiredCookiesVersion(loadParameters.requiredCookiesVersion);
