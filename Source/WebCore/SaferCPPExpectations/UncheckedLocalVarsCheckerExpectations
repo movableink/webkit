@@ -404,7 +404,6 @@ platform/graphics/ca/GraphicsLayerCA.cpp
 platform/graphics/ca/PlatformCALayer.mm
 platform/graphics/ca/cocoa/PlatformCALayerCocoa.mm
 platform/graphics/cg/CGSubimageCacheWithTimer.cpp
-platform/graphics/displaylists/DisplayListRecorder.cpp
 platform/graphics/mac/controls/ImageControlsButtonMac.mm
 platform/ios/PlaybackSessionInterfaceIOS.mm
 platform/ios/WebAVPlayerController.mm

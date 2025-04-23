@@ -26,7 +26,6 @@
 #pragma once
 
 #include "DisplayListItems.h"
-#include "DisplayListResourceHeap.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
@@ -53,17 +52,12 @@ public:
 
     const Vector<Item>& items() const { return m_items; }
     Vector<Item>& items() { return m_items; }
-    const ResourceHeap& resourceHeap() const { return m_resourceHeap; }
-
-    void cacheImageBuffer(ImageBuffer&);
-    void cacheNativeImage(NativeImage&);
 
     WEBCORE_EXPORT String asText(OptionSet<AsTextFlag>) const;
     void dump(WTF::TextStream&) const;
 
 private:
     Vector<Item> m_items;
-    ResourceHeap m_resourceHeap;
 };
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const DisplayList&);

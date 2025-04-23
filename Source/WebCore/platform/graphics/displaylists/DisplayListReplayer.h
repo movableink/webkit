@@ -38,7 +38,6 @@ class GraphicsContext;
 namespace DisplayList {
 
 class DisplayList;
-class ResourceHeap;
 
 struct ReplayResult {
     std::unique_ptr<DisplayList> trackedDisplayList;
@@ -50,7 +49,7 @@ class Replayer {
     WTF_MAKE_NONCOPYABLE(Replayer);
 public:
     WEBCORE_EXPORT Replayer(GraphicsContext&, const DisplayList&);
-    WEBCORE_EXPORT Replayer(GraphicsContext&, const Vector<Item>&, const ResourceHeap&, ControlFactory&);
+    WEBCORE_EXPORT Replayer(GraphicsContext&, const Vector<Item>&, ControlFactory&);
     ~Replayer() = default;
 
     WEBCORE_EXPORT ReplayResult replay(const FloatRect& initialClip = { }, bool trackReplayList = false);
@@ -58,7 +57,6 @@ public:
 private:
     GraphicsContext& m_context;
     const Vector<Item>& m_items;
-    const ResourceHeap& m_resourceHeap;
     Ref<ControlFactory> m_controlFactory;
 };
 

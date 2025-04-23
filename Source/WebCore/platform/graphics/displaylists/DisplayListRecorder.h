@@ -78,17 +78,6 @@ public:
 protected:
     WEBCORE_EXPORT Recorder(IsDeferred, const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&, const DestinationColorSpace&, DrawGlyphsMode);
 
-    virtual void recordClipToImageBuffer(ImageBuffer&, const FloatRect& destinationRect) = 0;
-    virtual void recordDrawFilteredImageBuffer(ImageBuffer*, const FloatRect& sourceImageRect, Filter&) = 0;
-    virtual void recordDrawImageBuffer(ImageBuffer&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions) = 0;
-    virtual void recordDrawNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions) = 0;
-    virtual void recordDrawSystemImage(SystemImage&, const FloatRect&) = 0;
-    virtual void recordDrawPattern(RenderingResourceIdentifier, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { }) = 0;
-
-    virtual bool recordResourceUse(NativeImage&) = 0;
-    virtual bool recordResourceUse(ImageBuffer&) = 0;
-    virtual bool recordResourceUse(const SourceImage&) = 0;
-
     struct ContextState {
         GraphicsContextState state;
         AffineTransform ctm;
@@ -134,7 +123,9 @@ protected:
     WEBCORE_EXPORT void updateStateForClipOut(const FloatRect&);
     WEBCORE_EXPORT void updateStateForClipOut(const Path&);
     WEBCORE_EXPORT void updateStateForClipOutRoundedRect(const FloatRoundedRect&);
+    WEBCORE_EXPORT void updateStateForClipToImageBuffer(const FloatRect&);
     WEBCORE_EXPORT void updateStateForApplyDeviceScaleFactor(float);
+    WEBCORE_EXPORT bool decomposeDrawGlyphsIfNeeded(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& anchorPoint, FontSmoothingMode);
     FloatRect initialClip() const { return m_initialClip; }
 
     const DestinationColorSpace& colorSpace() const final { return m_colorSpace; }
@@ -153,17 +144,10 @@ private:
 
     WEBCORE_EXPORT void didUpdateState(GraphicsContextState&) final;
     WEBCORE_EXPORT void didUpdateSingleState(GraphicsContextState&, GraphicsContextState::ChangeIndex) final;
-    WEBCORE_EXPORT void drawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter&, FilterResults&) final;
-    WEBCORE_EXPORT void drawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& anchorPoint, FontSmoothingMode) final;
-    WEBCORE_EXPORT void drawImageBuffer(ImageBuffer&, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions) final;
+    // Returns true if decomposition handled the glyphs by calling drawDecomposedGlyphs and other functions.
     WEBCORE_EXPORT void drawConsumingImageBuffer(RefPtr<ImageBuffer>, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions) final;
-    WEBCORE_EXPORT void drawNativeImageInternal(NativeImage&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions) final;
-    WEBCORE_EXPORT void drawSystemImage(SystemImage&, const FloatRect&) final;
-    WEBCORE_EXPORT void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions) final;
-    WEBCORE_EXPORT void drawPattern(ImageBuffer&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions) final;
     WEBCORE_EXPORT AffineTransform getCTM(GraphicsContext::IncludeDeviceScale = PossiblyIncludeDeviceScale) const final;
     WEBCORE_EXPORT IntRect clipBounds() const final;
-    WEBCORE_EXPORT void clipToImageBuffer(ImageBuffer&, const FloatRect&) final;
 
     virtual void appendStateChangeItemIfNecessary() = 0;
 

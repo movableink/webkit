@@ -38,6 +38,7 @@
 #include <WebCore/DisplayList.h>
 #include <WebCore/DisplayListDrawingContext.h>
 #include <WebCore/DisplayListItems.h>
+#include <WebCore/FEImage.h>
 #include <WebCore/Filter.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/ImageBuffer.h>
@@ -47,6 +48,10 @@
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
+
+#if USE(SYSTEM_PREVIEW)
+#include <WebCore/ARKitBadgeSystemImage.h>
+#endif
 
 namespace WebKit {
 using namespace WebCore;
@@ -201,8 +206,10 @@ void RemoteDisplayListRecorderProxy::clipOutRoundedRect(const FloatRoundedRect& 
     send(Messages::RemoteDisplayListRecorder::ClipOutRoundedRect(rect));
 }
 
-void RemoteDisplayListRecorderProxy::recordClipToImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destinationRect)
+void RemoteDisplayListRecorderProxy::clipToImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destinationRect)
 {
+    updateStateForClipToImageBuffer(destinationRect);
+    recordResourceUse(imageBuffer);
     send(Messages::RemoteDisplayListRecorder::ClipToImageBuffer(imageBuffer.renderingResourceIdentifier(), destinationRect));
 }
 
@@ -225,17 +232,39 @@ void RemoteDisplayListRecorderProxy::resetClip()
     clip(initialClip());
 }
 
-void RemoteDisplayListRecorderProxy::recordDrawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter& filter)
+void RemoteDisplayListRecorderProxy::drawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter& filter, FilterResults& results)
 {
-    std::optional<RenderingResourceIdentifier> identifier;
-    if (sourceImage)
-        identifier = sourceImage->renderingResourceIdentifier();
+    appendStateChangeItemIfNecessary();
 
-    auto* svgFilter = dynamicDowncast<SVGFilter>(filter);
+    for (auto& effect : filter.effectsOfType(FilterEffect::Type::FEImage)) {
+        Ref feImage = downcast<FEImage>(effect.get());
+        if (!recordResourceUse(feImage->sourceImage())) {
+            GraphicsContext::drawFilteredImageBuffer(sourceImage, sourceImageRect, filter, results);
+            return;
+        }
+    }
+
+    RefPtr svgFilter = dynamicDowncast<SVGFilter>(filter);
     if (svgFilter && svgFilter->hasValidRenderingResourceIdentifier())
         recordResourceUse(filter);
 
+    std::optional<RenderingResourceIdentifier> identifier;
+    if (sourceImage) {
+        if (!recordResourceUse(*sourceImage)) {
+            GraphicsContext::drawFilteredImageBuffer(sourceImage, sourceImageRect, filter, results);
+            return;
+        }
+        identifier = sourceImage->renderingResourceIdentifier();
+    }
+
     send(Messages::RemoteDisplayListRecorder::DrawFilteredImageBuffer(WTFMove(identifier), sourceImageRect, filter));
+}
+
+void RemoteDisplayListRecorderProxy::drawGlyphs(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& localAnchor, FontSmoothingMode smoothingMode)
+{
+    if (decomposeDrawGlyphsIfNeeded(font, glyphs, advances, localAnchor, smoothingMode))
+        return;
+    drawGlyphsImmediate(font, glyphs, advances, localAnchor, smoothingMode);
 }
 
 void RemoteDisplayListRecorderProxy::drawGlyphsImmediate(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& localAnchor, FontSmoothingMode smoothingMode)
@@ -254,24 +283,57 @@ void RemoteDisplayListRecorderProxy::drawDecomposedGlyphs(const Font& font, cons
     send(Messages::RemoteDisplayListRecorder::DrawDecomposedGlyphs(font.renderingResourceIdentifier(), decomposedGlyphs.renderingResourceIdentifier()));
 }
 
-void RemoteDisplayListRecorderProxy::recordDrawImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
+void RemoteDisplayListRecorderProxy::drawImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
+    appendStateChangeItemIfNecessary();
+
+    if (!recordResourceUse(imageBuffer)) {
+        GraphicsContext::drawImageBuffer(imageBuffer, destRect, srcRect, options);
+        return;
+    }
+
     send(Messages::RemoteDisplayListRecorder::DrawImageBuffer(imageBuffer.renderingResourceIdentifier(), destRect, srcRect, options));
 }
 
-void RemoteDisplayListRecorderProxy::recordDrawNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
+void RemoteDisplayListRecorderProxy::drawNativeImageInternal(NativeImage& image, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
-    send(Messages::RemoteDisplayListRecorder::DrawNativeImage(imageIdentifier, destRect, srcRect, options));
+    appendStateChangeItemIfNecessary();
+    recordResourceUse(image);
+    send(Messages::RemoteDisplayListRecorder::DrawNativeImage(image.renderingResourceIdentifier(), destRect, srcRect, options));
 }
 
-void RemoteDisplayListRecorderProxy::recordDrawSystemImage(SystemImage& systemImage, const FloatRect& destinationRect)
+void RemoteDisplayListRecorderProxy::drawSystemImage(SystemImage& systemImage, const FloatRect& destinationRect)
 {
+    appendStateChangeItemIfNecessary();
+#if USE(SYSTEM_PREVIEW)
+    if (auto* badgeSystemImage = dynamicDowncast<ARKitBadgeSystemImage>(systemImage)) {
+        if (auto image = badgeSystemImage->image()) {
+            auto nativeImage = image->nativeImage();
+            if (!nativeImage)
+                return;
+            recordResourceUse(*nativeImage);
+        }
+    }
+#endif
     send(Messages::RemoteDisplayListRecorder::DrawSystemImage(systemImage, destinationRect));
 }
 
-void RemoteDisplayListRecorderProxy::recordDrawPattern(RenderingResourceIdentifier imageIdentifier, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& transform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
+void RemoteDisplayListRecorderProxy::drawPattern(NativeImage& image, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
 {
-    send(Messages::RemoteDisplayListRecorder::DrawPattern(imageIdentifier, destRect, tileRect, transform, phase, spacing, options));
+    appendStateChangeItemIfNecessary();
+    recordResourceUse(image);
+    send(Messages::RemoteDisplayListRecorder::DrawPatternNativeImage(image.renderingResourceIdentifier(), destRect, tileRect, patternTransform, phase, spacing, options));
+}
+
+void RemoteDisplayListRecorderProxy::drawPattern(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
+{
+    appendStateChangeItemIfNecessary();
+    if (!recordResourceUse(imageBuffer)) {
+        GraphicsContext::drawPattern(imageBuffer, destRect, tileRect, patternTransform, phase, spacing, options);
+        return;
+    }
+
+    send(Messages::RemoteDisplayListRecorder::DrawPatternImageBuffer(imageBuffer.renderingResourceIdentifier(), destRect, tileRect, patternTransform, phase, spacing, options));
 }
 
 void RemoteDisplayListRecorderProxy::beginTransparencyLayer(float opacity)

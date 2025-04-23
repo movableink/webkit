@@ -55,7 +55,7 @@ void DrawingContext::replayDisplayList(GraphicsContext& destContext, ControlFact
         return;
 
     ASSERT_IMPLIES(!controlFactory, isMainThread());
-    Replayer replayer(destContext, m_displayList.items(), m_displayList.resourceHeap(), controlFactory ? *controlFactory : ControlFactory::shared());
+    Replayer replayer(destContext, m_displayList.items(), controlFactory ? *controlFactory : ControlFactory::shared());
     if (m_tracksDisplayListReplay)
         m_replayedDisplayList = replayer.replay({ }, m_tracksDisplayListReplay).trackedDisplayList;
     else

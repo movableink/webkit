@@ -155,9 +155,10 @@ void RecorderImpl::clipOutRoundedRect(const FloatRoundedRect& clipRect)
     append(ClipOutRoundedRect(clipRect));
 }
 
-void RecorderImpl::recordClipToImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destinationRect)
+void RecorderImpl::clipToImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destinationRect)
 {
-    append(ClipToImageBuffer(imageBuffer.renderingResourceIdentifier(), destinationRect));
+    updateStateForClipToImageBuffer(destinationRect);
+    append(ClipToImageBuffer(imageBuffer, destinationRect));
 }
 
 void RecorderImpl::clipOut(const Path& path)
@@ -172,12 +173,17 @@ void RecorderImpl::clipPath(const Path& path, WindRule rule)
     append(ClipPath(path, rule));
 }
 
-void RecorderImpl::recordDrawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter& filter)
+void RecorderImpl::drawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter& filter, FilterResults&)
 {
-    std::optional<RenderingResourceIdentifier> identifier;
-    if (sourceImage)
-        identifier = sourceImage->renderingResourceIdentifier();
-    append(DrawFilteredImageBuffer(WTFMove(identifier), sourceImageRect, filter));
+    appendStateChangeItemIfNecessary();
+    append(DrawFilteredImageBuffer(sourceImage, sourceImageRect, filter));
+}
+
+void RecorderImpl::drawGlyphs(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& localAnchor, FontSmoothingMode smoothingMode)
+{
+    if (decomposeDrawGlyphsIfNeeded(font, glyphs, advances, localAnchor, smoothingMode))
+        return;
+    drawGlyphsImmediate(font, glyphs, advances, localAnchor, smoothingMode);
 }
 
 void RecorderImpl::drawGlyphsImmediate(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& localAnchor, FontSmoothingMode smoothingMode)
@@ -192,24 +198,34 @@ void RecorderImpl::drawDecomposedGlyphs(const Font& font, const DecomposedGlyphs
     append(DrawDecomposedGlyphs(Ref { font }, Ref { decomposedGlyphs }));
 }
 
-void RecorderImpl::recordDrawImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
+void RecorderImpl::drawImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
-    append(DrawImageBuffer(imageBuffer.renderingResourceIdentifier(), destRect, srcRect, options));
+    appendStateChangeItemIfNecessary();
+    append(DrawImageBuffer(imageBuffer, destRect, srcRect, options));
 }
 
-void RecorderImpl::recordDrawNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
+void RecorderImpl::drawNativeImageInternal(NativeImage& image, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
-    append(DrawNativeImage(imageIdentifier, destRect, srcRect, options));
+    appendStateChangeItemIfNecessary();
+    append(DrawNativeImage(image, destRect, srcRect, options));
 }
 
-void RecorderImpl::recordDrawSystemImage(SystemImage& systemImage, const FloatRect& destinationRect)
+void RecorderImpl::drawSystemImage(SystemImage& systemImage, const FloatRect& destinationRect)
 {
+    appendStateChangeItemIfNecessary();
     append(DrawSystemImage(systemImage, destinationRect));
 }
 
-void RecorderImpl::recordDrawPattern(RenderingResourceIdentifier imageIdentifier, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& transform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
+void RecorderImpl::drawPattern(NativeImage& image, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
 {
-    append(DrawPattern(imageIdentifier, destRect, tileRect, transform, phase, spacing, options));
+    appendStateChangeItemIfNecessary();
+    append(DrawPatternNativeImage(image, destRect, tileRect, patternTransform, phase, spacing, options));
+}
+
+void RecorderImpl::drawPattern(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
+{
+    appendStateChangeItemIfNecessary();
+    append(DrawPatternImageBuffer(imageBuffer, destRect, tileRect, patternTransform, phase, spacing, options));
 }
 
 void RecorderImpl::beginTransparencyLayer(float opacity)
@@ -408,29 +424,6 @@ void RecorderImpl::setURLForRect(const URL& link, const FloatRect& destRect)
 {
     appendStateChangeItemIfNecessary();
     append(SetURLForRect(link, destRect));
-}
-
-bool RecorderImpl::recordResourceUse(NativeImage& nativeImage)
-{
-    m_displayList.cacheNativeImage(nativeImage);
-    return true;
-}
-
-bool RecorderImpl::recordResourceUse(ImageBuffer& imageBuffer)
-{
-    m_displayList.cacheImageBuffer(imageBuffer);
-    return true;
-}
-
-bool RecorderImpl::recordResourceUse(const SourceImage& image)
-{
-    if (auto imageBuffer = image.imageBufferIfExists())
-        return recordResourceUse(*imageBuffer);
-
-    if (auto nativeImage = image.nativeImageIfExists())
-        return recordResourceUse(*nativeImage);
-
-    return true;
 }
 
 void RecorderImpl::appendStateChangeItemIfNecessary()

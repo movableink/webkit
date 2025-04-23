@@ -35,14 +35,13 @@ namespace WebCore {
 namespace DisplayList {
 
 Replayer::Replayer(GraphicsContext& context, const DisplayList& displayList)
-    : Replayer(context, displayList.items(), displayList.resourceHeap(), ControlFactory::shared())
+    : Replayer(context, displayList.items(), ControlFactory::shared())
 {
 }
 
-Replayer::Replayer(GraphicsContext& context, const Vector<Item>& items, const ResourceHeap& resourceHeap, ControlFactory& controlFactory)
+Replayer::Replayer(GraphicsContext& context, const Vector<Item>& items, ControlFactory& controlFactory)
     : m_context(context)
     , m_items(items)
-    , m_resourceHeap(resourceHeap)
     , m_controlFactory(controlFactory)
 {
 }
@@ -63,7 +62,7 @@ ReplayResult Replayer::replay(const FloatRect& initialClip, bool trackReplayList
     for (auto& item : m_items) {
         LOG_WITH_STREAM(DisplayLists, stream << "applying " << i++ << " " << item);
 
-        auto applyResult = applyItem(m_context, m_resourceHeap, m_controlFactory, item);
+        auto applyResult = applyItem(m_context, m_controlFactory, item);
         if (applyResult.stopReason) {
             result.reasonForStopping = *applyResult.stopReason;
             result.missingCachedResourceIdentifier = WTFMove(applyResult.resourceIdentifier);

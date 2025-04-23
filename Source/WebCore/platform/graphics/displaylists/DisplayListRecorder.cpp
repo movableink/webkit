@@ -40,10 +40,6 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
-#if USE(SYSTEM_PREVIEW)
-#include "ARKitBadgeSystemImage.h"
-#endif
-
 namespace WebCore {
 namespace DisplayList {
 
@@ -94,32 +90,7 @@ void Recorder::didUpdateSingleState(GraphicsContextState& state, GraphicsContext
     state.didApplyChanges();
 }
 
-void Recorder::drawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter& filter, FilterResults& results)
-{
-    appendStateChangeItemIfNecessary();
-
-    for (auto& effect : filter.effectsOfType(FilterEffect::Type::FEImage)) {
-        auto& feImage = downcast<FEImage>(effect.get());
-        if (!recordResourceUse(feImage.sourceImage())) {
-            GraphicsContext::drawFilteredImageBuffer(sourceImage, sourceImageRect, filter, results);
-            return;
-        }
-    }
-
-    if (!sourceImage) {
-        recordDrawFilteredImageBuffer(nullptr, sourceImageRect, filter);
-        return;
-    }
-
-    if (!recordResourceUse(*sourceImage)) {
-        GraphicsContext::drawFilteredImageBuffer(sourceImage, sourceImageRect, filter, results);
-        return;
-    }
-
-    recordDrawFilteredImageBuffer(sourceImage, sourceImageRect, filter);
-}
-
-void Recorder::drawGlyphs(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& localAnchor, FontSmoothingMode smoothingMode)
+bool Recorder::decomposeDrawGlyphsIfNeeded(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& localAnchor, FontSmoothingMode smoothingMode)
 {
 #if USE(CORE_TEXT)
     if (m_drawGlyphsMode == DrawGlyphsMode::Deconstruct || m_drawGlyphsMode == DrawGlyphsMode::DeconstructAndRetain) {
@@ -128,23 +99,18 @@ void Recorder::drawGlyphs(const Font& font, std::span<const GlyphBufferGlyph> gl
             m_drawGlyphsRecorder = makeUnique<DrawGlyphsRecorder>(*this, m_initialScale, DrawGlyphsRecorder::DeriveFontFromContext::No, shouldDrawDecomposedGlyphs);
         }
         m_drawGlyphsRecorder->drawGlyphs(font, glyphs, advances, localAnchor, smoothingMode);
-        return;
+        return true;
     }
+#else
+    UNUSED_PARAM(font);
+    UNUSED_PARAM(glyphs);
+    UNUSED_PARAM(advances);
+    UNUSED_PARAM(localAnchor);
+    UNUSED_PARAM(smoothingMode);
 #endif
-    drawGlyphsImmediate(font, glyphs, advances, localAnchor, smoothingMode);
+    return false;
 }
 
-void Recorder::drawImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
-{
-    appendStateChangeItemIfNecessary();
-
-    if (!recordResourceUse(imageBuffer)) {
-        GraphicsContext::drawImageBuffer(imageBuffer, destRect, srcRect, options);
-        return;
-    }
-
-    recordDrawImageBuffer(imageBuffer, destRect, srcRect, options);
-}
 void Recorder::drawConsumingImageBuffer(RefPtr<ImageBuffer> imageBuffer, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
     // ImageBuffer draws are recorded as ImageBuffer draws, not as NativeImage draws. So for consistency,
@@ -152,48 +118,6 @@ void Recorder::drawConsumingImageBuffer(RefPtr<ImageBuffer> imageBuffer, const F
     if (!imageBuffer)
         return;
     drawImageBuffer(*imageBuffer, destRect, srcRect, options);
-}
-
-void Recorder::drawNativeImageInternal(NativeImage& image, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
-{
-    appendStateChangeItemIfNecessary();
-    recordResourceUse(image);
-    recordDrawNativeImage(image.renderingResourceIdentifier(), destRect, srcRect, options);
-}
-
-void Recorder::drawSystemImage(SystemImage& systemImage, const FloatRect& destinationRect)
-{
-    appendStateChangeItemIfNecessary();
-#if USE(SYSTEM_PREVIEW)
-    if (auto* badgeSystemImage = dynamicDowncast<ARKitBadgeSystemImage>(systemImage)) {
-        if (auto image = badgeSystemImage->image()) {
-            auto nativeImage = image->nativeImage();
-            if (!nativeImage)
-                return;
-            recordResourceUse(*nativeImage);
-        }
-    }
-#endif
-    recordDrawSystemImage(systemImage, destinationRect);
-}
-
-void Recorder::drawPattern(NativeImage& image, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
-{
-    appendStateChangeItemIfNecessary();
-    recordResourceUse(image);
-    recordDrawPattern(image.renderingResourceIdentifier(), destRect, tileRect, patternTransform, phase, spacing, options);
-}
-
-void Recorder::drawPattern(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
-{
-    appendStateChangeItemIfNecessary();
-
-    if (!recordResourceUse(imageBuffer)) {
-        GraphicsContext::drawPattern(imageBuffer, destRect, tileRect, patternTransform, phase, spacing, options);
-        return;
-    }
-
-    recordDrawPattern(imageBuffer.renderingResourceIdentifier(), destRect, tileRect, patternTransform, phase, spacing, options);
 }
 
 void Recorder::updateStateForSave(GraphicsContextState::Purpose purpose)
@@ -325,6 +249,12 @@ void Recorder::updateStateForClipPath(const Path& path)
     currentState().clipBounds.intersect(currentState().ctm.mapRect(path.fastBoundingRect()));
 }
 
+void Recorder::updateStateForClipToImageBuffer(const FloatRect& rect)
+{
+    appendStateChangeItemIfNecessary(); // Conservative: we do not know if the clip application might use state such as antialiasing.
+    currentState().clipBounds.intersect(currentState().ctm.mapRect(rect));
+}
+
 IntRect Recorder::clipBounds() const
 {
     if (auto inverse = currentState().ctm.inverse())
@@ -333,14 +263,6 @@ IntRect Recorder::clipBounds() const
     // If the CTM is not invertible, return the original rect.
     // This matches CGRectApplyInverseAffineTransform behavior.
     return enclosingIntRect(currentState().clipBounds);
-}
-
-void Recorder::clipToImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destRect)
-{
-    appendStateChangeItemIfNecessary(); // Conservative: we do not know if the clip application might use state such as antialiasing.
-    currentState().clipBounds.intersect(currentState().ctm.mapRect(destRect));
-    recordResourceUse(imageBuffer);
-    recordClipToImageBuffer(imageBuffer, destRect);
 }
 
 void Recorder::updateStateForApplyDeviceScaleFactor(float deviceScaleFactor)

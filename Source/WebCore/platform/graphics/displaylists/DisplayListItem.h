@@ -39,8 +39,6 @@ class GraphicsContext;
 
 namespace DisplayList {
 
-class ResourceHeap;
-
 class ApplyDeviceScaleFactor;
 class BeginTransparencyLayer;
 class BeginTransparencyLayerWithCompositeMode;
@@ -66,7 +64,8 @@ class DrawLine;
 class DrawLinesForText;
 class DrawNativeImage;
 class DrawPath;
-class DrawPattern;
+class DrawPatternNativeImage;
+class DrawPatternImageBuffer;
 class DrawRect;
 class DrawSystemImage;
 class EndTransparencyLayer;
@@ -130,7 +129,8 @@ using Item = Variant
     , DrawLinesForText
     , DrawNativeImage
     , DrawPath
-    , DrawPattern
+    , DrawPatternNativeImage
+    , DrawPatternImageBuffer
     , DrawRect
     , DrawSystemImage
     , EndTransparencyLayer
@@ -186,9 +186,7 @@ enum class AsTextFlag : uint8_t {
     IncludeResourceIdentifiers     = 1 << 1,
 };
 
-bool isValid(const Item&);
-
-ApplyItemResult applyItem(GraphicsContext&, const ResourceHeap&, ControlFactory&, const Item&);
+ApplyItemResult applyItem(GraphicsContext&, ControlFactory&, const Item&);
 
 bool shouldDumpItem(const Item&, OptionSet<AsTextFlag>);
 

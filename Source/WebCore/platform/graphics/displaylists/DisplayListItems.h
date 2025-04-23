@@ -37,7 +37,6 @@
 #include "Gradient.h"
 #include "GraphicsContext.h"
 #include "Image.h"
-#include "RenderingResourceIdentifier.h"
 #include "SharedBuffer.h"
 #include "SystemImage.h"
 #include "TextFlags.h"
@@ -387,22 +386,20 @@ class ClipToImageBuffer {
 public:
     static constexpr char name[] = "clip-to-image-buffer";
 
-    ClipToImageBuffer(std::optional<RenderingResourceIdentifier> imageBufferIdentifier, const FloatRect& destinationRect)
-        : m_imageBufferIdentifier(imageBufferIdentifier)
+    ClipToImageBuffer(Ref<ImageBuffer> imageBuffer, const FloatRect& destinationRect)
+        : m_imageBuffer(imageBuffer)
         , m_destinationRect(destinationRect)
     {
     }
 
-    RenderingResourceIdentifier imageBufferIdentifier() const { return *m_imageBufferIdentifier; }
+    Ref<ImageBuffer> imageBuffer() const { return m_imageBuffer; }
     FloatRect destinationRect() const { return m_destinationRect; }
 
-    bool isValid() const { return !!m_imageBufferIdentifier; }
-
-    WEBCORE_EXPORT void apply(GraphicsContext&, ImageBuffer&) const;
+    void apply(GraphicsContext&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    Markable<RenderingResourceIdentifier> m_imageBufferIdentifier;
+    Ref<ImageBuffer> m_imageBuffer;
     FloatRect m_destinationRect;
 };
 
@@ -472,18 +469,22 @@ class DrawFilteredImageBuffer {
 public:
     static constexpr char name[] = "draw-filtered-image-buffer";
 
-    WEBCORE_EXPORT DrawFilteredImageBuffer(std::optional<RenderingResourceIdentifier> sourceImageIdentifier, const FloatRect& sourceImageRect, Filter&);
+    DrawFilteredImageBuffer(RefPtr<ImageBuffer>&& sourceImage, const FloatRect& sourceImageRect, Filter& filter)
+        : m_sourceImage(WTFMove(sourceImage))
+        , m_sourceImageRect(sourceImageRect)
+        , m_filter(filter)
+    {
+    }
 
-    std::optional<RenderingResourceIdentifier> sourceImageIdentifier() const { return m_sourceImageIdentifier; }
+    RefPtr<ImageBuffer> sourceImage() const { return m_sourceImage; }
     FloatRect sourceImageRect() const { return m_sourceImageRect; }
     Ref<Filter> filter() const { return m_filter; }
 
-    NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
-    WEBCORE_EXPORT void apply(GraphicsContext&, ImageBuffer* sourceImage, FilterResults&) const;
+    void apply(GraphicsContext&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    std::optional<RenderingResourceIdentifier> m_sourceImageIdentifier;
+    RefPtr<ImageBuffer> m_sourceImage;
     FloatRect m_sourceImageRect;
     Ref<Filter> m_filter;
 };
@@ -544,27 +545,24 @@ class DrawImageBuffer {
 public:
     static constexpr char name[] = "draw-image-buffer";
 
-    DrawImageBuffer(RenderingResourceIdentifier imageBufferIdentifier, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
-        : m_imageBufferIdentifier(imageBufferIdentifier)
+    DrawImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
+        : m_imageBuffer(imageBuffer)
         , m_destinationRect(destRect)
         , m_srcRect(srcRect)
         , m_options(options)
     {
     }
 
-    RenderingResourceIdentifier imageBufferIdentifier() const { return *m_imageBufferIdentifier; }
+    Ref<ImageBuffer> imageBuffer() const { return m_imageBuffer; }
     FloatRect source() const { return m_srcRect; }
     FloatRect destinationRect() const { return m_destinationRect; }
     ImagePaintingOptions options() const { return m_options; }
 
-    // FIXME: We might want to validate ImagePaintingOptions.
-    bool isValid() const { return !!m_imageBufferIdentifier; }
-
-    WEBCORE_EXPORT void apply(GraphicsContext&, ImageBuffer&) const;
+    void apply(GraphicsContext&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    Markable<RenderingResourceIdentifier> m_imageBufferIdentifier;
+    Ref<ImageBuffer> m_imageBuffer;
     FloatRect m_destinationRect;
     FloatRect m_srcRect;
     ImagePaintingOptions m_options;
@@ -574,27 +572,24 @@ class DrawNativeImage {
 public:
     static constexpr char name[] = "draw-native-image";
 
-    DrawNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
-        : m_imageIdentifier(imageIdentifier)
+    DrawNativeImage(NativeImage& image, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
+        : m_image(image)
         , m_destinationRect(destRect)
         , m_srcRect(srcRect)
         , m_options(options)
     {
     }
 
-    RenderingResourceIdentifier imageIdentifier() const { return *m_imageIdentifier; }
+    Ref<NativeImage> nativeImage() const { return m_image; }
     const FloatRect& destinationRect() const { return m_destinationRect; }
     const FloatRect& source() const { return m_srcRect; }
     ImagePaintingOptions options() const { return m_options; }
 
-    // FIXME: We might want to validate ImagePaintingOptions.
-    bool isValid() const { return !!m_imageIdentifier; }
-
-    WEBCORE_EXPORT void apply(GraphicsContext&, NativeImage&) const;
+    void apply(GraphicsContext&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    Markable<RenderingResourceIdentifier> m_imageIdentifier;
+    Ref<NativeImage> m_image;
     FloatRect m_destinationRect;
     FloatRect m_srcRect;
     ImagePaintingOptions m_options;
@@ -613,7 +608,7 @@ public:
     const Ref<SystemImage>& systemImage() const { return m_systemImage; }
     const FloatRect& destinationRect() const { return m_destinationRect; }
 
-    WEBCORE_EXPORT void apply(GraphicsContext&) const;
+    void apply(GraphicsContext&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
@@ -621,13 +616,21 @@ private:
     FloatRect m_destinationRect;
 };
 
-class DrawPattern {
+class DrawPatternNativeImage {
 public:
-    static constexpr char name[] = "draw-pattern";
+    static constexpr char name[] = "draw-pattern-nativeimage";
 
-    WEBCORE_EXPORT DrawPattern(RenderingResourceIdentifier, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { });
-
-    RenderingResourceIdentifier imageIdentifier() const { return *m_imageIdentifier; }
+    DrawPatternNativeImage(NativeImage& image, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
+        : m_image(image)
+        , m_destination(destRect)
+        , m_tileRect(tileRect)
+        , m_patternTransform(patternTransform)
+        , m_phase(phase)
+        , m_spacing(spacing)
+        , m_options(options)
+    {
+    }
+    Ref<NativeImage> nativeImage() const { return m_image; }
     FloatRect destRect() const { return m_destination; }
     FloatRect tileRect() const { return m_tileRect; }
     const AffineTransform& patternTransform() const { return m_patternTransform; }
@@ -635,14 +638,46 @@ public:
     FloatSize spacing() const { return m_spacing; }
     ImagePaintingOptions options() const { return m_options; }
 
-    // FIXME: We might want to validate ImagePaintingOptions.
-    bool isValid() const { return !!m_imageIdentifier; }
-
-    WEBCORE_EXPORT void apply(GraphicsContext&, SourceImage&) const;
+    void apply(GraphicsContext&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    Markable<RenderingResourceIdentifier> m_imageIdentifier;
+    Ref<NativeImage> m_image;
+    FloatRect m_destination;
+    FloatRect m_tileRect;
+    AffineTransform m_patternTransform;
+    FloatPoint m_phase;
+    FloatSize m_spacing;
+    ImagePaintingOptions m_options;
+};
+
+class DrawPatternImageBuffer {
+public:
+    static constexpr char name[] = "draw-pattern-imagebuffer";
+
+    DrawPatternImageBuffer(ImageBuffer& image, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
+        : m_imageBuffer(image)
+        , m_destination(destRect)
+        , m_tileRect(tileRect)
+        , m_patternTransform(patternTransform)
+        , m_phase(phase)
+        , m_spacing(spacing)
+        , m_options(options)
+    {
+    }
+    Ref<ImageBuffer> imageBuffer() const { return m_imageBuffer; }
+    FloatRect destRect() const { return m_destination; }
+    FloatRect tileRect() const { return m_tileRect; }
+    const AffineTransform& patternTransform() const { return m_patternTransform; }
+    FloatPoint phase() const { return m_phase; }
+    FloatSize spacing() const { return m_spacing; }
+    ImagePaintingOptions options() const { return m_options; }
+
+    void apply(GraphicsContext&) const;
+    void dump(TextStream&, OptionSet<AsTextFlag>) const;
+
+private:
+    Ref<ImageBuffer> m_imageBuffer;
     FloatRect m_destination;
     FloatRect m_tileRect;
     AffineTransform m_patternTransform;

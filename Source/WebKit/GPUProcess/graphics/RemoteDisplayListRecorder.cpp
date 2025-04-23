@@ -468,21 +468,24 @@ void RemoteDisplayListRecorder::drawSystemImage(Ref<SystemImage>&& systemImage, 
     context().drawSystemImage(systemImage, destinationRect);
 }
 
-void RemoteDisplayListRecorder::drawPattern(RenderingResourceIdentifier imageIdentifier, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& transform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
+void RemoteDisplayListRecorder::drawPatternNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& transform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
 {
-    auto patternImage = sourceImage(imageIdentifier);
-    if (!patternImage) {
+    RefPtr image = resourceCache().cachedNativeImage(imageIdentifier);
+    if (!image) {
         ASSERT_NOT_REACHED();
         return;
     }
-    if (RefPtr nativeImage = patternImage->nativeImageIfExists()) {
-        context().drawPattern(*nativeImage, destRect, tileRect, transform, phase, spacing, options);
+    context().drawPattern(*image, destRect, tileRect, transform, phase, spacing, options);
+}
+
+void RemoteDisplayListRecorder::drawPatternImageBuffer(RenderingResourceIdentifier imageIdentifier, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& transform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
+{
+    RefPtr image = imageBuffer(imageIdentifier);
+    if (!image) {
+        ASSERT_NOT_REACHED();
         return;
     }
-    if (RefPtr imageBuffer = patternImage->imageBufferIfExists()) {
-        context().drawPattern(*imageBuffer, destRect, tileRect, transform, phase, spacing, options);
-        return;
-    }
+    context().drawPattern(*image, destRect, tileRect, transform, phase, spacing, options);
 }
 
 void RemoteDisplayListRecorder::beginTransparencyLayer(float opacity)

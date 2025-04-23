@@ -29,6 +29,7 @@
 #include "DecomposedGlyphs.h"
 #include "DisplayListReplayer.h"
 #include "Filter.h"
+#include "FilterResults.h"
 #include "FontCascade.h"
 #include "ImageBuffer.h"
 #include "MediaPlayer.h"
@@ -221,15 +222,15 @@ void ClipOutRoundedRect::dump(TextStream& ts, OptionSet<AsTextFlag>) const
     ts.dumpProperty("rect"_s, rect());
 }
 
-void ClipToImageBuffer::apply(GraphicsContext& context, ImageBuffer& imageBuffer) const
+void ClipToImageBuffer::apply(GraphicsContext& context) const
 {
-    context.clipToImageBuffer(imageBuffer, m_destinationRect);
+    context.clipToImageBuffer(m_imageBuffer, m_destinationRect);
 }
 
 void ClipToImageBuffer::dump(TextStream& ts, OptionSet<AsTextFlag> flags) const
 {
     if (flags.contains(AsTextFlag::IncludeResourceIdentifiers))
-        ts.dumpProperty("image-buffer-identifier"_s, imageBufferIdentifier());
+        ts.dumpProperty("image-buffer-identifier"_s, imageBuffer()->renderingResourceIdentifier());
     ts.dumpProperty("dest-rect"_s, destinationRect());
 }
 
@@ -259,27 +260,18 @@ void ResetClip::apply(GraphicsContext& context) const
     context.resetClip();
 }
 
-DrawFilteredImageBuffer::DrawFilteredImageBuffer(std::optional<RenderingResourceIdentifier> sourceImageIdentifier, const FloatRect& sourceImageRect, Filter& filter)
-    : m_sourceImageIdentifier(sourceImageIdentifier)
-    , m_sourceImageRect(sourceImageRect)
-    , m_filter(filter)
+void DrawFilteredImageBuffer::apply(GraphicsContext& context) const
 {
-}
-
-NO_RETURN_DUE_TO_ASSERT void DrawFilteredImageBuffer::apply(GraphicsContext&) const
-{
-    ASSERT_NOT_REACHED();
-}
-
-void DrawFilteredImageBuffer::apply(GraphicsContext& context, ImageBuffer* sourceImage, FilterResults& results) const
-{
-    context.drawFilteredImageBuffer(sourceImage, m_sourceImageRect, m_filter, results);
+    FilterResults results;
+    context.drawFilteredImageBuffer(m_sourceImage.get(), m_sourceImageRect, m_filter, results);
 }
 
 void DrawFilteredImageBuffer::dump(TextStream& ts, OptionSet<AsTextFlag> flags) const
 {
-    if (flags.contains(AsTextFlag::IncludeResourceIdentifiers))
-        ts.dumpProperty("source-image-identifier"_s, sourceImageIdentifier());
+    if (flags.contains(AsTextFlag::IncludeResourceIdentifiers)) {
+        if (m_sourceImage)
+            ts.dumpProperty("source-image-identifier"_s, sourceImage()->renderingResourceIdentifier());
+    }
     ts.dumpProperty("source-image-rect"_s, sourceImageRect());
 }
 
@@ -322,28 +314,28 @@ void DrawDecomposedGlyphs::dump(TextStream& ts, OptionSet<AsTextFlag> flags) con
     }
 }
 
-void DrawImageBuffer::apply(GraphicsContext& context, ImageBuffer& imageBuffer) const
+void DrawImageBuffer::apply(GraphicsContext& context) const
 {
-    context.drawImageBuffer(imageBuffer, m_destinationRect, m_srcRect, m_options);
+    context.drawImageBuffer(m_imageBuffer, m_destinationRect, m_srcRect, m_options);
 }
 
 void DrawImageBuffer::dump(TextStream& ts, OptionSet<AsTextFlag> flags) const
 {
     if (flags.contains(AsTextFlag::IncludeResourceIdentifiers))
-        ts.dumpProperty("image-buffer-identifier"_s, imageBufferIdentifier());
+        ts.dumpProperty("image-buffer-identifier"_s, imageBuffer()->renderingResourceIdentifier());
     ts.dumpProperty("source-rect"_s, source());
     ts.dumpProperty("dest-rect"_s, destinationRect());
 }
 
-void DrawNativeImage::apply(GraphicsContext& context, NativeImage& image) const
+void DrawNativeImage::apply(GraphicsContext& context) const
 {
-    context.drawNativeImageInternal(image, m_destinationRect, m_srcRect, m_options);
+    context.drawNativeImageInternal(m_image, m_destinationRect, m_srcRect, m_options);
 }
 
 void DrawNativeImage::dump(TextStream& ts, OptionSet<AsTextFlag> flags) const
 {
     if (flags.contains(AsTextFlag::IncludeResourceIdentifiers))
-        ts.dumpProperty("image-identifier"_s, imageIdentifier());
+        ts.dumpProperty("image-identifier"_s, nativeImage()->renderingResourceIdentifier());
     ts.dumpProperty("source-rect"_s, source());
     ts.dumpProperty("dest-rect"_s, destinationRect());
 }
@@ -359,36 +351,31 @@ void DrawSystemImage::dump(TextStream& ts, OptionSet<AsTextFlag>) const
     ts.dumpProperty("destination"_s, destinationRect());
 }
 
-DrawPattern::DrawPattern(RenderingResourceIdentifier imageIdentifier, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
-    : m_imageIdentifier(imageIdentifier)
-    , m_destination(destRect)
-    , m_tileRect(tileRect)
-    , m_patternTransform(patternTransform)
-    , m_phase(phase)
-    , m_spacing(spacing)
-    , m_options(options)
+void DrawPatternNativeImage::apply(GraphicsContext& context) const
 {
+    context.drawPattern(m_image, m_destination, m_tileRect, m_patternTransform, m_phase, m_spacing, m_options);
 }
 
-void DrawPattern::apply(GraphicsContext& context, SourceImage& sourceImage) const
-{
-    if (auto image = sourceImage.nativeImageIfExists()) {
-        context.drawPattern(*image, m_destination, m_tileRect, m_patternTransform, m_phase, m_spacing, m_options);
-        return;
-    }
-
-    if (auto imageBuffer = sourceImage.imageBufferIfExists()) {
-        context.drawPattern(*imageBuffer, m_destination, m_tileRect, m_patternTransform, m_phase, m_spacing, m_options);
-        return;
-    }
-
-    ASSERT_NOT_REACHED();
-}
-
-void DrawPattern::dump(TextStream& ts, OptionSet<AsTextFlag> flags) const
+void DrawPatternNativeImage::dump(TextStream& ts, OptionSet<AsTextFlag> flags) const
 {
     if (flags.contains(AsTextFlag::IncludeResourceIdentifiers))
-        ts.dumpProperty("image-identifier"_s, imageIdentifier());
+        ts.dumpProperty("image-identifier"_s, nativeImage()->renderingResourceIdentifier());
+    ts.dumpProperty("pattern-transform"_s, patternTransform());
+    ts.dumpProperty("tile-rect"_s, tileRect());
+    ts.dumpProperty("dest-rect"_s, destRect());
+    ts.dumpProperty("phase"_s, phase());
+    ts.dumpProperty("spacing"_s, spacing());
+}
+
+void DrawPatternImageBuffer::apply(GraphicsContext& context) const
+{
+    context.drawPattern(m_imageBuffer, m_destination, m_tileRect, m_patternTransform, m_phase, m_spacing, m_options);
+}
+
+void DrawPatternImageBuffer::dump(TextStream& ts, OptionSet<AsTextFlag> flags) const
+{
+    if (flags.contains(AsTextFlag::IncludeResourceIdentifiers))
+        ts.dumpProperty("image-identifier"_s, imageBuffer()->renderingResourceIdentifier());
     ts.dumpProperty("pattern-transform"_s, patternTransform());
     ts.dumpProperty("tile-rect"_s, tileRect());
     ts.dumpProperty("dest-rect"_s, destRect());

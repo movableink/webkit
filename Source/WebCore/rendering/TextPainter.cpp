@@ -129,7 +129,7 @@ void TextPainter::paintTextOrEmphasisMarks(const FontCascade& font, const TextRu
     else {
         // Replaying back a whole cached glyph run to the GraphicsContext.
         m_context.translate(textOrigin);
-        DisplayList::Replayer replayer(m_context, m_glyphDisplayList->items(), m_glyphDisplayList->resourceHeap(), ControlFactory::shared());
+        DisplayList::Replayer replayer(m_context, m_glyphDisplayList->items(), ControlFactory::shared());
         replayer.replay();
         m_context.translate(-textOrigin);
     }
