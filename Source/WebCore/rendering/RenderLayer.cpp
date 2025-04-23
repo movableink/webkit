@@ -3621,9 +3621,10 @@ void RenderLayer::paintLayerContents(GraphicsContext& context, const LayerPainti
     bool isCollectingAccessibilityRegion = is<AccessibilityRegionContext>(paintingInfo.regionContext);
 
     bool isSelfPaintingLayer = this->isSelfPaintingLayer();
+    bool isInsideSkippedSubtree = renderer().isSkippedContent();
 
     auto hasVisibleContent = [&]() -> bool {
-        if (renderer().isSkippedContent())
+        if (isInsideSkippedSubtree)
             return false;
 
         if (!m_hasVisibleContent)
@@ -3848,14 +3849,10 @@ void RenderLayer::paintLayerContents(GraphicsContext& context, const LayerPainti
         if (shouldPaintNegativeZIndexChildren)
             paintList(negativeZOrderLayers(), currentContext, paintingInfo, localPaintFlags);
         
-        if (isPaintingCompositedForeground) {
-            if (shouldPaintContent) {
-                paintForegroundForFragments(layerFragments, currentContext, context, paintingInfo.paintDirtyRect, haveTransparency,
-                    localPaintingInfo, paintBehavior, subtreePaintRootForRenderer);
-            }
-        }
+        if (isPaintingCompositedForeground && shouldPaintContent)
+            paintForegroundForFragments(layerFragments, currentContext, context, paintingInfo.paintDirtyRect, haveTransparency, localPaintingInfo, paintBehavior, subtreePaintRootForRenderer);
 
-        if (isCollectingEventRegion)
+        if (isCollectingEventRegion && !isInsideSkippedSubtree)
             collectEventRegionForFragments(layerFragments, currentContext, localPaintingInfo, paintBehavior);
 
         if (isCollectingAccessibilityRegion)
