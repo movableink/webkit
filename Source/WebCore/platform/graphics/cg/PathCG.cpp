@@ -581,16 +581,13 @@ static inline void addToCGContextPath(CGContextRef context, PathSegment anySegme
 
 void addToCGContextPath(CGContextRef context, const Path& path)
 {
-    if (auto* singleSegment = path.singleSegmentIfExists(); LIKELY(singleSegment)) {
-        addToCGContextPath(context, *singleSegment);
+    if (auto* platformPath = path.platformPathIfExists()) {
+        CGContextAddPath(context, platformPath);
         return;
     }
-    if (auto* segments = path.segmentsIfExists(); LIKELY(segments)) {
-        for (auto& segment : *segments)
-            addToCGContextPath(context, segment);
-        return;
-    }
-    CGContextAddPath(context, path.platformPath());
+
+    for (auto& segment : path.segments())
+        addToCGContextPath(context, segment);
 }
 
 } // namespace WebCore
