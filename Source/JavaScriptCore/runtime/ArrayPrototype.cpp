@@ -2262,7 +2262,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncCopyWithin, (JSGlobalObject* globalObject
 
     if (LIKELY(isJSArray(thisObject))) {
         JSArray* thisArray = asArray(thisObject);
-        if (thisArray->fastCopywithin(globalObject, from, to, count, length))
+        if (thisArray->fastCopyWithin(globalObject, from, to, count, length))
             return JSValue::encode(thisValue);
     }
 

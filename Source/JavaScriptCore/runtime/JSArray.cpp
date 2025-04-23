@@ -778,7 +778,7 @@ std::optional<bool> JSArray::fastIncludes(JSGlobalObject* globalObject, JSValue 
     }
 }
 
-bool JSArray::fastCopywithin(JSGlobalObject* globalObject, uint64_t from64, uint64_t to64, uint64_t count64, uint64_t length64)
+bool JSArray::fastCopyWithin(JSGlobalObject* globalObject, uint64_t from64, uint64_t to64, uint64_t count64, uint64_t length64)
 {
     VM& vm = globalObject->vm();
 
