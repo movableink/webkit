@@ -24,7 +24,7 @@ import json
 import logging
 import os
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 from webkitbugspy import Tracker, bugzilla, radar
@@ -127,7 +127,7 @@ class TestCommit(unittest.TestCase):
     SVN revision: r123 on trunk
     identifier: 123 on trunk
     by Jonathan Bedard <jbedard@apple.com> @ {}
-'''.format(datetime.utcfromtimestamp(1000)),
+'''.format(datetime.fromtimestamp(1000, timezone.utc)),
         )
 
         self.assertEqual(
@@ -142,7 +142,7 @@ class TestCommit(unittest.TestCase):
     SVN revision: r124 on branch-a
     identifier: 1 on branch-a branched from 123
     by Jonathan Bedard <jbedard@apple.com> @ {}
-'''.format(datetime.utcfromtimestamp(1000)),
+'''.format(datetime.fromtimestamp(1000, timezone.utc)),
         )
 
         self.assertEqual(
@@ -159,7 +159,7 @@ class TestCommit(unittest.TestCase):
     by Jonathan Bedard <jbedard@apple.com> @ {}
 
 PRINTED
-'''.format(datetime.utcfromtimestamp(1000)),
+'''.format(datetime.fromtimestamp(1000, timezone.utc)),
         )
 
     def test_repr(self):

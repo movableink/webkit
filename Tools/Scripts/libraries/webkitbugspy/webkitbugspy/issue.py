@@ -49,7 +49,7 @@ class Issue(object):
         def __repr__(self):
             return '({} @ {}) {}'.format(
                 self.user,
-                datetime.utcfromtimestamp(self.timestamp) if self.timestamp else '-',
+                datetime.fromtimestamp(self.timestamp, timezone.utc) if self.timestamp else '-',
                 self.content,
             )
 

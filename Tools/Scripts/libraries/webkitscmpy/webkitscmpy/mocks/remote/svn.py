@@ -119,7 +119,7 @@ class Svn(mocks.Requests):
 
     def request(self, method, url, data=None, **kwargs):
         import xmltodict
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         if not url.startswith('http://') and not url.startswith('https://'):
             return mocks.Response.create404(url)
@@ -246,7 +246,7 @@ class Svn(mocks.Requests):
                     '</D:multistatus>\n'.format(
                         stripped_url,
                         commit.revision,
-                        datetime.utcfromtimestamp(commit.timestamp - timedelta(hours=7).seconds).strftime('%Y-%m-%dT%H:%M:%S.103754Z'),
+                        datetime.fromtimestamp(commit.timestamp - timedelta(hours=7).seconds, timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.103754Z'),
                         commit.author.email,
                 ),
             )
@@ -278,7 +278,7 @@ class Svn(mocks.Requests):
                         '<S:date>{}</S:date>\n'
                         '{}{}</S:log-item>\n'.format(
                             commit.revision,
-                            datetime.utcfromtimestamp(commit.timestamp - timedelta(hours=7).seconds).strftime('%Y-%m-%dT%H:%M:%S.103754Z'),
+                            datetime.fromtimestamp(commit.timestamp - timedelta(hours=7).seconds, timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.103754Z'),
                             '' if data['S:log-report'].get('S:revpro') else '<D:comment>{}</D:comment>\n'
                             '<D:creator-displayname>{}</D:creator-displayname>\n'.format(
                                 commit.message,

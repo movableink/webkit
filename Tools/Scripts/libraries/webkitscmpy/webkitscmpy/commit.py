@@ -23,7 +23,7 @@
 import json
 import re
 
-from datetime import datetime
+from datetime import datetime, timezone
 from webkitbugspy import Tracker
 from webkitscmpy import Contributor
 from webkitcorepy import string_utils
@@ -266,7 +266,7 @@ class Commit(object):
         if self.author:
             result += '    by {}'.format(self.author)
             if self.timestamp:
-                result += ' @ {}'.format(datetime.utcfromtimestamp(self.timestamp))
+                result += ' @ {}'.format(datetime.fromtimestamp(self.timestamp, timezone.utc))
             result += '\n'
 
         if self.message and message:

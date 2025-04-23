@@ -23,7 +23,7 @@
 import os
 import shutil
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 from webkitcorepy import LoggerCapture, OutputCapture, run, testing
@@ -518,7 +518,7 @@ CommitDate: {time_c}
                 [
                     'From bae5d1e90999d4f916a8a15810ccfa43f37a2fd6',
                     'From: Jonathan Bedard <jbedard@apple.com>',
-                    'Date: {} +0000'.format(datetime.utcfromtimestamp(1601668000 + time.timezone).strftime('%a %b %d %H:%M:%S %Y')),
+                    'Date: {} +0000'.format(datetime.fromtimestamp(1601668000 + time.timezone, timezone.utc).strftime('%a %b %d %H:%M:%S %Y')),
                     'Subject: [PATCH] 8th commit',
                     '---',
                     'diff --git a/ChangeLog b/ChangeLog',

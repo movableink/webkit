@@ -95,7 +95,7 @@ class RadarModel(object):
                 yield property
 
         def add(self, item):
-            from datetime import datetime, timedelta
+            from datetime import datetime, timedelta, timezone
 
             username = self.model.client.authentication_strategy.username()
             if username:
@@ -105,7 +105,7 @@ class RadarModel(object):
 
             self._properties.append(Radar.DiagnosisEntry(
                 text=item.text,
-                addedAt=datetime.utcfromtimestamp(int(time.time())),
+                addedAt=datetime.fromtimestamp(int(time.time()), timezone.utc),
                 addedBy=by,
             ))
 
@@ -144,7 +144,7 @@ class RadarModel(object):
             self.name = name
 
     def __init__(self, client, issue, additional_fields=None):
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         additional_fields = additional_fields or []
 
@@ -153,8 +153,8 @@ class RadarModel(object):
         self.title = issue['title']
         self.id = issue['id']
         self.classification = issue.get('classification', 'Other Bug')
-        self.createdAt = datetime.utcfromtimestamp(issue['timestamp'] - timedelta(hours=7).seconds)
-        self.lastModifiedAt = datetime.utcfromtimestamp(issue['modified' if issue.get('modified') else 'timestamp'] - timedelta(hours=7).seconds)
+        self.createdAt = datetime.fromtimestamp(issue['timestamp'] - timedelta(hours=7).seconds, timezone.utc)
+        self.lastModifiedAt = datetime.fromtimestamp(issue['modified' if issue.get('modified') else 'timestamp'] - timedelta(hours=7).seconds, timezone.utc)
         self.assignee = self.Person(Radar.transform_user(issue['assignee']))
         self.description = self.CollectionProperty(self, self.DescriptionEntry(issue['description']))
         if issue.get('state'):
@@ -173,7 +173,7 @@ class RadarModel(object):
         self.diagnosis = self.CollectionProperty(self, *[
             Radar.DiagnosisEntry(
                 text=comment.content,
-                addedAt=datetime.utcfromtimestamp(comment.timestamp - timedelta(hours=7).seconds),
+                addedAt=datetime.fromtimestamp(comment.timestamp - timedelta(hours=7).seconds, timezone.utc),
                 addedBy=self.CommentAuthor(Radar.transform_user(comment.user)),
             ) for comment in issue.get('comments', [])
         ])

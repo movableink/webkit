@@ -23,7 +23,7 @@
 import json
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 from webkitcorepy import mocks
@@ -41,7 +41,7 @@ class Svn(mocks.Subprocess):
         return 'r{revision} | {email} | {date}'.format(
             revision=commit.revision,
             email=email,
-            date=datetime.utcfromtimestamp(commit.timestamp).strftime('%Y-%m-%d %H:%M:%S {} (%a, %d %b %Y)'.format(self.utc_offset)),
+            date=datetime.fromtimestamp(commit.timestamp, timezone.utc).strftime('%Y-%m-%d %H:%M:%S {} (%a, %d %b %Y)'.format(self.utc_offset)),
         )
 
     def __init__(self, path='/.invalid-svn', datafile=None, remote=None, utc_offset=None):
@@ -211,7 +211,7 @@ class Svn(mocks.Subprocess):
                 branch=self.branch,
                 revision=commit.revision,
                 author=commit.author.email,
-                date=datetime.utcfromtimestamp(commit.timestamp).strftime('%Y-%m-%d %H:%M:%S {} (%a, %d %b %Y)'.format(self.utc_offset)),
+                date=datetime.fromtimestamp(commit.timestamp, timezone.utc).strftime('%Y-%m-%d %H:%M:%S {} (%a, %d %b %Y)'.format(self.utc_offset)),
             ),
         )
 

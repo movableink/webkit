@@ -22,7 +22,7 @@
 
 import os
 import shutil
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 from webkitcorepy import LoggerCapture, OutputCapture, testing
@@ -98,7 +98,7 @@ class TestLocalSvn(testing.PathTestCase):
                     u'Schedule': u'normal',
                     u'Last Changed Author': u'jbedard@apple.com',
                     u'Last Changed Rev': u'6',
-                    u'Last Changed Date': datetime.utcfromtimestamp(1601665100).strftime('%Y-%m-%d %H:%M:%S 0000 (%a, %d %b %Y)'),
+                    u'Last Changed Date': datetime.fromtimestamp(1601665100, timezone.utc).strftime('%Y-%m-%d %H:%M:%S 0000 (%a, %d %b %Y)'),
                 }, local.Svn(self.path).info(),
             )
 
@@ -323,7 +323,7 @@ class TestRemoteSvn(testing.TestCase):
         with mocks.remote.Svn():
             self.assertDictEqual({
                 'Last Changed Author': 'jbedard@apple.com',
-                'Last Changed Date': datetime.utcfromtimestamp(1601665100 - timedelta(hours=7).seconds).strftime('%Y-%m-%d %H:%M:%S'),
+                'Last Changed Date': datetime.fromtimestamp(1601665100 - timedelta(hours=7).seconds, timezone.utc).strftime('%Y-%m-%d %H:%M:%S'),
                 'Last Changed Rev': '6',
                 'Revision': 10,
             }, remote.Svn(self.remote).info())

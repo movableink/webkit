@@ -24,7 +24,7 @@ import os
 import time
 import sys
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from webkitcorepy import OutputCapture, Terminal, testing
 from webkitscmpy import program, mocks
@@ -66,7 +66,7 @@ index 2deba859a126..7b85f5cecd66 100644
 +        return;
     auto offset = layer.convertToLayerCoords(&clippingRoot, {{ }}, RenderLayer::AdjustForColumns);
     clipRect.moveBy(-offset);
-'''.format(datetime.utcfromtimestamp(commit.timestamp + time.timezone).strftime('%a %b %d %H:%M:%S %Y +0000')),
+'''.format(datetime.fromtimestamp(commit.timestamp + time.timezone, timezone.utc).strftime('%a %b %d %H:%M:%S %Y +0000')),
         )
 
     def test_git_svn(self):
@@ -99,7 +99,7 @@ index 2deba859a126..7b85f5cecd66 100644
 +        return;
     auto offset = layer.convertToLayerCoords(&clippingRoot, {{ }}, RenderLayer::AdjustForColumns);
     clipRect.moveBy(-offset);
-'''.format(datetime.utcfromtimestamp(commit.timestamp + time.timezone).strftime('%a %b %d %H:%M:%S %Y +0000')),
+'''.format(datetime.fromtimestamp(commit.timestamp + time.timezone, timezone.utc).strftime('%a %b %d %H:%M:%S %Y +0000')),
         )
 
     def test_svn(self):

@@ -24,7 +24,7 @@ import json
 import re
 
 from .commit import Commit
-from datetime import datetime
+from datetime import datetime, timezone
 from webkitscmpy import Contributor
 from webkitcorepy import string_utils
 
@@ -57,7 +57,7 @@ class PullRequest(object):
         def __repr__(self):
             return '({} @ {}) {}'.format(
                 self.author,
-                datetime.utcfromtimestamp(self.timestamp) if self.timestamp else '-',
+                datetime.fromtimestamp(self.timestamp, timezone.utc) if self.timestamp else '-',
                 self.content,
             )
 
