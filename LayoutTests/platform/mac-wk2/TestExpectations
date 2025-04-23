@@ -2144,3 +2144,5 @@ webkit.org/b/291878 [ Sequoia Release arm64 ] http/tests/webgpu/webgpu/shader/va
 # webkit.org/b/291904 REGRESSION(293851@main):[iOS MacOS Debug] ASSERTION FAILED: !layer || !layer->hasAncestor in fast/css/view-transitions-hide-under-page-background-color.html (flaky in EWS)
 [ Sonoma Debug ] fast/css/view-transition-pseudo-element-styles-crash.html [ Skip ]
 [ Sonoma Debug ] fast/css/view-transitions-hide-under-page-background-color.html [ Skip ]
+
+webkit.org/b/291966 [ Sequoia+ Release ] http/tests/webgpu/webgpu/api/validation/render_pipeline/fragment_state.html [ Pass Timeout ]
