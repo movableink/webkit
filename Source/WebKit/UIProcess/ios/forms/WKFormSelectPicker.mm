@@ -915,6 +915,14 @@ static NSString *optionCellReuseIdentifier = @"WKSelectPickerTableViewCell";
     RetainPtr<UIBarButtonItem> _nextButton;
 }
 
+#if ENABLE(SELECT_MULTIPLE_ADJUSTMENTS)
+#import <WebKitAdditions/WKSelectPickerTableViewControllerAdditions.mm>
+#else
+- (void)performAdjustmentsIfNeeded
+{
+}
+#endif
+
 - (id)initWithView:(WKContentView *)view
 {
     if (!(self = [super initWithStyle:UITableViewStyleGrouped]))
@@ -946,6 +954,8 @@ static NSString *optionCellReuseIdentifier = @"WKSelectPickerTableViewCell";
         if (option.isGroup)
             _numberOfSections++;
     }
+
+    [self performAdjustmentsIfNeeded];
 
     return self;
 }
