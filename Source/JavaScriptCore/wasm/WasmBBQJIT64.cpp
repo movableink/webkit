@@ -3352,7 +3352,7 @@ BBQJIT::BranchFoldResult BBQJIT::tryFoldFusedBranchCompare(OpType opType, Expres
     case OpType::I32Eq:
         return left.asI32() == right.asI32() ? BranchAlwaysTaken : BranchNeverTaken;
     case OpType::I32Ne:
-        return left.asI32() == right.asI32() ? BranchAlwaysTaken : BranchNeverTaken;
+        return left.asI32() != right.asI32() ? BranchAlwaysTaken : BranchNeverTaken;
     case OpType::I64LtS:
         return left.asI64() < right.asI64() ? BranchAlwaysTaken : BranchNeverTaken;
     case OpType::I64LtU:
@@ -3372,7 +3372,7 @@ BBQJIT::BranchFoldResult BBQJIT::tryFoldFusedBranchCompare(OpType opType, Expres
     case OpType::I64Eq:
         return left.asI64() == right.asI64() ? BranchAlwaysTaken : BranchNeverTaken;
     case OpType::I64Ne:
-        return left.asI64() == right.asI64() ? BranchAlwaysTaken : BranchNeverTaken;
+        return left.asI64() != right.asI64() ? BranchAlwaysTaken : BranchNeverTaken;
     case OpType::F32Lt:
         return left.asF32() < right.asF32() ? BranchAlwaysTaken : BranchNeverTaken;
     case OpType::F32Gt:
