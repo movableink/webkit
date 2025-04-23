@@ -646,6 +646,11 @@ public:
         add32(imm, src, dest);
     }
 
+    void addPtr(TrustedImmPtr imm, RegisterID src, RegisterID dest)
+    {
+        add32(TrustedImm32(imm), src, dest);
+    }
+
     void addPtr(TrustedImm32 imm, AbsoluteAddress address)
     {
         add32(imm, address);
@@ -1007,6 +1012,11 @@ public:
     void addPtr(TrustedImm32 imm, RegisterID src, RegisterID dest)
     {
         add64(imm, src, dest);
+    }
+
+    void addPtr(TrustedImmPtr imm, RegisterID src, RegisterID dest)
+    {
+        add64(TrustedImm64(imm), src, dest);
     }
 
     void addPtr(TrustedImm32 imm, Address address)

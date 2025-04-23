@@ -763,7 +763,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSG
     }
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationSwitchStringAndGetIndex, unsigned, (JSGlobalObject* globalObject, const UnlinkedStringJumpTable* unlinkedTable, JSString* string))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationSwitchStringAndGetIndex, UCPUStrictInt32, (JSGlobalObject* globalObject, const UnlinkedStringJumpTable* unlinkedTable, JSString* string))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
@@ -772,16 +772,16 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationSwitchStringAndGetIndex, unsigned, (J
 
     unsigned length = string->length();
     if (length < unlinkedTable->minLength() || length > unlinkedTable->maxLength())
-        return std::numeric_limits<unsigned>::max();
+        return toUCPUStrictInt32(std::numeric_limits<unsigned>::max());
 
     auto str = string->value(globalObject);
 
     RETURN_IF_EXCEPTION(throwScope, 0);
 
-    return unlinkedTable->indexForValue(str->impl(), std::numeric_limits<unsigned>::max());
+    return toUCPUStrictInt32(unlinkedTable->indexForValue(str->impl(), std::numeric_limits<unsigned>::max()));
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationTypeOfObjectAsTypeofType, int32_t, (JSGlobalObject* globalObject, JSCell* object))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationTypeOfObjectAsTypeofType, UCPUStrictInt32, (JSGlobalObject* globalObject, JSCell* object))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
@@ -790,10 +790,10 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationTypeOfObjectAsTypeofType, int32_t, (J
     ASSERT(jsDynamicCast<JSObject*>(object));
 
     if (object->structure()->masqueradesAsUndefined(globalObject))
-        return static_cast<int32_t>(TypeofType::Undefined);
+        return toUCPUStrictInt32(static_cast<int32_t>(TypeofType::Undefined));
     if (object->isCallable())
-        return static_cast<int32_t>(TypeofType::Function);
-    return static_cast<int32_t>(TypeofType::Object);
+        return toUCPUStrictInt32(static_cast<int32_t>(TypeofType::Function));
+    return toUCPUStrictInt32(static_cast<int32_t>(TypeofType::Object));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationCompileFTLLazySlowPath, void*, (CallFrame* callFrame, unsigned index))

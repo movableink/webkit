@@ -1628,6 +1628,7 @@ void BBQJIT::emitAllocateGCArrayUninitialized(GPRReg resultGPR, uint32_t typeInd
         JIT_COMMENT(m_jit, "Do array allocation variable sized");
 
         ASSERT(hasOneBitSet(elementSize));
+        m_jit.jitAssertIsInt32(sizeLocation.asGPR());
         m_jit.lshift64(sizeLocation.asGPR(), TrustedImm32(getLSBSet(elementSize)), scratchGPR);
         m_jit.add64(TrustedImm64(sizeof(JSWebAssemblyArray)), scratchGPR);
 
@@ -1670,7 +1671,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayNew(uint32_t typeIndex, Express
 
         MacroAssembler::Label loop(m_jit);
         JIT_COMMENT(m_jit, "Array initialization loop header");
-        Jump done = m_jit.branchTestPtr(MacroAssembler::Zero, sizeLocation.asGPR());
+        Jump done = m_jit.branchTest32(MacroAssembler::Zero, sizeLocation.asGPR());
         m_jit.sub32(TrustedImm32(1), sizeLocation.asGPR());
         constexpr bool preserveIndex = true;
         emitArrayStoreElementUnchecked(elementType, scratchGPR, sizeLocation, initValue, preserveIndex);
@@ -1772,7 +1773,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayNewDefault(uint32_t typeIndex, 
 
         MacroAssembler::Label loop(m_jit);
         JIT_COMMENT(m_jit, "Array initialization loop header");
-        Jump done = m_jit.branchTestPtr(MacroAssembler::Zero, sizeLocation.asGPR());
+        Jump done = m_jit.branchTest32(MacroAssembler::Zero, sizeLocation.asGPR());
         m_jit.sub32(TrustedImm32(1), sizeLocation.asGPR());
         constexpr bool preserveIndex = true;
         emitArrayStoreElementUnchecked(elementType, scratchGPR, sizeLocation, initValue, preserveIndex);
@@ -2642,7 +2643,7 @@ PartialResult BBQJIT::addI32WrapI64(Value operand, Value& result)
         "I32WrapI64", TypeKind::I32,
         BLOCK(Value::fromI32(static_cast<int32_t>(operand.asI64()))),
         BLOCK(
-            m_jit.move(operandLocation.asGPR(), resultLocation.asGPR());
+            m_jit.zeroExtend32ToWord(operandLocation.asGPR(), resultLocation.asGPR());
         )
     )
 }

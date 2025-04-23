@@ -133,9 +133,8 @@ JSC_DEFINE_JIT_OPERATION(operationJSToWasmEntryWrapperBuildFrame, JSEntrypointCa
             dataLogLnIf(WasmOperationsInternal::verbose, "* Register Arg ", i, " ", dst);
 
             if (type.isI32() || type.isF32())
-                *access.operator()<uint32_t>(registerSpace, dst) = static_cast<uint32_t>(value);
-            else
-                *access.operator()<uint64_t>(registerSpace, dst) = value;
+                value = static_cast<uint64_t>(static_cast<uint32_t>(value));
+            *access.operator()<uint64_t>(registerSpace, dst) = value;
         }
     }
 
@@ -271,7 +270,7 @@ JSC_DEFINE_JIT_OPERATION(operationJSToWasmEntryWrapperBuildReturnFrame, EncodedJ
     OPERATION_RETURN(scope, JSValue::encode(resultArray));
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationGetWasmCalleeStackSize, unsigned, (JSWebAssemblyInstance*, WasmCallableFunction* functionInfo))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationGetWasmCalleeStackSize, UCPUStrictInt32, (JSWebAssemblyInstance*, WasmCallableFunction* functionInfo))
 {
     auto typeIndex = static_cast<WasmOrJSImportableFunctionCallLinkInfo*>(functionInfo)->typeIndex;
     const TypeDefinition& typeDefinition = TypeInformation::get(typeIndex).expand();
@@ -288,7 +287,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationGetWasmCalleeStackSize, unsigned, (JS
     const unsigned numberOfBytesForSavedResults = savedResultRegisters.sizeOfAreaInBytes();
     const unsigned stackOffset = WTF::roundUpToMultipleOf<stackAlignmentBytes()>(std::max(numberOfBytesForCall, numberOfBytesForSavedResults));
 
-    return stackOffset;
+    return toUCPUStrictInt32(stackOffset);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalArguments, bool, (void* sp, CallFrame* cfr, void* argumentRegisters, JSWebAssemblyInstance* instance))
@@ -480,15 +479,17 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalReturnValues, void, (void* 
             if (!returned.isNumber() || !returned.isInt32()) {
                 // slow path
                 uint32_t result = JSValue::decode(std::bit_cast<EncodedJSValue>(returned)).toInt32(globalObject);
-                *access.operator()<uint32_t>(registerSpace, 0) = result;
+                OPERATION_RETURN_IF_EXCEPTION(scope);
+                *access.operator()<uint64_t>(registerSpace, 0) = static_cast<uint64_t>(result);
             } else {
                 uint64_t result = static_cast<uint64_t>(*access.operator()<uint32_t>(registerSpace, 0));
-                *access.operator()<uint32_t>(registerSpace, 0) = result;
+                *access.operator()<uint64_t>(registerSpace, 0) = result;
             }
             break;
         }
         case TypeKind::I64: {
             uint64_t result = JSValue::decode(std::bit_cast<EncodedJSValue>(returned)).toBigInt64(globalObject);
+            OPERATION_RETURN_IF_EXCEPTION(scope);
             *access.operator()<uint64_t>(registerSpace, 0) = result;
             break;
         }
@@ -506,11 +507,12 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalReturnValues, void, (void* 
                     uint64_t intermediate = *access.operator()<uint64_t>(registerSpace, 0);
 #endif
                     double d = std::bit_cast<double>(intermediate);
-                    *access.operator()<float>(registerSpace, offset) = static_cast<float>(d);
+                    *access.operator()<uint64_t>(registerSpace, offset) = static_cast<uint64_t>(std::bit_cast<uint32_t>(static_cast<float>(d)));
                 }
             } else {
                 float result = static_cast<float>(JSValue::decode(std::bit_cast<EncodedJSValue>(returned)).toNumber(globalObject));
-                *access.operator()<float>(registerSpace, offset) = result;
+                OPERATION_RETURN_IF_EXCEPTION(scope);
+                *access.operator()<uint64_t>(registerSpace, offset) = static_cast<uint64_t>(std::bit_cast<uint32_t>(result));
             }
             break;
         }
@@ -532,6 +534,7 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalReturnValues, void, (void* 
                 }
             } else {
                 double result = static_cast<double>(JSValue::decode(std::bit_cast<EncodedJSValue>(returned)).toNumber(globalObject));
+                OPERATION_RETURN_IF_EXCEPTION(scope);
                 *access.operator()<double>(registerSpace, offset) = result;
             }
             break;
@@ -664,7 +667,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmToJSExitIterateResults, bool, (JS
         const auto& returnType = signature->returnType(index);
         switch (returnType.kind) {
         case TypeKind::I32:
-            unboxedValue = value.toInt32(globalObject);
+            unboxedValue = static_cast<uint32_t>(value.toInt32(globalObject));
             break;
         case TypeKind::I64:
             unboxedValue = value.toBigInt64(globalObject);
@@ -1304,14 +1307,14 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationConvertToF64, double, (JSWebAssemblyI
     return JSValue::decode(v).toNumber(globalObject);
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationConvertToI32, int32_t, (JSWebAssemblyInstance* instance, EncodedJSValue v))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationConvertToI32, UCPUStrictInt32, (JSWebAssemblyInstance* instance, EncodedJSValue v))
 {
     CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
     assertCalleeIsReferenced(callFrame, instance);
     VM& vm = instance->vm();
     JSGlobalObject* globalObject = instance->globalObject();
     NativeCallFrameTracer tracer(vm, callFrame);
-    return JSValue::decode(v).toInt32(globalObject);
+    return toUCPUStrictInt32(JSValue::decode(v).toInt32(globalObject));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationConvertToF32, float, (JSWebAssemblyInstance* instance, EncodedJSValue v))
@@ -1534,9 +1537,9 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmWriteBarrierSlowPath, void, (JSCe
     vm.writeBarrierSlowPath(cell);
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationPopcount32, uint32_t, (int32_t value))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationPopcount32, UCPUStrictInt32, (int32_t value))
 {
-    return std::popcount(static_cast<uint32_t>(value));
+    return toUCPUStrictInt32(std::popcount(static_cast<uint32_t>(value)));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationPopcount64, uint64_t, (int64_t value))
@@ -1544,13 +1547,13 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationPopcount64, uint64_t, (int64_t value)
     return std::popcount(static_cast<uint64_t>(value));
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationGrowMemory, int32_t, (JSWebAssemblyInstance* instance, int32_t delta))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationGrowMemory, UCPUStrictInt32, (JSWebAssemblyInstance* instance, int32_t delta))
 {
     CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
     assertCalleeIsReferenced(callFrame, instance);
     VM& vm = instance->vm();
     NativeCallFrameTracer tracer(vm, callFrame);
-    return growMemory(instance, delta);
+    return toUCPUStrictInt32(growMemory(instance, delta));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmMemoryFill, UCPUStrictInt32, (JSWebAssemblyInstance* instance, uint32_t dstAddress, uint32_t targetValue, uint32_t count))
@@ -1583,9 +1586,9 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmElemDrop, void, (JSWebAssemblyIns
     return elemDrop(instance, elementIndex);
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmTableGrow, int32_t, (JSWebAssemblyInstance* instance, unsigned tableIndex, EncodedJSValue fill, uint32_t delta))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmTableGrow, UCPUStrictInt32, (JSWebAssemblyInstance* instance, unsigned tableIndex, EncodedJSValue fill, uint32_t delta))
 {
-    return tableGrow(instance, tableIndex, fill, delta);
+    return toUCPUStrictInt32(tableGrow(instance, tableIndex, fill, delta));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmTableFill, UCPUStrictInt32, (JSWebAssemblyInstance* instance, unsigned tableIndex, uint32_t offset, EncodedJSValue fill, uint32_t count))
@@ -1630,24 +1633,24 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmStructSet, void, (JSWebAssemblyIn
     return structSet(encodedStructReference, fieldIndex, argument);
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationGetWasmTableSize, int32_t, (JSWebAssemblyInstance* instance, unsigned tableIndex))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationGetWasmTableSize, UCPUStrictInt32, (JSWebAssemblyInstance* instance, unsigned tableIndex))
 {
-    return tableSize(instance, tableIndex);
+    return toUCPUStrictInt32(tableSize(instance, tableIndex));
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMemoryAtomicWait32, int32_t, (JSWebAssemblyInstance* instance, unsigned base, unsigned offset, int32_t value, int64_t timeoutInNanoseconds))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMemoryAtomicWait32, UCPUStrictInt32, (JSWebAssemblyInstance* instance, unsigned base, unsigned offset, int32_t value, int64_t timeoutInNanoseconds))
 {
-    return memoryAtomicWait32(instance, base, offset, value, timeoutInNanoseconds);
+    return toUCPUStrictInt32(memoryAtomicWait32(instance, base, offset, value, timeoutInNanoseconds));
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMemoryAtomicWait64, int32_t, (JSWebAssemblyInstance* instance, unsigned base, unsigned offset, int64_t value, int64_t timeoutInNanoseconds))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMemoryAtomicWait64, UCPUStrictInt32, (JSWebAssemblyInstance* instance, unsigned base, unsigned offset, int64_t value, int64_t timeoutInNanoseconds))
 {
-    return memoryAtomicWait64(instance, base, offset, value, timeoutInNanoseconds);
+    return toUCPUStrictInt32(memoryAtomicWait64(instance, base, offset, value, timeoutInNanoseconds));
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMemoryAtomicNotify, int32_t, (JSWebAssemblyInstance* instance, unsigned base, unsigned offset, int32_t countValue))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMemoryAtomicNotify, UCPUStrictInt32, (JSWebAssemblyInstance* instance, unsigned base, unsigned offset, int32_t countValue))
 {
-    return memoryAtomicNotify(instance, base, offset, countValue);
+    return toUCPUStrictInt32(memoryAtomicNotify(instance, base, offset, countValue));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmMemoryInit, UCPUStrictInt32, (JSWebAssemblyInstance* instance, unsigned dataSegmentIndex, uint32_t dstAddress, uint32_t srcAddress, uint32_t length))
@@ -1896,7 +1899,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmAnyConvertExtern, EncodedJSValue,
     return externInternalize(reference);
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmRefTest, int32_t, (JSWebAssemblyInstance* instance, EncodedJSValue reference, uint32_t allowNull, int32_t heapType, bool shouldNegate))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmRefTest, UCPUStrictInt32, (JSWebAssemblyInstance* instance, EncodedJSValue reference, uint32_t allowNull, int32_t heapType, bool shouldNegate))
 {
     Wasm::TypeIndex typeIndex;
     if (Wasm::typeIndexIsType(static_cast<Wasm::TypeIndex>(heapType)))
@@ -1906,7 +1909,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmRefTest, int32_t, (JSWebAssemblyI
     int32_t truth = shouldNegate ? 0 : 1;
     int32_t falsity = shouldNegate ? 1 : 0;
     // Explicitly return 1 or 0 because bool in C++ only reqiures that the bottom bit match the other bits can be anything.
-    return Wasm::refCast(reference, static_cast<bool>(allowNull), typeIndex) ? truth : falsity;
+    return toUCPUStrictInt32(Wasm::refCast(reference, static_cast<bool>(allowNull), typeIndex) ? truth : falsity);
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmRefCast, EncodedJSValue, (JSWebAssemblyInstance* instance, EncodedJSValue reference, uint32_t allowNull, int32_t heapType))
