@@ -847,10 +847,15 @@ LayoutUnit RenderInline::baselinePosition(FontBaseline baselineType, bool firstL
 LayoutSize RenderInline::offsetForInFlowPositionedInline(const RenderBox* child) const
 {
     // FIXME: This function isn't right with mixed writing modes.
-
-    ASSERT(isInFlowPositioned());
-    if (!isInFlowPositioned())
+    if (!isInFlowPositioned()) {
+        ASSERT_NOT_REACHED();
         return { };
+    }
+
+    if (!hasLayer()) {
+        // It looks like we are inflow positioned but no layer created yet. It essentially means we don't have an position offset yet.
+        return { };
+    }
 
     // When we have an enclosing relpositioned inline, we need to add in the offset of the first line
     // box from the rest of the content, but only in the cases where we know we're positioned
