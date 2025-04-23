@@ -132,7 +132,7 @@ protected:
     bool hasVoiceActivityListenerCallback() const { return !!m_voiceActivityCallback; }
     void voiceActivityDetected();
 
-    void disableVoiceActivityThrottleTimerForTesting() { m_voiceActivityThrottleTimer.stop(); }
+    void disableVoiceActivityThrottleTimerForTesting();
     void stopRunning();
 
     bool isCapturingWithDefaultMicrophone() const { return m_isCapturingWithDefaultMicrophone; }
@@ -169,7 +169,7 @@ private:
     bool m_isCapturingWithDefaultMicrophone { false };
     bool m_isProducingMicrophoneSamples { true };
     Function<void()> m_voiceActivityCallback;
-    Timer m_voiceActivityThrottleTimer;
+    std::unique_ptr<Timer> m_voiceActivityThrottleTimer;
 };
 
 } // namespace WebCore
