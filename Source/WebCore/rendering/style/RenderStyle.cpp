@@ -374,6 +374,7 @@ void RenderStyle::fastPathInheritFrom(const RenderStyle& inheritParent)
 
     // FIXME: Use this mechanism for other properties too, like variables.
     m_inheritedFlags.visibility = inheritParent.m_inheritedFlags.visibility;
+    m_inheritedFlags.hasExplicitlySetColor = inheritParent.m_inheritedFlags.hasExplicitlySetColor;
 
     if (m_inheritedData.ptr() != inheritParent.m_inheritedData.ptr()) {
         if (m_inheritedData->nonFastPathInheritedEqual(*inheritParent.m_inheritedData)) {
@@ -490,6 +491,8 @@ bool RenderStyle::fastPathInheritedEqual(const RenderStyle& other) const
 {
     if (m_inheritedFlags.visibility != other.m_inheritedFlags.visibility)
         return false;
+    if (m_inheritedFlags.hasExplicitlySetColor != other.m_inheritedFlags.hasExplicitlySetColor)
+        return false;
     if (m_inheritedData.ptr() == other.m_inheritedData.ptr())
         return true;
     return m_inheritedData->fastPathInheritedEqual(*other.m_inheritedData);
@@ -498,7 +501,8 @@ bool RenderStyle::fastPathInheritedEqual(const RenderStyle& other) const
 bool RenderStyle::nonFastPathInheritedEqual(const RenderStyle& other) const
 {
     auto withoutFastPathFlags = [](auto flags) {
-        flags.visibility = 0;
+        flags.visibility = { };
+        flags.hasExplicitlySetColor = { };
         return flags;
     };
     if (withoutFastPathFlags(m_inheritedFlags) != withoutFastPathFlags(other.m_inheritedFlags))
