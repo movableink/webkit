@@ -70,20 +70,6 @@ MediaSessionManagerCocoa::MediaSessionManagerCocoa()
     , m_defaultBufferSize(AudioSession::protectedSharedSession()->preferredBufferSize())
     , m_delayCategoryChangeTimer(RunLoop::main(), this, &MediaSessionManagerCocoa::possiblyChangeAudioCategory)
 {
-    ensureCodecsRegistered();
-}
-
-void MediaSessionManagerCocoa::ensureCodecsRegistered()
-{
-#if ENABLE(VP9)
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        if (shouldEnableVP9Decoder())
-            registerSupplementalVP9Decoder();
-        if (shouldEnableSWVP9Decoder())
-            registerWebKitVP9Decoder();
-    });
-#endif
 }
 
 static bool s_shouldUseModernAVContentKeySession;

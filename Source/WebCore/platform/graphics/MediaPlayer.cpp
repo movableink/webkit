@@ -313,10 +313,8 @@ static void buildMediaEnginesVector() WTF_REQUIRES_LOCK(mediaEngineVectorLock)
 
         if (registerRemoteEngine)
             registerRemoteEngine(addMediaEngine, MediaPlayerEnums::MediaEngineIdentifier::AVFoundation);
-        else {
-            MediaSessionManagerCocoa::ensureCodecsRegistered();
+        else
             MediaPlayerPrivateAVFoundationObjC::registerMediaEngine(addMediaEngine);
-        }
 
 #if ENABLE(MEDIA_SOURCE)
         if (registerRemoteEngine)
