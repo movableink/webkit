@@ -166,6 +166,7 @@ public:
     using MacroAssemblerBase::move32ToFloat;
     using MacroAssemblerBase::moveDouble;
     using MacroAssemblerBase::move64ToDouble;
+    using MacroAssemblerBase::moveVector;
     using MacroAssemblerBase::add32;
     using MacroAssemblerBase::mul32;
     using MacroAssemblerBase::and32;
@@ -599,6 +600,12 @@ public:
     {
         loadDouble(src, scratch);
         storeDouble(scratch, dest);
+    }
+
+    void moveVector(Address src, Address dest, FPRegisterID scratch)
+    {
+        loadVector(src, scratch);
+        storeVector(scratch, dest);
     }
 
     // Ptr methods

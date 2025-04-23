@@ -1832,9 +1832,10 @@ private:
                         if (!inst.admitsStack(arg)) {
                             switch (inst.kind.opcode) {
                             case Move:
+                            case Move32:
                             case MoveDouble:
                             case MoveFloat:
-                            case Move32: {
+                            case MoveVector: {
                                 unsigned argIndex = &arg - &inst.args[0];
                                 unsigned otherArgIndex = argIndex ^ 1;
                                 Arg otherArg = inst.args[otherArgIndex];
@@ -1911,6 +1912,7 @@ private:
                     inst.args.append(tmp);
                     RELEASE_ASSERT(inst.args.size() == 3);
                     m_stats[bank].numMoveSpillSpillInsts++;
+                    ASSERT(inst.isValidForm());
                     // WTF::Liveness and Air::LivenessAdapter do not handle a late-def/use followed by early-def
                     // correctly. While this register allocator does handle it correctly (since it models distinct
                     // late and early points between instructions (i.e. intervalForSpill() won't overlap for different
