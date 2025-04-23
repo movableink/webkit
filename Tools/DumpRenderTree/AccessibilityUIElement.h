@@ -138,6 +138,8 @@ public:
     JSRetainPtr<JSStringRef> liveRegionRelevant() const;
     JSRetainPtr<JSStringRef> liveRegionStatus() const;
     JSRetainPtr<JSStringRef> orientation() const;
+    double pageX();
+    double pageY();
     double x();
     double y();
     double width();

@@ -3327,8 +3327,13 @@ void RenderLayer::paintLayerWithEffects(GraphicsContext& context, const LayerPai
         return;
 
     // If this layer is totally invisible then there is nothing to paint.
-    if (!renderer().opacity())
+    if (!renderer().opacity() && !is<AccessibilityRegionContext>(paintingInfo.regionContext)) {
+        // However, we do want to continue painting for accessibility paints, as we still need accurate
+        // geometry for opacity:0 things. It's very common to make form controls "screenreader-only" via
+        // CSS, often involving opacity:0, while positioning some other visual-only / mouse-only control in
+        // its place. Having the correct geometry is vital for ensuring VoiceOver can still press these controls.
         return;
+    }
 
     if (paintsWithTransparency(paintingInfo.paintBehavior))
         paintFlags.add(PaintLayerFlag::HaveTransparency);

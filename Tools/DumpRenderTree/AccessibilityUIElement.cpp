@@ -1306,6 +1306,16 @@ static JSValueRef columnCountCallback(JSContextRef context, JSObjectRef thisObje
     return JSValueMakeNumber(context, toAXElement(thisObject)->columnCount());
 }
 
+static JSValueRef getPageXCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
+{
+    return JSValueMakeNumber(context, toAXElement(thisObject)->pageX());
+}
+
+static JSValueRef getPageYCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
+{
+    return JSValueMakeNumber(context, toAXElement(thisObject)->pageY());
+}
+
 static JSValueRef getXCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
 {
     return JSValueMakeNumber(context, toAXElement(thisObject)->x());
@@ -1985,6 +1995,8 @@ JSClassRef AccessibilityUIElement::getJSClass()
         { "helpText", getHelpTextCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "customContent", getCustomContentCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "stringValue", getStringValueCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "pageX", getPageXCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "pageY", getPageYCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "x", getXCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "y", getYCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "width", getWidthCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },

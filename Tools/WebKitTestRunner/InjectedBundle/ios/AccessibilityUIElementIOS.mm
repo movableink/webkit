@@ -156,6 +156,7 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 @interface NSObject (WebAccessibilityObjectWrapperPrivate)
 - (NSString *)accessibilityDOMIdentifier;
 - (CGPathRef)_accessibilityPath;
+- (CGPoint)_accessibilityPageRelativeLocation;
 @end
 
 namespace WTR {
@@ -576,6 +577,18 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::language()
 JSRetainPtr<JSStringRef> AccessibilityUIElement::helpText() const
 {
     return concatenateAttributeAndValue(@"AXHint", [m_element accessibilityHint]);
+}
+
+double AccessibilityUIElement::pageX()
+{
+    CGPoint point = [m_element _accessibilityPageRelativeLocation];
+    return point.x;
+}
+
+double AccessibilityUIElement::pageY()
+{
+    CGPoint point = [m_element _accessibilityPageRelativeLocation];
+    return point.y;
 }
 
 double AccessibilityUIElement::x()

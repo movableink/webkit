@@ -188,6 +188,7 @@
 #define NSAccessibilityLoadingProgressAttribute @"AXLoadingProgress"
 #define NSAccessibilityOwnersAttribute @"AXOwners"
 #define NSAccessibilityOwnsAttribute @"AXOwns"
+#define NSAccessibilityPageRelativePositionAttribute @"_AXPageRelativePosition"
 #define NSAccessibilityPathAttribute @"AXPath"
 #define NSAccessibilityPopupValueAttribute @"AXPopupValue"
 #define NSAccessibilityPreventKeyboardDOMEventDispatchAttribute @"AXPreventKeyboardDOMEventDispatch"

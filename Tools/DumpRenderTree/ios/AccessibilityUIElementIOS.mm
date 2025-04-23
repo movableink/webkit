@@ -126,6 +126,7 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 
 @interface NSObject (WebAccessibilityObjectWrapperPrivate)
 - (CGPathRef)_accessibilityPath;
+- (CGPoint)_accessibilityPageRelativeLocation;
 @end
 
 AccessibilityUIElement::AccessibilityUIElement(id element)
@@ -207,6 +208,18 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::url()
 {
     NSURL *url = [m_element accessibilityURL];
     return [[url absoluteString] createJSStringRef];
+}
+
+double AccessibilityUIElement::pageX()
+{
+    CGPoint point = [m_element _accessibilityPageRelativeLocation];
+    return point.x;
+}
+
+double AccessibilityUIElement::pageY()
+{
+    CGPoint point = [m_element _accessibilityPageRelativeLocation];
+    return point.y;
 }
 
 double AccessibilityUIElement::x()

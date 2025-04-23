@@ -997,6 +997,16 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::helpText() const
     return OpaqueJSString::tryCreate(builder.toString()).leakRef();
 }
 
+double AccessibilityUIElement::pageX()
+{
+    return 0;
+}
+
+double AccessibilityUIElement::pageY()
+{
+    return 0;
+}
+
 double AccessibilityUIElement::x()
 {
     m_element->updateBackingStore();

@@ -193,6 +193,7 @@ static id attributeValue(id element, NSString *attribute)
         @"AXLabelledBy",
         @"AXLineRectsAndText",
         @"AXOwners",
+        @"_AXPageRelativePosition",
         @"AXStringValue",
         @"AXValueAutofillType",
 
@@ -1109,6 +1110,26 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::helpText() const
     END_AX_OBJC_EXCEPTIONS
     
     return nullptr;
+}
+
+double AccessibilityUIElement::pageX()
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    auto positionValue = attributeValue(@"_AXPageRelativePosition");
+    return static_cast<double>([positionValue pointValue].x);
+    END_AX_OBJC_EXCEPTIONS
+
+    return 0.0f;
+}
+
+double AccessibilityUIElement::pageY()
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    auto positionValue = attributeValue(@"_AXPageRelativePosition");
+    return static_cast<double>([positionValue pointValue].y);
+    END_AX_OBJC_EXCEPTIONS
+
+    return 0.0f;
 }
 
 double AccessibilityUIElement::x()

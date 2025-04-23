@@ -910,6 +910,8 @@ accessibility/display-contents/role-row-headers.html [ Skip ]
 
 accessibility/mac/text-marker-from-typing-notification.html [ Skip ]
 
+accessibility/opacity-0-bounding-box.html [ WontFix ]
+
 # Missing AccessibilityUIElement::dateTimeValue() implementation.
 accessibility/dynamic-datetime-attribute.html [ Skip ]
 

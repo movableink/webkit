@@ -1747,6 +1747,13 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     return [self _accessibilityConvertPointToViewSpace:point];
 }
 
+- (CGPoint)_accessibilityPageRelativeLocation
+{
+    if (![self _prepareAccessibilityCall])
+        return CGPointZero;
+    return self.axBackingObject->relativeFrame().location();
+}
+
 - (CGRect)accessibilityFrame
 {
     if (![self _prepareAccessibilityCall])

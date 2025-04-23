@@ -780,6 +780,26 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::customContent() const
 #endif
 }
 
+double AccessibilityUIElement::pageX()
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    NSValue* positionValue = [m_element accessibilityAttributeValue:@"_AXPageRelativePosition"];
+    return static_cast<double>([positionValue pointValue].x);
+    END_AX_OBJC_EXCEPTIONS
+
+    return 0.0f;
+}
+
+double AccessibilityUIElement::pageY()
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    NSValue* positionValue = [m_element accessibilityAttributeValue:@"_AXPageRelativePosition"];
+    return static_cast<double>([positionValue pointValue].y);
+    END_AX_OBJC_EXCEPTIONS
+
+    return 0.0f;
+}
+
 double AccessibilityUIElement::x()
 {
     BEGIN_AX_OBJC_EXCEPTIONS

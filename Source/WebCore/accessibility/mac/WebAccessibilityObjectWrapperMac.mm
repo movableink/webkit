@@ -1943,6 +1943,9 @@ id attributeValueForTesting(const RefPtr<AXCoreObject>& backingObject, NSString 
     if ([attributeName isEqualToString:NSAccessibilityInfoStringForTestingAttribute])
         return backingObject->infoStringForTesting().createNSString().autorelease();
 
+    if ([attributeName isEqualToString:NSAccessibilityPageRelativePositionAttribute])
+        return [NSValue valueWithPoint:(CGPoint)backingObject->relativeFrame().location()];
+
     return nil;
 }
 
