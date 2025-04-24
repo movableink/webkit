@@ -153,8 +153,8 @@ public:
     double lookupCSSRandomBaseValue(const CSSCalc::RandomCachingKey&, std::optional<CSS::Keyword::ElementShared>) const;
 
     // Accessors for sibling information used by the sibling-count() and sibling-index() CSS functions.
-    unsigned siblingCount() const;
-    unsigned siblingIndex() const;
+    unsigned siblingCount();
+    unsigned siblingIndex();
 
     AnchorPositionedStates* anchorPositionedStates() { return m_context.treeResolutionState ? &m_context.treeResolutionState->anchorPositionedStates : nullptr; }
     const std::optional<BuilderPositionTryFallback>& positionTryFallback() const { return m_context.positionTryFallback; }

@@ -85,6 +85,8 @@ bool MatchedDeclarationsCache::isCacheable(const Element& element, const RenderS
         return false;
     if (style.usesContainerUnits())
         return false;
+    if (style.useTreeCountingFunctions())
+        return false;
     if (style.usesAnchorFunctions())
         return false;
 

@@ -329,11 +329,21 @@ double BuilderState::lookupCSSRandomBaseValue(const CSSCalc::RandomCachingKey& k
     return document().lookupCSSRandomBaseValue(key);
 }
 
-unsigned BuilderState::siblingCount() const
+// MARK: - Tree Counting Functions
+
+unsigned BuilderState::siblingCount()
 {
     // https://drafts.csswg.org/css-values-5/#funcdef-sibling-count
 
     ASSERT(element());
+
+    RefPtr parent = element()->parentElement();
+    if (!parent)
+        return 1;
+
+    m_style.setUsesTreeCountingFunctions();
+    parent->setChildrenAffectedByBackwardPositionalRules();
+    parent->setChildrenAffectedByForwardPositionalRules();
 
     unsigned count = 1;
     for (const auto* sibling = ElementTraversal::previousSibling(*element()); sibling; sibling = ElementTraversal::previousSibling(*sibling))
@@ -343,11 +353,19 @@ unsigned BuilderState::siblingCount() const
     return count;
 }
 
-unsigned BuilderState::siblingIndex() const
+unsigned BuilderState::siblingIndex()
 {
     // https://drafts.csswg.org/css-values-5/#funcdef-sibling-index
 
     ASSERT(element());
+
+    RefPtr parent = element()->parentElement();
+    if (!parent)
+        return 1;
+
+    m_style.setUsesTreeCountingFunctions();
+    parent->setChildrenAffectedByBackwardPositionalRules();
+    parent->setChildrenAffectedByForwardPositionalRules();
 
     unsigned count = 1;
     for (const auto* sibling = ElementTraversal::previousSibling(*element()); sibling; sibling = ElementTraversal::previousSibling(*sibling))

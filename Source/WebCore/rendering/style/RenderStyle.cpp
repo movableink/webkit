@@ -220,6 +220,7 @@ RenderStyle::RenderStyle(CreateDefaultStyleTag)
     m_nonInheritedFlags.textDecorationLine = initialTextDecorationLine().toRaw();
     m_nonInheritedFlags.usesViewportUnits = false;
     m_nonInheritedFlags.usesContainerUnits = false;
+    m_nonInheritedFlags.useTreeCountingFunctions = false;
     m_nonInheritedFlags.hasExplicitlyInheritedProperties = false;
     m_nonInheritedFlags.disallowsFastPathInheritance = false;
     m_nonInheritedFlags.hasContentNone = false;
@@ -399,6 +400,7 @@ inline void RenderStyle::NonInheritedFlags::copyNonInheritedFrom(const NonInheri
     textDecorationLine = other.textDecorationLine;
     usesViewportUnits = other.usesViewportUnits;
     usesContainerUnits = other.usesContainerUnits;
+    useTreeCountingFunctions = other.useTreeCountingFunctions;
     hasExplicitlyInheritedProperties = other.hasExplicitlyInheritedProperties;
     disallowsFastPathInheritance = other.disallowsFastPathInheritance;
     hasContentNone = other.hasContentNone;
@@ -1606,6 +1608,7 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
         // unicodeBidi
         // usesViewportUnits
         // usesContainerUnits
+        // useTreeCountingFunctions
         // hasExplicitlyInheritedProperties
         // disallowsFastPathInheritance
         // hasContentNone
@@ -4045,6 +4048,7 @@ void RenderStyle::NonInheritedFlags::dumpDifferences(TextStream& ts, const NonIn
 
     LOG_IF_DIFFERENT(usesViewportUnits);
     LOG_IF_DIFFERENT(usesContainerUnits);
+    LOG_IF_DIFFERENT(useTreeCountingFunctions);
     LOG_IF_DIFFERENT(hasContentNone);
 
     LOG_IF_DIFFERENT_WITH_CAST(TextDecorationLine, textDecorationLine);
