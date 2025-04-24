@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -586,8 +586,17 @@ static void overrideDefaults()
 
 #if OS(DARWIN) && CPU(ARM64)
     Options::numberOfGCMarkers() = std::min<unsigned>(4, kernTCSMAwareNumberOfProcessorCores());
+
+    Options::minNumberOfWorklistThreads() = 1;
+    Options::maxNumberOfWorklistThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
+    Options::numberOfBaselineCompilerThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
     Options::numberOfDFGCompilerThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
     Options::numberOfFTLCompilerThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
+    Options::worklistLoadFactor() = 4;
+    Options::worklistBaselineLoadWeight() = 1;
+    Options::worklistDFGLoadWeight() = 2;
+    // Set the FTL load weight equal to the load-factor so that a new thread is started for each FTL plan
+    Options::worklistFTLLoadWeight() = 4;
 #endif
 
 #if OS(LINUX) && CPU(ARM)

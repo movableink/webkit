@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,13 +46,18 @@ JITWorklist::JITWorklist()
     , m_planEnqueued(AutomaticThreadCondition::create())
 {
     m_maximumNumberOfConcurrentCompilationsPerTier = {
-        Options::numberOfWorklistThreads(),
+        Options::numberOfBaselineCompilerThreads(),
         Options::numberOfDFGCompilerThreads(),
         Options::numberOfFTLCompilerThreads(),
     };
+    m_loadWeightsPerTier = {
+        Options::worklistBaselineLoadWeight(),
+        Options::worklistDFGLoadWeight(),
+        Options::worklistFTLLoadWeight(),
+    };
 
     Locker locker { *m_lock };
-    for (unsigned i = 0; i < Options::numberOfWorklistThreads(); ++i)
+    for (unsigned i = 0; i < Options::maxNumberOfWorklistThreads(); ++i)
         m_threads.append(*new JITWorklistThread(locker, *this));
 }
 
@@ -79,6 +84,54 @@ JITWorklist& JITWorklist::ensureGlobalWorklist()
             theGlobalJITWorklist = worklist;
         });
     return *theGlobalJITWorklist;
+}
+
+// wakeThreads wakes up compiler worker threads, if appropriate.
+//
+// There is a cost to running more worker threads. For example, there is a direct cost
+// to wake (or spawn) a thread, and additional threads lead to more synchronization
+// overhead between threads, colder CPU and software (e.g. allocator) caches, more
+// contention for cpu resources across the system, more cpu scheduler overhead, etc.
+//
+// So, it's better to have a short queue of work ready for each compiler thread rather
+// than aggressively spinning up a thread whenever there is any work pending.
+// Yet, the queues should not get too long as to increase compiler latency significantly.
+// wakeThreads applies a load-based heuristic to determine whether it's worthwhile
+// to use more compiler threads.
+//
+// The load is computed from the queue-depth of each tier scaled by a per-tier weight,
+// to model the the increasing compile latency at each tier. The heuristic wakes
+// more threads only when the capacity of the thread pool, as determined by the number
+// of threads and a desired load-factor, is exceeded.
+void JITWorklist::wakeThreads(const AbstractLocker& locker, unsigned enqueuedTier)
+{
+    unsigned targetNumThreads;
+
+    if (m_numberOfActiveThreads < Options::minNumberOfWorklistThreads()
+        && m_ongoingCompilationsPerTier[enqueuedTier] < m_maximumNumberOfConcurrentCompilationsPerTier[enqueuedTier]) {
+        targetNumThreads = m_numberOfActiveThreads + 1;
+    } else {
+        unsigned load = 0;
+        unsigned maxThreads = 0;
+        for (unsigned tier = 0; tier < static_cast<unsigned>(JITPlan::Tier::Count); tier++) {
+            unsigned plansForTier = m_ongoingCompilationsPerTier[tier] + m_queues[tier].size();
+
+            unsigned maxThreadsUsedForTier = std::min(plansForTier, m_maximumNumberOfConcurrentCompilationsPerTier[tier]);
+            maxThreads += maxThreadsUsedForTier;
+
+            unsigned loadForTier = plansForTier * m_loadWeightsPerTier[tier];
+            load += loadForTier;
+        }
+        maxThreads = std::min(maxThreads, Options::maxNumberOfWorklistThreads());
+
+        targetNumThreads = (load + Options::worklistLoadFactor() - 1) / Options::worklistLoadFactor();
+        targetNumThreads = std::min(targetNumThreads, maxThreads);
+    }
+    while (m_numberOfActiveThreads < targetNumThreads) {
+        m_planEnqueued->notifyOne(locker);
+        m_numberOfActiveThreads++;
+    }
+    ASSERT(m_numberOfActiveThreads >= 1);
 }
 
 CompilationResult JITWorklist::enqueue(Ref<JITPlan> plan)
@@ -108,12 +161,7 @@ CompilationResult JITWorklist::enqueue(Ref<JITPlan> plan)
     ASSERT(m_plans.find(plan->key()) == m_plans.end());
     m_plans.add(plan->key(), plan.copyRef());
     m_queues[tier].append(WTFMove(plan));
-
-    if (m_numberOfActiveThreads < m_threads.size()
-        && m_ongoingCompilationsPerTier[tier] < m_maximumNumberOfConcurrentCompilationsPerTier[tier]) {
-        m_planEnqueued->notifyOne(locker);
-        m_numberOfActiveThreads++;
-    }
+    wakeThreads(locker, tier);
     return CompilationDeferred;
 }
 
