@@ -2201,6 +2201,8 @@ imported/w3c/web-platform-tests/svg/linking/reftests/view-viewbox-override.html 
 imported/w3c/web-platform-tests/svg/render/reftests/render-sync-with-font-size.html [ Skip ]
 imported/w3c/web-platform-tests/svg/render/order/z-index.svg [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/render/reftests/blending-001.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/layout/svg-foreign-relayout-001.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/layout/svg-foreign-relayout-002.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/shapes/ellipse-02.svg [ Skip ]
 imported/w3c/web-platform-tests/svg/shapes/ellipse-03.svg [ Skip ]
 imported/w3c/web-platform-tests/svg/shapes/ellipse-05.svg [ Skip ]

@@ -14,5 +14,18 @@ Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
 List of files:
+/LayoutTests/imported/w3c/web-platform-tests/svg/layout/svg-embed-intrinsic-size-min-size-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/layout/svg-embed-intrinsic-size-min-size.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/layout/svg-foreign-relayout-001-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/layout/svg-foreign-relayout-001.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/layout/svg-foreign-relayout-002-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/layout/svg-foreign-relayout-002.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/layout/svg-intrinsic-size-invalidation-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/layout/svg-intrinsic-size-invalidation-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/layout/svg-intrinsic-size-invalidation.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/layout/svg-intrinsic-size-min-size-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/layout/svg-intrinsic-size-min-size-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/layout/svg-intrinsic-size-min-size.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/layout/svg-with-precent-dimensions-relayout-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/layout/svg-with-precent-dimensions-relayout-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/layout/svg-with-precent-dimensions-relayout.html
