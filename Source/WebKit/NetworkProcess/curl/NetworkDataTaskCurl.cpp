@@ -349,7 +349,7 @@ void NetworkDataTaskCurl::willPerformHTTPRedirection()
     ResourceRequest request = m_firstRequest;
     if (!redirectedURL.hasFragmentIdentifier() && request.url().hasFragmentIdentifier())
         redirectedURL.setFragmentIdentifier(request.url().fragmentIdentifier());
-    request.setURL(WTFMove(redirectedURL));
+    request.setURL(redirectedURL);
 
     m_hasCrossOriginRedirect = m_hasCrossOriginRedirect || !SecurityOrigin::create(m_response.url())->canRequest(request.url(), WebCore::EmptyOriginAccessPatterns::singleton());
 

@@ -60,6 +60,12 @@ public:
         m_initLevel = AllFields;
     }
 
+    ResourceResponse(const URL& url, const String& mimeType, long long expectedLength, const String& textEncodingName)
+        : ResourceResponseBase(url, mimeType, expectedLength, textEncodingName)
+    {
+        m_initLevel = AllFields;
+    }
+
     WEBCORE_EXPORT void disableLazyInitialization();
 
     unsigned memoryUsage() const

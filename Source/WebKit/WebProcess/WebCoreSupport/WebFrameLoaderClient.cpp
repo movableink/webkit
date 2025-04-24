@@ -102,7 +102,7 @@ std::optional<NavigationActionData> WebFrameLoaderClient::navigationActionData(c
     FrameInfoData originatingFrameInfoData {
         navigationAction.initiatedByMainFrame() == InitiatedByMainFrame::Yes,
         FrameType::Local,
-        ResourceRequest { URL { requester.url } },
+        ResourceRequest { requester.url },
         requester.securityOrigin->data(),
         { },
         WTFMove(originatingFrameID),

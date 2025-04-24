@@ -70,6 +70,26 @@ ResourceResponseBase::ResourceResponseBase(URL&& url, String&& mimeType, long lo
 {
 }
 
+ResourceResponseBase::ResourceResponseBase(URL&& url, String&& mimeType, long long expectedLength, const String& textEncodingName)
+    : m_url(WTFMove(url))
+    , m_mimeType(WTFMove(mimeType))
+    , m_expectedContentLength(expectedLength)
+    , m_textEncodingName(textEncodingName)
+    , m_certificateInfo(CertificateInfo()) // Empty but valid for synthetic responses.
+    , m_isNull(false)
+{
+}
+
+ResourceResponseBase::ResourceResponseBase(const URL& url, const String& mimeType, long long expectedLength, const String& textEncodingName)
+    : m_url(url)
+    , m_mimeType(mimeType)
+    , m_expectedContentLength(expectedLength)
+    , m_textEncodingName(textEncodingName)
+    , m_certificateInfo(CertificateInfo()) // Empty but valid for synthetic responses.
+    , m_isNull(false)
+{
+}
+
 ResourceResponseBase::ResourceResponseBase(std::optional<ResourceResponseData>&& data)
     : m_url(data ? WTFMove(data->url) : URL { })
     , m_mimeType(data ? WTFMove(data->mimeType) : AtomString { })
@@ -181,7 +201,7 @@ ResourceResponse ResourceResponseBase::fromCrossThreadData(CrossThreadData&& dat
 ResourceResponse ResourceResponseBase::syntheticRedirectResponse(const URL& fromURL, const URL& toURL)
 {
     ResourceResponse redirectResponse;
-    redirectResponse.setURL(URL { fromURL });
+    redirectResponse.setURL(fromURL);
     redirectResponse.setHTTPStatusCode(302);
     redirectResponse.setHTTPVersion("HTTP/1.1"_s);
     redirectResponse.setHTTPHeaderField(HTTPHeaderName::Location, toURL.string());
@@ -192,7 +212,7 @@ ResourceResponse ResourceResponseBase::syntheticRedirectResponse(const URL& from
 
 ResourceResponse ResourceResponseBase::dataURLResponse(const URL& url, const DataURLDecoder::Result& result)
 {
-    ResourceResponse dataResponse { URL { url }, String { result.mimeType }, static_cast<long long>(result.data.size()), String { result.charset } };
+    ResourceResponse dataResponse { url, result.mimeType, static_cast<long long>(result.data.size()), result.charset };
     dataResponse.setHTTPStatusCode(200);
     dataResponse.setHTTPStatusText("OK"_s);
     dataResponse.setHTTPHeaderField(HTTPHeaderName::ContentType, result.contentType);
@@ -214,7 +234,7 @@ ResourceResponse ResourceResponseBase::filter(const ResourceResponse& response, 
         ResourceResponse opaqueResponse;
         opaqueResponse.setTainting(Tainting::Opaqueredirect);
         opaqueResponse.setType(Type::Opaqueredirect);
-        opaqueResponse.setURL(URL { response.url() });
+        opaqueResponse.setURL(response.url());
         return opaqueResponse;
     }
 
@@ -267,6 +287,16 @@ void ResourceResponseBase::setURL(URL&& url)
     m_isNull = false;
 
     m_url = WTFMove(url);
+
+    // FIXME: Should invalidate or update platform response if present.
+}
+
+void ResourceResponseBase::setURL(const URL& url)
+{
+    lazyInit(CommonFieldsOnly);
+    m_isNull = false;
+
+    m_url = url;
 
     // FIXME: Should invalidate or update platform response if present.
 }

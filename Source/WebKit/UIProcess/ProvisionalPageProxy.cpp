@@ -368,7 +368,7 @@ void ProvisionalPageProxy::goToBackForwardItem(API::Navigation& navigation, WebB
         existingNetworkResourceLoadIdentifierToResume = WTFMove(existingNetworkResourceLoadIdentifierToResume),
         navigation = Ref { navigation },
         sandboxExtensionHandle = WTFMove(sandboxExtensionHandle)
-    ] (std::optional<SandboxExtension::Handle>&& sandboxExtension) mutable {
+    ] (std::optional<SandboxExtension::Handle> sandboxExtension) mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;

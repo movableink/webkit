@@ -616,7 +616,7 @@ void NetworkDataTaskSoup::applyAuthenticationToRequest(ResourceRequest& request)
     auto url = request.url();
     url.setUser(m_user);
     url.setPassword(m_password);
-    request.setURL(WTFMove(url));
+    request.setURL(url);
 
     m_user = String();
     m_password = String();
@@ -917,7 +917,7 @@ void NetworkDataTaskSoup::continueHTTPRedirection()
     URL redirectedURL = URL(m_response.url(), m_response.httpHeaderField(HTTPHeaderName::Location));
     if (!redirectedURL.hasFragmentIdentifier() && request.url().hasFragmentIdentifier())
         redirectedURL.setFragmentIdentifier(request.url().fragmentIdentifier());
-    request.setURL(WTFMove(redirectedURL));
+    request.setURL(redirectedURL);
 
     m_networkLoadMetrics.hasCrossOriginRedirect = m_networkLoadMetrics.hasCrossOriginRedirect || !SecurityOrigin::create(m_currentRequest.url())->canRequest(request.url(), WebCore::EmptyOriginAccessPatterns::singleton());
 
@@ -1113,7 +1113,7 @@ void NetworkDataTaskSoup::didRequestNextPart(GRefPtr<GInputStream>&& inputStream
     m_inputStream = WTFMove(inputStream);
     auto* headers = soup_multipart_input_stream_get_headers(m_multipartInputStream.get());
     auto contentType = String::fromLatin1(soup_message_headers_get_one(headers, "Content-Type"));
-    m_response = ResourceResponse(URL { m_firstRequest.url() }, extractMIMETypeFromMediaType(contentType),
+    m_response = ResourceResponse(m_firstRequest.url(), extractMIMETypeFromMediaType(contentType),
         soup_message_headers_get_content_length(headers), extractCharsetFromMediaType(contentType).toString());
     m_response.updateFromSoupMessageHeaders(headers);
     dispatchDidReceiveResponse();
@@ -1688,7 +1688,7 @@ void NetworkDataTaskSoup::fileQueryInfoCallback(GFile* file, GAsyncResult* resul
 
 void NetworkDataTaskSoup::didGetFileInfo(GFileInfo* info)
 {
-    m_response.setURL(URL { m_firstRequest.url() });
+    m_response.setURL(m_firstRequest.url());
     if (g_file_info_get_file_type(info) == G_FILE_TYPE_DIRECTORY) {
         m_response.setMimeType("text/html"_s);
         m_response.setExpectedContentLength(-1);

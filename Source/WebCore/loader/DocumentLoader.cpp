@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -244,8 +244,8 @@ Document* DocumentLoader::document() const
 
 void DocumentLoader::replaceRequestURLForSameDocumentNavigation(const URL& url)
 {
-    m_originalRequestCopy.setURL(URL { url });
-    m_request.setURL(URL { url });
+    m_originalRequestCopy.setURL(url);
+    m_request.setURL(url);
 }
 
 void DocumentLoader::setRequest(const ResourceRequest& req)
@@ -562,7 +562,7 @@ void DocumentLoader::handleSubstituteDataLoadNow()
 
     ResourceResponse response = m_substituteData.response();
     if (response.url().isEmpty())
-        response = ResourceResponse(URL { m_request.url() }, String { m_substituteData.mimeType() }, m_substituteData.content()->size(), String { m_substituteData.textEncoding() });
+        response = ResourceResponse(m_request.url(), m_substituteData.mimeType(), m_substituteData.content()->size(), m_substituteData.textEncoding());
 
 #if ENABLE(CONTENT_EXTENSIONS)
     if (RefPtr page = m_frame ? m_frame->page() : nullptr) {
@@ -2092,13 +2092,13 @@ bool DocumentLoader::maybeLoadEmpty()
         return false;
 
     if (m_request.url().isEmpty() && !protectedFrameLoader()->stateMachine().creatingInitialEmptyDocument()) {
-        m_request.setURL(URL { aboutBlankURL() });
+        m_request.setURL(aboutBlankURL());
         if (isLoadingMainResource())
             frameLoaderClient->dispatchDidChangeProvisionalURL();
     }
 
     String mimeType = shouldLoadEmpty ? textHTMLContentTypeAtom() : frameLoaderClient->generatedMIMETypeForURLScheme(m_request.url().protocol());
-    m_response = ResourceResponse(URL { m_request.url() }, WTFMove(mimeType), 0, "UTF-8"_s);
+    m_response = ResourceResponse(m_request.url(), mimeType, 0, "UTF-8"_s);
 
     bool isDisplayingInitialEmptyDocument = frameLoader()->stateMachine().isDisplayingInitialEmptyDocument();
     if (!isDisplayingInitialEmptyDocument) {
@@ -2117,7 +2117,7 @@ bool DocumentLoader::maybeLoadEmpty()
 
 void DocumentLoader::loadErrorDocument()
 {
-    m_response = ResourceResponse(URL { m_request.url() }, String { textHTMLContentTypeAtom() }, 0, "UTF-8"_s);
+    m_response = ResourceResponse(m_request.url(), textHTMLContentTypeAtom(), 0, "UTF-8"_s);
     SetForScope isInFinishedLoadingOfEmptyDocument { m_isInFinishedLoadingOfEmptyDocument, true };
 
     commitIfReady();
@@ -2188,7 +2188,7 @@ void DocumentLoader::startLoadingMainResource()
     auto url = m_request.url();
     auto fragmentDirective = url.consumeFragmentDirective();
 
-    m_request.setURL(WTFMove(url), m_request.didFilterLinkDecoration());
+    m_request.setURL(url, m_request.didFilterLinkDecoration());
     frame = m_frame.get();
     if (frame) {
         RefPtr page = frame->protectedPage();
@@ -2371,7 +2371,7 @@ void DocumentLoader::loadMainResource(ResourceRequest&& request)
     // If there was a fragment identifier on m_request, the cache will have stripped it. m_request should include
     // the fragment identifier, so add that back in.
     if (equalIgnoringFragmentIdentifier(m_request.url(), updatedRequest.url()))
-        updatedRequest.setURL(URL { m_request.url() });
+        updatedRequest.setURL(m_request.url());
     setRequest(updatedRequest);
 }
 
@@ -2637,7 +2637,7 @@ ResourceError DocumentLoader::contentFilterDidBlock(ContentFilterUnblockHandler 
 
 void DocumentLoader::handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, SubstituteData& substituteData)
 {
-    protectedFrameLoader()->load(FrameLoadRequest(*frame(), URL { blockedPageURL }, substituteData));
+    protectedFrameLoader()->load(FrameLoadRequest(*frame(), blockedPageURL, substituteData));
 }
 
 #if HAVE(WEBCONTENTRESTRICTIONS)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -1914,7 +1914,7 @@ void WebLocalFrameLoaderClient::sendH2Ping(const URL& url, CompletionHandler<voi
         webPage->webPageProxyIdentifier(),
         webPage->identifier(),
         m_frame->frameID(),
-        ResourceRequest(URL { url })
+        ResourceRequest(url)
     };
     parameters.createSandboxExtensionHandlesIfNecessary();
 
