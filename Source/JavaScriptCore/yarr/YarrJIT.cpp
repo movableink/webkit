@@ -2103,8 +2103,8 @@ class YarrGenerator final : public YarrJITInfo {
         // upper & lower case representations are converted to a character class.
         ASSERT(!op.m_term->ignoreCase() || isASCIIAlpha(firstChar) || isCanonicallyUnique(firstChar, m_canonicalMode));
 
-        if (have16BitCharacter && m_charSize == CharSize::Char16 && !U_IS_BMP(firstChar)) {
-            // The first term we are considering is a non-BMP char in a 16 bit pattern. Just try matching it and be done.
+        if (m_decodeSurrogatePairs && (!U_IS_BMP(firstChar) || U16_IS_SURROGATE(firstChar))) {
+            // The first term we are considering is a non-BMP or dangling surrogate char in unicode pattern. Just try matching it and be done.
             uint64_t charToMatch = firstChar;
 
             auto offset = op.m_checkedOffset - op.m_term->inputPosition;
@@ -2133,7 +2133,7 @@ class YarrGenerator final : public YarrJITInfo {
                 || (currTerm->type != PatternTerm::Type::PatternCharacter
                     && currTerm->type != PatternTerm::Type::CharacterClass)
                 || (m_decodeSurrogatePairs
-                    && ((currTerm->type == PatternTerm::Type::PatternCharacter && !U_IS_BMP(currTerm->patternCharacter))
+                    && ((currTerm->type == PatternTerm::Type::PatternCharacter && (!U_IS_BMP(currTerm->patternCharacter) || U16_IS_SURROGATE(currTerm->patternCharacter)))
                         || (currTerm->type == PatternTerm::Type::CharacterClass && (currTerm->characterClass->hasNonBMPCharacters()
                             || currTerm->invert())))))
                 break;
