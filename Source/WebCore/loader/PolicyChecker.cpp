@@ -53,6 +53,7 @@
 #include "Logging.h"
 #include "Navigation.h"
 #include "PlatformStrategies.h"
+#include "ResourceLoadInfo.h"
 #include "ThreadableBlobRegistry.h"
 #include "URLKeepingBlobAlive.h"
 #include <wtf/CompletionHandler.h>

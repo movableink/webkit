@@ -27,6 +27,7 @@
 #include "DisplayListItems.h"
 
 #include "DecomposedGlyphs.h"
+#include "DisplayList.h"
 #include "Filter.h"
 #include "FilterResults.h"
 #include "FontCascade.h"
