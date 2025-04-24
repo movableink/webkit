@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/EmbeddedFixedVector.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Nonmovable.h>
@@ -52,8 +53,10 @@ class Node;
 class Builder {
     WTF_MAKE_NONCOPYABLE(Builder);
 
+    using Arena = EmbeddedFixedVector<uint8_t>;
+
 public:
-    static constexpr size_t arenaSize = 0x4000;
+    static constexpr size_t arenaSize = 0x4000 - sizeof(Arena);
 
     Builder() = default;
     Builder(Builder&&);
@@ -102,7 +105,7 @@ private:
 
     std::span<uint8_t> m_arena { };
     uint8_t* m_arenaEnd { nullptr };
-    Vector<FixedVector<uint8_t>> m_arenas;
+    Vector<UniqueRef<Arena>> m_arenas;
     Vector<Node*> m_nodes;
 };
 

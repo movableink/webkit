@@ -27,7 +27,6 @@
 #include "ASTBuilder.h"
 
 #include "ASTNode.h"
-#include <wtf/FixedVector.h>
 
 namespace WGSL::AST {
 
@@ -47,8 +46,8 @@ Builder::~Builder()
 
 void Builder::allocateArena()
 {
-    m_arenas.append(FixedVector<uint8_t>(arenaSize));
-    m_arena = m_arenas.last().mutableSpan();
+    m_arenas.append(Arena::create(arenaSize));
+    m_arena = m_arenas.last()->span();
 
 #if ASAN_ENABLED
     __asan_poison_memory_region(m_arena.data(), m_arena.size());
