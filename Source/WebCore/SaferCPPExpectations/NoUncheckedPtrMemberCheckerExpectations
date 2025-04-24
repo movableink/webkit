@@ -5,7 +5,6 @@ bindings/js/JSLazyEventListener.cpp
 css/CSSToLengthConversionData.h
 css/SelectorChecker.h
 css/SelectorFilter.h
-css/StyleSheetList.h
 css/calc/CSSCalcTree+CalculationValue.cpp
 css/query/MediaQueryEvaluator.h
 dom/CollectionIndexCache.h

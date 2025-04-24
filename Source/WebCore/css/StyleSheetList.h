@@ -57,9 +57,11 @@ private:
     StyleSheetList(Document&);
     StyleSheetList(ShadowRoot&);
     const Vector<RefPtr<StyleSheet>>& styleSheets() const;
+    RefPtr<Document> protectedDocument() const;
+    RefPtr<ShadowRoot> protectedShadowRoot() const;
 
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
-    ShadowRoot* m_shadowRoot { nullptr };
+    WeakPtr<ShadowRoot, WeakPtrImplWithEventTargetData> m_shadowRoot;
     Vector<RefPtr<StyleSheet>> m_detachedStyleSheets;
 };
 

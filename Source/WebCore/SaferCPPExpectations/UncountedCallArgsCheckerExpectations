@@ -469,7 +469,6 @@ css/StyleRule.cpp
 css/StyleRuleImport.cpp
 css/StyleRuleImport.h
 css/StyleSheetContents.cpp
-css/StyleSheetList.cpp
 css/query/GenericMediaQuerySerialization.cpp
 css/query/MediaQueryFeatures.cpp
 css/typedom/CSSOMVariableReferenceValue.cpp

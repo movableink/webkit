@@ -27,7 +27,6 @@ css/ShorthandSerializer.cpp
 css/StyleProperties.h
 css/StyleRuleImport.h
 css/StyleSheetContents.h
-css/StyleSheetList.h
 dom/CollectionIndexCache.h
 dom/Node.cpp
 dom/Node.h
