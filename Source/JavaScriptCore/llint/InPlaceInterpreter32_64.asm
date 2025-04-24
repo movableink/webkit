@@ -39,7 +39,7 @@ end
 
 macro pushQuad(hi, lo)
     if ARMv7
-        subp 16, sp
+        subp LocalSize, sp
         store2ia lo, hi, [sp]
     else
         break
@@ -48,7 +48,7 @@ end
 
 macro pushDouble(reg)
     if ARMv7
-        subp 16, sp
+        subp LocalSize, sp
         storei reg, [sp]
     else
         break
@@ -58,7 +58,7 @@ end
 macro popQuad(hi, lo)
     if ARMv7
         load2ia [sp], lo, hi
-        addp 16, sp
+        addp LocalSize, sp
     else
         break
     end
@@ -67,7 +67,7 @@ end
 macro popDouble(reg)
     if ARMv7
         loadi [sp], reg
-        addp 16, sp
+        addp LocalSize, sp
     else
         break
     end
@@ -75,7 +75,7 @@ end
 
 macro pushFloat(reg)
     if ARMv7
-        subp 16, sp
+        subp LocalSize, sp
         stored reg, [sp]
     else
         break
@@ -85,7 +85,7 @@ end
 macro popFloat(reg)
     if ARMv7
         loadd [sp], reg
-        addp 16, sp
+        addp LocalSize, sp
     else
         break
     end
@@ -118,6 +118,14 @@ end
 macro peekDouble(i, reg)
     if ARMv7
         loadi (i*16)[sp], reg
+    else
+        break
+    end
+end
+
+macro peekQuad(i, hi, lo)
+    if ARMv7
+        load2ia (i*16)[sp], lo, hi
     else
         break
     end
@@ -171,7 +179,7 @@ end
 # csr1 = tmp
 # t4 = dst
 # t5 = src
-# t6 = end
+# csr0 = end
 # t7 = for dispatch
 
 const argumINTTmp = csr1
@@ -204,7 +212,7 @@ end
 macro argumINTDispatch()
     loadb [MC], argumINTTmp
     addp 1, MC
-    bbgteq argumINTTmp, 0x12, .err
+    bbgteq argumINTTmp, (constexpr IPInt::ArgumINTBytecode::NumOpcodes), .err
     lshiftp 6, argumINTTmp
     leap (_argumINT_begin + 1), argumINTDsp
     addp argumINTTmp, argumINTDsp
@@ -237,37 +245,41 @@ end
     # 0x00 - 0x11: control flow #
     #############################
 
-instructionLabel(_unreachable)
+ipintOp(_unreachable, macro()
     # unreachable
     ipintException(Unreachable)
+end)
 
-instructionLabel(_nop)
+ipintOp(_nop, macro()
     # nop
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_block)
+ipintOp(_block, macro()
     # block
     loadi IPInt::BlockMetadata::deltaPC[MC], t0
     loadi IPInt::BlockMetadata::deltaMC[MC], t1
     advancePCByReg(t0)
     advanceMCByReg(t1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_loop)
+ipintOp(_loop, macro()
     # loop
     ipintLoopOSR(1)
     loadb IPInt::InstructionLengthMetadata::length[MC], t0
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_if)
+ipintOp(_if, macro()
     # if
     popInt32(t0)
-    bpneq 0, t0, .ipint_if_taken
+    bineq 0, t0, .ipint_if_taken
     loadi IPInt::IfMetadata::elseDeltaPC[MC], t0
-    loadi IPInt::IfMetadata::elseDeltaMC[MC], t0
+    loadi IPInt::IfMetadata::elseDeltaMC[MC], t1
     advancePCByReg(t0)
     advanceMCByReg(t1)
     nextIPIntInstruction()
@@ -277,8 +289,9 @@ instructionLabel(_if)
     advanceMC(constexpr (sizeof(IPInt::IfMetadata)))
     advancePCByReg(t0)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_else)
+ipintOp(_else, macro()
     # else
     # Counterintuitively, we only run this instruction if the if
     # clause is TAKEN. This is used to branch to the end of the
@@ -288,6 +301,7 @@ instructionLabel(_else)
     advancePCByReg(t0)
     advanceMCByReg(t1)
     nextIPIntInstruction()
+end)
 
 unimplementedInstruction(_try)
 unimplementedInstruction(_catch)
@@ -296,41 +310,48 @@ unimplementedInstruction(_rethrow)
 unimplementedInstruction(_throw_ref)
 
 # MC = location in uINT bytecode
-# csr1 = tmp # clobbers PC
+# csr1, csr0 = tmp # clobbers PC, WI
 # t7 = for dispatch
+# sc1 = _uint_begin + 1
 
 macro uintDispatch()
     loadb [MC], csr1
     addp 1, MC
-    bilt csr1, 0x12, .safe
+    bilt csr1, (constexpr IPInt::UIntBytecode::NumOpcodes), .safe
     break
 .safe:
     lshiftp 6, csr1
-    leap (_uint_begin + 1), t7
-    addp csr1, t7
+    addp csr1, sc1, t7
     # t7 = r9
     emit "bx r9"
 end
 
-instructionLabel(_end)
-    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
+macro uintEnter()
+    leap (_uint_begin + 1), sc1
+    uintDispatch()
+end
+
+ipintOp(_end, macro()
     loadi Wasm::IPIntCallee::m_bytecodeEnd[ws0], t0
     bpeq PC, t0, .ipint_end_ret
     advancePC(1)
     nextIPIntInstruction()
+end)
+
+# This implementation is specially defined out of ipintOp scope to make end implementation tight.
 .ipint_end_ret:
     loadp Wasm::IPIntCallee::m_uINTBytecodePointer[ws0], MC
     ipintEpilogueOSR(10)
     loadp Wasm::IPIntCallee::m_highestReturnStackOffset[ws0], sc0
     addp cfr, sc0
-    uintDispatch()
+    uintEnter()
 
-instructionLabel(_br)
+ipintOp(_br, macro()
     # br
     # number to pop
     loadh IPInt::BranchTargetMetadata::toPop[MC], t0
     # number to keep
-    loadh IPInt::BranchTargetMetadata::toKeep[MC], t5
+    loadh IPInt::BranchTargetMetadata::toKeep[MC], t4
 
     # ex. pop 3 and keep 2
     #
@@ -344,9 +365,9 @@ instructionLabel(_br)
     leap [sp, t2], t2
 
 .ipint_br_poploop:
-    bpeq t5, 0, .ipint_br_popend
-    subp 1, t5
-    move t5, t3
+    bpeq t4, 0, .ipint_br_popend
+    subp 1, t4
+    move t4, t3
     lshiftp 4, t3
     load2ia [sp, t3], t0, t1
     store2ia t0, t1, [t2, t3]
@@ -362,8 +383,9 @@ instructionLabel(_br)
     advancePCByReg(t0)
     advanceMCByReg(t1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_br_if)
+ipintOp(_br_if, macro()
     # pop i32
     popInt32(t0)
     bineq t0, 0, _ipint_br
@@ -371,8 +393,9 @@ instructionLabel(_br_if)
     advanceMC(constexpr (sizeof(IPInt::BranchMetadata)))
     advancePCByReg(t0)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_br_table)
+ipintOp(_br_table, macro()
     # br_table
     popInt32(t0)
     loadi IPInt::SwitchMetadata::size[MC], t1
@@ -386,20 +409,21 @@ instructionLabel(_br_table)
     addp t1, t0
     addp t0, MC
     jmp _ipint_br
+end)
 
-instructionLabel(_return)
-    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
+ipintOp(_return, macro()
     # ret
     loadi Wasm::IPIntCallee::m_bytecodeEnd[ws0], PC
     loadp Wasm::IPIntCallee::m_uINTBytecode[ws0], MC
     # This is guaranteed going to an end instruction, so skip
     # dispatch and end of program check for speed
     jmp .ipint_end_ret
+end)
 
 const IPIntCallCallee = sc1
 const IPIntCallFunctionSlot = sc0
 
-instructionLabel(_call)
+ipintOp(_call, macro()
     loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
     move PC, t1
     subp t0, t1
@@ -424,8 +448,9 @@ instructionLabel(_call)
 
     # call
     jmp .ipint_call_common
+end)
 
-instructionLabel(_call_indirect)
+ipintOp(_call_indirect, macro()
     loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
     move PC, t1
     subp t0, t1
@@ -442,17 +467,14 @@ instructionLabel(_call_indirect)
     move MC, a3
     advanceMC(IPInt::CallIndirectMetadata::signature)
 
-    operationCall(macro() cCall4(_ipint_extern_prepare_call_indirect) end)
-    btpz r1, .ipint_call_indirect_throw
+    operationCallMayThrow(macro() cCall4(_ipint_extern_prepare_call_indirect) end)
 
     loadp [sp], IPIntCallCallee
     loadp 8[sp], IPIntCallFunctionSlot
     addp 16, sp
 
     jmp .ipint_call_common
-
-.ipint_call_indirect_throw:
-    jmp _wasm_throw_from_slow_path_trampoline
+end)
 
 unimplementedInstruction(_return_call)
 unimplementedInstruction(_return_call_indirect)
@@ -463,27 +485,46 @@ reservedOpcode(0x17)
 unimplementedInstruction(_delegate)
 unimplementedInstruction(_catch_all)
 
-instructionLabel(_drop)
+ipintOp(_drop, macro()
     drop()
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_select)
+ipintOp(_select, macro()
     popInt32(t0)
     bieq t0, 0, .ipint_select_val2
     drop()
     advancePC(1)
-    advanceMC(8)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
 .ipint_select_val2:
+    popQuad(t3, t2)
     popQuad(t1, t0)
-    drop()
-    pushQuad(t1, t0)
+    pushQuad(t3, t2)
     advancePC(1)
-    advanceMC(8)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
+end)
 
-unimplementedInstruction(_select_t)
+ipintOp(_select_t, macro()
+    popInt32(t0)
+    bieq t0, 0, .ipint_select_t_val2
+    drop()
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
+    nextIPIntInstruction()
+.ipint_select_t_val2:
+    popQuad(t3, t2)
+    popQuad(t1, t0)
+    pushQuad(t3, t2)
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
+    nextIPIntInstruction()
+end)
+
 reservedOpcode(0x1d)
 reservedOpcode(0x1e)
 unimplementedInstruction(_try_table)
@@ -492,7 +533,7 @@ unimplementedInstruction(_try_table)
     # 0x20 - 0x26: get and set values #
     ###################################
 
-instructionLabel(_local_get)
+ipintOp(_local_get, macro()
     # local.get
     loadb 1[PC], t0
     advancePC(2)
@@ -504,8 +545,9 @@ instructionLabel(_local_get)
     # Push to stack
     pushQuad(t1, t0)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_local_set)
+ipintOp(_local_set, macro()
     # local.set
     loadb 1[PC], t0
     advancePC(2)
@@ -517,21 +559,23 @@ instructionLabel(_local_set)
     mulp LocalSize, t0
     store2ia t2, t3, [PL, t0]
     nextIPIntInstruction()
+end)
 
-instructionLabel(_local_tee)
+ipintOp(_local_tee, macro()
     # local.tee
     loadb 1[PC], t0
     advancePC(2)
     bbaeq t0, 128, _ipint_local_tee_slow_path
 .ipint_local_tee_post_decode:
     # Load from stack
-    load2ia [sp], t3, t2
+    load2ia [sp], t2, t3
     # Store to locals
     mulp LocalSize, t0
     store2ia t2, t3, [PL, t0]
     nextIPIntInstruction()
+end)
 
-instructionLabel(_global_get)
+ipintOp(_global_get, macro()
     # Load pre-computed index from metadata
     loadb IPInt::GlobalMetadata::bindingMode[MC], t2
     loadi IPInt::GlobalMetadata::index[MC], t1
@@ -548,13 +592,14 @@ instructionLabel(_global_get)
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::GlobalMetadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_global_set)
+ipintOp(_global_set, macro()
     # isRef = 1 => ref, use slowpath
     loadb IPInt::GlobalMetadata::isRef[MC], t0
     bineq t0, 0, .ipint_global_set_refpath
     # bindingMode = 1 => portable
-    loadb IPInt::GlobalMetadata::bindingMode[MC], t5
+    loadb IPInt::GlobalMetadata::bindingMode[MC], t4
     # get global addr
     loadp CodeBlock[cfr], t0
     loadp JSWebAssemblyInstance::m_globals[t0], t0
@@ -563,7 +608,7 @@ instructionLabel(_global_set)
     # get index
     loadi IPInt::GlobalMetadata::index[MC], t1
     lshiftp 1, t1
-    bieq t5, 0, .ipint_global_set_embedded
+    bieq t4, 0, .ipint_global_set_embedded
     # portable: dereference then set
     loadp [t0, t1, 8], t0
     store2ia t2, t3, [t0]
@@ -582,16 +627,47 @@ instructionLabel(_global_set)
 .ipint_global_set_refpath:
     loadi IPInt::GlobalMetadata::index[MC], a1
     # Pop from stack
-    popQuad(a2, a3)
+    popQuad(a3, a2)
     operationCall(macro() cCall4(_ipint_extern_set_global_ref) end)
 
     loadb IPInt::GlobalMetadata::instructionLength[MC], t0
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::GlobalMetadata)))
     nextIPIntInstruction()
+end)
 
-unimplementedInstruction(_table_get)
-unimplementedInstruction(_table_set)
+ipintOp(_table_get, macro()
+    # Load pre-computed index from metadata
+    loadi IPInt::Const32Metadata::value[MC], a1
+    popInt32(a2)
+    operationCallMayThrow(macro() cCall3(_ipint_extern_table_get) end)
+    pushQuad(r1, r0)
+
+    loadb IPInt::Const32Metadata::instructionLength[MC], t0
+
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
+    nextIPIntInstruction()
+end)
+
+ipintOp(_table_set, macro()
+    # Load pre-computed index from metadata
+    loadi IPInt::Const32Metadata::value[MC], a1 # table index
+    popQuad(t4, t3) # value
+    popInt32(a2) # index
+    operationCallMayThrow(macro()
+        push t4, t3
+        cCall3(_ipint_extern_table_set)
+        addp 2*MachineRegisterSize, sp
+    end)
+
+    loadb IPInt::Const32Metadata::instructionLength[MC], t0
+
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
+    nextIPIntInstruction()
+end)
+
 reservedOpcode(0x27)
 
 macro ipintWithMemory()
@@ -611,7 +687,7 @@ macro ipintMaterializePtrAndCheckMemoryBound(mem, offset, size)
 .continuation:
 end
 
-instructionLabel(_i32_load_mem)
+ipintOp(_i32_load_mem, macro()
     # i32.load
     # pop index
     popInt32(t0)
@@ -626,8 +702,9 @@ instructionLabel(_i32_load_mem)
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_load_mem)
+ipintOp(_i64_load_mem, macro()
     # i32.load
     # pop index
     popInt32(t0)
@@ -642,8 +719,9 @@ instructionLabel(_i64_load_mem)
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_load_mem)
+ipintOp(_f32_load_mem, macro()
     # f32.load
     # pop index
     popInt32(t0)
@@ -659,8 +737,9 @@ instructionLabel(_f32_load_mem)
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_load_mem)
+ipintOp(_f64_load_mem, macro()
     # f64.load
     # pop index
     popInt32(t0)
@@ -676,8 +755,9 @@ instructionLabel(_f64_load_mem)
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_load8s_mem)
+ipintOp(_i32_load8s_mem, macro()
     # i32.load8_s
     # pop index
     popInt32(t0)
@@ -693,8 +773,9 @@ instructionLabel(_i32_load8s_mem)
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_load8u_mem)
+ipintOp(_i32_load8u_mem, macro()
     # i32.load8_u
     # pop index
     popInt32(t0)
@@ -709,8 +790,9 @@ instructionLabel(_i32_load8u_mem)
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_load16s_mem)
+ipintOp(_i32_load16s_mem, macro()
     # i32.load16_s
     # pop index
     popInt32(t0)
@@ -726,8 +808,9 @@ instructionLabel(_i32_load16s_mem)
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_load16u_mem)
+ipintOp(_i32_load16u_mem, macro()
     # i32.load16_u
     # pop index
     popInt32(t0)
@@ -742,8 +825,9 @@ instructionLabel(_i32_load16u_mem)
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_load8s_mem)
+ipintOp(_i64_load8s_mem, macro()
     # i64.load8_s
     # pop index
     popInt32(t0)
@@ -760,8 +844,9 @@ instructionLabel(_i64_load8s_mem)
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_load8u_mem)
+ipintOp(_i64_load8u_mem, macro()
     # i64.load8_u
     # pop index
     popInt32(t0)
@@ -777,14 +862,15 @@ instructionLabel(_i64_load8u_mem)
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_load16s_mem)
+ipintOp(_i64_load16s_mem, macro()
     # i64.load16_s
     # pop index
     popInt32(t0)
     loadi IPInt::Const32Metadata::value[MC], t1
     ipintWithMemory()
-    ipintMaterializePtrAndCheckMemoryBound(t0, t1, 1)
+    ipintMaterializePtrAndCheckMemoryBound(t0, t1, 2)
     # load memory location
     loadh [memoryBase, t0], t0
     sxh2i t0, t0
@@ -795,14 +881,15 @@ instructionLabel(_i64_load16s_mem)
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_load16u_mem)
+ipintOp(_i64_load16u_mem, macro()
     # i64.load16_u
     # pop index
     popInt32(t0)
     loadi IPInt::Const32Metadata::value[MC], t1
     ipintWithMemory()
-    ipintMaterializePtrAndCheckMemoryBound(t0, t1, 1)
+    ipintMaterializePtrAndCheckMemoryBound(t0, t1, 2)
     # load memory location
     loadh [memoryBase, t0], t0
     move 0, t1
@@ -812,14 +899,15 @@ instructionLabel(_i64_load16u_mem)
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_load32s_mem)
+ipintOp(_i64_load32s_mem, macro()
     # i64.load32_s
     # pop index
     popInt32(t0)
     loadi IPInt::Const32Metadata::value[MC], t1
     ipintWithMemory()
-    ipintMaterializePtrAndCheckMemoryBound(t0, t1, 1)
+    ipintMaterializePtrAndCheckMemoryBound(t0, t1, 4)
     # load memory location
     loadi [memoryBase, t0], t0
     rshifti t0, 31, t1
@@ -829,14 +917,15 @@ instructionLabel(_i64_load32s_mem)
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_load32u_mem)
+ipintOp(_i64_load32u_mem, macro()
     # i64.load8_s
     # pop index
     popInt32(t0)
     loadi IPInt::Const32Metadata::value[MC], t1
     ipintWithMemory()
-    ipintMaterializePtrAndCheckMemoryBound(t0, t1, 1)
+    ipintMaterializePtrAndCheckMemoryBound(t0, t1, 4)
     # load memory location
     loadi [memoryBase, t0], t0
     move 0, t1
@@ -846,44 +935,47 @@ instructionLabel(_i64_load32u_mem)
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_store_mem)
+ipintOp(_i32_store_mem, macro()
     # i32.store
     # pop data
     popInt32(t0)
     # pop index
-    popInt32(t5)
+    popInt32(t4)
     loadi IPInt::Const32Metadata::value[MC], t1
     ipintWithMemory()
-    ipintMaterializePtrAndCheckMemoryBound(t5, t1, 4)
+    ipintMaterializePtrAndCheckMemoryBound(t4, t1, 4)
     # store at memory location
-    storei t0, [memoryBase, t5]
+    storei t0, [memoryBase, t4]
 
     loadb IPInt::Const32Metadata::instructionLength[MC], t0
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_store_mem)
+ipintOp(_i64_store_mem, macro()
     # i64.store
     # peek index
-    peekInt32(1, t5)
+    peekInt32(1, t4)
     loadi IPInt::Const32Metadata::value[MC], t1
     ipintWithMemory()
-    ipintMaterializePtrAndCheckMemoryBound(t5, t1, 8)
+    ipintMaterializePtrAndCheckMemoryBound(t4, t1, 8)
     # pop data
     popInt64(t1, t0)
     # drop index
     drop()
     # store at memory location
-    store2ia t0, t1, [memoryBase, t5]
+    store2ia t0, t1, [memoryBase, t4]
 
     loadb IPInt::Const32Metadata::instructionLength[MC], t0
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_store_mem)
+ipintOp(_f32_store_mem, macro()
     # f32.store
     # pop data
     popFloat32(ft0)
@@ -900,125 +992,138 @@ instructionLabel(_f32_store_mem)
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_store_mem)
+ipintOp(_f64_store_mem, macro()
     # f64.store
     # pop data
     popFloat64(ft0)
     # pop index
-    popInt32(t5)
+    popInt32(t4)
     loadi IPInt::Const32Metadata::value[MC], t1
     ipintWithMemory()
-    ipintMaterializePtrAndCheckMemoryBound(t5, t1, 8)
+    ipintMaterializePtrAndCheckMemoryBound(t4, t1, 8)
     # store at memory location
     fd2ii ft0, t0, t1 # NB: can be unaligned, hence fd2ii, store2ia instead of stored
-    store2ia t0, t1, [memoryBase, t5]
+    store2ia t0, t1, [memoryBase, t4]
 
     loadb IPInt::Const32Metadata::instructionLength[MC], t0
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_store8_mem)
+ipintOp(_i32_store8_mem, macro()
     # i32.store8
     # pop data
     popInt32(t0)
     # pop index
-    popInt32(t5)
+    popInt32(t4)
     loadi IPInt::Const32Metadata::value[MC], t1
     ipintWithMemory()
-    ipintMaterializePtrAndCheckMemoryBound(t5, t1, 1)
+    ipintMaterializePtrAndCheckMemoryBound(t4, t1, 1)
     # store at memory location
-    storeb t0, [memoryBase, t5]
+    storeb t0, [memoryBase, t4]
 
     loadb IPInt::Const32Metadata::instructionLength[MC], t0
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_store16_mem)
+ipintOp(_i32_store16_mem, macro()
     # i32.store16
     # pop data
     popInt32(t0)
     # pop index
-    popInt32(t5)
+    popInt32(t4)
     loadi IPInt::Const32Metadata::value[MC], t1
     ipintWithMemory()
-    ipintMaterializePtrAndCheckMemoryBound(t5, t1, 2)
+    ipintMaterializePtrAndCheckMemoryBound(t4, t1, 2)
     # store at memory location
-    storeh t0, [memoryBase, t5]
+    storeh t0, [memoryBase, t4]
 
     loadb IPInt::Const32Metadata::instructionLength[MC], t0
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_store8_mem)
+ipintOp(_i64_store8_mem, macro()
     # i64.store8
     # pop data
     popInt32(t0)
     # pop index
-    popInt32(t5)
+    popInt32(t4)
     loadi IPInt::Const32Metadata::value[MC], t1
     ipintWithMemory()
-    ipintMaterializePtrAndCheckMemoryBound(t5, t1, 1)
+    ipintMaterializePtrAndCheckMemoryBound(t4, t1, 1)
     # store at memory location
-    storeb t0, [memoryBase, t5]
+    storeb t0, [memoryBase, t4]
 
     loadb IPInt::Const32Metadata::instructionLength[MC], t0
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_store16_mem)
+ipintOp(_i64_store16_mem, macro()
     # i64.store16
     # pop data
     popInt32(t0)
     # pop index
-    popInt32(t5)
+    popInt32(t4)
     loadi IPInt::Const32Metadata::value[MC], t1
     ipintWithMemory()
-    ipintMaterializePtrAndCheckMemoryBound(t5, t1, 2)
+    ipintMaterializePtrAndCheckMemoryBound(t4, t1, 2)
     # store at memory location
-    storeh t0, [memoryBase, t5]
+    storeh t0, [memoryBase, t4]
 
     loadb IPInt::Const32Metadata::instructionLength[MC], t0
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_store32_mem)
+ipintOp(_i64_store32_mem, macro()
     # i64.store32
     # pop data
     popInt32(t0)
     # pop index
-    popInt32(t5)
+    popInt32(t4)
     loadi IPInt::Const32Metadata::value[MC], t1
     ipintWithMemory()
-    ipintMaterializePtrAndCheckMemoryBound(t5, t1, 4)
+    ipintMaterializePtrAndCheckMemoryBound(t4, t1, 4)
     # store at memory location
-    storei t0, [memoryBase, t5]
+    storei t0, [memoryBase, t4]
 
     loadb IPInt::Const32Metadata::instructionLength[MC], t0
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-unimplementedInstruction(_memory_size)
+ipintOp(_memory_size, macro()
+    operationCall(macro() cCall2(_ipint_extern_current_memory) end)
+    pushInt32(r0)
+    advancePC(2)
+    nextIPIntInstruction()
+end)
 
-instructionLabel(_memory_grow)
+ipintOp(_memory_grow, macro()
     popInt32(a1)
     operationCall(macro() cCall2(_ipint_extern_memory_grow) end)
     pushInt32(r0)
     ipintReloadMemory()
     advancePC(2)
     nextIPIntInstruction()
+end)
 
     ################################
     # 0x41 - 0x44: constant values #
     ################################
 
-instructionLabel(_i32_const)
+ipintOp(_i32_const, macro()
     # i32.const
     loadb IPInt::InstructionLengthMetadata::length[MC], t1
     bigteq t1, 2, .ipint_i32_const_slowpath
@@ -1039,8 +1144,9 @@ instructionLabel(_i32_const)
     advancePCByReg(t1)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_const)
+ipintOp(_i64_const, macro()
     # i64.const
     # Load pre-computed value from metadata
     load2ia IPInt::Const64Metadata::value[MC], t0, t1
@@ -1051,8 +1157,9 @@ instructionLabel(_i64_const)
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const64Metadata)))
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_const)
+ipintOp(_f32_const, macro()
     # f32.const
     # Load pre-computed value from metadata
     loadi 1[PC], t0 # NB: can be unaligned, hence loadi, fi2f instead of loadf (VLDR)
@@ -1061,8 +1168,9 @@ instructionLabel(_f32_const)
 
     advancePC(5)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_const)
+ipintOp(_f64_const, macro()
     # f64.const
     # Load pre-computed value from metadata
     load2ia 1[PC], t0, t1 # NB: can be unaligned, hence loadi, fii2d instead of loadd
@@ -1075,16 +1183,18 @@ instructionLabel(_f64_const)
     ###############################
     # 0x45 - 0x4f: i32 comparison #
     ###############################
+end)
 
-instructionLabel(_i32_eqz)
+ipintOp(_i32_eqz, macro()
     # i32.eqz
     popInt32(t0)
     cieq t0, 0, t0
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_eq)
+ipintOp(_i32_eq, macro()
     # i32.eq
     popInt32(t1)
     popInt32(t0)
@@ -1092,8 +1202,9 @@ instructionLabel(_i32_eq)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_ne)
+ipintOp(_i32_ne, macro()
     # i32.ne
     popInt32(t1)
     popInt32(t0)
@@ -1101,8 +1212,9 @@ instructionLabel(_i32_ne)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_lt_s)
+ipintOp(_i32_lt_s, macro()
     # i32.lt_s
     popInt32(t1)
     popInt32(t0)
@@ -1110,8 +1222,9 @@ instructionLabel(_i32_lt_s)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_lt_u)
+ipintOp(_i32_lt_u, macro()
     # i32.lt_u
     popInt32(t1)
     popInt32(t0)
@@ -1119,8 +1232,9 @@ instructionLabel(_i32_lt_u)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_gt_s)
+ipintOp(_i32_gt_s, macro()
     # i32.gt_s
     popInt32(t1)
     popInt32(t0)
@@ -1128,8 +1242,9 @@ instructionLabel(_i32_gt_s)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_gt_u)
+ipintOp(_i32_gt_u, macro()
     # i32.gt_u
     popInt32(t1)
     popInt32(t0)
@@ -1137,8 +1252,9 @@ instructionLabel(_i32_gt_u)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_le_s)
+ipintOp(_i32_le_s, macro()
     # i32.le_s
     popInt32(t1)
     popInt32(t0)
@@ -1146,8 +1262,9 @@ instructionLabel(_i32_le_s)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_le_u)
+ipintOp(_i32_le_u, macro()
     # i32.le_u
     popInt32(t1)
     popInt32(t0)
@@ -1155,8 +1272,9 @@ instructionLabel(_i32_le_u)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_ge_s)
+ipintOp(_i32_ge_s, macro()
     # i32.ge_s
     popInt32(t1)
     popInt32(t0)
@@ -1164,8 +1282,9 @@ instructionLabel(_i32_ge_s)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_ge_u)
+ipintOp(_i32_ge_u, macro()
     # i32.ge_u
     popInt32(t1)
     popInt32(t0)
@@ -1173,12 +1292,13 @@ instructionLabel(_i32_ge_u)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
     ###############################
     # 0x50 - 0x5a: i64 comparison #
     ###############################
 
-instructionLabel(_i64_eqz)
+ipintOp(_i64_eqz, macro()
     # i64.eqz
     popInt64(t1, t0)
     move 0, t2
@@ -1188,148 +1308,159 @@ instructionLabel(_i64_eqz)
     pushInt32(t2)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_eq)
+ipintOp(_i64_eq, macro()
     # i64.eq
     popInt64(t3, t2)
     popInt64(t1, t0)
-    move 0, t5
+    move 0, t4
     bineq t1, t3, .ipint_i64_eq_return
-    cieq t0, t2, t5
+    cieq t0, t2, t4
 .ipint_i64_eq_return:
-    pushInt32(t5)
+    pushInt32(t4)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_ne)
+ipintOp(_i64_ne, macro()
     # i64.ne
     popInt64(t3, t2)
     popInt64(t1, t0)
-    move 1, t5
+    move 1, t4
     bineq t1, t3, .ipint_i64_ne_return
-    cineq t0, t2, t5
+    cineq t0, t2, t4
 .ipint_i64_ne_return:
-    pushInt32(t5)
+    pushInt32(t4)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_lt_s)
+ipintOp(_i64_lt_s, macro()
     # i64.lt_s
     popInt64(t3, t2)
     popInt64(t1, t0)
-    move 1, t5
+    move 1, t4
     bilt t1, t3, .ipint_i64_lt_s_return
-    move 0, t5
+    move 0, t4
     bigt t1, t3, .ipint_i64_lt_s_return
-    cib t0, t2, t5
+    cib t0, t2, t4
 .ipint_i64_lt_s_return:
-    pushInt32(t5)
+    pushInt32(t4)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_lt_u)
+ipintOp(_i64_lt_u, macro()
     # i64.lt_u
     popInt64(t3, t2)
     popInt64(t1, t0)
-    move 1, t5
+    move 1, t4
     bib t1, t3, .ipint_i64_lt_u_return
-    move 0, t5
+    move 0, t4
     bia t1, t3, .ipint_i64_lt_u_return
-    cib t0, t2, t5
+    cib t0, t2, t4
 .ipint_i64_lt_u_return:
-    pushInt32(t5)
+    pushInt32(t4)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_gt_s)
+ipintOp(_i64_gt_s, macro()
     # i64.gt_s
     popInt64(t3, t2)
     popInt64(t1, t0)
-    move 1, t5
+    move 1, t4
     bigt t1, t3, .ipint_i64_gt_s_return
-    move 0, t5
+    move 0, t4
     bilt t1, t3, .ipint_i64_gt_s_return
-    cia t0, t2, t5
+    cia t0, t2, t4
 .ipint_i64_gt_s_return:
-    pushInt32(t5)
+    pushInt32(t4)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_gt_u)
+ipintOp(_i64_gt_u, macro()
     # i64.gt_u
     popInt64(t3, t2)
     popInt64(t1, t0)
-    move 1, t5
+    move 1, t4
     bia t1, t3, .ipint_i64_gt_u_return
-    move 0, t5
+    move 0, t4
     bib t1, t3, .ipint_i64_gt_u_return
-    cia t0, t2, t5
+    cia t0, t2, t4
 .ipint_i64_gt_u_return:
-    pushInt32(t5)
+    pushInt32(t4)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_le_s)
+ipintOp(_i64_le_s, macro()
     # i64.le_s
     popInt64(t3, t2)
     popInt64(t1, t0)
-    move 1, t5
+    move 1, t4
     bilt t1, t3, .ipint_i64_le_s_return
-    move 0, t5
+    move 0, t4
     bigt t1, t3, .ipint_i64_le_s_return
-    cibeq t0, t2, t5
+    cibeq t0, t2, t4
 .ipint_i64_le_s_return:
-    pushInt32(t5)
+    pushInt32(t4)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_le_u)
+ipintOp(_i64_le_u, macro()
     # i64.le_u
     popInt64(t3, t2)
     popInt64(t1, t0)
-    move 1, t5
+    move 1, t4
     bib t1, t3, .ipint_i64_le_u_return
-    move 0, t5
+    move 0, t4
     bia t1, t3, .ipint_i64_le_u_return
-    cibeq t0, t2, t5
+    cibeq t0, t2, t4
 .ipint_i64_le_u_return:
-    pushInt32(t5)
+    pushInt32(t4)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_ge_s)
+ipintOp(_i64_ge_s, macro()
     # i64.ge_s
     popInt64(t3, t2)
     popInt64(t1, t0)
-    move 1, t5
+    move 1, t4
     bigt t1, t3, .ipint_i64_ge_s_return
-    move 0, t5
+    move 0, t4
     bilt t1, t3, .ipint_i64_ge_s_return
-    ciaeq t0, t2, t5
+    ciaeq t0, t2, t4
 .ipint_i64_ge_s_return:
-    pushInt32(t5)
+    pushInt32(t4)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_ge_u)
+ipintOp(_i64_ge_u, macro()
     # i64.ge_u
     popInt64(t3, t2)
     popInt64(t1, t0)
-    move 0, t5
+    move 0, t4
     bib t1, t3, .ipint_i64_ge_u_return
-    move 1, t5
+    move 1, t4
     bia t1, t3, .ipint_i64_ge_u_return
-    ciaeq t0, t2, t5
+    ciaeq t0, t2, t4
 .ipint_i64_ge_u_return:
-    pushInt32(t5)
+    pushInt32(t4)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
     ###############################
     # 0x5b - 0x60: f32 comparison #
     ###############################
 
-instructionLabel(_f32_eq)
+ipintOp(_f32_eq, macro()
     # f32.eq
     popFloat32(ft1)
     popFloat32(ft0)
@@ -1337,8 +1468,9 @@ instructionLabel(_f32_eq)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_ne)
+ipintOp(_f32_ne, macro()
     # f32.ne
     popFloat32(ft1)
     popFloat32(ft0)
@@ -1346,8 +1478,9 @@ instructionLabel(_f32_ne)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_lt)
+ipintOp(_f32_lt, macro()
     # f32.lt
     popFloat32(ft1)
     popFloat32(ft0)
@@ -1355,8 +1488,9 @@ instructionLabel(_f32_lt)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_gt)
+ipintOp(_f32_gt, macro()
     # f32.gt
     popFloat32(ft1)
     popFloat32(ft0)
@@ -1364,8 +1498,9 @@ instructionLabel(_f32_gt)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_le)
+ipintOp(_f32_le, macro()
     # f32.le
     popFloat32(ft1)
     popFloat32(ft0)
@@ -1373,8 +1508,9 @@ instructionLabel(_f32_le)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_ge)
+ipintOp(_f32_ge, macro()
     # f32.ge
     popFloat32(ft1)
     popFloat32(ft0)
@@ -1382,12 +1518,13 @@ instructionLabel(_f32_ge)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
     ###############################
     # 0x61 - 0x66: f64 comparison #
     ###############################
 
-instructionLabel(_f64_eq)
+ipintOp(_f64_eq, macro()
     # f64.eq
     popFloat64(ft1)
     popFloat64(ft0)
@@ -1395,8 +1532,9 @@ instructionLabel(_f64_eq)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_ne)
+ipintOp(_f64_ne, macro()
     # f64.ne
     popFloat64(ft1)
     popFloat64(ft0)
@@ -1404,8 +1542,9 @@ instructionLabel(_f64_ne)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_lt)
+ipintOp(_f64_lt, macro()
     # f64.lt
     popFloat64(ft1)
     popFloat64(ft0)
@@ -1413,8 +1552,9 @@ instructionLabel(_f64_lt)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_gt)
+ipintOp(_f64_gt, macro()
     # f64.gt
     popFloat64(ft1)
     popFloat64(ft0)
@@ -1422,8 +1562,9 @@ instructionLabel(_f64_gt)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_le)
+ipintOp(_f64_le, macro()
     # f64.le
     popFloat64(ft1)
     popFloat64(ft0)
@@ -1431,8 +1572,9 @@ instructionLabel(_f64_le)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_ge)
+ipintOp(_f64_ge, macro()
     # f64.ge
     popFloat64(ft1)
     popFloat64(ft0)
@@ -1440,12 +1582,13 @@ instructionLabel(_f64_ge)
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
     ###############################
     # 0x67 - 0x78: i32 operations #
     ###############################
 
-instructionLabel(_i32_clz)
+ipintOp(_i32_clz, macro()
     # i32.clz
     popInt32(t0)
     lzcnti t0, t1
@@ -1453,8 +1596,9 @@ instructionLabel(_i32_clz)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_ctz)
+ipintOp(_i32_ctz, macro()
     # i32.ctz
     popInt32(t0)
     tzcnti t0, t1
@@ -1462,8 +1606,9 @@ instructionLabel(_i32_ctz)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_popcnt)
+ipintOp(_i32_popcnt, macro()
     # i32.popcnt
     popInt32(t1)
     operationCall(macro() cCall2(_slow_path_wasm_popcount) end)
@@ -1471,8 +1616,9 @@ instructionLabel(_i32_popcnt)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_add)
+ipintOp(_i32_add, macro()
     # i32.add
     popInt32(t1)
     popInt32(t0)
@@ -1481,8 +1627,9 @@ instructionLabel(_i32_add)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_sub)
+ipintOp(_i32_sub, macro()
     # i32.sub
     popInt32(t1)
     popInt32(t0)
@@ -1491,8 +1638,9 @@ instructionLabel(_i32_sub)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_mul)
+ipintOp(_i32_mul, macro()
     # i32.mul
     popInt32(t1)
     popInt32(t0)
@@ -1501,8 +1649,9 @@ instructionLabel(_i32_mul)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_div_s)
+ipintOp(_i32_div_s, macro()
     # i32.div_s
     popInt32(t1)
     popInt32(t0)
@@ -1522,8 +1671,9 @@ instructionLabel(_i32_div_s)
 
 .ipint_i32_div_s_throwIntegerOverflow:
     ipintException(IntegerOverflow)
+end)
 
-instructionLabel(_i32_div_u)
+ipintOp(_i32_div_u, macro()
     # i32.div_u
     popInt32(t1)
     popInt32(t0)
@@ -1536,8 +1686,9 @@ instructionLabel(_i32_div_u)
 
 .ipint_i32_div_u_throwDivisionByZero:
     ipintException(DivisionByZero)
+end)
 
-instructionLabel(_i32_rem_s)
+ipintOp(_i32_rem_s, macro()
     # i32.rem_s
     popInt32(t1)
     popInt32(t0)
@@ -1560,8 +1711,9 @@ instructionLabel(_i32_rem_s)
 
 .ipint_i32_rem_s_throwDivisionByZero:
     ipintException(DivisionByZero)
+end)
 
-instructionLabel(_i32_rem_u)
+ipintOp(_i32_rem_u, macro()
     # i32.rem_u
     popInt32(t1)
     popInt32(t0)
@@ -1574,8 +1726,9 @@ instructionLabel(_i32_rem_u)
 
 .ipint_i32_rem_u_throwDivisionByZero:
     ipintException(DivisionByZero)
+end)
 
-instructionLabel(_i32_and)
+ipintOp(_i32_and, macro()
     # i32.and
     popInt32(t1)
     popInt32(t0)
@@ -1584,8 +1737,9 @@ instructionLabel(_i32_and)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_or)
+ipintOp(_i32_or, macro()
     # i32.or
     popInt32(t1)
     popInt32(t0)
@@ -1594,8 +1748,9 @@ instructionLabel(_i32_or)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_xor)
+ipintOp(_i32_xor, macro()
     # i32.xor
     popInt32(t1)
     popInt32(t0)
@@ -1604,8 +1759,9 @@ instructionLabel(_i32_xor)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_shl)
+ipintOp(_i32_shl, macro()
     # i32.shl
     popInt32(t1)
     popInt32(t0)
@@ -1614,8 +1770,9 @@ instructionLabel(_i32_shl)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_shr_s)
+ipintOp(_i32_shr_s, macro()
     # i32.shr_s
     popInt32(t1)
     popInt32(t0)
@@ -1624,8 +1781,9 @@ instructionLabel(_i32_shr_s)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_shr_u)
+ipintOp(_i32_shr_u, macro()
     # i32.shr_u
     popInt32(t1)
     popInt32(t0)
@@ -1634,8 +1792,9 @@ instructionLabel(_i32_shr_u)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_rotl)
+ipintOp(_i32_rotl, macro()
     # i32.rotl
     popInt32(t1)
     popInt32(t0)
@@ -1644,8 +1803,9 @@ instructionLabel(_i32_rotl)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_rotr)
+ipintOp(_i32_rotr, macro()
     # i32.rotr
     popInt32(t1)
     popInt32(t0)
@@ -1654,12 +1814,13 @@ instructionLabel(_i32_rotr)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
     ###############################
     # 0x79 - 0x8a: i64 operations #
     ###############################
 
-instructionLabel(_i64_clz)
+ipintOp(_i64_clz, macro()
     # i64.clz
     popInt64(t1, t0)
     btiz t1, .ipint_i64_clz_bottom
@@ -1677,8 +1838,9 @@ instructionLabel(_i64_clz)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_ctz)
+ipintOp(_i64_ctz, macro()
     # i64.ctz
     popInt64(t1, t0)
     btiz t0, .ipint_i64_ctz_top
@@ -1696,8 +1858,9 @@ instructionLabel(_i64_ctz)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_popcnt)
+ipintOp(_i64_popcnt, macro()
     # i64.popcnt
     popInt64(t3, t2)
     operationCall(macro() cCall2(_slow_path_wasm_popcountll) end)
@@ -1706,8 +1869,9 @@ instructionLabel(_i64_popcnt)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_add)
+ipintOp(_i64_add, macro()
     # i64.add
     popInt64(t3, t2)
     popInt64(t1, t0)
@@ -1717,8 +1881,9 @@ instructionLabel(_i64_add)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_sub)
+ipintOp(_i64_sub, macro()
     # i64.sub
     popInt64(t3, t2)
     popInt64(t1, t0)
@@ -1728,8 +1893,9 @@ instructionLabel(_i64_sub)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_mul)
+ipintOp(_i64_mul, macro()
     # i64.mul
     popInt64(t3, t2)
     popInt64(t1, t0)
@@ -1742,8 +1908,9 @@ instructionLabel(_i64_mul)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_div_s)
+ipintOp(_i64_div_s, macro()
     # i64.div_s
     popInt64(t3, t2)
     popInt64(t1, t0)
@@ -1767,8 +1934,9 @@ instructionLabel(_i64_div_s)
 
 .ipint_i64_div_s_throwIntegerOverflow:
     ipintException(IntegerOverflow)
+end)
 
-instructionLabel(_i64_div_u)
+ipintOp(_i64_div_u, macro()
     # i64.div_u
     popInt64(t3, t2)
     popInt64(t1, t0)
@@ -1783,8 +1951,9 @@ instructionLabel(_i64_div_u)
 
 .ipint_i64_div_u_throwDivisionByZero:
     ipintException(DivisionByZero)
+end)
 
-instructionLabel(_i64_rem_s)
+ipintOp(_i64_rem_s, macro()
     # i64.rem_s
     popInt64(t3, t2)
     popInt64(t1, t0)
@@ -1810,8 +1979,9 @@ instructionLabel(_i64_rem_s)
 
 .ipint_i64_rem_s_throwDivisionByZero:
     ipintException(DivisionByZero)
+end)
 
-instructionLabel(_i64_rem_u)
+ipintOp(_i64_rem_u, macro()
     # i64.rem_u
     popInt64(t3, t2)
     popInt64(t1, t0)
@@ -1826,8 +1996,9 @@ instructionLabel(_i64_rem_u)
 
 .ipint_i64_rem_u_throwDivisionByZero:
     ipintException(DivisionByZero)
+end)
 
-instructionLabel(_i64_and)
+ipintOp(_i64_and, macro()
     # i64.and
     popInt64(t3, t2)
     popInt64(t1, t0)
@@ -1837,8 +2008,9 @@ instructionLabel(_i64_and)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_or)
+ipintOp(_i64_or, macro()
     # i64.or
     popInt64(t3, t2)
     popInt64(t1, t0)
@@ -1848,8 +2020,9 @@ instructionLabel(_i64_or)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_xor)
+ipintOp(_i64_xor, macro()
     # i64.xor
     popInt64(t3, t2)
     popInt64(t1, t0)
@@ -1859,8 +2032,9 @@ instructionLabel(_i64_xor)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_shl)
+ipintOp(_i64_shl, macro()
     # i64.shl
     popInt32(t2)
     popInt64(t1, t0)
@@ -1885,8 +2059,9 @@ instructionLabel(_i64_shl)
     pushInt64(t1, t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_shr_s)
+ipintOp(_i64_shr_s, macro()
     # i64.shr_s
     popInt32(t2)
     popInt64(t1, t0)
@@ -1911,8 +2086,9 @@ instructionLabel(_i64_shr_s)
     pushInt64(t1, t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_shr_u)
+ipintOp(_i64_shr_u, macro()
     # i64.shr_u
     popInt32(t2)
     popInt64(t1, t0)
@@ -1937,8 +2113,9 @@ instructionLabel(_i64_shr_u)
     pushInt64(t1, t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_rotl)
+ipintOp(_i64_rotl, macro()
     # i64.rotl
     popInt32(t2)
     popInt64(t1, t0)
@@ -1953,21 +2130,22 @@ instructionLabel(_i64_rotl)
     andi 0x1f, t2
     btiz t2, .ipint_i64_rotl_return
 
-    move 32, t5
-    subi t2, t5
-    urshifti t0, t5, t3
-    urshifti t1, t5, t5
+    move 32, t4
+    subi t2, t4
+    urshifti t0, t4, t3
+    urshifti t1, t4, t4
     lshifti t2, t0
     lshifti t2, t1
-    ori t5, t0
+    ori t4, t0
     ori t3, t1
 
 .ipint_i64_rotl_return:
     pushInt64(t1, t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_rotr)
+ipintOp(_i64_rotr, macro()
     # i64.rotr
     popInt32(t2)
     popInt64(t1, t0)
@@ -1982,25 +2160,27 @@ instructionLabel(_i64_rotr)
     andi 0x1f, t2
     btiz t2, .ipint_i64_rotr_return
 
-    move 32, t5
-    subi t2, t5
-    lshifti t0, t5, t3
-    lshifti t1, t5, t5
+    move 32, t4
+    subi t2, t4
+    lshifti t0, t4, t3
+    lshifti t1, t4, t4
     urshifti t2, t0
     urshifti t2, t1
-    ori t5, t0
+    ori t4, t0
     ori t3, t1
 
 .ipint_i64_rotr_return:
     pushInt64(t1, t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
     ###############################
     # 0x8b - 0x98: f32 operations #
     ###############################
 
-instructionLabel(_f32_abs)
+
+ipintOp(_f32_abs, macro()
     # f32.abs
     popFloat32(ft0)
     absf ft0, ft0
@@ -2008,8 +2188,9 @@ instructionLabel(_f32_abs)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_neg)
+ipintOp(_f32_neg, macro()
     # f32.neg
     popFloat32(ft0)
     negf ft0, ft0
@@ -2017,8 +2198,9 @@ instructionLabel(_f32_neg)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_ceil)
+ipintOp(_f32_ceil, macro()
     # f32.ceil
     popFloat32(ft0)
     functionCall(macro () cCall2(_ceilFloat) end)
@@ -2026,8 +2208,9 @@ instructionLabel(_f32_ceil)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_floor)
+ipintOp(_f32_floor, macro()
     # f32.floor
     popFloat32(ft0)
     functionCall(macro () cCall2(_floorFloat) end)
@@ -2035,8 +2218,9 @@ instructionLabel(_f32_floor)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_trunc)
+ipintOp(_f32_trunc, macro()
     # f32.trunc
     popFloat32(ft0)
     functionCall(macro () cCall2(_truncFloat) end)
@@ -2044,8 +2228,9 @@ instructionLabel(_f32_trunc)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_nearest)
+ipintOp(_f32_nearest, macro()
     # f32.nearest
     popFloat32(ft0)
     functionCall(macro () cCall2(_f32_nearest) end)
@@ -2053,8 +2238,9 @@ instructionLabel(_f32_nearest)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_sqrt)
+ipintOp(_f32_sqrt, macro()
     # f32.sqrt
     popFloat32(ft0)
     sqrtf ft0, ft0
@@ -2062,8 +2248,9 @@ instructionLabel(_f32_sqrt)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_add)
+ipintOp(_f32_add, macro()
     # f32.add
     popFloat32(ft1)
     popFloat32(ft0)
@@ -2072,8 +2259,9 @@ instructionLabel(_f32_add)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_sub)
+ipintOp(_f32_sub, macro()
     # f32.sub
     popFloat32(ft1)
     popFloat32(ft0)
@@ -2082,8 +2270,9 @@ instructionLabel(_f32_sub)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_mul)
+ipintOp(_f32_mul, macro()
     # f32.mul
     popFloat32(ft1)
     popFloat32(ft0)
@@ -2092,8 +2281,9 @@ instructionLabel(_f32_mul)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_div)
+ipintOp(_f32_div, macro()
     # f32.div
     popFloat32(ft1)
     popFloat32(ft0)
@@ -2102,8 +2292,9 @@ instructionLabel(_f32_div)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_min)
+ipintOp(_f32_min, macro()
     # f32.min
     popFloat32(ft1)
     popFloat32(ft0)
@@ -2133,8 +2324,9 @@ instructionLabel(_f32_min)
     pushFloat32(ft1)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_max)
+ipintOp(_f32_max, macro()
     # f32.max
     popFloat32(ft1)
     popFloat32(ft0)
@@ -2165,33 +2357,28 @@ instructionLabel(_f32_max)
     pushFloat32(ft1)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f32_copysign)
+ipintOp(_f32_copysign, macro()
     # f32.copysign
-    popFloat32(ft1)
-    popFloat32(ft0)
+    popDouble(t1)
+    popDouble(t0)
 
-    ff2i ft1, t1
-    move 0x80000000, t2
-    andi t2, t1
-
-    ff2i ft0, t0
-    move 0x7fffffff, t2
-    andi t2, t0
-
+    andi 0x80000000, t1
+    andi 0x7fffffff, t0
     ori t1, t0
-    fi2f t0, ft0
 
-    pushFloat32(ft0)
+    pushDouble(t0)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
     ###############################
     # 0x99 - 0xa6: f64 operations #
     ###############################
 
-instructionLabel(_f64_abs)
+ipintOp(_f64_abs, macro()
     # f64.abs
     popFloat64(ft0)
     absd ft0, ft0
@@ -2199,8 +2386,9 @@ instructionLabel(_f64_abs)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_neg)
+ipintOp(_f64_neg, macro()
     # f64.neg
     popFloat64(ft0)
     negd ft0, ft0
@@ -2208,8 +2396,9 @@ instructionLabel(_f64_neg)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_ceil)
+ipintOp(_f64_ceil, macro()
     # f64.ceil
     popFloat64(ft0)
     functionCall(macro () cCall2(_ceilDouble) end)
@@ -2217,8 +2406,9 @@ instructionLabel(_f64_ceil)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_floor)
+ipintOp(_f64_floor, macro()
     # f64.floor
     popFloat64(ft0)
     functionCall(macro () cCall2(_floorDouble) end)
@@ -2226,8 +2416,9 @@ instructionLabel(_f64_floor)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_trunc)
+ipintOp(_f64_trunc, macro()
     # f64.trunc
     popFloat64(ft0)
     functionCall(macro () cCall2(_truncDouble) end)
@@ -2235,8 +2426,9 @@ instructionLabel(_f64_trunc)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_nearest)
+ipintOp(_f64_nearest, macro()
     # f64.nearest
     popFloat64(ft0)
     functionCall(macro () cCall2(_f64_nearest) end)
@@ -2244,8 +2436,9 @@ instructionLabel(_f64_nearest)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_sqrt)
+ipintOp(_f64_sqrt, macro()
     # f64.sqrt
     popFloat64(ft0)
     sqrtd ft0, ft0
@@ -2253,8 +2446,9 @@ instructionLabel(_f64_sqrt)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_add)
+ipintOp(_f64_add, macro()
     # f64.add
     popFloat64(ft1)
     popFloat64(ft0)
@@ -2263,8 +2457,9 @@ instructionLabel(_f64_add)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_sub)
+ipintOp(_f64_sub, macro()
     # f64.sub
     popFloat64(ft1)
     popFloat64(ft0)
@@ -2273,8 +2468,9 @@ instructionLabel(_f64_sub)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_mul)
+ipintOp(_f64_mul, macro()
     # f64.mul
     popFloat64(ft1)
     popFloat64(ft0)
@@ -2283,8 +2479,9 @@ instructionLabel(_f64_mul)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_div)
+ipintOp(_f64_div, macro()
     # f64.div
     popFloat64(ft1)
     popFloat64(ft0)
@@ -2293,8 +2490,9 @@ instructionLabel(_f64_div)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_min)
+ipintOp(_f64_min, macro()
     # f64.min
     popFloat64(ft1)
     popFloat64(ft0)
@@ -2318,8 +2516,9 @@ instructionLabel(_f64_min)
     pushFloat64(ft1)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_max)
+ipintOp(_f64_max, macro()
     # f64.max
     popFloat64(ft1)
     popFloat64(ft0)
@@ -2344,83 +2543,348 @@ instructionLabel(_f64_max)
     pushFloat64(ft1)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_f64_copysign)
+ipintOp(_f64_copysign, macro()
     # f64.copysign
-    popFloat64(ft1)
-    popFloat64(ft0)
+    popQuad(t3, t2)
+    popQuad(t1, t0)
 
-    fd2ii ft1, t2, t3
-    fd2ii ft0, t0, t1
     andi 0x7fffffff, t1
     andi 0x80000000, t3
     ori t3, t1
 
-    pushFloat64(ft0)
+    pushQuad(t1, t0)
 
     advancePC(1)
     nextIPIntInstruction()
+end)
 
     ############################
     # 0xa7 - 0xc4: conversions #
     ############################
 
-unimplementedInstruction(_i32_wrap_i64)
-unimplementedInstruction(_i32_trunc_f32_s)
-unimplementedInstruction(_i32_trunc_f32_u)
-unimplementedInstruction(_i32_trunc_f64_s)
-unimplementedInstruction(_i32_trunc_f64_u)
-unimplementedInstruction(_i64_extend_i32_s)
-unimplementedInstruction(_i64_extend_i32_u)
-unimplementedInstruction(_i64_trunc_f32_s)
-unimplementedInstruction(_i64_trunc_f32_u)
-unimplementedInstruction(_i64_trunc_f64_s)
-unimplementedInstruction(_i64_trunc_f64_u)
-unimplementedInstruction(_f32_convert_i32_s)
-unimplementedInstruction(_f32_convert_i32_u)
-unimplementedInstruction(_f32_convert_i64_s)
-unimplementedInstruction(_f32_convert_i64_u)
-unimplementedInstruction(_f32_demote_f64)
-unimplementedInstruction(_f64_convert_i32_s)
-unimplementedInstruction(_f64_convert_i32_u)
-unimplementedInstruction(_f64_convert_i64_s)
-unimplementedInstruction(_f64_convert_i64_u)
-unimplementedInstruction(_f64_promote_f32)
+ipintOp(_i32_wrap_i64, macro()
+    # because of how we store values on stack, do nothing
+    advancePC(1)
+    nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_reinterpret_f32)
+ipintOp(_i32_trunc_f32_s, macro()
+    popFloat32(ft0)
+    move 0xcf000000, t0 # INT32_MIN (Note that INT32_MIN - 1.0 in float is the same as INT32_MIN in float).
+    fi2f t0, ft1
+    bfltun ft0, ft1, .ipint_trunc_i32_f32_s_outOfBoundsTrunc
+
+    move 0x4f000000, t0 # -INT32_MIN
+    fi2f t0, ft1
+    bfgtequn ft0, ft1, .ipint_trunc_i32_f32_s_outOfBoundsTrunc
+
+    truncatef2is ft0, t0
+    pushInt32(t0)
+    advancePC(1)
+    nextIPIntInstruction()
+
+.ipint_trunc_i32_f32_s_outOfBoundsTrunc:
+    ipintException(OutOfBoundsTrunc)
+end)
+
+ipintOp(_i32_trunc_f32_u, macro()
+    popFloat32(ft0)
+    move 0xbf800000, t0 # -1.0
+    fi2f t0, ft1
+    bfltequn ft0, ft1, .ipint_trunc_i32_f32_u_outOfBoundsTrunc
+
+    move 0x4f800000, t0 # INT32_MIN * -2.0
+    fi2f t0, ft1
+    bfgtequn ft0, ft1, .ipint_trunc_i32_f32_u_outOfBoundsTrunc
+
+    truncatef2i ft0, t0
+    pushInt32(t0)
+    advancePC(1)
+    nextIPIntInstruction()
+
+.ipint_trunc_i32_f32_u_outOfBoundsTrunc:
+    ipintException(OutOfBoundsTrunc)
+end)
+
+ipintOp(_i32_trunc_f64_s, macro()
+    popFloat64(ft0)
+    # INT32_MIN - 1.0
+    move 0xc1e00000, t1
+    move 0x00200000, t0
+    fii2d t0, t1, ft1
+    bdltequn ft0, ft1, .ipint_trunc_i32_f64_s_outOfBoundsTrunc
+
+    # -INT32_MIN
+    move 0x41e00000, t1
+    move 0x00000000, t0
+    fii2d t0, t1, ft1
+    bdgtequn ft0, ft1, .ipint_trunc_i32_f64_s_outOfBoundsTrunc
+
+    truncated2is ft0, t0
+    pushInt32(t0)
+    advancePC(1)
+    nextIPIntInstruction()
+
+.ipint_trunc_i32_f64_s_outOfBoundsTrunc:
+    ipintException(OutOfBoundsTrunc)
+end)
+
+ipintOp(_i32_trunc_f64_u, macro()
+    popFloat64(ft0)
+    # -1.0
+    move 0xbff00000, t1
+    move 0x00000000, t0
+    fii2d t0, t1, ft1
+    bdltequn ft0, ft1, .ipint_trunc_i32_f64_u_outOfBoundsTrunc
+
+    # INT32_MIN * -2.0
+    move 0x41f00000, t1
+    move 0x00000000, t0
+    fii2d t0, t1, ft1
+    bdgtequn ft0, ft1, .ipint_trunc_i32_f64_u_outOfBoundsTrunc
+
+    truncated2i ft0, t0
+    pushInt32(t0)
+    advancePC(1)
+    nextIPIntInstruction()
+
+.ipint_trunc_i32_f64_u_outOfBoundsTrunc:
+    ipintException(OutOfBoundsTrunc)
+end)
+
+ipintOp(_i64_extend_i32_s, macro()
+    popInt32(t0)
+    rshifti t0, 31, t1
+    pushInt64(t1, t0)
+    advancePC(1)
+    nextIPIntInstruction()
+end)
+
+ipintOp(_i64_extend_i32_u, macro()
+    popInt32(t0)
+    move 0, t1
+    pushInt64(t1, t0)
+    advancePC(1)
+    nextIPIntInstruction()
+end)
+
+ipintOp(_i64_trunc_f32_s, macro()
+    popFloat64(ft0)
+    
+    move 0xdf000000, t0 # INT64_MIN
+    fi2f t0, ft1
+    bfltun ft0, ft1, .ipint_trunc_i64_f32_s_outOfBoundsTrunc
+    
+    move 0x5f000000, t0 # -INT64_MIN
+    fi2f t0, ft1
+    bfgtequn ft0, ft1, .ipint_trunc_i64_f32_s_outOfBoundsTrunc
+
+    functionCall(macro () cCall2(_i64_trunc_s_f32) end)
+    pushInt64(r1, r0)
+    advancePC(1)
+    nextIPIntInstruction()
+
+.ipint_trunc_i64_f32_s_outOfBoundsTrunc:
+    ipintException(OutOfBoundsTrunc)
+end)
+
+ipintOp(_i64_trunc_f32_u, macro()
+    popFloat64(ft0)
+
+    move 0xbf800000, t0 # -1.0
+    fi2f t0, ft1
+    bfltequn ft0, ft1, .ipint_i64_f32_u_outOfBoundsTrunc
+
+    move 0x5f800000, t0 # INT64_MIN * -2.0
+    fi2f t0, ft1
+    bfgtequn ft0, ft1, .ipint_i64_f32_u_outOfBoundsTrunc
+
+    functionCall(macro () cCall2(_i64_trunc_u_f32) end)
+    pushInt64(r1, r0)
+    advancePC(1)
+    nextIPIntInstruction()
+
+.ipint_i64_f32_u_outOfBoundsTrunc:
+    ipintException(OutOfBoundsTrunc)
+end)
+
+ipintOp(_i64_trunc_f64_s, macro()
+    popFloat64(ft0)
+
+    # INT64_MIN
+    move 0xc3e00000, t1
+    move 0x00000000, t0
+    fii2d t0, t1, ft1
+    bdltun ft0, ft1, .ipint_i64_f64_s_outOfBoundsTrunc
+
+    # -INT64_MIN
+    move 0x43e00000, t1
+    move 0x00000000, t0
+    fii2d t0, t1, ft1
+    bdgtequn ft0, ft1, .ipint_i64_f64_s_outOfBoundsTrunc
+
+    functionCall(macro () cCall2(_i64_trunc_s_f64) end)
+    pushInt64(r1, r0)
+    advancePC(1)
+    nextIPIntInstruction()
+
+.ipint_i64_f64_s_outOfBoundsTrunc:
+    ipintException(OutOfBoundsTrunc)
+end)
+
+ipintOp(_i64_trunc_f64_u, macro()
+    popFloat64(ft0)
+
+    # -1.0
+    move 0xbff00000, t1
+    move 0x00000000, t0
+    fii2d t0, t1, ft1
+    bdltequn ft0, ft1, .ipint_i64_f64_u_outOfBoundsTrunc
+
+    # INT64_MIN * -2.0
+    move 0x43f00000, t1
+    move 0x00000000, t0
+    fii2d t0, t1, ft1
+    bdgtequn ft0, ft1, .ipint_i64_f64_u_outOfBoundsTrunc
+
+    functionCall(macro () cCall2(_i64_trunc_u_f64) end)
+    pushInt64(r1, r0)
+    advancePC(1)
+    nextIPIntInstruction()
+
+.ipint_i64_f64_u_outOfBoundsTrunc:
+    ipintException(OutOfBoundsTrunc)
+end)
+
+ipintOp(_f32_convert_i32_s, macro()
+    popInt32(t0)
+    ci2fs t0, ft0
+    pushFloat32(ft0)
+    advancePC(1)
+    nextIPIntInstruction()
+end)
+
+ipintOp(_f32_convert_i32_u, macro()
+    popInt32(t0)
+    ci2f t0, ft0
+    pushFloat32(ft0)
+    advancePC(1)
+    nextIPIntInstruction()
+end)
+
+ipintOp(_f32_convert_i64_s, macro()
+    popInt64(t1, t0)
+    functionCall(macro () cCall2(_f32_convert_s_i64) end)
+    pushFloat32(fr)
+    advancePC(1)
+    nextIPIntInstruction()
+end)
+
+ipintOp(_f32_convert_i64_u, macro()
+    popInt64(t1, t0)
+    functionCall(macro () cCall2(_f32_convert_u_i64) end)
+    pushFloat32(fr)
+    advancePC(1)
+    nextIPIntInstruction()
+end)
+
+ipintOp(_f32_demote_f64, macro()
+    popFloat64(ft0)
+    cd2f ft0, ft0
+    pushFloat32(ft0)
+    advancePC(1)
+    nextIPIntInstruction()
+end)
+
+ipintOp(_f64_convert_i32_s, macro()
+    popInt32(t0)
+    ci2ds t0, ft0
+    pushFloat64(ft0)
+    advancePC(1)
+    nextIPIntInstruction()
+end)
+
+ipintOp(_f64_convert_i32_u, macro()
+    popInt32(t0)
+    ci2d t0, ft0
+    pushFloat64(ft0)
+    advancePC(1)
+    nextIPIntInstruction()
+end)
+
+ipintOp(_f64_convert_i64_s, macro()
+    popInt64(t1, t0)
+    functionCall(macro () cCall2(_f64_convert_s_i64) end)
+    pushFloat64(fr)
+    advancePC(1)
+    nextIPIntInstruction()
+end)
+
+ipintOp(_f64_convert_i64_u, macro()
+    popInt64(t1, t0)
+    functionCall(macro () cCall2(_f64_convert_u_i64) end)
+    pushFloat64(fr)
+    advancePC(1)
+    nextIPIntInstruction()
+end)
+
+ipintOp(_f64_promote_f32, macro()
+    popFloat32(ft0)
+    cf2d ft0, ft0
+    pushFloat64(ft0)
+    advancePC(1)
+    nextIPIntInstruction()
+end)
+
+ipintOp(_i32_reinterpret_f32, macro()
     popFloat32(ft0)
     ff2i ft0, t0
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_reinterpret_f64)
+ipintOp(_i64_reinterpret_f64, macro()
     popFloat64(ft0)
     fd2ii ft0, t0, t1
     pushInt64(t1, t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-unimplementedInstruction(_f32_reinterpret_i32)
-unimplementedInstruction(_f64_reinterpret_i64)
+ipintOp(_f32_reinterpret_i32, macro()
+    # nop because of stack layout
+    advancePC(1)
+    nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_extend8_s)
+ipintOp(_f64_reinterpret_i64, macro()
+    # nop because of stack layout
+    advancePC(1)
+    nextIPIntInstruction()
+end)
+
+ipintOp(_i32_extend8_s, macro()
     # i32.extend8_s
     popInt32(t0)
     sxb2i t0, t0
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i32_extend16_s)
+ipintOp(_i32_extend16_s, macro()
     # i32.extend8_s
     popInt32(t0)
     sxh2i t0, t0
     pushInt32(t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_extend8_s)
+ipintOp(_i64_extend8_s, macro()
     # i64.extend8_s
     popInt32(t0)
     sxb2i t0, t0
@@ -2428,8 +2892,9 @@ instructionLabel(_i64_extend8_s)
     pushInt64(t1, t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_extend16_s)
+ipintOp(_i64_extend16_s, macro()
     # i64.extend8_s
     popInt32(t0)
     sxh2i t0, t0
@@ -2437,14 +2902,16 @@ instructionLabel(_i64_extend16_s)
     pushInt64(t1, t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
-instructionLabel(_i64_extend32_s)
+ipintOp(_i64_extend32_s, macro()
     # i64.extend8_s
     popInt32(t0)
     rshifti t0, 31, t1
     pushInt64(t1, t0)
     advancePC(1)
     nextIPIntInstruction()
+end)
 
 reservedOpcode(0xc5)
 reservedOpcode(0xc6)
@@ -2462,13 +2929,78 @@ reservedOpcode(0xcf)
     # 0xd0 - 0xd6: refs #
     #####################
 
-unimplementedInstruction(_ref_null_t)
-unimplementedInstruction(_ref_is_null)
-unimplementedInstruction(_ref_func)
-unimplementedInstruction(_ref_eq)
-unimplementedInstruction(_ref_as_non_null)
-unimplementedInstruction(_br_on_null)
-unimplementedInstruction(_br_on_non_null)
+ipintOp(_ref_null_t, macro()
+    loadi IPInt::Const32Metadata::value[MC], t0
+    move NullTag, t1
+    pushQuad(t1, t0)
+    loadb IPInt::Const32Metadata::instructionLength[MC], t0
+    advancePC(t0)
+    advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
+    nextIPIntInstruction()
+end)
+
+ipintOp(_ref_is_null, macro()
+    popQuad(t1, t0)
+    cieq t1, NullTag, t0
+    pushInt32(t0)
+    advancePC(1)
+    nextIPIntInstruction()
+end)
+
+ipintOp(_ref_func, macro()
+    loadi IPInt::Const32Metadata::value[MC], a1
+    operationCall(macro() cCall2(_ipint_extern_ref_func) end)
+    pushQuad(r1, r0)
+    loadb IPInt::Const32Metadata::instructionLength[MC], t0
+    advancePC(t0)
+    advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
+    nextIPIntInstruction()
+end)
+
+ipintOp(_ref_eq, macro()
+    popQuad(t1, t0)
+    popQuad(t3, t2)
+    cieq t0, t2, t0
+    cieq t1, t3, t1
+    andi t0, t1, t0
+    pushInt32(t0)
+    advancePC(1)
+    nextIPIntInstruction()
+end)
+
+ipintOp(_ref_as_non_null, macro()
+    peekQuad(0, t1, t0)
+    bpeq t1, NullTag, .ref_as_non_null_nullRef
+    advancePC(1)
+    nextIPIntInstruction()
+.ref_as_non_null_nullRef:
+    throwException(NullRefAsNonNull)
+end)
+
+ipintOp(_br_on_null, macro()
+    peekQuad(0, t1, t0)
+    bpeq t1, NullTag, .br_on_null_not_null
+
+    # pop the null
+    drop()
+    jmp _ipint_br
+.br_on_null_not_null:
+    loadb IPInt::BranchMetadata::instructionLength[MC], t0
+    advanceMC(constexpr (sizeof(IPInt::BranchMetadata)))
+    advancePCByReg(t0)
+    nextIPIntInstruction()
+end)
+
+ipintOp(_br_on_non_null, macro()
+    peekQuad(0, t1, t0)
+    bineq t1, NullTag, _ipint_br
+    drop()
+    loadb IPInt::BranchMetadata::instructionLength[MC], t0
+    advanceMC(constexpr (sizeof(IPInt::BranchMetadata)))
+    advancePCByReg(t0)
+    nextIPIntInstruction()
+end)
+
 reservedOpcode(0xd7)
 reservedOpcode(0xd8)
 reservedOpcode(0xd9)
@@ -2506,7 +3038,20 @@ reservedOpcode(0xf8)
 reservedOpcode(0xf9)
 reservedOpcode(0xfa)
 unimplementedInstruction(_fb_block)
-unimplementedInstruction(_fc_block)
+
+ipintOp(_fc_block, macro()
+    decodeLEBVarUInt32(1, t0, t1, t2, t3, t4)
+    # Security guarantee: always less than 18 (0x00 -> 0x11)
+    biaeq t0, 0x12, .ipint_fc_nonexistent
+    lshiftp 8, t0
+    leap (_ipint_i32_trunc_sat_f32_s + 1), t1
+    addp t1, t0
+    emit "bx r0"
+
+.ipint_fc_nonexistent:
+    break
+end)
+
 unimplementedInstruction(_simd)
 unimplementedInstruction(_atomic)
 reservedOpcode(0xff)
@@ -2551,24 +3096,385 @@ unimplementedInstruction(_i31_get_u)
     ## 0xFC instructions ##
     #######################
 
-unimplementedInstruction(_i32_trunc_sat_f32_s)
-unimplementedInstruction(_i32_trunc_sat_f32_u)
-unimplementedInstruction(_i32_trunc_sat_f64_s)
-unimplementedInstruction(_i32_trunc_sat_f64_u)
-unimplementedInstruction(_i64_trunc_sat_f32_s)
-unimplementedInstruction(_i64_trunc_sat_f32_u)
-unimplementedInstruction(_i64_trunc_sat_f64_s)
-unimplementedInstruction(_i64_trunc_sat_f64_u)
-unimplementedInstruction(_memory_init)
-unimplementedInstruction(_data_drop)
-unimplementedInstruction(_memory_copy)
-unimplementedInstruction(_memory_fill)
-unimplementedInstruction(_table_init)
-unimplementedInstruction(_elem_drop)
-unimplementedInstruction(_table_copy)
-unimplementedInstruction(_table_grow)
-unimplementedInstruction(_table_size)
-unimplementedInstruction(_table_fill)
+ipintOp(_i32_trunc_sat_f32_s, macro()
+    popFloat32(ft0)
+
+    move 0xcf000000, t0 # INT32_MIN (Note that INT32_MIN - 1.0 in float is the same as INT32_MIN in float).
+    fi2f t0, ft1
+    bfltun ft0, ft1, .ipint_i32_trunc_sat_f32_s_outOfBoundsTruncSatMinOrNaN
+
+    move 0x4f000000, t0 # -INT32_MIN
+    fi2f t0, ft1
+    bfgtequn ft0, ft1, .ipint_i32_trunc_sat_f32_s_outOfBoundsTruncSatMax
+
+    truncatef2is ft0, t0
+    pushInt32(t0)
+    jmp .ipint_i32_trunc_sat_f32_s_end
+
+.ipint_i32_trunc_sat_f32_s_outOfBoundsTruncSatMinOrNaN:
+    bfeq ft0, ft0, .ipint_i32_trunc_sat_f32_s_outOfBoundsTruncSatMin
+    move 0, t0
+    pushInt32(t0)
+    jmp .ipint_i32_trunc_sat_f32_s_end
+
+.ipint_i32_trunc_sat_f32_s_outOfBoundsTruncSatMax:
+    move (constexpr INT32_MAX), t0
+    pushInt32(t0)
+    jmp .ipint_i32_trunc_sat_f32_s_end
+
+.ipint_i32_trunc_sat_f32_s_outOfBoundsTruncSatMin:
+    move (constexpr INT32_MIN), t0
+    pushInt32(t0)
+    # jmp .ipint_i32_trunc_sat_f32_s_end
+
+.ipint_i32_trunc_sat_f32_s_end:
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
+    nextIPIntInstruction()
+end)
+
+ipintOp(_i32_trunc_sat_f32_u, macro()
+    popFloat32(ft0)
+
+    move 0xbf800000, t0 # -1.0
+    fi2f t0, ft1
+    bfltequn ft0, ft1, .ipint_i32_trunc_sat_f32_u_outOfBoundsTruncSatMin
+
+    move 0x4f800000, t0 # INT32_MIN * -2.0
+    fi2f t0, ft1
+    bfgtequn ft0, ft1, .ipint_i32_trunc_sat_f32_u_outOfBoundsTruncSatMax
+
+    truncatef2i ft0, t0
+    pushInt32(t0)
+    jmp .ipint_i32_trunc_sat_f32_u_end
+
+.ipint_i32_trunc_sat_f32_u_outOfBoundsTruncSatMin:
+    move 0, t0
+    pushInt32(t0)
+    jmp .ipint_i32_trunc_sat_f32_u_end
+
+.ipint_i32_trunc_sat_f32_u_outOfBoundsTruncSatMax:
+    move (constexpr UINT32_MAX), t0
+    pushInt32(t0)
+    # jmp .ipint_i32_trunc_sat_f32_u_end
+    
+.ipint_i32_trunc_sat_f32_u_end:
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
+    nextIPIntInstruction()
+end)
+
+ipintOp(_i32_trunc_sat_f64_s, macro()
+    popFloat64(ft0)
+
+    # INT32_MIN - 1.0
+    move 0xc1e00000, t1
+    move 0x00200000, t0
+    fii2d t0, t1, ft1
+    bdltequn ft0, ft1, .ipint_i32_trunc_sat_f64_s_outOfBoundsTruncSatMinOrNaN
+
+    # -INT32_MIN
+    move 0x41e00000, t1
+    move 0x00000000, t0 
+    fii2d t0, t1, ft1
+    bdgtequn ft0, ft1, .ipint_i32_trunc_sat_f64_s_outOfBoundsTruncSatMax
+
+    truncated2is ft0, t0
+    pushInt32(t0)
+    jmp .ipint_i32_trunc_sat_f64_s_end
+
+.ipint_i32_trunc_sat_f64_s_outOfBoundsTruncSatMinOrNaN:
+    bdeq ft0, ft0, .ipint_i32_trunc_sat_f64_s_outOfBoundsTruncSatMin
+    move 0, t0
+    pushInt32(t0)
+    jmp .ipint_i32_trunc_sat_f64_s_end
+
+.ipint_i32_trunc_sat_f64_s_outOfBoundsTruncSatMax:
+    move (constexpr INT32_MAX), t0
+    pushInt32(t0)
+    jmp .ipint_i32_trunc_sat_f64_s_end
+
+.ipint_i32_trunc_sat_f64_s_outOfBoundsTruncSatMin:
+    move (constexpr INT32_MIN), t0
+    pushInt32(t0)
+    # jmp .ipint_i32_trunc_sat_f64_s_end
+
+.ipint_i32_trunc_sat_f64_s_end:
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
+    nextIPIntInstruction()
+end)
+
+ipintOp(_i32_trunc_sat_f64_u, macro()
+    popFloat64(ft0)
+
+    # -1.0
+    move 0xbff00000, t1
+    move 0x00000000, t0 
+    fii2d t0, t1, ft1
+    bdltequn ft0, ft1, .ipint_i32_trunc_sat_f64_u_outOfBoundsTruncSatMin
+
+    # INT32_MIN * -2.0
+    move 0x41f00000, t1
+    move 0x00000000, t0 
+    fii2d t0, t1, ft1
+    bdgtequn ft0, ft1, .ipint_i32_trunc_sat_f64_u_outOfBoundsTruncSatMax
+
+    truncated2i ft0, t0
+    pushInt32(t0)
+    jmp .ipint_i32_trunc_sat_f64_u_end
+
+.ipint_i32_trunc_sat_f64_u_outOfBoundsTruncSatMin:
+    move 0, t0
+    pushInt32(t0)
+    jmp .ipint_i32_trunc_sat_f64_u_end
+
+.ipint_i32_trunc_sat_f64_u_outOfBoundsTruncSatMax:
+    move (constexpr UINT32_MAX), t0
+    pushInt32(t0)
+    # jmp .ipint_i32_trunc_sat_f64_u_end
+
+.ipint_i32_trunc_sat_f64_u_end:
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
+    nextIPIntInstruction()
+end)
+
+ipintOp(_i64_trunc_sat_f32_s, macro()
+    popFloat32(ft0)
+
+    move 0xdf000000, t0 # INT64_MIN
+    fi2f t0, ft1
+    bfltun ft0, ft1, .ipint_i64_trunc_sat_f32_s_outOfBoundsTruncSatMinOrNaN
+
+    move 0x5f000000, t0 # -INT64_MIN
+    fi2f t0, ft1
+    bfgtequn ft0, ft1, .ipint_i64_trunc_sat_f32_s_outOfBoundsTruncSatMax
+
+    functionCall(macro () cCall2(_i64_trunc_s_f32) end)
+
+    pushInt64(r1, r0)
+    jmp .ipint_i64_trunc_sat_f32_s_end
+
+.ipint_i64_trunc_sat_f32_s_outOfBoundsTruncSatMinOrNaN:
+    bfeq ft0, ft0, .ipint_i64_trunc_sat_f32_s_outOfBoundsTruncSatMin
+    pushInt64(0, 0)
+    jmp .ipint_i64_trunc_sat_f32_s_end
+
+.ipint_i64_trunc_sat_f32_s_outOfBoundsTruncSatMax:
+    # INT64_MAX
+    move 0x7fffffff, t1
+    move 0xffffffff, t0
+    pushInt64(t1, t0)
+    jmp .ipint_i64_trunc_sat_f32_s_end
+
+.ipint_i64_trunc_sat_f32_s_outOfBoundsTruncSatMin:
+    # INT64_MIN
+    move 0x80000000, t1
+    move 0x00000000, t0
+    pushInt64(t1, t0)
+    # jmp .ipint_i64_trunc_sat_f32_s_end
+
+.ipint_i64_trunc_sat_f32_s_end:
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
+    nextIPIntInstruction()
+end)
+
+ipintOp(_i64_trunc_sat_f32_u, macro()
+    popFloat32(ft0)
+
+    functionCall(macro () cCall2(_i64_trunc_u_f32) end)
+
+    pushInt64(r1, r0)
+
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
+    nextIPIntInstruction()
+end)
+
+ipintOp(_i64_trunc_sat_f64_s, macro()
+    popFloat64(ft0)
+
+    # INT64_MIN
+    move 0xc3e00000, t1
+    move 0x00000000, t0
+    fii2d t0, t1, ft1
+    bdltun ft0, ft1, .ipint_i64_trunc_sat_f64_s_outOfBoundsTruncSatMinOrNaN
+
+    # -INT64_MIN
+    move 0x43e00000, t1
+    move 0x00000000, t0
+    fii2d t0, t1, ft1
+    bdgtequn ft0, ft1, .ipint_i64_trunc_sat_f64_s_outOfBoundsTruncSatMax
+
+    functionCall(macro () cCall2(_i64_trunc_s_f64) end)
+
+    pushInt64(r1, r0)
+    jmp .ipint_i64_trunc_sat_f64_s_end
+
+.ipint_i64_trunc_sat_f64_s_outOfBoundsTruncSatMinOrNaN:
+    bdeq ft0, ft0, .ipint_i64_trunc_sat_f64_s_outOfBoundsTruncSatMin
+    pushInt64(0, 0)
+    jmp .ipint_i64_trunc_sat_f64_s_end
+
+.ipint_i64_trunc_sat_f64_s_outOfBoundsTruncSatMax:
+    # INT64_MAX
+    move 0x7fffffff, t1
+    move 0xffffffff, t0
+    pushInt64(t1, t0)
+    jmp .ipint_i64_trunc_sat_f64_s_end
+
+.ipint_i64_trunc_sat_f64_s_outOfBoundsTruncSatMin:
+    # INT64_MIN
+    move 0x80000000, t1
+    move 0x00000000, t0
+    pushInt64(t1, t0)
+    # jmp .ipint_i64_trunc_sat_f64_s_end
+
+.ipint_i64_trunc_sat_f64_s_end:
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
+    nextIPIntInstruction()
+end)
+
+ipintOp(_i64_trunc_sat_f64_u, macro()
+    popFloat64(ft0)
+
+    functionCall(macro () cCall2(_i64_trunc_u_f64) end)
+
+    pushInt64(r1, r0)
+
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
+    nextIPIntInstruction()
+end)
+
+ipintOp(_memory_init, macro()
+    # memory.init
+    move sp, a2
+    loadi 1[MC], a1
+    operationCallMayThrow(macro() cCall3(_ipint_extern_memory_init) end)
+    addp 3 * StackValueSize, sp
+    loadb [MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::Const32Metadata))) # xxx check
+    nextIPIntInstruction()
+end)
+
+ipintOp(_data_drop, macro()
+    # data.drop
+    loadi 1[MC], a1
+    operationCall(macro() cCall2(_ipint_extern_data_drop) end)
+    loadb [MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::Const32Metadata))) # xxx check
+    nextIPIntInstruction()
+end)
+
+ipintOp(_memory_copy, macro()
+    # memory.copy
+    popInt32(a3) # n
+    popInt32(a2) # s
+    popInt32(a1) # d
+    operationCallMayThrow(macro() cCall4(_ipint_extern_memory_copy) end)
+
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
+    nextIPIntInstruction()
+end)
+
+ipintOp(_memory_fill, macro()
+    # memory.fill
+    popInt32(a3) # n
+    popInt32(a2) # val
+    popInt32(a1) # d
+    operationCallMayThrow(macro() cCall4(_ipint_extern_memory_fill) end)
+
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
+    nextIPIntInstruction()
+end)
+
+ipintOp(_table_init, macro()
+    # table.init
+    move sp, a1
+    leap [MC], a2 # IPInt::tableInitMetadata
+    operationCallMayThrow(macro() cCall3(_ipint_extern_table_init) end)
+    addp 3 * StackValueSize, sp
+    loadb IPInt::TableInitMetadata::instructionLength[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::TableInitMetadata)))
+    nextIPIntInstruction()
+end)
+
+ipintOp(_elem_drop, macro()
+    # elem.drop
+    loadi IPInt::Const32Metadata::value[MC], a1
+    operationCall(macro() cCall2(_ipint_extern_elem_drop) end)
+    loadb IPInt::Const32Metadata::instructionLength[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
+    nextIPIntInstruction()
+end)
+
+ipintOp(_table_copy, macro()
+    # table.copy
+    move sp, a1
+    move MC, a2
+    operationCallMayThrow(macro() cCall3(_ipint_extern_table_copy) end)
+    addp 3 * StackValueSize, sp
+    loadb IPInt::TableCopyMetadata::instructionLength[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::TableCopyMetadata)))
+    nextIPIntInstruction()
+end)
+
+ipintOp(_table_grow, macro()
+    # table.grow
+    move sp, a1
+    move MC, a2 # IPInt::tableGrowMetadata
+    operationCall(macro() cCall3(_ipint_extern_table_grow) end)
+    addp 2*StackValueSize, sp
+    pushInt32(r0)
+    loadb IPInt::TableGrowMetadata::instructionLength[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::TableGrowMetadata)))
+    nextIPIntInstruction()
+end)
+
+ipintOp(_table_size, macro()
+    # table.size
+    loadi IPInt::Const32Metadata::value[MC], a1
+    operationCall(macro() cCall2(_ipint_extern_table_size) end)
+    pushInt32(r0)
+    loadb IPInt::Const32Metadata::instructionLength[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
+    nextIPIntInstruction()
+end)
+
+ipintOp(_table_fill, macro()
+    # table.fill
+    move sp, a1
+    move MC, a2
+    operationCallMayThrow(macro() cCall3(_ipint_extern_table_fill) end)
+    addp 3 * StackValueSize, sp
+    loadb IPInt::TableFillMetadata::instructionLength[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::TableFillMetadata)))
+    nextIPIntInstruction()
+end)
 
     #######################
     ## SIMD Instructions ##
@@ -3005,12 +3911,12 @@ const mintSS = sc1
 
 macro mintPop(hi, lo)
     load2ia [mintSS], lo, hi
-    addp 16, mintSS
+    addp LocalSize, mintSS
 end
 
 macro mintPopF(reg)
     loadd [mintSS], reg
-    addp 16, mintSS
+    addp LocalSize, mintSS
 end
 
 macro mintArgDispatch()
@@ -3089,6 +3995,9 @@ end
     # reserved
     # reserved        <- sp
 
+    # align sp
+    subp 8, sp
+
     push argSP, PC
     push PL, wasmInstance
 
@@ -3116,7 +4025,7 @@ end
     # call frame      <- sp
 
     # set up the Callee slot
-    storep IPIntCallCallee, Callee - CallerFrameAndPCSize[sp]
+    store2ia IPIntCallCallee, (constexpr JSValue::NativeCalleeTag), Callee - CallerFrameAndPCSize[sp]
     storep IPIntCallFunctionSlot, CodeBlock - CallerFrameAndPCSize[sp]
 
     push targetEntrypoint, targetInstance
@@ -3154,36 +4063,47 @@ mintAlign(_a7)
     break
 
 mintAlign(_fa0)
-    mintPopF(ft0)
+    mintPopF(wfa0)
     mintArgDispatch()
 
 mintAlign(_fa1)
-    mintPopF(ft1)
+    mintPopF(wfa1)
     mintArgDispatch()
 
 mintAlign(_fa2)
-    break
+    mintPopF(wfa2)
+    mintArgDispatch()
 
 mintAlign(_fa3)
-    break
+    mintPopF(wfa3)
+    mintArgDispatch()
 
 mintAlign(_fa4)
-    break
+    mintPopF(wfa4)
+    mintArgDispatch()
 
 mintAlign(_fa5)
-    break
+    mintPopF(wfa5)
+    mintArgDispatch()
 
 mintAlign(_fa6)
-    break
+    mintPopF(wfa6)
+    mintArgDispatch()
 
 mintAlign(_fa7)
-    break
+    mintPopF(wfa7)
+    mintArgDispatch()
 
 mintAlign(_stackzero)
-    break
+    mintPop(t1, t0)
+    store2ia t0, t1, [csr0]
+    mintArgDispatch()
 
 mintAlign(_stackeight)
-    break
+    mintPop(t1, t0)
+    subp 16, csr0
+    store2ia t0, t1, 8[csr0]
+    mintArgDispatch()
 
 mintAlign(_tail_stackzero)
     break
@@ -3192,7 +4112,8 @@ mintAlign(_tail_stackeight)
     break
 
 mintAlign(_gap)
-    break
+    subp 16, csr0
+    mintArgDispatch()
 
 mintAlign(_tail_gap)
     break
@@ -3233,12 +4154,12 @@ mintAlign(_call)
     loadi IPInt::CallReturnMetadata::stackFrameSize[MC], csr0
     leap [sp, csr0], csr0
 
-    const mintRetSrc = t2
-    const mintRetDst = t3
+    const mintRetSrc = csr1
+    const mintRetDst = sc1
 
-    loadi IPInt::CallReturnMetadata::firstStackArgumentSPOffset[MC], t2
+    loadi IPInt::CallReturnMetadata::firstStackArgumentSPOffset[MC], csr1
     advanceMC(IPInt::CallReturnMetadata::resultBytecode)
-    leap [sp, t2], mintRetSrc
+    leap [sp, csr1], mintRetSrc
 
     loadp 3*MachineRegisterSize[csr0], mintRetDst # load argSP
 
@@ -3254,7 +4175,9 @@ mintAlign(_r1)
     break
 
 mintAlign(_r2)
-    break
+    subp StackValueSize, mintRetDst
+    store2ia a2, a3, [mintRetDst]
+    mintRetDispatch()
 
 mintAlign(_r3)
     break
@@ -3273,32 +4196,50 @@ mintAlign(_r7)
 
 mintAlign(_fr0)
     subp StackValueSize, mintRetDst
-    stored ft0, [mintRetDst]
+    stored fr, [mintRetDst]
     mintRetDispatch()
 
 mintAlign(_fr1)
-    break
+    subp StackValueSize, mintRetDst
+    stored fa1, [mintRetDst]
+    mintRetDispatch()
 
 mintAlign(_fr2)
-    break
+    subp StackValueSize, mintRetDst
+    stored wfa2, [mintRetDst]
+    mintRetDispatch()
 
 mintAlign(_fr3)
-    break
+    subp StackValueSize, mintRetDst
+    stored wfa3, [mintRetDst]
+    mintRetDispatch()
 
 mintAlign(_fr4)
-    break
+    subp StackValueSize, mintRetDst
+    stored wfa4, [mintRetDst]
+    mintRetDispatch()
 
 mintAlign(_fr5)
-    break
+    subp StackValueSize, mintRetDst
+    stored wfa5, [mintRetDst]
+    mintRetDispatch()
 
 mintAlign(_fr6)
-    break
+    subp StackValueSize, mintRetDst
+    stored wfa6, [mintRetDst]
+    mintRetDispatch()
 
 mintAlign(_fr7)
-    break
+    subp StackValueSize, mintRetDst
+    stored wfa7, [mintRetDst]
+    mintRetDispatch()
 
 mintAlign(_stack)
-    break
+    load2ia [mintRetSrc], t0, t1
+    addp SlotSize, mintRetSrc
+    subp StackValueSize, mintRetDst
+    store2ia t0, t1, [mintRetDst]
+    mintRetDispatch()
 
 mintAlign(_stack_gap)
     break
@@ -3321,11 +4262,12 @@ mintAlign(_end)
     # call frame
     # call frame
 
+    # Restore PC, WI, PL
+    loadp 2*MachineRegisterSize[csr0], PC
     # note: we don't care about argSP anymore
     load2ia [csr0], wasmInstance, PL
     move mintRetDst, sp
 
-    # Restore PC / MC
     push MC
     getIPIntCallee()
     pop MC
@@ -3336,6 +4278,10 @@ mintAlign(_end)
     end)
     nextIPIntInstruction()
 
+###########################################
+# uINT: function return value interpreter #
+###########################################
+
 uintAlign(_r0)
 _uint_begin:
     popQuad(r1, r0)
@@ -3345,7 +4291,8 @@ uintAlign(_r1)
     break
 
 uintAlign(_r2)
-    break
+    popQuad(a3, a2)
+    uintDispatch()
 
 uintAlign(_r3)
     break
@@ -3363,34 +4310,44 @@ uintAlign(_r7)
     break
 
 uintAlign(_fr0)
-    popFloat(ft0)
+    popFloat(fr)
     uintDispatch()
 
 uintAlign(_fr1)
-    break
+    popFloat(fa1)
+    uintDispatch()
 
 uintAlign(_fr2)
-    break
+    popFloat(wfa2)
+    uintDispatch()
 
 uintAlign(_fr3)
-    break
+    popFloat(wfa3)
+    uintDispatch()
 
 uintAlign(_fr4)
-    break
+    popFloat(wfa4)
+    uintDispatch()
 
 uintAlign(_fr5)
-    break
+    popFloat(wfa5)
+    uintDispatch()
 
 uintAlign(_fr6)
-    break
+    popFloat(wfa6)
+    uintDispatch()
 
 uintAlign(_fr7)
-    break
+    popFloat(wfa7)
+    uintDispatch()
 
 # destination on stack is sc0
 
 uintAlign(_stack)
-    break
+    popInt64(csr1, csr0)
+    store2ia csr0, csr1, [sc0]
+    subp 8, sc0
+    uintDispatch()
 
 uintAlign(_ret)
     jmp .ipint_exit
@@ -3399,7 +4356,6 @@ uintAlign(_ret)
 # csr1 = tmp
 # t4 = dst
 # t5 = src
-# t6
 # t7 = for dispatch
 
 argumINTAlign(_a0)
@@ -3444,25 +4400,41 @@ argumINTAlign(_fa1)
     argumINTDispatch()
 
 argumINTAlign(_fa2)
-    break
+    stored wfa2, [argumINTDst]
+    addp LocalSize, argumINTDst
+    argumINTDispatch()
 
 argumINTAlign(_fa3)
-    break
+    stored wfa3, [argumINTDst]
+    addp LocalSize, argumINTDst
+    argumINTDispatch()
 
 argumINTAlign(_fa4)
-    break
+    stored wfa4, [argumINTDst]
+    addp LocalSize, argumINTDst
+    argumINTDispatch()
 
 argumINTAlign(_fa5)
-    break
+    stored wfa5, [argumINTDst]
+    addp LocalSize, argumINTDst
+    argumINTDispatch()
 
 argumINTAlign(_fa6)
-    break
+    stored wfa6, [argumINTDst]
+    addp LocalSize, argumINTDst
+    argumINTDispatch()
 
 argumINTAlign(_fa7)
-    break
+    stored wfa7, [argumINTDst]
+    addp LocalSize, argumINTDst
+    argumINTDispatch()
 
 argumINTAlign(_stack)
-    break
+    load2ia [argumINTSrc], t0, t1
+    addp 8, argumINTSrc
+    store2ia t0, t1, [argumINTDst]
+    addp LocalSize, argumINTDst
+    argumINTDispatch()
 
 argumINTAlign(_end)
     jmp .ipint_entry_end_local

@@ -201,6 +201,11 @@ end
 # 2. Core interpreter macros #
 ##############################
 
+macro ipintOp(name, impl)
+    instructionLabel(name)
+    impl()
+end
+
 # -----------------------------------
 # 2.1: Core interpreter functionality
 # -----------------------------------

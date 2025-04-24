@@ -22,11 +22,6 @@
 # THE POSSIBILITY OF SUCH DAMAGE.
 
 
-macro ipintOp(name, impl)
-    instructionLabel(name)
-    impl()
-end
-
 # Callee save
 
 macro saveIPIntRegisters()
