@@ -92,6 +92,12 @@ public:
     static WGPUTextureFormat removeSRGBSuffix(WGPUTextureFormat);
     static std::optional<WGPUTextureFormat> resolveTextureFormat(WGPUTextureFormat, WGPUTextureAspect);
     static bool isCompressedFormat(WGPUTextureFormat);
+    enum class CompressFormat {
+        ASTC, // NOLINT
+        BC, // NOLINT
+        ETC // NOLINT
+    };
+    static std::optional<CompressFormat> compressedFormatType(WGPUTextureFormat);
     static bool isRenderableFormat(WGPUTextureFormat, const Device&);
     static bool isColorRenderableFormat(WGPUTextureFormat, const Device&);
     static bool isDepthStencilRenderableFormat(WGPUTextureFormat, const Device&);

@@ -1614,6 +1614,8 @@ fast/webgpu/nocrash/fuzz-286820.html [ Skip ]
 [ Release arm64 Sequoia+ ] http/tests/webgpu/webgpu/shader [ Pass ]
 [ Release arm64 Sequoia+ ] http/tests/webgpu/webgpu/web_platform [ Pass Failure Timeout ]
 
+[ arm64 ] http/tests/webgpu/webgpu/api/validation/capability_checks/features/texture_formats.html [ Pass ]
+
 # Skip tests due to taking too long to run on EWS
 http/tests/webgpu/webgpu/api/operation/command_buffer/copyTextureToTexture.html [ Skip ]
 http/tests/webgpu/webgpu/api/operation/command_buffer/image_copy.html [ Skip ]

@@ -42,6 +42,11 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(Texture);
 
 bool Texture::isCompressedFormat(WGPUTextureFormat format)
 {
+    return Texture::compressedFormatType(format).has_value();
+}
+
+std::optional<Texture::CompressFormat> Texture::compressedFormatType(WGPUTextureFormat format)
+{
     // https://gpuweb.github.io/gpuweb/#packed-formats
     switch (format) {
     case WGPUTextureFormat_BC1RGBAUnorm:
@@ -58,6 +63,7 @@ bool Texture::isCompressedFormat(WGPUTextureFormat format)
     case WGPUTextureFormat_BC6HRGBFloat:
     case WGPUTextureFormat_BC7RGBAUnorm:
     case WGPUTextureFormat_BC7RGBAUnormSrgb:
+        return Texture::CompressFormat::BC;
     case WGPUTextureFormat_ETC2RGB8Unorm:
     case WGPUTextureFormat_ETC2RGB8UnormSrgb:
     case WGPUTextureFormat_ETC2RGB8A1Unorm:
@@ -68,6 +74,7 @@ bool Texture::isCompressedFormat(WGPUTextureFormat format)
     case WGPUTextureFormat_EACR11Snorm:
     case WGPUTextureFormat_EACRG11Unorm:
     case WGPUTextureFormat_EACRG11Snorm:
+        return Texture::CompressFormat::ETC;
     case WGPUTextureFormat_ASTC4x4Unorm:
     case WGPUTextureFormat_ASTC4x4UnormSrgb:
     case WGPUTextureFormat_ASTC5x4Unorm:
@@ -96,7 +103,7 @@ bool Texture::isCompressedFormat(WGPUTextureFormat format)
     case WGPUTextureFormat_ASTC12x10UnormSrgb:
     case WGPUTextureFormat_ASTC12x12Unorm:
     case WGPUTextureFormat_ASTC12x12UnormSrgb:
-        return true;
+        return Texture::CompressFormat::ASTC;
     case WGPUTextureFormat_R8Unorm:
     case WGPUTextureFormat_R8Snorm:
     case WGPUTextureFormat_R8Uint:
@@ -140,12 +147,12 @@ bool Texture::isCompressedFormat(WGPUTextureFormat format)
     case WGPUTextureFormat_Depth24PlusStencil8:
     case WGPUTextureFormat_Depth32Float:
     case WGPUTextureFormat_Depth32FloatStencil8:
-        return false;
+        return std::nullopt;
     case WGPUTextureFormat_Undefined:
-        return false;
+        return std::nullopt;
     case WGPUTextureFormat_Force32:
         ASSERT_NOT_REACHED();
-        return false;
+        return std::nullopt;
     }
 }
 
@@ -1858,8 +1865,22 @@ NSString *Device::errorValidatingTextureCreation(const WGPUTextureDescriptor& de
         if (descriptor.sampleCount != 1)
             return @"createTexture: descriptor.sampleCount != 1";
 
-        if (Texture::isCompressedFormat(descriptor.format) || Texture::isDepthOrStencilFormat(descriptor.format))
-            return @"createTexture: descriptor.format is compressed or a depth stencil format";
+        if (auto compressedFormatType = Texture::compressedFormatType(descriptor.format)) {
+            switch (*compressedFormatType) {
+            case Texture::CompressFormat::BC:
+                if (!hasFeature(WGPUFeatureName_TextureCompressionBCSliced3D))
+                    return @"createTexture: descriptor.format is a compressed format but BC sliced 3D extension is not enabled";
+                break;
+            case Texture::CompressFormat::ASTC:
+                if (!hasFeature(WGPUFeatureName_TextureCompressionASTCSliced3D))
+                    return @"createTexture: descriptor.format is a compressed format but ASTC sliced 3D extension is not enabled";
+                break;
+            case Texture::CompressFormat::ETC:
+                return @"createTexture: descriptor.format is a ETC compressed format which is not supported for 3D textures";
+            }
+        }
+        if (Texture::isDepthOrStencilFormat(descriptor.format))
+            return @"createTexture: descriptor.format is a depth stencil format, this is not allowed for 3D textures";
         break;
     case WGPUTextureDimension_Force32:
         ASSERT_NOT_REACHED();
