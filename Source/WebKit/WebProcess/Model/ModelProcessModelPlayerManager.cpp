@@ -91,7 +91,8 @@ void ModelProcessModelPlayerManager::modelProcessConnectionDidClose(ModelProcess
 {
     m_modelProcessConnection = nullptr;
 
-    for (auto& entry : m_players) {
+    auto playersToNotify = m_players;
+    for (auto& entry : playersToNotify) {
         if (RefPtr player = entry.value.get())
             player->renderingAbruptlyStopped();
     }
