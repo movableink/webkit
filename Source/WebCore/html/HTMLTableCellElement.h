@@ -61,6 +61,7 @@ public:
     WEBCORE_EXPORT void setScope(const AtomString&);
 
     WEBCORE_EXPORT HTMLTableCellElement* cellAbove() const;
+    WEBCORE_EXPORT RefPtr<HTMLTableCellElement> protectedCellAbove() const;
 
 private:
     HTMLTableCellElement(const QualifiedName&, Document&);

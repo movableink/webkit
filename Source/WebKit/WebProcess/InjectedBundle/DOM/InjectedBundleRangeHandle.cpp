@@ -39,6 +39,7 @@
 #include <WebCore/JSRange.h>
 #include <WebCore/LocalFrame.h>
 #include <WebCore/LocalFrameView.h>
+#include <WebCore/NodeInlines.h>
 #include <WebCore/Page.h>
 #include <WebCore/Range.h>
 #include <WebCore/RenderView.h>
@@ -67,7 +68,8 @@ static DOMRangeHandleCache& domRangeHandleCache()
 
 RefPtr<InjectedBundleRangeHandle> InjectedBundleRangeHandle::getOrCreate(JSContextRef context, JSObjectRef object)
 {
-    return getOrCreate(JSRange::toWrapped(toJS(context)->vm(), toJS(object)));
+    RefPtr wrapped = JSRange::toWrapped(toJS(context)->vm(), toJS(object));
+    return getOrCreate(wrapped.get());
 }
 
 RefPtr<InjectedBundleRangeHandle> InjectedBundleRangeHandle::getOrCreate(WebCore::Range* range)
@@ -105,16 +107,16 @@ Ref<WebCore::Range> InjectedBundleRangeHandle::protectedCoreRange() const
 
 Ref<InjectedBundleNodeHandle> InjectedBundleRangeHandle::document()
 {
-    return InjectedBundleNodeHandle::getOrCreate(m_range->startContainer().document());
+    return InjectedBundleNodeHandle::getOrCreate(m_range->startContainer().protectedDocument());
 }
 
 WebCore::IntRect InjectedBundleRangeHandle::boundingRectInWindowCoordinates() const
 {
     auto range = makeSimpleRange(m_range);
-    auto frame = range.start.document().frame();
+    RefPtr frame = range.start.document().frame();
     if (!frame)
         return { };
-    auto view = frame->view();
+    RefPtr view = frame->view();
     if (!view)
         return { };
     return view->contentsToWindow(enclosingIntRect(unionRectIgnoringZeroRects(RenderObject::absoluteBorderAndTextRects(range))));
@@ -130,7 +132,7 @@ RefPtr<WebImage> InjectedBundleRangeHandle::renderedImage(SnapshotOptions option
     if (!frame)
         return nullptr;
 
-    auto frameView = frame->view();
+    RefPtr frameView = frame->view();
     if (!frameView)
         return nullptr;
 

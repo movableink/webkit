@@ -46,8 +46,8 @@ static DOMStyleDeclarationHandleCache& domStyleDeclarationHandleCache()
 
 RefPtr<InjectedBundleCSSStyleDeclarationHandle> InjectedBundleCSSStyleDeclarationHandle::getOrCreate(JSContextRef, JSObjectRef object)
 {
-    CSSStyleDeclaration* cssStyleDeclaration = JSCSSStyleDeclaration::toWrapped(toJS(object)->vm(), toJS(object));
-    return getOrCreate(cssStyleDeclaration);
+    RefPtr cssStyleDeclaration = JSCSSStyleDeclaration::toWrapped(toJS(object)->vm(), toJS(object));
+    return getOrCreate(cssStyleDeclaration.get());
 }
 
 RefPtr<InjectedBundleCSSStyleDeclarationHandle> InjectedBundleCSSStyleDeclarationHandle::getOrCreate(CSSStyleDeclaration* styleDeclaration)
