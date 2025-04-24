@@ -2869,7 +2869,7 @@ void Element::updateEffectiveTextDirectionIfNeeded()
     if (!(parent && parent->usesEffectiveTextDirection()))
         return;
 
-    if (hasAttributeWithoutSynchronization(HTMLNames::dirAttr) || shadowRoot() || firstChild()) {
+    if (hasAttributeWithoutSynchronization(HTMLNames::dirAttr) || shadowRoot()) {
         updateEffectiveTextDirection();
         return;
     }
