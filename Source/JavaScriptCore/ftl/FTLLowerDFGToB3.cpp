@@ -2270,7 +2270,7 @@ private:
 
         case DoubleRepAnyIntUse: {
             bool canIgnoreNegativeZero = bytecodeCanIgnoreNegativeZero(m_node->arithNodeFlags());
-            LValue result = doubleToStrictInt52(Int52Overflow, m_node->child1(), lowDouble(m_node->child1()), canIgnoreNegativeZero);
+            LValue result = doubleToStrictInt52(Int52Overflow, m_node->child1().node(), lowDouble(m_node->child1()), canIgnoreNegativeZero);
             m_interpreter.filter(m_node->child1(), SpecAnyIntAsDouble);
             setStrictInt52(result);
             return;
@@ -2278,7 +2278,7 @@ private:
 
         case DoubleRepRealUse: {
             bool canIgnoreNegativeZero = bytecodeCanIgnoreNegativeZero(m_node->arithNodeFlags());
-            LValue result = doubleToStrictInt52(Int52Overflow, m_node->child1(), lowDouble(m_node->child1()), canIgnoreNegativeZero);
+            LValue result = doubleToStrictInt52(Int52Overflow, m_node->child1().node(), lowDouble(m_node->child1()), canIgnoreNegativeZero);
             m_interpreter.filter(m_node->child1(), SpecDoubleReal);
             setStrictInt52(result);
             return;
@@ -6599,29 +6599,49 @@ IGNORE_CLANG_WARNINGS_END
                     LValue isHole = nullptr;
                     LValue result = nullptr;
                     if (expectedType == ArrayWithDouble) {
-                        LValue doubleResult = m_out.loadDouble(baseIndexWithProvenValue(heap, butterfly, index, indexEdge));
-                        isHole = m_out.doubleNotEqualOrUnordered(doubleResult, doubleResult);
-                        if (m_node->hasDoubleResult())
-                            result = doubleResult;
-                        else
-                            result = boxDouble(doubleResult);
+                        result = m_out.loadDouble(baseIndexWithProvenValue(heap, butterfly, index, indexEdge));
+                        isHole = m_out.doubleNotEqualOrUnordered(result, result);
                     } else {
                         result = m_out.load64(baseIndexWithProvenValue(heap, butterfly, index, indexEdge));
                         isHole = m_out.isZero64(result);
                     }
-                    if (arrayMode.isInBoundsSaneChain()) {
-                        if (m_node->hasDoubleResult())
-                            result = m_out.select(isHole, m_out.constDouble(std::bit_cast<int64_t>(PNaN)), result);
+
+                    LValue finalResult = nullptr;
+                    if (m_node->hasDoubleResult()) {
+                        ASSERT(result->type() == Double);
+                        finalResult = result;
+                    } else if (m_node->hasInt52Result()) {
+                        if (result->type() == Double) {
+                            bool canIgnoreNegativeZero = false;
+                            finalResult = doubleToStrictInt52(Int52Overflow, m_node, result, canIgnoreNegativeZero);
+                        } else {
+                            ASSERT(expectedType == ArrayWithInt32);
+                            finalResult = m_out.signExt32To64(unboxInt32(result));
+                        }
+                    } else {
+                        if (result->type() == Double)
+                            finalResult = boxDouble(result);
                         else
-                            result = m_out.select(isHole, m_out.constInt64(JSValue::encode(jsUndefined())), result);
+                            finalResult = result;
+                    }
+
+                    if (arrayMode.isInBoundsSaneChain()) {
+                        ASSERT(!m_node->hasInt52Result());
+                        if (m_node->hasDoubleResult()) {
+                            ASSERT(result->type() == Double);
+                            finalResult = m_out.select(isHole, m_out.constDouble(std::bit_cast<int64_t>(PNaN)), finalResult);
+                        } else
+                            finalResult = m_out.select(isHole, m_out.constInt64(JSValue::encode(jsUndefined())), finalResult);
                     } else
                         speculate(LoadFromHole, noValue(), nullptr, isHole);
-                    results.append(m_out.anchor(result));
+
+                    results.append(m_out.anchor(finalResult));
                     m_out.jump(continuation);
                     return;
                 }
 
                 ASSERT(!m_node->hasDoubleResult());
+                ASSERT(!m_node->hasInt52Result());
                 LBasicBlock fastCase = m_out.newBlock();
                 LBasicBlock slowCase = m_out.newBlock();
 
@@ -6720,19 +6740,30 @@ IGNORE_CLANG_WARNINGS_END
                 LValue unboxedResult = loadValue();
                 if (isInt(type)) {
                     ASSERT(!m_node->hasDoubleResult()); // Right now, it is yes. We extend later.
-                    auto speculateOrAdjust = [&](LValue result) {
-                        if (elementSize(type) < 4 || isSigned(type))
-                            return boxInt32(result);
 
-                        if (m_node->shouldSpeculateInt32()) {
-                            speculate(Overflow, noValue(), nullptr, m_out.lessThan(result, m_out.int32Zero));
-                            return boxInt32(result);
-                        }
+                    if (m_node->hasInt52Result()) {
+                        LValue result = nullptr;
+                        if (isSigned(type))
+                            result = m_out.signExt32To64(unboxedResult);
+                        else
+                            result = m_out.zeroExt(unboxedResult, Int64);
+                        results.append(m_out.anchor(result));
+                    } else {
+                        auto speculateOrAdjust = [&](LValue result) {
+                            if (elementSize(type) < 4 || isSigned(type))
+                                return boxInt32(result);
 
-                        return boxDouble(m_out.unsignedToDouble(result));
-                    };
-                    results.append(m_out.anchor(speculateOrAdjust(unboxedResult)));
+                            if (m_node->shouldSpeculateInt32()) {
+                                speculate(Overflow, noValue(), nullptr, m_out.lessThan(result, m_out.int32Zero));
+                                return boxInt32(result);
+                            }
+
+                            return boxDouble(m_out.unsignedToDouble(result));
+                        };
+                        results.append(m_out.anchor(speculateOrAdjust(unboxedResult)));
+                    }
                 } else {
+                    ASSERT(!m_node->hasInt52Result()); // Right now, it is yes. We extend later.
                     if (m_node->hasDoubleResult())
                         results.append(m_out.anchor(unboxedResult));
                     else
@@ -6818,6 +6849,8 @@ IGNORE_CLANG_WARNINGS_END
         m_out.appendTo(continuation, lastNext);
         if (m_node->hasDoubleResult())
             setDouble(m_out.phi(Double, results));
+        else if (m_node->hasInt52Result())
+            setStrictInt52(m_out.phi(Int64, results));
         else
             setJSValue(m_out.phi(Int64, results));
     }
@@ -22313,7 +22346,7 @@ IGNORE_CLANG_WARNINGS_END
         m_out.appendTo(doubleCase, continuation);
         speculate(BadType, jsValueValue(boxedValue), edge.node(), isNotNumber(boxedValue, provenType(edge) & ~SpecInt32Only));
         LValue doubleValue = unboxDouble(boxedValue);
-        ValueFromBlock doubleToInt52 = m_out.anchor(doubleToStrictInt52(BadType, edge, doubleValue, canIgnoreNegativeZero));
+        ValueFromBlock doubleToInt52 = m_out.anchor(doubleToStrictInt52(BadType, edge.node(), doubleValue, canIgnoreNegativeZero));
         m_out.jump(continuation);
 
         m_out.appendTo(continuation, lastNext);
@@ -22324,19 +22357,19 @@ IGNORE_CLANG_WARNINGS_END
         return m_out.phi(Int64, intToInt52, doubleToInt52);
     }
 
-    LValue doubleToStrictInt52(ExitKind exitKind, Edge edge, LValue value, bool canIgnoreNegativeZero)
+    LValue doubleToStrictInt52(ExitKind exitKind, Node* node, LValue value, bool canIgnoreNegativeZero)
     {
         LValue integerValue = m_out.doubleToInt64(value);
         LValue integerValueConvertedToDouble = tryDoubleToInt64AsDouble(value);
         if (!integerValueConvertedToDouble)
             integerValueConvertedToDouble = m_out.intToDouble(integerValue);
         LValue valueNotConvertibleToInteger = m_out.doubleNotEqualOrUnordered(value, integerValueConvertedToDouble);
-        speculate(exitKind, doubleValue(value), edge.node(), valueNotConvertibleToInteger);
+        speculate(exitKind, doubleValue(value), node, valueNotConvertibleToInteger);
 
         auto speculateInt52Range = [&](LValue integerValue) {
             LValue added = m_out.add(m_out.constInt64(0xfff8000000000000ULL), integerValue);
             LValue shifted = m_out.lShr(added, m_out.constInt32(52));
-            speculate(exitKind, doubleValue(value), edge.node(), m_out.belowOrEqual(shifted, m_out.constInt64(4094)));
+            speculate(exitKind, doubleValue(value), node, m_out.belowOrEqual(shifted, m_out.constInt64(4094)));
         };
 
         if (canIgnoreNegativeZero) {
@@ -22351,7 +22384,7 @@ IGNORE_CLANG_WARNINGS_END
 
         LBasicBlock lastNext = m_out.appendTo(valueIsZero, valueIsNotZero);
         LValue doubleBitcastToInt64 = m_out.bitCast(value, Int64);
-        speculate(exitKind, doubleValue(value), edge.node(), m_out.testNonZero64(doubleBitcastToInt64, m_out.constInt64(1ULL << 63)));
+        speculate(exitKind, doubleValue(value), node, m_out.testNonZero64(doubleBitcastToInt64, m_out.constInt64(1ULL << 63)));
         m_out.jump(continuation);
 
         m_out.appendTo(valueIsNotZero, continuation);
@@ -23514,7 +23547,7 @@ IGNORE_CLANG_WARNINGS_END
             return;
 
         constexpr bool canIgnoreNegativeZero = false;
-        doubleToStrictInt52(BadType, edge, lowDouble(edge), canIgnoreNegativeZero);
+        doubleToStrictInt52(BadType, edge.node(), lowDouble(edge), canIgnoreNegativeZero);
         m_interpreter.filter(edge, SpecAnyIntAsDouble);
     }
 
