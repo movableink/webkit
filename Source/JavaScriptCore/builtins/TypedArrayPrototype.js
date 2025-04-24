@@ -52,23 +52,6 @@ function typedArraySpeciesConstructor(value)
     return constructor;
 }
 
-function every(callback /*, thisArg */)
-{
-    "use strict";
-    var length = @typedArrayLength(this);
-    var thisArg = @argument(1);
-
-    if (!@isCallable(callback))
-        @throwTypeError("TypedArray.prototype.every callback must be a function");
-
-    for (var i = 0; i < length; i++) {
-        if (!callback.@call(thisArg, this[i], i, this))
-            return false;
-    }
-
-    return true;
-}
-
 function findLast(callback /* [, thisArg] */)
 {
     "use strict";
@@ -100,24 +83,6 @@ function findLastIndex(callback /* [, thisArg] */)
             return i;
     }
     return -1;
-}
-
-function some(callback /* [, thisArg] */)
-{
-    // 22.2.3.24
-    "use strict";
-    var length = @typedArrayLength(this);
-    var thisArg = @argument(1);
-
-    if (!@isCallable(callback))
-        @throwTypeError("TypedArray.prototype.some callback must be a function");
-
-    for (var i = 0; i < length; i++) {
-        if (callback.@call(thisArg, this[i], i, this))
-            return true;
-    }
-
-    return false;
 }
 
 function reduce(callback /* [, initialValue] */)
