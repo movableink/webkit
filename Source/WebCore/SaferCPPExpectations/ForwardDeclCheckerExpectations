@@ -90,7 +90,6 @@ layout/formattingContexts/inline/text/TextUtil.cpp
 layout/integration/LayoutIntegrationUtils.h
 layout/integration/inline/LayoutIntegrationLineLayout.h
 layout/layouttree/LayoutElementBox.h
-loader/DocumentThreadableLoader.h
 loader/cache/CachedImageClient.h
 loader/cache/CachedResourceHandle.h
 page/DOMWindow.cpp
