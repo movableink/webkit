@@ -49,6 +49,10 @@ void Builder::allocateArena()
 {
     m_arenas.append(FixedVector<uint8_t>(arenaSize));
     m_arena = m_arenas.last().mutableSpan();
+
+#if ASAN_ENABLED
+    __asan_poison_memory_region(m_arena.data(), m_arena.size());
+#endif
 }
 
 auto Builder::saveCurrentState() -> State

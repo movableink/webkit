@@ -68,6 +68,11 @@ public:
         if (UNLIKELY(m_arena.size() < alignedSize))
             allocateArena();
 
+#if ASAN_ENABLED
+        RELEASE_ASSERT(__asan_address_is_poisoned(m_arena.data()));
+        __asan_unpoison_memory_region(m_arena.data(), size);
+#endif
+
         auto* node = new (m_arena.data()) T(std::forward<Arguments>(arguments)...);
         skip(m_arena, alignedSize);
         m_nodes.append(node);
