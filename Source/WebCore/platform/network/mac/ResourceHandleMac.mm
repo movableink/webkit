@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -141,7 +141,7 @@ void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredential
         URL urlWithCredentials(firstRequest().url());
         urlWithCredentials.setUser(d->m_user);
         urlWithCredentials.setPassword(d->m_password);
-        firstRequest().setURL(urlWithCredentials);
+        firstRequest().setURL(WTFMove(urlWithCredentials));
     }
 
     if (shouldUseCredentialStorage && firstRequest().url().protocolIsInHTTPFamily()) {

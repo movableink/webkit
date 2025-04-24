@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2008 Alp Toker <alp@atoker.com>
@@ -431,7 +431,7 @@ void FrameLoader::initForSynthesizedDocument(const URL&)
     {
         Ref loader = m_client->createDocumentLoader(ResourceRequest(URL({ }, emptyString())), SubstituteData());
         loader->attachToFrame(frame);
-        loader->setResponse(ResourceResponse(URL(), textHTMLContentTypeAtom(), 0, String()));
+        loader->setResponse(ResourceResponse(URL(), String { textHTMLContentTypeAtom() }, 0, String()));
         loader->setCommitted(true);
         setDocumentLoader(WTFMove(loader));
     }
@@ -496,7 +496,7 @@ void FrameLoader::changeLocation(const URL& url, const AtomString& passedTarget,
 
     Ref document = *m_frame->document();
     NewFrameOpenerPolicy newFrameOpenerPolicy = openerPolicy.value_or(referrerPolicy == ReferrerPolicy::NoReferrer ? NewFrameOpenerPolicy::Suppress : NewFrameOpenerPolicy::Allow);
-    FrameLoadRequest frameLoadRequest(document.copyRef(), document->securityOrigin(), { url }, passedTarget, initiatedByMainFrame, downloadAttribute);
+    FrameLoadRequest frameLoadRequest(document.copyRef(), document->securityOrigin(), { URL { url } }, passedTarget, initiatedByMainFrame, downloadAttribute);
     frameLoadRequest.setNewFrameOpenerPolicy(newFrameOpenerPolicy);
     frameLoadRequest.setReferrerPolicy(referrerPolicy);
     frameLoadRequest.setShouldOpenExternalURLsPolicy(shouldOpenExternalURLsPolicy);
@@ -1068,7 +1068,7 @@ void FrameLoader::loadURLIntoChildFrame(const URL& url, const String& referer, L
     auto initiatedByMainFrame = lexicalFrame && lexicalFrame->isMainFrame() ? InitiatedByMainFrame::Yes : InitiatedByMainFrame::Unknown;
 
     RefPtr document = m_frame->document();
-    FrameLoadRequest frameLoadRequest { *document, document->securityOrigin(), { url }, selfTargetFrameName(), initiatedByMainFrame };
+    FrameLoadRequest frameLoadRequest { *document, document->securityOrigin(), { URL { url } }, selfTargetFrameName(), initiatedByMainFrame };
     frameLoadRequest.setNewFrameOpenerPolicy(NewFrameOpenerPolicy::Suppress);
     frameLoadRequest.setLockBackForwardList(LockBackForwardList::Yes);
     frameLoadRequest.setIsInitialFrameSrcLoad(true);
@@ -1086,10 +1086,10 @@ void FrameLoader::loadArchive(Ref<Archive>&& archive)
     if (!mainResource)
         return;
 
-    ResourceResponse response(URL(), mainResource->mimeType(), mainResource->data().size(), mainResource->textEncoding());
+    ResourceResponse response(URL(), String { mainResource->mimeType() }, mainResource->data().size(), String { mainResource->textEncoding() });
     SubstituteData substituteData(&mainResource->data(), URL(), response, SubstituteData::SessionHistoryVisibility::Hidden);
     
-    ResourceRequest request(mainResource->url());
+    ResourceRequest request(URL { mainResource->url() });
 
     Ref documentLoader = m_client->createDocumentLoader(request, substituteData);
     documentLoader->setArchive(WTFMove(archive));
@@ -1558,7 +1558,7 @@ void FrameLoader::loadURL(FrameLoadRequest&& frameLoadRequest, const String& ref
     }
 
     const URL& newURL = frameLoadRequest.resourceRequest().url();
-    ResourceRequest request(newURL);
+    ResourceRequest request(URL { newURL });
     if (!referrer.isEmpty())
         request.setHTTPReferrer(referrer);
 
@@ -1677,7 +1677,7 @@ SubstituteData FrameLoader::defaultSubstituteDataForURL(const URL& url)
     ASSERT(!srcdoc.isNull());
     CString encodedSrcdoc = srcdoc.string().utf8();
 
-    ResourceResponse response(URL(), textHTMLContentTypeAtom(), encodedSrcdoc.length(), "UTF-8"_s);
+    ResourceResponse response(URL(), String { textHTMLContentTypeAtom() }, encodedSrcdoc.length(), "UTF-8"_s);
     return SubstituteData(SharedBuffer::create(encodedSrcdoc.span()), URL(), response, iframeElement->srcdocSessionHistoryVisibility());
 }
 
@@ -1948,14 +1948,14 @@ bool FrameLoader::willLoadMediaElementURL(URL& url, Node& initiatorNode)
         return m_client->shouldLoadMediaElementURL(url);
 #endif
 
-    ResourceRequest request(url);
+    ResourceRequest request(URL { url });
     request.setInspectorInitiatorNodeIdentifier(InspectorInstrumentation::identifierForNode(initiatorNode));
     if (m_documentLoader)
         request.setIsAppInitiated(m_documentLoader->lastNavigationWasAppInitiated());
 
     ResourceError error;
     auto identifier = requestFromDelegate(request, IsMainResourceLoad::No, error);
-    notifier().sendRemainingDelegateMessages(protectedDocumentLoader().get(), IsMainResourceLoad::No, identifier, request, ResourceResponse(url, String(), -1, String()), nullptr, -1, -1, error);
+    notifier().sendRemainingDelegateMessages(protectedDocumentLoader().get(), IsMainResourceLoad::No, identifier, request, ResourceResponse(URL { url }, String(), -1, String()), nullptr, -1, -1, error);
 
     url = request.url();
 
@@ -1994,7 +1994,7 @@ void FrameLoader::reloadWithOverrideEncoding(const String& encoding)
     ResourceRequest request = documentLoader->request();
     URL unreachableURL = documentLoader->unreachableURL();
     if (!unreachableURL.isEmpty())
-        request.setURL(unreachableURL);
+        request.setURL(WTFMove(unreachableURL));
 
     // FIXME: If the resource is a result of form submission and is not cached, the form will be silently resubmitted.
     // We should ask the user for confirmation in this case.
@@ -2027,7 +2027,7 @@ void FrameLoader::reload(OptionSet<ReloadOption> options, bool isRequestFromClie
     ResourceRequest initialRequest = documentLoader->request();
     URL unreachableURL = documentLoader->unreachableURL();
     if (!unreachableURL.isEmpty())
-        initialRequest.setURL(unreachableURL);
+        initialRequest.setURL(WTFMove(unreachableURL));
 
     // Create a new document loader for the reload, this will become m_documentLoader eventually,
     // but first it has to be the "policy" document loader, and then the "provisional" document loader.
@@ -2459,7 +2459,7 @@ IGNORE_GCC_WARNINGS_END
             const auto& response = documentLoader->responses()[i];
             // FIXME: If the WebKit client changes or cancels the request, this is not respected.
             ResourceError error;
-            ResourceRequest request(response.url());
+            ResourceRequest request(URL { response.url() });
             request.setIsAppInitiated(documentLoader->lastNavigationWasAppInitiated());
             auto identifier = requestFromDelegate(request, IsMainResourceLoad::Yes, error);
             // FIXME: If we get a resource with more than 2B bytes, this code won't do the right thing.
@@ -3416,7 +3416,7 @@ void FrameLoader::updateRequestAndAddExtraFields(Frame& targetFrame, ResourceReq
 
     if (page && isMainResource) {
         auto [filteredURL, didFilter] = page->chrome().client().applyLinkDecorationFilteringWithResult(request.url(), LinkDecorationFilteringTrigger::Navigation);
-        request.setURL(filteredURL, didFilter == DidFilterLinkDecoration::Yes);
+        request.setURL(WTFMove(filteredURL), didFilter == DidFilterLinkDecoration::Yes);
     }
 }
 
@@ -3507,11 +3507,11 @@ void FrameLoader::loadPostRequest(FrameLoadRequest&& request, const String& refe
     NewFrameOpenerPolicy openerPolicy = request.newFrameOpenerPolicy();
 
     const ResourceRequest& inRequest = request.resourceRequest();
-    const URL& url = inRequest.url();
+    URL url = inRequest.url();
     const String& contentType = inRequest.httpContentType();
     String origin = inRequest.httpOrigin();
 
-    ResourceRequest workingResourceRequest(url);    
+    ResourceRequest workingResourceRequest(WTFMove(url));
 
     if (!referrer.isEmpty())
         workingResourceRequest.setHTTPReferrer(referrer);
@@ -4386,7 +4386,7 @@ void FrameLoader::loadDifferentDocumentItem(HistoryItem& item, HistoryItem* from
         currentURL = loader->url();
     RefPtr formData = item.formData();
 
-    ResourceRequest request(itemURL);
+    ResourceRequest request(WTFMove(itemURL));
 
     if (!item.referrer().isNull())
         request.setHTTPReferrer(item.referrer());
@@ -4456,7 +4456,7 @@ void FrameLoader::loadDifferentDocumentItem(HistoryItem& item, HistoryItem* from
         updateRequestAndAddExtraFields(request, IsMainResource::Yes, loadType);
 
         ResourceRequest requestForOriginalURL(request);
-        requestForOriginalURL.setURL(itemOriginalURL);
+        requestForOriginalURL.setURL(WTFMove(itemOriginalURL));
         action = { frame->protectedDocument().releaseNonNull(), requestForOriginalURL, initiatedByMainFrame, request.isAppInitiated(), loadType, isFormSubmission, nullptr, shouldOpenExternalURLsPolicy };
     }
 
@@ -4659,7 +4659,7 @@ void FrameLoader::tellClientAboutPastMemoryCacheLoads()
         if (!resource)
             continue;
 
-        ResourceRequest request(resource->url());
+        ResourceRequest request(URL { resource->url() });
         m_client->dispatchDidLoadResourceFromMemoryCache(documentLoader.get(), request, resource->response(), resource->encodedSize());
     }
 }

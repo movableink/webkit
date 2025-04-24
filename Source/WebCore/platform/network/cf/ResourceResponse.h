@@ -60,8 +60,9 @@ public:
         m_initLevel = AllFields;
     }
 
-    ResourceResponse(const URL& url, const String& mimeType, long long expectedLength, const String& textEncodingName)
-        : ResourceResponseBase(url, mimeType, expectedLength, textEncodingName)
+    // FIXME(rdar://149970210): Remove this constructor once the internal build is up-to-date
+    ResourceResponse(const URL& url, String&& mimeType, long long expectedLength, String&& textEncodingName)
+        : ResourceResponseBase(URL { url }, WTFMove(mimeType), expectedLength, WTFMove(textEncodingName))
     {
         m_initLevel = AllFields;
     }

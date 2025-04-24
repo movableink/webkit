@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile, Inc.
  * Copyright (C) 2021 Metrological Group B.V.
  * Copyright (C) 2021 Igalia S.L.
@@ -53,7 +53,7 @@ void WorkerFontLoadRequest::load(WorkerGlobalScope& workerGlobalScope)
 {
     m_context = workerGlobalScope;
 
-    ResourceRequest request { m_url };
+    ResourceRequest request { URL { m_url } };
     ASSERT(request.httpMethod() == "GET"_s);
 
     FetchOptions fetchOptions;

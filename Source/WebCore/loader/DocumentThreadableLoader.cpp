@@ -398,7 +398,7 @@ void DocumentThreadableLoader::responseReceived(CachedResource& resource, const 
     ResourceResponse responseWithCorrectFragmentIdentifier;
     if (response.source() != ResourceResponse::Source::ServiceWorker && response.url().fragmentIdentifier() != m_responseURL.fragmentIdentifier()) {
         responseWithCorrectFragmentIdentifier = response;
-        responseWithCorrectFragmentIdentifier.setURL(m_responseURL);
+        responseWithCorrectFragmentIdentifier.setURL(URL { m_responseURL });
     }
 
     if (!m_responsesCanBeOpaque) {

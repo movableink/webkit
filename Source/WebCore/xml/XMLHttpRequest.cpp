@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *  Copyright (C) 2005-2007 Alexey Proskuryakov <ap@webkit.org>
  *  Copyright (C) 2007, 2008 Julien Chaffraix <jchaffraix@webkit.org>
  *  Copyright (C) 2008, 2011 Google Inc. All rights reserved.
@@ -601,7 +601,7 @@ ExceptionOr<void> XMLHttpRequest::createRequest()
     if (m_async && m_upload && m_upload->hasEventListeners())
         m_uploadListenerFlag = true;
 
-    ResourceRequest request(m_url);
+    ResourceRequest request(URL { m_url });
     request.setRequester(ResourceRequestRequester::XHR);
     request.setInitiatorIdentifier(scriptExecutionContext()->resourceRequestIdentifier());
     request.setHTTPMethod(m_method);

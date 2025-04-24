@@ -618,7 +618,7 @@ static void webKitWebSrcMakeRequest(WebKitWebSrc* src, DataMutexLocker<WebKitWeb
     GST_DEBUG_OBJECT(src, "Posting task to request R%u %s requestedPosition=%" G_GUINT64_FORMAT " stopPosition=%" G_GUINT64_FORMAT, members->requestNumber, priv->originalURI.data(), members->requestedPosition, members->stopPosition);
     URL url { String::fromLatin1(priv->originalURI.data()) };
 
-    ResourceRequest request(url);
+    ResourceRequest request(WTFMove(url));
     request.setAllowCookies(true);
     request.setHTTPReferrer(members->referrer);
 

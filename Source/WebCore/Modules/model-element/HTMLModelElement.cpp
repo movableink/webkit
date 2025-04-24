@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -193,7 +193,7 @@ void HTMLModelElement::setSourceURL(const URL& url)
     // FIXME: Set other options.
 
     auto crossOriginAttribute = parseCORSSettingsAttribute(attributeWithoutSynchronization(HTMLNames::crossoriginAttr));
-    auto request = createPotentialAccessControlRequest(ResourceRequest { m_sourceURL }, WTFMove(options), document(), crossOriginAttribute);
+    auto request = createPotentialAccessControlRequest(ResourceRequest { URL { m_sourceURL } }, WTFMove(options), document(), crossOriginAttribute);
     request.setInitiator(*this);
 
     auto resource = document().protectedCachedResourceLoader()->requestModelResource(WTFMove(request));

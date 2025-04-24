@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -1031,7 +1031,7 @@ void PluginView::loadMainResource()
         referrer = { };
 
     ASSERT(!m_pendingResourceRequest);
-    m_pendingResourceRequest = WTF::makeUnique<ResourceRequest>(m_mainResourceURL, referrer);
+    m_pendingResourceRequest = WTF::makeUnique<ResourceRequest>(URL { m_mainResourceURL }, referrer);
     m_pendingResourceRequestTimer.startOneShot(0_s);
 }
 

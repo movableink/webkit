@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -720,7 +720,7 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString, bo
                 auto addResult = uniqueSubresources.add(subresourceURL.string(), emptyString());
                 auto resource = documentLoader->subresource(subresourceURL);
                 if (!resource) {
-                    ResourceRequest request(subresourceURL);
+                    ResourceRequest request(URL { subresourceURL });
                     request.setDomainForCachePartition(frame.document()->domainForCachePartition());
                     if (auto* cachedResource = MemoryCache::singleton().resourceForRequest(request, frame.page()->sessionID()))
                         resource = ArchiveResource::create(cachedResource->resourceBuffer(), subresourceURL, cachedResource->response());

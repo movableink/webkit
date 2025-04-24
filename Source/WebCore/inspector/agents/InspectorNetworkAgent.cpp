@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -1011,7 +1011,7 @@ void InspectorNetworkAgent::loadResource(const Inspector::Protocol::Network::Fra
     }
 
     URL url = context->completeURL(urlString);
-    ResourceRequest request(url);
+    ResourceRequest request(WTFMove(url));
     request.setHTTPMethod("GET"_s);
     request.setHiddenFromInspector(true);
 
@@ -1325,7 +1325,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorNetworkAgent::interceptRequest
         data = SharedBuffer::create(content.utf8().span());
 
     // Mimic data URL load behavior - report didReceiveResponse & didFinishLoading.
-    ResourceResponse response(pendingRequest->m_loader->url(), mimeType, data->size(), String());
+    ResourceResponse response(URL { pendingRequest->m_loader->url() }, String { mimeType }, data->size(), String());
     response.setSource(ResourceResponse::Source::InspectorOverride);
     response.setHTTPStatusCode(status);
     response.setHTTPStatusText(String { statusText });

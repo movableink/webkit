@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Canon Inc.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -186,8 +187,8 @@ ExceptionOr<void> FetchRequest::initializeWith(const String& url, Init&& init)
     m_options.mode = Mode::Cors;
     m_options.credentials = Credentials::SameOrigin;
     m_referrer = "client"_s;
-    m_request.setURL(requestURL);
-    m_requestURL = { WTFMove(requestURL), scriptExecutionContext()->topOrigin().data() };
+    m_request.setURL(WTFMove(requestURL));
+    m_requestURL = { m_request.url(), scriptExecutionContext()->topOrigin().data() };
     m_request.setInitiatorIdentifier(scriptExecutionContext()->resourceRequestIdentifier());
 
     auto optionsResult = initializeOptions(init);

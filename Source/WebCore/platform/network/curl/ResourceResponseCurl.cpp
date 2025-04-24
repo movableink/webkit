@@ -81,7 +81,7 @@ static bool isAppendableHeader(const String &key)
 ResourceResponse::ResourceResponse(CurlResponse& response)
     : ResourceResponseBase()
 {
-    setURL(response.url);
+    setURL(URL { response.url });
     setExpectedContentLength(response.expectedContentLength);
     setHTTPStatusCode(response.statusCode ? response.statusCode : response.httpConnectCode);
 

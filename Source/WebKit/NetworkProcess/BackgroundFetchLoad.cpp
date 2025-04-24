@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -207,25 +207,25 @@ void BackgroundFetchLoad::didSendData(uint64_t totalBytesSent, uint64_t totalByt
 void BackgroundFetchLoad::wasBlocked()
 {
     BGLOAD_RELEASE_LOG("wasBlocked");
-    didFinish(blockedError(ResourceRequest { currentURL() }));
+    didFinish(blockedError(ResourceRequest { URL { currentURL() } }));
 }
 
 void BackgroundFetchLoad::cannotShowURL()
 {
     BGLOAD_RELEASE_LOG("cannotShowURL");
-    didFinish(cannotShowURLError(ResourceRequest { currentURL() }));
+    didFinish(cannotShowURLError(ResourceRequest { URL { currentURL() } }));
 }
 
 void BackgroundFetchLoad::wasBlockedByRestrictions()
 {
     BGLOAD_RELEASE_LOG("wasBlockedByRestrictions");
-    didFinish(wasBlockedByRestrictionsError(ResourceRequest { currentURL() }));
+    didFinish(wasBlockedByRestrictionsError(ResourceRequest { URL { currentURL() } }));
 }
 
 void BackgroundFetchLoad::wasBlockedByDisabledFTP()
 {
     BGLOAD_RELEASE_LOG("wasBlockedByDisabledFTP");
-    didFinish(ftpDisabledError(ResourceRequest(currentURL())));
+    didFinish(ftpDisabledError(ResourceRequest(URL { currentURL() })));
 }
 
 const URL& BackgroundFetchLoad::currentURL() const

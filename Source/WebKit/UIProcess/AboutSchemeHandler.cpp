@@ -65,7 +65,7 @@ void AboutSchemeHandler::platformStartTask(WebPageProxy&, WebURLSchemeTask& task
         return;
     }
 
-    WebCore::ResourceResponse response(url, "text/html"_s, 0, "UTF-8"_s);
+    WebCore::ResourceResponse response(WTF::URL { url }, "text/html"_s, 0, "UTF-8"_s);
     task.didReceiveResponse(response);
     task.didComplete({ });
 }

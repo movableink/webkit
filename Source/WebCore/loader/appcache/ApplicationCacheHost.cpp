@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -105,7 +105,7 @@ void ApplicationCacheHost::maybeLoadMainResource(const ResourceRequest& request,
             if (request.url().hasFragmentIdentifier()) {
                 URL url = responseToUse.url();
                 url.setFragmentIdentifier(request.url().fragmentIdentifier());
-                responseToUse.setURL(url);
+                responseToUse.setURL(WTFMove(url));
             }
 
             substituteData = SubstituteData(&resource->data(),

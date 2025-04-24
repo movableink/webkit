@@ -245,7 +245,7 @@ static void webkitURISchemeRequestReadCallback(GInputStream* inputStream, GAsync
     WebKitURISchemeResponse* resp = priv->response.get();
     if (!priv->bytesRead) {
         auto contentType = String::fromLatin1(webKitURISchemeResponseGetContentType(resp).data());
-        ResourceResponse response(priv->task->request().url(), extractMIMETypeFromMediaType(contentType), webKitURISchemeResponseGetStreamLength(resp), emptyString());
+        ResourceResponse response(URL { priv->task->request().url() }, extractMIMETypeFromMediaType(contentType), webKitURISchemeResponseGetStreamLength(resp), String { emptyString() });
         response.setTextEncodingName(extractCharsetFromMediaType(contentType).toString());
         const CString& statusMessage = webKitURISchemeResponseGetStatusMessage(resp);
         if (statusMessage.isNull()) {
