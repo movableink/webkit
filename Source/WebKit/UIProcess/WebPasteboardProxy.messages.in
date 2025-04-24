@@ -72,7 +72,7 @@ messages -> WebPasteboardProxy {
 
 #if PLATFORM(GTK)
     GetTypes(String pasteboardName) -> (Vector<String> types) Synchronous
-    ReadText(String pasteboardName) -> (String text) Synchronous
+    ReadText(String pasteboardName, String pasteboardType) -> (String text) Synchronous
     ReadFilePaths(String pasteboardName) -> (Vector<String> types) Synchronous
     ReadBuffer(String pasteboardName, String pasteboardType) -> (RefPtr<WebCore::SharedBuffer> buffer) Synchronous
     WriteToClipboard(String pasteboardName, WebCore::SelectionData pasteboardContent)

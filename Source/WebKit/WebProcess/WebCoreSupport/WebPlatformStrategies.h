@@ -86,7 +86,7 @@ private:
 #endif
 #if PLATFORM(GTK)
     Vector<String> types(const String& pasteboardName) override;
-    String readTextFromClipboard(const String& pasteboardName) override;
+    String readTextFromClipboard(const String& pasteboardName, const String& pasteboardType) override;
     Vector<String> readFilePathsFromClipboard(const String& pasteboardName) override;
     RefPtr<WebCore::SharedBuffer> readBufferFromClipboard(const String& pasteboardName, const String& pasteboardType) override;
     void writeToClipboard(const String& pasteboardName, WebCore::SelectionData&&) override;

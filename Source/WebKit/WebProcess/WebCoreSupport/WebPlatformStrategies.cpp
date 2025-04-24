@@ -315,9 +315,9 @@ Vector<String> WebPlatformStrategies::types(const String& pasteboardName)
     return result;
 }
 
-String WebPlatformStrategies::readTextFromClipboard(const String& pasteboardName)
+String WebPlatformStrategies::readTextFromClipboard(const String& pasteboardName, const String& pasteboardType)
 {
-    auto sendResult = WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebPasteboardProxy::ReadText(pasteboardName), 0);
+    auto sendResult = WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebPasteboardProxy::ReadText(pasteboardName, pasteboardType), 0);
     auto [result] = sendResult.takeReplyOr(String { });
     return result;
 }
