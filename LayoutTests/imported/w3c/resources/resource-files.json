@@ -10886,6 +10886,8 @@
         "web-platform-tests/svg/shapes/reftests/pathlength-001-ref.svg",
         "web-platform-tests/svg/shapes/reftests/pathlength-002-ref.svg",
         "web-platform-tests/svg/shapes/reftests/pathlength-003-ref.svg",
+        "web-platform-tests/svg/shapes/reftests/pathlength-004-ref.svg",
+        "web-platform-tests/svg/shapes/reftests/pathlength-005-ref.html",
         "web-platform-tests/svg/shapes/reftests/reference/empty.svg",
         "web-platform-tests/svg/struct/reftests/reference/green-100x100.html",
         "web-platform-tests/svg/struct/reftests/reference/green-100x100.svg",
