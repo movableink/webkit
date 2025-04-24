@@ -1285,10 +1285,10 @@ void WebLocalFrameLoaderClient::updateGlobalHistoryRedirectLinks()
     }
 }
 
-WebCore::ShouldGoToHistoryItem WebLocalFrameLoaderClient::shouldGoToHistoryItem(HistoryItem& item, IsSameDocumentNavigation isSameDocumentNavigation) const
+WebCore::ShouldGoToHistoryItem WebLocalFrameLoaderClient::shouldGoToHistoryItem(HistoryItem& item, IsSameDocumentNavigation isSameDocumentNavigation, ProcessSwapDisposition processSwapDisposition) const
 {
-    // In WebKit2, the synchronous version of this policy client should only ever be consulted for same document navigations.
-    RELEASE_ASSERT(isSameDocumentNavigation == IsSameDocumentNavigation::Yes || item.wasRestoredFromSession());
+    // In WebKit2, the synchronous version of this policy client should only ever be consulted for same document navigations or a COOP swap is being performed.
+    RELEASE_ASSERT(isSameDocumentNavigation == IsSameDocumentNavigation::Yes || item.wasRestoredFromSession() || processSwapDisposition == ProcessSwapDisposition::COOP);
 
     RefPtr webPage = m_frame->page();
     if (!webPage)

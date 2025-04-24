@@ -440,7 +440,6 @@ void HistoryController::goToItemForNavigationAPI(HistoryItem& targetItem, FrameL
 
 void HistoryController::goToItemShared(HistoryItem& targetItem, CompletionHandler<void(ShouldGoToHistoryItem)>&& completionHandler, ProcessSwapDisposition processSwapDisposition)
 {
-    UNUSED_PARAM(processSwapDisposition);
     m_policyItem = &targetItem;
 
     // Same document navigations must continue synchronously from here,
@@ -451,9 +450,9 @@ void HistoryController::goToItemShared(HistoryItem& targetItem, CompletionHandle
     Ref frame = m_frame.get();
     // FIXME <rdar://148849772>: Remove wasRestoredFromSession check once we have a better solution for passing context to newly spawned processes regarding COOP headers,
     // and go back to asynchronous path.
-    if (sameDocumentNavigation || !frame->protectedLoader()->protectedClient()->supportsAsyncShouldGoToHistoryItem() || targetItem.wasRestoredFromSession()) {
+    if (sameDocumentNavigation || !frame->protectedLoader()->protectedClient()->supportsAsyncShouldGoToHistoryItem() || targetItem.wasRestoredFromSession() || processSwapDisposition == ProcessSwapDisposition::COOP) {
         auto isSameDocumentNavigation = sameDocumentNavigation ? IsSameDocumentNavigation::Yes : IsSameDocumentNavigation::No;
-        auto result = frame->protectedLoader()->protectedClient()->shouldGoToHistoryItem(targetItem, isSameDocumentNavigation);
+        auto result = frame->protectedLoader()->protectedClient()->shouldGoToHistoryItem(targetItem, isSameDocumentNavigation, processSwapDisposition);
         completionHandler(result);
         return;
     }
