@@ -178,6 +178,11 @@ public:
         add32(imm, dest, dest);
     }
 
+    void add32AndSetFlags(TrustedImm32 imm, RegisterID dest)
+    {
+        add32AndSetFlags(imm, dest, dest);
+    }
+
     void add32(TrustedImm32 imm, RegisterID src, RegisterID dest)
     {
         auto immediate = imm.m_value;
@@ -197,6 +202,22 @@ public:
             move(imm, getCachedDataTempRegisterIDAndInvalidate());
             m_assembler.add<32>(dest, src, dataTempRegister);
         }
+    }
+
+    void add32AndSetFlags(TrustedImm32 imm, RegisterID src, RegisterID dest)
+    {
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.add<32, S>(dest, src, u12, shift);
+            else
+                m_assembler.sub<32, S>(dest, src, u12, shift);
+            return;
+        }
+
+        move(imm, getCachedDataTempRegisterIDAndInvalidate());
+        m_assembler.add<32, S>(dest, src, dataTempRegister);
     }
 
     void add32(TrustedImm32 imm, Address address)
@@ -268,9 +289,19 @@ public:
         add64(imm, dest, dest);
     }
 
+    void add64AndSetFlags(TrustedImm32 imm, RegisterID dest)
+    {
+        add64AndSetFlags(imm, dest, dest);
+    }
+
     void add64(TrustedImm64 imm, RegisterID dest)
     {
         add64(imm, dest, dest);
+    }
+
+    void add64AndSetFlags(TrustedImm64 imm, RegisterID dest)
+    {
+        add64AndSetFlags(imm, dest, dest);
     }
 
     void add64(TrustedImm32 imm, RegisterID src, RegisterID dest)
@@ -288,6 +319,21 @@ public:
         }
     }
 
+    void add64AndSetFlags(TrustedImm32 imm, RegisterID src, RegisterID dest)
+    {
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.add<64, S>(dest, src, u12, shift);
+            else
+                m_assembler.sub<64, S>(dest, src, u12, shift);
+        } else {
+            signExtend32ToPtr(imm, getCachedDataTempRegisterIDAndInvalidate());
+            m_assembler.add<64, S>(dest, src, dataTempRegister);
+        }
+    }
+
     void add64(TrustedImm64 imm, RegisterID src, RegisterID dest)
     {
         auto immediate = imm.m_value;
@@ -300,6 +346,21 @@ public:
         } else {
             move(imm, getCachedDataTempRegisterIDAndInvalidate());
             m_assembler.add<64>(dest, src, dataTempRegister);
+        }
+    }
+
+    void add64AndSetFlags(TrustedImm64 imm, RegisterID src, RegisterID dest)
+    {
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.add<64, S>(dest, src, u12, shift);
+            else
+                m_assembler.sub<64, S>(dest, src, u12, shift);
+        } else {
+            move(imm, getCachedDataTempRegisterIDAndInvalidate());
+            m_assembler.add<64, S>(dest, src, dataTempRegister);
         }
     }
 
@@ -387,14 +448,29 @@ public:
         and32(dest, src, dest);
     }
 
+    void and32AndSetFlags(RegisterID src, RegisterID dest)
+    {
+        and32AndSetFlags(dest, src, dest);
+    }
+
     void and32(RegisterID op1, RegisterID op2, RegisterID dest)
     {
         m_assembler.and_<32>(dest, op1, op2);
     }
 
+    void and32AndSetFlags(RegisterID op1, RegisterID op2, RegisterID dest)
+    {
+        m_assembler.and_<32, S>(dest, op1, op2);
+    }
+
     void and32(TrustedImm32 imm, RegisterID dest)
     {
         and32(imm, dest, dest);
+    }
+
+    void and32AndSetFlags(TrustedImm32 imm, RegisterID dest)
+    {
+        and32AndSetFlags(imm, dest, dest);
     }
 
     void and32(TrustedImm32 imm, RegisterID src, RegisterID dest)
@@ -411,6 +487,19 @@ public:
 
         move(imm, getCachedDataTempRegisterIDAndInvalidate());
         m_assembler.and_<32>(dest, src, dataTempRegister);
+    }
+
+    void and32AndSetFlags(TrustedImm32 imm, RegisterID src, RegisterID dest)
+    {
+        LogicalImmediate logicalImm = LogicalImmediate::create32(imm.m_value);
+
+        if (logicalImm.isValid()) {
+            m_assembler.and_<32, S>(dest, src, logicalImm);
+            return;
+        }
+
+        move(imm, getCachedDataTempRegisterIDAndInvalidate());
+        m_assembler.and_<32, S>(dest, src, dataTempRegister);
     }
 
     void and32(Address src, RegisterID dest)
