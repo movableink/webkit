@@ -787,6 +787,7 @@ static BOOL isArrayOfRequestMethodsValid(NSArray<NSString *> *requestMethods)
 
     NSString *chromeActionType = _action[declarativeNetRequestRuleActionTypeKey];
     NSString *webKitActionType = chromeActionTypesToWebKitActionTypes[chromeActionType];
+    BOOL isRuleForAllowAllRequests = [chromeActionType isEqualToString:declarativeNetRequestRuleActionTypeAllowAllRequests];
 
     NSDictionary *(^createModifiedConditionsForURLFilter)(NSDictionary *, NSString *) = ^NSDictionary *(NSDictionary *condition, NSString *urlFilter) {
         NSMutableDictionary *modifiedCondition = [condition mutableCopy];
@@ -815,13 +816,13 @@ static BOOL isArrayOfRequestMethodsValid(NSArray<NSString *> *requestMethods)
             NSString *combinedRequestDomainAndURLFilter = [self _combineRequestDomain:requestDomain withURLFilter:_condition[declarativeNetRequestRuleConditionURLFilterKey]];
             NSDictionary *modifiedConditionsForURLFilter = createModifiedConditionsForURLFilter(_condition, combinedRequestDomainAndURLFilter);
 
-            if (requestMethods) {
+            if (requestMethods && !isRuleForAllowAllRequests) {
                 for (NSString *requestMethod in requestMethods)
                     [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:createModifiedConditionsForRequestMethod(modifiedConditionsForURLFilter, requestMethod) webKitActionType:webKitActionType chromeActionType:chromeActionType]];
             } else
                 [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:modifiedConditionsForURLFilter webKitActionType:webKitActionType chromeActionType:chromeActionType]];
         }
-    } else if (requestMethods) {
+    } else if (requestMethods && !isRuleForAllowAllRequests) {
         for (NSString *requestMethod in requestMethods)
             [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:createModifiedConditionsForRequestMethod(_condition, requestMethod) webKitActionType:webKitActionType chromeActionType:chromeActionType]];
     } else
@@ -832,13 +833,13 @@ static BOOL isArrayOfRequestMethodsValid(NSArray<NSString *> *requestMethods)
         for (NSString *excludedRequestDomain in excludedRequestDomains) {
             NSDictionary *modifiedConditionsForURLFilter = createModifiedConditionsForURLFilter(_condition, excludedRequestDomain);
 
-            if (excludedRequestMethods) {
+            if (excludedRequestMethods && !isRuleForAllowAllRequests) {
                 for (NSString *excludedRequestMethod in excludedRequestMethods)
                     [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:createModifiedConditionsForRequestMethod(modifiedConditionsForURLFilter, excludedRequestMethod) webKitActionType:@"ignore-previous-rules" chromeActionType:chromeActionType]];
             } else
                 [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:modifiedConditionsForURLFilter webKitActionType:@"ignore-previous-rules" chromeActionType:chromeActionType]];
         }
-    } else if (excludedRequestMethods) {
+    } else if (excludedRequestMethods && !isRuleForAllowAllRequests) {
         for (NSString *excludedRequestMethod in excludedRequestMethods)
             [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:createModifiedConditionsForRequestMethod(_condition, excludedRequestMethod) webKitActionType:@"ignore-previous-rules" chromeActionType:chromeActionType]];
     }
@@ -855,7 +856,7 @@ static BOOL isArrayOfRequestMethodsValid(NSArray<NSString *> *requestMethods)
 
     [convertedRules addObject:[self _webKitRuleWithWebKitActionType:webKitActionType chromeActionType:chromeActionType condition:condition]];
 
-    if (condition[ruleConditionInitiatorDomainsKey] && condition[ruleConditionExcludedInitiatorDomainsKey]) {
+    if ((condition[ruleConditionInitiatorDomainsKey] && condition[ruleConditionExcludedInitiatorDomainsKey]) && ![chromeActionType isEqualToString:declarativeNetRequestRuleActionTypeAllowAllRequests]) {
         // If a rule specifies both initiatorDomains and excludedInitiatorDomains, we need to turn that into two rules.
         // The first rule will have the initiatorDomains implemented as normal (using if-frame-url). We then create a
         // second rule as an ignore-previous-rules rule using if-frame-url instead of unless-frame-url.
@@ -870,20 +871,31 @@ static BOOL isArrayOfRequestMethodsValid(NSArray<NSString *> *requestMethods)
 
 - (NSDictionary *)_webKitRuleWithWebKitActionType:(NSString *)webKitActionType chromeActionType:(NSString *)chromeActionType condition:(NSDictionary *)condition
 {
-    NSString *filter;
-    NSArray *webKitResourceTypes;
-    BOOL isRuleForAllowAllRequests = [chromeActionType isEqualToString:declarativeNetRequestRuleActionTypeAllowAllRequests];
-    if (isRuleForAllowAllRequests) {
-        filter = @".*";
-        // Intentionally leave the resourceTypes array empty to use all of WebKit's resource types.
-    } else {
-        filter = [self _regexURLFilterForChromeURLFilter:condition[declarativeNetRequestRuleConditionURLFilterKey]] ?: condition[declarativeNetRequestRuleConditionRegexFilterKey] ?: @".*";
-        webKitResourceTypes = [self _convertedResourceTypesForChromeResourceTypes:[self _allChromeResourceTypesForCondition:condition]];
-    }
-
     NSMutableDictionary *actionDictionary = [@{ @"type": webKitActionType } mutableCopy];
     NSMutableDictionary *triggerDictionary = [NSMutableDictionary dictionary];
     NSNumber *isCaseSensitive = condition[declarativeNetRequestRuleConditionCaseSensitiveKey] ?: @NO;
+    NSDictionary<NSString *, id> *convertedRule = @{
+        @"action": actionDictionary,
+        @"trigger": triggerDictionary,
+    };
+
+    if ([chromeActionType isEqualToString:declarativeNetRequestRuleActionTypeAllowAllRequests]) {
+        triggerDictionary[@"url-filter"] = @".*";
+        triggerDictionary[@"if-frame-url"] = @[ [self _regexURLFilterForChromeURLFilter:condition[declarativeNetRequestRuleConditionURLFilterKey]] ?: condition[declarativeNetRequestRuleConditionRegexFilterKey] ?: @".*" ];
+
+        NSMutableArray *loadContexts = [NSMutableArray array];
+        if ([condition[declarativeNetRequestRuleConditionResourceTypeKey] containsObject:@"main_frame"])
+            [loadContexts addObject:@"top-frame"];
+        if ([condition[declarativeNetRequestRuleConditionResourceTypeKey] containsObject:@"sub_frame"])
+            [loadContexts addObject:@"child-frame"];
+        triggerDictionary[@"load-context"] = loadContexts;
+
+        return [convertedRule copy];
+    }
+
+    NSString *filter = [self _regexURLFilterForChromeURLFilter:condition[declarativeNetRequestRuleConditionURLFilterKey]] ?: condition[declarativeNetRequestRuleConditionRegexFilterKey] ?: @".*";
+    NSArray *webKitResourceTypes = [self _convertedResourceTypesForChromeResourceTypes:[self _allChromeResourceTypesForCondition:condition]];
+
     if (filter) {
         triggerDictionary[@"url-filter"] = filter;
 
@@ -891,11 +903,6 @@ static BOOL isArrayOfRequestMethodsValid(NSArray<NSString *> *requestMethods)
         if (isCaseSensitive.boolValue)
             triggerDictionary[@"url-filter-is-case-sensitive"] = isCaseSensitive;
     }
-
-    NSDictionary<NSString *, id> *convertedRule = @{
-        @"action": actionDictionary,
-        @"trigger": triggerDictionary,
-    };
 
     if ([chromeActionType isEqualToString:declarativeNetRequestRuleActionTypeModifyHeaders]) {
         NSArray<NSDictionary *> *requestHeadersInfo = _action[declarativeNetRequestRuleRequestHeadersKey];
@@ -976,10 +983,6 @@ static BOOL isArrayOfRequestMethodsValid(NSArray<NSString *> *requestMethods)
 
     if (NSString *requestMethod = condition[declarativeNetRequestRuleConditionRequestMethodsKey])
         triggerDictionary[@"request-method"] = requestMethod;
-
-    // FIXME: <rdar://72203692> Support 'allowAllRequests' when the resource type is 'sub_frame'.
-    if (isRuleForAllowAllRequests)
-        triggerDictionary[@"if-top-url"] = @[ [self _regexURLFilterForChromeURLFilter:condition[declarativeNetRequestRuleConditionURLFilterKey]] ?: condition[declarativeNetRequestRuleConditionRegexFilterKey] ?: @"" ];
 
     return [convertedRule copy];
 }

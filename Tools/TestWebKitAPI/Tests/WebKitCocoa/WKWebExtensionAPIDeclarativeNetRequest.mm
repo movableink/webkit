@@ -2565,30 +2565,42 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, NoResourceTypeForAllowAllRequests)
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithAllowAllRequests)
 {
-    NSDictionary *rule = @{
-        @"id": @1,
-        @"action": @{ @"type": @"allowAllRequests" },
-        @"condition": @{
-            @"urlFilter": @"apple.com",
-            @"resourceTypes": @[ @"main_frame" ],
-        },
+    __auto_type testAllowAllRequests = ^(NSDictionary<NSString *, id> *condition, NSString *frameURL, NSArray<NSString *> *loadContext) {
+        NSDictionary *rule = @{
+            @"id": @1,
+            @"action": @{ @"type": @"allowAllRequests" },
+            @"condition": condition,
+        };
+
+        _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
+        NSMutableDictionary *convertedRule = [validatedRule.ruleInWebKitFormat.firstObject mutableCopy];
+        EXPECT_NOT_NULL(convertedRule);
+
+        NSMutableDictionary *correctRuleConversion = [@{
+            @"action": @{
+                @"type": @"ignore-previous-rules",
+            },
+            @"trigger": [@{
+                @"url-filter": @".*",
+                @"if-frame-url": @[ frameURL ],
+                @"load-context": loadContext,
+            } mutableCopy],
+        } mutableCopy];
+
+        NSSet *actualLoadContext = [NSSet setWithArray:convertedRule[@"trigger"][@"load-context"]];
+        NSSet *expectedLoadContext = [NSSet setWithArray:correctRuleConversion[@"trigger"][@"load-context"]];
+        EXPECT_NS_EQUAL(actualLoadContext, expectedLoadContext);
+
+        convertedRule[@"trigger"][@"load-context"] = nil;
+        correctRuleConversion[@"trigger"][@"load-context"] = nil;
+        EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
     };
 
-    _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
-    NSDictionary *convertedRule = validatedRule.ruleInWebKitFormat.firstObject;
-    EXPECT_NOT_NULL(convertedRule);
-
-    NSDictionary *correctRuleConversion = @{
-        @"action": @{
-            @"type": @"ignore-previous-rules",
-        },
-        @"trigger": @{
-            @"url-filter": @".*",
-            @"if-top-url": @[ @"apple\\.com" ],
-        },
-    };
-
-    EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
+    testAllowAllRequests(@{ @"resourceTypes": @[ @"main_frame" ] }, @".*", @[ @"top-frame" ]);
+    testAllowAllRequests(@{ @"resourceTypes": @[ @"sub_frame" ] }, @".*", @[ @"child-frame" ]);
+    testAllowAllRequests(@{ @"resourceTypes": @[ @"main_frame", @"sub_frame" ] }, @".*", @[ @"top-frame", @"child-frame" ]);
+    testAllowAllRequests(@{ @"urlFilter": @"apple.com", @"resourceTypes": @[ @"main_frame" ] }, @"apple\\.com", @[ @"top-frame" ]);
+    testAllowAllRequests(@{ @"requestDomains": @[ @"apple.com" ], @"resourceTypes": @[ @"main_frame" ] }, @"^[^:]+://+([^:/]+\\.)?apple\\.com", @[ @"top-frame" ]);
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithRedirect)

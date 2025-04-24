@@ -248,7 +248,8 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
         else if (auto* page = frame->page())
             mainDocumentURL = page->mainFrameURL();
     }
-    if (currentDocument)
+
+    if (currentDocument && currentDocument->url().isValid())
         frameURL = currentDocument->url();
     else
         frameURL = url;
