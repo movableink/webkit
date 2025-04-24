@@ -294,7 +294,7 @@ WK_SWIFT_UI_ACTOR
  */
 - (void)webView:(WKWebView *)webView runOpenPanelWithParameters:(WKOpenPanelParameters *)parameters initiatedByFrame:(WKFrameInfo *)frame completionHandler:(WK_SWIFT_UI_ACTOR void (^)(NSArray<NSURL *> * _Nullable URLs))completionHandler WK_API_AVAILABLE(macos(10.12), ios(18.4), visionos(2.4));
 
-#if TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED >= 180400
+#if TARGET_OS_IOS && !TARGET_OS_MACCATALYST && __IPHONE_OS_VERSION_MIN_REQUIRED >= 180400
 
 /*! @abstract Tells the delegate when the keyboard delivers an input suggestion.
  @param webView The web view where the input suggestion should be inserted.
@@ -302,7 +302,7 @@ WK_SWIFT_UI_ACTOR
  */
 - (void)webView:(WKWebView *)webView insertInputSuggestion:(UIInputSuggestion *)inputSuggestion WK_API_AVAILABLE(ios(WK_IOS_TBA)) WK_API_UNAVAILABLE(tvos, watchos, visionos, macCatalyst) NS_SWIFT_NAME(webView(_:insertInputSuggestion:));
 
-#endif // TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED >= 180400
+#endif // TARGET_OS_IOS && !TARGET_OS_MACCATALYST && __IPHONE_OS_VERSION_MIN_REQUIRED >= 180400
 
 @end
 

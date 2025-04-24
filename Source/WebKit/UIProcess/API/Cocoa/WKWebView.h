@@ -660,7 +660,7 @@ The uniform type identifier kUTTypeWebArchive can be used get the related pasteb
 
 #endif
 
-#if TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED >= 180400
+#if TARGET_OS_IOS && !TARGET_OS_MACCATALYST && __IPHONE_OS_VERSION_MIN_REQUIRED >= 180400
 
 /*! @abstract A reference to a conversation, such as a mail or messaging thread.
  @discussion Set this conversation context before the keyboard appears; the keyboard uses this context to initialize its conversation context value. When your conversation updates, update the smart reply by setting this property.
@@ -668,7 +668,7 @@ The uniform type identifier kUTTypeWebArchive can be used get the related pasteb
 
 @property (strong, nonatomic) UIConversationContext *conversationContext WK_API_AVAILABLE(ios(WK_IOS_TBA)) WK_API_UNAVAILABLE(tvos, watchos, visionos, macCatalyst);
 
-#endif // TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED >= 180400
+#endif // TARGET_OS_IOS && !TARGET_OS_MACCATALYST && __IPHONE_OS_VERSION_MIN_REQUIRED >= 180400
 
 /*!
 @abstract Controls whether this @link WKWebView @/link is inspectable in Web Inspector.
