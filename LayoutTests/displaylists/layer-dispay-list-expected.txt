@@ -22,3 +22,7 @@
 (draw-rect
   (rect at (102,0) size 2x104)
   (border-thickness 1.00))
+(set-state
+  (change-flags [stroke-style, should-antialias])
+  (stroke-style solid-stroke)
+  (should-antialias 1))

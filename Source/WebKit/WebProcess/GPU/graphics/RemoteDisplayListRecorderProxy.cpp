@@ -36,7 +36,6 @@
 #include "StreamClientConnection.h"
 #include "WebProcess.h"
 #include <WebCore/DisplayList.h>
-#include <WebCore/DisplayListDrawingContext.h>
 #include <WebCore/DisplayListItems.h>
 #include <WebCore/FEImage.h>
 #include <WebCore/Filter.h>

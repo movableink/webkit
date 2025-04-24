@@ -27,7 +27,6 @@
 #include "DisplayListItems.h"
 
 #include "DecomposedGlyphs.h"
-#include "DisplayListReplayer.h"
 #include "Filter.h"
 #include "FilterResults.h"
 #include "FontCascade.h"
@@ -312,6 +311,29 @@ void DrawDecomposedGlyphs::dump(TextStream& ts, OptionSet<AsTextFlag> flags) con
         if (flags.contains(AsTextFlag::IncludeResourceIdentifiers))
             ts.dumpProperty("identifier"_s, decomposedGlyphs->renderingResourceIdentifier());
     }
+}
+
+DrawDisplayList::DrawDisplayList(Ref<const DisplayList>&& displayList)
+    : m_displayList(WTFMove(displayList))
+{
+}
+
+DrawDisplayList::~DrawDisplayList() = default;
+
+Ref<const DisplayList> DrawDisplayList::displayList() const
+{
+    return m_displayList;
+}
+
+void DrawDisplayList::apply(GraphicsContext& context) const
+{
+    return context.drawDisplayList(m_displayList);
+}
+
+void DrawDisplayList::dump(TextStream& ts, OptionSet<AsTextFlag>) const
+{
+    Ref displayList = this->displayList();
+    ts.dumpProperty("display-list"_s, displayList);
 }
 
 void DrawImageBuffer::apply(GraphicsContext& context) const

@@ -29,7 +29,7 @@
 #include "WebCoreTestUtilities.h"
 #include <WebCore/DestinationColorSpace.h>
 #include <WebCore/DisplayList.h>
-#include <WebCore/DisplayListDrawingContext.h>
+#include <WebCore/DisplayListRecorderImpl.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/ImageBuffer.h>
 #include <wtf/MathExtras.h>
@@ -77,23 +77,6 @@ static Ref<WebCore::ImageBuffer> createTestImageBuffer()
     auto result = WebCore::ImageBuffer::create(logicalSize, WebCore::RenderingMode::Unaccelerated, WebCore::RenderingPurpose::Unspecified, scale, colorSpace, pixelFormat);
     RELEASE_ASSERT(result);
     return result.releaseNonNull();
-}
-
-namespace {
-
-class TestDrawingContext : public WebCore::DisplayList::DrawingContext {
-public:
-    TestDrawingContext(WebCore::FloatSize logicalSize)
-        : WebCore::DisplayList::DrawingContext { logicalSize }
-    {
-    }
-};
-
-}
-
-static std::unique_ptr<TestDrawingContext> createDisplayListTarget()
-{
-    return makeUnique<TestDrawingContext>(WebCore::FloatSize { testContextWidth, testContextHeight });
 }
 
 // Function that applies same functor to two contexts. BifurbicatedGraphicsContext seems to have missing features.
@@ -461,24 +444,22 @@ TYPED_TEST_P(DisplayListRecorderResultStateTest, StateThroughDisplayListIsPreser
 {
     auto refTarget = createReferenceTarget();
     auto& ref = refTarget->context();
-    auto testedTarget = createDisplayListTarget();
-    auto& tested = testedTarget->recorder();
+    WebCore::DisplayList::RecorderImpl tested { { testContextWidth, testContextHeight } };
     EXPECT_TRUE(checkEqualState(ref, tested));
 
     forBoth(ref, tested, this->operation());
 
     EXPECT_TRUE(checkEqualState(ref, tested));
 
-    tested.commitRecording();
+    Ref displayList = tested.takeDisplayList();
 
-    auto resultTarget = createReferenceTarget();
-    auto& result = resultTarget->context();
-
-    auto description = testedTarget->displayList().asText({ WebCore::DisplayList::AsTextFlag::IncludePlatformOperations }).trim(deprecatedIsSpaceOrNewline);
+    auto description = displayList->asText({ WebCore::DisplayList::AsTextFlag::IncludePlatformOperations }).trim(deprecatedIsSpaceOrNewline);
     auto expectedDescription = this->operationDescription().trim(deprecatedIsSpaceOrNewline);
     EXPECT_EQ(expectedDescription, description);
 
-    testedTarget->replayDisplayList(result);
+    RefPtr resultTarget = createReferenceTarget();
+    auto& result = resultTarget->context();
+    result.drawDisplayList(displayList);
     EXPECT_TRUE(checkEqualState(ref, result));
 
     // Unwind the stack in case the test-case tested state middle of the save/restore pair.

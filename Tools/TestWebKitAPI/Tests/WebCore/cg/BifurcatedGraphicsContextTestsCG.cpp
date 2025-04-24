@@ -50,9 +50,7 @@ TEST(BifurcatedGraphicsContextTests, Basic)
     auto primaryCGContext = adoptCF(CGBitmapContextCreate(nullptr, contextWidth, contextHeight, 8, 4 * contextWidth, colorSpace.platformColorSpace(), kCGImageAlphaPremultipliedLast));
 
     GraphicsContextCG primaryContext(primaryCGContext.get());
-
-    DisplayList displayList;
-    RecorderImpl secondaryContext(displayList, { }, FloatRect(0, 0, contextWidth, contextHeight), { });
+    RecorderImpl secondaryContext({ }, FloatRect(0, 0, contextWidth, contextHeight), { });
 
     BifurcatedGraphicsContext ctx(primaryContext, secondaryContext);
 
@@ -64,12 +62,12 @@ TEST(BifurcatedGraphicsContextTests, Basic)
     EXPECT_EQ(primaryData[0], 255);
     EXPECT_EQ(primaryData[1], 0);
     EXPECT_EQ(primaryData[2], 0);
-
+    Ref displayList = secondaryContext.takeDisplayList();
     // The secondary context should have a red FillRectWithColor.
-    EXPECT_FALSE(displayList.isEmpty());
+    EXPECT_FALSE(displayList->items().empty());
     bool sawFillRect = false;
 
-    for (auto& item : displayList.items()) {
+    for (auto& item : displayList->items()) {
         if (auto* fillRect = std::get_if<FillRectWithColor>(&item)) {
             sawFillRect = true;
             EXPECT_EQ(fillRect->rect(), FloatRect(0, 0, contextWidth, contextHeight));
@@ -82,11 +80,8 @@ TEST(BifurcatedGraphicsContextTests, Basic)
 
 TEST(BifurcatedGraphicsContextTests, Text)
 {
-    DisplayList primaryDisplayList;
-    RecorderImpl primaryContext(primaryDisplayList, { }, FloatRect(0, 0, contextWidth, contextHeight), { });
-
-    DisplayList secondaryDisplayList;
-    RecorderImpl secondaryContext(secondaryDisplayList, { }, FloatRect(0, 0, contextWidth, contextHeight), { });
+    RecorderImpl primaryContext({ }, FloatRect(0, 0, contextWidth, contextHeight), { });
+    RecorderImpl secondaryContext({ }, FloatRect(0, 0, contextWidth, contextHeight), { });
 
     BifurcatedGraphicsContext ctx(primaryContext, secondaryContext);
 
@@ -100,8 +95,8 @@ TEST(BifurcatedGraphicsContextTests, Text)
     TextRun run(string);
     ctx.drawText(font, run, { });
 
-    auto runTest = [&] (DisplayList& displayList) {
-        EXPECT_FALSE(displayList.isEmpty());
+    auto runTest = [&] (const DisplayList& displayList) {
+        EXPECT_FALSE(displayList.items().empty());
         bool sawDrawGlyphs = false;
         for (auto& displayListItem : displayList.items()) {
             if (std::holds_alternative<DrawGlyphs>(displayListItem))
@@ -112,8 +107,8 @@ TEST(BifurcatedGraphicsContextTests, Text)
     };
 
     // Ensure that both contexts have text painting commands.
-    runTest(primaryDisplayList);
-    runTest(secondaryDisplayList);
+    runTest(primaryContext.takeDisplayList());
+    runTest(secondaryContext.takeDisplayList());
 }
 
 TEST(BifurcatedGraphicsContextTests, DrawTiledGradientImage)
@@ -186,9 +181,7 @@ TEST(BifurcatedGraphicsContextTests, Borders)
     auto primaryCGContext = adoptCF(CGBitmapContextCreate(nullptr, contextWidth, contextHeight, 8, 4 * contextWidth, colorSpace.platformColorSpace(), kCGImageAlphaPremultipliedLast));
 
     GraphicsContextCG primaryContext(primaryCGContext.get());
-
-    DisplayList displayList;
-    RecorderImpl secondaryContext(displayList, { }, FloatRect(0, 0, contextWidth, contextHeight), { });
+    RecorderImpl secondaryContext({ }, FloatRect(0, 0, contextWidth, contextHeight), { });
 
     BifurcatedGraphicsContext ctx(primaryContext, secondaryContext);
 
@@ -214,8 +207,7 @@ TEST(BifurcatedGraphicsContextTests, TransformedClip)
     GraphicsContextCG primaryContextCG(primaryCGContext.get());
     GraphicsContext& primaryContext = primaryContextCG;
 
-    DisplayList displayList;
-    RecorderImpl secondaryContextDL(displayList, { }, FloatRect(0, 0, 100, 100), { });
+    RecorderImpl secondaryContextDL({ }, FloatRect(0, 0, 100, 100), { });
     GraphicsContext& secondaryContext = secondaryContextDL;
 
     BifurcatedGraphicsContext ctx(primaryContext, secondaryContext);
@@ -273,8 +265,7 @@ TEST(BifurcatedGraphicsContextTests, ApplyDeviceScaleFactor)
     GraphicsContextCG primaryContextCG(primaryCGContext.get());
     GraphicsContext& primaryContext = primaryContextCG;
 
-    DisplayList displayList;
-    RecorderImpl secondaryContextDL(displayList, { }, FloatRect(0, 0, 100, 100), { });
+    RecorderImpl secondaryContextDL({ }, FloatRect(0, 0, 100, 100), { });
     GraphicsContext& secondaryContext = secondaryContextDL;
 
     BifurcatedGraphicsContext ctx(primaryContext, secondaryContext);
@@ -293,19 +284,16 @@ TEST(BifurcatedGraphicsContextTests, ApplyDeviceScaleFactor)
 
 TEST(BifurcatedGraphicsContextTests, ClipToImageBuffer)
 {
-    DisplayList primaryDisplayList;
-    RecorderImpl primaryContext(primaryDisplayList, { }, FloatRect(0, 0, contextWidth, contextHeight), { });
-
-    DisplayList secondaryDisplayList;
-    RecorderImpl secondaryContext(secondaryDisplayList, { }, FloatRect(0, 0, contextWidth, contextHeight), { });
+    RecorderImpl primaryContext({ }, FloatRect(0, 0, contextWidth, contextHeight), { });
+    RecorderImpl secondaryContext({ }, FloatRect(0, 0, contextWidth, contextHeight), { });
 
     BifurcatedGraphicsContext ctx(primaryContext, secondaryContext);
 
     auto imageBuffer = ImageBuffer::create({ 100, 100 }, RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     ctx.clipToImageBuffer(*imageBuffer, { 0, 0, 100, 100 });
 
-    auto runTest = [&] (DisplayList& displayList) {
-        EXPECT_FALSE(displayList.isEmpty());
+    auto runTest = [&] (const DisplayList& displayList) {
+        EXPECT_FALSE(displayList.items().empty());
         bool sawClipToImageBuffer = false;
 
         for (auto& item : displayList.items()) {
@@ -317,8 +305,8 @@ TEST(BifurcatedGraphicsContextTests, ClipToImageBuffer)
     };
 
     // Ensure that both contexts have clip-to-image-buffer commands.
-    runTest(primaryDisplayList);
-    runTest(secondaryDisplayList);
+    runTest(primaryContext.takeDisplayList());
+    runTest(secondaryContext.takeDisplayList());
 }
 
 } // namespace TestWebKitAPI

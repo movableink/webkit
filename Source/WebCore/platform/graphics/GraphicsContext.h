@@ -63,6 +63,7 @@ enum class RequiresClipToRect : bool { No, Yes };
 
 namespace DisplayList {
 class DrawNativeImage;
+class DisplayList;
 }
 
 class GraphicsContext {
@@ -306,6 +307,8 @@ public:
     WEBCORE_EXPORT virtual void drawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint&, FontSmoothingMode);
     WEBCORE_EXPORT virtual void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&);
 
+    WEBCORE_EXPORT void drawDisplayList(const DisplayList::DisplayList&);
+    WEBCORE_EXPORT virtual void drawDisplayList(const DisplayList::DisplayList&, ControlFactory&);
     WEBCORE_EXPORT FloatRect computeUnderlineBoundsForText(const FloatRect&, bool printing);
     WEBCORE_EXPORT void drawLineForText(const FloatRect&, bool isPrinting, bool doubleLines = false, StrokeStyle = StrokeStyle::SolidStroke);
     // The `origin` defines the line origin point.

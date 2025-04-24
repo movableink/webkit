@@ -34,15 +34,13 @@
 namespace WebCore {
 namespace DisplayList {
 
-ApplyItemResult applyItem(GraphicsContext& context, ControlFactory& controlFactory, const Item& item)
+void applyItem(GraphicsContext& context, ControlFactory& controlFactory, const Item& item)
 {
-    return WTF::switchOn(item,
-        [&](const DrawControlPart& item) -> ApplyItemResult {
+    WTF::switchOn(item,
+        [&](const DrawControlPart& item) {
             item.apply(context, controlFactory);
-            return { };
-        }, [&](const auto& item) -> ApplyItemResult {
+        }, [&](const auto& item) {
             item.apply(context);
-            return { };
         }
     );
 }
@@ -78,17 +76,6 @@ void dumpItem(TextStream& ts, const Item& item, OptionSet<AsTextFlag> flags)
 TextStream& operator<<(TextStream& ts, const Item& item)
 {
     dumpItem(ts, item, { AsTextFlag::IncludePlatformOperations, AsTextFlag::IncludeResourceIdentifiers });
-    return ts;
-}
-
-TextStream& operator<<(TextStream& ts, StopReplayReason reason)
-{
-    switch (reason) {
-    case StopReplayReason::ReplayedAllItems: ts << "ReplayedAllItems"_s; break;
-    case StopReplayReason::MissingCachedResource: ts << "MissingCachedResource"_s; break;
-    case StopReplayReason::InvalidItemOrExtent: ts << "InvalidItemOrExtent"_s; break;
-    case StopReplayReason::OutOfMemory: ts << "OutOfMemory"_s; break;
-    }
     return ts;
 }
 

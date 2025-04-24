@@ -26,7 +26,6 @@
 
 #include "ControlFactory.h"
 #include "DisplayListRecorderImpl.h"
-#include "DisplayListReplayer.h"
 #include "FilterOperations.h"
 #include "FontCascade.h"
 #include "GraphicsContext.h"
@@ -122,18 +121,17 @@ void TextPainter::paintTextOrEmphasisMarks(const FontCascade& font, const TextRu
         return;
     }
 
+    RefPtr glyphDisplayList = WTFMove(m_glyphDisplayList);
     if (!emphasisMark.isEmpty())
         m_context.drawEmphasisMarks(font, textRun, emphasisMark, textOrigin + FloatSize(0, emphasisMarkOffset), startOffset, endOffset);
-    else if (startOffset || endOffset < textRun.length() || !m_glyphDisplayList)
+    else if (startOffset || endOffset < textRun.length() || !glyphDisplayList)
         m_context.drawText(font, textRun, textOrigin, startOffset, endOffset);
     else {
         // Replaying back a whole cached glyph run to the GraphicsContext.
         m_context.translate(textOrigin);
-        DisplayList::Replayer replayer(m_context, m_glyphDisplayList->items(), ControlFactory::shared());
-        replayer.replay();
+        m_context.drawDisplayList(*glyphDisplayList);
         m_context.translate(-textOrigin);
     }
-    m_glyphDisplayList = nullptr;
 }
 
 void TextPainter::paintTextWithShadows(const ShadowData* shadow, const FilterOperations* colorFilter, const FontCascade& font, const TextRun& textRun, const FloatRect& boxRect, const FloatPoint& textOrigin, unsigned startOffset, unsigned endOffset, const AtomString& emphasisMark, float emphasisMarkOffset, bool stroked)
@@ -247,7 +245,7 @@ String TextPainter::cachedGlyphDisplayListsForTextNodeAsText(Text& textNode, Opt
     StringBuilder builder;
 
     for (auto textBox : InlineIterator::textBoxesFor(*textNode.renderer())) {
-        DisplayList::DisplayList* displayList = nullptr;
+        RefPtr<const DisplayList::DisplayList> displayList;
         if (auto* legacyInlineBox = textBox.legacyInlineBox())
             displayList = TextPainter::glyphDisplayListIfExists(*legacyInlineBox);
         else

@@ -52,6 +52,7 @@ class ControlFactory;
 struct ImagePaintingOptions;
 
 namespace DisplayList {
+class DisplayList;
 
 class Save {
 public:
@@ -539,6 +540,22 @@ public:
 private:
     Ref<const Font> m_font;
     Ref<const DecomposedGlyphs> m_decomposedGlyphs;
+};
+
+class DrawDisplayList {
+public:
+    static constexpr char name[] = "draw-display-list";
+
+    DrawDisplayList(Ref<const DisplayList>&&);
+    ~DrawDisplayList();
+
+    Ref<const DisplayList> displayList() const;
+
+    void apply(GraphicsContext&) const;
+    void dump(TextStream&, OptionSet<AsTextFlag>) const;
+
+private:
+    Ref<const DisplayList> m_displayList;
 };
 
 class DrawImageBuffer {

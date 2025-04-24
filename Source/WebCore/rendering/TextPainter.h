@@ -75,7 +75,7 @@ public:
 
 private:
     template<typename LayoutRun>
-    static DisplayList::DisplayList* glyphDisplayListIfExists(const LayoutRun& run)
+    static RefPtr<const DisplayList::DisplayList> glyphDisplayListIfExists(const LayoutRun& run)
     {
         return GlyphDisplayListCache::singleton().getIfExists(run);
     }
@@ -95,7 +95,7 @@ private:
     const ShadowData* m_shadow { nullptr };
     const FilterOperations* m_shadowColorFilter { nullptr };
     const RenderCombineText* m_combinedText { nullptr };
-    DisplayList::DisplayList* m_glyphDisplayList { nullptr };
+    RefPtr<const DisplayList::DisplayList> m_glyphDisplayList { nullptr };
     float m_emphasisMarkOffset { 0 };
     WritingMode m_writingMode;
 };

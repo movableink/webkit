@@ -40,25 +40,12 @@ namespace DisplayList {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(DisplayList);
 
-void DisplayList::append(Item&& item)
+DisplayList::DisplayList(Vector<Item>&& items)
+    : m_items(WTFMove(items))
 {
-    m_items.append(WTFMove(item));
 }
 
-void DisplayList::shrinkToFit()
-{
-    m_items.shrinkToFit();
-}
-
-void DisplayList::clear()
-{
-    m_items.clear();
-}
-
-bool DisplayList::isEmpty() const
-{
-    return m_items.isEmpty();
-}
+DisplayList::~DisplayList() = default;
 
 String DisplayList::asText(OptionSet<AsTextFlag> flags) const
 {

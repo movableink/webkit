@@ -36,10 +36,17 @@ class RecorderImpl : public Recorder {
     WTF_MAKE_TZONE_ALLOCATED(RecorderImpl);
     WTF_MAKE_NONCOPYABLE(RecorderImpl);
 public:
-    WEBCORE_EXPORT RecorderImpl(DisplayList&, const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&, const DestinationColorSpace& = DestinationColorSpace::SRGB(), DrawGlyphsMode = DrawGlyphsMode::Normal);
+    WEBCORE_EXPORT RecorderImpl(const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&, const DestinationColorSpace& = DestinationColorSpace::SRGB(), DrawGlyphsMode = DrawGlyphsMode::Normal);
+    RecorderImpl(FloatSize initialClipSize)
+        : RecorderImpl({ }, { { }, initialClipSize }, { }, DestinationColorSpace::SRGB(), DrawGlyphsMode::Normal)
+    {
+    }
     WEBCORE_EXPORT virtual ~RecorderImpl();
 
-    bool isEmpty() const { return m_displayList.isEmpty(); }
+    WEBCORE_EXPORT Ref<const DisplayList> takeDisplayList();
+    // This function is deprecated and sign that caller is doing something incorrect. This will be
+    // removed once all clients are fixed.
+    WEBCORE_EXPORT Ref<const DisplayList> copyDisplayList();
 
     void save(GraphicsContextState::Purpose) final;
     void restore(GraphicsContextState::Purpose) final;
@@ -89,6 +96,7 @@ public:
     void drawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& localAnchor, FontSmoothingMode) final;
     void drawGlyphsImmediate(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& localAnchor, FontSmoothingMode) final;
     void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) final;
+    void drawDisplayList(const DisplayList&, ControlFactory&) final;
 #if ENABLE(VIDEO)
     void drawVideoFrame(VideoFrame&, const FloatRect& destination, ImageOrientation, bool shouldDiscardAlpha) final;
 #endif
@@ -111,12 +119,7 @@ public:
 private:
     void appendStateChangeItemIfNecessary() final;
 
-    void append(Item&& item)
-    {
-        m_displayList.append(WTFMove(item));
-    }
-
-    DisplayList& m_displayList;
+    Vector<Item> m_items;
 };
 
 }

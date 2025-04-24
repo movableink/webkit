@@ -72,9 +72,6 @@ public:
     }
     WEBCORE_EXPORT virtual ~Recorder();
 
-    // Records possible pending commands. Should be used when recording is known to end.
-    WEBCORE_EXPORT void commitRecording();
-
 protected:
     WEBCORE_EXPORT Recorder(IsDeferred, const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&, const DestinationColorSpace&, DrawGlyphsMode);
 

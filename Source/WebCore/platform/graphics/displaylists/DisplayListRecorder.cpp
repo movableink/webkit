@@ -27,7 +27,6 @@
 #include "DisplayListRecorder.h"
 
 #include "DisplayList.h"
-#include "DisplayListDrawingContext.h"
 #include "DisplayListItems.h"
 #include "FEImage.h"
 #include "Filter.h"
@@ -64,12 +63,6 @@ Recorder::Recorder(IsDeferred isDeferred, const GraphicsContextState& state, con
 Recorder::~Recorder()
 {
     ASSERT(m_stateStack.size() == 1); // If this fires, it indicates mismatched save/restore.
-}
-
-void Recorder::commitRecording()
-{
-    // Fixup the possible pending state.
-    appendStateChangeItemIfNecessary();
 }
 
 const GraphicsContextState& Recorder::state() const

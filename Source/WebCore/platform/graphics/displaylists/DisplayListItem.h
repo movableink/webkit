@@ -59,6 +59,7 @@ class DrawFocusRingPath;
 class DrawFocusRingRects;
 class DrawGlyphs;
 class DrawDecomposedGlyphs;
+class DrawDisplayList;
 class DrawImageBuffer;
 class DrawLine;
 class DrawLinesForText;
@@ -124,6 +125,7 @@ using Item = Variant
     , DrawFocusRingRects
     , DrawGlyphs
     , DrawDecomposedGlyphs
+    , DrawDisplayList
     , DrawImageBuffer
     , DrawLine
     , DrawLinesForText
@@ -169,31 +171,18 @@ using Item = Variant
     , SetURLForRect
 >;
 
-enum class StopReplayReason : uint8_t {
-    ReplayedAllItems,
-    MissingCachedResource,
-    InvalidItemOrExtent,
-    OutOfMemory
-};
-
-struct ApplyItemResult {
-    std::optional<StopReplayReason> stopReason;
-    std::optional<RenderingResourceIdentifier> resourceIdentifier;
-};
-
 enum class AsTextFlag : uint8_t {
     IncludePlatformOperations      = 1 << 0,
     IncludeResourceIdentifiers     = 1 << 1,
 };
 
-ApplyItemResult applyItem(GraphicsContext&, ControlFactory&, const Item&);
+void applyItem(GraphicsContext&, ControlFactory&, const Item&);
 
 bool shouldDumpItem(const Item&, OptionSet<AsTextFlag>);
 
 WEBCORE_EXPORT void dumpItem(TextStream&, const Item&, OptionSet<AsTextFlag>);
 
 WEBCORE_EXPORT TextStream& operator<<(TextStream&, const Item&);
-WEBCORE_EXPORT TextStream& operator<<(TextStream&, StopReplayReason);
 
 } // namespace DisplayList
 } // namespace WebCore

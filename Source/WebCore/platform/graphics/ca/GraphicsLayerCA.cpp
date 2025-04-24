@@ -31,7 +31,6 @@
 #include "Animation.h"
 #include "DisplayList.h"
 #include "DisplayListRecorderImpl.h"
-#include "DisplayListReplayer.h"
 #include "FloatConversion.h"
 #include "FloatRect.h"
 #include "GraphicsLayerAsyncContentsDisplayDelegateCocoa.h"
@@ -383,7 +382,7 @@ Ref<PlatformCAAnimation> GraphicsLayerCA::createPlatformCAAnimation(PlatformCAAn
     return PlatformCAAnimationCocoa::create(type, keyPath);
 }
 
-typedef UncheckedKeyHashMap<const GraphicsLayerCA*, std::pair<FloatRect, std::unique_ptr<DisplayList::DisplayList>>> LayerDisplayListHashMap;
+typedef UncheckedKeyHashMap<const GraphicsLayerCA*, std::pair<FloatRect, Ref<const DisplayList::DisplayList>>> LayerDisplayListHashMap;
 
 static LayerDisplayListHashMap& layerDisplayListMap()
 {
@@ -1991,13 +1990,11 @@ void GraphicsLayerCA::recursiveCommitChanges(CommitState& commitState, const Tra
 
     if (usesDisplayListDrawing() && m_drawsContent && (!m_hasEverPainted || hadDirtyRects)) {
         TraceScope tracingScope(DisplayListRecordStart, DisplayListRecordEnd);
-
-        m_displayList = makeUnique<DisplayList::DisplayList>();
-        
+        m_displayList = nullptr;
         FloatRect initialClip(boundsOrigin(), size());
-
-        DisplayList::RecorderImpl context(*m_displayList, GraphicsContextState(), initialClip, AffineTransform());
+        DisplayList::RecorderImpl context(GraphicsContextState(), initialClip, AffineTransform());
         paintGraphicsLayerContents(context, FloatRect(FloatPoint(), size()));
+        m_displayList = context.takeDisplayList();
     }
 }
 
@@ -2020,14 +2017,13 @@ void GraphicsLayerCA::platformCALayerPaintContents(PlatformCALayer*, GraphicsCon
 {
     m_hasEverPainted = true;
     if (m_displayList) {
-        DisplayList::Replayer replayer(context, *m_displayList);
+        context.drawDisplayList(*m_displayList);
         
         if (UNLIKELY(isTrackingDisplayListReplay())) {
-            auto replayList = replayer.replay(clip, isTrackingDisplayListReplay()).trackedDisplayList;
-            layerDisplayListMap().add(this, std::pair<FloatRect, std::unique_ptr<DisplayList::DisplayList>>(clip, WTFMove(replayList)));
-        } else
-            replayer.replay(clip);
-
+            // Original purpose of the code was to track playback time optimizations. However, there are no such things, and as such we
+            // use the original.
+            layerDisplayListMap().add(this, std::make_pair(clip, Ref { *m_displayList }));
+        }
         return;
     }
 

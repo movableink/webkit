@@ -57,7 +57,7 @@ class ControlFactory : public RefCounted<ControlFactory> {
 public:
     virtual ~ControlFactory() = default;
 
-    WEBCORE_EXPORT static RefPtr<ControlFactory> create();
+    WEBCORE_EXPORT static Ref<ControlFactory> create();
     WEBCORE_EXPORT static ControlFactory& shared();
 
 #if ENABLE(APPLE_PAY)

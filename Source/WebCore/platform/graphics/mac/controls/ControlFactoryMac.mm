@@ -60,9 +60,9 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ControlFactoryMac);
 
-RefPtr<ControlFactory> ControlFactory::create()
+Ref<ControlFactory> ControlFactory::create()
 {
-    return adoptRef(new ControlFactoryMac());
+    return adoptRef(*new ControlFactoryMac());
 }
 
 ControlFactoryMac& ControlFactoryMac::shared()

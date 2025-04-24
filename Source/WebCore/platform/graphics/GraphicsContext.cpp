@@ -28,7 +28,7 @@
 
 #include "BidiResolver.h"
 #include "DecomposedGlyphs.h"
-#include "DisplayListReplayer.h"
+#include "DisplayList.h"
 #include "Filter.h"
 #include "FilterImage.h"
 #include "FloatRoundedRect.h"
@@ -588,6 +588,20 @@ void GraphicsContext::drawLineForText(const FloatRect& rect, bool isPrinting, bo
 {
     FloatSegment line[1] { { 0, rect.width() } };
     drawLinesForText(rect.location(), rect.height(), line, isPrinting, doubleUnderlines, style);
+}
+
+void GraphicsContext::drawDisplayList(const DisplayList::DisplayList& displayList)
+{
+    Ref controlFactory = ControlFactory::shared();
+    drawDisplayList(displayList, controlFactory);
+}
+
+void GraphicsContext::drawDisplayList(const DisplayList::DisplayList& displayList, ControlFactory& controlFactory)
+{
+    // FIXME: ControlFactory should be property of the context and not passed this way here.
+    // Currently this mutates each ControlPart which is unsuitable for display lists.
+    for (auto& item : displayList.items())
+        applyItem(*this, controlFactory, item);
 }
 
 FloatRect GraphicsContext::computeUnderlineBoundsForText(const FloatRect& rect, bool printing)
