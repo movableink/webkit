@@ -2801,7 +2801,6 @@
 		51E780361919AFF8001829A2 /* simple2.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = simple2.html; sourceTree = "<group>"; };
 		51E780371919AFF8001829A2 /* simple3.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = simple3.html; sourceTree = "<group>"; };
 		51E93016156B13E1004C99DF /* WKPageGetScaleFactorNotZero.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WKPageGetScaleFactorNotZero.cpp; sourceTree = "<group>"; };
-		51EB125324C66BCB000CB030 /* TestWebKitAPI-macOS-internal.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "TestWebKitAPI-macOS-internal.entitlements"; sourceTree = "<group>"; };
 		51EB125424C66FE8000CB030 /* VirtualGamepad.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VirtualGamepad.h; sourceTree = "<group>"; };
 		51EB125624C66FE8000CB030 /* VirtualGamepad.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = VirtualGamepad.mm; sourceTree = "<group>"; };
 		51EB125824C68589000CB030 /* HIDGamepads.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = HIDGamepads.mm; sourceTree = "<group>"; };
@@ -2863,7 +2862,6 @@
 		573255A222139B8F00396AE8 /* load-web-archive-1.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "load-web-archive-1.html"; sourceTree = "<group>"; };
 		573255A322139B9000396AE8 /* load-web-archive-2.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "load-web-archive-2.html"; sourceTree = "<group>"; };
 		573255A422139B9000396AE8 /* helloworld.webarchive */ = {isa = PBXFileReference; lastKnownFileType = file.bplist; path = helloworld.webarchive; sourceTree = "<group>"; };
-		5735F0251F3A4EA6000EE801 /* TestWebKitAPI-iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "TestWebKitAPI-iOS.entitlements"; sourceTree = "<group>"; };
 		574217872400ABFD002B303D /* web-authentication-make-credential-la-error.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "web-authentication-make-credential-la-error.html"; sourceTree = "<group>"; };
 		574217892400AED0002B303D /* web-authentication-make-credential-la-duplicate-credential.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "web-authentication-make-credential-la-duplicate-credential.html"; sourceTree = "<group>"; };
 		5742178D2400D26C002B303D /* web-authentication-make-credential-la.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "web-authentication-make-credential-la.html"; sourceTree = "<group>"; };
@@ -3108,7 +3106,6 @@
 		7A99D9931AD4A29D00373141 /* MenuTypesForMouseEvents.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MenuTypesForMouseEvents.mm; sourceTree = "<group>"; };
 		7AA021BA1AB09EA70052953F /* DateMath.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DateMath.cpp; sourceTree = "<group>"; };
 		7AA6A1511AAC0B31002B2ED3 /* WorkQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WorkQueue.cpp; sourceTree = "<group>"; };
-		7AB0173923FB2BF0002F8366 /* TestWebKitAPI-macOS.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "TestWebKitAPI-macOS.entitlements"; sourceTree = "<group>"; };
 		7AC7B56B20D9768E002C09A0 /* CustomBundleParameter_Bundle.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CustomBundleParameter_Bundle.mm; sourceTree = "<group>"; };
 		7AC7B56C20D9768F002C09A0 /* CustomBundleParameter.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CustomBundleParameter.mm; sourceTree = "<group>"; };
 		7AC7B56F20D9BA5B002C09A0 /* CustomBundleObject.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CustomBundleObject.mm; sourceTree = "<group>"; };
@@ -3377,6 +3374,9 @@
 		A14FC5891B89927100D107EB /* ContentFilteringPlugIn.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ContentFilteringPlugIn.mm; sourceTree = "<group>"; };
 		A14FC58D1B8AE36500D107EB /* TestProtocol.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TestProtocol.h; path = cocoa/TestProtocol.h; sourceTree = "<group>"; };
 		A14FC58E1B8AE36500D107EB /* TestProtocol.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = TestProtocol.mm; path = cocoa/TestProtocol.mm; sourceTree = "<group>"; };
+		A1508C502DAEF19200C3E213 /* check-xcfilelists.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "check-xcfilelists.sh"; sourceTree = "<group>"; };
+		A1508C512DAEF19200C3E213 /* generate-unified-sources.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "generate-unified-sources.sh"; sourceTree = "<group>"; };
+		A1508C532DAEF1A500C3E213 /* process-entitlements.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "process-entitlements.sh"; sourceTree = "<group>"; };
 		A15502281E05020B00A24C57 /* DuplicateCompletionHandlerCalls.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = DuplicateCompletionHandlerCalls.mm; sourceTree = "<group>"; };
 		A155022B1E050BC500A24C57 /* duplicate-completion-handler-calls.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = "duplicate-completion-handler-calls.html"; sourceTree = "<group>"; };
 		A16F66B91C40EA2000BD4D24 /* ContentFiltering.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = ContentFiltering.html; sourceTree = "<group>"; };
@@ -4170,6 +4170,7 @@
 				5C9D921D22D7DBF7008E9266 /* Sources.txt */,
 				5C9D922622D7DD7B008E9266 /* Derived Sources */,
 				5C9D921E22D7DBF8008E9266 /* SourcesCocoa.txt */,
+				A1508C522DAEF19200C3E213 /* Scripts */,
 				08FB7795FE84155DC02AAC07 /* Source */,
 				BCB9EB66112366D800A137E0 /* Tests */,
 				BC90957D12554CEA00083756 /* Configurations */,
@@ -5193,6 +5194,16 @@
 			path = cocoa/WebProcessPlugIn;
 			sourceTree = "<group>";
 		};
+		A1508C522DAEF19200C3E213 /* Scripts */ = {
+			isa = PBXGroup;
+			children = (
+				A1508C502DAEF19200C3E213 /* check-xcfilelists.sh */,
+				A1508C512DAEF19200C3E213 /* generate-unified-sources.sh */,
+				A1508C532DAEF1A500C3E213 /* process-entitlements.sh */,
+			);
+			path = Scripts;
+			sourceTree = "<group>";
+		};
 		A16F66B81C40E9E100BD4D24 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -5648,9 +5659,6 @@
 				BC90957F12554CF900083756 /* DebugRelease.xcconfig */,
 				BC575AE2126E88B1006F0F12 /* InjectedBundle.xcconfig */,
 				7B9FC58628A2682E007570E7 /* TestIPC.xcconfig */,
-				5735F0251F3A4EA6000EE801 /* TestWebKitAPI-iOS.entitlements */,
-				51EB125324C66BCB000CB030 /* TestWebKitAPI-macOS-internal.entitlements */,
-				7AB0173923FB2BF0002F8366 /* TestWebKitAPI-macOS.entitlements */,
 				A17C58232C9AA491009DD0B5 /* TestWebKitAPI.xcconfig */,
 				A17C58222C9AA2B0009DD0B5 /* TestWebKitAPIApp.xcconfig */,
 				BC90958012554CF900083756 /* TestWebKitAPIBase.xcconfig */,
@@ -6535,6 +6543,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1DEB927408733DD40010E9CD /* Build configuration list for PBXNativeTarget "TestWebKitAPI" */;
 			buildPhases = (
+				A1508C552DAF1F8000C3E213 /* Process Entitlements */,
 				8DD76F990486AA7600D96B5E /* Sources */,
 				8DD76F9B0486AA7600D96B5E /* Frameworks */,
 			);
@@ -6588,6 +6597,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = A17C58212C9AA132009DD0B5 /* Build configuration list for PBXNativeTarget "TestWebKitAPIApp" */;
 			buildPhases = (
+				A1CD8B582DBA0F4600463203 /* Process Entitlements */,
 				A17C57FE2C9AA12F009DD0B5 /* Sources */,
 				A17C57FF2C9AA12F009DD0B5 /* Frameworks */,
 				A1B8D7622D67CD6E0045C305 /* Copy Resources */,
@@ -6851,6 +6861,48 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "Scripts/generate-unified-sources.sh\n";
+		};
+		A1508C552DAF1F8000C3E213 /* Process Entitlements */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Scripts/process-entitlements.sh",
+			);
+			name = "Process Entitlements";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(WK_PROCESSED_XCENT_FILE)",
+				"$(WK_PROCESSED_SIMULATOR_XCENT_FILE)",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "Scripts/process-entitlements.sh\n";
+		};
+		A1CD8B582DBA0F4600463203 /* Process Entitlements */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Scripts/process-entitlements.sh",
+			);
+			name = "Process Entitlements";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(WK_PROCESSED_XCENT_FILE)",
+				"$(WK_PROCESSED_SIMULATOR_XCENT_FILE)",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "Scripts/process-entitlements.sh\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
