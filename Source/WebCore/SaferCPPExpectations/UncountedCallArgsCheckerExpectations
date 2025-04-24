@@ -267,7 +267,6 @@ animation/AnimationEffectTiming.cpp
 animation/AnimationTimeline.cpp
 animation/AnimationTimelinesController.cpp
 animation/BlendingKeyframes.cpp
-animation/CSSTransition.cpp
 animation/CustomEffect.cpp
 animation/DocumentTimeline.cpp
 animation/KeyframeEffect.cpp

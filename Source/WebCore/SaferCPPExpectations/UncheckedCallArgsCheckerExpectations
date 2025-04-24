@@ -91,7 +91,6 @@ accessibility/mac/AccessibilityObjectMac.mm
 accessibility/mac/WebAccessibilityObjectWrapperMac.mm
 animation/AnimationTimelinesController.cpp
 animation/BlendingKeyframes.cpp
-animation/CSSTransition.cpp
 animation/DocumentTimeline.cpp
 animation/ElementAnimationRareData.cpp
 animation/KeyframeEffect.cpp
