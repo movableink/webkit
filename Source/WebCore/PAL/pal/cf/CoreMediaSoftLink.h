@@ -287,6 +287,8 @@ SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMBufferQueueGetCallbacksForUnsort
 #define CMBufferQueueGetCallbacksForUnsortedSampleBuffers softLink_CoreMedia_CMBufferQueueGetCallbacksForUnsortedSampleBuffers
 SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMBufferQueueGetEndPresentationTimeStamp, CMTime, (CMBufferQueueRef queue), (queue))
 #define CMBufferQueueGetEndPresentationTimeStamp softLink_CoreMedia_CMBufferQueueGetEndPresentationTimeStamp
+SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMBufferQueueGetMaxPresentationTimeStamp, CMTime, (CMBufferQueueRef queue), (queue))
+#define CMBufferQueueGetMaxPresentationTimeStamp softLink_CoreMedia_CMBufferQueueGetMaxPresentationTimeStamp
 SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMBufferQueueInstallTrigger, OSStatus, (CMBufferQueueRef queue, CMBufferQueueTriggerCallback callback, void* refcon, CMBufferQueueTriggerCondition condition, CMTime time, CMBufferQueueTriggerToken* triggerTokenOut), (queue, callback, refcon, condition, time, triggerTokenOut))
 #define CMBufferQueueInstallTrigger softLink_CoreMedia_CMBufferQueueInstallTrigger
 SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMBufferQueueRemoveTrigger, OSStatus, (CMBufferQueueRef queue, CMBufferQueueTriggerToken triggerToken), (queue, triggerToken))
