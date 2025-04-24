@@ -215,7 +215,7 @@ std::optional<PlaybackTargetClientContextIdentifier> WebMediaSessionManager::add
     m_clientState.append(makeUnique<ClientState>(client, contextId));
 
     if (m_externalOutputDeviceAvailable || m_playbackTarget)
-        scheduleDelayedTask(InitialConfigurationTask | TargetClientsConfigurationTask);
+        scheduleDelayedTask({ ConfigurationTaskFlags::InitialConfiguration, ConfigurationTaskFlags::TargetClientsConfiguration });
 
     return contextId;
 }
@@ -230,7 +230,7 @@ void WebMediaSessionManager::removePlaybackTargetPickerClient(WebMediaSessionMan
     ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, m_clientState[index].get());
 
     m_clientState.remove(index);
-    scheduleDelayedTask(TargetMonitoringConfigurationTask | TargetClientsConfigurationTask);
+    scheduleDelayedTask({ ConfigurationTaskFlags::TargetMonitoringConfiguration, ConfigurationTaskFlags::TargetClientsConfiguration });
 }
 
 void WebMediaSessionManager::removeAllPlaybackTargetPickerClients(WebMediaSessionManagerClient& client)
@@ -244,7 +244,7 @@ void WebMediaSessionManager::removeAllPlaybackTargetPickerClients(WebMediaSessio
             m_clientState.remove(i - 1);
         }
     }
-    scheduleDelayedTask(TargetMonitoringConfigurationTask | TargetClientsConfigurationTask);
+    scheduleDelayedTask({ ConfigurationTaskFlags::TargetMonitoringConfiguration, ConfigurationTaskFlags::TargetClientsConfiguration });
 }
 
 void WebMediaSessionManager::showPlaybackTargetPicker(WebMediaSessionManagerClient& client, PlaybackTargetClientContextIdentifier contextId, const IntRect& rect, bool, bool useDarkAppearance)
@@ -284,13 +284,13 @@ void WebMediaSessionManager::clientStateDidChange(WebMediaSessionManagerClient& 
 
     constexpr MediaProducerMediaStateFlags updateConfigurationFlags { MediaProducerMediaState::RequiresPlaybackTargetMonitoring, MediaProducerMediaState::HasPlaybackTargetAvailabilityListener, MediaProducerMediaState::HasAudioOrVideo };
     if ((oldFlags & updateConfigurationFlags) != (newFlags & updateConfigurationFlags))
-        scheduleDelayedTask(TargetMonitoringConfigurationTask);
+        scheduleDelayedTask(ConfigurationTaskFlags::TargetMonitoringConfiguration);
 
     constexpr MediaProducerMediaStateFlags playingToTargetFlags { MediaProducerMediaState::IsPlayingToExternalDevice, MediaProducerMediaState::IsPlayingVideo };
     if ((oldFlags & playingToTargetFlags) != (newFlags & playingToTargetFlags)) {
         if (flagsAreSet(oldFlags, MediaProducerMediaState::IsPlayingVideo) && !flagsAreSet(newFlags, MediaProducerMediaState::IsPlayingVideo) && flagsAreSet(newFlags, MediaProducerMediaState::DidPlayToEnd))
             changedClientState->playedToEnd = true;
-        scheduleDelayedTask(WatchdogTimerConfigurationTask);
+        scheduleDelayedTask(ConfigurationTaskFlags::WatchdogTimerConfiguration);
     }
 
     if (!m_playbackTarget || !m_playbackTarget->hasActiveRoute() || !flagsAreSet(newFlags, MediaProducerMediaState::ExternalDeviceAutoPlayCandidate))
@@ -332,7 +332,7 @@ void WebMediaSessionManager::setPlaybackTarget(Ref<MediaPlaybackTarget>&& target
     ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, "has active route = ", target->hasActiveRoute());
     m_playbackTarget = WTFMove(target);
     m_targetChanged = true;
-    scheduleDelayedTask(TargetClientsConfigurationTask);
+    scheduleDelayedTask(ConfigurationTaskFlags::TargetClientsConfiguration);
 }
 
 void WebMediaSessionManager::externalOutputDeviceAvailableDidChange(bool available)
@@ -347,7 +347,7 @@ void WebMediaSessionManager::playbackTargetPickerWasDismissed()
 {
     ALWAYS_LOG_MEDIASESSIONMANAGER(__func__);
     m_playbackTargetPickerDismissed = true;
-    scheduleDelayedTask(TargetClientsConfigurationTask);
+    scheduleDelayedTask(ConfigurationTaskFlags::TargetClientsConfiguration);
 }
 
 void WebMediaSessionManager::configureNewClients()
@@ -458,22 +458,22 @@ void WebMediaSessionManager::configurePlaybackTargetMonitoring()
 
 void WebMediaSessionManager::scheduleDelayedTask(ConfigurationTasks tasks)
 {
-    m_taskFlags |= tasks;
+    m_taskFlags.add(tasks);
     m_taskTimer.startOneShot(taskDelayInterval);
 }
 
 void WebMediaSessionManager::taskTimerFired()
 {
-    if (m_taskFlags & InitialConfigurationTask)
+    if (m_taskFlags.contains(ConfigurationTaskFlags::InitialConfiguration))
         configureNewClients();
-    if (m_taskFlags & TargetClientsConfigurationTask)
+    if (m_taskFlags.contains(ConfigurationTaskFlags::TargetClientsConfiguration))
         configurePlaybackTargetClients();
-    if (m_taskFlags & TargetMonitoringConfigurationTask)
+    if (m_taskFlags.contains(ConfigurationTaskFlags::TargetMonitoringConfiguration))
         configurePlaybackTargetMonitoring();
-    if (m_taskFlags & WatchdogTimerConfigurationTask)
+    if (m_taskFlags.contains(ConfigurationTaskFlags::WatchdogTimerConfiguration))
         configureWatchdogTimer();
 
-    m_taskFlags = NoTask;
+    m_taskFlags = { };
 }
 
 size_t WebMediaSessionManager::find(WebMediaSessionManagerClient* client, PlaybackTargetClientContextIdentifier contextId)
