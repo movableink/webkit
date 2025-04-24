@@ -27,6 +27,7 @@
 #include "Color.h"
 #include "FindOptions.h"
 #include "FrameLoaderTypes.h"
+#include "HistoryItem.h"
 #include "IntRectHash.h"
 #include "KeyboardScrollingAnimator.h"
 #include "LayoutMilestone.h"
@@ -420,7 +421,7 @@ public:
     const RegistrableDomain& openedByScriptDomain() const { return m_openedByScriptDomain; }
     void setOpenedByScriptDomain(RegistrableDomain&& domain) { m_openedByScriptDomain = WTFMove(domain); }
 
-    WEBCORE_EXPORT void goToItem(LocalFrame& rootFrame, HistoryItem&, FrameLoadType, ShouldTreatAsContinuingLoad);
+    WEBCORE_EXPORT void goToItem(LocalFrame& rootFrame, HistoryItem&, FrameLoadType, ShouldTreatAsContinuingLoad, ProcessSwapDisposition processSwapDisposition = ProcessSwapDisposition::None);
     void goToItemForNavigationAPI(LocalFrame& rootFrame, HistoryItem&, FrameLoadType, LocalFrame& triggeringFrame, NavigationAPIMethodTracker*);
 
     WEBCORE_EXPORT void setGroupName(const String&);

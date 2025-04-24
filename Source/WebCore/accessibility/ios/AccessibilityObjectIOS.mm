@@ -202,7 +202,7 @@ void AXRemoteFrame::initializePlatformElementWithRemoteToken(std::span<const uin
 #if !PLATFORM(MACCATALYST)
     m_processIdentifier = processIdentifier;
 
-    RetainPtr nsToken = toNSData(token);
+    RetainPtr nsToken = WTF::toNSData(token);
     NSDictionary *tokenDictionary = nsToken ? unarchivedTokenForData(nsToken).get() : nil;
     if (!tokenDictionary)
         return;
