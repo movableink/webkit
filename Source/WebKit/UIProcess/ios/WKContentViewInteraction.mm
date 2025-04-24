@@ -7231,6 +7231,11 @@ static UITextAutocapitalizationType toUITextAutocapitalize(WebCore::Autocapitali
     }
     }
 
+#if HAVE(UI_CONVERSATION_CONTEXT)
+    if ([traits respondsToSelector:@selector(setConversationContext:)])
+        traits.conversationContext = [_webView conversationContext];
+#endif
+
     BOOL disableAutocorrectAndAutocapitalize = _focusedElementInformation.elementType == WebKit::InputType::Password || _focusedElementInformation.elementType == WebKit::InputType::Email
         || _focusedElementInformation.elementType == WebKit::InputType::URL || _focusedElementInformation.formAction.contains("login"_s);
     if ([traits respondsToSelector:@selector(setAutocapitalizationType:)])
@@ -14244,6 +14249,39 @@ static inline WKTextAnimationType toWKTextAnimationType(WebCore::TextAnimationTy
     [self.containerForDragPreviews addSubview:containerView];
 }
 #endif
+
+#if HAVE(UI_CONVERSATION_CONTEXT)
+
+- (UIConversationContext *)_conversationContext
+{
+    if (self._requiresLegacyTextInputTraits)
+        return self.textInputTraits.conversationContext;
+
+    return self.extendedTraitsDelegate.conversationContext;
+}
+
+- (void)_setConversationContext:(UIConversationContext *)context
+{
+    [_legacyTextInputTraits setConversationContext:context];
+    [_extendedTextInputTraits setConversationContext:context];
+
+    [self.inputDelegate conversationContext:context didChange:self];
+}
+
+- (void)insertInputSuggestion:(UIInputSuggestion *)suggestion
+{
+    RetainPtr webView = _webView.get();
+    RetainPtr delegate = [webView UIDelegate];
+
+    if (![delegate respondsToSelector:@selector(webView:insertInputSuggestion:)]) {
+        RELEASE_LOG_ERROR(TextInput, "Ignored input suggestion (UI delegate does not implement -webView:insertInputSuggestion:)");
+        return;
+    }
+
+    [delegate webView:webView.get() insertInputSuggestion:suggestion];
+}
+
+#endif // HAVE(UI_CONVERSATION_CONTEXT)
 
 @end
 

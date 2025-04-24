@@ -317,6 +317,10 @@ struct PerWebProcessState {
     RetainPtr<UIFindInteraction> _findInteraction;
 #endif
 
+#if HAVE(UI_CONVERSATION_CONTEXT)
+    RetainPtr<UIConversationContext> _conversationContextFromClient;
+#endif
+
     RetainPtr<_WKRemoteObjectRegistry> _remoteObjectRegistry;
     
     PerWebProcessState _perProcessState;

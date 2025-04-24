@@ -46,6 +46,10 @@ NS_ASSUME_NONNULL_BEGIN
 @protocol UIEditMenuInteractionAnimating;
 #endif
 
+#if TARGET_OS_IOS
+@class UIInputSuggestion;
+#endif
+
 typedef NS_ENUM(NSInteger, WKPermissionDecision) {
     WKPermissionDecisionPrompt,
     WKPermissionDecisionGrant,
@@ -289,6 +293,16 @@ WK_SWIFT_UI_ACTOR
  the web view to act as if the user selected the Cancel button on iOS or visionOS, immediately call the completion handler with nil.
  */
 - (void)webView:(WKWebView *)webView runOpenPanelWithParameters:(WKOpenPanelParameters *)parameters initiatedByFrame:(WKFrameInfo *)frame completionHandler:(WK_SWIFT_UI_ACTOR void (^)(NSArray<NSURL *> * _Nullable URLs))completionHandler WK_API_AVAILABLE(macos(10.12), ios(18.4), visionos(2.4));
+
+#if TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED >= 180400
+
+/*! @abstract Tells the delegate when the keyboard delivers an input suggestion.
+ @param webView The web view where the input suggestion should be inserted.
+ @param inputSuggestion The input suggestion that the user or system selected.
+ */
+- (void)webView:(WKWebView *)webView insertInputSuggestion:(UIInputSuggestion *)inputSuggestion WK_API_AVAILABLE(ios(WK_IOS_TBA)) WK_API_UNAVAILABLE(tvos, watchos, visionos, macCatalyst) NS_SWIFT_NAME(webView(_:insertInputSuggestion:));
+
+#endif // TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED >= 180400
 
 @end
 

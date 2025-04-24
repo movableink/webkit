@@ -997,6 +997,10 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
 @property (nonatomic, readonly) BOOL shouldUseAsyncInteractions;
 @property (nonatomic, readonly) NSArray<UIView *> *allViewsIntersectingSelectionRange;
 
+#if HAVE(UI_CONVERSATION_CONTEXT)
+@property (strong, nonatomic, setter=_setConversationContext:) UIConversationContext *_conversationContext;
+#endif
+
 #if ENABLE(MODEL_PROCESS)
 - (void)_willInvalidateDraggedModelWithContainerView:(UIView *)containerView;
 #endif

@@ -136,6 +136,16 @@
         _saveDataToFile(webView, data, suggestedFilename, mimeType, url);
 }
 
+#if HAVE(UI_CONVERSATION_CONTEXT)
+
+- (void)webView:(WKWebView *)webView insertInputSuggestion:(UIInputSuggestion *)suggestion
+{
+    if (_insertInputSuggestion)
+        _insertInputSuggestion(webView, suggestion);
+}
+
+#endif
+
 - (NSString *)waitForAlert
 {
     EXPECT_FALSE(self.runJavaScriptAlertPanelWithMessage);

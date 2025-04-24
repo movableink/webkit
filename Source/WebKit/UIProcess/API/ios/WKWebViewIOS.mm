@@ -3947,6 +3947,22 @@ static bool isLockdownModeWarningNeeded()
 }
 #endif
 
+#if HAVE(UI_CONVERSATION_CONTEXT)
+
+- (UIConversationContext *)conversationContext
+{
+    return _conversationContextFromClient.get();
+}
+
+- (void)setConversationContext:(UIConversationContext *)context
+{
+    _conversationContextFromClient = context;
+
+    [_contentView _setConversationContext:context];
+}
+
+#endif // HAVE(UI_CONVERSATION_CONTEXT)
+
 #if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WKWebViewIOSInternalAdditionsAfter.mm>)
 #import <WebKitAdditions/WKWebViewIOSInternalAdditionsAfter.mm>
 #endif
