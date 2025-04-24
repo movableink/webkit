@@ -660,22 +660,25 @@ void VideoMediaSampleRenderer::purgeDecodedSampleQueueAndDisplay(FlushId flushId
         samplesPurged = purgeDecodedSampleQueue(currentTime);
         if (RetainPtr nextSample = nextDecodedSample()) {
             auto result = maybeQueueFrameForDisplay(currentTime, nextSample.get(), flushId);
-#if !LOG_DISABLED
             auto presentationTime = PAL::CMSampleBufferGetOutputPresentationTimeStamp(nextSample.get());
             auto presentationEndTime = nextDecodedSampleEndTime();
-
-            auto resultLiteral = [](DecodedFrameResult result) {
-                switch (result) {
-                case DecodedFrameResult::TooEarly: return "tooEarly"_s;
-                case DecodedFrameResult::TooLate: return "tooLate"_s;
-                case DecodedFrameResult::AlreadyDisplayed: return "alreadyDisplayed"_s;
-                case DecodedFrameResult::Displayed: return "displayed"_s;
-                };
-            }(result);
-            LOG(Media, "maybeQueueFrameForDisplay: currentTime:%f start:%f end:%f result:%s", PAL::CMTimeGetSeconds(currentTime), PAL::CMTimeGetSeconds(presentationTime), PAL::CMTimeGetSeconds(presentationEndTime), resultLiteral.characters());
-#else
-            UNUSED_VARIABLE(result);
+#if !LOG_DISABLED
+            if (LOG_CHANNEL(Media).level >= WTFLogLevel::Debug) {
+                auto resultLiteral = [](DecodedFrameResult result) {
+                    switch (result) {
+                    case DecodedFrameResult::TooEarly: return "tooEarly"_s;
+                    case DecodedFrameResult::TooLate: return "tooLate"_s;
+                    case DecodedFrameResult::AlreadyDisplayed: return "alreadyDisplayed"_s;
+                    case DecodedFrameResult::Displayed: return "displayed"_s;
+                    };
+                }(result);
+                LOG(Media, "maybeQueueFrameForDisplay: currentTime:%f start:%f end:%f result:%s", PAL::CMTimeGetSeconds(currentTime), PAL::CMTimeGetSeconds(presentationTime), PAL::CMTimeGetSeconds(presentationEndTime), resultLiteral.characters());
+            }
 #endif
+            if (result == DecodedFrameResult::TooEarly)
+                [rendererOrDisplayLayer() expectMinimumUpcomingSampleBufferPresentationTime:presentationTime];
+            else if (CMTIME_IS_VALID(presentationEndTime))
+                [rendererOrDisplayLayer() expectMinimumUpcomingSampleBufferPresentationTime:presentationEndTime];
         }
     }
     if (samplesPurged) {
