@@ -130,6 +130,7 @@ public:
     bool mustTakeSlowIndexValidationPath() const { return m_mustTakeSlowIndexValidationPath; }
     void clearMustTakeSlowIndexValidationPath() { m_mustTakeSlowIndexValidationPath = false; }
     void takeSlowIndexValidationPath(CommandBuffer&, uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, uint32_t instanceCount, MTLIndexType, uint32_t firstInstance, uint32_t baseVertex, uint32_t minInstanceCount, uint32_t primitiveOffset);
+    bool needsIndexValidation(uint32_t, uint16_t);
 
 private:
     Buffer(id<MTLBuffer>, uint64_t initialSize, WGPUBufferUsageFlags, State initialState, MappingRange initialMappingRange, Device&);
@@ -166,6 +167,9 @@ private PUBLIC_IN_WEBGPU_SWIFT:
     MappedRanges m_mappedRanges;
 private:
     WGPUMapModeFlags m_mapMode { WGPUMapMode_None };
+    uint32_t m_maxUnsignedIndex { 0 };
+    uint16_t m_maxUshortIndex { 0 };
+
     struct IndirectArgsCache {
         uint64_t indirectOffset { UINT64_MAX };
         uint64_t indexBufferOffsetInBytes { UINT64_MAX };

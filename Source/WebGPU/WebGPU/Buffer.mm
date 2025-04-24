@@ -424,6 +424,7 @@ void Buffer::unmap()
         return;
 
     decrementBufferMapCount();
+    m_maxUnsignedIndex = m_maxUshortIndex = 0;
     indirectBufferInvalidated();
 
 #if CPU(X86_64) && (PLATFORM(MAC) || PLATFORM(MACCATALYST))
@@ -701,6 +702,7 @@ void Buffer::indirectIndexedBufferRecomputed(MTLIndexType indexType, NSUInteger 
 
 void Buffer::indirectBufferInvalidated(CommandEncoder& commandEncoder)
 {
+    m_maxUnsignedIndex = m_maxUshortIndex = 0;
     indirectBufferInvalidated();
 
     commandEncoder.addOnCommitHandler([weakThis = ThreadSafeWeakPtr { *this }, weakCommandEncoder = WeakPtr { commandEncoder }](CommandBuffer&, CommandEncoder&) {
@@ -708,6 +710,7 @@ void Buffer::indirectBufferInvalidated(CommandEncoder& commandEncoder)
             return true;
 
         RefPtr protectedThis = weakThis.get();
+        protectedThis->m_maxUnsignedIndex = protectedThis->m_maxUshortIndex = 0;
         RefPtr commandEncoder = weakCommandEncoder.get();
         protectedThis->indirectBufferInvalidated(commandEncoder.get());
         return true;
@@ -720,6 +723,21 @@ static size_t computeSize(HashSet<uint64_t, DefaultHash<uint64_t>, WTF::Unsigned
         return !device.commandEncoderFromIdentifier(encoderId);
     });
     return encoders.size();
+}
+
+bool Buffer::needsIndexValidation(uint32_t maxUnsignedIndex, uint16_t maxUshortIndex)
+{
+    bool needsUpdate = false;
+    if (maxUnsignedIndex > m_maxUnsignedIndex) {
+        m_maxUnsignedIndex = maxUnsignedIndex;
+        needsUpdate = true;
+    }
+    if (m_maxUshortIndex > maxUshortIndex) {
+        m_maxUshortIndex = maxUshortIndex;
+        needsUpdate = true;
+    }
+
+    return needsUpdate;
 }
 
 void Buffer::indirectBufferInvalidated(CommandEncoder* commandEncoder)

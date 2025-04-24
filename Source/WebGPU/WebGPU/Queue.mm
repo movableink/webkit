@@ -38,6 +38,7 @@
 #if ENABLE(WEBGPU_SWIFT)
 #import "WebGPUSwiftInternal.h"
 #endif
+#import <simd/simd.h>
 #import <wtf/CheckedArithmetic.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/TZoneMallocInlines.h>
@@ -464,6 +465,50 @@ void Queue::synchronizeResourceAndWait(id<MTLBuffer> buffer)
 #endif
 }
 
+static std::pair<uint32_t, uint16_t> maxIndexValueSlow(std::span<uint8_t> data)
+{
+    auto lengthUint32 = data.size() / 4;
+    std::span<uint32_t> dataUint = unsafeMakeSpan(static_cast<uint32_t*>(static_cast<void*>(data.data())), lengthUint32);
+    std::span<uint16_t> dataUshort = unsafeMakeSpan(static_cast<uint16_t*>(static_cast<void*>(data.data())), lengthUint32 * 2);
+    uint32_t maxValue = 0;
+    for (uint32_t dataUintV : dataUint) {
+        if (maxValue < dataUintV)
+            maxValue = dataUintV;
+    }
+    uint16_t maxUshort = 0;
+    for (uint16_t dataUshortV : dataUshort) {
+        if (maxUshort < dataUshortV)
+            maxUshort = dataUshortV;
+    }
+    return std::make_pair(maxValue, maxUshort);
+}
+
+static std::pair<uint32_t, uint16_t> maxIndexValue(std::span<uint8_t> data)
+{
+    constexpr auto blockSize = 64;
+    auto divResult = std::div(data.size(), blockSize);
+    auto lengthUint32 = divResult.quot;
+    if (!lengthUint32 || reinterpret_cast<uint64_t>(data.data()) % 64)
+        return maxIndexValueSlow(data);
+
+    std::span<simd::uint16> dataUint = unsafeMakeSpan(static_cast<simd::uint16*>(static_cast<void*>(data.data())), lengthUint32);
+    std::span<simd::ushort32> dataUshort = unsafeMakeSpan(static_cast<simd::ushort32*>(static_cast<void*>(data.data())), lengthUint32);
+    simd::uint16 maxValue = dataUint.front();
+    simd::ushort32 maxUshort = dataUshort.front();
+    for (auto dataUintV : dataUint)
+        maxValue = simd_max(maxValue, dataUintV);
+    for (auto dataUshortV : dataUshort)
+        maxUshort = simd_max(maxUshort, dataUshortV);
+
+    auto result = std::make_pair(simd_reduce_max(maxValue), simd_reduce_max(maxUshort));
+    if (divResult.rem) {
+        auto slowResult = maxIndexValueSlow(data.subspan(blockSize * divResult.quot));
+        result.first = std::max(result.first, slowResult.first);
+        result.second = std::max(result.second, slowResult.second);
+    }
+    return result;
+}
+
 void Queue::writeBuffer(Buffer& buffer, uint64_t bufferOffset, std::span<uint8_t> data)
 {
     auto device = m_device.get();
@@ -472,7 +517,8 @@ void Queue::writeBuffer(Buffer& buffer, uint64_t bufferOffset, std::span<uint8_t
 
     // https://gpuweb.github.io/gpuweb/#dom-gpuqueue-writebuffer
 
-    if (!validateWriteBuffer(buffer, bufferOffset, data.size()) || !isValidToUseWith(buffer, *this)) {
+    auto dataSize = data.size();
+    if (!validateWriteBuffer(buffer, bufferOffset, dataSize) || !isValidToUseWith(buffer, *this)) {
         device->generateAValidationError("Validation failure."_s);
         return;
     }
@@ -487,7 +533,15 @@ void Queue::writeBuffer(Buffer& buffer, uint64_t bufferOffset, std::span<uint8_t
 
     // FIXME(PERFORMANCE): Instead of checking whether or not the whole queue is idle,
     // we could detect whether this specific resource is idle, if we tracked every resource.
-    buffer.indirectBufferInvalidated();
+    bool needsInvalidation = true;
+
+    if (dataSize < 16*KB && (buffer.usage() & WGPUBufferUsage_Index) && !(buffer.usage() & WGPUBufferUsage_Indirect)) {
+        auto maxUnsignedUshortValue = maxIndexValue(data);
+        if (!buffer.needsIndexValidation(maxUnsignedUshortValue.first, maxUnsignedUshortValue.second))
+            needsInvalidation = false;
+    }
+    if (needsInvalidation)
+        buffer.indirectBufferInvalidated();
     if (isIdle()) {
         switch (buffer.buffer().storageMode) {
         case MTLStorageModeShared:
