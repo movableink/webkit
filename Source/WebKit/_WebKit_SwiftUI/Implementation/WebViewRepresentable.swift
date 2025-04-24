@@ -26,24 +26,24 @@ internal import SwiftUI
 
 @MainActor
 struct WebViewRepresentable {
-    let owner: WebView
+    let page: WebPage
 
     func makePlatformView(context: Context) -> CocoaWebViewAdapter {
         // FIXME: Make this more robust by figuring out what happens when a WebPage moves between representables.
-        // We can't have multiple owners regardless, but we'll want to decide if it's an error, if we can handle it gracefully, and how deterministic it might even be.
+        // We can't have multiple owning pages regardless, but we'll want to decide if it's an error, if we can handle it gracefully, and how deterministic it might even be.
         // Perhaps we should keep an ownership assertion which we can tear down in something like dismantleUIView().
 
-        precondition(!owner.page.isBoundToWebView, "This web page is already bound to another web view.")
+        precondition(!page.isBoundToWebView, "This web page is already bound to another web view.")
 
         let parent = CocoaWebViewAdapter()
-        parent.webView = owner.page.backingWebView
-        owner.page.isBoundToWebView = true
+        parent.webView = page.backingWebView
+        page.isBoundToWebView = true
 
         return parent
     }
 
     func updatePlatformView(_ platformView: CocoaWebViewAdapter, context: Context) {
-        let webView = owner.page.backingWebView
+        let webView = page.backingWebView
         let environment = context.environment
 
         platformView.webView = webView
@@ -89,11 +89,11 @@ struct WebViewRepresentable {
 
 #if os(macOS) && !targetEnvironment(macCatalyst)
         if let menu = environment.webViewContextMenuContext?.menu {
-            owner.page.setMenuBuilder {
+            page.setMenuBuilder {
                 menu(.init(linkURL: $0.linkURL))
             }
         } else {
-            owner.page.setMenuBuilder(nil)
+            page.setMenuBuilder(nil)
         }
 #endif
     }
@@ -116,7 +116,7 @@ struct WebViewRepresentable {
     }
 
     static func dismantlePlatformView(_ platformView: CocoaWebViewAdapter, coordinator: WebViewCoordinator) {
-        coordinator.configuration.owner.page.isBoundToWebView = false
+        coordinator.configuration.page.isBoundToWebView = false
     }
 }
 

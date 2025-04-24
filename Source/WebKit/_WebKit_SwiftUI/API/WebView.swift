@@ -39,10 +39,10 @@ public struct WebView: View {
         self.page = page
     }
 
-    let page: WebPage
+    private let page: WebPage
 
     public var body: some View {
-        WebViewRepresentable(owner: self)
+        WebViewRepresentable(page: page)
     }
 }
 
