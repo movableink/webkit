@@ -316,7 +316,7 @@ static GlyphData glyphDataForNonCJKCharacterWithGlyphOrientation(char32_t charac
 {
     bool syntheticOblique = data.font->platformData().syntheticOblique();
     if (orientation == NonCJKGlyphOrientation::Upright || shouldIgnoreRotation(character)) {
-        GlyphData uprightData = data.font->protectedUprightOrientationFont()->glyphDataForCharacter(character);
+        GlyphData uprightData = Ref { *data.font }->protectedUprightOrientationFont()->glyphDataForCharacter(character);
         // If the glyphs are the same, then we know we can just use the horizontal glyph rotated vertically
         // to be upright. For synthetic oblique, however, we will always return the uprightData to ensure
         // that non-CJK and CJK runs are broken up. This guarantees that vertical
@@ -329,7 +329,7 @@ static GlyphData glyphDataForNonCJKCharacterWithGlyphOrientation(char32_t charac
         if (uprightData.font)
             return uprightData;
     } else if (orientation == NonCJKGlyphOrientation::Mixed) {
-        GlyphData verticalRightData = data.font->protectedVerticalRightOrientationFont()->glyphDataForCharacter(character);
+        GlyphData verticalRightData = Ref { *data.font }->protectedVerticalRightOrientationFont()->glyphDataForCharacter(character);
 
         // If there is a baked-in rotated glyph, we will use it unless syntheticOblique is set. If
         // synthetic oblique is set, we fall back to the horizontal glyph. This guarantees that vertical
