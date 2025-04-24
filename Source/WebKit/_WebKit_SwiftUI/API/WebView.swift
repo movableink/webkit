@@ -36,13 +36,46 @@ public struct WebView: View {
     ///
     /// - Parameter page: The ``WebPage`` that should be associated with this ``WebView``. It is a programming error to create multiple ``WebView``s with the same ``WebPage``.
     public init(_ page: WebPage) {
-        self.page = page
+        self.storage = .webPage(page)
     }
 
-    private let page: WebPage
+    /// Create a new WebView with the specified URL.
+    ///
+    /// For example, you can create a WebView that displays one of two URLs depending on the state of a toggle:
+    ///
+    ///     struct URLView: View {
+    ///         @State private var url: URL? = nil
+    ///         @State private var toggle = false
+    ///
+    ///         var body: some View {
+    ///             VStack {
+    ///                 Button("Toggle") {
+    ///                     toggle.toggle()
+    ///                 }
+    ///                 WebView(url: url)
+    ///             }
+    ///             .onChange(of: toggle, initial: true) {
+    ///                 url = toggle ? URL(string: "https://www.webkit.org") : URL(string: "https://www.apple.com")
+    ///             }
+    ///         }
+    ///     }
+    ///
+    /// - Parameter url: The URL to display in the view. If this value is non-nil or changes to become a non-nil value, the new URL is loaded into the view.
+    public init(url: URL?) {
+        self.storage = .state(State(initialValue: WebPage()), url)
+    }
+
+    private let storage: Storage
 
     public var body: some View {
-        WebViewRepresentable(page: page)
+        WebViewRepresentable(page: storage.webPage)
+            .onChange(of: storage.url, initial: true) {
+                guard let url = storage.url else {
+                    return
+                }
+
+                storage.webPage.load(URLRequest(url: url))
+            }
     }
 }
 
@@ -152,4 +185,25 @@ extension WebView {
         /// The URL of the link that the user clicked.
         public let linkURL: URL?
     }
- }
+}
+
+extension WebView {
+    private enum Storage: DynamicProperty {
+        case state(State<WebPage>, URL?)
+        case webPage(WebPage)
+
+        var webPage: WebPage {
+            switch self {
+            case let .state(state, _): state.wrappedValue
+            case let .webPage(webPage): webPage
+            }
+        }
+
+        var url: URL? {
+            switch self {
+            case let .state(_, url): url
+            case .webPage: nil
+            }
+        }
+    }
+}
