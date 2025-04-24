@@ -7908,3 +7908,5 @@ webkit.org/b/290133 [ Debug ] svg/dom/SVGGeometry-isPointInFill-with-null-path.h
 fast/forms/color/input-color-swatch-overlay-appearance.html [ Skip ]
 
 webkit.org/b/288831 [ Debug ] fast/css/shadow-box-recursion-depth.html [ Pass Timeout ]
+
+webkit.org/b/291974 imported/w3c/web-platform-tests/scroll-animations/css/animation-range-visual-test.html [ Skip ]

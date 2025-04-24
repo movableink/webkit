@@ -6,7 +6,7 @@ testRunner.waitUntilDone();
 testRunner.dumpAsText();
 
 document.getElementById("target").animate({
-    offsetDistance: ["0", "100%"]
+    offsetDistance: ["0", "0"]
 }, 1000 * 60).ready.then(() => {
     document.getElementById("results").innerText = internals.layerTreeAsText(document);
     testRunner.notifyDone();

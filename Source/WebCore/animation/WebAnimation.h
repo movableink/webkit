@@ -137,6 +137,8 @@ public:
     virtual ExceptionOr<void> bindingsPause() { return pause(); }
     std::optional<WebAnimationTime> holdTime() const { return m_holdTime; }
 
+    void setPendingStartTime(WebAnimationTime pendingStartTime) { m_pendingStartTime = pendingStartTime; }
+
     virtual Variant<FramesPerSecond, AnimationFrameRatePreset> bindingsFrameRate() const { return m_bindingsFrameRate; }
     virtual void setBindingsFrameRate(Variant<FramesPerSecond, AnimationFrameRatePreset>&&);
     std::optional<FramesPerSecond> frameRate() const { return m_effectiveFrameRate; }
@@ -219,6 +221,7 @@ private:
     void applyPendingPlaybackRate();
     void setEffectiveFrameRate(std::optional<FramesPerSecond>);
     void autoAlignStartTime();
+    void maybeMarkAsReady();
     bool isTimeValid(const std::optional<WebAnimationTime>&) const;
 
     // ActiveDOMObject.
@@ -240,6 +243,7 @@ private:
     UniqueRef<FinishedPromise> m_finishedPromise;
     std::optional<WebAnimationTime> m_previousCurrentTime;
     std::optional<WebAnimationTime> m_startTime;
+    std::optional<WebAnimationTime> m_pendingStartTime;
     std::optional<WebAnimationTime> m_holdTime;
     MarkableDouble m_pendingPlaybackRate;
     double m_playbackRate { 1 };

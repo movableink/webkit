@@ -299,10 +299,8 @@ void DocumentTimeline::removeReplacedAnimations()
         //    Otherwise, queue a task to dispatch removeEvent at animation. The task source for this task is the DOM manipulation task source.
         auto scheduledTime = [&]() -> std::optional<Seconds> {
             if (auto* documentTimeline = dynamicDowncast<DocumentTimeline>(animation->timeline())) {
-                if (auto currentTime = documentTimeline->currentTime()) {
-                    ASSERT(currentTime->time());
-                    return documentTimeline->convertTimelineTimeToOriginRelativeTime(*currentTime->time());
-                }
+                auto currentTime = MonotonicTime::now().secondsSinceEpoch();
+                return documentTimeline->convertTimelineTimeToOriginRelativeTime(currentTime);
             }
             return std::nullopt;
         }();

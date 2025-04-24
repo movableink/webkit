@@ -43,7 +43,6 @@
 #include "ViewTimeline.h"
 #include "WebAnimation.h"
 #include "WebAnimationTypes.h"
-#include <JavaScriptCore/VM.h>
 #include <wtf/HashSet.h>
 #include <wtf/Ref.h>
 #include <wtf/text/TextStream.h>
@@ -83,10 +82,15 @@ void AnimationTimelinesController::removeTimeline(AnimationTimeline& timeline)
 
 void AnimationTimelinesController::detachFromDocument()
 {
-    m_currentTimeClearingTaskCancellationGroup.cancel();
+    m_pendingAnimationsProcessingTaskCancellationGroup.cancel();
 
     while (RefPtr timeline = m_timelines.takeAny())
         timeline->detachFromDocument();
+}
+
+void AnimationTimelinesController::addPendingAnimation(WebAnimation& animation)
+{
+    m_pendingAnimations.add(animation);
 }
 
 void AnimationTimelinesController::updateAnimationsAndSendEvents(ReducedResolutionSeconds timestamp)
@@ -291,35 +295,42 @@ std::optional<Seconds> AnimationTimelinesController::currentTime()
 
 void AnimationTimelinesController::cacheCurrentTime(ReducedResolutionSeconds newCurrentTime)
 {
-    m_cachedCurrentTime = newCurrentTime;
-    // We want to be sure to keep this time cached until we've both finished running JS and finished updating
-    // animations, so we schedule the invalidation task and register a whenIdle callback on the VM, which will
-    // fire syncronously if no JS is running.
-    m_waitingOnVMIdle = true;
-    if (!m_currentTimeClearingTaskCancellationGroup.hasPendingTask()) {
-        CancellableTask task(m_currentTimeClearingTaskCancellationGroup, std::bind(&AnimationTimelinesController::maybeClearCachedCurrentTime, this));
-        m_document->eventLoop().queueTask(TaskSource::InternalAsyncTask, WTFMove(task));
+    if (m_cachedCurrentTime == newCurrentTime)
+        return;
+
+    // We can get in a situation where the event loop will not run a task that had been enqueued.
+    // If that is the case, we must clear the task group and run the callback prior to adding a
+    // new task.
+    if (m_pendingAnimationsProcessingTaskCancellationGroup.hasPendingTask()) {
+        m_pendingAnimationsProcessingTaskCancellationGroup.cancel();
+        processPendingAnimations();
     }
 
-    // AnimationTimelinesController is owned by Document.
-    m_document->vm().whenIdle([this, weakDocument = WeakPtr<Document, WeakPtrImplWithEventTargetData> { m_document }]() {
-        RefPtr document = weakDocument.get();
-        if (!document)
-            return;
+    m_cachedCurrentTime = newCurrentTime;
 
-        m_waitingOnVMIdle = false;
-        maybeClearCachedCurrentTime();
-    });
+    // As we've advanced to a new current time, we want all animations created during this run
+    // loop to have this newly-cached current time as their start time. To that end, we schedule
+    // a task to set that current time on all animations created until then as their pending
+    // start time.
+    if (!m_pendingAnimationsProcessingTaskCancellationGroup.hasPendingTask()) {
+        CancellableTask task(m_pendingAnimationsProcessingTaskCancellationGroup, std::bind(&AnimationTimelinesController::processPendingAnimations, this));
+        m_document->eventLoop().queueTask(TaskSource::InternalAsyncTask, WTFMove(task));
+    }
 }
 
-void AnimationTimelinesController::maybeClearCachedCurrentTime()
+void AnimationTimelinesController::processPendingAnimations()
 {
-    // We want to make sure we only clear the cached current time if we're not currently running
-    // JS or waiting on all current animation updating code to have completed. This is so that
-    // we're guaranteed to have a consistent current time reported for all work happening in a given
-    // JS frame or throughout updating animations in WebCore.
-    if (!m_isSuspended && !m_waitingOnVMIdle && !m_currentTimeClearingTaskCancellationGroup.hasPendingTask())
-        m_cachedCurrentTime = std::nullopt;
+    if (m_isSuspended)
+        return;
+
+    ASSERT(m_cachedCurrentTime);
+    ASSERT(!m_pendingAnimationsProcessingTaskCancellationGroup.hasPendingTask());
+
+    auto pendingAnimations = std::exchange(m_pendingAnimations, { });
+    for (Ref pendingAnimation : pendingAnimations) {
+        if (pendingAnimation->timeline() && pendingAnimation->timeline()->isMonotonic())
+            pendingAnimation->setPendingStartTime(*m_cachedCurrentTime);
+    }
 }
 
 bool AnimationTimelinesController::isPendingTimelineAttachment(const WebAnimation& animation) const
