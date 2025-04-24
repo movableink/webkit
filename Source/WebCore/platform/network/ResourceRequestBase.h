@@ -68,7 +68,7 @@ public:
     struct RequestData {
         RequestData() { }
 
-        RequestData(URL&& url, URL&& firstPartyForCookies, double timeoutInterval, String&& httpMethod, HTTPHeaderMap&& httpHeaderFields, Vector<String>&& responseContentDispositionEncodingFallbackArray, const ResourceRequestCachePolicy& cachePolicy, const SameSiteDisposition& sameSiteDisposition, const ResourceLoadPriority& priority, const ResourceRequestRequester& requester, bool allowCookies, bool isTopSite, bool isAppInitiated = true, bool privacyProxyFailClosedForUnreachableNonMainHosts = false, bool useAdvancedPrivacyProtections = false, bool didFilterLinkDecoration = false, bool isPrivateTokenUsageByThirdPartyAllowed = false, bool wasSchemeOptimisticallyUpgraded = false)
+        RequestData(URL&& url, URL&& firstPartyForCookies, double timeoutInterval, String&& httpMethod, HTTPHeaderMap&& httpHeaderFields, Vector<String>&& responseContentDispositionEncodingFallbackArray, ResourceRequestCachePolicy cachePolicy, SameSiteDisposition sameSiteDisposition, ResourceLoadPriority priority, ResourceRequestRequester requester, bool allowCookies, bool isTopSite, bool isAppInitiated = true, bool privacyProxyFailClosedForUnreachableNonMainHosts = false, bool useAdvancedPrivacyProtections = false, bool didFilterLinkDecoration = false, bool isPrivateTokenUsageByThirdPartyAllowed = false, bool wasSchemeOptimisticallyUpgraded = false)
             : m_url(WTFMove(url))
             , m_firstPartyForCookies(WTFMove(firstPartyForCookies))
             , m_timeoutInterval(timeoutInterval)
@@ -90,40 +90,12 @@ public:
         {
         }
 
-        RequestData(const URL& url, const URL& firstPartyForCookies, double timeoutInterval, const String& httpMethod, const HTTPHeaderMap& httpHeaderFields, const Vector<String>& responseContentDispositionEncodingFallbackArray, const ResourceRequestCachePolicy& cachePolicy, const SameSiteDisposition& sameSiteDisposition, const ResourceLoadPriority& priority, const ResourceRequestRequester& requester, bool allowCookies, bool isTopSite, bool isAppInitiated = true, bool privacyProxyFailClosedForUnreachableNonMainHosts = false, bool useAdvancedPrivacyProtections = false, bool didFilterLinkDecoration = false, bool isPrivateTokenUsageByThirdPartyAllowed = false, bool wasSchemeOptimisticallyUpgraded = false)
-            : m_url(url)
-            , m_firstPartyForCookies(firstPartyForCookies)
-            , m_timeoutInterval(timeoutInterval)
-            , m_httpMethod(httpMethod)
-            , m_httpHeaderFields(httpHeaderFields)
-            , m_responseContentDispositionEncodingFallbackArray(responseContentDispositionEncodingFallbackArray)
-            , m_cachePolicy(cachePolicy)
-            , m_sameSiteDisposition(sameSiteDisposition)
-            , m_priority(priority)
-            , m_requester(requester)
-            , m_isTopSite(isTopSite)
-            , m_allowCookies(allowCookies)
-            , m_isAppInitiated(isAppInitiated)
-            , m_privacyProxyFailClosedForUnreachableNonMainHosts(privacyProxyFailClosedForUnreachableNonMainHosts)
-            , m_useAdvancedPrivacyProtections(useAdvancedPrivacyProtections)
-            , m_didFilterLinkDecoration(didFilterLinkDecoration)
-            , m_isPrivateTokenUsageByThirdPartyAllowed(isPrivateTokenUsageByThirdPartyAllowed)
-            , m_wasSchemeOptimisticallyUpgraded(wasSchemeOptimisticallyUpgraded)
-        {
-        }
-        
         RequestData(URL&& url, ResourceRequestCachePolicy cachePolicy)
             : m_url(WTFMove(url))
             , m_cachePolicy(cachePolicy)
         {
         }
 
-        RequestData(const URL& url, ResourceRequestCachePolicy cachePolicy)
-            : m_url(url)
-            , m_cachePolicy(cachePolicy)
-        {
-        }
-        
         URL m_url;
         URL m_firstPartyForCookies;
         double m_timeoutInterval { s_defaultTimeoutInterval }; // 0 is a magic value for platform default on platforms that have one.
@@ -162,7 +134,6 @@ public:
     
     WEBCORE_EXPORT const URL& url() const;
     WEBCORE_EXPORT void setURL(URL&&, bool didFilterLinkDecoration = false);
-    WEBCORE_EXPORT void setURL(const URL&, bool didFilterLinkDecoration = false);
 
     void redirectAsGETIfNeeded(const ResourceRequestBase &, const ResourceResponse&);
 
@@ -329,17 +300,6 @@ protected:
 
     ResourceRequestBase(URL&& url, ResourceRequestCachePolicy policy)
         : m_requestData({ WTFMove(url), policy })
-        , m_resourceRequestUpdated(true)
-        , m_platformRequestUpdated(false)
-        , m_resourceRequestBodyUpdated(true)
-        , m_platformRequestBodyUpdated(false)
-        , m_hiddenFromInspector(false)
-    {
-        m_requestData.m_allowCookies = true;
-    }
-
-    ResourceRequestBase(const URL& url, ResourceRequestCachePolicy policy)
-        : m_requestData({ url, policy })
         , m_resourceRequestUpdated(true)
         , m_platformRequestUpdated(false)
         , m_resourceRequestBodyUpdated(true)

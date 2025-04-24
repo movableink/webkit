@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -65,7 +65,7 @@ void loadResourceFromBundle(ResourceLoader& loader, const String& subdirectory)
 
         RunLoop::protectedMain()->dispatch([protectedLoader = WTFMove(protectedLoader), url = WTFMove(url).isolatedCopy(), buffer = SharedBuffer::create(data)]() mutable {
             auto mimeType = MIMETypeRegistry::mimeTypeForPath(url.path());
-            ResourceResponse response { url, mimeType, static_cast<long long>(buffer->size()), MIMETypeRegistry::isTextMIMEType(mimeType) ? "UTF-8"_s : String() };
+            ResourceResponse response { WTFMove(url), WTFMove(mimeType), static_cast<long long>(buffer->size()), MIMETypeRegistry::isTextMIMEType(mimeType) ? "UTF-8"_s : String() };
             response.setHTTPStatusCode(200);
             response.setHTTPStatusText("OK"_s);
             response.setSource(ResourceResponse::Source::Network);

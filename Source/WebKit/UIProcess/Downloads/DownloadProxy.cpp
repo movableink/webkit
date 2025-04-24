@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -62,7 +62,7 @@ DownloadProxy::DownloadProxy(DownloadProxyMap& downloadProxyMap, WebsiteDataStor
     , m_downloadID(DownloadID::generate())
     , m_request(resourceRequest)
     , m_originatingPage(originatingPage)
-    , m_frameInfo(frameInfoData ? API::FrameInfo::create(FrameInfoData { *frameInfoData }, originatingPage) : API::FrameInfo::create(legacyEmptyFrameInfo(ResourceRequest { aboutBlankURL() }), originatingPage))
+    , m_frameInfo(frameInfoData ? API::FrameInfo::create(FrameInfoData { *frameInfoData }, originatingPage) : API::FrameInfo::create(legacyEmptyFrameInfo(ResourceRequest { URL { aboutBlankURL() } }), originatingPage))
 #if HAVE(MODERN_DOWNLOADPROGRESS)
     , m_assertion(ProcessAssertion::create(getCurrentProcessID(), "WebKit DownloadProxy DecideDestination"_s, ProcessAssertionType::FinishTaskInterruptable))
 #endif

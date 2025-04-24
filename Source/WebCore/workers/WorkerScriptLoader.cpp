@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2009-2025 Apple Inc. All Rights Reserved.
  * Copyright (C) 2009, 2011 Google Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -191,7 +191,7 @@ const URL& WorkerScriptLoader::responseURL() const
 
 std::unique_ptr<ResourceRequest> WorkerScriptLoader::createResourceRequest(const String& initiatorIdentifier)
 {
-    auto request = makeUnique<ResourceRequest>(m_url);
+    auto request = makeUnique<ResourceRequest>(URL { m_url });
     request->setHTTPMethod("GET"_s);
     request->setInitiatorIdentifier(initiatorIdentifier);
     return request;

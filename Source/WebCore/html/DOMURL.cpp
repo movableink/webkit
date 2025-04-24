@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Simon Hausmann <hausmann@kde.org>
- * Copyright (C) 2003, 2006, 2007, 2008, 2009, 2010, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *           (C) 2006 Graham Dennis (graham.dennis@gmail.com)
  * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2012 Motorola Mobility Inc.
@@ -123,12 +123,12 @@ URLSearchParams& DOMURL::searchParams()
 void DOMURL::revokeObjectURL(ScriptExecutionContext& scriptExecutionContext, const String& urlString)
 {
     URL url { urlString };
-    ResourceRequest request(url);
+    ResourceRequest request(WTFMove(url));
     request.setDomainForCachePartition(scriptExecutionContext.domainForCachePartition());
 
     MemoryCache::removeRequestFromSessionCaches(scriptExecutionContext, request);
 
-    scriptExecutionContext.publicURLManager().revoke(url);
+    scriptExecutionContext.publicURLManager().revoke(request.url());
 }
 
 } // namespace WebCore

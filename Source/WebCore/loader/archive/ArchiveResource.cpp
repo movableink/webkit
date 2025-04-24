@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,7 +49,7 @@ RefPtr<ArchiveResource> ArchiveResource::create(RefPtr<FragmentedSharedBuffer>&&
     if (!data)
         return nullptr;
     if (response.isNull()) {
-        ResourceResponse syntheticResponse(url, mimeType, data->size(), textEncoding);
+        ResourceResponse syntheticResponse(URL { url }, String { mimeType }, data->size(), String { textEncoding });
         // Provide a valid HTTP status code for http URLs since we have logic in WebCore that validates it.
         if (url.protocolIsInHTTPFamily())
             syntheticResponse.setHTTPStatusCode(200);

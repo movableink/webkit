@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -101,7 +101,7 @@ void EarlyHintsResourceLoader::handleEarlyHintsResponse(ResourceResponse&& respo
 
 ResourceRequest EarlyHintsResourceLoader::constructPreconnectRequest(const ResourceRequest& originalRequest, const URL& url)
 {
-    ResourceRequest request { url };
+    ResourceRequest request { URL { url } };
 
     // firstPartyForCookies and user agent are part of the HTTP socket pool keys in CFNetwork: rdar://59434166
     auto firstPartyForCookies = originalRequest.firstPartyForCookies();

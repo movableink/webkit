@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -111,7 +111,7 @@ void NetworkExtensionContentFilter::willSendRequest(ResourceRequest& request, co
         return;
     }
 
-    request.setURL(modifiedRequestURL);
+    request.setURL(WTFMove(modifiedRequestURL));
 }
 
 void NetworkExtensionContentFilter::responseReceived(const ResourceResponse& response)

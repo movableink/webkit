@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -416,7 +416,7 @@ void SystemPreviewController::begin(const URL& url, const WebCore::SecurityOrigi
         if (!webPageProxy)
             return completionHandler();
         RELEASE_LOG(SystemPreview, "SystemPreview began on %lld", protectedThis->m_systemPreviewInfo.element.elementIdentifier ? protectedThis->m_systemPreviewInfo.element.elementIdentifier->toUInt64() : 0);
-        auto request = WebCore::ResourceRequest(url);
+        auto request = WebCore::ResourceRequest(URL { url });
         bool shouldRunAtForegroundPriority = false;
         webPageProxy->dataTaskWithRequest(WTFMove(request), topOrigin, shouldRunAtForegroundPriority, [weakThis, completionHandler = WTFMove(completionHandler)] (Ref<API::DataTask>&& task) mutable {
             if (!weakThis)

@@ -88,7 +88,6 @@ public:
 
     WEBCORE_EXPORT const URL& url() const;
     WEBCORE_EXPORT void setURL(URL&&);
-    WEBCORE_EXPORT void setURL(const URL&);
 
     WEBCORE_EXPORT const String& mimeType() const;
     WEBCORE_EXPORT void setMimeType(String&&);
@@ -234,8 +233,6 @@ protected:
 
     WEBCORE_EXPORT ResourceResponseBase();
     WEBCORE_EXPORT ResourceResponseBase(URL&&, String&& mimeType, long long expectedLength, String&& textEncodingName);
-    WEBCORE_EXPORT ResourceResponseBase(URL&&, String&& mimeType, long long expectedLength, const String& textEncodingName);
-    WEBCORE_EXPORT ResourceResponseBase(const URL&, const String& mimeType, long long expectedLength, const String& textEncodingName);
 
     WEBCORE_EXPORT void lazyInit(InitLevel) const;
 

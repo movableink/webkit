@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -2143,7 +2143,7 @@ void NetworkSessionCocoa::loadImageForDecoding(WebCore::ResourceRequest&& reques
         void wasBlockedByDisabledFTP() final { completeWithBlockedError(); }
         void completeWithBlockedError()
         {
-            didCompleteWithError(blockedError({ m_url }), WebCore::NetworkLoadMetrics { });
+            didCompleteWithError(blockedError({ URL { m_url } }), WebCore::NetworkLoadMetrics { });
         }
 
         RefPtr<Client> m_selfReference;

@@ -138,16 +138,6 @@ void ResourceRequestBase::setURL(URL&& url, bool didFilterLinkDecoration)
     m_platformRequestUpdated = false;
 }
 
-void ResourceRequestBase::setURL(const URL& url, bool didFilterLinkDecoration)
-{ 
-    updateResourceRequest(); 
-
-    m_requestData.m_url = url;
-    m_requestData.m_didFilterLinkDecoration = didFilterLinkDecoration;
-    
-    m_platformRequestUpdated = false;
-}
-
 static bool shouldUseGet(const ResourceRequestBase& request, const ResourceResponse& redirectResponse)
 {
     if (equalLettersIgnoringASCIICase(request.httpMethod(), "get"_s) || equalLettersIgnoringASCIICase(request.httpMethod(), "head"_s))

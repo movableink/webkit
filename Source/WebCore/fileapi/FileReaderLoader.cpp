@@ -100,7 +100,7 @@ void FileReaderLoader::start(ScriptExecutionContext* scriptExecutionContext, con
     ThreadableBlobRegistry::registerBlobURL(securityOrigin.get(), scriptExecutionContext->policyContainer(), m_urlForReading, blobURL);
 
     // Construct and load the request.
-    ResourceRequest request(m_urlForReading);
+    ResourceRequest request(URL { m_urlForReading });
     request.setHTTPMethod("GET"_s);
     request.setHiddenFromInspector(true);
 

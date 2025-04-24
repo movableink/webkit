@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009, 2012 Ericsson AB. All rights reserved.
- * Copyright (C) 2010, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2011, Code Aurora Forum. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -95,7 +95,7 @@ void EventSource::connect()
     ASSERT(m_state == CONNECTING);
     ASSERT(!m_requestInFlight);
 
-    ResourceRequest request { m_url };
+    ResourceRequest request { URL { m_url } };
     request.setRequester(ResourceRequestRequester::EventSource);
     request.setHTTPMethod("GET"_s);
     request.setHTTPHeaderField(HTTPHeaderName::Accept, "text/event-stream"_s);

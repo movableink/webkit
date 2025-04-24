@@ -1,6 +1,6 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -114,7 +114,7 @@ CachedImage* CSSImageValue::loadImage(CachedResourceLoader& loader, const Resour
         ResourceLoaderOptions loadOptions = options;
         CSS::applyModifiersToLoaderOptions(m_location.modifiers, loadOptions);
 
-        CachedResourceRequest request(ResourceRequest(m_location.resolved), loadOptions);
+        CachedResourceRequest request(ResourceRequest(URL { m_location.resolved }), loadOptions);
         if (m_initiatorType.isEmpty())
             request.setInitiatorType(cachedResourceRequestInitiatorTypes().css);
         else
