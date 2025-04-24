@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,20 +28,34 @@
 
 #if LIBPAS_ENABLED
 
-#include <stdlib.h>
-#include <stdbool.h>
-#include <unistd.h>
-#include <sys/mman.h>
-#include "pas_utils.h"
-#include "pas_heap.h"
 #include "pas_probabilistic_guard_malloc_allocator.h"
-#include "pas_large_heap.h"
-#include "pas_ptr_hash_map.h"
+
 #include "iso_heap_config.h"
-#include "pas_utility_heap.h"
+#include "pas_heap.h"
+#include "pas_large_heap.h"
 #include "pas_large_utility_free_heap.h"
+#include "pas_ptr_hash_map.h"
 #include "pas_random.h"
+#include "pas_utility_heap.h"
+#include "pas_utility_heap_support.h"
+#include "pas_utils.h"
+#include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <unistd.h>
+
+/* PlayStation does not currently support the backtrace API. */
+#if !PAS_PLATFORM(PLAYSTATION)
+#include <execinfo.h>
+#else
+size_t backtrace(void** buffer, size_t size)
+{
+    PAS_UNUSED_PARAM(buffer);
+    PAS_UNUSED_PARAM(size);
+    return 0;
+}
+#endif
 
 static size_t free_wasted_mem  = PAS_PGM_MAX_WASTED_MEMORY;
 static size_t free_virtual_mem = PAS_PGM_MAX_VIRTUAL_MEMORY;
@@ -187,15 +201,18 @@ pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* la
     pas_pgm_storage* value = pas_utility_heap_try_allocate(sizeof(pas_pgm_storage), "pas_pgm_hash_map_VALUE");
     PAS_ASSERT(value);
 
-    value->mem_to_waste                = mem_to_waste;
-    value->size_of_data_pages          = mem_to_alloc - (lower_guard_size + upper_guard_size);
-    value->start_of_data_pages         = result.begin + lower_guard_size;
-    value->size_of_allocated_pages     = mem_to_alloc;
-    value->start_of_allocated_pages    = result.begin;
-    value->allocation_size_requested   = size;
-    value->page_size                   = page_size;
-    value->large_heap                  = large_heap;
-    value->right_align                 = right_align;
+    value->alloc_backtrace              = pas_utility_heap_allocate(sizeof(pas_backtrace_metadata), "pas_alloc_backtrace_metadata");
+    value->alloc_backtrace->frame_size  = backtrace(value->alloc_backtrace->backtrace_buffer, PGM_BACKTRACE_MAX_FRAMES);
+    value->dealloc_backtrace            = NULL;
+    value->mem_to_waste                 = mem_to_waste;
+    value->size_of_data_pages           = mem_to_alloc - (lower_guard_size + upper_guard_size);
+    value->start_of_data_pages          = result.begin + lower_guard_size;
+    value->size_of_allocated_pages      = mem_to_alloc;
+    value->start_of_allocated_pages     = result.begin;
+    value->allocation_size_requested    = size;
+    value->page_size                    = page_size;
+    value->large_heap                   = large_heap;
+    value->right_align                  = right_align;
 
     pas_ptr_hash_map_add_result add_result = pas_ptr_hash_map_add(&pas_pgm_hash_map, (void*)key, NULL, &pas_large_utility_free_heap_allocation_config);
     PAS_ASSERT(add_result.is_new_entry);
@@ -237,6 +254,10 @@ void pas_probabilistic_guard_malloc_deallocate(void* mem)
     int mprotect_res = mprotect((void*)value->start_of_data_pages, value->size_of_data_pages, PROT_NONE);
     PAS_ASSERT(!mprotect_res);
 
+    /* grab some memory for dealloc backtrace and capture deallocation backtrace */
+    value->dealloc_backtrace = pas_utility_heap_allocate(sizeof(pas_backtrace_metadata), "pas_dealloc_backtrace_metadata");
+    value->dealloc_backtrace->frame_size = backtrace(value->dealloc_backtrace->backtrace_buffer, PGM_BACKTRACE_MAX_FRAMES);
+
     /*
      * ensure physical addresses are released
      * TODO: investigate using MADV_FREE_REUSABLE instead
@@ -254,7 +275,10 @@ void pas_probabilistic_guard_malloc_deallocate(void* mem)
     value->free_status = true;
     pas_ptr_hash_map_entry* old_entry = &pgm_metadata_vector[pgm_metadata_index];
     if (old_entry->key) {
-        pas_utility_heap_deallocate(old_entry->value);
+        pas_pgm_storage* old_pas_pgm_storage = (pas_pgm_storage*)(old_entry->value);
+        pas_utility_heap_deallocate((void*)old_pas_pgm_storage->alloc_backtrace);
+        pas_utility_heap_deallocate((void*)old_pas_pgm_storage->dealloc_backtrace);
+        pas_utility_heap_deallocate((void*)old_pas_pgm_storage);
         bool removed = pas_ptr_hash_map_remove(&pas_pgm_hash_map, (void*)old_entry->key, NULL, &pas_large_utility_free_heap_allocation_config);
         PAS_ASSERT(removed);
     }
