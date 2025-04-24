@@ -59,11 +59,6 @@ namespace JSC { namespace IPInt {
         return encodeResult(first, second); \
     } while (false)
 
-#define WASM_THROW(callFrame, exceptionType) do { \
-        callFrame->setArgumentCountIncludingThis(static_cast<int>(exceptionType)); \
-        WASM_RETURN_TWO(LLInt::wasmExceptionInstructions(), 0); \
-    } while (false)
-
 #define WASM_CALL_RETURN(targetInstance, callTarget) do { \
         static_assert(callTarget.getTag() == WasmEntryPtrTag); \
         callTarget.validate(); \
@@ -73,24 +68,23 @@ namespace JSC { namespace IPInt {
 #define IPINT_CALLEE(callFrame) \
     static_cast<Wasm::IPIntCallee*>(callFrame->callee().asNativeCallee())
 
-// For operation calls that may throw an exception, we return (0, <val>)
-// if it is fine, and (SlowPathExceptionTag, <exception value>) if it is not
-// FIXME: match what JS does on 64-bit? i.e. return (<exception>, SlowPathExceptionTag) and (payload, tag) on JSVALUE32_54
+// For operation calls that may throw an exception, we return (<val>, 0)
+// if it is fine, and (<exception value>, SlowPathExceptionTag) if it is not
 
 #define EXCEPTION_VALUE(type) \
     std::bit_cast<void*>(static_cast<uintptr_t>(type))
 
 #define IPINT_THROW(type) \
-    WASM_RETURN_TWO(std::bit_cast<void*>(SlowPathExceptionTag), EXCEPTION_VALUE(type))
+    WASM_RETURN_TWO(EXCEPTION_VALUE(type), std::bit_cast<void*>(SlowPathExceptionTag))
 
 #define IPINT_END() WASM_RETURN_TWO(0, 0);
 
 #if CPU(ADDRESS64)
 #define IPINT_RETURN(value) \
-    WASM_RETURN_TWO(0, std::bit_cast<void*>(value));
+    WASM_RETURN_TWO(std::bit_cast<void*>(value), 0);
 #else
 #define IPINT_RETURN(value) \
-    WASM_RETURN_TWO(std::bit_cast<void*>(JSValue::decode(value).tag()), std::bit_cast<void*>(JSValue::decode(value).payload()));
+    WASM_RETURN_TWO(std::bit_cast<void*>(JSValue::decode(value).payload()), std::bit_cast<void*>(JSValue::decode(value).tag()));
 #endif
 
 #if ENABLE(WEBASSEMBLY_BBQJIT)
@@ -942,16 +936,16 @@ WASM_IPINT_EXTERN_CPP_DECL(prepare_call_indirect, CallFrame* callFrame, Wasm::Fu
     Wasm::FuncRefTable* table = instance->table(tableIndex)->asFuncrefTable();
 
     if (*functionIndex >= table->length())
-        WASM_THROW(callFrame, Wasm::ExceptionType::OutOfBoundsCallIndirect);
+        IPINT_THROW(Wasm::ExceptionType::OutOfBoundsCallIndirect);
 
     const Wasm::FuncRefTable::Function& function = table->function(*functionIndex);
 
     if (function.m_function.typeIndex == Wasm::TypeDefinition::invalidIndex)
-        WASM_THROW(callFrame, Wasm::ExceptionType::NullTableEntry);
+        IPINT_THROW(Wasm::ExceptionType::NullTableEntry);
 
     const auto& callSignature = static_cast<Wasm::IPIntCallee*>(callFrame->callee().asNativeCallee())->signature(typeIndex);
     if (!Wasm::isSubtypeIndex(function.m_function.typeIndex, callSignature.index()))
-        WASM_THROW(callFrame, Wasm::ExceptionType::BadSignature);
+        IPINT_THROW(Wasm::ExceptionType::BadSignature);
 
     Register* calleeReturn = std::bit_cast<Register*>(functionIndex);
     EncodedJSValue boxedCallee = CalleeBits::encodeNullCallee();
@@ -980,7 +974,7 @@ WASM_IPINT_EXTERN_CPP_DECL(prepare_call_ref, CallFrame* callFrame, Wasm::TypeInd
     JSValue targetReference = JSValue::decode(sp->ref);
 
     if (targetReference.isNull())
-        WASM_THROW(callFrame, Wasm::ExceptionType::NullReference);
+        IPINT_THROW(Wasm::ExceptionType::NullReference);
 
     ASSERT(targetReference.isObject());
     JSObject* referenceAsObject = jsCast<JSObject*>(targetReference);

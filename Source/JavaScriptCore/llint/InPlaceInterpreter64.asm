@@ -177,18 +177,6 @@ macro popFloat64(reg)
     popv reg
 end
 
-# Call site tracking
-
-macro saveCallSiteIndex()
-if X86_64
-    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
-end
-    loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
-    move PC, t1
-    subq t0, t1
-    storei t1, CallSiteIndex[cfr]
-end
-
 # Entering IPInt
 
 # MC = location in argumINT bytecode
@@ -581,8 +569,7 @@ ipintOp(_call_indirect, macro()
     move MC, a3
     advanceMC(IPInt::CallIndirectMetadata::signature)
 
-    operationCall(macro() cCall4(_ipint_extern_prepare_call_indirect) end)
-    btpz r1, _wasm_throw_from_slow_path_trampoline
+    operationCallMayThrow(macro() cCall4(_ipint_extern_prepare_call_indirect) end)
 
     loadq [sp], IPIntCallCallee
     loadq 8[sp], IPIntCallFunctionSlot
@@ -628,8 +615,7 @@ ipintOp(_return_call_indirect, macro()
     # Get callIndirectMetadata
     move cfr, a1
     move MC, a3
-    operationCall(macro() cCall4(_ipint_extern_prepare_call_indirect) end)
-    btpz r1, _wasm_throw_from_slow_path_trampoline
+    operationCallMayThrow(macro() cCall4(_ipint_extern_prepare_call_indirect) end)
 
     loadq [sp], IPIntCallCallee
     loadq 8[sp], IPIntCallFunctionSlot
@@ -647,8 +633,7 @@ ipintOp(_call_ref, macro()
     loadi IPInt::CallRefMetadata::typeIndex[MC], a2
     move sp, a3
 
-    operationCall(macro() cCall4(_ipint_extern_prepare_call_ref) end)
-    btpz r1, _wasm_throw_from_slow_path_trampoline
+    operationCallMayThrow(macro() cCall4(_ipint_extern_prepare_call_ref) end)
     loadq [sp], IPIntCallCallee
     loadq 8[sp], IPIntCallFunctionSlot
     addq 16, sp
@@ -669,8 +654,7 @@ ipintOp(_return_call_ref, macro()
     move cfr, a1
     loadi IPInt::TailCallRefMetadata::typeIndex[MC], a2
     move sp, a3
-    operationCall(macro() cCall4(_ipint_extern_prepare_call_ref) end)
-    btpz r1, _wasm_throw_from_slow_path_trampoline
+    operationCallMayThrow(macro() cCall4(_ipint_extern_prepare_call_ref) end)
     loadq [sp], IPIntCallCallee
     loadq 8[sp], IPIntCallFunctionSlot
     addq 16, sp
@@ -888,7 +872,7 @@ ipintOp(_table_get, macro()
 
     operationCallMayThrow(macro() cCall3(_ipint_extern_table_get) end)
 
-    pushQuad(r1)
+    pushQuad(r0)
 
     loadb IPInt::Const32Metadata::instructionLength[MC], t0
 
@@ -3100,7 +3084,7 @@ ipintOp(_ref_func, macro()
     move wasmInstance, a0
     loadi IPInt::Const32Metadata::value[MC], a1
     operationCall(macro() cCall2(_ipint_extern_ref_func) end)
-    pushQuad(r1)
+    pushQuad(r0)
     loadb IPInt::Const32Metadata::instructionLength[MC], t0
     advancePC(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))
@@ -3270,10 +3254,10 @@ ipintOp(_struct_new, macro()
     loadp IPInt::StructNewMetadata::typeIndex[MC], a1  # type index
     move sp, a2
     operationCallMayThrow(macro() cCall3(_ipint_extern_struct_new) end)
-    loadh IPInt::StructNewMetadata::params[MC], t0  # number of parameters popped
-    mulq StackValueSize, t0
-    addq t0, sp
-    pushQuad(r1)
+    loadh IPInt::StructNewMetadata::params[MC], t1  # number of parameters popped
+    mulq StackValueSize, t1
+    addq t1, sp
+    pushQuad(r0)
     loadb IPInt::StructNewMetadata::length[MC], t0
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::StructNewMetadata)))
@@ -3283,7 +3267,7 @@ end)
 ipintOp(_struct_new_default, macro()
     loadp IPInt::StructNewDefaultMetadata::typeIndex[MC], a1  # type index
     operationCallMayThrow(macro() cCall2(_ipint_extern_struct_new_default) end)
-    pushQuad(r1)
+    pushQuad(r0)
     loadb IPInt::StructNewDefaultMetadata::length[MC], t0
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::StructNewDefaultMetadata)))
@@ -3294,7 +3278,7 @@ ipintOp(_struct_get, macro()
     popQuad(a1)  # object
     loadi IPInt::StructGetSetMetadata::fieldIndex[MC], a2  # field index
     operationCallMayThrow(macro() cCall3(_ipint_extern_struct_get) end)
-    pushQuad(r1)
+    pushQuad(r0)
 
     loadb IPInt::StructGetSetMetadata::length[MC], t0
     advancePCByReg(t0)
@@ -3306,7 +3290,7 @@ ipintOp(_struct_get_s, macro()
     popQuad(a1)  # object
     loadi IPInt::StructGetSetMetadata::fieldIndex[MC], a2  # field index
     operationCallMayThrow(macro() cCall3(_ipint_extern_struct_get_s) end)
-    pushQuad(r1)
+    pushQuad(r0)
 
     loadb IPInt::StructGetSetMetadata::length[MC], t0
     advancePCByReg(t0)
@@ -3318,7 +3302,7 @@ ipintOp(_struct_get_u, macro()
     popQuad(a1)  # object
     loadi IPInt::StructGetSetMetadata::fieldIndex[MC], a2  # field index
     operationCallMayThrow(macro() cCall3(_ipint_extern_struct_get) end)
-    pushQuad(r1)
+    pushQuad(r0)
 
     loadb IPInt::StructGetSetMetadata::length[MC], t0
     advancePCByReg(t0)
@@ -3345,7 +3329,7 @@ ipintOp(_array_new, macro()
     popQuad(a2)  # default value
     operationCallMayThrow(macro() cCall4(_ipint_extern_array_new) end)
 
-    pushQuad(r1)
+    pushQuad(r0)
 
     loadb IPInt::ArrayNewMetadata::length[MC], t0
     advancePCByReg(t0)
@@ -3358,7 +3342,7 @@ ipintOp(_array_new_default, macro()
     popInt32(a2, t0)  # length
     operationCallMayThrow(macro() cCall3(_ipint_extern_array_new_default) end)
 
-    pushQuad(r1)
+    pushQuad(r0)
 
     loadb IPInt::ArrayNewMetadata::length[MC], t0
     advancePCByReg(t0)
@@ -3377,7 +3361,7 @@ ipintOp(_array_new_fixed, macro()
     lshifti StackValueShift, t3
     addp t3, sp
 
-    pushQuad(r1)
+    pushQuad(r0)
 
     loadb IPInt::ArrayNewFixedMetadata::length[MC], t0
     advancePCByReg(t0)
@@ -3391,7 +3375,7 @@ ipintOp(_array_new_data, macro()
     popInt32(a2, t0)  # offset
     operationCallMayThrow(macro() cCall4(_ipint_extern_array_new_data) end)
 
-    pushQuad(r1)
+    pushQuad(r0)
 
     loadb IPInt::ArrayNewDataMetadata::length[MC], t0
     advancePCByReg(t0)
@@ -3405,7 +3389,7 @@ ipintOp(_array_new_elem, macro()
     popInt32(a2, t0)  # offset
     operationCallMayThrow(macro() cCall4(_ipint_extern_array_new_elem) end)
 
-    pushQuad(r1)
+    pushQuad(r0)
 
     loadb IPInt::ArrayNewElemMetadata::length[MC], t0
     advancePCByReg(t0)
@@ -3419,7 +3403,7 @@ ipintOp(_array_get, macro()
     popQuad(a2)  # array
     operationCallMayThrow(macro() cCall4(_ipint_extern_array_get) end)
 
-    pushQuad(r1)
+    pushQuad(r0)
 
     loadb IPInt::ArrayGetSetMetadata::length[MC], t0
     advancePCByReg(t0)
@@ -3433,7 +3417,7 @@ ipintOp(_array_get_s, macro()
     popQuad(a2)  # array
     operationCallMayThrow(macro() cCall4(_ipint_extern_array_get_s) end)
 
-    pushQuad(r1)
+    pushQuad(r0)
 
     loadb IPInt::ArrayGetSetMetadata::length[MC], t0
     advancePCByReg(t0)
@@ -3447,7 +3431,7 @@ ipintOp(_array_get_u, macro()
     popQuad(a2)  # array
     operationCallMayThrow(macro() cCall4(_ipint_extern_array_get) end)
 
-    pushQuad(r1)
+    pushQuad(r0)
 
     loadb IPInt::ArrayGetSetMetadata::length[MC], t0
     advancePCByReg(t0)
@@ -3536,7 +3520,7 @@ ipintOp(_ref_test, macro()
     popQuad(a3)
     operationCall(macro() cCall3(_ipint_extern_ref_test) end)
 
-    pushInt32(r1)
+    pushInt32(r0)
 
     loadb IPInt::RefTestCastMetadata::length[MC], t0
     advancePCByReg(t0)
@@ -3550,7 +3534,7 @@ ipintOp(_ref_test_nullable, macro()
     popQuad(a3)
     operationCall(macro() cCall3(_ipint_extern_ref_test) end)
 
-    pushInt32(r1)
+    pushInt32(r0)
 
     loadb IPInt::RefTestCastMetadata::length[MC], t0
     advancePCByReg(t0)
@@ -3564,7 +3548,7 @@ ipintOp(_ref_cast, macro()
     popQuad(a3)
     operationCallMayThrow(macro() cCall3(_ipint_extern_ref_cast) end)
 
-    pushInt32(r1)
+    pushInt32(r0)
 
     loadb IPInt::RefTestCastMetadata::length[MC], t0
     advancePCByReg(t0)
@@ -3578,7 +3562,7 @@ ipintOp(_ref_cast_nullable, macro()
     popQuad(a3)
     operationCallMayThrow(macro() cCall3(_ipint_extern_ref_cast) end)
 
-    pushInt32(r1)
+    pushInt32(r0)
 
     loadb IPInt::RefTestCastMetadata::length[MC], t0
     advancePCByReg(t0)
@@ -3596,7 +3580,7 @@ ipintOp(_br_on_cast, macro()
 
     advanceMC(constexpr (sizeof(IPInt::RefTestCastMetadata)))
     
-    bineq r1, 0, _ipint_br
+    bineq r0, 0, _ipint_br
     loadb IPInt::BranchMetadata::instructionLength[MC], t0
     advanceMC(constexpr (sizeof(IPInt::BranchMetadata)))
     advancePCByReg(t0)
@@ -3613,7 +3597,7 @@ ipintOp(_br_on_cast_fail, macro()
 
     advanceMC(constexpr (sizeof(IPInt::RefTestCastMetadata)))
     
-    bieq r1, 0, _ipint_br
+    bieq r0, 0, _ipint_br
     loadb IPInt::BranchMetadata::instructionLength[MC], t0
     advanceMC(constexpr (sizeof(IPInt::BranchMetadata)))
     advancePCByReg(t0)
@@ -3623,7 +3607,7 @@ end)
 ipintOp(_any_convert_extern, macro()
     popQuad(a1)
     operationCall(macro() cCall2(_ipint_extern_any_convert_extern) end)
-    pushQuad(r1)
+    pushQuad(r0)
     advancePC(2)
     nextIPIntInstruction()
 end)
@@ -4104,7 +4088,7 @@ ipintOp(_table_grow, macro()
     move MC, a2 # IPInt::tableGrowMetadata
     operationCall(macro() cCall3(_ipint_extern_table_grow) end)
     addp 2*StackValueSize, sp
-    pushQuad(t0)
+    pushQuad(r0)
     loadb IPInt::TableGrowMetadata::instructionLength[MC], t0
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::TableGrowMetadata)))
@@ -4115,7 +4099,7 @@ ipintOp(_table_size, macro()
     # table.size
     loadi IPInt::Const32Metadata::value[MC], a1
     operationCall(macro() cCall2(_ipint_extern_table_size) end)
-    pushQuad(t0)
+    pushQuad(r0)
     loadb IPInt::Const32Metadata::instructionLength[MC], t0
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::Const32Metadata)))

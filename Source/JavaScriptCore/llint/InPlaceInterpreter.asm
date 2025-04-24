@@ -324,6 +324,18 @@ macro ipintReloadMemory()
     end
 end
 
+# Call site tracking
+
+macro saveCallSiteIndex()
+if X86_64
+    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
+end
+    loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
+    negp t0
+    addp PC, t0
+    storei t0, CallSiteIndex[cfr]
+end
+
 # Operation Calls
 
 macro operationCall(fn)
@@ -347,10 +359,7 @@ macro operationCall(fn)
 end
 
 macro operationCallMayThrow(fn)
-    loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
-    negp t0
-    addp PC, t0
-    storei t0, CallSiteIndex[cfr]
+    saveCallSiteIndex()
 
     move wasmInstance, a0
     push PC, MC
@@ -360,8 +369,8 @@ macro operationCallMayThrow(fn)
         push PL, IB
     end
     fn()
-    bpneq r0, (constexpr JSC::IPInt::SlowPathExceptionTag), .continuation
-    storei r1, ArgumentCountIncludingThis + PayloadOffset[cfr]
+    bpneq r1, (constexpr JSC::IPInt::SlowPathExceptionTag), .continuation
+    storei r0, ArgumentCountIncludingThis + PayloadOffset[cfr]
     jmp _wasm_throw_from_slow_path_trampoline
 .continuation:
     if ARM64 or ARM64E
