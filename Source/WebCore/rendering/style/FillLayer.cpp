@@ -78,10 +78,6 @@ FillLayer::FillLayer(FillLayerType type)
     , m_repeatSet(false)
     , m_xPosSet(false)
     , m_yPosSet(false)
-    , m_backgroundXOriginSet(false)
-    , m_backgroundYOriginSet(false)
-    , m_backgroundXOrigin(static_cast<unsigned>(Edge::Left))
-    , m_backgroundYOrigin(static_cast<unsigned>(Edge::Top))
     , m_compositeSet(false)
     , m_blendModeSet(false)
     , m_maskModeSet(false)
@@ -109,10 +105,6 @@ FillLayer::FillLayer(const FillLayer& o)
     , m_repeatSet(o.m_repeatSet)
     , m_xPosSet(o.m_xPosSet)
     , m_yPosSet(o.m_yPosSet)
-    , m_backgroundXOriginSet(o.m_backgroundXOriginSet)
-    , m_backgroundYOriginSet(o.m_backgroundYOriginSet)
-    , m_backgroundXOrigin(o.m_backgroundXOrigin)
-    , m_backgroundYOrigin(o.m_backgroundYOrigin)
     , m_compositeSet(o.m_compositeSet)
     , m_blendModeSet(o.m_blendModeSet)
     , m_maskModeSet(o.m_maskModeSet)
@@ -138,10 +130,6 @@ FillLayer& FillLayer::operator=(const FillLayer& o)
     m_image = o.m_image;
     m_xPosition = o.m_xPosition;
     m_yPosition = o.m_yPosition;
-    m_backgroundXOrigin = o.m_backgroundXOrigin;
-    m_backgroundYOrigin = o.m_backgroundYOrigin;
-    m_backgroundXOriginSet = o.m_backgroundXOriginSet;
-    m_backgroundYOriginSet = o.m_backgroundYOriginSet;
     m_sizeLength = o.m_sizeLength;
     m_repeat = o.m_repeat;
     m_attachment = o.m_attachment;
@@ -173,7 +161,6 @@ bool FillLayer::operator==(const FillLayer& o) const
     // We do not check the "isSet" booleans for each property, since those are only used during initial construction
     // to propagate patterns into layers. All layer comparisons happen after values have all been filled in anyway.
     return arePointingToEqualData(m_image.get(), o.m_image.get()) && m_xPosition == o.m_xPosition && m_yPosition == o.m_yPosition
-        && m_backgroundXOrigin == o.m_backgroundXOrigin && m_backgroundYOrigin == o.m_backgroundYOrigin
         && m_attachment == o.m_attachment && m_clip == o.m_clip && m_composite == o.m_composite
         && m_blendMode == o.m_blendMode && m_origin == o.m_origin && m_repeat == o.m_repeat
         && m_sizeType == o.m_sizeType && m_maskMode == o.m_maskMode
@@ -189,10 +176,6 @@ void FillLayer::fillUnsetProperties()
         // We need to fill in the remaining values with the pattern specified.
         for (FillLayer* pattern = this; curr; curr = curr->next()) {
             curr->m_xPosition = pattern->m_xPosition;
-            if (pattern->isBackgroundXOriginSet())
-                curr->m_backgroundXOrigin = pattern->m_backgroundXOrigin;
-            if (pattern->isBackgroundYOriginSet())
-                curr->m_backgroundYOrigin = pattern->m_backgroundYOrigin;
             pattern = pattern->next();
             if (pattern == curr || !pattern)
                 pattern = this;
@@ -204,10 +187,6 @@ void FillLayer::fillUnsetProperties()
         // We need to fill in the remaining values with the pattern specified.
         for (FillLayer* pattern = this; curr; curr = curr->next()) {
             curr->m_yPosition = pattern->m_yPosition;
-            if (pattern->isBackgroundXOriginSet())
-                curr->m_backgroundXOrigin = pattern->m_backgroundXOrigin;
-            if (pattern->isBackgroundYOriginSet())
-                curr->m_backgroundYOrigin = pattern->m_backgroundYOrigin;
             pattern = pattern->next();
             if (pattern == curr || !pattern)
                 pattern = this;
@@ -429,10 +408,6 @@ TextStream& operator<<(TextStream& ts, const FillLayer& layer)
     ts.endGroup();
 
     ts.dumpProperty("size"_s, layer.size());
-
-    ts.startGroup();
-    ts << "background-origin "_s << layer.backgroundXOrigin() << ' ' << layer.backgroundYOrigin();
-    ts.endGroup();
 
     ts.dumpProperty("repeat"_s, layer.repeat());
     ts.dumpProperty("clip"_s, layer.clip());

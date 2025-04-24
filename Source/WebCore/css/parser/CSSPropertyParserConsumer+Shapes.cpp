@@ -153,7 +153,7 @@ static std::optional<CSS::AbsoluteControlPoint> consumeAbsoluteControlPoint(CSSP
     if (auto relativeControlPoint = consumeRelativeControlPoint(range, state)) {
         return CSS::AbsoluteControlPoint {
             .offset = CSS::Position {
-                CSS::TwoComponentPosition {
+                CSS::TwoComponentPositionHorizontalVertical {
                     { relativeControlPoint->offset.x() },
                     { relativeControlPoint->offset.y() }
                 }

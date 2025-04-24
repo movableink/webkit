@@ -529,19 +529,6 @@ static inline std::optional<LayoutUnit> getSpace(LayoutUnit areaSize, LayoutUnit
     return std::nullopt;
 }
 
-static LayoutUnit resolveEdgeRelativeLength(const Length& length, Edge edge, LayoutUnit availableSpace, const LayoutSize& areaSize, const LayoutSize& tileSize)
-{
-    LayoutUnit result = minimumValueForLength(length, availableSpace);
-
-    if (edge == Edge::Right)
-        return areaSize.width() - tileSize.width() - result;
-
-    if (edge == Edge::Bottom)
-        return areaSize.height() - tileSize.height() - result;
-
-    return result;
-}
-
 static void pixelSnapBackgroundImageGeometryForPainting(LayoutRect& destinationRect, LayoutSize& tileSize, LayoutSize& phase, LayoutSize& space, float scaleFactor)
 {
     tileSize = LayoutSize(snapRectToDevicePixels(LayoutRect(destinationRect.location(), tileSize), scaleFactor).size());
@@ -655,7 +642,7 @@ BackgroundImageGeometry BackgroundPainter::calculateBackgroundImageGeometry(cons
 
     LayoutSize spaceSize;
     LayoutSize phase;
-    LayoutUnit computedXPosition = resolveEdgeRelativeLength(fillLayer.xPosition(), fillLayer.backgroundXOrigin(), availableWidth, positioningAreaSize, tileSize);
+    LayoutUnit computedXPosition = minimumValueForLength(fillLayer.xPosition(), availableWidth);
     if (backgroundRepeatX == FillRepeat::Round && positioningAreaSize.width() > 0 && tileSize.width() > 0) {
         int numTiles = std::max(1, roundToInt(positioningAreaSize.width() / tileSize.width()));
         if (fillLayer.size().size.height.isAuto() && backgroundRepeatY != FillRepeat::Round)
@@ -665,7 +652,7 @@ BackgroundImageGeometry BackgroundPainter::calculateBackgroundImageGeometry(cons
         phase.setWidth(tileSize.width() ? tileSize.width() - fmodf((computedXPosition + left), tileSize.width()) : 0);
     }
 
-    LayoutUnit computedYPosition = resolveEdgeRelativeLength(fillLayer.yPosition(), fillLayer.backgroundYOrigin(), availableHeight, positioningAreaSize, tileSize);
+    LayoutUnit computedYPosition = minimumValueForLength(fillLayer.yPosition(), availableHeight);
     if (backgroundRepeatY == FillRepeat::Round && positioningAreaSize.height() > 0 && tileSize.height() > 0) {
         int numTiles = std::max(1, roundToInt(positioningAreaSize.height() / tileSize.height()));
         if (fillLayer.size().size.width.isAuto() && backgroundRepeatX != FillRepeat::Round)

@@ -469,34 +469,19 @@ static inline Ref<CSSValue> valueForReflection(const StyleReflection* reflection
     return CSSReflectValue::create(toCSSValueID(reflection->direction()), offset.releaseNonNull(), valueForNinePieceImage(CSSPropertyWebkitBoxReflect, reflection->mask(), style));
 }
 
-static Ref<CSSValueList> createPositionListForLayer(CSSPropertyID propertyID, const FillLayer& layer, const RenderStyle& style)
+static Ref<CSSValueList> createPositionListForLayer(const FillLayer& layer, const RenderStyle& style)
 {
     CSSValueListBuilder list;
-    if (layer.isBackgroundXOriginSet() && layer.backgroundXOrigin() != Edge::Left) {
-        ASSERT_UNUSED(propertyID, propertyID == CSSPropertyBackgroundPosition || propertyID == CSSPropertyMaskPosition || propertyID == CSSPropertyWebkitMaskPosition);
-        list.append(createConvertingToCSSValueID(layer.backgroundXOrigin()));
-    }
     list.append(ComputedStyleExtractor::zoomAdjustedPixelValueForLength(layer.xPosition(), style));
-    if (layer.isBackgroundYOriginSet() && layer.backgroundYOrigin() != Edge::Top) {
-        ASSERT(propertyID == CSSPropertyBackgroundPosition || propertyID == CSSPropertyMaskPosition || propertyID == CSSPropertyWebkitMaskPosition);
-        list.append(createConvertingToCSSValueID(layer.backgroundYOrigin()));
-    }
     list.append(ComputedStyleExtractor::zoomAdjustedPixelValueForLength(layer.yPosition(), style));
     return CSSValueList::createSpaceSeparated(WTFMove(list));
 }
 
 static Ref<CSSValue> createSingleAxisPositionValueForLayer(CSSPropertyID propertyID, const FillLayer& layer, const RenderStyle& style)
 {
-    if (propertyID == CSSPropertyBackgroundPositionX || propertyID == CSSPropertyWebkitMaskPositionX) {
-        if (!layer.isBackgroundXOriginSet() || layer.backgroundXOrigin() == Edge::Left)
-            return ComputedStyleExtractor::zoomAdjustedPixelValueForLength(layer.xPosition(), style);
-        return CSSValueList::createSpaceSeparated(createConvertingToCSSValueID(layer.backgroundXOrigin()),
-            ComputedStyleExtractor::zoomAdjustedPixelValueForLength(layer.xPosition(), style));
-    }
-    if (!layer.isBackgroundYOriginSet() || layer.backgroundYOrigin() == Edge::Top)
-        return ComputedStyleExtractor::zoomAdjustedPixelValueForLength(layer.yPosition(), style);
-    return CSSValueList::createSpaceSeparated(createConvertingToCSSValueID(layer.backgroundYOrigin()),
-        ComputedStyleExtractor::zoomAdjustedPixelValueForLength(layer.yPosition(), style));
+    if (propertyID == CSSPropertyBackgroundPositionX || propertyID == CSSPropertyWebkitMaskPositionX)
+        return ComputedStyleExtractor::zoomAdjustedPixelValueForLength(layer.xPosition(), style);
+    return ComputedStyleExtractor::zoomAdjustedPixelValueForLength(layer.yPosition(), style);
 }
 
 static Length getOffsetComputedLength(const RenderStyle& style, CSSPropertyID propertyID)
@@ -3730,10 +3715,10 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
     case CSSPropertyMaskPosition: {
         auto& layers = propertyID == CSSPropertyBackgroundPosition ? style.backgroundLayers() : style.maskLayers();
         if (!layers.next())
-            return createPositionListForLayer(propertyID, layers, style);
+            return createPositionListForLayer(layers, style);
         CSSValueListBuilder list;
         for (auto* currLayer = &layers; currLayer; currLayer = currLayer->next())
-            list.append(createPositionListForLayer(propertyID, *currLayer, style));
+            list.append(createPositionListForLayer(*currLayer, style));
         return CSSValueList::createCommaSeparated(WTFMove(list));
     }
     case CSSPropertyBackgroundPositionX:

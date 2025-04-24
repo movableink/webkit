@@ -47,6 +47,7 @@
 #include "CSSParserIdioms.h"
 #include "CSSParserTokenRangeGuard.h"
 #include "CSSPendingSubstitutionValue.h"
+#include "CSSPositionValue.h"
 #include "CSSPrimitiveNumericTypes+CSSValueCreation.h"
 #include "CSSPropertyParserConsumer+Align.h"
 #include "CSSPropertyParserConsumer+AngleDefinitions.h"
@@ -2334,11 +2335,12 @@ bool CSSPropertyParser::consumeBackgroundShorthand(const StylePropertyShorthand&
 
                 if (property == CSSPropertyBackgroundPositionX || property == CSSPropertyWebkitMaskPositionX) {
                     // Note: This assumes y properties (for example background-position-y) follow the x properties in the shorthand array.
-                    auto position = consumeBackgroundPositionCoordinates(m_range, state);
+                    auto position = consumeBackgroundPositionUnresolved(m_range, state);
                     if (!position)
                         continue;
-                    value = WTFMove(position->x);
-                    valueY = WTFMove(position->y);
+                    auto [positionX, positionY] = CSS::split(WTFMove(*position));
+                    value = CSSPositionXValue::create(WTFMove(positionX));
+                    valueY = CSSPositionYValue::create(WTFMove(positionY));
                 } else if (property == CSSPropertyBackgroundSize) {
                     if (!consumeSlashIncludingWhitespace(m_range))
                         continue;
@@ -2418,11 +2420,12 @@ bool CSSPropertyParser::consumeBackgroundPositionShorthand(const StylePropertySh
     CSSValueListBuilder x;
     CSSValueListBuilder y;
     do {
-        auto position = consumeBackgroundPositionCoordinates(m_range, state);
+        auto position = consumeBackgroundPositionUnresolved(m_range, state);
         if (!position)
             return false;
-        x.append(WTFMove(position->x));
-        y.append(WTFMove(position->y));
+        auto [positionX, positionY] = CSS::split(WTFMove(*position));
+        x.append(CSSPositionXValue::create(WTFMove(positionX)));
+        y.append(CSSPositionYValue::create(WTFMove(positionY)));
     } while (consumeCommaIncludingWhitespace(m_range));
 
     if (!m_range.atEnd())
@@ -2469,11 +2472,12 @@ bool CSSPropertyParser::consumeMaskPositionShorthand(CSS::PropertyParserState& s
     CSSValueListBuilder x;
     CSSValueListBuilder y;
     do {
-        auto position = consumePositionCoordinates(m_range, state);
+        auto position = consumePositionUnresolved(m_range, state);
         if (!position)
             return false;
-        x.append(WTFMove(position->x));
-        y.append(WTFMove(position->y));
+        auto [positionX, positionY] = CSS::split(WTFMove(*position));
+        x.append(CSSPositionXValue::create(WTFMove(positionX)));
+        y.append(CSSPositionYValue::create(WTFMove(positionY)));
     } while (consumeCommaIncludingWhitespace(m_range));
 
     if (!m_range.atEnd())
@@ -2942,16 +2946,17 @@ bool CSSPropertyParser::consumeContainIntrinsicSizeShorthand(CSS::PropertyParser
 
 bool CSSPropertyParser::consumeTransformOriginShorthand(CSS::PropertyParserState& state)
 {
-    if (auto resultXY = consumeOneOrTwoValuedPositionCoordinates(m_range, state)) {
+    if (auto position = consumeOneOrTwoComponentPositionUnresolved(m_range, state)) {
         m_range.consumeWhitespace();
         bool atEnd = m_range.atEnd();
         auto resultZ = CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(m_range, state);
         if ((!resultZ && !atEnd) || !m_range.atEnd())
             return false;
-        addPropertyForCurrentShorthand(state, CSSPropertyTransformOriginX, WTFMove(resultXY->x));
-        addPropertyForCurrentShorthand(state, CSSPropertyTransformOriginY, WTFMove(resultXY->y));
-        addPropertyForCurrentShorthand(state, CSSPropertyTransformOriginZ, resultZ);
 
+        auto [positionX, positionY] = CSS::split(WTFMove(*position));
+        addPropertyForCurrentShorthand(state, CSSPropertyTransformOriginX, CSSPositionXValue::create(WTFMove(positionX)));
+        addPropertyForCurrentShorthand(state, CSSPropertyTransformOriginY, CSSPositionYValue::create(WTFMove(positionY)));
+        addPropertyForCurrentShorthand(state, CSSPropertyTransformOriginZ, resultZ);
         return true;
     }
     return false;
@@ -2959,11 +2964,13 @@ bool CSSPropertyParser::consumeTransformOriginShorthand(CSS::PropertyParserState
 
 bool CSSPropertyParser::consumePerspectiveOriginShorthand(CSS::PropertyParserState& state)
 {
-    if (auto result = consumePositionCoordinates(m_range, state)) {
-        addPropertyForCurrentShorthand(state, CSSPropertyPerspectiveOriginX, WTFMove(result->x));
-        addPropertyForCurrentShorthand(state, CSSPropertyPerspectiveOriginY, WTFMove(result->y));
+    if (auto position = consumePositionUnresolved(m_range, state)) {
+        auto [positionX, positionY] = CSS::split(WTFMove(*position));
+        addPropertyForCurrentShorthand(state, CSSPropertyPerspectiveOriginX, CSSPositionXValue::create(WTFMove(positionX)));
+        addPropertyForCurrentShorthand(state, CSSPropertyPerspectiveOriginY, CSSPositionYValue::create(WTFMove(positionY)));
         return true;
     }
+
     return false;
 }
 

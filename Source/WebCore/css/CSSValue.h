@@ -111,6 +111,9 @@ public:
     bool isPair() const { return m_classType == ClassType::ValuePair; }
     bool isPath() const { return m_classType == ClassType::Path; }
     bool isPendingSubstitutionValue() const { return m_classType == ClassType::PendingSubstitutionValue; }
+    bool isPositionValue() const { return m_classType == ClassType::Position; }
+    bool isPositionXValue() const { return m_classType == ClassType::PositionX; }
+    bool isPositionYValue() const { return m_classType == ClassType::PositionY; }
     bool isPrimitiveValue() const { return m_classType == ClassType::Primitive; }
     bool isQuad() const { return m_classType == ClassType::Quad; }
     bool isRatioValue() const { return m_classType == ClassType::Ratio; }
@@ -239,6 +242,9 @@ protected:
         OffsetRotate,
         Path,
         PendingSubstitutionValue,
+        Position,
+        PositionX,
+        PositionY,
         Quad,
         Ratio,
         Ray,

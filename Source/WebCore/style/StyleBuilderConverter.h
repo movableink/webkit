@@ -49,6 +49,7 @@
 #include "CSSImageValue.h"
 #include "CSSOffsetRotateValue.h"
 #include "CSSPathValue.h"
+#include "CSSPositionValue.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPrimitiveValueMappings.h"
 #include "CSSPropertyParserConsumer+Font.h"
@@ -124,6 +125,8 @@ public:
     static LengthPoint convertPosition(BuilderState&, const CSSValue&);
     static LengthPoint convertPositionOrAuto(BuilderState&, const CSSValue&);
     static LengthPoint convertPositionOrAutoOrNormal(BuilderState&, const CSSValue&);
+    static WebCore::Length convertPositionComponentX(BuilderState&, const CSSValue&);
+    static WebCore::Length convertPositionComponentY(BuilderState&, const CSSValue&);
     static OptionSet<TextDecorationLine> convertTextDecorationLine(BuilderState&, const CSSValue&);
     static OptionSet<TextTransform> convertTextTransform(BuilderState&, const CSSValue&);
     template<typename T> static T convertNumber(BuilderState&, const CSSValue&);
@@ -220,9 +223,6 @@ public:
 
     static OptionSet<SpeakAs> convertSpeakAs(BuilderState&, const CSSValue&);
 
-    static WebCore::Length convertPositionComponentX(BuilderState&, const CSSValue&);
-    static WebCore::Length convertPositionComponentY(BuilderState&, const CSSValue&);
-
     static GapLength convertGapLength(BuilderState&, const CSSValue&);
 
     static OffsetRotation convertOffsetRotate(BuilderState&, const CSSValue&);
@@ -268,8 +268,6 @@ public:
     static Style::CornerShapeValue convertCornerShapeValue(BuilderState&, const CSSValue&);
 
     static Vector<PositionTryFallback> convertPositionTryFallbacks(BuilderState&, const CSSValue&);
-
-    template<CSSValueID, CSSValueID> static WebCore::Length convertPositionComponent(BuilderState&, const CSSValue&);
 
     template<class ValueType> static const ValueType* requiredDowncast(BuilderState&, const CSSValue&);
     template<class ValueType> static std::optional<std::pair<const ValueType&, const ValueType&>> requiredPairDowncast(BuilderState&, const CSSValue&);
@@ -572,66 +570,17 @@ inline LengthSize BuilderConverter::convertRadius(BuilderState& builderState, co
     return radius;
 }
 
-inline WebCore::Length BuilderConverter::convertPositionComponentX(BuilderState& builderState, const CSSValue& value)
-{
-    return convertPositionComponent<CSSValueLeft, CSSValueRight>(builderState, value);
-}
-
-inline WebCore::Length BuilderConverter::convertPositionComponentY(BuilderState& builderState, const CSSValue& value)
-{
-    return convertPositionComponent<CSSValueTop, CSSValueBottom>(builderState, value);
-}
-
-template<CSSValueID cssValueFor0, CSSValueID cssValueFor100>
-inline WebCore::Length BuilderConverter::convertPositionComponent(BuilderState& builderState, const CSSValue& value)
-{
-    WebCore::Length length;
-
-    auto* lengthValue = &value;
-    bool relativeToTrailingEdge = false;
-    
-    if (value.isPair()) {
-        auto& first = value.first();
-        if (first.valueID() == CSSValueRight || first.valueID() == CSSValueBottom)
-            relativeToTrailingEdge = true;
-        lengthValue = &value.second();
-    }
-    
-    if (value.isValueID()) {
-        switch (value.valueID()) {
-        case cssValueFor0:
-            return WebCore::Length(0, LengthType::Percent);
-        case cssValueFor100:
-            return WebCore::Length(100, LengthType::Percent);
-        case CSSValueCenter:
-            return WebCore::Length(50, LengthType::Percent);
-        default:
-            ASSERT_NOT_REACHED();
-        }
-    }
-        
-    length = convertLength(builderState, *lengthValue);
-
-    if (relativeToTrailingEdge)
-        length = convertTo100PercentMinusLength(length);
-
-    return length;
-}
-
 inline LengthPoint BuilderConverter::convertPosition(BuilderState& builderState, const CSSValue& value)
 {
-    if (!value.isPair())
+    RefPtr positionValue = requiredDowncast<CSSPositionValue>(builderState, value);
+    if (!positionValue)
         return RenderStyle::initialObjectPosition();
-
-    auto lengthX = convertPositionComponent<CSSValueLeft, CSSValueRight>(builderState, value.first());
-    auto lengthY = convertPositionComponent<CSSValueTop, CSSValueBottom>(builderState, value.second());
-
-    return LengthPoint(lengthX, lengthY);
+    return Style::toPlatform(Style::toStyle(positionValue->position(), builderState));
 }
 
 inline LengthPoint BuilderConverter::convertPositionOrAutoOrNormal(BuilderState& builderState, const CSSValue& value)
 {
-    if (value.isPair())
+    if (value.isPositionValue())
         return convertPosition(builderState, value);
     if (value.valueID() == CSSValueNormal)
         return { { LengthType::Normal }, { LengthType::Normal } };
@@ -640,10 +589,27 @@ inline LengthPoint BuilderConverter::convertPositionOrAutoOrNormal(BuilderState&
 
 inline LengthPoint BuilderConverter::convertPositionOrAuto(BuilderState& builderState, const CSSValue& value)
 {
-    if (value.isPair())
+    if (value.isPositionValue())
         return convertPosition(builderState, value);
     return { };
 }
+
+inline WebCore::Length BuilderConverter::convertPositionComponentX(BuilderState& builderState, const CSSValue& value)
+{
+    RefPtr positionXValue = requiredDowncast<CSSPositionXValue>(builderState, value);
+    if (!positionXValue)
+        return { };
+    return Style::toPlatform(Style::toStyle(positionXValue->position(), builderState));
+}
+
+inline WebCore::Length BuilderConverter::convertPositionComponentY(BuilderState& builderState, const CSSValue& value)
+{
+    RefPtr positionYValue = requiredDowncast<CSSPositionYValue>(builderState, value);
+    if (!positionYValue)
+        return { };
+    return Style::toPlatform(Style::toStyle(positionYValue->position(), builderState));
+}
+
 
 inline OptionSet<TextDecorationLine> BuilderConverter::convertTextDecorationLine(BuilderState&, const CSSValue& value)
 {

@@ -926,6 +926,7 @@ css/CSSPathValue.cpp
 css/CSSPendingSubstitutionValue.cpp
 css/CSSPositionTryDescriptors.cpp
 css/CSSPositionTryRule.cpp
+css/CSSPositionValue.cpp
 css/CSSPrimitiveValue.cpp
 css/CSSProperty.cpp
 css/CSSPropertyRule.cpp

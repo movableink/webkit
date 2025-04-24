@@ -9,7 +9,7 @@ PASS Property background-position-y value '10px'
 PASS Property background-position-y value '0.5em'
 PASS Property background-position-y value 'calc(10px - 0.5em)'
 PASS Property background-position-y value 'top -20%'
-FAIL Property background-position-y value 'bottom -10px' assert_equals: expected "calc(100% + 10px)" but got "bottom -10px"
+PASS Property background-position-y value 'bottom -10px'
 PASS Property background-position-y value '-20%, 10px'
 PASS Property background-position-y value 'center, top, bottom'
 FAIL Property background-position-y value '0.5em, y-start, y-end' assert_true: '0.5em, y-start, y-end' is a supported value for background-position-y. expected true got false

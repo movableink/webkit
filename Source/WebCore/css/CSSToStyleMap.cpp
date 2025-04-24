@@ -224,16 +224,7 @@ void CSSToStyleMap::mapFillXPosition(CSSPropertyID propertyID, FillLayer& layer,
         layer.setXPosition(FillLayer::initialFillXPosition(layer.type()));
         return;
     }
-
-    Length length;
-    if (value.isPair()) {
-        ASSERT_UNUSED(propertyID, propertyID == CSSPropertyBackgroundPositionX || propertyID == CSSPropertyWebkitMaskPositionX);
-        length = Style::BuilderConverter::convertLength(m_builderState, value.second());
-    } else
-        length = Style::BuilderConverter::convertPositionComponentX(m_builderState, value);
-
-    layer.setXPosition(length);
-    layer.setBackgroundXOrigin(value.isPair() ? fromCSSValue<Edge>(value.first()) : Edge::Left);
+    layer.setXPosition(Style::BuilderConverter::convertPositionComponentX(m_builderState, value));
 }
 
 void CSSToStyleMap::mapFillYPosition(CSSPropertyID propertyID, FillLayer& layer, const CSSValue& value)
@@ -242,16 +233,7 @@ void CSSToStyleMap::mapFillYPosition(CSSPropertyID propertyID, FillLayer& layer,
         layer.setYPosition(FillLayer::initialFillYPosition(layer.type()));
         return;
     }
-
-    Length length;
-    if (value.isPair()) {
-        ASSERT_UNUSED(propertyID, propertyID == CSSPropertyBackgroundPositionY || propertyID == CSSPropertyWebkitMaskPositionY);
-        length = Style::BuilderConverter::convertLength(m_builderState, value.second());
-    } else
-        length = Style::BuilderConverter::convertPositionComponentY(m_builderState, value);
-
-    layer.setYPosition(length);
-    layer.setBackgroundYOrigin(value.isPair() ? fromCSSValue<Edge>(value.first()) : Edge::Top);
+    layer.setYPosition(Style::BuilderConverter::convertPositionComponentY(m_builderState, value));
 }
 
 void CSSToStyleMap::mapFillMaskMode(CSSPropertyID propertyID, FillLayer& layer, const CSSValue& value)

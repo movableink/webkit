@@ -2427,12 +2427,9 @@ private:
 class FillLayerPositionWrapper final : public FillLayerWrapperWithGetter<const WebCore::Length&> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    FillLayerPositionWrapper(CSSPropertyID property, const WebCore::Length& (FillLayer::*lengthGetter)() const, void (FillLayer::*lengthSetter)(WebCore::Length), Edge (FillLayer::*originGetter)() const, void (FillLayer::*originSetter)(Edge), Edge farEdge)
+    FillLayerPositionWrapper(CSSPropertyID property, const WebCore::Length& (FillLayer::*lengthGetter)() const, void (FillLayer::*lengthSetter)(WebCore::Length))
         : FillLayerWrapperWithGetter(property, lengthGetter)
         , m_lengthSetter(lengthSetter)
-        , m_originGetter(originGetter)
-        , m_originSetter(originSetter)
-        , m_farEdge(farEdge)
     {
     }
 
@@ -2443,36 +2440,13 @@ private:
             return true;
         if (!a || !b)
             return false;
-
-        auto fromLength = value(a);
-        auto toLength = value(b);
-
-        Edge fromEdge = (a->*m_originGetter)();
-        Edge toEdge = (b->*m_originGetter)();
-
-        return fromLength == toLength && fromEdge == toEdge;
+        return value(a) == value(b);
     }
 
     void interpolate(FillLayer* destination, const FillLayer* from, const FillLayer* to, const Context& context) const final
     {
         auto fromLength = value(from);
         auto toLength = value(to);
-
-        Edge fromEdge = (from->*m_originGetter)();
-        Edge toEdge = (to->*m_originGetter)();
-
-        Edge destinationEdge = toEdge;
-        if (fromEdge != toEdge) {
-            // Convert the right/bottom into a calc expression,
-            if (fromEdge == m_farEdge)
-                fromLength = convertTo100PercentMinusLength(fromLength);
-            else if (toEdge == m_farEdge) {
-                toLength = convertTo100PercentMinusLength(toLength);
-                destinationEdge = fromEdge; // Now we have a calc(100% - l), it's relative to the left/top edge.
-            }
-        }
-
-        (destination->*m_originSetter)(destinationEdge);
         (destination->*m_lengthSetter)(blendFunc(fromLength, toLength, context));
     }
 
@@ -2484,9 +2458,6 @@ private:
 #endif
 
     void (FillLayer::*m_lengthSetter)(WebCore::Length);
-    Edge (FillLayer::*m_originGetter)() const;
-    void (FillLayer::*m_originSetter)(Edge);
-    Edge m_farEdge;
 };
 
 template<typename T>
@@ -2604,11 +2575,11 @@ public:
         switch (property) {
         case CSSPropertyBackgroundPositionX:
         case CSSPropertyWebkitMaskPositionX:
-            m_fillLayerWrapper = makeUnique<FillLayerPositionWrapper>(property, &FillLayer::xPosition, &FillLayer::setXPosition, &FillLayer::backgroundXOrigin, &FillLayer::setBackgroundXOrigin, Edge::Right);
+            m_fillLayerWrapper = makeUnique<FillLayerPositionWrapper>(property, &FillLayer::xPosition, &FillLayer::setXPosition);
             break;
         case CSSPropertyBackgroundPositionY:
         case CSSPropertyWebkitMaskPositionY:
-            m_fillLayerWrapper = makeUnique<FillLayerPositionWrapper>(property, &FillLayer::yPosition, &FillLayer::setYPosition, &FillLayer::backgroundYOrigin, &FillLayer::setBackgroundYOrigin, Edge::Bottom);
+            m_fillLayerWrapper = makeUnique<FillLayerPositionWrapper>(property, &FillLayer::yPosition, &FillLayer::setYPosition);
             break;
         case CSSPropertyBackgroundSize:
         case CSSPropertyWebkitBackgroundSize:

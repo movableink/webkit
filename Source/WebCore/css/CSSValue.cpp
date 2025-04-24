@@ -70,6 +70,7 @@
 #include "CSSPaintImageValue.h"
 #include "CSSPathValue.h"
 #include "CSSPendingSubstitutionValue.h"
+#include "CSSPositionValue.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSProperty.h"
 #include "CSSQuadValue.h"
@@ -194,6 +195,12 @@ template<typename Visitor> constexpr decltype(auto) CSSValue::visitDerived(Visit
         return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<CSSPathValue>(*this));
     case PendingSubstitutionValue:
         return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<CSSPendingSubstitutionValue>(*this));
+    case Position:
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<CSSPositionValue>(*this));
+    case PositionX:
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<CSSPositionXValue>(*this));
+    case PositionY:
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<CSSPositionYValue>(*this));
     case Primitive:
         return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<CSSPrimitiveValue>(*this));
     case Quad:
