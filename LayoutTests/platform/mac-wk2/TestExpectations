@@ -2142,3 +2142,9 @@ webkit.org/b/291861 [ Release x86_64 ] media/media-vp8-hiddenframes.html [ Pass 
 webkit.org/b/291878 [ Sequoia Release arm64 ] http/tests/webgpu/webgpu/shader/validation/expression/call/builtin/textureSampleBias.html [ Failure ]
 
 webkit.org/b/291966 [ Sequoia+ Release ] http/tests/webgpu/webgpu/api/validation/render_pipeline/fragment_state.html [ Pass Timeout ]
+
+# webkit.org/b/292016 REGRESSION(294049@main): [macOS Debug] ASSERTION FAILED: repaintContainer->isComposited() (flaky in EWS)
+[ Debug ] imported/w3c/web-platform-tests/scroll-animations/css/scroll-timeline-frame-size-changed.html [ Pass Crash ]
+[ Debug ] imported/w3c/web-platform-tests/scroll-animations/css/scroll-timeline-default-quirks-mode.html [ Pass Crash ]
+[ Debug ] imported/w3c/web-platform-tests/scroll-animations/css/scroll-timeline-default.html [ Pass Crash ]
+[ Debug ] imported/w3c/web-platform-tests/scroll-animations/css/scroll-timeline-inline-orientation.html [ Pass Crash ]
