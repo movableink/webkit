@@ -137,7 +137,7 @@ public:
     void setUseFormSemanticContext(bool value) { m_useFormSemanticContext = value; }
     virtual bool supportsLargeFormControls() const { return false; }
 
-    virtual bool searchFieldShouldAppearAsTextField(const RenderStyle&) const { return false; }
+    virtual bool searchFieldShouldAppearAsTextField(const RenderStyle&, const Settings&) const { return false; }
 
     // Text selection colors.
     WEBCORE_EXPORT Color activeSelectionBackgroundColor(OptionSet<StyleColorOptions>) const;

@@ -722,9 +722,17 @@ bool RenderThemeMac::usesTestModeFocusRingColor() const
     return WebCore::usesTestModeFocusRingColor();
 }
 
-bool RenderThemeMac::searchFieldShouldAppearAsTextField(const RenderStyle& style) const
+bool RenderThemeMac::searchFieldShouldAppearAsTextField(const RenderStyle& style, const Settings& settings) const
 {
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (settings.vectorBasedControlsOnMacEnabled())
+        return false;
+#else
+    UNUSED_PARAM(settings);
+#endif
+
     return !style.writingMode().isHorizontal();
+
 }
 
 bool RenderThemeMac::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const

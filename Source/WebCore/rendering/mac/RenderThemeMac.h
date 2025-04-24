@@ -140,7 +140,7 @@ private:
 
     Color systemColor(CSSValueID, OptionSet<StyleColorOptions>) const final;
 
-    bool searchFieldShouldAppearAsTextField(const RenderStyle&) const final;
+    bool searchFieldShouldAppearAsTextField(const RenderStyle&, const Settings&) const final;
 
     std::span<const IntSize, 4> menuListSizes() const;
     std::span<const IntSize, 4> searchFieldSizes() const;
