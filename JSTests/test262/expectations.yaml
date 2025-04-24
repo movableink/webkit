@@ -1067,20 +1067,11 @@ test/built-ins/TypedArrayConstructors/internals/Set/key-is-valid-index-reflect-s
   default: 'Test262Error: target[0] should remain unchanged (receiver: empty object) Expected SameValue(«2.3», «0») to be true (Testing with Float64Array.)'
   strict mode: 'Test262Error: target[0] should remain unchanged (receiver: empty object) Expected SameValue(«2.3», «0») to be true (Testing with Float64Array.)'
 test/intl402/DateTimeFormat/canonicalize-timezone.js:
-  default: 'Test262Error: Time zone name Pacific/Truk should be canonicalized to Pacific/Chuuk Expected SameValue(«"Pacific/Truk"», «"Pacific/Chuuk"») to be true'
-  strict mode: 'Test262Error: Time zone name Pacific/Truk should be canonicalized to Pacific/Chuuk Expected SameValue(«"Pacific/Truk"», «"Pacific/Chuuk"») to be true'
+  default: 'Test262Error: Time zone name Australia/Canberra should be preserved and not canonicalized to Australia/Sydney Expected SameValue(«"Australia/Sydney"», «"Australia/Canberra"») to be true'
+  strict mode: 'Test262Error: Time zone name Australia/Canberra should be preserved and not canonicalized to Australia/Sydney Expected SameValue(«"Australia/Sydney"», «"Australia/Canberra"») to be true'
 test/intl402/DateTimeFormat/canonicalize-utc-timezone.js:
   default: "Test262Error: Time zone name Etc/GMT should be preserved and not canonicalized to 'UTC' Expected SameValue(«\"UTC\"», «\"Etc/GMT\"») to be true"
   strict mode: "Test262Error: Time zone name Etc/GMT should be preserved and not canonicalized to 'UTC' Expected SameValue(«\"UTC\"», «\"Etc/GMT\"») to be true"
-test/intl402/DateTimeFormat/prototype/format/dayPeriod-long-en.js:
-  default: 'Test262Error: 00:00, long format Expected SameValue(«"in the morning"», «"at night"») to be true'
-  strict mode: 'Test262Error: 00:00, long format Expected SameValue(«"in the morning"», «"at night"») to be true'
-test/intl402/DateTimeFormat/prototype/format/dayPeriod-narrow-en.js:
-  default: 'Test262Error: 00:00, narrow format Expected SameValue(«"in the morning"», «"at night"») to be true'
-  strict mode: 'Test262Error: 00:00, narrow format Expected SameValue(«"in the morning"», «"at night"») to be true'
-test/intl402/DateTimeFormat/prototype/format/dayPeriod-short-en.js:
-  default: 'Test262Error: 00:00, short format Expected SameValue(«"in the morning"», «"at night"») to be true'
-  strict mode: 'Test262Error: 00:00, short format Expected SameValue(«"in the morning"», «"at night"») to be true'
 test/intl402/DateTimeFormat/prototype/format/temporal-objects-not-overlapping-options.js:
   default: "TypeError: undefined is not a constructor (evaluating 'new Temporal.PlainYearMonth(2024, 9)')"
   strict mode: "TypeError: undefined is not a constructor (evaluating 'new Temporal.PlainYearMonth(2024, 9)')"
@@ -1105,15 +1096,6 @@ test/intl402/DateTimeFormat/prototype/formatRangeToParts/temporal-zoneddatetime-
 test/intl402/DateTimeFormat/prototype/formatRangeToParts/to-datetime-formattable-with-different-arg-kinds.js:
   default: "TypeError: undefined is not a constructor (evaluating 'new Temporal.PlainYearMonth(1970, 1)')"
   strict mode: "TypeError: undefined is not a constructor (evaluating 'new Temporal.PlainYearMonth(1970, 1)')"
-test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-long-en.js:
-  default: 'Test262Error: expected part value. 00:00, long format Expected SameValue(«"in the morning"», «"at night"») to be true'
-  strict mode: 'Test262Error: expected part value. 00:00, long format Expected SameValue(«"in the morning"», «"at night"») to be true'
-test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-narrow-en.js:
-  default: 'Test262Error: expected part value. 00:00, narrow format Expected SameValue(«"in the morning"», «"at night"») to be true'
-  strict mode: 'Test262Error: expected part value. 00:00, narrow format Expected SameValue(«"in the morning"», «"at night"») to be true'
-test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-short-en.js:
-  default: 'Test262Error: expected part value. 00:00, short format Expected SameValue(«"in the morning"», «"at night"») to be true'
-  strict mode: 'Test262Error: expected part value. 00:00, short format Expected SameValue(«"in the morning"», «"at night"») to be true'
 test/intl402/DateTimeFormat/prototype/formatToParts/temporal-objects-not-overlapping-options.js:
   default: "TypeError: undefined is not a constructor (evaluating 'new Temporal.PlainYearMonth(2024, 9)')"
   strict mode: "TypeError: undefined is not a constructor (evaluating 'new Temporal.PlainYearMonth(2024, 9)')"
