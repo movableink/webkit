@@ -202,22 +202,23 @@ void AnimationTimelinesController::updateAnimationsAndSendEvents(ReducedResoluti
     // 3. Perform a microtask checkpoint.
     protectedDocument()->eventLoop().performMicrotaskCheckpoint();
 
-    // 4. Let events to dispatch be a copy of doc's pending animation event queue.
-    // 5. Clear doc's pending animation event queue.
-    AnimationEvents events;
-    for (auto& timeline : timelinesToUpdate) {
-        if (RefPtr documentTimeline = dynamicDowncast<DocumentTimeline>(timeline))
-            events.appendVector(documentTimeline->prepareForPendingAnimationEventsDispatch());
+    if (RefPtr documentTimeline = m_document->existingTimeline()) {
+        // FIXME: pending animation events should be owned by this controller rather
+        // than the document timeline.
+
+        // 4. Let events to dispatch be a copy of doc's pending animation event queue.
+        // 5. Clear doc's pending animation event queue.
+        auto events = documentTimeline->prepareForPendingAnimationEventsDispatch();
+
+        // 6. Perform a stable sort of the animation events in events to dispatch as follows.
+        std::stable_sort(events.begin(), events.end(), [] (const Ref<AnimationEventBase>& lhs, const Ref<AnimationEventBase>& rhs) {
+            return compareAnimationEventsByCompositeOrder(lhs.get(), rhs.get());
+        });
+
+        // 7. Dispatch each of the events in events to dispatch at their corresponding target using the order established in the previous step.
+        for (auto& event : events)
+            event->target()->dispatchEvent(event);
     }
-
-    // 6. Perform a stable sort of the animation events in events to dispatch as follows.
-    std::stable_sort(events.begin(), events.end(), [] (const Ref<AnimationEventBase>& lhs, const Ref<AnimationEventBase>& rhs) {
-        return compareAnimationEventsByCompositeOrder(lhs.get(), rhs.get());
-    });
-
-    // 7. Dispatch each of the events in events to dispatch at their corresponding target using the order established in the previous step.
-    for (auto& event : events)
-        event->target()->dispatchEvent(event);
 
     // This will cancel any scheduled invalidation if we end up removing all animations.
     for (auto& animation : animationsToRemove) {
