@@ -555,8 +555,7 @@ RenderBundleEncoder::FinalizeRenderCommand RenderBundleEncoder::finalizeRenderCo
 {
     m_currentCommand = nil;
 
-    constexpr auto approximateCommandSize = 512;
-    static const auto maxCommandCount = std::max<uint32_t>(100000, m_device->limits().maxBufferSize / approximateCommandSize);
+    constexpr auto maxCommandCount = 0x4000;
     if (isValid() && m_currentCommandIndex >= maxCommandCount && !m_requiresCommandReplay && !m_indirectCommandBuffer)
         endCurrentICB();
 
@@ -891,7 +890,7 @@ void RenderBundleEncoder::endCurrentICB()
     auto commandCount = m_currentCommandIndex;
     m_currentCommandIndex = 0;
     RELEASE_ASSERT(!commandCount || !!m_icbDescriptor);
-    auto cleanup = [&] {
+    auto cleanup = [&] (bool resetPipeline) {
         m_indirectCommandBuffer = nil;
         m_currentCommand = nil;
         m_currentPipelineState = nil;
@@ -899,10 +898,12 @@ void RenderBundleEncoder::endCurrentICB()
         m_dynamicOffsetsVertexBuffer = nil;
         m_minVertexCountForDrawCommand.clear();
         m_resources = [NSMapTable strongToStrongObjectsMapTable];
+        if (RefPtr pipeline = m_pipeline; resetPipeline && m_pipeline)
+            setPipeline(*pipeline);
     };
     if (!m_icbDescriptor.commandTypes && !m_requiresCommandReplay) {
         m_recordedCommands.clear();
-        cleanup();
+        cleanup(false);
         return;
     }
 
@@ -964,7 +965,7 @@ void RenderBundleEncoder::endCurrentICB()
     m_recordedCommands = std::exchange(recordedCommands, { });
     m_currentCommandIndex = commandCount - completedDraws;
     [m_icbArray addObject:makeRenderBundleICBWithResources(m_indirectCommandBuffer, m_resources, m_currentPipelineState, m_depthStencilState, m_cullMode, m_frontFace, m_depthClipMode, m_depthBias, m_depthBiasSlopeScale, m_depthBiasClamp, m_dynamicOffsetsFragmentBuffer, m_pipeline.get(), device.get(), m_minVertexCountForDrawCommand)];
-    cleanup();
+    cleanup(true);
 }
 
 bool RenderBundleEncoder::validToEncodeCommand() const
@@ -991,7 +992,7 @@ Ref<RenderBundle> RenderBundleEncoder::finish(const WGPURenderBundleDescriptor& 
         return RenderBundle::createInvalid(device, m_lastErrorString);
     }
 
-    m_requiresCommandReplay = m_requiresCommandReplay ?: (!m_currentCommandIndex);
+    m_requiresCommandReplay = m_requiresCommandReplay ?: (!m_currentCommandIndex && !m_icbArray.count);
     resetIndexBuffer();
 
     auto createRenderBundle = ^{
