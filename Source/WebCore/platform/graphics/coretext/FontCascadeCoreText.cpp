@@ -285,16 +285,16 @@ static void showGlyphsWithAdvances(const FloatPoint& point, const Font& font, CG
 
 static void setCGFontRenderingMode(GraphicsContext& context)
 {
-    CGContextRef cgContext = context.platformContext();
-    CGContextSetShouldAntialiasFonts(cgContext, true);
+    RetainPtr<CGContextRef> cgContext = context.platformContext();
+    CGContextSetShouldAntialiasFonts(cgContext.get(), true);
 
-    CGAffineTransform contextTransform = CGContextGetCTM(cgContext);
+    CGAffineTransform contextTransform = CGContextGetCTM(cgContext.get());
     bool isTranslationOrIntegralScale = WTF::isIntegral(contextTransform.a) && WTF::isIntegral(contextTransform.d) && contextTransform.b == 0.f && contextTransform.c == 0.f;
     bool isRotated = ((contextTransform.b || contextTransform.c) && (contextTransform.a || contextTransform.d));
     bool doSubpixelQuantization = isTranslationOrIntegralScale || (!isRotated && context.shouldSubpixelQuantizeFonts());
 
-    CGContextSetShouldSubpixelPositionFonts(cgContext, true);
-    CGContextSetShouldSubpixelQuantizeFonts(cgContext, doSubpixelQuantization);
+    CGContextSetShouldSubpixelPositionFonts(cgContext.get(), true);
+    CGContextSetShouldSubpixelQuantizeFonts(cgContext.get(), doSubpixelQuantization);
 }
 
 void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& anchorPoint, FontSmoothingMode smoothingMode)
@@ -308,7 +308,7 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, std::sp
         return;
     }
 
-    CGContextRef cgContext = context.platformContext();
+    RetainPtr<CGContextRef> cgContext = context.platformContext();
 
     if (!font.allowsAntialiasing())
         smoothingMode = FontSmoothingMode::NoSmoothing;
@@ -332,22 +332,22 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, std::sp
 #if PLATFORM(IOS_FAMILY)
     UNUSED_VARIABLE(shouldSmoothFonts);
 #else
-    bool originalShouldUseFontSmoothing = CGContextGetShouldSmoothFonts(cgContext);
+    bool originalShouldUseFontSmoothing = CGContextGetShouldSmoothFonts(cgContext.get());
     if (shouldSmoothFonts != originalShouldUseFontSmoothing)
-        CGContextSetShouldSmoothFonts(cgContext, shouldSmoothFonts);
+        CGContextSetShouldSmoothFonts(cgContext.get(), shouldSmoothFonts);
 #endif
 
-    bool originalShouldAntialias = CGContextGetShouldAntialias(cgContext);
+    bool originalShouldAntialias = CGContextGetShouldAntialias(cgContext.get());
     if (shouldAntialias != originalShouldAntialias)
-        CGContextSetShouldAntialias(cgContext, shouldAntialias);
+        CGContextSetShouldAntialias(cgContext.get(), shouldAntialias);
 
     FloatPoint point = anchorPoint;
 
     auto textMatrix = computeOverallTextMatrix(font);
-    ScopedTextMatrix restorer(textMatrix, cgContext);
+    ScopedTextMatrix restorer(textMatrix, cgContext.get());
 
     setCGFontRenderingMode(context);
-    CGContextSetFontSize(cgContext, platformData.size());
+    CGContextSetFontSize(cgContext.get(), platformData.size());
 
     auto shadow = context.dropShadow();
 
@@ -370,29 +370,29 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, std::sp
         Color shadowFillColor = shadow->color.colorWithAlphaMultipliedBy(fillColor.alphaAsFloat());
         context.setFillColor(shadowFillColor);
         auto shadowTextOffset = point + context.platformShadowOffset(shadow->offset);
-        showGlyphsWithAdvances(shadowTextOffset, font, cgContext, glyphs, advances, textMatrix);
+        showGlyphsWithAdvances(shadowTextOffset, font, cgContext.get(), glyphs, advances, textMatrix);
         if (syntheticBoldOffset) {
             shadowTextOffset.move(syntheticBoldOffset, 0);
-            showGlyphsWithAdvances(shadowTextOffset, font, cgContext, glyphs, advances, textMatrix);
+            showGlyphsWithAdvances(shadowTextOffset, font, cgContext.get(), glyphs, advances, textMatrix);
         }
         context.setFillColor(fillColor);
     }
 
-    showGlyphsWithAdvances(point, font, cgContext, glyphs, advances, textMatrix);
+    showGlyphsWithAdvances(point, font, cgContext.get(), glyphs, advances, textMatrix);
 
     if (syntheticBoldOffset)
-        showGlyphsWithAdvances(FloatPoint(point.x() + syntheticBoldOffset, point.y()), font, cgContext, glyphs, advances, textMatrix);
+        showGlyphsWithAdvances(FloatPoint(point.x() + syntheticBoldOffset, point.y()), font, cgContext.get(), glyphs, advances, textMatrix);
 
     if (hasSimpleShadow)
         context.setDropShadow(*shadow);
 
 #if !PLATFORM(IOS_FAMILY)
     if (shouldSmoothFonts != originalShouldUseFontSmoothing)
-        CGContextSetShouldSmoothFonts(cgContext, originalShouldUseFontSmoothing);
+        CGContextSetShouldSmoothFonts(cgContext.get(), originalShouldUseFontSmoothing);
 #endif
 
     if (shouldAntialias != originalShouldAntialias)
-        CGContextSetShouldAntialias(cgContext, originalShouldAntialias);
+        CGContextSetShouldAntialias(cgContext.get(), originalShouldAntialias);
 }
 
 bool FontCascade::primaryFontIsSystemFont() const
