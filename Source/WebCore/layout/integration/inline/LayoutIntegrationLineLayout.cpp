@@ -1265,6 +1265,9 @@ void LineLayout::shiftLinesBy(LayoutUnit blockShift)
 
 bool LineLayout::insertedIntoTree(const RenderElement& parent, RenderObject& child)
 {
+    if (flow().style().isSkippedRootOrSkippedContent())
+        return false;
+
     if (!m_inlineContent) {
         // This should only be called on partial layout.
         ASSERT_NOT_REACHED();
@@ -1288,6 +1291,9 @@ bool LineLayout::insertedIntoTree(const RenderElement& parent, RenderObject& chi
 
 bool LineLayout::removedFromTree(const RenderElement& parent, RenderObject& child)
 {
+    if (flow().style().isSkippedRootOrSkippedContent())
+        return false;
+
     if (!child.everHadLayout()) {
         ensureLineDamage().addDetachedBox(BoxTreeUpdater { flow() }.remove(parent, child));
         return false;
@@ -1310,6 +1316,9 @@ bool LineLayout::removedFromTree(const RenderElement& parent, RenderObject& chil
 
 bool LineLayout::updateTextContent(const RenderText& textRenderer, size_t offset, int delta)
 {
+    if (flow().style().isSkippedRootOrSkippedContent())
+        return false;
+
     if (!m_inlineContent) {
         // This is supposed to be only called on partial layout, but
         // RenderText::setText may be (force) called after min/max size computation and before layout.
