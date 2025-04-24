@@ -603,8 +603,7 @@ void WebProcess::platformSetWebsiteDataStoreParameters(WebProcessDataStoreParame
 #endif
 #endif
 #if PLATFORM(IOS_FAMILY)
-    if (auto& handle = parameters.containerTemporaryDirectoryExtensionHandle)
-        grantAccessToContainerTempDirectory(*handle);
+    grantAccessToContainerTempDirectory(parameters.containerTemporaryDirectoryExtensionHandle);
 #endif
 
     if (!parameters.javaScriptConfigurationDirectory.isEmpty()) {

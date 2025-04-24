@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,27 +25,11 @@
 
 #pragma once
 
-#include "NetworkSessionCreationParameters.h"
-#include "SandboxExtension.h"
-#include <WebCore/Cookie.h>
-#include <pal/SessionID.h>
-#include <wtf/Vector.h>
-#include <wtf/text/WTFString.h>
-
 namespace WebKit {
 
-struct WebsiteDataStoreParameters {
-    Vector<uint8_t> uiProcessCookieStorageIdentifier;
-    SandboxExtension::Handle cookieStoragePathExtensionHandle;
-    NetworkSessionCreationParameters networkSessionParameters;
+constexpr ASCIILiteral webContentServiceName { "com.apple.WebKit.WebContent"_s };
+constexpr ASCIILiteral networkingServiceName { "com.apple.WebKit.Networking"_s };
+constexpr ASCIILiteral gpuServiceName { "com.apple.WebKit.GPU"_s };
+constexpr ASCIILiteral modelServiceName { "com.apple.WebKit.Model"_s };
 
-#if PLATFORM(IOS_FAMILY)
-    std::optional<SandboxExtension::Handle> cookieStorageDirectoryExtensionHandle;
-    std::optional<SandboxExtension::Handle> containerCachesDirectoryExtensionHandle;
-    std::optional<SandboxExtension::Handle> parentBundleDirectoryExtensionHandle;
-    std::optional<SandboxExtension::Handle> tempDirectoryExtensionHandle;
-    std::optional<SandboxExtension::Handle> tempDirectoryRootExtensionHandle;
-#endif
-};
-
-} // namespace WebKit
+}

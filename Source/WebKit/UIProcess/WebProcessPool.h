@@ -966,6 +966,7 @@ private:
 #if PLATFORM(IOS_FAMILY)
     bool m_processesShouldSuspend { false };
     HardwareKeyboardState m_hardwareKeyboardState;
+    String m_cachedWebContentTempDirectory;
 #endif
 
 #if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)

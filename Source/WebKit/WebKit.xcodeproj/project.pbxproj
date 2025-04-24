@@ -2392,6 +2392,7 @@
 		E3CAAA442413279900CED2E2 /* AccessibilitySupportSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = E3CAAA432413278A00CED2E2 /* AccessibilitySupportSPI.h */; };
 		E3D0A9412D62B1C90094538A /* ServiceWorkerDebuggableFrontendChannel.h in Headers */ = {isa = PBXBuildFile; fileRef = E3D0A93F2D62B1C90094538A /* ServiceWorkerDebuggableFrontendChannel.h */; };
 		E3D0A9422D62B1C90094538A /* ServiceWorkerDebuggableFrontendChannel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E3D0A9402D62B1C90094538A /* ServiceWorkerDebuggableFrontendChannel.cpp */; };
+		E3DCC9AB2DA08079008712FE /* WebKitServiceNames.h in Headers */ = {isa = PBXBuildFile; fileRef = E3DCC9AA2DA07FA0008712FE /* WebKitServiceNames.h */; };
 		E3E6297E2D5FA8F200DAE50C /* ServiceWorkerDebuggableProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = E3E6297C2D5FA8F200DAE50C /* ServiceWorkerDebuggableProxy.h */; };
 		E3E6297F2D5FA8F200DAE50C /* ServiceWorkerDebuggableProxy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E3E6297D2D5FA8F200DAE50C /* ServiceWorkerDebuggableProxy.cpp */; };
 		E3E84BDA2AE0AAE50091B3C2 /* XPCEndpoint.h in Copy Testing Headers */ = {isa = PBXBuildFile; fileRef = C14D306724B794E700480387 /* XPCEndpoint.h */; };
@@ -8207,6 +8208,7 @@
 		E3D0A93F2D62B1C90094538A /* ServiceWorkerDebuggableFrontendChannel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ServiceWorkerDebuggableFrontendChannel.h; sourceTree = "<group>"; };
 		E3D0A9402D62B1C90094538A /* ServiceWorkerDebuggableFrontendChannel.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ServiceWorkerDebuggableFrontendChannel.cpp; sourceTree = "<group>"; };
 		E3DC5B1A2C9AE09700D73BB3 /* LogStreamIdentifier.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LogStreamIdentifier.h; sourceTree = "<group>"; };
+		E3DCC9AA2DA07FA0008712FE /* WebKitServiceNames.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebKitServiceNames.h; sourceTree = "<group>"; };
 		E3E6297C2D5FA8F200DAE50C /* ServiceWorkerDebuggableProxy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ServiceWorkerDebuggableProxy.h; sourceTree = "<group>"; };
 		E3E6297D2D5FA8F200DAE50C /* ServiceWorkerDebuggableProxy.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ServiceWorkerDebuggableProxy.cpp; sourceTree = "<group>"; };
 		E3E84BED2AE1AA5A0091B3C2 /* ExtensionKitSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ExtensionKitSPI.h; sourceTree = "<group>"; };
@@ -9736,6 +9738,7 @@
 				0F4000FF2527D6F700E91DA7 /* WebKeyboardEvent.h */,
 				BC9BA5021697C45300E44616 /* WebKit2Initialize.cpp */,
 				BC9BA5031697C45300E44616 /* WebKit2Initialize.h */,
+				E3DCC9AA2DA07FA0008712FE /* WebKitServiceNames.h */,
 				905620E812BC248B000799B6 /* WebMemorySampler.cpp */,
 				905620E912BC248B000799B6 /* WebMemorySampler.h */,
 				C0337DAF127A28D0008FF4F4 /* WebMouseEvent.cpp */,
@@ -17768,6 +17771,7 @@
 				BCB63478116BF10600603215 /* WebKit2_C.h in Headers */,
 				BC9BA5051697C45300E44616 /* WebKit2Initialize.h in Headers */,
 				0744DA552CE05FE400AACC81 /* WebKitInternal.h in Headers */,
+				E3DCC9AB2DA08079008712FE /* WebKitServiceNames.h in Headers */,
 				DD4BDE9C2CA73B60001A3339 /* WebKitSwiftOverlayMacros.h in Headers */,
 				BC032D7F10F4378D0058C15A /* WebLocalFrameLoaderClient.h in Headers */,
 				465FA7262757D93D0072362B /* WebLockRegistryProxy.h in Headers */,

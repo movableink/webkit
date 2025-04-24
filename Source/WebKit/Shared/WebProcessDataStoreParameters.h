@@ -55,7 +55,7 @@ struct WebProcessDataStoreParameters {
     SandboxExtension::Handle modelElementCacheDirectoryExtensionHandle;
 #endif
 #if PLATFORM(IOS_FAMILY)
-    std::optional<SandboxExtension::Handle> containerTemporaryDirectoryExtensionHandle;
+    SandboxExtension::Handle containerTemporaryDirectoryExtensionHandle;
 #endif
     bool trackingPreventionEnabled { false };
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)

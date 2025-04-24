@@ -77,6 +77,7 @@
 #include "WebGeolocationManagerProxy.h"
 #include "WebInspectorUtilities.h"
 #include "WebKit2Initialize.h"
+#include "WebKitServiceNames.h"
 #include "WebMemorySampler.h"
 #include "WebNotificationManagerProxy.h"
 #include "WebPageGroup.h"
@@ -886,9 +887,13 @@ WebProcessDataStoreParameters WebProcessPool::webProcessDataStoreParameters(WebP
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-    std::optional<SandboxExtension::Handle> containerTemporaryDirectoryExtensionHandle;
-    if (auto directory = websiteDataStore.resolvedContainerTemporaryDirectory(); !directory.isEmpty())
-        containerTemporaryDirectoryExtensionHandle = SandboxExtension::createHandleWithoutResolvingPath(directory, SandboxExtension::Type::ReadWrite);
+    SandboxExtension::Handle containerTemporaryDirectoryExtensionHandle;
+    if (auto directory = websiteDataStore.resolvedContainerTemporaryDirectory(); !directory.isEmpty()) {
+        if (m_cachedWebContentTempDirectory.isEmpty())
+            m_cachedWebContentTempDirectory = resolveAndCreateReadWriteDirectoryForSandboxExtension(FileSystem::pathByAppendingComponent(directory, webContentServiceName));
+        if (auto handle = SandboxExtension::createHandleWithoutResolvingPath(m_cachedWebContentTempDirectory, SandboxExtension::Type::ReadWrite))
+            containerTemporaryDirectoryExtensionHandle = WTFMove(*handle);
+    }
 #endif
 
     return WebProcessDataStoreParameters {
