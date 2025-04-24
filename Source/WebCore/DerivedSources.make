@@ -1525,6 +1525,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/page/DOMWindow+VisualViewport.idl \
     $(WebCore)/page/EventSource.idl \
     $(WebCore)/page/FragmentDirective.idl \
+    $(WebCore)/page/GetComposedRangesOptions.idl \
     $(WebCore)/page/History.idl \
     $(WebCore)/page/IsLoggedIn.idl \
     $(WebCore)/page/IntersectionObserver.idl \

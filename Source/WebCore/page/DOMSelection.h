@@ -30,10 +30,12 @@
 #pragma once
 
 #include "ExceptionOr.h"
+#include "GetComposedRangesOptions.h"
 #include "LocalDOMWindowProperty.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/Variant.h>
 
 namespace WebCore {
 
@@ -77,7 +79,7 @@ public:
     void addRange(Range&);
     ExceptionOr<void> removeRange(Range&);
 
-    Vector<Ref<StaticRange>> getComposedRanges(FixedVector<std::reference_wrapper<ShadowRoot>>&&);
+    Vector<Ref<StaticRange>> getComposedRanges(std::optional<Variant<RefPtr<ShadowRoot>, GetComposedRangesOptions>>&& options = std::nullopt, FixedVector<std::reference_wrapper<ShadowRoot>>&& = { });
 
     void deleteFromDocument();
     bool containsNode(Node&, bool partlyContained) const;

@@ -1452,6 +1452,7 @@ set(WebCore_NON_SVG_IDL_FILES
     page/DOMWindow.idl
     page/EventSource.idl
     page/FragmentDirective.idl
+    page/GetComposedRangesOptions.idl
     page/History.idl
     page/IsLoggedIn.idl
     page/IntersectionObserver.idl

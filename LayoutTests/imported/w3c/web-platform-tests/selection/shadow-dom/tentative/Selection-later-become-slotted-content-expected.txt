@@ -1,5 +1,5 @@
 slotted
 outer
 
-FAIL test to select a light DOM element and it becomes a slotted content after the selection Type error
+PASS test to select a light DOM element and it becomes a slotted content after the selection
 

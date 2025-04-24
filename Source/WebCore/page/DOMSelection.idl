@@ -49,7 +49,7 @@
     [EnabledBySetting=LiveRangeSelectionEnabled] undefined removeRange(Range range);
     undefined removeAllRanges();
 
-    [EnabledBySetting=SelectionAPIForShadowDOMEnabled] sequence<StaticRange> getComposedRanges(ShadowRoot... shadowRoots);
+    [EnabledBySetting=SelectionAPIForShadowDOMEnabled] sequence<StaticRange> getComposedRanges(optional (ShadowRoot or GetComposedRangesOptions) options, ShadowRoot... shadowRoots);
 
     undefined empty();
 

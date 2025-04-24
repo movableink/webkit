@@ -461,7 +461,7 @@ ExceptionOr<void> DOMSelection::removeRange(Range& liveRange)
     return { };
 }
 
-Vector<Ref<StaticRange>> DOMSelection::getComposedRanges(FixedVector<std::reference_wrapper<ShadowRoot>>&& shadowRoots)
+Vector<Ref<StaticRange>> DOMSelection::getComposedRanges(std::optional<Variant<RefPtr<ShadowRoot>, GetComposedRangesOptions>>&& firstShadowRootOrOptions, FixedVector<std::reference_wrapper<ShadowRoot>>&& remainingShadowRoots)
 {
     RefPtr frame = this->frame();
     if (!frame)
@@ -471,9 +471,19 @@ Vector<Ref<StaticRange>> DOMSelection::getComposedRanges(FixedVector<std::refere
         return { };
 
     UncheckedKeyHashSet<Ref<ShadowRoot>> shadowRootSet;
-    shadowRootSet.reserveInitialCapacity(shadowRoots.size());
-    for (auto& root : shadowRoots)
-        shadowRootSet.add(root.get());
+    if (firstShadowRootOrOptions) {
+        if (auto* firstShadowRoot = std::get_if<RefPtr<ShadowRoot>>(&*firstShadowRootOrOptions)) {
+            shadowRootSet.reserveInitialCapacity(remainingShadowRoots.size() + 1);
+            shadowRootSet.add(firstShadowRoot->releaseNonNull());
+            for (auto& root : remainingShadowRoots)
+                shadowRootSet.add(root.get());
+        } else {
+            auto* options = std::get_if<GetComposedRangesOptions>(&*firstShadowRootOrOptions);
+            RELEASE_ASSERT(options);
+            for (auto& shadowRoot : options->shadowRoots)
+                shadowRootSet.add(WTFMove(shadowRoot));
+        }
+    }
 
     Ref startNode = range->startContainer();
     unsigned startOffset = range->startOffset();

@@ -4019,6 +4019,7 @@ JSGeolocationCoordinates.cpp
 JSGeolocationPosition.cpp
 JSGeolocationPositionError.cpp
 JSGetAnimationsOptions.cpp
+JSGetComposedRangesOptions.cpp
 JSGetHTMLOptions.cpp
 JSHTMLAllCollection.cpp
 JSHTMLAnchorElement.cpp
