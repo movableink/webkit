@@ -93,6 +93,8 @@ private:
     void didFailResourceLoad(const WebCore::ResourceError&);
     void didFailServiceWorkerLoad(const WebCore::ResourceError&);
     void serviceWorkerDidNotHandle();
+    void updateResultingClientIdentifier(WTF::UUID currentIdentifier, WTF::UUID newIdentifier);
+
     void didBlockAuthenticationChallenge();
     void setWorkerStart(MonotonicTime value) { m_workerStart = value; }
 

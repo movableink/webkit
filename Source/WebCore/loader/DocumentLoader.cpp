@@ -2744,6 +2744,14 @@ void DocumentLoader::whenDocumentIsCreated(Function<void(Document*)>&& callback)
     m_whenDocumentIsCreatedCallback = WTFMove(callback);
 }
 
+void DocumentLoader::setNewResultingClientId(ScriptExecutionContextIdentifier identifier)
+{
+    if (scriptExecutionContextIdentifierToLoaderMap().remove(*m_resultingClientId)) {
+        m_resultingClientId = identifier;
+        scriptExecutionContextIdentifierToLoaderMap().add(identifier, this);
+    }
+}
+
 } // namespace WebCore
 
 #undef PAGE_ID

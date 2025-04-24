@@ -543,6 +543,8 @@ public:
     bool navigationCanTriggerCrossDocumentViewTransition(Document& oldDocument, bool fromBackForwardCache);
     WEBCORE_EXPORT void whenDocumentIsCreated(Function<void(Document*)>&&);
 
+    WEBCORE_EXPORT void setNewResultingClientId(ScriptExecutionContextIdentifier);
+
 protected:
     WEBCORE_EXPORT DocumentLoader(const ResourceRequest&, const SubstituteData&);
 

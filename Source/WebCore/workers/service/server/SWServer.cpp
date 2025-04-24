@@ -1197,12 +1197,23 @@ void SWServer::registerServiceWorkerClient(ClientOrigin&& clientOrigin, ServiceW
 
     auto addResult = m_visibleClientIdToInternalClientIdMap.add(data.identifier.object().toString(), clientIdentifier);
     if (!addResult.isNewEntry) {
-        ASSERT(m_visibleClientIdToInternalClientIdMap.get(data.identifier.object().toString()) == clientIdentifier);
-        ASSERT(m_clientsById.contains(clientIdentifier));
-        if (data.isFocused)
-            data.focusOrder = ++m_focusOrder;
-        m_clientsById.set(clientIdentifier, makeUniqueRef<ServiceWorkerClientData>(WTFMove(data)));
-        return;
+        if (addResult.iterator->value.processIdentifier() != clientIdentifier.processIdentifier()) {
+            // The client is being process-swapped, we clear the hash maps so that they get properly populated.
+            auto previousIdentifier = addResult.iterator->value;
+            m_clientsById.remove(previousIdentifier);
+            m_clientsToBeCreatedById.remove(previousIdentifier);
+            m_clientToControllingRegistration.remove(previousIdentifier);
+            m_clientIdentifiersPerOrigin.ensure(clientOrigin, [] {
+                return Clients { };
+            }).iterator->value.identifiers.remove(previousIdentifier);
+        } else {
+            ASSERT(m_visibleClientIdToInternalClientIdMap.get(data.identifier.object().toString()) == clientIdentifier);
+            ASSERT(m_clientsById.contains(clientIdentifier));
+            if (data.isFocused)
+                data.focusOrder = ++m_focusOrder;
+            m_clientsById.set(clientIdentifier, makeUniqueRef<ServiceWorkerClientData>(WTFMove(data)));
+            return;
+        }
     }
 
     ASSERT(!m_clientsById.contains(clientIdentifier));
@@ -1265,6 +1276,10 @@ std::optional<SWServer::GatheredClientData> SWServer::gatherClientData(const Cli
 
 void SWServer::unregisterServiceWorkerClient(const ClientOrigin& clientOrigin, ScriptExecutionContextIdentifier clientIdentifier)
 {
+    auto clientIterator = m_clientsById.find(clientIdentifier);
+    if (clientIterator != m_clientsById.end() && clientIterator->value->identifier.processIdentifier() != clientIdentifier.processIdentifier())
+        return;
+
     auto clientRegistrableDomain = clientOrigin.clientRegistrableDomain();
     auto appInitiatedValueBefore = clientIsAppInitiatedForRegistrableDomain(clientOrigin.clientRegistrableDomain());
 

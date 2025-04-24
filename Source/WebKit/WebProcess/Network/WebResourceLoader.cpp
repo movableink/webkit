@@ -311,6 +311,12 @@ void WebResourceLoader::serviceWorkerDidNotHandle()
     coreLoader->didFail(error);
 }
 
+void WebResourceLoader::updateResultingClientIdentifier(WTF::UUID currentIdentifier, WTF::UUID newIdentifier)
+{
+    if (RefPtr loader = DocumentLoader::fromScriptExecutionContextIdentifier({ currentIdentifier, Process::identifier() }))
+        loader->setNewResultingClientId({ newIdentifier, Process::identifier() });
+}
+
 void WebResourceLoader::didFailResourceLoad(const ResourceError& error)
 {
     RefPtr coreLoader = m_coreLoader;
