@@ -28,8 +28,6 @@
 #import <wtf/RetainPtr.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 
-extern "C" void _BeginEventReceiptOnThread(void);
-
 void buildArgumentDefaults(int argc, char** argv, NSMutableDictionary *argumentDefaults)
 {
     // FIXME: We should switch these defaults to use overlay scrollbars, since they are the
@@ -73,7 +71,6 @@ int main(int argc, char** argv)
         enableAllSDKAlignedBehaviors();
 
         [NSApplication sharedApplication];
-        _BeginEventReceiptOnThread(); // Makes window visibility notifications work (and possibly more).
 
         passed = TestWebKitAPI::TestsController::singleton().run(argc, argv);
     }
