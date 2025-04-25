@@ -856,7 +856,7 @@ void HTMLModelElement::environmentMapRequestResource()
     options.destination = FetchOptions::Destination::Environmentmap;
 
     auto crossOriginAttribute = parseCORSSettingsAttribute(attributeWithoutSynchronization(HTMLNames::crossoriginAttr));
-    auto request = createPotentialAccessControlRequest(ResourceRequest { m_environmentMapURL }, WTFMove(options), document(), crossOriginAttribute);
+    auto request = createPotentialAccessControlRequest(ResourceRequest { URL { m_environmentMapURL } }, WTFMove(options), document(), crossOriginAttribute);
     request.setInitiator(*this);
 
     auto resource = document().protectedCachedResourceLoader()->requestEnvironmentMapResource(WTFMove(request));
