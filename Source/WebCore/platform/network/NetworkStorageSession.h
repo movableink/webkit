@@ -305,7 +305,12 @@ public:
 
     uint64_t cookiesVersion() const { return m_cookiesVersion; }
     WEBCORE_EXPORT void setCookiesVersion(uint64_t);
-    WEBCORE_EXPORT void addCookiesVersionChangeCallback(uint64_t version, CompletionHandler<void()>&&);
+    struct CookieVersionChangeCallback {
+        enum class Reason : uint8_t { VersionChange, SessionClose };
+        uint64_t version;
+        CompletionHandler<void(Reason)> callback;
+    };
+    WEBCORE_EXPORT void addCookiesVersionChangeCallback(CookieVersionChangeCallback&&);
 
 private:
 #if PLATFORM(COCOA)
@@ -392,10 +397,6 @@ private:
     mutable std::unique_ptr<CookieStorageObserver> m_cookieStorageObserver;
 #endif
     uint64_t m_cookiesVersion { 0 };
-    struct CookieVersionChangeCallback {
-        uint64_t version;
-        CompletionHandler<void()> callback;
-    };
     Deque<CookieVersionChangeCallback> m_cookiesVersionChangeCallbacks;
 
     static bool m_processMayUseCookieAPI;

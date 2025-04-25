@@ -646,24 +646,24 @@ void NetworkStorageSession::setCookiesVersion(uint64_t version)
     while (!cookiesVersionChangeCallbacks.isEmpty()) {
         auto callback = cookiesVersionChangeCallbacks.takeFirst();
         if (callback.version <= m_cookiesVersion) {
-            callback.callback();
+            callback.callback(CookieVersionChangeCallback::Reason::VersionChange);
             continue;
         }
         m_cookiesVersionChangeCallbacks.append(WTFMove(callback));
     }
 }
 
-void NetworkStorageSession::addCookiesVersionChangeCallback(uint64_t version, CompletionHandler<void()>&& completionHandler)
+void NetworkStorageSession::addCookiesVersionChangeCallback(CookieVersionChangeCallback&& callback)
 {
-    ASSERT(version < m_cookiesVersion);
-    m_cookiesVersionChangeCallbacks.append({ version, WTFMove(completionHandler) });
+    ASSERT(callback.version < m_cookiesVersion);
+    m_cookiesVersionChangeCallbacks.append(WTFMove(callback));
 }
 
 void NetworkStorageSession::clearCookiesVersionChangeCallbacks()
 {
     while (!m_cookiesVersionChangeCallbacks.isEmpty()) {
         auto callback = m_cookiesVersionChangeCallbacks.takeFirst();
-        callback.callback();
+        callback.callback(CookieVersionChangeCallback::Reason::SessionClose);
     }
 }
 
