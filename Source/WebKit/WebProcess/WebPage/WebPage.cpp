@@ -4838,6 +4838,8 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
     // that indicates override state for Lockdown mode. https://webkit.org/b/233100.
     if (WebProcess::singleton().isLockdownModeEnabled())
         adjustSettingsForLockdownMode(settings, &store);
+    if (settings.forceLockdownFontParserEnabled())
+        settings.setDownloadableBinaryFontTrustedTypes(DownloadableBinaryFontTrustedTypes::SafeFontParser);
 
 #if ENABLE(ARKIT_INLINE_PREVIEW)
     m_useARKitForModel = store.getBoolValueForKey(WebPreferencesKey::useARKitForModelKey());

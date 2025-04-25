@@ -630,7 +630,7 @@ void RemoteRenderingBackend::terminateWebProcess(ASCIILiteral message)
 bool RemoteRenderingBackend::shouldUseLockdownFontParser() const
 {
 #if HAVE(CTFONTMANAGER_CREATEMEMORYSAFEFONTDESCRIPTORFROMDATA)
-    return m_gpuConnectionToWebProcess->isLockdownSafeFontParserEnabled() && m_gpuConnectionToWebProcess->isLockdownModeEnabled();
+    return (m_gpuConnectionToWebProcess->isLockdownSafeFontParserEnabled() && m_gpuConnectionToWebProcess->isLockdownModeEnabled()) || (m_gpuConnectionToWebProcess->isForceLockdownSafeFontParserEnabled());
 #else
     return false;
 #endif

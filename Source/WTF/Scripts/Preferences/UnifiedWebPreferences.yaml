@@ -3180,6 +3180,22 @@ ForceFTPDirectoryListings:
     WebCore:
       default: false
 
+ForceLockdownFontParserEnabled:
+  type: bool
+  status: internal
+  humanReadableName: "Force Lockdown Mode Safe Font Parser"
+  humanReadableDescription: "Forcing the Lockdown Mode Safe Font Parser independently from Lockdown Mode state"
+  exposed: [ WebKit ]
+  category: security
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+  sharedPreferenceForWebProcess: true
+
 ForceWebGLUsesLowPower:
   type: bool
   status: embedder

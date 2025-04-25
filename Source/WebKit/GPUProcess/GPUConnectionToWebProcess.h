@@ -178,6 +178,7 @@ public:
 
     bool isLockdownModeEnabled() const { return m_isLockdownModeEnabled; }
     bool isLockdownSafeFontParserEnabled() const { return sharedPreferencesForWebProcess() ? sharedPreferencesForWebProcess()->lockdownFontParserEnabled : false; }
+    bool isForceLockdownSafeFontParserEnabled() const { return sharedPreferencesForWebProcess() ? sharedPreferencesForWebProcess()->forceLockdownFontParserEnabled : false; }
 
     Logger& logger();
 
