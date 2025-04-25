@@ -158,7 +158,6 @@ void CSSAnimation::syncStyleOriginatedTimeline()
     suspendEffectInvalidation();
 
     ASSERT(owningElement());
-    Ref target = owningElement()->element;
     Ref document = owningElement()->element.document();
     auto& timeline = backingAnimation().timeline();
     WTF::switchOn(timeline,
