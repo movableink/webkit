@@ -73,6 +73,12 @@ function process_ios_family_testwebkitapi_entitlements()
     plistbuddy Add :com.apple.private.xpc.launchd.job-manager string TestWebKitAPI
     plistbuddy Add :com.apple.CommCenter.fine-grained array
     plistbuddy Add :com.apple.CommCenter.fine-grained:0 string public-cellular-plan
+
+    if [[ "${PRODUCT_BUNDLE_IDENTIFIER}" == org.webkit.TestWebKitAPI ]]
+    then
+        plistbuddy Add :com.apple.developer.web-browser bool YES
+        plistbuddy Add :com.apple.developer.web-browser-engine.host bool YES
+    fi
 }
 
 plistbuddy Clear dict
