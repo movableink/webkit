@@ -68,6 +68,7 @@ public:
     bool isInactiveStyleOriginatedTimeline() const { return m_isInactiveStyleOriginatedTimeline; }
 
     AnimationTimeline::ShouldUpdateAnimationsAndSendEvents documentWillUpdateAnimationsAndSendEvents() override;
+    void updateCurrentTimeIfStale();
 
     AnimationTimelinesController* controller() const override;
 

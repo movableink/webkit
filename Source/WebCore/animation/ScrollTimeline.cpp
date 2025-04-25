@@ -29,6 +29,7 @@
 #include "AnimationTimelinesController.h"
 #include "DocumentInlines.h"
 #include "Element.h"
+#include "KeyframeEffect.h"
 #include "RenderLayerScrollableArea.h"
 #include "RenderView.h"
 #include "WebAnimation.h"
@@ -265,6 +266,35 @@ AnimationTimeline::ShouldUpdateAnimationsAndSendEvents ScrollTimeline::documentW
     if (source && source->element.isConnected())
         return AnimationTimeline::ShouldUpdateAnimationsAndSendEvents::Yes;
     return AnimationTimeline::ShouldUpdateAnimationsAndSendEvents::No;
+}
+
+void ScrollTimeline::updateCurrentTimeIfStale()
+{
+    // https://drafts.csswg.org/scroll-animations-1/#event-loop
+    // We must update timelines that became stale in the process of updating the page rendering.
+    // This function will be called during Page::updateRendering() after animations have been
+    // updated, requestAnimationFrame callbacks have been serviced, styles have been updated
+    // and resize observers have been run.
+    // See https://github.com/w3c/csswg-drafts/issues/12120 about clarifying this.
+    auto source = m_source.styleable();
+    if (!source || m_animations.isEmpty())
+        return;
+
+    auto previousMaxScrollOffset = m_cachedCurrentTimeData.maxScrollOffset;
+    cacheCurrentTime();
+    if (previousMaxScrollOffset == m_cachedCurrentTimeData.maxScrollOffset)
+        return;
+
+    bool needsStyleUpdate = false;
+    for (auto& animation : m_animations) {
+        if (RefPtr effect = dynamicDowncast<KeyframeEffect>(animation->effect())) {
+            effect->invalidate();
+            needsStyleUpdate = true;
+        }
+    }
+
+    if (needsStyleUpdate)
+        source->element.protectedDocument()->updateStyleIfNeeded();
 }
 
 void ScrollTimeline::setTimelineScopeElement(const Element& element)

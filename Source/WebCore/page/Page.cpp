@@ -2185,6 +2185,11 @@ void Page::updateRendering()
         document.updateResizeObservations(*this);
     });
 
+    // https://drafts.csswg.org/scroll-animations-1/#event-loop
+    forEachDocument([] (Document& document) {
+        document.updateStaleScrollTimelines();
+    });
+
     runProcessingStep(RenderingUpdateStep::FocusFixup, [&] (Document& document) {
         if (RefPtr focusedElement = document.focusedElement()) {
             if (!focusedElement->isFocusable())

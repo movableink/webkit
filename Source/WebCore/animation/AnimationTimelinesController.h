@@ -38,6 +38,7 @@ namespace WebCore {
 
 class AnimationTimeline;
 class Document;
+class ScrollTimeline;
 class WeakPtrImplWithEventTargetData;
 class WebAnimation;
 
@@ -57,6 +58,7 @@ public:
     void removeTimeline(AnimationTimeline&);
     void detachFromDocument();
     void updateAnimationsAndSendEvents(ReducedResolutionSeconds);
+    void updateStaleScrollTimelines();
     void addPendingAnimation(WebAnimation&);
 
     std::optional<Seconds> currentTime();
@@ -85,6 +87,7 @@ private:
     std::unique_ptr<AcceleratedEffectStackUpdater> m_acceleratedEffectStackUpdater;
 #endif
 
+    Vector<Ref<ScrollTimeline>> m_updatedScrollTimelines;
     UncheckedKeyHashMap<FramesPerSecond, ReducedResolutionSeconds> m_animationFrameRateToLastTickTimeMap;
     WeakHashSet<AnimationTimeline> m_timelines;
     WeakHashSet<WebAnimation, WeakPtrImplWithEventTargetData> m_pendingAnimations;

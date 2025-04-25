@@ -10464,6 +10464,12 @@ void Document::updateAnimationsAndSendEvents()
         timelinesController->updateAnimationsAndSendEvents(domWindow->frozenNowTimestamp());
 }
 
+void Document::updateStaleScrollTimelines()
+{
+    if (CheckedPtr timelinesController = this->timelinesController())
+        timelinesController->updateStaleScrollTimelines();
+}
+
 DocumentTimeline& Document::timeline()
 {
     if (!m_timeline)
