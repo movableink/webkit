@@ -1862,7 +1862,7 @@ webkit.org/b/261024 imported/w3c/web-platform-tests/websockets/opening-handshake
 webkit.org/b/261024 imported/w3c/web-platform-tests/websockets/opening-handshake/005.html?default [ Failure Pass ]
 webkit.org/b/261024 inspector/canvas/recording-webgl-full.html [ Failure ]
 webkit.org/b/261024 inspector/canvas/recording-webgl-snapshots.html [ Failure ]
-webkit.org/b/261024 webgl/1.0.3/conformance/canvas/buffer-offscreen-test.html [ Pass Timeout ]
+webkit.org/b/261024 webgl/1.0.x/conformance/canvas/buffer-offscreen-test.html [ Pass Timeout ]
 webkit.org/b/261024 webgl/1.0.x/conformance/context/context-attribute-preserve-drawing-buffer-antialias.html [ Pass Timeout ]
 webkit.org/b/261024 webgl/1.0.x/conformance/offscreencanvas/context-attribute-preserve-drawing-buffer.html [ Pass Timeout ]
 webkit.org/b/261024 webgl/1.0.x/conformance/renderbuffers/framebuffer-state-restoration.html [ Pass Timeout ]

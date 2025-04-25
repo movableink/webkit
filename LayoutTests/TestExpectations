@@ -4593,7 +4593,6 @@ webgl/2.0.0/conformance2/rendering/blitframebuffer-filter-outofbounds.html [ Ski
 
 # webkit.org/b/203908 Tests generate inconsistent results or time out
 webgl/1.0.3/conformance/textures/texture-npot-video.html [ Skip ]
-webgl/1.0.3/conformance/canvas/rapid-resizing.html [ Skip ]
 
 # WebGL 2 Conformance Suite rules for regular bots post ANGLE backend adoption.
 # DEQP is skipped on the main fleet of bots because of the long run time.
@@ -4695,12 +4694,12 @@ webkit.org/b/241027 webgl/2.0.0/conformance2/textures/image_bitmap_from_image_bi
 webgl/1.0.x [ Skip ]
 
 # Explicitly enable tests which we have fixed and do not have corresponding 1.0.3 test functionality.
-webgl/1.0.x/conformance/canvas/to-data-url-test.html [ Pass ]
 webgl/1.0.x/conformance/context/constants-and-properties.html [ Pass ]
 webgl/1.0.x/conformance/textures/misc/exif-orientation.html [ Pass ]
 
 webgl/1.0.x/conformance/attribs [ Pass ]
 webgl/1.0.x/conformance/buffers [ Pass ]
+webgl/1.0.x/conformance/canvas [ Pass ]
 webgl/1.0.x/conformance/context [ Pass ]
 webgl/1.0.x/conformance/extensions [ Pass ]
 webgl/1.0.x/conformance/glsl [ Pass ]
@@ -4726,7 +4725,6 @@ webgl/2.0.y [ Skip ]
 webkit.org/b/254730 [ Debug ] webgl/2.0.y/conformance/extensions/webgl-compressed-texture-astc.html [ Slow ]
 
 # Explicitly enable tests which we have fixed and do not have corresponding 2.0.0 test functionality.
-webgl/2.0.y/conformance/canvas/to-data-url-test.html [ Pass ]
 webgl/2.0.y/conformance/textures/misc/exif-orientation.html [ Pass ]
 webgl/2.0.y/conformance/extensions/webgl-multi-draw.html [ Pass Slow ]
 webgl/2.0.y/conformance2/extensions/ext-texture-filter-anisotropic.html [ Pass ]
@@ -4744,6 +4742,7 @@ webgl/2.0.y/conformance2/offscreencanvas [ Pass ]
 # Explicitly turn on conformance test until all of webgl/2.0.y is enabled
 webgl/2.0.y/conformance/attribs [ Pass ]
 webgl/2.0.y/conformance/buffers [ Pass ]
+webgl/2.0.y/conformance/canvas [ Pass ]
 webgl/2.0.y/conformance/context [ Pass ]
 webgl/2.0.y/conformance/extensions [ Pass ]
 webgl/2.0.y/conformance/glsl [ Pass ]
@@ -4757,6 +4756,7 @@ webgl/2.0.y/conformance/reading [ Pass ]
 webgl/2.0.y/conformance/renderbuffers [ Pass ]
 webgl/2.0.y/conformance/rendering [ Pass ]
 webgl/2.0.y/conformance/textures/canvas/ [ Pass ]
+webgl/2.0.y/conformance2/canvas [ Pass ]
 webgl/2.0.y/conformance/uniforms [ Pass Slow ]
 webgl/2.0.y/conformance2/context [ Pass ]
 webgl/2.0.y/conformance2/extensions/ext-conservative-depth.html [ Pass ]
@@ -4794,6 +4794,7 @@ webkit.org/b/282031 webgl/2.0.y/conformance/offscreencanvas/context-lost.html [ 
 fast/canvas/webgl/invalid-passed-params.html [ Skip ]
 webgl/1.0.3/conformance/attribs [ Skip ]
 webgl/1.0.3/conformance/buffers [ Skip ]
+webgl/1.0.3/conformance/canvas [ Skip ]
 webgl/1.0.3/conformance/context [ Skip ]
 webgl/1.0.3/conformance/extensions [ Skip ]
 webgl/1.0.3/conformance/glsl [ Skip ]
@@ -4809,6 +4810,7 @@ webgl/1.0.3/conformance/state [ Skip ]
 webgl/1.0.3/conformance/uniforms [ Skip ]
 webgl/2.0.0/conformance/attribs [ Skip ]
 webgl/2.0.0/conformance/buffers [ Skip ]
+webgl/2.0.0/conformance/canvas [ Skip ]
 webgl/2.0.0/conformance/context [ Skip ]
 webgl/2.0.0/conformance/extensions [ Skip ]
 webgl/2.0.0/conformance/glsl [ Skip ]
