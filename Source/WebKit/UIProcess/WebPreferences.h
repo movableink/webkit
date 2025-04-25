@@ -94,6 +94,8 @@ public:
     void startBatchingUpdates();
     void endBatchingUpdates();
 
+    static void forceSiteIsolationAlwaysOnForTesting();
+
 private:
     void platformInitializeStore();
 

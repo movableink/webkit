@@ -1932,6 +1932,11 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
     return NO;
 }
 
++ (void)_forceSiteIsolationAlwaysOnForTesting
+{
+    WebKit::WebPreferences::forceSiteIsolationAlwaysOnForTesting();
+}
+
 #if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WKPreferencesAdditions.mm>)
 #import <WebKitAdditions/WKPreferencesAdditions.mm>
 #endif

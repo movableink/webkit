@@ -28,7 +28,17 @@
 #import <wtf/RetainPtr.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 
-void buildArgumentDefaults(int argc, char** argv, NSMutableDictionary *argumentDefaults)
+static void forceSiteIsolationForTesting()
+{
+    // Use these indirect lookup techniques because some users of mainMac.mm don't link WebKit
+    // e.g. TestWTF, TestIPC, etc
+    Class theClass = NSClassFromString(@"WKPreferences");
+    SEL sel = NSSelectorFromString(@"_forceSiteIsolationAlwaysOnForTesting");
+    if ([theClass respondsToSelector:sel])
+        [theClass performSelector:sel];
+}
+
+static void handleArguments(int argc, char** argv, NSMutableDictionary *argumentDefaults)
 {
     // FIXME: We should switch these defaults to use overlay scrollbars, since they are the
     // default on the platform, but a variety of tests will need changes.
@@ -45,6 +55,8 @@ void buildArgumentDefaults(int argc, char** argv, NSMutableDictionary *argumentD
             argumentDefaults[@"WebKit2GPUProcessForDOMRendering"] = @YES;
         else if (strcmp(argv[i], "--no-use-gpu-process") == 0)
             argumentDefaults[@"WebKit2GPUProcessForDOMRendering"] = @NO;
+        else if (strcmp(argv[i], "--site-isolation") == 0)
+            forceSiteIsolationForTesting();
     }
 }
 
@@ -63,7 +75,7 @@ int main(int argc, char** argv)
         // Web Content process. Those listed below are propagated manually.
 
         auto argumentDefaults = adoptNS([[NSMutableDictionary alloc] init]);
-        buildArgumentDefaults(argc, argv, argumentDefaults.get());
+        handleArguments(argc, argv, argumentDefaults.get());
 
         [argumentDomain addEntriesFromDictionary:argumentDefaults.get()];
         [[NSUserDefaults standardUserDefaults] setVolatileDomain:argumentDomain.get() forName:NSArgumentDomain];
