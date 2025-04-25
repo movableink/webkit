@@ -182,8 +182,13 @@ void AlternativeTextController::show(const SimpleRange& rangeToReplace, const St
     m_rangeWithAlternative = rangeToReplace;
     m_details = replacement;
     m_isActive = true;
-    if (CheckedPtr client = alternativeTextClient())
-        client->showCorrectionAlternative(m_type, boundingBox, m_originalText, replacement, { });
+
+    if (!m_document->frame())
+        return;
+    FrameIdentifier rootFrameID = m_document->frame()->rootFrame().frameID();
+
+    if (CheckedPtr client = alternativeTextClient(); client)
+        client->showCorrectionAlternative(m_type, boundingBox, m_originalText, replacement, { }, rootFrameID);
 }
 
 void AlternativeTextController::handleCancelOperation()
@@ -278,9 +283,12 @@ void AlternativeTextController::timerFired()
         m_originalText = plainText(*m_rangeWithAlternative);
         auto boundingBox = rootViewRectForRange(*m_rangeWithAlternative);
         if (!boundingBox.isEmpty()) {
+            if (!m_document->frame())
+                return;
+            FrameIdentifier rootFrameID = m_document->frame()->rootFrame().frameID();
             if (CheckedPtr client = alternativeTextClient()) {
                 removeMarkers(*m_rangeWithAlternative, { DocumentMarkerType::CorrectionIndicator });
-                client->showCorrectionAlternative(m_type, boundingBox, m_originalText, replacementString, { });
+                client->showCorrectionAlternative(m_type, boundingBox, m_originalText, replacementString, { }, rootFrameID);
             }
         }
     }
@@ -310,8 +318,11 @@ void AlternativeTextController::timerFired()
         m_isActive = true;
         auto boundingBox = rootViewRectForRange(*m_rangeWithAlternative);
         if (!boundingBox.isEmpty()) {
+            if (!m_document->frame())
+                return;
+            FrameIdentifier rootFrameID = m_document->frame()->rootFrame().frameID();
             if (CheckedPtr client = alternativeTextClient())
-                client->showCorrectionAlternative(m_type, boundingBox, m_originalText, topSuggestion, suggestions);
+                client->showCorrectionAlternative(m_type, boundingBox, m_originalText, topSuggestion, suggestions, rootFrameID);
         }
     }
         break;

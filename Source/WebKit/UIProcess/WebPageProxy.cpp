@@ -13140,10 +13140,24 @@ void WebPageProxy::substitutionsPanelIsShowing(CompletionHandler<void(bool)>&& c
     completionHandler(TextChecker::substitutionsPanelIsShowing());
 }
 
-void WebPageProxy::showCorrectionPanel(AlternativeTextType panelType, const FloatRect& boundingBoxOfReplacedString, const String& replacedString, const String& replacementString, const Vector<String>& alternativeReplacementStrings)
+void WebPageProxy::showCorrectionPanel(AlternativeTextType panelType, const FloatRect& boundingBoxOfReplacedString, String&& replacedString, String&& replacementString, Vector<String>&& alternativeReplacementStrings, FrameIdentifier rootFrameID)
 {
-    if (RefPtr pageClient = this->pageClient())
-        pageClient->showCorrectionPanel(panelType, boundingBoxOfReplacedString, replacedString, replacementString, alternativeReplacementStrings);
+    RefPtr pageClient = this->pageClient();
+    if (!pageClient)
+        return;
+
+    convertRectToMainFrameCoordinates(boundingBoxOfReplacedString, rootFrameID, [pageClient = WTFMove(pageClient),
+        panelType = WTFMove(panelType),
+        replacedString = WTFMove(replacedString),
+        replacementString = WTFMove(replacementString),
+        alternativeReplacementStrings = WTFMove(alternativeReplacementStrings)]
+    (std::optional<WebCore::FloatRect> convertedBoundingBox)
+    {
+        if (!convertedBoundingBox)
+            return;
+
+        pageClient->showCorrectionPanel(panelType, convertedBoundingBox.value(), replacedString, replacementString, alternativeReplacementStrings);
+    });
 }
 
 void WebPageProxy::dismissCorrectionPanel(ReasonForDismissingAlternativeText reason)
