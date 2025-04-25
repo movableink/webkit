@@ -45,8 +45,8 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-/* PlayStation does not currently support the backtrace API. */
-#if !PAS_PLATFORM(PLAYSTATION)
+/* PlayStation does not currently support the backtrace API. Android API versions < 33 don't, either */
+#if !PAS_PLATFORM(PLAYSTATION) && (!PAS_OS(ANDROID) || __ANDROID_API__ >= 33)
 #include <execinfo.h>
 #else
 size_t backtrace(void** buffer, size_t size)
