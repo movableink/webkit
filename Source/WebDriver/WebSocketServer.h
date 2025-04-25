@@ -106,7 +106,10 @@ private:
 
 class WebSocketServer : public RefCountedAndCanMakeWeakPtr<WebSocketServer> {
 public:
-    explicit WebSocketServer(WebSocketMessageHandler&, WebDriverService&);
+    static Ref<WebSocketServer> create(WebSocketMessageHandler& messageHandler)
+    {
+        return adoptRef(*new WebSocketServer(messageHandler));
+    }
     virtual ~WebSocketServer() = default;
 
     std::optional<String> listen(const String& host, unsigned port);
@@ -121,7 +124,7 @@ public:
     void removeStaticConnection(const WebSocketMessageHandler::Connection&);
 
     void addConnection(WebSocketMessageHandler::Connection&&, const String& sessionId);
-    RefPtr<Session> session(const WebSocketMessageHandler::Connection&);
+    String sessionID(const WebSocketMessageHandler::Connection&) const;
     std::optional<WebSocketMessageHandler::Connection> connection(const String& sessionId);
     void removeConnection(const WebSocketMessageHandler::Connection&);
 
@@ -136,9 +139,9 @@ public:
     void disconnectSession(const String& sessionId);
 
 private:
+    explicit WebSocketServer(WebSocketMessageHandler&);
 
     WebSocketMessageHandler& m_messageHandler;
-    WebDriverService& m_service;
     String m_listenerURL;
     RefPtr<WebSocketListener> m_listener;
     HashMap<WebSocketMessageHandler::Connection, String> m_connectionToSession;

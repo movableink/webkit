@@ -38,9 +38,8 @@
 
 namespace WebDriver {
 
-WebSocketServer::WebSocketServer(WebSocketMessageHandler& messageHandler, WebDriverService& service)
+WebSocketServer::WebSocketServer(WebSocketMessageHandler& messageHandler)
     : m_messageHandler(messageHandler)
-    , m_service(service)
 {
 }
 
@@ -71,25 +70,14 @@ void WebSocketServer::removeConnection(const WebSocketMessageHandler::Connection
         m_connectionToSession.remove(it);
 }
 
-RefPtr<Session> WebSocketServer::session(const WebSocketMessageHandler::Connection& connection)
+String WebSocketServer::sessionID(const WebSocketMessageHandler::Connection& connection) const
 {
-    String sessionId;
-
     for (const auto& pair : m_connectionToSession) {
-        if (pair.key == connection) {
-            sessionId = pair.value;
-            break;
-        }
+        if (pair.key == connection)
+            return pair.value;
     }
 
-    if (sessionId.isNull())
-        return { };
-
-    const auto& existingSession = m_service.session();
-    if (!existingSession || (existingSession->id() != sessionId))
-        return { };
-
-    return existingSession;
+    return { };
 }
 
 std::optional<WebSocketMessageHandler::Connection> WebSocketServer::connection(const String& sessionId)

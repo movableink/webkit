@@ -30,6 +30,7 @@
 #include "HTTPServer.h"
 #include "Logging.h"
 #include <cstdio>
+#include <glib-object.h>
 #include <libsoup/soup-websocket-connection.h>
 #include <libsoup/soup.h>
 #include <optional>
@@ -192,6 +193,15 @@ void WebSocketServer::disconnect()
 #if USE(SOUP2)
     RELEASE_LOG(WebDriverBiDi, "WebSockets support not implemented yet with libsoup2");
 #else
+    if (!m_soupServer)
+        return;
+
+    for (const auto& connection : m_connectionToSession.keys()) {
+        if (!connection)
+            continue;
+        g_signal_handlers_disconnect_by_data(connection.get(), this);
+    }
+
     soup_server_disconnect(m_soupServer.get());
     m_soupServer = nullptr;
 #endif
@@ -204,10 +214,11 @@ void WebSocketServer::disconnectSession(const String& sessionId)
     RELEASE_LOG(WebDriverBiDi, "WebSockets support not implemented yet with libsoup2");
 #else
     auto connection = this->connection(sessionId);
-    if (!connection)
+    if (!connection || !connection->get())
         return;
 
     soup_websocket_connection_close(connection->get(), SOUP_WEBSOCKET_CLOSE_NORMAL, nullptr);
+    g_signal_handlers_disconnect_by_data(connection->get(), this);
 #endif
 }
 
