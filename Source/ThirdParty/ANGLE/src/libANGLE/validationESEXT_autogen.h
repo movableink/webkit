@@ -1027,8 +1027,6 @@ bool ValidateReleaseTexturesANGLE(const Context *context,
 
 // GL_APPLE_clip_distance
 
-// GL_ARB_sync
-
 // GL_ARM_rgba8
 
 // GL_ARM_shader_framebuffer_fetch
@@ -1098,11 +1096,6 @@ bool ValidateEGLImageTargetTexStorageEXT(const Context *context,
                                          GLenum target,
                                          egl::ImageID imagePacked,
                                          const GLint *attrib_list);
-bool ValidateEGLImageTargetTextureStorageEXT(const Context *context,
-                                             angle::EntryPoint entryPoint,
-                                             GLuint texture,
-                                             egl::ImageID imagePacked,
-                                             const GLint *attrib_list);
 
 // GL_EXT_EGL_image_storage_compression
 
@@ -2063,12 +2056,6 @@ bool ValidateTexBufferRangeEXT(const Context *context,
 // GL_EXT_texture_shadow_lod
 
 // GL_EXT_texture_storage
-bool ValidateTexStorage1DEXT(const Context *context,
-                             angle::EntryPoint entryPoint,
-                             GLenum target,
-                             GLsizei levels,
-                             GLenum internalformat,
-                             GLsizei width);
 bool ValidateTexStorage2DEXT(const Context *context,
                              angle::EntryPoint entryPoint,
                              TextureType targetPacked,

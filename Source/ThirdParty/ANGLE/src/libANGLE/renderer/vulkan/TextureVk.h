@@ -583,7 +583,10 @@ class TextureVk : public TextureImpl, public angle::ObserverInterface
     angle::Result maybeUpdateBaseMaxLevels(ContextVk *contextVk,
                                            TextureUpdateResult *changeResultOut);
 
-    bool isFastUnpackPossible(const vk::Format &vkFormat,
+    bool isFastUnpackPossible(const gl::Box &area,
+                              GLuint rowLengthPixels,
+                              GLuint imageHeightPixels,
+                              const vk::Format &vkFormat,
                               size_t offset,
                               const vk::Format &bufferVkFormat) const;
 
@@ -633,11 +636,6 @@ class TextureVk : public TextureImpl, public angle::ObserverInterface
     angle::Result setStorageImpl(ContextVk *contextVk,
                                  gl::TextureType type,
                                  const vk::Format &format);
-
-    GLint getFormatSupportedCompressionRatesImpl(vk::Renderer *renderer,
-                                                 const vk::Format &format,
-                                                 GLsizei bufSize,
-                                                 GLint *rates);
 
     bool mOwnsImage;
     // Generated from ImageVk if EGLImage target, or from throw-away generator if Surface target.

@@ -460,8 +460,6 @@ const char *GetEntryPointName(EntryPoint ep)
             return "eglSwapBuffers";
         case EntryPoint::EGLSwapBuffersWithDamageKHR:
             return "eglSwapBuffersWithDamageKHR";
-        case EntryPoint::EGLSwapBuffersWithFrameTokenANGLE:
-            return "eglSwapBuffersWithFrameTokenANGLE";
         case EntryPoint::EGLSwapInterval:
             return "eglSwapInterval";
         case EntryPoint::EGLTerminate:
@@ -884,8 +882,6 @@ const char *GetEntryPointName(EntryPoint ep)
             return "glEGLImageTargetTexStorageEXT";
         case EntryPoint::GLEGLImageTargetTexture2DOES:
             return "glEGLImageTargetTexture2DOES";
-        case EntryPoint::GLEGLImageTargetTextureStorageEXT:
-            return "glEGLImageTargetTextureStorageEXT";
         case EntryPoint::GLEnable:
             return "glEnable";
         case EntryPoint::GLEnableClientState:
@@ -1980,8 +1976,6 @@ const char *GetEntryPointName(EntryPoint ep)
             return "glTexParameterx";
         case EntryPoint::GLTexParameterxv:
             return "glTexParameterxv";
-        case EntryPoint::GLTexStorage1DEXT:
-            return "glTexStorage1DEXT";
         case EntryPoint::GLTexStorage2D:
             return "glTexStorage2D";
         case EntryPoint::GLTexStorage2DEXT:

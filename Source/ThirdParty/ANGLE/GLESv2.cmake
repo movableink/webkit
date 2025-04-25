@@ -19,6 +19,7 @@ set(libangle_common_headers
     "src/common/PackedEGLEnums_autogen.h"
     "src/common/PackedEnums.h"
     "src/common/PackedGLEnums_autogen.h"
+    "src/common/PackedCLEnums_autogen.h"
     "src/common/PoolAlloc.h"
     "src/common/RingBufferAllocator.h"
     "src/common/SimpleMutex.h"
@@ -67,6 +68,7 @@ set(libangle_common_headers
     "src/common/uniform_type_info_autogen.h"
     "src/common/utilities.h"
     "src/common/vector_utils.h"
+    "src/libANGLE/CLBitField.h"
 )
 
 set(libangle_common_sources
@@ -105,6 +107,7 @@ set(libangle_common_shader_state_sources
 set(libangle_common_cl_sources
     "src/common/PackedCLEnums_autogen.cpp"
     "src/common/PackedCLEnums_autogen.h"
+    "src/libANGLE/CLBitField.h"
 )
 
 set(xxhash_sources
@@ -330,7 +333,6 @@ set(libangle_headers
     "src/libANGLE/cl_types.h"
     "src/libANGLE/context_private_call.inl.h"
     "src/libANGLE/context_private_call_autogen.h"
-    "src/libANGLE/entry_points_utils.cpp"
     "src/libANGLE/entry_points_utils.h"
     "src/libANGLE/features.h"
     "src/libANGLE/formatutils.h"
@@ -396,7 +398,18 @@ set(libangle_headers
     "src/libANGLE/validationESEXT.h"
     "src/libANGLE/validationESEXT_autogen.h"
     "src/common/base/anglebase/trace_event/trace_event.h"
-    "src/common/PackedCLEnums_autogen.h"
+    "src/libANGLE/CLPlatform.h"
+    "src/libANGLE/renderer/CLPlatformImpl.h"
+    "src/libANGLE/CLObject.h"
+    "src/libANGLE/renderer/CLContextImpl.h"
+    "src/libANGLE/renderer/CLDeviceImpl.h"
+    "src/libANGLE/renderer/CLExtensions.h"
+    "src/libANGLE/renderer/CLCommandQueueImpl.h"
+    "src/libANGLE/renderer/CLEventImpl.h"
+    "src/libANGLE/renderer/CLMemoryImpl.h"
+    "src/libANGLE/renderer/CLProgramImpl.h"
+    "src/libANGLE/renderer/CLSamplerImpl.h"
+    "src/libANGLE/renderer/CLKernelImpl.h"
 )
 
 set(libangle_sources
@@ -584,6 +597,7 @@ list(APPEND libangle_sources
     "src/common/gl_enum_utils.h"
     "src/common/gl_enum_utils_autogen.h"
     "src/libANGLE/capture/FrameCapture.h"
+    "src/libANGLE/capture/capture_cl_autogen.h"
     "src/libANGLE/capture/capture_egl_autogen.h"
     "src/libANGLE/capture/capture_gles_1_0_autogen.h"
     "src/libANGLE/capture/capture_gles_2_0_autogen.h"
@@ -596,6 +610,7 @@ list(APPEND libangle_sources
 
 set(libangle_capture_sources
     "src/libANGLE/capture/FrameCapture.cpp"
+    "src/libANGLE/capture/FrameCaptureCommon.cpp"
     "src/libANGLE/capture/capture_egl_autogen.cpp"
     "src/libANGLE/capture/capture_gles_1_0_autogen.cpp"
     "src/libANGLE/capture/capture_gles_1_0_params.cpp"
@@ -609,9 +624,18 @@ set(libangle_capture_sources
     "src/libANGLE/capture/capture_gles_3_2_params.cpp"
     "src/libANGLE/capture/capture_gles_ext_autogen.cpp"
     "src/libANGLE/capture/capture_gles_ext_params.cpp"
+    "src/libGLESv2/cl_stubs_autogen.h"
     "src/libGLESv2/global_state.h"
     "src/third_party/ceval/ceval.h"
 )
+
+if(angle_enable_cl)
+    list(APPEND libangle_capture_sources
+        "src/libANGLE/capture/FrameCaptureCL.cpp"
+        "src/libANGLE/capture/capture_cl_autogen.cpp"
+        "src/libANGLE/capture/capture_cl_params.cpp"
+    )
+endif()
 
 set(libglesv2_sources
     "src/libGLESv2/egl_context_lock_autogen.h"

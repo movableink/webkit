@@ -150,7 +150,6 @@ const ProcEntry g_procTable[] = {
     {"eglSurfaceAttrib", P(EGL_SurfaceAttrib)},
     {"eglSwapBuffers", P(EGL_SwapBuffers)},
     {"eglSwapBuffersWithDamageKHR", P(EGL_SwapBuffersWithDamageKHR)},
-    {"eglSwapBuffersWithFrameTokenANGLE", P(EGL_SwapBuffersWithFrameTokenANGLE)},
     {"eglSwapInterval", P(EGL_SwapInterval)},
     {"eglTerminate", P(EGL_Terminate)},
     {"eglUnlockSurfaceKHR", P(EGL_UnlockSurfaceKHR)},
@@ -362,7 +361,6 @@ const ProcEntry g_procTable[] = {
     {"glEGLImageTargetRenderbufferStorageOES", P(GL_EGLImageTargetRenderbufferStorageOES)},
     {"glEGLImageTargetTexStorageEXT", P(GL_EGLImageTargetTexStorageEXT)},
     {"glEGLImageTargetTexture2DOES", P(GL_EGLImageTargetTexture2DOES)},
-    {"glEGLImageTargetTextureStorageEXT", P(GL_EGLImageTargetTextureStorageEXT)},
     {"glEnable", P(GL_Enable)},
     {"glEnableClientState", P(GL_EnableClientState)},
     {"glEnableVertexAttribArray", P(GL_EnableVertexAttribArray)},
@@ -910,7 +908,6 @@ const ProcEntry g_procTable[] = {
     {"glTexParameterivRobustANGLE", P(GL_TexParameterivRobustANGLE)},
     {"glTexParameterx", P(GL_TexParameterx)},
     {"glTexParameterxv", P(GL_TexParameterxv)},
-    {"glTexStorage1DEXT", P(GL_TexStorage1DEXT)},
     {"glTexStorage2D", P(GL_TexStorage2D)},
     {"glTexStorage2DEXT", P(GL_TexStorage2DEXT)},
     {"glTexStorage2DMultisample", P(GL_TexStorage2DMultisample)},
@@ -1012,6 +1009,11 @@ const ProcEntry g_procTable[] = {
 
 __eglMustCastToProperFunctionPointerType GetProcAddress(Thread *thread, const char *procname)
 {
+    if (procname == nullptr)
+    {
+        return nullptr;
+    }
+
     const ProcEntry *entry =
         std::lower_bound(std::begin(g_procTable), std::end(g_procTable), procname, CompareProc);
 

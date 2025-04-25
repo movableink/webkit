@@ -302,19 +302,11 @@ bool AreAssertionsEnabled();
         } while (0)
 
 // A macro for code which is not expected to be reached under valid assumptions
-#    if defined(__clang__) && __has_builtin(__builtin_unreachable)
-#        define UNREACHABLE()            \
-            do                           \
-            {                            \
-                __builtin_unreachable(); \
-            } while (0)
-#    else
-#        define UNREACHABLE()  \
-            do                 \
-            {                  \
-                ASSERT(false); \
-            } while (0)
-#    endif  // defined(__clang__) && __has_builtin(__builtin_unreachable)
+#    define UNREACHABLE()  \
+        do                 \
+        {                  \
+            ASSERT(false); \
+        } while (0)
 #endif  // defined(ANGLE_TRACE_ENABLED) || defined(ANGLE_ENABLE_ASSERTS)
 
 #if defined(ANGLE_PLATFORM_WINDOWS)

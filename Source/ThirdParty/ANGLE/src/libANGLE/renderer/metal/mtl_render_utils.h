@@ -13,6 +13,7 @@
 
 #import <Metal/Metal.h>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "libANGLE/angletypes.h"
 #include "libANGLE/renderer/metal/RenderTargetMtl.h"
@@ -157,24 +158,20 @@ struct CopyPixelsCommonParams
     uint32_t bufferRowPitch    = 0;
 
     TextureRef texture;
+
+    gl::Rectangle textureArea    = {};
+    uint32_t textureSliceOrDepth = 0;
 };
 
 struct CopyPixelsFromBufferParams : CopyPixelsCommonParams
 {
     uint32_t bufferDepthPitch = 0;
-
-    // z offset is:
-    //  - slice index if texture is array.
-    //  - depth if texture is 3d.
-    gl::Box textureArea;
 };
 
 struct CopyPixelsToBufferParams : CopyPixelsCommonParams
 {
-    gl::Rectangle textureArea;
     MipmapNativeLevel textureLevel = kZeroNativeMipLevel;
-    uint32_t textureSliceOrDeph    = 0;
-    bool reverseTextureRowOrder;
+    bool reverseTextureRowOrder    = false;
 };
 
 struct VertexFormatConvertParams
@@ -255,30 +252,51 @@ class ColorBlitUtils final : angle::NonCopyable
                                     const ColorBlitParams &params);
 
   private:
+    ANGLE_ENABLE_STRUCT_PADDING_WARNINGS
     struct ShaderKey
     {
-        uint32_t numColorAttachments = 0;
         int sourceTextureType        = 0;
-        bool unmultiplyAlpha         = false;
-        bool premultiplyAlpha        = false;
-        bool transformLinearToSrgb   = false;
+        uint32_t numColorAttachments : 29;
+        uint32_t unmultiplyAlpha : 1;
+        uint32_t premultiplyAlpha : 1;
+        uint32_t transformLinearToSrgb : 1;
+        ShaderKey()
+            : numColorAttachments(0),
+              unmultiplyAlpha(false),
+              premultiplyAlpha(false),
+              transformLinearToSrgb(false)
+        {}
+        ShaderKey(int sourceTextureType,
+                  uint32_t numColorAttachments,
+                  bool unmultiplyAlpha,
+                  bool premultiplyAlpha,
+                  bool transformLinearToSrgb)
+            : sourceTextureType(sourceTextureType),
+              numColorAttachments(numColorAttachments),
+              unmultiplyAlpha(unmultiplyAlpha != premultiplyAlpha ? unmultiplyAlpha : false),
+              premultiplyAlpha(unmultiplyAlpha != premultiplyAlpha ? premultiplyAlpha : false),
+              transformLinearToSrgb(transformLinearToSrgb)
+        {}
         bool operator==(const ShaderKey &other) const
         {
-            return numColorAttachments == other.numColorAttachments &&
+            return sourceTextureType == other.sourceTextureType &&
+                   numColorAttachments == other.numColorAttachments &&
                    unmultiplyAlpha == other.unmultiplyAlpha &&
                    premultiplyAlpha == other.premultiplyAlpha &&
-                   transformLinearToSrgb == other.transformLinearToSrgb &&
-                   sourceTextureType == other.sourceTextureType;
+                   transformLinearToSrgb == other.transformLinearToSrgb;
         }
         struct Hash
         {
             size_t operator()(const ShaderKey &k) const noexcept
             {
-                return angle::HashMultiple(k.numColorAttachments, k.unmultiplyAlpha,
-                                           k.premultiplyAlpha, k.sourceTextureType);
+                return angle::HashMultiple(k.sourceTextureType, k.numColorAttachments,
+                                           k.unmultiplyAlpha, k.premultiplyAlpha,
+                                           k.transformLinearToSrgb);
             }
         };
     };
+    ANGLE_DISABLE_STRUCT_PADDING_WARNINGS
+    static_assert(sizeof(ShaderKey) == 8);
     angle::Result ensureShadersInitialized(ContextMtl *ctx,
                                            const ShaderKey &key,
                                            angle::ObjCPtr<id<MTLFunction>> *fragmentShaderOut);
@@ -387,18 +405,6 @@ class IndexGeneratorUtils final : angle::NonCopyable
     angle::Result generateLineLoopLastSegmentFromElementsArray(ContextMtl *contextMtl,
                                                                const IndexGenerationParams &params);
 
-    angle::Result generatePrimitiveRestartPointsBuffer(ContextMtl *contextMtl,
-                                                       const IndexGenerationParams &params,
-                                                       size_t *indicesGenerated);
-
-    angle::Result generatePrimitiveRestartLinesBuffer(ContextMtl *contextMtl,
-                                                      const IndexGenerationParams &params,
-                                                      size_t *indicesGenerated);
-
-    angle::Result generatePrimitiveRestartTrianglesBuffer(ContextMtl *contextMtl,
-                                                          const IndexGenerationParams &params,
-                                                          size_t *indicesGenerated);
-
   private:
     // Index generator compute shaders:
     //  - First dimension: index type.
@@ -456,11 +462,6 @@ class IndexGeneratorUtils final : angle::NonCopyable
     angle::Result generateLineLoopLastSegmentFromElementsArrayCPU(
         ContextMtl *contextMtl,
         const IndexGenerationParams &params);
-
-    angle::Result generatePrimitiveRestartBuffer(ContextMtl *contextMtl,
-                                                 unsigned numVerticesPerPrimitive,
-                                                 const IndexGenerationParams &params,
-                                                 size_t *indicesGenerated);
 
     IndexConversionShaderArray mIndexConversionShaders;
 
@@ -531,27 +532,38 @@ class CopyPixelsUtils final : angle::NonCopyable
     CopyPixelsUtils() = default;
     CopyPixelsUtils(const std::string &readShaderName, const std::string &writeShaderName);
 
-    angle::Result unpackPixelsFromBufferToTexture(ContextMtl *contextMtl,
-                                                  const angle::Format &srcAngleFormat,
-                                                  const CopyPixelsFromBufferParams &params);
-    angle::Result packPixelsFromTextureToBuffer(ContextMtl *contextMtl,
-                                                const angle::Format &dstAngleFormat,
-                                                const CopyPixelsToBufferParams &params);
+    angle::Result unpackPixelsWithDraw(const gl::Context *context,
+                                       const angle::Format &srcAngleFormat,
+                                       const CopyPixelsFromBufferParams &params);
+    angle::Result packPixelsCS(ContextMtl *contextMtl,
+                               const angle::Format &dstAngleFormat,
+                               const CopyPixelsToBufferParams &params);
 
   private:
-    angle::Result getPixelsCopyPipeline(
+    angle::Result getT2BComputePipeline(
         ContextMtl *contextMtl,
         const angle::Format &angleFormat,
         const TextureRef &texture,
-        bool bufferWrite,
         angle::ObjCPtr<id<MTLComputePipelineState>> *outComputePipeline);
-    // Copy pixels between buffer and texture compute pipelines:
-    // - First dimension: pixel format.
-    // - Second dimension: texture type * (buffer read/write flag)
-    using PixelsCopyComputeShaderArray =
-        std::array<std::array<angle::ObjCPtr<id<MTLFunction>>, mtl_shader::kTextureTypeCount * 2>,
+    angle::Result getB2TRenderPipeline(
+        ContextMtl *contextMtl,
+        RenderCommandEncoder *cmdEncoder,
+        const angle::Format &angleFormat,
+        angle::ObjCPtr<id<MTLRenderPipelineState>> *outRenderPipeline);
+    // Compute functions that copy pixels from texture to buffer:
+    // - First dimension: pixel format key.
+    // - Second dimension: texture type key.
+    using T2BComputeShaderArray =
+        std::array<std::array<angle::ObjCPtr<id<MTLFunction>>, mtl_shader::kTextureTypeCount>,
                    angle::kNumANGLEFormats>;
-    PixelsCopyComputeShaderArray mPixelsCopyComputeShaders;
+    T2BComputeShaderArray mT2BComputeShaders;
+
+    // Render pipeline functions that copy pixels from buffer to texture:
+    // - Keyed by pixel formats.
+    using B2TFragmentShaderArray =
+        std::array<angle::ObjCPtr<id<MTLFunction>>, angle::kNumANGLEFormats>;
+    B2TFragmentShaderArray mB2TFragmentShaders;
+    angle::ObjCPtr<id<MTLFunction>> mB2TVertexShader;
 
     const std::string mReadShaderName;
     const std::string mWriteShaderName;
@@ -723,12 +735,13 @@ class RenderUtils : angle::NonCopyable
                                    bool sRGBMipmap,
                                    NativeTexLevelArray *mipmapOutputViews);
 
-    angle::Result unpackPixelsFromBufferToTexture(ContextMtl *contextMtl,
-                                                  const angle::Format &srcAngleFormat,
-                                                  const CopyPixelsFromBufferParams &params);
-    angle::Result packPixelsFromTextureToBuffer(ContextMtl *contextMtl,
-                                                const angle::Format &dstAngleFormat,
-                                                const CopyPixelsToBufferParams &params);
+    bool isPixelsUnpackSupported(const angle::Format &format) const;
+    angle::Result unpackPixelsWithDraw(const gl::Context *context,
+                                       const angle::Format &srcAngleFormat,
+                                       const CopyPixelsFromBufferParams &params);
+    angle::Result packPixelsCS(ContextMtl *contextMtl,
+                               const angle::Format &dstAngleFormat,
+                               const CopyPixelsToBufferParams &params);
 
     // See VertexFormatConversionUtils::convertVertexFormatToFloatCS()
     angle::Result convertVertexFormatToFloatCS(ContextMtl *contextMtl,
@@ -749,12 +762,6 @@ class RenderUtils : angle::NonCopyable
                                                  const angle::Format &srcAngleFormat,
                                                  const VertexFormatConvertParams &params);
 
-    angle::Result generatePrimitiveRestartPointsBuffer(ContextMtl *contextMtl,
-                                                       const IndexGenerationParams &params,
-                                                       size_t *indicesGenerated);
-    angle::Result generatePrimitiveRestartLinesBuffer(ContextMtl *contextMtl,
-                                                      const IndexGenerationParams &params,
-                                                      size_t *indicesGenerated);
     angle::Result generatePrimitiveRestartTrianglesBuffer(ContextMtl *contextMtl,
                                                           const IndexGenerationParams &params,
                                                           size_t *indicesGenerated);
@@ -779,6 +786,8 @@ class RenderUtils : angle::NonCopyable
     VertexFormatConversionUtils mVertexFormatUtils;
     BlockLinearizationUtils mBlockLinearizationUtils;
     DepthSaturationUtils mDepthSaturationUtils;
+
+    const std::unordered_set<angle::FormatID> mPixelUnpackSupportedFormats;
 };
 
 }  // namespace mtl

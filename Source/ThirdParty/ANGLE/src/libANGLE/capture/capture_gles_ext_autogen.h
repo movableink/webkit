@@ -13,6 +13,9 @@
 
 #include "common/PackedEnums.h"
 #include "libANGLE/capture/FrameCapture.h"
+#ifdef ANGLE_ENABLE_CL
+#    include "common/PackedCLEnums_autogen.h"
+#endif
 
 namespace gl
 {
@@ -1025,8 +1028,6 @@ angle::CallCapture CaptureReleaseTexturesANGLE(const State &glState,
 
 // GL_APPLE_clip_distance
 
-// GL_ARB_sync
-
 // GL_ARM_rgba8
 
 // GL_ARM_shader_framebuffer_fetch
@@ -1095,11 +1096,6 @@ angle::CallCapture CaptureEGLImageTargetTexStorageEXT(const State &glState,
                                                       GLenum target,
                                                       egl::ImageID imagePacked,
                                                       const GLint *attrib_list);
-angle::CallCapture CaptureEGLImageTargetTextureStorageEXT(const State &glState,
-                                                          bool isCallValid,
-                                                          GLuint texture,
-                                                          egl::ImageID imagePacked,
-                                                          const GLint *attrib_list);
 
 // GL_EXT_EGL_image_storage_compression
 
@@ -2062,12 +2058,6 @@ angle::CallCapture CaptureTexBufferRangeEXT(const State &glState,
 // GL_EXT_texture_shadow_lod
 
 // GL_EXT_texture_storage
-angle::CallCapture CaptureTexStorage1DEXT(const State &glState,
-                                          bool isCallValid,
-                                          GLenum target,
-                                          GLsizei levels,
-                                          GLenum internalformat,
-                                          GLsizei width);
 angle::CallCapture CaptureTexStorage2DEXT(const State &glState,
                                           bool isCallValid,
                                           TextureType targetPacked,
@@ -4509,12 +4499,6 @@ void CaptureEGLImageTargetTexStorageEXT_attrib_list(const State &glState,
                                                     egl::ImageID imagePacked,
                                                     const GLint *attrib_list,
                                                     angle::ParamCapture *paramCapture);
-void CaptureEGLImageTargetTextureStorageEXT_attrib_list(const State &glState,
-                                                        bool isCallValid,
-                                                        GLuint texture,
-                                                        egl::ImageID imagePacked,
-                                                        const GLint *attrib_list,
-                                                        angle::ParamCapture *paramCapture);
 void CaptureDrawElementsInstancedBaseInstanceEXT_indices(const State &glState,
                                                          bool isCallValid,
                                                          PrimitiveMode modePacked,

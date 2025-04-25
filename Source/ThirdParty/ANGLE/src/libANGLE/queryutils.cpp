@@ -1375,6 +1375,7 @@ void QueryProgramiv(Context *context, Program *program, GLenum pname, GLint *par
         case GL_COMPLETION_STATUS_KHR:
             if (context->isContextLost())
             {
+                context->contextLostErrorOnBlockingCall(angle::EntryPoint::GLGetProgramiv);
                 *params = GL_TRUE;
             }
             else
@@ -1513,7 +1514,9 @@ void QueryRenderbufferiv(const Context *context,
             }
             else
             {
-                *params = renderbuffer->getFormat().info->internalFormat;
+                *params = (renderbuffer->getFormat().info->internalFormat == GL_NONE)
+                              ? GL_RGBA4
+                              : renderbuffer->getFormat().info->internalFormat;
             }
             break;
         case GL_RENDERBUFFER_RED_SIZE:
@@ -1573,6 +1576,7 @@ void QueryShaderiv(const Context *context, Shader *shader, GLenum pname, GLint *
         case GL_COMPLETION_STATUS_KHR:
             if (context->isContextLost())
             {
+                context->contextLostErrorOnBlockingCall(angle::EntryPoint::GLGetShaderiv);
                 *params = GL_TRUE;
             }
             else
@@ -1847,6 +1851,7 @@ angle::Result QuerySynciv(const Context *context,
         case GL_SYNC_STATUS:
             if (context->isContextLost())
             {
+                context->contextLostErrorOnBlockingCall(angle::EntryPoint::GLGetSynciv);
                 *values = GL_SIGNALED;
             }
             else
@@ -3327,7 +3332,7 @@ bool GetQueryParameterInfo(const State &glState,
         }
         case GL_BLEND_ADVANCED_COHERENT_KHR:
         {
-            if (clientMajorVersion < 2 || !extensions.blendEquationAdvancedCoherentKHR)
+            if (!extensions.blendEquationAdvancedCoherentKHR)
             {
                 return false;
             }
@@ -4098,7 +4103,6 @@ bool GetQueryParameterInfo(const State &glState,
         switch (pname)
         {
             case GL_MAX_PIXEL_LOCAL_STORAGE_PLANES_ANGLE:
-            case GL_MAX_COLOR_ATTACHMENTS_WITH_ACTIVE_PIXEL_LOCAL_STORAGE_ANGLE:
             case GL_MAX_COMBINED_DRAW_BUFFERS_AND_PIXEL_LOCAL_STORAGE_PLANES_ANGLE:
             case GL_PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE:
                 *type      = GL_INT;

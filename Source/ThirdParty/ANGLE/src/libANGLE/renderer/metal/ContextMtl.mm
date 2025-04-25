@@ -1999,13 +1999,22 @@ mtl::RenderCommandEncoder *ContextMtl::getTextureRenderCommandEncoder(
     const mtl::TextureRef &textureTarget,
     const mtl::ImageNativeIndex &index)
 {
+    return getTextureRenderCommandEncoder(textureTarget, index.getNativeLevel(),
+                                          index.hasLayer() ? index.getLayerIndex() : 0);
+}
+
+mtl::RenderCommandEncoder *ContextMtl::getTextureRenderCommandEncoder(
+    const mtl::TextureRef &textureTarget,
+    mtl::MipmapNativeLevel level,
+    uint32_t layer)
+{
     ASSERT(textureTarget && textureTarget->valid());
 
     mtl::RenderPassDesc rpDesc;
 
     rpDesc.colorAttachments[0].texture      = textureTarget;
-    rpDesc.colorAttachments[0].level        = index.getNativeLevel();
-    rpDesc.colorAttachments[0].sliceOrDepth = index.hasLayer() ? index.getLayerIndex() : 0;
+    rpDesc.colorAttachments[0].level        = level;
+    rpDesc.colorAttachments[0].sliceOrDepth = layer;
     rpDesc.numColorAttachments              = 1;
     rpDesc.rasterSampleCount                = textureTarget->samples();
 

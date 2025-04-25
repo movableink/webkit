@@ -26,7 +26,7 @@ namespace webgpu
 {
 
 // WebGPU requires copy buffers bytesPerRow to be aligned to 256.
-// https://www.w3.org/TR/webgpu/#abstract-opdef-validating-gpuimagecopybuffer
+// https://www.w3.org/TR/webgpu/#abstract-opdef-validating-gputexelcopybufferinfo
 static const GLuint kCopyBufferAlignment = 256;
 
 enum class UpdateSource
@@ -49,7 +49,7 @@ struct SubresourceUpdate
 
     SubresourceUpdate(UpdateSource targetUpdateSource,
                       gl::LevelIndex newTargetLevel,
-                      wgpu::ImageCopyBuffer targetBuffer)
+                      wgpu::TexelCopyBufferInfo targetBuffer)
     {
         updateSource = targetUpdateSource;
         textureData  = targetBuffer;
@@ -71,7 +71,7 @@ struct SubresourceUpdate
 
     UpdateSource updateSource;
     ClearUpdate clearData;
-    wgpu::ImageCopyBuffer textureData;
+    wgpu::TexelCopyBufferInfo textureData;
 
     gl::LevelIndex targetLevel;
 };
@@ -142,9 +142,17 @@ class ImageHelper
                              const rx::PackPixelsParams &packPixelsParams,
                              void *pixels);
 
+    angle::Result createTextureViewSingleLevel(gl::LevelIndex targetLevel,
+                                               uint32_t layerIndex,
+                                               wgpu::TextureView &textureViewOut);
+    angle::Result createFullTextureView(wgpu::TextureView &textureViewOut,
+                                        wgpu::TextureViewDimension desiredViewDimension);
     angle::Result createTextureView(gl::LevelIndex targetLevel,
+                                    uint32_t levelCount,
                                     uint32_t layerIndex,
-                                    wgpu::TextureView &textureViewOut);
+                                    uint32_t arrayLayerCount,
+                                    wgpu::TextureView &textureViewOut,
+                                    wgpu::TextureViewDimension desiredViewDimension);
     LevelIndex toWgpuLevel(gl::LevelIndex levelIndexGl) const;
     gl::LevelIndex toGlLevel(LevelIndex levelIndexWgpu) const;
     bool isTextureLevelInAllocatedImage(gl::LevelIndex textureLevel);
@@ -186,6 +194,8 @@ enum class MapAtCreation
     Yes,
 };
 
+struct BufferReadback;
+
 class BufferHelper : public angle::NonCopyable
 {
   public:
@@ -214,15 +224,32 @@ class BufferHelper : public angle::NonCopyable
     bool canMapForRead() const;
     bool canMapForWrite() const;
 
+    bool isMappedForRead() const;
+    bool isMappedForWrite() const;
+
     wgpu::Buffer &getBuffer();
     uint64_t requestedSize() const;
     uint64_t actualSize() const;
+
+    // Helper to copy data to a staging buffer and map it. Staging data is cleaned up by the
+    // BufferReadback RAII object.
+    angle::Result readDataImmediate(ContextWgpu *context,
+                                    size_t offset,
+                                    size_t size,
+                                    webgpu::RenderPassClosureReason reason,
+                                    BufferReadback *result);
 
   private:
     wgpu::Buffer mBuffer;
     size_t mRequestedSize = 0;
 
     std::optional<BufferMapState> mMappedState;
+};
+
+struct BufferReadback
+{
+    BufferHelper buffer;
+    const uint8_t *data = nullptr;
 };
 
 }  // namespace webgpu

@@ -76,7 +76,6 @@
     void getTranslatedShaderSource(ShaderProgramID shaderPacked, GLsizei bufSize, GLsizei *length, \
                                    GLchar *source);                                                \
     /* GL_APPLE_clip_distance */                                                                   \
-    /* GL_ARB_sync */                                                                              \
     /* GL_ARM_rgba8 */                                                                             \
     /* GL_ARM_shader_framebuffer_fetch */                                                          \
     /* GL_ARM_shader_framebuffer_fetch_depth_stencil */                                            \
@@ -85,8 +84,6 @@
     /* GL_EXT_EGL_image_storage */                                                                 \
     void eGLImageTargetTexStorage(GLenum target, egl::ImageID imagePacked,                         \
                                   const GLint *attrib_list);                                       \
-    void eGLImageTargetTextureStorage(GLuint texture, egl::ImageID imagePacked,                    \
-                                      const GLint *attrib_list);                                   \
     /* GL_EXT_EGL_image_storage_compression */                                                     \
     /* GL_EXT_YUV_target */                                                                        \
     /* GL_EXT_base_instance */                                                                     \
@@ -253,7 +250,6 @@
     /* GL_EXT_texture_sRGB_decode */                                                               \
     /* GL_EXT_texture_shadow_lod */                                                                \
     /* GL_EXT_texture_storage */                                                                   \
-    void texStorage1D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width);        \
     /* GL_EXT_texture_storage_compression */                                                       \
     void texStorageAttribs2D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width,  \
                              GLsizei height, const GLint *attrib_list);                            \

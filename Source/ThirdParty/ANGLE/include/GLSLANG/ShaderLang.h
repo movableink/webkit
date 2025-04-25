@@ -26,7 +26,7 @@
 
 // Version number for shader translation API.
 // It is incremented every time the API changes.
-#define ANGLE_SH_VERSION 371
+#define ANGLE_SH_VERSION 374
 
 enum ShShaderSpec
 {
@@ -474,6 +474,12 @@ struct ShCompileOptions
     // Specify struct in one statement, declare instance in other.
     uint64_t separateCompoundStructDeclarations : 1;
 
+    // Whether to preserve denorm floats in the lexer or convert to zero
+    uint64_t preserveDenorms : 1;
+
+    // Whether inactive shader variables from the output.
+    uint64_t removeInactiveVariables : 1;
+
     ShCompileOptionsMetal metal;
     ShPixelLocalStorageOptions pls;
 };
@@ -738,7 +744,6 @@ struct ShBuiltInResources
 
     // ANGLE_shader_pixel_local_storage.
     int MaxPixelLocalStoragePlanes;
-    int MaxColorAttachmentsWithActivePixelLocalStorage;
     int MaxCombinedDrawBuffersAndPixelLocalStoragePlanes;
 };
 

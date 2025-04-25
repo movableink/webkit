@@ -136,8 +136,6 @@ class ProgramPrelude : public TIntermTraverser
     void addScalarMatrix();
     void subMatrixScalar();
     void subScalarMatrix();
-    void divMatrixScalar();
-    void divMatrixScalarAssign();
     void divScalarMatrix();
     void componentWiseDivide();
     void componentWiseDivideAssign();
@@ -738,32 +736,6 @@ ANGLE_ALWAYS_INLINE metal::matrix<T, Cols, Rows> operator-(T x, metal::matrix<T,
     return m;
 }
 )")
-
-PROGRAM_PRELUDE_DECLARE(divMatrixScalarAssign,
-                        R"(
-template <typename T, int Cols, int Rows>
-ANGLE_ALWAYS_INLINE thread metal::matrix<T, Cols, Rows> &operator/=(thread metal::matrix<T, Cols, Rows> &m, T x)
-{
-    for (size_t col = 0; col < Cols; ++col)
-    {
-        m[col] /= x;
-    }
-    return m;
-}
-)")
-
-PROGRAM_PRELUDE_DECLARE(divMatrixScalar,
-                        R"(
-#if __METAL_VERSION__ <= 220
-template <typename T, int Cols, int Rows>
-ANGLE_ALWAYS_INLINE metal::matrix<T, Cols, Rows> operator/(metal::matrix<T, Cols, Rows> m, T x)
-{
-    m /= x;
-    return m;
-}
-#endif
-)",
-                        divMatrixScalarAssign())
 
 PROGRAM_PRELUDE_DECLARE(divScalarMatrix,
                         R"(
@@ -3636,20 +3608,16 @@ void ProgramPrelude::visitOperator(TOperator op,
 
         case TOperator::EOpDiv:
         case TOperator::EOpDivAssign:
-            if (argType0->isMatrix())
+            if (argType1->isMatrix())
             {
-                if (argType1->isMatrix())
+                if (argType0->isMatrix())
                 {
                     componentWiseDivide();
                 }
-                else if (argType1->isScalar())
+                else if (argType0->isScalar())
                 {
-                    divMatrixScalar();
+                    divScalarMatrix();
                 }
-            }
-            else if (op == TOperator::EOpDiv && argType0->isScalar() && argType1->isMatrix())
-            {
-                divScalarMatrix();
             }
             else
             {

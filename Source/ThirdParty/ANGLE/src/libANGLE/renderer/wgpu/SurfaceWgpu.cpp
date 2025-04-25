@@ -45,8 +45,8 @@ angle::Result SurfaceWgpu::createDepthStencilAttachment(uint32_t width,
                                                            device, gl::LevelIndex(level), desc));
 
     wgpu::TextureView view;
-    ANGLE_TRY(
-        outDepthStencilAttachment->texture.createTextureView(gl::LevelIndex(level), layer, view));
+    ANGLE_TRY(outDepthStencilAttachment->texture.createTextureViewSingleLevel(gl::LevelIndex(level),
+                                                                              layer, view));
     outDepthStencilAttachment->renderTarget.set(
         &outDepthStencilAttachment->texture, view, webgpu::LevelIndex(level), layer,
         outDepthStencilAttachment->texture.toWgpuTextureFormat());
@@ -66,7 +66,7 @@ egl::Error OffscreenSurfaceWgpu::initialize(const egl::Display *display)
     return angle::ResultToEGL(initializeImpl(display));
 }
 
-egl::Error OffscreenSurfaceWgpu::swap(const gl::Context *context)
+egl::Error OffscreenSurfaceWgpu::swap(const gl::Context *context, SurfaceSwapFeedback *feedback)
 {
     UNREACHABLE();
     return egl::NoError();
@@ -168,7 +168,8 @@ angle::Result OffscreenSurfaceWgpu::initializeImpl(const egl::Display *display)
                                                      gl::LevelIndex(level), desc));
 
         wgpu::TextureView view;
-        ANGLE_TRY(mColorAttachment.texture.createTextureView(gl::LevelIndex(level), layer, view));
+        ANGLE_TRY(mColorAttachment.texture.createTextureViewSingleLevel(gl::LevelIndex(level),
+                                                                        layer, view));
         mColorAttachment.renderTarget.set(&mColorAttachment.texture, view,
                                           webgpu::LevelIndex(level), layer,
                                           mColorAttachment.texture.toWgpuTextureFormat());
@@ -206,7 +207,7 @@ void WindowSurfaceWgpu::destroy(const egl::Display *display)
     mDepthStencilAttachment.texture.resetImage();
 }
 
-egl::Error WindowSurfaceWgpu::swap(const gl::Context *context)
+egl::Error WindowSurfaceWgpu::swap(const gl::Context *context, SurfaceSwapFeedback *feedback)
 {
     return angle::ResultToEGL(swapImpl(context));
 }
@@ -396,7 +397,8 @@ angle::Result WindowSurfaceWgpu::updateCurrentTexture(const egl::Display *displa
 {
     wgpu::SurfaceTexture texture;
     mSurface.GetCurrentTexture(&texture);
-    if (texture.status != wgpu::SurfaceGetCurrentTextureStatus::Success)
+    if (texture.status != wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal &&
+        texture.status != wgpu::SurfaceGetCurrentTextureStatus::SuccessSuboptimal)
     {
         ERR() << "wgpu::Surface::GetCurrentTexture failed: "
               << gl::FmtHex(static_cast<uint32_t>(texture.status));
@@ -409,7 +411,7 @@ angle::Result WindowSurfaceWgpu::updateCurrentTexture(const egl::Display *displa
     ANGLE_TRY(mColorAttachment.texture.initExternal(angleFormat, angleFormat, texture.texture));
 
     wgpu::TextureView view;
-    ANGLE_TRY(mColorAttachment.texture.createTextureView(gl::LevelIndex(0), 0, view));
+    ANGLE_TRY(mColorAttachment.texture.createTextureViewSingleLevel(gl::LevelIndex(0), 0, view));
 
     mColorAttachment.renderTarget.set(&mColorAttachment.texture, view, webgpu::LevelIndex(0), 0,
                                       wgpuFormat);

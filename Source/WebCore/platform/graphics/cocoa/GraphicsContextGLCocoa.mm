@@ -150,7 +150,7 @@ static EGLDisplay initializeEGLDisplay(const GraphicsContextGLAttributes& attrs)
     }
     LOG(WebGL, "ANGLE initialised Major: %d Minor: %d", majorVersion, minorVersion);
 
-#if ASSERT_ENABLED && ENABLE(WEBXR)
+#if ASSERT_ENABLED
     auto displayExtensions = unsafeSpan8(EGL_QueryString(display, EGL_EXTENSIONS));
     ASSERT(WTF::contains(displayExtensions, "EGL_ANGLE_metal_shared_event_sync"_span));
 #endif
@@ -300,9 +300,6 @@ bool GraphicsContextGLCocoa::platformInitializeExtensions()
     if (attributes.xrCompatible && !enableRequiredWebXRExtensionsImpl())
         return false;
 #endif
-    // Sync objects are used to throttle display on Metal implementations.
-    if (!enableExtension("GL_ARB_sync"_s))
-        return false;
     return true;
 }
 

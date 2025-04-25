@@ -90,7 +90,6 @@ gles_requestable_extensions = [
     "GL_ANGLE_pack_reverse_row_order",
     "GL_ANGLE_texture_usage",
     "GL_APPLE_clip_distance",
-    "GL_ARB_sync",
     "GL_ARM_rgba8",
     "GL_ARM_shader_framebuffer_fetch",
     "GL_ARM_shader_framebuffer_fetch_depth_stencil",
@@ -172,6 +171,8 @@ gles_requestable_extensions = [
     "GL_EXT_YUV_target",
     "GL_IMG_texture_compression_pvrtc",
     "GL_IMG_texture_compression_pvrtc2",
+    "GL_KHR_blend_equation_advanced",
+    "GL_KHR_blend_equation_advanced_coherent",
     "GL_KHR_parallel_shader_compile",
     "GL_KHR_texture_compression_astc_hdr",
     "GL_KHR_texture_compression_astc_ldr",
@@ -280,8 +281,6 @@ gles_es_only_extensions = [
     "GL_EXT_sRGB_write_control",
     "GL_EXT_texture_format_sRGB_override",
     "GL_EXT_texture_sRGB_decode",
-    "GL_KHR_blend_equation_advanced",
-    "GL_KHR_blend_equation_advanced_coherent",
     "GL_KHR_debug",
     "GL_KHR_no_error",
     "GL_KHR_robust_buffer_access_behavior",
@@ -310,6 +309,23 @@ gles1_extensions = [
     "GL_OES_texture_mirrored_repeat",
 ]
 
+# Unsupported entry points that require explicit exclusion
+# because XML registry does not contain enough information.
+gles_skipped_commands = [
+    # GL_EXT_EGL_image_storage
+    "glEGLImageTargetTextureStorageEXT",
+    # GL_EXT_memory_object
+    "glTextureStorageMem2DEXT",
+    "glTextureStorageMem2DMultisampleEXT",
+    "glTextureStorageMem3DEXT",
+    "glTextureStorageMem3DMultisampleEXT",
+    "glNamedBufferStorageMemEXT",
+    # GL_EXT_texture_storage
+    "glTexStorage1DEXT",
+    "glTextureStorage1DEXT",
+    "glTextureStorage2DEXT",
+    "glTextureStorage3DEXT",
+]
 
 def check_sorted(name, l):
     unidiff = difflib.unified_diff(l, sorted(l, key=str.casefold), 'unsorted', 'sorted')
@@ -348,7 +364,6 @@ supported_egl_extensions = [
     "EGL_ANGLE_display_texture_share_group",
     "EGL_ANGLE_external_context_and_surface",
     "EGL_ANGLE_feature_control",
-    "EGL_ANGLE_ggp_stream_descriptor",
     "EGL_ANGLE_memory_usage_report",
     "EGL_ANGLE_metal_create_context_ownership_identity",
     "EGL_ANGLE_metal_shared_event_sync",
@@ -359,7 +374,6 @@ supported_egl_extensions = [
     "EGL_ANGLE_query_surface_pointer",
     "EGL_ANGLE_stream_producer_d3d_texture",
     "EGL_ANGLE_surface_d3d_texture_2d_share_handle",
-    "EGL_ANGLE_swap_with_frame_token",
     "EGL_ANGLE_sync_control_rate",
     "EGL_ANGLE_vulkan_image",
     "EGL_ANGLE_wait_until_work_scheduled",
@@ -563,7 +577,7 @@ class RegistryXML:
     def _ClassifySupport(self, extension):
         supported = extension.attrib['supported']
         # Desktop GL extensions exposed in ANGLE GLES for Chrome.
-        if extension.attrib['name'] in ['GL_ARB_sync', 'GL_NV_robustness_video_memory_purge']:
+        if extension.attrib['name'] in ['GL_NV_robustness_video_memory_purge']:
             supported += "|gles2"
         if 'gles2' in supported:
             return 'gl2ext'
@@ -606,13 +620,11 @@ class RegistryXML:
                 if 'api' in require.attrib and require.attrib['api'] not in apis:
                     continue
 
-                # A special case for EXT_texture_storage
-                filter_out_comment = "Supported only if GL_EXT_direct_state_access is supported"
-                if 'comment' in require.attrib and require.attrib['comment'] == filter_out_comment:
-                    continue
-
-                extension_commands = require.findall('command')
-                ext_cmd_names += [command.attrib['name'] for command in extension_commands]
+                ext_cmd_names += [
+                    command.attrib['name']
+                    for command in require.findall('command')
+                    if command.attrib['name'] not in gles_skipped_commands
+                ]
 
             self.ext_data[extension_name] = sorted(ext_cmd_names)
 

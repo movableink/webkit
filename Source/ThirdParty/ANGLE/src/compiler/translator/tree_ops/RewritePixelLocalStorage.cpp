@@ -301,7 +301,7 @@ class RewritePLSTraverser : public TIntermTraverser
         if (var->getType().getNominalSize() != n)
         {
             ASSERT(var->getType().getNominalSize() > n);
-            TVector swizzleOffsets{0, 1, 2, 3};
+            TVector<uint32_t> swizzleOffsets{0, 1, 2, 3};
             swizzleOffsets.resize(n);
             swizzled = new TIntermSwizzle(swizzled, swizzleOffsets);
         }
@@ -756,12 +756,12 @@ class RewritePLSToFramebufferFetchTraverser : public RewritePLSTraverser
         {
             const TType &plsType = plsVar.getType();
 
-            TType *accessVarType = nullptr;
+            TType *accessVarType;
             switch (plsType.getLayoutQualifier().imageInternalFormat)
             {
                 default:
                     UNREACHABLE();
-                    break;
+                    [[fallthrough]];
                 case EiifRGBA8:
                     accessVarType = new TType(EbtFloat, 4);
                     break;

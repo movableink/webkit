@@ -342,11 +342,11 @@ ANGLE_INLINE void VertexArray::updateCachedTransformFeedbackBindingValidation(si
     mCachedTransformFeedbackConflictedBindingsMask.set(bindingIndex, hasConflict);
 }
 
-VertexArray::DirtyBindingBits VertexArray::bindVertexBufferImpl(const Context *context,
-                                                                size_t bindingIndex,
-                                                                Buffer *boundBuffer,
-                                                                GLintptr offset,
-                                                                GLsizei stride)
+ANGLE_INLINE VertexArray::DirtyBindingBits VertexArray::bindVertexBufferImpl(const Context *context,
+                                                                             size_t bindingIndex,
+                                                                             Buffer *boundBuffer,
+                                                                             GLintptr offset,
+                                                                             GLsizei stride)
 {
     ASSERT(bindingIndex < getMaxBindings());
     ASSERT(context->isCurrentVertexArray(this));
@@ -751,7 +751,7 @@ VertexArray::DirtyBitType VertexArray::getDirtyBitFromIndex(bool contentsChanged
 {
     if (IsElementArrayBufferSubjectIndex(index))
     {
-        mIndexRangeCache.invalidate();
+        mIndexRangeInlineCache = {};
         return contentsChanged ? DIRTY_BIT_ELEMENT_ARRAY_BUFFER_DATA
                                : DIRTY_BIT_ELEMENT_ARRAY_BUFFER;
     }
@@ -841,44 +841,6 @@ bool VertexArray::hasTransformFeedbackBindingConflict(const Context *context) co
     }
 
     return false;
-}
-
-angle::Result VertexArray::getIndexRangeImpl(const Context *context,
-                                             DrawElementsType type,
-                                             GLsizei indexCount,
-                                             const void *indices,
-                                             IndexRange *indexRangeOut) const
-{
-    Buffer *elementArrayBuffer = mState.mElementArrayBuffer.get();
-    if (!elementArrayBuffer)
-    {
-        *indexRangeOut = ComputeIndexRange(type, indices, indexCount,
-                                           context->getState().isPrimitiveRestartEnabled());
-        return angle::Result::Continue;
-    }
-
-    size_t offset = reinterpret_cast<uintptr_t>(indices);
-    ANGLE_TRY(elementArrayBuffer->getIndexRange(context, type, offset, indexCount,
-                                                context->getState().isPrimitiveRestartEnabled(),
-                                                indexRangeOut));
-
-    mIndexRangeCache.put(type, indexCount, offset, *indexRangeOut);
-    return angle::Result::Continue;
-}
-
-VertexArray::IndexRangeCache::IndexRangeCache() = default;
-
-void VertexArray::IndexRangeCache::put(DrawElementsType type,
-                                       GLsizei indexCount,
-                                       size_t offset,
-                                       const IndexRange &indexRange)
-{
-    ASSERT(type != DrawElementsType::InvalidEnum);
-
-    mTypeKey       = type;
-    mIndexCountKey = indexCount;
-    mOffsetKey     = offset;
-    mPayload       = indexRange;
 }
 
 void VertexArray::onBufferContentsChange(uint32_t bufferIndex)

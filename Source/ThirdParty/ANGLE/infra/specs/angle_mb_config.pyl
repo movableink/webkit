@@ -17,7 +17,7 @@
       'android-arm-compile': 'angle_reclient_android_arm_release_bot',
       'android-arm-dbg-compile': 'angle_reclient_android_arm_debug_bot',
       'android-arm64-dbg-compile': 'angle_reclient_android_arm64_debug_bot',
-      'android-arm64-exp-s22-test': 'angle_reclient_android_arm64_release_bot',
+      'android-arm64-exp-s24-test': 'angle_reclient_android_arm64_release_bot',
       'android-arm64-exp-test': 'angle_reclient_android_arm64_release_bot',
       'android-arm64-test': 'angle_reclient_android_arm64_release_bot',
       'android-pixel4-perf': 'angle_reclient_android_perf_bot',
@@ -88,7 +88,7 @@
   # mb should use. See //tools/mb/docs/user_guide.md for more information.
   'mixins': {
     'android': {
-      'gn_args': 'target_os="android"',
+      'gn_args': 'target_os="android" android_static_analysis = "on"',
     },
     'angle': {
       'gn_args': 'is_component_build=true',
@@ -106,7 +106,7 @@
       'gn_args': 'angle_with_capture_by_default=true',
     },
     'cxx17': {
-      # Android does not fully support C++20 yet: b/330910097
+      # Skia does not support C++20 yet: b/330910097
       'gn_args': 'use_cxx17=true',
     },
     'debug': {

@@ -683,8 +683,6 @@ EXPORTS
 
     ; GL_APPLE_clip_distance
 
-    ; GL_ARB_sync
-
     ; GL_ARM_rgba8
 
     ; GL_ARM_shader_framebuffer_fetch
@@ -711,7 +709,6 @@ EXPORTS
 
     ; GL_EXT_EGL_image_storage
     glEGLImageTargetTexStorageEXT
-    glEGLImageTargetTextureStorageEXT
 
     ; GL_EXT_EGL_image_storage_compression
 
@@ -1000,7 +997,6 @@ EXPORTS
     ; GL_EXT_texture_shadow_lod
 
     ; GL_EXT_texture_storage
-    glTexStorage1DEXT
     glTexStorage2DEXT
     glTexStorage3DEXT
 
@@ -1417,9 +1413,6 @@ EXPORTS
     ; EGL_ANGLE_stream_producer_d3d_texture
     EGL_CreateStreamProducerD3DTextureANGLE
     EGL_StreamPostD3DTextureANGLE
-
-    ; EGL_ANGLE_swap_with_frame_token
-    EGL_SwapBuffersWithFrameTokenANGLE
 
     ; EGL_ANGLE_sync_control_rate
     EGL_GetMscRateANGLE

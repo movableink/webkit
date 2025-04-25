@@ -24,8 +24,8 @@
 #include "libANGLE/renderer/Format.h"
 #include "platform/Feature.h"
 
-#include <string.h>
 #include <cctype>
+#include <cstring>
 
 namespace angle
 {
@@ -74,7 +74,7 @@ void FeatureInfo::applyOverride(bool state)
 // FeatureSetBase implementation
 void FeatureSetBase::reset()
 {
-    for (auto iter : members)
+    for (const auto &iter : members)
     {
         FeatureInfo *feature = iter.second;
         feature->enabled     = false;
@@ -82,12 +82,15 @@ void FeatureSetBase::reset()
     }
 }
 
-void FeatureSetBase::overrideFeatures(const std::vector<std::string> &featureNames, bool enabled)
+std::string FeatureSetBase::overrideFeatures(const std::vector<std::string> &featureNames,
+                                             bool enabled)
 {
+    std::stringstream featureStream;
+
     for (const std::string &name : featureNames)
     {
         const bool hasWildcard = name.back() == '*';
-        for (auto iter : members)
+        for (const auto &iter : members)
         {
             const std::string &featureName = iter.first;
             FeatureInfo *feature           = iter.second;
@@ -99,6 +102,12 @@ void FeatureSetBase::overrideFeatures(const std::vector<std::string> &featureNam
 
             feature->applyOverride(enabled);
 
+            if (featureStream.str().empty())
+            {
+                featureStream << "Feature overrides: ";
+            }
+            featureStream << featureName << (enabled ? " enabled, " : " disabled, ");
+
             // If name has a wildcard, try to match it with all features.  Otherwise, bail on first
             // match, as names are unique.
             if (!hasWildcard)
@@ -107,13 +116,20 @@ void FeatureSetBase::overrideFeatures(const std::vector<std::string> &featureNam
             }
         }
     }
+
+    if (!featureStream.str().empty())
+    {
+        featureStream << std::endl;
+    }
+
+    return featureStream.str();
 }
 
 void FeatureSetBase::populateFeatureList(FeatureList *features) const
 {
-    for (FeatureMap::const_iterator it = members.begin(); it != members.end(); it++)
+    for (const auto &member : members)
     {
-        features->push_back(it->second);
+        features->push_back(member.second);
     }
 }
 }  // namespace angle
@@ -385,6 +401,7 @@ PackPixelsParams::PackPixelsParams()
     : destFormat(nullptr),
       outputPitch(0),
       packBuffer(nullptr),
+      reverseRowOrder(false),
       offset(0),
       rotation(SurfaceRotation::Identity)
 {}
@@ -692,10 +709,6 @@ void CopyImageCHROMIUM(const uint8_t *sourceData,
 }
 
 // IncompleteTextureSet implementation.
-IncompleteTextureSet::IncompleteTextureSet() {}
-
-IncompleteTextureSet::~IncompleteTextureSet() {}
-
 void IncompleteTextureSet::onDestroy(const gl::Context *context)
 {
     // Clear incomplete textures.
@@ -1028,17 +1041,39 @@ BufferAndLayout::BufferAndLayout() = default;
 BufferAndLayout::~BufferAndLayout() = default;
 
 template <typename T>
-void UpdateBufferWithLayout(GLsizei count,
-                            uint32_t arrayIndex,
-                            int componentCount,
-                            const T *v,
-                            const sh::BlockMemberInfo &layoutInfo,
-                            angle::MemoryBuffer *uniformData)
+ANGLE_NOINLINE void UpdateBufferWithLayoutStrided(GLsizei count,
+                                                  uint32_t arrayIndex,
+                                                  int componentCount,
+                                                  const T *v,
+                                                  const sh::BlockMemberInfo &layoutInfo,
+                                                  angle::MemoryBuffer *uniformData)
 {
     const int elementSize = sizeof(T) * componentCount;
+    uint8_t *dst          = uniformData->data() + layoutInfo.offset;
+    int maxIndex          = arrayIndex + count;
+    for (int writeIndex = arrayIndex, readIndex = 0; writeIndex < maxIndex;
+         writeIndex++, readIndex++)
+    {
+        const int arrayOffset = writeIndex * layoutInfo.arrayStride;
+        uint8_t *writePtr     = dst + arrayOffset;
+        const T *readPtr      = v + (readIndex * componentCount);
+        ASSERT(writePtr + elementSize <= uniformData->data() + uniformData->size());
+        memcpy(writePtr, readPtr, elementSize);
+    }
+}
 
+template <typename T>
+ANGLE_INLINE void UpdateBufferWithLayout(GLsizei count,
+                                         uint32_t arrayIndex,
+                                         int componentCount,
+                                         const T *v,
+                                         const sh::BlockMemberInfo &layoutInfo,
+                                         angle::MemoryBuffer *uniformData)
+{
+    const int elementSize = sizeof(T) * componentCount;
     uint8_t *dst = uniformData->data() + layoutInfo.offset;
-    if (layoutInfo.arrayStride == 0 || layoutInfo.arrayStride == elementSize)
+    if (ANGLE_LIKELY(layoutInfo.arrayStride == 0) ||
+        ANGLE_LIKELY(layoutInfo.arrayStride == elementSize))
     {
         uint32_t arrayOffset = arrayIndex * layoutInfo.arrayStride;
         uint8_t *writePtr    = dst + arrayOffset;
@@ -1048,16 +1083,8 @@ void UpdateBufferWithLayout(GLsizei count,
     else
     {
         // Have to respect the arrayStride between each element of the array.
-        int maxIndex = arrayIndex + count;
-        for (int writeIndex = arrayIndex, readIndex = 0; writeIndex < maxIndex;
-             writeIndex++, readIndex++)
-        {
-            const int arrayOffset = writeIndex * layoutInfo.arrayStride;
-            uint8_t *writePtr     = dst + arrayOffset;
-            const T *readPtr      = v + (readIndex * componentCount);
-            ASSERT(writePtr + elementSize <= uniformData->data() + uniformData->size());
-            memcpy(writePtr, readPtr, elementSize);
-        }
+        UpdateBufferWithLayoutStrided(count, arrayIndex, componentCount, v, layoutInfo,
+                                      uniformData);
     }
 }
 
@@ -1088,6 +1115,51 @@ void ReadFromBufferWithLayout(int componentCount,
 }
 
 template <typename T>
+ANGLE_NOINLINE void SetUniformAsBool(const gl::ProgramExecutable *executable,
+                                     GLint location,
+                                     GLsizei count,
+                                     const T *v,
+                                     GLenum entryPointType,
+                                     DefaultUniformBlockMap *defaultUniformBlocks,
+                                     gl::ShaderBitSet *defaultUniformBlocksDirty)
+{
+    const gl::VariableLocation &locationInfo = executable->getUniformLocations()[location];
+    const gl::LinkedUniform &linkedUniform   = executable->getUniforms()[locationInfo.index];
+
+    for (const gl::ShaderType shaderType : executable->getLinkedShaderStages())
+    {
+        BufferAndLayout &uniformBlock         = *(*defaultUniformBlocks)[shaderType];
+        const sh::BlockMemberInfo &layoutInfo = uniformBlock.uniformLayout[location];
+
+        // Assume an offset of -1 means the block is unused.
+        if (layoutInfo.offset == -1)
+        {
+            continue;
+        }
+
+        const GLint componentCount = linkedUniform.getElementComponents();
+
+        ASSERT(linkedUniform.getType() == gl::VariableBoolVectorType(entryPointType));
+
+        GLint initialArrayOffset =
+            locationInfo.arrayIndex * layoutInfo.arrayStride + layoutInfo.offset;
+        for (GLint i = 0; i < count; i++)
+        {
+            GLint elementOffset = i * layoutInfo.arrayStride + initialArrayOffset;
+            GLint *dst = reinterpret_cast<GLint *>(uniformBlock.uniformData.data() + elementOffset);
+            const T *source = v + i * componentCount;
+
+            for (int c = 0; c < componentCount; c++)
+            {
+                dst[c] = (source[c] == static_cast<T>(0)) ? GL_FALSE : GL_TRUE;
+            }
+        }
+
+        defaultUniformBlocksDirty->set(shaderType);
+    }
+}
+
+template <typename T>
 void SetUniform(const gl::ProgramExecutable *executable,
                 GLint location,
                 GLsizei count,
@@ -1101,7 +1173,7 @@ void SetUniform(const gl::ProgramExecutable *executable,
 
     ASSERT(!linkedUniform.isSampler());
 
-    if (linkedUniform.getType() == entryPointType)
+    if (ANGLE_LIKELY(linkedUniform.getType() == entryPointType))
     {
         for (const gl::ShaderType shaderType : executable->getLinkedShaderStages())
         {
@@ -1122,38 +1194,8 @@ void SetUniform(const gl::ProgramExecutable *executable,
     }
     else
     {
-        for (const gl::ShaderType shaderType : executable->getLinkedShaderStages())
-        {
-            BufferAndLayout &uniformBlock         = *(*defaultUniformBlocks)[shaderType];
-            const sh::BlockMemberInfo &layoutInfo = uniformBlock.uniformLayout[location];
-
-            // Assume an offset of -1 means the block is unused.
-            if (layoutInfo.offset == -1)
-            {
-                continue;
-            }
-
-            const GLint componentCount = linkedUniform.getElementComponents();
-
-            ASSERT(linkedUniform.getType() == gl::VariableBoolVectorType(entryPointType));
-
-            GLint initialArrayOffset =
-                locationInfo.arrayIndex * layoutInfo.arrayStride + layoutInfo.offset;
-            for (GLint i = 0; i < count; i++)
-            {
-                GLint elementOffset = i * layoutInfo.arrayStride + initialArrayOffset;
-                GLint *dst =
-                    reinterpret_cast<GLint *>(uniformBlock.uniformData.data() + elementOffset);
-                const T *source = v + i * componentCount;
-
-                for (int c = 0; c < componentCount; c++)
-                {
-                    dst[c] = (source[c] == static_cast<T>(0)) ? GL_FALSE : GL_TRUE;
-                }
-            }
-
-            defaultUniformBlocksDirty->set(shaderType);
-        }
+        SetUniformAsBool(executable, location, count, v, entryPointType, defaultUniformBlocks,
+                         defaultUniformBlocksDirty);
     }
 }
 template void SetUniform<GLint>(const gl::ProgramExecutable *executable,
@@ -1326,7 +1368,8 @@ angle::Result GetVertexRangeInfo(const gl::Context *context,
     {
         gl::IndexRange indexRange;
         ANGLE_TRY(context->getState().getVertexArray()->getIndexRange(
-            context, indexTypeOrInvalid, vertexOrIndexCount, indices, &indexRange));
+            context, indexTypeOrInvalid, vertexOrIndexCount, indices,
+            context->getState().isPrimitiveRestartEnabled(), &indexRange));
         ANGLE_TRY(ComputeStartVertex(context->getImplementation(), indexRange, baseVertex,
                                      startVertexOut));
         *vertexCountOut = indexRange.vertexCount();
@@ -1367,37 +1410,13 @@ gl::Rectangle ClipRectToScissor(const gl::State &glState, const gl::Rectangle &r
     return clippedRect;
 }
 
-void LogFeatureStatus(const angle::FeatureSetBase &features,
-                      const std::vector<std::string> &featureNames,
-                      bool enabled)
-{
-    for (const std::string &name : featureNames)
-    {
-        const bool hasWildcard = name.back() == '*';
-        for (auto iter : features.getFeatures())
-        {
-            const std::string &featureName = iter.first;
-
-            if (!angle::FeatureNameMatch(featureName, name))
-            {
-                continue;
-            }
-
-            INFO() << "Feature: " << featureName << (enabled ? " enabled" : " disabled");
-
-            if (!hasWildcard)
-            {
-                break;
-            }
-        }
-    }
-}
-
 void ApplyFeatureOverrides(angle::FeatureSetBase *features,
                            const angle::FeatureOverrides &overrides)
 {
-    features->overrideFeatures(overrides.enabled, true);
-    features->overrideFeatures(overrides.disabled, false);
+    std::stringstream featureStream;
+
+    featureStream << features->overrideFeatures(overrides.enabled, true);
+    featureStream << features->overrideFeatures(overrides.disabled, false);
 
     // Override with environment as well.
     constexpr char kAngleFeatureOverridesEnabledEnvName[]  = "ANGLE_FEATURE_OVERRIDES_ENABLED";
@@ -1413,11 +1432,42 @@ void ApplyFeatureOverrides(angle::FeatureSetBase *features,
         angle::GetCachedStringsFromEnvironmentVarOrAndroidProperty(
             kAngleFeatureOverridesDisabledEnvName, kAngleFeatureOverridesDisabledPropertyName, ":");
 
-    features->overrideFeatures(overridesEnabled, true);
-    LogFeatureStatus(*features, overridesEnabled, true);
+    featureStream << features->overrideFeatures(overridesEnabled, true);
+    featureStream << features->overrideFeatures(overridesDisabled, false);
 
-    features->overrideFeatures(overridesDisabled, false);
-    LogFeatureStatus(*features, overridesDisabled, false);
+    if (!featureStream.str().empty())
+    {
+        INFO() << featureStream.str();
+    }
+}
+
+void StreamEmulatedLineLoopIndices(gl::DrawElementsType glIndexType,
+                                   GLsizei indexCount,
+                                   const uint8_t *srcPtr,
+                                   uint8_t *outPtr,
+                                   bool shouldConvertUint8)
+{
+    switch (glIndexType)
+    {
+        case gl::DrawElementsType::UnsignedByte:
+            if (shouldConvertUint8)
+            {
+                CopyLineLoopIndicesWithRestart<uint8_t, uint16_t>(indexCount, srcPtr, outPtr);
+            }
+            else
+            {
+                CopyLineLoopIndicesWithRestart<uint8_t, uint8_t>(indexCount, srcPtr, outPtr);
+            }
+            break;
+        case gl::DrawElementsType::UnsignedShort:
+            CopyLineLoopIndicesWithRestart<uint16_t, uint16_t>(indexCount, srcPtr, outPtr);
+            break;
+        case gl::DrawElementsType::UnsignedInt:
+            CopyLineLoopIndicesWithRestart<uint32_t, uint32_t>(indexCount, srcPtr, outPtr);
+            break;
+        default:
+            UNREACHABLE();
+    }
 }
 
 void GetSamplePosition(GLsizei sampleCount, size_t index, GLfloat *xy)

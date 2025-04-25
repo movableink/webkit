@@ -607,7 +607,6 @@
 #define glCoverageModulationCHROMIUM l_glCoverageModulationCHROMIUM
 #define glLoseContextCHROMIUM l_glLoseContextCHROMIUM
 #define glEGLImageTargetTexStorageEXT l_glEGLImageTargetTexStorageEXT
-#define glEGLImageTargetTextureStorageEXT l_glEGLImageTargetTextureStorageEXT
 #define glDrawArraysInstancedBaseInstanceEXT l_glDrawArraysInstancedBaseInstanceEXT
 #define glDrawElementsInstancedBaseInstanceEXT l_glDrawElementsInstancedBaseInstanceEXT
 #define glDrawElementsInstancedBaseVertexBaseInstanceEXT \
@@ -747,7 +746,6 @@
 #define glTexParameterIuivEXT l_glTexParameterIuivEXT
 #define glTexBufferEXT l_glTexBufferEXT
 #define glTexBufferRangeEXT l_glTexBufferRangeEXT
-#define glTexStorage1DEXT l_glTexStorage1DEXT
 #define glTexStorage2DEXT l_glTexStorage2DEXT
 #define glTexStorage3DEXT l_glTexStorage3DEXT
 #define glTexStorageAttribs2DEXT l_glTexStorageAttribs2DEXT
@@ -1500,8 +1498,6 @@ ANGLE_UTIL_EXPORT extern PFNGLCOPYTEXTURECHROMIUMPROC l_glCopyTextureCHROMIUM;
 ANGLE_UTIL_EXPORT extern PFNGLCOVERAGEMODULATIONCHROMIUMPROC l_glCoverageModulationCHROMIUM;
 ANGLE_UTIL_EXPORT extern PFNGLLOSECONTEXTCHROMIUMPROC l_glLoseContextCHROMIUM;
 ANGLE_UTIL_EXPORT extern PFNGLEGLIMAGETARGETTEXSTORAGEEXTPROC l_glEGLImageTargetTexStorageEXT;
-ANGLE_UTIL_EXPORT extern PFNGLEGLIMAGETARGETTEXTURESTORAGEEXTPROC
-    l_glEGLImageTargetTextureStorageEXT;
 ANGLE_UTIL_EXPORT extern PFNGLDRAWARRAYSINSTANCEDBASEINSTANCEEXTPROC
     l_glDrawArraysInstancedBaseInstanceEXT;
 ANGLE_UTIL_EXPORT extern PFNGLDRAWELEMENTSINSTANCEDBASEINSTANCEEXTPROC
@@ -1647,7 +1643,6 @@ ANGLE_UTIL_EXPORT extern PFNGLTEXPARAMETERIIVEXTPROC l_glTexParameterIivEXT;
 ANGLE_UTIL_EXPORT extern PFNGLTEXPARAMETERIUIVEXTPROC l_glTexParameterIuivEXT;
 ANGLE_UTIL_EXPORT extern PFNGLTEXBUFFEREXTPROC l_glTexBufferEXT;
 ANGLE_UTIL_EXPORT extern PFNGLTEXBUFFERRANGEEXTPROC l_glTexBufferRangeEXT;
-ANGLE_UTIL_EXPORT extern PFNGLTEXSTORAGE1DEXTPROC l_glTexStorage1DEXT;
 ANGLE_UTIL_EXPORT extern PFNGLTEXSTORAGE2DEXTPROC l_glTexStorage2DEXT;
 ANGLE_UTIL_EXPORT extern PFNGLTEXSTORAGE3DEXTPROC l_glTexStorage3DEXT;
 ANGLE_UTIL_EXPORT extern PFNGLTEXSTORAGEATTRIBS2DEXTPROC l_glTexStorageAttribs2DEXT;
@@ -1784,7 +1779,7 @@ typedef GenericProc(KHRONOS_APIENTRY *LoadProc)(const char *);
 ANGLE_UTIL_EXPORT void LoadUtilGLES(LoadProc loadProc);
 
 #if defined(__cplusplus)
-}       // extern "C"
+}  // extern "C"
 #endif  // defined(__cplusplus)
 
 #endif  // UTIL_GLES_LOADER_AUTOGEN_H_

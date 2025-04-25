@@ -23,7 +23,6 @@
 #include "compiler/translator/tree_ops/MonomorphizeUnsupportedFunctions.h"
 #include "compiler/translator/tree_ops/RecordConstantPrecision.h"
 #include "compiler/translator/tree_ops/RemoveAtomicCounterBuiltins.h"
-#include "compiler/translator/tree_ops/RemoveInactiveInterfaceVariables.h"
 #include "compiler/translator/tree_ops/RewriteArrayOfArrayOfOpaqueUniforms.h"
 #include "compiler/translator/tree_ops/RewriteAtomicCounters.h"
 #include "compiler/translator/tree_ops/RewriteDfdy.h"
@@ -791,17 +790,6 @@ bool TranslatorSPIRV::translateImpl(TIntermBlock *root,
         }
     }
 
-    // Remove declarations of inactive shader interface variables so SPIR-V transformer doesn't need
-    // to replace them.  Note that currently, CollectVariables marks every field of an active
-    // uniform that's of struct type as active, i.e. no extracted sampler is inactive, so this can
-    // be done before extracting samplers from structs.
-    if (!RemoveInactiveInterfaceVariables(this, root, &getSymbolTable(), getAttributes(),
-                                          getInputVaryings(), getOutputVariables(), getUniforms(),
-                                          getInterfaceBlocks(), true))
-    {
-        return false;
-    }
-
     // If there are any function calls that take array-of-array of opaque uniform parameters, or
     // other opaque uniforms that need special handling in Vulkan, such as atomic counters,
     // monomorphize the functions by removing said parameters and replacing them in the function
@@ -966,6 +954,19 @@ bool TranslatorSPIRV::translateImpl(TIntermBlock *root,
         // Add support code for pre-rotation and depth correction in the vertex processing stages.
         if (!AddVertexTransformationSupport(this, compileOptions, root, &getSymbolTable(),
                                             specConst, driverUniforms))
+        {
+            return false;
+        }
+    }
+
+    if (IsExtensionEnabled(getExtensionBehavior(), TExtension::EXT_YUV_target))
+    {
+        if (!EmulateYUVBuiltIns(this, root, &getSymbolTable()))
+        {
+            return false;
+        }
+
+        if (!ReswizzleYUVTextureAccess(this, root, &getSymbolTable()))
         {
             return false;
         }
@@ -1162,12 +1163,8 @@ bool TranslatorSPIRV::translateImpl(TIntermBlock *root,
 
             if (IsExtensionEnabled(getExtensionBehavior(), TExtension::EXT_YUV_target))
             {
-                if (!EmulateYUVBuiltIns(this, root, &getSymbolTable()))
-                {
-                    return false;
-                }
-
-                if (!ReswizzleYUVOps(this, root, &getSymbolTable(), yuvOutput))
+                if (yuvOutput != nullptr &&
+                    !AdjustYUVOutput(this, root, &getSymbolTable(), *yuvOutput))
                 {
                     return false;
                 }

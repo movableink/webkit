@@ -3971,8 +3971,6 @@ void GL_APIENTRY glReleaseTexturesANGLE(GLuint numTextures, const GLuint *textur
 
 // GL_APPLE_clip_distance
 
-// GL_ARB_sync
-
 // GL_ARM_rgba8
 
 // GL_ARM_shader_framebuffer_fetch
@@ -4050,12 +4048,6 @@ void GL_APIENTRY glEGLImageTargetTexStorageEXT(GLenum target,
     return GL_EGLImageTargetTexStorageEXT(target, image, attrib_list);
 }
 
-void GL_APIENTRY glEGLImageTargetTextureStorageEXT(GLuint texture,
-                                                   GLeglImageOES image,
-                                                   const GLint *attrib_list)
-{
-    return GL_EGLImageTargetTextureStorageEXT(texture, image, attrib_list);
-}
 
 // GL_EXT_EGL_image_storage_compression
 
@@ -5136,14 +5128,6 @@ void GL_APIENTRY glTexBufferRangeEXT(GLenum target,
 // GL_EXT_texture_shadow_lod
 
 // GL_EXT_texture_storage
-void GL_APIENTRY glTexStorage1DEXT(GLenum target,
-                                   GLsizei levels,
-                                   GLenum internalformat,
-                                   GLsizei width)
-{
-    return GL_TexStorage1DEXT(target, levels, internalformat, width);
-}
-
 void GL_APIENTRY glTexStorage2DEXT(GLenum target,
                                    GLsizei levels,
                                    GLenum internalformat,

@@ -7044,6 +7044,37 @@ TEST_P(GLSLTest, InactiveVaryingInVertexActiveInFragment)
     ASSERT_GL_NO_ERROR();
 }
 
+// Test that standard derivatives work as expected with FBOs since the render target
+// might have flipped viewport orientation.
+TEST_P(GLSLTest, ScreenFlipCauseStandardDerivativesWrong)
+{
+    constexpr char kFS[] =
+        R"(
+#extension GL_OES_standard_derivatives : enable
+precision mediump float;
+
+void main()
+{
+    gl_FragColor = vec4(
+        dFdx(gl_FragCoord.x),
+        dFdy(gl_FragCoord.y),
+        0.0, 1.0
+    );
+}
+        )";
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glClearColor(0.0, 0.0, 0.0, 1.0);
+    ASSERT_GL_NO_ERROR();
+
+    ANGLE_GL_PROGRAM(program, essl1_shaders::vs::Simple(), kFS);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+    drawQuad(program, essl1_shaders::PositionAttrib(), 0.5f);
+    ASSERT_GL_NO_ERROR();
+    EXPECT_PIXEL_RECT_EQ(0, 0, getWindowWidth(), getWindowHeight(), GLColor::yellow);
+}
+
 // Test that a varying struct that's not statically used in the fragment shader works.
 // GLSL ES 3.00.6 section 4.3.10.
 TEST_P(GLSLTest_ES3, VaryingStructNotStaticallyUsedInFragmentShader)
@@ -11104,6 +11135,17 @@ void main()
 })";
 
     GLuint shader = CompileShader(GL_FRAGMENT_SHADER, kFS);
+    EXPECT_NE(shader, 0u);
+}
+
+// Test that output variables declared after main work in combination with initOutputVariables
+// (which is enabled on WebGL).
+TEST_P(WebGLGLSLTest, OutputAfterMain)
+{
+    constexpr char kVS[] = R"(void main(){}
+varying float r;)";
+
+    GLuint shader = CompileShader(GL_VERTEX_SHADER, kVS);
     EXPECT_NE(shader, 0u);
 }
 
@@ -17275,6 +17317,35 @@ TEST_P(GLSLTest_ES3, UnsuccessfulRelinkWithBindAttribLocation)
     EXPECT_GL_NO_ERROR();
 }
 
+// Regression test for an unsuccessful link with a varying followed by another link
+TEST_P(GLSLTest_ES3, UnsuccessfulLinkFollowedByAnotherLink)
+{
+    // Make a simple program.
+    ANGLE_GL_PROGRAM(program, essl1_shaders::vs::Simple(), essl1_shaders::fs::Green());
+
+    // Install the executable.
+    glUseProgram(program);
+
+    // Re-link with a bad XFB varying and a bound attrib location.
+    const char *tfVaryings = "gl_FragColor";
+    glTransformFeedbackVaryings(program, 1, &tfVaryings, GL_SEPARATE_ATTRIBS);
+    glBindAttribLocation(program, 8, essl1_shaders::PositionAttrib());
+    glLinkProgram(program);
+    GLint linkStatus = 999;
+    glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
+    ASSERT_GL_NO_ERROR();
+    // Link expected to fail on the first program
+    ASSERT_EQ(linkStatus, GL_FALSE);
+
+    // Another program with the same shaders but without the varying is expected to link
+    ANGLE_GL_PROGRAM(anotherProgram, essl1_shaders::vs::Simple(), essl1_shaders::fs::Green());
+    ASSERT_NE(program, anotherProgram);
+    glUseProgram(anotherProgram);
+    glLinkProgram(anotherProgram);
+    ASSERT_GL_NO_ERROR();
+    ASSERT_NE(CheckLinkStatusAndReturnProgram(anotherProgram, true), 0u);
+}
+
 // Tests an unsuccessful re-link using glBindAttribLocation under WebGL.
 TEST_P(WebGL2GLSLTest, UnsuccessfulRelinkWithBindAttribLocation)
 {
@@ -20629,6 +20700,126 @@ void main ()
     ANGLE_GL_PROGRAM(program, kVS, kFS);
     drawQuad(program, "position", 0);
     EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::red);
+}
+
+// Test that a mismatched varying that is unused in fragshader compiles.
+TEST_P(GLSLTest, MismatchedInactiveVarying)
+{
+    const char kVS[] = R"(precision mediump float;
+
+attribute vec2 a_position_0;
+attribute vec4 a_color_0;
+
+varying vec4 vertexColor;
+
+void main()
+{
+    vertexColor = a_color_0;
+    gl_Position = vec4(a_position_0, 0.0, 1.0);
+})";
+
+    const char kFS[] = R"(precision highp float;
+
+uniform vec2 resolution;
+uniform vec2 fragOffset;
+uniform vec2 fragScale;
+
+varying vec4 vertexColor;
+varying vec2 texCoord;
+
+void main()
+{
+    vec2 uv = (fragScale * gl_FragCoord.xy + fragOffset) / resolution;
+    gl_FragColor = vec4(uv, 1.0, 1.0);
+})";
+
+    ANGLE_GL_PROGRAM(program, kVS, kFS);
+}
+
+// Regression test for a bug where the sampler-in-struct rewrite transformation did not take a
+// specific pattern of side_effect,index_the_struct_to_write into account.
+TEST_P(GLSLTest_ES3, StructWithSamplerRHSOfCommaWithSideEffect)
+{
+    constexpr char kVS[] = R"(uniform struct S {
+    sampler2D s;
+    mat2 m;
+} u[2];
+void main()
+{
+    ++gl_Position, u[0];
+})";
+
+    GLuint shader = CompileShader(GL_VERTEX_SHADER, kVS);
+    EXPECT_NE(0u, shader);
+    glDeleteShader(shader);
+}
+
+// Regression test for a bug where the sampler-in-struct rewrite transformation did not take a
+// specific pattern of side_effect,struct_with_only_samplers into account.
+TEST_P(GLSLTest_ES3, StructWithOnlySamplersRHSOfCommaWithSideEffect)
+{
+    constexpr char kVS[] = R"(uniform struct S {
+    sampler2D s;
+} u;
+void main()
+{
+    ++gl_Position, u;
+})";
+
+    GLuint shader = CompileShader(GL_VERTEX_SHADER, kVS);
+    EXPECT_NE(0u, shader);
+    glDeleteShader(shader);
+}
+
+// Test that denorm float values in GLSL are preserved
+TEST_P(GLSLTest_ES3, DenormFloatsToIntValues)
+{
+    ANGLE_SKIP_TEST_IF(!IsVulkan());
+
+    constexpr char kFS[] =
+        "#version 300 es\n"
+        "precision highp float;\n"
+        "out vec4 out_color;\n"
+        "uniform float u;\n"
+        "void main()\n"
+        "{\n"
+        "   float smallDenormFloat = 1.40129846e-45;\n"
+        "   int smallBits = floatBitsToInt(smallDenormFloat);\n"
+        "   bool smallCorrect = smallBits == 1;\n"
+        "\n"
+        "   float largeDenormFloat = 1.1754942107e-38f;\n"
+        "   int largeBits = floatBitsToInt(largeDenormFloat);\n"
+        "   bool largeCorrect = largeBits == 0x007FFFFF;\n"
+        "\n"
+        "   out_color = (smallCorrect && largeCorrect)\n"
+        "             ? vec4(0.0, 1.0, 0.0, 1.0)\n"
+        "             : vec4(1.0, 0.0, 0.0, 1.0);\n"
+        "}\n";
+
+    ANGLE_GL_PROGRAM(program, essl3_shaders::vs::Simple(), kFS);
+    drawQuad(program, essl3_shaders::PositionAttrib(), 0.5f);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::green);
+}
+
+// Test output initialization vs. fragment output arrays
+TEST_P(WebGL2GLSLTest, FragmentOutputArray)
+{
+    constexpr char kFS[] = R"(#version 300 es
+precision mediump float;
+layout(location = 0) out vec4 activeColor;
+layout(location = 1) out vec4 inactive[3];
+void main() {
+    // Make activeColor active without fully initializing it.
+    activeColor.x += 0.0001;
+})";
+
+    glClearColor(100, 200, 50, 150);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    ANGLE_GL_PROGRAM(program, essl3_shaders::vs::Simple(), kFS);
+    drawQuad(program, essl3_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::transparentBlack);
 }
 
 // Test highp int scalar + vec

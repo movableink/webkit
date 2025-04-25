@@ -48,14 +48,10 @@ void GL_APIENTRY GL_BeginPerfMonitorAMD(GLuint monitor)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLBeginPerfMonitorAMD) &&
-              ValidateBeginPerfMonitorAMD(context, angle::EntryPoint::GLBeginPerfMonitorAMD,
-                                          monitor)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateBeginPerfMonitorAMD(
+                                context, angle::EntryPoint::GLBeginPerfMonitorAMD, monitor));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->beginPerfMonitor(monitor);
         }
@@ -81,7 +77,7 @@ void GL_APIENTRY GL_DeletePerfMonitorsAMD(GLsizei n, GLuint *monitors)
         bool isCallValid = (context->skipValidation() ||
                             ValidateDeletePerfMonitorsAMD(
                                 context, angle::EntryPoint::GLDeletePerfMonitorsAMD, n, monitors));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->deletePerfMonitors(n, monitors);
         }
@@ -105,11 +101,8 @@ void GL_APIENTRY GL_EndPerfMonitorAMD(GLuint monitor)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLEndPerfMonitorAMD) &&
-              ValidateEndPerfMonitorAMD(context, angle::EntryPoint::GLEndPerfMonitorAMD, monitor)));
-        if (isCallValid)
+             ValidateEndPerfMonitorAMD(context, angle::EntryPoint::GLEndPerfMonitorAMD, monitor));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->endPerfMonitor(monitor);
         }
@@ -135,7 +128,7 @@ void GL_APIENTRY GL_GenPerfMonitorsAMD(GLsizei n, GLuint *monitors)
         bool isCallValid = (context->skipValidation() ||
                             ValidateGenPerfMonitorsAMD(
                                 context, angle::EntryPoint::GLGenPerfMonitorsAMD, n, monitors));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->genPerfMonitors(n, monitors);
         }
@@ -169,7 +162,7 @@ void GL_APIENTRY GL_GetPerfMonitorCounterDataAMD(GLuint monitor,
                             ValidateGetPerfMonitorCounterDataAMD(
                                 context, angle::EntryPoint::GLGetPerfMonitorCounterDataAMD, monitor,
                                 pname, dataSize, data, bytesWritten));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getPerfMonitorCounterData(monitor, pname, dataSize, data, bytesWritten);
         }
@@ -201,7 +194,7 @@ void GL_APIENTRY GL_GetPerfMonitorCounterInfoAMD(GLuint group,
                             ValidateGetPerfMonitorCounterInfoAMD(
                                 context, angle::EntryPoint::GLGetPerfMonitorCounterInfoAMD, group,
                                 counter, pname, data));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getPerfMonitorCounterInfo(group, counter, pname, data);
         }
@@ -235,7 +228,7 @@ void GL_APIENTRY GL_GetPerfMonitorCounterStringAMD(GLuint group,
                             ValidateGetPerfMonitorCounterStringAMD(
                                 context, angle::EntryPoint::GLGetPerfMonitorCounterStringAMD, group,
                                 counter, bufSize, length, counterString));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getPerfMonitorCounterString(group, counter, bufSize, length, counterString);
         }
@@ -270,7 +263,7 @@ void GL_APIENTRY GL_GetPerfMonitorCountersAMD(GLuint group,
                             ValidateGetPerfMonitorCountersAMD(
                                 context, angle::EntryPoint::GLGetPerfMonitorCountersAMD, group,
                                 numCounters, maxActiveCounters, counterSize, counters));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getPerfMonitorCounters(group, numCounters, maxActiveCounters, counterSize,
                                             counters);
@@ -304,7 +297,7 @@ void GL_APIENTRY GL_GetPerfMonitorGroupStringAMD(GLuint group,
                             ValidateGetPerfMonitorGroupStringAMD(
                                 context, angle::EntryPoint::GLGetPerfMonitorGroupStringAMD, group,
                                 bufSize, length, groupString));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getPerfMonitorGroupString(group, bufSize, length, groupString);
         }
@@ -334,7 +327,7 @@ void GL_APIENTRY GL_GetPerfMonitorGroupsAMD(GLint *numGroups, GLsizei groupsSize
             (context->skipValidation() ||
              ValidateGetPerfMonitorGroupsAMD(context, angle::EntryPoint::GLGetPerfMonitorGroupsAMD,
                                              numGroups, groupsSize, groups));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getPerfMonitorGroups(numGroups, groupsSize, groups);
         }
@@ -365,15 +358,11 @@ void GL_APIENTRY GL_SelectPerfMonitorCountersAMD(GLuint monitor,
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLSelectPerfMonitorCountersAMD) &&
-              ValidateSelectPerfMonitorCountersAMD(
-                  context, angle::EntryPoint::GLSelectPerfMonitorCountersAMD, monitor, enable,
-                  group, numCounters, counterList)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateSelectPerfMonitorCountersAMD(
+                                context, angle::EntryPoint::GLSelectPerfMonitorCountersAMD, monitor,
+                                enable, group, numCounters, counterList));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->selectPerfMonitorCounters(monitor, enable, group, numCounters, counterList);
         }
@@ -411,7 +400,7 @@ void GL_APIENTRY GL_DrawArraysInstancedBaseInstanceANGLE(GLenum mode,
                             ValidateDrawArraysInstancedBaseInstanceANGLE(
                                 context, angle::EntryPoint::GLDrawArraysInstancedBaseInstanceANGLE,
                                 modePacked, first, count, instanceCount, baseInstance));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawArraysInstancedBaseInstanceANGLE(modePacked, first, count, instanceCount,
                                                           baseInstance);
@@ -453,7 +442,7 @@ void GL_APIENTRY GL_DrawElementsInstancedBaseVertexBaseInstanceANGLE(GLenum mode
              ValidateDrawElementsInstancedBaseVertexBaseInstanceANGLE(
                  context, angle::EntryPoint::GLDrawElementsInstancedBaseVertexBaseInstanceANGLE,
                  modePacked, count, typePacked, indices, instanceCount, baseVertex, baseInstance));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawElementsInstancedBaseVertexBaseInstanceANGLE(
                 modePacked, count, typePacked, indices, instanceCount, baseVertex, baseInstance);
@@ -490,13 +479,10 @@ void GL_APIENTRY GL_MultiDrawArraysInstancedBaseInstanceANGLE(GLenum mode,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLMultiDrawArraysInstancedBaseInstanceANGLE) &&
-              ValidateMultiDrawArraysInstancedBaseInstanceANGLE(
-                  context, angle::EntryPoint::GLMultiDrawArraysInstancedBaseInstanceANGLE,
-                  modePacked, firsts, counts, instanceCounts, baseInstances, drawcount)));
-        if (isCallValid)
+             ValidateMultiDrawArraysInstancedBaseInstanceANGLE(
+                 context, angle::EntryPoint::GLMultiDrawArraysInstancedBaseInstanceANGLE,
+                 modePacked, firsts, counts, instanceCounts, baseInstances, drawcount));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->multiDrawArraysInstancedBaseInstance(modePacked, firsts, counts,
                                                           instanceCounts, baseInstances, drawcount);
@@ -538,15 +524,12 @@ GL_MultiDrawElementsInstancedBaseVertexBaseInstanceANGLE(GLenum mode,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLMultiDrawElementsInstancedBaseVertexBaseInstanceANGLE) &&
-              ValidateMultiDrawElementsInstancedBaseVertexBaseInstanceANGLE(
-                  context,
-                  angle::EntryPoint::GLMultiDrawElementsInstancedBaseVertexBaseInstanceANGLE,
-                  modePacked, counts, typePacked, indices, instanceCounts, baseVertices,
-                  baseInstances, drawcount)));
-        if (isCallValid)
+             ValidateMultiDrawElementsInstancedBaseVertexBaseInstanceANGLE(
+                 context,
+                 angle::EntryPoint::GLMultiDrawElementsInstancedBaseVertexBaseInstanceANGLE,
+                 modePacked, counts, typePacked, indices, instanceCounts, baseVertices,
+                 baseInstances, drawcount));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->multiDrawElementsInstancedBaseVertexBaseInstance(
                 modePacked, counts, typePacked, indices, instanceCounts, baseVertices,
@@ -580,12 +563,9 @@ void GL_APIENTRY GL_BlobCacheCallbacksANGLE(GLSETBLOBPROCANGLE set,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLBlobCacheCallbacksANGLE) &&
-              ValidateBlobCacheCallbacksANGLE(context, angle::EntryPoint::GLBlobCacheCallbacksANGLE,
-                                              set, get, userParam)));
-        if (isCallValid)
+             ValidateBlobCacheCallbacksANGLE(context, angle::EntryPoint::GLBlobCacheCallbacksANGLE,
+                                             set, get, userParam));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->blobCacheCallbacks(set, get, userParam);
         }
@@ -611,7 +591,7 @@ void GL_APIENTRY GL_GetPointervANGLE(GLenum pname, void **params)
         bool isCallValid = (context->skipValidation() ||
                             ValidateGetPointervANGLE(context, angle::EntryPoint::GLGetPointervANGLE,
                                                      pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getPointerv(pname, params);
         }
@@ -659,14 +639,11 @@ void GL_APIENTRY GL_CopyTexture3DANGLE(GLuint sourceId,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLCopyTexture3DANGLE) &&
-              ValidateCopyTexture3DANGLE(
-                  context, angle::EntryPoint::GLCopyTexture3DANGLE, sourceIdPacked, sourceLevel,
-                  destTargetPacked, destIdPacked, destLevel, internalFormat, destType, unpackFlipY,
-                  unpackPremultiplyAlpha, unpackUnmultiplyAlpha)));
-        if (isCallValid)
+             ValidateCopyTexture3DANGLE(context, angle::EntryPoint::GLCopyTexture3DANGLE,
+                                        sourceIdPacked, sourceLevel, destTargetPacked, destIdPacked,
+                                        destLevel, internalFormat, destType, unpackFlipY,
+                                        unpackPremultiplyAlpha, unpackUnmultiplyAlpha));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->copyTexture3D(sourceIdPacked, sourceLevel, destTargetPacked, destIdPacked,
                                    destLevel, internalFormat, destType, unpackFlipY,
@@ -721,15 +698,11 @@ void GL_APIENTRY GL_CopySubTexture3DANGLE(GLuint sourceId,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLCopySubTexture3DANGLE) &&
-              ValidateCopySubTexture3DANGLE(context, angle::EntryPoint::GLCopySubTexture3DANGLE,
-                                            sourceIdPacked, sourceLevel, destTargetPacked,
-                                            destIdPacked, destLevel, xoffset, yoffset, zoffset, x,
-                                            y, z, width, height, depth, unpackFlipY,
-                                            unpackPremultiplyAlpha, unpackUnmultiplyAlpha)));
-        if (isCallValid)
+             ValidateCopySubTexture3DANGLE(
+                 context, angle::EntryPoint::GLCopySubTexture3DANGLE, sourceIdPacked, sourceLevel,
+                 destTargetPacked, destIdPacked, destLevel, xoffset, yoffset, zoffset, x, y, z,
+                 width, height, depth, unpackFlipY, unpackPremultiplyAlpha, unpackUnmultiplyAlpha));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->copySubTexture3D(sourceIdPacked, sourceLevel, destTargetPacked, destIdPacked,
                                       destLevel, xoffset, yoffset, zoffset, x, y, z, width, height,
@@ -774,15 +747,11 @@ void GL_APIENTRY GL_BlitFramebufferANGLE(GLint srcX0,
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLBlitFramebufferANGLE) &&
-              ValidateBlitFramebufferANGLE(context, angle::EntryPoint::GLBlitFramebufferANGLE,
-                                           srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1,
-                                           mask, filter)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateBlitFramebufferANGLE(
+                                context, angle::EntryPoint::GLBlitFramebufferANGLE, srcX0, srcY0,
+                                srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->blitFramebuffer(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask,
                                      filter);
@@ -814,15 +783,11 @@ void GL_APIENTRY GL_RenderbufferStorageMultisampleANGLE(GLenum target,
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLRenderbufferStorageMultisampleANGLE) &&
-              ValidateRenderbufferStorageMultisampleANGLE(
-                  context, angle::EntryPoint::GLRenderbufferStorageMultisampleANGLE, target,
-                  samples, internalformat, width, height)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateRenderbufferStorageMultisampleANGLE(
+                                context, angle::EntryPoint::GLRenderbufferStorageMultisampleANGLE,
+                                target, samples, internalformat, width, height));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->renderbufferStorageMultisample(target, samples, internalformat, width, height);
         }
@@ -856,7 +821,7 @@ GL_GetTexImageANGLE(GLenum target, GLint level, GLenum format, GLenum type, void
         bool isCallValid = (context->skipValidation() ||
                             ValidateGetTexImageANGLE(context, angle::EntryPoint::GLGetTexImageANGLE,
                                                      targetPacked, level, format, type, pixels));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getTexImage(targetPacked, level, format, type, pixels);
         }
@@ -886,7 +851,7 @@ void GL_APIENTRY GL_GetCompressedTexImageANGLE(GLenum target, GLint level, void 
                             ValidateGetCompressedTexImageANGLE(
                                 context, angle::EntryPoint::GLGetCompressedTexImageANGLE,
                                 targetPacked, level, pixels));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getCompressedTexImage(targetPacked, level, pixels);
         }
@@ -920,7 +885,7 @@ void GL_APIENTRY GL_GetRenderbufferImageANGLE(GLenum target,
                             ValidateGetRenderbufferImageANGLE(
                                 context, angle::EntryPoint::GLGetRenderbufferImageANGLE, target,
                                 format, type, pixels));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getRenderbufferImage(target, format, type, pixels);
         }
@@ -957,7 +922,7 @@ void GL_APIENTRY GL_GetTexLevelParameterivANGLE(GLenum target,
                             ValidateGetTexLevelParameterivANGLE(
                                 context, angle::EntryPoint::GLGetTexLevelParameterivANGLE,
                                 targetPacked, level, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getTexLevelParameteriv(targetPacked, level, pname, params);
         }
@@ -991,7 +956,7 @@ void GL_APIENTRY GL_GetTexLevelParameterfvANGLE(GLenum target,
                             ValidateGetTexLevelParameterfvANGLE(
                                 context, angle::EntryPoint::GLGetTexLevelParameterfvANGLE,
                                 targetPacked, level, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getTexLevelParameterfv(targetPacked, level, pname, params);
         }
@@ -1025,7 +990,7 @@ void GL_APIENTRY GL_DrawArraysInstancedANGLE(GLenum mode,
                             ValidateDrawArraysInstancedANGLE(
                                 context, angle::EntryPoint::GLDrawArraysInstancedANGLE, modePacked,
                                 first, count, primcount));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawArraysInstanced(modePacked, first, count, primcount);
         }
@@ -1062,7 +1027,7 @@ void GL_APIENTRY GL_DrawElementsInstancedANGLE(GLenum mode,
                             ValidateDrawElementsInstancedANGLE(
                                 context, angle::EntryPoint::GLDrawElementsInstancedANGLE,
                                 modePacked, count, typePacked, indices, primcount));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawElementsInstanced(modePacked, count, typePacked, indices, primcount);
         }
@@ -1090,7 +1055,7 @@ void GL_APIENTRY GL_VertexAttribDivisorANGLE(GLuint index, GLuint divisor)
             (context->skipValidation() ||
              ValidateVertexAttribDivisorANGLE(
                  context, angle::EntryPoint::GLVertexAttribDivisorANGLE, index, divisor));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->vertexAttribDivisor(index, divisor);
         }
@@ -1114,15 +1079,11 @@ void GL_APIENTRY GL_LogicOpANGLE(GLenum opcode)
     if (context)
     {
         LogicalOperation opcodePacked = PackParam<LogicalOperation>(opcode);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLLogicOpANGLE) &&
-              ValidateLogicOpANGLE(context->getPrivateState(),
-                                   context->getMutableErrorSetForValidation(),
-                                   angle::EntryPoint::GLLogicOpANGLE, opcodePacked)));
-        if (isCallValid)
+        bool isCallValid              = (context->skipValidation() ||
+                            ValidateLogicOpANGLE(context->getPrivateState(),
+                                                              context->getMutableErrorSetForValidation(),
+                                                              angle::EntryPoint::GLLogicOpANGLE, opcodePacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateLogicOpANGLE(context->getMutablePrivateState(),
                                        context->getMutablePrivateStateCache(), opcodePacked);
@@ -1168,16 +1129,12 @@ void GL_APIENTRY GL_TexStorageMemFlags2DANGLE(GLenum target,
         TextureType targetPacked    = PackParam<TextureType>(target);
         MemoryObjectID memoryPacked = PackParam<MemoryObjectID>(memory);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexStorageMemFlags2DANGLE) &&
-              ValidateTexStorageMemFlags2DANGLE(
-                  context, angle::EntryPoint::GLTexStorageMemFlags2DANGLE, targetPacked, levels,
-                  internalFormat, width, height, memoryPacked, offset, createFlags, usageFlags,
-                  imageCreateInfoPNext)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateTexStorageMemFlags2DANGLE(
+                                context, angle::EntryPoint::GLTexStorageMemFlags2DANGLE,
+                                targetPacked, levels, internalFormat, width, height, memoryPacked,
+                                offset, createFlags, usageFlags, imageCreateInfoPNext));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texStorageMemFlags2D(targetPacked, levels, internalFormat, width, height,
                                           memoryPacked, offset, createFlags, usageFlags,
@@ -1226,14 +1183,11 @@ void GL_APIENTRY GL_TexStorageMemFlags2DMultisampleANGLE(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLTexStorageMemFlags2DMultisampleANGLE) &&
-              ValidateTexStorageMemFlags2DMultisampleANGLE(
-                  context, angle::EntryPoint::GLTexStorageMemFlags2DMultisampleANGLE, targetPacked,
-                  samples, internalFormat, width, height, fixedSampleLocations, memoryPacked,
-                  offset, createFlags, usageFlags, imageCreateInfoPNext)));
-        if (isCallValid)
+             ValidateTexStorageMemFlags2DMultisampleANGLE(
+                 context, angle::EntryPoint::GLTexStorageMemFlags2DMultisampleANGLE, targetPacked,
+                 samples, internalFormat, width, height, fixedSampleLocations, memoryPacked, offset,
+                 createFlags, usageFlags, imageCreateInfoPNext));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texStorageMemFlags2DMultisample(
                 targetPacked, samples, internalFormat, width, height, fixedSampleLocations,
@@ -1282,14 +1236,11 @@ void GL_APIENTRY GL_TexStorageMemFlags3DANGLE(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexStorageMemFlags3DANGLE) &&
-              ValidateTexStorageMemFlags3DANGLE(
-                  context, angle::EntryPoint::GLTexStorageMemFlags3DANGLE, targetPacked, levels,
-                  internalFormat, width, height, depth, memoryPacked, offset, createFlags,
-                  usageFlags, imageCreateInfoPNext)));
-        if (isCallValid)
+             ValidateTexStorageMemFlags3DANGLE(
+                 context, angle::EntryPoint::GLTexStorageMemFlags3DANGLE, targetPacked, levels,
+                 internalFormat, width, height, depth, memoryPacked, offset, createFlags,
+                 usageFlags, imageCreateInfoPNext));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texStorageMemFlags3D(targetPacked, levels, internalFormat, width, height,
                                           depth, memoryPacked, offset, createFlags, usageFlags,
@@ -1339,14 +1290,11 @@ void GL_APIENTRY GL_TexStorageMemFlags3DMultisampleANGLE(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLTexStorageMemFlags3DMultisampleANGLE) &&
-              ValidateTexStorageMemFlags3DMultisampleANGLE(
-                  context, angle::EntryPoint::GLTexStorageMemFlags3DMultisampleANGLE, targetPacked,
-                  samples, internalFormat, width, height, depth, fixedSampleLocations, memoryPacked,
-                  offset, createFlags, usageFlags, imageCreateInfoPNext)));
-        if (isCallValid)
+             ValidateTexStorageMemFlags3DMultisampleANGLE(
+                 context, angle::EntryPoint::GLTexStorageMemFlags3DMultisampleANGLE, targetPacked,
+                 samples, internalFormat, width, height, depth, fixedSampleLocations, memoryPacked,
+                 offset, createFlags, usageFlags, imageCreateInfoPNext));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texStorageMemFlags3DMultisample(
                 targetPacked, samples, internalFormat, width, height, depth, fixedSampleLocations,
@@ -1381,15 +1329,11 @@ void GL_APIENTRY GL_ImportMemoryZirconHandleANGLE(GLuint memory,
         MemoryObjectID memoryPacked = PackParam<MemoryObjectID>(memory);
         HandleType handleTypePacked = PackParam<HandleType>(handleType);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLImportMemoryZirconHandleANGLE) &&
-              ValidateImportMemoryZirconHandleANGLE(
-                  context, angle::EntryPoint::GLImportMemoryZirconHandleANGLE, memoryPacked, size,
-                  handleTypePacked, handle)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateImportMemoryZirconHandleANGLE(
+                                context, angle::EntryPoint::GLImportMemoryZirconHandleANGLE,
+                                memoryPacked, size, handleTypePacked, handle));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->importMemoryZirconHandle(memoryPacked, size, handleTypePacked, handle);
         }
@@ -1425,12 +1369,9 @@ void GL_APIENTRY GL_MultiDrawArraysANGLE(GLenum mode,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLMultiDrawArraysANGLE) &&
-              ValidateMultiDrawArraysANGLE(context, angle::EntryPoint::GLMultiDrawArraysANGLE,
-                                           modePacked, firsts, counts, drawcount)));
-        if (isCallValid)
+             ValidateMultiDrawArraysANGLE(context, angle::EntryPoint::GLMultiDrawArraysANGLE,
+                                          modePacked, firsts, counts, drawcount));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->multiDrawArrays(modePacked, firsts, counts, drawcount);
         }
@@ -1462,15 +1403,11 @@ void GL_APIENTRY GL_MultiDrawArraysInstancedANGLE(GLenum mode,
     {
         PrimitiveMode modePacked = PackParam<PrimitiveMode>(mode);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLMultiDrawArraysInstancedANGLE) &&
-              ValidateMultiDrawArraysInstancedANGLE(
-                  context, angle::EntryPoint::GLMultiDrawArraysInstancedANGLE, modePacked, firsts,
-                  counts, instanceCounts, drawcount)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateMultiDrawArraysInstancedANGLE(
+                                context, angle::EntryPoint::GLMultiDrawArraysInstancedANGLE,
+                                modePacked, firsts, counts, instanceCounts, drawcount));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->multiDrawArraysInstanced(modePacked, firsts, counts, instanceCounts,
                                               drawcount);
@@ -1506,12 +1443,9 @@ void GL_APIENTRY GL_MultiDrawElementsANGLE(GLenum mode,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLMultiDrawElementsANGLE) &&
-              ValidateMultiDrawElementsANGLE(context, angle::EntryPoint::GLMultiDrawElementsANGLE,
-                                             modePacked, counts, typePacked, indices, drawcount)));
-        if (isCallValid)
+             ValidateMultiDrawElementsANGLE(context, angle::EntryPoint::GLMultiDrawElementsANGLE,
+                                            modePacked, counts, typePacked, indices, drawcount));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->multiDrawElements(modePacked, counts, typePacked, indices, drawcount);
         }
@@ -1548,13 +1482,10 @@ void GL_APIENTRY GL_MultiDrawElementsInstancedANGLE(GLenum mode,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLMultiDrawElementsInstancedANGLE) &&
-              ValidateMultiDrawElementsInstancedANGLE(
-                  context, angle::EntryPoint::GLMultiDrawElementsInstancedANGLE, modePacked, counts,
-                  typePacked, indices, instanceCounts, drawcount)));
-        if (isCallValid)
+             ValidateMultiDrawElementsInstancedANGLE(
+                 context, angle::EntryPoint::GLMultiDrawElementsInstancedANGLE, modePacked, counts,
+                 typePacked, indices, instanceCounts, drawcount));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->multiDrawElementsInstanced(modePacked, counts, typePacked, indices,
                                                 instanceCounts, drawcount);
@@ -1588,7 +1519,7 @@ void GL_APIENTRY GL_PolygonModeANGLE(GLenum face, GLenum mode)
              ValidatePolygonModeANGLE(context->getPrivateState(),
                                       context->getMutableErrorSetForValidation(),
                                       angle::EntryPoint::GLPolygonModeANGLE, face, modePacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivatePolygonMode(context->getMutablePrivateState(),
                                       context->getMutablePrivateStateCache(), face, modePacked);
@@ -1625,7 +1556,7 @@ void GL_APIENTRY GL_ProvokingVertexANGLE(GLenum provokeMode)
              ValidateProvokingVertexANGLE(
                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
                  angle::EntryPoint::GLProvokingVertexANGLE, provokeModePacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateProvokingVertex(context->getMutablePrivateState(),
                                           context->getMutablePrivateStateCache(),
@@ -1653,14 +1584,10 @@ void GL_APIENTRY GL_RequestExtensionANGLE(const GLchar *name)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLRequestExtensionANGLE) &&
-              ValidateRequestExtensionANGLE(context, angle::EntryPoint::GLRequestExtensionANGLE,
-                                            name)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateRequestExtensionANGLE(
+                                context, angle::EntryPoint::GLRequestExtensionANGLE, name));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->requestExtension(name);
         }
@@ -1683,14 +1610,10 @@ void GL_APIENTRY GL_DisableExtensionANGLE(const GLchar *name)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLDisableExtensionANGLE) &&
-              ValidateDisableExtensionANGLE(context, angle::EntryPoint::GLDisableExtensionANGLE,
-                                            name)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateDisableExtensionANGLE(
+                                context, angle::EntryPoint::GLDisableExtensionANGLE, name));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->disableExtension(name);
         }
@@ -1726,7 +1649,7 @@ void GL_APIENTRY GL_GetBooleanvRobustANGLE(GLenum pname,
             (context->skipValidation() ||
              ValidateGetBooleanvRobustANGLE(context, angle::EntryPoint::GLGetBooleanvRobustANGLE,
                                             pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getBooleanvRobust(pname, bufSize, length, params);
         }
@@ -1762,7 +1685,7 @@ void GL_APIENTRY GL_GetBufferParameterivRobustANGLE(GLenum target,
                             ValidateGetBufferParameterivRobustANGLE(
                                 context, angle::EntryPoint::GLGetBufferParameterivRobustANGLE,
                                 targetPacked, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getBufferParameterivRobust(targetPacked, pname, bufSize, length, params);
         }
@@ -1796,7 +1719,7 @@ void GL_APIENTRY GL_GetFloatvRobustANGLE(GLenum pname,
             (context->skipValidation() ||
              ValidateGetFloatvRobustANGLE(context, angle::EntryPoint::GLGetFloatvRobustANGLE, pname,
                                           bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getFloatvRobust(pname, bufSize, length, params);
         }
@@ -1834,7 +1757,7 @@ void GL_APIENTRY GL_GetFramebufferAttachmentParameterivRobustANGLE(GLenum target
              ValidateGetFramebufferAttachmentParameterivRobustANGLE(
                  context, angle::EntryPoint::GLGetFramebufferAttachmentParameterivRobustANGLE,
                  target, attachment, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getFramebufferAttachmentParameterivRobust(target, attachment, pname, bufSize,
                                                                length, params);
@@ -1869,7 +1792,7 @@ void GL_APIENTRY GL_GetIntegervRobustANGLE(GLenum pname,
             (context->skipValidation() ||
              ValidateGetIntegervRobustANGLE(context, angle::EntryPoint::GLGetIntegervRobustANGLE,
                                             pname, bufSize, length, data));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getIntegervRobust(pname, bufSize, length, data);
         }
@@ -1905,7 +1828,7 @@ void GL_APIENTRY GL_GetProgramivRobustANGLE(GLuint program,
             (context->skipValidation() ||
              ValidateGetProgramivRobustANGLE(context, angle::EntryPoint::GLGetProgramivRobustANGLE,
                                              programPacked, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getProgramivRobust(programPacked, pname, bufSize, length, params);
         }
@@ -1939,7 +1862,7 @@ void GL_APIENTRY GL_GetRenderbufferParameterivRobustANGLE(GLenum target,
                             ValidateGetRenderbufferParameterivRobustANGLE(
                                 context, angle::EntryPoint::GLGetRenderbufferParameterivRobustANGLE,
                                 target, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getRenderbufferParameterivRobust(target, pname, bufSize, length, params);
         }
@@ -1975,7 +1898,7 @@ void GL_APIENTRY GL_GetShaderivRobustANGLE(GLuint shader,
             (context->skipValidation() ||
              ValidateGetShaderivRobustANGLE(context, angle::EntryPoint::GLGetShaderivRobustANGLE,
                                             shaderPacked, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getShaderivRobust(shaderPacked, pname, bufSize, length, params);
         }
@@ -2010,7 +1933,7 @@ void GL_APIENTRY GL_GetTexParameterfvRobustANGLE(GLenum target,
                             ValidateGetTexParameterfvRobustANGLE(
                                 context, angle::EntryPoint::GLGetTexParameterfvRobustANGLE,
                                 targetPacked, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getTexParameterfvRobust(targetPacked, pname, bufSize, length, params);
         }
@@ -2046,7 +1969,7 @@ void GL_APIENTRY GL_GetTexParameterivRobustANGLE(GLenum target,
                             ValidateGetTexParameterivRobustANGLE(
                                 context, angle::EntryPoint::GLGetTexParameterivRobustANGLE,
                                 targetPacked, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getTexParameterivRobust(targetPacked, pname, bufSize, length, params);
         }
@@ -2082,7 +2005,7 @@ void GL_APIENTRY GL_GetUniformfvRobustANGLE(GLuint program,
                             ValidateGetUniformfvRobustANGLE(
                                 context, angle::EntryPoint::GLGetUniformfvRobustANGLE,
                                 programPacked, locationPacked, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getUniformfvRobust(programPacked, locationPacked, bufSize, length, params);
         }
@@ -2118,7 +2041,7 @@ void GL_APIENTRY GL_GetUniformivRobustANGLE(GLuint program,
                             ValidateGetUniformivRobustANGLE(
                                 context, angle::EntryPoint::GLGetUniformivRobustANGLE,
                                 programPacked, locationPacked, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getUniformivRobust(programPacked, locationPacked, bufSize, length, params);
         }
@@ -2153,7 +2076,7 @@ void GL_APIENTRY GL_GetVertexAttribfvRobustANGLE(GLuint index,
                             ValidateGetVertexAttribfvRobustANGLE(
                                 context, angle::EntryPoint::GLGetVertexAttribfvRobustANGLE, index,
                                 pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getVertexAttribfvRobust(index, pname, bufSize, length, params);
         }
@@ -2188,7 +2111,7 @@ void GL_APIENTRY GL_GetVertexAttribivRobustANGLE(GLuint index,
                             ValidateGetVertexAttribivRobustANGLE(
                                 context, angle::EntryPoint::GLGetVertexAttribivRobustANGLE, index,
                                 pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getVertexAttribivRobust(index, pname, bufSize, length, params);
         }
@@ -2223,7 +2146,7 @@ void GL_APIENTRY GL_GetVertexAttribPointervRobustANGLE(GLuint index,
                             ValidateGetVertexAttribPointervRobustANGLE(
                                 context, angle::EntryPoint::GLGetVertexAttribPointervRobustANGLE,
                                 index, pname, bufSize, length, pointer));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getVertexAttribPointervRobust(index, pname, bufSize, length, pointer);
         }
@@ -2262,15 +2185,11 @@ void GL_APIENTRY GL_ReadPixelsRobustANGLE(GLint x,
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLReadPixelsRobustANGLE) &&
-              ValidateReadPixelsRobustANGLE(context, angle::EntryPoint::GLReadPixelsRobustANGLE, x,
-                                            y, width, height, format, type, bufSize, length,
-                                            columns, rows, pixels)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateReadPixelsRobustANGLE(
+                                context, angle::EntryPoint::GLReadPixelsRobustANGLE, x, y, width,
+                                height, format, type, bufSize, length, columns, rows, pixels));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->readPixelsRobust(x, y, width, height, format, type, bufSize, length, columns,
                                       rows, pixels);
@@ -2311,13 +2230,10 @@ void GL_APIENTRY GL_TexImage2DRobustANGLE(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexImage2DRobustANGLE) &&
-              ValidateTexImage2DRobustANGLE(context, angle::EntryPoint::GLTexImage2DRobustANGLE,
-                                            targetPacked, level, internalformat, width, height,
-                                            border, format, type, bufSize, pixels)));
-        if (isCallValid)
+             ValidateTexImage2DRobustANGLE(context, angle::EntryPoint::GLTexImage2DRobustANGLE,
+                                           targetPacked, level, internalformat, width, height,
+                                           border, format, type, bufSize, pixels));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texImage2DRobust(targetPacked, level, internalformat, width, height, border,
                                       format, type, bufSize, pixels);
@@ -2352,7 +2268,7 @@ void GL_APIENTRY GL_TexParameterfvRobustANGLE(GLenum target,
                             ValidateTexParameterfvRobustANGLE(
                                 context, angle::EntryPoint::GLTexParameterfvRobustANGLE,
                                 targetPacked, pname, bufSize, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texParameterfvRobust(targetPacked, pname, bufSize, params);
         }
@@ -2386,7 +2302,7 @@ void GL_APIENTRY GL_TexParameterivRobustANGLE(GLenum target,
                             ValidateTexParameterivRobustANGLE(
                                 context, angle::EntryPoint::GLTexParameterivRobustANGLE,
                                 targetPacked, pname, bufSize, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texParameterivRobust(targetPacked, pname, bufSize, params);
         }
@@ -2426,13 +2342,10 @@ void GL_APIENTRY GL_TexSubImage2DRobustANGLE(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexSubImage2DRobustANGLE) &&
-              ValidateTexSubImage2DRobustANGLE(
-                  context, angle::EntryPoint::GLTexSubImage2DRobustANGLE, targetPacked, level,
-                  xoffset, yoffset, width, height, format, type, bufSize, pixels)));
-        if (isCallValid)
+             ValidateTexSubImage2DRobustANGLE(
+                 context, angle::EntryPoint::GLTexSubImage2DRobustANGLE, targetPacked, level,
+                 xoffset, yoffset, width, height, format, type, bufSize, pixels));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texSubImage2DRobust(targetPacked, level, xoffset, yoffset, width, height,
                                          format, type, bufSize, pixels);
@@ -2475,13 +2388,10 @@ void GL_APIENTRY GL_TexImage3DRobustANGLE(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexImage3DRobustANGLE) &&
-              ValidateTexImage3DRobustANGLE(context, angle::EntryPoint::GLTexImage3DRobustANGLE,
-                                            targetPacked, level, internalformat, width, height,
-                                            depth, border, format, type, bufSize, pixels)));
-        if (isCallValid)
+             ValidateTexImage3DRobustANGLE(context, angle::EntryPoint::GLTexImage3DRobustANGLE,
+                                           targetPacked, level, internalformat, width, height,
+                                           depth, border, format, type, bufSize, pixels));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texImage3DRobust(targetPacked, level, internalformat, width, height, depth,
                                       border, format, type, bufSize, pixels);
@@ -2527,13 +2437,10 @@ void GL_APIENTRY GL_TexSubImage3DRobustANGLE(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexSubImage3DRobustANGLE) &&
-              ValidateTexSubImage3DRobustANGLE(
-                  context, angle::EntryPoint::GLTexSubImage3DRobustANGLE, targetPacked, level,
-                  xoffset, yoffset, zoffset, width, height, depth, format, type, bufSize, pixels)));
-        if (isCallValid)
+             ValidateTexSubImage3DRobustANGLE(
+                 context, angle::EntryPoint::GLTexSubImage3DRobustANGLE, targetPacked, level,
+                 xoffset, yoffset, zoffset, width, height, depth, format, type, bufSize, pixels));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texSubImage3DRobust(targetPacked, level, xoffset, yoffset, zoffset, width,
                                          height, depth, format, type, bufSize, pixels);
@@ -2574,13 +2481,10 @@ void GL_APIENTRY GL_CompressedTexImage2DRobustANGLE(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLCompressedTexImage2DRobustANGLE) &&
-              ValidateCompressedTexImage2DRobustANGLE(
-                  context, angle::EntryPoint::GLCompressedTexImage2DRobustANGLE, targetPacked,
-                  level, internalformat, width, height, border, imageSize, dataSize, data)));
-        if (isCallValid)
+             ValidateCompressedTexImage2DRobustANGLE(
+                 context, angle::EntryPoint::GLCompressedTexImage2DRobustANGLE, targetPacked, level,
+                 internalformat, width, height, border, imageSize, dataSize, data));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->compressedTexImage2DRobust(targetPacked, level, internalformat, width, height,
                                                 border, imageSize, dataSize, data);
@@ -2620,13 +2524,10 @@ void GL_APIENTRY GL_CompressedTexSubImage2DRobustANGLE(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLCompressedTexSubImage2DRobustANGLE) &&
-              ValidateCompressedTexSubImage2DRobustANGLE(
-                  context, angle::EntryPoint::GLCompressedTexSubImage2DRobustANGLE, targetPacked,
-                  level, xoffset, yoffset, width, height, format, imageSize, dataSize, data)));
-        if (isCallValid)
+             ValidateCompressedTexSubImage2DRobustANGLE(
+                 context, angle::EntryPoint::GLCompressedTexSubImage2DRobustANGLE, targetPacked,
+                 level, xoffset, yoffset, width, height, format, imageSize, dataSize, data));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->compressedTexSubImage2DRobust(targetPacked, level, xoffset, yoffset, width,
                                                    height, format, imageSize, dataSize, data);
@@ -2667,13 +2568,10 @@ void GL_APIENTRY GL_CompressedTexImage3DRobustANGLE(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLCompressedTexImage3DRobustANGLE) &&
-              ValidateCompressedTexImage3DRobustANGLE(
-                  context, angle::EntryPoint::GLCompressedTexImage3DRobustANGLE, targetPacked,
-                  level, internalformat, width, height, depth, border, imageSize, dataSize, data)));
-        if (isCallValid)
+             ValidateCompressedTexImage3DRobustANGLE(
+                 context, angle::EntryPoint::GLCompressedTexImage3DRobustANGLE, targetPacked, level,
+                 internalformat, width, height, depth, border, imageSize, dataSize, data));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->compressedTexImage3DRobust(targetPacked, level, internalformat, width, height,
                                                 depth, border, imageSize, dataSize, data);
@@ -2715,16 +2613,12 @@ void GL_APIENTRY GL_CompressedTexSubImage3DRobustANGLE(GLenum target,
     {
         TextureTarget targetPacked = PackParam<TextureTarget>(target);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLCompressedTexSubImage3DRobustANGLE) &&
-              ValidateCompressedTexSubImage3DRobustANGLE(
-                  context, angle::EntryPoint::GLCompressedTexSubImage3DRobustANGLE, targetPacked,
-                  level, xoffset, yoffset, zoffset, width, height, depth, format, imageSize,
-                  dataSize, data)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateCompressedTexSubImage3DRobustANGLE(
+                                context, angle::EntryPoint::GLCompressedTexSubImage3DRobustANGLE,
+                                targetPacked, level, xoffset, yoffset, zoffset, width, height,
+                                depth, format, imageSize, dataSize, data));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->compressedTexSubImage3DRobust(targetPacked, level, xoffset, yoffset, zoffset,
                                                    width, height, depth, format, imageSize,
@@ -2763,7 +2657,7 @@ void GL_APIENTRY GL_GetQueryivRobustANGLE(GLenum target,
             (context->skipValidation() ||
              ValidateGetQueryivRobustANGLE(context, angle::EntryPoint::GLGetQueryivRobustANGLE,
                                            targetPacked, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getQueryivRobust(targetPacked, pname, bufSize, length, params);
         }
@@ -2799,7 +2693,7 @@ void GL_APIENTRY GL_GetQueryObjectuivRobustANGLE(GLuint id,
                             ValidateGetQueryObjectuivRobustANGLE(
                                 context, angle::EntryPoint::GLGetQueryObjectuivRobustANGLE,
                                 idPacked, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getQueryObjectuivRobust(idPacked, pname, bufSize, length, params);
         }
@@ -2835,7 +2729,7 @@ void GL_APIENTRY GL_GetBufferPointervRobustANGLE(GLenum target,
                             ValidateGetBufferPointervRobustANGLE(
                                 context, angle::EntryPoint::GLGetBufferPointervRobustANGLE,
                                 targetPacked, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getBufferPointervRobust(targetPacked, pname, bufSize, length, params);
         }
@@ -2870,7 +2764,7 @@ void GL_APIENTRY GL_GetIntegeri_vRobustANGLE(GLenum target,
                             ValidateGetIntegeri_vRobustANGLE(
                                 context, angle::EntryPoint::GLGetIntegeri_vRobustANGLE, target,
                                 index, bufSize, length, data));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getIntegeri_vRobust(target, index, bufSize, length, data);
         }
@@ -2907,7 +2801,7 @@ void GL_APIENTRY GL_GetInternalformativRobustANGLE(GLenum target,
                             ValidateGetInternalformativRobustANGLE(
                                 context, angle::EntryPoint::GLGetInternalformativRobustANGLE,
                                 target, internalformat, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getInternalformativRobust(target, internalformat, pname, bufSize, length,
                                                params);
@@ -2943,7 +2837,7 @@ void GL_APIENTRY GL_GetVertexAttribIivRobustANGLE(GLuint index,
                             ValidateGetVertexAttribIivRobustANGLE(
                                 context, angle::EntryPoint::GLGetVertexAttribIivRobustANGLE, index,
                                 pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getVertexAttribIivRobust(index, pname, bufSize, length, params);
         }
@@ -2978,7 +2872,7 @@ void GL_APIENTRY GL_GetVertexAttribIuivRobustANGLE(GLuint index,
                             ValidateGetVertexAttribIuivRobustANGLE(
                                 context, angle::EntryPoint::GLGetVertexAttribIuivRobustANGLE, index,
                                 pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getVertexAttribIuivRobust(index, pname, bufSize, length, params);
         }
@@ -3014,7 +2908,7 @@ void GL_APIENTRY GL_GetUniformuivRobustANGLE(GLuint program,
                             ValidateGetUniformuivRobustANGLE(
                                 context, angle::EntryPoint::GLGetUniformuivRobustANGLE,
                                 programPacked, locationPacked, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getUniformuivRobust(programPacked, locationPacked, bufSize, length, params);
         }
@@ -3053,7 +2947,7 @@ void GL_APIENTRY GL_GetActiveUniformBlockivRobustANGLE(GLuint program,
              ValidateGetActiveUniformBlockivRobustANGLE(
                  context, angle::EntryPoint::GLGetActiveUniformBlockivRobustANGLE, programPacked,
                  uniformBlockIndexPacked, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getActiveUniformBlockivRobust(programPacked, uniformBlockIndexPacked, pname,
                                                    bufSize, length, params);
@@ -3088,7 +2982,7 @@ void GL_APIENTRY GL_GetInteger64vRobustANGLE(GLenum pname,
                             ValidateGetInteger64vRobustANGLE(
                                 context, angle::EntryPoint::GLGetInteger64vRobustANGLE, pname,
                                 bufSize, length, data));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getInteger64vRobust(pname, bufSize, length, data);
         }
@@ -3123,7 +3017,7 @@ void GL_APIENTRY GL_GetInteger64i_vRobustANGLE(GLenum target,
                             ValidateGetInteger64i_vRobustANGLE(
                                 context, angle::EntryPoint::GLGetInteger64i_vRobustANGLE, target,
                                 index, bufSize, length, data));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getInteger64i_vRobust(target, index, bufSize, length, data);
         }
@@ -3159,7 +3053,7 @@ void GL_APIENTRY GL_GetBufferParameteri64vRobustANGLE(GLenum target,
                             ValidateGetBufferParameteri64vRobustANGLE(
                                 context, angle::EntryPoint::GLGetBufferParameteri64vRobustANGLE,
                                 targetPacked, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getBufferParameteri64vRobust(targetPacked, pname, bufSize, length, params);
         }
@@ -3192,7 +3086,7 @@ void GL_APIENTRY GL_SamplerParameterivRobustANGLE(GLuint sampler,
                             ValidateSamplerParameterivRobustANGLE(
                                 context, angle::EntryPoint::GLSamplerParameterivRobustANGLE,
                                 samplerPacked, pname, bufSize, param));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->samplerParameterivRobust(samplerPacked, pname, bufSize, param);
         }
@@ -3226,7 +3120,7 @@ void GL_APIENTRY GL_SamplerParameterfvRobustANGLE(GLuint sampler,
                             ValidateSamplerParameterfvRobustANGLE(
                                 context, angle::EntryPoint::GLSamplerParameterfvRobustANGLE,
                                 samplerPacked, pname, bufSize, param));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->samplerParameterfvRobust(samplerPacked, pname, bufSize, param);
         }
@@ -3262,7 +3156,7 @@ void GL_APIENTRY GL_GetSamplerParameterivRobustANGLE(GLuint sampler,
                             ValidateGetSamplerParameterivRobustANGLE(
                                 context, angle::EntryPoint::GLGetSamplerParameterivRobustANGLE,
                                 samplerPacked, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getSamplerParameterivRobust(samplerPacked, pname, bufSize, length, params);
         }
@@ -3298,7 +3192,7 @@ void GL_APIENTRY GL_GetSamplerParameterfvRobustANGLE(GLuint sampler,
                             ValidateGetSamplerParameterfvRobustANGLE(
                                 context, angle::EntryPoint::GLGetSamplerParameterfvRobustANGLE,
                                 samplerPacked, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getSamplerParameterfvRobust(samplerPacked, pname, bufSize, length, params);
         }
@@ -3333,7 +3227,7 @@ void GL_APIENTRY GL_GetFramebufferParameterivRobustANGLE(GLenum target,
                             ValidateGetFramebufferParameterivRobustANGLE(
                                 context, angle::EntryPoint::GLGetFramebufferParameterivRobustANGLE,
                                 target, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getFramebufferParameterivRobust(target, pname, bufSize, length, params);
         }
@@ -3370,7 +3264,7 @@ void GL_APIENTRY GL_GetProgramInterfaceivRobustANGLE(GLuint program,
                             ValidateGetProgramInterfaceivRobustANGLE(
                                 context, angle::EntryPoint::GLGetProgramInterfaceivRobustANGLE,
                                 programPacked, programInterface, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getProgramInterfaceivRobust(programPacked, programInterface, pname, bufSize,
                                                  length, params);
@@ -3406,7 +3300,7 @@ void GL_APIENTRY GL_GetBooleani_vRobustANGLE(GLenum target,
                             ValidateGetBooleani_vRobustANGLE(
                                 context, angle::EntryPoint::GLGetBooleani_vRobustANGLE, target,
                                 index, bufSize, length, data));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getBooleani_vRobust(target, index, bufSize, length, data);
         }
@@ -3441,7 +3335,7 @@ void GL_APIENTRY GL_GetMultisamplefvRobustANGLE(GLenum pname,
                             ValidateGetMultisamplefvRobustANGLE(
                                 context, angle::EntryPoint::GLGetMultisamplefvRobustANGLE, pname,
                                 index, bufSize, length, val));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getMultisamplefvRobust(pname, index, bufSize, length, val);
         }
@@ -3478,7 +3372,7 @@ void GL_APIENTRY GL_GetTexLevelParameterivRobustANGLE(GLenum target,
                             ValidateGetTexLevelParameterivRobustANGLE(
                                 context, angle::EntryPoint::GLGetTexLevelParameterivRobustANGLE,
                                 targetPacked, level, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getTexLevelParameterivRobust(targetPacked, level, pname, bufSize, length,
                                                   params);
@@ -3516,7 +3410,7 @@ void GL_APIENTRY GL_GetTexLevelParameterfvRobustANGLE(GLenum target,
                             ValidateGetTexLevelParameterfvRobustANGLE(
                                 context, angle::EntryPoint::GLGetTexLevelParameterfvRobustANGLE,
                                 targetPacked, level, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getTexLevelParameterfvRobust(targetPacked, level, pname, bufSize, length,
                                                   params);
@@ -3551,7 +3445,7 @@ void GL_APIENTRY GL_GetPointervRobustANGLERobustANGLE(GLenum pname,
                             ValidateGetPointervRobustANGLERobustANGLE(
                                 context, angle::EntryPoint::GLGetPointervRobustANGLERobustANGLE,
                                 pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getPointervRobustANGLERobust(pname, bufSize, length, params);
         }
@@ -3590,15 +3484,11 @@ void GL_APIENTRY GL_ReadnPixelsRobustANGLE(GLint x,
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLReadnPixelsRobustANGLE) &&
-              ValidateReadnPixelsRobustANGLE(context, angle::EntryPoint::GLReadnPixelsRobustANGLE,
-                                             x, y, width, height, format, type, bufSize, length,
-                                             columns, rows, data)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateReadnPixelsRobustANGLE(
+                                context, angle::EntryPoint::GLReadnPixelsRobustANGLE, x, y, width,
+                                height, format, type, bufSize, length, columns, rows, data));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->readnPixelsRobust(x, y, width, height, format, type, bufSize, length, columns,
                                        rows, data);
@@ -3635,7 +3525,7 @@ void GL_APIENTRY GL_GetnUniformfvRobustANGLE(GLuint program,
                             ValidateGetnUniformfvRobustANGLE(
                                 context, angle::EntryPoint::GLGetnUniformfvRobustANGLE,
                                 programPacked, locationPacked, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getnUniformfvRobust(programPacked, locationPacked, bufSize, length, params);
         }
@@ -3671,7 +3561,7 @@ void GL_APIENTRY GL_GetnUniformivRobustANGLE(GLuint program,
                             ValidateGetnUniformivRobustANGLE(
                                 context, angle::EntryPoint::GLGetnUniformivRobustANGLE,
                                 programPacked, locationPacked, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getnUniformivRobust(programPacked, locationPacked, bufSize, length, params);
         }
@@ -3707,7 +3597,7 @@ void GL_APIENTRY GL_GetnUniformuivRobustANGLE(GLuint program,
                             ValidateGetnUniformuivRobustANGLE(
                                 context, angle::EntryPoint::GLGetnUniformuivRobustANGLE,
                                 programPacked, locationPacked, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getnUniformuivRobust(programPacked, locationPacked, bufSize, length, params);
         }
@@ -3741,7 +3631,7 @@ void GL_APIENTRY GL_TexParameterIivRobustANGLE(GLenum target,
                             ValidateTexParameterIivRobustANGLE(
                                 context, angle::EntryPoint::GLTexParameterIivRobustANGLE,
                                 targetPacked, pname, bufSize, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texParameterIivRobust(targetPacked, pname, bufSize, params);
         }
@@ -3775,7 +3665,7 @@ void GL_APIENTRY GL_TexParameterIuivRobustANGLE(GLenum target,
                             ValidateTexParameterIuivRobustANGLE(
                                 context, angle::EntryPoint::GLTexParameterIuivRobustANGLE,
                                 targetPacked, pname, bufSize, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texParameterIuivRobust(targetPacked, pname, bufSize, params);
         }
@@ -3811,7 +3701,7 @@ void GL_APIENTRY GL_GetTexParameterIivRobustANGLE(GLenum target,
                             ValidateGetTexParameterIivRobustANGLE(
                                 context, angle::EntryPoint::GLGetTexParameterIivRobustANGLE,
                                 targetPacked, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getTexParameterIivRobust(targetPacked, pname, bufSize, length, params);
         }
@@ -3847,7 +3737,7 @@ void GL_APIENTRY GL_GetTexParameterIuivRobustANGLE(GLenum target,
                             ValidateGetTexParameterIuivRobustANGLE(
                                 context, angle::EntryPoint::GLGetTexParameterIuivRobustANGLE,
                                 targetPacked, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getTexParameterIuivRobust(targetPacked, pname, bufSize, length, params);
         }
@@ -3881,7 +3771,7 @@ void GL_APIENTRY GL_SamplerParameterIivRobustANGLE(GLuint sampler,
                             ValidateSamplerParameterIivRobustANGLE(
                                 context, angle::EntryPoint::GLSamplerParameterIivRobustANGLE,
                                 samplerPacked, pname, bufSize, param));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->samplerParameterIivRobust(samplerPacked, pname, bufSize, param);
         }
@@ -3915,7 +3805,7 @@ void GL_APIENTRY GL_SamplerParameterIuivRobustANGLE(GLuint sampler,
                             ValidateSamplerParameterIuivRobustANGLE(
                                 context, angle::EntryPoint::GLSamplerParameterIuivRobustANGLE,
                                 samplerPacked, pname, bufSize, param));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->samplerParameterIuivRobust(samplerPacked, pname, bufSize, param);
         }
@@ -3951,7 +3841,7 @@ void GL_APIENTRY GL_GetSamplerParameterIivRobustANGLE(GLuint sampler,
                             ValidateGetSamplerParameterIivRobustANGLE(
                                 context, angle::EntryPoint::GLGetSamplerParameterIivRobustANGLE,
                                 samplerPacked, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getSamplerParameterIivRobust(samplerPacked, pname, bufSize, length, params);
         }
@@ -3987,7 +3877,7 @@ void GL_APIENTRY GL_GetSamplerParameterIuivRobustANGLE(GLuint sampler,
                             ValidateGetSamplerParameterIuivRobustANGLE(
                                 context, angle::EntryPoint::GLGetSamplerParameterIuivRobustANGLE,
                                 samplerPacked, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getSamplerParameterIuivRobust(samplerPacked, pname, bufSize, length, params);
         }
@@ -4023,7 +3913,7 @@ void GL_APIENTRY GL_GetQueryObjectivRobustANGLE(GLuint id,
                             ValidateGetQueryObjectivRobustANGLE(
                                 context, angle::EntryPoint::GLGetQueryObjectivRobustANGLE, idPacked,
                                 pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getQueryObjectivRobust(idPacked, pname, bufSize, length, params);
         }
@@ -4058,7 +3948,7 @@ void GL_APIENTRY GL_GetQueryObjecti64vRobustANGLE(GLuint id,
                             ValidateGetQueryObjecti64vRobustANGLE(
                                 context, angle::EntryPoint::GLGetQueryObjecti64vRobustANGLE,
                                 idPacked, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getQueryObjecti64vRobust(idPacked, pname, bufSize, length, params);
         }
@@ -4093,7 +3983,7 @@ void GL_APIENTRY GL_GetQueryObjectui64vRobustANGLE(GLuint id,
                             ValidateGetQueryObjectui64vRobustANGLE(
                                 context, angle::EntryPoint::GLGetQueryObjectui64vRobustANGLE,
                                 idPacked, pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getQueryObjectui64vRobust(idPacked, pname, bufSize, length, params);
         }
@@ -4127,15 +4017,11 @@ void GL_APIENTRY GL_ImportSemaphoreZirconHandleANGLE(GLuint semaphore,
         SemaphoreID semaphorePacked = PackParam<SemaphoreID>(semaphore);
         HandleType handleTypePacked = PackParam<HandleType>(handleType);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLImportSemaphoreZirconHandleANGLE) &&
-              ValidateImportSemaphoreZirconHandleANGLE(
-                  context, angle::EntryPoint::GLImportSemaphoreZirconHandleANGLE, semaphorePacked,
-                  handleTypePacked, handle)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateImportSemaphoreZirconHandleANGLE(
+                                context, angle::EntryPoint::GLImportSemaphoreZirconHandleANGLE,
+                                semaphorePacked, handleTypePacked, handle));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->importSemaphoreZirconHandle(semaphorePacked, handleTypePacked, handle);
         }
@@ -4163,12 +4049,16 @@ void GL_APIENTRY GL_FramebufferMemorylessPixelLocalStorageANGLE(GLint plane, GLe
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
+        if (context->getState().getPixelLocalStorageActivePlanes() != 0)
+        {
+            context->endPixelLocalStorageImplicit();
+        }
         bool isCallValid =
             (context->skipValidation() ||
              ValidateFramebufferMemorylessPixelLocalStorageANGLE(
                  context, angle::EntryPoint::GLFramebufferMemorylessPixelLocalStorageANGLE, plane,
                  internalformat));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferMemorylessPixelLocalStorage(plane, internalformat);
         }
@@ -4197,12 +4087,16 @@ void GL_APIENTRY GL_FramebufferTexturePixelLocalStorageANGLE(GLint plane,
     {
         TextureID backingtexturePacked = PackParam<TextureID>(backingtexture);
         SCOPED_SHARE_CONTEXT_LOCK(context);
+        if (context->getState().getPixelLocalStorageActivePlanes() != 0)
+        {
+            context->endPixelLocalStorageImplicit();
+        }
         bool isCallValid =
             (context->skipValidation() ||
              ValidateFramebufferTexturePixelLocalStorageANGLE(
                  context, angle::EntryPoint::GLFramebufferTexturePixelLocalStorageANGLE, plane,
                  backingtexturePacked, level, layer));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferTexturePixelLocalStorage(plane, backingtexturePacked, level, layer);
         }
@@ -4229,13 +4123,10 @@ void GL_APIENTRY GL_FramebufferPixelLocalClearValuefvANGLE(GLint plane, const GL
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLFramebufferPixelLocalClearValuefvANGLE) &&
-              ValidateFramebufferPixelLocalClearValuefvANGLE(
-                  context, angle::EntryPoint::GLFramebufferPixelLocalClearValuefvANGLE, plane,
-                  value)));
-        if (isCallValid)
+             ValidateFramebufferPixelLocalClearValuefvANGLE(
+                 context, angle::EntryPoint::GLFramebufferPixelLocalClearValuefvANGLE, plane,
+                 value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferPixelLocalClearValuefv(plane, value);
         }
@@ -4262,13 +4153,10 @@ void GL_APIENTRY GL_FramebufferPixelLocalClearValueivANGLE(GLint plane, const GL
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLFramebufferPixelLocalClearValueivANGLE) &&
-              ValidateFramebufferPixelLocalClearValueivANGLE(
-                  context, angle::EntryPoint::GLFramebufferPixelLocalClearValueivANGLE, plane,
-                  value)));
-        if (isCallValid)
+             ValidateFramebufferPixelLocalClearValueivANGLE(
+                 context, angle::EntryPoint::GLFramebufferPixelLocalClearValueivANGLE, plane,
+                 value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferPixelLocalClearValueiv(plane, value);
         }
@@ -4295,13 +4183,10 @@ void GL_APIENTRY GL_FramebufferPixelLocalClearValueuivANGLE(GLint plane, const G
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLFramebufferPixelLocalClearValueuivANGLE) &&
-              ValidateFramebufferPixelLocalClearValueuivANGLE(
-                  context, angle::EntryPoint::GLFramebufferPixelLocalClearValueuivANGLE, plane,
-                  value)));
-        if (isCallValid)
+             ValidateFramebufferPixelLocalClearValueuivANGLE(
+                 context, angle::EntryPoint::GLFramebufferPixelLocalClearValueuivANGLE, plane,
+                 value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferPixelLocalClearValueuiv(plane, value);
         }
@@ -4327,12 +4212,9 @@ void GL_APIENTRY GL_BeginPixelLocalStorageANGLE(GLsizei n, const GLenum *loadops
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLBeginPixelLocalStorageANGLE) &&
-              ValidateBeginPixelLocalStorageANGLE(
-                  context, angle::EntryPoint::GLBeginPixelLocalStorageANGLE, n, loadops)));
-        if (isCallValid)
+             ValidateBeginPixelLocalStorageANGLE(
+                 context, angle::EntryPoint::GLBeginPixelLocalStorageANGLE, n, loadops));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->beginPixelLocalStorage(n, loadops);
         }
@@ -4360,7 +4242,7 @@ void GL_APIENTRY GL_EndPixelLocalStorageANGLE(GLsizei n, const GLenum *storeops)
             (context->skipValidation() ||
              ValidateEndPixelLocalStorageANGLE(
                  context, angle::EntryPoint::GLEndPixelLocalStorageANGLE, n, storeops));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->endPixelLocalStorage(n, storeops);
         }
@@ -4385,7 +4267,7 @@ void GL_APIENTRY GL_PixelLocalStorageBarrierANGLE()
         bool isCallValid = (context->skipValidation() ||
                             ValidatePixelLocalStorageBarrierANGLE(
                                 context, angle::EntryPoint::GLPixelLocalStorageBarrierANGLE));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->pixelLocalStorageBarrier();
         }
@@ -4411,7 +4293,7 @@ void GL_APIENTRY GL_FramebufferPixelLocalStorageInterruptANGLE()
             (context->skipValidation() ||
              ValidateFramebufferPixelLocalStorageInterruptANGLE(
                  context, angle::EntryPoint::GLFramebufferPixelLocalStorageInterruptANGLE));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferPixelLocalStorageInterrupt();
         }
@@ -4435,12 +4317,9 @@ void GL_APIENTRY GL_FramebufferPixelLocalStorageRestoreANGLE()
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLFramebufferPixelLocalStorageRestoreANGLE) &&
-              ValidateFramebufferPixelLocalStorageRestoreANGLE(
-                  context, angle::EntryPoint::GLFramebufferPixelLocalStorageRestoreANGLE)));
-        if (isCallValid)
+             ValidateFramebufferPixelLocalStorageRestoreANGLE(
+                 context, angle::EntryPoint::GLFramebufferPixelLocalStorageRestoreANGLE));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferPixelLocalStorageRestore();
         }
@@ -4471,7 +4350,7 @@ void GL_APIENTRY GL_GetFramebufferPixelLocalStorageParameterfvANGLE(GLint plane,
              ValidateGetFramebufferPixelLocalStorageParameterfvANGLE(
                  context, angle::EntryPoint::GLGetFramebufferPixelLocalStorageParameterfvANGLE,
                  plane, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getFramebufferPixelLocalStorageParameterfv(plane, pname, params);
         }
@@ -4503,7 +4382,7 @@ void GL_APIENTRY GL_GetFramebufferPixelLocalStorageParameterivANGLE(GLint plane,
              ValidateGetFramebufferPixelLocalStorageParameterivANGLE(
                  context, angle::EntryPoint::GLGetFramebufferPixelLocalStorageParameterivANGLE,
                  plane, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getFramebufferPixelLocalStorageParameteriv(plane, pname, params);
         }
@@ -4540,7 +4419,7 @@ void GL_APIENTRY GL_GetFramebufferPixelLocalStorageParameterfvRobustANGLE(GLint 
                  context,
                  angle::EntryPoint::GLGetFramebufferPixelLocalStorageParameterfvRobustANGLE, plane,
                  pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getFramebufferPixelLocalStorageParameterfvRobust(plane, pname, bufSize, length,
                                                                       params);
@@ -4578,7 +4457,7 @@ void GL_APIENTRY GL_GetFramebufferPixelLocalStorageParameterivRobustANGLE(GLint 
                  context,
                  angle::EntryPoint::GLGetFramebufferPixelLocalStorageParameterivRobustANGLE, plane,
                  pname, bufSize, length, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getFramebufferPixelLocalStorageParameterivRobust(plane, pname, bufSize, length,
                                                                       params);
@@ -4622,15 +4501,11 @@ void GL_APIENTRY GL_TexImage2DExternalANGLE(GLenum target,
     {
         TextureTarget targetPacked = PackParam<TextureTarget>(target);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexImage2DExternalANGLE) &&
-              ValidateTexImage2DExternalANGLE(context, angle::EntryPoint::GLTexImage2DExternalANGLE,
-                                              targetPacked, level, internalformat, width, height,
-                                              border, format, type)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateTexImage2DExternalANGLE(
+                                context, angle::EntryPoint::GLTexImage2DExternalANGLE, targetPacked,
+                                level, internalformat, width, height, border, format, type));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texImage2DExternal(targetPacked, level, internalformat, width, height, border,
                                         format, type);
@@ -4658,12 +4533,9 @@ void GL_APIENTRY GL_InvalidateTextureANGLE(GLenum target)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLInvalidateTextureANGLE) &&
-              ValidateInvalidateTextureANGLE(context, angle::EntryPoint::GLInvalidateTextureANGLE,
-                                             targetPacked)));
-        if (isCallValid)
+             ValidateInvalidateTextureANGLE(context, angle::EntryPoint::GLInvalidateTextureANGLE,
+                                            targetPacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->invalidateTexture(targetPacked);
         }
@@ -4699,13 +4571,10 @@ void GL_APIENTRY GL_TexStorage2DMultisampleANGLE(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLTexStorage2DMultisampleANGLE) &&
-              ValidateTexStorage2DMultisampleANGLE(
-                  context, angle::EntryPoint::GLTexStorage2DMultisampleANGLE, targetPacked, samples,
-                  internalformat, width, height, fixedsamplelocations)));
-        if (isCallValid)
+             ValidateTexStorage2DMultisampleANGLE(
+                 context, angle::EntryPoint::GLTexStorage2DMultisampleANGLE, targetPacked, samples,
+                 internalformat, width, height, fixedsamplelocations));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texStorage2DMultisample(targetPacked, samples, internalformat, width, height,
                                              fixedsamplelocations);
@@ -4735,7 +4604,7 @@ void GL_APIENTRY GL_GetMultisamplefvANGLE(GLenum pname, GLuint index, GLfloat *v
             (context->skipValidation() ||
              ValidateGetMultisamplefvANGLE(context, angle::EntryPoint::GLGetMultisamplefvANGLE,
                                            pname, index, val));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getMultisamplefv(pname, index, val);
         }
@@ -4759,13 +4628,10 @@ void GL_APIENTRY GL_SampleMaskiANGLE(GLuint maskNumber, GLbitfield mask)
     {
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLSampleMaskiANGLE) &&
-              ValidateSampleMaskiANGLE(context->getPrivateState(),
-                                       context->getMutableErrorSetForValidation(),
-                                       angle::EntryPoint::GLSampleMaskiANGLE, maskNumber, mask)));
-        if (isCallValid)
+             ValidateSampleMaskiANGLE(context->getPrivateState(),
+                                      context->getMutableErrorSetForValidation(),
+                                      angle::EntryPoint::GLSampleMaskiANGLE, maskNumber, mask));
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateSampleMaski(context->getMutablePrivateState(),
                                       context->getMutablePrivateStateCache(), maskNumber, mask);
@@ -4803,7 +4669,7 @@ void GL_APIENTRY GL_GetTranslatedShaderSourceANGLE(GLuint shader,
                             ValidateGetTranslatedShaderSourceANGLE(
                                 context, angle::EntryPoint::GLGetTranslatedShaderSourceANGLE,
                                 shaderPacked, bufSize, length, source));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getTranslatedShaderSource(shaderPacked, bufSize, length, source);
         }
@@ -4829,11 +4695,8 @@ void GL_APIENTRY GL_BindMetalRasterizationRateMapANGLE(GLuint renderbuffer, GLMT
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLBindMetalRasterizationRateMapANGLE) &&
               ValidateBindMetalRasterizationRateMapANGLE(
-                  context, angle::EntryPoint::GLBindMetalRasterizationRateMapANGLE, map)));
+                  context, angle::EntryPoint::GLBindMetalRasterizationRateMapANGLE, map));
         if (isCallValid)
         {
             context->bindMetalRasterizationRateMap(renderbuffer, map);
@@ -4865,12 +4728,9 @@ void GL_APIENTRY GL_AcquireTexturesANGLE(GLuint numTextures,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLAcquireTexturesANGLE) &&
-              ValidateAcquireTexturesANGLE(context, angle::EntryPoint::GLAcquireTexturesANGLE,
-                                           numTextures, texturesPacked, layouts)));
-        if (isCallValid)
+             ValidateAcquireTexturesANGLE(context, angle::EntryPoint::GLAcquireTexturesANGLE,
+                                          numTextures, texturesPacked, layouts));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->acquireTextures(numTextures, texturesPacked, layouts);
         }
@@ -4901,12 +4761,9 @@ void GL_APIENTRY GL_ReleaseTexturesANGLE(GLuint numTextures,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLReleaseTexturesANGLE) &&
-              ValidateReleaseTexturesANGLE(context, angle::EntryPoint::GLReleaseTexturesANGLE,
-                                           numTextures, texturesPacked, layouts)));
-        if (isCallValid)
+             ValidateReleaseTexturesANGLE(context, angle::EntryPoint::GLReleaseTexturesANGLE,
+                                          numTextures, texturesPacked, layouts));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->releaseTextures(numTextures, texturesPacked, layouts);
         }
@@ -4923,21 +4780,6 @@ void GL_APIENTRY GL_ReleaseTexturesANGLE(GLuint numTextures,
 // GL_ANGLE_yuv_internal_format
 
 // GL_APPLE_clip_distance
-
-// GL_ARB_sync
-// ClientWaitSync is already defined.
-
-// DeleteSync is already defined.
-
-// FenceSync is already defined.
-
-// GetInteger64v is already defined.
-
-// GetSynciv is already defined.
-
-// IsSync is already defined.
-
-// WaitSync is already defined.
 
 // GL_ARM_rgba8
 
@@ -4959,15 +4801,11 @@ void GL_APIENTRY GL_BindUniformLocationCHROMIUM(GLuint program, GLint location, 
         ShaderProgramID programPacked  = PackParam<ShaderProgramID>(program);
         UniformLocation locationPacked = PackParam<UniformLocation>(location);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLBindUniformLocationCHROMIUM) &&
-              ValidateBindUniformLocationCHROMIUM(context,
-                                                  angle::EntryPoint::GLBindUniformLocationCHROMIUM,
-                                                  programPacked, locationPacked, name)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateBindUniformLocationCHROMIUM(
+                                context, angle::EntryPoint::GLBindUniformLocationCHROMIUM,
+                                programPacked, locationPacked, name));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->bindUniformLocation(programPacked, locationPacked, name);
         }
@@ -4994,15 +4832,11 @@ void GL_APIENTRY GL_CompressedCopyTextureCHROMIUM(GLuint sourceId, GLuint destId
         TextureID sourceIdPacked = PackParam<TextureID>(sourceId);
         TextureID destIdPacked   = PackParam<TextureID>(destId);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLCompressedCopyTextureCHROMIUM) &&
-              ValidateCompressedCopyTextureCHROMIUM(
-                  context, angle::EntryPoint::GLCompressedCopyTextureCHROMIUM, sourceIdPacked,
-                  destIdPacked)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateCompressedCopyTextureCHROMIUM(
+                                context, angle::EntryPoint::GLCompressedCopyTextureCHROMIUM,
+                                sourceIdPacked, destIdPacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->compressedCopyTexture(sourceIdPacked, destIdPacked);
         }
@@ -5047,14 +4881,11 @@ void GL_APIENTRY GL_CopyTextureCHROMIUM(GLuint sourceId,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLCopyTextureCHROMIUM) &&
-              ValidateCopyTextureCHROMIUM(
-                  context, angle::EntryPoint::GLCopyTextureCHROMIUM, sourceIdPacked, sourceLevel,
-                  destTargetPacked, destIdPacked, destLevel, internalFormat, destType, unpackFlipY,
-                  unpackPremultiplyAlpha, unpackUnmultiplyAlpha)));
-        if (isCallValid)
+             ValidateCopyTextureCHROMIUM(
+                 context, angle::EntryPoint::GLCopyTextureCHROMIUM, sourceIdPacked, sourceLevel,
+                 destTargetPacked, destIdPacked, destLevel, internalFormat, destType, unpackFlipY,
+                 unpackPremultiplyAlpha, unpackUnmultiplyAlpha));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->copyTexture(sourceIdPacked, sourceLevel, destTargetPacked, destIdPacked,
                                  destLevel, internalFormat, destType, unpackFlipY,
@@ -5104,14 +4935,11 @@ void GL_APIENTRY GL_CopySubTextureCHROMIUM(GLuint sourceId,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLCopySubTextureCHROMIUM) &&
-              ValidateCopySubTextureCHROMIUM(
-                  context, angle::EntryPoint::GLCopySubTextureCHROMIUM, sourceIdPacked, sourceLevel,
-                  destTargetPacked, destIdPacked, destLevel, xoffset, yoffset, x, y, width, height,
-                  unpackFlipY, unpackPremultiplyAlpha, unpackUnmultiplyAlpha)));
-        if (isCallValid)
+             ValidateCopySubTextureCHROMIUM(
+                 context, angle::EntryPoint::GLCopySubTextureCHROMIUM, sourceIdPacked, sourceLevel,
+                 destTargetPacked, destIdPacked, destLevel, xoffset, yoffset, x, y, width, height,
+                 unpackFlipY, unpackPremultiplyAlpha, unpackUnmultiplyAlpha));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->copySubTexture(sourceIdPacked, sourceLevel, destTargetPacked, destIdPacked,
                                     destLevel, xoffset, yoffset, x, y, width, height, unpackFlipY,
@@ -5140,13 +4968,10 @@ void GL_APIENTRY GL_CoverageModulationCHROMIUM(GLenum components)
     {
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLCoverageModulationCHROMIUM) &&
-              ValidateCoverageModulationCHROMIUM(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLCoverageModulationCHROMIUM, components)));
-        if (isCallValid)
+             ValidateCoverageModulationCHROMIUM(
+                 context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                 angle::EntryPoint::GLCoverageModulationCHROMIUM, components));
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateCoverageModulation(context->getMutablePrivateState(),
                                              context->getMutablePrivateStateCache(), components);
@@ -5176,12 +5001,9 @@ void GL_APIENTRY GL_LoseContextCHROMIUM(GLenum current, GLenum other)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLLoseContextCHROMIUM) &&
-              ValidateLoseContextCHROMIUM(context, angle::EntryPoint::GLLoseContextCHROMIUM,
-                                          currentPacked, otherPacked)));
-        if (isCallValid)
+             ValidateLoseContextCHROMIUM(context, angle::EntryPoint::GLLoseContextCHROMIUM,
+                                         currentPacked, otherPacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->loseContext(currentPacked, otherPacked);
         }
@@ -5212,15 +5034,11 @@ void GL_APIENTRY GL_EGLImageTargetTexStorageEXT(GLenum target,
     {
         egl::ImageID imagePacked = PackParam<egl::ImageID>(image);
         SCOPED_EGL_IMAGE_SHARE_CONTEXT_LOCK(context, imagePacked);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLEGLImageTargetTexStorageEXT) &&
-              ValidateEGLImageTargetTexStorageEXT(context,
-                                                  angle::EntryPoint::GLEGLImageTargetTexStorageEXT,
-                                                  target, imagePacked, attrib_list)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateEGLImageTargetTexStorageEXT(
+                                context, angle::EntryPoint::GLEGLImageTargetTexStorageEXT, target,
+                                imagePacked, attrib_list));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->eGLImageTargetTexStorage(target, imagePacked, attrib_list);
         }
@@ -5234,41 +5052,6 @@ void GL_APIENTRY GL_EGLImageTargetTexStorageEXT(GLenum target,
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
-void GL_APIENTRY GL_EGLImageTargetTextureStorageEXT(GLuint texture,
-                                                    GLeglImageOES image,
-                                                    const GLint *attrib_list)
-{
-    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
-    Context *context = GetValidGlobalContext();
-    EVENT(context, GLEGLImageTargetTextureStorageEXT,
-          "context = %d, texture = %u, image = 0x%016" PRIxPTR ", attrib_list = 0x%016" PRIxPTR "",
-          CID(context), texture, (uintptr_t)image, (uintptr_t)attrib_list);
-
-    if (context)
-    {
-        egl::ImageID imagePacked = PackParam<egl::ImageID>(image);
-        SCOPED_EGL_IMAGE_SHARE_CONTEXT_LOCK(context, imagePacked);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLEGLImageTargetTextureStorageEXT) &&
-              ValidateEGLImageTargetTextureStorageEXT(
-                  context, angle::EntryPoint::GLEGLImageTargetTextureStorageEXT, texture,
-                  imagePacked, attrib_list)));
-        if (isCallValid)
-        {
-            context->eGLImageTargetTextureStorage(texture, imagePacked, attrib_list);
-        }
-        ANGLE_CAPTURE_GL(EGLImageTargetTextureStorageEXT, isCallValid, context, texture,
-                         imagePacked, attrib_list);
-    }
-    else
-    {
-        GenerateContextLostErrorOnCurrentGlobalContext();
-    }
-    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
-}
 
 // GL_EXT_EGL_image_storage_compression
 
@@ -5296,7 +5079,7 @@ void GL_APIENTRY GL_DrawArraysInstancedBaseInstanceEXT(GLenum mode,
                             ValidateDrawArraysInstancedBaseInstanceEXT(
                                 context, angle::EntryPoint::GLDrawArraysInstancedBaseInstanceEXT,
                                 modePacked, first, count, instancecount, baseinstance));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawArraysInstancedBaseInstance(modePacked, first, count, instancecount,
                                                      baseinstance);
@@ -5337,7 +5120,7 @@ void GL_APIENTRY GL_DrawElementsInstancedBaseInstanceEXT(GLenum mode,
              ValidateDrawElementsInstancedBaseInstanceEXT(
                  context, angle::EntryPoint::GLDrawElementsInstancedBaseInstanceEXT, modePacked,
                  count, typePacked, indices, instancecount, baseinstance));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawElementsInstancedBaseInstance(modePacked, count, typePacked, indices,
                                                        instancecount, baseinstance);
@@ -5379,7 +5162,7 @@ void GL_APIENTRY GL_DrawElementsInstancedBaseVertexBaseInstanceEXT(GLenum mode,
              ValidateDrawElementsInstancedBaseVertexBaseInstanceEXT(
                  context, angle::EntryPoint::GLDrawElementsInstancedBaseVertexBaseInstanceEXT,
                  modePacked, count, typePacked, indices, instancecount, basevertex, baseinstance));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawElementsInstancedBaseVertexBaseInstance(
                 modePacked, count, typePacked, indices, instancecount, basevertex, baseinstance);
@@ -5410,12 +5193,9 @@ void GL_APIENTRY GL_BindFragDataLocationEXT(GLuint program, GLuint color, const 
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLBindFragDataLocationEXT) &&
-              ValidateBindFragDataLocationEXT(context, angle::EntryPoint::GLBindFragDataLocationEXT,
-                                              programPacked, color, name)));
-        if (isCallValid)
+             ValidateBindFragDataLocationEXT(context, angle::EntryPoint::GLBindFragDataLocationEXT,
+                                             programPacked, color, name));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->bindFragDataLocation(programPacked, color, name);
         }
@@ -5443,15 +5223,11 @@ void GL_APIENTRY GL_BindFragDataLocationIndexedEXT(GLuint program,
     {
         ShaderProgramID programPacked = PackParam<ShaderProgramID>(program);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLBindFragDataLocationIndexedEXT) &&
-              ValidateBindFragDataLocationIndexedEXT(
-                  context, angle::EntryPoint::GLBindFragDataLocationIndexedEXT, programPacked,
-                  colorNumber, index, name)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateBindFragDataLocationIndexedEXT(
+                                context, angle::EntryPoint::GLBindFragDataLocationIndexedEXT,
+                                programPacked, colorNumber, index, name));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->bindFragDataLocationIndexed(programPacked, colorNumber, index, name);
         }
@@ -5481,7 +5257,7 @@ GLint GL_APIENTRY GL_GetFragDataIndexEXT(GLuint program, const GLchar *name)
             (context->skipValidation() ||
              ValidateGetFragDataIndexEXT(context, angle::EntryPoint::GLGetFragDataIndexEXT,
                                          programPacked, name));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->getFragDataIndex(programPacked, name);
         }
@@ -5521,7 +5297,7 @@ GLint GL_APIENTRY GL_GetProgramResourceLocationIndexEXT(GLuint program,
                             ValidateGetProgramResourceLocationIndexEXT(
                                 context, angle::EntryPoint::GLGetProgramResourceLocationIndexEXT,
                                 programPacked, programInterface, name));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue =
                 context->getProgramResourceLocationIndex(programPacked, programInterface, name);
@@ -5565,14 +5341,10 @@ void GL_APIENTRY GL_BufferStorageEXT(GLenum target,
     {
         BufferBinding targetPacked = PackParam<BufferBinding>(target);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLBufferStorageEXT) &&
-              ValidateBufferStorageEXT(context, angle::EntryPoint::GLBufferStorageEXT, targetPacked,
-                                       size, data, flags)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateBufferStorageEXT(context, angle::EntryPoint::GLBufferStorageEXT,
+                                                     targetPacked, size, data, flags));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->bufferStorage(targetPacked, size, data, flags);
         }
@@ -5601,14 +5373,10 @@ GL_ClearTexImageEXT(GLuint texture, GLint level, GLenum format, GLenum type, con
     {
         TextureID texturePacked = PackParam<TextureID>(texture);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLClearTexImageEXT) &&
-              ValidateClearTexImageEXT(context, angle::EntryPoint::GLClearTexImageEXT,
-                                       texturePacked, level, format, type, data)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateClearTexImageEXT(context, angle::EntryPoint::GLClearTexImageEXT,
+                                                     texturePacked, level, format, type, data));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->clearTexImage(texturePacked, level, format, type, data);
         }
@@ -5649,13 +5417,10 @@ void GL_APIENTRY GL_ClearTexSubImageEXT(GLuint texture,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLClearTexSubImageEXT) &&
-              ValidateClearTexSubImageEXT(context, angle::EntryPoint::GLClearTexSubImageEXT,
-                                          texturePacked, level, xoffset, yoffset, zoffset, width,
-                                          height, depth, format, type, data)));
-        if (isCallValid)
+             ValidateClearTexSubImageEXT(context, angle::EntryPoint::GLClearTexSubImageEXT,
+                                         texturePacked, level, xoffset, yoffset, zoffset, width,
+                                         height, depth, format, type, data));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->clearTexSubImage(texturePacked, level, xoffset, yoffset, zoffset, width,
                                       height, depth, format, type, data);
@@ -5687,7 +5452,7 @@ void GL_APIENTRY GL_ClipControlEXT(GLenum origin, GLenum depth)
              ValidateClipControlEXT(
                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
                  angle::EntryPoint::GLClipControlEXT, originPacked, depthPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateClipControl(context->getMutablePrivateState(),
                                       context->getMutablePrivateStateCache(), originPacked,
@@ -5741,16 +5506,12 @@ void GL_APIENTRY GL_CopyImageSubDataEXT(GLuint srcName,
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLCopyImageSubDataEXT) &&
-              ValidateCopyImageSubDataEXT(context, angle::EntryPoint::GLCopyImageSubDataEXT,
-                                          srcName, srcTarget, srcLevel, srcX, srcY, srcZ, dstName,
-                                          dstTarget, dstLevel, dstX, dstY, dstZ, srcWidth,
-                                          srcHeight, srcDepth)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateCopyImageSubDataEXT(
+                                context, angle::EntryPoint::GLCopyImageSubDataEXT, srcName,
+                                srcTarget, srcLevel, srcX, srcY, srcZ, dstName, dstTarget, dstLevel,
+                                dstX, dstY, dstZ, srcWidth, srcHeight, srcDepth));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->copyImageSubData(srcName, srcTarget, srcLevel, srcX, srcY, srcZ, dstName,
                                       dstTarget, dstLevel, dstX, dstY, dstZ, srcWidth, srcHeight,
@@ -5786,7 +5547,7 @@ GL_GetObjectLabelEXT(GLenum type, GLuint object, GLsizei bufSize, GLsizei *lengt
             (context->skipValidation() ||
              ValidateGetObjectLabelEXT(context, angle::EntryPoint::GLGetObjectLabelEXT, type,
                                        object, bufSize, length, label));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getObjectLabel(type, object, bufSize, length, label);
         }
@@ -5811,14 +5572,10 @@ void GL_APIENTRY GL_LabelObjectEXT(GLenum type, GLuint object, GLsizei length, c
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLLabelObjectEXT) &&
-              ValidateLabelObjectEXT(context, angle::EntryPoint::GLLabelObjectEXT, type, object,
-                                     length, label)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateLabelObjectEXT(context, angle::EntryPoint::GLLabelObjectEXT,
+                                                   type, object, length, label));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->labelObject(type, object, length, label);
         }
@@ -5846,12 +5603,9 @@ void GL_APIENTRY GL_InsertEventMarkerEXT(GLsizei length, const GLchar *marker)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLInsertEventMarkerEXT) &&
-              ValidateInsertEventMarkerEXT(context, angle::EntryPoint::GLInsertEventMarkerEXT,
-                                           length, marker)));
-        if (isCallValid)
+             ValidateInsertEventMarkerEXT(context, angle::EntryPoint::GLInsertEventMarkerEXT,
+                                          length, marker));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->insertEventMarker(length, marker);
         }
@@ -5877,11 +5631,8 @@ void GL_APIENTRY GL_PopGroupMarkerEXT()
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLPopGroupMarkerEXT) &&
-              ValidatePopGroupMarkerEXT(context, angle::EntryPoint::GLPopGroupMarkerEXT)));
-        if (isCallValid)
+             ValidatePopGroupMarkerEXT(context, angle::EntryPoint::GLPopGroupMarkerEXT));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->popGroupMarker();
         }
@@ -5906,14 +5657,10 @@ void GL_APIENTRY GL_PushGroupMarkerEXT(GLsizei length, const GLchar *marker)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLPushGroupMarkerEXT) &&
-              ValidatePushGroupMarkerEXT(context, angle::EntryPoint::GLPushGroupMarkerEXT, length,
-                                         marker)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidatePushGroupMarkerEXT(
+                                context, angle::EntryPoint::GLPushGroupMarkerEXT, length, marker));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->pushGroupMarker(length, marker);
         }
@@ -5943,14 +5690,15 @@ void GL_APIENTRY GL_DiscardFramebufferEXT(GLenum target,
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
+        if (context->getState().getPixelLocalStorageActivePlanes() != 0)
+        {
+            context->endPixelLocalStorageImplicit();
+        }
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLDiscardFramebufferEXT) &&
-              ValidateDiscardFramebufferEXT(context, angle::EntryPoint::GLDiscardFramebufferEXT,
-                                            target, numAttachments, attachments)));
-        if (isCallValid)
+             ValidateDiscardFramebufferEXT(context, angle::EntryPoint::GLDiscardFramebufferEXT,
+                                           target, numAttachments, attachments));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->discardFramebuffer(target, numAttachments, attachments);
         }
@@ -5977,14 +5725,10 @@ void GL_APIENTRY GL_BeginQueryEXT(GLenum target, GLuint id)
         QueryType targetPacked = PackParam<QueryType>(target);
         QueryID idPacked       = PackParam<QueryID>(id);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLBeginQueryEXT) &&
-              ValidateBeginQueryEXT(context, angle::EntryPoint::GLBeginQueryEXT, targetPacked,
-                                    idPacked)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateBeginQueryEXT(context, angle::EntryPoint::GLBeginQueryEXT,
+                                                  targetPacked, idPacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->beginQuery(targetPacked, idPacked);
         }
@@ -6011,7 +5755,7 @@ void GL_APIENTRY GL_DeleteQueriesEXT(GLsizei n, const GLuint *ids)
         bool isCallValid = (context->skipValidation() ||
                             ValidateDeleteQueriesEXT(context, angle::EntryPoint::GLDeleteQueriesEXT,
                                                      n, idsPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->deleteQueries(n, idsPacked);
         }
@@ -6037,11 +5781,8 @@ void GL_APIENTRY GL_EndQueryEXT(GLenum target)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLEndQueryEXT) &&
-              ValidateEndQueryEXT(context, angle::EntryPoint::GLEndQueryEXT, targetPacked)));
-        if (isCallValid)
+             ValidateEndQueryEXT(context, angle::EntryPoint::GLEndQueryEXT, targetPacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->endQuery(targetPacked);
         }
@@ -6068,7 +5809,7 @@ void GL_APIENTRY GL_GenQueriesEXT(GLsizei n, GLuint *ids)
         bool isCallValid =
             (context->skipValidation() ||
              ValidateGenQueriesEXT(context, angle::EntryPoint::GLGenQueriesEXT, n, idsPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->genQueries(n, idsPacked);
         }
@@ -6094,7 +5835,7 @@ void GL_APIENTRY GL_GetInteger64vEXT(GLenum pname, GLint64 *data)
         bool isCallValid =
             (context->skipValidation() ||
              ValidateGetInteger64vEXT(context, angle::EntryPoint::GLGetInteger64vEXT, pname, data));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getInteger64v(pname, data);
         }
@@ -6123,7 +5864,7 @@ void GL_APIENTRY GL_GetQueryObjecti64vEXT(GLuint id, GLenum pname, GLint64 *para
             (context->skipValidation() ||
              ValidateGetQueryObjecti64vEXT(context, angle::EntryPoint::GLGetQueryObjecti64vEXT,
                                            idPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getQueryObjecti64v(idPacked, pname, params);
         }
@@ -6151,7 +5892,7 @@ void GL_APIENTRY GL_GetQueryObjectivEXT(GLuint id, GLenum pname, GLint *params)
             (context->skipValidation() ||
              ValidateGetQueryObjectivEXT(context, angle::EntryPoint::GLGetQueryObjectivEXT,
                                          idPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getQueryObjectiv(idPacked, pname, params);
         }
@@ -6179,7 +5920,7 @@ void GL_APIENTRY GL_GetQueryObjectui64vEXT(GLuint id, GLenum pname, GLuint64 *pa
             (context->skipValidation() ||
              ValidateGetQueryObjectui64vEXT(context, angle::EntryPoint::GLGetQueryObjectui64vEXT,
                                             idPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getQueryObjectui64v(idPacked, pname, params);
         }
@@ -6208,7 +5949,7 @@ void GL_APIENTRY GL_GetQueryObjectuivEXT(GLuint id, GLenum pname, GLuint *params
             (context->skipValidation() ||
              ValidateGetQueryObjectuivEXT(context, angle::EntryPoint::GLGetQueryObjectuivEXT,
                                           idPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getQueryObjectuiv(idPacked, pname, params);
         }
@@ -6237,7 +5978,7 @@ void GL_APIENTRY GL_GetQueryivEXT(GLenum target, GLenum pname, GLint *params)
         bool isCallValid = (context->skipValidation() ||
                             ValidateGetQueryivEXT(context, angle::EntryPoint::GLGetQueryivEXT,
                                                   targetPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getQueryiv(targetPacked, pname, params);
         }
@@ -6263,7 +6004,7 @@ GLboolean GL_APIENTRY GL_IsQueryEXT(GLuint id)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid = (context->skipValidation() ||
                             ValidateIsQueryEXT(context, angle::EntryPoint::GLIsQueryEXT, idPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->isQuery(idPacked);
         }
@@ -6294,14 +6035,10 @@ void GL_APIENTRY GL_QueryCounterEXT(GLuint id, GLenum target)
         QueryID idPacked       = PackParam<QueryID>(id);
         QueryType targetPacked = PackParam<QueryType>(target);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLQueryCounterEXT) &&
-              ValidateQueryCounterEXT(context, angle::EntryPoint::GLQueryCounterEXT, idPacked,
-                                      targetPacked)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateQueryCounterEXT(context, angle::EntryPoint::GLQueryCounterEXT,
+                                                    idPacked, targetPacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->queryCounter(idPacked, targetPacked);
         }
@@ -6327,11 +6064,8 @@ void GL_APIENTRY GL_DrawBuffersEXT(GLsizei n, const GLenum *bufs)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLDrawBuffersEXT) &&
-              ValidateDrawBuffersEXT(context, angle::EntryPoint::GLDrawBuffersEXT, n, bufs)));
-        if (isCallValid)
+             ValidateDrawBuffersEXT(context, angle::EntryPoint::GLDrawBuffersEXT, n, bufs));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawBuffers(n, bufs);
         }
@@ -6361,7 +6095,7 @@ void GL_APIENTRY GL_BlendEquationSeparateiEXT(GLuint buf, GLenum modeRGB, GLenum
              ValidateBlendEquationSeparateiEXT(
                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
                  angle::EntryPoint::GLBlendEquationSeparateiEXT, buf, modeRGB, modeAlpha));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateBlendEquationSeparatei(context->getMutablePrivateState(),
                                                  context->getMutablePrivateStateCache(), buf,
@@ -6390,7 +6124,7 @@ void GL_APIENTRY GL_BlendEquationiEXT(GLuint buf, GLenum mode)
              ValidateBlendEquationiEXT(context->getPrivateState(),
                                        context->getMutableErrorSetForValidation(),
                                        angle::EntryPoint::GLBlendEquationiEXT, buf, mode));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateBlendEquationi(context->getMutablePrivateState(),
                                          context->getMutablePrivateStateCache(), buf, mode);
@@ -6424,7 +6158,7 @@ GL_BlendFuncSeparateiEXT(GLuint buf, GLenum srcRGB, GLenum dstRGB, GLenum srcAlp
                                            context->getMutableErrorSetForValidation(),
                                            angle::EntryPoint::GLBlendFuncSeparateiEXT, buf, srcRGB,
                                            dstRGB, srcAlpha, dstAlpha));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateBlendFuncSeparatei(context->getMutablePrivateState(),
                                              context->getMutablePrivateStateCache(), buf, srcRGB,
@@ -6455,7 +6189,7 @@ void GL_APIENTRY GL_BlendFunciEXT(GLuint buf, GLenum src, GLenum dst)
              ValidateBlendFunciEXT(context->getPrivateState(),
                                    context->getMutableErrorSetForValidation(),
                                    angle::EntryPoint::GLBlendFunciEXT, buf, src, dst));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateBlendFunci(context->getMutablePrivateState(),
                                      context->getMutablePrivateStateCache(), buf, src, dst);
@@ -6484,7 +6218,7 @@ void GL_APIENTRY GL_ColorMaskiEXT(GLuint index, GLboolean r, GLboolean g, GLbool
              ValidateColorMaskiEXT(context->getPrivateState(),
                                    context->getMutableErrorSetForValidation(),
                                    angle::EntryPoint::GLColorMaskiEXT, index, r, g, b, a));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateColorMaski(context->getMutablePrivateState(),
                                      context->getMutablePrivateStateCache(), index, r, g, b, a);
@@ -6511,7 +6245,7 @@ void GL_APIENTRY GL_DisableiEXT(GLenum target, GLuint index)
                             ValidateDisableiEXT(context->getPrivateState(),
                                                 context->getMutableErrorSetForValidation(),
                                                 angle::EntryPoint::GLDisableiEXT, target, index));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateDisablei(context->getMutablePrivateState(),
                                    context->getMutablePrivateStateCache(), target, index);
@@ -6538,7 +6272,7 @@ void GL_APIENTRY GL_EnableiEXT(GLenum target, GLuint index)
                             ValidateEnableiEXT(context->getPrivateState(),
                                                context->getMutableErrorSetForValidation(),
                                                angle::EntryPoint::GLEnableiEXT, target, index));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateEnablei(context->getMutablePrivateState(),
                                   context->getMutablePrivateStateCache(), target, index);
@@ -6567,7 +6301,7 @@ GLboolean GL_APIENTRY GL_IsEnablediEXT(GLenum target, GLuint index)
              ValidateIsEnablediEXT(context->getPrivateState(),
                                    context->getMutableErrorSetForValidation(),
                                    angle::EntryPoint::GLIsEnablediEXT, target, index));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue =
                 ContextPrivateIsEnabledi(context->getMutablePrivateState(),
@@ -6612,7 +6346,7 @@ void GL_APIENTRY GL_DrawElementsBaseVertexEXT(GLenum mode,
                             ValidateDrawElementsBaseVertexEXT(
                                 context, angle::EntryPoint::GLDrawElementsBaseVertexEXT, modePacked,
                                 count, typePacked, indices, basevertex));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawElementsBaseVertex(modePacked, count, typePacked, indices, basevertex);
         }
@@ -6651,7 +6385,7 @@ void GL_APIENTRY GL_DrawElementsInstancedBaseVertexEXT(GLenum mode,
                             ValidateDrawElementsInstancedBaseVertexEXT(
                                 context, angle::EntryPoint::GLDrawElementsInstancedBaseVertexEXT,
                                 modePacked, count, typePacked, indices, instancecount, basevertex));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawElementsInstancedBaseVertex(modePacked, count, typePacked, indices,
                                                      instancecount, basevertex);
@@ -6691,7 +6425,7 @@ void GL_APIENTRY GL_DrawRangeElementsBaseVertexEXT(GLenum mode,
                             ValidateDrawRangeElementsBaseVertexEXT(
                                 context, angle::EntryPoint::GLDrawRangeElementsBaseVertexEXT,
                                 modePacked, start, end, count, typePacked, indices, basevertex));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawRangeElementsBaseVertex(modePacked, start, end, count, typePacked, indices,
                                                  basevertex);
@@ -6727,15 +6461,11 @@ void GL_APIENTRY GL_MultiDrawElementsBaseVertexEXT(GLenum mode,
         PrimitiveMode modePacked    = PackParam<PrimitiveMode>(mode);
         DrawElementsType typePacked = PackParam<DrawElementsType>(type);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLMultiDrawElementsBaseVertexEXT) &&
-              ValidateMultiDrawElementsBaseVertexEXT(
-                  context, angle::EntryPoint::GLMultiDrawElementsBaseVertexEXT, modePacked, count,
-                  typePacked, indices, drawcount, basevertex)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateMultiDrawElementsBaseVertexEXT(
+                                context, angle::EntryPoint::GLMultiDrawElementsBaseVertexEXT,
+                                modePacked, count, typePacked, indices, drawcount, basevertex));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->multiDrawElementsBaseVertex(modePacked, count, typePacked, indices, drawcount,
                                                  basevertex);
@@ -6770,15 +6500,11 @@ void GL_APIENTRY GL_BufferStorageExternalEXT(GLenum target,
     {
         BufferBinding targetPacked = PackParam<BufferBinding>(target);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLBufferStorageExternalEXT) &&
-              ValidateBufferStorageExternalEXT(context,
-                                               angle::EntryPoint::GLBufferStorageExternalEXT,
-                                               targetPacked, offset, size, clientBuffer, flags)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateBufferStorageExternalEXT(
+                                context, angle::EntryPoint::GLBufferStorageExternalEXT,
+                                targetPacked, offset, size, clientBuffer, flags));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->bufferStorageExternal(targetPacked, offset, size, clientBuffer, flags);
         }
@@ -6810,15 +6536,11 @@ void GL_APIENTRY GL_NamedBufferStorageExternalEXT(GLuint buffer,
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLNamedBufferStorageExternalEXT) &&
-              ValidateNamedBufferStorageExternalEXT(
-                  context, angle::EntryPoint::GLNamedBufferStorageExternalEXT, buffer, offset, size,
-                  clientBuffer, flags)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateNamedBufferStorageExternalEXT(
+                                context, angle::EntryPoint::GLNamedBufferStorageExternalEXT, buffer,
+                                offset, size, clientBuffer, flags));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->namedBufferStorageExternal(buffer, offset, size, clientBuffer, flags);
         }
@@ -6851,11 +6573,15 @@ void GL_APIENTRY GL_FramebufferTextureEXT(GLenum target,
     {
         TextureID texturePacked = PackParam<TextureID>(texture);
         SCOPED_SHARE_CONTEXT_LOCK(context);
+        if (context->getState().getPixelLocalStorageActivePlanes() != 0)
+        {
+            context->endPixelLocalStorageImplicit();
+        }
         bool isCallValid =
             (context->skipValidation() ||
              ValidateFramebufferTextureEXT(context, angle::EntryPoint::GLFramebufferTextureEXT,
                                            target, attachment, texturePacked, level));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferTexture(target, attachment, texturePacked, level);
         }
@@ -6891,7 +6617,7 @@ void GL_APIENTRY GL_DrawArraysInstancedEXT(GLenum mode,
             (context->skipValidation() ||
              ValidateDrawArraysInstancedEXT(context, angle::EntryPoint::GLDrawArraysInstancedEXT,
                                             modePacked, start, count, primcount));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawArraysInstanced(modePacked, start, count, primcount);
         }
@@ -6928,7 +6654,7 @@ void GL_APIENTRY GL_DrawElementsInstancedEXT(GLenum mode,
                             ValidateDrawElementsInstancedEXT(
                                 context, angle::EntryPoint::GLDrawElementsInstancedEXT, modePacked,
                                 count, typePacked, indices, primcount));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawElementsInstanced(modePacked, count, typePacked, indices, primcount);
         }
@@ -6956,7 +6682,7 @@ void GL_APIENTRY GL_VertexAttribDivisorEXT(GLuint index, GLuint divisor)
             (context->skipValidation() ||
              ValidateVertexAttribDivisorEXT(context, angle::EntryPoint::GLVertexAttribDivisorEXT,
                                             index, divisor));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->vertexAttribDivisor(index, divisor);
         }
@@ -6983,15 +6709,11 @@ void GL_APIENTRY GL_FlushMappedBufferRangeEXT(GLenum target, GLintptr offset, GL
     {
         BufferBinding targetPacked = PackParam<BufferBinding>(target);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLFlushMappedBufferRangeEXT) &&
-              ValidateFlushMappedBufferRangeEXT(context,
-                                                angle::EntryPoint::GLFlushMappedBufferRangeEXT,
-                                                targetPacked, offset, length)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateFlushMappedBufferRangeEXT(
+                                context, angle::EntryPoint::GLFlushMappedBufferRangeEXT,
+                                targetPacked, offset, length));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->flushMappedBufferRange(targetPacked, offset, length);
         }
@@ -7025,12 +6747,9 @@ void *GL_APIENTRY GL_MapBufferRangeEXT(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLMapBufferRangeEXT) &&
-              ValidateMapBufferRangeEXT(context, angle::EntryPoint::GLMapBufferRangeEXT,
-                                        targetPacked, offset, length, access)));
-        if (isCallValid)
+             ValidateMapBufferRangeEXT(context, angle::EntryPoint::GLMapBufferRangeEXT,
+                                       targetPacked, offset, length, access));
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->mapBufferRange(targetPacked, offset, length, access);
         }
@@ -7070,12 +6789,9 @@ void GL_APIENTRY GL_BufferStorageMemEXT(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLBufferStorageMemEXT) &&
-              ValidateBufferStorageMemEXT(context, angle::EntryPoint::GLBufferStorageMemEXT,
-                                          targetPacked, size, memoryPacked, offset)));
-        if (isCallValid)
+             ValidateBufferStorageMemEXT(context, angle::EntryPoint::GLBufferStorageMemEXT,
+                                         targetPacked, size, memoryPacked, offset));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->bufferStorageMem(targetPacked, size, memoryPacked, offset);
         }
@@ -7103,12 +6819,9 @@ void GL_APIENTRY GL_CreateMemoryObjectsEXT(GLsizei n, GLuint *memoryObjects)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLCreateMemoryObjectsEXT) &&
-              ValidateCreateMemoryObjectsEXT(context, angle::EntryPoint::GLCreateMemoryObjectsEXT,
-                                             n, memoryObjectsPacked)));
-        if (isCallValid)
+             ValidateCreateMemoryObjectsEXT(context, angle::EntryPoint::GLCreateMemoryObjectsEXT, n,
+                                            memoryObjectsPacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->createMemoryObjects(n, memoryObjectsPacked);
         }
@@ -7138,7 +6851,7 @@ void GL_APIENTRY GL_DeleteMemoryObjectsEXT(GLsizei n, const GLuint *memoryObject
             (context->skipValidation() ||
              ValidateDeleteMemoryObjectsEXT(context, angle::EntryPoint::GLDeleteMemoryObjectsEXT, n,
                                             memoryObjectsPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->deleteMemoryObjects(n, memoryObjectsPacked);
         }
@@ -7168,7 +6881,7 @@ void GL_APIENTRY GL_GetMemoryObjectParameterivEXT(GLuint memoryObject, GLenum pn
                             ValidateGetMemoryObjectParameterivEXT(
                                 context, angle::EntryPoint::GLGetMemoryObjectParameterivEXT,
                                 memoryObjectPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getMemoryObjectParameteriv(memoryObjectPacked, pname, params);
         }
@@ -7195,7 +6908,7 @@ void GL_APIENTRY GL_GetUnsignedBytevEXT(GLenum pname, GLubyte *data)
         bool isCallValid = (context->skipValidation() ||
                             ValidateGetUnsignedBytevEXT(
                                 context, angle::EntryPoint::GLGetUnsignedBytevEXT, pname, data));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getUnsignedBytev(pname, data);
         }
@@ -7223,7 +6936,7 @@ void GL_APIENTRY GL_GetUnsignedBytei_vEXT(GLenum target, GLuint index, GLubyte *
             (context->skipValidation() ||
              ValidateGetUnsignedBytei_vEXT(context, angle::EntryPoint::GLGetUnsignedBytei_vEXT,
                                            target, index, data));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getUnsignedBytei_v(target, index, data);
         }
@@ -7252,7 +6965,7 @@ GLboolean GL_APIENTRY GL_IsMemoryObjectEXT(GLuint memoryObject)
             (context->skipValidation() ||
              ValidateIsMemoryObjectEXT(context, angle::EntryPoint::GLIsMemoryObjectEXT,
                                        memoryObjectPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->isMemoryObject(memoryObjectPacked);
         }
@@ -7287,15 +7000,11 @@ void GL_APIENTRY GL_MemoryObjectParameterivEXT(GLuint memoryObject,
     {
         MemoryObjectID memoryObjectPacked = PackParam<MemoryObjectID>(memoryObject);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLMemoryObjectParameterivEXT) &&
-              ValidateMemoryObjectParameterivEXT(context,
-                                                 angle::EntryPoint::GLMemoryObjectParameterivEXT,
-                                                 memoryObjectPacked, pname, params)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateMemoryObjectParameterivEXT(
+                                context, angle::EntryPoint::GLMemoryObjectParameterivEXT,
+                                memoryObjectPacked, pname, params));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->memoryObjectParameteriv(memoryObjectPacked, pname, params);
         }
@@ -7331,15 +7040,11 @@ void GL_APIENTRY GL_TexStorageMem2DEXT(GLenum target,
         TextureType targetPacked    = PackParam<TextureType>(target);
         MemoryObjectID memoryPacked = PackParam<MemoryObjectID>(memory);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexStorageMem2DEXT) &&
-              ValidateTexStorageMem2DEXT(context, angle::EntryPoint::GLTexStorageMem2DEXT,
-                                         targetPacked, levels, internalFormat, width, height,
-                                         memoryPacked, offset)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateTexStorageMem2DEXT(
+                                context, angle::EntryPoint::GLTexStorageMem2DEXT, targetPacked,
+                                levels, internalFormat, width, height, memoryPacked, offset));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texStorageMem2D(targetPacked, levels, internalFormat, width, height,
                                      memoryPacked, offset);
@@ -7379,14 +7084,10 @@ void GL_APIENTRY GL_TexStorageMem2DMultisampleEXT(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLTexStorageMem2DMultisampleEXT) &&
-              ValidateTexStorageMem2DMultisampleEXT(
-                  context, angle::EntryPoint::GLTexStorageMem2DMultisampleEXT, targetPacked,
-                  samples, internalFormat, width, height, fixedSampleLocations, memoryPacked,
-                  offset)));
-        if (isCallValid)
+             ValidateTexStorageMem2DMultisampleEXT(
+                 context, angle::EntryPoint::GLTexStorageMem2DMultisampleEXT, targetPacked, samples,
+                 internalFormat, width, height, fixedSampleLocations, memoryPacked, offset));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texStorageMem2DMultisample(targetPacked, samples, internalFormat, width,
                                                 height, fixedSampleLocations, memoryPacked, offset);
@@ -7426,13 +7127,10 @@ void GL_APIENTRY GL_TexStorageMem3DEXT(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexStorageMem3DEXT) &&
-              ValidateTexStorageMem3DEXT(context, angle::EntryPoint::GLTexStorageMem3DEXT,
-                                         targetPacked, levels, internalFormat, width, height, depth,
-                                         memoryPacked, offset)));
-        if (isCallValid)
+             ValidateTexStorageMem3DEXT(context, angle::EntryPoint::GLTexStorageMem3DEXT,
+                                        targetPacked, levels, internalFormat, width, height, depth,
+                                        memoryPacked, offset));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texStorageMem3D(targetPacked, levels, internalFormat, width, height, depth,
                                      memoryPacked, offset);
@@ -7473,14 +7171,10 @@ void GL_APIENTRY GL_TexStorageMem3DMultisampleEXT(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLTexStorageMem3DMultisampleEXT) &&
-              ValidateTexStorageMem3DMultisampleEXT(
-                  context, angle::EntryPoint::GLTexStorageMem3DMultisampleEXT, targetPacked,
-                  samples, internalFormat, width, height, depth, fixedSampleLocations, memoryPacked,
-                  offset)));
-        if (isCallValid)
+             ValidateTexStorageMem3DMultisampleEXT(
+                 context, angle::EntryPoint::GLTexStorageMem3DMultisampleEXT, targetPacked, samples,
+                 internalFormat, width, height, depth, fixedSampleLocations, memoryPacked, offset));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texStorageMem3DMultisample(targetPacked, samples, internalFormat, width,
                                                 height, depth, fixedSampleLocations, memoryPacked,
@@ -7514,12 +7208,9 @@ void GL_APIENTRY GL_ImportMemoryFdEXT(GLuint memory, GLuint64 size, GLenum handl
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLImportMemoryFdEXT) &&
-              ValidateImportMemoryFdEXT(context, angle::EntryPoint::GLImportMemoryFdEXT,
-                                        memoryPacked, size, handleTypePacked, fd)));
-        if (isCallValid)
+             ValidateImportMemoryFdEXT(context, angle::EntryPoint::GLImportMemoryFdEXT,
+                                       memoryPacked, size, handleTypePacked, fd));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->importMemoryFd(memoryPacked, size, handleTypePacked, fd);
         }
@@ -7550,15 +7241,11 @@ void GL_APIENTRY GL_MultiDrawArraysIndirectEXT(GLenum mode,
     {
         PrimitiveMode modePacked = PackParam<PrimitiveMode>(mode);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLMultiDrawArraysIndirectEXT) &&
-              ValidateMultiDrawArraysIndirectEXT(context,
-                                                 angle::EntryPoint::GLMultiDrawArraysIndirectEXT,
-                                                 modePacked, indirect, drawcount, stride)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateMultiDrawArraysIndirectEXT(
+                                context, angle::EntryPoint::GLMultiDrawArraysIndirectEXT,
+                                modePacked, indirect, drawcount, stride));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->multiDrawArraysIndirect(modePacked, indirect, drawcount, stride);
         }
@@ -7591,15 +7278,11 @@ void GL_APIENTRY GL_MultiDrawElementsIndirectEXT(GLenum mode,
         PrimitiveMode modePacked    = PackParam<PrimitiveMode>(mode);
         DrawElementsType typePacked = PackParam<DrawElementsType>(type);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLMultiDrawElementsIndirectEXT) &&
-              ValidateMultiDrawElementsIndirectEXT(
-                  context, angle::EntryPoint::GLMultiDrawElementsIndirectEXT, modePacked,
-                  typePacked, indirect, drawcount, stride)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateMultiDrawElementsIndirectEXT(
+                                context, angle::EntryPoint::GLMultiDrawElementsIndirectEXT,
+                                modePacked, typePacked, indirect, drawcount, stride));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->multiDrawElementsIndirect(modePacked, typePacked, indirect, drawcount, stride);
         }
@@ -7635,12 +7318,16 @@ void GL_APIENTRY GL_FramebufferTexture2DMultisampleEXT(GLenum target,
         TextureTarget textargetPacked = PackParam<TextureTarget>(textarget);
         TextureID texturePacked       = PackParam<TextureID>(texture);
         SCOPED_SHARE_CONTEXT_LOCK(context);
+        if (context->getState().getPixelLocalStorageActivePlanes() != 0)
+        {
+            context->endPixelLocalStorageImplicit();
+        }
         bool isCallValid =
             (context->skipValidation() ||
              ValidateFramebufferTexture2DMultisampleEXT(
                  context, angle::EntryPoint::GLFramebufferTexture2DMultisampleEXT, target,
                  attachment, textargetPacked, texturePacked, level, samples));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferTexture2DMultisample(target, attachment, textargetPacked,
                                                      texturePacked, level, samples);
@@ -7671,15 +7358,11 @@ void GL_APIENTRY GL_RenderbufferStorageMultisampleEXT(GLenum target,
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLRenderbufferStorageMultisampleEXT) &&
-              ValidateRenderbufferStorageMultisampleEXT(
-                  context, angle::EntryPoint::GLRenderbufferStorageMultisampleEXT, target, samples,
-                  internalformat, width, height)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateRenderbufferStorageMultisampleEXT(
+                                context, angle::EntryPoint::GLRenderbufferStorageMultisampleEXT,
+                                target, samples, internalformat, width, height));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->renderbufferStorageMultisampleEXT(target, samples, internalformat, width,
                                                        height);
@@ -7726,7 +7409,7 @@ void GL_APIENTRY GL_PolygonOffsetClampEXT(GLfloat factor, GLfloat units, GLfloat
              ValidatePolygonOffsetClampEXT(
                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
                  angle::EntryPoint::GLPolygonOffsetClampEXT, factor, units, clamp));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivatePolygonOffsetClamp(context->getMutablePrivateState(),
                                              context->getMutablePrivateStateCache(), factor, units,
@@ -7762,14 +7445,11 @@ void GL_APIENTRY GL_PrimitiveBoundingBoxEXT(GLfloat minX,
     {
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLPrimitiveBoundingBoxEXT) &&
-              ValidatePrimitiveBoundingBoxEXT(context->getPrivateState(),
-                                              context->getMutableErrorSetForValidation(),
-                                              angle::EntryPoint::GLPrimitiveBoundingBoxEXT, minX,
-                                              minY, minZ, minW, maxX, maxY, maxZ, maxW)));
-        if (isCallValid)
+             ValidatePrimitiveBoundingBoxEXT(context->getPrivateState(),
+                                             context->getMutableErrorSetForValidation(),
+                                             angle::EntryPoint::GLPrimitiveBoundingBoxEXT, minX,
+                                             minY, minZ, minW, maxX, maxY, maxZ, maxW));
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivatePrimitiveBoundingBox(context->getMutablePrivateState(),
                                                context->getMutablePrivateStateCache(), minX, minY,
@@ -7807,7 +7487,7 @@ GLenum GL_APIENTRY GL_GetGraphicsResetStatusEXT()
         bool isCallValid = (context->skipValidation() ||
                             ValidateGetGraphicsResetStatusEXT(
                                 context, angle::EntryPoint::GLGetGraphicsResetStatusEXT));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->getGraphicsResetStatus();
         }
@@ -7848,7 +7528,7 @@ void GL_APIENTRY GL_GetnUniformfvEXT(GLuint program,
             (context->skipValidation() ||
              ValidateGetnUniformfvEXT(context, angle::EntryPoint::GLGetnUniformfvEXT, programPacked,
                                       locationPacked, bufSize, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getnUniformfv(programPacked, locationPacked, bufSize, params);
         }
@@ -7879,7 +7559,7 @@ void GL_APIENTRY GL_GetnUniformivEXT(GLuint program, GLint location, GLsizei buf
             (context->skipValidation() ||
              ValidateGetnUniformivEXT(context, angle::EntryPoint::GLGetnUniformivEXT, programPacked,
                                       locationPacked, bufSize, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getnUniformiv(programPacked, locationPacked, bufSize, params);
         }
@@ -7913,14 +7593,10 @@ void GL_APIENTRY GL_ReadnPixelsEXT(GLint x,
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLReadnPixelsEXT) &&
-              ValidateReadnPixelsEXT(context, angle::EntryPoint::GLReadnPixelsEXT, x, y, width,
-                                     height, format, type, bufSize, data)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateReadnPixelsEXT(context, angle::EntryPoint::GLReadnPixelsEXT, x,
+                                                   y, width, height, format, type, bufSize, data));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->readnPixels(x, y, width, height, format, type, bufSize, data);
         }
@@ -7954,7 +7630,7 @@ void GL_APIENTRY GL_DeleteSemaphoresEXT(GLsizei n, const GLuint *semaphores)
             (context->skipValidation() ||
              ValidateDeleteSemaphoresEXT(context, angle::EntryPoint::GLDeleteSemaphoresEXT, n,
                                          semaphoresPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->deleteSemaphores(n, semaphoresPacked);
         }
@@ -7981,7 +7657,7 @@ void GL_APIENTRY GL_GenSemaphoresEXT(GLsizei n, GLuint *semaphores)
         bool isCallValid = (context->skipValidation() ||
                             ValidateGenSemaphoresEXT(context, angle::EntryPoint::GLGenSemaphoresEXT,
                                                      n, semaphoresPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->genSemaphores(n, semaphoresPacked);
         }
@@ -8010,7 +7686,7 @@ void GL_APIENTRY GL_GetSemaphoreParameterui64vEXT(GLuint semaphore, GLenum pname
                             ValidateGetSemaphoreParameterui64vEXT(
                                 context, angle::EntryPoint::GLGetSemaphoreParameterui64vEXT,
                                 semaphorePacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getSemaphoreParameterui64v(semaphorePacked, pname, params);
         }
@@ -8038,7 +7714,7 @@ GLboolean GL_APIENTRY GL_IsSemaphoreEXT(GLuint semaphore)
         bool isCallValid =
             (context->skipValidation() ||
              ValidateIsSemaphoreEXT(context, angle::EntryPoint::GLIsSemaphoreEXT, semaphorePacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->isSemaphore(semaphorePacked);
         }
@@ -8071,15 +7747,11 @@ void GL_APIENTRY GL_SemaphoreParameterui64vEXT(GLuint semaphore,
     {
         SemaphoreID semaphorePacked = PackParam<SemaphoreID>(semaphore);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLSemaphoreParameterui64vEXT) &&
-              ValidateSemaphoreParameterui64vEXT(context,
-                                                 angle::EntryPoint::GLSemaphoreParameterui64vEXT,
-                                                 semaphorePacked, pname, params)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateSemaphoreParameterui64vEXT(
+                                context, angle::EntryPoint::GLSemaphoreParameterui64vEXT,
+                                semaphorePacked, pname, params));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->semaphoreParameterui64v(semaphorePacked, pname, params);
         }
@@ -8116,13 +7788,10 @@ void GL_APIENTRY GL_SignalSemaphoreEXT(GLuint semaphore,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLSignalSemaphoreEXT) &&
-              ValidateSignalSemaphoreEXT(context, angle::EntryPoint::GLSignalSemaphoreEXT,
-                                         semaphorePacked, numBufferBarriers, buffersPacked,
-                                         numTextureBarriers, texturesPacked, dstLayouts)));
-        if (isCallValid)
+             ValidateSignalSemaphoreEXT(context, angle::EntryPoint::GLSignalSemaphoreEXT,
+                                        semaphorePacked, numBufferBarriers, buffersPacked,
+                                        numTextureBarriers, texturesPacked, dstLayouts));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->signalSemaphore(semaphorePacked, numBufferBarriers, buffersPacked,
                                      numTextureBarriers, texturesPacked, dstLayouts);
@@ -8161,13 +7830,10 @@ void GL_APIENTRY GL_WaitSemaphoreEXT(GLuint semaphore,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLWaitSemaphoreEXT) &&
-              ValidateWaitSemaphoreEXT(context, angle::EntryPoint::GLWaitSemaphoreEXT,
-                                       semaphorePacked, numBufferBarriers, buffersPacked,
-                                       numTextureBarriers, texturesPacked, srcLayouts)));
-        if (isCallValid)
+             ValidateWaitSemaphoreEXT(context, angle::EntryPoint::GLWaitSemaphoreEXT,
+                                      semaphorePacked, numBufferBarriers, buffersPacked,
+                                      numTextureBarriers, texturesPacked, srcLayouts));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->waitSemaphore(semaphorePacked, numBufferBarriers, buffersPacked,
                                    numTextureBarriers, texturesPacked, srcLayouts);
@@ -8201,12 +7867,9 @@ void GL_APIENTRY GL_ImportSemaphoreFdEXT(GLuint semaphore, GLenum handleType, GL
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLImportSemaphoreFdEXT) &&
-              ValidateImportSemaphoreFdEXT(context, angle::EntryPoint::GLImportSemaphoreFdEXT,
-                                           semaphorePacked, handleTypePacked, fd)));
-        if (isCallValid)
+             ValidateImportSemaphoreFdEXT(context, angle::EntryPoint::GLImportSemaphoreFdEXT,
+                                          semaphorePacked, handleTypePacked, fd));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->importSemaphoreFd(semaphorePacked, handleTypePacked, fd);
         }
@@ -8237,12 +7900,9 @@ void GL_APIENTRY GL_ActiveShaderProgramEXT(GLuint pipeline, GLuint program)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLActiveShaderProgramEXT) &&
-              ValidateActiveShaderProgramEXT(context, angle::EntryPoint::GLActiveShaderProgramEXT,
-                                             pipelinePacked, programPacked)));
-        if (isCallValid)
+             ValidateActiveShaderProgramEXT(context, angle::EntryPoint::GLActiveShaderProgramEXT,
+                                            pipelinePacked, programPacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->activeShaderProgram(pipelinePacked, programPacked);
         }
@@ -8268,12 +7928,9 @@ void GL_APIENTRY GL_BindProgramPipelineEXT(GLuint pipeline)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLBindProgramPipelineEXT) &&
-              ValidateBindProgramPipelineEXT(context, angle::EntryPoint::GLBindProgramPipelineEXT,
-                                             pipelinePacked)));
-        if (isCallValid)
+             ValidateBindProgramPipelineEXT(context, angle::EntryPoint::GLBindProgramPipelineEXT,
+                                            pipelinePacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->bindProgramPipeline(pipelinePacked);
         }
@@ -8301,12 +7958,9 @@ GLuint GL_APIENTRY GL_CreateShaderProgramvEXT(GLenum type, GLsizei count, const 
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLCreateShaderProgramvEXT) &&
-              ValidateCreateShaderProgramvEXT(context, angle::EntryPoint::GLCreateShaderProgramvEXT,
-                                              typePacked, count, strings)));
-        if (isCallValid)
+             ValidateCreateShaderProgramvEXT(context, angle::EntryPoint::GLCreateShaderProgramvEXT,
+                                             typePacked, count, strings));
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->createShaderProgramv(typePacked, count, strings);
         }
@@ -8343,7 +7997,7 @@ void GL_APIENTRY GL_DeleteProgramPipelinesEXT(GLsizei n, const GLuint *pipelines
             (context->skipValidation() ||
              ValidateDeleteProgramPipelinesEXT(
                  context, angle::EntryPoint::GLDeleteProgramPipelinesEXT, n, pipelinesPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->deleteProgramPipelines(n, pipelinesPacked);
         }
@@ -8371,7 +8025,7 @@ void GL_APIENTRY GL_GenProgramPipelinesEXT(GLsizei n, GLuint *pipelines)
             (context->skipValidation() ||
              ValidateGenProgramPipelinesEXT(context, angle::EntryPoint::GLGenProgramPipelinesEXT, n,
                                             pipelinesPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->genProgramPipelines(n, pipelinesPacked);
         }
@@ -8404,7 +8058,7 @@ void GL_APIENTRY GL_GetProgramPipelineInfoLogEXT(GLuint pipeline,
                             ValidateGetProgramPipelineInfoLogEXT(
                                 context, angle::EntryPoint::GLGetProgramPipelineInfoLogEXT,
                                 pipelinePacked, bufSize, length, infoLog));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getProgramPipelineInfoLog(pipelinePacked, bufSize, length, infoLog);
         }
@@ -8434,7 +8088,7 @@ void GL_APIENTRY GL_GetProgramPipelineivEXT(GLuint pipeline, GLenum pname, GLint
             (context->skipValidation() ||
              ValidateGetProgramPipelineivEXT(context, angle::EntryPoint::GLGetProgramPipelineivEXT,
                                              pipelinePacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getProgramPipelineiv(pipelinePacked, pname, params);
         }
@@ -8463,7 +8117,7 @@ GLboolean GL_APIENTRY GL_IsProgramPipelineEXT(GLuint pipeline)
             (context->skipValidation() ||
              ValidateIsProgramPipelineEXT(context, angle::EntryPoint::GLIsProgramPipelineEXT,
                                           pipelinePacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->isProgramPipeline(pipelinePacked);
         }
@@ -8496,12 +8150,9 @@ void GL_APIENTRY GL_ProgramParameteriEXT(GLuint program, GLenum pname, GLint val
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramParameteriEXT) &&
-              ValidateProgramParameteriEXT(context, angle::EntryPoint::GLProgramParameteriEXT,
-                                           programPacked, pname, value)));
-        if (isCallValid)
+             ValidateProgramParameteriEXT(context, angle::EntryPoint::GLProgramParameteriEXT,
+                                          programPacked, pname, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programParameteri(programPacked, pname, value);
         }
@@ -8528,12 +8179,9 @@ void GL_APIENTRY GL_ProgramUniform1fEXT(GLuint program, GLint location, GLfloat 
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform1fEXT) &&
-              ValidateProgramUniform1fEXT(context, angle::EntryPoint::GLProgramUniform1fEXT,
-                                          programPacked, locationPacked, v0)));
-        if (isCallValid)
+             ValidateProgramUniform1fEXT(context, angle::EntryPoint::GLProgramUniform1fEXT,
+                                         programPacked, locationPacked, v0));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform1f(programPacked, locationPacked, v0);
         }
@@ -8565,12 +8213,9 @@ void GL_APIENTRY GL_ProgramUniform1fvEXT(GLuint program,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform1fvEXT) &&
-              ValidateProgramUniform1fvEXT(context, angle::EntryPoint::GLProgramUniform1fvEXT,
-                                           programPacked, locationPacked, count, value)));
-        if (isCallValid)
+             ValidateProgramUniform1fvEXT(context, angle::EntryPoint::GLProgramUniform1fvEXT,
+                                          programPacked, locationPacked, count, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform1fv(programPacked, locationPacked, count, value);
         }
@@ -8598,12 +8243,9 @@ void GL_APIENTRY GL_ProgramUniform1iEXT(GLuint program, GLint location, GLint v0
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform1iEXT) &&
-              ValidateProgramUniform1iEXT(context, angle::EntryPoint::GLProgramUniform1iEXT,
-                                          programPacked, locationPacked, v0)));
-        if (isCallValid)
+             ValidateProgramUniform1iEXT(context, angle::EntryPoint::GLProgramUniform1iEXT,
+                                         programPacked, locationPacked, v0));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform1i(programPacked, locationPacked, v0);
         }
@@ -8635,12 +8277,9 @@ void GL_APIENTRY GL_ProgramUniform1ivEXT(GLuint program,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform1ivEXT) &&
-              ValidateProgramUniform1ivEXT(context, angle::EntryPoint::GLProgramUniform1ivEXT,
-                                           programPacked, locationPacked, count, value)));
-        if (isCallValid)
+             ValidateProgramUniform1ivEXT(context, angle::EntryPoint::GLProgramUniform1ivEXT,
+                                          programPacked, locationPacked, count, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform1iv(programPacked, locationPacked, count, value);
         }
@@ -8668,12 +8307,9 @@ void GL_APIENTRY GL_ProgramUniform1uiEXT(GLuint program, GLint location, GLuint 
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform1uiEXT) &&
-              ValidateProgramUniform1uiEXT(context, angle::EntryPoint::GLProgramUniform1uiEXT,
-                                           programPacked, locationPacked, v0)));
-        if (isCallValid)
+             ValidateProgramUniform1uiEXT(context, angle::EntryPoint::GLProgramUniform1uiEXT,
+                                          programPacked, locationPacked, v0));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform1ui(programPacked, locationPacked, v0);
         }
@@ -8705,12 +8341,9 @@ void GL_APIENTRY GL_ProgramUniform1uivEXT(GLuint program,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform1uivEXT) &&
-              ValidateProgramUniform1uivEXT(context, angle::EntryPoint::GLProgramUniform1uivEXT,
-                                            programPacked, locationPacked, count, value)));
-        if (isCallValid)
+             ValidateProgramUniform1uivEXT(context, angle::EntryPoint::GLProgramUniform1uivEXT,
+                                           programPacked, locationPacked, count, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform1uiv(programPacked, locationPacked, count, value);
         }
@@ -8739,12 +8372,9 @@ void GL_APIENTRY GL_ProgramUniform2fEXT(GLuint program, GLint location, GLfloat 
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform2fEXT) &&
-              ValidateProgramUniform2fEXT(context, angle::EntryPoint::GLProgramUniform2fEXT,
-                                          programPacked, locationPacked, v0, v1)));
-        if (isCallValid)
+             ValidateProgramUniform2fEXT(context, angle::EntryPoint::GLProgramUniform2fEXT,
+                                         programPacked, locationPacked, v0, v1));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform2f(programPacked, locationPacked, v0, v1);
         }
@@ -8776,12 +8406,9 @@ void GL_APIENTRY GL_ProgramUniform2fvEXT(GLuint program,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform2fvEXT) &&
-              ValidateProgramUniform2fvEXT(context, angle::EntryPoint::GLProgramUniform2fvEXT,
-                                           programPacked, locationPacked, count, value)));
-        if (isCallValid)
+             ValidateProgramUniform2fvEXT(context, angle::EntryPoint::GLProgramUniform2fvEXT,
+                                          programPacked, locationPacked, count, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform2fv(programPacked, locationPacked, count, value);
         }
@@ -8810,12 +8437,9 @@ void GL_APIENTRY GL_ProgramUniform2iEXT(GLuint program, GLint location, GLint v0
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform2iEXT) &&
-              ValidateProgramUniform2iEXT(context, angle::EntryPoint::GLProgramUniform2iEXT,
-                                          programPacked, locationPacked, v0, v1)));
-        if (isCallValid)
+             ValidateProgramUniform2iEXT(context, angle::EntryPoint::GLProgramUniform2iEXT,
+                                         programPacked, locationPacked, v0, v1));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform2i(programPacked, locationPacked, v0, v1);
         }
@@ -8847,12 +8471,9 @@ void GL_APIENTRY GL_ProgramUniform2ivEXT(GLuint program,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform2ivEXT) &&
-              ValidateProgramUniform2ivEXT(context, angle::EntryPoint::GLProgramUniform2ivEXT,
-                                           programPacked, locationPacked, count, value)));
-        if (isCallValid)
+             ValidateProgramUniform2ivEXT(context, angle::EntryPoint::GLProgramUniform2ivEXT,
+                                          programPacked, locationPacked, count, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform2iv(programPacked, locationPacked, count, value);
         }
@@ -8881,12 +8502,9 @@ void GL_APIENTRY GL_ProgramUniform2uiEXT(GLuint program, GLint location, GLuint 
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform2uiEXT) &&
-              ValidateProgramUniform2uiEXT(context, angle::EntryPoint::GLProgramUniform2uiEXT,
-                                           programPacked, locationPacked, v0, v1)));
-        if (isCallValid)
+             ValidateProgramUniform2uiEXT(context, angle::EntryPoint::GLProgramUniform2uiEXT,
+                                          programPacked, locationPacked, v0, v1));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform2ui(programPacked, locationPacked, v0, v1);
         }
@@ -8918,12 +8536,9 @@ void GL_APIENTRY GL_ProgramUniform2uivEXT(GLuint program,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform2uivEXT) &&
-              ValidateProgramUniform2uivEXT(context, angle::EntryPoint::GLProgramUniform2uivEXT,
-                                            programPacked, locationPacked, count, value)));
-        if (isCallValid)
+             ValidateProgramUniform2uivEXT(context, angle::EntryPoint::GLProgramUniform2uivEXT,
+                                           programPacked, locationPacked, count, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform2uiv(programPacked, locationPacked, count, value);
         }
@@ -8953,12 +8568,9 @@ GL_ProgramUniform3fEXT(GLuint program, GLint location, GLfloat v0, GLfloat v1, G
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform3fEXT) &&
-              ValidateProgramUniform3fEXT(context, angle::EntryPoint::GLProgramUniform3fEXT,
-                                          programPacked, locationPacked, v0, v1, v2)));
-        if (isCallValid)
+             ValidateProgramUniform3fEXT(context, angle::EntryPoint::GLProgramUniform3fEXT,
+                                         programPacked, locationPacked, v0, v1, v2));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform3f(programPacked, locationPacked, v0, v1, v2);
         }
@@ -8990,12 +8602,9 @@ void GL_APIENTRY GL_ProgramUniform3fvEXT(GLuint program,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform3fvEXT) &&
-              ValidateProgramUniform3fvEXT(context, angle::EntryPoint::GLProgramUniform3fvEXT,
-                                           programPacked, locationPacked, count, value)));
-        if (isCallValid)
+             ValidateProgramUniform3fvEXT(context, angle::EntryPoint::GLProgramUniform3fvEXT,
+                                          programPacked, locationPacked, count, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform3fv(programPacked, locationPacked, count, value);
         }
@@ -9025,12 +8634,9 @@ GL_ProgramUniform3iEXT(GLuint program, GLint location, GLint v0, GLint v1, GLint
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform3iEXT) &&
-              ValidateProgramUniform3iEXT(context, angle::EntryPoint::GLProgramUniform3iEXT,
-                                          programPacked, locationPacked, v0, v1, v2)));
-        if (isCallValid)
+             ValidateProgramUniform3iEXT(context, angle::EntryPoint::GLProgramUniform3iEXT,
+                                         programPacked, locationPacked, v0, v1, v2));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform3i(programPacked, locationPacked, v0, v1, v2);
         }
@@ -9062,12 +8668,9 @@ void GL_APIENTRY GL_ProgramUniform3ivEXT(GLuint program,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform3ivEXT) &&
-              ValidateProgramUniform3ivEXT(context, angle::EntryPoint::GLProgramUniform3ivEXT,
-                                           programPacked, locationPacked, count, value)));
-        if (isCallValid)
+             ValidateProgramUniform3ivEXT(context, angle::EntryPoint::GLProgramUniform3ivEXT,
+                                          programPacked, locationPacked, count, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform3iv(programPacked, locationPacked, count, value);
         }
@@ -9097,12 +8700,9 @@ GL_ProgramUniform3uiEXT(GLuint program, GLint location, GLuint v0, GLuint v1, GL
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform3uiEXT) &&
-              ValidateProgramUniform3uiEXT(context, angle::EntryPoint::GLProgramUniform3uiEXT,
-                                           programPacked, locationPacked, v0, v1, v2)));
-        if (isCallValid)
+             ValidateProgramUniform3uiEXT(context, angle::EntryPoint::GLProgramUniform3uiEXT,
+                                          programPacked, locationPacked, v0, v1, v2));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform3ui(programPacked, locationPacked, v0, v1, v2);
         }
@@ -9134,12 +8734,9 @@ void GL_APIENTRY GL_ProgramUniform3uivEXT(GLuint program,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform3uivEXT) &&
-              ValidateProgramUniform3uivEXT(context, angle::EntryPoint::GLProgramUniform3uivEXT,
-                                            programPacked, locationPacked, count, value)));
-        if (isCallValid)
+             ValidateProgramUniform3uivEXT(context, angle::EntryPoint::GLProgramUniform3uivEXT,
+                                           programPacked, locationPacked, count, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform3uiv(programPacked, locationPacked, count, value);
         }
@@ -9173,12 +8770,9 @@ void GL_APIENTRY GL_ProgramUniform4fEXT(GLuint program,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform4fEXT) &&
-              ValidateProgramUniform4fEXT(context, angle::EntryPoint::GLProgramUniform4fEXT,
-                                          programPacked, locationPacked, v0, v1, v2, v3)));
-        if (isCallValid)
+             ValidateProgramUniform4fEXT(context, angle::EntryPoint::GLProgramUniform4fEXT,
+                                         programPacked, locationPacked, v0, v1, v2, v3));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform4f(programPacked, locationPacked, v0, v1, v2, v3);
         }
@@ -9210,12 +8804,9 @@ void GL_APIENTRY GL_ProgramUniform4fvEXT(GLuint program,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform4fvEXT) &&
-              ValidateProgramUniform4fvEXT(context, angle::EntryPoint::GLProgramUniform4fvEXT,
-                                           programPacked, locationPacked, count, value)));
-        if (isCallValid)
+             ValidateProgramUniform4fvEXT(context, angle::EntryPoint::GLProgramUniform4fvEXT,
+                                          programPacked, locationPacked, count, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform4fv(programPacked, locationPacked, count, value);
         }
@@ -9245,12 +8836,9 @@ GL_ProgramUniform4iEXT(GLuint program, GLint location, GLint v0, GLint v1, GLint
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform4iEXT) &&
-              ValidateProgramUniform4iEXT(context, angle::EntryPoint::GLProgramUniform4iEXT,
-                                          programPacked, locationPacked, v0, v1, v2, v3)));
-        if (isCallValid)
+             ValidateProgramUniform4iEXT(context, angle::EntryPoint::GLProgramUniform4iEXT,
+                                         programPacked, locationPacked, v0, v1, v2, v3));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform4i(programPacked, locationPacked, v0, v1, v2, v3);
         }
@@ -9282,12 +8870,9 @@ void GL_APIENTRY GL_ProgramUniform4ivEXT(GLuint program,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform4ivEXT) &&
-              ValidateProgramUniform4ivEXT(context, angle::EntryPoint::GLProgramUniform4ivEXT,
-                                           programPacked, locationPacked, count, value)));
-        if (isCallValid)
+             ValidateProgramUniform4ivEXT(context, angle::EntryPoint::GLProgramUniform4ivEXT,
+                                          programPacked, locationPacked, count, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform4iv(programPacked, locationPacked, count, value);
         }
@@ -9317,12 +8902,9 @@ GL_ProgramUniform4uiEXT(GLuint program, GLint location, GLuint v0, GLuint v1, GL
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform4uiEXT) &&
-              ValidateProgramUniform4uiEXT(context, angle::EntryPoint::GLProgramUniform4uiEXT,
-                                           programPacked, locationPacked, v0, v1, v2, v3)));
-        if (isCallValid)
+             ValidateProgramUniform4uiEXT(context, angle::EntryPoint::GLProgramUniform4uiEXT,
+                                          programPacked, locationPacked, v0, v1, v2, v3));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform4ui(programPacked, locationPacked, v0, v1, v2, v3);
         }
@@ -9354,12 +8936,9 @@ void GL_APIENTRY GL_ProgramUniform4uivEXT(GLuint program,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniform4uivEXT) &&
-              ValidateProgramUniform4uivEXT(context, angle::EntryPoint::GLProgramUniform4uivEXT,
-                                            programPacked, locationPacked, count, value)));
-        if (isCallValid)
+             ValidateProgramUniform4uivEXT(context, angle::EntryPoint::GLProgramUniform4uivEXT,
+                                           programPacked, locationPacked, count, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniform4uiv(programPacked, locationPacked, count, value);
         }
@@ -9391,15 +8970,11 @@ void GL_APIENTRY GL_ProgramUniformMatrix2fvEXT(GLuint program,
         ShaderProgramID programPacked  = PackParam<ShaderProgramID>(program);
         UniformLocation locationPacked = PackParam<UniformLocation>(location);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniformMatrix2fvEXT) &&
-              ValidateProgramUniformMatrix2fvEXT(
-                  context, angle::EntryPoint::GLProgramUniformMatrix2fvEXT, programPacked,
-                  locationPacked, count, transpose, value)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateProgramUniformMatrix2fvEXT(
+                                context, angle::EntryPoint::GLProgramUniformMatrix2fvEXT,
+                                programPacked, locationPacked, count, transpose, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniformMatrix2fv(programPacked, locationPacked, count, transpose,
                                              value);
@@ -9432,15 +9007,11 @@ void GL_APIENTRY GL_ProgramUniformMatrix2x3fvEXT(GLuint program,
         ShaderProgramID programPacked  = PackParam<ShaderProgramID>(program);
         UniformLocation locationPacked = PackParam<UniformLocation>(location);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLProgramUniformMatrix2x3fvEXT) &&
-              ValidateProgramUniformMatrix2x3fvEXT(
-                  context, angle::EntryPoint::GLProgramUniformMatrix2x3fvEXT, programPacked,
-                  locationPacked, count, transpose, value)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateProgramUniformMatrix2x3fvEXT(
+                                context, angle::EntryPoint::GLProgramUniformMatrix2x3fvEXT,
+                                programPacked, locationPacked, count, transpose, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniformMatrix2x3fv(programPacked, locationPacked, count, transpose,
                                                value);
@@ -9473,15 +9044,11 @@ void GL_APIENTRY GL_ProgramUniformMatrix2x4fvEXT(GLuint program,
         ShaderProgramID programPacked  = PackParam<ShaderProgramID>(program);
         UniformLocation locationPacked = PackParam<UniformLocation>(location);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLProgramUniformMatrix2x4fvEXT) &&
-              ValidateProgramUniformMatrix2x4fvEXT(
-                  context, angle::EntryPoint::GLProgramUniformMatrix2x4fvEXT, programPacked,
-                  locationPacked, count, transpose, value)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateProgramUniformMatrix2x4fvEXT(
+                                context, angle::EntryPoint::GLProgramUniformMatrix2x4fvEXT,
+                                programPacked, locationPacked, count, transpose, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniformMatrix2x4fv(programPacked, locationPacked, count, transpose,
                                                value);
@@ -9514,15 +9081,11 @@ void GL_APIENTRY GL_ProgramUniformMatrix3fvEXT(GLuint program,
         ShaderProgramID programPacked  = PackParam<ShaderProgramID>(program);
         UniformLocation locationPacked = PackParam<UniformLocation>(location);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniformMatrix3fvEXT) &&
-              ValidateProgramUniformMatrix3fvEXT(
-                  context, angle::EntryPoint::GLProgramUniformMatrix3fvEXT, programPacked,
-                  locationPacked, count, transpose, value)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateProgramUniformMatrix3fvEXT(
+                                context, angle::EntryPoint::GLProgramUniformMatrix3fvEXT,
+                                programPacked, locationPacked, count, transpose, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniformMatrix3fv(programPacked, locationPacked, count, transpose,
                                              value);
@@ -9555,15 +9118,11 @@ void GL_APIENTRY GL_ProgramUniformMatrix3x2fvEXT(GLuint program,
         ShaderProgramID programPacked  = PackParam<ShaderProgramID>(program);
         UniformLocation locationPacked = PackParam<UniformLocation>(location);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLProgramUniformMatrix3x2fvEXT) &&
-              ValidateProgramUniformMatrix3x2fvEXT(
-                  context, angle::EntryPoint::GLProgramUniformMatrix3x2fvEXT, programPacked,
-                  locationPacked, count, transpose, value)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateProgramUniformMatrix3x2fvEXT(
+                                context, angle::EntryPoint::GLProgramUniformMatrix3x2fvEXT,
+                                programPacked, locationPacked, count, transpose, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniformMatrix3x2fv(programPacked, locationPacked, count, transpose,
                                                value);
@@ -9596,15 +9155,11 @@ void GL_APIENTRY GL_ProgramUniformMatrix3x4fvEXT(GLuint program,
         ShaderProgramID programPacked  = PackParam<ShaderProgramID>(program);
         UniformLocation locationPacked = PackParam<UniformLocation>(location);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLProgramUniformMatrix3x4fvEXT) &&
-              ValidateProgramUniformMatrix3x4fvEXT(
-                  context, angle::EntryPoint::GLProgramUniformMatrix3x4fvEXT, programPacked,
-                  locationPacked, count, transpose, value)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateProgramUniformMatrix3x4fvEXT(
+                                context, angle::EntryPoint::GLProgramUniformMatrix3x4fvEXT,
+                                programPacked, locationPacked, count, transpose, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniformMatrix3x4fv(programPacked, locationPacked, count, transpose,
                                                value);
@@ -9637,15 +9192,11 @@ void GL_APIENTRY GL_ProgramUniformMatrix4fvEXT(GLuint program,
         ShaderProgramID programPacked  = PackParam<ShaderProgramID>(program);
         UniformLocation locationPacked = PackParam<UniformLocation>(location);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramUniformMatrix4fvEXT) &&
-              ValidateProgramUniformMatrix4fvEXT(
-                  context, angle::EntryPoint::GLProgramUniformMatrix4fvEXT, programPacked,
-                  locationPacked, count, transpose, value)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateProgramUniformMatrix4fvEXT(
+                                context, angle::EntryPoint::GLProgramUniformMatrix4fvEXT,
+                                programPacked, locationPacked, count, transpose, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniformMatrix4fv(programPacked, locationPacked, count, transpose,
                                              value);
@@ -9678,15 +9229,11 @@ void GL_APIENTRY GL_ProgramUniformMatrix4x2fvEXT(GLuint program,
         ShaderProgramID programPacked  = PackParam<ShaderProgramID>(program);
         UniformLocation locationPacked = PackParam<UniformLocation>(location);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLProgramUniformMatrix4x2fvEXT) &&
-              ValidateProgramUniformMatrix4x2fvEXT(
-                  context, angle::EntryPoint::GLProgramUniformMatrix4x2fvEXT, programPacked,
-                  locationPacked, count, transpose, value)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateProgramUniformMatrix4x2fvEXT(
+                                context, angle::EntryPoint::GLProgramUniformMatrix4x2fvEXT,
+                                programPacked, locationPacked, count, transpose, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniformMatrix4x2fv(programPacked, locationPacked, count, transpose,
                                                value);
@@ -9719,15 +9266,11 @@ void GL_APIENTRY GL_ProgramUniformMatrix4x3fvEXT(GLuint program,
         ShaderProgramID programPacked  = PackParam<ShaderProgramID>(program);
         UniformLocation locationPacked = PackParam<UniformLocation>(location);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLProgramUniformMatrix4x3fvEXT) &&
-              ValidateProgramUniformMatrix4x3fvEXT(
-                  context, angle::EntryPoint::GLProgramUniformMatrix4x3fvEXT, programPacked,
-                  locationPacked, count, transpose, value)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateProgramUniformMatrix4x3fvEXT(
+                                context, angle::EntryPoint::GLProgramUniformMatrix4x3fvEXT,
+                                programPacked, locationPacked, count, transpose, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programUniformMatrix4x3fv(programPacked, locationPacked, count, transpose,
                                                value);
@@ -9757,12 +9300,9 @@ void GL_APIENTRY GL_UseProgramStagesEXT(GLuint pipeline, GLbitfield stages, GLui
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLUseProgramStagesEXT) &&
-              ValidateUseProgramStagesEXT(context, angle::EntryPoint::GLUseProgramStagesEXT,
-                                          pipelinePacked, stages, programPacked)));
-        if (isCallValid)
+             ValidateUseProgramStagesEXT(context, angle::EntryPoint::GLUseProgramStagesEXT,
+                                         pipelinePacked, stages, programPacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->useProgramStages(pipelinePacked, stages, programPacked);
         }
@@ -9789,12 +9329,9 @@ void GL_APIENTRY GL_ValidateProgramPipelineEXT(GLuint pipeline)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLValidateProgramPipelineEXT) &&
-              ValidateValidateProgramPipelineEXT(
-                  context, angle::EntryPoint::GLValidateProgramPipelineEXT, pipelinePacked)));
-        if (isCallValid)
+             ValidateValidateProgramPipelineEXT(
+                 context, angle::EntryPoint::GLValidateProgramPipelineEXT, pipelinePacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->validateProgramPipeline(pipelinePacked);
         }
@@ -9819,14 +9356,10 @@ void GL_APIENTRY GL_FramebufferFetchBarrierEXT()
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLFramebufferFetchBarrierEXT) &&
-              ValidateFramebufferFetchBarrierEXT(context,
-                                                 angle::EntryPoint::GLFramebufferFetchBarrierEXT)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateFramebufferFetchBarrierEXT(
+                                context, angle::EntryPoint::GLFramebufferFetchBarrierEXT));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferFetchBarrier();
         }
@@ -9859,13 +9392,10 @@ void GL_APIENTRY GL_PatchParameteriEXT(GLenum pname, GLint value)
     {
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLPatchParameteriEXT) &&
-              ValidatePatchParameteriEXT(context->getPrivateState(),
-                                         context->getMutableErrorSetForValidation(),
-                                         angle::EntryPoint::GLPatchParameteriEXT, pname, value)));
-        if (isCallValid)
+             ValidatePatchParameteriEXT(context->getPrivateState(),
+                                        context->getMutableErrorSetForValidation(),
+                                        angle::EntryPoint::GLPatchParameteriEXT, pname, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivatePatchParameteri(context->getMutablePrivateState(),
                                           context->getMutablePrivateStateCache(), pname, value);
@@ -9896,7 +9426,7 @@ void GL_APIENTRY GL_GetSamplerParameterIivEXT(GLuint sampler, GLenum pname, GLin
                             ValidateGetSamplerParameterIivEXT(
                                 context, angle::EntryPoint::GLGetSamplerParameterIivEXT,
                                 samplerPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getSamplerParameterIiv(samplerPacked, pname, params);
         }
@@ -9926,7 +9456,7 @@ void GL_APIENTRY GL_GetSamplerParameterIuivEXT(GLuint sampler, GLenum pname, GLu
                             ValidateGetSamplerParameterIuivEXT(
                                 context, angle::EntryPoint::GLGetSamplerParameterIuivEXT,
                                 samplerPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getSamplerParameterIuiv(samplerPacked, pname, params);
         }
@@ -9957,7 +9487,7 @@ void GL_APIENTRY GL_GetTexParameterIivEXT(GLenum target, GLenum pname, GLint *pa
             (context->skipValidation() ||
              ValidateGetTexParameterIivEXT(context, angle::EntryPoint::GLGetTexParameterIivEXT,
                                            targetPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getTexParameterIiv(targetPacked, pname, params);
         }
@@ -9987,7 +9517,7 @@ void GL_APIENTRY GL_GetTexParameterIuivEXT(GLenum target, GLenum pname, GLuint *
             (context->skipValidation() ||
              ValidateGetTexParameterIuivEXT(context, angle::EntryPoint::GLGetTexParameterIuivEXT,
                                             targetPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getTexParameterIuiv(targetPacked, pname, params);
         }
@@ -10016,7 +9546,7 @@ void GL_APIENTRY GL_SamplerParameterIivEXT(GLuint sampler, GLenum pname, const G
             (context->skipValidation() ||
              ValidateSamplerParameterIivEXT(context, angle::EntryPoint::GLSamplerParameterIivEXT,
                                             samplerPacked, pname, param));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->samplerParameterIiv(samplerPacked, pname, param);
         }
@@ -10045,7 +9575,7 @@ void GL_APIENTRY GL_SamplerParameterIuivEXT(GLuint sampler, GLenum pname, const 
             (context->skipValidation() ||
              ValidateSamplerParameterIuivEXT(context, angle::EntryPoint::GLSamplerParameterIuivEXT,
                                              samplerPacked, pname, param));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->samplerParameterIuiv(samplerPacked, pname, param);
         }
@@ -10076,7 +9606,7 @@ void GL_APIENTRY GL_TexParameterIivEXT(GLenum target, GLenum pname, const GLint 
             (context->skipValidation() ||
              ValidateTexParameterIivEXT(context, angle::EntryPoint::GLTexParameterIivEXT,
                                         targetPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texParameterIiv(targetPacked, pname, params);
         }
@@ -10106,7 +9636,7 @@ void GL_APIENTRY GL_TexParameterIuivEXT(GLenum target, GLenum pname, const GLuin
             (context->skipValidation() ||
              ValidateTexParameterIuivEXT(context, angle::EntryPoint::GLTexParameterIuivEXT,
                                          targetPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texParameterIuiv(targetPacked, pname, params);
         }
@@ -10133,14 +9663,10 @@ void GL_APIENTRY GL_TexBufferEXT(GLenum target, GLenum internalformat, GLuint bu
         TextureType targetPacked = PackParam<TextureType>(target);
         BufferID bufferPacked    = PackParam<BufferID>(buffer);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexBufferEXT) &&
-              ValidateTexBufferEXT(context, angle::EntryPoint::GLTexBufferEXT, targetPacked,
-                                   internalformat, bufferPacked)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateTexBufferEXT(context, angle::EntryPoint::GLTexBufferEXT,
+                                                 targetPacked, internalformat, bufferPacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texBuffer(targetPacked, internalformat, bufferPacked);
         }
@@ -10175,12 +9701,9 @@ void GL_APIENTRY GL_TexBufferRangeEXT(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexBufferRangeEXT) &&
-              ValidateTexBufferRangeEXT(context, angle::EntryPoint::GLTexBufferRangeEXT,
-                                        targetPacked, internalformat, bufferPacked, offset, size)));
-        if (isCallValid)
+             ValidateTexBufferRangeEXT(context, angle::EntryPoint::GLTexBufferRangeEXT,
+                                       targetPacked, internalformat, bufferPacked, offset, size));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texBufferRange(targetPacked, internalformat, bufferPacked, offset, size);
         }
@@ -10233,42 +9756,6 @@ void GL_APIENTRY GL_TexBufferRangeEXT(GLenum target,
 // GL_EXT_texture_shadow_lod
 
 // GL_EXT_texture_storage
-void GL_APIENTRY GL_TexStorage1DEXT(GLenum target,
-                                    GLsizei levels,
-                                    GLenum internalformat,
-                                    GLsizei width)
-{
-    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
-    Context *context = GetValidGlobalContext();
-    EVENT(context, GLTexStorage1DEXT,
-          "context = %d, target = %s, levels = %d, internalformat = %s, width = %d", CID(context),
-          GLenumToString(GLESEnum::TextureTarget, target), levels,
-          GLenumToString(GLESEnum::SizedInternalFormat, internalformat), width);
-
-    if (context)
-    {
-        SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexStorage1DEXT) &&
-              ValidateTexStorage1DEXT(context, angle::EntryPoint::GLTexStorage1DEXT, target, levels,
-                                      internalformat, width)));
-        if (isCallValid)
-        {
-            context->texStorage1D(target, levels, internalformat, width);
-        }
-        ANGLE_CAPTURE_GL(TexStorage1DEXT, isCallValid, context, target, levels, internalformat,
-                         width);
-    }
-    else
-    {
-        GenerateContextLostErrorOnCurrentGlobalContext();
-    }
-    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
-}
-
 void GL_APIENTRY GL_TexStorage2DEXT(GLenum target,
                                     GLsizei levels,
                                     GLenum internalformat,
@@ -10288,12 +9775,9 @@ void GL_APIENTRY GL_TexStorage2DEXT(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexStorage2DEXT) &&
-              ValidateTexStorage2DEXT(context, angle::EntryPoint::GLTexStorage2DEXT, targetPacked,
-                                      levels, internalformat, width, height)));
-        if (isCallValid)
+             ValidateTexStorage2DEXT(context, angle::EntryPoint::GLTexStorage2DEXT, targetPacked,
+                                     levels, internalformat, width, height));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texStorage2D(targetPacked, levels, internalformat, width, height);
         }
@@ -10328,12 +9812,9 @@ void GL_APIENTRY GL_TexStorage3DEXT(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexStorage3DEXT) &&
-              ValidateTexStorage3DEXT(context, angle::EntryPoint::GLTexStorage3DEXT, targetPacked,
-                                      levels, internalformat, width, height, depth)));
-        if (isCallValid)
+             ValidateTexStorage3DEXT(context, angle::EntryPoint::GLTexStorage3DEXT, targetPacked,
+                                     levels, internalformat, width, height, depth));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texStorage3D(targetPacked, levels, internalformat, width, height, depth);
         }
@@ -10367,15 +9848,11 @@ void GL_APIENTRY GL_TexStorageAttribs2DEXT(GLenum target,
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexStorageAttribs2DEXT) &&
-              ValidateTexStorageAttribs2DEXT(context, angle::EntryPoint::GLTexStorageAttribs2DEXT,
-                                             target, levels, internalformat, width, height,
-                                             attrib_list)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateTexStorageAttribs2DEXT(
+                                context, angle::EntryPoint::GLTexStorageAttribs2DEXT, target,
+                                levels, internalformat, width, height, attrib_list));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texStorageAttribs2D(target, levels, internalformat, width, height,
                                          attrib_list);
@@ -10410,15 +9887,11 @@ void GL_APIENTRY GL_TexStorageAttribs3DEXT(GLenum target,
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexStorageAttribs3DEXT) &&
-              ValidateTexStorageAttribs3DEXT(context, angle::EntryPoint::GLTexStorageAttribs3DEXT,
-                                             target, levels, internalformat, width, height, depth,
-                                             attrib_list)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateTexStorageAttribs3DEXT(
+                                context, angle::EntryPoint::GLTexStorageAttribs3DEXT, target,
+                                levels, internalformat, width, height, depth, attrib_list));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texStorageAttribs3D(target, levels, internalformat, width, height, depth,
                                          attrib_list);
@@ -10451,13 +9924,9 @@ void GL_APIENTRY GL_BlendBarrierKHR()
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLBlendBarrierKHR) &&
-              ValidateBlendBarrierKHR(context, angle::EntryPoint::GLBlendBarrierKHR)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateBlendBarrierKHR(context, angle::EntryPoint::GLBlendBarrierKHR));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->blendBarrier();
         }
@@ -10488,7 +9957,7 @@ void GL_APIENTRY GL_DebugMessageCallbackKHR(GLDEBUGPROCKHR callback, const void 
             (context->skipValidation() ||
              ValidateDebugMessageCallbackKHR(context, angle::EntryPoint::GLDebugMessageCallbackKHR,
                                              callback, userParam));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->debugMessageCallback(callback, userParam);
         }
@@ -10525,7 +9994,7 @@ void GL_APIENTRY GL_DebugMessageControlKHR(GLenum source,
             (context->skipValidation() ||
              ValidateDebugMessageControlKHR(context, angle::EntryPoint::GLDebugMessageControlKHR,
                                             source, type, severity, count, ids, enabled));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->debugMessageControl(source, type, severity, count, ids, enabled);
         }
@@ -10562,7 +10031,7 @@ void GL_APIENTRY GL_DebugMessageInsertKHR(GLenum source,
             (context->skipValidation() ||
              ValidateDebugMessageInsertKHR(context, angle::EntryPoint::GLDebugMessageInsertKHR,
                                            source, type, id, severity, length, buf));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->debugMessageInsert(source, type, id, severity, length, buf);
         }
@@ -10602,7 +10071,7 @@ GLuint GL_APIENTRY GL_GetDebugMessageLogKHR(GLuint count,
                             ValidateGetDebugMessageLogKHR(
                                 context, angle::EntryPoint::GLGetDebugMessageLogKHR, count, bufSize,
                                 sources, types, ids, severities, lengths, messageLog));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->getDebugMessageLog(count, bufSize, sources, types, ids,
                                                       severities, lengths, messageLog);
@@ -10645,7 +10114,7 @@ void GL_APIENTRY GL_GetObjectLabelKHR(GLenum identifier,
             (context->skipValidation() ||
              ValidateGetObjectLabelKHR(context, angle::EntryPoint::GLGetObjectLabelKHR, identifier,
                                        name, bufSize, length, label));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getObjectLabel(identifier, name, bufSize, length, label);
         }
@@ -10678,7 +10147,7 @@ void GL_APIENTRY GL_GetObjectPtrLabelKHR(const void *ptr,
             (context->skipValidation() ||
              ValidateGetObjectPtrLabelKHR(context, angle::EntryPoint::GLGetObjectPtrLabelKHR, ptr,
                                           bufSize, length, label));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getObjectPtrLabel(ptr, bufSize, length, label);
         }
@@ -10704,7 +10173,7 @@ void GL_APIENTRY GL_GetPointervKHR(GLenum pname, void **params)
         bool isCallValid =
             (context->skipValidation() ||
              ValidateGetPointervKHR(context, angle::EntryPoint::GLGetPointervKHR, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getPointerv(pname, params);
         }
@@ -10735,7 +10204,7 @@ void GL_APIENTRY GL_ObjectLabelKHR(GLenum identifier,
         bool isCallValid = (context->skipValidation() ||
                             ValidateObjectLabelKHR(context, angle::EntryPoint::GLObjectLabelKHR,
                                                    identifier, name, length, label));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->objectLabel(identifier, name, length, label);
         }
@@ -10763,7 +10232,7 @@ void GL_APIENTRY GL_ObjectPtrLabelKHR(const void *ptr, GLsizei length, const GLc
             (context->skipValidation() ||
              ValidateObjectPtrLabelKHR(context, angle::EntryPoint::GLObjectPtrLabelKHR, ptr, length,
                                        label));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->objectPtrLabel(ptr, length, label);
         }
@@ -10788,7 +10257,7 @@ void GL_APIENTRY GL_PopDebugGroupKHR()
         bool isCallValid =
             (context->skipValidation() ||
              ValidatePopDebugGroupKHR(context, angle::EntryPoint::GLPopDebugGroupKHR));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->popDebugGroup();
         }
@@ -10820,7 +10289,7 @@ void GL_APIENTRY GL_PushDebugGroupKHR(GLenum source,
             (context->skipValidation() ||
              ValidatePushDebugGroupKHR(context, angle::EntryPoint::GLPushDebugGroupKHR, source, id,
                                        length, message));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->pushDebugGroup(source, id, length, message);
         }
@@ -10845,14 +10314,10 @@ void GL_APIENTRY GL_MaxShaderCompilerThreadsKHR(GLuint count)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLMaxShaderCompilerThreadsKHR) &&
-              ValidateMaxShaderCompilerThreadsKHR(
-                  context, angle::EntryPoint::GLMaxShaderCompilerThreadsKHR, count)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateMaxShaderCompilerThreadsKHR(
+                                context, angle::EntryPoint::GLMaxShaderCompilerThreadsKHR, count));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->maxShaderCompilerThreads(count);
         }
@@ -10881,7 +10346,7 @@ GLenum GL_APIENTRY GL_GetGraphicsResetStatusKHR()
         bool isCallValid = (context->skipValidation() ||
                             ValidateGetGraphicsResetStatusKHR(
                                 context, angle::EntryPoint::GLGetGraphicsResetStatusKHR));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->getGraphicsResetStatus();
         }
@@ -10922,7 +10387,7 @@ void GL_APIENTRY GL_GetnUniformfvKHR(GLuint program,
             (context->skipValidation() ||
              ValidateGetnUniformfvKHR(context, angle::EntryPoint::GLGetnUniformfvKHR, programPacked,
                                       locationPacked, bufSize, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getnUniformfv(programPacked, locationPacked, bufSize, params);
         }
@@ -10953,7 +10418,7 @@ void GL_APIENTRY GL_GetnUniformivKHR(GLuint program, GLint location, GLsizei buf
             (context->skipValidation() ||
              ValidateGetnUniformivKHR(context, angle::EntryPoint::GLGetnUniformivKHR, programPacked,
                                       locationPacked, bufSize, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getnUniformiv(programPacked, locationPacked, bufSize, params);
         }
@@ -10987,7 +10452,7 @@ void GL_APIENTRY GL_GetnUniformuivKHR(GLuint program,
             (context->skipValidation() ||
              ValidateGetnUniformuivKHR(context, angle::EntryPoint::GLGetnUniformuivKHR,
                                        programPacked, locationPacked, bufSize, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getnUniformuiv(programPacked, locationPacked, bufSize, params);
         }
@@ -11021,14 +10486,10 @@ void GL_APIENTRY GL_ReadnPixelsKHR(GLint x,
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLReadnPixelsKHR) &&
-              ValidateReadnPixelsKHR(context, angle::EntryPoint::GLReadnPixelsKHR, x, y, width,
-                                     height, format, type, bufSize, data)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateReadnPixelsKHR(context, angle::EntryPoint::GLReadnPixelsKHR, x,
+                                                   y, width, height, format, type, bufSize, data));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->readnPixels(x, y, width, height, format, type, bufSize, data);
         }
@@ -11060,11 +10521,15 @@ void GL_APIENTRY GL_FramebufferParameteriMESA(GLenum target, GLenum pname, GLint
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
+        if (context->getState().getPixelLocalStorageActivePlanes() != 0)
+        {
+            context->endPixelLocalStorageImplicit();
+        }
         bool isCallValid =
             (context->skipValidation() ||
              ValidateFramebufferParameteriMESA(
                  context, angle::EntryPoint::GLFramebufferParameteriMESA, target, pname, param));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferParameteriMESA(target, pname, param);
         }
@@ -11093,7 +10558,7 @@ void GL_APIENTRY GL_GetFramebufferParameterivMESA(GLenum target, GLenum pname, G
                             ValidateGetFramebufferParameterivMESA(
                                 context, angle::EntryPoint::GLGetFramebufferParameterivMESA, target,
                                 pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getFramebufferParameterivMESA(target, pname, params);
         }
@@ -11122,7 +10587,7 @@ void GL_APIENTRY GL_DeleteFencesNV(GLsizei n, const GLuint *fences)
         bool isCallValid =
             (context->skipValidation() ||
              ValidateDeleteFencesNV(context, angle::EntryPoint::GLDeleteFencesNV, n, fencesPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->deleteFencesNV(n, fencesPacked);
         }
@@ -11147,11 +10612,8 @@ void GL_APIENTRY GL_FinishFenceNV(GLuint fence)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLFinishFenceNV) &&
-              ValidateFinishFenceNV(context, angle::EntryPoint::GLFinishFenceNV, fencePacked)));
-        if (isCallValid)
+             ValidateFinishFenceNV(context, angle::EntryPoint::GLFinishFenceNV, fencePacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->finishFenceNV(fencePacked);
         }
@@ -11178,7 +10640,7 @@ void GL_APIENTRY GL_GenFencesNV(GLsizei n, GLuint *fences)
         bool isCallValid =
             (context->skipValidation() ||
              ValidateGenFencesNV(context, angle::EntryPoint::GLGenFencesNV, n, fencesPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->genFencesNV(n, fencesPacked);
         }
@@ -11206,7 +10668,7 @@ void GL_APIENTRY GL_GetFenceivNV(GLuint fence, GLenum pname, GLint *params)
         bool isCallValid = (context->skipValidation() ||
                             ValidateGetFenceivNV(context, angle::EntryPoint::GLGetFenceivNV,
                                                  fencePacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getFenceivNV(fencePacked, pname, params);
         }
@@ -11233,7 +10695,7 @@ GLboolean GL_APIENTRY GL_IsFenceNV(GLuint fence)
         bool isCallValid =
             (context->skipValidation() ||
              ValidateIsFenceNV(context, angle::EntryPoint::GLIsFenceNV, fencePacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->isFenceNV(fencePacked);
         }
@@ -11265,12 +10727,8 @@ void GL_APIENTRY GL_SetFenceNV(GLuint fence, GLenum condition)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLSetFenceNV) &&
-              ValidateSetFenceNV(context, angle::EntryPoint::GLSetFenceNV, fencePacked,
-                                 condition)));
-        if (isCallValid)
+             ValidateSetFenceNV(context, angle::EntryPoint::GLSetFenceNV, fencePacked, condition));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->setFenceNV(fencePacked, condition);
         }
@@ -11296,11 +10754,8 @@ GLboolean GL_APIENTRY GL_TestFenceNV(GLuint fence)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTestFenceNV) &&
-              ValidateTestFenceNV(context, angle::EntryPoint::GLTestFenceNV, fencePacked)));
-        if (isCallValid)
+             ValidateTestFenceNV(context, angle::EntryPoint::GLTestFenceNV, fencePacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->testFenceNV(fencePacked);
         }
@@ -11343,15 +10798,11 @@ void GL_APIENTRY GL_BlitFramebufferNV(GLint srcX0,
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLBlitFramebufferNV) &&
-              ValidateBlitFramebufferNV(context, angle::EntryPoint::GLBlitFramebufferNV, srcX0,
-                                        srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask,
-                                        filter)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateBlitFramebufferNV(
+                                context, angle::EntryPoint::GLBlitFramebufferNV, srcX0, srcY0,
+                                srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->blitFramebufferNV(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask,
                                        filter);
@@ -11385,7 +10836,7 @@ void GL_APIENTRY GL_PolygonModeNV(GLenum face, GLenum mode)
              ValidatePolygonModeNV(context->getPrivateState(),
                                    context->getMutableErrorSetForValidation(),
                                    angle::EntryPoint::GLPolygonModeNV, face, modePacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivatePolygonModeNV(context->getMutablePrivateState(),
                                         context->getMutablePrivateStateCache(), face, modePacked);
@@ -11422,15 +10873,11 @@ void GL_APIENTRY GL_EGLImageTargetRenderbufferStorageOES(GLenum target, GLeglIma
     {
         egl::ImageID imagePacked = PackParam<egl::ImageID>(image);
         SCOPED_EGL_IMAGE_SHARE_CONTEXT_LOCK(context, imagePacked);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLEGLImageTargetRenderbufferStorageOES) &&
-              ValidateEGLImageTargetRenderbufferStorageOES(
-                  context, angle::EntryPoint::GLEGLImageTargetRenderbufferStorageOES, target,
-                  imagePacked)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateEGLImageTargetRenderbufferStorageOES(
+                                context, angle::EntryPoint::GLEGLImageTargetRenderbufferStorageOES,
+                                target, imagePacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->eGLImageTargetRenderbufferStorage(target, imagePacked);
         }
@@ -11457,15 +10904,11 @@ void GL_APIENTRY GL_EGLImageTargetTexture2DOES(GLenum target, GLeglImageOES imag
         TextureType targetPacked = PackParam<TextureType>(target);
         egl::ImageID imagePacked = PackParam<egl::ImageID>(image);
         SCOPED_EGL_IMAGE_SHARE_CONTEXT_LOCK(context, imagePacked);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLEGLImageTargetTexture2DOES) &&
-              ValidateEGLImageTargetTexture2DOES(context,
-                                                 angle::EntryPoint::GLEGLImageTargetTexture2DOES,
-                                                 targetPacked, imagePacked)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateEGLImageTargetTexture2DOES(
+                                context, angle::EntryPoint::GLEGLImageTargetTexture2DOES,
+                                targetPacked, imagePacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->eGLImageTargetTexture2D(targetPacked, imagePacked);
         }
@@ -11497,7 +10940,7 @@ void GL_APIENTRY GL_BlendEquationOES(GLenum mode)
                             ValidateBlendEquationOES(context->getPrivateState(),
                                                      context->getMutableErrorSetForValidation(),
                                                      angle::EntryPoint::GLBlendEquationOES, mode));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateBlendEquation(context->getMutablePrivateState(),
                                         context->getMutablePrivateStateCache(), mode);
@@ -11546,16 +10989,12 @@ void GL_APIENTRY GL_CopyImageSubDataOES(GLuint srcName,
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLCopyImageSubDataOES) &&
-              ValidateCopyImageSubDataOES(context, angle::EntryPoint::GLCopyImageSubDataOES,
-                                          srcName, srcTarget, srcLevel, srcX, srcY, srcZ, dstName,
-                                          dstTarget, dstLevel, dstX, dstY, dstZ, srcWidth,
-                                          srcHeight, srcDepth)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateCopyImageSubDataOES(
+                                context, angle::EntryPoint::GLCopyImageSubDataOES, srcName,
+                                srcTarget, srcLevel, srcX, srcY, srcZ, dstName, dstTarget, dstLevel,
+                                dstX, dstY, dstZ, srcWidth, srcHeight, srcDepth));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->copyImageSubData(srcName, srcTarget, srcLevel, srcX, srcY, srcZ, dstName,
                                       dstTarget, dstLevel, dstX, dstY, dstZ, srcWidth, srcHeight,
@@ -11595,7 +11034,7 @@ void GL_APIENTRY GL_BlendEquationSeparateiOES(GLuint buf, GLenum modeRGB, GLenum
              ValidateBlendEquationSeparateiOES(
                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
                  angle::EntryPoint::GLBlendEquationSeparateiOES, buf, modeRGB, modeAlpha));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateBlendEquationSeparatei(context->getMutablePrivateState(),
                                                  context->getMutablePrivateStateCache(), buf,
@@ -11624,7 +11063,7 @@ void GL_APIENTRY GL_BlendEquationiOES(GLuint buf, GLenum mode)
              ValidateBlendEquationiOES(context->getPrivateState(),
                                        context->getMutableErrorSetForValidation(),
                                        angle::EntryPoint::GLBlendEquationiOES, buf, mode));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateBlendEquationi(context->getMutablePrivateState(),
                                          context->getMutablePrivateStateCache(), buf, mode);
@@ -11658,7 +11097,7 @@ GL_BlendFuncSeparateiOES(GLuint buf, GLenum srcRGB, GLenum dstRGB, GLenum srcAlp
                                            context->getMutableErrorSetForValidation(),
                                            angle::EntryPoint::GLBlendFuncSeparateiOES, buf, srcRGB,
                                            dstRGB, srcAlpha, dstAlpha));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateBlendFuncSeparatei(context->getMutablePrivateState(),
                                              context->getMutablePrivateStateCache(), buf, srcRGB,
@@ -11689,7 +11128,7 @@ void GL_APIENTRY GL_BlendFunciOES(GLuint buf, GLenum src, GLenum dst)
              ValidateBlendFunciOES(context->getPrivateState(),
                                    context->getMutableErrorSetForValidation(),
                                    angle::EntryPoint::GLBlendFunciOES, buf, src, dst));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateBlendFunci(context->getMutablePrivateState(),
                                      context->getMutablePrivateStateCache(), buf, src, dst);
@@ -11718,7 +11157,7 @@ void GL_APIENTRY GL_ColorMaskiOES(GLuint index, GLboolean r, GLboolean g, GLbool
              ValidateColorMaskiOES(context->getPrivateState(),
                                    context->getMutableErrorSetForValidation(),
                                    angle::EntryPoint::GLColorMaskiOES, index, r, g, b, a));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateColorMaski(context->getMutablePrivateState(),
                                      context->getMutablePrivateStateCache(), index, r, g, b, a);
@@ -11745,7 +11184,7 @@ void GL_APIENTRY GL_DisableiOES(GLenum target, GLuint index)
                             ValidateDisableiOES(context->getPrivateState(),
                                                 context->getMutableErrorSetForValidation(),
                                                 angle::EntryPoint::GLDisableiOES, target, index));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateDisablei(context->getMutablePrivateState(),
                                    context->getMutablePrivateStateCache(), target, index);
@@ -11772,7 +11211,7 @@ void GL_APIENTRY GL_EnableiOES(GLenum target, GLuint index)
                             ValidateEnableiOES(context->getPrivateState(),
                                                context->getMutableErrorSetForValidation(),
                                                angle::EntryPoint::GLEnableiOES, target, index));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateEnablei(context->getMutablePrivateState(),
                                   context->getMutablePrivateStateCache(), target, index);
@@ -11801,7 +11240,7 @@ GLboolean GL_APIENTRY GL_IsEnablediOES(GLenum target, GLuint index)
              ValidateIsEnablediOES(context->getPrivateState(),
                                    context->getMutableErrorSetForValidation(),
                                    angle::EntryPoint::GLIsEnablediOES, target, index));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue =
                 ContextPrivateIsEnabledi(context->getMutablePrivateState(),
@@ -11846,7 +11285,7 @@ void GL_APIENTRY GL_DrawElementsBaseVertexOES(GLenum mode,
                             ValidateDrawElementsBaseVertexOES(
                                 context, angle::EntryPoint::GLDrawElementsBaseVertexOES, modePacked,
                                 count, typePacked, indices, basevertex));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawElementsBaseVertex(modePacked, count, typePacked, indices, basevertex);
         }
@@ -11885,7 +11324,7 @@ void GL_APIENTRY GL_DrawElementsInstancedBaseVertexOES(GLenum mode,
                             ValidateDrawElementsInstancedBaseVertexOES(
                                 context, angle::EntryPoint::GLDrawElementsInstancedBaseVertexOES,
                                 modePacked, count, typePacked, indices, instancecount, basevertex));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawElementsInstancedBaseVertex(modePacked, count, typePacked, indices,
                                                      instancecount, basevertex);
@@ -11925,7 +11364,7 @@ void GL_APIENTRY GL_DrawRangeElementsBaseVertexOES(GLenum mode,
                             ValidateDrawRangeElementsBaseVertexOES(
                                 context, angle::EntryPoint::GLDrawRangeElementsBaseVertexOES,
                                 modePacked, start, end, count, typePacked, indices, basevertex));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawRangeElementsBaseVertex(modePacked, start, end, count, typePacked, indices,
                                                  basevertex);
@@ -11956,7 +11395,7 @@ void GL_APIENTRY GL_DrawTexfOES(GLfloat x, GLfloat y, GLfloat z, GLfloat width, 
         bool isCallValid = (context->skipValidation() ||
                             ValidateDrawTexfOES(context, angle::EntryPoint::GLDrawTexfOES, x, y, z,
                                                 width, height));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawTexf(x, y, z, width, height);
         }
@@ -11982,7 +11421,7 @@ void GL_APIENTRY GL_DrawTexfvOES(const GLfloat *coords)
         bool isCallValid =
             (context->skipValidation() ||
              ValidateDrawTexfvOES(context, angle::EntryPoint::GLDrawTexfvOES, coords));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawTexfv(coords);
         }
@@ -12008,7 +11447,7 @@ void GL_APIENTRY GL_DrawTexiOES(GLint x, GLint y, GLint z, GLint width, GLint he
         bool isCallValid = (context->skipValidation() ||
                             ValidateDrawTexiOES(context, angle::EntryPoint::GLDrawTexiOES, x, y, z,
                                                 width, height));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawTexi(x, y, z, width, height);
         }
@@ -12034,7 +11473,7 @@ void GL_APIENTRY GL_DrawTexivOES(const GLint *coords)
         bool isCallValid =
             (context->skipValidation() ||
              ValidateDrawTexivOES(context, angle::EntryPoint::GLDrawTexivOES, coords));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawTexiv(coords);
         }
@@ -12060,7 +11499,7 @@ void GL_APIENTRY GL_DrawTexsOES(GLshort x, GLshort y, GLshort z, GLshort width, 
         bool isCallValid = (context->skipValidation() ||
                             ValidateDrawTexsOES(context, angle::EntryPoint::GLDrawTexsOES, x, y, z,
                                                 width, height));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawTexs(x, y, z, width, height);
         }
@@ -12086,7 +11525,7 @@ void GL_APIENTRY GL_DrawTexsvOES(const GLshort *coords)
         bool isCallValid =
             (context->skipValidation() ||
              ValidateDrawTexsvOES(context, angle::EntryPoint::GLDrawTexsvOES, coords));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawTexsv(coords);
         }
@@ -12113,7 +11552,7 @@ void GL_APIENTRY GL_DrawTexxOES(GLfixed x, GLfixed y, GLfixed z, GLfixed width, 
         bool isCallValid = (context->skipValidation() ||
                             ValidateDrawTexxOES(context, angle::EntryPoint::GLDrawTexxOES, x, y, z,
                                                 width, height));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawTexx(x, y, z, width, height);
         }
@@ -12139,7 +11578,7 @@ void GL_APIENTRY GL_DrawTexxvOES(const GLfixed *coords)
         bool isCallValid =
             (context->skipValidation() ||
              ValidateDrawTexxvOES(context, angle::EntryPoint::GLDrawTexxvOES, coords));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->drawTexxv(coords);
         }
@@ -12172,7 +11611,7 @@ void GL_APIENTRY GL_BindFramebufferOES(GLenum target, GLuint framebuffer)
             (context->skipValidation() ||
              ValidateBindFramebufferOES(context, angle::EntryPoint::GLBindFramebufferOES, target,
                                         framebufferPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->bindFramebuffer(target, framebufferPacked);
         }
@@ -12200,7 +11639,7 @@ void GL_APIENTRY GL_BindRenderbufferOES(GLenum target, GLuint renderbuffer)
             (context->skipValidation() ||
              ValidateBindRenderbufferOES(context, angle::EntryPoint::GLBindRenderbufferOES, target,
                                          renderbufferPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->bindRenderbuffer(target, renderbufferPacked);
         }
@@ -12227,7 +11666,7 @@ GLenum GL_APIENTRY GL_CheckFramebufferStatusOES(GLenum target)
         bool isCallValid = (context->skipValidation() ||
                             ValidateCheckFramebufferStatusOES(
                                 context, angle::EntryPoint::GLCheckFramebufferStatusOES, target));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->checkFramebufferStatus(target);
         }
@@ -12264,7 +11703,7 @@ void GL_APIENTRY GL_DeleteFramebuffersOES(GLsizei n, const GLuint *framebuffers)
             (context->skipValidation() ||
              ValidateDeleteFramebuffersOES(context, angle::EntryPoint::GLDeleteFramebuffersOES, n,
                                            framebuffersPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->deleteFramebuffers(n, framebuffersPacked);
         }
@@ -12294,7 +11733,7 @@ void GL_APIENTRY GL_DeleteRenderbuffersOES(GLsizei n, const GLuint *renderbuffer
             (context->skipValidation() ||
              ValidateDeleteRenderbuffersOES(context, angle::EntryPoint::GLDeleteRenderbuffersOES, n,
                                             renderbuffersPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->deleteRenderbuffers(n, renderbuffersPacked);
         }
@@ -12328,7 +11767,7 @@ void GL_APIENTRY GL_FramebufferRenderbufferOES(GLenum target,
                             ValidateFramebufferRenderbufferOES(
                                 context, angle::EntryPoint::GLFramebufferRenderbufferOES, target,
                                 attachment, renderbuffertarget, renderbufferPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferRenderbuffer(target, attachment, renderbuffertarget,
                                              renderbufferPacked);
@@ -12362,11 +11801,15 @@ void GL_APIENTRY GL_FramebufferTexture2DOES(GLenum target,
         TextureTarget textargetPacked = PackParam<TextureTarget>(textarget);
         TextureID texturePacked       = PackParam<TextureID>(texture);
         SCOPED_SHARE_CONTEXT_LOCK(context);
+        if (context->getState().getPixelLocalStorageActivePlanes() != 0)
+        {
+            context->endPixelLocalStorageImplicit();
+        }
         bool isCallValid = (context->skipValidation() ||
                             ValidateFramebufferTexture2DOES(
                                 context, angle::EntryPoint::GLFramebufferTexture2DOES, target,
                                 attachment, textargetPacked, texturePacked, level));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferTexture2D(target, attachment, textargetPacked, texturePacked,
                                           level);
@@ -12396,7 +11839,7 @@ void GL_APIENTRY GL_GenFramebuffersOES(GLsizei n, GLuint *framebuffers)
             (context->skipValidation() ||
              ValidateGenFramebuffersOES(context, angle::EntryPoint::GLGenFramebuffersOES, n,
                                         framebuffersPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->genFramebuffers(n, framebuffersPacked);
         }
@@ -12424,7 +11867,7 @@ void GL_APIENTRY GL_GenRenderbuffersOES(GLsizei n, GLuint *renderbuffers)
             (context->skipValidation() ||
              ValidateGenRenderbuffersOES(context, angle::EntryPoint::GLGenRenderbuffersOES, n,
                                          renderbuffersPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->genRenderbuffers(n, renderbuffersPacked);
         }
@@ -12451,7 +11894,7 @@ void GL_APIENTRY GL_GenerateMipmapOES(GLenum target)
         bool isCallValid = (context->skipValidation() ||
                             ValidateGenerateMipmapOES(
                                 context, angle::EntryPoint::GLGenerateMipmapOES, targetPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->generateMipmap(targetPacked);
         }
@@ -12485,7 +11928,7 @@ void GL_APIENTRY GL_GetFramebufferAttachmentParameterivOES(GLenum target,
              ValidateGetFramebufferAttachmentParameterivOES(
                  context, angle::EntryPoint::GLGetFramebufferAttachmentParameterivOES, target,
                  attachment, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getFramebufferAttachmentParameteriv(target, attachment, pname, params);
         }
@@ -12515,7 +11958,7 @@ void GL_APIENTRY GL_GetRenderbufferParameterivOES(GLenum target, GLenum pname, G
                             ValidateGetRenderbufferParameterivOES(
                                 context, angle::EntryPoint::GLGetRenderbufferParameterivOES, target,
                                 pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getRenderbufferParameteriv(target, pname, params);
         }
@@ -12543,7 +11986,7 @@ GLboolean GL_APIENTRY GL_IsFramebufferOES(GLuint framebuffer)
         bool isCallValid = (context->skipValidation() ||
                             ValidateIsFramebufferOES(context, angle::EntryPoint::GLIsFramebufferOES,
                                                      framebufferPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->isFramebuffer(framebufferPacked);
         }
@@ -12578,7 +12021,7 @@ GLboolean GL_APIENTRY GL_IsRenderbufferOES(GLuint renderbuffer)
             (context->skipValidation() ||
              ValidateIsRenderbufferOES(context, angle::EntryPoint::GLIsRenderbufferOES,
                                        renderbufferPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->isRenderbuffer(renderbufferPacked);
         }
@@ -12617,7 +12060,7 @@ void GL_APIENTRY GL_RenderbufferStorageOES(GLenum target,
             (context->skipValidation() ||
              ValidateRenderbufferStorageOES(context, angle::EntryPoint::GLRenderbufferStorageOES,
                                             target, internalformat, width, height));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->renderbufferStorage(target, internalformat, width, height);
         }
@@ -12648,11 +12091,15 @@ void GL_APIENTRY GL_FramebufferTextureOES(GLenum target,
     {
         TextureID texturePacked = PackParam<TextureID>(texture);
         SCOPED_SHARE_CONTEXT_LOCK(context);
+        if (context->getState().getPixelLocalStorageActivePlanes() != 0)
+        {
+            context->endPixelLocalStorageImplicit();
+        }
         bool isCallValid =
             (context->skipValidation() ||
              ValidateFramebufferTextureOES(context, angle::EntryPoint::GLFramebufferTextureOES,
                                            target, attachment, texturePacked, level));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferTexture(target, attachment, texturePacked, level);
         }
@@ -12689,7 +12136,7 @@ void GL_APIENTRY GL_GetProgramBinaryOES(GLuint program,
             (context->skipValidation() ||
              ValidateGetProgramBinaryOES(context, angle::EntryPoint::GLGetProgramBinaryOES,
                                          programPacked, bufSize, length, binaryFormat, binary));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getProgramBinary(programPacked, bufSize, length, binaryFormat, binary);
         }
@@ -12719,14 +12166,10 @@ void GL_APIENTRY GL_ProgramBinaryOES(GLuint program,
     {
         ShaderProgramID programPacked = PackParam<ShaderProgramID>(program);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLProgramBinaryOES) &&
-              ValidateProgramBinaryOES(context, angle::EntryPoint::GLProgramBinaryOES,
-                                       programPacked, binaryFormat, binary, length)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateProgramBinaryOES(context, angle::EntryPoint::GLProgramBinaryOES,
+                                                     programPacked, binaryFormat, binary, length));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->programBinary(programPacked, binaryFormat, binary, length);
         }
@@ -12760,7 +12203,7 @@ void GL_APIENTRY GL_GetBufferPointervOES(GLenum target, GLenum pname, void **par
             (context->skipValidation() ||
              ValidateGetBufferPointervOES(context, angle::EntryPoint::GLGetBufferPointervOES,
                                           targetPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getBufferPointerv(targetPacked, pname, params);
         }
@@ -12786,14 +12229,10 @@ void *GL_APIENTRY GL_MapBufferOES(GLenum target, GLenum access)
     {
         BufferBinding targetPacked = PackParam<BufferBinding>(target);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLMapBufferOES) &&
-              ValidateMapBufferOES(context, angle::EntryPoint::GLMapBufferOES, targetPacked,
-                                   access)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateMapBufferOES(context, angle::EntryPoint::GLMapBufferOES,
+                                                 targetPacked, access));
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->mapBuffer(targetPacked, access);
         }
@@ -12826,11 +12265,8 @@ GLboolean GL_APIENTRY GL_UnmapBufferOES(GLenum target)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLUnmapBufferOES) &&
-              ValidateUnmapBufferOES(context, angle::EntryPoint::GLUnmapBufferOES, targetPacked)));
-        if (isCallValid)
+             ValidateUnmapBufferOES(context, angle::EntryPoint::GLUnmapBufferOES, targetPacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->unmapBuffer(targetPacked);
         }
@@ -12864,7 +12300,7 @@ void GL_APIENTRY GL_CurrentPaletteMatrixOES(GLuint matrixpaletteindex)
             (context->skipValidation() ||
              ValidateCurrentPaletteMatrixOES(context, angle::EntryPoint::GLCurrentPaletteMatrixOES,
                                              matrixpaletteindex));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->currentPaletteMatrix(matrixpaletteindex);
         }
@@ -12889,7 +12325,7 @@ void GL_APIENTRY GL_LoadPaletteFromModelViewMatrixOES()
         bool isCallValid = (context->skipValidation() ||
                             ValidateLoadPaletteFromModelViewMatrixOES(
                                 context, angle::EntryPoint::GLLoadPaletteFromModelViewMatrixOES));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->loadPaletteFromModelViewMatrix();
         }
@@ -12920,7 +12356,7 @@ void GL_APIENTRY GL_MatrixIndexPointerOES(GLint size,
             (context->skipValidation() ||
              ValidateMatrixIndexPointerOES(context, angle::EntryPoint::GLMatrixIndexPointerOES,
                                            size, type, stride, pointer));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->matrixIndexPointer(size, type, stride, pointer);
         }
@@ -12947,7 +12383,7 @@ void GL_APIENTRY GL_WeightPointerOES(GLint size, GLenum type, GLsizei stride, co
         bool isCallValid = (context->skipValidation() ||
                             ValidateWeightPointerOES(context, angle::EntryPoint::GLWeightPointerOES,
                                                      size, type, stride, pointer));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->weightPointer(size, type, stride, pointer);
         }
@@ -12979,7 +12415,7 @@ void GL_APIENTRY GL_PointSizePointerOES(GLenum type, GLsizei stride, const void 
             (context->skipValidation() ||
              ValidatePointSizePointerOES(context, angle::EntryPoint::GLPointSizePointerOES,
                                          typePacked, stride, pointer));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->pointSizePointer(typePacked, stride, pointer);
         }
@@ -13015,14 +12451,11 @@ void GL_APIENTRY GL_PrimitiveBoundingBoxOES(GLfloat minX,
     {
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLPrimitiveBoundingBoxOES) &&
-              ValidatePrimitiveBoundingBoxOES(context->getPrivateState(),
-                                              context->getMutableErrorSetForValidation(),
-                                              angle::EntryPoint::GLPrimitiveBoundingBoxOES, minX,
-                                              minY, minZ, minW, maxX, maxY, maxZ, maxW)));
-        if (isCallValid)
+             ValidatePrimitiveBoundingBoxOES(context->getPrivateState(),
+                                             context->getMutableErrorSetForValidation(),
+                                             angle::EntryPoint::GLPrimitiveBoundingBoxOES, minX,
+                                             minY, minZ, minW, maxX, maxY, maxZ, maxW));
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivatePrimitiveBoundingBox(context->getMutablePrivateState(),
                                                context->getMutablePrivateStateCache(), minX, minY,
@@ -13054,7 +12487,7 @@ GLbitfield GL_APIENTRY GL_QueryMatrixxOES(GLfixed *mantissa, GLint *exponent)
         bool isCallValid = (context->skipValidation() ||
                             ValidateQueryMatrixxOES(context, angle::EntryPoint::GLQueryMatrixxOES,
                                                     mantissa, exponent));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->queryMatrixx(mantissa, exponent);
         }
@@ -13088,13 +12521,10 @@ void GL_APIENTRY GL_MinSampleShadingOES(GLfloat value)
     {
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLMinSampleShadingOES) &&
-              ValidateMinSampleShadingOES(context->getPrivateState(),
-                                          context->getMutableErrorSetForValidation(),
-                                          angle::EntryPoint::GLMinSampleShadingOES, value)));
-        if (isCallValid)
+             ValidateMinSampleShadingOES(context->getPrivateState(),
+                                         context->getMutableErrorSetForValidation(),
+                                         angle::EntryPoint::GLMinSampleShadingOES, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateMinSampleShading(context->getMutablePrivateState(),
                                            context->getMutablePrivateStateCache(), value);
@@ -13132,13 +12562,10 @@ void GL_APIENTRY GL_PatchParameteriOES(GLenum pname, GLint value)
     {
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLPatchParameteriOES) &&
-              ValidatePatchParameteriOES(context->getPrivateState(),
-                                         context->getMutableErrorSetForValidation(),
-                                         angle::EntryPoint::GLPatchParameteriOES, pname, value)));
-        if (isCallValid)
+             ValidatePatchParameteriOES(context->getPrivateState(),
+                                        context->getMutableErrorSetForValidation(),
+                                        angle::EntryPoint::GLPatchParameteriOES, pname, value));
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivatePatchParameteri(context->getMutablePrivateState(),
                                           context->getMutablePrivateStateCache(), pname, value);
@@ -13178,13 +12605,10 @@ void GL_APIENTRY GL_CompressedTexImage3DOES(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLCompressedTexImage3DOES) &&
-              ValidateCompressedTexImage3DOES(context, angle::EntryPoint::GLCompressedTexImage3DOES,
-                                              targetPacked, level, internalformat, width, height,
-                                              depth, border, imageSize, data)));
-        if (isCallValid)
+             ValidateCompressedTexImage3DOES(context, angle::EntryPoint::GLCompressedTexImage3DOES,
+                                             targetPacked, level, internalformat, width, height,
+                                             depth, border, imageSize, data));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->compressedTexImage3D(targetPacked, level, internalformat, width, height, depth,
                                           border, imageSize, data);
@@ -13226,13 +12650,10 @@ void GL_APIENTRY GL_CompressedTexSubImage3DOES(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLCompressedTexSubImage3DOES) &&
-              ValidateCompressedTexSubImage3DOES(
-                  context, angle::EntryPoint::GLCompressedTexSubImage3DOES, targetPacked, level,
-                  xoffset, yoffset, zoffset, width, height, depth, format, imageSize, data)));
-        if (isCallValid)
+             ValidateCompressedTexSubImage3DOES(
+                 context, angle::EntryPoint::GLCompressedTexSubImage3DOES, targetPacked, level,
+                 xoffset, yoffset, zoffset, width, height, depth, format, imageSize, data));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->compressedTexSubImage3D(targetPacked, level, xoffset, yoffset, zoffset, width,
                                              height, depth, format, imageSize, data);
@@ -13269,15 +12690,15 @@ void GL_APIENTRY GL_CopyTexSubImage3DOES(GLenum target,
     {
         TextureTarget targetPacked = PackParam<TextureTarget>(target);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLCopyTexSubImage3DOES) &&
-              ValidateCopyTexSubImage3DOES(context, angle::EntryPoint::GLCopyTexSubImage3DOES,
-                                           targetPacked, level, xoffset, yoffset, zoffset, x, y,
-                                           width, height)));
-        if (isCallValid)
+        if (context->getState().getPixelLocalStorageActivePlanes() != 0)
+        {
+            context->endPixelLocalStorageImplicit();
+        }
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateCopyTexSubImage3DOES(
+                                context, angle::EntryPoint::GLCopyTexSubImage3DOES, targetPacked,
+                                level, xoffset, yoffset, zoffset, x, y, width, height));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->copyTexSubImage3D(targetPacked, level, xoffset, yoffset, zoffset, x, y, width,
                                        height);
@@ -13313,11 +12734,15 @@ void GL_APIENTRY GL_FramebufferTexture3DOES(GLenum target,
         TextureTarget textargetPacked = PackParam<TextureTarget>(textarget);
         TextureID texturePacked       = PackParam<TextureID>(texture);
         SCOPED_SHARE_CONTEXT_LOCK(context);
+        if (context->getState().getPixelLocalStorageActivePlanes() != 0)
+        {
+            context->endPixelLocalStorageImplicit();
+        }
         bool isCallValid = (context->skipValidation() ||
                             ValidateFramebufferTexture3DOES(
                                 context, angle::EntryPoint::GLFramebufferTexture3DOES, target,
                                 attachment, textargetPacked, texturePacked, level, zoffset));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferTexture3D(target, attachment, textargetPacked, texturePacked, level,
                                           zoffset);
@@ -13357,15 +12782,11 @@ void GL_APIENTRY GL_TexImage3DOES(GLenum target,
     {
         TextureTarget targetPacked = PackParam<TextureTarget>(target);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexImage3DOES) &&
-              ValidateTexImage3DOES(context, angle::EntryPoint::GLTexImage3DOES, targetPacked,
-                                    level, internalformat, width, height, depth, border, format,
-                                    type, pixels)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateTexImage3DOES(context, angle::EntryPoint::GLTexImage3DOES,
+                                                  targetPacked, level, internalformat, width,
+                                                  height, depth, border, format, type, pixels));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texImage3D(targetPacked, level, internalformat, width, height, depth, border,
                                 format, type, pixels);
@@ -13405,15 +12826,11 @@ void GL_APIENTRY GL_TexSubImage3DOES(GLenum target,
     {
         TextureTarget targetPacked = PackParam<TextureTarget>(target);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexSubImage3DOES) &&
-              ValidateTexSubImage3DOES(context, angle::EntryPoint::GLTexSubImage3DOES, targetPacked,
-                                       level, xoffset, yoffset, zoffset, width, height, depth,
-                                       format, type, pixels)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateTexSubImage3DOES(context, angle::EntryPoint::GLTexSubImage3DOES,
+                                                     targetPacked, level, xoffset, yoffset, zoffset,
+                                                     width, height, depth, format, type, pixels));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texSubImage3D(targetPacked, level, xoffset, yoffset, zoffset, width, height,
                                    depth, format, type, pixels);
@@ -13445,7 +12862,7 @@ void GL_APIENTRY GL_GetSamplerParameterIivOES(GLuint sampler, GLenum pname, GLin
                             ValidateGetSamplerParameterIivOES(
                                 context, angle::EntryPoint::GLGetSamplerParameterIivOES,
                                 samplerPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getSamplerParameterIiv(samplerPacked, pname, params);
         }
@@ -13475,7 +12892,7 @@ void GL_APIENTRY GL_GetSamplerParameterIuivOES(GLuint sampler, GLenum pname, GLu
                             ValidateGetSamplerParameterIuivOES(
                                 context, angle::EntryPoint::GLGetSamplerParameterIuivOES,
                                 samplerPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getSamplerParameterIuiv(samplerPacked, pname, params);
         }
@@ -13506,7 +12923,7 @@ void GL_APIENTRY GL_GetTexParameterIivOES(GLenum target, GLenum pname, GLint *pa
             (context->skipValidation() ||
              ValidateGetTexParameterIivOES(context, angle::EntryPoint::GLGetTexParameterIivOES,
                                            targetPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getTexParameterIiv(targetPacked, pname, params);
         }
@@ -13536,7 +12953,7 @@ void GL_APIENTRY GL_GetTexParameterIuivOES(GLenum target, GLenum pname, GLuint *
             (context->skipValidation() ||
              ValidateGetTexParameterIuivOES(context, angle::EntryPoint::GLGetTexParameterIuivOES,
                                             targetPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getTexParameterIuiv(targetPacked, pname, params);
         }
@@ -13565,7 +12982,7 @@ void GL_APIENTRY GL_SamplerParameterIivOES(GLuint sampler, GLenum pname, const G
             (context->skipValidation() ||
              ValidateSamplerParameterIivOES(context, angle::EntryPoint::GLSamplerParameterIivOES,
                                             samplerPacked, pname, param));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->samplerParameterIiv(samplerPacked, pname, param);
         }
@@ -13594,7 +13011,7 @@ void GL_APIENTRY GL_SamplerParameterIuivOES(GLuint sampler, GLenum pname, const 
             (context->skipValidation() ||
              ValidateSamplerParameterIuivOES(context, angle::EntryPoint::GLSamplerParameterIuivOES,
                                              samplerPacked, pname, param));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->samplerParameterIuiv(samplerPacked, pname, param);
         }
@@ -13625,7 +13042,7 @@ void GL_APIENTRY GL_TexParameterIivOES(GLenum target, GLenum pname, const GLint 
             (context->skipValidation() ||
              ValidateTexParameterIivOES(context, angle::EntryPoint::GLTexParameterIivOES,
                                         targetPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texParameterIiv(targetPacked, pname, params);
         }
@@ -13655,7 +13072,7 @@ void GL_APIENTRY GL_TexParameterIuivOES(GLenum target, GLenum pname, const GLuin
             (context->skipValidation() ||
              ValidateTexParameterIuivOES(context, angle::EntryPoint::GLTexParameterIuivOES,
                                          targetPacked, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texParameterIuiv(targetPacked, pname, params);
         }
@@ -13682,14 +13099,10 @@ void GL_APIENTRY GL_TexBufferOES(GLenum target, GLenum internalformat, GLuint bu
         TextureType targetPacked = PackParam<TextureType>(target);
         BufferID bufferPacked    = PackParam<BufferID>(buffer);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexBufferOES) &&
-              ValidateTexBufferOES(context, angle::EntryPoint::GLTexBufferOES, targetPacked,
-                                   internalformat, bufferPacked)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateTexBufferOES(context, angle::EntryPoint::GLTexBufferOES,
+                                                 targetPacked, internalformat, bufferPacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texBuffer(targetPacked, internalformat, bufferPacked);
         }
@@ -13724,12 +13137,9 @@ void GL_APIENTRY GL_TexBufferRangeOES(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexBufferRangeOES) &&
-              ValidateTexBufferRangeOES(context, angle::EntryPoint::GLTexBufferRangeOES,
-                                        targetPacked, internalformat, bufferPacked, offset, size)));
-        if (isCallValid)
+             ValidateTexBufferRangeOES(context, angle::EntryPoint::GLTexBufferRangeOES,
+                                       targetPacked, internalformat, bufferPacked, offset, size));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texBufferRange(targetPacked, internalformat, bufferPacked, offset, size);
         }
@@ -13761,7 +13171,7 @@ void GL_APIENTRY GL_GetTexGenfvOES(GLenum coord, GLenum pname, GLfloat *params)
         bool isCallValid = (context->skipValidation() ||
                             ValidateGetTexGenfvOES(context, angle::EntryPoint::GLGetTexGenfvOES,
                                                    coord, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getTexGenfv(coord, pname, params);
         }
@@ -13789,7 +13199,7 @@ void GL_APIENTRY GL_GetTexGenivOES(GLenum coord, GLenum pname, GLint *params)
         bool isCallValid = (context->skipValidation() ||
                             ValidateGetTexGenivOES(context, angle::EntryPoint::GLGetTexGenivOES,
                                                    coord, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getTexGeniv(coord, pname, params);
         }
@@ -13817,7 +13227,7 @@ void GL_APIENTRY GL_GetTexGenxvOES(GLenum coord, GLenum pname, GLfixed *params)
         bool isCallValid = (context->skipValidation() ||
                             ValidateGetTexGenxvOES(context, angle::EntryPoint::GLGetTexGenxvOES,
                                                    coord, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getTexGenxv(coord, pname, params);
         }
@@ -13844,7 +13254,7 @@ void GL_APIENTRY GL_TexGenfOES(GLenum coord, GLenum pname, GLfloat param)
         bool isCallValid =
             (context->skipValidation() ||
              ValidateTexGenfOES(context, angle::EntryPoint::GLTexGenfOES, coord, pname, param));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texGenf(coord, pname, param);
         }
@@ -13872,7 +13282,7 @@ void GL_APIENTRY GL_TexGenfvOES(GLenum coord, GLenum pname, const GLfloat *param
         bool isCallValid =
             (context->skipValidation() ||
              ValidateTexGenfvOES(context, angle::EntryPoint::GLTexGenfvOES, coord, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texGenfv(coord, pname, params);
         }
@@ -13899,7 +13309,7 @@ void GL_APIENTRY GL_TexGeniOES(GLenum coord, GLenum pname, GLint param)
         bool isCallValid =
             (context->skipValidation() ||
              ValidateTexGeniOES(context, angle::EntryPoint::GLTexGeniOES, coord, pname, param));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texGeni(coord, pname, param);
         }
@@ -13927,7 +13337,7 @@ void GL_APIENTRY GL_TexGenivOES(GLenum coord, GLenum pname, const GLint *params)
         bool isCallValid =
             (context->skipValidation() ||
              ValidateTexGenivOES(context, angle::EntryPoint::GLTexGenivOES, coord, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texGeniv(coord, pname, params);
         }
@@ -13954,7 +13364,7 @@ void GL_APIENTRY GL_TexGenxOES(GLenum coord, GLenum pname, GLfixed param)
         bool isCallValid =
             (context->skipValidation() ||
              ValidateTexGenxOES(context, angle::EntryPoint::GLTexGenxOES, coord, pname, param));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texGenx(coord, pname, param);
         }
@@ -13982,7 +13392,7 @@ void GL_APIENTRY GL_TexGenxvOES(GLenum coord, GLenum pname, const GLfixed *param
         bool isCallValid =
             (context->skipValidation() ||
              ValidateTexGenxvOES(context, angle::EntryPoint::GLTexGenxvOES, coord, pname, params));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texGenxv(coord, pname, params);
         }
@@ -14035,13 +13445,10 @@ void GL_APIENTRY GL_TexStorage3DMultisampleOES(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLTexStorage3DMultisampleOES) &&
-              ValidateTexStorage3DMultisampleOES(
-                  context, angle::EntryPoint::GLTexStorage3DMultisampleOES, targetPacked, samples,
-                  internalformat, width, height, depth, fixedsamplelocations)));
-        if (isCallValid)
+             ValidateTexStorage3DMultisampleOES(
+                 context, angle::EntryPoint::GLTexStorage3DMultisampleOES, targetPacked, samples,
+                 internalformat, width, height, depth, fixedsamplelocations));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texStorage3DMultisample(targetPacked, samples, internalformat, width, height,
                                              depth, fixedsamplelocations);
@@ -14067,14 +13474,10 @@ void GL_APIENTRY GL_BindVertexArrayOES(GLuint array)
     {
         VertexArrayID arrayPacked = PackParam<VertexArrayID>(array);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLBindVertexArrayOES) &&
-              ValidateBindVertexArrayOES(context, angle::EntryPoint::GLBindVertexArrayOES,
-                                         arrayPacked)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateBindVertexArrayOES(
+                                context, angle::EntryPoint::GLBindVertexArrayOES, arrayPacked));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->bindVertexArray(arrayPacked);
         }
@@ -14102,7 +13505,7 @@ void GL_APIENTRY GL_DeleteVertexArraysOES(GLsizei n, const GLuint *arrays)
             (context->skipValidation() ||
              ValidateDeleteVertexArraysOES(context, angle::EntryPoint::GLDeleteVertexArraysOES, n,
                                            arraysPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->deleteVertexArrays(n, arraysPacked);
         }
@@ -14129,7 +13532,7 @@ void GL_APIENTRY GL_GenVertexArraysOES(GLsizei n, GLuint *arrays)
         bool isCallValid = (context->skipValidation() ||
                             ValidateGenVertexArraysOES(
                                 context, angle::EntryPoint::GLGenVertexArraysOES, n, arraysPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->genVertexArrays(n, arraysPacked);
         }
@@ -14156,7 +13559,7 @@ GLboolean GL_APIENTRY GL_IsVertexArrayOES(GLuint array)
         bool isCallValid =
             (context->skipValidation() ||
              ValidateIsVertexArrayOES(context, angle::EntryPoint::GLIsVertexArrayOES, arrayPacked));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             returnValue = context->isVertexArray(arrayPacked);
         }
@@ -14200,11 +13603,15 @@ void GL_APIENTRY GL_FramebufferTextureMultiviewOVR(GLenum target,
     {
         TextureID texturePacked = PackParam<TextureID>(texture);
         SCOPED_SHARE_CONTEXT_LOCK(context);
+        if (context->getState().getPixelLocalStorageActivePlanes() != 0)
+        {
+            context->endPixelLocalStorageImplicit();
+        }
         bool isCallValid = (context->skipValidation() ||
                             ValidateFramebufferTextureMultiviewOVR(
                                 context, angle::EntryPoint::GLFramebufferTextureMultiviewOVR,
                                 target, attachment, texturePacked, level, baseViewIndex, numViews));
-        if (isCallValid)
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferTextureMultiview(target, attachment, texturePacked, level,
                                                  baseViewIndex, numViews);
@@ -14242,13 +13649,10 @@ void GL_APIENTRY GL_FramebufferFoveationConfigQCOM(GLuint framebuffer,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLFramebufferFoveationConfigQCOM) &&
-              ValidateFramebufferFoveationConfigQCOM(
-                  context, angle::EntryPoint::GLFramebufferFoveationConfigQCOM, framebufferPacked,
-                  numLayers, focalPointsPerLayer, requestedFeatures, providedFeatures)));
-        if (isCallValid)
+             ValidateFramebufferFoveationConfigQCOM(
+                 context, angle::EntryPoint::GLFramebufferFoveationConfigQCOM, framebufferPacked,
+                 numLayers, focalPointsPerLayer, requestedFeatures, providedFeatures));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferFoveationConfig(framebufferPacked, numLayers, focalPointsPerLayer,
                                                 requestedFeatures, providedFeatures);
@@ -14285,13 +13689,10 @@ void GL_APIENTRY GL_FramebufferFoveationParametersQCOM(GLuint framebuffer,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLFramebufferFoveationParametersQCOM) &&
-              ValidateFramebufferFoveationParametersQCOM(
-                  context, angle::EntryPoint::GLFramebufferFoveationParametersQCOM,
-                  framebufferPacked, layer, focalPoint, focalX, focalY, gainX, gainY, foveaArea)));
-        if (isCallValid)
+             ValidateFramebufferFoveationParametersQCOM(
+                 context, angle::EntryPoint::GLFramebufferFoveationParametersQCOM,
+                 framebufferPacked, layer, focalPoint, focalX, focalY, gainX, gainY, foveaArea));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferFoveationParameters(framebufferPacked, layer, focalPoint, focalX,
                                                     focalY, gainX, gainY, foveaArea);
@@ -14319,15 +13720,11 @@ void GL_APIENTRY GL_ShadingRateQCOM(GLenum rate)
 
     if (context)
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLShadingRateQCOM) &&
-              ValidateShadingRateQCOM(context->getPrivateState(),
-                                      context->getMutableErrorSetForValidation(),
-                                      angle::EntryPoint::GLShadingRateQCOM, rate)));
-        if (isCallValid)
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateShadingRateQCOM(context->getPrivateState(),
+                                                    context->getMutableErrorSetForValidation(),
+                                                    angle::EntryPoint::GLShadingRateQCOM, rate));
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateShadingRate(context->getMutablePrivateState(),
                                       context->getMutablePrivateStateCache(), rate);
@@ -14364,13 +13761,10 @@ void GL_APIENTRY GL_TextureFoveationParametersQCOM(GLuint texture,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLTextureFoveationParametersQCOM) &&
-              ValidateTextureFoveationParametersQCOM(
-                  context, angle::EntryPoint::GLTextureFoveationParametersQCOM, texturePacked,
-                  layer, focalPoint, focalX, focalY, gainX, gainY, foveaArea)));
-        if (isCallValid)
+             ValidateTextureFoveationParametersQCOM(
+                 context, angle::EntryPoint::GLTextureFoveationParametersQCOM, texturePacked, layer,
+                 focalPoint, focalX, focalY, gainX, gainY, foveaArea));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->textureFoveationParameters(texturePacked, layer, focalPoint, focalX, focalY,
                                                 gainX, gainY, foveaArea);
@@ -14398,11 +13792,8 @@ void GL_APIENTRY GL_EndTilingQCOM(GLbitfield preserveMask)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLEndTilingQCOM) &&
-              ValidateEndTilingQCOM(context, angle::EntryPoint::GLEndTilingQCOM, preserveMask)));
-        if (isCallValid)
+             ValidateEndTilingQCOM(context, angle::EntryPoint::GLEndTilingQCOM, preserveMask));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->endTiling(preserveMask);
         }
@@ -14427,14 +13818,14 @@ GL_StartTilingQCOM(GLuint x, GLuint y, GLuint width, GLuint height, GLbitfield p
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLStartTilingQCOM) &&
-              ValidateStartTilingQCOM(context, angle::EntryPoint::GLStartTilingQCOM, x, y, width,
-                                      height, preserveMask)));
-        if (isCallValid)
+        if (context->getState().getPixelLocalStorageActivePlanes() != 0)
+        {
+            context->endPixelLocalStorageImplicit();
+        }
+        bool isCallValid = (context->skipValidation() ||
+                            ValidateStartTilingQCOM(context, angle::EntryPoint::GLStartTilingQCOM,
+                                                    x, y, width, height, preserveMask));
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->startTiling(x, y, width, height, preserveMask);
         }
@@ -14466,12 +13857,9 @@ void GL_APIENTRY GL_FramebufferResolveRenderbufferWEBKIT(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             (ValidatePixelLocalStorageInactive(
-                  context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                  angle::EntryPoint::GLFramebufferResolveRenderbufferWEBKIT) &&
               ValidateFramebufferResolveRenderbufferWEBKIT(
                   context, angle::EntryPoint::GLFramebufferResolveRenderbufferWEBKIT, target,
-                  attachment, renderbuffertarget, renderbufferPacked)));
+                  attachment, renderbuffertarget, renderbufferPacked));
         if (isCallValid)
         {
             context->framebufferResolveRenderbufferWEBKIT(target, attachment, renderbuffertarget,

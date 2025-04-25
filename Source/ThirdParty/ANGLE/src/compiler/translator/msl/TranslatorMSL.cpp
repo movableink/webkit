@@ -22,7 +22,6 @@
 #include "compiler/translator/tree_ops/MonomorphizeUnsupportedFunctions.h"
 #include "compiler/translator/tree_ops/PreTransformTextureCubeGradDerivatives.h"
 #include "compiler/translator/tree_ops/RemoveAtomicCounterBuiltins.h"
-#include "compiler/translator/tree_ops/RemoveInactiveInterfaceVariables.h"
 #include "compiler/translator/tree_ops/RewriteArrayOfArrayOfOpaqueUniforms.h"
 #include "compiler/translator/tree_ops/RewriteAtomicCounters.h"
 #include "compiler/translator/tree_ops/RewriteDfdy.h"
@@ -217,7 +216,7 @@ TIntermSequence *GetMainSequence(TIntermBlock *root)
     TIntermSymbol *builtinRef = new TIntermSymbol(builtin);
 
     // Create a swizzle to "builtin.xy"
-    TVector<int> swizzleOffsetXY = {0, 1};
+    TVector<uint32_t> swizzleOffsetXY = {0, 1};
     TIntermSwizzle *builtinXY    = new TIntermSwizzle(builtinRef, swizzleOffsetXY);
 
     // Create a symbol reference to our new variable that will hold the modified builtin.
@@ -738,7 +737,7 @@ void AddFragDepthEXTDeclaration(TCompiler &compiler, TIntermBlock &root, TSymbol
     TIntermSymbol *positionRef = new TIntermSymbol(position);
 
     // Create a swizzle to "gl_Position.y"
-    TVector<int> swizzleOffsetY;
+    TVector<uint32_t> swizzleOffsetY;
     swizzleOffsetY.push_back(1);
     TIntermSwizzle *positionY = new TIntermSwizzle(positionRef, swizzleOffsetY);
 
@@ -867,7 +866,7 @@ bool TranslatorMSL::transformDepthBeforeCorrection(TIntermBlock *root,
     TIntermSymbol *positionRef = new TIntermSymbol(position);
 
     // Create a swizzle to "gl_Position.z"
-    TVector<int> swizzleOffsetZ = {2};
+    TVector<uint32_t> swizzleOffsetZ = {2};
     TIntermSwizzle *positionZ   = new TIntermSwizzle(positionRef, swizzleOffsetZ);
 
     // Create a ref to "zscale"
@@ -899,12 +898,12 @@ bool TranslatorMSL::appendVertexShaderDepthCorrectionToMain(
     const TVariable *position  = BuiltInVariable::gl_Position();
     TIntermSymbol *positionRef = new TIntermSymbol(position);
 
-    TVector<int> swizzleOffsetZ = {2};
+    TVector<uint32_t> swizzleOffsetZ = {2};
     TIntermSwizzle *positionZ   = new TIntermSwizzle(positionRef, swizzleOffsetZ);
 
     TIntermConstantUnion *oneHalf = CreateFloatNode(0.5f, EbpMedium);
 
-    TVector<int> swizzleOffsetW = {3};
+    TVector<uint32_t> swizzleOffsetW = {3};
     TIntermSwizzle *positionW   = new TIntermSwizzle(positionRef->deepCopy(), swizzleOffsetW);
 
     // Create the expression "(gl_Position.z + gl_Position.w) * 0.5".
@@ -954,18 +953,6 @@ bool TranslatorMSL::translateImpl(TInfoSinkBase &sink,
     ppc.usesDerivatives = usesDerivatives();
 
     if (!WrapMain(*this, idGen, *root))
-    {
-        return false;
-    }
-
-    // Remove declarations of inactive shader interface variables so glslang wrapper doesn't need to
-    // replace them.  Note: this is done before extracting samplers from structs, as removing such
-    // inactive samplers is not yet supported.  Note also that currently, CollectVariables marks
-    // every field of an active uniform that's of struct type as active, i.e. no extracted sampler
-    // is inactive.
-    if (!RemoveInactiveInterfaceVariables(this, root, &getSymbolTable(), getAttributes(),
-                                          getInputVaryings(), getOutputVariables(), getUniforms(),
-                                          getInterfaceBlocks(), false))
     {
         return false;
     }
