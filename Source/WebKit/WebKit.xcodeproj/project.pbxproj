@@ -2457,6 +2457,10 @@
 		EEA52F482D70545300D578B5 /* WKStageMode.h in Headers */ = {isa = PBXBuildFile; fileRef = EE0D3CDD2D3709BE00072978 /* WKStageMode.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		EEA52F492D7055A700D578B5 /* WKStageMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0D3CDC2D3709BE00072978 /* WKStageMode.swift */; };
 		EEFE72792D64FE5600DC6214 /* StageModeInteractionState.h in Headers */ = {isa = PBXBuildFile; fileRef = EEFE72782D64FE5600DC6214 /* StageModeInteractionState.h */; };
+		F3272B802DB997C6007B3A9A /* BidiBrowsingContextAgent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F3272B7D2DB997C6007B3A9A /* BidiBrowsingContextAgent.cpp */; };
+		F3272B812DB997C6007B3A9A /* BidiScriptAgent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F3272B7F2DB997C6007B3A9A /* BidiScriptAgent.cpp */; };
+		F3272B822DB997C6007B3A9A /* BidiBrowsingContextAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = F3272B7C2DB997C6007B3A9A /* BidiBrowsingContextAgent.h */; };
+		F3272B832DB997C6007B3A9A /* BidiScriptAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = F3272B7E2DB997C6007B3A9A /* BidiScriptAgent.h */; };
 		F3A94F012DB6F3310023CE9D /* BidiUserContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F3A94F002DB6F3310023CE9D /* BidiUserContext.cpp */; };
 		F3A94F022DB6F3310023CE9D /* BidiUserContext.h in Headers */ = {isa = PBXBuildFile; fileRef = F3A94EFF2DB6F3310023CE9D /* BidiUserContext.h */; };
 		F3EEEE592DB318270038CC1D /* BidiBrowserAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = F3EEEE572DB318270038CC1D /* BidiBrowserAgent.h */; };
@@ -8318,6 +8322,10 @@
 		EE0D3CDD2D3709BE00072978 /* WKStageMode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WKStageMode.h; sourceTree = "<group>"; };
 		EEFE72782D64FE5600DC6214 /* StageModeInteractionState.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StageModeInteractionState.h; sourceTree = "<group>"; };
 		F036978715F4BF0500C3A80E /* WebColorPicker.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebColorPicker.cpp; sourceTree = "<group>"; };
+		F3272B7C2DB997C6007B3A9A /* BidiBrowsingContextAgent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BidiBrowsingContextAgent.h; sourceTree = "<group>"; };
+		F3272B7D2DB997C6007B3A9A /* BidiBrowsingContextAgent.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = BidiBrowsingContextAgent.cpp; sourceTree = "<group>"; };
+		F3272B7E2DB997C6007B3A9A /* BidiScriptAgent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BidiScriptAgent.h; sourceTree = "<group>"; };
+		F3272B7F2DB997C6007B3A9A /* BidiScriptAgent.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = BidiScriptAgent.cpp; sourceTree = "<group>"; };
 		F3A94EFF2DB6F3310023CE9D /* BidiUserContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BidiUserContext.h; sourceTree = "<group>"; };
 		F3A94F002DB6F3310023CE9D /* BidiUserContext.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = BidiUserContext.cpp; sourceTree = "<group>"; };
 		F3EEEE572DB318270038CC1D /* BidiBrowserAgent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BidiBrowserAgent.h; sourceTree = "<group>"; };
@@ -14066,6 +14074,10 @@
 				9955A6E91C7980BB00EB6A93 /* Automation.json */,
 				F3EEEE582DB318270038CC1D /* BidiBrowserAgent.cpp */,
 				F3EEEE572DB318270038CC1D /* BidiBrowserAgent.h */,
+				F3272B7D2DB997C6007B3A9A /* BidiBrowsingContextAgent.cpp */,
+				F3272B7C2DB997C6007B3A9A /* BidiBrowsingContextAgent.h */,
+				F3272B7F2DB997C6007B3A9A /* BidiScriptAgent.cpp */,
+				F3272B7E2DB997C6007B3A9A /* BidiScriptAgent.h */,
 				F3A94F002DB6F3310023CE9D /* BidiUserContext.cpp */,
 				F3A94EFF2DB6F3310023CE9D /* BidiUserContext.h */,
 				995226D5207D184600F78420 /* SimulatedInputDispatcher.cpp */,
@@ -16938,6 +16950,8 @@
 				46A2B6091E5676A600C3DEDA /* BackgroundProcessResponsivenessTimer.h in Headers */,
 				95C943912523C0D00054F3D5 /* BaseBoardSPI.h in Headers */,
 				F3EEEE592DB318270038CC1D /* BidiBrowserAgent.h in Headers */,
+				F3272B822DB997C6007B3A9A /* BidiBrowsingContextAgent.h in Headers */,
+				F3272B832DB997C6007B3A9A /* BidiScriptAgent.h in Headers */,
 				F3A94F022DB6F3310023CE9D /* BidiUserContext.h in Headers */,
 				E164A2F2191AF14E0010737D /* BlobDataFileReferenceWithSandboxExtension.h in Headers */,
 				E170876C16D6CA6900F99226 /* BlobRegistryProxy.h in Headers */,
@@ -20391,6 +20405,8 @@
 				E326E357284E580E00157372 /* AuxiliaryProcessProxyCocoa.mm in Sources */,
 				413E5C9229B0CF7C002F4987 /* BackgroundFetchStateCocoa.mm in Sources */,
 				F3EEEE5A2DB318270038CC1D /* BidiBrowserAgent.cpp in Sources */,
+				F3272B802DB997C6007B3A9A /* BidiBrowsingContextAgent.cpp in Sources */,
+				F3272B812DB997C6007B3A9A /* BidiScriptAgent.cpp in Sources */,
 				F3A94F012DB6F3310023CE9D /* BidiUserContext.cpp in Sources */,
 				1C62747E288B4C3E00CED3A2 /* CocoaHelpers.mm in Sources */,
 				49DC1DE127E5129100C1CB36 /* CSPExtensionUtilities.mm in Sources */,
