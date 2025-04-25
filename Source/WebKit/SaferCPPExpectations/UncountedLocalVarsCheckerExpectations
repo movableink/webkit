@@ -40,7 +40,6 @@ WebProcess/Network/webrtc/WebMDNSRegister.cpp
 WebProcess/Notifications/WebNotificationManager.cpp
 WebProcess/Storage/WebSWClientConnection.cpp
 WebProcess/Storage/WebServiceWorkerProvider.cpp
-WebProcess/UserContent/WebUserContentController.cpp
 WebProcess/WebCoreSupport/SessionStateConversion.cpp
 WebProcess/WebCoreSupport/ShareableBitmapUtilities.cpp
 WebProcess/WebCoreSupport/WebChromeClient.cpp
