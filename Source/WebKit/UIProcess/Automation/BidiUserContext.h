@@ -32,7 +32,7 @@
 #include <wtf/Noncopyable.h>
 #include <wtf/Ref.h>
 
-#if PLATFORM(GTK)
+#if USE(GLIB)
 #include <wtf/glib/GRefPtr.h>
 typedef struct _WebKitWebContext WebKitWebContext;
 #endif
@@ -46,7 +46,7 @@ class BidiUserContext {
     WTF_MAKE_NONCOPYABLE(BidiUserContext);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-#if PLATFORM(GTK)
+#if USE(GLIB)
     BidiUserContext(WebsiteDataStore&, WebProcessPool&, GRefPtr<WebKitWebContext>&&);
 #else
     BidiUserContext(WebsiteDataStore&, WebProcessPool&);
@@ -60,7 +60,7 @@ private:
 
     Ref<WebsiteDataStore> m_dataStore;
     Ref<WebProcessPool> m_processPool;
-#if PLATFORM(GTK)
+#if USE(GLIB)
     GRefPtr<WebKitWebContext> m_context;
 #endif
 };

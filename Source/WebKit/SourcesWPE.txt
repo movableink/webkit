@@ -208,6 +208,7 @@ UIProcess/API/wpe/WPEWebViewPlatform.cpp @no-unify
 
 UIProcess/Automation/libwpe/WebAutomationSessionLibWPE.cpp
 UIProcess/Automation/libwpe/WebAutomationSessionWPE.cpp
+UIProcess/Automation/glib/BidiBrowserAgentGlib.cpp @no-unify
 
 UIProcess/CoordinatedGraphics/DrawingAreaProxyCoordinatedGraphics.cpp
 

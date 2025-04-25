@@ -124,7 +124,7 @@ Inspector::CommandResult<void> BidiBrowserAgent::removeUserContext(const String&
     return { };
 }
 
-#if !PLATFORM(GTK)
+#if !USE(GLIB)
 std::unique_ptr<BidiUserContext> BidiBrowserAgent::platformCreateUserContext(String& error)
 {
     error = "User context creation is not implemented for this platform yet."_s;

@@ -33,7 +33,7 @@
 
 namespace WebKit {
 
-#if PLATFORM(GTK)
+#if USE(GLIB)
 BidiUserContext::BidiUserContext(WebsiteDataStore& dataStore, WebProcessPool& processPool, GRefPtr<WebKitWebContext>&& context)
     : m_dataStore(dataStore)
     , m_processPool(processPool)
