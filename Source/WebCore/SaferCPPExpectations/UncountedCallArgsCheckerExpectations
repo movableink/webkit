@@ -760,7 +760,6 @@ html/track/TextTrackCue.cpp
 html/track/TrackBase.cpp
 html/track/VTTCue.cpp
 html/track/VideoTrack.cpp
-html/track/WebVTTParser.cpp
 inspector/CommandLineAPIModule.cpp
 inspector/DOMEditor.cpp
 inspector/DOMPatchSupport.cpp

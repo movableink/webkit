@@ -36,7 +36,6 @@ editing/cocoa/HTMLConverter.mm
 html/FormListedElement.cpp
 html/parser/HTMLTreeBuilder.h
 html/track/TrackBase.h
-html/track/WebVTTParser.h
 inspector/DOMPatchSupport.cpp
 inspector/InspectorFrontendHost.cpp
 inspector/InspectorFrontendHost.h

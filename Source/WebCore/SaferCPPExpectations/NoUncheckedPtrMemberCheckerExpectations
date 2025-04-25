@@ -14,7 +14,6 @@ editing/TextCheckingHelper.h
 editing/VisiblePosition.h
 html/HTMLLinkElement.h
 html/parser/HTMLTreeBuilder.h
-html/track/WebVTTParser.h
 inspector/DOMPatchSupport.cpp
 inspector/InspectorController.h
 inspector/InspectorStyleSheet.cpp

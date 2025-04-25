@@ -394,7 +394,6 @@ html/track/InbandWebVTTTextTrack.cpp
 html/track/LoadableTextTrack.cpp
 html/track/TextTrackCue.cpp
 html/track/VTTCue.cpp
-html/track/WebVTTParser.cpp
 inspector/DOMEditor.cpp
 inspector/DOMPatchSupport.cpp
 inspector/InspectorAuditAccessibilityObject.cpp

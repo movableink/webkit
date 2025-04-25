@@ -266,7 +266,7 @@ WebVTTParser::ParseState WebVTTParser::collectRegionSettings(const String& line)
     if (checkAndStoreRegion(line))
         return checkAndRecoverCue(line);
     
-    m_currentRegion->setRegionSettings(line);
+    Ref { *m_currentRegion }->setRegionSettings(line);
     return Region;
 }
 
@@ -332,7 +332,7 @@ bool WebVTTParser::checkAndCreateRegion(StringView line)
     // zero or more U+0020 SPACE characters or U+0009 CHARACTER TABULATION
     // (tab) characters expected other than these characters it is invalid.
     if (line.startsWith("REGION"_s) && line.substring(regionIdentifierLength).containsOnly<isASCIIWhitespace>()) {
-        m_currentRegion = VTTRegion::create(m_document);
+        m_currentRegion = VTTRegion::create(m_document.get());
         return true;
     }
     return false;
@@ -411,7 +411,7 @@ bool WebVTTParser::checkAndStoreStyleSheet(StringView line)
         if (styleRule->properties().isEmpty())
             continue;
 
-        sanitizedStyleSheetBuilder.append(selectorText, " { "_s, styleRule->properties().asText(CSS::defaultSerializationContext()), "  }\n"_s);
+        sanitizedStyleSheetBuilder.append(selectorText, " { "_s, styleRule->protectedProperties()->asText(CSS::defaultSerializationContext()), "  }\n"_s);
     }
 
     // It would be more stylish to parse the stylesheet only once instead of serializing a sanitized version.
@@ -515,12 +515,13 @@ private:
     void constructTreeFromToken(Document&);
 
     WebVTTNodeType currentType() const { return m_typeStack.isEmpty() ? WebVTTNodeTypeNone : m_typeStack.last(); }
+    RefPtr<ContainerNode> protectedCurrentNode() const { return m_currentNode.get(); }
 
     WebVTTToken m_token;
     Vector<WebVTTNodeType> m_typeStack;
     RefPtr<ContainerNode> m_currentNode;
     Vector<AtomString> m_languageStack;
-    Document& m_document;
+    const Ref<Document> m_document;
 };
 
 Ref<DocumentFragment> WebVTTTreeBuilder::buildFromString(const String& cueText)
@@ -528,10 +529,10 @@ Ref<DocumentFragment> WebVTTTreeBuilder::buildFromString(const String& cueText)
     // Cue text processing based on
     // 5.4 WebVTT cue text parsing rules, and
     // 5.5 WebVTT cue text DOM construction rules.
-    auto fragment = DocumentFragment::create(m_document);
+    auto fragment = DocumentFragment::create(m_document.get());
 
     if (cueText.isEmpty()) {
-        fragment->parserAppendChild(Text::create(m_document, String { emptyString() }));
+        fragment->parserAppendChild(Text::create(m_document.get(), String { emptyString() }));
         return fragment;
     }
 
@@ -541,7 +542,7 @@ Ref<DocumentFragment> WebVTTTreeBuilder::buildFromString(const String& cueText)
     m_languageStack.clear();
     m_typeStack.clear();
     while (tokenizer.nextToken(m_token))
-        constructTreeFromToken(m_document);
+        constructTreeFromToken(m_document.get());
     
     return fragment;
 }
@@ -694,7 +695,7 @@ void WebVTTTreeBuilder::constructTreeFromToken(Document& document)
 
     switch (m_token.type()) {
     case WebVTTTokenTypes::Character: {
-        m_currentNode->parserAppendChild(Text::create(document, String { m_token.characters() }));
+        protectedCurrentNode()->parserAppendChild(Text::create(document, String { m_token.characters() }));
         break;
     }
     case WebVTTTokenTypes::StartTag: {
@@ -717,7 +718,7 @@ void WebVTTTreeBuilder::constructTreeFromToken(Document& document)
             m_languageStack.append(m_token.annotation());
             child->setAttributeWithoutSynchronization(WebVTTElement::langAttributeName(), m_languageStack.last());
         }
-        m_currentNode->parserAppendChild(child);
+        protectedCurrentNode()->parserAppendChild(child);
         m_currentNode = WTFMove(child);
         m_typeStack.append(nodeType);
         break;
@@ -754,7 +755,7 @@ void WebVTTTreeBuilder::constructTreeFromToken(Document& document)
     case WebVTTTokenTypes::TimestampTag: {
         MediaTime parsedTimeStamp;
         if (WebVTTParser::collectTimeStamp(m_token.characters(), parsedTimeStamp))
-            m_currentNode->parserAppendChild(ProcessingInstruction::create(document, "timestamp"_s, serializeTimestamp(parsedTimeStamp.toDouble())));
+            protectedCurrentNode()->parserAppendChild(ProcessingInstruction::create(document, "timestamp"_s, serializeTimestamp(parsedTimeStamp.toDouble())));
         break;
     }
     default:
