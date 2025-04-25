@@ -1127,10 +1127,6 @@ void MediaPlayerPrivateAVFoundationObjC::createAVPlayer()
     }
 #endif
 
-#if HAVE(SPATIAL_TRACKING_LABEL)
-    updateSpatialTrackingLabel();
-#endif
-
     ASSERT(!m_currentTimeObserver);
     m_currentTimeObserver = [m_avPlayer addPeriodicTimeObserverForInterval:PAL::CMTimeMake(1, 10) queue:dispatch_get_main_queue() usingBlock:[weakThis = ThreadSafeWeakPtr { *this }, identifier = LOGIDENTIFIER] (CMTime cmTime) {
         ensureOnMainThread([weakThis, cmTime, identifier] {
@@ -4094,14 +4090,14 @@ void MediaPlayerPrivateAVFoundationObjC::updateSpatialTrackingLabel()
             .spatialTrackingLabel = m_spatialTrackingLabel,
 #endif
         });
-        INFO_LOG(LOGIDENTIFIER, "Setting spatialAudioExperience: ", spatialAudioExperienceDescription(experience.get()));
+        ALWAYS_LOG(LOGIDENTIFIER, "Setting spatialAudioExperience: ", spatialAudioExperienceDescription(experience.get()));
         [m_avPlayer setIntendedSpatialAudioExperience:experience.get()];
         return;
     }
 #endif
 
     if (!m_spatialTrackingLabel.isNull()) {
-        INFO_LOG(LOGIDENTIFIER, "Explicitly set STSLabel: ", m_spatialTrackingLabel);
+        ALWAYS_LOG(LOGIDENTIFIER, "Explicitly set STSLabel: ", m_spatialTrackingLabel);
         [m_avPlayer _setSTSLabel:m_spatialTrackingLabel.createNSString().get()];
         return;
     }
@@ -4109,21 +4105,21 @@ void MediaPlayerPrivateAVFoundationObjC::updateSpatialTrackingLabel()
     if (m_videoLayer && isVisible()) {
         // If the media player has a renderer, and that renderer belongs to a page that is visible,
         // then let AVPlayer manage setting the spatial tracking label in its AVPlayerLayer itself;
-        INFO_LOG(LOGIDENTIFIER, "No videoLayer, set STSLabel: nil");
+        ALWAYS_LOG(LOGIDENTIFIER, "No videoLayer, set STSLabel: nil");
         [m_avPlayer _setSTSLabel:nil];
         return;
     }
 
     if (!m_defaultSpatialTrackingLabel.isNull()) {
         // If a default spatial tracking label was explicitly set, use it.
-        INFO_LOG(LOGIDENTIFIER, "Default STSLabel: ", m_defaultSpatialTrackingLabel);
+        ALWAYS_LOG(LOGIDENTIFIER, "Default STSLabel: ", m_defaultSpatialTrackingLabel);
         [m_avPlayer _setSTSLabel:m_defaultSpatialTrackingLabel.createNSString().get()];
         return;
     }
 
     // If there is no AVPlayerLayer, and no default spatial tracking label is available, use the session's spatial tracking label.
     AVAudioSession *session = [PAL::getAVAudioSessionClass() sharedInstance];
-    INFO_LOG(LOGIDENTIFIER, "AVAudioSession label: ", session.spatialTrackingLabel);
+    ALWAYS_LOG(LOGIDENTIFIER, "AVAudioSession label: ", session.spatialTrackingLabel);
     [m_avPlayer _setSTSLabel:session.spatialTrackingLabel];
 }
 #endif

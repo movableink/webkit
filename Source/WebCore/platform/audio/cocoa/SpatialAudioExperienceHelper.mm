@@ -57,15 +57,21 @@ RetainPtr<CASpatialAudioExperience> createSpatialAudioExperienceWithOptions(cons
     }
 #endif
 
-    if (options.isVisible && options.hasLayer) {
+    if ((options.isVisible && options.hasLayer) || options.sceneIdentifier.isEmpty()) {
+        // If the page is visible, and we have a layer, an automatic anchoring strategy
+        // will attach the audio to the location occupied by layer.
+        // If the page is not visible, or does not have a layer, and the sceneIdentifier
+        // is empty, an automatic anchoring strategy will attach the audio to the
+        // AVAudioSession, which may be incorrect in the case of an AVAudioSession
+        // used for multiple UIWindowScenes, but will at least have the right sound
+        // stage size.
         RetainPtr anchoring = adoptNS([[CAAutomaticAnchoringStrategy alloc] init]);
         return adoptNS([[CAHeadTrackedSpatialAudio alloc] initWithSoundStageSize:toCASoundStageSize(options.soundStageSize) anchoringStrategy:anchoring.get()]);
     }
 
-    // Either not visible, or with no layer or target:
-    if (options.sceneIdentifier.isEmpty())
-        return nil;
-
+    // If the page is not visible, or we do not have a layer or target, but do
+    // have a scene identifier, attach the audio to the UIWindowScene with that
+    // identifier.
     RetainPtr anchoring = adoptNS([[CASceneAnchoringStrategy alloc] initWithSceneIdentifier:options.sceneIdentifier.createNSString().get()]);
     return adoptNS([[CAHeadTrackedSpatialAudio alloc] initWithSoundStageSize:toCASoundStageSize(options.soundStageSize) anchoringStrategy:anchoring.get()]);
 }

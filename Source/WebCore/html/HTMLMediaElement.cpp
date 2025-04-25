@@ -8016,6 +8016,10 @@ void HTMLMediaElement::createMediaPlayer() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     updateSpatialTrackingLabel();
 #endif
 
+#if PLATFORM(IOS_FAMILY)
+    sceneIdentifierDidChange();
+#endif
+
 #if ENABLE(WEB_AUDIO)
     if (m_audioSourceNode) {
         // When creating the player, make sure its AudioSourceProvider knows about the MediaElementAudioSourceNode.
