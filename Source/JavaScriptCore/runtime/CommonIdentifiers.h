@@ -291,6 +291,7 @@
     macro(toPrecision) \
     macro(toReversed) \
     macro(toSorted) \
+    macro(toSpliced) \
     macro(toString) \
     macro(toTemporalInstant) \
     macro(toWellFormed) \

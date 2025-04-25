@@ -70,6 +70,7 @@ static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncToSorted);
 static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncWith);
 static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncIncludes);
 static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncCopyWithin);
+static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncToSpliced);
 
 // ------------------------------ ArrayPrototype ----------------------------
 
@@ -132,7 +133,7 @@ void ArrayPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().atPublicName(), arrayPrototypeAtCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->toReversed, arrayProtoFuncToReversed, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public);
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->toSorted, arrayProtoFuncToSorted, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
-    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().toSplicedPublicName(), arrayPrototypeToSplicedCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->toSpliced, arrayProtoFuncToSpliced, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->with, arrayProtoFuncWith, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().entriesPrivateName(), getDirect(vm, vm.propertyNames->builtinNames().entriesPublicName()), static_cast<unsigned>(PropertyAttribute::ReadOnly));
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().forEachPrivateName(), getDirect(vm, vm.propertyNames->builtinNames().forEachPublicName()), static_cast<unsigned>(PropertyAttribute::ReadOnly));
@@ -160,7 +161,7 @@ void ArrayPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
         &vm.propertyNames->builtinNames().keysPublicName(),
         &vm.propertyNames->toReversed,
         &vm.propertyNames->toSorted,
-        &vm.propertyNames->builtinNames().toSplicedPublicName(),
+        &vm.propertyNames->toSpliced,
         &vm.propertyNames->builtinNames().valuesPublicName()
     };
     for (const auto* unscopableName : unscopableNames) {
@@ -1756,17 +1757,17 @@ static JSArray* concatAppendArray(JSGlobalObject* globalObject, VM& vm, JSArray*
     if (type == ArrayWithDouble) {
         double* buffer = butterfly->contiguousDouble().data();
         if (firstType == ArrayWithDouble)
-            copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, 0, firstButterfly->contiguousDouble().data(), firstArraySize, firstType);
+            copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, 0, firstButterfly->contiguousDouble().data(), 0, firstArraySize, firstType);
         else
-            copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, 0, firstButterfly->contiguous().data(), firstArraySize, firstType);
+            copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, 0, firstButterfly->contiguous().data(), 0, firstArraySize, firstType);
         if (secondType == ArrayWithDouble)
-            copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, firstArraySize, secondButterfly->contiguousDouble().data(), secondArraySize, secondType);
+            copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, firstArraySize, secondButterfly->contiguousDouble().data(), 0, secondArraySize, secondType);
         else
-            copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, firstArraySize, secondButterfly->contiguous().data(), secondArraySize, secondType);
+            copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, firstArraySize, secondButterfly->contiguous().data(), 0, secondArraySize, secondType);
     } else if (type != ArrayWithUndecided) {
         WriteBarrier<Unknown>* buffer = butterfly->contiguous().data();
-        copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, 0, firstButterfly->contiguous().data(), firstArraySize, firstType);
-        copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, firstArraySize, secondButterfly->contiguous().data(), secondArraySize, secondType);
+        copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, 0, firstButterfly->contiguous().data(), 0, firstArraySize, firstType);
+        copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, firstArraySize, secondButterfly->contiguous().data(), 0, secondArraySize, secondType);
     }
 
     Butterfly::clearOptimalVectorLengthGap(type, butterfly, vectorLength, resultSize);
@@ -2292,6 +2293,83 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncCopyWithin, (JSGlobalObject* globalObject
     }
 
     return JSValue::encode(thisObject);
+}
+
+JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncToSpliced, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
+    RETURN_IF_EXCEPTION(scope, { });
+
+    if (UNLIKELY(thisValue.isUndefinedOrNull()))
+        return throwVMTypeError(globalObject, scope, "Array.prototype.toSpliced requires that |this| not be null or undefined"_s);
+    auto* thisObject = thisValue.toObject(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    uint64_t length = toLength(globalObject, thisObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    uint64_t start = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, callFrame->argument(0), length);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    uint64_t insertCount = 0;
+    uint64_t deleteCount = 0;
+    if (callFrame->argumentCount() == 1)
+        deleteCount = length - start;
+    else if (callFrame->argumentCount() > 1) {
+        insertCount = callFrame->argumentCount() - 2;
+        deleteCount = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::No>(globalObject, callFrame->uncheckedArgument(1), length - start);
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+
+    uint64_t newLen = length + insertCount - deleteCount;
+
+    if (UNLIKELY(newLen >= static_cast<uint64_t>(maxSafeInteger()))) {
+        throwTypeError(globalObject, scope, "Array length exceeds 2**53 - 1"_s);
+        return { };
+    }
+
+    if (UNLIKELY(newLen > std::numeric_limits<uint32_t>::max())) {
+        throwRangeError(globalObject, scope, "Array length must be a positive integer of safe magnitude."_s);
+        return { };
+    }
+
+    if (LIKELY(isJSArray(thisObject))) {
+        JSArray* thisArray = asArray(thisObject);
+        if (JSArray* result = thisArray->fastToSpliced(globalObject, callFrame, length, newLen, start, deleteCount, insertCount))
+            return JSValue::encode(result);
+    }
+
+    JSArray* result = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithUndecided), newLen);
+    if (UNLIKELY(!result)) {
+        throwOutOfMemoryError(globalObject, scope);
+        return { };
+    }
+
+    uint64_t k = 0;
+
+    for (; k < start; k++) {
+        JSValue fromValue = thisObject->getIndex(globalObject, k);
+        RETURN_IF_EXCEPTION(scope, { });
+        result->putDirectIndex(globalObject, k, fromValue, 0, PutDirectIndexShouldThrow);
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+
+    for (uint64_t i = 0; i < insertCount; i++, k++) {
+        result->putDirectIndex(globalObject, k, callFrame->argument(i + 2), 0, PutDirectIndexShouldThrow);
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+
+    for (; k < newLen; k++) {
+        JSValue fromValue = thisObject->getIndex(globalObject, k + deleteCount - insertCount);
+        RETURN_IF_EXCEPTION(scope, { });
+        result->putDirectIndex(globalObject, k, fromValue, 0, PutDirectIndexShouldThrow);
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+
+    return JSValue::encode(result);
 }
 
 } // namespace JSC

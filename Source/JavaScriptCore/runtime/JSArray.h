@@ -129,6 +129,8 @@ public:
 
     bool fastCopyWithin(JSGlobalObject*, uint64_t from64, uint64_t to64, uint64_t count64, uint64_t length64);
 
+    JSArray* fastToSpliced(JSGlobalObject*, CallFrame*, uint64_t length, uint64_t newLength, uint64_t start, uint64_t deleteCount, uint64_t insertCount);
+
     ALWAYS_INLINE bool definitelyNegativeOneMiss() const;
 
     enum ShiftCountMode {
@@ -340,7 +342,7 @@ template<>
 void clearElement(double& element);
 
 template<ArrayFillMode fillMode, NeedsGCSafeOps needsGCSafeOps, typename T, typename U>
-ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsigned sourceSize, IndexingType sourceType)
+ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsigned sourceOffset, unsigned sourceSize, IndexingType sourceType)
 {
     if (sourceType == ArrayWithUndecided) {
         if constexpr (fillMode == ArrayFillMode::Empty) {
@@ -356,15 +358,15 @@ ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsi
     if constexpr (std::is_same_v<T, U>) {
         if constexpr (fillMode == ArrayFillMode::Empty) {
             if constexpr (needsGCSafeOps == NeedsGCSafeOps::No && sizeof(T) == sizeof(U))
-                memcpy(buffer + offset, source, sizeof(T) * sourceSize);
+                memcpy(buffer + offset, source + sourceOffset, sizeof(T) * sourceSize);
             else if constexpr (std::is_same_v<T, double>)
-                memcpy(buffer + offset, source, sizeof(double) * sourceSize);
+                memcpy(buffer + offset, source + sourceOffset, sizeof(double) * sourceSize);
             else
-                gcSafeMemcpy(buffer + offset, source, sizeof(JSValue) * sourceSize);
+                gcSafeMemcpy(buffer + offset, source + sourceOffset, sizeof(JSValue) * sourceSize);
             return;
         } else {
             for (unsigned i = 0; i < sourceSize; ++i) {
-                JSValue value = source[i].get();
+                JSValue value = source[i + sourceOffset].get();
                 if (!value)
                     value = jsUndefined();
                 buffer[i + offset].setWithoutWriteBarrier(value);
@@ -374,7 +376,7 @@ ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsi
         ASSERT(sourceType == ArrayWithInt32);
         static_assert(fillMode == ArrayFillMode::Empty);
         for (unsigned i = 0; i < sourceSize; ++i) {
-            JSValue value = source[i].get();
+            JSValue value = source[i + sourceOffset].get();
             if (value)
                 buffer[i + offset] = value.asInt32();
             else
@@ -383,7 +385,7 @@ ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsi
     } else {
         static_assert(std::is_same_v<U, double>);
         for (unsigned i = 0; i < sourceSize; ++i) {
-            double value = source[i];
+            double value = source[i + sourceOffset];
             if (value == value)
                 buffer[i + offset].setWithoutWriteBarrier(JSValue(JSValue::EncodeAsDouble, value));
             else {
