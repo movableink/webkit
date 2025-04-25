@@ -302,7 +302,7 @@ void AnimationTimelinesController::cacheCurrentTime(ReducedResolutionSeconds new
     // We can get in a situation where the event loop will not run a task that had been enqueued.
     // If that is the case, we must clear the task group and run the callback prior to adding a
     // new task.
-    if (m_pendingAnimationsProcessingTaskCancellationGroup.hasPendingTask()) {
+    if (m_pendingAnimationsProcessingTaskCancellationGroup.hasPendingTask() && m_cachedCurrentTime) {
         m_pendingAnimationsProcessingTaskCancellationGroup.cancel();
         processPendingAnimations();
     }

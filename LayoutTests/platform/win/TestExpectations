@@ -1057,8 +1057,6 @@ animations/font-variations/font-style.html [ Skip ]
 
 webkit.org/b/229584 animations/fill-mode-forwards.html [ Failure Pass Timeout ]
 
-webkit.org/b/292032 animations/resume-after-page-cache.html [ Skip ] # Crash Pass
-
 # TODO Uses showModalDialog
 webkit.org/b/53675 fast/animation/request-animation-frame-during-modal.html [ Skip ]
 
