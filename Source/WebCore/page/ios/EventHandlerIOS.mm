@@ -786,13 +786,13 @@ bool EventHandler::eventLoopHandleMouseDragged(const MouseEventWithHitTestResult
     return false;
 }
 
-bool EventHandler::tryToBeginDragAtPoint(const IntPoint& clientPosition, const IntPoint&)
+DragStartRequestResult EventHandler::tryToBeginDragAtPoint(const IntPoint& clientPosition, const IntPoint&)
 {
     Ref frame = m_frame.get();
 
     RefPtr document = frame->document();
     if (!document)
-        return false;
+        return DragStartRequestResult::Ended;
 
     SetForScope shouldAllowMouseDownToStartDrag { m_shouldAllowMouseDownToStartDrag, true };
 
@@ -811,11 +811,11 @@ bool EventHandler::tryToBeginDragAtPoint(const IntPoint& clientPosition, const I
     auto hitTestedMouseEvent = document->prepareMouseEvent(hitType, documentPoint, syntheticMouseMoveEvent);
 
     auto subframe = dynamicDowncast<LocalFrame>(subframeForHitTestResult(hitTestedMouseEvent));
-    if (subframe && subframe->eventHandler().tryToBeginDragAtPoint(adjustedClientPosition, adjustedGlobalPosition))
-        return true;
+    if (subframe && subframe->eventHandler().tryToBeginDragAtPoint(adjustedClientPosition, adjustedGlobalPosition) == DragStartRequestResult::Started)
+        return DragStartRequestResult::Started;
 
     if (!eventMayStartDrag(syntheticMousePressEvent))
-        return false;
+        return DragStartRequestResult::Ended;
 
     handleMousePressEvent(syntheticMousePressEvent);
     bool handledDrag = m_mouseDownMayStartDrag && handleMouseDraggedEvent(hitTestedMouseEvent, DontCheckDragHysteresis);
@@ -824,7 +824,8 @@ bool EventHandler::tryToBeginDragAtPoint(const IntPoint& clientPosition, const I
     // Reset this bit to ensure that WebChromeClientIOS::observedContentChange() is called by EventHandler::mousePressed()
     // when we would process the next tap after a drag interaction.
     m_mousePressed = false;
-    return handledDrag;
+
+    return handledDrag ? DragStartRequestResult::Started : DragStartRequestResult::Ended;
 }
 
 bool EventHandler::supportsSelectionUpdatesOnMouseDrag() const

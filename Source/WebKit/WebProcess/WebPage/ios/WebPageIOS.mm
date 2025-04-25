@@ -1111,8 +1111,10 @@ void WebPage::requestDragStart(const IntPoint& clientPosition, const IntPoint& g
     RefPtr localMainFrame = m_page->localMainFrame();
     if (!localMainFrame)
         return;
-    bool didStart = localMainFrame->eventHandler().tryToBeginDragAtPoint(clientPosition, globalPosition);
-    send(Messages::WebPageProxy::DidHandleDragStartRequest(didStart));
+
+    auto didHandleDrag = localMainFrame->eventHandler().tryToBeginDragAtPoint(clientPosition, globalPosition);
+    if (didHandleDrag != WebCore::DragStartRequestResult::Delayed)
+        send(Messages::WebPageProxy::DidHandleDragStartRequest(didHandleDrag == WebCore::DragStartRequestResult::Started));
 }
 
 void WebPage::requestAdditionalItemsForDragSession(const IntPoint& clientPosition, const IntPoint& globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask)
@@ -1129,8 +1131,10 @@ void WebPage::requestAdditionalItemsForDragSession(const IntPoint& clientPositio
 
     localMainFrame->eventHandler().dragSourceEndedAt(event, { }, MayExtendDragSession::Yes);
 
-    bool didHandleDrag = localMainFrame->eventHandler().tryToBeginDragAtPoint(clientPosition, globalPosition);
-    send(Messages::WebPageProxy::DidHandleAdditionalDragItemsRequest(didHandleDrag));
+    auto didHandleDrag = localMainFrame->eventHandler().tryToBeginDragAtPoint(clientPosition, globalPosition);
+
+    if (didHandleDrag != WebCore::DragStartRequestResult::Delayed)
+        send(Messages::WebPageProxy::DidHandleAdditionalDragItemsRequest(didHandleDrag == WebCore::DragStartRequestResult::Started));
 }
 
 void WebPage::insertDroppedImagePlaceholders(const Vector<IntSize>& imageSizes, CompletionHandler<void(const Vector<IntRect>&, std::optional<WebCore::TextIndicatorData>)>&& reply)
