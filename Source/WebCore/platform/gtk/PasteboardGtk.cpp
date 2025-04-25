@@ -263,7 +263,7 @@ void Pasteboard::setDragImage(DragImage, const IntPoint&)
 
 void Pasteboard::read(PasteboardPlainText& text, PlainTextURLReadingPolicy, std::optional<size_t>)
 {
-    text.text = platformStrategies()->pasteboardStrategy()->readTextFromClipboard(m_name, textPlainContentTypeAtom());
+    text.text = platformStrategies()->pasteboardStrategy()->readTextFromClipboard(m_name, "text/plain"_s);
 }
 
 void Pasteboard::read(PasteboardWebContentReader& reader, WebContentReadingPolicy policy, std::optional<size_t>)
@@ -311,7 +311,7 @@ void Pasteboard::read(PasteboardWebContentReader& reader, WebContentReadingPolic
             return;
     }
 
-    if (types.contains(textPlainContentTypeAtom()) || types.contains("text/plain;charset=utf-8"_s)) {
+    if (types.contains("text/plain"_s) || types.contains("text/plain;charset=utf-8"_s)) {
         auto text = platformStrategies()->pasteboardStrategy()->readTextFromClipboard(m_name, textPlainContentTypeAtom());
         if (!text.isNull() && reader.readPlainText(text))
             return;

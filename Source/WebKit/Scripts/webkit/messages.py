@@ -653,7 +653,7 @@ def conditions_for_header(header):
         '<WebCore/ModelPlayerIdentifier.h>': ["ENABLE(MODEL_PROCESS)"],
         '<WebCore/PlaybackTargetClientContextIdentifier.h>': ["ENABLE(WIRELESS_PLAYBACK_TARGET)"],
         '<WebCore/SoupNetworkProxySettings.h>': ["USE(SOUP)"],
-        '<WebCore/SelectionData.h>': ["PLATFORM(GTK)"],
+        '<WebCore/SelectionData.h>': ["PLATFORM(GTK)", "PLATFORM(WPE)"],
         '<WebCore/VideoFrameCV.h>': ["PLATFORM(COCOA)", ],
     }
     if not header in conditions:

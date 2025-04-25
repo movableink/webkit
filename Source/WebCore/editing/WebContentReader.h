@@ -63,7 +63,7 @@ public:
     WebContentReader(LocalFrame& frame, const SimpleRange& context, bool allowPlainText)
         : FrameWebContentReader(frame)
         , m_context(context)
-#if PLATFORM(COCOA) || PLATFORM(GTK)
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
         , m_allowPlainText(allowPlainText)
 #endif
     {
@@ -77,7 +77,7 @@ public:
     bool madeFragmentFromPlainText() const { return m_madeFragmentFromPlainText; }
 
 private:
-#if PLATFORM(COCOA) || PLATFORM(GTK)
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
     bool readFilePath(const String&, PresentationSize preferredPresentationSize = { }, const String& contentType = { }) override;
     bool readFilePaths(const Vector<String>&) override;
     bool readHTML(const String&) override;
@@ -94,7 +94,7 @@ private:
 #endif
 
     const SimpleRange m_context;
-#if PLATFORM(COCOA) || PLATFORM(GTK)
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
     const bool m_allowPlainText;
 #endif
 
@@ -112,7 +112,7 @@ public:
     String takeMarkup() { return std::exchange(m_markup, { }); }
 
 private:
-#if PLATFORM(COCOA) || PLATFORM(GTK)
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
     bool readFilePath(const String&, PresentationSize = { }, const String& = { }) override { return false; }
     bool readFilePaths(const Vector<String>&) override { return false; }
     bool readHTML(const String&) override;

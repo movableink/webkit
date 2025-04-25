@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WebContentReader.h"
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
 #include "Blob.h"
 #include "BlobURL.h"
 #include "DOMURL.h"
@@ -108,3 +109,5 @@ bool WebContentMarkupReader::readHTML(const String& string)
 }
 
 } // namespace WebCore
+
+#endif // PLATFORM(GTK) || PLATFORM(WPE)

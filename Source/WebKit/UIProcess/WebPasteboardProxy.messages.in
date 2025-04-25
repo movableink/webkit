@@ -70,7 +70,7 @@ messages -> WebPasteboardProxy {
 
 #endif
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(WPE)
     GetTypes(String pasteboardName) -> (Vector<String> types) Synchronous
     ReadText(String pasteboardName, String pasteboardType) -> (String text) Synchronous
     ReadFilePaths(String pasteboardName) -> (Vector<String> types) Synchronous
@@ -80,7 +80,7 @@ messages -> WebPasteboardProxy {
     GetPasteboardChangeCount(String pasteboardName) -> (int64_t changeCount) Synchronous
 #endif
 
-#if USE(LIBWPE)
+#if USE(LIBWPE) && !PLATFORM(WPE)
     GetPasteboardTypes() -> (Vector<String> types) Synchronous
     WriteWebContentToPasteboard(struct WebCore::PasteboardWebContent content)
     WriteStringToPasteboard(String pasteboardType, String text)

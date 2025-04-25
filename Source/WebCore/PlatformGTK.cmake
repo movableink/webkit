@@ -51,6 +51,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     accessibility/atspi/AccessibilityRootAtspi.h
 
     platform/glib/ApplicationGLib.h
+    platform/glib/SelectionData.h
     platform/glib/SystemSettings.h
 
     platform/graphics/egl/PlatformDisplayDefault.h
@@ -69,7 +70,6 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/gtk/GtkUtilities.h
     platform/gtk/GtkVersioning.h
     platform/gtk/ScrollbarThemeGtk.h
-    platform/gtk/SelectionData.h
 
     platform/text/enchant/TextCheckerEnchant.h
 )

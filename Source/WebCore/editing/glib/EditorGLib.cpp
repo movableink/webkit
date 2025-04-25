@@ -27,6 +27,7 @@
 #include "config.h"
 #include "Editor.h"
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
 #include "CachedImage.h"
 #include "DocumentFragment.h"
 #include "ElementInlines.h"
@@ -130,3 +131,5 @@ RefPtr<DocumentFragment> Editor::webContentFromPasteboard(Pasteboard& pasteboard
 }
 
 } // namespace WebCore
+
+#endif // PLATFORM(GTK) || PLATFORM(WPE)

@@ -128,6 +128,7 @@ private:
 #endif
 #if USE(LIBWPE)
     struct wpe_pasteboard* m_pasteboard;
+    int64_t m_changeCount { 0 };
 #endif
 };
 

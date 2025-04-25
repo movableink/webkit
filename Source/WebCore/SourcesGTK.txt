@@ -41,8 +41,8 @@ accessibility/atspi/AXObjectCacheAtspi.cpp
 
 editing/atspi/FrameSelectionAtspi.cpp
 
-editing/gtk/EditorGtk.cpp
-editing/gtk/WebContentReaderGtk.cpp
+editing/glib/EditorGLib.cpp
+editing/glib/WebContentReaderGLib.cpp
 
 loader/soup/ResourceLoaderSoup.cpp
 
@@ -98,7 +98,6 @@ platform/gtk/PlatformScreenGtk.cpp
 platform/gtk/RenderThemeGadget.cpp
 platform/gtk/RenderThemeScrollbar.cpp
 platform/gtk/ScrollbarThemeGtk.cpp
-platform/gtk/SelectionData.cpp
 platform/gtk/ValidationBubbleGtk.cpp
 
 platform/text/Hyphenation.cpp

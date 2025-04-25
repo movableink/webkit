@@ -305,7 +305,7 @@ void WebPlatformStrategies::updateSupportedTypeIdentifiers(const Vector<String>&
 
 #endif // PLATFORM(COCOA)
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(WPE)
 // PasteboardStrategy
 
 Vector<String> WebPlatformStrategies::types(const String& pasteboardName)
@@ -353,9 +353,7 @@ int64_t WebPlatformStrategies::changeCount(const String& pasteboardName)
     return changeCount;
 }
 
-#endif // PLATFORM(GTK)
-
-#if USE(LIBWPE)
+#elif USE(LIBWPE)
 // PasteboardStrategy
 
 void WebPlatformStrategies::getTypes(Vector<String>& types)
