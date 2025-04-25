@@ -124,6 +124,8 @@ profiler/ProfilerDatabase.cpp
 profiler/ProfilerEvent.cpp
 runtime/ArrayBuffer.cpp
 runtime/ArrayBuffer.h
+runtime/ArrayBufferView.cpp
+runtime/ArrayBufferView.h
 runtime/AtomicsObject.cpp
 runtime/CacheableIdentifier.h
 runtime/CacheableIdentifierInlines.h
@@ -140,6 +142,7 @@ runtime/InferredValue.h
 runtime/InternalFunction.cpp
 runtime/IntlObject.cpp
 runtime/JSArrayBuffer.cpp
+runtime/JSArrayBufferPrototype.cpp
 runtime/JSArrayBufferView.cpp
 runtime/JSCustomGetterFunction.cpp
 runtime/JSCustomSetterFunction.cpp
@@ -206,6 +209,7 @@ wasm/WasmTypeDefinitionInlines.h
 wasm/WasmWorklist.cpp
 wasm/js/JSWebAssembly.cpp
 wasm/js/JSWebAssemblyGlobal.cpp
+wasm/js/JSWebAssemblyHelpers.h
 wasm/js/JSWebAssemblyInstance.cpp
 wasm/js/JSWebAssemblyInstance.h
 wasm/js/JSWebAssemblyMemory.cpp

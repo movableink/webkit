@@ -1,4 +1,5 @@
 API/JSCallbackObjectFunctions.h
+API/JSTypedArray.cpp
 API/JSValue.mm
 API/JSWrapperMap.mm
 API/tests/testapi.cpp
@@ -33,6 +34,7 @@ dfg/DFGCommonData.cpp
 dfg/DFGConstantFoldingPhase.cpp
 dfg/DFGDesiredGlobalProperties.cpp
 dfg/DFGDesiredIdentifiers.cpp
+dfg/DFGDesiredWatchpoints.cpp
 dfg/DFGFixupPhase.cpp
 dfg/DFGGraph.cpp
 dfg/DFGGraph.h
@@ -92,6 +94,7 @@ runtime/FileBasedFuzzerAgent.cpp
 runtime/HasOwnPropertyCache.h
 runtime/HashMapHelper.h
 runtime/InferredValue.h
+runtime/JSArrayBufferView.cpp
 runtime/JSCJSValue.cpp
 runtime/JSCJSValueInlines.h
 runtime/JSFinalizationRegistry.cpp

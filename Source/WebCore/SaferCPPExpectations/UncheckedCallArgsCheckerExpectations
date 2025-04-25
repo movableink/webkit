@@ -12,6 +12,8 @@ Modules/fetch/FetchBody.h
 Modules/fetch/FetchBodyOwner.cpp
 Modules/fetch/FetchLoader.cpp
 Modules/fetch/FetchResponse.cpp
+Modules/gamepad/GamepadManager.cpp
+Modules/gamepad/NavigatorGamepad.cpp
 Modules/geolocation/Geolocation.cpp
 Modules/geolocation/GeolocationController.cpp
 Modules/highlight/AppHighlightStorage.cpp
@@ -35,6 +37,8 @@ Modules/mediastream/RTCPeerConnection.cpp
 Modules/mediastream/RTCRtpScriptTransformer.cpp
 Modules/model-element/HTMLModelElement.cpp
 Modules/notifications/Notification.cpp
+Modules/permissions/NavigatorPermissions.cpp
+Modules/permissions/WorkerNavigatorPermissions.cpp
 Modules/pictureinpicture/HTMLVideoElementPictureInPicture.cpp
 Modules/plugins/YouTubePluginReplacement.cpp
 Modules/push-api/PushDatabase.cpp
@@ -45,10 +49,12 @@ Modules/screen-wake-lock/NavigatorScreenWakeLock.cpp
 Modules/screen-wake-lock/WakeLock.cpp
 Modules/screen-wake-lock/WakeLockManager.cpp
 Modules/speech/SpeechRecognitionCaptureSource.cpp
+Modules/storage/StorageManager.cpp
 Modules/webaudio/AudioContext.cpp
 Modules/webaudio/AudioWorkletMessagingProxy.cpp
 Modules/webaudio/BaseAudioContext.cpp
 Modules/webaudio/BiquadFilterNode.cpp
+Modules/webaudio/DefaultAudioDestinationNode.cpp
 Modules/webaudio/IIRFilterNode.cpp
 Modules/webaudio/MediaStreamAudioDestinationNode.cpp
 Modules/webaudio/WaveShaperNode.cpp
@@ -100,6 +106,8 @@ animation/StyleOriginatedAnimationEvent.cpp
 animation/ViewTimeline.cpp
 animation/WebAnimation.cpp
 animation/WebAnimationUtilities.cpp
+bindings/js/DOMPromiseProxy.h
+bindings/js/JSCanvasRenderingContext2DCustom.cpp
 bindings/js/JSCustomElementInterface.cpp
 bindings/js/JSDOMBindingSecurity.cpp
 bindings/js/JSDOMBindingSecurity.h
@@ -116,6 +124,7 @@ bindings/js/JSIDBObjectStoreCustom.cpp
 bindings/js/JSIntersectionObserverCustom.cpp
 bindings/js/JSIntersectionObserverEntryCustom.cpp
 bindings/js/JSLazyEventListener.cpp
+bindings/js/JSNavigatorCustom.cpp
 bindings/js/JSNodeCustom.cpp
 bindings/js/JSNodeListCustom.cpp
 bindings/js/JSPluginElementFunctions.cpp
@@ -123,6 +132,7 @@ bindings/js/JSResizeObserverEntryCustom.cpp
 bindings/js/JSSVGViewSpecCustom.cpp
 bindings/js/JSStylePropertyMapReadOnlyCustom.cpp
 bindings/js/JSWorkerGlobalScopeBase.cpp
+bindings/js/JSWorkerNavigatorCustom.cpp
 bindings/js/JSWorkletGlobalScopeBase.cpp
 bindings/js/JSXMLHttpRequestCustom.cpp
 bindings/js/ScheduledAction.cpp
@@ -353,6 +363,7 @@ html/MediaDocument.cpp
 html/MediaElementSession.cpp
 html/ModelDocument.cpp
 html/NumberInputType.cpp
+html/OffscreenCanvas.cpp
 html/PermissionsPolicy.cpp
 html/PluginDocument.cpp
 html/RadioNodeList.cpp
@@ -561,6 +572,7 @@ page/Location.cpp
 page/MemoryRelease.cpp
 page/NavigateEvent.cpp
 page/Navigator.cpp
+page/NavigatorLoginStatus.cpp
 page/Page.cpp
 page/PageColorSampler.cpp
 page/PageConsoleClient.cpp
@@ -607,6 +619,8 @@ platform/ScrollbarsController.cpp
 platform/ScrollingEffectsController.cpp
 platform/ThreadGlobalData.cpp
 platform/Widget.cpp
+platform/audio/PlatformMediaSession.cpp
+platform/audio/PlatformMediaSessionInterface.h
 platform/cocoa/DragImageCocoa.mm
 platform/cocoa/LowPowerModeNotifier.mm
 platform/cocoa/VideoPresentationModelVideoElement.mm
@@ -982,7 +996,7 @@ workers/WorkerOrWorkletScriptController.cpp
 workers/WorkerRunLoop.cpp
 workers/WorkerThread.cpp
 workers/service/ExtendableEvent.cpp
-workers/service/ServiceWorkerClientData.cpp
+workers/service/ServiceWorkerGlobalScope.cpp
 workers/service/ServiceWorkerJob.cpp
 workers/service/context/ServiceWorkerThread.cpp
 workers/service/context/ServiceWorkerThreadProxy.cpp

@@ -89,6 +89,8 @@ Modules/indexeddb/client/IDBConnectionProxy.cpp
 Modules/indexeddb/client/IDBConnectionToServer.cpp
 Modules/indexeddb/client/TransactionOperation.h
 Modules/indexeddb/server/MemoryObjectStore.cpp
+Modules/indexeddb/server/UniqueIDBDatabase.cpp
+Modules/indexeddb/server/UniqueIDBDatabaseTransaction.cpp
 Modules/mediacontrols/MediaControlsHost.cpp
 Modules/mediasession/MediaMetadata.cpp
 Modules/mediasession/MediaSession.cpp
@@ -203,7 +205,10 @@ Modules/webaudio/PannerNode.cpp
 Modules/webaudio/RealtimeAnalyser.cpp
 Modules/webaudio/ScriptProcessorNode.cpp
 Modules/webaudio/StereoPannerNode.cpp
+Modules/webauthn/AuthenticationExtensionsClientOutputs.cpp
+Modules/webauthn/AuthenticatorAttestationResponse.cpp
 Modules/webauthn/AuthenticatorCoordinator.cpp
+Modules/webauthn/PublicKeyCredential.cpp
 Modules/webauthn/fido/Pin.cpp
 Modules/webcodecs/WebCodecsAudioData.cpp
 Modules/webcodecs/WebCodecsAudioDecoder.cpp
@@ -377,6 +382,7 @@ bindings/js/ScriptBufferSourceProvider.h
 bindings/js/ScriptCachedFrameData.cpp
 bindings/js/ScriptModuleLoader.cpp
 bindings/js/ScriptSourceCode.h
+bindings/js/SerializedScriptValue.cpp
 bindings/js/WebAssemblyScriptBufferSourceProvider.h
 bindings/js/WebCoreJSClientData.cpp
 bindings/js/WebCoreTypedArrayController.cpp
@@ -624,6 +630,7 @@ editing/cocoa/WebContentReaderCocoa.mm
 editing/mac/EditorMac.mm
 editing/mac/FrameSelectionMac.mm
 editing/markup.cpp
+fileapi/FileReaderLoader.cpp
 history/BackForwardCache.cpp
 history/CachedFrame.cpp
 history/CachedPage.cpp
@@ -1268,9 +1275,12 @@ svg/SVGElement.cpp
 svg/SVGElement.h
 svg/SVGEllipseElement.h
 svg/SVGFEBlendElement.h
+svg/SVGFEColorMatrixElement.cpp
 svg/SVGFEColorMatrixElement.h
+svg/SVGFEComponentTransferElement.cpp
 svg/SVGFEComponentTransferElement.h
 svg/SVGFECompositeElement.h
+svg/SVGFEConvolveMatrixElement.cpp
 svg/SVGFEConvolveMatrixElement.h
 svg/SVGFEDiffuseLightingElement.cpp
 svg/SVGFEDiffuseLightingElement.h
@@ -1295,6 +1305,7 @@ svg/SVGFontFaceUriElement.cpp
 svg/SVGForeignObjectElement.h
 svg/SVGGeometryElement.h
 svg/SVGGlyphRefElement.cpp
+svg/SVGGradientElement.cpp
 svg/SVGGradientElement.h
 svg/SVGGraphicsElement.cpp
 svg/SVGGraphicsElement.h
@@ -1315,6 +1326,7 @@ svg/SVGPathSegListBuilder.cpp
 svg/SVGPathSegListSource.cpp
 svg/SVGPatternElement.cpp
 svg/SVGPatternElement.h
+svg/SVGPolyElement.cpp
 svg/SVGPolyElement.h
 svg/SVGRadialGradientElement.cpp
 svg/SVGRadialGradientElement.h
@@ -1327,6 +1339,7 @@ svg/SVGTextContentElement.cpp
 svg/SVGTextContentElement.h
 svg/SVGTextPathElement.cpp
 svg/SVGTextPathElement.h
+svg/SVGTextPositioningElement.cpp
 svg/SVGTextPositioningElement.h
 svg/SVGToOTFFontConversion.cpp
 svg/SVGURIReference.cpp
@@ -1334,6 +1347,7 @@ svg/SVGURIReference.h
 svg/SVGUseElement.cpp
 svg/SVGUseElement.h
 svg/SVGViewSpec.cpp
+svg/SVGViewSpec.h
 svg/animation/SVGSMILElement.cpp
 svg/graphics/SVGImage.cpp
 svg/graphics/SVGImageForContainer.h
@@ -1341,17 +1355,20 @@ svg/properties/SVGAnimatedDecoratedProperty.h
 svg/properties/SVGAnimatedPrimitiveProperty.h
 svg/properties/SVGAnimatedPropertyAnimator.h
 svg/properties/SVGAnimatedPropertyAnimatorImpl.h
+svg/properties/SVGAnimatedPropertyImpl.h
 svg/properties/SVGAnimatedPropertyList.h
 svg/properties/SVGAnimatedPropertyPairAccessorImpl.h
 svg/properties/SVGAnimatedPropertyPairAnimator.h
 svg/properties/SVGAnimatedPropertyPairAnimatorImpl.h
 svg/properties/SVGAnimatedString.cpp
 svg/properties/SVGAnimatedValueProperty.h
+svg/properties/SVGAnimationAdditiveListFunctionImpl.h
 svg/properties/SVGAttributeAnimator.cpp
 svg/properties/SVGPointerMemberAccessor.h
 svg/properties/SVGPrimitivePropertyAnimator.h
 svg/properties/SVGPropertyAccessorImpl.h
 svg/properties/SVGValuePropertyAnimator.h
+svg/properties/SVGValuePropertyListAnimator.h
 svg/properties/SVGValuePropertyListAnimatorImpl.h
 testing/InternalSettings.cpp
 testing/Internals.cpp
@@ -1379,7 +1396,6 @@ workers/WorkerRunLoop.cpp
 workers/WorkerScriptLoader.cpp
 workers/service/FetchEvent.cpp
 workers/service/ServiceWorker.cpp
-workers/service/ServiceWorkerClientData.cpp
 workers/service/ServiceWorkerContainer.cpp
 workers/service/ServiceWorkerGlobalScope.cpp
 workers/service/ServiceWorkerJob.cpp
@@ -1389,6 +1405,8 @@ workers/service/background-fetch/BackgroundFetch.cpp
 workers/service/background-fetch/BackgroundFetchEngine.cpp
 workers/service/background-fetch/BackgroundFetchRegistration.cpp
 workers/service/background-fetch/ServiceWorkerRegistrationBackgroundFetchAPI.cpp
+workers/service/server/SWServer.cpp
+workers/service/server/SWServerWorker.cpp
 workers/shared/SharedWorker.cpp
 workers/shared/SharedWorkerScriptLoader.cpp
 worklets/PaintWorkletGlobalScope.cpp

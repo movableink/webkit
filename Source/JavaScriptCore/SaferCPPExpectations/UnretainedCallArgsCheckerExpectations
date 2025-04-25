@@ -2,7 +2,6 @@ API/JSScript.mm
 API/JSValue.mm
 API/JSVirtualMachine.mm
 API/JSWrapperMap.mm
-API/ObjcRuntimeExtras.h
 API/tests/Regress141275.mm
 inspector/JSGlobalObjectDebugger.cpp
 inspector/remote/RemoteInspectionTarget.cpp

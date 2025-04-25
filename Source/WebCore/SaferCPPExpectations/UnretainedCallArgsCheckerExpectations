@@ -12,8 +12,6 @@ Modules/model-element/scenekit/SceneKitModelLoader.mm
 Modules/model-element/scenekit/SceneKitModelLoaderUSD.mm
 Modules/model-element/scenekit/SceneKitModelPlayer.mm
 Modules/notifications/NotificationDataCocoa.mm
-Modules/notifications/NotificationOptionsPayloadCocoa.mm
-Modules/notifications/NotificationPayloadCocoa.mm
 Modules/speech/cocoa/WebSpeechRecognizerTask.mm
 PAL/pal/cocoa/AVFAudioSoftLink.h
 PAL/pal/cocoa/AVFoundationSoftLink.h
@@ -54,10 +52,8 @@ editing/cocoa/WebContentReaderCocoa.mm
 editing/mac/EditorMac.mm
 editing/mac/TextAlternativeWithRange.mm
 editing/mac/TextUndoInsertionMarkupMac.mm
-fileapi/FileCocoa.mm
 inspector/agents/page/PageTimelineAgent.cpp
 inspector/mac/PageDebuggerMac.mm
-loader/archive/cf/LegacyWebArchiveMac.mm
 loader/cocoa/DiskCacheMonitorCocoa.mm
 loader/cocoa/PrivateClickMeasurementCocoa.mm
 page/CaptionUserPreferencesMediaAF.cpp
@@ -91,10 +87,8 @@ platform/cocoa/DragImageCocoa.mm
 platform/cocoa/EffectiveRateChangedListener.mm
 platform/cocoa/FileMonitorCocoa.mm
 platform/cocoa/LocalizedStringsCocoa.mm
-platform/cocoa/LowPowerModeNotifier.mm
 platform/cocoa/NetworkExtensionContentFilter.mm
 platform/cocoa/ParentalControlsContentFilter.mm
-platform/cocoa/PasteboardCocoa.mm
 platform/cocoa/PlatformPasteboardCocoa.mm
 platform/cocoa/PlatformSpeechSynthesizerCocoa.mm
 platform/cocoa/PowerSourceNotifier.mm
@@ -104,7 +98,6 @@ platform/cocoa/TextRecognitionResultCocoa.mm
 platform/cocoa/UserAgentCocoa.mm
 platform/cocoa/VideoFullscreenCaptions.mm
 platform/cocoa/WebAVPlayerLayer.mm
-platform/cocoa/WebCoreNSErrorExtras.mm
 platform/gamepad/cocoa/CoreHapticsSoftLink.h
 platform/gamepad/cocoa/GameControllerGamepad.mm
 platform/gamepad/cocoa/GameControllerGamepadProvider.mm
@@ -160,7 +153,6 @@ platform/graphics/cg/ImageBufferCGBitmapBackend.cpp
 platform/graphics/cg/ImageBufferCGPDFDocumentBackend.cpp
 platform/graphics/cg/ImageBufferIOSurfaceBackend.cpp
 platform/graphics/cg/ImageBufferUtilitiesCG.cpp
-platform/graphics/cg/ImageDecoderCG.cpp
 platform/graphics/cg/NativeImageCG.cpp
 platform/graphics/cg/PathCG.cpp
 platform/graphics/cg/ShareableBitmapCG.mm
@@ -193,9 +185,7 @@ platform/graphics/cv/ImageRotationSessionVT.mm
 platform/graphics/cv/ImageTransferSessionVT.mm
 platform/graphics/cv/VideoFrameCV.mm
 platform/graphics/gpu/cocoa/GPUPrewarmingMetal.mm
-platform/graphics/mac/AppKitControlSystemImage.mm
 platform/graphics/mac/ColorMac.mm
-platform/graphics/mac/IconMac.mm
 platform/graphics/mac/LegacyDisplayRefreshMonitorMac.cpp
 platform/graphics/mac/PDFDocumentImageMac.mm
 platform/graphics/mac/ScrollbarTrackCornerSystemImageMac.mm
@@ -209,7 +199,6 @@ platform/libwebrtc/LibWebRTCVPXVideoEncoder.cpp
 platform/mac/CursorMac.mm
 platform/mac/DataDetectorHighlight.mm
 platform/mac/HIDDevice.cpp
-platform/mac/LocalDefaultSystemAppearance.mm
 platform/mac/PasteboardMac.mm
 platform/mac/PasteboardWriter.mm
 platform/mac/PlatformEventFactoryMac.mm
@@ -240,7 +229,6 @@ platform/mediastream/mac/ScreenCaptureKitSharingSessionManager.mm
 platform/network/cf/DNSResolveQueueCFNet.cpp
 platform/network/cf/FormDataStreamCFNet.cpp
 platform/network/cocoa/CookieCocoa.mm
-platform/network/cocoa/CookieStorageObserver.mm
 platform/network/cocoa/CredentialCocoa.mm
 platform/network/cocoa/NetworkStorageSessionCocoa.mm
 platform/network/cocoa/ProtectionSpaceCocoa.mm
@@ -254,7 +242,6 @@ platform/network/mac/ResourceErrorMac.mm
 platform/network/mac/ResourceHandleMac.mm
 platform/network/mac/SynchronousLoaderClient.mm
 platform/network/mac/WebCoreResourceHandleAsOperationQueueDelegate.mm
-platform/text/cocoa/LocaleCocoa.mm
 platform/text/cocoa/LocalizedDateCache.mm
 rendering/AttachmentLayout.mm
 rendering/mac/RenderThemeMac.mm

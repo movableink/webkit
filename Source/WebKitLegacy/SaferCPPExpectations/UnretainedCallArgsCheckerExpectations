@@ -6,11 +6,9 @@ mac/DOM/DOMCSSValue.mm
 mac/DOM/DOMCustomXPathNSResolver.mm
 mac/DOM/DOMEvent.mm
 mac/DOM/DOMHTMLCollection.mm
-mac/DOM/DOMInternal.mm
 mac/DOM/DOMNode.mm
 mac/DOM/DOMObject.mm
 mac/DOM/DOMStyleSheet.mm
-mac/DOM/ExceptionHandlers.mm
 mac/DOM/ObjCEventListener.mm
 mac/DOM/ObjCNodeFilterCondition.mm
 mac/DefaultDelegates/WebDefaultContextMenuDelegate.mm
@@ -26,7 +24,6 @@ mac/Misc/WebKitNSStringExtras.mm
 mac/Misc/WebLocalizableStrings.mm
 mac/Misc/WebNSObjectExtras.mm
 mac/Misc/WebNSPasteboardExtras.mm
-mac/Misc/WebNSPrintOperationExtras.m
 mac/Misc/WebNSURLExtras.mm
 mac/Misc/WebNSViewExtras.m
 mac/Misc/WebNSWindowExtras.m
@@ -43,8 +40,6 @@ mac/Storage/WebDatabaseManager.mm
 mac/Storage/WebDatabaseManagerClient.mm
 mac/Storage/WebDatabaseProvider.mm
 mac/Storage/WebDatabaseQuotaManager.mm
-mac/Storage/WebStorageManager.mm
-mac/Storage/WebStorageTrackerClient.mm
 mac/WebCoreSupport/PopupMenuMac.mm
 mac/WebCoreSupport/SearchPopupMenuMac.mm
 mac/WebCoreSupport/WebAlternativeTextClient.mm

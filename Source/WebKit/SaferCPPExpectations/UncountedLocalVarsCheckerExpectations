@@ -2,6 +2,15 @@ NetworkProcess/NetworkConnectionToWebProcess.cpp
 NetworkProcess/NetworkProcess.cpp
 NetworkProcess/ServiceWorker/WebSWServerConnection.cpp
 NetworkProcess/ServiceWorker/WebSWServerToContextConnection.cpp
+NetworkProcess/SharedWorker/WebSharedWorkerServer.cpp
+NetworkProcess/storage/NetworkStorageManager.cpp
+UIProcess/API/Cocoa/_WKInspectorConfiguration.mm
+UIProcess/Cocoa/VideoPresentationManagerProxy.mm
+UIProcess/Notifications/WebNotificationManagerProxy.cpp
+UIProcess/UserContent/WebUserContentControllerProxy.cpp
+UIProcess/ViewGestureController.cpp
+UIProcess/WebPageProxy.cpp
+UIProcess/mac/WebViewImpl.mm
 WebProcess/Automation/WebAutomationSessionProxy.cpp
 WebProcess/EncryptedMedia/MediaKeySystemPermissionRequestManager.cpp
 WebProcess/Extensions/Bindings/JSWebExtensionWrapper.cpp

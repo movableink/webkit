@@ -24,9 +24,11 @@ Modules/indexeddb/IDBObjectStore.cpp
 Modules/indexeddb/IDBTransaction.cpp
 Modules/indexeddb/WindowOrWorkerGlobalScopeIndexedDatabase.cpp
 Modules/indexeddb/client/IDBConnectionProxy.cpp
+Modules/indexeddb/server/IDBServer.cpp
 Modules/indexeddb/server/MemoryBackingStoreTransaction.cpp
 Modules/indexeddb/server/MemoryIDBBackingStore.cpp
 Modules/indexeddb/server/MemoryObjectStore.cpp
+Modules/indexeddb/server/UniqueIDBDatabase.cpp
 Modules/mediacapabilities/MediaCapabilities.cpp
 Modules/mediacontrols/MediaControlsHost.cpp
 Modules/mediarecorder/MediaRecorder.cpp
@@ -74,6 +76,8 @@ Modules/webaudio/ScriptProcessorNode.cpp
 Modules/webaudio/StereoPannerNode.cpp
 Modules/webaudio/WaveShaperDSPKernel.cpp
 Modules/webaudio/WaveShaperNode.cpp
+Modules/webauthn/AuthenticatorAssertionResponse.cpp
+Modules/webauthn/AuthenticatorAttestationResponse.cpp
 Modules/webauthn/AuthenticatorCoordinator.cpp
 Modules/webauthn/PublicKeyCredential.cpp
 Modules/webcodecs/WebCodecsVideoFrameAlgorithms.cpp
@@ -151,6 +155,7 @@ bindings/js/JSDOMBindingSecurity.cpp
 bindings/js/JSDOMConvertInterface.h
 bindings/js/JSDOMConvertPromise.h
 bindings/js/JSDOMConvertStrings.cpp
+bindings/js/JSDOMConvertUnion.h
 bindings/js/JSDOMGlobalObject.cpp
 bindings/js/JSDOMPromiseDeferred.cpp
 bindings/js/JSDOMWindowBase.cpp
@@ -192,6 +197,8 @@ bindings/js/JSWorkerGlobalScopeCustom.cpp
 bindings/js/JSXMLHttpRequestCustom.cpp
 bindings/js/ScriptCachedFrameData.cpp
 bindings/js/ScriptModuleLoader.cpp
+bindings/js/SerializedScriptValue.cpp
+bindings/js/StructuredClone.cpp
 bindings/js/WebCoreJSClientData.cpp
 bindings/js/WindowProxy.cpp
 bridge/objc/WebScriptObject.mm
@@ -655,6 +662,7 @@ rendering/svg/SVGRenderTreeAsText.cpp
 rendering/svg/SVGRenderingContext.cpp
 rendering/svg/SVGTextBoxPainter.cpp
 rendering/svg/SVGTextChunk.cpp
+rendering/svg/SVGTextLayoutAttributesBuilder.cpp
 rendering/svg/SVGTextLayoutEngine.cpp
 rendering/svg/legacy/LegacyRenderSVGModelObject.cpp
 rendering/svg/legacy/LegacyRenderSVGPath.cpp
@@ -713,6 +721,7 @@ svg/SVGClipPathElement.cpp
 svg/SVGCursorElement.cpp
 svg/SVGElement.cpp
 svg/SVGFEComponentTransferElement.cpp
+svg/SVGFEConvolveMatrixElement.cpp
 svg/SVGFEDropShadowElement.cpp
 svg/SVGFEFloodElement.cpp
 svg/SVGFELightElement.cpp
@@ -757,7 +766,9 @@ workers/service/ServiceWorkerContainer.cpp
 workers/service/ServiceWorkerGlobalScope.cpp
 workers/service/ServiceWorkerRegistration.cpp
 workers/service/WorkerSWClientConnection.cpp
+workers/service/background-fetch/BackgroundFetch.cpp
 workers/service/background-fetch/BackgroundFetchEngine.cpp
+workers/service/server/SWServer.cpp
 workers/shared/SharedWorkerObjectConnection.cpp
 workers/shared/SharedWorkerScriptLoader.cpp
 worklets/Worklet.cpp

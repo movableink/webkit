@@ -1,10 +1,8 @@
 accessibility/mac/WebAccessibilityObjectWrapperMac.mm
 platform/cocoa/SharedVideoFrameInfo.mm
 platform/graphics/avfoundation/objc/MediaPlayerPrivateAVFoundationObjC.mm
-platform/graphics/coreimage/FEComponentTransferCoreImageApplier.mm
 platform/graphics/cv/VideoFrameCV.mm
 platform/graphics/mac/controls/ControlMac.mm
-platform/graphics/mac/controls/SwitchTrackMac.mm
 platform/mac/PlatformPasteboardMac.mm
 platform/mac/WebCoreObjCExtras.mm
 platform/network/mac/WebCoreResourceHandleAsOperationQueueDelegate.mm

@@ -86,6 +86,7 @@ bindings/js/JSStyleSheetCustom.h
 bindings/js/JSUndoItemCustom.cpp
 bindings/js/JSWebAnimationCustom.cpp
 bindings/js/JSWorkerGlobalScopeBase.cpp
+bindings/js/JSWorkerGlobalScopeCustom.cpp
 bindings/js/JSXMLHttpRequestCustom.cpp
 bindings/js/ScheduledAction.cpp
 bindings/js/ScriptModuleLoader.cpp
@@ -240,6 +241,7 @@ html/ValidatedFormListedElement.cpp
 html/ValidationMessage.cpp
 html/canvas/CanvasRenderingContext2D.cpp
 html/canvas/CanvasRenderingContext2DBase.cpp
+html/canvas/GPUCanvasContextCocoa.mm
 html/parser/HTMLConstructionSite.cpp
 html/shadow/DateTimeEditElement.cpp
 html/shadow/DateTimeNumericFieldElement.cpp
@@ -253,6 +255,7 @@ html/track/TextTrackCueGeneric.cpp
 html/track/VTTCue.cpp
 inspector/DOMPatchSupport.cpp
 inspector/InspectorAuditAccessibilityObject.cpp
+inspector/InspectorCanvas.cpp
 inspector/InspectorCanvasCallTracer.cpp
 inspector/InspectorInstrumentation.cpp
 inspector/InspectorInstrumentation.h

@@ -58,7 +58,10 @@ UIProcess/DisplayLink.cpp
 UIProcess/Inspector/WebPageInspectorController.cpp
 UIProcess/Inspector/mac/RemoteWebInspectorUIProxyMac.mm
 UIProcess/ProcessThrottler.cpp
+UIProcess/ProvisionalPageProxy.cpp
 UIProcess/RemoteLayerTree/RemoteLayerTreeDrawingAreaProxy.mm
+UIProcess/RemoteLayerTree/RemoteLayerTreeHost.mm
+UIProcess/RemoteLayerTree/RemoteLayerTreeScrollingPerformanceData.mm
 UIProcess/RemoteLayerTree/mac/RemoteLayerTreeDrawingAreaProxyMac.mm
 UIProcess/RemoteLayerTree/mac/RemoteLayerTreeEventDispatcher.mm
 UIProcess/RemoteLayerTree/mac/RemoteScrollingCoordinatorProxyMac.mm

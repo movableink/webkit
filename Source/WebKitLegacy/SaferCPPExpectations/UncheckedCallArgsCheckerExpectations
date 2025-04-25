@@ -21,6 +21,7 @@ mac/DOM/DOMHTMLBaseElement.mm
 mac/DOM/DOMHTMLBaseFontElement.mm
 mac/DOM/DOMHTMLBodyElement.mm
 mac/DOM/DOMHTMLButtonElement.mm
+mac/DOM/DOMHTMLCanvasElement.mm
 mac/DOM/DOMHTMLCollection.mm
 mac/DOM/DOMHTMLDListElement.mm
 mac/DOM/DOMHTMLDirectoryElement.mm
@@ -45,7 +46,6 @@ mac/DOM/DOMHTMLLegendElement.mm
 mac/DOM/DOMHTMLLinkElement.mm
 mac/DOM/DOMHTMLMapElement.mm
 mac/DOM/DOMHTMLMarqueeElement.mm
-mac/DOM/DOMHTMLMediaElement.mm
 mac/DOM/DOMHTMLMenuElement.mm
 mac/DOM/DOMHTMLMetaElement.mm
 mac/DOM/DOMHTMLModElement.mm
@@ -70,7 +70,6 @@ mac/DOM/DOMHTMLTableSectionElement.mm
 mac/DOM/DOMHTMLTextAreaElement.mm
 mac/DOM/DOMHTMLTitleElement.mm
 mac/DOM/DOMHTMLUListElement.mm
-mac/DOM/DOMHTMLVideoElement.mm
 mac/DOM/DOMImplementation.mm
 mac/DOM/DOMInternal.mm
 mac/DOM/DOMMutationEvent.mm
