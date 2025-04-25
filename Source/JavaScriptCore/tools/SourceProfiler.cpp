@@ -29,6 +29,9 @@
 namespace JSC {
 namespace SourceProfiler {
 
+#if OS(DARWIN)
+__attribute__((section("__DATA_DIRTY,__data")))
+#endif
 ProfilerHook g_profilerHook = nullptr;
 
 void profile(Type type, const SourceCode& source)
