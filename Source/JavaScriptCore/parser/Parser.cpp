@@ -3361,7 +3361,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseExpressionOrL
     /* Expression and Label statements are ambiguous at LL(1), so we have a
      * special case that looks for a colon as the next character in the input.
      */
-    Vector<LabelInfo> labels;
+    Vector<LabelInfo, 4> labels;
     JSTokenLocation location;
     do {
         if (!nextTokenIsColon()) {
@@ -3402,8 +3402,8 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseExpressionOrL
     }
     const Identifier* unused = nullptr;
     ScopeRef labelScope = currentScope();
-    for (size_t i = 0; i < labels.size(); i++)
-        pushLabel(labels[i].m_ident, isLoop);
+    for (auto& label : labels)
+        pushLabel(label.m_ident, isLoop);
     m_immediateParentAllowsFunctionDeclarationInStatement = allowFunctionDeclarationAsStatement;
     TreeStatement statement = parseStatement(context, unused);
     for (size_t i = 0; i < labels.size(); i++)
@@ -3477,10 +3477,8 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseIfStatement(T
     if (!match(ELSE))
         return context.createIfStatement(ifLocation, condition, trueBlock, 0, start, end);
 
-    Vector<TreeExpression> exprStack;
-    Vector<std::pair<int, int>> posStack;
-    Vector<JSTokenLocation> tokenLocationStack;
-    Vector<TreeStatement> statementStack;
+    Vector<std::tuple<TreeExpression, int, int, JSTokenLocation>, 8> exprStack;
+    Vector<TreeStatement, 8> statementStack;
     bool trailingElse = false;
     do {
         JSTokenLocation tempLocation = tokenLocation();
@@ -3508,38 +3506,23 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseIfStatement(T
         m_immediateParentAllowsFunctionDeclarationInStatement = true;
         TreeStatement innerTrueBlock = parseStatement(context, unused);
         failIfFalse(innerTrueBlock, "Expected a statement as the body of an if block");
-        tokenLocationStack.append(tempLocation);
-        exprStack.append(innerCondition);
-        posStack.append(std::make_pair(innerStart, innerEnd));
+        exprStack.append(std::tuple { innerCondition, innerStart, innerEnd, tempLocation });
         statementStack.append(innerTrueBlock);
     } while (match(ELSE));
 
     if (!trailingElse) {
-        TreeExpression condition = exprStack.last();
-        exprStack.removeLast();
-        TreeStatement trueBlock = statementStack.last();
-        statementStack.removeLast();
-        std::pair<int, int> pos = posStack.last();
-        posStack.removeLast();
-        JSTokenLocation elseLocation = tokenLocationStack.last();
-        tokenLocationStack.removeLast();
-        TreeStatement ifStatement = context.createIfStatement(elseLocation, condition, trueBlock, 0, pos.first, pos.second);
+        auto [condition, start, end, location] = exprStack.takeLast();
+        TreeStatement trueBlock = statementStack.takeLast();
+        TreeStatement ifStatement = context.createIfStatement(location, condition, trueBlock, 0, start, end);
         context.setEndOffset(ifStatement, context.endOffset(trueBlock));
         statementStack.append(ifStatement);
     }
 
     while (!exprStack.isEmpty()) {
-        TreeExpression condition = exprStack.last();
-        exprStack.removeLast();
-        TreeStatement falseBlock = statementStack.last();
-        statementStack.removeLast();
-        TreeStatement trueBlock = statementStack.last();
-        statementStack.removeLast();
-        std::pair<int, int> pos = posStack.last();
-        posStack.removeLast();
-        JSTokenLocation elseLocation = tokenLocationStack.last();
-        tokenLocationStack.removeLast();
-        TreeStatement ifStatement = context.createIfStatement(elseLocation, condition, trueBlock, falseBlock, pos.first, pos.second);
+        auto [condition, start, end, location] = exprStack.takeLast();
+        TreeStatement falseBlock = statementStack.takeLast();
+        TreeStatement trueBlock = statementStack.takeLast();
+        TreeStatement ifStatement = context.createIfStatement(location, condition, trueBlock, falseBlock, start, end);
         context.setEndOffset(ifStatement, context.endOffset(falseBlock));
         statementStack.append(ifStatement);
     }
@@ -3768,7 +3751,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseImportDeclara
 }
 
 template <typename LexerType>
-template <class TreeBuilder> typename TreeBuilder::ExportSpecifier Parser<LexerType>::parseExportSpecifier(TreeBuilder& context, Vector<std::pair<const Identifier*, const Identifier*>>& maybeExportedLocalNames, bool& hasKeywordForLocalBindings, bool& hasReferencedModuleExportNames)
+template <class TreeBuilder> typename TreeBuilder::ExportSpecifier Parser<LexerType>::parseExportSpecifier(TreeBuilder& context, Vector<std::pair<const Identifier*, const Identifier*>, 8>& maybeExportedLocalNames, bool& hasKeywordForLocalBindings, bool& hasReferencedModuleExportNames)
 {
     // ExportSpecifier :
     // IdentifierName
@@ -3962,7 +3945,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseExportDeclara
         next();
 
         auto specifierList = context.createExportSpecifierList();
-        Vector<std::pair<const Identifier*, const Identifier*>> maybeExportedLocalNames;
+        Vector<std::pair<const Identifier*, const Identifier*>, 8> maybeExportedLocalNames;
 
         bool hasKeywordForLocalBindings = false;
         bool hasReferencedModuleExportNames = false;
@@ -5261,7 +5244,7 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parseMemberExpres
     TreeExpression base = 0;
     JSTextPosition expressionStart = tokenStartPosition();
     JSTokenLocation location = tokenLocation();
-    Vector<JSTextPosition> newTokenStartPositions;
+    Vector<JSTextPosition, 4> newTokenStartPositions;
     while (match(NEW)) {
         newTokenStartPositions.append(tokenStartPosition());
         next();
