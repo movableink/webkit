@@ -27,6 +27,7 @@ import Combine
 import RealityKit
 import Spatial
 import Foundation
+@_spi(Observation) import RealityFoundation
 @_spi(RealityKit) import RealityKit
 import WebKitSwift
 import os
@@ -219,8 +220,8 @@ final public class WKStageModeInteractionDriver: NSObject {
     
     private func subscribeToPitchChanges() {
         withObservationTracking {
-#if canImport(RealityFoundation, _version: 380)
-            _ = self.interactionContainer.proto_observableComponents[Transform.self]
+#if canImport(RealityFoundation, _version: 395)
+            _ = self.interactionContainer.proto_observable.components[Transform.self]
 #endif
         } onChange: {
             Task { @MainActor in
@@ -240,9 +241,9 @@ final public class WKStageModeInteractionDriver: NSObject {
     
     private func subscribeToYawChanges() {
         withObservationTracking {
-#if canImport(RealityFoundation, _version: 380)
+#if canImport(RealityFoundation, _version: 395)
             // By default, we do not care about the proxy, but we use the update to set the deceleration of the turntable container
-            _ = turntableAnimationProxyEntity.proto_observableComponents[Transform.self]
+            _ = turntableAnimationProxyEntity.proto_observable.components[Transform.self]
 #endif
         } onChange: {
             Task { @MainActor in
