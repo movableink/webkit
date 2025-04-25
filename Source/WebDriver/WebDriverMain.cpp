@@ -37,8 +37,9 @@
 // https://github.com/Igalia/wpe-android/blob/b918e3f8b86eda406436cb251c2e7b10a529008c/wpeview/src/main/cpp/Service/EntryPoint.cpp#L55
 //
 #if OS(ANDROID)
+namespace WebKit {
 __attribute__((visibility("default")))
-int WebKit::WebDriverProcessMain(int argc, char** argv)
+int WebDriverProcessMain(int argc, char** argv)
 #else
 int main(int argc, char** argv)
 #endif
@@ -53,3 +54,6 @@ int main(int argc, char** argv)
     WebDriver::WebDriverService service;
     return service.run(argc, argv);
 }
+#if OS(ANDROID)
+}
+#endif
