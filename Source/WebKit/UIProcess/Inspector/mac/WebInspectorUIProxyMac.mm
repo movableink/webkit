@@ -900,7 +900,8 @@ void WebInspectorUIProxy::platformSetAttachedWindowHeight(unsigned height)
     if (!m_isAttached)
         return;
 
-    inspectedViewFrameDidChange(height);
+    NSEdgeInsets webViewInsets = [m_inspectorViewController webView].safeAreaInsets;
+    inspectedViewFrameDidChange(height + webViewInsets.top + webViewInsets.bottom);
 }
 
 void WebInspectorUIProxy::platformSetAttachedWindowWidth(unsigned width)
@@ -908,7 +909,8 @@ void WebInspectorUIProxy::platformSetAttachedWindowWidth(unsigned width)
     if (!m_isAttached)
         return;
 
-    inspectedViewFrameDidChange(width);
+    NSEdgeInsets webViewInsets = [m_inspectorViewController webView].safeAreaInsets;
+    inspectedViewFrameDidChange(width + webViewInsets.left + webViewInsets.right);
 }
 
 void WebInspectorUIProxy::platformSetSheetRect(const FloatRect& rect)

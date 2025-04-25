@@ -927,56 +927,27 @@ WI.resizeDockedFrameMouseDown = function(event)
 
     let isDockedBottom = WI.dockConfiguration === WI.DockConfiguration.Bottom;
 
-    let windowProperty = isDockedBottom ? "innerHeight" : "innerWidth";
-    let eventScreenProperty = isDockedBottom ? "screenY" : "screenX";
-    let eventClientProperty = isDockedBottom ? "clientY" : "clientX";
+    let windowDimensionProperty = isDockedBottom ? "innerHeight" : "innerWidth";
+    let cursorPositionProperty = isDockedBottom ? "screenY" : "screenX";
 
     let resizerElement = event.target;
-    let firstClientPosition = event[eventClientProperty];
-    let lastScreenPosition = event[eventScreenProperty];
+    let initialWindowDimension = window[windowDimensionProperty] * WI.getZoomFactor();
+    let initialCursorPosition = event[cursorPositionProperty];
 
     function dividerDrag(event)
     {
         if (event.button !== 0)
             return;
 
-        let position = event[eventScreenProperty];
-        let delta = position - lastScreenPosition;
-        let clientPosition = event[eventClientProperty];
-
-        lastScreenPosition = position;
-
-        if (WI.dockConfiguration === WI.DockConfiguration.Left) {
-            // If the mouse is travelling rightward but is positioned left of the resizer, ignore the event.
-            if (delta > 0 && clientPosition < firstClientPosition)
-                return;
-
-            // If the mouse is travelling leftward but is positioned to the right of the resizer, ignore the event.
-            if (delta < 0 && clientPosition > window[windowProperty])
-                return;
-
-            // We later subtract the delta from the current position, but since the inspected view and inspector view
-            // are flipped when docked to left, we want dragging to have the opposite effect from docked to right.
+        let delta = event[cursorPositionProperty] - initialCursorPosition;
+        if (WI.dockConfiguration === WI.DockConfiguration.Left)
             delta *= -1;
-        } else {
-            // If the mouse is travelling downward/rightward but is positioned above/left of the resizer, ignore the event.
-            if (delta > 0 && clientPosition < firstClientPosition)
-                return;
 
-            // If the mouse is travelling upward/leftward but is positioned below/right of the resizer, ignore the event.
-            if (delta < 0 && clientPosition > firstClientPosition)
-                return;
-        }
-
-        let dimension = Math.max(0, window[windowProperty] - delta);
-        // If zoomed in/out, there be greater/fewer document pixels shown, but the inspector's
-        // width or height should be the same in device pixels regardless of the document zoom.
-        dimension *= WI.getZoomFactor();
-
+        let newDimension = Math.max(0, Math.round(initialWindowDimension - delta));
         if (isDockedBottom)
-            InspectorFrontendHost.setAttachedWindowHeight(dimension);
+            InspectorFrontendHost.setAttachedWindowHeight(newDimension);
         else
-            InspectorFrontendHost.setAttachedWindowWidth(dimension);
+            InspectorFrontendHost.setAttachedWindowWidth(newDimension);
     }
 
     function elementDragEnd(event)
