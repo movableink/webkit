@@ -421,7 +421,7 @@ webkit.org/b/251107 webgl/2.0.0/conformance2/rendering/fs-color-type-mismatch-co
 
 # WEBGL2 flakies
 webkit.org/b/251107 fast/canvas/webgl/webgl2-texture-upload-enums.html [ Failure ]
-webkit.org/b/251107 webgl/1.0.3/conformance/uniforms/uniform-default-values.html [ Pass Timeout ]
+webkit.org/b/251107 webgl/1.0.x/conformance/uniforms/uniform-default-values.html [ Pass Timeout ]
 webkit.org/b/251107 webgl/2.0.0/conformance2/extensions/promoted-extensions-in-shaders.html [ Pass Failure ]
 webkit.org/b/251107 webgl/2.0.0/conformance2/rendering/blitframebuffer-test.html [ Pass Failure ]
 webkit.org/b/251107 webgl/2.0.0/conformance2/state/gl-object-get-calls.html [ Pass Failure ]
@@ -436,8 +436,8 @@ webkit.org/b/251107 webgl/2.0.0/conformance/textures/video/tex-2d-rgba-rgba-unsi
 webkit.org/b/251107 webgl/2.0.0/conformance/textures/video/tex-2d-rgba-rgba-unsigned_short_5_5_5_1.html [ Pass Failure ]
 webkit.org/b/251107 webgl/2.0.0/conformance/textures/video/tex-2d-rgb-rgb-unsigned_byte.html [ Pass Failure Timeout ]
 webkit.org/b/251107 webgl/2.0.0/conformance/textures/video/tex-2d-rgb-rgb-unsigned_short_5_6_5.html [ Pass Failure ]
-webkit.org/b/251107 webgl/2.0.0/conformance/uniforms/out-of-bounds-uniform-array-access.html [ Pass Timeout ]
-webkit.org/b/251107 webgl/2.0.0/conformance/uniforms/uniform-default-values.html [ Pass Timeout ]
+webkit.org/b/251107 webgl/2.0.y/conformance/uniforms/out-of-bounds-uniform-array-access.html [ Pass Timeout ]
+webkit.org/b/251107 webgl/2.0.y/conformance/uniforms/uniform-default-values.html [ Pass Timeout ]
 webkit.org/b/251107 webgl/2.0.y/conformance2/extensions/ext-texture-norm16.html [ Failure ]
 webkit.org/b/251107 webgl/2.0.y/conformance2/extensions/webgl-multi-draw-instanced-base-vertex-base-instance.html [ Pass Failure Timeout ]
 webkit.org/b/251107 webgl/2.0.y/conformance/buffers/buffer-data-dynamic-delay.html [ Failure Pass Timeout ]

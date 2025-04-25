@@ -4589,7 +4589,6 @@ imported/w3c/web-platform-tests/css/css-fonts/font-weight-lighter-001.xht [ Imag
 imported/w3c/web-platform-tests/css/css-fonts/font-weight-normal-001.xht [ ImageOnlyFailure ]
 
 # webkit.org/b/203763 2019 WebGL test gardening: These tests pass in Safari and the conformance suite, but timeout in TestRunner and MiniBrowser.
-webgl/1.0.3/conformance/uniforms/gl-uniform-arrays.html [ Skip ]
 webgl/2.0.0/conformance2/rendering/blitframebuffer-filter-outofbounds.html [ Skip ]
 
 # webkit.org/b/203908 Tests generate inconsistent results or time out
@@ -4599,8 +4598,6 @@ webgl/1.0.3/conformance/canvas/rapid-resizing.html [ Skip ]
 # WebGL 2 Conformance Suite rules for regular bots post ANGLE backend adoption.
 # DEQP is skipped on the main fleet of bots because of the long run time.
 webgl/2.0.0/deqp [ Skip ]
-
-webkit.org/b/214893 [ Debug ] webgl/2.0.0/conformance/uniforms/gl-uniform-arrays.html [ Slow ]
 
 # webkit.org/b/208211 Additional inconsitencies between Intel bots and AMD machine
 webgl/2.0.0/conformance2/rendering/clipping-wide-points.html [ Pass Failure ]
@@ -4718,6 +4715,7 @@ webgl/1.0.x/conformance/renderbuffers [ Pass ]
 webgl/1.0.x/conformance/rendering [ Pass ]
 webgl/1.0.x/conformance/state [ Pass ]
 webgl/1.0.x/conformance/textures/canvas/ [ Pass ]
+webgl/1.0.x/conformance/uniforms [ Pass Slow ]
 
 # Debug builds on slower machines run close to the time out especially with GPUP enabled
 webkit.org/b/238691 [ Debug ] webgl/1.0.3/conformance/state/gl-object-get-calls.html [ Slow ]
@@ -4758,6 +4756,7 @@ webgl/2.0.y/conformance/reading [ Pass ]
 webgl/2.0.y/conformance/renderbuffers [ Pass ]
 webgl/2.0.y/conformance/rendering [ Pass ]
 webgl/2.0.y/conformance/textures/canvas/ [ Pass ]
+webgl/2.0.y/conformance/uniforms [ Pass Slow ]
 webgl/2.0.y/conformance2/context [ Pass ]
 webgl/2.0.y/conformance2/extensions/ext-conservative-depth.html [ Pass ]
 webgl/2.0.y/conformance2/extensions/ext-render-snorm.html [ Pass ]
@@ -4777,7 +4776,9 @@ webgl/2.0.y/conformance2/rendering/rasterizer-discard-and-implicit-clear.html [ 
 webgl/2.0.y/conformance2/state [ Pass ]
 webgl/2.0.y/conformance2/textures/canvas/ [ Pass ]
 webgl/2.0.y/conformance2/textures/webgl_canvas [ Pass ]
+webgl/2.0.y/conformance2/uniforms [ Pass ]
 webgl/2.0.y/conformance2/wasm [ Pass ]
+
 
 webkit.org/b/282031 webgl/1.0.x/conformance/context/context-lost-restored.html [ Failure ]
 webkit.org/b/282031 webgl/1.0.x/conformance/context/context-lost.html [ Failure ]
@@ -4804,6 +4805,7 @@ webgl/1.0.3/conformance/reading [ Skip ]
 webgl/1.0.3/conformance/renderbuffers [ Skip ]
 webgl/1.0.3/conformance/rendering [ Skip ]
 webgl/1.0.3/conformance/state [ Skip ]
+webgl/1.0.3/conformance/uniforms [ Skip ]
 webgl/2.0.0/conformance/attribs [ Skip ]
 webgl/2.0.0/conformance/buffers [ Skip ]
 webgl/2.0.0/conformance/context [ Skip ]
@@ -4818,6 +4820,7 @@ webgl/2.0.0/conformance/reading [ Skip ]
 webgl/2.0.0/conformance/renderbuffers [ Skip ]
 webgl/2.0.0/conformance/rendering [ Skip ]
 webgl/2.0.0/conformance/textures/canvas/ [ Skip ]
+webgl/2.0.0/conformance/uniforms [ Skip ]
 webgl/2.0.0/conformance2/context [ Skip ]
 webgl/2.0.0/conformance2/context/constants-and-properties-2.html [ Skip ]
 webgl/2.0.0/conformance2/state [ Skip ]

@@ -4252,7 +4252,12 @@ bool WebGLRenderingContextBase::validateUniformLocation(ASCIILiteral functionNam
 {
     if (!location)
         return false;
-    if (location->program() != m_currentProgram) {
+    RefPtr program = location->program();
+    if (!program) {
+        synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, functionName, "invalidated location"_s);
+        return false;
+    }
+    if (program != m_currentProgram) {
         synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, functionName, "location not for current program"_s);
         return false;
     }

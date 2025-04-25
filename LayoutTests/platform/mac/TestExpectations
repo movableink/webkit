@@ -1759,10 +1759,6 @@ webkit.org/b/222239 webgl/2.0.0/conformance2/glsl3/compound-assignment-type-comb
 # Note: Even when fixed, this bug needs to be marked as Slow in debug builds.
 webkit.org/b/222239 webgl/2.0.0/conformance2/state/gl-object-get-calls.html [ Pass Failure Slow ]
 
-# These ones only seem to fail on the bots. Could be older OSes?
-webkit.org/b/222239 webgl/1.0.3/conformance/uniforms/uniform-default-values.html [ Pass Failure ]
-webkit.org/b/222239 webgl/2.0.0/conformance/uniforms/uniform-default-values.html [ Pass Failure ]
-
 webkit.org/b/222844 fast/canvas/webgl/match-page-color-space.html [ Pass ImageOnlyFailure ]
 webkit.org/b/222844 imported/blink/compositing/draws-content/webgl-simple-background.html [ Pass ImageOnlyFailure ]
 

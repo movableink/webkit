@@ -1734,7 +1734,7 @@ webgl/2.0.0/conformance2/textures/image_bitmap_from_image_bitmap [ Skip ]
 [ Debug ] fast/canvas/webgl/webgl2-large-getbuffersubdata.html [ Skip ] # Slow
 
 # Needs JIT
-webkit.org/b/274059 webgl/2.0.0/conformance/uniforms/uniform-default-values.html [ Skip ] # Timeout
+webkit.org/b/274059 webgl/2.0.y/conformance/uniforms/uniform-default-values.html [ Skip ] # Timeout
 webkit.org/b/274059 webgl/2.0.y/conformance/glsl/bugs/complex-glsl-does-not-crash.html [ Skip ] # Timeout
 webkit.org/b/274059 webgl/2.0.y/conformance/glsl/misc/shader-uniform-packing-restrictions.html [ Skip ] # Timeout
 webkit.org/b/274059 webgl/2.0.y/conformance/misc/uninitialized-test.html [ Skip ] # Timeout
@@ -1764,7 +1764,7 @@ webgl/2.0.y/conformance/glsl/bugs/qualcomm-loop-with-continue-crash.html [ Skip 
 webgl/2.0.y/conformance/glsl/bugs/sketchfab-lighting-shader-crash.html [ Skip ] # Flaky timeout if it runs with other tests
 webgl/2.0.0/conformance/textures/misc/texture-mips.html [ Failure Pass ]
 webgl/2.0.0/conformance/textures/misc/texture-upload-size.html [ Skip ] # Timeout
-webgl/2.0.0/conformance/uniforms/out-of-bounds-uniform-array-access.html [ Skip ] # Timeout
+webgl/2.0.y/conformance/uniforms/out-of-bounds-uniform-array-access.html [ Skip ] # Timeout
 webgl/2.0.0/conformance2/attribs/gl-vertexattribipointer.html [ Skip ] # Timeout
 webgl/2.0.0/conformance2/glsl3/tricky-loop-conditions.html [ Failure ]
 webgl/2.0.0/conformance2/rendering/blitframebuffer-filter-srgb.html [ Pass Failure ]

@@ -3650,8 +3650,6 @@ imported/w3c/web-platform-tests/css/mediaqueries/viewport-script-dynamic.html [ 
 imported/w3c/web-platform-tests/html/rendering/bindings/the-select-element-0/option-label.html [ Pass ]
 webkit.org/b/214465 imported/w3c/web-platform-tests/css/mediaqueries/mq-gamut-002.html [ Pass ]
 
-webkit.org/b/237694 [ Debug ] webgl/1.0.3/conformance/uniforms/uniform-samplers-test.html [ Timeout Pass ]
-
 # image-set failing only on iOS
 webkit.org/b/253095 imported/w3c/web-platform-tests/css/css-images/image-set/image-set-type-rendering-2.html [ ImageOnlyFailure ]
 
@@ -5755,8 +5753,6 @@ webkit.org/b/181392 imported/w3c/web-platform-tests/service-workers/service-work
 
 webkit.org/b/181821 fast/visual-viewport/ios/caret-after-focus-in-fixed.html [ Pass Failure Timeout ]
 
-webkit.org/b/231514 webgl/1.0.3/conformance/uniforms/uniform-default-values.html [ Slow ]
-
 webkit.org/b/183860 http/wpt/service-workers/third-party-registration.html [ Pass Timeout ]
 
 webkit.org/b/184245 http/tests/workers/service/service-worker-cache-api.https.html [ Pass Failure Timeout ]
@@ -7447,9 +7443,6 @@ imported/w3c/web-platform-tests/mathml/relations/html5-tree/tabindex-002.tentati
 imported/w3c/web-platform-tests/mathml/relations/css-styling/mozilla-393760-1.xml [ ImageOnlyFailure ]
 
 webkit.org/b/277195 imported/w3c/web-platform-tests/html/semantics/interactive-elements/the-dialog-element/inert-label-focus.html [ Failure ]
-
-# webkit.org/b/277308 (webgl/1.0.3/conformance/uniforms/out-of-bounds-uniform-array-access.html needs to be marked as slow.)
-webgl/1.0.3/conformance/uniforms/out-of-bounds-uniform-array-access.html [ Slow ]
 
 # webkit.org/b/277710 [ iOS ] [ Release ] editing/execCommand/insert-ordered-list-and-delete.html is a flaky text failure
 editing/execCommand/insert-ordered-list-and-delete.html [ Pass Failure ]

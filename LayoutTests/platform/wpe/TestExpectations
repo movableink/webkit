@@ -870,8 +870,8 @@ webkit.org/b/246337 webgl/1.0.x/conformance/extensions/oes-vertex-array-object.h
 webkit.org/b/246337 webgl/1.0.3/conformance/canvas/drawingbuffer-static-canvas-test.html [ Pass Timeout ]
 webkit.org/b/246337 webgl/1.0.x/conformance/extensions/oes-texture-half-float-linear.html [ Pass Timeout ]
 webkit.org/b/246337 webgl/1.0.x/conformance/rendering/multisample-corruption.html [ Pass Timeout ]
-webkit.org/b/246337 webgl/1.0.3/conformance/uniforms/out-of-bounds-uniform-array-access.html [ Pass Timeout ]
-webkit.org/b/246337 webgl/1.0.3/conformance/uniforms/uniform-default-values.html [ Pass Timeout ]
+webkit.org/b/246337 webgl/1.0.x/conformance/uniforms/out-of-bounds-uniform-array-access.html [ Pass Timeout ]
+webkit.org/b/246337 webgl/1.0.x/conformance/uniforms/uniform-default-values.html [ Pass Timeout ]
 webkit.org/b/246337 webgl/1.0.x/conformance/rendering/gl-scissor-test.html [ Failure ]
 
 # fast/canvas/
@@ -1360,7 +1360,7 @@ webrtc/h264-high.html [ Skip ] # Timeout.
 fast/history/page-cache-suspended-audiocontext.html [ Pass Timeout ]
 imported/w3c/web-platform-tests/css/css-shapes/shape-outside-invalid-circle-000.html [ Pass Timeout ]
 imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/constants/001.html?wss [ Pass Timeout ]
-webgl/2.0.0/conformance/uniforms/out-of-bounds-uniform-array-access.html [ Pass Timeout ]
+webgl/2.0.y/conformance/uniforms/out-of-bounds-uniform-array-access.html [ Pass Timeout ]
 webgl/2.0.y/conformance/reading/read-pixels-test.html [ Pass Timeout ]
 
 imported/blink/fast/text/international/vertical-positioning-with-combining-marks.html [ ImageOnlyFailure ]
