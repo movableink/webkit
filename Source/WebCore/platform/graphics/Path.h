@@ -47,7 +47,6 @@ public:
     Path() = default;
     WEBCORE_EXPORT Path(PathSegment&&);
     WEBCORE_EXPORT Path(Vector<PathSegment>&&);
-    WEBCORE_EXPORT Path(std::span<const PathSegment>);
     explicit Path(const Vector<FloatPoint>& points);
     Path(Ref<PathImpl>&&);
 
@@ -100,10 +99,10 @@ public:
     WEBCORE_EXPORT bool isEmpty() const;
     bool definitelySingleLine() const;
     WEBCORE_EXPORT PlatformPathPtr platformPath() const;
-    WEBCORE_EXPORT PlatformPathPtr platformPathIfExists() const;
 
     const PathSegment* singleSegmentIfExists() const { return asSingle(); }
-    WEBCORE_EXPORT std::span<const PathSegment> segments() const;
+    WEBCORE_EXPORT const Vector<PathSegment>* segmentsIfExists() const;
+    WEBCORE_EXPORT Vector<PathSegment> segments() const;
 
     float length() const;
     bool isClosed() const;

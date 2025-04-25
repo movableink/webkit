@@ -47,18 +47,13 @@ Path::Path(const Vector<FloatPoint>& points)
 
 Path::Path(Vector<PathSegment>&& segments)
 {
-    if (segments.size() == 1)
-        m_data = segments[0];
-    else if (segments.size() > 1)
-        m_data = DataRef<PathImpl> { PathStream::create(WTFMove(segments)) };
-}
+    if (segments.isEmpty())
+        return;
 
-Path::Path(std::span<const PathSegment> segments)
-{
     if (segments.size() == 1)
-        m_data = segments[0];
-    else if (segments.size() > 1)
-        m_data = DataRef<PathImpl> { PathStream::create(Vector<PathSegment>(segments)) };
+        m_data = WTFMove(segments[0]);
+    else
+        m_data = DataRef<PathImpl> { PathStream::create(WTFMove(segments)) };
 }
 
 Path::Path(Ref<PathImpl>&& impl)
@@ -528,35 +523,27 @@ PlatformPathPtr Path::platformPath() const
     return const_cast<Path&>(*this).ensurePlatformPathImpl().platformPath();
 }
 
-PlatformPathPtr Path::platformPathIfExists() const
+const Vector<PathSegment>* Path::segmentsIfExists() const
 {
-    if (RefPtr impl = asImpl()) {
-        if (RefPtr platformImpl = dynamicDowncast<PlatformPathImpl>(impl.get()))
-            return platformImpl->platformPath();
+    if (auto impl = asImpl()) {
+        if (auto* stream = dynamicDowncast<PathStream>(*impl))
+            return &stream->segments();
     }
+
     return nullptr;
 }
 
-std::span<const PathSegment> Path::segments() const
+Vector<PathSegment> Path::segments() const
 {
-    if (std::holds_alternative<std::monostate>(m_data))
-        return { };
-    if (const auto* segment = std::get_if<PathSegment>(&m_data))
-        return singleElementSpan(*segment);
-    const auto& impl = std::get<DataRef<PathImpl>>(m_data);
-    if (RefPtr platformPathImpl = dynamicDowncast<PlatformPathImpl>(impl.ptr())) {
-        Vector<PathSegment> segments;
-        platformPathImpl->applySegments([&](const PathSegment& segment) {
-            segments.append(segment);
-        });
-        const_cast<Path&>(*this).setImpl(PathStream::create(WTFMove(segments)));
-    }
-    RefPtr streamImpl = dynamicDowncast<PathStream>(impl.ptr());
-    if (!streamImpl) {
-        ASSERT_NOT_REACHED();
-        return { };
-    }
-    return streamImpl->segments();
+    if (const auto* segments = segmentsIfExists())
+        return *segments;
+
+    Vector<PathSegment> segments;
+    applySegments([&](const PathSegment& segment) {
+        segments.append(segment);
+    });
+
+    return segments;
 }
 
 float Path::length() const

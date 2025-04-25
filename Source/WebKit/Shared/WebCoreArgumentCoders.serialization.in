@@ -2026,7 +2026,7 @@ header: <WebCore/RectEdges.h>
 }
 
 [AdditionalEncoder=StreamConnectionEncoder] class WebCore::Path {
-    std::span<const WebCore::PathSegment> segments();
+    Vector<WebCore::PathSegment> segments();
 }
 
 #if ENABLE(META_VIEWPORT)

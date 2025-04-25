@@ -112,7 +112,8 @@ static std::optional<FloatRect> guardRectForRegionBounds(const InteractionRegion
 
     bool isSmallRect = false;
     bool isComplexShape =  region.clipPath
-        && region.clipPath->segments().size() > complexSegmentsCount;
+        && region.clipPath->segmentsIfExists()
+        && region.clipPath->segmentsIfExists()->size() > complexSegmentsCount;
 
     auto guardRect = region.rectInLayerCoordinates;
 
