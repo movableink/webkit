@@ -5449,7 +5449,7 @@ MutationEventsEnabled:
   humanReadableName: "DOM mutation events"
   defaultValue:
     WebKitLegacy:
-      default: false
+      default: WebKit::defaultMutationEventsEnabled()
     WebKit:
       default: WebKit::defaultMutationEventsEnabled()
     WebCore:

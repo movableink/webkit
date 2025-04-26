@@ -59,6 +59,7 @@ bool defaultNeedsFrameNameFallbackToIdQuirk();
 bool defaultNeedsKeyboardEventDisambiguationQuirks();
 #endif
 
+bool defaultMutationEventsEnabled();
 bool defaultAttachmentElementEnabled();
 bool defaultShouldRestrictBaseURLSchemes();
 bool defaultAllowDisplayOfInsecureContent();

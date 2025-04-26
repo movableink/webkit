@@ -162,6 +162,11 @@ bool defaultNeedsKeyboardEventDisambiguationQuirks()
 
 #endif // PLATFORM(MAC)
 
+bool defaultMutationEventsEnabled()
+{
+    return WTF::CocoaApplication::isAppleApplication() || !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::MutationEventsDisabledByDefault);
+}
+
 bool defaultAttachmentElementEnabled()
 {
 #if PLATFORM(IOS_FAMILY)
