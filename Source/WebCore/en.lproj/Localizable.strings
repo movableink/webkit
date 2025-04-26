@@ -1087,9 +1087,6 @@
 /* Label for only item in menu that appears when clicking on the search field image, when no searches have been performed */
 "No recent searches" = "No recent searches";
 
-/* WKWebExtensionErrorInvalidBackgroundPersistence description for webRequest events */
-"Non-persistent background content cannot listen to `webRequest` events." = "Non-persistent background content cannot listen to `webRequest` events.";
-
 /* Option in segmented control for choosing list type in text editing */
 "None" = "None";
 

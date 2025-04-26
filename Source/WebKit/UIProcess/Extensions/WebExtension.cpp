@@ -1172,9 +1172,6 @@ void WebExtension::populateBackgroundPropertiesIfNeeded()
         m_backgroundContentIsPersistent = false;
     }
 
-    if (!m_backgroundContentIsPersistent && hasRequestedPermission("webRequest"_s))
-        recordError(createError(Error::InvalidBackgroundPersistence, WEB_UI_STRING("Non-persistent background content cannot listen to `webRequest` events.", "WKWebExtensionErrorInvalidBackgroundPersistence description for webRequest events")));
-
 #if PLATFORM(VISION)
     if (m_backgroundContentIsPersistent)
         recordError(createError(Error::InvalidBackgroundPersistence, WEB_UI_STRING("Invalid `persistent` manifest entry. A non-persistent background is required on visionOS.", "WKWebExtensionErrorInvalidBackgroundPersistence description for visionOS")));

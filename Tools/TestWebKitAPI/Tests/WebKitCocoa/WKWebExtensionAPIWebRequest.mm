@@ -34,9 +34,37 @@
 
 namespace TestWebKitAPI {
 
+static auto *webRequestManifest = @{ @"manifest_version": @3, @"permissions": @[ @"webRequest" ], @"background": @{ @"scripts": @[ @"background.js" ], @"type": @"module" } };
+
 #if PLATFORM(MAC)
 
-static auto *webRequestManifest = @{ @"manifest_version": @2, @"permissions": @[ @"webRequest" ], @"background": @{ @"scripts": @[ @"background.js" ], @"type": @"module", @"persistent": @YES } };
+TEST(WKWebExtensionAPIWebRequest, ManifestV2Persistent)
+{
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.assertEq(typeof browser.webRequest, 'object', 'webRequest should be defined')",
+
+        @"browser.test.notifyPass()"
+    ]);
+
+    auto *manifest = @{ @"manifest_version": @2, @"permissions": @[ @"webRequest" ], @"background": @{ @"scripts": @[ @"background.js" ], @"type": @"module", @"persistent": @YES } };
+
+    Util::loadAndRunExtension(manifest, @{ @"background.js": backgroundScript });
+}
+
+#endif // PLATFORM(MAC)
+
+TEST(WKWebExtensionAPIWebRequest, ManifestV2NonPersistent)
+{
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.assertEq(typeof browser.webRequest, 'object', 'webRequest should be defined')",
+
+        @"browser.test.notifyPass()"
+    ]);
+
+    auto *manifest = @{ @"manifest_version": @2, @"permissions": @[ @"webRequest" ], @"background": @{ @"scripts": @[ @"background.js" ], @"type": @"module", @"persistent": @NO } };
+
+    Util::loadAndRunExtension(manifest, @{ @"background.js": backgroundScript });
+}
 
 TEST(WKWebExtensionAPIWebRequest, EventListenerRegistration)
 {
@@ -1432,8 +1460,6 @@ TEST(WKWebExtensionAPIWebRequest, RemoveListenerDuringEvent)
 
     [manager run];
 }
-
-#endif // PLATFORM(MAC)
 
 TEST(WKWebExtensionAPIWebRequest, Initialization)
 {
