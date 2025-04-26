@@ -339,19 +339,17 @@ ALWAYS_INLINE bool isHole(double value)
     return std::isnan(value);
 }
 
-ALWAYS_INLINE bool isHole(const WriteBarrier<Unknown>& value)
-{
-    return !value;
-}
-
 template<typename T>
 ALWAYS_INLINE bool containsHole(const T* data, unsigned length)
 {
-    for (unsigned i = 0; i < length; ++i) {
-        if (isHole(data[i]))
-            return true;
-    }
-    return false;
+    if constexpr (std::is_same_v<T, double>) {
+        for (unsigned i = 0; i < length; ++i) {
+            if (isHole(data[i]))
+                return true;
+        }
+        return false;
+    } else
+        return WTF::find64(std::bit_cast<const uint64_t*>(data), JSValue::encode(JSValue()), length);
 }
 
 } // namespace JSC

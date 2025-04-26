@@ -1661,7 +1661,8 @@ bool JSArray::unshiftCountWithAnyIndexingType(JSGlobalObject* globalObject, unsi
         // through shifting and then realize we should have been in ArrayStorage mode.
         if (moveCount) {
             if (UNLIKELY(holesMustForwardToPrototype())) {
-                if (UNLIKELY(WTF::find64(std::bit_cast<const uint64_t*>(butterfly->contiguous().data() + startIndex), JSValue::encode(JSValue()), moveCount)))
+                auto* buffer = butterfly->contiguous().data() + startIndex;
+                if (UNLIKELY(containsHole(buffer, moveCount)))
                     RELEASE_AND_RETURN(scope, unshiftCountWithArrayStorage(globalObject, startIndex, count, ensureArrayStorage(vm)));
             }
 
@@ -2013,16 +2014,11 @@ JSArray* tryCloneArrayFromFast(JSGlobalObject* globalObject, JSValue arrayValue)
     IndexingType resultType = sourceType;
     if (sourceType == ArrayWithDouble) {
         double* buffer = butterfly->contiguousDouble().data();
-        for (unsigned i = 0; i < resultSize; ++i) {
-            double value = buffer[i];
-            if (std::isnan(value)) {
-                resultType = ArrayWithContiguous;
-                break;
-            }
-        }
+        if (UNLIKELY(containsHole(buffer, resultSize)))
+            resultType = ArrayWithContiguous;
     } else if (sourceType == ArrayWithInt32) {
         auto* buffer = butterfly->contiguous().data();
-        if (UNLIKELY(WTF::find64(std::bit_cast<const uint64_t*>(buffer), JSValue::encode(JSValue()), resultSize)))
+        if (UNLIKELY(containsHole(buffer, resultSize)))
             resultType = ArrayWithContiguous;
     } else if (sourceType == ArrayWithUndecided && resultSize)
         resultType = ArrayWithContiguous;
