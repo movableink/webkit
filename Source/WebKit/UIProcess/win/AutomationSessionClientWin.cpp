@@ -83,6 +83,7 @@ void AutomationSessionClient::requestNewPageWithOptions(WebKit::WebAutomationSes
                 false, /* hasOpener */
                 false, /* isPerformingHTTPFallback */
                 false, /* isInitialFrameSrcLoad */
+                false, /* isContentExtensionRedirect */
                 { }, /* openedMainFrameName */
                 { }, /* requesterOrigin */
                 { }, /* requesterTopOrigin */
