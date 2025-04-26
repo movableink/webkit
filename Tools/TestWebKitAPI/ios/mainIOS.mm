@@ -46,6 +46,11 @@ int main(int argc, char** argv)
 
         [[NSUserDefaults standardUserDefaults] setVolatileDomain:argumentDomain.get() forName:NSArgumentDomain];
 
+#if ENABLE(SCREEN_TIME)
+        RetainPtr uiKitDefaults = adoptNS([[NSUserDefaults alloc] initWithSuiteName:@"com.apple.UIKit"]);
+        [uiKitDefaults registerDefaults:@{ @"ForceLegacyHostingRemoteViewControllerForService": @"com.apple.ScreenTime.ScreenTimeWebExtension" }];
+#endif
+
         enableAllSDKAlignedBehaviors();
 
         passed = TestWebKitAPI::TestsController::singleton().run(argc, argv);
