@@ -126,15 +126,16 @@ private:
     void flushCompressedSampleQueue();
     void flushDecodedSampleQueue();
     void cancelTimer();
-    void purgeDecodedSampleQueueAndDisplay(FlushId);
-    bool purgeDecodedSampleQueue(const CMTime&);
-    void schedulePurgeAndDisplayAtTime(const CMTime&);
-    void maybeReschedulePurgeAndDisplay(FlushId);
+    void purgeDecodedSampleQueue(FlushId);
+    bool purgeDecodedSampleQueueUntilTime(const CMTime&);
+    void schedulePurgeAtTime(const CMTime&);
+    void maybeReschedulePurge(FlushId);
     void enqueueDecodedSample(RetainPtr<CMSampleBufferRef>&&);
     size_t decodedSamplesCount() const;
     RetainPtr<CMSampleBufferRef> nextDecodedSample() const;
     CMTime nextDecodedSampleEndTime() const;
-    size_t maximumDecodedSampleCount(const WebCoreDecompressionSession&) const;
+    CMTime lastDecodedSampleTime() const;
+    bool hasIncomingOutOfOrderFrame(const CMTime&) const;
 
     void assignResourceOwner(CMSampleBufferRef);
     bool areSamplesQueuesReadyForMoreMediaData(size_t waterMark) const;
@@ -162,6 +163,7 @@ private:
     std::atomic<FlushId> m_flushId { 0 };
     Deque<std::pair<RetainPtr<CMSampleBufferRef>, FlushId>> m_compressedSampleQueue WTF_GUARDED_BY_CAPABILITY(dispatcher().get());
     std::atomic<uint32_t> m_compressedSampleQueueSize { 0 };
+    static constexpr MediaTime s_decodeAhead { 133, 1000 };
     RetainPtr<CMBufferQueueRef> m_decodedSampleQueue; // created on the main thread, immutable after creation.
     RefPtr<WebCoreDecompressionSession> m_decompressionSession WTF_GUARDED_BY_LOCK(m_lock);
     std::atomic<bool> m_isUsingDecompressionSession { false };
@@ -177,6 +179,10 @@ private:
     std::optional<uint32_t> m_currentCodec;
     std::atomic<bool> m_gotDecodingError { false };
     bool m_needsFlushing WTF_GUARDED_BY_CAPABILITY(mainThread) { false };
+
+    // B-Frame tracker.
+    MediaTime m_highestPresentationTime WTF_GUARDED_BY_CAPABILITY(mainThread) { MediaTime::invalidTime() };
+    bool m_hasOutOfOrderFrames WTF_GUARDED_BY_CAPABILITY(dispatcher().get()) { false };
 
     // Playback Statistics
     std::atomic<unsigned> m_totalVideoFrames { 0 };
