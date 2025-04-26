@@ -98,6 +98,8 @@ ThreadedCompositor::ThreadedCompositor(LayerTreeHost& layerTreeHost, ThreadedDis
 {
     ASSERT(RunLoop::isMain());
 
+    initializeFPSCounter();
+
     const auto& webPage = m_layerTreeHost->webPage();
     updateSceneAttributes(webPage.size(), webPage.deviceScaleFactor());
 
@@ -296,7 +298,6 @@ void ThreadedCompositor::paintToCurrentGLContext(const TransformationMatrix& mat
         m_textureMapper->endClip();
 #endif
 
-    m_fpsCounter.updateFPSAndDisplay(*m_textureMapper, clipRect.location(), matrix);
 #if ENABLE(DAMAGE_TRACKING)
     if (m_damageVisualizer)
         m_damageVisualizer->paintDamage(*m_textureMapper, m_surface->frameDamage());
@@ -367,6 +368,8 @@ void ThreadedCompositor::renderLayerTree()
     WTFBeginSignpost(this, PaintToGLContext);
     paintToCurrentGLContext(viewportTransform, viewportSize);
     WTFEndSignpost(this, PaintToGLContext);
+
+    updateFPSCounter();
 
     uint32_t compositionRequestID = m_compositionRequestID.load();
 #if HAVE(DISPLAY_LINK)
@@ -483,6 +486,40 @@ void ThreadedCompositor::updateSceneAttributes(const IntSize& size, float device
     m_attributes.viewportSize = size;
     m_attributes.deviceScaleFactor = deviceScaleFactor;
     m_attributes.viewportSize.scale(m_attributes.deviceScaleFactor);
+}
+
+void ThreadedCompositor::initializeFPSCounter()
+{
+    // When the envvar is set, the FPS is logged to the console, so it may be necessary to enable the
+    // 'LogsPageMessagesToSystemConsole' runtime preference to see it.
+    const auto showFPSEnvironment = String::fromLatin1(getenv("WEBKIT_SHOW_FPS"));
+    bool ok = false;
+    Seconds interval(showFPSEnvironment.toDouble(&ok));
+    if (ok && interval) {
+        m_fpsCounter.exposesFPS = true;
+        m_fpsCounter.calculationInterval = interval;
+    }
+}
+
+void ThreadedCompositor::updateFPSCounter()
+{
+    if (!m_fpsCounter.exposesFPS
+#if USE(SYSPROF_CAPTURE)
+        && !SysprofAnnotator::singletonIfCreated()
+#endif
+    )
+        return;
+
+    m_fpsCounter.frameCountSinceLastCalculation++;
+    const Seconds delta = MonotonicTime::now() - m_fpsCounter.lastCalculationTimestamp;
+    if (delta >= m_fpsCounter.calculationInterval) {
+        WTFSetCounter(FPS, static_cast<int>(std::round(m_fpsCounter.frameCountSinceLastCalculation / delta.seconds())));
+        if (m_fpsCounter.exposesFPS)
+            m_fpsCounter.fps = m_fpsCounter.frameCountSinceLastCalculation / delta.seconds();
+        m_fpsCounter.frameCountSinceLastCalculation = 0;
+        m_fpsCounter.lastCalculationTimestamp += delta;
+    } else if (m_fpsCounter.exposesFPS)
+        m_fpsCounter.fps = std::nullopt;
 }
 
 }

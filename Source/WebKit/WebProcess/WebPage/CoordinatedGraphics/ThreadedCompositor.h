@@ -32,7 +32,6 @@
 #include <WebCore/GLContext.h>
 #include <WebCore/IntSize.h>
 #include <WebCore/TextureMapperDamageVisualizer.h>
-#include <WebCore/TextureMapperFPSCounter.h>
 #include <atomic>
 #include <wtf/Atomics.h>
 #include <wtf/CheckedPtr.h>
@@ -103,6 +102,8 @@ public:
 
     bool isActive() const;
 
+    std::optional<double> fps() const { return m_fpsCounter.fps.load(); };
+
 #if ENABLE(DAMAGE_TRACKING)
     void setDamagePropagation(WebCore::Damage::Propagation);
     WebCore::FrameDamageHistory* frameDamageHistory() const { return m_frameDamageHistory.get(); }
@@ -130,6 +131,9 @@ private:
 
     void updateSceneAttributes(const WebCore::IntSize&, float deviceScaleFactor);
 
+    void initializeFPSCounter();
+    void updateFPSCounter();
+
     CheckedPtr<LayerTreeHost> m_layerTreeHost;
     std::unique_ptr<AcceleratedSurface> m_surface;
     RefPtr<CoordinatedSceneState> m_sceneState;
@@ -151,7 +155,14 @@ private:
     } m_attributes;
 
     std::unique_ptr<WebCore::TextureMapper> m_textureMapper;
-    WebCore::TextureMapperFPSCounter m_fpsCounter;
+
+    struct {
+        bool exposesFPS { false };
+        Seconds calculationInterval { 1_s };
+        MonotonicTime lastCalculationTimestamp;
+        unsigned frameCountSinceLastCalculation { 0 };
+        std::atomic<std::optional<double>> fps;
+    } m_fpsCounter;
 
 #if ENABLE(DAMAGE_TRACKING)
     WebCore::Damage::Propagation m_damagePropagation { WebCore::Damage::Propagation::None };

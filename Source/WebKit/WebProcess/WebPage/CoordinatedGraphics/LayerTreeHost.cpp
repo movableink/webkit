@@ -489,6 +489,10 @@ void LayerTreeHost::didRenderFrame()
 {
     if (auto* drawingArea = m_webPage.drawingArea())
         drawingArea->didCompleteRenderingUpdateDisplay();
+    if (auto fps = m_compositor->fps()) {
+        if (RefPtr document = m_webPage.corePage()->localTopDocument())
+            document->addConsoleMessage(MessageSource::Rendering, MessageLevel::Info, makeString("FPS: "_s, *fps));
+    }
 }
 
 #if HAVE(DISPLAY_LINK)
