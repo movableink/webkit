@@ -126,7 +126,7 @@ private:
                         if (!(child1->arrayModes() & supportedArrays))
                             break;
 
-                        if (child1.useKind() == AnyIntUse) {
+                        if (child1.useKind() == AnyIntUse || child1.useKind() == RealNumberUse) {
                             if (child1->origin.exitOK)
                                 candidates.add(child1.node());
                             break;
@@ -391,6 +391,7 @@ private:
                         }
                         switch (user->child1().useKind()) {
                         case AnyIntUse:
+                        case RealNumberUse:
                             break;
                         default: {
                             ok = false;
