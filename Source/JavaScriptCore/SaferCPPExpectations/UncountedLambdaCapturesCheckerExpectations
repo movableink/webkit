@@ -21,4 +21,3 @@ runtime/WaiterListManager.h
 wasm/WasmCallee.cpp
 wasm/WasmTable.cpp
 wasm/js/JSWebAssembly.cpp
-wasm/js/WebAssemblyModuleRecord.cpp
