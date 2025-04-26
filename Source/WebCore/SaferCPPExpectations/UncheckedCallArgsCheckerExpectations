@@ -303,7 +303,6 @@ html/FTPDirectoryDocument.cpp
 html/FileInputType.cpp
 html/FormAssociatedCustomElement.cpp
 html/FormAssociatedElement.cpp
-html/FormListedElement.cpp
 html/HTMLAllCollection.cpp
 html/HTMLAnchorElement.cpp
 html/HTMLAttachmentElement.cpp
