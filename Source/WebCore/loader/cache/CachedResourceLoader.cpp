@@ -1202,7 +1202,9 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
                 return makeUnexpected(ResourceError { errorDomainWebKitInternal, 0, url, "Resource blocked by content blocker"_s, ResourceError::Type::AccessControl });
             }
             if (type == CachedResource::Type::MainResource && RegistrableDomain { resourceRequest.url() } != originalDomain) {
-                frame->loader().load(FrameLoadRequest { frame, { URL { resourceRequest.url() } } });
+                FrameLoadRequest frameLoadRequest(frame, ResourceRequest(URL { resourceRequest.url() }));
+                frameLoadRequest.setIsContentExtensionRedirect(true);
+                frame->loader().load(WTFMove(frameLoadRequest));
                 return makeUnexpected(ResourceError { errorDomainWebKitInternal, 0, url, "Loading in a new process"_s, ResourceError::Type::Cancellation });
             }
         }
