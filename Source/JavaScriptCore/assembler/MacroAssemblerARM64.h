@@ -6662,28 +6662,32 @@ protected:
     ALWAYS_INLINE void loadSignedAddressedByUnsignedImmediate(RegisterID rt, RegisterID rn, unsigned pimm)
     {
         static_assert(datasize >= loadSize);
-        if constexpr (loadSize == 8)
+        if constexpr (datasize == loadSize)
+            loadUnsignedImmediate<datasize>(rt, rn, pimm);
+        else if constexpr (loadSize == 8)
             m_assembler.ldrsb<datasize>(rt, rn, pimm);
         else if constexpr (loadSize == 16)
             m_assembler.ldrsh<datasize>(rt, rn, pimm);
         else if constexpr (loadSize == 32)
             m_assembler.ldrsw<datasize>(rt, rn, pimm);
         else
-            loadUnsignedImmediate<datasize>(rt, rn, pimm);
+            RELEASE_ASSERT_NOT_REACHED();
     }
 
     template<int datasize, int loadSize>
     ALWAYS_INLINE void loadSignedAddressedByUnscaledImmediate(RegisterID rt, RegisterID rn, int simm)
     {
         static_assert(datasize >= loadSize);
-        if constexpr (loadSize == 8)
+        if constexpr (datasize == loadSize)
+            loadUnscaledImmediate<datasize>(rt, rn, simm);
+        else if constexpr (loadSize == 8)
             m_assembler.ldursb<datasize>(rt, rn, simm);
         else if constexpr (loadSize == 16)
             m_assembler.ldursh<datasize>(rt, rn, simm);
         else if constexpr (loadSize == 32)
             m_assembler.ldursw<datasize>(rt, rn, simm);
         else
-            loadUnscaledImmediate<datasize>(rt, rn, simm);
+            RELEASE_ASSERT_NOT_REACHED();
     }
 
     template<int datasize>
