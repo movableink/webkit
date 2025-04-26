@@ -1368,16 +1368,6 @@ test/staging/sm/RegExp/unicode-braced.js:
   default: 'SyntaxError: Invalid regular expression: regular expression too large'
 test/staging/sm/RegExp/unicode-class-braced.js:
   default: 'SyntaxError: Invalid regular expression: regular expression too large'
-test/staging/sm/RegExp/unicode-class-lead-trail.js:
-  default: "Test262Error: Actual argument shouldn't be nullish. "
-test/staging/sm/RegExp/unicode-class-negated.js:
-  default: 'Test262Error: Actual [�] and expected [�] should have the same contents. '
-test/staging/sm/RegExp/unicode-everything.js:
-  default: "Test262Error: Actual argument shouldn't be nullish. "
-test/staging/sm/RegExp/unicode-lead-trail.js:
-  default: "Test262Error: Actual argument shouldn't be nullish. "
-test/staging/sm/RegExp/unicode-raw.js:
-  default: 'Test262Error: Expected SameValue(«🐸», «null») to be true'
 test/staging/sm/String/string-code-point-upper-lower-mapping.js:
   default: 'Test262Error: Expected SameValue(«68976», «68944») to be true'
 test/staging/sm/String/string-upper-lower-mapping.js:
