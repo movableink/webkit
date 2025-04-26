@@ -85,11 +85,18 @@ void ResourceMonitorPersistence::reportSQLError(ASCIILiteral method, ASCIILitera
 #endif
 }
 
-bool ResourceMonitorPersistence::openDatabase(String&& path)
+static String databasePath(const String& directoryPath)
+{
+    if (directoryPath.isEmpty())
+        return SQLiteDatabase::inMemoryPath();
+    return FileSystem::pathByAppendingComponent(directoryPath, "ResourceMonitorPersistence.db"_s);
+}
+
+bool ResourceMonitorPersistence::openDatabase(String&& directoryPath)
 {
     ASSERT(!isMainThread());
 
-    FileSystem::makeAllDirectories(FileSystem::parentPath(path));
+    FileSystem::makeAllDirectories(directoryPath);
 
     m_sqliteDB = makeUnique<SQLiteDatabase>();
 
@@ -98,6 +105,8 @@ bool ResourceMonitorPersistence::openDatabase(String&& path)
         closeDatabase();
         return false;
     };
+
+    const auto path = databasePath(directoryPath);
 
     if (!m_sqliteDB->open(path, SQLiteDatabase::OpenMode::ReadWriteCreate, SQLiteDatabase::OpenOptions::CanSuspendWhileLocked))
         return reportErrorAndCloseDatabase("open database"_s);

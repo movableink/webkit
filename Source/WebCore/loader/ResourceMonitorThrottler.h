@@ -39,7 +39,7 @@ class ResourceMonitorPersistence;
 class ResourceMonitorThrottler final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    ResourceMonitorThrottler(String&& databasePath, size_t count, Seconds duration, size_t maxHosts);
+    ResourceMonitorThrottler(String&& databaseDirectoryPath, size_t count, Seconds duration, size_t maxHosts);
     ~ResourceMonitorThrottler();
 
     void openDatabase(String&& path);

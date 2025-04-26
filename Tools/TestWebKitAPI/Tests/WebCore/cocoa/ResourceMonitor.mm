@@ -47,7 +47,7 @@ public:
 protected:
     ContinuousApproximateTime m_reference;
     RefPtr<ResourceMonitorThrottlerHolder> m_throttler;
-    String m_temporayDatabasePath;
+    String m_persistenceDirectory;
 
     void prepareThrottler(size_t count, Seconds duration, size_t maxHosts, bool withPersistence = false)
     {
@@ -104,11 +104,9 @@ protected:
 
     String& temporaryDatabasePath()
     {
-        if (m_temporayDatabasePath.isEmpty()) {
-            m_temporayDatabasePath = FileSystem::createTemporaryFile("tempDatabaseForResourceMonitorThrottler"_s);
-            FileSystem::deleteFile(m_temporayDatabasePath);
-        }
-        return m_temporayDatabasePath;
+        if (m_persistenceDirectory.isEmpty())
+            m_persistenceDirectory = FileSystem::createTemporaryDirectory(@"ResourceMonitor");
+        return m_persistenceDirectory;
     }
 };
 

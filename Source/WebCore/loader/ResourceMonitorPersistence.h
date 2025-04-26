@@ -44,7 +44,7 @@ public:
     WEBCORE_EXPORT ResourceMonitorPersistence();
     WEBCORE_EXPORT ~ResourceMonitorPersistence();
 
-    bool openDatabase(String&& path);
+    bool openDatabase(String&& directoryPath);
     bool isDatabaseOpen() const { return m_sqliteDB && m_sqliteDB->isOpen(); }
 
     void deleteAllRecords();
