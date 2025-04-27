@@ -172,6 +172,30 @@ void callMemberFunction(T* object, MF U::* function, Connection& connection, Arg
         }, std::forward<ArgsTuple>(tuple));
 }
 
+template<typename T, typename U, typename MF, typename ArgsTuple>
+void callMemberFunctionCoroutine(T* object, MF U::* function, ArgsTuple&& tuple)
+{
+    [&] -> Task {
+        Ref protectedObject { *object };
+        co_await std::apply([&](auto&&... args) {
+            // Use of object without protection is safe here since std::apply() runs synchronously.
+            SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE return (object->*function)(std::forward<decltype(args)>(args)...);
+        }, std::forward<ArgsTuple>(tuple));
+    }();
+}
+
+template<typename T, typename U, typename MF, typename ArgsTuple>
+void callMemberFunctionCoroutine(T* object, MF U::* function, Connection& connection, ArgsTuple&& tuple)
+{
+    [&] -> Task {
+        Ref protectedObject { *object };
+        co_await std::apply([&](auto&&... args) {
+            // Use of object without protection is safe here since std::apply() runs synchronously.
+            SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE return (object->*function)(connection, std::forward<decltype(args)>(args)...);
+        }, std::forward<ArgsTuple>(tuple));
+    }();
+}
+
 template<typename T, typename U, typename MF, typename ArgsTuple, typename CH>
 void callMemberFunctionCoroutine(T* object, MF U::* function, ArgsTuple&& tuple, CompletionHandler<CH>&& completionHandler)
 {
@@ -267,6 +291,7 @@ struct MethodSignatureValidation<R(MethodArgumentTypes...)>
     : MethodSignatureValidationImpl<std::tuple<>, std::tuple<MethodArgumentTypes...>> {
     using ReturnType = R;
     static constexpr bool returnsVoid = std::is_same_v<R, void>;
+    static constexpr bool returnsAwaitableVoid = std::is_same_v<R, Awaitable<void>>;
 };
 
 template<typename R, typename... MethodArgumentTypes>
@@ -274,6 +299,7 @@ struct MethodSignatureValidation<R(MethodArgumentTypes...) const>
     : MethodSignatureValidation<R(MethodArgumentTypes...)> {
     using ReturnType = R;
     static constexpr bool returnsVoid = std::is_same_v<R, void>;
+    static constexpr bool returnsAwaitableVoid = std::is_same_v<R, Awaitable<void>>;
 };
 
 template<typename> struct AwaitableReturnTuple;
@@ -299,10 +325,17 @@ void handleMessage(C& connection, Decoder& decoder, T* object, MF U::* function)
         return;
 
     logMessage(connection, MessageType::name(), object, *arguments);
-    if constexpr (ValidationType::expectsConnectionArgument)
-        callMemberFunction(object, function, connection, WTFMove(*arguments));
-    else
-        callMemberFunction(object, function, WTFMove(*arguments));
+    if constexpr (ValidationType::returnsAwaitableVoid) {
+        if constexpr (ValidationType::expectsConnectionArgument)
+            callMemberFunctionCoroutine(object, function, connection, WTFMove(*arguments));
+        else
+            callMemberFunctionCoroutine(object, function, WTFMove(*arguments));
+    } else {
+        if constexpr (ValidationType::expectsConnectionArgument)
+            callMemberFunction(object, function, connection, WTFMove(*arguments));
+        else
+            callMemberFunction(object, function, WTFMove(*arguments));
+    }
 }
 
 template<typename MessageType, typename T, typename U, typename MF>

@@ -12851,6 +12851,13 @@ void WebPageProxy::convertRectToMainFrameCoordinates(WebCore::FloatRect rect, st
     });
 }
 
+Awaitable<std::optional<WebCore::FloatRect>> WebPageProxy::convertRectToMainFrameCoordinates(WebCore::FloatRect rect, std::optional<WebCore::FrameIdentifier> frameID)
+{
+    co_return co_await AwaitableFromCompletionHandler<std::optional<WebCore::FloatRect>> { [protectedThis = Ref { *this }, rect, frameID] (auto completionHandler) {
+        protectedThis->convertRectToMainFrameCoordinates(rect, frameID, WTFMove(completionHandler));
+    } };
+}
+
 void WebPageProxy::didFinishLoadingDataForCustomContentProvider(const String& suggestedFilename, std::span<const uint8_t> dataReference)
 {
     if (RefPtr pageClient = this->pageClient())
@@ -13140,24 +13147,17 @@ void WebPageProxy::substitutionsPanelIsShowing(CompletionHandler<void(bool)>&& c
     completionHandler(TextChecker::substitutionsPanelIsShowing());
 }
 
-void WebPageProxy::showCorrectionPanel(AlternativeTextType panelType, const FloatRect& boundingBoxOfReplacedString, String&& replacedString, String&& replacementString, Vector<String>&& alternativeReplacementStrings, FrameIdentifier rootFrameID)
+Awaitable<void> WebPageProxy::showCorrectionPanel(AlternativeTextType panelType, FloatRect boundingBoxOfReplacedString, String replacedString, String replacementString, Vector<String> alternativeReplacementStrings, FrameIdentifier rootFrameID)
 {
     RefPtr pageClient = this->pageClient();
     if (!pageClient)
-        return;
+        co_return;
 
-    convertRectToMainFrameCoordinates(boundingBoxOfReplacedString, rootFrameID, [pageClient = WTFMove(pageClient),
-        panelType = WTFMove(panelType),
-        replacedString = WTFMove(replacedString),
-        replacementString = WTFMove(replacementString),
-        alternativeReplacementStrings = WTFMove(alternativeReplacementStrings)]
-    (std::optional<WebCore::FloatRect> convertedBoundingBox)
-    {
-        if (!convertedBoundingBox)
-            return;
+    auto convertedBoundingBox = co_await convertRectToMainFrameCoordinates(boundingBoxOfReplacedString, rootFrameID);
+    if (!convertedBoundingBox)
+        co_return;
 
-        pageClient->showCorrectionPanel(panelType, convertedBoundingBox.value(), replacedString, replacementString, alternativeReplacementStrings);
-    });
+    pageClient->showCorrectionPanel(panelType, *convertedBoundingBox, replacedString, replacementString, alternativeReplacementStrings);
 }
 
 void WebPageProxy::dismissCorrectionPanel(ReasonForDismissingAlternativeText reason)
