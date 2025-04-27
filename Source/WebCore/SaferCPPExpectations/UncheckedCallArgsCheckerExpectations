@@ -165,7 +165,6 @@ css/query/MediaQueryFeatures.cpp
 css/typedom/CSSStyleValueFactory.cpp
 css/typedom/ComputedStylePropertyMapReadOnly.cpp
 css/typedom/InlineStylePropertyMap.cpp
-dom/ActiveDOMObject.cpp
 dom/Attr.cpp
 dom/BoundaryPoint.cpp
 dom/CharacterData.cpp
@@ -175,9 +174,6 @@ dom/ContainerNode.cpp
 dom/ContainerNodeAlgorithms.cpp
 dom/ContentVisibilityDocumentState.cpp
 dom/CurrentScriptIncrementer.h
-dom/CustomElementReactionQueue.cpp
-dom/CustomElementRegistry.cpp
-dom/DOMImplementation.cpp
 dom/DataTransfer.cpp
 dom/DeviceMotionController.cpp
 dom/DeviceOrientationController.cpp
@@ -1003,7 +999,6 @@ workers/service/server/SWRegistrationDatabase.cpp
 workers/shared/context/SharedWorkerThreadProxy.cpp
 worklets/PaintWorkletGlobalScope.cpp
 worklets/WorkletGlobalScope.cpp
-xml/DOMParser.cpp
 xml/NativeXPathNSResolver.cpp
 xml/XMLHttpRequestProgressEventThrottle.cpp
 xml/XMLHttpRequestUpload.cpp

@@ -103,10 +103,11 @@ static inline Ref<XMLDocument> createXMLDocument(const String& namespaceURI, con
 
 ExceptionOr<Ref<XMLDocument>> DOMImplementation::createDocument(const AtomString& namespaceURI, const AtomString& qualifiedName, DocumentType* documentType)
 {
-    Ref document = createXMLDocument(namespaceURI, m_document->protectedSettings());
+    Ref thisDocument = m_document.get();
+    Ref document = createXMLDocument(namespaceURI, thisDocument->protectedSettings());
     document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent });
-    document->setContextDocument(m_document->contextDocument());
-    document->setSecurityOriginPolicy(m_document->securityOriginPolicy());
+    document->setContextDocument(thisDocument->contextDocument());
+    document->setSecurityOriginPolicy(thisDocument->securityOriginPolicy());
 
     RefPtr<Element> documentElement;
     if (!qualifiedName.isEmpty()) {
@@ -136,7 +137,8 @@ Ref<CSSStyleSheet> DOMImplementation::createCSSStyleSheet(const String&, const S
 
 Ref<HTMLDocument> DOMImplementation::createHTMLDocument(String&& title)
 {
-    Ref document = HTMLDocument::create(nullptr, m_document->protectedSettings(), URL(), { });
+    Ref thisDocument = m_document.get();
+    Ref document = HTMLDocument::create(nullptr, thisDocument->protectedSettings(), URL(), { });
     document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent });
     document->open();
     document->write(nullptr, FixedVector<String> { "<!doctype html><html><head></head><body></body></html>"_s });
@@ -146,8 +148,8 @@ Ref<HTMLDocument> DOMImplementation::createHTMLDocument(String&& title)
         ASSERT(document->head());
         document->protectedHead()->appendChild(titleElement);
     }
-    document->setContextDocument(m_document->contextDocument());
-    document->setSecurityOriginPolicy(m_document->securityOriginPolicy());
+    document->setContextDocument(thisDocument->contextDocument());
+    document->setSecurityOriginPolicy(thisDocument->securityOriginPolicy());
     return document;
 }
 

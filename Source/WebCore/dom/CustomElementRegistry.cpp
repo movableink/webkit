@@ -230,7 +230,7 @@ void CustomElementRegistry::addToScopedCustomElementRegistryMap(Element& element
     if (element.usesScopedCustomElementRegistryMap())
         return;
     element.setUsesScopedCustomElementRegistryMap();
-    registry.didAssociateWithDocument(element.document());
+    registry.didAssociateWithDocument(element.protectedDocument().get());
     auto result = scopedCustomElementRegistryMap().add(element, registry);
     ASSERT_UNUSED(result, result.isNewEntry);
 }

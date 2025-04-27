@@ -1412,7 +1412,6 @@ workers/shared/SharedWorkerScriptLoader.cpp
 worklets/PaintWorkletGlobalScope.cpp
 worklets/WorkletGlobalScope.cpp
 worklets/WorkletPendingTasks.cpp
-xml/DOMParser.cpp
 xml/NativeXPathNSResolver.cpp
 xml/XMLHttpRequest.cpp
 xml/XMLHttpRequestProgressEventThrottle.cpp
