@@ -2126,3 +2126,15 @@ webkit.org/b/291966 [ Sequoia+ Release ] http/tests/webgpu/webgpu/api/validation
 [ Debug ] imported/w3c/web-platform-tests/scroll-animations/css/scroll-timeline-default-quirks-mode.html [ Pass Crash ]
 [ Debug ] imported/w3c/web-platform-tests/scroll-animations/css/scroll-timeline-default.html [ Pass Crash ]
 [ Debug ] imported/w3c/web-platform-tests/scroll-animations/css/scroll-timeline-inline-orientation.html [ Pass Crash ]
+
+# webkit.org/b/292111 REGRESSION ( 294024@main): [ MacOS iOS WK2 Debug ] ASSERTION FAILED: bytecodeCanIgnoreNegativeZero(node->arithNodeFlags())
+[ Sonoma+ Debug ] imported/w3c/web-platform-tests/webcodecs/video-encoder-rescaling.https.any.html?av1 [ Skip ]
+[ Sonoma+ Debug ] imported/w3c/web-platform-tests/webcodecs/video-encoder-rescaling.https.any.html?h264_annexb [ Skip ]
+[ Sonoma+ Debug ] imported/w3c/web-platform-tests/webcodecs/video-encoder-rescaling.https.any.html?h264_avc [ Skip ]
+[ Sonoma+ Debug ] imported/w3c/web-platform-tests/webcodecs/video-encoder-rescaling.https.any.html?vp8 [ Skip ]
+[ Sonoma+ Debug ] imported/w3c/web-platform-tests/webcodecs/video-encoder-rescaling.https.any.html?vp9_p0 [ Skip ]
+[ Sonoma+ Debug ] imported/w3c/web-platform-tests/webcodecs/video-encoder-rescaling.https.any.worker.html?av1 [ Skip ]
+[ Sonoma+ Debug ] imported/w3c/web-platform-tests/webcodecs/video-encoder-rescaling.https.any.worker.html?h264_annexb [ Skip ]
+[ Sonoma+ Debug ] imported/w3c/web-platform-tests/webcodecs/video-encoder-rescaling.https.any.worker.html?h264_avc [ Skip ]
+[ Sonoma+ Debug ] imported/w3c/web-platform-tests/webcodecs/video-encoder-rescaling.https.any.worker.html?vp8 [ Skip ]
+[ Sonoma+ Debug ] imported/w3c/web-platform-tests/webcodecs/video-encoder-rescaling.https.any.worker.html?vp9_p0 [ Skip ]
