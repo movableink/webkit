@@ -25,11 +25,9 @@
 #include "config.h"
 #include "StylePosition.h"
 
-#include "BoxSides.h"
 #include "CalculationCategory.h"
 #include "CalculationTree.h"
 #include "LengthPoint.h"
-#include "StylePrimitiveNumericTypes+Blending.h"
 #include "StylePrimitiveNumericTypes+Conversions.h"
 #include "StylePrimitiveNumericTypes+Evaluation.h"
 
@@ -45,7 +43,7 @@ static auto resolveKeyword(CSS::Keyword::Top, const BuilderState&) -> LengthPerc
     return 0_css_percentage;
 }
 
-static auto resolveKeyword(CSS::Keyword::Top, const CSS::LengthPercentage<>& length, const BuilderState& state) -> LengthPercentage<>
+static auto resolveKeyword(CSS::Keyword::Top, const BuilderState& state, const CSS::LengthPercentage<>& length) -> LengthPercentage<>
 {
     return toStyle(length, state);
 }
@@ -55,7 +53,7 @@ static auto resolveKeyword(CSS::Keyword::Right, const BuilderState&) -> LengthPe
     return 100_css_percentage;
 }
 
-static auto resolveKeyword(CSS::Keyword::Right, const CSS::LengthPercentage<>& length, const BuilderState& state) -> LengthPercentage<>
+static auto resolveKeyword(CSS::Keyword::Right, const BuilderState& state, const CSS::LengthPercentage<>& length) -> LengthPercentage<>
 {
     return reflect(toStyle(length, state));
 }
@@ -65,7 +63,7 @@ static auto resolveKeyword(CSS::Keyword::Bottom, const BuilderState&) -> LengthP
     return 100_css_percentage;
 }
 
-static auto resolveKeyword(CSS::Keyword::Bottom, const CSS::LengthPercentage<>& length, const BuilderState& state) -> LengthPercentage<>
+static auto resolveKeyword(CSS::Keyword::Bottom, const BuilderState& state, const CSS::LengthPercentage<>& length) -> LengthPercentage<>
 {
     return reflect(toStyle(length, state));
 }
@@ -75,7 +73,7 @@ static auto resolveKeyword(CSS::Keyword::Left, const BuilderState&) -> LengthPer
     return 0_css_percentage;
 }
 
-static auto resolveKeyword(CSS::Keyword::Left, const CSS::LengthPercentage<>& length, const BuilderState& state) -> LengthPercentage<>
+static auto resolveKeyword(CSS::Keyword::Left, const BuilderState& state, const CSS::LengthPercentage<>& length) -> LengthPercentage<>
 {
     return toStyle(length, state);
 }
@@ -83,6 +81,36 @@ static auto resolveKeyword(CSS::Keyword::Left, const CSS::LengthPercentage<>& le
 static auto resolveKeyword(CSS::Keyword::Center, const BuilderState&) -> LengthPercentage<>
 {
     return 50_css_percentage;
+}
+
+// MARK: Mapped value resolution
+
+template<typename... Args> static auto resolveKeyword(CSS::Keyword::XStart, const BuilderState& state, Args&&... args) -> LengthPercentage<>
+{
+    return state.style().writingMode().isAnyLeftToRight()
+        ? resolveKeyword(CSS::Keyword::Left { }, state, std::forward<Args>(args)...)
+        : resolveKeyword(CSS::Keyword::Right { }, state, std::forward<Args>(args)...);
+}
+
+template<typename... Args> static auto resolveKeyword(CSS::Keyword::XEnd, const BuilderState& state, Args&&... args) -> LengthPercentage<>
+{
+    return state.style().writingMode().isAnyLeftToRight()
+        ? resolveKeyword(CSS::Keyword::Right { }, state, std::forward<Args>(args)...)
+        : resolveKeyword(CSS::Keyword::Left { }, state, std::forward<Args>(args)...);
+}
+
+template<typename... Args> static auto resolveKeyword(CSS::Keyword::YStart, const BuilderState& state, Args&&... args) -> LengthPercentage<>
+{
+    return state.style().writingMode().isAnyTopToBottom()
+        ? resolveKeyword(CSS::Keyword::Top { }, state, std::forward<Args>(args)...)
+        : resolveKeyword(CSS::Keyword::Bottom { }, state, std::forward<Args>(args)...);
+}
+
+template<typename... Args> static auto resolveKeyword(CSS::Keyword::YEnd, const BuilderState& state, Args&&... args) -> LengthPercentage<>
+{
+    return state.style().writingMode().isAnyTopToBottom()
+        ? resolveKeyword(CSS::Keyword::Bottom { }, state, std::forward<Args>(args)...)
+        : resolveKeyword(CSS::Keyword::Top { }, state, std::forward<Args>(args)...);
 }
 
 // MARK: Horizontal/Vertical
@@ -133,7 +161,7 @@ static auto resolve(const CSS::FourComponentPositionHorizontal& value, const Bui
 {
     return WTF::switchOn(get<0>(value.offset),
         [&](auto keyword) {
-            return resolveKeyword(keyword, get<1>(value.offset), state);
+            return resolveKeyword(keyword, state, get<1>(value.offset));
         }
     );
 }
@@ -142,7 +170,7 @@ static auto resolve(const CSS::FourComponentPositionVertical& value, const Build
 {
     return WTF::switchOn(get<0>(value.offset),
         [&](auto keyword) {
-            return resolveKeyword(keyword, get<1>(value.offset), state);
+            return resolveKeyword(keyword, state, get<1>(value.offset));
         }
     );
 }

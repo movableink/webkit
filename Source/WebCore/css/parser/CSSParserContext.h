@@ -88,6 +88,7 @@ struct CSSParserContext {
     bool cssRandomFunctionEnabled : 1 { false };
     bool cssTreeCountingFunctionsEnabled : 1 { false };
     bool cssURLModifiersEnabled : 1 { false };
+    bool cssAxisRelativePositionKeywordsEnabled : 1 { false };
     bool webkitMediaTextTrackDisplayQuirkEnabled : 1 { false };
 
     // Settings, those affecting properties.

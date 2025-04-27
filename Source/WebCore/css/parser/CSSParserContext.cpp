@@ -117,6 +117,7 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
     , cssRandomFunctionEnabled { document.settings().cssRandomFunctionEnabled() }
     , cssTreeCountingFunctionsEnabled { document.settings().cssTreeCountingFunctionsEnabled() }
     , cssURLModifiersEnabled { document.settings().cssURLModifiersEnabled() }
+    , cssAxisRelativePositionKeywordsEnabled { document.settings().cssAxisRelativePositionKeywordsEnabled() }
     , webkitMediaTextTrackDisplayQuirkEnabled { document.quirks().needsWebKitMediaTextTrackDisplayQuirk() }
     , propertySettings { CSSPropertySettings { document.settings() } }
 {
@@ -157,7 +158,8 @@ void add(Hasher& hasher, const CSSParserContext& context)
         | context.cssContainerProgressFunctionEnabled       << 26
         | context.cssRandomFunctionEnabled                  << 27
         | context.cssTreeCountingFunctionsEnabled           << 28
-        | context.cssURLModifiersEnabled                    << 29;
+        | context.cssURLModifiersEnabled                    << 29
+        | context.cssAxisRelativePositionKeywordsEnabled    << 30;
     add(hasher, context.baseURL, context.charset, context.propertySettings, context.mode, bits);
 }
 
