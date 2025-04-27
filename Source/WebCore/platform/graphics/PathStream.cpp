@@ -78,8 +78,9 @@ PathStream::PathStream(const Vector<PathSegment>& segments)
 }
 
 PathStream::PathStream(PathSegment&& segment)
-    : m_segments({ WTFMove(segment) })
 {
+    m_segments.reserveCapacity(16); // 16 is Vector's minCapacity, and we know we're going to append a second segment.
+    m_segments.append(WTFMove(segment));
 }
 
 bool PathStream::definitelyEqual(const PathImpl& other) const

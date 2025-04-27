@@ -738,7 +738,7 @@ private:
     Vector<LayerPropertyAnimation> m_baseValueTransformAnimations;
     Vector<LayerPropertyAnimation> m_animationGroups;
 
-    Vector<FloatRect> m_dirtyRects;
+    Vector<FloatRect, 4> m_dirtyRects;
 
     RefPtr<const DisplayList::DisplayList> m_displayList;
 
