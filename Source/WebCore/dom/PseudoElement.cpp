@@ -54,6 +54,7 @@ PseudoElement::PseudoElement(Element& host, PseudoId pseudoId)
     , m_pseudoId(pseudoId)
 {
     setEventTargetFlag(EventTargetFlag::IsConnected);
+    setStateFlag(StateFlag::IsPseudoElement);
     ASSERT(pseudoId == PseudoId::Before || pseudoId == PseudoId::After);
 }
 

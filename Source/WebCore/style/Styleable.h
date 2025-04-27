@@ -26,6 +26,7 @@
 #pragma once
 
 #include "Element.h"
+#include "NodeInlines.h"
 #include "PseudoElement.h"
 #include "PseudoElementIdentifier.h"
 #include "RenderStyleConstants.h"

@@ -234,10 +234,10 @@ public:
 
     bool isFormControlElement() const { return hasTypeFlag(TypeFlag::IsFormControlElement); }
 
-    bool isPseudoElement() const { return pseudoId() != PseudoId::None; }
-    bool isBeforePseudoElement() const { return pseudoId() == PseudoId::Before; }
-    bool isAfterPseudoElement() const { return pseudoId() == PseudoId::After; }
-    PseudoId pseudoId() const { return (isElementNode() && hasCustomStyleResolveCallbacks()) ? customPseudoId() : PseudoId::None; }
+    bool isPseudoElement() const { return hasStateFlag(StateFlag::IsPseudoElement); }
+    inline bool isBeforePseudoElement() const;
+    inline bool isAfterPseudoElement() const;
+    inline PseudoId pseudoId() const;
 
 #if ENABLE(VIDEO)
     virtual bool isWebVTTElement() const { return false; }
@@ -645,8 +645,9 @@ protected:
 #endif
         ContainsSelectionEndPoint = 1 << 11,
         IsSpecialInternalNode = 1 << 12, // DocumentFragment node for innerHTML/outerHTML or EditingText node.
+        IsPseudoElement = 1 << 13, // FIXME: This belongs to TypeFlag.
 
-        // 3 bits free.
+        // 2 bits free.
     };
 
     enum class ElementStateFlag : uint16_t {
@@ -778,12 +779,6 @@ protected:
     ExceptionOr<NodeVector> convertNodesOrStringsIntoNodeVector(FixedVector<NodeOrString>&&);
 
 private:
-    virtual PseudoId customPseudoId() const
-    {
-        ASSERT(hasCustomStyleResolveCallbacks());
-        return PseudoId::None;
-    }
-
     WEBCORE_EXPORT void removedLastRef();
 
     void refEventTarget() final;

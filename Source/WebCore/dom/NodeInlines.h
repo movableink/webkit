@@ -24,6 +24,7 @@
 #include "Document.h"
 #include "Element.h"
 #include "Node.h"
+#include "PseudoElement.h"
 #include "WebCoreOpaqueRoot.h"
 
 namespace WebCore {
@@ -68,6 +69,23 @@ inline Element* Node::parentElement() const
 inline RefPtr<Element> Node::protectedParentElement() const
 {
     return parentElement();
+}
+
+bool Node::isBeforePseudoElement() const
+{
+    return pseudoId() == PseudoId::Before;
+}
+
+bool Node::isAfterPseudoElement() const
+{
+    return pseudoId() == PseudoId::After;
+}
+
+PseudoId Node::pseudoId() const
+{
+    if (auto* pseudoElement = dynamicDowncast<PseudoElement>(*this))
+        return pseudoElement->pseudoId();
+    return PseudoId::None;
 }
 
 inline void Node::setTabIndexState(TabIndexState state)
