@@ -28,6 +28,7 @@
 #include "CalculationCategory.h"
 #include "CalculationTree.h"
 #include "LengthPoint.h"
+#include "RenderStyle.h"
 #include "StylePrimitiveNumericTypes+Conversions.h"
 #include "StylePrimitiveNumericTypes+Evaluation.h"
 
