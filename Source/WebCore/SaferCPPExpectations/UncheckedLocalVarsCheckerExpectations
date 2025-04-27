@@ -252,7 +252,6 @@ html/shadow/SpinButtonElement.cpp
 html/shadow/TextControlInnerElements.cpp
 html/track/TextTrackCue.cpp
 html/track/TextTrackCueGeneric.cpp
-html/track/VTTCue.cpp
 inspector/DOMPatchSupport.cpp
 inspector/InspectorAuditAccessibilityObject.cpp
 inspector/InspectorCanvas.cpp

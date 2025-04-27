@@ -176,7 +176,7 @@ void VTTCueBox::applyCSSProperties()
 {
     auto textTrackCue = getCue();
     ASSERT(!textTrackCue || is<VTTCue>(textTrackCue));
-    RefPtr cue = dynamicDowncast<VTTCue>(*textTrackCue);
+    RefPtr cue = dynamicDowncast<VTTCue>(textTrackCue);
     if (!cue)
         return;
 
@@ -320,7 +320,7 @@ VTTCue::~VTTCue()
 
 RefPtr<VTTCueBox> VTTCue::createDisplayTree()
 {
-    if (auto* document = this->document())
+    if (RefPtr document = this->document())
         return VTTCueBox::create(*document, *this);
     return nullptr;
 }
@@ -493,7 +493,7 @@ void VTTCue::setText(const String& text)
 void VTTCue::createWebVTTNodeTree()
 {
     if (!m_webVTTNodeTree && document())
-        m_webVTTNodeTree = WebVTTParser::createDocumentFragmentFromCueText(*document(), m_content);
+        m_webVTTNodeTree = WebVTTParser::createDocumentFragmentFromCueText(*protectedDocument().get(), m_content);
 }
 
 static void copyWebVTTNodeToDOMTree(ContainerNode& webVTTNode, Node& parent)
@@ -501,7 +501,7 @@ static void copyWebVTTNodeToDOMTree(ContainerNode& webVTTNode, Node& parent)
     for (RefPtr node = webVTTNode.firstChild(); node; node = node->nextSibling()) {
         RefPtr<Node> clonedNode;
         if (RefPtr element = dynamicDowncast<WebVTTElement>(*node))
-            clonedNode = element->createEquivalentHTMLElement(parent.document());
+            clonedNode = element->createEquivalentHTMLElement(parent.protectedDocument().get());
         else
             clonedNode = node->cloneNode(false);
         parent.appendChild(*clonedNode);
@@ -516,12 +516,12 @@ RefPtr<DocumentFragment> VTTCue::getCueAsHTML()
     if (!m_webVTTNodeTree)
         return nullptr;
 
-    auto* document = this->document();
+    RefPtr document = this->document();
     if (!document)
         return nullptr;
 
     auto clonedFragment = DocumentFragment::create(*document);
-    copyWebVTTNodeToDOMTree(*m_webVTTNodeTree, clonedFragment);
+    copyWebVTTNodeToDOMTree(*protectedWebVTTNodeTree(), clonedFragment);
     return clonedFragment;
 }
 
@@ -531,7 +531,7 @@ RefPtr<DocumentFragment> VTTCue::createCueRenderingTree()
     if (!m_webVTTNodeTree)
         return nullptr;
 
-    auto* document = this->document();
+    RefPtr document = this->document();
     if (!document)
         return nullptr;
 
@@ -540,7 +540,7 @@ RefPtr<DocumentFragment> VTTCue::createCueRenderingTree()
     // The cloned fragment is never exposed to author scripts so it's safe to dispatch events here.
     ScriptDisallowedScope::EventAllowedScope allowedScope(clonedFragment);
 
-    m_webVTTNodeTree->cloneChildNodes(*document, nullptr, clonedFragment);
+    protectedWebVTTNodeTree()->cloneChildNodes(*document, nullptr, clonedFragment);
     return clonedFragment;
 }
 
@@ -970,16 +970,17 @@ void VTTCue::obtainCSSBoxes()
     else
         displayTree->applyCSSProperties();
 
-    if (displayTree->document().page()) {
-        auto cssString = displayTree->document().page()->captionUserPreferencesStyleSheet();
-        auto style = HTMLStyleElement::create(HTMLNames::styleTag, displayTree->document(), false);
+    Ref document = displayTree->document();
+    if (document->page()) {
+        auto cssString = document->page()->captionUserPreferencesStyleSheet();
+        auto style = HTMLStyleElement::create(HTMLNames::styleTag, document.get(), false);
         style->setTextContent(WTFMove(cssString));
         displayTree->appendChild(WTFMove(style));
     }
 
     if (const auto& styleSheets = track()->styleSheets()) {
         for (const auto& cssString : *styleSheets) {
-            auto style = HTMLStyleElement::create(HTMLNames::styleTag, displayTree->document(), false);
+            auto style = HTMLStyleElement::create(HTMLNames::styleTag, document.get(), false);
             style->setTextContent(String { cssString });
             displayTree->appendChild(WTFMove(style));
         }

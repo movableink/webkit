@@ -141,6 +141,7 @@ protected:
     TextTrackCue(Document&, const MediaTime& start, const MediaTime& end);
 
     Document* document() const;
+    RefPtr<Document> protectedDocument() const { return document(); }
 
     virtual void toJSON(JSON::Object&) const;
 

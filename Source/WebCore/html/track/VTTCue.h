@@ -259,6 +259,8 @@ private:
     void pauseSpeaking() final;
     void cancelSpeaking() final;
 
+    RefPtr<DocumentFragment> protectedWebVTTNodeTree() const { return m_webVTTNodeTree.get(); }
+
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return *m_logger; }
     uint64_t logIdentifier() const final;
