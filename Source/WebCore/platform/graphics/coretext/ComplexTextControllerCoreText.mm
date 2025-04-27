@@ -100,7 +100,7 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(CTRunRef ctRun, const Font
         if (auto baseAdvancesSpan = CTRunGetAdvancesSpan(ctRun); baseAdvancesSpan.data())
             m_baseAdvances = baseAdvancesSpan;
         else {
-            Vector<CGSize> baseAdvancesVector;
+            Vector<CGSize, 64> baseAdvancesVector;
             baseAdvancesVector.grow(m_glyphCount);
             CTRunGetAdvances(ctRun, CFRangeMake(0, 0), baseAdvancesVector.data());
             m_baseAdvances = BaseAdvancesVector(m_glyphCount, [&](size_t i) {
