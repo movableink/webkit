@@ -49,7 +49,7 @@ FlexLayoutItem::FlexLayoutItem(RenderBox& flexItem, LayoutUnit flexBaseContentSi
     ASSERT(!flexItem.isOutOfFlowPositioned());
 }
 
-FlexLayoutAlgorithm::FlexLayoutAlgorithm(RenderFlexibleBox& flexbox, LayoutUnit lineBreakLength, const Vector<FlexLayoutItem>& allItems, LayoutUnit gapBetweenItems, LayoutUnit gapBetweenLines)
+FlexLayoutAlgorithm::FlexLayoutAlgorithm(RenderFlexibleBox& flexbox, LayoutUnit lineBreakLength, const RenderFlexibleBox::FlexLayoutItems& allItems, LayoutUnit gapBetweenItems, LayoutUnit gapBetweenLines)
     : m_flexbox(flexbox)
     , m_lineBreakLength(lineBreakLength)
     , m_allItems(allItems)
@@ -77,7 +77,7 @@ void FlexLayoutAlgorithm::removeMarginEndFromFlexSizes(FlexLayoutItem& flexLayou
     sumHypotheticalMainSize -= margin;
 } 
 
-bool FlexLayoutAlgorithm::computeNextFlexLine(size_t& nextIndex, Vector<FlexLayoutItem>& lineItems, LayoutUnit& sumFlexBaseSize, double& totalFlexGrow, double& totalFlexShrink, double& totalWeightedFlexShrink, LayoutUnit& sumHypotheticalMainSize)
+bool FlexLayoutAlgorithm::computeNextFlexLine(size_t& nextIndex, RenderFlexibleBox::FlexLayoutItems& lineItems, LayoutUnit& sumFlexBaseSize, double& totalFlexGrow, double& totalFlexShrink, double& totalWeightedFlexShrink, LayoutUnit& sumHypotheticalMainSize)
 {
     lineItems.clear();
     sumFlexBaseSize = 0_lu;

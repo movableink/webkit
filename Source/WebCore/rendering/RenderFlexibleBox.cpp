@@ -1741,7 +1741,7 @@ FlexLayoutItem RenderFlexibleBox::constructFlexLayoutItem(RenderBox& flexItem, R
     return FlexLayoutItem(flexItem, innerFlexBaseSize, borderAndPadding, margin, computeFlexItemMinMaxSizes(flexItem), everHadLayout);
 }
     
-void RenderFlexibleBox::freezeViolations(Vector<FlexLayoutItem*>& violations, LayoutUnit& availableFreeSpace, double& totalFlexGrow, double& totalFlexShrink, double& totalWeightedFlexShrink)
+void RenderFlexibleBox::freezeViolations(Vector<FlexLayoutItem*, 4>& violations, LayoutUnit& availableFreeSpace, double& totalFlexGrow, double& totalFlexShrink, double& totalWeightedFlexShrink)
 {
     for (size_t i = 0; i < violations.size(); ++i) {
         ASSERT(!violations[i]->frozen);
@@ -1766,7 +1766,7 @@ void RenderFlexibleBox::freezeInflexibleItems(FlexSign flexSign, FlexLayoutItems
     // Per https://drafts.csswg.org/css-flexbox/#resolve-flexible-lengths step 2,
     // we freeze all items with a flex factor of 0 as well as those with a min/max
     // size violation.
-    Vector<FlexLayoutItem*> newInflexibleItems;
+    Vector<FlexLayoutItem*, 4> newInflexibleItems;
     for (auto& flexLayoutItem : flexLayoutItems) {
         ASSERT(!flexLayoutItem.renderer->isOutOfFlowPositioned());
         ASSERT(!flexLayoutItem.frozen);
@@ -1784,8 +1784,8 @@ bool RenderFlexibleBox::resolveFlexibleLengths(FlexSign flexSign, FlexLayoutItem
 {
     LayoutUnit totalViolation;
     LayoutUnit usedFreeSpace;
-    Vector<FlexLayoutItem*> minViolations;
-    Vector<FlexLayoutItem*> maxViolations;
+    Vector<FlexLayoutItem*, 4> minViolations;
+    Vector<FlexLayoutItem*, 4> maxViolations;
 
     double sumFlexFactors = (flexSign == FlexSign::PositiveFlexibility) ? totalFlexGrow : totalFlexShrink;
     if (sumFlexFactors > 0 && sumFlexFactors < 1) {

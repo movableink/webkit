@@ -77,11 +77,11 @@ class FlexLayoutAlgorithm {
     WTF_MAKE_NONCOPYABLE(FlexLayoutAlgorithm);
 
 public:
-    FlexLayoutAlgorithm(RenderFlexibleBox&, LayoutUnit lineBreakLength, const Vector<FlexLayoutItem>& allItems, LayoutUnit gapBetweenItems, LayoutUnit gapBetweenLines);
+    FlexLayoutAlgorithm(RenderFlexibleBox&, LayoutUnit lineBreakLength, const RenderFlexibleBox::FlexLayoutItems& allItems, LayoutUnit gapBetweenItems, LayoutUnit gapBetweenLines);
 
     // The hypothetical main size of an item is the flex base size clamped
     // according to its min and max main size properties
-    bool computeNextFlexLine(size_t& nextIndex, Vector<FlexLayoutItem>& lineItems, LayoutUnit& sumFlexBaseSize, double& totalFlexGrow, double& totalFlexShrink, double& totalWeightedFlexShrink, LayoutUnit& sumHypotheticalMainSize);
+    bool computeNextFlexLine(size_t& nextIndex, RenderFlexibleBox::FlexLayoutItems& lineItems, LayoutUnit& sumFlexBaseSize, double& totalFlexGrow, double& totalFlexShrink, double& totalWeightedFlexShrink, LayoutUnit& sumHypotheticalMainSize);
 
 private:
     bool isMultiline() const { return m_flexbox.style().flexWrap() != FlexWrap::NoWrap; }
@@ -90,7 +90,7 @@ private:
 
     RenderFlexibleBox& m_flexbox;
     LayoutUnit m_lineBreakLength;
-    const Vector<FlexLayoutItem>& m_allItems;
+    const RenderFlexibleBox::FlexLayoutItems& m_allItems;
 
     const LayoutUnit m_gapBetweenItems;
     const LayoutUnit m_gapBetweenLines;
