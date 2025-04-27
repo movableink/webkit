@@ -7789,6 +7789,7 @@
         "web-platform-tests/css/cssom-view/smooth-scrollIntoView-with-smooth-fragment-scroll-iframe.html",
         "web-platform-tests/css/cssom-view/window-scrollBy-display-change-ref.html",
         "web-platform-tests/css/cssom/CSSStyleSheet-constructable-concat-ref.html",
+        "web-platform-tests/css/cssom/CSSStyleSheet-constructable-insertRule-base-uri-ref.html",
         "web-platform-tests/css/cssom/HTMLLinkElement-disabled-alternate-ref.html",
         "web-platform-tests/css/cssom/insertRule-from-script-ref.html",
         "web-platform-tests/css/cssom/medialist-dynamic-001-ref.html",
