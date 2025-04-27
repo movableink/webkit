@@ -73,6 +73,10 @@
 #include <wtf/spi/darwin/OSVariantSPI.h>
 #endif
 
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+#include "InteractionRegion.h"
+#endif
+
 namespace WebCore {
 
 static void releaseNoncriticalMemory(MaintainMemoryCache maintainMemoryCache)
@@ -104,6 +108,9 @@ static void releaseNoncriticalMemory(MaintainMemoryCache maintainMemoryCache)
     HTMLNameCache::clear();
     ImmutableStyleProperties::clearDeduplicationMap();
     SVGPathElement::clearCache();
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    InteractionRegion::clearCache();
+#endif
 }
 
 static void releaseCriticalMemory(Synchronous synchronous, MaintainBackForwardCache maintainBackForwardCache, MaintainMemoryCache maintainMemoryCache)

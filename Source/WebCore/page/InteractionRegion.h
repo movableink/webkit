@@ -66,6 +66,8 @@ struct InteractionRegion {
     String text { };
 #endif
 
+    static void clearCache();
+
     WEBCORE_EXPORT ~InteractionRegion();
 };
 

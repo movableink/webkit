@@ -32,6 +32,7 @@
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementInlines.h"
 #include "ElementRuleCollector.h"
+#include "FloatSizeHash.h"
 #include "FrameSnapshotting.h"
 #include "GeometryUtilities.h"
 #include "HTMLAnchorElement.h"
@@ -67,6 +68,53 @@
 namespace WebCore {
 
 InteractionRegion::~InteractionRegion() = default;
+
+class InteractionRegionPathCache {
+public:
+    static InteractionRegionPathCache& singleton();
+
+    std::optional<Path> get(const Image&, const FloatSize&);
+    void add(const Image&, const FloatSize&, Path);
+
+    void clear();
+
+private:
+    friend class NeverDestroyed<InteractionRegionPathCache>;
+
+    InteractionRegionPathCache() = default;
+
+    WeakHashMap<const Image, UncheckedKeyHashMap<FloatSize, Path>> m_imageCache;
+};
+
+InteractionRegionPathCache& InteractionRegionPathCache::singleton()
+{
+    static NeverDestroyed<InteractionRegionPathCache> cache;
+    return cache;
+}
+
+std::optional<Path> InteractionRegionPathCache::get(const Image& image, const FloatSize& size)
+{
+    if (auto cacheBySize = m_imageCache.getOptional(image))
+        return cacheBySize->getOptional(size);
+    return std::nullopt;
+}
+
+void InteractionRegionPathCache::add(const Image& image, const FloatSize& size, Path path)
+{
+    m_imageCache.ensure(image, [] {
+        return UncheckedKeyHashMap<FloatSize, Path>();
+    }).iterator->value.add(size, path);
+}
+
+void InteractionRegionPathCache::clear()
+{
+    m_imageCache.clear();
+}
+
+void InteractionRegion::clearCache()
+{
+    InteractionRegionPathCache::singleton().clear();
+}
 
 static bool hasInteractiveCursorType(Element& element)
 {
@@ -499,11 +547,17 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
         clipPath = path;
     } else if (iconImage && originalElement) {
         auto size = boundingSize(regionRenderer, transform);
-        LayoutRect imageRect(FloatPoint(), size);
-        Ref shape = LayoutShape::createRasterShape(iconImage.get(), 0, imageRect, imageRect, WritingMode(), 0);
-        LayoutShape::DisplayPaths paths;
-        shape->buildDisplayPaths(paths);
-        auto path = paths.shape;
+        auto generateAndCachePath = [&] {
+            LayoutRect imageRect(FloatPoint(), size);
+            Ref shape = LayoutShape::createRasterShape(iconImage.get(), 0, imageRect, imageRect, WritingMode(), 0);
+            LayoutShape::DisplayPaths paths;
+            shape->buildDisplayPaths(paths);
+            auto path = paths.shape;
+            InteractionRegionPathCache::singleton().add(*iconImage.get(), size, path);
+            return path;
+        };
+        auto cachedPath = InteractionRegionPathCache::singleton().get(*iconImage.get(), size);
+        auto path = cachedPath ? *cachedPath : generateAndCachePath();
 
         if (!clipOffset.isZero())
             path.translate(clipOffset);
