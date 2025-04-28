@@ -750,7 +750,6 @@ textarea {
      and bottom padding to ensure we have a symmetric look for text areas. */
     padding-block: 2px;
 #endif
-    flex-direction: column;
     resize: -internal-textarea-auto;
     cursor: auto;
     white-space: pre-wrap;
