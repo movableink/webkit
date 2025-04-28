@@ -183,6 +183,8 @@ struct ModuleInformation final : public ThreadSafeRefCounted<ModuleInformation> 
 
     MemoryInformation memory;
     bool m_hasGCObjectTypes { false };
+    mutable Atomic<bool> m_usesLegacyExceptions { false };
+    mutable Atomic<bool> m_usesModernExceptions { false };
 
     Vector<FunctionData> functions;
 

@@ -1,3 +1,5 @@
+import * as assert from "../assert.js";
+
 /*
 (module
   (import "env" "throw" (func $jsThrow))
@@ -58,5 +60,5 @@ function shouldBe(actual, expected) {
 try {
     main();
 } catch (error) {
-    shouldBe(error, 1234);
+    assert.eq(error.message, "Module uses both legacy exceptions and try_table (evaluating 'new WebAssembly.Module(WASM_MODULE_CODE)')");
 }

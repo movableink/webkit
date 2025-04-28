@@ -229,6 +229,12 @@ void EntryPlan::compileFunctions()
     for (uint32_t index = functionIndex; index < functionIndexEnd; ++index)
         compileFunction(FunctionCodeIndex(index));
 
+    if (m_moduleInformation->m_usesModernExceptions.loadRelaxed() && m_moduleInformation->m_usesLegacyExceptions.loadRelaxed()) {
+        Locker locker { m_lock };
+        fail(makeString("Module uses both legacy exceptions and try_table"_s));
+        return;
+    }
+
     if (!areWasmToWasmStubsCompiled) {
         if (UNLIKELY(!generateWasmToWasmStubs())) {
             Locker locker { m_lock };

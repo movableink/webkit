@@ -3365,6 +3365,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
     }
 
     case Try: {
+        m_info.m_usesLegacyExceptions.storeRelaxed(true);
         BlockSignature inlineSignature;
         WASM_PARSER_FAIL_IF(!parseBlockSignatureAndNotifySIMDUseIfNeeded(inlineSignature), "can't get try's signature"_s);
 
@@ -3414,6 +3415,8 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             m_expressionStack.constructAndAppend(argumentType, results[i]);
         }
         resetLocalInitStackToHeight(controlEntry.localInitStackHeight);
+
+        ASSERT(m_info.m_usesLegacyExceptions.loadRelaxed());
         return { };
     }
 
@@ -3430,10 +3433,13 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         m_expressionStack.swap(preCatchStack);
         WASM_TRY_ADD_TO_CONTEXT(addCatchAll(preCatchStack, controlEntry.controlData));
         resetLocalInitStackToHeight(controlEntry.localInitStackHeight);
+
+        ASSERT(m_info.m_usesLegacyExceptions.loadRelaxed());
         return { };
     }
 
     case TryTable: {
+        m_info.m_usesModernExceptions.storeRelaxed(true);
         BlockSignature inlineSignature;
         WASM_PARSER_FAIL_IF(!parseBlockSignatureAndNotifySIMDUseIfNeeded(inlineSignature), "can't get try_table's signature"_s);
 

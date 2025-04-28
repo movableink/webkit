@@ -629,6 +629,8 @@ bool hasCapacityToUseLargeGigacage();
     \
     /* Feature Flags */\
     \
+    /* Restricted so some app doesn't set this environment variable and start using it. */ \
+    v(Bool, disallowMixedWasmExceptions, true, Restricted, "Disallow using both legacy and modern (try_table) wasm exception specs in the same module."_s) \
     v(Bool, useImportDefer, false, Normal, "Enable deferred module import."_s) \
     v(Bool, useIteratorChunking, false, Normal, "Expose the Iterator.prototype.chunks and Iterator.prototype.windows methods."_s) \
     v(Bool, useIteratorHelpers, true, Normal, "Expose the Iterator Helpers."_s) \
