@@ -43,6 +43,10 @@
 #include <wtf/WTFConfig.h>
 #include <wtf/WordLock.h>
 
+#if OS(HAIKU)
+#include <OS.h>
+#endif
+
 #if OS(LINUX)
 #include <sched.h>
 #include <sys/prctl.h>
@@ -346,6 +350,8 @@ void Thread::initializeCurrentThreadInternal(const char* threadName)
 {
 #if HAVE(PTHREAD_SETNAME_NP)
     pthread_setname_np(normalizeThreadName(threadName));
+#elif OS(HAIKU)
+    rename_thread(find_thread(nullptr), normalizeThreadName(threadName));
 #elif OS(LINUX)
     prctl(PR_SET_NAME, normalizeThreadName(threadName));
 #else

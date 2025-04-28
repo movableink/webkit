@@ -199,7 +199,7 @@
 #define HAVE_DISPATCH_H 1
 #endif
 
-#if OS(DARWIN)
+#if OS(DARWIN) || OS(HAIKU)
 #define HAVE_MADV_FREE 1
 #endif
 
@@ -207,7 +207,7 @@
 #define HAVE_MADV_FREE_REUSE 1
 #endif
 
-#if OS(DARWIN)
+#if OS(DARWIN) || OS(HAIKU)
 #define HAVE_MADV_DONTNEED 1
 #endif
 
