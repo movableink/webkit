@@ -190,7 +190,7 @@ void DisplayLink::notifyObserversDisplayDidRefresh()
 
     tracePoint(DisplayLinkUpdate);
 
-    auto maxFramesPerSecond = [](const auto& observers) {
+    auto maxFramesPerSecond = [](const Vector<ObserverInfo>& observers) {
         std::optional<FramesPerSecond> observersMaxFramesPerSecond;
         for (const auto& observer : observers)
             observersMaxFramesPerSecond = std::max(observersMaxFramesPerSecond.value_or(0), observer.preferredFramesPerSecond);

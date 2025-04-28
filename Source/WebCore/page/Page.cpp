@@ -4346,7 +4346,7 @@ RenderingUpdateScheduler* Page::existingRenderingUpdateScheduler()
 
 void Page::forEachDocumentFromMainFrame(const Frame& mainFrame, NOESCAPE const Function<void(Document&)>& functor)
 {
-    Vector<Ref<Document>, 8> documents;
+    Vector<Ref<Document>> documents;
     for (RefPtr frame = &mainFrame; frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(*frame);
         if (!localFrame)
@@ -4354,7 +4354,6 @@ void Page::forEachDocumentFromMainFrame(const Frame& mainFrame, NOESCAPE const F
         if (RefPtr document = localFrame->document())
             documents.append(document.releaseNonNull());
     }
-
     for (auto& document : documents)
         functor(document);
 }
@@ -4381,7 +4380,7 @@ bool Page::findMatchingLocalDocument(NOESCAPE const Function<bool(Document&)>& f
 
 void Page::forEachRenderableDocument(NOESCAPE const Function<void(Document&)>& functor) const
 {
-    Vector<Ref<Document>, 8> documents;
+    Vector<Ref<Document>> documents;
     for (RefPtr frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(*frame);
         if (!localFrame)
