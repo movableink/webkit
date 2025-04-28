@@ -164,13 +164,14 @@ static void webkit_audio_sink_class_init(WebKitAudioSinkClass* klass)
     eklass->change_state = GST_DEBUG_FUNCPTR(webKitAudioSinkChangeState);
 }
 
-GstElement* webkitAudioSinkNew()
+GstElement* /* (transfer floating) */ webkitAudioSinkNew()
 {
     auto* sink = GST_ELEMENT_CAST(g_object_new(WEBKIT_TYPE_AUDIO_SINK, nullptr));
     if (!webKitAudioSinkConfigure(WEBKIT_AUDIO_SINK(sink))) {
         gst_object_unref(sink);
         return nullptr;
     }
+    ASSERT(g_object_is_floating(sink));
     return sink;
 }
 

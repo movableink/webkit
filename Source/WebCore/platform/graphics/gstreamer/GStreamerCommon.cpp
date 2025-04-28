@@ -987,7 +987,7 @@ bool gstElementFactoryEquals(GstElement* element, ASCIILiteral name)
     return name == GST_OBJECT_NAME(gst_element_get_factory(element));
 }
 
-GstElement* createAutoAudioSink(const String& role)
+GstElement* /* (transfer floating) */ createAutoAudioSink(const String& role)
 {
     auto* audioSink = makeGStreamerElement("autoaudiosink"_s);
     g_signal_connect_data(audioSink, "child-added", G_CALLBACK(+[](GstChildProxy*, GObject* object, gchar*, gpointer userData) {
@@ -1007,10 +1007,11 @@ IGNORE_WARNINGS_END
     }), role.isolatedCopy().releaseImpl().leakRef(), static_cast<GClosureNotify>([](gpointer userData, GClosure*) {
         reinterpret_cast<StringImpl*>(userData)->deref();
     }), static_cast<GConnectFlags>(0));
+    ASSERT(g_object_is_floating(audioSink));
     return audioSink;
 }
 
-GstElement* createPlatformAudioSink(const String& role)
+GstElement* /* (transfer floating) */ createPlatformAudioSink(const String& role)
 {
     GstElement* audioSink = webkitAudioSinkNew();
     if (!audioSink) {
@@ -1072,12 +1073,12 @@ bool webkitGstSetElementStateSynchronously(GstElement* pipeline, GstState target
     return true;
 }
 
-GstBuffer* gstBufferNewWrappedFast(void* data, size_t length)
+GstBuffer* /* (transfer full) */ gstBufferNewWrappedFast(void* data, size_t length)
 {
     return gst_buffer_new_wrapped_full(static_cast<GstMemoryFlags>(0), data, length, 0, length, data, fastFree);
 }
 
-GstElement* makeGStreamerElement(ASCIILiteral factoryName, const String& name)
+GstElement* /* (transfer floating) */ makeGStreamerElement(ASCIILiteral factoryName, const String& name)
 {
     static Lock lock;
     static Vector<String> cache WTF_GUARDED_BY_LOCK(lock);
@@ -1088,6 +1089,7 @@ GstElement* makeGStreamerElement(ASCIILiteral factoryName, const String& name)
         WTFLogAlways("GStreamer element %s not found. Please install it", factoryName.characters());
         ASSERT_NOT_REACHED_WITH_MESSAGE("GStreamer element %s not found. Please install it", factoryName.characters());
     }
+    ASSERT(g_object_is_floating(element));
     return element;
 }
 
