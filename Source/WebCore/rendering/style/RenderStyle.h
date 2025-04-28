@@ -808,6 +808,8 @@ public:
     inline ContainIntrinsicSizeType containIntrinsicLogicalHeightType() const;
     inline bool containIntrinsicWidthHasAuto() const;
     inline bool containIntrinsicHeightHasAuto() const;
+    inline bool containIntrinsicWidthHasLength() const;
+    inline bool containIntrinsicHeightHasLength() const;
     inline bool containIntrinsicLogicalWidthHasAuto() const;
     inline bool containIntrinsicLogicalHeightHasAuto() const;
     inline void containIntrinsicWidthAddAuto();

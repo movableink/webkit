@@ -5006,39 +5006,49 @@ bool RenderBox::shouldIgnoreLogicalMinMaxHeightSizes() const
 std::optional<LayoutUnit> RenderBox::explicitIntrinsicInnerWidth() const
 {
     ASSERT(isHorizontalWritingMode() ? shouldApplySizeOrInlineSizeContainment() : shouldApplySizeContainment());
-    if (style().containIntrinsicWidthType() == ContainIntrinsicSizeType::None)
-        return std::nullopt;
 
-    if (element() && style().containIntrinsicWidthHasAuto() && isSkippedContentRoot(*this)) {
+    if (style().containIntrinsicWidthType() == ContainIntrinsicSizeType::None)
+        return { };
+
+    if (style().containIntrinsicWidthHasAuto() && isSkippedContentRoot(*this)) {
+        // If auto is specified and the element has a last remembered size and is currently skipping its contents,
+        // its explicit intrinsic inner size in the corresponding axis is the last remembered size in that axis.
+        // https://drafts.csswg.org/css-sizing-4/#intrinsic-size-override
         if (auto width = isHorizontalWritingMode() ? element()->lastRememberedLogicalWidth() : element()->lastRememberedLogicalHeight())
             return width;
     }
 
-    if (style().containIntrinsicWidthType() == ContainIntrinsicSizeType::AutoAndNone)
-        return std::nullopt;
+    if (style().containIntrinsicWidthHasLength()) {
+        ASSERT(style().containIntrinsicWidth().has_value());
+        return LayoutUnit { style().containIntrinsicWidth()->value() };
+    }
 
-    auto width = style().containIntrinsicWidth();
-    ASSERT(width.has_value());
-    return std::optional<LayoutUnit> { width->value() };
+    ASSERT(style().containIntrinsicWidthType() == ContainIntrinsicSizeType::AutoAndNone);
+    return { };
 }
 
 std::optional<LayoutUnit> RenderBox::explicitIntrinsicInnerHeight() const
 {
     ASSERT(isHorizontalWritingMode() ? shouldApplySizeContainment() : shouldApplySizeOrInlineSizeContainment());
-    if (style().containIntrinsicHeightType() == ContainIntrinsicSizeType::None)
-        return std::nullopt;
 
-    if (element() && style().containIntrinsicHeightHasAuto() && isSkippedContentRoot(*this)) {
+    if (style().containIntrinsicHeightType() == ContainIntrinsicSizeType::None)
+        return { };
+
+    if (style().containIntrinsicHeightHasAuto() && isSkippedContentRoot(*this)) {
+        // If auto is specified and the element has a last remembered size and is currently skipping its contents,
+        // its explicit intrinsic inner size in the corresponding axis is the last remembered size in that axis.
+        // https://drafts.csswg.org/css-sizing-4/#intrinsic-size-override
         if (auto height = isHorizontalWritingMode() ? element()->lastRememberedLogicalHeight() : element()->lastRememberedLogicalWidth())
             return height;
     }
 
-    if (style().containIntrinsicHeightType() == ContainIntrinsicSizeType::AutoAndNone)
-        return std::nullopt;
+    if (style().containIntrinsicHeightHasLength()) {
+        ASSERT(style().containIntrinsicHeight().has_value());
+        return LayoutUnit { style().containIntrinsicHeight()->value() };
+    }
 
-    auto height = style().containIntrinsicHeight();
-    ASSERT(height.has_value());
-    return std::optional<LayoutUnit> { height->value() };
+    ASSERT(style().containIntrinsicHeightType() == ContainIntrinsicSizeType::AutoAndNone);
+    return { };
 }
 
 // hasAutoZIndex only returns true if the element is positioned or a flex-item since

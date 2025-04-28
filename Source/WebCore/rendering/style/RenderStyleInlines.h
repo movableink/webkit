@@ -194,10 +194,12 @@ inline OptionSet<Containment> RenderStyle::contain() const { return m_nonInherit
 inline std::optional<Length> RenderStyle::containIntrinsicHeight() const { return m_nonInheritedData->rareData->containIntrinsicHeight; }
 inline ContainIntrinsicSizeType RenderStyle::containIntrinsicHeightType() const { return static_cast<ContainIntrinsicSizeType>(m_nonInheritedData->rareData->containIntrinsicHeightType); }
 inline bool RenderStyle::containIntrinsicHeightHasAuto() const { return containIntrinsicHeightType() == ContainIntrinsicSizeType::AutoAndLength || containIntrinsicHeightType() == ContainIntrinsicSizeType::AutoAndNone; }
+inline bool RenderStyle::containIntrinsicHeightHasLength() const { return containIntrinsicHeightType() == ContainIntrinsicSizeType::Length || containIntrinsicHeightType() == ContainIntrinsicSizeType::AutoAndLength; }
 inline bool RenderStyle::containIntrinsicLogicalHeightHasAuto() const { return writingMode().isHorizontal() ? containIntrinsicHeightHasAuto() : containIntrinsicWidthHasAuto(); }
 inline ContainIntrinsicSizeType RenderStyle::containIntrinsicLogicalHeightType() const { return writingMode().isHorizontal() ? containIntrinsicHeightType() : containIntrinsicWidthType(); }
 inline ContainIntrinsicSizeType RenderStyle::containIntrinsicLogicalWidthType() const { return writingMode().isHorizontal() ? containIntrinsicWidthType() : containIntrinsicHeightType(); }
 inline bool RenderStyle::containIntrinsicWidthHasAuto() const { return containIntrinsicWidthType() == ContainIntrinsicSizeType::AutoAndLength || containIntrinsicWidthType() == ContainIntrinsicSizeType::AutoAndNone; }
+inline bool RenderStyle::containIntrinsicWidthHasLength() const { return containIntrinsicWidthType() == ContainIntrinsicSizeType::Length || containIntrinsicWidthType() == ContainIntrinsicSizeType::AutoAndLength; }
 inline bool RenderStyle::containIntrinsicLogicalWidthHasAuto() const { return writingMode().isHorizontal() ? containIntrinsicWidthHasAuto() : containIntrinsicHeightHasAuto(); }
 inline std::optional<Length> RenderStyle::containIntrinsicWidth() const { return m_nonInheritedData->rareData->containIntrinsicWidth; }
 inline ContainIntrinsicSizeType RenderStyle::containIntrinsicWidthType() const { return static_cast<ContainIntrinsicSizeType>(m_nonInheritedData->rareData->containIntrinsicWidthType); }
