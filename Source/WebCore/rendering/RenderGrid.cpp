@@ -491,7 +491,6 @@ void RenderGrid::layoutGrid(RelayoutChildren relayoutChildren)
         if (size() != previousSize)
             relayoutChildren = RelayoutChildren::Yes;
 
-
         if (isDocumentElementRenderer())
             layoutPositionedObjects(RelayoutChildren::Yes);
         else
@@ -628,7 +627,6 @@ void RenderGrid::layoutMasonry(RelayoutChildren relayoutChildren)
 
         if (size() != previousSize)
             relayoutChildren = RelayoutChildren::Yes;
-
 
         if (isDocumentElementRenderer())
             layoutPositionedObjects(RelayoutChildren::Yes);

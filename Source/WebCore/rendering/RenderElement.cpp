@@ -2707,6 +2707,7 @@ void RenderElement::layoutIfNeeded()
 {
     if (!needsLayout())
         return;
+    // FIXME: Replace this with ASSERT after fixing FC layout code not calling into child layout.
     if (layoutContext().isSkippedContentForLayout(*this)) {
         clearNeedsLayoutForSkippedContent();
         return;

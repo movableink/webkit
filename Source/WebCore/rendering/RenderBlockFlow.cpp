@@ -744,7 +744,8 @@ void RenderBlockFlow::layoutInFlowChildren(RelayoutChildren relayoutChildren, La
         return;
     }
 
-    if (layoutContext().isSkippedContentRootForLayout(*this)) {
+    // FIXME: We should bail out sooner when subtree layout entry point is _inside_ a skipped subtree.
+    if (layoutContext().isSkippedContentRootForLayout(*this) || layoutContext().isSkippedContentForLayout(*this)) {
         clearNeedsLayoutForSkippedContent();
         return;
     }
@@ -815,16 +816,13 @@ void RenderBlockFlow::layoutBlockChildren(RelayoutChildren relayoutChildren, Lay
     RenderBox* next = firstChildBox();
 
     while (next) {
+        ASSERT(!layoutContext().isSkippedContentForLayout(*next));
+
         RenderBox& child = *next;
         next = child.nextSiblingBox();
 
         if (child.isExcludedFromNormalLayout())
             continue; // Skip this child, since it will be positioned by the specialized subclass (fieldsets and ruby runs).
-
-        if (layoutContext().isSkippedContentForLayout(child)) {
-            child.clearNeedsLayoutForSkippedContent();
-            continue;
-        }
 
         updateBlockChildDirtyBitsBeforeLayout(relayoutChildren, child);
 
