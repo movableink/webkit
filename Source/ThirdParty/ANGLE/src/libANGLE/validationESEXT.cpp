@@ -100,9 +100,9 @@ bool ValidateObjectIdentifierAndName(const Context *context,
                                      GLenum identifier,
                                      GLuint name)
 {
-    bool isGLES11 = context->getClientVersion() == Version(1, 1);
-    bool isGLES3  = context->getClientMajorVersion() >= 3;
-    bool isGLES31 = context->getClientVersion() >= Version(3, 1);
+    const bool isGLES11 = context->getClientVersion() == ES_1_1;
+    const bool isGLES3  = context->getClientVersion() >= ES_3_0;
+    const bool isGLES31 = context->getClientVersion() >= ES_3_1;
     switch (identifier)
     {
         case GL_BUFFER_OBJECT_EXT:
@@ -570,12 +570,11 @@ bool ValidateDrawRangeElementsBaseVertexEXT(const Context *context,
     }
 
     // Note that resolving the index range is a bit slow. We should probably optimize this.
-    IndexRange indexRange;
+    IndexRange indexRange{IndexRange::Undefined()};
     ANGLE_VALIDATION_TRY(context->getState().getVertexArray()->getIndexRange(
         context, type, count, indices, context->getState().isPrimitiveRestartEnabled(),
         &indexRange));
-
-    if (indexRange.end > end || indexRange.start < start)
+    if (!indexRange.isEmpty() && (indexRange.end() > end || indexRange.start() < start))
     {
         // GL spec says that behavior in this case is undefined - generating an error is fine.
         ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kExceedsElementRange);
@@ -789,12 +788,11 @@ bool ValidateDrawRangeElementsBaseVertexOES(const Context *context,
     }
 
     // Note that resolving the index range is a bit slow. We should probably optimize this.
-    IndexRange indexRange;
+    IndexRange indexRange{IndexRange::Undefined()};
     ANGLE_VALIDATION_TRY(context->getState().getVertexArray()->getIndexRange(
         context, type, count, indices, context->getState().isPrimitiveRestartEnabled(),
         &indexRange));
-
-    if (indexRange.end > end || indexRange.start < start)
+    if (!indexRange.isEmpty() && (indexRange.end() > end || indexRange.start() < start))
     {
         // GL spec says that behavior in this case is undefined - generating an error is fine.
         ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kExceedsElementRange);
@@ -1487,13 +1485,12 @@ bool ValidateTexStorageMem2DEXT(const Context *context,
         return false;
     }
 
-    if (context->getClientMajorVersion() < 3)
+    if (context->getClientVersion() < ES_3_0)
     {
         return ValidateES2TexStorageParametersBase(context, entryPoint, target, levels,
                                                    internalFormat, width, height);
     }
 
-    ASSERT(context->getClientMajorVersion() >= 3);
     return ValidateES3TexStorage2DParameters(context, entryPoint, target, levels, internalFormat,
                                              width, height, 1);
 }
@@ -1754,7 +1751,7 @@ bool ValidateGetTexParameterIivOES(const Context *context,
                                    GLenum pname,
                                    const GLint *params)
 {
-    if (context->getClientMajorVersion() < 3)
+    if (context->getClientVersion() < ES_3_0)
     {
         ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kES3Required);
         return false;
@@ -1774,7 +1771,7 @@ bool ValidateGetTexParameterIuivOES(const Context *context,
                                     GLenum pname,
                                     const GLuint *params)
 {
-    if (context->getClientMajorVersion() < 3)
+    if (context->getClientVersion() < ES_3_0)
     {
         ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kES3Required);
         return false;
@@ -1794,7 +1791,7 @@ bool ValidateTexParameterIivOES(const Context *context,
                                 GLenum pname,
                                 const GLint *params)
 {
-    if (context->getClientMajorVersion() < 3)
+    if (context->getClientVersion() < ES_3_0)
     {
         ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kES3Required);
         return false;
@@ -1814,7 +1811,7 @@ bool ValidateTexParameterIuivOES(const Context *context,
                                  GLenum pname,
                                  const GLuint *params)
 {
-    if (context->getClientMajorVersion() < 3)
+    if (context->getClientVersion() < ES_3_0)
     {
         ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kES3Required);
         return false;
@@ -1835,7 +1832,7 @@ bool ValidateGetSamplerParameterIivOES(const Context *context,
                                        GLenum pname,
                                        const GLint *params)
 {
-    if (context->getClientMajorVersion() < 3)
+    if (context->getClientVersion() < ES_3_0)
     {
         ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kES3Required);
         return false;
@@ -1855,7 +1852,7 @@ bool ValidateGetSamplerParameterIuivOES(const Context *context,
                                         GLenum pname,
                                         const GLuint *params)
 {
-    if (context->getClientMajorVersion() < 3)
+    if (context->getClientVersion() < ES_3_0)
     {
         ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kES3Required);
         return false;
@@ -1875,7 +1872,7 @@ bool ValidateSamplerParameterIivOES(const Context *context,
                                     GLenum pname,
                                     const GLint *params)
 {
-    if (context->getClientMajorVersion() < 3)
+    if (context->getClientVersion() < ES_3_0)
     {
         ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kES3Required);
         return false;
@@ -1895,7 +1892,7 @@ bool ValidateSamplerParameterIuivOES(const Context *context,
                                      GLenum pname,
                                      const GLuint *params)
 {
-    if (context->getClientMajorVersion() < 3)
+    if (context->getClientVersion() < ES_3_0)
     {
         ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kES3Required);
         return false;
@@ -1915,7 +1912,7 @@ bool ValidateGetSamplerParameterIivEXT(const Context *context,
                                        GLenum pname,
                                        const GLint *params)
 {
-    if (context->getClientMajorVersion() < 3)
+    if (context->getClientVersion() < ES_3_0)
     {
         ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kES3Required);
         return false;
@@ -1936,7 +1933,7 @@ bool ValidateGetSamplerParameterIuivEXT(const Context *context,
                                         GLenum pname,
                                         const GLuint *params)
 {
-    if (context->getClientMajorVersion() < 3)
+    if (context->getClientVersion() < ES_3_0)
     {
         ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kES3Required);
         return false;
@@ -1957,7 +1954,7 @@ bool ValidateGetTexParameterIivEXT(const Context *context,
                                    GLenum pname,
                                    const GLint *params)
 {
-    if (context->getClientMajorVersion() < 3)
+    if (context->getClientVersion() < ES_3_0)
     {
         ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kES3Required);
         return false;
@@ -1977,7 +1974,7 @@ bool ValidateGetTexParameterIuivEXT(const Context *context,
                                     GLenum pname,
                                     const GLuint *params)
 {
-    if (context->getClientMajorVersion() < 3)
+    if (context->getClientVersion() < ES_3_0)
     {
         ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kES3Required);
         return false;
@@ -1997,7 +1994,7 @@ bool ValidateSamplerParameterIivEXT(const Context *context,
                                     GLenum pname,
                                     const GLint *param)
 {
-    if (context->getClientMajorVersion() < 3)
+    if (context->getClientVersion() < ES_3_0)
     {
         ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kES3Required);
         return false;
@@ -2017,7 +2014,7 @@ bool ValidateSamplerParameterIuivEXT(const Context *context,
                                      GLenum pname,
                                      const GLuint *param)
 {
-    if (context->getClientMajorVersion() < 3)
+    if (context->getClientVersion() < ES_3_0)
     {
         ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kES3Required);
         return false;
@@ -2037,7 +2034,7 @@ bool ValidateTexParameterIivEXT(const Context *context,
                                 GLenum pname,
                                 const GLint *params)
 {
-    if (context->getClientMajorVersion() < 3)
+    if (context->getClientVersion() < ES_3_0)
     {
         ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kES3Required);
         return false;
@@ -2057,7 +2054,7 @@ bool ValidateTexParameterIuivEXT(const Context *context,
                                  GLenum pname,
                                  const GLuint *params)
 {
-    if (context->getClientMajorVersion() < 3)
+    if (context->getClientVersion() < ES_3_0)
     {
         ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kES3Required);
         return false;

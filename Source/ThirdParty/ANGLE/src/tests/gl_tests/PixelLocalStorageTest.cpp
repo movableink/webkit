@@ -42,15 +42,15 @@ using namespace angle;
         EXPECT_EQ(nextError, GLenum(GL_NO_ERROR)); \
     }
 
-#define EXPECT_GL_SINGLE_ERROR_MSG(msg)                         \
-    if (mHasDebugKHR)                                           \
-    {                                                           \
-        EXPECT_EQ(mErrorMessages.size(), size_t(1));            \
-        if (mErrorMessages.size() == 1)                         \
-        {                                                       \
-            EXPECT_EQ(std::string(msg), mErrorMessages.back()); \
-        }                                                       \
-        mErrorMessages.clear();                                 \
+#define EXPECT_GL_SINGLE_ERROR_MSG(msg)                                                 \
+    if (mHasDebugKHR)                                                                   \
+    {                                                                                   \
+        EXPECT_EQ(mErrorMessages.size(), size_t(1));                                    \
+        if (mErrorMessages.size() == 1)                                                 \
+        {                                                                               \
+            EXPECT_NE(mErrorMessages.back().find(std::string(msg)), std::string::npos); \
+        }                                                                               \
+        mErrorMessages.clear();                                                         \
     }
 
 #define EXPECT_PIXEL_LOCAL_CLEAR_VALUE_FLOAT(plane, rgba)                             \
@@ -7232,7 +7232,7 @@ TEST_P(PixelLocalStorageValidationTest, ModifyTextureDuringPLS)
                                        GL_UNSIGNED_BYTE, imageData.size(), imageData.data()));
     }
 
-    if (IsGLExtensionEnabled("GL_OES_texture_3D"))
+    if (EnsureGLExtensionEnabled("GL_OES_texture_3D"))
     {
         CHECK_TEXTURE_2D_ARRAY_MODIFICATION(glTexSubImage3DOES(
             GL_TEXTURE_2D_ARRAY, 0, 0, 0, 1, W, H, 1, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data()));
@@ -7484,10 +7484,13 @@ TEST_P(PixelLocalStorageValidationTest, ReadPixels)
         glCopyTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 2, 0, 0, W, H);
         EXPECT_GL_NO_ERROR();
         EXPECT_GL_INTEGER(GL_PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE, 0);
-        beginPLS();
-        glCopyTexSubImage3DOES(GL_TEXTURE_3D, 0, 0, 0, 2, 0, 0, W, H);
-        EXPECT_GL_NO_ERROR();
-        EXPECT_GL_INTEGER(GL_PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE, 0);
+        if (EnsureGLExtensionEnabled("GL_OES_texture_3D"))
+        {
+            beginPLS();
+            glCopyTexSubImage3DOES(GL_TEXTURE_3D, 0, 0, 0, 2, 0, 0, W, H);
+            EXPECT_GL_NO_ERROR();
+            EXPECT_GL_INTEGER(GL_PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE, 0);
+        }
         beginPLS();
     }
     for (int i = firstOverriddenDrawBuffer; i < MAX_DRAW_BUFFERS; ++i)
@@ -7522,10 +7525,13 @@ TEST_P(PixelLocalStorageValidationTest, ReadPixels)
         glCopyTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 2, 0, 0, W, H);
         EXPECT_BLIT_FRAMEBUFFER_ERROR();
         EXPECT_GL_INTEGER(GL_PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE, 0);
-        beginPLS();
-        glCopyTexSubImage3DOES(GL_TEXTURE_3D, 0, 0, 0, 2, 0, 0, W, H);
-        EXPECT_BLIT_FRAMEBUFFER_ERROR();
-        EXPECT_GL_INTEGER(GL_PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE, 0);
+        if (EnsureGLExtensionEnabled("GL_OES_texture_3D"))
+        {
+            beginPLS();
+            glCopyTexSubImage3DOES(GL_TEXTURE_3D, 0, 0, 0, 2, 0, 0, W, H);
+            EXPECT_BLIT_FRAMEBUFFER_ERROR();
+            EXPECT_GL_INTEGER(GL_PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE, 0);
+        }
         beginPLS();
 #undef EXPECT_BLIT_FRAMEBUFFER_ERROR
     }
@@ -7559,10 +7565,13 @@ TEST_P(PixelLocalStorageValidationTest, ReadPixels)
         glCopyTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 2, 0, 0, W, H);
         EXPECT_GL_NO_ERROR();
         EXPECT_GL_INTEGER(GL_PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE, 0);
-        beginPLS();
-        glCopyTexSubImage3DOES(GL_TEXTURE_3D, 0, 0, 0, 2, 0, 0, W, H);
-        EXPECT_GL_NO_ERROR();
-        EXPECT_GL_INTEGER(GL_PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE, 0);
+        if (EnsureGLExtensionEnabled("GL_OES_texture_3D"))
+        {
+            beginPLS();
+            glCopyTexSubImage3DOES(GL_TEXTURE_3D, 0, 0, 0, 2, 0, 0, W, H);
+            EXPECT_GL_NO_ERROR();
+            EXPECT_GL_INTEGER(GL_PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE, 0);
+        }
         beginPLS();
     }
 
@@ -8554,5 +8563,4 @@ TEST_P(PixelLocalStorageTestPreES3, UnsupportedClientVersion)
 
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(PixelLocalStorageTestPreES3);
 ANGLE_INSTANTIATE_TEST(PixelLocalStorageTestPreES3,
-                       ES1_NULL().enable(Feature::EmulatePixelLocalStorage),
                        ES2_NULL().enable(Feature::EmulatePixelLocalStorage));

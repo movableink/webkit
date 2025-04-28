@@ -283,8 +283,6 @@ constexpr const char *kSkippedMessages[] = {
     "VUID-vkCmdDraw-None-09462",
     // https://anglebug.com/394598758
     "VUID-vkBindBufferMemory-size-01037",
-    // https://anglebug.com/408190758
-    "VUID-vkQueueSubmit-pSignalSemaphores-00067",
 };
 
 // Validation messages that should be ignored only when VK_EXT_primitive_topology_list_restart is
@@ -344,6 +342,11 @@ constexpr const char *kSkippedMessagesWithDynamicRendering[] = {
     "VUID-vkCmdDrawIndexed-multisampledRenderToSingleSampled-07285",
     "VUID-vkCmdDrawIndexed-multisampledRenderToSingleSampled-07286",
     "VUID-vkCmdDrawIndexed-multisampledRenderToSingleSampled-07287",
+};
+
+constexpr const char *kSkippedMessagesWithoutSwapchainMaintenance1[] = {
+    // https://anglebug.com/408190758
+    "VUID-vkQueueSubmit-pSignalSemaphores-00067",
 };
 
 // Some syncval errors are resolved in the presence of the NONE load or store render pass ops.  For
@@ -2031,6 +2034,8 @@ void Renderer::onDestroy(vk::ErrorContext *context)
         handleDeviceLost();
     }
 
+    (void)(finishResourceUse(context, mSubmittedResourceUse));
+
     if (mPlaceHolderDescriptorSetLayout)
     {
         ASSERT(mPlaceHolderDescriptorSetLayout.unique());
@@ -2320,7 +2325,7 @@ angle::Result Renderer::initialize(vk::ErrorContext *context,
         volkInitializeCustom(vulkanLoaderGetInstanceProcAddr);
 
         uint32_t ver = volkGetInstanceVersion();
-        if (!IsAndroid() && ver < VK_MAKE_VERSION(1, 1, 91))
+        if (!IsAndroid() && ver < VK_MAKE_API_VERSION(0, 1, 1, 91))
         {
             // http://crbug.com/1205999 - non-Android Vulkan Loader versions before 1.1.91 have a
             // bug which prevents loading VK_EXT_debug_utils function pointers.
@@ -4501,6 +4506,14 @@ void Renderer::initializeValidationMessageSuppressions()
             kSkippedMessagesWithDynamicRendering + ArraySize(kSkippedMessagesWithDynamicRendering));
     }
 
+    if (!getFeatures().supportsSwapchainMaintenance1.enabled)
+    {
+        mSkippedValidationMessages.insert(
+            mSkippedValidationMessages.end(), kSkippedMessagesWithoutSwapchainMaintenance1,
+            kSkippedMessagesWithoutSwapchainMaintenance1 +
+                ArraySize(kSkippedMessagesWithoutSwapchainMaintenance1));
+    }
+
     // Build the list of syncval errors that are currently expected and should be skipped.
     mSkippedSyncvalMessages.insert(mSkippedSyncvalMessages.end(), kSkippedSyncvalMessages,
                                    kSkippedSyncvalMessages + ArraySize(kSkippedSyncvalMessages));
@@ -4563,9 +4576,9 @@ std::string Renderer::getRendererDescription() const
     uint32_t apiVersion = mPhysicalDeviceProperties.apiVersion;
 
     strstr << "Vulkan ";
-    strstr << VK_VERSION_MAJOR(apiVersion) << ".";
-    strstr << VK_VERSION_MINOR(apiVersion) << ".";
-    strstr << VK_VERSION_PATCH(apiVersion);
+    strstr << VK_API_VERSION_MAJOR(apiVersion) << ".";
+    strstr << VK_API_VERSION_MINOR(apiVersion) << ".";
+    strstr << VK_API_VERSION_PATCH(apiVersion);
 
     strstr << " (";
 
@@ -4618,12 +4631,21 @@ std::string Renderer::getVersionString(bool includeFullVersion) const
             strstr << ANGLE_VK_VERSION_MAJOR_WIN_INTEL(driverVersion) << ".";
             strstr << ANGLE_VK_VERSION_MINOR_WIN_INTEL(driverVersion);
         }
+        // The major version for the new QCOM drivers seems to be 512, which results in a major
+        // version of 0 and a non-zero variant field when using the VK_API_VERSION_x macros.
+        // Therefore, the version string is updated to show the correct major version.
+        else if (mPhysicalDeviceProperties.vendorID == VENDOR_ID_QUALCOMM)
+        {
+            strstr << (512 | VK_API_VERSION_MAJOR(driverVersion)) << ".";
+            strstr << VK_API_VERSION_MINOR(driverVersion) << ".";
+            strstr << VK_API_VERSION_PATCH(driverVersion);
+        }
         // All other drivers use the Vulkan standard
         else
         {
-            strstr << VK_VERSION_MAJOR(driverVersion) << ".";
-            strstr << VK_VERSION_MINOR(driverVersion) << ".";
-            strstr << VK_VERSION_PATCH(driverVersion);
+            strstr << VK_API_VERSION_MAJOR(driverVersion) << ".";
+            strstr << VK_API_VERSION_MINOR(driverVersion) << ".";
+            strstr << VK_API_VERSION_PATCH(driverVersion);
         }
     }
 
@@ -5015,6 +5037,13 @@ void Renderer::initFeatures(const vk::ExtensionNameList &deviceExtensionNames,
     // VkHostImageCopyDevicePerformanceQueryEXT::identicalMemoryLayout.
     ANGLE_FEATURE_CONDITION(&mFeatures, allowHostImageCopyDespiteNonIdenticalLayout, false);
 
+    // Force host image copy for textures with luminance/alpha formats.  This disables framebuffer
+    // compression (but these formats are not renderable), and the benefits of host image copy
+    // outweigh framebuffer compression on sampled textures on the following GPUs:
+    //
+    // - ARM
+    ANGLE_FEATURE_CONDITION(&mFeatures, forceHostImageCopyForLuma, isARM);
+
     // VK_EXT_pipeline_creation_feedback is promoted to core in Vulkan 1.3.
     ANGLE_FEATURE_CONDITION(
         &mFeatures, supportsPipelineCreationFeedback,
@@ -5341,23 +5370,6 @@ void Renderer::initFeatures(const vk::ExtensionNameList &deviceExtensionNames,
 
     ANGLE_FEATURE_CONDITION(&mFeatures, supportsShaderFloat64,
                             mPhysicalDeviceFeatures.shaderFloat64 == VK_TRUE);
-
-    // Prefer driver uniforms over specialization constants in the following:
-    //
-    // - Older Qualcomm drivers where specialization constants severely degrade the performance of
-    //   pipeline creation.  http://issuetracker.google.com/173636783
-    // - ARM hardware
-    // - Imagination hardware
-    // - Samsung hardware
-    // - SwiftShader
-    //
-    ANGLE_FEATURE_CONDITION(
-        &mFeatures, preferDriverUniformOverSpecConst,
-        (isQualcommProprietary && driverVersion < angle::VersionTriple(512, 513, 0)) || isARM ||
-            isPowerVR || isSamsung || isSwiftShader);
-
-    ANGLE_FEATURE_CONDITION(&mFeatures, warmUpPreRotatePipelineVariations,
-                            !mFeatures.preferDriverUniformOverSpecConst.enabled && IsAndroid());
 
     ANGLE_FEATURE_CONDITION(&mFeatures, preferCachedNoncoherentForDynamicStreamBufferUsage,
                             IsMeteorLake(mPhysicalDeviceProperties.deviceID));
@@ -5818,10 +5830,14 @@ void Renderer::initFeatures(const vk::ExtensionNameList &deviceExtensionNames,
     // on those earlier versions.  http://anglebug.com/42266655
     //
     // On RADV, creating graphics pipeline can crash in the driver.  http://crbug.com/1497512
+    //
+    // Some unacceptable performance degradation has been observed on ARM GPU based device
+    // when graphics pipeline is enabled, therefore it's recommended to disable it until
+    // the problematic area gets addressed and fixed. http://anglebug.com/404581992
     ANGLE_FEATURE_CONDITION(&mFeatures, supportsGraphicsPipelineLibrary,
                             mGraphicsPipelineLibraryFeatures.graphicsPipelineLibrary == VK_TRUE &&
                                 (!isNvidia || driverVersion >= angle::VersionTriple(531, 0, 0)) &&
-                                !isRADV);
+                                !isRADV && !isARM);
 
     // When VK_EXT_graphics_pipeline_library is not used:
     //
@@ -6566,6 +6582,7 @@ angle::Result Renderer::queueSubmitOneOff(vk::ErrorContext *context,
                                               primary.getHandle(), waitSemaphore,
                                               waitSemaphoreStageMasks, submitQueueSerial));
 
+    mSubmittedResourceUse.setQueueSerial(submitQueueSerial);
     *queueSerialOut = submitQueueSerial;
     if (primary.valid())
     {
@@ -6584,9 +6601,11 @@ angle::Result Renderer::queueSubmitWaitSemaphore(vk::ErrorContext *context,
                                                  VkPipelineStageFlags waitSemaphoreStageMasks,
                                                  QueueSerial submitQueueSerial)
 {
-    return mCommandQueue.queueSubmitOneOff(context, vk::ProtectionType::Unprotected, priority,
-                                           VK_NULL_HANDLE, waitSemaphore.getHandle(),
-                                           waitSemaphoreStageMasks, submitQueueSerial);
+    ANGLE_TRY(mCommandQueue.queueSubmitOneOff(context, vk::ProtectionType::Unprotected, priority,
+                                              VK_NULL_HANDLE, waitSemaphore.getHandle(),
+                                              waitSemaphoreStageMasks, submitQueueSerial));
+    mSubmittedResourceUse.setQueueSerial(submitQueueSerial);
+    return angle::Result::Continue;
 }
 
 template <VkFormatFeatureFlags VkFormatProperties::*features>
@@ -6862,6 +6881,7 @@ angle::Result Renderer::submitPriorityDependency(vk::ErrorContext *context,
         }
         ANGLE_TRY(submitCommands(context, protectionType, srcContextPriority, signalSemaphore,
                                  nullptr, {}, queueSerial));
+        mSubmittedResourceUse.setQueueSerial(queueSerial);
     }
 
     // Submit only Wait Semaphore into the destination Priority (VkQueue).
@@ -6952,34 +6972,30 @@ VkResult Renderer::queuePresent(vk::ErrorContext *context,
 template <typename CommandBufferHelperT, typename RecyclerT>
 angle::Result Renderer::getCommandBufferImpl(vk::ErrorContext *context,
                                              vk::SecondaryCommandPool *commandPool,
-                                             vk::SecondaryCommandMemoryAllocator *commandsAllocator,
                                              RecyclerT *recycler,
                                              CommandBufferHelperT **commandBufferHelperOut)
 {
-    return recycler->getCommandBufferHelper(context, commandPool, commandsAllocator,
-                                            commandBufferHelperOut);
+    return recycler->getCommandBufferHelper(context, commandPool, commandBufferHelperOut);
 }
 
 angle::Result Renderer::getOutsideRenderPassCommandBufferHelper(
     vk::ErrorContext *context,
     vk::SecondaryCommandPool *commandPool,
-    vk::SecondaryCommandMemoryAllocator *commandsAllocator,
     vk::OutsideRenderPassCommandBufferHelper **commandBufferHelperOut)
 {
     ANGLE_TRACE_EVENT0("gpu.angle", "Renderer::getOutsideRenderPassCommandBufferHelper");
-    return getCommandBufferImpl(context, commandPool, commandsAllocator,
-                                &mOutsideRenderPassCommandBufferRecycler, commandBufferHelperOut);
+    return getCommandBufferImpl(context, commandPool, &mOutsideRenderPassCommandBufferRecycler,
+                                commandBufferHelperOut);
 }
 
 angle::Result Renderer::getRenderPassCommandBufferHelper(
     vk::ErrorContext *context,
     vk::SecondaryCommandPool *commandPool,
-    vk::SecondaryCommandMemoryAllocator *commandsAllocator,
     vk::RenderPassCommandBufferHelper **commandBufferHelperOut)
 {
     ANGLE_TRACE_EVENT0("gpu.angle", "Renderer::getRenderPassCommandBufferHelper");
-    return getCommandBufferImpl(context, commandPool, commandsAllocator,
-                                &mRenderPassCommandBufferRecycler, commandBufferHelperOut);
+    return getCommandBufferImpl(context, commandPool, &mRenderPassCommandBufferRecycler,
+                                commandBufferHelperOut);
 }
 
 void Renderer::recycleOutsideRenderPassCommandBufferHelper(

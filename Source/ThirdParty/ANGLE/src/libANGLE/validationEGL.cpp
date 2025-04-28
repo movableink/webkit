@@ -677,7 +677,7 @@ bool ValidateGetPlatformDisplayCommon(const ValidationContext *val,
             }
             break;
         default:
-            val->setError(EGL_BAD_CONFIG, "Bad platform type.");
+            val->setError(EGL_BAD_PARAMETER, "Bad platform type.");
             return false;
     }
 
@@ -1300,7 +1300,7 @@ bool ValidateCompatibleSurface(const ValidationContext *val,
     const Config *surfaceConfig = surface->getConfig();
 
     // Surface compatible with client API - only OPENGL_ES supported
-    switch (context->getClientMajorVersion())
+    switch (context->getClientVersion().getMajor())
     {
         case 1:
             if (!(surfaceConfig->renderableType & EGL_OPENGL_ES_BIT))
@@ -2854,15 +2854,16 @@ bool ValidateCreateContext(const ValidationContext *val,
                         return false;
                     }
                     if (display->getMaxSupportedESVersion() <
-                        gl::Version(static_cast<GLuint>(clientMajorVersion),
-                                    static_cast<GLuint>(clientMinorVersion)))
+                        gl::Version(static_cast<uint8_t>(clientMajorVersion),
+                                    static_cast<uint8_t>(clientMinorVersion)))
                     {
                         gl::Version max = display->getMaxSupportedESVersion();
                         val->setError(EGL_BAD_MATCH,
                                       "Requested GLES version (%" PRIxPTR ".%" PRIxPTR
                                       ") is greater than "
-                                      "max supported (%d, %d).",
-                                      clientMajorVersion, clientMinorVersion, max.major, max.minor);
+                                      "max supported (%d.%d).",
+                                      clientMajorVersion, clientMinorVersion, max.getMajor(),
+                                      max.getMinor());
                         return false;
                     }
                     if ((attributes.get(EGL_CONTEXT_WEBGL_COMPATIBILITY_ANGLE, EGL_FALSE) ==

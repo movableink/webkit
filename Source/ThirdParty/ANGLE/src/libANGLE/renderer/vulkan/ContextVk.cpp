@@ -1256,10 +1256,6 @@ void ContextVk::onDestroy(const gl::Context *context)
     mOutsideRenderPassCommands->releaseCommandPool();
     mRenderPassCommands->releaseCommandPool();
 
-    // Detach functions are only used for ring buffer allocators.
-    mOutsideRenderPassCommands->detachAllocator();
-    mRenderPassCommands->detachAllocator();
-
     mRenderer->recycleOutsideRenderPassCommandBufferHelper(&mOutsideRenderPassCommands);
     mRenderer->recycleRenderPassCommandBufferHelper(&mRenderPassCommands);
 
@@ -1389,10 +1385,9 @@ angle::Result ContextVk::initialize(const angle::ImageLoadContext &imageLoadCont
         this, &mCommandPools.renderPassPool, mRenderer->getQueueFamilyIndex(),
         getProtectionType()));
     ANGLE_TRY(mRenderer->getOutsideRenderPassCommandBufferHelper(
-        this, &mCommandPools.outsideRenderPassPool, &mOutsideRenderPassCommandsAllocator,
-        &mOutsideRenderPassCommands));
-    ANGLE_TRY(mRenderer->getRenderPassCommandBufferHelper(
-        this, &mCommandPools.renderPassPool, &mRenderPassCommandsAllocator, &mRenderPassCommands));
+        this, &mCommandPools.outsideRenderPassPool, &mOutsideRenderPassCommands));
+    ANGLE_TRY(mRenderer->getRenderPassCommandBufferHelper(this, &mCommandPools.renderPassPool,
+                                                          &mRenderPassCommands));
 
     // Allocate queueSerial index and generate queue serial for commands.
     ANGLE_TRY(allocateQueueSerialIndex());
@@ -1546,8 +1541,6 @@ angle::Result ContextVk::finish(const gl::Context *context)
     }
 
     ANGLE_TRY(finishImpl(RenderPassClosureReason::GLFinish));
-
-    syncObjectPerfCounters(mRenderer->getCommandQueuePerfCounters());
 
     if (!mCurrentWindowSurface || singleBufferedFlush)
     {
@@ -6215,21 +6208,6 @@ void ContextVk::updateSurfaceRotationDrawFramebuffer(const gl::State &glState,
     const SurfaceRotation rotation =
         getSurfaceRotationImpl(glState.getDrawFramebuffer(), currentDrawSurface);
     mCurrentRotationDrawFramebuffer = rotation;
-
-    if (!getFeatures().preferDriverUniformOverSpecConst.enabled)
-    {
-        const bool isRotatedAspectRatio = IsRotatedAspectRatio(rotation);
-        // Update spec consts
-        if (isRotatedAspectRatio != mGraphicsPipelineDesc->getSurfaceRotation())
-        {
-            // surface rotation are specialization constants, which affects program compilation.
-            // When rotation changes, we need to update GraphicsPipelineDesc so that the correct
-            // pipeline program object will be retrieved.
-            mGraphicsPipelineDesc->updateSurfaceRotation(&mGraphicsPipelineTransition,
-                                                         isRotatedAspectRatio);
-            invalidateCurrentGraphicsPipeline();
-        }
-    }
 }
 
 void ContextVk::updateSurfaceRotationReadFramebuffer(const gl::State &glState,
@@ -7424,7 +7402,6 @@ angle::Result ContextVk::initImageAllocation(vk::ImageHelper *imageHelper,
     {
         ANGLE_TRY(imageHelper->initializeNonZeroMemory(this, hasProtectedContent, outputFlags,
                                                        outputSize));
-        imageHelper->getImage().getHandle();
     }
 
     return angle::Result::Continue;
@@ -7877,6 +7854,8 @@ angle::Result ContextVk::finishImpl(RenderPassClosureReason renderPassClosureRea
             ANGLE_TRY(synchronizeCpuGpuTime());
         }
     }
+
+    syncObjectPerfCounters(mRenderer->getCommandQueuePerfCounters());
 
     return angle::Result::Continue;
 }

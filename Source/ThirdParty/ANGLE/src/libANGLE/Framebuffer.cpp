@@ -138,8 +138,11 @@ FramebufferStatus CheckAttachmentCompleteness(const Context *context,
             // range[levelbase, q], where levelbase is the value of TEXTURE_BASE_LEVEL and q is
             // the effective maximum texture level defined in the Mipmapping discussion of
             // section 3.8.10.4.
-            if (attachmentMipLevel < texture->getBaseLevel() ||
-                attachmentMipLevel > texture->getMipmapMaxLevel())
+            // The above condition works only if FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL is not
+            // the same as levelbase.
+            if (attachmentMipLevel != texture->getBaseLevel() &&
+                (attachmentMipLevel < texture->getBaseLevel() ||
+                 attachmentMipLevel > texture->getMipmapMaxLevel()))
             {
                 return FramebufferStatus::Incomplete(
                     GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT,
@@ -1399,7 +1402,7 @@ FramebufferStatus Framebuffer::checkStatusWithGLFrontEnd(const Context *context)
 
             // in GLES 2.0, all color attachments attachments must have the same number of bitplanes
             // in GLES 3.0, there is no such restriction
-            if (state.getClientMajorVersion() < 3)
+            if (state.getClientVersion() < ES_3_0)
             {
                 if (colorbufferSize.valid())
                 {
@@ -1624,7 +1627,7 @@ FramebufferStatus Framebuffer::checkStatusWithGLFrontEnd(const Context *context)
     }
 
     // Starting from ES 3.0 stencil and depth, if present, should be the same image
-    if (state.getClientMajorVersion() >= 3 && depthAttachment.isAttached() &&
+    if (state.getClientVersion() >= ES_3_0 && depthAttachment.isAttached() &&
         stencilAttachment.isAttached() && stencilAttachment != depthAttachment)
     {
         return FramebufferStatus::Incomplete(
@@ -1711,7 +1714,7 @@ FramebufferStatus Framebuffer::checkStatusWithGLFrontEnd(const Context *context)
 
     // In ES 2.0 and WebGL, all color attachments must have the same width and height.
     // In ES 3.0, there is no such restriction.
-    if ((state.getClientMajorVersion() < 3 || state.getExtensions().webglCompatibilityANGLE) &&
+    if ((state.getClientVersion() < ES_3_0 || state.getExtensions().webglCompatibilityANGLE) &&
         !mState.attachmentsHaveSameDimensions())
     {
         return FramebufferStatus::Incomplete(

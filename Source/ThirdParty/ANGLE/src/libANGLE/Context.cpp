@@ -257,11 +257,11 @@ bool GetWebGLContext(const egl::AttributeMap &attribs)
 
 Version GetClientVersion(egl::Display *display, const egl::AttributeMap &attribs)
 {
-    Version requestedVersion =
-        Version(GetClientMajorVersion(attribs), GetClientMinorVersion(attribs));
+    const Version requestedVersion(static_cast<uint8_t>(GetClientMajorVersion(attribs)),
+                                   static_cast<uint8_t>(GetClientMinorVersion(attribs)));
     if (GetBackwardCompatibleContext(attribs))
     {
-        if (requestedVersion.major == 1)
+        if (requestedVersion < ES_2_0)
         {
             // If the user requests an ES1 context, we cannot return an ES 2+ context.
             return Version(1, 1);
@@ -1675,6 +1675,15 @@ void Context::getQueryiv(QueryType target, GLenum pname, GLint *params)
         case GL_QUERY_COUNTER_BITS_EXT:
             switch (target)
             {
+                case QueryType::AnySamples:
+                case QueryType::AnySamplesConservative:
+                case QueryType::CommandsCompleted:
+                    params[0] = 1;
+                    break;
+                case QueryType::PrimitivesGenerated:
+                case QueryType::TransformFeedbackPrimitivesWritten:
+                    params[0] = 32;
+                    break;
                 case QueryType::TimeElapsed:
                     params[0] = getCaps().queryCounterBitsTimeElapsed;
                     break;
@@ -1993,10 +2002,10 @@ void Context::getIntegervImpl(GLenum pname, GLint *params) const
             *params = mState.getCaps().maxProgramTexelOffset;
             break;
         case GL_MAJOR_VERSION:
-            *params = getClientVersion().major;
+            *params = getClientVersion().getMajor();
             break;
         case GL_MINOR_VERSION:
-            *params = getClientVersion().minor;
+            *params = getClientVersion().getMinor();
             break;
         case GL_MAX_ELEMENTS_INDICES:
             *params = mState.getCaps().maxElementsIndices;
@@ -2366,7 +2375,7 @@ void Context::getIntegervImpl(GLenum pname, GLint *params) const
 
         // case GL_MAX_CLIP_DISTANCES_EXT:  Conflict enum value
         case GL_MAX_CLIP_PLANES:
-            if (getClientVersion().major >= 2)
+            if (getClientVersion() >= ES_2_0)
             {
                 // GL_APPLE_clip_distance / GL_EXT_clip_cull_distance / GL_ANGLE_clip_cull_distance
                 *params = mState.getCaps().maxClipDistances;
@@ -3525,7 +3534,7 @@ void Context::initVersionStrings()
     else
     {
         versionString << "OpenGL ES ";
-        versionString << clientVersion.major << "." << clientVersion.minor << ".0 (ANGLE "
+        versionString << clientVersion.getMajor() << "." << clientVersion.getMinor() << ".0 (ANGLE "
                       << angle::GetANGLEVersionString() << ")";
     }
 
@@ -3533,8 +3542,8 @@ void Context::initVersionStrings()
 
     std::ostringstream shadingLanguageVersionString;
     shadingLanguageVersionString << "OpenGL ES GLSL ES ";
-    shadingLanguageVersionString << (clientVersion.major == 2 ? 1 : clientVersion.major) << "."
-                                 << clientVersion.minor << "0 (ANGLE "
+    shadingLanguageVersionString << (clientVersion.getMajor() == 2 ? 1 : clientVersion.getMajor())
+                                 << "." << clientVersion.getMinor() << "0 (ANGLE "
                                  << angle::GetANGLEVersionString() << ")";
     mShadingLanguageString = MakeStaticString(shadingLanguageVersionString.str());
 }
@@ -4304,9 +4313,9 @@ void Context::initCaps()
             extensions->textureCompressionAstcLdrKHR          = false;
         }
 #if !defined(ANGLE_HAS_ASTCENC)
-        // Don't expose emulated ASTC when it's not built.
-        mSupportedExtensions.textureCompressionAstcLdrKHR = false;
-        extensions->textureCompressionAstcLdrKHR          = false;
+        // ASTC shouldn't be exposed if decoder is not built.
+        ASSERT(!mSupportedExtensions.textureCompressionAstcLdrKHR);
+        ASSERT(!extensions->textureCompressionAstcLdrKHR);
 #endif
     }
 
@@ -6180,8 +6189,7 @@ void Context::debugMessageInsert(GLenum source,
     }
 
     std::string msg(buf, (length > 0) ? static_cast<size_t>(length) : strlen(buf));
-    mState.getDebug().insertMessage(source, type, id, severity, std::move(msg), gl::LOG_INFO,
-                                    angle::EntryPoint::GLDebugMessageInsert);
+    mState.getDebug().insertMessage(source, type, id, severity, std::move(msg), gl::LOG_INFO);
 }
 
 void Context::debugMessageCallback(GLDEBUGPROCKHR callback, const void *userParam)
@@ -9085,7 +9093,7 @@ bool Context::usingDisplaySemaphoreShareGroup() const
 
 GLenum Context::getConvertedRenderbufferFormat(GLenum internalformat) const
 {
-    if (isWebGL() && mState.getClientMajorVersion() == 2 && internalformat == GL_DEPTH_STENCIL)
+    if (isWebGL1() && internalformat == GL_DEPTH_STENCIL)
     {
         return GL_DEPTH24_STENCIL8;
     }
@@ -9947,16 +9955,16 @@ void ErrorSet::handleError(GLenum errorCode,
 
     // Process the error, but log it with WARN severity so it shows up in logs.
     mDebug->insertMessage(GL_DEBUG_SOURCE_API, GL_DEBUG_TYPE_ERROR, errorCode,
-                          GL_DEBUG_SEVERITY_HIGH, std::move(formattedMessage), gl::LOG_WARN,
-                          angle::EntryPoint::Invalid);
+                          GL_DEBUG_SEVERITY_HIGH, std::move(formattedMessage), gl::LOG_WARN);
 
     pushError(errorCode);
 }
 
 void ErrorSet::validationError(angle::EntryPoint entryPoint, GLenum errorCode, const char *message)
 {
-    mDebug->insertMessage(GL_DEBUG_SOURCE_API, GL_DEBUG_TYPE_ERROR, errorCode,
-                          GL_DEBUG_SEVERITY_HIGH, message, gl::LOG_INFO, entryPoint);
+    mDebug->insertMessage(
+        GL_DEBUG_SOURCE_API, GL_DEBUG_TYPE_ERROR, errorCode, GL_DEBUG_SEVERITY_HIGH,
+        std::string(GetEntryPointName(entryPoint)) + ": " + message, gl::LOG_INFO);
 
     pushError(errorCode);
 }
@@ -10430,9 +10438,9 @@ void StateCache::updateValidDrawModes(Context *context)
 void StateCache::updateValidBindTextureTypes(Context *context)
 {
     const Extensions &exts = context->getExtensions();
-    bool isGLES3           = context->getClientMajorVersion() >= 3;
-    bool isGLES31          = context->getClientVersion() >= Version(3, 1);
-    bool isGLES32          = context->getClientVersion() >= Version(3, 2);
+    const bool isGLES3     = context->getClientVersion() >= ES_3_0;
+    const bool isGLES31    = context->getClientVersion() >= ES_3_1;
+    const bool isGLES32    = context->getClientVersion() >= ES_3_2;
 
     mCachedValidBindTextureTypes = {{
         {TextureType::_2D, true},
@@ -10452,7 +10460,7 @@ void StateCache::updateValidBindTextureTypes(Context *context)
 void StateCache::updateValidDrawElementsTypes(Context *context)
 {
     bool supportsUint =
-        (context->getClientMajorVersion() >= 3 || context->getExtensions().elementIndexUintOES);
+        (context->getClientVersion() >= ES_3_0 || context->getExtensions().elementIndexUintOES);
 
     mCachedValidDrawElementsTypes = {{
         {DrawElementsType::UnsignedByte, true},
@@ -10477,7 +10485,7 @@ void StateCache::updateVertexAttribTypesValidation(Context *context)
                                                          ? VertexAttribTypeCase::ValidSize3or4
                                                          : VertexAttribTypeCase::Invalid;
 
-    if (context->getClientMajorVersion() <= 2)
+    if (context->getClientVersion() < ES_3_0)
     {
         mCachedVertexAttribTypesValidation = {{
             {VertexAttribType::Byte, VertexAttribTypeCase::Valid},

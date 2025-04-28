@@ -391,14 +391,6 @@
             "issue": "http://anglebug.com/40096464"
         },
         {
-            "name": "warm_up_pre_rotate_pipeline_variations",
-            "category": "Features",
-            "description": [
-                "Enable warm up pre-rotation pipeline variations for landscape applications"
-            ],
-            "issue": "http://anglebug.com/42262166"
-        },
-        {
             "name": "enable_precision_qualifiers",
             "category": "Features",
             "description": [
@@ -658,14 +650,6 @@
                 "Emulate 270-degree prerotation."
             ],
             "issue": "http://anglebug.com/42263477"
-        },
-        {
-            "name": "prefer_driver_uniform_over_spec_const",
-            "category": "Features",
-            "description": [
-                "Prefer using driver uniforms instead of specialization constants."
-            ],
-            "issue": "http://anglebug.com/42265878"
         },
         {
             "name": "expose_non_conformant_extensions_and_versions",
@@ -1466,6 +1450,14 @@
             "description": [
                 "When using VK_EXT_host_image_copy, allow VK_IMAGE_USAGE_HOST_TRANSFER_BIT_EXT even if",
                 "perf query indicates only optimalDeviceAccess, but not identicalMemoryLayout"
+            ]
+        },
+        {
+            "name": "force_host_image_copy_for_luma",
+            "category": "Features",
+            "description": [
+                "When using VK_EXT_host_image_copy, use VK_IMAGE_USAGE_HOST_TRANSFER_BIT_EXT for images created",
+                "for luminance/alpha textures"
             ]
         },
         {

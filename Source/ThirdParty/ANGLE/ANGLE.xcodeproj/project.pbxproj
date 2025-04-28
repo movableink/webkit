@@ -439,9 +439,7 @@
 		7B359E002A7CFC750016DC59 /* mtl_buffer_manager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7B359DFC2A7CFC750016DC59 /* mtl_buffer_manager.mm */; };
 		7B359E032A7CFCE60016DC59 /* GlobalMutex.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B359E012A7CFCE60016DC59 /* GlobalMutex.h */; };
 		7B359E042A7CFCE60016DC59 /* GlobalMutex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B359E022A7CFCE60016DC59 /* GlobalMutex.cpp */; };
-		7B359E0E2A7CFD610016DC59 /* RingBufferAllocator.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B359E052A7CFD610016DC59 /* RingBufferAllocator.h */; };
 		7B359E0F2A7CFD610016DC59 /* angle_version.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B359E062A7CFD610016DC59 /* angle_version.h */; };
-		7B359E122A7CFD610016DC59 /* RingBufferAllocator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B359E092A7CFD610016DC59 /* RingBufferAllocator.cpp */; };
 		7B359E132A7CFD610016DC59 /* platform_helpers.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B359E0A2A7CFD610016DC59 /* platform_helpers.h */; };
 		7B359E152A7CFD610016DC59 /* platform_helpers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B359E0C2A7CFD610016DC59 /* platform_helpers.cpp */; };
 		7B359E162A7CFD610016DC59 /* SynchronizedValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B359E0D2A7CFD610016DC59 /* SynchronizedValue.h */; };
@@ -1642,11 +1640,9 @@
 		7B359DFC2A7CFC750016DC59 /* mtl_buffer_manager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = mtl_buffer_manager.mm; sourceTree = "<group>"; };
 		7B359E012A7CFCE60016DC59 /* GlobalMutex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GlobalMutex.h; sourceTree = "<group>"; };
 		7B359E022A7CFCE60016DC59 /* GlobalMutex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GlobalMutex.cpp; sourceTree = "<group>"; };
-		7B359E052A7CFD610016DC59 /* RingBufferAllocator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RingBufferAllocator.h; sourceTree = "<group>"; };
 		7B359E062A7CFD610016DC59 /* angle_version.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = angle_version.h; sourceTree = "<group>"; };
 		7B359E072A7CFD610016DC59 /* system_utils_ios.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = system_utils_ios.mm; sourceTree = "<group>"; };
 		7B359E082A7CFD610016DC59 /* system_utils_ios.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = system_utils_ios.cpp; sourceTree = "<group>"; };
-		7B359E092A7CFD610016DC59 /* RingBufferAllocator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RingBufferAllocator.cpp; sourceTree = "<group>"; };
 		7B359E0A2A7CFD610016DC59 /* platform_helpers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = platform_helpers.h; sourceTree = "<group>"; };
 		7B359E0C2A7CFD610016DC59 /* platform_helpers.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = platform_helpers.cpp; sourceTree = "<group>"; };
 		7B359E0D2A7CFD610016DC59 /* SynchronizedValue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SynchronizedValue.h; sourceTree = "<group>"; };
@@ -2751,8 +2747,6 @@
 				7B359E0A2A7CFD610016DC59 /* platform_helpers.h */,
 				5C55D7152282747600B5BA2C /* PoolAlloc.cpp */,
 				5C55D7162282747600B5BA2C /* PoolAlloc.h */,
-				7B359E092A7CFD610016DC59 /* RingBufferAllocator.cpp */,
-				7B359E052A7CFD610016DC59 /* RingBufferAllocator.h */,
 				7BBC97D42BDB11C800628E74 /* SimpleMutex.cpp */,
 				7BBC97D52BDB11C800628E74 /* SimpleMutex.h */,
 				7BFD81832D50CF7C0010ED68 /* span.h */,
@@ -3571,7 +3565,6 @@
 				31CDFF7D2491849800486F27 /* RewriteStructSamplers.h in Headers */,
 				31CDFF932491849800486F27 /* RewriteTexelFetchOffset.h in Headers */,
 				7B359DB82A7CEDAA0016DC59 /* RewriteUnaddressableReferences.h in Headers */,
-				7B359E0E2A7CFD610016DC59 /* RingBufferAllocator.h in Headers */,
 				FF62F64B27446DC800AD6EDC /* RunAtTheBeginningOfShader.h in Headers */,
 				31CDFFAE249184A100486F27 /* RunAtTheEndOfShader.h in Headers */,
 				3A0EBFA32980B545002C72BC /* safe_conversions.h in Headers */,
@@ -4210,7 +4203,6 @@
 				DF83E2642639FD33000825EF /* RewriteStructSamplers.cpp in Sources */,
 				DF83E2802639FD33000825EF /* RewriteTexelFetchOffset.cpp in Sources */,
 				7B359DA42A7CEDAA0016DC59 /* RewriteUnaddressableReferences.cpp in Sources */,
-				7B359E122A7CFD610016DC59 /* RingBufferAllocator.cpp in Sources */,
 				FF62F64A27446DC800AD6EDC /* RunAtTheBeginningOfShader.cpp in Sources */,
 				DF83E2AD2639FD83000825EF /* RunAtTheEndOfShader.cpp in Sources */,
 				DF83E3202639FE17000825EF /* Sampler.cpp in Sources */,
