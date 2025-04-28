@@ -930,6 +930,8 @@ WebPageProxy::WebPageProxy(PageClient& pageClient, WebProcessProxy& process, Ref
     if (RefPtr gpuProcess = GPUProcessProxy::singletonIfCreated())
         gpuProcess->setPresentingApplicationAuditToken(process.coreProcessIdentifier(), m_webPageID, m_presentingApplicationAuditToken);
 #endif
+    if (protectedPreferences()->siteIsolationEnabled())
+        IPC::Connection::setShouldCrashOnMessageCheckFailure(true);
 }
 
 WebPageProxy::~WebPageProxy()
