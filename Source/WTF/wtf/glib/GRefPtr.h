@@ -143,7 +143,7 @@ public:
     // Borrows the raw pointer from GRefPtr.
     // The pointer is guaranteed to be valid for as long as GRefPtr holds an owning reference
     // to that object.
-    T* /* (transfer none) */ get() const LIFETIME_BOUND { return m_ptr; }
+    T* /* (transfer none) */ get() const { return m_ptr; }
     T& operator*() const { return *m_ptr; }
     ALWAYS_INLINE T* operator->() const { return m_ptr; }
 
