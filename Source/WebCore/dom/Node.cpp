@@ -117,11 +117,11 @@ public:
 #if ASSERT_ENABLED
     bool inRemovedLastRefFunction;
     bool adoptionIsRequired;
+    bool deletionHasBegun;
 #endif
     uint32_t refCountAndParentBit;
     uint32_t nodeFlags;
-    uint16_t elementStateFlags;
-    uint16_t styleBitfields;
+    uint32_t stateFlags;
     void* parentNode;
     void* treeScope;
     void* previous;
@@ -2915,7 +2915,7 @@ void Node::removedLastRef()
         svgElement->detachAllProperties();
 
 #if ASSERT_ENABLED
-    setStateFlag(StateFlag::DeletionHasBegun);
+    m_deletionHasBegun = true;
 #endif
     delete this;
 }

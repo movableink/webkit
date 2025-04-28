@@ -232,9 +232,9 @@ public:
     bool isSVGUnknownElement() const { return isSVGElement() && isUnknownElement(); }
     bool isMathMLUnknownElement() const { return isMathMLElement() && isUnknownElement(); }
 
-    bool isFormControlElement() const { return hasTypeFlag(TypeFlag::IsFormControlElement); }
+    bool isFormControlElement() const { return isElementNode() && hasTypeFlag(TypeFlag::IsShadowRootOrFormControlElement); }
 
-    bool isPseudoElement() const { return hasStateFlag(StateFlag::IsPseudoElement); }
+    bool isPseudoElement() const { return isElementNode() && hasTypeFlag(TypeFlag::IsPseudoElementOrSpecialInternalNode); }
     inline bool isBeforePseudoElement() const;
     inline bool isAfterPseudoElement() const;
     inline PseudoId pseudoId() const;
@@ -248,9 +248,9 @@ public:
     virtual bool isPluginElement() const { return false; }
 
     bool isDocumentNode() const { return nodeType() == DOCUMENT_NODE; }
-    bool isTreeScope() const { return isDocumentNode() || hasTypeFlag(TypeFlag::IsShadowRoot); }
+    bool isTreeScope() const { return isDocumentNode() || isShadowRoot(); }
     bool isDocumentFragment() const { return nodeType() == DOCUMENT_FRAGMENT_NODE; }
-    bool isShadowRoot() const { return hasTypeFlag(TypeFlag::IsShadowRoot); }
+    bool isShadowRoot() const { return isDocumentFragment() && hasTypeFlag(TypeFlag::IsShadowRootOrFormControlElement); }
     bool isUserAgentShadowRoot() const; // Defined in ShadowRoot.h
 
     bool hasCustomStyleResolveCallbacks() const { return hasTypeFlag(TypeFlag::HasCustomStyleResolveCallbacks); }
@@ -261,8 +261,8 @@ public:
     bool hasShadowRootContainingSlots() const { return hasEventTargetFlag(EventTargetFlag::HasShadowRootContainingSlots); }
     void setHasShadowRootContainingSlots(bool flag) { setEventTargetFlag(EventTargetFlag::HasShadowRootContainingSlots, flag); }
 
-    bool needsSVGRendererUpdate() const { return hasElementStateFlag(ElementStateFlag::NeedsSVGRendererUpdate); }
-    void setNeedsSVGRendererUpdate(bool flag) { setElementStateFlag(ElementStateFlag::NeedsSVGRendererUpdate, flag); }
+    bool needsSVGRendererUpdate() const { return hasStateFlag(StateFlag::NeedsSVGRendererUpdate); }
+    void setNeedsSVGRendererUpdate(bool flag) { setStateFlag(StateFlag::NeedsSVGRendererUpdate, flag); }
 
     // If this node is in a shadow tree, returns its shadow host. Otherwise, returns null.
     WEBCORE_EXPORT Element* shadowHost() const;
@@ -289,17 +289,17 @@ public:
     bool isPrecustomizedCustomElement() const { return customElementState() == CustomElementState::FailedOrPrecustomized && !isUnknownElement(); }
     bool isPrecustomizedOrDefinedCustomElement() const { return isPrecustomizedCustomElement() || isDefinedCustomElement(); }
 
-    bool isInCustomElementReactionQueue() const { return hasElementStateFlag(ElementStateFlag::IsInCustomElementReactionQueue); }
-    void setIsInCustomElementReactionQueue() { setElementStateFlag(ElementStateFlag::IsInCustomElementReactionQueue); }
-    void clearIsInCustomElementReactionQueue() { clearElementStateFlag(ElementStateFlag::IsInCustomElementReactionQueue); }
+    bool isInCustomElementReactionQueue() const { return hasStateFlag(StateFlag::IsInCustomElementReactionQueue); }
+    void setIsInCustomElementReactionQueue() { setStateFlag(StateFlag::IsInCustomElementReactionQueue); }
+    void clearIsInCustomElementReactionQueue() { clearStateFlag(StateFlag::IsInCustomElementReactionQueue); }
 
-    bool usesNullCustomElementRegistry() const { return hasElementStateFlag(ElementStateFlag::UsesNullCustomElementRegistry); }
-    void setUsesNullCustomElementRegistry() const { setElementStateFlag(ElementStateFlag::UsesNullCustomElementRegistry); }
-    void clearUsesNullCustomElementRegistry() const { clearElementStateFlag(ElementStateFlag::UsesNullCustomElementRegistry); }
+    bool usesNullCustomElementRegistry() const { return hasStateFlag(StateFlag::UsesNullCustomElementRegistry); }
+    void setUsesNullCustomElementRegistry() const { setStateFlag(StateFlag::UsesNullCustomElementRegistry); }
+    void clearUsesNullCustomElementRegistry() const { clearStateFlag(StateFlag::UsesNullCustomElementRegistry); }
 
-    bool usesScopedCustomElementRegistryMap() const { return hasElementStateFlag(ElementStateFlag::UsesScopedCustomElementRegistryMap); }
-    void setUsesScopedCustomElementRegistryMap() { setElementStateFlag(ElementStateFlag::UsesScopedCustomElementRegistryMap); }
-    void clearUsesScopedCustomElementRegistryMap() { clearElementStateFlag(ElementStateFlag::UsesScopedCustomElementRegistryMap); }
+    bool usesScopedCustomElementRegistryMap() const { return hasStateFlag(StateFlag::UsesScopedCustomElementRegistryMap); }
+    void setUsesScopedCustomElementRegistryMap() { setStateFlag(StateFlag::UsesScopedCustomElementRegistryMap); }
+    void clearUsesScopedCustomElementRegistryMap() { clearStateFlag(StateFlag::UsesScopedCustomElementRegistryMap); }
 
     // Returns null, a child of ShadowRoot, or a legacy shadow root.
     Node* nonBoundaryShadowTreeRootNode();
@@ -357,8 +357,8 @@ public:
     virtual void notifyLoadedSheetAndAllCriticalSubresources(bool /* error loading subresource */) { }
     virtual void startLoadingDynamicSheet() { ASSERT_NOT_REACHED(); }
 
-    bool isUserActionElement() const { return hasElementStateFlag(ElementStateFlag::IsUserActionElement); }
-    void setUserActionElement(bool flag) { setElementStateFlag(ElementStateFlag::IsUserActionElement, flag); }
+    bool isUserActionElement() const { return hasStateFlag(StateFlag::IsUserActionElement); }
+    void setUserActionElement(bool flag) { setStateFlag(StateFlag::IsUserActionElement, flag); }
 
     bool inRenderedDocument() const;
     bool needsStyleRecalc() const { return styleValidity() != Style::Validity::Valid || hasInvalidRenderer(); }
@@ -366,9 +366,9 @@ public:
     bool hasInvalidRenderer() const { return hasStateFlag(StateFlag::HasInvalidRenderer); }
     bool styleResolutionShouldRecompositeLayer() const { return hasStateFlag(StateFlag::StyleResolutionShouldRecompositeLayer); }
     bool childNeedsStyleRecalc() const { return hasStyleFlag(NodeStyleFlag::DescendantNeedsStyleResolution); }
-    bool isEditingText() const { return isTextNode() && hasStateFlag(StateFlag::IsSpecialInternalNode); }
+    bool isEditingText() const { return isTextNode() && hasTypeFlag(TypeFlag::IsPseudoElementOrSpecialInternalNode); }
 
-    bool isDocumentFragmentForInnerOuterHTML() const { return isDocumentFragment() && hasStateFlag(StateFlag::IsSpecialInternalNode); }
+    bool isDocumentFragmentForInnerOuterHTML() const { return isDocumentFragment() && hasTypeFlag(TypeFlag::IsPseudoElementOrSpecialInternalNode); }
 
     bool hasHeldBackChildrenChanged() const { return hasStateFlag(StateFlag::HasHeldBackChildrenChanged); }
     void setHasHeldBackChildrenChanged() { setStateFlag(StateFlag::HasHeldBackChildrenChanged); }
@@ -555,11 +555,6 @@ public:
     unsigned refCount() const;
     void applyRefDuringDestructionCheck() const;
 
-#if ASSERT_ENABLED
-    mutable bool m_inRemovedLastRefFunction { false };
-    bool m_adoptionIsRequired { true };
-#endif
-
     void relaxAdoptionRequirement()
     {
 #if ASSERT_ENABLED
@@ -594,14 +589,13 @@ public:
     static auto flagIsText() { return enumToUnderlyingType(TypeFlag::IsText); }
     static auto flagIsContainer() { return enumToUnderlyingType(TypeFlag::IsContainerNode); }
     static auto flagIsElement() { return enumToUnderlyingType(TypeFlag::IsElement); }
-    static auto flagIsShadowRoot() { return enumToUnderlyingType(TypeFlag::IsShadowRoot); }
     static auto flagIsHTML() { return enumToUnderlyingType(TypeFlag::IsHTMLElement); }
     static auto flagIsLink() { return enumToUnderlyingType(StateFlag::IsLink); }
     static auto flagIsParsingChildren() { return enumToUnderlyingType(StateFlag::IsParsingChildren); }
 #endif // ENABLE(JIT)
 
 #if ASSERT_ENABLED
-    bool deletionHasBegun() const { return hasStateFlag(StateFlag::DeletionHasBegun); }
+    bool deletionHasBegun() const { return m_deletionHasBegun; }
 #endif
 
     bool containsSelectionEndPoint() const { return hasStateFlag(StateFlag::ContainsSelectionEndPoint); }
@@ -616,9 +610,9 @@ protected:
         IsHTMLElement = 1 << 4,
         IsSVGElement = 1 << 5,
         IsMathMLElement = 1 << 6,
-        IsShadowRoot = 1 << 7,
+        IsShadowRootOrFormControlElement = 1 << 7,
         IsUnknownElement = 1 << 8,
-        IsFormControlElement = 1 << 9,
+        IsPseudoElementOrSpecialInternalNode = 1 << 9,
         HasCustomStyleResolveCallbacks = 1 << 10,
         HasDidMoveToNewDocument = 1 << 11,
     };
@@ -629,7 +623,7 @@ protected:
     // Don't bother masking with (1 << typeFlagBitCount) - 1 since OptionSet tolerates the upper 4-bits being used for other purposes.
     bool hasTypeFlag(TypeFlag flag) const { return OptionSet<TypeFlag>::fromRaw(m_typeBitFields).contains(flag); }
 
-    enum class StateFlag : uint16_t {
+    enum class StateFlag : uint32_t {
         IsLink = 1 << 0,
         IsParsingChildren = 1 << 1,
         SelfOrPrecedingNodesAffectDirAuto = 1 << 2,
@@ -640,29 +634,19 @@ protected:
         ContainsOnlyASCIIWhitespace = 1 << 7, // Only used on CharacterData.
         ContainsOnlyASCIIWhitespaceIsValid = 1 << 8, // Only used on CharacterData.
         HasHeldBackChildrenChanged = 1 << 9,
-#if ASSERT_ENABLED
-        DeletionHasBegun = 1 << 10,
-#endif
-        ContainsSelectionEndPoint = 1 << 11,
-        IsSpecialInternalNode = 1 << 12, // DocumentFragment node for innerHTML/outerHTML or EditingText node.
-        IsPseudoElement = 1 << 13, // FIXME: This belongs to TypeFlag.
-
-        // 2 bits free.
-    };
-
-    enum class ElementStateFlag : uint16_t {
-        HasElementIdentifier = 1 << 0,
-        IsUserActionElement = 1 << 1,
-        IsInCustomElementReactionQueue = 1 << 2,
-        NeedsSVGRendererUpdate = 1 << 3,
-        NeedsUpdateQueryContainerDependentStyle = 1 << 4,
-        EverHadSmoothScroll = 1 << 5,
+        ContainsSelectionEndPoint = 1 << 10,
+        HasElementIdentifier = 1 << 11,
+        IsUserActionElement = 1 << 12,
+        IsInCustomElementReactionQueue = 1 << 13,
+        UsesNullCustomElementRegistry = 1 << 14,
+        UsesScopedCustomElementRegistryMap = 1 << 15,
+        NeedsSVGRendererUpdate = 1 << 16,
+        NeedsUpdateQueryContainerDependentStyle = 1 << 17,
+        EverHadSmoothScroll = 1 << 18,
 #if ENABLE(FULLSCREEN_API)
-        IsFullscreen = 1 << 6,
+        IsFullscreen = 1 << 19,
 #endif
-        UsesNullCustomElementRegistry = 1 << 7,
-        UsesScopedCustomElementRegistryMap = 1 << 8,
-        // 7-bits free.
+        // 12 bits free.
     };
 
     enum class TabIndexState : uint8_t {
@@ -690,10 +674,6 @@ protected:
     bool hasStateFlag(StateFlag flag) const { return m_stateFlags.contains(flag); }
     void setStateFlag(StateFlag flag, bool value = true) const { m_stateFlags.set(flag, value); }
     void clearStateFlag(StateFlag flag) const { setStateFlag(flag, false); }
-
-    bool hasElementStateFlag(ElementStateFlag flag) const { return m_elementStateFlags.contains(flag); }
-    inline void setElementStateFlag(ElementStateFlag, bool value = true) const;
-    void clearElementStateFlag(ElementStateFlag flag) const { setElementStateFlag(flag, false); }
 
     RareDataBitFields rareDataBitfields() const { return std::bit_cast<RareDataBitFields>(m_rareDataWithBitfields.type()); }
     void setRareDataBitfields(RareDataBitFields bitfields) { m_rareDataWithBitfields.setType(std::bit_cast<uint16_t>(bitfields)); }
@@ -799,12 +779,19 @@ private:
     void moveNodeToNewDocumentSlowCase(Document& oldDocument, Document& newDocument);
 
     WEBCORE_EXPORT void notifyInspectorOfRendererChange();
-    
+
+#if ASSERT_ENABLED
+    mutable bool m_inRemovedLastRefFunction { false };
+    bool m_adoptionIsRequired { true };
+    bool m_deletionHasBegun { false };
+
+    friend void adopted(Node*);
+#endif
+
     mutable uint32_t m_refCountAndParentBit { s_refCountIncrement };
     const uint16_t m_typeBitFields;
-    mutable OptionSet<StateFlag> m_stateFlags;
-    mutable OptionSet<ElementStateFlag> m_elementStateFlags;
     mutable StyleBitfields m_styleBitfields;
+    mutable OptionSet<StateFlag> m_stateFlags;
 
     CheckedPtr<ContainerNode> m_parentNode;
     TreeScope* m_treeScope { nullptr };
@@ -900,11 +887,6 @@ inline ContainerNode* Node::parentNodeGuaranteedHostFree() const
 {
     ASSERT(!isShadowRoot());
     return parentNode();
-}
-
-inline void Node::setElementStateFlag(ElementStateFlag flag, bool value) const
-{
-    m_elementStateFlags.set(flag, value);
 }
 
 ALWAYS_INLINE void Node::setStyleFlag(NodeStyleFlag flag)

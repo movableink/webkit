@@ -301,7 +301,7 @@ Element::~Element()
     ASSERT(!beforePseudoElement());
     ASSERT(!afterPseudoElement());
 
-    if (UNLIKELY(hasElementStateFlag(ElementStateFlag::HasElementIdentifier)))
+    if (UNLIKELY(hasStateFlag(StateFlag::HasElementIdentifier)))
         elementIdentifiersMap().remove(*this);
     else
         ASSERT(!elementIdentifiersMap().contains(*this));
@@ -2692,7 +2692,7 @@ void Element::invalidateForQueryContainerSizeChange()
 {
     // FIXME: Ideally we would just recompute things that are actually affected by containers queries within the subtree.
     Node::invalidateStyle(Style::Validity::SubtreeInvalid);
-    setElementStateFlag(ElementStateFlag::NeedsUpdateQueryContainerDependentStyle);
+    setStateFlag(StateFlag::NeedsUpdateQueryContainerDependentStyle);
 }
 
 void Element::invalidateForAnchorRectChange()
@@ -2714,12 +2714,12 @@ void Element::invalidateForResumingAnchorPositionedElementResolution()
 
 bool Element::needsUpdateQueryContainerDependentStyle() const
 {
-    return hasElementStateFlag(ElementStateFlag::NeedsUpdateQueryContainerDependentStyle);
+    return hasStateFlag(StateFlag::NeedsUpdateQueryContainerDependentStyle);
 }
 
 void Element::clearNeedsUpdateQueryContainerDependentStyle()
 {
-    clearElementStateFlag(ElementStateFlag::NeedsUpdateQueryContainerDependentStyle);
+    clearStateFlag(StateFlag::NeedsUpdateQueryContainerDependentStyle);
 }
 
 void Element::invalidateEventListenerRegions()
@@ -4965,9 +4965,9 @@ void Element::setFullscreenFlag(bool flag)
 {
     Style::PseudoClassChangeInvalidation styleInvalidation(*this, { { CSSSelector::PseudoClass::Fullscreen, flag }, { CSSSelector::PseudoClass::Modal, flag } });
     if (flag)
-        setElementStateFlag(ElementStateFlag::IsFullscreen);
+        setStateFlag(StateFlag::IsFullscreen);
     else
-        clearElementStateFlag(ElementStateFlag::IsFullscreen);
+        clearStateFlag(StateFlag::IsFullscreen);
 }
 
 #endif
@@ -5990,7 +5990,7 @@ Vector<RefPtr<WebAnimation>> Element::getAnimations(std::optional<GetAnimationsO
 ElementIdentifier Element::identifier() const
 {
     return elementIdentifiersMap().ensure(const_cast<Element&>(*this), [&] {
-        setElementStateFlag(ElementStateFlag::HasElementIdentifier);
+        setStateFlag(StateFlag::HasElementIdentifier);
         return ElementIdentifier::generate();
     }).iterator->value;
 }

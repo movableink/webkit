@@ -52,8 +52,7 @@ Ref<DocumentFragment> DocumentFragment::create(Document& document)
 
 Ref<DocumentFragment> DocumentFragment::createForInnerOuterHTML(Document& document)
 {
-    auto node = adoptRef(*new DocumentFragment(document));
-    node->setStateFlag(StateFlag::IsSpecialInternalNode);
+    auto node = adoptRef(*new DocumentFragment(document, { TypeFlag::IsPseudoElementOrSpecialInternalNode }));
     ASSERT(node->isDocumentFragmentForInnerOuterHTML());
     return node;
 }

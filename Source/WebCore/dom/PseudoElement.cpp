@@ -49,12 +49,11 @@ const QualifiedName& pseudoElementTagName()
 }
 
 PseudoElement::PseudoElement(Element& host, PseudoId pseudoId)
-    : Element(pseudoElementTagName(), host.document(), TypeFlag::HasCustomStyleResolveCallbacks)
+    : Element(pseudoElementTagName(), host.document(), { TypeFlag::HasCustomStyleResolveCallbacks, TypeFlag::IsPseudoElementOrSpecialInternalNode })
     , m_hostElement(host)
     , m_pseudoId(pseudoId)
 {
     setEventTargetFlag(EventTargetFlag::IsConnected);
-    setStateFlag(StateFlag::IsPseudoElement);
     ASSERT(pseudoId == PseudoId::Before || pseudoId == PseudoId::After);
 }
 

@@ -452,7 +452,7 @@ public:
             m_refCountAndParentBit = s_refCountIncrement;
 
 #if ASSERT_ENABLED
-            setStateFlag(StateFlag::DeletionHasBegun);
+            m_deletionHasBegun = true;
 #endif
             delete this;
         }
