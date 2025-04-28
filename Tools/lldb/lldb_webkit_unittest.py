@@ -82,11 +82,8 @@ class LLDBDebugSession(object):
         cls.sbProcess.Kill()
 
 
+@unittest.skipUnless(SystemHost.get_default().platform.is_mac(), "macOS only")
 class TestSummaryProviders(unittest.TestCase):
-    @classmethod
-    def shouldSkip(cls):
-        return not SystemHost.get_default().platform.is_mac()
-
     @classmethod
     def setUpClass(cls):
         global cached_debug_session

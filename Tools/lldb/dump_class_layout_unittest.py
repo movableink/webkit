@@ -46,11 +46,8 @@ def destroy_cached_debug_session():
     debugger_instance = None
 
 
+@unittest.skipUnless(SystemHost.get_default().platform.is_mac(), "macOS only")
 class TestDumpClassLayout(unittest.TestCase):
-    @classmethod
-    def shouldSkip(cls):
-        return not SystemHost.get_default().platform.is_mac()
-
     @classmethod
     def setUpClass(cls):
         global debugger_instance
