@@ -1,3 +1,5 @@
+include(CheckCXXSymbolExists)
+
 if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
     list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
         "${WEBCORE_DIR}/Modules/mediastream/gstreamer"
@@ -169,6 +171,16 @@ if (ENABLE_ENCRYPTED_MEDIA AND ENABLE_THUNDER)
     list(APPEND WebCore_LIBRARIES
         ${THUNDER_LIBRARIES}
     )
+
+    # Globally add thunder libraries, required for the check_cxx_symbol_exists call.
+    set(CMAKE_REQUIRED_LIBRARIES ${THUNDER_LIBRARIES})
+
+    check_cxx_symbol_exists(opencdm_gstreamer_session_decrypt_buffer ${THUNDER_INCLUDE_DIR}/open_cdm_adapter.h HAS_OCDM_DECRYPT_BUFFER)
+    if (HAS_OCDM_DECRYPT_BUFFER)
+      list(APPEND WebCore_PRIVATE_DEFINITIONS THUNDER_HAS_OCDM_DECRYPT_BUFFER=1)
+    else ()
+      list(APPEND WebCore_PRIVATE_DEFINITIONS THUNDER_HAS_OCDM_DECRYPT_BUFFER=0)
+    endif ()
 endif ()
 
 if (ENABLE_SPEECH_SYNTHESIS)
