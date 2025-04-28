@@ -283,9 +283,9 @@ public:
     // Determines the writing direction using the Unicode Bidi Algorithm rules P2 and P3.
     std::optional<UCharDirection> defaultWritingDirection() const;
 
-    bool containsOnlyASCII() const { return !m_impl || m_impl->containsOnlyASCII(); }
-    bool containsOnlyLatin1() const { return !m_impl || m_impl->containsOnlyLatin1(); }
-    template<bool isSpecialCharacter(UChar)> bool containsOnly() const { return !m_impl || m_impl->containsOnly<isSpecialCharacter>(); }
+    bool containsOnlyASCII() const { SUPPRESS_UNCOUNTED_ARG return !m_impl || m_impl->containsOnlyASCII(); }
+    bool containsOnlyLatin1() const { SUPPRESS_UNCOUNTED_ARG return !m_impl || m_impl->containsOnlyLatin1(); }
+    template<bool isSpecialCharacter(UChar)> bool containsOnly() const { SUPPRESS_UNCOUNTED_ARG return !m_impl || m_impl->containsOnly<isSpecialCharacter>(); }
 
     // Hash table deleted values, which are only constructed and never copied or destroyed.
     String(WTF::HashTableDeletedValueType) : m_impl(WTF::HashTableDeletedValue) { }
