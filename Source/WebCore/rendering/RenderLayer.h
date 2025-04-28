@@ -63,7 +63,7 @@ namespace WTF {
 class TextStream;
 }
 
-void outputLayerPositionTreeRecursive(TextStream&, const WebCore::RenderLayer&, unsigned);
+void outputLayerPositionTreeRecursive(TextStream&, const WebCore::RenderLayer&, unsigned, const WebCore::RenderLayer*);
 
 namespace WebCore {
 
@@ -166,7 +166,7 @@ public:
     friend class RenderLayerBacking;
     friend class RenderLayerCompositor;
     friend class RenderLayerScrollableArea;
-    friend void ::outputLayerPositionTreeRecursive(TextStream&, const WebCore::RenderLayer&, unsigned);
+    friend void ::outputLayerPositionTreeRecursive(TextStream&, const WebCore::RenderLayer&, unsigned, const WebCore::RenderLayer*);
 
     explicit RenderLayer(RenderLayerModelObject&);
     ~RenderLayer();
@@ -1532,6 +1532,6 @@ void showLayerTree(const WebCore::RenderLayer*);
 void showLayerTree(const WebCore::RenderObject*);
 void showPaintOrderTree(const WebCore::RenderLayer*);
 void showPaintOrderTree(const WebCore::RenderObject*);
-void showLayerPositionTree(const WebCore::RenderLayer*);
+void showLayerPositionTree(const WebCore::RenderLayer* root, const WebCore::RenderLayer* mark = nullptr);
 #endif
 
