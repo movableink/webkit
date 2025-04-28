@@ -4184,6 +4184,12 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
             return CSSPrimitiveValue::create(CSSValueBlock);
         if (marginTrim.containsAll({ MarginTrimType::InlineStart, MarginTrimType::InlineEnd }) && !marginTrim.containsAny({ MarginTrimType::BlockStart, MarginTrimType::BlockEnd }))
             return CSSPrimitiveValue::create(CSSValueInline);
+        if (marginTrim.containsAll({ MarginTrimType::BlockStart, MarginTrimType::BlockEnd, MarginTrimType::InlineStart, MarginTrimType::InlineEnd })) {
+            CSSValueListBuilder list;
+            list.append(CSSPrimitiveValue::create(CSSValueBlock));
+            list.append(CSSPrimitiveValue::create(CSSValueInline));
+            return CSSValueList::createSpaceSeparated(WTFMove(list));
+        }
 
         CSSValueListBuilder list;
         if (marginTrim.contains(MarginTrimType::BlockStart))

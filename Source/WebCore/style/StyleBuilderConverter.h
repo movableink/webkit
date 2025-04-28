@@ -2174,7 +2174,14 @@ inline OptionSet<MarginTrimType> BuilderConverter::convertMarginTrim(BuilderStat
     if (!list || !list->size())
         return RenderStyle::initialMarginTrim();
     OptionSet<MarginTrimType> marginTrim;
-    ASSERT(list->size() <= 4);
+    for (auto& item : *list) {
+        if (item.valueID() == CSSValueBlock)
+            marginTrim.add({ MarginTrimType::BlockStart, MarginTrimType::BlockEnd });
+        if (item.valueID() == CSSValueInline)
+            marginTrim.add({ MarginTrimType::InlineStart, MarginTrimType::InlineEnd });
+    }
+    if (!marginTrim.isEmpty())
+        return marginTrim;
     for (auto& item : *list) {
         if (item.valueID() == CSSValueBlockStart)
             marginTrim.add(MarginTrimType::BlockStart);
@@ -2185,6 +2192,7 @@ inline OptionSet<MarginTrimType> BuilderConverter::convertMarginTrim(BuilderStat
         if (item.valueID() == CSSValueInlineEnd)
             marginTrim.add(MarginTrimType::InlineEnd);
     }
+    ASSERT(list->size() <= 4);
     return marginTrim;
 }
 

@@ -45,20 +45,35 @@ RefPtr<CSSValue> consumeMarginTrim(CSSParserTokenRange& range, CSS::PropertyPars
     // https://drafts.csswg.org/css-box/#margin-trim
 
     auto firstValue = range.peek().id();
-    if (firstValue == CSSValueBlock || firstValue == CSSValueInline || firstValue == CSSValueNone)
+    if (firstValue == CSSValueNone)
         return consumeIdent(range).releaseNonNull();
+
+    // FIXME: Multiple values should be appended in canonical order.
     Vector<CSSValueID, 4> idents;
-    while (auto ident = consumeIdentRaw<CSSValueBlockStart, CSSValueBlockEnd, CSSValueInlineStart, CSSValueInlineEnd>(range)) {
-        if (idents.contains(*ident))
-            return nullptr;
-        idents.append(*ident);
-    }
-    // Try to serialize into either block or inline form
-    if (idents.size() == 2) {
-        if (idents.contains(CSSValueBlockStart) && idents.contains(CSSValueBlockEnd))
-            return CSSPrimitiveValue::create(CSSValueBlock);
-        if (idents.contains(CSSValueInlineStart) && idents.contains(CSSValueInlineEnd))
-            return CSSPrimitiveValue::create(CSSValueInline);
+    if (firstValue == CSSValueBlock || firstValue == CSSValueInline) {
+        while (auto ident = consumeIdentRaw<CSSValueBlock, CSSValueInline>(range)) {
+            if (idents.contains(*ident))
+                return nullptr;
+            idents.append(*ident);
+        }
+    } else {
+        while (auto ident = consumeIdentRaw<CSSValueBlockStart, CSSValueBlockEnd, CSSValueInlineStart, CSSValueInlineEnd>(range)) {
+            if (idents.contains(*ident))
+                return nullptr;
+            idents.append(*ident);
+        }
+        // Try to serialize into either block or inline form
+        if (idents.size() == 2) {
+            if (idents.contains(CSSValueBlockStart) && idents.contains(CSSValueBlockEnd))
+                return CSSPrimitiveValue::create(CSSValueBlock);
+            if (idents.contains(CSSValueInlineStart) && idents.contains(CSSValueInlineEnd))
+                return CSSPrimitiveValue::create(CSSValueInline);
+        } else if (idents.size() == 4) {
+            CSSValueListBuilder list;
+            list.append(CSSPrimitiveValue::create(CSSValueBlock));
+            list.append(CSSPrimitiveValue::create(CSSValueInline));
+            return CSSValueList::createSpaceSeparated(WTFMove(list));
+        }
     }
     CSSValueListBuilder list;
     for (auto ident : idents)

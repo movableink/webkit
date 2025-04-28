@@ -5276,7 +5276,7 @@
                 "settings-flag": "cssMarginTrimEnabled",
                 "style-builder-converter": "MarginTrim",
                 "parser-function": "consumeMarginTrim",
-                "parser-grammar-unused": "none | block | inline | [ block-start || inline-start || block-end || inline-end ]",
+                "parser-grammar-unused": "none | [ block || inline ] | [ block-start || inline-start || block-end || inline-end ]",
                 "parser-grammar-unused-reason": "Needs support for transforming parsed input to minimal form."
             },
             "specification": {
