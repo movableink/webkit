@@ -3104,3 +3104,5 @@ webkit.org/b/132766 fast/hidpi/filters-reference.html [ ImageOnlyFailure ]
 # webkit.org/b/292214 REGRESSION(293890@main): [macOS wk1] Two tests are constant failures in imported/w3c/web-platform-tests/svg/painting with image diff (flaky in EWS)
 imported/w3c/web-platform-tests/svg/painting/marker-005.svg [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/painting/marker-006.svg [ ImageOnlyFailure ]
+
+webkit.org/b/292218 [ Sonoma Release ] media/media-source/media-source-video-renders.html [ Pass ImageOnlyFailure Timeout ]
