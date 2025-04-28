@@ -714,32 +714,32 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
 
     unsigned cacheHash = MatchedDeclarationsCache::computeHash(matchResult, parentStyle.inheritedCustomProperties());
 
-    auto* cacheEntry = m_matchedDeclarationsCache.find(cacheHash, matchResult, parentStyle.inheritedCustomProperties());
+    auto cacheResult = m_matchedDeclarationsCache.find(cacheHash, matchResult, parentStyle.inheritedCustomProperties(), parentStyle);
 
-    auto hasUsableEntry = cacheEntry && MatchedDeclarationsCache::isCacheable(element, style, parentStyle);
+    auto hasUsableEntry = cacheResult && MatchedDeclarationsCache::isCacheable(element, style, parentStyle);
     if (hasUsableEntry) {
+        auto& cacheEntry = cacheResult->entry;
+        bool inheritedEqual = cacheResult->inheritedEqual;
         // We can build up the style by copying non-inherited properties from an earlier style object built using the same exact
         // style declarations. We then only need to apply the inherited properties, if any, as their values can depend on the
         // element context. This is fast and saves memory by reusing the style data structures.
-        style.copyNonInheritedFrom(*cacheEntry->renderStyle);
+        style.copyNonInheritedFrom(*cacheEntry.renderStyle);
 
-        bool inheritedEqual = parentStyle.inheritedEqual(*cacheEntry->parentRenderStyle);
-
-        bool hasExplicitlyInherited = cacheEntry->renderStyle->hasExplicitlyInheritedProperties();
-        bool explicitlyInheritedEqual = !hasExplicitlyInherited || parentStyle.nonInheritedEqual(*cacheEntry->parentRenderStyle);
+        bool hasExplicitlyInherited = cacheEntry.renderStyle->hasExplicitlyInheritedProperties();
+        bool explicitlyInheritedEqual = !hasExplicitlyInherited || parentStyle.nonInheritedEqual(*cacheEntry.parentRenderStyle);
 
         if (inheritedEqual) {
             InsideLink linkStatus = style.insideLink();
             // If the cache item parent style has identical inherited properties to the current parent style then the
             // resulting style will be identical too. We copy the inherited properties over from the cache and are done.
-            style.inheritFrom(*cacheEntry->renderStyle);
+            style.inheritFrom(*cacheEntry.renderStyle);
 
             // Link status is treated like an inherited property. We need to explicitly restore it.
             style.setInsideLink(linkStatus);
 
             if (explicitlyInheritedEqual && matchResult.nonCacheablePropertyIds.isEmpty()) {
-                if (cacheEntry->userAgentAppearanceStyle && elementTypeHasAppearanceFromUAStyle(element))
-                    state.setUserAgentAppearanceStyle(RenderStyle::clonePtr(*cacheEntry->userAgentAppearanceStyle));
+                if (cacheEntry.userAgentAppearanceStyle && elementTypeHasAppearanceFromUAStyle(element))
+                    state.setUserAgentAppearanceStyle(RenderStyle::clonePtr(*cacheEntry.userAgentAppearanceStyle));
 
                 return;
             }
@@ -774,7 +774,7 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
     // High priority properties may affect resolution of other properties (they are mostly font related).
     builder.applyHighPriorityProperties();
 
-    if (cacheEntry && !cacheEntry->isUsableAfterHighPriorityProperties(style)) {
+    if (cacheResult && !cacheResult->entry.isUsableAfterHighPriorityProperties(style)) {
         // High-priority properties may affect resolution of other properties. Kick out the existing cache entry and try again.
         m_matchedDeclarationsCache.remove(cacheHash);
         applyMatchedProperties(state, matchResult, PropertyCascade::normalProperties());
@@ -786,10 +786,7 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
 
     setGlobalStateAfterApplyingProperties(builder.state());
 
-    if (cacheEntry || !cacheHash)
-        return;
-
-    if (MatchedDeclarationsCache::isCacheable(element, style, parentStyle))
+    if (((cacheHash && !cacheResult) || (cacheResult && !cacheResult->inheritedEqual)) && MatchedDeclarationsCache::isCacheable(element, style, parentStyle))
         m_matchedDeclarationsCache.add(style, parentStyle, state.userAgentAppearanceStyle(), cacheHash, matchResult);
 }
 

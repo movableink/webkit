@@ -55,7 +55,12 @@ public:
         bool isUsableAfterHighPriorityProperties(const RenderStyle&) const;
     };
 
-    const Entry* find(unsigned hash, const MatchResult&, const StyleCustomPropertyData& inheritedCustomProperties);
+    struct Result {
+        const Entry& entry;
+        bool inheritedEqual;
+    };
+
+    std::optional<Result> find(unsigned hash, const MatchResult&, const StyleCustomPropertyData& inheritedCustomProperties, const RenderStyle&);
     void add(const RenderStyle&, const RenderStyle& parentStyle, const RenderStyle* userAgentAppearanceStyle, unsigned hash, const MatchResult&);
     void remove(unsigned hash);
 
@@ -68,10 +73,13 @@ public:
     void deref() const;
 
 private:
+    template<typename Callback>
+    void removeAllMatching(const Callback& matches);
+
     void sweep();
 
     SingleThreadWeakRef<const Resolver> m_owner;
-    UncheckedKeyHashMap<unsigned, Entry, AlreadyHashed> m_entries;
+    UncheckedKeyHashMap<unsigned, Vector<Entry>, AlreadyHashed> m_entries;
     Timer m_sweepTimer;
     unsigned m_additionsSinceLastSweep { 0 };
 };
