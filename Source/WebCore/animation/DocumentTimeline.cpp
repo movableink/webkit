@@ -235,7 +235,7 @@ IGNORE_GCC_WARNINGS_BEGIN("dangling-reference")
     auto& style = [&]() -> const RenderStyle& {
         if (auto* renderer = target->renderer())
             return renderer->style();
-        return RenderStyle::defaultStyle();
+        return RenderStyle::defaultStyleSingleton();
     }();
 IGNORE_GCC_WARNINGS_END
 

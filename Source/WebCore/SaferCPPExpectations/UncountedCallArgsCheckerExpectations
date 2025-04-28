@@ -399,7 +399,6 @@ contentextensions/ContentExtensionStyleSheet.cpp
 contentextensions/ContentExtensionsBackend.cpp
 crypto/SubtleCrypto.cpp
 crypto/parameters/CryptoAlgorithmRsaKeyGenParams.h
-css/CSSComputedStyleDeclaration.cpp
 css/CSSCounterStyle.cpp
 css/CSSCounterStyleDescriptors.cpp
 css/CSSCounterStyleRegistry.cpp

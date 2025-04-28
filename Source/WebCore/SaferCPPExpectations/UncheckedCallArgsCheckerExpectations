@@ -142,8 +142,6 @@ bindings/js/WorkerModuleScriptLoader.cpp
 bridge/objc/WebScriptObject.mm
 bridge/runtime_method.cpp
 contentextensions/ContentExtensionsBackend.cpp
-css/CSSComputedStyleDeclaration.cpp
-css/CSSCustomPropertyValue.cpp
 css/CSSFontFace.cpp
 css/CSSImageValue.cpp
 css/CSSStyleProperties.cpp
@@ -162,7 +160,6 @@ css/StyleAttributeMutationScope.h
 css/calc/CSSCalcTree+ContainerProgressEvaluator.cpp
 css/parser/SizesAttributeParser.cpp
 css/query/MediaQueryFeatures.cpp
-css/typedom/CSSStyleValueFactory.cpp
 css/typedom/ComputedStylePropertyMapReadOnly.cpp
 css/typedom/InlineStylePropertyMap.cpp
 dom/Attr.cpp

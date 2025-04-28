@@ -287,7 +287,7 @@ void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const 
     if (!isAppearanceAllowedForAllElements(appearance)
         && !userAgentAppearanceStyle
         && autoAppearance == StyleAppearance::None
-        && !style.borderAndBackgroundEqual(RenderStyle::defaultStyle()))
+        && !style.borderAndBackgroundEqual(RenderStyle::defaultStyleSingleton()))
         style.setUsedAppearance(StyleAppearance::None);
 
     if (!style.hasUsedAppearance())

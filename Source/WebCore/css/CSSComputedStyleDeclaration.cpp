@@ -33,6 +33,7 @@
 #include "ComposedTreeAncestorIterator.h"
 #include "ComputedStyleExtractor.h"
 #include "DeprecatedCSSOMValue.h"
+#include "NodeInlines.h"
 #include "RenderBox.h"
 #include "RenderBoxModelObject.h"
 #include "RenderStyleInlines.h"
@@ -100,7 +101,7 @@ ExceptionOr<void> CSSComputedStyleDeclaration::setCssText(const String&)
 // https://developer.mozilla.org/en-US/docs/Web/API/Window/getComputedStyle#Notes
 RefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropertyID propertyID, ComputedStyleExtractor::UpdateLayout updateLayout) const
 {
-    if (!isExposed(propertyID, settings()) || m_isEmpty)
+    if (!isExposed(propertyID, protectedSettings().get()) || m_isEmpty)
         return nullptr;
     return ComputedStyleExtractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementIdentifier).propertyValue(propertyID, updateLayout);
 }
@@ -117,9 +118,14 @@ const Settings* CSSComputedStyleDeclaration::settings() const
     return &m_element->document().settings();
 }
 
+RefPtr<const Settings> CSSComputedStyleDeclaration::protectedSettings() const
+{
+    return settings();
+}
+
 const FixedVector<CSSPropertyID>& CSSComputedStyleDeclaration::exposedComputedCSSPropertyIDs() const
 {
-    return m_element->document().exposedComputedCSSPropertyIDs();
+    return protectedElement()->protectedDocument()->exposedComputedCSSPropertyIDs();
 }
 
 String CSSComputedStyleDeclaration::getPropertyValue(CSSPropertyID propertyID) const
@@ -155,7 +161,7 @@ unsigned CSSComputedStyleDeclaration::length() const
 
     ComputedStyleExtractor::updateStyleIfNeededForProperty(m_element.get(), CSSPropertyCustom);
 
-    auto* style = m_element->computedStyle(m_pseudoElementIdentifier);
+    CheckedPtr style = protectedElement()->computedStyle(m_pseudoElementIdentifier);
     if (!style)
         return 0;
 
@@ -173,21 +179,21 @@ String CSSComputedStyleDeclaration::item(unsigned i) const
     if (i < exposedComputedCSSPropertyIDs().size())
         return nameString(exposedComputedCSSPropertyIDs().at(i));
 
-    auto* style = m_element->computedStyle(m_pseudoElementIdentifier);
+    CheckedPtr style = protectedElement()->computedStyle(m_pseudoElementIdentifier);
     if (!style)
         return String();
 
-    const auto& inheritedCustomProperties = style->inheritedCustomProperties();
+    Ref inheritedCustomProperties = style->inheritedCustomProperties();
 
     // FIXME: findKeyAtIndex does a linear search for the property name, so if
     // we are called in a loop over all item indexes, we'll spend quadratic time
     // searching for keys.
 
-    if (i < exposedComputedCSSPropertyIDs().size() + inheritedCustomProperties.size())
-        return inheritedCustomProperties.findKeyAtIndex(i - exposedComputedCSSPropertyIDs().size());
+    if (i < exposedComputedCSSPropertyIDs().size() + inheritedCustomProperties->size())
+        return inheritedCustomProperties->findKeyAtIndex(i - exposedComputedCSSPropertyIDs().size());
 
-    const auto& nonInheritedCustomProperties = style->nonInheritedCustomProperties();
-    return nonInheritedCustomProperties.findKeyAtIndex(i - inheritedCustomProperties.size() - exposedComputedCSSPropertyIDs().size());
+    Ref nonInheritedCustomProperties = style->nonInheritedCustomProperties();
+    return nonInheritedCustomProperties->findKeyAtIndex(i - inheritedCustomProperties->size() - exposedComputedCSSPropertyIDs().size());
 }
 
 CSSRule* CSSComputedStyleDeclaration::parentRule() const

@@ -58,7 +58,6 @@ animation/AcceleratedEffectStackUpdater.cpp
 animation/BlendingKeyframes.cpp
 animation/DocumentTimeline.cpp
 animation/KeyframeEffect.cpp
-animation/KeyframeEffectStack.cpp
 animation/StyleOriginatedAnimation.cpp
 animation/StyleOriginatedAnimationEvent.cpp
 animation/ViewTimeline.cpp
@@ -92,7 +91,6 @@ bindings/js/ScheduledAction.cpp
 bindings/js/ScriptModuleLoader.cpp
 bindings/js/WebCoreJSClientData.cpp
 contentextensions/ContentExtensionsBackend.cpp
-css/CSSComputedStyleDeclaration.cpp
 css/CSSFontSelector.cpp
 css/CSSStyleSheet.cpp
 css/ComputedStyleExtractor.cpp

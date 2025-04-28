@@ -63,7 +63,7 @@ const CSSParserContext& CSSRule::parserContext() const
 
 bool CSSRule::hasStyleRuleAncestor() const
 {
-    auto current = this->parentRule();
+    RefPtr current = this->parentRule();
     while (current) {
         if (current->styleRuleType() == StyleRuleType::Style)
             return true;

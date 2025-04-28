@@ -119,7 +119,7 @@ static_assert(!((enumToUnderlyingType(PseudoId::AfterLastInternalPseudoId) - 1) 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PseudoStyleCache);
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(RenderStyle);
 
-RenderStyle& RenderStyle::defaultStyle()
+RenderStyle& RenderStyle::defaultStyleSingleton()
 {
     static NeverDestroyed<RenderStyle> style { CreateDefaultStyle };
     return style;
@@ -127,12 +127,12 @@ RenderStyle& RenderStyle::defaultStyle()
 
 RenderStyle RenderStyle::create()
 {
-    return clone(defaultStyle());
+    return clone(defaultStyleSingleton());
 }
 
 std::unique_ptr<RenderStyle> RenderStyle::createPtr()
 {
-    return clonePtr(defaultStyle());
+    return clonePtr(defaultStyleSingleton());
 }
 
 std::unique_ptr<RenderStyle> RenderStyle::createPtrWithRegisteredInitialValues(const Style::CustomPropertyRegistry& registry)

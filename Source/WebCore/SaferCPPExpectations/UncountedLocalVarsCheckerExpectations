@@ -208,7 +208,6 @@ contentextensions/ContentExtensionsBackend.cpp
 crypto/SubtleCrypto.cpp
 crypto/algorithms/CryptoAlgorithmECDH.cpp
 crypto/algorithms/CryptoAlgorithmX25519.cpp
-css/CSSComputedStyleDeclaration.cpp
 css/CSSCounterStyleDescriptors.cpp
 css/CSSFontFace.cpp
 css/CSSFontFaceSet.cpp
@@ -219,7 +218,6 @@ css/CSSImageSetValue.cpp
 css/CSSImageValue.cpp
 css/CSSKeyframeRule.cpp
 css/CSSLayerBlockRule.cpp
-css/CSSRule.cpp
 css/CSSStyleProperties.cpp
 css/CSSStyleRule.cpp
 css/CSSStyleSheet.cpp

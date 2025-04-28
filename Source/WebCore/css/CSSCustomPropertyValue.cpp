@@ -32,6 +32,7 @@
 #include "CSSParserIdioms.h"
 #include "CSSSerializationContext.h"
 #include "CSSTokenizer.h"
+#include "CalculationValue.h"
 #include "ComputedStyleExtractor.h"
 #include "RenderStyle.h"
 #include "StyleURL.h"
@@ -76,23 +77,23 @@ String CSSCustomPropertyValue::customCSSText(const CSS::SerializationContext& co
         return WTF::switchOn(syntaxValue, [&](const Length& value) {
             if (value.type() == LengthType::Calculated) {
                 // FIXME: Implement serialization for CalculationValue directly.
-                auto calcValue = CSSCalcValue::create(value.calculationValue(), RenderStyle::defaultStyle());
+                auto calcValue = CSSCalcValue::create(value.protectedCalculationValue(), RenderStyle::defaultStyleSingleton());
                 return calcValue->cssText(context);
             }
-            return CSSPrimitiveValue::create(value, RenderStyle::defaultStyle())->cssText(context);
+            return CSSPrimitiveValue::create(value, RenderStyle::defaultStyleSingleton())->cssText(context);
         }, [&](const NumericSyntaxValue& value) {
             return CSSPrimitiveValue::create(value.value, value.unitType)->cssText(context);
         }, [&](const Style::Color& value) {
             return serializationForCSS(context, value);
         }, [&](const RefPtr<StyleImage>& value) {
             // FIXME: This is not right for gradients that use `currentcolor`. There should be a way preserve it.
-            return value->computedStyleValue(RenderStyle::defaultStyle())->cssText(context);
+            return value->computedStyleValue(RenderStyle::defaultStyleSingleton())->cssText(context);
         }, [&](const Style::URL& value) {
-            return serializationForCSS(context, Style::toCSS(value, RenderStyle::defaultStyle()));
+            return serializationForCSS(context, Style::toCSS(value, RenderStyle::defaultStyleSingleton()));
         }, [&](const String& value) {
             return value;
         }, [&](const TransformSyntaxValue& value) {
-            auto cssValue = transformOperationAsCSSValue(value.transform, RenderStyle::defaultStyle());
+            auto cssValue = transformOperationAsCSSValue(value.transform, RenderStyle::defaultStyleSingleton());
             if (!cssValue)
                 return emptyString();
             return cssValue->cssText(context);

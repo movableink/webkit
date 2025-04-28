@@ -397,7 +397,7 @@ RefPtr<CSSStyleValue> CSSStyleValueFactory::constructStyleValueForCustomProperty
             return CSSKeywordValue::rectifyKeywordish(nameLiteral(CSSValueCurrentcolor));
         return CSSStyleValue::create(CSSValuePool::singleton().createColorValue(colorValue.resolvedColor()));
     }, [&](const Style::URL& urlValue) -> RefPtr<CSSStyleValue> {
-        return CSSStyleValue::create(CSSURLValue::create(Style::toCSS(urlValue, RenderStyle::defaultStyle())));
+        return CSSStyleValue::create(CSSURLValue::create(Style::toCSS(urlValue, RenderStyle::defaultStyleSingleton())));
     }, [&](const String& identValue) -> RefPtr<CSSStyleValue> {
         return CSSKeywordValue::rectifyKeywordish(identValue);
     }, [&](const RefPtr<StyleImage>&) -> RefPtr<CSSStyleValue>  {

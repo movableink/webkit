@@ -333,7 +333,7 @@ public:
     explicit RenderStyle(CreateDefaultStyleTag);
     RenderStyle(const RenderStyle&, CloneTag);
 
-    static RenderStyle& defaultStyle();
+    static RenderStyle& defaultStyleSingleton();
 
     WEBCORE_EXPORT static RenderStyle create();
     static std::unique_ptr<RenderStyle> createPtr();

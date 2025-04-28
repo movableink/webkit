@@ -74,8 +74,10 @@ private:
     Ref<MutableStyleProperties> copyProperties() const final;
 
     RefPtr<CSSValue> getPropertyCSSValue(CSSPropertyID, ComputedStyleExtractor::UpdateLayout = ComputedStyleExtractor::UpdateLayout::Yes) const;
+    Ref<Element> protectedElement() const { return m_element; }
 
     const Settings* settings() const final;
+    RefPtr<const Settings> protectedSettings() const;
     const FixedVector<CSSPropertyID>& exposedComputedCSSPropertyIDs() const;
 
     mutable Ref<Element> m_element;

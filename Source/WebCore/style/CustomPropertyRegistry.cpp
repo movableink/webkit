@@ -199,7 +199,7 @@ auto CustomPropertyRegistry::parseInitialValue(const Document& document, const A
     // We don't need to provide a real context style since only computationally independent values are allowed (no 'em' etc).
     auto placeholderStyle = RenderStyle::create();
     auto placeholderMatchResult = MatchResult::create();
-    Style::Builder builder { placeholderStyle, { document, RenderStyle::defaultStyle() }, placeholderMatchResult, { } };
+    Style::Builder builder { placeholderStyle, { document, RenderStyle::defaultStyleSingleton() }, placeholderMatchResult, { } };
 
     auto initialValue = CSSPropertyParser::parseTypedCustomPropertyInitialValue(propertyName, syntax, tokenRange, builder.state(), { document });
     if (!initialValue)

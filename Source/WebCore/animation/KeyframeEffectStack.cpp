@@ -157,7 +157,7 @@ OptionSet<AnimationImpact> KeyframeEffectStack::applyKeyframeEffects(RenderStyle
 {
     OptionSet<AnimationImpact> impact;
 
-    auto& previousStyle = previousLastStyleChangeEventStyle ? *previousLastStyleChangeEventStyle : RenderStyle::defaultStyle();
+    auto& previousStyle = previousLastStyleChangeEventStyle ? *previousLastStyleChangeEventStyle : RenderStyle::defaultStyleSingleton();
 
     auto transformRelatedPropertyChanged = [&]() -> bool {
         return !arePointingToEqualData(targetStyle.translate(), previousStyle.translate())

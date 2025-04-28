@@ -347,7 +347,7 @@ UnadjustedStyle Resolver::unadjustedStyleForElement(Element& element, const Reso
 ResolvedStyle Resolver::styleForElement(Element& element, const ResolutionContext& context, RuleMatchingBehavior matchingBehavior)
 {
     auto unadjustedStyle = unadjustedStyleForElement(element, context, matchingBehavior);
-    auto& parentStyle = context.parentStyle ? *context.parentStyle : RenderStyle::defaultStyle();
+    auto& parentStyle = context.parentStyle ? *context.parentStyle : RenderStyle::defaultStyleSingleton();
 
     auto style = WTFMove(unadjustedStyle.style);
 

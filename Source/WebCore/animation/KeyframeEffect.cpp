@@ -2488,7 +2488,7 @@ const RenderStyle& KeyframeEffect::currentStyle() const
 {
     if (auto* renderer = this->renderer())
         return renderer->style();
-    return RenderStyle::defaultStyle();
+    return RenderStyle::defaultStyleSingleton();
 }
 
 bool KeyframeEffect::computeExtentOfTransformAnimation(LayoutRect& bounds) const
