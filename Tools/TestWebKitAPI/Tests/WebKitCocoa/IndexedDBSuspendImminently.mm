@@ -40,6 +40,13 @@
 
 #if PLATFORM(IOS_FAMILY)
 
+static void keepNetworkProcessActive()
+{
+    [WKWebsiteDataStore.defaultDataStore fetchDataRecordsOfTypes:WKWebsiteDataStore.allWebsiteDataTypes completionHandler:^(NSArray<WKWebsiteDataRecord *> *) {
+        keepNetworkProcessActive();
+    }];
+}
+
 // FIXME: Re-enable this test once webkit.org/b/290203 is resolved.
 #if defined(NDEBUG)
 TEST(IndexedDB, DISABLED_IndexedDBSuspendImminently)
@@ -64,6 +71,7 @@ TEST(IndexedDB, IndexedDBSuspendImminently)
     [configuration.get().websiteDataStore _sendNetworkProcessWillSuspendImminently];
     EXPECT_WK_STREQ([handler waitForMessage].body, @"Expected Abort For Suspension");
 
+    keepNetworkProcessActive();
     [configuration.get().websiteDataStore _sendNetworkProcessDidResume];
     EXPECT_WK_STREQ([handler waitForMessage].body, @"Expected Success After Resume");
 }
