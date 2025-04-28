@@ -10740,6 +10740,7 @@
         "web-platform-tests/svg/coordinate-systems/support/viewBox-change-repaint-001-ref.html",
         "web-platform-tests/svg/coordinate-systems/support/viewBox-scaling-text-001-ref.html",
         "web-platform-tests/svg/coordinate-systems/support/views.svg",
+        "web-platform-tests/svg/coordinate-systems/viewBox-synthesized-in-img-001-ref.html",
         "web-platform-tests/svg/crashtests/support/used.svg",
         "web-platform-tests/svg/embedded/image-embedding-svg-with-near-integral-width-ref.html",
         "web-platform-tests/svg/embedded/reference/green-rect-100x100.svg",
