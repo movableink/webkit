@@ -75,7 +75,6 @@ ResourceMonitorThrottler::~ResourceMonitorThrottler()
 
     if (m_persistence) {
         RESOURCEMONITOR_RELEASE_LOG("Closing persistence for throttler.");
-        m_persistence->deleteExpiredRecords(ContinuousApproximateTime::now(), m_config.duration);
         m_persistence = nullptr;
     }
 }
