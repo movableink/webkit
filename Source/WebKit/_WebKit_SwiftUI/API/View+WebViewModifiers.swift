@@ -62,21 +62,6 @@ extension View {
         environment(\.webViewElementFullscreenBehavior, value)
     }
 
-    @_spi(Private)
-    public nonisolated func webViewFindNavigator(isPresented: Binding<Bool>) -> some View {
-        environment(\.webViewFindContext, .init(isPresented: isPresented))
-    }
-
-    @_spi(Private)
-    public nonisolated func webViewFindDisabled(_ isDisabled: Bool = true) -> some View {
-        transformEnvironment(\.webViewFindContext) { $0.canFind = !isDisabled }
-    }
-
-    @_spi(Private)
-    public nonisolated func webViewReplaceDisabled(_ isDisabled: Bool = true) -> some View {
-        transformEnvironment(\.webViewFindContext) { $0.canReplace = !isDisabled }
-    }
-
     /// Adds an item-based context menu to a WebView, replacing the default set of context menu items.
     ///
     /// - Parameters:

@@ -233,7 +233,7 @@ struct ContentView: View {
                 .webViewLinkPreviews(.enabled)
                 .webViewTextSelection(.enabled)
                 .webViewElementFullscreenBehavior(.enabled)
-                .webViewFindNavigator(isPresented: $findNavigatorIsPresented)
+                .findNavigator(isPresented: $findNavigatorIsPresented)
                 .task {
                     // FIXME: Observe navigation changes.
                 }

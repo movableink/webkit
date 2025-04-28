@@ -35,12 +35,6 @@ struct OnScrollGeometryChangeContext {
     let action: (AnyHashable, AnyHashable) -> Void
 }
 
-struct FindContext {
-    var isPresented: Binding<Bool>?
-    var canFind = true
-    var canReplace = true
-}
-
 struct ScrollPositionContext {
     var position: Binding<ScrollPosition>?
 }

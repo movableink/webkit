@@ -131,8 +131,10 @@ final class WebViewCoordinator {
     func update(_ view: CocoaWebViewAdapter, configuration: WebViewRepresentable, context: WebViewRepresentable.Context) {
         self.configuration = configuration
 
-        self.updateFindInteraction(view, context: context)
-        self.updateScrollPosition(view, context: context)
+#if canImport(SwiftUI, _version: "7.0.57")
+        updateFindInteraction(view, context: context)
+#endif
+        updateScrollPosition(view, context: context)
     }
 
     private func updateScrollPosition(_ view: CocoaWebViewAdapter, context: WebViewRepresentable.Context) {
@@ -165,6 +167,7 @@ final class WebViewCoordinator {
         }
     }
 
+#if canImport(SwiftUI, _version: "7.0.57")
     private func updateFindInteraction(_ view: CocoaWebViewAdapter, context: WebViewRepresentable.Context) {
         guard let webView = view.webView else {
             return
@@ -172,11 +175,11 @@ final class WebViewCoordinator {
 
         let environment = context.environment
 
-        let findContext = environment.webViewFindContext
+        let findContext = environment.findContext
         view.findContext = findContext
 
 #if os(iOS)
-        webView.isFindInteractionEnabled = findContext.canFind
+        webView.isFindInteractionEnabled = findContext != nil
 #endif
 
         guard let findInteraction = view.findInteraction else {
@@ -186,16 +189,17 @@ final class WebViewCoordinator {
         let isFindNavigatorVisible = view.isFindNavigatorVisible
 
         // Showing or hiding the find navigator can change the first responder, which triggers a graph cycle if done synchronously.
-        if findContext.canFind && findContext.isPresented?.wrappedValue == true && !isFindNavigatorVisible {
+        if let findContext, findContext.isPresented?.wrappedValue == true && !isFindNavigatorVisible {
             onNextMainRunLoop {
                 findInteraction.presentFindNavigator(showingReplace: false)
             }
-        } else if findContext.isPresented?.wrappedValue == false && isFindNavigatorVisible {
+        } else if findContext?.isPresented?.wrappedValue == false && isFindNavigatorVisible {
             onNextMainRunLoop {
                 findInteraction.dismissFindNavigator()
             }
         }
     }
+#endif // canImport(SwiftUI, _version: "7.0.57")
 }
 
 #if canImport(UIKit)

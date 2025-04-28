@@ -71,9 +71,11 @@ class CocoaWebViewAdapter: CocoaView, PlatformTextSearching {
                 return
             }
 
+#if canImport(SwiftUI, _version: "7.0.57")
             if let isPresented = findContext?.isPresented {
                 isPresented.wrappedValue = isFindBarVisible
             }
+#endif
 
             if isFindBarVisible {
                 findBarDidBecomeVisible()
@@ -88,7 +90,9 @@ class CocoaWebViewAdapter: CocoaView, PlatformTextSearching {
 
     // MARK: Find-in-Page support
 
+#if canImport(SwiftUI, _version: "7.0.57")
     var findContext: FindContext?
+#endif
 
     var scrollPosition: ScrollPositionContext?
 
@@ -237,21 +241,29 @@ extension CocoaWebViewAdapter: @preconcurrency NSTextFinderBarContainer {
 extension CocoaWebViewAdapter: WebPageWebView.Delegate {
 #if os(iOS)
     func findInteraction(_ interaction: UIFindInteraction, didBegin session: UIFindSession) {
+#if canImport(SwiftUI, _version: "7.0.57")
         if let isPresented = findContext?.isPresented {
             isPresented.wrappedValue = true
         }
+#endif
     }
 
     func findInteraction(_ interaction: UIFindInteraction, didEnd session: UIFindSession) {
+#if canImport(SwiftUI, _version: "7.0.57")
         if let isPresented = findContext?.isPresented {
             isPresented.wrappedValue = false
         }
+#endif
     }
 
     func supportsTextReplacement() -> Bool {
+#if canImport(SwiftUI, _version: "7.0.57")
         findContext?.canReplace ?? false
-    }
+#else
+        false
 #endif
+    }
+#endif // os(iOS)
 
     func geometryDidChange(_ geometry: WKScrollGeometryAdapter) {
         let newScrollGeometry = ScrollGeometry(geometry)

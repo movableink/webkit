@@ -41,9 +41,6 @@ extension EnvironmentValues {
     var webViewElementFullscreenBehavior = WebView.ElementFullscreenBehavior.automatic
 
     @Entry
-    var webViewFindContext: FindContext = .init()
-
-    @Entry
     var webViewContextMenuContext: ContextMenuContext? = nil
 
     @Entry
