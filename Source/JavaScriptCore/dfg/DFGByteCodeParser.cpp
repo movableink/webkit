@@ -1656,7 +1656,7 @@ std::tuple<unsigned, InlineAttribute> ByteCodeParser::inliningCost(CallVariant c
     CallMode callMode = InlineCallFrame::callModeFor(kind);
     CodeSpecializationKind specializationKind = specializationKindFor(callMode);
     VERBOSE_LOG("Considering inlining ", callee, " into ", currentCodeOrigin(), "\n");
-    
+
     if (m_hasDebuggerEnabled) {
         VERBOSE_LOG("    Failing because the debugger is in use.\n");
         return { UINT_MAX, InlineAttribute::None };
@@ -1771,7 +1771,7 @@ void ByteCodeParser::inlineCall(Node* callTargetNode, Operand result, CallVarian
     CodeBlock* codeBlock = callee.functionExecutable()->baselineCodeBlockFor(specializationKind);
     insertChecks(codeBlock);
 
-    dataLogLnIf(Options::printEachDFGFTLInlineCall(), "[InlineCall] JITType: ", m_graph.m_plan.jitType(), " | Callee: ", codeBlock->inferredNameWithHash(), " -> Caller: ", m_graph.m_codeBlock->inferredNameWithHash());
+    dataLogLnIf(Options::printEachDFGFTLInlineCall(), "[InlineCall][", m_graph.m_plan.jitType(), "] Callee: ", codeBlock->inferredNameWithHash(), " -> Caller: ", m_graph.m_codeBlock->inferredNameWithHash());
 
     // FIXME: Don't flush constants!
 
@@ -2063,7 +2063,7 @@ ByteCodeParser::CallOptimizationResult ByteCodeParser::handleCallVariant(Node* c
             RELEASE_ASSERT(!didInsertChecks);
         }
     }
-    
+
     auto [myInliningCost, inlineAttribute] = inliningCost(callee, argumentCountIncludingThis, kind);
     if (!inliningBalance)
         return CallOptimizationResult::DidNothing;

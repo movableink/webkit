@@ -625,6 +625,7 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, freeRetiredWasmCode, true, Normal, "free BBQ/OMG-OSR wasm code once it's no longer reachable."_s) \
     v(Bool, useArrayAllocationSinking, true, Normal, "free BBQ/OMG-OSR wasm code once it's no longer reachable."_s) \
     v(Bool, dumpFTLCodeSize, false, Normal, nullptr) \
+    v(Bool, dumpOptimizationTracing, false, Normal, nullptr) \
     v(Unsigned, markedBlockDumpInfoCount, 0, Normal, nullptr) /* FIXME: rdar://139998916 */ \
     \
     /* Feature Flags */\

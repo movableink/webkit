@@ -216,7 +216,7 @@ public:
             }
         }
 
-        dataLogLnIf(Options::printEachUnrolledLoop(), "\tIn function ", m_graph.m_codeBlock->inferredNameWithHash(), ", ", data.shouldFullyUnroll() ?  "fully" : "partially", " unrolling the loop with data=", data);
+        dataLogLnIf(Options::printEachUnrolledLoop(), "[UnrollLoop][", m_graph.m_plan.jitType(), "][", data.shouldFullyUnroll() ?  "Full" : "Partial", "] function: ", m_graph.m_codeBlock->inferredNameWithHash(), " data: ", data);
         unrollLoop(data);
 
         dataLogIf(Options::verboseLoopUnrolling(), "\tGraph after Loop Unrolling for loop\n", m_graph);
