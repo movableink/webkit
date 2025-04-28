@@ -4738,7 +4738,7 @@ void EventHandler::stopKeyboardScrolling()
     RefPtr page = m_frame->page();
     if (!page)
         return;
-    if (auto animator = page->currentKeyboardScrollingAnimator())
+    if (CheckedPtr animator = page->currentKeyboardScrollingAnimator())
         animator->handleKeyUpEvent();
 }
 

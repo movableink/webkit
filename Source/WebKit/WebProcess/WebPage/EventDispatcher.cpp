@@ -123,7 +123,7 @@ void EventDispatcher::internalWheelEvent(PageIdentifier pageID, const WebWheelEv
     ensureOnMainRunLoop([pageID] {
         if (RefPtr webPage = WebProcess::singleton().webPage(pageID)) {
             if (RefPtr corePage = webPage->corePage()) {
-                if (auto* keyboardScrollingAnimator = corePage->currentKeyboardScrollingAnimator())
+                if (CheckedPtr keyboardScrollingAnimator = corePage->currentKeyboardScrollingAnimator())
                     keyboardScrollingAnimator->stopScrollingImmediately();
             }
         }
@@ -166,10 +166,11 @@ void EventDispatcher::internalWheelEvent(PageIdentifier pageID, const WebWheelEv
 
         scrollingTree->willProcessWheelEvent();
 
-        ScrollingThread::dispatch([scrollingTree, wheelEvent, platformWheelEvent, processingSteps, useMainThreadForScrolling, pageID, wheelEventOrigin, this, protectedThis = Ref { *this }] {
+        ScrollingThread::dispatch([scrollingTree, wheelEvent = WebWheelEvent { wheelEvent }, platformWheelEvent, processingSteps, useMainThreadForScrolling, pageID, wheelEventOrigin, this, protectedThis = Ref { *this }] {
+            CheckedRef checkedWheelEvent = wheelEvent;
             if (useMainThreadForScrolling) {
                 scrollingTree->willSendEventToMainThread(platformWheelEvent);
-                dispatchWheelEventViaMainThread(pageID, wheelEvent, processingSteps, wheelEventOrigin);
+                dispatchWheelEventViaMainThread(pageID, checkedWheelEvent.get(), processingSteps, wheelEventOrigin);
                 scrollingTree->waitForEventToBeProcessedByMainThread(platformWheelEvent);
                 return;
             }
@@ -177,7 +178,7 @@ void EventDispatcher::internalWheelEvent(PageIdentifier pageID, const WebWheelEv
             auto result = scrollingTree->handleWheelEvent(platformWheelEvent, processingSteps);
 
             if (result.needsMainThreadProcessing()) {
-                dispatchWheelEventViaMainThread(pageID, wheelEvent, result.steps, wheelEventOrigin);
+                dispatchWheelEventViaMainThread(pageID, checkedWheelEvent.get(), result.steps, wheelEventOrigin);
                 if (result.steps.contains(WheelEventProcessingSteps::SynchronousScrolling))
                     return;
             }
@@ -185,7 +186,7 @@ void EventDispatcher::internalWheelEvent(PageIdentifier pageID, const WebWheelEv
             // If we scrolled on the scrolling thread (even if we send the event to the main thread for passive event handlers)
             // respond to the UI process that the event was handled.
             if (wheelEventOrigin == WheelEventOrigin::UIProcess)
-                sendDidReceiveEvent(pageID, wheelEvent.type(), result.wasHandled);
+                sendDidReceiveEvent(pageID, checkedWheelEvent->type(), result.wasHandled);
         });
     } while (false);
 #else
@@ -285,8 +286,8 @@ void EventDispatcher::dispatchTouchEvents()
 void EventDispatcher::dispatchWheelEventViaMainThread(WebCore::PageIdentifier pageID, const WebWheelEvent& wheelEvent, OptionSet<WheelEventProcessingSteps> processingSteps, WheelEventOrigin wheelEventOrigin)
 {
     ASSERT(!RunLoop::isMain());
-    RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }, pageID, wheelEvent, wheelEventOrigin, steps = processingSteps - WheelEventProcessingSteps::AsyncScrolling] {
-        dispatchWheelEvent(pageID, wheelEvent, steps, wheelEventOrigin);
+    RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }, pageID, wheelEvent = WebWheelEvent { wheelEvent }, wheelEventOrigin, steps = processingSteps - WheelEventProcessingSteps::AsyncScrolling] {
+        dispatchWheelEvent(pageID, CheckedRef { wheelEvent }.get(), steps, wheelEventOrigin);
     });
 }
 

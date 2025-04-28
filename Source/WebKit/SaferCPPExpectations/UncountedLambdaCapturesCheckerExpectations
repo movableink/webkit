@@ -12,4 +12,3 @@ UIProcess/RemoteLayerTree/mac/RemoteLayerTreeEventDispatcher.mm
 UIProcess/WebProcessCache.cpp
 UIProcess/mac/PageClientImplMac.mm
 UIProcess/mac/WebViewImpl.mm
-WebProcess/WebPage/EventDispatcher.cpp
