@@ -238,6 +238,7 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::UseCFNetworkNetworkLoader);
         disableBehavior(SDKAlignedBehavior::BlocksConnectionsToAddressWithOnlyZeros);
         disableBehavior(SDKAlignedBehavior::BlockCrossOriginRedirectDownloads);
+        disableBehavior(SDKAlignedBehavior::SupportGameControllerEventInteractionAPI);
     }
 
     disableAdditionalSDKAlignedBehaviors(behaviors);

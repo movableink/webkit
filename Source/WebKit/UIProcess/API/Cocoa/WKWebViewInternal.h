@@ -425,6 +425,7 @@ struct PerWebProcessState {
 #endif
 
 #if ENABLE(GAMEPAD)
+    BOOL _gamepadsRecentlyAccessed;
     RetainPtr<id> _gamepadsRecentlyAccessedState;
 #endif
 

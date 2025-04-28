@@ -135,6 +135,7 @@ enum class SDKAlignedBehavior {
     DispatchFocusEventBeforeNotifyingClient,
     EnableTrustedTypesByDefault,
     BlobFileAccessEnforcement,
+    SupportGameControllerEventInteractionAPI,
 
     NumberOfBehaviors
 };
