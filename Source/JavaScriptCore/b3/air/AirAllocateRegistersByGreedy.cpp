@@ -703,7 +703,6 @@ private:
             for (Reg r : m_allowedRegistersInPriorityOrder[bank])
                 m_allAllowedRegisters.add(r, IgnoreVectors);
         });
-        m_allAllowedRegistersWholeWidth = m_allAllowedRegisters.toRegisterSet().includeWholeRegisterWidth();
     }
 
     void buildIndices()
@@ -2098,7 +2097,6 @@ private:
     Code& m_code;
     Vector<Reg> m_allowedRegistersInPriorityOrder[numBanks];
     ScalarRegisterSet m_allAllowedRegisters;
-    RegisterSet m_allAllowedRegistersWholeWidth;
     IndexMap<BasicBlock*, Point> m_blockToHeadPoint;
     Vector<Point> m_tailPoints;
     TmpMap<TmpData> m_map;
