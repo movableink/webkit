@@ -172,10 +172,10 @@ void GStreamerVideoCaptureSource::settingsDidChange(OptionSet<RealtimeMediaSourc
     bool reconfigure = false;
     GST_DEBUG("Settings changed");
     if (settings.containsAny({ RealtimeMediaSourceSettings::Flag::Width, RealtimeMediaSourceSettings::Flag::Height })) {
+        GST_DEBUG("Size changed to %dx%d, intrinsic size: %dx%d", size().width(), size().height(), intrinsicSize().width(), intrinsicSize().height());
         if (m_deviceType == CaptureDevice::DeviceType::Window || m_deviceType == CaptureDevice::DeviceType::Screen)
             ensureIntrinsicSizeMaintainsAspectRatio();
 
-        GST_DEBUG("Size changed to %dx%d", size().width(), size().height());
         if (m_capturer->setSize(size()))
             reconfigure = true;
     }
@@ -191,6 +191,7 @@ void GStreamerVideoCaptureSource::settingsDidChange(OptionSet<RealtimeMediaSourc
 
 void GStreamerVideoCaptureSource::sourceCapsChanged(const GstCaps* caps)
 {
+    GST_DEBUG("Caps changed to %" GST_PTR_FORMAT, caps);
     auto videoResolution = getVideoResolutionFromCaps(caps);
     if (!videoResolution)
         return;
@@ -301,7 +302,7 @@ void GStreamerVideoCaptureSource::generatePresets()
 
         int32_t width, height;
         if (!gst_structure_get(str, "width", G_TYPE_INT, &width, "height", G_TYPE_INT, &height, nullptr)) {
-            GST_INFO("Could not find discret height and width values in %" GST_PTR_FORMAT, str);
+            GST_INFO("Could not find discrete height and width values in %" GST_PTR_FORMAT, str);
             continue;
         }
 
@@ -358,6 +359,18 @@ void GStreamerVideoCaptureSource::setSizeFrameRateAndZoom(const VideoPresetConst
         return;
 
     m_capturer->setSize({ *constraints.width, *constraints.height });
+}
+
+void GStreamerVideoCaptureSource::applyFrameRateAndZoomWithPreset(double requestedFrameRate, double requestedZoom, std::optional<VideoPreset>&& preset)
+{
+    UNUSED_PARAM(requestedZoom);
+
+    m_currentPreset = WTFMove(preset);
+    if (!m_currentPreset)
+        return;
+
+    setIntrinsicSize(m_currentPreset->size());
+    m_capturer->setFrameRate(requestedFrameRate);
 }
 
 #undef GST_CAT_DEFAULT

@@ -64,6 +64,7 @@ protected:
     bool canResizeVideoFrames() const final { return true; }
     void generatePresets() final;
     void setSizeFrameRateAndZoom(const VideoPresetConstraints&) final;
+    void applyFrameRateAndZoomWithPreset(double, double, std::optional<VideoPreset>&&) final;
 
     mutable std::optional<RealtimeMediaSourceCapabilities> m_capabilities;
     mutable std::optional<RealtimeMediaSourceSettings> m_currentSettings;
@@ -75,6 +76,8 @@ private:
 
     RefPtr<GStreamerVideoCapturer> m_capturer;
     CaptureDevice::DeviceType m_deviceType;
+
+    std::optional<VideoPreset> m_currentPreset;
 };
 
 } // namespace WebCore
