@@ -665,10 +665,10 @@ protected:
     void platformPerformDeferredCacheUpdate();
 
 #if PLATFORM(COCOA) || USE(ATSPI)
-    void postTextStateChangePlatformNotification(AccessibilityObject*, const AXTextStateChangeIntent&, const VisibleSelection&);
+    void postTextSelectionChangePlatformNotification(AccessibilityObject*, const AXTextStateChangeIntent&, const VisibleSelection&);
     void postTextStateChangePlatformNotification(AccessibilityObject*, AXTextEditType, const String&, const VisiblePosition&);
-    void postTextReplacementPlatformNotificationForTextControl(AccessibilityObject*, const String& deletedText, const String& insertedText);
     void postTextReplacementPlatformNotification(AccessibilityObject*, AXTextEditType, const String&, AXTextEditType, const String&, const VisiblePosition&);
+    void postTextReplacementPlatformNotificationForTextControl(AccessibilityObject*, const String& deletedText, const String& insertedText);
 #else // PLATFORM(COCOA) || USE(ATSPI)
     static AXTextChange textChangeForEditType(AXTextEditType);
     void nodeTextChangePlatformNotification(AccessibilityObject*, AXTextChange, unsigned, const String&);

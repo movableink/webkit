@@ -126,7 +126,7 @@ void AXObjectCache::postPlatformAnnouncementNotification(const String& message)
     }
 }
 
-void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject* object, const AXTextStateChangeIntent&, const VisibleSelection&)
+void AXObjectCache::postTextSelectionChangePlatformNotification(AccessibilityObject* object, const AXTextStateChangeIntent&, const VisibleSelection&)
 {
     if (object)
         postPlatformNotification(*object, AXNotification::SelectedTextChanged);

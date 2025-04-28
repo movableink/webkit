@@ -146,7 +146,7 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject& coreObject, AX
     }
 }
 
-void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject* coreObject, const AXTextStateChangeIntent&, const VisibleSelection& selection)
+void AXObjectCache::postTextSelectionChangePlatformNotification(AccessibilityObject* coreObject, const AXTextStateChangeIntent&, const VisibleSelection& selection)
 {
     if (!coreObject)
         coreObject = rootWebArea();

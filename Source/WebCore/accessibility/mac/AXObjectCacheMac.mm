@@ -458,7 +458,7 @@ AXTextStateChangeIntent AXObjectCache::inferDirectionFromIntent(AccessibilityObj
     return intent;
 }
 
-void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject* object, const AXTextStateChangeIntent& originalIntent, const VisibleSelection& selection)
+void AXObjectCache::postTextSelectionChangePlatformNotification(AccessibilityObject* object, const AXTextStateChangeIntent& originalIntent, const VisibleSelection& selection)
 {
     if (!object)
         object = rootWebArea();

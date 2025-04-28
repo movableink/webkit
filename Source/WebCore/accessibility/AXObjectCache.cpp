@@ -2351,7 +2351,7 @@ void AXObjectCache::postTextStateChangeNotification(AccessibilityObject* object,
 
     if (object) {
         const AXTextStateChangeIntent& newIntent = (intent.type == AXTextStateChangeTypeUnknown || (m_isSynchronizingSelection && m_textSelectionIntent.type != AXTextStateChangeTypeUnknown)) ? m_textSelectionIntent : intent;
-        postTextStateChangePlatformNotification(object, newIntent, selection);
+        postTextSelectionChangePlatformNotification(object, newIntent, selection);
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
         m_lastDebouncedTextRangeObject = object->objectID();
