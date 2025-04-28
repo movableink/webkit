@@ -485,7 +485,7 @@ BinaryPropertyListSerializer::BinaryPropertyListSerializer(BinaryPropertyListWri
     , m_currentObjectReference(0)
 {
     auto bufferSize = m_offsetTableStart + m_plan.objectCount() * m_offsetSize + trailerSize;
-    m_buffer = unsafeMakeSpan(client.buffer(bufferSize), bufferSize);
+    m_buffer = client.buffer(bufferSize);
     ASSERT(m_objectReferenceSize > 0);
     ASSERT(m_offsetSize > 0);
 

@@ -32,6 +32,11 @@ using namespace WebCore;
 
 static const int currentFileVersion = 1;
 
+struct CFMalloc {
+    static void* malloc(size_t size) { return CFAllocatorAllocate(nullptr, size, 0); }
+    static void free(void* p) { CFAllocatorDeallocate(nullptr, p); }
+};
+
 HistoryPropertyListWriter::HistoryPropertyListWriter()
     : m_displayTitleKey("displayTitle"_s)
     , m_lastVisitWasFailureKey("lastVisitWasFailure"_s)
@@ -39,29 +44,26 @@ HistoryPropertyListWriter::HistoryPropertyListWriter()
     , m_redirectURLsKey("redirectURLs"_s)
     , m_titleKey("title"_s)
     , m_urlKey(emptyString())
-    , m_buffer(0)
 {
 }
 
-UInt8* HistoryPropertyListWriter::buffer(size_t size)
+HistoryPropertyListWriter::~HistoryPropertyListWriter() = default;
+
+std::span<UInt8> HistoryPropertyListWriter::buffer(size_t size)
 {
     ASSERT(!m_buffer);
-    m_buffer = static_cast<UInt8*>(CFAllocatorAllocate(0, size, 0));
-    m_bufferSize = size;
-    return m_buffer;
+    m_buffer = MallocSpan<UInt8, CFMalloc>::malloc(size);
+    return m_buffer.mutableSpan();
 }
 
 RetainPtr<CFDataRef> HistoryPropertyListWriter::releaseData()
 {
-    UInt8* buffer = m_buffer;
-    if (!buffer)
-        return 0;
-    m_buffer = 0;
-    RetainPtr<CFDataRef> data = adoptCF(CFDataCreateWithBytesNoCopy(0, buffer, m_bufferSize, 0));
-    if (!data) {
-        CFAllocatorDeallocate(0, buffer);
-        return 0;
-    }
+    if (!m_buffer)
+        return nullptr;
+    auto span = m_buffer.leakSpan();
+    RetainPtr data = adoptCF(CFDataCreateWithBytesNoCopy(0, span.data(), span.size(), 0));
+    if (!data)
+        adoptMallocSpan<UInt8, CFMalloc>(span); // We need to make sure we free the data if creating the CFData failed.
     return data;
 }
 
