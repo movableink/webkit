@@ -416,7 +416,7 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
     if (!PAL::isScreenTimeFrameworkAvailable())
         return;
 
-    if (_page && !_page->preferences().screenTimeEnabled())
+    if (!_page->preferences().screenTimeEnabled() || !_page->mainFrame()->url().protocolIsInHTTPFamily())
         return;
 
     _screenTimeWebpageController = adoptNS([PAL::allocSTWebpageControllerInstance() init]);
@@ -436,6 +436,7 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
         [screenTimeView setFrame:self.bounds];
         [self addSubview:screenTimeView.get()];
     }
+
     RELEASE_LOG(ScreenTime, "Screen Time controller was installed.");
 }
 
@@ -477,6 +478,7 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
         [self _installScreenTimeWebpageControllerIfNeeded];
         if (!previouslyInstalledScreenTimeWebpageController && _screenTimeWebpageController)
             [_screenTimeWebpageController setURL:[self _mainFrameURL]];
+
         if (!showsSystemScreenTimeBlockingView && _screenTimeBlurredSnapshot) {
             [_screenTimeBlurredSnapshot setHidden:NO];
             RELEASE_LOG(ScreenTime, "Screen Time has updated to use the blurred view for any blocked URL.");
