@@ -1,0 +1,58 @@
+Tests the #comp_name_from_heading portions of the AccName Name Computation algorithm.
+
+Includes tentative "name from heading" diff.
+
+alertdialog role heading contents
+
+More alertdialog content.
+
+article role heading contents
+
+More article content.
+
+dialog role heading contents
+
+More dialog content.
+
+Not this one
+
+nor this one
+
+Nor this content.
+
+dialog heading contents
+
+More dialog content.
+
+article role simple DFS
+
+Not this one
+
+More article content.
+
+
+FAIL alertdialog role, name from heading assert_equals: <div role="alertdialog" data-expectedlabel="alertdialog role heading contents" data-testname="alertdialog role, name from heading" class="ex-label">
+  <h2>alertdialog role heading contents</h2>
+  <p>More alertdialog content.</p>
+</div> expected "alertdialog role heading contents" but got ""
+FAIL article role, name from heading assert_equals: <div role="article" data-expectedlabel="article role heading contents" data-testname="article role, name from heading" class="ex-label">
+  <h2>article role heading contents</h2>
+  <p>More article content.</p>
+</div> expected "article role heading contents" but got ""
+FAIL dialog role, name from heading assert_equals: <div role="dialog" data-expectedlabel="dialog role heading contents" data-testname="dialog role, name from heading" class="ex-label">
+  <h2>dialog role heading contents</h2>
+  <p>More dialog content.</p>
+</div> expected "dialog role heading contents" but got ""
+PASS group role, verify name is NOT from heading
+FAIL native dialog element, name from heading assert_equals: <dialog open="" data-expectedlabel="dialog heading contents" data-testname="native dialog element, name from heading" class="ex-label">
+  <h2>dialog heading contents</h2>
+  <p>More dialog content.</p>
+</dialog> expected "dialog heading contents" but got ""
+FAIL article role, name from DFS heading assert_equals: <div role="article" data-expectedlabel="article role simple DFS" data-testname="article role, name from DFS heading" class="ex-label">
+  <div role="group">
+    <h3>article role simple DFS</h3>
+  </div>
+  <h2>Not this one</h2>
+  <p>More article content.</p>
+</div> expected "article role simple DFS" but got ""
+

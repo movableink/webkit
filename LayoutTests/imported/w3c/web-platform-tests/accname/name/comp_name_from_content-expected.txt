@@ -158,6 +158,40 @@ onetwothree
 
 onetwothree
 
+Call us
+
+CALL US
+
+Call Us
+
+call us
+
+heading which visually transforms びょういん (hospital) to びよういん (beauty parlor) using CSS text-transform:full-size-kana
+
+びよういんのかんじやサービス
+
+Elements with implicit button, heading, link roles containing element with implicit term role
+
+this is an example
+this is an example
+
+this is an example
+Elements with implicit button, heading, link roles containing element with explicit term role
+
+this is an example
+this is an example
+
+this is an example
+Elements with explicit button, heading, link roles containing element with implicit term role
+
+this is an example
+this is an example
+this is an example
+Elements with explicit button, heading, link roles containing element with explicit term role
+
+this is an example
+this is an example
+this is an example
 
 PASS aria button name from content, inline
 PASS aria heading name from content, inline
@@ -226,4 +260,21 @@ PASS link name from content for each child (no space, display:block)
 PASS button name from content for each child (no space, display:inline-block)
 PASS heading name from content for each child (no space, display:inline-block)
 PASS link name from content for each child (no space, display:inline-block)
+PASS heading name from content with text-transform:none
+PASS heading name from content with text-transform:uppercase
+PASS heading name from content with text-transform:capitalize
+PASS heading name from content with text-transform:lowercase
+PASS heading name from content with text-transform:full-size-kana
+PASS implicit button name from content containing a dfn element
+PASS implicit heading name from content containing a dfn element
+PASS implicit link name from content containing a dfn element
+PASS implicit button name from content containing an element with explicit term role
+PASS implicit heading name from content containing an element with explicit term role
+PASS implicit link name from content containing an element explicit with term role
+PASS explicit button name from content containing a dfn element
+PASS explicit heading name from content containing a dfn element
+PASS explicit link name from content containing a dfn element
+PASS explicit button name from content containing an element explicit with term role
+PASS explicit heading name from content containing an element explicit with term role
+PASS explicit link name from content containing an element explicit with term role
 
