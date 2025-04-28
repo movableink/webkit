@@ -4369,4 +4369,64 @@ TEST(SiteIsolation, CoordinateTransformation)
     Util::run(&done);
 }
 
+TEST(SiteIsolation, Events)
+{
+    auto eventListeners = "<script>"
+    "addEventListener('resize', ()=>{ alert('resize') });"
+    "addEventListener('load', ()=>{ alert('load') });"
+    "addEventListener('beforeunload', ()=>{ alert('beforeunload') });"
+    "addEventListener('unload', ()=>{ alert('unload') });"
+    "addEventListener('pageswap', ()=>{ alert('pageswap') });"
+    "addEventListener('pageshow', ()=>{ alert('pageshow') });"
+    "addEventListener('pagehide', ()=>{ alert('pagehide') });"
+    "addEventListener('pagereveal', ()=>{ alert('pagereveal') });"
+    "addEventListener('focus', ()=>{ alert('focus') });"
+    "addEventListener('blur', ()=>{ alert('blur') });"
+    "</script>"_s;
+
+    HTTPServer server({
+        { "/example"_s, { makeString(eventListeners, "<br><iframe id='wk' src='https://webkit.org/iframe'></iframe>"_s) } },
+        { "/iframe"_s, { eventListeners } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    __block bool receivedLastExpectedMessage = false;
+    __block RetainPtr<NSMutableArray<NSString *>> messages = adoptNS([NSMutableArray new]);
+    RetainPtr delegate = adoptNS([TestUIDelegate new]);
+    delegate.get().runJavaScriptAlertPanelWithMessage = ^(WKWebView *, NSString *message, WKFrameInfo *frame, void (^completionHandler)(void)) {
+        [messages addObject:[NSString stringWithFormat:@"%@ from %@", message, frame.securityOrigin.host]];
+        completionHandler();
+        if ([message isEqualToString:@"pageshow"] && [frame.securityOrigin.host isEqualToString:@"apple.com"])
+            receivedLastExpectedMessage = true;
+    };
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
+    webView.get().UIDelegate = delegate.get();
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+    [webView evaluateJavaScript:@"wk.height = 75" completionHandler:nil];
+    [webView evaluateJavaScript:@"window.location = 'https://apple.com/iframe'" inFrame:[webView firstChildFrame] completionHandler:nil];
+    Util::run(&receivedLastExpectedMessage);
+    Util::runFor(Seconds(0.1));
+
+    NSArray *expectedMessages = @[
+        @"load from webkit.org",
+        @"pageshow from webkit.org",
+        @"load from example.com",
+        @"pageshow from example.com",
+
+        // Note: when fixing <rdar://150217584> this resize needs to stay here.
+        @"resize from webkit.org",
+
+        // FIXME: <rdar://150216569> There should be a pageswap from webkit.org here.
+
+        @"load from apple.com",
+        @"pageshow from apple.com",
+        @"resize from apple.com", // FIXME: <rdar://150217584> This event should not happen.
+    ];
+    if (![messages isEqualToArray:expectedMessages]) {
+        WTFLogAlways("Actual messages: %@", messages.get());
+        EXPECT_TRUE(false);
+    }
+}
+
 }
