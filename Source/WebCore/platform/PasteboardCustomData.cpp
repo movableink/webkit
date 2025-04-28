@@ -246,13 +246,13 @@ String PasteboardCustomData::readStringInCustomData(const String& type) const
     return { };
 }
 
-void PasteboardCustomData::forEachType(Function<void(const String&)>&& function) const
+void PasteboardCustomData::forEachType(NOESCAPE const Function<void(const String&)>& function) const
 {
     for (auto& entry : m_data)
         function(entry.type);
 }
 
-void PasteboardCustomData::forEachPlatformString(Function<void(const String& type, const String& data)>&& function) const
+void PasteboardCustomData::forEachPlatformString(NOESCAPE const Function<void(const String& type, const String& data)>& function) const
 {
     for (auto& entry : m_data) {
         if (!std::holds_alternative<String>(entry.platformData))
@@ -264,7 +264,7 @@ void PasteboardCustomData::forEachPlatformString(Function<void(const String& typ
     }
 }
 
-void PasteboardCustomData::forEachCustomString(Function<void(const String& type, const String& data)>&& function) const
+void PasteboardCustomData::forEachCustomString(NOESCAPE const Function<void(const String& type, const String& data)>& function) const
 {
     for (auto& entry : m_data) {
         if (!entry.customData.isNull())
@@ -272,7 +272,7 @@ void PasteboardCustomData::forEachCustomString(Function<void(const String& type,
     }
 }
 
-void PasteboardCustomData::forEachPlatformStringOrBuffer(Function<void(const String& type, const Variant<String, Ref<SharedBuffer>>& data)>&& function) const
+void PasteboardCustomData::forEachPlatformStringOrBuffer(NOESCAPE const Function<void(const String& type, const Variant<String, Ref<SharedBuffer>>& data)>& function) const
 {
     for (auto& entry : m_data) {
         auto& data = entry.platformData;

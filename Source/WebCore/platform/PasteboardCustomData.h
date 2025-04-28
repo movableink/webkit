@@ -83,10 +83,10 @@ public:
     static ASCIILiteral wpeType() { return "org.wpewebkit.WebKit.custom-pasteboard-data"_s; }
 #endif
 
-    void forEachType(Function<void(const String&)>&&) const;
-    void forEachPlatformString(Function<void(const String& type, const String& data)>&&) const;
-    void forEachPlatformStringOrBuffer(Function<void(const String& type, const Variant<String, Ref<SharedBuffer>>& data)>&&) const;
-    void forEachCustomString(Function<void(const String& type, const String& data)>&&) const;
+    void forEachType(NOESCAPE const Function<void(const String&)>&) const;
+    void forEachPlatformString(NOESCAPE const Function<void(const String& type, const String& data)>&) const;
+    void forEachPlatformStringOrBuffer(NOESCAPE const Function<void(const String& type, const Variant<String, Ref<SharedBuffer>>& data)>&) const;
+    void forEachCustomString(NOESCAPE const Function<void(const String& type, const String& data)>&) const;
 
     bool hasData() const;
     bool hasSameOriginCustomData() const;

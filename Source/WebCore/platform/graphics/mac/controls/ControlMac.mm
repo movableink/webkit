@@ -221,7 +221,7 @@ static void applyViewlessCellSettings(float deviceScaleFactor, const ControlStyl
         [cell _setFallbackSemanticContext:NSViewSemanticContextForm];
 }
 
-static void performDrawingWithUnflippedContext(GraphicsContext& context, const FloatRect& rect, Function<void(const FloatRect&)>&& draw)
+static void performDrawingWithUnflippedContext(GraphicsContext& context, const FloatRect& rect, NOESCAPE const Function<void(const FloatRect&)>& draw)
 {
     auto adjustedRect = rect;
 
