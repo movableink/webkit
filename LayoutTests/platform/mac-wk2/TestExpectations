@@ -2138,3 +2138,5 @@ webkit.org/b/291966 [ Sequoia+ Release ] http/tests/webgpu/webgpu/api/validation
 [ Sonoma+ Debug ] imported/w3c/web-platform-tests/webcodecs/video-encoder-rescaling.https.any.worker.html?h264_avc [ Skip ]
 [ Sonoma+ Debug ] imported/w3c/web-platform-tests/webcodecs/video-encoder-rescaling.https.any.worker.html?vp8 [ Skip ]
 [ Sonoma+ Debug ] imported/w3c/web-platform-tests/webcodecs/video-encoder-rescaling.https.any.worker.html?vp9_p0 [ Skip ]
+
+webkit.org/b/292203 [ Debug ] imported/w3c/web-platform-tests/css/css-view-transitions/transition-in-hidden-page.html [ Pass Crash ]
