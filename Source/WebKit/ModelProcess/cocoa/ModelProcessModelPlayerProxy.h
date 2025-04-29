@@ -147,6 +147,7 @@ private:
     void applyStageModeOperationToDriver();
     bool stageModeInteractionInProgress() const;
     void updateTransformSRT();
+    void notifyModelPlayerOfEntityTransformChange();
 
     WebCore::ModelPlayerIdentifier m_id;
     Ref<IPC::Connection> m_webProcessConnection;
