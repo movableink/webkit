@@ -120,7 +120,7 @@ private:
 
     struct ClientInfo {
         unsigned fullSpeedUpdatesClientCount { 0 };
-        Vector<ObserverInfo> observers;
+        Vector<ObserverInfo, 1> observers;
     };
 
 #if PLATFORM(MAC)
