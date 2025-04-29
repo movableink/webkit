@@ -32,6 +32,7 @@
 #include "HTMLObjectElement.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
+#include "NodeInlines.h"
 #include "NodeName.h"
 #include "PluginDocument.h"
 #include "RenderEmbeddedObject.h"

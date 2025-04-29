@@ -23,6 +23,7 @@
 #include "SVGCursorElement.h"
 
 #include "Document.h"
+#include "NodeInlines.h"
 #include "SVGNames.h"
 #include "SVGStringList.h"
 #include "StyleCursorImage.h"

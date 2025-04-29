@@ -52,6 +52,7 @@
 #include "MIMETypeRegistry.h"
 #include "MediaQueryEvaluator.h"
 #include "MouseEvent.h"
+#include "NodeInlines.h"
 #include "NodeName.h"
 #include "NodeTraversal.h"
 #include "PlatformMouseEvent.h"

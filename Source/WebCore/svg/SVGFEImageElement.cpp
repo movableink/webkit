@@ -30,6 +30,7 @@
 #include "FEImage.h"
 #include "Image.h"
 #include "LegacyRenderSVGResource.h"
+#include "NodeInlines.h"
 #include "RenderObject.h"
 #include "SVGElementInlines.h"
 #include "SVGNames.h"

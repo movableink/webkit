@@ -327,7 +327,7 @@ public:
     void queueTaskToDispatchEvent(TaskSource, Ref<Event>&&);
 
     // Use when it's guaranteed to that shadowHost is null.
-    ContainerNode* parentNodeGuaranteedHostFree() const;
+    inline ContainerNode* parentNodeGuaranteedHostFree() const;
     // Returns the parent node, but null if the parent node is a ShadowRoot.
     ContainerNode* nonShadowBoundaryParentNode() const;
 
@@ -375,9 +375,9 @@ public:
     void clearHasHeldBackChildrenChanged() { clearStateFlag(StateFlag::HasHeldBackChildrenChanged); }
 
     void setChildNeedsStyleRecalc() { setStyleFlag(NodeStyleFlag::DescendantNeedsStyleResolution); }
-    void clearChildNeedsStyleRecalc();
+    inline void clearChildNeedsStyleRecalc();
 
-    void setHasValidStyle();
+    inline void setHasValidStyle();
 
     WEBCORE_EXPORT bool isContentEditable() const;
     bool isContentRichlyEditable() const;
@@ -420,7 +420,7 @@ public:
         return *m_treeScope;
     }
     Ref<TreeScope> protectedTreeScope() const { return treeScope(); }
-    void setTreeScopeRecursively(TreeScope&);
+    inline void setTreeScopeRecursively(TreeScope&);
     static constexpr ptrdiff_t treeScopeMemoryOffset() { return OBJECT_OFFSETOF(Node, m_treeScope); }
 
     TreeScope& treeScopeForSVGReferences() const;
@@ -561,20 +561,13 @@ public:
     // Perform the default action for an event.
     virtual void defaultEventHandler(Event&);
 
-    void ref() const;
-    void deref() const;
-    bool hasOneRef() const;
-    unsigned refCount() const;
+    ALWAYS_INLINE void ref() const;
+    ALWAYS_INLINE void deref() const;
+    ALWAYS_INLINE bool hasOneRef() const;
+    ALWAYS_INLINE unsigned refCount() const;
     void applyRefDuringDestructionCheck() const;
 
-    void relaxAdoptionRequirement()
-    {
-#if ASSERT_ENABLED
-        ASSERT_WITH_SECURITY_IMPLICATION(!deletionHasBegun());
-        ASSERT(m_adoptionIsRequired);
-        m_adoptionIsRequired = false;
-#endif
-    }
+    inline void relaxAdoptionRequirement();
 
     UncheckedKeyHashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions> registeredMutationObservers(MutationObserverOptionType, const QualifiedName* attributeName);
     void registerMutationObserver(MutationObserver&, MutationObserverOptions, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter);
@@ -797,7 +790,7 @@ private:
     bool m_adoptionIsRequired { true };
     bool m_deletionHasBegun { false };
 
-    friend void adopted(Node*);
+    friend inline void adopted(Node*);
 #endif
 
     mutable uint32_t m_refCountAndParentBit { s_refCountIncrement };
@@ -870,23 +863,9 @@ ALWAYS_INLINE void Node::deref() const
     m_refCountAndParentBit = updatedRefCount;
 }
 
-ALWAYS_INLINE bool Node::hasOneRef() const
-{
-    ASSERT(!deletionHasBegun());
-    ASSERT(!m_inRemovedLastRefFunction);
-    return refCount() == 1;
-}
-
 ALWAYS_INLINE unsigned Node::refCount() const
 {
     return m_refCountAndParentBit / s_refCountIncrement;
-}
-
-// Used in Node::addSubresourceAttributeURLs() and in addSubresourceStyleURLs()
-inline void addSubresourceURL(ListHashSet<URL>& urls, const URL& url)
-{
-    if (!url.isNull())
-        urls.add(url);
 }
 
 inline ContainerNode* Node::parentNode() const
@@ -895,49 +874,11 @@ inline ContainerNode* Node::parentNode() const
     return m_parentNode.get();
 }
 
-inline ContainerNode* Node::parentNodeGuaranteedHostFree() const
-{
-    ASSERT(!isShadowRoot());
-    return parentNode();
-}
-
 ALWAYS_INLINE void Node::setStyleFlag(NodeStyleFlag flag)
 {
     auto bitfields = styleBitfields();
     bitfields.setFlag(flag);
     setStyleBitfields(bitfields);
-}
-
-ALWAYS_INLINE void Node::clearStyleFlags(OptionSet<NodeStyleFlag> flags)
-{
-    auto bitfields = styleBitfields();
-    bitfields.clearFlags(flags);
-    setStyleBitfields(bitfields);
-}
-
-inline void Node::clearChildNeedsStyleRecalc()
-{
-    auto bitfields = styleBitfields();
-    bitfields.clearDescendantsNeedStyleResolution();
-    setStyleBitfields(bitfields);
-}
-
-inline void Node::setHasValidStyle()
-{
-    auto bitfields = styleBitfields();
-    bitfields.setStyleValidity(Style::Validity::Valid);
-    setStyleBitfields(bitfields);
-    clearStateFlag(StateFlag::IsComputedStyleInvalidFlag);
-    clearStateFlag(StateFlag::HasInvalidRenderer);
-    clearStateFlag(StateFlag::StyleResolutionShouldRecompositeLayer);
-}
-
-inline void Node::setTreeScopeRecursively(TreeScope& newTreeScope)
-{
-    ASSERT(!isDocumentNode());
-    ASSERT(!deletionHasBegun());
-    if (m_treeScope != &newTreeScope)
-        moveTreeToNewScope(*this, *m_treeScope, newTreeScope);
 }
 
 inline void EventTarget::ref()
@@ -956,15 +897,6 @@ inline void EventTarget::deref()
         node->deref();
     else
         derefEventTarget();
-}
-
-template<typename NodeClass>
-inline NodeClass& Node::traverseToRootNodeInternal(const NodeClass& node)
-{
-    auto* current = const_cast<NodeClass*>(&node);
-    while (current->parentNode())
-        current = current->parentNode();
-    return *current;
 }
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Node&);

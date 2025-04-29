@@ -33,6 +33,7 @@
 #include "LocalFrame.h"
 #include "MediaQueryParser.h"
 #include "MediaQueryParserContext.h"
+#include "NodeInlines.h"
 #include "StyleScope.h"
 #include "StyleSheetContents.h"
 #include "XMLDocumentParser.h"

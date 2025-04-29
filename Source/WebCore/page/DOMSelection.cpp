@@ -36,6 +36,7 @@
 #include "Editing.h"
 #include "FrameSelection.h"
 #include "LocalFrame.h"
+#include "NodeInlines.h"
 #include "Quirks.h"
 #include "Range.h"
 #include "Settings.h"

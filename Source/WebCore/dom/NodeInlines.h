@@ -160,6 +160,78 @@ inline RefPtr<ContainerNode> Node::protectedParentNode() const
     return parentNode();
 }
 
+ALWAYS_INLINE bool Node::hasOneRef() const
+{
+    ASSERT(!deletionHasBegun());
+    ASSERT(!m_inRemovedLastRefFunction);
+    return refCount() == 1;
+}
+
+ALWAYS_INLINE void Node::clearStyleFlags(OptionSet<NodeStyleFlag> flags)
+{
+    auto bitfields = styleBitfields();
+    bitfields.clearFlags(flags);
+    setStyleBitfields(bitfields);
+}
+
+inline void Node::clearChildNeedsStyleRecalc()
+{
+    auto bitfields = styleBitfields();
+    bitfields.clearDescendantsNeedStyleResolution();
+    setStyleBitfields(bitfields);
+}
+
+inline void Node::setHasValidStyle()
+{
+    auto bitfields = styleBitfields();
+    bitfields.setStyleValidity(Style::Validity::Valid);
+    setStyleBitfields(bitfields);
+    clearStateFlag(StateFlag::IsComputedStyleInvalidFlag);
+    clearStateFlag(StateFlag::HasInvalidRenderer);
+    clearStateFlag(StateFlag::StyleResolutionShouldRecompositeLayer);
+}
+
+inline void Node::setTreeScopeRecursively(TreeScope& newTreeScope)
+{
+    ASSERT(!isDocumentNode());
+    ASSERT(!deletionHasBegun());
+    if (m_treeScope != &newTreeScope) {
+        Ref oldTreeScope = *m_treeScope;
+        moveTreeToNewScope(*this, oldTreeScope, newTreeScope);
+    }
+}
+
+inline ContainerNode* Node::parentNodeGuaranteedHostFree() const
+{
+    ASSERT(!isShadowRoot());
+    return parentNode();
+}
+
+template<typename NodeClass>
+inline NodeClass& Node::traverseToRootNodeInternal(const NodeClass& node)
+{
+    auto* current = const_cast<NodeClass*>(&node);
+    while (current->parentNode())
+        current = current->parentNode();
+    return *current;
+}
+
+inline void Node::relaxAdoptionRequirement()
+{
+#if ASSERT_ENABLED
+    ASSERT_WITH_SECURITY_IMPLICATION(!deletionHasBegun());
+    ASSERT(m_adoptionIsRequired);
+    m_adoptionIsRequired = false;
+#endif
+}
+
+// Used in Node::addSubresourceAttributeURLs() and in addSubresourceStyleURLs()
+inline void addSubresourceURL(ListHashSet<URL>& urls, const URL& url)
+{
+    if (!url.isNull())
+        urls.add(url);
+}
+
 inline void collectChildNodes(Node& node, NodeVector& children)
 {
     for (SUPPRESS_UNCOUNTED_LOCAL Node* child = node.firstChild(); child; child = child->nextSibling())

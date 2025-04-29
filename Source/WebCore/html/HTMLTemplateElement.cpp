@@ -37,6 +37,7 @@
 #include "ElementInlines.h"
 #include "ElementRareData.h"
 #include "HTMLNames.h"
+#include "NodeInlines.h"
 #include "NodeTraversal.h"
 #include "ShadowRoot.h"
 #include "ShadowRootInit.h"

@@ -544,7 +544,6 @@ dom/MutationObserverRegistration.cpp
 dom/MutationRecord.cpp
 dom/NamedNodeMap.cpp
 dom/Node.cpp
-dom/Node.h
 dom/NodeIterator.cpp
 dom/NodeList.h
 dom/NodeRareData.h

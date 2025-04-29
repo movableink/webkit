@@ -32,6 +32,7 @@
 #include "Event.h"
 #include "HTMLNames.h"
 #include "MutableStyleProperties.h"
+#include "NodeInlines.h"
 #include "ScopedEventQueue.h"
 #include "StyledElement.h"
 #include "TextNodeTraversal.h"

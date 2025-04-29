@@ -30,6 +30,7 @@
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "JSRequestPriority.h"
+#include "NodeInlines.h"
 #include "NodeName.h"
 #include "RequestPriority.h"
 #include "Settings.h"

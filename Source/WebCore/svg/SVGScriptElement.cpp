@@ -25,6 +25,7 @@
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "Event.h"
+#include "NodeInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
