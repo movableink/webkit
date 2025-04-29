@@ -89,8 +89,7 @@ static RetainPtr<PKContact> convert(unsigned version, const ApplePayPaymentConta
                 builder.append('\n');
         }
 
-        // FIXME: StringBuilder should hava a toNSString() function to avoid the extra String allocation.
-        [address setStreet:builder.toString().createNSString().get()];
+        [address setStreet:builder.createNSString().get()];
 
         if (!contact.subLocality.isEmpty())
             [address setSubLocality:contact.subLocality.createNSString().get()];

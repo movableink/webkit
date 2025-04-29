@@ -996,8 +996,8 @@ void WebResourceLoadStatisticsStore::dumpResourceLoadStatistics(CompletionHandle
     ASSERT(RunLoop::isMain());
 
     postTask([this, completionHandler = WTFMove(completionHandler)]() mutable {
-        auto innerCompletionHandler = [completionHandler = WTFMove(completionHandler)](String&& result) mutable {
-            postTaskReply([result = WTFMove(result).isolatedCopy(), completionHandler = WTFMove(completionHandler)]() mutable {
+        auto innerCompletionHandler = [completionHandler = WTFMove(completionHandler)](const String& result) mutable {
+            postTaskReply([result = result.isolatedCopy(), completionHandler = WTFMove(completionHandler)]() mutable {
                 completionHandler(WTFMove(result));
             });
         };

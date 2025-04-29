@@ -267,7 +267,7 @@ RetainPtr<VKCImageAnalysis> Internals::fakeImageAnalysisResultForTesting(const V
             fullText.append(newlineCharacter);
     }
 
-    return adoptNS((id)[[FakeImageAnalysisResult alloc] initWithString:fullText.toString().createNSString().get()]);
+    return adoptNS((id)[[FakeImageAnalysisResult alloc] initWithString:fullText.createNSString().get()]);
 }
 
 #endif // ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)

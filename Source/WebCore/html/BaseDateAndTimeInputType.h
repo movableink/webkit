@@ -88,7 +88,7 @@ private:
         DateTimeFormatValidator() { }
 
         void visitField(DateTimeFormat::FieldType, int);
-        void visitLiteral(String&&) { }
+        void visitLiteral(const String&) { }
 
         bool validateFormat(const String& format, const BaseDateAndTimeInputType&);
 

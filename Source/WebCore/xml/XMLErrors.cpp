@@ -144,7 +144,7 @@ void XMLErrors::insertErrorMessageBlock()
         documentElement = WTFMove(body);
     }
 
-    Ref reportElement = createXHTMLParserErrorHeader(document, m_errorMessages.toString());
+    Ref reportElement = createXHTMLParserErrorHeader(document, String { m_errorMessages.toString() });
 
 #if ENABLE(XSLT)
     if (document->transformSourceDocument()) {

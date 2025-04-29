@@ -122,8 +122,7 @@ void IntlPluralRules::initializePluralRules(JSGlobalObject* globalObject, JSValu
 
     appendNumberFormatDigitOptionsToSkeleton(this, skeletonBuilder);
 
-    String skeleton = skeletonBuilder.toString();
-    StringView skeletonView(skeleton);
+    StringView skeletonView { skeletonBuilder.toString() };
     auto upconverted = skeletonView.upconvertedCharacters();
 
     m_numberFormatter = std::unique_ptr<UNumberFormatter, UNumberFormatterDeleter>(unumf_openForSkeletonAndLocale(upconverted.get(), skeletonView.length(), locale.data(), &status));

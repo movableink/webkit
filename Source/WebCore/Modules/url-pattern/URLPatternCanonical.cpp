@@ -147,7 +147,7 @@ ExceptionOr<String> canonicalizeIPv6Hostname(StringView value, BaseURLStringType
         result.append(toASCIILower(codepoint));
     }
 
-    return result.toString();
+    return String { result.toString() };
 }
 
 // https://urlpattern.spec.whatwg.org/#canonicalize-a-port, combined with https://urlpattern.spec.whatwg.org/#process-port-for-init

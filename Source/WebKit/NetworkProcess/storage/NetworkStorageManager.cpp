@@ -2044,7 +2044,7 @@ void NetworkStorageManager::cacheStorageClearMemoryRepresentation(const WebCore:
     callback();
 }
 
-void NetworkStorageManager::cacheStorageRepresentation(CompletionHandler<void(String&&)>&& callback)
+void NetworkStorageManager::cacheStorageRepresentation(CompletionHandler<void(const String&)>&& callback)
 {
     Vector<String> originStrings;
     auto targetTypes = OptionSet<WebsiteDataType> { WebsiteDataType::DOMCache };

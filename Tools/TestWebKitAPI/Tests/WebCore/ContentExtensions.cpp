@@ -1238,7 +1238,7 @@ TEST_F(ContentExtensionTest, WideNFA)
     }
     ruleList.append(']');
     
-    auto backend = makeBackend(ruleList.toString());
+    auto backend = makeBackend(String { ruleList.toString() });
 
     testRequest(backend, mainDocumentRequest("http://webkit.org/AAA"_s), { variantIndex<ContentExtensions::CSSDisplayNoneSelectorAction> });
     testRequest(backend, mainDocumentRequest("http://webkit.org/YAA"_s), { variantIndex<ContentExtensions::CSSDisplayNoneSelectorAction> });

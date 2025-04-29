@@ -162,7 +162,7 @@ static NSMutableAttributedString *browsingDetailsText(const URL& url, SSBService
         auto malwareDescription = adoptNS([[NSMutableAttributedString alloc] initWithString:description]);
         replace(malwareDescription.get(), @"%safeBrowsingProvider%", localizedProviderDisplayName(result).createNSString().get());
         auto statusLink = adoptNS([[NSMutableAttributedString alloc] initWithString:WEB_UI_NSSTRING(@"the status of “%site%”", "Part of malware description")]);
-        replace(statusLink.get(), @"%site%", url.host().toString().createNSString().get());
+        replace(statusLink.get(), @"%site%", url.host().createNSString().get());
         addLinkAndReplace(malwareDescription.get(), statusStringToReplace, [statusLink string], malwareDetailsURL(url, result).get());
 
         auto ifYouUnderstand = adoptNS([[NSMutableAttributedString alloc] initWithString:WEB_UI_NSSTRING(@"If you understand the risks involved, you can %visit-this-unsafe-site-link%.", "Action from safe browsing warning")]);

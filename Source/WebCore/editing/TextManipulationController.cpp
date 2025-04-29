@@ -817,7 +817,7 @@ auto TextManipulationController::replace(const ManipulationItemData& item, const
             newValue.append(replacementTokens[i].content);
         }
         if (item.attributeName == nullQName())
-            element->setTextContent(newValue.toString());
+            element->setTextContent(String { newValue.toString() });
         else if (RefPtr input = dynamicDowncast<HTMLInputElement>(*element); input && item.attributeName == HTMLNames::valueAttr)
             input->setValue(newValue.toString());
         else

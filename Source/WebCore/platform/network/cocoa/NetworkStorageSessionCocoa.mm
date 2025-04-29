@@ -730,7 +730,7 @@ void NetworkStorageSession::deleteAllCookiesModifiedSince(WallTime timePoint, Co
 
 Vector<Cookie> NetworkStorageSession::domCookiesForHost(const URL& firstParty)
 {
-    RetainPtr host = firstParty.host().toString().createNSString();
+    RetainPtr host = firstParty.host().createNSString();
 
     // _getCookiesForDomain only returned unpartitioned (i.e., nil partition) cookies
     RetainPtr<NSArray> unpartitionedCookies = [nsCookieStorage() _getCookiesForDomain:host.get()];

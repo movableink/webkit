@@ -126,7 +126,7 @@ TEST(PermissionsAPI, DataURL)
     for (size_t cptr = 0; cptr < sizeof(script) - 1; ++cptr)
         urlEncodeIfNeeded(script[cptr], buffer);
 
-    RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:buffer.toString().createNSString().get()]).get()]);
+    RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:buffer.createNSString().get()]).get()]);
     [webView loadRequest:request.get()];
     TestWebKitAPI::Util::run(&didReceiveMessage);
     EXPECT_FALSE(didReceiveQueryPermission);

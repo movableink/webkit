@@ -682,7 +682,7 @@ inline static RetainPtr<NSString> textRelativeToSelectionStart(WKRelativeTextRan
             break;
         }
     }
-    return string.toString().createNSString();
+    return string.createNSString();
 }
 
 @implementation WKRelativeTextPosition

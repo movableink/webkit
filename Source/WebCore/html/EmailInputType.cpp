@@ -122,7 +122,7 @@ ValueOrReference<String> EmailInputType::sanitizeValue(const String& proposedVal
             strippedValue.append(',');
         strippedValue.append(addresses[i].trim(isASCIIWhitespace));
     }
-    return strippedValue.toString();
+    return String { strippedValue.toString() };
 }
 
 } // namespace WebCore
