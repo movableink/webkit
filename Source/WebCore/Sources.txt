@@ -2255,6 +2255,7 @@ page/scrolling/ScrollingTreePositionedNode.cpp
 page/scrolling/ScrollingTreeScrollingNode.cpp
 page/scrolling/ScrollingTreeScrollingNodeDelegate.cpp
 page/scrolling/ScrollingTreeStickyNode.cpp
+page/scrolling/ScrollingTreeViewportConstrainedNode.cpp
 page/scrolling/ThreadedScrollingCoordinator.cpp
 page/scrolling/ThreadedScrollingTree.cpp
 page/scrolling/ThreadedScrollingTreeScrollingNodeDelegate.cpp

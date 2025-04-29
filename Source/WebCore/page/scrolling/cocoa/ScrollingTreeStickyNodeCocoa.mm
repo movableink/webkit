@@ -60,7 +60,7 @@ bool ScrollingTreeStickyNodeCocoa::commitStateBeforeChildren(const ScrollingStat
 
 void ScrollingTreeStickyNodeCocoa::applyLayerPositions()
 {
-    auto layerPosition = computeLayerPosition();
+    auto layerPosition = computeAnchorLayerPosition();
 
     LOG_WITH_STREAM(Scrolling, stream << "ScrollingTreeStickyNodeCocoa " << scrollingNodeID() << " constrainingRectAtLastLayout " << m_constraints.constrainingRectAtLastLayout() << " last layer pos " << m_constraints.layerPositionAtLastLayout() << " layerPosition " << layerPosition);
 

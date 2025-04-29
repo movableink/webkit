@@ -46,9 +46,8 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollingTreeStickyNode);
 
 ScrollingTreeStickyNode::ScrollingTreeStickyNode(ScrollingTree& scrollingTree, ScrollingNodeID nodeID)
-    : ScrollingTreeNode(scrollingTree, ScrollingNodeType::Sticky, nodeID)
+    : ScrollingTreeViewportConstrainedNode(scrollingTree, ScrollingNodeType::Sticky, nodeID)
 {
-    scrollingTree.fixedOrStickyNodeAdded(*this);
 }
 
 ScrollingTreeStickyNode::~ScrollingTreeStickyNode() = default;
@@ -74,7 +73,7 @@ void ScrollingTreeStickyNode::dumpProperties(TextStream& ts, OptionSet<Scrolling
         ts.dumpProperty("layer top left"_s, layerTopLeft());
 }
 
-FloatPoint ScrollingTreeStickyNode::computeLayerPosition() const
+FloatPoint ScrollingTreeStickyNode::computeAnchorLayerPosition() const
 {
     FloatSize offsetFromStickyAncestors;
     auto computeLayerPositionForScrollingNode = [&](ScrollingTreeNode& scrollingNode) {
@@ -115,7 +114,7 @@ FloatPoint ScrollingTreeStickyNode::computeLayerPosition() const
 
 FloatSize ScrollingTreeStickyNode::scrollDeltaSinceLastCommit() const
 {
-    auto layerPosition = computeLayerPosition();
+    auto layerPosition = computeAnchorLayerPosition();
     return layerPosition - m_constraints.layerPositionAtLastLayout();
 }
 

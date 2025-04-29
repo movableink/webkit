@@ -1824,6 +1824,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/scrolling/ScrollingTreeScrollingNode.h
     page/scrolling/ScrollingTreeScrollingNodeDelegate.h
     page/scrolling/ScrollingTreeStickyNode.h
+    page/scrolling/ScrollingTreeViewportConstrainedNode.h
     page/scrolling/ThreadedScrollingTree.h
 
     page/text-extraction/TextExtraction.h

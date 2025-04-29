@@ -33,28 +33,29 @@
 #include "ScrollingConstraints.h"
 #include "ScrollingPlatformLayer.h"
 #include "ScrollingTreeNode.h"
+#include "ScrollingTreeViewportConstrainedNode.h"
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-class ScrollingTreeStickyNode : public ScrollingTreeNode {
+class ScrollingTreeStickyNode : public ScrollingTreeViewportConstrainedNode {
     WTF_MAKE_TZONE_ALLOCATED(ScrollingTreeStickyNode);
 public:
     virtual ~ScrollingTreeStickyNode();
 
     FloatSize scrollDeltaSinceLastCommit() const;
 
-    virtual ScrollingPlatformLayer* layer() const = 0;
-
 protected:
     ScrollingTreeStickyNode(ScrollingTree&, ScrollingNodeID);
 
     bool commitStateBeforeChildren(const ScrollingStateNode&) override;
-    FloatPoint computeLayerPosition() const;
+
+    FloatPoint computeAnchorLayerPosition() const;
     void dumpProperties(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const override;
 
     virtual FloatPoint layerTopLeft() const = 0;
+    const ViewportConstraints& constraints() const final { return m_constraints; }
 
     StickyPositionViewportConstraints m_constraints;
 };
