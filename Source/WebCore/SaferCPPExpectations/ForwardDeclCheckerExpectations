@@ -105,7 +105,6 @@ platform/PODRedBlackTree.h
 platform/PlatformStrategies.h
 platform/Scrollbar.h
 platform/ThreadGlobalData.h
-platform/ThreadTimers.h
 platform/cocoa/TelephoneNumberDetectorCocoa.cpp
 platform/graphics/ImageBufferContextSwitcher.h
 platform/graphics/StringTruncator.cpp
