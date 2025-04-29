@@ -395,3 +395,5 @@ Tests/WebKitCocoa/_WKInputDelegate.mm
 Tests/WebKitCocoa/_WKWebAuthenticationPanel.mm
 Tests/WebKitCocoa/iOSMouseSupport.mm
 Tests/WebKitCocoa/iOSStylusSupport.mm
+
+Tests/WebKitCocoa/UI/VideoPresentationMode.mm
