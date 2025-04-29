@@ -143,17 +143,6 @@ public:
         }
         ASSERT_NOT_REACHED();
     }
-    
-    template<typename Func>
-    void forEachTmp(const Func& func)
-    {
-        for (unsigned bankIndex = 0; bankIndex < numBanks; ++bankIndex) {
-            Bank bank = static_cast<Bank>(bankIndex);
-            unsigned numTmps = this->numTmps(bank);
-            for (unsigned i = 0; i < numTmps; ++i)
-                func(Tmp::tmpForIndex(bank, i));
-        }
-    }
 
     template<Bank bank, typename Func>
     void forEachTmp(const Func& func)
@@ -161,6 +150,14 @@ public:
         unsigned numTmps = this->numTmps(bank);
         for (unsigned i = 0; i < numTmps; ++i)
             func(Tmp::tmpForIndex(bank, i));
+    }
+
+    template<typename Func>
+    void forEachTmp(const Func& func)
+    {
+        static_assert(numBanks == 2);
+        forEachTmp<GP>(func);
+        forEachTmp<FP>(func);
     }
 
     unsigned callArgAreaSizeInBytes() const { return m_callArgAreaSize; }
@@ -311,15 +308,6 @@ public:
 
     const SparseCollection<Special>& specials() const { return m_specials; }
     SparseCollection<Special>& specials() { return m_specials; }
-
-    template<typename Callback>
-    void forAllTmps(const Callback& callback) const
-    {
-        for (unsigned i = m_numGPTmps; i--;)
-            callback(Tmp::gpTmpForIndex(i));
-        for (unsigned i = m_numFPTmps; i--;)
-            callback(Tmp::fpTmpForIndex(i));
-    }
 
     void addFastTmp(Tmp);
 
