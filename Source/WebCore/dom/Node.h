@@ -29,7 +29,6 @@
 #include "LayoutRect.h"
 #include "RenderStyleConstants.h"
 #include "StyleValidity.h"
-#include "TaskSource.h"
 #include "TreeScope.h"
 #include <compare>
 #include <wtf/CompactPointerTuple.h>
@@ -86,6 +85,7 @@ WTF_ALLOW_COMPACT_POINTERS_TO_INCOMPLETE_TYPE(WebCore::NodeRareData);
 namespace WebCore {
 
 enum class MutationObserverOptionType : uint8_t;
+enum class TaskSource : uint8_t;
 using MutationObserverOptions = OptionSet<MutationObserverOptionType>;
 using MutationRecordDeliveryOptions = OptionSet<MutationObserverOptionType>;
 

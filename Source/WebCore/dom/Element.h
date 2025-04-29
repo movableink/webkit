@@ -33,9 +33,7 @@
 #include "QualifiedName.h"
 #include "RenderPtr.h"
 #include "ScrollTypes.h"
-#include "ShadowRootMode.h"
 #include "SimulatedClickOptions.h"
-#include "WebAnimationTypes.h"
 #include <JavaScriptCore/Forward.h>
 
 #define DUMP_NODE_STATISTICS 0
@@ -50,6 +48,8 @@ namespace WebCore {
 class Attr;
 class Attribute;
 class AttributeIteratorAccessor;
+class CSSAnimation;
+class CSSTransition;
 class CustomElementDefaultARIA;
 class CustomElementReactionQueue;
 class CustomStateSet;
@@ -80,6 +80,7 @@ class PopoverData;
 class PseudoElement;
 class RenderStyle;
 class RenderTreePosition;
+class Settings;
 class SpaceSplitString;
 class StylePropertyMap;
 class StylePropertyMapReadOnly;
@@ -95,6 +96,8 @@ class WebAnimation;
 class AttachmentAssociatedElement;
 #endif
 
+enum CSSPropertyID : uint16_t;
+
 enum class AnimationImpact : uint8_t;
 enum class EventHandling : uint8_t;
 enum class EventProcessing : uint8_t;
@@ -106,6 +109,7 @@ enum class PopoverState : uint8_t { None, Auto, Manual };
 enum class ResolveURLs : uint8_t { No, NoExcludingURLsForPrivacy, Yes, YesExcludingURLsForPrivacy };
 enum class SelectionRestorationMode : uint8_t;
 enum class ShadowRootDelegatesFocus : bool { No, Yes };
+enum class ShadowRootMode : uint8_t;
 enum class ShadowRootClonable : bool { No, Yes };
 enum class ShadowRootSerializable : bool { No, Yes };
 enum class VisibilityAdjustment : uint8_t;
@@ -137,6 +141,10 @@ struct ScrollToOptions;
 struct SecurityPolicyViolationEventInit;
 struct ShadowRootInit;
 
+using AnimatableCSSProperty = Variant<CSSPropertyID, AtomString>;
+using AnimatableCSSPropertyToTransitionMap = UncheckedKeyHashMap<AnimatableCSSProperty, Ref<CSSTransition>>;
+using AnimationCollection = ListHashSet<Ref<WebAnimation>>;
+using CSSAnimationCollection = ListHashSet<Ref<CSSAnimation>>;
 using ElementName = NodeName;
 using ExplicitlySetAttrElementsMap = UncheckedKeyHashMap<QualifiedName, Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>>>;
 using TrustedTypeOrString = Variant<RefPtr<TrustedHTML>, RefPtr<TrustedScript>, RefPtr<TrustedScriptURL>, AtomString>;

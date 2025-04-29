@@ -23,7 +23,6 @@
 
 #pragma once
 
-#include "CollectionType.h"
 #include "Node.h"
 
 namespace WebCore {
@@ -31,6 +30,8 @@ namespace WebCore {
 class HTMLCollection;
 class RadioNodeList;
 class RenderElement;
+
+enum class CollectionType : uint8_t;
 
 class ContainerNode : public Node {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ContainerNode);
