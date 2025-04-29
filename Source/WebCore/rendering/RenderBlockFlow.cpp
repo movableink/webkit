@@ -4594,6 +4594,20 @@ static inline LayoutUnit preferredWidth(LayoutUnit preferredWidth, float result)
     return std::max(preferredWidth, LayoutUnit::fromFloatCeil(result));
 }
 
+static inline std::optional<LayoutUnit> textIndentForBlockContainer(const RenderBlockFlow& renderer)
+{
+    auto& style = renderer.style();
+    auto indentValue = LayoutUnit { };
+    if (style.textIndent().isFixed())
+        indentValue = LayoutUnit { style.textIndent().value() };
+    else if (auto* containingBlock = renderer.containingBlock(); containingBlock && containingBlock->style().logicalWidth().isFixed()) {
+        // At this point of the shrink-to-fit computatation, we don't have a used value for the containing block width
+        // (that's exactly to what we try to contribute here) unless the computed value is fixed.
+        indentValue = minimumValueForLength(style.textIndent(), containingBlock->style().logicalWidth().value());
+    }
+    return indentValue ? std::make_optional(indentValue) : std::nullopt;
+}
+
 void RenderBlockFlow::computeInlinePreferredLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
     ASSERT(!shouldApplyInlineSizeContainment());
@@ -4621,14 +4635,7 @@ void RenderBlockFlow::computeInlinePreferredLogicalWidths(LayoutUnit& minLogical
 
     // Signals the text indent was more negative than the min preferred width
     auto remainingNegativeTextIndent = std::optional<LayoutUnit> { };
-    auto textIndent = std::optional<LayoutUnit> { };
-    if (styleToUse.textIndent().isFixed())
-        textIndent = LayoutUnit { styleToUse.textIndent().value() };
-    else if (auto* containingBlock = this->containingBlock(); containingBlock && containingBlock->style().logicalWidth().isFixed()) {
-        // At this point of the shrink-to-fit computatation, we don't have a used value for the containing block width
-        // (that's exactly to what we try to contribute here) unless the computed value is fixed.
-        textIndent = minimumValueForLength(styleToUse.textIndent(), containingBlock->style().logicalWidth().value());
-    }
+    auto textIndent = textIndentForBlockContainer(*this);
     CheckedPtr<RenderBox> previousFloat;
     bool isPrevChildInlineFlow = false;
     bool shouldBreakLineAfterText = false;
