@@ -290,16 +290,18 @@ uint64_t PDFPluginBase::streamedBytes() const
 // it is difficult to prove that any previous stack frame did in fact secure
 // the data lock without having to pass around Locker instances across dataSpanForRange()
 // and its callers. Instead, this method opts out of thread safety analysis
-// and ensures the lock is held when reading m_streamedBytes, else we assert.
-uint64_t PDFPluginBase::streamedBytesForDebugLogging() const WTF_IGNORES_THREAD_SAFETY_ANALYSIS
+// and ensures the lock is held when reading m_streamedBytes, else we give up.
+std::optional<uint64_t> PDFPluginBase::streamedBytesForDebugLogging() const WTF_IGNORES_THREAD_SAFETY_ANALYSIS
 {
+    if (m_streamedDataLock.isHeld())
+        return m_streamedBytes;
+
     if (m_streamedDataLock.tryLock()) {
         Locker locker { AdoptLock, m_streamedDataLock };
         return m_streamedBytes;
     }
 
-    m_streamedDataLock.assertIsOwner();
-    return m_streamedBytes;
+    return std::nullopt;
 }
 
 #endif
@@ -1346,7 +1348,7 @@ DocumentEditingContext PDFPluginBase::documentEditingContext(DocumentEditingCont
 #if !LOG_DISABLED
 
 #if HAVE(INCREMENTAL_PDF_APIS)
-static void verboseLog(PDFIncrementalLoader* incrementalLoader, uint64_t streamedBytes, bool documentFinishedLoading)
+static void verboseLog(PDFIncrementalLoader* incrementalLoader, std::optional<uint64_t>&& streamedBytes, bool documentFinishedLoading)
 {
     ASSERT(isMainRunLoop());
 
@@ -1357,7 +1359,12 @@ static void verboseLog(PDFIncrementalLoader* incrementalLoader, uint64_t streame
     if (incrementalLoader)
         incrementalLoader->logState(stream);
 
-    stream << "The main document loader has finished loading " << streamedBytes << " bytes, and is";
+    stream << "The main document loader has finished loading ";
+    if (streamedBytes)
+        stream << *streamedBytes;
+    else
+        stream << "(unknown)";
+    stream << " bytes, and is";
     if (!documentFinishedLoading)
         stream << " not";
     stream << " complete";
@@ -1369,18 +1376,22 @@ static void verboseLog(PDFIncrementalLoader* incrementalLoader, uint64_t streame
 void PDFPluginBase::incrementalLoaderLog(const String& message)
 {
 #if HAVE(INCREMENTAL_PDF_APIS)
-    ensureOnMainRunLoop([this, protectedThis = Ref { *this }, message = message.isolatedCopy(), byteCount = streamedBytesForDebugLogging()] {
-        incrementalLoaderLogWithBytes(message, byteCount);
+    ensureOnMainRunLoop([this, protectedThis = Ref { *this }, message = message.isolatedCopy(), byteCount = streamedBytesForDebugLogging()] mutable {
+        // If we failed to acquire the data lock, try again post main thread hop.
+        byteCount = byteCount.or_else([&protectedThis] {
+            return protectedThis->streamedBytesForDebugLogging();
+        });
+        incrementalLoaderLogWithBytes(message, WTFMove(byteCount));
     });
 #else
     UNUSED_PARAM(message);
 #endif
 }
 
-void PDFPluginBase::incrementalLoaderLogWithBytes(const String& message, uint64_t streamedBytes)
+void PDFPluginBase::incrementalLoaderLogWithBytes(const String& message, std::optional<uint64_t>&& streamedBytes)
 {
     LOG_WITH_STREAM(IncrementalPDF, stream << message);
-    verboseLog(m_incrementalLoader.get(), streamedBytes, m_documentFinishedLoading);
+    verboseLog(m_incrementalLoader.get(), WTFMove(streamedBytes), m_documentFinishedLoading);
     LOG_WITH_STREAM(IncrementalPDFVerbose, stream << message);
 }
 

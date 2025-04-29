@@ -1972,8 +1972,7 @@ webkit.org/b/287122 imported/w3c/web-platform-tests/html/capability-delegation/d
 [ arm64 ] fast/webgpu/nocrash/fuzz-284937.html [ Skip ]
 [ arm64 ] fast/webgpu/nocrash/fuzz-287444.html [ Skip ]
 
-webkit.org/b/287865 [ Release ] pdf/two-pages-continuous-to-discrete.html [ Pass ImageOnlyFailure ]
-webkit.org/b/287865 [ Debug ] pdf/two-pages-continuous-to-discrete.html [ Pass Crash ]
+webkit.org/b/287865 pdf/two-pages-continuous-to-discrete.html [ Pass ImageOnlyFailure ]
 
 # webkit.org/b/287875 [ macOS Release wk2 x86_64 ] 2x fast/borders/border-painting-*.html are consistently failing.
 [ Sonoma x86_64 Release ] fast/borders/border-painting-inset.html [ Pass ImageOnlyFailure  ]
@@ -2017,13 +2016,6 @@ webkit.org/b/288119 imported/w3c/web-platform-tests/preload/preload-type-match.h
 webkit.org/b/288120 [ Sonoma+ Release ] fast/animation/request-animation-frame-throttling-lowPowerMode.html [ Pass Failure ]
 
 webkit.org/b/288404 [ Sonoma+ Release ] fast/text/canvas-color-fonts/stroke-gradient-COLR.html [ Pass ImageOnlyFailure ]
-
-# webkit.org/b/287012 PDF tests crashing at WTF::Lock::assertIsOwner() under PDFPluginBase::streamedBytesForDebugLogging()
-[ Debug ] http/tests/pdf/linearized-pdf-in-iframe.html [ Pass Crash ]
-[ Debug ] http/tests/pdf/linearized-pdf-in-display-none-iframe.html [ Pass Crash ]
-[ Debug ] pdf/annotations/checkbox-set-active.html [ Pass Crash ]
-[ Debug ] pdf/annotations/dropdown-select-second-option.html [ Pass Crash ]
-[ Debug ] pdf/annotations/radio-buttons-select-second.html [ Pass Crash ]
 
 webkit.org/b/288411 [ Sequoia x86_64 ] imported/w3c/web-platform-tests/webrtc/simulcast/getStats.https.html [ Failure ]
 
@@ -2119,8 +2111,6 @@ webkit.org/b/291108 [ Sequoia Debug ] imported/w3c/web-platform-tests/html/webap
 webkit.org/b/291115 [ Sequoia Debug ] imported/w3c/web-platform-tests/websockets/back-forward-cache-with-closed-websocket-connection-ccns.tentative.window.html [ Pass Failure ]
 
 webkit.org/b/291119 [ Debug ] imported/w3c/web-platform-tests/html/semantics/embedded-content/media-elements/loading-the-media-resource/resource-selection-invoke-pause-networkState.html [ Pass Failure ]
-
-webkit.org/b/291236 [ Debug ] http/tests/pdf/page-in-window-update-with-linearized-pdf-in-display-none-iframe.html [ Skip ]
 
 webkit.org/b/291394 [ Debug ] imported/w3c/web-platform-tests/wasm/webapi/esm-integration/script-src-blocks-wasm.tentative.sub.html [ Pass Failure ]
 

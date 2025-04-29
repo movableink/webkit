@@ -361,8 +361,8 @@ private:
     bool getByteRanges(CFMutableArrayRef, std::span<const CFRange>) const;
 
 #if !LOG_DISABLED
-    uint64_t streamedBytesForDebugLogging() const;
-    void incrementalLoaderLogWithBytes(const String&, uint64_t streamedBytes);
+    std::optional<uint64_t> streamedBytesForDebugLogging() const;
+    void incrementalLoaderLogWithBytes(const String&, std::optional<uint64_t>&& streamedBytes);
 #endif
 
 protected:
