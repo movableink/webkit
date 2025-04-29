@@ -240,7 +240,7 @@ JSC_DEFINE_HOST_FUNCTION(mathProtoFuncHypot, (JSGlobalObject* globalObject, Call
         double argument = callFrame->uncheckedArgument(i).toNumber(globalObject);
         RETURN_IF_EXCEPTION(scope, std::nullopt);
         return argument;
-    });
+    }, NulloptBehavior::Abort);
     RETURN_IF_EXCEPTION(scope, { });
 
     double max = 0;

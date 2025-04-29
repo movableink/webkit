@@ -55,6 +55,8 @@ namespace WTF {
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Vector);
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(VectorBuffer);
 
+enum class NulloptBehavior : bool { Ignore, Abort };
+
 template <bool needsDestruction, typename T>
 struct VectorDestructor;
 
@@ -734,23 +736,32 @@ public:
     }
 
     template<std::invocable<size_t> Functor>
+    requires (!std::is_same_v<std::invoke_result_t<Functor, size_t>, std::optional<T>>)
     Vector(size_t size, NOESCAPE const Functor& valueGenerator)
     {
         reserveInitialCapacity(size);
 
         asanSetInitialBufferSizeTo(size);
 
-        if constexpr (std::is_same_v<std::invoke_result_t<Functor, size_t>, std::optional<T>>) {
-            for (size_t i = 0; i < size; ++i) {
-                if (auto item = valueGenerator(i))
-                    unsafeAppendWithoutCapacityCheck(WTFMove(*item));
-                else
-                    return;
-            }
-        } else {
-            for (size_t i = 0; i < size; ++i)
-                unsafeAppendWithoutCapacityCheck(valueGenerator(i));
+        for (size_t i = 0; i < size; ++i)
+            unsafeAppendWithoutCapacityCheck(valueGenerator(i));
+    }
+
+    template<std::invocable<size_t> Functor>
+    requires (std::is_same_v<std::invoke_result_t<Functor, size_t>, std::optional<T>>)
+    Vector(size_t size, NOESCAPE const Functor& valueGenerator, NulloptBehavior nulloptBehavior = NulloptBehavior::Ignore)
+    {
+        reserveInitialCapacity(size);
+
+        asanSetInitialBufferSizeTo(size);
+
+        for (size_t i = 0; i < size; ++i) {
+            if (auto item = valueGenerator(i))
+                unsafeAppendWithoutCapacityCheck(WTFMove(*item));
+            else if (nulloptBehavior == NulloptBehavior::Abort)
+                break;
         }
+        shrinkToFit();
     }
 
     template<typename U, size_t Extent>
@@ -2119,6 +2130,7 @@ template<typename T, size_t Extent> Vector(std::span<const T, Extent>) -> Vector
 
 } // namespace WTF
 
+using WTF::NulloptBehavior;
 using WTF::UnsafeVectorOverflow;
 using WTF::Vector;
 using WTF::copyToVector;

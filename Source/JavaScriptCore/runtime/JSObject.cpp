@@ -4208,7 +4208,7 @@ void JSObject::putOwnDataPropertyBatching(VM& vm, UniquedStringImpl** properties
 
             structure = newStructure;
             return offset;
-        });
+        }, NulloptBehavior::Abort);
 
         // Flush batching here. Note that it is possible that offsets.size() is not equal to size, if we stop batching due to transition-watchpoint-firing.
 
