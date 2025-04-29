@@ -441,7 +441,7 @@ webkit.org/b/251107 webgl/1.0.x/conformance/textures/video/tex-2d-rgb-rgb-unsign
 webkit.org/b/251107 webgl/1.0.x/conformance/textures/video/tex-2d-rgba-rgba-unsigned_short_4_4_4_4.html [ Timeout ]
 webkit.org/b/251107 webgl/1.0.x/conformance/textures/video/tex-2d-rgba-rgba-unsigned_short_5_5_5_1.html [ Timeout ]
 webkit.org/b/251107 webgl/1.0.x/conformance/uniforms/uniform-default-values.html [ Pass Timeout ]
-webkit.org/b/251107 webgl/2.0.0/conformance2/extensions/promoted-extensions-in-shaders.html [ Pass Failure ]
+webkit.org/b/251107 webgl/2.0.y/conformance2/extensions/promoted-extensions-in-shaders.html [ Pass Failure ]
 webkit.org/b/251107 webgl/2.0.0/conformance2/rendering/blitframebuffer-test.html [ Pass Failure ]
 webkit.org/b/251107 webgl/2.0.0/conformance2/state/gl-object-get-calls.html [ Pass Failure ]
 webkit.org/b/251107 webgl/2.0.y/conformance/buffers/buffer-data-dynamic-delay.html [ Failure Pass Timeout ]
