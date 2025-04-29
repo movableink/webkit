@@ -443,7 +443,7 @@ void ModelProcessModelPlayerProxy::computeTransform(bool setDefaultRotation)
     RESRT newSRT = computeSRT(m_layer.get(), m_originalBoundingBoxExtents, m_originalBoundingBoxCenter, boundingRadius, m_hasPortal, effectivePointsPerMeter(m_layer.get()), m_stageModeOperation, currentModelRotation);
     m_transformSRT = newSRT;
 
-    notifyModelPlayerOfEntityTransformChange()
+    notifyModelPlayerOfEntityTransformChange();
 }
 
 void ModelProcessModelPlayerProxy::notifyModelPlayerOfEntityTransformChange()
