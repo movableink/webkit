@@ -34,6 +34,7 @@
 #include "ActiveDOMObject.h"
 #include "EventLoop.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "ExceptionOr.h"
 #include "ThreadableLoaderClient.h"
 #include "Timer.h"

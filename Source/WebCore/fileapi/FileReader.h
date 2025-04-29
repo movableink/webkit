@@ -33,6 +33,7 @@
 #include "ActiveDOMObject.h"
 #include "DOMException.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "ExceptionCode.h"
 #include "ExceptionOr.h"
 #include "FileReaderLoader.h"

@@ -29,6 +29,7 @@
 #include "ActiveDOMObject.h"
 #include "ContextDestructionObserverInlines.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "ExceptionOr.h"
 #include "MessagePortChannel.h"
 #include "MessagePortIdentifier.h"

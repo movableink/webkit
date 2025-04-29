@@ -63,6 +63,7 @@
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "EventPath.h"
+#include "EventTargetInlines.h"
 #include "FloatRect.h"
 #include "FocusController.h"
 #include "FrameLoadRequest.h"

@@ -27,6 +27,7 @@
 
 #if ENABLE(WEB_CODECS)
 
+#include "EventTargetInterfaces.h"
 #include "JSDOMPromiseDeferredForward.h"
 #include "VideoEncoder.h"
 #include "WebCodecsBase.h"

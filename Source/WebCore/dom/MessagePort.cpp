@@ -29,6 +29,7 @@
 
 #include "Document.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "Logging.h"
 #include "MessageEvent.h"
 #include "MessagePortChannelProvider.h"

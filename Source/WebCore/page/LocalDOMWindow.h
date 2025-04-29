@@ -29,6 +29,7 @@
 #include "Base64Utilities.h"
 #include "ContextDestructionObserverInlines.h"
 #include "DOMWindow.h"
+#include "EventTargetInterfaces.h"
 #include "ExceptionOr.h"
 #include "LocalFrame.h"
 #include "PushManager.h"

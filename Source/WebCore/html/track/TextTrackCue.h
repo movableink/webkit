@@ -35,6 +35,7 @@
 
 #include "ActiveDOMObject.h"
 #include "DocumentFragment.h"
+#include "EventTargetInterfaces.h"
 #include "HTMLElement.h"
 #include <wtf/JSONValues.h>
 #include <wtf/MediaTime.h>

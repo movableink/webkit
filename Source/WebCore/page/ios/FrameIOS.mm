@@ -38,6 +38,7 @@
 #import "ElementRareData.h"
 #import "EventHandler.h"
 #import "EventNames.h"
+#import "EventTargetInlines.h"
 #import "FormController.h"
 #import "FrameSelection.h"
 #import "HTMLAreaElement.h"

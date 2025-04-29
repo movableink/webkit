@@ -31,6 +31,7 @@
 #include "DetachedRTCDataChannel.h"
 #include "Event.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "ExceptionOr.h"
 #include "NetworkSendQueue.h"
 #include "RTCDataChannelHandler.h"

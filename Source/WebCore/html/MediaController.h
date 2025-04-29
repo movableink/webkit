@@ -30,6 +30,7 @@
 #include "ContextDestructionObserver.h"
 #include "Event.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "MediaControllerInterface.h"
 #include "Timer.h"
 #include <wtf/Vector.h>

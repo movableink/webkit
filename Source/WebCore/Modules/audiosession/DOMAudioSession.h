@@ -30,6 +30,7 @@
 #include "ActiveDOMObject.h"
 #include "AudioSession.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "ExceptionOr.h"
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMallocInlines.h>

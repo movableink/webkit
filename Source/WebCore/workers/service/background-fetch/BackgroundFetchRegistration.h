@@ -30,6 +30,7 @@
 #include "BackgroundFetchInformation.h"
 #include "BackgroundFetchResult.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "JSDOMPromiseDeferred.h"
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>

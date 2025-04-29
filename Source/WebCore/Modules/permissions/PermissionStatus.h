@@ -28,6 +28,7 @@
 #include "ActiveDOMObject.h"
 #include "ClientOrigin.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "MainThreadPermissionObserverIdentifier.h"
 #include "Page.h"
 #include "PermissionDescriptor.h"

@@ -55,6 +55,7 @@
 #include "DocumentInlines.h"
 #include "DynamicsCompressorNode.h"
 #include "EventNames.h"
+#include "EventTargetInterfaces.h"
 #include "FFTFrame.h"
 #include "FrameLoader.h"
 #include "GainNode.h"

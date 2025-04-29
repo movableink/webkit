@@ -29,6 +29,7 @@
 #include "ActiveDOMObject.h"
 #include "Event.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "RTCSctpTransportBackend.h"
 
 namespace WebCore {

@@ -29,6 +29,7 @@
 
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "TransformationMatrix.h"
 #include "WebXRSession.h"
 #include <wtf/RefCounted.h>

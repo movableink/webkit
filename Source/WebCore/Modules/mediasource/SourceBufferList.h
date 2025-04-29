@@ -34,6 +34,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 

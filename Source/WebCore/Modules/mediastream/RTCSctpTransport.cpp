@@ -29,6 +29,7 @@
 
 #include "ContextDestructionObserverInlines.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "Logging.h"
 #include "RTCDtlsTransport.h"
 #include "RTCSctpTransportBackend.h"

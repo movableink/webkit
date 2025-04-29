@@ -36,6 +36,7 @@
 #include "ActiveDOMObject.h"
 #include "EventNames.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "ExceptionOr.h"
 #include "IDLTypes.h"
 #include "MediaTrackConstraints.h"

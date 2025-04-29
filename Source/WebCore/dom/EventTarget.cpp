@@ -37,6 +37,7 @@
 #include "EventNames.h"
 #include "EventPath.h"
 #include "EventTargetConcrete.h"
+#include "EventTargetInlines.h"
 #include "HTMLBodyElement.h"
 #include "HTMLHtmlElement.h"
 #include "InspectorInstrumentation.h"
@@ -412,6 +413,17 @@ void EventTarget::removeAllEventListeners()
     }
 
     threadData->setIsInRemoveAllEventListeners(false);
+}
+
+bool EventTarget::hasAnyEventListeners(Vector<AtomString> eventTypes) const
+{
+    if (auto* data = eventTargetData()) {
+        for (const auto& eventType : eventTypes) {
+            if (data->eventListenerMap.contains(eventType))
+                return true;
+        }
+    }
+    return false;
 }
 
 } // namespace WebCore

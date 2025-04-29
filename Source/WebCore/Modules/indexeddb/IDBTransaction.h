@@ -26,6 +26,7 @@
 #pragma once
 
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "IDBActiveDOMObject.h"
 #include "IDBError.h"
 #include "IDBGetAllRecordsData.h"

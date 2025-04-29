@@ -22,6 +22,7 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
+#include "EventTargetInterfaces.h"
 #include "ExceptionOr.h"
 #include "FormData.h"
 #include "ResourceResponse.h"

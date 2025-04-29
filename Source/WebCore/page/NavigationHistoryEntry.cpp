@@ -28,6 +28,8 @@
 
 #include "DocumentInlines.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
+#include "EventTargetInterfaces.h"
 #include "FrameLoader.h"
 #include "HistoryController.h"
 #include "JSDOMGlobalObject.h"

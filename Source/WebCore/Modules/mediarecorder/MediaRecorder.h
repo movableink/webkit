@@ -28,6 +28,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "ExceptionOr.h"
 #include "MediaRecorderPrivateOptions.h"
 #include "MediaStream.h"

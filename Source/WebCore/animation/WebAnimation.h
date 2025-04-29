@@ -32,6 +32,7 @@
 #include "CSSNumericValue.h"
 #include "ContextDestructionObserverInlines.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "ExceptionOr.h"
 #include "IDLTypes.h"
 #include "Styleable.h"

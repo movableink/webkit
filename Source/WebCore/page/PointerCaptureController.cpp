@@ -31,6 +31,7 @@
 #include "Element.h"
 #include "EventHandler.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "EventTarget.h"
 #include "HitTestResult.h"
 #include "MouseEventTypes.h"

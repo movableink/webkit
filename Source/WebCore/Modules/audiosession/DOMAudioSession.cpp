@@ -31,6 +31,7 @@
 #include "AudioSession.h"
 #include "Document.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "Page.h"
 #include "PermissionsPolicy.h"
 #include "PlatformMediaSessionManager.h"

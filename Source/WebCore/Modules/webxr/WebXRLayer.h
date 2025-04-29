@@ -29,6 +29,7 @@
 
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "PlatformXR.h"
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMalloc.h>

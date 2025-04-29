@@ -31,6 +31,7 @@
 #include "Blob.h"
 #include "ContextDestructionObserverInlines.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "Logging.h"
 #include "NotImplemented.h"
 #include "RTCDtlsTransportBackend.h"

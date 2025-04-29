@@ -29,6 +29,7 @@
 
 #include "TextTrackList.h"
 
+#include "EventTargetInterfaces.h"
 #include "InbandTextTrack.h"
 #include "InbandTextTrackPrivate.h"
 #include "LoadableTextTrack.h"

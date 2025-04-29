@@ -37,6 +37,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "MediaEndpointConfiguration.h"
 #include "MediaStream.h"
 #include "PeerConnectionBackend.h"

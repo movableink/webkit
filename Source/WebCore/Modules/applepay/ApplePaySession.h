@@ -31,6 +31,7 @@
 #include "ApplePayPaymentAuthorizationResult.h"
 #include "ApplePayPaymentRequest.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "ExceptionOr.h"
 #include "PaymentSession.h"
 #include <wtf/Ref.h>

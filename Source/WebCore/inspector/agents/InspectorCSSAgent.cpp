@@ -46,6 +46,7 @@
 #include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"
 #include "EventTarget.h"
+#include "EventTargetInlines.h"
 #include "Font.h"
 #include "FontCache.h"
 #include "FontCascade.h"

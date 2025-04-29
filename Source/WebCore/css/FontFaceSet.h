@@ -28,6 +28,7 @@
 #include "ActiveDOMObject.h"
 #include "CSSFontFaceSet.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "IDLTypes.h"
 #include <wtf/UniqueRef.h>
 

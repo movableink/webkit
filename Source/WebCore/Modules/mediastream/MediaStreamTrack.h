@@ -32,6 +32,7 @@
 #include "ActiveDOMObject.h"
 #include "Blob.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "IDLTypes.h"
 #include "JSDOMPromiseDeferred.h"
 #include "MediaProducer.h"

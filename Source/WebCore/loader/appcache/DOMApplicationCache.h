@@ -26,6 +26,7 @@
 #pragma once
 
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "LocalDOMWindowProperty.h"
 #include <wtf/WeakPtr.h>
 

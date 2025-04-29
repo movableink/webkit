@@ -30,6 +30,7 @@
 
 #include "AXObjectCache.h"
 #include "ElementChildIteratorInlines.h"
+#include "EventTargetInlines.h"
 #include "HTMLNames.h"
 #include "RenderIterator.h"
 #include "RenderText.h"

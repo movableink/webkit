@@ -34,6 +34,7 @@
 #include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "ExceptionCode.h"
 #include "FrameLoader.h"
 #include "JSDOMPromiseDeferred.h"

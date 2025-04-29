@@ -32,6 +32,7 @@
 #include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInterfaces.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"

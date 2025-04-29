@@ -34,6 +34,7 @@
 #include "CDMInstanceSession.h"
 #include "ContextDestructionObserverInlines.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "IDLTypes.h"
 #include "MediaKeyMessageType.h"
 #include "MediaKeySessionType.h"

@@ -40,6 +40,7 @@
 #include "Event.h"
 #include "EventListener.h"
 #include "EventNames.h"
+#include "EventTargetInterfaces.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "InspectorInstrumentation.h"

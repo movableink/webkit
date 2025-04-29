@@ -30,6 +30,7 @@
 
 #include "Document.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "FocusEvent.h"
 #include "HTMLFieldSetElement.h"
 #include "HTMLFormElement.h"

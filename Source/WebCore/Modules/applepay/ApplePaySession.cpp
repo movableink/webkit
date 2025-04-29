@@ -48,6 +48,7 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LinkIconCollector.h"
 #include "LinkIconType.h"

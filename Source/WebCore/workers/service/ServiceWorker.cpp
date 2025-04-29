@@ -28,6 +28,7 @@
 
 #include "Document.h"
 #include "EventNames.h"
+#include "EventTargetInterfaces.h"
 #include "Logging.h"
 #include "MessagePort.h"
 #include "SWClientConnection.h"

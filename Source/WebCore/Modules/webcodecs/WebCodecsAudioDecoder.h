@@ -29,6 +29,7 @@
 #if ENABLE(WEB_CODECS)
 
 #include "AudioDecoder.h"
+#include "EventTargetInterfaces.h"
 #include "JSDOMPromiseDeferredForward.h"
 #include "WebCodecsAudioDecoderConfig.h"
 #include "WebCodecsAudioDecoderSupport.h"

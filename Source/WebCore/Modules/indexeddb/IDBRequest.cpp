@@ -30,6 +30,7 @@
 #include "Event.h"
 #include "EventDispatcher.h"
 #include "EventNames.h"
+#include "EventTargetInterfaces.h"
 #include "IDBBindingUtilities.h"
 #include "IDBConnectionProxy.h"
 #include "IDBCursor.h"

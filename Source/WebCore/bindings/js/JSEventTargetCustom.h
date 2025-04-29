@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "EventTargetInlines.h"
 #include "JSDOMBinding.h"
 #include "JSDOMBindingSecurity.h"
 #include "JSDOMOperation.h"

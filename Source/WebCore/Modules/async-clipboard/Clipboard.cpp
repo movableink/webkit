@@ -31,6 +31,7 @@
 #include "CommonAtomStrings.h"
 #include "Document.h"
 #include "Editor.h"
+#include "EventTargetInterfaces.h"
 #include "JSBlob.h"
 #include "JSClipboardItem.h"
 #include "JSDOMPromiseDeferred.h"

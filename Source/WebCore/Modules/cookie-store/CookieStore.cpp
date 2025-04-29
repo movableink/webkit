@@ -36,6 +36,8 @@
 #include "CookieStoreGetOptions.h"
 #include "Document.h"
 #include "EventNames.h"
+#include "EventTargetInterfaces.h"
+#include "EventTargetInlines.h"
 #include "ExceptionOr.h"
 #include "JSCookieListItem.h"
 #include "JSDOMPromiseDeferred.h"

@@ -31,6 +31,7 @@
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "EventNames.h"
+#include "EventTargetInterfaces.h"
 #include "Logging.h"
 #include "MessageChannel.h"
 #include "MessagePort.h"

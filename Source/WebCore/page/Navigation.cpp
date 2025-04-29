@@ -36,6 +36,7 @@
 #include "DocumentLoader.h"
 #include "ErrorEvent.h"
 #include "EventNames.h"
+#include "EventTargetInterfaces.h"
 #include "Exception.h"
 #include "FormState.h"
 #include "FrameLoadRequest.h"

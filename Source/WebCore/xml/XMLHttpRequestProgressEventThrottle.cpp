@@ -31,6 +31,7 @@
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "EventTarget.h"
+#include "EventTargetInlines.h"
 #include "ScriptExecutionContext.h"
 #include "XMLHttpRequest.h"
 #include "XMLHttpRequestProgressEvent.h"

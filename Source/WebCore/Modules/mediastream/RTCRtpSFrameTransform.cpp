@@ -30,6 +30,7 @@
 
 #include "ContextDestructionObserverInlines.h"
 #include "CryptoKeyRaw.h"
+#include "EventTargetInlines.h"
 #include "JSDOMConvertBufferSource.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSRTCEncodedAudioFrame.h"

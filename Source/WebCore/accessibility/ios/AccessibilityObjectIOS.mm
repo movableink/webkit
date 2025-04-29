@@ -31,6 +31,7 @@
 #import "AXRemoteFrame.h"
 #import "AccessibilityRenderObject.h"
 #import "EventNames.h"
+#import "EventTargetInlines.h"
 #import "HTMLInputElement.h"
 #import "HTMLNames.h"
 #import "LocalFrameView.h"

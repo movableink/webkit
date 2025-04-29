@@ -35,6 +35,7 @@
 #include "AudioNodeOutput.h"
 #include "AudioParam.h"
 #include "ContextDestructionObserverInlines.h"
+#include "EventTargetInterfaces.h"
 #include "Logging.h"
 #include <wtf/Atomics.h>
 #include <wtf/MainThread.h>

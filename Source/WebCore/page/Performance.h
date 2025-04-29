@@ -35,6 +35,7 @@
 #include "ContextDestructionObserver.h"
 #include "DOMHighResTimeStamp.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "ExceptionOr.h"
 #include "ReducedResolutionSeconds.h"
 #include "ScriptExecutionContext.h"

@@ -32,7 +32,6 @@
 
 #include "EventListenerMap.h"
 #include "EventListenerOptions.h"
-#include "EventTargetInterfaces.h"
 #include "ExceptionOr.h"
 #include "ScriptWrappable.h"
 #include <memory>
@@ -48,6 +47,7 @@ class JSObject;
 
 namespace WebCore {
 
+enum class EventTargetInterfaceType : uint8_t;
 struct AddEventListenerOptions;
 class DOMWrapperWorld;
 class EventTarget;
@@ -125,46 +125,19 @@ public:
     enum class EventInvokePhase { Capturing, Bubbling };
     void fireEventListeners(Event&, EventInvokePhase);
 
-    template<typename Visitor> void visitJSEventListeners(Visitor&);
+    template<typename Visitor>
+    inline void visitJSEventListeners(Visitor&);
     void invalidateJSEventListeners(JSC::JSObject*);
 
-    const EventTargetData* eventTargetData() const
-    {
-        if (hasEventTargetData())
-            return &weakPtrFactory().impl()->eventTargetData();
-        return nullptr;
-    }
-
-    EventTargetData* eventTargetData()
-    {
-        if (hasEventTargetData())
-            return &weakPtrFactory().impl()->eventTargetData();
-        return nullptr;
-    }
-
-    EventTargetData* eventTargetDataConcurrently()
-    {
-        bool flag = this->hasEventTargetData();
-        auto fencedFlag = Dependency::fence(flag);
-        if (flag)
-            return &fencedFlag.consume(this)->weakPtrFactory().impl()->eventTargetData();
-        return nullptr;
-    }
+    inline const EventTargetData* eventTargetData() const;
+    inline EventTargetData* eventTargetData();
+    inline EventTargetData* eventTargetDataConcurrently();
 
     template<typename CallbackType>
-    void enumerateEventListenerTypes(NOESCAPE const CallbackType& callback) const
-    {
-        if (auto* data = eventTargetData())
-            data->eventListenerMap.enumerateEventListenerTypes(callback);
-    }
+    inline void enumerateEventListenerTypes(NOESCAPE const CallbackType&) const;
 
     template<typename CallbackType>
-    bool containsMatchingEventListener(NOESCAPE const CallbackType& callback) const
-    {
-        if (auto* data = eventTargetData())
-            return data->eventListenerMap.containsMatchingEventListener(callback);
-        return false;
-    }
+    inline bool containsMatchingEventListener(NOESCAPE const CallbackType&) const;
 
     bool hasEventTargetData() const { return hasEventTargetFlag(EventTargetFlag::HasEventTargetData); }
     bool isNode() const { return hasEventTargetFlag(EventTargetFlag::IsNode); }
@@ -208,15 +181,7 @@ protected:
         HasPendingResources = 1 << 15,
     };
 
-    EventTargetData& ensureEventTargetData()
-    {
-        if (auto* data = eventTargetData())
-            return *data;
-        initializeWeakPtrFactory();
-        WTF::storeStoreFence();
-        setEventTargetFlag(EventTargetFlag::HasEventTargetData, true);
-        return weakPtrFactory().impl()->eventTargetData();
-    }
+    EventTargetData& ensureEventTargetData();
 
     virtual void eventListenersDidChange() { }
 
@@ -230,42 +195,6 @@ private:
 
     void innerInvokeEventListeners(Event&, EventListenerVector, EventInvokePhase);
 };
-
-inline bool EventTarget::hasEventListeners() const
-{
-    auto* data = eventTargetData();
-    return data && !data->eventListenerMap.isEmpty();
-}
-
-inline bool EventTarget::hasEventListeners(const AtomString& eventType) const
-{
-    auto* data = eventTargetData();
-    return data && data->eventListenerMap.contains(eventType);
-}
-
-inline bool EventTarget::hasAnyEventListeners(Vector<AtomString> eventTypes) const
-{
-    if (auto* data = eventTargetData()) {
-        for (const auto& eventType : eventTypes) {
-            if (data->eventListenerMap.contains(eventType))
-                return true;
-        }
-    }
-    return false;
-}
-
-inline bool EventTarget::hasCapturingEventListeners(const AtomString& eventType)
-{
-    auto* data = eventTargetData();
-    return data && data->eventListenerMap.containsCapturing(eventType);
-}
-
-template<typename Visitor>
-void EventTarget::visitJSEventListeners(Visitor& visitor)
-{
-    if (auto* data = eventTargetDataConcurrently())
-        data->eventListenerMap.visitJSEventListeners(visitor);
-}
 
 inline void EventTarget::setEventTargetFlag(EventTargetFlag flag, bool value)
 {

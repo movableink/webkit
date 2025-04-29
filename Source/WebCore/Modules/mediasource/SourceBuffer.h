@@ -36,6 +36,7 @@
 #include "ActiveDOMObject.h"
 #include "AudioTrackClient.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "ExceptionOr.h"
 #include "SourceBufferPrivate.h"
 #include "SourceBufferPrivateClient.h"

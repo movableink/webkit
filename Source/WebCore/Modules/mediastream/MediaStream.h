@@ -31,6 +31,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "MediaCanStartListener.h"
 #include "MediaProducer.h"
 #include "MediaStreamPrivate.h"

@@ -60,6 +60,7 @@
 #include "ElementChildIteratorInlines.h"
 #include "EventLoop.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "FourCC.h"
 #include "FrameLoader.h"
 #include "HTMLAudioElement.h"

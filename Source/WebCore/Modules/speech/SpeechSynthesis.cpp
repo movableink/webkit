@@ -30,6 +30,7 @@
 
 #include "Document.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "LocalFrame.h"
 #include "Page.h"

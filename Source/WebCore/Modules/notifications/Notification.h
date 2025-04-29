@@ -36,6 +36,7 @@
 #include "ActiveDOMObject.h"
 #include "ContextDestructionObserverInlines.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "NotificationDirection.h"
 #include "NotificationPayload.h"
 #include "NotificationPermission.h"

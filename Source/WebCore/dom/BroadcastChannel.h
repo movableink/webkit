@@ -29,6 +29,7 @@
 #include "BroadcastChannelIdentifier.h"
 #include "ClientOrigin.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "ExceptionOr.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>

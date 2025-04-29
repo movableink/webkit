@@ -32,6 +32,7 @@
 #include "AudioUtilities.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "ScriptController.h"
 #include "ScriptExecutionContext.h"
 #include <algorithm>

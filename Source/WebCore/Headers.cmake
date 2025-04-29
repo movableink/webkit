@@ -1122,6 +1122,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/EventOptions.h
     dom/EventTarget.h
     dom/EventTargetConcrete.h
+    dom/EventTargetInlines.h
     dom/Exception.h
     dom/ExceptionCode.h
     dom/ExceptionData.h
