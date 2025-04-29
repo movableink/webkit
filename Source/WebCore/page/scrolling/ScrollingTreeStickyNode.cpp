@@ -86,7 +86,7 @@ FloatPoint ScrollingTreeStickyNode::computeLayerPosition() const
             constrainingRect.move(overflowScrollingNode->scrollDeltaSinceLastCommit());
         }
         constrainingRect.move(-offsetFromStickyAncestors);
-        return m_constraints.layerPositionForConstrainingRect(constrainingRect);
+        return m_constraints.anchorLayerPositionForConstrainingRect(constrainingRect);
     };
 
     for (RefPtr ancestor = parent(); ancestor; ancestor = ancestor->parent()) {

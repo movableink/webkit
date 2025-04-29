@@ -7276,6 +7276,8 @@ header: <WebCore/ScrollingConstraints.h>
     WebCore::FloatRect containingBlockRect();
     WebCore::FloatRect stickyBoxRect();
     WebCore::FloatSize stickyOffsetAtLastLayout();
+    WebCore::FloatSize anchorLayerOffsetAtLastLayout();
+    WebCore::FloatRect viewportRectAtLastLayout();
     WebCore::FloatPoint layerPositionAtLastLayout();
 };
 

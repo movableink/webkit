@@ -5327,6 +5327,7 @@ StickyPositionViewportConstraints RenderLayerCompositor::computeStickyViewportCo
     StickyPositionViewportConstraints constraints;
     renderer.computeStickyPositionConstraints(constraints, renderer.constrainingRectForStickyPosition());
 
+    constraints.setViewportRectAtLastLayout(m_renderView.protectedFrameView()->rectForFixedPositionLayout());
     constraints.setLayerPositionAtLastLayout(anchorLayer->position());
     constraints.setStickyOffsetAtLastLayout(renderer.stickyPositionOffset());
     constraints.setAlignmentOffset(anchorLayer->pixelAlignmentOffset());

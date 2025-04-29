@@ -72,7 +72,7 @@ FloatPoint ScrollingTreeFixedNode::computeLayerPosition() const
             // Fixed nodes are positioned relative to the containing frame scrolling node.
             // We bail out after finding one.
             auto layoutViewport = scrollingNode->layoutViewport();
-            return m_constraints.layerPositionForViewportRect(layoutViewport) - overflowScrollDelta;
+            return m_constraints.viewportRelativeLayerPosition(layoutViewport) - overflowScrollDelta;
         }
 
         if (auto* overflowNode = dynamicDowncast<ScrollingTreeOverflowScrollingNode>(*ancestor)) {
