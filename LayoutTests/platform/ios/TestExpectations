@@ -7102,7 +7102,8 @@ webkit.org/b/170293 fast/css-grid-layout/grid-align-baseline-vertical.html [ Fai
 webkit.org/b/170293 fast/css-grid-layout/grid-self-baseline-two-dimensional.html [ Failure ]
 
 # A sub-test in this test is extremely flaky and fails most of the time, messing up partial-failure expectations
-webkit.org/b/189686 webgl/2.0.0/conformance2/renderbuffers/multisampled-renderbuffer-initialization.html [ Skip ]
+webkit.org/b/189686 webgl/2.0.y/conformance2/renderbuffers/multisampled-renderbuffer-initialization.html [ Skip ]
+
 # Crashes
 webkit.org/b/189686 webgl/2.0.y/conformance2/buffers/one-large-uniform-buffer.html [ Skip ]
 
