@@ -287,7 +287,7 @@ public:
     virtual void delaySamples(Seconds) { };
     virtual void setInterruptedForTesting(bool);
 
-    virtual bool setShouldApplyRotation(bool) { return false; }
+    virtual bool setShouldApplyRotation();
     virtual void setIsInBackground(bool);
 
     std::optional<PageIdentifier> pageIdentifier() const { return m_pageIdentifier.asOptional(); }
@@ -478,6 +478,11 @@ inline void RealtimeMediaSource::setIsInBackground(bool)
 inline const String& RealtimeMediaSource::hashedGroupId() const
 {
     return m_hashedGroupId;
+}
+
+inline bool RealtimeMediaSource::setShouldApplyRotation()
+{
+    return false;
 }
 
 } // namespace WebCore

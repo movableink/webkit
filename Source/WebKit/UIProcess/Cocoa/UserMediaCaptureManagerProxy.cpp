@@ -139,7 +139,7 @@ public:
         protectedSource()->requestToEnd(*this);
     }
 
-    void setShouldApplyRotation(bool shouldApplyRotation) { m_shouldApplyRotation = true; }
+    void setShouldApplyRotation() { m_shouldApplyRotation = true; }
     void setIsInBackground(bool value) { m_source->setIsInBackground(value); }
 
     bool isPowerEfficient()
@@ -773,10 +773,10 @@ void UserMediaCaptureManagerProxy::endProducingData(RealtimeMediaSourceIdentifie
         proxy->end();
 }
 
-void UserMediaCaptureManagerProxy::setShouldApplyRotation(RealtimeMediaSourceIdentifier sourceID, bool shouldApplyRotation)
+void UserMediaCaptureManagerProxy::setShouldApplyRotation(RealtimeMediaSourceIdentifier sourceID)
 {
     if (RefPtr proxy = m_proxies.get(sourceID))
-        proxy->setShouldApplyRotation(shouldApplyRotation);
+        proxy->setShouldApplyRotation();
 }
 
 void UserMediaCaptureManagerProxy::setIsInBackground(RealtimeMediaSourceIdentifier sourceID, bool isInBackground)
