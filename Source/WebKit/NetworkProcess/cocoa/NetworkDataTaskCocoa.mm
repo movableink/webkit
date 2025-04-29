@@ -195,7 +195,7 @@ NetworkDataTaskCocoa::NetworkDataTaskCocoa(NetworkSession& session, NetworkDataT
 {
     auto request = parameters.request;
     auto url = request.url();
-    if (url.isNull()) {
+    if (!url.isValid()) {
         scheduleFailure(FailureType::InvalidURL);
         return;
     }

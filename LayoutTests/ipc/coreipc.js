@@ -572,6 +572,7 @@ export class ArgumentSerializer {
                     return ArgumentSerializer.serializeStdArray(innerType, argument);
                 case 'HashSet':
                     return ArgumentSerializer.serializeHashSet(innerType, argument);
+                case 'std::variant':
                 case 'Variant':
                     return ArgumentSerializer.serializeVariant(innerType, argument);
                 case 'std::pair':
@@ -1111,7 +1112,8 @@ export class ArgumentParser {
                     const [newPosition, value] = ArgumentParser.parseKeyValuePair(buffer, position, innerType);
                     return [newPosition, {parsedType: argumentDefinition.type, parsedValue: value}];
                 }
-                case 'std::variant': {
+                case 'std::variant':
+                case 'Variant': {
                     const [newPosition, variant] = ArgumentParser.parseVariant(buffer, position, innerType);
                     return [newPosition, {parsedType: argumentDefinition.type, parsedValue: variant}];
                 }

@@ -224,6 +224,8 @@ void NetworkConnectionToWebProcess::hasUploadStateChanged(bool hasUpload)
 
 void NetworkConnectionToWebProcess::loadImageForDecoding(WebCore::ResourceRequest&& request, WebPageProxyIdentifier pageID, size_t maximumBytesFromNetwork, CompletionHandler<void(Expected<Ref<WebCore::FragmentedSharedBuffer>, WebCore::ResourceError>&&)>&& completionHandler)
 {
+    auto url = request.url();
+    MESSAGE_CHECK_COMPLETION(!url.isValid(), completionHandler(makeUnexpected<WebCore::ResourceError>({ })));
     CheckedPtr networkSession = this->networkSession();
     if (!networkSession)
         return completionHandler(makeUnexpected<WebCore::ResourceError>({ }));
