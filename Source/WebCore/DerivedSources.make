@@ -2360,9 +2360,14 @@ EVENT_FACTORY_FILES = \
 #
 EVENT_FACTORY_PATTERNS = $(call to-pattern, $(EVENT_FACTORY_FILES))
 
+EVENT_FACTORY_SCRIPTS = \
+    $(WebCore)/dom/make_event_factory.pl \
+    $(WebCore)/bindings/scripts/InFilesCompiler.pm \
+#
+
 all : $(EVENT_FACTORY_FILES)
-$(EVENT_FACTORY_PATTERNS) : $(WebCore)/dom/make_event_factory.pl $(EVENT_INTERFACES)
-	$(PERL) $< $(addprefix --input , $(filter-out $(WebCore)/dom/make_event_factory.pl, $^))
+$(EVENT_FACTORY_PATTERNS) : $(EVENT_FACTORY_SCRIPTS) $(EVENT_INTERFACES)
+	$(PERL) $(WebCore)/dom/make_event_factory.pl $(addprefix --input , $(filter-out $(EVENT_FACTORY_SCRIPTS), $^))
 
 EVENT_TARGET_FACTORY = $(WebCore)/dom/EventTargetFactory.in $(ADDITIONAL_EVENT_TARGET_FACTORY)
 
@@ -2374,8 +2379,8 @@ EVENT_TARGET_FACTORY_FILES = \
 EVENT_TARGET_FACTORY_PATTERNS = $(call to-pattern, $(EVENT_TARGET_FACTORY_FILES))
 
 all : $(EVENT_TARGET_FACTORY_FILES)
-$(EVENT_TARGET_FACTORY_PATTERNS) : $(WebCore)/dom/make_event_factory.pl $(EVENT_TARGET_FACTORY)
-	$(PERL) $< $(addprefix --input , $(filter-out $(WebCore)/dom/make_event_factory.pl, $^))
+$(EVENT_TARGET_FACTORY_PATTERNS) : $(EVENT_FACTORY_SCRIPTS) $(EVENT_TARGET_FACTORY)
+	$(PERL) $(WebCore)/dom/make_event_factory.pl $(addprefix --input , $(filter-out $(EVENT_FACTORY_SCRIPTS), $^))
 
 # --------
 

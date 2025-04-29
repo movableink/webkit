@@ -1221,6 +1221,7 @@ $(PROJECT_DIR)/bindings/scripts/CodeGeneratorJS.pm
 $(PROJECT_DIR)/bindings/scripts/Hasher.pm
 $(PROJECT_DIR)/bindings/scripts/IDLAttributes.json
 $(PROJECT_DIR)/bindings/scripts/IDLParser.pm
+$(PROJECT_DIR)/bindings/scripts/InFilesCompiler.pm
 $(PROJECT_DIR)/bindings/scripts/StaticString.pm
 $(PROJECT_DIR)/bindings/scripts/generate-bindings.pl
 $(PROJECT_DIR)/bindings/scripts/preprocess-idls.pl
