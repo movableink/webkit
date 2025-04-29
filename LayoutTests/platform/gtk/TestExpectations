@@ -416,7 +416,7 @@ webkit.org/b/251107 inspector/canvas/recording-webgl2-full.html [ Failure ]
 webkit.org/b/251107 inspector/canvas/recording-webgl2-snapshots.html [ Failure ]
 webkit.org/b/251107 webgl/2.0.y/conformance/context/premultiplyalpha-test.html [ Failure ]
 webkit.org/b/251107 webgl/2.0.y/conformance/rendering/gl-scissor-test.html [ Failure ]
-webkit.org/b/251107 webgl/2.0.0/conformance2/reading/read-pixels-from-fbo-test.html [ Failure ]
+webkit.org/b/251107 webgl/2.0.y/conformance2/reading/read-pixels-from-fbo-test.html [ Failure ]
 webkit.org/b/251107 webgl/2.0.0/conformance2/rendering/fs-color-type-mismatch-color-buffer-type.html [ Failure ]
 
 # WEBGL flakies
