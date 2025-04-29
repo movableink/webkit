@@ -1765,7 +1765,7 @@ webgl/2.0.y/conformance/glsl/bugs/sketchfab-lighting-shader-crash.html [ Skip ] 
 webgl/2.0.0/conformance/textures/misc/texture-mips.html [ Failure Pass ]
 webgl/2.0.0/conformance/textures/misc/texture-upload-size.html [ Skip ] # Timeout
 webgl/2.0.y/conformance/uniforms/out-of-bounds-uniform-array-access.html [ Skip ] # Timeout
-webgl/2.0.0/conformance2/attribs/gl-vertexattribipointer.html [ Skip ] # Timeout
+webgl/2.0.y/conformance2/attribs/gl-vertexattribipointer.html [ Skip ] # Timeout
 webgl/2.0.0/conformance2/glsl3/tricky-loop-conditions.html [ Failure ]
 webgl/2.0.0/conformance2/rendering/blitframebuffer-filter-srgb.html [ Pass Failure ]
 webgl/2.0.0/conformance2/rendering/blitframebuffer-stencil-only.html [ Pass Failure ]
