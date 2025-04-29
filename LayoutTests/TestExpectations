@@ -4609,10 +4609,6 @@ webgl/2.0.0/conformance2/renderbuffers/multisampled-renderbuffer-initialization.
 # webkit.org/b/211220 svg_image WebGL 2.0 tests currently fail due to inconsistencies between browsers
 webgl/2.0.0/conformance2/textures/svg_image [ Skip ]
 
-# To-be-addressed WebGL 2 Timeouts and Failures
-# webkit.org/b/189641
-webgl/2.0.0/conformance2/misc/uninitialized-test-2.html [ Skip ]
-
 # Flaky failures
 webkit.org/b/241027 webgl/2.0.y/conformance/textures/image_bitmap_from_image_bitmap/tex-2d-rgb-rgb-unsigned_byte.html [ Pass Failure ]
 webkit.org/b/241027 webgl/2.0.y/conformance/textures/image_bitmap_from_image_bitmap/tex-2d-rgb-rgb-unsigned_short_5_6_5.html [ Pass Failure ]
@@ -4720,6 +4716,7 @@ webgl/2.0.y/conformance2/canvas [ Pass ]
 webgl/2.0.y/conformance2/context [ Pass ]
 webgl/2.0.y/conformance2/extensions [ Pass ]
 webgl/2.0.y/conformance2/rendering/rasterizer-discard-and-implicit-clear.html [ Pass ]
+webgl/2.0.y/conformance2/misc [ Pass ]
 webgl/2.0.y/conformance2/state [ Pass ]
 webgl/2.0.y/conformance2/textures/canvas/ [ Pass ]
 webgl/2.0.y/conformance2/textures/webgl_canvas [ Pass ]
@@ -4749,6 +4746,7 @@ webgl/2.0.0/conformance2/attribs [ Skip ]
 webgl/2.0.0/conformance2/buffers [ Skip ]
 webgl/2.0.0/conformance2/context [ Skip ]
 webgl/2.0.0/conformance2/extensions [ Skip ]
+webgl/2.0.0/conformance2/misc [ Skip ]
 webgl/2.0.0/conformance2/state [ Skip ]
 webgl/2.0.0/conformance2/textures/canvas/ [ Skip ]
 webgl/2.0.0/conformance2/vertex_arrays [ Skip ]
