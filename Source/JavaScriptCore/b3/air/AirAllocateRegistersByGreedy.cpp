@@ -406,10 +406,10 @@ public:
         }
     }
 
-    void addClobberHigh64(Reg reg, Interval interval)
+    void addClobberHigh64(Reg reg, Point point)
     {
         ASSERT(reg.isFPR());
-        m_allocationsHigh64.insert({ Tmp(reg), interval });
+        m_allocationsHigh64.insert({ Tmp(reg), Interval(point) });
     }
 
     void evict(Tmp tmp, LiveRange& range)
@@ -750,18 +750,19 @@ private:
 
     static Point positionOfEarly(Interval interval)
     {
-        return interval.begin() & ~static_cast<Point>(1);
+        static_assert(!(pointsPerInst & (pointsPerInst - 1)));
+        return interval.begin() & ~static_cast<Point>(pointsPerInst - 1);
     }
 
     static Interval earlyInterval(Point positionOfEarly)
     {
-        ASSERT(!(positionOfEarly & 1));
+        ASSERT(!(positionOfEarly % pointsPerInst));
         return Interval(positionOfEarly);
     }
 
     static Interval lateInterval(Point positionOfEarly)
     {
-        ASSERT(!(positionOfEarly & 1));
+        ASSERT(!(positionOfEarly % pointsPerInst));
         return Interval(positionOfEarly + 1);
     }
 
@@ -900,7 +901,11 @@ private:
     {
         CompilerTimingScope timingScope("Air"_s, "GreedyRegAlloc::buildLiveRanges"_s);
         UnifiedTmpLiveness liveness(m_code);
-        TmpMap<Interval> activeIntervals(m_code);
+        TmpMap<Point> activeEnds(m_code);
+        TmpMap<Point> liveAtTailMarkers(m_code, std::numeric_limits<Point>::max());
+#if ASSERT_ENABLED
+        UnifiedTmpLiveness::LiveAtHead assertOnlyLiveAtHead = liveness.liveAtHead();
+#endif
 
         // Find non-rare blocks.
         m_fastBlocks.push(m_code[0]);
@@ -942,7 +947,7 @@ private:
         };
 
         auto isLiveAt = [&](Tmp tmp, Point point) {
-            if (activeIntervals[tmp])
+            if (activeEnds[tmp])
                 return true;
             // Tmp may have had a dead def at point (e.g. clobber).
             auto& intervals = m_map[tmp].liveRange.intervals();
@@ -972,10 +977,18 @@ private:
             });
         };
 
-        auto closeInterval = [&](Tmp tmp) {
-            ASSERT(activeIntervals[tmp] != Interval());
-            m_map[tmp].liveRange.prepend(activeIntervals[tmp]);
-            activeIntervals[tmp] = Interval();
+        auto markUse = [&](Tmp tmp, Point point) {
+            Point& end = activeEnds[tmp];
+            ASSERT(!end || point < end);
+            if (!end)
+                end = point + 1; // +1 since Interval end is not inclusive
+        };
+        auto markDef = [&](Tmp tmp, Point point)  {
+            Point end = activeEnds[tmp];
+            if (UNLIKELY(!end))
+                end = point + 1; // Dead def / clobber
+            m_map[tmp].liveRange.prepend({ point, end });
+            activeEnds[tmp] = 0;
         };
 
         // First pass: collect all the potential coalescable pairs of Tmps.
@@ -1006,6 +1019,7 @@ private:
         // prune conflicts from the coalescables.
         BasicBlock* blockAfter = nullptr;
         Vector<Tmp, 8> earlyUses, earlyDefs, lateUses, lateDefs;
+        Vector<Reg, 8> earlyClobbersHigh64, lateClobbersHigh64;
         for (size_t blockIndex = m_code.size(); blockIndex--;) {
             BasicBlock* block = m_code[blockIndex];
             if (!block)
@@ -1019,28 +1033,33 @@ private:
                 dataLog("  positionOfTail = ", positionOfTail, "\n");
             }
 
-            for (Tmp tmp : liveness.liveAtTail(block))
-                activeIntervals[tmp] |= Interval(positionOfTail); // FIXME: could just set interval start
-
+            for (Tmp tmp : liveness.liveAtTail(block)) {
+                markUse(tmp, positionOfTail);
+                liveAtTailMarkers[tmp] = positionOfTail;
+            }
             if (blockAfter) {
+                Point blockAfterPositionOfHead = this->positionOfHead(blockAfter);
                 for (Tmp tmp : liveness.liveAtHead(blockAfter)) {
-                    if (!activeIntervals[tmp].contains(positionOfTail)) {
-                        // If tmp was live at the head of the next block but no longer live, close
-                        // the current interval.
-                        ASSERT(activeIntervals[tmp].begin() == this->positionOfHead(blockAfter));
-                        closeInterval(tmp);
-                    }
+                    // FIXME: rdar://145150735, remove pinned register liveness special cases
+                    ASSERT(activeEnds[tmp] || (tmp.isReg() && !m_allAllowedRegisters.contains(tmp.reg(), IgnoreVectors)));
+                    // If tmp was live at the head of the next block but not live at the
+                    // tail of the current block, close the interval.
+                    if (liveAtTailMarkers[tmp] > positionOfTail && LIKELY(activeEnds[tmp]))
+                        markDef(tmp, blockAfterPositionOfHead);
                 }
             }
 
             for (unsigned instIndex = block->size(); instIndex--;) {
                 Inst& inst = block->at(instIndex);
                 Point positionOfEarly = positionOfHead + instIndex * pointsPerInst;
+                Point positionOfLate = positionOfEarly + 1;
 
                 lateUses.shrink(0);
                 lateDefs.shrink(0);
+                lateClobbersHigh64.shrink(0);
                 earlyUses.shrink(0);
                 earlyDefs.shrink(0);
+                earlyClobbersHigh64.shrink(0);
                 inst.forEachTmp([&](Tmp& tmp, Arg::Role role, Bank, Width) {
                     if (Arg::isLateUse(role))
                         lateUses.append(tmp);
@@ -1051,60 +1070,59 @@ private:
                     if (Arg::isEarlyDef(role))
                         earlyDefs.append(tmp);
                 });
-                for (Tmp tmp : lateUses)
-                    activeIntervals[tmp] |= lateInterval(positionOfEarly);
-                for (Tmp tmp : lateDefs) {
-                    activeIntervals[tmp] |= lateInterval(positionOfEarly);
-                    closeInterval(tmp);
-                    pruneCoalescable(inst, tmp, positionOfEarly + 1);
-                }
-                for (Tmp tmp : earlyUses)
-                    activeIntervals[tmp] |= earlyInterval(positionOfEarly);
-                for (Tmp tmp : earlyDefs) {
-                    activeIntervals[tmp] |= earlyInterval(positionOfEarly);
-                    closeInterval(tmp);
-                    pruneCoalescable(inst, tmp, positionOfEarly);
-                }
-                if (inst.kind.opcode == Patch) {
-                    auto clobberReg = [&](Reg reg, PreservedWidth preservedWidth, Interval interval) {
-                        if (preservedWidth == PreservesNothing) {
-                            Tmp tmp = Tmp(reg);
-                            bool isAlive = !!activeIntervals[tmp];
-                            activeIntervals[tmp] |= interval;
-                            if (!isAlive)
-                                closeInterval(tmp);
-                        } else {
-                            ASSERT(preservedWidth == Preserves64);
-                            ASSERT(reg.isFPR() && m_code.usesSIMD());
-                            m_regRanges[reg].addClobberHigh64(reg, interval);
-                        }
-                    };
-                    inst.extraClobberedRegs().forEachWithWidthAndPreserved(
-                        [&](Reg reg, Width, PreservedWidth preservedWidth) {
-                            clobberReg(reg, preservedWidth, lateInterval(positionOfEarly));
-                        });
+                if (UNLIKELY(inst.kind.opcode == Patch)) {
                     inst.extraEarlyClobberedRegs().forEachWithWidthAndPreserved(
                         [&](Reg reg, Width, PreservedWidth preservedWidth) {
-                            clobberReg(reg, preservedWidth, earlyInterval(positionOfEarly));
+                            ASSERT(preservedWidth == PreservesNothing || preservedWidth == Preserves64);
+                            if (preservedWidth == PreservesNothing)
+                                earlyDefs.append(Tmp(reg));
+                            else
+                                earlyClobbersHigh64.append(reg);
+                        });
+                    inst.extraClobberedRegs().forEachWithWidthAndPreserved(
+                        [&](Reg reg, Width, PreservedWidth preservedWidth) {
+                            ASSERT(preservedWidth == PreservesNothing || preservedWidth == Preserves64);
+                            if (preservedWidth == PreservesNothing)
+                                lateDefs.append(Tmp(reg));
+                            else
+                                lateClobbersHigh64.append(reg);
                         });
                 }
 
-            }
-            for (Tmp tmp : liveness.liveAtHead(block))
-                activeIntervals[tmp] |= Interval(positionOfHead);
+                for (Tmp tmp : lateUses)
+                    markUse(tmp, positionOfLate);
+                for (Tmp tmp : lateDefs) {
+                    markDef(tmp, positionOfLate);
+                    pruneCoalescable(inst, tmp, positionOfLate);
+                }
+                for (Reg reg : lateClobbersHigh64)
+                    m_regRanges[reg].addClobberHigh64(reg, positionOfLate);
 
+                for (Tmp tmp : earlyUses)
+                    markUse(tmp, positionOfEarly);
+                for (Tmp tmp : earlyDefs) {
+                    markDef(tmp, positionOfEarly);
+                    pruneCoalescable(inst, tmp, positionOfEarly);
+                }
+                for (Reg reg : earlyClobbersHigh64)
+                    m_regRanges[reg].addClobberHigh64(reg, positionOfEarly);
+            }
+#if ASSERT_ENABLED
+            m_code.forEachTmp([&](Tmp tmp) {
+                ASSERT(!!activeEnds[tmp] == assertOnlyLiveAtHead.isLiveAtHead(block, tmp));
+            });
+#endif
             blockAfter = block;
         }
         if (blockAfter) {
-            for (Tmp tmp : liveness.liveAtHead(blockAfter)) {
-                ASSERT(activeIntervals[tmp].begin() == this->positionOfHead(blockAfter));
-                closeInterval(tmp);
-            }
+            Point firstBlockPositionOfHead = this->positionOfHead(blockAfter);
+            for (Tmp tmp : liveness.liveAtHead(blockAfter))
+                markDef(tmp, firstBlockPositionOfHead);
         }
 
 #if ASSERT_ENABLED
         m_code.forEachTmp([&](Tmp tmp) {
-            ASSERT(!activeIntervals[tmp]);
+            ASSERT(!activeEnds[tmp]);
         });
 #endif
     }
