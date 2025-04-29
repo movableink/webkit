@@ -2428,6 +2428,4 @@ fast/forms/color/input-color-swatch-overlay-appearance.html [ Pass ]
 
 webkit.org/b/291459 [ Release ] imported/w3c/web-platform-tests/css/css-shapes/shape-outside/shape-image/shape-image-018.html [ Pass Failure ]
 
-webkit.org/b/289124 imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/noopener/coop-noopener-allow-popups.https.html [ Pass Failure ]
-
 webkit.org/b/291785 [ Release ] security/decode-buffer-size.html [ Timeout ]
