@@ -26,20 +26,12 @@
 #pragma once
 
 #include "CSSFontFace.h"
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/Observer.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/text/StringHash.h>
-
-namespace WebCore {
-struct FontEventClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::FontEventClient> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -49,7 +41,7 @@ class FontFaceSet;
 
 template<typename> class ExceptionOr;
 
-struct FontEventClient : public CanMakeWeakPtr<FontEventClient> {
+struct FontEventClient : public AbstractRefCountedAndCanMakeWeakPtr<FontEventClient> {
     virtual ~FontEventClient() = default;
     virtual void faceFinished(CSSFontFace&, CSSFontFace::Status) = 0;
     virtual void startedLoading() = 0;

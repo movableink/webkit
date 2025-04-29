@@ -39,15 +39,6 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-class CSSFontFaceClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CSSFontFaceClient> : std::true_type { };
-}
-
-namespace WebCore {
 
 class CSSFontFaceClient;
 class CSSFontFaceSource;

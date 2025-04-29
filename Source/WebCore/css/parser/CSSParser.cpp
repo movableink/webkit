@@ -308,8 +308,8 @@ bool CSSParser::supportsDeclaration(CSSParserTokenRange& range)
 
 void CSSParser::parseDeclarationListForInspector(const String& declaration, const CSSParserContext& context, CSSParserObserver& observer)
 {
-    CSSParserObserverWrapper wrapper(observer);
-    CSSParser parser(context, declaration, nullptr, &wrapper);
+    Ref wrapper = CSSParserObserverWrapper::create(observer);
+    CSSParser parser(context, declaration, nullptr, wrapper.ptr());
     observer.startRuleHeader(StyleRuleType::Style, 0);
     observer.endRuleHeader(1);
     parser.consumeDeclarationList(parser.tokenizer()->tokenRange(), StyleRuleType::Style);
@@ -317,8 +317,8 @@ void CSSParser::parseDeclarationListForInspector(const String& declaration, cons
 
 void CSSParser::parseStyleSheetForInspector(const String& string, const CSSParserContext& context, StyleSheetContents& styleSheet, CSSParserObserver& observer)
 {
-    CSSParserObserverWrapper wrapper(observer);
-    CSSParser parser(context, string, &styleSheet, &wrapper);
+    Ref wrapper = CSSParserObserverWrapper::create(observer);
+    CSSParser parser(context, string, &styleSheet, wrapper.ptr());
     bool firstRuleValid = parser.consumeRuleList(parser.tokenizer()->tokenRange(), RuleList::TopLevel, [&styleSheet](Ref<StyleRuleBase> rule) {
         if (rule->isCharsetRule())
             return;
@@ -591,12 +591,12 @@ RefPtr<StyleRuleImport> CSSParser::consumeImportRule(CSSParserTokenRange prelude
     if (uri.isNull())
         return nullptr; // Parse error, expected string or URI
 
-    if (m_observerWrapper) {
-        unsigned endOffset = m_observerWrapper->endOffset(prelude);
-        m_observerWrapper->observer().startRuleHeader(StyleRuleType::Import, m_observerWrapper->startOffset(prelude));
-        m_observerWrapper->observer().endRuleHeader(endOffset);
-        m_observerWrapper->observer().startRuleBody(endOffset);
-        m_observerWrapper->observer().endRuleBody(endOffset);
+    if (RefPtr observerWrapper = m_observerWrapper.get()) {
+        unsigned endOffset = observerWrapper->endOffset(prelude);
+        observerWrapper->observer().startRuleHeader(StyleRuleType::Import, observerWrapper->startOffset(prelude));
+        observerWrapper->observer().endRuleHeader(endOffset);
+        observerWrapper->observer().startRuleBody(endOffset);
+        observerWrapper->observer().endRuleBody(endOffset);
     }
 
     prelude.consumeWhitespace();
@@ -708,16 +708,16 @@ Vector<Ref<StyleRuleBase>> CSSParser::consumeNestedGroupRules(CSSParserTokenRang
 
 RefPtr<StyleRuleMedia> CSSParser::consumeMediaRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
 {
-    if (m_observerWrapper) {
-        m_observerWrapper->observer().startRuleHeader(StyleRuleType::Media, m_observerWrapper->startOffset(prelude));
-        m_observerWrapper->observer().endRuleHeader(m_observerWrapper->endOffset(prelude));
-        m_observerWrapper->observer().startRuleBody(m_observerWrapper->previousTokenStartOffset(block));
+    if (RefPtr observerWrapper = m_observerWrapper.get()) {
+        observerWrapper->observer().startRuleHeader(StyleRuleType::Media, observerWrapper->startOffset(prelude));
+        observerWrapper->observer().endRuleHeader(observerWrapper->endOffset(prelude));
+        observerWrapper->observer().startRuleBody(observerWrapper->previousTokenStartOffset(block));
     }
 
     auto rules = consumeNestedGroupRules(block);
 
-    if (m_observerWrapper)
-        m_observerWrapper->observer().endRuleBody(m_observerWrapper->endOffset(block));
+    if (RefPtr observerWrapper = m_observerWrapper.get())
+        observerWrapper->observer().endRuleBody(observerWrapper->endOffset(block));
 
     return StyleRuleMedia::create(MQ::MediaQueryParser::parse(prelude, { m_context }), WTFMove(rules));
 }
@@ -728,16 +728,16 @@ RefPtr<StyleRuleSupports> CSSParser::consumeSupportsRule(CSSParserTokenRange pre
     if (supported == CSSSupportsParser::Invalid)
         return nullptr; // Parse error, invalid @supports condition
 
-    if (m_observerWrapper) {
-        m_observerWrapper->observer().startRuleHeader(StyleRuleType::Supports, m_observerWrapper->startOffset(prelude));
-        m_observerWrapper->observer().endRuleHeader(m_observerWrapper->endOffset(prelude));
-        m_observerWrapper->observer().startRuleBody(m_observerWrapper->previousTokenStartOffset(block));
+    if (RefPtr observerWrapper = m_observerWrapper.get()) {
+        observerWrapper->observer().startRuleHeader(StyleRuleType::Supports, observerWrapper->startOffset(prelude));
+        observerWrapper->observer().endRuleHeader(observerWrapper->endOffset(prelude));
+        observerWrapper->observer().startRuleBody(observerWrapper->previousTokenStartOffset(block));
     }
 
     auto rules = consumeNestedGroupRules(block);
 
-    if (m_observerWrapper)
-        m_observerWrapper->observer().endRuleBody(m_observerWrapper->endOffset(block));
+    if (RefPtr observerWrapper = m_observerWrapper.get())
+        observerWrapper->observer().endRuleBody(observerWrapper->endOffset(block));
 
     return StyleRuleSupports::create(prelude.serialize().trim(deprecatedIsSpaceOrNewline), supported, WTFMove(rules));
 }
@@ -747,12 +747,12 @@ RefPtr<StyleRuleFontFace> CSSParser::consumeFontFaceRule(CSSParserTokenRange pre
     if (!prelude.atEnd())
         return nullptr; // Parse error; @font-face prelude should be empty
 
-    if (m_observerWrapper) {
-        unsigned endOffset = m_observerWrapper->endOffset(prelude);
-        m_observerWrapper->observer().startRuleHeader(StyleRuleType::FontFace, m_observerWrapper->startOffset(prelude));
-        m_observerWrapper->observer().endRuleHeader(endOffset);
-        m_observerWrapper->observer().startRuleBody(endOffset);
-        m_observerWrapper->observer().endRuleBody(endOffset);
+    if (RefPtr observerWrapper = m_observerWrapper.get()) {
+        unsigned endOffset = observerWrapper->endOffset(prelude);
+        observerWrapper->observer().startRuleHeader(StyleRuleType::FontFace, observerWrapper->startOffset(prelude));
+        observerWrapper->observer().endRuleHeader(endOffset);
+        observerWrapper->observer().startRuleBody(endOffset);
+        observerWrapper->observer().endRuleBody(endOffset);
     }
 
     auto declarations = consumeDeclarationListInNewNestingContext(block, StyleRuleType::FontFace);
@@ -795,11 +795,11 @@ RefPtr<StyleRuleFontFeatureValuesBlock> CSSParser::consumeFontFeatureValuesRuleB
     if (range.atEnd())
         return { };
 
-    if (m_observerWrapper) {
-        m_observerWrapper->observer().startRuleHeader(StyleRuleType::FontFeatureValuesBlock, m_observerWrapper->startOffset(prelude));
-        m_observerWrapper->observer().endRuleHeader(m_observerWrapper->endOffset(prelude));
-        m_observerWrapper->observer().startRuleBody(m_observerWrapper->previousTokenStartOffset(range));
-        m_observerWrapper->observer().endRuleBody(m_observerWrapper->endOffset(range));
+    if (RefPtr observerWrapper = m_observerWrapper.get()) {
+        observerWrapper->observer().startRuleHeader(StyleRuleType::FontFeatureValuesBlock, observerWrapper->startOffset(prelude));
+        observerWrapper->observer().endRuleHeader(observerWrapper->endOffset(prelude));
+        observerWrapper->observer().startRuleBody(observerWrapper->previousTokenStartOffset(range));
+        observerWrapper->observer().endRuleBody(observerWrapper->endOffset(range));
     }
 
     auto [type, maxValues] = fontFeatureValuesTypeMappings(id);
@@ -868,10 +868,10 @@ RefPtr<StyleRuleFontFeatureValues> CSSParser::consumeFontFeatureValuesRule(CSSPa
     if (fontFamilies.isEmpty() || !prelude.atEnd())
         return nullptr;
 
-    if (m_observerWrapper) {
-        m_observerWrapper->observer().startRuleHeader(StyleRuleType::FontFeatureValues, m_observerWrapper->startOffset(originalPrelude));
-        m_observerWrapper->observer().endRuleHeader(m_observerWrapper->endOffset(prelude));
-        m_observerWrapper->observer().startRuleBody(m_observerWrapper->previousTokenStartOffset(block));
+    if (RefPtr observerWrapper = m_observerWrapper.get()) {
+        observerWrapper->observer().startRuleHeader(StyleRuleType::FontFeatureValues, observerWrapper->startOffset(originalPrelude));
+        observerWrapper->observer().endRuleHeader(observerWrapper->endOffset(prelude));
+        observerWrapper->observer().startRuleBody(observerWrapper->previousTokenStartOffset(block));
     }
 
     Vector<Ref<StyleRuleBase>> rules;
@@ -879,8 +879,8 @@ RefPtr<StyleRuleFontFeatureValues> CSSParser::consumeFontFeatureValuesRule(CSSPa
         rules.append(rule);
     });
 
-    if (m_observerWrapper)
-        m_observerWrapper->observer().endRuleBody(m_observerWrapper->endOffset(block));
+    if (RefPtr observerWrapper = m_observerWrapper.get())
+        observerWrapper->observer().endRuleBody(observerWrapper->endOffset(block));
 
     // Convert block rules to value (remove duplicate...etc)
     auto fontFeatureValues = FontFeatureValues::create();
@@ -899,12 +899,12 @@ RefPtr<StyleRuleFontPaletteValues> CSSParser::consumeFontPaletteValuesRule(CSSPa
     if (!name || !prelude.atEnd())
         return nullptr; // Parse error; expected custom ident in @font-palette-values header
 
-    if (m_observerWrapper) {
-        unsigned endOffset = m_observerWrapper->endOffset(prelude);
-        m_observerWrapper->observer().startRuleHeader(StyleRuleType::FontPaletteValues, m_observerWrapper->startOffset(prelude));
-        m_observerWrapper->observer().endRuleHeader(endOffset);
-        m_observerWrapper->observer().startRuleBody(endOffset);
-        m_observerWrapper->observer().endRuleBody(endOffset);
+    if (RefPtr observerWrapper = m_observerWrapper.get()) {
+        unsigned endOffset = observerWrapper->endOffset(prelude);
+        observerWrapper->observer().startRuleHeader(StyleRuleType::FontPaletteValues, observerWrapper->startOffset(prelude));
+        observerWrapper->observer().endRuleHeader(endOffset);
+        observerWrapper->observer().startRuleBody(endOffset);
+        observerWrapper->observer().endRuleBody(endOffset);
     }
 
     auto declarations = consumeDeclarationListInNewNestingContext(block, StyleRuleType::FontPaletteValues);
@@ -977,11 +977,11 @@ RefPtr<StyleRuleKeyframes> CSSParser::consumeKeyframesRule(CSSParserTokenRange p
 
     auto name = nameToken.value().toAtomString();
 
-    if (m_observerWrapper) {
-        m_observerWrapper->observer().startRuleHeader(StyleRuleType::Keyframes, m_observerWrapper->startOffset(rangeCopy));
-        m_observerWrapper->observer().endRuleHeader(m_observerWrapper->endOffset(prelude));
-        m_observerWrapper->observer().startRuleBody(m_observerWrapper->previousTokenStartOffset(block));
-        m_observerWrapper->observer().endRuleBody(m_observerWrapper->endOffset(block));
+    if (RefPtr observerWrapper = m_observerWrapper.get()) {
+        observerWrapper->observer().startRuleHeader(StyleRuleType::Keyframes, observerWrapper->startOffset(rangeCopy));
+        observerWrapper->observer().endRuleHeader(observerWrapper->endOffset(prelude));
+        observerWrapper->observer().startRuleBody(observerWrapper->previousTokenStartOffset(block));
+        observerWrapper->observer().endRuleBody(observerWrapper->endOffset(block));
     }
 
     auto keyframeRule = StyleRuleKeyframes::create(name);
@@ -999,10 +999,10 @@ RefPtr<StyleRulePage> CSSParser::consumePageRule(CSSParserTokenRange prelude, CS
     if (selectorList.isEmpty())
         return nullptr; // Parse error, invalid @page selector
 
-    if (m_observerWrapper) {
-        unsigned endOffset = m_observerWrapper->endOffset(prelude);
-        m_observerWrapper->observer().startRuleHeader(StyleRuleType::Page, m_observerWrapper->startOffset(prelude));
-        m_observerWrapper->observer().endRuleHeader(endOffset);
+    if (RefPtr observerWrapper = m_observerWrapper.get()) {
+        unsigned endOffset = observerWrapper->endOffset(prelude);
+        observerWrapper->observer().startRuleHeader(StyleRuleType::Page, observerWrapper->startOffset(prelude));
+        observerWrapper->observer().endRuleHeader(endOffset);
     }
 
     auto declarations = consumeDeclarationListInNewNestingContext(block, StyleRuleType::Page);
@@ -1020,11 +1020,11 @@ RefPtr<StyleRuleCounterStyle> CSSParser::consumeCounterStyleRule(CSSParserTokenR
     if (name.isNull())
         return nullptr;
 
-    if (m_observerWrapper) {
-        m_observerWrapper->observer().startRuleHeader(StyleRuleType::CounterStyle, m_observerWrapper->startOffset(rangeCopy));
-        m_observerWrapper->observer().endRuleHeader(m_observerWrapper->endOffset(prelude));
-        m_observerWrapper->observer().startRuleBody(m_observerWrapper->previousTokenStartOffset(block));
-        m_observerWrapper->observer().endRuleBody(m_observerWrapper->endOffset(block));
+    if (RefPtr observerWrapper = m_observerWrapper.get()) {
+        observerWrapper->observer().startRuleHeader(StyleRuleType::CounterStyle, observerWrapper->startOffset(rangeCopy));
+        observerWrapper->observer().endRuleHeader(observerWrapper->endOffset(prelude));
+        observerWrapper->observer().startRuleBody(observerWrapper->previousTokenStartOffset(block));
+        observerWrapper->observer().endRuleBody(observerWrapper->endOffset(block));
     }
 
     auto declarations = consumeDeclarationListInNewNestingContext(block, StyleRuleType::CounterStyle);
@@ -1042,12 +1042,12 @@ RefPtr<StyleRuleViewTransition> CSSParser::consumeViewTransitionRule(CSSParserTo
     if (!prelude.atEnd())
         return nullptr; // Parse error; @view-transition prelude should be empty
 
-    if (m_observerWrapper) {
-        unsigned endOffset = m_observerWrapper->endOffset(prelude);
-        m_observerWrapper->observer().startRuleHeader(StyleRuleType::ViewTransition, m_observerWrapper->startOffset(prelude));
-        m_observerWrapper->observer().endRuleHeader(endOffset);
-        m_observerWrapper->observer().startRuleBody(endOffset);
-        m_observerWrapper->observer().endRuleBody(endOffset);
+    if (RefPtr observerWrapper = m_observerWrapper.get()) {
+        unsigned endOffset = observerWrapper->endOffset(prelude);
+        observerWrapper->observer().startRuleHeader(StyleRuleType::ViewTransition, observerWrapper->startOffset(prelude));
+        observerWrapper->observer().endRuleHeader(endOffset);
+        observerWrapper->observer().startRuleBody(endOffset);
+        observerWrapper->observer().endRuleBody(endOffset);
     }
 
     auto declarations = consumeDeclarationListInNewNestingContext(block, StyleRuleType::ViewTransition);
@@ -1066,12 +1066,12 @@ RefPtr<StyleRulePositionTry> CSSParser::consumePositionTryRule(CSSParserTokenRan
     if (!prelude.atEnd())
         return nullptr;
 
-    if (m_observerWrapper) {
-        unsigned endOffset = m_observerWrapper->endOffset(prelude);
-        m_observerWrapper->observer().startRuleHeader(StyleRuleType::PositionTry, m_observerWrapper->startOffset(prelude));
-        m_observerWrapper->observer().endRuleHeader(endOffset);
-        m_observerWrapper->observer().startRuleBody(endOffset);
-        m_observerWrapper->observer().endRuleBody(endOffset);
+    if (RefPtr observerWrapper = m_observerWrapper.get()) {
+        unsigned endOffset = observerWrapper->endOffset(prelude);
+        observerWrapper->observer().startRuleHeader(StyleRuleType::PositionTry, observerWrapper->startOffset(prelude));
+        observerWrapper->observer().endRuleHeader(endOffset);
+        observerWrapper->observer().startRuleBody(endOffset);
+        observerWrapper->observer().endRuleBody(endOffset);
     }
 
     auto declarations = consumeDeclarationListInNewNestingContext(block, StyleRuleType::PositionTry);
@@ -1133,11 +1133,11 @@ RefPtr<StyleRuleScope> CSSParser::consumeScopeRule(CSSParserTokenRange prelude, 
             return nullptr;
     }
 
-    if (m_observerWrapper) {
-        m_observerWrapper->observer().startRuleHeader(StyleRuleType::Scope, m_observerWrapper->startOffset(preludeRangeCopy));
-        m_observerWrapper->observer().endRuleHeader(m_observerWrapper->endOffset(prelude));
-        m_observerWrapper->observer().startRuleBody(m_observerWrapper->previousTokenStartOffset(block));
-        m_observerWrapper->observer().endRuleBody(m_observerWrapper->endOffset(block));
+    if (RefPtr observerWrapper = m_observerWrapper.get()) {
+        observerWrapper->observer().startRuleHeader(StyleRuleType::Scope, observerWrapper->startOffset(preludeRangeCopy));
+        observerWrapper->observer().endRuleHeader(observerWrapper->endOffset(prelude));
+        observerWrapper->observer().startRuleBody(observerWrapper->previousTokenStartOffset(block));
+        observerWrapper->observer().endRuleBody(observerWrapper->endOffset(block));
     }
 
     m_ancestorRuleTypeStack.append(CSSParserEnum::NestedContextType::Scope);
@@ -1157,16 +1157,16 @@ RefPtr<StyleRuleStartingStyle> CSSParser::consumeStartingStyleRule(CSSParserToke
     if (!prelude.atEnd())
         return nullptr;
 
-    if (m_observerWrapper) {
-        m_observerWrapper->observer().startRuleHeader(StyleRuleType::StartingStyle, m_observerWrapper->startOffset(prelude));
-        m_observerWrapper->observer().endRuleHeader(m_observerWrapper->endOffset(prelude));
-        m_observerWrapper->observer().startRuleBody(m_observerWrapper->previousTokenStartOffset(block));
+    if (RefPtr observerWrapper = m_observerWrapper.get()) {
+        observerWrapper->observer().startRuleHeader(StyleRuleType::StartingStyle, observerWrapper->startOffset(prelude));
+        observerWrapper->observer().endRuleHeader(observerWrapper->endOffset(prelude));
+        observerWrapper->observer().startRuleBody(observerWrapper->previousTokenStartOffset(block));
     }
 
     auto rules = consumeNestedGroupRules(block);
 
-    if (m_observerWrapper)
-        m_observerWrapper->observer().endRuleBody(m_observerWrapper->endOffset(block));
+    if (RefPtr observerWrapper = m_observerWrapper.get())
+        observerWrapper->observer().endRuleBody(observerWrapper->endOffset(block));
 
     return StyleRuleStartingStyle::create(WTFMove(rules));
 }
@@ -1192,12 +1192,12 @@ RefPtr<StyleRuleLayer> CSSParser::consumeLayerRule(CSSParserTokenRange prelude, 
                 return { };
         }
 
-        if (m_observerWrapper) {
-            unsigned endOffset = m_observerWrapper->endOffset(preludeCopy);
-            m_observerWrapper->observer().startRuleHeader(StyleRuleType::LayerStatement, m_observerWrapper->startOffset(preludeCopy));
-            m_observerWrapper->observer().endRuleHeader(endOffset);
-            m_observerWrapper->observer().startRuleBody(endOffset);
-            m_observerWrapper->observer().endRuleBody(endOffset);
+        if (RefPtr observerWrapper = m_observerWrapper.get()) {
+            unsigned endOffset = observerWrapper->endOffset(preludeCopy);
+            observerWrapper->observer().startRuleHeader(StyleRuleType::LayerStatement, observerWrapper->startOffset(preludeCopy));
+            observerWrapper->observer().endRuleHeader(endOffset);
+            observerWrapper->observer().startRuleBody(endOffset);
+            observerWrapper->observer().endRuleBody(endOffset);
         }
 
         return StyleRuleLayer::createStatement(WTFMove(nameList));
@@ -1211,16 +1211,16 @@ RefPtr<StyleRuleLayer> CSSParser::consumeLayerRule(CSSParserTokenRange prelude, 
     if (!prelude.atEnd())
         return nullptr;
 
-    if (m_observerWrapper) {
-        m_observerWrapper->observer().startRuleHeader(StyleRuleType::LayerBlock, m_observerWrapper->startOffset(preludeCopy));
-        m_observerWrapper->observer().endRuleHeader(m_observerWrapper->endOffset(preludeCopy));
-        m_observerWrapper->observer().startRuleBody(m_observerWrapper->previousTokenStartOffset(*block));
+    if (RefPtr observerWrapper = m_observerWrapper.get()) {
+        observerWrapper->observer().startRuleHeader(StyleRuleType::LayerBlock, observerWrapper->startOffset(preludeCopy));
+        observerWrapper->observer().endRuleHeader(observerWrapper->endOffset(preludeCopy));
+        observerWrapper->observer().startRuleBody(observerWrapper->previousTokenStartOffset(*block));
     }
 
     auto rules = consumeNestedGroupRules(*block);
 
-    if (m_observerWrapper)
-        m_observerWrapper->observer().endRuleBody(m_observerWrapper->endOffset(*block));
+    if (RefPtr observerWrapper = m_observerWrapper.get())
+        observerWrapper->observer().endRuleBody(observerWrapper->endOffset(*block));
 
     return StyleRuleLayer::createBlock(WTFMove(*name), WTFMove(rules));
 }
@@ -1240,16 +1240,16 @@ RefPtr<StyleRuleContainer> CSSParser::consumeContainerRule(CSSParserTokenRange p
     if (!prelude.atEnd())
         return nullptr;
 
-    if (m_observerWrapper) {
-        m_observerWrapper->observer().startRuleHeader(StyleRuleType::Container, m_observerWrapper->startOffset(originalPreludeRange));
-        m_observerWrapper->observer().endRuleHeader(m_observerWrapper->endOffset(originalPreludeRange));
-        m_observerWrapper->observer().startRuleBody(m_observerWrapper->previousTokenStartOffset(block));
+    if (RefPtr observerWrapper = m_observerWrapper.get()) {
+        observerWrapper->observer().startRuleHeader(StyleRuleType::Container, observerWrapper->startOffset(originalPreludeRange));
+        observerWrapper->observer().endRuleHeader(observerWrapper->endOffset(originalPreludeRange));
+        observerWrapper->observer().startRuleBody(observerWrapper->previousTokenStartOffset(block));
     }
 
     auto rules = consumeNestedGroupRules(block);
 
-    if (m_observerWrapper)
-        m_observerWrapper->observer().endRuleBody(m_observerWrapper->endOffset(block));
+    if (RefPtr observerWrapper = m_observerWrapper.get())
+        observerWrapper->observer().endRuleBody(observerWrapper->endOffset(block));
 
     return StyleRuleContainer::create(WTFMove(*query), WTFMove(rules));
 }
@@ -1327,9 +1327,9 @@ RefPtr<StyleRuleKeyframe> CSSParser::consumeKeyframeStyleRule(CSSParserTokenRang
     if (keyList.isEmpty())
         return nullptr;
 
-    if (m_observerWrapper) {
-        m_observerWrapper->observer().startRuleHeader(StyleRuleType::Keyframe, m_observerWrapper->startOffset(prelude));
-        m_observerWrapper->observer().endRuleHeader(m_observerWrapper->endOffset(prelude));
+    if (RefPtr observerWrapper = m_observerWrapper.get()) {
+        observerWrapper->observer().startRuleHeader(StyleRuleType::Keyframe, observerWrapper->startOffset(prelude));
+        observerWrapper->observer().endRuleHeader(observerWrapper->endOffset(prelude));
     }
 
     auto declarations = consumeDeclarationListInNewNestingContext(block, StyleRuleType::Keyframe);
@@ -1368,8 +1368,8 @@ RefPtr<StyleRuleBase> CSSParser::consumeStyleRule(CSSParserTokenRange prelude, C
     CSSSelectorList selectorList { WTFMove(mutableSelectorList) };
     ASSERT(!selectorList.isEmpty());
 
-    if (m_observerWrapper)
-        observeSelectors(*m_observerWrapper, preludeCopyForInspector);
+    if (RefPtr observerWrapper = m_observerWrapper.get())
+        observeSelectors(*observerWrapper, preludeCopyForInspector);
 
     RefPtr<StyleRuleBase> styleRule;
 
@@ -1404,11 +1404,13 @@ void CSSParser::consumeBlockContent(CSSParserTokenRange range, StyleRuleType rul
     ASSERT(topContext().m_parsedProperties.isEmpty());
     ASSERT(topContext().m_parsedRules.isEmpty());
 
-    bool useObserver = m_observerWrapper && (ruleType == StyleRuleType::Style || ruleType == StyleRuleType::Keyframe || ruleType == StyleRuleType::Page);
+    RefPtr observerWrapper = m_observerWrapper.get();
+
+    bool useObserver = observerWrapper && (ruleType == StyleRuleType::Style || ruleType == StyleRuleType::Keyframe || ruleType == StyleRuleType::Page);
     if (useObserver) {
         if (isParsingStyleDeclarationsInRuleList == ParsingStyleDeclarationsInRuleList::No)
-            m_observerWrapper->observer().startRuleBody(m_observerWrapper->previousTokenStartOffset(range));
-        m_observerWrapper->skipCommentsBefore(range, true);
+            observerWrapper->observer().startRuleBody(observerWrapper->previousTokenStartOffset(range));
+        observerWrapper->skipCommentsBefore(range, true);
     }
 
     auto consumeUntilSemicolon = [&] {
@@ -1470,7 +1472,7 @@ void CSSParser::consumeBlockContent(CSSParserTokenRange range, StyleRuleType rul
             auto declarationStart = range;
 
             if (useObserver)
-                m_observerWrapper->yieldCommentsBefore(range);
+                observerWrapper->yieldCommentsBefore(range);
 
             consumeUntilSemicolon();
 
@@ -1478,7 +1480,7 @@ void CSSParser::consumeBlockContent(CSSParserTokenRange range, StyleRuleType rul
             auto isValidDeclaration = consumeDeclaration(declarationRange, ruleType);
 
             if (useObserver)
-                m_observerWrapper->skipCommentsBefore(range, false);
+                observerWrapper->skipCommentsBefore(range, false);
 
             if (!isValidDeclaration) {
                 // If it's not a valid declaration, we rewind the parser and try to parse it as a nested style rule.
@@ -1517,9 +1519,9 @@ void CSSParser::consumeBlockContent(CSSParserTokenRange range, StyleRuleType rul
 
     // Yield remaining comments
     if (useObserver) {
-        m_observerWrapper->yieldCommentsBefore(range);
+        observerWrapper->yieldCommentsBefore(range);
         if (isParsingStyleDeclarationsInRuleList == ParsingStyleDeclarationsInRuleList::No)
-            m_observerWrapper->observer().endRuleBody(m_observerWrapper->endOffset(range));
+            observerWrapper->observer().endRuleBody(observerWrapper->endOffset(range));
     }
 }
 
@@ -1608,9 +1610,10 @@ bool CSSParser::consumeDeclaration(CSSParserTokenRange range, StyleRuleType rule
     if (propertyID != CSSPropertyInvalid)
         consumeDeclarationValue(range, propertyID, important, ruleType);
 
-    if (m_observerWrapper && (ruleType == StyleRuleType::Style || ruleType == StyleRuleType::Keyframe || ruleType == StyleRuleType::Page)) {
-        m_observerWrapper->observer().observeProperty(
-            m_observerWrapper->startOffset(rangeCopy), m_observerWrapper->endOffset(rangeCopy),
+    RefPtr observerWrapper = m_observerWrapper.get();
+    if (observerWrapper&& (ruleType == StyleRuleType::Style || ruleType == StyleRuleType::Keyframe || ruleType == StyleRuleType::Page)) {
+        observerWrapper->observer().observeProperty(
+            observerWrapper->startOffset(rangeCopy), observerWrapper->endOffset(rangeCopy),
             important == IsImportant::Yes, didParseNewProperties());
     }
 
