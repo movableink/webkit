@@ -42,6 +42,12 @@ extension WebContentProcessExtension: WebContentExtension {
     override func lockdownSandbox(_ version: String) {
         if (version == "1.0") {
             self.applyRestrictedSandbox(revision: RestrictedSandboxRevision.revision1)
+            return
         }
+#if ENABLE_BROWSERENGINEKIT_SANDBOX_REVISION_2
+        if (version == "2.0") {
+            self.applyRestrictedSandbox(revision: RestrictedSandboxRevision.revision2)
+        }
+#endif
     }
 }
