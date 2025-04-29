@@ -74,29 +74,33 @@ PlatformImage PlatformWebViewClientWPE::snapshot()
         g_main_context_iteration(nullptr, TRUE);
 
     GUniqueOutPtr<GError> error;
-    GBytes* bytes = wpe_buffer_import_to_pixels(m_buffer.get(), &error.outPtr());
-    if (!bytes)
+    GBytes* pixels = wpe_buffer_import_to_pixels(m_buffer.get(), &error.outPtr());
+    if (!pixels)
         g_error("Failed to import buffer to pixels: %s\n", error->message);
+
+    gsize pixelsDataSize;
+    const auto* pixelsData = g_bytes_get_data(pixels, &pixelsDataSize);
+    GRefPtr<GBytes> bytes = adoptGRef(g_bytes_new(pixelsData, pixelsDataSize));
 
     auto width = wpe_buffer_get_width(m_buffer.get());
     auto height = wpe_buffer_get_height(m_buffer.get());
 #if USE(CAIRO)
     auto stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width);
-    auto* data = static_cast<unsigned char*>(const_cast<void*>(g_bytes_get_data(bytes, nullptr)));
+    auto* data = static_cast<unsigned char*>(const_cast<void*>(g_bytes_get_data(bytes.get(), nullptr)));
     cairo_surface_t* surface = cairo_image_surface_create_for_data(data, CAIRO_FORMAT_ARGB32, width, height, stride);
     static cairo_user_data_key_t s_surfaceDataKey;
-    cairo_surface_set_user_data(surface, &s_surfaceDataKey, g_object_ref(m_buffer.get()), [](void* data) {
-        g_object_unref(WPE_BUFFER(data));
+    cairo_surface_set_user_data(surface, &s_surfaceDataKey, bytes.leakRef(), [](void* data) {
+        g_bytes_unref(static_cast<GBytes*>(data));
     });
     cairo_surface_mark_dirty(surface);
 
     return surface;
 #elif USE(SKIA)
     auto info = SkImageInfo::MakeN32Premul(width, height, SkColorSpace::MakeSRGB());
-    SkPixmap pixmap(info, g_bytes_get_data(bytes, nullptr), info.minRowBytes64());
+    SkPixmap pixmap(info, g_bytes_get_data(bytes.get(), nullptr), info.minRowBytes());
     return SkImages::RasterFromPixmap(pixmap, [](const void*, void* context) {
-        g_object_unref(WPE_BUFFER(context));
-    }, g_object_ref(m_buffer.get())).release();
+        g_bytes_unref(static_cast<GBytes*>(context));
+    }, bytes.leakRef()).release();
 #endif
 }
 

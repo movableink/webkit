@@ -268,7 +268,9 @@ gpointer wpe_buffer_import_to_egl_image(WPEBuffer* buffer, GError** error)
  * @buffer: a #WPEBuffer
  * @error: return location for error or %NULL to ignore
  *
- * Import @buffer into a pixels buffer.
+ * Import @buffer into a pixels buffer. The returned data is owned by the @buffer and it's
+ * not a copy, so if you are not going to use it immediately or need to modify the data, you
+ * should make a copy.
  *
  * Returns: (transfer none): a #GBytes with the pixels data, or %NULL in case of error
  */
