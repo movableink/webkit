@@ -1481,7 +1481,7 @@ RefPtr<Element> Element::offsetParentForBindings()
     RefPtr element = offsetParent();
     if (!element || !element->isInShadowTree())
         return element;
-    while (element && !isDescendantOrShadowDescendantOf(&element->rootNode()))
+    while (element && !isShadowIncludingDescendantOf(&element->rootNode()))
         element = element->offsetParent();
     return element;
 }
@@ -2391,7 +2391,7 @@ RefPtr<Element> Element::elementForAttributeInternal(const QualifiedName& attrib
             ASSERT(it->value.size() == 1);
             hasExplicitlySetElement = true;
             RefPtr explicitlySetElement = it->value[0].get();
-            if (explicitlySetElement && isDescendantOrShadowDescendantOf(explicitlySetElement->rootNode()))
+            if (explicitlySetElement && isShadowIncludingDescendantOf(explicitlySetElement->rootNode()))
                 element = explicitlySetElement;
         }
     }
@@ -2443,7 +2443,7 @@ std::optional<Vector<Ref<Element>>> Element::elementsArrayForAttributeInternal(c
             hasExplicitlySetElements = true;
             elements = compactMap(it->value, [&](auto& weakElement) -> std::optional<Ref<Element>> {
                 RefPtr element = weakElement.get();
-                if (element && isDescendantOrShadowDescendantOf(element->rootNode()))
+                if (element && isShadowIncludingDescendantOf(element->rootNode()))
                     return element.releaseNonNull();
                 return std::nullopt;
             });
@@ -4046,7 +4046,7 @@ void Element::focus(const FocusOptions& options)
 
     if (RefPtr root = shadowRootWithDelegatesFocus(*this)) {
         RefPtr currentlyFocusedElement = document->focusedElement();
-        if (root->containsIncludingShadowDOM(currentlyFocusedElement.get())) {
+        if (root->isShadowIncludingInclusiveAncestorOf(currentlyFocusedElement.get())) {
             if (RefPtr page = document->page())
                 page->chrome().client().elementDidRefocus(*currentlyFocusedElement, options);
             return;

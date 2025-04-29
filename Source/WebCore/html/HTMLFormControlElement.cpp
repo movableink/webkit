@@ -403,7 +403,7 @@ void HTMLFormControlElement::handlePopoverTargetAction(const EventTarget* eventT
     ASSERT(popover->popoverData());
 
     if (RefPtr eventTargetNode = dynamicDowncast<Node>(eventTarget)) {
-        if (popover->containsIncludingShadowDOM(eventTargetNode.get()) && popover->isDescendantOrShadowDescendantOf(this))
+        if (popover->isShadowIncludingInclusiveAncestorOf(eventTargetNode.get()) && popover->isShadowIncludingDescendantOf(this))
             return;
     }
 

@@ -188,7 +188,7 @@ std::tuple<RefPtr<ImageBuffer>, FloatRect> SVGFEImageElement::imageBufferForEffe
     if (!is<SVGElement>(target.element))
         return { };
 
-    if (isDescendantOrShadowDescendantOf(target.element.get()))
+    if (isShadowIncludingDescendantOf(target.element.get()))
         return { };
 
     RefPtr contextNode = static_pointer_cast<SVGElement>(target.element);

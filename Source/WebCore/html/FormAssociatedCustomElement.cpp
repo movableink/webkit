@@ -67,7 +67,7 @@ ExceptionOr<void> FormAssociatedCustomElement::setValidity(ValidityStateFlags va
     m_validityStateFlags = validityStateFlags;
     setCustomValidity(validityStateFlags.isValid() ? emptyString() : WTFMove(message));
 
-    if (validationAnchor && !validationAnchor->isDescendantOrShadowDescendantOf(*m_element))
+    if (validationAnchor && !validationAnchor->isShadowIncludingDescendantOf(*m_element))
         return Exception { ExceptionCode::NotFoundError };
 
     m_validationAnchor = validationAnchor;

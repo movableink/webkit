@@ -579,7 +579,7 @@ static bool removingNodeRemovesPosition(Node& node, const Position& position)
         return true;
 
     RefPtr element = dynamicDowncast<Element>(node);
-    return element && element->containsIncludingShadowDOM(position.anchorNode());
+    return element && element->isShadowIncludingInclusiveAncestorOf(position.anchorNode());
 }
 
 void DragCaretController::nodeWillBeRemoved(Node& node)

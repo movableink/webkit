@@ -1310,7 +1310,7 @@ Vector<TargetedElementInfo> ElementTargetingController::extractTargets(Vector<Re
                 candidateOrHost = pseudo->hostElement();
             else
                 candidateOrHost = &candidate;
-            return candidateOrHost && target.containsIncludingShadowDOM(candidateOrHost.get());
+            return candidateOrHost && target.isShadowIncludingInclusiveAncestorOf(candidateOrHost.get());
         };
 
         candidates.removeAllMatching([&](auto& candidate) {
@@ -1362,7 +1362,7 @@ Vector<TargetedElementInfo> ElementTargetingController::extractTargets(Vector<Re
                 continue;
 
             bool elementIsAlreadyTargeted = targets.containsIf([&element](auto& target) {
-                return target->containsIncludingShadowDOM(element.get());
+                return target->isShadowIncludingInclusiveAncestorOf(element.get());
             });
 
             if (elementIsAlreadyTargeted)

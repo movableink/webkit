@@ -262,7 +262,7 @@ void ContentVisibilityDocumentState::updateAnimations(const Element& element, Is
         if (!styleOriginatedAnimation)
             continue;
         auto owningElement = styleOriginatedAnimation->owningElement();
-        if (!owningElement || !owningElement->element.isDescendantOrShadowDescendantOf(&element))
+        if (!owningElement || !owningElement->element.isShadowIncludingDescendantOf(&element))
             continue;
 
         if (RefPtr timeline = styleOriginatedAnimation->timeline())

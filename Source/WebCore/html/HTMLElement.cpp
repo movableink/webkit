@@ -1259,7 +1259,7 @@ ExceptionOr<void> HTMLElement::hidePopoverInternal(FocusPreviousElement focusPre
 
     Ref document = this->document();
     if (RefPtr element = popoverData()->previouslyFocusedElement()) {
-        if (focusPreviousElement == FocusPreviousElement::Yes && containsIncludingShadowDOM(document->protectedFocusedElement().get())) {
+        if (focusPreviousElement == FocusPreviousElement::Yes && isShadowIncludingInclusiveAncestorOf(document->protectedFocusedElement().get())) {
             FocusOptions options;
             options.preventScroll = true;
             element->focus(options);

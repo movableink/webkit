@@ -980,7 +980,7 @@ std::optional<HitTestResult> DragController::hitTestResultForDragStart(LocalFram
     constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AllowChildFrameContent };
     auto hitTestResult = source.eventHandler().hitTestResultAtPoint(location, hitType);
 
-    bool sourceContainsHitNode = element.containsIncludingShadowDOM(hitTestResult.innerNode());
+    bool sourceContainsHitNode = element.isShadowIncludingInclusiveAncestorOf(hitTestResult.innerNode());
     if (!sourceContainsHitNode) {
         // The original node being dragged isn't under the drag origin anymore... maybe it was
         // hidden or moved out from under the cursor. Regardless, we don't want to start a drag on

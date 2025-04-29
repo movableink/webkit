@@ -446,7 +446,7 @@ private:
     bool isDescendantOf(Node& node, Node& possibleAncestor)
     {
         if (UNLIKELY(m_useComposedTree))
-            return node.isDescendantOrShadowDescendantOf(&possibleAncestor);
+            return node.isShadowIncludingDescendantOf(&possibleAncestor);
         return node.isDescendantOf(&possibleAncestor);
     }
 
@@ -876,7 +876,7 @@ RefPtr<Node> StyledMarkupAccumulator::traverseNodesForSerialization(Node& startN
         else
             advanceToAncestorSibling();
 
-        ASSERT(next || !pastEnd || n->containsIncludingShadowDOM(pastEnd));
+        ASSERT(next || !pastEnd || n->isShadowIncludingInclusiveAncestorOf(pastEnd));
 
         if (isBlock(*n) && canHaveChildrenForEditing(*n) && next == pastEnd) {
             // Don't write out empty block containers that aren't fully selected.

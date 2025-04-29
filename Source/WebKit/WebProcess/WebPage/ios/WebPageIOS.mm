@@ -5984,7 +5984,7 @@ void WebPage::scheduleEditorStateUpdateAfterAnimationIfNeeded(const Element& ani
         return;
 
     auto scheduleEditorStateUpdateForStartOrEndContainerNodeIfNeeded = [&](const Node* container) {
-        if (!animatedElement.containsIncludingShadowDOM(container))
+        if (!animatedElement.isShadowIncludingInclusiveAncestorOf(container))
             return false;
 
         frame->selection().setCaretRectNeedsUpdate();

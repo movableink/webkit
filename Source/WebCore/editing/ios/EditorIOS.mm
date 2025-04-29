@@ -235,7 +235,7 @@ void Editor::confirmMarkedText()
     Ref document = protectedDocument();
     RefPtr focused = document->focusedElement();
     RefPtr composition = compositionNode();
-    if (composition && focused && !composition->isDescendantOrShadowDescendantOf(*focused)) {
+    if (composition && focused && !composition->isShadowIncludingDescendantOf(*focused)) {
         cancelComposition();
         document->setFocusedElement(focused.get());
     } else

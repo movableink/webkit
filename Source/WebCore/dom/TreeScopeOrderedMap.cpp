@@ -56,7 +56,7 @@ void TreeScopeOrderedMap::add(const AtomString& key, Element& element, const Tre
 {
     ASSERT_WITH_SECURITY_IMPLICATION(!key.isNull());
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&element.treeScope() == &treeScope);
-    ASSERT_WITH_SECURITY_IMPLICATION(treeScope.rootNode().containsIncludingShadowDOM(&element));
+    ASSERT_WITH_SECURITY_IMPLICATION(treeScope.rootNode().isShadowIncludingInclusiveAncestorOf(&element));
 
     if (!element.isInTreeScope())
         return;

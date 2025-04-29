@@ -1167,11 +1167,12 @@ ExceptionOr<void> Node::checkSetPrefix(const AtomString& prefix)
     return { };
 }
 
+// https://dom.spec.whatwg.org/#concept-tree-descendant
 bool Node::isDescendantOf(const Node& other) const
 {
     // Return true if other is an ancestor of this.
-    if (other.isDocumentNode())
-        return &treeScope().rootNode() == &other && !isDocumentNode() && isConnected();
+    if (other.isTreeScope())
+        return &treeScope().rootNode() == &other && !isTreeScope() && isInTreeScope();
     if (!other.hasChildNodes() || isConnected() != other.isConnected())
         return false;
     for (auto ancestor = parentNode(); ancestor; ancestor = ancestor->parentNode()) {
@@ -1181,7 +1182,8 @@ bool Node::isDescendantOf(const Node& other) const
     return false;
 }
 
-bool Node::isDescendantOrShadowDescendantOf(const Node& other) const
+// https://dom.spec.whatwg.org/#concept-shadow-including-inclusive-ancestor
+bool Node::isShadowIncludingDescendantOf(const Node& other) const
 {
     if (isDescendantOf(other))
         return true;
@@ -1190,21 +1192,7 @@ bool Node::isDescendantOrShadowDescendantOf(const Node& other) const
         if (other.contains(*host))
             return true;
     }
-    
-    return false;
-}
 
-bool Node::contains(const Node& node) const
-{
-    return this == &node || node.isDescendantOf(*this);
-}
-
-bool Node::containsIncludingShadowDOM(const Node* node) const
-{
-    for (; node; node = node->parentOrShadowHostNode()) {
-        if (node == this)
-            return true;
-    }
     return false;
 }
 
@@ -1332,7 +1320,7 @@ CheckedPtr<RenderObject> Node::checkedRenderer() const
 static bool isClosedShadowHiddenUsingSpecDefinition(const Node& A, const Node& B)
 {
     return A.isInShadowTree()
-        && !A.rootNode().containsIncludingShadowDOM(&B)
+        && !A.rootNode().isShadowIncludingInclusiveAncestorOf(&B)
         && (A.containingShadowRoot()->mode() != ShadowRootMode::Open || isClosedShadowHiddenUsingSpecDefinition(*A.shadowHost(), B));
 }
 #endif

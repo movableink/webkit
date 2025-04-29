@@ -10140,7 +10140,7 @@ void WebPage::simulateClickOverFirstMatchingTextInViewportWithUserInteraction(co
                 HitTestRequest::Type::Active,
             });
             RefPtr innerNode = result.innerNonSharedNode();
-            return !innerNode || !target->containsIncludingShadowDOM(innerNode.get());
+            return !innerNode || !target->isShadowIncludingInclusiveAncestorOf(innerNode.get());
         });
     };
 

@@ -143,7 +143,7 @@ bool HTMLLabelElement::isEventTargetedAtInteractiveDescendants(Event& event) con
     if (!node)
         return false;
 
-    if (!containsIncludingShadowDOM(node.get()))
+    if (!isShadowIncludingInclusiveAncestorOf(node.get()))
         return false;
 
     for (const auto* it = node.get(); it && it != this; it = it->parentElementInComposedTree()) {
@@ -162,7 +162,7 @@ void HTMLLabelElement::defaultEventHandler(Event& event)
         // If we can't find a control or if the control received the click
         // event, then there's no need for us to do anything.
         auto* eventTarget = dynamicDowncast<Node>(event.target());
-        if (!control || (eventTarget && control->containsIncludingShadowDOM(eventTarget))) {
+        if (!control || (eventTarget && control->isShadowIncludingInclusiveAncestorOf(eventTarget))) {
             HTMLElement::defaultEventHandler(event);
             return;
         }

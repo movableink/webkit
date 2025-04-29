@@ -405,7 +405,7 @@ void AXObjectCache::updateCurrentModalNode()
             if (!isNodeVisible(element.get()) || !modalElementHasAccessibleContent(*element))
                 continue;
 
-            bool focusIsInsideElement = focusedElement && (focusedElement == element.get() || focusedElement->isDescendantOf(*element));
+            bool focusIsInsideElement = focusedElement && focusedElement->isInclusiveDescendantOf(*element);
 
             // If the modal we found previously is a descendant of this one, prefer the descendant and skip this one.
             if (modalElementToReturn && foundModalWithFocusInside && modalElementToReturn->isDescendantOf(*element))

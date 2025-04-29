@@ -444,14 +444,26 @@ public:
 
     ExceptionOr<void> checkSetPrefix(const AtomString& prefix);
 
+    // https://dom.spec.whatwg.org/#concept-tree-descendant
     WEBCORE_EXPORT bool isDescendantOf(const Node&) const;
     bool isDescendantOf(const Node* other) const { return other && isDescendantOf(*other); }
-    WEBCORE_EXPORT bool contains(const Node&) const;
-    bool contains(const Node* other) const { return other && contains(*other); }
 
-    WEBCORE_EXPORT bool isDescendantOrShadowDescendantOf(const Node&) const;
-    bool isDescendantOrShadowDescendantOf(const Node* other) const { return other && isDescendantOrShadowDescendantOf(*other); } 
-    WEBCORE_EXPORT bool containsIncludingShadowDOM(const Node*) const;
+    // https://dom.spec.whatwg.org/#concept-tree-inclusive-descendant
+    ALWAYS_INLINE bool isInclusiveDescendantOf(const Node& other) const { return this == &other || isDescendantOf(other); }
+    ALWAYS_INLINE bool isInclusiveDescendantOf(const Node* other) const { return other && isInclusiveDescendantOf(*other); }
+
+    // https://dom.spec.whatwg.org/#concept-tree-inclusive-ancestor
+    ALWAYS_INLINE bool contains(const Node& other) const { return other.isInclusiveDescendantOf(*this); }
+    ALWAYS_INLINE bool contains(const Node* other) const { return other && contains(*other); }
+
+    // https://dom.spec.whatwg.org/#concept-shadow-including-descendant
+    WEBCORE_EXPORT bool isShadowIncludingDescendantOf(const Node&) const;
+    ALWAYS_INLINE bool isShadowIncludingDescendantOf(const Node* other) const { return other && isShadowIncludingDescendantOf(*other); }
+
+    // https://dom.spec.whatwg.org/#concept-shadow-including-inclusive-ancestor
+    ALWAYS_INLINE bool isShadowIncludingInclusiveAncestorOf(const Node& other) const { return this == &other || other.isShadowIncludingDescendantOf(*this); }
+    ALWAYS_INLINE bool isShadowIncludingInclusiveAncestorOf(const Node* other) const { return other && isShadowIncludingInclusiveAncestorOf(*other); }
+
     bool isComposedTreeDescendantOf(const Node&) const;
 
     // Whether or not a selection can be started in this object

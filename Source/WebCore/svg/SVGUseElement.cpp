@@ -475,7 +475,7 @@ RefPtr<SVGElement> SVGUseElement::findTarget(AtomString* targetID) const
         if (target->contains(this))
             return nullptr;
         // Target should only refer to a node in the same tree or a node in another document.
-        ASSERT(!isDescendantOrShadowDescendantOf(target.get()));
+        ASSERT(!isShadowIncludingDescendantOf(target.get()));
     }
 
     return target;

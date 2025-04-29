@@ -299,7 +299,7 @@ ExceptionOr<void> DOMSelection::setBaseAndExtent(Node* baseNode, unsigned baseOf
             return result.releaseException();
         Ref document = *frame->document();
         if (frame->settings().selectionAPIForShadowDOMEnabled()) {
-            if (!document->containsIncludingShadowDOM(baseNode) || !document->containsIncludingShadowDOM(extentNode))
+            if (!document->isShadowIncludingInclusiveAncestorOf(baseNode) || !document->isShadowIncludingInclusiveAncestorOf(extentNode))
                 return { };
         } else {
             if (!document->contains(*baseNode) || !document->contains(*extentNode))

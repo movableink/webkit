@@ -424,7 +424,7 @@ static inline Node* nextNode(TextIteratorBehaviors options, Node& node)
 static inline bool isDescendantOf(TextIteratorBehaviors options, Node& node, Node& possibleAncestor)
 {
     if (UNLIKELY(options.contains(TextIteratorBehavior::TraversesFlatTree)))
-        return node.isDescendantOrShadowDescendantOf(&possibleAncestor);
+        return node.isShadowIncludingDescendantOf(&possibleAncestor);
     return node.isDescendantOf(&possibleAncestor);
 }
 

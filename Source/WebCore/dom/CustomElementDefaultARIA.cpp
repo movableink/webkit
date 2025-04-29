@@ -47,7 +47,7 @@ void CustomElementDefaultARIA::setValueForAttribute(const QualifiedName& name, c
 
 static bool isElementVisible(const Element& element, const Element& thisElement)
 {
-    return !element.isConnected() || element.isInDocumentTree() || thisElement.isDescendantOrShadowDescendantOf(element.protectedRootNode());
+    return !element.isConnected() || element.isInDocumentTree() || thisElement.isShadowIncludingDescendantOf(element.protectedRootNode());
 }
 
 const AtomString& CustomElementDefaultARIA::valueForAttribute(const Element& thisElement, const QualifiedName& name) const

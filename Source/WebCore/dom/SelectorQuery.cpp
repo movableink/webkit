@@ -304,7 +304,7 @@ static ContainerNode& filterRootById(ContainerNode& rootNode, const CSSSelector&
                 if (LIKELY(!rootNode.treeScope().containsMultipleElementsWithId(idToMatch))) {
                     if (inAdjacentChain)
                         searchRoot = searchRoot->parentNode();
-                    if (searchRoot && (rootNode.isTreeScope() || searchRoot == &rootNode || searchRoot->isDescendantOf(rootNode)))
+                    if (searchRoot && (rootNode.isTreeScope() || searchRoot->isInclusiveDescendantOf(rootNode)))
                         return *searchRoot;
                 }
             }

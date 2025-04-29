@@ -977,8 +977,8 @@ std::optional<SimpleRange> AccessibilityObject::findTextRange(const Vector<Strin
     if (found) {
         // If the search started within a text control, ensure that the result is inside that element.
         if (element() && element()->isTextField()) {
-            if (!found->startContainer().isDescendantOrShadowDescendantOf(element())
-                || !found->endContainer().isDescendantOrShadowDescendantOf(element()))
+            if (!found->startContainer().isShadowIncludingDescendantOf(element())
+                || !found->endContainer().isShadowIncludingDescendantOf(element()))
                 return std::nullopt;
         }
     }
@@ -2001,7 +2001,7 @@ int AccessibilityObject::lineForPosition(const VisiblePosition& visiblePos) cons
 
     // If the position is not in the same editable region as this AX object, return -1.
     Node* containerNode = visiblePos.deepEquivalent().containerNode();
-    if (!containerNode->containsIncludingShadowDOM(node()) && !node()->containsIncludingShadowDOM(containerNode))
+    if (!containerNode->isShadowIncludingInclusiveAncestorOf(node()) && !node()->isShadowIncludingInclusiveAncestorOf(containerNode))
         return -1;
 
     int lineCount = -1;
