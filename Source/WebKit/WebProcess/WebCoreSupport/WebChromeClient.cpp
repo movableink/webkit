@@ -1289,7 +1289,8 @@ void WebChromeClient::exitVideoFullscreenForVideoElement(HTMLVideoElement& video
 
 void WebChromeClient::setUpPlaybackControlsManager(HTMLMediaElement& mediaElement)
 {
-    protectedPage()->playbackSessionManager().setUpPlaybackControlsManager(mediaElement);
+    if (RefPtr page = m_page.get())
+        page->playbackSessionManager().setUpPlaybackControlsManager(mediaElement);
 }
 
 void WebChromeClient::clearPlaybackControlsManager()
