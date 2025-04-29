@@ -4635,7 +4635,8 @@ void RenderBlockFlow::computeInlinePreferredLogicalWidths(LayoutUnit& minLogical
 
     // Signals the text indent was more negative than the min preferred width
     auto remainingNegativeTextIndent = std::optional<LayoutUnit> { };
-    auto textIndent = textIndentForBlockContainer(*this);
+    auto textIndentForMinimum = textIndentForBlockContainer(*this);
+    auto textIndentForMaximum = textIndentForMinimum;
     CheckedPtr<RenderBox> previousFloat;
     bool isPrevChildInlineFlow = false;
     bool shouldBreakLineAfterText = false;
@@ -4811,11 +4812,16 @@ void RenderBlockFlow::computeInlinePreferredLogicalWidths(LayoutUnit& minLogical
                 }
 
                 // Add in text-indent. This is added in only once.
-                if (textIndent && !box->isFloating()) {
-                    auto ceiledIndent = LayoutUnit { textIndent->ceilToFloat() };
-                    childMin += ceiledIndent;
-                    childMax += ceiledIndent;
-                    textIndent = childMin < 0 ? std::make_optional(LayoutUnit::fromFloatCeil(childMin)) : std::nullopt;
+                if (!box->isFloating()) {
+                    if (textIndentForMinimum) {
+                        childMin += LayoutUnit { textIndentForMinimum->ceilToFloat() };
+                        textIndentForMinimum = childMin < 0 ? std::make_optional(LayoutUnit::fromFloatCeil(childMin)) : std::nullopt;
+                    }
+
+                    if (textIndentForMaximum) {
+                        childMax += LayoutUnit { textIndentForMaximum->ceilToFloat() };
+                        textIndentForMaximum = childMax < 0 ? std::make_optional(LayoutUnit::fromFloatCeil(childMax)) : std::nullopt;
+                    }
                 }
                 
                 if (canHangPunctuationAtStart && !addedStartPunctuationHang && !box->isFloating())
@@ -4883,20 +4889,22 @@ void RenderBlockFlow::computeInlinePreferredLogicalWidths(LayoutUnit& minLogical
 
                 // Add in text-indent. This is added in only once.
                 float ti = 0.f;
-                if (textIndent || remainingNegativeTextIndent) {
-                    ti = (textIndent ? *textIndent : *remainingNegativeTextIndent).ceilToFloat();
+                if (textIndentForMinimum || remainingNegativeTextIndent) {
+                    ti = (textIndentForMinimum ? *textIndentForMinimum : *remainingNegativeTextIndent).ceilToFloat();
                     childMin += ti;
                     widths.beginMin += ti;
-
                     // It the text indent negative and larger than the child minimum, we re-use the remainder
                     // in future minimum calculations, but using the negative value again on the maximum
                     // will lead to under-counting the max pref width.
-                    if (textIndent) {
-                        childMax += ti;
-                        widths.beginMax += ti;
-                        textIndent = { };
-                    }
+                    textIndentForMinimum = { };
                     remainingNegativeTextIndent = childMin < 0 ? std::make_optional(childMin) : std::nullopt;
+                }
+
+                if (textIndentForMaximum) {
+                    auto textIndent = textIndentForMaximum->ceilToFloat();
+                    childMax += textIndent;
+                    widths.beginMax += textIndent;
+                    textIndentForMaximum = { };
                 }
                 
                 // See if we have a hanging punctuation situation at the start.
@@ -4946,7 +4954,8 @@ void RenderBlockFlow::computeInlinePreferredLogicalWidths(LayoutUnit& minLogical
                     maxLogicalWidth = preferredWidth(maxLogicalWidth, inlineMax);
                     maxLogicalWidth = preferredWidth(maxLogicalWidth, childMax);
                     inlineMax = widths.endMax;
-                    textIndent = { };
+                    textIndentForMinimum = { };
+                    textIndentForMaximum = { };
                     remainingNegativeTextIndent = { };
                     addedStartPunctuationHang = true;
                     if (widths.endsWithBreak)
@@ -4967,7 +4976,8 @@ void RenderBlockFlow::computeInlinePreferredLogicalWidths(LayoutUnit& minLogical
             inlineMin = inlineMax = 0;
             stripFrontSpaces = true;
             trailingSpaceChild = 0;
-            textIndent = { };
+            textIndentForMinimum = { };
+            textIndentForMaximum = { };
             remainingNegativeTextIndent = { };
             addedStartPunctuationHang = true;
         }
