@@ -891,31 +891,35 @@ WASM_IPINT_EXTERN_CPP_DECL(ref_cast, int32_t heapType, bool allowNull, EncodedJS
 
 /**
  * Given a function index, determine the pointer to its executable code.
- * Return a pair of the wasm instance pointer and the code pointer.
+ * Return a pair of the wasm instance pointer received as the first argument and the code pointer.
+ * Additionally, store the following into the 'calleeAndWasmInstanceReturn':
+ *
+ *  - calleeAndWasmInstanceReturn[0] - the callee to use, goes into the 'callee' slot of the CallFrame.
+ *  - calleeAndWasmInstanceReturn[1] - the wasm instance to use, goes into the 'codeBlock' slot of the CallFrame.
  */
-static inline UGPRPair resolveWasmCall(JSWebAssemblyInstance* instance, Wasm::FunctionSpaceIndex functionIndex, Register* callee)
+static inline UGPRPair resolveWasmCall(JSWebAssemblyInstance* instance, Wasm::FunctionSpaceIndex functionIndex, Register* calleeAndWasmInstanceReturn)
 {
     uint32_t importFunctionCount = instance->module().moduleInformation().importFunctionCount();
 
+    Register& calleeReturn = calleeAndWasmInstanceReturn[0];
+    Register& wasmInstanceReturn = calleeAndWasmInstanceReturn[1];
     CodePtr<WasmEntryPtrTag> codePtr;
-    EncodedJSValue boxedCallee = CalleeBits::encodeNullCallee();
-    Register& functionInfoSlot = callee[1];
 
     if (functionIndex < importFunctionCount) {
         auto* functionInfo = instance->importFunctionInfo(functionIndex);
         codePtr = functionInfo->importFunctionStub;
-        *callee = *std::bit_cast<uintptr_t*>(functionInfo->boxedWasmCalleeLoadLocation);
+        calleeReturn = *std::bit_cast<uintptr_t*>(functionInfo->boxedWasmCalleeLoadLocation);
         if (!functionInfo->targetInstance)
-            functionInfoSlot = reinterpret_cast<uintptr_t>(functionInfo);
+            // The imported function is a JS function
+            wasmInstanceReturn = reinterpret_cast<uintptr_t>(functionInfo);
         else
-            functionInfoSlot = functionInfo->targetInstance.get();
+            wasmInstanceReturn = functionInfo->targetInstance.get();
     } else {
         // Target is a wasm function within the same instance
         codePtr = *instance->calleeGroup()->entrypointLoadLocationFromFunctionIndexSpace(functionIndex);
-        boxedCallee = CalleeBits::encodeNativeCallee(
+        calleeReturn = CalleeBits::encodeNativeCallee(
             instance->calleeGroup()->wasmCalleeFromFunctionIndexSpace(functionIndex));
-        *callee = boxedCallee;
-        functionInfoSlot = instance;
+        wasmInstanceReturn = instance;
     }
 
     RELEASE_ASSERT(WTF::isTaggedWith<WasmEntryPtrTag>(codePtr));
