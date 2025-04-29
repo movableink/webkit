@@ -171,7 +171,8 @@ static inline String joinStrings(JSGlobalObject* globalObject, const WriteBarrie
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    ASSERT(joinedLength);
+    if (!joinedLength)
+        return emptyString();
 
     std::span<OutputCharacterType> data;
     String result = StringImpl::tryCreateUninitialized(joinedLength, data);
