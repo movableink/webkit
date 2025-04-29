@@ -143,6 +143,14 @@ def run_comparison_for_test(args, jsc_args, test_name):
 
         print(f"\n--- Category: {category} ---")
 
+        if args.verbose:
+            print("\nLogs from Build A:")
+            for line in sorted(set_a):
+                print("  A:", line)
+            print("\nLogs from Build B:")
+            for line in sorted(set_b):
+                print("  B:", line)
+
         print("\nRemoved:")
         if removed:
             for line in removed:
