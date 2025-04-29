@@ -567,6 +567,8 @@ void RenderLayer::removeOnlyThisLayer()
         removeChild(*current);
         m_parent->addChild(*current, nextSib);
         current->setRepaintStatus(RepaintStatus::NeedsFullRepaint);
+        if (isComposited())
+            current->computeRepaintRectsIncludingDescendants();
         current = next;
     }
 
