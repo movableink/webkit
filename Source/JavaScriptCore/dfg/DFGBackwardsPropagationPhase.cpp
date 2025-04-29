@@ -616,6 +616,20 @@ private:
             // The results of these nodes are pure unboxed integers. Then, we
             // should definitely tell their children that you will be used as an integer.
             node->child1()->mergeFlags(NodeBytecodeUsesAsInt);
+            if (node->op() == Int52Rep) {
+                auto& edge = node->child1();
+                if (edge->hasDoubleResult()) {
+                    if (bytecodeCanIgnoreNegativeZero(node->arithNodeFlags()))
+                        edge.setUseKind(DoubleRepRealUse);
+                    else
+                        edge.setUseKind(DoubleRepAnyIntUse);
+                } else if (!edge->shouldSpeculateInt32ForArithmetic()) {
+                    if (bytecodeCanIgnoreNegativeZero(node->arithNodeFlags()))
+                        edge.setUseKind(RealNumberUse);
+                    else
+                        edge.setUseKind(AnyIntUse);
+                }
+            }
             break;
 
         case DoubleRep:
