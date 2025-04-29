@@ -1224,6 +1224,8 @@ imported/w3c/web-platform-tests/cookie-store [ Skip ]
 imported/w3c/web-platform-tests/cookies/partitioned-cookies/partitioned-cookies.tentative.https.html [ Skip ]
 http/tests/cookies/cookie-store-get-secure.https.html [ Skip ]
 http/tests/cookies/cookie-store-set-secure.https.html [ Skip ]
+cookies/cookie-store-register-eventlistener-from-file-protocol.html [ Skip ]
+cookies/cookie-store-start-listening-for-change-with-null-url-crash.html [ Skip ]
 
 # View Transitions API is disabled in WK1.
 imported/w3c/web-platform-tests/css/css-view-transitions [ Skip ]

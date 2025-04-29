@@ -2431,6 +2431,3 @@ webkit.org/b/291459 [ Release ] imported/w3c/web-platform-tests/css/css-shapes/s
 webkit.org/b/289124 imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/noopener/coop-noopener-allow-popups.https.html [ Pass Failure ]
 
 webkit.org/b/291785 [ Release ] security/decode-buffer-size.html [ Timeout ]
-
-webkit.org/b/292217 [ Debug ] cookies/cookie-store-register-eventlistener-from-file-protocol.html [ Crash ]
-webkit.org/b/292217 [ Debug ] fast/cookie-store/start-listening-for-change-with-null-url-crash.html [ Crash ]
