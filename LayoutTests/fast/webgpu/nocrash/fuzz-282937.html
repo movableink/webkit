@@ -1,6 +1,7 @@
 <style>
   :root { background: #102030e0; color: #99ddbbcc; font-size: 15px; }
 </style>
+<script src="../../../resources/js-test-pre.js"></script>
 <script id="shared">
 const log = globalThis.$vm?.print ?? console.log;
 
@@ -25073,8 +25074,7 @@ onload = async () => {
   for (let result of results) {
     if (result.status === 'rejected') { throw result.reason; }
   }
-  log('the end')
-  log(location);
+  debug('Pass')
   } catch (e) {
     log('error');
     log(e);
@@ -25105,6 +25105,7 @@ onload = async () => {
       
     }
   }
+  globalThis.testRunner?.dumpAsText();
   globalThis.testRunner?.notifyDone();
 };
 </script>

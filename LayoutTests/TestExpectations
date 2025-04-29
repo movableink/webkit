@@ -2298,20 +2298,70 @@ webkit.org/b/126420 svg/custom/resource-invalidation-crash.svg [ Failure Pass ]
 webkit.org/b/139639 [ Debug ] cssom/non-subpixel-scroll-top-left-values.html [ Slow ]
 
 [ Debug ] fast/workers/worker-cloneport.html [ Slow ]
+
+# WebGPU
+
+fast/webgpu [ Pass ]
+
 [ Debug ] fast/webgpu/present-without-compute-pipeline.html [ Slow ]
 [ Debug ] fast/webgpu/multidimensional-texture-bounds.html [ Slow ]
-
-fast/webgpu/regression [ Pass ]
-fast/webgpu/regression/repro_275108.html [ Pass Failure Timeout ]
-
-[ Debug ] fast/webgpu/nocrash [ Skip ]
-[ Release ] fast/webgpu/nocrash [ Pass Failure ]
-fast/webgpu/nocrash/fuzz-282052.html [ Pass Failure Slow ]
-[ Debug ] fast/webgpu/regression/repro_275624.html [ Skip ]
 [ Debug ] fast/webgpu/texture-supports-blending.html [ Pass Crash ]
 
-# renable once test reliability is improved webkit.org/b/286080
-fast/webgpu/nocrash/fuzz-284937.html [ Skip ]
+# Regression tests
+
+fast/webgpu/regression/repro_275108.html [ Pass Failure Timeout ]
+[ Debug ] fast/webgpu/regression/repro_275624.html [ Skip ]
+
+# FIXME: https://bugs.webkit.org/show_bug.cgi?id=292024
+[ Debug ] fast/webgpu/regression/repro_281491.html [ Pass Crash ]
+
+# nocrash/
+
+fast/webgpu/nocrash/fuzz-282937.html [ Failure ]
+fast/webgpu/nocrash/fuzz-283196.html [ Failure ]
+fast/webgpu/nocrash/fuzz-283943.html [ Failure ]
+fast/webgpu/nocrash/fuzz-283989.html [ Failure ]
+fast/webgpu/nocrash/fuzz-283998.html [ Failure ]
+fast/webgpu/nocrash/fuzz-284090.html [ Failure ]
+fast/webgpu/nocrash/fuzz-284126.html [ Failure ]
+fast/webgpu/nocrash/fuzz-284326.html [ Failure ]
+fast/webgpu/nocrash/fuzz-284335.html [ Failure ]
+fast/webgpu/nocrash/fuzz-284390.html [ Failure ]
+fast/webgpu/nocrash/fuzz-285311.html [ Failure ]
+fast/webgpu/nocrash/fuzz-285828.html [ Failure ]
+fast/webgpu/nocrash/fuzz-286407.html [ Failure ]
+fast/webgpu/nocrash/fuzz-286689.html [ Failure ]
+fast/webgpu/nocrash/fuzz-286956.html [ Failure ]
+fast/webgpu/nocrash/fuzz-286967.html [ Failure ]
+fast/webgpu/nocrash/fuzz-287418.html [ Failure ]
+fast/webgpu/nocrash/fuzz-287519.html [ Failure ]
+fast/webgpu/nocrash/fuzz-287580.html [ Failure ]
+fast/webgpu/nocrash/fuzz-287868.html [ Failure ]
+fast/webgpu/nocrash/fuzz-290344.html [ Failure ]
+fast/webgpu/nocrash/fuzz-291181.html [ Failure ]
+fast/webgpu/nocrash/fuzz-291545.html [ Failure ]
+
+fast/webgpu/nocrash/fuzz-277035.html [ Pass Failure ]
+fast/webgpu/nocrash/fuzz-284498.html [ Pass Failure ]
+fast/webgpu/nocrash/fuzz-287200.html [ Pass Failure ]
+fast/webgpu/nocrash/fuzz-287866.html [ Pass Failure ]
+fast/webgpu/nocrash/fuzz-290795.html [ Pass Failure ]
+fast/webgpu/nocrash/fuzz-290978.html [ Pass Failure ]
+fast/webgpu/nocrash/fuzz-291570.html [ Pass Failure ]
+
+fast/webgpu/nocrash/fuzz-274270.html [ Pass Timeout ]
+fast/webgpu/nocrash/fuzz-277027.html [ Pass Timeout ]
+fast/webgpu/nocrash/fuzz-282485.html [ Pass Timeout ]
+fast/webgpu/nocrash/fuzz-283157.html [ Pass Timeout ]
+
+fast/webgpu/nocrash/fuzz-274289.html [ Pass Failure Timeout ]
+fast/webgpu/nocrash/fuzz-291181-reduced.html [ Pass Failure Timeout ]
+
+[ Debug ] fast/webgpu/nocrash/RenderBundle_WRITE.html [ Pass Timeout ]
+[ Debug ] fast/webgpu/nocrash/fuzz-279542.html [ Pass Timeout ]
+
+# FIXME: https://bugs.webkit.org/show_bug.cgi?id=292020
+[ Debug ] fast/webgpu/nocrash/fuzz-275294.html [ Pass Crash ]
 
 # Imported W3C HTML/DOM ref tests that are failing.
 imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/environment-changes/viewport-change.html [ Failure ]

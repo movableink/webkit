@@ -1,3 +1,4 @@
+<script src="../../../resources/js-test-pre.js"></script>
 <script>
     const log = console.log;
     globalThis.testRunner?.dumpAsText();
@@ -89,14 +90,14 @@ struct FragmentOutput0 {
     });
 
     await device0.queue.onSubmittedWorkDone();
-    console.log('Pass')
+    debug('Pass')
     globalThis.testRunner?.notifyDone();
 }
 
 onload = async function() {
  try {
      await window0();
- } catch {
+ } catch (e) {
      if (e instanceof GPUPipelineError) {
          if (e.name === 'OperationError') {}
      }

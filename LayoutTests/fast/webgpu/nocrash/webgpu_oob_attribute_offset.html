@@ -6,6 +6,7 @@
   </head>
   <body>
     <canvas width="1024" height="1024"></canvas>
+    <script src="../../../resources/js-test-pre.js"></script>
     <script>
         globalThis?.testRunner?.dumpAsText(); globalThis?.testRunner?.waitUntilDone();
 
@@ -359,6 +360,7 @@
       device.queue.submit([encoder.finish()]);
     }
     updateGrid();
+    debug('Pass');
     globalThis?.testRunner?.notifyDone();
 };
 

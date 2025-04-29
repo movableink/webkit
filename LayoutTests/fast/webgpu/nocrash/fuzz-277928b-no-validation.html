@@ -1,3 +1,4 @@
+<script src="../../../resources/js-test-pre.js"></script>
 <script>
 async function run() {
     let adapter = await navigator.gpu.requestAdapter();
@@ -37,7 +38,7 @@ async function run() {
     let renderPassEncoder = commandEncoder.beginRenderPass({ colorAttachments: [{ view: textureView, loadOp: 'clear', storeOp: 'store' }] });
     renderPassEncoder.executeBundles([renderBundle2, renderBundle]);
     await device.queue.onSubmittedWorkDone();
-    console.log('Pass')
+    debug('Pass')
     globalThis.testRunner?.notifyDone();
 }
 globalThis.testRunner?.dumpAsText();

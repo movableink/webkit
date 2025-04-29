@@ -1,4 +1,5 @@
 <!-- webkit-test-runner [ enableMetalDebugDevice=true ] -->
+<script src="../../../resources/js-test-pre.js"></script>
 <script>
 async function run() {
     let adapter = await navigator.gpu.requestAdapter();
@@ -10,7 +11,7 @@ async function run() {
     });
     device.queue.writeTexture({texture : texture}, new Uint8Array(136), {}, { width: 16, height: 4 });
     await device.queue.onSubmittedWorkDone();
-    console.log('Pass')
+    debug('Pass')
     globalThis.testRunner?.notifyDone();
 }
 testRunner?.dumpAsText();

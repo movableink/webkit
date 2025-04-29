@@ -1572,6 +1572,22 @@ fast/webgpu/nocrash/fuzz-286820.html [ Skip ]
 [ x86_64 ] fast/webgpu/nocrash/fuzz-282499.html [ Skip ]
 [ x86_64 ] fast/webgpu/nocrash/fuzz-283196.html [ Skip ]
 
+[ x86_64 ] fast/webgpu/nocrash/fuzz-145583179.html [ Pass Failure ]
+[ x86_64 ] fast/webgpu/nocrash/fuzz-145584310.html [ Pass Failure ]
+[ x86_64 ] fast/webgpu/nocrash/fuzz-147280474.html [ Pass Failure ]
+[ x86_64 ] fast/webgpu/nocrash/fuzz-287444.html [ Pass Failure ]
+[ x86_64 ] fast/webgpu/nocrash/fuzz-287761.html [ Pass Failure ]
+[ x86_64 ] fast/webgpu/nocrash/fuzz-288383.html [ Pass Failure ]
+[ x86_64 ] fast/webgpu/nocrash/fuzz-288671.html [ Pass Failure ]
+[ x86_64 ] fast/webgpu/nocrash/fuzz-289006.html [ Pass Failure ]
+[ x86_64 ] fast/webgpu/nocrash/fuzz-291180.html [ Pass Failure ]
+[ x86_64 ] fast/webgpu/nocrash/fuzz-291435.html [ Pass Failure ]
+[ x86_64 ] fast/webgpu/nocrash/fuzz-291579.html [ Pass Failure ]
+[ x86_64 ] fast/webgpu/nocrash/fuzz-291708.html [ Pass Failure ]
+[ x86_64 ] fast/webgpu/nocrash/fuzz-291867.html [ Pass Failure ]
+
+[ x86_64 ] fast/webgpu/nocrash/fuzz-291168.html [ Pass Timeout ]
+
 # skipped on Intel due to intermittently timing out due to the workload
 [ x86_64 ] fast/webgpu/nocrash/fuzz-282052.html [ Skip ]
 

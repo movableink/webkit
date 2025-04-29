@@ -1553,7 +1553,7 @@ std::pair<Ref<RenderPipeline>, NSString*> Device::createRenderPipeline(const WGP
     MTLDepthClipMode mtlDepthClipMode = MTLDepthClipModeClip;
     if (descriptor.primitive.nextInChain) {
         if (!hasFeature(WGPUFeatureName_DepthClipControl) || descriptor.primitive.nextInChain->sType != WGPUSType_PrimitiveDepthClipControl || descriptor.primitive.nextInChain->next)
-            return returnInvalidRenderPipeline(*this, isAsync, "unclippedDepth used without enabling depth-clip-contro feature"_s);
+            return returnInvalidRenderPipeline(*this, isAsync, "unclippedDepth used without enabling depth-clip-control feature"_s);
 
         auto* depthClipControl = reinterpret_cast<const WGPUPrimitiveDepthClipControl*>(descriptor.primitive.nextInChain);
 
