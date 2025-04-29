@@ -466,11 +466,8 @@ void WebFrameProxy::commitProvisionalFrame(IPC::Connection& connection, FrameIde
     ASSERT(m_page);
     if (m_provisionalFrame) {
         protectedProcess()->send(Messages::WebPage::LoadDidCommitInAnotherProcess(frameID, m_layerHostingContextIdentifier), *webPageIDInCurrentProcess());
-        if (RefPtr process = std::exchange(m_provisionalFrame, nullptr)->takeFrameProcess()) {
+        if (RefPtr process = std::exchange(m_provisionalFrame, nullptr)->takeFrameProcess())
             m_frameProcess = process.releaseNonNull();
-            if (m_remoteFrameSize)
-                send(Messages::WebFrame::UpdateFrameSize(*m_remoteFrameSize));
-        }
     }
     protectedPage()->didCommitLoadForFrame(connection, frameID, WTFMove(frameInfo), WTFMove(request), navigationID, mimeType, frameHasCustomContentProvider, frameLoadType, certificateInfo, usedLegacyTLS, privateRelayed, proxyName, source, containsPluginDocument, hasInsecureContent, mouseEventPolicy, userData);
 }

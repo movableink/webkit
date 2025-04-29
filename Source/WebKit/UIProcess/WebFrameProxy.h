@@ -231,6 +231,8 @@ public:
     WebFrameProxy* opener() { return m_opener.get(); }
     void disownOpener() { m_opener = nullptr; }
 
+    std::optional<WebCore::IntSize> remoteFrameSize() const { return m_remoteFrameSize; }
+
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&);
     static void sendCancelReply(IPC::Connection&, IPC::Decoder&);
     template<typename M, typename C> void sendWithAsyncReply(M&&, C&&);

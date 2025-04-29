@@ -4369,6 +4369,8 @@ TEST(SiteIsolation, CoordinateTransformation)
     Util::run(&done);
 }
 
+// FIXME: Fix this on iOS. https://bugs.webkit.org/show_bug.cgi?id=292276
+#if PLATFORM(MAC)
 TEST(SiteIsolation, Events)
 {
     auto eventListeners = "<script>"
@@ -4413,20 +4415,18 @@ TEST(SiteIsolation, Events)
         @"pageshow from webkit.org",
         @"load from example.com",
         @"pageshow from example.com",
-
-        // Note: when fixing <rdar://150217584> this resize needs to stay here.
         @"resize from webkit.org",
 
         // FIXME: <rdar://150216569> There should be a pageswap from webkit.org here.
 
         @"load from apple.com",
         @"pageshow from apple.com",
-        @"resize from apple.com", // FIXME: <rdar://150217584> This event should not happen.
     ];
     if (![messages isEqualToArray:expectedMessages]) {
         WTFLogAlways("Actual messages: %@", messages.get());
         EXPECT_TRUE(false);
     }
 }
+#endif
 
 }

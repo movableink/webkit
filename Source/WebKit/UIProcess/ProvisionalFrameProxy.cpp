@@ -29,8 +29,8 @@
 #include "FrameProcess.h"
 #include "ProvisionalFrameCreationParameters.h"
 #include "VisitedLinkStore.h"
+#include "WebFrameMessages.h"
 #include "WebFrameProxy.h"
-#include "WebPageMessages.h"
 #include "WebPageProxy.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -45,13 +45,14 @@ ProvisionalFrameProxy::ProvisionalFrameProxy(WebFrameProxy& frame, Ref<FrameProc
 {
     Ref process = this->process();
     process->markProcessAsRecentlyUsed();
-    process->send(Messages::WebPage::CreateProvisionalFrame(ProvisionalFrameCreationParameters {
+    process->send(Messages::WebFrame::CreateProvisionalFrame(ProvisionalFrameCreationParameters {
         frame.frameID(),
         std::nullopt,
         frame.layerHostingContextIdentifier(),
         frame.effectiveSandboxFlags(),
-        frame.scrollingMode()
-    }), frame.protectedPage()->webPageIDInProcess(process));
+        frame.scrollingMode(),
+        frame.remoteFrameSize()
+    }), frame.frameID());
 }
 
 ProvisionalFrameProxy::~ProvisionalFrameProxy()
@@ -60,12 +61,8 @@ ProvisionalFrameProxy::~ProvisionalFrameProxy()
         return;
 
     Ref frame = m_frame.get();
-    RefPtr page = frame->page();
-    if (!page)
-        return;
-
     Ref process = this->process();
-    process->send(Messages::WebPage::DestroyProvisionalFrame(frame->frameID()), page->webPageIDInProcess(process));
+    process->send(Messages::WebFrame::DestroyProvisionalFrame(), frame->frameID());
 }
 
 RefPtr<FrameProcess> ProvisionalFrameProxy::takeFrameProcess()

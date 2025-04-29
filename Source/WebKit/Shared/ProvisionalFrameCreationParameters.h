@@ -26,6 +26,7 @@
 #pragma once
 
 #include <WebCore/FrameIdentifier.h>
+#include <WebCore/IntSize.h>
 #include <WebCore/LayerHostingContextIdentifier.h>
 
 namespace WebCore {
@@ -42,6 +43,7 @@ struct ProvisionalFrameCreationParameters {
     std::optional<WebCore::LayerHostingContextIdentifier> layerHostingContextIdentifier;
     WebCore::SandboxFlags effectiveSandboxFlags;
     WebCore::ScrollbarMode scrollingMode;
+    std::optional<WebCore::IntSize> initialSize;
 };
 
 } // namespace WebKit

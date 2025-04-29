@@ -263,6 +263,7 @@ private:
     uint64_t messageSenderDestinationID() const final;
 
     void setLayerHostingContextIdentifier(WebCore::LayerHostingContextIdentifier identifier) { m_layerHostingContextIdentifier = identifier; }
+    void updateLocalFrameSize(WebCore::LocalFrame&, WebCore::IntSize);
 
     inline WebCore::DocumentLoader* policySourceDocumentLoader() const;
 

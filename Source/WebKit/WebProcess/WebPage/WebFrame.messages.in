@@ -28,4 +28,6 @@
 messages -> WebFrame {
     GetFrameInfo() -> (struct std::optional<WebKit::FrameInfoData> data)
     UpdateFrameSize(WebCore::IntSize newSize)
+    CreateProvisionalFrame(struct WebKit::ProvisionalFrameCreationParameters creationParameters)
+    DestroyProvisionalFrame();
 }
