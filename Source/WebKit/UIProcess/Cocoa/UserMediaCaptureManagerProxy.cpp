@@ -313,18 +313,18 @@ private:
 
     void sourceStopped() final
     {
-        protectedConnection()->send(Messages::UserMediaCaptureManager::SourceStopped(m_id, m_source->captureDidFail()), 0);
+        m_connection->send(Messages::UserMediaCaptureManager::SourceStopped(m_id, m_source->captureDidFail()), 0);
     }
 
     void sourceMutedChanged() final
     {
-        protectedConnection()->send(Messages::UserMediaCaptureManager::SourceMutedChanged(m_id, m_source->muted(), m_source->interrupted()), 0);
+        m_connection->send(Messages::UserMediaCaptureManager::SourceMutedChanged(m_id, m_source->muted(), m_source->interrupted()), 0);
     }
 
     void sourceSettingsChanged() final
     {
         m_settings = { };
-        protectedConnection()->send(Messages::UserMediaCaptureManager::SourceSettingsChanged(m_id, settings()), 0);
+        m_connection->send(Messages::UserMediaCaptureManager::SourceSettingsChanged(m_id, settings()), 0);
     }
 
     void sourceConfigurationChanged() final
@@ -338,7 +338,7 @@ private:
         }
 
         m_settings = { };
-        protectedConnection()->send(Messages::UserMediaCaptureManager::SourceConfigurationChanged(m_id, source->persistentID(), settings(), source->capabilities()), 0);
+        m_connection->send(Messages::UserMediaCaptureManager::SourceConfigurationChanged(m_id, source->persistentID(), settings(), source->capabilities()), 0);
     }
 
     // May get called on a background thread.
@@ -361,7 +361,7 @@ private:
             RELEASE_ASSERT(result); // FIXME(https://bugs.webkit.org/show_bug.cgi?id=262690): Handle allocation failure.
             auto [ringBuffer, handle] = WTFMove(*result);
             m_ringBuffer = WTFMove(ringBuffer);
-            protectedConnection()->send(Messages::RemoteCaptureSampleManager::AudioStorageChanged(m_id, WTFMove(handle), *m_description, *m_captureSemaphore, m_startTime, m_frameChunkSize), 0);
+            m_connection->send(Messages::RemoteCaptureSampleManager::AudioStorageChanged(m_id, WTFMove(handle), *m_description, *m_captureSemaphore, m_startTime, m_frameChunkSize), 0);
         }
 
         m_ringBuffer->store(downcast<WebAudioBufferList>(audioData).list(), numberOfFrames, m_writeOffset);
@@ -393,12 +393,12 @@ private:
 
         RefPtr videoFrameObjectHeap = m_videoFrameObjectHeap;
         if (!videoFrameObjectHeap) {
-            protectedConnection()->send(Messages::RemoteCaptureSampleManager::VideoFrameAvailableCV(m_id, videoFrame->pixelBuffer(), videoFrame->rotation(), videoFrame->isMirrored(), videoFrame->presentationTime(), metadata), 0);
+            m_connection->send(Messages::RemoteCaptureSampleManager::VideoFrameAvailableCV(m_id, videoFrame->pixelBuffer(), videoFrame->rotation(), videoFrame->isMirrored(), videoFrame->presentationTime(), metadata), 0);
             return;
         }
 
         auto properties = videoFrameObjectHeap->add(*videoFrame);
-        protectedConnection()->send(Messages::RemoteCaptureSampleManager::VideoFrameAvailable(m_id, properties, metadata), 0);
+        m_connection->send(Messages::RemoteCaptureSampleManager::VideoFrameAvailable(m_id, properties, metadata), 0);
     }
 
     RetainPtr<CVPixelBufferRef> rotatePixelBuffer(VideoFrame& videoFrame)
@@ -434,7 +434,7 @@ private:
     Ref<IPC::Connection> protectedConnection() const { return m_connection; }
 
     RealtimeMediaSourceIdentifier m_id;
-    Ref<IPC::Connection> m_connection;
+    const Ref<IPC::Connection> m_connection;
     ProcessIdentity m_resourceOwner;
     const Ref<RealtimeMediaSource> m_source;
     std::unique_ptr<ProducerSharedCARingBuffer> m_ringBuffer;
