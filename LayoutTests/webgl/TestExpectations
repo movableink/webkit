@@ -1,5 +1,5 @@
 # Currently skipped due to fetching external resources.
-webgl/2.0.0/conformance/textures/misc/origin-clean-conformance.html [ Skip ]
+webgl/2.0.y/conformance/textures/misc/origin-clean-conformance.html [ Skip ]
 
 # Run as much of DEQP as possible
 webgl/2.0.0/deqp [ Pass Slow ]

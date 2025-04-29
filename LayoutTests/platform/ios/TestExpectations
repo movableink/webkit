@@ -6610,7 +6610,7 @@ webkit.org/b/237674 imported/w3c/web-platform-tests/html/semantics/links/links-c
 webkit.org/b/237674 imported/w3c/web-platform-tests/html/semantics/links/links-created-by-a-and-area-elements/target_blank_implicit_noopener_base.html [ Timeout Crash Pass ]
 
 # Timeout
-webkit.org/b/238691 webgl/1.0.3/conformance/state/gl-object-get-calls.html [ Timeout Pass ]
+webkit.org/b/238691 webgl/1.0.x/conformance/state/gl-object-get-calls.html [ Timeout Pass ]
 
 ############ end of test failures related to GPU Process on by default
 
@@ -6943,25 +6943,17 @@ webkit.org/b/263044 [ Debug ] imported/w3c/web-platform-tests/webrtc-stats/suppo
 
 webkit.org/b/268422 fast/events/ios/keyboard-should-not-trigger-resize.html [ Pass Failure ]
 
-# webkit.org/b/268581 (18 webgl/1.0.3/conformance/textures/* tests are consistently/flakily timing out.)
-webgl/1.0.3/conformance/textures/copy-tex-image-and-sub-image-2d.html [ Pass Timeout ]
-webgl/1.0.3/conformance/textures/gl-teximage.html [ Pass Timeout ]
-webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-image-data-rgb565.html [ Pass Timeout ]
-webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-image-data-rgba4444.html [ Pass Timeout ]
-webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-image-data-rgba5551.html [ Pass Timeout ]
-webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-image-data.html [ Pass Timeout ]
-webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-image-rgb565.html [ Pass Timeout ]
-webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-image-rgba4444.html [ Pass Timeout ]
-webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-image-rgba5551.html [ Pass Timeout ]
-webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-image.html [ Pass Timeout ]
-webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-svg-image.html [ Pass Timeout ]
-webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-video-rgb565.html [ Pass Timeout ]
-webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-video-rgba4444.html [ Pass Timeout ]
-webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-video-rgba5551.html [ Pass Timeout ]
-webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-video.html [ Pass Timeout ]
-webgl/1.0.3/conformance/textures/tex-image-with-format-and-type.html [ Pass Timeout ]
-webgl/1.0.3/conformance/textures/texture-size-cube-maps.html [ Pass Timeout ]
-webgl/1.0.3/conformance/textures/texture-transparent-pixels-initialized.html [ Pass Timeout ]
+webgl/1.0.x/conformance/textures/image_bitmap_from_video/tex-2d-rgb-rgb-unsigned_byte.html
+webgl/1.0.x/conformance/textures/image_bitmap_from_video/tex-2d-rgb-rgb-unsigned_short_5_6_5.html
+webgl/1.0.x/conformance/textures/image_bitmap_from_video/tex-2d-rgba-rgba-unsigned_byte.html
+webgl/1.0.x/conformance/textures/image_bitmap_from_video/tex-2d-rgba-rgba-unsigned_short_4_4_4_4.html
+webgl/1.0.x/conformance/textures/image_bitmap_from_video/tex-2d-rgba-rgba-unsigned_short_5_5_5_1.html
+webgl/1.0.x/conformance/textures/misc/texture-srgb-upload.html
+webgl/2.0.y/conformance/textures/image_bitmap_from_video/tex-2d-rgb-rgb-unsigned_byte.html
+webgl/2.0.y/conformance/textures/image_bitmap_from_video/tex-2d-rgb-rgb-unsigned_short_5_6_5.html
+webgl/2.0.y/conformance/textures/image_bitmap_from_video/tex-2d-rgba-rgba-unsigned_byte.html
+webgl/2.0.y/conformance/textures/image_bitmap_from_video/tex-2d-rgba-rgba-unsigned_short_4_4_4_4.html
+webgl/2.0.y/conformance/textures/image_bitmap_from_video/tex-2d-rgba-rgba-unsigned_short_5_5_5_1.html
 
 webkit.org/b/269086 [ Release ] imported/w3c/web-platform-tests/feature-policy/feature-policy-frame-policy-allowed-for-all.https.sub.html [ Pass Failure ]
 
@@ -7132,8 +7124,8 @@ imported/w3c/web-platform-tests/wasm [ Skip ]
 webkit.org/b/201509 imported/w3c/web-platform-tests/html/semantics/embedded-content/the-video-element/video_timeupdate_on_seek.html [ Failure ]
 
 # ANGLE Metal backend failing tests with shared texture memory on the simulator
-webkit.org/b/222685 webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-array-buffer-view.html [ Pass Failure ]
-webkit.org/b/222685 webgl/1.0.3/conformance/textures/texture-mips.html [ Pass Failure ]
+webkit.org/b/222685 webgl/1.0.x/conformance/textures/misc/tex-image-and-sub-image-2d-with-array-buffer-view.html [ Pass Failure ]
+webkit.org/b/222685 webgl/1.0.x/conformance/textures/misc/texture-mips.html [ Pass Failure ]
 
 # webkit.org/b/238220 These 5 tests are constant failures on gpup arm64
 [ arm64 ] webaudio/Analyser/realtimeanalyser-fftsize-reset.html [ Failure ]

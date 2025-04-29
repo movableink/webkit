@@ -2148,7 +2148,7 @@ webkit.org/b/264729 imported/w3c/web-platform-tests/fetch/metadata/generated/aud
 #////////////////////////////////////////////////////////////////////////////////////////
 
 webkit.org/b/211887 [ Debug ] fast/canvas/webgl/tex-sub-image-2d-bad-args.html [ Crash ]
-webkit.org/b/211887 [ Debug ] webgl/1.0.3/conformance/textures/tex-sub-image-2d-bad-args.html [ Crash ]
+webkit.org/b/211887 [ Debug ] webgl/1.0.x/conformance/textures/misc/tex-sub-image-2d-bad-args.html [ Crash ]
 
 webkit.org/b/216071 fast/canvas/webgl/move-canvas-in-document-while-clean.html [ ImageOnlyFailure ]
 
