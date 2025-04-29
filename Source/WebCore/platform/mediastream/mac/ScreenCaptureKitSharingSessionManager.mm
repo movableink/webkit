@@ -62,6 +62,7 @@
 
 - (instancetype)initWithCallback:(WebCore::ScreenCaptureKitSharingSessionManager*)callback;
 - (void)disconnect;
+- (BOOL)hasObservingSession;
 - (void)startObservingSession:(SCContentSharingSession *)session;
 - (void)stopObservingSession:(SCContentSharingSession *)session;
 - (void)sessionDidEnd:(SCContentSharingSession *)session;
@@ -94,6 +95,11 @@
     for (auto& session : _sessions)
         [session setDelegate:nil];
     _sessions.clear();
+}
+
+- (BOOL)hasObservingSession
+{
+    return _sessions.isEmpty();
 }
 
 - (void)startObservingSession:(SCContentSharingSession *)session
@@ -251,7 +257,8 @@ void ScreenCaptureKitSharingSessionManager::cancelPicking()
 #if HAVE(SC_CONTENT_SHARING_PICKER)
     if (useSCContentSharingPicker()) {
         RetainPtr picker = [PAL::getSCContentSharingPickerClass() sharedPicker];
-        [picker setActive:NO];
+        if (![m_promptHelper hasObservingSession])
+            [picker setActive:NO];
         if (m_activeSources.isEmpty())
             [m_promptHelper stopObservingPicker:picker.get()];
     }
