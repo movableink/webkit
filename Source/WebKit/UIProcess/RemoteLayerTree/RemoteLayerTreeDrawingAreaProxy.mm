@@ -255,7 +255,9 @@ void RemoteLayerTreeDrawingAreaProxy::willCommitLayerTree(IPC::Connection& conne
 
 void RemoteLayerTreeDrawingAreaProxy::commitLayerTree(IPC::Connection& connection, const Vector<std::pair<RemoteLayerTreeTransaction, RemoteScrollingCoordinatorTransaction>>& transactions, HashMap<RemoteImageBufferSetIdentifier, std::unique_ptr<BufferSetBackendHandle>>&& handlesMap)
 {
-    Vector<MachSendRight> sendRights;
+    // The `sendRights` vector must have __block scope to be captured by
+    // the commit handler block below without the need to copy it.
+    __block Vector<MachSendRight> sendRights;
     for (auto& transaction : transactions) {
         // commitLayerTreeTransaction consumes the incoming buffers, so we need to grab them first.
         for (auto& [layerID, properties] : transaction.first.changedLayerProperties()) {
@@ -285,7 +287,7 @@ void RemoteLayerTreeDrawingAreaProxy::commitLayerTree(IPC::Connection& connectio
     // Keep IOSurface send rights alive until the transaction is commited, otherwise we will
     // prematurely drop the only reference to them, and `inUse` will be wrong for a brief window.
     if (!sendRights.isEmpty())
-        [CATransaction addCommitHandler:[sendRights = WTFMove(sendRights)]() { } forPhase:kCATransactionPhasePostCommit];
+        [CATransaction addCommitHandler:^{ sendRights.clear(); } forPhase:kCATransactionPhasePostCommit];
 
     ProcessState& state = processStateForConnection(connection);
     if (std::exchange(state.commitLayerTreeMessageState, NeedsDisplayDidRefresh) == MissedCommit)
