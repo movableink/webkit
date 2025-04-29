@@ -55,6 +55,14 @@ void NetworkConnectionToWebProcess::updateActivePages(String&& overrideDisplayNa
 #endif
         return;
     }
+
+#if ENABLE(LAUNCHSERVICES_SANDBOX_EXTENSION_BLOCKING)
+    // Disable relaunch on login for the WebContent process.
+    OSStatus status = _LSSetApplicationInformationItem(kLSDefaultSessionID, asn.get(), _kLSPersistenceSuppressRelaunchAtLoginKey, kCFBooleanTrue, nullptr);
+    if (status != noErr)
+        RELEASE_LOG_ERROR(Process, "Unable to disable relaunch on login for the WebContent process, status = %d", status);
+#endif
+
     if (!overrideDisplayName)
         _LSSetApplicationInformationItem(kLSDefaultSessionID, asn.get(), CFSTR("LSActivePageUserVisibleOriginsKey"), (__bridge CFArrayRef)createNSArray(activePagesOrigins).get(), nullptr);
     else
