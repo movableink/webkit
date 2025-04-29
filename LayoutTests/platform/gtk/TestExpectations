@@ -1895,7 +1895,7 @@ webkit.org/b/261024 webgl/1.0.x/conformance/context/context-attribute-preserve-d
 webkit.org/b/261024 webgl/1.0.x/conformance/offscreencanvas/context-attribute-preserve-drawing-buffer.html [ Pass Timeout ]
 webkit.org/b/261024 webgl/1.0.x/conformance/renderbuffers/framebuffer-state-restoration.html [ Pass Timeout ]
 webkit.org/b/261024 webgl/1.0.x/conformance/rendering/color-mask-preserved-during-implicit-clears.html [ Pass Timeout ]
-webkit.org/b/261024 webgl/2.0.0/conformance2/query/occlusion-query.html [ Pass Timeout ]
+webkit.org/b/261024 webgl/2.0.y/conformance2/query/occlusion-query.html [ Pass Timeout ]
 webkit.org/b/261024 webgl/2.0.y/conformance2/textures/canvas/tex-3d-r8-red-unsigned_byte.html [ Pass Timeout ]
 webkit.org/b/261024 webrtc/utf8-sdp.html [ Pass Timeout ]
 
