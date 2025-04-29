@@ -28,8 +28,7 @@ from unittest.mock import patch
 
 from webkitcorepy import LoggerCapture, OutputCapture, run, testing
 from webkitcorepy.mocks import Time as MockTime
-
-from webkitscmpy import Commit, local, mocks, remote
+from webkitscmpy import Commit, Contributor, local, mocks, remote
 
 
 class TestGit(testing.PathTestCase):
@@ -589,6 +588,24 @@ CommitDate: {time_c}
             self.assertEqual(
                 local.Git(self.path).files_changed('4@main'),
                 ['Source/main.cpp', 'Source/main.h'],
+            )
+
+    def test_last_commits_on(self):
+        with mocks.local.Git(self.path):
+            git = local.Git(self.path)
+            commits = git.last_commits_on('README.md', count=5)
+
+            # Mock environment only produces 3 commits when README.md is requested
+            # because the mock filters to commits with odd-numbered identifiers.
+            self.assertEqual(len(commits), 3)
+            self.assertTrue(all(len(c.hash) == 40 for c in commits))
+            self.assertEqual(
+                [f'{c.identifier}@{c.branch}' for c in commits],
+                [
+                    '1@main',
+                    '3@main',
+                    '5@main',
+                ]
             )
 
     def test_merge_base(self):

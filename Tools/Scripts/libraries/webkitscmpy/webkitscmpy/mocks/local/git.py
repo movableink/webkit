@@ -375,6 +375,15 @@ nothing to commit, working tree clean
                     ])
                 )
             ), mocks.Subprocess.Route(
+                self.executable, 'log', re.compile(r'--max-count=\d+'), '--follow', '--format=%H', '--', re.compile(r'.+'),
+                cwd=self.path,
+                generator=lambda *args, **kwargs: mocks.ProcessCompletion(
+                    returncode=0,
+                    stdout='\n'.join([
+                        commit.hash for commit in self.commits[self.branch] if commit.identifier % 2
+                    ][:int(args[2].split('=')[-1])])
+                )
+            ), mocks.Subprocess.Route(
                 self.executable, 'log', re.compile(r'.+'),
                 cwd=self.path,
                 generator=lambda *args, **kwargs: mocks.ProcessCompletion(
