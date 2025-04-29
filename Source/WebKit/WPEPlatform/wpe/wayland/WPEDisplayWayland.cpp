@@ -470,15 +470,10 @@ static gpointer wpeDisplayWaylandGetEGLDisplay(WPEDisplay* display, GError** err
     return nullptr;
 }
 
-static WPEKeymap* wpeDisplayWaylandGetKeymap(WPEDisplay* display, GError** error)
+static WPEKeymap* wpeDisplayWaylandGetKeymap(WPEDisplay* display)
 {
     auto* priv = WPE_DISPLAY_WAYLAND(display)->priv;
-    if (!priv->wlSeat) {
-        g_set_error_literal(error, WPE_DISPLAY_ERROR, WPE_DISPLAY_ERROR_NOT_SUPPORTED, "Operation not supported");
-        return nullptr;
-    }
-
-    return priv->wlSeat->keymap();
+    return priv->wlSeat ? priv->wlSeat->keymap() : nullptr;
 }
 
 static WPEBufferDMABufFormats* wpeDisplayWaylandGetPreferredDMABufFormats(WPEDisplay* display)

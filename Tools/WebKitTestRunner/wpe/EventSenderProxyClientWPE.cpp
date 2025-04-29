@@ -266,12 +266,12 @@ void EventSenderProxyClientWPE::keyDown(WKStringRef keyRef, double time, WKEvent
     auto keyval = wpeKeyvalForKeyRef(keyRef, location, modifiers);
     auto* view = WKViewGetView(m_testController.mainWebView()->platformView());
     unsigned keycode = 0;
-    if (auto* keymap = wpe_display_get_keymap(wpe_view_get_display(view), nullptr)) {
-        GUniqueOutPtr<WPEKeymapEntry> entries;
-        guint entriesCount;
-        if (wpe_keymap_get_entries_for_keyval(keymap, keyval, &entries.outPtr(), &entriesCount))
-            keycode = entries.get()[0].keycode;
-    }
+    auto* keymap = wpe_display_get_keymap(wpe_view_get_display(view));
+    GUniqueOutPtr<WPEKeymapEntry> entries;
+    guint entriesCount;
+    if (wpe_keymap_get_entries_for_keyval(keymap, keyval, &entries.outPtr(), &entriesCount))
+        keycode = entries.get()[0].keycode;
+
     auto* event = wpe_event_keyboard_new(WPE_EVENT_KEYBOARD_KEY_DOWN, view, WPE_INPUT_SOURCE_KEYBOARD, secToMsTimestamp(time), static_cast<WPEModifiers>(modifiers), keycode, keyval);
     wpe_view_event(view, event);
     wpe_event_unref(event);

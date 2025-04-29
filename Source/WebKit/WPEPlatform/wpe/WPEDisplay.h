@@ -62,8 +62,7 @@ struct _WPEDisplayClass
     WPEView                *(* create_view)                   (WPEDisplay *display);
     gpointer                (* get_egl_display)               (WPEDisplay *display,
                                                                GError    **error);
-    WPEKeymap              *(* get_keymap)                    (WPEDisplay *display,
-                                                               GError    **error);
+    WPEKeymap              *(* get_keymap)                    (WPEDisplay *display);
     WPEBufferDMABufFormats *(* get_preferred_dma_buf_formats) (WPEDisplay *display);
     guint                   (* get_n_screens)                 (WPEDisplay *display);
     WPEScreen              *(* get_screen)                    (WPEDisplay *display,
@@ -100,8 +99,7 @@ WPE_API gboolean                 wpe_display_connect                       (WPED
                                                                             GError    **error);
 WPE_API gpointer                 wpe_display_get_egl_display               (WPEDisplay *display,
                                                                             GError    **error);
-WPE_API WPEKeymap               *wpe_display_get_keymap                    (WPEDisplay *display,
-                                                                            GError    **error);
+WPE_API WPEKeymap               *wpe_display_get_keymap                    (WPEDisplay *display);
 WPE_API WPEBufferDMABufFormats  *wpe_display_get_preferred_dma_buf_formats (WPEDisplay *display);
 WPE_API guint                    wpe_display_get_n_screens                 (WPEDisplay *display);
 WPE_API WPEScreen               *wpe_display_get_screen                    (WPEDisplay *display,

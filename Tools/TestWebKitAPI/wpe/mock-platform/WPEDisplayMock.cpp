@@ -61,7 +61,7 @@ static gpointer wpeDisplayMockGetEGLDisplay(WPEDisplay* display, GError** error)
     return nullptr;
 }
 
-static WPEKeymap* wpeDisplayMockGetKeymap(WPEDisplay* display, GError** error)
+static WPEKeymap* wpeDisplayMockGetKeymap(WPEDisplay* display)
 {
     return nullptr;
 }

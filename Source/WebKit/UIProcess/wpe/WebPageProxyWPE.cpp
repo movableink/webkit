@@ -196,10 +196,7 @@ OptionSet<WebCore::PlatformEvent::Modifier> WebPageProxy::currentStateOfModifier
     if (!view)
         return { };
 
-    auto* keymap = wpe_display_get_keymap(wpe_view_get_display(view), nullptr);
-    if (!keymap)
-        return { };
-
+    auto* keymap = wpe_display_get_keymap(wpe_view_get_display(view));
     OptionSet<WebCore::PlatformEvent::Modifier> modifiers;
     auto wpeModifiers = wpe_keymap_get_modifiers(keymap);
     if (wpeModifiers & WPE_MODIFIER_KEYBOARD_CONTROL)
