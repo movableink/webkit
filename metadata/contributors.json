@@ -3735,6 +3735,15 @@
    },
    {
       "emails" : [
+         "ikohli@apple.com",
+         "ishaankohli.work@gmail.com"
+      ],
+      "github" : "ik128484",
+      "name" : "Ishaan Kohli",
+      "status" : "committer"
+   },
+   {
+      "emails" : [
          "iagho@apple.com"
       ],
       "github" : "asiagho",
