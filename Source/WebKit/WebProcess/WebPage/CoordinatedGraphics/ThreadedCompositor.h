@@ -102,7 +102,7 @@ public:
 
     bool isActive() const;
 
-    std::optional<double> fps() const { return m_fpsCounter.fps.load(); };
+    std::optional<float> fps() const { return m_fpsCounter.fps.load(); };
 
 #if ENABLE(DAMAGE_TRACKING)
     void setDamagePropagation(WebCore::Damage::Propagation);
@@ -161,7 +161,7 @@ private:
         Seconds calculationInterval { 1_s };
         MonotonicTime lastCalculationTimestamp;
         unsigned frameCountSinceLastCalculation { 0 };
-        std::atomic<std::optional<double>> fps;
+        std::atomic<std::optional<float>> fps;
     } m_fpsCounter;
 
 #if ENABLE(DAMAGE_TRACKING)
