@@ -7780,8 +7780,6 @@ webkit.org/b/290856 imported/w3c/web-platform-tests/css/css-viewport/zoom/backgr
 
 webkit.org/b/290871 imported/w3c/web-platform-tests/navigation-api/scroll-behavior/after-transition-reject.html [ Pass Failure ]
 
-webkit.org/b/290876 imported/w3c/web-platform-tests/trusted-types/DedicatedWorker-constructor-from-SharedWorker.html [ Pass Failure ]
-
 webkit.org/b/290888 fast/loader/redirect-to-invalid-url-using-meta-refresh-calls-policy-delegate.html [ Pass Failure ]
 
 webkit.org/b/290942 [ Debug ] fast/viewport/ios/width-is-device-width-overflowing-body-overflow-hidden.html [ Pass Crash ]
@@ -7809,14 +7807,15 @@ webkit.org/b/290568 fast/multicol/simple-line-layout-line-index-after-strut.html
 
 webkit.org/b/291278 http/tests/IndexedDB/storage-limit-1.https.html [ Pass Failure ]
 
-# webkit.org/b/291345 [ iOS ] 7x imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-*.https.html are flaky failures. 
-imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register.https.html [ Pass Failure ]
-imported/w3c/web-platform-tests/trusted-types/ServiceWorker-block-eval-function-constructor.https.html [ Pass Failure ]
-imported/w3c/web-platform-tests/trusted-types/ServiceWorker-eval.https.html [ Pass Failure ]
-imported/w3c/web-platform-tests/trusted-types/ServiceWorker-importScripts.https.html [ Pass Failure ]
-imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register-from-DedicatedWorker.https.html [ Pass Failure ]
-imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register-from-ServiceWorker.https.html [ Pass Failure ]
-imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register-from-SharedWorker.https.html [ Pass Failure ]
+# webkit.org/b/292268 [ iOS ] Due to harness issues various trusted types tests are flaky timeouts on iOS.
+imported/w3c/web-platform-tests/trusted-types/ServiceWorker-block-eval-function-constructor.https.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/ServiceWorker-eval.https.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/ServiceWorker-importScripts.https.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register.https.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register-from-DedicatedWorker.https.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register-from-ServiceWorker.https.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register-from-SharedWorker.https.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/DedicatedWorker-constructor-from-SharedWorker.html [ Skip ]
 
 webkit.org/b/291436 http/tests/security/contentSecurityPolicy/extensions/manifest-v3/default-src/manifest-v3-default-src-block-wildcard.html [ Failure ]
 
