@@ -196,7 +196,6 @@
     /* Invert colors yet preserve the hue */
     --filter-invert: invert(100%) hue-rotate(180deg);
 
-    --undocked-title-area-height: 0px;
     --tab-bar-height: var(--navigation-bar-height);
     --navigation-bar-height: 29px;
 
@@ -433,10 +432,5 @@ body {
             --border-color: hsl(0, 0%, 30%);
             --border-color-secondary: hsl(0, 0%, 24%);
         }
-    }
-
-    /* Only needed by the Mac port, keep in sync with `WI.undockedTitleAreaHeight` */
-    &.mac-platform:not(.docked) {
-        --undocked-title-area-height: calc(27px / var(--zoom-factor));
     }
 }

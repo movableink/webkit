@@ -839,8 +839,6 @@ void WebInspectorUIProxy::platformAttach()
     RetainPtr inspectedView = protectedInspectedPage()->inspectorAttachmentView();
     WKWebView *inspectorView = [m_inspectorViewController webView];
 
-    [m_inspectorViewController setIsAttached:YES];
-
     if (m_inspectorWindow) {
         [m_inspectorWindow setDelegate:nil];
         [m_inspectorWindow close];
@@ -876,8 +874,6 @@ void WebInspectorUIProxy::platformDetach()
     RefPtr inspectedPage = m_inspectedPage.get();
     RetainPtr inspectedView = inspectedPage ? inspectedPage->inspectorAttachmentView() : nil;
     WKWebView *inspectorView = [m_inspectorViewController webView];
-
-    [m_inspectorViewController setIsAttached:NO];
 
     [inspectorView removeFromSuperview];
     [inspectorView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];

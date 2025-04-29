@@ -476,11 +476,6 @@ WI.contentLoaded = function()
         WI._dockedResizerElement.addEventListener("mousedown", WI._handleDockedResizerMouseDown);
     }
 
-    if (supportsUndocked) {
-        let undockedTitleAreaElement = document.getElementById("undocked-title-area");
-        undockedTitleAreaElement.addEventListener("mousedown", WI._handleUndockedTitleAreaMouseDown);
-    }
-
     WI._dockingAvailable = false;
 
     WI._updateDockNavigationItems();
@@ -2039,17 +2034,11 @@ WI._handleDockedResizerMouseDown = function(event)
     WI.resizeDockedFrameMouseDown(event);
 };
 
-WI._handleUndockedTitleAreaMouseDown = function(event)
-{
-    WI.moveUndockedWindowMouseDown(event);
-};
-
 WI._domStorageWasInspected = function(event)
 {
     WI.showStorageTab({initiatorHint: WI.TabBrowser.TabNavigationInitiator.Inspect});
     WI.showRepresentedObject(event.data.domStorage, null, {ignoreSearchTab: true});
 };
-
 
 WI._domNodeWasInspected = function(event)
 {
@@ -2591,19 +2580,6 @@ WI.setLayoutDirection = function(value)
     WI.settings.debugLayoutDirection.value = value;
 
     InspectorFrontendHost.reopen();
-};
-
-WI.undockedTitleAreaHeight = function()
-{
-    if (WI.dockConfiguration !== WI.DockConfiguration.Undocked)
-        return 0;
-
-    if (WI.Platform.name === "mac") {
-        /* Keep in sync with `--undocked-title-area-height` CSS variable. */
-        return 27 / WI.getZoomFactor();
-    }
-
-    return 0;
 };
 
 WI._showTabAtIndexFromShortcut = function(i)
