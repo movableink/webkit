@@ -33,9 +33,7 @@
 #include "Element.h"
 #include "LegacyRenderSVGModelObject.h"
 #include "RenderBlock.h"
-#include "RenderBox.h"
-#include "RenderBoxInlines.h"
-#include "RenderInline.h"
+#include "RenderBoxModelObject.h"
 #include "RenderLayerScrollableArea.h"
 #include "RenderSVGModelObject.h"
 #include "ScrollAnchoringController.h"
@@ -321,10 +319,8 @@ void ViewTimeline::cacheCurrentTime()
         subjectOffset -= scrollDirection.isVertical ? scrollerPaddingBoxOrigin.y() : scrollerPaddingBoxOrigin.x();
 
         auto subjectBounds = [&] -> FloatSize {
-            if (CheckedPtr subjectRenderBox = dynamicDowncast<RenderBox>(subjectRenderer.get()))
-                return subjectRenderBox->contentBoxRect().size();
-            if (CheckedPtr subjectRenderInline = dynamicDowncast<RenderInline>(subjectRenderer.get()))
-                return subjectRenderInline->borderBoundingBox().size();
+            if (CheckedPtr subjectRenderBoxModelObject = dynamicDowncast<RenderBoxModelObject>(subjectRenderer.get()))
+                return subjectRenderBoxModelObject->borderBoundingBox().size();
             if (CheckedPtr subjectRenderSVGModelObject = dynamicDowncast<RenderSVGModelObject>(subjectRenderer.get()))
                 return subjectRenderSVGModelObject->borderBoxRectEquivalent().size();
             if (is<LegacyRenderSVGModelObject>(subjectRenderer.get()))
