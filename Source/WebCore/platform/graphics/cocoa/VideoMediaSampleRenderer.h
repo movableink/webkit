@@ -136,6 +136,7 @@ private:
     CMTime nextDecodedSampleEndTime() const;
     CMTime lastDecodedSampleTime() const;
     bool hasIncomingOutOfOrderFrame(const CMTime&) const;
+    CMTime minimumUpcomingSampleTime(CMSampleBufferRef) const;
 
     void assignResourceOwner(CMSampleBufferRef);
     bool areSamplesQueuesReadyForMoreMediaData(size_t waterMark) const;

@@ -239,6 +239,9 @@ bool VideoMediaSampleRenderer::hasIncomingOutOfOrderFrame(const CMTime& time) co
 {
     assertIsCurrent(dispatcher().get());
 
+    if (!m_hasOutOfOrderFrames)
+        return false;
+
     size_t forwardIndex = 0;
     // The maximum queue depth possible for out of order frames with either H264 or HEVC is 16, limit looking ahead of 16 frames.
     for (auto it = m_compressedSampleQueue.begin(); it != m_compressedSampleQueue.end() && forwardIndex < 16; ++forwardIndex, ++it) {
@@ -250,6 +253,28 @@ bool VideoMediaSampleRenderer::hasIncomingOutOfOrderFrame(const CMTime& time) co
             return true;
     }
     return false;
+}
+
+CMTime VideoMediaSampleRenderer::minimumUpcomingSampleTime(CMSampleBufferRef sample) const
+{
+    assertIsCurrent(dispatcher().get());
+
+    CMTime minimumSampleTime = PAL::CMSampleBufferGetPresentationTimeStamp(sample);
+
+    if (!m_hasOutOfOrderFrames)
+        return minimumSampleTime;
+
+    // The maximum queue depth possible for out of order frames with either H264 or HEVC is 16, limit looking ahead of 16 frames.
+    size_t forwardIndex = 0;
+    for (auto it = m_compressedSampleQueue.begin(); it != m_compressedSampleQueue.end() && forwardIndex < 16; ++forwardIndex, ++it) {
+        const auto& [sample, flushId] = *it;
+        if (flushId != m_flushId)
+            break;
+        CMTime presentationTime = PAL::CMSampleBufferGetPresentationTimeStamp(sample.get());
+        if (PAL::CMTimeCompare(presentationTime, minimumSampleTime) < 0)
+            minimumSampleTime = presentationTime;
+    }
+    return minimumSampleTime;
 }
 
 void VideoMediaSampleRenderer::enqueueDecodedSample(RetainPtr<CMSampleBufferRef>&& sample)
@@ -455,11 +480,12 @@ void VideoMediaSampleRenderer::decodeNextSampleIfNeeded()
         auto aheadTime = PAL::CMTimeAdd(currentTime, PAL::toCMTime(s_decodeAhead));
         auto endTime = lastDecodedSampleTime();
         if (CMTIME_IS_VALID(endTime) && PAL::CMTimeCompare(endTime, aheadTime) > 0 && decodedSamplesCount() >= 3) {
-            if (!m_hasOutOfOrderFrames || !hasIncomingOutOfOrderFrame(endTime))
+            if (!hasIncomingOutOfOrderFrame(endTime))
                 return;
             RELEASE_LOG_DEBUG(Media, "Out of order frames detected, forcing extra decode");
         }
     }
+
     auto [sample, flushId] = m_compressedSampleQueue.takeFirst();
     m_compressedSampleQueueSize = m_compressedSampleQueue.size();
     maybeBecomeReadyForMoreMediaData();
@@ -476,6 +502,8 @@ void VideoMediaSampleRenderer::decodeNextSampleIfNeeded()
         decodeNextSampleIfNeeded();
         return;
     }
+
+    [rendererOrDisplayLayer() expectMinimumUpcomingSampleBufferPresentationTime:minimumUpcomingSampleTime(sample.get())];
 
     auto decodePromise = decompressionSession->decodeSample(sample.get(), displaying);
     m_isDecodingSample = true;
