@@ -7845,3 +7845,5 @@ fast/forms/ios/file-upload-panel-dismiss-when-view-removed-from-window.html [ Pa
 [ Debug ] imported/w3c/web-platform-tests/webcodecs/video-encoder-rescaling.https.any.worker.html?vp9_p0 [ Skip ]
 
 webkit.org/b/292288 resize-observer/contain-instrinsic-size-should-not-leak-nodes.html [ Pass Failure ]
+
+webkit.org/b/292294 webgl/2.0.y/conformance2/extensions/webgl-stencil-texturing.html [ Failure ]
