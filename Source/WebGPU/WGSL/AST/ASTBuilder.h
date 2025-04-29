@@ -72,7 +72,7 @@ public:
             allocateArena();
 
 #if ASAN_ENABLED
-        RELEASE_ASSERT(__asan_address_is_poisoned(m_arena.data()));
+        RELEASE_ASSERT(!canPoison() || __asan_address_is_poisoned(m_arena.data()));
         __asan_unpoison_memory_region(m_arena.data(), size);
 #endif
 
@@ -100,6 +100,10 @@ private:
     {
         return (size + sizeof(WTF::AllocAlignmentInteger) - 1) & ~(sizeof(WTF::AllocAlignmentInteger) - 1);
     }
+
+#if ASAN_ENABLED
+    static bool canPoison();
+#endif
 
     void allocateArena();
 

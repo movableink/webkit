@@ -54,6 +54,20 @@ void Builder::allocateArena()
 #endif
 }
 
+#if ASAN_ENABLED
+bool Builder::canPoison()
+{
+    bool canPoison;
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [&] {
+        uintptr_t address;
+        __asan_poison_memory_region(&address, sizeof(address));
+        canPoison = __asan_address_is_poisoned(&address);
+    });
+    return canPoison;
+}
+#endif
+
 auto Builder::saveCurrentState() -> State
 {
     State state;
