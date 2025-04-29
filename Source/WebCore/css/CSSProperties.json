@@ -6848,6 +6848,7 @@
                 "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
                 "render-style-initial": "initialPadding",
                 "style-builder-converter": "Length",
+                "style-builder-custom": "All",
                 "parser-grammar": "<length-percentage [0,inf]>"
             },
             "specification": {
@@ -6918,6 +6919,7 @@
                 "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
                 "render-style-initial": "initialPadding",
                 "style-builder-converter": "Length",
+                "style-builder-custom": "All",
                 "parser-grammar": "<length-percentage [0,inf]>"
             },
             "specification": {
@@ -6938,6 +6940,7 @@
                 "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
                 "render-style-initial": "initialPadding",
                 "style-builder-converter": "Length",
+                "style-builder-custom": "All",
                 "parser-grammar": "<length-percentage [0,inf]>"
             },
             "specification": {
@@ -6958,6 +6961,7 @@
                 "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
                 "render-style-initial": "initialPadding",
                 "style-builder-converter": "Length",
+                "style-builder-custom": "All",
                 "parser-grammar": "<length-percentage [0,inf]>"
             },
             "specification": {

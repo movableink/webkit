@@ -127,6 +127,10 @@ public:
     DECLARE_PROPERTY_CUSTOM_HANDLERS(MaskBorderRepeat);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(MaskBorderSlice);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(MaskBorderWidth);
+    DECLARE_PROPERTY_CUSTOM_HANDLERS(PaddingBottom);
+    DECLARE_PROPERTY_CUSTOM_HANDLERS(PaddingLeft);
+    DECLARE_PROPERTY_CUSTOM_HANDLERS(PaddingRight);
+    DECLARE_PROPERTY_CUSTOM_HANDLERS(PaddingTop);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(OutlineStyle);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(Stroke);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(TextEmphasisStyle);
@@ -1846,6 +1850,78 @@ inline void BuilderCustom::applyValueContainIntrinsicHeight(BuilderState& builde
         auto lengthValue = pair->second.resolveAsLength<WebCore::Length>(builderState.cssToLengthConversionData().copyWithAdjustedZoom(1.0f));
         style.setContainIntrinsicHeight(lengthValue);
     }
+}
+
+inline void BuilderCustom::applyInitialPaddingBottom(BuilderState& builderState)
+{
+    builderState.style().setPaddingBottom(RenderStyle::initialPadding());
+    builderState.style().setHasExplicitlySetPaddingBottom(builderState.isAuthorOrigin());
+}
+
+inline void BuilderCustom::applyInheritPaddingBottom(BuilderState& builderState)
+{
+    builderState.style().setPaddingBottom(forwardInheritedValue(builderState.parentStyle().paddingBottom()));
+    builderState.style().setHasExplicitlySetPaddingBottom(builderState.isAuthorOrigin());
+}
+
+inline void BuilderCustom::applyValuePaddingBottom(BuilderState& builderState, CSSValue& value)
+{
+    builderState.style().setPaddingBottom(BuilderConverter::convertLength(builderState, value));
+    builderState.style().setHasExplicitlySetPaddingBottom(builderState.isAuthorOrigin());
+}
+
+inline void BuilderCustom::applyInitialPaddingLeft(BuilderState& builderState)
+{
+    builderState.style().setPaddingLeft(RenderStyle::initialPadding());
+    builderState.style().setHasExplicitlySetPaddingLeft(builderState.isAuthorOrigin());
+}
+
+inline void BuilderCustom::applyInheritPaddingLeft(BuilderState& builderState)
+{
+    builderState.style().setPaddingLeft(forwardInheritedValue(builderState.parentStyle().paddingLeft()));
+    builderState.style().setHasExplicitlySetPaddingLeft(builderState.isAuthorOrigin());
+}
+
+inline void BuilderCustom::applyValuePaddingLeft(BuilderState& builderState, CSSValue& value)
+{
+    builderState.style().setPaddingLeft(BuilderConverter::convertLength(builderState, value));
+    builderState.style().setHasExplicitlySetPaddingLeft(builderState.isAuthorOrigin());
+}
+
+inline void BuilderCustom::applyInitialPaddingRight(BuilderState& builderState)
+{
+    builderState.style().setPaddingRight(RenderStyle::initialPadding());
+    builderState.style().setHasExplicitlySetPaddingRight(builderState.isAuthorOrigin());
+}
+
+inline void BuilderCustom::applyInheritPaddingRight(BuilderState& builderState)
+{
+    builderState.style().setPaddingRight(forwardInheritedValue(builderState.parentStyle().paddingRight()));
+    builderState.style().setHasExplicitlySetPaddingRight(builderState.isAuthorOrigin());
+}
+
+inline void BuilderCustom::applyValuePaddingRight(BuilderState& builderState, CSSValue& value)
+{
+    builderState.style().setPaddingRight(BuilderConverter::convertLength(builderState, value));
+    builderState.style().setHasExplicitlySetPaddingRight(builderState.isAuthorOrigin());
+}
+
+inline void BuilderCustom::applyInitialPaddingTop(BuilderState& builderState)
+{
+    builderState.style().setPaddingTop(RenderStyle::initialPadding());
+    builderState.style().setHasExplicitlySetPaddingTop(builderState.isAuthorOrigin());
+}
+
+inline void BuilderCustom::applyInheritPaddingTop(BuilderState& builderState)
+{
+    builderState.style().setPaddingTop(forwardInheritedValue(builderState.parentStyle().paddingTop()));
+    builderState.style().setHasExplicitlySetPaddingTop(builderState.isAuthorOrigin());
+}
+
+inline void BuilderCustom::applyValuePaddingTop(BuilderState& builderState, CSSValue& value)
+{
+    builderState.style().setPaddingTop(BuilderConverter::convertLength(builderState, value));
+    builderState.style().setHasExplicitlySetPaddingTop(builderState.isAuthorOrigin());
 }
 
 }

@@ -33,6 +33,10 @@ StyleSurroundData::StyleSurroundData()
     , hasExplicitlySetBorderBottomRightRadius(false)
     , hasExplicitlySetBorderTopLeftRadius(false)
     , hasExplicitlySetBorderTopRightRadius(false)
+    , hasExplicitlySetPaddingBottom(false)
+    , hasExplicitlySetPaddingLeft(false)
+    , hasExplicitlySetPaddingRight(false)
+    , hasExplicitlySetPaddingTop(false)
     , margin(LengthType::Fixed)
     , padding(LengthType::Fixed)
 {
@@ -44,6 +48,10 @@ inline StyleSurroundData::StyleSurroundData(const StyleSurroundData& o)
     , hasExplicitlySetBorderBottomRightRadius(o.hasExplicitlySetBorderBottomRightRadius)
     , hasExplicitlySetBorderTopLeftRadius(o.hasExplicitlySetBorderTopLeftRadius)
     , hasExplicitlySetBorderTopRightRadius(o.hasExplicitlySetBorderTopRightRadius)
+    , hasExplicitlySetPaddingBottom(o.hasExplicitlySetPaddingBottom)
+    , hasExplicitlySetPaddingLeft(o.hasExplicitlySetPaddingLeft)
+    , hasExplicitlySetPaddingRight(o.hasExplicitlySetPaddingRight)
+    , hasExplicitlySetPaddingTop(o.hasExplicitlySetPaddingTop)
     , offset(o.offset)
     , margin(o.margin)
     , padding(o.padding)
@@ -62,7 +70,11 @@ bool StyleSurroundData::operator==(const StyleSurroundData& o) const
         && hasExplicitlySetBorderBottomLeftRadius == o.hasExplicitlySetBorderBottomLeftRadius
         && hasExplicitlySetBorderBottomRightRadius == o.hasExplicitlySetBorderBottomRightRadius
         && hasExplicitlySetBorderTopLeftRadius == o.hasExplicitlySetBorderTopLeftRadius
-        && hasExplicitlySetBorderTopRightRadius == o.hasExplicitlySetBorderTopRightRadius;
+        && hasExplicitlySetBorderTopRightRadius == o.hasExplicitlySetBorderTopRightRadius
+        && hasExplicitlySetPaddingBottom == o.hasExplicitlySetPaddingBottom
+        && hasExplicitlySetPaddingLeft == o.hasExplicitlySetPaddingLeft
+        && hasExplicitlySetPaddingRight == o.hasExplicitlySetPaddingRight
+        && hasExplicitlySetPaddingTop == o.hasExplicitlySetPaddingTop;
 }
 
 #if !LOG_DISABLED
@@ -72,6 +84,11 @@ void StyleSurroundData::dumpDifferences(TextStream& ts, const StyleSurroundData&
     LOG_IF_DIFFERENT(hasExplicitlySetBorderBottomRightRadius);
     LOG_IF_DIFFERENT(hasExplicitlySetBorderTopLeftRadius);
     LOG_IF_DIFFERENT(hasExplicitlySetBorderTopRightRadius);
+
+    LOG_IF_DIFFERENT(hasExplicitlySetPaddingBottom);
+    LOG_IF_DIFFERENT(hasExplicitlySetPaddingLeft);
+    LOG_IF_DIFFERENT(hasExplicitlySetPaddingRight);
+    LOG_IF_DIFFERENT(hasExplicitlySetPaddingTop);
 
     LOG_IF_DIFFERENT(offset);
     LOG_IF_DIFFERENT(margin);

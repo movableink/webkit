@@ -186,6 +186,10 @@ inline void RenderStyle::setHasExplicitlySetBorderBottomLeftRadius(bool value) {
 inline void RenderStyle::setHasExplicitlySetBorderBottomRightRadius(bool value) { SET_NESTED(m_nonInheritedData, surroundData, hasExplicitlySetBorderBottomRightRadius, value); }
 inline void RenderStyle::setHasExplicitlySetBorderTopLeftRadius(bool value) { SET_NESTED(m_nonInheritedData, surroundData, hasExplicitlySetBorderTopLeftRadius, value); }
 inline void RenderStyle::setHasExplicitlySetBorderTopRightRadius(bool value) { SET_NESTED(m_nonInheritedData, surroundData, hasExplicitlySetBorderTopRightRadius, value); }
+inline void RenderStyle::setHasExplicitlySetPaddingBottom(bool value) { SET_NESTED(m_nonInheritedData, surroundData, hasExplicitlySetPaddingBottom, value); }
+inline void RenderStyle::setHasExplicitlySetPaddingLeft(bool value) { SET_NESTED(m_nonInheritedData, surroundData, hasExplicitlySetPaddingLeft, value); }
+inline void RenderStyle::setHasExplicitlySetPaddingRight(bool value) { SET_NESTED(m_nonInheritedData, surroundData, hasExplicitlySetPaddingRight, value); }
+inline void RenderStyle::setHasExplicitlySetPaddingTop(bool value) { SET_NESTED(m_nonInheritedData, surroundData, hasExplicitlySetPaddingTop, value); }
 inline void RenderStyle::setHasExplicitlySetStrokeColor(bool value) { SET(m_rareInheritedData, hasSetStrokeColor, static_cast<unsigned>(value)); }
 inline void RenderStyle::setHasExplicitlySetStrokeWidth(bool value) { SET(m_rareInheritedData, hasSetStrokeWidth, static_cast<unsigned>(value)); }
 inline void RenderStyle::setHasPseudoStyles(PseudoIdSet set) { m_nonInheritedFlags.setHasPseudoStyles(set); }

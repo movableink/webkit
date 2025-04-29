@@ -54,6 +54,11 @@ public:
     bool hasExplicitlySetBorderTopLeftRadius : 1;
     bool hasExplicitlySetBorderTopRightRadius : 1;
 
+    bool hasExplicitlySetPaddingBottom : 1;
+    bool hasExplicitlySetPaddingLeft : 1;
+    bool hasExplicitlySetPaddingRight : 1;
+    bool hasExplicitlySetPaddingTop : 1;
+
     LengthBox offset;
     LengthBox margin;
     LengthBox padding;
