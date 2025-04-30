@@ -84,6 +84,7 @@
 				C0CE72841247E66800BC0EC4 /* Generate Derived Sources */,
 				7B7A089228B738D800FF1239 /* Copy Profiling Data */,
 				DD6BF6292D2F4DC200B9A084 /* Unifdef module.private.modulemap */,
+				DD5697CB2DC0625300050321 /* Generate Swift platform args */,
 			);
 			dependencies = (
 			);
@@ -2316,6 +2317,9 @@
 		DD4DB789280F9471001700D4 /* FindNodes.js in Headers */ = {isa = PBXBuildFile; fileRef = 990657311F323CBF00944F9C /* FindNodes.js */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD4DB78A280F9471001700D4 /* FormElementClear.js in Headers */ = {isa = PBXBuildFile; fileRef = 990657321F323CBF00944F9C /* FormElementClear.js */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD4DB78B280F9471001700D4 /* FormSubmit.js in Headers */ = {isa = PBXBuildFile; fileRef = 990657351F323CBF00944F9C /* FormSubmit.js */; settings = {ATTRIBUTES = (Private, ); }; };
+		DD5697CD2DC06F7700050321 /* rdar150228472.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD5697CC2DC06F7700050321 /* rdar150228472.swift */; };
+		DD5697CE2DC06F7700050321 /* rdar150228472.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD5697CC2DC06F7700050321 /* rdar150228472.swift */; };
+		DD5697CF2DC06F7700050321 /* rdar150228472.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD5697CC2DC06F7700050321 /* rdar150228472.swift */; };
 		DD8CD363296D03A400C04CA1 /* _WKFeature.h in Headers */ = {isa = PBXBuildFile; fileRef = DD8CD360296D03A300C04CA1 /* _WKFeature.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD8CD364296D03A400C04CA1 /* _WKFeatureInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = DD8CD361296D03A400C04CA1 /* _WKFeatureInternal.h */; };
 		DD8CD365296D097300C04CA1 /* APIFeature.h in Headers */ = {isa = PBXBuildFile; fileRef = 317FE7C21C487A6600A0CA89 /* APIFeature.h */; };
@@ -2931,6 +2935,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = CD95493426159004008372D9;
 			remoteInfo = WebKitSwift;
+		};
+		DD5698242DC1812C00050321 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0867D690FE84028FC02AAC07 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C0CE72851247E66800BC0EC4;
+			remoteInfo = "Derived Sources";
 		};
 		DFBD8A3B2718B38C00BEC5B0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -8095,6 +8106,7 @@
 		DD4BDE6F2CA38213001A3339 /* ObjectiveCBlockConversions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectiveCBlockConversions.swift; sourceTree = "<group>"; };
 		DD4BDE8F2CA38268001A3339 /* WebKitSwiftOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebKitSwiftOverlay.swift; sourceTree = "<group>"; };
 		DD4BDE9B2CA729AE001A3339 /* WebKitSwiftOverlayMacros.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebKitSwiftOverlayMacros.h; sourceTree = "<group>"; };
+		DD5697CC2DC06F7700050321 /* rdar150228472.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = rdar150228472.swift; sourceTree = "<group>"; };
 		DD6E58C42BE004DE0000C264 /* RealitySystemSupportSPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RealitySystemSupportSPI.h; sourceTree = "<group>"; };
 		DD8CD35F296D03A300C04CA1 /* _WKFeature.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = _WKFeature.mm; sourceTree = "<group>"; };
 		DD8CD360296D03A300C04CA1 /* _WKFeature.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _WKFeature.h; sourceTree = "<group>"; };
@@ -15866,6 +15878,7 @@
 				CDA29A261CBEB67A00901CCF /* PlaybackSessionManagerProxyMessageReceiver.cpp */,
 				CDA29A271CBEB67A00901CCF /* PlaybackSessionManagerProxyMessages.h */,
 				51EE7B5A2A95B5820016FF78 /* PushClientConnectionMessages.h */,
+				DD5697CC2DC06F7700050321 /* rdar150228472.swift */,
 				1C55A593275457C900EB7E95 /* RemoteAdapterMessageReceiver.cpp */,
 				1C55A5B1275457CD00EB7E95 /* RemoteAdapterMessages.h */,
 				CD20CE7725CD2B9D0069B542 /* RemoteAudioHardwareListenerMessageReceiver.cpp */,
@@ -18470,6 +18483,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				DD5698252DC1812C00050321 /* PBXTargetDependency */,
 			);
 			name = _WebKit_SwiftUI;
 			packageProductDependencies = (
@@ -19830,6 +19844,31 @@
 			shellPath = /bin/sh;
 			shellScript = "set -e\nif [ \"${ACTION}\" != installhdrs -a \"${WK_USE_OVERRIDE_FRAMEWORKS_DIR}\" = NO ]; then\n    if [ \"${ACTION}\" != installapi ]; then\n        ln -sfhv \"../../../System/Library/Frameworks/WebKit.framework/${WK_FRAMEWORK_VERSION_PREFIX}WebKit\" \"${SCRIPT_OUTPUT_FILE_0}\" \n    fi\n    ln -sfhv \"../../../System/Library/Frameworks/WebKit.framework/${WK_FRAMEWORK_VERSION_PREFIX}WebKit.tbd\" \"${SCRIPT_OUTPUT_FILE_1}\"\nfi\n";
 		};
+		DD5697CB2DC0625300050321 /* Generate Swift platform args */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			dependencyFile = "$(DERIVED_FILES_DIR)/generate-platform-args.d";
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(WTF_BUILD_SCRIPTS_DIR)/generate-platform-args",
+			);
+			name = "Generate Swift platform args";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/DerivedSources/WebKit/platform-enabled-swift-args.arm64.resp",
+				"$(BUILT_PRODUCTS_DIR)/DerivedSources/WebKit/platform-enabled-swift-args.arm64_32.resp",
+				"$(BUILT_PRODUCTS_DIR)/DerivedSources/WebKit/platform-enabled-swift-args.x86_64.resp",
+				"$(BUILT_PRODUCTS_DIR)/DerivedSources/WebKit/platform-enabled-swift-args.arm64e.resp",
+				"$(BUILT_PRODUCTS_DIR)/DerivedSources/WebKit/rdar150228472.swift",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ \"${ACTION}\" = installhdrs ]\nthen touch \"${DERIVED_FILES_DIR}/generate-platform-args.d\"\nelse \"${SCRIPT_INPUT_FILE_0}\"\nfi\n";
+		};
 		DD6BF6292D2F4DC200B9A084 /* Unifdef module.private.modulemap */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -19869,7 +19908,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ -f \"${SCRIPT_INPUT_FILE_0}\" ]\nthen \"${SCRIPT_INPUT_FILE_0}\" \"${BUILT_PRODUCTS_DIR}/JavaScriptCore.framework/JavaScriptCore\" \"${BUILT_PRODUCTS_DIR}/libwebrtc.dylib\" \"${BUILT_PRODUCTS_DIR}/WebCore.framework/WebCore\" \"${BUILT_PRODUCTS_DIR}/WebGPU.framework/WebGPU\" \"${BUILT_PRODUCTS_DIR}/libWebKitSwift.dylib\"\nfi && touch \"${DERIVED_FILES_DIR}/audit-spi.d\"\n";
+			shellScript = "if [ -f \"${SCRIPT_INPUT_FILE_0}\" ]\nthen \"${SCRIPT_INPUT_FILE_0}\" \"${BUILT_PRODUCTS_DIR}/JavaScriptCore.framework/JavaScriptCore\" \"${BUILT_PRODUCTS_DIR}/libwebrtc.dylib\" \"${BUILT_PRODUCTS_DIR}/WebCore.framework/WebCore\" \"${BUILT_PRODUCTS_DIR}/WebGPU.framework/WebGPU\"\nfi && touch \"${DERIVED_FILES_DIR}/audit-spi.d\"\n";
 		};
 		DD725ED52D9129A600E72544 /* Audit SPI use */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -20194,6 +20233,7 @@
 				079A4DAC2D72D06D00CA387F /* EnvironmentValues+Extras.swift in Sources */,
 				07AF79DD2D6938A1004E8D3A /* Foundation+Extras.swift in Sources */,
 				07AF79D12D68E67F004E8D3A /* PlatformTextSearching.swift in Sources */,
+				DD5697CF2DC06F7700050321 /* rdar150228472.swift in Sources */,
 				07AF79DF2D693BAA004E8D3A /* SwiftUI+Extras.swift in Sources */,
 				076868032D4C2867004DA801 /* View+WebViewModifiers.swift in Sources */,
 				07AF79D02D68E210004E8D3A /* ViewModifierContexts.swift in Sources */,
@@ -20445,6 +20485,7 @@
 				517B5F7B275E97A9002DC22D /* PushClientConnection.mm in Sources */,
 				EB36B16927A7B4500050E00D /* PushService.mm in Sources */,
 				EBA8D3B727A5E33F00CB7900 /* PushServiceConnection.mm in Sources */,
+				DD5697CE2DC06F7700050321 /* rdar150228472.swift in Sources */,
 				9B1229CE23FF25F2008CA751 /* RemoteAudioDestinationManager.cpp in Sources */,
 				2D72A1FA212BF46E00517A20 /* RemoteLayerTreeDrawingArea.mm in Sources */,
 				2DC18FB4218A6E9E0025A88D /* RemoteLayerTreeViews.mm in Sources */,
@@ -20910,6 +20951,7 @@
 				EB0FBFA72B66C61E00269CC1 /* MarketplaceKitWrapper.swift in Sources */,
 				0785E8002CBCDFFD00F68126 /* PlatformIntelligenceTextEffectView.swift in Sources */,
 				B66F88C02B6D1F2300FB1734 /* PreviewWindowController.swift in Sources */,
+				DD5697CD2DC06F7700050321 /* rdar150228472.swift in Sources */,
 				528952812C70797900D0357E /* RKEntity.swift in Sources */,
 				440DB5B72C1914DC0021639B /* TextAnimationManager.swift in Sources */,
 				077FD1A02CC7569200C5D9E0 /* WKIntelligenceReplacementTextEffectCoordinator.swift in Sources */,
@@ -21104,6 +21146,11 @@
 			isa = PBXTargetDependency;
 			target = CD95493426159004008372D9 /* WebKitSwift */;
 			targetProxy = CD0C36DC2639D3B4004E35D8 /* PBXContainerItemProxy */;
+		};
+		DD5698252DC1812C00050321 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C0CE72851247E66800BC0EC4 /* Derived Sources */;
+			targetProxy = DD5698242DC1812C00050321 /* PBXContainerItemProxy */;
 		};
 		DFBD8A3C2718B38C00BEC5B0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;

@@ -21,10 +21,7 @@ preprocessor_definitions = shlex.split(
     '{GCC_PREPROCESSOR_DEFINITIONS}'.format_map(os.environ))
 archs = shlex.split(os.environ['ARCHS'])
 
-if os.environ['DEPLOYMENT_LOCATION'] == 'YES':
-    output_dir = '{DSTROOT}/{PRIVATE_HEADERS_FOLDER_PATH}/Scripts'.format_map(os.environ)
-else:
-    output_dir = '{BUILT_PRODUCTS_DIR}/{PRIVATE_HEADERS_FOLDER_PATH}/Scripts'.format_map(os.environ)
+output_dir = os.path.dirname(os.environ['SCRIPT_OUTPUT_FILE_0'])
 
 combined_depfile_fd = open(
     '{DERIVED_FILES_DIR}/generate-platform-args.d'.format_map(os.environ), 'w')
@@ -39,9 +36,10 @@ combined_depfile_fd = open(
 # path arguments is duplicated by migrate-header-rule in WebKitLegacy. We could
 # share this implementation and generate bash-compatible and Make-compatible
 # variables for these use cases as well.
-#
-# FIXME: As an alternative, we could integrate the script as a build rule in
-# targets that compile swift, and generate the arguments on demand.
+
+with open(f'{output_dir}/rdar150228472.swift', 'w') as fd:
+    fd.write('// generate-platform-args: empty file to work around dependency '
+             'bug in rdar://150228472\n')
 
 for arch in archs:
     output_name = f'platform-enabled-swift-args.{arch}.resp'

@@ -216,6 +216,7 @@
 		97FA1A8E29C086230052D650 /* wgslc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 97FA1A8729C085A60052D650 /* wgslc.cpp */; };
 		97FA1AA729C0DA890052D650 /* libwgsl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1CEBD7F22716B2CC00A5254D /* libwgsl.a */; };
 		DD05A35C27BF09C60096EFAB /* libWTF.a in Product Dependencies */ = {isa = PBXBuildFile; fileRef = 1CEBD8292716CAE700A5254D /* libWTF.a */; };
+		DD5697FE2DC1316A00050321 /* rdar150228472.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD5697FC2DC1311D00050321 /* rdar150228472.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildRule section */
@@ -538,6 +539,7 @@
 		97FA1A7F29C085740052D650 /* wgslc */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = wgslc; sourceTree = BUILT_PRODUCTS_DIR; };
 		97FA1A8729C085A60052D650 /* wgslc.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = wgslc.cpp; path = WGSL/wgslc.cpp; sourceTree = SOURCE_ROOT; };
 		97FA1AA229C0BB700052D650 /* wgslc.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = wgslc.xcconfig; sourceTree = "<group>"; };
+		DD5697FC2DC1311D00050321 /* rdar150228472.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = rdar150228472.swift; sourceTree = "<group>"; };
 		DD8EE22A2CE6AC77004DD6F8 /* SwiftCXXThunk.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SwiftCXXThunk.h; sourceTree = "<group>"; };
 		DD8EE22F2CE6B4B3004DD6F8 /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -590,6 +592,7 @@
 		1CEBD7D92716AFBA00A5254D = {
 			isa = PBXGroup;
 			children = (
+				DD5697FD2DC1311D00050321 /* Derived Sources */,
 				1CEBD8242716C81400A5254D /* Info.plist */,
 				1CEBD7F92716B38600A5254D /* Configurations */,
 				1CEBD7F62716B33100A5254D /* WGSL */,
@@ -901,6 +904,15 @@
 			path = Metal;
 			sourceTree = "<group>";
 		};
+		DD5697FD2DC1311D00050321 /* Derived Sources */ = {
+			isa = PBXGroup;
+			children = (
+				DD5697FC2DC1311D00050321 /* rdar150228472.swift */,
+			);
+			name = "Derived Sources";
+			path = DerivedSources/WebGPU;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
 		DD8EE22E2CE6B490004DD6F8 /* Internal */ = {
 			isa = PBXGroup;
 			children = (
@@ -1080,6 +1092,7 @@
 			buildConfigurationList = 1CEBD7EA2716AFBA00A5254D /* Build configuration list for PBXNativeTarget "WebGPU" */;
 			buildPhases = (
 				1CEBD7DE2716AFBA00A5254D /* Headers */,
+				DD5697D92DC089C500050321 /* Generate Swift platform args */,
 				1CEBD7DF2716AFBA00A5254D /* Sources */,
 				1CEBD7E02716AFBA00A5254D /* Frameworks */,
 				1CEBD7E12716AFBA00A5254D /* Resources */,
@@ -1206,6 +1219,31 @@
 			shellPath = /bin/zsh;
 			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-cryptex.sh\"\n";
 		};
+		DD5697D92DC089C500050321 /* Generate Swift platform args */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			dependencyFile = "$(DERIVED_FILES_DIR)/generate-platform-args.d";
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(WTF_BUILD_SCRIPTS_DIR)/generate-platform-args",
+			);
+			name = "Generate Swift platform args";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/DerivedSources/WebGPU/platform-enabled-swift-args.arm64e.resp",
+				"$(BUILT_PRODUCTS_DIR)/DerivedSources/WebGPU/platform-enabled-swift-args.arm64.resp",
+				"$(BUILT_PRODUCTS_DIR)/DerivedSources/WebGPU/platform-enabled-swift-args.arm64_32.resp",
+				"$(BUILT_PRODUCTS_DIR)/DerivedSources/WebGPU/platform-enabled-swift-x86_64.resp",
+				"$(BUILT_PRODUCTS_DIR)/DerivedSources/WebGPU/rdar150228472.swift",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ \"${ACTION}\" = installhdrs ]\nthen touch \"${DERIVED_FILES_DIR}/generate-platform-args.d\"\nelse \"${SCRIPT_INPUT_FILE_0}\"\nfi\n";
+		};
 		DD725EBA2D8937A200E72544 /* Audit SPI use */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -1266,6 +1304,7 @@
 				1C5ACABD273A426D0095F8D5 /* QuerySet.mm in Sources */,
 				1C5ACACB273A426E0095F8D5 /* Queue.mm in Sources */,
 				941C1EE52CA328F7004D4220 /* Queue.swift in Sources */,
+				DD5697FE2DC1316A00050321 /* rdar150228472.swift in Sources */,
 				1C5ACAE7273A55EF0095F8D5 /* RenderBundle.mm in Sources */,
 				1C5ACACC273A426E0095F8D5 /* RenderBundleEncoder.mm in Sources */,
 				1C5ACAC2273A426D0095F8D5 /* RenderPassEncoder.mm in Sources */,

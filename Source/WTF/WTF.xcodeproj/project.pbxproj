@@ -575,6 +575,7 @@
 		DD4901EA27B4748A00D7E50D /* WindowsExtras.h in Headers */ = {isa = PBXBuildFile; fileRef = DD4901E327B4748A00D7E50D /* WindowsExtras.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD4901EB27B4748A00D7E50D /* ParallelJobsOpenMP.h in Headers */ = {isa = PBXBuildFile; fileRef = DD4901E427B4748A00D7E50D /* ParallelJobsOpenMP.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD4901EC27B4748A00D7E50D /* MainThreadData.h in Headers */ = {isa = PBXBuildFile; fileRef = DD4901E527B4748A00D7E50D /* MainThreadData.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		DD5697C72DC0511900050321 /* generate-platform-args in Headers */ = {isa = PBXBuildFile; fileRef = DD9C67FB2D70243000D4BEC7 /* generate-platform-args */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD725ECA2D8A443E00E72544 /* audit-spi-if-needed.sh in Headers */ = {isa = PBXBuildFile; fileRef = DD725EC92D8A442900E72544 /* audit-spi-if-needed.sh */; settings = {ATTRIBUTES = (Private, ); }; };
 		DDA35E4A29CA9B68006C1018 /* PlatformEnablePlayStation.h in Headers */ = {isa = PBXBuildFile; fileRef = DD4901E127B4748A00D7E50D /* PlatformEnablePlayStation.h */; };
 		DDCAF31D27B1E7C500C45308 /* GenericHashKey.h in Headers */ = {isa = PBXBuildFile; fileRef = E3FD6D6627A1F6AD00935000 /* GenericHashKey.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -2683,8 +2684,8 @@
 				7AFEC6AE1EB22AC600DADE36 /* UUID.h */,
 				A8A47311151A825B004123FG /* ValidatedReinterpretCast.h */,
 				A8A4736F151A825B004123FF /* ValueCheck.h */,
-				FA864D5F2DA9809F006820D3 /* Variant.h */,
 				144177D52D89B7C100F5099E /* ValueOrReference.h */,
+				FA864D5F2DA9809F006820D3 /* Variant.h */,
 				BCE0DFAA2D18670B003F0349 /* VariantExtras.h */,
 				BCEA08032CCFDB33000AC148 /* VariantList.h */,
 				BC05ACA52CEA70E500750CB1 /* VariantListOperations.h */,
@@ -3473,6 +3474,7 @@
 				DD3DC8AA27A4BF8E007E5B61 /* FunctionDispatcher.h in Headers */,
 				FEC26BF3289DBBD300639A59 /* FunctionPtr.h in Headers */,
 				DD3DC94E27A4BF8E007E5B61 /* FunctionTraits.h in Headers */,
+				DD5697C72DC0511900050321 /* generate-platform-args in Headers */,
 				DDF3080227C08A77006A526F /* generate-unified-source-bundles.rb in Headers */,
 				DDF3080327C08A77006A526F /* GeneratePreferences.rb in Headers */,
 				DDCAF31D27B1E7C500C45308 /* GenericHashKey.h in Headers */,
@@ -3826,8 +3828,8 @@
 				DD3DC8C227A4BF8E007E5B61 /* UUID.h in Headers */,
 				DD3DC98127A4BF8E007E5B62 /* ValidatedReinterpretCast.h in Headers */,
 				DD3DC86D27A4BF8E007E5B61 /* ValueCheck.h in Headers */,
-				FA864D602DA9809F006820D3 /* Variant.h in Headers */,
 				144177D62D89B7C100F5099E /* ValueOrReference.h in Headers */,
+				FA864D602DA9809F006820D3 /* Variant.h in Headers */,
 				BCE0DFAB2D18670B003F0349 /* VariantExtras.h in Headers */,
 				BCEA08042CCFDB33000AC148 /* VariantList.h in Headers */,
 				BC05ACA62CEA70E500750CB1 /* VariantListOperations.h in Headers */,
@@ -4076,7 +4078,6 @@
 				5D247B5E14689B8600E78B76 /* Sources */,
 				5D247B5F14689B8600E78B76 /* Frameworks */,
 				DDA35E4929CA74D4006C1018 /* Generate TAPI filelist */,
-				DD9C680D2D793A2200D4BEC7 /* Generate Swift platform args */,
 			);
 			buildRules = (
 				147572882CCD82170027BA8F /* PBXBuildRule */,
@@ -4182,30 +4183,6 @@
 			);
 			outputPaths = (
 				"$(WK_DERIVED_SDK_HEADERS_DIR)",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${SCRIPT_INPUT_FILE_0}\"\n";
-		};
-		DD9C680D2D793A2200D4BEC7 /* Generate Swift platform args */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			dependencyFile = "$(DERIVED_FILES_DIR)/generate-platform-args.d";
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"$(SRCROOT)/Scripts/generate-platform-args",
-			);
-			name = "Generate Swift platform args";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(BUILT_PRODUCTS_DIR)/$(PRIVATE_HEADERS_FOLDER_PATH)/Scripts/platform-enabled-swift-args.arm64.resp",
-				"$(BUILT_PRODUCTS_DIR)/$(PRIVATE_HEADERS_FOLDER_PATH)/Scripts/platform-enabled-swift-args.arm64_32.resp",
-				"$(BUILT_PRODUCTS_DIR)/$(PRIVATE_HEADERS_FOLDER_PATH)/Scripts/platform-enabled-swift-args.arm64e.resp",
-				"$(BUILT_PRODUCTS_DIR)/$(PRIVATE_HEADERS_FOLDER_PATH)/Scripts/platform-enabled-swift-args.x86_64.resp",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
