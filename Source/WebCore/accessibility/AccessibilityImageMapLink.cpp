@@ -89,7 +89,7 @@ void AccessibilityImageMapLink::accessibilityText(Vector<AccessibilityText>& tex
 {
     String description = this->description();
     if (!description.isEmpty())
-        textOrder.append(AccessibilityText(description, AccessibilityTextSource::Alternative));
+        textOrder.append(AccessibilityText(WTFMove(description), AccessibilityTextSource::Alternative));
 
     const AtomString& titleText = getAttribute(titleAttr);
     if (!titleText.isEmpty())

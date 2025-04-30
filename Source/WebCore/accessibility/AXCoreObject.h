@@ -621,7 +621,11 @@ struct AccessibilityText {
     String text;
     AccessibilityTextSource textSource;
 
-    AccessibilityText(const String& text, const AccessibilityTextSource& source)
+    AccessibilityText(String&& text, AccessibilityTextSource source)
+        : text(WTFMove(text))
+        , textSource(source)
+    { }
+    AccessibilityText(const String& text, AccessibilityTextSource source)
         : text(text)
         , textSource(source)
     { }

@@ -1769,15 +1769,21 @@ void AccessibilityNodeObject::alternativeText(Vector<AccessibilityText>& textOrd
     if (isWebArea()) {
         String webAreaText = alternativeTextForWebArea();
         if (!webAreaText.isEmpty())
-            textOrder.append(AccessibilityText(webAreaText, AccessibilityTextSource::Alternative));
+            textOrder.append(AccessibilityText(WTFMove(webAreaText), AccessibilityTextSource::Alternative));
         return;
     }
 
     ariaLabeledByText(textOrder);
 
-    auto ariaLabel = getAttributeTrimmed(aria_labelAttr);
-    if (!ariaLabel.isEmpty())
-        textOrder.append(AccessibilityText(ariaLabel, AccessibilityTextSource::Alternative));
+    bool hasValidAriaLabel = false;
+    {
+        // Scoped since we potentially move |ariaLabel| here. The scope prevents accidental use-after-move later.
+        auto ariaLabel = getAttributeTrimmed(aria_labelAttr);
+        if (!ariaLabel.isEmpty()) {
+            hasValidAriaLabel = true;
+            textOrder.append(AccessibilityText(WTFMove(ariaLabel), AccessibilityTextSource::Alternative));
+        }
+    }
 
     if (usesAltTagForTextComputation()) {
         if (auto* renderImage = dynamicDowncast<RenderImage>(renderer())) {
@@ -1785,7 +1791,7 @@ void AccessibilityNodeObject::alternativeText(Vector<AccessibilityText>& textOrd
 
             // RenderImage will return title as a fallback from altText, but we don't want title here because we consider that in helpText.
             if (!renderAltText.isEmpty() && renderAltText != getAttribute(titleAttr)) {
-                textOrder.append(AccessibilityText(renderAltText, AccessibilityTextSource::Alternative));
+                textOrder.append(AccessibilityText(WTFMove(renderAltText), AccessibilityTextSource::Alternative));
                 return;
             }
         }
@@ -1816,7 +1822,7 @@ void AccessibilityNodeObject::alternativeText(Vector<AccessibilityText>& textOrd
     }
 
     // Tree items missing a label are labeled by all child elements.
-    if (isTreeItem() && ariaLabel.isEmpty() && ariaLabeledByAttribute().isEmpty())
+    if (isTreeItem() && !hasValidAriaLabel && ariaLabeledByAttribute().isEmpty())
         textOrder.append(AccessibilityText(accessibleNameForNode(*node), AccessibilityTextSource::Alternative));
 
 #if ENABLE(MATHML)
@@ -1849,7 +1855,7 @@ void AccessibilityNodeObject::visibleText(Vector<AccessibilityText>& textOrder) 
 
         String text = textUnderElement(mode);
         if (!text.isEmpty())
-            textOrder.append(AccessibilityText(text, AccessibilityTextSource::Children));
+            textOrder.append(AccessibilityText(WTFMove(text), AccessibilityTextSource::Children));
     }
 }
 
@@ -1902,14 +1908,14 @@ void AccessibilityNodeObject::accessibilityText(Vector<AccessibilityText>& textO
 
     String placeholder = placeholderValue();
     if (!placeholder.isEmpty())
-        textOrder.append(AccessibilityText(placeholder, AccessibilityTextSource::Placeholder));
+        textOrder.append(AccessibilityText(WTFMove(placeholder), AccessibilityTextSource::Placeholder));
 }
 
 void AccessibilityNodeObject::ariaLabeledByText(Vector<AccessibilityText>& textOrder) const
 {
     String ariaLabeledBy = ariaLabeledByAttribute();
     if (!ariaLabeledBy.isEmpty())
-        textOrder.append(AccessibilityText(ariaLabeledBy, AccessibilityTextSource::Alternative));
+        textOrder.append(AccessibilityText(WTFMove(ariaLabeledBy), AccessibilityTextSource::Alternative));
 }
 
 String AccessibilityNodeObject::alternativeTextForWebArea() const
