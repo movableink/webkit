@@ -257,7 +257,7 @@ void RemoteLayerTreeDrawingAreaProxy::commitLayerTree(IPC::Connection& connectio
 {
     // The `sendRights` vector must have __block scope to be captured by
     // the commit handler block below without the need to copy it.
-    __block Vector<MachSendRight> sendRights;
+    __block Vector<MachSendRight, 16> sendRights;
     for (auto& transaction : transactions) {
         // commitLayerTreeTransaction consumes the incoming buffers, so we need to grab them first.
         for (auto& [layerID, properties] : transaction.first.changedLayerProperties()) {
