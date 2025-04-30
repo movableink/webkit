@@ -38,10 +38,6 @@ public:
     ~AutomationClient();
 
 private:
-    // API::AutomationClient
-    bool allowsRemoteAutomation(WebKit::WebProcessPool*) final { return remoteAutomationAllowed(); }
-    void didRequestAutomationSession(WebKit::WebProcessPool*, const String& sessionIdentifier) final { }
-
     // RemoteInspector::Client
     bool remoteAutomationAllowed() const override { return true; }
 

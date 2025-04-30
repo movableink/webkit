@@ -62,13 +62,6 @@ AutomationClient::~AutomationClient()
     RemoteInspector::singleton().setClient(nullptr);
 }
 
-// MARK: API::AutomationClient
-
-void AutomationClient::didRequestAutomationSession(WebKit::WebProcessPool*, const String& sessionIdentifier)
-{
-    requestAutomationSession(sessionIdentifier, { });
-}
-
 // MARK: RemoteInspector::Client
 
 bool AutomationClient::remoteAutomationAllowed() const
