@@ -33,11 +33,9 @@
 #import <WebKit/WKWebViewPrivate.h>
 #import <wtf/text/StringBuilder.h>
 
-static unsigned clientPermissionRequestCount;
 static bool didReceiveMessage;
 static bool didReceiveQueryPermission;
-static bool isDone;
-static bool shouldSetPermissionToGranted;
+static WKPermissionDecision permissionDecision;
 static RetainPtr<WKScriptMessage> scriptMessage;
 
 @interface PermissionsAPIMessageHandler : NSObject <WKScriptMessageHandler>
@@ -46,7 +44,7 @@ static RetainPtr<WKScriptMessage> scriptMessage;
 @implementation PermissionsAPIMessageHandler
 - (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message
 {
-    EXPECT_WK_STREQ([message body], @"prompt");
+    scriptMessage = message;
     didReceiveMessage = true;
 }
 @end
@@ -59,32 +57,10 @@ static RetainPtr<WKScriptMessage> scriptMessage;
 @implementation PermissionsAPIUIDelegate
 - (void)_webView:(WKWebView *)webView queryPermission:(NSString*) name forOrigin:(WKSecurityOrigin *)origin completionHandler:(void (^)(WKPermissionDecision state))completionHandler {
     didReceiveQueryPermission = true;
-    completionHandler(WKPermissionDecisionDeny);
+    completionHandler(permissionDecision);
 }
 @end
 
-
-@interface PermissionChangedTestAPIMessageHandler : NSObject <WKScriptMessageHandler>
-@end
-
-@implementation PermissionChangedTestAPIMessageHandler
-- (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message
-{
-    scriptMessage = message;
-    didReceiveMessage = true;
-}
-@end
-
-
-@interface PermissionChangedTestAPIUIDelegate : NSObject<WKUIDelegate>
-- (void)_webView:(WKWebView *)webView queryPermission:(NSString*) name forOrigin:(WKSecurityOrigin *)origin completionHandler:(void (^)(WKPermissionDecision state))completionHandler;
-@end
-
-@implementation PermissionChangedTestAPIUIDelegate
-- (void)_webView:(WKWebView *)webView queryPermission:(NSString*) name forOrigin:(WKSecurityOrigin *)origin completionHandler:(void (^)(WKPermissionDecision state))completionHandler {
-    shouldSetPermissionToGranted ? completionHandler(WKPermissionDecisionGrant) : completionHandler(WKPermissionDecisionPrompt);
-}
-@end
 
 namespace TestWebKitAPI {
 
@@ -110,9 +86,10 @@ TEST(PermissionsAPI, DataURL)
     auto delegate = adoptNS([[PermissionsAPIUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
 
-    isDone = false;
+    permissionDecision = WKPermissionDecisionDeny;
     didReceiveMessage = false;
     didReceiveQueryPermission = false;
+
     char script[] = "<script>\
         navigator.permissions.query({ name : 'geolocation' }).then((result) => { \
             window.webkit.messageHandlers.msg.postMessage(result.state);\
@@ -128,21 +105,27 @@ TEST(PermissionsAPI, DataURL)
 
     RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:buffer.createNSString().get()]).get()]);
     [webView loadRequest:request.get()];
+
     TestWebKitAPI::Util::run(&didReceiveMessage);
+    EXPECT_STREQ(((NSString *)[scriptMessage body]).UTF8String, "prompt");
+
     EXPECT_FALSE(didReceiveQueryPermission);
 }
 
 TEST(PermissionsAPI, OnChange)
 {
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
-    auto messageHandler = adoptNS([[PermissionChangedTestAPIMessageHandler alloc] init]);
+    auto messageHandler = adoptNS([[PermissionsAPIMessageHandler alloc] init]);
     [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"msg"];
 
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500) configuration:configuration.get()]);
-    auto delegate = adoptNS([[PermissionChangedTestAPIUIDelegate  alloc] init]);
+    auto delegate = adoptNS([[PermissionsAPIUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
 
-    shouldSetPermissionToGranted = true;
+    permissionDecision = WKPermissionDecisionGrant;
+    didReceiveMessage = false;
+    didReceiveQueryPermission = false;
+
     NSString *script = @"<script>"
         "navigator.permissions.query({ name : 'geolocation' }).then((permissionStatus) => {"
         "    window.webkit.messageHandlers.msg.postMessage(permissionStatus.state);"
@@ -157,9 +140,10 @@ TEST(PermissionsAPI, OnChange)
     [webView synchronouslyLoadHTMLString:script baseURL:[NSURL URLWithString:@"https://example.com/"]];
 
     TestWebKitAPI::Util::run(&didReceiveMessage);
-    didReceiveMessage = false;
     EXPECT_STREQ(((NSString *)[scriptMessage body]).UTF8String, "granted");
-    shouldSetPermissionToGranted = false;
+
+    didReceiveMessage = false;
+    permissionDecision = WKPermissionDecisionPrompt;
 
     auto originString = adoptWK(WKStringCreateWithUTF8CString("https://example.com/"));
     auto origin = adoptWK(WKSecurityOriginCreateFromString(originString.get()));
