@@ -61,7 +61,9 @@ class WebStorageSessionProvider : public WebCore::StorageSessionProvider {
 };
 
 WebCookieJar::WebCookieJar()
-    : WebCore::CookieJar(adoptRef(*new WebStorageSessionProvider)) { }
+    : WebCore::CookieJar(adoptRef(*new WebStorageSessionProvider))
+    , m_cache(WebCookieCache::create())
+{ }
 
 enum class BlockCookies : uint8_t { No, Yes, WillDecideInNetworkProcess };
 static BlockCookies shouldBlockCookies(WebFrame* frame, const URL& firstPartyForCookies, const URL& resourceURL)
@@ -107,7 +109,7 @@ bool WebCookieJar::isEligibleForCache(WebFrame& frame, const URL& firstPartyForC
     if (!page)
         return false;
 
-    if (!m_cache.isSupported())
+    if (!m_cache->isSupported())
         return false;
 
     // For now, we only cache cookies for first-party content. Third-party cookie caching is a bit more complicated due to partitioning and storage access.
@@ -151,7 +153,7 @@ String WebCookieJar::cookies(WebCore::Document& document, const URL& url) const
     auto webPageProxyID = page->webPageProxyIdentifier();
 
     if (isEligibleForCache(*webFrame, document.firstPartyForCookies(), url))
-        return m_cache.cookiesForDOM(document.firstPartyForCookies(), sameSiteInfo, url, frameID, pageID, webPageProxyID, includeSecureCookies);
+        return m_cache->cookiesForDOM(document.firstPartyForCookies(), sameSiteInfo, url, frameID, pageID, webPageProxyID, includeSecureCookies);
 
     auto sendResult = WebProcess::singleton().ensureNetworkProcessConnection().protectedConnection()->sendSync(Messages::NetworkConnectionToWebProcess::CookiesForDOM(document.firstPartyForCookies(), sameSiteInfo, url, frameID, pageID, includeSecureCookies, webPageProxyID), 0);
     auto [cookieString, secureCookiesAccessed] = sendResult.takeReplyOr(String { }, false);
@@ -180,7 +182,7 @@ void WebCookieJar::setCookies(WebCore::Document& document, const URL& url, const
     auto requiresTelemetry = document.requiresScriptExecutionTelemetry(ScriptTelemetryCategory::Cookies) ? RequiresScriptTelemetry::Yes : RequiresScriptTelemetry::No;
 
     if (isEligibleForCache(*webFrame, document.firstPartyForCookies(), url))
-        m_cache.setCookiesFromDOM(document.firstPartyForCookies(), sameSiteInfo, url, frameID, pageID, cookieString, shouldRelaxThirdPartyCookieBlocking(webFrame.get()));
+        m_cache->setCookiesFromDOM(document.firstPartyForCookies(), sameSiteInfo, url, frameID, pageID, cookieString, shouldRelaxThirdPartyCookieBlocking(webFrame.get()));
 
     WebProcess::singleton().ensureNetworkProcessConnection().protectedConnection()->send(Messages::NetworkConnectionToWebProcess::SetCookiesFromDOM(document.firstPartyForCookies(), sameSiteInfo, url, frameID, pageID, cookieString, requiresTelemetry, page->webPageProxyIdentifier()), 0);
 }
@@ -209,17 +211,17 @@ void WebCookieJar::cookiesDeleted(const String& host, Vector<WebCore::Cookie>&& 
 
 void WebCookieJar::allCookiesDeleted()
 {
-    m_cache.allCookiesDeleted();
+    m_cache->allCookiesDeleted();
 }
 
 void WebCookieJar::clearCache()
 {
-    m_cache.clear();
+    m_cache->clear();
 }
 
 void WebCookieJar::clearCacheForHost(const String& host)
 {
-    m_cache.clearForHost(host);
+    m_cache->clearForHost(host);
 }
 
 bool WebCookieJar::cookiesEnabled(Document& document)
@@ -369,12 +371,12 @@ void WebCookieJar::setCookieAsync(WebCore::Document& document, const URL& url, c
     PendingCookieUpdateCounter::Token pendingCookieUpdate;
     bool shouldUpdateCookieCache = webFrame && isEligibleForCache(*webFrame, document.firstPartyForCookies(), url);
     if (shouldUpdateCookieCache)
-        pendingCookieUpdate = m_cache.willSetCookieFromDOM();
+        pendingCookieUpdate = m_cache->willSetCookieFromDOM();
 
     auto completionHandlerWrapper = [protectedThis = Ref { *this }, pendingCookieUpdate = WTFMove(pendingCookieUpdate), shouldUpdateCookieCache, document = Ref { document }, webFrame, sameSiteInfo, url, frameID, pageID, cookie, completionHandler = WTFMove(completionHandler)](bool success) mutable {
         if (success) {
             if (shouldUpdateCookieCache)
-                protectedThis->m_cache.didSetCookieFromDOM(WTFMove(pendingCookieUpdate), document->firstPartyForCookies(), sameSiteInfo, url, *frameID, *pageID, cookie, shouldRelaxThirdPartyCookieBlocking(webFrame.get()));
+                protectedThis->m_cache->didSetCookieFromDOM(WTFMove(pendingCookieUpdate), document->firstPartyForCookies(), sameSiteInfo, url, *frameID, *pageID, cookie, shouldRelaxThirdPartyCookieBlocking(webFrame.get()));
         }
         pendingCookieUpdate = nullptr;
         completionHandler(success);
@@ -441,7 +443,7 @@ void WebCookieJar::removeChangeListener(const String& host, const WebCore::Cooki
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
 void WebCookieJar::setOptInCookiePartitioningEnabled(bool enabled)
 {
-    m_cache.setOptInCookiePartitioningEnabled(enabled);
+    m_cache->setOptInCookiePartitioningEnabled(enabled);
 }
 #endif
 
