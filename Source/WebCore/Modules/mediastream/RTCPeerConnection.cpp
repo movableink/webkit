@@ -963,6 +963,7 @@ void RTCPeerConnection::updateNegotiationNeededFlag(std::optional<uint32_t> even
         if (!connection.protectedBackend()->isNegotiationNeeded(*eventId))
             return;
 
+        connection.m_negotiationNeededEventId = std::nullopt;
         connection.dispatchEvent(Event::create(eventNames().negotiationneededEvent, Event::CanBubble::No, Event::IsCancelable::No));
     });
 }
