@@ -870,28 +870,36 @@ NSString* Device::addPipelineLayouts(Vector<Vector<WGPUBindGroupLayoutEntry>>& p
             auto stage = visibility / 2;
             WGPUBindGroupLayoutEntry newEntry = { };
             // FIXME: https://bugs.webkit.org/show_bug.cgi?id=265204 - use a set instead
+            bool isArrayLength = false;
+            uint32_t webBinding = entry.webBinding;
+            if (auto& entryName = entry.name; entryName.length()) {
+                if (entryName.endsWith("_ArrayLength"_s)) {
+                    webBinding += limits().maxBindingsPerBindGroup;
+                    isArrayLength = true;
+                }
+            }
+
             if (auto existingBindingIndex = entries.findIf([&](const WGPUBindGroupLayoutEntry& e) {
-                return e.binding == entry.webBinding;
+                return e.binding == webBinding;
             }); existingBindingIndex != notFound) {
                 entries[existingBindingIndex].visibility |= visibility;
                 std::span(entries[existingBindingIndex].metalBinding)[stage] = entry.binding;
                 if (!BindGroupLayout::equalBindingEntries(toBindingLayout(entries[existingBindingIndex]), makeBindingLayout(newEntry, entry.bindingMember)))
                     return @"Binding mismatch in auto-generated layouts";
-                entryMap.set(entry.name, entry.webBinding);
+                entryMap.set(entry.name, webBinding);
                 continue;
             }
             uint64_t bufferSizeForBinding = 0;
             WGPUBufferBindingType bufferTypeOverride = WGPUBufferBindingType_Undefined;
-            uint32_t webBinding = entry.webBinding;
             if (auto& entryName = entry.name; entryName.length()) {
-                if (entryName.endsWith("_ArrayLength"_s)) {
+                if (isArrayLength) {
                     webBinding += limits().maxBindingsPerBindGroup;
                     bufferTypeOverride = static_cast<WGPUBufferBindingType>(WGPUBufferBindingType_ArrayLength);
                     auto shortName = entryName.substring(2, entryName.length() - (sizeof("_ArrayLength") + 1));
                     if (auto it = entryMap.find(shortName); it != entryMap.end())
                         bufferSizeForBinding = it->value;
                 } else
-                    entryMap.set(entryName, entry.webBinding);
+                    entryMap.set(entryName, webBinding);
             }
 
             newEntry.binding = webBinding;
