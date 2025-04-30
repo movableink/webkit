@@ -99,16 +99,70 @@ template<typename CharacterType> static int parseTransformParamList(StringParsin
 static constexpr std::array requiredValuesForType { 0, 6, 1, 1, 1, 1, 1 };
 static constexpr std::array optionalValuesForType { 0, 0, 1, 1, 2, 0, 0 };
 
-template<typename CharacterType> static RefPtr<SVGTransform> parseTransformGeneric(SVGTransformValue::SVGTransformType type, StringParsingBuffer<CharacterType>& buffer, RefPtr<SVGTransform> reusableTransform)
+template<typename CharacterType>
+bool SVGTransformable::parseAndReplaceTransform(SVGTransformValue::SVGTransformType type, StringParsingBuffer<CharacterType>& buffer, SVGTransform& transform)
 {
-    ASSERT_IMPLIES(reusableTransform, type == reusableTransform->value().type());
+    ASSERT(type == transform.value().type());
 
+    if (type == SVGTransformValue::SVG_TRANSFORM_UNKNOWN)
+        return false;
+
+    std::array<float, 6> values { 0, 0, 0, 0, 0, 0 };
+    int valueCount = parseTransformParamList(buffer, values, requiredValuesForType[type], optionalValuesForType[type]);
+    if (valueCount < 0)
+        return false;
+
+    switch (type) {
+    case SVGTransformValue::SVG_TRANSFORM_UNKNOWN:
+        ASSERT_NOT_REACHED();
+        return false;
+
+    case SVGTransformValue::SVG_TRANSFORM_SKEWX:
+        transform.value().setSkewX(values[0]);
+        return true;
+
+    case SVGTransformValue::SVG_TRANSFORM_SKEWY:
+        transform.value().setSkewY(values[0]);
+        return true;
+
+    case SVGTransformValue::SVG_TRANSFORM_SCALE:
+        if (valueCount == 1)
+            transform.value().setScale(values[0], values[0]);
+        else
+            transform.value().setScale(values[0], values[1]);
+        return true;
+
+    case SVGTransformValue::SVG_TRANSFORM_TRANSLATE:
+        if (valueCount == 1)
+            transform.value().setTranslate(values[0], values[0]);
+        else
+            transform.value().setTranslate(values[0], values[1]);
+        return true;
+
+    case SVGTransformValue::SVG_TRANSFORM_ROTATE:
+        if (valueCount == 1)
+            transform.value().setRotate(values[0], 0, 0);
+        else
+            transform.value().setRotate(values[0], values[1], values[2]);
+        return true;
+
+    case SVGTransformValue::SVG_TRANSFORM_MATRIX:
+        transform.value().setMatrix(AffineTransform(values[0], values[1], values[2], values[3], values[4], values[5]));
+        return true;
+    }
+
+    return false;
+}
+
+template<typename CharacterType>
+RefPtr<SVGTransform> SVGTransformable::parseTransform(SVGTransformValue::SVGTransformType type, StringParsingBuffer<CharacterType>& buffer)
+{
     if (type == SVGTransformValue::SVG_TRANSFORM_UNKNOWN)
         return nullptr;
 
-    int valueCount = 0;
     std::array<float, 6> values { 0, 0, 0, 0, 0, 0 };
-    if ((valueCount = parseTransformParamList(buffer, values, requiredValuesForType[type], optionalValuesForType[type])) < 0)
+    int valueCount = parseTransformParamList(buffer, values, requiredValuesForType[type], optionalValuesForType[type]);
+    if (valueCount < 0)
         return nullptr;
 
     switch (type) {
@@ -117,36 +171,16 @@ template<typename CharacterType> static RefPtr<SVGTransform> parseTransformGener
         return nullptr;
 
     case SVGTransformValue::SVG_TRANSFORM_SKEWX: {
-        if (reusableTransform) {
-            ASSERT(reusableTransform->value().type() == SVGTransformValue::SVG_TRANSFORM_SKEWX);
-            reusableTransform->value().setSkewX(values[0]);
-            return reusableTransform;
-        }
-
         SVGTransformValue transform;
         transform.setSkewX(values[0]);
         return SVGTransform::create(WTFMove(transform));
     }
     case SVGTransformValue::SVG_TRANSFORM_SKEWY: {
-        if (reusableTransform) {
-            reusableTransform->value().setSkewY(values[0]);
-            return reusableTransform;
-        }
-
         SVGTransformValue transform;
         transform.setSkewY(values[0]);
         return SVGTransform::create(WTFMove(transform));
     }
     case SVGTransformValue::SVG_TRANSFORM_SCALE: {
-        if (reusableTransform) {
-            if (valueCount == 1)
-                reusableTransform->value().setScale(values[0], values[0]);
-            else
-                reusableTransform->value().setScale(values[0], values[1]);
-
-            return reusableTransform;
-        }
-
         auto resultValue = [&]() {
             if (valueCount == 1) // Spec: if only one param given, assume uniform scaling
                 return SVGTransformValue::scaleTransformValue({ values[0], values[0] });
@@ -157,30 +191,12 @@ template<typename CharacterType> static RefPtr<SVGTransform> parseTransformGener
         return SVGTransform::create(resultValue());
     }
     case SVGTransformValue::SVG_TRANSFORM_TRANSLATE: {
-        if (reusableTransform) {
-            if (valueCount == 1)
-                reusableTransform->value().setTranslate(values[0], values[0]);
-            else
-                reusableTransform->value().setTranslate(values[0], values[1]);
-
-            return reusableTransform;
-        }
-
         if (valueCount == 1) // Spec: if only one param given, assume 2nd param to be 0
             return SVGTransform::create(SVGTransformValue::translateTransformValue({ values[0], 0 }));
 
         return SVGTransform::create(SVGTransformValue::translateTransformValue({ values[0], values[1] }));
     }
     case SVGTransformValue::SVG_TRANSFORM_ROTATE: {
-        if (reusableTransform) {
-            if (valueCount == 1)
-                reusableTransform->value().setRotate(values[0], 0, 0);
-            else
-                reusableTransform->value().setRotate(values[0], values[1], values[2]);
-
-            return reusableTransform;
-        }
-
         auto resultValue = [&]() {
             if (valueCount == 1)
                 return SVGTransformValue::rotateTransformValue(values[0], { });
@@ -190,11 +206,6 @@ template<typename CharacterType> static RefPtr<SVGTransform> parseTransformGener
         return SVGTransform::create(resultValue());
     }
     case SVGTransformValue::SVG_TRANSFORM_MATRIX: {
-        if (reusableTransform) {
-            reusableTransform->value().setMatrix(AffineTransform(values[0], values[1], values[2], values[3], values[4], values[5]));
-            return reusableTransform;
-        }
-
         SVGTransformValue transform;
         transform.setMatrix(AffineTransform(values[0], values[1], values[2], values[3], values[4], values[5]));
         return SVGTransform::create(transform);
@@ -202,16 +213,6 @@ template<typename CharacterType> static RefPtr<SVGTransform> parseTransformGener
     }
 
     return nullptr;
-}
-
-RefPtr<SVGTransform> SVGTransformable::parseTransform(SVGTransformValue::SVGTransformType type, StringParsingBuffer<LChar>& buffer, RefPtr<SVGTransform> reusableTransform)
-{
-    return parseTransformGeneric(type, buffer, reusableTransform);
-}
-
-RefPtr<SVGTransform> SVGTransformable::parseTransform(SVGTransformValue::SVGTransformType type, StringParsingBuffer<UChar>& buffer, RefPtr<SVGTransform> reusableTransform)
-{
-    return parseTransformGeneric(type, buffer, reusableTransform);
 }
 
 template<typename CharacterType> static constexpr std::array<CharacterType, 5> skewXDesc  { 's', 'k', 'e', 'w', 'X' };

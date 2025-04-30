@@ -77,21 +77,22 @@ template<typename CharacterType> bool SVGTransformList::parseGeneric(StringParsi
         if (!parsedTransformType)
             return false;
 
-        RefPtr<SVGTransform> existingTransform;
-        if (currentListReplacement == ListReplacement::Replace && itemIndex < m_items.size() && parsedTransformType == m_items[itemIndex]->type())
-            existingTransform = m_items[itemIndex].ptr();
+        if (currentListReplacement == ListReplacement::Replace && itemIndex < m_items.size() && parsedTransformType == m_items[itemIndex]->type()) {
+            if (!SVGTransformable::parseAndReplaceTransform(*parsedTransformType, buffer, m_items[itemIndex]))
+                return false;
+        } else {
+            // Switch to `Append` mode and remove the existing SVGTransforms starting from `itemIndex`.
+            if (currentListReplacement == ListReplacement::Replace) {
+                currentListReplacement = ListReplacement::Append;
+                resize(itemIndex);
+            }
 
-        RefPtr parsedTransform = SVGTransformable::parseTransform(*parsedTransformType, buffer, existingTransform);
-        if (!parsedTransform)
-            return false;
+            RefPtr parsedTransform = SVGTransformable::parseTransform(*parsedTransformType, buffer);
+            if (!parsedTransform)
+                return false;
 
-        if (currentListReplacement == ListReplacement::Replace && parsedTransform.get() != existingTransform.get()) {
-            currentListReplacement = ListReplacement::Append;
-            resize(itemIndex);
-        }
-
-        if (currentListReplacement == ListReplacement::Append)
             append(parsedTransform.releaseNonNull());
+        }
 
         skipOptionalSVGSpaces(buffer);
 

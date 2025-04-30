@@ -32,8 +32,11 @@ class SVGTransformable : public SVGLocatable {
 public:
     virtual ~SVGTransformable();
 
-    static RefPtr<SVGTransform> parseTransform(SVGTransformValue::SVGTransformType, StringParsingBuffer<LChar>&, RefPtr<SVGTransform> reusableValue);
-    static RefPtr<SVGTransform> parseTransform(SVGTransformValue::SVGTransformType, StringParsingBuffer<UChar>&, RefPtr<SVGTransform> reusableValue);
+    template<typename CharacterType>
+    static bool parseAndReplaceTransform(SVGTransformValue::SVGTransformType, StringParsingBuffer<CharacterType>&, SVGTransform&);
+
+    template<typename CharacterType>
+    static RefPtr<SVGTransform> parseTransform(SVGTransformValue::SVGTransformType, StringParsingBuffer<CharacterType>&);
 
     static std::optional<SVGTransformValue::SVGTransformType> parseTransformType(StringView);
     static std::optional<SVGTransformValue::SVGTransformType> parseTransformType(StringParsingBuffer<LChar>&);
