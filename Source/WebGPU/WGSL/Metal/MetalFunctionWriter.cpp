@@ -667,7 +667,6 @@ void FunctionDefinitionWriter::visit(AST::Function& functionDefinition)
     for (auto& callee : m_shaderModule.callGraph().callees(functionDefinition))
         visit(*callee.target);
 
-    // FIXME: visit return attributes
     for (auto& attribute : functionDefinition.attributes()) {
         checkErrorAndVisit(attribute);
         m_body.append(' ');
@@ -713,7 +712,6 @@ void FunctionDefinitionWriter::visit(AST::Function& functionDefinition)
 
 void FunctionDefinitionWriter::visit(AST::Structure& structDecl)
 {
-    // FIXME: visit struct attributes
     m_structRole = { structDecl.role() };
     m_body.append(m_indent, "struct "_s, structDecl.name(), " {\n"_s);
     {
@@ -1483,7 +1481,6 @@ static void emitTextureLoad(FunctionDefinitionWriter* writer, AST::CallExpressio
     auto& texture = call.arguments()[0];
     auto* textureType = texture.inferredType();
 
-    // FIXME: this should become isPrimitiveReference once PR#14299 lands
     auto* primitive = std::get_if<Types::Primitive>(textureType);
     bool isExternalTexture = primitive && primitive->kind == Types::Primitive::TextureExternal;
     if (!isExternalTexture) {
@@ -1706,7 +1703,7 @@ static void emitTextureSampleBaseClampToEdge(FunctionDefinitionWriter* writer, A
     auto* textureType = std::get_if<Types::Texture>(texture.inferredType());
 
     if (textureType) {
-        // FIXME: this needs to clamp the coordinates
+        // FIXME: <rdar://150364488> this needs to clamp the coordinates
         writer->visit(texture);
         writer->stringBuilder().append(".sample"_s);
         visitArguments(writer, call, 1);

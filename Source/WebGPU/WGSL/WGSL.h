@@ -214,7 +214,6 @@ struct SpecializationConstant {
 };
 
 struct EntryPointInformation {
-    // FIXME: This can probably be factored better.
     String originalName;
     String mangledName;
     std::optional<PipelineLayout> defaultLayout; // If the input PipelineLayout is nullopt, the compiler computes a layout and returns it. https://gpuweb.github.io/gpuweb/#default-pipeline-layout

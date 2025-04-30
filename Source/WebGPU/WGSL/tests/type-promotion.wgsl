@@ -16,8 +16,7 @@ fn testCallee()
 struct S { x: u32 };
 fn testLiteral() -> i32
 {
-    // FIXME: this still fails
-    // _ = S(abs(0));
+    _ = S(abs(0));
 
     // We generate struct initialization with braces, so no narrowing allowed
     _ = S(abs(0u));

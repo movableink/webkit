@@ -14,9 +14,6 @@ fn testReferenceAssignment()
     // CHECK-L: cannot assign to a value of type 'i32'
     let z: i32 = 0;
     z = 0;
-
-    // FIXME: we can't test that we don't accept write-only references for reads
-    // since there are no valid ways of declaring a write-only var
 }
 
 fn testDecrementIcrement() {

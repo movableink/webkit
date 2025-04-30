@@ -391,14 +391,12 @@ fn testMultiply()
     v2f *= v2f;
     v2f *= 2;
     m2f *= m2f;
-    // FIXME: this requires type checking compound assignment
-    // m2f *= 2;
+    m2f *= 2;
 
     v2h *= v2h;
     v2h *= 2;
     m2h *= m2h;
-    // hIXME: this requires type checking compound assignment
-    // m2h *= 2;
+    m2h *= 2;
 
 }
 

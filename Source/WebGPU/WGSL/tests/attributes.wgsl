@@ -10,8 +10,7 @@ struct S {
 
 @group(0) @binding(0) var<storage> y : i32;
 
-// FIXME: we don't yet parse @id
-// @id(0) override z : i32;
+@id(0) override z : i32;
 
 @compute @workgroup_size(1)
 fn f1() { }

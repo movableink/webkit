@@ -17,9 +17,8 @@ struct S {
 // CHECK-L: @binding must be an i32 or u32 value
 @group(0) @binding(0.0) var y : i32;
 
-// FIXME: Type checking is implemented, but we don't yet parse @id
-// FIXME: CHECK-L: @binding must be an i32 or u32 value
-// @id(0.0) override z : i32;
+// CHECK-L: @id must be an i32 or u32 value
+@id(0.0) override z : i32;
 
 // CHECK-L: @workgroup_size x dimension must be an i32 or u32 value
 @compute @workgroup_size(1.0)

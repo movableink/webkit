@@ -451,7 +451,6 @@ std::optional<FailedCheck> TypeChecker::check()
     if (m_errors.isEmpty())
         return std::nullopt;
 
-    // FIXME: add support for warnings
     Vector<Warning> warnings { };
     return FailedCheck { WTFMove(m_errors), WTFMove(warnings) };
 }
@@ -1383,7 +1382,7 @@ void TypeChecker::visit(AST::CallExpression& call)
             if (isBottom(result))
                 return;
 
-            // FIXME: this will go away once we track used intrinsics properly
+            // FIXME: <rdar://150366527> this will go away once we track used intrinsics properly
             if (targetName == "workgroupUniformLoad"_s)
                 m_shaderModule.setUsesWorkgroupUniformLoad();
             else if (targetName == "frexp"_s)
@@ -1455,7 +1454,7 @@ void TypeChecker::visit(AST::CallExpression& call)
             return;
         }
 
-        // FIXME: similarly to above: this shouldn't be a string check
+        // FIXME: <rdar://150366527> similarly to above: this shouldn't be a string check
         if (targetName == "bitcast"_s) {
             bitcast(call, typeArguments);
             return;

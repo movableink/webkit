@@ -137,7 +137,7 @@ fn main()
     _ = testBuiltinShadowedByUserDefinedFunction();
     _ = testBuiltinShadowedByStruct();
 
-    // FIXME: test shadowing types once we support it
-    // const i32 = 0;
-    // const vec2 = 0;
+    const i32 = 0;
+    const vec2 = 0;
+    const x = i32 * vec2;
 }

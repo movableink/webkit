@@ -505,7 +505,7 @@ Packing RewriteGlobalVariables::getPacking(AST::FieldAccessExpression& expressio
 {
     auto* baseType = expression.base().inferredType();
     if (!baseType) {
-        // FIXME: all AST nodes should have an inferred type, but we create field
+        // All AST nodes should have an inferred type, but we create field
         // access nodes from the EntryPointRewriter which don't have a trivial
         // type, so we work around it by returning unpacked since those are only
         // used for marshalling inputs/outputs and don't need to packed/unpacked.
@@ -1327,7 +1327,7 @@ auto RewriteGlobalVariables::determineUsedGlobals(const AST::Function& function)
         auto groupResult = usedGlobals.resources.add(group, IndexMap<Global*>());
         auto bindingResult = groupResult.iterator->value.add(binding, &global);
 
-        // FIXME: this check needs to occur during WGSL::staticCheck
+        // FIXME: <rdar://150368198> this check needs to occur during WGSL::staticCheck
         if (!bindingResult.isNewEntry)
             return makeUnexpected(Error(makeString("entry point '"_s, m_entryPointInformation->originalName, "' uses variables '"_s, bindingResult.iterator->value->declaration->originalName(), "' and '"_s, variable.originalName(), "', both which use the same resource binding: @group("_s, group, ") @binding("_s, binding, ')'), variable.span()));
     }
@@ -1564,11 +1564,11 @@ Vector<unsigned> RewriteGlobalVariables::insertStructs(const UsedResources& used
                 auto* variable = bufferSizeIt->value;
                 bufferSizeToOwnerMap.add(variable, m_generatedLayout->bindGroupLayouts[group].entries.size());
             } else if (auto ownerIt = bufferSizeToOwnerMap.find(global.declaration); ownerIt != bufferSizeToOwnerMap.end()) {
-                // FIXME: since we only ever generate a layout for one shader stage
-                // at a time, we always store the indices in the vertex slot, but
-                // we should use a structs to pass information from the compiler to
-                // the API (instead of reusing the same struct the API uses to pass
-                // information to the compiler)
+                // FIXME: <rdar://150369108> since we only ever generate a layout
+                // for one shader stage at a time, we always store the indices in
+                // the vertex slot, but we should use a structs to pass information
+                // from the compiler to the API (instead of reusing the same struct
+                // the API uses to pass information to the compiler)
                 m_generatedLayout->bindGroupLayouts[group].entries[ownerIt->value].vertexArgumentBufferSizeIndex = metalId;
             }
 

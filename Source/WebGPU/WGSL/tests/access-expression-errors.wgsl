@@ -49,8 +49,8 @@ fn testConcretizationIfIndexIsNotConstant()
     // CHECK-L: cannot initialize var of type 'u32' with value of type 'i32'
     { let x: u32 = vec2(0)[i]; }
 
-    // FIXME: in order to test this we need to implement f16
-    // { let x: vec2<f16> = mat2x2(0, 0, 0, 0)[i]; }
+    // CHECK-L: cannot initialize var of type 'vec2<f16>' with value of type 'vec2<f32>'
+    { let x: vec2<f16> = mat2x2(0, 0, 0, 0)[i]; }
 
     // CHECK-NOT-L: cannot initialize var of type 'f32' with value of type 'i32'
     { let x: f32 = array(0)[0]; }

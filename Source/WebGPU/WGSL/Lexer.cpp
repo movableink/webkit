@@ -221,7 +221,6 @@ Token Lexer<T>::nextToken()
             shift();
             return makeToken(TokenType::StarEq);
         default:
-            // FIXME: Report unbalanced block comments, such as "this is an unbalanced comment. */"
             return makeToken(TokenType::Star);
         }
     case '/':
@@ -299,7 +298,6 @@ Token Lexer<T>::nextToken()
                 shift(consumed);
             }
 
-            // FIXME: a trie would be more efficient here, look at JavaScriptCore/KeywordLookupGenerator.py for an example of code autogeneration that produces such a trie.
             String view(StringImpl::createWithoutCopying(startOfToken.subspan(0, currentTokenLength())));
 
             static constexpr std::pair<ComparableASCIILiteral, TokenType> keywordMappings[] {
@@ -539,7 +537,6 @@ bool Lexer<T>::skipBlockComments()
             newLine();
     }
 
-    // FIXME: Report unbalanced block comments, such as "/* this is an unbalanced comment."
     return false;
 }
 

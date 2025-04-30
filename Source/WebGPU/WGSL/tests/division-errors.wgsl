@@ -184,16 +184,19 @@ fn testU32Compound()
 
 fn testF32Compound()
 {
-    // FIXME: these depende on proper typing for compound statements
-    // var y: vec2<f32>;
-    // skip-CHECK-NOT-L: division by zero
-    // y /= 0;
-    // skip-CHECK-NOT-L: division by zero
-    // y /= vec2(1, 0);
-    // skip-CHECK-NOT-L: division by zero
-    // y[0] /= 0;
-    // skip-CHECK-NOT-L: division by zero
-    // y[0] /= vec2(1, 0);
+    var y: vec2<f32>;
+
+    // CHECK-NOT-L: division by zero
+    y /= 0;
+
+    // CHECK-NOT-L: division by zero
+    y /= vec2(1, 0);
+
+    // CHECK-NOT-L: division by zero
+    y[0] /= 0;
+
+    // CHECK-NOT-L: division by zero
+    y[0] /= vec2(1, 0);
 }
 
 fn testDivisorOverflow()
