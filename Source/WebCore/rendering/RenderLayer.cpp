@@ -3216,7 +3216,7 @@ void RenderLayer::clipToRect(GraphicsContext& context, GraphicsContextStateSaver
                 break;
         
             if (layer->renderer().hasNonVisibleOverflow() && layer->renderer().style().hasBorderRadius() && ancestorLayerIsInContainingBlockChain(*layer)) {
-                LayoutRect adjustedClipRect = LayoutRect(toLayoutPoint(layer->offsetFromAncestor(paintingInfo.rootLayer, AdjustForColumns)), layer->size());
+                auto adjustedClipRect = LayoutRect { LayoutPoint { layer->offsetFromAncestor(paintingInfo.rootLayer, AdjustForColumns) }, layer->rendererBorderBoxRect().size() };
                 adjustedClipRect.move(paintingInfo.subpixelOffset);
                 auto borderShape = BorderShape::shapeForBorderRect(layer->renderer().style(), adjustedClipRect);
                 if (borderShape.innerShapeContains(paintingInfo.paintDirtyRect))
