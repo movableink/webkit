@@ -1,1 +1,1 @@
-CONSOLE MESSAGE: Pass
+Pass

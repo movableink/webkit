@@ -1,3 +1,4 @@
+<!-- webkit-test-runner [ dumpJSConsoleLogInStdErr=true ] -->
 <style>
   :root { background: #102030e0; color: #99ddbbcc; font-size: 15px; }
 </style>
@@ -27998,7 +27999,6 @@ device0.queue.submit([commandBuffer23, commandBuffer25]);
 try {
 device0.queue.writeBuffer(buffer23, 12, new DataView(new ArrayBuffer(15688)), 57, 4);
 } catch {}
-await gc();
 videoFrame0.close();
 videoFrame1.close();
 videoFrame2.close();
@@ -28021,6 +28021,8 @@ videoFrame23.close();
 videoFrame24.close();
 videoFrame25.close();
 videoFrame26.close();
+await gc();
+
 }
 
 onload = async () => {
@@ -28068,8 +28070,9 @@ onload = async () => {
       
     }
   }
-  log('Pass');
+  console.debug('Pass');
   globalThis.testRunner?.dumpAsText();
   globalThis.testRunner?.notifyDone();
 };
 </script>
+Pass

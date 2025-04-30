@@ -2418,5 +2418,3 @@ fast/forms/color/input-color-swatch-overlay-appearance.html [ Pass ]
 webkit.org/b/291459 [ Release ] imported/w3c/web-platform-tests/css/css-shapes/shape-outside/shape-image/shape-image-018.html [ Pass Failure ]
 
 webkit.org/b/291785 [ Release ] security/decode-buffer-size.html [ Timeout ]
-
-webkit.org/b/292337 fast/webgpu/nocrash/fuzz-291988b.html [ Skip ]
