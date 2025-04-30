@@ -103,6 +103,32 @@ TEST(WTF_CompactVariant, Pointers)
     );
 }
 
+#if CPU(ADDRESS64)
+TEST(WTF_CompactVariant, Pointers64)
+{
+    int testInt = 1;
+    void* testPtr = reinterpret_cast<void*>(0x2600'1234'5678'9abcULL);
+
+    CompactVariant<int*, void*> variant = &testInt;
+    EXPECT_TRUE(WTF::holdsAlternative<int*>(variant));
+    EXPECT_FALSE(WTF::holdsAlternative<void*>(variant));
+
+    WTF::switchOn(variant,
+        [&](int* const& value) { EXPECT_EQ(*value, 1); },
+        [&](void* const& value) { FAIL(); }
+    );
+
+    variant = testPtr;
+    EXPECT_FALSE(WTF::holdsAlternative<int*>(variant));
+    EXPECT_TRUE(WTF::holdsAlternative<void*>(variant));
+
+    WTF::switchOn(variant,
+        [&](int* const& value) { FAIL(); },
+        [&](void* const& value) { EXPECT_EQ(reinterpret_cast<uintptr_t>(value), 0x2600'1234'5678'9abcULL); }
+    );
+}
+#endif
+
 TEST(WTF_CompactVariant, SmartPointers)
 {
     {
