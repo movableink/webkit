@@ -339,14 +339,26 @@ StyleDifference RenderElement::adjustStyleDifference(StyleDifference diff, Optio
 
 inline bool RenderElement::shouldRepaintForStyleDifference(StyleDifference diff) const
 {
-    auto hasImmediateNonWhitespaceTextChild = [&] {
-        for (auto& child : childrenOfType<RenderText>(*this)) {
-            if (!child.containsOnlyCollapsibleWhitespace())
+    if (diff == StyleDifference::Repaint)
+        return true;
+
+    if (diff == StyleDifference::RepaintIfText) {
+        auto hasImmediateNonWhitespaceTextChild = [&](auto& renderer) {
+            for (auto& child : childrenOfType<RenderText>(renderer)) {
+                if (!child.containsOnlyCollapsibleWhitespace())
+                    return true;
+            }
+            return false;
+        };
+        if (hasImmediateNonWhitespaceTextChild(*this))
+            return true;
+        for (auto& blockChild : childrenOfType<RenderBlock>(*this)) {
+            if (blockChild.isAnonymousBlock() && hasImmediateNonWhitespaceTextChild(blockChild))
                 return true;
         }
-        return false;
-    };
-    return diff == StyleDifference::Repaint || (diff == StyleDifference::RepaintIfText && hasImmediateNonWhitespaceTextChild());
+    }
+
+    return false;
 }
 
 void RenderElement::updateFillImages(const FillLayer* oldLayers, const FillLayer* newLayers)
