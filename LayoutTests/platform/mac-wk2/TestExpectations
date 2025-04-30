@@ -1554,6 +1554,7 @@ webkit.org/b/261356 [ Debug ] fast/mediastream/device-change-event-2.html [ Pass
 webkit.org/b/263396 css3/color/text.html [ Skip ]
 
 # WebGPU
+fast/webgpu/nocrash/fuzz-275294.html [ Pass ]
 [ Release ] http/tests/webgpu/webgpu/api/validation/encoding/cmds/copyTextureToTexture.html
 
 # skipped due to infinite loop compute shaders normally not terminating on macOS, test must be run locally for now

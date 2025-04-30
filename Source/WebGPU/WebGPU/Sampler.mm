@@ -295,14 +295,8 @@ id<MTLSamplerState> Sampler::samplerState() const
             return false;
         });
     }
-    if (cachedSamplerStates->size() >= maxArgumentBufferSamplerCount) {
-        if (!lastAccessedKeys->size())
-            return nil;
-        auto& firstKey = *lastAccessedKeys->begin();
-        cachedSamplerStates->remove(firstKey);
-        retainedSamplerStates->remove(firstKey);
-        lastAccessedKeys->removeFirst();
-    }
+    if (cachedSamplerStates->size() >= maxArgumentBufferSamplerCount)
+        return nil;
 
     samplerState = [device newSamplerStateWithDescriptor:createMetalDescriptorFromDescriptor(m_descriptor)];
     if (!samplerState)
