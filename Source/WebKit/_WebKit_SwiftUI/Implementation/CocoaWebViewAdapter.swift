@@ -258,7 +258,7 @@ extension CocoaWebViewAdapter: WebPageWebView.Delegate {
 
     func supportsTextReplacement() -> Bool {
 #if canImport(SwiftUI, _version: "7.0.57")
-        findContext?.canReplace ?? false
+        findContext?.supportsReplace ?? false
 #else
         false
 #endif
