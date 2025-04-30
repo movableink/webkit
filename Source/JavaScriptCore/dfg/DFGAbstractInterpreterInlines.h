@@ -2667,7 +2667,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
 
                     if (arrayMode.isOutOfBounds()) {
                         if (m_graph.isWatchingArrayPrototypeChainIsSaneWatchpoint(node)) {
-                            if (arrayMode.type() == Array::Double && arrayMode.isOutOfBoundsSaneChain() && !(node->flags() & NodeBytecodeUsesAsOther))
+                            if (arrayMode.type() == Array::Double && node->hasDoubleResult())
                                 setConstant(node, jsNumber(PNaN));
                             else
                                 setConstant(node, jsUndefined());
@@ -2864,7 +2864,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             } else if (arrayMode.isInBoundsSaneChain())
                 setNonCellTypeForNode(node, SpecBytecodeDouble);
             else if (arrayMode.isOutOfBoundsSaneChain()) {
-                if (!!(node->flags() & NodeBytecodeUsesAsOther))
+                if (!node->hasDoubleResult())
                     setNonCellTypeForNode(node, SpecBytecodeDouble | SpecOther);
                 else
                     setNonCellTypeForNode(node, SpecBytecodeDouble);
