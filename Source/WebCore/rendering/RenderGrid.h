@@ -224,8 +224,8 @@ private:
 
     LayoutUnit gridAreaBreadthForOutOfFlowGridItem(const RenderBox&, GridTrackSizingDirection);
     LayoutUnit logicalOffsetForOutOfFlowGridItem(const RenderBox&, GridTrackSizingDirection, LayoutUnit) const;
-    LayoutRange gridAreaRowRangeForOutOfFlow(const RenderBox& gridItem) const;
-    LayoutRange gridAreaColumnRangeForOutOfFlow(const RenderBox& gridItem) const;
+    std::optional<LayoutRange> gridAreaRowRangeForOutOfFlow(const RenderBox& gridItem) const;
+    std::optional<LayoutRange> gridAreaColumnRangeForOutOfFlow(const RenderBox& gridItem) const;
     std::pair<LayoutUnit, LayoutUnit> gridAreaPositionForOutOfFlowGridItem(const RenderBox&, GridTrackSizingDirection) const;
     std::pair<LayoutUnit, LayoutUnit> gridAreaPositionForInFlowGridItem(const RenderBox&, GridTrackSizingDirection) const;
     std::pair<LayoutUnit, LayoutUnit> gridAreaPositionForGridItem(const RenderBox&, GridTrackSizingDirection) const;

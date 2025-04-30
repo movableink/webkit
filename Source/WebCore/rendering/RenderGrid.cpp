@@ -2331,21 +2331,24 @@ LayoutUnit RenderGrid::logicalOffsetForOutOfFlowGridItem(const RenderBox& gridIt
     return trackBreadth - offset - gridItemBreadth;
 }
 
-LayoutRange RenderGrid::gridAreaRowRangeForOutOfFlow(const RenderBox& gridItem) const
+std::optional<LayoutRange> RenderGrid::gridAreaRowRangeForOutOfFlow(const RenderBox& gridItem) const
 {
     ASSERT(gridItem.isOutOfFlowPositioned());
     auto areaSize = GridLayoutFunctions::overridingContainingBlockContentSizeForGridItem(gridItem, GridTrackSizingDirection::ForRows);
+    if (!areaSize)
+        return std::nullopt;
     LayoutRange range(borderBefore(), areaSize->value());
     if (auto line = m_outOfFlowItemRow.get(&gridItem))
         range.moveTo(m_rowPositions[line.value()]);
     return range;
 }
 
-LayoutRange RenderGrid::gridAreaColumnRangeForOutOfFlow(const RenderBox& gridItem) const
+std::optional<LayoutRange> RenderGrid::gridAreaColumnRangeForOutOfFlow(const RenderBox& gridItem) const
 {
     ASSERT(gridItem.isOutOfFlowPositioned());
     auto areaSize = GridLayoutFunctions::overridingContainingBlockContentSizeForGridItem(gridItem, GridTrackSizingDirection::ForColumns);
-    ASSERT(areaSize);
+    if (!areaSize)
+        return std::nullopt;
     LayoutRange range(borderStart(), areaSize->value());
     if (auto line = m_outOfFlowItemColumn.get(&gridItem))
         range.moveTo(m_columnPositions[line.value()]);
@@ -2354,11 +2357,12 @@ LayoutRange RenderGrid::gridAreaColumnRangeForOutOfFlow(const RenderBox& gridIte
 
 std::pair<LayoutUnit, LayoutUnit> RenderGrid::gridAreaPositionForOutOfFlowGridItem(const RenderBox& gridItem, GridTrackSizingDirection direction) const
 {
-    LayoutRange range = direction == GridTrackSizingDirection::ForColumns
+    std::optional<LayoutRange> range = direction == GridTrackSizingDirection::ForColumns
         ? gridAreaColumnRangeForOutOfFlow(gridItem)
         : gridAreaRowRangeForOutOfFlow(gridItem);
-    range.moveBy(logicalOffsetForOutOfFlowGridItem(gridItem, direction, range.size()));
-    return { range.min(), range.max() };
+    ASSERT(range);
+    range->moveBy(logicalOffsetForOutOfFlowGridItem(gridItem, direction, range->size()));
+    return { range->min(), range->max() };
 }
 
 std::pair<LayoutUnit, LayoutUnit> RenderGrid::gridAreaPositionForInFlowGridItem(const RenderBox& gridItem, GridTrackSizingDirection direction) const
