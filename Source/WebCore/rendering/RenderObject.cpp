@@ -517,56 +517,46 @@ RenderBox* RenderObject::enclosingScrollableContainer() const
     return document().documentElement() ? document().documentElement()->renderBox() : nullptr;
 }
 
-enum class RelayoutBoundary {
-    No,
-    OverflowOnly,
-    Yes,
-};
-
-static inline RelayoutBoundary isLayoutBoundary(const RenderElement& renderer)
+static inline bool isLayoutBoundary(const RenderElement& renderer)
 {
     // FIXME: In future it may be possible to broaden these conditions in order to improve performance.
     if (renderer.isRenderView())
-        return RelayoutBoundary::Yes;
+        return true;
 
     auto& style = renderer.style();
     if (CheckedPtr textControl = dynamicDowncast<RenderTextControl>(renderer)) {
         if (!textControl->isFlexItem() && !textControl->isGridItem() && style.fieldSizing() != FieldSizing::Content) {
             // Flexing type of layout systems may compute different size than what input's preferred width is which won't happen unless they run their layout as well.
-            return RelayoutBoundary::Yes;
+            return true;
         }
     }
 
     if (renderer.shouldApplyLayoutContainment() && renderer.shouldApplySizeContainment())
-        return RelayoutBoundary::Yes;
+        return true;
 
     if (renderer.isRenderOrLegacyRenderSVGRoot())
-        return RelayoutBoundary::Yes;
+        return true;
+
+    if (!renderer.hasNonVisibleOverflow()) {
+        // While createsNewFormattingContext (a few lines below) covers this case, overflow visible is a super common value so we should be able
+        // to bail out here fast.
+        return false;
+    }
 
     if (style.width().isIntrinsicOrAuto() || style.height().isIntrinsicOrAuto() || style.height().isPercentOrCalculated())
-        return RelayoutBoundary::No;
+        return false;
 
     if (renderer.document().settings().layerBasedSVGEngineEnabled() && renderer.isSVGLayerAwareRenderer())
-        return RelayoutBoundary::No;
+        return false;
 
     // Table parts can't be relayout roots since the table is responsible for layouting all the parts.
     if (renderer.isTablePart())
-        return RelayoutBoundary::No;
+        return false;
 
-    // Tables size to their contents, even with a fixed height.
-    if (renderer.isRenderTable())
-        return RelayoutBoundary::No;
+    if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(renderer); !renderBlock->createsNewFormattingContext())
+        return false;
 
-    if (CheckedPtr block = dynamicDowncast<RenderBlock>(renderer)) {
-        if (!block->createsNewFormattingContext())
-            return RelayoutBoundary::No;
-        return renderer.hasNonVisibleOverflow() ? RelayoutBoundary::Yes : RelayoutBoundary::OverflowOnly;
-    }
-
-    if (!renderer.hasNonVisibleOverflow())
-        return RelayoutBoundary::No;
-
-    return RelayoutBoundary::Yes;
+    return true;
 }
 
 void RenderObject::clearNeedsLayout(HadSkippedLayout hadSkippedLayout)
@@ -649,16 +639,8 @@ RenderElement* RenderObject::markContainingBlocksForLayout(RenderElement* layout
             // Having a valid layout root also mean we should not stop at layout boundaries.
             if (ancestor == layoutRoot)
                 return layoutRoot;
-
-            if (isLayoutBoundary(*ancestor) > RelayoutBoundary::No)
-                simplifiedNormalFlowLayout = true;
-        } else {
-            auto boundary = isLayoutBoundary(*ancestor);
-            if (boundary == RelayoutBoundary::Yes)
-                return ancestor.get();
-            if (boundary == RelayoutBoundary::OverflowOnly)
-                simplifiedNormalFlowLayout = true;
-        }
+        } else if (isLayoutBoundary(*ancestor))
+            return ancestor.get();
 
         if (auto* renderGrid = dynamicDowncast<RenderGrid>(container.get()); renderGrid && renderGrid->isExtrinsicallySized())
             simplifiedNormalFlowLayout = true;
