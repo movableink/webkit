@@ -2738,11 +2738,6 @@ AnimationList& RenderStyle::ensureTransitions()
     return *transitions;
 }
 
-const FontCascade& RenderStyle::fontCascade() const
-{
-    return m_inheritedData->fontData->fontCascade;
-}
-
 const FontMetrics& RenderStyle::metricsOfPrimaryFont() const
 {
     return m_inheritedData->fontData->fontCascade.metricsOfPrimaryFont();

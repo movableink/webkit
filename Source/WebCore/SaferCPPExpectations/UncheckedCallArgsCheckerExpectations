@@ -489,7 +489,6 @@ layout/integration/inline/InlineIteratorLineBoxInlines.h
 layout/integration/inline/InlineIteratorLineBoxLegacyPath.h
 layout/integration/inline/InlineIteratorLogicalOrderTraversal.cpp
 layout/integration/inline/InlineIteratorSVGTextBox.cpp
-layout/integration/inline/InlineIteratorTextBox.cpp
 layout/integration/inline/LayoutIntegrationInlineContentBuilder.cpp
 layout/integration/inline/LayoutIntegrationInlineContentPainter.cpp
 layout/integration/inline/LayoutIntegrationLineLayout.cpp
@@ -691,7 +690,6 @@ rendering/RenderBoxModelObject.cpp
 rendering/RenderBoxModelObjectInlines.h
 rendering/RenderButton.cpp
 rendering/RenderCombineText.cpp
-rendering/RenderCombineText.h
 rendering/RenderCounter.cpp
 rendering/RenderDeprecatedFlexibleBox.cpp
 rendering/RenderDescendantIterator.h
@@ -794,10 +792,8 @@ rendering/line/WordTrailingSpace.h
 rendering/mac/RenderThemeMac.mm
 rendering/mathml/MathOperator.cpp
 rendering/mathml/RenderMathMLBlock.cpp
-rendering/mathml/RenderMathMLBlockInlines.h
 rendering/mathml/RenderMathMLFenced.cpp
 rendering/mathml/RenderMathMLFencedOperator.cpp
-rendering/mathml/RenderMathMLFencedOperator.h
 rendering/mathml/RenderMathMLFraction.cpp
 rendering/mathml/RenderMathMLMenclose.cpp
 rendering/mathml/RenderMathMLMenclose.h
