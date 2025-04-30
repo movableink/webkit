@@ -760,13 +760,9 @@ TEST(AdaptiveImageGlyph, ContentsAsAttributedString)
 
 #if HAVE(NS_EMOJI_IMAGE_STRIKE_PROVENANCE)
             RetainPtr<NSDictionary> provenance = [adaptiveImageGlyph strikes].firstObject.provenance;
-
-            // FIXME: Remove the conditional once rdar://137757841 is in a build.
-            if ([provenance count]) {
-                EXPECT_WK_STREQ([provenance objectForKey:(__bridge NSString *)kCGImagePropertyIPTCCredit], "Apple Image Playground");
-                EXPECT_WK_STREQ([provenance objectForKey:(__bridge NSString *)kCGImagePropertyIPTCExtDigitalSourceType], "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia");
-                EXPECT_TRUE([provenance isEqualToDictionary:[value strikes].firstObject.provenance]);
-            }
+            EXPECT_WK_STREQ([provenance objectForKey:(__bridge NSString *)kCGImagePropertyIPTCCredit], "Apple Image Playground");
+            EXPECT_WK_STREQ([provenance objectForKey:(__bridge NSString *)kCGImagePropertyIPTCExtDigitalSourceType], "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia");
+            EXPECT_TRUE([provenance isEqualToDictionary:[value strikes].firstObject.provenance]);
 #endif
 
             // Reconstruction is lossy, so data cannot be compared directly against the original.

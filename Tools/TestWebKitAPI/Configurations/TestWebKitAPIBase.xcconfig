@@ -101,6 +101,9 @@ WK_IMAGEIO_LDFLAGS_xros = -framework ImageIO
 WK_IMAGEIO_LDFLAGS_xrsimulator = -framework ImageIO
 WK_IMAGEIO_LDFLAGS_maccatalyst = -framework ImageIO
 WK_IMAGEIO_LDFLAGS_appletvos = -framework ImageIO
+WK_IMAGEIO_LDFLAGS_appletvsimulator = -framework ImageIO
+WK_IMAGEIO_LDFLAGS_watchos = -framework ImageIO
+WK_IMAGEIO_LDFLAGS_watchsimulator = -framework ImageIO
 WK_IMAGEIO_LDFLAGS_macosx = $(WK_IMAGEIO_LDFLAGS$(WK_MACOS_1300));
 WK_IMAGEIO_LDFLAGS_MACOS_SINCE_1300 = -framework ImageIO;
 
