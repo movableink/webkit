@@ -440,42 +440,46 @@ ExceptionOr<std::optional<URLPatternResult>> URLPattern::match(ScriptExecutionCo
     auto protocolExecResult = m_protocolComponent.componentExec(context, protocol);
     if (protocolExecResult.isNull() || protocolExecResult.isUndefined())
         return { std::nullopt };
-    result.protocol = m_protocolComponent.createComponentMatchResult(context, WTFMove(protocol), protocolExecResult);
+
+    auto* globalObject = context.globalObject();
+    if (!globalObject)
+        return  { std::nullopt };
+    result.protocol = m_protocolComponent.createComponentMatchResult(globalObject, WTFMove(protocol), protocolExecResult);
 
     auto usernameExecResult = m_usernameComponent.componentExec(context, username);
     if (usernameExecResult.isNull() || usernameExecResult.isUndefined())
         return { std::nullopt };
-    result.username = m_usernameComponent.createComponentMatchResult(context, WTFMove(username), usernameExecResult);
+    result.username = m_usernameComponent.createComponentMatchResult(globalObject, WTFMove(username), usernameExecResult);
 
     auto passwordExecResult = m_passwordComponent.componentExec(context, password);
     if (passwordExecResult.isNull() || passwordExecResult.isUndefined())
         return { std::nullopt };
-    result.password = m_passwordComponent.createComponentMatchResult(context, WTFMove(password), passwordExecResult);
+    result.password = m_passwordComponent.createComponentMatchResult(globalObject, WTFMove(password), passwordExecResult);
 
     auto hostnameExecResult = m_hostnameComponent.componentExec(context, hostname);
     if (hostnameExecResult.isNull() || hostnameExecResult.isUndefined())
         return { std::nullopt };
-    result.hostname = m_hostnameComponent.createComponentMatchResult(context, WTFMove(hostname), hostnameExecResult);
+    result.hostname = m_hostnameComponent.createComponentMatchResult(globalObject, WTFMove(hostname), hostnameExecResult);
 
     auto pathnameExecResult = m_pathnameComponent.componentExec(context, pathname);
     if (pathnameExecResult.isNull() || pathnameExecResult.isUndefined())
         return { std::nullopt };
-    result.pathname = m_pathnameComponent.createComponentMatchResult(context, WTFMove(pathname), pathnameExecResult);
+    result.pathname = m_pathnameComponent.createComponentMatchResult(globalObject, WTFMove(pathname), pathnameExecResult);
 
     auto portExecResult = m_portComponent.componentExec(context, port);
     if (portExecResult.isNull() || portExecResult.isUndefined())
         return { std::nullopt };
-    result.port = m_portComponent.createComponentMatchResult(context, WTFMove(port), portExecResult);
+    result.port = m_portComponent.createComponentMatchResult(globalObject, WTFMove(port), portExecResult);
 
     auto searchExecResult = m_searchComponent.componentExec(context, search);
     if (searchExecResult.isNull() || searchExecResult.isUndefined())
         return { std::nullopt };
-    result.search = m_searchComponent.createComponentMatchResult(context, WTFMove(search), searchExecResult);
+    result.search = m_searchComponent.createComponentMatchResult(globalObject, WTFMove(search), searchExecResult);
 
     auto hashExecResult = m_hashComponent.componentExec(context, hash);
     if (hashExecResult.isNull() || hashExecResult.isUndefined())
         return { std::nullopt };
-    result.hash = m_hashComponent.createComponentMatchResult(context, WTFMove(hash), hashExecResult);
+    result.hash = m_hashComponent.createComponentMatchResult(globalObject, WTFMove(hash), hashExecResult);
 
     return { result };
 }

@@ -106,11 +106,10 @@ JSC::JSValue URLPatternComponent::componentExec(ScriptExecutionContext& context,
 }
 
 // https://urlpattern.spec.whatwg.org/#create-a-component-match-result
-URLPatternComponentResult URLPatternComponent::createComponentMatchResult(ScriptExecutionContext& context, String&& input, const JSC::JSValue& execResult) const
+URLPatternComponentResult URLPatternComponent::createComponentMatchResult(JSC::JSGlobalObject* globalObject, String&& input, const JSC::JSValue& execResult) const
 {
     URLPatternComponentResult::GroupsRecord groups;
 
-    auto globalObject = context.globalObject();
     Ref vm = globalObject->vm();
 
     auto length = execResult.get(globalObject, vm->propertyNames->length).toIntegerOrInfinity(globalObject);
