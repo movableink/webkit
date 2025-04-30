@@ -53,7 +53,7 @@ public:
     virtual void dataReceivedThroughContentFilter(const SharedBuffer&) = 0;
     virtual ResourceError contentFilterDidBlock(ContentFilterUnblockHandler, String&& unblockRequestDeniedScript) = 0;
     virtual void cancelMainResourceLoadForContentFilter(const ResourceError&) = 0;
-    virtual void handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, SubstituteData&) = 0;
+    virtual void handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, SubstituteData&&) = 0;
 
 #if HAVE(WEBCONTENTRESTRICTIONS)
     virtual bool usesWebContentRestrictions() = 0;

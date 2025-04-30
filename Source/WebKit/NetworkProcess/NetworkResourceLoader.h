@@ -203,7 +203,7 @@ private:
     void dataReceivedThroughContentFilter(const WebCore::SharedBuffer&) final;
     WebCore::ResourceError contentFilterDidBlock(WebCore::ContentFilterUnblockHandler, String&& unblockRequestDeniedScript) final;
     void cancelMainResourceLoadForContentFilter(const WebCore::ResourceError&) final;
-    void handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, WebCore::SubstituteData&) final;
+    void handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, WebCore::SubstituteData&&) final;
 #if HAVE(WEBCONTENTRESTRICTIONS)
     bool usesWebContentRestrictions() final;
 #endif

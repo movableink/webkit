@@ -110,7 +110,7 @@ void ApplicationCacheHost::maybeLoadMainResource(const ResourceRequest& request,
 
             substituteData = SubstituteData(&resource->data(),
                                             URL(),
-                                            responseToUse,
+                                            WTFMove(responseToUse),
                                             SubstituteData::SessionHistoryVisibility::Visible);
         }
     }

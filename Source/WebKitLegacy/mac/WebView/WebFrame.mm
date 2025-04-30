@@ -2451,7 +2451,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (!resourceRequest.url().isValid() && !resourceRequest.url().isEmpty())
         resourceRequest.setURL([NSURL URLWithString:[@"file:" stringByAppendingString:[[request URL] absoluteString]]]);
 
-    coreFrame->loader().load(WebCore::FrameLoadRequest(*coreFrame, resourceRequest));
+    coreFrame->loader().load(WebCore::FrameLoadRequest(*coreFrame, WTFMove(resourceRequest)));
 }
 
 static NSURL *createUniqueWebDataURL()
@@ -2490,9 +2490,9 @@ static NSURL *createUniqueWebDataURL()
     WebCore::ResourceRequest request(absoluteBaseURL.get());
 
     WebCore::ResourceResponse response(responseURL.get(), MIMEType, [data length], encodingName);
-    WebCore::SubstituteData substituteData(WebCore::SharedBuffer::create(data), [unreachableURL absoluteURL], response, WebCore::SubstituteData::SessionHistoryVisibility::Hidden);
+    WebCore::SubstituteData substituteData(WebCore::SharedBuffer::create(data), [unreachableURL absoluteURL], WTFMove(response), WebCore::SubstituteData::SessionHistoryVisibility::Hidden);
 
-    _private->coreFrame->loader().load(WebCore::FrameLoadRequest(*_private->coreFrame, request, substituteData));
+    _private->coreFrame->loader().load(WebCore::FrameLoadRequest(*_private->coreFrame, WTFMove(request), WTFMove(substituteData)));
 }
 
 - (void)loadData:(NSData *)data MIMEType:(NSString *)MIMEType textEncodingName:(NSString *)encodingName baseURL:(NSURL *)baseURL

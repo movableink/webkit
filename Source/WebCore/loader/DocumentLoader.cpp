@@ -176,13 +176,13 @@ DocumentLoader* DocumentLoader::fromScriptExecutionContextIdentifier(ScriptExecu
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DocumentLoader);
 
-DocumentLoader::DocumentLoader(const ResourceRequest& request, const SubstituteData& substituteData)
+DocumentLoader::DocumentLoader(ResourceRequest&& request, SubstituteData&& substituteData)
     : FrameDestructionObserver(nullptr)
     , m_cachedResourceLoader(CachedResourceLoader::create(this))
     , m_originalRequest(request)
-    , m_substituteData(substituteData)
+    , m_substituteData(WTFMove(substituteData))
     , m_originalRequestCopy(request)
-    , m_request(request)
+    , m_request(WTFMove(request))
     , m_substituteResourceDeliveryTimer(*this, &DocumentLoader::substituteResourceDeliveryTimerFired)
     , m_applicationCacheHost(makeUnique<ApplicationCacheHost>(*this))
     , m_originalSubstituteDataWasValid(substituteData.isValid())
@@ -248,7 +248,7 @@ void DocumentLoader::replaceRequestURLForSameDocumentNavigation(const URL& url)
     m_request.setURL(URL { url });
 }
 
-void DocumentLoader::setRequest(const ResourceRequest& req)
+void DocumentLoader::setRequest(ResourceRequest&& req)
 {
     // Replacing an unreachable URL with alternate content looks like a server-side
     // redirect at this point, but we can replace a committed dataSource.
@@ -267,7 +267,7 @@ void DocumentLoader::setRequest(const ResourceRequest& req)
     // would be a WebFoundation bug if it sent a redirect callback after commit.
     ASSERT(!m_committed);
 
-    m_request = req;
+    m_request = WTFMove(req);
     if (shouldNotifyAboutProvisionalURLChange) {
         // Logging for <rdar://problem/54830233>.
         if (!frameLoader()->provisionalDocumentLoader())
@@ -769,7 +769,7 @@ void DocumentLoader::willSendRequest(ResourceRequest&& newRequest, const Resourc
         return completionHandler(WTFMove(newRequest));
 #endif
 
-    setRequest(newRequest);
+    setRequest(ResourceRequest { newRequest });
 
     if (!didReceiveRedirectResponse)
         return completionHandler(WTFMove(newRequest));
@@ -2372,7 +2372,7 @@ void DocumentLoader::loadMainResource(ResourceRequest&& request)
     // the fragment identifier, so add that back in.
     if (equalIgnoringFragmentIdentifier(m_request.url(), updatedRequest.url()))
         updatedRequest.setURL(URL { m_request.url() });
-    setRequest(updatedRequest);
+    setRequest(WTFMove(updatedRequest));
 }
 
 void DocumentLoader::cancelPolicyCheckIfNeeded()
@@ -2406,7 +2406,7 @@ void DocumentLoader::cancelMainResourceLoad(const ResourceError& resourceError, 
 
 void DocumentLoader::willContinueMainResourceLoadAfterRedirect(const ResourceRequest& newRequest)
 {
-    setRequest(newRequest);
+    setRequest(ResourceRequest { newRequest });
 }
 
 void DocumentLoader::clearMainResource()
@@ -2635,9 +2635,9 @@ ResourceError DocumentLoader::contentFilterDidBlock(ContentFilterUnblockHandler 
     return handleContentFilterDidBlock(unblockHandler, WTFMove(unblockRequestDeniedScript));
 }
 
-void DocumentLoader::handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, SubstituteData& substituteData)
+void DocumentLoader::handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, SubstituteData&& substituteData)
 {
-    protectedFrameLoader()->load(FrameLoadRequest(*frame(), URL { blockedPageURL }, substituteData));
+    protectedFrameLoader()->load(FrameLoadRequest(*frame(), URL { blockedPageURL }, WTFMove(substituteData)));
 }
 
 #if HAVE(WEBCONTENTRESTRICTIONS)
@@ -2684,7 +2684,7 @@ void DocumentLoader::contentFilterHandleProvisionalLoadFailure(const ResourceErr
         m_contentFilter->handleProvisionalLoadFailure(error);
     if (contentFilterInDocumentLoader())
         return;
-    handleProvisionalLoadFailureFromContentFilter(m_blockedPageURL, m_substituteDataFromContentFilter);
+    handleProvisionalLoadFailureFromContentFilter(m_blockedPageURL, SubstituteData { m_substituteDataFromContentFilter });
 }
 
 #endif // ENABLE(CONTENT_FILTERING)

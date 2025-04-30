@@ -2058,7 +2058,7 @@ void WebPage::loadDataInFrame(std::span<const uint8_t> data, String&& type, Stri
 
     Ref sharedBuffer = SharedBuffer::create(data);
     ResourceResponse response(URL { baseURL }, WTFMove(type), sharedBuffer->size(), WTFMove(encodingName));
-    SubstituteData substituteData(WTFMove(sharedBuffer), baseURL, WTFMove(response), SubstituteData::SessionHistoryVisibility::Hidden);
+    SubstituteData substituteData(WTFMove(sharedBuffer), URL { baseURL }, WTFMove(response), SubstituteData::SessionHistoryVisibility::Hidden);
     frame->coreLocalFrame()->loader().load(FrameLoadRequest(*frame->coreLocalFrame(), ResourceRequest(WTFMove(baseURL)), WTFMove(substituteData)));
 }
 
@@ -2127,12 +2127,12 @@ void WebPage::loadRequest(LoadParameters&& loadParameters)
 
     // Initate the load in WebCore.
     ASSERT(localFrame->document());
-    FrameLoadRequest frameLoadRequest { *localFrame, loadParameters.request };
+    FrameLoadRequest frameLoadRequest { *localFrame, WTFMove(loadParameters.request) };
     frameLoadRequest.setShouldOpenExternalURLsPolicy(loadParameters.shouldOpenExternalURLsPolicy);
     frameLoadRequest.setShouldTreatAsContinuingLoad(loadParameters.shouldTreatAsContinuingLoad);
     frameLoadRequest.setLockHistory(loadParameters.lockHistory);
     frameLoadRequest.setLockBackForwardList(loadParameters.lockBackForwardList);
-    frameLoadRequest.setClientRedirectSourceForHistory(loadParameters.clientRedirectSourceForHistory);
+    frameLoadRequest.setClientRedirectSourceForHistory(WTFMove(loadParameters.clientRedirectSourceForHistory));
     frameLoadRequest.setIsHandledByAboutSchemeHandler(loadParameters.isHandledByAboutSchemeHandler);
     if (loadParameters.isRequestFromClientOrUserInput)
         frameLoadRequest.setIsRequestFromClientOrUserInput();
@@ -2173,7 +2173,7 @@ void WebPage::loadDataImpl(std::optional<WebCore::NavigationIdentifier> navigati
     m_pendingNavigationID = navigationID;
     m_internals->pendingWebsitePolicies = WTFMove(websitePolicies);
 
-    SubstituteData substituteData(WTFMove(sharedBuffer), unreachableURL, response, sessionHistoryVisibility);
+    SubstituteData substituteData(WTFMove(sharedBuffer), WTFMove(unreachableURL), WTFMove(response), sessionHistoryVisibility);
 
     // Let the InjectedBundle know we are about to start the load, passing the user data from the UIProcess
     // to all the client to set up any needed state.
@@ -2186,7 +2186,7 @@ void WebPage::loadDataImpl(std::optional<WebCore::NavigationIdentifier> navigati
     }
 
     // Initate the load in WebCore.
-    FrameLoadRequest frameLoadRequest(*localFrame, request, substituteData);
+    FrameLoadRequest frameLoadRequest(*localFrame, WTFMove(request), WTFMove(substituteData));
     frameLoadRequest.setShouldOpenExternalURLsPolicy(shouldOpenExternalURLsPolicy);
     frameLoadRequest.setShouldTreatAsContinuingLoad(shouldTreatAsContinuingLoad);
     frameLoadRequest.setIsRequestFromClientOrUserInput();
@@ -2225,9 +2225,9 @@ void WebPage::loadAlternateHTML(LoadParameters&& loadParameters)
 {
     platformDidReceiveLoadParameters(loadParameters);
 
-    URL baseURL = loadParameters.baseURLString.isEmpty() ? aboutBlankURL() : URL { loadParameters.baseURLString };
-    URL unreachableURL = loadParameters.unreachableURLString.isEmpty() ? URL() : URL { loadParameters.unreachableURLString };
-    URL provisionalLoadErrorURL = loadParameters.provisionalLoadErrorURLString.isEmpty() ? URL() : URL { loadParameters.provisionalLoadErrorURLString };
+    URL baseURL = loadParameters.baseURLString.isEmpty() ? aboutBlankURL() : URL { WTFMove(loadParameters.baseURLString) };
+    URL unreachableURL = loadParameters.unreachableURLString.isEmpty() ? URL() : URL { WTFMove(loadParameters.unreachableURLString) };
+    URL provisionalLoadErrorURL = loadParameters.provisionalLoadErrorURLString.isEmpty() ? URL() : URL { WTFMove(loadParameters.provisionalLoadErrorURLString) };
     RefPtr sharedBuffer = loadParameters.data;
     if (!sharedBuffer) {
         ASSERT_NOT_REACHED();
@@ -8213,9 +8213,9 @@ void WebPage::setScrollbarOverlayStyle(std::optional<WebCore::ScrollbarOverlaySt
         localMainFrame->protectedView()->recalculateScrollbarOverlayStyle();
 }
 
-Ref<DocumentLoader> WebPage::createDocumentLoader(LocalFrame& frame, const ResourceRequest& request, const SubstituteData& substituteData)
+Ref<DocumentLoader> WebPage::createDocumentLoader(LocalFrame& frame, ResourceRequest&& request, SubstituteData&& substituteData)
 {
-    auto documentLoader = DocumentLoader::create(request, substituteData);
+    auto documentLoader = DocumentLoader::create(WTFMove(request), WTFMove(substituteData));
 
     documentLoader->setLastNavigationWasAppInitiated(m_lastNavigationWasAppInitiated);
 

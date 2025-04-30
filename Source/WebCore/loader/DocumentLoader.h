@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -209,9 +209,9 @@ public:
     void deref() const final { RefCounted::deref(); }
 #endif
 
-    static Ref<DocumentLoader> create(const ResourceRequest& request, const SubstituteData& data)
+    static Ref<DocumentLoader> create(ResourceRequest&& request, SubstituteData&& data)
     {
-        return adoptRef(*new DocumentLoader(request, data));
+        return adoptRef(*new DocumentLoader(WTFMove(request), WTFMove(data)));
     }
 
     USING_CAN_MAKE_WEAKPTR(CachedRawResourceClient);
@@ -549,7 +549,7 @@ public:
     WEBCORE_EXPORT void setNewResultingClientId(ScriptExecutionContextIdentifier);
 
 protected:
-    WEBCORE_EXPORT DocumentLoader(const ResourceRequest&, const SubstituteData&);
+    WEBCORE_EXPORT DocumentLoader(ResourceRequest&&, SubstituteData&&);
 
     WEBCORE_EXPORT virtual void attachToFrame();
 
@@ -563,7 +563,7 @@ private:
 
     void loadMainResource(ResourceRequest&&);
 
-    void setRequest(const ResourceRequest&);
+    void setRequest(ResourceRequest&&);
 
     void commitIfReady();
     void setMainDocumentError(const ResourceError&);
@@ -596,7 +596,7 @@ private:
     WEBCORE_EXPORT void dataReceivedThroughContentFilter(const SharedBuffer&) final;
     WEBCORE_EXPORT ResourceError contentFilterDidBlock(ContentFilterUnblockHandler, String&& unblockRequestDeniedScript) final;
     WEBCORE_EXPORT void cancelMainResourceLoadForContentFilter(const ResourceError&) final;
-    WEBCORE_EXPORT void handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, SubstituteData&) final;
+    WEBCORE_EXPORT void handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, SubstituteData&&) final;
 #if HAVE(WEBCONTENTRESTRICTIONS)
     WEBCORE_EXPORT bool usesWebContentRestrictions() final;
 #endif

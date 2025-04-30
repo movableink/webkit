@@ -347,9 +347,9 @@ void ContentFilter::handleProvisionalLoadFailure(const ResourceError& error)
 
     RefPtr replacementData { m_blockingContentFilter->replacementData() };
     ResourceResponse response { URL(), "text/html"_s, static_cast<long long>(replacementData->size()), "UTF-8"_s };
-    SubstituteData substituteData { WTFMove(replacementData), error.failingURL(), response, SubstituteData::SessionHistoryVisibility::Hidden };
+    SubstituteData substituteData { WTFMove(replacementData), URL { error.failingURL() }, WTFMove(response), SubstituteData::SessionHistoryVisibility::Hidden };
     SetForScope loadingBlockedPage { m_isLoadingBlockedPage, true };
-    protectedClient()->handleProvisionalLoadFailureFromContentFilter(blockedPageURL(), substituteData);
+    protectedClient()->handleProvisionalLoadFailureFromContentFilter(blockedPageURL(), WTFMove(substituteData));
 }
 
 void ContentFilter::deliverStoredResourceData()

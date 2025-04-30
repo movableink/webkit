@@ -506,7 +506,7 @@ public:
 
         Ref originDocument = m_originDocument.get();
         ResourceResponse replacementResponse { URL { originDocument->url() }, String { textPlainContentTypeAtom() }, 0, "UTF-8"_s };
-        SubstituteData replacementData { SharedBuffer::create(), originDocument->url(), replacementResponse, SubstituteData::SessionHistoryVisibility::Hidden };
+        SubstituteData replacementData { SharedBuffer::create(), URL { originDocument->url() }, WTFMove(replacementResponse), SubstituteData::SessionHistoryVisibility::Hidden };
 
         ResourceRequest resourceRequest { URL { originDocument->url() }, emptyString(), ResourceRequestCachePolicy::ReloadIgnoringCacheData };
         if (RefPtr documentLoader = originDocument->loader())
@@ -514,7 +514,7 @@ public:
         FrameLoadRequest frameLoadRequest { originDocument.copyRef(), originDocument->protectedSecurityOrigin(), WTFMove(resourceRequest), { }, initiatedByMainFrame() };
         frameLoadRequest.setLockHistory(lockHistory());
         frameLoadRequest.setLockBackForwardList(lockBackForwardList());
-        frameLoadRequest.setSubstituteData(replacementData);
+        frameLoadRequest.setSubstituteData(WTFMove(replacementData));
         frameLoadRequest.setShouldOpenExternalURLsPolicy(shouldOpenExternalURLs());
         localFrame->protectedLoader()->load(WTFMove(frameLoadRequest));
     }

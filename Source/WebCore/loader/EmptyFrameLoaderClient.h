@@ -36,7 +36,7 @@ public:
     { }
 
 private:
-    Ref<DocumentLoader> createDocumentLoader(const ResourceRequest&, const SubstituteData&) override;
+    Ref<DocumentLoader> createDocumentLoader(ResourceRequest&&, SubstituteData&&) override;
 
     bool hasWebView() const final;
 

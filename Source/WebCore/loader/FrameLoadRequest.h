@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@ class SecurityOrigin;
 class FrameLoadRequest {
 public:
     WEBCORE_EXPORT FrameLoadRequest(Ref<Document>&&, SecurityOrigin&, ResourceRequest&&, const AtomString& frameName, InitiatedByMainFrame, const AtomString& downloadAttribute = { });
-    WEBCORE_EXPORT FrameLoadRequest(LocalFrame&, const ResourceRequest&, const SubstituteData& = SubstituteData());
+    WEBCORE_EXPORT FrameLoadRequest(LocalFrame&, ResourceRequest&&, SubstituteData&& = SubstituteData());
 
     WEBCORE_EXPORT ~FrameLoadRequest();
 
@@ -58,6 +58,7 @@ public:
 
     ResourceRequest& resourceRequest() { return m_resourceRequest; }
     const ResourceRequest& resourceRequest() const { return m_resourceRequest; }
+    ResourceRequest takeResourceRequest() { return std::exchange(m_resourceRequest, { }); }
 
     const AtomString& frameName() const { return m_frameName; }
     void setFrameName(const AtomString& frameName) { m_frameName = frameName; }
@@ -69,8 +70,9 @@ public:
     ShouldTreatAsContinuingLoad shouldTreatAsContinuingLoad() const { return m_shouldTreatAsContinuingLoad; }
 
     const SubstituteData& substituteData() const { return m_substituteData; }
-    void setSubstituteData(const SubstituteData& data) { m_substituteData = data; }
+    void setSubstituteData(SubstituteData&& data) { m_substituteData = WTFMove(data); }
     bool hasSubstituteData() { return m_substituteData.isValid(); }
+    SubstituteData takeSubstituteData() { return std::exchange(m_substituteData, { }); }
 
     LockHistory lockHistory() const { return m_lockHistory; }
     void setLockHistory(LockHistory value) { m_lockHistory = value; }
@@ -85,7 +87,7 @@ public:
     void setIsContentExtensionRedirect(bool isContentExtensionRedirect) { m_isContentExtensionRedirect = isContentExtensionRedirect; }
 
     const String& clientRedirectSourceForHistory() const { return m_clientRedirectSourceForHistory; }
-    void setClientRedirectSourceForHistory(const String& clientRedirectSourceForHistory) { m_clientRedirectSourceForHistory = clientRedirectSourceForHistory; }
+    void setClientRedirectSourceForHistory(String&& clientRedirectSourceForHistory) { m_clientRedirectSourceForHistory = WTFMove(clientRedirectSourceForHistory); }
 
     ReferrerPolicy referrerPolicy() const { return m_referrerPolicy; }
     void setReferrerPolicy(const ReferrerPolicy& referrerPolicy) { m_referrerPolicy = referrerPolicy; }
