@@ -443,10 +443,10 @@ StringBuilder MarkupAccumulator::takeMarkup()
     return std::exchange(m_markup, { });
 }
 
-void MarkupAccumulator::appendAttributeValue(StringBuilder& result, const String& attribute, bool isSerializingHTML)
+void MarkupAccumulator::appendAttributeValue(StringBuilder& result, const String& attribute)
 {
     appendCharactersReplacingEntities(result, attribute, 0, attribute.length(),
-        isSerializingHTML ? EntityMaskInHTMLAttributeValue : EntityMaskInAttributeValue);
+        inXMLFragmentSerialization() ? EntityMaskInAttributeValue : EntityMaskInHTMLAttributeValue);
 }
 
 void MarkupAccumulator::appendCustomAttributes(StringBuilder&, const Element&, Namespaces*)
@@ -510,7 +510,7 @@ void MarkupAccumulator::appendNamespace(StringBuilder& result, const AtomString&
         return;
 
     result.append(' ', xmlnsAtom(), prefix.isEmpty() ? ""_s : ":"_s, prefix, "=\""_s);
-    appendAttributeValue(result, namespaceURI, false);
+    appendAttributeValue(result, namespaceURI);
     result.append('"');
 }
 
@@ -803,10 +803,10 @@ bool MarkupAccumulator::appendAttribute(StringBuilder& result, const Element& el
         // FIXME: This does not fully match other browsers. Firefox percent-escapes
         // non-ASCII characters for innerHTML.
         auto [resolvedURL, isCreatedByURLReplacement] = resolveURLIfNeeded(element, attribute.value());
-        appendAttributeValue(result, resolvedURL, isSerializingHTML);
+        appendAttributeValue(result, resolvedURL);
         isURLAttributeValueReplaced = isCreatedByURLReplacement == IsCreatedByURLReplacement::Yes;
     } else
-        appendAttributeValue(result, attribute.value(), isSerializingHTML);
+        appendAttributeValue(result, attribute.value());
     result.append('"');
 
     return isURLAttributeValueReplaced;
@@ -847,8 +847,7 @@ void MarkupAccumulator::appendNonElementNode(StringBuilder& result, const Node& 
         result.append("<![CDATA["_s, uncheckedDowncast<CDATASection>(node).data(), "]]>"_s);
         break;
     case Node::ATTRIBUTE_NODE:
-        // Only XMLSerializer can pass an Attr. So, |documentIsHTML| flag is false.
-        appendAttributeValue(result, uncheckedDowncast<Attr>(node).value(), false);
+        appendAttributeValue(result, uncheckedDowncast<Attr>(node).value());
         break;
     }
 }

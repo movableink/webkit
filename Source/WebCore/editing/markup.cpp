@@ -328,7 +328,7 @@ public:
 
     RefPtr<Node> serializeNodes(const Position& start, const Position& end);
     void wrapWithNode(Node&, bool convertBlocksToInlines = false, RangeFullySelectsNode = DoesFullySelectNode);
-    void wrapWithStyleNode(StyleProperties*, Document&, bool isBlock = false);
+    void wrapWithStyleNode(StyleProperties*, bool isBlock = false);
     String takeResults();
     
     bool needRelativeStyleWrapper() const { return m_needRelativeStyleWrapper; }
@@ -388,7 +388,7 @@ public:
 
 private:
     bool containsOnlyASCII() const;
-    void appendStyleNodeOpenTag(StringBuilder&, StyleProperties*, Document&, bool isBlock = false, std::optional<TextDirection> directionToAppend = std::nullopt);
+    void appendStyleNodeOpenTag(StringBuilder&, StyleProperties*, bool isBlock = false, std::optional<TextDirection> directionToAppend = std::nullopt);
     const String& styleNodeCloseTag(bool isBlock = false);
 
     String renderedTextRespectingRange(const Text&);
@@ -514,15 +514,15 @@ void StyledMarkupAccumulator::wrapWithNode(Node& node, bool convertBlocksToInlin
         m_nodes->append(node);
 }
 
-void StyledMarkupAccumulator::wrapWithStyleNode(StyleProperties* style, Document& document, bool isBlock)
+void StyledMarkupAccumulator::wrapWithStyleNode(StyleProperties* style, bool isBlock)
 {
     StringBuilder openTag;
-    appendStyleNodeOpenTag(openTag, style, document, isBlock);
+    appendStyleNodeOpenTag(openTag, style, isBlock);
     m_reversedPrecedingMarkup.append(openTag.toString());
     append(styleNodeCloseTag(isBlock));
 }
 
-void StyledMarkupAccumulator::appendStyleNodeOpenTag(StringBuilder& out, StyleProperties* style, Document& document, bool isBlock, std::optional<TextDirection> directionToAppend)
+void StyledMarkupAccumulator::appendStyleNodeOpenTag(StringBuilder& out, StyleProperties* style, bool isBlock, std::optional<TextDirection> directionToAppend)
 {
     // With AnnotateForInterchange::Yes, wrappingStyleForSerialization should have removed -webkit-text-decorations-in-effect
     ASSERT(!shouldAnnotate() || propertyMissingOrEqualToNone(style, CSSPropertyWebkitTextDecorationsInEffect));
@@ -531,7 +531,7 @@ void StyledMarkupAccumulator::appendStyleNodeOpenTag(StringBuilder& out, StylePr
         out.append(directionAttributeAndValue(*directionToAppend), ' ');
     out.append("style=\""_s);
 
-    appendAttributeValue(out, style->asText(CSS::defaultSerializationContext()), document.isHTMLDocument());
+    appendAttributeValue(out, style->asText(CSS::defaultSerializationContext()));
     out.append("\">"_s);
 }
 
@@ -577,7 +577,7 @@ void StyledMarkupAccumulator::appendText(StringBuilder& out, const Text& text)
         // FIXME: Should this be included in forceInline?
         wrappingStyle->style()->setProperty(CSSPropertyFloat, CSSValueNone);
 
-        appendStyleNodeOpenTag(out, wrappingStyle->style(), text.protectedDocument(), false, [&] -> std::optional<TextDirection> {
+        appendStyleNodeOpenTag(out, wrappingStyle->style(), false, [&] -> std::optional<TextDirection> {
             if (m_hasAppendedAnyText)
                 return std::nullopt;
 
@@ -701,8 +701,6 @@ StyledMarkupAccumulator::SpanReplacementType StyledMarkupAccumulator::spanReplac
 
 void StyledMarkupAccumulator::appendStartTag(StringBuilder& out, const Element& element, bool addDisplayInline, RangeFullySelectsNode rangeFullySelectsNode)
 {
-    const bool documentIsHTML = element.document().isHTMLDocument();
-
     auto replacementType = spanReplacementForElement(element);
     if (UNLIKELY(replacementType != SpanReplacementType::None))
         out.append("<span"_s);
@@ -769,7 +767,7 @@ void StyledMarkupAccumulator::appendStartTag(StringBuilder& out, const Element& 
 
         if (!newInlineStyle->isEmpty()) {
             out.append(" style=\""_s);
-            appendAttributeValue(out, newInlineStyle->style()->asText(CSS::defaultSerializationContext()), documentIsHTML);
+            appendAttributeValue(out, newInlineStyle->style()->asText(CSS::defaultSerializationContext()));
             out.append('"');
         }
     }
@@ -1121,7 +1119,7 @@ static String serializePreservingVisualAppearanceInternal(const Position& start,
                         fullySelectedRootStyle->style()->setProperty(CSSPropertyTextDecorationLine, CSSValueNone);
                     if (!propertyMissingOrEqualToNone(fullySelectedRootStyle->style(), CSSPropertyWebkitTextDecorationsInEffect))
                         fullySelectedRootStyle->style()->setProperty(CSSPropertyWebkitTextDecorationsInEffect, CSSValueNone);
-                    accumulator.wrapWithStyleNode(fullySelectedRootStyle->style(), document, true);
+                    accumulator.wrapWithStyleNode(fullySelectedRootStyle->style(), true);
                 }
             } else {
                 // Since this node and all the other ancestors are not in the selection we want to set RangeFullySelectsNode to DoesNotFullySelectNode
@@ -1141,7 +1139,7 @@ static String serializePreservingVisualAppearanceInternal(const Position& start,
             accumulator.append("<div style=\"clear: both;\"></div>"_s);
         RefPtr<EditingStyle> positionRelativeStyle = styleFromMatchedRulesAndInlineDecl(*body);
         positionRelativeStyle->style()->setProperty(CSSPropertyPosition, CSSValueRelative);
-        accumulator.wrapWithStyleNode(positionRelativeStyle->style(), document, true);
+        accumulator.wrapWithStyleNode(positionRelativeStyle->style(), true);
     }
 
     // FIXME: The interchange newline should be placed in the block that it's in, not after all of the content, unconditionally.

@@ -98,7 +98,7 @@ protected:
 
     void appendNonElementNode(StringBuilder&, const Node&, Namespaces*);
 
-    static void appendAttributeValue(StringBuilder&, const String&, bool isSerializingHTML);
+    void appendAttributeValue(StringBuilder&, const String&);
     bool appendAttribute(StringBuilder&, const Element&, const Attribute&, Namespaces*);
 
     OptionSet<EntityMask> entityMaskForText(const Text&) const;
