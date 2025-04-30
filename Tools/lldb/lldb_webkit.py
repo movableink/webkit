@@ -174,17 +174,17 @@ def WTFVector_SummaryProvider(valobj, dict):
 
 def WTFHashTable_SummaryProvider(valobj, dict):
     provider = WTFHashTableProvider(valobj, dict)
-    return "{ tableSize = %d, keyCount = %d }" % (provider.tableSize(), provider.keyCount())
+    return "{ keyCount = %d, tableSize = %d }" % (provider.keyCount(), provider.tableSize())
 
 
 def WTFHashMap_SummaryProvider(valobj, dict):
     provider = WTFHashMapProvider(valobj, dict)
-    return "{ tableSize = %d, keyCount = %d }" % (provider.tableSize(), provider.keyCount())
+    return "{ keyCount = %d, tableSize = %d }" % (provider.keyCount(), provider.tableSize())
 
 
 def WTFHashSet_SummaryProvider(valobj, dict):
     provider = WTFHashSetProvider(valobj, dict)
-    return "{ tableSize = %d, keyCount = %d }" % (provider.tableSize(), provider.keyCount())
+    return "{ keyCount = %d, tableSize = %d }" % (provider.keyCount(), provider.tableSize())
 
 
 def WTFOptionSet_SummaryProvider(valobj, dict):
@@ -1231,12 +1231,14 @@ class WTFHashTableProvider:
         self.update()
 
     def metadataWithIndex(self, index):
-        table_pointer = self.valobj.GetChildMemberWithName('m_tableForLLDB')
+        table_pointer = self.valobj.GetChildMemberWithName('m_table')
+        if not table_pointer.GetValueAsUnsigned():
+            return 0
+
+        unsigned_type = self.valobj.GetTarget().GetBasicType(lldb.eBasicTypeUnsignedInt)
         metadata_pointer = table_pointer.GetValueAsUnsigned() + 4 * index
-        byte_order = self.valobj.GetTarget().GetByteOrder()
-        address_byte_size = self.valobj.GetTarget().GetAddressByteSize()
-        pointer_data = lldb.SBData.CreateDataFromUInt64Array(byte_order, address_byte_size, [metadata_pointer])
-        return self.valobj.CreateValueFromData('[0]', pointer_data, table_pointer.GetType()).Dereference().GetValueAsUnsigned()
+        metadata_value = self.valobj.CreateValueFromAddress('value', metadata_pointer, unsigned_type)
+        return metadata_value.GetValueAsUnsigned()
 
     def tableSize(self):
         return self.metadataWithIndex(-1)
