@@ -4369,8 +4369,6 @@ TEST(SiteIsolation, CoordinateTransformation)
     Util::run(&done);
 }
 
-// FIXME: Fix this on iOS. https://bugs.webkit.org/show_bug.cgi?id=292276
-#if PLATFORM(MAC)
 TEST(SiteIsolation, Events)
 {
     auto eventListeners = "<script>"
@@ -4392,10 +4390,20 @@ TEST(SiteIsolation, Events)
     }, HTTPServer::Protocol::HttpsProxy);
 
     __block bool receivedLastExpectedMessage = false;
-    __block RetainPtr<NSMutableArray<NSString *>> messages = adoptNS([NSMutableArray new]);
+    __block RetainPtr<NSMutableArray<NSString *>> webkitMessages = adoptNS([NSMutableArray new]);
+    __block RetainPtr<NSMutableArray<NSString *>> exampleMessages = adoptNS([NSMutableArray new]);
+    __block RetainPtr<NSMutableArray<NSString *>> appleMessages = adoptNS([NSMutableArray new]);
     RetainPtr delegate = adoptNS([TestUIDelegate new]);
     delegate.get().runJavaScriptAlertPanelWithMessage = ^(WKWebView *, NSString *message, WKFrameInfo *frame, void (^completionHandler)(void)) {
-        [messages addObject:[NSString stringWithFormat:@"%@ from %@", message, frame.securityOrigin.host]];
+        NSString *host = frame.securityOrigin.host;
+        if ([host isEqualToString:@"apple.com"])
+            [appleMessages addObject:message];
+        else if ([host isEqualToString:@"webkit.org"])
+            [webkitMessages addObject:message];
+        else if ([host isEqualToString:@"example.com"])
+            [exampleMessages addObject:message];
+        else
+            EXPECT_FALSE(true);
         completionHandler();
         if ([message isEqualToString:@"pageshow"] && [frame.securityOrigin.host isEqualToString:@"apple.com"])
             receivedLastExpectedMessage = true;
@@ -4410,23 +4418,43 @@ TEST(SiteIsolation, Events)
     Util::run(&receivedLastExpectedMessage);
     Util::runFor(Seconds(0.1));
 
-    NSArray *expectedMessages = @[
-        @"load from webkit.org",
-        @"pageshow from webkit.org",
-        @"load from example.com",
-        @"pageshow from example.com",
-        @"resize from webkit.org",
-
-        // FIXME: <rdar://150216569> There should be a pageswap from webkit.org here.
-
-        @"load from apple.com",
-        @"pageshow from apple.com",
+    NSArray *expectedExampleMessages = @[
+#if PLATFORM(IOS_FAMILY)
+        @"pagereveal",
+#endif
+        @"load",
+        @"pageshow",
     ];
-    if (![messages isEqualToArray:expectedMessages]) {
-        WTFLogAlways("Actual messages: %@", messages.get());
+    if (![exampleMessages isEqualToArray:expectedExampleMessages]) {
+        WTFLogAlways("Actual example messages: %@", exampleMessages.get());
+        EXPECT_TRUE(false);
+    }
+
+    NSArray *expectedWebKitMessages = @[
+        @"load",
+        @"pageshow",
+#if PLATFORM(IOS_FAMILY)
+        @"pagereveal",
+#endif
+        @"resize",
+        // FIXME: <rdar://150216569> There should be a pageswap from webkit.org here.
+    ];
+    if (![webkitMessages isEqualToArray:expectedWebKitMessages]) {
+        WTFLogAlways("Actual webkit messages: %@", webkitMessages.get());
+        EXPECT_TRUE(false);
+    }
+
+    NSArray *expectedAppleMessages = @[
+        @"load",
+        @"pageshow",
+#if PLATFORM(IOS_FAMILY)
+        @"pagereveal",
+#endif
+    ];
+    if (![appleMessages isEqualToArray:expectedAppleMessages]) {
+        WTFLogAlways("Actual apple messages: %@", appleMessages.get());
         EXPECT_TRUE(false);
     }
 }
-#endif
 
 }
