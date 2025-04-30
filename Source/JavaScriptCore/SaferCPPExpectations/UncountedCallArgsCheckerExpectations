@@ -52,6 +52,7 @@ dfg/DFGJITCompiler.cpp
 dfg/DFGJITCompiler.h
 dfg/DFGJITFinalizer.cpp
 dfg/DFGLazyJSValue.cpp
+dfg/DFGLoopUnrollingPhase.cpp
 dfg/DFGNode.cpp
 dfg/DFGOperations.cpp
 dfg/DFGPlan.cpp
