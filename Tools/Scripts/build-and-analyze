@@ -85,6 +85,7 @@ def make_analyzer_flags(output_dir, args):
             'alpha.webkit.MemoryUnsafeCastChecker',
             'alpha.webkit.NoUncheckedPtrMemberChecker',
             'alpha.webkit.NoUnretainedMemberChecker',
+            'alpha.webkit.RetainPtrCtorAdoptChecker',
             'alpha.webkit.UncheckedCallArgsChecker',
             'alpha.webkit.UncheckedLocalVarsChecker',
             'alpha.webkit.UncountedCallArgsChecker',
