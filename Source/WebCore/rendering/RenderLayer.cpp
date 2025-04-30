@@ -845,14 +845,15 @@ void RenderLayer::rebuildZOrderLists(std::unique_ptr<Vector<RenderLayer*>>& posZ
         if (topLayerLayers.size()) {
             if (!posZOrderList)
                 posZOrderList = makeUnique<Vector<RenderLayer*>>();
-
-            CheckedPtr<RenderLayer> viewTransitionLayer;
-            if (posZOrderList->size() && posZOrderList->last()->renderer().style().pseudoElementType() == PseudoId::ViewTransition)
-                viewTransitionLayer = posZOrderList->takeLast();
-
             posZOrderList->appendVector(topLayerLayers);
-            if (viewTransitionLayer)
-                posZOrderList->append(viewTransitionLayer.get());
+        }
+    }
+
+    if (isRenderViewLayer() && renderer().document().hasViewTransitionPseudoElementTree()) {
+        if (WeakPtr viewTransitionRoot = renderer().view().viewTransitionRoot(); viewTransitionRoot && viewTransitionRoot->hasLayer()) {
+            if (!posZOrderList)
+                posZOrderList = makeUnique<Vector<RenderLayer*>>();
+            posZOrderList->append(viewTransitionRoot->layer());
         }
     }
 }
@@ -894,7 +895,7 @@ void RenderLayer::setWasOmittedFromZOrderTree()
 void RenderLayer::collectLayers(std::unique_ptr<Vector<RenderLayer*>>& positiveZOrderList, std::unique_ptr<Vector<RenderLayer*>>& negativeZOrderList, OptionSet<Compositing>& accumulatedDirtyFlags)
 {
     ASSERT(!descendantDependentFlagsAreDirty());
-    if (establishesTopLayer())
+    if (establishesTopLayer() || renderer().isViewTransitionRoot())
         return;
 
     bool isStacking = isStackingContext();
