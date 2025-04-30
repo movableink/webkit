@@ -28,6 +28,7 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "CanvasCaptureMediaStreamTrack.h"
 #include "GraphicsContext.h"
 #include "ImageBitmapOptions.h"
 #include "ImageBuffer.h"
@@ -171,6 +172,22 @@ static void createImageBitmap(VideoFrame& videoFrame, CompletionHandler<void(Ref
     completionHandler(createImageBitmapViaDrawing(imageBuffer.releaseNonNull(), videoFrame));
 }
 
+static Exception createImageCaptureException()
+{
+    return Exception { WebCore::ExceptionCode::UnknownError, "Unable to create ImageBitmap"_s };
+}
+
+static void createImageBitmapOrException(VideoFrame& videoFrame, CompletionHandler<void(ExceptionOr<Ref<ImageBitmap>>&&)>&& callback)
+{
+    createImageBitmap(videoFrame, [callback = WTFMove(callback)](auto&& bitmap) mutable {
+        if (!bitmap) {
+            callback(createImageCaptureException());
+            return;
+        }
+        callback(bitmap.releaseNonNull());
+    });
+}
+
 class ImageCaptureVideoFrameObserver : public RealtimeMediaSource::VideoFrameObserver, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<ImageCaptureVideoFrameObserver, WTF::DestructionThread::MainRunLoop> {
 public:
     static Ref<ImageCaptureVideoFrameObserver> create(Ref<RealtimeMediaSource>&& source) { return adoptRef(*new ImageCaptureVideoFrameObserver(WTFMove(source))); }
@@ -233,13 +250,7 @@ private:
         if (m_callbacks.isEmpty())
             return;
 
-        createImageBitmap(frame, [callback = m_callbacks.takeFirst()](auto&& bitmap) mutable {
-            if (!bitmap) {
-                callback(WebCore::Exception { WebCore::ExceptionCode::UnknownError, "Unable to create ImageBitmap"_s });
-                return;
-            }
-            callback(bitmap.releaseNonNull());
-        });
+        createImageBitmapOrException(frame, m_callbacks.takeFirst());
 
         if (m_callbacks.isEmpty())
             m_source->removeVideoFrameObserver(*this);
@@ -258,6 +269,26 @@ void ImageCapture::grabFrame(DOMPromiseDeferred<IDLInterface<ImageBitmap>>&& pro
 
     if (m_track->readyState() == MediaStreamTrack::State::Ended) {
         promise.reject(Exception { ExceptionCode::InvalidStateError, "Track has ended"_s });
+        return;
+    }
+
+    if (RefPtr canvasTrack = dynamicDowncast<CanvasCaptureMediaStreamTrack>(m_track.get())) {
+        ImageCaptureVideoFrameObserver::Callback callback = [promise = WTFMove(promise), pendingActivity = makePendingActivity(*this)](auto&& result) mutable {
+            if (pendingActivity->object().isContextStopped())
+                return;
+
+            queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::ImageCapture, [promise = WTFMove(promise), result = WTFMove(result)](auto&) mutable {
+                promise.settle(WTFMove(result));
+            });
+        };
+        callOnMainThread([frame = canvasTrack->grabFrame(), callback = WTFMove(callback)]() mutable {
+            if (!frame) {
+                callback(createImageCaptureException());
+                return;
+            }
+
+            createImageBitmapOrException(*frame, WTFMove(callback));
+        });
         return;
     }
 

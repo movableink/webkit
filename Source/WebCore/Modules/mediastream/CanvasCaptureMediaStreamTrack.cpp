@@ -61,6 +61,12 @@ CanvasCaptureMediaStreamTrack::CanvasCaptureMediaStreamTrack(Document& document,
 {
 }
 
+RefPtr<VideoFrame> CanvasCaptureMediaStreamTrack::grabFrame()
+{
+    Ref source = static_cast<Source&>(this->source());
+    return source->grabFrame();
+}
+
 Ref<CanvasCaptureMediaStreamTrack::Source> CanvasCaptureMediaStreamTrack::Source::create(HTMLCanvasElement& canvas, std::optional<double>&& frameRequestRate)
 {
     auto source = adoptRef(*new Source(canvas, WTFMove(frameRequestRate)));
@@ -187,6 +193,19 @@ void CanvasCaptureMediaStreamTrack::Source::canvasDisplayBufferPrepared(CanvasBa
     scheduleCaptureCanvas();
 }
 
+RefPtr<VideoFrame> CanvasCaptureMediaStreamTrack::Source::grabFrame()
+{
+    RefPtr canvas = m_canvas.get();
+    if (!canvas)
+        return nullptr;
+
+#if ENABLE(WEBGL)
+    if (RefPtr gl = dynamicDowncast<WebGLRenderingContextBase>(canvas->renderingContext()))
+        return gl->surfaceBufferToVideoFrame(CanvasRenderingContext::SurfaceBuffer::DisplayBuffer);
+#endif
+    return canvas->toVideoFrame();
+}
+
 void CanvasCaptureMediaStreamTrack::Source::captureCanvas()
 {
     ASSERT(m_canvas);
@@ -203,13 +222,8 @@ void CanvasCaptureMediaStreamTrack::Source::captureCanvas()
 
     if (!canvas->originClean())
         return;
-    RefPtr<VideoFrame> videoFrame = [&]() -> RefPtr<VideoFrame> {
-#if ENABLE(WEBGL)
-        if (RefPtr gl = dynamicDowncast<WebGLRenderingContextBase>(canvas->renderingContext()))
-            return gl->surfaceBufferToVideoFrame(CanvasRenderingContext::SurfaceBuffer::DisplayBuffer);
-#endif
-        return canvas->toVideoFrame();
-    }();
+
+    RefPtr videoFrame = grabFrame();
     if (!videoFrame)
         return;
 
