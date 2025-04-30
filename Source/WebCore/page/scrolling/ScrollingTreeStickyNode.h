@@ -51,10 +51,12 @@ protected:
 
     bool commitStateBeforeChildren(const ScrollingStateNode&) override;
 
+    FloatPoint computeClippingLayerPosition() const;
     FloatPoint computeAnchorLayerPosition() const;
     void dumpProperties(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const override;
 
     virtual FloatPoint layerTopLeft() const = 0;
+    virtual bool hasViewportClippingLayer() const { return false; }
     const ViewportConstraints& constraints() const final { return m_constraints; }
 
     StickyPositionViewportConstraints m_constraints;

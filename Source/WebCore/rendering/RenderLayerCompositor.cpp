@@ -906,8 +906,12 @@ void RenderLayerCompositor::didChangePlatformLayerForLayer(RenderLayer& layer, c
     if (auto* clippingStack = layer.backing()->ancestorClippingStack())
         clippingStack->updateScrollingNodeLayers(*scrollingCoordinator);
 
-    if (auto nodeID = backing->scrollingNodeIDForRole(ScrollCoordinationRole::ViewportConstrained))
-        scrollingCoordinator->setNodeLayers(*nodeID, { backing->viewportAnchorLayer() });
+    if (auto nodeID = backing->scrollingNodeIDForRole(ScrollCoordinationRole::ViewportConstrained)) {
+        scrollingCoordinator->setNodeLayers(*nodeID, {
+            .layer = backing->viewportClippingOrAnchorLayer(),
+            .viewportAnchorLayer = backing->viewportAnchorLayer()
+        });
+    }
 
     if (auto nodeID = backing->scrollingNodeIDForRole(ScrollCoordinationRole::FrameHosting))
         scrollingCoordinator->setNodeLayers(*nodeID, { backing->graphicsLayer() });
@@ -5277,16 +5281,16 @@ FixedPositionViewportConstraints RenderLayerCompositor::computeFixedViewportCons
 {
     ASSERT(layer.isComposited());
 
-    RefPtr anchorLayer = layer.backing()->viewportAnchorLayer();
-    if (!anchorLayer) {
+    RefPtr scrollingNodeLayer = layer.backing()->viewportClippingOrAnchorLayer();
+    if (!scrollingNodeLayer) {
         ASSERT_NOT_REACHED();
         return { };
     }
 
     FixedPositionViewportConstraints constraints;
-    constraints.setLayerPositionAtLastLayout(anchorLayer->position());
+    constraints.setLayerPositionAtLastLayout(scrollingNodeLayer->position());
     constraints.setViewportRectAtLastLayout(m_renderView.protectedFrameView()->rectForFixedPositionLayout());
-    constraints.setAlignmentOffset(anchorLayer->pixelAlignmentOffset());
+    constraints.setAlignmentOffset(scrollingNodeLayer->pixelAlignmentOffset());
 
     const RenderStyle& style = layer.renderer().style();
     if (!style.left().isAuto())
@@ -5318,6 +5322,12 @@ StickyPositionViewportConstraints RenderLayerCompositor::computeStickyViewportCo
 
     auto& renderer = downcast<RenderBoxModelObject>(layer.renderer());
 
+    RefPtr scrollingNodeLayer = layer.backing()->viewportClippingOrAnchorLayer();
+    if (!scrollingNodeLayer) {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+
     RefPtr anchorLayer = layer.backing()->viewportAnchorLayer();
     if (!anchorLayer) {
         ASSERT_NOT_REACHED();
@@ -5328,9 +5338,11 @@ StickyPositionViewportConstraints RenderLayerCompositor::computeStickyViewportCo
     renderer.computeStickyPositionConstraints(constraints, renderer.constrainingRectForStickyPosition());
 
     constraints.setViewportRectAtLastLayout(m_renderView.protectedFrameView()->rectForFixedPositionLayout());
-    constraints.setLayerPositionAtLastLayout(anchorLayer->position());
+    constraints.setLayerPositionAtLastLayout(scrollingNodeLayer->position());
+    if (scrollingNodeLayer != anchorLayer)
+        constraints.setAnchorLayerOffsetAtLastLayout(toFloatSize(anchorLayer->position()));
     constraints.setStickyOffsetAtLastLayout(renderer.stickyPositionOffset());
-    constraints.setAlignmentOffset(anchorLayer->pixelAlignmentOffset());
+    constraints.setAlignmentOffset(scrollingNodeLayer->pixelAlignmentOffset());
 
     return constraints;
 }
@@ -5601,8 +5613,10 @@ std::optional<ScrollingNodeID> RenderLayerCompositor::updateScrollingNodeForView
     LOG_WITH_STREAM(Compositing, stream << "Registering ViewportConstrained " << nodeType << " node " << newNodeID << " (layer " << layer.backing()->graphicsLayer()->primaryLayerID() << ") as child of " << treeState.parentNodeID);
 
     if (changes & ScrollingNodeChangeFlags::Layer) {
-        ASSERT(layer.backing()->viewportAnchorLayer());
-        scrollingCoordinator->setNodeLayers(*newNodeID, { layer.backing()->viewportAnchorLayer() });
+        scrollingCoordinator->setNodeLayers(*newNodeID, {
+            .layer = layer.backing()->viewportClippingOrAnchorLayer(),
+            .viewportAnchorLayer = layer.backing()->viewportAnchorLayer(),
+        });
     }
 
     if (changes & ScrollingNodeChangeFlags::LayerGeometry) {

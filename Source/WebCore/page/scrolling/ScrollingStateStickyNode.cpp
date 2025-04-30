@@ -43,9 +43,10 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollingStateStickyNode);
 
-ScrollingStateStickyNode::ScrollingStateStickyNode(ScrollingNodeID nodeID, Vector<Ref<ScrollingStateNode>>&& children, OptionSet<ScrollingStateNodeProperty> changedProperties, std::optional<PlatformLayerIdentifier> layerID, StickyPositionViewportConstraints&& constraints)
+ScrollingStateStickyNode::ScrollingStateStickyNode(ScrollingNodeID nodeID, Vector<Ref<ScrollingStateNode>>&& children, OptionSet<ScrollingStateNodeProperty> changedProperties, std::optional<PlatformLayerIdentifier> layerID, StickyPositionViewportConstraints&& constraints, LayerRepresentation&& viewportAnchorLayer)
     : ScrollingStateNode(ScrollingNodeType::Sticky, nodeID, WTFMove(children), changedProperties, layerID)
     , m_constraints(WTFMove(constraints))
+    , m_viewportAnchorLayer(WTFMove(viewportAnchorLayer))
 {
 }
 
@@ -58,6 +59,8 @@ ScrollingStateStickyNode::ScrollingStateStickyNode(const ScrollingStateStickyNod
     : ScrollingStateNode(node, adoptiveTree)
     , m_constraints(StickyPositionViewportConstraints(node.viewportConstraints()))
 {
+    if (hasChangedProperty(Property::ViewportAnchorLayer))
+        setViewportAnchorLayer(node.viewportAnchorLayer().toRepresentation(adoptiveTree.preferredLayerRepresentation()));
 }
 
 ScrollingStateStickyNode::~ScrollingStateStickyNode() = default;
@@ -69,11 +72,23 @@ Ref<ScrollingStateNode> ScrollingStateStickyNode::clone(ScrollingStateTree& adop
 
 OptionSet<ScrollingStateNode::Property> ScrollingStateStickyNode::applicableProperties() const
 {
-    constexpr OptionSet<Property> nodeProperties = { Property::ViewportConstraints };
+    static constexpr OptionSet nodeProperties = {
+        Property::ViewportAnchorLayer,
+        Property::ViewportConstraints,
+    };
 
     auto properties = ScrollingStateNode::applicableProperties();
     properties.add(nodeProperties);
     return properties;
+}
+
+void ScrollingStateStickyNode::setViewportAnchorLayer(const LayerRepresentation& layer)
+{
+    if (layer == m_viewportAnchorLayer)
+        return;
+
+    m_viewportAnchorLayer = layer;
+    setPropertyChanged(Property::ViewportAnchorLayer);
 }
 
 void ScrollingStateStickyNode::updateConstraints(const StickyPositionViewportConstraints& constraints)
@@ -87,9 +102,9 @@ void ScrollingStateStickyNode::updateConstraints(const StickyPositionViewportCon
     setPropertyChanged(Property::ViewportConstraints);
 }
 
-FloatPoint ScrollingStateStickyNode::computeLayerPosition(const LayoutRect& viewportRect) const
+FloatPoint ScrollingStateStickyNode::computeAnchorLayerPosition(const LayoutRect& viewportRect) const
 {
-    // This logic follows ScrollingTreeStickyNode::computeLayerPosition().
+    // This logic follows ScrollingTreeStickyNode::computeAnchorLayerPosition().
     FloatSize offsetFromStickyAncestors;
     auto computeLayerPositionForScrollingNode = [&](ScrollingStateNode& scrollingStateNode) {
         FloatRect constrainingRect;
@@ -126,37 +141,60 @@ FloatPoint ScrollingStateStickyNode::computeLayerPosition(const LayoutRect& view
     return m_constraints.layerPositionAtLastLayout();
 }
 
+FloatPoint ScrollingStateStickyNode::computeClippingLayerPosition(const LayoutRect& viewportRect) const
+{
+    if (!hasViewportClippingLayer()) {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+
+    return m_constraints.viewportRelativeLayerPosition(viewportRect);
+}
+
 void ScrollingStateStickyNode::reconcileLayerPositionForViewportRect(const LayoutRect& viewportRect, ScrollingLayerPositionAction action)
 {
-    FloatPoint position = computeLayerPosition(viewportRect);
-    if (layer().representsGraphicsLayer()) {
-        auto* graphicsLayer = static_cast<GraphicsLayer*>(layer());
-        ASSERT(graphicsLayer);
-        // Crash data suggest that graphicsLayer can be null: rdar://106547410.
-        if (!graphicsLayer)
+    auto updateLayerPosition = [&](const LayerRepresentation& representation, const FloatPoint& position) {
+        if (!representation.representsGraphicsLayer())
             return;
 
-        LOG_WITH_STREAM(Compositing, stream << "ScrollingStateStickyNode " << scrollingNodeID() << " reconcileLayerPositionForViewportRect " << action << " position of layer " << graphicsLayer->primaryLayerID() << " to " << position << " sticky offset " << m_constraints.stickyOffsetAtLastLayout());
-        
+        RefPtr layer = static_cast<GraphicsLayer*>(representation);
+        if (!layer)
+            return;
+
+        LOG_WITH_STREAM(Compositing, stream << "ScrollingStateStickyNode " << scrollingNodeID() << " reconcileLayerPositionForViewportRect " << action << " position of layer " << layer->primaryLayerID() << " to " << position << " sticky offset " << m_constraints.stickyOffsetAtLastLayout());
+
         switch (action) {
         case ScrollingLayerPositionAction::Set:
-            graphicsLayer->setPosition(position);
+            layer->setPosition(position);
             break;
 
         case ScrollingLayerPositionAction::SetApproximate:
-            graphicsLayer->setApproximatePosition(position);
+            layer->setApproximatePosition(position);
             break;
-        
+
         case ScrollingLayerPositionAction::Sync:
-            graphicsLayer->syncPosition(position);
+            layer->syncPosition(position);
             break;
         }
+    };
+
+    auto anchorLayerPosition = computeAnchorLayerPosition(viewportRect);
+    if (hasViewportClippingLayer()) {
+        auto clippingLayerPosition = computeClippingLayerPosition(viewportRect);
+        updateLayerPosition(layer(), clippingLayerPosition);
+        anchorLayerPosition.moveBy(-clippingLayerPosition);
     }
+    updateLayerPosition(viewportAnchorLayer(), anchorLayerPosition);
+}
+
+bool ScrollingStateStickyNode::hasViewportClippingLayer() const
+{
+    return m_viewportAnchorLayer && layer() != m_viewportAnchorLayer;
 }
 
 FloatSize ScrollingStateStickyNode::scrollDeltaSinceLastCommit(const LayoutRect& viewportRect) const
 {
-    auto layerPosition = computeLayerPosition(viewportRect);
+    auto layerPosition = hasViewportClippingLayer() ? computeClippingLayerPosition(viewportRect) : computeAnchorLayerPosition(viewportRect);
     return layerPosition - m_constraints.layerPositionAtLastLayout();
 }
 

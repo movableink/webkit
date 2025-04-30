@@ -73,6 +73,16 @@ void ScrollingTreeStickyNode::dumpProperties(TextStream& ts, OptionSet<Scrolling
         ts.dumpProperty("layer top left"_s, layerTopLeft());
 }
 
+FloatPoint ScrollingTreeStickyNode::computeClippingLayerPosition() const
+{
+    if (!hasViewportClippingLayer()) {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+
+    return computeLayerPosition();
+}
+
 FloatPoint ScrollingTreeStickyNode::computeAnchorLayerPosition() const
 {
     FloatSize offsetFromStickyAncestors;
@@ -114,7 +124,7 @@ FloatPoint ScrollingTreeStickyNode::computeAnchorLayerPosition() const
 
 FloatSize ScrollingTreeStickyNode::scrollDeltaSinceLastCommit() const
 {
-    auto layerPosition = computeAnchorLayerPosition();
+    auto layerPosition = hasViewportClippingLayer() ? computeClippingLayerPosition() : computeAnchorLayerPosition();
     return layerPosition - m_constraints.layerPositionAtLastLayout();
 }
 

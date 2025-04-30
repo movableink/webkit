@@ -49,8 +49,10 @@ private:
     void applyLayerPositions() final WTF_REQUIRES_LOCK(scrollingTree()->treeLock());
     FloatPoint layerTopLeft() const final;
     CALayer *layer() const final { return m_layer.get(); }
+    bool hasViewportClippingLayer() const final;
 
     RetainPtr<CALayer> m_layer;
+    RetainPtr<CALayer> m_viewportAnchorLayer;
 };
 
 } // namespace WebCore

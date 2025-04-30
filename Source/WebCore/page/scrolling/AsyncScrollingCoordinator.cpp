@@ -991,6 +991,9 @@ void AsyncScrollingCoordinator::setNodeLayers(ScrollingNodeID nodeID, const Node
             frameScrollingNode->setRootContentsLayer(nodeLayers.rootContentsLayer);
         }
     }
+
+    if (RefPtr stickyNode = dynamicDowncast<ScrollingStateStickyNode>(*node))
+        stickyNode->setViewportAnchorLayer(nodeLayers.viewportAnchorLayer);
 }
 
 void AsyncScrollingCoordinator::setFrameScrollingNodeState(ScrollingNodeID nodeID, const LocalFrameView& frameView)

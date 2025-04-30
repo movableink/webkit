@@ -163,6 +163,7 @@ public:
         GraphicsLayer* rootContentsLayer { nullptr };
         GraphicsLayer* horizontalScrollbarLayer { nullptr };
         GraphicsLayer* verticalScrollbarLayer { nullptr };
+        GraphicsLayer* viewportAnchorLayer { nullptr };
     };
     virtual void setNodeLayers(ScrollingNodeID, const NodeLayers&) { }
 

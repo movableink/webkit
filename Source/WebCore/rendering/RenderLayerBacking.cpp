@@ -529,7 +529,7 @@ void RenderLayerBacking::updateDebugIndicators(bool showBorder, bool showRepaint
     m_graphicsLayer->setShowDebugBorder(showBorder);
     m_graphicsLayer->setShowRepaintCounter(showRepaintCounter);
 
-    // m_viewportAnchorLayer can't show layer borders becuase it's a structural layer.
+    // m_viewportAnchorLayer can't show layer borders because it's a structural layer.
 
     if (m_ancestorClippingStack) {
         for (auto& entry : m_ancestorClippingStack->stack())
@@ -3543,8 +3543,8 @@ GraphicsLayer* RenderLayerBacking::childForSuperlayersExcludingViewTransitions()
     if (m_ancestorClippingStack)
         return m_ancestorClippingStack->firstLayer();
 
-    if (m_viewportAnchorLayer)
-        return m_viewportAnchorLayer.get();
+    if (RefPtr viewportConstrainedLayer = viewportClippingOrAnchorLayer())
+        return viewportConstrainedLayer.get();
 
     if (m_contentsContainmentLayer)
         return m_contentsContainmentLayer.get();
