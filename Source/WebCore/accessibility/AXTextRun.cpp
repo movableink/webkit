@@ -152,9 +152,9 @@ FloatRect AXTextRuns::localRect(unsigned start, unsigned end, FontOrientation or
     if (smallerOffset > largerOffset)
         std::swap(smallerOffset, largerOffset);
 
-    // Hardcode Affinity::Upstream to avoid unnecessarily accounting for an extra line.
-    unsigned runIndexOfSmallerOffset = indexForOffset(smallerOffset, Affinity::Upstream);
-    unsigned runIndexOfLargerOffset = indexForOffset(largerOffset, Affinity::Upstream);
+    // Hardcode Affinity::Downstream to avoid unnecessarily accounting for the end of the line above.
+    unsigned runIndexOfSmallerOffset = indexForOffset(smallerOffset, Affinity::Downstream);
+    unsigned runIndexOfLargerOffset = indexForOffset(largerOffset, Affinity::Downstream);
 
     auto computeAdvance = [&] (const AXTextRun& run, unsigned offsetOfFirstCharacterInRun, unsigned startIndex, unsigned endIndex) {
         const auto& characterAdvances = run.advances();
@@ -215,7 +215,7 @@ FloatRect AXTextRuns::localRect(unsigned start, unsigned end, FontOrientation or
                 }
 
                 if (measuredWidthInDirection)
-                    offsetFromOriginInDirection = widthPriorToStart;
+                    offsetFromOriginInDirection = widthPriorToStart + run.distanceFromBoundsInDirection;
             } else if (i == runIndexOfLargerOffset) {
                 // We're measuring the end of the range, so measure from the first character in the run up to largerOffset.
                 unsigned offsetOfFirstCharacterInRun = !i ? 0 : runLengthSumTo(i - 1);

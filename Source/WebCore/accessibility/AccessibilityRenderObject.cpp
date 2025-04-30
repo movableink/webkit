@@ -1423,7 +1423,7 @@ AXTextRuns AccessibilityRenderObject::textRuns()
     CheckedPtr renderer = this->renderer();
     if (auto* renderLineBreak = dynamicDowncast<RenderLineBreak>(renderer.get())) {
         auto box = InlineIterator::boxFor(*renderLineBreak);
-        return { renderLineBreak->containingBlock(), { AXTextRun(box ? box->lineIndex() : 0, makeString('\n').isolatedCopy(), { lengthOneDomOffsets }, { 0 }, 0) } };
+        return { renderLineBreak->containingBlock(), { AXTextRun(box ? box->lineIndex() : 0, makeString('\n').isolatedCopy(), { lengthOneDomOffsets }, { 0 }, 0, 0) } };
     }
 
     if (isReplacedElement()) {
@@ -1431,7 +1431,7 @@ AXTextRuns AccessibilityRenderObject::textRuns()
         FloatRect rect = frameRect();
         uint16_t width = static_cast<uint16_t>(rect.width());
         uint16_t height = static_cast<uint16_t>(rect.height());
-        return containingBlock ? AXTextRuns(containingBlock, { AXTextRun(0, String(span(objectReplacementCharacter)), { lengthOneDomOffsets }, { width }, height) }) : AXTextRuns();
+        return containingBlock ? AXTextRuns(containingBlock, { AXTextRun(0, String(span(objectReplacementCharacter)), { lengthOneDomOffsets }, { width }, height, 0) }) : AXTextRuns();
     }
 
     WeakPtr renderText = dynamicDowncast<RenderText>(renderer.get());
@@ -1445,9 +1445,12 @@ AXTextRuns AccessibilityRenderObject::textRuns()
     Vector<AXTextRun> runs;
     StringBuilder lineString;
     Vector<uint16_t> characterWidths;
+    float distanceFromBoundsInDirection = 0;
     // Used to round an accumulated floating point value into an uint16, which is how we store character widths.
     float accumulatedDistanceFromStart = 0.0;
     float lineHeight = 0.0;
+
+    bool isHorizontal = fontOrientation() == FontOrientation::Horizontal;
     // Appends text to the current lineString, collapsing whitespace as necessary (similar to how TextIterator::handleTextRun() does).
     auto appendToLineString = [&] (const InlineIterator::TextBoxIterator& textBox) {
         auto text = textBox->originalText();
@@ -1464,7 +1467,27 @@ AXTextRuns AccessibilityRenderObject::textRuns()
         bool collapseNewlines = !textBox->style().preserveNewline();
 
         auto textRun = textBox->textRun(InlineIterator::TextRunMode::Editing);
-        lineHeight = LineSelection::logicalRect(*textBox->lineBox()).height();
+        auto lineBox = textBox->lineBox();
+        if (!lineBox)
+            return;
+        lineHeight = LineSelection::logicalRect(*lineBox).height();
+
+        CheckedPtr renderStyle = style();
+        if (renderStyle && renderStyle->textAlign() != TextAlignMode::Left) {
+            // To serve the appropriate bounds for text, we need to offset them by a text run's position within its associated RenderText.
+            // Computing this requires the following:
+            //     1. Get the run's logical offset within the containing block (see note below).
+            //     2. Add the containing block's position to get an page-relative position.
+            //     3. Subtract the this object's (RenderText) position to get a distance relative to the RenderText.
+
+            // Note: For horizontal text, the contentLogicalLeft property accurately gets us the offset within the containing block.
+            // ContentLogicalLeft is wrong for vertical orientations, but xPos (only set in vertical mode) provides that same information accurately.
+            float containingBlockOffset = 0;
+            if (CheckedPtr containingBlock = renderText->containingBlock())
+                containingBlockOffset = isHorizontal ? containingBlock->absoluteBoundingBoxRect().x() : containingBlock->absoluteBoundingBoxRect().y();
+
+            distanceFromBoundsInDirection = isHorizontal ? lineBox->contentLogicalLeft() + containingBlockOffset - elementRect().x() : -textRun.xPos() + containingBlockOffset - elementRect().y();
+        }
 
         auto appendCharacterWidth = [&] (unsigned characterIndex) {
             float characterWidth = textBox->fontCascade().widthForCharacterInRun(textRun, characterIndex);
@@ -1507,10 +1530,11 @@ AXTextRuns AccessibilityRenderObject::textRuns()
         size_t newLineIndex = textBox->lineIndex();
         if (newLineIndex != currentLineIndex) {
             // FIXME: Currently, this is only ever called to ship text runs off to the accessibility thread. But maybe we should we make the isolatedCopy()s in this function optional based on a parameter?
-            runs.append({ currentLineIndex, lineString.toString().isolatedCopy(), { std::exchange(textRunDomOffsets, { }) }, std::exchange(characterWidths, { }), lineHeight });
+            runs.append({ currentLineIndex, lineString.toString().isolatedCopy(), { std::exchange(textRunDomOffsets, { }) }, std::exchange(characterWidths, { }), lineHeight, distanceFromBoundsInDirection });
             lineString.clear();
             accumulatedDistanceFromStart = 0.0;
             lineHeight = 0.0;
+            distanceFromBoundsInDirection = 0.0;
         }
         currentLineIndex = newLineIndex;
 
@@ -1521,7 +1545,7 @@ AXTextRuns AccessibilityRenderObject::textRuns()
     }
 
     if (!lineString.isEmpty())
-        runs.append({ currentLineIndex, lineString.toString().isolatedCopy(), WTFMove(textRunDomOffsets), std::exchange(characterWidths, { }), lineHeight });
+        runs.append({ currentLineIndex, lineString.toString().isolatedCopy(), WTFMove(textRunDomOffsets), std::exchange(characterWidths, { }), lineHeight, distanceFromBoundsInDirection });
 
     bool containsOnlyASCII = true;
     for (size_t i = 0; i < runs.size(); i++) {

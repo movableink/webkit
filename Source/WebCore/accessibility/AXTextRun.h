@@ -83,12 +83,16 @@ struct AXTextRun {
 
     float lineHeight;
 
-    AXTextRun(size_t lineIndex, String&& text, Vector<std::array<uint16_t, 2>>&& domOffsets, Vector<uint16_t> characterAdvances, float lineHeight)
+    // The distance between the RenderText's position and the start of the text run (useful for things that are not left-aligned, like `text-align: center`).
+    float distanceFromBoundsInDirection;
+
+    AXTextRun(size_t lineIndex, String&& text, Vector<std::array<uint16_t, 2>>&& domOffsets, Vector<uint16_t> characterAdvances, float lineHeight, float distanceFromBoundsInDirection)
         : lineIndex(lineIndex)
         , text(WTFMove(text))
         , textRunDomOffsets(WTFMove(domOffsets))
         , characterAdvances(WTFMove(characterAdvances))
         , lineHeight(lineHeight)
+        , distanceFromBoundsInDirection(distanceFromBoundsInDirection)
     { }
 
     String debugDescription(void* containingBlock) const

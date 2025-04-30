@@ -1455,6 +1455,11 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::rangeForPosition(int x, int y)
     return nullptr;
 }
 
+static NSMutableString* makeBoundsDescription(NSRect rect, bool exposePosition)
+{
+    return [NSMutableString stringWithFormat:@"{{%f, %f}, {%f, %f}}", exposePosition ? rect.origin.x : -1.0f, exposePosition ? rect.origin.y : -1.0f, rect.size.width, rect.size.height];
+}
+
 JSRetainPtr<JSStringRef> AccessibilityUIElement::boundsForRange(unsigned location, unsigned length)
 {
     NSRange range = NSMakeRange(location, length);
@@ -1465,7 +1470,23 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::boundsForRange(unsigned locatio
         rect = [value rectValue]; 
 
     // don't return position information because it is platform dependent
-    NSMutableString* boundsDescription = [NSMutableString stringWithFormat:@"{{%f, %f}, {%f, %f}}",-1.0f,-1.0f,rect.size.width,rect.size.height];
+    NSMutableString* boundsDescription = makeBoundsDescription(rect, false /* exposePosition */);
+    return [boundsDescription createJSStringRef];
+    END_AX_OBJC_EXCEPTIONS
+
+    return nullptr;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::boundsForRangeWithPagePosition(unsigned location, unsigned length)
+{
+    NSRange range = NSMakeRange(location, length);
+    BEGIN_AX_OBJC_EXCEPTIONS
+    auto value = attributeValueForParameter(@"_AXPageBoundsForTextMarkerRange", [NSValue valueWithRange:range]);
+    NSRect rect = NSMakeRect(0, 0, 0, 0);
+    if ([value isKindOfClass:[NSValue class]])
+        rect = [value rectValue];
+
+    NSMutableString* boundsDescription = makeBoundsDescription(rect, true /* exposePosition */);
     return [boundsDescription createJSStringRef];
     END_AX_OBJC_EXCEPTIONS
 

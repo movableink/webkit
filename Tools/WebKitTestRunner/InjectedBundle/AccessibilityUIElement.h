@@ -302,6 +302,11 @@ public:
     JSRetainPtr<JSStringRef> rangeForLine(int);
     JSRetainPtr<JSStringRef> rangeForPosition(int x, int y);
     JSRetainPtr<JSStringRef> boundsForRange(unsigned location, unsigned length);
+#if PLATFORM(MAC)
+    JSRetainPtr<JSStringRef> boundsForRangeWithPagePosition(unsigned location, unsigned length);
+#else
+    JSRetainPtr<JSStringRef> boundsForRangeWithPagePosition(unsigned location, unsigned length) { return createJSString(); };
+#endif
     bool setSelectedTextRange(unsigned location, unsigned length);
     JSRetainPtr<JSStringRef> stringForRange(unsigned location, unsigned length);
     JSRetainPtr<JSStringRef> attributedStringForRange(unsigned location, unsigned length);

@@ -217,6 +217,7 @@ interface AccessibilityUIElement {
     DOMString rangeForLine(long index);
     DOMString rangeForPosition(long x, long y);
     DOMString boundsForRange(unsigned long location, unsigned long length);
+    DOMString boundsForRangeWithPagePosition(unsigned long location, unsigned long length);
     DOMString stringForRange(unsigned long location, unsigned long length);
     DOMString attributedStringForRange(unsigned long location, unsigned long length);
     DOMString attributedStringForElement();
