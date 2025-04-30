@@ -121,7 +121,6 @@ void VideoPresentationInterfaceLMK::finalizeSetup()
 void VideoPresentationInterfaceLMK::setupPlayerViewController()
 {
     linearMediaPlayer().captionLayer = captionsLayer();
-    linearMediaPlayer().contentType = WKSLinearMediaContentTypePlanar;
 
     ensurePlayableViewController();
 }

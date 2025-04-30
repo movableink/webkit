@@ -139,6 +139,7 @@ enum LinearMediaPlayerErrors: Error {
     var isImmersiveVideo: Bool {
         get { swiftOnlyData.isImmersiveVideo }
         set {
+            Logger.linearMediaPlayer.log("\(#function) \(newValue)")
             swiftOnlyData.isImmersiveVideo = newValue
             // FIXME: Should limit ContentTypePublisher to only publish changes to contentType if we have already created a default entity
             // rather than having to use a isImmersive attribute.
