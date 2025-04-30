@@ -132,8 +132,8 @@
 #include "InternalsSetLike.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSFile.h"
-#include "JSImageData.h"
 #include "JSInternals.h"
+#include "JSWebCodecsVideoFrame.h"
 #include "LegacySchemeRegistry.h"
 #include "LoaderStrategy.h"
 #include "LocalDOMWindow.h"
@@ -7376,16 +7376,22 @@ void Internals::loadArtworkImage(String&& url, ArtworkImagePromise&& promise)
         return;
     }
     m_artworkImagePromise = makeUnique<ArtworkImagePromise>(WTFMove(promise));
-    m_artworkLoader = makeUnique<ArtworkImageLoader>(*contextDocument(), url, [this](Image* image) {
-        if (image) {
-            auto imageData = ImageData::create(image->width(), image->height(), { { PredefinedColorSpace::SRGB } });
-            if (!imageData.hasException())
-                m_artworkImagePromise->resolve(imageData.releaseReturnValue());
-            else
-                m_artworkImagePromise->reject(imageData.exception().code());
-        } else
-            m_artworkImagePromise->reject(Exception { ExceptionCode::InvalidAccessError, "No image retrieved."_s });
-        m_artworkImagePromise = nullptr;
+    m_artworkLoader = makeUnique<ArtworkImageLoader>(*contextDocument(), url, [weakThis = WeakPtr { *this }](Image* image) {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
+
+        RefPtr document = protectedThis->contextDocument();
+        if (!document)
+            return;
+
+        auto promise = std::exchange(protectedThis->m_artworkImagePromise, { });
+        RefPtr nativeImage = image ? image->nativeImage() : nullptr;
+        if (!nativeImage) {
+            promise->reject(Exception { ExceptionCode::InvalidAccessError, "No image retrieved."_s });
+            return;
+        }
+        promise->settle(WebCodecsVideoFrame::create(*document, *nativeImage));
     });
     m_artworkLoader->requestImageResource();
 }
