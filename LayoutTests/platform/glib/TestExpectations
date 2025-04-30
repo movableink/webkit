@@ -1859,8 +1859,6 @@ imported/w3c/web-platform-tests/html/semantics/embedded-content/the-canvas-eleme
 
 imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/adopt-from-image-document.html [ Pass ImageOnlyFailure ]
 
-imported/w3c/web-platform-tests/svg/import/filters-displace-01-f-manual.svg [ Failure ]
-
 fast/mediastream/camera-powerEfficient-track.html [ Failure ]
 
 imported/w3c/web-platform-tests/webcodecs/videoFrame-construction.any.html [ Failure ]

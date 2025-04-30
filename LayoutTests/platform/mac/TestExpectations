@@ -1465,7 +1465,7 @@ accessibility/mac/text-input-session-notifications.html [ Skip ]
 
 webkit.org/b/202064 webaudio/silent-audio-interrupted-in-background.html [ Pass Crash ]
 
-webkit.org/b/204312 imported/w3c/web-platform-tests/svg/import/struct-dom-06-b-manual.svg [ Failure Pass ]
+webkit.org/b/205756 webgl/2.0.0/conformance2/glsl3/no-attribute-vertex-shader.html [ Pass Failure ]
 
 webkit.org/b/203222 svg/wicd/rightsizing-grid.xhtml [ Pass Failure ]
 
@@ -2024,7 +2024,6 @@ webkit.org/b/237415 webgl/1.0.x/conformance/rendering/clipping-wide-points.html 
 
 # webkit.org/b/275963 -- these tests have slight differences on x86_64 and arm64
 # they've been re-baselined to pass on arm64, so we expect failure on x86_64
-[ x86_64 ] imported/w3c/web-platform-tests/svg/import/metadata-example-01-t-manual.svg [ Failure ]
 [ x86_64 ] svg/W3C-SVG-1.1/metadata-example-01-b.svg [ Failure ]
 [ x86_64 ] svg/custom/use-on-symbol-inside-pattern.svg [ Failure ]
 

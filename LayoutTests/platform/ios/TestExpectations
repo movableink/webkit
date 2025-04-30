@@ -3286,8 +3286,6 @@ webkit.org/b/207858 fast/canvas/webgl/uninitialized-test.html [ Pass Failure ]
 webkit.org/b/207858 fast/canvas/webgl/oes-texture-float-linear.html [ Pass Failure ]
 webkit.org/b/207858 fast/canvas/webgl/tex-image-and-sub-image-2d-with-video.html [ Pass Failure ]
 
-webkit.org/b/204312 imported/w3c/web-platform-tests/svg/import/struct-dom-06-b-manual.svg [ Failure Pass ]
-
 webkit.org/b/209257 svg/as-object/object-box-sizing-no-width-height.html [ Pass Failure ]
 
 webkit.org/b/208592 svg/custom/object-sizing-explicit-height.xhtml [ Pass Failure ]
@@ -6341,8 +6339,6 @@ webkit.org/b/215167 imported/mozilla/svg/image/image-filter-01.svg [ ImageOnlyFa
 
 webkit.org/b/215192 imported/w3c/web-platform-tests/preload/single-download-preload.html [ Pass Failure ]
 
-webkit.org/b/215204 imported/w3c/web-platform-tests/svg/import/linking-a-10-f-manual.svg [ Pass Failure ]
-
 webkit.org/b/215268 http/wpt/resource-timing/rt-revalidate-requests-3.html [ Pass Failure ]
 
 webkit.org/b/215273 svg/animations/smil-multiple-animate-list.svg [ Pass Timeout ]
@@ -7245,8 +7241,6 @@ webkit.org/b/203112 scrollingcoordinator/ios/ui-scroll-fixed.html [ Pass Failure
 
 webkit.org/b/215033 imported/w3c/web-platform-tests/websockets/cookies/third-party-cookie-accepted.https.html [ Pass Failure ]
 
-webkit.org/b/215216 imported/w3c/web-platform-tests/svg/import/interact-zoom-01-t-manual.svg [ Pass Failure ]
-
 webkit.org/b/215676 [ Release ] http/tests/security/contentSecurityPolicy/worker-redirect-allowed.html [ Pass ]
 
 webkit.org/b/217414 [ Release ] imported/w3c/web-platform-tests/user-timing/measure-l3.any.html [ Pass Failure ]
@@ -7335,7 +7329,6 @@ webkit.org/b/276006 [ x86_64 ] imported/w3c/web-platform-tests/css/motion/offset
 webkit.org/b/276013 [ x86_64 ] webgl/1.0.x/conformance/glsl/bugs/sampler-array-using-loop-index.html [ Failure ]
 webkit.org/b/276013 [ x86_64 ] webgl/2.0.y/conformance/glsl/bugs/sampler-array-using-loop-index.html [ Failure ]
 # these specifically are baselined to pass on arm64, so we expect failure on x86_64
-webkit.org/b/275963 [ x86_64 ] imported/w3c/web-platform-tests/svg/import/metadata-example-01-t-manual.svg [ Failure ]
 webkit.org/b/275963 [ x86_64 ] svg/W3C-SVG-1.1/metadata-example-01-b.svg [ Failure ]
 webkit.org/b/275963 [ x86_64 ] svg/custom/use-on-symbol-inside-pattern.svg [ Failure ]
 

@@ -10859,6 +10859,7 @@
         "web-platform-tests/svg/path/property/mpath-ref.svg",
         "web-platform-tests/svg/path/property/priority-ref.svg",
         "web-platform-tests/svg/path/reftests/path-zoom-ref.html",
+        "web-platform-tests/svg/print/svg-use-page-break-crash-print.html",
         "web-platform-tests/svg/pservers/reftests/gradient-inheritance-not-in-rendertree-01.tentative.svg",
         "web-platform-tests/svg/pservers/reftests/gradient-inheritance-not-in-rendertree-02.tentative.svg",
         "web-platform-tests/svg/pservers/reftests/pattern-inheritance-not-in-rendertree-01.tentative.svg",
