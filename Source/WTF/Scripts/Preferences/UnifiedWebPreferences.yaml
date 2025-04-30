@@ -7986,7 +7986,6 @@ UnifiedPDFEnabled:
   type: bool
   status: Unifiedpdf_feature_status
   category: security
-  defaultsOverridable: true
   humanReadableName: "Unified PDF Viewer"
   humanReadableDescription: "Enable Unified PDF Viewer"
   condition: ENABLE(UNIFIED_PDF)
