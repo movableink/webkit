@@ -4639,15 +4639,11 @@ imported/w3c/web-platform-tests/css/css-fonts/font-weight-bolder-001.xht [ Image
 imported/w3c/web-platform-tests/css/css-fonts/font-weight-lighter-001.xht [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-fonts/font-weight-normal-001.xht [ ImageOnlyFailure ]
 
-# webkit.org/b/203763 2019 WebGL test gardening: These tests pass in Safari and the conformance suite, but timeout in TestRunner and MiniBrowser.
-webgl/2.0.0/conformance2/rendering/blitframebuffer-filter-outofbounds.html [ Skip ]
-
 # WebGL 2 Conformance Suite rules for regular bots post ANGLE backend adoption.
 # DEQP is skipped on the main fleet of bots because of the long run time.
 webgl/2.0.0/deqp [ Skip ]
 
 # webkit.org/b/208211 Additional inconsitencies between Intel bots and AMD machine
-webgl/2.0.0/conformance2/rendering/clipping-wide-points.html [ Pass Failure ]
 webgl/2.0.0/conformance2/textures/misc/tex-3d-size-limit.html [ Pass Failure ]
 
 # webkit.org/b/214763 regression on some hardware
@@ -4762,11 +4758,12 @@ webgl/2.0.y/conformance2/canvas [ Pass ]
 webgl/2.0.y/conformance2/context [ Pass ]
 webgl/2.0.y/conformance2/extensions [ Pass ]
 webgl/2.0.y/conformance2/glsl3 [ Pass Slow ]
-webgl/2.0.y/conformance2/rendering/rasterizer-discard-and-implicit-clear.html [ Pass ]
 webgl/2.0.y/conformance2/misc [ Pass ]
 webgl/2.0.y/conformance2/programs [ Pass ]
 webgl/2.0.y/conformance2/query [ Pass ]
 webgl/2.0.y/conformance2/reading [ Pass ]
+webgl/2.0.y/conformance2/renderbuffers [ Pass ]
+webgl/2.0.y/conformance2/rendering [ Pass ]
 webgl/2.0.y/conformance2/samplers [ Pass ]
 webgl/2.0.y/conformance2/state [ Pass ]
 webgl/2.0.y/conformance2/sync [ Pass ]
@@ -4789,6 +4786,7 @@ webkit.org/b/282031 webgl/2.0.y/conformance/context/context-lost.html [ Failure 
 webkit.org/b/282031 webgl/2.0.y/conformance/offscreencanvas/context-lost-restored.html [ Failure ]
 webkit.org/b/282031 webgl/2.0.y/conformance/offscreencanvas/context-lost.html [ Failure ]
 
+
 # WebGL 1.0.3 and 2.0.0 tests where behavior is obsolete and WebKit contains implementation
 # and tests for the new behavior. Should be removed once 1.0.3 and 2.0.0 are retired.
 fast/canvas/webgl/invalid-passed-params.html [ Skip ]
@@ -4804,6 +4802,7 @@ webgl/2.0.0/conformance2/programs [ Skip ]
 webgl/2.0.0/conformance2/query [ Skip ]
 webgl/2.0.0/conformance2/reading [ Skip ]
 webgl/2.0.0/conformance2/renderbuffers [ Skip ]
+webgl/2.0.0/conformance2/rendering [ Skip ]
 webgl/2.0.0/conformance2/samplers [ Skip ]
 webgl/2.0.0/conformance2/state [ Skip ]
 webgl/2.0.0/conformance2/sync [ Skip ]
@@ -4831,6 +4830,8 @@ webkit.org/b/292182 webgl/1.0.x/conformance/textures/video/tex-2d-rgba-rgba-unsi
 webkit.org/b/292182 webgl/2.0.y/conformance/textures/misc/copytexsubimage2d-large-partial-copy-corruption.html [ Failure Pass ]
 webkit.org/b/292182 webgl/2.0.y/conformance/textures/misc/texture-srgb-upload.html [ Failure Pass Timeout ]
 webkit.org/b/292182 webgl/2.0.y/conformance/textures/misc/texture-video-transparent.html [ Failure Pass ]
+webkit.org/b/292182 webgl/2.0.y/conformance2/rendering/blitframebuffer-test.html [ Failure ]
+webkit.org/b/292182 webgl/2.0.y/conformance2/rendering/clipping-wide-points.html [ Failure Pass ]
 
 # Until more platforms ship with WebGL GPUP
 webgl/webgl-fail-platform-context-creation-no-crash.html [ Failure Pass ]
