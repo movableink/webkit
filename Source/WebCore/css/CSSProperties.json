@@ -11936,7 +11936,7 @@
                 "no-overflow"
             ],
             "codegen-properties": {
-                "settings-flag": "cssAnchorPositioningEnabled",
+                "settings-flag": "cssAnchorPositioningPositionVisibilityEnabled",
                 "style-builder-converter": "PositionVisibility",
                 "parser-grammar": "always | [ anchors-valid || anchors-visible || no-overflow ]@(no-single-item-opt)"
             },

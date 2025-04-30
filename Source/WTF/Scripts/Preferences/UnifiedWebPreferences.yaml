@@ -1081,7 +1081,7 @@ CSSAnchorPositioningEnabled:
   status: stable
   category: css
   humanReadableName: "CSS Anchor Positioning"
-  humanReadableDescription: "Enable CSS Anchor Positioning"
+  humanReadableDescription: "Enable CSS Anchor Positioning (except position-visibility)"
   defaultValue:
     WebKitLegacy:
       default: true
@@ -1089,6 +1089,20 @@ CSSAnchorPositioningEnabled:
       default: true
     WebCore:
       default: true
+
+CSSAnchorPositioningPositionVisibilityEnabled:
+  type: bool
+  status: testable
+  category: css
+  humanReadableName: "CSS Anchor Positioning: position-visibility"
+  humanReadableDescription: "Enable position-visibility specified in CSS Anchor Positioning"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
 
 CSSAppearanceBaseEnabled:
   type: bool

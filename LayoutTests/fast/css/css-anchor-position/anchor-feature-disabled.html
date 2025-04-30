@@ -1,4 +1,4 @@
-<!-- webkit-test-runner [ CSSAnchorPositioningEnabled=false ] -->
+<!-- webkit-test-runner [ CSSAnchorPositioningEnabled=false CSSAnchorPositioningPositionVisibilityEnabled=false ] -->
 <!DOCTYPE html>
 <html>
 
@@ -15,8 +15,12 @@
 <script>
 // FIXME: test the following features are disabled too:
 // anchor(), anchor-size(), anchor-name, anchor-scope, position-anchor,
-// position-area, position-visibility, position-try-fallbacks, position-try-order,
+// position-area, position-try-fallbacks, position-try-order,
 // position-try, @position-try.
+
+test_invalid_value('position-visibility', 'always');
+test_invalid_value('position-visibility', 'anchors-valid');
+test_invalid_value('position-visibility', 'anchors-valid anchors-visible');
 
 test_invalid_value('align-self', 'anchor-center');
 test_invalid_value('align-items', 'anchor-center');
