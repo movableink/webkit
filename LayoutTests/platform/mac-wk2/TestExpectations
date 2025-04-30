@@ -1597,13 +1597,16 @@ fast/webgpu/nocrash/fuzz-286820.html [ Skip ]
 # skipped due to failing when run in stress test mode
 [ Sonoma ] fast/webgpu/nocrash/RenderBundle_WRITE.html [ Skip ]
 
-[ Release arm64 Sequoia+ ] http/tests/webgpu/webgpu/api [ Pass ]
-[ Release arm64 Sequoia+ ] http/tests/webgpu/webgpu/shader [ Pass ]
+[ Slow arm64 Sequoia+ ] http/tests/webgpu/webgpu/api [ Pass ]
+[ Slow arm64 Sequoia+ ] http/tests/webgpu/webgpu/shader [ Pass ]
 [ Release arm64 Sequoia+ ] http/tests/webgpu/webgpu/web_platform [ Pass Failure Timeout ]
 
 [ arm64 ] http/tests/webgpu/webgpu/api/validation/capability_checks/features/texture_formats.html [ Pass ]
 
 # Skip tests due to taking too long to run on EWS
+[ Debug ] http/tests/webgpu/webgpu/api/operation/render_pipeline/sample_mask.html [ Skip ]
+[ Debug ] http/tests/webgpu/webgpu/api/validation/image_copy/texture_related.html [ Skip ]
+[ Debug ] http/tests/webgpu/webgpu/api/validation/state/device_lost/destroy.html [ Skip ]
 http/tests/webgpu/webgpu/api/operation/command_buffer/copyTextureToTexture.html [ Skip ]
 http/tests/webgpu/webgpu/api/operation/command_buffer/image_copy.html [ Skip ]
 http/tests/webgpu/webgpu/api/operation/resource_init/texture_zero.html [ Skip ]
@@ -1612,6 +1615,9 @@ http/tests/webgpu/webgpu/api/validation/capability_checks/limits/maxStorageTextu
 http/tests/webgpu/webgpu/api/validation/createView.html [ Skip ]
 http/tests/webgpu/webgpu/api/validation/render_pipeline/vertex_state.html [ Skip ]
 http/tests/webgpu/webgpu/api/validation/encoding/cmds/render/draw.html [ Skip ]
+http/tests/webgpu/webgpu/api/validation/createTexture.html [ Skip ]
+http/tests/webgpu/webgpu/api/validation/error_scope.html [ Skip ]
+http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/distance.html [ Skip ]
 
 # these tests are flaky failures, potentially a test issue
 http/tests/webgpu/webgpu/api/operation/adapter/info.html [ Skip ]
@@ -1623,6 +1629,9 @@ http/tests/webgpu/webgpu/api/validation/image_copy/layout_related.html [ Skip ]
 http/tests/webgpu/webgpu/api/validation/render_pipeline/depth_stencil_state.html [ Skip ]
 http/tests/webgpu/webgpu/api/validation/render_pipeline/misc.html [ Skip ]
 http/tests/webgpu/webgpu/api/validation/resource_usages/texture/in_render_common.html [ Skip ]
+http/tests/webgpu/webgpu/api/validation/capability_checks/limits/maxSampledTexturesPerShaderStage.html [ Skip ]
+http/tests/webgpu/webgpu/api/validation/capability_checks/limits/maxSamplersPerShaderStage.html [ Skip ]
+http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/textureSampleBaseClampToEdge.html [ Skip ]
 
 http/tests/webgpu/webgpu/shader/execution/limits.html [ Skip ]
 http/tests/webgpu/webgpu/shader/execution/expression/binary/bitwise.html [ Skip ]
@@ -1693,6 +1702,21 @@ http/tests/webgpu/webgpu/shader/validation/parse/diagnostic.html [ Skip ]
 http/tests/webgpu/webgpu/shader/validation/parse/shadow_builtins.html [ Skip ]
 http/tests/webgpu/webgpu/shader/validation/shader_io/group_and_binding.html [ Skip ]
 http/tests/webgpu/webgpu/shader/validation/uniformity/uniformity.html [ Skip ]
+http/tests/webgpu/webgpu/api/operation/memory_sync/buffer/multiple_buffers.html  [ Skip ]
+http/tests/webgpu/webgpu/api/operation/rendering/depth_clip_clamp.html  [ Skip ]
+http/tests/webgpu/webgpu/api/validation/encoding/programmable/pipeline_bind_group_compat.html  [ Skip ]
+http/tests/webgpu/webgpu/api/validation/getBindGroupLayout.html  [ Skip ]
+http/tests/webgpu/webgpu/shader/execution/expression/precedence.html  [ Skip ]
+http/tests/webgpu/webgpu/shader/validation/expression/call/builtin/barriers.html  [ Skip ]
+http/tests/webgpu/webgpu/shader/validation/parse/literal.html  [ Skip ]
+http/tests/webgpu/webgpu/shader/validation/types/struct.html  [ Skip ]
+[ Debug ]  http/tests/webgpu/webgpu/api/operation/buffers/map_ArrayBuffer.html [ Skip ]
+http/tests/webgpu/webgpu/api/validation/image_copy/buffer_texture_copies.html [ Skip ]
+http/tests/webgpu/webgpu/shader/execution/expression/binary/af_matrix_matrix_multiplication.html [ Skip ]
+http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/faceForward.html [ Skip ]
+http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/fwidth.html [ Skip ]
+http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/fwidthCoarse.html [ Skip ]
+http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/fwidthFine.html [ Skip ]
 
 # timeout on Intel Macs due to difference in handling infinite loops
 [ x86_64 ] fast/webgpu/regression/repro_283595-for.html [ Skip ]
@@ -1725,6 +1749,10 @@ http/tests/webgpu/webgpu/api/validation/buffer/mapping.html [ Pass ]
 # skipped debug due to test taking too long even with Slow
 [ Release Sequoia+ ] http/tests/webgpu/webgpu/api/validation/compute_pipeline.html [ Pass Slow ]
 [ Release Sequoia+ ] http/tests/webgpu/webgpu/api/validation/render_pipeline/resource_compatibility.html [ Pass Slow ]
+[ Release Sequoia+ ] http/tests/webgpu/webgpu/api/operation/render_pipeline/sample_mask.html [ Pass Slow ]
+[ Release Sequoia+ ] http/tests/webgpu/webgpu/api/validation/image_copy/texture_related.html [ Pass Slow ]
+[ Release Sequoia+ ] http/tests/webgpu/webgpu/api/validation/state/device_lost/destroy.html [ Pass Slow ]
+
 
 http/tests/webgpu/webgpu/api/validation/queue/buffer_mapped.html [ Pass ]
 http/tests/webgpu/webgpu/api/validation/queue/submit.html [ Pass ]
@@ -1831,7 +1859,6 @@ webkit.org/b/258228 [ Sonoma+ Debug ] accessibility/mac/text-input-session-notif
 [ Release x86_64 ] http/tests/webgpu/webgpu/api/operation/render_pipeline/overrides.html [ Skip ]
 [ Release x86_64 ] http/tests/webgpu/webgpu/api/operation/render_pipeline/primitive_topology.html [ Skip ]
 [ Release x86_64 ] http/tests/webgpu/webgpu/api/operation/memory_sync/buffer/single_buffer.html [ Skip ]
-[ Release x86_64 ] http/tests/webgpu/webgpu/api/operation/memory_sync/buffer/multiple_buffers.html [ Skip ]
 [ Release x86_64 ] http/tests/webgpu/webgpu/api/operation/memory_sync/texture/same_subresource.html [ Skip ]
 [ Release x86_64 ] http/tests/webgpu/webgpu/api/operation/command_buffer/programmable/state_tracking.html [ Skip ]
 
@@ -2118,9 +2145,9 @@ webkit.org/b/291710 [ Debug ] swipe/basic-cached-back-swipe.html [ Pass Timeout 
 
 webkit.org/b/291861 [ Release x86_64 ] media/media-vp8-hiddenframes.html [ Pass ImageOnlyFailure ]
 
-webkit.org/b/291878 [ Sequoia Release arm64 ] http/tests/webgpu/webgpu/shader/validation/expression/call/builtin/textureSampleBias.html [ Failure ]
+webkit.org/b/291878 [ Sequoia ] http/tests/webgpu/webgpu/shader/validation/expression/call/builtin/textureSampleBias.html [ Failure ]
 
-webkit.org/b/291966 [ Sequoia+ Release ] http/tests/webgpu/webgpu/api/validation/render_pipeline/fragment_state.html [ Pass Timeout ]
+webkit.org/b/291966 [ Sequoia+ ] http/tests/webgpu/webgpu/api/validation/render_pipeline/fragment_state.html [ Pass Timeout ]
 
 # webkit.org/b/292111 REGRESSION ( 294024@main): [ MacOS iOS WK2 Debug ] ASSERTION FAILED: bytecodeCanIgnoreNegativeZero(node->arithNodeFlags())
 [ Sonoma+ Debug ] imported/w3c/web-platform-tests/webcodecs/video-encoder-rescaling.https.any.html?av1 [ Skip ]

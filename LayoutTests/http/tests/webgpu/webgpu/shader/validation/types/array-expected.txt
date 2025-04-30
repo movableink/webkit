@@ -34,17 +34,7 @@ PASS :valid:case="shadow"
 PASS :valid:case="trailing_comma1"
 PASS :valid:case="trailing_comma2"
 PASS :valid:case="alias_element"
-FAIL :invalid:case="f16_without_enable" assert_unreached:
-  - VALIDATION FAILED: Missing expected compilationInfo 'error' message.
-
-
-    ---- shader ----
-    alias T = array<f16>;
-    expectCompileResult@http://127.0.0.1:8000/webgpu/webgpu/shader/validation/shader_validation_test.js:73:28
-    @http://127.0.0.1:8000/webgpu/webgpu/shader/validation/types/array.spec.js:163:24
-  - EXPECTATION FAILED: Expected validation error
-      at (elided: below max severity)
- Reached unreachable code
+PASS :invalid:case="f16_without_enable"
 PASS :invalid:case="texture"
 PASS :invalid:case="sampler"
 PASS :invalid:case="runtime_nested"
