@@ -1728,7 +1728,7 @@ webgl/2.0.0/conformance2/textures/image_bitmap_from_image_bitmap [ Skip ]
 [ Debug ] webgl/2.0.y/conformance/glsl/misc/struct-nesting-of-variable-names.html [ Skip ] # Slow
 [ Debug ] webgl/2.0.y/conformance/rendering/many-draw-calls.html [ Skip ] # Slow
 [ Debug ] webgl/2.0.y/conformance/textures/misc/tex-image-and-sub-image-2d-with-array-buffer-view.html [ Skip ] # Slow
-[ Debug ] webgl/2.0.0/conformance2/glsl3/compound-assignment-type-combination.html [ Skip ] # Slow
+[ Debug ] webgl/2.0.y/conformance2/glsl3/compound-assignment-type-combination.html [ Skip ] # Slow
 [ Debug ] webgl/2.0.0/conformance2/rendering/blitframebuffer-filter-outofbounds.html [ Skip ] # Slow
 [ Debug ] webgl/2.0.0/conformance2/textures/misc/copy-texture-image-luma-format.html [ Skip ] # Slow
 
@@ -1767,7 +1767,7 @@ webgl/2.0.y/conformance/textures/misc/texture-mips.html [ Failure Pass ]
 webgl/2.0.y/conformance/textures/misc/texture-upload-size.html [ Skip ] # Timeout
 webgl/2.0.y/conformance/uniforms/out-of-bounds-uniform-array-access.html [ Skip ] # Timeout
 webgl/2.0.y/conformance2/attribs/gl-vertexattribipointer.html [ Skip ] # Timeout
-webgl/2.0.0/conformance2/glsl3/tricky-loop-conditions.html [ Failure ]
+webgl/2.0.y/conformance2/glsl3/tricky-loop-conditions.html [ Failure ]
 webgl/2.0.0/conformance2/rendering/blitframebuffer-filter-srgb.html [ Pass Failure ]
 webgl/2.0.0/conformance2/rendering/blitframebuffer-stencil-only.html [ Pass Failure ]
 webgl/2.0.0/conformance2/rendering/fs-color-type-mismatch-color-buffer-type.html [ Failure ]
@@ -1805,6 +1805,8 @@ fast/canvas/webgl/webgl-clear-composited-notshowing.html [ Slow ]
 fast/canvas/webgl/debug-messages-to-console.html [ Failure Pass ]
 
 webgl/2.0.y/conformance/textures/misc/png-image-types.html [ Failure ]
+webgl/2.0.y/conformance2/glsl3/switch-case.html [ Failure ]
+webgl/2.0.y/conformance2/glsl3/texture-bias.html [ Failure ]
 
 #//////////////////////////////////////////////////////////////////////////////////////////
 # Unknown category

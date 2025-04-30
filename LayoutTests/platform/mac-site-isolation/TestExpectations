@@ -434,7 +434,7 @@ webgl/1.0.x/conformance/glsl/bugs/assign-to-swizzled-twice-in-function.html [ Sk
 webgl/1.0.x/conformance/glsl/bugs/constant-precision-qualifier.html [ Skip ]
 webgl/1.0.x/conformance/ogles/GL/asin/asin_001_to_006.html [ Skip ]
 webgl/1.0.x/conformance/ogles/GL/struct/struct_033_to_040.html [ Skip ]
-webgl/2.0.0/conformance2/glsl3/vector-dynamic-indexing.html [ Skip ]
+webgl/2.0.y/conformance2/glsl3/vector-dynamic-indexing.html [ Skip ]
 webgl/2.0.0/conformance2/textures/image_bitmap_from_blob/tex-3d-rg8ui-rg_integer-unsigned_byte.html [ Skip ]
 webgl/2.0.0/conformance2/textures/image_bitmap_from_image_data/tex-3d-r16f-red-half_float.html [ Skip ]
 webgl/2.0.0/conformance2/textures/image_bitmap_from_image/tex-3d-rg8-rg-unsigned_byte.html [ Skip ]
