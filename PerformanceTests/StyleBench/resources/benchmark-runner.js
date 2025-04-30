@@ -126,12 +126,14 @@ BenchmarkRunner.prototype._runTest = function(suite, test, prepareReturnValue, c
     var contentWindow = self._frame.contentWindow;
     var contentDocument = self._frame.contentDocument;
 
+    // Force style resolution before running the test to ensure we don't measure stuff unrelated to the test.
+    window._unusedHeightValue = contentDocument.body.getBoundingClientRect().height;
     self._writeMark(suite.name + '.' + test.name + '-start');
 
     var startTime = now();
     test.run(prepareReturnValue, contentWindow, contentDocument);
     // Force style resolution + layout to ensure we're measuring it.
-    window._unusedHeightValue = self._frame.contentDocument.body.getBoundingClientRect().height;
+    window._unusedHeightValue = contentDocument.body.getBoundingClientRect().height;
     var endTime = now();
 
     self._writeMark(suite.name + '.' + test.name + '-sync-end');
