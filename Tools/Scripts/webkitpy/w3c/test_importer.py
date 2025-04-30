@@ -71,22 +71,18 @@ import itertools
 import json
 import logging
 import mimetypes
+from pathlib import Path
 
-try:
-    from pathlib import Path
-except ImportError:
-    from pathlib2 import Path
+from webkitscmpy.local.git import Git
 
 from webkitpy.common.host import Host
 from webkitpy.common.system.filesystem import FileSystem
-from webkitpy.common.system.executive import ScriptError
 from webkitpy.common.webkit_finder import WebKitFinder
-from webkitpy.port.factory import PortFactory
 from webkitpy.layout_tests.controllers.layout_test_finder_legacy import LayoutTestFinder
 from webkitpy.w3c.common import TEMPLATED_TEST_HEADER, WPT_GH_URL, WPTPaths
-from webkitpy.w3c.test_parser import TestParser
 from webkitpy.w3c.test_converter import convert_for_webkit
 from webkitpy.w3c.test_downloader import TestDownloader
+from webkitpy.w3c.test_parser import TestParser
 
 _log = logging.getLogger(__name__)
 
@@ -213,10 +209,9 @@ class TestImporter(object):
         if self.source_directory:
             source_path = str(Path(self.source_directory) / 'web-platform-tests')
             try:
-                git = self.test_downloader().git(source_path)
-                self.upstream_revision = git.rev_parse('HEAD')
-            except (OSError, ScriptError):
-                pass
+                self.upstream_revision = Git(source_path).find('HEAD').hash
+            except OSError:
+                self.upstream_revision = None
         else:
             _log.info('Downloading W3C test repositories')
             self.filesystem.maybe_make_directory(self.tests_download_path)

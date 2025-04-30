@@ -30,9 +30,10 @@
 import json
 import logging
 
-from webkitpy.common.system.filesystem import FileSystem
+from webkitcorepy import run
+from webkitscmpy.local.git import Git
+
 from webkitpy.common.webkit_finder import WebKitFinder
-from webkitpy.common.checkout.scm.git import Git
 
 _log = logging.getLogger(__name__)
 
@@ -98,24 +99,20 @@ class TestDownloader(object):
         if not self._options.import_all:
             self._init_paths_from_expectations()
 
-    def git(self, test_repository):
-        return Git(test_repository, None, executive=self._host.executive, filesystem=self._filesystem)
-
     def checkout_test_repository(self, revision, url, directory):
-        git = None
-        if not self._filesystem.exists(directory):
+        needs_clone = not self._filesystem.exists(directory)
+        if needs_clone:
             _log.info('Cloning %s into %s...' % (url, directory))
-            Git.clone(url, directory, self._host.executive)
-            git = self.git(directory)
-        elif self._options.fetch is True:
-            git = self.git(directory)
+            run([Git.executable(), 'clone', url, directory], check=True)
+
+        git = Git(directory)
+        if not needs_clone and self._options.fetch is True:
             _log.info('Fetching %s...' % url)
-            git.fetch()
-        else:
-            git = self.git(directory)
+            git.fetch(git.default_branch)
+
         _log.info('Checking out revision ' + revision)
-        git.checkout(revision, not self._options.verbose)
-        self.upstream_revision = git.rev_parse('HEAD')
+        git.checkout(revision)
+        self.upstream_revision = git.find('HEAD').hash
 
     def _init_paths_from_expectations(self):
         import_lines = json.loads(self._filesystem.read_text_file(self.import_expectations_path))
