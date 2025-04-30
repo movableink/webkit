@@ -414,6 +414,7 @@ public:
     virtual String ariaDescribedByAttribute() const { return String(); }
     const String placeholderValue() const final;
     bool accessibleNameDerivesFromContent() const;
+    bool accessibleNameDerivesFromHeading() const;
     String brailleLabel() const override { return getAttribute(HTMLNames::aria_braillelabelAttr); }
     String brailleRoleDescription() const override { return getAttribute(HTMLNames::aria_brailleroledescriptionAttr); }
     String embeddedImageDescription() const final;

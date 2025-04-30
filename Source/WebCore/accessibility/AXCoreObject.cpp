@@ -1148,6 +1148,7 @@ static bool isVisibleText(AccessibilityTextSource textSource)
     case AccessibilityTextSource::Visible:
     case AccessibilityTextSource::Children:
     case AccessibilityTextSource::LabelByElement:
+    case AccessibilityTextSource::Heading:
         return true;
     case AccessibilityTextSource::Alternative:
     case AccessibilityTextSource::Summary:
@@ -1176,6 +1177,7 @@ static bool isDescriptiveText(AccessibilityTextSource textSource)
     case AccessibilityTextSource::Title:
     case AccessibilityTextSource::Subtitle:
     case AccessibilityTextSource::Action:
+    case AccessibilityTextSource::Heading:
         return false;
     }
 }
@@ -1199,7 +1201,7 @@ String AXCoreObject::descriptionAttributeValue() const
 
     StringBuilder returnText;
     for (const auto& text : textOrder) {
-        if (text.textSource == AccessibilityTextSource::Alternative) {
+        if (text.textSource == AccessibilityTextSource::Alternative || text.textSource == AccessibilityTextSource::Heading) {
             returnText.append(text.text);
             break;
         }
@@ -1246,7 +1248,7 @@ String AXCoreObject::titleAttributeValue() const
 
     for (const auto& text : textOrder) {
         // If we have alternative text, then we should not expose a title.
-        if (text.textSource == AccessibilityTextSource::Alternative)
+        if (text.textSource == AccessibilityTextSource::Alternative || text.textSource == AccessibilityTextSource::Heading)
             break;
 
         // Once we encounter visible text, or the text from our children that should be used foremost.

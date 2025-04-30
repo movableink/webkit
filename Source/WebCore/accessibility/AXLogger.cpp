@@ -475,6 +475,9 @@ TextStream& operator<<(TextStream& stream, AccessibilityTextSource source)
     case AccessibilityTextSource::Action:
         stream << "Action";
         break;
+    case AccessibilityTextSource::Heading:
+        stream << "Heading";
+        break;
     }
     return stream;
 }

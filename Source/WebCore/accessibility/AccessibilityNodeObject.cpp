@@ -87,6 +87,7 @@
 #include "Text.h"
 #include "TextControlInnerElements.h"
 #include "TextIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include "UserGestureIndicator.h"
 #include "VisibleUnits.h"
 #include <wtf/Scope.h>
@@ -1824,6 +1825,23 @@ void AccessibilityNodeObject::alternativeText(Vector<AccessibilityText>& textOrd
     // Tree items missing a label are labeled by all child elements.
     if (isTreeItem() && !hasValidAriaLabel && ariaLabeledByAttribute().isEmpty())
         textOrder.append(AccessibilityText(accessibleNameForNode(*node), AccessibilityTextSource::Alternative));
+
+    if (accessibleNameDerivesFromHeading()) {
+        CheckedPtr cache = axObjectCache();
+        // Where an element supports nameFrom: heading and no nameFrom: content/author is supplied, its accname may be
+        // derived from the first descendant node that is a heading (depth-first search, preorder traversal).
+        if (auto* containerNode = dynamicDowncast<ContainerNode>(node); containerNode && cache) {
+            for (auto& element : descendantsOfType<Element>(*containerNode)) {
+                if (auto* descendantObject = cache->getOrCreate(element); descendantObject && descendantObject->isHeading()) {
+                    TextUnderElementMode mode;
+                    mode.includeFocusableContent = true;
+                    String nameFromHeading = descendantObject->textUnderElement(mode);
+                    if (!nameFromHeading.isEmpty())
+                        textOrder.append(AccessibilityText(nameFromHeading, AccessibilityTextSource::Heading));
+                }
+            }
+        }
+    }
 
 #if ENABLE(MATHML)
     if (node->isMathMLElement())

@@ -346,6 +346,21 @@ bool AccessibilityObject::accessibleNameDerivesFromContent() const
     return true;
 }
 
+// https://github.com/w3c/aria/pull/1860
+// If accname cannot be derived from content or author, accname can be derived on permitted roles
+// from the first descendant element node with a heading role.
+bool AccessibilityObject::accessibleNameDerivesFromHeading() const
+{
+    switch (roleValue()) {
+    case AccessibilityRole::ApplicationAlertDialog:
+    case AccessibilityRole::ApplicationDialog:
+    case AccessibilityRole::DocumentArticle:
+        return true;
+    default:
+        return false;
+    }
+}
+
 String AccessibilityObject::computedLabel()
 {
     // This method is being called by WebKit inspector, which may happen at any time, so we need to update our backing store now.

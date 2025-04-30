@@ -562,6 +562,7 @@ enum class AccessibilityTextSource {
     Title,
     Subtitle,
     Action,
+    Heading,
 };
 
 using AXEditingStyleValueVariant = Variant<String, bool, int>;

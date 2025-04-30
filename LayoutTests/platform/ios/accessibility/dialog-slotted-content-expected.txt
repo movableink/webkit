@@ -1,7 +1,7 @@
 This test ensures that slotted content inside dialogs is accessible.
 
 WebArea AXLabel:
-    ApplicationDialog AXLabel: web dialog
+    ApplicationDialog AXLabel: Hello world, web dialog
         Heading AXLabel: Hello world
             StaticText AXLabel: Hello world
         Button AXLabel: Non-slotted button
