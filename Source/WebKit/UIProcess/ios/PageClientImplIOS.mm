@@ -29,6 +29,7 @@
 #if PLATFORM(IOS_FAMILY)
 
 #import "APIData.h"
+#import "APIOpenPanelParameters.h"
 #import "APIUIClient.h"
 #import "ApplicationStateTracker.h"
 #import "DrawingAreaProxy.h"
@@ -36,6 +37,7 @@
 #import "FrameInfoData.h"
 #import "InteractionInformationAtPosition.h"
 #import "KeyEventInterpretationContext.h"
+#import "Logging.h"
 #import "NativeWebKeyboardEvent.h"
 #import "NavigationState.h"
 #import "PDFPluginIdentifier.h"
@@ -69,6 +71,8 @@
 #import <WebCore/DOMPasteAccess.h>
 #import <WebCore/DictionaryLookup.h>
 #import <WebCore/ElementIdentifier.h>
+#import <WebCore/MediaPlaybackTarget.h>
+#import <WebCore/MediaSessionHelperIOS.h>
 #import <WebCore/NotImplemented.h>
 #import <WebCore/PlatformScreen.h>
 #import <WebCore/PromisedAttachmentInfo.h>
@@ -741,9 +745,17 @@ void PageClientImpl::showPlaybackTargetPicker(bool hasVideo, const IntRect& elem
     [contentView() _showPlaybackTargetPicker:hasVideo fromRect:elementRect routeSharingPolicy:policy routingContextUID:contextUID.createNSString().get()];
 }
 
-bool PageClientImpl::handleRunOpenPanel(WebPageProxy*, WebFrameProxy*, const FrameInfoData& frameInfo, API::OpenPanelParameters* parameters, WebOpenPanelResultListenerProxy* listener)
+bool PageClientImpl::handleRunOpenPanel(const WebPageProxy& page, const WebFrameProxy&, const FrameInfoData& frameInfo, API::OpenPanelParameters& parameters, WebOpenPanelResultListenerProxy& listener)
 {
-    [contentView() _showRunOpenPanel:parameters frameInfo:frameInfo resultListener:listener];
+    RELEASE_LOG_INFO(WebRTC, "PageClientImpl::handleRunOpenPanel");
+#if ENABLE(MEDIA_CAPTURE)
+    if (parameters.mediaCaptureType() != WebCore::MediaCaptureType::MediaCaptureTypeNone) {
+        if (auto pid = page.configuration().processPool().configuration().presentingApplicationPID())
+            WebCore::MediaSessionHelper::sharedHelper().providePresentingApplicationPID(pid, WebCore::MediaSessionHelper::ShouldOverride::Yes);
+    }
+#endif
+
+    [contentView() _showRunOpenPanel:&parameters frameInfo:frameInfo resultListener:&listener];
     return true;
 }
 

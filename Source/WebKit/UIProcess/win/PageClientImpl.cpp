@@ -226,11 +226,8 @@ void PageClientImpl::preferencesDidChange()
     notImplemented();
 }
 
-bool PageClientImpl::handleRunOpenPanel(WebPageProxy*, WebFrameProxy*, const FrameInfoData&, API::OpenPanelParameters* parameters, WebOpenPanelResultListenerProxy* listener)
+bool PageClientImpl::handleRunOpenPanel(const WebPageProxy&, const WebFrameProxy&, const FrameInfoData&, API::OpenPanelParameters& parameters, WebOpenPanelResultListenerProxy& listener)
 {
-    ASSERT(parameters);
-    ASSERT(listener);
-
     HWND viewWindow = viewWidget();
     if (!IsWindow(viewWindow))
         return false;
@@ -240,7 +237,7 @@ bool PageClientImpl::handleRunOpenPanel(WebPageProxy*, WebFrameProxy*, const Fra
     // So we can assume the required size can't be more than the maximum value for a short.
     constexpr size_t maxFilePathsListSize = USHRT_MAX;
 
-    bool isAllowMultipleFiles = parameters->allowMultipleFiles();
+    bool isAllowMultipleFiles = parameters.allowMultipleFiles();
     Vector<wchar_t> fileBuffer(isAllowMultipleFiles ? maxFilePathsListSize : MAX_PATH);
 
     OPENFILENAME ofn { };
@@ -280,7 +277,7 @@ bool PageClientImpl::handleRunOpenPanel(WebPageProxy*, WebFrameProxy*, const Fra
             fileList.append(WTFMove(firstValue));
 
         ASSERT(fileList.size());
-        listener->chooseFiles(fileList);
+        listener.chooseFiles(fileList);
         return true;
     }
     // FIXME: Show some sort of error if too many files are selected and the buffer is too small. For now, this will fail silently.

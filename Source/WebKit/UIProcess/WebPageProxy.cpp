@@ -8941,7 +8941,7 @@ void WebPageProxy::runOpenPanel(IPC::Connection& connection, FrameIdentifier fra
 
     if (!m_uiClient->runOpenPanel(*this, frame.get(), WTFMove(frameInfo), parameters.ptr(), openPanelResultListener.ptr())) {
         RefPtr pageClient = this->pageClient();
-        if (!pageClient || !pageClient->handleRunOpenPanel(this, frame.get(), frameInfoForPageClient, parameters.ptr(), openPanelResultListener.ptr()))
+        if (!pageClient || !pageClient->handleRunOpenPanel(*this, *frame, frameInfoForPageClient, parameters, openPanelResultListener))
             didCancelForOpenPanel();
     }
 }
