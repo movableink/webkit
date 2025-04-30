@@ -5671,13 +5671,6 @@
    },
    {
       "emails" : [
-         "krzywix@apple.com"
-      ],
-      "github" : "mkrzywix",
-      "name" : "Mateusz Krzywicki"
-   },
-   {
-      "emails" : [
          "mattbaker01@gmail.com"
       ],
       "expertise" : "Web Inspector",
