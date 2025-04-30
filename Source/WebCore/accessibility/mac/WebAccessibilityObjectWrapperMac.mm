@@ -2260,9 +2260,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     if (backingObject->isTable() && backingObject->isExposable())
         return tableParamAttrs;
 
-    if (backingObject->isMenuRelated())
-        return nil;
-
     if (backingObject->isWebArea())
         return webAreaParamAttrs;
 
