@@ -592,11 +592,11 @@ static void overrideDefaults()
     Options::numberOfBaselineCompilerThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
     Options::numberOfDFGCompilerThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
     Options::numberOfFTLCompilerThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
-    Options::worklistLoadFactor() = 4;
-    Options::worklistBaselineLoadWeight() = 1;
-    Options::worklistDFGLoadWeight() = 2;
+    Options::worklistLoadFactor() = 20;
+    Options::worklistBaselineLoadWeight() = 2;
+    Options::worklistDFGLoadWeight() = 5;
     // Set the FTL load weight equal to the load-factor so that a new thread is started for each FTL plan
-    Options::worklistFTLLoadWeight() = 4;
+    Options::worklistFTLLoadWeight() = 20;
 #endif
 
 #if OS(LINUX) && CPU(ARM)
