@@ -83,10 +83,7 @@ void ArtworkImageLoader::notifyFinished(CachedResource& resource, const NetworkL
         m_callback(nullptr);
         return;
     }
-    Ref image = *m_cachedImage->image();
-    image->subresourcesAreFinished(nullptr, [image, callback = std::exchange(m_callback, { })]() mutable {
-        callback(image.ptr());
-    });
+    m_callback(m_cachedImage->image());
 }
 
 ExceptionOr<Ref<MediaMetadata>> MediaMetadata::create(ScriptExecutionContext& context, std::optional<MediaMetadataInit>&& init)

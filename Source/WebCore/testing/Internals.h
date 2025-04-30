@@ -187,7 +187,6 @@ class PlatformSpeechSynthesizerMock;
 #endif
 
 #if ENABLE(WEB_CODECS)
-class WebCodecsVideoFrame;
 class WebCodecsVideoDecoder;
 #endif
 
@@ -1460,7 +1459,7 @@ public:
     ExceptionOr<double> currentMediaSessionPosition(const MediaSession&);
     ExceptionOr<void> sendMediaSessionAction(MediaSession&, const MediaSessionActionDetails&);
 
-    using ArtworkImagePromise = DOMPromiseDeferred<IDLInterface<WebCodecsVideoFrame>>;
+        using ArtworkImagePromise = DOMPromiseDeferred<IDLInterface<ImageData>>;
     void loadArtworkImage(String&&, ArtworkImagePromise&&);
     ExceptionOr<Vector<String>> platformSupportedCommands() const;
 
