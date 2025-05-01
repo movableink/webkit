@@ -1933,6 +1933,7 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
     static constexpr auto sampleRectThickness = 2;
     static constexpr auto sampleRectMargin = 4;
     static constexpr auto thinBorderWidth = 10;
+    static constexpr auto minimumCoverageForLeftAndRightSides = 0.5;
 
     struct FixedContainerResult {
         RefPtr<Element> container;
@@ -1955,9 +1956,25 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
         case BoxSide::Left:
             return { rect.x(), (rect.y() + rect.maxY()) / 2 };
         case BoxSide::Right:
-            return { rect.maxX(), (fixedRect.y() + rect.maxY()) / 2 };
+            return { rect.maxX(), (rect.y() + rect.maxY()) / 2 };
         case BoxSide::Bottom:
             return { (rect.x() + rect.maxX()) / 2, rect.maxY() };
+        default:
+            ASSERT_NOT_REACHED();
+            return { };
+        }
+    };
+
+    auto computeSampleRectIgnoringBorderWidth = [](LayoutRect rect, BoxSide side) -> LayoutRect {
+        switch (side) {
+        case BoxSide::Top:
+            return { rect.minXMinYCorner(), LayoutPoint { rect.maxX(), rect.y() + sampleRectThickness } };
+        case BoxSide::Left:
+            return { rect.minXMinYCorner(), LayoutPoint { rect.x() + sampleRectThickness, rect.maxY() } };
+        case BoxSide::Right:
+            return { LayoutPoint { rect.maxX() - sampleRectThickness, rect.y() }, rect.maxXMaxYCorner() };
+        case BoxSide::Bottom:
+            return { LayoutPoint { rect.x(), rect.maxY() - sampleRectThickness }, rect.maxXMaxYCorner() };
         default:
             ASSERT_NOT_REACHED();
             return { };
@@ -2013,11 +2030,12 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
         NotFixedOrSticky,
         IsHiddenOrTransparent,
         IsScrollable,
+        TooSmall,
         IsCandidate,
     };
     using enum ContainerEdgeCandidateResult;
 
-    auto containerEdgeCandidateResult = [](const RenderElement& renderer) {
+    auto containerEdgeCandidateResult = [&](BoxSide side, const RenderElement& renderer) {
         if (!renderer.hasLayer())
             return NoLayer;
 
@@ -2030,6 +2048,13 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
 
             if (box->canBeScrolledAndHasScrollableArea())
                 return IsScrollable;
+        }
+
+        if (side == BoxSide::Left || side == BoxSide::Right) {
+            FloatRect fixedRectEdge = computeSampleRectIgnoringBorderWidth(fixedRect, side);
+            FloatRect intersectionRect = intersection(fixedRectEdge, renderer.absoluteBoundingBoxRect());
+            if (intersectionRect.area() / fixedRectEdge.area() < minimumCoverageForLeftAndRightSides)
+                return TooSmall;
         }
 
         return IsCandidate;
@@ -2085,11 +2110,12 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
                     hasMultipleBackgroundColors = true;
             }
 
-            auto candidateResult = containerEdgeCandidateResult(ancestor);
+            auto candidateResult = containerEdgeCandidateResult(side, ancestor);
             switch (candidateResult) {
             case NoLayer:
             case NotFixedOrSticky:
             case IsScrollable:
+            case TooSmall:
                 break;
             case IsHiddenOrTransparent: {
                 hitInvisiblePointerEventsNoneContainer = ancestor->usedPointerEvents() == PointerEvents::None;
@@ -2115,25 +2141,7 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
     };
 
     auto computeSamplingRect = [&](const RenderStyle* style, BoxSide side) -> LayoutRect {
-        LayoutRect samplingRect;
-        switch (side) {
-        case BoxSide::Top:
-            samplingRect = { fixedRect.minXMinYCorner(), LayoutPoint { fixedRect.maxX(), fixedRect.y() + sampleRectThickness } };
-            break;
-        case BoxSide::Left:
-            samplingRect = { fixedRect.minXMinYCorner(), LayoutPoint { fixedRect.x() + sampleRectThickness, fixedRect.maxY() } };
-            break;
-        case BoxSide::Right:
-            samplingRect = { LayoutPoint { fixedRect.maxX() - sampleRectThickness, fixedRect.y() }, fixedRect.maxXMaxYCorner() };
-            break;
-        case BoxSide::Bottom:
-            samplingRect = { LayoutPoint { fixedRect.x(), fixedRect.maxY() - sampleRectThickness }, fixedRect.maxXMaxYCorner() };
-            break;
-        default:
-            ASSERT_NOT_REACHED();
-            return { };
-        }
-
+        auto samplingRect = computeSampleRectIgnoringBorderWidth(fixedRect, side);
         if (!style)
             return samplingRect;
 
