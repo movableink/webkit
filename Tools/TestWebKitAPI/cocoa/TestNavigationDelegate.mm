@@ -261,57 +261,57 @@
 
 - (void)_test_waitForDidStartProvisionalNavigation
 {
-    EXPECT_FALSE(self.navigationDelegate);
+    auto *oldNavigationDelegate = self.navigationDelegate;
 
     auto navigationDelegate = adoptNS([[TestNavigationDelegate alloc] init]);
     self.navigationDelegate = navigationDelegate.get();
     [navigationDelegate waitForDidStartProvisionalNavigation];
 
-    self.navigationDelegate = nil;
+    self.navigationDelegate = oldNavigationDelegate;
 }
 
 - (void)_test_waitForDidFailProvisionalNavigation
 {
-    EXPECT_FALSE(self.navigationDelegate);
+    auto *oldNavigationDelegate = self.navigationDelegate;
 
     auto navigationDelegate = adoptNS([[TestNavigationDelegate alloc] init]);
     self.navigationDelegate = navigationDelegate.get();
     [navigationDelegate waitForDidFailProvisionalNavigation];
 
-    self.navigationDelegate = nil;
+    self.navigationDelegate = oldNavigationDelegate;
 }
 
 - (void)_test_waitForDidFinishNavigationWithoutPresentationUpdate
 {
-    EXPECT_FALSE(self.navigationDelegate);
+    auto *oldNavigationDelegate = self.navigationDelegate;
 
     auto navigationDelegate = adoptNS([[TestNavigationDelegate alloc] init]);
     self.navigationDelegate = navigationDelegate.get();
     [navigationDelegate waitForDidFinishNavigation];
 
-    self.navigationDelegate = nil;
+    self.navigationDelegate = oldNavigationDelegate;
 }
 
 - (void)_test_waitForDidFinishNavigationWithPreferences:(WKWebpagePreferences *)preferences
 {
-    EXPECT_FALSE(self.navigationDelegate);
+    auto *oldNavigationDelegate = self.navigationDelegate;
 
     auto navigationDelegate = adoptNS([[TestNavigationDelegate alloc] init]);
     self.navigationDelegate = navigationDelegate.get();
     [navigationDelegate waitForDidFinishNavigationWithPreferences:preferences];
 
-    self.navigationDelegate = nil;
+    self.navigationDelegate = oldNavigationDelegate;
 }
 
 - (void)_test_waitForDidFinishNavigation
 {
-    EXPECT_FALSE(self.navigationDelegate);
+    auto *oldNavigationDelegate = self.navigationDelegate;
 
     auto navigationDelegate = adoptNS([[TestNavigationDelegate alloc] init]);
     self.navigationDelegate = navigationDelegate.get();
     [navigationDelegate waitForDidFinishNavigation];
 
-    self.navigationDelegate = nil;
+    self.navigationDelegate = oldNavigationDelegate;
 
 #if PLATFORM(IOS_FAMILY)
     __block bool presentationUpdateHappened = false;
@@ -324,18 +324,18 @@
 
 - (void)_test_waitForDidSameDocumentNavigation
 {
-    EXPECT_FALSE(self.navigationDelegate);
+    auto *oldNavigationDelegate = self.navigationDelegate;
 
     auto navigationDelegate = adoptNS([[TestNavigationDelegate alloc] init]);
     self.navigationDelegate = navigationDelegate.get();
     [navigationDelegate waitForDidSameDocumentNavigation];
 
-    self.navigationDelegate = nil;
+    self.navigationDelegate = oldNavigationDelegate;
 }
 
 - (void)_test_waitForDidFinishNavigationWhileIgnoringSSLErrors
 {
-    EXPECT_FALSE(self.navigationDelegate);
+    auto *oldNavigationDelegate = self.navigationDelegate;
 
     auto navigationDelegate = adoptNS([[TestNavigationDelegate alloc] init]);
     navigationDelegate.get().didReceiveAuthenticationChallenge = ^(WKWebView *, NSURLAuthenticationChallenge *challenge, void (^completionHandler)(NSURLSessionAuthChallengeDisposition, NSURLCredential *)) {
@@ -344,7 +344,7 @@
     self.navigationDelegate = navigationDelegate.get();
     [navigationDelegate waitForDidFinishNavigation];
 
-    self.navigationDelegate = nil;
+    self.navigationDelegate = oldNavigationDelegate;
 
 #if PLATFORM(IOS_FAMILY)
     __block bool presentationUpdateHappened = false;
@@ -357,13 +357,14 @@
 
 - (_WKProcessTerminationReason)_test_waitForWebContentProcessDidTerminate
 {
-    EXPECT_FALSE(self.navigationDelegate);
+    auto *oldNavigationDelegate = self.navigationDelegate;
 
     auto navigationDelegate = adoptNS([[TestNavigationDelegate alloc] init]);
     self.navigationDelegate = navigationDelegate.get();
     auto result = [navigationDelegate waitForWebContentProcessDidTerminate];
 
-    self.navigationDelegate = nil;
+    self.navigationDelegate = oldNavigationDelegate;
+
     return result;
 }
 

@@ -2026,6 +2026,114 @@ TEST(WKWebExtensionAPITabs, SendMessageFromBackgroundToSpecificDocument)
     [manager run];
 }
 
+TEST(WKWebExtensionAPITabs, SendMessageBackAndForwardNavigation)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, "<iframe src='/frame'></iframe>"_s } },
+        { "/frame"_s, { { { "Content-Type"_s, "text/html"_s } }, "<p>Frame Content</p>"_s } }
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto *backgroundScript = Util::constructScript(@[
+        @"const expectedHostnames = ['localhost', '127.0.0.1', 'localhost', '127.0.0.1']",
+        @"let step = 0",
+
+        @"browser.test.onMessage.addListener(async (message) => {",
+        @"  browser.test.assertEq(message, 'Go', 'Message content should match')",
+
+        @"  const [tab] = await browser.tabs.query({ active: true, currentWindow: true })",
+        @"  const frames = await browser.webNavigation.getAllFrames({ tabId: tab.id })",
+
+        @"  const responses = await Promise.all(frames.map(async (frame) => {",
+        @"    return await browser.tabs.sendMessage(tab.id, 'Ping', { frameId: frame.frameId })",
+        @"  }))",
+
+        @"  browser.test.assertEq(responses.length, 2, 'Should receive 2 responses')",
+
+        @"  const mainFrameHost = new URL(responses[0]).hostname",
+        @"  const subframeHost = new URL(responses[1]).hostname",
+
+        @"  browser.test.assertEq(mainFrameHost, expectedHostnames[step], 'Main frame host should be')",
+        @"  browser.test.assertEq(subframeHost, expectedHostnames[step], 'Subframe host should be')",
+
+        @"  ++step",
+
+        @"  browser.test.sendMessage('Messages Sent')",
+        @"})",
+
+        @"browser.test.sendMessage('Ready')"
+    ]);
+
+    auto *contentScript = Util::constructScript(@[
+        @"browser.runtime.onMessage.addListener((message) => {",
+        @"  browser.test.assertEq(message, 'Ping', 'Message content should match')",
+        @"  return Promise.resolve(window?.location?.href)",
+        @"})"
+    ]);
+
+    auto *resources = @{
+        @"background.js": backgroundScript,
+        @"content.js": contentScript,
+    };
+
+    auto *manifest = @{
+        @"manifest_version": @3,
+
+        @"name": @"Tabs Test",
+        @"description": @"Tabs Test",
+        @"version": @"1",
+
+        @"background": @{
+            @"scripts": @[ @"background.js" ],
+            @"type": @"module",
+            @"persistent": @NO,
+        },
+
+        @"content_scripts": @[ @{
+            @"js": @[ @"content.js" ],
+            @"matches": @[ @"*://*/*" ],
+            @"all_frames": @YES,
+        } ],
+
+        @"permissions": @[ @"webNavigation", @"tabs" ]
+    };
+
+    auto manager = Util::loadExtension(manifest, resources);
+
+    auto *localhostRequest = server.requestWithLocalhost();
+    auto *altHostRequest = server.request();
+
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:localhostRequest.URL];
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:altHostRequest.URL];
+
+    [manager runUntilTestMessage:@"Ready"];
+
+    auto *webView = manager.get().defaultTab.webView;
+
+    // Load localhost page.
+    [webView synchronouslyLoadRequest:localhostRequest];
+
+    [manager sendTestMessage:@"Go"];
+    [manager runUntilTestMessage:@"Messages Sent"];
+
+    // Load 127.0.0.1 page.
+    [webView synchronouslyLoadRequest:altHostRequest];
+
+    [manager sendTestMessage:@"Go"];
+    [manager runUntilTestMessage:@"Messages Sent"];
+
+    // Go back to localhost.
+    [webView synchronouslyGoBack];
+
+    [manager sendTestMessage:@"Go"];
+    [manager runUntilTestMessage:@"Messages Sent"];
+
+    // Go forward to 127.0.0.1.
+    [webView synchronouslyGoForward];
+
+    [manager sendTestMessage:@"Go"];
+    [manager runUntilTestMessage:@"Messages Sent"];
+}
+
 // FIXME rdar://147858640
 #if PLATFORM(IOS) && !defined(NDEBUG)
 TEST(WKWebExtensionAPITabs, DISABLED_Connect)
