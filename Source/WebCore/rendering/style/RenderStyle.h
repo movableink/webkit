@@ -619,7 +619,7 @@ public:
     inline TextAlignLast textAlignLast() const;
     inline TextGroupAlign textGroupAlign() const;
     inline OptionSet<TextTransform> textTransform() const;
-    inline OptionSet<TextDecorationLine> textDecorationsInEffect() const;
+    inline OptionSet<TextDecorationLine> textDecorationLineInEffect() const;
     inline OptionSet<TextDecorationLine> textDecorationLine() const;
     inline TextDecorationStyle textDecorationStyle() const;
     inline TextDecorationSkipInk textDecorationSkipInk() const;
@@ -1330,8 +1330,8 @@ public:
     inline void setTextAlignLast(TextAlignLast);
     inline void setTextGroupAlign(TextGroupAlign);
     inline void setTextTransform(OptionSet<TextTransform>);
-    inline void addToTextDecorationsInEffect(OptionSet<TextDecorationLine>);
-    inline void setTextDecorationsInEffect(OptionSet<TextDecorationLine>);
+    inline void addToTextDecorationLineInEffect(OptionSet<TextDecorationLine>);
+    inline void setTextDecorationLineInEffect(OptionSet<TextDecorationLine>);
     inline void setTextDecorationLine(OptionSet<TextDecorationLine>);
     inline void setTextDecorationStyle(TextDecorationStyle);
     inline void setTextDecorationSkipInk(TextDecorationSkipInk);
@@ -2423,7 +2423,7 @@ private:
         unsigned char textWrapStyle : 2; // TextWrapStyle
         unsigned char textTransform : TextTransformBits; // OptionSet<TextTransform>
         unsigned char : 1; // byte alignment
-        unsigned char textDecorationLines : TextDecorationLineBits;
+        unsigned char textDecorationLineInEffect : TextDecorationLineBits;
 
         // Cursors and Visibility = 13 bits aligned onto 4 bits + 1 byte + 1 bit
         unsigned char pointerEvents : 4; // PointerEvents

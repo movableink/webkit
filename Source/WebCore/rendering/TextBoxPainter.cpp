@@ -268,7 +268,7 @@ void TextBoxPainter::paintCompositionForeground(const StyledMarkedText& markedTe
 void TextBoxPainter::paintForegroundAndDecorations()
 {
     auto shouldPaintSelectionForeground = m_haveSelection && !m_useCustomUnderlines;
-    auto hasTextDecoration = !m_style.textDecorationsInEffect().isEmpty();
+    auto hasTextDecoration = !m_style.textDecorationLineInEffect().isEmpty();
     auto hasHighlightDecoration = m_document.hasHighlight() && !MarkedText::collectForHighlights(m_renderer, m_selectableRange, MarkedText::PaintPhase::Decoration).isEmpty();
     auto hasMismatchingContentDirection = m_renderer.containingBlock()->writingMode().bidiDirection() != textBox().direction();
     auto hasBackwardTrunctation = m_selectableRange.truncation && hasMismatchingContentDirection;
@@ -283,7 +283,7 @@ void TextBoxPainter::paintForegroundAndDecorations()
         if (hasSpellingError) {
             auto spellingErrorStyle = m_renderer.spellingErrorPseudoStyle();
             if (spellingErrorStyle)
-                return !spellingErrorStyle->textDecorationsInEffect().isEmpty();
+                return !spellingErrorStyle->textDecorationLineInEffect().isEmpty();
         }
 
         auto hasGrammarError = markedTexts.containsIf([](auto&& markedText) {
@@ -293,7 +293,7 @@ void TextBoxPainter::paintForegroundAndDecorations()
         if (hasGrammarError) {
             auto grammarErrorStyle = m_renderer.grammarErrorPseudoStyle();
             if (grammarErrorStyle)
-                return !grammarErrorStyle->textDecorationsInEffect().isEmpty();
+                return !grammarErrorStyle->textDecorationLineInEffect().isEmpty();
         }
 
         return false;
@@ -572,7 +572,7 @@ static inline float computedLinethroughCenter(const RenderStyle& styleToUse, flo
 
 static inline OptionSet<TextDecorationLine> computedTextDecorationType(const RenderStyle& style, const TextDecorationPainter::Styles& textDecorationStyles)
 {
-    auto textDecorations = style.textDecorationsInEffect();
+    auto textDecorations = style.textDecorationLineInEffect();
     textDecorations.add(TextDecorationPainter::textDecorationsInEffectForStyle(textDecorationStyles));
     return textDecorations;
 }
@@ -600,7 +600,7 @@ static inline bool isDecoratingBoxForBackground(const InlineIterator::InlineBox&
         return true;
     }
     return styleToUse.textDecorationLine().containsAny({ TextDecorationLine::Underline, TextDecorationLine::Overline })
-        || (inlineBox.isRootInlineBox() && styleToUse.textDecorationsInEffect().containsAny({ TextDecorationLine::Underline, TextDecorationLine::Overline }));
+        || (inlineBox.isRootInlineBox() && styleToUse.textDecorationLineInEffect().containsAny({ TextDecorationLine::Underline, TextDecorationLine::Overline }));
 }
 
 void TextBoxPainter::collectDecoratingBoxesForBackgroundPainting(DecoratingBoxList& decoratingBoxList, const InlineIterator::TextBoxIterator& textBox, FloatPoint textBoxLocation, const TextDecorationPainter::Styles& overrideDecorationStyle)
@@ -627,7 +627,7 @@ void TextBoxPainter::collectDecoratingBoxesForBackgroundPainting(DecoratingBoxLi
         auto& style = decoratingBoxStyleForInlineBox(*inlineBox, m_isFirstLine);
 
         auto computedDecorationStyle = [&] {
-            return TextDecorationPainter::stylesForRenderer(inlineBox->renderer(), style.textDecorationsInEffect(), m_isFirstLine);
+            return TextDecorationPainter::stylesForRenderer(inlineBox->renderer(), style.textDecorationLineInEffect(), m_isFirstLine);
         };
         if (!isDecoratingBoxForBackground(*inlineBox, style)) {
             // Some cases even non-decoration boxes may have some decoration pieces coming from the marked text (e.g. highlight).
@@ -721,7 +721,7 @@ void TextBoxPainter::paintForegroundDecorations(TextDecorationPainter& decoratio
     auto textBox = makeIterator();
     auto& styleForDecoration = decoratingBoxStyle(textBox);
     auto computedTextDecorationType = [&] {
-        auto textDecorations = styleForDecoration.textDecorationsInEffect();
+        auto textDecorations = styleForDecoration.textDecorationLineInEffect();
         textDecorations.add(TextDecorationPainter::textDecorationsInEffectForStyle(markedText.style.textDecorationStyles));
         return textDecorations;
     }();
@@ -1027,14 +1027,14 @@ void TextBoxPainter::paintPlatformDocumentMarkers()
         return;
 
     auto spellingErrorStyle = m_renderer.spellingErrorPseudoStyle();
-    if (spellingErrorStyle && !spellingErrorStyle->textDecorationsInEffect().isEmpty()) {
+    if (spellingErrorStyle && !spellingErrorStyle->textDecorationLineInEffect().isEmpty()) {
         markedTexts.removeAllMatching([] (auto&& markedText) {
             return markedText.type == MarkedText::Type::SpellingError;
         });
     }
 
     auto grammarErrorStyle = m_renderer.grammarErrorPseudoStyle();
-    if (grammarErrorStyle && !grammarErrorStyle->textDecorationsInEffect().isEmpty()) {
+    if (grammarErrorStyle && !grammarErrorStyle->textDecorationLineInEffect().isEmpty()) {
         markedTexts.removeAllMatching([] (auto&& markedText) {
             return markedText.type == MarkedText::Type::GrammarError;
         });

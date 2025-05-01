@@ -191,7 +191,7 @@ RenderStyle::RenderStyle(CreateDefaultStyleTag)
     m_inheritedFlags.visibility = static_cast<unsigned>(initialVisibility());
     m_inheritedFlags.textAlign = static_cast<unsigned>(initialTextAlign());
     m_inheritedFlags.textTransform = initialTextTransform().toRaw();
-    m_inheritedFlags.textDecorationLines = initialTextDecorationLine().toRaw();
+    m_inheritedFlags.textDecorationLineInEffect = initialTextDecorationLine().toRaw();
     m_inheritedFlags.cursor = static_cast<unsigned>(initialCursor());
 #if ENABLE(CURSOR_VISIBILITY)
     m_inheritedFlags.cursorVisibility = static_cast<unsigned>(initialCursorVisibility());
@@ -717,7 +717,7 @@ inline bool RenderStyle::changeAffectsVisualOverflow(const RenderStyle& other) c
     };
 
     auto textDecorationsDiffer = [&]() {
-        if (m_inheritedFlags.textDecorationLines != other.m_inheritedFlags.textDecorationLines)
+        if (m_inheritedFlags.textDecorationLineInEffect != other.m_inheritedFlags.textDecorationLineInEffect)
             return true;
 
         if (m_nonInheritedData.ptr() != other.m_nonInheritedData.ptr() && m_nonInheritedData->rareData.ptr() != other.m_nonInheritedData->rareData.ptr()) {
@@ -1384,7 +1384,7 @@ bool RenderStyle::changeRequiresRepaintIfText(const RenderStyle& other, OptionSe
     if (m_inheritedData->color != other.m_inheritedData->color)
         return true;
 
-    if (m_inheritedFlags.textDecorationLines != other.m_inheritedFlags.textDecorationLines
+    if (m_inheritedFlags.textDecorationLineInEffect != other.m_inheritedFlags.textDecorationLineInEffect
         || m_nonInheritedFlags.textDecorationLine != other.m_nonInheritedFlags.textDecorationLine)
         return true;
 
@@ -1549,7 +1549,7 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
             changingProperties.m_properties.set(CSSPropertyTextAlign);
         if (first.textTransform != second.textTransform)
             changingProperties.m_properties.set(CSSPropertyTextTransform);
-        if (first.textDecorationLines != second.textDecorationLines)
+        if (first.textDecorationLineInEffect != second.textDecorationLineInEffect)
             changingProperties.m_properties.set(CSSPropertyTextDecorationLine);
         if (first.cursor != second.cursor)
             changingProperties.m_properties.set(CSSPropertyCursor);
@@ -4073,7 +4073,7 @@ void RenderStyle::InheritedFlags::dumpDifferences(TextStream& ts, const Inherite
     LOG_IF_DIFFERENT_WITH_CAST(TextWrapStyle, textWrapStyle);
 
     LOG_RAW_OPTIONSET_IF_DIFFERENT(TextTransform, textTransform);
-    LOG_RAW_OPTIONSET_IF_DIFFERENT(TextDecorationLine, textDecorationLines);
+    LOG_RAW_OPTIONSET_IF_DIFFERENT(TextDecorationLine, textDecorationLineInEffect);
 
     LOG_IF_DIFFERENT_WITH_CAST(PointerEvents, pointerEvents);
     LOG_IF_DIFFERENT_WITH_CAST(Visibility, visibility);

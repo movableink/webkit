@@ -4644,7 +4644,7 @@ FontAttributes Editor::fontAttributesAtSelectionStart()
                 attributes.hasUnderline = true;
         }
     } else {
-        auto decoration = style->textDecorationsInEffect();
+        auto decoration = style->textDecorationLineInEffect();
         if (decoration & TextDecorationLine::LineThrough)
             attributes.hasStrikeThrough = true;
         if (decoration & TextDecorationLine::Underline)

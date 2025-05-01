@@ -167,7 +167,7 @@ void InlineDisplayContentBuilder::appendTextDisplayBox(const Line::Run& lineRun,
     auto& text = lineRun.textContent();
     auto isContentful = true;
 
-    m_hasSeenTextDecoration = m_hasSeenTextDecoration || (!lineIndex() ? inlineTextBox.parent().firstLineStyle().textDecorationsInEffect() : inlineTextBox.parent().style().textDecorationsInEffect());
+    m_hasSeenTextDecoration = m_hasSeenTextDecoration || (!lineIndex() ? inlineTextBox.parent().firstLineStyle().textDecorationLineInEffect() : inlineTextBox.parent().style().textDecorationLineInEffect());
 
     auto inkOverflow = [&] {
         auto inkOverflow = textRunRect;
@@ -1012,7 +1012,7 @@ static float logicalBottomForTextDecorationContent(const InlineDisplay::Boxes& b
     for (auto& displayBox : boxes) {
         if (displayBox.isRootInlineBox())
             continue;
-        if (!displayBox.style().textDecorationsInEffect().contains(TextDecorationLine::Underline))
+        if (!displayBox.style().textDecorationLineInEffect().contains(TextDecorationLine::Underline))
             continue;
         if (displayBox.isText() || displayBox.style().textDecorationSkipInk() == TextDecorationSkipInk::None) {
             auto contentLogicalBottom = isHorizontalWritingMode ? displayBox.bottom() : displayBox.right();
@@ -1038,7 +1038,7 @@ void InlineDisplayContentBuilder::collectInkOverflowForTextDecorations(InlineDis
             continue;
 
         auto& parentStyle = displayBox.layoutBox().parent().style();
-        auto textDecorations = parentStyle.textDecorationsInEffect();
+        auto textDecorations = parentStyle.textDecorationLineInEffect();
         if (!textDecorations)
             continue;
 

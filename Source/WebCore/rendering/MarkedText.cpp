@@ -116,7 +116,7 @@ Vector<MarkedText> MarkedText::collectForHighlights(const RenderText& renderer, 
             auto renderStyle = parentRenderer.getUncachedPseudoStyle({ PseudoId::Highlight, highlightName }, &parentStyle);
             if (!renderStyle)
                 continue;
-            if (renderStyle->textDecorationsInEffect().isEmpty() && phase == PaintPhase::Decoration)
+            if (renderStyle->textDecorationLineInEffect().isEmpty() && phase == PaintPhase::Decoration)
                 continue;
             for (auto& highlightRange : highlightRegistry->map().get(highlightName)->highlightRanges()) {
                 if (!renderHighlight.setRenderRange(highlightRange))

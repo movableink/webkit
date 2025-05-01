@@ -1366,7 +1366,7 @@ AXCoreObject* AXCoreObject::parentObjectUnignored() const
 LineDecorationStyle::LineDecorationStyle(RenderObject& renderer)
 {
     const auto& style = renderer.style();
-    auto decor = style.textDecorationsInEffect();
+    auto decor = style.textDecorationLineInEffect();
     if (decor & TextDecorationLine::Underline || decor & TextDecorationLine::LineThrough) {
         auto decorationStyles = TextDecorationPainter::stylesForRenderer(renderer, decor);
         if (decor & TextDecorationLine::Underline) {

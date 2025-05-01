@@ -60,7 +60,7 @@ static float minLogicalTopForTextDecorationLineUnder(const InlineIterator::LineB
         if (run->renderer().isOutOfFlowPositioned())
             continue; // Positioned placeholders don't affect calculations.
 
-        if (!run->style().textDecorationsInEffect().contains(TextDecorationLine::Underline))
+        if (!run->style().textDecorationLineInEffect().contains(TextDecorationLine::Underline))
             continue; // If the text decoration isn't in effect on the child, then it must be outside of |decoratingBoxRendererForUnderline|'s hierarchy.
 
         if (auto* renderInline = dynamicDowncast<RenderInline>(decoratingBoxRendererForUnderline); renderInline && !isAncestorAndWithinBlock(*renderInline, &run->renderer()))
@@ -79,7 +79,7 @@ static float maxLogicalBottomForTextDecorationLineUnder(const InlineIterator::Li
         if (run->renderer().isOutOfFlowPositioned())
             continue; // Positioned placeholders don't affect calculations.
 
-        if (!run->style().textDecorationsInEffect().contains(TextDecorationLine::Underline))
+        if (!run->style().textDecorationLineInEffect().contains(TextDecorationLine::Underline))
             continue; // If the text decoration isn't in effect on the child, then it must be outside of |decoratingBoxRendererForUnderline|'s hierarchy.
 
         if (auto* renderInline = dynamicDowncast<RenderInline>(decoratingBoxRendererForUnderline); renderInline && !isAncestorAndWithinBlock(*renderInline, &run->renderer()))
@@ -190,7 +190,7 @@ static GlyphOverflow computedInkOverflowForDecorations(const RenderStyle& lineSt
     if (underlineOffset)
         *underlineOffset += *underlineOffset >= 0 ? 1 : -1;
 
-    auto decoration = lineStyle.textDecorationsInEffect();
+    auto decoration = lineStyle.textDecorationLineInEffect();
     if (decoration.isEmpty())
         return GlyphOverflow();
 
@@ -278,7 +278,7 @@ GlyphOverflow inkOverflowForDecorations(const InlineIterator::LineBoxIterator& l
         textUnderlinePositionUnder = TextUnderlinePositionUnder { textBoxLogicalBottom - textBoxLogicalTop, textRunOffset };
     }
 
-    auto underlineOffset = style.textDecorationsInEffect().contains(TextDecorationLine::Underline)
+    auto underlineOffset = style.textDecorationLineInEffect().contains(TextDecorationLine::Underline)
         ? std::make_optional(computedUnderlineOffset({ style, textUnderlinePositionUnder }))
         : std::nullopt;
     return computedInkOverflowForDecorations(style, underlineOffset);
@@ -286,7 +286,7 @@ GlyphOverflow inkOverflowForDecorations(const InlineIterator::LineBoxIterator& l
 
 GlyphOverflow inkOverflowForDecorations(const RenderStyle& style, TextUnderlinePositionUnder textUnderlinePositionUnder)
 {
-    auto underlineOffset = style.textDecorationsInEffect().contains(TextDecorationLine::Underline)
+    auto underlineOffset = style.textDecorationLineInEffect().contains(TextDecorationLine::Underline)
         ? std::make_optional(computedUnderlineOffset({ style, textUnderlinePositionUnder }))
         : std::nullopt;
     return computedInkOverflowForDecorations(style, underlineOffset);
@@ -294,7 +294,7 @@ GlyphOverflow inkOverflowForDecorations(const RenderStyle& style, TextUnderlineP
 
 GlyphOverflow inkOverflowForDecorations(const RenderStyle& style)
 {
-    auto underlineOffset = style.textDecorationsInEffect().contains(TextDecorationLine::Underline)
+    auto underlineOffset = style.textDecorationLineInEffect().contains(TextDecorationLine::Underline)
         ? std::make_optional(computedUnderlineOffset({ style, { } }))
         : std::nullopt;
     return computedInkOverflowForDecorations(style, underlineOffset);

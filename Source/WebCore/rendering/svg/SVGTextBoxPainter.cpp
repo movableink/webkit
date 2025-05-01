@@ -218,7 +218,7 @@ void SVGTextBoxPainter<TextBoxPath>::paint()
             m_paintInfo.context().concatCTM(fragmentTransform);
 
         // Spec: All text decorations except line-through should be drawn before the text is filled and stroked; thus, the text is rendered on top of these decorations.
-        auto decorations = style.textDecorationsInEffect();
+        auto decorations = style.textDecorationLineInEffect();
         if (decorations & TextDecorationLine::Underline)
             paintDecoration(TextDecorationLine::Underline, fragment);
         if (decorations & TextDecorationLine::Overline)
@@ -421,7 +421,7 @@ static inline float thicknessForDecoration(OptionSet<TextDecorationLine>, const 
 template<typename TextBoxPath>
 void SVGTextBoxPainter<TextBoxPath>::paintDecoration(OptionSet<TextDecorationLine> decoration, const SVGTextFragment& fragment)
 {
-    if (renderer().style().textDecorationsInEffect().isEmpty())
+    if (renderer().style().textDecorationLineInEffect().isEmpty())
         return;
 
     // Find out which render style defined the text-decoration, as its fill/stroke properties have to be used for drawing instead of ours.

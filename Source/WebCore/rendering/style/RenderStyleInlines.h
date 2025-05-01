@@ -761,7 +761,7 @@ inline OptionSet<TextDecorationLine> RenderStyle::textDecorationLine() const { r
 inline TextDecorationSkipInk RenderStyle::textDecorationSkipInk() const { return static_cast<TextDecorationSkipInk>(m_rareInheritedData->textDecorationSkipInk); }
 inline TextDecorationStyle RenderStyle::textDecorationStyle() const { return static_cast<TextDecorationStyle>(m_nonInheritedData->rareData->textDecorationStyle); }
 inline TextDecorationThickness RenderStyle::textDecorationThickness() const { return m_nonInheritedData->rareData->textDecorationThickness; }
-inline OptionSet<TextDecorationLine> RenderStyle::textDecorationsInEffect() const { return OptionSet<TextDecorationLine>::fromRaw(m_inheritedFlags.textDecorationLines); }
+inline OptionSet<TextDecorationLine> RenderStyle::textDecorationLineInEffect() const { return OptionSet<TextDecorationLine>::fromRaw(m_inheritedFlags.textDecorationLineInEffect); }
 inline const Style::Color& RenderStyle::textEmphasisColor() const { return m_rareInheritedData->textEmphasisColor; }
 inline const AtomString& RenderStyle::textEmphasisCustomMark() const { return m_rareInheritedData->textEmphasisCustomMark; }
 inline TextEmphasisFill RenderStyle::textEmphasisFill() const { return static_cast<TextEmphasisFill>(m_rareInheritedData->textEmphasisFill); }

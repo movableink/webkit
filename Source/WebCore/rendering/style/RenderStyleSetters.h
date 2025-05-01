@@ -48,7 +48,7 @@ namespace WebCore {
 
 template<typename T, typename U> inline bool compareEqual(const T& a, const U& b) { return a == b; }
 
-inline void RenderStyle::addToTextDecorationsInEffect(OptionSet<TextDecorationLine> value) { m_inheritedFlags.textDecorationLines |= static_cast<unsigned>(value.toRaw()); }
+inline void RenderStyle::addToTextDecorationLineInEffect(OptionSet<TextDecorationLine> value) { m_inheritedFlags.textDecorationLineInEffect |= static_cast<unsigned>(value.toRaw()); }
 inline void RenderStyle::clearAnimations() { m_nonInheritedData.access().miscData.access().animations = nullptr; }
 inline void RenderStyle::clearBackgroundLayers() { m_nonInheritedData.access().backgroundData.access().background = FillLayer::create(FillLayerType::Background); }
 inline void RenderStyle::clearMaskLayers() { m_nonInheritedData.access().miscData.access().mask = FillLayer::create(FillLayerType::Mask); }
@@ -311,7 +311,7 @@ inline void RenderStyle::setTextDecorationLine(OptionSet<TextDecorationLine> val
 inline void RenderStyle::setTextDecorationSkipInk(TextDecorationSkipInk skipInk) { SET(m_rareInheritedData, textDecorationSkipInk, static_cast<unsigned>(skipInk)); }
 inline void RenderStyle::setTextDecorationStyle(TextDecorationStyle value) { SET_NESTED(m_nonInheritedData, rareData, textDecorationStyle, static_cast<unsigned>(value)); }
 inline void RenderStyle::setTextDecorationThickness(TextDecorationThickness textDecorationThickness) { SET_NESTED(m_nonInheritedData, rareData, textDecorationThickness, textDecorationThickness); }
-inline void RenderStyle::setTextDecorationsInEffect(OptionSet<TextDecorationLine> value) { m_inheritedFlags.textDecorationLines = value.toRaw(); }
+inline void RenderStyle::setTextDecorationLineInEffect(OptionSet<TextDecorationLine> value) { m_inheritedFlags.textDecorationLineInEffect = value.toRaw(); }
 inline void RenderStyle::setTextEmphasisColor(const Style::Color& c) { SET(m_rareInheritedData, textEmphasisColor, c); }
 inline void RenderStyle::setTextEmphasisCustomMark(const AtomString& mark) { SET(m_rareInheritedData, textEmphasisCustomMark, mark); }
 inline void RenderStyle::setTextEmphasisFill(TextEmphasisFill fill) { SET(m_rareInheritedData, textEmphasisFill, static_cast<unsigned>(fill)); }

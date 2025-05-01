@@ -2068,8 +2068,8 @@ void AXObjectCache::onStyleChange(RenderText& renderText, StyleDifference differ
     if (!!oldStyle->textShadow() != !!newStyle.textShadow())
         tree->queueNodeUpdate(object->objectID(), { AXProperty::HasTextShadow });
 
-    auto oldDecor = oldStyle->textDecorationsInEffect();
-    auto newDecor = newStyle.textDecorationsInEffect();
+    auto oldDecor = oldStyle->textDecorationLineInEffect();
+    auto newDecor = newStyle.textDecorationLineInEffect();
     if ((oldDecor & TextDecorationLine::Underline) != (newDecor & TextDecorationLine::Underline))
         tree->queueNodeUpdate(object->objectID(), { AXProperty::HasUnderline });
 
