@@ -578,6 +578,7 @@ public:
     RefPtr<VideoPlaybackQuality> getVideoPlaybackQuality() const;
 
     MediaPlayer::Preload preloadValue() const { return m_preload; }
+    MediaPlayer::Preload effectivePreloadValue() const;
     MediaElementSession* mediaSessionIfExists() const { return m_mediaSession.get(); }
     WEBCORE_EXPORT MediaElementSession& mediaSession() const;
 
@@ -1166,6 +1167,8 @@ private:
 
     bool limitedMatroskaSupportEnabled() const;
 
+    void maybeUpdatePlayerPreload() const;
+
     Timer m_progressEventTimer;
     Timer m_playbackProgressTimer;
     Timer m_scanTimer;
@@ -1478,6 +1481,8 @@ private:
     SoundStageSize m_soundStageSize { SoundStageSize::Auto };
 
     WeakHashSet<HTMLMediaElementClient> m_clients;
+
+    bool m_hasEverPreparedToPlay { false };
 };
 
 String convertEnumerationToString(HTMLMediaElement::AutoplayEventPlaybackState);

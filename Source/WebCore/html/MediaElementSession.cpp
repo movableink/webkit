@@ -973,19 +973,25 @@ void MediaElementSession::mediaStateDidChange(MediaProducerMediaStateFlags state
 
 MediaPlayer::Preload MediaElementSession::effectivePreloadForElement() const
 {
-    RefPtr element = protectedElement();
-    if (!element)
-        return MediaPlayer::Preload::None;
+    MediaPlayer::Preload preload = [&] {
+        RefPtr element = protectedElement();
+        if (!element)
+            return MediaPlayer::Preload::None;
 
-    MediaPlayer::Preload preload = element->preloadValue();
+        MediaPlayer::Preload preload = element->effectivePreloadValue();
 
-    if (pageExplicitlyAllowsElementToAutoplayInline(*element))
+        if (pageExplicitlyAllowsElementToAutoplayInline(*element))
+            return preload;
+
+        if (m_restrictions & AutoPreloadingNotPermitted) {
+            if (preload > MediaPlayer::Preload::MetaData)
+                return MediaPlayer::Preload::MetaData;
+        }
+
         return preload;
+    }();
 
-    if (m_restrictions & AutoPreloadingNotPermitted) {
-        if (preload > MediaPlayer::Preload::MetaData)
-            return MediaPlayer::Preload::MetaData;
-    }
+    ALWAYS_LOG(LOGIDENTIFIER, preload);
 
     return preload;
 }
