@@ -358,6 +358,7 @@ page/FrameSnapshotting.cpp
 page/FrameView.cpp
 page/ImageAnalysisQueue.cpp
 page/ImageOverlayController.cpp
+page/IntelligenceTextEffectsSupport.cpp
 page/InteractionRegion.cpp
 page/IntersectionObserver.cpp
 page/LocalDOMWindow.cpp
@@ -390,6 +391,7 @@ page/scrolling/ScrollAnchoringController.cpp
 page/scrolling/ScrollSnapOffsetsInfo.cpp
 page/scrolling/ScrollingCoordinator.cpp
 page/text-extraction/TextExtraction.cpp
+page/writing-tools/WritingToolsController.mm
 platform/CaretAnimator.cpp
 platform/DictationCaretAnimator.cpp
 platform/DragImage.cpp

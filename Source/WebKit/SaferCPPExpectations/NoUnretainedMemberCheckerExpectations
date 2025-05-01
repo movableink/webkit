@@ -112,6 +112,7 @@ UIProcess/WebAuthentication/Mock/MockNfcService.mm
 UIProcess/mac/WKFullScreenWindowController.h
 UIProcess/mac/WKImmediateActionController.h
 UIProcess/mac/WKPrintingView.h
+UIProcess/mac/WKTextAnimationManager.mm
 UIProcess/mac/WKTextFinderClient.mm
 UIProcess/mac/WebDataListSuggestionsDropdownMac.mm
 UIProcess/mac/WebPageProxyMac.mm

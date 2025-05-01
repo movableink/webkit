@@ -942,6 +942,7 @@ page/scrolling/ThreadedScrollingCoordinator.cpp
 page/scrolling/mac/ScrollingCoordinatorMac.mm
 page/scrolling/mac/ScrollingTreeScrollingNodeDelegateMac.mm
 page/text-extraction/TextExtraction.cpp
+page/writing-tools/WritingToolsController.mm
 platform/Cursor.h
 platform/DragImage.cpp
 platform/Length.cpp

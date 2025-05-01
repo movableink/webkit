@@ -7271,7 +7271,7 @@ void WebPage::didChangeSelection(LocalFrame& frame)
         m_userInteractionsSincePageTransition.add(UserInteractionFlag::SelectedRange);
 
 #if ENABLE(WRITING_TOOLS)
-    corePage()->updateStateForSelectedSuggestionIfNeeded();
+    protectedCorePage()->updateStateForSelectedSuggestionIfNeeded();
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -7286,8 +7286,6 @@ void WebPage::didChangeSelection(LocalFrame& frame)
 
         protectedThis->preemptivelySendAutocorrectionContext();
     });
-#else
-    UNUSED_PARAM(frame);
 #endif // PLATFORM(IOS_FAMILY)
 }
 

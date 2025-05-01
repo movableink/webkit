@@ -75,6 +75,7 @@ UIProcess/WebProcessProxy.cpp
 UIProcess/mac/PageClientImplMac.mm
 UIProcess/mac/ViewGestureControllerMac.mm
 UIProcess/mac/WKRevealItemPresenter.mm
+UIProcess/mac/WKTextAnimationManager.mm
 UIProcess/mac/WKViewLayoutStrategy.mm
 UIProcess/mac/WebViewImpl.mm
 WebPageMessages.h
@@ -133,6 +134,7 @@ WebProcess/WebCoreSupport/WebDateTimeChooser.cpp
 WebProcess/WebCoreSupport/WebValidationMessageClient.cpp
 WebProcess/WebCoreSupport/mac/WebDragClientMac.mm
 WebProcess/WebCoreSupport/mac/WebPopupMenuMac.mm
+WebProcess/WebPage/Cocoa/TextAnimationController.mm
 WebProcess/WebPage/Cocoa/WebPageCocoa.mm
 WebProcess/WebPage/DrawingArea.cpp
 WebProcess/WebPage/FindController.cpp

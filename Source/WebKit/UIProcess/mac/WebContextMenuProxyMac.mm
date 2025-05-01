@@ -174,12 +174,13 @@
 #if ENABLE(WRITING_TOOLS)
 - (void)showWritingTools:(id)sender
 {
-    if (!_menuProxy)
+    RefPtr menuProxy = _menuProxy.get();
+    if (!menuProxy)
         return;
 
     WTRequestedTool tool = (WTRequestedTool)[sender tag];
 
-    _menuProxy->handleContextMenuWritingTools(WebKit::convertToWebRequestedTool(tool));
+    menuProxy->handleContextMenuWritingTools(WebKit::convertToWebRequestedTool(tool));
 }
 #endif
 
@@ -250,7 +251,7 @@ void WebContextMenuProxyMac::contextMenuItemSelected(const WebContextMenuItemDat
 #if ENABLE(WRITING_TOOLS)
 void WebContextMenuProxyMac::handleContextMenuWritingTools(WebCore::WritingTools::RequestedTool tool)
 {
-    page()->handleContextMenuWritingTools(tool);
+    protectedPage()->handleContextMenuWritingTools(tool);
 }
 #endif
 

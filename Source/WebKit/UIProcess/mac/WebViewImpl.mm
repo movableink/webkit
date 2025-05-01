@@ -4806,7 +4806,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 void WebViewImpl::addTextAnimationForAnimationID(WTF::UUID uuid, const WebCore::TextAnimationData& data)
 {
-    if (!m_page->preferences().textAnimationsEnabled())
+    if (!m_page->protectedPreferences()->textAnimationsEnabled())
         return;
 
     if (!m_textAnimationTypeManager)
@@ -4817,7 +4817,7 @@ void WebViewImpl::addTextAnimationForAnimationID(WTF::UUID uuid, const WebCore::
 
 void WebViewImpl::removeTextAnimationForAnimationID(WTF::UUID uuid)
 {
-    if (!m_page->preferences().textAnimationsEnabled())
+    if (!m_page->protectedPreferences()->textAnimationsEnabled())
         return;
 
     [m_textAnimationTypeManager removeTextAnimationForAnimationID:uuid.createNSUUID().get()];

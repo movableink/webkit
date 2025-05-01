@@ -600,6 +600,7 @@ page/scrolling/ScrollingStateNode.cpp
 page/scrolling/ScrollingStateOverflowScrollProxyNode.cpp
 page/scrolling/ScrollingStateStickyNode.cpp
 page/text-extraction/TextExtraction.cpp
+page/writing-tools/WritingToolsController.mm
 platform/DragImage.cpp
 platform/KeyboardScrollingAnimator.cpp
 platform/OrientationNotifier.h
