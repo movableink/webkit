@@ -33,6 +33,7 @@
 
 #if ENABLE(VIDEO)
 
+#include "CSSValueKeywords.h"
 #include "HTMLElement.h"
 #include "SpeechSynthesisUtterance.h"
 #include "TextTrackCue.h"

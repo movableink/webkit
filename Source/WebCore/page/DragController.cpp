@@ -31,6 +31,7 @@
 #include "SVGElementTypeHelpers.h"
 
 #if ENABLE(DRAG_SUPPORT)
+#include "BoundaryPointInlines.h"
 #include "CachedImage.h"
 #include "CachedResourceLoader.h"
 #include "ColorSerialization.h"

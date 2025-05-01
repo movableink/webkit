@@ -51,6 +51,7 @@
 #include "RenderImage.h"
 #include "RenderInline.h"
 #include "RenderLineBreak.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleSetters.h"
 #include "RenderTable.h"
 #include "RenderTableCaption.h"

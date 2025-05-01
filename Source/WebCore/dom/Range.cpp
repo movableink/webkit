@@ -25,6 +25,7 @@
 #include "config.h"
 #include "Range.h"
 
+#include "BoundaryPointInlines.h"
 #include "Comment.h"
 #include "CustomElementReactionQueue.h"
 #include "DOMRect.h"

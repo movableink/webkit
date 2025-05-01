@@ -62,7 +62,7 @@
 #include "PageRuntimeAgent.h"
 #include "PageTimelineAgent.h"
 #include "PlatformStrategies.h"
-#include "RenderObject.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "ScriptController.h"
 #include "ScriptExecutionContext.h"

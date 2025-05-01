@@ -34,6 +34,7 @@
 #include "LegacyRenderSVGResource.h"
 #include "PointerEventsHitRules.h"
 #include "RenderImageResource.h"
+#include "RenderObjectInlines.h"
 #include "RenderLayer.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGImageElement.h"

@@ -38,6 +38,7 @@
 #import "GraphicsContextCG.h"
 #import "Image.h"
 #import "LocalDefaultSystemAppearance.h"
+#import "NodeInlines.h"
 #import "Page.h"
 #import "StringTruncator.h"
 #import "TextIndicator.h"

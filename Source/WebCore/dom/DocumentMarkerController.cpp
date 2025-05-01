@@ -27,6 +27,7 @@
 #include "config.h"
 #include "DocumentMarkerController.h"
 
+#include "BoundaryPointInlines.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "DocumentInlines.h"

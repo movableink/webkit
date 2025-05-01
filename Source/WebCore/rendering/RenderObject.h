@@ -490,7 +490,7 @@ public:
     bool isRenderScrollbarPart() const { return type() == Type::ScrollbarPart; }
     bool isRenderVTTCue() const { return type() == Type::VTTCue; }
 
-    bool isDocumentElementRenderer() const { return document().documentElement() == m_node.ptr(); }
+    inline bool isDocumentElementRenderer() const; // Defined in RenderObjectInlines.h
     bool isBody() const { return node() && node()->hasTagName(HTMLNames::bodyTag); }
     bool isHR() const { return node() && node()->hasTagName(HTMLNames::hrTag); }
     bool isLegend() const;
@@ -714,7 +714,7 @@ public:
 
     inline bool preservesNewline() const;
 
-    RenderView& view() const { return *document().renderView(); }
+    inline RenderView& view() const; // Defined in RenderObjectInlines.h
     CheckedRef<RenderView> checkedView() const;
     inline const LocalFrameViewLayoutContext& layoutContext() const;
 
@@ -739,15 +739,15 @@ public:
     // pseudo elements for which their parent node is returned.
     Node* generatingNode() const { return isPseudoElement() ? generatingPseudoHostElement() : node(); }
 
-    Document& document() const { return m_node.get().document(); }
-    inline Ref<Document> protectedDocument() const; // Defined in RenderObjectInlines.h.
+    inline Document& document() const; // Defined in RenderObjectInlines.h
+    inline Ref<Document> protectedDocument() const; // Defined in RenderObjectInlines.h
     TreeScope& treeScopeForSVGReferences() const { return m_node.get().treeScopeForSVGReferences(); }
-    Ref<TreeScope> protectedTreeScopeForSVGReferences() const { return treeScopeForSVGReferences(); }
-    LocalFrame& frame() const;
-    Ref<LocalFrame> protectedFrame() const { return frame(); }
-    Page& page() const;
-    Ref<Page> protectedPage() const;
-    Settings& settings() const { return page().settings(); }
+    inline Ref<TreeScope> protectedTreeScopeForSVGReferences() const; // Defined in RenderObjectInlines.h
+    inline LocalFrame& frame() const; // Defined in RenderObjectInlines.h
+    inline Ref<LocalFrame> protectedFrame() const; // Defined in RenderObjectInlines.h
+    inline Page& page() const; // Defined in RenderObjectInlines.h
+    inline Ref<Page> protectedPage() const; // Defined in RenderObjectInlines.h
+    inline Settings& settings() const; // Defined in RenderObjectInlines.h
 
     // Returns the object containing this one. Can be different from parent for positioned elements.
     // If repaintContainer and repaintContainerSkipped are not null, on return *repaintContainerSkipped
@@ -870,7 +870,8 @@ public:
     virtual LayoutUnit minPreferredLogicalWidth() const { return 0; }
     virtual LayoutUnit maxPreferredLogicalWidth() const { return 0; }
 
-    const RenderStyle& style() const;
+    const RenderStyle& style() const; // Defined in RenderElement.h.
+    inline CheckedRef<const RenderStyle> checkedStyle() const;
     const RenderStyle& firstLineStyle() const;
     WritingMode writingMode() const { return style().writingMode(); }
     // writingMode().isHorizontal() is cached by isHorizontalWritingMode() above.
@@ -1072,7 +1073,7 @@ public:
     virtual bool shouldPaintSelectionGaps() const { return false; }
 
     // When performing a global document tear-down, or when going into the back/forward cache, the renderer of the document is cleared.
-    bool renderTreeBeingDestroyed() const;
+    bool renderTreeBeingDestroyed() const; // Defined in RenderObjectInlines.h
 
     void destroy();
 
@@ -1324,29 +1325,6 @@ private:
     bool m_preexistingForbidden;
 #endif
 };
-
-inline LocalFrame& RenderObject::frame() const
-{
-    return *document().frame();
-}
-
-inline Page& RenderObject::page() const
-{
-    // The render tree will always be torn down before Frame is disconnected from Page,
-    // so it's safe to assume Frame::page() is non-null as long as there are live RenderObjects.
-    ASSERT(frame().page());
-    return *frame().page();
-}
-
-inline Ref<Page> RenderObject::protectedPage() const
-{
-    return page();
-}
-
-inline bool RenderObject::renderTreeBeingDestroyed() const
-{
-    return document().renderTreeBeingDestroyed();
-}
 
 inline void RenderObject::setNeedsLayout(MarkingBehavior markParents)
 {

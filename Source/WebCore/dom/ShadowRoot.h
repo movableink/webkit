@@ -32,6 +32,7 @@
 #include "StyleScopeOrdinal.h"
 #include "ShadowRootMode.h"
 #include "SlotAssignmentMode.h"
+#include "TreeScope.h"
 #include <wtf/HashMap.h>
 
 namespace WebCore {

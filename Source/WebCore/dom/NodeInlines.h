@@ -23,8 +23,10 @@
 #include "CharacterData.h"
 #include "Document.h"
 #include "Element.h"
+#include "LayoutRect.h"
 #include "Node.h"
 #include "PseudoElement.h"
+#include "TreeScopeInlines.h"
 #include "WebCoreOpaqueRoot.h"
 
 namespace WebCore {
@@ -43,9 +45,19 @@ inline WebCoreOpaqueRoot Node::opaqueRoot() const
     return traverseToOpaqueRoot();
 }
 
+inline Document& Node::document() const
+{
+    return treeScope().documentScope();
+}
+
 inline Ref<Document> Node::protectedDocument() const
 {
     return document();
+}
+
+inline Ref<TreeScope> Node::protectedTreeScope() const
+{
+    return treeScope();
 }
 
 inline bool Node::hasAttributes() const
@@ -223,6 +235,11 @@ inline void Node::relaxAdoptionRequirement()
     ASSERT(m_adoptionIsRequired);
     m_adoptionIsRequired = false;
 #endif
+}
+
+inline IntRect Node::pixelSnappedAbsoluteBoundingRect(bool* isReplaced)
+{
+    return snappedIntRect(absoluteBoundingRect(isReplaced));
 }
 
 // Used in Node::addSubresourceAttributeURLs() and in addSubresourceStyleURLs()

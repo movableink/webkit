@@ -27,6 +27,7 @@
 #include "config.h"
 #include "AlternativeTextController.h"
 
+#include "BoundaryPointInlines.h"
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "DocumentInlines.h"

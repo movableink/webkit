@@ -28,6 +28,7 @@
 #include "RenderObject.h"
 
 #include "AXObjectCache.h"
+#include "BoundaryPointInlines.h"
 #include "DocumentInlines.h"
 #include "EditingInlines.h"
 #include "Editor.h"

@@ -29,6 +29,7 @@
 #include "config.h"
 #include "LegacyWebArchive.h"
 
+#include "BoundaryPointInlines.h"
 #include "CSSImportRule.h"
 #include "CSSSerializationContext.h"
 #include "CachedResource.h"

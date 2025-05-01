@@ -246,6 +246,11 @@ Document* TextTrackCue::document() const
     return downcast<Document>(scriptExecutionContext());
 }
 
+RefPtr<Document> TextTrackCue::protectedDocument() const
+{
+    return document();
+}
+
 void TextTrackCue::willChange()
 {
     if (++m_processingCueChanges > 1)

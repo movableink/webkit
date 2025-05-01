@@ -37,6 +37,7 @@
 #import "Logging.h"
 #import "MediaControlsHost.h"
 #import "MediaSelectionOption.h"
+#import "NodeInlines.h"
 #import "Page.h"
 #import "PageGroup.h"
 #import "TextTrackList.h"

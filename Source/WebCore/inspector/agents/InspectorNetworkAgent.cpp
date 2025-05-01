@@ -61,6 +61,7 @@
 #include "Page.h"
 #include "PlatformStrategies.h"
 #include "ProgressTracker.h"
+#include "RenderObjectInlines.h"
 #include "ResourceError.h"
 #include "ResourceLoader.h"
 #include "ResourceRequest.h"

@@ -43,7 +43,7 @@
 #import <WebCore/LocalFrameView.h>
 #import <WebCore/RenderLayer.h>
 #import <WebCore/RenderLayerBacking.h>
-#import <WebCore/RenderObject.h>
+#import <WebCore/RenderObjectInlines.h>
 #import <WebCore/RenderView.h>
 #import <WebCore/WebCoreFullScreenWindow.h>
 #import <wtf/RetainPtr.h>

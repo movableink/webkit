@@ -72,6 +72,7 @@
 #include "Quirks.h"
 #include "RenderBlock.h"
 #include "RenderBox.h"
+#include "RenderObjectInlines.h"
 #include "RenderTextControl.h"
 #include "RenderTreeUpdater.h"
 #include "RenderView.h"

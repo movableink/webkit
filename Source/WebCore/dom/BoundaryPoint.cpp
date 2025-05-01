@@ -119,9 +119,4 @@ TextStream& operator<<(TextStream& stream, const BoundaryPoint& boundaryPoint)
     return stream;
 }
 
-Ref<Document> BoundaryPoint::protectedDocument() const
-{
-    return document();
-}
-
 }

@@ -29,6 +29,7 @@
 #import "InjectedBundleRangeHandle.h"
 #import "WKBundleAPICast.h"
 #import "WKDOMInternals.h"
+#import <WebCore/BoundaryPointInlines.h>
 #import <WebCore/Document.h>
 #import <WebCore/TextIterator.h>
 #import <WebCore/VisibleUnits.h>

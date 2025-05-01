@@ -27,6 +27,7 @@
 #include "SpellingCorrectionCommand.h"
 
 #include "AlternativeTextController.h"
+#include "BoundaryPointInlines.h"
 #include "DataTransfer.h"
 #include "Document.h"
 #include "DocumentFragment.h"

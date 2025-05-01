@@ -53,6 +53,7 @@
 #include "PlatformMediaSessionManager.h"
 #include "Quirks.h"
 #include "RenderMedia.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "ScriptController.h"
 #include "Settings.h"

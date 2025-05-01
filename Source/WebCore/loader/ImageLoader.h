@@ -26,6 +26,7 @@
 #include "CachedResourceHandle.h"
 #include "Element.h"
 #include "LoaderMalloc.h"
+#include "NodeInlines.h"
 #include "Timer.h"
 #include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>

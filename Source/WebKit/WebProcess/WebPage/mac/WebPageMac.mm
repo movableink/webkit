@@ -59,6 +59,7 @@
 #import <QuartzCore/QuartzCore.h>
 #import <WebCore/AXObjectCache.h>
 #import <WebCore/BackForwardController.h>
+#import <WebCore/BoundaryPointInlines.h>
 #import <WebCore/ColorMac.h>
 #import <WebCore/DataDetection.h>
 #import <WebCore/DictionaryLookup.h>

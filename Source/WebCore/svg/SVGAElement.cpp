@@ -35,6 +35,7 @@
 #include "LocalFrame.h"
 #include "MouseEvent.h"
 #include "PlatformMouseEvent.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGInline.h"
 #include "RenderSVGText.h"
 #include "RenderSVGTransformableContainer.h"

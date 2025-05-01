@@ -25,11 +25,8 @@
 #pragma once
 
 #include "EventTarget.h"
-#include "ExceptionOr.h"
-#include "LayoutRect.h"
 #include "RenderStyleConstants.h"
 #include "StyleValidity.h"
-#include "TreeScope.h"
 #include <compare>
 #include <wtf/CompactPointerTuple.h>
 #include <wtf/CompactUniquePtrTuple.h>
@@ -51,16 +48,20 @@ class TextStream;
 namespace WebCore {
 
 class ContainerNode;
+class CustomElementRegistry;
 class Document;
 class Element;
 class EventTypeInfo;
 class FloatPoint;
 class HTMLQualifiedName;
 class HTMLSlotElement;
+class IntRect;
+class LayoutRect;
 class MathMLQualifiedName;
 class MutationObserver;
 class MutationObserverRegistration;
 class NamedNodeMap;
+class Node;
 class NodeList;
 class NodeListsNodeData;
 class NodeRareData;
@@ -72,7 +73,12 @@ class RenderStyle;
 class SVGQualifiedName;
 class ShadowRoot;
 class TouchEvent;
+class TreeScope;
 class WebCoreOpaqueRoot;
+
+enum class TextDirection : bool;
+
+template<typename T> class ExceptionOr;
 
 namespace Style {
 struct PseudoElementIdentifier;
@@ -402,7 +408,7 @@ public:
     Editability computeEditabilityWithStyle(const RenderStyle*, UserSelectAllTreatment, ShouldUpdateStyle) const;
 
     WEBCORE_EXPORT LayoutRect absoluteBoundingRect(bool* isReplaced);
-    IntRect pixelSnappedAbsoluteBoundingRect(bool* isReplaced) { return snappedIntRect(absoluteBoundingRect(isReplaced)); }
+    inline IntRect pixelSnappedAbsoluteBoundingRect(bool* isReplaced); // Defined in NodeInlines.h
 
     WEBCORE_EXPORT unsigned computeNodeIndex() const;
 
@@ -411,15 +417,15 @@ public:
     WEBCORE_EXPORT Document* ownerDocument() const;
 
     // Returns the document associated with this node. A document node returns itself.
-    Document& document() const { return treeScope().documentScope(); }
-    inline Ref<Document> protectedDocument() const;
+    inline Document& document() const; // Defined in NodeInlines.h
+    inline Ref<Document> protectedDocument() const; // Defined in NodeInlines.h
 
     TreeScope& treeScope() const
     {
         ASSERT(m_treeScope);
         return *m_treeScope;
     }
-    Ref<TreeScope> protectedTreeScope() const { return treeScope(); }
+    inline Ref<TreeScope> protectedTreeScope() const; // Defined in NodeInlines.h
     inline void setTreeScopeRecursively(TreeScope&);
     static constexpr ptrdiff_t treeScopeMemoryOffset() { return OBJECT_OFFSETOF(Node, m_treeScope); }
 

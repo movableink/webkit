@@ -31,6 +31,7 @@
 
 #include "ArchiveResource.h"
 #include "AttachmentAssociatedElement.h"
+#include "BoundaryPointInlines.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyNames.h"
 #include "CSSSerializationContext.h"

@@ -73,6 +73,7 @@
 #import "PluginViewBase.h"
 #import "Range.h"
 #import "RenderInline.h"
+#import "RenderObjectInlines.h"
 #import "RenderTextControl.h"
 #import "RenderView.h"
 #import "RenderWidget.h"

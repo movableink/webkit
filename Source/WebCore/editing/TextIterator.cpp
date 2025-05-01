@@ -28,6 +28,7 @@
 #include "config.h"
 #include "TextIterator.h"
 
+#include "BoundaryPointInlines.h"
 #include "ComposedTreeIterator.h"
 #include "Document.h"
 #include "Editing.h"

@@ -43,6 +43,7 @@
 #import <JavaScriptCore/JSCJSValue.h>
 #import <JavaScriptCore/JSGlobalObjectInlines.h>
 #import <JavaScriptCore/JSLock.h>
+#import <WebCore/BoundaryPointInlines.h>
 #import <WebCore/Document.h>
 #import <WebCore/FrameLoader.h>
 #import <WebCore/HTMLInputElement.h>

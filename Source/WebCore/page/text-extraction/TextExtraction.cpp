@@ -47,6 +47,7 @@
 #include "RenderLayer.h"
 #include "RenderLayerModelObject.h"
 #include "RenderLayerScrollableArea.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "SimpleRange.h"
 #include "Text.h"

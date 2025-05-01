@@ -945,6 +945,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/DeprecatedCSSOMValueList.h
     css/FontLoadTimingOverride.h
     css/ImmutableStyleProperties.h
+    css/IsImportant.h
     css/MediaList.h
     css/MediaQueryParserContext.h
     css/MutableStyleProperties.h

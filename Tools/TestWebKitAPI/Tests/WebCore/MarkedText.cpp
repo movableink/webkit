@@ -26,6 +26,7 @@
 #include "config.h"
 
 #include "Test.h"
+#include <WebCore/FloatRect.h>
 #include <WebCore/MarkedText.h>
 #include <WebCore/RenderedDocumentMarker.h>
 

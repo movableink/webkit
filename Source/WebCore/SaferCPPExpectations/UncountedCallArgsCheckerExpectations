@@ -1122,12 +1122,9 @@ rendering/RenderScrollbarPart.cpp
 rendering/RenderSearchField.cpp
 rendering/RenderSlider.cpp
 rendering/RenderTable.cpp
-rendering/RenderTable.h
 rendering/RenderTableCell.cpp
-rendering/RenderTableCell.h
 rendering/RenderTableRow.cpp
 rendering/RenderTableSection.cpp
-rendering/RenderTableSection.h
 rendering/RenderText.cpp
 rendering/RenderTextControl.cpp
 rendering/RenderTextControlMultiLine.cpp

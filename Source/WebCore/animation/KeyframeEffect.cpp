@@ -60,6 +60,7 @@
 #include "RenderBox.h"
 #include "RenderBoxModelObject.h"
 #include "RenderElement.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "Settings.h"
 #include "StyleAdjuster.h"

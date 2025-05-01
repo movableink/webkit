@@ -27,6 +27,7 @@
 #import "HTMLConverter.h"
 
 #import "ArchiveResource.h"
+#import "BoundaryPointInlines.h"
 #import "CSSColorValue.h"
 #import "CSSComputedStyleDeclaration.h"
 #import "CSSPrimitiveValue.h"

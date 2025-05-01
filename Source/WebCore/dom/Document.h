@@ -41,6 +41,7 @@
 #include "FrameIdentifier.h"
 #include "HitTestSource.h"
 #include "IntDegrees.h"
+#include "IntRect.h"
 #include "PageIdentifier.h"
 #include "PermissionsPolicy.h"
 #include "PlaybackTargetClientContextIdentifier.h"

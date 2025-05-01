@@ -37,6 +37,7 @@
 namespace WebCore {
 
 class StyleSheetContents;
+struct CSSParserContext;
 
 class CSSStyleProperties : public CSSStyleDeclaration {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSStyleProperties);

@@ -44,6 +44,7 @@
 #import "AccessibilityTableCell.h"
 #import "AccessibilityTableColumn.h"
 #import "AccessibilityTableRow.h"
+#import "BoundaryPointInlines.h"
 #import "ColorMac.h"
 #import "ContextMenuController.h"
 #import "Editing.h"

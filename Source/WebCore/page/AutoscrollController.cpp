@@ -37,6 +37,7 @@
 #include "Page.h"
 #include "RenderBox.h"
 #include "RenderListBox.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "ScrollView.h"
 #include "Settings.h"

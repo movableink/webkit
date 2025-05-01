@@ -30,6 +30,7 @@
 #import "DOMNodeInternal.h"
 #import <WebCore/DocumentFragment.h>
 #import "ExceptionHandlers.h"
+#import <WebCore/BoundaryPointInlines.h>
 #import <WebCore/JSExecState.h>
 #import <WebCore/Range.h>
 #import <WebCore/SimpleRange.h>

@@ -114,7 +114,7 @@ public:
     void setCellWidthChanged(bool b = true) { m_cellWidthChanged = b; }
 
     static RenderPtr<RenderTableCell> createAnonymousWithParentRenderer(const RenderTableRow&);
-    RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
+    inline RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override; // Defined in RenderTableCellInlines.h
 
     // Table layout always uses the table's writing mode.
     const WritingMode tableWritingMode() const { return table()->writingMode(); }
@@ -311,11 +311,6 @@ inline void RenderTableCell::invalidateHasEmptyCollapsedBorders()
     m_hasEmptyCollapsedAfterBorder = false;
     m_hasEmptyCollapsedStartBorder = false;
     m_hasEmptyCollapsedEndBorder = false;
-}
-
-inline RenderPtr<RenderBox> RenderTableCell::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const
-{
-    return RenderTableCell::createTableCellWithStyle(renderer.document(), renderer.style());
 }
 
 } // namespace WebCore

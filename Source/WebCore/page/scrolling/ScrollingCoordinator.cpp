@@ -39,6 +39,7 @@
 #include "Region.h"
 #include "RenderLayerCompositor.h"
 #include "RenderLayerScrollableArea.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "ScrollAnimator.h"
 #include "Settings.h"

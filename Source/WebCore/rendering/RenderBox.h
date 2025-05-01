@@ -530,21 +530,8 @@ public:
 
     // These represent your location relative to your container as a physical offset.
     // In layout related methods you almost always want the logical location (e.g. x() and y()).
-    LayoutPoint topLeftLocation() const
-    {
-        // This is inlined for speed, since it is used by updateLayerPosition() during scrolling.
-        if (!document().view() || !document().view()->hasFlippedBlockRenderers())
-            return location();
-        return topLeftLocationWithFlipping();
-    }
-
-    LayoutSize topLeftLocationOffset() const
-    {
-        // This is inlined for speed, since it is used by updateLayerPosition() during scrolling.
-        if (!document().view() || !document().view()->hasFlippedBlockRenderers())
-            return locationOffset();
-        return toLayoutSize(topLeftLocationWithFlipping());
-    }
+    LayoutPoint topLeftLocation() const; // Defined in RenderBoxInlines.h
+    LayoutSize topLeftLocationOffset() const; // Defined in RenderBoxInlines.h
 
     LayoutRect logicalVisualOverflowRectForPropagation(const WritingMode) const;
     LayoutRect visualOverflowRectForPropagation(const WritingMode) const;

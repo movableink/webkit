@@ -61,8 +61,8 @@ public:
     void stringReplaceAll(String&&);
     void replaceAll(Node*);
 
-    ContainerNode& rootNode() const;
-    Ref<ContainerNode> protectedRootNode() const { return rootNode(); }
+    inline ContainerNode& rootNode() const; // Defined in TreeScopeInlines.h
+    inline Ref<ContainerNode> protectedRootNode() const; // Defined in TreeScopeInlines.h
     ContainerNode& traverseToRootNode() const;
 
     // These methods are only used during parsing.
@@ -124,7 +124,7 @@ public:
 
     // Return a bounding box in absolute coordinates enclosing this node and all its descendants.
     // This gives the area within which events may get handled by a hander registered on this node.
-    virtual LayoutRect absoluteEventHandlerBounds(bool& /* includesFixedPositionElements */) { return LayoutRect(); }
+    virtual LayoutRect absoluteEventHandlerBounds(bool& /* includesFixedPositionElements */);
 
     WEBCORE_EXPORT ExceptionOr<Element*> querySelector(const String& selectors);
     WEBCORE_EXPORT ExceptionOr<Ref<NodeList>> querySelectorAll(const String& selectors);
@@ -191,18 +191,6 @@ inline ContainerNode::ContainerNode(Document& document, NodeType type, OptionSet
     : Node(document, type, typeFlags | TypeFlag::IsContainerNode)
 {
     ASSERT(!isTextNode());
-}
-
-inline ContainerNode& TreeScope::rootNode() const
-{
-    return m_rootNode.get();
-}
-
-inline ContainerNode& ContainerNode::rootNode() const
-{
-    if (isInTreeScope())
-        return treeScope().rootNode();
-    return traverseToRootNode();
 }
 
 } // namespace WebCore

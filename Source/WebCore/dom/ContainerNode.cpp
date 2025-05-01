@@ -726,6 +726,11 @@ void ContainerNode::disconnectDescendantFrames()
     disconnectSubframesIfNeeded(*this, SubframeDisconnectPolicy::RootAndDescendants);
 }
 
+LayoutRect ContainerNode::absoluteEventHandlerBounds(bool& /* includesFixedPositionElements */)
+{
+    return LayoutRect();
+}
+
 ExceptionOr<void> ContainerNode::removeChild(Node& oldChild)
 {
     // Check that this node is not "floating".

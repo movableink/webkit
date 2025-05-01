@@ -23,6 +23,7 @@
 
 #include "CSSPropertyNames.h"
 #include "CSSValue.h"
+#include "IsImportant.h"
 #include "WritingMode.h"
 #include <wtf/BitSet.h>
 #include <wtf/RefPtr.h>
@@ -32,7 +33,6 @@ namespace WebCore {
 class CSSValueList;
 class Settings;
 
-enum class IsImportant : bool { No, Yes };
 enum class IsImplicit : bool { No, Yes };
 
 struct StylePropertyMetadata {

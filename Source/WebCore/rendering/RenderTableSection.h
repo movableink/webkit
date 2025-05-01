@@ -144,8 +144,8 @@ public:
     LayoutUnit distributeExtraLogicalHeightToRows(LayoutUnit extraLogicalHeight);
 
     static RenderPtr<RenderTableSection> createAnonymousWithParentRenderer(const RenderTable&);
-    RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
-    
+    inline RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override; // Defined in RenderTableSectionInlines.h
+
     void paint(PaintInfo&, const LayoutPoint&) override;
 
     void willInsertTableRow(RenderTableRow& child, RenderObject* beforeChild);
@@ -296,11 +296,6 @@ inline CellSpan RenderTableSection::fullTableRowSpan() const
 {
     ASSERT(!m_needsCellRecalc);
     return CellSpan(0, m_grid.size());
-}
-
-inline RenderPtr<RenderBox> RenderTableSection::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const
-{
-    return RenderTableSection::createTableSectionWithStyle(renderer.document(), renderer.style());
 }
 
 } // namespace WebCore

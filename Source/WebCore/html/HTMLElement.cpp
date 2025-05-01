@@ -1382,6 +1382,11 @@ const AtomString& HTMLElement::popover() const
     return nullAtom();
 }
 
+void HTMLElement::setPopover(const AtomString& value)
+{
+    setAttributeWithoutSynchronization(HTMLNames::popoverAttr, value);
+}
+
 #if PLATFORM(IOS_FAMILY)
 
 SelectionRenderingBehavior HTMLElement::selectionRenderingBehavior(const Node* node)

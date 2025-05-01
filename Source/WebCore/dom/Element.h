@@ -71,6 +71,7 @@ class IntSize;
 class JSCustomElementInterface;
 class KeyframeEffectStack;
 class KeyboardEvent;
+class LayoutUnit;
 class LocalFrame;
 class Locale;
 class PlatformKeyboardEvent;

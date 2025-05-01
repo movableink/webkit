@@ -30,6 +30,16 @@
 
 namespace WebCore {
 
+inline Document& BoundaryPoint::document() const
+{
+    return container->document();
+}
+
+inline Ref<Document> BoundaryPoint::protectedDocument() const
+{
+    return document();
+}
+
 BoundaryPoint makeBoundaryPointAfterNodeContents(Node& node)
 {
     return { node, node.length() };

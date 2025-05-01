@@ -34,6 +34,7 @@
 #include "InspectorController.h"
 #include "InstrumentingAgents.h"
 #include "Page.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "TimelineRecordFactory.h"
 #include "WebDebuggerAgent.h"

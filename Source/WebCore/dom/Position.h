@@ -29,6 +29,7 @@
 #include "ContainerNode.h"
 #include "EditingBoundary.h"
 #include "TextAffinity.h"
+#include "NodeInlines.h"
 
 namespace WTF {
 class TextStream;

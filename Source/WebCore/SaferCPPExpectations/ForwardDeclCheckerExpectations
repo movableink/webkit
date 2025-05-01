@@ -124,7 +124,6 @@ rendering/BreakLines.h
 rendering/ImageQualityController.h
 rendering/RenderLayerBacking.cpp
 rendering/RenderLayerCompositor.cpp
-rendering/RenderLineBoxList.h
 rendering/RenderTableCellInlines.h
 rendering/RenderText.cpp
 rendering/RenderTextLineBoxes.h

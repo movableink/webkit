@@ -39,6 +39,7 @@
 #include "NullGraphicsContext.h"
 #include "ReferenceFilterOperation.h"
 #include "RenderElement.h"
+#include "RenderObjectInlines.h"
 #include "StyleFilterProperty.h"
 #include <wtf/PointerComparison.h>
 

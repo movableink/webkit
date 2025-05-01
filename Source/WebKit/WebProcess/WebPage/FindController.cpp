@@ -34,6 +34,7 @@
 #include "WebImage.h"
 #include "WebPage.h"
 #include "WebPageProxyMessages.h"
+#include <WebCore/BoundaryPointInlines.h>
 #include <WebCore/DocumentInlines.h>
 #include <WebCore/DocumentMarkerController.h>
 #include <WebCore/FloatQuad.h>

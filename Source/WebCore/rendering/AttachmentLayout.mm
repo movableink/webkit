@@ -33,6 +33,7 @@
 #include "FontCacheCoreText.h"
 #include "FrameSelection.h"
 #include "GeometryUtilities.h"
+#include "RenderObjectInlines.h"
 #include "RenderTheme.h"
 #include <pal/spi/cf/CoreTextSPI.h>
 #include <wtf/cocoa/TypeCastsCocoa.h>

@@ -28,6 +28,7 @@
 
 #include "PluginView.h"
 #include "WebPage.h"
+#include <WebCore/BoundaryPointInlines.h>
 #include <WebCore/CharacterRange.h>
 #include <WebCore/Document.h>
 #include <WebCore/DocumentInlines.h>

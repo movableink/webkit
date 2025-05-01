@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderTable.h"
 
@@ -94,6 +95,11 @@ inline LayoutUnit RenderTable::outerBorderTop() const
     if (writingMode().isHorizontal())
         return writingMode().isBlockTopToBottom() ? outerBorderBefore() : outerBorderAfter();
     return writingMode().isInlineTopToBottom() ? outerBorderStart() : borderEnd();
+}
+
+inline RenderPtr<RenderBox> RenderTable::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const
+{
+    return RenderTable::createTableWithStyle(renderer.protectedDocument(), renderer.checkedStyle().get());
 }
 
 } // namespace WebCore

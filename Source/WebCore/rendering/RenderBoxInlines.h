@@ -21,6 +21,7 @@
 
 #include "RenderBox.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderObjectInlines.h"
 
 namespace WebCore {
 
@@ -66,6 +67,22 @@ inline void RenderBox::setLogicalLocation(LayoutPoint location) { setLocation(wr
 inline void RenderBox::setLogicalSize(LayoutSize size) { setSize(writingMode().isHorizontal() ? size : size.transposedSize()); }
 inline bool RenderBox::shouldTrimChildMargin(MarginTrimType type, const RenderBox& child) const { return style().marginTrim().contains(type) && isChildEligibleForMarginTrim(type, child); }
 inline bool RenderBox::stretchesToViewport() const { return document().inQuirksMode() && style().logicalHeight().isAuto() && !isFloatingOrOutOfFlowPositioned() && (isDocumentElementRenderer() || isBody()) && !shouldComputeLogicalHeightFromAspectRatio() && !isInline(); }
+
+inline LayoutPoint RenderBox::topLeftLocation() const
+{
+    // This is inlined for speed, since it is used by updateLayerPosition() during scrolling.
+    if (!document().view() || !document().view()->hasFlippedBlockRenderers())
+        return location();
+    return topLeftLocationWithFlipping();
+}
+
+inline LayoutSize RenderBox::topLeftLocationOffset() const
+{
+    // This is inlined for speed, since it is used by updateLayerPosition() during scrolling.
+    if (!document().view() || !document().view()->hasFlippedBlockRenderers())
+        return locationOffset();
+    return toLayoutSize(topLeftLocationWithFlipping());
+}
 
 inline LayoutRect RenderBox::paddingBoxRectIncludingScrollbar() const
 {

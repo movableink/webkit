@@ -28,6 +28,7 @@
 
 #import "AXObjectCache.h"
 #import "ColorCocoa.h"
+#import "RenderObjectInlines.h"
 #import "WebAccessibilityObjectWrapperBase.h"
 
 #if PLATFORM(IOS_FAMILY)

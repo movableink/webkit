@@ -47,6 +47,7 @@
 #include "RenderInline.h"
 #include "RenderLayer.h"
 #include "RenderLayerModelObject.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include "RenderViewTransitionCapture.h"

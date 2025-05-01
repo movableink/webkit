@@ -50,6 +50,7 @@
 #import "PlatformEventFactoryIOS.h"
 #import "PlatformKeyboardEvent.h"
 #import "RenderWidget.h"
+#import "RenderObjectInlines.h"
 #import "ScrollingCoordinatorTypes.h"
 #import "WAKView.h"
 #import "WAKWindow.h"
