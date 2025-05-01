@@ -1384,6 +1384,8 @@ bool RenderStyle::changeRequiresRepaintIfText(const RenderStyle& other, OptionSe
     if (m_inheritedData->color != other.m_inheritedData->color)
         return true;
 
+    // Note that we may reach this function with mutated text-decoration values (e.g. thickness), when visual overflow recompute is not required.
+    // see RenderStyle::changeAffectsVisualOverflow
     if (m_inheritedFlags.textDecorationLineInEffect != other.m_inheritedFlags.textDecorationLineInEffect
         || m_nonInheritedFlags.textDecorationLine != other.m_nonInheritedFlags.textDecorationLine)
         return true;
