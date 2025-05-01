@@ -144,6 +144,10 @@ struct NetworkSessionCreationParameters {
 #else
     bool isLegacyTLSAllowed { true };
 #endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    String webContentRestrictionsConfigurationFile;
+    SandboxExtension::Handle webContentRestrictionsConfigurationExtensionHandle;
+#endif
 };
 
 } // namespace WebKit

@@ -85,6 +85,10 @@ public:
 #if HAVE(WEBCONTENTRESTRICTIONS)
     std::optional<URL> evaluatedURL() const { return m_evaluatedURL; }
 #endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    const String& configurationPath() const { return m_configurationPath; }
+    void setConfigurationPath(const String& path) { m_configurationPath = path; }
+#endif
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
     WEBCORE_EXPORT Vector<uint8_t> webFilterEvaluatorData() const;
 #endif
@@ -102,6 +106,9 @@ private:
     UnblockRequesterFunction m_unblockRequester;
 #if HAVE(WEBCONTENTRESTRICTIONS)
     std::optional<URL> m_evaluatedURL;
+#endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    String m_configurationPath;
 #endif
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
     RetainPtr<WebFilterEvaluator> m_webFilterEvaluator;

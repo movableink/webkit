@@ -179,7 +179,12 @@ void ContentFilterUnblockHandler::requestUnblockAsync(DecisionHandlerFunction de
 {
 #if HAVE(WEBCONTENTRESTRICTIONS)
     if (m_evaluatedURL) {
-        WebCore::ParentalControlsURLFilter::singleton().allowURL(*m_evaluatedURL, [decisionHandler = WTFMove(decisionHandler)](bool didAllow) {
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+        auto& filter = WebCore::ParentalControlsURLFilter::filterWithConfigurationPath(configurationPath());
+#else
+        auto& filter = WebCore::ParentalControlsURLFilter::singleton();
+#endif
+        filter.allowURL(*m_evaluatedURL, [decisionHandler = WTFMove(decisionHandler)](bool didAllow) {
             callOnMainThread([decisionHandler = WTFMove(decisionHandler), didAllow]() {
                 RELEASE_LOG(ContentFiltering, "ParentalControlsURLFilter %" PUBLIC_LOG_STRING " the unblock request.\n", didAllow ? "allowed" : "did not allow");
                 decisionHandler(didAllow);

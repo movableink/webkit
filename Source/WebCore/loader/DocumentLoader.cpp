@@ -2646,6 +2646,13 @@ bool DocumentLoader::usesWebContentRestrictions()
     return DeprecatedGlobalSettings::usesWebContentRestrictionsForFilter();
 }
 #endif
+
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+String DocumentLoader::webContentRestrictionsConfigurationPath() const
+{
+    return emptyString();
+}
+#endif
 #endif // ENABLE(CONTENT_FILTERING)
 
 #if ENABLE(CONTENT_FILTERING)

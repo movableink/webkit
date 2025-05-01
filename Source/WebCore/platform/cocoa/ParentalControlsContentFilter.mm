@@ -57,9 +57,15 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(ParentalControlsContentFilter);
 bool ParentalControlsContentFilter::enabled() const
 {
 #if HAVE(WEBCONTENTRESTRICTIONS)
-    if (m_usesWebContentRestrictions)
-        return ParentalControlsURLFilter::singleton().isEnabled();
+    if (m_usesWebContentRestrictions) {
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+        auto& filter = ParentalControlsURLFilter::filterWithConfigurationPath(m_webContentRestrictionsConfigurationPath);
+#else
+        auto& filter = ParentalControlsURLFilter::singleton();
 #endif
+        return filter.isEnabled();
+    }
+#endif // HAVE(WEBCONTENTRESTRICTIONS)
 
 #if HAVE(WEBCONTENTANALYSIS_FRAMEWORK)
     bool enabled = [getWebFilterEvaluatorClass() isManagedSession];
@@ -78,6 +84,9 @@ UniqueRef<ParentalControlsContentFilter> ParentalControlsContentFilter::create(c
 ParentalControlsContentFilter::ParentalControlsContentFilter(const PlatformContentFilter::FilterParameters& params)
 #if HAVE(WEBCONTENTRESTRICTIONS)
     : m_usesWebContentRestrictions(params.usesWebContentRestrictions)
+#endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    , m_webContentRestrictionsConfigurationPath(params.webContentRestrictionsConfigurationPath)
 #endif
 {
     UNUSED_PARAM(params);
@@ -103,7 +112,12 @@ void ParentalControlsContentFilter::responseReceived(const ResourceResponse& res
     if (m_usesWebContentRestrictions) {
         m_evaluatedURL = response.url();
         m_state = State::Filtering;
-        ParentalControlsURLFilter::singleton().isURLAllowed(*m_evaluatedURL, [weakThis = WeakPtr { *this }](bool isAllowed, auto replacementData) {
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+        auto& filter = ParentalControlsURLFilter::filterWithConfigurationPath(m_webContentRestrictionsConfigurationPath);
+#else
+        auto& filter = ParentalControlsURLFilter::singleton();
+#endif
+        filter.isURLAllowed(*m_evaluatedURL, [weakThis = WeakPtr { *this }](bool isAllowed, auto replacementData) {
             if (CheckedPtr checkedThis = weakThis.get())
                 checkedThis->updateFilterState(isAllowed ? State::Allowed : State::Blocked, replacementData);
         });

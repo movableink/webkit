@@ -33,20 +33,27 @@ namespace WebCore {
 
 class ParentalControlsURLFilter {
     WTF_MAKE_FAST_ALLOCATED;
-    friend UniqueRef<ParentalControlsURLFilter> WTF::makeUniqueRefWithoutFastMallocCheck<ParentalControlsURLFilter>();
 public:
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    static ParentalControlsURLFilter& filterWithConfigurationPath(const String&);
+#else
     static ParentalControlsURLFilter& singleton();
+#endif
 
     bool isEnabled() const;
     void isURLAllowed(const URL&, CompletionHandler<void(bool, NSData *)>&&);
     void allowURL(const URL&, CompletionHandler<void(bool)>&&);
 
 private:
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    ParentalControlsURLFilter(const String& configurationPath);
+#else
     ParentalControlsURLFilter();
+#endif
 
     RetainPtr<WCRBrowserEngineClient> m_wcrBrowserEngineClient;
 };
 
 } // namespace WebCore
 
-#endif
+#endif // HAVE(WEBCONTENTRESTRICTIONS)

@@ -37,6 +37,42 @@
 
 namespace WebCore {
 
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+
+static bool wcrBrowserEngineClientEnabled(const String& path)
+{
+    if (!path.isEmpty())
+        return [PAL::getWCRBrowserEngineClientClass() shouldEvaluateURLsForConfigurationAtPath:path.createNSString().get()];
+
+    return [PAL::getWCRBrowserEngineClientClass() shouldEvaluateURLs];
+}
+
+ParentalControlsURLFilter& ParentalControlsURLFilter::filterWithConfigurationPath(const String& path)
+{
+    // Coalesce null string into the empty string.
+    String key = path.isEmpty() ? emptyString() : path;
+
+    static MainThreadNeverDestroyed<HashMap<String, UniqueRef<ParentalControlsURLFilter>>> map;
+
+    auto iterator = map->find(key);
+    if (iterator != map->end())
+        return iterator->value;
+
+    return map->set(key, UniqueRef(*new ParentalControlsURLFilter(key))).iterator->value;
+}
+
+ParentalControlsURLFilter::ParentalControlsURLFilter(const String& configurationPath)
+{
+    if (wcrBrowserEngineClientEnabled(configurationPath)) {
+        if (!configurationPath.isEmpty())
+            m_wcrBrowserEngineClient = adoptNS([PAL::allocWCRBrowserEngineClientInstance() initWithConfigurationAtPath:configurationPath.createNSString().get()]);
+        else
+            m_wcrBrowserEngineClient = adoptNS([PAL::allocWCRBrowserEngineClientInstance() init]);
+    }
+}
+
+#else
+
 static bool wcrBrowserEngineClientEnabled()
 {
     return [PAL::getWCRBrowserEngineClientClass() shouldEvaluateURLs];
@@ -44,7 +80,7 @@ static bool wcrBrowserEngineClientEnabled()
 
 ParentalControlsURLFilter& ParentalControlsURLFilter::singleton()
 {
-    static MainThreadNeverDestroyed<UniqueRef<ParentalControlsURLFilter>> filter = makeUniqueRef< ParentalControlsURLFilter>();
+    static MainThreadNeverDestroyed<UniqueRef<ParentalControlsURLFilter>> filter = UniqueRef(*new ParentalControlsURLFilter(key));
     return filter.get();
 }
 
@@ -53,6 +89,8 @@ ParentalControlsURLFilter::ParentalControlsURLFilter()
     if (wcrBrowserEngineClientEnabled())
         m_wcrBrowserEngineClient = adoptNS([PAL::allocWCRBrowserEngineClientInstance() init]);
 }
+
+#endif
 
 bool ParentalControlsURLFilter::isEnabled() const
 {
@@ -89,4 +127,4 @@ void ParentalControlsURLFilter::allowURL(const URL& url, CompletionHandler<void(
 
 } // namespace WebCore
 
-#endif
+#endif // HAVE(WEBCONTENTRESTRICTIONS)

@@ -302,6 +302,10 @@ public:
     void resetResourceMonitorThrottlerForTesting();
 #endif
 
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    String webContentRestrictionsConfigurationFile() const { return m_webContentRestrictionsConfigurationFile; }
+#endif
+
     std::optional<WTF::UUID> dataStoreIdentifier() const { return m_dataStoreIdentifier; }
 
 protected:
@@ -417,6 +421,9 @@ protected:
 #if ENABLE(CONTENT_EXTENSIONS)
     RefPtr<WebCore::ResourceMonitorThrottlerHolder> m_resourceMonitorThrottler;
     String m_resourceMonitorThrottlerDirectory;
+#endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    String m_webContentRestrictionsConfigurationFile;
 #endif
     Markable<WTF::UUID> m_dataStoreIdentifier;
 };

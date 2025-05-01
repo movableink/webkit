@@ -612,6 +612,25 @@ static WebKit::UnifiedOriginStorageLevel toUnifiedOriginStorageLevel(_WKUnifiedO
     _configuration->setResourceMonitorThrottlerDirectory(url.path);
 }
 
+- (NSURL *)webContentRestrictionsConfigurationURL
+{
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    auto file = _configuration->webContentRestrictionsConfigurationFile();
+    if (!file.isEmpty())
+        return [NSURL fileURLWithPath:file.createNSString().get()];
+#endif
+
+    return nil;
+}
+
+- (void)setWebContentRestrictionsConfigurationURL:(NSURL *)url
+{
+    checkURLArgument(url);
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    _configuration->setWebContentRestrictionsConfigurationFile(url.path);
+#endif
+}
+
 - (BOOL)isDeclarativeWebPushEnabled
 {
 #if ENABLE(DECLARATIVE_WEB_PUSH)

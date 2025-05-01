@@ -178,6 +178,9 @@ NetworkSession::NetworkSession(NetworkProcess& networkProcess, const NetworkSess
 #if ENABLE(CONTENT_EXTENSIONS)
     , m_resourceMonitorThrottlerDirectory(parameters.resourceMonitorThrottlerDirectory)
 #endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    , m_webContentRestrictionsConfigurationFile(parameters.webContentRestrictionsConfigurationFile)
+#endif
     , m_dataStoreIdentifier(parameters.dataStoreIdentifier)
 {
     if (!m_sessionID.isEphemeral()) {
@@ -225,6 +228,9 @@ NetworkSession::NetworkSession(NetworkProcess& networkProcess, const NetworkSess
 
 #if ENABLE(CONTENT_EXTENSIONS)
     SandboxExtension::consumePermanently(parameters.resourceMonitorThrottlerDirectoryExtensionHandle);
+#endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    SandboxExtension::consumePermanently(parameters.webContentRestrictionsConfigurationExtensionHandle);
 #endif
 }
 

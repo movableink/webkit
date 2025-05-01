@@ -207,6 +207,9 @@ private:
 #if HAVE(WEBCONTENTRESTRICTIONS)
     bool usesWebContentRestrictions() final;
 #endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    String webContentRestrictionsConfigurationPath() const final;
+#endif
 #endif
 
     void processClearSiteDataHeader(const WebCore::ResourceResponse&, CompletionHandler<void()>&&);

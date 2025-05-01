@@ -2199,6 +2199,16 @@ bool NetworkResourceLoader::usesWebContentRestrictions()
     return protectedConnectionToWebProcess()->usesWebContentRestrictionsForFilter();
 }
 #endif
+
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+String NetworkResourceLoader::webContentRestrictionsConfigurationPath() const
+{
+    if (CheckedPtr session = protectedConnectionToWebProcess()->protectedNetworkProcess()->networkSession(sessionID()))
+        return session->webContentRestrictionsConfigurationFile();
+
+    return emptyString();
+}
+#endif
 #endif // ENABLE(CONTENT_FILTERING)
 
 void NetworkResourceLoader::useRedirectionForCurrentNavigation(WebCore::ResourceResponse&& response)

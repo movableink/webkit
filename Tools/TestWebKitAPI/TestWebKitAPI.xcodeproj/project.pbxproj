@@ -3040,6 +3040,7 @@
 		5E4B1D2C1D404C6100053621 /* WKScrollViewDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = WKScrollViewDelegate.mm; path = ../ios/WKScrollViewDelegate.mm; sourceTree = "<group>"; };
 		631EFFF51E7B5E8D00D2EBB8 /* Geolocation.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = Geolocation.mm; sourceTree = "<group>"; };
 		634910DF1E9D3FF300880309 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
+		634E44892DB770CA00793399 /* WebContentRestrictions.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WebContentRestrictions.mm; sourceTree = "<group>"; };
 		6351992722275C6A00890AD3 /* NavigationAction.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = NavigationAction.mm; sourceTree = "<group>"; };
 		6354F4D01F7C3AB500D89DF3 /* ApplicationManifestParser.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ApplicationManifestParser.cpp; sourceTree = "<group>"; };
 		6356FB211EC4E0BA0044BF18 /* VisibleContentRect.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = VisibleContentRect.mm; sourceTree = "<group>"; };
@@ -4678,6 +4679,7 @@
 				6356FB211EC4E0BA0044BF18 /* VisibleContentRect.mm */,
 				83779C371F82FEB0007CDA8A /* VisitedLinkStore.mm */,
 				830F2E0B209A6A7400D36FF1 /* WebContentProcessDidTerminate.mm */,
+				634E44892DB770CA00793399 /* WebContentRestrictions.mm */,
 				57A79856224AB34E00A7F6F1 /* WebCryptoMasterKey.mm */,
 				46061545275824B400AB613D /* WebLocks.mm */,
 				51714EB61CF8C7A4004723C4 /* WebProcessKillIDBCleanup.mm */,

@@ -2115,6 +2115,13 @@ WebsiteDataStoreParameters WebsiteDataStore::parameters()
         createHandleFromResolvedPathIfPossible(resourceMonitorThrottlerDirectory, resourceMonitorThrottlerDirectoryExtensionHandle);
 #endif
 
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    auto webContentRestrictionsConfigurationFile = m_configuration->webContentRestrictionsConfigurationFile();
+    SandboxExtension::Handle webContentRestrictionsConfigurationExtensionHandle;
+    if (!webContentRestrictionsConfigurationFile.isEmpty())
+        createHandleFromResolvedPathIfPossible(webContentRestrictionsConfigurationFile, webContentRestrictionsConfigurationExtensionHandle, SandboxExtension::Type::ReadOnly);
+#endif
+
     bool shouldIncludeLocalhostInResourceLoadStatistics = false;
     auto firstPartyWebsiteDataRemovalMode = WebCore::FirstPartyWebsiteDataRemovalMode::AllButCookies;
     WebCore::RegistrableDomain standaloneApplicationDomain;
@@ -2215,6 +2222,11 @@ WebsiteDataStoreParameters WebsiteDataStore::parameters()
     networkSessionParameters.resourceMonitorThrottlerDirectoryExtensionHandle = WTFMove(resourceMonitorThrottlerDirectoryExtensionHandle);
 #endif
     networkSessionParameters.isLegacyTLSAllowed = m_configuration->legacyTLSEnabled();
+
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    networkSessionParameters.webContentRestrictionsConfigurationFile = WTFMove(webContentRestrictionsConfigurationFile);
+    networkSessionParameters.webContentRestrictionsConfigurationExtensionHandle = WTFMove(webContentRestrictionsConfigurationExtensionHandle);
+#endif
 
     parameters.networkSessionParameters = WTFMove(networkSessionParameters);
     parameters.networkSessionParameters.resourceLoadStatisticsParameters.enabled = trackingPreventionEnabled();

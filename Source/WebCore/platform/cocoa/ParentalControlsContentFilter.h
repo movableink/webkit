@@ -71,6 +71,9 @@ private:
     bool m_usesWebContentRestrictions { false };
     std::optional<URL> m_evaluatedURL;
 #endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    String m_webContentRestrictionsConfigurationPath;
+#endif
 };
     
 } // namespace WebCore

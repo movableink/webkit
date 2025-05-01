@@ -58,6 +58,9 @@ public:
 #if HAVE(WEBCONTENTRESTRICTIONS)
     virtual bool usesWebContentRestrictions() = 0;
 #endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    virtual String webContentRestrictionsConfigurationPath() const = 0;
+#endif
 };
 
 } // namespace WebCore

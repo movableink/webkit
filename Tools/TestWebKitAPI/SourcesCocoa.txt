@@ -379,6 +379,7 @@ Tests/WebKitCocoa/WKWebViewThemeColor.mm
 Tests/WebKitCocoa/WKWebViewUnderPageBackgroundColor.mm
 Tests/WebKitCocoa/WKWebsiteDatastore.mm
 Tests/WebKitCocoa/WebContentProcessDidTerminate.mm
+Tests/WebKitCocoa/WebContentRestrictions.mm
 Tests/WebKitCocoa/WebCryptoMasterKey.mm
 Tests/WebKitCocoa/WebLocks.mm
 Tests/WebKitCocoa/WebProcessKillIDBCleanup.mm

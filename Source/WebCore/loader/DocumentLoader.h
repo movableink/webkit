@@ -600,6 +600,9 @@ private:
 #if HAVE(WEBCONTENTRESTRICTIONS)
     WEBCORE_EXPORT bool usesWebContentRestrictions() final;
 #endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    WEBCORE_EXPORT String webContentRestrictionsConfigurationPath() const final;
+#endif
 #endif
 
     void redirectReceived(ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&);
