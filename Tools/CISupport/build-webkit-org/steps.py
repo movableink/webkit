@@ -34,6 +34,8 @@ import re
 import socket
 import sys
 
+from Shared.steps import ShellMixin
+
 if sys.version_info < (3, 9):  # noqa: UP036
     print('ERROR: Minimum supported Python version for this code is Python 3.9')
     sys.exit(1)
@@ -105,23 +107,6 @@ class CustomFlagsMixin(object):
         else:
             device_model = platform
         self.command += ['--' + device_model]
-
-
-class ShellMixin(object):
-    WINDOWS_SHELL_PLATFORMS = ['win', 'playstation']
-
-    def has_windows_shell(self):
-        return self.getProperty('platform', '*') in self.WINDOWS_SHELL_PLATFORMS
-
-    def shell_command(self, command):
-        if self.has_windows_shell():
-            return ['sh', '-c', command]
-        return ['/bin/sh', '-c', command]
-
-    def shell_exit_0(self):
-        if self.has_windows_shell():
-            return 'exit 0'
-        return 'true'
 
 
 class AddToLogMixin(object):
@@ -382,7 +367,7 @@ class InstallWpeDependencies(shell.ShellCommandNewStyle, CustomFlagsMixin):
         return super().run()
 
 
-class CompileWebKit(shell.Compile, CustomFlagsMixin):
+class CompileWebKit(shell.Compile, CustomFlagsMixin, ShellMixin):
     build_command = ["perl", "Tools/Scripts/build-webkit", "--no-fatal-warnings"]
     filter_command = ['perl', 'Tools/Scripts/filter-build-webkit', '-logfile', 'build-log.txt']
     APPLE_PLATFORMS = ('mac', 'ios', 'visionos', 'tvos', 'watchos')
@@ -430,7 +415,7 @@ class CompileWebKit(shell.Compile, CustomFlagsMixin):
         # filter-build-webkit is specifically designed for Xcode and doesn't work generally
         if platform in self.APPLE_PLATFORMS:
             full_command = f"{' '.join(build_command)} 2>&1 | {' '.join(self.filter_command)}"
-            self.setCommand(['/bin/sh', '-c', full_command])
+            self.setCommand(self.shell_command(full_command))
         else:
             self.setCommand(build_command)
 
@@ -729,7 +714,7 @@ class DownloadBuiltProductFromMaster(transfer.FileDownload):
         return super(DownloadBuiltProductFromMaster, self).getResultSummary()
 
 
-class RunJavaScriptCoreTests(TestWithFailureCount, CustomFlagsMixin):
+class RunJavaScriptCoreTests(TestWithFailureCount, CustomFlagsMixin, ShellMixin):
     name = "jscore-test"
     description = ["jscore-tests running"]
     descriptionDone = ["jscore-tests"]
@@ -780,7 +765,7 @@ class RunJavaScriptCoreTests(TestWithFailureCount, CustomFlagsMixin):
             self.command += ['--test-writer=ruby']
 
         self.appendCustomBuildFlags(platform, self.getProperty('fullPlatform'))
-        self.command = ['/bin/sh', '-c', ' '.join(quote(str(c)) for c in self.command) + ' 2>&1 | python3 Tools/Scripts/filter-test-logs jsc']
+        self.command = self.shell_command(' '.join(quote(str(c)) for c in self.command) + ' 2>&1 | python3 Tools/Scripts/filter-test-logs jsc')
 
         steps_to_add = [
             GenerateS3URL(
@@ -1377,7 +1362,7 @@ class RunWPEAPITests(RunGLibAPITests):
     command = ["python3", "Tools/Scripts/run-wpe-tests", WithProperties("--%(configuration)s")]
 
 
-class RunWebDriverTests(shell.Test, CustomFlagsMixin):
+class RunWebDriverTests(shell.Test, CustomFlagsMixin, ShellMixin):
     name = "webdriver-test"
     description = ["webdriver-tests running"]
     descriptionDone = ["webdriver-tests"]
@@ -1396,7 +1381,7 @@ class RunWebDriverTests(shell.Test, CustomFlagsMixin):
             self.command += additionalArguments
 
         self.appendCustomBuildFlags(self.getProperty('platform'), self.getProperty('fullPlatform'))
-        self.command = ['/bin/sh', '-c', ' '.join(self.command) + ' > logs.txt 2>&1']
+        self.command = self.shell_command(' '.join(self.command) + ' > logs.txt 2>&1')
 
         self.log_observer = logobserver.BufferLogObserver()
         self.addLogObserver('stdio', self.log_observer)
@@ -2034,7 +2019,7 @@ class ExtractStaticAnalyzerTestResults(ExtractTestResults):
         pass
 
 
-class PrintConfiguration(steps.ShellSequence):
+class PrintConfiguration(steps.ShellSequence, ShellMixin):
     name = 'configuration'
     description = ['configuration']
     haltOnFailure = False
@@ -2042,7 +2027,7 @@ class PrintConfiguration(steps.ShellSequence):
     warnOnFailure = False
     logEnviron = False
     command_list_generic = [['hostname']]
-    command_list_apple = [['df', '-hl'], ['date'], ['sw_vers'], ['system_profiler', 'SPSoftwareDataType', 'SPHardwareDataType'], ['/bin/sh', '-c', 'echo TimezoneVers: $(cat /usr/share/zoneinfo/+VERSION)'], ['xcodebuild', '-sdk', '-version']]
+    command_list_apple = [['df', '-hl'], ['date'], ['sw_vers'], ['system_profiler', 'SPSoftwareDataType', 'SPHardwareDataType'], ['cat', '/usr/share/zoneinfo/+VERSION'], ['xcodebuild', '-sdk', '-version']]
     command_list_linux = [['df', '-hl', '--exclude-type=fuse.portal'], ['date'], ['uname', '-a'], ['uptime']]
 
     def __init__(self, **kwargs):

@@ -424,7 +424,7 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
                 workdir='wkdir',
                 timeout=3600,
                 logEnviron=True,
-                command=['/bin/sh', '-c', 'perl Tools/Scripts/build-webkit --no-fatal-warnings --release --architecture "x86_64 arm64" WK_VALIDATE_DEPENDENCIES=YES 2>&1 | perl Tools/Scripts/filter-build-webkit -logfile build-log.txt'],
+                command=['/bin/bash', '--posix', '-o', 'pipefail', '-c', 'perl Tools/Scripts/build-webkit --no-fatal-warnings --release --architecture "x86_64 arm64" WK_VALIDATE_DEPENDENCIES=YES 2>&1 | perl Tools/Scripts/filter-build-webkit -logfile build-log.txt'],
             ) + 0,
         )
         self.expectOutcome(result=SUCCESS, state_string='compiled')
@@ -832,7 +832,7 @@ class TestRunWebKitTests(BuildStepMixinAdditions, unittest.TestCase):
                 workdir='wkdir',
                 timeout=10800,
                 logEnviron=False,
-                command=['/bin/sh', '-c',
+                command=['/bin/bash', '--posix', '-o', 'pipefail', '-c',
                          f'python3 Tools/Scripts/run-webkit-tests --no-build --no-show-results --no-new-test-results --clobber-old-results --builder-name iOS-14-Simulator-WK2-Tests-EWS --build-number 101 --buildbot-worker ews100 --buildbot-master {CURRENT_HOSTNAME} --report {RESULTS_WEBKIT_URL} --exit-after-n-crashes-or-timeouts 50 --exit-after-n-failures 500 --release --results-directory layout-test-results --debug-rwt-logging 2>&1 | python3 Tools/Scripts/filter-test-logs layout'],
                 env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
             ) + 0,
@@ -851,7 +851,7 @@ class TestRunWebKitTests(BuildStepMixinAdditions, unittest.TestCase):
                 workdir='wkdir',
                 timeout=10800,
                 logEnviron=False,
-                command=['/bin/sh', '-c',
+                command=['/bin/bash', '--posix', '-o', 'pipefail', '-c',
                          f'python3 Tools/Scripts/run-webkit-tests --no-build --no-show-results --no-new-test-results --clobber-old-results --builder-name iOS-14-Simulator-WK2-Tests-EWS --build-number 101 --buildbot-worker ews100 --buildbot-master {CURRENT_HOSTNAME} --report {RESULTS_WEBKIT_URL} --exit-after-n-crashes-or-timeouts 50 --exit-after-n-failures 500 --release --results-directory layout-test-results --debug-rwt-logging 2>&1 | python3 Tools/Scripts/filter-test-logs layout'],
                 env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
             ) + 0
@@ -871,7 +871,7 @@ class TestRunWebKitTests(BuildStepMixinAdditions, unittest.TestCase):
                 workdir='wkdir',
                 timeout=10800,
                 logEnviron=False,
-                command=['/bin/sh', '-c',
+                command=['/bin/bash', '--posix', '-o', 'pipefail', '-c',
                          f'python3 Tools/Scripts/run-webkit-tests --no-build --no-show-results --no-new-test-results --clobber-old-results --builder-name iOS-14-Simulator-WK2-Tests-EWS --build-number 101 --buildbot-worker ews100 --buildbot-master {CURRENT_HOSTNAME} --report {RESULTS_WEBKIT_URL} --exit-after-n-crashes-or-timeouts 50 --exit-after-n-failures 500 --release --results-directory layout-test-results --debug-rwt-logging 2>&1 | python3 Tools/Scripts/filter-test-logs layout'],
                 env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
             ) + 2
@@ -889,7 +889,7 @@ class TestRunWebKitTests(BuildStepMixinAdditions, unittest.TestCase):
                 workdir='wkdir',
                 timeout=10800,
                 logEnviron=False,
-                command=['/bin/sh', '-c',
+                command=['/bin/bash', '--posix', '-o', 'pipefail', '-c',
                          f'python3 Tools/Scripts/run-webkit-tests --no-build --no-show-results --no-new-test-results --clobber-old-results --builder-name iOS-14-Simulator-WK2-Tests-EWS --build-number 101 --buildbot-worker ews100 --buildbot-master {CURRENT_HOSTNAME} --report {RESULTS_WEBKIT_URL} --exit-after-n-crashes-or-timeouts 50 --exit-after-n-failures 500 --debug --results-directory layout-test-results --debug-rwt-logging 2>&1 | python3 Tools/Scripts/filter-test-logs layout'],
                 env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
             ) + 2
@@ -907,7 +907,7 @@ class TestRunWebKitTests(BuildStepMixinAdditions, unittest.TestCase):
                 workdir='wkdir',
                 timeout=10800,
                 logEnviron=False,
-                command=['/bin/sh', '-c',
+                command=['/bin/bash', '--posix', '-o', 'pipefail', '-c',
                          f'python3 Tools/Scripts/run-webkit-tests --no-build --no-show-results --no-new-test-results --clobber-old-results --builder-name iOS-14-Simulator-WK2-Tests-EWS --build-number 101 --buildbot-worker ews100 --buildbot-master {CURRENT_HOSTNAME} --report {RESULTS_WEBKIT_URL} --exit-after-n-crashes-or-timeouts 50 --exit-after-n-failures 500 --debug --results-directory layout-test-results --debug-rwt-logging 2>&1 | python3 Tools/Scripts/filter-test-logs layout'],
                 env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
             ) + 254
@@ -929,7 +929,7 @@ class TestRunWebKitTests(BuildStepMixinAdditions, unittest.TestCase):
                 workdir='wkdir',
                 timeout=10800,
                 logEnviron=False,
-                command=['/bin/sh', '-c',
+                command=['/bin/bash', '--posix', '-o', 'pipefail', '-c',
                          f'python3 Tools/Scripts/run-webkit-tests --no-build --no-show-results --no-new-test-results --clobber-old-results --builder-name GTK-Linux-64-bit-Release-Tests --build-number 103 --buildbot-worker gtk103 --buildbot-master {CURRENT_HOSTNAME} --report {RESULTS_WEBKIT_URL} --exit-after-n-crashes-or-timeouts 50 --exit-after-n-failures 500 --release --gtk --results-directory layout-test-results --debug-rwt-logging --enable-core-dumps-nolimit 2>&1 | python3 Tools/Scripts/filter-test-logs layout'],
                 env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
             ) + 0,
@@ -950,7 +950,7 @@ class TestRunWebKitTests(BuildStepMixinAdditions, unittest.TestCase):
                 workdir='wkdir',
                 timeout=10800,
                 logEnviron=False,
-                command=['/bin/sh', '-c',
+                command=['/bin/bash', '--posix', '-o', 'pipefail', '-c',
                          f'python3 Tools/Scripts/run-webkit-tests --no-build --no-show-results --no-new-test-results --clobber-old-results --builder-name WPE-Linux-64-bit-Release-Tests --build-number 103 --buildbot-worker wpe103 --buildbot-master {CURRENT_HOSTNAME} --report {RESULTS_WEBKIT_URL} --exit-after-n-crashes-or-timeouts 50 --exit-after-n-failures 500 --release --wpe --results-directory layout-test-results --debug-rwt-logging --enable-core-dumps-nolimit 2>&1 | python3 Tools/Scripts/filter-test-logs layout'],
                 env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
             ) + 0,
@@ -968,7 +968,7 @@ class TestRunWebKitTests(BuildStepMixinAdditions, unittest.TestCase):
                 workdir='wkdir',
                 timeout=36000,
                 logEnviron=False,
-                command=['/bin/sh', '-c',
+                command=['/bin/bash', '--posix', '-o', 'pipefail', '-c',
                          f'python3 Tools/Scripts/run-webkit-tests --no-build --no-show-results --no-new-test-results --clobber-old-results --builder-name iOS-14-Simulator-WK2-Tests-EWS --build-number 101 --buildbot-worker ews100 --buildbot-master {CURRENT_HOSTNAME} --report {RESULTS_WEBKIT_URL} --exit-after-n-crashes-or-timeouts 50 --exit-after-n-failures 500 --debug --results-directory layout-test-results --debug-rwt-logging --site-isolation 2>&1 | python3 Tools/Scripts/filter-test-logs layout'],
                 env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
             ) + 0
@@ -1003,7 +1003,7 @@ class TestRunDashboardTests(BuildStepMixinAdditions, unittest.TestCase):
                 workdir='wkdir',
                 logEnviron=False,
                 timeout=10800,
-                command=['/bin/sh', '-c',
+                command=['/bin/bash', '--posix', '-o', 'pipefail', '-c',
                          f'python3 Tools/Scripts/run-webkit-tests --no-build --no-show-results --no-new-test-results --clobber-old-results --builder-name Apple-Sequoia-Release-WK2-Tests --build-number 101 --buildbot-worker bot100 --buildbot-master {CURRENT_HOSTNAME} --report {RESULTS_WEBKIT_URL} --exit-after-n-crashes-or-timeouts 50 --exit-after-n-failures 500 --debug --no-http-servers --layout-tests-directory Tools/CISupport/build-webkit-org/public_html/dashboard/Scripts/tests --results-directory layout-test-results/dashboard-layout-test-results --debug-rwt-logging 2>&1 | python3 Tools/Scripts/filter-test-logs layout'],
                 env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
             ) + 0,
@@ -1020,7 +1020,7 @@ class TestRunDashboardTests(BuildStepMixinAdditions, unittest.TestCase):
                 workdir='wkdir',
                 logEnviron=False,
                 timeout=10800,
-                command=['/bin/sh', '-c',
+                command=['/bin/bash', '--posix', '-o', 'pipefail', '-c',
                          f'python3 Tools/Scripts/run-webkit-tests --no-build --no-show-results --no-new-test-results --clobber-old-results --builder-name Apple-Sequoia-Release-WK2-Tests --build-number 101 --buildbot-worker bot100 --buildbot-master {CURRENT_HOSTNAME} --report {RESULTS_WEBKIT_URL} --exit-after-n-crashes-or-timeouts 50 --exit-after-n-failures 500 --release --no-http-servers --layout-tests-directory Tools/CISupport/build-webkit-org/public_html/dashboard/Scripts/tests --results-directory layout-test-results/dashboard-layout-test-results --debug-rwt-logging 2>&1 | python3 Tools/Scripts/filter-test-logs layout'],
                 env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
             ) + ExpectShell.log('stdio', stdout='9 failures found.')
@@ -1058,7 +1058,7 @@ class TestRunWebKit1Tests(BuildStepMixinAdditions, unittest.TestCase):
                 workdir='wkdir',
                 logEnviron=False,
                 timeout=10800,
-                command=['/bin/sh', '-c',
+                command=['/bin/bash', '--posix', '-o', 'pipefail', '-c',
                          f'python3 Tools/Scripts/run-webkit-tests --no-build --no-show-results --no-new-test-results --clobber-old-results --builder-name Apple-iOS-14-Simulator-Debug-Build --build-number 101 --buildbot-worker bot100 --buildbot-master {CURRENT_HOSTNAME} --report {RESULTS_WEBKIT_URL} --exit-after-n-crashes-or-timeouts 50 --exit-after-n-failures 500 --debug --dump-render-tree --results-directory layout-test-results --debug-rwt-logging 2>&1 | python3 Tools/Scripts/filter-test-logs layout'],
                 env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
             ) + 0,
@@ -1077,7 +1077,7 @@ class TestRunWebKit1Tests(BuildStepMixinAdditions, unittest.TestCase):
                 workdir='wkdir',
                 logEnviron=False,
                 timeout=10800,
-                command=['/bin/sh', '-c',
+                command=['/bin/bash', '--posix', '-o', 'pipefail', '-c',
                          f'python3 Tools/Scripts/run-webkit-tests --no-build --no-show-results --no-new-test-results --clobber-old-results --builder-name Apple-iOS-14-Simulator-Debug-Build --build-number 101 --buildbot-worker bot100 --buildbot-master {CURRENT_HOSTNAME} --report {RESULTS_WEBKIT_URL} --exit-after-n-crashes-or-timeouts 50 --exit-after-n-failures 500 --release --dump-render-tree --results-directory layout-test-results --debug-rwt-logging 2>&1 | python3 Tools/Scripts/filter-test-logs layout'],
                 env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
             ) + ExpectShell.log('stdio', stdout='9 failures found.')
@@ -1113,7 +1113,7 @@ class TestRunWorldLeaksTests(BuildStepMixinAdditions, unittest.TestCase):
                 workdir='wkdir',
                 logEnviron=False,
                 timeout=10800,
-                command=['/bin/sh', '-c',
+                command=['/bin/bash', '--posix', '-o', 'pipefail', '-c',
                          f'python3 Tools/Scripts/run-webkit-tests --no-build --no-show-results --no-new-test-results --clobber-old-results --exit-after-n-crashes-or-timeouts 50 --exit-after-n-failures 500 --debug --world-leaks --results-directory layout-test-results/world-leaks-layout-test-results --debug-rwt-logging 2>&1 | python3 Tools/Scripts/filter-test-logs layout'],
                 env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
             ) + 0,
@@ -1130,8 +1130,8 @@ class TestRunWorldLeaksTests(BuildStepMixinAdditions, unittest.TestCase):
                 workdir='wkdir',
                 logEnviron=False,
                 timeout=10800,
-                command=['/bin/sh',
-                         '-c', f'python3 Tools/Scripts/run-webkit-tests --no-build --no-show-results --no-new-test-results --clobber-old-results --exit-after-n-crashes-or-timeouts 50 --exit-after-n-failures 500 --release --world-leaks --results-directory layout-test-results/world-leaks-layout-test-results --debug-rwt-logging 2>&1 | python3 Tools/Scripts/filter-test-logs layout'],
+                command=['/bin/bash', '--posix', '-o', 'pipefail', '-c',
+                         f'python3 Tools/Scripts/run-webkit-tests --no-build --no-show-results --no-new-test-results --clobber-old-results --exit-after-n-crashes-or-timeouts 50 --exit-after-n-failures 500 --release --world-leaks --results-directory layout-test-results/world-leaks-layout-test-results --debug-rwt-logging 2>&1 | python3 Tools/Scripts/filter-test-logs layout'],
                 env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
             ) + ExpectShell.log('stdio', stdout='9 failures found.')
             + 2,
@@ -1170,7 +1170,7 @@ class TestRunJavaScriptCoreTests(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(workdir='wkdir',
                         logEnviron=False,
-                        command=['/bin/sh', '-c', ' '.join(command) + ' 2>&1 | python3 Tools/Scripts/filter-test-logs jsc'],
+                        command=['/bin/bash', '--posix', '-o', 'pipefail', '-c', ' '.join(command) + ' 2>&1 | python3 Tools/Scripts/filter-test-logs jsc'],
                         logfiles={'json': self.jsonFileName},
                         env={'RESULTS_SERVER_API_KEY': 'test-api-key'},
                         timeout=72000,
@@ -1186,7 +1186,7 @@ class TestRunJavaScriptCoreTests(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(workdir='wkdir',
                         logEnviron=False,
-                        command=['/bin/sh', '-c', ' '.join(command) + ' 2>&1 | python3 Tools/Scripts/filter-test-logs jsc'],
+                        command=['/bin/bash', '--posix', '-o', 'pipefail', '-c', ' '.join(command) + ' 2>&1 | python3 Tools/Scripts/filter-test-logs jsc'],
                         logfiles={'json': self.jsonFileName},
                         env={'RESULTS_SERVER_API_KEY': 'test-api-key'},
                         timeout=72000,
@@ -1229,7 +1229,7 @@ class TestRunAPITests(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(workdir='wkdir',
                         logEnviron=False,
-                        command=['/bin/sh', '-c', command + ' > logs.txt 2>&1 ; grep "Ran " logs.txt'],
+                        command=['/bin/bash', '--posix', '-o', 'pipefail', '-c', command + ' > logs.txt 2>&1 ; grep "Ran " logs.txt'],
                         logfiles={'json': self.jsonFileName},
                         env={'RESULTS_SERVER_API_KEY': 'test-api-key'},
                         timeout=10800,
@@ -1483,7 +1483,7 @@ ProductVersion:	15.0
 BuildVersion:	24A335'''),
             ExpectShell(command=['system_profiler', 'SPSoftwareDataType', 'SPHardwareDataType'], workdir='wkdir', timeout=60, logEnviron=False) + 0
             + ExpectShell.log('stdio', stdout='Configuration version: Software: System Software Overview: System Version: macOS 11.4 (20F71) Kernel Version: Darwin 20.5.0 Boot Volume: Macintosh HD Boot Mode: Normal Computer Name: bot1020 User Name: WebKit Build Worker (buildbot) Secure Virtual Memory: Enabled System Integrity Protection: Enabled Time since boot: 27 seconds Hardware: Hardware Overview: Model Name: Mac mini Model Identifier: Macmini8,1 Processor Name: 6-Core Intel Core i7 Processor Speed: 3.2 GHz Number of Processors: 1 Total Number of Cores: 6 L2 Cache (per Core): 256 KB L3 Cache: 12 MB Hyper-Threading Technology: Enabled Memory: 32 GB System Firmware Version: 1554.120.19.0.0 (iBridge: 18.16.14663.0.0,0) Serial Number (system): C07DXXXXXXXX Hardware UUID: F724DE6E-706A-5A54-8D16-000000000000 Provisioning UDID: E724DE6E-006A-5A54-8D16-000000000000 Activation Lock Status: Disabled Xcode 12.5 Build version 12E262'),
-            ExpectShell(command=['/bin/sh', '-c', 'echo TimezoneVers: $(cat /usr/share/zoneinfo/+VERSION)'], workdir='wkdir', timeout=60, logEnviron=False) + 0,
+            ExpectShell(command=['cat', '/usr/share/zoneinfo/+VERSION'], workdir='wkdir', timeout=60, logEnviron=False) + 0,
             ExpectShell(command=['xcodebuild', '-sdk', '-version'], workdir='wkdir', timeout=60, logEnviron=False)
             + ExpectShell.log('stdio', stdout='''MacOSX15.sdk - macOS 15.0 (macosx15.0)
 SDKVersion: 15.0
@@ -1526,7 +1526,7 @@ ProductVersion:	14.5
 BuildVersion:	23F79'''),
             ExpectShell(command=['system_profiler', 'SPSoftwareDataType', 'SPHardwareDataType'], workdir='wkdir', timeout=60, logEnviron=False) + 0
             + ExpectShell.log('stdio', stdout='Sample system information'),
-            ExpectShell(command=['/bin/sh', '-c', 'echo TimezoneVers: $(cat /usr/share/zoneinfo/+VERSION)'], workdir='wkdir', timeout=60, logEnviron=False) + 0,
+            ExpectShell(command=['cat', '/usr/share/zoneinfo/+VERSION'], workdir='wkdir', timeout=60, logEnviron=False) + 0,
             ExpectShell(command=['xcodebuild', '-sdk', '-version'], workdir='wkdir', timeout=60, logEnviron=False)
             + ExpectShell.log('stdio', stdout='''iPhoneSimulator17.5.sdk - Simulator - iOS 17.5 (iphonesimulator17.5)
 SDKVersion: 17.5
@@ -1560,7 +1560,7 @@ ProductVersion:	14.5
 BuildVersion:	23F79'''),
             ExpectShell(command=['system_profiler', 'SPSoftwareDataType', 'SPHardwareDataType'], workdir='wkdir', timeout=60, logEnviron=False) + 0
             + ExpectShell.log('stdio', stdout='Sample system information'),
-            ExpectShell(command=['/bin/sh', '-c', 'echo TimezoneVers: $(cat /usr/share/zoneinfo/+VERSION)'], workdir='wkdir', timeout=60, logEnviron=False) + 0,
+            ExpectShell(command=['cat', '/usr/share/zoneinfo/+VERSION'], workdir='wkdir', timeout=60, logEnviron=False) + 0,
             ExpectShell(command=['xcodebuild', '-sdk', '-version'], workdir='wkdir', timeout=60, logEnviron=False) + 0
             + ExpectShell.log('stdio', stdout='''Xcode 15.4\nBuild version 15F31d'''),
         )
@@ -1622,7 +1622,7 @@ BuildVersion:	23F79'''),
 OSError: [Errno 2] No such file or directory'''),
             ExpectShell(command=['system_profiler', 'SPSoftwareDataType', 'SPHardwareDataType'], workdir='wkdir', timeout=60, logEnviron=False) + 0
             + ExpectShell.log('stdio', stdout='Sample system information'),
-            ExpectShell(command=['/bin/sh', '-c', 'echo TimezoneVers: $(cat /usr/share/zoneinfo/+VERSION)'], workdir='wkdir', timeout=60, logEnviron=False) + 0,
+            ExpectShell(command=['cat', '/usr/share/zoneinfo/+VERSION'], workdir='wkdir', timeout=60, logEnviron=False) + 0,
             ExpectShell(command=['xcodebuild', '-sdk', '-version'], workdir='wkdir', timeout=60, logEnviron=False)
             + ExpectShell.log('stdio', stdout='''Upon execvpe xcodebuild ['xcodebuild', '-sdk', '-version'] in environment id 7696545612416
 :Traceback (most recent call last):
@@ -1898,7 +1898,7 @@ class TestRunWebDriverTests(BuildStepMixinAdditions, unittest.TestCase):
                 workdir='wkdir',
                 logEnviron=True,
                 logfiles={'json': self.jsonFileName},
-                command=['/bin/sh', '-c', 'python3 Tools/Scripts/run-webdriver-tests --json-output=webdriver_tests.json --release > logs.txt 2>&1'],
+                command=['/bin/bash', '--posix', '-o', 'pipefail', '-c', 'python3 Tools/Scripts/run-webdriver-tests --json-output=webdriver_tests.json --release > logs.txt 2>&1'],
                 timeout=5400
             ) + 0,
         )
@@ -1914,7 +1914,7 @@ class TestRunWebDriverTests(BuildStepMixinAdditions, unittest.TestCase):
                 workdir='wkdir',
                 logEnviron=True,
                 logfiles={'json': self.jsonFileName},
-                command=['/bin/sh', '-c', 'python3 Tools/Scripts/run-webdriver-tests --json-output=webdriver_tests.json --release > logs.txt 2>&1'],
+                command=['/bin/bash', '--posix', '-o', 'pipefail', '-c', 'python3 Tools/Scripts/run-webdriver-tests --json-output=webdriver_tests.json --release > logs.txt 2>&1'],
                 timeout=5400
             ) + 1,
         )
@@ -2087,7 +2087,7 @@ exit 1''')
 
 class TestScanBuild(BuildStepMixinAdditions, unittest.TestCase):
     WORK_DIR = 'wkdir'
-    EXPECTED_BUILD_COMMAND = ['/bin/sh', '-c', f'Tools/Scripts/build-and-analyze --output-dir wkdir/build/{SCAN_BUILD_OUTPUT_DIR} --configuration release --only-smart-pointers --analyzer-path=wkdir/llvm-project/build/bin/clang --scan-build-path=../llvm-project/clang/tools/scan-build/bin/scan-build --sdkroot=macosx --preprocessor-additions=CLANG_WEBKIT_BRANCH=1 2>&1 | python3 Tools/Scripts/filter-test-logs scan-build --output build-log.txt']
+    EXPECTED_BUILD_COMMAND = ['/bin/bash', '--posix', '-o', 'pipefail', '-c', f'Tools/Scripts/build-and-analyze --output-dir wkdir/build/{SCAN_BUILD_OUTPUT_DIR} --configuration release --only-smart-pointers --analyzer-path=wkdir/llvm-project/build/bin/clang --scan-build-path=../llvm-project/clang/tools/scan-build/bin/scan-build --sdkroot=macosx --preprocessor-additions=CLANG_WEBKIT_BRANCH=1 2>&1 | python3 Tools/Scripts/filter-test-logs scan-build --output build-log.txt']
 
     def setUp(self):
         return self.setUpBuildStep()
@@ -2105,7 +2105,7 @@ class TestScanBuild(BuildStepMixinAdditions, unittest.TestCase):
 
         self.expectRemoteCommands(
             ExpectShell(workdir=self.WORK_DIR,
-                        command=['/bin/sh', '-c', f'/bin/rm -rf wkdir/build/{SCAN_BUILD_OUTPUT_DIR}'],
+                        command=['/bin/bash', '--posix', '-o', 'pipefail', '-c', f'/bin/rm -rf wkdir/build/{SCAN_BUILD_OUTPUT_DIR}'],
                         timeout=2 * 60 * 60) + 0,
             ExpectShell(workdir=self.WORK_DIR,
                         command=self.EXPECTED_BUILD_COMMAND,
@@ -2123,7 +2123,7 @@ class TestScanBuild(BuildStepMixinAdditions, unittest.TestCase):
 
         self.expectRemoteCommands(
             ExpectShell(workdir=self.WORK_DIR,
-                        command=['/bin/sh', '-c', f'/bin/rm -rf wkdir/build/{SCAN_BUILD_OUTPUT_DIR}'],
+                        command=['/bin/bash', '--posix', '-o', 'pipefail', '-c', f'/bin/rm -rf wkdir/build/{SCAN_BUILD_OUTPUT_DIR}'],
                         timeout=2 * 60 * 60)
             + 0,
             ExpectShell(workdir=self.WORK_DIR,
@@ -2142,7 +2142,7 @@ class TestScanBuild(BuildStepMixinAdditions, unittest.TestCase):
 
         self.expectRemoteCommands(
             ExpectShell(workdir=self.WORK_DIR,
-                        command=['/bin/sh', '-c', f'/bin/rm -rf wkdir/build/{SCAN_BUILD_OUTPUT_DIR}'],
+                        command=['/bin/bash', '--posix', '-o', 'pipefail', '-c', f'/bin/rm -rf wkdir/build/{SCAN_BUILD_OUTPUT_DIR}'],
                         timeout=2 * 60 * 60)
             + 0,
             ExpectShell(workdir=self.WORK_DIR,
@@ -2252,11 +2252,11 @@ class TestUpdateSaferCPPBaseline(BuildStepMixinAdditions, unittest.TestCase):
 
         self.expectRemoteCommands(
             ExpectShell(workdir='wkdir',
-                        command=['/bin/sh', '-c', 'rm -r wkdir/smart-pointer-result-archive/baseline'],)
+                        command=['/bin/bash', '--posix', '-o', 'pipefail', '-c', 'rm -r wkdir/smart-pointer-result-archive/baseline'],)
             + ExpectShell.log('stdio', stdout='')
             + 0,
             ExpectShell(workdir='wkdir',
-                        command=['/bin/sh', '-c', 'cp -r wkdir/smart-pointer-result-archive/2 wkdir/smart-pointer-result-archive/baseline'],)
+                        command=['/bin/bash', '--posix', '-o', 'pipefail', '-c', 'cp -r wkdir/smart-pointer-result-archive/2 wkdir/smart-pointer-result-archive/baseline'],)
             + ExpectShell.log('stdio', stdout='')
             + 0,
         )

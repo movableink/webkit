@@ -46,6 +46,8 @@ import socket
 import sys
 import time
 
+from Shared.steps import ShellMixin
+
 if sys.version_info < (3, 9):  # noqa: UP036
     print('ERROR: Minimum supported Python version for this code is Python 3.9')
     sys.exit(1)
@@ -548,23 +550,6 @@ class GitHubMixin(object):
         except Exception as e:
             yield self._addToLog('stdio', f"Error in updating PR {pr_number}\n    {e}\n")
             defer.returnValue(False)
-
-
-class ShellMixin(object):
-    WINDOWS_SHELL_PLATFORMS = ['win', 'playstation']
-
-    def has_windows_shell(self):
-        return self.getProperty('platform', '*') in self.WINDOWS_SHELL_PLATFORMS
-
-    def shell_command(self, command):
-        if self.has_windows_shell():
-            return ['sh', '-c', command]
-        return ['/bin/sh', '-c', command]
-
-    def shell_exit_0(self):
-        if self.has_windows_shell():
-            return 'exit 0'
-        return 'true'
 
 
 class AddToLogMixin(object):
@@ -5971,7 +5956,7 @@ class PrintConfiguration(steps.ShellSequence):
     warnOnFailure = False
     logEnviron = False
     command_list_generic = [['hostname']]
-    command_list_apple = [['df', '-hl'], ['date'], ['sw_vers'], ['system_profiler', 'SPSoftwareDataType', 'SPHardwareDataType'], ['/bin/sh', '-c', 'echo TimezoneVers: $(cat /usr/share/zoneinfo/+VERSION)'], ['xcodebuild', '-sdk', '-version']]
+    command_list_apple = [['df', '-hl'], ['date'], ['sw_vers'], ['system_profiler', 'SPSoftwareDataType', 'SPHardwareDataType'], ['cat', '/usr/share/zoneinfo/+VERSION'], ['xcodebuild', '-sdk', '-version']]
     command_list_linux = [['df', '-hl', '--exclude-type=fuse.portal'], ['date'], ['uname', '-a'], ['uptime']]
 
     def __init__(self, **kwargs):
@@ -6251,7 +6236,7 @@ class PushCommitToWebKitRepo(shell.ShellCommand):
 class DetermineLandedIdentifier(shell.ShellCommandNewStyle):
     name = 'determine-landed-identifier'
     descriptionDone = ['Determined landed identifier']
-    command = ['/bin/sh', '-c', "git log -1 --no-decorate | grep 'Canonical link: https://commits\\.webkit\\.org/'"]
+    command = ['/bin/bash', '--posix', '-o', 'pipefail', '-c', "git log -1 --no-decorate | grep 'Canonical link: https://commits\\.webkit\\.org/'"]
     CANONICAL_LINK_RE = re.compile(r'\ACanonical link: https://commits\.webkit\.org/(?P<identifier>\d+.?\d*@\S+)\Z')
     haltOnFailure = False
 

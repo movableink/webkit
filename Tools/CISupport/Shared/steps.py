@@ -47,15 +47,29 @@ LLVM_REVISION = 'e8e99e6cbbd6596dbd7e6f1c25c7eebb9bafa1c8'
 
 
 class ShellMixin(object):
-    WINDOWS_SHELL_PLATFORMS = ['win']
+    WINDOWS_SHELL_PLATFORMS = ['win', 'playstation']
 
     def has_windows_shell(self):
         return self.getProperty('platform', '*') in self.WINDOWS_SHELL_PLATFORMS
 
-    def shell_command(self, command):
-        if self.has_windows_shell():
-            return ['sh', '-c', command]
-        return ['/bin/sh', '-c', command]
+    def shell_command(self, command, pipefail=True):
+        if pipefail:
+            # -o pipefail is new in POSIX 2024, and on systems using `dash` to provide
+            # `sh` (e.g., Debian and Ubuntu) this is unsupported, as it is currently
+            # only supported in pre-release versions of `dash`. For now, we use `bash`
+            # in its POSIX mode (which is also its default when it is invoked as `sh`)
+            # to try and reduce the risk of bashisms slipping in.
+            if self.has_windows_shell():
+                shell = 'bash'
+            else:
+                shell = '/bin/bash'
+            return [shell, '--posix', '-o', 'pipefail', '-c', command]
+        else:
+            if self.has_windows_shell():
+                shell = 'sh'
+            else:
+                shell = '/bin/sh'
+            return [shell, '-c', command]
 
     def shell_exit_0(self):
         if self.has_windows_shell():
