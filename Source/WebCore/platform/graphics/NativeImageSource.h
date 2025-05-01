@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc.  All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,7 +39,7 @@ private:
     IntSize size(ImageOrientation = ImageOrientation::Orientation::FromImage) const final { return m_frame.size(); }
     DestinationColorSpace colorSpace() const final { return m_frame.nativeImage()->colorSpace(); }
     std::optional<Color> singlePixelSolidColor() const final { return m_frame.nativeImage()->singlePixelSolidColor(); }
-    bool hasHDRContent() const final { return m_frame.nativeImage()->headroom() > Headroom::None; }
+    bool hasHDRContent() const final { return colorSpace().usesITUR_2100TF(); }
 
     const ImageFrame& primaryImageFrame(const std::optional<SubsamplingLevel>& = std::nullopt) final { return m_frame; }
 

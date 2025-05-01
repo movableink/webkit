@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc.  All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,8 +57,8 @@ public:
     RepetitionCount repetitionCount() const;
     DestinationColorSpace colorSpace() const;
     std::optional<Color> singlePixelSolidColor() const;
-    Headroom headroom() const;
     bool hasHDRGainMap() const;
+    bool hasHDRColorSpace() const;
 
     String uti() const;
     String filenameExtension() const;
@@ -88,14 +88,13 @@ private:
         RepetitionCount             = 1 << 6,
         ColorSpace                  = 1 << 7,
         SinglePixelSolidColor       = 1 << 8,
-        Headroom                    = 1 << 9,
-        HasHDRGainMap               = 1 << 10,
+        HasHDRGainMap               = 1 << 9,
 
-        UTI                         = 1 << 11,
-        FilenameExtension           = 1 << 12,
-        AccessibilityDescription    = 1 << 13,
-        HotSpot                     = 1 << 14,
-        MaximumSubsamplingLevel     = 1 << 15,
+        UTI                         = 1 << 10,
+        FilenameExtension           = 1 << 11,
+        AccessibilityDescription    = 1 << 12,
+        HotSpot                     = 1 << 13,
+        MaximumSubsamplingLevel     = 1 << 14,
     };
 
     template<typename MetadataType>
@@ -118,7 +117,6 @@ private:
     mutable RepetitionCount m_repetitionCount { RepetitionCountNone };
     mutable DestinationColorSpace m_colorSpace { DestinationColorSpace::SRGB() };
     mutable std::optional<Color> m_singlePixelSolidColor;
-    mutable Headroom m_headroom { Headroom::None };
     mutable bool m_hasHDRGainMap { false };
 
     mutable String m_uti;

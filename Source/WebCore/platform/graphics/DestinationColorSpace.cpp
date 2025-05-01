@@ -170,6 +170,16 @@ bool DestinationColorSpace::usesExtendedRange() const
 #endif
 }
 
+bool DestinationColorSpace::usesITUR_2100TF() const
+{
+#if USE(CG)
+    return CGColorSpaceUsesITUR_2100TF(platformColorSpace());
+#else
+    notImplemented();
+    return false;
+#endif
+}
+
 TextStream& operator<<(TextStream& ts, const DestinationColorSpace& colorSpace)
 {
     if (colorSpace == DestinationColorSpace::SRGB())

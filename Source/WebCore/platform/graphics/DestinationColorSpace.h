@@ -66,6 +66,7 @@ public:
     WEBCORE_EXPORT bool supportsOutput() const;
 
     bool usesExtendedRange() const;
+    bool usesITUR_2100TF() const;
 
 private:
     PlatformColorSpace m_platformColorSpace;

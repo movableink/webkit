@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc.  All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -163,14 +163,25 @@ std::optional<Color> BitmapImageDescriptor::singlePixelSolidColor() const
     return primaryNativeImageMetadata(m_singlePixelSolidColor, std::optional<Color>(), CachedFlag::SinglePixelSolidColor, &NativeImage::singlePixelSolidColor);
 }
 
-Headroom BitmapImageDescriptor::headroom() const
-{
-    return primaryImageFrameMetadata(m_headroom, CachedFlag::Headroom, &ImageFrame::headroom);
-}
-
 bool BitmapImageDescriptor::hasHDRGainMap() const
 {
     return imageMetadata(m_hasHDRGainMap, false, CachedFlag::HasHDRGainMap, &ImageDecoder::hasHDRGainMap);
+}
+
+bool BitmapImageDescriptor::hasHDRColorSpace() const
+{
+    if (m_cachedFlags.contains(CachedFlag::ColorSpace))
+        return m_colorSpace.usesITUR_2100TF();
+
+    if (m_source->primaryNativeImageIfExists())
+        return colorSpace().usesITUR_2100TF();
+
+    bool hasHDRColorSpace = colorSpace().usesITUR_2100TF();
+
+    // FIXME: This frame may not be destroyed. It can be reused for sync image decoding.
+    // Async image decoding should destroy this frame and treat it as if it did not exist.
+    m_source->destroyNativeImageAtIndex(m_source->primaryFrameIndex());
+    return hasHDRColorSpace;
 }
 
 String BitmapImageDescriptor::uti() const
