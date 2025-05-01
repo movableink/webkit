@@ -58,7 +58,7 @@ public:
     struct IncludedProperties {
         OptionSet<PropertyType> types;
         // Ids are mutually exclusive with types. They are low-priority only.
-        Vector<CSSPropertyID> ids { };
+        Vector<CSSPropertyID, 4> ids { };
 
         bool isEmpty() const { return !types && ids.isEmpty(); }
     };
