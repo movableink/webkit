@@ -401,11 +401,11 @@ void JSGenericTypedArrayView<Adaptor>::copyFromDoubleShapeArray(size_t offset, J
     ASSERT((length + objectOffset) <= array->length());
     ASSERT(array->isIteratorProtocolFastAndNonObservable());
 
-    if constexpr (Adaptor::typeValue == TypeFloat64) {
-        // Double to double copy. Thus we can use memcpy (since Array will never overlap with TypedArrays' backing store).
+    if constexpr (Adaptor::typeValue == TypeFloat64 || Adaptor::typeValue == TypeFloat32) {
         WTF::copyElements(typedSpan().subspan(offset), std::span<const double> { array->butterfly()->contiguousDouble().data() + objectOffset, length });
         return;
     }
+
     for (size_t i = 0; i < length; ++i) {
         double d = array->butterfly()->contiguousDouble().at(array, static_cast<unsigned>(i + objectOffset));
         setIndexQuicklyToNativeValue(offset + i, Adaptor::toNativeFromDouble(d));

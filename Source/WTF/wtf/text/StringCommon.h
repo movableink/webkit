@@ -1218,6 +1218,33 @@ inline void copyElements(std::span<uint8_t> destinationSpan, std::span<const uin
         *destination++ = *source++;
 }
 
+inline void copyElements(std::span<float> destinationSpan, std::span<const double> sourceSpan)
+{
+    ASSERT(!spansOverlap(destinationSpan, sourceSpan));
+    ASSERT(destinationSpan.size() >= sourceSpan.size());
+    auto* __restrict destination = destinationSpan.data();
+    auto* __restrict source = sourceSpan.data();
+    size_t length = sourceSpan.size();
+
+    const auto* end = destination + length;
+    const uintptr_t memoryAccessSize = 64 / sizeof(double);
+    if (length >= memoryAccessSize) {
+        const uintptr_t memoryAccessMask = memoryAccessSize - 1;
+        const uintptr_t lengthLeft = end - destination;
+        const auto* const simdEnd = destination + (lengthLeft & ~memoryAccessMask);
+        do {
+            simde_float64x2x4_t result = simde_vld1q_f64_x4(source);
+            source += memoryAccessSize;
+            simde_float32x4_t converted0 = simde_vcvt_high_f32_f64(simde_vcvt_f32_f64(result.val[0]), result.val[1]);
+            simde_float32x4_t converted1 = simde_vcvt_high_f32_f64(simde_vcvt_f32_f64(result.val[2]), result.val[3]);
+            simde_vst1q_f32_x2(destination, simde_float32x4x2_t { converted0, converted1 });
+            destination += memoryAccessSize;
+        } while (destination != simdEnd);
+    }
+    while (destination != end)
+        *destination++ = *source++;
+}
+
 #ifndef __swift__ // FIXME: rdar://136156228
 inline void copyElements(std::span<UChar> destination, std::span<const LChar> source)
 {
