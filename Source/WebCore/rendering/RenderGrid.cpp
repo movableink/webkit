@@ -886,12 +886,18 @@ unsigned RenderGrid::computeAutoRepeatTracksCount(GridTrackSizingDirection direc
     for (auto& autoTrackSize : autoRepeatTracks) {
         ASSERT(autoTrackSize.minTrackBreadth().isLength());
         ASSERT(!autoTrackSize.minTrackBreadth().isFlex());
-        bool hasDefiniteMaxTrackSizingFunction = autoTrackSize.maxTrackBreadth().isLength() && !autoTrackSize.maxTrackBreadth().isContentSized();
-        auto trackLength = hasDefiniteMaxTrackSizingFunction ? autoTrackSize.maxTrackBreadth().length() : autoTrackSize.minTrackBreadth().length();
-        bool hasDefiniteMinTrackSizingFunction = autoTrackSize.minTrackBreadth().isLength() && !autoTrackSize.minTrackBreadth().isContentSized();
-        if (hasDefiniteMinTrackSizingFunction && (trackLength.value() < autoTrackSize.minTrackBreadth().length().value()))
-            trackLength = autoTrackSize.minTrackBreadth().length();
-        autoRepeatTracksSize += valueForLength(trackLength, availableSize.value());
+
+        auto& minTrackSizingFunction = autoTrackSize.minTrackBreadth();
+        auto& maxTrackSizingFunction = autoTrackSize.maxTrackBreadth();
+        bool hasDefiniteMaxTrackSizingFunction = maxTrackSizingFunction.isLength() && !maxTrackSizingFunction.isContentSized();
+        bool hasDefiniteMinTrackSizingFunction = minTrackSizingFunction.isLength() && !minTrackSizingFunction.isContentSized();
+
+        auto contributingTrackSize = [&] {
+            if (hasDefiniteMaxTrackSizingFunction && hasDefiniteMinTrackSizingFunction)
+                return std::max(valueForLength(minTrackSizingFunction.length(), *availableSize), valueForLength(maxTrackSizingFunction.length(), *availableSize));
+            return hasDefiniteMaxTrackSizingFunction ? valueForLength(maxTrackSizingFunction.length(), *availableSize) : valueForLength(minTrackSizingFunction.length(), *availableSize);
+        };
+        autoRepeatTracksSize += contributingTrackSize();
     }
     // For the purpose of finding the number of auto-repeated tracks, the UA must floor the track size to a UA-specified
     // value to avoid division by zero. It is suggested that this floor be 1px.
