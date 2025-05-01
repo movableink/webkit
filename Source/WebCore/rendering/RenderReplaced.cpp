@@ -47,6 +47,7 @@
 #include "RenderElementInlines.h"
 #include "RenderFlexibleBox.h"
 #include "RenderFragmentedFlow.h"
+#include "RenderHTMLCanvas.h"
 #include "RenderHighlight.h"
 #include "RenderImage.h"
 #include "RenderLayer.h"
@@ -114,6 +115,19 @@ void RenderReplaced::styleDidChange(StyleDifference diff, const RenderStyle* old
         intrinsicSizeChanged();
 }
 
+static void issueFullRepaintOnSizeChangeIfNeeded(RenderReplaced& renderer)
+{
+    auto shouldRepaintOnSizeChange = [&] {
+        if (is<RenderHTMLCanvas>(renderer))
+            return true;
+        if (auto* renderImage = dynamicDowncast<RenderImage>(renderer); renderImage && !is<RenderMedia>(*renderImage) && !renderImage->isShowingMissingOrImageError())
+            return true;
+        return false;
+    };
+    if (shouldRepaintOnSizeChange())
+        renderer.repaint();
+}
+
 void RenderReplaced::layout()
 {
     StackStats::LayoutCheckPoint layoutCheckPoint;
@@ -132,12 +146,13 @@ void RenderReplaced::layout()
     addVisualEffectOverflow();
     updateLayerTransform();
     invalidateBackgroundObscurationStatus();
-
     repainter.repaintAfterLayout();
     clearNeedsLayout();
 
-    if (replacedContentRect() != oldContentRect)
+    if (replacedContentRect() != oldContentRect) {
         setPreferredLogicalWidthsDirty(true);
+        issueFullRepaintOnSizeChangeIfNeeded(*this);
+    }
 }
 
 void RenderReplaced::intrinsicSizeChanged()
