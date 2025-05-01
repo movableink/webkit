@@ -3853,16 +3853,11 @@ TEST(WritingTools, CompositionWithOmittedTrailingWhitespaceContent)
     TestWebKitAPI::Util::run(&finished);
 }
 
-// FIXME rdar://148280675
-#if PLATFORM(IOS) && !defined(NDEBUG)
-TEST(WritingTools, DISABLED_IntelligenceTextEffectCoordinatorDelegate_RectsForProofreadingSuggestionsInRange)
-#else
 TEST(WritingTools, IntelligenceTextEffectCoordinatorDelegate_RectsForProofreadingSuggestionsInRange)
-#endif
 {
     RetainPtr session = adoptNS([[WTSession alloc] initWithType:WTSessionTypeProofreading textViewDelegate:nil]);
 
-    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p id='first'>I don't thin so. I didn't quite here him.</p><p id='second'>Who's over they're. I could come their.</p></body>"]);
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body style='font-size: 14px; font-family: serif; line-height: 32px;' contenteditable><p id='first'>I don't thin so. I didn't quite here him.</p><p id='second'>Who's over they're. I could come their.</p></body>"]);
     [webView focusDocumentBodyAndSelectAll];
 
     NSString *originalText = @"I don't thin so. I didn't quite here him.\n\nWho's over they're. I could come their.";
@@ -3918,8 +3913,8 @@ TEST(WritingTools, IntelligenceTextEffectCoordinatorDelegate_RectsForProofreadin
     finished = false;
 
     const Vector<WebCore::IntRect> expectedRects {
-        { { 196, 8 }, { 29, 18 } },
-        { { 84, 42 }, { 40, 18 } },
+        { { 149, 8 }, { 22, 14 } },
+        { { 65, 34 }, { 30, 14 } },
     };
 
     for (NSUInteger i = 0; i < [rectValues count]; i++) {
