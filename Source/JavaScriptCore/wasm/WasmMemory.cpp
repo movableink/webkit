@@ -149,7 +149,7 @@ Ref<Memory> Memory::createZeroSized(VM& vm, MemorySharingMode sharingMode, WTF::
     return adoptRef(*new Memory(vm, PageCount(0), PageCount(0), sharingMode, WTFMove(growSuccessCallback)));
 }
 
-RefPtr<Memory> Memory::tryCreate(VM& vm, PageCount initial, PageCount maximum, MemorySharingMode sharingMode, WTF::Function<void(GrowSuccess, PageCount, PageCount)>&& growSuccessCallback)
+RefPtr<Memory> Memory::tryCreate(VM& vm, PageCount initial, PageCount maximum, MemorySharingMode sharingMode, std::optional<MemoryMode> desiredMemoryMode, WTF::Function<void(GrowSuccess, PageCount, PageCount)>&& growSuccessCallback)
 {
     ASSERT(initial);
     RELEASE_ASSERT(!maximum || maximum >= initial); // This should be guaranteed by our caller.
@@ -174,7 +174,7 @@ RefPtr<Memory> Memory::tryCreate(VM& vm, PageCount initial, PageCount maximum, M
         return nullptr;
         
     char* fastMemory = nullptr;
-    if (Options::useWasmFastMemory()) {
+    if (Options::useWasmFastMemory() && desiredMemoryMode.value_or(MemoryMode::Signaling) == MemoryMode::Signaling) {
 #if CPU(ADDRESS32)
         RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("32-bit platforms don't support fast memory.");
 #endif
@@ -204,6 +204,9 @@ RefPtr<Memory> Memory::tryCreate(VM& vm, PageCount initial, PageCount maximum, M
         RELEASE_ASSERT_NOT_REACHED();
         return nullptr;
     }
+
+    if (desiredMemoryMode == MemoryMode::Signaling)
+        return nullptr;
 
     if (UNLIKELY(Options::crashIfWasmCantFastMemory()))
         webAssemblyCouldntGetFastMemory();

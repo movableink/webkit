@@ -912,11 +912,11 @@ public:
 #endif
     }
 
-    void storeWasmCalleeCallee(const EncodedJSValue* boxedWasmCalleeLoadLocation)
+    void storeWasmCalleeCallee(const CalleeBits* boxedWasmCalleeLoadLocation)
     {
         ASSERT(boxedWasmCalleeLoadLocation);
-        JIT_COMMENT(*this, "> ", RawHex(*boxedWasmCalleeLoadLocation));
-        move(TrustedImmPtr(*boxedWasmCalleeLoadLocation), scratchRegister());
+        JIT_COMMENT(*this, "> ", RawPointer(boxedWasmCalleeLoadLocation->asNativeCallee()));
+        move(TrustedImmPtr(boxedWasmCalleeLoadLocation->rawPtr()), scratchRegister());
         storeWasmCalleeCallee(scratchRegister());
     }
 

@@ -582,11 +582,11 @@ class Sequence
             when "loadi", "loadis", "storei", "addi", "andi", "lshifti", "muli", "negi",
                 "noti", "ori", "rshifti", "urshifti", "subi", "xori", /^bi/, /^bti/,
                 /^ci/, /^ti/, "addis", "subis", "mulis", "smulli", "leai", "loadf", "storef", "loadlinkacqi", "storecondreli",
-                /^atomic[a-z]+i$/
+                /^atomic[a-z]+i$/, "transferi"
                 size = 4
             when "loadp", "storep", "loadq", "storeq", "loadqinc", "loadd", "stored", "lshiftp", "lshiftq", "negp", "negq", "rshiftp", "rshiftq",
                 "urshiftp", "urshiftq", "addp", "addq", "mulp", "mulq", "andp", "andq", "orp", "orq", "subp", "subq", "xorp", "xorq", "addd",
-                "divd", "subd", "muld", "sqrtd", /^bp/, /^bq/, /^btp/, /^btq/, /^cp/, /^cq/, /^tp/, /^tq/, /^bd/,
+                "divd", "subd", "muld", "sqrtd", /^bp/, /^bq/, /^btp/, /^btq/, /^cp/, /^cq/, /^tp/, /^tq/, /^bd/, "transferq", "transferp",
                 "jmp", "call", "leap", "leaq", "loadlinkacqq", "storecondrelq", /^atomic[a-z]+q$/, "loadv", "storev"
                 size = $currentSettings["ADDRESS64"] ? 8 : 4
             when "loadpairi", "storepairi"
@@ -652,9 +652,8 @@ class Sequence
             | node, address |
             case node.opcode
             when /^loadpair/, /^storepair/
-#                not (address.is_a? Address and not (-512..504).include? address.offset.value)
                 not address.is_a? Address or not isMalformedArm64LoadStorePairAddress(node.opcode, address)
-            when /^load/, /^store/
+            when /^load/, /^store/, /^transfer/
                 not address.is_a? Address or not isMalformedArm64LoadStoreAddress(node.opcode, address)
             when /^lea/
                 true
@@ -1027,6 +1026,21 @@ class Instruction
             emitARM64Access("ldrsb", "ldursb", operands[1], operands[0], :quad)
         when "storeb"
             emitARM64Unflipped("strb", operands, :word)
+        when "transferi"
+            $asm.puts "// transferi"
+            tmp = ARM64_EXTRA_GPRS[1]
+            emitARM64Access("ldr", "ldur", tmp, operands[0], :word)
+            emitARM64Unflipped("str", [tmp, operands[1]], :word)
+        when "transferq"
+            $asm.puts "// transferq"
+            tmp = ARM64_EXTRA_GPRS[1]
+            emitARM64Access("ldr", "ldur", tmp, operands[0], :quad)
+            emitARM64Unflipped("str", [tmp, operands[1]], :quad)
+        when "transferp"
+            $asm.puts "// transferp"
+            tmp = ARM64_EXTRA_GPRS[1]
+            emitARM64Access("ldr", "ldur", tmp, operands[0], :ptr)
+            emitARM64Unflipped("str", [tmp, operands[1]], :ptr)
         when "loadh"
             emitARM64Access("ldrh", "ldurh", operands[1], operands[0], :word)
         when "loadhsi"

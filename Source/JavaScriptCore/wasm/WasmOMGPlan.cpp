@@ -224,10 +224,6 @@ void OMGPlan::work()
         }
     }
 
-    auto* jsEntrypointCallee = m_calleeGroup->m_jsEntrypointCallees.get(m_functionIndex);
-    if (jsEntrypointCallee)
-        jsEntrypointCallee->setReplacementTarget(entrypoint);
-
     if (Options::freeRetiredWasmCode()) {
         WTF::storeStoreFence();
         Locker locker { m_calleeGroup->m_lock };

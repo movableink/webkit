@@ -80,13 +80,13 @@ JSC_DEFINE_JIT_OPERATION(operationJSToWasmEntryWrapperBuildFrame, JSEntrypointCa
     auto* globalObject = function->globalObject();
     VM& vm = globalObject->vm();
     NativeCallFrameTracer tracer(vm, callFrame);
-    auto* callee = function->m_jsToWasmCallee.ptr();
+    auto* callee = function->jsToWasmCallee();
     ASSERT(function);
     ASSERT(callee->ident() == 0xBF);
     ASSERT(callee->typeIndex() == function->typeIndex());
     ASSERT(callee->frameSize() + JSEntrypointCallee::SpillStackSpaceAligned == (reinterpret_cast<uintptr_t>(callFrame) - reinterpret_cast<uintptr_t>(sp)));
     dataLogLnIf(WasmOperationsInternal::verbose, "operationJSToWasmEntryWrapperBuildFrame setting callee: ", RawHex(CalleeBits::encodeNativeCallee(callee)));
-    dataLogLnIf(WasmOperationsInternal::verbose, "operationJSToWasmEntryWrapperBuildFrame wasm callee: ", RawHex(callee->wasmCallee()));
+    dataLogLnIf(WasmOperationsInternal::verbose, "operationJSToWasmEntryWrapperBuildFrame wasm callee: ", RawHex(callee->wasmCallee().encodedBits()));
 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -1277,8 +1277,13 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmLoopOSREnterBBQJIT, void, (Probe:
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmUnwind, void*, (JSWebAssemblyInstance* instance))
 {
+    ASSERT(instance->type() == WebAssemblyInstanceType);
     CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
-    assertCalleeIsReferenced(callFrame, instance);
+#if ASSERT_ENABLED
+    // JS -> Wasm might throw before it's transitioned to a NativeCallee. It should have restored any callee saves at this point already though.
+    if (callFrame->callee().isNativeCallee())
+        assertCalleeIsReferenced(callFrame, instance);
+#endif
     VM& vm = instance->vm();
     NativeCallFrameTracer tracer(vm, callFrame);
     genericUnwind(vm, callFrame);

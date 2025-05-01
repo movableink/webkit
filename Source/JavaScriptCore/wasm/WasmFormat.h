@@ -812,7 +812,7 @@ struct InternalFunction {
     unsigned osrEntryScratchBufferSize { 0 };
 };
 
-extern const EncodedJSValue NullWasmCallee;
+extern const CalleeBits NullWasmCallee;
 
 struct alignas(8) WasmCallableFunction {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
@@ -820,7 +820,8 @@ struct alignas(8) WasmCallableFunction {
     static constexpr ptrdiff_t offsetOfEntrypointLoadLocation() { return OBJECT_OFFSETOF(WasmCallableFunction, entrypointLoadLocation); }
     static constexpr ptrdiff_t offsetOfBoxedWasmCalleeLoadLocation() { return OBJECT_OFFSETOF(WasmCallableFunction, boxedWasmCalleeLoadLocation); }
 
-    const EncodedJSValue* boxedWasmCalleeLoadLocation { &NullWasmCallee };
+    // FIXME: This always points to the interpreter callee anyway so there's no point in having the extra indirection.
+    const CalleeBits* boxedWasmCalleeLoadLocation { &NullWasmCallee };
     // Target instance and entrypoint are only set for wasm->wasm calls, and are otherwise nullptr. The js-specific logic occurs through import function.
     WriteBarrier<JSWebAssemblyInstance> targetInstance { };
     LoadLocation entrypointLoadLocation { };
@@ -847,7 +848,7 @@ struct WasmOrJSImportableFunction : public WasmToWasmImportableFunction {
 
     CodePtr<WasmEntryPtrTag> importFunctionStub;
     WriteBarrier<JSObject> importFunction { };
-    EncodedJSValue boxedCallee { 0xBEEF };
+    CalleeBits boxedCallee { 0xBEEF };
 };
 
 struct WasmOrJSImportableFunctionCallLinkInfo final : public WasmOrJSImportableFunction {

@@ -38,7 +38,7 @@
 
 namespace JSC { namespace Wasm {
 
-constexpr EncodedJSValue NullWasmCallee = CalleeBits::encodeNullCallee();
+constexpr CalleeBits NullWasmCallee = CalleeBits::nullCallee();
 
 Segment::Ptr Segment::create(std::optional<I32InitExpr> offset, uint32_t sizeInBytes, Kind kind)
 {

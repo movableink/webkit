@@ -517,7 +517,7 @@ Box<PCToCodeOriginMap> OptimizingJITCallee::materializePCToOriginMap(B3::PCToOri
 
 #endif
 
-JSEntrypointCallee::JSEntrypointCallee(TypeIndex typeIndex, bool usesSIMD)
+JSEntrypointCallee::JSEntrypointCallee(TypeIndex typeIndex, bool)
     : Callee(Wasm::CompilationMode::JSToWasmEntrypointMode)
     , m_typeIndex(typeIndex)
 {
@@ -530,33 +530,6 @@ JSEntrypointCallee::JSEntrypointCallee(TypeIndex typeIndex, bool usesSIMD)
     totalFrameSize += JSEntrypointCallee::RegisterStackSpaceAligned;
     totalFrameSize = WTF::roundUpToMultipleOf<stackAlignmentBytes()>(totalFrameSize);
     m_frameSize = totalFrameSize;
-
-#if ENABLE(JIT)
-    if (Options::useWasmJIT()) {
-#else
-    if (false) {
-#endif
-        if (Options::useWasmIPInt())
-            if (usesSIMD)
-                m_wasmFunctionPrologue = LLInt::inPlaceInterpreterSIMDEntryThunk().code().retagged<WasmEntryPtrTag>();
-            else
-                m_wasmFunctionPrologue = LLInt::inPlaceInterpreterEntryThunk().code().retagged<WasmEntryPtrTag>();
-        else {
-            if (usesSIMD)
-                m_wasmFunctionPrologue = LLInt::wasmFunctionEntryThunkSIMD().code().retagged<WasmEntryPtrTag>();
-            else
-                m_wasmFunctionPrologue = LLInt::wasmFunctionEntryThunk().code().retagged<WasmEntryPtrTag>();
-        }
-    } else {
-        if (Options::useWasmIPInt())
-            m_wasmFunctionPrologue = CodePtr<CFunctionPtrTag>(LLInt::getCodeFunctionPtr<CFunctionPtrTag>(ipint_trampoline)).retagged<WasmEntryPtrTag>();
-        else {
-            if (usesSIMD)
-                m_wasmFunctionPrologue = CodePtr<CFunctionPtrTag>(LLInt::getCodeFunctionPtr<CFunctionPtrTag>(wasm_function_prologue_simd_trampoline)).retagged<WasmEntryPtrTag>();
-            else
-                m_wasmFunctionPrologue = CodePtr<CFunctionPtrTag>(LLInt::getCodeFunctionPtr<CFunctionPtrTag>(wasm_function_prologue_trampoline)).retagged<WasmEntryPtrTag>();
-        }
-    }
 }
 
 CodePtr<WasmEntryPtrTag> JSEntrypointCallee::entrypointImpl() const

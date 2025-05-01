@@ -110,6 +110,8 @@ static inline Wasm::JITCallee* jitCompileAndSetHeuristics(Wasm::IPIntCallee* cal
 
     MemoryMode memoryMode = instance->memory()->mode();
     Wasm::CalleeGroup& calleeGroup = *instance->calleeGroup();
+    ASSERT(instance->memoryMode() == memoryMode);
+    ASSERT(memoryMode == calleeGroup.mode());
     auto getReplacement = [&] () -> Wasm::JITCallee* {
         Locker locker { calleeGroup.m_lock };
         if (osrFor == OSRFor::Call)
@@ -952,13 +954,11 @@ WASM_IPINT_EXTERN_CPP_DECL(prepare_call_indirect, CallFrame* callFrame, Wasm::Fu
         IPINT_THROW(Wasm::ExceptionType::BadSignature);
 
     Register* calleeReturn = std::bit_cast<Register*>(functionIndex);
-    EncodedJSValue boxedCallee = CalleeBits::encodeNullCallee();
     if (function.m_function.boxedWasmCalleeLoadLocation)
-        boxedCallee = CalleeBits::encodeBoxedNativeCallee(reinterpret_cast<void*>(*function.m_function.boxedWasmCalleeLoadLocation));
+        *calleeReturn = function.m_function.boxedWasmCalleeLoadLocation->encodedBits();
     else
-        boxedCallee = CalleeBits::encodeNativeCallee(
+        *calleeReturn = CalleeBits::encodeNativeCallee(
             function.m_instance->calleeGroup()->wasmCalleeFromFunctionIndexSpace(*functionIndex));
-    *calleeReturn = boxedCallee;
 
     Register& functionInfoSlot = calleeReturn[1];
     if (!function.m_function.targetInstance)
@@ -990,9 +990,9 @@ WASM_IPINT_EXTERN_CPP_DECL(prepare_call_ref, CallFrame* callFrame, Wasm::TypeInd
 
     ASSERT(function.boxedWasmCalleeLoadLocation);
     if (function.boxedWasmCalleeLoadLocation)
-        sp->ref = CalleeBits::encodeBoxedNativeCallee(reinterpret_cast<void*>(*function.boxedWasmCalleeLoadLocation));
+        sp->ref = function.boxedWasmCalleeLoadLocation->encodedBits();
     else
-        sp->ref = CalleeBits::encodeNullCallee();
+        sp->ref = CalleeBits::nullCallee().encodedBits();
 
     Register& functionInfoSlot = std::bit_cast<Register*>(sp)[1];
     if (!function.targetInstance)

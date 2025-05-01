@@ -84,7 +84,7 @@
 #include "VMTrapsInlines.h"
 #include "WasmCapabilities.h"
 #include "WasmFaultSignalHandler.h"
-#include "WasmMemory.h"
+#include "WebAssemblyMemoryConstructor.h"
 #include <span>
 #include <stdio.h>
 #include <stdlib.h>
@@ -388,6 +388,7 @@ static JSC_DECLARE_HOST_FUNCTION(functionAsyncTestPassed);
 
 #if ENABLE(WEBASSEMBLY)
 static JSC_DECLARE_HOST_FUNCTION(functionWebAssemblyMemoryMode);
+static JSC_DECLARE_HOST_FUNCTION(functionCreateWebAssemblyMemoryWithMode);
 #endif
 
 #if ENABLE(SAMPLING_FLAGS)
@@ -755,6 +756,7 @@ private:
 
 #if ENABLE(WEBASSEMBLY)
         addFunction(vm, "WebAssemblyMemoryMode"_s, functionWebAssemblyMemoryMode, 1);
+        addFunction(vm, "createWebAssemblyMemoryWithMode"_s, functionCreateWebAssemblyMemoryWithMode, 2);
 #endif
 
         if (!arguments.isEmpty()) {
@@ -3294,6 +3296,29 @@ JSC_DEFINE_HOST_FUNCTION(functionWebAssemblyMemoryMode, (JSGlobalObject* globalO
     }
 
     return throwVMTypeError(globalObject, scope, "WebAssemblyMemoryMode expects either a WebAssembly.Memory or WebAssembly.Instance"_s);
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionCreateWebAssemblyMemoryWithMode, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (!Wasm::isSupported())
+        return throwVMTypeError(globalObject, scope, "createWebAssemblyMemoryWithMode should only be called if the useWebAssembly option is set"_s);
+
+    JSObject* memoryDescriptor = jsDynamicCast<JSObject*>(callFrame->argument(0));
+    if (!memoryDescriptor)
+        return throwVMTypeError(globalObject, scope, "createWebAssemblyMemoryWithMode expects the first argument to be an object"_s);
+
+    auto desiredMode = callFrame->argument(1).toWTFString(globalObject);
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    MemoryMode mode = MemoryMode::Signaling;
+    if (desiredMode == "BoundsChecking"_s)
+        mode = MemoryMode::BoundsChecking;
+    else if (desiredMode != "Signaling"_s)
+        return throwVMError(globalObject, scope, "createWebAssemblyMemoryWithMode expects either 'BoundsChecking' or 'Signaling' as the second argument."_s);
+
+    RELEASE_AND_RETURN(scope, JSValue::encode(WebAssemblyMemoryConstructor::createMemoryFromDescriptor(globalObject, globalObject->webAssemblyMemoryStructure(), memoryDescriptor, mode)));
 }
 
 #endif // ENABLE(WEBASSEMBLY)
