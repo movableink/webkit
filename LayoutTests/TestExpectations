@@ -8,6 +8,7 @@
 
 apple-visual-effects [ Skip ]
 compositing/ios [ Skip ]
+compositing/cocoa [ Skip ]
 compositing/contents-format/ipad [ Skip ]
 compositing/scrolling/async-overflow-scrolling/mac [ Skip ]
 css3/scroll-snap/ios [ Skip ]

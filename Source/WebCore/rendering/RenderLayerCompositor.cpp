@@ -4185,22 +4185,43 @@ bool RenderLayerCompositor::isAsyncScrollableStickyLayer(const RenderLayer& laye
 #endif
 }
 
-bool RenderLayerCompositor::isViewportConstrainedFixedOrStickyLayer(const RenderLayer& layer) const
+ViewportConstrainedSublayers RenderLayerCompositor::viewportConstrainedSublayers(const RenderLayer& layer) const
 {
-    if (layer.renderer().isStickilyPositioned())
-        return isAsyncScrollableStickyLayer(layer);
+    using enum ViewportConstrainedSublayers;
+
+    auto sublayersForViewportConstrainedLayer = [&] {
+        if (!m_renderView.settings().contentInsetBackgroundFillEnabled())
+            return Anchor;
+
+        if (!isMainFrameCompositor())
+            return Anchor;
+
+        return ClippingAndAnchor;
+    };
+
+    if (layer.renderer().isStickilyPositioned()) {
+        const RenderLayer* overflowLayer = nullptr;
+        if (!isAsyncScrollableStickyLayer(layer, &overflowLayer))
+            return None;
+
+        if (overflowLayer)
+            return Anchor;
+
+        return sublayersForViewportConstrainedLayer();
+    }
 
     if (!(layer.renderer().isFixedPositioned() && layer.behavesAsFixed()))
-        return false;
+        return None;
 
     for (auto* ancestor = layer.parent(); ancestor; ancestor = ancestor->parent()) {
         if (ancestor->hasCompositedScrollableOverflow())
-            return true;
+            return sublayersForViewportConstrainedLayer();
+
         if (ancestor->isStackingContext() && ancestor->isComposited() && ancestor->renderer().isFixedPositioned())
-            return false;
+            return None;
     }
 
-    return true;
+    return sublayersForViewportConstrainedLayer();
 }
 
 bool RenderLayerCompositor::fixedLayerIntersectsViewport(const RenderLayer& layer) const
@@ -5499,7 +5520,7 @@ void RenderLayerCompositor::detachScrollCoordinatedLayer(RenderLayer& layer, Opt
 OptionSet<ScrollCoordinationRole> RenderLayerCompositor::coordinatedScrollingRolesForLayer(const RenderLayer& layer, const RenderLayer* compositingAncestor) const
 {
     OptionSet<ScrollCoordinationRole> coordinationRoles;
-    if (isViewportConstrainedFixedOrStickyLayer(layer))
+    if (viewportConstrainedSublayers(layer) != ViewportConstrainedSublayers::None)
         coordinationRoles.add(ScrollCoordinationRole::ViewportConstrained);
 
     if (useCoordinatedScrollingForLayer(layer))

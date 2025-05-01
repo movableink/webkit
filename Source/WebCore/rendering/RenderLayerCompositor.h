@@ -100,6 +100,12 @@ enum class ScrollCoordinationRole {
     Positioning         = 1 << 5,
 };
 
+enum class ViewportConstrainedSublayers : uint8_t {
+    None,
+    Anchor,
+    ClippingAndAnchor,
+};
+
 static constexpr OptionSet<ScrollCoordinationRole> allScrollCoordinationRoles()
 {
     return {
@@ -372,8 +378,9 @@ public:
 
     void updateRootContentsLayerBackgroundColor();
 
+    ViewportConstrainedSublayers viewportConstrainedSublayers(const RenderLayer&) const;
+
     // FIXME: make the coordinated/async terminology consistent.
-    bool isViewportConstrainedFixedOrStickyLayer(const RenderLayer&) const;
     bool useCoordinatedScrollingForLayer(const RenderLayer&) const;
     ScrollPositioningBehavior computeCoordinatedPositioningForLayer(const RenderLayer&, const RenderLayer* compositingAncestor) const;
     bool isLayerForIFrameWithScrollCoordinatedContents(const RenderLayer&) const;

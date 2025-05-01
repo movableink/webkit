@@ -109,7 +109,7 @@ public:
 
     GraphicsLayer* contentsContainmentLayer() const { return m_contentsContainmentLayer.get(); }
     GraphicsLayer* viewportAnchorLayer() const { return m_viewportAnchorLayer.get(); }
-    GraphicsLayer* viewportClippingOrAnchorLayer() const { return viewportAnchorLayer(); }
+    GraphicsLayer* viewportClippingOrAnchorLayer() const { return m_viewportClippingLayer.get() ?: viewportAnchorLayer(); }
 
     GraphicsLayer* foregroundLayer() const { return m_foregroundLayer.get(); }
     GraphicsLayer* backgroundLayer() const { return m_backgroundLayer.get(); }
@@ -325,7 +325,7 @@ private:
     RenderLayerCompositor& compositor() const { return m_owningLayer.compositor(); }
 
     void updateInternalHierarchy();
-    bool updateViewportConstrainedAnchorLayer(bool needsAnchorLayer);
+    bool updateViewportConstrainedSublayers(ViewportConstrainedSublayers);
     bool updateAncestorClipping(bool needsAncestorClip, const RenderLayer* compositingAncestor);
     bool updateDescendantClippingLayer(bool needsDescendantClip);
     bool updateOverflowControlsLayers(bool needsHorizontalScrollbarLayer, bool needsVerticalScrollbarLayer, bool needsScrollCornerLayer);
@@ -443,6 +443,7 @@ private:
     RefPtr<GraphicsLayer> m_foregroundLayer; // Only used in cases where we need to draw the foreground separately.
     RefPtr<GraphicsLayer> m_backgroundLayer; // Only used in cases where we need to draw the background separately.
     RefPtr<GraphicsLayer> m_childContainmentLayer; // Only used if we have clipping on a stacking context with compositing children, or if the layer has a tile cache.
+    RefPtr<GraphicsLayer> m_viewportClippingLayer; // Only used on fixed/sticky elements. Contains the viewport anchor layer.
     RefPtr<GraphicsLayer> m_viewportAnchorLayer; // Only used on fixed/sticky elements.
     RefPtr<GraphicsLayer> m_maskLayer; // Only used if we have a mask and/or clip-path.
     RefPtr<GraphicsLayer> m_transformFlatteningLayer;

@@ -391,10 +391,9 @@ bool TestController::platformResetStateToConsistentValues(const TestOptions& opt
         [scrollView setZoomScale:1 animated:NO];
         scrollView.firstResponderKeyboardAvoidanceEnabled = YES;
 
-        auto contentInsetTop = options.contentInsetTop();
-        if (auto contentInset = scrollView.contentInset; contentInset.top != contentInsetTop) {
-            contentInset.top = contentInsetTop;
-            scrollView.contentInset = contentInset;
+        auto insetsToRestore = UIEdgeInsetsMake(options.contentInsetTop(), 0, 0, 0);
+        if (auto contentInset = scrollView.contentInset; !UIEdgeInsetsEqualToEdgeInsets(contentInset, insetsToRestore)) {
+            scrollView.contentInset = insetsToRestore;
             scrollView.contentOffset = CGPointMake(-contentInset.left, -contentInset.top);
         }
 

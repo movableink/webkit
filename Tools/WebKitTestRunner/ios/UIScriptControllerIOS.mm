@@ -1397,7 +1397,14 @@ void UIScriptControllerIOS::beginInteractiveObscuredInsetsChange()
 
 void UIScriptControllerIOS::setObscuredInsets(double top, double right, double bottom, double left)
 {
-    webView()._obscuredInsets = UIEdgeInsetsMake(top, left, bottom, right);
+    RetainPtr webView = this->webView();
+
+    auto insets = UIEdgeInsetsMake(top, left, bottom, right);
+    auto insetSize = UIEdgeInsetsInsetRect([webView bounds], insets).size;
+
+    [webView scrollView].contentInset = insets;
+    [webView _setObscuredInsets:insets];
+    [webView _overrideLayoutParametersWithMinimumLayoutSize:insetSize minimumUnobscuredSizeOverride:insetSize maximumUnobscuredSizeOverride:insetSize];
 }
 
 void UIScriptControllerIOS::endInteractiveObscuredInsetsChange()

@@ -531,6 +531,9 @@ void RenderLayerBacking::updateDebugIndicators(bool showBorder, bool showRepaint
 
     // m_viewportAnchorLayer can't show layer borders because it's a structural layer.
 
+    if (m_viewportClippingLayer)
+        m_viewportClippingLayer->setShowDebugBorder(showBorder);
+
     if (m_ancestorClippingStack) {
         for (auto& entry : m_ancestorClippingStack->stack())
             entry.clippingLayer->setShowDebugBorder(showBorder);
@@ -661,6 +664,7 @@ void RenderLayerBacking::destroyGraphicsLayers()
 
     GraphicsLayer::unparentAndClear(m_transformFlatteningLayer);
     GraphicsLayer::unparentAndClear(m_viewportAnchorLayer);
+    GraphicsLayer::unparentAndClear(m_viewportClippingLayer);
     GraphicsLayer::unparentAndClear(m_contentsContainmentLayer);
     GraphicsLayer::unparentAndClear(m_foregroundLayer);
     GraphicsLayer::unparentAndClear(m_backgroundLayer);
@@ -1167,7 +1171,7 @@ bool RenderLayerBacking::updateConfiguration(const RenderLayer* compositingAnces
     if (updateTransformFlatteningLayer(compositingAncestor))
         layerConfigChanged = true;
 
-    if (updateViewportConstrainedAnchorLayer(compositor.isViewportConstrainedFixedOrStickyLayer(m_owningLayer)))
+    if (updateViewportConstrainedSublayers(compositor.viewportConstrainedSublayers(m_owningLayer)))
         layerConfigChanged = true;
 
     setBackgroundLayerPaintsFixedRootBackground(compositor.needsFixedRootBackgroundLayer(m_owningLayer));
@@ -1567,6 +1571,12 @@ void RenderLayerBacking::updateGeometry(const RenderLayer* compositedAncestor)
     bool preserves3D = style.preserves3D() && !renderer().hasReflection();
 
     if (m_viewportAnchorLayer) {
+        if (m_viewportClippingLayer) {
+            auto fixedPositionRect = renderer().view().frameView().rectForFixedPositionLayout();
+            m_viewportClippingLayer->setPosition(fixedPositionRect.location());
+            m_viewportClippingLayer->setSize(fixedPositionRect.size());
+            primaryLayerPosition.moveBy(-fixedPositionRect.location());
+        }
         m_viewportAnchorLayer->setPosition(primaryLayerPosition);
         primaryLayerPosition = { };
     }
@@ -1904,6 +1914,9 @@ void RenderLayerBacking::updateInternalHierarchy()
 
     if (lastClippingLayer)
         orderedLayers.append(lastClippingLayer);
+
+    if (m_viewportClippingLayer)
+        orderedLayers.append(m_viewportClippingLayer.get());
 
     if (m_viewportAnchorLayer)
         orderedLayers.append(m_viewportAnchorLayer.get());
@@ -2596,9 +2609,25 @@ bool RenderLayerBacking::updateTransformFlatteningLayer(const RenderLayer* compo
     return layerChanged;
 }
 
-bool RenderLayerBacking::updateViewportConstrainedAnchorLayer(bool needsAnchorLayer)
+bool RenderLayerBacking::updateViewportConstrainedSublayers(ViewportConstrainedSublayers sublayers)
 {
     bool layerChanged = false;
+
+    using enum ViewportConstrainedSublayers;
+
+    bool needsAnchorLayer = false;
+    bool needsClippingLayer = false;
+    switch (sublayers) {
+    case None:
+        break;
+    case ClippingAndAnchor:
+        needsClippingLayer = true;
+        FALLTHROUGH;
+    case Anchor:
+        needsAnchorLayer = true;
+        break;
+    }
+
     if (needsAnchorLayer) {
         if (!m_viewportAnchorLayer) {
             auto layerName = makeString(m_owningLayer.name(), " (anchor)"_s);
@@ -2608,6 +2637,19 @@ bool RenderLayerBacking::updateViewportConstrainedAnchorLayer(bool needsAnchorLa
     } else if (m_viewportAnchorLayer) {
         willDestroyLayer(m_viewportAnchorLayer.get());
         GraphicsLayer::unparentAndClear(m_viewportAnchorLayer);
+        layerChanged = true;
+    }
+
+    if (needsClippingLayer) {
+        if (!m_viewportClippingLayer) {
+            auto layerName = makeString(m_owningLayer.name(), " (clipping)"_s);
+            m_viewportClippingLayer = createGraphicsLayer(layerName, GraphicsLayer::Type::Normal);
+            m_viewportClippingLayer->setMasksToBounds(true);
+            layerChanged = true;
+        }
+    } else if (m_viewportClippingLayer) {
+        willDestroyLayer(m_viewportClippingLayer.get());
+        GraphicsLayer::unparentAndClear(m_viewportClippingLayer);
         layerChanged = true;
     }
 
