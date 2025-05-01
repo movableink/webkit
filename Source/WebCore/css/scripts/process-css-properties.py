@@ -989,12 +989,20 @@ class StyleProperties:
         if not a_is_high_priority and b_is_high_priority:
             return 1
 
-        # Sort longhands in a logical property group to the back, before shorthands.
-        a_is_in_logical_property_group = a.codegen_properties.logical_property_group
-        b_is_in_logical_property_group = b.codegen_properties.logical_property_group
-        if a_is_in_logical_property_group and not b_is_in_logical_property_group:
+        # Sort logical longhands in a logical property group to the back, before shorthands.
+        a_is_in_logical_property_group_logical = a.codegen_properties.logical_property_group and a.codegen_properties.logical_property_group.logic == 'logical'
+        b_is_in_logical_property_group_logical = b.codegen_properties.logical_property_group and b.codegen_properties.logical_property_group.logic == 'logical'
+        if a_is_in_logical_property_group_logical and not b_is_in_logical_property_group_logical:
             return 1
-        if not a_is_in_logical_property_group and b_is_in_logical_property_group:
+        if not a_is_in_logical_property_group_logical and b_is_in_logical_property_group_logical:
+            return -1
+
+        # Sort physical longhands in a logical property group to the back, before shorthands.
+        a_is_in_logical_property_group_physical = a.codegen_properties.logical_property_group and a.codegen_properties.logical_property_group.logic == 'physical'
+        b_is_in_logical_property_group_physical = b.codegen_properties.logical_property_group and b.codegen_properties.logical_property_group.logic == 'physical'
+        if a_is_in_logical_property_group_physical and not b_is_in_logical_property_group_physical:
+            return 1
+        if not a_is_in_logical_property_group_physical and b_is_in_logical_property_group_physical:
             return -1
 
         # Sort sunken names at the end of their priority bucket.
@@ -3385,12 +3393,6 @@ class GenerateCSSPropertyNames:
                 iterable=(p for p in self.properties_and_descriptors.style_properties.all if p.codegen_properties.disables_native_appearance)
             )
 
-            self.generation_context.generate_property_id_switch_function_bool(
-                to=writer,
-                signature="bool CSSProperty::isDirectionAwareProperty(CSSPropertyID id)",
-                iterable=self.properties_and_descriptors.style_properties.all_direction_aware_properties
-            )
-
             for group_name, property_group in sorted(self.generation_context.properties_and_descriptors.style_properties.logical_property_groups.items(), key=lambda x: x[0]):
                 properties = set()
                 for kind in ["logical", "physical"]:
@@ -3499,8 +3501,10 @@ class GenerateCSSPropertyNames:
             last_high_priority_property = None
             first_low_priority_property = None
             last_low_priority_property = None
-            first_logical_group_property = None
-            last_logical_group_property = None
+            first_logical_group_physical_property = None
+            last_logical_group_physical_property = None
+            first_logical_group_logical_property = None
+            last_logical_group_logical_property = None
 
             for property in self.properties_and_descriptors.all_unique:
                 if property.codegen_properties.longhands:
@@ -3519,10 +3523,16 @@ class GenerateCSSPropertyNames:
                     if not first_low_priority_property:
                         first_low_priority_property = property
                     last_low_priority_property = property
+                elif property.codegen_properties.logical_property_group.logic == 'physical':
+                    if not first_logical_group_physical_property:
+                        first_logical_group_physical_property = property
+                    last_logical_group_physical_property = property
+                elif property.codegen_properties.logical_property_group.logic == 'logical':
+                    if not first_logical_group_logical_property:
+                        first_logical_group_logical_property = property
+                    last_logical_group_logical_property = property
                 else:
-                    if not first_logical_group_property:
-                        first_logical_group_property = property
-                    last_logical_group_property = property
+                    raise Exception(f"{property.id_without_scope} is not part of any priority bucket. {property.codegen_properties.logical_property_group}")
 
                 to.write(f"{property.id_without_scope} = {count},")
 
@@ -3553,8 +3563,12 @@ class GenerateCSSPropertyNames:
         to.write(f"constexpr auto lastHighPriorityProperty = {last_high_priority_property.id};")
         to.write(f"constexpr auto firstLowPriorityProperty = {first_low_priority_property.id};")
         to.write(f"constexpr auto lastLowPriorityProperty = {last_low_priority_property.id};")
-        to.write(f"constexpr auto firstLogicalGroupProperty = {first_logical_group_property.id};")
-        to.write(f"constexpr auto lastLogicalGroupProperty = {last_logical_group_property.id};")
+        to.write(f"constexpr auto firstLogicalGroupPhysicalProperty = {first_logical_group_physical_property.id};")
+        to.write(f"constexpr auto lastLogicalGroupPhysicalProperty = {last_logical_group_physical_property.id};")
+        to.write(f"constexpr auto firstLogicalGroupLogicalProperty = {first_logical_group_logical_property.id};")
+        to.write(f"constexpr auto lastLogicalGroupLogicalProperty = {last_logical_group_logical_property.id};")
+        to.write(f"constexpr auto firstLogicalGroupProperty = firstLogicalGroupPhysicalProperty;")
+        to.write(f"constexpr auto lastLogicalGroupProperty = lastLogicalGroupLogicalProperty;")
         to.write(f"constexpr auto firstShorthandProperty = {first_shorthand_property.id};")
         to.write(f"constexpr auto lastShorthandProperty = {last_shorthand_property.id};")
         to.write(f"constexpr uint16_t numCSSPropertyLonghands = firstShorthandProperty - firstCSSProperty;")
@@ -3616,11 +3630,31 @@ class GenerateCSSPropertyNames:
 
             constexpr bool isLonghand(CSSPropertyID property)
             {
-                return static_cast<uint16_t>(property) >= firstCSSProperty && static_cast<uint16_t>(property) < static_cast<uint16_t>(firstShorthandProperty);
+                return static_cast<uint16_t>(property) >= firstCSSProperty
+                    && static_cast<uint16_t>(property) < static_cast<uint16_t>(firstShorthandProperty);
             }
             constexpr bool isShorthand(CSSPropertyID property)
             {
-                return static_cast<uint16_t>(property) >= static_cast<uint16_t>(firstShorthandProperty) && static_cast<uint16_t>(property) <= static_cast<uint16_t>(lastShorthandProperty);
+                return static_cast<uint16_t>(property) >= static_cast<uint16_t>(firstShorthandProperty)
+                    && static_cast<uint16_t>(property) <= static_cast<uint16_t>(lastShorthandProperty);
+            }
+
+            constexpr bool isLogicalPropertyGroupProperty(CSSPropertyID property)
+            {
+                return static_cast<uint16_t>(property) >= static_cast<uint16_t>(firstLogicalGroupPhysicalProperty)
+                    && static_cast<uint16_t>(property) <= static_cast<uint16_t>(lastLogicalGroupLogicalProperty);
+            }
+
+            constexpr bool isLogicalPropertyGroupPhysicalProperty(CSSPropertyID property)
+            {
+                return static_cast<uint16_t>(property) >= static_cast<uint16_t>(firstLogicalGroupPhysicalProperty)
+                    && static_cast<uint16_t>(property) <= static_cast<uint16_t>(lastLogicalGroupPhysicalProperty);
+            }
+
+            constexpr bool isLogicalPropertyGroupLogicalProperty(CSSPropertyID property)
+            {
+                return static_cast<uint16_t>(property) >= static_cast<uint16_t>(firstLogicalGroupLogicalProperty)
+                    && static_cast<uint16_t>(property) <= static_cast<uint16_t>(lastLogicalGroupLogicalProperty);
             }
 
             WTF::TextStream& operator<<(WTF::TextStream&, CSSPropertyID);

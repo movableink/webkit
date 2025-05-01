@@ -107,10 +107,10 @@ enum CSSPropertyID : uint16_t {
     CSSPropertyTestUsingSharedRuleExported = 93,
     CSSPropertyTestUsingSharedRuleWithOverrideFunction = 94,
     CSSPropertyTestSinkPriority = 95,
-    CSSPropertyTestLogicalPropertyGroupLogicalBlock = 96,
-    CSSPropertyTestLogicalPropertyGroupLogicalInline = 97,
-    CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal = 98,
-    CSSPropertyTestLogicalPropertyGroupPhysicalVertical = 99,
+    CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal = 96,
+    CSSPropertyTestLogicalPropertyGroupPhysicalVertical = 97,
+    CSSPropertyTestLogicalPropertyGroupLogicalBlock = 98,
+    CSSPropertyTestLogicalPropertyGroupLogicalInline = 99,
     CSSPropertyFont = 100,
     CSSPropertyTestShorthandOne = 101,
     CSSPropertyTestShorthandTwo = 102,
@@ -132,8 +132,12 @@ constexpr auto firstHighPriorityProperty = CSSPropertyID::CSSPropertyTestHighPri
 constexpr auto lastHighPriorityProperty = CSSPropertyID::CSSPropertyTestHighPriority;
 constexpr auto firstLowPriorityProperty = CSSPropertyID::CSSPropertyFirstTestDescriptorForFirstDescriptor;
 constexpr auto lastLowPriorityProperty = CSSPropertyID::CSSPropertyTestSinkPriority;
-constexpr auto firstLogicalGroupProperty = CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock;
-constexpr auto lastLogicalGroupProperty = CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalVertical;
+constexpr auto firstLogicalGroupPhysicalProperty = CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal;
+constexpr auto lastLogicalGroupPhysicalProperty = CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalVertical;
+constexpr auto firstLogicalGroupLogicalProperty = CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock;
+constexpr auto lastLogicalGroupLogicalProperty = CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline;
+constexpr auto firstLogicalGroupProperty = firstLogicalGroupPhysicalProperty;
+constexpr auto lastLogicalGroupProperty = lastLogicalGroupLogicalProperty;
 constexpr auto firstShorthandProperty = CSSPropertyID::CSSPropertyFont;
 constexpr auto lastShorthandProperty = CSSPropertyID::CSSPropertyTestShorthandTwo;
 constexpr uint16_t numCSSPropertyLonghands = firstShorthandProperty - firstCSSProperty;
@@ -184,11 +188,31 @@ constexpr AllLonghandCSSPropertiesRange allLonghandCSSProperties() { return { };
 
 constexpr bool isLonghand(CSSPropertyID property)
 {
-    return static_cast<uint16_t>(property) >= firstCSSProperty && static_cast<uint16_t>(property) < static_cast<uint16_t>(firstShorthandProperty);
+    return static_cast<uint16_t>(property) >= firstCSSProperty 
+        && static_cast<uint16_t>(property) < static_cast<uint16_t>(firstShorthandProperty);
 }
 constexpr bool isShorthand(CSSPropertyID property)
 {
-    return static_cast<uint16_t>(property) >= static_cast<uint16_t>(firstShorthandProperty) && static_cast<uint16_t>(property) <= static_cast<uint16_t>(lastShorthandProperty);
+    return static_cast<uint16_t>(property) >= static_cast<uint16_t>(firstShorthandProperty) 
+        && static_cast<uint16_t>(property) <= static_cast<uint16_t>(lastShorthandProperty);
+}
+
+constexpr bool isLogicalPropertyGroupProperty(CSSPropertyID property)
+{
+    return static_cast<uint16_t>(property) >= static_cast<uint16_t>(firstLogicalGroupPhysicalProperty) 
+        && static_cast<uint16_t>(property) <= static_cast<uint16_t>(lastLogicalGroupLogicalProperty);
+}
+
+constexpr bool isLogicalPropertyGroupPhysicalProperty(CSSPropertyID property)
+{
+    return static_cast<uint16_t>(property) >= static_cast<uint16_t>(firstLogicalGroupPhysicalProperty) 
+        && static_cast<uint16_t>(property) <= static_cast<uint16_t>(lastLogicalGroupPhysicalProperty);
+}
+
+constexpr bool isLogicalPropertyGroupLogicalProperty(CSSPropertyID property)
+{
+    return static_cast<uint16_t>(property) >= static_cast<uint16_t>(firstLogicalGroupLogicalProperty) 
+        && static_cast<uint16_t>(property) <= static_cast<uint16_t>(lastLogicalGroupLogicalProperty);
 }
 
 WTF::TextStream& operator<<(WTF::TextStream&, CSSPropertyID);

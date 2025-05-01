@@ -218,10 +218,10 @@ constexpr ASCIILiteral propertyNameStrings[numCSSProperties] = {
     "test-using-shared-rule-exported"_s,
     "test-using-shared-rule-with-override-function"_s,
     "test-sink-priority"_s,
-    "test-logical-property-group-logical-block"_s,
-    "test-logical-property-group-logical-inline"_s,
     "test-logical-property-group-physical-horizontal"_s,
     "test-logical-property-group-physical-vertical"_s,
+    "test-logical-property-group-logical-block"_s,
+    "test-logical-property-group-logical-inline"_s,
     "font"_s,
     "test-shorthand-one"_s,
     "test-shorthand-two"_s,
@@ -336,10 +336,10 @@ test-using-shared-rule, CSSPropertyID::CSSPropertyTestUsingSharedRule
 test-using-shared-rule-exported, CSSPropertyID::CSSPropertyTestUsingSharedRuleExported
 test-using-shared-rule-with-override-function, CSSPropertyID::CSSPropertyTestUsingSharedRuleWithOverrideFunction
 test-sink-priority, CSSPropertyID::CSSPropertyTestSinkPriority
-test-logical-property-group-logical-block, CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock
-test-logical-property-group-logical-inline, CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline
 test-logical-property-group-physical-horizontal, CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal
 test-logical-property-group-physical-vertical, CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalVertical
+test-logical-property-group-logical-block, CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock
+test-logical-property-group-logical-inline, CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline
 font, CSSPropertyID::CSSPropertyFont
 test-shorthand-one, CSSPropertyID::CSSPropertyTestShorthandOne
 test-shorthand-two, CSSPropertyID::CSSPropertyTestShorthandTwo
@@ -560,10 +560,10 @@ constexpr bool isInheritedPropertyTable[cssPropertyIDEnumValueCount] = {
     false, // CSSPropertyID::CSSPropertyTestUsingSharedRuleExported
     false, // CSSPropertyID::CSSPropertyTestUsingSharedRuleWithOverrideFunction
     false, // CSSPropertyID::CSSPropertyTestSinkPriority
-    false, // CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock
-    false, // CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline
     false, // CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal
     false, // CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalVertical
+    false, // CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock
+    false, // CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline
     false, // CSSPropertyID::CSSPropertyFont
     false, // CSSPropertyID::CSSPropertyTestShorthandOne
     false, // CSSPropertyID::CSSPropertyTestShorthandTwo
@@ -663,10 +663,10 @@ bool CSSProperty::allowsNumberOrIntegerInput(CSSPropertyID id)
     case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt:
     case CSSPropertyID::CSSPropertyTestUsingSharedRule:
     case CSSPropertyID::CSSPropertyTestSinkPriority:
-    case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock:
-    case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline:
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal:
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalVertical:
+    case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock:
+    case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline:
         return true;
     default:
         return false;
@@ -676,17 +676,6 @@ bool CSSProperty::allowsNumberOrIntegerInput(CSSPropertyID id)
 bool CSSProperty::disablesNativeAppearance(CSSPropertyID id)
 {
     switch (id) {
-        return true;
-    default:
-        return false;
-    }
-}
-
-bool CSSProperty::isDirectionAwareProperty(CSSPropertyID id)
-{
-    switch (id) {
-    case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock:
-    case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline:
         return true;
     default:
         return false;

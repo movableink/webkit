@@ -79,7 +79,7 @@ public:
     static CSSPropertyID unresolvePhysicalProperty(CSSPropertyID, WritingMode);
     static bool isInheritedProperty(CSSPropertyID);
     static Vector<String> aliasesForProperty(CSSPropertyID);
-    static bool isDirectionAwareProperty(CSSPropertyID);
+    static bool isDirectionAwareProperty(CSSPropertyID propertyID) { return isLogicalPropertyGroupLogicalProperty(propertyID); }
     static bool isInLogicalPropertyGroup(CSSPropertyID);
     static bool areInSameLogicalPropertyGroupWithDifferentMappingLogic(CSSPropertyID, CSSPropertyID);
     static bool isDescriptorOnly(CSSPropertyID);

@@ -2362,10 +2362,6 @@ void BuilderGenerated::applyProperty(CSSPropertyID id, BuilderState& builderStat
             break;
         }
         break;
-    case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock:
-        break;
-    case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline:
-        break;
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal:
         switch (valueType) {
         case ApplyValueType::Initial:
@@ -2391,6 +2387,10 @@ void BuilderGenerated::applyProperty(CSSPropertyID id, BuilderState& builderStat
             BuilderFunctions::applyValueTestLogicalPropertyGroupPhysicalVertical(builderState, value);
             break;
         }
+        break;
+    case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock:
+        break;
+    case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline:
         break;
     case CSSPropertyID::CSSPropertyFont:
         ASSERT(isShorthand(id));

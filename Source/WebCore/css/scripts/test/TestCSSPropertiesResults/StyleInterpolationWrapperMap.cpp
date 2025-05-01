@@ -125,10 +125,10 @@ WrapperMap::WrapperMap()
         new DiscreteWrapper(CSSPropertyID::CSSPropertyTestUsingSharedRuleExported, &RenderStyle::testUsingSharedRuleExported, &RenderStyle::setTestUsingSharedRuleExported), // CSSPropertyID::CSSPropertyTestUsingSharedRuleExported
         new DiscreteWrapper(CSSPropertyID::CSSPropertyTestUsingSharedRuleWithOverrideFunction, &RenderStyle::testUsingSharedRuleWithOverrideFunction, &RenderStyle::setTestUsingSharedRuleWithOverrideFunction), // CSSPropertyID::CSSPropertyTestUsingSharedRuleWithOverrideFunction
         new DiscreteWrapper(CSSPropertyID::CSSPropertyTestSinkPriority, &RenderStyle::testSinkPriority, &RenderStyle::setTestSinkPriority), // CSSPropertyID::CSSPropertyTestSinkPriority
-        nullptr, // CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock - logical, handled via resolution to physical
-        nullptr, // CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline - logical, handled via resolution to physical
         new DiscreteWrapper(CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal, &RenderStyle::testLogicalPropertyGroupPhysicalHorizontal, &RenderStyle::setTestLogicalPropertyGroupPhysicalHorizontal), // CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal
         new DiscreteWrapper(CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalVertical, &RenderStyle::testLogicalPropertyGroupPhysicalVertical, &RenderStyle::setTestLogicalPropertyGroupPhysicalVertical), // CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalVertical
+        nullptr, // CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock - logical, handled via resolution to physical
+        nullptr, // CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline - logical, handled via resolution to physical
         nullptr, // CSSPropertyID::CSSPropertyFont - shorthand, will perform fix-up below
         nullptr, // CSSPropertyID::CSSPropertyTestShorthandOne - shorthand, will perform fix-up below
         nullptr, // CSSPropertyID::CSSPropertyTestShorthandTwo - shorthand, will perform fix-up below
