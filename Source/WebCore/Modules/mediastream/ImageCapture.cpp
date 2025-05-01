@@ -41,6 +41,7 @@
 #include "PlatformStrategies.h"
 #include "TaskSource.h"
 #include "VideoFrame.h"
+#include <wtf/Compiler.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/RunLoop.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -298,15 +299,10 @@ void ImageCapture::grabFrame(DOMPromiseDeferred<IDLInterface<ImageBitmap>>&& pro
     }
 
     Ref { *m_grabFrameObserver }->add([promise = WTFMove(promise), pendingActivity = makePendingActivity(*this)](auto&& result) mutable {
-        if (!pendingActivity->object().m_isStopped)
+        queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::ImageCapture, [promise = WTFMove(promise), result = WTFMove(result)](auto&) mutable {
             promise.settle(WTFMove(result));
+        });
     });
-}
-
-void ImageCapture::stop()
-{
-    m_isStopped = true;
-    stopGrabFrameObserver();
 }
 
 void ImageCapture::stopGrabFrameObserver()
@@ -315,6 +311,13 @@ void ImageCapture::stopGrabFrameObserver()
         Ref { m_track->privateTrack() }->removeObserver(*this);
         grabFrameObserver->stop();
     }
+}
+
+void ImageCapture::trackEnded(MediaStreamTrackPrivate&)
+{
+    callOnMainThread([protectedThis = Ref { *this }] {
+        protectedThis->stopGrabFrameObserver();
+    });
 }
 
 void ImageCapture::getPhotoCapabilities(DOMPromiseDeferred<IDLDictionary<PhotoCapabilities>>&& promise)

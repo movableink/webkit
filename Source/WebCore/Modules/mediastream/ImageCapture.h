@@ -67,10 +67,10 @@ private:
     void stopGrabFrameObserver();
 
     // ActiveDOMObject
-    void stop() final;
+    void stop() final { stopGrabFrameObserver(); };
 
     // MediaStreamTrackPrivateObserver
-    void trackEnded(MediaStreamTrackPrivate&) final { stopGrabFrameObserver(); }
+    void trackEnded(MediaStreamTrackPrivate&) final;
     void trackMutedChanged(MediaStreamTrackPrivate&) final { }
     void trackSettingsChanged(MediaStreamTrackPrivate&) final { }
     void trackEnabledChanged(MediaStreamTrackPrivate&) final { }
@@ -84,7 +84,6 @@ private:
 
     const Ref<MediaStreamTrack> m_track;
     RefPtr<ImageCaptureVideoFrameObserver> m_grabFrameObserver;
-    bool m_isStopped { false };
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
