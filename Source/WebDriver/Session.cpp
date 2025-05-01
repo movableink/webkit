@@ -27,8 +27,10 @@
 #include "Session.h"
 
 #include "CommandResult.h"
+#include "Logging.h"
 #include "SessionHost.h"
 #include "WebDriverAtoms.h"
+#include <optional>
 #include <wtf/ASCIICType.h>
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/FileSystem.h>
@@ -84,7 +86,7 @@ Session::Session(Ref<SessionHost>&& host, WeakPtr<WebSocketServer>&& bidiServer)
     : Session(WTFMove(host))
 {
     m_bidiServer = WTFMove(bidiServer);
-    m_host->addEventHandler(this);
+    m_host->setBidiHandler(this);
 }
 #endif
 
@@ -3152,23 +3154,51 @@ void Session::takeScreenshot(std::optional<String> elementID, std::optional<bool
 }
 
 #if ENABLE(WEBDRIVER_BIDI)
-void Session::dispatchEvent(RefPtr<JSON::Object>&& message)
+void Session::dispatchBidiMessage(RefPtr<JSON::Object>&& message)
 {
-    static String automationPrefix = "Automation."_s;
-    auto method = message->getString("method"_s);
-    if (!method.startsWith(automationPrefix)) {
-        WTFLogAlways("Unknown event domain: %s", method.utf8().data());
+    // Validate bidi message
+    auto params = message->getObject("params"_s);
+    if (!params) {
+        RELEASE_LOG(WebDriverBiDi, "Session::dispatchBidiMessage: Missing 'params' field in payload");
+        m_bidiServer->sendErrorResponse(this->id(), std::nullopt, CommandResult::ErrorCode::UnknownError, "Received malformed bidi message from browser: Missing 'params' field."_s);
         return;
     }
 
-    auto eventName = method.substring(automationPrefix.length());
-    if (!m_globalEventSet.contains(eventName))
-        return;
-
-    if (eventName == "logEntryAdded"_s) {
-        doLogEntryAdded(WTFMove(message));
+    auto bidiMessageString = params->getString("message"_s);
+    if (!bidiMessageString) {
+        RELEASE_LOG(WebDriverBiDi, "Session::dispatchBidiMessage: Missing actual bidi message in payload");
+        m_bidiServer->sendErrorResponse(this->id(), std::nullopt, CommandResult::ErrorCode::UnknownError, "Received malformed bidi message from browser: Missing 'message' field."_s);
         return;
     }
+
+    auto bidiMessageValue = JSON::Value::parseJSON(bidiMessageString);
+    if (!bidiMessageValue) {
+        RELEASE_LOG(WebDriverBiDi, "Session::dispatchBidiMessage: Bidi message with invalid JSON.");
+        m_bidiServer->sendErrorResponse(this->id(), std::nullopt, CommandResult::ErrorCode::UnknownError, "Received malformed bidi message from browser: Invalid JSON message."_s);
+        return;
+    }
+
+    auto bidiMessage = bidiMessageValue->asObject();
+    LOG(WebDriverBiDi, "Session::dispatchBidiMessage: received bidi message %s", bidiMessageValue->toJSONString().utf8().data());
+
+    // FIXME: Move event subscription into the browser
+    if (bidiMessage->getString("type"_s) == "event"_s) {
+        if (bidiMessage->size() < 3 || (bidiMessage->find("method"_s) == bidiMessage->end()) || (bidiMessage->find("params"_s) == bidiMessage->end())) {
+            RELEASE_LOG(WebDriverBiDi, "Session::dispatchBidiMessage: Malformed bidi event: %s", bidiMessageValue->toJSONString().utf8().data());
+            return;
+        }
+
+        auto bidiMethod = bidiMessage->getString("method"_s);
+        if (!eventIsEnabled(bidiMethod, { m_toplevelBrowsingContext.value() })) {
+            RELEASE_LOG(WebDriverBiDi, "Message %s is an unknown event or not enabled, ignoring.", bidiMethod.utf8().data());
+            return;
+        }
+        if (bidiMethod == "log.entryAdded"_s)
+            doLogEntryAdded(WTFMove(bidiMessage));
+        return;
+    }
+
+    m_bidiServer->sendMessage(this->id(), bidiMessage->toJSONString());
 }
 
 void Session::doLogEntryAdded(RefPtr<JSON::Object>&& message)
@@ -3176,7 +3206,7 @@ void Session::doLogEntryAdded(RefPtr<JSON::Object>&& message)
     // https://w3c.github.io/webdriver-bidi/#event-log-entryAdded
     auto params = message->getObject("params"_s);
     if (!params) {
-        WTFLogAlways("Log event without parameter information, ignoring.");
+        RELEASE_LOG(WebDriverBiDi, "Log event without parameter information, ignoring.");
         return;
     }
 
@@ -3235,8 +3265,8 @@ void Session::doLogEntryAdded(RefPtr<JSON::Object>&& message)
     auto body = JSON::Object::create();
     body->setObject("params"_s, WTFMove(entry));
 
-    if (eventIsEnabled("logEntryAdded"_s, { m_toplevelBrowsingContext.value() }))
-        emitEvent("log.entryAdded"_s, WTFMove(body));
+    emitEvent("log.entryAdded"_s, WTFMove(body));
+
     // TODO Implement event buffering, to save the log entries for later emission when the user subscribes to it
     // https://bugs.webkit.org/show_bug.cgi?id=282980
 }
@@ -3261,35 +3291,29 @@ bool Session::eventIsEnabled(const String& eventName, const Vector<String>&)
 
 void Session::enableGlobalEvent(const String& eventName)
 {
-    m_globalEventSet.add(toInternalEventName(eventName));
+    m_globalEventSet.add(eventName);
 }
 
 void Session::disableGlobalEvent(const String& eventName)
 {
-    m_globalEventSet.remove(toInternalEventName(eventName));
+    m_globalEventSet.remove(eventName);
 }
 
-String Session::toInternalEventName(const String& eventName)
+void Session::relayBidiCommand(const String& message, unsigned commandId, Function<void(WebSocketMessageHandler::Message&&)>&& completionHandler)
 {
-    // The messages exchanged with the Browser (see Automation.json) can't have
-    // periods in the message name.
-    StringBuilder builder;
-    bool capitalizeNext = false;
-    for (unsigned i = 0; i < eventName.length(); i++) {
-        if (eventName[i] == '.') {
-            capitalizeNext = true;
-            continue;
+    auto parameters = JSON::Object::create();
+    parameters->setString("message"_s, message);
+    m_host->sendCommandToBackend("processBidiMessage"_s, WTFMove(parameters), [protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler), commandId](SessionHost::CommandResponse&& response) {
+        if (response.isError) {
+            auto errorCode = CommandResult::ErrorCode::UnknownError;
+            auto errorMessage = response.responseObject->getString("message"_s);
+            if (errorMessage.isNull())
+                errorMessage = "Unknown error"_s;
+            completionHandler(WebSocketMessageHandler::Message::fail(errorCode, std::nullopt, errorMessage, { commandId }));
         }
-
-        if (capitalizeNext) {
-            builder.append(toASCIIUpper(eventName[i]));
-            capitalizeNext = false;
-        } else
-            builder.append(eventName[i]);
-    }
-
-    return builder.toString();
+    });
 }
-#endif
+
+#endif // ENABLE(WEBDRIVER_BIDI)
 
 } // namespace WebDriver

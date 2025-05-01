@@ -460,30 +460,45 @@ void WebDriverService::handleMessage(WebSocketMessageHandler::Message&& message,
 
     auto parsedMessageValue = JSON::Value::parseJSON(String::fromUTF8(message.payload.data()));
     if (!parsedMessageValue) {
-        RELEASE_LOG(WebDriverBiDi, "WebDriver handle Message: Failed to parse incoming message");
+        RELEASE_LOG(WebDriverBiDi, "WebDriverService::handleMessage() Failed to parse incoming message");
         completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, message.connection));
         return;
     }
 
-    BidiCommandHandler handler;
-    unsigned id = 0;
-    RefPtr<JSON::Object> parameters;
-    if (!findBidiCommand(parsedMessageValue, &handler, id, parameters)) {
-        RELEASE_LOG(WebDriverBiDi, "Failed to find appropriate BiDi command");
-        std::optional<int> commandId;
-        if (auto parsedMessageObject = parsedMessageValue->asObject()) {
-            auto parsedCommandId = parsedMessageObject->getInteger("id"_s);
-            if (parsedCommandId && *parsedCommandId >= 0)
-                commandId = parsedCommandId;
-        }
-
-        auto errorCode = CommandResult::ErrorCode::UnknownCommand;
-        auto errorReply = WebSocketMessageHandler::Message::fail(errorCode, connection, { "Command not supported"_s }, commandId);
-        completionHandler(WTFMove(errorReply));
+    const auto& messageObject = parsedMessageValue->asObject();
+    if (!messageObject) {
+        RELEASE_LOG_ERROR(WebDriverBiDi, "WebDriver handle BiDi message: Expected object.");
+        completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, connection));
         return;
     }
 
-    ((*this).*handler)(id, WTFMove(parameters), [completionHandler = WTFMove(completionHandler), message](WebSocketMessageHandler::Message&& resultMessage) {
+    std::optional<int> commandId = messageObject->getInteger("id"_s);
+    if (!commandId) {
+        RELEASE_LOG_ERROR(WebDriverBiDi, "Missing command ID.");
+        completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, connection, "Missing command id"_s));
+        return;
+    }
+
+    BidiCommandHandler handler;
+    RefPtr<JSON::Object> parameters;
+    // FIXME Maybe replace manual method dispatch with generated dispatchers for static methods, like we do in WebDriverBidiProcessor-related classes in the UIProcess
+    // https://bugs.webkit.org/show_bug.cgi?id=281721
+    if (!findBidiCommand(messageObject, &handler, parameters)) {
+        RELEASE_LOG(WebDriverBiDi, "Failed to find appropriate BiDi command on WebDriver service. Relaying to the browser.");
+        auto sessionID = m_session->id();
+        m_session->relayBidiCommand(makeString(message.payload), *commandId, [completionHandler = WTFMove(completionHandler), sessionID, this](WebSocketMessageHandler::Message&& resultMessage) {
+            auto connection = m_bidiServer->connection(sessionID);
+            if (!connection) {
+                RELEASE_LOG(WebDriverBiDi, "Failed to find connection for session ID %s. Ignoring message.", sessionID.utf8().data());
+                return;
+            }
+            resultMessage.connection = *connection;
+            completionHandler(WTFMove(resultMessage));
+        });
+        return;
+    }
+
+    ((*this).*handler)(*commandId, WTFMove(parameters), [completionHandler = WTFMove(completionHandler), message](WebSocketMessageHandler::Message&& resultMessage) {
         // 6.7.5 If method is "session.new", let session be the entry in the list of active sessions whose session ID is equal to the "sessionId" property of value, append connection to session’s session WebSocket connections, and remove connection from the WebSocket connections not associated with a session.
         // FIXME https://bugs.webkit.org/show_bug.cgi?id=281722
         resultMessage.connection = message.connection;
@@ -491,20 +506,9 @@ void WebDriverService::handleMessage(WebSocketMessageHandler::Message&& message,
     });
 }
 
-bool WebDriverService::findBidiCommand(RefPtr<JSON::Value>& parameters, BidiCommandHandler* handler, unsigned& id, RefPtr<JSON::Object>& parsedParams)
+bool WebDriverService::findBidiCommand(const RefPtr<JSON::Object>& parameters, BidiCommandHandler* handler, RefPtr<JSON::Object>& parsedParams)
 {
-    if (!parameters)
-        return false;
-
-    const auto& asObject = parameters->asObject();
-    if (!asObject)
-        return false;
-
-    std::optional<int> idOpt = asObject->getInteger("id"_s);
-    if (!idOpt)
-        return false;
-
-    const String& method = asObject->getString("method"_s);
+    const String& method = parameters->getString("method"_s);
     if (!method)
         return false;
 
@@ -516,8 +520,7 @@ bool WebDriverService::findBidiCommand(RefPtr<JSON::Value>& parameters, BidiComm
     if (candidate == std::end(s_bidiCommands))
         return false;
 
-    id = *idOpt;
-    parsedParams = asObject->getObject("params"_s);
+    parsedParams = parameters->getObject("params"_s);
     *handler = candidate->handler;
     return true;
 }

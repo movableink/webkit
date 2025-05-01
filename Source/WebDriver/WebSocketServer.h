@@ -132,7 +132,8 @@ public:
     String getResourceName(const String& sessionId);
     String getWebSocketURL(const RefPtr<WebSocketListener>, const String& sessionId);
     String getSessionID(const String& resource);
-    void sendMessage(const String& session, const String& message);
+    void sendMessage(const String& sessionId, const String& message);
+    void sendErrorResponse(const String& sessionId, std::optional<unsigned> commandId, CommandResult::ErrorCode, const String& errorMessage, std::optional<String> stacktrace = std::nullopt);
 
     // Non-spec method
     void removeResourceForSession(const String& sessionId);
@@ -141,6 +142,8 @@ public:
 private:
     explicit WebSocketServer(WebSocketMessageHandler&);
 
+    void sendMessage(WebSocketMessageHandler::Connection, const String& message);
+    void sendErrorResponse(WebSocketMessageHandler::Connection, std::optional<unsigned> commandId, CommandResult::ErrorCode, const String& errorMessage, std::optional<String> stacktrace = std::nullopt);
     WebSocketMessageHandler& m_messageHandler;
     String m_listenerURL;
     RefPtr<WebSocketListener> m_listener;

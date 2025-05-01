@@ -27,6 +27,7 @@
 #include "WebSocketServer.h"
 
 #include "CommandResult.h"
+#include "Logging.h"
 #include "Session.h"
 #include "WebDriverService.h"
 #include <algorithm>
@@ -205,6 +206,41 @@ std::optional<Command> Command::fromData(const char* data, size_t dataLength)
     };
 
     return command;
+}
+
+void WebSocketServer::sendMessage(const String& sessionId, const String& message)
+{
+    auto connection = this->connection(sessionId);
+    if (!connection) {
+        RELEASE_LOG_ERROR(WebDriverBiDi, "No connection found for session %s when trying to send message: %s", sessionId.utf8().data(), message.utf8().data());
+        return;
+    }
+    sendMessage(*connection, message);
+}
+
+void WebSocketServer::sendErrorResponse(const String& sessionId, std::optional<unsigned> commandId, CommandResult::ErrorCode errorCode, const String& errorMessage, std::optional<String> stacktrace)
+{
+    auto connection = this->connection(sessionId);
+    if (!connection) {
+        RELEASE_LOG_ERROR(WebDriverBiDi, "No connection found for session %s when trying to send error response", sessionId.utf8().data());
+        return;
+    }
+    sendErrorResponse(*connection, commandId, errorCode, errorMessage, stacktrace);
+}
+
+void WebSocketServer::sendErrorResponse(WebSocketMessageHandler::Connection connection, std::optional<unsigned> commandId, CommandResult::ErrorCode errorCode, const String& errorMessage, std::optional<String> stacktrace)
+{
+    auto errorObject = JSON::Object::create();
+
+    errorObject->setString("type"_s, "error"_s);
+    errorObject->setString("error"_s, CommandResult::errorCodeToString(errorCode));
+    errorObject->setString("message"_s, errorMessage);
+    if (commandId)
+        errorObject->setInteger("id"_s, *commandId); // FIXME change to JSON::Value
+    if (stacktrace)
+        errorObject->setString("stacktrace"_s, *stacktrace);
+
+    sendMessage(connection, errorObject->toJSONString());
 }
 
 

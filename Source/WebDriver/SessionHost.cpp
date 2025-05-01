@@ -26,6 +26,7 @@
 #include "config.h"
 #include "SessionHost.h"
 
+#include "Logging.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Observer.h>
 #include <wtf/WeakHashSet.h>
@@ -78,6 +79,7 @@ long SessionHost::sendCommandToBackend(const String& command, RefPtr<JSON::Objec
 
 void SessionHost::dispatchMessage(const String& message)
 {
+    LOG(SessionHost, "SessionHost::dispatchMessage: %s", message.utf8().data());
     auto messageValue = JSON::Value::parseJSON(message);
     if (!messageValue)
         return;
@@ -88,8 +90,15 @@ void SessionHost::dispatchMessage(const String& message)
 
     auto sequenceID = messageObject->getInteger("id"_s);
     if (!sequenceID) {
+        auto method = messageObject->getString("method"_s);
+        if (method == "Automation.browsingContextCleared"_s)
+            return;
 #if ENABLE(WEBDRIVER_BIDI)
-        dispatchEvent(WTFMove(messageObject));
+        if (method != "Automation.bidiMessageSent"_s)
+            return;
+        dispatchBidiMessage(WTFMove(messageObject));
+#else
+        RELEASE_LOG_ERROR(SessionHost, "Received from browser message without id: %s", message.utf8().data());
 #endif
         return;
     }
@@ -126,10 +135,13 @@ void SessionHost::removeBrowserTerminatedObserver(const BrowserTerminatedObserve
     browserTerminatedObservers().remove(observer);
 }
 
-void SessionHost::dispatchEvent(RefPtr<JSON::Object>&& event)
+void SessionHost::dispatchBidiMessage(RefPtr<JSON::Object>&& event)
 {
-    if (m_eventHandler)
-        m_eventHandler->dispatchEvent(WTFMove(event));
+    LOG(WebDriverBiDi, "SessionHost::dispatchBidiMessage: %s", event->toJSONString().utf8().data());
+    if (m_bidiHandler)
+        m_bidiHandler->dispatchBidiMessage(WTFMove(event));
+    else
+        RELEASE_LOG(SessionHost, "No bidi message handler to dispatch message %s", event->toJSONString().utf8().data());
 }
 #endif
 

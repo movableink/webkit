@@ -26,6 +26,9 @@
 #include "config.h"
 #include "WebDriverBidiProcessor.h"
 
+#include "AutomationBackendDispatchers.h"
+#include <optional>
+
 #if ENABLE(WEBDRIVER_BIDI)
 
 #include "BidiBrowserAgent.h"
@@ -86,6 +89,77 @@ void WebDriverBidiProcessor::processBidiMessage(const String& message)
     protectedBackendDispatcher()->dispatch(message);
 }
 
+// Translate internal error messages that come from the inspector protocol payload.
+// See the list of allowed bidi errors in https://w3c.github.io/webdriver-bidi/#errors
+static String toBidiErrorCode(int errorCode, const String& inspectorInternalMsg)
+{
+    // These error codes are specified in JSON-RPC 2.0, Section 5.1.
+    switch (errorCode) {
+    case -32000: // Server error
+        break;
+    case -32700: // Parse error
+    case -32600: // Invalid request
+    case -32603: // Internal error
+        return "unknown error"_s;
+    case -32601: // Method not found
+        return "unknown command"_s;
+    case -32602: // Invalid params
+        return "invalid argument"_s;
+    }
+
+    auto errorMessage = Inspector::Protocol::AutomationHelpers::parseEnumValueFromString<Inspector::Protocol::Automation::ErrorMessage>(inspectorInternalMsg);
+    if (!errorMessage)
+        return "unknown error"_s;
+
+    switch (*errorMessage) {
+    case Inspector::Protocol::Automation::ErrorMessage::InternalError:
+        return "unknown error"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::Timeout:
+        return "timeout"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::JavaScriptError:
+        return "javascript error"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::JavaScriptTimeout:
+        return "script timeout"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::WindowNotFound:
+        return "no such window"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::FrameNotFound:
+        return "no such frame"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::NodeNotFound:
+        return "stale element reference"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::InvalidNodeIdentifier:
+        return "no such element"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::InvalidElementState:
+        return "invalid element state"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::NoJavaScriptDialog:
+        return "no such alert"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::NotImplemented:
+        return "unsupported operation"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::MissingParameter:
+    case Inspector::Protocol::Automation::ErrorMessage::InvalidParameter:
+        return "invalid argument"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::InvalidSelector:
+        return "invalid selector"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::ElementNotInteractable:
+        return "element not interactable"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::ElementNotSelectable:
+        return "element not selectable"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::ScreenshotError:
+        return "unable to capture screen"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::UnexpectedAlertOpen:
+        return "unexpected alert open"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::TargetOutOfBounds:
+        return "move target out of bounds"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::UnableToLoadExtension:
+        return "unable to load extension"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::UnableToUnloadExtension:
+        return "unable to unload extension"_s;
+    case Inspector::Protocol::Automation::ErrorMessage::NoSuchExtension:
+        return "no such web extension"_s;
+    default:
+        return "unknown error"_s;
+    }
+}
+
 void WebDriverBidiProcessor::sendBidiMessage(const String& message)
 {
     RefPtr session = m_session.get();
@@ -97,7 +171,40 @@ void WebDriverBidiProcessor::sendBidiMessage(const String& message)
     LOG(Automation, "[s:%s] sendBidiMessage of length %d", session->sessionIdentifier().utf8().data(), message.length());
     LOG(Automation, "%s", message.utf8().data());
 
-    session->sendBidiMessage(message);
+    auto msgValue = JSON::Object::parseJSON(message);
+    if (!msgValue) {
+        RELEASE_LOG_ERROR(Automation, "[s:%s] sendBidiMessage failed to parse message as JSON: %s", session->sessionIdentifier().utf8().data(), message.utf8().data());
+        return;
+    }
+    auto msgObj = msgValue->asObject();
+    if (!msgObj) {
+        RELEASE_LOG_ERROR(Automation, "[s:%s] sendBidiMessage failed to parse message as JSON object: %s", session->sessionIdentifier().utf8().data(), message.utf8().data());
+        return;
+    }
+
+    if (auto internalErrorObj = msgObj->getObject("error"_s)) {
+        if (auto codeField = internalErrorObj->getInteger("code"_s)) {
+            RELEASE_LOG(Automation, "[s:%s] sendBidiMessage converting internal error into BiDi error: %s", session->sessionIdentifier().utf8().data(), message.utf8().data());
+
+            auto bidiErrorObj = JSON::Object::create();
+            bidiErrorObj->setString("type"_s, "error"_s);
+            auto internalMsg = internalErrorObj->getString("message"_s);
+            bidiErrorObj->setString("message"_s, internalMsg);
+            bidiErrorObj->setString("error"_s, toBidiErrorCode(*codeField, internalMsg));
+            if (auto commandId = msgObj->getInteger("id"_s))
+                bidiErrorObj->setInteger("id"_s, *commandId);
+
+            session->sendBidiMessage(bidiErrorObj->toJSONString());
+            return;
+        }
+        // FIXME should we forward some unknown error?
+        RELEASE_LOG_ERROR(Automation, "[s:%s] sendBidiMessage failed to parse error code: %s", session->sessionIdentifier().utf8().data(), message.utf8().data());
+    } else if (msgObj->getInteger("id"_s))
+        msgObj->setString("type"_s, "success"_s);
+    else
+        msgObj->setString("type"_s, "event"_s);
+
+    session->sendBidiMessage(msgObj->toJSONString());
 }
 
 

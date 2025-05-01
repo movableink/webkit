@@ -49,7 +49,7 @@ class SessionHost;
 
 class Session :
 #if ENABLE(WEBDRIVER_BIDI)
-public BiDiEventHandler // Inherits RefCounted
+public BidiMessageHandler // Inherits RefCounted
 #else
 public RefCounted<Session>
 #endif
@@ -159,7 +159,8 @@ public:
 #if ENABLE(WEBDRIVER_BIDI)
     void enableGlobalEvent(const String&);
     void disableGlobalEvent(const String&);
-    void dispatchEvent(RefPtr<JSON::Object>&&);
+    void dispatchBidiMessage(RefPtr<JSON::Object>&&);
+    void relayBidiCommand(const String&, unsigned commandId, Function<void(WebSocketMessageHandler::Message&&)>&&);
 #endif
 
 private:

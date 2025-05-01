@@ -171,20 +171,17 @@ std::optional<String> WebSocketServer::listen(const String& host, unsigned port)
 #endif
 }
 
-void WebSocketServer::sendMessage(const String& session, const String& message)
+void WebSocketServer::sendMessage(WebSocketMessageHandler::Connection connection, const String& message)
 {
 #if USE(SOUP2)
-    UNUSED_PARAM(session);
+    UNUSED_PARAM(connection);
     UNUSED_PARAM(message);
     RELEASE_LOG(WebDriverBiDi, "WebSockets support not implemented yet with libsoup2");
 #else
-    for (const auto& pair : m_connectionToSession) {
-        if (pair.value == session) {
-            GRefPtr<GBytes> rawMessage = adoptGRef(g_bytes_new(message.utf8().data(), message.utf8().length()));
-            soup_websocket_connection_send_message(pair.key.get(), SOUP_WEBSOCKET_DATA_TEXT, rawMessage.get());
-            return;
-        }
-    }
+    ASSERT(connection);
+    RELEASE_LOG(WebDriverBiDi, "Sending message: %s", message.utf8().data());
+    GRefPtr<GBytes> rawMessage = adoptGRef(g_bytes_new(message.utf8().data(), message.utf8().length()));
+    soup_websocket_connection_send_message(connection.get(), SOUP_WEBSOCKET_DATA_TEXT, rawMessage.get());
 #endif
 }
 

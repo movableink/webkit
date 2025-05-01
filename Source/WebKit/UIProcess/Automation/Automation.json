@@ -935,18 +935,6 @@
             ]
         },
         {
-            "name": "logEntryAdded",
-            "description": "Fired when a new log entry is added.",
-            "parameters": [
-                { "name": "level", "type": "string", "description": "The log entry level." },
-                { "name": "source", "type": "string", "description": "The source script information" },
-                { "name": "text", "type": "string", "description": "The log entry text message." },
-                { "name": "timestamp", "type": "number", "description": "The timestamp of the log entry." },
-                { "name": "type", "type": "string", "description": "The log entry type." },
-                { "name": "method", "type": "string", "optional": true, "description": "The log entry console method."}
-            ]
-        },
-        {
             "name": "bidiMessageSent",
             "description": "Relay a WebDriver Bidi message from the automation session to be processed by the client.",
             "condition": "ENABLE(WEBDRIVER_BIDI)",

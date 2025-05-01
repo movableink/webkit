@@ -2504,6 +2504,7 @@ Ref<WebAutomationSession::Debuggable> WebAutomationSession::protectedDebuggable(
 }
 #endif
 
+#if ENABLE(WEBDRIVER_BIDI)
 static String logEntryLevelForMessage(const JSC::MessageType& messageType, const MessageLevel& messageLevel)
 {
     if (messageType == JSC::MessageType::Assert || messageLevel == JSC::MessageLevel::Error)
@@ -2536,9 +2537,11 @@ static String logEntryTypeForMessage(const JSC::MessageSource& messageSource)
         return "javascript"_s;
     return "console"_s;
 }
+#endif // ENABLE(WEBDRIVER_BIDI)
 
 void WebAutomationSession::logEntryAdded(const JSC::MessageSource& messageSource, const JSC::MessageLevel& messageLevel, const String& messageText, const JSC::MessageType& messageType, const WallTime& timestamp)
 {
+#if ENABLE(WEBDRIVER_BIDI)
     // FIXME Support getting source information
     // https://bugs.webkit.org/show_bug.cgi?id=282978
     String sourceString;
@@ -2550,9 +2553,13 @@ void WebAutomationSession::logEntryAdded(const JSC::MessageSource& messageSource
 
     // FIXME Get browsing context handle and source info
     // https://bugs.webkit.org/show_bug.cgi?id=282981
-    m_domainNotifier->logEntryAdded(level, sourceString, messageText, milliseconds, type, method);
-#if ENABLE(WEBDRIVER_BIDI)
     m_bidiProcessor->logDomainNotifier().entryAdded(level, sourceString, messageText, milliseconds, type, method);
+#else
+    UNUSED_PARAM(messageSource);
+    UNUSED_PARAM(messageLevel);
+    UNUSED_PARAM(messageText);
+    UNUSED_PARAM(messageType);
+    UNUSED_PARAM(timestamp);
 #endif
 }
 
