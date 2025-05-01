@@ -26,6 +26,7 @@
 #pragma once
 
 #include "CalculationTree.h"
+#include <numbers>
 #include <numeric>
 #include <wtf/Forward.h>
 #include <wtf/MathExtras.h>
@@ -361,11 +362,11 @@ template<> struct OperatorExecutor<Cos> {
 template<> struct OperatorExecutor<Tan> {
     double operator()(double a)
     {
-        double x = std::fmod(a, piDouble * 2);
+        double x = std::fmod(a, std::numbers::pi * 2);
         // std::fmod can return negative values.
-        x = x < 0 ? piDouble * 2 + x : x;
+        x = x < 0 ? std::numbers::pi * 2 + x : x;
         ASSERT(!(x < 0));
-        ASSERT(!(x > piDouble * 2));
+        ASSERT(!(x > std::numbers::pi * 2));
         if (x == piOverTwoDouble)
             return std::numeric_limits<double>::infinity();
         if (x == 3 * piOverTwoDouble)

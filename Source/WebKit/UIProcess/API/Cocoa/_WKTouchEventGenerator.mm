@@ -30,6 +30,7 @@
 
 #import "UIKitSPI.h"
 #import <mach/mach_time.h>
+#import <numbers>
 #import <pal/spi/cocoa/IOKitSPI.h>
 #import <wtf/Assertions.h>
 #import <wtf/IndexedRange.h>
@@ -73,7 +74,7 @@ static CFTimeInterval secondsSinceAbsoluteTime(CFAbsoluteTime startTime)
 
 static double simpleCurveInterpolation(double a, double b, double t)
 {
-    return a + (b - a) * sin(sin(t * M_PI / 2) * t * M_PI / 2);
+    return a + (b - a) * sin(sin(t * std::numbers::pi / 2) * t * std::numbers::pi / 2);
 }
 
 static CGPoint calculateNextCurveLocation(CGPoint a, CGPoint b, CFTimeInterval t)

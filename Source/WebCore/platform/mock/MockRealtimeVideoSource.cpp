@@ -46,6 +46,7 @@
 #include "ThreadGlobalData.h"
 #include "VideoFrame.h"
 #include <math.h>
+#include <numbers>
 #include <wtf/NativePromise.h>
 #include <wtf/UUID.h>
 #include <wtf/text/MakeString.h>
@@ -473,16 +474,16 @@ void MockRealtimeVideoSource::drawAnimation(GraphicsContext& context)
 
     m_path.clear();
     m_path.moveTo(location);
-    m_path.addArc(location, radius, 0, 2 * piFloat, RotationDirection::Counterclockwise);
+    m_path.addArc(location, radius, 0, 2 * std::numbers::pi_v<float>, RotationDirection::Counterclockwise);
     m_path.closeSubpath();
     context.setFillColor(Color::white);
     context.setFillRule(WindRule::NonZero);
     context.fillPath(m_path);
 
-    float endAngle = piFloat * (((fmod(m_frameNumber, frameRate()) + 0.5) * (2.0 / frameRate())) + 1);
+    float endAngle = std::numbers::pi_v<float> * (((fmod(m_frameNumber, frameRate()) + 0.5) * (2.0 / frameRate())) + 1);
     m_path.clear();
     m_path.moveTo(location);
-    m_path.addArc(location, radius, 1.5 * piFloat, endAngle, RotationDirection::Counterclockwise);
+    m_path.addArc(location, radius, 1.5 * std::numbers::pi_v<float>, endAngle, RotationDirection::Counterclockwise);
     m_path.closeSubpath();
     context.setFillColor(Color::gray);
     context.setFillRule(WindRule::NonZero);

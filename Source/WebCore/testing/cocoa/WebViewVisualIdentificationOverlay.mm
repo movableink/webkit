@@ -31,6 +31,7 @@
 #import "Color.h"
 #import "WebCoreCALayerExtras.h"
 #import <CoreText/CoreText.h>
+#import <wtf/MathExtras.h>
 #import <wtf/WeakObjCPtr.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -169,7 +170,7 @@ static void drawPattern(void *overlayPtr, CGContextRef ctx)
 
     CGSize textSize = [_kind sizeWithAttributes:@{ (id)kCTFontAttributeName : (id)createIdentificationFont().get() }];
     CGSize patternSize = CGSizeMake(textSize.width + horizontalMargin, (textSize.height + verticalMargin) * 2);
-    auto pattern = adoptCF(CGPatternCreate(self, layer.bounds, CGAffineTransformMakeRotation(M_PI_4), patternSize.width, patternSize.height, kCGPatternTilingNoDistortion, true, &callbacks));
+    auto pattern = adoptCF(CGPatternCreate(self, layer.bounds, CGAffineTransformMakeRotation(piOverFourDouble), patternSize.width, patternSize.height, kCGPatternTilingNoDistortion, true, &callbacks));
     CGFloat alpha = 0.5;
     CGContextSetFillPattern(ctx, pattern.get(), &alpha);
 

@@ -28,6 +28,7 @@
 #include "GeometryUtilities.h"
 
 #include "FloatQuad.h"
+#include <numbers>
 #include <wtf/MathExtras.h>
 #include <wtf/Vector.h>
 
@@ -213,7 +214,7 @@ static float angleBetweenVectors(const FloatSize& u, const FloatSize& v)
 
 RotatedRect rotatedBoundingRectWithMinimumAngleOfRotation(const FloatQuad& quad, std::optional<float> minRotationInRadians)
 {
-    constexpr auto twoPiFloat = 2 * piFloat;
+    constexpr auto twoPiFloat = 2 * std::numbers::pi_v<float>;
 
     auto minRotationAmount = minRotationInRadians.value_or(std::numeric_limits<float>::epsilon());
 

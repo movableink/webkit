@@ -30,6 +30,7 @@
 #include <cmath>
 #include <float.h>
 #include <limits>
+#include <numbers>
 #include <stdint.h>
 #include <stdlib.h>
 #include <wtf/StdLibExtras.h>
@@ -39,45 +40,11 @@
 #include <machine/ieee.h>
 #endif
 
-#ifndef M_PI
-constexpr double piDouble = 3.14159265358979323846;
-constexpr float piFloat = 3.14159265358979323846f;
-#else
-constexpr double piDouble = M_PI;
-constexpr float piFloat = static_cast<float>(M_PI);
-#endif
+constexpr double piOverTwoDouble = std::numbers::pi / 2;
+constexpr float piOverTwoFloat = static_cast<float>(piOverTwoDouble);
 
-#ifndef M_PI_2
-constexpr double piOverTwoDouble = 1.57079632679489661923;
-constexpr float piOverTwoFloat = 1.57079632679489661923f;
-#else
-constexpr double piOverTwoDouble = M_PI_2;
-constexpr float piOverTwoFloat = static_cast<float>(M_PI_2);
-#endif
-
-#ifndef M_PI_4
-constexpr double piOverFourDouble = 0.785398163397448309616;
-constexpr float piOverFourFloat = 0.785398163397448309616f;
-#else
-constexpr double piOverFourDouble = M_PI_4;
-constexpr float piOverFourFloat = static_cast<float>(M_PI_4);
-#endif
-
-#ifndef M_SQRT2
-constexpr double sqrtOfTwoDouble = 1.41421356237309504880;
-constexpr float sqrtOfTwoFloat = 1.41421356237309504880f;
-#else
-constexpr double sqrtOfTwoDouble = M_SQRT2;
-constexpr float sqrtOfTwoFloat = static_cast<float>(M_SQRT2);
-#endif
-
-#ifndef M_E
-constexpr double eDouble = 2.71828182845904523536028747135266250;
-constexpr float eFloat = 2.71828182845904523536028747135266250f;
-#else
-constexpr double eDouble = M_E;
-constexpr float eFloat = static_cast<float>(M_E);
-#endif
+constexpr double piOverFourDouble = std::numbers::pi / 4;
+constexpr float piOverFourFloat = static_cast<float>(piOverFourDouble);
 
 #if OS(WINDOWS)
 
@@ -108,13 +75,13 @@ extern "C" inline double wtf_atan2(double x, double y)
 
 #endif // OS(WINDOWS)
 
-constexpr double radiansPerDegreeDouble = piDouble / 180.0;
-constexpr double degreesPerRadianDouble = 180.0 / piDouble;
+constexpr double radiansPerDegreeDouble = std::numbers::pi / 180.0;
+constexpr double degreesPerRadianDouble = 180.0 / std::numbers::pi;
 constexpr double gradientsPerDegreeDouble = 400.0 / 360.0;
 constexpr double degreesPerGradientDouble = 360.0 / 400.0;
 constexpr double turnsPerDegreeDouble = 1.0 / 360.0;
 constexpr double degreesPerTurnDouble = 360.0;
-constexpr double radiansPerTurnDouble = 2.0f * piDouble;
+constexpr double radiansPerTurnDouble = 2.0 * std::numbers::pi;
 
 constexpr double deg2rad(double d)  { return d * radiansPerDegreeDouble; }
 constexpr double rad2deg(double r)  { return r * degreesPerRadianDouble; }
@@ -125,13 +92,13 @@ constexpr double turn2deg(double t) { return t * degreesPerTurnDouble; }
 
 
 // Note that these differ from the casting the double values above in their rounding errors.
-constexpr float radiansPerDegreeFloat = piFloat / 180.0f;
-constexpr float degreesPerRadianFloat = 180.0f / piFloat;
+constexpr float radiansPerDegreeFloat = std::numbers::pi_v<float> / 180.0f;
+constexpr float degreesPerRadianFloat = 180.0f / std::numbers::pi_v<float>;
 constexpr float gradientsPerDegreeFloat= 400.0f / 360.0f;
 constexpr float degreesPerGradientFloat = 360.0f / 400.0f;
 constexpr float turnsPerDegreeFloat = 1.0f / 360.0f;
 constexpr float degreesPerTurnFloat = 360.0f;
-constexpr float radiansPerTurnFloat = 2.0f * piFloat;
+constexpr float radiansPerTurnFloat = 2.0f * std::numbers::pi_v<float>;
 
 constexpr float deg2rad(float d)  { return d * radiansPerDegreeFloat; }
 constexpr float rad2deg(float r)  { return r * degreesPerRadianFloat; }

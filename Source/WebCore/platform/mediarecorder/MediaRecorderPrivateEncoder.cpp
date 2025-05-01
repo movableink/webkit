@@ -42,6 +42,7 @@
 #include <CoreAudio/CoreAudioTypes.h>
 #include <CoreMedia/CMTime.h>
 #include <mutex>
+#include <numbers>
 #include <wtf/Locker.h>
 #include <wtf/MediaTime.h>
 
@@ -456,7 +457,7 @@ void MediaRecorderPrivateEncoder::appendVideoFrame(MediaTime sampleTime, Ref<Vid
         m_firstVideoFrameProcessed = true;
 
         if (frame->rotation() != VideoFrame::Rotation::None || frame->isMirrored()) {
-            m_videoTransform = CGAffineTransformMakeRotation(static_cast<int>(frame->rotation()) * M_PI / 180);
+            m_videoTransform = CGAffineTransformMakeRotation(static_cast<int>(frame->rotation()) * std::numbers::pi / 180);
             if (frame->isMirrored())
                 m_videoTransform = CGAffineTransformScale(*m_videoTransform, -1, 1);
         }

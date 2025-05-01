@@ -35,6 +35,7 @@
 #include "IntRect.h"
 #include "Region.h"
 #include "TransformationMatrix.h"
+#include <numbers>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
@@ -408,18 +409,18 @@ void AffineTransform::blend(const AffineTransform& from, double progress, Compos
     if ((srA.scaleX < 0 && srB.scaleY < 0) || (srA.scaleY < 0 &&  srB.scaleX < 0)) {
         srA.scaleX = -srA.scaleX;
         srA.scaleY = -srA.scaleY;
-        srA.angle += srA.angle < 0 ? piDouble : -piDouble;
+        srA.angle += srA.angle < 0 ? std::numbers::pi : -std::numbers::pi;
     }
 
     // Don't rotate the long way around.
-    srA.angle = fmod(srA.angle, 2 * piDouble);
-    srB.angle = fmod(srB.angle, 2 * piDouble);
+    srA.angle = fmod(srA.angle, 2 * std::numbers::pi);
+    srB.angle = fmod(srB.angle, 2 * std::numbers::pi);
 
-    if (std::abs(srA.angle - srB.angle) > piDouble) {
+    if (std::abs(srA.angle - srB.angle) > std::numbers::pi) {
         if (srA.angle > srB.angle)
-            srA.angle -= piDouble * 2;
+            srA.angle -= std::numbers::pi * 2;
         else
-            srB.angle -= piDouble * 2;
+            srB.angle -= std::numbers::pi * 2;
     }
     
     srA.scaleX += progress * (srB.scaleX - srA.scaleX);

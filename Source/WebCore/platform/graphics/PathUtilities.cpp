@@ -34,6 +34,7 @@
 #include "FloatRoundedRect.h"
 #include "GeometryUtilities.h"
 #include <math.h>
+#include <numbers>
 #include <ranges>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -186,7 +187,7 @@ static FloatPointGraph::Polygon walkGraphAndExtractPolygon(FloatPointGraph::Node
             float crossZ = nextVec.x() * currentVec.y() - nextVec.y() * currentVec.x();
 
             if (crossZ < 0)
-                angle = (2 * piFloat) - angle;
+                angle = (2 * std::numbers::pi_v<float>) - angle;
 
             if (!nextNode || angle > nextNodeAngle) {
                 nextNode = potentialNextNode;

@@ -28,6 +28,7 @@
 
 #include "FEGaussianBlurSoftwareApplier.h"
 #include "Filter.h"
+#include <numbers>
 #include <wtf/text/TextStream.h>
 
 #if USE(SKIA)
@@ -83,7 +84,7 @@ bool FEGaussianBlur::setEdgeMode(EdgeModeType edgeMode)
 
 static inline float gaussianKernelFactor()
 {
-    return 3 / 4.f * sqrtf(2 * piFloat);
+    return 3 / 4.f * sqrtf(2 * std::numbers::pi_v<float>);
 }
 
 static int clampedToKernelSize(float value)

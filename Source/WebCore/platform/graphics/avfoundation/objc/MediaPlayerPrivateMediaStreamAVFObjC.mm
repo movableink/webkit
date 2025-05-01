@@ -41,6 +41,7 @@
 #import "VideoFrameMetadata.h"
 #import "VideoLayerManagerObjC.h"
 #import "VideoTrackPrivateMediaStream.h"
+#import <numbers>
 #import <objc_runtime.h>
 #import <pal/avfoundation/MediaTimeAVFoundation.h>
 #import <pal/spi/cocoa/AVFoundationSPI.h>
@@ -49,7 +50,7 @@
 #import <wtf/MainThread.h>
 #import <wtf/NeverDestroyed.h>
 #import <wtf/TZoneMallocInlines.h>
-#include <wtf/text/MakeString.h>
+#import <wtf/text/MakeString.h>
 
 #import "CoreVideoSoftLink.h"
 #import <pal/cf/CoreMediaSoftLink.h>
@@ -1094,7 +1095,7 @@ static inline CGAffineTransform videoTransformationMatrix(VideoFrame& videoFrame
     if (!width || !height)
         return CGAffineTransformIdentity;
 
-    auto videoTransform = CGAffineTransformMakeRotation(static_cast<int>(videoFrame.rotation()) * M_PI / 180);
+    auto videoTransform = CGAffineTransformMakeRotation(static_cast<int>(videoFrame.rotation()) * std::numbers::pi / 180);
     if (videoFrame.isMirrored())
         videoTransform = CGAffineTransformScale(videoTransform, -1, 1);
 

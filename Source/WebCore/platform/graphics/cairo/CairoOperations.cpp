@@ -50,6 +50,7 @@
 #include "ShadowBlur.h"
 #include <algorithm>
 #include <cairo.h>
+#include <numbers>
 
 namespace WebCore {
 namespace Cairo {
@@ -1152,7 +1153,7 @@ void drawEllipse(GraphicsContextCairo& platformContext, const FloatRect& rect, c
     float xRadius = .5 * rect.width();
     cairo_translate(cr, rect.x() + xRadius, rect.y() + yRadius);
     cairo_scale(cr, xRadius, yRadius);
-    cairo_arc(cr, 0., 0., 1., 0., 2 * piFloat);
+    cairo_arc(cr, 0., 0., 1., 0., 2 * std::numbers::pi_v<float>);
     cairo_restore(cr);
 
     if (fillColor.isVisible()) {

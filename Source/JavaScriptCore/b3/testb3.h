@@ -72,6 +72,7 @@
 #include "OperationResult.h"
 #include "PureNaN.h"
 #include <cmath>
+#include <numbers>
 #include <regex>
 #include <string>
 #include <wtf/FastTLS.h>
@@ -341,10 +342,6 @@ typedef B3Operand<int8_t> Int8Operand;
 
 #define MAKE_OPERAND(value) B3Operand<decltype(value)> { #value, value }
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846264338327950288
-#endif
-
 template<typename FloatType>
 void populateWithInterestingValues(Vector<B3Operand<FloatType>>& operands)
 {
@@ -362,8 +359,8 @@ void populateWithInterestingValues(Vector<B3Operand<FloatType>>& operands)
     operands.append({ "-1.1", static_cast<FloatType>(-1.1) });
     operands.append({ "2.", static_cast<FloatType>(2.) });
     operands.append({ "-2.", static_cast<FloatType>(-2.) });
-    operands.append({ "M_PI", static_cast<FloatType>(M_PI) });
-    operands.append({ "-M_PI", static_cast<FloatType>(-M_PI) });
+    operands.append({ "M_PI", static_cast<FloatType>(std::numbers::pi) });
+    operands.append({ "-M_PI", static_cast<FloatType>(-std::numbers::pi) });
     operands.append({ "min", std::numeric_limits<FloatType>::min() });
     operands.append({ "max", std::numeric_limits<FloatType>::max() });
     operands.append({ "lowest", std::numeric_limits<FloatType>::lowest() });

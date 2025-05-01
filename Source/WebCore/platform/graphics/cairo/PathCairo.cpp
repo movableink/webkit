@@ -33,6 +33,7 @@
 #include "FloatRect.h"
 #include "GraphicsContextCairo.h"
 #include "PathStream.h"
+#include <numbers>
 
 namespace WebCore {
 
@@ -221,7 +222,7 @@ void PathCairo::add(PathArcTo arcTo)
     orth_p1p0 = FloatPoint(-orth_p1p0.x(), -orth_p1p0.y());
     float sa = acos(orth_p1p0.x() / orth_p1p0_length);
     if (orth_p1p0.y() < 0.f)
-        sa = 2 * piDouble - sa;
+        sa = 2 * std::numbers::pi - sa;
 
     // clockwise logic
     auto direction = RotationDirection::Clockwise;
@@ -232,10 +233,10 @@ void PathCairo::add(PathArcTo arcTo)
     float orth_p1p2_length = sqrtf(orth_p1p2.x() * orth_p1p2.x() + orth_p1p2.y() * orth_p1p2.y());
     float ea = acos(orth_p1p2.x() / orth_p1p2_length);
     if (orth_p1p2.y() < 0)
-        ea = 2 * piDouble - ea;
-    if ((sa > ea) && ((sa - ea) < piDouble))
+        ea = 2 * std::numbers::pi - ea;
+    if ((sa > ea) && ((sa - ea) < std::numbers::pi))
         direction = RotationDirection::Counterclockwise;
-    if ((sa < ea) && ((ea - sa) > piDouble))
+    if ((sa < ea) && ((ea - sa) > std::numbers::pi))
         direction = RotationDirection::Counterclockwise;
 
     cairo_line_to(platformPath(), t_p1p0.x(), t_p1p0.y());
@@ -254,7 +255,7 @@ void PathCairo::add(PathArc arc)
     const float endAngle = arc.endAngle;
     const RotationDirection direction = arc.direction;
     float sweep = endAngle - startAngle;
-    const float twoPI = 2 * piFloat;
+    constexpr float twoPI = 2 * std::numbers::pi_v<float>;
     if ((sweep <= -twoPI || sweep >= twoPI)
         && ((direction == RotationDirection::Counterclockwise && (endAngle < startAngle)) || (direction == RotationDirection::Clockwise && (startAngle < endAngle)))) {
         if (direction == RotationDirection::Clockwise)
@@ -305,7 +306,7 @@ void PathCairo::add(PathEllipseInRect ellipseInRect)
     float xRadius = .5 * ellipseInRect.rect.width();
     cairo_translate(cr, ellipseInRect.rect.x() + xRadius, ellipseInRect.rect.y() + yRadius);
     cairo_scale(cr, xRadius, yRadius);
-    cairo_arc(cr, 0., 0., 1., 0., 2 * piDouble);
+    cairo_arc(cr, 0., 0., 1., 0., 2 * std::numbers::pi);
     cairo_restore(cr);
 
     m_elementsStream = nullptr;

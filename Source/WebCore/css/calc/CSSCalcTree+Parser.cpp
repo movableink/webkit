@@ -49,6 +49,7 @@
 #include "Logging.h"
 #include "MediaQueryFeatures.h"
 #include "MediaQueryParser.h"
+#include <numbers>
 #include <wtf/SortedArrayMap.h>
 
 namespace WebCore {
@@ -61,8 +62,8 @@ static constexpr int maxExpressionDepth = 100;
 static std::optional<std::pair<Number, Type>> lookupConstantNumber(CSSValueID symbol)
 {
     static constexpr std::pair<CSSValueID, double> constantMappings[] {
-        { CSSValueE,                     eDouble                                  },
-        { CSSValuePi,                    piDouble                                 },
+        { CSSValueE,                     std::numbers::e                          },
+        { CSSValuePi,                    std::numbers::pi                         },
         { CSSValueInfinity,              std::numeric_limits<double>::infinity()  },
         { CSSValueNegativeInfinity, -1 * std::numeric_limits<double>::infinity()  },
         { CSSValueNaN,                   std::numeric_limits<double>::quiet_NaN() },

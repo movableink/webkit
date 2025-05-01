@@ -30,9 +30,11 @@
 #import "GeneratedTouchesDebugWindow.h"
 #import "UIKitSPIForTesting.h"
 #import <mach/mach_time.h>
+#import <numbers>
 #import <pal/spi/cocoa/IOKitSPI.h>
 #import <wtf/Assertions.h>
 #import <wtf/BlockPtr.h>
+#import <wtf/MathExtras.h>
 #import <wtf/SoftLinking.h>
 #import <wtf/Vector.h>
 
@@ -185,7 +187,7 @@ static double linearInterpolation(double a, double b, double t)
 
 static double simpleCurveInterpolation(double a, double b, double t)
 {
-    return (a + (b - a) * sin(sin(t * M_PI / 2) * t * M_PI / 2));
+    return (a + (b - a) * sin(sin(t * std::numbers::pi / 2) * t * std::numbers::pi / 2));
 }
 
 
@@ -712,8 +714,8 @@ static InterpolationType interpolationFromString(NSString *string)
     // data. It does not mention that the azimuth angle is offset from a full rotation.
     // Also, UIKit and IOHID interpret the altitude as different adjacent angles.
     _activePoints[0].pathPressure = pressure * 500;
-    _activePoints[0].azimuthAngle = M_PI * 2 - azimuthAngle;
-    _activePoints[0].altitudeAngle = M_PI_2 - altitudeAngle;
+    _activePoints[0].azimuthAngle = std::numbers::pi * 2 - azimuthAngle;
+    _activePoints[0].altitudeAngle = piOverTwoDouble - altitudeAngle;
 
     auto eventRef = adoptCF([self _createIOHIDEventType:StylusEventTouched]);
     [self _sendHIDEvent:eventRef.get()];
@@ -726,8 +728,8 @@ static InterpolationType interpolationFromString(NSString *string)
     _activePoints[0].isStylus = YES;
     // See notes above for details on these calculations.
     _activePoints[0].pathPressure = pressure * 500;
-    _activePoints[0].azimuthAngle = M_PI * 2 - azimuthAngle;
-    _activePoints[0].altitudeAngle = M_PI_2 - altitudeAngle;
+    _activePoints[0].azimuthAngle = std::numbers::pi * 2 - azimuthAngle;
+    _activePoints[0].altitudeAngle = piOverTwoDouble - altitudeAngle;
 
     auto eventRef = adoptCF([self _createIOHIDEventType:StylusEventMoved]);
     [self _sendHIDEvent:eventRef.get()];

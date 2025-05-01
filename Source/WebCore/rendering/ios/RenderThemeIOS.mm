@@ -85,10 +85,12 @@
 #import "WebCoreThreadRun.h"
 #import <CoreGraphics/CoreGraphics.h>
 #import <CoreImage/CoreImage.h>
+#import <numbers>
 #import <objc/runtime.h>
 #import <pal/spi/cf/CoreTextSPI.h>
 #import <pal/spi/ios/UIKitSPI.h>
 #import <pal/system/ios/UserInterfaceIdiom.h>
+#import <wtf/MathExtras.h>
 #import <wtf/NeverDestroyed.h>
 #import <wtf/ObjCRuntimeExtras.h>
 #import <wtf/StdLibExtras.h>
@@ -1312,7 +1314,7 @@ static void paintAttachmentProgress(GraphicsContext& context, AttachmentLayout& 
     Path progressPath;
     progressPath.moveTo(center);
     progressPath.addLineTo(FloatPoint(center.x(), info.progressRect.y()));
-    progressPath.addArc(center, info.progressRect.width() / 2, -M_PI_2, info.progress * 2 * M_PI - M_PI_2, RotationDirection::Counterclockwise);
+    progressPath.addArc(center, info.progressRect.width() / 2, -piOverTwoDouble, info.progress * 2 * std::numbers::pi - piOverTwoDouble, RotationDirection::Counterclockwise);
     progressPath.closeSubpath();
     context.fillPath(progressPath);
 }

@@ -35,6 +35,7 @@
 #include "Logging.h"
 #include "MediaPlayer.h"
 #include "NotImplemented.h"
+#include <numbers>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
@@ -144,7 +145,7 @@ bool Recorder::updateStateForTranslate(float x, float y)
 
 bool Recorder::updateStateForRotate(float angleInRadians)
 {
-    if (WTF::areEssentiallyEqual(0.f, fmodf(angleInRadians, piFloat * 2.f)))
+    if (WTF::areEssentiallyEqual(0.f, fmodf(angleInRadians, std::numbers::pi_v<float> * 2.f)))
         return false;
     currentState().rotate(angleInRadians);
     return true;

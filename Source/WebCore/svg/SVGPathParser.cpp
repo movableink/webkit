@@ -30,6 +30,7 @@
 #include "SVGPathSource.h"
 #include "SVGPathStringBuilder.h"
 #include "SVGPathUtilities.h"
+#include <numbers>
 #include <wtf/MathExtras.h>
 
 static const float gOneOverThree = 1 / 3.f;
@@ -455,9 +456,9 @@ bool SVGPathParser::decomposeArcToCubic(float angle, float rx, float ry, const F
 
     float thetaArc = theta2 - theta1;
     if (thetaArc < 0 && sweepFlag)
-        thetaArc += 2 * piFloat;
+        thetaArc += 2 * std::numbers::pi_v<float>;
     else if (thetaArc > 0 && !sweepFlag)
-        thetaArc -= 2 * piFloat;
+        thetaArc -= 2 * std::numbers::pi_v<float>;
 
     pointTransform.makeIdentity();
     pointTransform.rotate(angle);

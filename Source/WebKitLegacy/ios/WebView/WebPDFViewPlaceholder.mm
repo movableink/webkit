@@ -47,6 +47,7 @@
 #import <WebKitLegacy/WebNSViewExtras.h>
 #import <WebKitLegacy/WebPDFDocumentExtras.h>
 #import <WebKitLegacy/WebViewPrivate.h>
+#import <numbers>
 #import <wtf/MonotonicTime.h>
 #import <wtf/SoftLinking.h>
 #import <wtf/Vector.h>
@@ -346,7 +347,7 @@ static const float PAGE_HEIGHT_INSET = 4.0f * 2.0f;
         return CGRectZero;
 
     CGRect bounds = CGPDFPageGetBoxRect(page, kCGPDFCropBox);
-    CGFloat rotation = CGPDFPageGetRotationAngle(page) * (M_PI / 180.0f);
+    CGFloat rotation = CGPDFPageGetRotationAngle(page) * (std::numbers::pi / 180.0f);
     if (rotation != 0)
         bounds = CGRectApplyAffineTransform(bounds, CGAffineTransformMakeRotation(rotation));
 

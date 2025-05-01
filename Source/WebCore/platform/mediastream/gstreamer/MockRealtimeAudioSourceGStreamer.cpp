@@ -28,11 +28,12 @@
 #include "GStreamerCaptureDeviceManager.h"
 #include "MockRealtimeMediaSourceCenter.h"
 #include <gst/app/gstappsrc.h>
+#include <numbers>
 #include <wtf/IndexedRange.h>
 
 namespace WebCore {
 
-static constexpr double s_Tau = 2 * M_PI;
+static constexpr double s_Tau = 2 * std::numbers::pi;
 static constexpr double s_BipBopDuration = 0.07;
 static constexpr double s_BipBopVolume = 0.5;
 static constexpr double s_BipFrequency = 1500;

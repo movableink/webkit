@@ -30,6 +30,7 @@
 #include "Path.h"
 #include "StylePrimitiveNumericTypes+Blending.h"
 #include "StylePrimitiveNumericTypes+Evaluation.h"
+#include <numbers>
 #include <wtf/TinyLRUCache.h>
 
 namespace WebCore {
@@ -69,7 +70,7 @@ float resolveRadius(const Circle& value, FloatSize boxSize, FloatPoint center)
 {
     return WTF::switchOn(value.radius,
         [&](const Circle::Length& length) -> float {
-            return evaluate(length, boxSize.diagonalLength() / sqrtOfTwoFloat);
+            return evaluate(length, boxSize.diagonalLength() / std::numbers::sqrt2_v<float>);
         },
         [&](const Circle::Extent& extent) -> float {
             return WTF::switchOn(extent,

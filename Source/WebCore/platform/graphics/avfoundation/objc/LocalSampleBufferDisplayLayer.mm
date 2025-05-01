@@ -37,6 +37,7 @@
 #import <AVFoundation/AVSampleBufferDisplayLayer.h>
 #import <QuartzCore/CALayer.h>
 #import <QuartzCore/CATransaction.h>
+#import <numbers>
 #import <pal/avfoundation/MediaTimeAVFoundation.h>
 #import <pal/spi/cocoa/AVFoundationSPI.h>
 #import <wtf/MainThread.h>
@@ -370,7 +371,7 @@ static inline CGAffineTransform transformationMatrixForVideoFrame(VideoFrame& vi
 #else
     int rotationAngle = static_cast<int>(videoFrame.rotation());
 #endif
-    auto videoTransform = CGAffineTransformMakeRotation(rotationAngle * M_PI / 180);
+    auto videoTransform = CGAffineTransformMakeRotation(rotationAngle * std::numbers::pi / 180);
     if (videoFrame.isMirrored())
         videoTransform = CGAffineTransformScale(videoTransform, -1, 1);
 

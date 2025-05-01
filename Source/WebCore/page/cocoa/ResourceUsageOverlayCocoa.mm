@@ -37,6 +37,7 @@
 #import <CoreText/CoreText.h>
 #import <QuartzCore/CALayer.h>
 #import <QuartzCore/CATransaction.h>
+#import <numbers>
 #import <wtf/MainThread.h>
 #import <wtf/MathExtras.h>
 #import <wtf/MemoryFootprint.h>
@@ -406,7 +407,7 @@ static void drawMemHistory(CGContextRef context, float x1, float y1, float y2, H
     drawGraphLabel(context, x1, y2, "Mem"_s);
 }
 
-static const float fullCircleInRadians = piFloat * 2;
+static const float fullCircleInRadians = std::numbers::pi_v<float> * 2;
 
 static void drawSlice(CGContextRef context, FloatPoint center, float& angle, float radius, size_t sliceSize, size_t totalSize, CGColorRef color)
 {

@@ -38,6 +38,7 @@
 #import "WebPageProxy.h"
 #import <UIKit/UIKit.h>
 #import <WebCore/LocalizedStrings.h>
+#import <numbers>
 #import <pal/system/ios/UserInterfaceIdiom.h>
 
 using namespace WebKit;
@@ -856,7 +857,7 @@ static const CGFloat groupHeaderCollapseButtonTransitionDuration = 0.3f;
 
     auto animations = [protectedSelf = retainPtr(self)] {
         auto layoutDirectionMultipler = ([UIView userInterfaceLayoutDirectionForSemanticContentAttribute:[protectedSelf semanticContentAttribute]] == UIUserInterfaceLayoutDirectionLeftToRight) ? -1.0f : 1.0f;
-        auto transform = protectedSelf->_collapsed ? CGAffineTransformMakeRotation(layoutDirectionMultipler * M_PI / 2) : CGAffineTransformIdentity;
+        auto transform = protectedSelf->_collapsed ? CGAffineTransformMakeRotation(layoutDirectionMultipler * std::numbers::pi / 2) : CGAffineTransformIdentity;
         [protectedSelf->_collapseIndicatorView setTransform:transform];
     };
 

@@ -28,6 +28,7 @@
 
 #include "AffineTransform.h"
 #include "GeometryUtilities.h"
+#include <numbers>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
@@ -340,7 +341,7 @@ WTF::TextStream& operator<<(WTF::TextStream& ts, const PathBezierCurveTo& data)
 static float angleOfLine(const FloatPoint& p1, const FloatPoint& p2)
 {
     if (abs(p1.x() - p2.x()) < 0.00001)
-        return p1.y() - p2.y() >= 0 ? piFloat / 2 : 3 * piFloat / 2;
+        return p1.y() - p2.y() >= 0 ? std::numbers::pi_v<float> / 2 : 3 * std::numbers::pi_v<float> / 2;
     return atan2(p1.y() - p2.y(), p1.x() - p2.x());
 }
 
@@ -350,7 +351,7 @@ static FloatPoint calculateArcToEndPoint(const FloatPoint& currentPoint, const F
     float angle2 = angleOfLine(controlPoint1, controlPoint2);
     float angleBteweenLines = angle2 - angle1;
 
-    if (abs(angleBteweenLines) < 0.00001 || abs(angleBteweenLines) >= piFloat / 2)
+    if (abs(angleBteweenLines) < 0.00001 || abs(angleBteweenLines) >= std::numbers::pi_v<float> / 2)
         return controlPoint1;
 
     float adjacent = abs(radius / tan(angleBteweenLines / 2));
@@ -443,13 +444,13 @@ void PathArc::extendBoundingRect(const FloatPoint&, const FloatPoint&, FloatRect
     if (isInRange(float(0), startAngle, endAngle))
         x2 = circleRect.maxX();
 
-    if (isInRange(angleInClockwise(piFloat / 2, direction), startAngle, endAngle))
+    if (isInRange(angleInClockwise(std::numbers::pi_v<float> / 2, direction), startAngle, endAngle))
         y2 = circleRect.maxY();
 
-    if (isInRange(angleInClockwise(piFloat, direction), startAngle, endAngle))
+    if (isInRange(angleInClockwise(std::numbers::pi_v<float>, direction), startAngle, endAngle))
         x1 = circleRect.x();
 
-    if (isInRange(angleInClockwise(3 * piFloat / 2, direction), startAngle, endAngle))
+    if (isInRange(angleInClockwise(3 * std::numbers::pi_v<float> / 2, direction), startAngle, endAngle))
         y1 = circleRect.y();
 
     boundingRect.extend({ x1, y1 });

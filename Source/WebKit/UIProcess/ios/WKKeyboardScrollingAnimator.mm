@@ -41,6 +41,7 @@
 #import <WebCore/WebEvent.h>
 #import <WebKit/UIKitSPI.h>
 #import <algorithm>
+#import <numbers>
 #import <wtf/RetainPtr.h>
 #import <wtf/WeakObjCPtr.h>
 
@@ -316,7 +317,7 @@ static NSString * const scrollToExtentWithAnimationKey = @"ScrollToExtentAnimati
 
         // See also: _smoothDecelerationAnimation() in UIKit.
         auto animation = [CASpringAnimation animationWithKeyPath:@"position"];
-        static constexpr auto angularFrequency = 2 * M_PI / 0.6;
+        static constexpr auto angularFrequency = 2 * std::numbers::pi / 0.6;
         animation.mass = 1;
         animation.stiffness = angularFrequency * angularFrequency;
         animation.damping = 2 * angularFrequency;

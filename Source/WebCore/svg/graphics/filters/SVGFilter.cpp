@@ -30,6 +30,7 @@
 #include "SVGFilterElement.h"
 #include "SVGFilterPrimitiveGraph.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
+#include <numbers>
 
 namespace WebCore {
 
@@ -244,7 +245,7 @@ FloatPoint3D SVGFilter::resolvedPoint3D(const FloatPoint3D& point) const
     resolvedPoint.setY(m_targetBoundingBox.y() + point.y() * m_targetBoundingBox.height());
 
     // https://www.w3.org/TR/SVG/filters.html#fePointLightZAttribute and https://www.w3.org/TR/SVG/coords.html#Units_viewport_percentage
-    resolvedPoint.setZ(point.z() * euclidianDistance(m_targetBoundingBox.minXMinYCorner(), m_targetBoundingBox.maxXMaxYCorner()) / sqrtOfTwoFloat);
+    resolvedPoint.setZ(point.z() * euclidianDistance(m_targetBoundingBox.minXMinYCorner(), m_targetBoundingBox.maxXMaxYCorner()) / std::numbers::sqrt2_v<float>);
 
     return resolvedPoint;
 }

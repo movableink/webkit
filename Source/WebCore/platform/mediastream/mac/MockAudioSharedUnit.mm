@@ -44,6 +44,7 @@
 #import <AVFoundation/AVAudioBuffer.h>
 #import <AudioToolbox/AudioConverter.h>
 #import <CoreAudio/CoreAudioTypes.h>
+#import <numbers>
 #import <wtf/IndexedRange.h>
 #import <wtf/RunLoop.h>
 #import <wtf/StdLibExtras.h>
@@ -62,7 +63,7 @@ static inline size_t alignTo16Bytes(size_t size)
     return (size + 15) & ~15;
 }
 
-static constexpr double Tau = 2 * M_PI;
+static constexpr double Tau = 2 * std::numbers::pi;
 static constexpr double BipBopDuration = 0.07;
 static constexpr double BipBopVolume = 0.5;
 static constexpr double BipFrequency = 1500;

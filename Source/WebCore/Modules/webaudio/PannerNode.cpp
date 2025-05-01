@@ -37,6 +37,7 @@
 #include "HRTFDatabaseLoader.h"
 #include "HRTFPanner.h"
 #include "ScriptExecutionContext.h"
+#include <numbers>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -511,7 +512,7 @@ auto PannerNode::calculateAzimuthElevation(const FloatPoint3D& position, const F
         azimuth = 450.0 - azimuth;
 
     // Elevation
-    double elevation = 90.0 - 180.0 * acos(sourceListener.dot(up)) / piDouble;
+    double elevation = 90.0 - 180.0 * acos(sourceListener.dot(up)) / std::numbers::pi;
     fixNANs(elevation); // avoid illegal values
 
     if (elevation > 90.0)

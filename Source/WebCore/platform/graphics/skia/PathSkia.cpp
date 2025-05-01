@@ -30,6 +30,7 @@
 #include "GraphicsContextSkia.h"
 #include "NotImplemented.h"
 #include "PathStream.h"
+#include <numbers>
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/core/SkPathUtils.h>
@@ -126,13 +127,13 @@ void PathSkia::addEllipse(const FloatPoint& center, float radiusX, float radiusY
     SkRect oval = { x - radiusXScalar, y - radiusYScalar, x + radiusXScalar, y + radiusYScalar };
 
     if (direction == RotationDirection::Clockwise && startAngle > endAngle)
-        endAngle = startAngle + (2 * piFloat - fmodf(startAngle - endAngle, 2 * piFloat));
+        endAngle = startAngle + (2 * std::numbers::pi_v<float> - fmodf(startAngle - endAngle, 2 * std::numbers::pi_v<float>));
     else if (direction == RotationDirection::Counterclockwise && startAngle < endAngle)
-        endAngle = startAngle - (2 * piFloat - fmodf(endAngle - startAngle, 2 * piFloat));
+        endAngle = startAngle - (2 * std::numbers::pi_v<float> - fmodf(endAngle - startAngle, 2 * std::numbers::pi_v<float>));
 
     auto sweepAngle = endAngle - startAngle;
-    SkScalar startDegrees = SkFloatToScalar(startAngle * 180 / piFloat);
-    SkScalar sweepDegrees = SkFloatToScalar(sweepAngle * 180 / piFloat);
+    SkScalar startDegrees = SkFloatToScalar(startAngle * 180 / std::numbers::pi_v<float>);
+    SkScalar sweepDegrees = SkFloatToScalar(sweepAngle * 180 / std::numbers::pi_v<float>);
 
     // SkPath::arcTo can't handle the sweepAngle that is equal to 360, so in those
     // cases we add two arcs with sweepAngle = 180. SkPath::addOval can handle sweepAngle

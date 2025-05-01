@@ -48,6 +48,7 @@
 #import <WebKitLegacy/WebFrameView.h>
 #import <WebKitLegacy/WebNSViewExtras.h>
 #import <WebKitLegacy/WebViewPrivate.h>
+#import <numbers>
 #import <wtf/Assertions.h>
 #import <wtf/NeverDestroyed.h>
 #import <wtf/StdLibExtras.h>
@@ -262,7 +263,7 @@ static RetainPtr<CGColorRef> createCGColorWithDeviceWhite(CGFloat white, CGFloat
         
         CGPDFPageRef page = CGPDFDocumentGetPage(_PDFDocument, i);
         CGRect boxRect = CGPDFPageGetBoxRect(page, kCGPDFCropBox);
-        CGFloat rotation = CGPDFPageGetRotationAngle(page) * (M_PI / 180);
+        CGFloat rotation = CGPDFPageGetRotationAngle(page) * (std::numbers::pi / 180);
         if (rotation != 0) {
             boxRect = CGRectApplyAffineTransform(boxRect, CGAffineTransformMakeRotation(rotation));
             boxRect.size.width = roundf(boxRect.size.width);

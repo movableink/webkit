@@ -29,6 +29,7 @@
 #include "config.h"
 
 #include <limits>
+#include <numbers>
 #include <wtf/Expected.h>
 #include <wtf/MathExtras.h>
 #include <wtf/MediaTime.h>
@@ -193,7 +194,7 @@ TEST(WTF, MediaTime)
     EXPECT_EQ(MediaTime(3, 2).toDouble(), 1.5);
     EXPECT_EQ(MediaTime(1, 1 << 16).toFloat(), 1 / pow(2.0f, 16.0f));
     EXPECT_EQ(MediaTime(1, 1 << 30).toDouble(), 1 / pow(2.0, 30.0));
-    EXPECT_EQ(MediaTime::createWithDouble(piDouble, 1 << 30), MediaTime(3373259426U, 1 << 30));
+    EXPECT_EQ(MediaTime::createWithDouble(std::numbers::pi, 1 << 30), MediaTime(3373259426U, 1 << 30));
 
     EXPECT_EQ(MediaTime::createWithFloat(std::numeric_limits<float>::infinity()), MediaTime::positiveInfiniteTime());
     EXPECT_EQ(MediaTime::createWithFloat(-std::numeric_limits<float>::infinity()), MediaTime::negativeInfiniteTime());

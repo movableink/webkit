@@ -35,6 +35,7 @@
 #include <WebCore/FontCascade.h>
 #include <WebCore/GradientImage.h>
 #include <WebCore/GraphicsContextCG.h>
+#include <numbers>
 
 namespace TestWebKitAPI {
 using namespace WebCore;
@@ -241,7 +242,7 @@ TEST(BifurcatedGraphicsContextTests, TransformedClip)
         EXPECT_EQ(primaryContext.clipBounds(), secondaryContext.clipBounds());
         EXPECT_EQ(primaryContext.clipBounds(), FloatRect(0, 0, 10, 10));
 
-        ctx.rotate(M_PI / 6);
+        ctx.rotate(std::numbers::pi / 6);
 
         EXPECT_EQ(primaryContext.clipBounds(), secondaryContext.clipBounds());
         EXPECT_EQ(primaryContext.clipBounds(), FloatRect(0, -5, 14, 14));
