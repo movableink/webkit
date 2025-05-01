@@ -33,6 +33,7 @@
 #import "WebPage.h"
 #import "WebProcess.h"
 #import <WebCore/AttributedString.h>
+#import <WebCore/BoundaryPointInlines.h>
 #import <WebCore/DocumentMarker.h>
 #import <WebCore/DocumentMarkerController.h>
 #import <WebCore/Editing.h>
