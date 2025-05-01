@@ -46,6 +46,7 @@
 #include "HTMLTableElement.h"
 #include "InlineIteratorLineBox.h"
 #include "InlineIteratorTextBox.h"
+#include "InlineWalker.h"
 #include "LayoutElementBox.h"
 #include "LayoutIntegrationLineLayout.h"
 #include "LengthFunctions.h"
@@ -337,23 +338,36 @@ StyleDifference RenderElement::adjustStyleDifference(StyleDifference diff, Optio
 }
 
 
+static inline bool hasNonWhitespaceTextContent(const RenderElement& renderer)
+{
+    if (!renderer.childrenInline())
+        return false;
+
+    if (auto* blockContainer = dynamicDowncast<RenderBlockFlow>(renderer)) {
+        for (InlineWalker walker(*blockContainer); !walker.atEnd(); walker.advance()) {
+            if (auto* textRenderer = dynamicDowncast<RenderText>(*walker.current()); textRenderer && !textRenderer->containsOnlyCollapsibleWhitespace())
+                return true;
+        }
+        return false;
+    }
+
+    for (auto& textRenderer : childrenOfType<RenderText>(renderer)) {
+        if (!textRenderer.containsOnlyCollapsibleWhitespace())
+            return true;
+    }
+    return false;
+}
+
 inline bool RenderElement::shouldRepaintForStyleDifference(StyleDifference diff) const
 {
     if (diff == StyleDifference::Repaint)
         return true;
 
     if (diff == StyleDifference::RepaintIfText) {
-        auto hasImmediateNonWhitespaceTextChild = [&](auto& renderer) {
-            for (auto& child : childrenOfType<RenderText>(renderer)) {
-                if (!child.containsOnlyCollapsibleWhitespace())
-                    return true;
-            }
-            return false;
-        };
-        if (hasImmediateNonWhitespaceTextChild(*this))
+        if (hasNonWhitespaceTextContent(*this))
             return true;
         for (auto& blockChild : childrenOfType<RenderBlock>(*this)) {
-            if (blockChild.isAnonymousBlock() && hasImmediateNonWhitespaceTextChild(blockChild))
+            if (blockChild.isAnonymousBlock() && hasNonWhitespaceTextContent(blockChild))
                 return true;
         }
     }
