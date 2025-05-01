@@ -32,6 +32,7 @@
 #include "WebFrameMessages.h"
 #include "WebFrameProxy.h"
 #include "WebPageProxy.h"
+#include "WebProcessProxy.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {

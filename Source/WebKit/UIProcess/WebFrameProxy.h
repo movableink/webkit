@@ -28,13 +28,13 @@
 #include "APIObject.h"
 #include "FrameLoadState.h"
 #include "MessageReceiver.h"
-#include "WebFramePolicyListenerProxy.h"
-#include "WebProcessProxy.h"
+#include <WebCore/CertificateInfo.h>
 #include <WebCore/FrameLoaderTypes.h>
 #include <WebCore/LayerHostingContextIdentifier.h>
+#include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
-#include <wtf/Function.h>
 #include <wtf/ListHashSet.h>
+#include <wtf/ProcessID.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -46,6 +46,7 @@ namespace API {
 class Data;
 class Navigation;
 class URL;
+class WebsitePolicies;
 }
 
 namespace IPC {
@@ -54,10 +55,21 @@ class Decoder;
 }
 
 namespace WebCore {
+class FrameTreeSyncData;
+class ResourceRequest;
 class SecurityOriginData;
-enum class SandboxFlag : uint16_t;
-using SandboxFlags = OptionSet<SandboxFlag>;
+
+struct FrameIdentifierType;
+struct NavigationIdentifierType;
+
+enum class MouseEventPolicy : uint8_t;
 enum class ResourceResponseSource : uint8_t;
+enum class SandboxFlag : uint16_t;
+enum class ScrollbarMode : uint8_t;
+
+using FrameIdentifier = ObjectIdentifier<FrameIdentifierType>;
+using NavigationIdentifier = ObjectIdentifier<NavigationIdentifierType, uint64_t>;
+using SandboxFlags = OptionSet<SandboxFlag>;
 }
 
 namespace WebKit {
@@ -76,12 +88,17 @@ class WebsiteDataStore;
 enum class CanWrap : bool { No, Yes };
 enum class DidWrap : bool { No, Yes };
 enum class IsMainFrame : bool { No, Yes };
+enum class NavigatingToAppBoundDomain : bool;
 enum class ShouldExpectSafeBrowsingResult : bool;
+enum class ShouldExpectAppBoundDomainResult : bool;
+enum class ShouldWaitForInitialLinkDecorationFilteringData : bool;
 enum class ProcessSwapRequestedByClient : bool;
+enum class WasNavigationIntercepted : bool;
 
 struct FrameInfoData;
 struct FrameTreeCreationParameters;
 struct FrameTreeNodeData;
+struct SharedPreferencesForWebProcess;
 struct WebsitePoliciesData;
 
 class WebFrameProxy : public API::ObjectImpl<API::Object::Type::Frame>, public IPC::MessageReceiver {
@@ -181,7 +198,7 @@ public:
     WebFrameProxy* parentFrame() const { return m_parentFrame.get(); }
     WebFrameProxy& rootFrame();
     WebProcessProxy& process() const;
-    Ref<WebProcessProxy> protectedProcess() const { return process(); }
+    Ref<WebProcessProxy> protectedProcess() const;
     void setProcess(FrameProcess&);
     const FrameProcess& frameProcess() const { return m_frameProcess.get(); }
     FrameProcess& frameProcess() { return m_frameProcess.get(); }

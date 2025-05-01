@@ -183,6 +183,11 @@ WebProcessProxy& WebFrameProxy::process() const
     return m_frameProcess->process();
 }
 
+Ref<WebProcessProxy> WebFrameProxy::protectedProcess() const
+{
+    return process();
+}
+
 ProcessID WebFrameProxy::processID() const
 {
     return process().processID();
