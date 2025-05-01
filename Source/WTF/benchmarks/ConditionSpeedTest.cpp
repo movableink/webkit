@@ -31,6 +31,7 @@
 #include "ToyLocks.h"
 #include <condition_variable>
 #include <mutex>
+#include <ranges>
 #include <thread>
 #include <type_traits>
 #include <unistd.h>
@@ -161,7 +162,7 @@ void runTest(
         thread->waitForCompletion();
 
     RELEASE_ASSERT(numProducers * numMessagesPerProducer == received.size());
-    std::sort(received.begin(), received.end());
+    std::ranges::sort(received);
     for (unsigned messageIndex = 0; messageIndex < numMessagesPerProducer; ++messageIndex) {
         for (unsigned producerIndex = 0; producerIndex < numProducers; ++producerIndex)
             RELEASE_ASSERT(messageIndex == received[messageIndex * numProducers + producerIndex]);

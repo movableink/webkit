@@ -31,6 +31,7 @@
 #include "HTMLHeadElement.h"
 #include "HTMLLinkElement.h"
 #include "LinkIconType.h"
+#include <ranges>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
@@ -111,7 +112,7 @@ auto LinkIconCollector::iconsOfTypes(OptionSet<LinkIconType> iconTypes) -> Vecto
         icons.append({ url, iconType, linkElement->type(), iconSize, WTFMove(attributes) });
     }
 
-    std::sort(icons.begin(), icons.end(), [](auto& a, auto& b) {
+    std::ranges::sort(icons, [](auto& a, auto& b) {
         return compareIcons(a, b) < 0;
     });
 

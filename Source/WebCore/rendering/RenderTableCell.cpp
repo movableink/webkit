@@ -46,6 +46,7 @@
 #include "Settings.h"
 #include "StyleProperties.h"
 #include "TransformState.h"
+#include <ranges>
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -1256,7 +1257,7 @@ void RenderTableCell::collectBorderValues(RenderTable::CollapsedBorderValues& bo
 
 void RenderTableCell::sortBorderValues(RenderTable::CollapsedBorderValues& borderValues)
 {
-    std::sort(borderValues.begin(), borderValues.end(), compareBorders);
+    std::ranges::sort(borderValues, compareBorders);
 }
 
 void RenderTableCell::paintCollapsedBorders(PaintInfo& paintInfo, const LayoutPoint& paintOffset)

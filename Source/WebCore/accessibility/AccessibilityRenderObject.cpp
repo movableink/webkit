@@ -120,6 +120,7 @@
 #include "TypedElementDescendantIteratorInlines.h"
 #include "VisibleUnits.h"
 #include <algorithm>
+#include <ranges>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
@@ -2330,7 +2331,7 @@ bool AccessibilityRenderObject::inheritsPresentationalRole() const
         // If native tag of the parent element matches an acceptable name, then return
         // based on its presentational status.
         auto& name = node->tagQName();
-        if (std::any_of(parentTags.begin(), parentTags.end(), [&name] (auto* possibleName) { return possibleName->get() == name; }))
+        if (std::ranges::any_of(parentTags, [&name](auto* possibleName) { return possibleName->get() == name; }))
             return parent->roleValue() == AccessibilityRole::Presentational;
     }
 

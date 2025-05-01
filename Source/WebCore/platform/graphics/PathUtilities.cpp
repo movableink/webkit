@@ -34,6 +34,7 @@
 #include "FloatRoundedRect.h"
 #include "GeometryUtilities.h"
 #include <math.h>
+#include <ranges>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -136,7 +137,7 @@ static bool addIntersectionPoints(Vector<FloatPointGraph::Polygon>& polys, Float
             intersectionPoints.append(graph.findOrCreateNode(intersectionPoint));
         }
 
-        std::sort(intersectionPoints.begin(), intersectionPoints.end(), [edgeA](auto* a, auto* b) {
+        std::ranges::sort(intersectionPoints, [edgeA](auto* a, auto* b) {
             return FloatPoint(*edgeA.first - *b).lengthSquared() > FloatPoint(*edgeA.first - *a).lengthSquared();
         });
 
@@ -263,10 +264,10 @@ static Vector<FloatPointGraph::Polygon> polygonsForRect(const Vector<FloatRect>&
 {
     Vector<FloatRect> sortedRects = rects;
     // FIXME: Replace it with 2 dimensional sort.
-    std::sort(sortedRects.begin(), sortedRects.end(), [](FloatRect a, FloatRect b) {
+    std::ranges::sort(sortedRects, [](FloatRect a, FloatRect b) {
         return a.x() < b.x();
     });
-    std::sort(sortedRects.begin(), sortedRects.end(), [](FloatRect a, FloatRect b) {
+    std::ranges::sort(sortedRects, [](FloatRect a, FloatRect b) {
         return a.y() < b.y();
     });
 

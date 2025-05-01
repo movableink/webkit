@@ -35,6 +35,7 @@
 #include "CSSUnits.h"
 #include "ContainerQueryFeatures.h"
 #include "MediaQueryFeatures.h"
+#include <ranges>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -241,7 +242,7 @@ static Vector<ChildRepresentation, 16> generateSortedChildrenMap(const Children&
     for (size_t i = 0; i < children.size(); ++i)
         sortedChildrenMap.append(ChildRepresentation { .index = i, .sortPriority = sortPriority(children[i]) });
 
-    std::stable_sort(sortedChildrenMap.begin(), sortedChildrenMap.end(), [](const auto& first, const auto& second) -> bool {
+    std::ranges::stable_sort(sortedChildrenMap, [](auto& first, auto& second) {
         return first.sortPriority < second.sortPriority;
     });
 

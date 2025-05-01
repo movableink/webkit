@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <ranges>
 #include <wtf/DataLog.h>
 #include <wtf/Dominators.h>
 
@@ -260,8 +261,8 @@ public:
             
                 Vector<const NaturalLoop<Graph>*> fancyLoopsOf = loopsOf(block);
             
-                std::sort(simpleLoopsOf.begin(), simpleLoopsOf.end());
-                std::sort(fancyLoopsOf.begin(), fancyLoopsOf.end());
+                std::ranges::sort(simpleLoopsOf);
+                std::ranges::sort(fancyLoopsOf);
             
                 RELEASE_ASSERT(simpleLoopsOf == fancyLoopsOf);
             }

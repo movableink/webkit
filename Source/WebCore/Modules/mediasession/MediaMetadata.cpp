@@ -40,6 +40,7 @@
 #include "MediaImage.h"
 #include "MediaMetadataInit.h"
 #include "SpaceSplitString.h"
+#include <ranges>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 #include <wtf/text/StringToIntegerConversion.h>
@@ -245,7 +246,7 @@ void MediaMetadata::refreshArtworkImage()
         return { imageDimensionsScore(size.width(), size.height(), s_minimumSize, s_idealSize), m_metadata.artwork[index].src };
     });
 
-    std::sort(artworks.begin(), artworks.end(), [](const Pair& a1, const Pair& a2) {
+    std::ranges::sort(artworks, [](const Pair& a1, const Pair& a2) {
         return a1.score > a2.score;
     });
 

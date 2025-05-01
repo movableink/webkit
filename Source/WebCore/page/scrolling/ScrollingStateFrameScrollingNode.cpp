@@ -29,6 +29,7 @@
 #if ENABLE(ASYNC_SCROLLING)
 
 #include "ScrollingStateTree.h"
+#include <ranges>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
@@ -472,7 +473,7 @@ void ScrollingStateFrameScrollingNode::dumpProperties(TextStream& ts, OptionSet<
     auto& synchronousDispatchRegionMap = m_eventTrackingRegions.eventSpecificSynchronousDispatchRegions;
     if (!synchronousDispatchRegionMap.isEmpty()) {
         auto eventRegionNames = copyToVector(synchronousDispatchRegionMap.keys());
-        std::sort(eventRegionNames.begin(), eventRegionNames.end());
+        std::ranges::sort(eventRegionNames);
         for (const auto& name : eventRegionNames) {
             const auto& region = synchronousDispatchRegionMap.get(name);
             TextStream::GroupScope scope(ts);

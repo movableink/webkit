@@ -79,6 +79,7 @@
 #include "TranslateTransformOperation.h"
 #include "ViewTimeline.h"
 #include <JavaScriptCore/Exception.h>
+#include <ranges>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/UUID.h>
 #include <wtf/text/TextStream.h>
@@ -473,7 +474,7 @@ static inline ExceptionOr<KeyframeEffect::KeyframeLikeObject> processKeyframeLik
 
     // 5. Sort animation properties in ascending order by the Unicode codepoints that define each property name.
     auto sortPropertiesInAscendingOrder = [](auto& properties) {
-        std::sort(properties.begin(), properties.end(), [](auto& lhs, auto& rhs) {
+        std::ranges::sort(properties, [](auto& lhs, auto& rhs) {
             return codePointCompareLessThan(lhs.string().string(), rhs.string().string());
         });
     };
@@ -660,7 +661,7 @@ static inline ExceptionOr<void> processPropertyIndexedKeyframes(JSGlobalObject& 
     }
 
     // 3. Sort processed keyframes by the computed keyframe offset of each keyframe in increasing order.
-    std::sort(parsedKeyframes.begin(), parsedKeyframes.end(), [](auto& lhs, auto& rhs) {
+    std::ranges::sort(parsedKeyframes, [](auto& lhs, auto& rhs) {
         if (!std::isnan(lhs.computedOffset) && !std::isnan(rhs.computedOffset))
             return lhs.computedOffset < rhs.computedOffset;
         // This will sort nullopt values prior to other values.

@@ -33,6 +33,7 @@
 #include "MediaSourcePrivateClient.h"
 #include "PlatformTimeRanges.h"
 #include "SourceBufferPrivate.h"
+#include <ranges>
 #include <wtf/Threading.h>
 
 namespace WebCore {
@@ -146,7 +147,7 @@ bool MediaSourcePrivate::hasAudio() const
 {
     ASSERT(m_dispatcher->isCurrent() || Thread::mayBeGCThread());
 
-    return std::any_of(m_activeSourceBuffers.begin(), m_activeSourceBuffers.end(), [] (SourceBufferPrivate* sourceBuffer) {
+    return std::ranges::any_of(m_activeSourceBuffers, [](auto* sourceBuffer) {
         return sourceBuffer->hasAudio();
     });
 }
@@ -155,7 +156,7 @@ bool MediaSourcePrivate::hasVideo() const
 {
     assertIsCurrent(m_dispatcher);
 
-    return std::any_of(m_activeSourceBuffers.begin(), m_activeSourceBuffers.end(), [] (SourceBufferPrivate* sourceBuffer) {
+    return std::ranges::any_of(m_activeSourceBuffers, [](auto* sourceBuffer) {
         return sourceBuffer->hasVideo();
     });
 }

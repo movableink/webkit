@@ -42,6 +42,7 @@
 #include "MutationRecord.h"
 #include "WindowEventLoop.h"
 #include <algorithm>
+#include <ranges>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RobinHoodHashSet.h>
@@ -245,7 +246,7 @@ void MutationObserver::notifyMutationObservers(WindowEventLoop& eventLoop)
         // 2. Let notify list be a copy of unit of related similar-origin browsing contexts' list of MutationObserver objects.
         auto notifyList = copyToVector(eventLoop.activeMutationObservers());
         eventLoop.activeMutationObservers().clear();
-        std::sort(notifyList.begin(), notifyList.end(), [](auto& lhs, auto& rhs) {
+        std::ranges::sort(notifyList, [](auto& lhs, auto& rhs) {
             return lhs->m_priority < rhs->m_priority;
         });
 

@@ -39,6 +39,7 @@
 #include "Logging.h"
 #include "MediaDeviceHashSalts.h"
 #include "MediaStreamPrivate.h"
+#include <ranges>
 #include <wtf/CallbackAggregator.h>
 #include <wtf/HexNumber.h>
 #include <wtf/SHA1.h>
@@ -352,7 +353,7 @@ Expected<RealtimeMediaSourceCenter::ValidDevices, MediaConstraintType> RealtimeM
 
     Vector<CaptureDevice> audioDevices;
     if (!audioDeviceInfo.isEmpty()) {
-        std::stable_sort(audioDeviceInfo.begin(), audioDeviceInfo.end(), sortBasedOnFitnessScore);
+        std::ranges::stable_sort(audioDeviceInfo, sortBasedOnFitnessScore);
         audioDevices = WTF::map(audioDeviceInfo, [] (auto& info) {
             return info.device;
         });
@@ -360,7 +361,7 @@ Expected<RealtimeMediaSourceCenter::ValidDevices, MediaConstraintType> RealtimeM
 
     Vector<CaptureDevice> videoDevices;
     if (!videoDeviceInfo.isEmpty()) {
-        std::stable_sort(videoDeviceInfo.begin(), videoDeviceInfo.end(), sortBasedOnFitnessScore);
+        std::ranges::stable_sort(videoDeviceInfo, sortBasedOnFitnessScore);
         videoDevices = WTF::map(videoDeviceInfo, [] (auto& info) {
             return info.device;
         });

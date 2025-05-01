@@ -52,6 +52,7 @@
 #include "CSSUnitValue.h"
 #include "CalculationCategory.h"
 #include "ExceptionOr.h"
+#include <ranges>
 #include <wtf/Algorithms.h>
 #include <wtf/FixedVector.h>
 #include <wtf/StdLibExtras.h>
@@ -417,7 +418,7 @@ ExceptionOr<Ref<CSSMathSum>> CSSNumericValue::toSum(FixedVector<String>&& units)
     }
 
     if (parsedUnits.isEmpty()) {
-        std::sort(values.begin(), values.end(), [](auto& a, auto& b) {
+        std::ranges::sort(values, [](auto& a, auto& b) {
             return is_lt(compareSpans(downcast<CSSUnitValue>(a)->unitSerialization().span(), downcast<CSSUnitValue>(b)->unitSerialization().span()));
         });
         return CSSMathSum::create(WTFMove(values));

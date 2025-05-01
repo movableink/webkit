@@ -39,6 +39,7 @@
 #include "RenderedDocumentMarker.h"
 #include "TextBoxSelectableRange.h"
 #include <algorithm>
+#include <ranges>
 #include <wtf/HashSet.h>
 
 namespace WebCore {
@@ -67,7 +68,7 @@ Vector<MarkedText> MarkedText::subdivide(const Vector<MarkedText>& markedTexts, 
     }
 
     // 2. Sort offsets such that begin offsets are in paint order and end offsets are in reverse paint order.
-    std::sort(offsets.begin(), offsets.end(), [] (const Offset& a, const Offset& b) {
+    std::ranges::sort(offsets, [] (const Offset& a, const Offset& b) {
         return a.value < b.value || (a.value == b.value && a.kind == b.kind && a.kind == Offset::Begin && a.markedText->type < b.markedText->type)
         || (a.value == b.value && a.kind == b.kind && a.kind == Offset::End && a.markedText->type > b.markedText->type);
     });
@@ -101,7 +102,7 @@ Vector<MarkedText> MarkedText::subdivide(const Vector<MarkedText>& markedTexts, 
     }
     // Fix up; sort the marked texts so that they are in paint order.
     if (overlapStrategy == OverlapStrategy::None)
-        std::sort(result.begin(), result.end(), [] (const MarkedText& a, const MarkedText& b) { return a.startOffset < b.startOffset || (a.startOffset == b.startOffset && a.type < b.type); });
+        std::ranges::sort(result, [] (const MarkedText& a, const MarkedText& b) { return a.startOffset < b.startOffset || (a.startOffset == b.startOffset && a.type < b.type); });
     return result;
 }
 

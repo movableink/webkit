@@ -32,6 +32,7 @@
 #include "FontMetricsNormalization.h"
 
 #include <pal/system/ios/UserInterfaceIdiom.h>
+#include <ranges>
 #include <wtf/cf/TypeCastsCF.h>
 
 namespace WebCore {
@@ -311,10 +312,10 @@ std::optional<SystemFontKind> SystemFontDatabaseCoreText::matchSystemFontUse(con
             kCTUIFontTextStyleTitle0,
             kCTUIFontTextStyleTitle4,
         };
-        std::sort(m_textStyles.begin(), m_textStyles.end(), compareAsPointer);
+        std::ranges::sort(m_textStyles, compareAsPointer);
     }
 
-    if (std::binary_search(m_textStyles.begin(), m_textStyles.end(), string, compareAsPointer))
+    if (std::ranges::binary_search(m_textStyles, string, compareAsPointer))
         return SystemFontKind::TextStyle;
 
     return std::nullopt;

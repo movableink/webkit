@@ -31,6 +31,7 @@
 #include "Logging.h"
 #include "NowPlayingInfo.h"
 #include "PlatformMediaSession.h"
+#include <ranges>
 #include <wtf/TZoneMallocInlines.h>
 
 #if PLATFORM(COCOA)
@@ -229,7 +230,7 @@ void PlatformMediaSessionManager::addSession(PlatformMediaSessionInterface& sess
 
 bool PlatformMediaSessionManager::hasNoSession() const
 {
-    return m_sessions.isEmpty() || std::all_of(m_sessions.begin(), m_sessions.end(), std::logical_not<void>());
+    return m_sessions.isEmpty() || std::ranges::all_of(m_sessions, std::logical_not<void>());
 }
 
 void PlatformMediaSessionManager::removeSession(PlatformMediaSessionInterface& session)

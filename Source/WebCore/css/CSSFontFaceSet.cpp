@@ -41,6 +41,7 @@
 #include "StyleBuilderConverter.h"
 #include "StylePrimitiveNumericTypes+Conversions.h"
 #include "StyleProperties.h"
+#include <ranges>
 
 namespace WebCore {
 
@@ -505,9 +506,9 @@ CSSSegmentedFontFace* CSSFontFaceSet::fontFace(FontSelectionRequest request, con
             return face.get().fontSelectionCapabilities();
         });
         FontSelectionAlgorithm fontSelectionAlgorithm(request, capabilities);
-        std::stable_sort(candidateFontFaces.begin(), candidateFontFaces.end(), [&fontSelectionAlgorithm](const CSSFontFace& first, const CSSFontFace& second) {
-            auto firstCapabilities = first.fontSelectionCapabilities();
-            auto secondCapabilities = second.fontSelectionCapabilities();
+        std::ranges::stable_sort(candidateFontFaces, [&fontSelectionAlgorithm](auto& first, auto& second) {
+            auto firstCapabilities = first.get().fontSelectionCapabilities();
+            auto secondCapabilities = second.get().fontSelectionCapabilities();
             
             auto widthDistanceFirst = fontSelectionAlgorithm.widthDistance(firstCapabilities).distance;
             auto widthDistanceSecond = fontSelectionAlgorithm.widthDistance(secondCapabilities).distance;

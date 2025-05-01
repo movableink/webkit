@@ -29,6 +29,7 @@
 #include "InlineLineBuilder.h"
 #include "RenderStyleInlines.h"
 #include <limits>
+#include <ranges>
 #include <wtf/MathExtras.h>
 #include <wtf/PriorityQueue.h>
 
@@ -582,7 +583,7 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::prettifyRange(Inline
     // try to build a valid line using hyphenation from the beginning.
     if (!lastValidStateIndex.has_value()) {
         auto newEntry = layoutSingleLineForPretty({ breakOpportunities[0], range.endIndex() }, idealLineWidth, state[0], 0);
-        auto it = std::find(breakOpportunities.begin(), breakOpportunities.end(), newEntry.lineEnd.index);
+        auto it = std::ranges::find(breakOpportunities, newEntry.lineEnd.index);
         if (it == breakOpportunities.end())
             return { };
         lastValidStateIndex = std::distance(breakOpportunities.begin(), it);
@@ -610,7 +611,7 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::prettifyRange(Inline
         if (firstStartIndex>lastValidStateIndex.value()) {
             // If hyphenation does not create a valid solution, we should return early.
             auto newEntry = layoutSingleLineForPretty({ state[lastValidStateIndex.value()].lineEnd.index, range.endIndex() }, idealLineWidth, state[lastValidStateIndex.value()], lastValidStateIndex.value());
-            auto it = std::find(breakOpportunities.begin(), breakOpportunities.end(), newEntry.lineEnd.index);
+            auto it = std::ranges::find(breakOpportunities, newEntry.lineEnd.index);
             if (it == breakOpportunities.end())
                 return { };
             lastValidStateIndex = std::distance(breakOpportunities.begin(), it);

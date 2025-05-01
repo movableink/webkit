@@ -491,7 +491,7 @@ void MallocCallTracker::dumpStats()
             stackHashes.append(key);
 
         // Sort by reverse total size.
-        std::sort(stackHashes.begin(), stackHashes.end(), [&] (unsigned a, unsigned b) {
+        std::ranges::sort(stackHashes, [&] (unsigned a, unsigned b) {
             const auto& aSiteTotals = callSiteToMallocData.get(a);
             const auto& bSiteTotals = callSiteToMallocData.get(b);
 

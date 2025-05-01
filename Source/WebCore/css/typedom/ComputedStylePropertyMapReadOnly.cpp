@@ -35,6 +35,7 @@
 #include "RenderStyleInlines.h"
 #include "StylePropertyShorthand.h"
 #include "StyleScope.h"
+#include <ranges>
 #include <wtf/KeyValuePair.h>
 
 namespace WebCore {
@@ -116,7 +117,7 @@ Vector<StylePropertyMapReadOnly::StylePropertyMapEntry> ComputedStylePropertyMap
         });
     }
 
-    std::sort(values.begin(), values.end(), [](const auto& a, const auto& b) {
+    std::ranges::sort(values, [](const auto& a, const auto& b) {
         const auto& nameA = a.key;
         const auto& nameB = b.key;
         if (nameA.startsWith("--"_s))

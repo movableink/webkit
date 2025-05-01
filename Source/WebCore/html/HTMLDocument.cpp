@@ -78,6 +78,7 @@
 #include "Quirks.h"
 #include "ScriptController.h"
 #include "StyleResolver.h"
+#include <ranges>
 #include <wtf/RobinHoodHashSet.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
@@ -143,7 +144,7 @@ Vector<AtomString> HTMLDocument::supportedPropertyNames() const
     // The specification says these should be sorted in document order but this would be expensive
     // and other browser engines do not comply with this part of the specification. For now, just
     // do an alphabetical sort to get consistent results.
-    std::sort(properties.begin(), properties.end(), WTF::codePointCompareLessThan);
+    std::ranges::sort(properties, WTF::codePointCompareLessThan);
     return properties;
 }
 

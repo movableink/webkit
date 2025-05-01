@@ -53,6 +53,7 @@
 #include "Text.h"
 #include "TextIterator.h"
 #include "WritingMode.h"
+#include <ranges>
 #include <unicode/uchar.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
@@ -610,9 +611,10 @@ RenderedText extractRenderedText(Element& element)
         return true;
     }();
 
-    std::sort(allTokensAndOffsets.begin(), allTokensAndOffsets.end(), [&](auto& a, auto& b) {
-        return ascendingOrder ? a.offset < b.offset : a.offset > b.offset;
-    });
+    if (ascendingOrder)
+        std::ranges::sort(allTokensAndOffsets, [&](auto& a, auto& b) { return a.offset < b.offset; });
+    else
+        std::ranges::sort(allTokensAndOffsets, [&](auto& a, auto& b) { return a.offset > b.offset; });
 
     bool hasLargeReplacedDescendant = false;
     StringBuilder textWithReplacedContent;

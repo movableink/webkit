@@ -48,6 +48,7 @@
 #include "Settings.h"
 #include <wtf/URL.h>
 #include "UserContentController.h"
+#include <ranges>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
@@ -144,7 +145,7 @@ auto ContentExtensionsBackend::actionsFromContentRuleList(const ContentExtension
         vector.appendContainerWithMapping(universalActions, [](uint64_t actionLocation) {
             return static_cast<uint32_t>(actionLocation);
         });
-        std::sort(vector.begin(), vector.end());
+        std::ranges::sort(vector);
 
         // Add actions in reverse order to properly deal with IgnorePreviousRules.
         for (auto i = vector.size(); i; i--) {
@@ -414,7 +415,7 @@ void applyResultsToRequest(ContentRuleListResults&& results, Page* page, Resourc
         request.upgradeInsecureRequest();
     }
 
-    std::sort(results.summary.modifyHeadersActions.begin(), results.summary.modifyHeadersActions.end(),
+    std::ranges::sort(results.summary.modifyHeadersActions,
         [] (const ModifyHeadersAction& a, const ModifyHeadersAction& b) {
         return a.priority > b.priority;
     });

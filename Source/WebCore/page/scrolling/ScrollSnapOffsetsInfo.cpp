@@ -36,6 +36,7 @@
 #include "RenderView.h"
 #include "ScrollableArea.h"
 #include "StyleScrollSnapPoints.h"
+#include <ranges>
 
 namespace WebCore {
 
@@ -399,13 +400,13 @@ void updateSnapOffsetsForScrollableArea(ScrollableArea& scrollableArea, const Re
 
     Vector<SnapOffset<LayoutUnit>> horizontalSnapOffsets = copyToVector(horizontalSnapOffsetsMap.values());
     if (!horizontalSnapOffsets.isEmpty()) {
-        std::sort(horizontalSnapOffsets.begin(), horizontalSnapOffsets.end(), compareSnapOffsets);
+        std::ranges::sort(horizontalSnapOffsets, compareSnapOffsets);
         LOG_WITH_STREAM(ScrollSnap, stream << " => Computed horizontal scroll snap offsets: " << horizontalSnapOffsets);
     }
 
     Vector<SnapOffset<LayoutUnit>> verticalSnapOffsets = copyToVector(verticalSnapOffsetsMap.values());
     if (!verticalSnapOffsets.isEmpty()) {
-        std::sort(verticalSnapOffsets.begin(), verticalSnapOffsets.end(), compareSnapOffsets);
+        std::ranges::sort(verticalSnapOffsets, compareSnapOffsets);
         LOG_WITH_STREAM(ScrollSnap, stream << " => Computed vertical scroll snap offsets: " << verticalSnapOffsets);
     }
 

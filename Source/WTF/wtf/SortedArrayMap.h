@@ -26,6 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
+#include <ranges>
 #include <wtf/IndexedRange.h>
 #include <wtf/text/StringView.h>
 
@@ -161,7 +162,7 @@ template<ASCIISubset subset, typename CharacterType> constexpr std::make_unsigne
 template<ASCIISubset subset> constexpr ComparableASCIISubsetLiteral<subset>::ComparableASCIISubsetLiteral(ASCIILiteral inputLiteral)
     : literal { inputLiteral }
 {
-    ASSERT_UNDER_CONSTEXPR_CONTEXT(std::all_of(literal.span().begin(), literal.span().end(), [] (char character) {
+    ASSERT_UNDER_CONSTEXPR_CONTEXT(std::ranges::all_of(literal.span(), [](char character) {
         return isInSubset<subset>(character);
     }));
 }
@@ -169,7 +170,7 @@ template<ASCIISubset subset> constexpr ComparableASCIISubsetLiteral<subset>::Com
 template<typename ArrayType> constexpr SortedArrayMap<ArrayType>::SortedArrayMap(const ArrayType& array)
     : m_array { array }
 {
-    ASSERT_UNDER_CONSTEXPR_CONTEXT(std::is_sorted(std::begin(array), std::end(array), [] (auto& a, auto b) {
+    ASSERT_UNDER_CONSTEXPR_CONTEXT(std::is_sorted(std::begin(array), std::end(array), [](auto& a, auto b) {
         return a.first < b.first;
     }));
 }
@@ -182,13 +183,13 @@ template<typename ArrayType> template<typename KeyArgument> inline auto SortedAr
         return nullptr;
     decltype(std::begin(m_array)) iterator;
     if (std::size(m_array) < binarySearchThreshold) {
-        iterator = std::find_if(std::begin(m_array), std::end(m_array), [&parsedKey] (auto& pair) {
+        iterator = std::find_if(std::begin(m_array), std::end(m_array), [&parsedKey](auto& pair) {
             return pair.first == *parsedKey;
         });
         if (iterator == std::end(m_array))
             return nullptr;
     } else {
-        iterator = std::lower_bound(std::begin(m_array), std::end(m_array), *parsedKey, [] (auto& pair, auto& value) {
+        iterator = std::lower_bound(std::begin(m_array), std::end(m_array), *parsedKey, [](auto& pair, auto& value) {
             return pair.first < value;
         });
         if (iterator == std::end(m_array) || !(iterator->first == *parsedKey))

@@ -40,6 +40,7 @@
 #include "Logging.h"
 #include "MediaKeySession.h"
 #include "SharedBuffer.h"
+#include <ranges>
 #include <wtf/Logger.h>
 #include <wtf/LoggerHelper.h>
 
@@ -174,7 +175,7 @@ void MediaKeys::attemptToResumePlaybackOnClients()
 
 bool MediaKeys::hasOpenSessions() const
 {
-    return std::any_of(m_sessions.begin(), m_sessions.end(),
+    return std::ranges::any_of(m_sessions,
         [](auto& session) {
             return !session->isClosed();
         });

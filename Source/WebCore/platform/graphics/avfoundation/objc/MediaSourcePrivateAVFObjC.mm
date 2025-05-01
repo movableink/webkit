@@ -38,6 +38,7 @@
 #import "SourceBufferPrivateAVFObjC.h"
 #import "VideoMediaSampleRenderer.h"
 #import <objc/runtime.h>
+#import <ranges>
 #import <wtf/Algorithms.h>
 #import <wtf/NativePromise.h>
 #import <wtf/SoftLinking.h>
@@ -174,7 +175,7 @@ void MediaSourcePrivateAVFObjC::keyAdded()
 
 bool MediaSourcePrivateAVFObjC::hasSelectedVideo() const
 {
-    return std::any_of(m_activeSourceBuffers.begin(), m_activeSourceBuffers.end(), [] (auto* sourceBuffer) {
+    return std::ranges::any_of(m_activeSourceBuffers, [] (auto* sourceBuffer) {
         return downcast<SourceBufferPrivateAVFObjC>(sourceBuffer)->hasSelectedVideo();
     });
 }

@@ -54,6 +54,7 @@
 #include "Settings.h"
 #include "Styleable.h"
 #include "WebAnimation.h"
+#include <ranges>
 #include <wtf/HashCountedSet.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/OptionSet.h>
@@ -358,7 +359,7 @@ Variant<PredominantColorType, Color> PageColorSampler::predominantColor(Page& pa
     for (auto& [color, count] : colorDistribution)
         colorsByDescendingFrequency.append({ color, count });
 
-    std::stable_sort(colorsByDescendingFrequency.begin(), colorsByDescendingFrequency.end(), [](auto& a, auto& b) {
+    std::ranges::stable_sort(colorsByDescendingFrequency, [](auto& a, auto& b) {
         return a.second > b.second;
     });
 

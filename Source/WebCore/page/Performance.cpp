@@ -51,6 +51,7 @@
 #include "PerformanceUserTiming.h"
 #include "ResourceResponse.h"
 #include "ScriptExecutionContext.h"
+#include <ranges>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -156,7 +157,7 @@ Vector<Ref<PerformanceEntry>> Performance::getEntries() const
     if (m_firstContentfulPaint)
         entries.append(*m_firstContentfulPaint);
 
-    std::sort(entries.begin(), entries.end(), PerformanceEntry::startTimeCompareLessThan);
+    std::ranges::sort(entries, PerformanceEntry::startTimeCompareLessThan);
     return entries;
 }
 
@@ -180,7 +181,7 @@ Vector<Ref<PerformanceEntry>> Performance::getEntriesByType(const String& entryT
             entries.appendVector(m_userTiming->getMeasures());
     }
 
-    std::sort(entries.begin(), entries.end(), PerformanceEntry::startTimeCompareLessThan);
+    std::ranges::sort(entries, PerformanceEntry::startTimeCompareLessThan);
     return entries;
 }
 
@@ -208,7 +209,7 @@ Vector<Ref<PerformanceEntry>> Performance::getEntriesByName(const String& name, 
             entries.appendVector(m_userTiming->getMeasures(name));
     }
 
-    std::sort(entries.begin(), entries.end(), PerformanceEntry::startTimeCompareLessThan);
+    std::ranges::sort(entries, PerformanceEntry::startTimeCompareLessThan);
     return entries;
 }
 

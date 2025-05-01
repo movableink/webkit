@@ -40,6 +40,7 @@
 #include "SharedBuffer.h"
 #include <algorithm>
 #include <iterator>
+#include <ranges>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
@@ -285,7 +286,7 @@ Vector<AtomString> CDMPrivateClearKey::supportedInitDataTypes() const
 
 static bool containsPersistentLicenseType(const Vector<CDMSessionType>& types)
 {
-    return std::any_of(types.begin(), types.end(),
+    return std::ranges::any_of(types,
         [] (auto& sessionType) { return sessionType == CDMSessionType::PersistentLicense; });
 }
 

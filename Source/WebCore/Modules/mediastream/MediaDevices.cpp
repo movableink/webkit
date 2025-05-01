@@ -54,6 +54,7 @@
 #include "UserGestureIndicator.h"
 #include "UserMediaController.h"
 #include "UserMediaRequest.h"
+#include <ranges>
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -340,7 +341,7 @@ static inline bool exposeSpeakersWithoutMicrophoneAccess(const Document& documen
 
 static inline bool haveMicrophoneDevice(const Vector<CaptureDeviceWithCapabilities>& devices, const String& deviceId)
 {
-    return std::any_of(devices.begin(), devices.end(), [&deviceId](auto& deviceWithCapabilities) {
+    return std::ranges::any_of(devices, [&deviceId](auto& deviceWithCapabilities) {
         auto& device = deviceWithCapabilities.device;
         return device.persistentId() == deviceId && device.type() == CaptureDevice::DeviceType::Microphone;
     });

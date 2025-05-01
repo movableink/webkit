@@ -23,6 +23,7 @@
 
 #include <mutex>
 #include <optional>
+#include <ranges>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Variant.h>
 #include <wtf/text/StringView.h>
@@ -153,7 +154,7 @@ private:
     TextBreakIterator take(StringView string, std::span<const UChar> priorContext, TextBreakIterator::Mode mode, TextBreakIterator::ContentAnalysis contentAnalysis, const AtomString& locale)
     {
         ASSERT(isMainThread());
-        auto iter = std::find_if(m_unused.begin(), m_unused.end(), [&](TextBreakIterator& candidate) {
+        auto iter = std::ranges::find_if(m_unused, [&](TextBreakIterator& candidate) {
             return candidate.mode() == mode && candidate.contentAnalysis() == contentAnalysis && candidate.locale() == locale;
         });
         if (iter == m_unused.end())

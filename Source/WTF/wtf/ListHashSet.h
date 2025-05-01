@@ -382,8 +382,8 @@ template<typename T, typename U>
 inline ListHashSet<T, U>::ListHashSet(const ListHashSet& other)
     : ListHashSet<T, U>()
 {
-    for (auto it = other.begin(), end = other.end(); it != end; ++it)
-        add(*it);
+    for (auto& item : other)
+        add(item);
 }
 
 template<typename T, typename U>

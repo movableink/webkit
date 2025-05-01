@@ -28,6 +28,7 @@
 #include "GradientColorStop.h"
 #include <algorithm>
 #include <optional>
+#include <ranges>
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
 
@@ -71,7 +72,7 @@ public:
         if (m_isSorted)
             return;
 
-        std::stable_sort(m_stops.begin(), m_stops.end(), [] (auto& a, auto& b) {
+        std::ranges::stable_sort(m_stops, [](auto& a, auto& b) {
             return a.offset < b.offset;
         });
         m_isSorted = true;
@@ -111,7 +112,7 @@ private:
 #if ASSERT_ENABLED
     bool validateIsSorted() const
     {
-        return std::is_sorted(m_stops.begin(), m_stops.end(), [] (auto& a, auto& b) {
+        return std::ranges::is_sorted(m_stops, [](auto& a, auto& b) {
             return a.offset < b.offset;
         });
     }

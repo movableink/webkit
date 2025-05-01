@@ -35,6 +35,7 @@
 #include "CSSSerializationContext.h"
 #include "Element.h"
 #include "HTMLParserIdioms.h"
+#include <ranges>
 #include <wtf/ListHashSet.h>
 #include <wtf/URL.h>
 #include <wtf/text/ParsingUtilities.h>
@@ -271,7 +272,7 @@ static ImageCandidate pickBestImageCandidate(float deviceScaleFactor, Vector<Ima
             candidate.density = DefaultDensityValue;
     }
 
-    std::stable_sort(imageCandidates.begin(), imageCandidates.end(), compareByDensity);
+    std::ranges::stable_sort(imageCandidates, compareByDensity);
 
     unsigned i;
     for (i = 0; i < imageCandidates.size() - 1; ++i) {

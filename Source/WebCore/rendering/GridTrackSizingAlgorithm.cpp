@@ -36,6 +36,7 @@
 #include "RenderGrid.h"
 #include "RenderStyleConstants.h"
 #include "StyleSelfAlignmentData.h"
+#include <ranges>
 #include <wtf/StdMap.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
@@ -768,7 +769,7 @@ static void distributeItemIncurredIncreases(Vector<WeakPtr<GridTrack>>& tracks, 
     if (variant == TrackSizeComputationVariant::NotCrossingFlexibleTracks) {
         // We have to sort tracks according to their growth potential. This is necessary even when distributing beyond growth limits,
         // because there might be tracks with growth limit caps (like the ones with fit-content()) which cannot indefinitely grow over the limits.
-        std::sort(tracks.begin(), tracks.end(), sortByGridTrackGrowthPotential);
+        std::ranges::sort(tracks, sortByGridTrackGrowthPotential);
         for (uint32_t i = 0; i < tracksSize; ++i) {
             ASSERT(!getSizeDistributionWeight<variant>(*tracks[i]));
             distributeItemIncurredIncreaseToTrack<phase, limit>(*tracks[i], freeSpace, tracksSize - i);

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <ranges>
 #include <wtf/Vector.h>
 
 namespace WTF {
@@ -212,8 +213,8 @@ auto IndexSparseSet<EntryType, EntryTypeTraits, OverflowHandler>::get(unsigned v
 template<typename EntryType, typename EntryTypeTraits, typename OverflowHandler>
 void IndexSparseSet<EntryType, EntryTypeTraits, OverflowHandler>::sort()
 {
-    std::sort(
-        m_values.begin(), m_values.end(),
+    std::ranges::sort(
+        m_values,
         [&] (const EntryType& a, const EntryType& b) {
             return EntryTypeTraits::key(a) < EntryTypeTraits::key(b);
         });

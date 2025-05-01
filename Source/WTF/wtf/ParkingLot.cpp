@@ -27,6 +27,7 @@
 #include <wtf/ParkingLot.h>
 
 #include <mutex>
+#include <ranges>
 #include <wtf/DataLog.h>
 #include <wtf/FixedVector.h>
 #include <wtf/HashFunctions.h>
@@ -312,7 +313,7 @@ Vector<Bucket*> lockHashtable()
         }
 
         // Now lock the buckets in the right order.
-        std::sort(buckets.begin(), buckets.end());
+        std::ranges::sort(buckets);
         for (Bucket* bucket : buckets)
             bucket->lock.lock();
 

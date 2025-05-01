@@ -42,6 +42,7 @@
 #include "UserStyleSheet.h"
 #include "UserStyleSheetTypes.h"
 #include <JavaScriptCore/JSObjectInlines.h>
+#include <ranges>
 #include <wtf/Language.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/unicode/Collator.h>
@@ -272,7 +273,7 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferences::sortedTrackListForMenu(TextTra
 
     Collator collator;
 
-    std::sort(tracksForMenu.begin(), tracksForMenu.end(), [&] (auto& a, auto& b) {
+    std::ranges::sort(tracksForMenu, [&](auto& a, auto& b) {
         return collator.collate(trackDisplayName(a.get()), trackDisplayName(b.get())) < 0;
     });
 
@@ -316,7 +317,7 @@ Vector<RefPtr<AudioTrack>> CaptionUserPreferences::sortedTrackListForMenu(AudioT
 
     Collator collator;
 
-    std::sort(tracksForMenu.begin(), tracksForMenu.end(), [&] (auto& a, auto& b) {
+    std::ranges::sort(tracksForMenu, [&](auto& a, auto& b) {
         return collator.collate(trackDisplayName(a.get()), trackDisplayName(b.get())) < 0;
     });
 

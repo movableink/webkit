@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <ranges>
 #include <wtf/BitSet.h>
 #include <wtf/CommaPrinter.h>
 #include <wtf/FastBitVector.h>
@@ -373,7 +374,7 @@ private:
             m_postorderNumbers.fill(0, m_graph.numNodes());
             for (unsigned i = 0; i < m_reversePostorderedNodes.size(); i ++)
                 m_postorderNumbers[m_reversePostorderedNodes[i]] = i;
-            std::reverse(m_reversePostorderedNodes.begin(), m_reversePostorderedNodes.end());
+            std::ranges::reverse(m_reversePostorderedNodes);
         }
 
         uint16_t intersect(uint16_t a, uint16_t b)

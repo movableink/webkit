@@ -40,6 +40,7 @@
 #include "UserAgentParts.h"
 #include "UserStyleSheetTypes.h"
 #include <algorithm>
+#include <ranges>
 #include <wtf/Language.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RetainPtr.h>
@@ -843,7 +844,7 @@ Vector<RefPtr<AudioTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu
 
     Collator collator;
 
-    std::sort(tracksForMenu.begin(), tracksForMenu.end(), [&] (auto& a, auto& b) {
+    std::ranges::sort(tracksForMenu, [&] (auto& a, auto& b) {
         if (auto trackDisplayComparison = collator.collate(trackDisplayName(*a), trackDisplayName(*b)))
             return trackDisplayComparison < 0;
 
@@ -959,7 +960,7 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(
     if (tracksForMenu.isEmpty())
         return tracksForMenu;
 
-    std::sort(tracksForMenu.begin(), tracksForMenu.end(), textTrackCompare);
+    std::ranges::sort(tracksForMenu, textTrackCompare);
 
     if (requestingCaptionsOrDescriptionsOrSubtitles) {
         tracksForMenu.insert(0, &TextTrack::captionMenuOffItem());

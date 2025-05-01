@@ -29,6 +29,7 @@
 #include "Logging.h"
 #include "ScrollExtents.h"
 #include "ScrollingEffectsController.h"
+#include <ranges>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
@@ -103,7 +104,7 @@ bool ScrollSnapAnimatorState::preserveCurrentTargetForAxis(ScrollEventAxis axis,
 {
     auto snapOffsets = snapOffsetsForAxis(axis);
     
-    auto found = std::find_if(snapOffsets.begin(), snapOffsets.end(), [boxID](SnapOffset<LayoutUnit> p) -> bool {
+    auto found = std::ranges::find_if(snapOffsets, [boxID](SnapOffset<LayoutUnit> p) -> bool {
         return *p.snapTargetID == boxID;
     });
     if (found == snapOffsets.end()) {
@@ -166,13 +167,13 @@ static ElementIdentifier chooseBoxToResnapTo(const UncheckedKeyHashSet<ElementId
 {
     ASSERT(snappedBoxes.size());
 
-    auto found = std::find_if(horizontalOffsets.begin(), horizontalOffsets.end(), [&snappedBoxes](SnapOffset<LayoutUnit> p) -> bool {
+    auto found = std::ranges::find_if(horizontalOffsets, [&snappedBoxes](SnapOffset<LayoutUnit> p) -> bool {
         return snappedBoxes.contains(*p.snapTargetID) && p.isFocused;
     });
     if (found != horizontalOffsets.end())
         return *found->snapTargetID;
     
-    found = std::find_if(verticalOffsets.begin(), verticalOffsets.end(), [&snappedBoxes](SnapOffset<LayoutUnit> p) -> bool {
+    found = std::ranges::find_if(verticalOffsets, [&snappedBoxes](SnapOffset<LayoutUnit> p) -> bool {
         return snappedBoxes.contains(*p.snapTargetID) && p.isFocused;
     });
     if (found != verticalOffsets.end())

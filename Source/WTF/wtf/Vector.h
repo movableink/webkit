@@ -23,6 +23,7 @@
 #include <initializer_list>
 #include <limits>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <string.h>
 #include <type_traits>
@@ -2118,7 +2119,7 @@ inline Vector<typename CopyOrMoveToVectorResult<Collection>::Type> moveToVector(
 
 template<typename T, size_t inlineCapacity = 0> static bool insertInUniquedSortedVector(Vector<T, inlineCapacity>& vector, const T& value)
 {
-    auto it = std::lower_bound(vector.begin(), vector.end(), value);
+    auto it = std::ranges::lower_bound(vector, value);
     if (UNLIKELY(it != vector.end() && *it == value))
         return false;
     vector.insert(it - vector.begin(), value);

@@ -58,6 +58,7 @@
 #include "TextTrackList.h"
 #include "UserAgentParts.h"
 #include "VTTRegionList.h"
+#include <ranges>
 #include <wtf/Language.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -174,7 +175,7 @@ void MediaControlTextTrackContainerElement::updateDisplay()
     // Sort the active cues for the appropriate display order. For example, for roll-up
     // or paint-on captions, we need to add the cues in reverse chronological order,
     // so that the newest captions appear at the bottom.
-    std::sort(activeCues.begin(), activeCues.end(), &compareCueIntervalForDisplay);
+    std::ranges::sort(activeCues, &compareCueIntervalForDisplay);
 
     if (mediaElement->closedCaptionsVisible()) {
         // 10. For each text track cue in cues that has not yet had

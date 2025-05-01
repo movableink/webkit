@@ -35,6 +35,7 @@
 #import "RealtimeMediaSourceCenter.h"
 #import <AVFoundation/AVAudioSession.h>
 #import <pal/spi/cocoa/AVFoundationSPI.h>
+#import <ranges>
 #import <wtf/Assertions.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/MainThread.h>
@@ -310,12 +311,12 @@ void AVAudioSessionCaptureDeviceManager::setAudioCaptureDevices(Vector<AVAudioSe
         }
     }
 
-    std::sort(newCaptureDevices.begin(), newCaptureDevices.end(), [] (auto& first, auto& second) -> bool {
+    std::ranges::sort(newCaptureDevices, [] (auto& first, auto& second) -> bool {
         return first.isDefault() && !second.isDefault();
     });
     m_captureDevices = WTFMove(newCaptureDevices);
 
-    std::sort(newSpeakerDevices.begin(), newSpeakerDevices.end(), [] (auto& first, auto& second) -> bool {
+    std::ranges::sort(newSpeakerDevices, [] (auto& first, auto& second) -> bool {
         return first.isDefault() && !second.isDefault();
     });
     m_speakerDevices = WTFMove(newSpeakerDevices);

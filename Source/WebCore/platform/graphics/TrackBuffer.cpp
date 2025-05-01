@@ -29,6 +29,7 @@
 #if ENABLE(MEDIA_SOURCE)
 
 #include "Logging.h"
+#include <ranges>
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -87,7 +88,7 @@ bool TrackBuffer::updateMinimumUpcomingPresentationTime()
         return false;
     }
 
-    auto minPts = std::min_element(m_decodeQueue.begin(), m_decodeQueue.end(), [](auto& left, auto& right) -> bool {
+    auto minPts = std::ranges::min_element(m_decodeQueue, [](auto& left, auto& right) -> bool {
         return left.second->presentationTime() < right.second->presentationTime();
     });
 

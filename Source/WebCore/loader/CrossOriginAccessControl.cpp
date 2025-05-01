@@ -41,6 +41,7 @@
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include <mutex>
+#include <ranges>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/text/AtomString.h>
@@ -107,7 +108,7 @@ ResourceRequest createAccessControlPreflightRequest(const ResourceRequest& reque
                 unsafeHeaders.append(headerField.key.convertToASCIILowercase());
         }
 
-        std::sort(unsafeHeaders.begin(), unsafeHeaders.end(), WTF::codePointCompareLessThan);
+        std::ranges::sort(unsafeHeaders, WTF::codePointCompareLessThan);
 
         StringBuilder headerBuffer;
 

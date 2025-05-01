@@ -33,6 +33,7 @@
 #include <JavaScriptCore/JSCJSValue.h>
 #include <JavaScriptCore/JSString.h>
 #include <JavaScriptCore/RegExpObject.h>
+#include <ranges>
 
 namespace WebCore {
 using namespace JSC;
@@ -85,7 +86,7 @@ bool URLPatternComponent::matchSpecialSchemeProtocol(ScriptExecutionContext& con
         return false;
     auto protocolRegex = JSC::RegExpObject::create(vm, contextObject->regExpStructure(), m_regularExpression.get(), true);
 
-    auto isSchemeMatch = std::find_if(specialSchemeList.begin(), specialSchemeList.end(), [context = Ref { context }, &vm, &protocolRegex](const String& scheme) {
+    auto isSchemeMatch = std::ranges::find_if(specialSchemeList, [context = Ref { context }, &vm, &protocolRegex](const String& scheme) {
         auto maybeMatch = protocolRegex->exec(context->globalObject(), JSC::jsString(vm, scheme));
         return !maybeMatch.isNull();
     });

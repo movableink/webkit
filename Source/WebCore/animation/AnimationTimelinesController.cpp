@@ -43,6 +43,7 @@
 #include "ViewTimeline.h"
 #include "WebAnimation.h"
 #include "WebAnimationTypes.h"
+#include <ranges>
 #include <wtf/HashSet.h>
 #include <wtf/Ref.h>
 #include <wtf/text/TextStream.h>
@@ -216,7 +217,7 @@ void AnimationTimelinesController::updateAnimationsAndSendEvents(ReducedResoluti
         auto events = documentTimeline->prepareForPendingAnimationEventsDispatch();
 
         // 6. Perform a stable sort of the animation events in events to dispatch as follows.
-        std::stable_sort(events.begin(), events.end(), [] (const Ref<AnimationEventBase>& lhs, const Ref<AnimationEventBase>& rhs) {
+        std::ranges::stable_sort(events, [](auto& lhs, auto& rhs) {
             return compareAnimationEventsByCompositeOrder(lhs.get(), rhs.get());
         });
 

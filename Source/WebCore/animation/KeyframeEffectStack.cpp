@@ -40,6 +40,7 @@
 #include "TranslateTransformOperation.h"
 #include "WebAnimation.h"
 #include "WebAnimationUtilities.h"
+#include <ranges>
 #include <wtf/PointerComparison.h>
 
 namespace WebCore {
@@ -130,7 +131,7 @@ void KeyframeEffectStack::ensureEffectsAreSorted()
     if (m_isSorted || m_effects.size() < 2)
         return;
 
-    std::stable_sort(m_effects.begin(), m_effects.end(), [](auto& lhs, auto& rhs) {
+    std::ranges::stable_sort(m_effects, [](auto& lhs, auto& rhs) {
         RELEASE_ASSERT(lhs.get());
         RELEASE_ASSERT(rhs.get());
         

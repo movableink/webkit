@@ -26,6 +26,7 @@
 #pragma once
 
 #include <algorithm>
+#include <ranges>
 #include <wtf/Vector.h>
 
 namespace WTF {
@@ -55,7 +56,7 @@ struct FloatSegment {
 // return differenceWithDilation({ 0, totalWidth }, intersections);
 inline Vector<FloatSegment> differenceWithDilation(FloatSegment a, Vector<FloatSegment>&& bs, float dilationAmount)
 {
-    std::sort(bs.begin(), bs.end(), [](auto&& a, auto&& b) {
+    std::ranges::sort(bs, [](auto&& a, auto&& b) {
         return a.begin < b.begin;
     });
 

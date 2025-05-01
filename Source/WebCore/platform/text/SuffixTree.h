@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <ranges>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -90,7 +91,7 @@ private:
 
         auto find(int codeWord)
         {
-            return std::find_if(m_children.begin(), m_children.end(), [codeWord](auto& entry) {
+            return std::ranges::find_if(m_children, [codeWord](auto& entry) {
                 return entry.codeWord == codeWord;
             });
         }
