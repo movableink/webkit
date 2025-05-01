@@ -219,6 +219,12 @@ PRINTED
         commit = Commit(revision=1, identifier=1, author=Contributor.Encoder().default(contributor))
         self.assertEqual(commit.author, contributor)
 
+    def test_contributor_emails(self):
+        commit = Commit(revision=1, identifier=1, author={"name": "Banana Apple", "email": "banana@apple.com", "username": "banana"})
+        self.assertEqual(commit.author.name, "Banana Apple")
+        self.assertEqual(commit.author.emails, ['banana@apple.com'])
+        self.assertEqual(commit.author.email, 'banana@apple.com')
+
     def test_invalid_contributor(self):
         with self.assertRaises(TypeError):
             Commit(revision=1, identifier=1, author='Jonathan Bedard')

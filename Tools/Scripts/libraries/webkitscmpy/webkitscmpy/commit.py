@@ -225,7 +225,10 @@ class Commit(object):
         self.order = order or 0
 
         if author and isinstance(author, dict) and author.get('name'):
-            self.author = Contributor(author.get('name'), author.get('emails'))
+            emails = author.get('emails', [])
+            if author.get('email'):
+                emails.append(author.get('email'))
+            self.author = Contributor(author.get('name'), emails)
         elif author and isinstance(author, string_utils.basestring) and '@' in author:
             self.author = Contributor(author, [author])
         elif author and not isinstance(author, Contributor):
