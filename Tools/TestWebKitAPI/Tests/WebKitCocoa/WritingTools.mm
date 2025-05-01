@@ -32,6 +32,7 @@
 #import "InstanceMethodSwizzler.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
+#import "TestCocoa.h"
 #import "TestInputDelegate.h"
 #import "TestNavigationDelegate.h"
 #import "TestUIDelegate.h"

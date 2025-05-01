@@ -80,7 +80,7 @@ static bool wcrBrowserEngineClientEnabled()
 
 ParentalControlsURLFilter& ParentalControlsURLFilter::singleton()
 {
-    static MainThreadNeverDestroyed<UniqueRef<ParentalControlsURLFilter>> filter = UniqueRef(*new ParentalControlsURLFilter(key));
+    static MainThreadNeverDestroyed<UniqueRef<ParentalControlsURLFilter>> filter = UniqueRef(*new ParentalControlsURLFilter);
     return filter.get();
 }
 
