@@ -629,7 +629,6 @@ class PlatformIntelligencePonderingTextEffect<Chunk>: PlatformIntelligenceTextEf
 
     func _add<Source>(to view: PlatformIntelligenceTextEffectView<Source>) async where Source : PlatformIntelligenceTextEffectViewSource, Source.Chunk == Chunk {
         guard let preview = await view.source.textPreview(for: self.chunk) else {
-            assertionFailure("Failed to generate text preview for pondering effect")
             return
         }
 
