@@ -93,7 +93,7 @@ def generate_message_receiver_implementations_file(log_messages, log_messages_re
             if category == "Default":
                 file.write("    auto osLogPointer = OS_LOG_DEFAULT;\n")
             else:
-                file.write("    auto osLog = adoptOSObject(os_log_create(\"com.apple.WebKit.WebContent\", \"" + category + "\"));\n")
+                file.write("    auto osLog = adoptOSObject(os_log_create(\"com.apple.WebKit\", \"" + category + "\"));\n")
                 file.write("    auto osLogPointer = osLog.get();\n")
 
             file.write("    os_log_with_type(osLogPointer, " + os_log_type + ", \"[PID=%d]: \"" + format_string)
