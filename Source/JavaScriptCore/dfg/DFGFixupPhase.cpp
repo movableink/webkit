@@ -1235,6 +1235,7 @@ private:
                                 auto old = node->arrayMode();
                                 old.setSpeculation(Array::OutOfBounds);
                                 node->setArrayMode(old);
+                                arrayMode = node->arrayMode(); // Reload
                             }
 
                             ArrayModes arrayModes = 0;
@@ -1244,7 +1245,7 @@ private:
                                 if (ArrayProfile* arrayProfile = profiledBlock->getArrayProfile(locker, node->origin.semantic.bytecodeIndex()))
                                     arrayModes = arrayProfile->observedArrayModes(locker);
                             }
-                            auto info = refineArrayModesForMultiByVal(node, arrayModes);
+                            auto info = refineArrayModesForMultiGetByVal(node, arrayModes);
                             if (!info)
                                 break;
 
@@ -1421,6 +1422,37 @@ private:
                         fixEdge<SymbolUse>(child2);
                         break;
                     }
+
+                    // Right now, we only support the pattern MultiPutByVal(Object, Int32, Int32)
+                    if (m_graph.m_plan.isFTL()) {
+                        if (node->op() == PutByVal && child2->shouldSpeculateInt32() && child3->shouldSpeculateInt32()) {
+                            ArrayModes arrayModes = 0;
+                            {
+                                CodeBlock* profiledBlock = m_graph.baselineCodeBlockFor(node->origin.semantic);
+                                ConcurrentJSLocker locker(profiledBlock->m_lock);
+                                if (ArrayProfile* arrayProfile = profiledBlock->getArrayProfile(locker, node->origin.semantic.bytecodeIndex()))
+                                    arrayModes = arrayProfile->observedArrayModes(locker);
+                            }
+                            if (auto result = refineArrayModesForMultiPutByVal(node, arrayModes)) {
+                                if (m_graph.hasExitSite(node->origin.semantic, OutOfBounds)) {
+                                    auto old = node->arrayMode();
+                                    old.setSpeculation(Array::OutOfBounds);
+                                    node->setArrayMode(old);
+                                }
+                                auto arrayMode = node->arrayMode().modeForPut();
+                                fixEdge<CellUse>(m_graph.child(node, 0));
+                                fixEdge<Int32Use>(m_graph.child(node, 1));
+                                fixEdge<Int32Use>(m_graph.child(node, 2));
+                                auto* data = m_graph.m_multiPutByValData.add(MultiPutByValData {
+                                    result.value(),
+                                    arrayMode,
+                                });
+                                node->convertToMultiPutByVal(data);
+                                break;
+                            }
+                        }
+                    }
+
                     if (!m_graph.m_slowPutByVal.contains(node)) {
                         fixEdge<CellUse>(child1);
                         break;
@@ -3460,6 +3492,7 @@ private:
         case CallCustomAccessorGetter:
         case CallCustomAccessorSetter:
         case MultiGetByVal:
+        case MultiPutByVal:
             break;
 #else // not ASSERT_ENABLED
         default:
@@ -4433,7 +4466,7 @@ private:
         } }
     }
 
-    static std::optional<std::tuple<ArrayModes, NodeFlags>> refineArrayModesForMultiByVal(Node* node, ArrayModes arrayModes)
+    static std::optional<std::tuple<ArrayModes, NodeFlags>> refineArrayModesForMultiGetByVal(Node* node, ArrayModes arrayModes)
     {
         constexpr ArrayModes supportedArrays = 0
             | asArrayModesIgnoringTypedArrays(ArrayWithInt32)
@@ -4498,6 +4531,44 @@ private:
         }
 
         return std::tuple { arrayModes, flags };
+    }
+
+    static std::optional<ArrayModes> refineArrayModesForMultiPutByVal(Node*, ArrayModes arrayModes)
+    {
+        constexpr ArrayModes supportedArrays = 0
+            | asArrayModesIgnoringTypedArrays(ArrayWithInt32)
+            | asArrayModesIgnoringTypedArrays(ArrayWithDouble)
+            | asArrayModesIgnoringTypedArrays(ArrayWithContiguous)
+            // | CopyOnWriteArrayWithInt32ArrayMode // Not supporting right now.
+            // | CopyOnWriteArrayWithDoubleArrayMode // Not supporting right now.
+            // | CopyOnWriteArrayWithContiguousArrayMode // Not supporting right now.
+            | Int8ArrayMode
+            | Int16ArrayMode
+            | Int32ArrayMode
+            | Uint8ArrayMode
+            | Uint8ClampedArrayMode
+            // | Float16ArrayMode // Not supporting right now.
+            | Uint16ArrayMode
+            | Uint32ArrayMode
+            | Float32ArrayMode
+            | Float64ArrayMode
+            // | BigInt64ArrayMode // Not supporting right now.
+            // | BigUint64ArrayMode // Not supporting right now.
+            | 0;
+
+        if (!arrayModes)
+            return std::nullopt;
+
+        // NonArray IndexingMode includes various subtle array-like objects, including DirectArguments, String, etc.
+        // We do not support them in Multi-ByVal ops.
+        if (~supportedArrays & arrayModes)
+            return std::nullopt;
+
+        unsigned count = std::popcount(arrayModes);
+        if (count > Options::maxAccessVariantListSize())
+            return std::nullopt;
+
+        return arrayModes;
     }
 
     bool alwaysUnboxSimplePrimitives()

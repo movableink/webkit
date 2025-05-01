@@ -1645,6 +1645,7 @@ private:
         case PutByValWithThis:
         case PutByIdWithThis:
         case PutByVal:
+        case MultiPutByVal:
         case PutByValMegamorphic:
         case PutPrivateName:
         case PutPrivateNameById:

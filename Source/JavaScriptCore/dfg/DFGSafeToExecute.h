@@ -413,7 +413,9 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case StringCodePointAt:
         return node->arrayMode().alreadyChecked(graph, node, state.forNode(graph.child(node, 0)));
 
+    // We can make them non conservative by checking the condition safely.
     case MultiGetByVal:
+    case MultiPutByVal:
         return false;
 
     case ArrayPush:

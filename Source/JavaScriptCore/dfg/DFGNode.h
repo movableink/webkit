@@ -112,6 +112,11 @@ struct MultiGetByValData {
     DFG::ArrayMode m_arrayMode { };
 };
 
+struct MultiPutByValData {
+    ArrayModes m_arrayModes { };
+    DFG::ArrayMode m_arrayMode { };
+};
+
 struct MatchStructureVariant {
     RegisteredStructure structure;
     bool result;
@@ -707,6 +712,13 @@ public:
         ASSERT(m_op == GetByVal);
         m_opInfo = data;
         m_op = MultiGetByVal;
+    }
+
+    void convertToMultiPutByVal(MultiPutByValData* data)
+    {
+        ASSERT(m_op == PutByVal);
+        m_opInfo = data;
+        m_op = MultiPutByVal;
     }
 
     void convertToNewRegExp(FrozenValue* regExp, Edge index)
@@ -2475,6 +2487,17 @@ public:
         return *m_opInfo.as<MultiGetByValData*>();
     }
 
+    bool hasMultiPutByValData()
+    {
+        return op() == MultiPutByVal;
+    }
+
+    MultiPutByValData& multiPutByValData()
+    {
+        ASSERT(hasMultiPutByValData());
+        return *m_opInfo.as<MultiPutByValData*>();
+    }
+
     bool hasMatchStructureData()
     {
         return op() == MatchStructure;
@@ -2603,6 +2626,7 @@ public:
     {
         switch (op()) {
         case MultiGetByVal:
+        case MultiPutByVal:
             return true;
         default:
             return false;
@@ -2615,6 +2639,8 @@ public:
         switch (op()) {
         case MultiGetByVal:
             return multiGetByValData().m_arrayModes;
+        case MultiPutByVal:
+            return multiPutByValData().m_arrayModes;
         default:
             return { };
         }
@@ -2640,6 +2666,7 @@ public:
         case GetByVal:
         case GetByValMegamorphic:
         case MultiGetByVal:
+        case MultiPutByVal:
         case EnumeratorNextUpdateIndexAndMode:
         case EnumeratorGetByVal:
         case EnumeratorInByVal:
@@ -2683,6 +2710,8 @@ public:
             return ArrayMode::fromWord(newArrayWithSpeciesData().arrayMode);
         case MultiGetByVal:
             return multiGetByValData().m_arrayMode;
+        case MultiPutByVal:
+            return multiPutByValData().m_arrayMode;
         default:
             return ArrayMode::fromWord(m_opInfo.as<uint32_t>());
         }
@@ -2706,6 +2735,9 @@ public:
         }
         case MultiGetByVal:
             multiGetByValData().m_arrayMode = arrayMode;
+            return true;
+        case MultiPutByVal:
+            multiPutByValData().m_arrayMode = arrayMode;
             return true;
         default:
             m_opInfo = arrayMode.asWord();
@@ -2735,6 +2767,7 @@ public:
         case PutByValDirect:
         case PutByValWithThis:
         case EnumeratorPutByVal:
+        case MultiPutByVal:
         case PutDynamicVar:
         case ToThis:
             return true;
@@ -2762,6 +2795,7 @@ public:
         case PutByValMegamorphic:
         case PutByValDirect:
         case EnumeratorPutByVal:
+        case MultiPutByVal:
         case PutDynamicVar:
             return ECMAMode::fromByte(m_opInfo2.as<uint8_t>());
         default:

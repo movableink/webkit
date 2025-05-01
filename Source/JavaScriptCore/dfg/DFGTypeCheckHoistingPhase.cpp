@@ -280,6 +280,7 @@ private:
                 case PutByVal:
                 case PutByValAlias:
                 case PutByValMegamorphic:
+                case MultiPutByVal:
                 case EnumeratorPutByVal:
                 case GetArrayLength:
                 case GetUndetachedTypeArrayLength:

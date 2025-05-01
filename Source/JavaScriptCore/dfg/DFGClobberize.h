@@ -162,6 +162,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         case GetByVal:
         case GetByValMegamorphic:
         case MultiGetByVal:
+        case MultiPutByVal:
         case StringAt:
         case StringCharAt:
         case StringCharCodeAt:
@@ -1145,7 +1146,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         ArrayMode mode = node->arrayMode();
         LocationKind indexedPropertyLoc = indexedPropertyLocForResultType(node->result());
         bool canUseCSE = true;
-        for (unsigned i = 0; i < sizeof(ArrayModes) * 8; ++i) {
+        for (unsigned i = 0; i < sizeof(ArrayModes) * CHAR_BIT; ++i) {
             ArrayModes oneArrayMode = 1ULL << i;
             if (node->arrayModes() & oneArrayMode) {
                 switch (oneArrayMode) {
@@ -1345,6 +1346,83 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
             return;
         }
         RELEASE_ASSERT_NOT_REACHED();
+        return;
+    }
+
+    case MultiPutByVal: {
+        ArrayMode mode = node->arrayMode();
+        for (unsigned i = 0; i < sizeof(ArrayModes) * CHAR_BIT; ++i) {
+            ArrayModes oneArrayMode = 1ULL << i;
+            if (node->arrayModes() & oneArrayMode) {
+                switch (oneArrayMode) {
+                case asArrayModesIgnoringTypedArrays(ArrayWithInt32): {
+                    if (mode.isOutOfBounds()) {
+                        clobberTop();
+                        break;
+                    }
+                    read(Butterfly_publicLength);
+                    read(Butterfly_vectorLength);
+                    read(IndexedInt32Properties);
+                    write(IndexedInt32Properties);
+                    if (mode.mayStoreToHole())
+                        write(Butterfly_publicLength);
+                    break;
+                }
+                case asArrayModesIgnoringTypedArrays(ArrayWithDouble): {
+                    if (mode.isOutOfBounds()) {
+                        clobberTop();
+                        break;
+                    }
+                    read(Butterfly_publicLength);
+                    read(Butterfly_vectorLength);
+                    read(IndexedDoubleProperties);
+                    write(IndexedDoubleProperties);
+                    if (mode.mayStoreToHole())
+                        write(Butterfly_publicLength);
+                    break;
+                }
+                case asArrayModesIgnoringTypedArrays(ArrayWithContiguous): {
+                    if (mode.isOutOfBounds()) {
+                        clobberTop();
+                        break;
+                    }
+                    read(Butterfly_publicLength);
+                    read(Butterfly_vectorLength);
+                    read(IndexedContiguousProperties);
+                    write(IndexedContiguousProperties);
+                    if (mode.mayStoreToHole())
+                        write(Butterfly_publicLength);
+                    break;
+                }
+                case Int8ArrayMode:
+                case Int16ArrayMode:
+                case Int32ArrayMode:
+                case Uint8ArrayMode:
+                case Uint8ClampedArrayMode:
+                case Float16ArrayMode:
+                case Uint16ArrayMode:
+                case Uint32ArrayMode:
+                case Float32ArrayMode:
+                case Float64ArrayMode:
+                case BigInt64ArrayMode:
+                case BigUint64ArrayMode:
+                    // Even if we hit out-of-bounds, this is fine. TypedArray does not propagate access to its [[Prototype]] when out-of-bounds access happens.
+                    if (mode.mayBeResizableOrGrowableSharedTypedArray()) {
+                        read(TypedArrayProperties);
+                        read(MiscFields);
+                        write(TypedArrayProperties);
+                        write(MiscFields);
+                    } else {
+                        read(MiscFields);
+                        write(TypedArrayProperties);
+                    }
+                    break;
+                default:
+                    DFG_CRASH(graph, node, "impossible array mode for MultiPutByVal");
+                    break;
+                }
+            }
+        }
         return;
     }
 

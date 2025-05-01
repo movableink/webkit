@@ -574,6 +574,9 @@ bool doesGC(Graph& graph, Node* node)
     case MultiGetByVal:
         return true;
 
+    case MultiPutByVal:
+        return true;
+
     case ResolveRope:
         return true;
 

@@ -2947,7 +2947,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
 
     case MultiGetByVal: {
         ArrayMode mode = node->arrayMode();
-        for (unsigned i = 0; i < sizeof(ArrayModes) * 8; ++i) {
+        for (unsigned i = 0; i < sizeof(ArrayModes) * CHAR_BIT; ++i) {
             ArrayModes oneArrayMode = 1ULL << i;
             if (node->arrayModes() & oneArrayMode) {
                 switch (oneArrayMode) {
@@ -3043,7 +3043,41 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         break;
     }
 
-            
+    case MultiPutByVal: {
+        ArrayMode mode = node->arrayMode();
+        for (unsigned i = 0; i < sizeof(ArrayModes) * CHAR_BIT; ++i) {
+            ArrayModes oneArrayMode = 1ULL << i;
+            if (node->arrayModes() & oneArrayMode) {
+                switch (oneArrayMode) {
+                case asArrayModesIgnoringTypedArrays(ArrayWithInt32):
+                case asArrayModesIgnoringTypedArrays(ArrayWithDouble):
+                case asArrayModesIgnoringTypedArrays(ArrayWithContiguous): {
+                    if (mode.isOutOfBounds())
+                        clobberWorld();
+                    break;
+                }
+                case Int8ArrayMode:
+                case Int16ArrayMode:
+                case Int32ArrayMode:
+                case Uint8ArrayMode:
+                case Uint8ClampedArrayMode:
+                case Float16ArrayMode:
+                case Uint16ArrayMode:
+                case Uint32ArrayMode:
+                case Float32ArrayMode:
+                case Float64ArrayMode:
+                case BigInt64ArrayMode:
+                case BigUint64ArrayMode:
+                    break;
+                default:
+                    DFG_CRASH(m_graph, node, "impossible array mode for MultiPutByVal");
+                    break;
+                }
+            }
+        }
+        break;
+    }
+
     case ArrayPush:
         switch (node->arrayMode().type()) {
         case Array::ForceExit:
