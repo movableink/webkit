@@ -1993,6 +1993,11 @@ void AXObjectCache::onSlottedContentChange(const HTMLSlotElement& slot)
     childrenChanged(get(const_cast<HTMLSlotElement&>(slot)));
 }
 
+static bool isContentVisibilityHidden(const RenderStyle& style)
+{
+    return style.usedContentVisibility() == ContentVisibility::Hidden;
+}
+
 void AXObjectCache::onStyleChange(Element& element, OptionSet<Style::Change> change, const RenderStyle* oldStyle, const RenderStyle* newStyle)
 {
     if (!change || !oldStyle || !newStyle)
@@ -2002,9 +2007,14 @@ void AXObjectCache::onStyleChange(Element& element, OptionSet<Style::Change> cha
     if (!object)
         return;
 
-    if (!element.renderer() && isVisibilityHidden(*oldStyle) != isVisibilityHidden(*newStyle)) {
-        // We only need to do this when the given element doesn't have a renderer, as if it did, we would get a normal
-        // children-changed event through the render tree.
+    if (element.renderer()) {
+        // Unlike changes to `visibility`, changes to `content-visibility` do not provide accessibility
+        // children changed notifications via the render tree, so check for that here.
+        if (isContentVisibilityHidden(*oldStyle) != isContentVisibilityHidden(*newStyle))
+            childrenChanged(object.get());
+    } else if (isVisibilityHidden(*oldStyle) != isVisibilityHidden(*newStyle)) {
+        // We only need to do this when the given element doesn't have a renderer, as if it did, we would
+        // get a children-changed event through the render tree.
         childrenChanged(object.get());
     }
 
@@ -5022,7 +5032,7 @@ bool isNodeFocused(Node& node)
 
 bool isVisibilityHidden(const RenderStyle& style)
 {
-    return style.usedVisibility() != Visibility::Visible || style.usedContentVisibility() == ContentVisibility::Hidden;
+    return style.usedVisibility() != Visibility::Visible || isContentVisibilityHidden(style);
 }
 
 // DOM component of hidden definition.

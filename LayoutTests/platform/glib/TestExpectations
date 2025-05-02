@@ -679,6 +679,8 @@ imported/w3c/web-platform-tests/navigation-api/navigation-history-entry/key-id-b
 accessibility/opacity-0-bounding-box.html [ Skip ]
 accessibility/clip-path-bounding-box.html [ Skip ]
 
+accessibility/dynamic-content-visibility.html [ Skip ]
+
 # AXObjectCache::announce not implemented.
 accessibility/announcement-notification.html [ Skip ]
 
