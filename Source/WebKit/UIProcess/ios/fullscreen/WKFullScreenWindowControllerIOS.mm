@@ -1293,7 +1293,7 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
             _previewWindowController = nil;
         }
 
-        if (auto* manager = self._manager) {
+        if (self._manager) {
             OBJC_ALWAYS_LOG(OBJC_LOGIDENTIFIER);
             completionHandler();
             return;
