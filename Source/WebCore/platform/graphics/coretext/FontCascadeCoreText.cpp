@@ -45,10 +45,12 @@ FontCascade::FontCascade(const FontPlatformData& fontData, FontSmoothingMode fon
     , m_requiresShaping(computeRequiresShaping())
 {
     m_fontDescription.setFontSmoothing(fontSmoothingMode);
-    m_fontDescription.setSpecifiedSize(CTFontGetSize(fontData.ctFont()));
-    m_fontDescription.setComputedSize(CTFontGetSize(fontData.ctFont()));
-    m_fontDescription.setIsItalic(CTFontGetSymbolicTraits(fontData.ctFont()) & kCTFontTraitItalic);
-    m_fontDescription.setWeight((CTFontGetSymbolicTraits(fontData.ctFont()) & kCTFontTraitBold) ? boldWeightValue() : normalWeightValue());
+    RetainPtr ctFont = fontData.ctFont();
+
+    m_fontDescription.setSpecifiedSize(CTFontGetSize(ctFont.get()));
+    m_fontDescription.setComputedSize(CTFontGetSize(ctFont.get()));
+    m_fontDescription.setIsItalic(CTFontGetSymbolicTraits(ctFont.get()) & kCTFontTraitItalic);
+    m_fontDescription.setWeight((CTFontGetSymbolicTraits(ctFont.get()) & kCTFontTraitBold) ? boldWeightValue() : normalWeightValue());
 }
 
 static const AffineTransform& rotateLeftTransform()
@@ -272,14 +274,15 @@ static void showGlyphsWithAdvances(const FloatPoint& point, const Font& font, CG
         ScopedTextMatrix savedMatrix(computeVerticalTextMatrix(font, textMatrix), context);
 
         Vector<CGSize, 256> translations(glyphs.size());
-        CTFontGetVerticalTranslationsForGlyphs(platformData.ctFont(), glyphs.data(), translations.data(), glyphs.size());
+        RetainPtr ctFont = platformData.ctFont();
+        CTFontGetVerticalTranslationsForGlyphs(ctFont.get(), glyphs.data(), translations.data(), glyphs.size());
 
         auto ascentDelta = font.fontMetrics().ascent(IdeographicBaseline) - font.fontMetrics().ascent();
         fillVectorWithVerticalGlyphPositions(positions, translations, advances, point, ascentDelta, CGContextGetTextMatrix(context));
-        CTFontDrawGlyphs(platformData.ctFont(), glyphs.data(), positions.data(), glyphs.size(), context);
+        CTFontDrawGlyphs(ctFont.get(), glyphs.data(), positions.data(), glyphs.size(), context);
     } else {
         fillVectorWithHorizontalGlyphPositions(positions, context, advances, point);
-        CTFontDrawGlyphs(platformData.ctFont(), glyphs.data(), positions.data(), glyphs.size(), context);
+        CTFontDrawGlyphs(RetainPtr { platformData.ctFont() }.get(), glyphs.data(), positions.data(), glyphs.size(), context);
     }
 }
 
@@ -398,7 +401,7 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, std::sp
 bool FontCascade::primaryFontIsSystemFont() const
 {
     Ref fontData = primaryFont();
-    return isSystemFont(fontData->getCTFont());
+    return isSystemFont(RetainPtr { fontData->getCTFont() }.get());
 }
 
 RefPtr<const Font> FontCascade::fontForCombiningCharacterSequence(StringView stringView) const
