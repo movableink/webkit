@@ -92,7 +92,7 @@ void ResourceLoadNotifier::didFinishLoad(ResourceLoader& loader, ResourceLoaderI
     if (RefPtr page = m_frame->page())
         page->checkedProgress()->completeProgress(identifier);
 
-    dispatchDidFinishLoading(loader.protectedDocumentLoader().get(), loader.options().mode == FetchOptions::Mode::Navigate ? IsMainResourceLoad::Yes : loader.options().mode == FetchOptions::Mode::Navigate ? IsMainResourceLoad::Yes : IsMainResourceLoad::No, identifier, networkLoadMetrics, &loader);
+    dispatchDidFinishLoading(loader.protectedDocumentLoader().get(), loader.options().mode == FetchOptions::Mode::Navigate ? IsMainResourceLoad::Yes : IsMainResourceLoad::No, identifier, networkLoadMetrics, &loader);
 }
 
 void ResourceLoadNotifier::didFailToLoad(ResourceLoader& loader, ResourceLoaderIdentifier identifier, const ResourceError& error)
