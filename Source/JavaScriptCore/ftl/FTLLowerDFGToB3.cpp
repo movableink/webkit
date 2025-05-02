@@ -22595,6 +22595,18 @@ IGNORE_CLANG_WARNINGS_END
         return m_out.phi(Int64, intToInt52, doubleToInt52);
     }
 
+    LValue isStrictInt52(LValue int64Value)
+    {
+        LValue added = m_out.add(m_out.constInt64(0x0008000000000000ULL), int64Value);
+        LValue shifted = m_out.lShr(added, m_out.constInt32(52));
+        return m_out.isZero64(shifted);
+    }
+
+    LValue isNotStrictInt52(LValue int64Value)
+    {
+        return m_out.logicalNot(isStrictInt52(int64Value));
+    }
+
     LValue doubleToStrictInt52(ExitKind exitKind, Node* node, LValue value, bool canIgnoreNegativeZero)
     {
         LValue integerValue = m_out.doubleToInt64(value);
@@ -22604,14 +22616,8 @@ IGNORE_CLANG_WARNINGS_END
         LValue valueNotConvertibleToInteger = m_out.doubleNotEqualOrUnordered(value, integerValueConvertedToDouble);
         speculate(exitKind, doubleValue(value), node, valueNotConvertibleToInteger);
 
-        auto speculateInt52Range = [&](LValue integerValue) {
-            LValue added = m_out.add(m_out.constInt64(0xfff8000000000000ULL), integerValue);
-            LValue shifted = m_out.lShr(added, m_out.constInt32(52));
-            speculate(exitKind, doubleValue(value), node, m_out.belowOrEqual(shifted, m_out.constInt64(4094)));
-        };
-
         if (canIgnoreNegativeZero) {
-            speculateInt52Range(integerValue);
+            speculate(exitKind, doubleValue(value), node, isNotStrictInt52(integerValue));
             return integerValue;
         }
 
@@ -22626,7 +22632,7 @@ IGNORE_CLANG_WARNINGS_END
         m_out.jump(continuation);
 
         m_out.appendTo(valueIsNotZero, continuation);
-        speculateInt52Range(integerValue);
+        speculate(exitKind, doubleValue(value), node, isNotStrictInt52(integerValue));
         m_out.jump(continuation);
 
         m_out.appendTo(continuation, lastNext);

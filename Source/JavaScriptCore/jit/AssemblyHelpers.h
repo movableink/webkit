@@ -1511,6 +1511,23 @@ public:
         unboxDouble(regs.payloadGPR(), resultGPR, destFPR);
     }
 
+    Jump isStrictInt52(GPRReg valueGPR, GPRReg scratchGPR)
+    {
+        // This moves the checking range (fail if N >= (1 << (52 - 1)) or N < -(1 << (52 - 1))) by subtracting a value.
+        // So, valid value region starts with -1 and lower. In unsigned form, which means,
+        // 0x00000000000000000 to 0x000fffffffffffff . So, by shifting 52, we can extract 0x000 part, and we can check whether it is zero.
+        add64(TrustedImm64(0x0008000000000000ULL), valueGPR, scratchGPR);
+        urshift64(TrustedImm32(52), scratchGPR);
+        return branchTest64(Zero, scratchGPR);
+    }
+
+    Jump isNotStrictInt52(GPRReg valueGPR, GPRReg scratchGPR)
+    {
+        add64(TrustedImm64(0x0008000000000000ULL), valueGPR, scratchGPR);
+        urshift64(TrustedImm32(52), scratchGPR);
+        return branchTest64(NonZero, scratchGPR);
+    }
+
     // Here are possible arrangements of source, target, scratch:
     // - source, target, scratch can all be separate registers.
     // - source and target can be the same but scratch is separate.
@@ -1555,13 +1572,7 @@ public:
         if (!canIgnoreNegativeZero)
             isZero = branchTest64(Zero, destGPR);
 
-        // This moves the checking range (fail if N >= (1 << (52 - 1)) or N < -(1 << (52 - 1))) by subtracting a value.
-        // So, valid value region starts with -1 and lower. In unsigned form, which means,
-        // 0xffffffffffffffff to 0xfff0000000000000. So, by shifting 52, we can extract 0xfff part, and we can check whether it is below than that (<= 4094).
-        move(TrustedImm64(0xfff8000000000000ULL), scratch1GPR);
-        add64(destGPR, scratch1GPR);
-        urshift64(TrustedImm32(52), scratch1GPR);
-        failureCases.append(branch64(BelowOrEqual, scratch1GPR, TrustedImm32(4094)));
+        failureCases.append(isNotStrictInt52(destGPR, scratch1GPR));
 
         if (isZero.isSet()) {
             doneCases.append(jump());
