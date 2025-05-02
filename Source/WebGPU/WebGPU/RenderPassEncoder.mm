@@ -70,7 +70,7 @@ static std::pair<uint64_t, uint32_t> makeKey(uint64_t bufferIdentifier, uint32_t
 
 void RenderPassEncoder::setVertexBuffer(id<MTLRenderCommandEncoder> commandEncoder, id<MTLBuffer> buffer, uint32_t offset, uint32_t bufferIndex)
 {
-    if (UNLIKELY(m_ignoreBufferCache)) {
+    if (m_ignoreBufferCache) [[unlikely]] {
         [commandEncoder setVertexBuffer:buffer offset:offset atIndex:bufferIndex];
         return;
     }
@@ -85,7 +85,7 @@ void RenderPassEncoder::setVertexBuffer(id<MTLRenderCommandEncoder> commandEncod
 
 void RenderPassEncoder::setFragmentBuffer(id<MTLRenderCommandEncoder> commandEncoder, id<MTLBuffer> buffer, uint32_t offset, uint32_t bufferIndex)
 {
-    if (UNLIKELY(m_ignoreBufferCache)) {
+    if (m_ignoreBufferCache) [[unlikely]] {
         [commandEncoder setFragmentBuffer:buffer offset:offset atIndex:bufferIndex];
         return;
     }

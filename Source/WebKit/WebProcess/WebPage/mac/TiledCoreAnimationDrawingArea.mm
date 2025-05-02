@@ -357,7 +357,7 @@ void TiledCoreAnimationDrawingArea::updateRendering(UpdateRenderingType flushTyp
         return;
 
     Ref webPage = m_webPage.get();
-    if (UNLIKELY(!webPage->hasRootFrames()))
+    if (!webPage->hasRootFrames()) [[unlikely]]
         return;
 
     @autoreleasepool {

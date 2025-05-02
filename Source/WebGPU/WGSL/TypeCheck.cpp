@@ -296,17 +296,17 @@ TypeChecker::TypeChecker(ShaderModule& shaderModule)
             if (isBottom(elementType))
                 return m_types.bottomType();
 
-            if (UNLIKELY(!elementType->isStorable())) {
+            if (!elementType->isStorable()) [[unlikely]] {
                 typeError(InferBottom::No, type.span(), '\'', *elementType, "' cannot be used as the store type of a pointer"_s);
                 return m_types.bottomType();
             }
 
-            if (UNLIKELY(std::holds_alternative<Types::Atomic>(*elementType) && addressSpace != AddressSpace::Storage && addressSpace != AddressSpace::Workgroup)) {
+            if (std::holds_alternative<Types::Atomic>(*elementType) && addressSpace != AddressSpace::Storage && addressSpace != AddressSpace::Workgroup) [[unlikely]] {
                 typeError(InferBottom::No, type.span(), '\'', *elementType, "' atomic variables must have <storage> or <workgroup> address space"_s);
                 return m_types.bottomType();
             }
 
-            if (UNLIKELY(elementType->containsRuntimeArray() && addressSpace != AddressSpace::Storage)) {
+            if (elementType->containsRuntimeArray() && addressSpace != AddressSpace::Storage) [[unlikely]] {
                 typeError(InferBottom::No, type.span(), "runtime-sized arrays can only be used in the <storage> address space"_s);
                 return m_types.bottomType();
             }
@@ -466,11 +466,11 @@ void TypeChecker::visit(AST::Structure& structure)
         visitAttributes(member.attributes());
         auto* memberType = resolve(member.type());
 
-        if (UNLIKELY(std::holds_alternative<Types::Bottom>(*memberType))) {
+        if (std::holds_alternative<Types::Bottom>(*memberType)) [[unlikely]] {
             introduceType(structure.name(), m_types.bottomType());
             return;
         }
-        if (UNLIKELY(!memberType->hasCreationFixedFootprint())) {
+        if (!memberType->hasCreationFixedFootprint()) [[unlikely]] {
             if (!memberType->containsRuntimeArray()) {
                 typeError(InferBottom::No, member.span(), "type '"_s, *memberType, "' cannot be used as a struct member because it does not have creation-fixed footprint"_s);
                 introduceType(structure.name(), m_types.bottomType());
@@ -1211,17 +1211,17 @@ void TypeChecker::binaryExpression(const SourceSpan& span, AST::Expression* expr
 void TypeChecker::visit(AST::IdentifierExpression& identifier)
 {
     auto* binding = readVariable(identifier.identifier());
-    if (UNLIKELY(!binding)) {
+    if (!binding) [[unlikely]] {
         typeError(identifier.span(), "unresolved identifier '"_s, identifier.identifier(), '\'');
         return;
     }
 
-    if (UNLIKELY(binding->kind != Binding::Value)) {
+    if (binding->kind != Binding::Value) [[unlikely]] {
         typeError(identifier.span(), "cannot use "_s, bindingKindToString(binding->kind), " '"_s, identifier.identifier(), "' as value"_s);
         return;
     }
 
-    if (UNLIKELY(binding->evaluation > m_evaluation)) {
+    if (binding->evaluation > m_evaluation) [[unlikely]] {
         typeError(identifier.span(), "cannot use "_s, evaluationToString(binding->evaluation), " value in "_s, evaluationToString(m_evaluation), " expression"_s);
         return;
     }
@@ -1262,7 +1262,7 @@ void TypeChecker::visit(AST::CallExpression& call)
                     return;
                 }
 
-                if (UNLIKELY(m_discardResult == DiscardResult::Yes)) {
+                if (m_discardResult == DiscardResult::Yes) [[unlikely]] {
                     typeError(call.span(), "value constructor evaluated but not used"_s);
                     return;
                 }
@@ -1338,12 +1338,12 @@ void TypeChecker::visit(AST::CallExpression& call)
             auto& functionType = std::get<Types::Function>(*targetBinding->type);
             auto numberOfArguments = call.arguments().size();
             auto numberOfParameters = functionType.parameters.size();
-            if (UNLIKELY(m_evaluation < Evaluation::Runtime)) {
+            if (m_evaluation < Evaluation::Runtime) [[unlikely]] {
                 typeError(call.span(), "cannot call function from "_s, evaluationToString(m_evaluation), " context"_s);
                 return;
             }
 
-            if (UNLIKELY(numberOfArguments != numberOfParameters)) {
+            if (numberOfArguments != numberOfParameters) [[unlikely]] {
                 auto errorKind = numberOfArguments < numberOfParameters ? "few"_s : "many"_s;
                 typeError(call.span(), "funtion call has too "_s, errorKind, " arguments: expected "_s, numberOfParameters, ", found "_s, numberOfArguments);
                 return;
@@ -1587,7 +1587,7 @@ void TypeChecker::visit(AST::CallExpression& call)
         if (argumentCount) {
             // https://www.w3.org/TR/WGSL/#limits
             constexpr unsigned maximumConstantArraySize = 2047;
-            if (UNLIKELY(argumentCount > maximumConstantArraySize))
+            if (argumentCount > maximumConstantArraySize) [[unlikely]]
                 typeError(InferBottom::No, call.span(), "constant array cannot have more than "_s, String::number(maximumConstantArraySize), " elements"_s);
             setConstantValue(call, result, ConstantArray(WTFMove(arguments)));
         } else
@@ -1607,7 +1607,7 @@ void TypeChecker::bitcast(AST::CallExpression& call, const Vector<const Type*>& 
         return;
     }
 
-    if (UNLIKELY(m_discardResult == DiscardResult::Yes)) {
+    if (m_discardResult == DiscardResult::Yes) [[unlikely]] {
         typeError(call.span(), "cannot discard the result of bitcast"_s);
         return;
     }
@@ -2378,7 +2378,7 @@ bool TypeChecker::convertValue(const SourceSpan& span, const Type* type, std::op
         return false;
     }
 
-    if (UNLIKELY(!convertValueImpl(span, type, *value))) {
+    if (!convertValueImpl(span, type, *value)) [[unlikely]] {
         StringPrintStream valueString;
         value->dump(valueString);
         typeError(InferBottom::No, span, "value "_s, valueString.toString(), " cannot be represented as '"_s, *type, '\'');

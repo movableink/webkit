@@ -62,7 +62,7 @@ void WebTransportSendStreamSink::write(WebCore::ScriptExecutionContext& context,
     auto scope = DECLARE_THROW_SCOPE(globalObject.vm());
 
     auto bufferSource = convert<WebCore::IDLUnion<WebCore::IDLArrayBuffer, WebCore::IDLArrayBufferView>>(globalObject, value);
-    if (UNLIKELY(bufferSource.hasException(scope)))
+    if (bufferSource.hasException(scope)) [[unlikely]]
         return promise.settle(WebCore::Exception { WebCore::ExceptionCode::ExistingExceptionError });
 
     WTF::switchOn(bufferSource.releaseReturnValue(), [&](auto&& arrayBufferOrView) {

@@ -363,7 +363,7 @@ bool WebExtensionAPIWindows::parseWindowUpdateOptions(NSDictionary *options, Web
 
 bool isValid(std::optional<WebExtensionWindowIdentifier> identifier, NSString **outExceptionString)
 {
-    if (UNLIKELY(!isValid(identifier))) {
+    if (!isValid(identifier)) [[unlikely]] {
         if (isNone(identifier))
             *outExceptionString = toErrorString(nullString(), @"windowId", @"'windows.WINDOW_ID_NONE' is not allowed").createNSString().autorelease();
         else if (identifier)
@@ -378,7 +378,7 @@ bool isValid(std::optional<WebExtensionWindowIdentifier> identifier, NSString **
 
 bool WebExtensionAPIWindows::isPropertyAllowed(const ASCIILiteral& name, WebPage*)
 {
-    if (UNLIKELY(extensionContext().isUnsupportedAPI(propertyPath(), name)))
+    if (extensionContext().isUnsupportedAPI(propertyPath(), name)) [[unlikely]]
         return false;
 
 #if PLATFORM(MAC)

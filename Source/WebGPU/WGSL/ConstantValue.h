@@ -185,7 +185,7 @@ template<typename To, typename From>
 std::optional<To> convertInteger(From value)
 {
     auto result = Checked<To, RecordOverflow>(value);
-    if (UNLIKELY(result.hasOverflowed()))
+    if (result.hasOverflowed()) [[unlikely]]
         return std::nullopt;
     return { result.value() };
 }

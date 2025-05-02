@@ -321,7 +321,7 @@ void handleMessage(C& connection, Decoder& decoder, T* object, MF U::* function)
     static_assert(std::is_same_v<typename ValidationType::MessageArguments, typename MessageType::Arguments>);
 
     auto arguments = decoder.decode<typename MessageType::Arguments>();
-    if (UNLIKELY(!arguments))
+    if (!arguments) [[unlikely]]
         return;
 
     logMessage(connection, MessageType::name(), object, *arguments);
@@ -345,7 +345,7 @@ void handleMessageWithoutUsingIPCConnection(Decoder& decoder, T* object, MF U::*
     static_assert(std::is_same_v<typename ValidationType::MessageArguments, typename MessageType::Arguments>);
 
     auto arguments = decoder.decode<typename MessageType::Arguments>();
-    if (UNLIKELY(!arguments))
+    if (!arguments) [[unlikely]]
         return;
 
     callMemberFunction(object, function, WTFMove(*arguments));
@@ -358,7 +358,7 @@ bool handleMessageSynchronous(Connection& connection, Decoder& decoder, UniqueRe
     static_assert(std::is_same_v<typename ValidationType::MessageArguments, typename MessageType::Arguments>);
 
     auto arguments = decoder.decode<typename MessageType::Arguments>();
-    if (UNLIKELY(!arguments))
+    if (!arguments) [[unlikely]]
         return true; // Message handler found, but decode failed.
 
     static_assert(std::is_same_v<typename ValidationType::CompletionHandlerArguments, typename MessageType::ReplyArguments>);
@@ -386,7 +386,7 @@ void handleMessageSynchronous(StreamServerConnection& connection, Decoder& decod
     static_assert(std::is_same_v<typename ValidationType::MessageArguments, typename MessageType::Arguments>);
 
     auto arguments = decoder.decode<typename MessageType::Arguments>();
-    if (UNLIKELY(!arguments))
+    if (!arguments) [[unlikely]]
         return;
 
     static_assert(std::is_same_v<typename ValidationType::CompletionHandlerArguments, typename MessageType::ReplyArguments>);
@@ -407,10 +407,10 @@ void handleMessageAsync(C& connection, Decoder& decoder, T* object, MF U::* func
     static_assert(std::is_same_v<typename ValidationType::MessageArguments, typename MessageType::Arguments>);
 
     auto arguments = decoder.decode<typename MessageType::Arguments>();
-    if (UNLIKELY(!arguments))
+    if (!arguments) [[unlikely]]
         return;
     auto replyID = decoder.decode<IPC::AsyncReplyID>();
-    if (UNLIKELY(!replyID))
+    if (!replyID) [[unlikely]]
         return;
 
     if constexpr (ValidationType::returnsVoid)
@@ -452,7 +452,7 @@ void handleMessageAsyncWithoutUsingIPCConnection(Decoder& decoder, Function<void
     static_assert(std::is_same_v<typename ValidationType::MessageArguments, typename MessageType::Arguments>);
 
     auto arguments = decoder.decode<typename MessageType::Arguments>();
-    if (UNLIKELY(!arguments))
+    if (!arguments) [[unlikely]]
         return;
 
     static_assert(std::is_same_v<typename ValidationType::CompletionHandlerArguments, typename MessageType::ReplyArguments>);
@@ -475,7 +475,7 @@ void handleMessageAsyncWithReplyID(Connection& connection, Decoder& decoder, T* 
     static_assert(std::is_same_v<typename ValidationType::MessageArguments, std::tuple<IPC::AsyncReplyID>>);
 
     auto replyID = decoder.decode<Connection::AsyncReplyID>();
-    if (UNLIKELY(!replyID))
+    if (!replyID) [[unlikely]]
         return;
 
     logMessage(connection, MessageType::name(), object, std::tuple<>());

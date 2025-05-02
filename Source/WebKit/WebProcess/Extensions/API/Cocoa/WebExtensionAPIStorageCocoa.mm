@@ -42,7 +42,7 @@ namespace WebKit {
 
 bool WebExtensionAPIStorage::isPropertyAllowed(const ASCIILiteral& propertyName, WebPage*)
 {
-    if (UNLIKELY(extensionContext().isUnsupportedAPI(propertyPath(), propertyName)))
+    if (extensionContext().isUnsupportedAPI(propertyPath(), propertyName)) [[unlikely]]
         return false;
 
     if (propertyName == "session"_s)

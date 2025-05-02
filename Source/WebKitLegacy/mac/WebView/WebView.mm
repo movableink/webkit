@@ -7481,7 +7481,7 @@ static NSAppleEventDescriptor* aeDescFromJSValue(JSC::JSGlobalObject* lexicalGlo
             }
         }
         JSC::JSValue primitive = object->toPrimitive(lexicalGlobalObject);
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             scope.clearException();
             return [NSAppleEventDescriptor nullDescriptor];
         }

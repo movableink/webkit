@@ -275,7 +275,7 @@ SOFT_LINK_OPTIONAL(libAccessibility, _AXSReduceMotionAutoplayAnimatedImagesEnabl
 #import <WebCore/GameControllerSoftLink.h>
 #endif
 
-#define THROW_IF_SUSPENDED if (UNLIKELY(_page && _page->isSuspended())) \
+#define THROW_IF_SUSPENDED if (_page && _page->isSuspended()) [[unlikely]] \
     [NSException raise:NSInternalInconsistencyException format:@"The WKWebView is suspended"]
 
 RetainPtr<NSError> nsErrorFromExceptionDetails(const std::optional<WebCore::ExceptionDetails>& details)

@@ -33,13 +33,13 @@
     void attachShader(uint32_t program, uint32_t shader)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(program))) {
+        if (!m_objectNames.isValidKey(program)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
         if (program)
             program = m_objectNames.get(program);
-        if (UNLIKELY(!m_objectNames.isValidKey(shader))) {
+        if (!m_objectNames.isValidKey(shader)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -50,7 +50,7 @@
     void bindAttribLocation(uint32_t arg0, uint32_t index, String&& name)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -61,7 +61,7 @@
     void bindBuffer(uint32_t target, uint32_t arg1)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg1))) {
+        if (!m_objectNames.isValidKey(arg1)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -72,7 +72,7 @@
     void bindFramebuffer(uint32_t target, uint32_t arg1)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg1))) {
+        if (!m_objectNames.isValidKey(arg1)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -83,7 +83,7 @@
     void bindRenderbuffer(uint32_t target, uint32_t arg1)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg1))) {
+        if (!m_objectNames.isValidKey(arg1)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -94,7 +94,7 @@
     void bindTexture(uint32_t target, uint32_t arg1)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg1))) {
+        if (!m_objectNames.isValidKey(arg1)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -162,7 +162,7 @@
     void compileShader(uint32_t arg0)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -183,7 +183,7 @@
     void createBuffer(uint32_t name)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(name))) {
+        if (!m_objectNames.isValidKey(name)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -194,7 +194,7 @@
     void createFramebuffer(uint32_t name)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(name))) {
+        if (!m_objectNames.isValidKey(name)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -205,7 +205,7 @@
     void createProgram(uint32_t name)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(name))) {
+        if (!m_objectNames.isValidKey(name)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -216,7 +216,7 @@
     void createRenderbuffer(uint32_t name)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(name))) {
+        if (!m_objectNames.isValidKey(name)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -227,7 +227,7 @@
     void createShader(uint32_t name, uint32_t arg0)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(name))) {
+        if (!m_objectNames.isValidKey(name)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -238,7 +238,7 @@
     void createTexture(uint32_t name)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(name))) {
+        if (!m_objectNames.isValidKey(name)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -254,11 +254,11 @@
     void deleteBuffer(uint32_t arg0)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
-        if (UNLIKELY(!arg0))
+        if (!arg0) [[unlikely]]
             return;
         arg0 = m_objectNames.take(arg0);
         protectedContext()->deleteBuffer(arg0);
@@ -266,11 +266,11 @@
     void deleteFramebuffer(uint32_t arg0)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
-        if (UNLIKELY(!arg0))
+        if (!arg0) [[unlikely]]
             return;
         arg0 = m_objectNames.take(arg0);
         protectedContext()->deleteFramebuffer(arg0);
@@ -278,11 +278,11 @@
     void deleteProgram(uint32_t arg0)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
-        if (UNLIKELY(!arg0))
+        if (!arg0) [[unlikely]]
             return;
         arg0 = m_objectNames.take(arg0);
         protectedContext()->deleteProgram(arg0);
@@ -290,11 +290,11 @@
     void deleteRenderbuffer(uint32_t arg0)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
-        if (UNLIKELY(!arg0))
+        if (!arg0) [[unlikely]]
             return;
         arg0 = m_objectNames.take(arg0);
         protectedContext()->deleteRenderbuffer(arg0);
@@ -302,11 +302,11 @@
     void deleteShader(uint32_t arg0)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
-        if (UNLIKELY(!arg0))
+        if (!arg0) [[unlikely]]
             return;
         arg0 = m_objectNames.take(arg0);
         protectedContext()->deleteShader(arg0);
@@ -314,11 +314,11 @@
     void deleteTexture(uint32_t arg0)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
-        if (UNLIKELY(!arg0))
+        if (!arg0) [[unlikely]]
             return;
         arg0 = m_objectNames.take(arg0);
         protectedContext()->deleteTexture(arg0);
@@ -341,13 +341,13 @@
     void detachShader(uint32_t arg0, uint32_t arg1)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
         if (arg0)
             arg0 = m_objectNames.get(arg0);
-        if (UNLIKELY(!m_objectNames.isValidKey(arg1))) {
+        if (!m_objectNames.isValidKey(arg1)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -398,7 +398,7 @@
     void framebufferRenderbuffer(uint32_t target, uint32_t attachment, uint32_t renderbuffertarget, uint32_t arg3)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg3))) {
+        if (!m_objectNames.isValidKey(arg3)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -409,7 +409,7 @@
     void framebufferTexture2D(uint32_t target, uint32_t attachment, uint32_t textarget, uint32_t arg3, int32_t level)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg3))) {
+        if (!m_objectNames.isValidKey(arg3)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -431,7 +431,7 @@
     {
         assertIsCurrent(workQueue());
         bool returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(program))) {
+        if (!m_objectNames.isValidKey(program)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -445,7 +445,7 @@
     {
         assertIsCurrent(workQueue());
         bool returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(program))) {
+        if (!m_objectNames.isValidKey(program)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -459,7 +459,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLint returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -525,7 +525,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLint returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(program))) {
+        if (!m_objectNames.isValidKey(program)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -554,7 +554,7 @@
     {
         assertIsCurrent(workQueue());
         String returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -574,7 +574,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLint returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -587,7 +587,7 @@
     {
         assertIsCurrent(workQueue());
         String returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -608,7 +608,7 @@
     {
         assertIsCurrent(workQueue());
         String returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -634,7 +634,7 @@
     void getUniformfv(uint32_t program, int32_t location, size_t valueSize, CompletionHandler<void(std::span<const float>)>&& completionHandler)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(program))) {
+        if (!m_objectNames.isValidKey(program)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -649,7 +649,7 @@
     void getUniformiv(uint32_t program, int32_t location, size_t valueSize, CompletionHandler<void(std::span<const int32_t>)>&& completionHandler)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(program))) {
+        if (!m_objectNames.isValidKey(program)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -664,7 +664,7 @@
     void getUniformuiv(uint32_t program, int32_t location, size_t valueSize, CompletionHandler<void(std::span<const uint32_t>)>&& completionHandler)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(program))) {
+        if (!m_objectNames.isValidKey(program)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -680,7 +680,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLint returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -705,7 +705,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLboolean returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -725,7 +725,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLboolean returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -738,7 +738,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLboolean returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -751,7 +751,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLboolean returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -764,7 +764,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLboolean returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -777,7 +777,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLboolean returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -794,7 +794,7 @@
     void linkProgram(uint32_t arg0)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -830,7 +830,7 @@
     void shaderSource(uint32_t arg0, String&& arg1)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -976,7 +976,7 @@
     void useProgram(uint32_t arg0)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -987,7 +987,7 @@
     void validateProgram(uint32_t arg0)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1123,7 +1123,7 @@
     void createVertexArray(uint32_t name)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(name))) {
+        if (!m_objectNames.isValidKey(name)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1134,11 +1134,11 @@
     void deleteVertexArray(uint32_t arg0)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
-        if (UNLIKELY(!arg0))
+        if (!arg0) [[unlikely]]
             return;
         arg0 = m_objectNames.take(arg0);
         protectedContext()->deleteVertexArray(arg0);
@@ -1147,7 +1147,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLboolean returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1159,7 +1159,7 @@
     void bindVertexArray(uint32_t arg0)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1180,7 +1180,7 @@
     void framebufferTextureLayer(uint32_t target, uint32_t attachment, uint32_t texture, int32_t level, int32_t layer)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(texture))) {
+        if (!m_objectNames.isValidKey(texture)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1267,7 +1267,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLint returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(program))) {
+        if (!m_objectNames.isValidKey(program)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1404,7 +1404,7 @@
     void createQuery(uint32_t name)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(name))) {
+        if (!m_objectNames.isValidKey(name)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1415,11 +1415,11 @@
     void deleteQuery(uint32_t query)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(query))) {
+        if (!m_objectNames.isValidKey(query)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
-        if (UNLIKELY(!query))
+        if (!query) [[unlikely]]
             return;
         query = m_objectNames.take(query);
         protectedContext()->deleteQuery(query);
@@ -1428,7 +1428,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLboolean returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(query))) {
+        if (!m_objectNames.isValidKey(query)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1440,7 +1440,7 @@
     void beginQuery(uint32_t target, uint32_t query)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(query))) {
+        if (!m_objectNames.isValidKey(query)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1464,7 +1464,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLuint returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(query))) {
+        if (!m_objectNames.isValidKey(query)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1476,7 +1476,7 @@
     void createSampler(uint32_t name)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(name))) {
+        if (!m_objectNames.isValidKey(name)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1487,11 +1487,11 @@
     void deleteSampler(uint32_t sampler)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(sampler))) {
+        if (!m_objectNames.isValidKey(sampler)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
-        if (UNLIKELY(!sampler))
+        if (!sampler) [[unlikely]]
             return;
         sampler = m_objectNames.take(sampler);
         protectedContext()->deleteSampler(sampler);
@@ -1500,7 +1500,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLboolean returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(sampler))) {
+        if (!m_objectNames.isValidKey(sampler)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1512,7 +1512,7 @@
     void bindSampler(uint32_t unit, uint32_t sampler)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(sampler))) {
+        if (!m_objectNames.isValidKey(sampler)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1523,7 +1523,7 @@
     void samplerParameteri(uint32_t sampler, uint32_t pname, int32_t param)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(sampler))) {
+        if (!m_objectNames.isValidKey(sampler)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1534,7 +1534,7 @@
     void samplerParameterf(uint32_t sampler, uint32_t pname, float param)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(sampler))) {
+        if (!m_objectNames.isValidKey(sampler)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1546,7 +1546,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLfloat returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(sampler))) {
+        if (!m_objectNames.isValidKey(sampler)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1559,7 +1559,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLint returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(sampler))) {
+        if (!m_objectNames.isValidKey(sampler)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1609,7 +1609,7 @@
     void createTransformFeedback(uint32_t name)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(name))) {
+        if (!m_objectNames.isValidKey(name)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1620,11 +1620,11 @@
     void deleteTransformFeedback(uint32_t id)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(id))) {
+        if (!m_objectNames.isValidKey(id)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
-        if (UNLIKELY(!id))
+        if (!id) [[unlikely]]
             return;
         id = m_objectNames.take(id);
         protectedContext()->deleteTransformFeedback(id);
@@ -1633,7 +1633,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLboolean returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(id))) {
+        if (!m_objectNames.isValidKey(id)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1645,7 +1645,7 @@
     void bindTransformFeedback(uint32_t target, uint32_t id)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(id))) {
+        if (!m_objectNames.isValidKey(id)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1666,7 +1666,7 @@
     void transformFeedbackVaryings(uint32_t program, Vector<String>&& varyings, uint32_t bufferMode)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(program))) {
+        if (!m_objectNames.isValidKey(program)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1677,7 +1677,7 @@
     void getTransformFeedbackVarying(uint32_t program, uint32_t index, CompletionHandler<void(struct WebCore::GraphicsContextGLActiveInfo&&)>&& completionHandler)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(program))) {
+        if (!m_objectNames.isValidKey(program)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1700,7 +1700,7 @@
     void bindBufferBase(uint32_t target, uint32_t index, uint32_t buffer)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(buffer))) {
+        if (!m_objectNames.isValidKey(buffer)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1711,7 +1711,7 @@
     void bindBufferRange(uint32_t target, uint32_t index, uint32_t buffer, uint64_t offset, uint64_t arg4)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(buffer))) {
+        if (!m_objectNames.isValidKey(buffer)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1723,7 +1723,7 @@
     {
         assertIsCurrent(workQueue());
         Vector<GCGLuint> returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(program))) {
+        if (!m_objectNames.isValidKey(program)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1736,7 +1736,7 @@
     {
         assertIsCurrent(workQueue());
         Vector<GCGLint> returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(program))) {
+        if (!m_objectNames.isValidKey(program)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1749,7 +1749,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLuint returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(program))) {
+        if (!m_objectNames.isValidKey(program)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1762,7 +1762,7 @@
     {
         assertIsCurrent(workQueue());
         String returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(program))) {
+        if (!m_objectNames.isValidKey(program)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1774,7 +1774,7 @@
     void uniformBlockBinding(uint32_t program, uint32_t uniformBlockIndex, uint32_t uniformBlockBinding)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(program))) {
+        if (!m_objectNames.isValidKey(program)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1785,7 +1785,7 @@
     void getActiveUniformBlockiv(uint32_t program, uint32_t uniformBlockIndex, uint32_t pname, size_t paramsSize, CompletionHandler<void(std::span<const int32_t>)>&& completionHandler)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(program))) {
+        if (!m_objectNames.isValidKey(program)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1801,7 +1801,7 @@
     {
         assertIsCurrent(workQueue());
         String returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1818,7 +1818,7 @@
     void createQueryEXT(uint32_t name)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(name))) {
+        if (!m_objectNames.isValidKey(name)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1829,11 +1829,11 @@
     void deleteQueryEXT(uint32_t query)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(query))) {
+        if (!m_objectNames.isValidKey(query)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
-        if (UNLIKELY(!query))
+        if (!query) [[unlikely]]
             return;
         query = m_objectNames.take(query);
         protectedContext()->deleteQueryEXT(query);
@@ -1842,7 +1842,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLboolean returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(query))) {
+        if (!m_objectNames.isValidKey(query)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1854,7 +1854,7 @@
     void beginQueryEXT(uint32_t target, uint32_t query)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(query))) {
+        if (!m_objectNames.isValidKey(query)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1870,7 +1870,7 @@
     void queryCounterEXT(uint32_t query, uint32_t target)
     {
         assertIsCurrent(workQueue());
-        if (UNLIKELY(!m_objectNames.isValidKey(query))) {
+        if (!m_objectNames.isValidKey(query)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1889,7 +1889,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLint returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(query))) {
+        if (!m_objectNames.isValidKey(query)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -1902,7 +1902,7 @@
     {
         assertIsCurrent(workQueue());
         GCGLuint64 returnValue = { };
-        if (UNLIKELY(!m_objectNames.isValidKey(query))) {
+        if (!m_objectNames.isValidKey(query)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -2007,7 +2007,7 @@
     {
         assertIsCurrent(workQueue());
         messageCheck(webXRPromptAccepted());
-        if (UNLIKELY(!m_objectNames.isValidKey(name))) {
+        if (!m_objectNames.isValidKey(name)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -2019,11 +2019,11 @@
     {
         assertIsCurrent(workQueue());
         messageCheck(webXRPromptAccepted());
-        if (UNLIKELY(!m_objectNames.isValidKey(handle))) {
+        if (!m_objectNames.isValidKey(handle)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
-        if (UNLIKELY(!handle))
+        if (!handle) [[unlikely]]
             return;
         handle = m_objectNames.take(handle);
         protectedContext()->deleteExternalImage(handle);
@@ -2032,7 +2032,7 @@
     {
         assertIsCurrent(workQueue());
         messageCheck(webXRPromptAccepted());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg1))) {
+        if (!m_objectNames.isValidKey(arg1)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -2044,7 +2044,7 @@
     {
         assertIsCurrent(workQueue());
         messageCheck(webXRPromptAccepted());
-        if (UNLIKELY(!m_objectNames.isValidKey(name))) {
+        if (!m_objectNames.isValidKey(name)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -2057,11 +2057,11 @@
     {
         assertIsCurrent(workQueue());
         messageCheck(webXRPromptAccepted());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
-        if (UNLIKELY(!arg0))
+        if (!arg0) [[unlikely]]
             return;
         arg0 = m_objectNames.take(arg0);
         protectedContext()->deleteExternalSync(arg0);
@@ -2087,7 +2087,7 @@
     {
         assertIsCurrent(workQueue());
         messageCheck(webXRPromptAccepted());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg0))) {
+        if (!m_objectNames.isValidKey(arg0)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }
@@ -2111,7 +2111,7 @@
     {
         assertIsCurrent(workQueue());
         messageCheck(webXRPromptAccepted());
-        if (UNLIKELY(!m_objectNames.isValidKey(arg3))) {
+        if (!m_objectNames.isValidKey(arg3)) [[unlikely]] {
             ASSERT_IS_TESTING_IPC();
             return;
         }

@@ -201,7 +201,7 @@ struct DMABufFeedback {
     std::pair<uint32_t, uint64_t> format(uint16_t index)
     {
         ASSERT(index < formatTable.size);
-        if (UNLIKELY(index >= formatTable.size))
+        if (index >= formatTable.size) [[unlikely]]
             return { 0, 0 };
 
         return { formatTable.data[index].format, formatTable.data[index].modifier };
@@ -672,7 +672,7 @@ static WPEBufferDMABufFormats* wpeToplevelWaylandGetPreferredDMABufFormats(WPETo
 
         for (const auto& format : tranche.formats) {
             auto [fourcc, modifier] = priv->committedDMABufFeedback->format(format);
-            if (LIKELY(fourcc))
+            if (fourcc) [[likely]]
                 wpe_buffer_dma_buf_formats_builder_append_format(builder, fourcc, modifier);
         }
     }

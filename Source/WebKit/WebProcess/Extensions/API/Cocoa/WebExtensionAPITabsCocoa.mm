@@ -586,7 +586,7 @@ bool WebExtensionAPITabs::parseScriptOptions(NSDictionary *options, WebExtension
 
 bool isValid(std::optional<WebExtensionTabIdentifier> identifier, NSString **outExceptionString)
 {
-    if (UNLIKELY(!isValid(identifier))) {
+    if (!isValid(identifier)) [[unlikely]] {
         if (isNone(identifier))
             *outExceptionString = toErrorString(nullString(), @"tabId", @"'tabs.TAB_ID_NONE' is not allowed").createNSString().autorelease();
         else if (identifier)
@@ -601,7 +601,7 @@ bool isValid(std::optional<WebExtensionTabIdentifier> identifier, NSString **out
 
 bool WebExtensionAPITabs::isPropertyAllowed(const ASCIILiteral& name, WebPage*)
 {
-    if (UNLIKELY(extensionContext().isUnsupportedAPI(propertyPath(), name)))
+    if (extensionContext().isUnsupportedAPI(propertyPath(), name)) [[unlikely]]
         return false;
 
     static NeverDestroyed<HashSet<AtomString>> removedInManifestVersion3 { HashSet { AtomString("executeScript"_s), AtomString("getSelected"_s), AtomString("insertCSS"_s), AtomString("removeCSS"_s) } };

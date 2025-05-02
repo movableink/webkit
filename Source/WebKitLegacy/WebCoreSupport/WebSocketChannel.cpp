@@ -262,7 +262,7 @@ void WebSocketChannel::didOpenSocketStream(SocketStreamHandle& handle)
     ASSERT(&handle == m_handle);
     if (!m_document)
         return;
-    if (UNLIKELY(LegacyWebSocketInspectorInstrumentation::hasFrontends())) {
+    if (LegacyWebSocketInspectorInstrumentation::hasFrontends()) [[unlikely]] {
         auto cookieRequestHeaderFieldValue = [document = m_document] (const URL& url) -> String {
             if (!document || !document->page())
                 return { };

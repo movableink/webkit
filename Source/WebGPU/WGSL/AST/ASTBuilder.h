@@ -68,7 +68,7 @@ public:
         constexpr size_t size = sizeof(T);
         constexpr size_t alignedSize = alignSize(size);
         static_assert(alignedSize <= arenaSize);
-        if (UNLIKELY(m_arena.size() < alignedSize))
+        if (m_arena.size() < alignedSize) [[unlikely]]
             allocateArena();
 
 #if ASAN_ENABLED

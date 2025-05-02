@@ -1680,10 +1680,10 @@ def generate_message_handler(receiver):
                 continue
             result.append('    case IPC::MessageName::%s_%s: {\n' % (receiver.name, message.name))
             result.append('        auto arguments = decoder.decode<typename Messages::%s::%s::Arguments>();\n' % (receiver.name, message.name))
-            result.append('        if (UNLIKELY(!arguments))\n')
+            result.append('        if (!arguments) [[unlikely]]\n')
             result.append('            return;\n')
             result.append('        auto replyID = decoder.decode<IPC::AsyncReplyID>();\n')
-            result.append('        if (UNLIKELY(!replyID))\n')
+            result.append('        if (!replyID) [[unlikely]]\n')
             result.append('            return;\n')
             result.append('        connection.sendAsyncReply<Messages::%s::%s>(*replyID\n' % (receiver.name, message.name))
             for parameter in message.reply_parameters:

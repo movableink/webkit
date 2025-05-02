@@ -465,11 +465,11 @@ FOREACH_KEYWORD(MAPPING_ENTRY)
             if (tokenType != TokenType::Invalid)
                 return makeToken(tokenType);
 
-            if (UNLIKELY(reservedWordSet.contains(view)))
+            if (reservedWordSet.contains(view)) [[unlikely]]
                 return makeToken(TokenType::ReservedWord);
 
 
-            if (UNLIKELY(length >= 2 && startOfToken[0] == '_' && startOfToken[1] == '_'))
+            if (length >= 2 && startOfToken[0] == '_' && startOfToken[1] == '_') [[unlikely]]
                 return makeToken(TokenType::Invalid);
 
 
@@ -491,7 +491,7 @@ T Lexer<T>::shift(unsigned i)
     m_code.advanceBy(i);
     m_currentPosition.offset += i;
     m_currentPosition.lineOffset += i;
-    if (LIKELY(m_code.hasCharactersRemaining()))
+    if (m_code.hasCharactersRemaining()) [[likely]]
         m_current = m_code[0];
     return last;
 }
@@ -499,7 +499,7 @@ T Lexer<T>::shift(unsigned i)
 template <typename T>
 T Lexer<T>::peek(unsigned i)
 {
-    if (UNLIKELY(i >= m_code.lengthRemaining()))
+    if (i >= m_code.lengthRemaining()) [[unlikely]]
         return 0;
     return m_code[i];
 }

@@ -1946,7 +1946,7 @@ Ref<WebExtensionWindow> WebExtensionContext::getOrCreateWindow(WKWebExtensionWin
 
 RefPtr<WebExtensionWindow> WebExtensionContext::getWindow(WebExtensionWindowIdentifier identifier, std::optional<WebPageProxyIdentifier> webPageProxyIdentifier, IgnoreExtensionAccess ignoreExtensionAccess) const
 {
-    if (UNLIKELY(!isValid(identifier)))
+    if (!isValid(identifier)) [[unlikely]]
         return nullptr;
 
     RefPtr<WebExtensionWindow> result;
@@ -1962,7 +1962,7 @@ RefPtr<WebExtensionWindow> WebExtensionContext::getWindow(WebExtensionWindowIden
     } else
         result = m_windowMap.get(identifier);
 
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         if (isCurrent(identifier)) {
             if (webPageProxyIdentifier)
                 RELEASE_LOG_ERROR(Extensions, "Current window for page %{public}llu was not found", webPageProxyIdentifier.value().toUInt64());
@@ -1974,7 +1974,7 @@ RefPtr<WebExtensionWindow> WebExtensionContext::getWindow(WebExtensionWindowIden
         return nullptr;
     }
 
-    if (UNLIKELY(!result->isValid())) {
+    if (!result->isValid()) [[unlikely]] {
         RELEASE_LOG_ERROR(Extensions, "Window %{public}llu has nil delegate; reference not removed via didCloseWindow: before release", result->identifier().toUInt64());
         forgetWindow(result->identifier());
         return nullptr;
@@ -2024,16 +2024,16 @@ Ref<WebExtensionTab> WebExtensionContext::getOrCreateTab(WKWebExtensionTab *dele
 
 RefPtr<WebExtensionTab> WebExtensionContext::getTab(WebExtensionTabIdentifier identifier, IgnoreExtensionAccess ignoreExtensionAccess) const
 {
-    if (UNLIKELY(!isValid(identifier)))
+    if (!isValid(identifier)) [[unlikely]]
         return nullptr;
 
     RefPtr result = m_tabMap.get(identifier);
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         RELEASE_LOG_ERROR(Extensions, "Tab %{public}llu was not found", identifier.toUInt64());
         return nullptr;
     }
 
-    if (UNLIKELY(!result->isValid())) {
+    if (!result->isValid()) [[unlikely]] {
         RELEASE_LOG_ERROR(Extensions, "Tab %{public}llu has nil delegate; reference not removed via didCloseTab: before release", identifier.toUInt64());
         forgetTab(identifier);
         return nullptr;
@@ -2131,12 +2131,12 @@ RefPtr<WebExtensionTab> WebExtensionContext::getCurrentTab(WebPageProxyIdentifie
 #endif // ENABLE(INSPECTOR_EXTENSIONS)
 
 finish:
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         RELEASE_LOG_DEBUG(Extensions, "Tab for page %{public}llu was not found", webPageProxyIdentifier.toUInt64());
         return nullptr;
     }
 
-    if (UNLIKELY(!result->isValid())) {
+    if (!result->isValid()) [[unlikely]] {
         RELEASE_LOG_ERROR(Extensions, "Tab %{public}llu has nil delegate; reference not removed via didCloseTab: before release", result->identifier().toUInt64());
         forgetTab(result->identifier());
         return nullptr;

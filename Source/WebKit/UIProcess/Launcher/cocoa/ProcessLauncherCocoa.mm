@@ -499,7 +499,7 @@ void ProcessLauncher::finishLaunchingProcess(ASCIILiteral name)
 
     xpc_connection_resume(m_xpcConnection.get());
 
-    if (UNLIKELY(m_launchOptions.shouldMakeProcessLaunchFailForTesting)) {
+    if (m_launchOptions.shouldMakeProcessLaunchFailForTesting) [[unlikely]] {
         eventHandlerBlock(nullptr);
         return;
     }

@@ -106,7 +106,7 @@ struct ArgumentCoder<ArrayReferenceTuple<Types...>> {
     {
         size_t size = arrayReference.size();
         encoder << size;
-        if (UNLIKELY(!size))
+        if (!size) [[unlikely]]
             return;
 
         (..., encoder.encodeSpan(arrayReference.template span<Indices>()));
@@ -116,14 +116,14 @@ struct ArgumentCoder<ArrayReferenceTuple<Types...>> {
     static std::optional<ArrayReferenceTuple<Types...>> decode(Decoder& decoder)
     {
         auto decodedSize = decoder.template decode<size_t>();
-        if (UNLIKELY(!decodedSize))
+        if (!decodedSize) [[unlikely]]
             return std::nullopt;
-        if (UNLIKELY(!*decodedSize))
+        if (!*decodedSize) [[unlikely]]
             return ArrayReferenceTuple<Types...> { };
 
         CheckedSize size { *decodedSize };
         bool anyOverflow = (... || (size * sizeof(Types)).hasOverflowed());
-        if (UNLIKELY(anyOverflow))
+        if (anyOverflow) [[unlikely]]
             return std::nullopt;
 
         return decode(decoder, size);
@@ -469,7 +469,7 @@ template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t min
 
         // Calls to reserveInitialCapacity with untrusted large sizes can cause allocator crashes.
         // Limit allocations from untrusted sources to 1MB.
-        if (LIKELY(*size < 1024 * 1024 / sizeof(T))) {
+        if (*size < 1024 * 1024 / sizeof(T)) [[likely]] {
             vector.reserveInitialCapacity(*size);
             for (size_t i = 0; i < *size; ++i) {
                 auto element = decoder.template decode<T>();
@@ -533,17 +533,17 @@ template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTrai
         HashMapType hashMap;
         for (unsigned i = 0; i < *hashMapSize; ++i) {
             auto key = decoder.template decode<KeyArg>();
-            if (UNLIKELY(!key))
+            if (!key) [[unlikely]]
                 return std::nullopt;
 
             auto value = decoder.template decode<MappedArg>();
-            if (UNLIKELY(!value))
+            if (!value) [[unlikely]]
                 return std::nullopt;
 
-            if (UNLIKELY(!HashMapType::isValidKey(*key)))
+            if (!HashMapType::isValidKey(*key)) [[unlikely]]
                 return std::nullopt;
 
-            if (UNLIKELY(!hashMap.add(WTFMove(*key), WTFMove(*value)).isNewEntry)) {
+            if (!hashMap.add(WTFMove(*key), WTFMove(*value)).isNewEntry) [[unlikely]] {
                 // The hash map already has the specified key, bail.
                 return std::nullopt;
             }
@@ -576,17 +576,17 @@ template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTrai
         HashMapType hashMap;
         for (unsigned i = 0; i < *hashMapSize; ++i) {
             auto key = decoder.template decode<KeyArg>();
-            if (UNLIKELY(!key))
+            if (!key) [[unlikely]]
                 return std::nullopt;
 
             auto value = decoder.template decode<MappedArg>();
-            if (UNLIKELY(!value))
+            if (!value) [[unlikely]]
                 return std::nullopt;
 
-            if (UNLIKELY(!HashMapType::isValidKey(*key)))
+            if (!HashMapType::isValidKey(*key)) [[unlikely]]
                 return std::nullopt;
 
-            if (UNLIKELY(!hashMap.add(WTFMove(*key), WTFMove(*value)).isNewEntry)) {
+            if (!hashMap.add(WTFMove(*key), WTFMove(*value)).isNewEntry) [[unlikely]] {
                 // The hash map already has the specified key, bail.
                 return std::nullopt;
             }
@@ -620,10 +620,10 @@ template<typename KeyArg, typename HashArg, typename KeyTraitsArg, typename Hash
             if (!key)
                 return std::nullopt;
 
-            if (UNLIKELY(!HashSetType::isValidValue(*key)))
+            if (!HashSetType::isValidValue(*key)) [[unlikely]]
                 return std::nullopt;
 
-            if (UNLIKELY(!hashSet.add(WTFMove(*key)).isNewEntry)) {
+            if (!hashSet.add(WTFMove(*key)).isNewEntry) [[unlikely]] {
                 // The hash set already has the specified key, bail.
                 return std::nullopt;
             }
@@ -663,10 +663,10 @@ template<typename KeyArg, typename HashArg, typename KeyTraitsArg> struct Argume
             if (!count)
                 return std::nullopt;
 
-            if (UNLIKELY(!HashCountedSetType::isValidValue(*key)))
+            if (!HashCountedSetType::isValidValue(*key)) [[unlikely]]
                 return std::nullopt;
 
-            if (UNLIKELY(!tempHashCountedSet.add(*key, *count).isNewEntry)) {
+            if (!tempHashCountedSet.add(*key, *count).isNewEntry) [[unlikely]] {
                 // The hash counted set already has the specified key, bail.
                 return std::nullopt;
             }
@@ -836,14 +836,14 @@ template<typename T, typename Traits> struct ArgumentCoder<WTF::Markable<T, Trai
     static std::optional<WTF::Markable<T>> decode(Decoder& decoder)
     {
         auto isEmpty = decoder.template decode<bool>();
-        if (UNLIKELY(!isEmpty))
+        if (!isEmpty) [[unlikely]]
             return std::nullopt;
 
         if (*isEmpty)
             return WTF::Markable<T, Traits> { };
 
         auto value = decoder.template decode<T>();
-        if (UNLIKELY(!value))
+        if (!value) [[unlikely]]
             return std::nullopt;
 
         return WTF::Markable<T, Traits>(WTFMove(*value));

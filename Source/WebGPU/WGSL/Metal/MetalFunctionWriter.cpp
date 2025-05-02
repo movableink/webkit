@@ -2381,7 +2381,7 @@ void FunctionDefinitionWriter::visit(AST::IndexAccessExpression& access)
 void FunctionDefinitionWriter::visit(AST::IdentifierExpression& identifier)
 {
     auto it = m_constantValues.find(identifier.identifier());
-    if (UNLIKELY(it != m_constantValues.end())) {
+    if (it != m_constantValues.end()) [[unlikely]] {
         m_body.append('(');
         serializeConstant(identifier.inferredType(), it->value);
         m_body.append(')');

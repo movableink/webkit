@@ -162,7 +162,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 {
     static std::atomic<bool> didInitialize { false };
     static std::atomic<unsigned> screenHeight { 0 };
-    if (UNLIKELY(!didInitialize)) {
+    if (!didInitialize) [[unlikely]] {
         didInitialize = true;
         callOnMainRunLoopAndWait([protectedSelf = retainPtr(self)] {
             if (!WebCore::AXObjectCache::accessibilityEnabled())

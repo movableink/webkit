@@ -134,7 +134,7 @@ public:
     std::optional<T> decode()
     {
         std::optional<T> t { ArgumentCoder<std::remove_cvref_t<T>, void>::decode(*this) };
-        if (UNLIKELY(!t))
+        if (!t) [[unlikely]]
             markInvalid();
         return t;
     }
@@ -225,7 +225,7 @@ inline std::span<const T> Decoder::decodeSpan(size_t size)
 
     const size_t alignedBufferPosition = static_cast<size_t>(std::distance(m_buffer.data(), roundUpToMultipleOf<alignof(T)>(std::to_address(m_bufferPosition))));
     const size_t bytesNeeded = size * sizeof(T);
-    if (UNLIKELY(!alignedBufferIsLargeEnoughToContain(m_buffer.size_bytes(), alignedBufferPosition, bytesNeeded))) {
+    if (!alignedBufferIsLargeEnoughToContain(m_buffer.size_bytes(), alignedBufferPosition, bytesNeeded)) [[unlikely]] {
         markInvalid();
         return { };
     }

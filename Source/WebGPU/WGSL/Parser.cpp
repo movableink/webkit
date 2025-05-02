@@ -850,7 +850,7 @@ Result<AST::Structure::Ref> Parser<Lexer>::parseStructure(AST::Attribute::List&&
 
         // https://www.w3.org/TR/WGSL/#limits
         static constexpr unsigned maximumNumberOfStructMembers = 1023;
-        if (UNLIKELY(members.size() > maximumNumberOfStructMembers))
+        if (members.size() > maximumNumberOfStructMembers) [[unlikely]]
             FAIL(makeString("struct cannot have more than "_s, String::number(maximumNumberOfStructMembers), " members"_s));
 
         if (current().type == TokenType::Comma)
@@ -889,7 +889,7 @@ Result<AST::Expression::Ref> Parser<Lexer>::parseTypeName()
 
     // https://www.w3.org/TR/WGSL/#limits
     static constexpr unsigned maximumCompositeTypeNestingDepth = 15;
-    if (UNLIKELY(m_compositeTypeDepth > maximumCompositeTypeNestingDepth))
+    if (m_compositeTypeDepth > maximumCompositeTypeNestingDepth) [[unlikely]]
         FAIL(makeString("composite type may not be nested more than "_s, String::number(maximumCompositeTypeNestingDepth), " levels"_s));
 
     if (current().type == TokenType::Identifier) {
@@ -1107,7 +1107,7 @@ Result<AST::Function::Ref> Parser<Lexer>::parseFunction(AST::Attribute::List&& a
 
         // https://www.w3.org/TR/WGSL/#limits
         static constexpr unsigned maximumNumberOfFunctionParameters = 255;
-        if (UNLIKELY(parameters.size() > maximumNumberOfFunctionParameters))
+        if (parameters.size() > maximumNumberOfFunctionParameters) [[unlikely]]
             FAIL(makeString("function cannot have more than "_s, String::number(maximumNumberOfFunctionParameters), " parameters"_s));
 
         if (current().type == TokenType::Comma)
@@ -1469,7 +1469,7 @@ Result<AST::Statement::Ref> Parser<Lexer>::parseSwitchStatement()
 
         // https://www.w3.org/TR/WGSL/#limits
         static constexpr unsigned maximumNumberOfCaseSelectors = 1023;
-        if (UNLIKELY(selectorCount > maximumNumberOfCaseSelectors))
+        if (selectorCount > maximumNumberOfCaseSelectors) [[unlikely]]
             FAIL(makeString("switch statement cannot have more than "_s, String::number(maximumNumberOfCaseSelectors), " case selector values"_s));
     }
     CONSUME_TYPE(BraceRight);

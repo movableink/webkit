@@ -304,7 +304,7 @@ template<typename T>
 static std::span<T> makeSpanFromBuffer(id<MTLBuffer> buffer, size_t byteOffset = 0)
 {
     auto bufferLength = buffer.length;
-    if (UNLIKELY(bufferLength < byteOffset || (bufferLength - byteOffset < sizeof(T))))
+    if (bufferLength < byteOffset || (bufferLength - byteOffset < sizeof(T))) [[unlikely]]
         return { };
 
     return unsafeMakeSpan(static_cast<T*>(buffer.contents), (bufferLength - byteOffset) / sizeof(T));

@@ -79,13 +79,13 @@ inline static RetainPtr<WKTextExtractionTextItem> createWKTextItem(const TextExt
 
     auto selectedRange = NSMakeRange(NSNotFound, 0);
     if (auto range = data.selectedRange) {
-        if (LIKELY(range->location + range->length <= data.content.length()))
+        if (range->location + range->length <= data.content.length()) [[likely]]
             selectedRange = NSMakeRange(range->location, range->length);
     }
 
     auto links = createNSArray(data.links, [&](auto& linkAndRange) -> RetainPtr<WKTextExtractionLink> {
         auto& [url, range] = linkAndRange;
-        if (UNLIKELY(range.location + range.length > data.content.length()))
+        if (range.location + range.length > data.content.length()) [[unlikely]]
             return { };
 
         RetainPtr nsURL = url.createNSURL();

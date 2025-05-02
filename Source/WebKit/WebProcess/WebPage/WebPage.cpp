@@ -7282,7 +7282,7 @@ void WebPage::didChangeSelection(LocalFrame& frame)
         return;
 
     callOnMainRunLoop([protectedThis = Ref { *this }, frame = Ref { frame }] {
-        if (UNLIKELY(!frame->document() || !frame->document()->hasLivingRenderTree() || frame->selection().isNone()))
+        if (!frame->document() || !frame->document()->hasLivingRenderTree() || frame->selection().isNone()) [[unlikely]]
             return;
 
         protectedThis->preemptivelySendAutocorrectionContext();
@@ -8243,7 +8243,7 @@ void WebPage::updateCachedDocumentLoader(DocumentLoader& documentLoader, LocalFr
 
 void WebPage::getBytecodeProfile(CompletionHandler<void(const String&)>&& callback)
 {
-    if (LIKELY(!commonVM().m_perBytecodeProfiler))
+    if (!commonVM().m_perBytecodeProfiler) [[likely]]
         return callback({ });
 
     String result = commonVM().m_perBytecodeProfiler->toJSON()->toJSONString();

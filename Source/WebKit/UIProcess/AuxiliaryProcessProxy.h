@@ -340,7 +340,7 @@ bool AuxiliaryProcessProxy::send(T&& message, uint64_t destinationID, OptionSet<
     static_assert(!T::isSync, "Async message expected");
 
     if constexpr (T::deferSendingIfSuspended) {
-        if (UNLIKELY(m_isSuspended)) {
+        if (m_isSuspended) [[unlikely]] {
             auto coalescingKeyEncoder = makeUniqueRef<IPC::Encoder>(T::name(), destinationID);
             message.encodeCoalescingKey(coalescingKeyEncoder.get());
             Vector<uint8_t> coalescingKey { coalescingKeyEncoder->mutableSpan() };

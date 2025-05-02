@@ -468,7 +468,7 @@ void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters,
             if (m_pagesInWindows.isEmpty() && critical == Critical::No)
                 critical = Critical::Yes;
 
-            if (UNLIKELY(Options::dumpHeapOnLowMemory()))
+            if (Options::dumpHeapOnLowMemory()) [[unlikely]]
                 GCController::singleton().dumpHeap();
 
 #if PLATFORM(COCOA)

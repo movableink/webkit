@@ -1153,7 +1153,7 @@ static WKDragSessionContext *ensureLocalDragSessionContext(id <UIDragSession> se
 @end
 
 #define RELEASE_ASSERT_ASYNC_TEXT_INTERACTIONS_DISABLED() do { \
-    if (UNLIKELY(self.shouldUseAsyncInteractions)) { \
+    if (self.shouldUseAsyncInteractions) [[unlikely]] { \
         RELEASE_LOG_ERROR(TextInteraction, "Received unexpected call to %s", __PRETTY_FUNCTION__); \
         RELEASE_ASSERT_NOT_REACHED(); \
     } \

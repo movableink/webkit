@@ -835,7 +835,7 @@ def encode_type(type):
 def decode_cf_type(type):
     result = []
     result.append(f'    auto result = decoder.decode<{type.cf_wrapper_type()}>();')
-    result.append('    if (UNLIKELY(!decoder.isValid()))')
+    result.append('    if (!decoder.isValid()) [[unlikely]]')
     result.append('        return std::nullopt;')
     if type.to_cf_method is not None:
         result.append(f'    return {type.to_cf_method};')
@@ -854,7 +854,7 @@ def decode_type(type):
     if type.members_are_subclasses:
         result.append(f'    auto type = decoder.decode<{type.subclass_enum_name()}>();')
         result.append('    UNUSED_PARAM(type);')
-        result.append('    if (UNLIKELY(!decoder.isValid()))')
+        result.append('    if (!decoder.isValid()) [[unlikely]]')
         result.append('        return std::nullopt;')
         result.append('')
 
@@ -886,7 +886,7 @@ def decode_type(type):
             result.append(f'    if (type == {type.subclass_enum_name()}::{member.name}) {{')
             typename = f'{member.namespace}::{member.name}'
             result.append(f'        auto result = decoder.decode<Ref<{typename}>>();')
-            result.append('        if (UNLIKELY(!decoder.isValid()))')
+            result.append('        if (!decoder.isValid()) [[unlikely]]')
             result.append('            return std::nullopt;')
             result.append('        return WTFMove(*result);')
             result.append('    }')
@@ -923,13 +923,13 @@ def decode_type(type):
                 result.append(f'            {sanitized_variable_name}->setHTTPBody({sanitized_variable_name}Body->takeData());')
                 result.append('    }')
             if type.debug_decoding_failure:
-                result.append(f'    if (UNLIKELY(!{sanitized_variable_name}))')
+                result.append(f'    if (!{sanitized_variable_name}) [[unlikely]]')
                 result.append(f'        decoder.setIndexOfDecodingFailure({str(i)});')
         for attribute in member.attributes:
             match = re.search(r'Validator=\'(.*)\'', attribute)
             if match:
                 validator, = match.groups()
-                result.append('    if (UNLIKELY(!decoder.isValid()))')
+                result.append('    if (!decoder.isValid()) [[unlikely]]')
                 result.append('        return std::nullopt;')
                 result.append('')
                 result.append(f'    if (!({validator}))')
@@ -1048,7 +1048,7 @@ def generate_one_impl(type, template_argument):
     result = result + decode_type(type)
     if type.cf_type is None:
         if not type.members_are_subclasses:
-            result.append('    if (UNLIKELY(!decoder.isValid()))')
+            result.append('    if (!decoder.isValid()) [[unlikely]]')
             result.append('        return std::nullopt;')
             if type.populate_from_empty_constructor and not type.has_optional_tuple_bits():
                 result.append(f'    {name_with_template} result;')

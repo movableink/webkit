@@ -4374,7 +4374,7 @@ gboolean webkit_settings_apply_from_key_file(WebKitSettings* settings, GKeyFile*
 
     GUniqueOutPtr<GError> getKeysError;
     auto allKeys = gKeyFileGetKeys(keyFile, groupName, getKeysError);
-    if (UNLIKELY(getKeysError)) {
+    if (getKeysError) [[unlikely]] {
         g_propagate_error(error, getKeysError.release());
         return FALSE;
     }

@@ -1670,7 +1670,7 @@ static gboolean webkitWebViewBaseCrossingNotifyEvent(GtkWidget* widget, GdkEvent
     // Do not send mouse move events to the WebProcess for crossing events during testing.
     // WTR never generates crossing events and they can confuse tests.
     // https://bugs.webkit.org/show_bug.cgi?id=185072.
-    if (UNLIKELY(priv->pageProxy->configuration().processPool().configuration().fullySynchronousModeIsAllowedForTesting()))
+    if (priv->pageProxy->configuration().processPool().configuration().fullySynchronousModeIsAllowedForTesting()) [[unlikely]]
         return GDK_EVENT_PROPAGATE;
 #endif
 
@@ -1721,7 +1721,7 @@ static void webkitWebViewBaseEnter(WebKitWebViewBase* webViewBase, double x, dou
     // Do not send mouse move events to the WebProcess for crossing events during testing.
     // WTR never generates crossing events and they can confuse tests.
     // https://bugs.webkit.org/show_bug.cgi?id=185072.
-    if (UNLIKELY(priv->pageProxy->configuration().processPool().configuration().fullySynchronousModeIsAllowedForTesting()))
+    if (priv->pageProxy->configuration().processPool().configuration().fullySynchronousModeIsAllowedForTesting()) [[unlikely]]
         return;
 #endif
 
@@ -1761,7 +1761,7 @@ static void webkitWebViewBaseLeave(WebKitWebViewBase* webViewBase, GdkCrossingMo
     // Do not send mouse move events to the WebProcess for crossing events during testing.
     // WTR never generates crossing events and they can confuse tests.
     // https://bugs.webkit.org/show_bug.cgi?id=185072.
-    if (UNLIKELY(priv->pageProxy->configuration().processPool().configuration().fullySynchronousModeIsAllowedForTesting()))
+    if (priv->pageProxy->configuration().processPool().configuration().fullySynchronousModeIsAllowedForTesting()) [[unlikely]]
         return;
 #endif
 

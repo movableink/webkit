@@ -81,10 +81,10 @@ void TestWithValidator::sendCancelReply(IPC::Connection& connection, IPC::Decode
     switch (decoder.messageName()) {
     case IPC::MessageName::TestWithValidator_MessageWithReply: {
         auto arguments = decoder.decode<typename Messages::TestWithValidator::MessageWithReply::Arguments>();
-        if (UNLIKELY(!arguments))
+        if (!arguments) [[unlikely]]
             return;
         auto replyID = decoder.decode<IPC::AsyncReplyID>();
-        if (UNLIKELY(!replyID))
+        if (!replyID) [[unlikely]]
             return;
         connection.sendAsyncReply<Messages::TestWithValidator::MessageWithReply>(*replyID
             , IPC::AsyncReplyError<String>::create()

@@ -181,13 +181,17 @@ bool WebProcessProxy::hasReachedProcessCountLimit()
 
 static bool isMainThreadOrCheckDisabled()
 {
+    if (RunLoop::isMain()) [[likely]]
+        return true;
+
 #if PLATFORM(IOS_FAMILY)
-    return LIKELY(RunLoop::isMain()) || !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::MainThreadReleaseAssertionInWebPageProxy);
+    if (!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::MainThreadReleaseAssertionInWebPageProxy))
+        return true;
 #elif PLATFORM(MAC)
-    return LIKELY(RunLoop::isMain()) || !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::MainThreadReleaseAssertionInWebPageProxy);
-#else
-    return RunLoop::isMain();
+    if (!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::MainThreadReleaseAssertionInWebPageProxy))
+        return true;
 #endif
+    return false;
 }
 
 WebProcessProxy::WebProcessProxyMap& WebProcessProxy::allProcessMap()
@@ -1909,7 +1913,7 @@ void WebProcessProxy::didChangeThrottleState(ProcessThrottleState type)
         updateRuntimeStatistics();
     });
 
-    if (UNLIKELY(!m_areThrottleStateChangesEnabled))
+    if (!m_areThrottleStateChangesEnabled) [[unlikely]]
         return;
     WEBPROCESSPROXY_RELEASE_LOG(ProcessSuspension, "didChangeThrottleState: type=%u", (unsigned)type);
 

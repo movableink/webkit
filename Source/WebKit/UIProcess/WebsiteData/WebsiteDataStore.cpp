@@ -1799,7 +1799,7 @@ void WebsiteDataStore::getNetworkProcessConnection(WebProcessProxy& webProcessPr
 {
     Ref networkProcessProxy = networkProcess();
     networkProcessProxy->getNetworkProcessConnection(webProcessProxy, [weakThis = WeakPtr { *this }, networkProcessProxy = WeakPtr { networkProcessProxy }, webProcessProxy = WeakPtr { webProcessProxy }, reply = WTFMove(reply), shouldRetryOnFailure] (NetworkProcessConnectionInfo&& connectionInfo) mutable {
-        if (UNLIKELY(!connectionInfo.connection)) {
+        if (!connectionInfo.connection) [[unlikely]] {
             if (shouldRetryOnFailure == ShouldRetryOnFailure::No || !webProcessProxy) {
                 RELEASE_LOG_ERROR(Process, "getNetworkProcessConnection: Failed to get connection to network process, will reply invalid identifier ...");
                 reply({ });
@@ -2872,7 +2872,7 @@ void WebsiteDataStore::processPushMessage(WebPushMessage&& pushMessage, Completi
 
 RestrictedOpenerType WebsiteDataStore::openerTypeForDomain(const WebCore::RegistrableDomain& domain) const
 {
-    if (UNLIKELY(!m_restrictedOpenerTypesForTesting.isEmpty())) {
+    if (!m_restrictedOpenerTypesForTesting.isEmpty()) [[unlikely]] {
         auto it = m_restrictedOpenerTypesForTesting.find(domain);
         return it == m_restrictedOpenerTypesForTesting.end() ? RestrictedOpenerType::Unrestricted : it->value;
     }

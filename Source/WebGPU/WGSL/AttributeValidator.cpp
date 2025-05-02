@@ -353,7 +353,7 @@ void AttributeValidator::visit(AST::Structure& structure)
 
         unsigned currentSize = UNLIKELY(size.hasOverflowed()) ? std::numeric_limits<unsigned>::max() : size.value();
         unsigned offset;
-        if (UNLIKELY(size.hasOverflowed()))
+        if (size.hasOverflowed()) [[unlikely]]
             offset = currentSize;
         else {
             CheckedUint32 checkedOffset = WTF::roundUpToMultipleOf(*fieldAlignment, static_cast<uint64_t>(currentSize));
@@ -365,7 +365,7 @@ void AttributeValidator::visit(AST::Structure& structure)
         alignment = std::max(alignment, *fieldAlignment);
         size = offset;
         size += *fieldSize;
-        if (UNLIKELY(size.hasOverflowed()))
+        if (size.hasOverflowed()) [[unlikely]]
             size = std::numeric_limits<unsigned>::max();
 
         if (previousMember)
@@ -375,11 +375,11 @@ void AttributeValidator::visit(AST::Structure& structure)
 
         previousSize = offset;
         previousSize += typeSize;
-        if (UNLIKELY(previousSize.hasOverflowed()))
+        if (previousSize.hasOverflowed()) [[unlikely]]
             previousSize = currentSize;
     }
     unsigned finalSize;
-    if (UNLIKELY(size.hasOverflowed()))
+    if (size.hasOverflowed()) [[unlikely]]
         finalSize = std::numeric_limits<unsigned>::max();
     else {
         CheckedUint32 checkedFinalSize = WTF::roundUpToMultipleOf(alignment, static_cast<uint64_t>(size.value()));
@@ -447,7 +447,7 @@ void AttributeValidator::visit(AST::StructureMember& member)
             else if (!isPowerOf2)
                 error(attribute.span(), "@align value must be a power of two"_s);
 
-            if (UNLIKELY(!m_errors.isEmpty())) {
+            if (!m_errors.isEmpty()) [[unlikely]] {
                 // It's not safe to access Type::alignment below if errors have
                 // already occurred
                 continue;

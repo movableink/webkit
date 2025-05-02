@@ -125,10 +125,10 @@ template<typename T, typename U, typename V, typename W>
 auto RemoteRenderingBackendProxy::send(T&& message, ObjectIdentifierGeneric<U, V, W> destination)
 {
     RefPtr connection = this->connection();
-    if (UNLIKELY(!connection))
+    if (!connection) [[unlikely]]
         return IPC::Error::InvalidConnection;
     auto result = connection->send(std::forward<T>(message), destination);
-    if (UNLIKELY(result != IPC::Error::NoError)) {
+    if (result != IPC::Error::NoError) [[unlikely]] {
         RELEASE_LOG(RemoteLayerBuffers, "[renderingBackend=%" PRIu64 "] RemoteRenderingBackendProxy::send - failed, name:%" PUBLIC_LOG_STRING ", error:%" PUBLIC_LOG_STRING, m_identifier.toUInt64(), IPC::description(T::name()).characters(), IPC::errorAsString(result).characters());
         didBecomeUnresponsive();
     }
@@ -142,7 +142,7 @@ auto RemoteRenderingBackendProxy::sendSync(T&& message, ObjectIdentifierGeneric<
     if (!connection)
         return IPC::StreamClientConnection::SendSyncResult<T> { IPC::Error::InvalidConnection };
     auto result = connection->sendSync(std::forward<T>(message), destination);
-    if (UNLIKELY(!result.succeeded())) {
+    if (!result.succeeded()) [[unlikely]] {
         RELEASE_LOG(RemoteLayerBuffers, "[renderingBackend=%" PRIu64 "] RemoteRenderingBackendProxy::sendSync - failed, name:%" PUBLIC_LOG_STRING ", error:%" PUBLIC_LOG_STRING,  m_identifier.toUInt64(), IPC::description(T::name()).characters(), IPC::errorAsString(result.error()).characters());
         didBecomeUnresponsive();
     }
@@ -153,10 +153,10 @@ template<typename T, typename C, typename U, typename V, typename W>
 auto RemoteRenderingBackendProxy::sendWithAsyncReply(T&& message, C&& callback, ObjectIdentifierGeneric<U, V, W> destination)
 {
     RefPtr connection = this->connection();
-    if (UNLIKELY(!connection))
+    if (!connection) [[unlikely]]
         return IPC::Error::InvalidConnection;
     auto replyID = connection->sendWithAsyncReply(std::forward<T>(message), std::forward<C>(callback), destination);
-    if (UNLIKELY(!replyID)) {
+    if (!replyID) [[unlikely]] {
         RELEASE_LOG(RemoteLayerBuffers, "[renderingBackend=%" PRIu64 "] RemoteRenderingBackendProxy::sendWithAsyncReply - failed, name:%" PUBLIC_LOG_STRING, m_identifier.toUInt64(), IPC::description(T::name()).characters());
         didBecomeUnresponsive();
         return IPC::Error::Unspecified;
@@ -621,7 +621,7 @@ RefPtr<IPC::StreamClientConnection> RemoteRenderingBackendProxy::connection()
         return nullptr;
 
     RefPtr connection = m_connection;
-    if (UNLIKELY(!connection->hasSemaphores())) {
+    if (!connection->hasSemaphores()) [[unlikely]] {
         auto error = connection->waitForAndDispatchImmediately<Messages::RemoteRenderingBackendProxy::DidInitialize>(renderingBackendIdentifier());
         if (error != IPC::Error::NoError) {
             RELEASE_LOG(RemoteLayerBuffers, "[renderingBackend=%" PRIu64 "] RemoteRenderingBackendProxy::connection() - waitForAndDispatchImmediately returned error: %" PUBLIC_LOG_STRING, renderingBackendIdentifier().toUInt64(), IPC::errorAsString(error).characters());

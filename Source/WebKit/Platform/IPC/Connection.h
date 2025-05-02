@@ -130,7 +130,7 @@ extern ASCIILiteral errorAsString(Error);
 #endif
 
 #define MESSAGE_CHECK_WITH_MESSAGE_BASE(assertion, connection, message) do { \
-    if (UNLIKELY(!(assertion))) { \
+    if (!(assertion)) [[unlikely]] { \
         RELEASE_LOG_FAULT(IPC, __FILE__ " " CONNECTION_STRINGIFY_MACRO(__LINE__) ": Invalid message dispatched %" PUBLIC_LOG_STRING ": " message, WTF_PRETTY_FUNCTION); \
         IPC::Connection::markCurrentlyDispatchedMessageAsInvalid(connection); \
         CRASH_IF_TESTING \
@@ -142,7 +142,7 @@ extern ASCIILiteral errorAsString(Error);
 #define MESSAGE_CHECK_BASE_COROUTINE(assertion, connection) MESSAGE_CHECK_COMPLETION_BASE_COROUTINE(assertion, connection, (void)0)
 
 #define MESSAGE_CHECK_OPTIONAL_CONNECTION_BASE(assertion, connection) do { \
-    if (UNLIKELY(!(assertion))) { \
+    if (!(assertion)) [[unlikely]] { \
         RELEASE_LOG_FAULT(IPC, __FILE__ " " CONNECTION_STRINGIFY_MACRO(__LINE__) ": Invalid message dispatched %" PUBLIC_LOG_STRING, WTF_PRETTY_FUNCTION); \
         IPC::Connection::markCurrentlyDispatchedMessageAsInvalid(connection); \
         CRASH_IF_TESTING \
@@ -151,7 +151,7 @@ extern ASCIILiteral errorAsString(Error);
 } while (0)
 
 #define MESSAGE_CHECK_COMPLETION_BASE(assertion, connection, completion) do { \
-    if (UNLIKELY(!(assertion))) { \
+    if (!(assertion)) [[unlikely]] { \
         RELEASE_LOG_FAULT(IPC, __FILE__ " " CONNECTION_STRINGIFY_MACRO(__LINE__) ": Invalid message dispatched %" PUBLIC_LOG_STRING, WTF_PRETTY_FUNCTION); \
         IPC::Connection::markCurrentlyDispatchedMessageAsInvalid(connection); \
         CRASH_IF_TESTING \
@@ -161,7 +161,7 @@ extern ASCIILiteral errorAsString(Error);
 } while (0)
 
 #define MESSAGE_CHECK_COMPLETION_BASE_COROUTINE(assertion, connection, completion) do { \
-    if (UNLIKELY(!(assertion))) { \
+    if (!(assertion)) [[unlikely]] { \
         RELEASE_LOG_FAULT(IPC, __FILE__ " " CONNECTION_STRINGIFY_MACRO(__LINE__) ": Invalid message dispatched %" PUBLIC_LOG_STRING, WTF_PRETTY_FUNCTION); \
         IPC::Connection::markCurrentlyDispatchedMessageAsInvalid(connection); \
         CRASH_IF_TESTING \
@@ -171,7 +171,7 @@ extern ASCIILiteral errorAsString(Error);
 } while (0)
 
 #define MESSAGE_CHECK_WITH_RETURN_VALUE_BASE(assertion, connection, returnValue) do { \
-    if (UNLIKELY(!(assertion))) { \
+    if (!(assertion)) [[unlikely]] { \
         RELEASE_LOG_FAULT(IPC, __FILE__ " " CONNECTION_STRINGIFY_MACRO(__LINE__) ": Invalid message dispatched %" PUBLIC_LOG_STRING, WTF_PRETTY_FUNCTION); \
         IPC::Connection::markCurrentlyDispatchedMessageAsInvalid(connection); \
         CRASH_IF_TESTING \

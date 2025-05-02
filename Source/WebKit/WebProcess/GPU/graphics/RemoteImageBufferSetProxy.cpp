@@ -118,11 +118,11 @@ template<typename T>
 ALWAYS_INLINE auto RemoteImageBufferSetProxy::send(T&& message)
 {
     RefPtr connection = this->connection();
-    if (UNLIKELY(!connection))
+    if (!connection) [[unlikely]]
         return IPC::Error::InvalidConnection;
 
     auto result = connection->send(std::forward<T>(message), identifier());
-    if (UNLIKELY(result != IPC::Error::NoError)) {
+    if (result != IPC::Error::NoError) [[unlikely]] {
         RELEASE_LOG(RemoteLayerBuffers, "RemoteImageBufferSetProxy::send - failed, name:%" PUBLIC_LOG_STRING ", error:%" PUBLIC_LOG_STRING,
             IPC::description(T::name()).characters(), IPC::errorAsString(result).characters());
         didBecomeUnresponsive();
@@ -134,15 +134,15 @@ template<typename T>
 ALWAYS_INLINE auto RemoteImageBufferSetProxy::sendSync(T&& message)
 {
     RefPtr connection = this->connection();
-    if (UNLIKELY(!connection))
+    if (!connection) [[unlikely]]
         return IPC::StreamClientConnection::SendSyncResult<T> { IPC::Error::InvalidConnection };
 
     auto result = connection->sendSync(std::forward<T>(message), identifier());
-    if (LIKELY(result.succeeded()))
+    if (result.succeeded()) [[likely]]
         return result;
 
     RefPtr remoteRenderingBackendProxy = m_remoteRenderingBackendProxy.get();
-    if (UNLIKELY(!remoteRenderingBackendProxy)) {
+    if (!remoteRenderingBackendProxy) [[unlikely]] {
         RELEASE_LOG(RemoteLayerBuffers, "[renderingBackend was deleted] Proxy::sendSync - failed, name:%" PUBLIC_LOG_STRING ", error:%" PUBLIC_LOG_STRING,
             IPC::description(T::name()).characters(), IPC::errorAsString(result.error()).characters());
         return result;
@@ -158,7 +158,7 @@ ALWAYS_INLINE auto RemoteImageBufferSetProxy::sendSync(T&& message)
 ALWAYS_INLINE RefPtr<IPC::StreamClientConnection> RemoteImageBufferSetProxy::connection() const
 {
     RefPtr backend = m_remoteRenderingBackendProxy.get();
-    if (UNLIKELY(!backend))
+    if (!backend) [[unlikely]]
         return nullptr;
     return backend->connection();
 }
@@ -166,7 +166,7 @@ ALWAYS_INLINE RefPtr<IPC::StreamClientConnection> RemoteImageBufferSetProxy::con
 void RemoteImageBufferSetProxy::didBecomeUnresponsive() const
 {
     RefPtr backend = m_remoteRenderingBackendProxy.get();
-    if (UNLIKELY(!backend))
+    if (!backend) [[unlikely]]
         return;
     backend->didBecomeUnresponsive();
 }
@@ -325,7 +325,7 @@ GraphicsContext& RemoteImageBufferSetProxy::context()
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
 std::optional<WebCore::DynamicContentScalingDisplayList> RemoteImageBufferSetProxy::dynamicContentScalingDisplayList()
 {
-    if (UNLIKELY(!m_remoteRenderingBackendProxy))
+    if (!m_remoteRenderingBackendProxy) [[unlikely]]
         return std::nullopt;
     auto sendResult = sendSync(Messages::RemoteImageBufferSet::DynamicContentScalingDisplayList());
     if (!sendResult.succeeded())

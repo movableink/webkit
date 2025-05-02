@@ -88,11 +88,11 @@ template<typename T>
 ALWAYS_INLINE void RemoteImageBufferProxy::send(T&& message)
 {
     RefPtr connection = this->connection();
-    if (UNLIKELY(!connection))
+    if (!connection) [[unlikely]]
         return;
 
     auto result = connection->send(std::forward<T>(message), renderingResourceIdentifier());
-    if (UNLIKELY(result != IPC::Error::NoError)) {
+    if (result != IPC::Error::NoError) [[unlikely]] {
         RELEASE_LOG(RemoteLayerBuffers, "RemoteImageBufferProxy::send - failed, name:%" PUBLIC_LOG_STRING ", error:%" PUBLIC_LOG_STRING, IPC::description(T::name()).characters(), IPC::errorAsString(result).characters());
         didBecomeUnresponsive();
     }
@@ -102,11 +102,11 @@ template<typename T>
 ALWAYS_INLINE auto RemoteImageBufferProxy::sendSync(T&& message)
 {
     RefPtr connection = this->connection();
-    if (UNLIKELY(!connection))
+    if (!connection) [[unlikely]]
         return IPC::StreamClientConnection::SendSyncResult<T> { IPC::Error::InvalidConnection };
 
     auto result = connection->sendSync(std::forward<T>(message), renderingResourceIdentifier());
-    if (UNLIKELY(!result.succeeded())) {
+    if (!result.succeeded()) [[unlikely]] {
         RELEASE_LOG(RemoteLayerBuffers, "RemoteDisplayListRecorderProxy::sendSync - failed, name:%" PUBLIC_LOG_STRING ", error:%" PUBLIC_LOG_STRING, IPC::description(T::name()).characters(), IPC::errorAsString(result.error()).characters());
         didBecomeUnresponsive();
     }
@@ -116,7 +116,7 @@ ALWAYS_INLINE auto RemoteImageBufferProxy::sendSync(T&& message)
 ALWAYS_INLINE RefPtr<IPC::StreamClientConnection> RemoteImageBufferProxy::connection() const
 {
     RefPtr backend = m_renderingBackend.get();
-    if (UNLIKELY(!backend))
+    if (!backend) [[unlikely]]
         return nullptr;
     return backend->connection();
 }
@@ -124,7 +124,7 @@ ALWAYS_INLINE RefPtr<IPC::StreamClientConnection> RemoteImageBufferProxy::connec
 void RemoteImageBufferProxy::didBecomeUnresponsive() const
 {
     RefPtr backend = m_renderingBackend.get();
-    if (UNLIKELY(!backend))
+    if (!backend) [[unlikely]]
         return;
     backend->didBecomeUnresponsive();
 }
@@ -198,7 +198,7 @@ ImageBufferBackend* RemoteImageBufferProxy::ensureBackend() const
         return m_backend.get();
 
     RefPtr renderingBackend = m_renderingBackend.get();
-    if (UNLIKELY(!renderingBackend)) {
+    if (!renderingBackend) [[unlikely]] {
         RELEASE_LOG(RemoteLayerBuffers, "[renderingBackend was deleted] RemoteImageBufferProxy::ensureBackendCreated - waitForAndDispatchImmediately returned error: %" PUBLIC_LOG_STRING,
             IPC::errorAsString(error).characters());
         return nullptr;
@@ -220,7 +220,7 @@ RefPtr<NativeImage> RemoteImageBufferProxy::copyNativeImage() const
         return ImageBuffer::copyNativeImage();
     }
     RefPtr renderingBackend = m_renderingBackend.get();
-    if (UNLIKELY(!renderingBackend))
+    if (!renderingBackend) [[unlikely]]
         return { };
 
     auto bitmap = renderingBackend->getShareableBitmap(m_renderingResourceIdentifier, PreserveResolution::Yes);
@@ -260,7 +260,7 @@ RefPtr<ImageBuffer> RemoteImageBufferProxy::sinkIntoBufferForDifferentThread()
 
 RefPtr<NativeImage> RemoteImageBufferProxy::filteredNativeImage(Filter& filter)
 {
-    if (UNLIKELY(!m_renderingBackend))
+    if (!m_renderingBackend) [[unlikely]]
         return nullptr;
     auto sendResult = sendSync(Messages::RemoteImageBuffer::FilteredNativeImage(filter));
     if (!sendResult.succeeded())
@@ -285,7 +285,7 @@ RefPtr<PixelBuffer> RemoteImageBufferProxy::getPixelBuffer(const PixelBufferForm
         return ImageBuffer::getPixelBuffer(destinationFormat, sourceRect, allocator);
     }
     auto pixelBuffer = allocator.createPixelBuffer(destinationFormat, sourceRect.size());
-    if (UNLIKELY(!pixelBuffer))
+    if (!pixelBuffer) [[unlikely]]
         return nullptr;
     if (RefPtr renderingBackend = m_renderingBackend.get()) {
         if (renderingBackend->getPixelBufferForImageBuffer(m_renderingResourceIdentifier, destinationFormat, sourceRect, pixelBuffer->bytes()))
@@ -328,7 +328,7 @@ void RemoteImageBufferProxy::putPixelBuffer(const PixelBufferSourceView& pixelBu
     }
 
     RefPtr renderingBackend = m_renderingBackend.get();
-    if (UNLIKELY(!renderingBackend))
+    if (!renderingBackend) [[unlikely]]
         return;
     // The math inside PixelBuffer::create() doesn't agree with the math inside ImageBufferBackend::putPixelBuffer() about how m_resolutionScale interacts with the data in the ImageBuffer.
     // This means that putPixelBuffer() is only called when resolutionScale() == 1.
@@ -354,7 +354,7 @@ void RemoteImageBufferProxy::transformToColorSpace(const DestinationColorSpace& 
 
 void RemoteImageBufferProxy::flushDrawingContext()
 {
-    if (UNLIKELY(!m_renderingBackend))
+    if (!m_renderingBackend) [[unlikely]]
         return;
     if (m_context.consumeHasDrawn()) {
         TraceScope tracingScope(FlushRemoteImageBufferStart, FlushRemoteImageBufferEnd);
@@ -365,7 +365,7 @@ void RemoteImageBufferProxy::flushDrawingContext()
 
 bool RemoteImageBufferProxy::flushDrawingContextAsync()
 {
-    if (UNLIKELY(!m_renderingBackend))
+    if (!m_renderingBackend) [[unlikely]]
         return false;
 
     if (!m_context.consumeHasDrawn())

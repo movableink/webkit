@@ -74,7 +74,7 @@
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView
 {
     CheckedPtr scrollingTreeNodeDelegate = _scrollingTreeNodeDelegate.get();
-    if (UNLIKELY(!scrollingTreeNodeDelegate))
+    if (!scrollingTreeNodeDelegate) [[unlikely]]
         return;
 
     if (RetainPtr baseScrollView = dynamic_objc_cast<WKBaseScrollView>(scrollView))
@@ -86,7 +86,7 @@
 - (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView
 {
     CheckedPtr scrollingTreeNodeDelegate = _scrollingTreeNodeDelegate.get();
-    if (UNLIKELY(!scrollingTreeNodeDelegate))
+    if (!scrollingTreeNodeDelegate) [[unlikely]]
         return;
 
     _inUserInteraction = YES;
@@ -99,7 +99,7 @@
 - (void)scrollViewWillEndDragging:(UIScrollView *)scrollView withVelocity:(CGPoint)velocity targetContentOffset:(inout CGPoint *)targetContentOffset
 {
     CheckedPtr scrollingTreeNodeDelegate = _scrollingTreeNodeDelegate.get();
-    if (UNLIKELY(!scrollingTreeNodeDelegate))
+    if (!scrollingTreeNodeDelegate) [[unlikely]]
         return;
 
     if (![scrollView isZooming]) {
@@ -143,7 +143,7 @@
 - (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)willDecelerate
 {
     CheckedPtr scrollingTreeNodeDelegate = _scrollingTreeNodeDelegate.get();
-    if (UNLIKELY(!scrollingTreeNodeDelegate))
+    if (!scrollingTreeNodeDelegate) [[unlikely]]
         return;
 
     if (_inUserInteraction && !willDecelerate) {
@@ -156,7 +156,7 @@
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
 {
     CheckedPtr scrollingTreeNodeDelegate = _scrollingTreeNodeDelegate.get();
-    if (UNLIKELY(!scrollingTreeNodeDelegate))
+    if (!scrollingTreeNodeDelegate) [[unlikely]]
         return;
 
     if (_inUserInteraction) {
@@ -169,7 +169,7 @@
 - (void)scrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView
 {
     CheckedPtr scrollingTreeNodeDelegate = _scrollingTreeNodeDelegate.get();
-    if (UNLIKELY(!scrollingTreeNodeDelegate))
+    if (!scrollingTreeNodeDelegate) [[unlikely]]
         return;
 
     scrollingTreeNodeDelegate->scrollDidEnd();
@@ -183,7 +183,7 @@
 - (void)cancelPointersForGestureRecognizer:(UIGestureRecognizer *)gestureRecognizer
 {
     CheckedPtr scrollingTreeNodeDelegate = _scrollingTreeNodeDelegate.get();
-    if (UNLIKELY(!scrollingTreeNodeDelegate))
+    if (!scrollingTreeNodeDelegate) [[unlikely]]
         return;
 
     scrollingTreeNodeDelegate->cancelPointersForGestureRecognizer(gestureRecognizer);
@@ -194,7 +194,7 @@
 - (BOOL)shouldAllowPanGestureRecognizerToReceiveTouchesInScrollView:(WKBaseScrollView *)scrollView
 {
     CheckedPtr scrollingTreeNodeDelegate = _scrollingTreeNodeDelegate.get();
-    if (UNLIKELY(!scrollingTreeNodeDelegate))
+    if (!scrollingTreeNodeDelegate) [[unlikely]]
         return YES;
 
     return scrollingTreeNodeDelegate->shouldAllowPanGestureRecognizerToReceiveTouches();
@@ -203,7 +203,7 @@
 - (UIAxis)axesToPreventScrollingForPanGestureInScrollView:(WKBaseScrollView *)scrollView
 {
     CheckedPtr scrollingTreeNodeDelegate = _scrollingTreeNodeDelegate.get();
-    if (UNLIKELY(!scrollingTreeNodeDelegate))
+    if (!scrollingTreeNodeDelegate) [[unlikely]]
         return UIAxisNeither;
 
     auto panGestureRecognizer = scrollView.panGestureRecognizer;
@@ -237,7 +237,7 @@
 - (WKBEScrollView *)parentScrollViewForScrollView:(WKBEScrollView *)scrollView
 {
     CheckedPtr scrollingTreeNodeDelegate = _scrollingTreeNodeDelegate.get();
-    if (UNLIKELY(!scrollingTreeNodeDelegate))
+    if (!scrollingTreeNodeDelegate) [[unlikely]]
         return nil;
 
     // An "acting parent" is a non-ancestor scrolling parent. We tell this to UIKit so it can propagate scrolls correctly.
@@ -258,7 +258,7 @@
 - (void)scrollView:(WKBaseScrollView *)scrollView handleScrollUpdate:(WKBEScrollViewScrollUpdate *)update completion:(void (^)(BOOL handled))completion
 {
     CheckedPtr scrollingTreeNodeDelegate = _scrollingTreeNodeDelegate.get();
-    if (UNLIKELY(!scrollingTreeNodeDelegate))
+    if (!scrollingTreeNodeDelegate) [[unlikely]]
         return;
 
     scrollingTreeNodeDelegate->handleAsynchronousCancelableScrollEvent(scrollView, update, completion);

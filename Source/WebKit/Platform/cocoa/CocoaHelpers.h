@@ -45,7 +45,7 @@ OBJC_CLASS NSString;
 OBJC_CLASS NSUUID;
 
 #define THROW_UNLESS(condition, message) \
-    if (UNLIKELY(!(condition))) \
+    if (!(condition)) [[unlikely]] \
         [NSException raise:NSInternalInconsistencyException format:message]
 
 namespace API {

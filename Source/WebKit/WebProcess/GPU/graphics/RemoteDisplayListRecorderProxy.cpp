@@ -80,7 +80,7 @@ template<typename T>
 ALWAYS_INLINE void RemoteDisplayListRecorderProxy::send(T&& message)
 {
     RefPtr connection = m_connection;
-    if (UNLIKELY(!connection)) {
+    if (!connection) [[unlikely]] {
         if (RefPtr backend = m_renderingBackend.get())
             connection = backend->connection();
         if (!connection)
@@ -94,7 +94,7 @@ ALWAYS_INLINE void RemoteDisplayListRecorderProxy::send(T&& message)
         m_hasDrawn = true;
     }
     auto result = connection->send(std::forward<T>(message), m_identifier);
-    if (UNLIKELY(result != IPC::Error::NoError)) {
+    if (result != IPC::Error::NoError) [[unlikely]] {
         RELEASE_LOG(RemoteLayerBuffers, "RemoteDisplayListRecorderProxy::send - failed, name:%" PUBLIC_LOG_STRING ", error:%" PUBLIC_LOG_STRING,
             IPC::description(T::name()).characters(), IPC::errorAsString(result).characters());
         didBecomeUnresponsive();
@@ -104,7 +104,7 @@ ALWAYS_INLINE void RemoteDisplayListRecorderProxy::send(T&& message)
 void RemoteDisplayListRecorderProxy::didBecomeUnresponsive() const
 {
     RefPtr backend = m_renderingBackend.get();
-    if (UNLIKELY(!backend))
+    if (!backend) [[unlikely]]
         return;
     backend->didBecomeUnresponsive();
 }
@@ -610,7 +610,7 @@ void RemoteDisplayListRecorderProxy::setURLForRect(const URL& link, const FloatR
 bool RemoteDisplayListRecorderProxy::recordResourceUse(NativeImage& image)
 {
     RefPtr renderingBackend = m_renderingBackend.get();
-    if (UNLIKELY(!renderingBackend)) {
+    if (!renderingBackend) [[unlikely]] {
         ASSERT_NOT_REACHED();
         return false;
     }
@@ -641,7 +641,7 @@ bool RemoteDisplayListRecorderProxy::recordResourceUse(NativeImage& image)
 bool RemoteDisplayListRecorderProxy::recordResourceUse(ImageBuffer& imageBuffer)
 {
     RefPtr renderingBackend = m_renderingBackend.get();
-    if (UNLIKELY(!renderingBackend)) {
+    if (!renderingBackend) [[unlikely]] {
         ASSERT_NOT_REACHED();
         return false;
     }
@@ -662,7 +662,7 @@ bool RemoteDisplayListRecorderProxy::recordResourceUse(const SourceImage& image)
 bool RemoteDisplayListRecorderProxy::recordResourceUse(Font& font)
 {
     RefPtr renderingBackend = m_renderingBackend.get();
-    if (UNLIKELY(!renderingBackend)) {
+    if (!renderingBackend) [[unlikely]] {
         ASSERT_NOT_REACHED();
         return false;
     }
@@ -674,7 +674,7 @@ bool RemoteDisplayListRecorderProxy::recordResourceUse(Font& font)
 bool RemoteDisplayListRecorderProxy::recordResourceUse(DecomposedGlyphs& decomposedGlyphs)
 {
     RefPtr renderingBackend = m_renderingBackend.get();
-    if (UNLIKELY(!renderingBackend)) {
+    if (!renderingBackend) [[unlikely]] {
         ASSERT_NOT_REACHED();
         return false;
     }
@@ -686,7 +686,7 @@ bool RemoteDisplayListRecorderProxy::recordResourceUse(DecomposedGlyphs& decompo
 bool RemoteDisplayListRecorderProxy::recordResourceUse(Gradient& gradient)
 {
     RefPtr renderingBackend = m_renderingBackend.get();
-    if (UNLIKELY(!renderingBackend)) {
+    if (!renderingBackend) [[unlikely]] {
         ASSERT_NOT_REACHED();
         return false;
     }
@@ -698,7 +698,7 @@ bool RemoteDisplayListRecorderProxy::recordResourceUse(Gradient& gradient)
 bool RemoteDisplayListRecorderProxy::recordResourceUse(Filter& filter)
 {
     RefPtr renderingBackend = m_renderingBackend.get();
-    if (UNLIKELY(!renderingBackend)) {
+    if (!renderingBackend) [[unlikely]] {
         ASSERT_NOT_REACHED();
         return false;
     }
@@ -710,7 +710,7 @@ bool RemoteDisplayListRecorderProxy::recordResourceUse(Filter& filter)
 RefPtr<ImageBuffer> RemoteDisplayListRecorderProxy::createImageBuffer(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, std::optional<RenderingMode> renderingMode, std::optional<RenderingMethod> renderingMethod) const
 {
     RefPtr renderingBackend = m_renderingBackend.get();
-    if (UNLIKELY(!renderingBackend)) {
+    if (!renderingBackend) [[unlikely]] {
         ASSERT_NOT_REACHED();
         return nullptr;
     }

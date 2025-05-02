@@ -69,7 +69,7 @@ public:
                 return adoptCF(CGColorSpaceCreateWithPropertyList(propertyList.get()));
             }
         );
-        if (UNLIKELY(!colorSpace))
+        if (!colorSpace) [[unlikely]]
             return nullptr;
         return colorSpace;
     }

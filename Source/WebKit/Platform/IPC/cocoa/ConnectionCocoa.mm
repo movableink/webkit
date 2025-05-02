@@ -281,13 +281,13 @@ bool Connection::sendOutgoingMessage(UniqueRef<Encoder>&& encoder)
 
     bool messageBodyIsOOL = false;
     auto messageSize = MachMessage::messageSize(encoder->span().size(), numberOfPortDescriptors, messageBodyIsOOL);
-    if (UNLIKELY(messageSize.hasOverflowed()))
+    if (messageSize.hasOverflowed()) [[unlikely]]
         return false;
 
     if (messageSize > inlineMessageMaxSize) {
         messageBodyIsOOL = true;
         messageSize = MachMessage::messageSize(0, numberOfPortDescriptors, messageBodyIsOOL);
-        if (UNLIKELY(messageSize.hasOverflowed()))
+        if (messageSize.hasOverflowed()) [[unlikely]]
             return false;
     }
 
@@ -379,7 +379,7 @@ void Connection::resumeSendSource()
 
 static std::unique_ptr<Decoder> createMessageDecoder(mach_msg_header_t* header, std::span<uint8_t> message)
 {
-    if (UNLIKELY(header->msgh_size > message.size())) {
+    if (header->msgh_size > message.size()) [[unlikely]] {
         RELEASE_LOG_FAULT(IPC, "createMessageDecoder: msgh_size is greater than bufferSize (header->msgh_size: %lu, bufferSize: %lu)", static_cast<unsigned long>(header->msgh_size), message.size());
         ASSERT_NOT_REACHED();
         return nullptr;
@@ -389,7 +389,7 @@ static std::unique_ptr<Decoder> createMessageDecoder(mach_msg_header_t* header, 
     if (!(header->msgh_bits & MACH_MSGH_BITS_COMPLEX)) {
         // We have a simple message.
         auto bodySize = CheckedSize { header->msgh_size } - sizeof(mach_msg_header_t);
-        if (UNLIKELY(bodySize.hasOverflowed())) {
+        if (bodySize.hasOverflowed()) [[unlikely]] {
             RELEASE_LOG_FAULT(IPC, "createMessageDecoder: Overflow when computing bodySize (header->msgh_size: %lu, sizeof(mach_msg_header_t): %lu)", static_cast<unsigned long>(header->msgh_size), sizeof(mach_msg_header_t));
             ASSERT_NOT_REACHED();
             return nullptr;
@@ -401,11 +401,11 @@ static std::unique_ptr<Decoder> createMessageDecoder(mach_msg_header_t* header, 
     auto& body = consumeAndReinterpretCastTo<mach_msg_body_t>(remaining);
     mach_msg_size_t numberOfPortDescriptors = body.msgh_descriptor_count;
     ASSERT(numberOfPortDescriptors);
-    if (UNLIKELY(!numberOfPortDescriptors))
+    if (!numberOfPortDescriptors) [[unlikely]]
         return nullptr;
 
     auto sizeWithPortDescriptors = CheckedSize { sizeof(mach_msg_header_t) + sizeof(mach_msg_body_t) } + CheckedSize { numberOfPortDescriptors } * sizeof(mach_msg_port_descriptor_t);
-    if (UNLIKELY(sizeWithPortDescriptors.hasOverflowed() || sizeWithPortDescriptors.value() > message.size())) {
+    if (sizeWithPortDescriptors.hasOverflowed() || sizeWithPortDescriptors.value() > message.size()) [[unlikely]] {
         RELEASE_LOG_FAULT(IPC, "createMessageDecoder: Overflow when computing sizeWithPortDescriptors (numberOfPortDescriptors: %lu)", static_cast<unsigned long>(numberOfPortDescriptors));
         ASSERT_NOT_REACHED();
         return nullptr;
@@ -448,7 +448,7 @@ static std::unique_ptr<Decoder> createMessageDecoder(mach_msg_header_t* header, 
 
     ASSERT(std::to_address(message.subspan(sizeWithPortDescriptors.value()).begin()) == std::to_address(remaining.begin()));
     auto messageBodySize = header->msgh_size - sizeWithPortDescriptors;
-    if (UNLIKELY(messageBodySize.hasOverflowed())) {
+    if (messageBodySize.hasOverflowed()) [[unlikely]] {
         RELEASE_LOG_FAULT(IPC, "createMessageDecoder: Overflow when computing bodySize (header->msgh_size: %lu, sizeWithPortDescriptors: %lu)", static_cast<unsigned long>(header->msgh_size), static_cast<unsigned long>(sizeWithPortDescriptors.value()));
         ASSERT_NOT_REACHED();
         return nullptr;
@@ -571,7 +571,7 @@ void Connection::receiveSourceEventHandler()
         return;
     }
 
-    if (UNLIKELY(shouldLogIncomingMessageHandling()))
+    if (shouldLogIncomingMessageHandling()) [[unlikely]]
         RELEASE_LOG(IPCMessages, "Connection::processIncomingMessage(%p) received %" PUBLIC_LOG_STRING " from port 0x%08x", this, description(decoder->messageName()).characters(), m_receivePort);
 
     processIncomingMessage(makeUniqueRefFromNonNullUniquePtr(WTFMove(decoder)));

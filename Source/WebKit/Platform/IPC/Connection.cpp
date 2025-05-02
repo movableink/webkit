@@ -828,7 +828,7 @@ auto Connection::waitForMessage(MessageName messageName, uint64_t destinationID,
             return makeUnexpected(Error::WaitingOnAlreadyDispatchedMessage);
         }
 
-        if (UNLIKELY(m_inDispatchSyncMessageCount && !timeout.isInfinity())) {
+        if (m_inDispatchSyncMessageCount && !timeout.isInfinity()) [[unlikely]] {
             RELEASE_LOG_ERROR(IPC, "Connection::waitForMessage(%" PUBLIC_LOG_STRING "): Exiting immediately, since we're handling a sync message already", description(messageName).characters());
             m_waitingForMessage = nullptr;
             return makeUnexpected(Error::AttemptingToWaitInsideSyncMessageHandling);

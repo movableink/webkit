@@ -186,7 +186,7 @@ NO_RETURN_DUE_TO_CRASH NEVER_INLINE static void crashBecausePageIsSuspended()
     CRASH();
 }
 
-#define CRASH_IF_SUSPENDED if (UNLIKELY(pageRef && toImpl(pageRef)->isSuspended())) \
+#define CRASH_IF_SUSPENDED if (pageRef && toImpl(pageRef)->isSuspended()) [[unlikely]] \
     crashBecausePageIsSuspended()
 
 WKTypeID WKPageGetTypeID()
