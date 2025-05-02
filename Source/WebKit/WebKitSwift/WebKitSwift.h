@@ -23,13 +23,14 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitSwift/LinearMediaKitExtras.h>
-#import <WebKitSwift/RealityKitBridging.h>
-#import <WebKitSwift/WKIntelligenceReplacementTextEffectCoordinator.h>
-#import <WebKitSwift/WKIntelligenceSmartReplyTextEffectCoordinator.h>
-#import <WebKitSwift/WKIntelligenceTextEffectCoordinator.h>
-#import <WebKitSwift/WKSLinearMediaPlayer.h>
-#import <WebKitSwift/WKSLinearMediaTypes.h>
-#import <WebKitSwift/WKSPreviewWindowController.h>
-#import <WebKitSwift/WKSTextAnimationSourceDelegate.h>
-#import <WebKitSwift/WKStageMode.h>
+#import "LinearMediaKitExtras.h"
+#import "RealityKitBridging.h"
+#import "WKIntelligenceReplacementTextEffectCoordinator.h"
+#import "WKIntelligenceSmartReplyTextEffectCoordinator.h"
+#import "WKIntelligenceTextEffectCoordinator.h"
+#import "WKSLinearMediaPlayer.h"
+#import "WKSLinearMediaTypes.h"
+#import "WKSPreviewWindowController.h"
+#import "WKSTextAnimationSourceDelegate.h"
+#import "WKStageMode.h"
+#import "WKTextExtractionItem.h"
