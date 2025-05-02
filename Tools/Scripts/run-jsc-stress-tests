@@ -317,9 +317,9 @@ GetoptLong.new(['--help', '-h', GetoptLong::NO_ARGUMENT],
     when '--test-writer'
         $testWriter = arg
     when '--treat-failing-as-flaky'
-        md = /^([^,]+),(\d+),(\d+)$/.match(arg)
+        md = /^([^,]+),(\d+),(\d+)(,(\d+))?$/.match(arg)
         if md.nil?
-            $stderr.puts("Could not parse argument to `--treat-failing-as-flaky`; expected `passPercentage,maxTries,maxFailing`")
+            $stderr.puts("Could not parse argument to `--treat-failing-as-flaky`; expected `passPercentage,maxTries,maxFailing[,maxRetrySeconds]`")
             exit(1)
         end
         passPercentage = md[1].to_f
@@ -337,9 +337,18 @@ GetoptLong.new(['--help', '-h', GetoptLong::NO_ARGUMENT],
             $stderr.puts("Invalid maxFailing `#{md[3]}`")
             exit(1)
         end
+        maxRetrySeconds = nil
+        if not md[5].nil?
+           maxRetrySeconds = md[5].to_i
+           if maxRetrySeconds == 0
+               $stderr.puts("Invalid maxRetrySeconds")
+               exit(1)
+           end
+        end
         $treatFailingAsFlaky = OpenStruct.new(:passPercentage => passPercentage,
                                               :maxTries => maxTries,
-                                              :maxFailing => maxFailing)
+                                              :maxFailing => maxFailing,
+                                              :maxRetrySeconds => maxRetrySeconds)
     when '--remote'
         $copyVM = true
         $tarball = true
@@ -3412,7 +3421,7 @@ end
 ExecutorSelfTests.run
 TestResultEvaluatorSelfTests.run
 
-class NonRemoteTestsExecutor < BaseTestsExecutor
+class NonRemoteTestsExecutor < BasicTestsExecutor
     def initialize(runlist, serialPlans, maxIterationsBounds, treatFailingAsFlaky, testRunner)
         super(runlist, serialPlans,
               nil,
@@ -3462,7 +3471,7 @@ class BundleTestsExecutor < NonRemoteTestsExecutor
     end
 end
 
-class BaseRemoteTestsExecutor < BaseTestsExecutor
+class BaseRemoteTestsExecutor < BasicTestsExecutor
     def initialize(runlist, serialPlans, remoteHosts, iterationLimits,
                    treatFailingAsFlaky, testRunner)
         super(runlist, serialPlans, remoteHosts, iterationLimits, treatFailingAsFlaky)

@@ -301,10 +301,11 @@ Usage: $programName [options] [options to pass to build system]
 
   --report-execution-time       Print execution time for each stress test.
   --treat-failing-as-flaky      Treat failing stress tests as flaky.
-                                Expects 3 comma-separated values: passPercentage,maxTries,maxFailing
+                                Expects 3 or 4 comma-separated values: passPercentage,maxTries,maxFailing[,maxRetrySeconds]
                                 If less than maxFailing tests failed, run them again (up to maxTries)
                                 until we can tell whether they pass more than passPercentage of the
-                                time (in which case the test is counted as a pass).
+                                time (in which case the test is counted as a pass). Do not start a new iteration
+                                if we've spent more than maxRetrySeconds retrying.
 
   --filter                      Only run tests whose name matches the given regular expression.
   --env-vars                    Pass a list of environment variables to set before running tests.
