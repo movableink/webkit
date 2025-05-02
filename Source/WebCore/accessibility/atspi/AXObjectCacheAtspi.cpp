@@ -184,6 +184,10 @@ void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject*
     case AXTextEditTypeAttributesChange:
         wrapper->textAttributesChanged();
         break;
+    case AXTextEditTypeReplace:
+        // Should call postTextReplacementPlatformNotification instead.
+        ASSERT_NOT_REACHED();
+        break;
     case AXTextEditTypeUnknown:
         break;
     }

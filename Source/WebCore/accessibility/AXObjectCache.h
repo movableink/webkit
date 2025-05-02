@@ -138,6 +138,15 @@ struct AXTreeData {
     String isolatedTree;
 };
 
+#if PLATFORM(COCOA)
+struct AXTextChangeContext {
+    AXTextStateChangeIntent intent;
+    String deletedText;
+    String insertedText;
+    VisibleSelection selection;
+};
+#endif // PLATFORM(COCOA)
+
 class AccessibilityReplacedText {
 public:
     AccessibilityReplacedText() = default;
@@ -272,7 +281,7 @@ enum class AXLoadingEvent : uint8_t {
 };
 
 #if !PLATFORM(COCOA)
-enum class AXTextChange : uint8_t { Inserted, Deleted, AttributesChanged };
+enum class AXTextChange : uint8_t { Inserted, Deleted, Replaced, AttributesChanged };
 #endif
 
 enum class PostTarget { Element, ObservableParent };
@@ -383,6 +392,7 @@ public:
     void onPopoverToggle(const HTMLElement&);
     void onScrollbarFrameRectChange(const Scrollbar&);
     void onSelectedChanged(Element&);
+    void onSelectedTextChanged(const VisiblePositionRange&, AccessibilityObject* = nullptr);
     void onSlottedContentChange(const HTMLSlotElement&);
     void onStyleChange(Element&, OptionSet<Style::Change>, const RenderStyle* oldStyle, const RenderStyle* newStyle);
     void onStyleChange(RenderText&, StyleDifference, const RenderStyle* oldStyle, const RenderStyle& newStyle);
@@ -409,7 +419,6 @@ public:
     void onRendererCreated(Element&);
 #if PLATFORM(MAC)
     void onDocumentRenderTreeCreation(const Document&);
-    void onSelectedTextChanged(const VisiblePositionRange&);
 #endif
 #if ENABLE(AX_THREAD_TEXT_APIS)
     void onTextRunsChanged(const RenderObject&);
@@ -731,8 +740,10 @@ private:
 
     void postTextStateChangeNotification(AccessibilityObject*, const AXTextStateChangeIntent&, const VisibleSelection&);
 
-    bool enqueuePasswordValueChangeNotification(AccessibilityObject&);
-    void passwordNotificationPostTimerFired();
+#if PLATFORM(COCOA)
+    bool enqueuePasswordNotification(AccessibilityObject&, AXTextChangeContext&&);
+    void passwordNotificationTimerFired();
+#endif
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     void selectedTextRangeTimerFired();
@@ -844,10 +855,11 @@ private:
     Timer m_notificationPostTimer;
     Vector<std::pair<Ref<AccessibilityObject>, AXNotification>> m_notificationsToPost;
 
-    Timer m_passwordNotificationPostTimer;
+#if PLATFORM(COCOA)
+    Timer m_passwordNotificationTimer;
+    Vector<std::pair<Ref<AccessibilityObject>, AXTextChangeContext>> m_passwordNotifications;
+#endif
 
-    ListHashSet<Ref<AccessibilityObject>> m_passwordNotificationsToPost;
-    
     Timer m_liveRegionChangedPostTimer;
     ListHashSet<Ref<AccessibilityObject>> m_changedLiveRegions;
 

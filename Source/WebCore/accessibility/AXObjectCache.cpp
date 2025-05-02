@@ -256,7 +256,9 @@ AXObjectCache::AXObjectCache(Page& page, Document* document)
     : m_document(document)
     , m_pageID(page.identifier())
     , m_notificationPostTimer(*this, &AXObjectCache::notificationPostTimerFired)
-    , m_passwordNotificationPostTimer(*this, &AXObjectCache::passwordNotificationPostTimerFired)
+#if PLATFORM(COCOA)
+    , m_passwordNotificationTimer(*this, &AXObjectCache::passwordNotificationTimerFired)
+#endif
     , m_liveRegionChangedPostTimer(*this, &AXObjectCache::liveRegionChangedNotificationPostTimerFired)
     , m_currentModalElement(nullptr)
     , m_performCacheUpdateTimer(*this, &AXObjectCache::performCacheUpdateTimerFired)
@@ -1666,20 +1668,6 @@ void AXObjectCache::notificationPostTimerFired()
         postPlatformNotification(note.first, note.second);
 }
 
-void AXObjectCache::passwordNotificationPostTimerFired()
-{
-#if PLATFORM(COCOA)
-    m_passwordNotificationPostTimer.stop();
-
-    // In tests, posting notifications has a tendency to immediately queue up other notifications, which can lead to unexpected behavior
-    // when the notification list is cleared at the end. Instead copy this list at the start.
-    auto notifications = std::exchange(m_passwordNotificationsToPost, { });
-
-    for (auto& notification : notifications)
-        postTextStateChangePlatformNotification(notification.ptr(), AXTextEditTypeInsert, " "_s, VisiblePosition());
-#endif
-}
-
 void AXObjectCache::postNotification(RenderObject* renderer, AXNotification notification, PostTarget postTarget)
 {
     if (!renderer)
@@ -2182,7 +2170,7 @@ void AXObjectCache::showIntent(const AXTextStateChangeIntent &intent)
     case AXTextStateChangeTypeUnknown:
         break;
     case AXTextStateChangeTypeEdit:
-        switch (intent.change) {
+        switch (intent.editType) {
         case AXTextEditTypeUnknown:
             dataLog("Unknown");
             break;
@@ -2203,6 +2191,9 @@ void AXObjectCache::showIntent(const AXTextStateChangeIntent &intent)
             break;
         case AXTextEditTypePaste:
             dataLog("Paste");
+            break;
+        case AXTextEditTypeReplace:
+            dataLog("Replace");
             break;
         case AXTextEditTypeAttributesChange:
             dataLog("AttributesChange");
@@ -2349,10 +2340,6 @@ void AXObjectCache::postTextStateChangeNotification(AccessibilityObject* object,
 
 #if PLATFORM(COCOA) || USE(ATSPI)
     if (object) {
-#if PLATFORM(COCOA)
-        if (isSecureFieldOrContainedBySecureField(*object))
-            return;
-#endif
         if (auto observableObject = object->observableObject())
             object = observableObject;
     }
@@ -2362,18 +2349,19 @@ void AXObjectCache::postTextStateChangeNotification(AccessibilityObject* object,
 
     if (object) {
         const AXTextStateChangeIntent& newIntent = (intent.type == AXTextStateChangeTypeUnknown || (m_isSynchronizingSelection && m_textSelectionIntent.type != AXTextStateChangeTypeUnknown)) ? m_textSelectionIntent : intent;
+
+#if PLATFORM(COCOA)
+        if (enqueuePasswordNotification(*object, { newIntent, { }, { }, selection }))
+            return;
+#endif
+
         postTextSelectionChangePlatformNotification(object, newIntent, selection);
+    }
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-        m_lastDebouncedTextRangeObject = object->objectID();
-        if (!m_selectedTextRangeTimer.isActive())
-            m_selectedTextRangeTimer.restart();
+    onSelectedTextChanged(selection, object);
 #endif
-    }
-#if PLATFORM(MAC)
-    onSelectedTextChanged(selection);
-#endif
-#else
+#else // PLATFORM(COCOA) || USE(ATSPI)
     UNUSED_PARAM(object);
     UNUSED_PARAM(intent);
     UNUSED_PARAM(selection);
@@ -2393,11 +2381,8 @@ void AXObjectCache::postTextStateChangeNotification(Node* node, AXTextEditType t
 
     AccessibilityObject* object = getOrCreate(node);
 #if PLATFORM(COCOA) || USE(ATSPI)
-    if (object) {
-        if (enqueuePasswordValueChangeNotification(*object))
-            return;
+    if (object)
         object = object->observableObject();
-    }
 
     if (!object)
         object = rootWebArea();
@@ -2405,12 +2390,17 @@ void AXObjectCache::postTextStateChangeNotification(Node* node, AXTextEditType t
     if (!object)
         return;
 
+#if PLATFORM(COCOA)
+    if (enqueuePasswordNotification(*object, { { type }, { }, text, { position, position } }))
+        return;
+#endif
+
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     updateIsolatedTree(*object, AXNotification::ValueChanged);
 #endif
 
     postTextStateChangePlatformNotification(object, type, text, position);
-#else
+#else // PLATFORM(COCOA) || USE(ATSPI)
     nodeTextChangePlatformNotification(object, textChangeForEditType(type), position.deepEquivalent().deprecatedEditingOffset(), text);
 #endif
 }
@@ -2428,14 +2418,18 @@ void AXObjectCache::postTextReplacementNotification(Node* node, AXTextEditType d
 
     AccessibilityObject* object = getOrCreate(*node);
 #if PLATFORM(COCOA) || USE(ATSPI)
-    if (object) {
-        if (enqueuePasswordValueChangeNotification(*object))
-            return;
+    if (object)
         object = object->observableObject();
-    }
+    if (!object)
+        return;
+
+#if PLATFORM(COCOA)
+    if (enqueuePasswordNotification(*object, { { AXTextEditTypeReplace }, deletedText, insertedText, { position, position } }))
+        return;
+#endif
 
     postTextReplacementPlatformNotification(object, deletionType, deletedText, insertionType, insertedText, position);
-#else
+#else // PLATFORM(COCOA) || USE(ATSPI)
     nodeTextChangePlatformNotification(object, textChangeForEditType(deletionType), position.deepEquivalent().deprecatedEditingOffset(), deletedText);
     nodeTextChangePlatformNotification(object, textChangeForEditType(insertionType), position.deepEquivalent().deprecatedEditingOffset(), insertedText);
 #endif
@@ -2447,42 +2441,150 @@ void AXObjectCache::postTextReplacementNotificationForTextControl(HTMLTextFormCo
 
     AccessibilityObject* object = getOrCreate(textControl);
 #if PLATFORM(COCOA) || USE(ATSPI)
-    if (object) {
-        if (enqueuePasswordValueChangeNotification(*object))
-            return;
+    if (object)
         object = object->observableObject();
-    }
+    if (!object)
+        return;
+
+#if PLATFORM(COCOA)
+    if (enqueuePasswordNotification(*object, { { AXTextEditTypeReplace }, deletedText, insertedText, { } }))
+        return;
+#endif
 
     postTextReplacementPlatformNotificationForTextControl(object, deletedText, insertedText);
-#else
+#else // PLATFORM(COCOA) || USE(ATSPI)
     nodeTextChangePlatformNotification(object, textChangeForEditType(AXTextEditTypeDelete), 0, deletedText);
     nodeTextChangePlatformNotification(object, textChangeForEditType(AXTextEditTypeInsert), 0, insertedText);
 #endif
 }
 
-bool AXObjectCache::enqueuePasswordValueChangeNotification(AccessibilityObject& object)
-{
 #if PLATFORM(COCOA)
+
+static AXTextChangeContext secureContext(AccessibilityObject& object, AXTextChangeContext& context)
+{
+    ASSERT(isSecureFieldOrContainedBySecureField(object));
+
+    // FIXME: Add a better way to retrieve the maskingCharacter for secure fields.
+    String value = object.secureFieldValue();
+    auto maskingCharacter = value.length() ? value[0] : bullet;
+
+    const auto& secureString = [&maskingCharacter] (String& text) {
+        if (text.isEmpty())
+            return;
+
+        std::span<UChar> characters;
+        text = String::createUninitialized(text.length(), characters);
+        for (unsigned i = 0; i < text.length(); ++i)
+            characters[i] = maskingCharacter;
+    };
+
+    secureString(context.deletedText);
+    secureString(context.insertedText);
+    return context;
+}
+
+bool AXObjectCache::enqueuePasswordNotification(AccessibilityObject& object, AXTextChangeContext&& context)
+{
     if (!isSecureFieldOrContainedBySecureField(object))
         return false;
 
-    AccessibilityObject* observableObject = object.observableObject();
+    auto* observableObject = object.observableObject();
     if (!observableObject) {
         ASSERT_NOT_REACHED();
-        // return true even though the enqueue didn't happen because this is a password field and caller shouldn't post a notification
+        // Return true even though the enqueue didn't happen because this is a password field and caller shouldn't post a notification unless it is queued.
         return true;
     }
 
-    m_passwordNotificationsToPost.add(*observableObject);
-    if (!m_passwordNotificationPostTimer.isActive())
-        m_passwordNotificationPostTimer.startOneShot(accessibilityPasswordValueChangeNotificationInterval);
+    m_passwordNotifications.append({ *observableObject, secureContext(*observableObject, context) });
+    if (!m_passwordNotificationTimer.isActive())
+        m_passwordNotificationTimer.startOneShot(accessibilityPasswordValueChangeNotificationInterval);
 
     return true;
-#else
-    UNUSED_PARAM(object);
-    return false;
-#endif
 }
+
+void AXObjectCache::passwordNotificationTimerFired()
+{
+    m_passwordNotificationTimer.stop();
+
+    // In tests, posting notifications has a tendency to immediately queue up other notifications, which can lead to unexpected behavior
+    // when the notification list is cleared at the end. Instead copy this list at the start.
+    auto passwordNotifications = std::exchange(m_passwordNotifications, { });
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    Vector<std::pair<Ref<AccessibilityObject>, AXNotification>> notifications;
+    for (const auto& note : passwordNotifications) {
+        switch (note.second.intent.type) {
+        case AXTextStateChangeTypeEdit:
+            notifications.append({ note.first, AXNotification::ValueChanged });
+            break;
+        case AXTextStateChangeTypeSelectionMove:
+        case AXTextStateChangeTypeSelectionExtend:
+        case AXTextStateChangeTypeSelectionBoundary:
+            notifications.append({ note.first, AXNotification::SelectedTextChanged });
+            break;
+        case AXTextStateChangeTypeUnknown:
+            break;
+        };
+    }
+    updateIsolatedTree(notifications);
+#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+
+    for (const auto& note : passwordNotifications) {
+        auto& context = note.second;
+        switch (context.intent.type) {
+        case AXTextStateChangeTypeEdit:
+            if (context.intent.editType == AXTextEditTypeReplace) {
+                postTextReplacementPlatformNotification(note.first.ptr(),
+                    AXTextEditTypeDelete, context.deletedText, AXTextEditTypeInsert, context.insertedText, context.selection.start());
+            } else {
+                postTextStateChangePlatformNotification(note.first.ptr(),
+                    context.intent.editType, context.insertedText, context.selection.start());
+            }
+            break;
+        case AXTextStateChangeTypeSelectionMove:
+        case AXTextStateChangeTypeSelectionExtend:
+        case AXTextStateChangeTypeSelectionBoundary:
+            postTextSelectionChangePlatformNotification(note.first.ptr(),
+                context.intent, context.selection);
+            break;
+        case AXTextStateChangeTypeUnknown:
+            break;
+        };
+    }
+}
+
+#endif // PLATFORM(COCOA)
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+void AXObjectCache::onSelectedTextChanged(const VisiblePositionRange& selection, AccessibilityObject* object)
+{
+    if (object) {
+        m_lastDebouncedTextRangeObject = object->objectID();
+        if (!m_selectedTextRangeTimer.isActive())
+            m_selectedTextRangeTimer.restart();
+    }
+
+    if (RefPtr tree = AXIsolatedTree::treeForPageID(m_pageID)) {
+        if (selection.isNull())
+            tree->setSelectedTextMarkerRange({ });
+        else {
+            auto startPosition = selection.start.deepEquivalent();
+            auto endPosition = selection.end.deepEquivalent();
+
+            if (startPosition.isNull() || endPosition.isNull())
+                tree->setSelectedTextMarkerRange({ });
+            else {
+                if (auto* startObject = get(startPosition.anchorNode()))
+                    createIsolatedObjectIfNeeded(*startObject);
+                if (auto* endObject = get(endPosition.anchorNode()))
+                    createIsolatedObjectIfNeeded(*endObject);
+
+                tree->setSelectedTextMarkerRange({ selection });
+            }
+        }
+    }
+}
+#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 
 void AXObjectCache::frameLoadingEventNotification(LocalFrame* frame, AXLoadingEvent loadingEvent)
 {
@@ -5594,13 +5696,14 @@ AXTextChange AXObjectCache::textChangeForEditType(AXTextEditType type)
     case AXTextEditTypeTyping:
     case AXTextEditTypePaste:
         return AXTextChange::Inserted;
+    case AXTextEditTypeReplace:
+        return AXTextChange::Replaced;
     case AXTextEditTypeAttributesChange:
         return AXTextChange::AttributesChanged;
     case AXTextEditTypeUnknown:
-        break;
+        ASSERT_NOT_REACHED();
+        return AXTextChange::Inserted;
     }
-    ASSERT_NOT_REACHED();
-    return AXTextChange::Inserted;
 }
 #endif
 
