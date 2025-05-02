@@ -712,7 +712,7 @@ void AudioContext::defaultDestinationWillBecomeConnected()
 void AudioContext::isActiveNowPlayingSessionChanged()
 {
     if (RefPtr document = this->document()) {
-        if (RefPtr page = document->protectedPage())
+        if (RefPtr page = document->page())
             page->hasActiveNowPlayingSessionChanged();
     }
 }

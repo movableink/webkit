@@ -286,6 +286,7 @@ void MediaSessionManagerCocoa::addSession(PlatformMediaSessionInterface& session
 void MediaSessionManagerCocoa::removeSession(PlatformMediaSessionInterface& session)
 {
     PlatformMediaSessionManager::removeSession(session);
+    session.setActiveNowPlayingSession(false);
 
     if (hasNoSession()) {
         m_nowPlayingManager->removeClient(*this);

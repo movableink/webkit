@@ -7510,11 +7510,6 @@ void WebPageProxy::didChangeMainDocument(IPC::Connection& connection, FrameIdent
     m_isQuotaIncreaseDenied = false;
 
     m_speechRecognitionPermissionManager = nullptr;
-
-    if (frame && frame->isMainFrame()) {
-        if (RefPtr pageClient = this->pageClient())
-            pageClient->hasActiveNowPlayingSessionChanged(false);
-    }
 }
 
 void WebPageProxy::viewIsBecomingVisible()
