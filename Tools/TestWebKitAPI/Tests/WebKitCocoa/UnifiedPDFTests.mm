@@ -27,6 +27,7 @@
 
 #if ENABLE(UNIFIED_PDF)
 
+#import "AppKitSPI.h"
 #import "CGImagePixelReader.h"
 #import "ContentSecurityPolicyTestHelpers.h"
 #import "HTTPServer.h"
@@ -55,6 +56,10 @@
 #import <wtf/RetainPtr.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/text/MakeString.h>
+
+@interface WKWebView ()
+- (void)copy:(id)sender;
+@end
 
 #if PLATFORM(IOS_FAMILY)
 @interface UIPrintInteractionController ()
@@ -315,6 +320,37 @@ UNIFIED_PDF_TEST(WebProcessShouldNotCrashWithUISideCompositingDisabled)
         return [delegate webProcessCrashed] || [delegate navigationFinished];
     });
     EXPECT_FALSE([delegate webProcessCrashed]);
+}
+
+UNIFIED_PDF_TEST(SelectAllText)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:configurationForWebViewTestingUnifiedPDF().get()]);
+    [webView synchronouslyLoadRequest:[NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"test" withExtension:@"pdf"]]];
+
+    auto selectAllText = [](TestWKWebView *webView) {
+#if PLATFORM(IOS_FAMILY)
+        [webView selectTextInGranularity:UITextGranularityDocument atPoint:CGPointMake(100, 100)];
+#else
+        [[webView window] makeFirstResponder:webView];
+        [[webView window] makeKeyAndOrderFront:nil];
+        [[webView window] orderFrontRegardless];
+        [webView sendClickAtPoint:NSMakePoint(100, 100)];
+        [webView selectAll:nil];
+#endif
+    };
+
+    selectAllText(webView.get());
+    [webView waitForNextPresentationUpdate];
+
+#if PLATFORM(IOS_FAMILY)
+    RetainPtr contentView = [webView textInputContentView];
+    RetainPtr selectedText = [contentView selectedText];
+#else
+    [webView copy:nil];
+    [webView waitForNextPresentationUpdate];
+    RetainPtr selectedText = [[NSPasteboard generalPasteboard] stringForType:NSPasteboardTypeString];
+#endif
+    EXPECT_WK_STREQ(@"Test PDF Content\n555-555-1234", selectedText.get());
 }
 
 #if PLATFORM(IOS_FAMILY)
