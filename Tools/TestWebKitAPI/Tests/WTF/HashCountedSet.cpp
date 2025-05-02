@@ -29,6 +29,7 @@
 #include "Counters.h"
 #include "MoveOnly.h"
 #include "RefLogger.h"
+#include <ranges>
 #include <string>
 #include <wtf/HashCountedSet.h>
 #include <wtf/text/StringHash.h>
@@ -500,7 +501,7 @@ TEST(WTF_HashCountedSet, Values)
     auto vector = copyToVector(set.values());
     EXPECT_EQ(3U, vector.size());
 
-    std::sort(vector.begin(), vector.end());
+    std::ranges::sort(vector);
     EXPECT_EQ(1, vector[0]);
     EXPECT_EQ(2, vector[1]);
     EXPECT_EQ(3, vector[2]);

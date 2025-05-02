@@ -32,6 +32,7 @@
 #include "CallGraph.h"
 #include "WGSL.h"
 #include "WGSLShaderModule.h"
+#include <ranges>
 #include <wtf/DataLog.h>
 #include <wtf/HashMap.h>
 #include <wtf/ListHashSet.h>
@@ -761,7 +762,7 @@ std::optional<Error> RewriteGlobalVariables::collectGlobals()
     }
 
     for (auto& [_, vector] : m_groupBindingMap)
-        std::sort(vector.begin(), vector.end(), [&](auto& a, auto& b) { return a.first < b.first; });
+        std::ranges::sort(vector, [](auto& a, auto& b) { return a.first < b.first; });
 
     if (!bufferLengths.isEmpty()) {
         for (const auto& [variable, group] : bufferLengths) {
@@ -1612,7 +1613,7 @@ AST::StructureMember& RewriteGlobalVariables::createArgumentBufferEntry(unsigned
 
 void RewriteGlobalVariables::finalizeArgumentBufferStruct(unsigned group, Vector<std::pair<unsigned, AST::StructureMember*>>& entries)
 {
-    std::sort(entries.begin(), entries.end(), [&](auto& a, auto& b) {
+    std::ranges::sort(entries, [](auto& a, auto& b) {
         return a.first < b.first;
     });
 

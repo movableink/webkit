@@ -28,6 +28,7 @@
 
 #import <algorithm>
 #import <limits>
+#import <ranges>
 #import <sys/sysctl.h>
 #import <wtf/MathExtras.h>
 #import <wtf/PageBlock.h>
@@ -176,7 +177,7 @@ static HardwareCapabilities apple4(id<MTLDevice> device)
     features.append(WGPUFeatureName_TextureCompressionASTC);
     features.append(WGPUFeatureName_TextureCompressionASTCSliced3D);
 
-    std::sort(features.begin(), features.end());
+    std::ranges::sort(features);
 
     return {
         defaultLimits(),
@@ -198,7 +199,7 @@ static HardwareCapabilities apple5(id<MTLDevice> device)
     features.append(WGPUFeatureName_TextureCompressionASTC);
     features.append(WGPUFeatureName_TextureCompressionASTCSliced3D);
 
-    std::sort(features.begin(), features.end());
+    std::ranges::sort(features);
 
     return {
         defaultLimits(),
@@ -222,7 +223,7 @@ static HardwareCapabilities apple6(id<MTLDevice> device)
     features.append(WGPUFeatureName_TextureCompressionASTC);
     features.append(WGPUFeatureName_TextureCompressionASTCSliced3D);
 
-    std::sort(features.begin(), features.end());
+    std::ranges::sort(features);
 
     return {
         {
@@ -282,7 +283,7 @@ static HardwareCapabilities apple7(id<MTLDevice> device)
     features.append(WGPUFeatureName_TextureCompressionASTC);
     features.append(WGPUFeatureName_TextureCompressionASTCSliced3D);
 
-    std::sort(features.begin(), features.end());
+    std::ranges::sort(features);
 
     return {
         {
@@ -342,7 +343,7 @@ static HardwareCapabilities mac2(id<MTLDevice> device)
 
     auto features = WebGPU::baseFeatures(device, baseCapabilities);
 
-    std::sort(features.begin(), features.end());
+    std::ranges::sort(features);
 
     return {
         {
@@ -446,8 +447,8 @@ static WGPULimits mergeLimits(const WGPULimits& previous, const WGPULimits& next
 
 static Vector<WGPUFeatureName> mergeFeatures(const Vector<WGPUFeatureName>& previous, const Vector<WGPUFeatureName>& next)
 {
-    ASSERT(std::is_sorted(previous.begin(), previous.end()));
-    ASSERT(std::is_sorted(next.begin(), next.end()));
+    ASSERT(std::ranges::is_sorted(previous));
+    ASSERT(std::ranges::is_sorted(next));
 
     Vector<WGPUFeatureName> result(previous.size() + next.size());
     auto end = mergeDeduplicatedSorted(previous.begin(), previous.end(), next.begin(), next.end(), result.begin());
@@ -607,9 +608,9 @@ bool anyLimitIsBetterThan(const WGPULimits& target, const WGPULimits& reference)
 
 bool includesUnsupportedFeatures(const Vector<WGPUFeatureName>& target, const Vector<WGPUFeatureName>& reference)
 {
-    ASSERT(std::is_sorted(reference.begin(), reference.end()));
+    ASSERT(std::ranges::is_sorted(reference));
     for (auto feature : target) {
-        if (!std::binary_search(reference.begin(), reference.end(), feature))
+        if (!std::ranges::binary_search(reference, feature))
             return true;
     }
     return false;

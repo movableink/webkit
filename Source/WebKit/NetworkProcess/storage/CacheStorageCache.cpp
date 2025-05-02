@@ -35,6 +35,7 @@
 #include <WebCore/HTTPHeaderMap.h>
 #include <WebCore/OriginAccessPatterns.h>
 #include <WebCore/ResourceError.h>
+#include <ranges>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -136,7 +137,7 @@ void CacheStorageCache::open(WebCore::DOMCacheEngine::CacheIdentifierCallback&& 
 
         protectedThis->assertIsOnCorrectQueue();
 
-        std::sort(recordInfos.begin(), recordInfos.end(), [](auto& a, auto& b) {
+        std::ranges::sort(recordInfos, [](auto& a, auto& b) {
             return a.insertionTime() < b.insertionTime();
         });
 
@@ -217,7 +218,7 @@ void CacheStorageCache::retrieveRecords(WebCore::RetrieveRecordsOptions&& option
             result.append(WTFMove(record));
         }
 
-        std::sort(result.begin(), result.end(), [&](auto& a, auto& b) {
+        std::ranges::sort(result, [&](auto& a, auto& b) {
             return a.identifier < b.identifier;
         });
 

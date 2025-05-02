@@ -28,6 +28,7 @@
 
 #include "Test.h"
 #include "Utilities.h"
+#include <ranges>
 #include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
@@ -878,7 +879,7 @@ TEST_F(FileSystemTest, listDirectory)
 
     auto matches = FileSystem::listDirectory(tempEmptyFolderPath());
     ASSERT_EQ(matches.size(), 5U);
-    std::sort(matches.begin(), matches.end(), WTF::codePointCompareLessThan);
+    std::ranges::sort(matches, WTF::codePointCompareLessThan);
     EXPECT_STREQ(matches[0].utf8().data(), "a.txt");
     EXPECT_STREQ(matches[1].utf8().data(), "b.txt");
     EXPECT_STREQ(matches[2].utf8().data(), "bar.png");
@@ -887,7 +888,7 @@ TEST_F(FileSystemTest, listDirectory)
 
     matches = FileSystem::listDirectory(FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), "subfolder"_s));
     ASSERT_EQ(matches.size(), 2U);
-    std::sort(matches.begin(), matches.end(), WTF::codePointCompareLessThan);
+    std::ranges::sort(matches, WTF::codePointCompareLessThan);
     EXPECT_STREQ(matches[0].utf8().data(), "c.txt");
     EXPECT_STREQ(matches[1].utf8().data(), "d.txt");
 
@@ -970,7 +971,7 @@ TEST_F(FileSystemTest, isAncestor)
         { { "a/b/c", "a/b/c/" }, false },
         { { "/a/b/c", "a/b/c/" }, false }
     };
-    std::for_each(narrowString.begin(), narrowString.end(), [](auto input) {
+    std::ranges::for_each(narrowString, [](auto input) {
         EXPECT_EQ(
             input.second,
                 FileSystem::isAncestor(
@@ -994,7 +995,7 @@ TEST_F(FileSystemTest, isAncestor)
         { { u"a/b/c", u"a/b/c/" }, false },
         { { u"/a/b/c", u"a/b/c/" }, false }
     };
-    std::for_each(wideString.begin(), wideString.end(), [](auto input) {
+    std::ranges::for_each(wideString, [](auto input) {
         EXPECT_EQ(
             input.second,
                 FileSystem::isAncestor(

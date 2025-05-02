@@ -826,7 +826,7 @@ String XMLHttpRequest::getAllResponseHeaders() const
             return std::make_pair(header.key, header.value);
         });
 
-        std::sort(headers.begin(), headers.end(), [] (const std::pair<String, String>& x, const std::pair<String, String>& y) {
+        std::ranges::sort(headers, [](auto& x, auto& y) {
             unsigned xLength = x.first.length();
             unsigned yLength = y.first.length();
             unsigned commonLength = std::min(xLength, yLength);

@@ -27,6 +27,7 @@
 #include "SharedStringHashStore.h"
 
 #include <algorithm>
+#include <ranges>
 #include <wtf/PageBlock.h>
 #include <wtf/StdLibExtras.h>
 
@@ -168,7 +169,7 @@ void SharedStringHashStore::resizeTable(unsigned newTableLength)
 void SharedStringHashStore::processPendingOperations()
 {
     unsigned currentTableLength = m_tableLength;
-    unsigned approximateNewHashCount = std::count_if(m_pendingOperations.begin(), m_pendingOperations.end(), [](auto& operation) {
+    unsigned approximateNewHashCount = std::ranges::count_if(m_pendingOperations, [](auto& operation) {
         return operation.type == Operation::Add;
     });
     // FIXME: The table can currently only grow. We should probably support shrinking it to save memory.

@@ -26,6 +26,7 @@
 #include "config.h"
 
 #include "MoveOnly.h"
+#include <ranges>
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -1060,7 +1061,7 @@ TEST(WTF_Vector, MapFromHashMap)
     auto mapped = WTF::map(map, [&] (KeyValuePair<String, String>& pair) -> String {
         return pair.value;
     });
-    std::sort(mapped.begin(), mapped.end(), WTF::codePointCompareLessThan);
+    std::ranges::sort(mapped, WTF::codePointCompareLessThan);
 
     EXPECT_EQ(3U, mapped.size());
     EXPECT_TRUE(mapped[0] == "v1"_s);
@@ -1070,7 +1071,7 @@ TEST(WTF_Vector, MapFromHashMap)
     mapped = WTF::map(map, [&] (const auto& pair) -> String {
         return pair.key;
     });
-    std::sort(mapped.begin(), mapped.end(), WTF::codePointCompareLessThan);
+    std::ranges::sort(mapped, WTF::codePointCompareLessThan);
 
     EXPECT_EQ(3U, mapped.size());
     EXPECT_TRUE(mapped[0] == "k1"_s);
@@ -1080,7 +1081,7 @@ TEST(WTF_Vector, MapFromHashMap)
     mapped = WTF::map(WTFMove(map), [&] (KeyValuePair<String, String>&& pair) -> String {
         return WTFMove(pair.value);
     });
-    std::sort(mapped.begin(), mapped.end(), WTF::codePointCompareLessThan);
+    std::ranges::sort(mapped, WTF::codePointCompareLessThan);
 
     EXPECT_EQ(3U, mapped.size());
     EXPECT_TRUE(mapped[0] == "v1"_s);
@@ -1482,7 +1483,7 @@ TEST(WTF_Vector, CopyToVector)
     auto vector = copyToVector(intSet);
     EXPECT_EQ(3U, vector.size());
 
-    std::sort(vector.begin(), vector.end());
+    std::ranges::sort(vector);
     EXPECT_EQ(1, vector[0]);
     EXPECT_EQ(2, vector[1]);
     EXPECT_EQ(3, vector[2]);
@@ -1510,7 +1511,7 @@ TEST(WTF_Vector, CopyToVectorOf)
     Vector<float> vector = copyToVectorOf<float>(intSet);
     EXPECT_EQ(3U, vector.size());
 
-    std::sort(vector.begin(), vector.end());
+    std::ranges::sort(vector);
     EXPECT_FLOAT_EQ(1, vector[0]);
     EXPECT_FLOAT_EQ(2, vector[1]);
     EXPECT_FLOAT_EQ(3, vector[2]);
@@ -1527,7 +1528,7 @@ TEST(WTF_Vector, CopyToVectorSizeRangeIterator)
     auto keysVector = copyToVector(map.keys());
     EXPECT_EQ(3U, keysVector.size());
 
-    std::sort(keysVector.begin(), keysVector.end());
+    std::ranges::sort(keysVector);
     EXPECT_EQ(1, keysVector[0]);
     EXPECT_EQ(2, keysVector[1]);
     EXPECT_EQ(3, keysVector[2]);
@@ -1535,7 +1536,7 @@ TEST(WTF_Vector, CopyToVectorSizeRangeIterator)
     auto valuesVector = copyToVector(map.values());
     EXPECT_EQ(3U, valuesVector.size());
 
-    std::sort(valuesVector.begin(), valuesVector.end());
+    std::ranges::sort(valuesVector);
     EXPECT_FLOAT_EQ(7, valuesVector[0]);
     EXPECT_FLOAT_EQ(8, valuesVector[1]);
     EXPECT_FLOAT_EQ(9, valuesVector[2]);

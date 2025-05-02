@@ -35,6 +35,7 @@
 #include <WebCore/Timer.h>
 #include <ifaddrs.h>
 #include <net/if.h>
+#include <ranges>
 #include <wtf/Function.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RetainPtr.h>
@@ -452,7 +453,7 @@ void NetworkManager::onGatheredNetworks(RTCNetwork::IPAddress&& ipv4, RTCNetwork
     RELEASE_LOG(WebRTC, "NetworkManagerWrapper::onGatheredNetworks - networks changed");
 
     auto networkList = copyToVector(m_networkMap.values());
-    std::sort(networkList.begin(), networkList.end(), sortNetworks);
+    std::ranges::sort(networkList, sortNetworks);
 
     int preference = std::max(127zu, networkList.size());
     for (auto& network : networkList)

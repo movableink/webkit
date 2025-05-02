@@ -55,6 +55,7 @@
 #include "StyleSheetContents.h"
 #include "StyledElement.h"
 #include "UserAgentStyle.h"
+#include <ranges>
 #include <wtf/SetForScope.h>
 
 namespace WebCore {
@@ -805,7 +806,7 @@ static inline bool compareRules(MatchedRule r1, MatchedRule r2)
 
 void ElementRuleCollector::sortMatchedRules()
 {
-    std::sort(m_matchedRules.begin(), m_matchedRules.end(), compareRules);
+    std::ranges::sort(m_matchedRules, compareRules);
 }
 
 void ElementRuleCollector::matchAllRules(bool matchAuthorAndUserStyles, bool includeSMILProperties)

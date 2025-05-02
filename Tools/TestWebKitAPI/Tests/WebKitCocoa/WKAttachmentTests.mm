@@ -46,6 +46,7 @@
 #import <WebKit/WebArchive.h>
 #import <WebKit/WebKitPrivate.h>
 #import <WebKit/_WKUserStyleSheet.h>
+#import <ranges>
 #import <wtf/RetainPtr.h>
 #import <wtf/SoftLinking.h>
 
@@ -1852,7 +1853,7 @@ TEST(WKAttachmentTests, CopyAndPasteRemoteImages)
             RetainPtr { [observer.observer().inserted[4] info] },
         } };
 
-        std::sort(attachmentInfo.begin(), attachmentInfo.end(), [] (auto& a, auto& b) {
+        std::ranges::sort(attachmentInfo, [](auto& a, auto& b) {
             return [[a name] compare:[b name]] == NSOrderedAscending;
         });
 

@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include <mutex>
+#include <ranges>
 #include <thread>
 #include <wtf/Condition.h>
 #include <wtf/DataLog.h>
@@ -167,7 +168,7 @@ void runTest(
         thread->waitForCompletion();
 
     EXPECT_EQ(numProducers * numMessagesPerProducer, received.size());
-    std::sort(received.begin(), received.end());
+    std::ranges::sort(received);
     for (unsigned messageIndex = 0; messageIndex < numMessagesPerProducer; ++messageIndex) {
         for (unsigned producerIndex = 0; producerIndex < numProducers; ++producerIndex)
             EXPECT_EQ(messageIndex, received[messageIndex * numProducers + producerIndex]);

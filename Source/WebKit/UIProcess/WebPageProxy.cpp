@@ -266,6 +266,7 @@
 #include <WebCore/WrappedCryptoKey.h>
 #include <WebCore/WritingDirection.h>
 #include <optional>
+#include <ranges>
 #include <stdio.h>
 #include <wtf/CallbackAggregator.h>
 #include <wtf/CoroutineUtilities.h>
@@ -14645,8 +14646,7 @@ bool WebPageProxy::checkURLReceivedFromCurrentOrPreviousWebProcess(WebProcessPro
         return path.startsWith(visitedPath);
     };
 
-    auto localPathsEnd = m_previouslyVisitedPaths.end();
-    if (std::find_if(m_previouslyVisitedPaths.begin(), localPathsEnd, startsWithURLPath) != localPathsEnd)
+    if (std::ranges::find_if(m_previouslyVisitedPaths, startsWithURLPath) != m_previouslyVisitedPaths.end())
         return true;
 
     return process.checkURLReceivedFromWebProcess(url);

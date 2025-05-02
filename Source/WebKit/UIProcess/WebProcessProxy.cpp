@@ -104,6 +104,7 @@
 #include <WebCore/WrappedCryptoKey.h>
 #include <optional>
 #include <pal/system/Sound.h>
+#include <ranges>
 #include <stdio.h>
 #include <wtf/Algorithms.h>
 #include <wtf/NeverDestroyed.h>
@@ -1059,12 +1060,10 @@ bool WebProcessProxy::hasAssumedReadAccessToURL(const URL& url) const
     };
 
     auto& platformPaths = platformPathsWithAssumedReadAccess();
-    auto platformPathsEnd = platformPaths.end();
-    if (std::find_if(platformPaths.begin(), platformPathsEnd, startsWithURLPath) != platformPathsEnd)
+    if (std::ranges::find_if(platformPaths, startsWithURLPath) != platformPaths.end())
         return true;
 
-    auto localPathsEnd = m_localPathsWithAssumedReadAccess.end();
-    if (std::find_if(m_localPathsWithAssumedReadAccess.begin(), localPathsEnd, startsWithURLPath) != localPathsEnd)
+    if (std::ranges::find_if(m_localPathsWithAssumedReadAccess, startsWithURLPath) != m_localPathsWithAssumedReadAccess.end())
         return true;
 
     return false;

@@ -30,6 +30,7 @@
 #include "CommandResult.h"
 #include "Logging.h"
 #include "SessionHost.h"
+#include <ranges>
 #include <wtf/Compiler.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/RunLoop.h>
@@ -414,7 +415,7 @@ bool WebDriverService::acceptHandshake(HTTPRequestHandler::Request&& request)
     auto& resourceName = request.path;
 
     auto& resources = m_bidiServer->listener()->resources;
-    auto foundResource = std::find(resources.begin(), resources.end(), resourceName);
+    auto foundResource = std::ranges::find(resources, resourceName);
     if (foundResource == resources.end()) {
         RELEASE_LOG(WebDriverBiDi, "Resource name %s not found in listener's list of WebSocket resources. Rejecting handshake.", resourceName.utf8().data());
         return false;

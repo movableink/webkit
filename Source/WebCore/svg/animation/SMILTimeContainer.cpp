@@ -35,6 +35,7 @@
 #include "SVGSVGElement.h"
 #include "ScopedEventQueue.h"
 #include "TypedElementDescendantIteratorInlines.h"
+#include <ranges>
 
 namespace WebCore {
 
@@ -246,7 +247,7 @@ void SMILTimeContainer::sortByPriority(AnimationsVector& animations, SMILTime el
 {
     if (m_documentOrderIndexesDirty)
         updateDocumentOrderIndexes();
-    std::sort(animations.begin(), animations.end(), PriorityCompare(elapsed));
+    std::ranges::sort(animations, PriorityCompare(elapsed));
 }
 
 void SMILTimeContainer::processScheduledAnimations(NOESCAPE const Function<void(SVGSMILElement&)>& callback)

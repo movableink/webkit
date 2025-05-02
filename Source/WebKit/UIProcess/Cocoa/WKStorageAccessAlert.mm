@@ -39,6 +39,7 @@
 #import <WebCore/LocalizedStrings.h>
 #import <WebCore/NetworkStorageSession.h>
 #import <WebCore/RegistrableDomain.h>
+#import <ranges>
 #import <wtf/BlockPtr.h>
 
 #if PLATFORM(MAC)
@@ -157,7 +158,7 @@ void presentStorageAccessAlertSSOQuirk(WKWebView *webView, const String& organiz
     }
 
     Vector<String> uniqueDomainList = copyToVector(allDomains);
-    std::sort(uniqueDomainList.begin(), uniqueDomainList.end(), WTF::codePointCompareLessThan);
+    std::ranges::sort(uniqueDomainList, WTF::codePointCompareLessThan);
 
     if (uniqueDomainList.size() < 4) {
         auto lastSite = uniqueDomainList.takeLast();

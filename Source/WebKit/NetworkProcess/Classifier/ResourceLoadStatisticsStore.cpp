@@ -47,6 +47,7 @@
 #include <WebCore/SQLiteStatement.h>
 #include <WebCore/SQLiteStatementAutoResetScope.h>
 #include <WebCore/UserGestureIndicator.h>
+#include <ranges>
 #include <wtf/CallbackAggregator.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/CrossThreadCopier.h>
@@ -2173,7 +2174,7 @@ void ResourceLoadStatisticsStore::dumpResourceLoadStatistics(CompletionHandler<v
     Vector<String> domains;
     while (scopedStatement->step() == SQLITE_ROW)
         domains.append(scopedStatement->columnText(0));
-    std::sort(domains.begin(), domains.end(), WTF::codePointCompareLessThan);
+    std::ranges::sort(domains, WTF::codePointCompareLessThan);
 
     StringBuilder result;
     result.append("Resource load statistics:\n\n"_s);

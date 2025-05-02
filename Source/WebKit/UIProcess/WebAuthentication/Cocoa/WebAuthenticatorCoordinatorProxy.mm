@@ -52,6 +52,7 @@
 #import <WebCore/SecurityOrigin.h>
 #import <WebCore/UnknownCredentialOptions.h>
 #import <WebCore/WebAuthenticationUtils.h>
+#import <ranges>
 #import <wtf/BlockPtr.h>
 #import <wtf/CompletionHandler.h>
 #import <wtf/StdLibExtras.h>
@@ -1233,7 +1234,7 @@ void WebAuthenticatorCoordinatorProxy::getClientCapabilities(const WebCore::Secu
         Vector<KeyValuePair<String, bool>> capabilities;
         for (NSString *key in result)
             capabilities.append({ key, result[key].boolValue });
-        std::sort(capabilities.begin(), capabilities.end(), [] (auto& a, auto& b) {
+        std::ranges::sort(capabilities, [](auto& a, auto& b) {
             return codePointCompareLessThan(a.key, b.key);
         });
 

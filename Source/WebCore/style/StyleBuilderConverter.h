@@ -101,6 +101,7 @@
 #include "TransformOperationsBuilder.h"
 #include "ViewTimeline.h"
 #include "WillChangeData.h"
+#include <ranges>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
@@ -1525,12 +1526,12 @@ inline NamedGridLinesMap BuilderConverter::createImplicitNamedGridLinesFromGridA
         {
             auto& startVector = namedGridLines.map.add(makeString(area.key, "-start"_s), Vector<unsigned>()).iterator->value;
             startVector.append(areaSpan.startLine());
-            std::sort(startVector.begin(), startVector.end());
+            std::ranges::sort(startVector);
         }
         {
             auto& endVector = namedGridLines.map.add(makeString(area.key, "-end"_s), Vector<unsigned>()).iterator->value;
             endVector.append(areaSpan.endLine());
-            std::sort(endVector.begin(), endVector.end());
+            std::ranges::sort(endVector);
         }
     }
     // FIXME: For acceptable performance, should sort once at the end, not as we add each item, or at least insert in sorted order instead of using std::sort each time.

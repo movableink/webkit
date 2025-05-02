@@ -161,6 +161,7 @@
 #import <pal/spi/ios/GraphicsServicesSPI.h>
 #import <pal/spi/ios/ManagedConfigurationSPI.h>
 #import <pal/system/ios/UserInterfaceIdiom.h>
+#import <ranges>
 #import <wtf/BlockObjCExceptions.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/CallbackAggregator.h>
@@ -6618,7 +6619,7 @@ static Vector<WebCore::CompositionUnderline> extractUnderlines(NSAttributedStrin
         });
     }];
 
-    std::sort(underlines.begin(), underlines.end(), [](auto& a, auto& b) {
+    std::ranges::sort(underlines, [](auto& a, auto& b) {
         if (a.startOffset < b.startOffset)
             return true;
         if (a.startOffset > b.startOffset)
@@ -6657,7 +6658,7 @@ static Vector<WebCore::CompositionHighlight> compositionHighlights(NSAttributedS
         highlights.append({ static_cast<unsigned>(range.location), static_cast<unsigned>(NSMaxRange(range)), backgroundHighlightColor, foregroundHighlightColor });
     }];
 
-    std::sort(highlights.begin(), highlights.end(), [](auto& a, auto& b) {
+    std::ranges::sort(highlights, [](auto& a, auto& b) {
         if (a.startOffset < b.startOffset)
             return true;
         if (a.startOffset > b.startOffset)

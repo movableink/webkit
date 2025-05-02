@@ -36,6 +36,7 @@
 #include "WebPageProxyIdentifier.h"
 #include "WebProcessProxy.h"
 #include <algorithm>
+#include <ranges>
 #include <wtf/RunLoop.h>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -622,7 +623,7 @@ void AuxiliaryProcessProxy::didChangeThrottleState(ProcessThrottleState state)
             indexMessagePairs.append(WTFMove(indexMessagePair));
 
         // Send messages in the order that they were enqueued after coalescing.
-        std::sort(indexMessagePairs.begin(), indexMessagePairs.end(), [](const auto& pair1, const auto& pair2) {
+        std::ranges::sort(indexMessagePairs, [](auto& pair1, auto& pair2) {
             return pair1.first < pair2.first;
         });
 

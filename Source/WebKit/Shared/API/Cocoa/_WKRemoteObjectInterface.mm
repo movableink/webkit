@@ -27,6 +27,7 @@
 #import "_WKRemoteObjectInterfaceInternal.h"
 
 #import <objc/runtime.h>
+#import <ranges>
 #import <wtf/HashMap.h>
 #import <wtf/NeverDestroyed.h>
 #import <wtf/ObjCRuntimeExtras.h>
@@ -187,7 +188,7 @@ static void initializeMethods(_WKRemoteObjectInterface *interface, Protocol *pro
             auto result = adoptNS([[NSMutableString alloc] initWithString:@"{"]);
 
             auto orderedArgumentClasses = copyToVector(allowedArgumentClasses);
-            std::sort(orderedArgumentClasses.begin(), orderedArgumentClasses.end(), [](CFTypeRef a, CFTypeRef b) {
+            std::ranges::sort(orderedArgumentClasses, [](CFTypeRef a, CFTypeRef b) {
                 return CString(class_getName((__bridge Class)a)) < CString(class_getName((__bridge Class)b));
             });
 

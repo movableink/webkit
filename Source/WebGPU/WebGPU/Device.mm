@@ -46,6 +46,7 @@
 #import "XRSubImage.h"
 #import <algorithm>
 #import <notify.h>
+#import <ranges>
 #import <wtf/StdLibExtras.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/WeakPtr.h>
@@ -446,7 +447,7 @@ size_t Device::enumerateFeatures(WGPUFeatureName* features)
     // The API contract for this requires that sufficient space has already been allocated for the output.
     // This requires the caller calling us twice: once to get the amount of space to allocate, and once to fill the space.
     if (features)
-        std::copy(m_capabilities.features.begin(), m_capabilities.features.end(), features);
+        std::ranges::copy(m_capabilities.features, features);
     return m_capabilities.features.size();
 }
 

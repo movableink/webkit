@@ -47,6 +47,7 @@
 #include "RenderView.h"
 #include "StyleInheritedData.h"
 #include <limits>
+#include <ranges>
 #include <wtf/HashSet.h>
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -1052,7 +1053,7 @@ CellSpan RenderTableSection::dirtiedColumns(const LayoutRect& damageRect) const
 CellSpan RenderTableSection::spannedRows(const LayoutRect& flippedRect, ShouldIncludeAllIntersectingCells shouldIncludeAllIntersectionCells) const
 {
     // Find the first row that starts after rect top.
-    unsigned nextRow = std::upper_bound(m_rowPos.begin(), m_rowPos.end(), flippedRect.y()) - m_rowPos.begin();
+    unsigned nextRow = std::ranges::upper_bound(m_rowPos, flippedRect.y()) - m_rowPos.begin();
     if (shouldIncludeAllIntersectionCells == IncludeAllIntersectingCells && nextRow && m_rowPos[nextRow - 1] == flippedRect.y())
         --nextRow;
 
@@ -1083,7 +1084,7 @@ CellSpan RenderTableSection::spannedColumns(const LayoutRect& flippedRect, Shoul
     // cell on the logical top/left.
     // upper_bound on the other hand properly returns the cell on the logical bottom/right, which also
     // matches the behavior of other browsers.
-    unsigned nextColumn = std::upper_bound(columnPos.begin(), columnPos.end(), flippedRect.x()) - columnPos.begin();
+    unsigned nextColumn = std::ranges::upper_bound(columnPos, flippedRect.x()) - columnPos.begin();
     if (shouldIncludeAllIntersectionCells == IncludeAllIntersectingCells && nextColumn && columnPos[nextColumn - 1] == flippedRect.x())
         --nextColumn;
 
@@ -1344,9 +1345,9 @@ void RenderTableSection::paintObject(PaintInfo& paintInfo, const LayoutPoint& pa
 
         // Sort the dirty cells by paint order.
         if (m_overflowingCells.isEmptyIgnoringNullReferences())
-            std::stable_sort(cells.begin(), cells.end(), compareCellPositions);
+            std::ranges::stable_sort(cells, compareCellPositions);
         else
-            std::sort(cells.begin(), cells.end(), compareCellPositionsWithOverflowingCells);
+            std::ranges::sort(cells, compareCellPositionsWithOverflowingCells);
 
         if (paintInfo.phase == PaintPhase::CollapsedTableBorders) {
             for (unsigned i = cells.size(); i > 0; --i) {

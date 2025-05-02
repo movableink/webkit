@@ -55,6 +55,7 @@
 #import <WebKit/_WKWebsiteDataStoreDelegate.h>
 #import <mach/mach_init.h>
 #import <mach/task.h>
+#import <ranges>
 #import <wtf/BlockPtr.h>
 #import <wtf/OSObjectPtr.h>
 #import <wtf/StdLibExtras.h>
@@ -1464,7 +1465,7 @@ TEST_F(WebPushDTest, SubscribeTest)
     };
     auto topics = getPushTopics();
     auto& subscribed = topics.first;
-    std::sort(subscribed.begin(), subscribed.end(), lessThan);
+    std::ranges::sort(subscribed, lessThan);
 
     Vector<String> expected {
         "com.apple.WebKit.TestWebKitAPI ds:0bf5053b-164c-4b7d-8179-832e6bf158df https://example.com/"_s,
@@ -1521,7 +1522,7 @@ TEST_F(WebPushDNavigatorTest, SubscribeTest)
     };
     auto topics = getPushTopics();
     auto& subscribed = topics.first;
-    std::sort(subscribed.begin(), subscribed.end(), lessThan);
+    std::ranges::sort(subscribed, lessThan);
 
     Vector<String> expected {
         "com.apple.WebKit.TestWebKitAPI ds:0bf5053b-164c-4b7d-8179-832e6bf158df https://example.com/"_s,

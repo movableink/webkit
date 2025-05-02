@@ -51,6 +51,7 @@
 #include "StyleRuleImport.h"
 #include "StyleSheetContents.h"
 #include "UserAgentParts.h"
+#include <ranges>
 
 namespace WebCore {
 namespace Style {
@@ -150,7 +151,7 @@ void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerId
             auto oldSize = container.size();
             container.grow(m_ruleCount);
             auto newlyAllocated = container.mutableSpan().subspan(oldSize);
-            std::fill(newlyAllocated.begin(), newlyAllocated.end(), 0);
+            std::ranges::fill(newlyAllocated, 0);
             container.last() = identifier;
         }
     };

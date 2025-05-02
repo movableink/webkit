@@ -61,6 +61,7 @@
 #include <WebCore/UniqueIDBDatabaseConnection.h>
 #include <WebCore/UniqueIDBDatabaseTransaction.h>
 #include <pal/crypto/CryptoDigest.h>
+#include <ranges>
 #include <wtf/SuspendableWorkQueue.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/Base64.h>
@@ -544,7 +545,7 @@ void NetworkStorageManager::performEviction(HashMap<WebCore::SecurityOriginData,
     for (auto&& [origin, record] : originRecords)
         sortedOriginRecords.append({ WTFMove(origin), WTFMove(record) });
 
-    std::sort(sortedOriginRecords.begin(), sortedOriginRecords.end(), [&](const auto& a, const auto& b) {
+    std::ranges::sort(sortedOriginRecords, [](auto& a, auto& b) {
         return a.second.lastAccessTime > b.second.lastAccessTime;
     });
 
@@ -2065,7 +2066,7 @@ void NetworkStorageManager::cacheStorageRepresentation(CompletionHandler<void(co
         removeOriginStorageManagerIfPossible(origin);
     }
 
-    std::sort(originStrings.begin(), originStrings.end(), [](auto& a, auto& b) {
+    std::ranges::sort(originStrings, [](auto& a, auto& b) {
         return codePointCompareLessThan(a, b);
     });
     StringBuilder builder;

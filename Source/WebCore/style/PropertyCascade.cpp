@@ -35,6 +35,7 @@
 #include "PropertyAllowlist.h"
 #include "StyleBuilderGenerated.h"
 #include "StylePropertyShorthand.h"
+#include <ranges>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -73,7 +74,7 @@ PropertyCascade::~PropertyCascade() = default;
 PropertyCascade::AnimationLayer::AnimationLayer(const UncheckedKeyHashSet<AnimatableCSSProperty>& properties)
     : properties(properties)
 {
-    hasCustomProperties = std::find_if(properties.begin(), properties.end(), [](auto& property) {
+    hasCustomProperties = std::ranges::find_if(properties, [](auto& property) {
         return std::holds_alternative<AtomString>(property);
     }) != properties.end();
 
@@ -402,7 +403,7 @@ void PropertyCascade::addImportantMatches(CascadeLevel cascadeLevel)
 
     if (hasMatchesFromOtherScopesOrLayers) {
         // Match results are sorted in reverse tree context order so this is not needed for normal properties.
-        std::stable_sort(importantMatches.begin(), importantMatches.end(), [] (auto& a, auto& b) {
+        std::ranges::stable_sort(importantMatches, [](auto& a, auto& b) {
             // For !important properties a later shadow tree wins.
             if (a.ordinal != b.ordinal)
                 return a.ordinal < b.ordinal;
@@ -427,7 +428,7 @@ void PropertyCascade::sortLogicalGroupPropertyIDs()
     }
     m_seenLogicalGroupPropertyCount = endIndex;
     auto logicalGroupPropertyIDs = std::span { m_logicalGroupPropertyIDs }.first(endIndex);
-    std::sort(logicalGroupPropertyIDs.begin(), logicalGroupPropertyIDs.end(), [&](auto id1, auto id2) {
+    std::ranges::sort(logicalGroupPropertyIDs, [&](auto id1, auto id2) {
         return logicalGroupPropertyIndex(id1) < logicalGroupPropertyIndex(id2);
     });
 }

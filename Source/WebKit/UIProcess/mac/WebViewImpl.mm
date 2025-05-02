@@ -149,6 +149,7 @@
 #import <pal/spi/mac/NSTextInputContextSPI.h>
 #import <pal/spi/mac/NSViewSPI.h>
 #import <pal/spi/mac/NSWindowSPI.h>
+#import <ranges>
 #import <sys/stat.h>
 #import <wtf/BlockObjCExceptions.h>
 #import <wtf/FileSystem.h>
@@ -5402,7 +5403,7 @@ static Vector<WebCore::CompositionHighlight> compositionHighlights(NSAttributedS
         highlights.append({ static_cast<unsigned>(range.location), static_cast<unsigned>(NSMaxRange(range)), backgroundHighlightColor, foregroundHighlightColor });
     }];
 
-    std::sort(highlights.begin(), highlights.end(), [](auto& a, auto& b) {
+    std::ranges::sort(highlights, [](auto& a, auto& b) {
         if (a.startOffset < b.startOffset)
             return true;
         if (a.startOffset > b.startOffset)
@@ -5446,7 +5447,7 @@ static Vector<WebCore::CompositionUnderline> compositionUnderlines(NSAttributedS
             underlines.append({ static_cast<unsigned>(range.location), static_cast<unsigned>(NSMaxRange(range)), WebCore::CompositionUnderlineColor::GivenColor, WebCore::Color::black, style.get().intValue > 1 });
     }];
 
-    std::sort(underlines.begin(), underlines.end(), [](auto& a, auto& b) {
+    std::ranges::sort(underlines, [](auto& a, auto& b) {
         if (a.startOffset < b.startOffset)
             return true;
         if (a.startOffset > b.startOffset)

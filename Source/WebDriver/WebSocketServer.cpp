@@ -32,6 +32,7 @@
 #include "WebDriverService.h"
 #include <algorithm>
 #include <optional>
+#include <ranges>
 #include <wtf/JSONValues.h>
 #include <wtf/UUID.h>
 #include <wtf/text/MakeString.h>
@@ -56,12 +57,12 @@ void WebSocketServer::addConnection(WebSocketMessageHandler::Connection&& connec
 
 bool WebSocketServer::isStaticConnection(const WebSocketMessageHandler::Connection& connection)
 {
-    return std::count(m_staticConnections.begin(), m_staticConnections.end(), connection);
+    return std::ranges::count(m_staticConnections, connection);
 }
 
 void WebSocketServer::removeStaticConnection(const WebSocketMessageHandler::Connection& connection)
 {
-    m_staticConnections.erase(std::find(m_staticConnections.begin(), m_staticConnections.end(), connection));
+    m_staticConnections.erase(std::ranges::find(m_staticConnections, connection));
 }
 
 void WebSocketServer::removeConnection(const WebSocketMessageHandler::Connection& connection)
@@ -143,7 +144,7 @@ String WebSocketServer::getWebSocketURL(const RefPtr<WebSocketListener> listener
 void WebSocketServer::removeResourceForSession(const String& sessionId)
 {
     auto resourceName = getResourceName(sessionId);
-    m_listener->resources.erase(std::remove(m_listener->resources.begin(), m_listener->resources.end(), resourceName), m_listener->resources.end());
+    std::erase(m_listener->resources, resourceName);
 }
 
 WebSocketMessageHandler::Message WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode errorCode, std::optional<Connection> connection, std::optional<String> errorMessage, std::optional<int> commandId)

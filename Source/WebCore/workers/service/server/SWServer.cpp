@@ -48,6 +48,7 @@
 #include "ServiceWorkerJobData.h"
 #include "Site.h"
 #include "WorkerFetchResult.h"
+#include <ranges>
 #include <wtf/CallbackAggregator.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/EnumTraits.h>
@@ -282,7 +283,7 @@ Vector<ServiceWorkerRegistrationData> SWServer::getRegistrations(const SecurityO
         }
     }
     // The specification mandates that registrations are returned in the insertion order.
-    std::sort(matchingRegistrations.begin(), matchingRegistrations.end(), [](auto& a, auto& b) {
+    std::ranges::sort(matchingRegistrations, [](auto& a, auto& b) {
         return a->creationTime() < b->creationTime();
     });
     return matchingRegistrations.map([](auto& registration) {

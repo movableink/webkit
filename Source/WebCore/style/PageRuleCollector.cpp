@@ -33,6 +33,7 @@
 #include "StyleProperties.h"
 #include "StyleRule.h"
 #include "UserAgentStyle.h"
+#include <ranges>
 
 namespace WebCore {
 namespace Style {
@@ -83,7 +84,7 @@ void PageRuleCollector::matchPageRules(RuleSet* rules, bool isLeftPage, bool isF
     if (matchedPageRules.isEmpty())
         return;
 
-    std::stable_sort(matchedPageRules.begin(), matchedPageRules.end(), comparePageRules);
+    std::ranges::stable_sort(matchedPageRules, comparePageRules);
 
     m_result->authorDeclarations.appendContainerWithMapping(matchedPageRules, [](auto& pageRule) {
         return MatchedProperties { pageRule->properties() };

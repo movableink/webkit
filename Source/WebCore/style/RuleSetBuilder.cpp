@@ -45,6 +45,7 @@
 #include "StyleRuleImport.h"
 #include "StyleScope.h"
 #include "StyleSheetContents.h"
+#include <ranges>
 #include <wtf/CryptographicallyRandomNumber.h>
 
 namespace WebCore {
@@ -448,7 +449,7 @@ void RuleSetBuilder::updateCascadeLayerPriorities()
         return i + 1;
     });
 
-    std::sort(layersInPriorityOrder.begin(), layersInPriorityOrder.end(), compare);
+    std::ranges::sort(layersInPriorityOrder, compare);
 
     // Priorities matter only relative to each other, so assign them enforcing these constraints:
     // - Layers must get a priority greater than RuleSet::cascadeLayerPriorityForPresentationalHints.
@@ -478,7 +479,7 @@ void RuleSetBuilder::addMutatingRulesToResolver()
     rulesToAdd.appendVector(WTFMove(m_collectedResolverMutatingRules));
 
     if (!m_cascadeLayerIdentifierMap.isEmpty())
-        std::stable_sort(rulesToAdd.begin(), rulesToAdd.end(), compareLayers);
+        std::ranges::stable_sort(rulesToAdd, compareLayers);
 
     for (auto& collectedRule : rulesToAdd) {
         if (collectedRule.layerIdentifier)

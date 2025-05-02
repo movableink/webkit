@@ -34,6 +34,7 @@
 #import "MetalSPI.h"
 #import "Sampler.h"
 #import "TextureView.h"
+#import <ranges>
 #import <wtf/EnumeratedArray.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/spi/cocoa/IOSurfaceSPI.h>
@@ -1233,7 +1234,7 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
     argumentBuffer[ShaderStage::Fragment].label = bindGroupLayout->fragmentArgumentEncoder().label;
     argumentBuffer[ShaderStage::Compute].label = bindGroupLayout->computeArgumentEncoder().label;
 
-    std::sort(dynamicBuffers.begin(), dynamicBuffers.end(), [](const BindGroup::BufferAndType& a, const BindGroup::BufferAndType& b) {
+    std::ranges::sort(dynamicBuffers, [](auto& a, auto& b) {
         return a.bindingIndex < b.bindingIndex;
     });
 

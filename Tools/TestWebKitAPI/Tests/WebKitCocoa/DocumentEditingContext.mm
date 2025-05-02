@@ -36,6 +36,7 @@
 #import <WebKit/WKWebViewPrivateForTesting.h>
 #import <WebKit/_WKTextInputContext.h>
 #import <pal/spi/ios/BrowserEngineKitSPI.h>
+#import <ranges>
 #import <wtf/RetainPtr.h>
 #import <wtf/Vector.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
@@ -128,7 +129,7 @@ static UIWKDocumentRequest *makeRequest(UIWKDocumentRequestFlags flags, UITextGr
         rangesAndRects.append(std::make_pair(characterRange, layoutRect));
     }];
 
-    std::sort(rangesAndRects.begin(), rangesAndRects.end(), [](auto& a, auto& b) {
+    std::ranges::sort(rangesAndRects, [](auto& a, auto& b) {
         return a.first.location < b.first.location;
     });
 

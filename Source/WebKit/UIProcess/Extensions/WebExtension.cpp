@@ -37,6 +37,7 @@
 #include <WebCore/LocalizedStrings.h>
 #include <WebCore/MIMETypeRegistry.h>
 #include <WebCore/TextResourceDecoder.h>
+#include <ranges>
 #include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/Language.h>
@@ -1972,7 +1973,7 @@ size_t WebExtension::bestIconSize(const JSON::Object& iconsObject, size_t idealP
         return 0;
 
     // Sort the remaining keys and find the next largest size.
-    std::sort(sizeValues.begin(), sizeValues.end());
+    std::ranges::sort(sizeValues);
 
     size_t bestSize = 0;
     for (auto size : sizeValues) {

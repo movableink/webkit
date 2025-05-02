@@ -42,6 +42,7 @@
 #include <WebCore/Range.h>
 #include <WebCore/RenderView.h>
 #include <WebCore/TextIterator.h>
+#include <ranges>
 #include <wtf/HashCountedSet.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -213,7 +214,7 @@ std::optional<std::pair<double, double>> ViewGestureGeometryCollector::computeTe
         return FontSizeAndCount { entry.key, entry.value };
     });
 
-    std::sort(sortedFontSizesAndCounts.begin(), sortedFontSizesAndCounts.end(), [] (auto& first, auto& second) {
+    std::ranges::sort(sortedFontSizesAndCounts, [](auto& first, auto& second) {
         return first.fontSize < second.fontSize;
     });
 

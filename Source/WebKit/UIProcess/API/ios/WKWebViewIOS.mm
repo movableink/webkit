@@ -76,6 +76,7 @@
 #import <WebCore/UserInterfaceLayoutDirection.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <pal/spi/ios/GraphicsServicesSPI.h>
+#import <ranges>
 #import <wtf/BlockPtr.h>
 #import <wtf/Box.h>
 #import <wtf/EnumTraits.h>
@@ -1318,7 +1319,7 @@ static void configureScrollViewWithOverlayRegionsIDs(WKBaseScrollView* scrollVie
     }
 
     auto mergeAndAdd = [&](auto& vec, const auto& sort, const auto& shouldMerge) {
-        std::sort(vec.begin(), vec.end(), sort);
+        std::ranges::sort(vec, sort);
 
         std::optional<WebCore::IntRect> current;
         for (auto rect : vec) {
@@ -1374,7 +1375,7 @@ static void configureScrollViewWithOverlayRegionsIDs(WKBaseScrollView* scrollVie
         [_scrollView _updateOverlayRegionsBehavior:NO];
 
     auto candidates = coordinatorProxy->overlayRegionScrollViewCandidates();
-    std::sort(candidates.begin(), candidates.end(), [] (auto& first, auto& second) {
+    std::ranges::sort(candidates, [](auto& first, auto& second) {
         return first.frame.size.width * first.frame.size.height
             > second.frame.size.width * second.frame.size.height;
     });

@@ -35,6 +35,7 @@
 #import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/WebViewPrivate.h>
 #import <pal/spi/mac/MediaRemoteSPI.h>
+#import <ranges>
 #import <wtf/Function.h>
 #import <wtf/HashSet.h>
 #import <wtf/NeverDestroyed.h>
@@ -420,14 +421,14 @@ TEST_F(MediaSessionTest, MinimalCommands)
         MRMediaRemoteCommandPause,
         MRMediaRemoteCommandSkipForward,
     };
-    std::sort(expectedCommands.begin(), expectedCommands.end());
+    std::ranges::sort(expectedCommands);
 
     Vector actualCommands = makeVector(getSupportedCommands().get(), [] (MRCommandInfo *command) -> std::optional<MRMediaRemoteCommand> {
         if (!command.enabled)
             return std::nullopt;
         return command.command;
     });
-    std::sort(actualCommands.begin(), actualCommands.end());
+    std::ranges::sort(actualCommands);
 
     EXPECT_EQ(expectedCommands, actualCommands);
 }

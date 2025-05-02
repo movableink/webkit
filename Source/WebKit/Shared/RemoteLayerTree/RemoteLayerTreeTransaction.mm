@@ -34,6 +34,7 @@
 #import <WebCore/LengthFunctions.h>
 #import <WebCore/Model.h>
 #import <WebCore/TimingFunction.h>
+#import <ranges>
 #import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/text/CString.h>
@@ -100,7 +101,7 @@ static void dumpChangedLayers(TextStream& ts, const LayerPropertiesMap& changedL
 
     // Dump the layer properties sorted by layer ID.
     auto layerIDs = copyToVector(changedLayerProperties.keys());
-    std::sort(layerIDs.begin(), layerIDs.end(), [](auto& lhs, auto& rhs) {
+    std::ranges::sort(layerIDs, [](auto& lhs, auto& rhs) {
         return lhs.object() < rhs.object();
     });
 
