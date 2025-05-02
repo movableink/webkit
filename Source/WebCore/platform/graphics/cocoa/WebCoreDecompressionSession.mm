@@ -136,7 +136,7 @@ auto WebCoreDecompressionSession::decodeSample(CMSampleBufferRef sample, bool di
         if (flushId == protectedThis->m_flushId)
             protectedThis->decodeSampleInternal(sample.get(), displaying)->chainTo(WTFMove(producer));
         else
-            producer.resolve(nullptr);
+            producer.reject(noErr);
     });
     return promise;
 }
@@ -146,11 +146,9 @@ Ref<WebCoreDecompressionSession::DecodingPromise> WebCoreDecompressionSession::d
     assertIsCurrent(m_decompressionQueue.get());
 
     m_lastDecodingError = noErr;
-    m_lastDecodedSample = nullptr;
-
-    VTDecodeInfoFlags flags { kVTDecodeFrame_EnableTemporalProcessing };
-    if (!displaying)
-        flags |= kVTDecodeFrame_DoNotOutputFrame;
+    size_t numberOfSamples = PAL::CMSampleBufferGetNumSamples(sample);
+    m_lastDecodedSamples = { };
+    m_lastDecodedSamples.reserveInitialCapacity(numberOfSamples);
 
     auto result = ensureDecompressionSessionForSample(sample);
     if (!result)
@@ -225,10 +223,12 @@ Ref<WebCoreDecompressionSession::DecodingPromise> WebCoreDecompressionSession::d
                     return;
                 }
                 assertIsCurrent(protectedThis->m_decompressionQueue.get());
-                if (!result)
+                if (protectedThis->m_lastDecodingError)
+                    producer.reject(protectedThis->m_lastDecodingError);
+                else if (!result)
                     producer.reject(kVTVideoDecoderBadDataErr);
                 else
-                    producer.resolve(std::exchange(protectedThis->m_lastDecodedSample, { }));
+                    producer.resolve(std::exchange(protectedThis->m_lastDecodedSamples, { }));
                 if (!protectedThis->m_pendingDecodeData)
                     return;
                 protectedThis->m_pendingDecodeData.reset();
@@ -245,24 +245,49 @@ Ref<WebCoreDecompressionSession::DecodingPromise> WebCoreDecompressionSession::d
 
     if (!decompressionSession)
         return DecodingPromise::createAndReject(kVTVideoDecoderNotAvailableNowErr);
-    ASSERT(!m_lastDecodedSample);
+
     DecodingPromise::Producer producer;
     auto promise = producer.promise();
-    auto handler = makeBlockPtr([weakThis = ThreadSafeWeakPtr { *this }, displaying, producer = WTFMove(producer), numberOfTimesCalled = 0](OSStatus status, VTDecodeInfoFlags infoFlags, CVImageBufferRef imageBuffer, CMTime presentationTimeStamp, CMTime presentationDuration) mutable {
-        if (++numberOfTimesCalled > 1)
+
+    auto handler = makeBlockPtr([weakThis = ThreadSafeWeakPtr { *this }, displaying, producer = WTFMove(producer), settled = false, numberOfTimesCalled = 0u, numberOfSamples](OSStatus status, VTDecodeInfoFlags infoFlags, CVImageBufferRef imageBuffer, CMTime presentationTimeStamp, CMTime presentationDuration) mutable {
+        if (settled)
             return;
         if (RefPtr protectedThis = weakThis.get()) {
-            protectedThis->m_decompressionQueue->dispatch([protectedThis, producer = WTFMove(producer), displaying, status, infoFlags, imageBuffer = RetainPtr { imageBuffer }, presentationTimeStamp, presentationDuration]() {
-                assertIsCurrent(protectedThis->m_decompressionQueue.get());
-                protectedThis->handleDecompressionOutput(displaying, status, infoFlags, imageBuffer.get(), presentationTimeStamp, presentationDuration);
-                if (protectedThis->m_lastDecodingError != noErr)
-                    producer.reject(protectedThis->m_lastDecodingError);
-                else
-                    producer.resolve(std::exchange(protectedThis->m_lastDecodedSample, { }));
-            });
-        } else
+            if (++numberOfTimesCalled == numberOfSamples || status != noErr) {
+                settled = true;
+                protectedThis->m_decompressionQueue->dispatch([protectedThis, producer = WTFMove(producer), displaying, status, infoFlags, imageBuffer = RetainPtr { imageBuffer }, presentationTimeStamp, presentationDuration]() {
+                    assertIsCurrent(protectedThis->m_decompressionQueue.get());
+                    if (protectedThis->m_lastDecodingError) {
+                        producer.reject(protectedThis->m_lastDecodingError);
+                        return;
+                    }
+                    auto result = protectedThis->handleDecompressionOutput(displaying, status, infoFlags, imageBuffer.get(), presentationTimeStamp, presentationDuration);
+                    if (!result)
+                        producer.reject(result.error());
+                    else {
+                        protectedThis->m_lastDecodedSamples.append(WTFMove(*result));
+                        producer.resolve(std::exchange(protectedThis->m_lastDecodedSamples, { }));
+                    }
+                });
+            } else {
+                protectedThis->m_decompressionQueue->dispatch([protectedThis, displaying, status, infoFlags, imageBuffer = RetainPtr { imageBuffer }, presentationTimeStamp, presentationDuration]() {
+                    assertIsCurrent(protectedThis->m_decompressionQueue.get());
+                    auto result = protectedThis->handleDecompressionOutput(displaying, status, infoFlags, imageBuffer.get(), presentationTimeStamp, presentationDuration);
+                    if (!result)
+                        protectedThis->m_lastDecodingError = result.error();
+                    else
+                        protectedThis->m_lastDecodedSamples.append(WTFMove(*result));
+                });
+            }
+        } else {
+            settled = true;
             producer.reject(0);
+        }
     });
+
+    VTDecodeInfoFlags flags = kVTDecodeFrame_EnableAsynchronousDecompression | kVTDecodeFrame_EnableTemporalProcessing;
+    if (!displaying)
+        flags |= kVTDecodeFrame_DoNotOutputFrame;
 
     if (auto result = VTDecompressionSessionDecodeFrameWithOutputHandler(decompressionSession.get(), sample, flags, nullptr, handler.get()); result != noErr)
         handler(result, 0, nullptr, PAL::kCMTimeInvalid, PAL::kCMTimeInvalid);
@@ -296,24 +321,22 @@ bool WebCoreDecompressionSession::isNonRecoverableError(OSStatus status) const
     return status != noErr && status != kVTVideoDecoderReferenceMissingErr;
 }
 
-void WebCoreDecompressionSession::handleDecompressionOutput(bool displaying, OSStatus status, VTDecodeInfoFlags, CVImageBufferRef rawImageBuffer, CMTime presentationTimeStamp, CMTime presentationDuration)
+Expected<RetainPtr<CMSampleBufferRef>, OSStatus> WebCoreDecompressionSession::handleDecompressionOutput(bool displaying, OSStatus status, VTDecodeInfoFlags, CVImageBufferRef rawImageBuffer, CMTime presentationTimeStamp, CMTime presentationDuration)
 {
     assertIsCurrent(m_decompressionQueue.get());
 
     if (isNonRecoverableError(status)) {
         RELEASE_LOG_ERROR(Media, "Video sample decompression failed with error:%d", int(status));
-        m_lastDecodingError = status;
-        return;
+        return makeUnexpected(status);
     }
 
     if (!displaying || !rawImageBuffer)
-        return;
+        return { };
 
     CMVideoFormatDescriptionRef rawImageBufferDescription = nullptr;
-    if (auto status = PAL::CMVideoFormatDescriptionCreateForImageBuffer(kCFAllocatorDefault, rawImageBuffer, &rawImageBufferDescription); status != noErr) {
-        m_lastDecodingError = status;
-        return;
-    }
+    if (auto status = PAL::CMVideoFormatDescriptionCreateForImageBuffer(kCFAllocatorDefault, rawImageBuffer, &rawImageBufferDescription); status != noErr)
+        return makeUnexpected(status);
+
     RetainPtr<CMVideoFormatDescriptionRef> imageBufferDescription = adoptCF(rawImageBufferDescription);
 
     CMSampleTimingInfo imageBufferTiming {
@@ -323,12 +346,10 @@ void WebCoreDecompressionSession::handleDecompressionOutput(bool displaying, OSS
     };
 
     CMSampleBufferRef rawImageSampleBuffer = nullptr;
-    if (auto status = PAL::CMSampleBufferCreateReadyWithImageBuffer(kCFAllocatorDefault, rawImageBuffer, imageBufferDescription.get(), &imageBufferTiming, &rawImageSampleBuffer); status != noErr) {
-        m_lastDecodingError = status;
-        return;
-    }
+    if (auto status = PAL::CMSampleBufferCreateReadyWithImageBuffer(kCFAllocatorDefault, rawImageBuffer, imageBufferDescription.get(), &imageBufferTiming, &rawImageSampleBuffer); status != noErr)
+        return makeUnexpected(status);
 
-    m_lastDecodedSample = adoptCF(rawImageSampleBuffer);
+    return adoptCF(rawImageSampleBuffer);
 }
 
 void WebCoreDecompressionSession::flush()
@@ -356,13 +377,19 @@ Ref<MediaPromise> WebCoreDecompressionSession::initializeVideoDecoder(FourCharCo
                     return;
 
                 if (!result) {
-                    protectedThis->handleDecompressionOutput(false, -1, 0, nullptr, PAL::kCMTimeInvalid, PAL::kCMTimeInvalid);
+                    protectedThis->m_lastDecodingError = -1;
                     return;
                 }
+                if (protectedThis->m_lastDecodingError)
+                    return;
 
                 auto presentationTime = PAL::toCMTime(MediaTime(result->timestamp, 1000000));
                 auto presentationDuration = PAL::toCMTime(MediaTime(result->duration.value_or(0), 1000000));
-                protectedThis->handleDecompressionOutput(protectedThis->m_pendingDecodeData->displaying, noErr, 0, result->frame->pixelBuffer(), presentationTime, presentationDuration);
+                auto sampleResult = protectedThis->handleDecompressionOutput(protectedThis->m_pendingDecodeData->displaying, noErr, 0, result->frame->pixelBuffer(), presentationTime, presentationDuration);
+                if (!sampleResult)
+                    protectedThis->m_lastDecodingError = sampleResult.error();
+                else
+                    protectedThis->m_lastDecodedSamples.append(WTFMove(*sampleResult));
             }
         });
     })->whenSettled(m_decompressionQueue, [protectedThis = Ref { *this }, this, producer = WTFMove(producer), queue = m_decompressionQueue] (auto&& result) mutable {

@@ -507,7 +507,7 @@ void VideoMediaSampleRenderer::decodeNextSampleIfNeeded()
 
     auto decodePromise = decompressionSession->decodeSample(sample.get(), displaying);
     m_isDecodingSample = true;
-    decodePromise->whenSettled(dispatcher(), [weakThis = ThreadSafeWeakPtr { *this }, this, displaying, flushId = flushId, startTime = MonotonicTime::now()](auto&& result) {
+    decodePromise->whenSettled(dispatcher(), [weakThis = ThreadSafeWeakPtr { *this }, this, displaying, flushId = flushId, startTime = MonotonicTime::now(), numberOfSamples = PAL::CMSampleBufferGetNumSamples(sample.get())](auto&& result) {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -522,12 +522,12 @@ void VideoMediaSampleRenderer::decodeNextSampleIfNeeded()
 
         m_isDecodingSample = false;
 
-        if (flushId != m_flushId) {
+        if (flushId != m_flushId || (!result && result.error() == noErr)) {
             decodeNextSampleIfNeeded();
             return;
         }
 
-        ++m_totalVideoFrames;
+        m_totalVideoFrames += numberOfSamples;
 
         if (!result) {
             if (result.error() == kVTInvalidSessionErr) {
@@ -563,8 +563,12 @@ void VideoMediaSampleRenderer::decodeNextSampleIfNeeded()
             return;
         }
 
-        if (displaying && *result)
-            decodedFrameAvailable(WTFMove(*result), flushId);
+        if (displaying) {
+            for (auto& decodedFrame : *result) {
+                if (decodedFrame)
+                    decodedFrameAvailable(WTFMove(decodedFrame), flushId);
+            }
+        }
 
         decodeNextSampleIfNeeded();
     });
