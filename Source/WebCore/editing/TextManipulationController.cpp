@@ -688,9 +688,10 @@ void TextManipulationController::flushPendingItemsForCallback()
     m_pendingItemsForCallback.clear();
 }
 
-auto TextManipulationController::completeManipulation(const Vector<WebCore::TextManipulationItem>& completionItems) -> Vector<ManipulationFailure>
+TextManipulationController::ManipulationResult TextManipulationController::completeManipulation(const Vector<TextManipulationItem>& completionItems)
 {
     Vector<ManipulationFailure> failures;
+    Vector<uint64_t> succeededIndexes;
     NodeSet containersWithoutVisualOverflowBeforeReplacement;
     for (unsigned i = 0; i < completionItems.size(); ++i) {
         auto& itemToComplete = completionItems[i];
@@ -718,8 +719,12 @@ auto TextManipulationController::completeManipulation(const Vector<WebCore::Text
         std::exchange(itemData, itemDataIterator->value);
         m_items.remove(itemDataIterator);
 
-        if (auto failureOrNullopt = replace(itemData, itemToComplete.tokens, containersWithoutVisualOverflowBeforeReplacement))
+        if (auto failureOrNullopt = replace(itemData, itemToComplete.tokens, containersWithoutVisualOverflowBeforeReplacement)) {
             failures.append(ManipulationFailure { *frameID, itemID, i, *failureOrNullopt });
+            continue;
+        }
+
+        succeededIndexes.append(i);
     }
 
     if (!containersWithoutVisualOverflowBeforeReplacement.isEmpty()) {
@@ -743,7 +748,7 @@ auto TextManipulationController::completeManipulation(const Vector<WebCore::Text
         }
     }
 
-    return failures;
+    return { WTFMove(failures), WTFMove(succeededIndexes) };
 }
 
 struct TokenExchangeData {

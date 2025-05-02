@@ -14914,12 +14914,11 @@ void WebPageProxy::setMockWebAuthenticationConfiguration(MockWebAuthenticationCo
 
 void WebPageProxy::startTextManipulations(const Vector<TextManipulationController::ExclusionRule>& exclusionRules, bool includeSubframes, TextManipulationItemCallback&& callback, CompletionHandler<void()>&& completionHandler)
 {
-    if (!hasRunningProcess()) {
-        completionHandler();
-        return;
-    }
     m_textManipulationItemCallback = WTFMove(callback);
-    sendWithAsyncReply(Messages::WebPage::StartTextManipulations(exclusionRules, includeSubframes), WTFMove(completionHandler));
+    auto callbackAggregator = CallbackAggregator::create(WTFMove(completionHandler));
+    forEachWebContentProcess([&](auto& webProcess, auto pageID) {
+        webProcess.sendWithAsyncReply(Messages::WebPage::StartTextManipulations(exclusionRules, includeSubframes), [callbackAggregator] { }, pageID);
+    });
 }
 
 void WebPageProxy::didFindTextManipulationItems(const Vector<WebCore::TextManipulationItem>& items)
@@ -14929,13 +14928,70 @@ void WebPageProxy::didFindTextManipulationItems(const Vector<WebCore::TextManipu
     m_textManipulationItemCallback(items);
 }
 
-void WebPageProxy::completeTextManipulation(const Vector<TextManipulationItem>& items, Function<void(bool allFailed, const Vector<TextManipulationControllerManipulationFailure>&)>&& completionHandler)
+void WebPageProxy::completeTextManipulation(const Vector<TextManipulationItem>& items, CompletionHandler<void(Vector<TextManipulationControllerManipulationFailure>&&)>&& completionHandler)
 {
-    if (!hasRunningProcess()) {
-        completionHandler(true, { });
-        return;
-    }
-    sendWithAsyncReply(Messages::WebPage::CompleteTextManipulation(items), WTFMove(completionHandler));
+    class TextManipulationCallbackAggregator final : public ThreadSafeRefCounted<TextManipulationCallbackAggregator, WTF::DestructionThread::MainRunLoop> {
+    public:
+        struct ItemInfo {
+            Markable<FrameIdentifier> frameID;
+            Markable<TextManipulationItemIdentifier> identifier;
+        };
+
+        using Callback = CompletionHandler<void(Vector<TextManipulationControllerManipulationFailure>&&)>;
+
+        static Ref<TextManipulationCallbackAggregator> create(Vector<ItemInfo>&& items, Callback&& callback)
+        {
+            return adoptRef(*new TextManipulationCallbackAggregator(WTFMove(items), WTFMove(callback)));
+        }
+
+        ~TextManipulationCallbackAggregator()
+        {
+            ASSERT(RunLoop::isMain());
+            BitVector resultIndexes;
+            for (auto& failure : m_result.failures)
+                resultIndexes.set(failure.index);
+            for (auto& index : m_result.succeededIndexes)
+                resultIndexes.add(index);
+            for (unsigned index = 0; index < m_items.size(); ++index) {
+                if (resultIndexes.get(index))
+                    continue;
+
+                WebCore::TextManipulationControllerManipulationFailure failure { *m_items[index].frameID, m_items[index].identifier, index, WebCore::TextManipulationControllerManipulationFailure::Type::NotAvailable };
+                m_result.failures.append(WTFMove(failure));
+            }
+
+            m_callback(WTFMove(m_result.failures));
+        }
+
+        void addResult(TextManipulationControllerManipulationResult&& result)
+        {
+            m_result.failures.appendVector(WTFMove(result.failures));
+            m_result.succeededIndexes.appendVector(WTFMove(result.succeededIndexes));
+        }
+
+    private:
+        TextManipulationCallbackAggregator(Vector<ItemInfo>&& items, Callback&& callback)
+            : m_items(WTFMove(items))
+            , m_callback(WTFMove(callback))
+        {
+            ASSERT(RunLoop::isMain());
+        }
+
+        Vector<ItemInfo> m_items;
+        Callback m_callback;
+        TextManipulationControllerManipulationResult m_result;
+    };
+
+    Vector<TextManipulationCallbackAggregator::ItemInfo> itemInfos;
+    itemInfos.reserveCapacity(items.size());
+    for (auto& item : items)
+        itemInfos.append({ item.frameID, item.identifier });
+    auto callbackAggregator = TextManipulationCallbackAggregator::create(WTFMove(itemInfos), WTFMove(completionHandler));
+    forEachWebContentProcess([&](auto& webProcess, auto pageID) {
+        webProcess.sendWithAsyncReply(Messages::WebPage::CompleteTextManipulation(items), [callbackAggregator](auto&& result) {
+            callbackAggregator->addResult(WTFMove(result));
+        }, pageID);
+    });
 }
 
 void WebPageProxy::setCORSDisablingPatterns(Vector<String>&& patterns)

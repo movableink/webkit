@@ -8904,7 +8904,7 @@ void WebPage::startTextManipulations(Vector<WebCore::TextManipulationController:
     m_textManipulationExclusionRules = WTFMove(exclusionRules);
     m_textManipulationIncludesSubframes = includeSubframes;
     if (m_textManipulationIncludesSubframes) {
-        for (RefPtr<Frame> frame = m_mainFrame->coreLocalFrame(); frame; frame = frame->tree().traverseNextRendered())
+        for (RefPtr<Frame> frame = m_mainFrame->coreFrame(); frame; frame = frame->tree().traverseNext())
             startTextManipulationForFrame(*frame);
     } else if (RefPtr frame = m_mainFrame->coreLocalFrame())
         startTextManipulationForFrame(*frame);
@@ -8935,33 +8935,33 @@ void WebPage::startTextManipulationForFrame(WebCore::Frame& frame)
 }
 
 void WebPage::completeTextManipulation(const Vector<WebCore::TextManipulationItem>& items,
-    CompletionHandler<void(bool allFailed, const Vector<WebCore::TextManipulationController::ManipulationFailure>&)>&& completionHandler)
+    CompletionHandler<void(const WebCore::TextManipulationController::ManipulationResult&)>&& completionHandler)
 {
     if (!m_page) {
-        completionHandler(true, { });
+        completionHandler({ });
         return;
     }
 
     if (items.isEmpty()) {
-        completionHandler(true, { });
+        completionHandler({ });
         return;
     }
 
     auto currentFrameID = items[0].frameID;
 
-    auto completeManipulationForItems = [&](const Vector<WebCore::TextManipulationItem>& items) -> std::optional<Vector<TextManipulationControllerManipulationFailure>> {
+    auto completeManipulationForItems = [&](const Vector<WebCore::TextManipulationItem>& items) -> WebCore::TextManipulationController::ManipulationResult {
         ASSERT(!items.isEmpty());
         RefPtr frame = WebProcess::singleton().webFrame(currentFrameID);
         if (!frame)
-            return std::nullopt;
+            return { };
 
         RefPtr coreFrame = frame->coreLocalFrame();
         if (!coreFrame)
-            return std::nullopt;
+            return { };
 
-        auto* controller = coreFrame->document()->textManipulationControllerIfExists();
+        CheckedPtr controller = coreFrame->document()->textManipulationControllerIfExists();
         if (!controller)
-            return std::nullopt;
+            return { };
 
         return controller->completeManipulation(items);
     };
@@ -8969,32 +8969,19 @@ void WebPage::completeTextManipulation(const Vector<WebCore::TextManipulationIte
     bool containsItemsForMultipleFrames = WTF::anyOf(items, [&](auto& item) {
         return currentFrameID != item.frameID;
     });
-    if (!containsItemsForMultipleFrames) {
-        auto failures = completeManipulationForItems(items);
-        if (failures)
-            completionHandler(false, *failures);
-        else
-            completionHandler(true, { });
-        return;
-    }
+    if (!containsItemsForMultipleFrames)
+        return completionHandler(completeManipulationForItems(items));
 
-    Vector<WebCore::TextManipulationController::ManipulationFailure> failuresForAllItems;
+    WebCore::TextManipulationController::ManipulationResult resultForAllItems;
 
     auto completeManipulationForCurrentFrame = [&](uint64_t startIndexForCurrentFrame, Vector<WebCore::TextManipulationItem> itemsForCurrentFrame) {
-        auto failures = completeManipulationForItems(std::exchange(itemsForCurrentFrame, { }));
-        if (!failures) {
-            uint64_t index = startIndexForCurrentFrame;
-            for (auto& item : itemsForCurrentFrame) {
-                failuresForAllItems.append(TextManipulationControllerManipulationFailure {
-                    *item.frameID, item.identifier, index, TextManipulationControllerManipulationFailure::Type::NotAvailable });
-                ++index;
-            }
-            return;
-        }
-        for (auto& failure : *failures) {
-            failuresForAllItems.append(WTFMove(failure));
-            failuresForAllItems.last().index += startIndexForCurrentFrame;
-        }
+        auto result = completeManipulationForItems(std::exchange(itemsForCurrentFrame, { }));
+        for (auto& failure : result.failures)
+            failure.index += startIndexForCurrentFrame;
+        for (auto& index : result.succeededIndexes)
+            index += startIndexForCurrentFrame;
+        resultForAllItems.failures.appendVector(WTFMove(result.failures));
+        resultForAllItems.succeededIndexes.appendVector(WTFMove(result.succeededIndexes));
     };
 
     uint64_t indexForCurrentItem = 0;
@@ -9012,7 +8999,7 @@ void WebPage::completeTextManipulation(const Vector<WebCore::TextManipulationIte
     RELEASE_ASSERT(indexForCurrentItem >= itemCount);
     completeManipulationForCurrentFrame(indexForCurrentItem - itemCount, items.subspan(indexForCurrentItem - itemCount, itemCount));
 
-    completionHandler(false, WTFMove(failuresForAllItems));
+    completionHandler(resultForAllItems);
 }
 
 PAL::SessionID WebPage::sessionID() const

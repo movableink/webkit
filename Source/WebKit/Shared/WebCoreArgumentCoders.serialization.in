@@ -4633,6 +4633,12 @@ header: <WebCore/TextManipulationController.h>
     WebCore::TextManipulationControllerManipulationFailure::Type type;
 };
 
+header: <WebCore/TextManipulationControllerManipulationFailure.h>
+[CustomHeader] struct WebCore::TextManipulationControllerManipulationResult {
+    Vector<WebCore::TextManipulationControllerManipulationFailure> failures;
+    Vector<uint64_t> succeededIndexes;
+};
+
 struct WebCore::BackgroundFetchInformation {
     WebCore::ServiceWorkerRegistrationIdentifier registrationIdentifier;
     String identifier;

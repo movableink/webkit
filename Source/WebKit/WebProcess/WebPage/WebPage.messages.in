@@ -702,7 +702,7 @@ messages -> WebPage WantsAsyncDispatchMessage {
 #endif
 
     StartTextManipulations(Vector<WebCore::TextManipulationControllerExclusionRule> exclusionRules, bool includeSubframes) -> ()
-    CompleteTextManipulation(Vector<WebCore::TextManipulationItem> items) -> (bool allFailed, Vector<WebCore::TextManipulationControllerManipulationFailure> failures)
+    CompleteTextManipulation(Vector<WebCore::TextManipulationItem> items) -> (struct WebCore::TextManipulationControllerManipulationResult result)
 
     SetOverriddenMediaType(String mediaType)
     GetProcessDisplayName() -> (String displayName)

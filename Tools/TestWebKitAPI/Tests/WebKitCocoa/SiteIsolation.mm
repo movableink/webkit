@@ -30,6 +30,7 @@
 #import "PlatformUtilities.h"
 #import "TestCocoa.h"
 #import "TestNavigationDelegate.h"
+#import "TestScriptMessageHandler.h"
 #import "TestUIDelegate.h"
 #import "TestURLSchemeHandler.h"
 #import "TestWKWebView.h"
@@ -50,9 +51,41 @@
 #import <WebKit/_WKFeature.h>
 #import <WebKit/_WKFrameTreeNode.h>
 #import <WebKit/_WKProcessPoolConfiguration.h>
+#import <WebKit/_WKTextManipulationConfiguration.h>
+#import <WebKit/_WKTextManipulationDelegate.h>
+#import <WebKit/_WKTextManipulationItem.h>
+#import <WebKit/_WKTextManipulationToken.h>
 #import <WebKit/_WKWebsiteDataStoreConfiguration.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/text/MakeString.h>
+
+@interface SiteIsolationTextManipulationDelegate : NSObject <_WKTextManipulationDelegate>
+- (void)_webView:(WKWebView *)webView didFindTextManipulationItems:(NSArray<_WKTextManipulationItem *> *)items;
+@property (nonatomic, readonly, copy) NSArray<_WKTextManipulationItem *> *items;
+@end
+
+@implementation SiteIsolationTextManipulationDelegate {
+    RetainPtr<NSMutableArray> _items;
+}
+
+- (instancetype)init
+{
+    if (!(self = [super init]))
+        return nil;
+    _items = adoptNS([[NSMutableArray alloc] init]);
+    return self;
+}
+
+- (void)_webView:(WKWebView *)webView didFindTextManipulationItems:(NSArray<_WKTextManipulationItem *> *)items
+{
+    [_items addObjectsFromArray:items];
+}
+
+- (NSArray<_WKTextManipulationItem *> *)items
+{
+    return _items.get();
+}
+@end
 
 @interface NavigationDelegateAllowingAllTLS : NSObject<WKNavigationDelegate>
 - (void)waitForDidFinishNavigation;
@@ -4367,6 +4400,214 @@ TEST(SiteIsolation, CoordinateTransformation)
         done = true;
     }];
     Util::run(&done);
+}
+
+RetainPtr<_WKTextManipulationToken> createToken(NSString *identifier, NSString *content)
+{
+    RetainPtr<_WKTextManipulationToken> token = adoptNS([[_WKTextManipulationToken alloc] init]);
+    [token setIdentifier: identifier];
+    [token setContent: content];
+    return token;
+}
+
+static RetainPtr<_WKTextManipulationItem> createItem(NSString *itemIdentifier, const Vector<RetainPtr<_WKTextManipulationToken>>& tokens)
+{
+    RetainPtr<NSMutableArray> wkTokens = adoptNS([[NSMutableArray alloc] init]);
+    for (auto& token : tokens)
+        [wkTokens addObject:token.get()];
+
+    return adoptNS([[_WKTextManipulationItem alloc] initWithIdentifier:itemIdentifier tokens:wkTokens.get()]);
+}
+
+TEST(SiteIsolation, CompleteTextManipulation)
+{
+    static constexpr auto mainFrameBytes = R"TESTRESOURCE(
+    <div id='text'>mainframe content</div>
+    <script>
+        function getTextContent() {
+            window.webkit.messageHandlers.testHandler.postMessage(document.getElementById('text').innerHTML);
+        }
+        function getIframeTextContent() {
+            document.getElementById('iframe').contentWindow.postMessage('print', '*');
+        }
+        function postResult(event) {
+            window.webkit.messageHandlers.testHandler.postMessage(event.data);
+        }
+        addEventListener('message', postResult, false);
+    </script>
+    <iframe id='iframe' src='https://apple.com/apple'></iframe>
+    )TESTRESOURCE"_s;
+
+    static constexpr auto iframeBytes = R"TESTRESOURCE(
+    <div id='text'>iframe content</div>
+    <script>
+        addEventListener('message', () => {
+            let textElement = document.getElementById('text');
+            parent.postMessage(textElement.innerHTML, '*');
+        }, false);
+        parent.postMessage('loaded', '*');
+    </script>
+    )TESTRESOURCE"_s;
+
+    HTTPServer server({
+        { "/example"_s, { mainFrameBytes } },
+        { "/apple"_s, { iframeBytes } },
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    bool didLoad = false;
+    bool didReceiveMainFrameContent = false;
+    bool didReceiveIframeContent = false;
+    auto webViewAndDelegates = makeWebViewAndDelegates(server);
+    [webViewAndDelegates.messageHandler addMessage:@"loaded" withHandler:[&]() {
+        didLoad = true;
+    }];
+    [webViewAndDelegates.messageHandler addMessage:@"MAINFRAME CONTENT" withHandler:[&]() {
+        didReceiveMainFrameContent = true;
+    }];
+    [webViewAndDelegates.messageHandler addMessage:@"IFRAME CONTENT" withHandler:[&]() {
+        didReceiveIframeContent = true;
+    }];
+    RetainPtr webView = webViewAndDelegates.webView;
+    RetainPtr textManipulationDelegate = adoptNS([[SiteIsolationTextManipulationDelegate alloc] init]);
+    [webView _setTextManipulationDelegate:textManipulationDelegate.get()];
+    RetainPtr manipulationConfiguration = adoptNS([[_WKTextManipulationConfiguration alloc] init]);
+    manipulationConfiguration.get().includeSubframes = YES;
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    Util::run(&didLoad);
+
+    [webView _startTextManipulationsWithConfiguration:manipulationConfiguration.get() completion:^{ }];
+    while ([textManipulationDelegate items].count < 2)
+        Util::spinRunLoop();
+
+    RetainPtr items = [textManipulationDelegate items];
+    auto sortFunction = ^(_WKTextManipulationItem *item1, _WKTextManipulationItem *item2) {
+        auto value1 = [NSNumber numberWithBool:item1.isSubframe];
+        auto value2 = [NSNumber numberWithBool:item2.isSubframe];
+        return [value1 compare:value2];
+    };
+    RetainPtr sortedItems = [items.get() sortedArrayUsingComparator:sortFunction];
+    EXPECT_EQ(items.get().count, 2UL);
+    auto firstItem = [sortedItems objectAtIndex:0];
+    auto secondItem = [sortedItems objectAtIndex:1];
+    EXPECT_EQ(firstItem.isSubframe, NO);
+    EXPECT_EQ(firstItem.isCrossSiteSubframe, NO);
+    EXPECT_EQ(firstItem.tokens.count, 1UL);
+    EXPECT_STREQ("mainframe content", firstItem.tokens[0].content.UTF8String);
+    EXPECT_EQ(secondItem.isSubframe, YES);
+    EXPECT_EQ(secondItem.isCrossSiteSubframe, YES);
+    EXPECT_EQ(secondItem.tokens.count, 1UL);
+    EXPECT_STREQ("iframe content", secondItem.tokens[0].content.UTF8String);
+
+    __block bool done = false;
+    [webView _completeTextManipulationForItems:@[
+        (_WKTextManipulationItem *)createItem(firstItem.identifier, { createToken(firstItem.tokens[0].identifier, @"MAINFRAME CONTENT") }),
+        (_WKTextManipulationItem *)createItem(secondItem.identifier, { createToken(secondItem.tokens[0].identifier, @"IFRAME CONTENT") })
+    ] completion:^(NSArray<NSError *> *errors) {
+        EXPECT_EQ(errors, nil);
+        done = true;
+    }];
+    Util::run(&done);
+
+    [webView evaluateJavaScript:@"getTextContent()" completionHandler:nil];
+    Util::run(&didReceiveMainFrameContent);
+
+    [webView evaluateJavaScript:@"getIframeTextContent()" completionHandler:nil];
+    Util::run(&didReceiveIframeContent);
+}
+
+TEST(SiteIsolation, CompleteTextManipulationFailsInSomeFrame)
+{
+    static constexpr auto mainFrameBytes = R"TESTRESOURCE(
+    <div>mainframe content</div>
+    <script>
+        function removeIframe() {
+            let element = document.getElementById('iframe');
+            element.parentNode.removeChild(element);
+        }
+        let messageCount = 0;
+        addEventListener('message', () => {
+            if (++messageCount == 2)
+                window.webkit.messageHandlers.testHandler.postMessage('loaded');
+        }, false);
+    </script>
+    <iframe id='iframe' src='https://apple.com/iframe'></iframe>
+    <iframe src='https://webkit.org/iframe'></iframe>
+    )TESTRESOURCE"_s;
+
+    static constexpr auto iframeBytes = R"TESTRESOURCE(
+    <div>iframe content</div>
+    <script>
+        parent.postMessage('loaded', '*');
+    </script>
+    )TESTRESOURCE"_s;
+
+    HTTPServer server({
+        { "/mainframe"_s, { mainFrameBytes } },
+        { "/iframe"_s, { iframeBytes } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    bool receivedMessage = false;
+    auto webViewAndDelegates = makeWebViewAndDelegates(server);
+    [webViewAndDelegates.messageHandler addMessage:@"loaded" withHandler:[&]() {
+        receivedMessage = true;
+    }];
+    RetainPtr webView = webViewAndDelegates.webView;
+    RetainPtr textManipulationDelegate = adoptNS([[SiteIsolationTextManipulationDelegate alloc] init]);
+    [webView _setTextManipulationDelegate:textManipulationDelegate.get()];
+    RetainPtr manipulationConfiguration = adoptNS([[_WKTextManipulationConfiguration alloc] init]);
+    manipulationConfiguration.get().includeSubframes = YES;
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    Util::run(&receivedMessage);
+
+    [webView _startTextManipulationsWithConfiguration:manipulationConfiguration.get() completion:^{ }];
+    while ([textManipulationDelegate items].count < 3)
+        Util::spinRunLoop();
+
+    RetainPtr items = [textManipulationDelegate items];
+    auto sortFunction = ^(_WKTextManipulationItem *item1, _WKTextManipulationItem *item2) {
+        auto value1 = [NSNumber numberWithBool:item1.isSubframe];
+        auto value2 = [NSNumber numberWithBool:item2.isSubframe];
+        return [value1 compare:value2];
+    };
+
+    RetainPtr sortedItems = [items.get() sortedArrayUsingComparator:sortFunction];
+    EXPECT_EQ(items.get().count, 3UL);
+    auto item1 = [sortedItems objectAtIndex:0];
+    auto item2 = [sortedItems objectAtIndex:1];
+    auto item3 = [sortedItems objectAtIndex:2];
+    EXPECT_EQ(item1.isSubframe, NO);
+    EXPECT_EQ(item1.isCrossSiteSubframe, NO);
+    EXPECT_EQ(item1.tokens.count, 1UL);
+    EXPECT_STREQ("mainframe content", item1.tokens[0].content.UTF8String);
+    EXPECT_EQ(item2.isSubframe, YES);
+    EXPECT_EQ(item2.isCrossSiteSubframe, YES);
+    EXPECT_EQ(item2.tokens.count, 1UL);
+    EXPECT_STREQ("iframe content", item2.tokens[0].content.UTF8String);
+    EXPECT_EQ(item3.isSubframe, YES);
+    EXPECT_EQ(item3.isCrossSiteSubframe, YES);
+    EXPECT_EQ(item3.tokens.count, 1UL);
+    EXPECT_STREQ("iframe content", item3.tokens[0].content.UTF8String);
+
+    __block bool done = false;
+    [webView evaluateJavaScript:@"removeIframe()" completionHandler:^(id, NSError *) {
+        done = true;
+    }];
+    Util::run(&done);
+
+    __block RetainPtr newItem1 = createItem(item1.identifier, { createToken(item1.tokens[0].identifier, @"MAINFRAME CONTENT") });
+    __block RetainPtr newItem2 = createItem(item2.identifier, { createToken(item2.tokens[0].identifier, @"IFRAME CONTENT") });
+    __block RetainPtr newItem3 = createItem(item3.identifier, { createToken(item3.tokens[0].identifier, @"IFRAME CONTENT") });
+    [webView _completeTextManipulationForItems:@[ newItem1.get(), newItem2.get(), newItem3.get()] completion:^(NSArray<NSError *> *errors) {
+        EXPECT_NOT_NULL(errors);
+        EXPECT_EQ(errors.count, 1UL);
+        EXPECT_EQ(errors.firstObject.domain, _WKTextManipulationItemErrorDomain);
+        EXPECT_EQ(errors.firstObject.code, _WKTextManipulationItemErrorContentChanged);
+        EXPECT_EQ(errors.firstObject.userInfo[_WKTextManipulationItemErrorItemKey], newItem2.get());
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
 }
 
 // FIXME: Re-enable this once the extra resize events are gone.

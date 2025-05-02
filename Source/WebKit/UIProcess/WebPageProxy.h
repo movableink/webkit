@@ -315,6 +315,7 @@ struct TextCheckingResult;
 struct TextIndicatorData;
 struct TextManipulationControllerExclusionRule;
 struct TextManipulationControllerManipulationFailure;
+struct TextManipulationControllerManipulationResult;
 struct TextManipulationItem;
 struct TextRecognitionResult;
 struct TranslationContextMenuInfo;
@@ -2228,7 +2229,7 @@ public:
     using TextManipulationItemCallback = Function<void(const Vector<WebCore::TextManipulationItem>&)>;
     void startTextManipulations(const Vector<WebCore::TextManipulationControllerExclusionRule>&, bool includeSubframes, TextManipulationItemCallback&&, WTF::CompletionHandler<void()>&&);
     void didFindTextManipulationItems(const Vector<WebCore::TextManipulationItem>&);
-    void completeTextManipulation(const Vector<WebCore::TextManipulationItem>&, Function<void(bool allFailed, const Vector<WebCore::TextManipulationControllerManipulationFailure>&)>&&);
+    void completeTextManipulation(const Vector<WebCore::TextManipulationItem>&, CompletionHandler<void(Vector<WebCore::TextManipulationControllerManipulationFailure>&&)>&&);
 
     const String& overriddenMediaType() const { return m_overriddenMediaType; }
     void setOverriddenMediaType(const String&);
