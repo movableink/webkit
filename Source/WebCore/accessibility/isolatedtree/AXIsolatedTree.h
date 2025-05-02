@@ -176,7 +176,6 @@ enum class AXProperty : uint16_t {
     IsRadioInput,
     IsInputImage,
     IsKeyboardFocusable,
-    IsListBox,
     IsMathElement,
     IsMathFraction,
     IsMathFenced,

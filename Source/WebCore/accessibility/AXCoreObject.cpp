@@ -32,6 +32,7 @@
 #include "LocalFrameView.h"
 #include "RenderObject.h"
 #include "TextDecorationPainter.h"
+#include <wtf/Deque.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
@@ -207,6 +208,37 @@ bool AXCoreObject::isTextControl() const
     default:
         return false;
     }
+}
+
+bool AXCoreObject::isValidListBox() const
+{
+    if (roleValue() != AccessibilityRole::ListBox)
+        return false;
+
+    Deque<Ref<AXCoreObject>, /* inlineCapacity */ 100> queue;
+    for (Ref child : const_cast<AXCoreObject*>(this)->childrenIncludingIgnored())
+        queue.append(WTFMove(child));
+
+    unsigned iterations = 0;
+    while (!queue.isEmpty()) {
+        Ref current = queue.takeFirst();
+
+        // Technically, per ARIA, the only valid children of listboxes are options, or groups containing options.
+        // But be permissive and call this listbox valid if it has at least one option.
+        if (current->isListBoxOption())
+            return true;
+        // Don't iterate forever in case someone added role="listbox" to some high-level element.
+        // If we haven't found an option after checking 200 objects, this probably isn't valid anyways.
+        if (iterations >= 250)
+            return false;
+        ++iterations;
+
+        if (current->isGroup() || current->isIgnored()) {
+            for (Ref child : current->childrenIncludingIgnored())
+                queue.append(WTFMove(child));
+        }
+    }
+    return false;
 }
 
 AXCoreObject::AccessibilityChildrenVector AXCoreObject::tabChildren()

@@ -824,6 +824,9 @@ public:
     bool isCheckbox() const { return roleValue() == AccessibilityRole::Checkbox; }
     bool isRadioButton() const { return roleValue() == AccessibilityRole::RadioButton; }
     bool isListBox() const { return roleValue() == AccessibilityRole::ListBox; }
+    // The children of listboxes must be of specific roles. Returns true if at least one of those is present.
+    bool isValidListBox() const;
+    bool isInvalidListBox() const { return isListBox() && !isValidListBox(); }
     bool isListBoxOption() const { return roleValue() == AccessibilityRole::ListBoxOption; }
     virtual bool isAttachment() const = 0;
     bool isMenuRelated() const;

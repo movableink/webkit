@@ -894,9 +894,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::IsKeyboardFocusable:
         stream << "IsKeyboardFocusable";
         break;
-    case AXProperty::IsListBox:
-        stream << "IsListBox";
-        break;
     case AXProperty::IsMathElement:
         stream << "IsMathElement";
         break;
