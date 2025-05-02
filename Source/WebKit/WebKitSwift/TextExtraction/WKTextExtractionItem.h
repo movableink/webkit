@@ -28,6 +28,8 @@
 #import <CoreGraphics/CoreGraphics.h>
 #import <Foundation/Foundation.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 typedef NS_ENUM(NSInteger, WKTextExtractionContainer) {
     WKTextExtractionContainerRoot,
     WKTextExtractionContainerViewportConstrained,
@@ -65,11 +67,11 @@ typedef NS_ENUM(NSInteger, WKTextExtractionContainer) {
 @end
 
 @interface WKTextExtractionTextItem : WKTextExtractionItem
-- (instancetype)initWithContent:(NSString *)content selectedRange:(NSRange)selectedRange links:(NSArray<WKTextExtractionLink *> *)links editable:(WKTextExtractionEditable *)editable rectInWebView:(CGRect)rectInWebView children:(NSArray<WKTextExtractionItem *> *)children;
+- (instancetype)initWithContent:(NSString *)content selectedRange:(NSRange)selectedRange links:(NSArray<WKTextExtractionLink *> *)links editable:(WKTextExtractionEditable * _Nullable)editable rectInWebView:(CGRect)rectInWebView children:(NSArray<WKTextExtractionItem *> *)children;
 @property (nonatomic, readonly) NSString *content;
 @property (nonatomic, readonly) NSRange selectedRange;
 @property (nonatomic, readonly) NSArray<WKTextExtractionLink *> *links;
-@property (nonatomic, readonly) WKTextExtractionEditable *editable;
+@property (nonatomic, readonly, nullable) WKTextExtractionEditable *editable;
 @end
 
 @interface WKTextExtractionScrollableItem : WKTextExtractionItem
@@ -84,6 +86,9 @@ typedef NS_ENUM(NSInteger, WKTextExtractionContainer) {
 @end
 
 @interface WKTextExtractionRequest : NSObject
+- (instancetype)initWithRectInWebView:(CGRect)rectInWebView completionHandler:(void(^)(WKTextExtractionItem * _Nullable))completionHandler;
 - (void)fulfill:(WKTextExtractionItem *)result;
 @property (nonatomic, readonly) CGRect rectInWebView;
 @end
+
+NS_ASSUME_NONNULL_END

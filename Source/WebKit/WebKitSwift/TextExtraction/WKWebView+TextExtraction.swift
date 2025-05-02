@@ -23,7 +23,7 @@
 
 #if HAVE_UIINTELLIGENCESUPPORT_FRAMEWORK
 
-@_spiOnly import WebKit
+import WebKitSwift
 @_spiOnly import UIIntelligenceSupport
 
 #if canImport(UIKit)
@@ -33,7 +33,10 @@
 #endif
 
 private func createEditable(for editable: WKTextExtractionEditable?) -> IntelligenceElement.Text.Editable? {
-    guard let editable else { return .none }
+    guard let editable else {
+        return nil
+    }
+
     return .init(label: editable.label, prompt: editable.placeholder, contentType: nil, isSecure: editable.isSecure, isFocused: editable.isFocused)
 }
 
@@ -94,7 +97,7 @@ extension WKWebView {
     }
 
     @objc private func _requestTextExtraction(in rect: CGRect, completionHandler: @escaping (WKTextExtractionItem?) -> Void) {
-        let context = WKTextExtractionRequest(rectInWebView: rect, completionHandler)
+        let context = WKTextExtractionRequest(rectInWebView: rect, completionHandler: completionHandler)
         self.perform(Selector(("_requestTextExtractionForSwift:")), with: context)
     }
 }

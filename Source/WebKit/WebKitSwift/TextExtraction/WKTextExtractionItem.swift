@@ -22,75 +22,81 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 
 import Foundation
+import WebKitSwift
 
-@available(iOS 17.0, macOS 12.0, *)
-@objc(WKTextExtractionItem) public class WKTextExtractionItem: NSObject {
-    @objc public let rectInWebView: CGRect
-    @objc public let children: [WKTextExtractionItem]
+// FIXME: Adopt `@objc @implementation` when support for macOS Sonoma is no longer needed.
 
-    public init(with rectInWebView: CGRect, children: [WKTextExtractionItem]) {
+@_objcImplementation extension WKTextExtractionItem {
+    let rectInWebView: CGRect
+    let children: [WKTextExtractionItem]
+
+    @objc
+    fileprivate init(with rectInWebView: CGRect, children: [WKTextExtractionItem]) {
         self.rectInWebView = rectInWebView
         self.children = children
     }
 }
 
-@available(iOS 17.0, macOS 12.0, *)
-@objc public enum WKTextExtractionContainer: Int {
-    case root
-    case viewportConstrained
-    case list
-    case listItem
-    case blockQuote
-    case article
-    case section
-    case nav
-    case button
-}
+@_objcImplementation extension WKTextExtractionContainerItem {
+    let container: WKTextExtractionContainer
 
-@available(iOS 17.0, macOS 12.0, *)
-@objc(WKTextExtractionContainerItem) public class WKTextExtractionContainerItem: WKTextExtractionItem {
-    @objc public let container: WKTextExtractionContainer
-
-    @objc public init(container: WKTextExtractionContainer, rectInWebView: CGRect, children: [WKTextExtractionItem]) {
+    init(container: WKTextExtractionContainer, rectInWebView: CGRect, children: [WKTextExtractionItem]) {
         self.container = container
         super.init(with: rectInWebView, children: children)
     }
 }
 
-@available(iOS 17.0, macOS 12.0, *)
-@objc(WKTextExtractionEditable) public class WKTextExtractionEditable: NSObject {
-    @objc public let label: String
-    @objc public let placeholder: String
-    @objc public let isSecure: Bool
-    @objc public let isFocused: Bool
+@_objcImplementation extension WKTextExtractionEditable {
+    let label: String
+    let placeholder: String
 
-    @objc public init(label: String, placeholder: String, isSecure: Bool, isFocused: Bool) {
+    // Properties with a customized getter are incorrectly mapped when using ObjCImplementation.
+    @nonobjc private let backingIsSecure: Bool
+    @objc(secure)
+    var isSecure: Bool {
+        @objc(isSecure)
+        get { backingIsSecure }
+    }
+
+    // Properties with a customized getter are incorrectly mapped when using ObjCImplementation.
+    @nonobjc private let backingIsFocused: Bool
+    @objc(focused)
+    var isFocused: Bool {
+        @objc(isFocused)
+        get { backingIsFocused }
+    }
+
+    init(label: String, placeholder: String, isSecure: Bool, isFocused: Bool) {
         self.label = label
         self.placeholder = placeholder
-        self.isSecure = isSecure
-        self.isFocused = isFocused
+        self.backingIsSecure = isSecure
+        self.backingIsFocused = isFocused
     }
 }
 
-@available(iOS 17.0, macOS 12.0, *)
-@objc(WKTextExtractionLink) public class WKTextExtractionLink: NSObject {
-    @objc public let url: NSURL
-    @objc public let range: NSRange
+@_objcImplementation extension WKTextExtractionLink {
+    // Used to workaround the fact that `@_objcImplementation` does not support stored properties whose size can change
+    // due to Library Evolution. Do not use this property directly.
+    @nonobjc private let _url: NSURL
 
-    @objc(initWithURL:range:) public init(url: NSURL, range: NSRange) {
-        self.url = url
+    var url: URL { _url as URL }
+
+    let range: NSRange
+
+    @objc(initWithURL:range:)
+    init(url: URL, range: NSRange) {
+        self._url = url as NSURL
         self.range = range
     }
 }
 
-@available(iOS 17.0, macOS 12.0, *)
-@objc(WKTextExtractionTextItem) public class WKTextExtractionTextItem: WKTextExtractionItem {
-    @objc public let content: String
-    @objc public let selectedRange: NSRange
-    @objc public let links: [WKTextExtractionLink]
-    @objc public let editable: WKTextExtractionEditable?
+@_objcImplementation extension WKTextExtractionTextItem {
+    let content: String
+    let selectedRange: NSRange
+    let links: [WKTextExtractionLink]
+    let editable: WKTextExtractionEditable?
 
-    @objc public init(content: String, selectedRange: NSRange, links: [WKTextExtractionLink], editable: WKTextExtractionEditable?, rectInWebView: CGRect, children: [WKTextExtractionItem]) {
+    init(content: String, selectedRange: NSRange, links: [WKTextExtractionLink], editable: WKTextExtractionEditable?, rectInWebView: CGRect, children: [WKTextExtractionItem]) {
         self.content = content
         self.selectedRange = selectedRange
         self.links = links
@@ -99,38 +105,37 @@ import Foundation
     }
 }
 
-@available(iOS 17.0, macOS 12.0, *)
-@objc(WKTextExtractionScrollableItem) public class WKTextExtractionScrollableItem: WKTextExtractionItem {
-    @objc public let contentSize: CGSize
+@_objcImplementation extension WKTextExtractionScrollableItem {
+    let contentSize: CGSize
 
-    @objc public init(contentSize: CGSize, rectInWebView: CGRect, children: [WKTextExtractionItem]) {
+    init(contentSize: CGSize, rectInWebView: CGRect, children: [WKTextExtractionItem]) {
         self.contentSize = contentSize
         super.init(with: rectInWebView, children: children)
     }
 }
 
-@available(iOS 17.0, macOS 12.0, *)
-@objc(WKTextExtractionImageItem) public class WKTextExtractionImageItem: WKTextExtractionItem {
-    @objc public let name: String
-    @objc public let altText: String
+@_objcImplementation extension WKTextExtractionImageItem {
+    let name: String
+    let altText: String
 
-    @objc public init(name: String, altText: String, rectInWebView: CGRect, children: [WKTextExtractionItem]) {
+    init(name: String, altText: String, rectInWebView: CGRect, children: [WKTextExtractionItem]) {
         self.name = name
         self.altText = altText
         super.init(with: rectInWebView, children: children)
     }
 }
 
-@objc(WKTextExtractionRequest) class WKTextExtractionRequest: NSObject {
-    @objc public let rectInWebView: CGRect
+@_objcImplementation extension WKTextExtractionRequest {
+    let rectInWebView: CGRect
+    @objc
     private var completionHandler: ((WKTextExtractionItem?) -> Void)?
 
-    @objc public init(rectInWebView: CGRect, _ completionHandler: @escaping (WKTextExtractionItem?) -> Void) {
+    init(rectInWebView: CGRect, completionHandler: @escaping (WKTextExtractionItem?) -> Void) {
         self.rectInWebView = rectInWebView
         self.completionHandler = completionHandler
     }
 
-    @objc(fulfill:) public func fulfill(item: WKTextExtractionItem) {
+    func fulfill(_ item: WKTextExtractionItem) {
         guard let completionHandler = self.completionHandler else { return }
         completionHandler(item)
         self.completionHandler = nil
