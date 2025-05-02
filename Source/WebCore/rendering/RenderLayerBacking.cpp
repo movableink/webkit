@@ -2136,6 +2136,9 @@ void RenderLayerBacking::updateEventRegion()
             eventRegion.ensureEditableRegion();
 #endif
         auto eventRegionContext = eventRegion.makeContext();
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+        eventRegionContext.reserveCapacityForInteractionRegions(graphicsLayer.eventRegion().interactionRegions().size());
+#endif
         auto layerOffset = graphicsLayer.scrollOffset() - graphicsLayer.offsetFromRenderer();
         auto layerBounds = FloatRoundedRect(FloatRect(-layerOffset, graphicsLayer.size()));
 

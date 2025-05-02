@@ -140,30 +140,28 @@ void EventRegionContext::uniteInteractionRegions(RenderObject& renderer, const F
 
     if (auto interactionRegion = interactionRegionForRenderedRegion(renderer, layerBounds, clipOffset, transform)) {
         auto rectForTracking = enclosingIntRect(interactionRegion->rectInLayerCoordinates);
-        
+
         if (interactionRegion->type == InteractionRegion::Type::Occlusion) {
-            if (m_occlusionRects.contains(rectForTracking))
+            auto result = m_occlusionRects.add(rectForTracking);
+            if (!result.isNewEntry)
                 return;
-            m_occlusionRects.add(rectForTracking);
-            
+
             m_interactionRegions.append(*interactionRegion);
             return;
         }
 
         if (interactionRegion->type == InteractionRegion::Type::Guard) {
-            if (m_guardRects.contains(rectForTracking))
+            auto result = m_guardRects.add(rectForTracking, Inflated::No);
+            if (!result.isNewEntry)
                 return;
-            m_guardRects.set(rectForTracking, Inflated::No);
 
             m_interactionRegions.append(*interactionRegion);
             return;
         }
-        
-        
-        if (m_interactionRectsAndContentHints.contains(rectForTracking)) {
-            m_interactionRectsAndContentHints.set(rectForTracking, interactionRegion->contentHint);
+
+        auto result = m_interactionRectsAndContentHints.set(rectForTracking, interactionRegion->contentHint);
+        if (!result.isNewEntry)
             return;
-        }
 
         bool defaultContentHint = interactionRegion->contentHint == InteractionRegion::ContentHint::Default;
         if (defaultContentHint && shouldConsolidateInteractionRegion(renderer, rectForTracking, interactionRegion->elementIdentifier))
@@ -175,8 +173,6 @@ void EventRegionContext::uniteInteractionRegions(RenderObject& renderer, const F
             if (auto* renderElement = dynamicDowncast<RenderElement>(renderer))
                 m_containerRemovalCandidates.add(renderElement->element()->identifier());
         }
-
-        m_interactionRectsAndContentHints.add(rectForTracking, interactionRegion->contentHint);
 
         auto discoveredAddResult = m_discoveredRegionsByElement.add(interactionRegion->elementIdentifier, Vector<InteractionRegion>());
         discoveredAddResult.iterator->value.append(*interactionRegion);
@@ -253,10 +249,8 @@ bool EventRegionContext::shouldConsolidateInteractionRegion(RenderObject& render
         }
 
         // We found a region nested inside a container candidate for removal, flag it for removal.
-        if (m_containerRemovalCandidates.contains(ancestorElementIdentifier)) {
-            m_containerRemovalCandidates.remove(ancestorElementIdentifier);
+        if (m_containerRemovalCandidates.remove(ancestorElementIdentifier))
             m_containersToRemove.add(ancestorElementIdentifier);
-        }
 
         return false;
     }
@@ -389,6 +383,11 @@ void EventRegionContext::copyInteractionRegionsToEventRegion(float minimumCorner
     removeSuperfluousInteractionRegions();
     shrinkWrapInteractionRegions();
     m_eventRegion.appendInteractionRegions(m_interactionRegions);
+}
+
+void EventRegionContext::reserveCapacityForInteractionRegions(size_t previousSize)
+{
+    m_interactionRegions.reserveCapacity(previousSize);
 }
 
 #endif
