@@ -275,7 +275,7 @@ bool decodeString(std::span<const CodeUnit> data, StringBuilder& output)
             output.append(c);
             continue;
         }
-        if (UNLIKELY(data.empty()))
+        if (data.empty()) [[unlikely]]
             return false;
         c = consume(data);
         switch (c) {
@@ -302,13 +302,13 @@ bool decodeString(std::span<const CodeUnit> data, StringBuilder& output)
             c = '\v';
             break;
         case 'x':
-            if (UNLIKELY(data.size() < 2))
+            if (data.size() < 2) [[unlikely]]
                 return false;
             c = toASCIIHexValue(data[0], data[1]);
             skip(data, 2);
             break;
         case 'u':
-            if (UNLIKELY(data.size() < 4))
+            if (data.size() < 4) [[unlikely]]
                 return false;
             c = toASCIIHexValue(data[0], data[1]) << 8 | toASCIIHexValue(data[2], data[3]);
             skip(data, 4);

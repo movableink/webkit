@@ -731,7 +731,7 @@ private:
 
             ASSERT(!promise.isNothing());
 
-            if (UNLIKELY(!m_targetQueue || (promise.m_dispatchMode == PromiseDispatchMode::RunSynchronouslyOnTarget && m_targetQueue->isCurrent()))) {
+            if (!m_targetQueue || (promise.m_dispatchMode == PromiseDispatchMode::RunSynchronouslyOnTarget && m_targetQueue->isCurrent())) [[unlikely]] {
                 if (m_disconnected) {
                     PROMISE_LOG("ThenCallback disconnected from ", promise, " aborting [callback:", (const void*)this, " callSite:", m_logSiteIdentifier, "]");
                     return;

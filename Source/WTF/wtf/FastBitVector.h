@@ -500,7 +500,7 @@ public:
     template<typename OtherWords>
     FastBitVector& operator=(const FastBitVectorImpl<OtherWords>& other)
     {
-        if (UNLIKELY(numBits() != other.numBits()))
+        if (numBits() != other.numBits()) [[unlikely]]
             resize(other.numBits());
         
         for (unsigned i = arrayLength(); i--;)

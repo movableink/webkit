@@ -36,7 +36,7 @@ namespace WTF {
 //
 // ValueOrReference<String> append(const String& string LIFETIME_BOUND, std::optional<String&> suffix)
 // {
-//     if (LIKELY(!suffix))
+//     if (!suffix) [[likely]]
 //         return string; // existing reference -- ValueOrReference<T> avoids a copy
 //     return makeString(string, suffix.value()); // temporary -- ValueOrReference<T> holds T
 // }

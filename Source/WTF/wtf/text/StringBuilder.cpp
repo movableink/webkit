@@ -142,7 +142,7 @@ std::span<UChar> StringBuilder::extendBufferForAppendingWithUpconvert(unsigned r
 {
     if (is8Bit()) {
         allocateBuffer<UChar>(span8(), expandedCapacity(capacity(), requiredLength));
-        if (UNLIKELY(hasOverflowed()))
+        if (hasOverflowed()) [[unlikely]]
             return { };
         return spanConstCast<UChar>(m_buffer->span16().subspan(std::exchange(m_length, requiredLength)));
     }

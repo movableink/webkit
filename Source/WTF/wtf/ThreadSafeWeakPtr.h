@@ -74,7 +74,7 @@ public:
         {
             Locker locker { m_lock };
             ASSERT_WITH_SECURITY_IMPLICATION(m_object);
-            if (LIKELY(--m_strongReferenceCount))
+            if (--m_strongReferenceCount) [[likely]]
                 return;
             object = static_cast<T*>(std::exchange(m_object, nullptr));
             // We need to take a weak ref so `this` survives until the `delete object` below.
@@ -185,14 +185,14 @@ private:
 struct ThreadSafeWeakPtrControlBlockRefDerefTraits {
     static ALWAYS_INLINE ThreadSafeWeakPtrControlBlock* refIfNotNull(ThreadSafeWeakPtrControlBlock* ptr)
     {
-        if (LIKELY(ptr))
+        if (ptr) [[likely]]
             return ptr->weakRef();
         return nullptr;
     }
 
     static ALWAYS_INLINE void derefIfNotNull(ThreadSafeWeakPtrControlBlock* ptr)
     {
-        if (LIKELY(ptr))
+        if (ptr) [[likely]]
             ptr->weakDeref();
     }
 };
@@ -282,7 +282,7 @@ protected:
         // that seems unlikely since this is a one-way street. Once we add a controlBlock we don't go back
         // to strong only.
         uintptr_t bits = m_bits.loadRelaxed();
-        if (LIKELY(!isStrongOnly(bits)))
+        if (!isStrongOnly(bits)) [[likely]]
             return *std::bit_cast<ThreadSafeWeakPtrControlBlock*>(bits);
 
         auto* controlBlock = new ThreadSafeWeakPtrControlBlock(this);

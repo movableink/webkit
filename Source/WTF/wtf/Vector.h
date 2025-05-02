@@ -348,7 +348,7 @@ public:
             newBuffer = static_cast<T*>(Malloc::malloc(sizeToAllocate));
         else {
             newBuffer = static_cast<T*>(Malloc::tryMalloc(sizeToAllocate));
-            if (UNLIKELY(!newBuffer))
+            if (!newBuffer) [[unlikely]]
                 return false;
         }
         m_capacity = sizeToAllocate / sizeof(T);
@@ -846,13 +846,13 @@ public:
 
     T& at(size_t i) LIFETIME_BOUND
     {
-        if (UNLIKELY(i >= size()))
+        if (i >= size()) [[unlikely]]
             OverflowHandler::overflowed();
         return Base::buffer()[i];
     }
     const T& at(size_t i) const LIFETIME_BOUND
     {
-        if (UNLIKELY(i >= size()))
+        if (i >= size()) [[unlikely]]
             OverflowHandler::overflowed();
         return Base::buffer()[i];
     }
@@ -947,7 +947,7 @@ public:
 
     void removeLast()
     {
-        if (UNLIKELY(isEmpty()))
+        if (isEmpty()) [[unlikely]]
             OverflowHandler::overflowed();
         shrink(size() - 1); 
     }
@@ -1262,7 +1262,7 @@ NEVER_INLINE T* Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>:
     if (ptr < begin() || ptr >= end()) {
         bool success = expandCapacity<action>(newMinCapacity);
         if constexpr (action == FailureAction::Report) {
-            if (UNLIKELY(!success))
+            if (!success) [[unlikely]]
                 return nullptr;
         }
         UNUSED_PARAM(success);
@@ -1271,7 +1271,7 @@ NEVER_INLINE T* Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>:
     size_t index = ptr - begin();
     bool success = expandCapacity<action>(newMinCapacity);
     if constexpr (action == FailureAction::Report) {
-        if (UNLIKELY(!success))
+        if (!success) [[unlikely]]
             return nullptr;
     }
     UNUSED_PARAM(success);
@@ -1285,7 +1285,7 @@ inline U* Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::expan
     static_assert(action == FailureAction::Crash || action == FailureAction::Report);
     bool success = expandCapacity<action>(newMinCapacity);
     if constexpr (action == FailureAction::Report) {
-        if (UNLIKELY(!success))
+        if (!success) [[unlikely]]
             return nullptr;
     }
     UNUSED_PARAM(success);
@@ -1332,7 +1332,7 @@ bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::growImpl(s
     if (size > capacity()) {
         bool success = expandCapacity<failureAction>(size);
         if constexpr (failureAction == FailureAction::Report) {
-            if (UNLIKELY(!success))
+            if (!success) [[unlikely]]
                 return false;
         }
     }
@@ -1403,7 +1403,7 @@ bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::reserveCap
 
     bool success = Base::template allocateBuffer<action>(newCapacity);
     if constexpr (action == FailureAction::Report) {
-        if (UNLIKELY(!success)) {
+        if (!success) [[unlikely]] {
             asanSetInitialBufferSizeTo(size());
             return false;
         }
@@ -1492,7 +1492,7 @@ ALWAYS_INLINE bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Mallo
     if (newSize > capacity()) {
         dataPtr = expandCapacity<action>(newSize, dataPtr);
         if constexpr (action == FailureAction::Report) {
-            if (UNLIKELY(!dataPtr))
+            if (!dataPtr) [[unlikely]]
                 return false;
         }
         ASSERT(begin());
@@ -1565,7 +1565,7 @@ bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::appendSlow
     auto ptr = const_cast<std::remove_cvref_t<U>*>(std::addressof(value));
     ptr = expandCapacity<action>(size() + 1, ptr);
     if constexpr (action == FailureAction::Report) {
-        if (UNLIKELY(!ptr))
+        if (!ptr) [[unlikely]]
             return false;
     }
     ASSERT(begin());
@@ -1585,7 +1585,7 @@ bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::constructA
 
     bool success = expandCapacity<action>(size() + 1);
     if constexpr (action == FailureAction::Report) {
-        if (UNLIKELY(!success))
+        if (!success) [[unlikely]]
             return false;
     }
     UNUSED_PARAM(success);
@@ -2120,7 +2120,7 @@ inline Vector<typename CopyOrMoveToVectorResult<Collection>::Type> moveToVector(
 template<typename T, size_t inlineCapacity = 0> static bool insertInUniquedSortedVector(Vector<T, inlineCapacity>& vector, const T& value)
 {
     auto it = std::ranges::lower_bound(vector, value);
-    if (UNLIKELY(it != vector.end() && *it == value))
+    if (it != vector.end() && *it == value) [[unlikely]]
         return false;
     vector.insert(it - vector.begin(), value);
     return true;

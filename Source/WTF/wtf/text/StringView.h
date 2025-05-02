@@ -305,14 +305,14 @@ inline StringView::StringView()
 
 inline String StringViewWithUnderlyingString::toString() const
 {
-    if (LIKELY(view.length() == underlyingString.length()))
+    if (view.length() == underlyingString.length()) [[likely]]
         return underlyingString;
     return view.toString();
 }
 
 inline AtomString StringViewWithUnderlyingString::toAtomString() const
 {
-    if (LIKELY(view.length() == underlyingString.length()))
+    if (view.length() == underlyingString.length()) [[likely]]
         return AtomString { underlyingString };
     return view.toAtomString();
 }

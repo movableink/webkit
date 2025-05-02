@@ -120,7 +120,7 @@ protected:
     {
         while (leftChildOf(location) < m_buffer.size()) {
             size_t higherPriorityChild;
-            if (LIKELY(rightChildOf(location) < m_buffer.size()))
+            if (rightChildOf(location) < m_buffer.size()) [[likely]]
                 higherPriorityChild = isHigherPriority(m_buffer[leftChildOf(location)], m_buffer[rightChildOf(location)]) ? leftChildOf(location) : rightChildOf(location);
             else
                 higherPriorityChild = leftChildOf(location);

@@ -137,7 +137,7 @@ private:
                 "), allocBound (", reinterpret_cast<void*>(m_allocBound)")");
 
             GranuleHeader* head { m_granules.head() };
-            if (UNLIKELY(!head || retain == TopGranulePolicy::DoNotRetain)) {
+            if (!head || retain == TopGranulePolicy::DoNotRetain) [[unlikely]] {
                 if (!head) {
                     ASSERT(!m_allocHead);
                     ASSERT(!m_allocBound);
@@ -176,7 +176,7 @@ private:
         {
             uintptr_t allocation = m_allocHead;
             uintptr_t newHead = headIncrementedBy(bytes);
-            if (LIKELY(newHead < m_allocBound)) {
+            if (newHead < m_allocBound) [[likely]] {
                 m_allocHead = newHead;
                 return reinterpret_cast<void*>(allocation);
             }
@@ -194,7 +194,7 @@ private:
         {
             uintptr_t allocation = headAlignedUpTo(alignment);
             uintptr_t newHead = headIncrementedBy((allocation - m_allocHead) + bytes);
-            if (LIKELY(newHead < m_allocBound)) {
+            if (newHead < m_allocBound) [[likely]] {
                 m_allocHead = newHead;
                 return reinterpret_cast<void*>(allocation);
             }
@@ -237,7 +237,7 @@ private:
             ASSERT(minSize <= minArenaGranuleSize);
             GranuleHeader* granule = reinterpret_cast<GranuleHeader*>(mapGranule<mode>(minArenaGranuleSize));
             if constexpr (mode == AllocationFailureMode::ReturnNull) {
-                if (UNLIKELY(!granule))
+                if (!granule) [[unlikely]]
                     return nullptr;
             }
 
@@ -322,7 +322,7 @@ public:
     {
         ASSERT(m_alive);
         auto retval = m_genericSmallArena.tryAllocate(bytes);
-        if (LIKELY(retval))
+        if (retval) [[likely]]
             registerSuccessfulAllocation(retval, bytes);
         return retval;
     }
@@ -331,7 +331,7 @@ public:
     {
         ASSERT(m_alive);
         auto retval = m_genericSmallArena.tryAlignedAllocate(alignment, bytes);
-        if (LIKELY(retval))
+        if (retval) [[likely]]
             registerSuccessfulAllocation(retval, bytes);
         return retval;
     }
@@ -341,7 +341,7 @@ public:
         WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         ASSERT(m_alive);
         auto retval = m_genericSmallArena.tryAllocate(bytes);
-        if (LIKELY(retval)) {
+        if (retval) [[likely]] {
             std::memset(retval, 0, bytes);
             registerSuccessfulAllocation(retval, bytes);
         }
@@ -439,7 +439,7 @@ public:
     {
         using SelfT = SequesteredArenaAllocator;
         auto ptr = reinterpret_cast<SelfT*>(SequesteredImmortalHeap::instance().getSlot());
-        if (UNLIKELY(!ptr)) {
+        if (!ptr) [[unlikely]] {
             static_assert(sizeof(SequesteredArenaAllocator) <= SequesteredImmortalHeap::slotSize);
             static_assert(!offsetof(SequesteredArenaAllocator, m_decommitQueue));
             ptr = reinterpret_cast<SelfT*>(

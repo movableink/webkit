@@ -620,7 +620,7 @@ static String percentEncodeCharacters(const StringType& input, bool(*shouldEncod
     };
 
     for (size_t i = 0; i < input.length(); ++i) {
-        if (UNLIKELY(shouldEncode(input[i])))
+        if (shouldEncode(input[i])) [[unlikely]]
             return encode(input);
     }
     if constexpr (std::is_same_v<StringType, StringView>)

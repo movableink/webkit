@@ -93,7 +93,7 @@ private:
 
 ALWAYS_INLINE bool FixedBitVector::concurrentTestAndSet(size_t bitIndex, Dependency dependency)
 {
-    if (UNLIKELY(bitIndex >= size()))
+    if (bitIndex >= size()) [[unlikely]]
         return false;
 
     WordType mask = one << (bitIndex % wordSize);
@@ -111,7 +111,7 @@ ALWAYS_INLINE bool FixedBitVector::concurrentTestAndSet(size_t bitIndex, Depende
 
 ALWAYS_INLINE bool FixedBitVector::concurrentTestAndClear(size_t bitIndex, Dependency dependency)
 {
-    if (UNLIKELY(bitIndex >= size()))
+    if (bitIndex >= size()) [[unlikely]]
         return false;
 
     WordType mask = one << (bitIndex % wordSize);
@@ -129,7 +129,7 @@ ALWAYS_INLINE bool FixedBitVector::concurrentTestAndClear(size_t bitIndex, Depen
 
 ALWAYS_INLINE bool FixedBitVector::testAndSet(size_t bitIndex)
 {
-    if (UNLIKELY(bitIndex >= size()))
+    if (bitIndex >= size()) [[unlikely]]
         return false;
 
     WordType mask = one << (bitIndex % wordSize);
@@ -142,7 +142,7 @@ ALWAYS_INLINE bool FixedBitVector::testAndSet(size_t bitIndex)
 
 ALWAYS_INLINE bool FixedBitVector::testAndClear(size_t bitIndex)
 {
-    if (UNLIKELY(bitIndex >= size()))
+    if (bitIndex >= size()) [[unlikely]]
         return false;
 
     WordType mask = one << (bitIndex % wordSize);
@@ -155,7 +155,7 @@ ALWAYS_INLINE bool FixedBitVector::testAndClear(size_t bitIndex)
 
 ALWAYS_INLINE bool FixedBitVector::test(size_t bitIndex)
 {
-    if (UNLIKELY(bitIndex >= size()))
+    if (bitIndex >= size()) [[unlikely]]
         return false;
 
     WordType mask = one << (bitIndex % wordSize);

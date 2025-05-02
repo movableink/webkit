@@ -51,7 +51,7 @@ public:
         : m_graph(graph)
         , m_data(graph.template newMap<BlockData>())
     {
-        if (LIKELY(m_graph.numNodes() <= maxNodesForIterativeDominance)) {
+        if (m_graph.numNodes() <= maxNodesForIterativeDominance) [[likely]] {
             IterativeDominance iterativeDominance(m_graph);
             iterativeDominance.compute();
 

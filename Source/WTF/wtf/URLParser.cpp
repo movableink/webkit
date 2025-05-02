@@ -374,7 +374,7 @@ template<typename CharacterType, URLParser::ReportSyntaxViolation reportSyntaxVi
 ALWAYS_INLINE void URLParser::advance(CodePointIterator<CharacterType>& iterator, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition)
 {
     ++iterator;
-    while (UNLIKELY(!iterator.atEnd() && isTabOrNewline(*iterator))) {
+    while (!iterator.atEnd() && isTabOrNewline(*iterator)) [[unlikely]] {
         if constexpr (reportSyntaxViolation == ReportSyntaxViolation::Yes)
             syntaxViolation(iteratorForSyntaxViolationPosition);
         ++iterator;
@@ -411,13 +411,13 @@ ALWAYS_INLINE bool URLParser::isWindowsDriveLetter(CodePointIterator<CharacterTy
 ALWAYS_INLINE void URLParser::appendToASCIIBuffer(char32_t codePoint)
 {
     ASSERT(isASCII(codePoint));
-    if (UNLIKELY(m_didSeeSyntaxViolation))
+    if (m_didSeeSyntaxViolation) [[unlikely]]
         m_asciiBuffer.append(codePoint);
 }
 
 ALWAYS_INLINE void URLParser::appendToASCIIBuffer(std::span<const LChar> characters)
 {
-    if (UNLIKELY(m_didSeeSyntaxViolation))
+    if (m_didSeeSyntaxViolation) [[unlikely]]
         m_asciiBuffer.append(characters);
 }
 
@@ -502,8 +502,8 @@ ALWAYS_INLINE void URLParser::utf8PercentEncode(const CodePointIterator<Characte
 {
     ASSERT(!iterator.atEnd());
     char32_t codePoint = *iterator;
-    if (LIKELY(isASCII(codePoint))) {
-        if (UNLIKELY(isInCodeSet(codePoint))) {
+    if (isASCII(codePoint)) [[likely]] {
+        if (isInCodeSet(codePoint)) [[unlikely]] {
             syntaxViolation(iterator);
             percentEncodeByte(codePoint);
         } else
@@ -530,8 +530,8 @@ ALWAYS_INLINE void URLParser::utf8QueryEncode(const CodePointIterator<CharacterT
 {
     ASSERT(!iterator.atEnd());
     char32_t codePoint = *iterator;
-    if (LIKELY(isASCII(codePoint))) {
-        if (UNLIKELY(shouldPercentEncodeQueryByte(codePoint, m_urlIsSpecial))) {
+    if (isASCII(codePoint)) [[likely]] {
+        if (shouldPercentEncodeQueryByte(codePoint, m_urlIsSpecial)) [[unlikely]] {
             syntaxViolation(iterator);
             percentEncodeByte(codePoint);
         } else
@@ -573,11 +573,11 @@ void URLParser::encodeNonUTF8Query(const Vector<UChar>& source, const URLTextEnc
     for (; i < length; ++i) {
         ASSERT(!iterator.atEnd());
         uint8_t byte = encoded[i];
-        if (UNLIKELY(byte != *iterator)) {
+        if (byte != *iterator) [[unlikely]] {
             syntaxViolation(iterator);
             break;
         }
-        if (UNLIKELY(shouldPercentEncodeQueryByte(byte, m_urlIsSpecial))) {
+        if (shouldPercentEncodeQueryByte(byte, m_urlIsSpecial)) [[unlikely]] {
             syntaxViolation(iterator);
             break;
         }
@@ -1061,7 +1061,7 @@ bool URLParser::isLocalhost(StringView view)
 
 ALWAYS_INLINE StringView URLParser::parsedDataView(size_t start, size_t length)
 {
-    if (UNLIKELY(m_didSeeSyntaxViolation)) {
+    if (m_didSeeSyntaxViolation) [[unlikely]] {
         ASSERT(start + length <= m_asciiBuffer.size());
         return m_asciiBuffer.subspan(start, length);
     }
@@ -1071,7 +1071,7 @@ ALWAYS_INLINE StringView URLParser::parsedDataView(size_t start, size_t length)
 
 ALWAYS_INLINE UChar URLParser::parsedDataView(size_t position)
 {
-    if (UNLIKELY(m_didSeeSyntaxViolation))
+    if (m_didSeeSyntaxViolation) [[unlikely]]
         return m_asciiBuffer[position];
     return m_inputString[position];
 }
@@ -1079,7 +1079,7 @@ ALWAYS_INLINE UChar URLParser::parsedDataView(size_t position)
 template<typename CharacterType>
 ALWAYS_INLINE size_t URLParser::currentPosition(const CodePointIterator<CharacterType>& iterator)
 {
-    if (UNLIKELY(m_didSeeSyntaxViolation))
+    if (m_didSeeSyntaxViolation) [[unlikely]]
         return m_asciiBuffer.size();
     
     return iterator.codeUnitsSince(reinterpret_cast<const CharacterType*>(m_inputBegin));
@@ -1121,7 +1121,7 @@ URLParser::URLParser(String&& input, const URL& base, const URLTextEncoding* non
     }
 #endif // ASSERT_ENABLED
 
-    if (UNLIKELY(needsNonSpecialDotSlash()))
+    if (needsNonSpecialDotSlash()) [[unlikely]]
         addNonSpecialDotSlash();
 }
 
@@ -1135,10 +1135,10 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
     Vector<UChar> queryBuffer;
 
     auto endIndex = input.size();
-    if (UNLIKELY(nonUTF8QueryEncoding == URLTextEncodingSentinelAllowingC0AtEnd))
+    if (nonUTF8QueryEncoding == URLTextEncodingSentinelAllowingC0AtEnd) [[unlikely]]
         nonUTF8QueryEncoding = nullptr;
     else {
-        while (UNLIKELY(endIndex && isC0ControlOrSpace(input[endIndex - 1]))) {
+        while (endIndex && isC0ControlOrSpace(input[endIndex - 1])) [[unlikely]] {
             syntaxViolation<CharacterType>(input);
             endIndex--;
         }
@@ -1146,7 +1146,7 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
     CodePointIterator<CharacterType> c(input.first(endIndex));
     CodePointIterator<CharacterType> authorityOrHostBegin;
     CodePointIterator<CharacterType> queryBegin;
-    while (UNLIKELY(!c.atEnd() && isC0ControlOrSpace(*c))) {
+    while (!c.atEnd() && isC0ControlOrSpace(*c)) [[unlikely]] {
         syntaxViolation(c);
         ++c;
     }
@@ -1181,7 +1181,7 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
 
     State state = State::SchemeStart;
     while (!c.atEnd()) {
-        if (UNLIKELY(isTabOrNewline(*c))) {
+        if (isTabOrNewline(*c)) [[unlikely]] {
             syntaxViolation(c);
             ++c;
             continue;
@@ -1191,7 +1191,7 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
         case State::SchemeStart:
             LOG_STATE("SchemeStart");
             if (isASCIIAlpha(*c)) {
-                if (UNLIKELY(isASCIIUpper(*c)))
+                if (isASCIIUpper(*c)) [[unlikely]]
                     syntaxViolation(c);
                 appendToASCIIBuffer(toASCIILower(*c));
                 advance(c);
@@ -1208,7 +1208,7 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
         case State::Scheme:
             LOG_STATE("Scheme");
             if (isValidSchemeCharacter(*c)) {
-                if (UNLIKELY(isASCIIUpper(*c)))
+                if (isASCIIUpper(*c)) [[unlikely]]
                     syntaxViolation(c);
                 appendToASCIIBuffer(toASCIILower(*c));
             } else if (*c == ':') {
@@ -1400,13 +1400,13 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
             break;
         case State::SpecialAuthoritySlashes:
             LOG_STATE("SpecialAuthoritySlashes");
-            if (LIKELY(*c == '/' || *c == '\\')) {
-                if (UNLIKELY(*c == '\\'))
+            if (*c == '/' || *c == '\\') [[likely]] {
+                if (*c == '\\') [[unlikely]]
                     syntaxViolation(c);
                 appendToASCIIBuffer('/');
                 advance(c);
-                if (LIKELY(!c.atEnd() && (*c == '/' || *c == '\\'))) {
-                    if (UNLIKELY(*c == '\\'))
+                if (!c.atEnd() && (*c == '/' || *c == '\\')) [[likely]] {
+                    if (*c == '\\') [[unlikely]]
                         syntaxViolation(c);
                     ++c;
                     appendToASCIIBuffer('/');
@@ -1472,7 +1472,7 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
                             failure();
                             return;
                         }
-                        if (UNLIKELY(!isSlash)) {
+                        if (!isSlash) [[unlikely]] {
                             if (m_urlIsSpecial) {
                                 syntaxViolation(c);
                                 appendToASCIIBuffer('/');
@@ -1597,8 +1597,8 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
             break;
         case State::FileSlash:
             LOG_STATE("FileSlash");
-            if (LIKELY(*c == '/' || *c == '\\')) {
-                if (UNLIKELY(*c == '\\'))
+            if (*c == '/' || *c == '\\') [[likely]] {
+                if (*c == '\\') [[unlikely]]
                     syntaxViolation(c);
                 if (base.isValid() && base.protocolIsFile()) {
                     copyURLPartsUntil(base, URLPart::SchemeEnd, c, nonUTF8QueryEncoding);
@@ -1661,7 +1661,7 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
                     }
                     if (windowsQuirk || authorityOrHostBegin == c) {
                         ASSERT(windowsQuirk || parsedDataView(currentPosition(c) - 1) == '/');
-                        if (UNLIKELY(*c == '?')) {
+                        if (*c == '?') [[unlikely]] {
                             syntaxViolation(c);
                             appendToASCIIBuffer("/?"_span8);
                             ++c;
@@ -1674,7 +1674,7 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
                             m_url.m_pathEnd = m_url.m_pathAfterLastSlash;
                             break;
                         }
-                        if (UNLIKELY(*c == '#')) {
+                        if (*c == '#') [[unlikely]] {
                             syntaxViolation(c);
                             appendToASCIIBuffer("/#"_span8);
                             ++c;
@@ -1691,7 +1691,7 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
                         failure();
                         return;
                     }
-                    if (UNLIKELY(isLocalhost(parsedDataView(m_url.m_passwordEnd, currentPosition(c) - m_url.m_passwordEnd)))) {
+                    if (isLocalhost(parsedDataView(m_url.m_passwordEnd, currentPosition(c) - m_url.m_passwordEnd))) [[unlikely]] {
                         syntaxViolation(c);
                         m_asciiBuffer.shrink(m_url.m_passwordEnd);
                         m_url.m_hostEnd = currentPosition(c);
@@ -1709,7 +1709,7 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
         case State::FilePathStart:
             LOG_STATE("FilePathStart");
             if (*c == '/' || *c != '\\') {
-                if (UNLIKELY(m_urlIsSpecial && *c == '\\'))
+                if (m_urlIsSpecial && *c == '\\') [[unlikely]]
                     syntaxViolation(c);
                 appendToASCIIBuffer('/');
                 advance(c);
@@ -1732,21 +1732,21 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
         case State::Path:
             LOG_STATE("Path");
             if (*c == '/' || (m_urlIsSpecial && *c == '\\')) {
-                if (UNLIKELY(m_urlIsSpecial && *c == '\\'))
+                if (m_urlIsSpecial && *c == '\\') [[unlikely]]
                     syntaxViolation(c);
                 appendToASCIIBuffer('/');
                 ++c;
                 m_url.m_pathAfterLastSlash = currentPosition(c);
                 break;
             }
-            if (UNLIKELY(currentPosition(c) && parsedDataView(currentPosition(c) - 1) == '/')) {
-                if (UNLIKELY(isDoubleDotPathSegment(c))) {
+            if (currentPosition(c) && parsedDataView(currentPosition(c) - 1) == '/') [[unlikely]] {
+                if (isDoubleDotPathSegment(c)) [[unlikely]] {
                     syntaxViolation(c);
                     consumeDoubleDotPathSegment(c);
                     popPath();
                     break;
                 }
-                if (UNLIKELY(isSingleDotPathSegment(c))) {
+                if (isSingleDotPathSegment(c)) [[unlikely]] {
                     syntaxViolation(c);
                     consumeSingleDotPathSegment(c);
                     break;
@@ -2056,7 +2056,7 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
         break;
     }
 
-    if (LIKELY(!m_didSeeSyntaxViolation)) {
+    if (!m_didSeeSyntaxViolation) [[likely]] {
         m_url.m_string = m_inputString;
         ASSERT(m_asciiBuffer.isEmpty());
     } else
@@ -2068,7 +2068,7 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
 template<typename CharacterType>
 void URLParser::parseAuthority(CodePointIterator<CharacterType> iterator)
 {
-    if (UNLIKELY(iterator.atEnd())) {
+    if (iterator.atEnd()) [[unlikely]] {
         syntaxViolation(iterator);
         m_url.m_userEnd = currentPosition(iterator);
         m_url.m_passwordEnd = m_url.m_userEnd;
@@ -2080,11 +2080,11 @@ void URLParser::parseAuthority(CodePointIterator<CharacterType> iterator)
             auto iteratorAtColon = iterator;
             ++iterator;
             bool tabOrNewlineAfterColon = false;
-            while (UNLIKELY(!iterator.atEnd() && isTabOrNewline(*iterator))) {
+            while (!iterator.atEnd() && isTabOrNewline(*iterator)) [[unlikely]] {
                 tabOrNewlineAfterColon = true;
                 ++iterator;
             }
-            if (UNLIKELY(iterator.atEnd())) {
+            if (iterator.atEnd()) [[unlikely]] {
                 syntaxViolation(iteratorAtColon);
                 m_url.m_passwordEnd = m_url.m_userEnd;
                 if (m_url.m_userEnd > m_url.m_userStart)
@@ -2230,7 +2230,7 @@ Expected<uint32_t, URLParser::IPv4PieceParsingError> URLParser::parseIPv4Piece(C
         }
         switch (state) {
         case State::UnknownBase:
-            if (UNLIKELY(*iterator == '0')) {
+            if (*iterator == '0') [[unlikely]] {
                 ++iterator;
                 state = State::OctalOrHex;
                 break;
@@ -2251,7 +2251,7 @@ Expected<uint32_t, URLParser::IPv4PieceParsingError> URLParser::parseIPv4Piece(C
                 return makeUnexpected(IPv4PieceParsingError::Failure);
             value *= 10;
             value += *iterator - '0';
-            if (UNLIKELY(value.hasOverflowed()))
+            if (value.hasOverflowed()) [[unlikely]]
                 return makeUnexpected(IPv4PieceParsingError::Overflow);
             ++iterator;
             break;
@@ -2261,7 +2261,7 @@ Expected<uint32_t, URLParser::IPv4PieceParsingError> URLParser::parseIPv4Piece(C
                 return makeUnexpected(IPv4PieceParsingError::Failure);
             value *= 8;
             value += *iterator - '0';
-            if (UNLIKELY(value.hasOverflowed()))
+            if (value.hasOverflowed()) [[unlikely]]
                 return makeUnexpected(IPv4PieceParsingError::Overflow);
             ++iterator;
             break;
@@ -2271,7 +2271,7 @@ Expected<uint32_t, URLParser::IPv4PieceParsingError> URLParser::parseIPv4Piece(C
                 return makeUnexpected(IPv4PieceParsingError::Failure);
             value *= 16;
             value += toASCIIHexValue(*iterator);
-            if (UNLIKELY(value.hasOverflowed()))
+            if (value.hasOverflowed()) [[unlikely]]
                 return makeUnexpected(IPv4PieceParsingError::Overflow);
             ++iterator;
             break;
@@ -2343,7 +2343,7 @@ Expected<URLParser::IPv4Address, URLParser::IPv4ParsingError> URLParser::parseIP
             syntaxViolation(iteratorForSyntaxViolationPosition);
     }
 
-    if (UNLIKELY(items.size() != 4))
+    if (items.size() != 4) [[unlikely]]
         syntaxViolation(iteratorForSyntaxViolationPosition);
 
     IPv4Address ipv4 = items.takeLast().value();
@@ -2472,7 +2472,7 @@ std::optional<URLParser::IPv6Address> URLParser::parseIPv6Host(CodePointIterator
         }
         
         previousValueWasZero = !value;
-        if (UNLIKELY((value && leadingZeros) || (previousValueWasZero && (length > 1 || immediatelyAfterCompress))))
+        if ((value && leadingZeros) || (previousValueWasZero && (length > 1 || immediatelyAfterCompress))) [[unlikely]]
             syntaxViolation(hostBegin);
 
         address[piecePointer++] = value;
@@ -2501,7 +2501,7 @@ std::optional<URLParser::IPv6Address> URLParser::parseIPv6Host(CodePointIterator
     std::optional<size_t> possibleCompressPointer = findLongestZeroSequence(address);
     if (possibleCompressPointer)
         possibleCompressPointer.value()++;
-    if (UNLIKELY(compressPointer != possibleCompressPointer))
+    if (compressPointer != possibleCompressPointer) [[unlikely]]
         syntaxViolation(hostBegin);
     
     return address;
@@ -2580,14 +2580,14 @@ template<typename CharacterType> std::optional<URLParser::LCharBuffer> URLParser
         if (domain.is8Bit()) {
             auto characters = domain.span8();
             ascii.appendUsingFunctor(length, [&](size_t i) {
-                if (UNLIKELY(isASCIIUpper(characters[i])))
+                if (isASCIIUpper(characters[i])) [[unlikely]]
                     syntaxViolation(iteratorForSyntaxViolationPosition);
                 return toASCIILower(characters[i]);
             });
         } else {
             auto characters = domain.span16();
             ascii.appendUsingFunctor(length, [&](size_t i) {
-                if (UNLIKELY(isASCIIUpper(characters[i])))
+                if (isASCIIUpper(characters[i])) [[unlikely]]
                     syntaxViolation(iteratorForSyntaxViolationPosition);
                 return toASCIILower(characters[i]);
             });
@@ -2629,14 +2629,14 @@ bool URLParser::hasForbiddenHostCodePoint(const URLParser::LCharBuffer& asciiDom
 template<typename CharacterType>
 bool URLParser::parsePort(CodePointIterator<CharacterType>& iterator)
 {
-    if (UNLIKELY(m_urlIsFile))
+    if (m_urlIsFile) [[unlikely]]
         return false;
 
     ASSERT(*iterator == ':');
     auto colonIterator = iterator;
     advance(iterator, colonIterator);
     uint32_t port = 0;
-    if (UNLIKELY(iterator.atEnd())) {
+    if (iterator.atEnd()) [[unlikely]] {
         unsigned portLength = currentPosition(colonIterator) - m_url.m_hostEnd;
         RELEASE_ASSERT(portLength <= URL::maxPortLength);
         m_url.m_portLength = portLength;
@@ -2646,7 +2646,7 @@ bool URLParser::parsePort(CodePointIterator<CharacterType>& iterator)
     size_t digitCount = 0;
     bool leadingZeros = false;
     for (; !iterator.atEnd(); ++iterator) {
-        if (UNLIKELY(isTabOrNewline(*iterator))) {
+        if (isTabOrNewline(*iterator)) [[unlikely]] {
             syntaxViolation(colonIterator);
             continue;
         }
@@ -2668,7 +2668,7 @@ bool URLParser::parsePort(CodePointIterator<CharacterType>& iterator)
         syntaxViolation(colonIterator);
 
     ASSERT(port == static_cast<uint16_t>(port));
-    if (UNLIKELY(defaultPortForProtocol(parsedDataView(0, m_url.m_schemeEnd)) == static_cast<uint16_t>(port)))
+    if (defaultPortForProtocol(parsedDataView(0, m_url.m_schemeEnd)) == static_cast<uint16_t>(port)) [[unlikely]]
         syntaxViolation(colonIterator);
     else {
         appendToASCIIBuffer(':');
@@ -2747,10 +2747,10 @@ static bool dnsNameEndsInNumber(StringView name)
     // https://url.spec.whatwg.org/#ends-in-a-number-checker
     auto containsOctalDecimalOrHexNumber = [] (StringView segment) {
         const auto segmentLength = segment.length();
-        if (!UNLIKELY(segmentLength))
+        if (!segmentLength) [[unlikely]]
             return false;
         auto firstCodeUnit = segment[0];
-        if (LIKELY(!isASCIIDigit(firstCodeUnit)))
+        if (!isASCIIDigit(firstCodeUnit)) [[likely]]
             return false;
         if (segmentLength == 1)
             return true;
@@ -2803,13 +2803,13 @@ auto URLParser::parseHostAndPort(CodePointIterator<CharacterType> iterator) -> H
 
     if (!m_urlIsSpecial) {
         for (; !iterator.atEnd(); ++iterator) {
-            if (UNLIKELY(isTabOrNewline(*iterator))) {
+            if (isTabOrNewline(*iterator)) [[unlikely]] {
                 syntaxViolation(iterator);
                 continue;
             }
             if (*iterator == ':')
                 break;
-            if (UNLIKELY(isForbiddenHostCodePoint(*iterator) && *iterator != '%'))
+            if (isForbiddenHostCodePoint(*iterator) && *iterator != '%') [[unlikely]]
                 return HostParsingResult::InvalidHost;
             utf8PercentEncode<isInC0ControlEncodeSet>(iterator);
         }
@@ -2821,7 +2821,7 @@ auto URLParser::parseHostAndPort(CodePointIterator<CharacterType> iterator) -> H
         return parsePort(iterator) ? HostParsingResult::NonSpecialHostWithPort : HostParsingResult::InvalidHost;
     }
     
-    if (LIKELY(!m_hostHasPercentOrNonASCII && !subdomainStartsWithXNDashDash(iterator))) {
+    if (!m_hostHasPercentOrNonASCII && !subdomainStartsWithXNDashDash(iterator)) [[likely]] {
         auto hostIterator = iterator;
         for (; !iterator.atEnd(); ++iterator) {
             if (isTabOrNewline(*iterator))
@@ -2844,17 +2844,17 @@ auto URLParser::parseHostAndPort(CodePointIterator<CharacterType> iterator) -> H
         if (address.error() == IPv4ParsingError::Failure)
             return HostParsingResult::InvalidHost;
         for (; hostIterator != iterator; ++hostIterator) {
-            if (UNLIKELY(isTabOrNewline(*hostIterator))) {
+            if (isTabOrNewline(*hostIterator)) [[unlikely]] {
                 syntaxViolation(hostIterator);
                 continue;
             }
-            if (UNLIKELY(isASCIIUpper(*hostIterator)))
+            if (isASCIIUpper(*hostIterator)) [[unlikely]]
                 syntaxViolation(hostIterator);
             appendToASCIIBuffer(toASCIILower(*hostIterator));
         }
         m_url.m_hostEnd = currentPosition(iterator);
         auto hostStart = m_url.hostStart();
-        if (UNLIKELY(dnsNameEndsInNumber(parsedDataView(hostStart, m_url.m_hostEnd - hostStart))))
+        if (dnsNameEndsInNumber(parsedDataView(hostStart, m_url.m_hostEnd - hostStart))) [[unlikely]]
             return HostParsingResult::InvalidHost;
         if (!hostIterator.atEnd())
             return parsePort(hostIterator) ? HostParsingResult::DNSNameWithPort : HostParsingResult::InvalidHost;
@@ -2866,13 +2866,13 @@ auto URLParser::parseHostAndPort(CodePointIterator<CharacterType> iterator) -> H
     
     LCharBuffer utf8Encoded;
     for (; !iterator.atEnd(); ++iterator) {
-        if (UNLIKELY(isTabOrNewline(*iterator))) {
+        if (isTabOrNewline(*iterator)) [[unlikely]] {
             syntaxViolation(hostBegin);
             continue;
         }
         if (*iterator == ':')
             break;
-        if (UNLIKELY(!isASCII(*iterator)))
+        if (!isASCII(*iterator)) [[unlikely]]
             syntaxViolation(hostBegin);
 
         std::array<uint8_t, U8_MAX_LENGTH> buffer;
@@ -2910,7 +2910,7 @@ auto URLParser::parseHostAndPort(CodePointIterator<CharacterType> iterator) -> H
     appendToASCIIBuffer(asciiDomainValue.span());
     m_url.m_hostEnd = currentPosition(iterator);
     auto hostStart = m_url.hostStart();
-    if (UNLIKELY(dnsNameEndsInNumber(parsedDataView(hostStart, m_url.m_hostEnd - hostStart))))
+    if (dnsNameEndsInNumber(parsedDataView(hostStart, m_url.m_hostEnd - hostStart))) [[unlikely]]
         return HostParsingResult::InvalidHost;
     if (!iterator.atEnd())
         return parsePort(iterator) ? HostParsingResult::DNSNameWithPort : HostParsingResult::InvalidHost;
@@ -2997,7 +2997,7 @@ const UIDNA& URLParser::internationalDomainNameTranscoder()
     std::call_once(onceFlag, [] {
         UErrorCode error = U_ZERO_ERROR;
         encoder = uidna_openUTS46(UIDNA_CHECK_BIDI | UIDNA_CHECK_CONTEXTJ | UIDNA_NONTRANSITIONAL_TO_UNICODE | UIDNA_NONTRANSITIONAL_TO_ASCII, &error);
-        if (UNLIKELY(U_FAILURE(error)))
+        if (U_FAILURE(error)) [[unlikely]]
             CRASH_WITH_INFO(error);
         RELEASE_ASSERT(encoder);
     });

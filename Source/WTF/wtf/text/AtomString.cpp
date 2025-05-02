@@ -39,7 +39,7 @@ template<AtomString::CaseConvertType type>
 ALWAYS_INLINE AtomString AtomString::convertASCIICase() const
 {
     StringImpl* impl = this->impl();
-    if (UNLIKELY(!impl))
+    if (!impl) [[unlikely]]
         return nullAtom();
 
     // Convert short strings without allocating a new StringImpl, since
@@ -67,7 +67,7 @@ SlowPath:
     }
 
     Ref<StringImpl> convertedString = type == CaseConvertType::Lower ? impl->convertToASCIILowercase() : impl->convertToASCIIUppercase();
-    if (LIKELY(convertedString.ptr() == impl))
+    if (convertedString.ptr() == impl) [[likely]]
         return *this;
 
     AtomString result;
@@ -152,7 +152,7 @@ static inline StringBuilder replaceUnpairedSurrogatesWithReplacementCharacterInt
 AtomString replaceUnpairedSurrogatesWithReplacementCharacter(AtomString&& string)
 {
     // Fast path for the case where there are no unpaired surrogates.
-    if (LIKELY(!hasUnpairedSurrogate(string)))
+    if (!hasUnpairedSurrogate(string)) [[likely]]
         return WTFMove(string);
     return replaceUnpairedSurrogatesWithReplacementCharacterInternal(string).toAtomString();
 }
@@ -160,7 +160,7 @@ AtomString replaceUnpairedSurrogatesWithReplacementCharacter(AtomString&& string
 String replaceUnpairedSurrogatesWithReplacementCharacter(String&& string)
 {
     // Fast path for the case where there are no unpaired surrogates.
-    if (LIKELY(!hasUnpairedSurrogate(string)))
+    if (!hasUnpairedSurrogate(string)) [[likely]]
         return WTFMove(string);
     return replaceUnpairedSurrogatesWithReplacementCharacterInternal(string).toString();
 }

@@ -270,7 +270,7 @@ private:
     template<typename T, typename Read8Functor>
     ALWAYS_INLINE static constexpr void handleGreaterThan8CharactersCase(T*& p, unsigned& i, NOESCAPE const Read8Functor& wyr8, uint64_t& seed, uint64_t see1, uint64_t see2)
     {
-        if (UNLIKELY(i > 24)) {
+        if (i > 24) [[unlikely]] {
             do {
                 consume24Characters(p, wyr8, seed, see1, see2);
                 p += 24;
@@ -278,7 +278,7 @@ private:
             } while (LIKELY(i > 24));
             seed ^= see1 ^ see2;
         }
-        while (UNLIKELY(i > 8)) {
+        while (i > 8) [[unlikely]] {
             seed = wymix(wyr8(p) ^ secret[1], wyr8(p + 4) ^ seed);
             i -= 8;
             p += 8;
@@ -302,13 +302,13 @@ private:
         const uint64_t byteCount = static_cast<uint64_t>(p.size()) << 1;
         uint64_t seed = initSeed();
 
-        if (LIKELY(p.size() <= 8)) {
-            if (LIKELY(p.size() >= 2)) {
+        if (p.size() <= 8) [[likely]] {
+            if (p.size() >= 2) [[likely]] {
                 const uint64_t offset = ((byteCount >> 3) << 2) >> 1;
                 a = (wyr4(p.data()) << 32) | wyr4(p.data() + offset);
                 auto* p2 = p.data() + p.size() - 2;
                 b = (wyr4(p2) << 32) | wyr4(p2 - offset);
-            } else if (LIKELY(p.size() > 0)) {
+            } else if (p.size() > 0) [[likely]] {
                 a = wyr3(p.data());
                 b = 0;
             } else {

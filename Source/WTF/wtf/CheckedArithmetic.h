@@ -734,21 +734,21 @@ public:
     // Boolean operators
     bool operator!() const
     {
-        if (UNLIKELY(this->hasOverflowed()))
+        if (this->hasOverflowed()) [[unlikely]]
             this->crash();
         return !m_value;
     }
 
     explicit operator bool() const
     {
-        if (UNLIKELY(this->hasOverflowed()))
+        if (this->hasOverflowed()) [[unlikely]]
             this->crash();
         return m_value;
     }
 
     operator T() const
     {
-        if (UNLIKELY(this->hasOverflowed()))
+        if (this->hasOverflowed()) [[unlikely]]
             this->crash();
         return m_value;
     }
@@ -757,7 +757,7 @@ public:
     template<typename U = T>
     U value() const
     {
-        if (UNLIKELY(this->hasOverflowed()))
+        if (this->hasOverflowed()) [[unlikely]]
             this->crash();
         return static_cast<U>(m_value);
     }
@@ -851,40 +851,40 @@ private:
 
 template <typename U, typename V, typename OverflowHandler> static inline Checked<typename Result<U, V>::ResultType, OverflowHandler> operator+(Checked<U, OverflowHandler> lhs, Checked<V, OverflowHandler> rhs)
 {
-    if (UNLIKELY(lhs.hasOverflowed() || rhs.hasOverflowed()))
+    if (lhs.hasOverflowed() || rhs.hasOverflowed()) [[unlikely]]
         return ResultOverflowed;
     typename Result<U, V>::ResultType result = 0;
-    if (UNLIKELY(!safeAdd<OverflowHandler>(lhs.value(), rhs.value(), result)))
+    if (!safeAdd<OverflowHandler>(lhs.value(), rhs.value(), result)) [[unlikely]]
         return ResultOverflowed;
     return result;
 }
 
 template <typename U, typename V, typename OverflowHandler> static inline Checked<typename Result<U, V>::ResultType, OverflowHandler> operator-(Checked<U, OverflowHandler> lhs, Checked<V, OverflowHandler> rhs)
 {
-    if (UNLIKELY(lhs.hasOverflowed() || rhs.hasOverflowed()))
+    if (lhs.hasOverflowed() || rhs.hasOverflowed()) [[unlikely]]
         return ResultOverflowed;
     typename Result<U, V>::ResultType result = 0;
-    if (UNLIKELY(!safeSub<OverflowHandler>(lhs.value(), rhs.value(), result)))
+    if (!safeSub<OverflowHandler>(lhs.value(), rhs.value(), result)) [[unlikely]]
         return ResultOverflowed;
     return result;
 }
 
 template <typename U, typename V, typename OverflowHandler> static inline Checked<typename Result<U, V>::ResultType, OverflowHandler> operator*(Checked<U, OverflowHandler> lhs, Checked<V, OverflowHandler> rhs)
 {
-    if (UNLIKELY(lhs.hasOverflowed() || rhs.hasOverflowed()))
+    if (lhs.hasOverflowed() || rhs.hasOverflowed()) [[unlikely]]
         return ResultOverflowed;
     typename Result<U, V>::ResultType result = 0;
-    if (UNLIKELY(!safeMultiply<OverflowHandler>(lhs.value(), rhs.value(), result)))
+    if (!safeMultiply<OverflowHandler>(lhs.value(), rhs.value(), result)) [[unlikely]]
         return ResultOverflowed;
     return result;
 }
 
 template <typename U, typename V, typename OverflowHandler> static inline Checked<typename Result<U, V>::ResultType, OverflowHandler> operator/(Checked<U, OverflowHandler> lhs, Checked<V, OverflowHandler> rhs)
 {
-    if (UNLIKELY(lhs.hasOverflowed() || rhs.hasOverflowed()))
+    if (lhs.hasOverflowed() || rhs.hasOverflowed()) [[unlikely]]
         return ResultOverflowed;
     typename Result<U, V>::ResultType result = 0;
-    if (UNLIKELY(!safeDivide<OverflowHandler>(lhs.value(), rhs.value(), result)))
+    if (!safeDivide<OverflowHandler>(lhs.value(), rhs.value(), result)) [[unlikely]]
         return ResultOverflowed;
     return result;
 }

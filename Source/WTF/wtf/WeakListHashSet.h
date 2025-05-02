@@ -269,7 +269,7 @@ public:
             return true;
 
         auto onlyContainsNullReferences = begin() == end();
-        if (UNLIKELY(onlyContainsNullReferences))
+        if (onlyContainsNullReferences) [[unlikely]]
             const_cast<WeakListHashSet&>(*this).clear();
         return onlyContainsNullReferences;
     }

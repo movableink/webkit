@@ -152,7 +152,7 @@ private:
     {
         uintptr_t allocation = m_allocHead;
         uintptr_t newHead = headIncrementedBy(bytes);
-        if (LIKELY(newHead < m_allocBound)) {
+        if (newHead < m_allocBound) [[likely]] {
             m_allocHead = newHead;
             return reinterpret_cast<void*>(allocation);
         }
@@ -163,7 +163,7 @@ private:
     {
         uintptr_t allocation = WTF::roundUpToMultipleOf<minHeadAlignment>(m_allocHead);
         uintptr_t newHead = headIncrementedBy((allocation - m_allocHead) + bytes);
-        if (LIKELY(newHead < m_allocBound)) {
+        if (newHead < m_allocBound) [[likely]] {
             m_allocHead = newHead;
             return reinterpret_cast<void*>(allocation);
         }
@@ -274,7 +274,7 @@ public:
     {
         void* p = mmap(nullptr, bytes, PROT_READ | PROT_WRITE,
             MAP_PRIVATE | MAP_ANON, -1, 0);
-        if (UNLIKELY(p == MAP_FAILED)) {
+        if (p == MAP_FAILED) [[unlikely]] {
             if constexpr (mode == AllocationFailureMode::ReturnNull)
                 return nullptr;
             RELEASE_ASSERT_NOT_REACHED();

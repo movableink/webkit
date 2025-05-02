@@ -436,10 +436,10 @@ inline Thread& Thread::currentSingleton()
     //    Thread::initializeTLSKey() is initially called from initialize(), ensuring
     //    this is initially called in a std::call_once locked context.
 #if !HAVE(FAST_TLS) && !OS(WINDOWS)
-    if (UNLIKELY(Thread::s_key == InvalidThreadSpecificKey))
+    if (Thread::s_key == InvalidThreadSpecificKey) [[unlikely]]
         WTF::initialize();
 #endif
-    if (SUPPRESS_UNCOUNTED_LOCAL auto* thread = currentMayBeNull(); LIKELY(thread))
+    if (SUPPRESS_UNCOUNTED_LOCAL auto* thread = currentMayBeNull(); thread) [[likely]]
         return *thread;
     return initializeCurrentTLS();
 }

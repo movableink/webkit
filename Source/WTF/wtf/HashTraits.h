@@ -182,7 +182,7 @@ template<typename T, typename Deleter> struct HashTraits<std::unique_ptr<T, Dele
 
         // The null case happens if a caller uses std::move() to remove the pointer before calling remove()
         // with an iterator. This is very uncommon.
-        if (LIKELY(pointer))
+        if (pointer) [[likely]]
             Deleter()(pointer);
     }
 };

@@ -124,7 +124,7 @@ size_t StringView::find(AdaptiveStringSearcherTables& tables, StringView matchSt
     if (!matchLength)
         return start;
 
-    if (UNLIKELY(subjectLength > INT32_MAX || matchLength > INT32_MAX))
+    if (subjectLength > INT32_MAX || matchLength > INT32_MAX) [[unlikely]]
         return find(matchString, start);
 
     if (is8Bit()) {
@@ -301,7 +301,7 @@ template<typename CharacterType>
 static AtomString convertASCIILowercaseAtom(std::span<const CharacterType> input)
 {
     for (auto character : input) {
-        if (UNLIKELY(isASCIIUpper(character)))
+        if (isASCIIUpper(character)) [[unlikely]]
             return makeAtomString(asASCIILowercase(input));
     }
     // Fast path when the StringView is already all lowercase.

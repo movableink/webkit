@@ -55,7 +55,7 @@ RetainPtr<CFURLRef> URL::createCFURL() const
         return nullptr;
 
     RetainPtr<CFURLRef> result;
-    if (LIKELY(m_string.is8Bit() && m_string.containsOnlyASCII())) {
+    if (m_string.is8Bit() && m_string.containsOnlyASCII()) [[likely]] {
         auto characters = m_string.span8();
         result = adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, characters.data(), characters.size(), kCFStringEncodingUTF8, nullptr, true));
     } else {

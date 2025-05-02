@@ -73,7 +73,7 @@ public:
                 m_checker.m_lastCheckpointStackTrace = StackTrace::captureStackTrace(INT_MAX);
             }
 
-            if (UNLIKELY(stackBetweenCheckpoints <= 0 || stackBetweenCheckpoints >= static_cast<ptrdiff_t>(m_checker.m_reservedZone)))
+            if (stackBetweenCheckpoints <= 0 || stackBetweenCheckpoints >= static_cast<ptrdiff_t>(m_checker.m_reservedZone)) [[unlikely]]
                 reportVerificationFailureAndCrash();
 #endif
         }

@@ -325,7 +325,7 @@ public:
             return true;
 
         auto onlyContainsNullReferences = begin() == end();
-        if (UNLIKELY(onlyContainsNullReferences))
+        if (onlyContainsNullReferences) [[unlikely]]
             const_cast<WeakHashMap&>(*this).clear();
         return onlyContainsNullReferences;
     }

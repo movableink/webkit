@@ -145,7 +145,7 @@ public:
         }
 
         // If we're more than 3/4ths full we grow.
-        if (UNLIKELY(m_size * 4 >= m_capacity * 3)) {
+        if (m_size * 4 >= m_capacity * 3) [[unlikely]] {
             grow(m_capacity * 2);
             ASSERT(!(m_capacity & (m_capacity - 1)));
         }
