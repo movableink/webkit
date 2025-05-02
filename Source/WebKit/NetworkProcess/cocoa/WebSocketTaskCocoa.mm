@@ -84,24 +84,25 @@ RefPtr<NetworkSocketChannel> WebSocketTask::protectedChannel() const
 
 void WebSocketTask::readNextMessage()
 {
-    [m_task receiveMessageWithCompletionHandler:makeBlockPtr([this, weakThis = WeakPtr { *this }](NSURLSessionWebSocketMessage* _Nullable message, NSError * _Nullable error) {
-        if (!weakThis)
+    [m_task receiveMessageWithCompletionHandler:makeBlockPtr([weakThis = WeakPtr { *this }](NSURLSessionWebSocketMessage* _Nullable message, NSError * _Nullable error) {
+        CheckedPtr checkedThis = weakThis.get();
+        if (!checkedThis)
             return;
 
-        RefPtr channel = m_channel.get();
+        RefPtr channel = checkedThis->m_channel.get();
         if (error) {
             // If closeCode is not zero, we are closing the connection and didClose will be called for us.
-            if ([m_task closeCode])
+            if ([checkedThis->m_task closeCode])
                 return;
 
-            if (!m_receivedDidConnect) {
-                ResourceResponse response { [m_task response] };
+            if (!checkedThis->m_receivedDidConnect) {
+                ResourceResponse response { [checkedThis->m_task response] };
                 if (!response.isNull())
                     channel->didReceiveHandshakeResponse(WTFMove(response));
             }
 
             channel->didReceiveMessageError([error localizedDescription]);
-            didClose(WebCore::ThreadableWebSocketChannel::CloseEventCodeAbnormalClosure, emptyString());
+            checkedThis->didClose(WebCore::ThreadableWebSocketChannel::CloseEventCodeAbnormalClosure, emptyString());
             return;
         }
         if (message.type == NSURLSessionWebSocketMessageTypeString)
@@ -109,7 +110,7 @@ void WebSocketTask::readNextMessage()
         else
             channel->didReceiveBinaryData(span(message.data));
 
-        readNextMessage();
+        checkedThis->readNextMessage();
     }).get()];
 }
 

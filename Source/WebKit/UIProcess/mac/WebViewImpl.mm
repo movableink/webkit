@@ -6676,9 +6676,9 @@ void WebViewImpl::handleContextMenuTranslation(const WebCore::TranslationContext
     [translationViewController setText:adoptNS([[NSAttributedString alloc] initWithString:info.text.createNSString().get()]).get()];
     if (info.mode == WebCore::TranslationContextMenuMode::Editable) {
         [translationViewController setIsSourceEditable:YES];
-        [translationViewController setReplacementHandler:[this, weakThis = WeakPtr { *this }](NSAttributedString *string) {
-            if (weakThis)
-                insertText(string.string);
+        [translationViewController setReplacementHandler:[weakThis = WeakPtr { *this }](NSAttributedString *string) {
+            if (CheckedPtr checkedThis = weakThis.get())
+                checkedThis->insertText(string.string);
         }];
     }
 
@@ -6870,16 +6870,17 @@ void WebViewImpl::beginTextRecognitionForVideoInElementFullscreen(ShareableBitma
         return;
 
     auto request = WebKit::createImageAnalyzerRequest(image.get(), VKAnalysisTypeText);
-    m_currentImageAnalysisRequestID = processImageAnalyzerRequest(request.get(), [this, weakThis = WeakPtr { *this }, bounds](RetainPtr<CocoaImageAnalysis>&& result, NSError *error) {
-        if (!weakThis || !m_currentImageAnalysisRequestID)
+    m_currentImageAnalysisRequestID = processImageAnalyzerRequest(request.get(), [weakThis = WeakPtr { *this }, bounds](RetainPtr<CocoaImageAnalysis>&& result, NSError *error) {
+        CheckedPtr checkedThis = weakThis.get();
+        if (!checkedThis || !checkedThis->m_currentImageAnalysisRequestID)
             return;
 
-        m_currentImageAnalysisRequestID = 0;
+        checkedThis->m_currentImageAnalysisRequestID = 0;
         if (error || !result)
             return;
 
-        m_imageAnalysisInteractionBounds = bounds;
-        installImageAnalysisOverlayView(WTFMove(result));
+        checkedThis->m_imageAnalysisInteractionBounds = bounds;
+        checkedThis->installImageAnalysisOverlayView(WTFMove(result));
     });
 #else
     UNUSED_PARAM(bitmapHandle);
@@ -6900,21 +6901,22 @@ void WebViewImpl::cancelTextRecognitionForVideoInElementFullscreen()
 
 void WebViewImpl::installImageAnalysisOverlayView(RetainPtr<VKCImageAnalysis>&& analysis)
 {
-    auto installTask = [this, weakThis = WeakPtr { *this }, analysis = WTFMove(analysis)] {
-        if (!weakThis)
+    auto installTask = [weakThis = WeakPtr { *this }, analysis = WTFMove(analysis)] {
+        CheckedPtr checkedThis = weakThis.get();
+        if (!checkedThis)
             return;
 
-        if (!m_imageAnalysisOverlayView) {
-            m_imageAnalysisOverlayView = adoptNS([PAL::allocVKCImageAnalysisOverlayViewInstance() initWithFrame:[m_view bounds]]);
-            m_imageAnalysisOverlayViewDelegate = adoptNS([[WKImageAnalysisOverlayViewDelegate alloc] initWithWebViewImpl:*this]);
-            [m_imageAnalysisOverlayView setDelegate:m_imageAnalysisOverlayViewDelegate.get()];
-            prepareImageAnalysisForOverlayView(m_imageAnalysisOverlayView.get());
+        if (!checkedThis->m_imageAnalysisOverlayView) {
+            checkedThis->m_imageAnalysisOverlayView = adoptNS([PAL::allocVKCImageAnalysisOverlayViewInstance() initWithFrame:[checkedThis->m_view bounds]]);
+            checkedThis->m_imageAnalysisOverlayViewDelegate = adoptNS([[WKImageAnalysisOverlayViewDelegate alloc] initWithWebViewImpl:*checkedThis.get()]);
+            [checkedThis->m_imageAnalysisOverlayView setDelegate:checkedThis->m_imageAnalysisOverlayViewDelegate.get()];
+            prepareImageAnalysisForOverlayView(checkedThis->m_imageAnalysisOverlayView.get());
             RELEASE_LOG(ImageAnalysis, "Installing image analysis overlay view at {{ %.0f, %.0f }, { %.0f, %.0f }}",
-                m_imageAnalysisInteractionBounds.x(), m_imageAnalysisInteractionBounds.y(), m_imageAnalysisInteractionBounds.width(), m_imageAnalysisInteractionBounds.height());
+                checkedThis->m_imageAnalysisInteractionBounds.x(), checkedThis->m_imageAnalysisInteractionBounds.y(), checkedThis->m_imageAnalysisInteractionBounds.width(), checkedThis->m_imageAnalysisInteractionBounds.height());
         }
 
-        [m_imageAnalysisOverlayView setAnalysis:analysis.get()];
-        [m_view addSubview:m_imageAnalysisOverlayView.get()];
+        [checkedThis->m_imageAnalysisOverlayView setAnalysis:analysis.get()];
+        [checkedThis->m_view addSubview:checkedThis->m_imageAnalysisOverlayView.get()];
     };
 
     performOrDeferImageAnalysisOverlayViewHierarchyTask(WTFMove(installTask));
@@ -6922,15 +6924,16 @@ void WebViewImpl::installImageAnalysisOverlayView(RetainPtr<VKCImageAnalysis>&& 
 
 void WebViewImpl::uninstallImageAnalysisOverlayView()
 {
-    auto uninstallTask = [this, weakThis = WeakPtr { *this }] {
-        if (!m_imageAnalysisOverlayView)
+    auto uninstallTask = [weakThis = WeakPtr { *this }] {
+        CheckedPtr checkedThis = weakThis.get();
+        if (!checkedThis || !checkedThis->m_imageAnalysisOverlayView)
             return;
 
         RELEASE_LOG(ImageAnalysis, "Uninstalling image analysis overlay view");
-        [m_imageAnalysisOverlayView removeFromSuperview];
-        m_imageAnalysisOverlayViewDelegate = nil;
-        m_imageAnalysisOverlayView = nil;
-        m_imageAnalysisInteractionBounds = { };
+        [checkedThis->m_imageAnalysisOverlayView removeFromSuperview];
+        checkedThis->m_imageAnalysisOverlayViewDelegate = nil;
+        checkedThis->m_imageAnalysisOverlayView = nil;
+        checkedThis->m_imageAnalysisInteractionBounds = { };
     };
 
     performOrDeferImageAnalysisOverlayViewHierarchyTask(WTFMove(uninstallTask));

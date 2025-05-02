@@ -452,10 +452,11 @@ void NetworkSession::handlePrivateClickMeasurementConversion(WebCore::PCM::Attri
             return;
 
         // Insert ephemeral measurement right before attribution.
-        m_privateClickMeasurement->storeUnattributed(WTFMove(ephemeralMeasurement), [this, weakThis = WeakPtr { *this }, attributionTriggerData = WTFMove(attributionTriggerData), requestURL, redirectDomain = WTFMove(redirectDomain), firstPartyForCookies = WTFMove(firstPartyForCookies), appBundleID = WTFMove(appBundleID)] () mutable {
-            if (!weakThis)
+        m_privateClickMeasurement->storeUnattributed(WTFMove(ephemeralMeasurement), [weakThis = WeakPtr { *this }, attributionTriggerData = WTFMove(attributionTriggerData), requestURL, redirectDomain = WTFMove(redirectDomain), firstPartyForCookies = WTFMove(firstPartyForCookies), appBundleID = WTFMove(appBundleID)] () mutable {
+            CheckedPtr checkedThis = weakThis.get();
+            if (!checkedThis)
                 return;
-            m_privateClickMeasurement->handleAttribution(WTFMove(attributionTriggerData), requestURL, WTFMove(redirectDomain), firstPartyForCookies, appBundleID);
+            checkedThis->m_privateClickMeasurement->handleAttribution(WTFMove(attributionTriggerData), requestURL, WTFMove(redirectDomain), firstPartyForCookies, appBundleID);
         });
         return;
     }

@@ -629,15 +629,16 @@ String OriginStorageManager::originFileIdentifier()
 
 Ref<OriginQuotaManager> OriginStorageManager::createQuotaManager(OriginQuotaManager::Parameters&& parameters)
 {
-    OriginQuotaManager::GetUsageFunction getUsageFunction = [this, weakThis = WeakPtr { *this }]() -> uint64_t {
-        if (!weakThis)
+    OriginQuotaManager::GetUsageFunction getUsageFunction = [weakThis = WeakPtr { *this }]() -> uint64_t {
+        CheckedPtr checkedThis = weakThis.get();
+        if (!checkedThis)
             return 0;
 
-        auto idbStoragePath = resolvedPath(WebsiteDataType::IndexedDBDatabases);
-        auto cacheStoragePath = resolvedPath(WebsiteDataType::DOMCache);
-        auto fileSystemStoragePath = resolvedPath(WebsiteDataType::FileSystem);
+        auto idbStoragePath = checkedThis->resolvedPath(WebsiteDataType::IndexedDBDatabases);
+        auto cacheStoragePath = checkedThis->resolvedPath(WebsiteDataType::DOMCache);
+        auto fileSystemStoragePath = checkedThis->resolvedPath(WebsiteDataType::FileSystem);
         uint64_t fileSystemStorageSize = valueOrDefault(FileSystem::directorySize(fileSystemStoragePath));
-        if (RefPtr fileSystemStorageManager = existingFileSystemStorageManager()) {
+        if (RefPtr fileSystemStorageManager = checkedThis->existingFileSystemStorageManager()) {
             CheckedUint64 totalFileSystemStorageSize = fileSystemStorageSize;
             totalFileSystemStorageSize += fileSystemStorageManager->allocatedUnusedCapacity();
             if (!totalFileSystemStorageSize.hasOverflowed())

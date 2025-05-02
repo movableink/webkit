@@ -67,34 +67,34 @@ void ServiceWorkerNavigationPreloader::start()
 
     if (RefPtr cache = session->cache()) {
         NetworkCache::GlobalFrameID globalID { *m_parameters.webPageProxyID, *m_parameters.webPageID, *m_parameters.webFrameID };
-        cache->retrieve(m_parameters.request, globalID, m_parameters.isNavigatingToAppBoundDomain, m_parameters.allowPrivacyProxy, m_parameters.advancedPrivacyProtections, [this, weakThis = WeakPtr { *this }](auto&& entry, auto&&) mutable {
+        cache->retrieve(m_parameters.request, globalID, m_parameters.isNavigatingToAppBoundDomain, m_parameters.allowPrivacyProxy, m_parameters.advancedPrivacyProtections, [weakThis = WeakPtr { *this }](auto&& entry, auto&&) mutable {
             CheckedPtr checkedThis = weakThis.get();
-            if (!checkedThis || m_isCancelled)
+            if (!checkedThis || checkedThis->m_isCancelled)
                 return;
 
             if (entry && !entry->needsValidation()) {
-                loadWithCacheEntry(*entry);
+                checkedThis->loadWithCacheEntry(*entry);
                 return;
             }
 
-            m_parameters.request.setCachePolicy(ResourceRequestCachePolicy::RefreshAnyCacheData);
+            checkedThis->m_parameters.request.setCachePolicy(ResourceRequestCachePolicy::RefreshAnyCacheData);
             if (entry) {
-                m_cacheEntry = WTFMove(entry);
+                checkedThis->m_cacheEntry = WTFMove(entry);
 
-                auto eTag = m_cacheEntry->response().httpHeaderField(HTTPHeaderName::ETag);
+                auto eTag = checkedThis->m_cacheEntry->response().httpHeaderField(HTTPHeaderName::ETag);
                 if (!eTag.isEmpty())
-                    m_parameters.request.setHTTPHeaderField(HTTPHeaderName::IfNoneMatch, eTag);
+                    checkedThis->m_parameters.request.setHTTPHeaderField(HTTPHeaderName::IfNoneMatch, eTag);
 
-                auto lastModified = m_cacheEntry->response().httpHeaderField(HTTPHeaderName::LastModified);
+                auto lastModified = checkedThis->m_cacheEntry->response().httpHeaderField(HTTPHeaderName::LastModified);
                 if (!lastModified.isEmpty())
-                    m_parameters.request.setHTTPHeaderField(HTTPHeaderName::IfModifiedSince, lastModified);
+                    checkedThis->m_parameters.request.setHTTPHeaderField(HTTPHeaderName::IfModifiedSince, lastModified);
             }
 
-            if (!m_session) {
-                didFailLoading(ResourceError { ResourceError::Type::Cancellation });
+            if (!checkedThis->m_session) {
+                checkedThis->didFailLoading(ResourceError { ResourceError::Type::Cancellation });
                 return;
             }
-            loadFromNetwork();
+            checkedThis->loadFromNetwork();
         });
         return;
     }
