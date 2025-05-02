@@ -2700,11 +2700,11 @@ void FunctionDefinitionWriter::visit(AST::SwitchStatement& statement)
         }
         if (isDefault)
             m_body.append('\n', m_indent, "default:"_s);
-        m_body.append(' ');
+        m_body.append("\n#if __wgslMetalAppleGPUFamily >= 9\n{ " DECLARE_FORWARD_PROGRESS "\n#endif\n"_s);
         visit(clause.body);
 
         IndentationScope scope(m_indent);
-        m_body.append('\n', m_indent, "break;"_s);
+        m_body.append('\n', m_indent, "#if __wgslMetalAppleGPUFamily >= 9\n}\n#endif\nbreak;"_s);
     };
 
     m_body.append("switch ("_s);
