@@ -875,7 +875,7 @@ void GraphicsContextGLCocoa::insertFinishedSignalOrInvoke(Function<void()> signa
         blockSignal();
     }];
     auto sync = createExternalSync(event, signalValue);
-    if (UNLIKELY(!sync)) {
+    if (!sync) [[unlikely]] {
         event.signaledValue = signalValue;
         ASSERT_NOT_REACHED();
         return;

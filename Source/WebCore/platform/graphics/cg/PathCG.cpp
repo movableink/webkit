@@ -581,11 +581,11 @@ static inline void addToCGContextPath(CGContextRef context, PathSegment anySegme
 
 void addToCGContextPath(CGContextRef context, const Path& path)
 {
-    if (auto* singleSegment = path.singleSegmentIfExists(); LIKELY(singleSegment)) {
+    if (auto* singleSegment = path.singleSegmentIfExists(); singleSegment) [[likely]] {
         addToCGContextPath(context, *singleSegment);
         return;
     }
-    if (auto* segments = path.segmentsIfExists(); LIKELY(segments)) {
+    if (auto* segments = path.segmentsIfExists(); segments) [[likely]] {
         for (auto& segment : *segments)
             addToCGContextPath(context, segment);
         return;

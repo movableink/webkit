@@ -60,7 +60,7 @@ static std::optional<WhitespaceContent> moveToNextNonWhitespacePosition(std::spa
     };
     auto nextNonWhiteSpacePosition = startPosition;
     while (nextNonWhiteSpacePosition < characters.size() && isWhitespaceCharacter(characters[nextNonWhiteSpacePosition])) {
-        if (UNLIKELY(stopAtWordSeparatorBoundary && hasWordSeparatorCharacter && !isWordSeparatorCharacter))
+        if (stopAtWordSeparatorBoundary && hasWordSeparatorCharacter && !isWordSeparatorCharacter) [[unlikely]]
             break;
         ++nextNonWhiteSpacePosition;
     }

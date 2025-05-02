@@ -351,12 +351,12 @@ inline UChar LegacyInlineIterator::previousInSameNode() const
 
 ALWAYS_INLINE UCharDirection LegacyInlineIterator::direction() const
 {
-    if (UNLIKELY(!m_renderer))
+    if (!m_renderer) [[unlikely]]
         return U_OTHER_NEUTRAL;
 
-    if (auto* textRenderer = dynamicDowncast<RenderText>(*m_renderer); LIKELY(textRenderer)) {
+    if (auto* textRenderer = dynamicDowncast<RenderText>(*m_renderer); textRenderer) [[likely]] {
         UChar codeUnit = textRenderer->characterAt(m_pos);
-        if (LIKELY(U16_IS_SINGLE(codeUnit)))
+        if (U16_IS_SINGLE(codeUnit)) [[likely]]
             return u_charDirection(codeUnit);
         return surrogateTextDirection(codeUnit);
     }

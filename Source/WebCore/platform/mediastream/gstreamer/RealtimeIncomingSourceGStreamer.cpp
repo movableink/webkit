@@ -45,7 +45,7 @@ RealtimeIncomingSourceGStreamer::RealtimeIncomingSourceGStreamer(const CaptureDe
 bool RealtimeIncomingSourceGStreamer::setBin(const GRefPtr<GstElement>& bin)
 {
     ASSERT(!m_bin);
-    if (UNLIKELY(m_bin)) {
+    if (m_bin) [[unlikely]] {
         GST_ERROR_OBJECT(m_bin.get(), "Calling setBin twice on the same incoming source instance is not allowed");
         return false;
     }

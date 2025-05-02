@@ -1319,7 +1319,7 @@ static std::optional<RefPtr<JSON::Value>> gstStructureValueToJSON(const GValue* 
 #if USE(GSTREAMER_WEBRTC)
     if (valueType == GST_TYPE_WEBRTC_STATS_TYPE) {
         auto name = webrtcStatsTypeName(g_value_get_enum(value));
-        if (LIKELY(!name.isEmpty()))
+        if (!name.isEmpty()) [[likely]]
             return JSON::Value::create(makeString(name))->asValue();
     }
 #endif

@@ -306,7 +306,7 @@ void WorkerDedicatedRunLoop::Task::performTask(WorkerOrWorkletGlobalScope* conte
         JSC::VM& vm = context->script()->vm();
         auto scope = DECLARE_CATCH_SCOPE(vm);
         m_task.performTask(*context);
-        if (UNLIKELY(context->script() && scope.exception())) {
+        if (context->script() && scope.exception()) [[unlikely]] {
             if (vm.hasPendingTerminationException()) {
                 context->script()->forbidExecution();
                 return;

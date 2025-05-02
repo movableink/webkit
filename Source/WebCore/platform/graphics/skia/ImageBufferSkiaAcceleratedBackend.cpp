@@ -161,7 +161,7 @@ void ImageBufferSkiaAcceleratedBackend::getPixelBuffer(const IntRect& srcRect, P
     SkPixmap pixmap(destinationInfo, destination.bytes().data(), destination.size().width() * 4);
 
     SkPixmap dstPixmap;
-    if (UNLIKELY(!pixmap.extractSubset(&dstPixmap, destinationRect)))
+    if (!pixmap.extractSubset(&dstPixmap, destinationRect)) [[unlikely]]
         return;
 
     m_surface->readPixels(dstPixmap, sourceRectClipped.x(), sourceRectClipped.y());
@@ -207,7 +207,7 @@ void ImageBufferSkiaAcceleratedBackend::putPixelBuffer(const PixelBufferSourceVi
     SkPixmap pixmap(pixelBufferInfo, pixelBuffer.bytes().data(), pixelBuffer.size().width() * 4);
 
     SkPixmap srcPixmap;
-    if (UNLIKELY(!pixmap.extractSubset(&srcPixmap, sourceRectClipped)))
+    if (!pixmap.extractSubset(&srcPixmap, sourceRectClipped)) [[unlikely]]
         return;
 
     const auto destAlphaType = (destFormat == AlphaPremultiplication::Premultiplied)

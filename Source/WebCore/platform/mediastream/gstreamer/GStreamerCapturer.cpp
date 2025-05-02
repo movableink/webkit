@@ -106,7 +106,7 @@ void GStreamerCapturer::setDevice(std::optional<GStreamerCaptureDevice>&& device
     tearDown(true);
     m_device = WTFMove(device);
 
-    if (UNLIKELY(!m_device))
+    if (!m_device) [[unlikely]]
         return;
 
     setupPipeline();

@@ -212,7 +212,7 @@ void GStreamerVideoRTPPacketizer::configure(const GstStructure* encodingParamete
 
 void GStreamerVideoRTPPacketizer::updateStats()
 {
-    if (UNLIKELY(!m_encoder))
+    if (!m_encoder) [[unlikely]]
         return;
 
     auto framesSent = gstStructureGet<uint64_t>(m_stats.get(), "frames-sent"_s).value_or(0);

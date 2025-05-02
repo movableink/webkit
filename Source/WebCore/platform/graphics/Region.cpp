@@ -626,33 +626,33 @@ bool Region::Shape::isValidShape(std::span<const int> segments, std::span<const 
         return !segmentsSize;
     if (!segmentsSize)
         return !spansSize;
-    if (UNLIKELY(spansSize == 1))
+    if (spansSize == 1) [[unlikely]]
         return false;
-    if (UNLIKELY(segmentsSize % 2))
+    if (segmentsSize % 2) [[unlikely]]
         return false;
     for (size_t i = 0; i < spansSize; ++i) {
         auto& span = spans[i];
-        if (UNLIKELY(span.segmentIndex > segmentsSize))
+        if (span.segmentIndex > segmentsSize) [[unlikely]]
             return false;
-        if (UNLIKELY(span.segmentIndex % 2))
+        if (span.segmentIndex % 2) [[unlikely]]
             return false;
 
         if (i < spansSize - 1) {
             auto& nextSpan = spans[i + 1];
 
-            if (UNLIKELY(span.y >= nextSpan.y))
+            if (span.y >= nextSpan.y) [[unlikely]]
                 return false;
-            if (UNLIKELY(span.segmentIndex > nextSpan.segmentIndex))
+            if (span.segmentIndex > nextSpan.segmentIndex) [[unlikely]]
                 return false;
 
             std::span spanSegments = segmentsForSpanSegmentIndices(segments, span.segmentIndex, nextSpan.segmentIndex);
             int lastX = std::numeric_limits<int>::min();
             for (int segment : spanSegments) {
-                if (UNLIKELY(lastX > segment))
+                if (lastX > segment) [[unlikely]]
                     return false;
                 lastX = segment;
             }
-        } else if (UNLIKELY(span.segmentIndex != segments.size()))
+        } else if (span.segmentIndex != segments.size()) [[unlikely]]
             return false;
     }
     return true;

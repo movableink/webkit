@@ -116,7 +116,7 @@ bool WorkerOrWorkletGlobalScope::isJSExecutionForbidden() const
 EventLoopTaskGroup& WorkerOrWorkletGlobalScope::eventLoop()
 {
     ASSERT(isContextThread());
-    if (UNLIKELY(!m_defaultTaskGroup)) {
+    if (!m_defaultTaskGroup) [[unlikely]] {
         m_eventLoop = WorkerEventLoop::create(*this);
         m_defaultTaskGroup = makeUnique<EventLoopTaskGroup>(*m_eventLoop);
         if (activeDOMObjectsAreStopped())

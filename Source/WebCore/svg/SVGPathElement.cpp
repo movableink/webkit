@@ -74,7 +74,7 @@ std::optional<DataRef<SVGPathByteStream::Data>> PathSegListCache::get(const Atom
 void PathSegListCache::add(const AtomString& attributeValue, DataRef<SVGPathByteStream::Data> data)
 {
     size_t newDataSize = data->size();
-    if (UNLIKELY(newDataSize > maxItemSizeInBytes))
+    if (newDataSize > maxItemSizeInBytes) [[unlikely]]
         return;
 
     m_sizeInBytes += newDataSize;

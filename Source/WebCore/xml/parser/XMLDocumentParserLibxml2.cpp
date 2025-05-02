@@ -816,14 +816,14 @@ void XMLDocumentParser::startElementNs(const xmlChar* xmlLocalName, const xmlCha
     if (!m_parsingFragment) {
         if (auto* window = m_currentNode->document().domWindow()) {
             auto* registry = window->customElementRegistry();
-            if (UNLIKELY(registry))
+            if (registry) [[unlikely]]
                 willConstructCustomElement = registry->findInterface(qName);
         }
     }
 
     std::optional<ThrowOnDynamicMarkupInsertionCountIncrementer> markupInsertionCountIncrementer;
     std::optional<CustomElementReactionStack> customElementReactionStack;
-    if (UNLIKELY(willConstructCustomElement)) {
+    if (willConstructCustomElement) [[unlikely]] {
         markupInsertionCountIncrementer.emplace(m_currentNode->document());
         m_currentNode->document().eventLoop().performMicrotaskCheckpoint();
         customElementReactionStack.emplace(m_currentNode->document().globalObject());
@@ -846,7 +846,7 @@ void XMLDocumentParser::startElementNs(const xmlChar* xmlLocalName, const xmlCha
         return;
     }
 
-    if (UNLIKELY(willConstructCustomElement)) {
+    if (willConstructCustomElement) [[unlikely]] {
         customElementReactionStack.reset();
         markupInsertionCountIncrementer.reset();
     }

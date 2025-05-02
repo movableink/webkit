@@ -159,7 +159,7 @@ bool GStreamerVideoCapturer::setSize(const IntSize& size)
         return true;
     }
 
-    if (UNLIKELY(!m_capsfilter))
+    if (!m_capsfilter) [[unlikely]]
         return false;
 
     m_size = size;
@@ -191,7 +191,7 @@ bool GStreamerVideoCapturer::setFrameRate(double frameRate)
         return false;
     }
 
-    if (UNLIKELY(!m_capsfilter))
+    if (!m_capsfilter) [[unlikely]]
         return false;
 
     m_caps = adoptGRef(gst_caps_copy(m_caps.get()));

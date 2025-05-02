@@ -160,7 +160,7 @@ void GStreamerIncomingTrackProcessor::retrieveMediaStreamAndTrackIdFromSDP()
     unsigned mLineIndex;
     g_object_get(m_data.transceiver.get(), "mlineindex", &mLineIndex, nullptr);
     const auto media = gst_sdp_message_get_media(description->sdp, mLineIndex);
-    if (UNLIKELY(!media))
+    if (!media) [[unlikely]]
         return;
 
     const char* msidAttribute = gst_sdp_media_get_attribute_val(media, "msid");
@@ -303,7 +303,7 @@ void GStreamerIncomingTrackProcessor::installRtpBufferPadProbe(const GRefPtr<Gst
         auto buffer = GST_PAD_PROBE_INFO_BUFFER(info);
         {
             GstMappedRtpBuffer rtpBuffer(buffer, GST_MAP_READ);
-            if (UNLIKELY(!rtpBuffer))
+            if (!rtpBuffer) [[unlikely]]
                 return GST_PAD_PROBE_OK;
 
             // Do not process further if this packet doesn't mark the end of a frame.

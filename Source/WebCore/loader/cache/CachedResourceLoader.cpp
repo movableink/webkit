@@ -121,11 +121,11 @@ static inline ResourceErrorOr<CachedResourceHandle<T>> castCachedResourceTo(Reso
 
 static ScriptRequiresTelemetry scriptRequiresTelemetry(const Document* document, const ResourceRequest& request)
 {
-    if (UNLIKELY(!document))
+    if (!document) [[unlikely]]
         return ScriptRequiresTelemetry::No;
 
     RefPtr page = document->page();
-    if (UNLIKELY(!page))
+    if (!page) [[unlikely]]
         return ScriptRequiresTelemetry::No;
 
     return page->requiresScriptTelemetryForURL(request.url()) ? ScriptRequiresTelemetry::Yes : ScriptRequiresTelemetry::No;

@@ -143,7 +143,7 @@ private:
 
 inline bool LayoutState::hasBoxGeometry(const Box& layoutBox) const
 {
-    if (LIKELY(m_type == Type::Primary))
+    if (m_type == Type::Primary) [[likely]]
         return !!layoutBox.m_cachedGeometryForPrimaryLayoutState;
 
     return m_layoutBoxToBoxGeometry.contains(&layoutBox);
@@ -151,7 +151,7 @@ inline bool LayoutState::hasBoxGeometry(const Box& layoutBox) const
 
 inline BoxGeometry& LayoutState::ensureGeometryForBox(const Box& layoutBox)
 {
-    if (LIKELY(m_type == Type::Primary)) {
+    if (m_type == Type::Primary) [[likely]] {
         if (auto* boxGeometry = layoutBox.m_cachedGeometryForPrimaryLayoutState.get()) {
             ASSERT(layoutBox.m_primaryLayoutState == this);
             return *boxGeometry;
@@ -162,7 +162,7 @@ inline BoxGeometry& LayoutState::ensureGeometryForBox(const Box& layoutBox)
 
 inline const BoxGeometry& LayoutState::geometryForBox(const Box& layoutBox) const
 {
-    if (LIKELY(m_type == Type::Primary)) {
+    if (m_type == Type::Primary) [[likely]] {
         ASSERT(layoutBox.m_primaryLayoutState == this);
         return *layoutBox.m_cachedGeometryForPrimaryLayoutState;
     }

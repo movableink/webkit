@@ -1262,7 +1262,7 @@ void webkitMediaStreamSrcConfigureAudioTracks(WebKitMediaStreamSrc* self, float 
 {
     for (auto& source : self->priv->sources) {
         auto track = source->track();
-        if (UNLIKELY(!track))
+        if (!track) [[unlikely]]
             continue;
         if (track->isAudio())
             source->configureAudioTrack(volume, isMuted, isPlaying);

@@ -331,7 +331,7 @@ void HTMLConstructionSite::mergeAttributesFromTokenIntoElement(AtomHTMLToken&& t
 
     for (auto& tokenAttribute : token.attributes()) {
         auto& attributeName = tokenAttribute.name();
-        if (UNLIKELY(attributeName == nonceAttr)) {
+        if (attributeName == nonceAttr) [[unlikely]] {
             if (element.hasAttributeWithoutSynchronization(nonceAttr) || !element.nonce().isEmpty())
                 continue;
             // Make sure the nonce attribute remains hidden.
@@ -381,7 +381,7 @@ void HTMLConstructionSite::setCompatibilityModeFromDoctype(const AtomString& nam
     // No Quirks - no quirks apply. Web pages will obey the specifications to the letter.
 
     bool isNameHTML = name == HTMLNames::htmlTag->localName();
-    if (LIKELY((isNameHTML && publicId.isEmpty() && systemId.isEmpty()) || document().isSrcdocDocument())) {
+    if ((isNameHTML && publicId.isEmpty() && systemId.isEmpty()) || document().isSrcdocDocument()) [[likely]] {
         setCompatibilityMode(DocumentCompatibilityMode::NoQuirksMode);
         return;
     }
@@ -593,7 +593,7 @@ void HTMLConstructionSite::insertHTMLTemplateElement(AtomHTMLToken&& token)
 std::unique_ptr<CustomElementConstructionData> HTMLConstructionSite::insertHTMLElementOrFindCustomElementInterface(AtomHTMLToken&& token)
 {
     auto [element, elementInterface, registry] = createHTMLElementOrFindCustomElementInterface(token);
-    if (UNLIKELY(elementInterface)) {
+    if (elementInterface) [[unlikely]] {
         RELEASE_ASSERT(registry);
         return makeUnique<CustomElementConstructionData>(elementInterface.releaseNonNull(), registry.releaseNonNull(), token.name(), WTFMove(token.attributes()));
     }
@@ -682,7 +682,7 @@ static ALWAYS_INLINE unsigned findBreakIndex(const String& string, unsigned curr
     ASSERT(currentPosition < proposedBreakIndex);
     ASSERT(proposedBreakIndex <= string.length());
 
-    if (LIKELY(proposedBreakIndex == string.length() || string.is8Bit()))
+    if (proposedBreakIndex == string.length() || string.is8Bit()) [[likely]]
         return proposedBreakIndex;
 
     return findBreakIndexSlow(string, currentPosition, proposedBreakIndex);
@@ -706,7 +706,7 @@ void HTMLConstructionSite::insertTextNode(const String& characters)
     if (task.nextChild)
         previousChild = task.nextChild->previousSibling();
     else {
-        if (auto templateParent = dynamicDowncast<HTMLTemplateElement>(task.parent.get()); UNLIKELY(templateParent)) {
+        if (auto templateParent = dynamicDowncast<HTMLTemplateElement>(task.parent.get()); templateParent) [[unlikely]] {
             auto parentNode = templateParent->contentIfAvailable();
             previousChild = parentNode ? parentNode->lastChild() : nullptr;
         } else
@@ -725,7 +725,7 @@ void HTMLConstructionSite::insertTextNode(const String& characters)
         unsigned proposedBreakIndex = std::min(currentPosition + lengthLimit, characters.length());
         unsigned breakIndex = findBreakIndex(characters, currentPosition, proposedBreakIndex);
         // If we couldn't find a break index (due to unbreakable characters), then we just don't split.
-        if (UNLIKELY(breakIndex == currentPosition))
+        if (breakIndex == currentPosition) [[unlikely]]
             breakIndex = characters.length();
 
         unsigned substringLength = breakIndex - currentPosition;
@@ -772,7 +772,7 @@ static inline QualifiedName qualifiedNameForTag(AtomHTMLToken& token, const Atom
 {
     auto nodeNamespace = findNamespace(namespaceURI);
     auto elementName = elementNameForTag(nodeNamespace, token.tagName());
-    if (LIKELY(elementName != ElementName::Unknown))
+    if (elementName != ElementName::Unknown) [[likely]]
         return qualifiedNameForNodeName(elementName);
     return { nullAtom(), token.name(), namespaceURI, nodeNamespace, elementName };
 }
@@ -780,7 +780,7 @@ static inline QualifiedName qualifiedNameForTag(AtomHTMLToken& token, const Atom
 static inline QualifiedName qualifiedNameForHTMLTag(const AtomHTMLToken& token)
 {
     auto elementName = elementNameForTag(Namespace::HTML, token.tagName());
-    if (LIKELY(elementName != ElementName::Unknown))
+    if (elementName != ElementName::Unknown) [[likely]]
         return qualifiedNameForNodeName(elementName);
     return { nullAtom(), token.name(), xhtmlNamespaceURI, Namespace::HTML, elementName };
 }
@@ -826,15 +826,15 @@ std::tuple<RefPtr<HTMLElement>, RefPtr<JSCustomElementInterface>, RefPtr<CustomE
     Ref ownerDocument = treeScope->documentScope();
     bool insideTemplateElement = m_openElements.containsTemplateElement();
     RefPtr element = HTMLElementFactory::createKnownElement(token.tagName(), ownerDocument, insideTemplateElement ? nullptr : form(), true);
-    if (UNLIKELY(!element)) {
+    if (!element) [[unlikely]] {
         RefPtr<CustomElementRegistry> registry = m_openElements.stackDepth() > 1 ? registryForCurrentNode(currentNode(), treeScope) : m_registry;
         auto* elementInterface = registry ? registry->findInterface(token.name()) : nullptr;
-        if (UNLIKELY(elementInterface)) {
+        if (elementInterface) [[unlikely]] {
             if (!m_isParsingFragment)
                 return { nullptr, elementInterface, WTFMove(registry) };
             ASSERT(qualifiedNameForHTMLTag(token) == elementInterface->name());
             element = elementInterface->createElement(ownerDocument);
-            if (UNLIKELY(registry->isScoped()))
+            if (registry->isScoped()) [[unlikely]]
                 CustomElementRegistry::addToScopedCustomElementRegistryMap(*element, *registry);
             element->setIsCustomElementUpgradeCandidate();
             element->enqueueToUpgrade(*elementInterface);

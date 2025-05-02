@@ -52,7 +52,7 @@ namespace WebCore {
 std::unique_ptr<CoordinatedPlatformLayerBufferVideo> CoordinatedPlatformLayerBufferVideo::create(GstSample* sample, GstVideoInfo* videoInfo, std::optional<DMABufFormat> dmabufFormat, std::optional<GstVideoDecoderPlatform> videoDecoderPlatform, bool gstGLEnabled, OptionSet<TextureMapperFlags> flags)
 {
     auto* buffer = gst_sample_get_buffer(sample);
-    if (UNLIKELY(!GST_IS_BUFFER(buffer)))
+    if (!GST_IS_BUFFER(buffer)) [[unlikely]]
         return nullptr;
 
     return makeUnique<CoordinatedPlatformLayerBufferVideo>(buffer, videoInfo, dmabufFormat, videoDecoderPlatform, gstGLEnabled, flags);

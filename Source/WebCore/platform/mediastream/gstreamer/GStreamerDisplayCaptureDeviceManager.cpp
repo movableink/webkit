@@ -147,7 +147,7 @@ CaptureSourceOrError GStreamerDisplayCaptureDeviceManager::createDisplayCaptureS
 
 void GStreamerDisplayCaptureDeviceManager::stopSource(const String& persistentID)
 {
-    if (UNLIKELY(!m_portal))
+    if (!m_portal) [[unlikely]]
         return;
 
     auto session = m_sessions.take(persistentID);

@@ -36,7 +36,7 @@ GStreamerQuirkWesteros::GStreamerQuirkWesteros()
     GST_DEBUG_CATEGORY_INIT(webkit_westeros_quirks_debug, "webkitquirkswesteros", 0, "WebKit Westeros Quirks");
 
     auto westerosFactory = adoptGRef(gst_element_factory_find("westerossink"));
-    if (UNLIKELY(!westerosFactory))
+    if (!westerosFactory) [[unlikely]]
         return;
 
     gst_object_unref(gst_plugin_feature_load(GST_PLUGIN_FEATURE(westerosFactory.get())));

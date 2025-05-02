@@ -1553,11 +1553,13 @@ String Quirks::scriptToEvaluateBeforeRunningScriptFromURL(const URL& scriptURL)
         return { };
 
     // player.anyclip.com rdar://138789765
-    if (UNLIKELY(m_quirksData.isThesaurus && scriptURL.lastPathComponent().endsWith("lre.js"_s)) && scriptURL.host() == "player.anyclip.com"_s)
-        return "(function() { let userAgent = navigator.userAgent; Object.defineProperty(navigator, 'userAgent', { get: () => { return userAgent + ' Chrome/130.0.0.0 Android/15.0'; }, configurable: true }); })();"_s;
+    if (m_quirksData.isThesaurus && scriptURL.lastPathComponent().endsWith("lre.js"_s)) [[unlikely]] {
+        if (scriptURL.host() == "player.anyclip.com"_s)
+            return "(function() { let userAgent = navigator.userAgent; Object.defineProperty(navigator, 'userAgent', { get: () => { return userAgent + ' Chrome/130.0.0.0 Android/15.0'; }, configurable: true }); })();"_s;
+    }
 
 #if ENABLE(DESKTOP_CONTENT_MODE_QUIRKS)
-    if (UNLIKELY(m_quirksData.isWebEx && scriptURL.lastPathComponent().startsWith("pushdownload."_s)))
+    if (m_quirksData.isWebEx && scriptURL.lastPathComponent().startsWith("pushdownload."_s)) [[unlikely]]
         return "Object.defineProperty(window, 'Touch', { get: () => undefined });"_s;
 #endif
 #else
@@ -1776,14 +1778,14 @@ bool Quirks::needsFacebookStoriesCreationFormQuirk(const Element& element, const
 
     Ref document = element.document();
     RefPtr loader = document->loader();
-    if (UNLIKELY(!loader))
+    if (!loader) [[unlikely]]
         return false;
 
     if (loader->metaViewportPolicy() != MetaViewportPolicy::Ignore)
         return false;
 
     RefPtr view = document->view();
-    if (UNLIKELY(!view))
+    if (!view) [[unlikely]]
         return false;
 
     float width = view->sizeForCSSDefaultViewportUnits().width();
@@ -1855,7 +1857,7 @@ bool Quirks::shouldSupportHoverMediaQueries() const
 
 URL Quirks::topDocumentURL() const
 {
-    if (UNLIKELY(!m_topDocumentURLForTesting.isEmpty()))
+    if (!m_topDocumentURLForTesting.isEmpty()) [[unlikely]]
         return m_topDocumentURLForTesting;
 
     return m_document->topURL();

@@ -213,7 +213,7 @@ public:
         if (inputImage._encodedWidth && inputImage._encodedHeight)
             updateCapsFromImageSize(inputImage._encodedWidth, inputImage._encodedHeight);
 
-        if (UNLIKELY(!m_caps)) {
+        if (!m_caps) [[unlikely]] {
             GST_ERROR("Encoded image caps not set");
             ASSERT_NOT_REACHED();
             return WEBRTC_VIDEO_CODEC_UNINITIALIZED;

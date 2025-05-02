@@ -100,7 +100,7 @@ private:
 
 inline void RenderTableRow::setRowIndex(unsigned rowIndex)
 {
-    if (UNLIKELY(rowIndex > maxRowIndex))
+    if (rowIndex > maxRowIndex) [[unlikely]]
         CRASH();
     m_rowIndex = rowIndex;
 }

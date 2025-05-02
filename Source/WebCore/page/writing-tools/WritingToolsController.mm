@@ -245,7 +245,7 @@ void WritingToolsController::willBeginWritingToolsSession(const std::optional<Wr
     // Postcondition: the selected text character range must be a valid range within the
     // attributed string formed by the context range; the length of the entire context range
     // being equal to the length of the attributed string implies the range is valid.
-    if (UNLIKELY(attributedStringCharacterCount != contextRangeCharacterCount)) {
+    if (attributedStringCharacterCount != contextRangeCharacterCount) [[unlikely]] {
         RELEASE_LOG_ERROR(WritingTools, "WritingToolsController::willBeginWritingToolsSession (%s) => attributed string length (%u) != context range length (%llu)", session->identifier.toString().utf8().data(), attributedStringCharacterCount, contextRangeCharacterCount);
         ASSERT_NOT_REACHED();
         completionHandler({ });
@@ -600,7 +600,7 @@ void WritingToolsController::compositionSessionDidReceiveTextWithReplacementRang
 
     // Precondition: the range is always relative to the context's attributed text, so by definition it must
     // be strictly less than the length of the attributed string.
-    if (UNLIKELY(contextTextCharacterCount < range.location + range.length)) {
+    if (contextTextCharacterCount < range.location + range.length) [[unlikely]] {
         RELEASE_LOG_ERROR(WritingTools, "WritingToolsController::compositionSessionDidReceiveTextWithReplacementRange (%s) => trying to replace a range larger than the context range (context range length: %u, range.location %llu, range.length %llu)", state->session.identifier.toString().utf8().data(), contextTextCharacterCount, range.location, range.length);
         compositionSessionDidFinishReplacement();
         ASSERT_NOT_REACHED();
@@ -630,7 +630,7 @@ void WritingToolsController::compositionSessionDidReceiveTextWithReplacementRang
     auto sessionRange = state->reappliedCommands.last()->endingContextRange();
     auto sessionRangeCharacterCount = characterCount(sessionRange);
 
-    if (UNLIKELY(range.length + sessionRangeCharacterCount < contextTextCharacterCount)) {
+    if (range.length + sessionRangeCharacterCount < contextTextCharacterCount) [[unlikely]] {
         RELEASE_LOG_ERROR(WritingTools, "WritingToolsController::compositionSessionDidReceiveTextWithReplacementRange (%s) => the range offset by the character count delta must have a non-negative size (context range length: %u, range.length %llu, session length: %llu)", state->session.identifier.toString().utf8().data(), contextTextCharacterCount, range.length, sessionRangeCharacterCount);
         compositionSessionDidFinishReplacement();
         ASSERT_NOT_REACHED();

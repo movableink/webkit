@@ -1112,7 +1112,7 @@ inline void LocalFrameView::incrementVisuallyNonEmptyPixelCount(const IntSize& s
         return;
 
     auto area = size.area<RecordOverflow>() + m_visuallyNonEmptyPixelCount;
-    if (UNLIKELY(area.hasOverflowed()))
+    if (area.hasOverflowed()) [[unlikely]]
         m_visuallyNonEmptyPixelCount = std::numeric_limits<decltype(m_visuallyNonEmptyPixelCount)>::max();
     else
         m_visuallyNonEmptyPixelCount = area;

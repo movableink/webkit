@@ -436,7 +436,7 @@ void GraphicsLayerCA::initialize(Type layerType)
 
 GraphicsLayerCA::~GraphicsLayerCA()
 {
-    if (UNLIKELY(isTrackingDisplayListReplay()))
+    if (isTrackingDisplayListReplay()) [[unlikely]]
         layerDisplayListMap().remove(this);
 
     // We release our references to the PlatformCALayers here, but do not actively unparent them,
@@ -2019,7 +2019,7 @@ void GraphicsLayerCA::platformCALayerPaintContents(PlatformCALayer*, GraphicsCon
     if (m_displayList) {
         context.drawDisplayList(*m_displayList);
         
-        if (UNLIKELY(isTrackingDisplayListReplay())) {
+        if (isTrackingDisplayListReplay()) [[unlikely]] {
             // Original purpose of the code was to track playback time optimizations. However, there are no such things, and as such we
             // use the original.
             layerDisplayListMap().add(this, std::make_pair(clip, Ref { *m_displayList }));

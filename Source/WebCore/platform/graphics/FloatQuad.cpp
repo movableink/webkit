@@ -79,7 +79,7 @@ inline bool isPointInTriangle(const FloatPoint& p, const FloatPoint& t1, const F
 
 static inline float clampToIntRange(float value)
 {
-    if (UNLIKELY(std::isinf(value) || std::abs(value) > (static_cast<float>(std::numeric_limits<int>::max()))))
+    if (std::isinf(value) || std::abs(value) > (static_cast<float>(std::numeric_limits<int>::max()))) [[unlikely]]
         return std::signbit(value) ? std::numeric_limits<int>::min() : (static_cast<float>(std::numeric_limits<int>::max()));
 
     return value;

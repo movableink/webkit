@@ -57,7 +57,7 @@ void AccessibilityRegionContext::takeBounds(const RenderInline& renderInline, La
 
 void AccessibilityRegionContext::takeBounds(const RenderBox& renderBox, LayoutPoint paintOffset)
 {
-    if (CheckedPtr renderView = dynamicDowncast<RenderView>(renderBox); UNLIKELY(renderView)) {
+    if (CheckedPtr renderView = dynamicDowncast<RenderView>(renderBox); renderView) [[unlikely]] {
         takeBounds(*renderView, WTFMove(paintOffset));
         return;
     }

@@ -216,7 +216,7 @@ void GStreamerRTPPacketizer::setPayloadType(int pt)
 
 std::optional<int> GStreamerRTPPacketizer::payloadType() const
 {
-    if (LIKELY(m_payloadType))
+    if (m_payloadType) [[likely]]
         return m_payloadType;
 
     GValue value = G_VALUE_INIT;
@@ -263,7 +263,7 @@ int GStreamerRTPPacketizer::findLastExtensionId(const GstCaps* caps)
             return true;
 
         auto identifier = WTF::parseInteger<int>(name.substring(7));
-        if (UNLIKELY(!identifier))
+        if (!identifier) [[unlikely]]
             return true;
 
         holder->extensionId = std::max(holder->extensionId, *identifier);

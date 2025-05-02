@@ -513,7 +513,7 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
 
 void BackgroundPainter::clipRoundedInnerRect(GraphicsContext& context, const FloatRoundedRect& clipRect)
 {
-    if (UNLIKELY(!clipRect.isRenderable())) {
+    if (!clipRect.isRenderable()) [[unlikely]] {
         auto adjustedClipRect = clipRect;
         adjustedClipRect.adjustRadii();
         context.clipRoundedRect(adjustedClipRect);

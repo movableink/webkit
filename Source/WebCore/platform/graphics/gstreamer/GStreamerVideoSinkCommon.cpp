@@ -109,7 +109,9 @@ public:
             GstCaps* caps;
             gboolean needPool;
             gst_query_parse_allocation(query, &caps, &needPool);
-            if (UNLIKELY(!caps) || !needPool)
+            if (!caps) [[unlikely]]
+                return GST_PAD_PROBE_OK;
+            if (!needPool)
                 return GST_PAD_PROBE_OK;
 
             unsigned size;

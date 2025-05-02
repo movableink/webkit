@@ -643,7 +643,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
                 style.setHeight(WebCore::Length(200, LengthType::Fixed));
         }
 
-        if (UNLIKELY(m_element->visibilityAdjustment().contains(VisibilityAdjustment::Subtree) || m_parentStyle.isInVisibilityAdjustmentSubtree()))
+        if (m_element->visibilityAdjustment().contains(VisibilityAdjustment::Subtree) || m_parentStyle.isInVisibilityAdjustmentSubtree()) [[unlikely]]
             style.setIsInVisibilityAdjustmentSubtree();
     }
 

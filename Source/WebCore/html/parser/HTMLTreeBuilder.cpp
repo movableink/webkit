@@ -1561,7 +1561,7 @@ void HTMLTreeBuilder::processAnyOtherEndTagForInBody(AtomHTMLToken&& token)
         }
     };
 
-    if (auto elementName = elementNameForTag(Namespace::HTML, token.tagName()); LIKELY(elementName != ElementName::Unknown))
+    if (auto elementName = elementNameForTag(Namespace::HTML, token.tagName()); elementName != ElementName::Unknown) [[likely]]
         popOpenElements(elementName);
     else
         popOpenElements(token.name());

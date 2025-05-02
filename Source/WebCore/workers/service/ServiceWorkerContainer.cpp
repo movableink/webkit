@@ -468,7 +468,7 @@ void ServiceWorkerContainer::jobResolvedWithRegistration(ServiceWorkerJob& job, 
                 container->notifyRegistrationIsSettled(iterator->value);
                 container->m_ongoingSettledRegistrations.remove(iterator);
             });
-            if (UNLIKELY(promise->needsAbort()))
+            if (promise->needsAbort()) [[unlikely]]
                 return;
         }
 
@@ -479,7 +479,7 @@ void ServiceWorkerContainer::jobResolvedWithRegistration(ServiceWorkerJob& job, 
 void ServiceWorkerContainer::postMessage(MessageWithMessagePorts&& message, ServiceWorkerData&& sourceData, String&& sourceOrigin)
 {
     auto& context = *scriptExecutionContext();
-    if (UNLIKELY(context.isJSExecutionForbidden()))
+    if (context.isJSExecutionForbidden()) [[unlikely]]
         return;
 
     auto* globalObject = context.globalObject();
@@ -492,7 +492,7 @@ void ServiceWorkerContainer::postMessage(MessageWithMessagePorts&& message, Serv
     MessageEventSource source = RefPtr<ServiceWorker> { ServiceWorker::getOrCreate(context, WTFMove(sourceData)) };
 
     auto messageEvent = MessageEvent::create(*globalObject, message.message.releaseNonNull(), sourceOrigin, { }, WTFMove(source), MessagePort::entanglePorts(context, WTFMove(message.transferredPorts)));
-    if (UNLIKELY(scope.exception())) {
+    if (scope.exception()) [[unlikely]] {
         // Currently, we assume that the only way we can get here is if we have a termination.
         RELEASE_ASSERT(vm.hasPendingTerminationException());
         return;

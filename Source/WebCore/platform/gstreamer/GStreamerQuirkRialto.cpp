@@ -45,7 +45,7 @@ GStreamerQuirkRialto::GStreamerQuirkRialto()
 
     for (const auto* sink : rialtoSinks) {
         auto sinkFactory = adoptGRef(gst_element_factory_find(sink));
-        if (UNLIKELY(!sinkFactory))
+        if (!sinkFactory) [[unlikely]]
             continue;
 
         gst_object_unref(gst_plugin_feature_load(GST_PLUGIN_FEATURE(sinkFactory.get())));

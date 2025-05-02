@@ -262,7 +262,7 @@ Vector<StyledMarkedText> StyledMarkedText::subdivideAndResolve(const Vector<Mark
 
     auto markedTexts = MarkedText::subdivide(textsToSubdivide, OverlapStrategy::None);
     ASSERT(!markedTexts.isEmpty());
-    if (UNLIKELY(markedTexts.isEmpty()))
+    if (markedTexts.isEmpty()) [[unlikely]]
         return { };
 
     if (!markedTexts.isEmpty()) {

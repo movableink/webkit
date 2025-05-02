@@ -94,7 +94,7 @@ inline void Node::setRenderer(RenderObject* renderer)
 {
     m_renderer = renderer;
 
-    if (UNLIKELY(InspectorInstrumentationPublic::hasFrontends()))
+    if (InspectorInstrumentationPublic::hasFrontends()) [[unlikely]]
         notifyInspectorOfRendererChange();
 }
 

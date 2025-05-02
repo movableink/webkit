@@ -311,7 +311,7 @@ void WebRTCProvider::setPortAllocatorRange(StringView range)
         return;
 
     auto components = range.toStringWithoutCopying().split(':');
-    if (UNLIKELY(components.size() != 2)) {
+    if (components.size() != 2) [[unlikely]] {
         WTFLogAlways("Invalid format for UDP port range. Should be \"min-port:max-port\"");
         ASSERT_NOT_REACHED();
         return;

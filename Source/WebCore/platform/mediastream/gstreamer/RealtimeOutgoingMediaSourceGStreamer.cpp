@@ -355,7 +355,7 @@ void RealtimeOutgoingMediaSourceGStreamer::configure(GRefPtr<GstCaps>&& allowedC
         const auto encodingsValue = gst_structure_get_value(m_parameters.get(), "encodings");
         RELEASE_ASSERT(GST_VALUE_HOLDS_LIST(encodingsValue));
         unsigned encodingsSize = gst_value_list_get_size(encodingsValue);
-        if (UNLIKELY(!encodingsSize)) {
+        if (!encodingsSize) [[unlikely]] {
             GST_WARNING_OBJECT(m_bin.get(), "Encodings list is empty, cancelling configuration");
             return;
         }
@@ -370,7 +370,7 @@ void RealtimeOutgoingMediaSourceGStreamer::setParameters(GUniquePtr<GstStructure
     const auto encodingsValue = gst_structure_get_value(parameters.get(), "encodings");
     RELEASE_ASSERT(GST_VALUE_HOLDS_LIST(encodingsValue));
     unsigned encodingsSize = gst_value_list_get_size(encodingsValue);
-    if (UNLIKELY(!encodingsSize)) {
+    if (!encodingsSize) [[unlikely]] {
         GST_WARNING_OBJECT(m_bin.get(), "Encodings list is empty, cancelling re-configuration");
         return;
     }
@@ -427,7 +427,7 @@ bool RealtimeOutgoingMediaSourceGStreamer::linkSource()
 bool RealtimeOutgoingMediaSourceGStreamer::configurePacketizers(GRefPtr<GstCaps>&& codecPreferences)
 {
     GST_DEBUG_OBJECT(m_bin.get(), "Configuring packetizers for caps %" GST_PTR_FORMAT, codecPreferences.get());
-    if (UNLIKELY(gst_caps_is_empty(codecPreferences.get()) || gst_caps_is_any(codecPreferences.get())))
+    if (gst_caps_is_empty(codecPreferences.get()) || gst_caps_is_any(codecPreferences.get())) [[unlikely]]
         return false;
 
     if (m_outgoingSource) {
@@ -445,7 +445,7 @@ bool RealtimeOutgoingMediaSourceGStreamer::configurePacketizers(GRefPtr<GstCaps>
             const auto encodingsValue = gst_structure_get_value(m_parameters.get(), "encodings");
             RELEASE_ASSERT(GST_VALUE_HOLDS_LIST(encodingsValue));
             auto totalEncodings = gst_value_list_get_size(encodingsValue);
-            if (UNLIKELY(!totalEncodings)) {
+            if (!totalEncodings) [[unlikely]] {
                 auto packetizer = createPacketizer(m_ssrcGenerator, codecParameters, nullptr);
                 if (!packetizer)
                     continue;
@@ -466,7 +466,7 @@ bool RealtimeOutgoingMediaSourceGStreamer::configurePacketizers(GRefPtr<GstCaps>
                     continue;
 
                 auto rtpParameters = packetizer->rtpParameters();
-                if (UNLIKELY(!rtpParameters))
+                if (!rtpParameters) [[unlikely]]
                     continue;
 
                 codecIsValid = linkPacketizer(WTFMove(packetizer));
@@ -487,7 +487,7 @@ bool RealtimeOutgoingMediaSourceGStreamer::configurePacketizers(GRefPtr<GstCaps>
                 continue;
 
             auto rtpParameters = packetizer->rtpParameters();
-            if (UNLIKELY(!rtpParameters))
+            if (!rtpParameters) [[unlikely]]
                 continue;
             if (linkPacketizer(WTFMove(packetizer))) {
                 gst_caps_append_structure(rtpCaps.get(), rtpParameters.release());
@@ -563,7 +563,7 @@ RealtimeOutgoingMediaSourceGStreamer::ExtensionLookupResults RealtimeOutgoingMed
             return true;
 
         auto identifier = WTF::parseInteger<int>(name.substring(7)).value_or(0);
-        if (UNLIKELY(!identifier))
+        if (!identifier) [[unlikely]]
             return true;
 
         lookupResults.lastIdentifier = std::max(lookupResults.lastIdentifier, identifier);

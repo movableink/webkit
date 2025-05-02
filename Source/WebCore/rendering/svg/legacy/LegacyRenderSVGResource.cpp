@@ -172,7 +172,7 @@ static void removeFromCacheAndInvalidateDependencies(RenderElement& renderer, bo
             // We allow cycles in SVGDocumentExtensions reference sets in order to avoid expensive
             // reference graph adjustments on changes, so we need to break possible cycles here.
             static NeverDestroyed<WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>> invalidatingDependencies;
-            if (UNLIKELY(!invalidatingDependencies.get().add(element.get()).isNewEntry)) {
+            if (!invalidatingDependencies.get().add(element.get()).isNewEntry) [[unlikely]] {
                 // Reference cycle: we are in process of invalidating this dependant.
                 continue;
             }

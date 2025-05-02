@@ -210,7 +210,7 @@ Node* FocusNavigationScope::parentInScope(const Node& node) const
     if (m_treeScopeRootNode == &node)
         return nullptr;
 
-    if (UNLIKELY(m_slotElement)) {
+    if (m_slotElement) [[unlikely]] {
         if (m_slotKind == SlotKind::Assigned) {
             if (m_slotElement == node.assignedSlot())
                 return nullptr;
@@ -227,7 +227,7 @@ Node* FocusNavigationScope::parentInScope(const Node& node) const
 
 Node* FocusNavigationScope::nextSiblingInScope(const Node& node) const
 {
-    if (UNLIKELY(m_slotElement && m_slotElement == node.assignedSlot())) {
+    if (m_slotElement && m_slotElement == node.assignedSlot()) [[unlikely]] {
         for (Node* current = node.nextSibling(); current; current = current->nextSibling()) {
             if (current->assignedSlot() == m_slotElement)
                 return current;
@@ -244,7 +244,7 @@ Node* FocusNavigationScope::nextSiblingInScope(const Node& node) const
 
 Node* FocusNavigationScope::previousSiblingInScope(const Node& node) const
 {
-    if (UNLIKELY(m_slotElement && m_slotElement == node.assignedSlot())) {
+    if (m_slotElement && m_slotElement == node.assignedSlot()) [[unlikely]] {
         for (Node* current = node.previousSibling(); current; current = current->previousSibling()) {
             if (current->assignedSlot() == m_slotElement)
                 return current;
@@ -261,7 +261,7 @@ Node* FocusNavigationScope::previousSiblingInScope(const Node& node) const
 
 Node* FocusNavigationScope::firstNodeInScope() const
 {
-    if (UNLIKELY(m_slotElement)) {
+    if (m_slotElement) [[unlikely]] {
         auto* assignedNodes = m_slotElement->assignedNodes();
         if (m_slotKind == SlotKind::Assigned) {
             ASSERT(assignedNodes);
@@ -279,7 +279,7 @@ Node* FocusNavigationScope::firstNodeInScope() const
 
 Node* FocusNavigationScope::lastNodeInScope() const
 {
-    if (UNLIKELY(m_slotElement)) {
+    if (m_slotElement) [[unlikely]] {
         auto* assignedNodes = m_slotElement->assignedNodes();
         if (m_slotKind == SlotKind::Assigned) {
             ASSERT(assignedNodes);

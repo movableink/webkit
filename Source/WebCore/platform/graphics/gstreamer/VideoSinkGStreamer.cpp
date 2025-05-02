@@ -103,7 +103,7 @@ public:
             sample = std::exchange(m_sample, nullptr);
         }
 
-        if (LIKELY(GST_IS_SAMPLE(sample.get())))
+        if (GST_IS_SAMPLE(sample.get())) [[likely]]
             webkitVideoSinkRepaintRequested(sink, sample.get());
 
         return true;

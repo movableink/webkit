@@ -144,7 +144,7 @@ public:
 
     int ceil() const
     {
-        if (UNLIKELY(m_value >= INT_MAX - kFixedPointDenominator + 1))
+        if (m_value >= INT_MAX - kFixedPointDenominator + 1) [[unlikely]]
             return intMaxForLayoutUnit;
         if (m_value >= 0)
             return (m_value + kFixedPointDenominator - 1) / kFixedPointDenominator;
@@ -158,7 +158,7 @@ public:
 
     int floor() const
     {
-        if (UNLIKELY(m_value <= INT_MIN + kFixedPointDenominator - 1))
+        if (m_value <= INT_MIN + kFixedPointDenominator - 1) [[unlikely]]
             return intMinForLayoutUnit;
         return m_value >> kLayoutUnitFractionalBits;
     }

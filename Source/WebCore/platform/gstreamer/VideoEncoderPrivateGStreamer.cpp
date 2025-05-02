@@ -713,7 +713,7 @@ static void webkit_video_encoder_class_init(WebKitVideoEncoderClass* klass)
             g_object_set(self->priv->parser.get(), "config-interval", 1, nullptr);
 
             const auto& encodedCaps = self->priv->encodedCaps;
-            if (LIKELY(!gst_caps_is_any(encodedCaps.get()) && !gst_caps_is_empty(encodedCaps.get()))) {
+            if (!gst_caps_is_any(encodedCaps.get()) && !gst_caps_is_empty(encodedCaps.get())) [[likely]] {
                 auto structure = gst_caps_get_structure(encodedCaps.get(), 0);
                 auto profile = gstStructureGetString(structure, "profile"_s);
 
@@ -993,7 +993,7 @@ static void webkit_video_encoder_class_init(WebKitVideoEncoderClass* klass)
         [](WebKitVideoEncoder* self) {
             g_object_set(self->priv->encoder.get(), "key-int-max", 15, nullptr);
         }, "bitrate"_s, [](GObject* object, ASCIILiteral propertyName, int bitrate) {
-            if (UNLIKELY(!bitrate))
+            if (!bitrate) [[unlikely]]
                 return;
             setBitrateKbitPerSec(object, propertyName, bitrate);
             auto bitrateMode = GPOINTER_TO_INT(g_object_get_qdata(object, x265BitrateQuark));

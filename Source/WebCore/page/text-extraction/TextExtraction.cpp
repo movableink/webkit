@@ -224,7 +224,7 @@ static inline void merge(Item& destinationItem, Item&& sourceItem)
 static inline FloatRect rootViewBounds(Node& node)
 {
     auto view = node.document().protectedView();
-    if (UNLIKELY(!view))
+    if (!view) [[unlikely]]
         return { };
 
     CheckedPtr renderer = node.renderer();

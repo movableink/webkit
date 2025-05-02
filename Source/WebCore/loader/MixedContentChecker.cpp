@@ -154,7 +154,7 @@ bool MixedContentChecker::frameAndAncestorsCanRunInsecureContent(LocalFrame& fra
         return false;
 
     bool allowed = !document->isStrictMixedContentMode() && frame.settings().allowRunningOfInsecureContent() && !frame.document()->geolocationAccessed() && !frame.document()->secureCookiesAccessed();
-    if (LIKELY(shouldLogWarning == ShouldLogWarning::Yes))
+    if (shouldLogWarning == ShouldLogWarning::Yes) [[likely]]
         logConsoleWarning(frame, allowed, "run"_s, url);
 
     if (allowed) {

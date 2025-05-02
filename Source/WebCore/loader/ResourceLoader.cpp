@@ -890,7 +890,7 @@ bool ResourceLoader::shouldIncludeCertificateInfo() const
 {
     if (m_options.certificateInfoPolicy == CertificateInfoPolicy::IncludeCertificateInfo)
         return true;
-    if (UNLIKELY(InspectorInstrumentation::hasFrontends()))
+    if (InspectorInstrumentation::hasFrontends()) [[unlikely]]
         return true;
     return false;
 }

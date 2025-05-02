@@ -84,7 +84,7 @@ void OpportunisticTaskScheduler::runLoopObserverFired()
         return;
 #endif
 
-    if (UNLIKELY(!m_page))
+    if (!m_page) [[unlikely]]
         return;
 
     RefPtr page = m_page.get();

@@ -186,7 +186,7 @@ String preferredExtensionForImageType(const String& uti)
 
     RetainPtr type = [UTType typeWithIdentifier:uti.createNSString().get()];
     String extension = type.get().preferredFilenameExtension;
-    if (UNLIKELY(oldExtension != extension)) {
+    if (oldExtension != extension) [[unlikely]] {
         std::array<uint64_t, 6> values { 0, 0, 0, 0, 0, 0 };
         auto utiInfo = makeString(uti, '~', oldExtension, '~', extension);
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN

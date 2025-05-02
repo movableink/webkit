@@ -94,7 +94,7 @@ InlineLayoutUnit TextUtil::width(const InlineTextBox& inlineTextBox, const FontC
     if (extendedMeasuring)
         width -= (spaceWidth(fontCascade, useSimplifiedContentMeasuring) + fontCascade.wordSpacing());
 
-    if (UNLIKELY(std::isnan(width) || std::isinf(width)))
+    if (std::isnan(width) || std::isinf(width)) [[unlikely]]
         return std::isnan(width) ? 0.0f : maxInlineLayoutUnit();
     return std::max(0.f, width);
 }
@@ -117,7 +117,7 @@ InlineLayoutUnit TextUtil::width(const InlineTextItem& inlineTextItem, const Fon
 
         if (singleWhiteSpace) {
             auto width = spaceWidth(fontCascade, useSimplifiedContentMeasuring);
-            if (UNLIKELY(std::isnan(width) || std::isinf(width)))
+            if (std::isnan(width) || std::isinf(width)) [[unlikely]]
                 return std::isnan(width) ? 0.0f : maxInlineLayoutUnit();
             return std::max(0.f, width);
         }
@@ -249,7 +249,7 @@ TextUtil::WordBreakLeft TextUtil::breakWord(const InlineTextBox& inlineTextBox, 
     ASSERT(length);
     auto& text = inlineTextBox.content();
 
-    if (UNLIKELY(!textWidth)) {
+    if (!textWidth) [[unlikely]] {
         ASSERT_NOT_REACHED();
         return { };
     }

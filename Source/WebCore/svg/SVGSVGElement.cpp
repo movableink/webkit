@@ -843,7 +843,7 @@ Element* SVGSVGElement::getElementById(const AtomString& id)
     if (id.isNull())
         return nullptr;
 
-    if (UNLIKELY(!isInTreeScope())) {
+    if (!isInTreeScope()) [[unlikely]] {
         for (auto& element : descendantsOfType<Element>(*this)) {
             if (element.getIdAttribute() == id)
                 return &element;

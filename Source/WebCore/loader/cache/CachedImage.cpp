@@ -775,7 +775,7 @@ bool CachedImage::isOriginClean(SecurityOrigin* origin)
 
 CachedResource::RevalidationDecision CachedImage::makeRevalidationDecision(CachePolicy cachePolicy) const
 {
-    if (UNLIKELY(isManuallyCached())) {
+    if (isManuallyCached()) [[unlikely]] {
         // Do not revalidate manually cached images. This mechanism is used as a
         // way to efficiently share an image from the client to content and
         // the URL for that image may not represent a resource that can be

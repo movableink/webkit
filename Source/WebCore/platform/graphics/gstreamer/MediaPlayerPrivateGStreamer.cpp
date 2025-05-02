@@ -936,7 +936,7 @@ bool MediaPlayerPrivateGStreamer::didLoadingProgress() const
         return didLoadingProgress;
     }
 
-    if (UNLIKELY(!m_pipeline || !duration() || (!isMediaSource() && !totalBytes())))
+    if (!m_pipeline || !duration() || (!isMediaSource() && !totalBytes())) [[unlikely]]
         return false;
 
     MediaTime currentMaxTimeLoaded = maxTimeLoaded();
@@ -1152,7 +1152,7 @@ void MediaPlayerPrivateGStreamer::syncOnClock(bool sync)
 template <typename TrackPrivateType>
 void MediaPlayerPrivateGStreamer::notifyPlayerOfTrack()
 {
-    if (UNLIKELY(!m_pipeline || !m_source))
+    if (!m_pipeline || !m_source) [[unlikely]]
         return;
 
     RefPtr player = m_player.get();
@@ -2677,7 +2677,7 @@ void MediaPlayerPrivateGStreamer::downloadBufferFileCreatedCallback(MediaPlayerP
     GUniqueOutPtr<char> downloadFile;
     g_object_get(player->m_downloadBuffer.get(), "temp-location", &downloadFile.outPtr(), nullptr);
 
-    if (UNLIKELY(!FileSystem::deleteFile(String::fromUTF8(downloadFile.get())))) {
+    if (!FileSystem::deleteFile(String::fromUTF8(downloadFile.get()))) [[unlikely]] {
         GST_WARNING("Couldn't unlink media temporary file %s after creation", downloadFile.get());
         return;
     }
@@ -2697,7 +2697,7 @@ void MediaPlayerPrivateGStreamer::purgeOldDownloadFiles(const String& downloadFi
             continue;
 
         auto filePath = FileSystem::pathByAppendingComponent(templateDirectory, fileName);
-        if (UNLIKELY(!FileSystem::deleteFile(filePath))) {
+        if (!FileSystem::deleteFile(filePath)) [[unlikely]] {
             GST_WARNING("Couldn't unlink legacy media temporary file: %s", filePath.utf8().data());
             continue;
         }
@@ -3405,7 +3405,7 @@ void MediaPlayerPrivateGStreamer::setupCodecProbe(GstElement* element)
             return GST_PAD_PROBE_REMOVE;
 
         std::optional<TrackID> streamId(getStreamIdFromPad(pad));
-        if (UNLIKELY(!streamId)) {
+        if (!streamId) [[unlikely]] {
             // FIXME: This is a workaround for https://bugs.webkit.org/show_bug.cgi?id=256428.
             GST_WARNING_OBJECT(player->pipeline(), "Caps event received before stream-start. This shouldn't happen!");
             return GST_PAD_PROBE_REMOVE;
@@ -3799,7 +3799,7 @@ void MediaPlayerPrivateGStreamer::triggerRepaint(GRefPtr<GstSample>&& sample)
                 return;
             }
 
-            if (UNLIKELY(!gst_caps_is_empty(caps.get()) && !gst_caps_is_any(caps.get()))) {
+            if (!gst_caps_is_empty(caps.get()) && !gst_caps_is_any(caps.get())) [[unlikely]] {
                 auto structure = gst_caps_get_structure(caps.get(), 0);
                 int framerateNumerator, framerateDenominator;
                 if (gst_structure_get_fraction(structure, "framerate", &framerateNumerator, &framerateDenominator)) {
@@ -4531,7 +4531,7 @@ void MediaPlayerPrivateGStreamer::audioOutputDeviceChanged()
 String MediaPlayerPrivateGStreamer::codecForStreamId(TrackID streamId)
 {
     Locker locker { m_codecsLock };
-    if (UNLIKELY(!m_codecs.contains(streamId)))
+    if (!m_codecs.contains(streamId)) [[unlikely]]
         return emptyString();
 
     return m_codecs.get(streamId);

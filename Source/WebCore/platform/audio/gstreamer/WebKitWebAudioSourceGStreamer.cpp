@@ -438,7 +438,7 @@ static GstStateChangeReturn webKitWebAudioSrcChangeState(GstElement* element, Gs
     }
 
     returnValue = GST_ELEMENT_CLASS(webkit_web_audio_src_parent_class)->change_state(element, transition);
-    if (UNLIKELY(returnValue == GST_STATE_CHANGE_FAILURE)) {
+    if (returnValue == GST_STATE_CHANGE_FAILURE) [[unlikely]] {
         GST_DEBUG_OBJECT(src, "State change failed");
         return returnValue;
     }

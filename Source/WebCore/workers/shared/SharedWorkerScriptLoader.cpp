@@ -58,7 +58,7 @@ void SharedWorkerScriptLoader::load(CompletionHandler<void(WorkerFetchResult&&, 
 
 void SharedWorkerScriptLoader::didReceiveResponse(ScriptExecutionContextIdentifier mainContextIdentifier, std::optional<ResourceLoaderIdentifier> identifier, const ResourceResponse&)
 {
-    if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+    if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
         ScriptExecutionContext::ensureOnContextThread(mainContextIdentifier, [identifier] (auto& mainContext) {
             InspectorInstrumentation::didReceiveScriptResponse(mainContext, *identifier);
         });
@@ -69,10 +69,12 @@ void SharedWorkerScriptLoader::notifyFinished(std::optional<ScriptExecutionConte
 {
     auto* scriptExecutionContext = m_worker->scriptExecutionContext();
 
-    if (UNLIKELY(InspectorInstrumentation::hasFrontends()) && scriptExecutionContext && !m_loader->failed()) {
-        ScriptExecutionContext::ensureOnContextThread(*mainContextIdentifier, [identifier = m_loader->identifier(), script = m_loader->script().isolatedCopy()] (auto& mainContext) {
-            InspectorInstrumentation::scriptImported(mainContext, identifier, script.toString());
-        });
+    if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
+        if (scriptExecutionContext && !m_loader->failed()) {
+            ScriptExecutionContext::ensureOnContextThread(*mainContextIdentifier, [identifier = m_loader->identifier(), script = m_loader->script().isolatedCopy()] (auto& mainContext) {
+                InspectorInstrumentation::scriptImported(mainContext, identifier, script.toString());
+            });
+        }
     }
 
     auto fetchResult = m_loader->fetchResult();

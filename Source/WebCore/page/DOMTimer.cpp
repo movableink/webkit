@@ -267,7 +267,7 @@ void DOMTimer::updateThrottlingStateIfNecessary(const DOMTimerFireState& fireSta
     if (!contextDocument)
         return;
 
-    if (UNLIKELY(!isDOMTimersThrottlingEnabled(*contextDocument))) {
+    if (!isDOMTimersThrottlingEnabled(*contextDocument)) [[unlikely]] {
         if (m_throttleState == ShouldThrottle) {
             // Unthrottle the timer in case it was throttled before the setting was updated.
             LOG(DOMTimers, "%p - Unthrottling DOM timer because throttling was disabled via settings.", this);

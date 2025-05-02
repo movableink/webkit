@@ -68,9 +68,9 @@ public:
 
     std::optional<uint32_t> getBitRate(unsigned spatialLayerIndex, unsigned temporalLayerIndex) const
     {
-        if (UNLIKELY(spatialLayerIndex >= MaxSpatialLayers))
+        if (spatialLayerIndex >= MaxSpatialLayers) [[unlikely]]
             return std::nullopt;
-        if (UNLIKELY(temporalLayerIndex >= MaxTemporalLayers))
+        if (temporalLayerIndex >= MaxTemporalLayers) [[unlikely]]
             return std::nullopt;
         return m_bitRates[spatialLayerIndex][temporalLayerIndex];
     }

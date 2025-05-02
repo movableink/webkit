@@ -160,7 +160,7 @@ std::unique_ptr<LegacyRootInlineBox> LegacyLineLayout::createRootInlineBox()
 LegacyRootInlineBox* LegacyLineLayout::createAndAppendRootInlineBox()
 {
     m_legacyRootInlineBox = createRootInlineBox();
-    if (UNLIKELY(AXObjectCache::accessibilityEnabled())) {
+    if (AXObjectCache::accessibilityEnabled()) [[unlikely]] {
         if (AXObjectCache* cache = m_flow.document().existingAXObjectCache())
             cache->deferRecomputeIsIgnored(m_flow.element());
     }

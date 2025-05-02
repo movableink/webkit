@@ -857,7 +857,7 @@ inline bool RenderStyle::usesAnchorFunctions() const { return m_nonInheritedData
 
 inline Visibility RenderStyle::usedVisibility() const
 {
-    if (UNLIKELY(isInVisibilityAdjustmentSubtree()))
+    if (isInVisibilityAdjustmentSubtree()) [[unlikely]]
         return Visibility::Hidden;
     return static_cast<Visibility>(m_inheritedFlags.visibility);
 }

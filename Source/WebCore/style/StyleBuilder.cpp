@@ -162,7 +162,7 @@ void Builder::applyLogicalGroupProperties()
 
 void Builder::applyProperties(int firstProperty, int lastProperty)
 {
-    if (LIKELY(m_cascade.customProperties().isEmpty()))
+    if (m_cascade.customProperties().isEmpty()) [[likely]]
         return applyPropertiesImpl<CustomPropertyCycleTracking::Disabled>(firstProperty, lastProperty);
 
     return applyPropertiesImpl<CustomPropertyCycleTracking::Enabled>(firstProperty, lastProperty);
@@ -414,7 +414,7 @@ void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::
         return;
     }
 
-    if (UNLIKELY(id == CSSPropertySize && valueType == ApplyValueType::Value)) {
+    if (id == CSSPropertySize && valueType == ApplyValueType::Value) [[unlikely]] {
         applyPageSizeDescriptor(valueToApply.get());
         return;
     }

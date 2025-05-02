@@ -519,7 +519,7 @@ void HTMLElementStack::pushCommon(HTMLStackItem&& item)
 {
     ASSERT(m_rootNode);
 
-    if (UNLIKELY(is<HTMLTemplateElement>(item.node())))
+    if (is<HTMLTemplateElement>(item.node())) [[unlikely]]
         ++m_templateElementCount;
 
     ++m_stackDepth;
@@ -535,7 +535,7 @@ void HTMLElementStack::popCommon()
     Ref oldTop = top();
     m_top = m_top->releaseNext();
 
-    if (UNLIKELY(is<HTMLTemplateElement>(oldTop))) {
+    if (is<HTMLTemplateElement>(oldTop)) [[unlikely]] {
         ASSERT(m_templateElementCount);
         --m_templateElementCount;
     }
@@ -555,7 +555,7 @@ void HTMLElementStack::removeNonTopCommon(Element& element)
             record->setNext(record->next()->releaseNext());
             --m_stackDepth;
 
-            if (UNLIKELY(is<HTMLTemplateElement>(element))) {
+            if (is<HTMLTemplateElement>(element)) [[unlikely]] {
                 ASSERT(m_templateElementCount);
                 --m_templateElementCount;
             }

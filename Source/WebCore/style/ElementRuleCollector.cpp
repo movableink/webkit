@@ -574,7 +574,7 @@ void ElementRuleCollector::collectMatchingRulesForList(const RuleSet::RuleDataVe
         return;
 
     for (auto& ruleData : *rules) {
-        if (UNLIKELY(!ruleData.isEnabled()))
+        if (!ruleData.isEnabled()) [[unlikely]]
             continue;
 
         if (!ruleData.canMatchPseudoElement() && m_pseudoElementRequest)

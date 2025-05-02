@@ -42,7 +42,7 @@ ImageGStreamer::ImageGStreamer(GRefPtr<GstSample>&& sample)
     : m_sample(WTFMove(sample))
 {
     GstBuffer* buffer = gst_sample_get_buffer(m_sample.get());
-    if (UNLIKELY(!GST_IS_BUFFER(buffer)))
+    if (!GST_IS_BUFFER(buffer)) [[unlikely]]
         return;
 
     GstMappedFrame videoFrame(m_sample, GST_MAP_READ);

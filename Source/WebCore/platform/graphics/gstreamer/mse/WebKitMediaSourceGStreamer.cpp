@@ -447,7 +447,7 @@ static void webKitMediaSrcWaitForPadLinkedOrFlush(GstPad* pad, DataMutexLocker<S
 {
     {
         auto locker = GstObjectLocker(pad);
-        if (LIKELY(GST_PAD_IS_LINKED(pad)))
+        if (GST_PAD_IS_LINKED(pad)) [[likely]]
             return;
 
         GST_DEBUG_OBJECT(pad, "Waiting for the pad to be linked...");

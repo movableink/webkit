@@ -1165,12 +1165,12 @@ bool RenderLayer::ancestorLayerPositionStateChanged(OptionSet<UpdateLayerPositio
 #if ASSERT_ENABLED
 #if ENABLE(TREE_DEBUGGING)
 #define LAYER_POSITIONS_ASSERT(assertion, ...) do { \
-    if (UNLIKELY(!(assertion))) \
+    if (!(assertion)) [[unlikely]] \
         showLayerPositionTree(root(), this); \
     ASSERT(assertion, __VA_ARGS__); \
 } while (0)
 #define LAYER_POSITIONS_ASSERT_IMPLIES(condition, assertion) do { \
-    if (UNLIKELY(condition && !(assertion))) \
+    if (condition && !(assertion)) [[unlikely]] \
         showLayerPositionTree(root(), this); \
     ASSERT_IMPLIES(condition, assertion); \
 } while (0)

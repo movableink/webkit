@@ -1297,7 +1297,7 @@ inline static bool changedCustomPaintWatchedProperty(const RenderStyle& a, const
     auto& propertiesA = aData.customPaintWatchedProperties;
     auto& propertiesB = bData.customPaintWatchedProperties;
 
-    if (UNLIKELY(!propertiesA.isEmpty() || !propertiesB.isEmpty())) {
+    if (!propertiesA.isEmpty() || !propertiesB.isEmpty()) [[unlikely]] {
         // FIXME: We should not need to use ComputedStyleExtractor here.
         ComputedStyleExtractor extractor((Element*) nullptr);
 
