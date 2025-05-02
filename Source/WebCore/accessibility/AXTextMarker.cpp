@@ -1502,6 +1502,10 @@ AXTextMarkerRange AXTextMarker::wordRange(WordRangeType type) const
 
     if (type == WordRangeType::Right) {
         endMarker = nextWordEnd();
+        // To match the live tree, if we end up in the same spot, return a length 0 text marker.
+        if (hasSameObjectAndOffset(endMarker))
+            return { *this, *this };
+
         startMarker = endMarker.previousWordStart();
         // Don't return a right word if the word start is more than a position away from current text marker (e.g., there's a space between the word and current marker).
         auto order = startMarker <=> *this;
@@ -1511,6 +1515,10 @@ AXTextMarkerRange AXTextMarker::wordRange(WordRangeType type) const
             return { *this, *this };
     } else {
         startMarker = previousWordStart();
+        // To match the live tree, if we end up in the same spot, return a length 0 text marker.
+        if (hasSameObjectAndOffset(startMarker))
+            return { *this, *this };
+
         endMarker = startMarker.nextWordEnd();
         // Don't return a left word if the word end is more than a position away from current text marker.
         auto order = endMarker <=> *this;
