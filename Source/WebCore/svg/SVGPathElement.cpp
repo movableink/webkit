@@ -23,6 +23,7 @@
 #include "SVGPathElement.h"
 
 #include "CSSPathValue.h"
+#include "ContainerNodeInlines.h"
 #include "LegacyRenderSVGPath.h"
 #include "LegacyRenderSVGResource.h"
 #include "MutableStyleProperties.h"

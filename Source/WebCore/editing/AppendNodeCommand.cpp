@@ -28,6 +28,7 @@
 
 #include "AXObjectCache.h"
 #include "CompositeEditCommand.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "Editing.h"
 #include "RenderElement.h"

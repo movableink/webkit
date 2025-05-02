@@ -27,6 +27,7 @@
 #include "SVGAnimationAdditiveValueFunctionImpl.h"
 
 #include "CSSPropertyParserConsumer+Color.h"
+#include "ContainerNodeInlines.h"
 #include "RenderElement.h"
 #include "SVGElement.h"
 #include <wtf/text/StringToIntegerConversion.h>

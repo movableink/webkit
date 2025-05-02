@@ -27,6 +27,7 @@
 
 #if ENABLE(VIDEO)
 
+#include "ContainerNodeInlines.h"
 #include "HTMLMediaElement.h"
 #include "RenderImage.h"
 

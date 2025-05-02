@@ -31,6 +31,7 @@
 #include "ValidatedFormListedElement.h"
 
 #include "AXObjectCache.h"
+#include "ContainerNodeInlines.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "Event.h"
 #include "EventHandler.h"

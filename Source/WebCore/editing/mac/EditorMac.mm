@@ -34,6 +34,7 @@
 #import "Color.h"
 #import "ColorCocoa.h"
 #import "ColorSerialization.h"
+#import "ContainerNodeInlines.h"
 #import "DataTransfer.h"
 #import "DocumentFragment.h"
 #import "Editing.h"

@@ -22,6 +22,7 @@
 #include "config.h"
 #include "RadioInputType.h"
 
+#include "ContainerNodeInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTMLFormElement.h"
 #include "HTMLInputElement.h"

@@ -29,6 +29,7 @@
 #if ENABLE(MODEL_ELEMENT)
 
 #include "CachedResourceLoader.h"
+#include "ContainerNodeInlines.h"
 #include "DOMMatrixReadOnly.h"
 #include "DOMPointReadOnly.h"
 #include "DOMPromiseProxy.h"

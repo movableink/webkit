@@ -31,6 +31,7 @@
 #import "CSSComputedStyleDeclaration.h"
 #import "CSSPrimitiveValueMappings.h"
 #import "CachedImage.h"
+#import "ContainerNodeInlines.h"
 #import "DataTransfer.h"
 #import "DictationCommandIOS.h"
 #import "DocumentFragment.h"

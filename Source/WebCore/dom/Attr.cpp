@@ -36,6 +36,7 @@
 #include "ScopedEventQueue.h"
 #include "StyledElement.h"
 #include "TextNodeTraversal.h"
+#include "TreeScopeInlines.h"
 #include "XMLNSNames.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/AtomString.h>

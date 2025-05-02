@@ -27,6 +27,7 @@
 #include "RemoveNodeCommand.h"
 
 #include "CompositeEditCommand.h"
+#include "ContainerNodeInlines.h"
 #include "Editing.h"
 #include "RenderElement.h"
 #include <wtf/Assertions.h>

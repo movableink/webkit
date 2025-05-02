@@ -28,6 +28,7 @@
 #include "ColorChooser.h"
 #include "ContactInfo.h"
 #include "ContactsRequestData.h"
+#include "ContainerNodeInlines.h"
 #include "DataListSuggestionPicker.h"
 #include "DateTimeChooser.h"
 #if HAVE(DIGITAL_CREDENTIALS_UI)

@@ -56,6 +56,7 @@
 #import <WebCore/Color.h>
 #import <WebCore/ColorCocoa.h>
 #import <WebCore/ColorSerialization.h>
+#import <WebCore/ContainerNodeInlines.h>
 #import <WebCore/Cursor.h>
 #import <WebCore/Document.h>
 #import <WebCore/EventNames.h>

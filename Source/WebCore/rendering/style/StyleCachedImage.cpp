@@ -26,6 +26,7 @@
 
 #include "CSSImageValue.h"
 #include "CachedImage.h"
+#include "ContainerNodeInlines.h"
 #include "ReferencedSVGResources.h"
 #include "RenderElement.h"
 #include "RenderObjectInlines.h"

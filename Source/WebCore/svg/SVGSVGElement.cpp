@@ -24,6 +24,7 @@
 #include "config.h"
 #include "SVGSVGElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "DOMMatrix2DInit.h"
 #include "DOMWrapperWorld.h"
 #include "ElementIterator.h"

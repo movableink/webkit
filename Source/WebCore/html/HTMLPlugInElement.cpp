@@ -26,6 +26,7 @@
 
 #include "BridgeJSC.h"
 #include "CSSPropertyNames.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "Event.h"
 #include "EventHandler.h"

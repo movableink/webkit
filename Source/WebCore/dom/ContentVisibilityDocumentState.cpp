@@ -26,6 +26,7 @@
 #include "config.h"
 #include "ContentVisibilityDocumentState.h"
 
+#include "ContainerNodeInlines.h"
 #include "ContentVisibilityAutoStateChangeEvent.h"
 #include "DocumentInlines.h"
 #include "DocumentTimeline.h"

@@ -23,6 +23,7 @@
 #include "FileInputType.h"
 
 #include "Chrome.h"
+#include "ContainerNodeInlines.h"
 #include "DOMFormData.h"
 #include "DirectoryFileListCreator.h"
 #include "DragData.h"

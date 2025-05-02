@@ -29,6 +29,7 @@
 #include "AXObjectCache.h"
 #include "ComposedTreeAncestorIterator.h"
 #include "ComposedTreeIterator.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "Element.h"
 #include "FrameSelection.h"

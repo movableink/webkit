@@ -28,6 +28,7 @@
 
 #include "AXObjectCache.h"
 #include "BreakBlockquoteCommand.h"
+#include "ContainerNodeInlines.h"
 #include "DataTransfer.h"
 #include "DeleteSelectionCommand.h"
 #include "DocumentInlines.h"

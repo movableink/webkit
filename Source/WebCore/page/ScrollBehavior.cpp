@@ -26,6 +26,7 @@
 #include "config.h"
 #include "ScrollBehavior.h"
 
+#include "ContainerNodeInlines.h"
 #include "Element.h"
 #include "RenderElement.h"
 #include "RenderStyleInlines.h"

@@ -1067,6 +1067,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/CommandEvent.h
     dom/Comment.h
     dom/ContainerNode.h
+    dom/ContainerNodeInlines.h
     dom/ContextDestructionObserver.h
     dom/ContextDestructionObserverInlines.h
     dom/CrossOriginMode.h

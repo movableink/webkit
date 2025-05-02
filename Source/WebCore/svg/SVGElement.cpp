@@ -30,6 +30,7 @@
 #include "CSSPrimitiveValueMappings.h"
 #include "CSSPropertyParser.h"
 #include "ComputedStyleExtractor.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "DocumentClasses.h"
 #include "ElementChildIteratorInlines.h"

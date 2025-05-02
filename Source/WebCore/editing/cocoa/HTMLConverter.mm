@@ -38,6 +38,7 @@
 #import "ColorMac.h"
 #import "CommonAtomStrings.h"
 #import "ComposedTreeIterator.h"
+#include "ContainerNodeInlines.h"
 #import "Document.h"
 #import "DocumentLoader.h"
 #import "Editing.h"

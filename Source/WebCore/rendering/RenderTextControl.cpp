@@ -22,6 +22,7 @@
 #include "config.h"
 #include "RenderTextControl.h"
 
+#include "ContainerNodeInlines.h"
 #include "HTMLTextFormControlElement.h"
 #include "HitTestResult.h"
 #include "RenderBoxInlines.h"

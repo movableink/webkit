@@ -27,6 +27,7 @@
 #include "AccessibilitySpinButton.h"
 
 #include "AXObjectCache.h"
+#include "ContainerNodeInlines.h"
 #include "RenderElement.h"
 
 namespace WebCore {

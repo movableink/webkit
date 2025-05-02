@@ -27,6 +27,7 @@
 
 #include "HTMLCollection.h"
 #include "LiveNodeListInlines.h"
+#include "TreeScopeInlines.h"
 
 namespace WebCore {
 

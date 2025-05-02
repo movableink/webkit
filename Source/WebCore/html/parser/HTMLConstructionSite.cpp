@@ -28,6 +28,7 @@
 #include "HTMLConstructionSite.h"
 
 #include "Comment.h"
+#include "ContainerNodeInlines.h"
 #include "CustomElementRegistry.h"
 #include "DocumentFragment.h"
 #include "DocumentType.h"

@@ -25,6 +25,8 @@
 
 #include "config.h"
 #include "ScrollAnchoringController.h"
+
+#include "ContainerNodeInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "ElementIterator.h"
 #include "HTMLHtmlElement.h"

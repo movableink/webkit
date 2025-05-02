@@ -25,6 +25,7 @@
 #include "config.h"
 #include "SVGRadialGradientElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "FloatConversion.h"
 #include "FloatPoint.h"
 #include "LegacyRenderSVGResourceRadialGradient.h"

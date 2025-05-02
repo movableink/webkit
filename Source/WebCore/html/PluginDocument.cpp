@@ -25,6 +25,7 @@
 #include "config.h"
 #include "PluginDocument.h"
 
+#include "ContainerNodeInlines.h"
 #include "DocumentLoader.h"
 #include "FrameLoader.h"
 #include "HTMLBodyElement.h"

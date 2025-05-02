@@ -40,7 +40,7 @@
 #include "CSSStyleSheet.h"
 #include "CSSValueKeywords.h"
 #include "CommonAtomStrings.h"
-#include "ContainerNode.h"
+#include "ContainerNodeInlines.h"
 #include "ContentSecurityPolicy.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementChildIteratorInlines.h"

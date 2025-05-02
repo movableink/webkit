@@ -21,6 +21,7 @@
 #include "config.h"
 #include "EventPath.h"
 
+#include "ContainerNodeInlines.h"
 #include "DocumentFullscreen.h"
 #include "ElementRareData.h"
 #include "Event.h"
@@ -33,6 +34,7 @@
 #include "PseudoElement.h"
 #include "ShadowRoot.h"
 #include "TouchEvent.h"
+#include "TreeScopeInlines.h"
 #include <wtf/CheckedPtr.h>
 
 namespace WebCore {

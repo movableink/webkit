@@ -22,6 +22,7 @@
 #include "PrintContext.h"
 
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "ElementTraversal.h"
 #include "GraphicsContext.h"
 #include "LengthBox.h"

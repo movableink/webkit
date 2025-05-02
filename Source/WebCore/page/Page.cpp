@@ -46,6 +46,7 @@
 #include "CommonAtomStrings.h"
 #include "CommonVM.h"
 #include "ConstantPropertyMap.h"
+#include "ContainerNodeInlines.h"
 #include "ContextMenuClient.h"
 #include "ContextMenuController.h"
 #include "CookieJar.h"

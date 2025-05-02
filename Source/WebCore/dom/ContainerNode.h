@@ -61,8 +61,8 @@ public:
     void stringReplaceAll(String&&);
     void replaceAll(Node*);
 
-    inline ContainerNode& rootNode() const; // Defined in TreeScopeInlines.h
-    inline Ref<ContainerNode> protectedRootNode() const; // Defined in TreeScopeInlines.h
+    inline ContainerNode& rootNode() const; // Defined in ContainerNodeInlines.h
+    inline Ref<ContainerNode> protectedRootNode() const; // Defined in ContainerNodeInlines.h
     ContainerNode& traverseToRootNode() const;
 
     // These methods are only used during parsing.
@@ -119,8 +119,8 @@ public:
 
     void disconnectDescendantFrames();
 
-    inline RenderElement* renderer() const; // Defined in RenderElement.h.
-    inline CheckedPtr<RenderElement> checkedRenderer() const; // Defined in RenderElement.h.
+    inline RenderElement* renderer() const; // Defined in ContainerNodeInlines.h.
+    inline CheckedPtr<RenderElement> checkedRenderer() const; // Defined in ContainerNodeInlines.h.
 
     // Return a bounding box in absolute coordinates enclosing this node and all its descendants.
     // This gives the area within which events may get handled by a hander registered on this node.
@@ -190,7 +190,7 @@ private:
 inline ContainerNode::ContainerNode(Document& document, NodeType type, OptionSet<TypeFlag> typeFlags)
     : Node(document, type, typeFlags | TypeFlag::IsContainerNode)
 {
-    ASSERT(!isTextNode());
+    ASSERT(!isCharacterDataNode());
 }
 
 } // namespace WebCore

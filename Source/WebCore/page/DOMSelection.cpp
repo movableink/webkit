@@ -31,6 +31,7 @@
 #include "DOMSelection.h"
 
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "Editing.h"

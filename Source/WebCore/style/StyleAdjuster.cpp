@@ -31,6 +31,7 @@
 #include "StyleAdjuster.h"
 
 #include "CSSFontSelector.h"
+#include "ContainerNodeInlines.h"
 #include "DOMTokenList.h"
 #include "Document.h"
 #include "DocumentInlines.h"

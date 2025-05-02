@@ -24,6 +24,7 @@
 #include "HitTestResult.h"
 
 #include "CachedImage.h"
+#include "ContainerNodeInlines.h"
 #include "DocumentMarkerController.h"
 #include "Editor.h"
 #include "ElementInlines.h"

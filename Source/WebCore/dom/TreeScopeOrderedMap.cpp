@@ -32,6 +32,7 @@
 #include "TreeScopeOrderedMap.h"
 
 #include "ContainerNodeAlgorithms.h"
+#include "ContainerNodeInlines.h"
 #include "ElementInlines.h"
 #include "HTMLImageElement.h"
 #include "HTMLLabelElement.h"

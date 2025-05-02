@@ -22,6 +22,7 @@
 #include "HTMLMeterElement.h"
 
 #include "Attribute.h"
+#include "ContainerNodeInlines.h"
 #include "ElementInlines.h"
 #include "ElementIterator.h"
 #include "HTMLDivElement.h"

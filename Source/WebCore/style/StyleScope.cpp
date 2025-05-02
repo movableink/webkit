@@ -31,6 +31,7 @@
 #include "CSSCounterStyleRegistry.h"
 #include "CSSFontSelector.h"
 #include "CSSStyleSheet.h"
+#include "ContainerNodeInlines.h"
 #include "CustomPropertyRegistry.h"
 #include "DocumentInlines.h"
 #include "Element.h"

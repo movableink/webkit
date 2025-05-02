@@ -20,6 +20,7 @@
 #include "config.h"
 #include "RenderSVGTextPath.h"
 
+#include "ContainerNodeInlines.h"
 #include "FloatQuad.h"
 #include "RenderBlock.h"
 #include "RenderBoxModelObjectInlines.h"

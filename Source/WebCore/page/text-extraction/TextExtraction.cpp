@@ -27,6 +27,7 @@
 #include "TextExtraction.h"
 
 #include "ComposedTreeIterator.h"
+#include "ContainerNodeInlines.h"
 #include "ElementInlines.h"
 #include "ExceptionCode.h"
 #include "ExceptionOr.h"

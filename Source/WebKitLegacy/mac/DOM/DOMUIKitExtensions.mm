@@ -40,6 +40,7 @@
 #import "DOMNodeInternal.h"
 #import "DOMRangeInternal.h"
 #import <WebCore/CachedImage.h>
+#import <WebCore/ContainerNodeInlines.h>
 #import <WebCore/Editing.h>
 #import <WebCore/FloatPoint.h>
 #import <WebCore/FontCascade.h>

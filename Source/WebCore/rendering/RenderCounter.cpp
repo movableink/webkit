@@ -23,6 +23,7 @@
 #include "RenderCounter.h"
 
 #include "CSSCounterStyleRegistry.h"
+#include "ContainerNodeInlines.h"
 #include "CounterDirectives.h"
 #include "CounterNode.h"
 #include "Document.h"

@@ -27,6 +27,7 @@
 
 #include "BoundaryPointInlines.h"
 #include "Comment.h"
+#include "ContainerNodeInlines.h"
 #include "CustomElementReactionQueue.h"
 #include "DOMRect.h"
 #include "DOMRectList.h"

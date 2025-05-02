@@ -32,6 +32,7 @@
 #import "WebViewInternal.h"
 #import "WebWindowAnimation.h"
 #import <WebCore/CGWindowUtilities.h>
+#import <WebCore/ContainerNodeInlines.h>
 #import <WebCore/Document.h>
 #import <WebCore/DocumentFullscreen.h>
 #import <WebCore/DocumentInlines.h>

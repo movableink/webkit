@@ -493,16 +493,6 @@ inline const RenderStyle& RenderObject::firstLineStyle() const
     return downcast<RenderElement>(*this).firstLineStyle();
 }
 
-inline RenderElement* ContainerNode::renderer() const
-{
-    return downcast<RenderElement>(Node::renderer());
-}
-
-inline CheckedPtr<RenderElement> ContainerNode::checkedRenderer() const
-{
-    return renderer();
-}
-
 inline RenderObject* RenderElement::firstInFlowChild() const
 {
     if (auto* firstChild = this->firstChild()) {

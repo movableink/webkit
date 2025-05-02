@@ -29,6 +29,7 @@
 
 #include "CSSTokenizerInputStream.h"
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "CustomElementRegistry.h"
 #include "DocumentFragment.h"
 #include "HTMLDocument.h"

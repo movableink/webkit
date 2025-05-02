@@ -31,6 +31,7 @@
 #include "AXObjectCache.h"
 #include "CSSStyleSheet.h"
 #include "ChildListMutationScope.h"
+#include "ContainerNodeInlines.h"
 #include "CustomElementRegistry.h"
 #include "ElementInlines.h"
 #include "ElementTraversal.h"

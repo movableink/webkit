@@ -29,8 +29,9 @@
 #import "DOMHTMLFormElementInternal.h"
 #import "DOMNodeInternal.h"
 #import "DOMPrivate.h"
-#import <WebCore/Document.h>
 #import "ExceptionHandlers.h"
+#import <WebCore/ContainerNodeInlines.h>
+#import <WebCore/Document.h>
 #import <WebCore/ElementInlines.h>
 #import <WebCore/HTMLFormElement.h>
 #import <WebCore/HTMLNames.h>

@@ -68,6 +68,7 @@
 #include <WebCore/ChromeClient.h>
 #include <WebCore/ColorBlending.h>
 #include <WebCore/ColorCocoa.h>
+#include <WebCore/ContainerNodeInlines.h>
 #include <WebCore/DataDetectorElementInfo.h>
 #include <WebCore/DictionaryLookup.h>
 #include <WebCore/DictionaryPopupInfo.h>

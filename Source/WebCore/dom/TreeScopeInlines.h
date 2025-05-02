@@ -67,17 +67,4 @@ inline bool TreeScope::containsMultipleElementsWithName(const AtomString& name) 
     return m_elementsByName && !name.isEmpty() && m_elementsByName->containsMultiple(name);
 }
 
-// FIXME: Move these to ContainerNodeInlines.h
-inline ContainerNode& ContainerNode::rootNode() const
-{
-    if (isInTreeScope())
-        return treeScope().rootNode();
-    return traverseToRootNode();
-}
-
-inline Ref<ContainerNode> ContainerNode::protectedRootNode() const
-{
-    return rootNode();
-}
-
 } // namespace WebCore

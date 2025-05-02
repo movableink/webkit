@@ -31,6 +31,7 @@
 #include "CacheStorageProvider.h"
 #include "Chrome.h"
 #include "CommonVM.h"
+#include "ContainerNodeInlines.h"
 #include "DOMParser.h"
 #include "DocumentLoader.h"
 #include "DocumentSVG.h"

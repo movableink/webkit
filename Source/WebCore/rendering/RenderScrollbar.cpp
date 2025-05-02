@@ -26,6 +26,7 @@
 #include "config.h"
 #include "RenderScrollbar.h"
 
+#include "ContainerNodeInlines.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "RenderScrollbarPart.h"

@@ -32,6 +32,7 @@
 #include "ClipboardUtilitiesWin.h"
 #include "Color.h"
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "Editor.h"

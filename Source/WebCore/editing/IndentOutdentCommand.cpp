@@ -27,6 +27,7 @@
 #include "config.h"
 #include "IndentOutdentCommand.h"
 
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "Editing.h"
 #include "ElementTraversal.h"

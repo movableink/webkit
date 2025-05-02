@@ -21,6 +21,7 @@
 #include "config.h"
 #include "LegacyRenderSVGResourceMasker.h"
 
+#include "ContainerNodeInlines.h"
 #include "Element.h"
 #include "ElementChildIteratorInlines.h"
 #include "FloatPoint.h"

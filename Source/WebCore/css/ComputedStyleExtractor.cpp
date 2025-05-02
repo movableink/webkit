@@ -64,6 +64,7 @@
 #include "CSSValuePool.h"
 #include "CSSViewValue.h"
 #include "ComposedTreeAncestorIterator.h"
+#include "ContainerNodeInlines.h"
 #include "ContentData.h"
 #include "CursorList.h"
 #include "CustomPropertyRegistry.h"

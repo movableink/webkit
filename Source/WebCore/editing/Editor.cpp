@@ -46,6 +46,7 @@
 #include "CommonAtomStrings.h"
 #include "CompositionEvent.h"
 #include "CompositionHighlight.h"
+#include "ContainerNodeInlines.h"
 #include "CreateLinkCommand.h"
 #include "CustomUndoStep.h"
 #include "DataTransfer.h"

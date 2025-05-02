@@ -26,6 +26,7 @@
 #include "CachedImage.h"
 #include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "FEImage.h"
 #include "Image.h"

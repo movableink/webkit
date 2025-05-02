@@ -33,6 +33,7 @@
 #import "DOMHTMLTextAreaElementInternal.h"
 #import "DOMNodeInternal.h"
 #import "DOMPrivate.h"
+#import <WebCore/ContainerNodeInlines.h>
 #import <WebCore/DocumentFragment.h>
 #import <WebCore/HTMLCollectionInlines.h>
 #import <WebCore/HTMLDocument.h>

@@ -33,6 +33,7 @@
 #include "CSSValuePool.h"
 #include "CheckVisibilityOptions.h"
 #include "ComputedStyleExtractor.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "DocumentTimeline.h"
 #include "ElementInlines.h"

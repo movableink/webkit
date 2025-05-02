@@ -22,6 +22,7 @@
 #include "config.h"
 #include "LegacyRenderSVGResourcePattern.h"
 
+#include "ContainerNodeInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "GraphicsContext.h"
 #include "LegacyRenderSVGRoot.h"

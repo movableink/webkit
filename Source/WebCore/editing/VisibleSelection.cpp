@@ -36,6 +36,7 @@
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "TextIterator.h"
+#include "TreeScopeInlines.h"
 #include "VisibleUnits.h"
 #include <stdio.h>
 #include <wtf/Assertions.h>

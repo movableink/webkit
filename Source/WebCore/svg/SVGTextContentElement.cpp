@@ -25,6 +25,7 @@
 
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
+#include "ContainerNodeInlines.h"
 #include "DOMPoint.h"
 #include "FrameSelection.h"
 #include "LegacyRenderSVGResource.h"

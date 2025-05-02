@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "ContainerNodeInlines.h"
 #include "HTMLTextAreaElement.h"
 #include "RenderTextControl.h"
 

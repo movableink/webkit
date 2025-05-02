@@ -25,10 +25,12 @@
 
 #include "config.h"
 #include "TimelineRange.h"
+
 #include "CSSNumericFactory.h"
 #include "CSSPropertyParserConsumer+Timeline.h"
 #include "CSSValuePair.h"
 #include "CSSValuePool.h"
+#include "ContainerNodeInlines.h"
 #include "StyleBuilderConverter.h"
 #include "StyleBuilderState.h"
 

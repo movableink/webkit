@@ -32,6 +32,7 @@
 #include "Attr.h"
 #include "CSSStyleSheet.h"
 #include "CSSStyleSheetObservableArray.h"
+#include "ContainerNodeInlines.h"
 #include "CustomElementRegistry.h"
 #include "FocusController.h"
 #include "HTMLAnchorElement.h"
@@ -55,6 +56,7 @@
 #include "SVGElement.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
+#include "TreeScopeInlines.h"
 #include "TreeScopeOrderedMap.h"
 #include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/RobinHoodHashMap.h>

@@ -27,6 +27,7 @@
 
 #include "BackgroundPainter.h"
 #include "BorderPainter.h"
+#include "ContainerNodeInlines.h"
 #include "GraphicsContext.h"
 #include "InlineIteratorBoxInlines.h"
 #include "InlineIteratorLineBox.h"

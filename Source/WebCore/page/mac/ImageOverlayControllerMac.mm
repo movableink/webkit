@@ -30,6 +30,7 @@
 
 #import "Chrome.h"
 #import "ChromeClient.h"
+#import "ContainerNodeInlines.h"
 #import "DataDetection.h"
 #import "DataDetectionResultsStorage.h"
 #import "DataDetectorElementInfo.h"

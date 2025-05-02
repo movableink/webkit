@@ -22,6 +22,7 @@
 
 #if USE(ATSPI)
 
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "DocumentType.h"

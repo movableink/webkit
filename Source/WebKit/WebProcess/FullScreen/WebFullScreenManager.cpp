@@ -37,6 +37,7 @@
 #include "WebPage.h"
 #include <WebCore/AddEventListenerOptions.h>
 #include <WebCore/Color.h>
+#include <WebCore/ContainerNodeInlines.h>
 #include <WebCore/DocumentFullscreen.h>
 #include <WebCore/EventNames.h>
 #include <WebCore/HTMLVideoElement.h>

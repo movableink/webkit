@@ -28,6 +28,7 @@
 
 #include "AccessibilityObject.h"
 #include "Attr.h"
+#include "ContainerNodeInlines.h"
 #include "DOMTokenList.h"
 #include "DeprecatedGlobalSettings.h"
 #include "Document.h"

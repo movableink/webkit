@@ -39,6 +39,7 @@
 #import "WebURLsWithTitles.h"
 #import "WebViewPrivate.h"
 #import <WebCore/CachedImage.h>
+#import <WebCore/ContainerNodeInlines.h>
 #import <WebCore/Element.h>
 #import <WebCore/Image.h>
 #import <WebCore/LegacyNSPasteboardTypes.h>

@@ -22,6 +22,7 @@
 #include "config.h"
 #include "SVGStopElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "LegacyRenderSVGResource.h"
 #include "RenderSVGGradientStop.h"

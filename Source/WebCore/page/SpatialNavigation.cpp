@@ -29,6 +29,7 @@
 #include "config.h"
 #include "SpatialNavigation.h"
 
+#include "ContainerNodeInlines.h"
 #include "FrameTree.h"
 #include "HTMLAreaElement.h"
 #include "HTMLImageElement.h"

@@ -23,6 +23,7 @@
 #include "SVGForeignObjectElement.h"
 
 #include "CSSPropertyNames.h"
+#include "ContainerNodeInlines.h"
 #include "LegacyRenderSVGForeignObject.h"
 #include "LegacyRenderSVGResource.h"
 #include "NodeName.h"

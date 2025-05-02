@@ -46,6 +46,7 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "CommonVM.h"
+#include "ContainerNodeInlines.h"
 #include "ContentFilter.h"
 #include "ContentRuleListResults.h"
 #include "ContentSecurityPolicy.h"

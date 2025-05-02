@@ -34,6 +34,7 @@
 
 #include "BaseClickableWithKeyInputType.h"
 #include "Chrome.h"
+#include "ContainerNodeInlines.h"
 #include "DateComponents.h"
 #include "DateTimeChooserParameters.h"
 #include "Decimal.h"

@@ -29,6 +29,7 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "ContextMenuController.h"
 #include "ElementInlines.h"
 #include "ElementRareData.h"

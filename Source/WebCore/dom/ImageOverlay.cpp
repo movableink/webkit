@@ -28,6 +28,7 @@
 
 #include "Blob.h"
 #include "CharacterRange.h"
+#include "ContainerNodeInlines.h"
 #include "DOMTokenList.h"
 #include "DOMURL.h"
 #include "Document.h"

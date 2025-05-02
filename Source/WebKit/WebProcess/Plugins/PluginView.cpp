@@ -42,6 +42,7 @@
 #include "WebWheelEvent.h"
 #include <WebCore/BitmapImage.h>
 #include <WebCore/Chrome.h>
+#include <WebCore/ContainerNodeInlines.h>
 #include <WebCore/CookieJar.h>
 #include <WebCore/Credential.h>
 #include <WebCore/CredentialStorage.h>

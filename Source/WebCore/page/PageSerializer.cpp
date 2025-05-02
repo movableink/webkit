@@ -38,6 +38,7 @@
 #include "CSSStyleRule.h"
 #include "CachedImage.h"
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "DocumentInlines.h"
 #include "ElementInlines.h"
 #include "HTMLFrameOwnerElement.h"

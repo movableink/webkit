@@ -23,6 +23,7 @@
 #include "config.h"
 #include "SVGLocatable.h"
 
+#include "ContainerNodeInlines.h"
 #include "RenderElement.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGGraphicsElement.h"

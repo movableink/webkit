@@ -30,6 +30,7 @@
 #import "CSSStyleProperties.h"
 #import "CommonVM.h"
 #import "ComposedTreeIterator.h"
+#import "ContainerNodeInlines.h"
 #import "Document.h"
 #import "DocumentInlines.h"
 #import "DocumentMarkerController.h"

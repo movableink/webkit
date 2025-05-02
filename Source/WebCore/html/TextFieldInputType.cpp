@@ -35,6 +35,7 @@
 #include "BeforeTextInsertedEvent.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "ContainerNodeInlines.h"
 #include "DOMFormData.h"
 #include "Editor.h"
 #include "ElementRareData.h"

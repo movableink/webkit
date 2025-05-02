@@ -20,6 +20,7 @@
 #include "config.h"
 #include "RenderSVGResourcePattern.h"
 
+#include "ContainerNodeInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "ImageBuffer.h"
 #include "RenderLayer.h"

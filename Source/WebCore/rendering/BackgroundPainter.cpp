@@ -30,6 +30,7 @@
 #include "BorderShape.h"
 #include "CachedImage.h"
 #include "ColorBlending.h"
+#include "ContainerNodeInlines.h"
 #include "FloatRoundedRect.h"
 #include "GeometryUtilities.h"
 #include "GraphicsContext.h"

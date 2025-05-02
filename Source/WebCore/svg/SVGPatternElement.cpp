@@ -25,6 +25,7 @@
 #include "SVGPatternElement.h"
 
 #include "AffineTransform.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "FloatConversion.h"
 #include "GraphicsContext.h"

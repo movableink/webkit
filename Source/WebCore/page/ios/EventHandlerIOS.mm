@@ -32,6 +32,7 @@
 #import "AutoscrollController.h"
 #import "Chrome.h"
 #import "ChromeClient.h"
+#import "ContainerNodeInlines.h"
 #import "DataTransfer.h"
 #import "DocumentInlines.h"
 #import "DragState.h"

@@ -36,7 +36,7 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "ColorBlending.h"
-#include "ContainerNode.h"
+#include "ContainerNodeInlines.h"
 #include "ContentVisibilityDocumentState.h"
 #include "DebugPageOverlays.h"
 #include "DocumentFullscreen.h"

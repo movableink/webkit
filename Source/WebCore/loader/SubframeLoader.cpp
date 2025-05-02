@@ -33,6 +33,7 @@
 #include "config.h"
 #include "SubframeLoader.h"
 
+#include "ContainerNodeInlines.h"
 #include "ContentSecurityPolicy.h"
 #include "DNS.h"
 #include "DiagnosticLoggingClient.h"

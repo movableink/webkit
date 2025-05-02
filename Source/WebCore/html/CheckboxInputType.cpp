@@ -34,6 +34,7 @@
 
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "ContainerNodeInlines.h"
 #include "EventHandler.h"
 #include "EventNames.h"
 #include "HTMLDivElement.h"

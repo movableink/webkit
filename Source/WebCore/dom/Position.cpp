@@ -29,6 +29,7 @@
 
 #include "BoundaryPoint.h"
 #include "CSSComputedStyleDeclaration.h"
+#include "ContainerNodeInlines.h"
 #include "EditingInlines.h"
 #include "ElementInlines.h"
 #include "HTMLBRElement.h"

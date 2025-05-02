@@ -26,6 +26,7 @@
 #include "config.h"
 #include "DeleteSelectionCommand.h"
 
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "DocumentMarkerController.h"
 #include "EditingInlines.h"

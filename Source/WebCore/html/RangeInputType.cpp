@@ -32,6 +32,7 @@
 #include "config.h"
 #include "RangeInputType.h"
 
+#include "ContainerNodeInlines.h"
 #include "Decimal.h"
 #include "DocumentInlines.h"
 #include "ElementInlines.h"

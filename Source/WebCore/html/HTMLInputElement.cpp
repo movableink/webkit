@@ -38,6 +38,7 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "ColorInputType.h"
+#include "ContainerNodeInlines.h"
 #include "DateComponents.h"
 #include "DateTimeChooser.h"
 #include "DocumentInlines.h"

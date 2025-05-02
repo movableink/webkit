@@ -25,6 +25,7 @@
 #include "config.h"
 #include "LegacyRenderSVGResource.h"
 
+#include "ContainerNodeInlines.h"
 #include "LegacyRenderSVGResourceClipper.h"
 #include "LegacyRenderSVGResourceFilter.h"
 #include "LegacyRenderSVGResourceMasker.h"

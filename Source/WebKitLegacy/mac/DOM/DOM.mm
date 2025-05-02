@@ -39,6 +39,7 @@
 #import <JavaScriptCore/APICast.h>
 #import <WebCore/BoundaryPointInlines.h>
 #import <WebCore/CachedImage.h>
+#import <WebCore/ContainerNodeInlines.h>
 #import <WebCore/DragImage.h>
 #import <WebCore/FocusController.h>
 #import <WebCore/FontCascade.h>

@@ -28,6 +28,7 @@
 
 #if ENABLE(ATTACHMENT_ELEMENT)
 
+#include "ContainerNodeInlines.h"
 #include "FloatRect.h"
 #include "FloatRoundedRect.h"
 #include "FrameSelection.h"

@@ -32,6 +32,7 @@
 #include "BitmapImage.h"
 #include "CachedImage.h"
 #include "Chrome.h"
+#include "ContainerNodeInlines.h"
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
 #include "Document.h"
