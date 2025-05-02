@@ -37,6 +37,7 @@
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/Lock.h>
+#include <wtf/Threading.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
@@ -57,6 +58,7 @@ public:
     void clear();
     void clearEntriesForTearDown()
     {
+        releaseAssertOrSetThreadUID();
         m_entries.clear();
     }
 
@@ -91,8 +93,17 @@ public:
     Lock& lock() { return m_lock; }
 
 private:
+    void releaseAssertOrSetThreadUID()
+    {
+        if (m_threadUID)
+            RELEASE_ASSERT(m_threadUID == Thread::currentSingleton().uid());
+        else
+            m_threadUID = Thread::currentSingleton().uid();
+    }
+
     Vector<std::pair<AtomString, EventListenerVector>, 0, CrashOnOverflow, 4> m_entries;
     Lock m_lock;
+    uint32_t m_threadUID { 0 };
 };
 
 template<typename Visitor>
