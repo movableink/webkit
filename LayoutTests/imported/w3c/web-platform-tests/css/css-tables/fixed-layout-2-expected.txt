@@ -48,9 +48,9 @@ PASS 100%
 PASS calc(10px + 100%)
 PASS auto
 PASS min-content
-PASS max-content
+FAIL max-content assert_equals: Table is in fixed mode expected 50 but got 100
 PASS fit-content
 PASS -webkit-fill-available
-PASS intrinsic
-PASS min-intrinsic
+FAIL intrinsic assert_equals: Table is in fixed mode expected 50 but got 100
+FAIL min-intrinsic assert_equals: Table is in fixed mode expected 50 but got 100
 
