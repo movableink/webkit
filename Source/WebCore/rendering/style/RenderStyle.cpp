@@ -1265,6 +1265,9 @@ static bool rareDataChangeRequiresRepaint(const StyleRareNonInheritedData& first
         // Don't return true; keep looking for another change.
     }
 
+    if (first.textDecorationStyle != second.textDecorationStyle || first.textDecorationColor != second.textDecorationColor || first.textDecorationThickness != second.textDecorationThickness)
+        return true;
+
     return false;
 }
 
@@ -1389,13 +1392,6 @@ bool RenderStyle::changeRequiresRepaintIfText(const RenderStyle& other, OptionSe
     if (m_inheritedFlags.textDecorationLineInEffect != other.m_inheritedFlags.textDecorationLineInEffect
         || m_nonInheritedFlags.textDecorationLine != other.m_nonInheritedFlags.textDecorationLine)
         return true;
-
-    if (m_nonInheritedData->rareData.ptr() != other.m_nonInheritedData->rareData.ptr()) {
-        if (m_nonInheritedData->rareData->textDecorationStyle != other.m_nonInheritedData->rareData->textDecorationStyle
-            || m_nonInheritedData->rareData->textDecorationColor != other.m_nonInheritedData->rareData->textDecorationColor
-            || m_nonInheritedData->rareData->textDecorationThickness != other.m_nonInheritedData->rareData->textDecorationThickness)
-            return true;
-    }
 
     if (m_rareInheritedData.ptr() != other.m_rareInheritedData.ptr()) {
         if (m_rareInheritedData->textDecorationSkipInk != other.m_rareInheritedData->textDecorationSkipInk
