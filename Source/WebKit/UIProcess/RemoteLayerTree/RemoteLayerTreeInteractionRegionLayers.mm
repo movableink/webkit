@@ -57,23 +57,37 @@ static Class interactionRegionLayerClass()
 static NSDictionary *interactionRegionEffectUserInfo()
 {
     static NeverDestroyed<RetainPtr<NSDictionary>> interactionRegionEffectUserInfo;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
+    static bool cached = false;
+    if (!cached) {
         if (canLoadRCPAllowedInputTypesUserInfoKey())
             interactionRegionEffectUserInfo.get() = @{ getRCPAllowedInputTypesUserInfoKey(): @(interactionRegionInputTypes) };
-    });
+        cached = true;
+    }
     return interactionRegionEffectUserInfo.get().get();
 }
 
 static float brightnessMultiplier()
 {
     static float multiplier = 1.5;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
+    static bool cached = false;
+    if (!cached) {
         if (auto brightnessUserDefault = [[NSUserDefaults standardUserDefaults] floatForKey:@"WKInteractionRegionBrightnessMultiplier"])
             multiplier = brightnessUserDefault;
-    });
+        cached = true;
+    }
     return multiplier;
+}
+
+static bool applyBackgroundColorForDebugging()
+{
+    static bool applyBackground = false;
+    static bool cached = false;
+    if (!cached) {
+        if (auto applyBackgroundUserDefault = [[NSUserDefaults standardUserDefaults] boolForKey:@"WKInteractionRegionDebugFill"])
+            applyBackground = applyBackgroundUserDefault;
+        cached = true;
+    }
+    return applyBackground;
 }
 
 static void configureLayerForInteractionRegion(CALayer *layer, NSString *groupName)
@@ -226,7 +240,7 @@ void updateLayersForInteractionRegions(RemoteLayerTreeNode& node)
         }
     }
 
-    bool applyBackgroundColorForDebugging = [[NSUserDefaults standardUserDefaults] boolForKey:@"WKInteractionRegionDebugFill"];
+    bool applyBackground = applyBackgroundColorForDebugging();
 
     NSUInteger insertionPoint = 0;
     HashSet<std::pair<IntRect, InteractionRegion::Type>>dedupeSet;
@@ -302,7 +316,7 @@ void updateLayersForInteractionRegions(RemoteLayerTreeNode& node)
                 [regionLayer setMask:nil];
         }
 
-        if (applyBackgroundColorForDebugging)
+        if (applyBackground)
             applyBackgroundColorForDebuggingToLayer(regionLayer.get(), region);
 
         // Since we insert new layers as we go, insertionPoint is always <= container.sublayers.count.
