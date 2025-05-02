@@ -417,9 +417,7 @@ void BlendingKeyframes::updatedComputedOffsets(NOESCAPE const Function<double(co
     for (auto& keyframe : m_keyframes)
         keyframe.setComputedOffset(callback(keyframe.specifiedOffset()));
 
-    std::ranges::stable_sort(m_keyframes, [](auto& lhs, auto& rhs) {
-        return lhs.offset() < rhs.offset();
-    });
+    std::ranges::stable_sort(m_keyframes, { }, &BlendingKeyframe::offset);
 }
 
 uint64_t BlendingKeyframes::nextAnonymousIdentifier()

@@ -119,10 +119,7 @@ inline double VideoPreset::maxFrameRate() const
 
 inline void VideoPreset::sortFrameRateRanges()
 {
-    std::ranges::sort(m_data.frameRateRanges,
-        [&] (const auto& a, const auto& b) -> bool {
-            return a.minimum < b.minimum;
-    });
+    std::ranges::sort(m_data.frameRateRanges, { }, &FrameRateRange::minimum);
 }
 
 } // namespace WebCore

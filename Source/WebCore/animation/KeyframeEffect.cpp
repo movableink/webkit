@@ -474,9 +474,7 @@ static inline ExceptionOr<KeyframeEffect::KeyframeLikeObject> processKeyframeLik
 
     // 5. Sort animation properties in ascending order by the Unicode codepoints that define each property name.
     auto sortPropertiesInAscendingOrder = [](auto& properties) {
-        std::ranges::sort(properties, [](auto& lhs, auto& rhs) {
-            return codePointCompareLessThan(lhs.string().string(), rhs.string().string());
-        });
+        std::ranges::sort(properties, codePointCompareLessThan, &JSC::Identifier::string);
     };
     sortPropertiesInAscendingOrder(logicalShorthands);
     sortPropertiesInAscendingOrder(physicalShorthands);

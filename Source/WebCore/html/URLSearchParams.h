@@ -75,7 +75,8 @@ private:
     void updateURL();
 
     WeakPtr<DOMURL> m_associatedURL;
-    Vector<KeyValuePair<String, String>> m_pairs;
+    using PairType = KeyValuePair<String, String>;
+    Vector<PairType> m_pairs;
 };
 
 } // namespace WebCore

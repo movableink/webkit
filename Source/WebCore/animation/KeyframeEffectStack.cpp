@@ -131,17 +131,9 @@ void KeyframeEffectStack::ensureEffectsAreSorted()
     if (m_isSorted || m_effects.size() < 2)
         return;
 
-    std::ranges::stable_sort(m_effects, [](auto& lhs, auto& rhs) {
-        RELEASE_ASSERT(lhs.get());
-        RELEASE_ASSERT(rhs.get());
-        
-        auto* lhsAnimation = lhs->animation();
-        auto* rhsAnimation = rhs->animation();
-
-        RELEASE_ASSERT(lhsAnimation);
-        RELEASE_ASSERT(rhsAnimation);
-
-        return compareAnimationsByCompositeOrder(*lhsAnimation, *rhsAnimation);
+    std::ranges::stable_sort(m_effects, compareAnimationsByCompositeOrder, [](auto& weakEffect) -> WebAnimation& {
+        RELEASE_ASSERT(weakEffect->animation());
+        return *weakEffect->animation();
     });
 
     m_isSorted = true;

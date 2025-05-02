@@ -213,11 +213,7 @@ auto IndexSparseSet<EntryType, EntryTypeTraits, OverflowHandler>::get(unsigned v
 template<typename EntryType, typename EntryTypeTraits, typename OverflowHandler>
 void IndexSparseSet<EntryType, EntryTypeTraits, OverflowHandler>::sort()
 {
-    std::ranges::sort(
-        m_values,
-        [&] (const EntryType& a, const EntryType& b) {
-            return EntryTypeTraits::key(a) < EntryTypeTraits::key(b);
-        });
+    std::ranges::sort(m_values, { }, EntryTypeTraits::key);
 
     // Bring m_map back in sync with m_values
     for (unsigned index = 0; index < m_values.size(); ++index) {

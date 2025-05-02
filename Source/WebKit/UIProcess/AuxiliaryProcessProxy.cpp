@@ -616,16 +616,15 @@ void AuxiliaryProcessProxy::didChangeThrottleState(ProcessThrottleState state)
     m_isSuspended = isNowSuspended;
 
     if (!isNowSuspended && !m_messagesToSendOnResume.isEmpty()) {
-        Vector<std::pair<unsigned, std::unique_ptr<IPC::Encoder>>> indexMessagePairs;
+        using PairType = std::pair<unsigned, std::unique_ptr<IPC::Encoder>>;
+        Vector<PairType> indexMessagePairs;
         indexMessagePairs.reserveInitialCapacity(m_messagesToSendOnResume.size());
 
         for (auto& indexMessagePair : m_messagesToSendOnResume.values())
             indexMessagePairs.append(WTFMove(indexMessagePair));
 
         // Send messages in the order that they were enqueued after coalescing.
-        std::ranges::sort(indexMessagePairs, [](auto& pair1, auto& pair2) {
-            return pair1.first < pair2.first;
-        });
+        std::ranges::sort(indexMessagePairs, { }, &PairType::first);
 
         for (auto& indexMessagePair : indexMessagePairs) {
             auto& encoder = indexMessagePair.second;

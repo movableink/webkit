@@ -130,7 +130,7 @@ template<typename Map> std::optional<typename Map::ValueType> peekIdentUsingMapp
 
 inline RefPtr<CSSPrimitiveValue> consumeCustomIdentExcluding(CSSParserTokenRange& range, std::initializer_list<CSSValueID> excluding, bool shouldLowercase)
 {
-    if (std::ranges::any_of(excluding, [peekedValueID = range.peek().id()](const auto& valueID) { return valueID == peekedValueID; }))
+    if (std::ranges::find(excluding, range.peek().id()) != excluding.end())
         return nullptr;
     return consumeCustomIdent(range, shouldLowercase);
 }

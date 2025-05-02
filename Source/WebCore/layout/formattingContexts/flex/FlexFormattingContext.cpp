@@ -193,9 +193,7 @@ FlexLayout::LogicalFlexItems FlexFormattingContext::convertFlexItemsToLogicalSpa
         if (!flexItemsNeedReordering)
             return;
 
-        std::ranges::stable_sort(flexItemList, [&](auto& a, auto& b) {
-            return a.logicalOrder < b.logicalOrder;
-        });
+        std::ranges::stable_sort(flexItemList, { }, &FlexItem::logicalOrder);
     };
     reorderFlexItemsIfApplicable();
 

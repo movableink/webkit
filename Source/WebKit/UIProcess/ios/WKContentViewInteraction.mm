@@ -9765,9 +9765,7 @@ static String fallbackLabelTextForUnlabeledInputFieldInZoomedFormControls(WebCor
     bool isPasswordField = false;
 
     auto elementTypeIsAnyOf = [elementType](std::initializer_list<WebKit::InputType>&& elementTypes) {
-        return std::ranges::any_of(WTFMove(elementTypes), [elementType](auto&& type) {
-            return elementType == type;
-        });
+        return std::ranges::find(elementTypes, elementType) != elementTypes.end();
     };
 
     // If unspecified, try to infer the input mode from the input type

@@ -242,9 +242,7 @@ static Vector<ChildRepresentation, 16> generateSortedChildrenMap(const Children&
     for (size_t i = 0; i < children.size(); ++i)
         sortedChildrenMap.append(ChildRepresentation { .index = i, .sortPriority = sortPriority(children[i]) });
 
-    std::ranges::stable_sort(sortedChildrenMap, [](auto& first, auto& second) {
-        return first.sortPriority < second.sortPriority;
-    });
+    std::ranges::stable_sort(sortedChildrenMap, { }, &ChildRepresentation::sortPriority);
 
     return sortedChildrenMap;
 }

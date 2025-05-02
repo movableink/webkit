@@ -354,14 +354,13 @@ Variant<PredominantColorType, Color> PageColorSampler::predominantColor(Page& pa
         return distance <= maxDistanceSquaredForSimilarColors;
     };
 
-    Vector<std::pair<Color, unsigned>> colorsByDescendingFrequency;
+    using PairType = std::pair<Color, unsigned>;
+    Vector<PairType> colorsByDescendingFrequency;
     colorsByDescendingFrequency.reserveInitialCapacity(colorDistribution.size());
     for (auto& [color, count] : colorDistribution)
         colorsByDescendingFrequency.append({ color, count });
 
-    std::ranges::stable_sort(colorsByDescendingFrequency, [](auto& a, auto& b) {
-        return a.second > b.second;
-    });
+    std::ranges::stable_sort(colorsByDescendingFrequency, std::ranges::greater { }, &PairType::second);
 
     std::optional<Color> mostFrequentColor;
     unsigned mostFrequentColorCount = 0;

@@ -91,9 +91,7 @@ private:
 
         auto find(int codeWord)
         {
-            return std::ranges::find_if(m_children, [codeWord](auto& entry) {
-                return entry.codeWord == codeWord;
-            });
+            return std::ranges::find(m_children, codeWord, &ChildWithCodeWord::codeWord);
         }
 
         auto end() { return m_children.end(); }

@@ -82,9 +82,7 @@ bool URLSearchParams::has(const String& name, const String& value) const
 
 void URLSearchParams::sort()
 {
-    std::ranges::stable_sort(m_pairs, [] (const auto& a, const auto& b) {
-        return WTF::codePointCompareLessThan(a.key, b.key);
-    });
+    std::ranges::stable_sort(m_pairs, WTF::codePointCompareLessThan, &PairType::key);
     updateURL();
 }
 

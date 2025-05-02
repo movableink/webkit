@@ -1234,9 +1234,7 @@ void WebAuthenticatorCoordinatorProxy::getClientCapabilities(const WebCore::Secu
         Vector<KeyValuePair<String, bool>> capabilities;
         for (NSString *key in result)
             capabilities.append({ key, result[key].boolValue });
-        std::ranges::sort(capabilities, [](auto& a, auto& b) {
-            return codePointCompareLessThan(a.key, b.key);
-        });
+        std::ranges::sort(capabilities, codePointCompareLessThan, &KeyValuePair<String, bool>::key);
 
         ensureOnMainRunLoop([handler = WTFMove(handler), capabilities = WTFMove(capabilities)] () mutable {
             handler(WTFMove(capabilities));

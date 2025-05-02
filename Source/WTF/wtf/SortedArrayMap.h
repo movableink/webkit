@@ -162,9 +162,7 @@ template<ASCIISubset subset, typename CharacterType> constexpr std::make_unsigne
 template<ASCIISubset subset> constexpr ComparableASCIISubsetLiteral<subset>::ComparableASCIISubsetLiteral(ASCIILiteral inputLiteral)
     : literal { inputLiteral }
 {
-    ASSERT_UNDER_CONSTEXPR_CONTEXT(std::ranges::all_of(literal.span(), [](char character) {
-        return isInSubset<subset>(character);
-    }));
+    ASSERT_UNDER_CONSTEXPR_CONTEXT(std::ranges::all_of(literal.span(), isInSubset<subset>));
 }
 
 template<typename ArrayType> constexpr SortedArrayMap<ArrayType>::SortedArrayMap(const ArrayType& array)

@@ -101,9 +101,7 @@ static void dumpChangedLayers(TextStream& ts, const LayerPropertiesMap& changedL
 
     // Dump the layer properties sorted by layer ID.
     auto layerIDs = copyToVector(changedLayerProperties.keys());
-    std::ranges::sort(layerIDs, [](auto& lhs, auto& rhs) {
-        return lhs.object() < rhs.object();
-    });
+    std::ranges::sort(layerIDs, { }, &WebCore::PlatformLayerIdentifier::object);
 
     for (auto& layerID : layerIDs) {
         const auto& layerProperties = *changedLayerProperties.get(layerID);

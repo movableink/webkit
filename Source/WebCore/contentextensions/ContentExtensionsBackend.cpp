@@ -415,10 +415,7 @@ void applyResultsToRequest(ContentRuleListResults&& results, Page* page, Resourc
         request.upgradeInsecureRequest();
     }
 
-    std::ranges::sort(results.summary.modifyHeadersActions,
-        [] (const ModifyHeadersAction& a, const ModifyHeadersAction& b) {
-        return a.priority > b.priority;
-    });
+    std::ranges::sort(results.summary.modifyHeadersActions, std::ranges::greater { }, &ModifyHeadersAction::priority);
 
     UncheckedKeyHashMap<String, ModifyHeadersAction::ModifyHeadersOperationType> headerNameToFirstOperationApplied;
     for (auto& action : results.summary.modifyHeadersActions)

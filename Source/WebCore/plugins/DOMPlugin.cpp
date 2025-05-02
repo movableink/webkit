@@ -39,7 +39,7 @@ static Vector<Ref<DOMMimeType>> makeMimeTypes(Navigator& navigator, const Plugin
     auto types = info.mimes.map([&](auto& type) {
         return DOMMimeType::create(navigator, type, self);
     });
-    std::ranges::sort(types, [](const Ref<DOMMimeType>& a, const Ref<DOMMimeType>& b) {
+    std::ranges::sort(types, [](auto& a, auto& b) {
         return codePointCompareLessThan(a->type(), b->type());
     });
 

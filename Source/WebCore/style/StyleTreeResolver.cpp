@@ -1446,9 +1446,7 @@ void TreeResolver::sortPositionOptionsIfNeeded(PositionOptions& options, const S
     }
 
     // "Stably sort the position options list according to this size, with the largest coming first."
-    std::ranges::stable_sort(optionsForSorting, [](auto& a, auto& b) {
-        return a.containingBlockSize > b.containingBlockSize;
-    });
+    std::ranges::stable_sort(optionsForSorting, std::ranges::greater { }, &SortingOption::containingBlockSize);
 
     for (size_t i = 0; i < optionsForSorting.size(); ++i)
         options.optionStyles[i] = WTFMove(optionsForSorting[i].style);

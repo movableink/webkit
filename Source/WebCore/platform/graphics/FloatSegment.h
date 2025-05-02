@@ -56,9 +56,7 @@ struct FloatSegment {
 // return differenceWithDilation({ 0, totalWidth }, intersections);
 inline Vector<FloatSegment> differenceWithDilation(FloatSegment a, Vector<FloatSegment>&& bs, float dilationAmount)
 {
-    std::ranges::sort(bs, [](auto&& a, auto&& b) {
-        return a.begin < b.begin;
-    });
+    std::ranges::sort(bs, { }, &FloatSegment::begin);
 
     auto result = bs.begin();
     for (auto b : bs) {

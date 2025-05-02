@@ -613,9 +613,9 @@ RenderedText extractRenderedText(Element& element)
     }();
 
     if (ascendingOrder)
-        std::ranges::sort(allTokensAndOffsets, [&](auto& a, auto& b) { return a.offset < b.offset; });
+        std::ranges::sort(allTokensAndOffsets, std::ranges::less { }, &TokenAndBlockOffset::offset);
     else
-        std::ranges::sort(allTokensAndOffsets, [&](auto& a, auto& b) { return a.offset > b.offset; });
+        std::ranges::sort(allTokensAndOffsets, std::ranges::greater { }, &TokenAndBlockOffset::offset);
 
     bool hasLargeReplacedDescendant = false;
     StringBuilder textWithReplacedContent;

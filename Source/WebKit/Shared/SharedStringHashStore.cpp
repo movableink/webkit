@@ -169,9 +169,7 @@ void SharedStringHashStore::resizeTable(unsigned newTableLength)
 void SharedStringHashStore::processPendingOperations()
 {
     unsigned currentTableLength = m_tableLength;
-    unsigned approximateNewHashCount = std::ranges::count_if(m_pendingOperations, [](auto& operation) {
-        return operation.type == Operation::Add;
-    });
+    unsigned approximateNewHashCount = std::ranges::count(m_pendingOperations, Operation::Add, &Operation::type);
     // FIXME: The table can currently only grow. We should probably support shrinking it to save memory.
     unsigned newTableLength = tableLengthForKeyCount(m_keyCount + approximateNewHashCount);
 

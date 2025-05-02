@@ -217,9 +217,7 @@ void AnimationTimelinesController::updateAnimationsAndSendEvents(ReducedResoluti
         auto events = documentTimeline->prepareForPendingAnimationEventsDispatch();
 
         // 6. Perform a stable sort of the animation events in events to dispatch as follows.
-        std::ranges::stable_sort(events, [](auto& lhs, auto& rhs) {
-            return compareAnimationEventsByCompositeOrder(lhs.get(), rhs.get());
-        });
+        std::ranges::stable_sort(events, compareAnimationEventsByCompositeOrder);
 
         // 7. Dispatch each of the events in events to dispatch at their corresponding target using the order established in the previous step.
         for (auto& event : events)

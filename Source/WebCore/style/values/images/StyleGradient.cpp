@@ -364,9 +364,7 @@ template<typename GradientAdapter, typename StyleGradient> GradientColorStops co
         };
     });
 
-    std::ranges::stable_sort(result, [](const auto& a, const auto& b) {
-        return a.offset < b.offset;
-    });
+    std::ranges::stable_sort(result, { }, &WebCore::GradientColorStop::offset);
 
     return GradientColorStops::Sorted { WTFMove(result) };
 }

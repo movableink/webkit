@@ -265,12 +265,8 @@ static Vector<FloatPointGraph::Polygon> polygonsForRect(const Vector<FloatRect>&
 {
     Vector<FloatRect> sortedRects = rects;
     // FIXME: Replace it with 2 dimensional sort.
-    std::ranges::sort(sortedRects, [](FloatRect a, FloatRect b) {
-        return a.x() < b.x();
-    });
-    std::ranges::sort(sortedRects, [](FloatRect a, FloatRect b) {
-        return a.y() < b.y();
-    });
+    std::ranges::sort(sortedRects, { }, &FloatRect::x);
+    std::ranges::sort(sortedRects, { }, &FloatRect::y);
 
     Vector<FloatPointGraph::Polygon> rectPolygons;
     rectPolygons.reserveInitialCapacity(sortedRects.size());

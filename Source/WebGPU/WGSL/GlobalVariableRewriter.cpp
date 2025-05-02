@@ -762,7 +762,7 @@ std::optional<Error> RewriteGlobalVariables::collectGlobals()
     }
 
     for (auto& [_, vector] : m_groupBindingMap)
-        std::ranges::sort(vector, [](auto& a, auto& b) { return a.first < b.first; });
+        std::ranges::sort(vector, { }, &std::pair<unsigned, String>::first);
 
     if (!bufferLengths.isEmpty()) {
         for (const auto& [variable, group] : bufferLengths) {
@@ -1613,9 +1613,7 @@ AST::StructureMember& RewriteGlobalVariables::createArgumentBufferEntry(unsigned
 
 void RewriteGlobalVariables::finalizeArgumentBufferStruct(unsigned group, Vector<std::pair<unsigned, AST::StructureMember*>>& entries)
 {
-    std::ranges::sort(entries, [](auto& a, auto& b) {
-        return a.first < b.first;
-    });
+    std::ranges::sort(entries, { }, &std::pair<unsigned, AST::StructureMember*>::first);
 
     AST::StructureMember::List structMembers;
     for (auto& [_, member] : entries)

@@ -780,7 +780,7 @@ std::optional<Child> simplify(Product& root, const SimplificationOptions& option
                     return makeChildWithValueBasedOn(numeric.value * numericProduct->value, numeric);
                 },
                 [&](IndirectNode<Sum>& sum) -> std::optional<Child> {
-                    if (!std::ranges::all_of(sum->children, [](auto& child) { return isNumeric(child); }))
+                    if (!std::ranges::all_of(sum->children, isNumeric))
                         return { };
 
                     for (auto& child : sum->children) {
@@ -938,7 +938,7 @@ std::optional<Child> simplify(Negate& root, const SimplificationOptions&)
         [](IndirectNode<Sum>& a) -> std::optional<Child> {
             // Not stated in spec, but needed for tests.
 
-            if (!std::ranges::all_of(a->children, [](auto& child) { return isNumeric(child); }))
+            if (!std::ranges::all_of(a->children, isNumeric))
                 return { };
 
             for (auto& child : a->children) {
@@ -953,7 +953,7 @@ std::optional<Child> simplify(Negate& root, const SimplificationOptions&)
         [](IndirectNode<Product>& a) -> std::optional<Child> {
             // Not stated in spec, but needed for tests.
 
-            if (!std::ranges::all_of(a->children, [](auto& child) { return isNumeric(child); }))
+            if (!std::ranges::all_of(a->children, isNumeric))
                 return { };
 
             for (auto& child : a->children) {

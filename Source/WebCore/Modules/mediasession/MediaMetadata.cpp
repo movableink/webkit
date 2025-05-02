@@ -246,9 +246,7 @@ void MediaMetadata::refreshArtworkImage()
         return { imageDimensionsScore(size.width(), size.height(), s_minimumSize, s_idealSize), m_metadata.artwork[index].src };
     });
 
-    std::ranges::sort(artworks, [](const Pair& a1, const Pair& a2) {
-        return a1.score > a2.score;
-    });
+    std::ranges::sort(artworks, std::ranges::greater { }, &Pair::score);
 
     tryNextArtworkImage(0, WTFMove(artworks));
 }

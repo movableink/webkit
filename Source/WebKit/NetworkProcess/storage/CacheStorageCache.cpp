@@ -137,9 +137,7 @@ void CacheStorageCache::open(WebCore::DOMCacheEngine::CacheIdentifierCallback&& 
 
         protectedThis->assertIsOnCorrectQueue();
 
-        std::ranges::sort(recordInfos, [](auto& a, auto& b) {
-            return a.insertionTime() < b.insertionTime();
-        });
+        std::ranges::sort(recordInfos, { }, &CacheStorageRecordInformation::insertionTime);
 
         for (auto&& recordInfo : recordInfos) {
             recordInfo.setIdentifier(nextRecordIdentifier());
@@ -197,13 +195,14 @@ void CacheStorageCache::retrieveRecords(WebCore::RetrieveRecordsOptions&& option
         return callback({ });
     
     m_store->readRecords(targetRecordInfos, [options = WTFMove(options), callback = WTFMove(callback)](auto&& cacheStorageRecords) mutable {
-        Vector<WebCore::DOMCacheEngine::CrossThreadRecord> result;
+        using namespace WebCore::DOMCacheEngine;
+        Vector<CrossThreadRecord> result;
         result.reserveInitialCapacity(cacheStorageRecords.size());
         for (auto&& cacheStorageRecord : cacheStorageRecords) {
             if (!cacheStorageRecord)
                 continue;
     
-            WebCore::DOMCacheEngine::CrossThreadRecord record { cacheStorageRecord->info.identifier(), 0, cacheStorageRecord->requestHeadersGuard, WTFMove(cacheStorageRecord->request), cacheStorageRecord->options, WTFMove(cacheStorageRecord->referrer), cacheStorageRecord->responseHeadersGuard, { }, nullptr, 0 };
+            CrossThreadRecord record { cacheStorageRecord->info.identifier(), 0, cacheStorageRecord->requestHeadersGuard, WTFMove(cacheStorageRecord->request), cacheStorageRecord->options, WTFMove(cacheStorageRecord->referrer), cacheStorageRecord->responseHeadersGuard, { }, nullptr, 0 };
             if (options.shouldProvideResponse) {
                 record.response = WTFMove(cacheStorageRecord->responseData);
                 record.responseBody = WTFMove(cacheStorageRecord->responseBody);
@@ -212,15 +211,13 @@ void CacheStorageCache::retrieveRecords(WebCore::RetrieveRecordsOptions&& option
 
             if (record.response.type == WebCore::ResourceResponse::Type::Opaque) {
                 if (WebCore::validateCrossOriginResourcePolicy(options.crossOriginEmbedderPolicy.value, options.sourceOrigin, record.request.url(), false, record.response.url, record.response.httpHeaderFields.get(WebCore::HTTPHeaderName::CrossOriginResourcePolicy), WebCore::ForNavigation::No, WebCore::EmptyOriginAccessPatterns::singleton()))
-                    return callback(makeUnexpected(WebCore::DOMCacheEngine::Error::CORP));
+                    return callback(makeUnexpected(Error::CORP));
             }
 
             result.append(WTFMove(record));
         }
 
-        std::ranges::sort(result, [&](auto& a, auto& b) {
-            return a.identifier < b.identifier;
-        });
+        std::ranges::sort(result, { }, &CrossThreadRecord::identifier);
 
         callback(WTFMove(result));
     });

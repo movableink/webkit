@@ -544,9 +544,7 @@ static Vector<Vector<String>> selectorsForTarget(Element& element, ElementSelect
             selectors.append(WTFMove(selector));
     }
 
-    std::ranges::sort(selectors, [](auto& first, auto& second) {
-        return first.length() < second.length();
-    });
+    std::ranges::sort(selectors, { }, &String::length);
 
     if (!selectors.isEmpty())
         cache.add(element, selectors.first());
@@ -1963,9 +1961,7 @@ uint64_t ElementTargetingController::numberOfVisibilityAdjustmentRects()
     }
 
     // Sort by area in descending order so that we don't double-count fully overlapped elements.
-    std::ranges::sort(clientRects, [](auto first, auto second) {
-        return first.area() > second.area();
-    });
+    std::ranges::sort(clientRects, std::ranges::greater { }, &FloatRect::area);
 
     Region adjustedRegion;
     uint64_t numberOfRects = 0;

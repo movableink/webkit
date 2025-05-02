@@ -1234,9 +1234,7 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
     argumentBuffer[ShaderStage::Fragment].label = bindGroupLayout->fragmentArgumentEncoder().label;
     argumentBuffer[ShaderStage::Compute].label = bindGroupLayout->computeArgumentEncoder().label;
 
-    std::ranges::sort(dynamicBuffers, [](auto& a, auto& b) {
-        return a.bindingIndex < b.bindingIndex;
-    });
+    std::ranges::sort(dynamicBuffers, { }, &BindGroup::BufferAndType::bindingIndex);
 
     if (m_bindGroupId == std::numeric_limits<decltype(m_bindGroupId)>::max()) {
         loseTheDevice(WGPUDeviceLostReason_Undefined);

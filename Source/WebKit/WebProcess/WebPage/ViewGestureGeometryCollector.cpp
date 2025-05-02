@@ -214,9 +214,7 @@ std::optional<std::pair<double, double>> ViewGestureGeometryCollector::computeTe
         return FontSizeAndCount { entry.key, entry.value };
     });
 
-    std::ranges::sort(sortedFontSizesAndCounts, [](auto& first, auto& second) {
-        return first.fontSize < second.fontSize;
-    });
+    std::ranges::sort(sortedFontSizesAndCounts, { }, &FontSizeAndCount::fontSize);
 
     double defaultScale = clampTo<double>(defaultTextLegibilityZoomScale, viewportMinimumScale, viewportMaximumScale);
     double textLegibilityScale = defaultScale;

@@ -2066,9 +2066,7 @@ void NetworkStorageManager::cacheStorageRepresentation(CompletionHandler<void(co
         removeOriginStorageManagerIfPossible(origin);
     }
 
-    std::ranges::sort(originStrings, [](auto& a, auto& b) {
-        return codePointCompareLessThan(a, b);
-    });
+    std::ranges::sort(originStrings, codePointCompareLessThan);
     StringBuilder builder;
     builder.append("{ \"path\": \""_s, m_customCacheStoragePath, "\", \"origins\": ["_s);
     ASCIILiteral divider = ""_s;
