@@ -122,6 +122,8 @@ Usage: $programName [options] [options to pass to build system]
   --simulator                       DEPRECATED alias of --ios-simulator
   --tvos-device                     Use "appletvos.internal" SDK if installed, else "appletvos" SDK (tvOS only)
   --tvos-simulator                  Use "appletvsimulator" (tvOS only)
+  --visionos-device                 Use "xros.internal" SDK if installed, else "xros" SDK (visionOS only)
+  --visionos-simulator              Use "xrsimulator" (visionOS only) 
   --watchos-device                  Use "watchos.internal" SDK if installed, else "watchos" SDK (watchOS only)
   --watchos-simulator               Use "watchsimulator" (watchOS only)
   --coverage                        Enable code coverage support (Mac only)
