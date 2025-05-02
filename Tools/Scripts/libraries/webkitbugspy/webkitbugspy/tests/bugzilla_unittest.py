@@ -175,7 +175,29 @@ class TestBugzilla(unittest.TestCase):
         )):
             tracker = bugzilla.Tracker(self.URL)
             tracker.issue(1).add_comment('Is this related to {}/show_bug.cgi?id=2?'.format(self.URL))
-            self.assertEqual(tracker.issue(1).references, [tracker.issue(2)])
+            self.assertEqual(tracker.issue(1).references, [])
+
+    def test_reference_order(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES, environment=wkmocks.Environment(
+            BUGS_EXAMPLE_COM_USERNAME='wwatcher@example.com',
+            BUGS_EXAMPLE_COM_PASSWORD='password',
+        )):
+            tracker = bugzilla.Tracker(self.URL)
+            tracker.issue(1).add_comment('{}/show_bug.cgi?id=2?'.format(self.URL))
+            tracker.issue(1).add_comment('{}/show_bug.cgi?id=3?'.format(self.URL))
+            self.assertEqual(tracker.issue(1).references, [tracker.issue(3), tracker.issue(2)])
+
+    def test_reference_multiline(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES, environment=wkmocks.Environment(
+            BUGS_EXAMPLE_COM_USERNAME='wwatcher@example.com',
+            BUGS_EXAMPLE_COM_PASSWORD='password',
+        )):
+            tracker = bugzilla.Tracker(self.URL)
+            tracker.issue(1).add_comment(f'{self.URL}/show_bug.cgi?id=2 is a bug.\n{self.URL}/show_bug.cgi?id=3 is another bug.')
+            self.assertEqual(tracker.issue(1).references, [tracker.issue(2), tracker.issue(3)])
+
+            tracker.issue(1).add_comment(f'{self.URL}/show_bug.cgi?id=4')
+            self.assertEqual(tracker.issue(1).references, [tracker.issue(4), tracker.issue(2), tracker.issue(3)])
 
     def test_me(self):
         with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES, environment=wkmocks.Environment(

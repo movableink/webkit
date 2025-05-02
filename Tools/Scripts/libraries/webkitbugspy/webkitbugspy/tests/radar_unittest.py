@@ -152,7 +152,13 @@ class TestRadar(unittest.TestCase):
         with wkmocks.Environment(RADAR_USERNAME='wwatcher'), mocks.Radar(issues=mocks.ISSUES) as mock:
             tracker = radar.Tracker()
             tracker.issue(1).add_comment('Is this related to <rdar://2> ?')
-            self.assertEqual(tracker.issue(1).references, [tracker.issue(2)])
+            self.assertEqual(tracker.issue(1).references, [])
+
+    def test_reference_multiline(self):
+        with wkmocks.Environment(RADAR_USERNAME='wwatcher'), mocks.Radar(issues=mocks.ISSUES) as mock:
+            tracker = radar.Tracker()
+            tracker.issue(1).add_comment('<rdar://2>\nrdar://3')
+            self.assertEqual(tracker.issue(1).references, [tracker.issue(2), tracker.issue(3)])
 
     def test_me(self):
         with wkmocks.Environment(RADAR_USERNAME='tcontributor'), mocks.Radar(issues=mocks.ISSUES):

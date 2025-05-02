@@ -34,6 +34,7 @@ from datetime import datetime
 from webkitbugspy import User, log
 
 from html.parser import HTMLParser
+from itertools import chain
 
 requests = webkitcorepy.CallByNeed(lambda: __import__('requests'))
 
@@ -286,20 +287,10 @@ class Tracker(GenericTracker):
             issue._references = []
             refs = set()
 
-            # Attempt to match radar importer first
-            if self.radar_importer:
-                for comment in (issue.comments or []):
-                    if not comment:
-                        continue
-                    if comment.user != self.radar_importer:
-                        continue
-                    candidate = GenericTracker.from_string(comment.content)
-                    if not candidate or candidate.link in refs or (isinstance(type(candidate.tracker), type(issue.tracker)) and candidate.id == issue.id):
-                        continue
-                    issue._references.append(candidate)
-                    refs.add(candidate.link)
-
-            for text in [issue.description] + [comment.content for comment in (issue.comments or []) if comment]:
+            for text in chain(
+                (comment.content for comment in (reversed(issue.comments) or ()) if comment),
+                (issue.description,),
+            ):
                 if not text:
                     continue
                 for match in self.REFERENCE_RE.findall(text):
