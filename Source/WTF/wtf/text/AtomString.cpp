@@ -51,9 +51,16 @@ ALWAYS_INLINE AtomString AtomString::convertASCIICase() const
         auto characters = impl->span8();
         unsigned failingIndex;
         for (unsigned i = 0; i < length; ++i) {
-            if (type == CaseConvertType::Lower ? UNLIKELY(isASCIIUpper(characters[i])) : LIKELY(isASCIILower(characters[i]))) {
-                failingIndex = i;
-                goto SlowPath;
+            if constexpr (type == CaseConvertType::Lower) {
+                if (isASCIIUpper(characters[i])) [[unlikely]] {
+                    failingIndex = i;
+                    goto SlowPath;
+                }
+            } else {
+                if (isASCIILower(characters[i])) [[likely]] {
+                    failingIndex = i;
+                    goto SlowPath;
+                }
             }
         }
         return *this;

@@ -297,7 +297,7 @@ enum WTFOSSignpostType {
 // By default, os_signpost always emits signpost data to logd. We want to avoid that for WebKit
 // signposts. Instead, we use kdebug_is_enabled to make WebKit's os_signposts behave like kdebug
 // trace points (i.e. we only enable them if a tracing tool is active).
-#define WTFSignpostsEnabled() UNLIKELY(kdebug_is_enabled(KDBG_EVENTID(DBG_APPS, DBG_APPS_WEBKIT_MISC, 0)))
+#define WTFSignpostsEnabled() kdebug_is_enabled(KDBG_EVENTID(DBG_APPS, DBG_APPS_WEBKIT_MISC, 0))
 #else
 #define WTFSignpostsEnabled() true
 #endif
@@ -346,7 +346,7 @@ enum WTFOSSignpostType {
 
 #define WTFEmitSignpostWithType(type, emitMacro, pointer, name, timeDelta, timeFormat, format, ...) \
     do { \
-        if (WTFSignpostsEnabled()) \
+        if (WTFSignpostsEnabled()) [[unlikely]] \
             WTFEmitSignpostAlwaysWithType(type, emitMacro, pointer, name, timeDelta, timeFormat, format, ##__VA_ARGS__); \
     } while (0)
 

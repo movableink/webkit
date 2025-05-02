@@ -271,11 +271,11 @@ private:
     ALWAYS_INLINE static constexpr void handleGreaterThan8CharactersCase(T*& p, unsigned& i, NOESCAPE const Read8Functor& wyr8, uint64_t& seed, uint64_t see1, uint64_t see2)
     {
         if (i > 24) [[unlikely]] {
-            do {
+            do [[likely]] {
                 consume24Characters(p, wyr8, seed, see1, see2);
                 p += 24;
                 i -= 24;
-            } while (LIKELY(i > 24));
+            } while (i > 24);
             seed ^= see1 ^ see2;
         }
         while (i > 8) [[unlikely]] {

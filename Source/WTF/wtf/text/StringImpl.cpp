@@ -729,9 +729,16 @@ ALWAYS_INLINE Ref<StringImpl> StringImpl::convertASCIICase(StringImpl& impl, std
     size_t failingIndex;
     for (size_t i = 0; i < data.size(); ++i) {
         CharacterType character = data[i];
-        if (type == CaseConvertType::Lower ? UNLIKELY(isASCIIUpper(character)) : LIKELY(isASCIILower(character))) {
-            failingIndex = i;
-            goto SlowPath;
+        if constexpr (type == CaseConvertType::Lower) {
+            if (isASCIIUpper(character)) [[unlikely]] {
+                failingIndex = i;
+                goto SlowPath;
+            }
+        } else {
+            if (isASCIILower(character)) [[likely]] {
+                failingIndex = i;
+                goto SlowPath;
+            }
         }
     }
     return impl;
