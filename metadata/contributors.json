@@ -6841,6 +6841,14 @@
    },
    {
       "emails" : [
+         "rahim_abdi@apple.com",
+         "abdi.abdirahim@gmail.com"
+      ],
+      "github" : "rahimabdi",
+      "name" : "Rahim Abdi"
+   },
+   {
+      "emails" : [
          "rakuco@webkit.org",
          "rakuco@FreeBSD.org",
          "raphael.kubo.da.costa@intel.com",
