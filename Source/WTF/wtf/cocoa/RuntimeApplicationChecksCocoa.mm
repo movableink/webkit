@@ -428,6 +428,12 @@ bool MacApplication::isHRBlock()
     return isHRBlock;
 }
 
+bool MacApplication::isTurboTax()
+{
+    static bool isTurboTax = applicationBundleIdentifier().startsWith("com.intuit.turbotax."_s);
+    return isTurboTax;
+}
+
 bool MacApplication::isEpsonSoftwareUpdater()
 {
     static bool isEpsonSoftwareUpdater = applicationBundleIsEqualTo("com.epson.EPSON_Software_Updater"_s);

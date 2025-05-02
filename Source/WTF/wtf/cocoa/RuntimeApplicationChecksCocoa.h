@@ -128,6 +128,7 @@ enum class SDKAlignedBehavior {
     LaxCookieSameSiteAttribute,
     BlockOptionallyBlockableMixedContent,
     UseCFNetworkNetworkLoader,
+    AutoLayoutInWKWebView,
     BlockCrossOriginRedirectDownloads,
     BlobFileAccessEnforcementAndNetworkProcessRoundTrip,
     DevolvableWidgets,
@@ -177,6 +178,7 @@ WTF_EXPORT_PRIVATE bool isQuickenEssentials();
 WTF_EXPORT_PRIVATE bool isSafari();
 WTF_EXPORT_PRIVATE bool isVersions();
 WTF_EXPORT_PRIVATE bool isHRBlock();
+WTF_EXPORT_PRIVATE bool isTurboTax();
 WTF_EXPORT_PRIVATE bool isEpsonSoftwareUpdater();
 WTF_EXPORT_PRIVATE bool isMimeoPhotoProject();
 
