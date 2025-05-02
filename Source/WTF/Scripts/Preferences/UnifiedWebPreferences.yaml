@@ -3136,17 +3136,17 @@ FileSystemWritableStreamEnabled:
 
 FilterLinkDecorationByDefaultEnabled:
   type: bool
-  status: testable
+  status: stable
   category: networking
   humanReadableName: "Filter Link Decoration"
   humanReadableDescription: "Enable Filtering Link Decoration"
   defaultValue:
     WebKitLegacy:
-      default: false
+      default: true
     WebKit:
-      default: false
+      default: true
     WebCore:
-      default: false
+      default: true
 
 FixedFontFamily:
   type: String
