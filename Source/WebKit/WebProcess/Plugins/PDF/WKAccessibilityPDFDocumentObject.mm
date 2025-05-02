@@ -102,8 +102,7 @@
     return rectInPageCoordinates;
 }
 
-#if !PLATFORM(MAC)
-
+#if PLATFORM(IOS_FAMILY)
 - (void)setAXElements
 {
     if (!_pdfDocument) {
@@ -127,6 +126,9 @@
             _pdfDocument = plugin->pdfDocument();
     }
 
+    if (![_axElements count])
+        [self setAXElements];
+
     if (RefPtr plugin = _pdfPlugin.get())
         return plugin->accessibilityHitTestInPageForIOS(point);
     return [_pdfDocument accessibilityHitTest:point];
@@ -142,10 +144,13 @@
 
 - (BOOL)accessibilityScroll:(UIAccessibilityScrollDirection)direction
 {
-    return NO;
+    if (RefPtr plugin = _pdfPlugin.get()) {
+        if (auto coreObject = plugin->accessibilityCoreObject())
+            [coreObject->wrapper() accessibilityScroll:direction];
+    }
+    return YES;
 }
-
-#endif // !PLATFORM(MAC)
+#endif // PLATFORM(IOS_FAMILY)
 
 #if PLATFORM(MAC)
 - (BOOL)isAccessibilityElement

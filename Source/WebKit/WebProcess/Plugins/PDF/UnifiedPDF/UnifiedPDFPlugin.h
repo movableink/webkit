@@ -55,6 +55,7 @@ class LocalFrameView;
 class PageOverlay;
 class PlatformWheelEvent;
 class ShadowRoot;
+class AXCoreObject;
 
 enum class DelegatedScrollingMode : uint8_t;
 
@@ -171,9 +172,10 @@ public:
 #if PLATFORM(MAC)
     void accessibilityScrollToPage(PDFDocumentLayout::PageIndex);
 #endif
-#if !PLATFORM(MAC)
+#if PLATFORM(IOS_FAMILY)
+    WebCore::AXCoreObject* accessibilityCoreObject();
     id accessibilityHitTestInPageForIOS(WebCore::FloatPoint);
-#endif
+#endif // PLATFORM(IOS_FAMILY)
 
 #if ENABLE(UNIFIED_PDF_DATA_DETECTION)
     void installDataDetectorOverlay(WebCore::PageOverlay&);

@@ -61,6 +61,7 @@
 #include <CoreGraphics/CoreGraphics.h>
 #include <PDFKit/PDFKit.h>
 #include <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
+#include <WebCore/AXCoreObject.h>
 #include <WebCore/AffineTransform.h>
 #include <WebCore/AutoscrollController.h>
 #include <WebCore/BitmapImage.h>
@@ -3728,7 +3729,7 @@ id UnifiedPDFPlugin::accessibilityObject() const
     return m_accessibilityDocumentObject.get();
 }
 
-#if !PLATFORM(MAC)
+#if PLATFORM(IOS_FAMILY)
 id UnifiedPDFPlugin::accessibilityHitTestInPageForIOS(WebCore::FloatPoint point)
 {
     RefPtr corePage = this->page();
@@ -3740,7 +3741,14 @@ id UnifiedPDFPlugin::accessibilityHitTestInPageForIOS(WebCore::FloatPoint point)
         return [page accessibilityHitTest:point withPlugin:m_accessibilityDocumentObject.get()];
     return nil;
 }
-#endif // !PLATFORM(MAC)
+
+WebCore::AXCoreObject* UnifiedPDFPlugin::accessibilityCoreObject()
+{
+    if (CheckedPtr cache = axObjectCache())
+        return cache->getOrCreate(m_element.get());
+    return nullptr;
+}
+#endif // PLATFORM(IOS_FAMILY)
 
 #if ENABLE(PDF_HUD)
 
