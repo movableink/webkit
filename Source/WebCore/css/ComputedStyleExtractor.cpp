@@ -83,6 +83,7 @@
 #include "RenderElementInlines.h"
 #include "RenderGrid.h"
 #include "RenderInline.h"
+#include "RenderObjectInlines.h"
 #include "RotateTransformOperation.h"
 #include "SVGElement.h"
 #include "SVGRenderStyle.h"

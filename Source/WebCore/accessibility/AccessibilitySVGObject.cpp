@@ -33,6 +33,7 @@
 #include "EventTargetInlines.h"
 #include "HTMLNames.h"
 #include "RenderIterator.h"
+#include "RenderObjectInlines.h"
 #include "RenderText.h"
 #include "SVGAElement.h"
 #include "SVGDescElement.h"

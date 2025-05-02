@@ -70,7 +70,7 @@
 #include "RenderFlexibleBox.h"
 #include "RenderGrid.h"
 #include "RenderInline.h"
-#include "RenderObject.h"
+#include "RenderObjectInlines.h"
 #include "Settings.h"
 #include "StyleGridData.h"
 #include "StyleResolver.h"

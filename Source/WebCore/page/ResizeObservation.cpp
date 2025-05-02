@@ -29,6 +29,7 @@
 #include "ElementInlines.h"
 #include "HTMLFrameOwnerElement.h"
 #include "Logging.h"
+#include "NodeInlines.h"
 #include "RenderBoxInlines.h"
 #include "RenderElementInlines.h"
 #include "SVGElement.h"

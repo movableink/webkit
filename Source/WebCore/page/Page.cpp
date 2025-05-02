@@ -140,6 +140,7 @@
 #include "Range.h"
 #include "RemoteFrame.h"
 #include "RenderDescendantIterator.h"
+#include "RenderElementInlines.h"
 #include "RenderImage.h"
 #include "RenderLayerCompositor.h"
 #include "RenderObjectInlines.h"

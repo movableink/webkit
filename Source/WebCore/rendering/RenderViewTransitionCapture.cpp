@@ -31,6 +31,7 @@
 #include "PaintInfo.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderLayer.h"
+#include "RenderObjectInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {

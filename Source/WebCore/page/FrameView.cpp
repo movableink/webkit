@@ -35,6 +35,7 @@
 #include "RenderElement.h"
 #include "RenderLayer.h"
 #include "RenderLayerScrollableArea.h"
+#include "RenderObjectInlines.h"
 #include "RenderWidget.h"
 #include <wtf/TZoneMallocInlines.h>
 

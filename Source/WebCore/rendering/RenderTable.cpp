@@ -466,6 +466,14 @@ LayoutUnit RenderTable::sumCaptionsLogicalHeight() const
     return height;
 }
 
+void RenderTable::setNeedsSectionRecalc()
+{
+    if (renderTreeBeingDestroyed())
+        return;
+    m_needsSectionRecalc = true;
+    setNeedsLayout();
+}
+
 void RenderTable::layout()
 {
     StackStats::LayoutCheckPoint layoutCheckPoint;

@@ -66,6 +66,7 @@
 #include "RenderLayoutState.h"
 #include "RenderListMarker.h"
 #include "RenderMenuList.h"
+#include "RenderObjectInlines.h"
 #include "RenderTableCell.h"
 #include "RenderTextControl.h"
 #include "RenderTextFragment.h"

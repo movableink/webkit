@@ -64,6 +64,7 @@
 #include "MutableStyleProperties.h"
 #include "OpacityCaretAnimator.h"
 #include "Page.h"
+#include "PositionInlines.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "Quirks.h"
 #include "Range.h"

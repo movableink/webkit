@@ -43,6 +43,7 @@
 #include "Logging.h"
 #include "Range.h"
 #include "RenderBlockFlow.h"
+#include "RenderObjectInlines.h"
 #include "SimpleRange.h"
 #include "Text.h"
 #include "TextIterator.h"

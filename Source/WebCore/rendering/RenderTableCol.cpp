@@ -33,6 +33,7 @@
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderChildIterator.h"
 #include "RenderIterator.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderTable.h"
 #include "RenderTableCaption.h"

@@ -167,6 +167,7 @@
 #include "NavigatorBeacon.h"
 #include "NavigatorMediaDevices.h"
 #include "NetworkLoadInformation.h"
+#include "NodeInlines.h"
 #include "Page.h"
 #include "PageOverlay.h"
 #include "PathUtilities.h"

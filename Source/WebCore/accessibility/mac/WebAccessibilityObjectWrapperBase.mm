@@ -48,6 +48,7 @@
 #import "ColorMac.h"
 #import "ContextMenuController.h"
 #import "Editing.h"
+#import "FrameDestructionObserverInlines.h"
 #import "FrameSelection.h"
 #import "LayoutRect.h"
 #import "LocalizedStrings.h"

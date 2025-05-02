@@ -35,6 +35,7 @@
 #include "DatabaseTask.h"
 #include "DatabaseThread.h"
 #include "Document.h"
+#include "FrameDestructionObserverInlines.h"
 #include "LegacySchemeRegistry.h"
 #include "Page.h"
 #include "ScriptExecutionContext.h"

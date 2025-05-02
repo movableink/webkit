@@ -630,7 +630,6 @@ rendering/RenderTableCell.cpp
 rendering/RenderTextControl.cpp
 rendering/RenderTextControlMultiLine.cpp
 rendering/RenderTextControlSingleLine.cpp
-rendering/RenderTextControlSingleLine.h
 rendering/RenderTheme.cpp
 rendering/RenderTreeAsText.cpp
 rendering/RenderWidget.cpp

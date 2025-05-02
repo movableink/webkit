@@ -109,6 +109,11 @@ RenderTableSection::RenderTableSection(Document& document, RenderStyle&& style)
 
 RenderTableSection::~RenderTableSection() = default;
 
+ASCIILiteral RenderTableSection::renderName() const
+{
+    return (isAnonymous() || isPseudoElement()) ? "RenderTableSection (anonymous)"_s : "RenderTableSection"_s;
+}
+
 void RenderTableSection::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderBox::styleDidChange(diff, oldStyle);

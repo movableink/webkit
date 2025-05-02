@@ -30,6 +30,7 @@
 #include "RenderButton.h"
 #include "RenderChildIterator.h"
 #include "RenderMultiColumnFlow.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderTextControl.h"
 #include "RenderTreeBuilderMultiColumn.h"

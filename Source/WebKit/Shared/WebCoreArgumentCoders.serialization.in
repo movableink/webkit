@@ -4676,6 +4676,7 @@ struct WebCore::ImageResource {
     String label;
 };
 
+header: <WebCore/SharedStringHash.h>
 using WebCore::SharedStringHash = uint32_t
 
 struct WebCore::FourCC {

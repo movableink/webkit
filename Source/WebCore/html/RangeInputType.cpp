@@ -48,6 +48,7 @@
 #include "MouseEvent.h"
 #include "NodeName.h"
 #include "PlatformMouseEvent.h"
+#include "RenderObjectInlines.h"
 #include "RenderSlider.h"
 #include "ScopedEventQueue.h"
 #include "ScriptDisallowedScope.h"

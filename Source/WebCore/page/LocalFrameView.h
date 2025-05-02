@@ -32,6 +32,7 @@
 #include "LayoutRect.h"
 #include "LocalFrame.h"
 #include "LocalFrameViewLayoutContext.h"
+#include "Page.h"
 #include "Pagination.h"
 #include "PaintPhase.h"
 #include "RenderPtr.h"

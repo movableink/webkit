@@ -36,6 +36,7 @@
 #include "RenderListItem.h"
 #include "RenderMultiColumnFlow.h"
 #include "RenderMultiColumnSpannerPlaceholder.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "StyleScope.h"
 #include <wtf/StackStats.h>

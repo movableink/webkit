@@ -41,6 +41,7 @@
 #include "RenderFrame.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "Settings.h"
 #include <wtf/StackStats.h>

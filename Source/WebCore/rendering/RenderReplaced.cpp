@@ -52,6 +52,7 @@
 #include "RenderImage.h"
 #include "RenderLayer.h"
 #include "RenderLayoutState.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderStyleSetters.h"
 #include "RenderTheme.h"

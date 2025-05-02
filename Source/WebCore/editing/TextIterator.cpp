@@ -57,6 +57,7 @@
 #include "RenderElementInlines.h"
 #include "RenderImage.h"
 #include "RenderIterator.h"
+#include "RenderObjectInlines.h"
 #include "RenderTableCell.h"
 #include "RenderTableRow.h"
 #include "RenderTextControl.h"

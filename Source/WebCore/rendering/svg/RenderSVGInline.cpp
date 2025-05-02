@@ -25,6 +25,7 @@
 
 #include "LegacyRenderSVGResource.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGInlineInlines.h"
 #include "RenderSVGInlineText.h"
 #include "RenderSVGText.h"

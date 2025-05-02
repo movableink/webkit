@@ -80,6 +80,7 @@
 #include "Logging.h"
 #include "NVShaderNoperspectiveInterpolation.h"
 #include "NavigatorWebXR.h"
+#include "NodeInlines.h"
 #include "NotImplemented.h"
 #include "OESDrawBuffersIndexed.h"
 #include "OESElementIndexUint.h"

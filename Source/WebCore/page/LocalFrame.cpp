@@ -93,7 +93,7 @@
 #include "RenderTextControl.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
-#include "RenderWidget.h"
+#include "RenderWidgetInlines.h"
 #include "ResourceMonitor.h"
 #include "SVGDocument.h"
 #include "SVGDocumentExtensions.h"

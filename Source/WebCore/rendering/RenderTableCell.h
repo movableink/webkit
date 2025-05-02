@@ -142,7 +142,7 @@ private:
 
     static RenderPtr<RenderTableCell> createTableCellWithStyle(Document&, const RenderStyle&);
 
-    ASCIILiteral renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableCell (anonymous)"_s : "RenderTableCell"_s; }
+    ASCIILiteral renderName() const override;
 
     void willBeRemovedFromTree() override;
 

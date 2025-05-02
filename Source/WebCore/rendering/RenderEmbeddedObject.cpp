@@ -51,6 +51,7 @@
 #include "RenderLayoutState.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
+#include "RenderWidgetInlines.h"
 #include "Settings.h"
 #include "SystemFontDatabase.h"
 #include "Text.h"

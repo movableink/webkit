@@ -33,6 +33,7 @@
 #include "RenderLayer.h"
 #include "RenderListItem.h"
 #include "RenderListMarker.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "SurrogatePairAwareTextIterator.h"
 #include "TextIterator.h"

@@ -54,6 +54,7 @@
 #include "RenderLayer.h"
 #include "RenderLayerScrollableArea.h"
 #include "RenderLayoutState.h"
+#include "RenderObjectInlines.h"
 #include "RenderScrollbar.h"
 #include "RenderText.h"
 #include "RenderTheme.h"

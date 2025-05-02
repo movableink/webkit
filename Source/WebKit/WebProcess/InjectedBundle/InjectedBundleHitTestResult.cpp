@@ -39,6 +39,7 @@
 #include <WebCore/HTMLMediaElement.h>
 #include <WebCore/LocalFrame.h>
 #include <WebCore/LocalFrameView.h>
+#include <WebCore/NodeInlines.h>
 #include <wtf/URL.h>
 
 namespace WebKit {

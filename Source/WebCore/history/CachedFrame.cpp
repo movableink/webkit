@@ -42,7 +42,7 @@
 #include "Page.h"
 #include "RemoteFrame.h"
 #include "RemoteFrameView.h"
-#include "RenderWidget.h"
+#include "RenderWidgetInlines.h"
 #include "SVGDocumentExtensions.h"
 #include "ScriptController.h"
 #include "SerializedScriptValue.h"

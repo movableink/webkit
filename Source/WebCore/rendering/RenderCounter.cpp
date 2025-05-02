@@ -34,6 +34,7 @@
 #include "PseudoElement.h"
 #include "RenderElementInlines.h"
 #include "RenderListItem.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyle.h"
 #include "RenderView.h"
 #include <wtf/StdLibExtras.h>

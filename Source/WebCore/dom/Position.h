@@ -29,7 +29,6 @@
 #include "ContainerNode.h"
 #include "EditingBoundary.h"
 #include "TextAffinity.h"
-#include "NodeInlines.h"
 
 namespace WTF {
 class TextStream;
@@ -121,9 +120,9 @@ public:
     Node* deprecatedNode() const { return m_anchorNode.get(); }
     RefPtr<Node> protectedDeprecatedNode() const { return m_anchorNode; }
 
-    Document* document() const { return m_anchorNode ? &m_anchorNode->document() : nullptr; }
-    TreeScope* treeScope() const { return m_anchorNode ? &m_anchorNode->treeScope() : nullptr; }
-    Element* rootEditableElement() const
+    inline Document* document() const;
+    inline TreeScope* treeScope() const;
+    inline Element* rootEditableElement() const
     {
         RefPtr container = containerNode();
         return container ? container->rootEditableElement() : nullptr;

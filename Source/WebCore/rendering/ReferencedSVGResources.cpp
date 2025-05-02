@@ -32,6 +32,7 @@
 #include "PathOperation.h"
 #include "ReferenceFilterOperation.h"
 #include "RenderLayer.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGPath.h"
 #include "RenderStyle.h"
 #include "SVGClipPathElement.h"

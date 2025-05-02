@@ -47,7 +47,7 @@
 #include "RenderBox.h"
 #include "RenderChildIterator.h"
 #include "RenderCombineText.h"
-#include "RenderElement.h"
+#include "RenderElementInlines.h"
 #include "RenderImage.h"
 #include "RenderInline.h"
 #include "RenderLineBreak.h"

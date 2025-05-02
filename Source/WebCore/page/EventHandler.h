@@ -30,6 +30,7 @@
 #include "FocusDirection.h"
 #include "HitTestRequest.h"
 #include "ImmediateActionStage.h"
+#include "IntPointHash.h"
 #include "LayoutPoint.h"
 #include "PlatformMouseEvent.h"
 #include "RenderObject.h"
@@ -623,11 +624,7 @@ private:
     std::optional<RemoteUserInputEventData> userInputEventDataForRemoteFrame(const RemoteFrame*, const IntPoint&);
 
     bool isCapturingMouseEventsElement() const { return m_capturingMouseEventsElement || m_isCapturingRootElementForMouseEvents; }
-    void resetCapturingMouseEventsElement()
-    {
-        m_capturingMouseEventsElement = nullptr;
-        m_isCapturingRootElementForMouseEvents = false;
-    }
+    void resetCapturingMouseEventsElement();
 
     Ref<LocalFrame> protectedFrame() const;
 

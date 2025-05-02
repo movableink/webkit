@@ -50,6 +50,7 @@
 #include "ProcessingInstruction.h"
 #include "RenderBoxInlines.h"
 #include "RenderLayer.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "RuleSet.h"
 #include "SVGElementTypeHelpers.h"

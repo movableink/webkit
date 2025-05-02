@@ -44,6 +44,7 @@
 #include "RemoteFrame.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "ScrollingCoordinator.h"
 #include "Settings.h"

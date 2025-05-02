@@ -486,12 +486,12 @@ public:
 
     // As renderer() includes a branch you should avoid calling it repeatedly in hot code paths.
     RenderObject* renderer() const { return m_renderer; }
-    CheckedPtr<RenderObject> checkedRenderer() const;
-    void setRenderer(RenderObject*); // Defined in RenderObject.h
+    inline CheckedPtr<RenderObject> checkedRenderer() const; // Defined in NodeInlines.h
+    void setRenderer(RenderObject*); // Defined in NodeInlines.h
 
     // Use these two methods with caution.
-    WEBCORE_EXPORT RenderBox* renderBox() const;
-    RenderBoxModelObject* renderBoxModelObject() const;
+    inline RenderBox* renderBox() const; // Defined in NodeInlines.h
+    inline RenderBoxModelObject* renderBoxModelObject() const; // Defined in NodeInlines.h
 
     // Wrapper for nodes that don't have a renderer, but still cache the style (like HTMLOptionElement).
     inline const RenderStyle* renderStyle() const;

@@ -50,7 +50,7 @@
 #import "Pasteboard.h"
 #import "PlatformEventFactoryIOS.h"
 #import "PlatformKeyboardEvent.h"
-#import "RenderWidget.h"
+#import "RenderWidgetInlines.h"
 #import "RenderObjectInlines.h"
 #import "ScrollingCoordinatorTypes.h"
 #import "WAKView.h"

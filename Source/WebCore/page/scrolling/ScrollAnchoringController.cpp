@@ -32,6 +32,7 @@
 #include "HTMLHtmlElement.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
+#include "NodeInlines.h"
 #include "RenderBox.h"
 #include "RenderLayerScrollableArea.h"
 #include "RenderElementInlines.h"

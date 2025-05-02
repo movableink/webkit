@@ -37,7 +37,7 @@
 #include "Position.h"
 #include "Range.h"
 #include "RenderLayer.h"
-#include "RenderObject.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "VisibleSelection.h"
 #include <wtf/WeakRef.h>

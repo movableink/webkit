@@ -54,6 +54,8 @@ enum class ContentChangeType : uint8_t {
 
 class BorderEdge;
 class BorderShape;
+class GraphicsContext;
+class Image;
 class ImageBuffer;
 class RenderTextFragment;
 class StickyPositionViewportConstraints;
@@ -64,6 +66,9 @@ class InlineBoxIterator;
 };
 
 enum class BoxSideFlag : uint8_t;
+enum class DecodingMode : uint8_t;
+enum class InterpolationQuality : uint8_t;
+
 using BoxSideSet = OptionSet<BoxSideFlag>;
 using BorderEdges = RectEdges<BorderEdge>;
 

@@ -37,6 +37,7 @@
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "LocalizedStrings.h"
+#include "NodeInlines.h"
 #include "Page.h"
 #include "PopupMenu.h"
 #include "RenderBoxInlines.h"

@@ -28,6 +28,7 @@
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderFrameSet.h"
+#include "RenderWidgetInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {

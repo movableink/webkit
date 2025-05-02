@@ -130,6 +130,7 @@ struct GraphicsContextGLAttributes;
 
 struct AppHighlight;
 struct ApplePayAMSUIRequest;
+struct CharacterRange;
 struct ContactsRequestData;
 struct ContentRuleListResults;
 struct DataDetectorElementInfo;
@@ -173,7 +174,9 @@ class TextDetector;
 }
 
 namespace WritingTools {
+using TextSuggestionID = WTF::UUID;
 using SessionID = WTF::UUID;
+enum class TextSuggestionState : uint8_t;
 }
 
 #if HAVE(WEBGPU_IMPLEMENTATION)

@@ -42,6 +42,7 @@
 #include "PaintInfo.h"
 #include "RenderBoxInlines.h"
 #include "RenderElementInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>

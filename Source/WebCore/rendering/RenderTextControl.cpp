@@ -25,6 +25,7 @@
 #include "ContainerNodeInlines.h"
 #include "HTMLTextFormControlElement.h"
 #include "HitTestResult.h"
+#include "NodeInlines.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderElementInlines.h"

@@ -45,6 +45,7 @@
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "Logging.h"
+#include "NodeInlines.h"
 #include "Page.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "QualifiedName.h"

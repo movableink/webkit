@@ -39,7 +39,9 @@
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
 #include "RenderLayerScrollableArea.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
+#include "RenderWidgetInlines.h"
 #include "SecurityOrigin.h"
 #include <wtf/Ref.h>
 #include <wtf/StackStats.h>

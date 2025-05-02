@@ -37,6 +37,7 @@
 #include "RenderIterator.h"
 #include "RenderLayerScrollableArea.h"
 #include "RenderLayoutState.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGText.h"
 #include "RenderSVGViewportContainer.h"
 #include "RenderTreeBuilder.h"

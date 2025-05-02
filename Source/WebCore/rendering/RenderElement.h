@@ -25,11 +25,15 @@
 #include "HitTestRequest.h"
 #include "LengthFunctions.h"
 #include "RenderObject.h"
+#include "RenderPtr.h"
+#include "RenderStyle.h"
+#include <wtf/MonotonicTime.h>
 #include <wtf/Packed.h>
 
 namespace WebCore {
 
 class Animation;
+class ContainerNode;
 class ContentData;
 class BlendingKeyframes;
 class ReferencedSVGResources;
@@ -84,11 +88,11 @@ public:
     std::unique_ptr<RenderStyle> getUncachedPseudoStyle(const Style::PseudoElementRequest&, const RenderStyle* parentStyle = nullptr, const RenderStyle* ownStyle = nullptr) const;
 
     // This is null for anonymous renderers.
-    Element* element() const { return downcast<Element>(RenderObject::node()); }
-    RefPtr<Element> protectedElement() const { return element(); }
-    Element* nonPseudoElement() const { return downcast<Element>(RenderObject::nonPseudoNode()); }
-    RefPtr<Element> protectedNonPseudoElement() const { return nonPseudoElement(); }
-    Element* generatingElement() const;
+    inline Element* element() const; // Defined in RenderElementInlines.h
+    inline RefPtr<Element> protectedElement() const; // Defined in RenderElementInlines.h
+    inline Element* nonPseudoElement() const; // Defined in RenderElementInlines.h
+    inline RefPtr<Element> protectedNonPseudoElement() const; // Defined in RenderElementInlines.h
+    inline Element* generatingElement() const; // Defined in RenderElementInlines.h
 
     RenderObject* firstChild() const { return m_firstChild.get(); }
     RenderObject* lastChild() const { return m_lastChild.get(); }
@@ -445,12 +449,14 @@ private:
     unsigned m_renderBoxHasShapeOutsideInfo : 1 { false };
     unsigned m_hasCachedSVGResource : 1 { false };
     unsigned m_renderBlockFlowLineLayoutPath : 3;
+    // 1 bit free.
 
     SingleThreadPackedWeakPtr<RenderObject> m_lastChild;
 
     unsigned m_isRegisteredForVisibleInViewportCallback : 1;
     unsigned m_visibleInViewportState : 2;
     unsigned m_didContributeToVisuallyNonEmptyPixelCount : 1;
+    // 12 bits free.
 
     RenderStyle m_style;
 };
@@ -469,28 +475,9 @@ inline void RenderElement::setChildNeedsLayout(MarkingBehavior markParents)
         scheduleLayout(markContainingBlocksForLayout());
 }
 
-inline Element* RenderElement::generatingElement() const
-{
-    return downcast<Element>(RenderObject::generatingNode());
-}
-
 inline bool RenderElement::canEstablishContainingBlockWithTransform() const
 {
     return isRenderBlock() || (isTablePart() && !isRenderTableCol());
-}
-
-inline const RenderStyle& RenderObject::style() const
-{
-    if (isRenderText())
-        return m_parent->style();
-    return downcast<RenderElement>(*this).style();
-}
-
-inline const RenderStyle& RenderObject::firstLineStyle() const
-{
-    if (isRenderText())
-        return m_parent->firstLineStyle();
-    return downcast<RenderElement>(*this).firstLineStyle();
 }
 
 inline RenderObject* RenderElement::firstInFlowChild() const

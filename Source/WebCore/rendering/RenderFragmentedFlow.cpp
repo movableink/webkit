@@ -41,6 +41,7 @@
 #include "RenderLayer.h"
 #include "RenderLayerCompositor.h"
 #include "RenderLayoutState.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderTableCell.h"
 #include "RenderTableSection.h"

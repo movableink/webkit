@@ -56,6 +56,7 @@
 #import <WebCore/Page.h>
 #import <WebCore/Range.h>
 #import <WebCore/RenderImage.h>
+#import <WebCore/RenderObjectInlines.h>
 #import <WebCore/RenderStyleInlines.h>
 #import <WebCore/RenderView.h>
 #import <WebCore/ScriptController.h>

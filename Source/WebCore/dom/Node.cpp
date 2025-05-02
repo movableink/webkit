@@ -934,16 +934,6 @@ Node::Editability Node::computeEditability(UserSelectAllTreatment treatment, Sho
     return computeEditabilityWithStyle(nullptr, treatment, shouldUpdateStyle);
 }
 
-RenderBox* Node::renderBox() const
-{
-    return dynamicDowncast<RenderBox>(renderer());
-}
-
-RenderBoxModelObject* Node::renderBoxModelObject() const
-{
-    return dynamicDowncast<RenderBoxModelObject>(renderer());
-}
-    
 LayoutRect Node::absoluteBoundingRect(bool* isReplaced)
 {
     RenderObject* hitRenderer = this->renderer();
@@ -1312,11 +1302,6 @@ ShadowRoot* Node::containingShadowRoot() const
 RefPtr<ShadowRoot> Node::protectedContainingShadowRoot() const
 {
     return containingShadowRoot();
-}
-
-CheckedPtr<RenderObject> Node::checkedRenderer() const
-{
-    return renderer();
 }
 
 #if ASSERT_ENABLED

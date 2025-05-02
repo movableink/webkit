@@ -43,6 +43,7 @@
 #include "JSDOMPromiseDeferred.h"
 #include "LayoutRect.h"
 #include "Logging.h"
+#include "RenderElementInlines.h"
 #include "PseudoElementRequest.h"
 #include "RenderBox.h"
 #include "RenderInline.h"

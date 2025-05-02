@@ -44,6 +44,7 @@
 #include "LocalFrame.h"
 #include "LocalizedStrings.h"
 #include "NodeName.h"
+#include "RenderObjectInlines.h"
 #include "RenderTextControlMultiLine.h"
 #include "ShadowRoot.h"
 #include "Text.h"

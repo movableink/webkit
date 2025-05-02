@@ -35,6 +35,7 @@
 #include "RenderIterator.h"
 #include "RenderMathMLBlockInlines.h"
 #include "RenderMathMLOperator.h"
+#include "RenderObjectInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {

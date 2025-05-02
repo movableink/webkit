@@ -30,6 +30,7 @@
 #include "FrameSelection.h"
 #include "LegacyRenderSVGResource.h"
 #include "LocalFrame.h"
+#include "NodeInlines.h"
 #include "RenderObjectInlines.h"
 #include "RenderSVGText.h"
 #include "SVGElementTypeHelpers.h"

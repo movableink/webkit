@@ -31,6 +31,7 @@
 #import "DictionaryLookup.h"
 #import "Document.h"
 #import "EventHandler.h"
+#import "FrameDestructionObserverInlines.h"
 #import "HTMLMediaElement.h"
 #import "HitTestResult.h"
 #import "LocalFrameView.h"

@@ -41,6 +41,10 @@ inline bool RenderElement::isTransparent() const { return style().hasOpacity(); 
 inline float RenderElement::opacity() const { return style().opacity(); }
 inline FloatRect RenderElement::transformReferenceBoxRect() const { return transformReferenceBoxRect(style()); }
 inline FloatRect RenderElement::transformReferenceBoxRect(const RenderStyle& style) const { return referenceBoxRect(transformBoxToCSSBoxType(style.transformBox())); }
+inline Element* RenderElement::element() const { return downcast<Element>(RenderObject::node()); }
+inline RefPtr<Element> RenderElement::protectedElement() const { return element(); }
+inline Element* RenderElement::nonPseudoElement() const { return downcast<Element>(RenderObject::nonPseudoNode()); }
+inline RefPtr<Element> RenderElement::protectedNonPseudoElement() const { return nonPseudoElement(); }
 
 #if HAVE(CORE_MATERIAL)
 inline bool RenderElement::hasAppleVisualEffect() const { return style().hasAppleVisualEffect(); }
@@ -213,6 +217,11 @@ inline LayoutSize adjustLayoutSizeForAbsoluteZoom(LayoutSize size, const RenderE
 inline LayoutUnit adjustLayoutUnitForAbsoluteZoom(LayoutUnit value, const RenderElement& renderer)
 {
     return adjustLayoutUnitForAbsoluteZoom(value, renderer.style());
+}
+
+inline Element* RenderElement::generatingElement() const
+{
+    return downcast<Element>(RenderObject::generatingNode());
 }
 
 } // namespace WebCore

@@ -38,6 +38,7 @@
 #include "PaintInfo.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderTableCellInlines.h"
 #include "RenderTableCol.h"
 #include "RenderTableInlines.h"
@@ -101,6 +102,11 @@ RenderTableCell::RenderTableCell(Document& document, RenderStyle&& style)
 }
 
 RenderTableCell::~RenderTableCell() = default;
+
+ASCIILiteral RenderTableCell::renderName() const
+{
+    return (isAnonymous() || isPseudoElement()) ? "RenderTableCell (anonymous)"_s : "RenderTableCell"_s;
+}
 
 void RenderTableCell::willBeRemovedFromTree()
 {

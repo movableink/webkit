@@ -37,6 +37,7 @@
 #include "RenderLayer.h"
 #include "RenderMultiColumnFlow.h"
 #include "RenderMultiColumnSpannerPlaceholder.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include <wtf/TZoneMallocInlines.h>
 

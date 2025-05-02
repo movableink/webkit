@@ -34,6 +34,7 @@
 #include "LogicalSelectionOffsetCaches.h"
 #include "RenderBlock.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGInlineTextBox.h"

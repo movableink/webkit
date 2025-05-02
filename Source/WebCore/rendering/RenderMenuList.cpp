@@ -46,6 +46,7 @@
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderChildIterator.h"
 #include "RenderElementInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderScrollbar.h"
 #include "RenderStyleSetters.h"
 #include "RenderText.h"

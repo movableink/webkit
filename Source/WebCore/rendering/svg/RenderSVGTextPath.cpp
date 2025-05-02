@@ -25,6 +25,7 @@
 #include "RenderBlock.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderLayer.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGInlineInlines.h"
 #include "RenderSVGShape.h"
 #include "SVGElementTypeHelpers.h"

@@ -33,6 +33,7 @@
 #include "HTMLNames.h"
 #include "LocalFrame.h"
 #include "MouseEvent.h"
+#include "NodeInlines.h"
 #include "Page.h"
 #include "RenderBox.h"
 #include "RenderTheme.h"

@@ -1114,7 +1114,6 @@ rendering/RenderMeter.cpp
 rendering/RenderMultiColumnFlow.cpp
 rendering/RenderMultiColumnSet.cpp
 rendering/RenderObject.cpp
-rendering/RenderObject.h
 rendering/RenderProgress.cpp
 rendering/RenderQuote.cpp
 rendering/RenderReplaced.cpp

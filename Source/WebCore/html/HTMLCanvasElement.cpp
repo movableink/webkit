@@ -60,6 +60,7 @@
 #include "Logging.h"
 #include "MIMETypeRegistry.h"
 #include "Navigator.h"
+#include "NodeInlines.h"
 #include "OffscreenCanvas.h"
 #include "PlaceholderRenderingContext.h"
 #include "Quirks.h"

@@ -34,6 +34,7 @@
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderView.h"
+#include "RenderWidgetInlines.h"
 #include "Settings.h"
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>

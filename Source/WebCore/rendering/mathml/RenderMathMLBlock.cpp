@@ -37,6 +37,7 @@
 #include "MathMLPresentationElement.h"
 #include "RenderChildIterator.h"
 #include "RenderBoxInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderTableInlines.h"
 #include "RenderView.h"
 #include <wtf/TZoneMallocInlines.h>

@@ -32,6 +32,7 @@
 #include "CustomPropertyRegistry.h"
 #include "RenderBoxInlines.h"
 #include "RenderElementInlines.h"
+#include "RenderObjectInlines.h"
 #include "StyleBuilder.h"
 #include <wtf/NeverDestroyed.h>
 

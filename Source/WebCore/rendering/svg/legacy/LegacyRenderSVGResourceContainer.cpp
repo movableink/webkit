@@ -22,6 +22,7 @@
 
 #include "LegacyRenderSVGRoot.h"
 #include "RenderLayer.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGGraphicsElement.h"

@@ -83,6 +83,7 @@
 #include "Logging.h"
 #include "MouseEvent.h"
 #include "MouseEventWithHitTestResults.h"
+#include "NodeInlines.h"
 #include "NotImplemented.h"
 #include "Page.h"
 #include "PageOverlayController.h"
@@ -5384,6 +5385,12 @@ void EventHandler::focusDocumentView()
         page->checkedFocusController()->setFocusedFrame(protectedFrame().ptr());
 }
 #endif // !PLATFORM(COCOA)
+
+void EventHandler::resetCapturingMouseEventsElement()
+{
+    m_capturingMouseEventsElement = nullptr;
+    m_isCapturingRootElementForMouseEvents = false;
+}
 
 Ref<LocalFrame> EventHandler::protectedFrame() const
 {

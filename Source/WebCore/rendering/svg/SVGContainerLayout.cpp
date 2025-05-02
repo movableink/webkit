@@ -31,6 +31,7 @@
 #include "Logging.h"
 #include "RenderAncestorIterator.h"
 #include "RenderChildIterator.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGInline.h"
 #include "RenderSVGModelObject.h"
 #include "RenderSVGResourceGradient.h"

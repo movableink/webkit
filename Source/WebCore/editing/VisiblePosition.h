@@ -26,6 +26,7 @@
 #pragma once
 
 #include "EditingBoundary.h"
+#include "LayoutRect.h"
 #include "Position.h"
 
 namespace WebCore {

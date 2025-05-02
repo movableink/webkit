@@ -2611,6 +2611,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/RenderVideo.h
     rendering/RenderView.h
     rendering/RenderWidget.h
+    rendering/RenderWidgetInlines.h
     rendering/TextBoxSelectableRange.h
     rendering/TransformOperationData.h
 

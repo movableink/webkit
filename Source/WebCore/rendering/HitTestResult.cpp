@@ -40,6 +40,7 @@
 #include "HTMLVideoElement.h"
 #include "ImageOverlay.h"
 #include "LocalFrame.h"
+#include "NodeInlines.h"
 #include "Page.h"
 #include "PseudoElement.h"
 #include "Range.h"

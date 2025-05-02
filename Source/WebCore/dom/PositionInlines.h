@@ -30,6 +30,16 @@
 
 namespace WebCore {
 
+inline Document* Position::document() const
+{
+    return m_anchorNode ? &m_anchorNode->document() : nullptr;
+}
+
+inline TreeScope* Position::treeScope() const
+{
+    return m_anchorNode ? &m_anchorNode->treeScope() : nullptr;
+}
+
 Position lastPositionInNode(Node* anchorNode)
 {
     if (anchorNode->isCharacterDataNode())

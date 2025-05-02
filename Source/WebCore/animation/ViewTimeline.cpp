@@ -34,6 +34,7 @@
 #include "LegacyRenderSVGModelObject.h"
 #include "RenderBlock.h"
 #include "RenderBoxModelObject.h"
+#include "RenderElementInlines.h"
 #include "RenderLayerScrollableArea.h"
 #include "RenderSVGModelObject.h"
 #include "ScrollAnchoringController.h"

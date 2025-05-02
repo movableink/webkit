@@ -67,6 +67,7 @@
 #include "RenderVideo.h"
 #include "RenderView.h"
 #include "RenderViewTransitionCapture.h"
+#include "RenderWidgetInlines.h"
 #include "RotateTransformOperation.h"
 #include "SVGGraphicsElement.h"
 #include "ScaleTransformOperation.h"

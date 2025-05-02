@@ -45,6 +45,7 @@
 #include "RenderBoxInlines.h"
 #include "RenderInline.h"
 #include "RenderLineBreak.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "WebCoreOpaqueRootInlines.h"
 #include <JavaScriptCore/AbstractSlotVisitorInlines.h>

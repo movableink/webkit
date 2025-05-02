@@ -78,7 +78,7 @@
 #include "PlatformMouseEvent.h"
 #include "PluginDocument.h"
 #include "PluginViewBase.h"
-#include "Position.h"
+#include "PositionInlines.h"
 #include "PromisedAttachmentInfo.h"
 #include "Range.h"
 #include "RemoteFrame.h"

@@ -21,6 +21,7 @@
 
 #include "RenderBox.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderObjectInlines.h"
 
 namespace WebCore {

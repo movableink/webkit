@@ -165,7 +165,7 @@ private:
         DoNotIncludeAllIntersectingCells
     };
 
-    ASCIILiteral renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableSection (anonymous)"_s : "RenderTableSection"_s; }
+    ASCIILiteral renderName() const override;
 
     bool canHaveChildren() const override { return true; }
 

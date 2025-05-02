@@ -49,6 +49,7 @@
 #include "RenderCombineText.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"
+#include "RenderObjectInlines.h"
 #include "RenderTextInlines.h"
 #include "RenderSVGInlineText.h"
 #include "RenderView.h"

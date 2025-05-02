@@ -47,6 +47,7 @@
 #include "HTMLStyleElement.h"
 #include "ImageOverlayController.h"
 #include "MediaControlsHost.h"
+#include "NodeInlines.h"
 #include "Page.h"
 #include "RenderBoxInlines.h"
 #include "RenderElementInlines.h"

@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include "GraphicsTypes.h"
 #include "RenderBoxModelObject.h"
 #include "RenderElement.h"
 

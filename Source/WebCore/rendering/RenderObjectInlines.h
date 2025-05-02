@@ -20,6 +20,8 @@
 #pragma once
 
 #include "Document.h"
+#include "FloatQuad.h"
+#include "FrameDestructionObserverInlines.h"
 #include "LocalFrame.h"
 #include "RenderElement.h"
 #include "RenderObject.h"
@@ -28,6 +30,7 @@
 
 namespace WebCore {
 
+inline Node& RenderObject::nodeForNonAnonymous() const { ASSERT(!isAnonymous()); return m_node.get(); }
 inline bool RenderObject::hasTransformOrPerspective() const { return hasTransformRelatedProperty() && (isTransformed() || style().hasPerspective()); }
 inline bool RenderObject::isAtomicInlineLevelBox() const { return style().isDisplayInlineType() && !(style().display() == DisplayType::Inline && !isReplacedOrAtomicInline()); }
 inline bool RenderObject::isTransformed() const { return hasTransformRelatedProperty() && (style().affectsTransform() || hasSVGTransform()); }
@@ -35,10 +38,44 @@ inline bool RenderObject::preservesNewline() const { return !isRenderSVGInlineTe
 inline Document& RenderObject::document() const { return m_node.get().document(); }
 inline Ref<Document> RenderObject::protectedDocument() const { return document(); }
 inline const LocalFrameViewLayoutContext& RenderObject::layoutContext() const { return view().frameView().layoutContext(); }
+inline bool RenderObject::isBody() const { return node() && node()->hasTagName(HTMLNames::bodyTag); }
+inline bool RenderObject::isHR() const { return node() && node()->hasTagName(HTMLNames::hrTag); }
+inline bool RenderObject::isPseudoElement() const { return node() && node()->isPseudoElement(); }
+inline Node* RenderObject::nonPseudoNode() const { return isPseudoElement() ? nullptr : node(); }
+inline RefPtr<Node> RenderObject::protectedNonPseudoNode() const { return nonPseudoNode(); }
+inline Node* RenderObject::generatingNode() const { return isPseudoElement() ? generatingPseudoHostElement() : node(); }
+inline TreeScope& RenderObject::treeScopeForSVGReferences() const { return Ref { m_node.get() }->treeScopeForSVGReferences(); }
+inline WritingMode RenderObject::writingMode() const { return style().writingMode(); }
+
+inline Node* RenderObject::node() const
+{
+    if (isAnonymous())
+        return nullptr;
+    return m_node.ptr();
+}
+
+inline RefPtr<Node> RenderObject::protectedNode() const
+{
+    return node();
+}
+
+inline const RenderStyle& RenderObject::style() const
+{
+    if (isRenderText())
+        return m_parent->style();
+    return downcast<RenderElement>(*this).style();
+}
 
 inline CheckedRef<const RenderStyle> RenderObject::checkedStyle() const
 {
     return style();
+}
+
+inline const RenderStyle& RenderObject::firstLineStyle() const
+{
+    if (isRenderText())
+        return checkedParent()->firstLineStyle();
+    return downcast<RenderElement>(*this).firstLineStyle();
 }
 
 inline Ref<TreeScope> RenderObject::protectedTreeScopeForSVGReferences() const
@@ -87,6 +124,29 @@ inline Settings& RenderObject::settings() const
 inline bool RenderObject::renderTreeBeingDestroyed() const
 {
     return document().renderTreeBeingDestroyed();
+}
+
+inline FloatQuad RenderObject::localToAbsoluteQuad(const FloatQuad& quad, OptionSet<MapCoordinatesMode> mode, bool* wasFixed) const
+{
+    return localToContainerQuad(quad, nullptr, mode, wasFixed);
+}
+
+inline void RenderObject::setNeedsLayout(MarkingBehavior markParents)
+{
+    ASSERT(!isSetNeedsLayoutForbidden());
+    if (selfNeedsLayout())
+        return;
+    m_stateBitfields.setFlag(StateFlag::NeedsLayout);
+    if (markParents == MarkContainingBlockChain)
+        scheduleLayout(CheckedPtr { markContainingBlocksForLayout() }.get());
+    if (hasLayer())
+        setLayerNeedsFullRepaint();
+}
+
+inline void RenderObject::setNeedsLayoutAndPrefWidthsRecalc()
+{
+    setNeedsLayout();
+    setPreferredLogicalWidthsDirty(true);
 }
 
 } // namespace WebCore

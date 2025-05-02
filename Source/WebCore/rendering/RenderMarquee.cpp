@@ -52,6 +52,7 @@
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderLayer.h"
 #include "RenderLayerScrollableArea.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include <wtf/TZoneMallocInlines.h>

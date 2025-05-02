@@ -46,6 +46,7 @@
 #include "RenderLayoutState.h"
 #include "RenderLineBreak.h"
 #include "RenderListMarker.h"
+#include "RenderObjectInlines.h"
 #include "RenderTable.h"
 #include "RenderTheme.h"
 #include "RenderTreeBuilder.h"

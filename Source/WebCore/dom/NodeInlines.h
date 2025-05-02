@@ -23,9 +23,11 @@
 #include "CharacterData.h"
 #include "Document.h"
 #include "Element.h"
+#include "InspectorInstrumentationPublic.h"
 #include "LayoutRect.h"
 #include "Node.h"
 #include "PseudoElement.h"
+#include "RenderBox.h"
 #include "TreeScopeInlines.h"
 #include "WebCoreOpaqueRoot.h"
 
@@ -60,6 +62,16 @@ inline Ref<TreeScope> Node::protectedTreeScope() const
     return treeScope();
 }
 
+inline RenderBox* Node::renderBox() const
+{
+    return dynamicDowncast<RenderBox>(renderer());
+}
+
+inline RenderBoxModelObject* Node::renderBoxModelObject() const
+{
+    return dynamicDowncast<RenderBoxModelObject>(renderer());
+}
+
 inline bool Node::hasAttributes() const
 {
     auto* element = dynamicDowncast<Element>(*this);
@@ -71,6 +83,19 @@ inline NamedNodeMap* Node::attributesMap() const
     if (auto* element = dynamicDowncast<Element>(*this))
         return &element->attributesMap();
     return nullptr;
+}
+
+CheckedPtr<RenderObject> Node::checkedRenderer() const
+{
+    return renderer();
+}
+
+inline void Node::setRenderer(RenderObject* renderer)
+{
+    m_renderer = renderer;
+
+    if (UNLIKELY(InspectorInstrumentationPublic::hasFrontends()))
+        notifyInspectorOfRendererChange();
 }
 
 inline Element* Node::parentElement() const

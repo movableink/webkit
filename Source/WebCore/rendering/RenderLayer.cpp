@@ -114,6 +114,7 @@
 #include "RenderLayerScrollableArea.h"
 #include "RenderMarquee.h"
 #include "RenderMultiColumnFlow.h"
+#include "RenderObjectInlines.h"
 #include "RenderReplica.h"
 #include "RenderSVGForeignObject.h"
 #include "RenderSVGHiddenContainer.h"

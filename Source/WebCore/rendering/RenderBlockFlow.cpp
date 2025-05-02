@@ -66,6 +66,7 @@
 #include "RenderMarquee.h"
 #include "RenderMultiColumnFlow.h"
 #include "RenderMultiColumnSet.h"
+#include "RenderObjectInlines.h"
 #include "RenderTableCellInlines.h"
 #include "RenderText.h"
 #include "RenderTreeBuilder.h"

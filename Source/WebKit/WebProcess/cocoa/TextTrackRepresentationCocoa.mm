@@ -33,6 +33,7 @@
 #import "WebPage.h"
 #import <WebCore/GraphicsContext.h>
 #import <WebCore/HTMLVideoElement.h>
+#import <WebCore/NodeInlines.h>
 #import <WebCore/Page.h>
 
 namespace WebKit {

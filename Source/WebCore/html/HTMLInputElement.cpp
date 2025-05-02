@@ -69,6 +69,7 @@
 #include "Page.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RadioInputType.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleSetters.h"
 #include "RenderTextControlSingleLine.h"
 #include "RenderTheme.h"

@@ -40,9 +40,11 @@
 #include "InputTypeNames.h"
 #include "KeyboardEvent.h"
 #include "LocalizedStrings.h"
+#include "NodeInlines.h"
 #include "NodeName.h"
 #include "PlatformLocale.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderTextControl.h"
 #include "StepRange.h"
 #include <limits>

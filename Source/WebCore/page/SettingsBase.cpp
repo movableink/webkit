@@ -43,6 +43,7 @@
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "Page.h"
+#include "RenderObjectInlines.h"
 #include "RenderWidget.h"
 #include "Settings.h"
 #include "StorageMap.h"

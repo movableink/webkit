@@ -41,6 +41,7 @@
 #include "MouseEvent.h"
 #include "NodeName.h"
 #include "RenderFrameSet.h"
+#include "RenderObjectInlines.h"
 #include "Text.h"
 #include <wtf/TZoneMallocInlines.h>
 

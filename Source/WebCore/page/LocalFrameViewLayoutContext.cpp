@@ -44,6 +44,7 @@
 #include "RenderElementInlines.h"
 #include "RenderLayerCompositor.h"
 #include "RenderLayoutState.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyle.h"
 #include "RenderStyleInlines.h"
 #include "RenderView.h"

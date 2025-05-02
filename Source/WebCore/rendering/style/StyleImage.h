@@ -26,6 +26,7 @@
 #include "CSSValue.h"
 #include "FloatSize.h"
 #include "Image.h"
+#include "RenderObject.h"
 #include "StyleURL.h"
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
@@ -42,8 +43,6 @@ class RenderElement;
 class RenderObject;
 class RenderStyle;
 struct ResourceLoaderOptions;
-
-typedef const void* WrappedImagePtr;
 
 class StyleImage : public RefCountedAndCanMakeWeakPtr<StyleImage> {
 public:

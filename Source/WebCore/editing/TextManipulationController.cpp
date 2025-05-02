@@ -41,6 +41,7 @@
 #include "InputTypeNames.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
+#include "NodeInlines.h"
 #include "NodeRenderStyle.h"
 #include "NodeTraversal.h"
 #include "PseudoElement.h"

@@ -34,6 +34,7 @@
 #include "GridPositionsResolver.h"
 #include "RenderElementInlines.h"
 #include "RenderGrid.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleConstants.h"
 #include "StyleSelfAlignmentData.h"
 #include <ranges>

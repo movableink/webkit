@@ -98,6 +98,7 @@
 #include "RenderListMarker.h"
 #include "RenderMathMLBlock.h"
 #include "RenderMenuList.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGInlineText.h"
 #include "RenderSVGRoot.h"
 #include "RenderSVGShape.h"

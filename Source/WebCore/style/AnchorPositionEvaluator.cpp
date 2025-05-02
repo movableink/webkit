@@ -41,6 +41,7 @@
 #include "RenderFragmentedFlow.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyle.h"
 #include "RenderStyleInlines.h"
 #include "RenderStyleSetters.h"

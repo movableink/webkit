@@ -34,6 +34,7 @@
 #include "HTMLNames.h"
 #include "ListStyleType.h"
 #include "PseudoElement.h"
+#include "RenderElementInlines.h"
 #include "RenderListItem.h"
 #include "RenderStyleInlines.h"
 

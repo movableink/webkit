@@ -57,7 +57,7 @@
 #include "MIMETypeRegistry.h"
 #include "MemoryCache.h"
 #include "Page.h"
-#include "RenderObject.h"
+#include "RenderObjectInlines.h"
 #include "RenderTheme.h"
 #include "ScriptController.h"
 #include "ScriptSourceCode.h"

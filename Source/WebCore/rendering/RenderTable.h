@@ -168,13 +168,7 @@ public:
     }
 
     bool needsSectionRecalc() const { return m_needsSectionRecalc; }
-    void setNeedsSectionRecalc()
-    {
-        if (renderTreeBeingDestroyed())
-            return;
-        m_needsSectionRecalc = true;
-        setNeedsLayout();
-    }
+    void setNeedsSectionRecalc();
 
     RenderTableSection* sectionAbove(const RenderTableSection*, SkipEmptySectionsValue = DoNotSkipEmptySections) const;
     RenderTableSection* sectionBelow(const RenderTableSection*, SkipEmptySectionsValue = DoNotSkipEmptySections) const;

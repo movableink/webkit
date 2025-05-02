@@ -76,7 +76,7 @@ public:
 private:
     static RenderPtr<RenderTableRow> createTableRowWithStyle(Document&, const RenderStyle&);
 
-    ASCIILiteral renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableRow (anonymous)"_s : "RenderTableRow"_s; }
+    ASCIILiteral renderName() const override;
     bool canHaveChildren() const override { return true; }
     void willBeRemovedFromTree() override;
     void layout() override;

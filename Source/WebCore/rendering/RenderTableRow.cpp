@@ -34,6 +34,7 @@
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderElementInlines.h"
 #include "RenderLayoutState.h"
+#include "RenderObjectInlines.h"
 #include "RenderTableCell.h"
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
@@ -64,6 +65,11 @@ RenderTableRow::RenderTableRow(Document& document, RenderStyle&& style)
 }
 
 RenderTableRow::~RenderTableRow() = default;
+
+ASCIILiteral RenderTableRow::renderName() const
+{
+    return (isAnonymous() || isPseudoElement()) ? "RenderTableRow (anonymous)"_s : "RenderTableRow"_s;
+}
 
 void RenderTableRow::willBeRemovedFromTree()
 {

@@ -44,6 +44,7 @@
 #include "RenderFragmentedFlow.h"
 #include "RenderLayoutState.h"
 #include "RenderLineBreak.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGText.h"
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"

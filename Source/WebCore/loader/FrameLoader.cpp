@@ -113,6 +113,7 @@
 #include "ProgressTracker.h"
 #include "Quirks.h"
 #include "RemoteFrame.h"
+#include "RenderWidgetInlines.h"
 #include "ReportingScope.h"
 #include "ResourceLoadInfo.h"
 #include "ResourceLoadObserver.h"

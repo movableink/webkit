@@ -40,6 +40,7 @@
 #include "RenderElementInlines.h"
 #include "RenderImageResource.h"
 #include "RenderLayer.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGModelObjectInlines.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGImageElement.h"

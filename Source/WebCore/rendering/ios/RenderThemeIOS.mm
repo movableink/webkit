@@ -65,6 +65,7 @@
 #import "LocalCurrentTraitCollection.h"
 #import "LocalFrame.h"
 #import "LocalFrameView.h"
+#import "NodeInlines.h"
 #import "NodeRenderStyle.h"
 #import "PaintInfo.h"
 #import "PathUtilities.h"

@@ -32,6 +32,7 @@
 #include "WebLocalFrameLoaderClient.h"
 #include <JavaScriptCore/APICast.h>
 #include <WebCore/Document.h>
+#include <WebCore/FrameDestructionObserverInlines.h>
 #include <WebCore/FrameLoader.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/HTMLFrameElement.h>

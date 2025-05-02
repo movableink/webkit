@@ -77,6 +77,7 @@
 #include "RenderLineBreak.h"
 #include "RenderListItem.h"
 #include "RenderMultiColumnSpannerPlaceholder.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGResourceContainer.h"
 #include "RenderSVGViewportContainer.h"
 #include "RenderStyleSetters.h"

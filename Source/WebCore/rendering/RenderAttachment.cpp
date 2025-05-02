@@ -33,8 +33,10 @@
 #include "FloatRoundedRect.h"
 #include "FrameSelection.h"
 #include "HTMLAttachmentElement.h"
+#include "NodeInlines.h"
 #include "RenderBoxInlines.h"
 #include "RenderChildIterator.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleSetters.h"
 #include "RenderTheme.h"
 #include <wtf/TZoneMallocInlines.h>

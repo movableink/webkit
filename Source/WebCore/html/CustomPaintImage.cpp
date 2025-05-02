@@ -75,7 +75,8 @@ static RefPtr<CSSValue> extractComputedProperty(const AtomString& name, Element&
 
 ImageDrawResult CustomPaintImage::doCustomPaint(GraphicsContext& destContext, const FloatSize& destSize)
 {
-    if (!m_element || !m_element->element() || !m_paintDefinition)
+    CheckedPtr renderElement = m_element.get();
+    if (!renderElement || !renderElement->element() || !m_paintDefinition)
         return ImageDrawResult::DidNothing;
 
     JSC::JSValue paintConstructor = m_paintDefinition->paintConstructor;
@@ -83,8 +84,8 @@ ImageDrawResult CustomPaintImage::doCustomPaint(GraphicsContext& destContext, co
     if (!paintConstructor)
         return ImageDrawResult::DidNothing;
 
-    ASSERT(!m_element->needsLayout());
-    ASSERT(!m_element->element()->document().needsStyleRecalc());
+    ASSERT(!renderElement->needsLayout());
+    ASSERT(!renderElement->element()->document().needsStyleRecalc());
 
     Ref callback = static_cast<JSCSSPaintCallback&>(m_paintDefinition->paintCallback.get());
     RefPtr scriptExecutionContext = callback->scriptExecutionContext();
@@ -96,7 +97,7 @@ ImageDrawResult CustomPaintImage::doCustomPaint(GraphicsContext& destContext, co
 
     UncheckedKeyHashMap<AtomString, RefPtr<CSSValue>> propertyValues;
 
-    if (auto* element = m_element->element()) {
+    if (auto* element = renderElement->element()) {
         for (auto& name : m_inputProperties)
             propertyValues.add(name, extractComputedProperty(name, *element));
     }
