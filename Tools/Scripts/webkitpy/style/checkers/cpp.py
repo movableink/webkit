@@ -2371,7 +2371,7 @@ def check_spacing(file_extension, clean_lines, line_number, file_state, error):
 
             # Do not check for more than one command in macros
             in_preprocessor_directive = match(r'\s*#', line)
-            if not in_preprocessor_directive and not match(r'((\s*{\s*}?)|(\s*;?))\s*\\?$', rest):
+            if not in_preprocessor_directive and not match(r'((\s*(\[\[(likely|unlikely)\]\])?\s*{\s*}?)|(\s*(\[\[(likely|unlikely)\]\])?\s*;?))\s*\\?$', rest):
                 error(line_number, 'whitespace/parens', 4,
                       'More than one command on the same line in %s' % statement)
 

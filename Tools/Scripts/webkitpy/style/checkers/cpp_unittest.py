@@ -5171,6 +5171,26 @@ class WebKitStyleTest(CppStyleTestBase):
         self.assert_multi_line_lint(
             '    if (condition) doIt();\n',
             'More than one command on the same line in if  [whitespace/parens] [4]')
+        self.assert_multi_line_lint(
+            '    if (condition) [[likely]]\n'
+            '        doIt();\n',
+            '')
+        self.assert_multi_line_lint(
+            '    if (condition) [[unlikely]]\n'
+            '        doIt();\n',
+            '')
+        self.assert_multi_line_lint(
+            '    if (condition) [[likely]] {\n'
+            '        doIt();\n'
+            '        doIt2();\n'
+            '    }\n',
+            '')
+        self.assert_multi_line_lint(
+            '    if (condition) [[unlikely]] {\n'
+            '        doIt();\n'
+            '        doIt2();\n'
+            '    }\n',
+            '')
         # Ensure that having a # in the line doesn't hide the error.
         self.assert_multi_line_lint(
             '    x++; char a[] = "#";',
