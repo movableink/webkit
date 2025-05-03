@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "ColorTypes.h"
 #include "HTMLNames.h"
 #include "StyledElement.h"
 
@@ -34,6 +33,10 @@ class FormAssociatedElement;
 class HTMLButtonElement;
 class HTMLFormElement;
 class VisibleSelection;
+
+struct SRGBADescriptor;
+template<typename, typename> struct BoundedGammaEncoded;
+template<typename T> using SRGBA = BoundedGammaEncoded<T, SRGBADescriptor>;
 
 struct SimpleRange;
 struct TextRecognitionResult;
