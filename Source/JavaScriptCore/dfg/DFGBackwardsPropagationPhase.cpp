@@ -136,6 +136,10 @@ private:
             return false;
         }
 
+        case Int52Rep:
+            // Do not decrease timeToLive since it is just propagating to the caller (not increasing the leaves of the tree).
+            return isNotNegZero(node->child1().node(), timeToLive);
+
         default:
             return false;
         }
