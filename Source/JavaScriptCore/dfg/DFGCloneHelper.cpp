@@ -56,10 +56,18 @@ NodeCloneStatus nodeCloneStatusFor(NodeType op)
 
 } // anonymous namespace
 
-bool CloneHelper::isNodeCloneable(Graph& graph, HashSet<Node*>& cloneableCache, Node* node)
+bool CloneHelper::isNodeCloneable(Graph& graph, UncheckedKeyHashSet<Node*>& cloneableCache, Node* node)
 {
     if (cloneableCache.contains(node))
         return true;
+
+#if ASSERT_ENABLED
+    UncheckedKeyHashSet<Node*>& visiting = CloneHelper::debugVisitingSet();
+    ASSERT(visiting.add(node).isNewEntry);
+    auto exitScope = makeScopeExit([&] {
+        visiting.remove(node);
+    });
+#endif
 
     bool result = true;
     switch (nodeCloneStatusFor(node->op())) {
@@ -71,12 +79,15 @@ bool CloneHelper::isNodeCloneable(Graph& graph, HashSet<Node*>& cloneableCache, 
             result = false;
             return IterationStatus::Done;
         });
-        return result;
+        break;
     }
     case NodeCloneStatus::PreCloned:
         break;
     case NodeCloneStatus::Unsupported:
         result = false;
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
     }
 
     if (result)

@@ -484,21 +484,25 @@ public:
             // If the block is unreachable or invalid in the CFG, we can directly
             // ignore the loop, avoiding unnecessary cloneability checks for nodes in invalid blocks.
 
-            HashSet<Node*> cloneableCache;
+            UncheckedKeyHashSet<Node*> cloneableCache;
             for (Node* node : *body) {
                 if (data.materialNodeCount > maxLoopUnrollingBodyNodeSize) {
                     dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *data.header(), " and loop node count=", data.materialNodeCount, " since maxLoopUnrollingBodyNodeSize=", maxLoopUnrollingBodyNodeSize);
                     return false;
                 }
 
-                if (!CloneHelper::isNodeCloneable(m_graph, cloneableCache, node)) {
-                    dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *data.header(), " since ", node, "<", node->op(), "> is not cloneable");
-                    return false;
-                }
-
                 if (node->op() == StringFromCharCode) {
                     // Not supported due to performance regression rdar://150526635
                     dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *data.header(), " since ", node, "<", node->op(), "> is not supported");
+                    return false;
+                }
+
+                bool isCloneable = CloneHelper::isNodeCloneable(m_graph, cloneableCache, node);
+#if ASSERT_ENABLED
+                ASSERT(CloneHelper::debugVisitingSet().isEmpty());
+#endif
+                if (!isCloneable) {
+                    dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *data.header(), " since D@", node->index(), " with op ", node->op(), " is not cloneable");
                     return false;
                 }
 

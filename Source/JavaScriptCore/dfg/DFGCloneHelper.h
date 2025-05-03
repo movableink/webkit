@@ -41,7 +41,19 @@ public:
         ASSERT(graph.m_form == ThreadedCPS || graph.m_form == LoadStore);
     }
 
-    static bool isNodeCloneable(Graph&, HashSet<Node*>&, Node*);
+    static bool isNodeCloneable(Graph&, UncheckedKeyHashSet<Node*>&, Node*);
+
+#if ASSERT_ENABLED
+    static UncheckedKeyHashSet<Node*>& debugVisitingSet()
+    {
+        static LazyNeverDestroyed<ThreadSpecific<UncheckedKeyHashSet<Node*>, WTF::CanBeGCThread::True>> s_visitingSet;
+        static std::once_flag onceFlag;
+        std::call_once(onceFlag, [] {
+            s_visitingSet.construct();
+        });
+        return *s_visitingSet.get();
+    }
+#endif
 
     template<typename CustomizeSuccessors>
     BasicBlock* cloneBlock(BasicBlock* const, const CustomizeSuccessors&);
