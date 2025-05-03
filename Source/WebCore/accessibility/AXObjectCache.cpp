@@ -1275,6 +1275,29 @@ void AXObjectCache::onRendererCreated(Element& element)
     }
 }
 
+void AXObjectCache::onRendererCreated(Text& textNode)
+{
+    if (!textNode.renderer()) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    // If we created an AccessibilityNodeObject for this Text, remove it since there should
+    // be a new AccessibilityRenderObject created using the renderer.
+    if (auto axID = m_nodeObjectMapping.get(textNode)) {
+        if (RefPtr nodeObject = get(textNode)) {
+            if (auto* parent = nodeObject->parentObject()) {
+                remove(textNode);
+                childrenChanged(parent);
+                return;
+            }
+            // We don't need to add nodeObject to m_deferredReplacedObjects, as that currently
+            // only serves to repair relationships for replaced objects, which text nodes cannot
+            // possibly be part of (because they are not elements).
+        }
+    }
+}
+
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 static bool isClickEvent(const AtomString& eventType)
 {

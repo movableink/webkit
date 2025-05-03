@@ -41,6 +41,7 @@ public:
     virtual ~AccessibilityImageMapLink();
     
     AccessibilityRole determineAccessibilityRole() final;
+    bool computeIsIgnored() const final;
     bool isEnabled() const final { return true; }
 
     Element* anchorElement() const final;

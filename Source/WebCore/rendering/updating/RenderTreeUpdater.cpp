@@ -618,6 +618,9 @@ void RenderTreeUpdater::createTextRenderer(Text& textNode, const Style::TextUpda
     auto* textManipulationController = m_document->textManipulationControllerIfExists();
     if (textManipulationController) [[unlikely]]
         textManipulationController->didAddOrCreateRendererForNode(textNode);
+
+    if (CheckedPtr cache = m_document->axObjectCache())
+        cache->onRendererCreated(textNode);
 }
 
 void RenderTreeUpdater::updateTextRenderer(Text& text, const Style::TextUpdate* textUpdate, const ContainerNode* root)

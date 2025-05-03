@@ -68,7 +68,14 @@ AccessibilityRole AccessibilityImageMapLink::determineAccessibilityRole()
 
     return !url().isEmpty() ? AccessibilityRole::WebCoreLink : AccessibilityRole::Generic;
 }
-    
+
+bool AccessibilityImageMapLink::computeIsIgnored() const
+{
+    if (!node())
+        return true;
+    return defaultObjectInclusion() == AccessibilityObjectInclusion::IgnoreObject ? true : false;
+}
+
 Element* AccessibilityImageMapLink::actionElement() const
 {
     return anchorElement();

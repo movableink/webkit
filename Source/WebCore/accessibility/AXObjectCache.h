@@ -417,6 +417,10 @@ public:
     // an AXNodeObject. This occurs when an Element with no renderer is
     // re-parented into a subtree that does have a renderer.
     void onRendererCreated(Element&);
+    // Similar to the above, but for when a RenderText is created for a Text node.
+    // We may have already created an AccessibilityNodeObject for the Text, so this
+    // method allows us to make any appropriate changes now that the Text has a renderer.
+    void onRendererCreated(Text&);
 #if PLATFORM(MAC)
     void onDocumentRenderTreeCreation(const Document&);
 #endif

@@ -680,13 +680,15 @@ bool AccessibilityNodeObject::computeIsIgnored() const
     // it's been initialized.
     ASSERT(m_initialized);
 #endif
-    if (!node())
+    RefPtr node = this->node();
+    if (!node)
         return true;
 
     // Handle non-rendered text that is exposed through aria-hidden=false.
-    if (node() && node()->isTextNode() && !renderer()) {
+    if (node->isTextNode() && !renderer()) {
+        RefPtr parent = node->parentNode();
         // Fallback content in iframe nodes should be ignored.
-        if (node()->parentNode() && node()->parentNode()->hasTagName(iframeTag) && node()->parentNode()->renderer())
+        if (parent && parent->hasTagName(iframeTag) && parent->renderer())
             return true;
 
         // Whitespace only text elements should be ignored when they have no renderer.
@@ -701,7 +703,14 @@ bool AccessibilityNodeObject::computeIsIgnored() const
         return true;
 
     auto role = roleValue();
-    return role == AccessibilityRole::Ignored || role == AccessibilityRole::Unknown;
+    if (role == AccessibilityRole::Ignored || role == AccessibilityRole::Unknown)
+        return true;
+
+    if (isRenderHidden() && !ancestorsOfType<HTMLCanvasElement>(*node).first()) {
+        // Only allow display:none / hidden-visibility node-only objects for canvas subtrees.
+        return true;
+    }
+    return false;
 }
 
 bool AccessibilityNodeObject::hasElementDescendant() const
