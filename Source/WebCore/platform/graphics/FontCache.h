@@ -266,7 +266,7 @@ private:
 
     ListHashSet<String> m_seenFamiliesForPrewarming;
     ListHashSet<String> m_fontNamesRequiringSystemFallbackForPrewarming;
-    RefPtr<WorkQueue> m_prewarmQueue;
+    const RefPtr<WorkQueue> m_prewarmQueue;
 
     FontFamilySpecificationCoreTextCache m_fontFamilySpecificationCoreTextCache;
     SystemFontDatabaseCoreText m_systemFontDatabaseCoreText;
