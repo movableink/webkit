@@ -1013,6 +1013,7 @@ WEBKIT_ADDITIONS_SWIFT_FILES = \
 	MaterialAdditions.swift \
 	WKSeparatedImageView.swift \
 	CredentialUpdaterShim.swift \
+	WKPDFPageNumberIndicatorAdditions.swift \
 #
 
 $(WEBKIT_ADDITIONS_SWIFT_FILES): %.swift : %.swift.in

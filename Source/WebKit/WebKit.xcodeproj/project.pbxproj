@@ -2439,6 +2439,7 @@
 		E596DD6A251E71D400C275A7 /* WKContactPicker.h in Headers */ = {isa = PBXBuildFile; fileRef = E596DD68251E71D300C275A7 /* WKContactPicker.h */; };
 		E5AF80FD2BB4F05F00726F63 /* PickerDismissalReason.h in Headers */ = {isa = PBXBuildFile; fileRef = E5AF80FC2BB4F00A00726F63 /* PickerDismissalReason.h */; };
 		E5BBD4192D58AD4B0083FD2E /* MaterialAdditions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5BBD4182D58AD4B0083FD2E /* MaterialAdditions.swift */; };
+		E5BBD4192D58AD4B0083FD2D /* WKPDFPageNumberIndicatorAdditions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5BBD4182D58AD4B0083FD2D /* WKPDFPageNumberIndicatorAdditions.swift */; };
 		E5BEF6822130C48000F31111 /* WebDataListSuggestionsDropdownIOS.h in Headers */ = {isa = PBXBuildFile; fileRef = E5BEF6802130C47F00F31111 /* WebDataListSuggestionsDropdownIOS.h */; };
 		E5CB07DC20E1678F0022C183 /* WKFormColorControl.h in Headers */ = {isa = PBXBuildFile; fileRef = E5CB07DA20E1678F0022C183 /* WKFormColorControl.h */; };
 		E5CBA76427A318E100DF7858 /* UnifiedSource120.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E5CBA75F27A3187800DF7858 /* UnifiedSource120.cpp */; };
@@ -8295,6 +8296,7 @@
 		E596DD69251E71D400C275A7 /* WKContactPicker.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WKContactPicker.mm; sourceTree = "<group>"; };
 		E5AF80FC2BB4F00A00726F63 /* PickerDismissalReason.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PickerDismissalReason.h; sourceTree = "<group>"; };
 		E5BBD4182D58AD4B0083FD2E /* MaterialAdditions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = MaterialAdditions.swift; path = "$(BUILT_PRODUCTS_DIR)/DerivedSources/WebKit/MaterialAdditions.swift"; sourceTree = "<group>"; };
+		E5BBD4182D58AD4B0083FD2D /* WKPDFPageNumberIndicatorAdditions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = WKPDFPageNumberIndicatorAdditions.swift; path = "$(BUILT_PRODUCTS_DIR)/DerivedSources/WebKit/WKPDFPageNumberIndicatorAdditions.swift"; sourceTree = "<group>"; };
 		E5BEF6802130C47F00F31111 /* WebDataListSuggestionsDropdownIOS.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = WebDataListSuggestionsDropdownIOS.h; path = ios/WebDataListSuggestionsDropdownIOS.h; sourceTree = "<group>"; };
 		E5BEF6812130C47F00F31111 /* WebDataListSuggestionsDropdownIOS.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = WebDataListSuggestionsDropdownIOS.mm; path = ios/WebDataListSuggestionsDropdownIOS.mm; sourceTree = "<group>"; };
 		E5CB07DA20E1678F0022C183 /* WKFormColorControl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = WKFormColorControl.h; path = ios/forms/WKFormColorControl.h; sourceTree = "<group>"; };
@@ -16360,6 +16362,7 @@
 				DF84CEE2249AA21F009096F6 /* WKPDFHUDView.mm */,
 				33E743E62D66C0AC00AC715E /* WKPDFPageNumberIndicator.h */,
 				33E743E72D66C0AC00AC715E /* WKPDFPageNumberIndicator.mm */,
+				E5BBD4182D58AD4B0083FD2D /* WKPDFPageNumberIndicatorAdditions.swift */,
 			);
 			name = PDF;
 			sourceTree = "<group>";
@@ -20903,6 +20906,7 @@
 				07CB79982CE943E400199C49 /* WKNavigationDelegateAdapter.swift in Sources */,
 				DF84CEE4249AA24D009096F6 /* WKPDFHUDView.mm in Sources */,
 				33E743E82D66C0AC00AC715E /* WKPDFPageNumberIndicator.mm in Sources */,
+				E5BBD4192D58AD4B0083FD2D /* WKPDFPageNumberIndicatorAdditions.swift in Sources */,
 				E31869C42B1A7C2400571519 /* WKProcessExtension.mm in Sources */,
 				07AF79E12D693DD7004E8D3A /* WKScrollGeometryAdapter.swift in Sources */,
 				B62449482CF672D800CBB3CF /* WKSeparatedImageView.mm in Sources */,

@@ -28,6 +28,7 @@
 #import <wtf/Platform.h>
 
 #import "WKMaterialHostingSupport.h"
+#import "WKPDFPageNumberIndicator.h"
 #import "WKPreferencesInternal.h"
 #import "WKScrollGeometry.h"
 #import "WKUIDelegateInternal.h"

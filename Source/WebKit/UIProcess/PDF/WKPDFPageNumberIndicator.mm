@@ -38,6 +38,7 @@
 #import <wtf/RetainPtr.h>
 #import <wtf/Seconds.h>
 #import <wtf/WeakObjCPtr.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 static constexpr CGFloat indicatorFontSize = 16;
 static constexpr CGFloat indicatorLabelOpacity = 0.4;
@@ -53,7 +54,7 @@ static constexpr Seconds indicatorMoveDuration { 0.3_s };
 
 @implementation WKPDFPageNumberIndicator {
     RetainPtr<UILabel> _label;
-    RetainPtr<UIVisualEffectView> _backdropView;
+    RetainPtr<UIView> _backdropView;
     RetainPtr<NSTimer> _timer;
     WeakObjCPtr<WKWebView> _webView;
 }
@@ -71,7 +72,12 @@ static constexpr Seconds indicatorMoveDuration { 0.3_s };
     self.layer.allowsGroupOpacity = NO;
     self.layer.allowsGroupBlending = NO;
 
-    _backdropView = adoptNS([[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleLight]]);
+    if (self.canUseVisualEffectViewForBackdrop)
+        _backdropView = adoptNS([[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleLight]]);
+    else {
+        _backdropView = adoptNS([[UIView alloc] init]);
+        [self configureBackgroundForBackdropViewIfNeeded];
+    }
     [_backdropView setFrame:self.bounds];
     [_backdropView setAutoresizingMask:UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight];
     [[_backdropView layer] setCornerRadius:indicatorCornerRadius];
@@ -88,7 +94,10 @@ static constexpr Seconds indicatorMoveDuration { 0.3_s };
     [_label setAdjustsFontSizeToFitWidth:YES];
     [_label setAutoresizingMask:UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight];
     WebCore::PlatformCAFilters::setBlendingFiltersOnLayer([_label layer], WebCore::BlendMode::PlusDarker);
-    [[_backdropView contentView] addSubview:_label.get()];
+    if (RetainPtr visualEffectBackdropView = dynamic_objc_cast<UIVisualEffectView>(_backdropView))
+        [[visualEffectBackdropView contentView] addSubview:_label.get()];
+    else
+        [_backdropView addSubview:_label.get()];
 
     [self updatePosition:self.frame];
     [self setPageCount:pageCount];
@@ -200,6 +209,11 @@ static constexpr Seconds indicatorMoveDuration { 0.3_s };
         return;
 
     [self show];
+}
+
+- (UIView *)backdropView
+{
+    return _backdropView.get();
 }
 
 @end
