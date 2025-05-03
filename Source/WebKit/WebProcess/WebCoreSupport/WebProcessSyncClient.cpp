@@ -29,6 +29,7 @@
 #include "MessageSenderInlines.h"
 #include "WebPage.h"
 #include "WebPageProxyMessages.h"
+#include <WebCore/DocumentSyncData.h>
 #include <WebCore/Page.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMallocInlines.h>

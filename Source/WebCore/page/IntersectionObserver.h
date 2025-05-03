@@ -26,6 +26,7 @@
 #pragma once
 
 #include "Document.h"
+#include "FloatRect.h"
 #include "GCReachableRef.h"
 #include "IntersectionObserverCallback.h"
 #include "LengthBox.h"

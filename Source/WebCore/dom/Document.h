@@ -34,16 +34,11 @@
 #include "DocumentClasses.h"
 #include "DocumentEnums.h"
 #include "DocumentEventTiming.h"
-#include "DocumentSyncData.h"
 #include "FontSelectorClient.h"
-#include "FragmentDirective.h"
 #include "FrameDestructionObserver.h"
 #include "FrameIdentifier.h"
 #include "HitTestSource.h"
-#include "IntDegrees.h"
-#include "IntRect.h"
 #include "PageIdentifier.h"
-#include "PermissionsPolicy.h"
 #include "PlaybackTargetClientContextIdentifier.h"
 #include "PseudoElementIdentifier.h"
 #include "RegistrableDomain.h"
@@ -53,7 +48,6 @@
 #include "SpatialBackdropSource.h"
 #include "StringWithDirection.h"
 #include "Supplementable.h"
-#include "TextIndicator.h"
 #include "Timer.h"
 #include "TreeScope.h"
 #include "TrustedHTML.h"
@@ -136,6 +130,7 @@ class DocumentLoader;
 class DocumentMarkerController;
 class DocumentParser;
 class DocumentSharedObjectPool;
+class DocumentSyncData;
 class DocumentTimeline;
 class AnimationTimelinesController;
 class DocumentType;
@@ -149,6 +144,7 @@ class FloatRect;
 class FontFaceSet;
 class FontLoadRequest;
 class FormController;
+class FragmentDirective;
 class FrameSelection;
 class Frame;
 class GPUCanvasContext;
@@ -208,6 +204,7 @@ class OrientationNotifier;
 class Page;
 class PaintWorklet;
 class PaintWorkletGlobalScope;
+class PermissionsPolicy;
 class PlatformMouseEvent;
 class PointerEvent;
 class ProcessingInstruction;
@@ -346,6 +343,7 @@ enum class EventTrackingRegionsEventType : uint8_t;
 enum class MediaSessionAction : uint8_t;
 #endif
 
+using IntDegrees = int32_t;
 using MediaProducerMediaStateFlags = OptionSet<MediaProducerMediaState>;
 using MediaProducerMutedStateFlags = OptionSet<MediaProducerMutedState>;
 using PlatformDisplayID = uint32_t;
@@ -1926,11 +1924,11 @@ public:
     const FrameSelection& selection() const { return m_selection; }
     CheckedRef<FrameSelection> checkedSelection();
     CheckedRef<const FrameSelection> checkedSelection() const;
-        
+
     void setFragmentDirective(const String& fragmentDirective) { m_fragmentDirective = fragmentDirective; }
     const String& fragmentDirective() const { return m_fragmentDirective; }
 
-    Ref<FragmentDirective> fragmentDirectiveForBindings() { return m_fragmentDirectiveForBindings; }
+    Ref<FragmentDirective> fragmentDirectiveForBindings();
 
     void prepareCanvasesForDisplayOrFlushIfNeeded();
     void addCanvasNeedingPreparationForDisplayOrFlush(CanvasRenderingContext&);
@@ -2173,7 +2171,7 @@ private:
 #endif
     void securityOriginDidChange() final;
 
-    Ref<DocumentSyncData> syncData() { return m_syncData.get(); }
+    inline Ref<DocumentSyncData> syncData();
     void populateDocumentSyncDataForNewlyConstructedDocument(ProcessSyncDataType);
 
     bool mainFrameDocumentHasHadUserInteraction() const;

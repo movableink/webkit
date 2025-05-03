@@ -41,6 +41,7 @@
 #include "JSDOMPromiseDeferred.h"
 #include "OffscreenCanvas.h"
 #include "PixelBuffer.h"
+#include "SecurityOrigin.h"
 #include "VideoFrame.h"
 #include "WebCodecsVideoFrame.h"
 #include "WebGPUDevice.h"

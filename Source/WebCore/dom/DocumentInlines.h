@@ -30,6 +30,7 @@
 #include "Document.h"
 #include "DocumentMarkerController.h"
 #include "DocumentParser.h"
+#include "DocumentSyncData.h"
 #include "Element.h"
 #include "ExtensionStyleSheets.h"
 #include "FocusOptions.h"
@@ -271,6 +272,11 @@ inline CheckedRef<const DocumentMarkerController> Document::checkedMarkers() con
 inline Ref<SecurityOrigin> Document::protectedSecurityOrigin() const
 {
     return SecurityContext::protectedSecurityOrigin().releaseNonNull();
+}
+
+inline Ref<DocumentSyncData> Document::syncData()
+{
+    return m_syncData.get();
 }
 
 } // namespace WebCore
