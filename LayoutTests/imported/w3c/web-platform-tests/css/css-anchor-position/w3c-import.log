@@ -32,8 +32,14 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-center-scroll-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-center-scroll-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-center-scroll.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-center-visibility-change-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-center-visibility-change-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-center-visibility-change.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-center-vrl-htb.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-center-vrl-vrl.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-css-zoom-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-css-zoom.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-display-none-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-fallback-invalidation.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-fallback-to-self-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-getComputedStyle-001.html
@@ -77,6 +83,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-dynamic-004.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-dynamic-005-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-dynamic-005.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-flip-sibling-index.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-grid-001.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-inline-001.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-inline-002.html
@@ -101,6 +108,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-multicol-fixed-001.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-multicol-nested-001.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-principal-box.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-sibling-index.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-top-layer-001-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-top-layer-001.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-top-layer-002-expected.html
@@ -210,6 +218,8 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-vrl.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-size-001.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-size-animation.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-size-css-zoom-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-size-css-zoom.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-size-minmax-001.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-size-parse-invalid.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/anchor-size-parse-valid.html
@@ -338,9 +348,9 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-after-scroll-out-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-after-scroll-out-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-after-scroll-out.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-both-position-fixed-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-both-position-fixed-ref.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-both-position-fixed.tentative-expected.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-both-position-fixed.tentative.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-both-position-fixed.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-chained-001-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-chained-001.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-chained-002-expected.html
@@ -363,15 +373,15 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-non-intervening-container-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-non-intervening-container-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-non-intervening-container.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-position-fixed-ref.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-position-fixed.tentative-expected.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-position-fixed.tentative.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-position-fixed-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-position-fixed.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-stacked-child-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-stacked-child.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-stacked-child.tentative-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-stacked-child.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-with-position-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-with-position-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible-with-position.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-anchors-visible.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/position-visibility-no-overflow-expected.html
@@ -392,6 +402,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/pseudo-element-anchor-dynamic.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/pseudo-element-anchor.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/remove-anchor-dirty-layout.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/remove-position-try-rules-001.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/sticky-anchor-position-invalid-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/sticky-anchor-position-invalid.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/try-tactic-alignment.html
@@ -405,3 +416,6 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/try-tactic-position-area.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/try-tactic-sizing.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/try-tactic-wm.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/vertical-aligned-table-cell-expected.xht
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/vertical-aligned-table-cell.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/viewport-overflow-hidden-invisible-anchor-crash.html

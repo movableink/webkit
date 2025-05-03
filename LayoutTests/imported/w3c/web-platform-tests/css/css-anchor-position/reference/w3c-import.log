@@ -14,6 +14,7 @@ Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
 List of files:
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/reference/anchor-css-zoom-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/reference/anchor-in-css-min-max-function-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/reference/anchor-name-005-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/reference/anchor-position-circular-ref.html
@@ -33,4 +34,5 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/reference/anchor-scroll-update-006-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/reference/anchor-scroll-vlr-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/reference/anchor-scroll-vrl-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/reference/anchor-size-css-zoom-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-anchor-position/reference/sticky-anchor-position-invalid-ref.html

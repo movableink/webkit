@@ -2,6 +2,9 @@ X
 
 PASS Element can be anchor positioned
 PASS Element can use <length> fallback if present
+PASS Element can use <length> fallback with percentage
+PASS Element can use <length> fallback for max size with percentage
+PASS Element can use <length> fallback for margin with percentage
 PASS Invalid anchor function, left
 PASS Invalid anchor function, right
 PASS Invalid anchor function, bottom
