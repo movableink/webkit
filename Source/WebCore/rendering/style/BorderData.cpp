@@ -35,19 +35,27 @@
 
 namespace WebCore {
 
+bool BorderData::containsCurrentColor() const
+{
+    return m_edges.anyOf([](const auto& edge) {
+        return edge.isVisible() && edge.color().containsCurrentColor();
+    });
+}
+
 bool BorderData::isEquivalentForPainting(const BorderData& other, bool currentColorDiffers) const
 {
-    if (!arePointingToEqualData(this, &other))
+    if (this == &other) {
+        ASSERT(currentColorDiffers);
+        return !containsCurrentColor();
+    }
+
+    if (*this != other)
         return false;
 
     if (!currentColorDiffers)
         return true;
 
-    auto visibleBorderHasCurrentColor = m_edges.anyOf([](const auto& edge) {
-        return edge.isVisible() && edge.color().containsCurrentColor();
-    });
-
-    return !visibleBorderHasCurrentColor;
+    return !containsCurrentColor();
 }
 
 TextStream& operator<<(TextStream& ts, const BorderValue& borderValue)
