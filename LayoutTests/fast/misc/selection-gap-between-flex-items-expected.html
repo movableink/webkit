@@ -2,16 +2,17 @@
 .container {
   font-family: Monospace;
   position: absolute;
-  width: 600px;
 }
+
 .content {
-  line-height: 20px;
-  margin-top: 40px;
+  position: absolute;
+  width: max-content;
+  top: 42px;
 }
 </style>
 <div class=container>
   <div id=selection_start class=content>Start selecting this line and continue with the next one</div>
-  <div id=selection_end class=content>pass if there's no selection hairline above this.</div>
+  <div id=selection_end class=content style="top: 102px;">pass if there's no selection hairline above this.</div>
 </div>
 <script>
 const selection = window.getSelection();

@@ -1538,8 +1538,7 @@ bool RenderBlock::isSelectionRoot() const
         || isRenderTableCell() || isNonReplacedAtomicInline()
         || isTransformed() || hasReflection() || hasMask() || isWritingModeRoot()
         || isRenderFragmentedFlow() || style().columnSpan() == ColumnSpan::All
-        || isFlexItemIncludingDeprecated() || isGridItem()
-        || is<RenderFlexibleBox>(*this) || is<RenderDeprecatedFlexibleBox>(*this) || is<RenderGrid>(*this))
+        || isFlexItemIncludingDeprecated() || isGridItem())
         return true;
     
     if (view().selection().start()) {
@@ -1649,12 +1648,17 @@ GapRects RenderBlock::selectionGaps(RenderBlock& rootBlock, const LayoutPoint& r
         clipOutFloatingObjects(rootBlock, paintInfo, rootBlockPhysicalPosition, offsetFromRootBlock);
     }
 
-    // FIXME: overflow: auto/scroll fragments need more math here, since painting in the border box is different from painting in the padding box (one is scrolled, the other is
-    // fixed).
-    GapRects result;
-    if (!is<RenderBlockFlow>(*this) && !is<RenderFlexibleBox>(*this) && !is<RenderDeprecatedFlexibleBox>(*this) && !is<RenderGrid>(*this)) {
+    // FIXME: overflow: auto/scroll fragments need more math here, since painting in the border box is different from painting in the padding box (one is scrolled, the other is fixed).
+    if (!is<RenderBlockFlow>(*this)) {
         // FIXME: Make multi-column selection gap filling work someday.
-        return result;
+        return { };
+    }
+
+    if (isFlexItem() || isGridItem() || isDeprecatedFlexItem()) {
+        // FIXME: Adding a selection gap to these blocks would produce correct (visual) result only if we could also paint selection gaps between them,
+        // as we do for blocks in a BFC. Returning an empty gap rect here means we only paint the selection over the content,
+        // as opposed to expand it all the way to the end of the container.
+        return { };
     }
 
     if (isTransformed() || style().columnSpan() == ColumnSpan::All || isRenderFragmentedFlow()) {
@@ -1662,9 +1666,10 @@ GapRects RenderBlock::selectionGaps(RenderBlock& rootBlock, const LayoutPoint& r
         lastLogicalTop = blockDirectionOffset(rootBlock, offsetFromRootBlock) + logicalHeight();
         lastLogicalLeft = logicalLeftSelectionOffset(rootBlock, logicalHeight(), cache);
         lastLogicalRight = logicalRightSelectionOffset(rootBlock, logicalHeight(), cache);
-        return result;
+        return { };
     }
 
+    GapRects result;
     if (childrenInline())
         result = inlineSelectionGaps(rootBlock, rootBlockPhysicalPosition, offsetFromRootBlock, lastLogicalTop, lastLogicalLeft, lastLogicalRight, cache, paintInfo);
     else
