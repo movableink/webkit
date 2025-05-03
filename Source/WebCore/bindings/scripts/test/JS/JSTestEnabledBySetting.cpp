@@ -286,7 +286,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestEnabledBySettingConstructor, (JSGlobalObject* lex
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestEnabledBySettingPrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestEnabledBySetting::getConstructor(vm, prototype->globalObject()));
 }
@@ -348,7 +348,7 @@ static inline bool setJSTestEnabledBySetting_enabledBySettingAttributeSetter(JSG
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = thisObject.wrapped();
     auto nativeValueConversionResult = convert<IDLDOMString>(lexicalGlobalObject, value);
-    if (UNLIKELY(nativeValueConversionResult.hasException(throwScope)))
+    if (nativeValueConversionResult.hasException(throwScope)) [[unlikely]]
         return false;
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
         return impl.setEnabledBySettingAttribute(nativeValueConversionResult.releaseReturnValue());
@@ -387,7 +387,7 @@ static inline bool setJSTestEnabledBySetting_enabledByTwoSettingsAttributeSetter
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = thisObject.wrapped();
     auto nativeValueConversionResult = convert<IDLDOMString>(lexicalGlobalObject, value);
-    if (UNLIKELY(nativeValueConversionResult.hasException(throwScope)))
+    if (nativeValueConversionResult.hasException(throwScope)) [[unlikely]]
         return false;
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
         return impl.setEnabledByTwoSettingsAttribute(nativeValueConversionResult.releaseReturnValue());
@@ -422,7 +422,7 @@ static inline bool setJSTestEnabledBySetting_supplementalAttributeSetter(JSGloba
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = thisObject.wrapped();
     auto nativeValueConversionResult = convert<IDLDOMString>(lexicalGlobalObject, value);
-    if (UNLIKELY(nativeValueConversionResult.hasException(throwScope)))
+    if (nativeValueConversionResult.hasException(throwScope)) [[unlikely]]
         return false;
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
         return WebCore::TestEnabledBySettingSupplemental::setSupplementalAttribute(impl, nativeValueConversionResult.releaseReturnValue());
@@ -443,11 +443,11 @@ static inline JSC::EncodedJSValue jsTestEnabledBySettingPrototypeFunction_enable
     UNUSED_PARAM(throwScope);
     UNUSED_PARAM(callFrame);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = castedThis->wrapped();
-    if (UNLIKELY(callFrame->argumentCount() < 1))
+    if (callFrame->argumentCount() < 1) [[unlikely]]
         return throwVMError(lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(lexicalGlobalObject));
     EnsureStillAliveScope argument0 = callFrame->uncheckedArgument(0);
     auto testParamConversionResult = convert<IDLDOMString>(*lexicalGlobalObject, argument0.value());
-    if (UNLIKELY(testParamConversionResult.hasException(throwScope)))
+    if (testParamConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     RELEASE_AND_RETURN(throwScope, JSValue::encode(toJS<IDLUndefined>(*lexicalGlobalObject, throwScope, [&]() -> decltype(auto) { return impl.enabledBySettingOperation(testParamConversionResult.releaseReturnValue()); })));
 }

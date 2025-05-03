@@ -1554,7 +1554,7 @@ private:
             return true;
         }
 
-        if (UNLIKELY(jsCast<JSArrayBufferView*>(obj)->isOutOfBounds())) {
+        if (jsCast<JSArrayBufferView*>(obj)->isOutOfBounds()) [[unlikely]] {
             code = SerializationReturnCode::DataCloneError;
             return true;
         }
@@ -2799,7 +2799,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
 
                     propertyStack.append(PropertyNameArray(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude));
                     array->getOwnNonIndexPropertyNames(m_lexicalGlobalObject, propertyStack.last(), DontEnumPropertiesMode::Exclude);
-                    if (UNLIKELY(scope.exception()))
+                    if (scope.exception()) [[unlikely]]
                         return SerializationReturnCode::ExistingExceptionError;
                     if (propertyStack.last().size()) {
                         write(NonIndexPropertiesTag);
@@ -2813,7 +2813,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                     break;
                 }
                 inValue = array->getDirectIndex(m_lexicalGlobalObject, index);
-                if (UNLIKELY(scope.exception()))
+                if (scope.exception()) [[unlikely]]
                     return SerializationReturnCode::ExistingExceptionError;
                 if (!inValue) {
                     indexStack.last()++;
@@ -2857,7 +2857,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                 indexStack.append(0);
                 propertyStack.append(PropertyNameArray(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude));
                 inObject->methodTable()->getOwnPropertyNames(inObject, m_lexicalGlobalObject, propertyStack.last(), DontEnumPropertiesMode::Exclude);
-                if (UNLIKELY(scope.exception()))
+                if (scope.exception()) [[unlikely]]
                     return SerializationReturnCode::ExistingExceptionError;
             }
             startVisitNamedMember:
@@ -2874,7 +2874,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                     break;
                 }
                 inValue = getProperty(object, properties[index]);
-                if (UNLIKELY(scope.exception()))
+                if (scope.exception()) [[unlikely]]
                     return SerializationReturnCode::ExistingExceptionError;
 
                 if (!inValue) {
@@ -2884,7 +2884,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                 }
                 write(properties[index].string());
 
-                if (UNLIKELY(scope.exception()))
+                if (scope.exception()) [[unlikely]]
                     return SerializationReturnCode::ExistingExceptionError;
 
                 auto terminalCode = SerializationReturnCode::SuccessfullyCompleted;
@@ -2897,7 +2897,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                 FALLTHROUGH;
             }
             case ObjectEndVisitNamedMember: {
-                if (UNLIKELY(scope.exception()))
+                if (scope.exception()) [[unlikely]]
                     return SerializationReturnCode::ExistingExceptionError;
 
                 indexStack.last()++;
@@ -2912,7 +2912,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                     break;
                 write(MapObjectTag);
                 JSMapIterator* iterator = JSMapIterator::create(m_lexicalGlobalObject, m_lexicalGlobalObject->mapIteratorStructure(), inMap, IterationKind::Entries);
-                if (UNLIKELY(scope.exception()))
+                if (scope.exception()) [[unlikely]]
                     return SerializationReturnCode::ExistingExceptionError;
                 m_keepAliveBuffer.appendWithCrashOnOverflow(iterator);
                 mapIteratorStack.append(iterator);
@@ -2929,7 +2929,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                     ASSERT(jsDynamicCast<JSMap*>(object));
                     propertyStack.append(PropertyNameArray(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude));
                     object->methodTable()->getOwnPropertyNames(object, m_lexicalGlobalObject, propertyStack.last(), DontEnumPropertiesMode::Exclude);
-                    if (UNLIKELY(scope.exception()))
+                    if (scope.exception()) [[unlikely]]
                         return SerializationReturnCode::ExistingExceptionError;
                     write(NonMapPropertiesTag);
                     indexStack.append(0);
@@ -2960,7 +2960,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                     break;
                 write(SetObjectTag);
                 JSSetIterator* iterator = JSSetIterator::create(m_lexicalGlobalObject, m_lexicalGlobalObject->setIteratorStructure(), inSet, IterationKind::Keys);
-                if (UNLIKELY(scope.exception()))
+                if (scope.exception()) [[unlikely]]
                     return SerializationReturnCode::ExistingExceptionError;
                 m_keepAliveBuffer.appendWithCrashOnOverflow(iterator);
                 setIteratorStack.append(iterator);
@@ -2977,7 +2977,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                     ASSERT(jsDynamicCast<JSSet*>(object));
                     propertyStack.append(PropertyNameArray(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude));
                     object->methodTable()->getOwnPropertyNames(object, m_lexicalGlobalObject, propertyStack.last(), DontEnumPropertiesMode::Exclude);
-                    if (UNLIKELY(scope.exception()))
+                    if (scope.exception()) [[unlikely]]
                         return SerializationReturnCode::ExistingExceptionError;
                     write(NonSetPropertiesTag);
                     indexStack.append(0);
@@ -3112,7 +3112,7 @@ public:
         
         auto result = deserializer.deserialize();
         // Deserialize again if data may have wrong version number, see rdar://118775332.
-        if (UNLIKELY(result.second != SerializationReturnCode::SuccessfullyCompleted && deserializer.shouldRetryWithVersionUpgrade())) {
+        if (result.second != SerializationReturnCode::SuccessfullyCompleted && deserializer.shouldRetryWithVersionUpgrade()) [[unlikely]] {
         CloneDeserializer newDeserializer(lexicalGlobalObject, globalObject, messagePorts, arrayBufferContentsArray, buffer, blobURLs, blobFilePaths, sharedBuffers, deserializer.takeDetachedImageBitmaps()
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
             , deserializer.takeDetachedOffscreenCanvases()
@@ -4849,7 +4849,7 @@ private:
             return jsBigInt32(0);
 #else
             JSBigInt* bigInt = JSBigInt::tryCreateZero(m_lexicalGlobalObject->vm());
-            if (UNLIKELY(!bigInt)) {
+            if (!bigInt) [[unlikely]] {
                 SERIALIZE_TRACE("FAIL deserialize");
                 fail();
                 return JSValue();
@@ -5279,7 +5279,7 @@ private:
             Structure* structure = m_globalObject->arrayBufferStructure(arrayBuffer->sharingMode());
             // A crazy RuntimeFlags mismatch could mean that we are not equipped to handle shared
             // array buffers while the sender is. In that case, we would see a null structure here.
-            if (UNLIKELY(!structure)) {
+            if (!structure) [[unlikely]] {
                 SERIALIZE_TRACE("FAIL deserialize");
                 fail();
                 return JSValue();
@@ -5298,7 +5298,7 @@ private:
             Structure* structure = m_globalObject->arrayBufferStructure(arrayBuffer->sharingMode());
             // A crazy RuntimeFlags mismatch could mean that we are not equipped to handle shared
             // array buffers while the sender is. In that case, we would see a null structure here.
-            if (UNLIKELY(!structure)) {
+            if (!structure) [[unlikely]] {
                 SERIALIZE_TRACE("FAIL deserialize");
                 fail();
                 return JSValue();
@@ -5543,7 +5543,7 @@ DeserializationResult CloneDeserializer::deserialize()
                 goto error;
             }
             JSArray* outArray = constructEmptyArray(m_globalObject, static_cast<JSC::ArrayAllocationProfile*>(nullptr), length);
-            if (UNLIKELY(scope.exception())) {
+            if (scope.exception()) [[unlikely]] {
                 SERIALIZE_TRACE("FAIL deserialize");
                 fail();
                 goto error;
@@ -5592,7 +5592,7 @@ DeserializationResult CloneDeserializer::deserialize()
 
             if (JSValue terminal = readTerminal()) {
                 putProperty(outputObjectStack.last(), index, terminal);
-                if (UNLIKELY(scope.exception())) {
+                if (scope.exception()) [[unlikely]] {
                     SERIALIZE_TRACE("FAIL deserialize");
                     fail();
                     goto error;
@@ -5608,7 +5608,7 @@ DeserializationResult CloneDeserializer::deserialize()
         case ArrayEndVisitIndexedMember: {
             JSObject* outArray = outputObjectStack.last();
             putProperty(outArray, indexStack.last(), outValue);
-            if (UNLIKELY(scope.exception())) {
+            if (scope.exception()) [[unlikely]] {
                 SERIALIZE_TRACE("FAIL deserialize");
                 fail();
                 goto error;
@@ -5688,7 +5688,7 @@ DeserializationResult CloneDeserializer::deserialize()
         }
         case MapDataEndVisitValue: {
             mapStack.last()->set(m_lexicalGlobalObject, mapKeyStack.last(), outValue);
-            if (UNLIKELY(scope.exception())) {
+            if (scope.exception()) [[unlikely]] {
                 SERIALIZE_TRACE("FAIL deserialize");
                 fail();
                 goto error;
@@ -5720,7 +5720,7 @@ DeserializationResult CloneDeserializer::deserialize()
         case SetDataEndVisitKey: {
             JSSet* set = setStack.last();
             set->add(m_lexicalGlobalObject, outValue);
-            if (UNLIKELY(scope.exception())) {
+            if (scope.exception()) [[unlikely]] {
                 SERIALIZE_TRACE("FAIL deserialize");
                 fail();
                 goto error;
@@ -6385,7 +6385,7 @@ ExceptionOr<Ref<SerializedScriptValue>> SerializedScriptValue::create(JSGlobalOb
     // Serialization may throw an exception. If we see one, we should exit early. To satisfy
     // exception checks, we need to check the exception here. When we throw an exception, we
     // need to make sure that our exception code is set, so we raise this in the error code.
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         code = SerializationReturnCode::ExistingExceptionError;
 
     if (throwExceptions == SerializationErrorMode::Throwing)
@@ -6489,7 +6489,7 @@ RefPtr<SerializedScriptValue> SerializedScriptValue::create(JSContextRef originC
 
     JSValue value = toJS(lexicalGlobalObject, apiValue);
     auto serializedValue = SerializedScriptValue::create(*lexicalGlobalObject, value);
-    if (UNLIKELY(scope.exception())) {
+    if (scope.exception()) [[unlikely]] {
         if (exception)
             *exception = toRef(lexicalGlobalObject, scope.exception()->value());
         scope.clearException();
@@ -6560,10 +6560,12 @@ JSValue SerializedScriptValue::deserialize(JSGlobalObject& lexicalGlobalObject, 
 
     // Deserialize may throw an exception. Similar to serialize (SerializedScriptValue::create),
     // we'll ensure that we raise this.
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         result.second = SerializationReturnCode::ValidationError;
 
-    if (UNLIKELY(scope.exception()) || throwExceptions == SerializationErrorMode::Throwing)
+    if (scope.exception()) [[unlikely]]
+        maybeThrowExceptionIfSerializationFailed(lexicalGlobalObject, result.second);
+    if (throwExceptions == SerializationErrorMode::Throwing)
         maybeThrowExceptionIfSerializationFailed(lexicalGlobalObject, result.second);
 
     // Handling newly thrown exceptions is a bit simpler here since we don't deal with return codes.
@@ -6579,7 +6581,7 @@ JSValueRef SerializedScriptValue::deserialize(JSContextRef destinationContext, J
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
     JSValue value = deserialize(*lexicalGlobalObject, lexicalGlobalObject);
-    if (UNLIKELY(scope.exception())) {
+    if (scope.exception()) [[unlikely]] {
         if (exception)
             *exception = toRef(lexicalGlobalObject, scope.exception()->value());
         scope.clearException();

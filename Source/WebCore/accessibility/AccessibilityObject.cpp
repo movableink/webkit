@@ -627,7 +627,7 @@ void AccessibilityObject::insertChild(AccessibilityObject& child, unsigned index
         }
     }
 
-    if (UNLIKELY(is<HTMLAreaElement>(child.node()))) {
+    if (is<HTMLAreaElement>(child.node())) [[unlikely]] {
         // Despite the DOM parent for <area> elements being <map>, we expose <area> elements as children
         // of the <img> using the <map>. This provides a better experience for AT users, e.g. a screenreader
         // would hear "image map" or "group" plus the image description, then the links, which provides the

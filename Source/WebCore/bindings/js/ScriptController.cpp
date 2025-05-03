@@ -198,7 +198,7 @@ void ScriptController::loadModuleScriptInWorld(LoadableModuleScript& moduleScrip
     auto& lexicalGlobalObject = *proxy.window();
 
     auto* promise = JSExecState::loadModule(lexicalGlobalObject, topLevelModuleURL, JSC::JSScriptFetchParameters::create(lexicalGlobalObject.vm(), WTFMove(topLevelFetchParameters)), JSC::JSScriptFetcher::create(lexicalGlobalObject.vm(), { &moduleScript }));
-    if (UNLIKELY(!promise))
+    if (!promise) [[unlikely]]
         return;
     setupModuleScriptHandlers(moduleScript, *promise, world);
 }
@@ -216,7 +216,7 @@ void ScriptController::loadModuleScriptInWorld(LoadableModuleScript& moduleScrip
     auto& lexicalGlobalObject = *proxy.window();
 
     auto* promise = JSExecState::loadModule(lexicalGlobalObject, sourceCode.jsSourceCode(), JSC::JSScriptFetcher::create(lexicalGlobalObject.vm(), { &moduleScript }));
-    if (UNLIKELY(!promise))
+    if (!promise) [[unlikely]]
         return;
     setupModuleScriptHandlers(moduleScript, *promise, world);
 }
@@ -676,7 +676,7 @@ ValueOrException ScriptController::callInWorld(RunJavaScriptParameters&& paramet
 
         auto scope = DECLARE_CATCH_SCOPE(globalObject.vm());
         auto jsArgument = argument->value(globalObject);
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             errorMessage = "Unable to deserialize argument to execute asynchronous JavaScript function"_s;
             break;
         }

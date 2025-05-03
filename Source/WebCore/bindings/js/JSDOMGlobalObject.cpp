@@ -192,7 +192,7 @@ JSC_DEFINE_HOST_FUNCTION(getInternalWritableStream, (JSGlobalObject*, CallFrame*
     ASSERT(callFrame->argumentCount() == 1);
 
     auto* writableStream = jsDynamicCast<JSWritableStream*>(callFrame->uncheckedArgument(0));
-    if (UNLIKELY(!writableStream))
+    if (!writableStream) [[unlikely]]
         return JSValue::encode(jsUndefined());
     return JSValue::encode(writableStream->wrapped().internalWritableStream());
 }
@@ -208,7 +208,7 @@ JSC_DEFINE_HOST_FUNCTION(getInternalReadableStream, (JSGlobalObject*, CallFrame*
     ASSERT(callFrame->argumentCount() == 1);
 
     auto* readableStream = jsDynamicCast<JSReadableStream*>(callFrame->uncheckedArgument(0));
-    if (UNLIKELY(!readableStream))
+    if (!readableStream) [[unlikely]]
         return JSValue::encode(jsUndefined());
     return JSValue::encode(readableStream->wrapped().internalReadableStream());
 }
@@ -230,7 +230,7 @@ JSC_DEFINE_HOST_FUNCTION(addAbortAlgorithmToSignal, (JSGlobalObject* globalObjec
     ASSERT(callFrame->argumentCount() == 2);
 
     auto* abortSignal = jsDynamicCast<JSAbortSignal*>(callFrame->uncheckedArgument(0));
-    if (UNLIKELY(!abortSignal))
+    if (!abortSignal) [[unlikely]]
         return JSValue::encode(JSValue(JSC::JSValue::JSFalse));
 
     auto* jsDOMGlobalObject = JSC::jsCast<JSDOMGlobalObject*>(globalObject);
@@ -246,7 +246,7 @@ JSC_DEFINE_HOST_FUNCTION(removeAbortAlgorithmFromSignal, (JSGlobalObject*, CallF
     ASSERT(callFrame->argumentCount() == 2);
 
     auto* abortSignal = jsDynamicCast<JSAbortSignal*>(callFrame->uncheckedArgument(0));
-    if (UNLIKELY(!abortSignal))
+    if (!abortSignal) [[unlikely]]
         return JSValue::encode(JSValue(JSC::JSValue::JSFalse));
 
     AbortSignal::removeAbortAlgorithmFromSignal(abortSignal->protectedWrapped().get(), callFrame->uncheckedArgument(1).asUInt32());
@@ -271,7 +271,7 @@ JSC_DEFINE_HOST_FUNCTION(signalAbort, (JSGlobalObject*, CallFrame* callFrame))
     ASSERT(callFrame->argumentCount() == 2);
 
     auto* abortSignal = jsDynamicCast<JSAbortSignal*>(callFrame->uncheckedArgument(0));
-    if (UNLIKELY(abortSignal))
+    if (abortSignal) [[unlikely]]
         abortSignal->protectedWrapped()->signalAbort(callFrame->uncheckedArgument(1));
     return JSValue::encode(JSC::jsUndefined());
 }
@@ -560,7 +560,7 @@ static JSC::JSPromise* handleResponseOnStreamingAction(JSC::JSGlobalObject* glob
     // FIXME: for efficiency, we should load blobs directly instead of going through the readableStream path.
     if (inputResponse->isBlobBody() || inputResponse->isBlobFormData()) {
         auto streamOrException = inputResponse->readableStream(*globalObject);
-        if (UNLIKELY(streamOrException.hasException())) {
+        if (streamOrException.hasException()) [[unlikely]] {
             deferred->reject(streamOrException.releaseException());
             return jsCast<JSC::JSPromise*>(deferred->promise());
         }
@@ -589,7 +589,7 @@ static JSC::JSPromise* handleResponseOnStreamingAction(JSC::JSGlobalObject* glob
 
                 auto scope = DECLARE_THROW_SCOPE(vm);
                 auto error = createDOMException(*globalObject, WTFMove(exception));
-                if (UNLIKELY(scope.exception())) {
+                if (scope.exception()) [[unlikely]] {
                     ASSERT(vm.hasPendingTerminationException());
                     compiler->cancel();
                     return;

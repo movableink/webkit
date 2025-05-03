@@ -162,7 +162,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestScheduledActionConstructor, (JSGlobalObject* lexi
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestScheduledActionPrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestScheduledAction::getConstructor(vm, prototype->globalObject()));
 }
@@ -174,11 +174,11 @@ static inline JSC::EncodedJSValue jsTestScheduledActionPrototypeFunction_methodB
     UNUSED_PARAM(throwScope);
     UNUSED_PARAM(callFrame);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = castedThis->wrapped();
-    if (UNLIKELY(callFrame->argumentCount() < 1))
+    if (callFrame->argumentCount() < 1) [[unlikely]]
         return throwVMError(lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(lexicalGlobalObject));
     EnsureStillAliveScope argument0 = callFrame->uncheckedArgument(0);
     auto actionConversionResult = convert<IDLScheduledAction>(*lexicalGlobalObject, argument0.value(), *castedThis->globalObject(), "TestScheduledActionReal method"_s);
-    if (UNLIKELY(actionConversionResult.hasException(throwScope)))
+    if (actionConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     RELEASE_AND_RETURN(throwScope, JSValue::encode(toJS<IDLUndefined>(*lexicalGlobalObject, throwScope, [&]() -> decltype(auto) { return impl.method(actionConversionResult.releaseReturnValue()); })));
 }

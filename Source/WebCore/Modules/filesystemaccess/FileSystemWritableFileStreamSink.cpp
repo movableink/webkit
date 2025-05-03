@@ -122,7 +122,7 @@ static ExceptionOr<FileSystemWritableFileStream::ChunkType> convertFileSystemWri
 {
     auto scope = DECLARE_THROW_SCOPE(context.vm());
     auto chunkResult = convert<IDLUnion<IDLArrayBufferView, IDLArrayBuffer, IDLInterface<Blob>, IDLUSVString, IDLDictionary<FileSystemWritableFileStream::WriteParams>>>(*context.globalObject(), value);
-    if (UNLIKELY(chunkResult.hasException(scope)))
+    if (chunkResult.hasException(scope)) [[unlikely]]
         return Exception { ExceptionCode::ExistingExceptionError };
 
     return chunkResult.releaseReturnValue();

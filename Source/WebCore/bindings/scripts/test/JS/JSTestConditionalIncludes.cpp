@@ -486,7 +486,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestConditionalIncludesConstructor, (JSGlobalObject* 
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestConditionalIncludesPrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestConditionalIncludes::getConstructor(vm, prototype->globalObject()));
 }
@@ -544,7 +544,7 @@ static inline bool setJSTestConditionalIncludes_mixinAttributeSetter(JSGlobalObj
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = thisObject.wrapped();
     auto nativeValueConversionResult = convert<IDLDOMString>(lexicalGlobalObject, value);
-    if (UNLIKELY(nativeValueConversionResult.hasException(throwScope)))
+    if (nativeValueConversionResult.hasException(throwScope)) [[unlikely]]
         return false;
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
         return impl.setMixinAttribute(nativeValueConversionResult.releaseReturnValue());
@@ -613,7 +613,7 @@ static inline bool setJSTestConditionalIncludes_mixinNodeAttributeSetter(JSGloba
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = thisObject.wrapped();
     auto nativeValueConversionResult = convert<IDLInterface<Node>>(lexicalGlobalObject, value, [](JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope) { throwAttributeTypeError(lexicalGlobalObject, scope, "TestConditionalIncludes"_s, "mixinNodeAttribute"_s, "Node"_s); });
-    if (UNLIKELY(nativeValueConversionResult.hasException(throwScope)))
+    if (nativeValueConversionResult.hasException(throwScope)) [[unlikely]]
         return false;
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
         return impl.setMixinNodeAttribute(*nativeValueConversionResult.releaseReturnValue());
@@ -670,18 +670,18 @@ static inline JSC::EncodedJSValue jsTestConditionalIncludesPrototypeFunction_mix
     UNUSED_PARAM(throwScope);
     UNUSED_PARAM(callFrame);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = castedThis->wrapped();
-    if (UNLIKELY(callFrame->argumentCount() < 2))
+    if (callFrame->argumentCount() < 2) [[unlikely]]
         return throwVMError(lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(lexicalGlobalObject));
     auto* context = jsCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext();
-    if (UNLIKELY(!context))
+    if (!context) [[unlikely]]
         return JSValue::encode(jsUndefined());
     EnsureStillAliveScope argument0 = callFrame->uncheckedArgument(0);
     auto strArgConversionResult = convert<IDLDOMString>(*lexicalGlobalObject, argument0.value());
-    if (UNLIKELY(strArgConversionResult.hasException(throwScope)))
+    if (strArgConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     EnsureStillAliveScope argument1 = callFrame->uncheckedArgument(1);
     auto objArgConversionResult = convert<IDLInterface<TestObj>>(*lexicalGlobalObject, argument1.value(), [](JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope) { throwArgumentTypeError(lexicalGlobalObject, scope, 1, "objArg"_s, "TestConditionalIncludes"_s, "mixinComplexOperation"_s, "TestObj"_s); });
-    if (UNLIKELY(objArgConversionResult.hasException(throwScope)))
+    if (objArgConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     RELEASE_AND_RETURN(throwScope, JSValue::encode(toJS<IDLInterface<TestObj>>(*lexicalGlobalObject, *castedThis->globalObject(), throwScope, impl.mixinComplexOperation(*context, strArgConversionResult.releaseReturnValue(), *objArgConversionResult.releaseReturnValue()))));
 }

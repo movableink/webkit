@@ -41,7 +41,7 @@ struct VariadicConverter {
         auto scope = DECLARE_THROW_SCOPE(vm);
 
         auto result = WebCore::convert<IDL>(lexicalGlobalObject, value);
-        if (UNLIKELY(result.hasException(scope)))
+        if (result.hasException(scope)) [[unlikely]]
             return std::nullopt;
 
         return result.releaseReturnValue();

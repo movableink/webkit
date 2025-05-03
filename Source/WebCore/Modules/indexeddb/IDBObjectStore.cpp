@@ -348,7 +348,7 @@ ExceptionOr<Ref<IDBRequest>> IDBObjectStore::putOrAdd(JSGlobalObject& state, JSV
         transaction->activate();
     }
 
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         return Exception { ExceptionCode::DataCloneError, "Failed to store record in an IDBObjectStore: An object could not be cloned."_s };
 
     if (key && !key->isValid())

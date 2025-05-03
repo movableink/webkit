@@ -557,7 +557,7 @@ void WebSocket::didReceiveMessage(String&& message)
         if (socket.m_state != OPEN)
             return;
 
-        if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+        if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
             if (auto* inspector = socket.m_channel->channelInspector()) {
                 auto utf8Message = message.utf8();
                 inspector->didReceiveWebSocketFrame(WebSocketChannelInspector::createFrame(byteCast<uint8_t>(utf8Message.span()), WebSocketFrame::OpCode::OpCodeText));
@@ -575,7 +575,7 @@ void WebSocket::didReceiveBinaryData(Vector<uint8_t>&& binaryData)
         if (socket.m_state != OPEN)
             return;
 
-        if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+        if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
             if (auto* inspector = socket.m_channel->channelInspector())
                 inspector->didReceiveWebSocketFrame(WebSocketChannelInspector::createFrame(binaryData.span(), WebSocketFrame::OpCode::OpCodeBinary));
         }
@@ -601,7 +601,7 @@ void WebSocket::didReceiveMessageError(String&& reason)
         socket.m_state = CLOSED;
         ASSERT(socket.scriptExecutionContext());
 
-        if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+        if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
             if (auto* inspector = socket.m_channel->channelInspector())
                 inspector->didReceiveWebSocketFrameError(reason);
         }
@@ -636,7 +636,7 @@ void WebSocket::didClose(unsigned unhandledBufferedAmount, ClosingHandshakeCompl
         if (!socket.m_channel)
             return;
 
-        if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+        if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
             if (auto* inspector = socket.m_channel->channelInspector()) {
                 WebSocketFrame closingFrame(WebSocketFrame::OpCodeClose, true, false, false);
                 inspector->didReceiveWebSocketFrame(closingFrame);

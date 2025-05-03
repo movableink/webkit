@@ -208,7 +208,7 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::clone()
             return Exception { ExceptionCode::InvalidStateError, "Context is stopped"_s };
 
         auto voidOrException = createReadableStream(*globalObject);
-        if (UNLIKELY(voidOrException.hasException()))
+        if (voidOrException.hasException()) [[unlikely]]
             return voidOrException.releaseException();
     }
 

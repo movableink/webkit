@@ -1880,7 +1880,7 @@ void AccessibilityNodeObject::visibleText(Vector<AccessibilityText>& textOrder) 
 void AccessibilityNodeObject::helpText(Vector<AccessibilityText>& textOrder) const
 {
     const AtomString& ariaHelp = getAttribute(aria_helpAttr);
-    if (UNLIKELY(!ariaHelp.isEmpty()))
+    if (!ariaHelp.isEmpty()) [[unlikely]]
         textOrder.append(AccessibilityText(ariaHelp, AccessibilityTextSource::Help));
 
 #if !PLATFORM(COCOA)
@@ -2039,7 +2039,7 @@ String AccessibilityNodeObject::helpText() const
         return { };
 
     const auto& ariaHelp = getAttribute(aria_helpAttr);
-    if (UNLIKELY(!ariaHelp.isEmpty()))
+    if (!ariaHelp.isEmpty()) [[unlikely]]
         return ariaHelp;
 
     String describedBy = ariaDescribedByAttribute();
@@ -2653,7 +2653,10 @@ bool AccessibilityNodeObject::hasAttributesRequiredForInclusion() const
         return true;
 #endif
 
-    if (element->attributeWithoutSynchronization(altAttr).length() || UNLIKELY(element->attributeWithoutSynchronization(aria_helpAttr).length()))
+    if (element->attributeWithoutSynchronization(altAttr).length())
+        return true;
+
+    if (element->attributeWithoutSynchronization(aria_helpAttr).length()) [[unlikely]]
         return true;
 
     return false;

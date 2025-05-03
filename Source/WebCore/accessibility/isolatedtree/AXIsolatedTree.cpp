@@ -1274,7 +1274,7 @@ void AXIsolatedTree::applyPendingChanges()
 
     Locker locker { m_changeLogLock };
 
-    if (UNLIKELY(m_queuedForDestruction)) {
+    if (m_queuedForDestruction) [[unlikely]] {
         for (const auto& object : m_readerThreadNodeMap.values())
             object->detach(AccessibilityDetachmentType::CacheDestroyed);
 

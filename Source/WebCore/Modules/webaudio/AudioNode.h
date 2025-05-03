@@ -285,14 +285,14 @@ private:
 template<typename T> struct AudioNodeConnectionRefDerefTraits {
     static ALWAYS_INLINE T* refIfNotNull(T* ptr)
     {
-        if (LIKELY(ptr))
+        if (ptr) [[likely]]
             ptr->incrementConnectionCount();
         return ptr;
     }
 
     static ALWAYS_INLINE void derefIfNotNull(T* ptr)
     {
-        if (LIKELY(ptr))
+        if (ptr) [[likely]]
             ptr->decrementConnectionCount();
     }
 };

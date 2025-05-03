@@ -61,7 +61,7 @@ static bool jsDOMWindowPropertiesGetOwnPropertySlotNamedItemGetter(JSDOMWindowPr
         AtomString atomPropertyName = propertyName.publicName();
         if (!atomPropertyName.isEmpty() && htmlDocument->hasWindowNamedItem(atomPropertyName)) {
             JSValue namedItem;
-            if (UNLIKELY(htmlDocument->windowNamedItemContainsMultipleElements(atomPropertyName))) {
+            if (htmlDocument->windowNamedItemContainsMultipleElements(atomPropertyName)) [[unlikely]] {
                 Ref<HTMLCollection> collection = document->windowNamedItems(atomPropertyName);
                 ASSERT(collection->length() > 1);
                 namedItem = toJS(lexicalGlobalObject, thisObject->globalObject(), collection);

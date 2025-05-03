@@ -182,7 +182,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestMapLikeConstructor, (JSGlobalObject* lexicalGloba
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestMapLikePrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestMapLike::getConstructor(vm, prototype->globalObject()));
 }
@@ -205,11 +205,11 @@ static inline JSC::EncodedJSValue jsTestMapLikePrototypeFunction_getBody(JSC::JS
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     UNUSED_PARAM(throwScope);
     UNUSED_PARAM(callFrame);
-    if (UNLIKELY(callFrame->argumentCount() < 1))
+    if (callFrame->argumentCount() < 1) [[unlikely]]
         return throwVMError(lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(lexicalGlobalObject));
     EnsureStillAliveScope argument0 = callFrame->uncheckedArgument(0);
     auto keyConversionResult = convert<IDLDOMString>(*lexicalGlobalObject, argument0.value());
-    if (UNLIKELY(keyConversionResult.hasException(throwScope)))
+    if (keyConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     RELEASE_AND_RETURN(throwScope, JSValue::encode(toJS<IDLAny>(*lexicalGlobalObject, throwScope, forwardGetToMapLike(*lexicalGlobalObject, *callFrame, *castedThis, keyConversionResult.releaseReturnValue()))));
 }
@@ -225,11 +225,11 @@ static inline JSC::EncodedJSValue jsTestMapLikePrototypeFunction_hasBody(JSC::JS
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     UNUSED_PARAM(throwScope);
     UNUSED_PARAM(callFrame);
-    if (UNLIKELY(callFrame->argumentCount() < 1))
+    if (callFrame->argumentCount() < 1) [[unlikely]]
         return throwVMError(lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(lexicalGlobalObject));
     EnsureStillAliveScope argument0 = callFrame->uncheckedArgument(0);
     auto keyConversionResult = convert<IDLDOMString>(*lexicalGlobalObject, argument0.value());
-    if (UNLIKELY(keyConversionResult.hasException(throwScope)))
+    if (keyConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     RELEASE_AND_RETURN(throwScope, JSValue::encode(toJS<IDLAny>(*lexicalGlobalObject, throwScope, forwardHasToMapLike(*lexicalGlobalObject, *callFrame, *castedThis, keyConversionResult.releaseReturnValue()))));
 }
@@ -287,11 +287,11 @@ static inline JSC::EncodedJSValue jsTestMapLikePrototypeFunction_forEachBody(JSC
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     UNUSED_PARAM(throwScope);
     UNUSED_PARAM(callFrame);
-    if (UNLIKELY(callFrame->argumentCount() < 1))
+    if (callFrame->argumentCount() < 1) [[unlikely]]
         return throwVMError(lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(lexicalGlobalObject));
     EnsureStillAliveScope argument0 = callFrame->uncheckedArgument(0);
     auto callbackConversionResult = convert<IDLAny>(*lexicalGlobalObject, argument0.value());
-    if (UNLIKELY(callbackConversionResult.hasException(throwScope)))
+    if (callbackConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     RELEASE_AND_RETURN(throwScope, JSValue::encode(toJS<IDLAny>(*lexicalGlobalObject, throwScope, forwardForEachToMapLike(*lexicalGlobalObject, *callFrame, *castedThis, callbackConversionResult.releaseReturnValue()))));
 }
@@ -307,15 +307,15 @@ static inline JSC::EncodedJSValue jsTestMapLikePrototypeFunction_setBody(JSC::JS
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     UNUSED_PARAM(throwScope);
     UNUSED_PARAM(callFrame);
-    if (UNLIKELY(callFrame->argumentCount() < 2))
+    if (callFrame->argumentCount() < 2) [[unlikely]]
         return throwVMError(lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(lexicalGlobalObject));
     EnsureStillAliveScope argument0 = callFrame->uncheckedArgument(0);
     auto keyConversionResult = convert<IDLDOMString>(*lexicalGlobalObject, argument0.value());
-    if (UNLIKELY(keyConversionResult.hasException(throwScope)))
+    if (keyConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     EnsureStillAliveScope argument1 = callFrame->uncheckedArgument(1);
     auto valueConversionResult = convert<IDLDOMString>(*lexicalGlobalObject, argument1.value());
-    if (UNLIKELY(valueConversionResult.hasException(throwScope)))
+    if (valueConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     RELEASE_AND_RETURN(throwScope, JSValue::encode(toJS<IDLAny>(*lexicalGlobalObject, throwScope, forwardSetToMapLike(*lexicalGlobalObject, *callFrame, *castedThis, keyConversionResult.releaseReturnValue(), valueConversionResult.releaseReturnValue()))));
 }
@@ -345,11 +345,11 @@ static inline JSC::EncodedJSValue jsTestMapLikePrototypeFunction_deleteBody(JSC:
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     UNUSED_PARAM(throwScope);
     UNUSED_PARAM(callFrame);
-    if (UNLIKELY(callFrame->argumentCount() < 1))
+    if (callFrame->argumentCount() < 1) [[unlikely]]
         return throwVMError(lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(lexicalGlobalObject));
     EnsureStillAliveScope argument0 = callFrame->uncheckedArgument(0);
     auto keyConversionResult = convert<IDLDOMString>(*lexicalGlobalObject, argument0.value());
-    if (UNLIKELY(keyConversionResult.hasException(throwScope)))
+    if (keyConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     RELEASE_AND_RETURN(throwScope, JSValue::encode(toJS<IDLAny>(*lexicalGlobalObject, throwScope, forwardDeleteToMapLike(*lexicalGlobalObject, *callFrame, *castedThis, keyConversionResult.releaseReturnValue()))));
 }

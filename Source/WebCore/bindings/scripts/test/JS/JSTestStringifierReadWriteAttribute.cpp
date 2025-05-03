@@ -163,7 +163,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestStringifierReadWriteAttributeConstructor, (JSGlob
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestStringifierReadWriteAttributePrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestStringifierReadWriteAttribute::getConstructor(vm, prototype->globalObject()));
 }
@@ -188,7 +188,7 @@ static inline bool setJSTestStringifierReadWriteAttribute_identifierSetter(JSGlo
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = thisObject.wrapped();
     auto nativeValueConversionResult = convert<IDLDOMString>(lexicalGlobalObject, value);
-    if (UNLIKELY(nativeValueConversionResult.hasException(throwScope)))
+    if (nativeValueConversionResult.hasException(throwScope)) [[unlikely]]
         return false;
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
         return impl.setIdentifier(nativeValueConversionResult.releaseReturnValue());

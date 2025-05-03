@@ -115,7 +115,7 @@ void ScheduledAction::executeFunctionInContext(JSGlobalObject* globalObject, JSV
     arguments.ensureCapacity(m_arguments.size());
     for (auto& argument : m_arguments)
         arguments.append(argument.get());
-    if (UNLIKELY(arguments.hasOverflowed())) {
+    if (arguments.hasOverflowed()) [[unlikely]] {
         reportException(jsFunctionGlobalObject, JSC::Exception::create(vm, createOutOfMemoryError(lexicalGlobalObject)));
         return;
     }

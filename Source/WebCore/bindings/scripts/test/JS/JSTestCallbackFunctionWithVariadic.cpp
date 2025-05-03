@@ -80,7 +80,7 @@ CallbackResult<typename IDLDOMString::CallbackReturnType> JSTestCallbackFunction
 
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto returnValue = convert<IDLDOMString>(lexicalGlobalObject, jsResult);
-    if (UNLIKELY(returnValue.hasException(throwScope)))
+    if (returnValue.hasException(throwScope)) [[unlikely]]
         return CallbackResultType::ExceptionThrown;
     return { returnValue.releaseReturnValue() };
 }
@@ -114,7 +114,7 @@ CallbackResult<typename IDLDOMString::CallbackReturnType> JSTestCallbackFunction
 
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto returnValue = convert<IDLDOMString>(lexicalGlobalObject, jsResult);
-    if (UNLIKELY(returnValue.hasException(throwScope)))
+    if (returnValue.hasException(throwScope)) [[unlikely]]
         return CallbackResultType::ExceptionThrown;
     return { returnValue.releaseReturnValue() };
 }

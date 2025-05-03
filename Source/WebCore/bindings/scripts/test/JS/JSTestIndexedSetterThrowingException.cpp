@@ -159,7 +159,7 @@ bool JSTestIndexedSetterThrowingException::legacyPlatformObjectGetOwnProperty(JS
     auto* thisObject = jsCast<JSTestIndexedSetterThrowingException*>(object);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     if (auto index = parseIndex(propertyName)) {
-        if (auto item = thisObject->wrapped().item(index.value()); LIKELY(!!item)) {
+        if (auto item = thisObject->wrapped().item(index.value()); !!item) [[likely]] {
             auto value = toJS<IDLDOMString>(*lexicalGlobalObject, throwScope, WTFMove(item));
             RETURN_IF_EXCEPTION(throwScope, false);
             slot.setValue(thisObject, 0, value);
@@ -181,8 +181,8 @@ bool JSTestIndexedSetterThrowingException::getOwnPropertySlotByIndex(JSObject* o
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* thisObject = jsCast<JSTestIndexedSetterThrowingException*>(object);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
-    if (LIKELY(index <= MAX_ARRAY_INDEX)) {
-        if (auto item = thisObject->wrapped().item(index); LIKELY(!!item)) {
+    if (index <= MAX_ARRAY_INDEX) [[likely]] {
+        if (auto item = thisObject->wrapped().item(index); !!item) [[likely]] {
             auto value = toJS<IDLDOMString>(*lexicalGlobalObject, throwScope, WTFMove(item));
             RETURN_IF_EXCEPTION(throwScope, false);
             slot.setValue(thisObject, 0, value);
@@ -207,13 +207,13 @@ bool JSTestIndexedSetterThrowingException::put(JSCell* cell, JSGlobalObject* lex
     auto* thisObject = jsCast<JSTestIndexedSetterThrowingException*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
 
-    if (UNLIKELY(thisObject != putPropertySlot.thisValue()))
+    if (thisObject != putPropertySlot.thisValue()) [[unlikely]]
         return JSObject::put(thisObject, lexicalGlobalObject, propertyName, value, putPropertySlot);
     auto throwScope = DECLARE_THROW_SCOPE(lexicalGlobalObject->vm());
 
     if (auto index = parseIndex(propertyName)) {
         auto nativeValue = convert<IDLDOMString>(*lexicalGlobalObject, value);
-        if (UNLIKELY(nativeValue.hasException(throwScope)))
+        if (nativeValue.hasException(throwScope)) [[unlikely]]
             return true;
         invokeFunctorPropagatingExceptionIfNecessary(*lexicalGlobalObject, throwScope, [&] { return thisObject->wrapped().setItem(index.value(), nativeValue.releaseReturnValue()); });
         return true;
@@ -231,9 +231,9 @@ bool JSTestIndexedSetterThrowingException::putByIndex(JSCell* cell, JSGlobalObje
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    if (LIKELY(index <= MAX_ARRAY_INDEX)) {
+    if (index <= MAX_ARRAY_INDEX) [[likely]] {
         auto nativeValue = convert<IDLDOMString>(*lexicalGlobalObject, value);
-        if (UNLIKELY(nativeValue.hasException(throwScope)))
+        if (nativeValue.hasException(throwScope)) [[unlikely]]
             return true;
         invokeFunctorPropagatingExceptionIfNecessary(*lexicalGlobalObject, throwScope, [&] { return thisObject->wrapped().setItem(index, nativeValue.releaseReturnValue()); });
         return true;
@@ -256,7 +256,7 @@ bool JSTestIndexedSetterThrowingException::defineOwnProperty(JSObject* object, J
         if (!propertyDescriptor.isDataDescriptor())
             return typeError(lexicalGlobalObject, throwScope, shouldThrow, "Cannot set indexed properties on this object"_s);
         auto nativeValue = convert<IDLDOMString>(*lexicalGlobalObject, propertyDescriptor.value());
-        if (UNLIKELY(nativeValue.hasException(throwScope)))
+        if (nativeValue.hasException(throwScope)) [[unlikely]]
             return true;
         invokeFunctorPropagatingExceptionIfNecessary(*lexicalGlobalObject, throwScope, [&] { return thisObject->wrapped().setItem(index.value(), nativeValue.releaseReturnValue()); });
         return true;
@@ -274,7 +274,7 @@ bool JSTestIndexedSetterThrowingException::deleteProperty(JSCell* cell, JSGlobal
 
     // Temporary quirk for ungap/@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.
     if (auto* document = dynamicDowncast<Document>(jsDynamicCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext())) {
-        if (UNLIKELY(document->quirks().needsConfigurableIndexedPropertiesQuirk()))
+        if (document->quirks().needsConfigurableIndexedPropertiesQuirk()) [[unlikely]]
             return JSObject::deleteProperty(cell, lexicalGlobalObject, propertyName, slot);
     }
 
@@ -291,7 +291,7 @@ bool JSTestIndexedSetterThrowingException::deletePropertyByIndex(JSCell* cell, J
 
     // Temporary quirk for ungap/@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.
     if (auto* document = dynamicDowncast<Document>(jsDynamicCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext())) {
-        if (UNLIKELY(document->quirks().needsConfigurableIndexedPropertiesQuirk()))
+        if (document->quirks().needsConfigurableIndexedPropertiesQuirk()) [[unlikely]]
             return JSObject::deletePropertyByIndex(cell, lexicalGlobalObject, index);
     }
 
@@ -303,7 +303,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestIndexedSetterThrowingExceptionConstructor, (JSGlo
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestIndexedSetterThrowingExceptionPrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestIndexedSetterThrowingException::getConstructor(vm, prototype->globalObject()));
 }

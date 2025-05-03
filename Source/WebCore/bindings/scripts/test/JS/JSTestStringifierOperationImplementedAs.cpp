@@ -161,7 +161,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestStringifierOperationImplementedAsConstructor, (JS
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestStringifierOperationImplementedAsPrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestStringifierOperationImplementedAs::getConstructor(vm, prototype->globalObject()));
 }

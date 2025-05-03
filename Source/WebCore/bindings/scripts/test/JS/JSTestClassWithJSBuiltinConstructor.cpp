@@ -158,7 +158,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestClassWithJSBuiltinConstructorConstructor, (JSGlob
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestClassWithJSBuiltinConstructorPrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestClassWithJSBuiltinConstructor::getConstructor(vm, prototype->globalObject()));
 }

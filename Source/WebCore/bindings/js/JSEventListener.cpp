@@ -146,7 +146,7 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
     if (!jsFunction)
         return;
 
-    if (UNLIKELY(!m_isolatedWorld))
+    if (!m_isolatedWorld) [[unlikely]]
         return;
 
     auto* globalObject = toJSDOMGlobalObject(scriptExecutionContext, *m_isolatedWorld);
@@ -203,7 +203,7 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
             return;
 
         handleEventFunction = jsFunction->get(lexicalGlobalObject, builtinNames(vm).handleEventPublicName());
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             auto* exception = scope.exception();
             scope.clearException();
             event.target()->uncaughtExceptionInEventHandler();
@@ -262,7 +262,7 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
         // This is a OnBeforeUnloadEventHandler, and therefore the return value must be coerced into a String.
         if (auto* beforeUnloadEvent = dynamicDowncast<BeforeUnloadEvent>(event)) {
             auto conversionResult = convert<IDLNullable<IDLDOMString>>(*lexicalGlobalObject, retval);
-            if (UNLIKELY(conversionResult.hasException(scope))) {
+            if (conversionResult.hasException(scope)) [[unlikely]] {
                 if (handleExceptionIfNeeded(scope.exception()))
                     return;
             }

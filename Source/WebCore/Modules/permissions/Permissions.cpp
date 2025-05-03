@@ -140,7 +140,7 @@ void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, DO
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto permissionDescriptorConversionResult = convert<IDLDictionary<PermissionDescriptor>>(*context->globalObject(), permissionDescriptorValue.get());
-    if (UNLIKELY(permissionDescriptorConversionResult.hasException(scope))) {
+    if (permissionDescriptorConversionResult.hasException(scope)) [[unlikely]] {
         promise.reject(Exception { ExceptionCode::ExistingExceptionError });
         return;
     }

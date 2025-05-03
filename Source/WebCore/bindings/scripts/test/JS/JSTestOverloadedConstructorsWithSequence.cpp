@@ -97,7 +97,7 @@ static inline EncodedJSValue constructJSTestOverloadedConstructorsWithSequence1(
     ASSERT(castedThis);
     EnsureStillAliveScope argument0 = callFrame->argument(0);
     auto sequenceOfStringsConversionResult = convertOptionalWithDefault<IDLSequence<IDLDOMString>>(*lexicalGlobalObject, argument0.value(), [&]() -> ConversionResult<IDLSequence<IDLDOMString>> { return Converter<IDLSequence<IDLDOMString>>::ReturnType { }; });
-    if (UNLIKELY(sequenceOfStringsConversionResult.hasException(throwScope)))
+    if (sequenceOfStringsConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     auto object = TestOverloadedConstructorsWithSequence::create(sequenceOfStringsConversionResult.releaseReturnValue());
     if constexpr (IsExceptionOr<decltype(object)>)
@@ -119,7 +119,7 @@ static inline EncodedJSValue constructJSTestOverloadedConstructorsWithSequence2(
     ASSERT(castedThis);
     EnsureStillAliveScope argument0 = callFrame->uncheckedArgument(0);
     auto stringConversionResult = convert<IDLDOMString>(*lexicalGlobalObject, argument0.value());
-    if (UNLIKELY(stringConversionResult.hasException(throwScope)))
+    if (stringConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     auto object = TestOverloadedConstructorsWithSequence::create(stringConversionResult.releaseReturnValue());
     if constexpr (IsExceptionOr<decltype(object)>)
@@ -227,7 +227,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestOverloadedConstructorsWithSequenceConstructor, (J
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestOverloadedConstructorsWithSequencePrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestOverloadedConstructorsWithSequence::getConstructor(vm, prototype->globalObject()));
 }

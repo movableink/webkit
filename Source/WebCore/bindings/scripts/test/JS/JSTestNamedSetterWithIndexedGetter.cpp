@@ -170,7 +170,7 @@ bool JSTestNamedSetterWithIndexedGetter::legacyPlatformObjectGetOwnProperty(JSOb
     auto* thisObject = jsCast<JSTestNamedSetterWithIndexedGetter*>(object);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     if (auto index = parseIndex(propertyName)) {
-        if (auto item = thisObject->wrapped().indexedSetter(index.value()); LIKELY(!!item)) {
+        if (auto item = thisObject->wrapped().indexedSetter(index.value()); !!item) [[likely]] {
             auto value = toJS<IDLDOMString>(*lexicalGlobalObject, throwScope, WTFMove(item));
             RETURN_IF_EXCEPTION(throwScope, false);
             slot.setValue(thisObject, static_cast<unsigned>(JSC::PropertyAttribute::ReadOnly), value);
@@ -205,8 +205,8 @@ bool JSTestNamedSetterWithIndexedGetter::getOwnPropertySlotByIndex(JSObject* obj
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* thisObject = jsCast<JSTestNamedSetterWithIndexedGetter*>(object);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
-    if (LIKELY(index <= MAX_ARRAY_INDEX)) {
-        if (auto item = thisObject->wrapped().indexedSetter(index); LIKELY(!!item)) {
+    if (index <= MAX_ARRAY_INDEX) [[likely]] {
+        if (auto item = thisObject->wrapped().indexedSetter(index); !!item) [[likely]] {
             auto value = toJS<IDLDOMString>(*lexicalGlobalObject, throwScope, WTFMove(item));
             RETURN_IF_EXCEPTION(throwScope, false);
             slot.setValue(thisObject, static_cast<unsigned>(JSC::PropertyAttribute::ReadOnly), value);
@@ -245,7 +245,7 @@ bool JSTestNamedSetterWithIndexedGetter::put(JSCell* cell, JSGlobalObject* lexic
     auto* thisObject = jsCast<JSTestNamedSetterWithIndexedGetter*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
 
-    if (UNLIKELY(thisObject != putPropertySlot.thisValue()))
+    if (thisObject != putPropertySlot.thisValue()) [[unlikely]]
         return JSObject::put(thisObject, lexicalGlobalObject, propertyName, value, putPropertySlot);
     auto throwScope = DECLARE_THROW_SCOPE(lexicalGlobalObject->vm());
 
@@ -257,7 +257,7 @@ bool JSTestNamedSetterWithIndexedGetter::put(JSCell* cell, JSGlobalObject* lexic
         RETURN_IF_EXCEPTION(throwScope, false);
         if (!found) {
             auto nativeValue = convert<IDLDOMString>(*lexicalGlobalObject, value);
-            if (UNLIKELY(nativeValue.hasException(throwScope)))
+            if (nativeValue.hasException(throwScope)) [[unlikely]]
                 return true;
             invokeFunctorPropagatingExceptionIfNecessary(*lexicalGlobalObject, throwScope, [&] { return thisObject->wrapped().namedSetter(propertyNameToString(propertyName), nativeValue.releaseReturnValue()); });
             return true;
@@ -293,7 +293,7 @@ bool JSTestNamedSetterWithIndexedGetter::putByIndex(JSCell* cell, JSGlobalObject
     RETURN_IF_EXCEPTION(throwScope, false);
     if (!found) {
         auto nativeValue = convert<IDLDOMString>(*lexicalGlobalObject, value);
-        if (UNLIKELY(nativeValue.hasException(throwScope)))
+        if (nativeValue.hasException(throwScope)) [[unlikely]]
             return true;
         invokeFunctorPropagatingExceptionIfNecessary(*lexicalGlobalObject, throwScope, [&] { return thisObject->wrapped().namedSetter(propertyNameToString(propertyName), nativeValue.releaseReturnValue()); });
         return true;
@@ -323,7 +323,7 @@ bool JSTestNamedSetterWithIndexedGetter::defineOwnProperty(JSObject* object, JSG
             if (!propertyDescriptor.isDataDescriptor())
                 return typeError(lexicalGlobalObject, throwScope, shouldThrow, "Cannot set named properties on this object"_s);
             auto nativeValue = convert<IDLDOMString>(*lexicalGlobalObject, propertyDescriptor.value());
-            if (UNLIKELY(nativeValue.hasException(throwScope)))
+            if (nativeValue.hasException(throwScope)) [[unlikely]]
                 return true;
             invokeFunctorPropagatingExceptionIfNecessary(*lexicalGlobalObject, throwScope, [&] { return thisObject->wrapped().namedSetter(propertyNameToString(propertyName), nativeValue.releaseReturnValue()); });
             return true;
@@ -342,7 +342,7 @@ bool JSTestNamedSetterWithIndexedGetter::deleteProperty(JSCell* cell, JSGlobalOb
 
     // Temporary quirk for ungap/@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.
     if (auto* document = dynamicDowncast<Document>(jsDynamicCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext())) {
-        if (UNLIKELY(document->quirks().needsConfigurableIndexedPropertiesQuirk()))
+        if (document->quirks().needsConfigurableIndexedPropertiesQuirk()) [[unlikely]]
             return JSObject::deleteProperty(cell, lexicalGlobalObject, propertyName, slot);
     }
 
@@ -364,7 +364,7 @@ bool JSTestNamedSetterWithIndexedGetter::deletePropertyByIndex(JSCell* cell, JSG
 
     // Temporary quirk for ungap/@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.
     if (auto* document = dynamicDowncast<Document>(jsDynamicCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext())) {
-        if (UNLIKELY(document->quirks().needsConfigurableIndexedPropertiesQuirk()))
+        if (document->quirks().needsConfigurableIndexedPropertiesQuirk()) [[unlikely]]
             return JSObject::deletePropertyByIndex(cell, lexicalGlobalObject, index);
     }
 
@@ -376,7 +376,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestNamedSetterWithIndexedGetterConstructor, (JSGloba
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestNamedSetterWithIndexedGetterPrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestNamedSetterWithIndexedGetter::getConstructor(vm, prototype->globalObject()));
 }
@@ -388,15 +388,15 @@ static inline JSC::EncodedJSValue jsTestNamedSetterWithIndexedGetterPrototypeFun
     UNUSED_PARAM(throwScope);
     UNUSED_PARAM(callFrame);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = castedThis->wrapped();
-    if (UNLIKELY(callFrame->argumentCount() < 2))
+    if (callFrame->argumentCount() < 2) [[unlikely]]
         return throwVMError(lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(lexicalGlobalObject));
     EnsureStillAliveScope argument0 = callFrame->uncheckedArgument(0);
     auto nameConversionResult = convert<IDLDOMString>(*lexicalGlobalObject, argument0.value());
-    if (UNLIKELY(nameConversionResult.hasException(throwScope)))
+    if (nameConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     EnsureStillAliveScope argument1 = callFrame->uncheckedArgument(1);
     auto valueConversionResult = convert<IDLDOMString>(*lexicalGlobalObject, argument1.value());
-    if (UNLIKELY(valueConversionResult.hasException(throwScope)))
+    if (valueConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     RELEASE_AND_RETURN(throwScope, JSValue::encode(toJS<IDLUndefined>(*lexicalGlobalObject, throwScope, [&]() -> decltype(auto) { return impl.namedSetter(nameConversionResult.releaseReturnValue(), valueConversionResult.releaseReturnValue()); })));
 }
@@ -413,11 +413,11 @@ static inline JSC::EncodedJSValue jsTestNamedSetterWithIndexedGetterPrototypeFun
     UNUSED_PARAM(throwScope);
     UNUSED_PARAM(callFrame);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = castedThis->wrapped();
-    if (UNLIKELY(callFrame->argumentCount() < 1))
+    if (callFrame->argumentCount() < 1) [[unlikely]]
         return throwVMError(lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(lexicalGlobalObject));
     EnsureStillAliveScope argument0 = callFrame->uncheckedArgument(0);
     auto indexConversionResult = convert<IDLUnsignedLong>(*lexicalGlobalObject, argument0.value());
-    if (UNLIKELY(indexConversionResult.hasException(throwScope)))
+    if (indexConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     RELEASE_AND_RETURN(throwScope, JSValue::encode(toJS<IDLDOMString>(*lexicalGlobalObject, throwScope, impl.indexedSetter(indexConversionResult.releaseReturnValue()))));
 }

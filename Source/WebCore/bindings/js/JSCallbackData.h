@@ -84,7 +84,7 @@ private:
     class WeakOwner : public JSC::WeakHandleOwner {
         bool isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown>, void* owner, JSC::AbstractSlotVisitor& visitor, ASCIILiteral* reason) override
         {
-            if (UNLIKELY(reason))
+            if (reason) [[unlikely]]
                 *reason = "Callback owner is an opaque root"_s;
             return visitor.containsOpaqueRoot(owner);
         }

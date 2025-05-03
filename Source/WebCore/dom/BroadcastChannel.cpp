@@ -261,7 +261,7 @@ void BroadcastChannel::dispatchMessage(Ref<SerializedScriptValue>&& message)
         auto& vm = globalObject->vm();
         auto scope = DECLARE_CATCH_SCOPE(vm);
         auto event = MessageEvent::create(*globalObject, WTFMove(message), channel.scriptExecutionContext()->securityOrigin()->toString());
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             // Currently, we assume that the only way we can get here is if we have a termination.
             RELEASE_ASSERT(vm.hasPendingTerminationException());
             return;

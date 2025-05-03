@@ -67,7 +67,7 @@ template<> std::optional<TestStandaloneEnumeration> parseEnumerationFromString<T
         std::pair<ComparableASCIILiteral, TestStandaloneEnumeration> { "enumValue2"_s, TestStandaloneEnumeration::EnumValue2 },
     };
     static constexpr SortedArrayMap enumerationMapping { mappings };
-    if (auto* enumerationValue = enumerationMapping.tryGet(stringValue); LIKELY(enumerationValue))
+    if (auto* enumerationValue = enumerationMapping.tryGet(stringValue); enumerationValue) [[likely]]
         return *enumerationValue;
     return std::nullopt;
 }

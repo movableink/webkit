@@ -82,7 +82,7 @@ Navigator* WebXRSystem::navigator()
 void WebXRSystem::ensureImmersiveXRDeviceIsSelected(CompletionHandler<void()>&& callback)
 {
     // Don't ask platform code for XR devices, we're using simulated ones.
-    if (UNLIKELY(m_testingDevices)) {
+    if (m_testingDevices) [[unlikely]] {
         callback();
         return;
     }
@@ -425,7 +425,7 @@ void WebXRSystem::resolveFeaturePermissions(XRSessionMode mode, const XRSessionI
     }
 
     // Skip platform code for asking for user's permission as we're using simulated ones.
-    if (UNLIKELY(m_testingDevices)) {
+    if (m_testingDevices) [[unlikely]] {
         device->setEnabledFeatures(mode, resolvedFeatures->granted);
         completionHandler(resolvedFeatures->granted);
         return;

@@ -89,7 +89,7 @@ static GPUFeatureName convertFeatureNameToEnum(const String& stringValue)
         { "timestamp-query"_s, GPUFeatureName::TimestampQuery },
     };
     static constexpr SortedArrayMap enumerationMapping { mappings };
-    if (auto* enumerationValue = enumerationMapping.tryGet(stringValue); LIKELY(enumerationValue))
+    if (auto* enumerationValue = enumerationMapping.tryGet(stringValue); enumerationValue) [[likely]]
         return *enumerationValue;
 
     RELEASE_ASSERT_NOT_REACHED();

@@ -221,7 +221,7 @@ ExceptionOr<JSC::JSObject*> CredentialRequestCoordinator::parseDigitalCredential
         return Exception { ExceptionCode::SyntaxError, "Failed to parse response JSON data."_s };
     }
 
-    if (UNLIKELY(scope.exception())) {
+    if (scope.exception()) [[unlikely]] {
         LOG(DigitalCredentials, "Failed to parse response JSON data");
         scope.clearException();
         return Exception { ExceptionCode::SyntaxError, "Failed to parse response JSON data."_s };

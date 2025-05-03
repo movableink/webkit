@@ -213,12 +213,12 @@ bool JSTestNamedDeleterNoIdentifier::put(JSCell* cell, JSGlobalObject* lexicalGl
     auto* thisObject = jsCast<JSTestNamedDeleterNoIdentifier*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
 
-    if (UNLIKELY(thisObject != putPropertySlot.thisValue()))
+    if (thisObject != putPropertySlot.thisValue()) [[unlikely]]
         return JSObject::put(thisObject, lexicalGlobalObject, propertyName, value, putPropertySlot);
 
     // Temporary quirk for ungap/@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.
     if (auto* document = dynamicDowncast<Document>(jsDynamicCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext())) {
-        if (UNLIKELY(document->quirks().needsConfigurableIndexedPropertiesQuirk()))
+        if (document->quirks().needsConfigurableIndexedPropertiesQuirk()) [[unlikely]]
             return JSObject::put(thisObject, lexicalGlobalObject, propertyName, value, putPropertySlot);
     }
 
@@ -242,7 +242,7 @@ bool JSTestNamedDeleterNoIdentifier::putByIndex(JSCell* cell, JSGlobalObject* le
 
     // Temporary quirk for ungap/@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.
     if (auto* document = dynamicDowncast<Document>(jsDynamicCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext())) {
-        if (UNLIKELY(document->quirks().needsConfigurableIndexedPropertiesQuirk()))
+        if (document->quirks().needsConfigurableIndexedPropertiesQuirk()) [[unlikely]]
             return JSObject::putByIndex(cell, lexicalGlobalObject, index, value, shouldThrow);
     }
 
@@ -317,7 +317,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestNamedDeleterNoIdentifierConstructor, (JSGlobalObj
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestNamedDeleterNoIdentifierPrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestNamedDeleterNoIdentifier::getConstructor(vm, prototype->globalObject()));
 }

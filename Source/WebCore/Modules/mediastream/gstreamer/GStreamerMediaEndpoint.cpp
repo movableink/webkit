@@ -101,7 +101,7 @@ GStreamerMediaEndpoint::NetSimOptions GStreamerMediaEndpoint::netSimOptionsFromE
     for (auto it : tokens.split(',')) {
         auto option = it.toString();
         auto keyValue = option.split('=');
-        if (UNLIKELY(keyValue.size() < 2))
+        if (keyValue.size() < 2) [[unlikely]]
             continue;
         options.add(keyValue[0], keyValue[1]);
     }
@@ -119,7 +119,7 @@ void GStreamerMediaEndpoint::maybeInsertNetSimForElement(GstBin* bin, GstElement
     const char* padName = isSource ? "src" : "sink";
     auto pad = adoptGRef(gst_element_get_static_pad(element, padName));
     auto peer = adoptGRef(gst_pad_get_peer(pad.get()));
-    if (UNLIKELY(!peer))
+    if (!peer) [[unlikely]]
         return;
 
     gst_pad_unlink(pad.get(), peer.get());
@@ -546,7 +546,7 @@ static std::optional<GStreamerMediaEndpointTransceiverState> toGStreamerMediaEnd
 #endif
     firedDirection = currentDirection != GST_WEBRTC_RTP_TRANSCEIVER_DIRECTION_NONE ? currentDirection : direction;
 
-    if (UNLIKELY(!mid))
+    if (!mid) [[unlikely]]
         return { };
 
     Vector<String> streamIds;
@@ -650,7 +650,7 @@ void GStreamerMediaEndpoint::linkOutgoingSources(GstSDPMessage* sdpMessage)
             }
 
             auto& sinkPad = source->pad();
-            if (UNLIKELY(gst_pad_is_linked(sinkPad.get()))) {
+            if (gst_pad_is_linked(sinkPad.get())) [[unlikely]] {
                 ASSERT_WITH_MESSAGE(gst_pad_is_linked(sinkPad.get()), "RealtimeMediaSource already linked.");
                 return true;
             }
@@ -1373,7 +1373,7 @@ void GStreamerMediaEndpoint::connectIncomingTrack(WebRTCTrackData& data)
         GUniqueOutPtr<GstWebRTCSessionDescription> description;
         g_object_get(m_webrtcBin.get(), "remote-description", &description.outPtr(), nullptr);
         const auto media = gst_sdp_message_get_media(description->sdp, mLineIndex);
-        if (UNLIKELY(!media)) {
+        if (!media) [[unlikely]] {
             GST_WARNING_OBJECT(m_pipeline.get(), "SDP media for transceiver %u not found, skipping incoming track setup", mLineIndex);
             return;
         }
@@ -2136,7 +2136,7 @@ void GStreamerMediaEndpoint::collectTransceivers()
             return false;
 
         const auto* media = gst_sdp_message_get_media(description->sdp, mLineIndex);
-        if (UNLIKELY(!media)) {
+        if (!media) [[unlikely]] {
             GST_WARNING_OBJECT(m_pipeline.get(), "SDP media for transceiver %u not found, skipping registration", mLineIndex);
             return false;
         }
@@ -2277,7 +2277,7 @@ GUniquePtr<GstStructure> GStreamerMediaEndpoint::preprocessStats(const GRefPtr<G
         };
 
         auto timestamp = gstStructureGet<double>(structure.get(), "timestamp"_s);
-        if (LIKELY(timestamp)) {
+        if (timestamp) [[unlikely]] {
             auto newTimestamp = StatsTimestampConverter::singleton().convertFromMonotonicTime(Seconds::fromMilliseconds(*timestamp));
             convertedTimestamp = newTimestamp;
             gst_structure_set(structure.get(), "timestamp", G_TYPE_DOUBLE, newTimestamp.microseconds(), nullptr);

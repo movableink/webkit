@@ -68,7 +68,7 @@ public:
 
         auto thisValue = callFrame.thisValue().toThis(&lexicalGlobalObject, JSC::ECMAMode::strict());
         auto thisObject = jsEventTargetCast(vm, thisValue.isUndefinedOrNull() ? JSC::JSValue(&lexicalGlobalObject) : thisValue);
-        if (UNLIKELY(thisObject.isNull()))
+        if (thisObject.isNull()) [[unlikely]]
             return throwThisTypeError(lexicalGlobalObject, throwScope, "EventTarget", operationName);
 
         auto& wrapped = thisObject.wrapped();

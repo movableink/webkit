@@ -425,15 +425,15 @@ JSC::JSObject* ScriptModuleLoader::createImportMetaProperties(JSC::JSGlobalObjec
         RETURN_IF_EXCEPTION(scope, { });
 
         auto* domGlobalObject = jsDynamicCast<JSDOMGlobalObject*>(globalObject);
-        if (UNLIKELY(!domGlobalObject))
+        if (!domGlobalObject) [[unlikely]]
             return JSC::throwVMTypeError(globalObject, scope);
 
         auto* context = domGlobalObject->scriptExecutionContext();
-        if (UNLIKELY(!context))
+        if (!context) [[unlikely]]
             return JSC::throwVMTypeError(globalObject, scope);
 
         auto result = resolveModuleSpecifier(*context, ownerType, domGlobalObject->importMap(), specifier, responseURL);
-        if (UNLIKELY(!result))
+        if (!result) [[unlikely]]
             return JSC::throwVMTypeError(globalObject, scope, result.error());
 
         return JSC::JSValue::encode(JSC::jsString(vm, result->string()));

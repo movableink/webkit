@@ -167,7 +167,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestCEReactionsStringifierConstructor, (JSGlobalObjec
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestCEReactionsStringifierPrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestCEReactionsStringifier::getConstructor(vm, prototype->globalObject()));
 }
@@ -193,7 +193,7 @@ static inline bool setJSTestCEReactionsStringifier_valueSetter(JSGlobalObject& l
     CustomElementReactionStack customElementReactionStack(lexicalGlobalObject);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = thisObject.wrapped();
     auto nativeValueConversionResult = convert<IDLDOMString>(lexicalGlobalObject, value);
-    if (UNLIKELY(nativeValueConversionResult.hasException(throwScope)))
+    if (nativeValueConversionResult.hasException(throwScope)) [[unlikely]]
         return false;
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
         return impl.setValue(nativeValueConversionResult.releaseReturnValue());
@@ -227,7 +227,7 @@ static inline bool setJSTestCEReactionsStringifier_valueWithoutReactionsSetter(J
     CustomElementReactionDisallowedScope customElementReactionDisallowedScope;
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = thisObject.wrapped();
     auto nativeValueConversionResult = convert<IDLDOMString>(lexicalGlobalObject, value);
-    if (UNLIKELY(nativeValueConversionResult.hasException(throwScope)))
+    if (nativeValueConversionResult.hasException(throwScope)) [[unlikely]]
         return false;
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
         return impl.setValueWithoutReactions(nativeValueConversionResult.releaseReturnValue());

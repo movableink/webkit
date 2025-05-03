@@ -197,7 +197,7 @@ bool AXSearchManager::matchWithResultsLimit(Ref<AXCoreObject> object, const Acce
 
 static void appendAccessibilityObject(Ref<AXCoreObject> object, AccessibilityObject::AccessibilityChildrenVector& results)
 {
-    if (LIKELY(!object->isAttachment()))
+    if (!object->isAttachment()) [[likely]]
         results.append(WTFMove(object));
     else {
         // Find the next descendant of this attachment object so search can continue through frames.

@@ -606,7 +606,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestDOMJITConstructor, (JSGlobalObject* lexicalGlobal
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestDOMJITPrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestDOMJIT::getConstructor(vm, prototype->globalObject()));
 }
@@ -1073,11 +1073,11 @@ static inline JSC::EncodedJSValue jsTestDOMJITPrototypeFunction_getAttributeBody
     UNUSED_PARAM(throwScope);
     UNUSED_PARAM(callFrame);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = castedThis->wrapped();
-    if (UNLIKELY(callFrame->argumentCount() < 1))
+    if (callFrame->argumentCount() < 1) [[unlikely]]
         return throwVMError(lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(lexicalGlobalObject));
     EnsureStillAliveScope argument0 = callFrame->uncheckedArgument(0);
     auto nameConversionResult = convert<IDLDOMString>(*lexicalGlobalObject, argument0.value());
-    if (UNLIKELY(nameConversionResult.hasException(throwScope)))
+    if (nameConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     RELEASE_AND_RETURN(throwScope, JSValue::encode(toJS<IDLNullable<IDLDOMString>>(*lexicalGlobalObject, throwScope, impl.getAttribute(nameConversionResult.releaseReturnValue()))));
 }
@@ -1110,15 +1110,15 @@ static inline JSC::EncodedJSValue jsTestDOMJITPrototypeFunction_itemBody(JSC::JS
     UNUSED_PARAM(throwScope);
     UNUSED_PARAM(callFrame);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = castedThis->wrapped();
-    if (UNLIKELY(callFrame->argumentCount() < 2))
+    if (callFrame->argumentCount() < 2) [[unlikely]]
         return throwVMError(lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(lexicalGlobalObject));
     EnsureStillAliveScope argument0 = callFrame->uncheckedArgument(0);
     auto xConversionResult = convert<IDLUnsignedShort>(*lexicalGlobalObject, argument0.value());
-    if (UNLIKELY(xConversionResult.hasException(throwScope)))
+    if (xConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     EnsureStillAliveScope argument1 = callFrame->uncheckedArgument(1);
     auto yConversionResult = convert<IDLUnsignedShort>(*lexicalGlobalObject, argument1.value());
-    if (UNLIKELY(yConversionResult.hasException(throwScope)))
+    if (yConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     RELEASE_AND_RETURN(throwScope, JSValue::encode(toJS<IDLDOMString>(*lexicalGlobalObject, throwScope, impl.item(xConversionResult.releaseReturnValue(), yConversionResult.releaseReturnValue()))));
 }
@@ -1182,11 +1182,11 @@ static inline JSC::EncodedJSValue jsTestDOMJITPrototypeFunction_getElementByIdBo
     UNUSED_PARAM(throwScope);
     UNUSED_PARAM(callFrame);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = castedThis->wrapped();
-    if (UNLIKELY(callFrame->argumentCount() < 1))
+    if (callFrame->argumentCount() < 1) [[unlikely]]
         return throwVMError(lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(lexicalGlobalObject));
     EnsureStillAliveScope argument0 = callFrame->uncheckedArgument(0);
     auto elementIdConversionResult = convert<IDLRequiresExistingAtomStringAdaptor<IDLDOMString>>(*lexicalGlobalObject, argument0.value());
-    if (UNLIKELY(elementIdConversionResult.hasException(throwScope)))
+    if (elementIdConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     RELEASE_AND_RETURN(throwScope, JSValue::encode(toJS<IDLInterface<Element>>(*lexicalGlobalObject, *castedThis->globalObject(), throwScope, impl.getElementById(elementIdConversionResult.releaseReturnValue()))));
 }
@@ -1219,11 +1219,11 @@ static inline JSC::EncodedJSValue jsTestDOMJITPrototypeFunction_getElementsByNam
     UNUSED_PARAM(throwScope);
     UNUSED_PARAM(callFrame);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = castedThis->wrapped();
-    if (UNLIKELY(callFrame->argumentCount() < 1))
+    if (callFrame->argumentCount() < 1) [[unlikely]]
         return throwVMError(lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(lexicalGlobalObject));
     EnsureStillAliveScope argument0 = callFrame->uncheckedArgument(0);
     auto elementNameConversionResult = convert<IDLAtomStringAdaptor<IDLDOMString>>(*lexicalGlobalObject, argument0.value());
-    if (UNLIKELY(elementNameConversionResult.hasException(throwScope)))
+    if (elementNameConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     RELEASE_AND_RETURN(throwScope, JSValue::encode(toJS<IDLInterface<NodeList>>(*lexicalGlobalObject, *castedThis->globalObject(), throwScope, impl.getElementsByName(elementNameConversionResult.releaseReturnValue()))));
 }

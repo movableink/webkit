@@ -165,7 +165,7 @@ bool JSTestEventTarget::legacyPlatformObjectGetOwnProperty(JSObject* object, JSG
     auto* thisObject = jsCast<JSTestEventTarget*>(object);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     if (auto index = parseIndex(propertyName)) {
-        if (auto item = thisObject->wrapped().item(index.value()); LIKELY(!!item)) {
+        if (auto item = thisObject->wrapped().item(index.value()); !!item) [[likely]] {
             auto value = toJS<IDLInterface<Node>>(*lexicalGlobalObject, *thisObject->globalObject(), throwScope, WTFMove(item));
             RETURN_IF_EXCEPTION(throwScope, false);
             slot.setValue(thisObject, static_cast<unsigned>(JSC::PropertyAttribute::ReadOnly), value);
@@ -200,8 +200,8 @@ bool JSTestEventTarget::getOwnPropertySlotByIndex(JSObject* object, JSGlobalObje
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* thisObject = jsCast<JSTestEventTarget*>(object);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
-    if (LIKELY(index <= MAX_ARRAY_INDEX)) {
-        if (auto item = thisObject->wrapped().item(index); LIKELY(!!item)) {
+    if (index <= MAX_ARRAY_INDEX) [[likely]] {
+        if (auto item = thisObject->wrapped().item(index); !!item) [[likely]] {
             auto value = toJS<IDLInterface<Node>>(*lexicalGlobalObject, *thisObject->globalObject(), throwScope, WTFMove(item));
             RETURN_IF_EXCEPTION(throwScope, false);
             slot.setValue(thisObject, static_cast<unsigned>(JSC::PropertyAttribute::ReadOnly), value);
@@ -240,12 +240,12 @@ bool JSTestEventTarget::put(JSCell* cell, JSGlobalObject* lexicalGlobalObject, P
     auto* thisObject = jsCast<JSTestEventTarget*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
 
-    if (UNLIKELY(thisObject != putPropertySlot.thisValue()))
+    if (thisObject != putPropertySlot.thisValue()) [[unlikely]]
         return JSObject::put(thisObject, lexicalGlobalObject, propertyName, value, putPropertySlot);
 
     // Temporary quirk for ungap/@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.
     if (auto* document = dynamicDowncast<Document>(jsDynamicCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext())) {
-        if (UNLIKELY(document->quirks().needsConfigurableIndexedPropertiesQuirk()))
+        if (document->quirks().needsConfigurableIndexedPropertiesQuirk()) [[unlikely]]
             return JSObject::put(thisObject, lexicalGlobalObject, propertyName, value, putPropertySlot);
     }
 
@@ -269,7 +269,7 @@ bool JSTestEventTarget::putByIndex(JSCell* cell, JSGlobalObject* lexicalGlobalOb
 
     // Temporary quirk for ungap/@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.
     if (auto* document = dynamicDowncast<Document>(jsDynamicCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext())) {
-        if (UNLIKELY(document->quirks().needsConfigurableIndexedPropertiesQuirk()))
+        if (document->quirks().needsConfigurableIndexedPropertiesQuirk()) [[unlikely]]
             return JSObject::putByIndex(cell, lexicalGlobalObject, index, value, shouldThrow);
     }
 
@@ -318,7 +318,7 @@ bool JSTestEventTarget::deleteProperty(JSCell* cell, JSGlobalObject* lexicalGlob
 
     // Temporary quirk for ungap/@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.
     if (auto* document = dynamicDowncast<Document>(jsDynamicCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext())) {
-        if (UNLIKELY(document->quirks().needsConfigurableIndexedPropertiesQuirk()))
+        if (document->quirks().needsConfigurableIndexedPropertiesQuirk()) [[unlikely]]
             return JSObject::deleteProperty(cell, lexicalGlobalObject, propertyName, slot);
     }
 
@@ -340,7 +340,7 @@ bool JSTestEventTarget::deletePropertyByIndex(JSCell* cell, JSGlobalObject* lexi
 
     // Temporary quirk for ungap/@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.
     if (auto* document = dynamicDowncast<Document>(jsDynamicCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext())) {
-        if (UNLIKELY(document->quirks().needsConfigurableIndexedPropertiesQuirk()))
+        if (document->quirks().needsConfigurableIndexedPropertiesQuirk()) [[unlikely]]
             return JSObject::deletePropertyByIndex(cell, lexicalGlobalObject, index);
     }
 
@@ -352,7 +352,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestEventTargetConstructor, (JSGlobalObject* lexicalG
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestEventTargetPrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestEventTarget::getConstructor(vm, prototype->globalObject()));
 }
@@ -364,11 +364,11 @@ static inline JSC::EncodedJSValue jsTestEventTargetPrototypeFunction_itemBody(JS
     UNUSED_PARAM(throwScope);
     UNUSED_PARAM(callFrame);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = castedThis->wrapped();
-    if (UNLIKELY(callFrame->argumentCount() < 1))
+    if (callFrame->argumentCount() < 1) [[unlikely]]
         return throwVMError(lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(lexicalGlobalObject));
     EnsureStillAliveScope argument0 = callFrame->uncheckedArgument(0);
     auto indexConversionResult = convert<IDLUnsignedLong>(*lexicalGlobalObject, argument0.value());
-    if (UNLIKELY(indexConversionResult.hasException(throwScope)))
+    if (indexConversionResult.hasException(throwScope)) [[unlikely]]
        return encodedJSValue();
     RELEASE_AND_RETURN(throwScope, JSValue::encode(toJS<IDLInterface<Node>>(*lexicalGlobalObject, *castedThis->globalObject(), throwScope, impl.item(indexConversionResult.releaseReturnValue()))));
 }

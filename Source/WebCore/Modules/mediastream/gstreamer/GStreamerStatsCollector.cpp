@@ -279,7 +279,7 @@ static gboolean fillReportCallback(const GValue* value, Ref<ReportHolder>& repor
     if (!gst_structure_get(structure, "type", GST_TYPE_WEBRTC_STATS_TYPE, &statsType, nullptr))
         return TRUE;
 
-    if (UNLIKELY(!reportHolder->adapter))
+    if (!reportHolder->adapter) [[unlikely]]
         return TRUE;
 
     auto& report = *reportHolder->adapter;

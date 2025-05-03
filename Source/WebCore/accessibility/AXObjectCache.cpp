@@ -1025,7 +1025,7 @@ RefPtr<AXIsolatedTree> AXObjectCache::getOrCreateIsolatedTree()
     // especially for large documents, for real clients we build a temporary "empty" isolated tree consisting only of the ScrollView and the WebArea objects.
     // Then we schedule building the entire isolated tree on a Timer.
     // For test clients, LayoutTests or XCTests, build the whole isolated tree.
-    if (LIKELY(!clientIsInTestMode())) {
+    if (!clientIsInTestMode()) [[likely]] {
         tree = AXIsolatedTree::createEmpty(*this);
         if (!m_buildIsolatedTreeTimer.isActive())
             m_buildIsolatedTreeTimer.startOneShot(0_s);
@@ -2021,10 +2021,10 @@ void AXObjectCache::onStyleChange(RenderText& renderText, StyleDifference differ
     if (!oldStyle)
         return;
 
-    bool speakAsChanged = UNLIKELY(oldStyle->speakAs() != newStyle.speakAs());
+    bool speakAsChanged = oldStyle->speakAs() != newStyle.speakAs();
 #if !ENABLE(AX_THREAD_TEXT_APIS)
     // In !ENABLE(AX_THREAD_TEXT_APIS), we don't have anything to do if speak-as hasn't changed.
-    if (!speakAsChanged)
+    if (!speakAsChanged) [[likely]]
         return;
 #endif // !ENABLE(AX_THREAD_TEXT_APIS)
 
@@ -2032,8 +2032,10 @@ void AXObjectCache::onStyleChange(RenderText& renderText, StyleDifference differ
     // When speak-as changes, style difference will be StyleDifference::Equal (so "equal"
     // is not exactly accurate). So if the styles are "equal" and speak-as hasn't changed,
     // we have nothing to do.
-    if (diffIsEqual && !speakAsChanged)
-        return;
+    if (diffIsEqual) {
+        if (!speakAsChanged) [[likely]]
+            return;
+    }
 
     RefPtr tree = AXIsolatedTree::treeForPageID(m_pageID);
     if (!tree)
@@ -2043,7 +2045,7 @@ void AXObjectCache::onStyleChange(RenderText& renderText, StyleDifference differ
     if (!object)
         return;
 
-    if (speakAsChanged)
+    if (speakAsChanged) [[unlikely]]
         postNotification(*object, AXNotification::SpeakAsChanged);
 
     // The following style changes will not have a StyleDifference::Equal, so we can
@@ -4685,7 +4687,7 @@ void AXObjectCache::performDeferredCacheUpdate(ForceLayout forceLayout)
             continue;
         shouldRecomputeModal = true;
 
-        if (UNLIKELY(!m_modalNodesInitialized))
+        if (!m_modalNodesInitialized) [[unlikely]]
             findModalNodes();
 
         if (isModalElement(element)) {
@@ -5597,12 +5599,16 @@ void AXObjectCache::updateRelations(Element& origin, const QualifiedName& attrib
     }
 
     // `commandfor` is only valid for button elements.
-    if (UNLIKELY(attribute == commandforAttr) && !is<HTMLButtonElement>(origin))
-        return;
+    if (attribute == commandforAttr) [[unlikely]] {
+        if (!is<HTMLButtonElement>(origin))
+            return;
+    }
 
     // `popovertarget` is only valid for input and button elements.
-    if (UNLIKELY(attribute == popovertargetAttr) && !is<HTMLInputElement>(origin) && !is<HTMLButtonElement>(origin))
-        return;
+    if (attribute == popovertargetAttr) [[unlikely]] {
+        if (!is<HTMLInputElement>(origin) && !is<HTMLButtonElement>(origin))
+            return;
+    }
 
     bool changedRelation = removeRelation(origin, relation);
     changedRelation |= addRelation(origin, attribute);

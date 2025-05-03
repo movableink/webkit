@@ -129,7 +129,7 @@ ExceptionOr<Ref<IDBRequest>> IDBCursor::update(JSGlobalObject& state, JSValue va
     auto serializedValue = SerializedScriptValue::create(state, value, SerializationForStorage::Yes);
     transaction->activate();
 
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         return Exception { ExceptionCode::DataCloneError, "Failed to store record in an IDBObjectStore: An object could not be cloned."_s };
 
     auto& objectStore = effectiveObjectStore();

@@ -103,7 +103,7 @@ ExceptionOr<Ref<WritableStream>> RTCRtpScriptTransformer::writable()
             auto scope = DECLARE_THROW_SCOPE(vm);
 
             auto frameConversionResult = convert<IDLUnion<IDLInterface<RTCEncodedAudioFrame>, IDLInterface<RTCEncodedVideoFrame>>>(globalObject, value);
-            if (UNLIKELY(frameConversionResult.hasException(scope)))
+            if (frameConversionResult.hasException(scope)) [[unlikely]]
                 return Exception { ExceptionCode::ExistingExceptionError };
 
             auto frame = frameConversionResult.releaseReturnValue();

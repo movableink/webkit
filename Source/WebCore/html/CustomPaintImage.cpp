@@ -114,7 +114,7 @@ ImageDrawResult CustomPaintImage::doCustomPaint(GraphicsContext& destContext, co
     JSC::ArgList noArgs;
     JSC::JSValue thisObject = { JSC::construct(&lexicalGlobalObject, paintConstructor, noArgs, "Failed to construct paint class"_s) };
 
-    if (UNLIKELY(scope.exception())) {
+    if (scope.exception()) [[unlikely]] {
         reportException(&lexicalGlobalObject, scope.exception());
         return ImageDrawResult::DidNothing;
     }

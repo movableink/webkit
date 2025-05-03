@@ -168,7 +168,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestAsyncKeyValueIterableConstructor, (JSGlobalObject
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestAsyncKeyValueIterablePrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestAsyncKeyValueIterable::getConstructor(vm, prototype->globalObject()));
 }

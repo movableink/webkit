@@ -136,7 +136,7 @@ public:
         {
             JSExecState currentState(&lexicalGlobalObject);
             returnValue = JSC::linkAndEvaluateModule(&lexicalGlobalObject, moduleKey, scriptFetcher);
-            if (UNLIKELY(scope.exception())) {
+            if (scope.exception()) [[unlikely]] {
                 returnedException = scope.exception();
                 if (!vm.hasPendingTerminationException())
                     scope.clearException();

@@ -97,7 +97,7 @@ static Ref<FetchResponse> createResponse(ScriptExecutionContext& context, const 
 
 void DOMCache::doMatch(RequestInfo&& info, CacheQueryOptions&& options, MatchCallback&& callback)
 {
-    if (UNLIKELY(!scriptExecutionContext()))
+    if (!scriptExecutionContext()) [[unlikely]]
         return;
 
     bool requestValidationFailed = false;
@@ -135,7 +135,7 @@ Vector<Ref<FetchResponse>> DOMCache::cloneResponses(const Vector<DOMCacheEngine:
 
 void DOMCache::matchAll(std::optional<RequestInfo>&& info, CacheQueryOptions&& options, MatchAllPromise&& promise)
 {
-    if (UNLIKELY(!scriptExecutionContext()))
+    if (!scriptExecutionContext()) [[unlikely]]
         return;
 
     ResourceRequest resourceRequest;
@@ -255,7 +255,7 @@ ExceptionOr<Ref<FetchRequest>> DOMCache::requestFromInfo(RequestInfo&& info, boo
 
 void DOMCache::addAll(Vector<RequestInfo>&& infos, DOMPromiseDeferred<void>&& promise)
 {
-    if (UNLIKELY(!scriptExecutionContext()))
+    if (!scriptExecutionContext()) [[unlikely]]
         return;
 
     Vector<Ref<FetchRequest>> requests;
@@ -400,7 +400,7 @@ void DOMCache::put(RequestInfo&& info, Ref<FetchResponse>&& response, DOMPromise
     // FIXME: for efficiency, we should load blobs/form data directly instead of going through the readableStream path.
     if (response->isBlobBody() || response->isBlobFormData()) {
         auto streamOrException = response->readableStream(*scriptExecutionContext()->globalObject());
-        if (UNLIKELY(streamOrException.hasException())) {
+        if (streamOrException.hasException()) [[unlikely]] {
             promise.reject(streamOrException.releaseException());
             return;
         }
@@ -432,7 +432,7 @@ void DOMCache::put(RequestInfo&& info, Ref<FetchResponse>&& response, DOMPromise
 
 void DOMCache::remove(RequestInfo&& info, CacheQueryOptions&& options, DOMPromiseDeferred<IDLBoolean>&& promise)
 {
-    if (UNLIKELY(!scriptExecutionContext()))
+    if (!scriptExecutionContext()) [[unlikely]]
         return;
 
     auto requestOrException = requestFromInfo(WTFMove(info), options.ignoreMethod);
@@ -456,7 +456,7 @@ static Ref<FetchRequest> createRequest(ScriptExecutionContext& context, const DO
 
 void DOMCache::keys(std::optional<RequestInfo>&& info, CacheQueryOptions&& options, KeysPromise&& promise)
 {
-    if (UNLIKELY(!scriptExecutionContext()))
+    if (!scriptExecutionContext()) [[unlikely]]
         return;
 
     ResourceRequest resourceRequest;

@@ -188,7 +188,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestCEReactionsConstructor, (JSGlobalObject* lexicalG
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestCEReactionsPrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestCEReactions::getConstructor(vm, prototype->globalObject()));
 }
@@ -214,7 +214,7 @@ static inline bool setJSTestCEReactions_attributeWithCEReactionsSetter(JSGlobalO
     CustomElementReactionStack customElementReactionStack(lexicalGlobalObject);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = thisObject.wrapped();
     auto nativeValueConversionResult = convert<IDLDOMString>(lexicalGlobalObject, value);
-    if (UNLIKELY(nativeValueConversionResult.hasException(throwScope)))
+    if (nativeValueConversionResult.hasException(throwScope)) [[unlikely]]
         return false;
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
         return impl.setAttributeWithCEReactions(nativeValueConversionResult.releaseReturnValue());
@@ -248,7 +248,7 @@ static inline bool setJSTestCEReactions_reflectAttributeWithCEReactionsSetter(JS
     CustomElementReactionStack customElementReactionStack(lexicalGlobalObject);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = thisObject.wrapped();
     auto nativeValueConversionResult = convert<IDLAtomStringAdaptor<IDLDOMString>>(lexicalGlobalObject, value);
-    if (UNLIKELY(nativeValueConversionResult.hasException(throwScope)))
+    if (nativeValueConversionResult.hasException(throwScope)) [[unlikely]]
         return false;
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
         return impl.setAttributeWithoutSynchronization(WebCore::HTMLNames::reflectattributewithcereactionsAttr, nativeValueConversionResult.releaseReturnValue());
@@ -282,7 +282,7 @@ static inline bool setJSTestCEReactions_stringifierAttributeSetter(JSGlobalObjec
     auto id = Identifier::fromString(vm, "stringifierAttribute"_s);
     auto valueToForwardTo = thisObject.get(&lexicalGlobalObject, id);
     RETURN_IF_EXCEPTION(throwScope, false);
-    if (UNLIKELY(!valueToForwardTo.isObject())) {
+    if (!valueToForwardTo.isObject()) [[unlikely]] {
         throwTypeError(&lexicalGlobalObject, throwScope);
         return false;
     }
@@ -319,7 +319,7 @@ static inline bool setJSTestCEReactions_attributeWithCEReactionsNotNeededSetter(
     CustomElementReactionDisallowedScope customElementReactionDisallowedScope;
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = thisObject.wrapped();
     auto nativeValueConversionResult = convert<IDLDOMString>(lexicalGlobalObject, value);
-    if (UNLIKELY(nativeValueConversionResult.hasException(throwScope)))
+    if (nativeValueConversionResult.hasException(throwScope)) [[unlikely]]
         return false;
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
         return impl.setAttributeWithCEReactionsNotNeeded(nativeValueConversionResult.releaseReturnValue());
@@ -353,7 +353,7 @@ static inline bool setJSTestCEReactions_reflectAttributeWithCEReactionsNotNeeded
     CustomElementReactionDisallowedScope customElementReactionDisallowedScope;
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = thisObject.wrapped();
     auto nativeValueConversionResult = convert<IDLAtomStringAdaptor<IDLDOMString>>(lexicalGlobalObject, value);
-    if (UNLIKELY(nativeValueConversionResult.hasException(throwScope)))
+    if (nativeValueConversionResult.hasException(throwScope)) [[unlikely]]
         return false;
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
         return impl.setAttributeWithoutSynchronization(WebCore::HTMLNames::reflectattributewithcereactionsnotneededAttr, nativeValueConversionResult.releaseReturnValue());
@@ -387,7 +387,7 @@ static inline bool setJSTestCEReactions_stringifierAttributeNotNeededSetter(JSGl
     auto id = Identifier::fromString(vm, "stringifierAttributeNotNeeded"_s);
     auto valueToForwardTo = thisObject.get(&lexicalGlobalObject, id);
     RETURN_IF_EXCEPTION(throwScope, false);
-    if (UNLIKELY(!valueToForwardTo.isObject())) {
+    if (!valueToForwardTo.isObject()) [[unlikely]] {
         throwTypeError(&lexicalGlobalObject, throwScope);
         return false;
     }

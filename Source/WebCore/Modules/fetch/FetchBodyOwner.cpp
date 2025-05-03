@@ -354,7 +354,7 @@ ExceptionOr<RefPtr<ReadableStream>> FetchBodyOwner::readableStream(JSC::JSGlobal
 
     if (!m_body->hasReadableStream()) {
         auto voidOrException = createReadableStream(state);
-        if (UNLIKELY(voidOrException.hasException()))
+        if (voidOrException.hasException()) [[unlikely]]
             return voidOrException.releaseException();
     }
 
@@ -366,7 +366,7 @@ ExceptionOr<void> FetchBodyOwner::createReadableStream(JSC::JSGlobalObject& stat
     ASSERT(!m_readableStreamSource);
     if (isDisturbed()) {
         auto streamOrException = ReadableStream::create(state, { }, { });
-        if (UNLIKELY(streamOrException.hasException()))
+        if (streamOrException.hasException()) [[unlikely]]
             return streamOrException.releaseException();
         m_body->setReadableStream(streamOrException.releaseReturnValue());
         m_body->protectedReadableStream()->lock();
@@ -375,7 +375,7 @@ ExceptionOr<void> FetchBodyOwner::createReadableStream(JSC::JSGlobalObject& stat
 
     m_readableStreamSource = adoptRef(*new FetchBodySource(*this));
     auto streamOrException = ReadableStream::create(*JSC::jsCast<JSDOMGlobalObject*>(&state), *m_readableStreamSource);
-    if (UNLIKELY(streamOrException.hasException())) {
+    if (streamOrException.hasException()) [[unlikely]] {
         m_readableStreamSource = nullptr;
         return streamOrException.releaseException();
     }

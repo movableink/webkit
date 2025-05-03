@@ -345,8 +345,10 @@ std::optional<SimpleRange> AXTextMarkerRange::simpleRange() const
 
 std::optional<CharacterRange> AXTextMarkerRange::characterRange() const
 {
-    if (m_start.m_data.objectID != m_end.m_data.objectID
-        || UNLIKELY(m_start.m_data.treeID != m_end.m_data.treeID))
+    if (m_start.m_data.objectID != m_end.m_data.objectID)
+        return std::nullopt;
+
+    if (m_start.m_data.treeID != m_end.m_data.treeID) [[unlikely]]
         return std::nullopt;
 
     if (m_start.m_data.characterOffset > m_end.m_data.characterOffset) {
@@ -358,9 +360,9 @@ std::optional<CharacterRange> AXTextMarkerRange::characterRange() const
 
 std::optional<AXTextMarkerRange> AXTextMarkerRange::intersectionWith(const AXTextMarkerRange& other) const
 {
-    if (UNLIKELY(m_start.m_data.treeID != m_end.m_data.treeID
+    if (m_start.m_data.treeID != m_end.m_data.treeID
         || other.m_start.m_data.treeID != other.m_end.m_data.treeID
-        || m_start.m_data.treeID != other.m_start.m_data.treeID))
+        || m_start.m_data.treeID != other.m_start.m_data.treeID) [[unlikely]]
         return std::nullopt;
 
     // Fast path: both ranges span one object
@@ -466,12 +468,14 @@ String AXTextMarkerRange::debugDescription() const
 
 std::partial_ordering operator<=>(const AXTextMarker& marker1, const AXTextMarker& marker2)
 {
-    if (marker1.objectID() == marker2.objectID() && LIKELY(marker1.treeID() == marker2.treeID())) {
-        if (LIKELY(marker1.m_data.characterOffset < marker2.m_data.characterOffset))
-            return std::partial_ordering::less;
-        if (marker1.m_data.characterOffset > marker2.m_data.characterOffset)
-            return std::partial_ordering::greater;
-        return std::partial_ordering::equivalent;
+    if (marker1.objectID() == marker2.objectID()) {
+        if (marker1.treeID() == marker2.treeID()) [[likely]] {
+            if (marker1.m_data.characterOffset < marker2.m_data.characterOffset) [[likely]]
+                return std::partial_ordering::less;
+            if (marker1.m_data.characterOffset > marker2.m_data.characterOffset)
+                return std::partial_ordering::greater;
+            return std::partial_ordering::equivalent;
+        }
     }
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
@@ -496,7 +500,7 @@ bool AXTextMarkerRange::isConfinedTo(std::optional<AXID> objectID) const
 {
     return m_start.objectID() == objectID
         && m_end.objectID() == objectID
-        && LIKELY(m_start.treeID() == m_end.treeID());
+        && m_start.treeID() == m_end.treeID();
 }
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
