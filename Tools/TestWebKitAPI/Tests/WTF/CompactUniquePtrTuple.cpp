@@ -156,7 +156,7 @@ TEST(WTF_CompactUniquePtrTuple, Basic)
 }
 
 class B : public A {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_COMPACT_ALLOCATED;
 
 public:
     B() { ++s_constructorCallCount; }
