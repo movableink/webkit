@@ -222,7 +222,7 @@ public:
     template <typename T>
     void fireAll(VM& vm, T& fireDetails)
     {
-        if (LIKELY(m_state != IsWatched))
+        if (m_state != IsWatched) [[likely]]
             return;
         fireAllSlow(vm, fireDetails);
     }
@@ -439,7 +439,7 @@ public:
     // if they collect a Vector of WatchpointSet*.
     WatchpointSet* inflate()
     {
-        if (LIKELY(isFat()))
+        if (isFat()) [[likely]]
             return fat();
         return inflateSlow();
     }

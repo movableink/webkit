@@ -101,21 +101,21 @@ public:
     void setStartOfCode()
     {
         m_pcToCodeOriginMapBuilder.appendItem(labelIgnoringWatchpoints(), CodeOrigin(BytecodeIndex(0)));
-        if (LIKELY(!m_disassembler))
+        if (!m_disassembler) [[likely]]
             return;
         m_disassembler->setStartOfCode(labelIgnoringWatchpoints());
     }
     
     void setForBlockIndex(BlockIndex blockIndex)
     {
-        if (LIKELY(!m_disassembler))
+        if (!m_disassembler) [[likely]]
             return;
         m_disassembler->setForBlockIndex(blockIndex, labelIgnoringWatchpoints());
     }
     
     void setForNode(Node* node)
     {
-        if (LIKELY(!m_disassembler))
+        if (!m_disassembler) [[likely]]
             return;
         m_disassembler->setForNode(node, labelIgnoringWatchpoints());
     }

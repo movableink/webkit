@@ -1673,7 +1673,7 @@ void JIT::emit_op_debug(const JSInstruction* currentInstruction)
 
 void JIT::emit_op_loop_hint(const JSInstruction* instruction)
 {
-    if (UNLIKELY(Options::returnEarlyFromInfiniteLoopsForFuzzing() && m_unlinkedCodeBlock->loopHintsAreEligibleForFuzzingEarlyReturn())) {
+    if (Options::returnEarlyFromInfiniteLoopsForFuzzing() && m_unlinkedCodeBlock->loopHintsAreEligibleForFuzzingEarlyReturn()) [[unlikely]] {
         uintptr_t* ptr = vm().getLoopHintExecutionCounter(instruction);
         loadPtr(ptr, regT0);
         auto skipEarlyReturn = branchPtr(Below, regT0, TrustedImmPtr(Options::earlyReturnFromInfiniteLoopsLimit()));

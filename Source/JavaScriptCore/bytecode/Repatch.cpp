@@ -87,7 +87,7 @@ void linkMonomorphicCall(VM& vm, JSCell* owner, CallLinkInfo& callLinkInfo, Code
     CodeBlock* callerCodeBlock = jsDynamicCast<CodeBlock*>(owner); // WebAssembly -> JS stubs don't have a valid CodeBlock.
     ASSERT(owner);
 
-    if (UNLIKELY(Options::forceICFailure()))
+    if (Options::forceICFailure()) [[unlikely]]
         return;
 
     ASSERT(!callLinkInfo.isLinked());

@@ -2441,7 +2441,7 @@ public:
 
     ~FPRTemporary()
     {
-        if (LIKELY(m_jit))
+        if (m_jit) [[likely]]
             m_jit->unlock(fpr());
     }
 

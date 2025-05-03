@@ -1564,7 +1564,7 @@ public:
     AssemblerLabel label()
     {
         AssemblerLabel result = m_buffer.label();
-        while (UNLIKELY(static_cast<int>(result.offset()) < m_indexOfTailOfLastWatchpoint)) {
+        while (static_cast<int>(result.offset()) < m_indexOfTailOfLastWatchpoint) [[unlikely]] {
             nop();
             result = m_buffer.label();
         }

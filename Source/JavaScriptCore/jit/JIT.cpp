@@ -205,7 +205,7 @@ void JIT::privateCompileMainPass()
         OpcodeID opcodeID = currentInstruction->opcodeID();
 
         std::optional<JITSizeStatistics::Marker> sizeMarker;
-        if (UNLIKELY(m_bytecodeIndex >= startBytecodeIndex && Options::dumpBaselineJITSizeStatistics())) {
+        if (m_bytecodeIndex >= startBytecodeIndex && Options::dumpBaselineJITSizeStatistics()) {
             String id = makeString("Baseline_fast_"_s, opcodeNames[opcodeID]);
             sizeMarker = m_vm->jitSizeStatistics->markStart(id, *this);
         }
@@ -219,7 +219,7 @@ void JIT::privateCompileMainPass()
         }
 #endif
 
-        if (UNLIKELY(m_compilation)) {
+        if (m_compilation) [[unlikely]] {
             add64(
                 TrustedImm32(1),
                 AbsoluteAddress(m_compilation->executionCounterFor(Profiler::OriginStack(Profiler::Origin(
@@ -230,7 +230,7 @@ void JIT::privateCompileMainPass()
             updateTopCallFrame();
 
         unsigned bytecodeOffset = m_bytecodeIndex.offset();
-        if (UNLIKELY(Options::traceBaselineJITExecution())) {
+        if (Options::traceBaselineJITExecution()) [[unlikely]] {
             VM* vm = m_vm;
             probeDebug([=] (Probe::Context& ctx) {
                 CallFrame* callFrame = ctx.fp<CallFrame*>();
@@ -450,7 +450,7 @@ void JIT::privateCompileMainPass()
             RELEASE_ASSERT_NOT_REACHED();
         }
 
-        if (UNLIKELY(sizeMarker))
+        if (sizeMarker) [[unlikely]]
             m_vm->jitSizeStatistics->markEnd(WTFMove(*sizeMarker), *this, m_plan);
 
         if (JITInternal::verbose)
@@ -505,12 +505,12 @@ void JIT::privateCompileSlowCases()
         OpcodeID opcodeID = currentInstruction->opcodeID();
 
         std::optional<JITSizeStatistics::Marker> sizeMarker;
-        if (UNLIKELY(Options::dumpBaselineJITSizeStatistics())) {
+        if (Options::dumpBaselineJITSizeStatistics()) [[unlikely]] {
             String id = makeString("Baseline_slow_"_s, opcodeNames[opcodeID]);
             sizeMarker = m_vm->jitSizeStatistics->markStart(id, *this);
         }
 
-        if (UNLIKELY(Options::traceBaselineJITExecution())) {
+        if (Options::traceBaselineJITExecution()) [[unlikely]] {
             unsigned bytecodeOffset = m_bytecodeIndex.offset();
             probeDebug([=] (Probe::Context& ctx) {
                 CodeBlock* codeBlock = ctx.fp<CallFrame*>()->codeBlock();
@@ -620,7 +620,7 @@ void JIT::privateCompileSlowCases()
         jump().linkTo(fastPathResumePoint(), this);
         ++bytecodeCountHavingSlowCase;
 
-        if (UNLIKELY(sizeMarker)) {
+        if (sizeMarker) [[unlikely]] {
             m_bytecodeIndex = BytecodeIndex(m_bytecodeIndex.offset() + currentInstruction->size());
             m_vm->jitSizeStatistics->markEnd(WTFMove(*sizeMarker), *this, m_plan);
         }
@@ -740,11 +740,11 @@ RefPtr<BaselineJITCode> JIT::compileAndLinkWithoutFinalizing(JITCompilationEffor
             m_stringSwitchJumpTables = FixedVector<StringJumpTable>(m_unlinkedCodeBlock->numberOfUnlinkedStringSwitchJumpTables());
     }
 
-    if (UNLIKELY(Options::dumpDisassembly() || Options::dumpBaselineDisassembly() || (m_vm->m_perBytecodeProfiler && Options::disassembleBaselineForProfiler()))) {
+    if (Options::dumpDisassembly() || Options::dumpBaselineDisassembly() || (m_vm->m_perBytecodeProfiler && Options::disassembleBaselineForProfiler())) [[unlikely]] {
         // FIXME: build a disassembler off of UnlinkedCodeBlock.
         m_disassembler = makeUnique<JITDisassembler>(m_profiledCodeBlock);
     }
-    if (UNLIKELY(m_vm->m_perBytecodeProfiler)) {
+    if (m_vm->m_perBytecodeProfiler) [[unlikely]] {
         // FIXME: build profiler disassembler off UnlinkedCodeBlock.
         m_compilation = adoptRef(
             new Profiler::Compilation(
@@ -756,7 +756,7 @@ RefPtr<BaselineJITCode> JIT::compileAndLinkWithoutFinalizing(JITCompilationEffor
     m_pcToCodeOriginMapBuilder.appendItem(label(), CodeOrigin(BytecodeIndex(0)));
 
     std::optional<JITSizeStatistics::Marker> sizeMarker;
-    if (UNLIKELY(Options::dumpBaselineJITSizeStatistics()))
+    if (Options::dumpBaselineJITSizeStatistics()) [[unlikely]]
         sizeMarker = m_vm->jitSizeStatistics->markStart("Baseline_prologue"_s, *this);
 
     Label entryLabel(this);
@@ -776,7 +776,7 @@ RefPtr<BaselineJITCode> JIT::compileAndLinkWithoutFinalizing(JITCompilationEffor
     JumpList stackOverflow;
 #if !CPU(ADDRESS64)
     unsigned maxFrameSize = -frameTopOffset;
-    if (UNLIKELY(maxFrameSize > Options::reservedZoneSize()))
+    if (maxFrameSize > Options::reservedZoneSize()) [[unlikely]]
         stackOverflow.append(branchPtr(Above, regT1, callFrameRegister));
 #endif
     stackOverflow.append(branchPtr(GreaterThan, AbsoluteAddress(m_vm->addressOfSoftStackLimit()), regT1));
@@ -808,7 +808,7 @@ RefPtr<BaselineJITCode> JIT::compileAndLinkWithoutFinalizing(JITCompilationEffor
     
     RELEASE_ASSERT(!JITCode::isJIT(m_profiledCodeBlock->jitType()));
 
-    if (UNLIKELY(sizeMarker))
+    if (sizeMarker) [[unlikely]]
         m_vm->jitSizeStatistics->markEnd(WTFMove(*sizeMarker), *this, m_plan);
 
     privateCompileMainPass();
@@ -956,12 +956,12 @@ RefPtr<BaselineJITCode> JIT::link(LinkBuffer& patchBuffer)
             jitCodeMapBuilder.append(BytecodeIndex(bytecodeOffset), patchBuffer.locationOf<JSEntryPtrTag>(m_labels[bytecodeOffset]));
     }
 
-    if (UNLIKELY(Options::dumpDisassembly() || Options::dumpBaselineDisassembly())) {
+    if (Options::dumpDisassembly() || Options::dumpBaselineDisassembly()) [[unlikely]] {
         m_disassembler->dump(patchBuffer);
         patchBuffer.didAlreadyDisassemble();
     }
 
-    if (UNLIKELY(m_compilation)) {
+    if (m_compilation) [[unlikely]] {
         // FIXME: should we make the bytecode profiler know about UnlinkedCodeBlock?
         if (Options::disassembleBaselineForProfiler())
             m_disassembler->reportToProfiler(m_compilation.get(), patchBuffer);

@@ -497,7 +497,7 @@ void Heap::dumpHeapStatisticsAtVMDestruction()
 void Heap::lastChanceToFinalize()
 {
     MonotonicTime before;
-    if (UNLIKELY(Options::logGC())) {
+    if (Options::logGC()) [[unlikely]] {
         before = MonotonicTime::now();
         dataLog("[GC<", RawPointer(this), ">: shutdown ");
     }
@@ -565,7 +565,7 @@ void Heap::lastChanceToFinalize()
     
     dataLogIf(Options::logGC(), "5 ");
 
-    if (UNLIKELY(Options::dumpHeapStatisticsAtVMDestruction()))
+    if (Options::dumpHeapStatisticsAtVMDestruction()) [[unlikely]]
         dumpHeapStatisticsAtVMDestruction();
     
     m_arrayBuffers.lastChanceToFinalize();
@@ -622,7 +622,7 @@ void Heap::reportExtraMemoryAllocatedPossiblyFromAlreadyMarkedCell(const JSCell*
     // We need to report this additionally to tell GC that we get additional extra memory now,
     // and GC needs to consider scheduling GC based on this increase.
 
-    if (UNLIKELY(mutatorShouldBeFenced())) {
+    if (mutatorShouldBeFenced()) [[unlikely]] {
         // In this case, the barrierThreshold is the tautological threshold, so cell could still be
         // not black. But we can't know for sure until we fire off a fence.
         WTF::storeLoadFence();
@@ -654,7 +654,7 @@ void Heap::reportExtraMemoryAllocatedSlowCase(GCDeferralContext* deferralContext
 {
     didAllocate(size);
     if (cell) {
-        if (UNLIKELY(isWithinThreshold(cell->cellState(), barrierThreshold())))
+        if (isWithinThreshold(cell->cellState(), barrierThreshold())) [[unlikely]]
             reportExtraMemoryAllocatedPossiblyFromAlreadyMarkedCell(cell, size);
     }
     collectIfNecessaryOrDefer(deferralContext);
@@ -1199,17 +1199,17 @@ void Heap::addToRememberedSet(const JSCell* constCell)
 
 void Heap::sweepSynchronously()
 {
-    if (UNLIKELY(!Options::useGC()))
+    if (!Options::useGC()) [[unlikely]]
         return;
 
     MonotonicTime before { };
-    if (UNLIKELY(Options::logGC())) {
+    if (Options::logGC()) [[unlikely]] {
         dataLog("Full sweep: ", capacity() / 1024, "kb ");
         before = MonotonicTime::now();
     }
     m_objectSpace.sweepBlocks();
     m_objectSpace.shrink();
-    if (UNLIKELY(Options::logGC())) {
+    if (Options::logGC()) [[unlikely]] {
         MonotonicTime after = MonotonicTime::now();
         dataLog("=> ", capacity() / 1024, "kb, ", (after - before).milliseconds(), "ms");
     }
@@ -1217,7 +1217,7 @@ void Heap::sweepSynchronously()
 
 void Heap::collect(Synchronousness synchronousness, GCRequest request)
 {
-    if (UNLIKELY(!Options::useGC()))
+    if (!Options::useGC()) [[unlikely]]
         return;
 
     switch (synchronousness) {
@@ -1234,7 +1234,7 @@ void Heap::collect(Synchronousness synchronousness, GCRequest request)
 
 void Heap::collectNow(Synchronousness synchronousness, GCRequest request)
 {
-    if (UNLIKELY(!Options::useGC()))
+    if (!Options::useGC()) [[unlikely]]
         return;
 
     if constexpr (validateDFGDoesGC)
@@ -1251,7 +1251,7 @@ void Heap::collectNow(Synchronousness synchronousness, GCRequest request)
         collectSync(request);
         
         DeferGCForAWhile deferGC(vm());
-        if (UNLIKELY(Options::useImmortalObjects()))
+        if (Options::useImmortalObjects()) [[unlikely]]
             sweeper().stopSweeping();
         
         bool alreadySweptInCollectSync = shouldSweepSynchronously();
@@ -1270,7 +1270,7 @@ void Heap::collectNow(Synchronousness synchronousness, GCRequest request)
 
 void Heap::collectAsync(GCRequest request)
 {
-    if (UNLIKELY(!Options::useGC()))
+    if (!Options::useGC()) [[unlikely]]
         return;
 
     if constexpr (validateDFGDoesGC)
@@ -1297,7 +1297,7 @@ void Heap::collectAsync(GCRequest request)
 
 void Heap::collectSync(GCRequest request)
 {
-    if (UNLIKELY(!Options::useGC()))
+    if (!Options::useGC()) [[unlikely]]
         return;
 
     if constexpr (validateDFGDoesGC)
@@ -1439,7 +1439,7 @@ NEVER_INLINE bool Heap::runBeginPhase(GCConductor conn)
     
     willStartCollection();
         
-    if (UNLIKELY(m_verifier)) {
+    if (m_verifier) [[unlikely]] {
         // Verify that live objects from the last GC cycle haven't been corrupted by
         // mutators before we begin this new GC cycle.
         m_verifier->verify(HeapVerifier::Phase::BeforeGC);
@@ -1450,7 +1450,7 @@ NEVER_INLINE bool Heap::runBeginPhase(GCConductor conn)
 
     ASSERT(m_collectionScope);
     bool isFullGC = m_collectionScope.value() == CollectionScope::Full;
-    if (UNLIKELY(Options::useGCSignpost())) {
+    if (Options::useGCSignpost()) [[unlikely]] {
         StringPrintStream stream;
         stream.print("GC:(", RawPointer(this), "),mode:(", (isFullGC ? "Full" : "Eden"), "),version:(", m_gcVersion, "),conn:(", gcConductorShortName(conn), "),capacity(", capacity() / 1024, "kb)");
         m_signpostMessage = stream.toCString();
@@ -1504,7 +1504,7 @@ NEVER_INLINE bool Heap::runBeginPhase(GCConductor conn)
     m_constraintSet->didStartMarking();
     
     m_scheduler->beginCollection();
-    if (UNLIKELY(Options::logGC()))
+    if (Options::logGC()) [[unlikely]]
         m_scheduler->log();
     
     // After this, we will almost certainly fall through all of the "visitor.isEmpty()"
@@ -1532,7 +1532,7 @@ NEVER_INLINE bool Heap::runFixpointPhase(GCConductor conn)
     
     SlotVisitor& visitor = *m_collectorSlotVisitor;
     
-    if (UNLIKELY(Options::logGC())) {
+    if (Options::logGC()) [[unlikely]] {
         UncheckedKeyHashMap<const char*, size_t> visitMap;
         forEachSlotVisitor(
             [&] (SlotVisitor& visitor) {
@@ -1604,7 +1604,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     m_scheduler->willResume();
         
-    if (UNLIKELY(Options::logGC())) {
+    if (Options::logGC()) [[unlikely]] {
         double thisPauseMS = (MonotonicTime::now() - m_stopTime).milliseconds();
         dataLog("p=", thisPauseMS, "ms (max ", maxPauseMS(thisPauseMS), ")...]\n");
     }
@@ -1652,7 +1652,7 @@ NEVER_INLINE bool Heap::runReloopPhase(GCConductor conn)
     
     m_scheduler->didStop();
     
-    if (UNLIKELY(Options::logGC()))
+    if (Options::logGC()) [[unlikely]]
         m_scheduler->log();
     
     return changePhase(conn, CollectorPhase::Fixpoint);
@@ -1681,10 +1681,10 @@ NEVER_INLINE bool Heap::runEndPhase(GCConductor conn)
     updateObjectCounts();
     endMarking();
 
-    if (UNLIKELY(Options::verifyGC()))
+    if (Options::verifyGC()) [[unlikely]]
         verifyGC();
 
-    if (UNLIKELY(m_verifier)) {
+    if (m_verifier) [[unlikely]] {
         m_verifier->gatherLiveCells(HeapVerifier::Phase::AfterMarking);
         m_verifier->verify(HeapVerifier::Phase::AfterMarking);
     }
@@ -1723,7 +1723,7 @@ NEVER_INLINE bool Heap::runEndPhase(GCConductor conn)
     m_objectSpace.prepareForAllocation();
     updateAllocationLimits();
 
-    if (UNLIKELY(m_verifier)) {
+    if (m_verifier) [[unlikely]] {
         m_verifier->trimDeadCells();
         m_verifier->verify(HeapVerifier::Phase::AfterGC);
     }
@@ -1740,7 +1740,7 @@ NEVER_INLINE bool Heap::runEndPhase(GCConductor conn)
         m_objectSpace.dumpBits();
     }
     
-    if (UNLIKELY(Options::logGC())) {
+    if (Options::logGC()) [[unlikely]] {
         double thisPauseMS = (m_afterGC - m_stopTime).milliseconds();
         dataLog("p=", thisPauseMS, "ms (max ", maxPauseMS(thisPauseMS), "), cycle ", (m_afterGC - m_beforeGC).milliseconds(), "ms END]\n");
     }
@@ -1754,7 +1754,7 @@ NEVER_INLINE bool Heap::runEndPhase(GCConductor conn)
     ParkingLot::unparkAll(&m_worldState);
 
     dataLogLnIf(Options::logGC(), "GC END!");
-    if (UNLIKELY(Options::useGCSignpost())) {
+    if (Options::useGCSignpost()) [[unlikely]] {
         WTFEndSignpost(this, JSCGarbageCollector, "%" PUBLIC_LOG_STRING, m_signpostMessage.data() ? m_signpostMessage.data() : "(nullptr)");
         m_signpostMessage = { };
     }
@@ -2243,7 +2243,7 @@ void Heap::notifyThreadStopping(const AbstractLocker&)
 void Heap::finalize()
 {
     MonotonicTime before;
-    if (UNLIKELY(Options::logGC())) {
+    if (Options::logGC()) [[unlikely]] {
         before = MonotonicTime::now();
         dataLog("[GC<", RawPointer(this), ">: finalize ");
     }
@@ -2277,7 +2277,7 @@ void Heap::finalize()
     if (shouldSweepSynchronously())
         sweepSynchronously();
 
-    if (UNLIKELY(Options::logGC())) {
+    if (Options::logGC()) [[unlikely]] {
         MonotonicTime after = MonotonicTime::now();
         dataLog((after - before).milliseconds(), "ms]\n");
     }
@@ -2345,7 +2345,7 @@ bool Heap::suspendCompilerThreads()
 void Heap::willStartCollection()
 {
     ++m_gcVersion;
-    if (UNLIKELY(Options::verifyGC())) {
+    if (Options::verifyGC()) [[unlikely]] {
         m_verifierSlotVisitor = makeUnique<VerifierSlotVisitor>(*this);
         ASSERT(!m_isMarkingForGCVerifier);
     }
@@ -2533,7 +2533,7 @@ void Heap::didFinishCollection()
         removeDeadHeapSnapshotNodes(*heapProfiler);
     }
 
-    if (UNLIKELY(m_verifier))
+    if (m_verifier) [[unlikely]]
         m_verifier->endGC();
 
     RELEASE_ASSERT(m_collectionScope);
@@ -2742,7 +2742,7 @@ void Heap::forEachCodeBlockIgnoringJITPlansImpl(const AbstractLocker& locker, co
 
 void Heap::writeBarrierSlowPath(const JSCell* from)
 {
-    if (UNLIKELY(mutatorShouldBeFenced())) {
+    if (mutatorShouldBeFenced()) [[unlikely]] {
         // In this case, the barrierThreshold is the tautological threshold, so from could still be
         // not black. But we can't know for sure until we fire off a fence.
         WTF::storeLoadFence();
@@ -2804,7 +2804,7 @@ void Heap::collectIfNecessaryOrDefer(GCDeferralContext* deferralContext)
     case MutatorState::Collecting:
         return;
     }
-    if (UNLIKELY(!Options::useGC()))
+    if (!Options::useGC()) [[unlikely]]
         return;
     
     if (mayNeedToStop()) {
@@ -2819,9 +2819,9 @@ void Heap::collectIfNecessaryOrDefer(GCDeferralContext* deferralContext)
     auto shouldRequestGC = [&] () -> bool {
         bool logRequestGC = false;
         // Don't log if we already have a request pending or if we have to come back later so we don't flood dataFile.
-        if (UNLIKELY(Options::logGC()))
+        if (Options::logGC()) [[unlikely]]
             logRequestGC = m_requests.isEmpty() && !deferralContext && !isDeferred();
-        if (UNLIKELY(Options::gcMaxHeapSize())) {
+        if (Options::gcMaxHeapSize()) [[unlikely]] {
             size_t bytesAllocatedThisCycle = totalBytesAllocatedThisCycle();
             if (bytesAllocatedThisCycle <= Options::gcMaxHeapSize())
                 return false;
@@ -2915,7 +2915,7 @@ template<typename Visitor>
 static ALWAYS_INLINE void visitSamplingProfiler(VM& vm, Visitor& visitor)
 {
     SamplingProfiler* samplingProfiler = vm.samplingProfiler();
-    if (UNLIKELY(samplingProfiler)) {
+    if (samplingProfiler) [[unlikely]] {
         Locker locker { samplingProfiler->getLock() };
         samplingProfiler->processUnverifiedStackTraces();
         samplingProfiler->visit(visitor);
@@ -2963,7 +2963,7 @@ void Heap::addCoreConstraints()
 
                 SetRootMarkReasonScope rootScope(visitor, RootMarkReason::ConservativeScan);
                 visitor.append(conservativeRoots);
-                if (UNLIKELY(m_verifierSlotVisitor)) {
+                if (m_verifierSlotVisitor) [[unlikely]] {
                     SetRootMarkReasonScope rootScope(*m_verifierSlotVisitor, RootMarkReason::ConservativeScan);
                     m_verifierSlotVisitor->append(conservativeRoots);
                 }
@@ -2972,7 +2972,7 @@ void Heap::addCoreConstraints()
             // JITStubRoutines must be visited after scanning ConservativeRoots since JITStubRoutines depend on the hook executed during gathering ConservativeRoots.
             SetRootMarkReasonScope rootScope(visitor, RootMarkReason::JITStubRoutines);
             m_jitStubRoutines->traceMarkedStubRoutines(visitor);
-            if (UNLIKELY(m_verifierSlotVisitor)) {
+            if (m_verifierSlotVisitor) [[unlikely]] {
                 // It's important to cast m_verifierSlotVisitor to an AbstractSlotVisitor here
                 // so that we'll call the AbstractSlotVisitor version of traceMarkedStubRoutines().
                 AbstractSlotVisitor& visitor = *m_verifierSlotVisitor;
@@ -3149,11 +3149,11 @@ void Heap::addMarkingConstraint(std::unique_ptr<MarkingConstraint> constraint)
 
 void Heap::notifyIsSafeToCollect()
 {
-    if (UNLIKELY(!Options::useGC()))
+    if (!Options::useGC()) [[unlikely]]
         return;
 
     MonotonicTime before;
-    if (UNLIKELY(Options::logGC())) {
+    if (Options::logGC()) [[unlikely]] {
         before = MonotonicTime::now();
         dataLog("[GC<", RawPointer(this), ">: starting ");
     }
@@ -3353,7 +3353,7 @@ void Heap::verifyGC()
             return;
 
         dataLogLn("\n" "GC Verifier: ERROR cell ", RawPointer(cell), " was not marked");
-        if (UNLIKELY(Options::verboseVerifyGC()))
+        if (Options::verboseVerifyGC()) [[unlikely]]
             visitor.dumpMarkerData(cell);
         RELEASE_ASSERT(this->isMarked(cell));
     });

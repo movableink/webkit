@@ -1205,7 +1205,7 @@ private:
             size_t searchStringLength = searchString.length();
             size_t matchEnd = matchStart + searchStringLength;
             String result = tryMakeReplacedString<StringReplaceSubstitutions::Yes>(string, replace, matchStart, matchEnd);
-            if (UNLIKELY(!result))
+            if (!result) [[unlikely]]
                 break;
 
             m_changed = true;

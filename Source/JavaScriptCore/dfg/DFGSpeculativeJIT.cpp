@@ -129,7 +129,7 @@ static void emitStackOverflowCheck(JITCompiler& jit, MacroAssembler::JumpList& s
     jit.addPtr(MacroAssembler::TrustedImm32(frameTopOffset), GPRInfo::callFrameRegister, GPRInfo::regT1);
 #if !CPU(ADDRESS64)
     unsigned maxFrameSize = -frameTopOffset;
-    if (UNLIKELY(maxFrameSize > Options::reservedZoneSize()))
+    if (maxFrameSize > Options::reservedZoneSize()) [[unlikely]]
         stackOverflow.append(jit.branchPtr(MacroAssembler::Above, GPRInfo::regT1, GPRInfo::callFrameRegister));
 #endif
     stackOverflow.append(jit.branchPtr(MacroAssembler::GreaterThan, MacroAssembler::AbsoluteAddress(jit.vm().addressOfSoftStackLimit()), GPRInfo::regT1));
@@ -652,7 +652,7 @@ void SpeculativeJIT::runSlowPathGenerators(PCToCodeOriginMapBuilder& pcToCodeOri
 {
     auto markSlowPathIfNeeded = [&] (Node* node) {
         std::optional<JITSizeStatistics::Marker> sizeMarker;
-        if (UNLIKELY(Options::dumpDFGJITSizeStatistics())) {
+        if (Options::dumpDFGJITSizeStatistics()) [[unlikely]] {
             String id = makeString("DFG_slow_"_s, m_graph.opName(node->op()));
             sizeMarker = vm().jitSizeStatistics->markStart(id, *this);
         }
@@ -665,7 +665,7 @@ void SpeculativeJIT::runSlowPathGenerators(PCToCodeOriginMapBuilder& pcToCodeOri
 
         slowPathGenerator->generate(this);
 
-        if (UNLIKELY(sizeMarker))
+        if (sizeMarker) [[unlikely]]
             vm().jitSizeStatistics->markEnd(WTFMove(*sizeMarker), *this, m_graph.m_plan);
     }
     for (auto& slowPathLambda : m_slowPathLambdas) {
@@ -678,7 +678,7 @@ void SpeculativeJIT::runSlowPathGenerators(PCToCodeOriginMapBuilder& pcToCodeOri
         slowPathLambda.generator();
         ASSERT(!m_underSilentSpill);
         m_outOfLineStreamIndex = std::nullopt;
-        if (UNLIKELY(sizeMarker))
+        if (sizeMarker) [[unlikely]]
             vm().jitSizeStatistics->markEnd(WTFMove(*sizeMarker), *this, m_graph.m_plan);
     }
 }
@@ -1927,7 +1927,7 @@ void SpeculativeJIT::noticeOSRBirth(Node* node)
 
 void SpeculativeJIT::compileLoopHint(Node* node)
 {
-    if (UNLIKELY(Options::returnEarlyFromInfiniteLoopsForFuzzing())) {
+    if (Options::returnEarlyFromInfiniteLoopsForFuzzing()) [[unlikely]] {
         bool emitEarlyReturn = true;
         node->origin.semantic.walkUpInlineStack([&](CodeOrigin origin) {
             CodeBlock* baselineCodeBlock = m_graph.baselineCodeBlockFor(origin);
@@ -2122,14 +2122,14 @@ void SpeculativeJIT::compileCurrentBlock()
         }
 
         std::optional<JITSizeStatistics::Marker> sizeMarker;
-        if (UNLIKELY(Options::dumpDFGJITSizeStatistics())) {
+        if (Options::dumpDFGJITSizeStatistics()) [[unlikely]] {
             String id = makeString("DFG_fast_"_s, m_graph.opName(m_currentNode->op()));
             sizeMarker = vm().jitSizeStatistics->markStart(id, *this);
         }
 
         compile(m_currentNode);
 
-        if (UNLIKELY(sizeMarker))
+        if (sizeMarker) [[unlikely]]
             vm().jitSizeStatistics->markEnd(WTFMove(*sizeMarker), *this, m_graph.m_plan);
 
         if (belongsInMinifiedGraph(m_currentNode->op()))
@@ -2287,7 +2287,7 @@ void SpeculativeJIT::linkOSREntries(LinkBuffer& linkBuffer)
 
     ASSERT(osrEntryIndex == m_osrEntryHeads.size());
     
-    if (UNLIKELY(verboseCompilationEnabled())) {
+    if (verboseCompilationEnabled()) [[unlikely]] {
         WTF::dataFile().atomically([&](auto& out) {
             DumpContext dumpContext;
             dataLogLn("OSR Entries:");

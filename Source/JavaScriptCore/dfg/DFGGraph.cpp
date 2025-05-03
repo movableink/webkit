@@ -1558,7 +1558,7 @@ void Graph::visitChildren(SlotVisitor& visitor) { visitChildrenImpl(visitor); }
 FrozenValue* Graph::freeze(JSValue value)
 {
     RELEASE_ASSERT(!m_plan.isInSafepoint());
-    if (UNLIKELY(!value))
+    if (!value) [[unlikely]]
         return FrozenValue::emptySingleton();
 
     // There are weird relationships in how optimized CodeBlocks
@@ -1568,7 +1568,7 @@ FrozenValue* Graph::freeze(JSValue value)
     RELEASE_ASSERT(!jsDynamicCast<CodeBlock*>(value));
     
     auto result = m_frozenValueMap.add(JSValue::encode(value), nullptr);
-    if (LIKELY(!result.isNewEntry))
+    if (!result.isNewEntry) [[likely]]
         return result.iterator->value;
 
     if (value.isUInt32())

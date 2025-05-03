@@ -108,7 +108,7 @@ public:
         // Don't use the first page because zero is used as the empty StructureID and the first allocation will conflict.
 #if !USE(SYSTEM_MALLOC)
         m_useDebugHeap = !bmalloc::api::isEnabled();
-        if (LIKELY(!m_useDebugHeap)) {
+        if (!m_useDebugHeap) [[likely]] {
             bmalloc_force_auxiliary_heap_into_reserved_memory(&structureHeap, reinterpret_cast<uintptr_t>(g_jscConfig.startOfStructureHeap) + MarkedBlock::blockSize, reinterpret_cast<uintptr_t>(g_jscConfig.startOfStructureHeap) + g_jscConfig.sizeOfStructureHeap);
             return;
         }
@@ -119,7 +119,7 @@ public:
     void* tryMallocStructureBlock()
     {
 #if !USE(SYSTEM_MALLOC)
-        if (LIKELY(!m_useDebugHeap))
+        if (!m_useDebugHeap) [[likely]]
             return bmalloc_try_allocate_auxiliary_with_alignment_inline(&structureHeap, MarkedBlock::blockSize, MarkedBlock::blockSize, pas_maybe_compact_allocation_mode);
 #endif
 
@@ -145,7 +145,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     void freeStructureBlock(void* blockPtr)
     {
 #if !USE(SYSTEM_MALLOC)
-        if (LIKELY(!m_useDebugHeap)) {
+        if (!m_useDebugHeap) [[likely]] {
             bmalloc_deallocate_inline(blockPtr);
             return;
         }

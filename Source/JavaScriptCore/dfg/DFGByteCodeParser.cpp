@@ -968,7 +968,7 @@ private:
                 prediction = codeBlock->valueProfilePredictionForBytecodeIndex(locker, codeOrigin.bytecodeIndex(), specFailValue);
             }
             auto* fuzzerAgent = m_vm->fuzzerAgent();
-            if (UNLIKELY(fuzzerAgent))
+            if (fuzzerAgent) [[unlikely]]
                 return fuzzerAgent->getPrediction(codeBlock, codeOrigin, prediction) & SpecBytecodeTop;
 
             return prediction;
@@ -1450,7 +1450,7 @@ ByteCodeParser::Terminality ByteCodeParser::handleCall(
             return Terminal;
         case CallOptimizationResult::Inlined:
         case CallOptimizationResult::InlinedTerminal:
-            if (UNLIKELY(m_graph.compilation()))
+            if (m_graph.compilation()) [[unlikely]]
                 m_graph.compilation()->noticeInlinedCall();
             return optimizationResult == CallOptimizationResult::InlinedTerminal ? Terminal : NonTerminal;
         case CallOptimizationResult::DidNothing:
@@ -1490,7 +1490,7 @@ ByteCodeParser::Terminality ByteCodeParser::handleVarargsCall(const JSInstructio
             callLinkStatus, firstFreeReg, bytecode.m_thisValue, bytecode.m_arguments,
             firstVarArgOffset, op,
             InlineCallFrame::varargsKindFor(callMode))) {
-            if (UNLIKELY(m_graph.compilation()))
+            if (m_graph.compilation()) [[unlikely]]
                 m_graph.compilation()->noticeInlinedCall();
             return NonTerminal;
         }
@@ -1561,7 +1561,7 @@ void ByteCodeParser::emitArgumentPhantoms(int registerOffset, int argumentCountI
 template<typename ChecksFunctor>
 bool ByteCodeParser::handleRecursiveTailCall(Node* callTargetNode, CallVariant callVariant, int registerOffset, int argumentCountIncludingThis, const ChecksFunctor& emitFunctionCheckIfNeeded)
 {
-    if (UNLIKELY(!Options::optimizeRecursiveTailCalls()))
+    if (!Options::optimizeRecursiveTailCalls()) [[unlikely]]
         return false;
 
     // This optimisation brings more performance if it only runs in FTL, probably because it interferes with tier-up.
@@ -4813,7 +4813,7 @@ bool ByteCodeParser::handleProxyObjectLoad(VirtualRegister destination, Speculat
         return false;
     JSGlobalObject* globalObject = m_inlineStackTop->m_codeBlock->globalObject();
     auto* function = globalObject->performProxyObjectGetFunctionConcurrently();
-    if (UNLIKELY(!function))
+    if (!function) [[unlikely]]
         return false;
 
     Node* functionNode = weakJSConstant(function);
@@ -4828,7 +4828,7 @@ bool ByteCodeParser::handleIndexedProxyObjectLoad(VirtualRegister destination, S
         return false;
     JSGlobalObject* globalObject = m_inlineStackTop->m_codeBlock->globalObject();
     auto* function = globalObject->performProxyObjectGetByValFunctionConcurrently();
-    if (UNLIKELY(!function))
+    if (!function) [[unlikely]]
         return false;
 
     Node* functionNode = weakJSConstant(function);
@@ -4842,7 +4842,7 @@ bool ByteCodeParser::handleProxyObjectStore(Node* base, Node* value, ECMAMode ec
         return false;
     JSGlobalObject* globalObject = m_inlineStackTop->m_codeBlock->globalObject();
     auto* function = ecmaMode.isStrict() ? globalObject->performProxyObjectSetStrictFunctionConcurrently() : globalObject->performProxyObjectSetSloppyFunctionConcurrently();
-    if (UNLIKELY(!function))
+    if (!function) [[unlikely]]
         return false;
 
     Node* functionNode = weakJSConstant(function);
@@ -4857,7 +4857,7 @@ bool ByteCodeParser::handleIndexedProxyObjectStore(Node* base, Node* propertyNam
         return false;
     JSGlobalObject* globalObject = m_inlineStackTop->m_codeBlock->globalObject();
     auto* function = ecmaMode.isStrict() ? globalObject->performProxyObjectSetByValStrictFunctionConcurrently() : globalObject->performProxyObjectSetByValSloppyFunctionConcurrently();
-    if (UNLIKELY(!function))
+    if (!function) [[unlikely]]
         return false;
 
     Node* functionNode = weakJSConstant(function);
@@ -4871,7 +4871,7 @@ bool ByteCodeParser::handleProxyObjectIn(VirtualRegister destination, Node* base
         return false;
     JSGlobalObject* globalObject = m_inlineStackTop->m_codeBlock->globalObject();
     auto* function = globalObject->performProxyObjectHasFunctionConcurrently();
-    if (UNLIKELY(!function))
+    if (!function) [[unlikely]]
         return false;
 
     Node* functionNode = weakJSConstant(function);
@@ -4886,7 +4886,7 @@ bool ByteCodeParser::handleIndexedProxyObjectIn(VirtualRegister destination, Nod
         return false;
     JSGlobalObject* globalObject = m_inlineStackTop->m_codeBlock->globalObject();
     auto* function = globalObject->performProxyObjectHasByValFunctionConcurrently();
-    if (UNLIKELY(!function))
+    if (!function) [[unlikely]]
         return false;
 
     Node* functionNode = weakJSConstant(function);
@@ -5655,14 +5655,14 @@ void ByteCodeParser::handleGetById(
     if (getById != TryGetById) {
         if (getByStatus.isModuleNamespace()) {
             if (handleModuleNamespaceLoad(destination, prediction, base, getByStatus)) {
-                if (UNLIKELY(m_graph.compilation()))
+                if (m_graph.compilation()) [[unlikely]]
                     m_graph.compilation()->noticeInlinedGetById();
                 return;
             }
         }
         if (getByStatus.isProxyObject()) {
             if (handleProxyObjectLoad(destination, prediction, base, getByStatus, osrExitIndex)) {
-                if (UNLIKELY(m_graph.compilation()))
+                if (m_graph.compilation()) [[unlikely]]
                     m_graph.compilation()->noticeInlinedGetById();
                 return;
             }
@@ -5687,7 +5687,7 @@ void ByteCodeParser::handleGetById(
                 if (Options::useDOMJIT() && variant.domAttribute()) {
                     ASSERT(!getByStatus.makesCalls());
                     if (handleDOMJITGetter(destination, variant, base, unwrapped, identifierNumber, prediction)) {
-                        if (UNLIKELY(m_graph.compilation()))
+                        if (m_graph.compilation()) [[unlikely]]
                             m_graph.compilation()->noticeInlinedGetById();
                         return;
                     }
@@ -5700,7 +5700,7 @@ void ByteCodeParser::handleGetById(
                     return;
                 }
 
-                if (UNLIKELY(m_graph.compilation()))
+                if (m_graph.compilation()) [[unlikely]]
                     m_graph.compilation()->noticeInlinedGetById();
 
                 addToGraph(FilterGetByStatus, OpInfo(m_graph.m_plan.recordedStatuses().addGetByStatus(currentCodeOrigin(), getByStatus)), base);
@@ -5767,7 +5767,7 @@ void ByteCodeParser::handleGetById(
             cases.append(MultiGetByOffsetCase(*m_graph.addStructureSet(variant.structureSet()), method));
         }
 
-        if (UNLIKELY(m_graph.compilation()))
+        if (m_graph.compilation()) [[unlikely]]
             m_graph.compilation()->noticeInlinedGetById();
     
         // 2) Emit a MultiGetByOffset
@@ -5805,7 +5805,7 @@ void ByteCodeParser::handleGetById(
         };
 
         if (handleIntrinsicGetter(destination, prediction, variant, base, unwrapped, addChecks)) {
-            if (UNLIKELY(m_graph.compilation()))
+            if (m_graph.compilation()) [[unlikely]]
                 m_graph.compilation()->noticeInlinedGetById();
             addToGraph(Phantom, base);
             return;
@@ -5820,7 +5820,7 @@ void ByteCodeParser::handleGetById(
         }
     }
 
-    if (UNLIKELY(m_graph.compilation()))
+    if (m_graph.compilation()) [[unlikely]]
         m_graph.compilation()->noticeInlinedGetById();
 
     if (!variant.callLinkStatus()) {
@@ -5907,7 +5907,7 @@ void ByteCodeParser::handleGetPrivateNameById(
             cases.append(MultiGetByOffsetCase(*m_graph.addStructureSet(variant.structureSet()), method));
         }
 
-        if (UNLIKELY(m_graph.compilation()))
+        if (m_graph.compilation()) [[unlikely]]
             m_graph.compilation()->noticeInlinedGetById();
 
         // 2) Emit a MultiGetByOffset
@@ -5934,7 +5934,7 @@ void ByteCodeParser::handleGetPrivateNameById(
         return;
     }
 
-    if (UNLIKELY(m_graph.compilation()))
+    if (m_graph.compilation()) [[unlikely]]
         m_graph.compilation()->noticeInlinedGetById();
 
     ASSERT(!variant.callLinkStatus());
@@ -6126,7 +6126,7 @@ void ByteCodeParser::handlePutById(
                 // Special path for custom accessors since custom's offset does not have any meanings.
                 // So, this is completely different from Simple one. But we have a chance to optimize it.
                 auto variant = putByStatus[0];
-                if (UNLIKELY(m_graph.compilation()))
+                if (m_graph.compilation()) [[unlikely]]
                     m_graph.compilation()->noticeInlinedPutById();
                 addToGraph(FilterPutByStatus, OpInfo(m_graph.m_plan.recordedStatuses().addPutByStatus(currentCodeOrigin(), putByStatus)), base);
                 if (!check(variant.conditionSet())) {
@@ -6176,7 +6176,7 @@ void ByteCodeParser::handlePutById(
             }
         }
         
-        if (UNLIKELY(m_graph.compilation()))
+        if (m_graph.compilation()) [[unlikely]]
             m_graph.compilation()->noticeInlinedPutById();
 
         addToGraph(FilterPutByStatus, OpInfo(m_graph.m_plan.recordedStatuses().addPutByStatus(currentCodeOrigin(), putByStatus)), base);
@@ -6203,7 +6203,7 @@ void ByteCodeParser::handlePutById(
         addToGraph(FilterPutByStatus, OpInfo(m_graph.m_plan.recordedStatuses().addPutByStatus(currentCodeOrigin(), putByStatus)), base);
 
         replace(unwrapped, identifierNumber, variant, value);
-        if (UNLIKELY(m_graph.compilation()))
+        if (m_graph.compilation()) [[unlikely]]
             m_graph.compilation()->noticeInlinedPutById();
         return;
     }
@@ -6270,7 +6270,7 @@ void ByteCodeParser::handlePutById(
         // https://bugs.webkit.org/show_bug.cgi?id=142924.
         addToGraph(PutStructure, OpInfo(transition), unwrapped);
 
-        if (UNLIKELY(m_graph.compilation()))
+        if (m_graph.compilation()) [[unlikely]]
             m_graph.compilation()->noticeInlinedPutById();
         return;
     }
@@ -6352,7 +6352,7 @@ void ByteCodeParser::handlePutPrivateNameById(
             return;
         }
         
-        if (UNLIKELY(m_graph.compilation()))
+        if (m_graph.compilation()) [[unlikely]]
             m_graph.compilation()->noticeInlinedPutById();
     
         addToGraph(FilterPutByStatus, OpInfo(m_graph.m_plan.recordedStatuses().addPutByStatus(currentCodeOrigin(), putByStatus)), base);
@@ -6380,7 +6380,7 @@ void ByteCodeParser::handlePutPrivateNameById(
         addToGraph(FilterPutByStatus, OpInfo(m_graph.m_plan.recordedStatuses().addPutByStatus(currentCodeOrigin(), putByStatus)), base);
     
         replace(base, identifierNumber, variant, value);
-        if (UNLIKELY(m_graph.compilation()))
+        if (m_graph.compilation()) [[unlikely]]
             m_graph.compilation()->noticeInlinedPutById();
         return;
     }
@@ -6447,7 +6447,7 @@ void ByteCodeParser::handlePutPrivateNameById(
         // https://bugs.webkit.org/show_bug.cgi?id=142924.
         addToGraph(PutStructure, OpInfo(transition), base);
     
-        if (UNLIKELY(m_graph.compilation()))
+        if (m_graph.compilation()) [[unlikely]]
             m_graph.compilation()->noticeInlinedPutById();
         return;
     }
@@ -6601,7 +6601,7 @@ void ByteCodeParser::parseBlock(unsigned limit)
 
         VERBOSE_LOG("    parsing ", currentCodeOrigin(), ": ", opcodeID, "\n");
         
-        if (UNLIKELY(m_graph.compilation())) {
+        if (m_graph.compilation()) [[unlikely]] {
             addToGraph(CountExecution, OpInfo(m_graph.compilation()->executionCounterFor(
                 Profiler::OriginStack(*m_vm->m_perBytecodeProfiler, m_codeBlock, currentCodeOrigin()))));
         }
@@ -10312,12 +10312,12 @@ void ByteCodeParser::parseCodeBlock()
     
     CodeBlock* codeBlock = m_inlineStackTop->m_codeBlock;
     
-    if (UNLIKELY(m_graph.compilation())) {
+    if (m_graph.compilation()) [[unlikely]] {
         m_graph.compilation()->addProfiledBytecodes(
             *m_vm->m_perBytecodeProfiler, m_inlineStackTop->m_profiledBlock);
     }
     
-    if (UNLIKELY(Options::dumpSourceAtDFGTime())) {
+    if (Options::dumpSourceAtDFGTime()) [[unlikely]] {
         Vector<DeferredSourceDump>& deferredSourceDump = m_graph.m_plan.callback()->ensureDeferredSourceDump();
         if (inlineCallFrame()) {
             DeferredSourceDump dump(codeBlock->baselineVersion(), m_codeBlock, JITType::DFGJIT, inlineCallFrame()->directCaller.bytecodeIndex());
@@ -10326,7 +10326,7 @@ void ByteCodeParser::parseCodeBlock()
             deferredSourceDump.append(DeferredSourceDump(codeBlock->baselineVersion()));
     }
 
-    if (UNLIKELY(Options::dumpBytecodeAtDFGTime())) {
+    if (Options::dumpBytecodeAtDFGTime()) [[unlikely]] {
         WTF::dataFile().atomically([&](auto&) {
             dataLog("Parsing ", *codeBlock);
             if (inlineCallFrame()) {
@@ -10341,7 +10341,7 @@ void ByteCodeParser::parseCodeBlock()
 
     Vector<JSInstructionStream::Offset, 32> jumpTargets;
     computePreciseJumpTargets(codeBlock, jumpTargets);
-    if (UNLIKELY(Options::dumpBytecodeAtDFGTime())) {
+    if (Options::dumpBytecodeAtDFGTime()) [[unlikely]] {
         WTF::dataFile().atomically([&](auto&) {
             dataLog("Jump targets: ");
             CommaPrinter comma;

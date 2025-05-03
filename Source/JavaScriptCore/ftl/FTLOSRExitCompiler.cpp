@@ -152,7 +152,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
 
     CCallHelpers jit(codeBlock);
 
-    if (UNLIKELY(Options::printEachOSRExit())) {
+    if (Options::printEachOSRExit()) [[unlikely]] {
         SpeculationFailureDebugInfo* debugInfo = new SpeculationFailureDebugInfo;
         debugInfo->codeBlock = jit.codeBlock();
         debugInfo->kind = exit.m_kind;
@@ -240,7 +240,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
     jit.popToRestore(GPRInfo::regT0);
     jit.checkStackPointerAlignment();
     
-    if (UNLIKELY(vm.m_perBytecodeProfiler && jitCode->dfgCommon()->compilation)) {
+    if (vm.m_perBytecodeProfiler && jitCode->dfgCommon()->compilation) [[unlikely]] {
         Profiler::Database& database = *vm.m_perBytecodeProfiler;
         Profiler::Compilation* compilation = jitCode->dfgCommon()->compilation.get();
         
@@ -388,13 +388,13 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
             if (value.dataFormat() == DataFormatJS) {
                 switch (value.kind()) {
                 case ExitValueDead:
-                    if (UNLIKELY(Options::poisonDeadOSRExitVariables())) {
+                    if (Options::poisonDeadOSRExitVariables()) [[unlikely]] {
                         spooler.moveConstant(poisonedDeadOSRExitValue);
                         spooler.storeGPR(index * sizeof(EncodedJSValue));
                         break;
                     }
 
-                    if (UNLIKELY(!undefinedGPR)) {
+                    if (!undefinedGPR) [[unlikely]] {
                         jit.move(CCallHelpers::TrustedImm64(JSValue::encode(jsUndefined())), GPRInfo::regT4);
                         undefinedGPR = GPRInfo::regT4;
                     }
@@ -405,7 +405,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
                 case ExitValueConstant: {
                     EncodedJSValue currentConstant = JSValue::encode(value.constant());
                     if (currentConstant == encodedJSUndefined()) {
-                        if (UNLIKELY(!undefinedGPR)) {
+                        if (!undefinedGPR) [[unlikely]] {
                             jit.move(CCallHelpers::TrustedImm64(JSValue::encode(jsUndefined())), GPRInfo::regT4);
                             undefinedGPR = GPRInfo::regT4;
                         }

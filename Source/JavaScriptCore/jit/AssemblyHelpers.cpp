@@ -370,7 +370,7 @@ AssemblyHelpers::Jump AssemblyHelpers::emitJumpIfException(VM& vm)
 
 AssemblyHelpers::Jump AssemblyHelpers::emitExceptionCheck(VM& vm, ExceptionCheckKind kind, ExceptionJumpWidth width, GPRReg exceptionReg)
 {
-    if (UNLIKELY(Options::useExceptionFuzz()))
+    if (Options::useExceptionFuzz()) [[unlikely]]
         callExceptionFuzz(vm, exceptionReg);
 
     if (width == FarJumpWidth)

@@ -223,7 +223,7 @@ bool UnlinkedCodeBlock::typeProfilerExpressionInfoForBytecodeOffset(unsigned byt
 
 UnlinkedCodeBlock::~UnlinkedCodeBlock()
 {
-    if (UNLIKELY(Options::returnEarlyFromInfiniteLoopsForFuzzing())) {
+    if (Options::returnEarlyFromInfiniteLoopsForFuzzing()) [[unlikely]] {
         if (auto* instructions = m_instructions.get()) {
             VM& vm = this->vm();
             for (const auto& instruction : *instructions) {

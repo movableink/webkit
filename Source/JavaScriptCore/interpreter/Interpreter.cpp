@@ -121,7 +121,7 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
     UnlinkedCodeBlock* callerUnlinkedCodeBlock = callerBaselineCodeBlock->unlinkedCodeBlock();
     JSGlobalObject* globalObject = callerBaselineCodeBlock->globalObject();
 
-    if (UNLIKELY(callFrame->guaranteedJSValueCallee() != globalObject->evalFunction()))
+    if (callFrame->guaranteedJSValueCallee() != globalObject->evalFunction()) [[unlikely]]
         return { };
 
     VM& vm = globalObject->vm();
@@ -137,7 +137,7 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
     JSValue program = callFrame->argument(0);
     JSString* programString = nullptr;
     bool isTrusted = false;
-    if (LIKELY(program.isString()))
+    if (program.isString()) [[likely]]
         programString = asString(program);
     else if (Options::useTrustedTypes() && program.isObject()) {
         auto* structure = globalObject->trustedScriptStructure();
@@ -198,7 +198,7 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
     DirectEvalExecutable* eval = callerBaselineCodeBlock->directEvalCodeCache().get(cacheKey);
     if (!eval) {
         auto programSource = programString->value(globalObject).data;
-        if (UNLIKELY(SourceProfiler::g_profilerHook)) {
+        if (SourceProfiler::g_profilerHook) [[unlikely]] {
             SourceTaintedOrigin sourceTaintedOrigin = computeNewSourceTaintedOriginFromStack(vm, callFrame);
             auto source = makeSource(programSource, callerBaselineCodeBlock->source().provider()->sourceOrigin(), sourceTaintedOrigin);
             SourceProfiler::profile(SourceProfiler::Type::Eval, source);
@@ -241,7 +241,7 @@ unsigned sizeOfVarargs(JSGlobalObject* globalObject, JSValue arguments, uint32_t
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!arguments.isCell())) {
+    if (!arguments.isCell()) [[unlikely]] {
         if (arguments.isUndefinedOrNull())
             return 0;
         
@@ -294,7 +294,7 @@ unsigned sizeFrameForForwardArguments(JSGlobalObject* globalObject, CallFrame* c
 
     unsigned length = callFrame->argumentCount();
     CallFrame* calleeFrame = calleeFrameForVarargs(callFrame, numUsedStackSlots, length + 1);
-    if (UNLIKELY(!vm.ensureStackCapacityFor(calleeFrame->registers())))
+    if (!vm.ensureStackCapacityFor(calleeFrame->registers())) [[unlikely]]
         throwStackOverflowError(globalObject, scope);
 
     return length;
@@ -308,7 +308,7 @@ unsigned sizeFrameForVarargs(JSGlobalObject* globalObject, CallFrame* callFrame,
     RETURN_IF_EXCEPTION(scope, 0);
 
     CallFrame* calleeFrame = calleeFrameForVarargs(callFrame, numUsedStackSlots, length + 1);
-    if (UNLIKELY(length > maxArguments || !vm.ensureStackCapacityFor(calleeFrame->registers()))) {
+    if (length > maxArguments || !vm.ensureStackCapacityFor(calleeFrame->registers())) [[unlikely]] {
         throwStackOverflowError(globalObject, scope);
         return 0;
     }
@@ -320,7 +320,9 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 void loadVarargs(JSGlobalObject* globalObject, JSValue* firstElementDest, JSValue arguments, uint32_t offset, uint32_t length)
 {
-    if (UNLIKELY(!arguments.isCell()) || !length)
+    if (!arguments.isCell()) [[unlikely]]
+        return;
+    if (!length)
         return;
 
     VM& vm = globalObject->vm();
@@ -846,7 +848,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     ALWAYS_INLINE static void notifyDebuggerOfUnwinding(JSGlobalObject* globalObject, VM& vm, CallFrame* callFrame)
     {
         Debugger* debugger = globalObject->debugger();
-        if (LIKELY(!debugger))
+        if (!debugger) [[likely]]
             return;
 
         DeferTermination deferScope(vm);
@@ -1005,7 +1007,7 @@ JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, J
         vm.didEnterVM = true;
     });
 
-    if (UNLIKELY(SourceProfiler::g_profilerHook))
+    if (SourceProfiler::g_profilerHook) [[unlikely]]
         SourceProfiler::profile(SourceProfiler::Type::Program, source);
 
     ProgramExecutable* program = ProgramExecutable::create(globalObject, source);
@@ -1018,10 +1020,10 @@ JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, J
     ASSERT(!vm.isCollectorBusyOnCurrentThread());
     RELEASE_ASSERT(vm.currentThreadIsHoldingAPILock());
 
-    if (UNLIKELY(!vm.isSafeToRecurseSoft()))
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]]
         return throwStackOverflowError(globalObject, throwScope);
 
-    if (UNLIKELY(vm.disallowVMEntryCount))
+    if (vm.disallowVMEntryCount) [[unlikely]]
         return checkVMEntryPermission();
 
     // First check if the "program" is actually just a JSON object. If so,
@@ -1056,7 +1058,7 @@ JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, J
             JSONPPath.swap(JSONPData[entry].m_path);
             JSValue JSONPValue = JSONPData[entry].m_value.get();
             if (JSONPPath.size() == 1 && JSONPPath[0].m_type == JSONPPathEntryTypeDeclareVar) {
-                if (UNLIKELY(!globalObject->isStructureExtensible()))
+                if (!globalObject->isStructureExtensible()) [[unlikely]]
                     goto failedJSONP;
                 globalObject->createGlobalVarBinding<BindingCreationContext::Global>(JSONPPath[0].m_pathEntryName);
                 RETURN_IF_EXCEPTION(throwScope, { });
@@ -1172,10 +1174,10 @@ failedJSONP:
     JSObject* error = program->initializeGlobalProperties(vm, globalObject, scope);
     EXCEPTION_ASSERT(!throwScope.exception() || !error || vm.hasPendingTerminationException());
     RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
-    if (UNLIKELY(error))
+    if (error) [[unlikely]]
         return throwException(globalObject, throwScope, error);
 
-    if (UNLIKELY(vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents))) {
+    if (vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents)) [[unlikely]] {
         if (vm.hasExceptionsAfterHandlingTraps())
             return throwScope.exception();
     }
@@ -1225,7 +1227,7 @@ JSValue Interpreter::executeBoundCall(VM& vm, JSBoundFunction* function, const A
     for (unsigned i = 0; i < args.size(); ++i)
         combinedArgs.append(args.at(i));
 
-    if (UNLIKELY(combinedArgs.hasOverflowed()))
+    if (combinedArgs.hasOverflowed()) [[unlikely]]
         return throwStackOverflowError(function->globalObject(), scope);
 
     JSObject* targetFunction = function->targetFunction();
@@ -1267,13 +1269,13 @@ ALWAYS_INLINE JSValue Interpreter::executeCallImpl(VM& vm, JSObject* function, c
     size_t argsCount = 1 + args.size(); // implicit "this" parameter
 
     VMEntryScope entryScope(vm, globalObject);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft() || args.size() > maxArguments))
+    if (!vm.isSafeToRecurseSoft() || args.size() > maxArguments) [[unlikely]]
         return throwStackOverflowError(globalObject, scope);
 
-    if (UNLIKELY(vm.disallowVMEntryCount))
+    if (vm.disallowVMEntryCount) [[unlikely]]
         return checkVMEntryPermission();
 
-    if (UNLIKELY(vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents))) {
+    if (vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents)) [[unlikely]] {
         if (vm.hasExceptionsAfterHandlingTraps())
             return scope.exception();
     }
@@ -1362,17 +1364,17 @@ JSObject* Interpreter::executeConstruct(JSObject* constructor, const CallData& c
     }
 
     VMEntryScope entryScope(vm, globalObject);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft() || args.size() > maxArguments)) {
+    if (!vm.isSafeToRecurseSoft() || args.size() > maxArguments) [[unlikely]] {
         throwStackOverflowError(globalObject, throwScope);
         return nullptr;
     }
 
-    if (UNLIKELY(vm.disallowVMEntryCount)) {
+    if (vm.disallowVMEntryCount) [[unlikely]] {
         checkVMEntryPermission();
         return globalObject->globalThis();
     }
 
-    if (UNLIKELY(vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents))) {
+    if (vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents)) [[unlikely]] {
         if (vm.hasExceptionsAfterHandlingTraps())
             return nullptr;
     }
@@ -1448,10 +1450,10 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
 
     JSGlobalObject* globalObject = scope->globalObject();
     VMEntryScope entryScope(vm, globalObject);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft()))
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]]
         return throwStackOverflowError(globalObject, throwScope);
 
-    if (UNLIKELY(vm.disallowVMEntryCount))
+    if (vm.disallowVMEntryCount) [[unlikely]]
         return checkVMEntryPermission();
 
     unsigned numVariables = eval->numVariables();
@@ -1479,7 +1481,7 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
         }
     }
 
-    if (UNLIKELY(vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents))) {
+    if (vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents)) [[unlikely]] {
         if (vm.hasExceptionsAfterHandlingTraps())
             return throwScope.exception();
     }
@@ -1639,13 +1641,13 @@ JSValue Interpreter::executeModuleProgram(JSModuleRecord* record, ModuleProgramE
 
     JSGlobalObject* globalObject = scope->globalObject();
     VMEntryScope entryScope(vm, scope->globalObject());
-    if (UNLIKELY(!vm.isSafeToRecurseSoft()))
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]]
         return throwStackOverflowError(globalObject, throwScope);
 
-    if (UNLIKELY(vm.disallowVMEntryCount))
+    if (vm.disallowVMEntryCount) [[unlikely]]
         return checkVMEntryPermission();
 
-    if (UNLIKELY(vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents))) {
+    if (vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents)) [[unlikely]] {
         if (vm.hasExceptionsAfterHandlingTraps())
             return throwScope.exception();
     }
@@ -1703,8 +1705,10 @@ NEVER_INLINE void Interpreter::debug(CallFrame* callFrame, DebugHookType debugHo
     DeferTermination deferScope(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    if (UNLIKELY(Options::debuggerTriggersBreakpointException()) && debugHookType == DidReachDebuggerStatement)
-        WTFBreakpointTrap();
+    if (Options::debuggerTriggersBreakpointException()) [[unlikely]] {
+        if (debugHookType == DidReachDebuggerStatement)
+            WTFBreakpointTrap();
+    }
 
     Debugger* debugger = callFrame->lexicalGlobalObject(vm)->debugger();
     if (!debugger)

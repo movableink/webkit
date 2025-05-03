@@ -193,17 +193,17 @@ FunctionExecutable* UnlinkedFunctionExecutable::link(VM& vm, ScriptExecutable* t
     SourceCode source = linkedSourceCode(passedParentSource);
     FunctionOverrides::OverrideInfo overrideInfo;
     bool hasFunctionOverride = false;
-    if (UNLIKELY(Options::functionOverrides()))
+    if (Options::functionOverrides()) [[unlikely]]
         hasFunctionOverride = FunctionOverrides::initializeOverrideFor(source, overrideInfo);
 
-    if (UNLIKELY(SourceProfiler::g_profilerHook))
+    if (SourceProfiler::g_profilerHook) [[unlikely]]
         SourceProfiler::profile(SourceProfiler::Type::Function, source);
 
     FunctionExecutable* result = FunctionExecutable::create(vm, topLevelExecutable, source, this, intrinsic, isInsideOrdinaryFunction);
     if (overrideLineNumber)
         result->setOverrideLineNumber(*overrideLineNumber);
 
-    if (UNLIKELY(hasFunctionOverride))
+    if (hasFunctionOverride) [[unlikely]]
         result->overrideInfo(overrideInfo);
 
     return result;

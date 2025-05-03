@@ -50,9 +50,10 @@ public:
     IndexingType selectIndexingType()
     {
         ASSERT(!isCompilationThread());
-        JSArray* lastArray = m_storage.pointer();
-        if (lastArray && UNLIKELY(lastArray->indexingType() != current().indexingType()))
-            updateProfile();
+        if (JSArray* lastArray = m_storage.pointer()) {
+            if (lastArray->indexingType() != current().indexingType()) [[unlikely]]
+                updateProfile();
+        }
         return current().indexingType();
     }
 

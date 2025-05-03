@@ -113,7 +113,7 @@ public:
     {
         ASSERT(m_graph.m_form == ThreadedCPS);
 
-        if (UNLIKELY(!functionAllowlist().contains(m_graph.m_codeBlock)))
+        if (!functionAllowlist().contains(m_graph.m_codeBlock)) [[unlikely]]
             return false;
 
         dataLogIf(Options::verboseLoopUnrolling(), "Graph before Loop Unrolling Phase:\n", m_graph);
@@ -178,7 +178,7 @@ public:
 
     bool tryUnroll(const NaturalLoop* loop)
     {
-        if (UNLIKELY(Options::verboseLoopUnrolling())) {
+        if (Options::verboseLoopUnrolling()) [[unlikely]] {
             const NaturalLoop* outerLoop = m_graph.m_cpsNaturalLoops->innerMostOuterLoop(*loop);
             dataLogLnIf(Options::verboseLoopUnrolling(), "\nTry unroll innerMostLoop=", *loop, " with innerMostOuterLoop=", outerLoop ? *outerLoop : NaturalLoop());
         }
@@ -506,7 +506,7 @@ public:
             }
         }
 
-        if (UNLIKELY(Options::verboseLoopUnrolling()))
+        if (Options::verboseLoopUnrolling()) [[unlikely]]
             dumpLoopNodeTypeStats(data);
 
         return data.isProfitableToUnroll();

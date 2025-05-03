@@ -898,10 +898,10 @@ CodeBlock::~CodeBlock()
         jitCode()->dfgCommon()->clearWatchpoints();
 #endif
 
-    if (UNLIKELY(vm.m_perBytecodeProfiler))
+    if (vm.m_perBytecodeProfiler) [[unlikely]]
         vm.m_perBytecodeProfiler->notifyDestruction(this);
 
-    if (LIKELY(!vm.heap.isShuttingDown())) {
+    if (!vm.heap.isShuttingDown()) [[likely]] {
         // FIXME: This check should really not be necessary, see https://webkit.org/b/272787
         ASSERT(!m_metadata || m_metadata->unlinkedMetadata());
         if (m_metadata && !m_metadata->isDestroyed()) {
@@ -974,7 +974,7 @@ CodeBlock::~CodeBlock()
                     return;
                 auto* prev = watchpoint.prev();
                 auto* next = watchpoint.next();
-                if (UNLIKELY(!Integrity::isSanePointer(prev) || !Integrity::isSanePointer(next))) {
+                if (!Integrity::isSanePointer(prev) || !Integrity::isSanePointer(next)) [[unlikely]] {
                     uintptr_t status = 0;
                     if (Integrity::isSanePointer(prev))
                         status |= 0x5;
@@ -1211,7 +1211,7 @@ bool CodeBlock::shouldVisitStrongly(const ConcurrentJSLocker& locker, Visitor& v
         return false;
     }
 
-    if (UNLIKELY(m_visitChildrenSkippedDueToOldAge)) {
+    if (m_visitChildrenSkippedDueToOldAge) [[unlikely]] {
         RELEASE_ASSERT(Options::verifyGC());
         return false;
     }
@@ -1237,7 +1237,7 @@ bool CodeBlock::shouldJettisonDueToWeakReference(VM& vm)
 
 static Seconds timeToLive(JITType jitType)
 {
-    if (UNLIKELY(Options::useEagerCodeBlockJettisonTiming())) {
+    if (Options::useEagerCodeBlockJettisonTiming()) [[unlikely]] {
         switch (jitType) {
         case JITType::InterpreterThunk:
             return 10_ms;
@@ -1274,7 +1274,7 @@ ALWAYS_INLINE bool CodeBlock::shouldJettisonDueToOldAge(const ConcurrentJSLocker
     if (visitor.isMarked(this))
         return false;
 
-    if (UNLIKELY(Options::forceCodeBlockToJettisonDueToOldAge()))
+    if (Options::forceCodeBlockToJettisonDueToOldAge()) [[unlikely]]
         return true;
     
     if (timeSinceCreation() < timeToLive(jitType()))
@@ -2332,7 +2332,7 @@ void CodeBlock::jettison(Profiler::JettisonReason reason, ReoptimizationMode mod
     
     if (reason != Profiler::JettisonDueToOldAge) {
         Profiler::Compilation* compilation = jitCode()->dfgCommon()->compilation.get();
-        if (UNLIKELY(compilation))
+        if (compilation) [[unlikely]]
             compilation->setJettisonReason(reason, detail);
         
         // This accomplishes (1), and does its own book-keeping about whether it has already happened.
@@ -3702,7 +3702,7 @@ namespace WTF {
     
 void printInternal(PrintStream& out, JSC::CodeBlock* codeBlock)
 {
-    if (UNLIKELY(!codeBlock)) {
+    if (!codeBlock) [[unlikely]] {
         out.print("<null codeBlock>");
         return;
     }

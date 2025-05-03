@@ -439,8 +439,10 @@ public:
     void forEachConflict(const LiveRange& range, Width width, const Func& func)
     {
         auto status = forEachConflictImpl(m_allocations, range, func);
-        if (UNLIKELY(width > Width64) && status == IterationStatus::Continue)
-            forEachConflictImpl(m_allocationsHigh64, range, func);
+        if (width > Width64) [[unlikely]] {
+            if (status == IterationStatus::Continue)
+                forEachConflictImpl(m_allocationsHigh64, range, func);
+        }
     }
 
     bool isEmpty() const
@@ -824,7 +826,7 @@ private:
     float adjustedBlockFrequency(BasicBlock* block)
     {
         float freq = block->frequency();
-        if (UNLIKELY(!m_fastBlocks.saw(block)))
+        if (!m_fastBlocks.saw(block)) [[unlikely]]
             freq *= Options::rareBlockPenalty();
         return freq;
     }
@@ -985,7 +987,7 @@ private:
         };
         auto markDef = [&](Tmp tmp, Point point)  {
             Point end = activeEnds[tmp];
-            if (UNLIKELY(!end))
+            if (!end) [[unlikely]]
                 end = point + 1; // Dead def / clobber
             m_map[tmp].liveRange.prepend({ point, end });
             activeEnds[tmp] = 0;
@@ -1044,8 +1046,10 @@ private:
                     ASSERT(activeEnds[tmp] || (tmp.isReg() && !m_allAllowedRegisters.contains(tmp.reg(), IgnoreVectors)));
                     // If tmp was live at the head of the next block but not live at the
                     // tail of the current block, close the interval.
-                    if (liveAtTailMarkers[tmp] > positionOfTail && LIKELY(activeEnds[tmp]))
-                        markDef(tmp, blockAfterPositionOfHead);
+                    if (liveAtTailMarkers[tmp] > positionOfTail) {
+                        if (activeEnds[tmp]) [[likely]]
+                            markDef(tmp, blockAfterPositionOfHead);
+                    }
                 }
             }
 
@@ -1070,7 +1074,7 @@ private:
                     if (Arg::isEarlyDef(role))
                         earlyDefs.append(tmp);
                 });
-                if (UNLIKELY(inst.kind.opcode == Patch)) {
+                if (inst.kind.opcode == Patch) [[unlikely]] {
                     inst.extraEarlyClobberedRegs().forEachWithWidthAndPreserved(
                         [&](Reg reg, Width, PreservedWidth preservedWidth) {
                             ASSERT(preservedWidth == PreservesNothing || preservedWidth == Preserves64);
@@ -1556,8 +1560,8 @@ private:
                         conflictsSpillCost = unspillableCost;
                         return IterationStatus::Done;
                     }
-                    if (UNLIKELY(cost == std::numeric_limits<float>::max()
-                        || conflictsSpillCost == std::numeric_limits<float>::max()))
+                    if (cost == std::numeric_limits<float>::max()
+                        || conflictsSpillCost == std::numeric_limits<float>::max()) [[unlikely]]
                         conflictsSpillCost = std::numeric_limits<float>::max();
                     else
                         conflictsSpillCost += cost;
@@ -1570,7 +1574,7 @@ private:
         }
         if (minSpillCost >= tmpData.spillCost()) {
             // If 'tmp' was unspillable, we better have found at least one suitable register.
-            if (UNLIKELY(tmpData.spillCost() == unspillableCost))
+            if (tmpData.spillCost() == unspillableCost) [[unlikely]]
                 failOutOfRegisters(tmp);
             return false;
         }

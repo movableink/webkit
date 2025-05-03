@@ -224,7 +224,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
         state.dumpDisassembly(WTF::dataFile(), *state.b3CodeLinkBuffer);
 
     Profiler::Compilation* compilation = graph.compilation();
-    if (UNLIKELY(compilation)) {
+    if (compilation) [[unlikely]] {
         compilation->addDescription(
             Profiler::OriginStack(),
             toCString("Generated FTL DFG IR for ", CodeBlockWithJITType(codeBlock, JITType::FTLJIT), ", instructions size = ", graph.m_codeBlock->instructionsSize(), ":\n"));

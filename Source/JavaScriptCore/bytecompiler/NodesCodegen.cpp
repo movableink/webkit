@@ -106,10 +106,10 @@ void ConstantNode::emitBytecodeInConditionContext(BytecodeGenerator& generator, 
 {
     TriState value = TriState::Indeterminate;
     JSValue constant = jsValue(generator);
-    if (LIKELY(constant))
+    if (constant) [[likely]]
         value = constant.pureToBoolean();
 
-    if (UNLIKELY(needsDebugHook())) {
+    if (needsDebugHook()) [[unlikely]] {
         if (value != TriState::Indeterminate)
             generator.emitDebugHook(this);
     }
@@ -129,7 +129,7 @@ RegisterID* ConstantNode::emitBytecode(BytecodeGenerator& generator, RegisterID*
     if (dst == generator.ignoredResult())
         return nullptr;
     JSValue constant = jsValue(generator);
-    if (UNLIKELY(!constant)) {
+    if (!constant) [[unlikely]] {
         // This can happen if we try to parse a string or BigInt so enormous that we OOM.
         return generator.emitThrowExpressionTooDeepException();
     }
@@ -433,7 +433,7 @@ RegisterID* ArrayNode::emitBytecode(BytecodeGenerator& generator, RegisterID* ds
             hadVariableExpression = true;
         else {
             JSValue constant = static_cast<ConstantNode*>(firstPutElement->value())->jsValue(generator);
-            if (UNLIKELY(!constant))
+            if (!constant) [[unlikely]]
                 hadVariableExpression = true;
             else {
                 recommendedIndexingType = leastUpperBoundOfIndexingTypeAndValue(recommendedIndexingType, constant);
@@ -1413,7 +1413,7 @@ RegisterID* StaticBlockFunctionCallNode::emitBytecode(BytecodeGenerator& generat
 RegisterID* FunctionCallResolveNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 {
     if (!ASSERT_ENABLED) {
-        if (UNLIKELY(m_ident == generator.vm().propertyNames->builtinNames().assertPrivateName()))
+        if (m_ident == generator.vm().propertyNames->builtinNames().assertPrivateName()) [[unlikely]]
             return generator.move(dst, generator.emitLoad(nullptr, jsUndefined()));
     }
 
@@ -3311,7 +3311,7 @@ RegisterID* UnaryPlusNode::emitBytecode(BytecodeGenerator& generator, RegisterID
 
 void LogicalNotNode::emitBytecodeInConditionContext(BytecodeGenerator& generator, Label& trueTarget, Label& falseTarget, FallThroughMode fallThroughMode)
 {
-    if (UNLIKELY(needsDebugHook()))
+    if (needsDebugHook()) [[unlikely]]
         generator.emitDebugHook(this);
 
     // Reverse the true and false targets.
@@ -3444,7 +3444,7 @@ void BinaryOpNode::emitBytecodeInConditionContext(BytecodeGenerator& generator, 
     ExpressionNode* branchExpression;
     tryFoldToBranch(generator, branchCondition, branchExpression);
 
-    if (UNLIKELY(needsDebugHook())) {
+    if (needsDebugHook()) [[unlikely]] {
         if (branchCondition != TriState::Indeterminate)
             generator.emitDebugHook(this);
     }
@@ -3491,7 +3491,7 @@ void BinaryOpNode::tryFoldToBranch(BytecodeGenerator& generator, TriState& branc
 
     OpcodeID opcodeID = this->opcodeID();
     JSValue value = constant->jsValue(generator);
-    if (UNLIKELY(!value))
+    if (!value) [[unlikely]]
         return;
     bool canFoldToBranch = JSC::canFoldToBranch(opcodeID, branchExpression, value);
     if (!canFoldToBranch)
@@ -3725,7 +3725,7 @@ RegisterID* LogicalOpNode::emitBytecode(BytecodeGenerator& generator, RegisterID
 
 void LogicalOpNode::emitBytecodeInConditionContext(BytecodeGenerator& generator, Label& trueTarget, Label& falseTarget, FallThroughMode fallThroughMode)
 {
-    if (UNLIKELY(needsDebugHook()))
+    if (needsDebugHook()) [[unlikely]]
         generator.emitDebugHook(this);
 
     Ref<Label> afterExpr1 = generator.newLabel();

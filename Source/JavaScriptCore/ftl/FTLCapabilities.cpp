@@ -518,7 +518,7 @@ CapabilityLevel canCompile(Graph& graph)
         return CannotCompile;
     }
     
-    if (UNLIKELY(graph.m_codeBlock->ownerExecutable()->neverFTLOptimize())) {
+    if (graph.m_codeBlock->ownerExecutable()->neverFTLOptimize()) [[unlikely]] {
         dataLogLnIf(verboseCapabilities(), "FTL rejecting ", *graph.m_codeBlock, " because it is marked as never FTL compile.");
         return CannotCompile;
     }
@@ -600,7 +600,7 @@ CapabilityLevel canCompile(Graph& graph)
                     break;
                 default:
                     // Don't know how to handle anything else.
-                    if (UNLIKELY(verboseCapabilities())) {
+                    if (verboseCapabilities()) [[unlikely]] {
                         WTF::dataFile().atomically([&](auto&) {
                             dataLogLn("FTL rejecting node in ", *graph.m_codeBlock, " because of bad use kind: ", edge.useKind(), " in node:");
                             graph.dump(WTF::dataFile(), "    ", node);
@@ -612,7 +612,7 @@ CapabilityLevel canCompile(Graph& graph)
             
             switch (canCompile(node)) {
             case CannotCompile: 
-                if (UNLIKELY(verboseCapabilities())) {
+                if (verboseCapabilities()) [[unlikely]] {
                     WTF::dataFile().atomically([&](auto&) {
                         dataLogLn("FTL rejecting node in ", *graph.m_codeBlock, ":");
                         graph.dump(WTF::dataFile(), "    ", node);
@@ -621,7 +621,7 @@ CapabilityLevel canCompile(Graph& graph)
                 return CannotCompile;
                 
             case CanCompile:
-                if (UNLIKELY(result == CanCompileAndOSREnter && verboseCompilationEnabled())) {
+                if (result == CanCompileAndOSREnter && verboseCompilationEnabled()) [[unlikely]] {
                     WTF::dataFile().atomically([&](auto&) {
                         dataLogLn("FTL disabling OSR entry because of node:");
                         graph.dump(WTF::dataFile(), "    ", node);

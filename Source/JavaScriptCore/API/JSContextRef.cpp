@@ -128,7 +128,7 @@ JSGlobalContextRef JSGlobalContextCreate(JSClassRef globalObjectClass)
         if (NSVersionOfLinkTimeLibrary("JavaScriptCore") <= webkitFirstVersionWithConcurrentGlobalContexts)
             s_sharedVM = &VM::createContextGroup().leakRef();
     });
-    if (UNLIKELY(s_sharedVM))
+    if (s_sharedVM) [[unlikely]]
         return JSGlobalContextCreateInGroup(toRef(s_sharedVM), globalObjectClass);
 #endif // OS(DARWIN)
 
@@ -509,11 +509,11 @@ JSStringRef JSContextGroupTakeSamplesFromSamplingProfiler(JSContextGroupRef grou
 
 #if ENABLE(SAMPLING_PROFILER)
     auto json = vm.takeSamplingProfilerSamplesAsJSON();
-    if (UNLIKELY(!json))
+    if (!json) [[unlikely]]
         return nullptr;
 
     auto jsonData = json->toJSONString();
-    if (UNLIKELY(jsonData.isNull()))
+    if (jsonData.isNull()) [[unlikely]]
         return nullptr;
 
     return OpaqueJSString::tryCreate(WTFMove(jsonData)).leakRef();

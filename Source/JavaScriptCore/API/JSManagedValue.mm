@@ -185,7 +185,7 @@ static JSManagedValueHandleOwner& managedValueHandleOwner()
 
 bool JSManagedValueHandleOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown>, void* context, JSC::AbstractSlotVisitor& visitor, ASCIILiteral* reason)
 {
-    if (UNLIKELY(reason))
+    if (reason) [[unlikely]]
         *reason = "JSManagedValue is opaque root"_s;
     JSManagedValue *managedValue = (__bridge JSManagedValue *)context;
     return visitor.containsOpaqueRoot((__bridge void*)managedValue);

@@ -97,7 +97,7 @@ void JITOperationList::populatePointersInJavaScriptCore()
         if (Options::useJIT())
             jitOperationList->addPointers(&startOfJITOperationsInJSC, &endOfJITOperationsInJSC);
 #if ENABLE(JIT_OPERATION_DISASSEMBLY)
-        if (UNLIKELY(Options::needDisassemblySupport()))
+        if (Options::needDisassemblySupport()) [[unlikely]]
             populateDisassemblyLabelsInJavaScriptCore();
 #endif
     });
@@ -230,7 +230,7 @@ void JITOperationList::populatePointersInJavaScriptCoreForLLInt()
             jitOperationList->addPointers(list.operations, list.operations + list.numberOfOperations);
         }
 #if ENABLE(JIT_OPERATION_DISASSEMBLY)
-        if (UNLIKELY(Options::needDisassemblySupport()))
+        if (Options::needDisassemblySupport()) [[unlikely]]
             JITOperationList::populateDisassemblyLabelsInJavaScriptCoreForLLInt();
 #endif
     });
@@ -285,7 +285,7 @@ void JITOperationList::populateDisassemblyLabelsInJavaScriptCoreForLLInt()
 
 void JITOperationList::populateDisassemblyLabelsInEmbedder(const JITOperationAnnotation* beginOperations, const JITOperationAnnotation* endOperations)
 {
-    if (LIKELY(!Options::needDisassemblySupport()))
+    if (!Options::needDisassemblySupport()) [[likely]]
         return;
     if (Options::useJIT())
         addDisassemblyLabels(beginOperations, endOperations);

@@ -167,7 +167,7 @@ public:
         , m_state(state.graph)
         , m_interpreter(state.graph, m_state)
     {
-        if (UNLIKELY(Options::validateAbstractInterpreterState())) {
+        if (Options::validateAbstractInterpreterState()) [[unlikely]] {
             performGraphPackingAndLivenessAnalysis(m_graph);
             performCFA(m_graph);
 
@@ -721,7 +721,7 @@ private:
         m_interpreter.startExecuting();
         m_interpreter.executeKnownEdgeTypes(m_node);
 
-        if (UNLIKELY(Options::validateAbstractInterpreterState()))
+        if (Options::validateAbstractInterpreterState()) [[unlikely]]
             validateAIState(m_node);
 
         if constexpr (validateDFGDoesGC) {
@@ -19746,7 +19746,7 @@ IGNORE_CLANG_WARNINGS_END
 
     void compileLoopHint()
     {
-        if (LIKELY(!Options::returnEarlyFromInfiniteLoopsForFuzzing()))
+        if (!Options::returnEarlyFromInfiniteLoopsForFuzzing()) [[likely]]
             return;
 
         bool emitEarlyReturn = true;
@@ -24289,7 +24289,7 @@ IGNORE_CLANG_WARNINGS_END
                 exitValue);
         }
 
-        if (UNLIKELY(verboseCompilationEnabled())) {
+        if (verboseCompilationEnabled()) [[unlikely]] {
             WTF::dataFile().atomically([&](auto&) {
                 dataLogLn("        Exit values: ", exitDescriptor->m_values);
                 if (!exitDescriptor->m_materializations.isEmpty()) {

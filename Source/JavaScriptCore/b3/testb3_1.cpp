@@ -1014,7 +1014,7 @@ int main(int argc, char** argv)
     JSC::JITOperationList::populatePointersInEmbedder(&startOfJITOperationsInTestB3, &endOfJITOperationsInTestB3);
 #endif
 #if ENABLE(JIT_OPERATION_DISASSEMBLY)
-    if (UNLIKELY(JSC::Options::needDisassemblySupport()))
+    if (JSC::Options::needDisassemblySupport()) [[unlikely]]
         JSC::JITOperationList::populateDisassemblyLabelsInEmbedder(&startOfJITOperationsInTestB3, &endOfJITOperationsInTestB3);
 #endif
 

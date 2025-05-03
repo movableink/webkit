@@ -473,10 +473,10 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         FTL::State state(dfg);
         FTL::lowerDFGToB3(state);
 
-        if (UNLIKELY(computeCompileTimes()))
+        if (computeCompileTimes()) [[unlikely]]
             m_timeBeforeFTL = MonotonicTime::now();
         
-        if (UNLIKELY(Options::b3AlwaysFailsBeforeCompile())) {
+        if (Options::b3AlwaysFailsBeforeCompile()) [[unlikely]] {
             FTL::fail(state);
             return FTLPath;
         }
@@ -485,7 +485,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         if (safepointResult.didGetCancelled())
             return CancelPath;
         
-        if (UNLIKELY(Options::b3AlwaysFailsBeforeLink())) {
+        if (Options::b3AlwaysFailsBeforeLink()) [[unlikely]] {
             FTL::fail(state);
             return FTLPath;
         }
@@ -607,7 +607,7 @@ CompilationResult Plan::finalize()
             return CompilationInvalidated;
         }
 
-        if (UNLIKELY(validationEnabled())) {
+        if (validationEnabled()) [[unlikely]] {
             TrackedReferences trackedReferences;
 
             for (WriteBarrier<JSCell>& reference : m_codeBlock->jitCode()->dfgCommon()->m_weakReferences)

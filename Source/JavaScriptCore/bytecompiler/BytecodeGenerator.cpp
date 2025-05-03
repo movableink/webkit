@@ -197,7 +197,7 @@ void BytecodeGenerator::asyncFuncParametersTryCatchWrap(const EmitBytecodeFuncto
 
 ParserError BytecodeGenerator::generate(unsigned& size)
 {
-    if (UNLIKELY(m_outOfMemoryDuringConstruction))
+    if (m_outOfMemoryDuringConstruction) [[unlikely]]
         return ParserError(ParserError::OutOfMemory);
 
     bool callingNonCallableConstructor = false;
@@ -603,7 +603,7 @@ BytecodeGenerator::BytecodeGenerator(VM& vm, FunctionNode* functionNode, Unlinke
         if (capturesAnyParameterByName) {
             ASSERT(m_lexicalEnvironmentRegister);
             bool success = functionSymbolTable->trySetArgumentsLength(vm, parameters.size());
-            if (UNLIKELY(!success)) {
+            if (!success) [[unlikely]] {
                 m_outOfMemoryDuringConstruction = true;
                 return;
             }
@@ -615,7 +615,7 @@ BytecodeGenerator::BytecodeGenerator(VM& vm, FunctionNode* functionNode, Unlinke
             for (unsigned i = 0; i < parameters.size(); ++i) {
                 ScopeOffset offset = functionSymbolTable->takeNextScopeOffset(NoLockingNecessary);
                 bool success = functionSymbolTable->trySetArgumentOffset(vm, i, offset);
-                if (UNLIKELY(!success)) {
+                if (!success) [[unlikely]] {
                     m_outOfMemoryDuringConstruction = true;
                     return;
                 }
@@ -1392,7 +1392,7 @@ void BytecodeGenerator::emitEnter()
 {
     OpEnter::emit(this);
 
-    if (LIKELY(Options::optimizeRecursiveTailCalls())) {
+    if (Options::optimizeRecursiveTailCalls()) [[likely]] {
         // We must add the end of op_enter as a potential jump target, because the bytecode parser may decide to split its basic block
         // to have somewhere to jump to if there is a recursive tail-call that points to this function.
         m_codeBlock->addJumpTarget(instructions().size());
@@ -4009,7 +4009,7 @@ void BytecodeGenerator::emitPopWithScope()
 
 void BytecodeGenerator::emitDebugHook(DebugHookType debugHookType, const JSTextPosition& divot, RegisterID* data)
 {
-    if (LIKELY(!shouldEmitDebugHooks()))
+    if (!shouldEmitDebugHooks()) [[likely]]
         return;
 
     if (m_lastDebugHook.position == divot && m_lastDebugHook.type == debugHookType)

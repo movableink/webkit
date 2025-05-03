@@ -545,7 +545,7 @@ public:
     {
 #if ENABLE(LIBPAS_JIT_HEAP)
         Vector<void*, 0> randomAllocations;
-        if (UNLIKELY(Options::useRandomizingExecutableIslandAllocation())) {
+        if (Options::useRandomizingExecutableIslandAllocation()) [[unlikely]] {
             // Let's fragment the executable memory agressively
             auto bytesAllocated = m_bytesAllocated.load(std::memory_order_relaxed);
             uint64_t allocationRoom = (m_reservation.size() - bytesAllocated) * 1 / 100 / sizeInBytes;
@@ -568,9 +568,9 @@ public:
             }
         }
         auto result = ExecutableMemoryHandle::createImpl(sizeInBytes);
-        if (LIKELY(result))
+        if (result) [[likely]]
             m_bytesAllocated.fetch_add(result->sizeInBytes(), std::memory_order_relaxed);
-        if (UNLIKELY(Options::useRandomizingExecutableIslandAllocation())) {
+        if (Options::useRandomizingExecutableIslandAllocation()) [[unlikely]] {
             for (unsigned i = 0; i < randomAllocations.size(); ++i)
                 jit_heap_deallocate(randomAllocations[i]);
         }
@@ -579,7 +579,7 @@ public:
         Locker locker { getLock() };
 
         unsigned start = 0;
-        if (UNLIKELY(Options::useRandomizingExecutableIslandAllocation()))
+        if (Options::useRandomizingExecutableIslandAllocation()) [[unlikely]]
             start = cryptographicallyRandomNumber<uint32_t>() % m_allocators.size();
 
         unsigned i = start;
@@ -1015,7 +1015,7 @@ private:
             const size_t maxIslandsInThisRegion = this->maxIslandsInThisRegion();
 
             RELEASE_ASSERT(oldSize <= maxIslandsInThisRegion);
-            if (UNLIKELY(oldSize == maxIslandsInThisRegion))
+            if (oldSize == maxIslandsInThisRegion) [[unlikely]]
                 crashOnJumpIslandExhaustion();
 
             const size_t newSize = std::min(oldSize + islandsPerPage(), maxIslandsInThisRegion);
@@ -1356,7 +1356,7 @@ void dumpJITMemory(const void* dst, const void* src, size_t size)
 
         static void write(const void* src, size_t size) WTF_REQUIRES_LOCK(dumpJITMemoryLock)
         {
-            if (UNLIKELY(offset + size > bufferSize))
+            if (offset + size > bufferSize) [[unlikely]]
                 flush();
             memcpy(buffer + offset, src, size);
             offset += size;
@@ -1422,7 +1422,7 @@ ExecutableMemoryHandle::~ExecutableMemoryHandle()
     AssemblyCommentRegistry::singleton().unregisterCodeRange(start().untaggedPtr(), end().untaggedPtr());
     FixedVMPoolExecutableAllocator* allocator = g_jscConfig.fixedVMPoolExecutableAllocator;
     allocator->handleWillBeReleased(*this, sizeInBytes());
-    if (UNLIKELY(Options::zeroExecutableMemoryOnFree())) {
+    if (Options::zeroExecutableMemoryOnFree()) [[unlikely]] {
         // We don't have a performJITMemset so just use a zeroed buffer.
         auto zeros = MallocSpan<uint8_t>::zeroedMalloc(sizeInBytes());
         auto span = zeros.span();

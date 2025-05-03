@@ -694,7 +694,7 @@ public:
 
     void lshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
-        if (UNLIKELY(!imm.m_value))
+        if (!imm.m_value) [[unlikely]]
             return move(src, dest);
         m_assembler.slliInsn(dest, src, uint32_t(imm.m_value & ((1 << 6) - 1)));
     }
@@ -753,7 +753,7 @@ public:
 
     void rshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
-        if (UNLIKELY(!imm.m_value))
+        if (!imm.m_value) [[unlikely]]
             return move(src, dest);
         m_assembler.sraiInsn(dest, src, uint32_t(imm.m_value & ((1 << 6) - 1)));
     }
@@ -812,7 +812,7 @@ public:
 
     void urshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
-        if (UNLIKELY(!imm.m_value))
+        if (!imm.m_value) [[unlikely]]
             return move(src, dest);
         m_assembler.srliInsn(dest, src, uint32_t(imm.m_value & ((1 << 6) - 1)));
     }

@@ -241,7 +241,7 @@ unsigned VariableEventStream::reconstruct(
         MinifiedGenerationInfo info = generationInfos.get(source.id());
         if (!info.alive) {
             dataLogLnIf(verbose, "Operand ", valueRecoveries.operandForIndex(i), " is dead.");
-            if (UNLIKELY(Options::poisonDeadOSRExitVariables())) {
+            if (Options::poisonDeadOSRExitVariables()) [[unlikely]] {
                 valueRecoveries[i] = ValueRecovery::constant(JSValue::decode(poisonedDeadOSRExitValue));
                 continue;
             }

@@ -168,7 +168,7 @@ static ALWAYS_INLINE void putWithThis(JSGlobalObject* globalObject, EncodedJSVal
 static ALWAYS_INLINE EncodedJSValue parseIntResult(double input)
 {
     int asInt = static_cast<int>(input);
-    if (LIKELY(static_cast<double>(asInt) == input && (asInt || !std::signbit(input))))
+    if (static_cast<double>(asInt) == input && (asInt || !std::signbit(input))) [[likely]]
         return JSValue::encode(jsNumber(asInt));
     return JSValue::encode(jsNumber(input));
 }
@@ -396,7 +396,7 @@ JSC_DEFINE_JIT_OPERATION(operationReflectOwnKeys, JSArray*, (JSGlobalObject* glo
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* object = JSValue::decode(encodedObject).getObject();
-    if (UNLIKELY(!object)) {
+    if (!object) [[unlikely]] {
         throwTypeError(globalObject, scope, ReflectOwnKeysNonObjectArgumentError);
         OPERATION_RETURN(scope, nullptr);
     }
@@ -518,7 +518,7 @@ JSC_DEFINE_JIT_OPERATION(operationToObject, JSCell*, (JSGlobalObject* globalObje
     JSValue value = JSValue::decode(encodedTarget);
     ASSERT(!value.isObject());
 
-    if (UNLIKELY(value.isUndefinedOrNull())) {
+    if (value.isUndefinedOrNull()) [[unlikely]] {
         if (errorMessage && errorMessage->length()) {
             throwVMTypeError(globalObject, scope, errorMessage);
             OPERATION_RETURN(scope, nullptr);
@@ -815,8 +815,8 @@ ALWAYS_INLINE EncodedJSValue getByValCellInt(JSGlobalObject* globalObject, VM& v
 {
     if (index < 0) {
         // When index is negative, -1 is the most common case. Let's handle it separately.
-        if (LIKELY(index == -1)) {
-            if (auto* array = jsDynamicCast<JSArray*>(base); LIKELY(array && array->definitelyNegativeOneMiss()))
+        if (index == -1) [[likely]] {
+            if (auto* array = jsDynamicCast<JSArray*>(base); array && array->definitelyNegativeOneMiss()) [[likely]]
                 return JSValue::encode(jsUndefined());
             return JSValue::encode(JSValue(base).get(globalObject, vm.propertyNames->negativeOneIdentifier));
         }
@@ -1200,7 +1200,7 @@ JSC_DEFINE_JIT_OPERATION(operationArrayPushMultipleSlow, EncodedJSValue, (JSGlob
     for (int32_t i = 0; i < elementCount; ++i)
         arguments.append(JSValue::decode(values[i]));
 
-    if (UNLIKELY(arguments.hasOverflowed())) {
+    if (arguments.hasOverflowed()) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         OPERATION_RETURN(scope, encodedJSValue());
     }
@@ -1243,7 +1243,7 @@ static ALWAYS_INLINE EncodedJSValue arraySpliceImpl(JSGlobalObject* globalObject
 
     MarkedArgumentBuffer insertions;
     insertions.ensureCapacity(itemCount);
-    if (UNLIKELY(insertions.hasOverflowed())) {
+    if (insertions.hasOverflowed()) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }
@@ -1274,7 +1274,7 @@ static ALWAYS_INLINE EncodedJSValue arraySpliceImpl(JSGlobalObject* globalObject
         return { };
 
     JSValue result;
-    if (LIKELY(speciesResult.first == SpeciesConstructResult::FastPath)) {
+    if (speciesResult.first == SpeciesConstructResult::FastPath) [[likely]] {
         // DFG / FTL tells the hint that the result array is not used at all.
         // If this condition is met, we can skip creation of this array completely.
         auto canFastSliceWithoutSideEffect = [](JSGlobalObject* globalObject, JSArray* base, uint64_t count) {
@@ -1287,7 +1287,7 @@ static ALWAYS_INLINE EncodedJSValue arraySpliceImpl(JSGlobalObject* globalObject
                     return false;
 
                 Structure* resultStructure = globalObject->arrayStructureForIndexingTypeDuringAllocation(arrayType);
-                if (UNLIKELY(hasAnyArrayStorage(resultStructure->indexingType())))
+                if (hasAnyArrayStorage(resultStructure->indexingType())) [[unlikely]]
                     return false;
 
                 return true;
@@ -1297,7 +1297,7 @@ static ALWAYS_INLINE EncodedJSValue arraySpliceImpl(JSGlobalObject* globalObject
                     return false;
 
                 Structure* resultStructure = globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous);
-                if (UNLIKELY(hasAnyArrayStorage(resultStructure->indexingType())))
+                if (hasAnyArrayStorage(resultStructure->indexingType())) [[unlikely]]
                     return false;
                 return true;
             }
@@ -1317,17 +1317,17 @@ static ALWAYS_INLINE EncodedJSValue arraySpliceImpl(JSGlobalObject* globalObject
         }
     }
 
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         JSObject* resultObject = nullptr;
         if (speciesResult.first == SpeciesConstructResult::CreatedObject)
             resultObject = speciesResult.second;
         else {
-            if (UNLIKELY(actualDeleteCount > std::numeric_limits<uint32_t>::max())) {
+            if (actualDeleteCount > std::numeric_limits<uint32_t>::max()) [[unlikely]] {
                 throwRangeError(globalObject, scope, LengthExceededTheMaximumArrayLengthError);
                 return { };
             }
             resultObject = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithUndecided), static_cast<uint32_t>(actualDeleteCount));
-            if (UNLIKELY(!resultObject)) {
+            if (!resultObject) [[unlikely]] {
                 throwOutOfMemoryError(globalObject, scope);
                 return { };
             }
@@ -1335,7 +1335,7 @@ static ALWAYS_INLINE EncodedJSValue arraySpliceImpl(JSGlobalObject* globalObject
         for (uint64_t k = 0; k < actualDeleteCount; ++k) {
             JSValue v = getProperty(globalObject, base, k + actualStart);
             RETURN_IF_EXCEPTION(scope, { });
-            if (UNLIKELY(!v))
+            if (!v) [[unlikely]]
                 continue;
             resultObject->putDirectIndex(globalObject, k, v, 0, PutDirectIndexShouldThrow);
             RETURN_IF_EXCEPTION(scope, { });
@@ -1428,7 +1428,7 @@ JSC_DEFINE_JIT_OPERATION(operationRegExpExecGeneric, EncodedJSValue, (JSGlobalOb
     JSValue argument = JSValue::decode(encodedArgument);
     
     auto* regexp = jsDynamicCast<RegExpObject*>(base);
-    if (UNLIKELY(!regexp))
+    if (!regexp) [[unlikely]]
         OPERATION_RETURN(scope, throwVMTypeError(globalObject, scope, "Builtin RegExp exec can only be called on a RegExp object"_s));
 
     JSString* input = argument.toStringOrNull(globalObject);
@@ -1663,7 +1663,7 @@ JSC_DEFINE_JIT_OPERATION(operationRegExpTestGeneric, size_t, (JSGlobalObject* gl
     JSValue argument = JSValue::decode(encodedArgument);
 
     auto* regexp = jsDynamicCast<RegExpObject*>(base);
-    if (UNLIKELY(!regexp)) {
+    if (!regexp) [[unlikely]] {
         throwTypeError(globalObject, scope);
         OPERATION_RETURN(scope, false);
     }
@@ -2147,7 +2147,7 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSize, char*, (JSGlobalObject* glob
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(size < 0)) {
+    if (size < 0) [[unlikely]] {
         throwException(globalObject, scope, createRangeError(globalObject, ArrayInvalidLengthError));
         OPERATION_RETURN(scope, nullptr);
     }
@@ -2157,7 +2157,7 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSize, char*, (JSGlobalObject* glob
         result = JSArray::createWithButterfly(vm, nullptr, arrayStructure, butterfly);
     else {
         result = JSArray::tryCreate(vm, arrayStructure, size);
-        if (UNLIKELY(!result)) {
+        if (!result) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             OPERATION_RETURN(scope, nullptr);
         }
@@ -2172,7 +2172,7 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSizeAndHint, char*, (JSGlobalObjec
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(size < 0)) {
+    if (size < 0) [[unlikely]] {
         throwException(globalObject, scope, createRangeError(globalObject, ArrayInvalidLengthError));
         OPERATION_RETURN(scope, nullptr);
     }
@@ -2182,7 +2182,7 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSizeAndHint, char*, (JSGlobalObjec
         result = JSArray::createWithButterfly(vm, nullptr, arrayStructure, butterfly);
     else {
         result = JSArray::tryCreate(vm, arrayStructure, size, vectorLengthHint);
-        if (UNLIKELY(!result)) {
+        if (!result) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             OPERATION_RETURN(scope, nullptr);
         }
@@ -2591,11 +2591,11 @@ JSC_DEFINE_JIT_OPERATION(operationHasIndexedProperty, size_t, (JSGlobalObject* g
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSObject* object = baseCell->toObject(globalObject);
-    if (UNLIKELY(subscript < 0)) {
+    if (subscript < 0) [[unlikely]] {
         // When subscript is negative, -1 is the most common case. Let's handle it separately.
-        if (LIKELY(subscript == -1)) {
+        if (subscript == -1) [[likely]] {
             // what?
-            if (auto* array = jsDynamicCast<JSArray*>(object); LIKELY(array && array->definitelyNegativeOneMiss()))
+            if (auto* array = jsDynamicCast<JSArray*>(object); array && array->definitelyNegativeOneMiss()) [[likely]]
                 OPERATION_RETURN(scope, false);
             OPERATION_RETURN(scope, object->hasProperty(globalObject, vm.propertyNames->negativeOneIdentifier));
         }
@@ -2613,10 +2613,10 @@ JSC_DEFINE_JIT_OPERATION(operationHasEnumerableIndexedProperty, size_t, (JSGloba
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSObject* object = baseCell->toObject(globalObject);
-    if (UNLIKELY(subscript < 0)) {
+    if (subscript < 0) [[unlikely]] {
         // When subscript is negative, -1 is the most common case. Let's handle it separately.
-        if (LIKELY(subscript == -1)) {
-            if (auto* array = jsDynamicCast<JSArray*>(baseCell); LIKELY(array && array->definitelyNegativeOneMiss()))
+        if (subscript == -1) [[likely]] {
+            if (auto* array = jsDynamicCast<JSArray*>(baseCell); array && array->definitelyNegativeOneMiss()) [[likely]]
                 OPERATION_RETURN(scope, false);
             OPERATION_RETURN(scope, object->hasProperty(globalObject, vm.propertyNames->negativeOneIdentifier));
         }
@@ -2925,7 +2925,7 @@ JSC_DEFINE_JIT_OPERATION(operationStringReplaceStringEmptyString, JSString*, (JS
     size_t searchLength = search->length();
     size_t matchEnd = matchStart + searchLength;
     auto result = tryMakeString(StringView(string).substring(0, matchStart), StringView(string).substring(matchEnd, string->length() - matchEnd));
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         OPERATION_RETURN(scope,  nullptr);
     }
@@ -2992,7 +2992,7 @@ JSC_DEFINE_JIT_OPERATION(operationStringReplaceStringEmptyStringWithTable8, JSSt
     size_t searchLength = search->length();
     size_t matchEnd = matchStart + searchLength;
     auto result = tryMakeString(StringView(string).substring(0, matchStart), StringView(string).substring(matchEnd, string->length() - matchEnd));
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         OPERATION_RETURN(scope, nullptr);
     }
@@ -3254,7 +3254,7 @@ JSC_DEFINE_JIT_OPERATION(operationStringProtoFuncReplaceAllRegExpEmptyStr, JSCel
 
     RegExp* regExp = searchValue->regExp();
 
-    if (UNLIKELY(!regExp->global())) {
+    if (!regExp->global()) [[unlikely]] {
         throwTypeError(globalObject, scope, "String.prototype.replaceAll argument must not be a non-global regular expression"_s);
         OPERATION_RETURN(scope, nullptr);
     }
@@ -3288,7 +3288,7 @@ JSC_DEFINE_JIT_OPERATION(operationStringProtoFuncReplaceAllRegExpString, JSCell*
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!searchValue->regExp()->global())) {
+    if (!searchValue->regExp()->global()) [[unlikely]] {
         throwTypeError(globalObject, scope, "String.prototype.replaceAll argument must not be a non-global regular expression"_s);
         OPERATION_RETURN(scope, nullptr);
     }
@@ -3395,7 +3395,7 @@ JSC_DEFINE_JIT_OPERATION(operationFunctionBind, JSBoundFunction*, (JSGlobalObjec
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!target->isCallable())) {
+    if (!target->isCallable()) [[unlikely]] {
         throwTypeError(globalObject, scope, "|this| is not a function inside Function.prototype.bind"_s);
         OPERATION_RETURN(scope, nullptr);
     }
@@ -3418,7 +3418,7 @@ JSC_DEFINE_JIT_OPERATION(operationFunctionBind, JSBoundFunction*, (JSGlobalObjec
     double length = 0;
     JSString* name = nullptr;
     JSFunction* function = jsDynamicCast<JSFunction*>(target);
-    if (LIKELY(function && function->canAssumeNameAndLengthAreOriginal(vm))) {
+    if (function && function->canAssumeNameAndLengthAreOriginal(vm)) [[likely]] {
         // Do nothing! 'length' and 'name' computation are lazily done.
         // And this is totally OK since we know that wrapped functions have canAssumeNameAndLengthAreOriginal condition
         // at the time of creation of JSBoundFunction.
@@ -3784,7 +3784,7 @@ JSC_DEFINE_JIT_OPERATION(operationHasOwnProperty, size_t, (JSGlobalObject* globa
 
     JSValue key = JSValue::decode(encodedKey);
 
-    if (LIKELY(key.isString())) {
+    if (key.isString()) [[likely]] {
         auto propertyName = asString(key)->toAtomString(globalObject);
         OPERATION_RETURN_IF_EXCEPTION(scope, false);
 
@@ -4352,13 +4352,13 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSpreadSlow, JSCell*, (JSGlobalObje
             ++checkedLength;
     }
 
-    if (UNLIKELY(checkedLength.hasOverflowed())) {
+    if (checkedLength.hasOverflowed()) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         OPERATION_RETURN(scope, nullptr);
     }
 
     unsigned length = checkedLength;
-    if (UNLIKELY(length >= MIN_ARRAY_STORAGE_CONSTRUCTION_LENGTH)) {
+    if (length >= MIN_ARRAY_STORAGE_CONSTRUCTION_LENGTH) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         OPERATION_RETURN(scope, nullptr);
     }
@@ -4366,7 +4366,7 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSpreadSlow, JSCell*, (JSGlobalObje
     Structure* structure = globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous);
 
     JSArray* result = JSArray::tryCreate(vm, structure, length);
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         OPERATION_RETURN(scope, nullptr);
     }
@@ -4462,11 +4462,11 @@ static ALWAYS_INLINE JSObject* newArrayWithSpeciesImpl(JSGlobalObject* globalObj
     std::pair<SpeciesConstructResult, JSObject*> speciesResult = speciesConstructArray(globalObject, array, length);
     EXCEPTION_ASSERT(!!scope.exception() == (speciesResult.first == SpeciesConstructResult::Exception));
 
-    if (UNLIKELY(speciesResult.first == SpeciesConstructResult::Exception))
+    if (speciesResult.first == SpeciesConstructResult::Exception) [[unlikely]]
         return { };
 
-    if (LIKELY(speciesResult.first == SpeciesConstructResult::FastPath)) {
-        if (UNLIKELY(length > std::numeric_limits<unsigned>::max())) {
+    if (speciesResult.first == SpeciesConstructResult::FastPath) [[likely]] {
+        if (length > std::numeric_limits<unsigned>::max()) [[unlikely]] {
             throwRangeError(globalObject, scope, ArrayInvalidLengthError);
             return nullptr;
         }
@@ -4477,7 +4477,7 @@ static ALWAYS_INLINE JSObject* newArrayWithSpeciesImpl(JSGlobalObject* globalObj
         else
             structure = globalObject->arrayStructureForIndexingTypeDuringAllocation(indexingType);
         JSArray* result = JSArray::tryCreate(vm, structure, length);
-        if (UNLIKELY(!result)) {
+        if (!result) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return nullptr;
         }
@@ -4896,7 +4896,7 @@ JSC_DEFINE_JIT_OPERATION(operationWeakSetAdd, void, (JSGlobalObject* globalObjec
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!canBeHeldWeakly(key))) {
+    if (!canBeHeldWeakly(key)) [[unlikely]] {
         throwTypeError(globalObject, scope, WeakSetInvalidValueError);
         OPERATION_RETURN(scope);
     }
@@ -4912,7 +4912,7 @@ JSC_DEFINE_JIT_OPERATION(operationWeakMapSet, void, (JSGlobalObject* globalObjec
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!canBeHeldWeakly(key))) {
+    if (!canBeHeldWeakly(key)) [[unlikely]] {
         throwTypeError(globalObject, scope, WeakMapInvalidKeyError);
         OPERATION_RETURN(scope);
     }

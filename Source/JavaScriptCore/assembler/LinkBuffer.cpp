@@ -66,7 +66,7 @@ LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithoutDisassembly
     ASSERT(m_didAllocate);
     CodeRef<LinkBufferPtrTag> codeRef(m_executableMemory ? CodeRef<LinkBufferPtrTag>(*m_executableMemory) : CodeRef<LinkBufferPtrTag>::createSelfManagedCodeRef(m_code));
 
-    if (UNLIKELY(Options::useJITDump()))
+    if (Options::useJITDump()) [[unlikely]]
         logJITCodeForJITDump(codeRef, simpleName);
 
     return codeRef;
@@ -427,7 +427,7 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, JITCompi
 #if ENABLE(JIT)
     if (g_jscConfig.useFastJITPermissions) {
         ASSERT(codeOutData == outData);
-        if (UNLIKELY(Options::dumpJITMemoryPath()))
+        if (Options::dumpJITMemoryPath()) [[unlikely]]
             dumpJITMemory(outData, outData, m_size);
     } else {
         ASSERT(codeOutData != outData);
@@ -521,7 +521,9 @@ void LinkBuffer::allocate(MacroAssembler& macroAssembler, JITCompilationEffort e
 
 void LinkBuffer::linkComments(MacroAssembler& assembler)
 {
-    if (LIKELY(!Options::needDisassemblySupport()) || !m_executableMemory)
+    if (!Options::needDisassemblySupport()) [[likely]]
+        return;
+    if (!m_executableMemory)
         return;
     AssemblyCommentRegistry::CommentMap map;
     for (auto& comment : assembler.m_comments) {

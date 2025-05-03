@@ -331,7 +331,7 @@ private:
 
     RareData& ensureRareData()
     {
-        if (LIKELY(m_rareData))
+        if (m_rareData) [[likely]]
             return *m_rareData;
         return ensureRareDataSlow();
     }

@@ -194,7 +194,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationCompileOSRExit, void, (CallFrame* cal
 
         jit.jitAssertHasValidCallFrame();
 
-        if (UNLIKELY(vm.m_perBytecodeProfiler && codeBlock->jitCode()->dfgCommon()->compilation)) {
+        if (vm.m_perBytecodeProfiler && codeBlock->jitCode()->dfgCommon()->compilation) [[unlikely]] {
             Profiler::Database& database = *vm.m_perBytecodeProfiler;
             Profiler::Compilation* compilation = codeBlock->jitCode()->dfgCommon()->compilation.get();
 
@@ -270,7 +270,7 @@ IGNORE_WARNINGS_END
 void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const Operands<ValueRecovery>& operands, SpeculationRecovery* recovery, uint32_t osrExitIndex)
 {
     // Pro-forma stuff.
-    if (UNLIKELY(Options::printEachOSRExit())) {
+    if (Options::printEachOSRExit()) [[unlikely]] {
         SpeculationFailureDebugInfo* debugInfo = new SpeculationFailureDebugInfo;
         debugInfo->codeBlock = jit.codeBlock();
         debugInfo->kind = exit.m_kind;
@@ -767,7 +767,7 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
 #if USE(JSVALUE64)
             EncodedJSValue currentConstant = JSValue::encode(recovery.constant());
             if (currentConstant == encodedJSUndefined()) {
-                if (UNLIKELY(!undefinedGPRIsInitialized)) {
+                if (!undefinedGPRIsInitialized) [[unlikely]] {
                     jit.move(CCallHelpers::TrustedImm64(encodedJSUndefined()), undefinedGPR);
                     undefinedGPRIsInitialized = true;
                 }

@@ -40,7 +40,7 @@ inline void* throwNotAFunctionErrorFromCallIC(JSGlobalObject* globalObject, JSCe
     auto scope = DECLARE_THROW_SCOPE(vm);
     auto errorMessage = constructErrorMessage(globalObject, callee, "is not a function"_s);
     RETURN_IF_EXCEPTION(scope, nullptr);
-    if (UNLIKELY(!errorMessage)) {
+    if (!errorMessage) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -62,7 +62,7 @@ inline void* throwNotAConstructorErrorFromCallIC(JSGlobalObject* globalObject, J
     auto scope = DECLARE_THROW_SCOPE(vm);
     auto errorMessage = constructErrorMessage(globalObject, callee, "is not a constructor"_s);
     RETURN_IF_EXCEPTION(scope, nullptr);
-    if (UNLIKELY(!errorMessage)) {
+    if (!errorMessage) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -92,7 +92,7 @@ inline void* handleHostCall(VM& vm, JSCell* owner, CallFrame* calleeFrame, JSVal
             calleeFrame->setCallee(asObject(callee));
             vm.encodedHostCallReturnValue = callData.native.function(asObject(callee)->globalObject(), calleeFrame);
             AssertNoGC assertNoGC;
-            if (UNLIKELY(scope.exception()))
+            if (scope.exception()) [[unlikely]]
                 return nullptr;
             return LLInt::getHostCallReturnValueEntrypoint().code().taggedPtr();
         }
@@ -113,7 +113,7 @@ inline void* handleHostCall(VM& vm, JSCell* owner, CallFrame* calleeFrame, JSVal
         calleeFrame->setCallee(asObject(callee));
         vm.encodedHostCallReturnValue = constructData.native.function(asObject(callee)->globalObject(), calleeFrame);
         AssertNoGC assertNoGC;
-        if (UNLIKELY(scope.exception()))
+        if (scope.exception()) [[unlikely]]
             return nullptr;
         return LLInt::getHostCallReturnValueEntrypoint().code().taggedPtr();
     }
@@ -232,7 +232,7 @@ ALWAYS_INLINE void* virtualForWithFunction(VM& vm, JSCell* owner, CallFrame* cal
 
     JSValue calleeAsValue = calleeFrame->guaranteedJSValueCallee();
     calleeAsFunctionCell = getJSFunction(calleeAsValue);
-    if (UNLIKELY(!calleeAsFunctionCell)) {
+    if (!calleeAsFunctionCell) [[unlikely]] {
         if (jsDynamicCast<InternalFunction*>(calleeAsValue)) {
             CodePtr<JSEntryPtrTag> codePtr = vm.getCTIInternalFunctionTrampolineFor(kind);
             ASSERT(!!codePtr);

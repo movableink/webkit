@@ -583,7 +583,7 @@ SpeculatedType speculationFromStructure(Structure* structure)
 SpeculatedType speculationFromCell(JSCell* cell)
 {
     // FIXME: rdar://69036888: remove isSanePointer checks when no longer needed.
-    if (UNLIKELY(!Integrity::isSanePointer(cell))) {
+    if (!Integrity::isSanePointer(cell)) [[unlikely]] {
         ASSERT_NOT_REACHED();
         return SpecNone;
     }
@@ -591,7 +591,7 @@ SpeculatedType speculationFromCell(JSCell* cell)
     if (cell->isString()) {
         JSString* string = jsCast<JSString*>(cell);
         if (const StringImpl* impl = string->tryGetValueImpl()) {
-            if (UNLIKELY(!Integrity::isSanePointer(impl))) {
+            if (!Integrity::isSanePointer(impl)) [[unlikely]] {
                 ASSERT_NOT_REACHED();
                 return SpecNone;
             }

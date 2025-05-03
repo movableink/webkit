@@ -56,25 +56,25 @@ public:
         });
 #endif
         ASSERT(!function->isHostFunctionNonInline());
-        if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+        if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
             throwStackOverflowError(globalObject, scope);
             return;
         }
 
-        if (UNLIKELY(vm.disallowVMEntryCount)) {
+        if (vm.disallowVMEntryCount) [[unlikely]] {
             Interpreter::checkVMEntryPermission();
             throwStackOverflowError(globalObject, scope);
             return;
         }
 
         m_arguments.ensureCapacity(argumentCount);
-        if (UNLIKELY(m_arguments.hasOverflowed())) {
+        if (m_arguments.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return;
         }
 
         auto* newCodeBlock = m_vm.interpreter.prepareForCachedCall(*this, function);
-        if (UNLIKELY(scope.exception()))
+        if (scope.exception()) [[unlikely]]
             return;
         m_numParameters = newCodeBlock->numParameters();
         m_protoCallFrame.init(newCodeBlock, function->globalObject(), function, jsUndefined(), argumentCount + 1, const_cast<EncodedJSValue*>(m_arguments.data()));
@@ -140,7 +140,7 @@ public:
         ASSERT(sizeof...(args) == static_cast<size_t>(m_protoCallFrame.argumentCount()));
         constexpr unsigned argumentCountIncludingThis = 1 + sizeof...(args);
         if constexpr (argumentCountIncludingThis <= 4) {
-            if (LIKELY(m_numParameters <= argumentCountIncludingThis)) {
+            if (m_numParameters <= argumentCountIncludingThis) [[likely]] {
                 JSValue result = m_vm.interpreter.tryCallWithArguments(*this, thisValue, args...);
                 RETURN_IF_EXCEPTION(scope, { });
                 if (result)
@@ -153,7 +153,7 @@ public:
         setThis(thisValue);
         (appendArgument(args), ...);
 
-        if (UNLIKELY(hasOverflowedArguments())) {
+        if (hasOverflowedArguments()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return { };
         }

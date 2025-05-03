@@ -418,7 +418,7 @@ String HeapSnapshotBuilder::json()
                     nodeLabel.append(description);
                 }
 
-                if (UNLIKELY(nodeLabel.hasOverflowed())) {
+                if (nodeLabel.hasOverflowed()) [[unlikely]] {
                     m_hasOverflowed = true;
                     return;
                 }

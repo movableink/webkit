@@ -2487,8 +2487,8 @@ public:
     AssemblerLabel label()
     {
         AssemblerLabel result = m_formatter.label();
-        while (UNLIKELY(static_cast<int>(result.offset()) < m_indexOfTailOfLastWatchpoint)) {
-            if (UNLIKELY(static_cast<int>(result.offset()) + 4 <= m_indexOfTailOfLastWatchpoint))
+        while (static_cast<int>(result.offset()) < m_indexOfTailOfLastWatchpoint) [[unlikely]] {
+            if (static_cast<int>(result.offset()) + 4 <= m_indexOfTailOfLastWatchpoint) [[unlikely]]
                 nopw();
             else
                 nop();

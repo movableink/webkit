@@ -108,7 +108,7 @@ inline void Heap::writeBarrier(const JSCell* from, JSCell* to)
 #endif
     if (!from)
         return;
-    if (LIKELY(!to))
+    if (!to) [[likely]]
         return;
     if (!isWithinThreshold(from->cellState(), barrierThreshold()))
         return;
@@ -120,7 +120,7 @@ inline void Heap::writeBarrier(const JSCell* from)
     ASSERT_GC_OBJECT_LOOKS_VALID(const_cast<JSCell*>(from));
     if (!from)
         return;
-    if (UNLIKELY(isWithinThreshold(from->cellState(), barrierThreshold())))
+    if (isWithinThreshold(from->cellState(), barrierThreshold())) [[unlikely]]
         writeBarrierSlowPath(from);
 }
 
@@ -133,7 +133,7 @@ inline void Heap::mutatorFence()
         return;
     }
 
-    if (UNLIKELY(mutatorShouldBeFenced()))
+    if (mutatorShouldBeFenced()) [[unlikely]]
         WTF::storeStoreFence();
 }
 

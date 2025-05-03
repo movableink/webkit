@@ -1442,8 +1442,10 @@ public:
                     
                     if (nonNegative && lessThanLength) {
                         executeNode(block->at(nodeIndex));
-                        if (UNLIKELY(Options::validateBoundsCheckElimination()) && node->op() == CheckInBounds)
-                            m_insertionSet.insertNode(nodeIndex, SpecNone, AssertInBounds, node->origin, node->child1(), node->child2());
+                        if (Options::validateBoundsCheckElimination()) [[unlikely]] {
+                            if (node->op() == CheckInBounds)
+                                m_insertionSet.insertNode(nodeIndex, SpecNone, AssertInBounds, node->origin, node->child1(), node->child2());
+                        }
                         // We just need to make sure we are a value-producing node.
                         node->convertToIdentityOn(node->child1().node());
                         changed = true;

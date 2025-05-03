@@ -328,7 +328,7 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
                 destroy(cell);
         }
         if (sweepMode == SweepToFreeList) {
-            if (UNLIKELY(scribbleMode == Scribble))
+            if (scribbleMode == Scribble) [[unlikely]]
                 scribble(payloadBegin, payloadEnd - payloadBegin);
             FreeCell* interval = reinterpret_cast_ptr<FreeCell*>(payloadBegin);
             interval->makeLast(payloadEnd - payloadBegin, secret);
@@ -364,7 +364,7 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
         if (destructionMode != BlockHasNoDestructors)
             destroy(cell);
         if (sweepMode == SweepToFreeList) {
-            if (UNLIKELY(scribbleMode == Scribble))
+            if (scribbleMode == Scribble) [[unlikely]]
                 scribble(cell, cellSize);
 
             // The following check passing implies there was at least one live cell
@@ -373,7 +373,7 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
             if (i + m_atomsPerCell < previousDeadCell) {
                 size_t intervalLength = currentInterval * atomSize;
                 FreeCell* cell = reinterpret_cast_ptr<FreeCell*>(&block.atoms()[previousDeadCell]);
-                if (LIKELY(head))
+                if (head) [[likely]]
                     cell->setNext(head, intervalLength, secret);
                 else
                     cell->makeLast(intervalLength, secret);
@@ -391,7 +391,7 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
             size_t intervalLength = currentInterval * atomSize;
             FreeCell* cell = reinterpret_cast_ptr<FreeCell*>(&block.atoms()[previousDeadCell]);
 
-            if (LIKELY(head))
+            if (head) [[likely]]
                 cell->setNext(head, intervalLength, secret);
             else
                 cell->makeLast(intervalLength, secret);

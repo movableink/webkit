@@ -59,7 +59,7 @@ namespace DFG {
 struct OSRExit;
 }
 
-#define JIT_COMMENT(jit, ...) do { if (UNLIKELY(Options::needDisassemblySupport())) { (jit).comment(__VA_ARGS__); } else { (void) jit; } } while (0)
+#define JIT_COMMENT(jit, ...) do { if (Options::needDisassemblySupport()) [[unlikely]] { (jit).comment(__VA_ARGS__); } else { (void) jit; } } while (0)
 
 class AbstractMacroAssemblerBase {
     WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(AbstractMacroAssemblerBase);
@@ -1112,7 +1112,7 @@ public:
     template<typename... Types>
     void comment(const Types&... values)
     {
-        if (LIKELY(!Options::needDisassemblySupport()))
+        if (!Options::needDisassemblySupport()) [[likely]]
             return;
         StringPrintStream s;
         s.print(values...);

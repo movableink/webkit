@@ -381,7 +381,7 @@ namespace JSC {
         static ParserError generate(VM& vm, Node* node, const SourceCode& sourceCode, UnlinkedCodeBlock* unlinkedCodeBlock, OptionSet<CodeGenerationMode> codeGenerationMode, const RefPtr<TDZEnvironmentLink>& parentScopeTDZVariables, const FixedVector<Identifier>* generatorOrAsyncWrapperFunctionParameterNames, const PrivateNameEnvironment* privateNameEnvironment)
         {
             MonotonicTime before;
-            if (UNLIKELY(Options::reportBytecodeCompileTimes()))
+            if (Options::reportBytecodeCompileTimes()) [[unlikely]]
                 before = MonotonicTime::now();
 
             DeferGC deferGC(vm);
@@ -389,7 +389,7 @@ namespace JSC {
             unsigned size;
             auto result = bytecodeGenerator->generate(size);
 
-            if (UNLIKELY(Options::reportBytecodeCompileTimes())) {
+            if (Options::reportBytecodeCompileTimes()) [[unlikely]] {
                 MonotonicTime after = MonotonicTime::now();
                 dataLogLn(result.isValid() ? "Failed to compile #" : "Compiled #", CodeBlockHash(sourceCode, unlinkedCodeBlock->isConstructor() ? CodeForConstruct : CodeForCall), " into bytecode ", size, " instructions in ", (after - before).milliseconds(), " ms.");
             }
@@ -486,11 +486,11 @@ namespace JSC {
         {
             // Node::emitCode assumes that dst, if provided, is either a local or a referenced temporary.
             ASSERT(!dst || dst == ignoredResult() || !dst->isTemporary() || dst->refCount());
-            if (UNLIKELY(!m_vm.isSafeToRecurse())) {
+            if (!m_vm.isSafeToRecurse()) [[unlikely]] {
                 emitThrowExpressionTooDeepException();
                 return;
             }
-            if (UNLIKELY(n->needsDebugHook()))
+            if (n->needsDebugHook()) [[unlikely]]
                 emitDebugHook(n);
             n->emitBytecode(*this, dst);
         }
@@ -545,9 +545,9 @@ namespace JSC {
         {
             // Node::emitCode assumes that dst, if provided, is either a local or a referenced temporary.
             ASSERT(!dst || dst == ignoredResult() || !dst->isTemporary() || dst->refCount());
-            if (UNLIKELY(!m_vm.isSafeToRecurse()))
+            if (!m_vm.isSafeToRecurse()) [[unlikely]]
                 return emitThrowExpressionTooDeepException();
-            if (UNLIKELY(n->needsDebugHook()))
+            if (n->needsDebugHook()) [[unlikely]]
                 emitDebugHook(n);
             return n->emitBytecode(*this, dst);
         }
@@ -565,9 +565,9 @@ namespace JSC {
         RegisterID* emitDefineClassElements(PropertyListNode* n, RegisterID* constructor, RegisterID* prototype, Vector<UnlinkedFunctionExecutable::ClassElementDefinition>& instanceElementDefinitions, Vector<UnlinkedFunctionExecutable::ClassElementDefinition>& staticElementDefinitions)
         {
             ASSERT(constructor->refCount() && prototype->refCount());
-            if (UNLIKELY(!m_vm.isSafeToRecurse()))
+            if (!m_vm.isSafeToRecurse()) [[unlikely]]
                 return emitThrowExpressionTooDeepException();
-            if (UNLIKELY(n->needsDebugHook()))
+            if (n->needsDebugHook()) [[unlikely]]
                 emitDebugHook(n);
             return n->emitBytecode(*this, constructor, prototype, &instanceElementDefinitions, &staticElementDefinitions);
         }
@@ -588,7 +588,7 @@ namespace JSC {
 
         void emitNodeInConditionContext(ExpressionNode* n, Label& trueTarget, Label& falseTarget, FallThroughMode fallThroughMode)
         {
-            if (UNLIKELY(!m_vm.isSafeToRecurse())) {
+            if (!m_vm.isSafeToRecurse()) [[unlikely]] {
                 emitThrowExpressionTooDeepException();
                 return;
             }

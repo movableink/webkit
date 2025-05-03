@@ -837,7 +837,7 @@ private:
         m_combinedLiveness = CombinedLiveness(m_graph);
 
         CString graphBeforeSinking;
-        if (UNLIKELY(Options::verboseValidationFailure() && Options::validateGraphAtEachPhase())) {
+        if (Options::verboseValidationFailure() && Options::validateGraphAtEachPhase()) [[unlikely]] {
             StringPrintStream out;
             m_graph.dump(out);
             graphBeforeSinking = out.toCString();
@@ -864,7 +864,7 @@ private:
         removeICStatusFilters();
         fixUpsilonEdge();
 
-        if (UNLIKELY(Options::validateGraphAtEachPhase()))
+        if (Options::validateGraphAtEachPhase()) [[unlikely]]
             DFG::validate(m_graph, DumpGraph, graphBeforeSinking);
         return true;
     }
@@ -2007,7 +2007,7 @@ escapeChildren:
                     // We're materializing `identifier` at this point, and the unmaterialized
                     // version is inside `location`. We track which SSA variable this belongs
                     // to in case we also need a PutHint for the Phi.
-                    if (UNLIKELY(validationEnabled())) {
+                    if (validationEnabled()) [[unlikely]] {
                         RELEASE_ASSERT(m_sinkCandidates.contains(location.base()));
                         RELEASE_ASSERT(m_sinkCandidates.contains(identifier));
 

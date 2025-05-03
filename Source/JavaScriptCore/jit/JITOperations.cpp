@@ -239,7 +239,7 @@ JSC_DEFINE_JIT_OPERATION(operationThrowRemoteFunctionException, EncodedJSValue, 
     // We should only be here when "rethrowing" an exception
     RELEASE_ASSERT(exception);
 
-    if (UNLIKELY(vm.isTerminationException(exception))) {
+    if (vm.isTerminationException(exception)) [[unlikely]] {
         scope.release();
         OPERATION_RETURN(scope, encodedJSValue());
     }
@@ -249,7 +249,7 @@ JSC_DEFINE_JIT_OPERATION(operationThrowRemoteFunctionException, EncodedJSValue, 
 
     String exceptionString = exceptionValue.toWTFString(globalObject);
     Exception* toStringException = scope.exception();
-    if (UNLIKELY(toStringException && vm.isTerminationException(toStringException))) {
+    if (toStringException && vm.isTerminationException(toStringException)) [[unlikely]] {
         scope.release();
         OPERATION_RETURN(scope, encodedJSValue());
     }
@@ -398,7 +398,7 @@ static ALWAYS_INLINE JSValue getByIdMegamorphic(JSGlobalObject* globalObject, VM
     auto* uid = identifier.uid();
     PropertySlot slot(thisValue, PropertySlot::InternalMethodType::Get);
 
-    if (UNLIKELY(!baseValue.isObject())) {
+    if (!baseValue.isObject()) [[unlikely]] {
         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
             repatchGetBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
         return baseValue.get(globalObject, uid, slot);
@@ -408,7 +408,7 @@ static ALWAYS_INLINE JSValue getByIdMegamorphic(JSGlobalObject* globalObject, VM
     JSObject* object = baseObject;
     bool cacheable = true;
     while (true) {
-        if (UNLIKELY(TypeInfo::overridesGetOwnPropertySlot(object->inlineTypeFlags()) && object->type() != ArrayType && object->type() != JSFunctionType && object != globalObject->arrayPrototype())) {
+        if (TypeInfo::overridesGetOwnPropertySlot(object->inlineTypeFlags()) && object->type() != ArrayType && object->type() != JSFunctionType && object != globalObject->arrayPrototype()) [[unlikely]] {
             if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
                 repatchGetBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
             if (object->getNonIndexPropertySlot(globalObject, uid, slot))
@@ -421,11 +421,11 @@ static ALWAYS_INLINE JSValue getByIdMegamorphic(JSGlobalObject* globalObject, VM
         structure = object->structure(); // Reload it again since static-class-table can cause transition. But this transition only affects on this Structure.
         cacheable &= structure->propertyAccessesAreCacheable();
         if (hasProperty) {
-            if (LIKELY(cacheable && slot.isCacheableValue() && slot.cachedOffset() <= MegamorphicCache::maxOffset)) {
+            if (cacheable && slot.isCacheableValue() && slot.cachedOffset() <= MegamorphicCache::maxOffset) [[likely]] {
                 if (slot.slotBase() == baseObject || !baseObject->structure()->isDictionary())
                     vm.megamorphicCache()->initAsHit(baseObject->structureID(), uid, slot.slotBase(), slot.cachedOffset(), slot.slotBase() == baseObject);
                 else {
-                    if (UNLIKELY(baseObject->structure()->hasBeenFlattenedBefore())) {
+                    if (baseObject->structure()->hasBeenFlattenedBefore()) [[unlikely]] {
                         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
                             repatchGetBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
                     }
@@ -442,12 +442,12 @@ static ALWAYS_INLINE JSValue getByIdMegamorphic(JSGlobalObject* globalObject, VM
 
         JSValue prototype = object->getPrototypeDirect();
         if (!prototype.isObject()) {
-            if (LIKELY(cacheable)) {
-                if (LIKELY(!baseObject->structure()->isDictionary())) {
+            if (cacheable) [[likely]] {
+                if (!baseObject->structure()->isDictionary()) [[likely]] {
                     vm.megamorphicCache()->initAsMiss(baseObject->structureID(), uid);
                     return jsUndefined();
                 }
-                if (LIKELY(!baseObject->structure()->hasBeenFlattenedBefore()))
+                if (!baseObject->structure()->hasBeenFlattenedBefore()) [[likely]]
                     return jsUndefined();
             }
             if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
@@ -707,7 +707,7 @@ static ALWAYS_INLINE JSValue inByIdMegamorphic(JSGlobalObject* globalObject, VM&
     auto* uid = identifier.uid();
     PropertySlot slot(baseValue, PropertySlot::InternalMethodType::HasProperty);
 
-    if (UNLIKELY(!baseValue.isObject())) {
+    if (!baseValue.isObject()) [[unlikely]] {
         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm)) {
             dataLogLnIf(verbose, " ", __LINE__);
             repatchInBySlowPathCall(callFrame->codeBlock(), *stubInfo, InByKind::ById);
@@ -720,7 +720,7 @@ static ALWAYS_INLINE JSValue inByIdMegamorphic(JSGlobalObject* globalObject, VM&
     JSObject* object = baseObject;
     bool cacheable = true;
     while (true) {
-        if (UNLIKELY(TypeInfo::overridesGetOwnPropertySlot(object->inlineTypeFlags()) && object->type() != ArrayType && object->type() != JSFunctionType && object != globalObject->arrayPrototype())) {
+        if (TypeInfo::overridesGetOwnPropertySlot(object->inlineTypeFlags()) && object->type() != ArrayType && object->type() != JSFunctionType && object != globalObject->arrayPrototype()) [[unlikely]] {
             if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm)) {
                 dataLogLnIf(verbose, " ", __LINE__);
                 repatchInBySlowPathCall(callFrame->codeBlock(), *stubInfo, InByKind::ById);
@@ -733,11 +733,11 @@ static ALWAYS_INLINE JSValue inByIdMegamorphic(JSGlobalObject* globalObject, VM&
         structure = object->structure(); // Reload it again since static-class-table can cause transition. But this transition only affects on this Structure.
         cacheable &= structure->propertyAccessesAreCacheable();
         if (hasProperty) {
-            if (LIKELY(cacheable && slot.isCacheable())) {
+            if (cacheable && slot.isCacheable()) [[likely]] {
                 if (slot.slotBase() == baseObject || !baseObject->structure()->isDictionary())
                     vm.megamorphicCache()->initAsHasHit(baseObject->structureID(), uid);
                 else {
-                    if (UNLIKELY(baseObject->structure()->hasBeenFlattenedBefore())) {
+                    if (baseObject->structure()->hasBeenFlattenedBefore()) [[unlikely]] {
                         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm)) {
                             dataLogLnIf(verbose, " ", __LINE__);
                             repatchInBySlowPathCall(callFrame->codeBlock(), *stubInfo, InByKind::ById);
@@ -759,12 +759,12 @@ static ALWAYS_INLINE JSValue inByIdMegamorphic(JSGlobalObject* globalObject, VM&
 
         JSValue prototype = object->getPrototypeDirect();
         if (!prototype.isObject()) {
-            if (LIKELY(cacheable)) {
-                if (LIKELY(!baseObject->structure()->isDictionary())) {
+            if (cacheable) [[likely]] {
+                if (!baseObject->structure()->isDictionary()) [[likely]] {
                     vm.megamorphicCache()->initAsHasMiss(baseObject->structureID(), uid);
                     return jsBoolean(false);
                 }
-                if (LIKELY(!baseObject->structure()->hasBeenFlattenedBefore()))
+                if (!baseObject->structure()->hasBeenFlattenedBefore()) [[likely]]
                     return jsBoolean(false);
             }
             if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm)) {
@@ -876,7 +876,7 @@ static ALWAYS_INLINE JSValue inByValMegamorphic(JSGlobalObject* globalObject, VM
     constexpr bool verbose = false;
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!baseValue.isObject() || !(subscript.isString() && CacheableIdentifier::isCacheableIdentifierCell(subscript)))) {
+    if (!baseValue.isObject() || !(subscript.isString() && CacheableIdentifier::isCacheableIdentifierCell(subscript))) [[unlikely]] {
         dataLogLnIf(verbose, " ", __LINE__);
         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm)) {
             repatchInBySlowPathCall(callFrame->codeBlock(), *stubInfo, InByKind::ByVal);
@@ -889,7 +889,7 @@ static ALWAYS_INLINE JSValue inByValMegamorphic(JSGlobalObject* globalObject, VM
 
     JSObject* baseObject = asObject(baseValue);
     UniquedStringImpl* uid = propertyName.impl();
-    if (UNLIKELY(!canUseMegamorphicInById(vm, uid))) {
+    if (!canUseMegamorphicInById(vm, uid)) [[unlikely]] {
         dataLogLnIf(verbose, " ", __LINE__);
         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm)) {
             repatchInBySlowPathCall(callFrame->codeBlock(), *stubInfo, InByKind::ByVal);
@@ -903,7 +903,7 @@ static ALWAYS_INLINE JSValue inByValMegamorphic(JSGlobalObject* globalObject, VM
     JSObject* object = baseObject;
     bool cacheable = true;
     while (true) {
-        if (UNLIKELY(TypeInfo::overridesGetOwnPropertySlot(object->inlineTypeFlags()) && object->type() != ArrayType && object->type() != JSFunctionType && object != globalObject->arrayPrototype())) {
+        if (TypeInfo::overridesGetOwnPropertySlot(object->inlineTypeFlags()) && object->type() != ArrayType && object->type() != JSFunctionType && object != globalObject->arrayPrototype()) [[unlikely]] {
             dataLogLnIf(verbose, " ", __LINE__);
             if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm)) {
                 repatchInBySlowPathCall(callFrame->codeBlock(), *stubInfo, InByKind::ByVal);
@@ -916,11 +916,11 @@ static ALWAYS_INLINE JSValue inByValMegamorphic(JSGlobalObject* globalObject, VM
         structure = object->structure(); // Reload it again since static-class-table can cause transition. But this transition only affects on this Structure.
         cacheable &= structure->propertyAccessesAreCacheable();
         if (hasProperty) {
-            if (LIKELY(cacheable && slot.isCacheable())) {
+            if (cacheable && slot.isCacheable()) [[likely]] {
                 if (slot.slotBase() == baseObject || !baseObject->structure()->isDictionary())
                     vm.megamorphicCache()->initAsHasHit(baseObject->structureID(), uid);
                 else {
-                    if (UNLIKELY(baseObject->structure()->hasBeenFlattenedBefore())) {
+                    if (baseObject->structure()->hasBeenFlattenedBefore()) [[unlikely]] {
                         dataLogLnIf(verbose, " ", __LINE__);
                         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm)) {
                             repatchInBySlowPathCall(callFrame->codeBlock(), *stubInfo, InByKind::ByVal);
@@ -941,12 +941,12 @@ static ALWAYS_INLINE JSValue inByValMegamorphic(JSGlobalObject* globalObject, VM
 
         JSValue prototype = object->getPrototypeDirect();
         if (!prototype.isObject()) {
-            if (LIKELY(cacheable)) {
-                if (LIKELY(!baseObject->structure()->isDictionary())) {
+            if (cacheable) [[likely]] {
+                if (!baseObject->structure()->isDictionary()) [[likely]] {
                     vm.megamorphicCache()->initAsHasMiss(baseObject->structureID(), uid);
                     return jsBoolean(false);
                 }
-                if (LIKELY(!baseObject->structure()->hasBeenFlattenedBefore()))
+                if (!baseObject->structure()->hasBeenFlattenedBefore()) [[likely]]
                     return jsBoolean(false);
             }
 
@@ -1143,7 +1143,7 @@ ALWAYS_INLINE static void putByIdMegamorphic(JSGlobalObject* globalObject, VM& v
     bool isStrict = kind == PutByKind::ByIdStrict;
     PutPropertySlot slot(baseValue, isStrict, callFrame->codeBlock()->putByIdContext());
 
-    if (UNLIKELY(!baseValue.isObject())) {
+    if (!baseValue.isObject()) [[unlikely]] {
         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
             repatchPutBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
         scope.release();
@@ -1154,7 +1154,7 @@ ALWAYS_INLINE static void putByIdMegamorphic(JSGlobalObject* globalObject, VM& v
     JSObject* baseObject = asObject(baseValue);
     Structure* structure = baseObject->structure();
 
-    if (UNLIKELY(structure->typeInfo().overridesPut())) {
+    if (structure->typeInfo().overridesPut()) [[unlikely]] {
         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
             repatchPutBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
         scope.release();
@@ -1165,7 +1165,7 @@ ALWAYS_INLINE static void putByIdMegamorphic(JSGlobalObject* globalObject, VM& v
     {
         JSObject* object = baseObject;
         while (true) {
-            if (UNLIKELY(structure->hasReadOnlyOrGetterSetterPropertiesExcludingProto() || structure->typeInfo().overridesGetPrototype() || structure->typeInfo().overridesPut() || structure->hasPolyProto())) {
+            if (structure->hasReadOnlyOrGetterSetterPropertiesExcludingProto() || structure->typeInfo().overridesGetPrototype() || structure->typeInfo().overridesPut() || structure->hasPolyProto()) [[unlikely]] {
                 if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
                     repatchPutBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
                 scope.release();
@@ -1184,7 +1184,7 @@ ALWAYS_INLINE static void putByIdMegamorphic(JSGlobalObject* globalObject, VM& v
     baseObject->putInlineFast(globalObject, uid, value, slot);
     RETURN_IF_EXCEPTION(scope, void());
 
-    if (UNLIKELY(!slot.isCacheablePut() || !oldStructure->propertyAccessesAreCacheable())) {
+    if (!slot.isCacheablePut() || !oldStructure->propertyAccessesAreCacheable()) [[unlikely]] {
         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
             repatchPutBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
         return;
@@ -1192,7 +1192,7 @@ ALWAYS_INLINE static void putByIdMegamorphic(JSGlobalObject* globalObject, VM& v
 
     Structure* newStructure = baseObject->structure();
     if (slot.type() == PutPropertySlot::ExistingProperty) {
-        if (LIKELY(oldStructure == newStructure && slot.cachedOffset() <= MegamorphicCache::maxOffset)) {
+        if (oldStructure == newStructure && slot.cachedOffset() <= MegamorphicCache::maxOffset) [[likely]] {
             oldStructure->didCachePropertyReplacement(vm, slot.cachedOffset()); // Ensure invalidating watchpoint set.
             vm.megamorphicCache()->initAsReplace(StructureID::encode(oldStructure), uid, slot.cachedOffset());
         }
@@ -1205,14 +1205,14 @@ ALWAYS_INLINE static void putByIdMegamorphic(JSGlobalObject* globalObject, VM& v
     if (oldStructure->isDictionary() || newStructure->isDictionary())
         return;
 
-    if (UNLIKELY(oldStructure->mayBePrototype() || (newStructure->previousID() != oldStructure) || !newStructure->propertyAccessesAreCacheable())) {
+    if (oldStructure->mayBePrototype() || (newStructure->previousID() != oldStructure) || !newStructure->propertyAccessesAreCacheable()) [[unlikely]] {
         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
             repatchPutBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
         return;
     }
 
     bool reallocating = newStructure->outOfLineCapacity() != oldStructure->outOfLineCapacity();
-    if (LIKELY(slot.cachedOffset() <= MegamorphicCache::maxOffset))
+    if (slot.cachedOffset() <= MegamorphicCache::maxOffset) [[likely]]
         vm.megamorphicCache()->initAsTransition(StructureID::encode(oldStructure), StructureID::encode(newStructure), uid, slot.cachedOffset(), reallocating);
 }
 
@@ -1960,7 +1960,7 @@ ALWAYS_INLINE static void putByValMegamorphic(JSGlobalObject* globalObject, VM& 
     auto scope = DECLARE_THROW_SCOPE(vm);
     bool isStrict = kind == PutByKind::ByValStrict;
 
-    if (UNLIKELY(!baseValue.isObject() || !(subscript.isString() && CacheableIdentifier::isCacheableIdentifierCell(subscript)))) {
+    if (!baseValue.isObject() || !(subscript.isString() && CacheableIdentifier::isCacheableIdentifierCell(subscript))) [[unlikely]] {
         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
             repatchPutBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
         scope.release();
@@ -1977,7 +1977,7 @@ ALWAYS_INLINE static void putByValMegamorphic(JSGlobalObject* globalObject, VM& 
     PutPropertySlot slot(baseValue, isStrict);
 
     UniquedStringImpl* uid = propertyName.impl();
-    if (UNLIKELY(!canUseMegamorphicPutById(vm, uid) || structure->typeInfo().overridesPut())) {
+    if (!canUseMegamorphicPutById(vm, uid) || structure->typeInfo().overridesPut()) [[unlikely]] {
         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
             repatchPutBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
         scope.release();
@@ -1988,7 +1988,7 @@ ALWAYS_INLINE static void putByValMegamorphic(JSGlobalObject* globalObject, VM& 
     {
         JSObject* object = baseObject;
         while (true) {
-            if (UNLIKELY(structure->hasReadOnlyOrGetterSetterPropertiesExcludingProto() || structure->typeInfo().overridesGetPrototype() || structure->typeInfo().overridesPut() || structure->hasPolyProto())) {
+            if (structure->hasReadOnlyOrGetterSetterPropertiesExcludingProto() || structure->typeInfo().overridesGetPrototype() || structure->typeInfo().overridesPut() || structure->hasPolyProto()) [[unlikely]] {
                 if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
                     repatchPutBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
                 scope.release();
@@ -2007,7 +2007,7 @@ ALWAYS_INLINE static void putByValMegamorphic(JSGlobalObject* globalObject, VM& 
     baseObject->putInlineFast(globalObject, uid, value, slot);
     RETURN_IF_EXCEPTION(scope, void());
 
-    if (UNLIKELY(!slot.isCacheablePut() || !oldStructure->propertyAccessesAreCacheable())) {
+    if (!slot.isCacheablePut() || !oldStructure->propertyAccessesAreCacheable()) [[unlikely]] {
         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
             repatchPutBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
         return;
@@ -2015,7 +2015,7 @@ ALWAYS_INLINE static void putByValMegamorphic(JSGlobalObject* globalObject, VM& 
 
     Structure* newStructure = baseObject->structure();
     if (slot.type() == PutPropertySlot::ExistingProperty) {
-        if (LIKELY(oldStructure == newStructure && slot.cachedOffset() <= MegamorphicCache::maxOffset)) {
+        if (oldStructure == newStructure && slot.cachedOffset() <= MegamorphicCache::maxOffset) [[likely]] {
             oldStructure->didCachePropertyReplacement(vm, slot.cachedOffset()); // Ensure invalidating watchpoint set.
             vm.megamorphicCache()->initAsReplace(StructureID::encode(oldStructure), uid, slot.cachedOffset());
         }
@@ -2028,14 +2028,14 @@ ALWAYS_INLINE static void putByValMegamorphic(JSGlobalObject* globalObject, VM& 
     if (oldStructure->isDictionary() || newStructure->isDictionary())
         return;
 
-    if (UNLIKELY(oldStructure->mayBePrototype() || (newStructure->previousID() != oldStructure) || !newStructure->propertyAccessesAreCacheable())) {
+    if (oldStructure->mayBePrototype() || (newStructure->previousID() != oldStructure) || !newStructure->propertyAccessesAreCacheable()) [[unlikely]] {
         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
             repatchPutBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
         return;
     }
 
     bool reallocating = newStructure->outOfLineCapacity() != oldStructure->outOfLineCapacity();
-    if (LIKELY(slot.cachedOffset() <= MegamorphicCache::maxOffset))
+    if (slot.cachedOffset() <= MegamorphicCache::maxOffset) [[likely]]
         vm.megamorphicCache()->initAsTransition(StructureID::encode(oldStructure), StructureID::encode(newStructure), uid, slot.cachedOffset(), reallocating);
 }
 
@@ -2453,12 +2453,12 @@ JSC_DEFINE_JIT_OPERATION(operationPolymorphicCall, UCPURegister, (CallFrame* cal
     calleeFrame->setCodeBlock(nullptr);
     JSCell* calleeAsFunctionCell;
     void* callTarget = virtualForWithFunction(vm, owner, calleeFrame, callLinkInfo, calleeAsFunctionCell);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         OPERATION_RETURN(scope, std::bit_cast<UCPURegister>(vm.getCTIStub(CommonJITThunkID::ThrowExceptionFromCall).template retagged<JSEntryPtrTag>().code().taggedPtr()));
     linkPolymorphicCall(vm, owner, calleeFrame, *callLinkInfo, CallVariant(calleeAsFunctionCell));
     // Keep owner alive explicitly. Now this function can be called from tail-call. This means that CallFrame for that owner already goes away, so we should keep it alive if we would like to use it.
     ensureStillAliveHere(owner);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         OPERATION_RETURN(scope, std::bit_cast<UCPURegister>(vm.getCTIStub(CommonJITThunkID::ThrowExceptionFromCall).template retagged<JSEntryPtrTag>().code().taggedPtr()));
     OPERATION_RETURN(scope, static_cast<UCPURegister>(std::bit_cast<uintptr_t>(callTarget)));
 }
@@ -2475,7 +2475,7 @@ JSC_DEFINE_JIT_OPERATION(operationVirtualCall, UCPURegister, (CallFrame* calleeF
     void* callTarget = virtualForWithFunction(vm, owner, calleeFrame, callLinkInfo, calleeAsFunctionCell);
     // Keep owner alive explicitly. Now this function can be called from tail-call. This means that CallFrame for that owner already goes away, so we should keep it alive if we would like to use it.
     ensureStillAliveHere(owner);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         OPERATION_RETURN(scope, std::bit_cast<UCPURegister>(vm.getCTIStub(CommonJITThunkID::ThrowExceptionFromCall).template retagged<JSEntryPtrTag>().code().taggedPtr()));
     OPERATION_RETURN(scope, std::bit_cast<UCPURegister>(std::bit_cast<uintptr_t>(callTarget)));
 }
@@ -2491,7 +2491,7 @@ JSC_DEFINE_JIT_OPERATION(operationDefaultCall, UCPURegister, (CallFrame* calleeF
     void* callTarget = linkFor(vm, owner, calleeFrame, callLinkInfo);
     // Keep owner alive explicitly. Now this function can be called from tail-call. This means that CallFrame for that owner already goes away, so we should keep it alive if we would like to use it.
     ensureStillAliveHere(owner);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         OPERATION_RETURN(scope, std::bit_cast<UCPURegister>(vm.getCTIStub(CommonJITThunkID::ThrowExceptionFromCall).template retagged<JSEntryPtrTag>().code().taggedPtr()));
     OPERATION_RETURN(scope, std::bit_cast<UCPURegister>(std::bit_cast<uintptr_t>(callTarget)));
 }
@@ -2947,7 +2947,7 @@ JSC_DEFINE_JIT_OPERATION(operationOptimize, UGPRPair, (VM* vmPointer, uint32_t b
     DeferGCForAWhile deferGC(vm);
     
     CodeBlock* codeBlock = callFrame->codeBlock();
-    if (UNLIKELY(codeBlock->jitType() != JITType::BaselineJIT)) {
+    if (codeBlock->jitType() != JITType::BaselineJIT) [[unlikely]] {
         dataLog("Unexpected code block in Baseline->DFG tier-up: ", *codeBlock, "\n");
         RELEASE_ASSERT_NOT_REACHED();
     }
@@ -2962,7 +2962,7 @@ JSC_DEFINE_JIT_OPERATION(operationOptimize, UGPRPair, (VM* vmPointer, uint32_t b
         codeBlock->m_shouldAlwaysBeInlined = false;
     }
 
-    if (UNLIKELY(Options::verboseOSR())) {
+    if (Options::verboseOSR()) [[unlikely]] {
         dataLog(
             *codeBlock, ": Entered optimize with bytecodeIndex = ", bytecodeIndex,
             ", executeCounter = ", codeBlock->baselineExecuteCounter(),
@@ -2982,7 +2982,7 @@ JSC_DEFINE_JIT_OPERATION(operationOptimize, UGPRPair, (VM* vmPointer, uint32_t b
         OPERATION_RETURN(scope, encodeResult(nullptr, nullptr));
     }
     
-    if (UNLIKELY(vm.hasTerminationRequest())) {
+    if (vm.hasTerminationRequest()) [[unlikely]] {
         // If termination of the current stack of execution is in progress,
         // then we need to hold off on optimized compiles so that termination
         // checks will be called, and we can unwind out of the current stack.
@@ -2992,7 +2992,7 @@ JSC_DEFINE_JIT_OPERATION(operationOptimize, UGPRPair, (VM* vmPointer, uint32_t b
     }
 
     Debugger* debugger = codeBlock->globalObject()->debugger();
-    if (UNLIKELY(debugger && (debugger->isStepping() || codeBlock->baselineAlternative()->hasDebuggerRequests()))) {
+    if (debugger && (debugger->isStepping() || codeBlock->baselineAlternative()->hasDebuggerRequests())) [[unlikely]] {
         CODEBLOCK_LOG_EVENT(codeBlock, "delayOptimizeToDFG", ("debugger is stepping or has requests"));
         updateAllPredictionsAndOptimizeAfterWarmUp(codeBlock);
         OPERATION_RETURN(scope, encodeResult(nullptr, nullptr));
@@ -3164,7 +3164,7 @@ JSC_DEFINE_JIT_OPERATION(operationTryOSREnterAtCatchAndValueProfile, UGPRPair, (
 
     CodeBlock* codeBlock = callFrame->codeBlock();
     CodeBlock* optimizedReplacement = codeBlock->replacement();
-    if (UNLIKELY(!optimizedReplacement))
+    if (!optimizedReplacement) [[unlikely]]
         OPERATION_RETURN(scope, encodeResult(nullptr, nullptr));
 
     switch (optimizedReplacement->jitType()) {
@@ -3359,7 +3359,7 @@ ALWAYS_INLINE static JSValue getByVal(JSGlobalObject* globalObject, CallFrame* c
         auto propertyName = asString(subscript)->toAtomString(globalObject);
         RETURN_IF_EXCEPTION(scope, JSValue());
 
-        if (LIKELY(baseValue.isCell())) {
+        if (baseValue.isCell()) [[likely]] {
             Structure& structure = *baseValue.asCell()->structure();
             if (JSCell::canUseFastGetOwnProperty(structure)) {
                 if (JSValue result = baseValue.asCell()->fastGetOwnProperty(vm, structure, propertyName.data)) {
@@ -3408,7 +3408,7 @@ ALWAYS_INLINE static JSValue getByVal(JSGlobalObject* globalObject, CallFrame* c
     } else if (subscript.isNumber() && baseValue.isCell() && arrayProfile) {
         arrayProfile->setOutOfBounds();
         if (subscript == jsNumber(-1)) {
-            if (auto* array = jsDynamicCast<JSArray*>(baseValue.asCell()); LIKELY(array && array->definitelyNegativeOneMiss()))
+            if (auto* array = jsDynamicCast<JSArray*>(baseValue.asCell()); array && array->definitelyNegativeOneMiss()) [[likely]]
                 return jsUndefined();
         }
     }
@@ -3492,7 +3492,7 @@ ALWAYS_INLINE static JSValue getByValWithThis(JSGlobalObject* globalObject, Call
         auto propertyName = asString(subscript)->toAtomString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
 
-        if (LIKELY(baseValue.isCell())) {
+        if (baseValue.isCell()) [[likely]] {
             Structure& structure = *baseValue.asCell()->structure();
             if (JSCell::canUseFastGetOwnProperty(structure)) {
                 if (JSValue result = baseValue.asCell()->fastGetOwnProperty(vm, structure, propertyName.data)) {
@@ -3539,7 +3539,7 @@ ALWAYS_INLINE static JSValue getByValWithThis(JSGlobalObject* globalObject, Call
     } else if (subscript.isNumber() && baseValue.isCell() && arrayProfile) {
         arrayProfile->setOutOfBounds();
         if (subscript == jsNumber(-1)) {
-            if (auto* array = jsDynamicCast<JSArray*>(baseValue.asCell()); LIKELY(array && array->definitelyNegativeOneMiss()))
+            if (auto* array = jsDynamicCast<JSArray*>(baseValue.asCell()); array && array->definitelyNegativeOneMiss()) [[likely]]
                 return jsUndefined();
         }
     }
@@ -3555,7 +3555,7 @@ static ALWAYS_INLINE JSValue getByValMegamorphic(JSGlobalObject* globalObject, V
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!baseValue.isObject() || !(subscript.isString() && CacheableIdentifier::isCacheableIdentifierCell(subscript)))) {
+    if (!baseValue.isObject() || !(subscript.isString() && CacheableIdentifier::isCacheableIdentifierCell(subscript))) [[unlikely]] {
         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
             repatchGetBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
         if (kind == GetByKind::ByVal)
@@ -3577,7 +3577,7 @@ static ALWAYS_INLINE JSValue getByValMegamorphic(JSGlobalObject* globalObject, V
     }
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (UNLIKELY(!canUseMegamorphicGetByIdExcludingIndex(vm, uid))) {
+    if (!canUseMegamorphicGetByIdExcludingIndex(vm, uid)) [[unlikely]] {
         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
             repatchGetBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
         if (kind == GetByKind::ByVal)
@@ -3585,7 +3585,7 @@ static ALWAYS_INLINE JSValue getByValMegamorphic(JSGlobalObject* globalObject, V
         RELEASE_AND_RETURN(scope, getByValWithThis(globalObject, callFrame, profile, baseValue, subscript, thisValue));
     }
 
-    if (auto index = parseIndex(*uid); UNLIKELY(index)) {
+    if (auto index = parseIndex(*uid); index) [[unlikely]] {
         if (!baseObject->structure()->isCacheableDictionary() || index.value() >= 100) {
             if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
                 repatchGetBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
@@ -3599,7 +3599,7 @@ static ALWAYS_INLINE JSValue getByValMegamorphic(JSGlobalObject* globalObject, V
     JSObject* object = baseObject;
     bool cacheable = true;
     while (true) {
-        if (UNLIKELY(TypeInfo::overridesGetOwnPropertySlot(object->inlineTypeFlags()) && object->type() != ArrayType && object->type() != JSFunctionType && object != globalObject->arrayPrototype())) {
+        if (TypeInfo::overridesGetOwnPropertySlot(object->inlineTypeFlags()) && object->type() != ArrayType && object->type() != JSFunctionType && object != globalObject->arrayPrototype()) [[unlikely]] {
             if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
                 repatchGetBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
             bool result = object->getNonIndexPropertySlot(globalObject, uid, slot);
@@ -3614,11 +3614,11 @@ static ALWAYS_INLINE JSValue getByValMegamorphic(JSGlobalObject* globalObject, V
         structure = object->structure(); // Reload it again since static-class-table can cause transition. But this transition only affects on this Structure.
         cacheable &= structure->propertyAccessesAreCacheable();
         if (hasProperty) {
-            if (LIKELY(cacheable && slot.isCacheableValue() && slot.cachedOffset() <= MegamorphicCache::maxOffset)) {
+            if (cacheable && slot.isCacheableValue() && slot.cachedOffset() <= MegamorphicCache::maxOffset) [[likely]] {
                 if (slot.slotBase() == baseObject || !baseObject->structure()->isDictionary())
                     vm.megamorphicCache()->initAsHit(baseObject->structureID(), uid, slot.slotBase(), slot.cachedOffset(), slot.slotBase() == baseObject);
                 else {
-                    if (UNLIKELY(baseObject->structure()->hasBeenFlattenedBefore())) {
+                    if (baseObject->structure()->hasBeenFlattenedBefore()) [[unlikely]] {
                         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
                             repatchGetBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
                     }
@@ -3635,12 +3635,12 @@ static ALWAYS_INLINE JSValue getByValMegamorphic(JSGlobalObject* globalObject, V
 
         JSValue prototype = object->getPrototypeDirect();
         if (!prototype.isObject()) {
-            if (LIKELY(cacheable)) {
-                if (LIKELY(!baseObject->structure()->isDictionary())) {
+            if (cacheable) [[likely]] {
+                if (!baseObject->structure()->isDictionary()) [[likely]] {
                     vm.megamorphicCache()->initAsMiss(baseObject->structureID(), uid);
                     return jsUndefined();
                 }
-                if (LIKELY(!baseObject->structure()->hasBeenFlattenedBefore()))
+                if (!baseObject->structure()->hasBeenFlattenedBefore()) [[likely]]
                     return jsUndefined();
             }
 
@@ -3758,7 +3758,7 @@ JSC_DEFINE_JIT_OPERATION(operationGetByValWithThisGeneric, EncodedJSValue, (JSGl
     JSValue property = JSValue::decode(encodedProperty);
     JSValue thisValue = JSValue::decode(encodedThis);
 
-    if (LIKELY(baseValue.isCell())) {
+    if (baseValue.isCell()) [[likely]] {
         JSCell* base = baseValue.asCell();
 
         if (std::optional<uint32_t> index = property.tryGetAsUint32Index())
@@ -5196,7 +5196,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationRetrieveAndClearExceptionIfCatchable,
     RELEASE_ASSERT(!!scope.exception());
 
     Exception* exception = scope.exception();
-    if (UNLIKELY(vm.isTerminationException(exception))) {
+    if (vm.isTerminationException(exception)) [[unlikely]] {
         genericUnwind(vm, callFrame);
         return nullptr;
     }

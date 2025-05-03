@@ -204,7 +204,7 @@ void BlockDirectory::stopAllocating()
 
 #if ASSERT_ENABLED
     assertIsMutatorOrMutatorIsStopped();
-    if (UNLIKELY(!inUseBitsView().isEmpty())) {
+    if (!inUseBitsView().isEmpty()) [[unlikely]] {
         dataLogLn("Not all inUse bits are clear at stopAllocating");
         dataLogLn(*this);
         dumpBits();
@@ -226,7 +226,7 @@ void BlockDirectory::prepareForAllocation()
     assertSweeperIsSuspended();
     edenBits().clearAll();
 
-    if (UNLIKELY(Options::useImmortalObjects())) {
+    if (Options::useImmortalObjects()) [[unlikely]] {
         // FIXME: Make this work again.
         // https://bugs.webkit.org/show_bug.cgi?id=162296
         RELEASE_ASSERT_NOT_REACHED();
@@ -282,7 +282,7 @@ void BlockDirectory::endMarking()
     allocatedBits().clearAll();
     
 #if ASSERT_ENABLED
-    if (UNLIKELY(!inUseBitsView().isEmpty())) {
+    if (!inUseBitsView().isEmpty()) [[unlikely]] {
         dataLogLn("Block is inUse at end marking.");
         dataLogLn(*this);
         dumpBits();
@@ -435,7 +435,7 @@ void BlockDirectory::didFinishUsingBlock(MarkedBlock::Handle* handle)
 
 void BlockDirectory::didFinishUsingBlock(AbstractLocker&, MarkedBlock::Handle* handle)
 {
-    if (UNLIKELY(!isInUse(handle))) {
+    if (!isInUse(handle)) [[unlikely]] {
         dataLogLn("Finish using on a block that's not in use: ", handle->index());
         dumpBits();
         RELEASE_ASSERT_NOT_REACHED();

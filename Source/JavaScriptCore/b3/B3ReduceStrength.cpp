@@ -96,7 +96,7 @@ class IntRange {
 
 #define DUMP_INT_RANGE_AND_RETURN(range)                           \
     do {                                                           \
-        if (UNLIKELY(B3ReduceStrengthInternal::verbose))           \
+        if (B3ReduceStrengthInternal::verbose) [[unlikely]]        \
             dataLogLn("    IntRange for ", *value, " is ", range); \
         return range;                                              \
     } while (false);

@@ -240,7 +240,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSG
         Structure* structure = globalObject->arrayStructureForIndexingTypeDuringAllocation(materialization->indexingType());
 
         JSArray* result = JSArray::tryCreate(vm, structure, size);
-        if (UNLIKELY(!result)) {
+        if (!result) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             OPERATION_RETURN(scope, nullptr);
         }
@@ -651,7 +651,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSG
         ASSERT(isCopyOnWrite(indexingMode));
         ASSERT(!structure->outOfLineCapacity());
 
-        if (UNLIKELY(immutableButterfly->indexingMode() != indexingMode)) {
+        if (immutableButterfly->indexingMode() != indexingMode) [[unlikely]] {
             auto* newButterfly = JSImmutableButterfly::create(vm, indexingMode, immutableButterfly->length());
             for (unsigned i = 0; i < immutableButterfly->length(); ++i)
                 newButterfly->setIndex(vm, i, immutableButterfly->get(i));
