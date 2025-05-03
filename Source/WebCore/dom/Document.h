@@ -72,6 +72,7 @@
 #include <wtf/text/AtomStringHash.h>
 
 #if ENABLE(IOS_TOUCH_EVENTS)
+#include "IntRect.h"
 #include <wtf/ThreadingPrimitives.h>
 #endif
 
