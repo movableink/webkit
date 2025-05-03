@@ -195,7 +195,7 @@ static inline void* signpostId(JITPlan& plan)
 
 CString JITPlan::signpostMessage()
 {
-    if (LIKELY(!Options::useCompilerSignpost()))
+    if (!Options::useCompilerSignpost()) [[likely]]
         return CString();
     StringPrintStream stream;
     stream.print(m_mode, " ", *m_codeBlock);
@@ -254,7 +254,7 @@ void JITPlan::compileInThread(JITWorklistThread* thread)
     CString codeBlockName;
 
     bool computeCompileTimes = this->computeCompileTimes();
-    if (UNLIKELY(computeCompileTimes)) {
+    if (computeCompileTimes) [[unlikely]] {
         before = MonotonicTime::now();
         if (reportCompileTimes())
             codeBlockName = toCString(*m_codeBlock);
@@ -263,14 +263,14 @@ void JITPlan::compileInThread(JITWorklistThread* thread)
     CompilationScope compilationScope;
 
 #if ENABLE(DFG_JIT)
-    if (UNLIKELY(DFG::logCompilationChanges(m_mode) || Options::logPhaseTimes()))
+    if (DFG::logCompilationChanges(m_mode) || Options::logPhaseTimes()) [[unlikely]]
         dataLog("DFG(Plan) compiling ", *m_codeBlock, " with ", m_mode, ", instructions size = ", m_codeBlock->instructionsSize(), "\n");
 #endif // ENABLE(DFG_JIT)
 
     CompilationPath path = compileInThreadImpl();
     RELEASE_ASSERT((path == CancelPath) == (m_stage == JITPlanStage::Canceled));
 
-    if (LIKELY(!computeCompileTimes))
+    if (!computeCompileTimes) [[likely]]
         return;
 
     MonotonicTime after = MonotonicTime::now();
@@ -326,7 +326,7 @@ void JITPlan::compileInThread(JITWorklistThread* thread)
             break;
         }
     }
-    if (UNLIKELY(reportCompileTimes())) {
+    if (reportCompileTimes()) [[unlikely]] {
         dataLog("Optimized ", codeBlockName, " using ", m_mode, " with ", pathName, " into ", codeSize(), " bytes in ", (after - before).milliseconds(), " ms");
         if (path == FTLPath)
             dataLog(" (DFG: ", (m_timeBeforeFTL - before).milliseconds(), ", B3: ", (after - m_timeBeforeFTL).milliseconds(), ")");

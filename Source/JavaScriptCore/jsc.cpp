@@ -2631,7 +2631,7 @@ JSC_DEFINE_HOST_FUNCTION(functionDollarAgentReceiveBroadcast, (JSGlobalObject* g
     MarkedArgumentBuffer args;
     args.append(result);
     args.append(jsNumber(message->index()));
-    if (UNLIKELY(args.hasOverflowed()))
+    if (args.hasOverflowed()) [[unlikely]]
         return JSValue::encode(throwOutOfMemoryError(globalObject, scope));
     RELEASE_AND_RETURN(scope, JSValue::encode(call(globalObject, callback, callData, jsNull(), args)));
 }
@@ -4463,7 +4463,7 @@ int jscmain(int argc, char** argv)
     JSC::JITOperationList::populatePointersInEmbedder(&startOfJITOperationsInShell, &endOfJITOperationsInShell);
 #endif
 #if ENABLE(JIT_OPERATION_DISASSEMBLY)
-    if (UNLIKELY(Options::needDisassemblySupport()))
+    if (Options::needDisassemblySupport()) [[unlikely]]
         JSC::JITOperationList::populateDisassemblyLabelsInEmbedder(&startOfJITOperationsInShell, &endOfJITOperationsInShell);
 #endif
 

@@ -167,25 +167,25 @@ ALWAYS_INLINE JSImmutableButterfly* trySpreadFast(JSGlobalObject* globalObject, 
 
     switch (iterable->type()) {
     case StringType: {
-        if (LIKELY(globalObject->isStringPrototypeIteratorProtocolFastAndNonObservable()))
+        if (globalObject->isStringPrototypeIteratorProtocolFastAndNonObservable()) [[likely]]
             return JSImmutableButterfly::createFromString(globalObject, jsCast<JSString*>(iterable));
         return nullptr;
     }
     case ClonedArgumentsType: {
         auto* arguments = jsCast<ClonedArguments*>(iterable);
-        if (LIKELY(arguments->isIteratorProtocolFastAndNonObservable()))
+        if (arguments->isIteratorProtocolFastAndNonObservable()) [[likely]]
             return JSImmutableButterfly::createFromClonedArguments(globalObject, arguments);
         return nullptr;
     }
     case DirectArgumentsType: {
         auto* arguments = jsCast<DirectArguments*>(iterable);
-        if (LIKELY(arguments->isIteratorProtocolFastAndNonObservable()))
+        if (arguments->isIteratorProtocolFastAndNonObservable()) [[likely]]
             return JSImmutableButterfly::createFromDirectArguments(globalObject, arguments);
         return nullptr;
     }
     case ScopedArgumentsType: {
         auto* arguments = jsCast<ScopedArguments*>(iterable);
-        if (LIKELY(arguments->isIteratorProtocolFastAndNonObservable()))
+        if (arguments->isIteratorProtocolFastAndNonObservable()) [[likely]]
             return JSImmutableButterfly::createFromScopedArguments(globalObject, arguments);
         return nullptr;
     }
@@ -201,14 +201,16 @@ inline void opEnumeratorPutByVal(JSGlobalObject* globalObject, JSValue baseValue
 
     switch (mode) {
     case JSPropertyNameEnumerator::IndexedMode: {
-        if (arrayProfile && LIKELY(baseValue.isCell()))
-            arrayProfile->observeStructureID(baseValue.asCell()->structureID());
+        if (arrayProfile) {
+            if (baseValue.isCell()) [[likely]]
+                arrayProfile->observeStructureID(baseValue.asCell()->structureID());
+        }
         scope.release();
         baseValue.putByIndex(globalObject, static_cast<unsigned>(index), value, ecmaMode.isStrict());
         return;
     }
     case JSPropertyNameEnumerator::OwnStructureMode: {
-        if (LIKELY(baseValue.isCell())) {
+        if (baseValue.isCell()) [[likely]] {
             auto* baseCell = baseValue.asCell();
             auto* structure = baseCell->structure();
             if (structure->id() == enumerator->cachedStructureID() && !structure->isWatchingReplacement() && !structure->hasReadOnlyOrGetterSetterPropertiesExcludingProto()) {

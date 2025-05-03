@@ -92,12 +92,12 @@ ALWAYS_INLINE std::pair<SpeciesConstructResult, JSObject*> speciesConstructArray
     JSValue constructor = jsUndefined();
     bool thisIsArray = isArray(globalObject, thisObject);
     RETURN_IF_EXCEPTION(scope, exceptionResult);
-    if (LIKELY(thisIsArray)) {
+    if (thisIsArray) [[likely]] {
         // Fast path in the normal case where the user has not set an own constructor and the Array.prototype.constructor is normal.
         // We need prototype check for subclasses of Array, which are Array objects but have a different prototype by default.
         bool isValid = arraySpeciesWatchpointIsValid(vm, thisObject);
         RETURN_IF_EXCEPTION(scope, exceptionResult);
-        if (LIKELY(isValid))
+        if (isValid) [[likely]]
             return std::pair { SpeciesConstructResult::FastPath, nullptr };
 
         constructor = thisObject->get(globalObject, vm.propertyNames->constructor);
@@ -135,8 +135,8 @@ ALWAYS_INLINE void setLength(JSGlobalObject* globalObject, VM& vm, JSObject* obj
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
     static constexpr bool throwException = true;
-    if (LIKELY(isJSArray(obj))) {
-        if (UNLIKELY(value > UINT32_MAX)) {
+    if (isJSArray(obj)) [[likely]] {
+        if (value > UINT32_MAX) [[unlikely]] {
             throwRangeError(globalObject, scope, "Invalid array length"_s);
             return;
         }
@@ -255,7 +255,7 @@ inline void unshift(JSGlobalObject* globalObject, JSObject* thisObj, uint64_t he
         } else {
             bool success = thisObj->deleteProperty(globalObject, to);
             RETURN_IF_EXCEPTION(scope, void());
-            if (UNLIKELY(!success)) {
+            if (!success) [[unlikely]] {
                 throwTypeError(globalObject, scope, UnableToDeletePropertyError);
                 return;
             }

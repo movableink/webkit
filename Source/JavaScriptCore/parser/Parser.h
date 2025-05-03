@@ -1733,7 +1733,7 @@ private:
 
         // In the case of Generator or Async function bodies, also check the wrapper function, whose name or
         // arguments may be invalid.
-        if (UNLIKELY((m_scopeStack[i].isGeneratorFunctionBoundary() || m_scopeStack[i].isAsyncFunctionBoundary()) && i))
+        if ((m_scopeStack[i].isGeneratorFunctionBoundary() || m_scopeStack[i].isAsyncFunctionBoundary()) && i) [[unlikely]]
             return m_scopeStack[i - 1].isValidStrictMode();
         return true;
     }
@@ -2279,7 +2279,7 @@ std::unique_ptr<ParsedNode> parse(
     ASSERT(!source.provider()->source().isNull());
 
     MonotonicTime before;
-    if (UNLIKELY(Options::reportParseTimes()))
+    if (Options::reportParseTimes()) [[unlikely]]
         before = MonotonicTime::now();
 
     std::unique_ptr<ParsedNode> result;
@@ -2298,10 +2298,10 @@ std::unique_ptr<ParsedNode> parse(
         result = parser.parse<ParsedNode>(error, name, ParsingContext::Normal, std::nullopt, parentScopePrivateNames, classElementDefinitions);
     }
 
-    if (UNLIKELY(Options::countParseTimes()))
+    if (Options::countParseTimes()) [[unlikely]]
         globalParseCount++;
 
-    if (UNLIKELY(Options::reportParseTimes())) {
+    if (Options::reportParseTimes()) [[unlikely]] {
         MonotonicTime after = MonotonicTime::now();
         ParseHash hash(source);
         dataLogLn(result ? "Parsed #" : "Failed to parse #", hash.hashForCall(), "/#", hash.hashForConstruct(), " in ", (after - before).milliseconds(), " ms.");
@@ -2324,7 +2324,7 @@ std::unique_ptr<ParsedNode> parseRootNode(
     ASSERT(!source.provider()->source().isNull());
 
     MonotonicTime before;
-    if (UNLIKELY(Options::reportParseTimes()))
+    if (Options::reportParseTimes()) [[unlikely]]
         before = MonotonicTime::now();
 
     Identifier name;
@@ -2344,10 +2344,10 @@ std::unique_ptr<ParsedNode> parseRootNode(
         result = parser.parse<ParsedNode>(error, name, ParsingContext::Normal);
     }
 
-    if (UNLIKELY(Options::countParseTimes()))
+    if (Options::countParseTimes()) [[unlikely]]
         globalParseCount++;
 
-    if (UNLIKELY(Options::reportParseTimes())) {
+    if (Options::reportParseTimes()) [[unlikely]] {
         MonotonicTime after = MonotonicTime::now();
         ParseHash hash(source);
         dataLogLn(result ? "Parsed #" : "Failed to parse #", hash.hashForCall(), "/#", hash.hashForConstruct(), " in ", (after - before).milliseconds(), " ms.");
@@ -2361,7 +2361,7 @@ inline std::unique_ptr<ProgramNode> parseFunctionForFunctionConstructor(VM& vm, 
     ASSERT(!source.provider()->source().isNull());
 
     MonotonicTime before;
-    if (UNLIKELY(Options::reportParseTimes()))
+    if (Options::reportParseTimes()) [[unlikely]]
         before = MonotonicTime::now();
 
     Identifier name;
@@ -2379,10 +2379,10 @@ inline std::unique_ptr<ProgramNode> parseFunctionForFunctionConstructor(VM& vm, 
             *positionBeforeLastNewline = parser.positionBeforeLastNewline();
     }
 
-    if (UNLIKELY(Options::countParseTimes()))
+    if (Options::countParseTimes()) [[unlikely]]
         globalParseCount++;
 
-    if (UNLIKELY(Options::reportParseTimes())) {
+    if (Options::reportParseTimes()) [[unlikely]] {
         MonotonicTime after = MonotonicTime::now();
         ParseHash hash(source);
         dataLogLn(result ? "Parsed #" : "Failed to parse #", hash.hashForCall(), "/#", hash.hashForConstruct(), " in ", (after - before).milliseconds(), " ms.");

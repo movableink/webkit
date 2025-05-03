@@ -103,7 +103,7 @@ public:
 
         m_buffer8.shrink(0);
         m_buffer16.shrink(0);
-        if (LIKELY(m_code < m_codeEnd))
+        if (m_code < m_codeEnd) [[likely]]
             m_current = *m_code;
         else
             m_current = 0;

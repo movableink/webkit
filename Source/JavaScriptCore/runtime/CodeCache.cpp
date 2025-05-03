@@ -234,7 +234,7 @@ UnlinkedFunctionExecutable* CodeCache::getUnlinkedGlobalFunctionExecutable(VM& v
 
     // This function assumes an input string that would result in a single function declaration.
     StatementNode* funcDecl = program->singleStatement();
-    if (UNLIKELY(!funcDecl)) {
+    if (!funcDecl) [[unlikely]] {
         JSToken token;
         error = ParserError(ParserError::SyntaxError, ParserError::SyntaxErrorIrrecoverable, token, "Parser error"_s, -1);
         return nullptr;

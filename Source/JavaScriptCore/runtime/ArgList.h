@@ -229,7 +229,7 @@ public:
         if (OverflowHandler::hasOverflowed())
             return;
         if (!isUsingInlineBuffer()) {
-            if (LIKELY(!m_markSet)) {
+            if (!m_markSet) [[likely]] {
                 m_markSet = &vm.heap.markListSet();
                 m_markSet->add(this);
             }

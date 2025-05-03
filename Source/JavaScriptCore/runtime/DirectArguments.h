@@ -78,7 +78,7 @@ public:
     {
         VM& vm = getVM(globalObject);
         auto scope = DECLARE_THROW_SCOPE(vm);
-        if (UNLIKELY(m_mappedArguments)) {
+        if (m_mappedArguments) [[unlikely]] {
             JSValue value = get(globalObject, vm.propertyNames->length);
             RETURN_IF_EXCEPTION(scope, { });
             RELEASE_AND_RETURN(scope, value.toUInt32(globalObject));
