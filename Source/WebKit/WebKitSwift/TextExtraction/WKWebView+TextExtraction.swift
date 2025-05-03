@@ -23,6 +23,7 @@
 
 #if HAVE_UIINTELLIGENCESUPPORT_FRAMEWORK
 
+import WebKit
 import WebKitSwift
 @_spiOnly import UIIntelligenceSupport
 
