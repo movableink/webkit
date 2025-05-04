@@ -69,8 +69,7 @@ static RenderObject* rendererAfterOffset(const RenderObject& renderer, unsigned 
 static bool isValidRendererForSelection(const RenderObject& renderer, const RenderRange& selection)
 {
     return (renderer.canBeSelectionLeaf() || &renderer == selection.start() || &renderer == selection.end())
-    && renderer.selectionState() != RenderObject::HighlightState::None
-    && renderer.containingBlock();
+        && renderer.selectionState() != RenderObject::HighlightState::None && renderer.containingBlock();
 }
 
 static RenderBlock* containingBlockBelowView(const RenderObject& renderer)
@@ -149,9 +148,7 @@ void RenderSelection::repaint() const
         end = rendererAfterOffset(*m_renderRange.end(), m_renderRange.endOffset());
     RenderRangeIterator highlightIterator(m_renderRange.start());
     for (auto* renderer = highlightIterator.current(); renderer && renderer != end; renderer = highlightIterator.next()) {
-        if (!renderer->canBeSelectionLeaf() && renderer != m_renderRange.start() && renderer != m_renderRange.end())
-            continue;
-        if (renderer->selectionState() == RenderObject::HighlightState::None)
+        if (!isValidRendererForSelection(*renderer, m_renderRange))
             continue;
         RenderSelectionGeometry(*renderer, true).repaint();
         // Blocks are responsible for painting line gaps and margin gaps. They must be examined as well.
@@ -175,8 +172,7 @@ IntRect RenderSelection::collectBounds(ClipToVisibleContent clipToVisibleContent
     
     RenderRangeIterator selectionIterator(start);
     while (start && start != stop) {
-        if ((start->canBeSelectionLeaf() || start == m_renderRange.start() || start == m_renderRange.end())
-            && start->selectionState() != RenderObject::HighlightState::None) {
+        if (isValidRendererForSelection(*start, m_renderRange)) {
             // Blocks are responsible for painting line gaps and margin gaps. They must be examined as well.
             renderers.set(*start, makeUnique<RenderSelectionGeometry>(*start, clipToVisibleContent == ClipToVisibleContent::Yes));
             LOG_WITH_STREAM(Selection, stream << " added start " << *start << " with rect " << renderers.get(start)->rect());
