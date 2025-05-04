@@ -68,8 +68,16 @@ static RenderObject* rendererAfterOffset(const RenderObject& renderer, unsigned 
 
 static bool isValidRendererForSelection(const RenderObject& renderer, const RenderRange& selection)
 {
-    return (renderer.canBeSelectionLeaf() || &renderer == selection.start() || &renderer == selection.end())
-        && renderer.selectionState() != RenderObject::HighlightState::None && renderer.containingBlock();
+    if (!renderer.containingBlock())
+        return false;
+
+    if (renderer.isSkippedContent())
+        return false;
+
+    if (renderer.selectionState() == RenderObject::HighlightState::None)
+        return false;
+
+    return renderer.canBeSelectionLeaf() || &renderer == selection.start() || &renderer == selection.end();
 }
 
 static RenderBlock* containingBlockBelowView(const RenderObject& renderer)
@@ -238,7 +246,7 @@ void RenderSelection::apply(const RenderRange& newSelection, RepaintMode blockRe
     for (auto* currentRenderer = selectionStart; currentRenderer && currentRenderer != selectionEnd; currentRenderer = selectionIterator.next()) {
         if (currentRenderer == selectionStart || currentRenderer == m_renderRange.end())
             continue;
-        if (!currentRenderer->canBeSelectionLeaf())
+        if (!currentRenderer->canBeSelectionLeaf() || currentRenderer->isSkippedContent())
             continue;
         currentRenderer->setSelectionStateIfNeeded(RenderObject::HighlightState::Inside);
     }
