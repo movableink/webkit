@@ -227,7 +227,7 @@ inline bool isInTopLayerOrBackdrop(const RenderStyle& style, const Element* elem
 inline void Element::hideNonce()
 {
     // In the common case, Elements don't have a nonce parameter to hide.
-    if (LIKELY(!isConnected() || !hasAttributeWithoutSynchronization(HTMLNames::nonceAttr)))
+    if (!isConnected() || !hasAttributeWithoutSynchronization(HTMLNames::nonceAttr)) [[likely]]
         return;
     hideNonceSlow();
 }

@@ -890,7 +890,7 @@ ALWAYS_INLINE void Node::setStyleFlag(NodeStyleFlag flag)
 inline void EventTarget::ref()
 {
     auto* node = dynamicDowncast<Node>(*this);
-    if (LIKELY(node))
+    if (node) [[likely]]
         node->ref();
     else
         refEventTarget();
@@ -899,7 +899,7 @@ inline void EventTarget::ref()
 inline void EventTarget::deref()
 {
     auto* node = dynamicDowncast<Node>(*this);
-    if (LIKELY(node))
+    if (node) [[likely]]
         node->deref();
     else
         derefEventTarget();

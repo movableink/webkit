@@ -618,7 +618,7 @@ void CSSToStyleMap::mapNinePieceImageWidth(const CSSBorderImageWidthValue& value
 
 LengthBox CSSToStyleMap::mapNinePieceImageQuad(const CSSValue& value)
 {
-    if (LIKELY(value.isQuad()))
+    if (value.isQuad()) [[likely]]
         return mapNinePieceImageQuad(value.quad());
 
     // Values coming from CSS Typed OM may not have been converted to a Quad yet.

@@ -303,7 +303,7 @@ Element::~Element()
     ASSERT(!beforePseudoElement());
     ASSERT(!afterPseudoElement());
 
-    if (UNLIKELY(hasStateFlag(StateFlag::HasElementIdentifier)))
+    if (hasStateFlag(StateFlag::HasElementIdentifier)) [[unlikely]]
         elementIdentifiersMap().remove(*this);
     else
         ASSERT(!elementIdentifiersMap().contains(*this));
@@ -765,7 +765,7 @@ ALWAYS_INLINE void Element::synchronizeAttribute(const QualifiedName& name) cons
 {
     if (!elementData())
         return;
-    if (UNLIKELY(name == styleAttr && elementData()->styleAttributeIsDirty())) {
+    if (name == styleAttr && elementData()->styleAttributeIsDirty()) [[unlikely]] {
         ASSERT_WITH_SECURITY_IMPLICATION(isStyledElement());
         static_cast<const StyledElement*>(this)->synchronizeStyleAttributeInternal();
         return;
@@ -2238,7 +2238,7 @@ void Element::notifyAttributeChanged(const QualifiedName& name, const AtomString
 
     document().incDOMTreeVersion();
 
-    if (UNLIKELY(isDefinedCustomElement()))
+    if (isDefinedCustomElement()) [[unlikely]]
         CustomElementReactionQueue::enqueueAttributeChangedCallbackIfNeeded(*this, name, oldValue, newValue);
 
     if (oldValue != newValue) {
@@ -2365,7 +2365,7 @@ static RefPtr<Element> getElementByIdIncludingDisconnected(const Element& startE
     if (id.isEmpty())
         return nullptr;
 
-    if (LIKELY(startElement.isInTreeScope()))
+    if (startElement.isInTreeScope()) [[likely]]
         return startElement.treeScope().getElementById(id);
 
     // https://html.spec.whatwg.org/#attr-associated-element
@@ -2824,7 +2824,7 @@ void Element::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
             notifyAttributeChanged(classAttr, nullAtom(), getAttribute(classAttr));
     }
 
-    if (UNLIKELY(isDefinedCustomElement()))
+    if (isDefinedCustomElement()) [[unlikely]]
         CustomElementReactionQueue::enqueueAdoptedCallbackIfNeeded(*this, oldDocument, newDocument);
 
     if (auto* observerData = intersectionObserverDataIfExists()) {
@@ -2862,7 +2862,7 @@ void Element::updateEffectiveTextDirection()
 
 void Element::updateEffectiveTextDirectionIfNeeded()
 {
-    if (UNLIKELY(selfOrPrecedingNodesAffectDirAuto())) {
+    if (selfOrPrecedingNodesAffectDirAuto()) [[unlikely]] {
         updateEffectiveTextDirection();
         return;
     }
@@ -3012,7 +3012,7 @@ Node::InsertedIntoAncestorResult Element::insertedIntoAncestor(InsertionType ins
 
     if (usesNullCustomElementRegistry() && !parentOfInsertedTree.usesNullCustomElementRegistry()) {
         clearUsesNullCustomElementRegistry();
-        if (UNLIKELY(parentOfInsertedTree.usesScopedCustomElementRegistryMap())) {
+        if (parentOfInsertedTree.usesScopedCustomElementRegistryMap()) [[unlikely]] {
             RefPtr registry = CustomElementRegistry::registryForElement(downcast<Element>(parentOfInsertedTree));
             ASSERT(registry);
             CustomElementRegistry::addToScopedCustomElementRegistryMap(*this, *registry);
@@ -3020,11 +3020,11 @@ Node::InsertedIntoAncestorResult Element::insertedIntoAncestor(InsertionType ins
     }
 
     if (insertionType.connectedToDocument) {
-        if (UNLIKELY(isCustomElementUpgradeCandidate())) {
+        if (isCustomElementUpgradeCandidate()) [[unlikely]] {
             ASSERT(isConnected());
             CustomElementReactionQueue::tryToUpgradeElement(*this);
         }
-        if (UNLIKELY(isDefinedCustomElement()))
+        if (isDefinedCustomElement()) [[unlikely]]
             CustomElementReactionQueue::enqueueConnectedCallbackIfNeeded(*this);
         if (shouldAutofocus(*this)) {
             if (RefPtr topDocument = document().sameOriginTopLevelTraversable())
@@ -3110,7 +3110,7 @@ void Element::removedFromAncestor(RemovalType removalType, ContainerNode& oldPar
         }
         if (oldParentOfRemovedTree.isInShadowTree()) {
             if (RefPtr registry = oldTreeScope.customElementRegistry()) {
-                if (UNLIKELY(registry->isScoped() && !usesScopedCustomElementRegistryMap()))
+                if (registry->isScoped() && !usesScopedCustomElementRegistryMap()) [[unlikely]]
                     CustomElementRegistry::addToScopedCustomElementRegistryMap(*this, *registry);
             }
         }
@@ -3135,17 +3135,17 @@ void Element::removedFromAncestor(RemovalType removalType, ContainerNode& oldPar
         clearAfterPseudoElement();
 
 #if ENABLE(FULLSCREEN_API)
-        if (UNLIKELY(hasFullscreenFlag()))
+        if (hasFullscreenFlag()) [[unlikely]]
             oldDocument->fullscreen().exitRemovedFullscreenElement(*this);
 #endif
 
-        if (UNLIKELY(isInTopLayer()))
+        if (isInTopLayer()) [[unlikely]]
             removeFromTopLayer();
 
         if (oldDocument->cssTarget() == this)
             oldDocument->setCSSTarget(nullptr);
 
-        if (UNLIKELY(isDefinedCustomElement()))
+        if (isDefinedCustomElement()) [[unlikely]]
             CustomElementReactionQueue::enqueueDisconnectedCallbackIfNeeded(*this);
     }
 
@@ -3164,9 +3164,11 @@ void Element::removedFromAncestor(RemovalType removalType, ContainerNode& oldPar
 
     document().userActionElements().clearAllForElement(*this);
 
-    if (UNLIKELY(usesEffectiveTextDirection()) && !hasValidTextDirectionState()) {
-        if (auto* parent = parentOrShadowHostElement(); !(parent && parent->usesEffectiveTextDirection()))
-            setUsesEffectiveTextDirection(false);
+    if (usesEffectiveTextDirection()) [[unlikely]] {
+        if (!hasValidTextDirectionState()) {
+            if (auto* parent = parentOrShadowHostElement(); !(parent && parent->usesEffectiveTextDirection()))
+                setUsesEffectiveTextDirection(false);
+        }
     }
 }
 
@@ -3559,7 +3561,7 @@ void Element::childrenChanged(const ChildChange& change)
         }
     }
 
-    if (UNLIKELY(document().isDirAttributeDirty())) {
+    if (document().isDirAttributeDirty()) [[unlikely]] {
         if (selfOrPrecedingNodesAffectDirAuto())
             updateEffectiveTextDirection();
     }
@@ -3873,9 +3875,11 @@ bool Element::removeAttribute(const AtomString& qualifiedName)
     AtomString caseAdjustedQualifiedName = shouldIgnoreAttributeCase(*this) ? qualifiedName.convertToASCIILowercase() : qualifiedName;
     unsigned index = elementData()->findAttributeIndexByName(caseAdjustedQualifiedName, false);
     if (index == ElementData::attributeNotFound) {
-        if (UNLIKELY(caseAdjustedQualifiedName == styleAttr) && elementData()->styleAttributeIsDirty()) {
-            if (auto* styledElement = dynamicDowncast<StyledElement>(*this))
-                styledElement->removeAllInlineStyleProperties();
+        if (caseAdjustedQualifiedName == styleAttr) [[unlikely]] {
+            if (elementData()->styleAttributeIsDirty()) {
+                if (auto* styledElement = dynamicDowncast<StyledElement>(*this))
+                    styledElement->removeAllInlineStyleProperties();
+            }
         }
         return false;
     }
@@ -4302,7 +4306,7 @@ ExceptionOr<void> Element::setOuterHTML(Variant<RefPtr<TrustedHTML>, String>&& h
     // The specification allows setting outerHTML on an Element whose parent is a DocumentFragment and Gecko supports this.
     // https://w3c.github.io/DOM-Parsing/#dom-element-outerhtml
     RefPtr parent = parentElement();
-    if (UNLIKELY(!parent)) {
+    if (!parent) [[unlikely]] {
         if (!parentNode())
             return { };
         return Exception { ExceptionCode::NoModificationAllowedError, "Cannot set outerHTML on element because its parent is not an Element"_s };
@@ -5861,7 +5865,7 @@ ExceptionOr<void> Element::insertAdjacentHTML(const String& where, const String&
     if (fragment.hasException())
         return fragment.releaseException();
 
-    if (UNLIKELY(addedNodes)) {
+    if (addedNodes) [[unlikely]] {
         // Must be called before insertAdjacent, as otherwise the children of fragment will be moved
         // to their new parent and will be harder to keep track of.
         collectChildNodes(fragment.returnValue(), *addedNodes);

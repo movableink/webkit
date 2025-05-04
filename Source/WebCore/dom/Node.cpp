@@ -657,7 +657,7 @@ ExceptionOr<NodeVector> Node::convertNodesOrStringsIntoNodeVector(FixedVector<No
         ASSERT(std::holds_alternative<RefPtr<Node>>(variant));
         RefPtr node = WTFMove(std::get<RefPtr<Node>>(variant));
         ASSERT(node);
-        if (auto* fragment = dynamicDowncast<DocumentFragment>(node.get()); UNLIKELY(fragment)) {
+        if (auto* fragment = dynamicDowncast<DocumentFragment>(node.get()); fragment) [[unlikely]] {
             for (auto* child = fragment->firstChild(); child; child = child->nextSibling())
                 nodeVector.append(*child);
         } else
@@ -824,7 +824,7 @@ Ref<Node> Node::cloneNode(bool deep)
 
 ExceptionOr<Ref<Node>> Node::cloneNodeForBindings(bool deep)
 {
-    if (UNLIKELY(isShadowRoot()))
+    if (isShadowRoot()) [[unlikely]]
         return Exception { ExceptionCode::NotSupportedError };
     return cloneNode(deep);
 }
@@ -2297,7 +2297,7 @@ void Node::moveTreeToNewScope(Node& root, TreeScope& oldScope, TreeScope& newSco
             if (newScopeIsUAShadowTree)
                 node.setEventTargetFlag(EventTargetFlag::HasBeenInUserAgentShadowTree);
             node.setTreeScope(newScope);
-            if (UNLIKELY(!node.hasRareData()))
+            if (!node.hasRareData()) [[likely]]
                 return;
             if (auto* nodeLists = node.rareData()->nodeLists())
                 nodeLists->adoptTreeScope();
@@ -2361,7 +2361,7 @@ void Node::moveNodeToNewDocumentSlowCase(Document& oldDocument, Document& newDoc
     }
 
     auto* textManipulationController = oldDocument.textManipulationControllerIfExists();
-    if (UNLIKELY(textManipulationController))
+    if (textManipulationController) [[unlikely]]
         textManipulationController->removeNode(*this);
 
     if (hasEventTargetData()) {

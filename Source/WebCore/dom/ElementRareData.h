@@ -395,7 +395,7 @@ inline RefPtr<ShadowRoot> Node::protectedShadowRoot() const
 inline void Element::removeShadowRoot()
 {
     RefPtr shadowRoot = this->shadowRoot();
-    if (LIKELY(!shadowRoot))
+    if (!shadowRoot) [[likely]]
         return;
     removeShadowRootSlow(*shadowRoot);
 }

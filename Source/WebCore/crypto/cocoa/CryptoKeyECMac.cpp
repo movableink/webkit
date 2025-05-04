@@ -167,7 +167,7 @@ Vector<uint8_t> CryptoKeyEC::platformExportRaw() const
 #else
     Vector<uint8_t> result(expectedSize);
     size_t size = result.size();
-    if (UNLIKELY(CCECCryptorExportKey(kCCImportKeyBinary, result.data(), &size, ccECKeyPublic, platformKey().get()) || size != expectedSize))
+    if (CCECCryptorExportKey(kCCImportKeyBinary, result.data(), &size, ccECKeyPublic, platformKey().get()) || size != expectedSize) [[unlikely]]
         return { };
     return result;
 #endif
@@ -235,7 +235,7 @@ bool CryptoKeyEC::platformAddFieldElements(JsonWebKey& jwk) const
         ASSERT_NOT_REACHED();
         return false;
     }
-    if (UNLIKELY((result.size() != publicKeySize) && (result.size() != privateKeySize)))
+    if ((result.size() != publicKeySize) && (result.size() != privateKeySize)) [[unlikely]]
         return false;
     jwk.x = base64URLEncodeToString(result.subspan(1, keySizeInBytes));
     jwk.y = base64URLEncodeToString(result.subspan(keySizeInBytes + 1, keySizeInBytes));
@@ -246,11 +246,11 @@ bool CryptoKeyEC::platformAddFieldElements(JsonWebKey& jwk) const
     size_t size = result.size();
     switch (type()) {
     case CryptoKeyType::Public:
-        if (UNLIKELY(CCECCryptorExportKey(kCCImportKeyBinary, result.data(), &size, ccECKeyPublic, platformKey().get())))
+        if (CCECCryptorExportKey(kCCImportKeyBinary, result.data(), &size, ccECKeyPublic, platformKey().get())) [[unlikely]]
             return false;
         break;
     case CryptoKeyType::Private:
-        if (UNLIKELY(CCECCryptorExportKey(kCCImportKeyBinary, result.data(), &size, ccECKeyPrivate, platformKey().get())))
+        if (CCECCryptorExportKey(kCCImportKeyBinary, result.data(), &size, ccECKeyPrivate, platformKey().get())) [[unlikely]]
             return false;
         break;
     default:
@@ -258,7 +258,7 @@ bool CryptoKeyEC::platformAddFieldElements(JsonWebKey& jwk) const
         return false;
     }
 
-    if (UNLIKELY((size != publicKeySize) && (size != privateKeySize)))
+    if ((size != publicKeySize) && (size != privateKeySize)) [[unlikely]]
         return false;
     jwk.x = base64URLEncodeToString(result.subspan(1, keySizeInBytes));
     jwk.y = base64URLEncodeToString(result.subspan(keySizeInBytes + 1, keySizeInBytes));
@@ -346,7 +346,7 @@ Vector<uint8_t> CryptoKeyEC::platformExportSpki() const
     keyBytes = WTFMove(rv.result);
     keySize = expectedKeySize;
 #else
-    if (UNLIKELY(CCECCryptorExportKey(kCCImportKeyBinary, keyBytes.data(), &keySize, ccECKeyPublic, platformKey().get()) || keySize != expectedKeySize))
+    if (CCECCryptorExportKey(kCCImportKeyBinary, keyBytes.data(), &keySize, ccECKeyPublic, platformKey().get()) || keySize != expectedKeySize) [[unlikely]]
         return { };
 #endif
     // The following adds SPKI header to a raw EC public key.
@@ -455,7 +455,7 @@ Vector<uint8_t> CryptoKeyEC::platformExportPkcs8() const
     keyBytes = WTFMove(rv.result);
 #else
     size_t keySize = keyBytes.size();
-    if (UNLIKELY(CCECCryptorExportKey(kCCImportKeyBinary, keyBytes.data(), &keySize, ccECKeyPrivate, platformKey().get()) || keySize != expectedKeySize))
+    if (CCECCryptorExportKey(kCCImportKeyBinary, keyBytes.data(), &keySize, ccECKeyPrivate, platformKey().get()) || keySize != expectedKeySize) [[unlikely]]
         return { };
 #endif
     // The following addes PKCS8 header to a raw EC private key.

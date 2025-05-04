@@ -258,7 +258,7 @@ ALWAYS_INLINE void SelectorDataList::executeFastPathForIdSelector(const Containe
     ASSERT(idSelector);
 
     const AtomString& idToMatch = idSelector->value();
-    if (UNLIKELY(rootNode.treeScope().containsMultipleElementsWithId(idToMatch))) {
+    if (rootNode.treeScope().containsMultipleElementsWithId(idToMatch)) [[unlikely]] {
         auto* elements = rootNode.treeScope().getAllElementsById(idToMatch);
         ASSERT(elements);
         bool rootNodeIsTreeScopeRoot = rootNode.isTreeScope();
@@ -301,7 +301,7 @@ static ContainerNode& filterRootById(ContainerNode& rootNode, const CSSSelector&
         if (canBeUsedForIdFastPath(*selector)) {
             const AtomString& idToMatch = selector->value();
             if (RefPtr<ContainerNode> searchRoot = rootNode.treeScope().getElementById(idToMatch)) {
-                if (LIKELY(!rootNode.treeScope().containsMultipleElementsWithId(idToMatch))) {
+                if (!rootNode.treeScope().containsMultipleElementsWithId(idToMatch)) [[likely]] {
                     if (inAdjacentChain)
                         searchRoot = searchRoot->parentNode();
                     if (searchRoot && (rootNode.isTreeScope() || searchRoot->isInclusiveDescendantOf(rootNode)))

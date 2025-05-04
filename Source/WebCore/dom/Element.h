@@ -1043,7 +1043,7 @@ inline void Element::clearAfterPseudoElement()
 inline void Element::disconnectFromIntersectionObservers()
 {
     auto* observerData = intersectionObserverDataIfExists();
-    if (LIKELY(!observerData))
+    if (!observerData) [[likely]]
         return;
     disconnectFromIntersectionObserversSlow(*observerData);
 }
@@ -1051,7 +1051,7 @@ inline void Element::disconnectFromIntersectionObservers()
 inline void Element::disconnectFromResizeObservers()
 {
     auto* observerData = resizeObserverDataIfExists();
-    if (LIKELY(!observerData))
+    if (!observerData) [[likely]]
         return;
     disconnectFromResizeObserversSlow(*observerData);
 }

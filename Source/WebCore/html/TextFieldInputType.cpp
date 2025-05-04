@@ -472,7 +472,7 @@ void TextFieldInputType::createDataListDropdownIndicator()
 
 static ValueOrReference<String> limitLength(const String& string LIFETIME_BOUND, unsigned maxLength)
 {
-    if (LIKELY(string.length() <= maxLength))
+    if (string.length() <= maxLength) [[likely]]
         return string;
 
     unsigned newLength = maxLength;
@@ -558,7 +558,7 @@ static bool isAutoFillButtonTypeChanged(const AtomString& attribute, AutoFillBut
 
 ValueOrReference<String> TextFieldInputType::sanitizeValue(const String& proposedValue LIFETIME_BOUND) const
 {
-    if (LIKELY(!containsHTMLLineBreak(proposedValue)))
+    if (!containsHTMLLineBreak(proposedValue)) [[likely]]
         return limitLength(proposedValue, HTMLInputElement::maxEffectiveLength);
 
     // Passing a lambda instead of a function name helps the compiler inline isHTMLLineBreak.

@@ -36,14 +36,14 @@ public:
     ScopedInspectorShaderProgramHighlight(WebGLRenderingContextBase& context)
        : m_context(shouldApply(context) ? &context : nullptr) // NOLINT
     {
-        if (LIKELY(!m_context))
+        if (!m_context) [[likely]]
             return;
         showHighlight();
     }
 
     ~ScopedInspectorShaderProgramHighlight()
     {
-        if (LIKELY(!m_context))
+        if (!m_context) [[likely]]
             return;
         hideHighlight();
     }

@@ -241,7 +241,7 @@ void Text::setDataAndUpdate(const String& newData, unsigned offsetOfReplacedData
     if (!offsetOfReplacedData) {
         Ref document = this->document();
         CheckedPtr textManipulationController = document->textManipulationControllerIfExists();
-        if (UNLIKELY(textManipulationController && oldData != newData))
+        if (textManipulationController && oldData != newData) [[unlikely]]
             textManipulationController->didUpdateContentForNode(*this);
     }
 }

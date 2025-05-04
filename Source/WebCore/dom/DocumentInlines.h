@@ -150,7 +150,7 @@ bool Document::hasNodeIterators() const
 
 inline void Document::invalidateAccessKeyCache()
 {
-    if (UNLIKELY(m_accessKeyCache))
+    if (m_accessKeyCache) [[unlikely]]
         invalidateAccessKeyCacheSlowCase();
 }
 
@@ -165,14 +165,14 @@ inline bool Document::isSameOriginAsTopDocument() const { return protectedSecuri
 
 inline bool Document::shouldMaskURLForBindings(const URL& urlToMask) const
 {
-    if (LIKELY(urlToMask.protocolIsInHTTPFamily()))
+    if (urlToMask.protocolIsInHTTPFamily()) [[likely]]
         return false;
     return shouldMaskURLForBindingsInternal(urlToMask);
 }
 
 inline const URL& Document::maskedURLForBindingsIfNeeded(const URL& url) const
 {
-    if (UNLIKELY(shouldMaskURLForBindings(url)))
+    if (shouldMaskURLForBindings(url)) [[unlikely]]
         return maskedURLForBindings();
     return url;
 }

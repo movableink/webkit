@@ -89,7 +89,7 @@ static std::optional<std::pair<Vector<uint8_t>, Vector<uint8_t>>> gcryptGenerate
 
     auto q = mpiData(qMpi);
     auto d = mpiData(dMpi);
-    if (UNLIKELY(!q || !d))
+    if (!q || !d) [[unlikely]]
         return std::nullopt;
     return std::make_pair(WTFMove(*q), WTFMove(*d));
 }
@@ -100,12 +100,12 @@ static std::optional<std::pair<Vector<uint8_t>, Vector<uint8_t>>> gcryptGenerate
     PAL::GCrypt::Handle<gcry_mpi_t> mpi(gcry_mpi_new(256));
     gcry_mpi_randomize(mpi, 256, GCRY_STRONG_RANDOM);
     auto q = mpiData(mpi);
-    if (UNLIKELY(!q))
+    if (!q) [[unlikely]]
         return std::nullopt;
 
     // public key being X25519(a, 9), as defined in [RFC7748], section 6.1.
     auto d = GCrypt::RFC7748::X25519(*q, GCrypt::RFC7748::c_X25519BasePointU);
-    if (UNLIKELY(!d))
+    if (!d) [[unlikely]]
         return std::nullopt;
 
     return std::make_pair(WTFMove(*q), WTFMove(*d));

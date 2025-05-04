@@ -341,7 +341,7 @@ public:
 
     ContainerNode* parentNode(Node& node)
     {
-        if (UNLIKELY(m_useComposedTree))
+        if (m_useComposedTree) [[unlikely]]
             return node.parentInComposedTree();
         return node.parentOrShadowHostNode();
     }
@@ -420,35 +420,35 @@ private:
 
     Node* firstChild(Node& node)
     {
-        if (UNLIKELY(m_useComposedTree))
+        if (m_useComposedTree) [[unlikely]]
             return firstChildInComposedTreeIgnoringUserAgentShadow(node);
         return node.firstChild();
     }
 
     Node* nextSibling(Node& node)
     {
-        if (UNLIKELY(m_useComposedTree))
+        if (m_useComposedTree) [[unlikely]]
             return nextSiblingInComposedTreeIgnoringUserAgentShadow(node);
         return node.nextSibling();
     }
     
     Node* nextSkippingChildren(Node& node)
     {
-        if (UNLIKELY(m_useComposedTree))
+        if (m_useComposedTree) [[unlikely]]
             return nextSkippingChildrenInComposedTreeIgnoringUserAgentShadow(node);
         return NodeTraversal::nextSkippingChildren(node);
     }
 
     bool hasChildNodes(Node& node)
     {
-        if (UNLIKELY(m_useComposedTree))
+        if (m_useComposedTree) [[unlikely]]
             return firstChildInComposedTreeIgnoringUserAgentShadow(node);
         return node.hasChildNodes();
     }
 
     bool isDescendantOf(Node& node, Node& possibleAncestor)
     {
-        if (UNLIKELY(m_useComposedTree))
+        if (m_useComposedTree) [[unlikely]]
             return node.isShadowIncludingDescendantOf(&possibleAncestor);
         return node.isDescendantOf(&possibleAncestor);
     }
@@ -705,7 +705,7 @@ StyledMarkupAccumulator::SpanReplacementType StyledMarkupAccumulator::spanReplac
 void StyledMarkupAccumulator::appendStartTag(StringBuilder& out, const Element& element, bool addDisplayInline, RangeFullySelectsNode rangeFullySelectsNode)
 {
     auto replacementType = spanReplacementForElement(element);
-    if (UNLIKELY(replacementType != SpanReplacementType::None))
+    if (replacementType != SpanReplacementType::None) [[unlikely]]
         out.append("<span"_s);
     else
         appendOpenTag(out, element, nullptr);
@@ -780,7 +780,7 @@ void StyledMarkupAccumulator::appendStartTag(StringBuilder& out, const Element& 
 
 void StyledMarkupAccumulator::appendEndTag(StringBuilder& out, const Element& element)
 {
-    if (UNLIKELY(spanReplacementForElement(element) != SpanReplacementType::None))
+    if (spanReplacementForElement(element) != SpanReplacementType::None) [[unlikely]]
         out.append("</span>"_s);
     else
         MarkupAccumulator::appendEndTag(out, element);
@@ -814,9 +814,11 @@ RefPtr<Node> StyledMarkupAccumulator::traverseNodesForSerialization(Node& startN
 
     unsigned depth = 0;
     auto enterNode = [&] (Node& node) {
-        if (UNLIKELY(m_shouldPreserveMSOList) && shouldEmit) {
-            if (appendNodeToPreserveMSOList(node))
-                return false;
+        if (m_shouldPreserveMSOList) [[unlikely]] {
+            if (shouldEmit) {
+                if (appendNodeToPreserveMSOList(node))
+                    return false;
+            }
         }
 
         RefPtr element = dynamicDowncast<Element>(node);

@@ -122,7 +122,7 @@ String HTMLElement::nodeName() const
     // FIXME: Would be nice to have an AtomString lookup based off uppercase
     // ASCII characters that does not have to copy the string on a hit in the hash.
     if (document().isHTMLDocument()) {
-        if (LIKELY(!tagQName().hasPrefix()))
+        if (!tagQName().hasPrefix()) [[likely]]
             return tagQName().localNameUppercase();
         return Element::nodeName().convertToASCIIUppercase();
     }

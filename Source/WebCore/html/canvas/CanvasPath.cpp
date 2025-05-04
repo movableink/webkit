@@ -63,7 +63,7 @@ void CanvasPath::moveTo(float x, float y)
 {
     if (!std::isfinite(x) || !std::isfinite(y))
         return;
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
     m_path.moveTo(FloatPoint(x, y));
 }
@@ -77,7 +77,7 @@ void CanvasPath::lineTo(float x, float y)
 {
     if (!std::isfinite(x) || !std::isfinite(y))
         return;
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
 
     FloatPoint p1 = FloatPoint(x, y);
@@ -91,7 +91,7 @@ void CanvasPath::quadraticCurveTo(float cpx, float cpy, float x, float y)
 {
     if (!std::isfinite(cpx) || !std::isfinite(cpy) || !std::isfinite(x) || !std::isfinite(y))
         return;
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
     if (m_path.isEmpty())
         m_path.moveTo(FloatPoint(cpx, cpy));
@@ -106,7 +106,7 @@ void CanvasPath::bezierCurveTo(float cp1x, float cp1y, float cp2x, float cp2y, f
 {
     if (!std::isfinite(cp1x) || !std::isfinite(cp1y) || !std::isfinite(cp2x) || !std::isfinite(cp2y) || !std::isfinite(x) || !std::isfinite(y))
         return;
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
     if (m_path.isEmpty())
         m_path.moveTo(FloatPoint(cp1x, cp1y));
@@ -126,7 +126,7 @@ ExceptionOr<void> CanvasPath::arcTo(float x1, float y1, float x2, float y2, floa
     if (r < 0)
         return Exception { ExceptionCode::IndexSizeError };
 
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return { };
 
     FloatPoint p1 = FloatPoint(x1, y1);
@@ -167,7 +167,7 @@ ExceptionOr<void> CanvasPath::arc(float x, float y, float radius, float startAng
     if (radius < 0)
         return Exception { ExceptionCode::IndexSizeError };
 
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return { };
 
     normalizeAngles(startAngle, endAngle, anticlockwise);
@@ -190,7 +190,7 @@ ExceptionOr<void> CanvasPath::ellipse(float x, float y, float radiusX, float rad
     if (radiusX < 0 || radiusY < 0)
         return Exception { ExceptionCode::IndexSizeError };
 
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return { };
 
     normalizeAngles(startAngle, endAngle, anticlockwise);
@@ -227,7 +227,7 @@ ExceptionOr<void> CanvasPath::ellipse(float x, float y, float radiusX, float rad
 
 void CanvasPath::rect(float x, float y, float width, float height)
 {
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
 
     if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(width) || !std::isfinite(height))

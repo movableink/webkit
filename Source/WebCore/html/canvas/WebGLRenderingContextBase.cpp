@@ -5623,7 +5623,7 @@ void WebGLRenderingContextBase::prepareForDisplay()
     m_compositingResultsNeedUpdating = false;
     m_canvasBufferContents = std::nullopt;
 
-    if (UNLIKELY(hasActiveInspectorCanvasCallTracer()))
+    if (hasActiveInspectorCanvasCallTracer()) [[unlikely]]
         InspectorInstrumentation::didFinishRecordingCanvasFrame(*this);
 }
 

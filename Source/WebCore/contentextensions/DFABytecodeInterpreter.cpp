@@ -250,7 +250,7 @@ auto DFABytecodeInterpreter::interpret(const String& urlString, ResourceFlags fl
 {
     CString urlCString;
     std::span<const LChar> url;
-    if (LIKELY(urlString.is8Bit()))
+    if (urlString.is8Bit()) [[likely]]
         url = urlString.span8();
     else {
         // FIXME: Stuffing a UTF-8 string into a Latin1 buffer seems wrong.

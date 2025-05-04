@@ -35,7 +35,7 @@ namespace WebCore {
 bool ScopedInspectorShaderProgramHighlight::shouldApply(WebGLRenderingContextBase& context)
 {
     RefPtr currentProgram = context.m_currentProgram;
-    if (LIKELY(!currentProgram || !InspectorInstrumentation::isWebGLProgramHighlighted(context, *currentProgram)))
+    if (!currentProgram || !InspectorInstrumentation::isWebGLProgramHighlighted(context, *currentProgram)) [[likely]]
         return false;
     if (context.m_framebufferBinding)
         return false;

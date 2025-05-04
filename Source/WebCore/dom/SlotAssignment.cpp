@@ -80,7 +80,7 @@ static HTMLSlotElement* findSlotElement(ShadowRoot& shadowRoot, const AtomString
 static HTMLSlotElement* nextSlotElementSkippingSubtree(ContainerNode& startingNode, ContainerNode* skippedSubtree)
 {
     auto nextNode = [&](Node& node) {
-        if (UNLIKELY(&node == skippedSubtree))
+        if (&node == skippedSubtree) [[unlikely]]
             return NodeTraversal::nextSkippingChildren(node);
         return NodeTraversal::next(node);
     };
@@ -324,7 +324,7 @@ void NamedSlotAssignment::didChangeSlot(const AtomString& slotAttrValue, ShadowR
         slotElement->updateAccessibilityOnSlotChange();
     }
 
-    if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+    if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
         for (auto& weakAssignedNode : assignedNodes) {
             if (RefPtr assignedNode = weakAssignedNode.get())
                 InspectorInstrumentation::didChangeAssignedSlot(*assignedNode);
@@ -417,7 +417,7 @@ void NamedSlotAssignment::assignSlots(ShadowRoot& shadowRoot)
     for (auto& entry : m_slots) {
         auto assignedNodes = std::exchange(entry.value->assignedNodes, { });
 
-        if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+        if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
             for (auto& weakAssignedNode : assignedNodes) {
                 if (RefPtr assignedNode = weakAssignedNode.get())
                     InspectorInstrumentation::didChangeAssignedSlot(*assignedNode);

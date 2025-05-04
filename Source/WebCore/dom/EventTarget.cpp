@@ -334,7 +334,7 @@ void EventTarget::innerInvokeEventListeners(Event& event, EventListenerVector li
     InspectorInstrumentation::willDispatchEvent(context, event);
 
     for (auto& registeredListener : listeners) {
-        if (UNLIKELY(registeredListener->wasRemoved()))
+        if (registeredListener->wasRemoved()) [[unlikely]]
             continue;
 
         if (phase == EventInvokePhase::Capturing && !registeredListener->useCapture())
@@ -357,7 +357,7 @@ void EventTarget::innerInvokeEventListeners(Event& event, EventListenerVector li
         JSC::EnsureStillAliveScope wrapperProtector(callback->wrapper());
         JSC::EnsureStillAliveScope jsFunctionProtector(callback->jsFunction());
 
-        if (UNLIKELY(event.isAutofillEvent())) {
+        if (event.isAutofillEvent()) [[unlikely]] {
             if (!worldForDOMObject(*callback->jsFunction()).allowAutofill())
                 continue; // webkitrequestautofill only fires in a world with autofill capability.
         }

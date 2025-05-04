@@ -675,7 +675,7 @@ void FrameSelection::nodeWillBeRemoved(Node& node)
         removingNodeRemovesPosition(node, m_selection.base()), removingNodeRemovesPosition(node, m_selection.extent()),
         removingNodeRemovesPosition(node, m_selection.start()), removingNodeRemovesPosition(node, m_selection.end()));
 
-    if (UNLIKELY(node.contains(m_previousCaretNode.get()))) {
+    if (node.contains(m_previousCaretNode.get())) [[unlikely]] {
         m_previousCaretNode = m_selection.start().anchorNode();
         setCaretRectNeedsUpdate();
     }

@@ -113,7 +113,7 @@ void EventPath::buildPath(Node& originalTarget, Event& event)
             }
 
             RefPtr parent = node->parentNode();
-            if (UNLIKELY(!parent)) {
+            if (!parent) [[unlikely]] {
                 // https://dom.spec.whatwg.org/#interface-document
                 if (auto* document = dynamicDowncast<Document>(*node); document && event.type() != eventNames().loadEvent) {
                     ASSERT(target);
@@ -125,7 +125,7 @@ void EventPath::buildPath(Node& originalTarget, Event& event)
                 return;
             }
 
-            if (RefPtr shadowRootOfParent = parent->shadowRoot(); UNLIKELY(shadowRootOfParent)) {
+            if (RefPtr shadowRootOfParent = parent->shadowRoot(); shadowRootOfParent) [[unlikely]] {
                 if (RefPtr assignedSlot = shadowRootOfParent->findAssignedSlot(*node)) {
                     if (shadowRootOfParent->mode() != ShadowRootMode::Open)
                         closedShadowDepth++;
@@ -167,18 +167,18 @@ void EventPath::setRelatedTarget(Node& origin, Node& relatedNode)
 
         Ref currentTarget = *context.node();
         Ref currentTreeScope = currentTarget->treeScope();
-        if (UNLIKELY(previousTreeScope && currentTreeScope.ptr() != previousTreeScope))
+        if (previousTreeScope && currentTreeScope.ptr() != previousTreeScope) [[unlikely]]
             retargeter.moveToNewTreeScope(previousTreeScope.get(), currentTreeScope);
 
         RefPtr currentRelatedNode = retargeter.currentNode(currentTarget);
-        if (UNLIKELY(!originIsRelatedTarget && context.target() == currentRelatedNode)) {
+        if (!originIsRelatedTarget && context.target() == currentRelatedNode) [[unlikely]] {
             m_path.shrink(contextIndex);
             break;
         }
 
         context.setRelatedTarget(WTFMove(currentRelatedNode));
 
-        if (UNLIKELY(originIsRelatedTarget && context.node() == rootNodeInOriginTreeScope.ptr())) {
+        if (originIsRelatedTarget && context.node() == rootNodeInOriginTreeScope.ptr()) [[unlikely]] {
             m_path.shrink(contextIndex + 1);
             break;
         }
@@ -211,7 +211,7 @@ void EventPath::retargetTouch(EventContext::TouchListType type, const Touch& tou
     for (auto& context : m_path) {
         Ref currentTarget = *context.node();
         Ref currentTreeScope = currentTarget->treeScope();
-        if (UNLIKELY(previousTreeScope && currentTreeScope.ptr() != previousTreeScope))
+        if (previousTreeScope && currentTreeScope.ptr() != previousTreeScope) [[unlikely]]
             retargeter.moveToNewTreeScope(previousTreeScope.get(), currentTreeScope);
 
         if (context.isTouchEventContext()) {
@@ -309,7 +309,7 @@ RelatedNodeRetargeter::RelatedNodeRetargeter(Ref<Node>&& relatedNode, Node& targ
 {
     auto& targetTreeScope = target.treeScope();
     RefPtr currentTreeScope = &m_relatedNode->treeScope();
-    if (LIKELY(currentTreeScope == &targetTreeScope && target.isConnected() && m_relatedNode->isConnected()))
+    if (currentTreeScope == &targetTreeScope && target.isConnected() && m_relatedNode->isConnected()) [[likely]]
         return;
 
     if (&currentTreeScope->documentScope() != &targetTreeScope.documentScope()

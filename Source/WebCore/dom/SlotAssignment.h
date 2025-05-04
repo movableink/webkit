@@ -187,31 +187,31 @@ inline void SlotAssignment::willRemoveAllChildren()
 
 inline void ShadowRoot::resolveSlotsBeforeNodeInsertionOrRemoval()
 {
-    if (UNLIKELY(m_slotAssignment))
+    if (m_slotAssignment) [[unlikely]]
         m_slotAssignment->resolveSlotsBeforeNodeInsertionOrRemoval();
 }
 
 inline void ShadowRoot::willRemoveAllChildren(ContainerNode&)
 {
-    if (UNLIKELY(m_slotAssignment))
+    if (m_slotAssignment) [[unlikely]]
         m_slotAssignment->willRemoveAllChildren();
 }
 
 inline void ShadowRoot::didRemoveAllChildrenOfShadowHost()
 {
-    if (UNLIKELY(m_slotAssignment))
+    if (m_slotAssignment) [[unlikely]]
         m_slotAssignment->didRemoveAllChildrenOfShadowHost(*this);
 }
 
 inline void ShadowRoot::didMutateTextNodesOfShadowHost()
 {
-    if (UNLIKELY(m_slotAssignment))
+    if (m_slotAssignment) [[unlikely]]
         m_slotAssignment->didMutateTextNodesOfShadowHost(*this);
 }
 
 inline void ShadowRoot::hostChildElementDidChange(const Element& childElement)
 {
-    if (UNLIKELY(m_slotAssignment))
+    if (m_slotAssignment) [[unlikely]]
         m_slotAssignment->hostChildElementDidChange(childElement, *this);
 }
 

@@ -71,7 +71,7 @@ public:
     {
         if (element.usesNullCustomElementRegistry())
             return nullptr;
-        if (UNLIKELY(element.usesScopedCustomElementRegistryMap()))
+        if (element.usesScopedCustomElementRegistryMap()) [[unlikely]]
             return scopedCustomElementRegistryMap().get(element);
         return element.treeScope().customElementRegistry();
     }
@@ -82,7 +82,7 @@ public:
             ASSERT(is<Element>(node) || node.isTreeScope() || node.isDocumentFragment());
             return nullptr;
         }
-        if (auto* element = dynamicDowncast<Element>(node); UNLIKELY(element && element->usesScopedCustomElementRegistryMap()))
+        if (auto* element = dynamicDowncast<Element>(node); element && element->usesScopedCustomElementRegistryMap()) [[unlikely]]
             return scopedCustomElementRegistryMap().get(*element);
         return treeScope.customElementRegistry();
     }

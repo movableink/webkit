@@ -196,7 +196,7 @@ WebCoreOpaqueRoot root(CanvasBase*);
 
 inline const CSSParserContext& CanvasBase::cssParserContext() const
 {
-    if (UNLIKELY(!m_cssParserContext))
+    if (!m_cssParserContext) [[unlikely]]
         m_cssParserContext = createCSSParserContext();
     return *m_cssParserContext;
 }

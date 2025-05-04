@@ -163,7 +163,7 @@ static inline std::pair<const AtomString&, InputTypeFactory*> findFactory(const 
     static NeverDestroyed factoryMap = createInputTypeFactoryMap();
     auto& map = factoryMap.get();
     auto it = map.find(typeName);
-    if (UNLIKELY(it == map.end())) {
+    if (it == map.end()) [[unlikely]] {
         it = map.find(typeName.convertToASCIILowercase());
         if (it == map.end())
             return { nullAtom(), nullptr };
@@ -177,7 +177,7 @@ RefPtr<InputType> InputType::createIfDifferent(HTMLInputElement& element, const 
         auto& currentTypeName = currentInputType ? currentInputType->formControlType() : nullAtom();
         if (typeName == currentTypeName)
             return nullptr;
-        if (auto factory = findFactory(typeName); LIKELY(factory.second)) {
+        if (auto factory = findFactory(typeName); factory.second) [[likely]] {
             if (factory.first == currentTypeName)
                 return nullptr;
             if (!factory.second->conditionalFunction || std::invoke(factory.second->conditionalFunction, element.document().settings()))

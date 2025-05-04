@@ -238,7 +238,7 @@ void TreeScope::removeElementByName(const AtomString& name, Element& element)
 Ref<Node> TreeScope::retargetToScope(Node& node) const
 {
     auto& scope = node.treeScope();
-    if (LIKELY(this == &scope || !node.isInShadowTree()))
+    if (this == &scope || !node.isInShadowTree()) [[likely]]
         return node;
     ASSERT(is<ShadowRoot>(scope.rootNode()));
 
@@ -612,7 +612,7 @@ RadioButtonGroups& TreeScope::radioButtonGroups()
 
 CSSStyleSheetObservableArray& TreeScope::ensureAdoptedStyleSheets()
 {
-    if (UNLIKELY(!m_adoptedStyleSheets))
+    if (!m_adoptedStyleSheets) [[unlikely]]
         m_adoptedStyleSheets = CSSStyleSheetObservableArray::create(m_rootNode.get());
     return *m_adoptedStyleSheets;
 }

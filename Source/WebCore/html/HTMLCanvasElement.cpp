@@ -277,7 +277,7 @@ ExceptionOr<std::optional<RenderingContext>> HTMLCanvasElement::getContext(JSC::
         auto scope = DECLARE_THROW_SCOPE(vm);
 
         auto settings = convert<IDLDictionary<CanvasRenderingContext2DSettings>>(state, arguments.isEmpty() ? JSC::jsUndefined() : (arguments[0].isObject() ? arguments[0].get() : JSC::jsNull()));
-        if (UNLIKELY(settings.hasException(scope)))
+        if (settings.hasException(scope)) [[unlikely]]
             return Exception { ExceptionCode::ExistingExceptionError };
 
         RefPtr context = createContext2d(contextId, settings.releaseReturnValue());
@@ -291,7 +291,7 @@ ExceptionOr<std::optional<RenderingContext>> HTMLCanvasElement::getContext(JSC::
         auto scope = DECLARE_THROW_SCOPE(vm);
 
         auto settings = convert<IDLDictionary<ImageBitmapRenderingContextSettings>>(state, arguments.isEmpty() ? JSC::jsUndefined() : (arguments[0].isObject() ? arguments[0].get() : JSC::jsNull()));
-        if (UNLIKELY(settings.hasException(scope)))
+        if (settings.hasException(scope)) [[unlikely]]
             return Exception { ExceptionCode::ExistingExceptionError };
 
         RefPtr context = createContextBitmapRenderer(contextId, settings.releaseReturnValue());
@@ -306,7 +306,7 @@ ExceptionOr<std::optional<RenderingContext>> HTMLCanvasElement::getContext(JSC::
         auto scope = DECLARE_THROW_SCOPE(vm);
 
         auto attributes = convert<IDLDictionary<WebGLContextAttributes>>(state, arguments.isEmpty() ? JSC::jsUndefined() : (arguments[0].isObject() ? arguments[0].get() : JSC::jsNull()));
-        if (UNLIKELY(attributes.hasException(scope)))
+        if (attributes.hasException(scope)) [[unlikely]]
             return Exception { ExceptionCode::ExistingExceptionError };
 
         RefPtr context = createContextWebGL(toWebGLVersion(contextId), attributes.releaseReturnValue());
@@ -659,7 +659,7 @@ void HTMLCanvasElement::paint(GraphicsContext& context, const LayoutRect& r)
         }
     }
 
-    if (UNLIKELY(m_context->hasActiveInspectorCanvasCallTracer()))
+    if (m_context->hasActiveInspectorCanvasCallTracer()) [[unlikely]]
         InspectorInstrumentation::didFinishRecordingCanvasFrame(*m_context);
 }
 

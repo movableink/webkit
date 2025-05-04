@@ -96,8 +96,10 @@ void HTMLFrameElementBase::openURL(LockHistory lockHistory, LockBackForwardList 
         return;
 
     auto frameName = getNameAttribute();
-    if (frameName.isNull() && UNLIKELY(document().settings().needsFrameNameFallbackToIdQuirk()))
-        frameName = getIdAttribute();
+    if (frameName.isNull()) {
+        if (document().settings().needsFrameNameFallbackToIdQuirk()) [[unlikely]]
+            frameName = getIdAttribute();
+    }
 
     auto completeURL = document().completeURL(m_frameURL);
     auto finishOpeningURL = [weakThis = WeakPtr { *this }, frameName, lockHistory, lockBackForwardList, parentFrame = WTFMove(parentFrame), completeURL] {

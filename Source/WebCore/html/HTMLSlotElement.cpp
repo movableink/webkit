@@ -135,7 +135,7 @@ static void flattenAssignedNodes(Vector<Ref<Node>>& nodes, const HTMLSlotElement
         return;
     }
     for (auto& weakNode : *assignedNodes) {
-        if (UNLIKELY(!weakNode)) {
+        if (!weakNode) [[unlikely]] {
             ASSERT_NOT_REACHED();
             continue;
         }

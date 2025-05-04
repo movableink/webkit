@@ -228,7 +228,7 @@ public:
 
     ALWAYS_INLINE ~CustomElementReactionStack()
     {
-        if (UNLIKELY(!m_queue.isEmpty()))
+        if (!m_queue.isEmpty()) [[unlikely]]
             m_queue.processQueue(m_state);
         s_currentProcessingStack = m_previousProcessingStack;
     }

@@ -434,7 +434,7 @@ ExceptionOr<void> PropertySetCSSStyleProperties::setProperty(const String& prope
         return { };
 
     bool changed;
-    if (UNLIKELY(propertyID == CSSPropertyCustom))
+    if (propertyID == CSSPropertyCustom) [[unlikely]]
         changed = m_propertySet->setCustomProperty(propertyName, value, cssParserContext(), important ? IsImportant::Yes : IsImportant::No);
     else
         changed = m_propertySet->setProperty(propertyID, value, cssParserContext(), important ? IsImportant::Yes : IsImportant::No);

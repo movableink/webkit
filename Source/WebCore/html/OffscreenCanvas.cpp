@@ -200,7 +200,7 @@ ExceptionOr<std::optional<OffscreenRenderingContext>> OffscreenCanvas::getContex
             auto scope = DECLARE_THROW_SCOPE(state.vm());
 
             auto settings = convert<IDLDictionary<CanvasRenderingContext2DSettings>>(state, arguments.isEmpty() ? JSC::jsUndefined() : (arguments[0].isObject() ? arguments[0].get() : JSC::jsNull()));
-            if (UNLIKELY(settings.hasException(scope)))
+            if (settings.hasException(scope)) [[unlikely]]
                 return Exception { ExceptionCode::ExistingExceptionError };
 
             m_context = OffscreenCanvasRenderingContext2D::create(*this, settings.releaseReturnValue());
@@ -214,7 +214,7 @@ ExceptionOr<std::optional<OffscreenRenderingContext>> OffscreenCanvas::getContex
             auto scope = DECLARE_THROW_SCOPE(state.vm());
 
             auto settings = convert<IDLDictionary<ImageBitmapRenderingContextSettings>>(state, arguments.isEmpty() ? JSC::jsUndefined() : (arguments[0].isObject() ? arguments[0].get() : JSC::jsNull()));
-            if (UNLIKELY(settings.hasException(scope)))
+            if (settings.hasException(scope)) [[unlikely]]
                 return Exception { ExceptionCode::ExistingExceptionError };
 
             m_context = ImageBitmapRenderingContext::create(*this, settings.releaseReturnValue());
@@ -252,7 +252,7 @@ ExceptionOr<std::optional<OffscreenRenderingContext>> OffscreenCanvas::getContex
             auto scope = DECLARE_THROW_SCOPE(state.vm());
 
             auto attributes = convert<IDLDictionary<WebGLContextAttributes>>(state, arguments.isEmpty() ? JSC::jsUndefined() : (arguments[0].isObject() ? arguments[0].get() : JSC::jsNull()));
-            if (UNLIKELY(attributes.hasException(scope)))
+            if (attributes.hasException(scope)) [[unlikely]]
                 return Exception { ExceptionCode::ExistingExceptionError };
 
             auto* scriptExecutionContext = this->scriptExecutionContext();

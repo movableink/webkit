@@ -94,7 +94,7 @@ RefPtr<HTMLTableSectionElement> HTMLTableElement::tHead() const
 
 ExceptionOr<void> HTMLTableElement::setTHead(RefPtr<HTMLTableSectionElement>&& newHead)
 {
-    if (UNLIKELY(newHead && !newHead->hasTagName(theadTag)))
+    if (newHead && !newHead->hasTagName(theadTag)) [[unlikely]]
         return Exception { ExceptionCode::HierarchyRequestError };
 
     deleteTHead();
@@ -121,7 +121,7 @@ RefPtr<HTMLTableSectionElement> HTMLTableElement::tFoot() const
 
 ExceptionOr<void> HTMLTableElement::setTFoot(RefPtr<HTMLTableSectionElement>&& newFoot)
 {
-    if (UNLIKELY(newFoot && !newFoot->hasTagName(tfootTag)))
+    if (newFoot && !newFoot->hasTagName(tfootTag)) [[unlikely]]
         return Exception { ExceptionCode::HierarchyRequestError };
     deleteTFoot();
     if (!newFoot)

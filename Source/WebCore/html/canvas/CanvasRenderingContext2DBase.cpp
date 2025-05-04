@@ -851,7 +851,7 @@ void CanvasRenderingContext2DBase::scale(double sx, double sy)
     GraphicsContext* c = effectiveDrawingContext();
     if (!c)
         return;
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
 
     if (!std::isfinite(sx) || !std::isfinite(sy))
@@ -879,7 +879,7 @@ void CanvasRenderingContext2DBase::rotate(double angleInRadians)
     GraphicsContext* c = effectiveDrawingContext();
     if (!c)
         return;
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
 
     if (!std::isfinite(angleInRadians))
@@ -902,7 +902,7 @@ void CanvasRenderingContext2DBase::translate(double tx, double ty)
     GraphicsContext* c = effectiveDrawingContext();
     if (!c)
         return;
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
 
     if (!std::isfinite(tx) || !std::isfinite(ty))
@@ -925,7 +925,7 @@ void CanvasRenderingContext2DBase::transform(double m11, double m12, double m21,
     GraphicsContext* c = effectiveDrawingContext();
     if (!c)
         return;
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
 
     if (!std::isfinite(m11) || !std::isfinite(m21) || !std::isfinite(dx) || !std::isfinite(m12) || !std::isfinite(m22) || !std::isfinite(dy))
@@ -1155,7 +1155,7 @@ void CanvasRenderingContext2DBase::fillInternal(const Path& path, CanvasFillRule
     auto* c = effectiveDrawingContext();
     if (!c)
         return;
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
 
     // If gradient size is zero, then paint nothing.
@@ -1198,7 +1198,7 @@ void CanvasRenderingContext2DBase::strokeInternal(const Path& path)
     auto* c = effectiveDrawingContext();
     if (!c)
         return;
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
 
     // If gradient size is zero, then paint nothing.
@@ -1232,7 +1232,7 @@ void CanvasRenderingContext2DBase::clipInternal(const Path& path, CanvasFillRule
     auto* c = effectiveDrawingContext();
     if (!c)
         return;
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
 
     realizeSaves();
@@ -1282,7 +1282,7 @@ bool CanvasRenderingContext2DBase::isPointInPathInternal(const Path& path, doubl
     
     if (!effectiveDrawingContext())
         return false;
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return false;
 
     auto& state = this->state();
@@ -1299,7 +1299,7 @@ bool CanvasRenderingContext2DBase::isPointInStrokeInternal(const Path& path, dou
 
     if (!effectiveDrawingContext())
         return false;
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return false;
 
     auto& state = this->state();
@@ -1326,7 +1326,7 @@ void CanvasRenderingContext2DBase::clearRect(double x, double y, double width, d
     auto* context = effectiveDrawingContext();
     if (!context)
         return;
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
     FloatRect rect(x, y, width, height);
 
@@ -1368,7 +1368,7 @@ void CanvasRenderingContext2DBase::fillRect(double x, double y, double width, do
     auto* c = effectiveDrawingContext();
     if (!c)
         return;
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
 
     // from the HTML5 Canvas spec:
@@ -1420,7 +1420,7 @@ void CanvasRenderingContext2DBase::strokeRect(double x, double y, double width, 
     auto* c = effectiveDrawingContext();
     if (!c)
         return;
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
     if (!(state().lineWidth >= 0))
         return;
@@ -1734,7 +1734,7 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(Document& document, Ca
     GraphicsContext* c = effectiveDrawingContext();
     if (!c)
         return { };
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return { };
 
     RefPtr<Image> image = cachedImage.imageForRenderer(renderer);
@@ -1815,7 +1815,7 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(CanvasBase& sourceCanv
     GraphicsContext* c = effectiveDrawingContext();
     if (!c)
         return { };
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return { };
 
     Ref protectedCanvas { sourceCanvas };
@@ -1877,7 +1877,7 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(HTMLVideoElement& vide
     GraphicsContext* c = effectiveDrawingContext();
     if (!c)
         return { };
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return { };
 
     checkOrigin(&video);
@@ -1929,7 +1929,7 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(ImageBitmap& imageBitm
     GraphicsContext* c = effectiveDrawingContext();
     if (!c)
         return { };
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return { };
 
     RefPtr buffer = imageBitmap.buffer();
@@ -2376,7 +2376,7 @@ void CanvasRenderingContext2DBase::didDraw(std::optional<FloatRect> rect, Option
     if (dirtyRect.isEmpty())
         return;
 
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
 
     if (options.contains(DidDrawOption::ApplyTransform))
@@ -2801,7 +2801,7 @@ bool CanvasRenderingContext2DBase::canDrawText(double x, double y, bool fill, st
     auto* c = effectiveDrawingContext();
     if (!c)
         return false;
-    if (UNLIKELY(!hasInvertibleTransform()))
+    if (!hasInvertibleTransform()) [[unlikely]]
         return false;
     if (!std::isfinite(x) || !std::isfinite(y))
         return false;

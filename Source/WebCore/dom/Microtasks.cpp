@@ -71,17 +71,17 @@ void MicrotaskQueue::runJSMicrotask(JSC::JSGlobalObject* globalObject, JSC::VM& 
 {
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    if (UNLIKELY(!task.job().isObject()))
+    if (!task.job().isObject()) [[unlikely]]
         return;
 
     auto* job = JSC::asObject(task.job());
 
-    if (UNLIKELY(!scope.clearExceptionExceptTermination()))
+    if (!scope.clearExceptionExceptTermination()) [[unlikely]]
         return;
 
     auto* lexicalGlobalObject = job->globalObject();
     auto callData = JSC::getCallData(job);
-    if (UNLIKELY(!scope.clearExceptionExceptTermination()))
+    if (!scope.clearExceptionExceptTermination()) [[unlikely]]
         return;
     ASSERT(callData.type != JSC::CallData::Type::None);
 
@@ -99,9 +99,9 @@ void MicrotaskQueue::runJSMicrotask(JSC::JSGlobalObject* globalObject, JSC::VM& 
     }
 
     NakedPtr<JSC::Exception> returnedException = nullptr;
-    if (LIKELY(!vm.hasPendingTerminationException())) {
+    if (!vm.hasPendingTerminationException()) [[likely]] {
         JSC::profiledCall(lexicalGlobalObject, JSC::ProfilingReason::Microtask, job, callData, JSC::jsUndefined(), JSC::ArgList { std::bit_cast<JSC::EncodedJSValue*>(task.arguments().data()), count }, returnedException);
-        if (UNLIKELY(returnedException))
+        if (returnedException) [[unlikely]]
             reportException(lexicalGlobalObject, returnedException);
         scope.clearExceptionExceptTermination();
     }
@@ -128,7 +128,7 @@ void MicrotaskQueue::performMicrotaskCheckpoint()
         m_microtaskQueue.performMicrotaskCheckpoint(vm,
             [&](JSC::QueuedTask& task) ALWAYS_INLINE_LAMBDA {
                 RefPtr dispatcher = downcast<WebCoreMicrotaskDispatcher>(task.dispatcher());
-                if (UNLIKELY(!dispatcher))
+                if (!dispatcher) [[unlikely]]
                     return JSC::QueuedTask::Result::Discard;
 
                 auto result = dispatcher->currentRunnability();
@@ -167,14 +167,14 @@ void MicrotaskQueue::performMicrotaskCheckpoint()
             }
 
             checkpointTask->execute();
-            if (UNLIKELY(!catchScope.clearExceptionExceptTermination()))
+            if (!catchScope.clearExceptionExceptTermination()) [[unlikely]]
                 break; // Encountered termination.
         }
     }
 
     // https://html.spec.whatwg.org/multipage/webappapis.html#perform-a-microtask-checkpoint (step 4).
     Ref { *m_eventLoop }->forEachAssociatedContext([vm = vm.copyRef()](auto& context) {
-        if (UNLIKELY(vm->executionForbidden()))
+        if (vm->executionForbidden()) [[unlikely]]
             return;
         auto catchScope = DECLARE_CATCH_SCOPE(vm);
         if (CheckedPtr tracker = context.rejectedPromiseTracker())

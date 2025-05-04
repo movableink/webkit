@@ -104,7 +104,7 @@ void SelectorFilter::pushParent(Element* parent)
 
 void SelectorFilter::pushParentInitializingIfNeeded(Element& parent)
 {
-    if (UNLIKELY(m_parentStack.isEmpty())) {
+    if (m_parentStack.isEmpty()) [[unlikely]] {
         initializeParentStack(parent);
         return;
     }

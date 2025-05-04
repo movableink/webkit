@@ -91,7 +91,7 @@ private:
     {
         InternalObserver::complete();
 
-        if (UNLIKELY(!m_accumulator)) {
+        if (!m_accumulator) [[unlikely]] {
             protectedPromise()->reject(Exception { ExceptionCode::TypeError, "No inital value for Observable with no values"_s });
             return;
         }
@@ -114,7 +114,7 @@ private:
         , m_callback(WTFMove(callback))
         , m_promise(WTFMove(promise))
     {
-        if (UNLIKELY(!initialValue.isUndefined()))
+        if (!initialValue.isUndefined()) [[unlikely]]
             m_accumulator.setWeakly(initialValue);
     }
 

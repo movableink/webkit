@@ -115,14 +115,14 @@ std::optional<Variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollectio
     if (name.isNull() || !hasDocumentNamedItem(name))
         return std::nullopt;
 
-    if (UNLIKELY(documentNamedItemContainsMultipleElements(name))) {
+    if (documentNamedItemContainsMultipleElements(name)) [[unlikely]] {
         auto collection = documentNamedItems(name);
         ASSERT(collection->length() > 1);
         return Variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>> { RefPtr<HTMLCollection> { WTFMove(collection) } };
     }
 
     Ref element = *documentNamedItem(name);
-    if (auto* iframe = dynamicDowncast<HTMLIFrameElement>(element.get()); UNLIKELY(iframe)) {
+    if (auto* iframe = dynamicDowncast<HTMLIFrameElement>(element.get()); iframe) [[unlikely]] {
         if (RefPtr domWindow = iframe->contentWindow())
             return Variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>> { WTFMove(domWindow) };
     }

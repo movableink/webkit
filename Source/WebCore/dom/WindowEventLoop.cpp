@@ -76,7 +76,7 @@ Ref<WindowEventLoop> WindowEventLoop::eventLoopForSecurityOrigin(const SecurityO
         return create({ });
 
     auto addResult = windowEventLoopMap().add(key, nullptr);
-    if (UNLIKELY(addResult.isNewEntry)) {
+    if (addResult.isNewEntry) [[unlikely]] {
         auto newEventLoop = create(key);
         addResult.iterator->value = newEventLoop.ptr();
         return newEventLoop;

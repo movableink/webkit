@@ -404,35 +404,35 @@ TextIterator::~TextIterator() = default;
 // FIXME: Use ComposedTreeIterator instead. These functions are more expensive because they might do O(n) work.
 static inline Node* firstChild(TextIteratorBehaviors options, Node& node)
 {
-    if (UNLIKELY(options.contains(TextIteratorBehavior::TraversesFlatTree)))
+    if (options.contains(TextIteratorBehavior::TraversesFlatTree)) [[unlikely]]
         return firstChildInComposedTreeIgnoringUserAgentShadow(node);
     return node.firstChild();
 }
 
 static inline Node* nextSibling(TextIteratorBehaviors options, Node& node)
 {
-    if (UNLIKELY(options.contains(TextIteratorBehavior::TraversesFlatTree)))
+    if (options.contains(TextIteratorBehavior::TraversesFlatTree)) [[unlikely]]
         return nextSiblingInComposedTreeIgnoringUserAgentShadow(node);
     return node.nextSibling();
 }
 
 static inline Node* nextNode(TextIteratorBehaviors options, Node& node)
 {
-    if (UNLIKELY(options.contains(TextIteratorBehavior::TraversesFlatTree)))
+    if (options.contains(TextIteratorBehavior::TraversesFlatTree)) [[unlikely]]
         return nextInComposedTreeIgnoringUserAgentShadow(node);
     return NodeTraversal::next(node);
 }
 
 static inline bool isDescendantOf(TextIteratorBehaviors options, Node& node, Node& possibleAncestor)
 {
-    if (UNLIKELY(options.contains(TextIteratorBehavior::TraversesFlatTree)))
+    if (options.contains(TextIteratorBehavior::TraversesFlatTree)) [[unlikely]]
         return node.isShadowIncludingDescendantOf(&possibleAncestor);
     return node.isDescendantOf(&possibleAncestor);
 }
 
 static inline Node* parentNodeOrShadowHost(TextIteratorBehaviors options, Node& node)
 {
-    if (UNLIKELY(options.contains(TextIteratorBehavior::TraversesFlatTree)))
+    if (options.contains(TextIteratorBehavior::TraversesFlatTree)) [[unlikely]]
         return node.parentInComposedTree();
     return node.parentOrShadowHostNode();
 }

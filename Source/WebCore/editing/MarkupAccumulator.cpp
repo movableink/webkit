@@ -172,10 +172,12 @@ static inline void appendCharactersReplacingEntitiesInternal(StringBuilder& resu
     for (size_t i = 0; i < length; ++i) {
         CharacterType character = text[i];
         uint8_t substitution = character < std::size(entityMap) ? entityMap[character] : static_cast<uint8_t>(EntitySubstitutionIndex::Null);
-        if (UNLIKELY(substitution != EntitySubstitutionIndex::Null) && entityMask.contains(*entitySubstitutionList[substitution].mask)) {
-            result.appendSubstring(source, offset + positionAfterLastEntity, i - positionAfterLastEntity);
-            result.append(entitySubstitutionList[substitution].characters);
-            positionAfterLastEntity = i + 1;
+        if (substitution != EntitySubstitutionIndex::Null) [[unlikely]] {
+            if (entityMask.contains(*entitySubstitutionList[substitution].mask)) {
+                result.appendSubstring(source, offset + positionAfterLastEntity, i - positionAfterLastEntity);
+                result.append(entitySubstitutionList[substitution].characters);
+                positionAfterLastEntity = i + 1;
+            }
         }
     }
     result.appendSubstring(source, offset + positionAfterLastEntity, length - positionAfterLastEntity);
