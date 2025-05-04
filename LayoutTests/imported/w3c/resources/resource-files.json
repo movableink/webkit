@@ -7945,6 +7945,7 @@
         "web-platform-tests/css/motion/offset-path-shape-rect-001-ref.html",
         "web-platform-tests/css/motion/offset-path-shape-rect-002-ref.html",
         "web-platform-tests/css/motion/offset-path-shape-rect-003-ref.html",
+        "web-platform-tests/css/motion/offset-path-shape-shape-001-ref.html",
         "web-platform-tests/css/motion/offset-path-shape-xywh-001-ref.html",
         "web-platform-tests/css/motion/offset-path-shape-xywh-002-ref.html",
         "web-platform-tests/css/motion/offset-path-shape-xywh-003-ref.html",
