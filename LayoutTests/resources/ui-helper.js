@@ -1855,6 +1855,9 @@ window.UIHelper = class UIHelper {
 
     static async setObscuredInsets(top, right, bottom, left)
     {
+        if (!window.testRunner)
+            return Promise.resolve();
+
         if (this.isWebKit2() && this.isIOSFamily()) {
             const scriptToRun = `uiController.setObscuredInsets(${top}, ${right}, ${bottom}, ${left})`;
             await new Promise(resolve => testRunner.runUIScript(scriptToRun, resolve));

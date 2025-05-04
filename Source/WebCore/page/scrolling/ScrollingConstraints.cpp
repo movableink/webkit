@@ -44,14 +44,14 @@ FloatPoint ViewportConstraints::viewportRelativeLayerPosition(const FloatRect& v
 {
     FloatSize offset;
 
-    if (hasAnchorEdge(AnchorEdgeLeft))
+    if (hasAnchorEdge(AnchorEdgeLeft) || !hasAnchorEdge(AnchorEdgeRight))
         offset.setWidth(viewportRect.x() - m_viewportRectAtLastLayout.x());
-    else if (hasAnchorEdge(AnchorEdgeRight))
+    else
         offset.setWidth(viewportRect.maxX() - m_viewportRectAtLastLayout.maxX());
 
-    if (hasAnchorEdge(AnchorEdgeTop))
+    if (hasAnchorEdge(AnchorEdgeTop) || !hasAnchorEdge(AnchorEdgeBottom))
         offset.setHeight(viewportRect.y() - m_viewportRectAtLastLayout.y());
-    else if (hasAnchorEdge(AnchorEdgeBottom))
+    else
         offset.setHeight(viewportRect.maxY() - m_viewportRectAtLastLayout.maxY());
 
     return m_layerPositionAtLastLayout + offset;

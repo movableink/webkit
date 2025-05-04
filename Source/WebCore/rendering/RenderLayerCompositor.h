@@ -378,7 +378,7 @@ public:
 
     void updateRootContentsLayerBackgroundColor();
 
-    ViewportConstrainedSublayers viewportConstrainedSublayers(const RenderLayer&) const;
+    ViewportConstrainedSublayers viewportConstrainedSublayers(const RenderLayer&, const RenderLayer* compositingAncestor) const;
 
     // FIXME: make the coordinated/async terminology consistent.
     bool useCoordinatedScrollingForLayer(const RenderLayer&) const;

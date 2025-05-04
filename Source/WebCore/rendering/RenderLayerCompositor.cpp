@@ -4186,7 +4186,7 @@ bool RenderLayerCompositor::isAsyncScrollableStickyLayer(const RenderLayer& laye
 #endif
 }
 
-ViewportConstrainedSublayers RenderLayerCompositor::viewportConstrainedSublayers(const RenderLayer& layer) const
+ViewportConstrainedSublayers RenderLayerCompositor::viewportConstrainedSublayers(const RenderLayer& layer, const RenderLayer* compositingAncestor) const
 {
     using enum ViewportConstrainedSublayers;
 
@@ -4195,6 +4195,9 @@ ViewportConstrainedSublayers RenderLayerCompositor::viewportConstrainedSublayers
             return Anchor;
 
         if (!isMainFrameCompositor())
+            return Anchor;
+
+        if (compositingAncestor != m_renderView.layer())
             return Anchor;
 
         return ClippingAndAnchor;
@@ -5521,7 +5524,7 @@ void RenderLayerCompositor::detachScrollCoordinatedLayer(RenderLayer& layer, Opt
 OptionSet<ScrollCoordinationRole> RenderLayerCompositor::coordinatedScrollingRolesForLayer(const RenderLayer& layer, const RenderLayer* compositingAncestor) const
 {
     OptionSet<ScrollCoordinationRole> coordinationRoles;
-    if (viewportConstrainedSublayers(layer) != ViewportConstrainedSublayers::None)
+    if (viewportConstrainedSublayers(layer, compositingAncestor) != ViewportConstrainedSublayers::None)
         coordinationRoles.add(ScrollCoordinationRole::ViewportConstrained);
 
     if (useCoordinatedScrollingForLayer(layer))
