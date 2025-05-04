@@ -9026,8 +9026,8 @@ WebPageSpatialBackdropEnabled:
   status: testable
   category: html
   condition: ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
-  humanReadableName: "Web Page Spatial Backdrop"
-  humanReadableDescription: "Enable Web Page Spatial Backdrop"
+  humanReadableName: "Website environments"
+  humanReadableDescription: "Enable website environments"
   defaultValue:
     WebKitLegacy:
       default: false
