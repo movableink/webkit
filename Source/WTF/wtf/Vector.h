@@ -1127,8 +1127,15 @@ Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>& Vector<T, inlin
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
 inline Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::Vector(Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>&& other)
-    : Base(WTFMove(other))
 {
+    // Make it possible to copy inline buffer.
+    asanSetBufferSizeToFullCapacity();
+    other.asanSetBufferSizeToFullCapacity();
+
+    Base::adopt(std::forward<decltype(other)>(other));
+
+    asanSetInitialBufferSizeTo(m_size);
+    other.asanSetInitialBufferSizeTo(other.m_size);
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
@@ -1141,9 +1148,10 @@ inline Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>& Vector<T
     asanSetBufferSizeToFullCapacity();
     other.asanSetBufferSizeToFullCapacity();
 
-    Base::adopt(WTFMove(other));
+    Base::adopt(std::forward<decltype(other)>(other));
 
     asanSetInitialBufferSizeTo(m_size);
+    other.asanSetInitialBufferSizeTo(other.m_size);
 
     return *this;
 }
