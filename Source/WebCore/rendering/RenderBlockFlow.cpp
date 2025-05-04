@@ -3398,15 +3398,25 @@ LayoutUnit RenderBlockFlow::adjustEnclosingTopForPrecedingBlock(LayoutUnit top) 
 GapRects RenderBlockFlow::inlineSelectionGaps(RenderBlock& rootBlock, const LayoutPoint& rootBlockPhysicalPosition, const LayoutSize& offsetFromRootBlock,
     LayoutUnit& lastLogicalTop, LayoutUnit& lastLogicalLeft, LayoutUnit& lastLogicalRight, const LogicalSelectionOffsetCaches& cache, const PaintInfo* paintInfo)
 {
+    ASSERT(!isSkippedContent());
+
+    auto updateLastLogicalValues = [&](auto logicalTop, auto logicalLeft, auto logicalRight) {
+        lastLogicalTop = logicalTop;
+        lastLogicalLeft = logicalLeft;
+        lastLogicalRight = logicalRight;
+    };
+
     bool containsStart = selectionState() == HighlightState::Start || selectionState() == HighlightState::Both;
+    if (isSkippedContentRoot(*this)) {
+        if (containsStart)
+            updateLastLogicalValues(blockDirectionOffset(rootBlock, offsetFromRootBlock) + logicalHeight(), logicalLeftOffsetForContent(), logicalRightOffsetForContent());
+        return { };
+    }
 
     if (!hasLines()) {
-        if (containsStart) {
-            // Update our lastLogicalTop to be the bottom of the block. <hr>s or empty blocks with height can trip this case.
-            lastLogicalTop = blockDirectionOffset(rootBlock, offsetFromRootBlock) + logicalHeight();
-            lastLogicalLeft = logicalLeftSelectionOffset(rootBlock, logicalHeight(), cache);
-            lastLogicalRight = logicalRightSelectionOffset(rootBlock, logicalHeight(), cache);
-        }
+        // Update our lastLogicalTop to be the bottom of the block. <hr>s or empty blocks with height can trip this case.
+        if (containsStart)
+            updateLastLogicalValues(blockDirectionOffset(rootBlock, offsetFromRootBlock) + logicalHeight(), logicalLeftSelectionOffset(rootBlock, logicalHeight(), cache), logicalRightSelectionOffset(rootBlock, logicalHeight(), cache));
         return { };
     }
 
@@ -3514,9 +3524,7 @@ GapRects RenderBlockFlow::inlineSelectionGaps(RenderBlock& rootBlock, const Layo
     if (lastSelectedLineBox && selectionState() != HighlightState::End && selectionState() != HighlightState::Both) {
         // Update our lastY to be the bottom of the last selected line.
         auto lastLineSelectionBottom = LayoutUnit { LineSelection::logicalBottom(*lastSelectedLineBox) };
-        lastLogicalTop = blockDirectionOffset(rootBlock, offsetFromRootBlock) + lastLineSelectionBottom;
-        lastLogicalLeft = logicalLeftSelectionOffset(rootBlock, lastLineSelectionBottom, cache);
-        lastLogicalRight = logicalRightSelectionOffset(rootBlock, lastLineSelectionBottom, cache);
+        updateLastLogicalValues(blockDirectionOffset(rootBlock, offsetFromRootBlock) + lastLineSelectionBottom, logicalLeftSelectionOffset(rootBlock, lastLineSelectionBottom, cache), logicalRightSelectionOffset(rootBlock, lastLineSelectionBottom, cache));
     }
     return result;
 }

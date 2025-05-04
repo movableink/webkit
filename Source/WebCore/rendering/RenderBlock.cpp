@@ -1344,13 +1344,15 @@ void RenderBlock::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
     if (shouldPaintContent) {
         if (paintPhase != PaintPhase::SelfOutline)
             paintContents(paintInfo, scrolledOffset);
+    }
 
-        // 3. paint selection
-        // FIXME: Make this work with multi column layouts. For now don't fill gaps.
-        bool isPrinting = document().printing();
-        if (!isPrinting)
-            paintSelection(paintInfo, scrolledOffset); // Fill in gaps in selection on lines and between blocks.
+    // 3. paint selection
+    if (!document().printing()) {
+        // Fill in gaps in selection on lines, between blocks and "empty space" when content is skipped.
+        paintSelection(paintInfo, scrolledOffset);
+    }
 
+    if (shouldPaintContent) {
         // 4. paint floats.
         if (paintPhase == PaintPhase::Float || paintPhase == PaintPhase::Selection || paintPhase == PaintPhase::TextClip || paintPhase == PaintPhase::EventRegion || paintPhase == PaintPhase::Accessibility)
             paintFloats(paintInfo, scrolledOffset, paintPhase == PaintPhase::Selection || paintPhase == PaintPhase::TextClip || paintPhase == PaintPhase::EventRegion || paintPhase == PaintPhase::Accessibility);
@@ -1555,7 +1557,7 @@ GapRects RenderBlock::selectionGapRectsForRepaint(const RenderLayerModelObject* 
     ASSERT(!needsLayout());
 
     if (!shouldPaintSelectionGaps())
-        return GapRects();
+        return { };
 
     FloatPoint containerPoint = localToContainerPoint(FloatPoint(), repaintContainer, UseTransforms);
     LayoutPoint offsetFromRepaintContainer(containerPoint - toFloatSize(scrollPosition()));
@@ -1693,17 +1695,21 @@ GapRects RenderBlock::inlineSelectionGaps(RenderBlock&, const LayoutPoint&, cons
 GapRects RenderBlock::blockSelectionGaps(RenderBlock& rootBlock, const LayoutPoint& rootBlockPhysicalPosition, const LayoutSize& offsetFromRootBlock,
     LayoutUnit& lastLogicalTop, LayoutUnit& lastLogicalLeft, LayoutUnit& lastLogicalRight, const LogicalSelectionOffsetCaches& cache, const PaintInfo* paintInfo)
 {
-    GapRects result;
+    ASSERT(!isSkippedContent());
+
+    if (isSkippedContentRoot(*this))
+        return { };
 
     // Jump right to the first block child that contains some selected objects.
     RenderBox* curr;
     for (curr = firstChildBox(); curr && curr->selectionState() == HighlightState::None; curr = curr->nextSiblingBox()) { }
     
     if (!curr)
-        return result;
+        return { };
 
     LogicalSelectionOffsetCaches childCache(*this, cache);
 
+    GapRects result;
     for (bool sawSelectionEnd = false; curr && !sawSelectionEnd; curr = curr->nextSiblingBox()) {
         HighlightState childState = curr->selectionState();
         if (childState == HighlightState::Both || childState == HighlightState::End)
