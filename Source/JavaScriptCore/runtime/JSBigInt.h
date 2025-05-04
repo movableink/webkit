@@ -680,7 +680,7 @@ ALWAYS_INLINE JSBigInt::ComparisonResult invertBigIntCompareResult(JSBigInt::Com
 ALWAYS_INLINE JSValue tryConvertToBigInt32(JSBigInt* bigInt)
 {
 #if USE(BIGINT32)
-    if (UNLIKELY(!bigInt))
+    if (!bigInt) [[unlikely]]
         return JSValue();
 
     if (bigInt->length() <= 1) {

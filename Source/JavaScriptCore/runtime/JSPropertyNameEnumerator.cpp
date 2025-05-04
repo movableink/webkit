@@ -38,13 +38,13 @@ JSPropertyNameEnumerator* JSPropertyNameEnumerator::tryCreate(VM& vm, Structure*
 {
     unsigned propertyNamesSize = propertyNames.size();
     auto propertyNamesBufferSizeInBytes = CheckedUint32(propertyNamesSize) * sizeof(WriteBarrier<JSString>);
-    if (UNLIKELY(propertyNamesBufferSizeInBytes.hasOverflowed()))
+    if (propertyNamesBufferSizeInBytes.hasOverflowed()) [[unlikely]]
         return nullptr;
 
     WriteBarrier<JSString>* propertyNamesBuffer = nullptr;
     if (propertyNamesBufferSizeInBytes) {
         propertyNamesBuffer = static_cast<WriteBarrier<JSString>*>(vm.auxiliarySpace().allocate(vm, propertyNamesBufferSizeInBytes, nullptr, AllocationFailureMode::ReturnNull));
-        if (UNLIKELY(!propertyNamesBuffer))
+        if (!propertyNamesBuffer) [[unlikely]]
             return nullptr;
 
         for (unsigned i = 0; i < propertyNamesSize; ++i)
@@ -147,7 +147,7 @@ void getEnumerablePropertyNames(JSGlobalObject* globalObject, JSObject* base, Pr
         if (prototype.isNull())
             break;
 
-        if (UNLIKELY(++prototypeCount > JSObject::maximumPrototypeChainDepth)) {
+        if (++prototypeCount > JSObject::maximumPrototypeChainDepth) [[unlikely]] {
             throwStackOverflowError(globalObject, scope);
             return;
         }

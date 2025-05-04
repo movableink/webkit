@@ -126,7 +126,7 @@ inline bool Structure::holesMustForwardToPrototype(JSObject* base) const
     ASSERT(base->structure() == this);
     if (typeInfo().type() == ArrayType) {
         JSGlobalObject* globalObject = this->globalObject();
-        if (LIKELY(globalObject->isOriginalArrayStructure(const_cast<Structure*>(this)) && globalObject->arrayPrototypeChainIsSane()))
+        if (globalObject->isOriginalArrayStructure(const_cast<Structure*>(this)) && globalObject->arrayPrototypeChainIsSane()) [[likely]]
             return false;
     }
 
@@ -392,7 +392,7 @@ inline bool Structure::isValid(JSGlobalObject* globalObject, StructureChain* cac
 
 inline void Structure::didReplaceProperty(PropertyOffset offset)
 {
-    if (LIKELY(!isWatchingReplacement()))
+    if (!isWatchingReplacement()) [[likely]]
         return;
     didReplacePropertySlow(offset);
 }

@@ -243,7 +243,7 @@ VM::VM(VMType vmType, HeapType heapType, WTF::RunLoop* runLoop, bool* success)
     , m_defaultMicrotaskQueue(*this)
     , m_syncWaiter(adoptRef(*new Waiter(this)))
 {
-    if (UNLIKELY(vmCreationShouldCrash || g_jscConfig.vmCreationDisallowed))
+    if (vmCreationShouldCrash || g_jscConfig.vmCreationDisallowed) [[unlikely]]
         CRASH_WITH_EXTRA_SECURITY_IMPLICATION_AND_INFO(VMCreationDisallowed, "VM creation disallowed"_s, 0x4242424220202020, 0xbadbeef0badbeef, 0x1234123412341234, 0x1337133713371337);
 
     VMInspector::singleton().add(this);
@@ -364,10 +364,10 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     heap.notifyIsSafeToCollect();
     
-    if (UNLIKELY(Options::useProfiler())) {
+    if (Options::useProfiler()) [[unlikely]] {
         m_perBytecodeProfiler = makeUnique<Profiler::Database>(*this);
 
-        if (UNLIKELY(Options::dumpProfilerDataAtExit())) {
+        if (Options::dumpProfilerDataAtExit()) [[unlikely]] {
             StringPrintStream pathOut;
             const char* profilerPath = getenv("JSC_PROFILER_PATH");
             if (profilerPath)
@@ -471,7 +471,7 @@ VM::~VM()
     if (Wasm::Worklist* worklist = Wasm::existingWorklistOrNull())
         worklist->stopAllPlansForContext(*this);
 #endif
-    if (RefPtr watchdog = this->watchdog(); UNLIKELY(watchdog))
+    if (RefPtr watchdog = this->watchdog(); watchdog) [[unlikely]]
         watchdog->willDestroyVM(this);
     m_traps.willDestroyVM();
     m_isInService = false;
@@ -919,7 +919,7 @@ void VM::clearSourceProviderCaches()
 
 bool VM::hasExceptionsAfterHandlingTraps()
 {
-    if (UNLIKELY(traps().needHandling(VMTraps::NonDebuggerAsyncEvents)))
+    if (traps().needHandling(VMTraps::NonDebuggerAsyncEvents)) [[unlikely]]
         m_traps.handleTraps(VMTraps::NonDebuggerAsyncEvents);
     return exception();
 }
@@ -961,7 +961,7 @@ Exception* VM::throwException(JSGlobalObject* globalObject, Exception* exception
     }
 
     CallFrame* throwOriginFrame = topJSCallFrame();
-    if (UNLIKELY(Options::breakOnThrow())) {
+    if (Options::breakOnThrow()) [[unlikely]] {
         CodeBlock* codeBlock = throwOriginFrame && !throwOriginFrame->isNativeCalleeFrame() ? throwOriginFrame->codeBlock() : nullptr;
         dataLog("Throwing exception in call frame ", RawPointer(throwOriginFrame), " for code block ", codeBlock, "\n");
         WTFBreakpointTrap();
@@ -1152,7 +1152,7 @@ void VM::popAllCheckpointOSRSideStateUntil(CallFrame* target)
 
 static void logSanitizeStack(VM& vm)
 {
-    if (UNLIKELY(Options::verboseSanitizeStack())) {
+    if (Options::verboseSanitizeStack()) [[unlikely]] {
         auto& stackBounds = Thread::currentSingleton().stack();
         dataLogLn("Sanitizing stack for VM = ", RawPointer(&vm), ", current stack pointer at ", RawPointer(currentStackPointer()), ", last stack top = ", RawPointer(vm.lastStackTop()), ", in stack range (", RawPointer(stackBounds.end()), ", ", RawPointer(stackBounds.origin()), "]");
     }
@@ -1346,10 +1346,10 @@ void VM::promiseRejected(JSPromise* promise)
 
 void VM::drainMicrotasks()
 {
-    if (UNLIKELY(m_drainMicrotaskDelayScopeCount))
+    if (m_drainMicrotaskDelayScopeCount) [[unlikely]]
         return;
 
-    if (UNLIKELY(executionForbidden()))
+    if (executionForbidden()) [[unlikely]]
         m_defaultMicrotaskQueue.clear();
     else {
         do {
@@ -1425,7 +1425,7 @@ void VM::verifyExceptionCheckNeedIsSatisfied(unsigned recursionDepth, ExceptionE
     if (!Options::validateExceptionChecks())
         return;
 
-    if (UNLIKELY(m_needExceptionCheck)) {
+    if (m_needExceptionCheck) [[unlikely]] {
         auto throwDepth = m_simulatedThrowPointRecursionDepth;
         auto& throwLocation = m_simulatedThrowPointLocation;
 
@@ -1526,7 +1526,7 @@ JSPropertyNameEnumerator* VM::emptyPropertyNameEnumeratorSlow()
 
 void VM::executeEntryScopeServicesOnEntry()
 {
-    if (UNLIKELY(hasEntryScopeServiceRequest(EntryScopeService::FirePrimitiveGigacageEnabled))) {
+    if (hasEntryScopeServiceRequest(EntryScopeService::FirePrimitiveGigacageEnabled)) [[unlikely]] {
         m_primitiveGigacageEnabled.fireAll(*this, "Primitive gigacage disabled asynchronously");
         clearEntryScopeService(EntryScopeService::FirePrimitiveGigacageEnabled);
     }
@@ -1545,13 +1545,13 @@ void VM::executeEntryScopeServicesOnEntry()
         samplingProfiler->noticeVMEntry();
 #endif
 
-    if (UNLIKELY(Options::useTracePoints()))
+    if (Options::useTracePoints()) [[unlikely]]
         tracePoint(VMEntryScopeStart);
 }
 
 void VM::executeEntryScopeServicesOnExit()
 {
-    if (UNLIKELY(Options::useTracePoints()))
+    if (Options::useTracePoints()) [[unlikely]]
         tracePoint(VMEntryScopeEnd);
 
     RefPtr watchdog = this->watchdog();

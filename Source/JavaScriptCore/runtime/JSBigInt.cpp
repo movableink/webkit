@@ -110,7 +110,7 @@ JSBigInt* JSBigInt::tryCreateZero(VM& vm)
 
 inline JSBigInt* JSBigInt::createWithLength(JSGlobalObject* nullOrGlobalObjectForOOM, VM& vm, unsigned length)
 {
-    if (UNLIKELY(length > maxLength)) {
+    if (length > maxLength) [[unlikely]] {
         if (nullOrGlobalObjectForOOM) {
             auto scope = DECLARE_THROW_SCOPE(vm);
             throwOutOfMemoryError(nullOrGlobalObjectForOOM, scope, "BigInt generated from this operation is too big"_s);
@@ -148,7 +148,7 @@ inline JSBigInt* JSBigInt::createFrom(JSGlobalObject* nullOrGlobalObjectForOOM, 
         return createZero(nullOrGlobalObjectForOOM, vm);
 
     JSBigInt* bigInt = createWithLength(nullOrGlobalObjectForOOM, vm, 1);
-    if (UNLIKELY(!bigInt))
+    if (!bigInt) [[unlikely]]
         return nullptr;
 
     if (value < 0) {
@@ -2414,7 +2414,7 @@ JSBigInt* JSBigInt::rightTrim(JSGlobalObject* nullOrGlobalObjectForOOM, VM& vm)
 
     unsigned newLength = nonZeroIndex + 1;
     JSBigInt* trimmedBigInt = createWithLength(nullOrGlobalObjectForOOM, vm, newLength);
-    if (UNLIKELY(!trimmedBigInt))
+    if (!trimmedBigInt) [[unlikely]]
         return nullptr;
     std::copy_n(dataStorage(), newLength, trimmedBigInt->dataStorage());
 
@@ -2658,7 +2658,7 @@ JSValue JSBigInt::parseInt(JSGlobalObject* nullOrGlobalObjectForOOM, VM& vm, std
                 }
             }
             heapResult = allocateFor(nullOrGlobalObjectForOOM, vm, radix, initialLength);
-            if (UNLIKELY(!heapResult))
+            if (!heapResult) [[unlikely]]
                 return JSValue();
             heapResult->initialize(InitializationType::WithZero);
         }

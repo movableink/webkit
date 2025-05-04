@@ -136,7 +136,7 @@ public:
     {
         size_t size = DisjunctionContext::allocationSize(disjunction->m_frameSize);
         auto* newAllocatorPool = allocatorPool->ensureCapacity(size);
-        if (UNLIKELY(!newAllocatorPool))
+        if (!newAllocatorPool) [[unlikely]]
             return nullptr;
         allocatorPool = newAllocatorPool;
         return new (allocatorPool->alloc(size)) DisjunctionContext();
@@ -254,7 +254,7 @@ public:
 
         size_t size = Checked<size_t>(ParenthesesDisjunctionContext::allocationSize(numNestedSubpatterns, numDuplicateNamedGroups)) + DisjunctionContext::allocationSize(disjunction->m_frameSize);
         auto* newAllocatorPool = allocatorPool->ensureCapacity(size);
-        if (UNLIKELY(!newAllocatorPool))
+        if (!newAllocatorPool) [[unlikely]]
             return nullptr;
         allocatorPool = newAllocatorPool;
         return new (allocatorPool->alloc(size)) ParenthesesDisjunctionContext(pattern, output, term, numDuplicateNamedGroups, duplicateNamedCaptureGroups);

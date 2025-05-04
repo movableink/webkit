@@ -2500,7 +2500,7 @@ ErrorCode YarrPattern::compile(StringView patternString)
 
     constructor.extractSpecificPattern();
 
-    if (UNLIKELY(Options::dumpCompiledRegExpPatterns()))
+    if (Options::dumpCompiledRegExpPatterns()) [[unlikely]]
         dumpPattern(patternString);
 
     return ErrorCode::NoError;

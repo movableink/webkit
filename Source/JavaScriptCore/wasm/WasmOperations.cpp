@@ -96,7 +96,7 @@ JSC_DEFINE_JIT_OPERATION(operationJSToWasmEntryWrapperBuildFrame, JSEntrypointCa
     const FunctionSignature& functionSignature = *signature.as<FunctionSignature>();
     CallInformation wasmFrameConvention = wasmCallingConvention().callInformationFor(signature, CallRole::Caller);
 
-    if (UNLIKELY(functionSignature.argumentsOrResultsIncludeV128() || functionSignature.argumentsOrResultsIncludeExnref())) {
+    if (functionSignature.argumentsOrResultsIncludeV128() || functionSignature.argumentsOrResultsIncludeExnref()) [[unlikely]] {
         throwVMTypeError(globalObject, scope, Wasm::errorMessageForExceptionType(Wasm::ExceptionType::TypeErrorInvalidValueUse));
         OPERATION_RETURN(scope, callee);
     }
@@ -313,7 +313,7 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalArguments, bool, (void* sp,
     const auto& wasmCC = wasmCallingConvention().callInformationFor(typeDefinition, CallRole::Caller);
     const auto& jsCC = jsCallingConvention().callInformationFor(typeDefinition, CallRole::Callee);
 
-    if (UNLIKELY(signature.argumentsOrResultsIncludeV128() || signature.argumentsOrResultsIncludeExnref()))
+    if (signature.argumentsOrResultsIncludeV128() || signature.argumentsOrResultsIncludeExnref()) [[unlikely]]
         OPERATION_RETURN(scope, false);
 
     for (unsigned argNum = 0; argNum < argCount; ++argNum) {
@@ -565,7 +565,7 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalReturnValues, void, (void* 
                     // operationConvertToAnyref
                     JSValue value = JSValue::decode(std::bit_cast<EncodedJSValue>(returned));
                     value = Wasm::internalizeExternref(value);
-                    if (UNLIKELY(!Wasm::TypeInformation::castReference(value, returnType.isNullable(), returnType.index))) {
+                    if (!Wasm::TypeInformation::castReference(value, returnType.isNullable(), returnType.index)) [[unlikely]] {
                         throwTypeError(globalObject, scope, "Argument value did not match the reference type"_s);
                         OPERATION_RETURN(scope);
                     }
@@ -699,7 +699,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmToJSExitIterateResults, bool, (JS
                     }
                 } else {
                     value = Wasm::internalizeExternref(value);
-                    if (UNLIKELY(!Wasm::TypeInformation::castReference(value, returnType.isNullable(), returnType.index))) {
+                    if (!Wasm::TypeInformation::castReference(value, returnType.isNullable(), returnType.index)) [[unlikely]] {
                         throwTypeError(globalObject, scope, "Argument value did not match the reference type"_s);
                         return true;
                     }
@@ -768,7 +768,7 @@ static void triggerOMGReplacementCompile(TierUpCount& tierUp, OMGCallee* replace
         // We need to compile the code.
         Ref<Plan> plan = adoptRef(*new OMGPlan(instance->vm(), Ref<Wasm::Module>(instance->module()), functionIndex, hasExceptionHandlers, calleeGroup.mode(), Plan::dontFinalize()));
         ensureWorklist().enqueue(plan.copyRef());
-        if (UNLIKELY(!Options::useConcurrentJIT()))
+        if (!Options::useConcurrentJIT()) [[unlikely]]
             plan->waitForCompletion();
         else
             tierUp.setOptimizationThresholdBasedOnCompilationResult(functionIndex, CompilationDeferred);
@@ -1015,7 +1015,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmTriggerOSREntryNow, void, (Probe:
             return true;
         uintptr_t stackExtent = stackPointer - callee->stackCheckSize();
         uintptr_t stackLimit = reinterpret_cast<uintptr_t>(instance->softStackLimit());
-        if (UNLIKELY(stackExtent >= stackPointer || stackExtent <= stackLimit)) {
+        if (stackExtent >= stackPointer || stackExtent <= stackLimit) [[unlikely]] {
             dataLogLnIf(Options::verboseOSR(), "\tSkipping OMG loop tier up due to stack check; ", RawHex(stackPointer), " -> ", RawHex(stackExtent), " is past soft limit ", RawHex(stackLimit));
             return false;
         }
@@ -1188,7 +1188,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmTriggerOSREntryNow, void, (Probe:
         dataLogLnIf(Options::verboseOSR(), "\ttriggerOMGOSR for ", functionIndex);
         Ref<Plan> plan = adoptRef(*new OSREntryPlan(instance->vm(), Ref<Wasm::Module>(instance->module()), Ref<Wasm::BBQCallee>(callee), functionIndex, callee.hasExceptionHandlers(), loopIndex, calleeGroup.mode(), Plan::dontFinalize()));
         ensureWorklist().enqueue(plan.copyRef());
-        if (UNLIKELY(!Options::useConcurrentJIT()))
+        if (!Options::useConcurrentJIT()) [[unlikely]]
             plan->waitForCompletion();
         else
             tierUp.setOptimizationThresholdBasedOnCompilationResult(functionIndex, CompilationDeferred);
@@ -1377,7 +1377,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationConvertToAnyref, EncodedJSValue, (JSW
 
     JSValue value = JSValue::decode(v);
     value = Wasm::internalizeExternref(value);
-    if (UNLIKELY(!Wasm::TypeInformation::castReference(value, resultType.isNullable(), resultType.index))) {
+    if (!Wasm::TypeInformation::castReference(value, resultType.isNullable(), resultType.index)) [[unlikely]] {
         throwTypeError(globalObject, scope, "Argument value did not match the reference type"_s);
         return { };
     }
@@ -1472,7 +1472,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationIterateResults, bool, (JSWebAssemblyI
                     }
                 } else {
                     value = Wasm::internalizeExternref(value);
-                    if (UNLIKELY(!Wasm::TypeInformation::castReference(value, returnType.isNullable(), returnType.index))) {
+                    if (!Wasm::TypeInformation::castReference(value, returnType.isNullable(), returnType.index)) [[unlikely]] {
                         throwTypeError(globalObject, scope, "Argument value did not match the reference type"_s);
                         return true;
                     }

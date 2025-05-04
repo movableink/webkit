@@ -92,7 +92,7 @@ Synchronousness JSModuleRecord::link(JSGlobalObject* globalObject, JSValue scrip
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(SourceProfiler::g_profilerHook))
+    if (SourceProfiler::g_profilerHook) [[unlikely]]
         SourceProfiler::profile(SourceProfiler::Type::Module, sourceCode());
 
     ModuleProgramExecutable* executable = ModuleProgramExecutable::create(globalObject, sourceCode());
@@ -162,7 +162,7 @@ void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, Modul
 
 #if CPU(ADDRESS64)
         // rdar://107531050: Speculative crash mitigation
-        if (UNLIKELY(importedModule == std::bit_cast<AbstractModuleRecord*>(encodedJSUndefined()))) {
+        if (importedModule == std::bit_cast<AbstractModuleRecord*>(encodedJSUndefined())) [[unlikely]] {
             RELEASE_ASSERT(vm.exceptionForInspection(), vm.traps().maybeNeedHandling(), vm.exceptionForInspection(), importedModule);
             RELEASE_ASSERT(vm.traps().maybeNeedHandling(), vm.traps().maybeNeedHandling(), vm.exceptionForInspection(), importedModule);
             if (!vm.exceptionForInspection() || !vm.traps().maybeNeedHandling()) {

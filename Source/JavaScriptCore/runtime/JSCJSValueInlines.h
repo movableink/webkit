@@ -923,7 +923,7 @@ ALWAYS_INLINE std::optional<uint32_t> JSValue::toUInt32AfterToNumeric(JSGlobalOb
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue result = toBigIntOrInt32(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    if (LIKELY(result.isInt32()))
+    if (result.isInt32()) [[likely]]
         return static_cast<uint32_t>(result.asInt32());
     return std::nullopt;
 }
@@ -1159,7 +1159,7 @@ ALWAYS_INLINE JSValue JSValue::get(JSGlobalObject* globalObject, unsigned proper
 
 ALWAYS_INLINE JSValue JSValue::get(JSGlobalObject* globalObject, uint64_t propertyName) const
 {
-    if (LIKELY(propertyName <= std::numeric_limits<unsigned>::max()))
+    if (propertyName <= std::numeric_limits<unsigned>::max()) [[likely]]
         return get(globalObject, static_cast<unsigned>(propertyName));
     return get(globalObject, Identifier::from(getVM(globalObject), static_cast<double>(propertyName)));
 }
@@ -1448,7 +1448,7 @@ ALWAYS_INLINE bool JSValue::requireObjectCoercible(JSGlobalObject* globalObject)
 ALWAYS_INLINE bool isThisValueAltered(const PutPropertySlot& slot, JSObject* baseObject)
 {
     JSValue thisValue = slot.thisValue();
-    if (LIKELY(thisValue == baseObject))
+    if (thisValue == baseObject) [[likely]]
         return false;
 
     if (!thisValue.isObject())

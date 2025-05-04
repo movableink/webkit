@@ -52,7 +52,7 @@ JSWebAssemblyStruct* JSWebAssemblyStruct::tryCreate(VM& vm, WebAssemblyGCStructu
 {
     auto* structType = structure->typeDefinition().as<Wasm::StructType>();
     auto* cell = tryAllocateCell<JSWebAssemblyStruct>(vm, TrailingArrayType::allocationSize(structType->instancePayloadSize()));
-    if (UNLIKELY(!cell))
+    if (!cell) [[unlikely]]
         return nullptr;
 
     auto* structValue = new (NotNull, cell) JSWebAssemblyStruct(vm, structure);

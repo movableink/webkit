@@ -107,7 +107,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpConstructorEscape, (JSGlobalObject* globalObject,
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue value = callFrame->argument(0);
-    if (UNLIKELY(!value.isString()))
+    if (!value.isString()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "RegExp.escape requires a string"_s);
 
     auto string = asString(value)->value(globalObject);
@@ -320,7 +320,7 @@ static JSObject* regExpCreate(JSGlobalObject* globalObject, JSValue newTarget, J
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     RegExp* regExp = RegExp::create(vm, pattern, flags);
-    if (UNLIKELY(!regExp->isValid())) {
+    if (!regExp->isValid()) [[unlikely]] {
         throwException(globalObject, scope, regExp->errorToThrow(globalObject));
         return nullptr;
     }
@@ -360,7 +360,7 @@ JSObject* constructRegExp(JSGlobalObject* globalObject, const ArgList& args,  JS
             RETURN_IF_EXCEPTION(scope, nullptr);
 
             regExp = RegExp::create(vm, regExp->pattern(), flags);
-            if (UNLIKELY(!regExp->isValid())) {
+            if (!regExp->isValid()) [[unlikely]] {
                 throwException(globalObject, scope, regExp->errorToThrow(globalObject));
                 return nullptr;
             }

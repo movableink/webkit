@@ -108,7 +108,7 @@ JSC_DEFINE_HOST_FUNCTION(boundFunctionConstruct, (JSGlobalObject* globalObject, 
 
     JSObject* targetFunction = boundFunction->targetFunction();
     auto constructData = JSC::getConstructData(targetFunction);
-    if (UNLIKELY(constructData.type == CallData::Type::None))
+    if (constructData.type == CallData::Type::None) [[unlikely]]
         return throwVMError(globalObject, scope, createNotAConstructorError(globalObject, boundFunction));
 
     MarkedArgumentBuffer args;
@@ -152,7 +152,7 @@ inline Structure* getBoundFunctionStructure(VM& vm, JSGlobalObject* globalObject
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSFunction* targetJSFunction = jsDynamicCast<JSFunction*>(targetFunction);
-    if (LIKELY(targetJSFunction && targetJSFunction->getPrototypeDirect() == globalObject->functionPrototype()))
+    if (targetJSFunction && targetJSFunction->getPrototypeDirect() == globalObject->functionPrototype()) [[likely]]
         return globalObject->boundFunctionStructure();
 
     JSValue prototype = targetFunction->getPrototype(vm, globalObject);

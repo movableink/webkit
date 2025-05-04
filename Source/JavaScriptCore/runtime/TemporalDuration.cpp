@@ -601,7 +601,7 @@ static void appendInteger(JSGlobalObject* globalObject, StringBuilder& builder, 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     double absValue = std::abs(value);
-    if (LIKELY(absValue <= maxSafeInteger())) {
+    if (absValue <= maxSafeInteger()) [[likely]] {
         builder.append(absValue);
         return;
     }
@@ -680,7 +680,7 @@ String TemporalDuration::toString(JSGlobalObject* globalObject, const ISO8601::D
         // Although we must be able to display Number values beyond MAX_SAFE_INTEGER, it does not seem reasonable
         // to require that calculations be performed outside of double space purely to support a case like
         // `Temporal.Duration.from({ microseconds: Number.MAX_VALUE, nanoseconds: Number.MAX_VALUE }).toString()`.
-        if (UNLIKELY(!std::isfinite(balancedSeconds))) {
+        if (!std::isfinite(balancedSeconds)) [[unlikely]] {
             throwRangeError(globalObject, scope, "Cannot display infinite seconds!"_s);
             return { };
         }

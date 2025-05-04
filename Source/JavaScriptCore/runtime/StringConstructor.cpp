@@ -82,7 +82,7 @@ JSC_DEFINE_HOST_FUNCTION(stringFromCharCode, (JSGlobalObject* globalObject, Call
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     unsigned length = callFrame->argumentCount();
-    if (LIKELY(length == 1)) {
+    if (length == 1) [[likely]] {
         scope.release();
         UChar code = callFrame->uncheckedArgument(0).toUInt32(globalObject);
         // Not checking for an exception here is ok because jsSingleCharacterString will just fetch an unused string if there's an exception.
@@ -94,7 +94,7 @@ JSC_DEFINE_HOST_FUNCTION(stringFromCharCode, (JSGlobalObject* globalObject, Call
     for (unsigned i = 0; i < length; ++i) {
         UChar character = static_cast<UChar>(callFrame->uncheckedArgument(i).toUInt32(globalObject));
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
-        if (UNLIKELY(!isLatin1(character))) {
+        if (!isLatin1(character)) [[unlikely]] {
             std::span<UChar> buf16Bit;
             auto impl16Bit = StringImpl::createUninitialized(length, buf16Bit);
             StringImpl::copyCharacters(buf16Bit, buf8Bit.first(i));

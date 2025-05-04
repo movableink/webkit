@@ -213,7 +213,7 @@ static void instantiate(VM& vm, JSGlobalObject* globalObject, JSPromise* promise
             }
             case Resolve::WithModuleRecord: {
                 auto* moduleRecord = instance->moduleRecord();
-                if (UNLIKELY(Options::dumpModuleRecord()))
+                if (Options::dumpModuleRecord()) [[unlikely]]
                     moduleRecord->dump();
                 promise->resolve(globalObject, moduleRecord);
                 break;

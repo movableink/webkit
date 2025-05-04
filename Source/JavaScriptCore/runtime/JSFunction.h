@@ -131,7 +131,7 @@ public:
     FunctionRareData* ensureRareData(VM& vm)
     {
         uintptr_t executableOrRareData = m_executableOrRareData;
-        if (UNLIKELY(!(executableOrRareData & rareDataTag)))
+        if (!(executableOrRareData & rareDataTag)) [[unlikely]]
             return allocateRareData(vm);
         return std::bit_cast<FunctionRareData*>(executableOrRareData & ~rareDataTag);
     }

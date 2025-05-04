@@ -459,7 +459,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
     JSValue x = callFrame->argument(0);
     String programSource;
     bool isTrusted = false;
-    if (LIKELY(x.isString())) {
+    if (x.isString()) [[likely]] {
         programSource = x.toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
     } else if (Options::useTrustedTypes() && x.isObject()) {
@@ -496,7 +496,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
         return JSValue::encode(jsUndefined());
     }
 
-    if (UNLIKELY(SourceProfiler::g_profilerHook)) {
+    if (SourceProfiler::g_profilerHook) [[unlikely]] {
         SourceOrigin sourceOrigin = callFrame->callerSourceOrigin(vm);
         SourceTaintedOrigin sourceTaintedOrigin = computeNewSourceTaintedOriginFromStack(vm, callFrame);
         auto source = makeSource(programSource, sourceOrigin, sourceTaintedOrigin);
@@ -936,7 +936,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
     }
 
     auto sourceStructure = source->structure();
-    if (LIKELY(canPerformFastPropertyEnumerationForCopyDataProperties(sourceStructure))) {
+    if (canPerformFastPropertyEnumerationForCopyDataProperties(sourceStructure)) [[likely]] {
         EnsureStillAliveScope sourceStructureScope(sourceStructure);
         Vector<UniquedStringImpl*, 8> properties; // sourceStructure ensures the lifetimes of these strings.
         MarkedArgumentBuffer values;
@@ -968,7 +968,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
         // excludedSet is no longer used.
         ensureStillAliveHere(unlinkedCodeBlock);
 
-        if (LIKELY(target->inherits<JSFinalObject>() && target->canPerformFastPutInlineExcludingProto() && target->isStructureExtensible()))
+        if (target->inherits<JSFinalObject>() && target->canPerformFastPutInlineExcludingProto() && target->isStructureExtensible()) [[likely]]
             target->putOwnDataPropertyBatching(vm, properties.data(), values.data(), properties.size());
         else {
             for (size_t i = 0; i < properties.size(); ++i)
@@ -1026,7 +1026,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCloneObject, (JSGlobalObject* globalObject, C
     }
 
     Structure* sourceStructure = source->structure();
-    if (LIKELY(sourceStructure->canPerformFastPropertyEnumerationCommon())) {
+    if (sourceStructure->canPerformFastPropertyEnumerationCommon()) [[likely]] {
         if (auto* cloned = tryCreateObjectViaCloning(vm, globalObject, source))
             return JSValue::encode(cloned);
     }
@@ -1034,7 +1034,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCloneObject, (JSGlobalObject* globalObject, C
     JSObject* target = constructEmptyObject(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (LIKELY(canPerformFastPropertyEnumerationForCopyDataProperties(sourceStructure))) {
+    if (canPerformFastPropertyEnumerationForCopyDataProperties(sourceStructure)) [[likely]] {
         EnsureStillAliveScope sourceStructureScope(sourceStructure);
         Vector<UniquedStringImpl*, 8> properties; // sourceStructure ensures the lifetimes of these strings.
         MarkedArgumentBuffer values;

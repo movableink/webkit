@@ -826,7 +826,7 @@ public:
     Ref<const TypeDefinition> replacePlaceholders(TypeIndex) const;
     ALWAYS_INLINE const TypeDefinition& unroll() const
     {
-        if (UNLIKELY(is<Projection>()))
+        if (is<Projection>()) [[unlikely]]
             return unrollSlow();
         ASSERT(refCount() > 1); // TypeInformation registry + owner(s).
         return *this;

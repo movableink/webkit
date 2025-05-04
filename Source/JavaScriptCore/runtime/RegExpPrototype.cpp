@@ -103,13 +103,13 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncTest, (JSGlobalObject* globalObject, Cal
     JSString* str = callFrame->argument(0).toString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (LIKELY(regExpTestWatchpointIsValid(vm, thisObject))) {
+    if (regExpTestWatchpointIsValid(vm, thisObject)) [[likely]] {
         auto* regExp = jsDynamicCast<RegExpObject*>(thisValue);
-        if (UNLIKELY(!regExp))
+        if (!regExp) [[unlikely]]
             return throwVMTypeError(globalObject, scope, "Builtin RegExp exec can only be called on a RegExp object"_s);
         auto strValue = str->value(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
-        if (LIKELY(!strValue->isNull() && regExp->getLastIndex().isNumber()))
+        if (!strValue->isNull() && regExp->getLastIndex().isNumber()) [[likely]]
             RELEASE_AND_RETURN(scope, JSValue::encode(jsBoolean(regExp->test(globalObject, str))));
     }
 
@@ -118,7 +118,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncTest, (JSGlobalObject* globalObject, Cal
     JSFunction* regExpBuiltinExec = globalObject->regExpProtoExecFunction();
 
     JSValue match;
-    if (UNLIKELY(regExpExec != regExpBuiltinExec && regExpExec.isCallable())) {
+    if (regExpExec != regExpBuiltinExec && regExpExec.isCallable()) [[unlikely]] {
         auto callData = JSC::getCallData(regExpExec);
         ASSERT(callData.type != CallData::Type::None);
         if (callData.type == CallData::Type::JS) [[likely]] {
@@ -179,7 +179,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncCompile, (JSGlobalObject* globalObject, 
 
     JSValue thisValue = callFrame->thisValue();
     auto* thisRegExp = jsDynamicCast<RegExpObject*>(thisValue);
-    if (UNLIKELY(!thisRegExp))
+    if (!thisRegExp) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
 
     if (thisRegExp->globalObject() != globalObject)

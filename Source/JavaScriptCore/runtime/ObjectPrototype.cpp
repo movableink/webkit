@@ -94,7 +94,7 @@ JSC_DEFINE_HOST_FUNCTION(objectProtoFuncValueOf, (JSGlobalObject* globalObject, 
 {
     JSValue thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
     JSObject* valueObj = thisValue.toObject(globalObject);
-    if (UNLIKELY(!valueObj))
+    if (!valueObj) [[unlikely]]
         return encodedJSValue();
     Integrity::auditStructureID(valueObj->structureID());
     return JSValue::encode(valueObj);

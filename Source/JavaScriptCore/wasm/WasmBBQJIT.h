@@ -848,9 +848,9 @@ private:
     }
 
 #define RESULT(...) Result { __VA_ARGS__ }
-#define LOG_INSTRUCTION(...) do { if (UNLIKELY(Options::verboseBBQJITInstructions())) { logInstruction(__VA_ARGS__); } } while (false)
-#define LOG_INDENT() do { if (UNLIKELY(Options::verboseBBQJITInstructions())) { m_loggingIndent += 2; } } while (false);
-#define LOG_DEDENT() do { if (UNLIKELY(Options::verboseBBQJITInstructions())) { m_loggingIndent -= 2; } } while (false);
+#define LOG_INSTRUCTION(...) do { if (Options::verboseBBQJITInstructions()) [[unlikely]] { logInstruction(__VA_ARGS__); } } while (false)
+#define LOG_INDENT() do { if (Options::verboseBBQJITInstructions()) [[unlikely]] { m_loggingIndent += 2; } } while (false);
+#define LOG_DEDENT() do { if (Options::verboseBBQJITInstructions()) [[unlikely]] { m_loggingIndent -= 2; } } while (false);
 
 public:
     // FIXME: Support fused branch compare on 32-bit platforms.

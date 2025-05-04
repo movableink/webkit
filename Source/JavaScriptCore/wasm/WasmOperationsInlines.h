@@ -58,7 +58,7 @@ JSWebAssemblyArray* tryFillArray(JSWebAssemblyInstance* instance, WebAssemblyGCS
     VM& vm = instance->vm();
 
     auto* array = JSWebAssemblyArray::tryCreate(vm, structure, size);
-    if (LIKELY(array))
+    if (array) [[likely]]
         array->fill(vm, 0, static_cast<T>(value), size);
     return array;
 }
@@ -215,13 +215,13 @@ inline EncodedJSValue arrayNewData(JSWebAssemblyInstance* instance, uint32_t typ
     size_t elementSize = fieldType.type.elementSize();
 
     // Check for overflow when determining array length in bytes
-    if (UNLIKELY(productOverflows<uint32_t>(elementSize, arraySize)))
+    if (productOverflows<uint32_t>(elementSize, arraySize)) [[unlikely]]
         return JSValue::encode(jsNull());
 
     uint32_t arrayLengthInBytes = arraySize * elementSize;
 
     // Check for offset + arrayLengthInBytes overflow
-    if (UNLIKELY(sumOverflows<uint32_t>(offset, arrayLengthInBytes)))
+    if (sumOverflows<uint32_t>(offset, arrayLengthInBytes)) [[unlikely]]
         return JSValue::encode(jsNull());
 
     // Finally, allocate the array from the `values` vector
@@ -270,7 +270,7 @@ inline EncodedJSValue arrayNewElem(JSWebAssemblyInstance* instance, uint32_t typ
     auto element = instance->elementAt(elemSegmentIndex);
     size_t segmentLength = element ? element->length() : 0U;
     auto calculatedArrayEnd = CheckedUint32 { offset } + arraySize;
-    if (UNLIKELY(calculatedArrayEnd.hasOverflowed() || calculatedArrayEnd > segmentLength))
+    if (calculatedArrayEnd.hasOverflowed() || calculatedArrayEnd > segmentLength) [[unlikely]]
         return JSValue::encode(jsNull());
 
     VM& vm = instance->vm();

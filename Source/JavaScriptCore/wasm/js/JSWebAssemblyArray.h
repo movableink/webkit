@@ -94,7 +94,7 @@ public:
     static std::optional<unsigned> allocationSizeInBytes(Wasm::FieldType fieldType, unsigned size)
     {
         unsigned elementSize = fieldType.type.elementSize();
-        if (UNLIKELY(productOverflows<uint32_t>(elementSize, size) || elementSize * size > Wasm::maxArraySizeInBytes))
+        if (productOverflows<uint32_t>(elementSize, size) || elementSize * size > Wasm::maxArraySizeInBytes) [[unlikely]]
             return std::nullopt;
         return sizeof(JSWebAssemblyArray) + size * elementSize + static_cast<size_t>(needsAlignmentCheck(fieldType.type) * v128AlignmentShift);
     }

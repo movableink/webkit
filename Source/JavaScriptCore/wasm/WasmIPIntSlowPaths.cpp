@@ -147,7 +147,7 @@ static inline Wasm::JITCallee* jitCompileAndSetHeuristics(Wasm::IPIntCallee* cal
         if (Wasm::BBQPlan::ensureGlobalBBQAllowlist().containsWasmFunction(functionIndex)) {
             auto plan = Wasm::BBQPlan::create(instance->vm(), const_cast<Wasm::ModuleInformation&>(instance->module().moduleInformation()), functionIndex, callee->hasExceptionHandlers(), Ref(*instance->calleeGroup()), Wasm::Plan::dontFinalize());
             Wasm::ensureWorklist().enqueue(plan.get());
-            if (UNLIKELY(!Options::useConcurrentJIT() || !Options::useWasmIPInt()))
+            if (!Options::useConcurrentJIT() || !Options::useWasmIPInt()) [[unlikely]]
                 plan->waitForCompletion();
             else
                 tierUpCounter.optimizeAfterWarmUp();
@@ -226,7 +226,7 @@ WASM_IPINT_EXTERN_CPP_DECL(simd_go_straight_to_bbq, CallFrame* cfr)
     dataLogLnIf(Options::verboseOSR(), *callee, ": Entered simd_go_straight_to_bbq_osr with tierUpCounter = ", callee->tierUpCounter());
 
     auto result = jitCompileSIMDFunction(callee, instance);
-    if (LIKELY(result.has_value()))
+    if (result.has_value()) [[likely]]
         WASM_RETURN_TWO(result.value()->entrypoint().taggedPtr(), nullptr);
 
     switch (result.error()) {
@@ -709,7 +709,7 @@ WASM_IPINT_EXTERN_CPP_DECL(array_new_fixed, Wasm::TypeIndex type, uint32_t size,
 WASM_IPINT_EXTERN_CPP_DECL(array_new_data, IPInt::ArrayNewDataMetadata* metadata, uint32_t offset, uint32_t size)
 {
     EncodedJSValue result = Wasm::arrayNewData(instance, static_cast<uint32_t>(metadata->typeIndex), metadata->dataSegmentIndex, size, offset);
-    if (UNLIKELY(JSValue::decode(result).isNull()))
+    if (JSValue::decode(result).isNull()) [[unlikely]]
         IPINT_THROW(Wasm::ExceptionType::BadArrayNewInitData);
 
     IPINT_RETURN(result);
@@ -718,7 +718,7 @@ WASM_IPINT_EXTERN_CPP_DECL(array_new_data, IPInt::ArrayNewDataMetadata* metadata
 WASM_IPINT_EXTERN_CPP_DECL(array_new_elem, IPInt::ArrayNewElemMetadata* metadata, uint32_t offset, uint32_t size)
 {
     EncodedJSValue result = Wasm::arrayNewElem(instance, static_cast<uint32_t>(metadata->typeIndex), metadata->elemSegmentIndex, size, offset);
-    if (UNLIKELY(JSValue::decode(result).isNull()))
+    if (JSValue::decode(result).isNull()) [[unlikely]]
         IPINT_THROW(Wasm::ExceptionType::BadArrayNewInitElem);
 
     IPINT_RETURN(result);

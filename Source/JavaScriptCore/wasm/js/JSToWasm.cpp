@@ -478,7 +478,7 @@ static RegisterAtOffsetList usedCalleeSaveRegisters(const Wasm::FunctionSignatur
 
 CodePtr<JSEntryPtrTag> FunctionSignature::jsToWasmICEntrypoint() const
 {
-    if (LIKELY(m_jsToWasmICCallee)) {
+    if (m_jsToWasmICCallee) [[likely]] {
         ASSERT(m_jsToWasmICCallee->jsEntrypoint());
         return m_jsToWasmICCallee->jsEntrypoint();
     }
@@ -501,7 +501,7 @@ CodePtr<JSEntryPtrTag> FunctionSignature::jsToWasmICEntrypoint() const
 
     const Wasm::WasmCallingConvention& wasmCC = Wasm::wasmCallingConvention();
     Wasm::CallInformation wasmCallInfo = wasmCC.callInformationFor(*this);
-    if (UNLIKELY(argumentsOrResultsIncludeV128() || argumentsOrResultsIncludeExnref()))
+    if (argumentsOrResultsIncludeV128() || argumentsOrResultsIncludeExnref()) [[unlikely]]
         return nullptr;
     Wasm::CallInformation jsCallInfo = Wasm::jsCallingConvention().callInformationFor(*this, Wasm::CallRole::Callee);
     RegisterAtOffsetList savedResultRegisters = wasmCallInfo.computeResultsOffsetList();

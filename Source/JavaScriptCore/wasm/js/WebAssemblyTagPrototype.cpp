@@ -86,7 +86,7 @@ ALWAYS_INLINE static JSWebAssemblyTag* getTag(JSGlobalObject* globalObject, JSVa
         return nullptr;
     }
     auto* tag = jsDynamicCast<JSWebAssemblyTag*>(thisValue.asCell());
-    if (LIKELY(tag))
+    if (tag) [[likely]]
         return tag;
     throwTypeError(globalObject, scope, "WebAssembly.Tag operation called on non-Tag object"_s);
     return nullptr;
@@ -111,7 +111,7 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyTagProtoFuncType, (JSGlobalObject* globalObj
         argList.append(valueString);
     }
 
-    if (UNLIKELY(argList.hasOverflowed())) {
+    if (argList.hasOverflowed()) [[unlikely]] {
         throwOutOfMemoryError(globalObject, throwScope);
         return encodedJSValue();
     }

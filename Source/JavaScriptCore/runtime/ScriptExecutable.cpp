@@ -201,11 +201,11 @@ void ScriptExecutable::installCode(VM& vm, CodeBlock* genericCodeBlock, CodeType
         
         dataLogLnIf(Options::verboseOSR(), "Installing ", *genericCodeBlock);
         
-        if (UNLIKELY(vm.m_perBytecodeProfiler))
+        if (vm.m_perBytecodeProfiler) [[unlikely]]
             vm.m_perBytecodeProfiler->ensureBytecodesFor(genericCodeBlock);
         
         Debugger* debugger = genericCodeBlock->globalObject()->debugger();
-        if (UNLIKELY(debugger))
+        if (debugger) [[unlikely]]
             debugger->registerCodeBlock(genericCodeBlock);
     }
 
@@ -391,7 +391,7 @@ void ScriptExecutable::prepareForExecutionImpl(VM& vm, JSFunction* function, JSS
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     DeferGCForAWhile deferGC(vm);
 
-    if (UNLIKELY(vm.getAndClearFailNextNewCodeBlock())) {
+    if (vm.getAndClearFailNextNewCodeBlock()) [[unlikely]] {
         JSGlobalObject* globalObject = scope->globalObject();
         throwException(globalObject, throwScope, createError(globalObject, "Forced Failure"_s));
         return;

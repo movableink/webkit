@@ -56,7 +56,7 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayPrototypeSetFromBase64, (JSGlobalObject* glob
     JSValue optionsValue = callFrame->argument(1);
     if (!optionsValue.isUndefined()) {
         JSObject* optionsObject = jsDynamicCast<JSObject*>(optionsValue);
-        if (UNLIKELY(!optionsValue.isObject()))
+        if (!optionsValue.isObject()) [[unlikely]]
             return throwVMTypeError(globalObject, scope, "Uint8Array.prototype.setFromBase64 requires that options be an object"_s);
 
         JSValue alphabetValue = optionsObject->get(globalObject, vm.propertyNames->alphabet);
@@ -78,7 +78,7 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayPrototypeSetFromBase64, (JSGlobalObject* glob
         RETURN_IF_EXCEPTION(scope, { });
         if (!lastChunkHandlingValue.isUndefined()) {
             JSString* lastChunkHandlingString = jsDynamicCast<JSString*>(lastChunkHandlingValue);
-            if (UNLIKELY(!lastChunkHandlingString))
+            if (!lastChunkHandlingString) [[unlikely]]
                 return throwVMTypeError(globalObject, scope, "Uint8Array.prototype.setFromBase64 requires that lastChunkHandling be \"loose\", \"strict\", or \"stop-before-partial\""_s);
 
             auto lastChunkHandlingStringView = lastChunkHandlingString->view(globalObject);
@@ -102,7 +102,7 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayPrototypeSetFromBase64, (JSGlobalObject* glob
 
     auto [shouldThrowError, readLength, writeLength] = fromBase64(view, std::span { uint8Array->typedVector(), uint8Array->length() }, alphabet, lastChunkHandling);
     ASSERT(readLength <= view.length());
-    if (UNLIKELY(shouldThrowError == WTF::FromBase64ShouldThrowError::Yes))
+    if (shouldThrowError == WTF::FromBase64ShouldThrowError::Yes) [[unlikely]]
         return JSValue::encode(throwSyntaxError(globalObject, scope, "Uint8Array.prototype.setFromBase64 requires a valid base64 string"_s));
 
     JSObject* resultObject = constructEmptyObject(globalObject);
@@ -128,7 +128,7 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayPrototypeSetFromHex, (JSGlobalObject* globalO
     JSString* jsString = jsDynamicCast<JSString*>(callFrame->argument(0));
     if (!jsString) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Uint8Array.prototype.setFromHex requires a string"_s);
-    if (UNLIKELY(jsString->length() % 2))
+    if (jsString->length() % 2) [[unlikely]]
         return JSValue::encode(throwSyntaxError(globalObject, scope, "Uint8Array.prototype.setFromHex requires a string of even length"_s));
 
     auto gcOwnedData = jsString->view(globalObject);
@@ -169,7 +169,7 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayPrototypeToBase64, (JSGlobalObject* globalObj
     JSValue optionsValue = callFrame->argument(0);
     if (!optionsValue.isUndefined()) {
         JSObject* optionsObject = jsDynamicCast<JSObject*>(optionsValue);
-        if (UNLIKELY(!optionsObject))
+        if (!optionsObject) [[unlikely]]
             return throwVMTypeError(globalObject, scope, "Uint8Array.prototype.toBase64 requires that options be an object"_s);
 
         JSValue alphabetValue = optionsObject->get(globalObject, vm.propertyNames->alphabet);

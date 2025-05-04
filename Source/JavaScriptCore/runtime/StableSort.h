@@ -35,7 +35,7 @@ namespace JSC {
 
 static ALWAYS_INLINE bool coerceComparatorResultToBoolean(JSGlobalObject* globalObject, JSValue comparatorResult)
 {
-    if (LIKELY(comparatorResult.isInt32()))
+    if (comparatorResult.isInt32()) [[likely]]
         return comparatorResult.asInt32() < 0;
 
     // See https://bugs.webkit.org/show_bug.cgi?id=47825 on boolean special-casing

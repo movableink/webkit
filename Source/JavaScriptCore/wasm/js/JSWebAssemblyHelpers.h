@@ -94,7 +94,7 @@ ALWAYS_INLINE std::span<const uint8_t> getWasmBufferFromValue(JSGlobalObject* gl
             RETURN_IF_EXCEPTION(throwScope, { });
         } else {
             IdempotentArrayBufferByteLengthGetter<std::memory_order_relaxed> getter;
-            if (UNLIKELY(!jsCast<JSDataView*>(arrayBufferView)->viewByteLength(getter))) {
+            if (!jsCast<JSDataView*>(arrayBufferView)->viewByteLength(getter)) [[unlikely]] {
                 throwTypeError(globalObject, throwScope, typedArrayBufferHasBeenDetachedErrorMessage);
                 return { };
             }

@@ -66,7 +66,7 @@ ScopedArgumentsTable* ScopedArgumentsTable::tryCreate(VM& vm, uint32_t length)
 
     result->m_length = length;
     result->m_arguments = ArgumentsPtr::tryCreate(length);
-    if (UNLIKELY(!result->m_arguments))
+    if (!result->m_arguments) [[unlikely]]
         return nullptr;
     result->m_watchpointSets.fill(nullptr, length);
     return result;
@@ -85,9 +85,9 @@ ScopedArgumentsTable* ScopedArgumentsTable::tryClone(VM& vm)
 
 ScopedArgumentsTable* ScopedArgumentsTable::trySetLength(VM& vm, uint32_t newLength)
 {
-    if (LIKELY(!m_locked)) {
+    if (!m_locked) [[likely]] {
         ArgumentsPtr newArguments = ArgumentsPtr::tryCreate(newLength, newLength);
-        if (UNLIKELY(!newArguments))
+        if (!newArguments) [[unlikely]]
             return nullptr;
         for (unsigned i = std::min(m_length, newLength); i--;)
             newArguments.at(i) = this->at(i);
@@ -113,7 +113,7 @@ static_assert(std::is_trivially_destructible<ScopeOffset>::value);
 ScopedArgumentsTable* ScopedArgumentsTable::trySet(VM& vm, uint32_t i, ScopeOffset value)
 {
     ScopedArgumentsTable* result;
-    if (UNLIKELY(m_locked)) {
+    if (m_locked) [[unlikely]] {
         result = tryClone(vm);
         if (!result) [[unlikely]]
             return nullptr;

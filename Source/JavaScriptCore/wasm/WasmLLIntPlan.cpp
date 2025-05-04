@@ -129,7 +129,7 @@ void LLIntPlan::compileFunction(FunctionCodeIndex functionIndex)
     }
 
     m_wasmInternalFunctions[functionIndex] = WTFMove(*parseAndCompileResult);
-    if (UNLIKELY(Options::dumpGeneratedWasmBytecodes()))
+    if (Options::dumpGeneratedWasmBytecodes()) [[unlikely]]
         BytecodeDumper::dumpBlock(m_wasmInternalFunctions[functionIndex].get(), m_moduleInformation, WTF::dataFile());
 
     LLIntCallee* llintCallee = nullptr;

@@ -199,7 +199,7 @@ public:
     ALWAYS_INLINE bool needHandling(BitField mask) const
     {
         auto maskedValue = m_trapBits.loadRelaxed() & (mask | DeferTrapHandling);
-        if (UNLIKELY(maskedValue))
+        if (maskedValue) [[unlikely]]
             return (maskedValue & NeedExceptionHandling) || !(maskedValue & DeferTrapHandling);
         return false;
     }

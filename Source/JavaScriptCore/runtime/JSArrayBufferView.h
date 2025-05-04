@@ -292,7 +292,7 @@ public:
             return byteOffsetRaw();
 
         IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
-        if (UNLIKELY(isArrayBufferViewOutOfBounds(const_cast<JSArrayBufferView*>(this), getter)))
+        if (isArrayBufferViewOutOfBounds(const_cast<JSArrayBufferView*>(this), getter)) [[unlikely]]
             return 0;
         return byteOffsetRaw();
     }
@@ -337,7 +337,7 @@ public:
         // https://tc39.es/proposal-resizablearraybuffer/#sec-isarraybufferviewoutofbounds
         if (isDetached()) [[unlikely]]
             return true;
-        if (LIKELY(!isResizableNonShared()))
+        if (!isResizableNonShared()) [[likely]]
             return false;
         IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
         return isArrayBufferViewOutOfBounds(const_cast<JSArrayBufferView*>(this), getter);

@@ -461,7 +461,7 @@ JSC_DEFINE_HOST_FUNCTION(dumpAndClearSamplingProfilerSamples, (JSGlobalObject* g
     }
 
     auto json = vm.takeSamplingProfilerSamplesAsJSON();
-    if (UNLIKELY(!json))
+    if (!json) [[unlikely]]
         return JSValue::encode(jsUndefined());
 
     auto jsonData = json->toJSONString();
@@ -1850,7 +1850,7 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
 
     initStaticGlobals(vm);
     
-    if (UNLIKELY(Options::useDollarVM()))
+    if (Options::useDollarVM()) [[unlikely]]
         exposeDollarVM(vm);
 
 #if ENABLE(WEBASSEMBLY)
@@ -1986,7 +1986,7 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
 
     fixupPrototypeChainWithObjectPrototype(vm);
 
-    if (UNLIKELY(Options::alwaysHaveABadTime()))
+    if (Options::alwaysHaveABadTime()) [[unlikely]]
         this->haveABadTime(vm);
 }
 
@@ -2061,7 +2061,7 @@ bool JSGlobalObject::canDeclareGlobalFunction(const Identifier& ident)
     PropertySlot slot(this, PropertySlot::InternalMethodType::GetOwnProperty);
     bool hasProperty = getOwnPropertySlot(this, this, ident, slot);
     scope.assertNoExceptionExceptTermination();
-    if (LIKELY(!hasProperty))
+    if (!hasProperty) [[likely]]
         return isStructureExtensible();
 
     bool isConfigurable = !(slot.attributes() & PropertyAttribute::DontDelete);

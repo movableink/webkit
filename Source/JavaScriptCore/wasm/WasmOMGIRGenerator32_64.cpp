@@ -2689,7 +2689,7 @@ auto OMGIRGenerator::load(LoadOpType op, ExpressionType pointerVar, ExpressionTy
     Value* pointer = get(pointerVar);
     ASSERT(pointer->type() == Int32);
 
-    if (UNLIKELY(sumOverflows<uint32_t>(offset, sizeOfLoadOp(op)))) {
+    if (sumOverflows<uint32_t>(offset, sizeOfLoadOp(op))) [[unlikely]] {
         // FIXME: Even though this is provably out of bounds, it's not a validation error, so we have to handle it
         // as a runtime exception. However, this may change: https://bugs.webkit.org/show_bug.cgi?id=166435
         B3::PatchpointValue* throwException = append<B3::PatchpointValue>(m_proc, B3::Void, origin());
@@ -2789,7 +2789,7 @@ auto OMGIRGenerator::store(StoreOpType op, ExpressionType pointerVar, Expression
     Value* value = get(valueVar);
     ASSERT(pointer->type() == Int32);
 
-    if (UNLIKELY(sumOverflows<uint32_t>(offset, sizeOfStoreOp(op)))) {
+    if (sumOverflows<uint32_t>(offset, sizeOfStoreOp(op))) [[unlikely]] {
         // FIXME: Even though this is provably out of bounds, it's not a validation error, so we have to handle it
         // as a runtime exception. However, this may change: https://bugs.webkit.org/show_bug.cgi?id=166435
         B3::PatchpointValue* throwException = append<B3::PatchpointValue>(m_proc, B3::Void, origin());

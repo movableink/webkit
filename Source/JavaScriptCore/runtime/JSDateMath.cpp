@@ -227,7 +227,7 @@ LocalTimeOffset DateCache::DSTCache::localTimeOffset(DateCache& dateCache, int64
         millisecondsFromEpoch = newTime;
     }
 
-    if (UNLIKELY(m_epoch > UINT32_MAX)) {
+    if (m_epoch > UINT32_MAX) [[unlikely]] {
         dataLogLnIf(JSDateMathInternal::verbose, "reset DSTCache");
         reset();
     }

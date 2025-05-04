@@ -42,12 +42,12 @@ ALWAYS_INLINE Ref<AtomStringImpl> JSONAtomStringCache::makeIdentifier(std::span<
     if (characters.size() == 1) {
         if (firstCharacter <= maxSingleCharacterString)
             return vm().smallStrings.singleCharacterStringRep(firstCharacter);
-    } else if (UNLIKELY(characters.size() > maxStringLengthForCache))
+    } else if (characters.size() > maxStringLengthForCache) [[unlikely]]
         return AtomStringImpl::add(characters).releaseNonNull();
 
     auto lastCharacter = characters.back();
     auto& slot = cacheSlot(firstCharacter, lastCharacter, characters.size());
-    if (UNLIKELY(slot.m_length != characters.size() || !equal(slot.m_buffer, characters))) {
+    if (slot.m_length != characters.size() || !equal(slot.m_buffer, characters)) [[unlikely]] {
         auto result = AtomStringImpl::add(characters);
         slot.m_impl = result;
         slot.m_length = characters.size();
@@ -68,12 +68,12 @@ ALWAYS_INLINE AtomStringImpl* JSONAtomStringCache::existingIdentifier(std::span<
     if (characters.size() == 1) {
         if (firstCharacter <= maxSingleCharacterString)
             return vm().smallStrings.existingSingleCharacterStringRep(firstCharacter);
-    } else if (UNLIKELY(characters.size() > maxStringLengthForCache))
+    } else if (characters.size() > maxStringLengthForCache) [[unlikely]]
         return nullptr;
 
     auto lastCharacter = characters.back();
     auto& slot = cacheSlot(firstCharacter, lastCharacter, characters.size());
-    if (UNLIKELY(slot.m_length != characters.size() || !equal(slot.m_buffer, characters)))
+    if (slot.m_length != characters.size() || !equal(slot.m_buffer, characters)) [[unlikely]]
         return nullptr;
 
     return slot.m_impl.get();

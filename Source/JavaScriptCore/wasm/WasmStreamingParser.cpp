@@ -49,7 +49,7 @@ static constexpr bool verbose = false;
 #define WASM_STREAMING_PARSER_FAIL_IF_HELPER_FAILS(helper) \
     do { \
         auto helperResult = helper; \
-        if (UNLIKELY(!helperResult)) { \
+        if (!helperResult) [[unlikely]] { \
             m_errorMessage = helperResult.error(); \
             return State::FatalError; \
         } \
@@ -299,12 +299,12 @@ auto StreamingParser::addBytes(std::span<const uint8_t> bytes, IsEndOfStream isE
         return m_state;
 
     m_totalSize += bytes.size();
-    if (UNLIKELY(m_totalSize.hasOverflowed() || m_totalSize > maxModuleSize)) {
+    if (m_totalSize.hasOverflowed() || m_totalSize > maxModuleSize) [[unlikely]] {
         m_state = fail("module size is too large, maximum "_s, maxModuleSize);
         return m_state;
     }
 
-    if (UNLIKELY(Options::useEagerWasmModuleHashing()))
+    if (Options::useEagerWasmModuleHashing()) [[unlikely]]
         m_hasher.addBytes(bytes);
 
     size_t offsetInBytes = 0;
@@ -439,14 +439,14 @@ auto StreamingParser::finalize() -> State
         }
 
         if (m_info->numberOfDataSegments) {
-            if (UNLIKELY(m_info->data.size() != m_info->numberOfDataSegments.value())) {
+            if (m_info->data.size() != m_info->numberOfDataSegments.value()) [[unlikely]] {
                 m_state = fail("Data section's count "_s, m_info->data.size(), " is different from Data Count section's count "_s, m_info->numberOfDataSegments.value());
                 break;
             }
         }
 
         if (m_remaining.isEmpty()) {
-            if (UNLIKELY(Options::useEagerWasmModuleHashing()))
+            if (Options::useEagerWasmModuleHashing()) [[unlikely]]
                 m_info->nameSection->setHash(m_hasher.computeHexDigest());
 
             m_state = State::Finished;

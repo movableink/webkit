@@ -54,7 +54,7 @@ public:
 
     RegExp* ensureEmptyRegExp(VM& vm)
     {
-        if (LIKELY(m_emptyRegExp))
+        if (m_emptyRegExp) [[likely]]
             return m_emptyRegExp;
         return ensureEmptyRegExpSlow(vm);
     }

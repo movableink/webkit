@@ -99,7 +99,7 @@ public:
     void resetIfNecessary()
     {
 #if PLATFORM(COCOA)
-        if (LIKELY(!hasTimeZoneChange()))
+        if (!hasTimeZoneChange()) [[likely]]
             return;
         m_cachedTimezoneID = lastTimeZoneID;
 #endif

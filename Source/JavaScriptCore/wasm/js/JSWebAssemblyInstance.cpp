@@ -666,7 +666,7 @@ bool JSWebAssemblyInstance::evaluateConstantExpression(uint64_t index, Type expe
 {
     const auto& constantExpression = m_module->moduleInformation().constantExpressions[index];
     auto evalResult = evaluateExtendedConstExpr(constantExpression, this, m_module->moduleInformation(), expectedType);
-    if (UNLIKELY(!evalResult.has_value()))
+    if (!evalResult.has_value()) [[unlikely]]
         return false;
 
     result = evalResult.value();

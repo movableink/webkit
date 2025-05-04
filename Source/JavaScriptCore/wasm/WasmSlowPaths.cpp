@@ -159,7 +159,7 @@ static inline Wasm::JITCallee* jitCompileAndSetHeuristics(Wasm::LLIntCallee* cal
             auto plan = Wasm::BBQPlan::create(instance->vm(), const_cast<Wasm::ModuleInformation&>(instance->module().moduleInformation()), functionIndex, callee->hasExceptionHandlers(), Ref(*instance->calleeGroup()), Wasm::Plan::dontFinalize());
             Wasm::ensureWorklist().enqueue(plan.get());
             dataLogLnIf(Options::verboseOSR(), "\tStarted BBQ compilation.");
-            if (UNLIKELY(!Options::useConcurrentJIT() || !Options::useWasmLLInt()))
+            if (!Options::useConcurrentJIT() || !Options::useWasmLLInt()) [[unlikely]]
                 plan->waitForCompletion();
             else
                 tierUpCounter.optimizeAfterWarmUp();
@@ -286,7 +286,7 @@ WASM_SLOW_PATH_DECL(loop_osr)
     ASSERT(bbqCallee->stackCheckSize());
     uintptr_t stackExtent = stackPointer - bbqCallee->stackCheckSize();
     uintptr_t stackLimit = reinterpret_cast<uintptr_t>(instance->softStackLimit());
-    if (UNLIKELY(stackExtent >= stackPointer || stackExtent <= stackLimit)) {
+    if (stackExtent >= stackPointer || stackExtent <= stackLimit) [[unlikely]] {
         dataLogLnIf(Options::verboseOSR(), "\tSkipping BBQ loop tier up due to stack check; ", RawHex(stackPointer), " -> ", RawHex(stackExtent), " is past soft limit ", RawHex(stackLimit));
         WASM_RETURN_TWO(nullptr, nullptr);
     }
@@ -338,7 +338,7 @@ WASM_SLOW_PATH_DECL(simd_go_straight_to_bbq_osr)
     dataLogLnIf(Options::verboseOSR(), *callee, ": Entered simd_go_straight_to_bbq_osr with tierUpCounter = ", callee->tierUpCounter());
 
     auto result = jitCompileSIMDFunction(callee, instance);
-    if (LIKELY(result.has_value()))
+    if (result.has_value()) [[likely]]
         WASM_RETURN_TWO(result.value()->entrypoint().taggedPtr(), nullptr);
 
     switch (result.error()) {

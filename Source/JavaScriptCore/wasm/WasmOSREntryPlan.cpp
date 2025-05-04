@@ -68,7 +68,7 @@ void OSREntryPlan::dumpDisassembly(CompilationContext& context, LinkBuffer& link
 {
     CompilationMode targetCompilationMode = CompilationMode::OMGForOSREntryMode;
     dataLogLnIf(context.procedure->shouldDumpIR() || shouldDumpDisassemblyFor(targetCompilationMode), "Generated OMG code for WebAssembly OMGforOSREntry function[", functionIndex, "] ", signature.toString().ascii().data(), " name ", makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data());
-    if (UNLIKELY(shouldDumpDisassemblyFor(targetCompilationMode))) {
+    if (shouldDumpDisassemblyFor(targetCompilationMode)) [[unlikely]] {
         auto* disassembler = context.procedure->code().disassembler();
 
         const char* b3Prefix = "b3    ";

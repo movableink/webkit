@@ -79,7 +79,7 @@ inline void JSStringJoiner::reserveCapacity(JSGlobalObject* globalObject, size_t
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (UNLIKELY(!m_strings.tryReserveCapacity(count)))
+    if (!m_strings.tryReserveCapacity(count)) [[unlikely]]
         throwOutOfMemoryError(globalObject, scope);
 }
 
@@ -101,7 +101,7 @@ ALWAYS_INLINE void JSStringJoiner::append(JSString* jsString, StringViewWithUnde
     ++m_stringsCount;
     if (m_lastString == jsString) {
         auto& entry = m_strings.last();
-        if (LIKELY(entry.m_additional < UINT16_MAX)) {
+        if (entry.m_additional < UINT16_MAX) [[likely]] {
             ++entry.m_additional;
             m_accumulatedStringsLength += entry.m_view.view.length();
             return;

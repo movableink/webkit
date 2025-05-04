@@ -196,7 +196,7 @@ public:
     
     SymbolTableEntry& operator=(const SymbolTableEntry& other)
     {
-        if (UNLIKELY(other.isFat()))
+        if (other.isFat()) [[unlikely]]
             return copySlow(other);
         freeFatEntry();
         m_bits = other.m_bits;
@@ -391,7 +391,7 @@ private:
     
     void freeFatEntry()
     {
-        if (LIKELY(!isFat()))
+        if (!isFat()) [[likely]]
             return;
         freeFatEntrySlow();
     }
@@ -666,7 +666,7 @@ public:
     
     bool trySetArgumentsLength(VM& vm, uint32_t length)
     {
-        if (UNLIKELY(!m_arguments)) {
+        if (!m_arguments) [[unlikely]] {
             ScopedArgumentsTable* table = ScopedArgumentsTable::tryCreate(vm, length);
             if (!table) [[unlikely]]
                 return false;
@@ -779,7 +779,7 @@ private:
     ~SymbolTable();
     SymbolTableRareData& ensureRareData()
     {
-        if (LIKELY(m_rareData))
+        if (m_rareData) [[likely]]
             return *m_rareData;
         return ensureRareDataSlow();
     }

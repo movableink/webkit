@@ -297,7 +297,7 @@ ALWAYS_INLINE String tryMakeReplacedString(const String& string, const String& r
             substituteBackreferencesSlow(builder, replacement, string, ovector, nullptr, dollarPos);
             if (builder.hasOverflowed()) [[unlikely]]
                 return { };
-            if (auto result = tryMakeString(StringView(string).substring(0, matchStart), builder.toString(), StringView(string).substring(matchEnd, string.length() - matchEnd)); LIKELY(!result.isNull()))
+            if (auto result = tryMakeString(StringView(string).substring(0, matchStart), builder.toString(), StringView(string).substring(matchEnd, string.length() - matchEnd)); !result.isNull()) [[likely]]
                 return result;
         }
     }
@@ -377,7 +377,7 @@ ALWAYS_INLINE JSString* stringReplaceAllStringString(JSGlobalObject* globalObjec
     }
     resultBuilder.append(StringView(string).substring(lastMatchEnd));
 
-    if (UNLIKELY(resultBuilder.hasOverflowed())) {
+    if (resultBuilder.hasOverflowed()) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -448,7 +448,7 @@ inline JSString* replaceUsingStringSearch(VM& vm, JSGlobalObject* globalObject, 
         replaceString = replacement.toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, nullptr);
 
-        if (UNLIKELY(!sourceRanges.tryConstructAndAppend(endOfLastMatch, matchStart))) {
+        if (!sourceRanges.tryConstructAndAppend(endOfLastMatch, matchStart)) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return nullptr;
         }
@@ -462,7 +462,7 @@ inline JSString* replaceUsingStringSearch(VM& vm, JSGlobalObject* globalObject, 
         matchStart = StringView(string).find(vm.adaptiveStringSearcherTables(), StringView(searchString), !searchStringLength ? endOfLastMatch + 1 : endOfLastMatch);
     } while (matchStart != notFound);
 
-    if (UNLIKELY(!sourceRanges.tryConstructAndAppend(endOfLastMatch, string.length()))) {
+    if (!sourceRanges.tryConstructAndAppend(endOfLastMatch, string.length())) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -586,7 +586,7 @@ static ALWAYS_INLINE JSString* removeAllUsingRegExpSearch(VM& vm, JSGlobalObject
                 if (input[i] != patternCharacter)
                     continue;
                 if (startIndex < i) {
-                    if (UNLIKELY(!sourceRanges.tryConstructAndAppend(startIndex, i))) {
+                    if (!sourceRanges.tryConstructAndAppend(startIndex, i)) [[unlikely]] {
                         throwOutOfMemoryError(globalObject, scope);
                         return notFound;
                     }
@@ -614,7 +614,7 @@ static ALWAYS_INLINE JSString* removeAllUsingRegExpSearch(VM& vm, JSGlobalObject
         size_t lastFound = notFound;
         do {
             if (startIndex < found) {
-                if (UNLIKELY(!sourceRanges.tryConstructAndAppend(startIndex, found))) {
+                if (!sourceRanges.tryConstructAndAppend(startIndex, found)) [[unlikely]] {
                     throwOutOfMemoryError(globalObject, scope);
                     return notFound;
                 }
@@ -770,7 +770,7 @@ static ALWAYS_INLINE JSString* replaceAllWithCacheUsingRegExpSearchThreeArgument
 
     MarkedArgumentBuffer replacements;
     replacements.fill(vm, items, [](JSValue*) { });
-    if (UNLIKELY(replacements.hasOverflowed())) {
+    if (replacements.hasOverflowed()) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -811,7 +811,7 @@ static ALWAYS_INLINE JSString* replaceAllWithCacheUsingRegExpSearchThreeArgument
             totalLength += (sourceLen - lastIndex);
     }
 
-    if (UNLIKELY(totalLength > StringImpl::MaxLength)) {
+    if (totalLength > StringImpl::MaxLength) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -915,7 +915,7 @@ static ALWAYS_INLINE JSString* replaceAllWithCacheUsingRegExpSearch(VM& vm, JSGl
     unsigned items = length / cachedCount;
     Vector<String, 16> replacements;
 
-    if (UNLIKELY(!replacements.tryReserveCapacity(items))) {
+    if (!replacements.tryReserveCapacity(items)) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -956,7 +956,7 @@ static ALWAYS_INLINE JSString* replaceAllWithCacheUsingRegExpSearch(VM& vm, JSGl
                 totalLength += (sourceLen - lastIndex);
         }
 
-        if (UNLIKELY(totalLength > StringImpl::MaxLength)) {
+        if (totalLength > StringImpl::MaxLength) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return nullptr;
         }
@@ -1032,7 +1032,7 @@ static ALWAYS_INLINE JSString* replaceAllWithCacheUsingRegExpSearch(VM& vm, JSGl
     }
 
     Vector<Range<int32_t>, 16> sourceRanges;
-    if (UNLIKELY(!sourceRanges.tryReserveCapacity(items + 1))) {
+    if (!sourceRanges.tryReserveCapacity(items + 1)) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -1242,7 +1242,7 @@ ALWAYS_INLINE JSString* replaceOneWithStringUsingRegExpSearch(VM& vm, JSGlobalOb
     auto after = StringView { source }.substring(result.end, source.length() - result.end);
 
     size_t dollarPos = replacementString.find('$');
-    if (LIKELY(dollarPos == WTF::notFound))
+    if (dollarPos == WTF::notFound) [[likely]]
         RELEASE_AND_RETURN(scope, jsString(vm, makeString(before, StringView { replacementString }, after)));
 
     StringBuilder replacement(OverflowPolicy::RecordOverflow);
@@ -1555,7 +1555,7 @@ ALWAYS_INLINE JSString* replace(VM& vm, JSGlobalObject* globalObject, JSValue th
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     // This path avoids an extra ref count churn for the most likely case that the search value is a string.
-    if (LIKELY(searchJSString)) {
+    if (searchJSString) [[likely]] {
         auto searchString = searchJSString->value(globalObject);
         RETURN_IF_EXCEPTION(scope, nullptr);
 

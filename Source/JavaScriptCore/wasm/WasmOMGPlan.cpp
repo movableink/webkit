@@ -78,7 +78,7 @@ FunctionAllowlist& OMGPlan::ensureGlobalOMGAllowlist()
 void OMGPlan::dumpDisassembly(CompilationContext& context, LinkBuffer& linkBuffer, FunctionCodeIndex functionIndex, const TypeDefinition& signature, FunctionSpaceIndex functionIndexSpace)
 {
     dataLogLnIf(context.procedure->shouldDumpIR() || shouldDumpDisassemblyFor(CompilationMode::OMGMode), "Generated OMG code for WebAssembly OMG function[", functionIndex, "] ", signature.toString().ascii().data(), " name ", makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data());
-    if (UNLIKELY(shouldDumpDisassemblyFor(CompilationMode::OMGMode))) {
+    if (shouldDumpDisassemblyFor(CompilationMode::OMGMode)) [[unlikely]] {
         ScopedPrintStream out;
         UncheckedKeyHashSet<B3::Value*> printedValues;
         auto* disassembler = context.procedure->code().disassembler();

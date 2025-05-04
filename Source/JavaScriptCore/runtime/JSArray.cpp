@@ -722,9 +722,9 @@ std::optional<bool> JSArray::fastIncludes(JSGlobalObject* globalObject, JSValue 
         int32_t int32Value = 0;
         if (searchElement.isInt32AsAnyInt())
             int32Value = searchElement.asInt32AsAnyInt();
-        else if (UNLIKELY(searchElement.isUndefined()))
+        else if (searchElement.isUndefined()) [[unlikely]]
             return containsHole(data, length64);
-        else if (UNLIKELY(!searchElement.isNumber() || searchElement.asNumber() != 0.0))
+        else if (!searchElement.isNumber() || searchElement.asNumber() != 0.0) [[unlikely]]
             return false;
 
         EncodedJSValue encodedSearchElement = JSValue::encode(jsNumber(int32Value));
@@ -865,13 +865,13 @@ JSArray* JSArray::fastToSpliced(JSGlobalObject* globalObject, CallFrame* callFra
     case ArrayWithInt32:
     case ArrayWithContiguous:
     case ArrayWithDouble: {
-        if (UNLIKELY(newLength > MAX_STORAGE_VECTOR_LENGTH))
+        if (newLength > MAX_STORAGE_VECTOR_LENGTH) [[unlikely]]
             return nullptr;
 
-        if (UNLIKELY(newLength >= MIN_SPARSE_ARRAY_INDEX))
+        if (newLength >= MIN_SPARSE_ARRAY_INDEX) [[unlikely]]
             return nullptr;
 
-        if (UNLIKELY(length > this->butterfly()->vectorLength()))
+        if (length > this->butterfly()->vectorLength()) [[unlikely]]
             return nullptr;
 
         if (hasDouble(sourceType)) {
@@ -887,7 +887,7 @@ JSArray* JSArray::fastToSpliced(JSGlobalObject* globalObject, CallFrame* callFra
         Structure* resultStructure = globalObject->arrayStructureForIndexingTypeDuringAllocation(insertedItemsIndexingType);
         IndexingType resultIndexingType = resultStructure->indexingType();
 
-        if (UNLIKELY(hasAnyArrayStorage(resultIndexingType)))
+        if (hasAnyArrayStorage(resultIndexingType)) [[unlikely]]
             return nullptr;
         ASSERT(!globalObject->isHavingABadTime());
 
@@ -997,7 +997,7 @@ bool JSArray::appendMemcpy(JSGlobalObject* globalObject, VM& vm, unsigned startI
     }
     ASSERT(copyType == indexingType());
 
-    if (UNLIKELY(otherType == ArrayWithUndecided)) {
+    if (otherType == ArrayWithUndecided) [[unlikely]] {
         auto* butterfly = this->butterfly();
         if (type == ArrayWithDouble) {
             for (unsigned i = startIndex; i < newLength; ++i)
@@ -1063,7 +1063,7 @@ bool JSArray::appendMemcpy(JSGlobalObject* globalObject, VM& vm, unsigned startI
     }
     ASSERT(copyType == indexingType());
 
-    if (UNLIKELY(otherType == ArrayWithUndecided)) {
+    if (otherType == ArrayWithUndecided) [[unlikely]] {
         auto* butterfly = this->butterfly();
         if (type == ArrayWithDouble) {
             for (unsigned i = startIndex; i < newLength; ++i)
@@ -1306,7 +1306,7 @@ JSArray* JSArray::fastSlice(JSGlobalObject* globalObject, JSObject* source, uint
         }
 
         ASSERT(!globalObject->isHavingABadTime());
-        if (UNLIKELY(count > MAX_STORAGE_VECTOR_LENGTH))
+        if (count > MAX_STORAGE_VECTOR_LENGTH) [[unlikely]]
             return nullptr;
 
         ASSERT(!resultStructure->outOfLineCapacity()); // JSArray's initial Structure should not have any properties.
@@ -1527,7 +1527,7 @@ bool JSArray::shiftCountWithAnyIndexingType(JSGlobalObject* globalObject, unsign
             if (holesMustForwardToPrototype()) [[unlikely]] {
                 for (unsigned i = startIndex; i < end; ++i) {
                     double v = butterfly->contiguousDouble().at(this, i + count);
-                    if (UNLIKELY(v != v)) {
+                    if (v != v) [[unlikely]] {
                         startIndex = i;
                         return shiftCountWithArrayStorage(vm, startIndex, count, ensureArrayStorage(vm));
                     }
@@ -1662,7 +1662,7 @@ bool JSArray::unshiftCountWithAnyIndexingType(JSGlobalObject* globalObject, unsi
         if (moveCount) {
             if (holesMustForwardToPrototype()) [[unlikely]] {
                 auto* buffer = butterfly->contiguous().data() + startIndex;
-                if (UNLIKELY(containsHole(buffer, moveCount)))
+                if (containsHole(buffer, moveCount)) [[unlikely]]
                     RELEASE_AND_RETURN(scope, unshiftCountWithArrayStorage(globalObject, startIndex, count, ensureArrayStorage(vm)));
             }
 
@@ -1713,7 +1713,7 @@ bool JSArray::unshiftCountWithAnyIndexingType(JSGlobalObject* globalObject, unsi
             if (holesMustForwardToPrototype()) [[unlikely]] {
                 for (unsigned i = oldLength; i-- > startIndex;) {
                     double v = butterfly->contiguousDouble().at(this, i);
-                    if (UNLIKELY(v != v))
+                    if (v != v) [[unlikely]]
                         RELEASE_AND_RETURN(scope, unshiftCountWithArrayStorage(globalObject, startIndex, count, ensureArrayStorage(vm)));
                 }
             }
@@ -1981,11 +1981,11 @@ JSArray* tryCloneArrayFromFast(JSGlobalObject* globalObject, JSValue arrayValue)
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto* array = jsCast<JSArray*>(arrayValue);
-    if (UNLIKELY(!array->isIteratorProtocolFastAndNonObservable()))
+    if (!array->isIteratorProtocolFastAndNonObservable()) [[unlikely]]
         return nullptr;
 
     IndexingType sourceType = array->indexingType();
-    if (UNLIKELY(shouldUseSlowPut(sourceType) || sourceType == ArrayClass))
+    if (shouldUseSlowPut(sourceType) || sourceType == ArrayClass) [[unlikely]]
         return nullptr;
 
     Butterfly* butterfly= array->butterfly();
@@ -2001,7 +2001,7 @@ JSArray* tryCloneArrayFromFast(JSGlobalObject* globalObject, JSValue arrayValue)
 
     ASSERT(sourceType == ArrayWithDouble || sourceType == ArrayWithInt32 || sourceType == ArrayWithContiguous || sourceType == ArrayWithUndecided);
 
-    if (LIKELY(!globalObject->isHavingABadTime())) {
+    if (!globalObject->isHavingABadTime()) [[likely]] {
         if constexpr (fillMode == ArrayFillMode::Empty) {
             if (isCopyOnWrite(array->indexingMode()))
                 return JSArray::createWithButterfly(vm, nullptr, globalObject->originalArrayStructureForIndexingType(array->indexingMode()), array->butterfly());
@@ -2014,11 +2014,11 @@ JSArray* tryCloneArrayFromFast(JSGlobalObject* globalObject, JSValue arrayValue)
     IndexingType resultType = sourceType;
     if (sourceType == ArrayWithDouble) {
         double* buffer = butterfly->contiguousDouble().data();
-        if (UNLIKELY(containsHole(buffer, resultSize)))
+        if (containsHole(buffer, resultSize)) [[unlikely]]
             resultType = ArrayWithContiguous;
     } else if (sourceType == ArrayWithInt32) {
         auto* buffer = butterfly->contiguous().data();
-        if (UNLIKELY(containsHole(buffer, resultSize)))
+        if (containsHole(buffer, resultSize)) [[unlikely]]
             resultType = ArrayWithContiguous;
     } else if (sourceType == ArrayWithUndecided && resultSize)
         resultType = ArrayWithContiguous;
@@ -2029,7 +2029,7 @@ JSArray* tryCloneArrayFromFast(JSGlobalObject* globalObject, JSValue arrayValue)
 
     ASSERT(!globalObject->isHavingABadTime());
     auto vectorLength = Butterfly::optimalContiguousVectorLength(resultStructure, resultSize);
-    if (UNLIKELY(vectorLength > MAX_STORAGE_VECTOR_LENGTH))
+    if (vectorLength > MAX_STORAGE_VECTOR_LENGTH) [[unlikely]]
         return { };
 
     ASSERT(!resultStructure->outOfLineCapacity());

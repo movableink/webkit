@@ -334,7 +334,7 @@ ALWAYS_INLINE JSArray* tryCreateContiguousArrayWithPattern(JSGlobalObject* globa
 
     VM& vm = globalObject->vm();
     Structure* structure = globalObject->originalArrayStructureForIndexingType(ArrayWithContiguous);
-    if (UNLIKELY(!hasContiguous(structure->indexingType())))
+    if (!hasContiguous(structure->indexingType())) [[unlikely]]
         return nullptr;
 
     unsigned vectorLength = Butterfly::optimalContiguousVectorLength(structure, initialLength);
@@ -369,7 +369,7 @@ ALWAYS_INLINE JSArray* createPatternFilledArray(JSGlobalObject* globalObject, JS
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (JSArray* array = tryCreateContiguousArrayWithPattern(globalObject, pattern, count); LIKELY(array))
+    if (JSArray* array = tryCreateContiguousArrayWithPattern(globalObject, pattern, count); array) [[likely]]
         return array;
 
     JSArray* array = constructEmptyArray(globalObject, nullptr, count);
@@ -544,7 +544,7 @@ inline JSScope* JSGlobalObject::globalScope()
 // https://tc39.es/ecma262/#sec-candeclareglobalvar
 inline bool JSGlobalObject::canDeclareGlobalVar(const Identifier& ident)
 {
-    if (LIKELY(isStructureExtensible()))
+    if (isStructureExtensible()) [[likely]]
         return true;
 
     PropertySlot slot(this, PropertySlot::InternalMethodType::GetOwnProperty);

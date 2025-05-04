@@ -140,7 +140,7 @@ JSC_DEFINE_HOST_FUNCTION(iteratorProtoFuncToArray, (JSGlobalObject* globalObject
     MarkedArgumentBuffer value;
     forEachInIteratorProtocol(globalObject, thisValue, [&value, &scope](VM&, JSGlobalObject* globalObject, JSValue nextItem) {
         value.append(nextItem);
-        if (UNLIKELY(value.hasOverflowed()))
+        if (value.hasOverflowed()) [[unlikely]]
             throwOutOfMemoryError(globalObject, scope);
     });
     RETURN_IF_EXCEPTION(scope, { });

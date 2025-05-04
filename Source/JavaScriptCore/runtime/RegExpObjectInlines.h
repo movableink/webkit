@@ -44,7 +44,7 @@ ALWAYS_INLINE unsigned getRegExpObjectLastIndexAsUnsigned(JSGlobalObject* global
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue jsLastIndex = regExpObject->getLastIndex();
     unsigned lastIndex;
-    if (LIKELY(jsLastIndex.isUInt32())) {
+    if (jsLastIndex.isUInt32()) [[likely]] {
         lastIndex = jsLastIndex.asUInt32();
         if (lastIndex > input.length())
             return UINT_MAX;

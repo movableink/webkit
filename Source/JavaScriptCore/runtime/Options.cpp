@@ -727,7 +727,7 @@ static void disableAllSignalHandlerBasedOptions()
 
 void Options::executeDumpOptions()
 {
-    if (LIKELY(!Options::dumpOptions()))
+    if (!Options::dumpOptions()) [[likely]]
         return;
 
     DumpLevel level = static_cast<DumpLevel>(Options::dumpOptions());
@@ -1123,7 +1123,7 @@ void Options::finalize()
     // The following should only be done at the end after all options
     // have been initialized.
     assertOptionsAreCoherent();
-    if (UNLIKELY(Options::dumpOptions()))
+    if (Options::dumpOptions()) [[unlikely]]
         executeDumpOptions();
 
 #if USE(LIBPAS)

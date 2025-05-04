@@ -74,7 +74,7 @@ FunctionAllowlist& BBQPlan::ensureGlobalBBQAllowlist()
 
 bool BBQPlan::dumpDisassembly(CompilationContext& context, LinkBuffer& linkBuffer, FunctionCodeIndex functionIndex, const TypeDefinition& signature, FunctionSpaceIndex functionIndexSpace)
 {
-    if (UNLIKELY(shouldDumpDisassemblyFor(CompilationMode::BBQMode))) {
+    if (shouldDumpDisassemblyFor(CompilationMode::BBQMode)) [[unlikely]] {
         dataLogF("Generated BBQ code for WebAssembly BBQ function[%zu] %s name %s\n", functionIndex.rawIndex(), signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data());
         if (context.bbqDisassembler)
             context.bbqDisassembler->dump(linkBuffer);

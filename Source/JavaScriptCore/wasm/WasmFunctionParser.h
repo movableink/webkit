@@ -308,7 +308,7 @@ private:
     NEVER_INLINE UnexpectedResult WARN_UNUSED_RETURN validationFail(const Args&... args) const
     {
         using namespace FailureHelper; // See ADL comment in WasmParser.h.
-        if (UNLIKELY(ASSERT_ENABLED && Options::crashOnFailedWasmValidate()))
+        if (ASSERT_ENABLED && Options::crashOnFailedWasmValidate())
             WTFBreakpointTrap();
 
         StringPrintStream out;
@@ -461,7 +461,7 @@ auto FunctionParser<Context>::parse() -> Result
         totalNumberOfLocals += numberOfLocals;
         WASM_PARSER_FAIL_IF(totalNumberOfLocals > maxFunctionLocals, "Function's number of locals is too big "_s, totalNumberOfLocals, " maximum "_s, maxFunctionLocals);
         WASM_PARSER_FAIL_IF(!parseValueType(m_info, typeOfLocal), "can't get Function local's type in group "_s, i);
-        if (UNLIKELY(!isDefaultableType(typeOfLocal)))
+        if (!isDefaultableType(typeOfLocal)) [[unlikely]]
             totalNonDefaultableLocals++;
 
         if (typeOfLocal.isV128()) {
@@ -520,7 +520,7 @@ auto FunctionParser<Context>::parseBody() -> PartialResult
 
         m_currentOpcode = static_cast<OpType>(op);
 #if ENABLE(WEBASSEMBLY_OMGJIT)
-        if (UNLIKELY(Options::dumpWasmOpcodeStatistics()))
+        if (Options::dumpWasmOpcodeStatistics()) [[unlikely]]
             WasmOpcodeCounter::singleton().increment(m_currentOpcode);
 #endif
 
@@ -1854,10 +1854,10 @@ ALWAYS_INLINE auto FunctionParser<Context>::parseNestedBlocksEagerly(bool& shoul
         BlockSignature inlineSignature;
 
         // Only attempt to parse the most optimistic case of a single non-ref or void return signature.
-        if (LIKELY(peekInt7(kindByte) && isValidTypeKind(kindByte))) {
+        if (peekInt7(kindByte) && isValidTypeKind(kindByte)) [[likely]] {
             TypeKind typeKind = static_cast<TypeKind>(kindByte);
             Type type = { typeKind, TypeDefinition::invalidIndex };
-            if (UNLIKELY(!(type.isVoid() || isValueType(type))))
+            if (!(type.isVoid() || isValueType(type))) [[unlikely]]
                 return { };
             inlineSignature = { m_typeInformation.thunkFor(type), nullptr };
             m_offset++;
@@ -2847,7 +2847,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 
         ExtAtomicOpType op = static_cast<ExtAtomicOpType>(m_currentExtOp);
 #if ENABLE(WEBASSEMBLY_OMGJIT)
-        if (UNLIKELY(Options::dumpWasmOpcodeStatistics()))
+        if (Options::dumpWasmOpcodeStatistics()) [[unlikely]]
             WasmOpcodeCounter::singleton().increment(op);
 #endif
 
@@ -3628,12 +3628,12 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         String errorMessage;
         targets.appendUsingFunctor(numberOfTargets, [&](size_t i) -> ControlType* {
             uint32_t target;
-            if (UNLIKELY(!parseVarUInt32(target))) {
+            if (!parseVarUInt32(target)) [[unlikely]] {
                 if (errorMessage.isNull())
                     errorMessage = WTF::makeString("can't get "_s, i, "th target for br_table"_s);
                 return nullptr;
             }
-            if (UNLIKELY(target >= m_controlStack.size())) {
+            if (target >= m_controlStack.size()) [[unlikely]] {
                 if (errorMessage.isNull())
                     errorMessage = WTF::makeString("br_table's "_s, i, "th target "_s, target, " exceeds control stack size "_s, m_controlStack.size());
                 return nullptr;
@@ -3746,7 +3746,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         constexpr bool isReachable = true;
 
         ExtSIMDOpType op = static_cast<ExtSIMDOpType>(m_currentExtOp);
-        if (UNLIKELY(Options::dumpWasmOpcodeStatistics()))
+        if (Options::dumpWasmOpcodeStatistics()) [[unlikely]]
             WasmOpcodeCounter::singleton().increment(op);
 
         switch (op) {
@@ -4128,7 +4128,7 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
 
         ExtGCOpType op = static_cast<ExtGCOpType>(m_currentExtOp);
 #if ENABLE(WEBASSEMBLY_OMGJIT)
-        if (UNLIKELY(Options::dumpWasmOpcodeStatistics()))
+        if (Options::dumpWasmOpcodeStatistics()) [[unlikely]]
             WasmOpcodeCounter::singleton().increment(op);
 #endif
 

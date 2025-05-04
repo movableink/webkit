@@ -175,7 +175,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewPrivateFuncLength, (JSGlobalObject* globa
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue argument = callFrame->argument(0);
-    if (UNLIKELY(!argument.isCell() || !isTypedView(argument.asCell()->type())))
+    if (!argument.isCell() || !isTypedView(argument.asCell()->type())) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view"_s);
 
     JSArrayBufferView* thisObject = jsCast<JSArrayBufferView*>(argument);
@@ -190,7 +190,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewPrivateFuncContentType, (JSGlobalObject* 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue argument = callFrame->argument(0);
-    if (UNLIKELY(!argument.isCell() || !isTypedView(argument.asCell()->type())))
+    if (!argument.isCell() || !isTypedView(argument.asCell()->type())) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view"_s);
     return JSValue::encode(jsNumber(static_cast<int32_t>(contentType(argument.asCell()->type()))));
 }
@@ -207,7 +207,7 @@ inline EncodedJSValue createTypedArrayIteratorObject(JSGlobalObject* globalObjec
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!callFrame->thisValue().isCell() || !isTypedArrayType(callFrame->thisValue().asCell()->type())))
+    if (!callFrame->thisValue().isCell() || !isTypedArrayType(callFrame->thisValue().asCell()->type())) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view"_s);
 
     JSArrayBufferView* thisObject = jsCast<JSArrayBufferView*>(callFrame->thisValue());

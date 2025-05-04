@@ -57,7 +57,7 @@ JSWebAssemblyArray* JSWebAssemblyArray::tryCreate(VM& vm, WebAssemblyGCStructure
 {
     Wasm::FieldType fieldType = elementType(structure);
     std::optional<unsigned> allocationSize = allocationSizeInBytes(fieldType, size);
-    if (UNLIKELY(!allocationSize))
+    if (!allocationSize) [[unlikely]]
         return nullptr;
 
     auto* array = new (NotNull, allocateCell<JSWebAssemblyArray>(vm, allocationSize.value())) JSWebAssemblyArray(vm, structure, size);

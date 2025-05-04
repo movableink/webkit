@@ -707,7 +707,7 @@ BBQJIT::BBQJIT(CCallHelpers& jit, const TypeDefinition& signature, BBQCallee& ca
     if ((Options::verboseBBQJITAllocation()))
         dataLogLn("BBQ\tUsing GPR set: ", m_gprSet, "\n   \tFPR set: ", m_fprSet);
 
-    if (UNLIKELY(shouldDumpDisassemblyFor(CompilationMode::BBQMode))) {
+    if (shouldDumpDisassemblyFor(CompilationMode::BBQMode)) [[unlikely]] {
         m_disassembler = makeUnique<BBQDisassembler>();
         m_disassembler->setStartOfCode(m_jit.label());
     }
@@ -796,7 +796,7 @@ Value BBQJIT::addConstant(Type type, uint64_t value)
         return Value::none();
     }
 
-    if (UNLIKELY(Options::disableBBQConsts())) {
+    if (Options::disableBBQConsts()) [[unlikely]] {
         Value stackResult = topValue(type.kind);
         emitStoreConst(result, canonicalSlot(stackResult));
         result = stackResult;
@@ -1202,7 +1202,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addDataDrop(unsigned dataSegmentIndex)
 
 PartialResult WARN_UNUSED_RETURN BBQJIT::atomicLoad(ExtAtomicOpType loadOp, Type valueType, ExpressionType pointer, ExpressionType& result, uint32_t uoffset)
 {
-    if (UNLIKELY(sumOverflows<uint32_t>(uoffset, sizeOfAtomicOpMemoryAccess(loadOp)))) {
+    if (sumOverflows<uint32_t>(uoffset, sizeOfAtomicOpMemoryAccess(loadOp))) [[unlikely]] {
         // FIXME: Same issue as in AirIRGenerator::load(): https://bugs.webkit.org/show_bug.cgi?id=166435
         emitThrowException(ExceptionType::OutOfBoundsMemoryAccess);
         consume(pointer);
@@ -1218,7 +1218,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::atomicLoad(ExtAtomicOpType loadOp, Type
 PartialResult WARN_UNUSED_RETURN BBQJIT::atomicStore(ExtAtomicOpType storeOp, Type valueType, ExpressionType pointer, ExpressionType value, uint32_t uoffset)
 {
     Location valueLocation = locationOf(value);
-    if (UNLIKELY(sumOverflows<uint32_t>(uoffset, sizeOfAtomicOpMemoryAccess(storeOp)))) {
+    if (sumOverflows<uint32_t>(uoffset, sizeOfAtomicOpMemoryAccess(storeOp))) [[unlikely]] {
         // FIXME: Same issue as in AirIRGenerator::load(): https://bugs.webkit.org/show_bug.cgi?id=166435
         emitThrowException(ExceptionType::OutOfBoundsMemoryAccess);
         consume(pointer);
@@ -1234,7 +1234,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::atomicStore(ExtAtomicOpType storeOp, Ty
 PartialResult WARN_UNUSED_RETURN BBQJIT::atomicBinaryRMW(ExtAtomicOpType op, Type valueType, ExpressionType pointer, ExpressionType value, ExpressionType& result, uint32_t uoffset)
 {
     Location valueLocation = locationOf(value);
-    if (UNLIKELY(sumOverflows<uint32_t>(uoffset, sizeOfAtomicOpMemoryAccess(op)))) {
+    if (sumOverflows<uint32_t>(uoffset, sizeOfAtomicOpMemoryAccess(op))) [[unlikely]] {
         // FIXME: Even though this is provably out of bounds, it's not a validation error, so we have to handle it
         // as a runtime exception. However, this may change: https://bugs.webkit.org/show_bug.cgi?id=166435
         emitThrowException(ExceptionType::OutOfBoundsMemoryAccess);
@@ -1252,7 +1252,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::atomicBinaryRMW(ExtAtomicOpType op, Typ
 PartialResult WARN_UNUSED_RETURN BBQJIT::atomicCompareExchange(ExtAtomicOpType op, Type valueType, ExpressionType pointer, ExpressionType expected, ExpressionType value, ExpressionType& result, uint32_t uoffset)
 {
     Location valueLocation = locationOf(value);
-    if (UNLIKELY(sumOverflows<uint32_t>(uoffset, sizeOfAtomicOpMemoryAccess(op)))) {
+    if (sumOverflows<uint32_t>(uoffset, sizeOfAtomicOpMemoryAccess(op))) [[unlikely]] {
         // FIXME: Even though this is provably out of bounds, it's not a validation error, so we have to handle it
         // as a runtime exception. However, this may change: https://bugs.webkit.org/show_bug.cgi?id=166435
         emitThrowException(ExceptionType::OutOfBoundsMemoryAccess);
@@ -2983,7 +2983,7 @@ void BBQJIT::emitEntryTierUpCheck()
 // Control flow
 ControlData WARN_UNUSED_RETURN BBQJIT::addTopLevel(BlockSignature signature)
 {
-    if (UNLIKELY(Options::verboseBBQJITInstructions())) {
+    if (Options::verboseBBQJITInstructions()) [[unlikely]] {
         auto nameSection = m_info.nameSection;
         std::pair<const Name*, RefPtr<NameSection>> name = nameSection->get(m_functionIndex);
         dataLog("BBQ\tFunction ");

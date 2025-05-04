@@ -251,7 +251,7 @@ void JSRemoteFunction::finishCreation(JSGlobalObject* globalObject, VM& vm)
     copyNameAndLength(globalObject);
 
     auto* exception = scope.exception();
-    if (UNLIKELY(exception && !vm.isTerminationException(exception))) {
+    if (exception && !vm.isTerminationException(exception)) [[unlikely]] {
         scope.clearException();
         throwTypeError(globalObject, scope, "wrapping returned function throws an error"_s);
     }

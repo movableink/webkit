@@ -238,7 +238,7 @@ JSValue JSStringJoiner::joinImpl(JSGlobalObject* globalObject)
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(m_hasOverflowed)) {
+    if (m_hasOverflowed) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }
@@ -279,7 +279,7 @@ JSValue JSOnlyStringsJoiner::joinImpl(JSGlobalObject* globalObject, const WriteB
     CheckedInt32 separatorLength = m_separator.length();
     CheckedInt32 totalSeparatorsLength = separatorLength * (CheckedInt32(length) - 1);
     CheckedInt32 totalLength = totalSeparatorsLength + m_accumulatedStringsLength;
-    if (UNLIKELY(totalLength.hasOverflowed())) {
+    if (totalLength.hasOverflowed()) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }

@@ -53,7 +53,7 @@ public:
 
     ALWAYS_INLINE static JSImmutableButterfly* tryCreate(VM& vm, Structure* structure, unsigned length)
     {
-        if (UNLIKELY(length > IndexingHeader::maximumLength))
+        if (length > IndexingHeader::maximumLength) [[unlikely]]
             return nullptr;
 
         // Because of the above maximumLength requirement, allocationSize can never overflow.

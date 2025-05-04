@@ -236,7 +236,7 @@ void EntryPlan::compileFunctions()
     }
 
     if (!areWasmToWasmStubsCompiled) {
-        if (UNLIKELY(!generateWasmToWasmStubs())) {
+        if (!generateWasmToWasmStubs()) [[unlikely]] {
             Locker locker { m_lock };
             fail(makeString("Out of executable memory at stub generation"_s));
             return;
@@ -244,7 +244,7 @@ void EntryPlan::compileFunctions()
     }
 
     if (!areWasmToJSStubsCompiled) {
-        if (UNLIKELY(!generateWasmToJSStubs())) {
+        if (!generateWasmToJSStubs()) [[unlikely]] {
             Locker locker { m_lock };
             fail(makeString("Out of executable memory at stub generation"_s));
             return;
@@ -285,14 +285,14 @@ bool EntryPlan::completeSyncIfPossible()
 void EntryPlan::generateStubsIfNecessary()
 {
     if (!std::exchange(m_areWasmToWasmStubsCompiled, true)) {
-        if (UNLIKELY(!generateWasmToWasmStubs())) {
+        if (!generateWasmToWasmStubs()) [[unlikely]] {
             fail(makeString("Out of executable memory at stub generation"_s));
             return;
         }
     }
 
     if (!std::exchange(m_areWasmToJSStubsCompiled, true)) {
-        if (UNLIKELY(!generateWasmToJSStubs())) {
+        if (!generateWasmToJSStubs()) [[unlikely]] {
             fail(makeString("Out of executable memory at stub generation"_s));
             return;
         }
@@ -312,7 +312,7 @@ bool EntryPlan::generateWasmToWasmStubs()
 #if ENABLE(JIT)
         if (Options::useWasmJIT()) {
             auto binding = wasmToWasm(importFunctionIndex);
-            if (UNLIKELY(!binding))
+            if (!binding) [[unlikely]]
                 return false;
             m_wasmToWasmExitStubs[importFunctionIndex++] = binding.value();
         }
@@ -340,7 +340,7 @@ bool EntryPlan::generateWasmToJSStubs()
         Wasm::TypeIndex typeIndex = m_moduleInformation->importFunctionTypeIndices.at(importIndex);
         if (Options::useWasmJIT()) {
             auto binding = wasmToJS(typeIndex, importIndex);
-            if (UNLIKELY(!binding))
+            if (!binding) [[unlikely]]
                 return false;
             m_wasmToJSExitStubs[importIndex] = binding.value();
         }
