@@ -61,7 +61,11 @@ private:
 
     const Ref<IPC::StreamClientConnection> m_logStreamConnection WTF_GUARDED_BY_LOCK(m_logStreamLock);
     LogStreamIdentifier m_logStreamIdentifier;
+#if ENABLE(UNFAIR_LOCK)
+    UnfairLock m_logStreamLock;
+#else
     Lock m_logStreamLock;
+#endif
 };
 
 }
