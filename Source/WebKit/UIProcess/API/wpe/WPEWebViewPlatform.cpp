@@ -321,7 +321,7 @@ gboolean ViewPlatform::handleEvent(WPEEvent* event)
         break;
     case WPE_EVENT_POINTER_DOWN:
         m_inputMethodFilter.cancelComposition();
-        FALLTHROUGH;
+        [[fallthrough]];
     case WPE_EVENT_POINTER_UP:
     case WPE_EVENT_POINTER_MOVE:
     case WPE_EVENT_POINTER_ENTER:

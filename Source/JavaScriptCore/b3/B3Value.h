@@ -644,10 +644,10 @@ private:
             break;
         case Three:
             std::bit_cast<Value**>(std::bit_cast<char*>(this) + offset)[2] = valueToClone.childrenArray()[2];
-            FALLTHROUGH;
+            [[fallthrough]];
         case Two:
             std::bit_cast<Value**>(std::bit_cast<char*>(this) + offset)[1] = valueToClone.childrenArray()[1];
-            FALLTHROUGH;
+            [[fallthrough]];
         case One:
             std::bit_cast<Value**>(std::bit_cast<char*>(this) + offset)[0] = valueToClone.childrenArray()[0];
             break;

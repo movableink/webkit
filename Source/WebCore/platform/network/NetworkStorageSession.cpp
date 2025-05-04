@@ -209,7 +209,7 @@ ThirdPartyCookieBlockingDecision NetworkStorageSession::thirdPartyCookieBlocking
     case ThirdPartyCookieBlockingMode::AllOnSitesWithoutUserInteraction:
         if (!hasHadUserInteractionAsFirstParty(firstPartyDomain))
             return decideThirdPartyCookieBlocking(false);
-        FALLTHROUGH;
+        [[fallthrough]];
     case ThirdPartyCookieBlockingMode::OnlyAccordingToPerDomainPolicy:
         return decideThirdPartyCookieBlocking(!shouldBlockThirdPartyCookies(resourceDomain));
     }

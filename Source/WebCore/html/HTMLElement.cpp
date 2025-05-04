@@ -223,7 +223,7 @@ void HTMLElement::collectPresentationalHintsForAttribute(const QualifiedName& na
             break;
         case ContentEditableType::PlaintextOnly:
             userModifyValue = CSSValueReadWritePlaintextOnly;
-            FALLTHROUGH;
+            [[fallthrough]];
         case ContentEditableType::True:
             addPropertyToPresentationalHintStyle(style, CSSPropertyOverflowWrap, CSSValueBreakWord);
             addPropertyToPresentationalHintStyle(style, CSSPropertyWebkitNbspMode, CSSValueSpace);

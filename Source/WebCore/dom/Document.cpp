@@ -1636,7 +1636,7 @@ ExceptionOr<Ref<Node>> Document::importNode(Node& nodeToImport, Variant<bool, Im
     case Node::DOCUMENT_FRAGMENT_NODE:
         if (nodeToImport.isShadowRoot())
             break;
-        FALLTHROUGH;
+        [[fallthrough]];
     case Node::ELEMENT_NODE:
     case Node::TEXT_NODE:
     case Node::CDATA_SECTION_NODE:
@@ -2033,7 +2033,7 @@ void Document::setReadyState(ReadyState readyState)
                 eventTiming->domComplete = now;
             WTFEmitSignpost(this, NavigationAndPaintTiming, "domComplete");
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     case ReadyState::Interactive:
         if (!m_eventTiming.domInteractive) {
             auto now = MonotonicTime::now();

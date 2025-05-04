@@ -3428,7 +3428,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         switch (ignoreTapGestureReason(_singleTapGestureRecognizer.get())) {
         case WebKit::IgnoreTapGestureReason::ToggleEditMenu:
             _page->clearSelectionAfterTappingSelectionHighlightIfNeeded(point);
-            FALLTHROUGH;
+            [[fallthrough]];
         case WebKit::IgnoreTapGestureReason::DeferToScrollView:
             return NO;
         case WebKit::IgnoreTapGestureReason::None:

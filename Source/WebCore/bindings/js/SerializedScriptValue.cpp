@@ -2788,7 +2788,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                 lengthStack.append(length);
             }
             arrayStartVisitIndexedMember:
-            FALLTHROUGH;
+            [[fallthrough]];
             case ArrayStartVisitIndexedMember: {
                 JSObject* array = inputObjectStack.last();
                 uint32_t index = indexStack.last();
@@ -2861,7 +2861,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                     return SerializationReturnCode::ExistingExceptionError;
             }
             startVisitNamedMember:
-            FALLTHROUGH;
+            [[fallthrough]];
             case ObjectStartVisitNamedMember: {
                 JSObject* object = inputObjectStack.last();
                 uint32_t index = indexStack.last();
@@ -2894,7 +2894,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                 }
                 if (terminalCode != SerializationReturnCode::SuccessfullyCompleted)
                     return terminalCode;
-                FALLTHROUGH;
+                [[fallthrough]];
             }
             case ObjectEndVisitNamedMember: {
                 if (scope.exception()) [[unlikely]]
@@ -5552,7 +5552,7 @@ DeserializationResult CloneDeserializer::deserialize()
             outputObjectStack.append(outArray);
         }
         arrayStartVisitIndexedMember:
-        FALLTHROUGH;
+        [[fallthrough]];
         case ArrayStartVisitIndexedMember: {
             uint32_t index;
             if (!read(index)) {
@@ -5643,7 +5643,7 @@ DeserializationResult CloneDeserializer::deserialize()
             outputObjectStack.append(outObject);
         }
         startVisitNamedMember:
-        FALLTHROUGH;
+        [[fallthrough]];
         case ObjectStartVisitNamedMember: {
             switch (startVisitNamedMember<ObjectEndVisitNamedMember>(outputObjectStack, propertyNameStack, stateStack, outValue)) {
             case VisitNamedMemberResult::Error:

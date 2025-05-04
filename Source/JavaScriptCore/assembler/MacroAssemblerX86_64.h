@@ -8565,7 +8565,7 @@ public:
             return;
         case SIMDLane::i8x16:
             vectorReplaceLane(SIMDLane::i8x16, TrustedImm32(1), src, dest);
-            FALLTHROUGH;
+            [[fallthrough]];
         case SIMDLane::i16x8:
             m_assembler.vpshuflw_i8rr(0, dest, dest);
             m_assembler.vpunpcklqdq_rrr(dest, dest, dest);
@@ -8593,7 +8593,7 @@ public:
             return;
         case SIMDLane::i8x16:
             vectorReplaceLane(SIMDLane::i8x16, TrustedImm32(1), src, dest);
-            FALLTHROUGH;
+            [[fallthrough]];
         case SIMDLane::i16x8:
             m_assembler.pshuflw_i8rr(0, dest, dest);
             m_assembler.punpcklqdq_rr(dest, dest);

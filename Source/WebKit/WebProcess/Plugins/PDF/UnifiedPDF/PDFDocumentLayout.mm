@@ -610,7 +610,7 @@ AffineTransform PDFDocumentLayout::toPageTransform(const PageGeometry& pageGeome
     AffineTransform matrix;
     switch (pageGeometry.rotation) {
     default:
-        FALLTHROUGH;
+        [[fallthrough]];
     case 0:
         matrix = AffineTransform::makeTranslation(FloatSize { pageGeometry.cropBox.x(), pageGeometry.cropBox.y() });
         break;

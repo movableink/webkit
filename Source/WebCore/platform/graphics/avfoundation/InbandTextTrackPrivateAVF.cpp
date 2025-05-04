@@ -313,12 +313,12 @@ Ref<InbandGenericCue> InbandTextTrackPrivateAVF::processCueAttributes(CFAttribut
         switch (cueData->align()) {
         case GenericCueData::Alignment::None:
             // By default, VTT cues alignment align as "start"
-            FALLTHROUGH;
+            [[fallthrough]];
         case GenericCueData::Alignment::Middle:
             // AVFoundation generates "middle" alignment cues for single line cues
             // and cues multi-line cues with lines of equal length, so just treat
             // "middle" alignment the same as "start"
-            FALLTHROUGH;
+            [[fallthrough]];
         case GenericCueData::Alignment::Start:
             cueData->setPositionAlign(GenericCueData::Alignment::Start);
             cueData->setPosition(cueData->position() - cueData->size() / 2);

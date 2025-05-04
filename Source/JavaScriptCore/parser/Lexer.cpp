@@ -2433,7 +2433,7 @@ start:
                 token = tokenTypeForIntegerLikeToken(tokenData->doubleValue);
             }
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     case CharacterNumber:
         if (token != INTEGER && token != DOUBLE) [[likely]] {
             auto parseNumberResult = parseDecimal();
@@ -2520,7 +2520,7 @@ start:
                 break;
             }
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     }
     case CharacterNonLatin1IdentifierStart: {
         if constexpr (ASSERT_ENABLED) {
@@ -2528,7 +2528,7 @@ start:
             U16_GET(m_code, 0, 0, m_codeEnd - m_code, codePoint);
             ASSERT(isIdentStart(codePoint));
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     }
     case CharacterBackSlash:
         parseIdent:

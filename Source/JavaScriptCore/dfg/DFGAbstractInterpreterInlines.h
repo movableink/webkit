@@ -3329,7 +3329,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             setConstant(node, childConst);
             break;
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     }
     case ToPropertyKey: {
         if (!(forNode(node->child1()).m_type & ~(SpecString | SpecSymbol))) {
@@ -5104,7 +5104,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         case Array::ArrayStorage: {
             if (mode.isInBounds())
                 break;
-            FALLTHROUGH;
+            [[fallthrough]];
         }
         default: {
             clobberWorld();
@@ -5137,7 +5137,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             case Array::ArrayStorage: {
                 if (arrayMode.isInBounds())
                     break;
-                FALLTHROUGH;
+                [[fallthrough]];
             }
             default: {
                 clobberWorld();

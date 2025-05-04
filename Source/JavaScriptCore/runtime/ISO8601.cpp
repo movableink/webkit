@@ -674,7 +674,7 @@ static std::optional<Variant<Vector<LChar>, int64_t>> parseTimeZoneAnnotation(St
                 }
             }
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     }
     default: {
         // TZLeadingChar :

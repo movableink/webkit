@@ -248,7 +248,7 @@ void PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const Resou
                 frameLoader->client().startDownload(request, suggestedFilename, fromDownloadAttribute);
             } else if (RefPtr document = frame->document())
                 document->addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Not allowed to download due to sandboxing"_s);
-            FALLTHROUGH;
+            [[fallthrough]];
         case PolicyAction::Ignore:
             POLICYCHECKER_RELEASE_LOG("checkNavigationPolicy: ignoring because policyAction from dispatchDecidePolicyForNavigationAction is Ignore");
             return function({ }, nullptr, NavigationPolicyDecision::IgnoreLoad);
@@ -350,7 +350,7 @@ void PolicyChecker::checkNewWindowPolicy(NavigationAction&& navigationAction, Re
                 frame->protectedLoader()->client().startDownload(request);
             else if (RefPtr document = frame->document())
                 document->addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Not allowed to download due to sandboxing"_s);
-            FALLTHROUGH;
+            [[fallthrough]];
         case PolicyAction::Ignore:
             function({ }, nullptr, { }, { }, ShouldContinuePolicyCheck::No);
             return;

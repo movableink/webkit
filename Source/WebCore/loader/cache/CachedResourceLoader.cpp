@@ -1284,7 +1284,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
     case Reload:
         if (mayAddToMemoryCache == MayAddToMemoryCache::Yes)
             memoryCache->remove(*resource);
-        FALLTHROUGH;
+        [[fallthrough]];
     case Load:
         if (resource && mayAddToMemoryCache == MayAddToMemoryCache::Yes)
             memoryCache->remove(*resource);

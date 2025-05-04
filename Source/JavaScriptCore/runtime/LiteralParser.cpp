@@ -1536,7 +1536,7 @@ JSValue LiteralParser<CharType, reviverMode>::parse(VM& vm, ParserState initialS
             }
         }
         doParseArrayStartExpression:
-        FALLTHROUGH;
+        [[fallthrough]];
         case DoParseArrayStartExpression: {
             TokenType lastToken = m_lexer.currentToken()->type;
             if (m_lexer.next() == TokRBracket) {

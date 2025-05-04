@@ -617,7 +617,7 @@ bool RenderLayerModelObject::pointInSVGClippingArea(const FloatPoint& point) con
                     referenceBox.setSize(*viewportSize);
                 break;
             }
-            FALLTHROUGH;
+            [[fallthrough]];
         case CSSBoxType::ContentBox:
         case CSSBoxType::FillBox:
         case CSSBoxType::PaddingBox:

@@ -813,28 +813,28 @@ void URLParser::copyURLPartsUntil(const URL& base, URLPart part, const CodePoint
     switch (part) {
     case URLPart::QueryEnd:
         m_url.m_queryEnd = base.m_queryEnd;
-        FALLTHROUGH;
+        [[fallthrough]];
     case URLPart::PathEnd:
         m_url.m_pathEnd = base.m_pathEnd;
-        FALLTHROUGH;
+        [[fallthrough]];
     case URLPart::PathAfterLastSlash:
         m_url.m_pathAfterLastSlash = base.m_pathAfterLastSlash;
-        FALLTHROUGH;
+        [[fallthrough]];
     case URLPart::PortEnd:
         m_url.m_portLength = base.m_portLength;
-        FALLTHROUGH;
+        [[fallthrough]];
     case URLPart::HostEnd:
         m_url.m_hostEnd = base.m_hostEnd;
-        FALLTHROUGH;
+        [[fallthrough]];
     case URLPart::PasswordEnd:
         m_url.m_passwordEnd = base.m_passwordEnd;
-        FALLTHROUGH;
+        [[fallthrough]];
     case URLPart::UserEnd:
         m_url.m_userEnd = base.m_userEnd;
-        FALLTHROUGH;
+        [[fallthrough]];
     case URLPart::UserStart:
         m_url.m_userStart = base.m_userStart;
-        FALLTHROUGH;
+        [[fallthrough]];
     case URLPart::SchemeEnd:
         m_url.m_isValid = base.m_isValid;
         m_url.m_protocolIsInHTTPFamily = base.m_protocolIsInHTTPFamily;
@@ -849,7 +849,7 @@ void URLParser::copyURLPartsUntil(const URL& base, URLPart part, const CodePoint
         return;
     case Scheme::File:
         m_urlIsFile = true;
-        FALLTHROUGH;
+        [[fallthrough]];
     case Scheme::FTP:
     case Scheme::HTTP:
     case Scheme::HTTPS:
@@ -1240,7 +1240,7 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
                 case Scheme::HTTP:
                 case Scheme::HTTPS:
                     m_url.m_protocolIsInHTTPFamily = true;
-                    FALLTHROUGH;
+                    [[fallthrough]];
                 case Scheme::FTP:
                     m_urlIsSpecial = true;
                     if (base.protocolIs(urlScheme))
@@ -1515,7 +1515,7 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
             switch (*c) {
             case '\\':
                 syntaxViolation(c);
-                FALLTHROUGH;
+                [[fallthrough]];
             case '/':
                 appendToASCIIBuffer('/');
                 state = State::FileSlash;
@@ -2029,7 +2029,7 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
         LOG_FINAL_STATE("PathStart");
         RELEASE_ASSERT_NOT_REACHED();
     case State::FilePathStart:
-        FALLTHROUGH;
+        [[fallthrough]];
     case State::Path:
         LOG_FINAL_STATE("Path");
         m_url.m_pathEnd = currentPosition(c);

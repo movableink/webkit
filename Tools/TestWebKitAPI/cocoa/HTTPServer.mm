@@ -88,7 +88,7 @@ static RetainPtr<nw_protocol_definition_t> proxyDefinition(HTTPServer::Protocol 
                 }
                 case State::DidRequestCredentials:
                     EXPECT_TRUE(strnstr(byteCast<char>(buffer), "Proxy-Authorization: Basic dGVzdHVzZXI6dGVzdHBhc3N3b3Jk\r\n", bufferLength));
-                    FALLTHROUGH;
+                    [[fallthrough]];
                 case State::WillNotRequestCredentials: {
                     const char* negotiationResponse = ""
                         "HTTP/1.1 200 Connection Established\r\n"

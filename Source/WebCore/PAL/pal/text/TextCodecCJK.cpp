@@ -484,7 +484,7 @@ String TextCodecCJK::iso2022JPDecode(std::span<const uint8_t> bytes, bool flush,
             break;
         case ISO2022JPDecoderState::TrailByte:
             m_iso2022JPDecoderState = ISO2022JPDecoderState::LeadByte;
-            FALLTHROUGH;
+            [[fallthrough]];
         case ISO2022JPDecoderState::EscapeStart:
             sawError = true;
             result.append(replacementCharacter);

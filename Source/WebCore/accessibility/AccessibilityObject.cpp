@@ -1915,7 +1915,7 @@ bool AccessibilityObject::dependsOnTextUnderElement() const
         // Native popup buttons should not use their descendant's text as a title. That value is retrieved through stringValue().
         if (hasTagName(selectTag))
             break;
-        FALLTHROUGH;
+        [[fallthrough]];
     case AccessibilityRole::Summary:
     case AccessibilityRole::Button:
     case AccessibilityRole::ToggleButton:

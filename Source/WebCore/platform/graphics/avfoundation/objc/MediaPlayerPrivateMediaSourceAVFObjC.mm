@@ -1007,13 +1007,13 @@ void MediaPlayerPrivateMediaSourceAVFObjC::ensureLayerOrVideoRenderer(MediaPlaye
     switch (acceleratedVideoMode()) {
     case AcceleratedVideoMode::Layer:
         destroyVideoRenderer();
-        FALLTHROUGH;
+        [[fallthrough]];
     case AcceleratedVideoMode::StagedLayer:
         ensureLayer();
         break;
     case AcceleratedVideoMode::VideoRenderer:
         destroyLayer();
-        FALLTHROUGH;
+        [[fallthrough]];
     case AcceleratedVideoMode::StagedVideoRenderer:
         ensureVideoRenderer();
         break;
@@ -1035,14 +1035,14 @@ void MediaPlayerPrivateMediaSourceAVFObjC::ensureLayerOrVideoRenderer(MediaPlaye
     switch (acceleratedVideoMode()) {
     case AcceleratedVideoMode::Layer:
         needsRenderingModeChanged = MediaPlayerEnums::NeedsRenderingModeChanged::Yes;
-        FALLTHROUGH;
+        [[fallthrough]];
     case AcceleratedVideoMode::VideoRenderer:
         if (mediaSourcePrivate)
             mediaSourcePrivate->setVideoRenderer(renderer.get());
         break;
     case AcceleratedVideoMode::StagedLayer:
         needsRenderingModeChanged = MediaPlayerEnums::NeedsRenderingModeChanged::Yes;
-        FALLTHROUGH;
+        [[fallthrough]];
     case AcceleratedVideoMode::StagedVideoRenderer:
         if (mediaSourcePrivate)
             mediaSourcePrivate->stageVideoRenderer(renderer.get());

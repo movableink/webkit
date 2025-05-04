@@ -238,7 +238,7 @@ static MTLPixelFormat metalPixelFormat(CVPixelBufferRef pixelBuffer, size_t plan
         return MTLPixelFormatRGBA8Unorm;
     case kCVPixelFormatType_64ARGB:     /* 64 bit ARGB, 16-bit big-endian samples */
         swizzle = MTLTextureSwizzleChannelsMake(MTLTextureSwizzleGreen, MTLTextureSwizzleZero, MTLTextureSwizzleZero, MTLTextureSwizzleZero);
-        FALLTHROUGH;
+        [[fallthrough]];
     case kCVPixelFormatType_64RGBALE:     /* 64 bit RGBA, 16-bit little-endian full-range (0-65535) samples */
         return MTLPixelFormatRGBA16Unorm;
 

@@ -732,7 +732,7 @@ private:
     case ProcessAccessType::Launch:
         networkProcess();
         ASSERT(m_networkProcess);
-        FALLTHROUGH;
+        [[fallthrough]];
     case ProcessAccessType::OnlyIfLaunched:
         if (RefPtr networkProcess = m_networkProcess) {
             networkProcess->fetchWebsiteData(m_sessionID, dataTypes, fetchOptions, [callbackAggregator](WebsiteData websiteData) {

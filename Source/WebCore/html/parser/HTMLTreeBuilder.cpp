@@ -817,7 +817,7 @@ void HTMLTreeBuilder::processStartTagForInBody(AtomHTMLToken&& token)
         parseError(token);
         // Apparently we're not supposed to ask.
         token.setTagName(TagName::img);
-        FALLTHROUGH;
+        [[fallthrough]];
     case TagName::area:
     case TagName::br:
     case TagName::img:
@@ -1108,7 +1108,7 @@ void HTMLTreeBuilder::processStartTag(AtomHTMLToken&& token)
     case InsertionMode::Initial:
         defaultForInitial();
         ASSERT(m_insertionMode == InsertionMode::BeforeHTML);
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::BeforeHTML:
         if (token.tagName() == TagName::html) {
             m_tree.insertHTMLHtmlStartTagBeforeHTML(WTFMove(token));
@@ -1117,7 +1117,7 @@ void HTMLTreeBuilder::processStartTag(AtomHTMLToken&& token)
         }
         defaultForBeforeHTML();
         ASSERT(m_insertionMode == InsertionMode::BeforeHead);
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::BeforeHead:
         if (token.tagName() == TagName::html) {
             processHtmlStartTagForInBody(WTFMove(token));
@@ -1130,13 +1130,13 @@ void HTMLTreeBuilder::processStartTag(AtomHTMLToken&& token)
         }
         defaultForBeforeHead();
         ASSERT(m_insertionMode == InsertionMode::InHead);
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::InHead:
         if (processStartTagForInHead(WTFMove(token)))
             return;
         defaultForInHead();
         ASSERT(m_insertionMode == InsertionMode::AfterHead);
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::AfterHead:
         switch (token.tagName()) {
         case TagName::html:
@@ -1175,7 +1175,7 @@ void HTMLTreeBuilder::processStartTag(AtomHTMLToken&& token)
         }
         defaultForAfterHead();
         ASSERT(m_insertionMode == InsertionMode::InBody);
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::InBody:
         processStartTagForInBody(WTFMove(token));
         break;
@@ -1400,7 +1400,7 @@ void HTMLTreeBuilder::processStartTag(AtomHTMLToken&& token)
         default:
             break;
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::InSelect:
         switch (token.tagName()) {
         case TagName::html:
@@ -2127,7 +2127,7 @@ void HTMLTreeBuilder::processEndTag(AtomHTMLToken&& token)
     case InsertionMode::Initial:
         defaultForInitial();
         ASSERT(m_insertionMode == InsertionMode::BeforeHTML);
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::BeforeHTML:
         switch (token.tagName()) {
         case TagName::head:
@@ -2141,7 +2141,7 @@ void HTMLTreeBuilder::processEndTag(AtomHTMLToken&& token)
         }
         defaultForBeforeHTML();
         ASSERT(m_insertionMode == InsertionMode::BeforeHead);
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::BeforeHead:
         switch (token.tagName()) {
         case TagName::head:
@@ -2155,7 +2155,7 @@ void HTMLTreeBuilder::processEndTag(AtomHTMLToken&& token)
         }
         defaultForBeforeHead();
         ASSERT(m_insertionMode == InsertionMode::InHead);
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::InHead:
         // FIXME: This case should be broken out into processEndTagForInHead,
         // because other end tag cases now refer to it ("process the token for using the rules of the "in head" insertion mode").
@@ -2178,7 +2178,7 @@ void HTMLTreeBuilder::processEndTag(AtomHTMLToken&& token)
         }
         defaultForInHead();
         ASSERT(m_insertionMode == InsertionMode::AfterHead);
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::AfterHead:
         switch (token.tagName()) {
         case TagName::body:
@@ -2191,7 +2191,7 @@ void HTMLTreeBuilder::processEndTag(AtomHTMLToken&& token)
         }
         defaultForAfterHead();
         ASSERT(m_insertionMode == InsertionMode::InBody);
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::InBody:
         processEndTagForInBody(WTFMove(token));
         break;
@@ -2266,7 +2266,7 @@ void HTMLTreeBuilder::processEndTag(AtomHTMLToken&& token)
             m_insertionMode = InsertionMode::AfterAfterBody;
             return;
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::AfterAfterBody:
         ASSERT(m_insertionMode == InsertionMode::AfterBody || m_insertionMode == InsertionMode::AfterAfterBody);
         parseError(token);
@@ -2329,7 +2329,7 @@ void HTMLTreeBuilder::processEndTag(AtomHTMLToken&& token)
             m_insertionMode = InsertionMode::AfterAfterFrameset;
             return;
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::AfterAfterFrameset:
         ASSERT(m_insertionMode == InsertionMode::AfterFrameset || m_insertionMode == InsertionMode::AfterAfterFrameset);
         parseError(token);
@@ -2354,7 +2354,7 @@ void HTMLTreeBuilder::processEndTag(AtomHTMLToken&& token)
         default:
             break;
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::InSelect:
         ASSERT(m_insertionMode == InsertionMode::InSelect || m_insertionMode == InsertionMode::InSelectInTable);
         switch (token.tagName()) {
@@ -2586,34 +2586,34 @@ ReprocessBuffer:
             return;
         defaultForInitial();
         ASSERT(m_insertionMode == InsertionMode::BeforeHTML);
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::BeforeHTML:
         buffer.skipLeadingWhitespace();
         if (buffer.isEmpty())
             return;
         defaultForBeforeHTML();
         ASSERT(m_insertionMode == InsertionMode::BeforeHead);
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::BeforeHead:
         buffer.skipLeadingWhitespace();
         if (buffer.isEmpty())
             return;
         defaultForBeforeHead();
         ASSERT(m_insertionMode == InsertionMode::InHead);
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::InHead: {
         if (consumeAndInsertWhitespace(buffer))
             return;
         defaultForInHead();
         ASSERT(m_insertionMode == InsertionMode::AfterHead);
-        FALLTHROUGH;
+        [[fallthrough]];
     }
     case InsertionMode::AfterHead: {
         if (consumeAndInsertWhitespace(buffer))
             return;
         defaultForAfterHead();
         ASSERT(m_insertionMode == InsertionMode::InBody);
-        FALLTHROUGH;
+        [[fallthrough]];
     }
     case InsertionMode::InBody:
     case InsertionMode::InCaption:
@@ -2639,7 +2639,7 @@ ReprocessBuffer:
             processCharacterBufferForInBody(buffer);
             break;
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::InTableText:
         buffer.giveRemainingTo(m_pendingTableCharacters);
         break;
@@ -2721,23 +2721,23 @@ void HTMLTreeBuilder::processEndOfFile(AtomHTMLToken&& token)
     case InsertionMode::Initial:
         defaultForInitial();
         ASSERT(m_insertionMode == InsertionMode::BeforeHTML);
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::BeforeHTML:
         defaultForBeforeHTML();
         ASSERT(m_insertionMode == InsertionMode::BeforeHead);
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::BeforeHead:
         defaultForBeforeHead();
         ASSERT(m_insertionMode == InsertionMode::InHead);
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::InHead:
         defaultForInHead();
         ASSERT(m_insertionMode == InsertionMode::AfterHead);
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::AfterHead:
         defaultForAfterHead();
         ASSERT(m_insertionMode == InsertionMode::InBody);
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::InBody:
     case InsertionMode::InCell:
     case InsertionMode::InCaption:
@@ -2765,7 +2765,7 @@ void HTMLTreeBuilder::processEndOfFile(AtomHTMLToken&& token)
         }
         ASSERT(m_tree.currentElementName() == HTML::colgroup || m_tree.currentElementName() == HTML::template_);
         processColgroupEndTagForInColumnGroup();
-        FALLTHROUGH;
+        [[fallthrough]];
     case InsertionMode::InFrameset:
     case InsertionMode::InTable:
     case InsertionMode::InTableBody:
@@ -3001,7 +3001,7 @@ void HTMLTreeBuilder::processTokenInForeignContent(AtomHTMLToken&& token)
         case TagName::font:
             if (!(hasAttribute(token, colorAttr) || hasAttribute(token, faceAttr) || hasAttribute(token, sizeAttr)))
                 break;
-            FALLTHROUGH;
+            [[fallthrough]];
         case TagName::b:
         case TagName::big:
         case TagName::blockquote:

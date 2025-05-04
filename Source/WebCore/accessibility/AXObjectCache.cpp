@@ -5020,7 +5020,7 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
         case AXNotification::LanguageChanged:
         case AXNotification::RowCountChanged:
             updateNode(notification.first);
-            FALLTHROUGH;
+            [[fallthrough]];
         case AXNotification::RowCollapsed:
         case AXNotification::RowExpanded:
             updateChildren(notification.first);

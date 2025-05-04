@@ -383,7 +383,7 @@ bool CSSParser::consumeRuleList(CSSParserTokenRange range, RuleList ruleListType
                 range.consume();
                 continue;
             }
-            FALLTHROUGH;
+            [[fallthrough]];
         default:
             rule = consumeQualifiedRule(range, allowedRules);
             break;

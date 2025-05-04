@@ -2895,7 +2895,7 @@ void Session::performActions(Vector<Vector<Action>>&& actionsByTick, Function<vo
                         state->setObject("location"_s, WTFMove(location));
                         if (action.origin->type == PointerOrigin::Type::Element)
                             state->setString("nodeHandle"_s, action.origin->elementID.value());
-                        FALLTHROUGH;
+                        [[fallthrough]];
                     }
                     case Action::Subtype::Pause:
                         if (action.duration)
@@ -2970,7 +2970,7 @@ void Session::performActions(Vector<Vector<Action>>&& actionsByTick, Function<vo
 
                         if (action.origin->type == PointerOrigin::Type::Element)
                             state->setString("nodeHandle"_s, action.origin->elementID.value());
-                        FALLTHROUGH;
+                        [[fallthrough]];
                     }
                     case Action::Subtype::Pause:
                         if (action.duration)

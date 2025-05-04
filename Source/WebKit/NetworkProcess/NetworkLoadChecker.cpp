@@ -435,7 +435,7 @@ void NetworkLoadChecker::checkCORSRequest(ResourceRequest&& request, ValidationH
             checkCORSRequestWithPreflight(WTFMove(request), WTFMove(handler));
             return;
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     case PreflightPolicy::Prevent:
         updateRequestForAccessControl(request, *origin(), m_storedCredentialsPolicy);
         handler(WTFMove(request));

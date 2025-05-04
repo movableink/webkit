@@ -353,7 +353,7 @@ void NetworkStorageSession::setCookieAcceptPolicy(HTTPCookieAcceptPolicy policy)
         soupPolicy = SOUP_COOKIE_JAR_ACCEPT_GRANDFATHERED_THIRD_PARTY;
         break;
 #else
-        FALLTHROUGH;
+        [[fallthrough]];
 #endif
     case HTTPCookieAcceptPolicy::ExclusivelyFromMainDocumentDomain:
         soupPolicy = SOUP_COOKIE_JAR_ACCEPT_NO_THIRD_PARTY;

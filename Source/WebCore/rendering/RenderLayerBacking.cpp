@@ -917,7 +917,7 @@ void RenderLayerBacking::updateVideoGravity(const RenderStyle& style)
     case ObjectFit::None:
     case ObjectFit::ScaleDown:
         // FIXME: Add support for "None" and "ScaleDown" with video gravity modes
-        FALLTHROUGH;
+        [[fallthrough]];
     case ObjectFit::Fill:
         videoGravity = MediaPlayerVideoGravity::Resize;
         break;
@@ -2625,7 +2625,7 @@ bool RenderLayerBacking::updateViewportConstrainedSublayers(ViewportConstrainedS
         break;
     case ClippingAndAnchor:
         needsClippingLayer = true;
-        FALLTHROUGH;
+        [[fallthrough]];
     case Anchor:
         needsAnchorLayer = true;
         break;

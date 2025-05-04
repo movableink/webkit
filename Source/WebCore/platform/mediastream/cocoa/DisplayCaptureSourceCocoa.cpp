@@ -76,7 +76,7 @@ CaptureSourceOrError DisplayCaptureSourceCocoa::create(const CaptureDevice& devi
             return makeUniqueRefWithoutRefCountedCheck<ReplayKitCaptureSource>(source);
         }, device, WTFMove(hashSalts), constraints, pageIdentifier);
 #elif HAVE(SCREEN_CAPTURE_KIT)
-        FALLTHROUGH;
+        [[fallthrough]];
 #else
         ASSERT_NOT_REACHED();
         return { };

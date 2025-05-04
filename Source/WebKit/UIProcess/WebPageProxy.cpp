@@ -12169,7 +12169,7 @@ void WebPageProxy::willStartCapture(UserMediaPermissionRequestProxy& request, Co
         break;
     case WebCore::MediaStreamRequest::Type::DisplayMediaWithAudio:
         m_mutedCaptureKindsDesiredByWebApp.remove(WebCore::MediaProducerMediaCaptureKind::SystemAudio);
-        FALLTHROUGH;
+        [[fallthrough]];
     case WebCore::MediaStreamRequest::Type::DisplayMedia:
         m_mutedCaptureKindsDesiredByWebApp.remove(WebCore::MediaProducerMediaCaptureKind::Display);
         break;

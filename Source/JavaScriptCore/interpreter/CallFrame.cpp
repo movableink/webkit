@@ -204,7 +204,7 @@ SourceOrigin CallFrame::callerSourceOrigin(VM& vm)
             // instead of the source origin of the forEach function.
             if (static_cast<FunctionExecutable*>(visitor->codeBlock()->ownerExecutable())->isBuiltinFunction())
                 return IterationStatus::Continue;
-            FALLTHROUGH;
+            [[fallthrough]];
 
         case StackVisitor::Frame::CodeType::Eval:
         case StackVisitor::Frame::CodeType::Module:

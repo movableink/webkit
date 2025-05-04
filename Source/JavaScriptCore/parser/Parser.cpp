@@ -477,7 +477,7 @@ template <class TreeBuilder> TreeSourceElements Parser<LexerType>::parseModuleSo
             }
 
             // This is `import("...")` call or `import.meta` meta property case.
-            FALLTHROUGH;
+            [[fallthrough]];
         }
 
         default: {
@@ -688,7 +688,7 @@ template <class TreeBuilder> TreeSourceElements Parser<LexerType>::parseSingleFu
             statement = parseAsyncFunctionDeclaration(context, functionStart, ExportType::NotExported, DeclarationDefaultContext::Standard, functionConstructorParametersEndPosition);
             break;
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     default:
         failDueToUnexpectedToken();
     }
@@ -752,7 +752,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseStatementList
     case ESCAPED_KEYWORD:
         if (!matchAllowedEscapedContextualKeyword()) [[unlikely]]
             failDueToUnexpectedToken();
-        FALLTHROUGH;
+        [[fallthrough]];
     case IDENT:
         if (*m_token.m_data.ident == m_vm.propertyNames->async && !m_token.m_data.escaped) [[unlikely]] {
             // Eagerly parse as AsyncFunctionDeclaration. This is the uncommon case,
@@ -766,7 +766,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseStatementList
             }
             restoreSavePoint(context, savePoint);
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     case AWAIT:
     case YIELD: {
         if (currentScope()->isStaticBlock()) [[unlikely]] {
@@ -2056,7 +2056,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseStatement(Tre
     case ESCAPED_KEYWORD:
         if (!matchAllowedEscapedContextualKeyword()) [[unlikely]]
             failDueToUnexpectedToken();
-        FALLTHROUGH;
+        [[fallthrough]];
     case LET:
     case IDENT:
     case AWAIT:
@@ -2071,7 +2071,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseStatement(Tre
         if (directiveLiteralLength)
             *directiveLiteralLength = m_token.m_location.endOffset - m_token.m_location.startOffset;
         nonTrivialExpressionCount = m_parserState.nonTrivialExpressionCount;
-        FALLTHROUGH;
+        [[fallthrough]];
     default:
         TreeStatement exprStatement = parseExpressionStatement(context);
         if (directive && nonTrivialExpressionCount != m_parserState.nonTrivialExpressionCount)
@@ -3078,7 +3078,7 @@ parseMethod:
                     goto parseMethod;
                 }
             }
-            FALLTHROUGH;
+            [[fallthrough]];
         case AWAIT: {
             ident = m_token.m_data.ident;
             bool escaped = m_token.m_data.escaped;
@@ -4034,7 +4034,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseExportDeclara
                 result = parseAsyncFunctionDeclaration(context, functionStart, ExportType::Exported);
                 break;
             }
-            FALLTHROUGH;
+            [[fallthrough]];
         default:
             failWithMessage("Expected either a declaration or a variable statement");
         }
@@ -4497,11 +4497,11 @@ parseProperty:
                 goto parseProperty;
             }
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     case YIELD:
     case AWAIT:
         wasIdent = true;
-        FALLTHROUGH;
+        [[fallthrough]];
     case STRING: {
 namedProperty:
         const Identifier* ident = m_token.m_data.ident;
@@ -5148,7 +5148,7 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parsePrimaryExpre
     case ESCAPED_KEYWORD:
         if (matchAllowedEscapedContextualKeyword()) [[likely]]
             goto identifierExpression;
-        FALLTHROUGH;
+        [[fallthrough]];
     default:
         failDueToUnexpectedToken();
     }

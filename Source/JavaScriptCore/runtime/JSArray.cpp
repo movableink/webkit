@@ -1108,7 +1108,7 @@ bool JSArray::setLength(JSGlobalObject* globalObject, unsigned newLength, bool t
             return true;
         convertFromCopyOnWrite(vm);
         butterfly = this->butterfly();
-        FALLTHROUGH;
+        [[fallthrough]];
 
     case ArrayWithUndecided:
     case ArrayWithInt32:

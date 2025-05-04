@@ -777,7 +777,7 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
             spooler.storeGPR(operand.virtualRegister().offset() * sizeof(CPURegister));
             break;
 #else
-            FALLTHROUGH;
+            [[fallthrough]];
 #endif
         }
         case DisplacedInJSStack:

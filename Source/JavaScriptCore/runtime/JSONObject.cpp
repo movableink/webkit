@@ -1625,7 +1625,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                 indexStack.append(0);
             }
             arrayStartVisitMember:
-            FALLTHROUGH;
+            [[fallthrough]];
             case ArrayStartVisitMember: {
                 JSObject* array = asObject(markedStack.last());
                 uint32_t index = indexStack.last();
@@ -1670,7 +1670,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                     outValue = inValue;
                     outValueRange = inValueRange;
                 }
-                FALLTHROUGH;
+                [[fallthrough]];
             }
             case ArrayEndVisitMember: {
                 JSObject* array = asObject(markedStack.last());
@@ -1706,7 +1706,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                 RETURN_IF_EXCEPTION(scope, { });
             }
             objectStartVisitMember:
-            FALLTHROUGH;
+            [[fallthrough]];
             case ObjectStartVisitMember: {
                 JSObject* object = jsCast<JSObject*>(markedStack.last());
                 uint32_t index = indexStack.last();
@@ -1746,7 +1746,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                     outValue = inValue;
                     outValueRange = inValueRange;
                 }
-                FALLTHROUGH;
+                [[fallthrough]];
             }
             case ObjectEndVisitMember: {
                 JSObject* object = jsCast<JSObject*>(markedStack.last());

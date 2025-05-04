@@ -1247,7 +1247,7 @@ static _WKProcessTerminationReason wkProcessTerminationReason(ProcessTermination
     case ProcessTerminationReason::IdleExit:
         // We probably shouldn't bother coming up with a new API type for process-swapping.
         // "Requested by client" seems like the best match for existing types.
-        FALLTHROUGH;
+        [[fallthrough]];
     case ProcessTerminationReason::RequestedByClient:
         return _WKProcessTerminationReasonRequestedByClient;
     case ProcessTerminationReason::ExceededProcessCountLimit:

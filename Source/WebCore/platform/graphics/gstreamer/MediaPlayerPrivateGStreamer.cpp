@@ -980,7 +980,7 @@ unsigned long long MediaPlayerPrivateGStreamer::totalBytes() const
             gst_iterator_resync(iter);
             break;
         case GST_ITERATOR_ERROR:
-            FALLTHROUGH;
+            [[fallthrough]];
         case GST_ITERATOR_DONE:
             done = true;
             break;
@@ -2772,7 +2772,7 @@ void MediaPlayerPrivateGStreamer::updateStates()
             m_networkState = MediaPlayer::NetworkState::Empty;
             break;
         case GST_STATE_PAUSED:
-            FALLTHROUGH;
+            [[fallthrough]];
         case GST_STATE_PLAYING: {
             bool isLooping = player && player->isLooping();
             if (m_wasBuffering) {

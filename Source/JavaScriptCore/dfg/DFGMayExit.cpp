@@ -278,7 +278,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
             break;
         if (node->isBinaryUseKind(OtherUse) || node->isSymmetricBinaryUseKind(OtherUse, UntypedUse))
             break;
-        FALLTHROUGH;
+        [[fallthrough]];
     case CompareEq:
     case CompareLess:
     case CompareLessEq:

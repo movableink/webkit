@@ -81,7 +81,7 @@ inline JSValue opEnumeratorGetByVal(JSGlobalObject* globalObject, JSValue baseVa
             if (enumeratorMetadata)
                 *enumeratorMetadata |= static_cast<uint8_t>(JSPropertyNameEnumerator::HasSeenOwnStructureModeStructureMismatch);
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     }
 
     case JSPropertyNameEnumerator::GenericMode: {

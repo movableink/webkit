@@ -1687,13 +1687,13 @@ void MediaPlayerPrivateWebM::ensureLayerOrVideoRenderer(MediaPlayerEnums::NeedsR
     switch (acceleratedVideoMode()) {
     case AcceleratedVideoMode::Layer:
         destroyVideoRenderer();
-        FALLTHROUGH;
+        [[fallthrough]];
     case AcceleratedVideoMode::StagedLayer:
         ensureLayer();
         break;
     case AcceleratedVideoMode::VideoRenderer:
         destroyLayer();
-        FALLTHROUGH;
+        [[fallthrough]];
     case AcceleratedVideoMode::StagedVideoRenderer:
         ensureVideoRenderer();
         break;
@@ -1717,13 +1717,13 @@ void MediaPlayerPrivateWebM::ensureLayerOrVideoRenderer(MediaPlayerEnums::NeedsR
 #else
         needsRenderingModeChanged = MediaPlayerEnums::NeedsRenderingModeChanged::Yes;
 #endif
-        FALLTHROUGH;
+        [[fallthrough]];
     case AcceleratedVideoMode::VideoRenderer:
         setVideoRenderer(renderer.get());
         break;
     case AcceleratedVideoMode::StagedLayer:
         needsRenderingModeChanged = MediaPlayerEnums::NeedsRenderingModeChanged::Yes;
-        FALLTHROUGH;
+        [[fallthrough]];
     case AcceleratedVideoMode::StagedVideoRenderer:
         stageVideoRenderer(renderer.get());
         break;

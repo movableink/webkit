@@ -150,7 +150,7 @@ void HTMLIFrameElement::attributeChanged(const QualifiedName& name, const AtomSt
         break;
     case AttributeNames::srcdocAttr:
     case AttributeNames::srcAttr:
-        FALLTHROUGH;
+        [[fallthrough]];
     default:
         HTMLFrameElementBase::attributeChanged(name, oldValue, newValue, attributeModificationReason);
         break;

@@ -306,7 +306,7 @@ Vector<MarkedText> MarkedText::collectForDocumentMarkers(const RenderText& rende
             if (!shouldPaintMarker)
                 break;
 
-            BFALLTHROUGH;
+            [[fallthrough]];
         }
 #endif
         case DocumentMarkerType::DictationAlternatives:

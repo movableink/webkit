@@ -1184,7 +1184,7 @@ void DocumentLoader::continueAfterContentPolicy(PolicyAction policy)
     case PolicyAction::LoadWillContinueInAnotherProcess:
         ASSERT_NOT_REACHED();
 #if !ASSERT_ENABLED
-        FALLTHROUGH;
+        [[fallthrough]];
 #endif
     case PolicyAction::Ignore:
         if (RefPtr mainResourceLoader = this->mainResourceLoader())

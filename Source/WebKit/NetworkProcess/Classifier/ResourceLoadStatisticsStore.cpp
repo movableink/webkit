@@ -2770,7 +2770,7 @@ bool ResourceLoadStatisticsStore::shouldRemoveAllButCookiesFor(const DomainData&
     OperatingDatesWindow window { };
     switch (firstPartyWebsiteDataRemovalMode()) {
     case FirstPartyWebsiteDataRemovalMode::AllButCookies:
-        FALLTHROUGH;
+        [[fallthrough]];
     case FirstPartyWebsiteDataRemovalMode::None:
         window = resourceStatistic.dataRemovalFrequency == DataRemovalFrequency::Short ? OperatingDatesWindow::Short : OperatingDatesWindow::Long;
         break;

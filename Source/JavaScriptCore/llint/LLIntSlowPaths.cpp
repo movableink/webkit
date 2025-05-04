@@ -2753,7 +2753,7 @@ extern "C" UGPRPair SYSV_ABI llint_slow_path_checkpoint_osr_exit_from_inlined_ca
             }
             hasInstanceOrPrototype = constructor.get(globalObject, vm.propertyNames->prototype);
             RETURN_IF_EXCEPTION(throwScope, { });
-            FALLTHROUGH;
+            [[fallthrough]];
         }
         case OpInstanceof::instanceof:
             bool result = JSObject::defaultHasInstance(globalObject, value, hasInstanceOrPrototype);

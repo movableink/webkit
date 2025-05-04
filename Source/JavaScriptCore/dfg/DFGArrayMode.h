@@ -614,7 +614,7 @@ private:
         case Array::Array:
             if (hasInt32(shape) || hasDouble(shape) || hasContiguous(shape))
                 return asArrayModesIgnoringTypedArrays(shape | IsArray) | asArrayModesIgnoringTypedArrays(shape | IsArray | CopyOnWrite);
-            FALLTHROUGH;
+            [[fallthrough]];
         case Array::OriginalNonCopyOnWriteArray:
             return asArrayModesIgnoringTypedArrays(shape | IsArray);
         case Array::PossiblyArray:

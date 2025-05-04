@@ -4930,7 +4930,7 @@ void SpeculativeJIT::compilePutByVal(Node* node)
     }
     case Array::Int32: {
         speculateInt32(child3);
-        FALLTHROUGH;
+        [[fallthrough]];
     }
     case Array::Contiguous: {
         compileContiguousPutByVal(node);
