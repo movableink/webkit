@@ -58,7 +58,7 @@ public:
 
         // Because of the above maximumLength requirement, allocationSize can never overflow.
         void* buffer = tryAllocateCell<JSImmutableButterfly>(vm, allocationSize(length));
-        if (UNLIKELY(!buffer))
+        if (!buffer) [[unlikely]]
             return nullptr;
         JSImmutableButterfly* result = new (NotNull, buffer) JSImmutableButterfly(vm, structure, length);
         result->finishCreation(vm);
@@ -91,7 +91,7 @@ public:
         }
 
         JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), length);
-        if (UNLIKELY(!result)) {
+        if (!result) [[unlikely]] {
             throwOutOfMemoryError(globalObject, throwScope);
             return nullptr;
         }

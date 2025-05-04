@@ -504,7 +504,7 @@ bool JSGenericTypedArrayView<Adaptor>::setFromArrayLike(JSGlobalObject* globalOb
         RETURN_IF_EXCEPTION(scope, false);
         bool success = setIndex(globalObject, offset + i, value);
         EXCEPTION_ASSERT(!scope.exception() || !success);
-        if (UNLIKELY(!success))
+        if (!success) [[unlikely]]
             return false;
     }
     for (size_t i = safeLength; i < sourceLength; ++i) {
@@ -512,7 +512,7 @@ bool JSGenericTypedArrayView<Adaptor>::setFromArrayLike(JSGlobalObject* globalOb
         RETURN_IF_EXCEPTION(scope, false);
         bool success = setIndex(globalObject, offset + i, value);
         EXCEPTION_ASSERT(!scope.exception() || !success);
-        if (UNLIKELY(!success))
+        if (!success) [[unlikely]]
             return false;
     }
     return true;
@@ -772,7 +772,7 @@ DEFINE_VISIT_CHILDREN_WITH_MODIFIER(template<typename Adaptor>, JSGenericTypedAr
 template<typename Adaptor> inline size_t JSGenericTypedArrayView<Adaptor>::byteLength() const
 {
     // https://tc39.es/proposal-resizablearraybuffer/#sec-get-%typedarray%.prototype.bytelength
-    if (LIKELY(canUseRawFieldsDirectly()))
+    if (canUseRawFieldsDirectly()) [[likely]]
         return byteLengthRaw();
     IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
     return integerIndexedObjectByteLength(const_cast<JSGenericTypedArrayView*>(this), getter);
@@ -795,7 +795,7 @@ template<typename Adaptor> inline typename Adaptor::Type* JSGenericTypedArrayVie
 
 template<typename Adaptor> inline bool JSGenericTypedArrayView<Adaptor>::inBounds(size_t i) const
 {
-    if (LIKELY(canUseRawFieldsDirectly()))
+    if (canUseRawFieldsDirectly()) [[likely]]
         return i < lengthRaw();
     size_t bufferByteLength = const_cast<JSGenericTypedArrayView*>(this)->existingBufferInButterfly()->byteLength();
     size_t byteOffset = const_cast<JSGenericTypedArrayView*>(this)->byteOffsetRaw();

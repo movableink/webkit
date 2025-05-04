@@ -779,7 +779,7 @@ CodePtr<JSEntryPtrTag> FunctionSignature::jsToWasmICEntrypoint() const
     jit.farJump(GPRInfo::returnValueGPR, ExceptionHandlerPtrTag);
 
     LinkBuffer linkBuffer(jit, nullptr, LinkBuffer::Profile::WasmThunk, JITCompilationCanFail);
-    if (UNLIKELY(linkBuffer.didFailToAllocate()))
+    if (linkBuffer.didFailToAllocate()) [[unlikely]]
         return nullptr;
 
     auto code = FINALIZE_WASM_CODE(linkBuffer, JSEntryPtrTag, nullptr, "JS->Wasm IC %s", WTF::toCString(*this).data());

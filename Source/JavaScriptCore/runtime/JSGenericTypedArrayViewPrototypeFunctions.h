@@ -107,7 +107,7 @@ inline JSArrayBufferView* speciesConstruct(JSGlobalObject* globalObject, ViewCla
     if (LIKELY(inSameRealm)) {
         bool isValid = speciesWatchpointIsValid(globalObject, exemplar);
         RETURN_IF_EXCEPTION(scope, nullptr);
-        if (LIKELY(isValid))
+        if (isValid) [[likely]]
             RELEASE_AND_RETURN(scope, defaultConstructor());
     }
 
@@ -185,7 +185,7 @@ inline size_t argumentClampedIndexFromStartOrEnd(JSGlobalObject* globalObject, J
     if (value.isUndefined())
         return undefinedValue;
 
-    if (LIKELY(value.isInt32())) {
+    if (value.isInt32()) [[likely]] {
         int64_t indexInt = value.asInt32();
         if (indexInt < 0) {
             indexInt += length;
@@ -304,7 +304,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncSet(VM& vm, JSGlobalO
         JSArrayBufferView* sourceView = jsCast<JSArrayBufferView*>(source);
         IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
         auto lengthValue = integerIndexedObjectLength(sourceView, getter);
-        if (UNLIKELY(!lengthValue))
+        if (!lengthValue) [[unlikely]]
             return throwVMTypeError(globalObject, scope, typedArrayBufferHasBeenDetachedErrorMessage);
         scope.release();
         thisObject->setFromTypedArray(globalObject, offset, sourceView, 0, lengthValue.value(), CopyType::Unobservable);
@@ -344,7 +344,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncCopyWithin(VM& vm, JS
     if (count > 0) {
         IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
         auto updatedLength = integerIndexedObjectLength(thisObject, getter);
-        if (UNLIKELY(!updatedLength))
+        if (!updatedLength) [[unlikely]]
             return throwVMTypeError(globalObject, scope, typedArrayBufferHasBeenDetachedErrorMessage);
 
         // ResizableArrayBuffer can shrink the length. Thus, we need to check again to see whether we can copy things.
@@ -452,7 +452,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncIncludes(VM& vm, JSGl
     {
         IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
         auto lengthValue = integerIndexedObjectLength(thisObject, getter);
-        if (UNLIKELY(!lengthValue))
+        if (!lengthValue) [[unlikely]]
             return JSValue::encode(jsBoolean(valueToFind.isUndefined()));
 
         updatedLength = lengthValue.value();
@@ -517,7 +517,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncIndexOf(VM& vm, JSGlo
     {
         IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
         auto lengthValue = integerIndexedObjectLength(thisObject, getter);
-        if (UNLIKELY(!lengthValue)) {
+        if (!lengthValue) [[unlikely]] {
             // indexOf only sees elements when HasProperty passed. Thus, even though length gets smaller, the trailing undefineds are not checked.
             return JSValue::encode(jsNumber(-1));
         }
@@ -552,7 +552,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncJoin(VM& vm, JSGlobal
     auto joinWithSeparator = [&] (StringView separator) -> EncodedJSValue {
         IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
         auto updatedLength = integerIndexedObjectLength(thisObject, getter);
-        if (UNLIKELY(!updatedLength)) {
+        if (!updatedLength) [[unlikely]] {
             JSStringJoiner joiner(separator);
             joiner.reserveCapacity(globalObject, length);
             RETURN_IF_EXCEPTION(scope, { });
@@ -624,7 +624,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncFill(VM& vm, JSGlobal
     // https://tc39.es/proposal-resizablearraybuffer/#sec-%typedarray%.prototype.fill
     IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
     auto updatedLength = integerIndexedObjectLength(thisObject, getter);
-    if (UNLIKELY(!updatedLength))
+    if (!updatedLength) [[unlikely]]
         return throwVMTypeError(globalObject, scope, typedArrayBufferHasBeenDetachedErrorMessage);
 
     end = std::min(end, updatedLength.value());
@@ -694,7 +694,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncLastIndexOf(VM& vm, J
     {
         IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
         auto lengthValue = integerIndexedObjectLength(thisObject, getter);
-        if (UNLIKELY(!lengthValue))
+        if (!lengthValue) [[unlikely]]
             return JSValue::encode(jsNumber(-1));
 
         length = lengthValue.value();
@@ -773,12 +773,12 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncForEach(VM& vm, JSGlo
 
     JSValue functorValue = callFrame->argument(0);
     auto callData = JSC::getCallData(functorValue);
-    if (UNLIKELY(callData.type == CallData::Type::None))
+    if (callData.type == CallData::Type::None) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.forEach callback must be a function"_s);
 
     JSValue thisArg = callFrame->argument(1);
 
-    if (LIKELY(callData.type == CallData::Type::JS)) {
+    if (callData.type == CallData::Type::JS) [[likely]] {
         CachedCall cachedCall(globalObject, jsCast<JSFunction*>(functorValue), 3);
         RETURN_IF_EXCEPTION(scope, { });
 
@@ -801,7 +801,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncForEach(VM& vm, JSGlo
         args.append(element);
         args.append(jsNumber(index));
         args.append(thisObject);
-        if (UNLIKELY(args.hasOverflowed())) {
+        if (args.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return IterationStatus::Continue;
         }
@@ -827,12 +827,12 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncFind(VM& vm, JSGlobal
 
     JSValue functorValue = callFrame->argument(0);
     auto callData = JSC::getCallData(functorValue);
-    if (UNLIKELY(callData.type == CallData::Type::None))
+    if (callData.type == CallData::Type::None) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.find callback must be a function"_s);
 
     JSValue thisArg = callFrame->argument(1);
 
-    if (LIKELY(callData.type == CallData::Type::JS)) {
+    if (callData.type == CallData::Type::JS) [[likely]] {
         CachedCall cachedCall(globalObject, jsCast<JSFunction*>(functorValue), 3);
         RETURN_IF_EXCEPTION(scope, { });
 
@@ -868,7 +868,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncFind(VM& vm, JSGlobal
         args.append(element);
         args.append(jsNumber(index));
         args.append(thisObject);
-        if (UNLIKELY(args.hasOverflowed())) {
+        if (args.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return IterationStatus::Continue;
         }
@@ -900,12 +900,12 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncFindIndex(VM& vm, JSG
 
     JSValue functorValue = callFrame->argument(0);
     auto callData = JSC::getCallData(functorValue);
-    if (UNLIKELY(callData.type == CallData::Type::None))
+    if (callData.type == CallData::Type::None) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.findIndex callback must be a function"_s);
 
     JSValue thisArg = callFrame->argument(1);
 
-    if (LIKELY(callData.type == CallData::Type::JS)) {
+    if (callData.type == CallData::Type::JS) [[likely]] {
         CachedCall cachedCall(globalObject, jsCast<JSFunction*>(functorValue), 3);
         RETURN_IF_EXCEPTION(scope, { });
 
@@ -941,7 +941,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncFindIndex(VM& vm, JSG
         args.append(element);
         args.append(jsNumber(index));
         args.append(thisObject);
-        if (UNLIKELY(args.hasOverflowed())) {
+        if (args.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return IterationStatus::Continue;
         }
@@ -973,12 +973,12 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncFindLast(VM& vm, JSGl
 
     JSValue functorValue = callFrame->argument(0);
     auto callData = JSC::getCallData(functorValue);
-    if (UNLIKELY(callData.type == CallData::Type::None))
+    if (callData.type == CallData::Type::None) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.findLast callback must be a function"_s);
 
     JSValue thisArg = callFrame->argument(1);
 
-    if (LIKELY(callData.type == CallData::Type::JS)) {
+    if (callData.type == CallData::Type::JS) [[likely]] {
         CachedCall cachedCall(globalObject, jsCast<JSFunction*>(functorValue), 3);
         RETURN_IF_EXCEPTION(scope, { });
 
@@ -1014,7 +1014,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncFindLast(VM& vm, JSGl
         args.append(element);
         args.append(jsNumber(index));
         args.append(thisObject);
-        if (UNLIKELY(args.hasOverflowed())) {
+        if (args.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return IterationStatus::Continue;
         }
@@ -1046,12 +1046,12 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncFindLastIndex(VM& vm,
 
     JSValue functorValue = callFrame->argument(0);
     auto callData = JSC::getCallData(functorValue);
-    if (UNLIKELY(callData.type == CallData::Type::None))
+    if (callData.type == CallData::Type::None) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.findLastIndex callback must be a function"_s);
 
     JSValue thisArg = callFrame->argument(1);
 
-    if (LIKELY(callData.type == CallData::Type::JS)) {
+    if (callData.type == CallData::Type::JS) [[likely]] {
         CachedCall cachedCall(globalObject, jsCast<JSFunction*>(functorValue), 3);
         RETURN_IF_EXCEPTION(scope, { });
 
@@ -1087,7 +1087,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncFindLastIndex(VM& vm,
         args.append(element);
         args.append(jsNumber(index));
         args.append(thisObject);
-        if (UNLIKELY(args.hasOverflowed())) {
+        if (args.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return IterationStatus::Continue;
         }
@@ -1119,12 +1119,12 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncEvery(VM& vm, JSGloba
 
     JSValue functorValue = callFrame->argument(0);
     auto callData = JSC::getCallData(functorValue);
-    if (UNLIKELY(callData.type == CallData::Type::None))
+    if (callData.type == CallData::Type::None) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.every callback must be a function"_s);
 
     JSValue thisArg = callFrame->argument(1);
 
-    if (LIKELY(callData.type == CallData::Type::JS)) {
+    if (callData.type == CallData::Type::JS) [[likely]] {
         CachedCall cachedCall(globalObject, jsCast<JSFunction*>(functorValue), 3);
         RETURN_IF_EXCEPTION(scope, { });
 
@@ -1160,7 +1160,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncEvery(VM& vm, JSGloba
         args.append(element);
         args.append(jsNumber(index));
         args.append(thisObject);
-        if (UNLIKELY(args.hasOverflowed())) {
+        if (args.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return IterationStatus::Continue;
         }
@@ -1192,12 +1192,12 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncSome(VM& vm, JSGlobal
 
     JSValue functorValue = callFrame->argument(0);
     auto callData = JSC::getCallData(functorValue);
-    if (UNLIKELY(callData.type == CallData::Type::None))
+    if (callData.type == CallData::Type::None) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.some callback must be a function"_s);
 
     JSValue thisArg = callFrame->argument(1);
 
-    if (LIKELY(callData.type == CallData::Type::JS)) {
+    if (callData.type == CallData::Type::JS) [[likely]] {
         CachedCall cachedCall(globalObject, jsCast<JSFunction*>(functorValue), 3);
         RETURN_IF_EXCEPTION(scope, { });
 
@@ -1233,7 +1233,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncSome(VM& vm, JSGlobal
         args.append(element);
         args.append(jsNumber(index));
         args.append(thisObject);
-        if (UNLIKELY(args.hasOverflowed())) {
+        if (args.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return IterationStatus::Continue;
         }
@@ -1338,7 +1338,7 @@ static ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncSortImpl(VM& v
 
     auto result = src;
 
-    if (LIKELY(callData.type == CallData::Type::JS)) {
+    if (callData.type == CallData::Type::JS) [[likely]] {
         CachedCall cachedCall(globalObject, jsCast<JSFunction*>(comparatorValue), 2);
         RETURN_IF_EXCEPTION(scope, { });
         result = arrayStableSort(vm, src, dst, [&](auto left, auto right) ALWAYS_INLINE_LAMBDA {
@@ -1369,7 +1369,7 @@ static ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncSortImpl(VM& v
 
             args.append(leftValue);
             args.append(rightValue);
-            if (UNLIKELY(args.hasOverflowed())) {
+            if (args.hasOverflowed()) [[unlikely]] {
                 throwOutOfMemoryError(globalObject, scope);
                 return false;
             }
@@ -1396,7 +1396,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncSort(VM& vm, JSGlobal
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue comparatorValue = callFrame->argument(0);
-    if (UNLIKELY(!comparatorValue.isUndefined() && !comparatorValue.isCallable()))
+    if (!comparatorValue.isUndefined() && !comparatorValue.isCallable()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.sort requires the comparator argument to be a function or undefined"_s);
 
     // https://tc39.es/ecma262/#sec-%typedarray%.prototype.sort
@@ -1415,7 +1415,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncToSorted(VM& vm, JSGl
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue comparatorValue = callFrame->argument(0);
-    if (UNLIKELY(!comparatorValue.isUndefined() && !comparatorValue.isCallable()))
+    if (!comparatorValue.isUndefined() && !comparatorValue.isCallable()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.toSorted requires the comparator argument to be a function or undefined"_s);
 
     ViewClass* thisObject = jsCast<ViewClass*>(callFrame->thisValue());
@@ -1487,7 +1487,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewPrivateFuncFromFast(VM& vm, JS
 
     IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
     auto lengthValue = integerIndexedObjectLength(items, getter);
-    if (UNLIKELY(!lengthValue))
+    if (!lengthValue) [[unlikely]]
         return throwVMTypeError(globalObject, scope, typedArrayBufferHasBeenDetachedErrorMessage);
     size_t length = lengthValue.value();
 
@@ -1516,7 +1516,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncSlice(VM& vm, JSGloba
     {
         IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
         auto lengthValue = integerIndexedObjectLength(thisObject, getter);
-        if (UNLIKELY(!lengthValue))
+        if (!lengthValue) [[unlikely]]
             return throwVMTypeError(globalObject, scope, typedArrayBufferHasBeenDetachedErrorMessage);
         thisLength = lengthValue.value();
     }
@@ -1557,7 +1557,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncSlice(VM& vm, JSGloba
     {
         IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
         auto updatedLength = integerIndexedObjectLength(thisObject, getter);
-        if (UNLIKELY(!updatedLength))
+        if (!updatedLength) [[unlikely]]
             return throwVMTypeError(globalObject, scope, typedArrayBufferHasBeenDetachedErrorMessage);
         end = std::min(updatedLength.value(), end);
     }

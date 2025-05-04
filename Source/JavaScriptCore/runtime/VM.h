@@ -1164,7 +1164,7 @@ namespace WTF {
 template<> struct DefaultRefDerefTraits<JSC::VM> {
     static ALWAYS_INLINE JSC::VM* refIfNotNull(JSC::VM* ptr)
     {
-        if (LIKELY(ptr))
+        if (ptr) [[likely]]
             ptr->refSuppressingSaferCPPChecking();
         return ptr;
     }
@@ -1177,7 +1177,7 @@ template<> struct DefaultRefDerefTraits<JSC::VM> {
 
     static ALWAYS_INLINE void derefIfNotNull(JSC::VM* ptr)
     {
-        if (LIKELY(ptr))
+        if (ptr) [[likely]]
             ptr->derefSuppressingSaferCPPChecking();
     }
 };

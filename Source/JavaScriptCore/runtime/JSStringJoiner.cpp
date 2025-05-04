@@ -108,7 +108,7 @@ static inline String joinStrings(const JSStringJoiner::Entries& strings, std::sp
 
     std::span<OutputCharacterType> data;
     String result = StringImpl::tryCreateUninitialized(joinedLength, data);
-    if (UNLIKELY(result.isNull()))
+    if (result.isNull()) [[unlikely]]
         return result;
 
     unsigned size = strings.size();
@@ -176,7 +176,7 @@ static inline String joinStrings(JSGlobalObject* globalObject, const WriteBarrie
 
     std::span<OutputCharacterType> data;
     String result = StringImpl::tryCreateUninitialized(joinedLength, data);
-    if (UNLIKELY(result.isNull())) {
+    if (result.isNull()) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }
@@ -260,7 +260,7 @@ JSValue JSStringJoiner::joinImpl(JSGlobalObject* globalObject)
             result = joinStrings<UChar>(m_strings, m_separator.span16(), length);
     }
 
-    if (UNLIKELY(result.isNull())) {
+    if (result.isNull()) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }

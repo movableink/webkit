@@ -174,14 +174,14 @@ auto SectionParser::parseImport() -> PartialResult
             bool isImport = true;
             kindIndex = m_info->tables.size();
             PartialResult result = parseTableHelper(isImport);
-            if (UNLIKELY(!result))
+            if (!result) [[unlikely]]
                 return makeUnexpected(WTFMove(result.error()));
             break;
         }
         case ExternalKind::Memory: {
             bool isImport = true;
             PartialResult result = parseMemoryHelper(isImport);
-            if (UNLIKELY(!result))
+            if (!result) [[unlikely]]
                 return makeUnexpected(WTFMove(result.error()));
             break;
         }
@@ -341,7 +341,7 @@ auto SectionParser::parseTable() -> PartialResult
     for (unsigned i = 0; i < count; ++i) {
         bool isImport = false;
         PartialResult result = parseTableHelper(isImport);
-        if (UNLIKELY(!result))
+        if (!result) [[unlikely]]
             return makeUnexpected(WTFMove(result.error()));
     }
 

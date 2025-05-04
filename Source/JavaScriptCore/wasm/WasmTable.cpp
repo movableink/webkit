@@ -152,7 +152,7 @@ std::optional<uint32_t> Table::grow(uint32_t delta, JSValue defaultValue)
         bool success = checkedGrow(static_cast<ExternOrAnyRefTable*>(this)->m_jsValues, [&](auto& slot) {
             slot.set(vm, m_owner, defaultValue);
         });
-        if (UNLIKELY(!success))
+        if (!success) [[unlikely]]
             return std::nullopt;
         break;
     }
@@ -160,7 +160,7 @@ std::optional<uint32_t> Table::grow(uint32_t delta, JSValue defaultValue)
         bool success = checkedGrow(static_cast<FuncRefTable*>(this)->m_importableFunctions, [&](auto& slot) {
             slot.m_value.set(vm, m_owner, defaultValue);
         });
-        if (UNLIKELY(!success))
+        if (!success) [[unlikely]]
             return std::nullopt;
         break;
     }

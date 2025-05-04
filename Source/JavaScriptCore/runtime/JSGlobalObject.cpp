@@ -1999,7 +1999,7 @@ bool JSGlobalObject::put(JSCell* cell, JSGlobalObject* globalObject, PropertyNam
     JSGlobalObject* thisObject = jsCast<JSGlobalObject*>(cell);
     ASSERT(!Heap::heap(value) || Heap::heap(value) == Heap::heap(thisObject));
 
-    if (UNLIKELY(isThisValueAltered(slot, thisObject))) {
+    if (isThisValueAltered(slot, thisObject)) [[unlikely]] {
         SymbolTableEntry::Fast entry = thisObject->symbolTable()->get(propertyName.uid());
         if (!entry.isNull()) {
             if (entry.isReadOnly())
@@ -2082,7 +2082,7 @@ void JSGlobalObject::createGlobalFunctionBinding(const Identifier& ident)
     PropertySlot slot(this, PropertySlot::InternalMethodType::GetOwnProperty);
     bool hasProperty = getOwnPropertySlot(this, this, ident, slot);
     scope.assertNoExceptionExceptTermination();
-    if (UNLIKELY(hasProperty)) {
+    if (hasProperty) [[unlikely]] {
         if (slot.attributes() & PropertyAttribute::DontDelete) {
             ASSERT(!(slot.attributes() & PropertyAttribute::ReadOnly));
             // Nothing to do here: there is either a symbol table entry or non-configurable writable property

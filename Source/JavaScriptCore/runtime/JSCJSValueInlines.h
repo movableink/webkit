@@ -1091,7 +1091,7 @@ ALWAYS_INLINE bool JSValue::getPropertySlot(JSGlobalObject* globalObject, Proper
     // If this is a primitive, we'll need to synthesize the prototype -
     // and if it's a string there are special properties to check first.
     JSObject* object;
-    if (UNLIKELY(!isObject())) {
+    if (!isObject()) [[unlikely]] {
         if (isString()) {
             bool hasProperty = asString(*this)->getStringPropertySlot(globalObject, propertyName, slot);
             RETURN_IF_EXCEPTION(scope, false);
@@ -1100,7 +1100,7 @@ ALWAYS_INLINE bool JSValue::getPropertySlot(JSGlobalObject* globalObject, Proper
         }
         object = synthesizePrototype(globalObject);
         EXCEPTION_ASSERT(!!scope.exception() == !object);
-        if (UNLIKELY(!object))
+        if (!object) [[unlikely]]
             return false;
     } else
         object = asObject(asCell());
@@ -1113,7 +1113,7 @@ ALWAYS_INLINE bool JSValue::getOwnPropertySlot(JSGlobalObject* globalObject, Pro
     // If this is a primitive, we'll need to synthesize the prototype -
     // and if it's a string there are special properties to check first.
     auto scope = DECLARE_THROW_SCOPE(getVM(globalObject));
-    if (UNLIKELY(!isObject())) {
+    if (!isObject()) [[unlikely]] {
         if (isString())
             RELEASE_AND_RETURN(scope, asString(*this)->getStringPropertySlot(globalObject, propertyName, slot));
 
@@ -1136,7 +1136,7 @@ ALWAYS_INLINE JSValue JSValue::get(JSGlobalObject* globalObject, unsigned proper
     // If this is a primitive, we'll need to synthesize the prototype -
     // and if it's a string there are special properties to check first.
     JSObject* object;
-    if (UNLIKELY(!isObject())) {
+    if (!isObject()) [[unlikely]] {
         if (isString()) {
             bool hasProperty = asString(*this)->getStringPropertySlot(globalObject, propertyName, slot);
             RETURN_IF_EXCEPTION(scope, { });
@@ -1145,7 +1145,7 @@ ALWAYS_INLINE JSValue JSValue::get(JSGlobalObject* globalObject, unsigned proper
         }
         object = synthesizePrototype(globalObject);
         EXCEPTION_ASSERT(!!scope.exception() == !object);
-        if (UNLIKELY(!object))
+        if (!object) [[unlikely]]
             return JSValue();
     } else
         object = asObject(asCell());
@@ -1178,7 +1178,7 @@ ALWAYS_INLINE T JSValue::getAs(JSGlobalObject* globalObject, PropertyNameType pr
 
 inline bool JSValue::put(JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
-    if (UNLIKELY(!isCell()))
+    if (!isCell()) [[unlikely]]
         return putToPrimitive(globalObject, propertyName, value, slot);
 
     return asCell()->methodTable()->put(asCell(), globalObject, propertyName, value, slot);
@@ -1186,14 +1186,14 @@ inline bool JSValue::put(JSGlobalObject* globalObject, PropertyName propertyName
 
 ALWAYS_INLINE bool JSValue::putInline(JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
-    if (UNLIKELY(!isCell()))
+    if (!isCell()) [[unlikely]]
         return putToPrimitive(globalObject, propertyName, value, slot);
     return asCell()->putInline(globalObject, propertyName, value, slot);
 }
 
 inline bool JSValue::putByIndex(JSGlobalObject* globalObject, unsigned propertyName, JSValue value, bool shouldThrow)
 {
-    if (UNLIKELY(!isCell()))
+    if (!isCell()) [[unlikely]]
         return putToPrimitiveByIndex(globalObject, propertyName, value, shouldThrow);
 
     return asCell()->methodTable()->putByIndex(asCell(), globalObject, propertyName, value, shouldThrow);

@@ -58,7 +58,7 @@ static Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> handleBa
     emitThrowWasmToJSException(jit, GPRInfo::argumentGPR0, exceptionType);
 
     LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::WasmThunk, JITCompilationCanFail);
-    if (UNLIKELY(linkBuffer.didFailToAllocate()))
+    if (linkBuffer.didFailToAllocate()) [[unlikely]]
         return makeUnexpected(BindingFailure::OutOfMemory);
 
     return FINALIZE_WASM_CODE(linkBuffer, WasmEntryPtrTag, nullptr, "WebAssembly->JavaScript throw exception due to invalid use of restricted type in import[%i]", importIndex);

@@ -877,7 +877,7 @@ JSValue WebAssemblyModuleRecord::evaluate(JSGlobalObject* globalObject)
         return IterationStatus::Continue;
     });
 
-    if (UNLIKELY(exception))
+    if (exception) [[unlikely]]
         return exception.value();
 
     // Validation of all segment ranges comes before all Table and Memory initialization.
@@ -899,7 +899,7 @@ JSValue WebAssemblyModuleRecord::evaluate(JSGlobalObject* globalObject)
         return IterationStatus::Continue;
     });
 
-    if (UNLIKELY(exception))
+    if (exception) [[unlikely]]
         return exception.value();
 
     ASSERT(!exception);

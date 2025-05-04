@@ -101,11 +101,11 @@ InstanceType* unwrapForLegacyIntlConstructor(JSGlobalObject* globalObject, JSVal
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* thisObject = jsDynamicCast<JSObject*>(thisValue);
-    if (UNLIKELY(!thisObject))
+    if (!thisObject) [[unlikely]]
         return nullptr;
 
     auto* instance = jsDynamicCast<InstanceType*>(thisObject);
-    if (LIKELY(instance))
+    if (instance) [[likely]]
         return instance;
 
     ASSERT(!constructor->template inherits<JSBoundFunction>());
@@ -293,7 +293,7 @@ inline JSObject* intlGetOptionsObject(JSGlobalObject* globalObject, JSValue opti
     auto scope = DECLARE_THROW_SCOPE(vm);
     if (options.isUndefined())
         return nullptr;
-    if (LIKELY(options.isObject()))
+    if (options.isObject()) [[likely]]
         return asObject(options);
     throwTypeError(globalObject, scope, "options argument is not an object or undefined"_s);
     return nullptr;

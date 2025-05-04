@@ -75,7 +75,7 @@ public:
                 subscribe->invokeRethrowingException();
 
                 JSC::Exception* exception = scope.exception();
-                if (UNLIKELY(exception)) {
+                if (exception) [[unlikely]] {
                     scope.clearException();
                     subscriber.error(exception->value());
                     return { };
@@ -117,7 +117,7 @@ private:
             next->invokeRethrowingException(value);
 
             JSC::Exception* exception = scope.exception();
-            if (UNLIKELY(exception)) {
+            if (exception) [[unlikely]] {
                 scope.clearException();
                 protectedSubscriber()->error(exception->value());
                 return;
@@ -139,7 +139,7 @@ private:
             error->invokeRethrowingException(value);
 
             JSC::Exception* exception = scope.exception();
-            if (UNLIKELY(exception)) {
+            if (exception) [[unlikely]] {
                 scope.clearException();
                 protectedSubscriber()->error(exception->value());
                 return;
@@ -163,7 +163,7 @@ private:
             complete->invokeRethrowingException();
 
             JSC::Exception* exception = scope.exception();
-            if (UNLIKELY(exception)) {
+            if (exception) [[unlikely]] {
                 scope.clearException();
                 protectedSubscriber()->error(exception->value());
                 return;

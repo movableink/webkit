@@ -82,7 +82,7 @@ ALWAYS_INLINE static JSWebAssemblyException* getException(JSGlobalObject* global
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!thisValue.isCell())) {
+    if (!thisValue.isCell()) [[unlikely]] {
         throwVMError(globalObject, scope, createNotAnObjectError(globalObject, thisValue));
         return nullptr;
     }

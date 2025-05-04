@@ -1421,7 +1421,7 @@ public:
             while (backTrack->matchAmount < minimumMatchCount) {
                 // Try to do a match, and it it succeeds, add it to the list.
                 ParenthesesDisjunctionContext* context = allocParenthesesDisjunctionContext(disjunctionBody, output, term);
-                if (UNLIKELY(!context))
+                if (!context) [[unlikely]]
                     return JSRegExpResult::ErrorNoMemory;
                 fixedMatchResult = matchDisjunction(disjunctionBody, context->getDisjunctionContext());
                 if (fixedMatchResult == JSRegExpResult::Match)
@@ -1452,7 +1452,7 @@ public:
         case QuantifierType::Greedy: {
             while (backTrack->matchAmount < term.atom.quantityMaxCount) {
                 ParenthesesDisjunctionContext* context = allocParenthesesDisjunctionContext(disjunctionBody, output, term);
-                if (UNLIKELY(!context))
+                if (!context) [[unlikely]]
                     return JSRegExpResult::ErrorNoMemory;
                 JSRegExpResult result = matchNonZeroDisjunction(disjunctionBody, context->getDisjunctionContext());
                 if (result == JSRegExpResult::Match)
@@ -1514,7 +1514,7 @@ public:
             while (backTrack->matchAmount < term.atom.quantityMaxCount) {
                 // Try to do a match, and it it succeeds, add it to the list.
                 context = allocParenthesesDisjunctionContext(disjunctionBody, output, term);
-                if (UNLIKELY(!context))
+                if (!context) [[unlikely]]
                     return JSRegExpResult::ErrorNoMemory;
                 result = matchDisjunction(disjunctionBody, context->getDisjunctionContext());
 
@@ -1548,7 +1548,7 @@ public:
             if (result == JSRegExpResult::Match) {
                 while (backTrack->matchAmount < term.atom.quantityMaxCount) {
                     ParenthesesDisjunctionContext* context = allocParenthesesDisjunctionContext(disjunctionBody, output, term);
-                    if (UNLIKELY(!context))
+                    if (!context) [[unlikely]]
                         return JSRegExpResult::ErrorNoMemory;
                     JSRegExpResult parenthesesResult = matchNonZeroDisjunction(disjunctionBody, context->getDisjunctionContext());
                     if (parenthesesResult == JSRegExpResult::Match)
@@ -1595,7 +1595,7 @@ public:
             // If we've not reached the limit, try to add one more match.
             if (backTrack->matchAmount < term.atom.quantityMaxCount) {
                 ParenthesesDisjunctionContext* context = allocParenthesesDisjunctionContext(disjunctionBody, output, term);
-                if (UNLIKELY(!context))
+                if (!context) [[unlikely]]
                     return JSRegExpResult::ErrorNoMemory;
                 JSRegExpResult result = matchNonZeroDisjunction(disjunctionBody, context->getDisjunctionContext());
                 if (result == JSRegExpResult::Match) {
@@ -1724,7 +1724,7 @@ public:
 
     JSRegExpResult matchDisjunction(ByteDisjunction* disjunction, DisjunctionContext* context, bool btrack = false)
     {
-        if (UNLIKELY(!isSafeToRecurse()))
+        if (!isSafeToRecurse()) [[unlikely]]
             return JSRegExpResult::ErrorNoMemory;
 
         if (!--remainingMatchCount) {
@@ -2210,7 +2210,7 @@ public:
         RELEASE_ASSERT(allocatorPool);
 
         DisjunctionContext* context = allocDisjunctionContext(pattern->m_body.get());
-        if (UNLIKELY(!context))
+        if (!context) [[unlikely]]
             return offsetNoMatch;
 
         dataLogLnIf(verbose, "  Interpret input: ", input, "\n  Matching");
@@ -2278,7 +2278,7 @@ public:
 
     std::unique_ptr<BytecodePattern> compile(BumpPointerAllocator* allocator, ConcurrentJSLock* lock, ErrorCode& errorCode)
     {
-        if (UNLIKELY(!isSafeToRecurse())) {
+        if (!isSafeToRecurse()) [[unlikely]] {
             errorCode = ErrorCode::TooManyDisjunctions;
             return nullptr;
         }
@@ -2666,7 +2666,7 @@ public:
 
     std::optional<ErrorCode> WARN_UNUSED_RETURN emitDisjunction(PatternDisjunction* disjunction, CheckedUint32 inputCountAlreadyChecked, unsigned parenthesesInputCountAlreadyChecked, MatchDirection matchDirection = Forward)
     {
-        if (UNLIKELY(!isSafeToRecurse()))
+        if (!isSafeToRecurse()) [[unlikely]]
             return ErrorCode::TooManyDisjunctions;
 
         for (unsigned alt = 0; alt < disjunction->m_alternatives.size(); ++alt) {

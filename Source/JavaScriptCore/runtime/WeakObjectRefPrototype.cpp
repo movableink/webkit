@@ -51,7 +51,7 @@ ALWAYS_INLINE static JSWeakObjectRef* getWeakRef(JSGlobalObject* globalObject, J
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!value.isObject())) {
+    if (!value.isObject()) [[unlikely]] {
         throwTypeError(globalObject, scope, "Called WeakRef function on non-object"_s);
         return nullptr;
     }

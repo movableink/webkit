@@ -96,7 +96,7 @@ void JSLock::lock(intptr_t lockCount) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
 #endif
 
     bool success = m_lock.tryLock();
-    if (UNLIKELY(!success)) {
+    if (!success) [[unlikely]] {
         if (currentThreadIsHoldingLock()) {
             m_lockCount += lockCount;
             return;
@@ -151,7 +151,7 @@ void JSLock::didAcquireLock()
 #if ENABLE(SAMPLING_PROFILER)
     {
         SamplingProfiler* samplingProfiler = m_vm->samplingProfiler();
-        if (UNLIKELY(samplingProfiler))
+        if (samplingProfiler) [[unlikely]]
             samplingProfiler->noticeJSLockAcquisition();
     }
 #endif

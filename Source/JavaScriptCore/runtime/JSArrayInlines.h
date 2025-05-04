@@ -208,7 +208,7 @@ ALWAYS_INLINE void JSArray::pushInline(JSGlobalObject* globalObject, JSValue val
             return;
         }
 
-        if (UNLIKELY(length > MAX_ARRAY_INDEX)) {
+        if (length > MAX_ARRAY_INDEX) [[unlikely]] {
             methodTable()->putByIndex(this, globalObject, length, value, true);
             if (!scope.exception())
                 throwException(globalObject, scope, createRangeError(globalObject, LengthExceededTheMaximumArrayLengthError));
@@ -230,7 +230,7 @@ ALWAYS_INLINE void JSArray::pushInline(JSGlobalObject* globalObject, JSValue val
             return;
         }
 
-        if (UNLIKELY(length > MAX_ARRAY_INDEX)) {
+        if (length > MAX_ARRAY_INDEX) [[unlikely]] {
             methodTable()->putByIndex(this, globalObject, length, value, true);
             if (!scope.exception())
                 throwException(globalObject, scope, createRangeError(globalObject, LengthExceededTheMaximumArrayLengthError));
@@ -266,7 +266,7 @@ ALWAYS_INLINE void JSArray::pushInline(JSGlobalObject* globalObject, JSValue val
             return;
         }
 
-        if (UNLIKELY(length > MAX_ARRAY_INDEX)) {
+        if (length > MAX_ARRAY_INDEX) [[unlikely]] {
             methodTable()->putByIndex(this, globalObject, length, value, true);
             if (!scope.exception())
                 throwException(globalObject, scope, createRangeError(globalObject, LengthExceededTheMaximumArrayLengthError));

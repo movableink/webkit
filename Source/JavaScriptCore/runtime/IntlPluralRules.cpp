@@ -175,7 +175,7 @@ JSObject* IntlPluralRules::resolvedOptions(JSGlobalObject* globalObject) const
     }
 
     JSArray* categories = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), 0);
-    if (UNLIKELY(!categories)) {
+    if (!categories) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }

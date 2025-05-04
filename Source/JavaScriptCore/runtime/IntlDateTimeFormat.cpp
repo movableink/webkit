@@ -834,12 +834,12 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
             return UDAT_NONE;
         };
 
-        if (UNLIKELY(required == RequiredComponent::Date && m_timeStyle != DateTimeStyle::None)) {
+        if (required == RequiredComponent::Date && m_timeStyle != DateTimeStyle::None) [[unlikely]] {
             throwTypeError(globalObject, scope, "timeStyle is specified while formatting date is requested"_s);
             return;
         }
 
-        if (UNLIKELY(required == RequiredComponent::Time && m_dateStyle != DateTimeStyle::None)) {
+        if (required == RequiredComponent::Time && m_dateStyle != DateTimeStyle::None) [[unlikely]] {
             throwTypeError(globalObject, scope, "dateStyle is specified while formatting time is requested"_s);
             return;
         }

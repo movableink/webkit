@@ -226,7 +226,7 @@ inline JSArray* JSArray::tryCreate(VM& vm, Structure* structure, unsigned initia
 
     Butterfly* butterfly;
     IndexingType indexingType = structure->indexingType();
-    if (LIKELY(!hasAnyArrayStorage(indexingType))) {
+    if (!hasAnyArrayStorage(indexingType)) [[likely]] {
         ASSERT(
             hasUndecided(indexingType)
             || hasInt32(indexingType)

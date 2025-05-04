@@ -277,7 +277,7 @@ JSC_DEFINE_HOST_FUNCTION(mathProtoFuncMax, (JSGlobalObject* globalObject, CallFr
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     unsigned argsCount = callFrame->argumentCount();
-    if (UNLIKELY(!argsCount))
+    if (!argsCount) [[unlikely]]
         return JSValue::encode(jsNumber(-std::numeric_limits<double>::infinity()));
 
     double result = callFrame->uncheckedArgument(0).toNumber(globalObject);
@@ -296,7 +296,7 @@ JSC_DEFINE_HOST_FUNCTION(mathProtoFuncMin, (JSGlobalObject* globalObject, CallFr
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     unsigned argsCount = callFrame->argumentCount();
-    if (UNLIKELY(!argsCount))
+    if (!argsCount) [[unlikely]]
         return JSValue::encode(jsNumber(std::numeric_limits<double>::infinity()));
 
     double result = callFrame->uncheckedArgument(0).toNumber(globalObject);

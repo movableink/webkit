@@ -133,7 +133,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewPrivateFuncIsResizableOrGrowableSharedTyp
 
 static inline std::optional<JSType> isTypedArrayViewConstructor(JSValue value)
 {
-    if (UNLIKELY(!value.isCell()))
+    if (!value.isCell()) [[unlikely]]
         return std::nullopt;
     const auto* classInfo = value.asCell()->classInfo();
 
@@ -237,7 +237,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncSet, (JSGlobalObject* globalObje
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncSet);
@@ -248,7 +248,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncCopyWithin, (JSGlobalObject* glo
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncCopyWithin);
@@ -259,7 +259,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncForEach, (JSGlobalObject* global
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncForEach);
@@ -270,7 +270,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncFind, (JSGlobalObject* globalObj
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncFind);
@@ -281,7 +281,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncFindIndex, (JSGlobalObject* glob
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncFindIndex);
@@ -292,7 +292,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncFindLast, (JSGlobalObject* globa
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncFindLast);
@@ -303,7 +303,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncFindLastIndex, (JSGlobalObject* 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncFindLastIndex);
@@ -314,7 +314,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncEvery, (JSGlobalObject* globalOb
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncEvery);
@@ -325,7 +325,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncSome, (JSGlobalObject* globalObj
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncSome);
@@ -336,7 +336,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncSort, (JSGlobalObject* globalObj
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncSort);
@@ -347,7 +347,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncIncludes, (JSGlobalObject* globa
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMError(globalObject, scope, createTypeError(globalObject, "Receiver should be a typed array view but was not an object"_s));
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncIncludes);
@@ -358,7 +358,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncLastIndexOf, (JSGlobalObject* gl
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncLastIndexOf);
@@ -369,7 +369,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncIndexOf, (JSGlobalObject* global
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncIndexOf);
@@ -380,7 +380,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncJoin, (JSGlobalObject* globalObj
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncJoin);
@@ -391,7 +391,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncFill, (JSGlobalObject* globalObj
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncFill);
@@ -402,7 +402,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoGetterFuncBuffer, (JSGlobalObject* g
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoGetterFuncBuffer);
@@ -413,7 +413,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoGetterFuncLength, (JSGlobalObject* g
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoGetterFuncLength);
@@ -424,7 +424,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoGetterFuncByteLength, (JSGlobalObjec
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoGetterFuncByteLength);
@@ -435,7 +435,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoGetterFuncByteOffset, (JSGlobalObjec
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoGetterFuncByteOffset);
@@ -446,7 +446,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncReverse, (JSGlobalObject* global
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncReverse);
@@ -457,7 +457,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncSubarray, (JSGlobalObject* globa
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncSubarray);
@@ -468,7 +468,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncSlice, (JSGlobalObject* globalOb
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncSlice);
@@ -517,7 +517,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncToReversed, (JSGlobalObject* glo
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncToReversed);
@@ -528,7 +528,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncToSorted, (JSGlobalObject* globa
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncToSorted);
@@ -539,7 +539,7 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoFuncWith, (JSGlobalObject* globalObj
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver should be a typed array view but was not an object"_s);
     scope.release();
     CALL_GENERIC_TYPEDARRAY_PROTOTYPE_FUNCTION(genericTypedArrayViewProtoFuncWith);

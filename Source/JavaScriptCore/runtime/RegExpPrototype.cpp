@@ -96,7 +96,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncTest, (JSGlobalObject* globalObject, Cal
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "RegExp.prototype.test requires that |this| be an Object"_s);
     JSObject* thisObject = asObject(thisValue);
 
@@ -121,7 +121,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncTest, (JSGlobalObject* globalObject, Cal
     if (UNLIKELY(regExpExec != regExpBuiltinExec && regExpExec.isCallable())) {
         auto callData = JSC::getCallData(regExpExec);
         ASSERT(callData.type != CallData::Type::None);
-        if (LIKELY(callData.type == CallData::Type::JS)) {
+        if (callData.type == CallData::Type::JS) [[likely]] {
             CachedCall cachedCall(globalObject, jsCast<JSFunction*>(regExpExec), 1);
             RETURN_IF_EXCEPTION(scope, { });
             match = cachedCall.callWithArguments(globalObject, thisValue, str);
@@ -154,7 +154,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncExec, (JSGlobalObject* globalObject, Cal
 
     JSValue thisValue = callFrame->thisValue();
     auto* regexp = jsDynamicCast<RegExpObject*>(thisValue);
-    if (UNLIKELY(!regexp))
+    if (!regexp) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Builtin RegExp exec can only be called on a RegExp object"_s);
     JSString* string = callFrame->argument(0).toStringOrNull(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !string);
@@ -247,7 +247,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncToString, (JSGlobalObject* globalObject,
     JSValue thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
 
     JSObject* thisObject = asObject(thisValue);
@@ -278,7 +278,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterGlobal, (JSGlobalObject* globalObject,
 
     JSValue thisValue = callFrame->thisValue();
     auto* regexp = jsDynamicCast<RegExpObject*>(thisValue);
-    if (UNLIKELY(!regexp)) {
+    if (!regexp) [[unlikely]] {
         if (thisValue == globalObject->regExpPrototype())
             return JSValue::encode(jsUndefined());
         return throwVMTypeError(globalObject, scope, "The RegExp.prototype.global getter can only be called on a RegExp object"_s);
@@ -294,7 +294,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterHasIndices, (JSGlobalObject* globalObj
 
     JSValue thisValue = callFrame->thisValue();
     auto* regexp = jsDynamicCast<RegExpObject*>(thisValue);
-    if (UNLIKELY(!regexp)) {
+    if (!regexp) [[unlikely]] {
         if (thisValue == globalObject->regExpPrototype())
             return JSValue::encode(jsUndefined());
         return throwVMTypeError(globalObject, scope, "The RegExp.prototype.hasIndices getter can only be called on a RegExp object"_s);
@@ -310,7 +310,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterIgnoreCase, (JSGlobalObject* globalObj
 
     JSValue thisValue = callFrame->thisValue();
     auto* regexp = jsDynamicCast<RegExpObject*>(thisValue);
-    if (UNLIKELY(!regexp)) {
+    if (!regexp) [[unlikely]] {
         if (thisValue == globalObject->regExpPrototype())
             return JSValue::encode(jsUndefined());
         return throwVMTypeError(globalObject, scope, "The RegExp.prototype.ignoreCase getter can only be called on a RegExp object"_s);
@@ -326,7 +326,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterMultiline, (JSGlobalObject* globalObje
 
     JSValue thisValue = callFrame->thisValue();
     auto* regexp = jsDynamicCast<RegExpObject*>(thisValue);
-    if (UNLIKELY(!regexp)) {
+    if (!regexp) [[unlikely]] {
         if (thisValue == globalObject->regExpPrototype())
             return JSValue::encode(jsUndefined());
         return throwVMTypeError(globalObject, scope, "The RegExp.prototype.multiline getter can only be called on a RegExp object"_s);
@@ -342,7 +342,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterDotAll, (JSGlobalObject* globalObject,
     
     JSValue thisValue = callFrame->thisValue();
     auto* regexp = jsDynamicCast<RegExpObject*>(thisValue);
-    if (UNLIKELY(!regexp)) {
+    if (!regexp) [[unlikely]] {
         if (thisValue == globalObject->regExpPrototype())
             return JSValue::encode(jsUndefined());
         return throwVMTypeError(globalObject, scope, "The RegExp.prototype.dotAll getter can only be called on a RegExp object"_s);
@@ -358,7 +358,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterSticky, (JSGlobalObject* globalObject,
 
     JSValue thisValue = callFrame->thisValue();
     auto* regexp = jsDynamicCast<RegExpObject*>(thisValue);
-    if (UNLIKELY(!regexp)) {
+    if (!regexp) [[unlikely]] {
         if (thisValue == globalObject->regExpPrototype())
             return JSValue::encode(jsUndefined());
         return throwVMTypeError(globalObject, scope, "The RegExp.prototype.sticky getter can only be called on a RegExp object"_s);
@@ -374,7 +374,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterUnicode, (JSGlobalObject* globalObject
 
     JSValue thisValue = callFrame->thisValue();
     auto* regexp = jsDynamicCast<RegExpObject*>(thisValue);
-    if (UNLIKELY(!regexp)) {
+    if (!regexp) [[unlikely]] {
         if (thisValue == globalObject->regExpPrototype())
             return JSValue::encode(jsUndefined());
         return throwVMTypeError(globalObject, scope, "The RegExp.prototype.unicode getter can only be called on a RegExp object"_s);
@@ -390,7 +390,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterUnicodeSets, (JSGlobalObject* globalOb
 
     JSValue thisValue = callFrame->thisValue();
     auto* regexp = jsDynamicCast<RegExpObject*>(thisValue);
-    if (UNLIKELY(!regexp)) {
+    if (!regexp) [[unlikely]] {
         if (thisValue == globalObject->regExpPrototype())
             return JSValue::encode(jsUndefined());
         return throwVMTypeError(globalObject, scope, "The RegExp.prototype.unicodeSets getter can only be called on a RegExp object"_s);
@@ -407,7 +407,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterFlags, (JSGlobalObject* globalObject, 
     JSValue thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (UNLIKELY(!thisValue.isObject()))
+    if (!thisValue.isObject()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "The RegExp.prototype.flags getter can only be called on an object"_s);
 
     auto flags = flagsString(globalObject, asObject(thisValue));
@@ -423,7 +423,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterSource, (JSGlobalObject* globalObject,
 
     JSValue thisValue = callFrame->thisValue();
     auto* regexp = jsDynamicCast<RegExpObject*>(thisValue);
-    if (UNLIKELY(!regexp)) {
+    if (!regexp) [[unlikely]] {
         if (thisValue == globalObject->regExpPrototype())
             return JSValue::encode(jsNontrivialString(vm, "(?:)"_s));
         return throwVMTypeError(globalObject, scope, "The RegExp.prototype.source getter can only be called on a RegExp object"_s);
@@ -617,7 +617,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncSplitFast, (JSGlobalObject* globalObject
     
     unsigned maxSizeForDirectPath = 100000;
     JSArray* result = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), 1);
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }

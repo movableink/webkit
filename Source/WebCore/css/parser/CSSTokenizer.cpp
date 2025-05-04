@@ -59,7 +59,7 @@ std::unique_ptr<CSSTokenizer> CSSTokenizer::tryCreate(const String& string)
     bool success = true;
     // We can't use makeUnique here because it does not have access to this private constructor.
     auto tokenizer = std::unique_ptr<CSSTokenizer>(new CSSTokenizer(string, nullptr, &success));
-    if (UNLIKELY(!success))
+    if (!success) [[unlikely]]
         return nullptr;
     return tokenizer;
 }
@@ -69,7 +69,7 @@ std::unique_ptr<CSSTokenizer> CSSTokenizer::tryCreate(const String& string, CSSP
     bool success = true;
     // We can't use makeUnique here because it does not have access to this private constructor.
     auto tokenizer = std::unique_ptr<CSSTokenizer>(new CSSTokenizer(string, &wrapper, &success));
-    if (UNLIKELY(!success))
+    if (!success) [[unlikely]]
         return nullptr;
     return tokenizer;
 }

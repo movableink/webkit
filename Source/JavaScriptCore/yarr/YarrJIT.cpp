@@ -4473,7 +4473,7 @@ class YarrGenerator final : public YarrJITInfo {
         YarrOpCode alternativeNextOpCode = YarrOpCode::SimpleNestedAlternativeNext;
         YarrOpCode alternativeEndOpCode = YarrOpCode::SimpleNestedAlternativeEnd;
 
-        if (UNLIKELY(!isSafeToRecurse())) {
+        if (!isSafeToRecurse()) [[unlikely]] {
             m_failureReason = JITFailureReason::ParenthesisNestedTooDeep;
             return;
         }
@@ -4622,7 +4622,7 @@ class YarrGenerator final : public YarrJITInfo {
     // once, and will never backtrack back into the assertion.
     void opCompileParentheticalAssertion(Checked<unsigned> checkedOffset, PatternTerm* term)
     {
-        if (UNLIKELY(!isSafeToRecurse())) {
+        if (!isSafeToRecurse()) [[unlikely]] {
             m_failureReason = JITFailureReason::ParenthesisNestedTooDeep;
             return;
         }
@@ -4723,7 +4723,7 @@ class YarrGenerator final : public YarrJITInfo {
     // to return the failing result.
     void opCompileBody(PatternDisjunction* disjunction)
     {
-        if (UNLIKELY(!isSafeToRecurse())) {
+        if (!isSafeToRecurse()) [[unlikely]] {
             m_failureReason = JITFailureReason::ParenthesisNestedTooDeep;
             return;
         }

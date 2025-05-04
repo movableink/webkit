@@ -45,7 +45,7 @@ ALWAYS_INLINE JSArray* tryCreateUninitializedRegExpMatchesArray(ObjectInitializa
 
     const bool hasIndexingHeader = true;
     Butterfly* butterfly = Butterfly::tryCreateUninitialized(vm, nullptr, 0, structure->outOfLineCapacity(), hasIndexingHeader, vectorLength * sizeof(EncodedJSValue), deferralContext);
-    if (UNLIKELY(!butterfly))
+    if (!butterfly) [[unlikely]]
         return nullptr;
 
     butterfly->setVectorLength(vectorLength);
@@ -125,7 +125,7 @@ ALWAYS_INLINE JSArray* createRegExpMatchesArray(
         return result;
     };
 
-    if (UNLIKELY(globalObject->isHavingABadTime())) {
+    if (globalObject->isHavingABadTime()) [[unlikely]] {
         GCDeferralContext deferralContext(vm);
         ObjectInitializationScope matchesArrayScope(vm);
         ObjectInitializationScope indicesArrayScope(vm);

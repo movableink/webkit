@@ -360,7 +360,7 @@ private:
 
 
 #define WASM_VALIDATOR_FAIL_IF(condition, ...) do { \
-        if (UNLIKELY(condition)) \
+        if (condition) [[unlikely]] \
             return validationFail(__VA_ARGS__); \
     } while (0) \
 

@@ -397,7 +397,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncCharAt, (JSGlobalObject* globalObject, C
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
     auto* thisString = thisValue.toString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
@@ -423,7 +423,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncCharCodeAt, (JSGlobalObject* globalObjec
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
     auto* thisString = thisValue.toString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
@@ -460,7 +460,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncCodePointAt, (JSGlobalObject* globalObje
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
 
     String string = thisValue.toWTFString(globalObject);
@@ -490,7 +490,7 @@ static EncodedJSValue stringIndexOfImpl(JSGlobalObject* globalObject, CallFrame*
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
 
     JSValue a0 = callFrame->argument(0);
@@ -550,7 +550,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncLastIndexOf, (JSGlobalObject* globalObje
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
 
     JSValue a0 = callFrame->argument(0);
@@ -595,7 +595,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncSlice, (JSGlobalObject* globalObject, Ca
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
     JSString* string = thisValue.toString(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -710,7 +710,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncSplitFast, (JSGlobalObject* globalObject
             Structure* immutableButterflyStructure = makeAtomStringsArray ? vm.immutableButterflyOnlyAtomStringsStructure.get() : vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous);
 
             auto* newButterfly = JSImmutableButterfly::tryCreate(vm, immutableButterflyStructure, resultSize);
-            if (UNLIKELY(!newButterfly)) {
+            if (!newButterfly) [[unlikely]] {
                 throwOutOfMemoryError(globalObject, scope);
                 return { };
             }
@@ -779,7 +779,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncSplitFast, (JSGlobalObject* globalObject
             Structure* immutableButterflyStructure = makeAtomStringsArray ? vm.immutableButterflyOnlyAtomStringsStructure.get() : vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous);
 
             auto* newButterfly = JSImmutableButterfly::tryCreate(vm, immutableButterflyStructure, resultSize);
-            if (UNLIKELY(!newButterfly)) {
+            if (!newButterfly) [[unlikely]] {
                 throwOutOfMemoryError(globalObject, scope);
                 return { };
             }
@@ -861,7 +861,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncSubstr, (JSGlobalObject* globalObject, C
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
     unsigned len;
     JSString* jsString = nullptr;
@@ -905,7 +905,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncSubstring, (JSGlobalObject* globalObject
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
 
     JSString* jsString = thisValue.toString(globalObject);
@@ -953,7 +953,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncToLowerCase, (JSGlobalObject* globalObje
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
 
     JSString* sVal = thisValue.toString(globalObject);
@@ -989,7 +989,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncToUpperCase, (JSGlobalObject* globalObje
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
 
     JSString* sVal = thisValue.toString(globalObject);
@@ -1029,7 +1029,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncLocaleCompare, (JSGlobalObject* globalOb
 
     // 1. Let O be RequireObjectCoercible(this value).
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "String.prototype.localeCompare requires that |this| not be null or undefined"_s);
 
     // 2. Let S be ToString(O).
@@ -1068,7 +1068,7 @@ static EncodedJSValue toLocaleCase(JSGlobalObject* globalObject, CallFrame* call
 
     // 1. Let O be RequireObjectCoercible(this value).
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
 
     // 2. Let S be ToString(O).
@@ -1170,7 +1170,7 @@ static inline JSValue trimString(JSGlobalObject* globalObject, JSValue thisValue
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwTypeError(globalObject, scope);
     String str = thisValue.toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
@@ -1226,7 +1226,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncStartsWith, (JSGlobalObject* globalObjec
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
 
     String stringToSearchIn = thisValue.toWTFString(globalObject);
@@ -1260,7 +1260,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncEndsWith, (JSGlobalObject* globalObject,
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
 
     String stringToSearchIn = thisValue.toWTFString(globalObject);
@@ -1311,7 +1311,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncIncludes, (JSGlobalObject* globalObject,
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
 
     String stringToSearchIn = thisValue.toWTFString(globalObject);
@@ -1357,7 +1357,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncIterator, (JSGlobalObject* globalObject,
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
     JSString* string = thisValue.toString(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -1436,7 +1436,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncNormalize, (JSGlobalObject* globalObject
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
     JSString* string = thisValue.toString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
@@ -1494,7 +1494,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncIsWellFormed, (JSGlobalObject* globalObj
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
 
     // Latin-1 characters do not have surrogates.
@@ -1515,7 +1515,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncToWellFormed, (JSGlobalObject* globalObj
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
 
     // Latin-1 characters do not have surrogates.
@@ -1586,7 +1586,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncAt, (JSGlobalObject* globalObject, CallF
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!checkObjectCoercible(thisValue)))
+    if (!checkObjectCoercible(thisValue)) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
     auto* thisString = thisValue.toString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });

@@ -105,7 +105,7 @@ void LLIntPlan::compileFunction(FunctionCodeIndex functionIndex)
     auto parseAndCompileResult = parseAndCompileBytecode(function.data, signature, m_moduleInformation.get(), functionIndex);
     endCompilerSignpost(CompilationMode::LLIntMode, functionIndexSpace);
 
-    if (UNLIKELY(!parseAndCompileResult)) {
+    if (!parseAndCompileResult) [[unlikely]] {
         Locker locker { m_lock };
         if (!m_errorMessage) {
             // Multiple compiles could fail simultaneously. We arbitrarily choose the first.

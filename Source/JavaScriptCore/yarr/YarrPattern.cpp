@@ -1563,7 +1563,7 @@ public:
     // skip alternatives with m_startsWithBOL set true.
     PatternDisjunction* copyDisjunction(PatternDisjunction* disjunction, bool filterStartsWithBOL)
     {
-        if (UNLIKELY(!isSafeToRecurse())) {
+        if (!isSafeToRecurse()) [[unlikely]] {
             m_error = ErrorCode::PatternTooLarge;
             return nullptr;
         }
@@ -1601,7 +1601,7 @@ public:
     
     std::optional<PatternTerm> copyTerm(PatternTerm& term, bool filterStartsWithBOL)
     {
-        if (UNLIKELY(!isSafeToRecurse())) {
+        if (!isSafeToRecurse()) [[unlikely]] {
             m_error = ErrorCode::PatternTooLarge;
             return PatternTerm(term);
         }
@@ -1704,7 +1704,7 @@ public:
 
     ErrorCode setupAlternativeOffsets(PatternAlternative* alternative, unsigned currentCallFrameSize, unsigned initialInputPosition, unsigned& newCallFrameSize) WARN_UNUSED_RETURN
     {
-        if (UNLIKELY(!isSafeToRecurse()))
+        if (!isSafeToRecurse()) [[unlikely]]
             return ErrorCode::TooManyDisjunctions;
 
         ErrorCode error = ErrorCode::NoError;
@@ -1829,7 +1829,7 @@ public:
 
     ErrorCode setupDisjunctionOffsets(PatternDisjunction* disjunction, unsigned initialCallFrameSize, unsigned initialInputPosition, unsigned& callFrameSize)
     {
-        if (UNLIKELY(!isSafeToRecurse()))
+        if (!isSafeToRecurse()) [[unlikely]]
             return ErrorCode::TooManyDisjunctions;
 
         if ((disjunction != m_pattern.m_body) && (disjunction->m_alternatives.size() > 1))

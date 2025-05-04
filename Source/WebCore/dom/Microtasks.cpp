@@ -92,7 +92,7 @@ void MicrotaskQueue::runJSMicrotask(JSC::JSGlobalObject* globalObject, JSC::VM& 
         ++count;
     }
 
-    if (UNLIKELY(globalObject->hasDebugger())) {
+    if (globalObject->hasDebugger()) [[unlikely]] {
         JSC::DeferTerminationForAWhile deferTerminationForAWhile(vm);
         globalObject->debugger()->willRunMicrotask(globalObject, task.identifier());
         scope.clearException();
@@ -106,7 +106,7 @@ void MicrotaskQueue::runJSMicrotask(JSC::JSGlobalObject* globalObject, JSC::VM& 
         scope.clearExceptionExceptTermination();
     }
 
-    if (UNLIKELY(globalObject->hasDebugger())) {
+    if (globalObject->hasDebugger()) [[unlikely]] {
         JSC::DeferTerminationForAWhile deferTerminationForAWhile(vm);
         globalObject->debugger()->didRunMicrotask(globalObject, task.identifier());
         scope.clearException();

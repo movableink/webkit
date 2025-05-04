@@ -2142,14 +2142,14 @@ private:
             RegisterBinding& binding = m_generator.gprBindings()[reg];
             m_generator.m_gprLRU.lock(reg);
             if (m_preserved.contains(reg, IgnoreVectors) && !binding.isNone()) {
-                if (UNLIKELY(Options::verboseBBQJITAllocation()))
+                if (Options::verboseBBQJITAllocation()) [[unlikely]]
                     dataLogLn("BBQ\tPreserving GPR ", MacroAssembler::gprName(reg), " currently bound to ", binding);
                 return reg; // If the register is already bound, we don't need to preserve it ourselves.
             }
             ASSERT(binding.isNone());
             binding = RegisterBinding::scratch();
             m_generator.m_gprSet.remove(reg);
-            if (UNLIKELY(Options::verboseBBQJITAllocation()))
+            if (Options::verboseBBQJITAllocation()) [[unlikely]]
                 dataLogLn("BBQ\tReserving scratch GPR ", MacroAssembler::gprName(reg));
             return reg;
         }
@@ -2161,14 +2161,14 @@ private:
             RegisterBinding& binding = m_generator.fprBindings()[reg];
             m_generator.m_fprLRU.lock(reg);
             if (m_preserved.contains(reg, Width::Width128) && !binding.isNone()) {
-                if (UNLIKELY(Options::verboseBBQJITAllocation()))
+                if (Options::verboseBBQJITAllocation()) [[unlikely]]
                     dataLogLn("BBQ\tPreserving FPR ", MacroAssembler::fprName(reg), " currently bound to ", binding);
                 return reg; // If the register is already bound, we don't need to preserve it ourselves.
             }
             ASSERT(binding.isNone());
             binding = RegisterBinding::scratch();
             m_generator.m_fprSet.remove(reg);
-            if (UNLIKELY(Options::verboseBBQJITAllocation()))
+            if (Options::verboseBBQJITAllocation()) [[unlikely]]
                 dataLogLn("BBQ\tReserving scratch FPR ", MacroAssembler::fprName(reg));
             return reg;
         }
@@ -2179,7 +2179,7 @@ private:
                 return;
             RegisterBinding& binding = m_generator.gprBindings()[reg];
             m_generator.m_gprLRU.unlock(reg);
-            if (UNLIKELY(Options::verboseBBQJITAllocation()))
+            if (Options::verboseBBQJITAllocation()) [[unlikely]]
                 dataLogLn("BBQ\tReleasing GPR ", MacroAssembler::gprName(reg), " preserved? ", m_preserved.contains(reg, IgnoreVectors), " binding: ", binding);
             if (m_preserved.contains(reg, IgnoreVectors) && !binding.isScratch())
                 return; // It's okay if the register isn't bound to a scratch if we meant to preserve it - maybe it was just already bound to something.
@@ -2194,7 +2194,7 @@ private:
                 return;
             RegisterBinding& binding = m_generator.fprBindings()[reg];
             m_generator.m_fprLRU.unlock(reg);
-            if (UNLIKELY(Options::verboseBBQJITAllocation()))
+            if (Options::verboseBBQJITAllocation()) [[unlikely]]
                 dataLogLn("BBQ\tReleasing FPR ", MacroAssembler::fprName(reg), " preserved? ", m_preserved.contains(reg, Width::Width128), " binding: ", binding);
             if (m_preserved.contains(reg, Width::Width128) && !binding.isScratch())
                 return; // It's okay if the register isn't bound to a scratch if we meant to preserve it - maybe it was just already bound to something.

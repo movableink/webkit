@@ -1333,7 +1333,7 @@ void VM::didExhaustMicrotaskQueue()
                 continue;
 
             callPromiseRejectionCallback(promise);
-            if (UNLIKELY(hasPendingTerminationException()))
+            if (hasPendingTerminationException()) [[unlikely]]
                 return;
         }
     } while (!m_aboutToBeNotifiedRejectedPromises.isEmpty());
@@ -1361,10 +1361,10 @@ void VM::drainMicrotasks()
                     runJSMicrotask(task.globalObject(), task.identifier(), task.job(), task.arguments());
                     return QueuedTask::Result::Executed;
                 });
-            if (UNLIKELY(hasPendingTerminationException()))
+            if (hasPendingTerminationException()) [[unlikely]]
                 return;
             didExhaustMicrotaskQueue();
-            if (UNLIKELY(hasPendingTerminationException()))
+            if (hasPendingTerminationException()) [[unlikely]]
                 return;
         } while (!m_defaultMicrotaskQueue.isEmpty());
     }
@@ -1536,12 +1536,12 @@ void VM::executeEntryScopeServicesOnEntry()
     dateCache.resetIfNecessary();
 
     RefPtr watchdog = this->watchdog();
-    if (UNLIKELY(watchdog))
+    if (watchdog) [[unlikely]]
         watchdog->enteredVM();
 
 #if ENABLE(SAMPLING_PROFILER)
     RefPtr samplingProfiler = this->samplingProfiler();
-    if (UNLIKELY(samplingProfiler))
+    if (samplingProfiler) [[unlikely]]
         samplingProfiler->noticeVMEntry();
 #endif
 
@@ -1555,7 +1555,7 @@ void VM::executeEntryScopeServicesOnExit()
         tracePoint(VMEntryScopeEnd);
 
     RefPtr watchdog = this->watchdog();
-    if (UNLIKELY(watchdog))
+    if (watchdog) [[unlikely]]
         watchdog->exitedVM();
 
     if (hasEntryScopeServiceRequest(EntryScopeService::PopListeners)) {

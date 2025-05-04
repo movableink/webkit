@@ -353,7 +353,7 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& 
     // Recursion is avoided by !holderStackWasEmpty check and do/while loop at the end of this method.
     // We're having this recursion check here as a fail safe in case the code
     // below get modified such that recursion is no longer avoided.
-    if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
         throwStackOverflowError(m_globalObject, scope);
         return StringifyFailed;
     }
@@ -441,7 +441,7 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& 
         return StringifyFailedDueToUndefinedOrSymbolValue;
     }
 
-    if (UNLIKELY(builder.hasOverflowed()))
+    if (builder.hasOverflowed()) [[unlikely]]
         return StringifyFailed;
 
     // Handle cycle detection, and put the holder on the stack.
@@ -470,7 +470,7 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& 
         while (m_holderStack.last().appendNextProperty(*this, builder))
             RETURN_IF_EXCEPTION(scope, StringifyFailed);
         RETURN_IF_EXCEPTION(scope, StringifyFailed);
-        if (UNLIKELY(builder.hasOverflowed()))
+        if (builder.hasOverflowed()) [[unlikely]]
             return StringifyFailed;
         m_holderStack.removeLast();
         m_objectStack.removeLast();
@@ -568,7 +568,7 @@ bool Stringifier::Holder::appendNextProperty(Stringifier& stringifier, StringBui
         }
         stringifier.indent();
     }
-    if (UNLIKELY(builder.hasOverflowed()))
+    if (builder.hasOverflowed()) [[unlikely]]
         return false;
 
     // Last time through, finish up and return false.
@@ -1240,7 +1240,7 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
         return;
     }
 
-    if (UNLIKELY(!value.isCell())) {
+    if (!value.isCell()) [[unlikely]] {
         recordFailure("value type"_s);
         return;
     }
@@ -1334,7 +1334,7 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
             }
             m_checkedObjectPrototype = true;
         }
-        if (UNLIKELY(!hasRemainingCapacity())) {
+        if (!hasRemainingCapacity()) [[unlikely]] {
             recordBufferFull();
             return;
         }
@@ -1397,7 +1397,7 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
         });
         if (UNLIKELY(haveFailure()))
             return;
-        if (UNLIKELY(!hasRemainingCapacity())) {
+        if (!hasRemainingCapacity()) [[unlikely]] {
             recordBufferFull();
             return;
         }
@@ -1426,14 +1426,14 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
             if (haveFailure())
                 return;
         }
-        if (UNLIKELY(!hasRemainingCapacity())) {
+        if (!hasRemainingCapacity()) [[unlikely]] {
             recordBufferFull();
             return;
         }
         buffer()[m_length++] = '[';
         for (unsigned i = 0, length = array.length(); i < length; ++i) {
             if (i) {
-                if (UNLIKELY(!hasRemainingCapacity())) {
+                if (!hasRemainingCapacity()) [[unlikely]] {
                     recordBufferFull();
                     return;
                 }
@@ -1447,7 +1447,7 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
             if (UNLIKELY(haveFailure()))
                 return;
         }
-        if (UNLIKELY(!hasRemainingCapacity())) {
+        if (!hasRemainingCapacity()) [[unlikely]] {
             recordBufferFull();
             return;
         }
@@ -1973,7 +1973,7 @@ JSC_DEFINE_HOST_FUNCTION(jsonProtoFuncRawJSON, (JSGlobalObject* globalObject, Ca
             LiteralParser<LChar, JSONReviverMode::Disabled> jsonParser(globalObject, string.span8(), StrictJSON);
             result = jsonParser.tryLiteralParsePrimitiveValue();
             RETURN_IF_EXCEPTION(scope, { });
-            if (UNLIKELY(!result)) {
+            if (!result) [[unlikely]] {
                 throwSyntaxError(globalObject, scope, jsonParser.getErrorMessage());
                 return { };
             }
@@ -1981,14 +1981,14 @@ JSC_DEFINE_HOST_FUNCTION(jsonProtoFuncRawJSON, (JSGlobalObject* globalObject, Ca
             LiteralParser<UChar, JSONReviverMode::Disabled> jsonParser(globalObject, string.span16(), StrictJSON);
             result = jsonParser.tryLiteralParsePrimitiveValue();
             RETURN_IF_EXCEPTION(scope, { });
-            if (UNLIKELY(!result)) {
+            if (!result) [[unlikely]] {
                 throwSyntaxError(globalObject, scope, jsonParser.getErrorMessage());
                 return { };
             }
         }
     }
     auto* object = JSRawJSONObject::tryCreate(vm, globalObject->rawJSONObjectStructure(), jsString);
-    if (UNLIKELY(!object)) {
+    if (!object) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }

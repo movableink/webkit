@@ -124,7 +124,7 @@ EncodedJSValue JSGenericArrayBufferConstructor<sharingMode>::constructImpl(JSGlo
 
     if (!buffer) {
         buffer = ArrayBuffer::tryCreate(length, 1, maxByteLength);
-        if (UNLIKELY(!buffer))
+        if (!buffer) [[unlikely]]
             return JSValue::encode(throwOutOfMemoryError(globalObject, scope));
         if constexpr (sharingMode == ArrayBufferSharingMode::Shared)
             buffer->makeShared();
@@ -170,7 +170,7 @@ JSObject* constructArrayBufferWithSize(JSGlobalObject* globalObject, Structure* 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto buffer = ArrayBuffer::tryCreate(length, 1);
-    if (UNLIKELY(!buffer)) {
+    if (!buffer) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }

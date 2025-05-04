@@ -173,7 +173,7 @@ inline JSValue jsMakeNontrivialString(JSGlobalObject* globalObject, StringType&&
     VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
     String result = tryMakeString(std::forward<StringType>(string), std::forward<StringTypes>(strings)...);
-    if (UNLIKELY(!result))
+    if (!result) [[unlikely]]
         return throwOutOfMemoryError(globalObject, scope);
     ASSERT(result.length() <= JSString::MaxLength);
     return jsNontrivialString(vm, WTFMove(result));

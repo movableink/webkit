@@ -191,7 +191,7 @@ protected:
         return UnexpectedResult(makeString("WebAssembly.Module doesn't parse at byte "_s, String::number(m_parser->offset() + m_offsetInSource), ": "_s, makeString(args)...));
     }
 #define WASM_COMPILE_FAIL_IF(condition, ...) do { \
-        if (UNLIKELY(condition))                  \
+        if (condition) [[unlikely]]                  \
             return fail(__VA_ARGS__);             \
     } while (0)
 
@@ -313,7 +313,7 @@ public:
             result = arrayNew(m_instance, typeIndex, size, value.getVector());
         else
             result = arrayNew(m_instance, typeIndex, size, value.getValue());
-        if (UNLIKELY(result.isNull()))
+        if (result.isNull()) [[unlikely]]
             return ConstExprValue(InvalidConstExpr);
         return ConstExprValue(Strong<JSObject>(vm, asObject(result)));
     }
@@ -382,7 +382,7 @@ public:
     {
         VM& vm = m_instance->vm();
         EncodedJSValue obj = structNew(m_instance, typeIndex, static_cast<bool>(UseDefaultValue::Yes), nullptr);
-        if (UNLIKELY(!obj))
+        if (!obj) [[unlikely]]
             return ConstExprValue(InvalidConstExpr);
         return ConstExprValue(Strong<JSObject>(vm, JSValue::decode(obj).getObject()));
     }

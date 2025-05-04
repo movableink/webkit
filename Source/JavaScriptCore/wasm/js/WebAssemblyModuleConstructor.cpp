@@ -299,7 +299,7 @@ JSWebAssemblyModule* WebAssemblyModuleConstructor::createModule(JSGlobalObject* 
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     auto result = Wasm::Module::validateSync(vm, WTFMove(buffer));
-    if (UNLIKELY(!result.has_value())) {
+    if (!result.has_value()) [[unlikely]] {
         throwException(globalObject, scope, createJSWebAssemblyCompileError(globalObject, vm, result.error()));
         return nullptr;
     }

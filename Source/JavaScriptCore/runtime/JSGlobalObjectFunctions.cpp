@@ -135,7 +135,7 @@ static JSValue encode(JSGlobalObject* globalObject, const WTF::BitSet<256>& doNo
         }
     }
 
-    if (UNLIKELY(builder.hasOverflowed()))
+    if (builder.hasOverflowed()) [[unlikely]]
         return throwOutOfMemoryError(globalObject, scope);
     return jsString(vm, builder.toString());
 }
@@ -219,7 +219,7 @@ static JSValue decode(JSGlobalObject* globalObject, std::span<const CharType> ch
         ++k;
         builder.append(c);
     }
-    if (UNLIKELY(builder.hasOverflowed()))
+    if (builder.hasOverflowed()) [[unlikely]]
         return throwOutOfMemoryError(globalObject, scope);
     RELEASE_AND_RETURN(scope, jsString(vm, builder.toString()));
 }
@@ -636,7 +636,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEscape, (JSGlobalObject* globalObject, CallFr
             }
         }
 
-        if (UNLIKELY(builder.hasOverflowed())) {
+        if (builder.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return { };
         }
@@ -699,7 +699,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncUnescape, (JSGlobalObject* globalObject, Call
             }
         }
 
-        if (UNLIKELY(builder.hasOverflowed())) {
+        if (builder.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return { };
         }
@@ -995,7 +995,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
             continue;
 
         JSValue value;
-        if (LIKELY(!slot.isTaintedByOpaqueObject()))
+        if (!slot.isTaintedByOpaqueObject()) [[likely]]
             value = slot.getValue(globalObject, propertyName);
         else
             value = source->get(globalObject, propertyName);
@@ -1079,7 +1079,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCloneObject, (JSGlobalObject* globalObject, C
             continue;
 
         JSValue value;
-        if (LIKELY(!slot.isTaintedByOpaqueObject()))
+        if (!slot.isTaintedByOpaqueObject()) [[likely]]
             value = slot.getValue(globalObject, propertyName);
         else
             value = source->get(globalObject, propertyName);

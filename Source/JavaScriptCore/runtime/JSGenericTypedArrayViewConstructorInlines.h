@@ -98,7 +98,7 @@ inline JSObject* constructGenericTypedArrayViewFromIterator(JSGlobalObject* glob
 
     ViewClass* result = ViewClass::createUninitialized(globalObject, structure, storage.size());
     EXCEPTION_ASSERT(!!scope.exception() == !result);
-    if (UNLIKELY(!result))
+    if (!result) [[unlikely]]
         return nullptr;
 
     for (unsigned i = 0; i < storage.size(); ++i) {
@@ -168,7 +168,7 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
 
             ViewClass* result = ViewClass::createUninitialized(globalObject, structure, length);
             EXCEPTION_ASSERT(!!scope.exception() == !result);
-            if (UNLIKELY(!result))
+            if (!result) [[unlikely]]
                 return nullptr;
 
             IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
@@ -228,7 +228,7 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
 
         ViewClass* result = ViewClass::createUninitialized(globalObject, structure, length);
         EXCEPTION_ASSERT(!!scope.exception() == !result);
-        if (UNLIKELY(!result))
+        if (!result) [[unlikely]]
             return nullptr;
 
         scope.release();

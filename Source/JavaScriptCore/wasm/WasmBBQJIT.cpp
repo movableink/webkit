@@ -3912,7 +3912,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::endTopLevel(BlockSignature, const Stack
     LOG_DEDENT();
     LOG_INSTRUCTION("End");
 
-    if (UNLIKELY(m_disassembler))
+    if (m_disassembler) [[unlikely]]
         m_disassembler->setEndOfOpcode(m_jit.label());
 
     for (const auto& latePath : m_latePaths)
@@ -4678,7 +4678,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addCrash()
 ALWAYS_INLINE void BBQJIT::willParseOpcode()
 {
     m_pcToCodeOriginMapBuilder.appendItem(m_jit.label(), CodeOrigin(BytecodeIndex(m_parser->currentOpcodeStartingOffset())));
-    if (UNLIKELY(m_disassembler)) {
+    if (m_disassembler) [[unlikely]] {
         OpType currentOpcode = m_parser->currentOpcode();
         switch (currentOpcode) {
         case OpType::Ext1:
@@ -4711,7 +4711,7 @@ ALWAYS_INLINE void BBQJIT::willParseOpcode()
 
 ALWAYS_INLINE void BBQJIT::willParseExtendedOpcode()
 {
-    if (UNLIKELY(m_disassembler)) {
+    if (m_disassembler) [[unlikely]] {
         OpType prefix = m_parser->currentOpcode();
         uint32_t opcode = m_parser->currentExtendedOpcode();
         m_disassembler->setOpcode(m_jit.label(), PrefixedOpcode(prefix, opcode), m_parser->currentOpcodeStartingOffset());
@@ -4742,7 +4742,7 @@ void BBQJIT::didPopValueFromStack(Value value, ASCIILiteral)
 
 void BBQJIT::finalize()
 {
-    if (UNLIKELY(m_disassembler))
+    if (m_disassembler) [[unlikely]]
         m_disassembler->setEndOfCode(m_jit.label());
 }
 
@@ -4924,7 +4924,7 @@ Location BBQJIT::allocateWithHint(Value value, Location hint)
     increaseKey(reg);
     if (value.isLocal())
         currentControlData().touch(value.asLocal());
-    if (UNLIKELY(Options::verboseBBQJITAllocation()))
+    if (Options::verboseBBQJITAllocation()) [[unlikely]]
         dataLogLn("BBQ\tAllocated ", value, " with type ", makeString(value.type()), " to ", reg);
     return bind(value, reg);
 }
@@ -4960,11 +4960,11 @@ Location BBQJIT::loadIfNecessary(Value value)
 {
     ASSERT(!value.isPinned()); // We should not load or move pinned values.
     ASSERT(!value.isConst()); // We should not be materializing things we know are constants.
-    if (UNLIKELY(Options::verboseBBQJITAllocation()))
+    if (Options::verboseBBQJITAllocation()) [[unlikely]]
         dataLogLn("BBQ\tLoading value ", value, " if necessary");
     Location loc = locationOf(value);
     if (loc.isMemory()) {
-        if (UNLIKELY(Options::verboseBBQJITAllocation()))
+        if (Options::verboseBBQJITAllocation()) [[unlikely]]
             dataLogLn("BBQ\tLoading local ", value, " to ", loc);
         loc = allocateRegister(value); // Find a register to store this value. Might spill older values if we run out.
         emitLoad(value, loc); // Generate the load instructions to move the value into the register.
@@ -5052,7 +5052,7 @@ Location BBQJIT::bind(Value value, Location loc)
         m_temps[value.asTemp()] = loc;
     }
 
-    if (UNLIKELY(Options::verboseBBQJITAllocation()))
+    if (Options::verboseBBQJITAllocation()) [[unlikely]]
         dataLogLn("BBQ\tBound value ", value, " to ", loc);
 
     return loc;
@@ -5081,7 +5081,7 @@ void BBQJIT::unbind(Value value, Location loc)
     else if (value.isTemp())
         m_temps[value.asTemp()] = Location::none();
 
-    if (UNLIKELY(Options::verboseBBQJITAllocation()))
+    if (Options::verboseBBQJITAllocation()) [[unlikely]]
         dataLogLn("BBQ\tUnbound value ", value, " from ", loc);
 }
 
@@ -5120,7 +5120,7 @@ GPRReg BBQJIT::evictGPR()
     auto lruGPR = m_gprLRU.findMin();
     auto lruBinding = gprBindings()[lruGPR];
 
-    if (UNLIKELY(Options::verboseBBQJITAllocation()))
+    if (Options::verboseBBQJITAllocation()) [[unlikely]]
         dataLogLn("BBQ\tEvicting GPR ", MacroAssembler::gprName(lruGPR), " currently bound to ", lruBinding);
     flushValue(lruBinding.toValue());
 
@@ -5134,7 +5134,7 @@ FPRReg BBQJIT::evictFPR()
     auto lruFPR = m_fprLRU.findMin();
     auto lruBinding = fprBindings()[lruFPR];
 
-    if (UNLIKELY(Options::verboseBBQJITAllocation()))
+    if (Options::verboseBBQJITAllocation()) [[unlikely]]
         dataLogLn("BBQ\tEvicting FPR ", MacroAssembler::fprName(lruFPR), " currently bound to ", lruBinding);
     flushValue(lruBinding.toValue());
 
@@ -5149,7 +5149,7 @@ void BBQJIT::clobber(GPRReg gpr)
 {
     if (m_validGPRs.contains(gpr, IgnoreVectors) && !m_gprSet.contains(gpr, IgnoreVectors)) {
         RegisterBinding& binding = gprBindings()[gpr];
-        if (UNLIKELY(Options::verboseBBQJITAllocation()))
+        if (Options::verboseBBQJITAllocation()) [[unlikely]]
             dataLogLn("BBQ\tClobbering GPR ", MacroAssembler::gprName(gpr), " currently bound to ", binding);
         RELEASE_ASSERT(!binding.isNone() && !binding.isScratch()); // We could probably figure out how to handle this, but let's just crash if it happens for now.
         flushValue(binding.toValue());
@@ -5160,7 +5160,7 @@ void BBQJIT::clobber(FPRReg fpr)
 {
     if (m_validFPRs.contains(fpr, Width::Width128) && !m_fprSet.contains(fpr, Width::Width128)) {
         RegisterBinding& binding = fprBindings()[fpr];
-        if (UNLIKELY(Options::verboseBBQJITAllocation()))
+        if (Options::verboseBBQJITAllocation()) [[unlikely]]
             dataLogLn("BBQ\tClobbering FPR ", MacroAssembler::fprName(fpr), " currently bound to ", binding);
         RELEASE_ASSERT(!binding.isNone() && !binding.isScratch()); // We could probably figure out how to handle this, but let's just crash if it happens for now.
         flushValue(binding.toValue());

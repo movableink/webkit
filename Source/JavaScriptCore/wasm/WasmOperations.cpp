@@ -548,7 +548,7 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalReturnValues, void, (void* 
                     JSValue value = JSValue::decode(std::bit_cast<EncodedJSValue>(returned));
                     WebAssemblyFunction* wasmFunction = nullptr;
                     WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
-                    if (UNLIKELY(!isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction) && !value.isNull())) {
+                    if (!isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction) && !value.isNull()) [[unlikely]] {
                         throwTypeError(globalObject, scope, "Funcref value is not a function"_s);
                         OPERATION_RETURN(scope);
                     }
@@ -643,7 +643,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmToJSExitIterateResults, bool, (JS
     forEachInIterable(globalObject, result, [&](VM&, JSGlobalObject*, JSValue value) -> void {
         if (buffer.size() < signature->returnCount()) {
             buffer.append(value);
-            if (UNLIKELY(buffer.hasOverflowed()))
+            if (buffer.hasOverflowed()) [[unlikely]]
                 throwOutOfMemoryError(globalObject, scope);
         }
         ++iterationCount;
@@ -685,7 +685,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmToJSExitIterateResults, bool, (JS
                 } else if (isFuncref(returnType)) {
                     WebAssemblyFunction* wasmFunction = nullptr;
                     WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
-                    if (UNLIKELY(!isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction) && !value.isNull())) {
+                    if (!isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction) && !value.isNull()) [[unlikely]] {
                         throwTypeError(globalObject, scope, "Argument value did not match the reference type"_s);
                         return true;
                     }
@@ -1344,7 +1344,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationConvertToFuncref, EncodedJSValue, (JS
     JSValue value = JSValue::decode(v);
     WebAssemblyFunction* wasmFunction = nullptr;
     WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
-    if (UNLIKELY(!isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction) && !value.isNull())) {
+    if (!isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction) && !value.isNull()) [[unlikely]] {
         throwTypeError(globalObject, scope, "Argument value did not match the reference type"_s);
         return { };
     }
@@ -1416,7 +1416,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationIterateResults, bool, (JSWebAssemblyI
     forEachInIterable(globalObject, result, [&](VM&, JSGlobalObject*, JSValue value) -> void {
         if (buffer.size() < signature->returnCount()) {
             buffer.append(value);
-            if (UNLIKELY(buffer.hasOverflowed()))
+            if (buffer.hasOverflowed()) [[unlikely]]
                 throwOutOfMemoryError(globalObject, scope);
         }
         ++iterationCount;
@@ -1458,7 +1458,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationIterateResults, bool, (JSWebAssemblyI
                 } else if (isFuncref(returnType)) {
                     WebAssemblyFunction* wasmFunction = nullptr;
                     WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
-                    if (UNLIKELY(!isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction) && !value.isNull())) {
+                    if (!isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction) && !value.isNull()) [[unlikely]] {
                         throwTypeError(globalObject, scope, "Argument value did not match the reference type"_s);
                         return true;
                     }
@@ -1619,7 +1619,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmStructNewEmpty, EncodedJSValue, (
     NativeCallFrameTracer tracer(vm, callFrame);
     WebAssemblyGCStructure* structure = instance->gcObjectStructure(typeIndex).get();
     auto* result = JSWebAssemblyStruct::tryCreate(vm, structure);
-    if (UNLIKELY(!result))
+    if (!result) [[unlikely]]
         return JSValue::encode(jsNull());
     return JSValue::encode(result);
 }
@@ -1835,7 +1835,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayNewEmpty, EncodedJSValue, (J
     ASSERT(typeIndex < instance->module().moduleInformation().typeCount());
     WebAssemblyGCStructure* structure = instance->gcObjectStructure(typeIndex).get();
     auto* array = JSWebAssemblyArray::tryCreate(vm, structure, size);
-    if (UNLIKELY(!array))
+    if (!array) [[unlikely]]
         return JSValue::encode(jsNull());
 
     // Create a default-initialized array with the right element type and length

@@ -291,7 +291,7 @@ public:
     bool isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, ASCIILiteral* reason) final
     {
         DollarVMAssertScope assertScope;
-        if (UNLIKELY(reason))
+        if (reason) [[unlikely]]
             *reason = "JSC::Element is opaque root"_s;
         Element* element = jsCast<Element*>(handle.slot()->asCell());
         return visitor.containsOpaqueRoot(element->root());
@@ -3270,7 +3270,7 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateWasmStreamingCompilerForCompile, (JSGloba
     args.append(compiler);
     ASSERT(!args.hasOverflowed());
     call(globalObject, callback, jsUndefined(), args, "You shouldn't see this..."_s);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         scope.clearException();
     compiler->streamingCompiler().finalize(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
@@ -3290,7 +3290,7 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateWasmStreamingCompilerForInstantiate, (JSG
 
     JSValue importArgument = callFrame->argument(1);
     JSObject* importObject = importArgument.getObject();
-    if (UNLIKELY(!importArgument.isUndefined() && !importObject))
+    if (!importArgument.isUndefined() && !importObject) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
 
     auto compiler = WasmStreamingCompiler::create(vm, globalObject, Wasm::CompilerMode::FullCompile, importObject);
@@ -3298,7 +3298,7 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateWasmStreamingCompilerForInstantiate, (JSG
     args.append(compiler);
     ASSERT(!args.hasOverflowed());
     call(globalObject, callback, jsUndefined(), args, "You shouldn't see this..."_s);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         scope.clearException();
     compiler->streamingCompiler().finalize(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
@@ -4284,7 +4284,7 @@ JSC_DEFINE_HOST_FUNCTION(functionCachedCallFromCPP, (JSGlobalObject* globalObjec
         cachedCall.appendArgument(callFrame->argument(i));
     cachedCall.setThis(jsNull());
 
-    if (UNLIKELY(cachedCall.hasOverflowedArguments()))
+    if (cachedCall.hasOverflowedArguments()) [[unlikely]]
         return JSValue::encode(jsUndefined());
 
     for (int32_t i = 0; i < count; ++i) {

@@ -289,7 +289,7 @@ inline JSArray* constructEmptyArray(JSGlobalObject* globalObject, ArrayAllocatio
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     JSArray* result = JSArray::tryCreate(vm, structure, initialLength);
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -322,7 +322,7 @@ inline JSArray* constructArrayNegativeIndexed(JSGlobalObject* globalObject, Arra
     RETURN_IF_EXCEPTION(scope, nullptr);
     scope.release();
     JSArray* array = constructArrayNegativeIndexed(globalObject, structure, values, length);
-    if (UNLIKELY(!array))
+    if (!array) [[unlikely]]
         return nullptr;
     return ArrayAllocationProfile::updateLastAllocationFor(profile, array);
 }
@@ -342,7 +342,7 @@ ALWAYS_INLINE JSArray* tryCreateContiguousArrayWithPattern(JSGlobalObject* globa
         vm,
         Butterfly::totalSize(0, 0, true, vectorLength * sizeof(EncodedJSValue)),
         nullptr, AllocationFailureMode::ReturnNull);
-    if (UNLIKELY(!temp))
+    if (!temp) [[unlikely]]
         return nullptr;
     Butterfly* butterfly = Butterfly::fromBase(temp, 0, 0);
     butterfly->setVectorLength(vectorLength);
@@ -561,7 +561,7 @@ inline void JSGlobalObject::createGlobalVarBinding(const Identifier& ident)
     PropertySlot slot(this, PropertySlot::InternalMethodType::GetOwnProperty);
     bool hasProperty = getOwnPropertySlot(this, this, ident, slot);
     scope.assertNoExceptionExceptTermination();
-    if (UNLIKELY(hasProperty))
+    if (hasProperty) [[unlikely]]
         return;
 
     ASSERT(isStructureExtensible());

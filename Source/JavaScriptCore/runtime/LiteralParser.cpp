@@ -1353,7 +1353,7 @@ JSValue LiteralParser<CharType, reviverMode>::parseRecursively(VM& vm, uint8_t* 
             else
                 value = parsePrimitiveValue(vm);
             EXCEPTION_ASSERT((!!scope.exception() || !m_parseErrorMessage.isNull()) == !value);
-            if (UNLIKELY(!value))
+            if (!value) [[unlikely]]
                 return { };
 
             array->putDirectIndex(m_globalObject, index++, value);
@@ -1420,7 +1420,7 @@ JSValue LiteralParser<CharType, reviverMode>::parseRecursively(VM& vm, uint8_t* 
                 return makeIdentifier(vm, m_lexer.currentToken());
             }();
 
-            if (UNLIKELY(m_lexer.next() != TokColon)) {
+            if (m_lexer.next() != TokColon) [[unlikely]] {
                 setErrorMessageForToken(TokColon);
                 return { };
             }
@@ -1432,7 +1432,7 @@ JSValue LiteralParser<CharType, reviverMode>::parseRecursively(VM& vm, uint8_t* 
             else
                 value = parsePrimitiveValue(vm);
             EXCEPTION_ASSERT((!!scope.exception() || !m_parseErrorMessage.isNull()) == !value);
-            if (UNLIKELY(!value))
+            if (!value) [[unlikely]]
                 return { };
 
             // When creating JSON object in this fast path, we know the following.
@@ -1463,7 +1463,7 @@ JSValue LiteralParser<CharType, reviverMode>::parseRecursively(VM& vm, uint8_t* 
                 ASSERT(std::holds_alternative<Identifier>(property));
                 auto& ident = std::get<Identifier>(property);
                 if (UNLIKELY(parserMode != StrictJSON && ident == vm.propertyNames->underscoreProto)) {
-                    if (UNLIKELY(!m_visitedUnderscoreProto.add(object).isNewEntry)) {
+                    if (!m_visitedUnderscoreProto.add(object).isNewEntry) [[unlikely]] {
                         m_parseErrorMessage = "Attempted to redefine __proto__ property"_s;
                         return { };
                     }
@@ -1490,7 +1490,7 @@ JSValue LiteralParser<CharType, reviverMode>::parseRecursively(VM& vm, uint8_t* 
                 continue;
             }
 
-            if (UNLIKELY(type != TokRBrace)) {
+            if (type != TokRBrace) [[unlikely]] {
                 setErrorMessageForToken(TokRBrace);
                 return { };
             }
@@ -1500,7 +1500,7 @@ JSValue LiteralParser<CharType, reviverMode>::parseRecursively(VM& vm, uint8_t* 
         }
     }
 
-    if (UNLIKELY(type != TokRBrace)) {
+    if (type != TokRBrace) [[unlikely]] {
         setErrorMessageForToken(TokRBrace);
         return { };
     }
@@ -1606,7 +1606,7 @@ JSValue LiteralParser<CharType, reviverMode>::parse(VM& vm, ParserState initialS
                 while (true) {
                     Identifier ident = makeIdentifier(vm, m_lexer.currentToken());
 
-                    if (UNLIKELY(m_lexer.next() != TokColon)) {
+                    if (m_lexer.next() != TokColon) [[unlikely]] {
                         setErrorMessageForToken(TokColon);
                         return { };
                     }
@@ -1633,7 +1633,7 @@ JSValue LiteralParser<CharType, reviverMode>::parse(VM& vm, ParserState initialS
 
                     if (UNLIKELY(m_mode != StrictJSON && ident == vm.propertyNames->underscoreProto)) {
                         ASSERT(!sourceRanges);
-                        if (UNLIKELY(!m_visitedUnderscoreProto.add(object).isNewEntry)) {
+                        if (!m_visitedUnderscoreProto.add(object).isNewEntry) [[unlikely]] {
                             m_parseErrorMessage = "Attempted to redefine __proto__ property"_s;
                             return { };
                         }
@@ -1687,7 +1687,7 @@ JSValue LiteralParser<CharType, reviverMode>::parse(VM& vm, ParserState initialS
                 break;
             }
 
-            if (UNLIKELY(type != TokRBrace)) {
+            if (type != TokRBrace) [[unlikely]] {
                 setErrorMessageForToken(TokRBrace);
                 return { };
             }
@@ -1713,7 +1713,7 @@ JSValue LiteralParser<CharType, reviverMode>::parse(VM& vm, ParserState initialS
             m_identifierStack.append(makeIdentifier(vm, m_lexer.currentToken()));
 
             // Check for colon
-            if (UNLIKELY(m_lexer.next() != TokColon)) {
+            if (m_lexer.next() != TokColon) [[unlikely]] {
                 setErrorMessageForToken(TokColon);
                 return { };
             }
@@ -1728,7 +1728,7 @@ JSValue LiteralParser<CharType, reviverMode>::parse(VM& vm, ParserState initialS
             Identifier ident = m_identifierStack.takeLast();
             if (UNLIKELY(m_mode != StrictJSON && ident == vm.propertyNames->underscoreProto)) {
                 ASSERT(!sourceRanges);
-                if (UNLIKELY(!m_visitedUnderscoreProto.add(object).isNewEntry)) {
+                if (!m_visitedUnderscoreProto.add(object).isNewEntry) [[unlikely]] {
                     m_parseErrorMessage = "Attempted to redefine __proto__ property"_s;
                     return { };
                 }

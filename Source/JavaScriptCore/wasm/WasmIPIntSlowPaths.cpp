@@ -681,7 +681,7 @@ WASM_IPINT_EXTERN_CPP_DECL(array_new_default, Wasm::TypeIndex type, uint32_t siz
         defaultValue = JSValue::encode(jsNull());
     } else if (elementType.unpacked().isV128()) {
         JSValue result = Wasm::arrayNew(instance, type, size, vectorAllZeros());
-        if (UNLIKELY(result.isNull()))
+        if (result.isNull()) [[unlikely]]
             IPINT_THROW(Wasm::ExceptionType::BadArrayNew);
         IPINT_RETURN(JSValue::encode(result));
     }
@@ -700,7 +700,7 @@ WASM_IPINT_EXTERN_CPP_DECL(array_new_fixed, Wasm::TypeIndex type, uint32_t size,
         arguments[i] = sp[i].i64;
 
     JSValue result = Wasm::arrayNewFixed(instance, type, size, arguments.data());
-    if (UNLIKELY(result.isNull()))
+    if (result.isNull()) [[unlikely]]
         IPINT_THROW(Wasm::ExceptionType::BadArrayNew);
 
     IPINT_RETURN(JSValue::encode(result));

@@ -217,7 +217,7 @@ public:
         return UnexpectedResult(makeString("WebAssembly.Module failed compiling: "_s, makeString(args)...));
     }
 #define WASM_COMPILE_FAIL_IF(condition, ...) do { \
-        if (UNLIKELY(condition))                  \
+        if (condition) [[unlikely]]                  \
             return fail(__VA_ARGS__);             \
     } while (0)
 

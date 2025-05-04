@@ -77,7 +77,7 @@ JSImmutableButterfly* JSImmutableButterfly::createFromClonedArguments(JSGlobalOb
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), length);
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -125,7 +125,7 @@ static ALWAYS_INLINE JSImmutableButterfly* createFromNonClonedArguments(JSGlobal
     unsigned length = arguments->internalLength();
 
     JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), length);
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -169,7 +169,7 @@ JSImmutableButterfly* JSImmutableButterfly::createFromString(JSGlobalObject* glo
     unsigned length = holder->length();
     if (holder->is8Bit()) {
         JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), length);
-        if (UNLIKELY(!result)) {
+        if (!result) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return nullptr;
         }
@@ -212,7 +212,7 @@ JSImmutableButterfly* JSImmutableButterfly::createFromString(JSGlobalObject* glo
     });
 
     JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), codePointLength);
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -241,7 +241,7 @@ JSImmutableButterfly* JSImmutableButterfly::createFromString(JSGlobalObject* glo
 JSImmutableButterfly* JSImmutableButterfly::tryCreateFromArgList(VM& vm, ArgList argList)
 {
     JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), argList.size());
-    if (UNLIKELY(!result))
+    if (!result) [[unlikely]]
         return nullptr;
     gcSafeMemcpy(std::bit_cast<EncodedJSValue*>(result->toButterfly()->contiguous().data()), argList.data(), argList.size() * sizeof(EncodedJSValue));
     vm.writeBarrier(result);

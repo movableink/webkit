@@ -299,7 +299,7 @@ void objectAssignGeneric(JSGlobalObject* globalObject, VM& vm, JSObject* target,
             continue;
 
         JSValue value;
-        if (LIKELY(!slot.isTaintedByOpaqueObject()))
+        if (!slot.isTaintedByOpaqueObject()) [[likely]]
             value = slot.getValue(globalObject, propertyName);
         else
             value = source->get(globalObject, propertyName);
@@ -527,7 +527,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorEntries, (JSGlobalObject* globalObject
             return;
 
         JSValue value;
-        if (LIKELY(!slot.isTaintedByOpaqueObject()))
+        if (!slot.isTaintedByOpaqueObject()) [[likely]]
             value = slot.getValue(globalObject, propertyName);
         else
             value = target->get(globalObject, propertyName);
@@ -638,7 +638,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorValues, (JSGlobalObject* globalObject,
             return;
 
         JSValue value;
-        if (LIKELY(!slot.isTaintedByOpaqueObject()))
+        if (!slot.isTaintedByOpaqueObject()) [[likely]]
             value = slot.getValue(globalObject, propertyName);
         else
             value = target->get(globalObject, propertyName);
@@ -824,7 +824,7 @@ static JSValue definePropertiesSlow(JSGlobalObject* globalObject, JSObject* obje
     Vector<PropertyDescriptor> descriptors;
     MarkedArgumentBuffer markBuffer;
 #define RETURN_IF_EXCEPTION_CLEARING_OVERFLOW(value) do { \
-    if (UNLIKELY(scope.exception())) { \
+    if (scope.exception()) [[unlikely]] { \
         markBuffer.overflowCheckNotNeeded(); \
         return value; \
     } \
@@ -896,7 +896,7 @@ static JSValue defineProperties(JSGlobalObject* globalObject, JSObject* object, 
     descriptors.reserveInitialCapacity(numProperties);
 
 #define RETURN_IF_EXCEPTION_CLEARING_OVERFLOW(value) do { \
-    if (UNLIKELY(scope.exception())) { \
+    if (scope.exception()) [[unlikely]] { \
         markBuffer.overflowCheckNotNeeded(); \
         return value; \
     } \
@@ -1004,7 +1004,7 @@ bool setIntegrityLevel(JSGlobalObject* globalObject, VM& vm, JSObject* object)
 
     bool success = object->methodTable()->preventExtensions(object, globalObject);
     RETURN_IF_EXCEPTION(scope, false);
-    if (UNLIKELY(!success))
+    if (!success) [[unlikely]]
         return false;
 
     PropertyNameArray properties(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
@@ -1099,7 +1099,7 @@ JSObject* objectConstructorSeal(JSGlobalObject* globalObject, JSObject* object)
 
     bool success = setIntegrityLevel<IntegrityLevel::Sealed>(globalObject, vm, object);
     RETURN_IF_EXCEPTION(scope, nullptr);
-    if (UNLIKELY(!success)) {
+    if (!success) [[unlikely]] {
         throwTypeError(globalObject, scope, "Unable to prevent extension in Object.seal"_s);
         return nullptr;
     }
@@ -1132,7 +1132,7 @@ JSObject* objectConstructorFreeze(JSGlobalObject* globalObject, JSObject* object
 
     bool success = setIntegrityLevel<IntegrityLevel::Frozen>(globalObject, vm, object);
     RETURN_IF_EXCEPTION(scope, nullptr);
-    if (UNLIKELY(!success)) {
+    if (!success) [[unlikely]] {
         throwTypeError(globalObject, scope, "Unable to prevent extension in Object.freeze"_s);
         return nullptr;
     }
@@ -1280,7 +1280,7 @@ JSArray* ownPropertyKeys(JSGlobalObject* globalObject, JSObject* object, Propert
             auto* cachedButterfly = structure->cachedPropertyNamesIgnoringSentinel(kind);
             if (cachedButterfly == StructureRareData::cachedPropertyNamesSentinel()) {
                 auto* newButterfly = JSImmutableButterfly::tryCreate(vm, CopyOnWriteArrayWithContiguous, numProperties);
-                if (UNLIKELY(!newButterfly)) {
+                if (!newButterfly) [[unlikely]] {
                     throwOutOfMemoryError(globalObject, scope);
                     return { };
                 }

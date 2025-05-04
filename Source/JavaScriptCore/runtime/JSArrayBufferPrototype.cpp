@@ -57,7 +57,7 @@ std::optional<JSValue> arrayBufferSpeciesConstructorSlow(JSGlobalObject* globalO
 
     bool isValid = speciesWatchpointIsValid(thisObject, mode);
     scope.assertNoException();
-    if (LIKELY(isValid))
+    if (isValid) [[likely]]
         return std::nullopt;
 
     JSValue constructor = thisObject->get(globalObject, vm.propertyNames->constructor);
@@ -110,7 +110,7 @@ static ALWAYS_INLINE std::pair<SpeciesConstructResult, JSArrayBuffer*> speciesCo
 
     // 17. Perform ? RequireInternalSlot(new, [[ArrayBufferData]]).
     JSArrayBuffer* result = jsDynamicCast<JSArrayBuffer*>(newObject);
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         throwTypeError(globalObject, scope, "Species construction does not create ArrayBuffer"_s);
         return errorResult;
     }
@@ -348,7 +348,7 @@ static JSArrayBuffer* arrayBufferCopyAndDetach(JSGlobalObject* globalObject, JSA
 
     // We should create a new ArrayBuffer and copy them since underlying ArrayBuffer characteristics are different.
     auto newBuffer = ArrayBuffer::tryCreate(newByteLength, 1, std::nullopt);
-    if (UNLIKELY(!newBuffer)) {
+    if (!newBuffer) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }

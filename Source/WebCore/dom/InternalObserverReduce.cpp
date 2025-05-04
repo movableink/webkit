@@ -71,7 +71,7 @@ private:
         auto result = protectedCallback()->invokeRethrowingException(m_accumulator.getValue(), value, m_index++);
 
         JSC::Exception* exception = scope.exception();
-        if (UNLIKELY(exception)) {
+        if (exception) [[unlikely]] {
             scope.clearException();
             auto value = exception->value();
             protectedPromise()->reject<IDLAny>(value);

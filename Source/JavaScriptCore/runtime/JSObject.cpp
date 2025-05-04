@@ -507,7 +507,7 @@ String JSObject::calculatedClassName(JSObject* object)
     }
 
     EXCEPTION_ASSERT(!scope.exception() || constructorFunctionName.isNull());
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         scope.clearException();
 
     // Get the display name of obj.__proto__.constructor.
@@ -534,7 +534,7 @@ String JSObject::calculatedClassName(JSObject* object)
     }
 
     EXCEPTION_ASSERT(!scope.exception() || constructorFunctionName.isNull());
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         scope.clearException();
 
     if (constructorFunctionName.isNull() || constructorFunctionName == "Object"_s) {
@@ -545,14 +545,14 @@ String JSObject::calculatedClassName(JSObject* object)
                 JSValue value = slot.getValue(globalObject, vm.propertyNames->toStringTagSymbol);
                 if (value.isString()) {
                     auto tag = asString(value)->value(globalObject);
-                    if (UNLIKELY(scope.exception()))
+                    if (scope.exception()) [[unlikely]]
                         scope.clearException();
                     return tag;
                 }
             }
         }
 
-        if (UNLIKELY(scope.exception()))
+        if (scope.exception()) [[unlikely]]
             scope.clearException();
 
         String classInfoName = object->classInfo()->className;
@@ -812,7 +812,7 @@ bool JSObject::putInlineSlow(JSGlobalObject* globalObject, PropertyName property
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
         throwStackOverflowError(globalObject, scope);
         return false;
     }
@@ -1301,7 +1301,7 @@ static Butterfly* createArrayStorageButterflyImpl(VM& vm, JSObject* intendedOwne
     Butterfly* newButterfly = Butterfly::createOrGrowArrayRight(
         oldButterfly, vm, intendedOwner, structure, structure->outOfLineCapacity(), false, 0,
         ArrayStorage::sizeFor(vectorLength));
-    if (UNLIKELY(!newButterfly)) {
+    if (!newButterfly) [[unlikely]] {
         if (mode == AllocationFailureMode::Assert)
             RELEASE_ASSERT(newButterfly, length, vectorLength, oldButterfly);
         else {
@@ -1861,7 +1861,7 @@ ContiguousJSValues JSObject::tryMakeWritableInt32Slow(VM& vm)
     
     switch (indexingType()) {
     case ALL_BLANK_INDEXING_TYPES:
-        if (UNLIKELY(indexingShouldBeSparse() || needsSlowPutIndexing()))
+        if (indexingShouldBeSparse() || needsSlowPutIndexing()) [[unlikely]]
             return ContiguousJSValues();
         return createInitialInt32(vm, 0);
         
@@ -1899,7 +1899,7 @@ ContiguousDoubles JSObject::tryMakeWritableDoubleSlow(VM& vm)
     
     switch (indexingType()) {
     case ALL_BLANK_INDEXING_TYPES:
-        if (UNLIKELY(indexingShouldBeSparse() || needsSlowPutIndexing()))
+        if (indexingShouldBeSparse() || needsSlowPutIndexing()) [[unlikely]]
             return ContiguousDoubles();
         return createInitialDouble(vm, 0);
         
@@ -1938,7 +1938,7 @@ ContiguousJSValues JSObject::tryMakeWritableContiguousSlow(VM& vm)
     
     switch (indexingType()) {
     case ALL_BLANK_INDEXING_TYPES:
-        if (UNLIKELY(indexingShouldBeSparse() || needsSlowPutIndexing()))
+        if (indexingShouldBeSparse() || needsSlowPutIndexing()) [[unlikely]]
             return ContiguousJSValues();
         return createInitialContiguous(vm, 0);
         
@@ -2091,7 +2091,7 @@ void JSObject::setPrototypeDirect(VM& vm, JSValue prototype)
         Structure* newStructure = Structure::changePrototypeTransition(vm, structure(), prototype, deferred);
         setStructure(vm, newStructure);
         // Prototype-chain gets changed for the already cached structures. Invalidate the cache.
-        if (UNLIKELY(mayBePrototype()))
+        if (mayBePrototype()) [[unlikely]]
             vm.invalidateStructureChainIntegrity(VM::StructureChainIntegrityEvent::Prototype);
     } else
         putDirectOffset(vm, knownPolyProtoOffset, prototype);
@@ -2293,7 +2293,7 @@ bool JSObject::hasProperty(JSGlobalObject* globalObject, unsigned propertyName) 
 
 bool JSObject::hasProperty(JSGlobalObject* globalObject, uint64_t propertyName) const
 {
-    if (LIKELY(propertyName <= MAX_ARRAY_INDEX))
+    if (propertyName <= MAX_ARRAY_INDEX) [[likely]]
         return hasProperty(globalObject, static_cast<uint32_t>(propertyName));
     ASSERT(propertyName <= maxSafeInteger());
     return hasProperty(globalObject, Identifier::from(globalObject->vm(), propertyName));
@@ -2623,7 +2623,7 @@ bool JSObject::hasInstance(JSGlobalObject* globalObject, JSValue value, JSValue 
         RELEASE_AND_RETURN(scope, defaultHasInstance(globalObject, value, prototype));
     }
     if (info.implementsHasInstance()) {
-        if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+        if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
             throwStackOverflowError(globalObject, scope);
             return false;
         }
@@ -4018,7 +4018,7 @@ void JSObject::convertToUncacheableDictionary(VM& vm)
         return;
     DeferredStructureTransitionWatchpointFire deferredWatchpointFire(vm, oldStructure);
     setStructure(vm, Structure::toUncacheableDictionaryTransition(vm, oldStructure, &deferredWatchpointFire));
-    if (UNLIKELY(mayBePrototype()))
+    if (mayBePrototype()) [[unlikely]]
         vm.invalidateStructureChainIntegrity(VM::StructureChainIntegrityEvent::Change);
 }
 
@@ -4033,7 +4033,7 @@ void JSObject::shiftButterflyAfterFlattening(const GCSafeConcurrentJSLocker&, VM
     size_t preCapacity;
     size_t indexingPayloadSizeInBytes;
     bool hasIndexingHeader = this->hasIndexingHeader();
-    if (UNLIKELY(hasIndexingHeader)) {
+    if (hasIndexingHeader) [[unlikely]] {
         preCapacity = oldButterfly->indexingHeader()->preCapacity(structure);
         indexingPayloadSizeInBytes = oldButterfly->indexingHeader()->indexingPayloadSizeInBytes(structure);
     } else {

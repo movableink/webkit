@@ -41,7 +41,7 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayConstructorFromBase64, (JSGlobalObject* globa
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSString* jsString = jsDynamicCast<JSString*>(callFrame->argument(0));
-    if (UNLIKELY(!jsString))
+    if (!jsString) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Uint8Array.fromBase64 requires a string"_s);
 
     auto alphabet = WTF::Alphabet::Base64;
@@ -57,7 +57,7 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayConstructorFromBase64, (JSGlobalObject* globa
         RETURN_IF_EXCEPTION(scope, { });
         if (!alphabetValue.isUndefined()) {
             JSString* alphabetString = jsDynamicCast<JSString*>(alphabetValue);
-            if (UNLIKELY(!alphabetString))
+            if (!alphabetString) [[unlikely]]
                 return throwVMTypeError(globalObject, scope, "Uint8Array.fromBase64 requires that alphabet be \"base64\" or \"base64url\""_s);
 
             auto alphabetStringView = alphabetString->view(globalObject);
@@ -216,7 +216,7 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayConstructorFromHex, (JSGlobalObject* globalOb
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSString* jsString = jsDynamicCast<JSString*>(callFrame->argument(0));
-    if (UNLIKELY(!jsString))
+    if (!jsString) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Uint8Array.fromHex requires a string"_s);
     if (UNLIKELY(jsString->length() % 2))
         return JSValue::encode(throwSyntaxError(globalObject, scope, "Uint8Array.fromHex requires a string of even length"_s));
@@ -238,7 +238,7 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayConstructorFromHex, (JSGlobalObject* globalOb
     else
         success = decodeHex(view.span16(), result) == WTF::notFound;
 
-    if (UNLIKELY(!success))
+    if (!success) [[unlikely]]
         return JSValue::encode(throwSyntaxError(globalObject, scope, "Uint8Array.prototype.fromHex requires a string containing only \"0123456789abcdefABCDEF\""_s));
 
     return JSValue::encode(uint8Array);

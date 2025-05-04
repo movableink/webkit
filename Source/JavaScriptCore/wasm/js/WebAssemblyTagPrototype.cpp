@@ -81,7 +81,7 @@ ALWAYS_INLINE static JSWebAssemblyTag* getTag(JSGlobalObject* globalObject, JSVa
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!thisValue.isCell())) {
+    if (!thisValue.isCell()) [[unlikely]] {
         throwVMError(globalObject, scope, createNotAnObjectError(globalObject, thisValue));
         return nullptr;
     }

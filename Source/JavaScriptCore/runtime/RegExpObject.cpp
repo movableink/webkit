@@ -143,7 +143,7 @@ bool RegExpObject::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName 
         if (!thisObject->lastIndexIsWritable())
             return typeError(globalObject, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
 
-        if (UNLIKELY(slot.thisValue() != thisObject))
+        if (slot.thisValue() != thisObject) [[unlikely]]
             RELEASE_AND_RETURN(scope, JSObject::definePropertyOnReceiver(globalObject, propertyName, value, slot));
 
         bool result = thisObject->setLastIndex(globalObject, value, slot.isStrictMode());

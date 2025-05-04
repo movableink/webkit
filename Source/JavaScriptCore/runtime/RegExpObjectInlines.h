@@ -163,14 +163,14 @@ JSValue collectMatches(VM& vm, JSGlobalObject* globalObject, JSString* string, S
         size_t end = result.end;
         size_t length = end - result.start;
         array->putDirectIndex(globalObject, arrayIndex++, jsSubstringOfResolved(vm, string, result.start, length));
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             hasException = true;
             return;
         }
         if (!length)
             end = fixEnd(end);
         result = globalObject->regExpGlobalData().performMatch(globalObject, regExp, string, s, end);
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             hasException = true;
             return;
         }
@@ -206,7 +206,7 @@ JSValue collectMatches(VM& vm, JSGlobalObject* globalObject, JSString* string, S
             do {
                 iterate();
                 EXCEPTION_ASSERT(!!scope.exception() == hasException);
-                if (UNLIKELY(hasException))
+                if (hasException) [[unlikely]]
                     return { };
             } while (result);
             
@@ -215,7 +215,7 @@ JSValue collectMatches(VM& vm, JSGlobalObject* globalObject, JSString* string, S
         
         iterate();
         EXCEPTION_ASSERT(!!scope.exception() == hasException);
-        if (UNLIKELY(hasException))
+        if (hasException) [[unlikely]]
             return { };
     } while (result);
     
@@ -287,7 +287,7 @@ ALWAYS_INLINE JSValue collectGlobalAtomMatches(JSGlobalObject* globalObject, JSS
         }
     }
 
-    if (UNLIKELY(numberOfMatches > MAX_STORAGE_VECTOR_LENGTH)) {
+    if (numberOfMatches > MAX_STORAGE_VECTOR_LENGTH) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return jsUndefined();
     }

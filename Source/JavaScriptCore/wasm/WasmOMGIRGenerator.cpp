@@ -367,7 +367,7 @@ public:
         return UnexpectedResult(makeString("WebAssembly.Module failed compiling: "_s, makeString(args)...));
     }
 #define WASM_COMPILE_FAIL_IF(condition, ...) do { \
-        if (UNLIKELY(condition))                  \
+        if (condition) [[unlikely]]                  \
             return fail(__VA_ARGS__);             \
     } while (0)
 
@@ -2539,7 +2539,7 @@ auto OMGIRGenerator::atomicLoad(ExtAtomicOpType op, Type valueType, ExpressionTy
 {
     ASSERT(pointer->type() == Int32);
 
-    if (UNLIKELY(sumOverflows<uint32_t>(offset, sizeOfAtomicOpMemoryAccess(op)))) {
+    if (sumOverflows<uint32_t>(offset, sizeOfAtomicOpMemoryAccess(op))) [[unlikely]] {
         // FIXME: Even though this is provably out of bounds, it's not a validation error, so we have to handle it
         // as a runtime exception. However, this may change: https://bugs.webkit.org/show_bug.cgi?id=166435
         B3::PatchpointValue* throwException = m_currentBlock->appendNew<B3::PatchpointValue>(m_proc, B3::Void, origin());
@@ -2577,7 +2577,7 @@ auto OMGIRGenerator::atomicStore(ExtAtomicOpType op, Type valueType, ExpressionT
 {
     ASSERT(pointer->type() == Int32);
 
-    if (UNLIKELY(sumOverflows<uint32_t>(offset, sizeOfAtomicOpMemoryAccess(op)))) {
+    if (sumOverflows<uint32_t>(offset, sizeOfAtomicOpMemoryAccess(op))) [[unlikely]] {
         // FIXME: Even though this is provably out of bounds, it's not a validation error, so we have to handle it
         // as a runtime exception. However, this may change: https://bugs.webkit.org/show_bug.cgi?id=166435
         B3::PatchpointValue* throwException = m_currentBlock->appendNew<B3::PatchpointValue>(m_proc, B3::Void, origin());
@@ -2665,7 +2665,7 @@ auto OMGIRGenerator::atomicBinaryRMW(ExtAtomicOpType op, Type valueType, Express
 {
     ASSERT(pointer->type() == Int32);
 
-    if (UNLIKELY(sumOverflows<uint32_t>(offset, sizeOfAtomicOpMemoryAccess(op)))) {
+    if (sumOverflows<uint32_t>(offset, sizeOfAtomicOpMemoryAccess(op))) [[unlikely]] {
         // FIXME: Even though this is provably out of bounds, it's not a validation error, so we have to handle it
         // as a runtime exception. However, this may change: https://bugs.webkit.org/show_bug.cgi?id=166435
         B3::PatchpointValue* throwException = m_currentBlock->appendNew<B3::PatchpointValue>(m_proc, B3::Void, origin());
@@ -2776,7 +2776,7 @@ auto OMGIRGenerator::atomicCompareExchange(ExtAtomicOpType op, Type valueType, E
 {
     ASSERT(pointer->type() == Int32);
 
-    if (UNLIKELY(sumOverflows<uint32_t>(offset, sizeOfAtomicOpMemoryAccess(op)))) {
+    if (sumOverflows<uint32_t>(offset, sizeOfAtomicOpMemoryAccess(op))) [[unlikely]] {
         // FIXME: Even though this is provably out of bounds, it's not a validation error, so we have to handle it
         // as a runtime exception. However, this may change: https://bugs.webkit.org/show_bug.cgi?id=166435
         B3::PatchpointValue* throwException = m_currentBlock->appendNew<B3::PatchpointValue>(m_proc, B3::Void, origin());

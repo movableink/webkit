@@ -59,7 +59,7 @@ ScopedArgumentsTable* ScopedArgumentsTable::create(VM& vm)
 ScopedArgumentsTable* ScopedArgumentsTable::tryCreate(VM& vm, uint32_t length)
 {
     void* buffer = tryAllocateCell<ScopedArgumentsTable>(vm);
-    if (UNLIKELY(!buffer))
+    if (!buffer) [[unlikely]]
         return nullptr;
     ScopedArgumentsTable* result = new (NotNull, buffer) ScopedArgumentsTable(vm);
     result->finishCreation(vm);
@@ -75,7 +75,7 @@ ScopedArgumentsTable* ScopedArgumentsTable::tryCreate(VM& vm, uint32_t length)
 ScopedArgumentsTable* ScopedArgumentsTable::tryClone(VM& vm)
 {
     ScopedArgumentsTable* result = tryCreate(vm, m_length);
-    if (UNLIKELY(!result))
+    if (!result) [[unlikely]]
         return nullptr;
     for (unsigned i = m_length; i--;)
         result->at(i) = this->at(i);
@@ -98,7 +98,7 @@ ScopedArgumentsTable* ScopedArgumentsTable::trySetLength(VM& vm, uint32_t newLen
     }
     
     ScopedArgumentsTable* result = tryCreate(vm, newLength);
-    if (UNLIKELY(!result))
+    if (!result) [[unlikely]]
         return nullptr;
     m_watchpointSets.resize(newLength);
     for (unsigned i = std::min(m_length, newLength); i--;) {
@@ -115,7 +115,7 @@ ScopedArgumentsTable* ScopedArgumentsTable::trySet(VM& vm, uint32_t i, ScopeOffs
     ScopedArgumentsTable* result;
     if (UNLIKELY(m_locked)) {
         result = tryClone(vm);
-        if (UNLIKELY(!result))
+        if (!result) [[unlikely]]
             return nullptr;
     } else
         result = this;

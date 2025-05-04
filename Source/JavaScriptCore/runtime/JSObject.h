@@ -281,7 +281,7 @@ public:
     ALWAYS_INLINE bool putByIndexInline(JSGlobalObject* globalObject, uint64_t propertyName, JSValue value, bool shouldThrow)
     {
         VM& vm = getVM(globalObject);
-        if (LIKELY(propertyName <= MAX_ARRAY_INDEX))
+        if (propertyName <= MAX_ARRAY_INDEX) [[likely]]
             return putByIndexInline(globalObject, static_cast<uint32_t>(propertyName), value, shouldThrow);
 
         ASSERT(propertyName <= maxSafeInteger());
@@ -330,7 +330,7 @@ public:
 
     ALWAYS_INLINE bool putDirectIndex(JSGlobalObject* globalObject, uint64_t propertyName, JSValue value, unsigned attributes, PutDirectIndexMode mode)
     {
-        if (LIKELY(propertyName <= MAX_ARRAY_INDEX))
+        if (propertyName <= MAX_ARRAY_INDEX) [[likely]]
             return putDirectIndex(globalObject, static_cast<uint32_t>(propertyName), value, attributes, mode);
         return putDirect(getVM(globalObject), Identifier::from(getVM(globalObject), propertyName), value, attributes);
     }
@@ -1696,7 +1696,7 @@ inline size_t JSObject::butterflyTotalSize()
     size_t indexingPayloadSizeInBytes;
     bool hasIndexingHeader = this->hasIndexingHeader();
 
-    if (UNLIKELY(hasIndexingHeader)) {
+    if (hasIndexingHeader) [[unlikely]] {
         preCapacity = butterfly->indexingHeader()->preCapacity(structure);
         indexingPayloadSizeInBytes = butterfly->indexingHeader()->indexingPayloadSizeInBytes(structure);
     } else {

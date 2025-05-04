@@ -112,7 +112,7 @@ protected:
         return UnexpectedResult(makeString("WebAssembly.Module doesn't parse at byte "_s, m_offset, ": "_s, makeString(args)...));
     }
 #define WASM_PARSER_FAIL_IF(condition, ...) do { \
-    if (UNLIKELY(condition))                     \
+    if (condition) [[unlikely]]                     \
         return fail(__VA_ARGS__);                \
     } while (0)
 

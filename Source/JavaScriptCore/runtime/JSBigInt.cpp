@@ -120,7 +120,7 @@ inline JSBigInt* JSBigInt::createWithLength(JSGlobalObject* nullOrGlobalObjectFo
 
     ASSERT(length <= maxLength);
     void* data = vm.primitiveGigacageAuxiliarySpace().allocate(vm, length * sizeof(Digit), nullptr, AllocationFailureMode::ReturnNull);
-    if (UNLIKELY(!data)) {
+    if (!data) [[unlikely]] {
         if (nullOrGlobalObjectForOOM) {
             auto scope = DECLARE_THROW_SCOPE(vm);
             throwOutOfMemoryError(nullOrGlobalObjectForOOM, scope);
@@ -1654,7 +1654,7 @@ bool JSBigInt::absoluteDivWithDigitDivisor(JSGlobalObject* nullOrGlobalObjectFor
     if (divisor == 1) {
         if (quotient) {
             JSBigInt* result = x.toHeapBigInt(nullOrGlobalObjectForOOM, vm);
-            if (UNLIKELY(!result))
+            if (!result) [[unlikely]]
                 return false;
             *quotient = result;
         }
@@ -1665,7 +1665,7 @@ bool JSBigInt::absoluteDivWithDigitDivisor(JSGlobalObject* nullOrGlobalObjectFor
     if (quotient) {
         if (*quotient == nullptr) {
             JSBigInt* result = createWithLength(nullOrGlobalObjectForOOM, vm, length);
-            if (UNLIKELY(!result))
+            if (!result) [[unlikely]]
                 return false;
             *quotient = result;
         }

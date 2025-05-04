@@ -404,7 +404,7 @@ bool JSFunction::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName pr
             if (!isValidOffset(thisObject->getDirectOffset(vm, propertyName))) {
                 // For class constructors, prototype object is initialized from bytecode via defineOwnProperty().
                 ASSERT(!thisObject->jsExecutable()->isClassConstructorFunction());
-                if (UNLIKELY(slot.thisValue() != thisObject))
+                if (slot.thisValue() != thisObject) [[unlikely]]
                     RELEASE_AND_RETURN(scope, JSObject::definePropertyOnReceiver(globalObject, propertyName, value, slot));
                 thisObject->putDirect(vm, propertyName, value, prototypeAttributesForNonClass);
                 return true;

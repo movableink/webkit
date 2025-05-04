@@ -368,7 +368,7 @@ private:
     
     FatEntry* inflate()
     {
-        if (LIKELY(isFat()))
+        if (isFat()) [[likely]]
             return fatEntry();
         return inflateSlow();
     }
@@ -668,12 +668,12 @@ public:
     {
         if (UNLIKELY(!m_arguments)) {
             ScopedArgumentsTable* table = ScopedArgumentsTable::tryCreate(vm, length);
-            if (UNLIKELY(!table))
+            if (!table) [[unlikely]]
                 return false;
             m_arguments.set(vm, this, table);
         } else {
             ScopedArgumentsTable* table = m_arguments->trySetLength(vm, length);
-            if (UNLIKELY(!table))
+            if (!table) [[unlikely]]
                 return false;
             m_arguments.set(vm, this, table);
         }

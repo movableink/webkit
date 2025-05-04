@@ -803,7 +803,7 @@ Vector<String> canonicalizeLocaleList(JSGlobalObject* globalObject, JSValue loca
             }
 
             String errorMessage = tryMakeString("invalid language tag: "_s, tag);
-            if (UNLIKELY(!errorMessage)) {
+            if (!errorMessage) [[unlikely]] {
                 throwException(globalObject, scope, createOutOfMemoryError(globalObject));
                 return { };
             }

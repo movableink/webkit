@@ -92,7 +92,7 @@ void iteratorClose(JSGlobalObject* globalObject, JSValue iterator)
     auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
     Exception* exception = nullptr;
-    if (UNLIKELY(catchScope.exception())) {
+    if (catchScope.exception()) [[unlikely]] {
         exception = catchScope.exception();
         catchScope.clearException();
     }

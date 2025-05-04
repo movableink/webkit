@@ -95,7 +95,7 @@ inline JSValue arrayNew(JSWebAssemblyInstance* instance, uint32_t typeIndex, uin
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }
-    if (UNLIKELY(!array))
+    if (!array) [[unlikely]]
         return jsNull();
     return array;
 }
@@ -113,7 +113,7 @@ inline JSValue arrayNew(JSWebAssemblyInstance* instance, uint32_t typeIndex, uin
     ASSERT_UNUSED(fieldType, fieldType.type.unpacked() == Wasm::Types::V128);
 
     auto* array = JSWebAssemblyArray::tryCreate(vm, structure, size);
-    if (UNLIKELY(!array))
+    if (!array) [[unlikely]]
         return jsNull();
 
     array->fill(vm, 0, value, size);
@@ -126,7 +126,7 @@ JSWebAssemblyArray* tryCopyElementsInReverse(JSWebAssemblyInstance* instance, We
     VM& vm = instance->vm();
 
     auto* array = JSWebAssemblyArray::tryCreate(vm, structure, size);
-    if (UNLIKELY(!array))
+    if (!array) [[unlikely]]
         return array;
 
     if (!size)
@@ -176,7 +176,7 @@ inline JSValue arrayNewFixed(JSWebAssemblyInstance* instance, uint32_t typeIndex
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }
-    if (UNLIKELY(!array))
+    if (!array) [[unlikely]]
         return jsNull();
     return array;
 }
@@ -187,7 +187,7 @@ EncodedJSValue createArrayFromDataSegment(JSWebAssemblyInstance* instance, WebAs
     JSGlobalObject* globalObject = instance->globalObject();
     VM& vm = globalObject->vm();
     auto* array = JSWebAssemblyArray::tryCreate(vm, structure, arraySize);
-    if (UNLIKELY(!array))
+    if (!array) [[unlikely]]
         return JSValue::encode(jsNull());
 
     ASSERT(!array->elementsAreRefTypes());
@@ -277,7 +277,7 @@ inline EncodedJSValue arrayNewElem(JSWebAssemblyInstance* instance, uint32_t typ
     StorageType arrayType = structure->typeDefinition().as<ArrayType>()->elementType().type;
     ASSERT_UNUSED(arrayType, isSubtype(StorageType(element->elementType), arrayType));
     auto* array = JSWebAssemblyArray::tryCreate(vm, structure, arraySize);
-    if (UNLIKELY(!array))
+    if (!array) [[unlikely]]
         return JSValue::encode(jsNull());
     instance->copyElementSegment(array, instance->module().moduleInformation().elements[elemSegmentIndex], offset, arraySize, array->span<uint64_t>().data());
     ASSERT(Wasm::isRefType(element->elementType));
