@@ -311,7 +311,7 @@ void CARingBuffer::fetchInternal(AudioBufferList* list, size_t nFrames, uint64_t
 
 std::unique_ptr<InProcessCARingBuffer> InProcessCARingBuffer::allocate(const WebCore::CAAudioStreamDescription& format, size_t frameCount)
 {
-    frameCount = WTF::roundUpToPowerOfTwo(frameCount);
+    frameCount = roundUpToPowerOfTwo(frameCount);
     auto bytesPerFrame = format.bytesPerFrame();
     auto numChannelStreams = format.numberOfChannelStreams();
 

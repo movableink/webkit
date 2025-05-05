@@ -466,9 +466,10 @@ TEST(WTF, clampInfinityToInteger)
 
 TEST(WTF, roundUpToPowerOfTwo)
 {
-    EXPECT_EQ(WTF::roundUpToPowerOfTwo(UINT32_MAX), 0U);
-    EXPECT_EQ(WTF::roundUpToPowerOfTwo(1U << 31), (1U << 31));
-    EXPECT_EQ(WTF::roundUpToPowerOfTwo((1U << 31) + 1), 0U);
+    EXPECT_EQ(roundUpToPowerOfTwo(1U), 1U);
+    EXPECT_EQ(roundUpToPowerOfTwo(4U), 4U);
+    EXPECT_EQ(roundUpToPowerOfTwo(120U), 128U);
+    EXPECT_EQ(roundUpToPowerOfTwo(1U << 31), (1U << 31));
 }
 
 TEST(WTF, clz)

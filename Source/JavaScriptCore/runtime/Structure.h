@@ -590,7 +590,7 @@ public:
 
         ASSERT(outOfLineSize > initialOutOfLineCapacity);
         static_assert(outOfLineGrowthFactor == 2);
-        return WTF::roundUpToPowerOfTwo(outOfLineSize);
+        return roundUpToPowerOfTwo(outOfLineSize);
     }
     
     static unsigned outOfLineSize(PropertyOffset maxOffset)

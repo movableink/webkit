@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <ranges>
+#include <wtf/MathExtras.h>
 #include <wtf/PageBlock.h>
 #include <wtf/StdLibExtras.h>
 
@@ -35,28 +36,12 @@ namespace WebKit {
 
 using namespace WebCore;
 
-const unsigned sharedStringHashTableMaxLoad = 2;
-
-static unsigned nextPowerOf2(unsigned v)
-{
-    // Taken from http://www.cs.utk.edu/~vose/c-stuff/bithacks.html
-    // Devised by Sean Anderson, September 14, 2001
-
-    v--;
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v |= v >> 16;
-    v++;
-
-    return v;
-}
+constexpr unsigned sharedStringHashTableMaxLoad = 2;
 
 static unsigned tableLengthForKeyCount(unsigned keyCount)
 {
     // We want the table to be at least half empty.
-    unsigned tableLength = nextPowerOf2(keyCount * sharedStringHashTableMaxLoad);
+    unsigned tableLength = roundUpToPowerOfTwo(keyCount * sharedStringHashTableMaxLoad);
 
     // Ensure that the table length is at least the size of a page.
     size_t minimumTableLength = pageSize() / sizeof(SharedStringHash);

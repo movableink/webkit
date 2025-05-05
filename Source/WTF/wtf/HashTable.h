@@ -1222,7 +1222,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
     template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, ShouldValidateKey shouldValidateKey, typename Malloc>
     constexpr unsigned HashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits, shouldValidateKey, Malloc>::computeBestTableSize(unsigned keyCount)
     {
-        unsigned bestTableSize = WTF::roundUpToPowerOfTwo(keyCount);
+        unsigned bestTableSize = roundUpToPowerOfTwo(keyCount);
 
         if (HashTableSizePolicy::shouldExpand(keyCount, bestTableSize))
             bestTableSize *= 2;

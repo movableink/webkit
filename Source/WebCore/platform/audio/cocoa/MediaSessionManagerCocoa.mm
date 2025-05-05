@@ -145,7 +145,7 @@ void MediaSessionManagerCocoa::updateSessionState()
     else if (captureCount || audioMediaStreamTrackCount) {
         // In case of audio capture or audio MediaStreamTrack playing, we want to grab 20 ms chunks to limit the latency so that it is not noticeable by users
         // while having a large enough buffer so that the audio rendering remains stable, hence a computation based on sample rate.
-        bufferSize = WTF::roundUpToPowerOfTwo(sharedSession->sampleRate() / 50);
+        bufferSize = roundUpToPowerOfTwo<size_t>(sharedSession->sampleRate() / 50);
     } else if (m_supportedAudioHardwareBufferSizes && DeprecatedGlobalSettings::lowPowerVideoAudioBufferSizeEnabled())
         bufferSize = m_supportedAudioHardwareBufferSizes.nearest(kLowPowerVideoBufferSize);
 

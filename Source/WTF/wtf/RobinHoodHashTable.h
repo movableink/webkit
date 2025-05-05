@@ -726,7 +726,7 @@ void RobinHoodHashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits,
 template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, typename SizePolicy, ShouldValidateKey shouldValidateKey, typename Malloc>
 constexpr unsigned RobinHoodHashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits, SizePolicy, shouldValidateKey, Malloc>::computeBestTableSize(unsigned keyCount)
 {
-    unsigned bestTableSize = WTF::roundUpToPowerOfTwo(keyCount);
+    unsigned bestTableSize = roundUpToPowerOfTwo(keyCount);
 
     if (shouldExpand(keyCount, bestTableSize))
         bestTableSize *= 2;

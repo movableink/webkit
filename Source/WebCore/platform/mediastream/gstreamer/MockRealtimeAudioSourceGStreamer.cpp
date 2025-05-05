@@ -217,7 +217,7 @@ void MockRealtimeAudioSourceGStreamer::reconfigure()
     auto rate = sampleRate();
     size_t sampleCount = 2 * rate;
 
-    m_maximiumFrameCount = WTF::roundUpToPowerOfTwo(renderInterval().seconds() * sampleRate());
+    m_maximiumFrameCount = roundUpToPowerOfTwo<uint32_t>(renderInterval().seconds() * sampleRate());
     gst_audio_info_set_format(&info, GST_AUDIO_FORMAT_F32LE, rate, 1, nullptr);
     m_streamFormat = GStreamerAudioStreamDescription(info);
     m_caps = adoptGRef(gst_audio_info_to_caps(&info));

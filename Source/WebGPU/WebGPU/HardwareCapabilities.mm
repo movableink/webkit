@@ -400,7 +400,7 @@ template <typename T>
 static T mergeAlignment(T previous, T next)
 {
     // https://gpuweb.github.io/gpuweb/#limit-class-alignment
-    return std::min(WTF::roundUpToPowerOfTwo(previous), WTF::roundUpToPowerOfTwo(next));
+    return std::min(roundUpToPowerOfTwo(previous), roundUpToPowerOfTwo(next));
 };
 
 static WGPULimits mergeLimits(const WGPULimits& previous, const WGPULimits& next)

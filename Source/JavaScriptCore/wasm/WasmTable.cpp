@@ -64,7 +64,7 @@ template<typename Visitor> constexpr decltype(auto) Table::visitDerived(Visitor&
 
 uint32_t Table::allocatedLength(uint32_t length)
 {
-    return WTF::roundUpToPowerOfTwo(length);
+    return roundUpToPowerOfTwo(length);
 }
 
 void Table::setLength(uint32_t length)
