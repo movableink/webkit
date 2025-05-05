@@ -611,7 +611,11 @@ template <typename T>
 ALWAYS_INLINE bool Lexer<T>::atEnd() const
 {
     ASSERT(!m_current || m_code < m_codeEnd);
-    return UNLIKELY(UNLIKELY(!m_current) && m_code == m_codeEnd);
+    if (m_current) [[likely]]
+        return false;
+    if (m_code == m_codeEnd) [[unlikely]]
+        return true;
+    return false;
 }
 
 template <typename T>

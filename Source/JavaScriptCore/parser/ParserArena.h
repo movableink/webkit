@@ -191,7 +191,7 @@ namespace JSC {
 
         IdentifierArena& identifierArena()
         {
-            if (UNLIKELY (!m_identifierArena))
+            if (!m_identifierArena) [[unlikely]]
                 m_identifierArena = makeUnique<IdentifierArena>();
             return *m_identifierArena;
         }

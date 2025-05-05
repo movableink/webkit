@@ -68,8 +68,10 @@ public:
         ASSERT(!isCompilationThread());
         JSArray* lastArray = m_storage.pointer();
         unsigned largestSeenVectorLength = current().vectorLength();
-        if (lastArray && (largestSeenVectorLength != BASE_CONTIGUOUS_VECTOR_LEN_MAX) && UNLIKELY(lastArray->getVectorLength() > largestSeenVectorLength))
-            updateProfile();
+        if (lastArray && (largestSeenVectorLength != BASE_CONTIGUOUS_VECTOR_LEN_MAX)) {
+            if (lastArray->getVectorLength() > largestSeenVectorLength) [[unlikely]]
+                updateProfile();
+        }
         return current().vectorLength();
     }
     

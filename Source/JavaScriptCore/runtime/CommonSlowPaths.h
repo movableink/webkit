@@ -73,14 +73,15 @@ inline JSValue opEnumeratorGetByVal(JSGlobalObject* globalObject, JSValue baseVa
         RELEASE_AND_RETURN(scope, baseValue.get(globalObject, static_cast<unsigned>(index)));
     }
     case JSPropertyNameEnumerator::OwnStructureMode: {
-        if (LIKELY(baseValue.isCell()) && baseValue.asCell()->structureID() == enumerator->cachedStructureID()) {
-            // We'll only match the structure ID if the base is an object.
-            ASSERT(index < enumerator->endStructurePropertyIndex());
-            RELEASE_AND_RETURN(scope, baseValue.getObject()->getDirect(index < enumerator->cachedInlineCapacity() ? index : index - enumerator->cachedInlineCapacity() + firstOutOfLineOffset));
-        } else {
-            if (enumeratorMetadata)
-                *enumeratorMetadata |= static_cast<uint8_t>(JSPropertyNameEnumerator::HasSeenOwnStructureModeStructureMismatch);
+        if (baseValue.isCell()) [[likely]] {
+            if (baseValue.asCell()->structureID() == enumerator->cachedStructureID()) {
+                // We'll only match the structure ID if the base is an object.
+                ASSERT(index < enumerator->endStructurePropertyIndex());
+                RELEASE_AND_RETURN(scope, baseValue.getObject()->getDirect(index < enumerator->cachedInlineCapacity() ? index : index - enumerator->cachedInlineCapacity() + firstOutOfLineOffset));
+            }
         }
+        if (enumeratorMetadata)
+            *enumeratorMetadata |= static_cast<uint8_t>(JSPropertyNameEnumerator::HasSeenOwnStructureModeStructureMismatch);
         [[fallthrough]];
     }
 

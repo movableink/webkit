@@ -5661,12 +5661,14 @@ public:
             return;
         }
 
-        if (isRepresentableAs<int32_t>(imm.m_value) && LIKELY(imm.m_value != INT32_MIN))
-            m_assembler.leaq_mr(-imm.m_value, src, dest);
-        else {
-            move(src, dest);
-            sub64(imm, dest);
+        if (isRepresentableAs<int32_t>(imm.m_value)) {
+            if (imm.m_value != INT32_MIN) [[likely]] {
+                m_assembler.leaq_mr(-imm.m_value, src, dest);
+                return;
+            }
         }
+        move(src, dest);
+        sub64(imm, dest);
     }
 
     void sub64(TrustedImm32 imm, Address address)

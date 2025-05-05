@@ -137,7 +137,7 @@ Plan::Plan(CodeBlock* passedCodeBlock, CodeBlock* profiledDFGCodeBlock,
         , m_profiledDFGCodeBlock(profiledDFGCodeBlock)
         , m_mustHandleValues(WTFMove(mustHandleValues))
         , m_osrEntryBytecodeIndex(osrEntryBytecodeIndex)
-        , m_compilation(UNLIKELY(m_vm->m_perBytecodeProfiler) ? adoptRef(new Profiler::Compilation(m_vm->m_perBytecodeProfiler->ensureBytecodesFor(m_codeBlock), profilerCompilationKindForMode(mode))) : nullptr)
+        , m_compilation(m_vm->m_perBytecodeProfiler ? adoptRef(new Profiler::Compilation(m_vm->m_perBytecodeProfiler->ensureBytecodesFor(m_codeBlock), profilerCompilationKindForMode(mode))) : nullptr)
         , m_inlineCallFrames(adoptRef(new InlineCallFrameSet()))
         , m_identifiers(m_codeBlock)
         , m_transitions(m_codeBlock)

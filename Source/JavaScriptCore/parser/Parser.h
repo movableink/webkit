@@ -1923,7 +1923,11 @@ private:
 
     ALWAYS_INLINE bool isPossiblyEscapedLet(const JSToken& token)
     {
-        return token.m_type == LET || UNLIKELY(token.m_type == ESCAPED_KEYWORD && *token.m_data.ident == m_vm.propertyNames->letKeyword);
+        if (token.m_type == LET)
+            return true;
+        if (token.m_type == ESCAPED_KEYWORD && *token.m_data.ident == m_vm.propertyNames->letKeyword) [[unlikely]]
+            return true;
+        return false;
     }
 
     bool isDisallowedIdentifierAwait(const JSToken& token)
@@ -1938,7 +1942,11 @@ private:
 
     ALWAYS_INLINE bool isPossiblyEscapedAwait(const JSToken& token)
     {
-        return token.m_type == AWAIT || UNLIKELY(token.m_type == ESCAPED_KEYWORD && *token.m_data.ident == m_vm.propertyNames->awaitKeyword);
+        if (token.m_type == AWAIT)
+            return true;
+        if (token.m_type == ESCAPED_KEYWORD && *token.m_data.ident == m_vm.propertyNames->awaitKeyword) [[unlikely]]
+            return true;
+        return false;
     }
 
     ALWAYS_INLINE bool canUseIdentifierAwait()
@@ -1958,7 +1966,11 @@ private:
 
     ALWAYS_INLINE bool isPossiblyEscapedYield(const JSToken& token)
     {
-        return token.m_type == YIELD || UNLIKELY(token.m_type == ESCAPED_KEYWORD && *token.m_data.ident == m_vm.propertyNames->yieldKeyword);
+        if (token.m_type == YIELD)
+            return true;
+        if (token.m_type == ESCAPED_KEYWORD && *token.m_data.ident == m_vm.propertyNames->yieldKeyword) [[unlikely]]
+            return true;
+        return false;
     }
 
     ALWAYS_INLINE bool canUseIdentifierYield()

@@ -666,7 +666,10 @@ void Heap::deprecatedReportExtraMemorySlowCase(size_t size)
     // https://bugs.webkit.org/show_bug.cgi?id=170411
     CheckedSize checkedNewSize = m_deprecatedExtraMemorySize;
     checkedNewSize += size;
-    m_deprecatedExtraMemorySize = UNLIKELY(checkedNewSize.hasOverflowed()) ? std::numeric_limits<size_t>::max() : checkedNewSize.value();
+    size_t newSize = std::numeric_limits<size_t>::max();
+    if (!checkedNewSize.hasOverflowed()) [[likely]]
+        newSize = checkedNewSize.value();
+    m_deprecatedExtraMemorySize = newSize;
     reportExtraMemoryAllocatedSlowCase(nullptr, nullptr, size);
 }
 
@@ -995,7 +998,9 @@ size_t Heap::extraMemorySize()
     CheckedSize checkedTotal = m_extraMemorySize;
     checkedTotal += m_deprecatedExtraMemorySize;
     checkedTotal += m_arrayBuffers.size();
-    size_t total = UNLIKELY(checkedTotal.hasOverflowed()) ? std::numeric_limits<size_t>::max() : checkedTotal.value();
+    size_t total = std::numeric_limits<size_t>::max();
+    if (!checkedTotal.hasOverflowed()) [[likely]]
+        total = checkedTotal.value();
 
     // It would be nice to have `ASSERT(m_objectSpace.capacity() >= m_objectSpace.size());` here but `m_objectSpace.size()`
     // requires having heap access which thread might not. Specifically, we might be called from the resource usage thread.
@@ -2768,7 +2773,9 @@ void Heap::reportExtraMemoryVisited(size_t size)
         // https://bugs.webkit.org/show_bug.cgi?id=170411
         CheckedSize checkedNewSize = oldSize;
         checkedNewSize += size;
-        size_t newSize = UNLIKELY(checkedNewSize.hasOverflowed()) ? std::numeric_limits<size_t>::max() : checkedNewSize.value();
+        size_t newSize = std::numeric_limits<size_t>::max();
+        if (!checkedNewSize.hasOverflowed()) [[likely]]
+            newSize = checkedNewSize.value();
         if (WTF::atomicCompareExchangeWeakRelaxed(counter, oldSize, newSize))
             return;
     }
