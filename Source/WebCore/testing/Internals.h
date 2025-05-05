@@ -74,7 +74,6 @@ namespace WebCore {
 class AccessibilityObject;
 class AbstractRange;
 class AnimationTimeline;
-class ArtworkImageLoader;
 class AudioContext;
 class AudioTrack;
 class BaseAudioContext;
@@ -187,6 +186,8 @@ class PlatformSpeechSynthesizerMock;
 #endif
 
 #if ENABLE(WEB_CODECS)
+class ArtworkImageLoader;
+class WebCodecsVideoFrame;
 class WebCodecsVideoDecoder;
 #endif
 
@@ -1459,8 +1460,10 @@ public:
     ExceptionOr<double> currentMediaSessionPosition(const MediaSession&);
     ExceptionOr<void> sendMediaSessionAction(MediaSession&, const MediaSessionActionDetails&);
 
-        using ArtworkImagePromise = DOMPromiseDeferred<IDLInterface<ImageData>>;
+#if ENABLE(WEB_CODECS)
+    using ArtworkImagePromise = DOMPromiseDeferred<IDLInterface<WebCodecsVideoFrame>>;
     void loadArtworkImage(String&&, ArtworkImagePromise&&);
+#endif
     ExceptionOr<Vector<String>> platformSupportedCommands() const;
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
@@ -1616,7 +1619,7 @@ private:
     RefPtr<RealtimeMediaSource> m_trackSource;
     int m_trackVideoRotation { 0 };
 #endif
-#if ENABLE(MEDIA_SESSION)
+#if ENABLE(MEDIA_SESSION) && ENABLE(WEB_CODECS)
     std::unique_ptr<ArtworkImageLoader> m_artworkLoader;
     std::unique_ptr<ArtworkImagePromise> m_artworkImagePromise;
 #endif

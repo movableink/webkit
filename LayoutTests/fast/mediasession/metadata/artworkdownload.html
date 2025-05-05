@@ -11,8 +11,8 @@ promise_test((test) => {
     if (!window.internals)
         return Promise.rejects("Test needs internals");
     return internals.loadArtworkImage(IMAGE_SRC).then((data) => {
-        assert_equals(data.width, 16);
-        assert_equals(data.height, 16);
+        assert_equals(data.codedWidth, 16);
+        assert_equals(data.codedHeight, 16);
     });
 }, "ensure loading artwork image method operates properly");
 
