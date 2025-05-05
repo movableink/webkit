@@ -45,6 +45,7 @@ namespace WebCore {
 
 class Color;
 class Model;
+class ModelPlayerAnimationState;
 class SharedBuffer;
 class TransformationMatrix;
 
@@ -56,6 +57,8 @@ public:
 #if ENABLE(MODEL_PROCESS)
     virtual ModelPlayerIdentifier identifier() const = 0;
 #endif
+
+    virtual std::optional<ModelPlayerAnimationState> currentAnimationState() const;
 
     virtual void load(Model&, LayoutSize) = 0;
     virtual void sizeDidChange(LayoutSize) = 0;

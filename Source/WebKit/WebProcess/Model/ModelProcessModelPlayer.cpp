@@ -35,6 +35,7 @@
 #include "WebProcess.h"
 #include <WebCore/LayerHostingContextIdentifier.h>
 #include <WebCore/Model.h>
+#include <WebCore/ModelPlayerAnimationState.h>
 #include <WebCore/Page.h>
 #include <WebCore/ResourceError.h>
 #include <WebCore/TransformationMatrix.h>
@@ -119,11 +120,10 @@ void ModelProcessModelPlayer::didUpdateAnimationPlaybackState(bool isPaused, dou
 {
     RELEASE_ASSERT(modelProcessEnabled());
 
-    m_paused = isPaused;
-    m_effectivePlaybackRate = fmax(playbackRate, 0);
-    m_duration = duration;
-    m_lastCachedCurrentTime = currentTime;
-    m_lastCachedClockTimestamp = clockTimestamp;
+    m_animationState.setPaused(isPaused);
+    m_animationState.setDuration(duration);
+    m_animationState.setPlaybackRate(playbackRate);
+    m_animationState.setCurrentTime(currentTime, clockTimestamp);
 }
 
 void ModelProcessModelPlayer::didFinishEnvironmentMapLoading(bool succeeded)
@@ -134,6 +134,11 @@ void ModelProcessModelPlayer::didFinishEnvironmentMapLoading(bool succeeded)
 }
 
 // MARK: - WebCore::ModelPlayer
+
+std::optional<WebCore::ModelPlayerAnimationState> ModelProcessModelPlayer::currentAnimationState() const
+{
+    return m_animationState;
+}
 
 void ModelProcessModelPlayer::load(WebCore::Model& model, WebCore::LayoutSize size)
 {
@@ -246,19 +251,19 @@ Vector<RetainPtr<id>> ModelProcessModelPlayer::accessibilityChildren()
 
 void ModelProcessModelPlayer::setAutoplay(bool autoplay)
 {
-    if (m_autoplay == autoplay)
+    if (m_animationState.autoplay() == autoplay)
         return;
 
-    m_autoplay = autoplay;
+    m_animationState.setAutoplay(autoplay);
     send(Messages::ModelProcessModelPlayerProxy::SetAutoplay(autoplay));
 }
 
 void ModelProcessModelPlayer::setLoop(bool loop)
 {
-    if (m_loop == loop)
+    if (m_animationState.loop() == loop)
         return;
 
-    m_loop = loop;
+    m_animationState.setLoop(loop);
     send(Messages::ModelProcessModelPlayerProxy::SetLoop(loop));
 }
 
@@ -271,12 +276,12 @@ void ModelProcessModelPlayer::setPlaybackRate(double playbackRate, CompletionHan
 
 double ModelProcessModelPlayer::duration() const
 {
-    return m_duration.seconds();
+    return m_animationState.duration().seconds();
 }
 
 bool ModelProcessModelPlayer::paused() const
 {
-    return m_paused;
+    return m_animationState.paused();
 }
 
 void ModelProcessModelPlayer::setPaused(bool paused, CompletionHandler<void(bool succeeded)>&& completionHandler)
@@ -286,32 +291,16 @@ void ModelProcessModelPlayer::setPaused(bool paused, CompletionHandler<void(bool
 
 Seconds ModelProcessModelPlayer::currentTime() const
 {
-    if (!m_duration || !m_lastCachedCurrentTime || !m_lastCachedClockTimestamp || !m_effectivePlaybackRate)
-        return 0_s;
-
     if (m_pendingCurrentTime)
         return *m_pendingCurrentTime;
 
-    Seconds lastCachedCurrentTime = *m_lastCachedCurrentTime;
-    MonotonicTime lastCachedTimestamp = *m_lastCachedClockTimestamp;
-    double playbackRate = *m_effectivePlaybackRate;
-
-    if (m_paused)
-        return lastCachedCurrentTime;
-
-    // Approximate based on last cached animation time, clock timestamp, and playbackRate
-    Seconds timePassedSinceLastSync = MonotonicTime::now() - lastCachedTimestamp;
-    Seconds animationTimePassed = Seconds::fromMilliseconds(floor((timePassedSinceLastSync * playbackRate).milliseconds()));
-    Seconds estimatedCurrentTime = lastCachedCurrentTime + animationTimePassed;
-    if (estimatedCurrentTime > m_duration)
-        estimatedCurrentTime = m_loop ? estimatedCurrentTime % m_duration : m_duration;
-    return estimatedCurrentTime;
+    return m_animationState.currentTime();
 }
 
 void ModelProcessModelPlayer::setCurrentTime(Seconds currentTime, CompletionHandler<void()>&& completionHandler)
 {
     ASSERT(RunLoop::isMain());
-    double durationSeconds = m_duration.seconds();
+    double durationSeconds = duration();
     if (!durationSeconds) {
         completionHandler();
         return;

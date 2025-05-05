@@ -27,6 +27,7 @@
 #include "ModelPlayer.h"
 
 #include "Color.h"
+#include "ModelPlayerAnimationState.h"
 #include "TransformationMatrix.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -39,6 +40,11 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ModelPlayer);
 
 ModelPlayer::~ModelPlayer() = default;
+
+std::optional<ModelPlayerAnimationState> ModelPlayer::currentAnimationState() const
+{
+    return std::nullopt;
+}
 
 void ModelPlayer::setEntityTransform(TransformationMatrix)
 {

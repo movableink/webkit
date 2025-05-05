@@ -31,6 +31,7 @@
 #import "WebPage.h"
 #import "WebPageProxyMessages.h"
 #import <WebCore/ModelPlayer.h>
+#import <WebCore/ModelPlayerAnimationState.h>
 #import <WebCore/ModelPlayerClient.h>
 #import <WebCore/ModelPlayerIdentifier.h>
 #import <WebCore/StageModeOperations.h>
@@ -75,6 +76,7 @@ private:
 
     // WebCore::ModelPlayer overrides.
     WebCore::ModelPlayerIdentifier identifier() const final { return m_id; }
+    std::optional<WebCore::ModelPlayerAnimationState> currentAnimationState() const final;
     void load(WebCore::Model&, WebCore::LayoutSize) final;
     void sizeDidChange(WebCore::LayoutSize) final;
     PlatformLayer* layer() final;
@@ -119,17 +121,11 @@ private:
     std::optional<WebCore::LayerHostingContextIdentifier> m_layerHostingContextIdentifier;
 
     bool m_hasPortal { true };
-    bool m_autoplay { false };
-    bool m_loop { false };
+    WebCore::StageModeOperation m_stageModeOperation { WebCore::StageModeOperation::None };
     double m_requestedPlaybackRate { 1.0 };
-    std::optional<double> m_effectivePlaybackRate;
-    Seconds m_duration { 0_s };
-    bool m_paused { true };
     std::optional<Seconds> m_pendingCurrentTime;
     std::optional<MonotonicTime> m_clockTimestampOfLastCurrentTimeSet;
-    std::optional<Seconds> m_lastCachedCurrentTime;
-    std::optional<MonotonicTime> m_lastCachedClockTimestamp;
-    WebCore::StageModeOperation m_stageModeOperation { WebCore::StageModeOperation::None };
+    WebCore::ModelPlayerAnimationState m_animationState;
 };
 
 }

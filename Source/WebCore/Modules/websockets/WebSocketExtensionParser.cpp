@@ -51,7 +51,7 @@ bool WebSocketExtensionParser::parsedSuccessfully()
 static bool isSeparator(char character)
 {
     static constexpr auto separatorCharacters = "()<>@,;:\\\"/[]?={} \t"_span;
-    return contains(separatorCharacters, character);
+    return WTF::contains(separatorCharacters, character);
 }
 
 static bool isSpaceOrTab(LChar character)
