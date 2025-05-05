@@ -887,24 +887,6 @@ ALWAYS_INLINE void Node::setStyleFlag(NodeStyleFlag flag)
     setStyleBitfields(bitfields);
 }
 
-inline void EventTarget::ref()
-{
-    auto* node = dynamicDowncast<Node>(*this);
-    if (node) [[likely]]
-        node->ref();
-    else
-        refEventTarget();
-}
-
-inline void EventTarget::deref()
-{
-    auto* node = dynamicDowncast<Node>(*this);
-    if (node) [[likely]]
-        node->deref();
-    else
-        derefEventTarget();
-}
-
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Node&);
 
 inline void collectChildNodes(Node&, NodeVector&);

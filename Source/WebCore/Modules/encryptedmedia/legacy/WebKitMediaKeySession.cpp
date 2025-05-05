@@ -31,6 +31,7 @@
 #include "Document.h"
 #include "EventLoop.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "Logging.h"
 #include "Page.h"
 #include "SecurityOriginData.h"

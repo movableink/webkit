@@ -31,6 +31,7 @@
 #include "Element.h"
 #include "ElementInlines.h"
 #include "EventRegion.h"
+#include "EventTargetInlines.h"
 #include "FloatQuad.h"
 #include "FrameSelection.h"
 #include "GraphicsContext.h"

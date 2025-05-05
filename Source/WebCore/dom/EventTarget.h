@@ -84,8 +84,8 @@ class EventTarget : public ScriptWrappable, public CanMakeWeakPtrWithBitField<Ev
 public:
     static Ref<EventTarget> create(ScriptExecutionContext&);
 
-    inline void ref(); // Defined in Node.h.
-    inline void deref(); // Defined in Node.h.
+    inline void ref(); // Defined in EventTargetInlines.h.
+    inline void deref(); // Defined in EventTargetInlines.h.
 
     virtual enum EventTargetInterfaceType eventTargetInterface() const = 0;
     virtual ScriptExecutionContext* scriptExecutionContext() const = 0;

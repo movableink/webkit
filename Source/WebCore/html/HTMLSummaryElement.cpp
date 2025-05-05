@@ -23,6 +23,7 @@
 
 #include "ElementInlines.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "HTMLDetailsElement.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLSlotElement.h"

@@ -32,8 +32,27 @@
 #pragma once
 
 #include "EventTarget.h"
+#include "Node.h"
 
 namespace WebCore {
+
+inline void EventTarget::ref()
+{
+    auto* node = dynamicDowncast<Node>(*this);
+    if (node) [[likely]]
+        node->ref();
+    else
+        refEventTarget();
+}
+
+inline void EventTarget::deref()
+{
+    auto* node = dynamicDowncast<Node>(*this);
+    if (node) [[likely]]
+        node->deref();
+    else
+        derefEventTarget();
+}
 
 inline bool EventTarget::hasEventListeners() const
 {

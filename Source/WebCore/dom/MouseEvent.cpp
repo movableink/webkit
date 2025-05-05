@@ -213,4 +213,9 @@ RefPtr<Node> MouseEvent::fromElement() const
     return dynamicDowncast<Node>(WTFMove(target));
 }
 
+void MouseEvent::setRelatedTarget(RefPtr<EventTarget>&& relatedTarget)
+{
+    m_relatedTarget = WTFMove(relatedTarget);
+}
+
 } // namespace WebCore
