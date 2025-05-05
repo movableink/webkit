@@ -113,7 +113,7 @@ public:
     }
     
 private:
-    NO_RETURN void run()
+    [[noreturn]] void run()
     {
         for (;;) {
             std::unique_ptr<DisassemblyTask> task;

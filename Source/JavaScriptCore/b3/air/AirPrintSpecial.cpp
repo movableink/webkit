@@ -114,7 +114,7 @@ void PrintSpecial::deepDumpImpl(PrintStream& out) const
 
 namespace Printer {
 
-NO_RETURN void printAirArg(PrintStream&, Context&)
+[[noreturn]] void printAirArg(PrintStream&, Context&)
 {
     // This function is only a placeholder to let PrintSpecial::generate() know that
     // the Printer needs to be replaced with one for a register, constant, etc. Hence,

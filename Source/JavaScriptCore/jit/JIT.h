@@ -424,7 +424,7 @@ namespace JSC {
 #if USE(BIGINT32)
         void emit_op_is_big_int(const JSInstruction*);
 #else
-        NO_RETURN void emit_op_is_big_int(const JSInstruction*);
+        [[noreturn]] void emit_op_is_big_int(const JSInstruction*);
 #endif
         void emit_op_is_object(const JSInstruction*);
         void emit_op_is_cell_with_type(const JSInstruction*);
