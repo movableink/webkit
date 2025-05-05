@@ -72,7 +72,11 @@ static constexpr Seconds indicatorMoveDuration { 0.3_s };
     self.layer.allowsGroupOpacity = NO;
     self.layer.allowsGroupBlending = NO;
 
-    if (self.canUseVisualEffectViewForBackdrop)
+    bool shouldUseVisualEffectViewForBackdrop = true;
+    if ([self respondsToSelector:@selector(canUseVisualEffectViewForBackdrop)])
+        shouldUseVisualEffectViewForBackdrop = self.canUseVisualEffectViewForBackdrop;
+
+    if (shouldUseVisualEffectViewForBackdrop)
         _backdropView = adoptNS([[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleLight]]);
     else {
         _backdropView = adoptNS([[UIView alloc] init]);
