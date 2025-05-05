@@ -221,8 +221,9 @@ void MediaPlayerPrivateGStreamerMSE::seekToTarget(const SeekTarget& target)
     doSeek(target, m_playbackRate);
 }
 
-bool MediaPlayerPrivateGStreamerMSE::doSeek(const SeekTarget& target, float rate)
+bool MediaPlayerPrivateGStreamerMSE::doSeek(const SeekTarget& target, float rate, bool isAsync)
 {
+    UNUSED_PARAM(isAsync);
     // This method should only be called outside of MediaPlayerPrivateGStreamerMSE by MediaPlayerPrivateGStreamer::setRate().
 
     // Note: An important difference between seek with WebKitMediaSrc and regular playback is that seeking before

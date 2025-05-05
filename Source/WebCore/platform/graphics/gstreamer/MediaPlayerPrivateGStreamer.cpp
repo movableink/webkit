@@ -478,7 +478,7 @@ void MediaPlayerPrivateGStreamer::play()
         if (player) {
             if (player->isLooping()) {
                 GST_DEBUG_OBJECT(pipeline(), "Scheduling initial SEGMENT seek");
-                doSeek(SeekTarget { playbackPosition() }, m_playbackRate);
+                doSeek(SeekTarget { playbackPosition() }, m_playbackRate, true);
             } else
                 updateDownloadBufferingFlag();
         }
@@ -552,7 +552,7 @@ bool MediaPlayerPrivateGStreamer::paused() const
     return !m_isPipelinePlaying;
 }
 
-bool MediaPlayerPrivateGStreamer::doSeek(const SeekTarget& target, float rate)
+bool MediaPlayerPrivateGStreamer::doSeek(const SeekTarget& target, float rate, bool isAsync)
 {
     RefPtr player = m_player.get();
 
@@ -600,8 +600,20 @@ bool MediaPlayerPrivateGStreamer::doSeek(const SeekTarget& target, float rate)
 
     auto seekStart = toGstClockTime(startTime);
     auto seekStop = toGstClockTime(endTime);
+    GstEvent* event = gst_event_new_seek(rate, GST_FORMAT_TIME, m_seekFlags, GST_SEEK_TYPE_SET, seekStart, GST_SEEK_TYPE_SET, seekStop);
+
     GST_DEBUG_OBJECT(pipeline(), "[Seek] Performing actual seek to %" GST_TIMEP_FORMAT " (endTime: %" GST_TIMEP_FORMAT ") at rate %f", &seekStart, &seekStop, rate);
-    return gst_element_seek(m_pipeline.get(), rate, GST_FORMAT_TIME, m_seekFlags, GST_SEEK_TYPE_SET, seekStart, GST_SEEK_TYPE_SET, seekStop);
+
+    if (isAsync) {
+        gst_element_call_async(m_pipeline.get(), reinterpret_cast<GstElementCallAsyncFunc>(+[](GstElement* pipeline, gpointer userData) {
+            GstEvent* event = static_cast<GstEvent*>(userData);
+            gst_element_send_event(pipeline, event);
+        }), event, nullptr);
+
+        return true;
+    }
+
+    return gst_element_send_event(m_pipeline.get(), event);
 }
 
 void MediaPlayerPrivateGStreamer::seekToTarget(const SeekTarget& inTarget)

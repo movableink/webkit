@@ -338,7 +338,7 @@ protected:
     void ensureAudioSourceProvider();
     virtual void checkPlayingConsistency();
 
-    virtual bool doSeek(const SeekTarget& position, float rate);
+    virtual bool doSeek(const SeekTarget& position, float rate, bool isAsync = false);
     void invalidateCachedPosition() const;
     void ensureSeekFlags();
 

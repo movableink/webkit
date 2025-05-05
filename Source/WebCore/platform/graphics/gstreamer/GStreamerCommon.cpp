@@ -955,7 +955,10 @@ void connectSimpleBusMessageCallback(GstElement* pipeline, Function<void(GstMess
             // This can happen if the latency of live elements changes, or
             // for one reason or another a new live element is added or
             // removed from the pipeline.
-            gst_bin_recalculate_latency(GST_BIN_CAST(pipeline.get()));
+            gst_element_call_async(pipeline.get(), reinterpret_cast<GstElementCallAsyncFunc>(+[](GstElement* pipeline, gpointer userData) {
+                UNUSED_PARAM(userData);
+                gst_bin_recalculate_latency(GST_BIN_CAST(pipeline));
+            }), nullptr, nullptr);
             break;
         default:
             break;
