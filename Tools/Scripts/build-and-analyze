@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2023-2024 Apple Inc. All rights reserved.
+# Copyright (C) 2023-2025 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -23,6 +23,7 @@
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 
@@ -69,6 +70,14 @@ def make_analyzer_flags(output_dir, args):
             'optin.cplusplus.VirtualCall',
         ])
 
+    if args.disable_checkers:
+        delimiters = re.compile(r'[\s,]+')
+        checkers = [ value for value in delimiters.split(args.disable_checkers) if value ]
+        analyzer_flags.extend([
+            '-analyzer-disable-checker',
+            ','.join(checkers),
+        ])
+
     if args.enable_webkit_checkers:
         additional_checkers.extend([
             'webkit.NoUncountedMemberChecker',
@@ -78,6 +87,11 @@ def make_analyzer_flags(output_dir, args):
             'alpha.webkit.UncountedCallArgsChecker',
             'alpha.webkit.UncountedLocalVarsChecker'
         ])
+
+    if args.enable_checkers:
+        delimiters = re.compile(r'[\s,]+')
+        checkers = [ value for value in delimiters.split(args.enable_checkers) if value ]
+        additional_checkers.extend(checkers)
 
     if args.only_smart_pointers:
         additional_checkers.extend([
@@ -170,6 +184,8 @@ def main(args):
     ]
 
     if args.dry_run:
+        env_vars_to_show = ['ANALYZER_EXEC', 'ANALYZER_FLAGS', 'ANALYZER_OUTPUT']
+        print('\n'.join(f'{key}="{value}"' for key, value in os.environ.items() if key in env_vars_to_show))
         for command in commands:
             print('\n' + ' '.join(command))
         return 0
@@ -191,12 +207,16 @@ def parse_args():
     parser.add_argument('--analyzer-path', dest='analyzer_path',
                         type=str, default=None,
                         help='Override path to clang static analyzer in scan-build and set CC/CPLUSPLUS for Xcode.')
+    parser.add_argument('--disable-checkers', dest='disable_checkers',
+                        help='Disable specific checkers listed.')
     parser.add_argument('--disable-default-checkers', dest='disable_default_checkers',
                         action='store_true', default=False,
                         help='Disable all checkers by default to run only specific checkers.')
     parser.add_argument('--enable-webkit-checkers', dest='enable_webkit_checkers',
                         action='store_true', default=False,
                         help='Enable all WebKit-specific checkers.')
+    parser.add_argument('--enable-checkers', dest='enable_checkers',
+                        help='Enable specific checkers listed.')
     parser.add_argument('--only-smart-pointers', dest='only_smart_pointers',
                         action='store_true', default=False,
                         help='Enable only WebKit-specific checkers for Smart Pointers. '
