@@ -6939,10 +6939,12 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(BUILT_PRODUCTS_DIR)/DerivedSources/TestWebKitAPI/platform-enabled-swift-args.arm64e.resp",
-				"$(BUILT_PRODUCTS_DIR)/DerivedSources/TestWebKitAPI/platform-enabled-swift-args.x86_64.resp",
-				"$(BUILT_PRODUCTS_DIR)/DerivedSources/TestWebKitAPI/platform-enabled-swift-args.arm64_32.resp",
 				"$(BUILT_PRODUCTS_DIR)/DerivedSources/TestWebKitAPI/platform-enabled-swift-args.arm64.resp",
+				"$(BUILT_PRODUCTS_DIR)/DerivedSources/TestWebKitAPI/platform-enabled-swift-args.arm64_32.resp",
+				"$(BUILT_PRODUCTS_DIR)/DerivedSources/TestWebKitAPI/platform-enabled-swift-args.arm64e.resp",
+				"$(BUILT_PRODUCTS_DIR)/DerivedSources/TestWebKitAPI/platform-enabled-swift-args.armv7k.resp",
+				"$(BUILT_PRODUCTS_DIR)/DerivedSources/TestWebKitAPI/platform-enabled-swift-args.i386.resp",
+				"$(BUILT_PRODUCTS_DIR)/DerivedSources/TestWebKitAPI/platform-enabled-swift-args.x86_64.resp",
 				"$(BUILT_PRODUCTS_DIR)/DerivedSources/TestWebKitAPI/rdar150228472.swift",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
