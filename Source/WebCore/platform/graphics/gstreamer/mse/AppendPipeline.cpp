@@ -108,6 +108,12 @@ static void assertedElementSetState(GstElement* element, GstState desiredState)
 void AppendPipeline::configureOptionalDemuxerFromAnyThread()
 {
     ASSERT(m_demux);
+#if !LOG_DISABLED
+    GRefPtr<GstPad> demuxerSinkPad = adoptGRef(gst_element_get_static_pad(m_demux.get(), "sink"));
+    m_demuxerDataEnteringPadProbeInformation.appendPipeline = this;
+    m_demuxerDataEnteringPadProbeInformation.description = "demuxer data entering";
+    m_demuxerDataEnteringPadProbeInformation.probeId = gst_pad_add_probe(demuxerSinkPad.get(), GST_PAD_PROBE_TYPE_BUFFER, reinterpret_cast<GstPadProbeCallback>(appendPipelinePadProbeDebugInformation), &m_demuxerDataEnteringPadProbeInformation, nullptr);
+#endif
 
     String elementClass = unsafeSpan(gst_element_get_metadata(m_demux.get(), GST_ELEMENT_METADATA_KLASS));
     // We try to detect special cases of demuxers that have a single static src pad, such as id3demux.
@@ -236,16 +242,8 @@ AppendPipeline::AppendPipeline(SourceBufferPrivateGStreamer& sourceBufferPrivate
 
     // m_demux might be null at this point if there's a typefind pending to identify the proper demuxer to be used
     // (see the audio/mpeg case right above).
-    if (m_demux) {
-#if !LOG_DISABLED
-        GRefPtr<GstPad> demuxerPad = adoptGRef(gst_element_get_static_pad(m_demux.get(), "sink"));
-        m_demuxerDataEnteringPadProbeInformation.appendPipeline = this;
-        m_demuxerDataEnteringPadProbeInformation.description = "demuxer data entering";
-        m_demuxerDataEnteringPadProbeInformation.probeId = gst_pad_add_probe(demuxerPad.get(), GST_PAD_PROBE_TYPE_BUFFER, reinterpret_cast<GstPadProbeCallback>(appendPipelinePadProbeDebugInformation), &m_demuxerDataEnteringPadProbeInformation, nullptr);
-#endif
-
+    if (m_demux)
         configureOptionalDemuxerFromAnyThread();
-    }
 
     // The added elements had their floating references sunk after being assigned to the GRefPtr, so the transfer-floating
     // parameters are working as transfer-none here.
