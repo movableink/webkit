@@ -153,6 +153,8 @@ platform/visionos/transforms/separated-update.html [ Failure ]
 platform/visionos/transforms/separated-video.html [ Failure ]
 platform/visionos/transforms/separated.html [ Failure ]
 
+webkit.org/b/292288 resize-observer/contain-instrinsic-size-should-not-leak-nodes.html [ Pass Failure ]
+
 ### END OF Triaged failures
 ###################################################################################################
 
