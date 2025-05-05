@@ -863,6 +863,10 @@ void TypeChecker::visit(AST::CompoundAssignmentStatement& statement)
     }
 
     binaryExpression(statement.span(), nullptr, statement.operation(), statement.leftExpression(), statement.rightExpression());
+
+    if (m_inferredType != referenceType->element)
+        typeError(InferBottom::No, statement.span(), "cannot assign '"_s, *m_inferredType, "' to '"_s, *referenceType->element, '\'');
+
     // Reset the inferred type since this is a statement
     m_inferredType = nullptr;
 }

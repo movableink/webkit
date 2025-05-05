@@ -50,3 +50,10 @@ fn testTextureGather()
     // CHECK-L: no matching overload for initializer textureGather()
     _ = textureGather();
 }
+
+fn testCompoundAssignment()
+{
+  var f = 1f;
+  // CHECK-L: cannot assign 'vec2<f32>' to 'f32'
+  f /= vec2f(1);
+}
