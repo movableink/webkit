@@ -27,17 +27,18 @@
 
 #define __WPE_PLATFORM_H_INSIDE__
 
-#include <wpe/WPEEnumTypes.h>
-#include <wpe/WPEEvent.h>
 #include <wpe/WPEBuffer.h>
 #include <wpe/WPEBufferDMABuf.h>
 #include <wpe/WPEBufferDMABufFormats.h>
 #include <wpe/WPEBufferSHM.h>
+#include <wpe/WPEClipboard.h>
 #include <wpe/WPEColor.h>
 #include <wpe/WPEConfig.h>
 #include <wpe/WPEDefines.h>
 #include <wpe/WPEDisplay.h>
 #include <wpe/WPEEGLError.h>
+#include <wpe/WPEEnumTypes.h>
+#include <wpe/WPEEvent.h>
 #include <wpe/WPEGestureController.h>
 #include <wpe/WPEInputMethodContext.h>
 #include <wpe/WPEKeymap.h>

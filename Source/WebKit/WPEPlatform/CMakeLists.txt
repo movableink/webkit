@@ -11,15 +11,16 @@ configure_file(wpe/WPEConfig.h.in ${WPEPlatform_DERIVED_SOURCES_DIR}/wpe/WPEConf
 configure_file(wpe/WPEVersion.h.in ${WPEPlatform_DERIVED_SOURCES_DIR}/wpe/WPEVersion.h)
 
 set(WPEPlatform_SOURCES
-    ${WEBKIT_DIR}/WPEPlatform/wpe/WPEEvent.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEBuffer.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEBufferDMABuf.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEBufferDMABufFormats.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEBufferSHM.cpp
+    ${WEBKIT_DIR}/WPEPlatform/wpe/WPEClipboard.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEColor.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPECursorTheme.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEDisplay.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEEGLError.cpp
+    ${WEBKIT_DIR}/WPEPlatform/wpe/WPEEvent.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEExtensions.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEInputMethodContext.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEInputMethodContextNone.cpp
@@ -40,15 +41,16 @@ set(WPEPlatform_SOURCES
 )
 
 set(WPEPlatform_INSTALLED_HEADERS
-    ${WEBKIT_DIR}/WPEPlatform/wpe/WPEEvent.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEBuffer.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEBufferDMABuf.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEBufferDMABufFormats.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEBufferSHM.h
+    ${WEBKIT_DIR}/WPEPlatform/wpe/WPEClipboard.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEColor.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEDefines.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEDisplay.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEEGLError.h
+    ${WEBKIT_DIR}/WPEPlatform/wpe/WPEEvent.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEInputMethodContext.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEKeyUnicode.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEKeymap.h

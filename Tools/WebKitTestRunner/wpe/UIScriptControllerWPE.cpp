@@ -34,6 +34,10 @@
 #include <WebKit/WKTextCheckerGLib.h>
 #include <wtf/RunLoop.h>
 
+#if ENABLE(WPE_PLATFORM)
+#include <wpe/wpe-platform.h>
+#endif
+
 namespace WTR {
 
 Ref<UIScriptController> UIScriptController::create(UIScriptContext& context)
@@ -56,8 +60,17 @@ void UIScriptControllerWPE::setContinuousSpellCheckingEnabled(bool enabled)
     WKTextCheckerSetContinuousSpellCheckingEnabled(enabled);
 }
 
-void UIScriptControllerWPE::copyText(JSStringRef)
+void UIScriptControllerWPE::copyText(JSStringRef text)
 {
+#if ENABLE(WPE_PLATFORM)
+    if (TestController::singleton().useWPEPlatformAPI()) {
+        auto* clipboard = wpe_display_get_clipboard(wpe_display_get_primary());
+        auto* content = wpe_clipboard_content_new();
+        wpe_clipboard_content_set_text(content, text->string().utf8().data());
+        wpe_clipboard_set_content(clipboard, content);
+        wpe_clipboard_content_unref(content);
+    }
+#endif
     // FIXME: implement.
 }
 

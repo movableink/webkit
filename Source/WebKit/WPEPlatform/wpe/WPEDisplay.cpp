@@ -59,6 +59,7 @@ struct _WPEDisplayPrivate {
     HashMap<String, bool> extensionsMap;
     GRefPtr<WPEBufferDMABufFormats> preferredDMABufFormats;
     GRefPtr<WPEKeymap> keymap;
+    GRefPtr<WPEClipboard> clipboard;
     GRefPtr<WPESettings> settings;
     WPEAvailableInputDevices availableInputDevices;
 };
@@ -386,6 +387,31 @@ WPEKeymap* wpe_display_get_keymap(WPEDisplay* display)
             priv->keymap = adoptGRef(wpe_keymap_xkb_new());
     }
     return priv->keymap.get();
+}
+
+/**
+ * wpe_display_get_clipboard:
+ * @display: a #WPEDisplay
+ *
+ * Get the #WPEClipboard of @display. If the platform doesn't
+ * support clipboard, a local #WPEClipboard is created.
+ *
+ * Returns: (transfer none): a #WPEClipboard
+ */
+WPEClipboard* wpe_display_get_clipboard(WPEDisplay* display)
+{
+    g_return_val_if_fail(WPE_IS_DISPLAY(display), nullptr);
+
+    auto* priv = display->priv;
+    if (!priv->clipboard) {
+        auto* wpeDisplayClass = WPE_DISPLAY_GET_CLASS(display);
+        if (wpeDisplayClass->get_clipboard)
+            priv->clipboard = wpeDisplayClass->get_clipboard(display);
+
+        if (!priv->clipboard)
+            priv->clipboard = adoptGRef(wpe_clipboard_new(display));
+    }
+    return priv->clipboard.get();
 }
 
 /**
