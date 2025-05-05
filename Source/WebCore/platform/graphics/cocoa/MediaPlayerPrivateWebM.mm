@@ -985,7 +985,7 @@ void MediaPlayerPrivateWebM::reenqueueMediaForTime(TrackBuffer& trackBuffer, Tra
 {
     if (needsFlush == NeedsFlush::Yes)
         flushTrack(trackId);
-    if (trackBuffer.reenqueueMediaForTime(time, timeFudgeFactor()))
+    if (trackBuffer.reenqueueMediaForTime(time, timeFudgeFactor(), m_loadFinished))
         provideMediaData(trackBuffer, trackId);
 }
 

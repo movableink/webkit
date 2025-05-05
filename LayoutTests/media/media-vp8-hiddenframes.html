@@ -20,14 +20,8 @@
         let v = document.getElementsByTagName('video')[0];
         v.src = "content/test-vp8-hiddenframes.webm";
         await waitFor(v, 'loadedmetadata', true);
-        await waitForVideoFrame(v); // make sure the first frame got displayed before waiting for the last one.
-        // duration of the last frame.
-        v.currentTime = v.duration - 0.038;
-        let promise = new Promise(resolve => v.requestVideoFrameCallback(resolve));
+        v.currentTime = v.duration;
         await waitFor(v, 'seeked', true);
-        v.play();
-        await waitFor(v, 'ended', true);
-        await promise;
 
         if (window.testRunner)
             testRunner.notifyDone();
