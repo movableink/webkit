@@ -43,7 +43,7 @@ namespace WebKit {
 using namespace WebCore;
 
 NSString *interactionRegionTypeKey = @"WKInteractionRegionType";
-NSString *interactionRegionGroupNameKey = @"WKInteractionRegionGroupName";
+NSString *interactionRegionElementIdentifierKey = @"WKInteractionRegionElementIdentifier";
 
 RCPRemoteEffectInputTypes interactionRegionInputTypes = RCPRemoteEffectInputTypesAll ^ RCPRemoteEffectInputTypePointer;
 
@@ -166,7 +166,7 @@ static void applyBackgroundColorForDebuggingToLayer(CALayer *layer, const WebCor
     }
 }
 
-static CALayer *createInteractionRegionLayer(WebCore::InteractionRegion::Type type, NSString *groupName)
+static CALayer *createInteractionRegionLayer(WebCore::InteractionRegion::Type type, WebCore::ElementIdentifier identifier, NSString *groupName)
 {
     CALayer *layer = type == InteractionRegion::Type::Interaction
         ? [[interactionRegionLayerClass() alloc] init]
@@ -176,7 +176,7 @@ static CALayer *createInteractionRegionLayer(WebCore::InteractionRegion::Type ty
     [layer setDelegate:[WebActionDisablingCALayerDelegate shared]];
 
     [layer setValue:@(static_cast<uint8_t>(type)) forKey:interactionRegionTypeKey];
-    [layer setValue:groupName forKey:interactionRegionGroupNameKey];
+    [layer setValue:@(identifier.toUInt64()) forKey:interactionRegionElementIdentifierKey];
 
     configureRemoteEffect(layer, type, groupName);
 
@@ -191,9 +191,12 @@ static std::optional<WebCore::InteractionRegion::Type> interactionRegionTypeForL
     return std::nullopt;
 }
 
-static NSString *interactionRegionGroupNameForLayer(CALayer *layer)
+static std::optional<UInt64> interactionRegionElementIdentifierForLayer(CALayer *layer)
 {
-    return [layer valueForKey:interactionRegionGroupNameKey];
+    id value = [layer valueForKey:interactionRegionElementIdentifierKey];
+    if (value)
+        return [value unsignedLongLongValue];
+    return std::nullopt;
 }
 
 static CACornerMask convertToCACornerMask(OptionSet<InteractionRegion::CornerMask> mask)
@@ -224,18 +227,17 @@ void updateLayersForInteractionRegions(RemoteLayerTreeNode& node)
     CALayer *container = node.ensureInteractionRegionsContainer();
 
     HashMap<std::pair<IntRect, InteractionRegion::Type>, CALayer *>existingLayers;
-    HashMap<std::pair<String, InteractionRegion::Type>, CALayer *>reusableLayers;
+    HashMap<std::pair<UInt64, InteractionRegion::Type>, CALayer *>reusableLayers;
     for (CALayer *sublayer in container.sublayers) {
-        if (auto type = interactionRegionTypeForLayer(sublayer)) {
-            auto result = existingLayers.add(std::make_pair(enclosingIntRect(sublayer.frame), *type), sublayer);
-            ASSERT_UNUSED(result, result.isNewEntry);
-
-            auto reuseKey = std::make_pair(interactionRegionGroupNameForLayer(sublayer), *type);
-            if (reusableLayers.contains(reuseKey))
-                reusableLayers.remove(reuseKey);
-            else {
-                auto result = reusableLayers.add(reuseKey, sublayer);
+        if (auto identifier = interactionRegionElementIdentifierForLayer(sublayer)) {
+            if (auto type = interactionRegionTypeForLayer(sublayer)) {
+                auto result = existingLayers.add(std::make_pair(enclosingIntRect(sublayer.frame), *type), sublayer);
                 ASSERT_UNUSED(result, result.isNewEntry);
+
+                auto reuseKey = std::make_pair(*identifier, *type);
+                auto reuseResult = reusableLayers.add(reuseKey, sublayer);
+                if (!reuseResult.isNewEntry)
+                    reusableLayers.remove(reuseResult.iterator);
             }
         }
     }
@@ -249,11 +251,12 @@ void updateLayersForInteractionRegions(RemoteLayerTreeNode& node)
         if (!node.visibleRect() || !node.visibleRect()->intersects(rect))
             continue;
 
-        RetainPtr interactionRegionGroupName = interactionRegionGroupNameForRegion(node.layerID(), region);
         auto key = std::make_pair(enclosingIntRect(rect), region.type);
         if (dedupeSet.contains(key))
             continue;
-        auto reuseKey = std::make_pair(String { interactionRegionGroupName.get() }, region.type);
+
+        auto reuseKey = std::make_pair(region.elementIdentifier.toUInt64(), region.type);
+        RetainPtr interactionRegionGroupName = interactionRegionGroupNameForRegion(node.layerID(), region);
 
         RetainPtr<CALayer> regionLayer;
         bool didReuseLayer = true;
@@ -274,17 +277,18 @@ void updateLayersForInteractionRegions(RemoteLayerTreeNode& node)
             }
 
             didReuseLayer = false;
-            regionLayer = adoptNS(createInteractionRegionLayer(region.type, interactionRegionGroupName.get()));
+            regionLayer = adoptNS(createInteractionRegionLayer(region.type, region.elementIdentifier, interactionRegionGroupName.get()));
         };
         findOrCreateLayer();
 
         if (didReuseLayer) {
+            auto layerIdentifier = interactionRegionElementIdentifierForLayer(regionLayer.get());
             auto layerKey = std::make_pair(enclosingIntRect([regionLayer frame]), region.type);
-            auto reuseKey = std::make_pair(interactionRegionGroupNameForLayer(regionLayer.get()), region.type);
+            auto layerReuseKey = std::make_pair(*layerIdentifier, region.type);
             existingLayers.remove(layerKey);
-            reusableLayers.remove(reuseKey);
+            reusableLayers.remove(layerReuseKey);
 
-            bool shouldReconfigureRemoteEffect = didReuseLayerBasedOnRect && ![interactionRegionGroupName isEqualToString:interactionRegionGroupNameForLayer(regionLayer.get())];
+            bool shouldReconfigureRemoteEffect = didReuseLayerBasedOnRect && layerIdentifier != region.elementIdentifier.toUInt64();
             if (shouldReconfigureRemoteEffect)
                 configureRemoteEffect(regionLayer.get(), region.type, interactionRegionGroupName.get());
         }
