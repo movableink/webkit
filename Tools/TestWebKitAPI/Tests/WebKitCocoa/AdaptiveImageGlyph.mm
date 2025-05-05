@@ -73,6 +73,7 @@ RetainPtr<NSAdaptiveImageGlyph> createAdaptiveImageGlyphForTesting()
 - (void)focusElementAndEnsureEditorStateUpdate:(NSString *)element;
 - (BOOL)canInsertAdaptiveImageGlyphs;
 - (NSAttributedString *)contentsAsAttributedString;
+- (void)waitForAdaptiveImageGlyphToLoad;
 
 @property (nonatomic, readonly) NSArray<_WKAttachment *> *insertedAttachments;
 @property (nonatomic, readonly) NSArray<_WKAttachment *> *removedAttachments;
@@ -167,6 +168,16 @@ RetainPtr<NSAdaptiveImageGlyph> createAdaptiveImageGlyphForTesting()
     }];
     TestWebKitAPI::Util::run(&finished);
     return result.autorelease();
+}
+
+- (void)waitForAdaptiveImageGlyphToLoad
+{
+    do {
+        if ([self stringByEvaluatingJavaScript:@"document.querySelector('img').complete"].boolValue)
+            break;
+
+        TestWebKitAPI::Util::runFor(0.1_s);
+    } while (true);
 }
 
 @end
@@ -497,7 +508,7 @@ TEST(AdaptiveImageGlyph, InsertWKAttachmentsCopyFromWebViewPasteToWebView)
     RetainPtr adaptiveImageGlyph = createAdaptiveImageGlyphForTesting();
 
     [copyWebView insertAdaptiveImageGlyph:adaptiveImageGlyph.get()];
-    [copyWebView waitForNextPresentationUpdate];
+    [copyWebView waitForAdaptiveImageGlyphToLoad];
 
     [copyWebView selectAll:nil];
     [copyWebView _synchronouslyExecuteEditCommand:@"Copy" argument:nil];
