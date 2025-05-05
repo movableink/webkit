@@ -2711,7 +2711,9 @@ JSTokenType Lexer<T>::scanRegExp(JSToken* tokenRecord, UChar patternPrefix)
     m_buffer16.shrink(0);
 
     ASSERT(m_buffer8.isEmpty());
-    while (LIKELY(isLatin1(m_current)) && isIdentPart(static_cast<LChar>(m_current))) {
+    while (isLatin1(m_current)) [[likely]] {
+        if (!isIdentPart(static_cast<LChar>(m_current)))
+            break;
         record8(static_cast<LChar>(m_current));
         shift();
     }
