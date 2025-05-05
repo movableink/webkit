@@ -134,7 +134,7 @@ private:
     void relayAccessibilityNotification(const String&, const RetainPtr<NSData>&) override;
     void doneWithKeyEvent(const NativeWebKeyboardEvent&, bool wasEventHandled) override;
 #if ENABLE(TOUCH_EVENTS)
-    void doneWithTouchEvent(const NativeWebTouchEvent&, bool wasEventHandled) override;
+    void doneWithTouchEvent(const WebTouchEvent&, bool wasEventHandled) override;
 #endif
 #if ENABLE(IOS_TOUCH_EVENTS)
     void doneDeferringTouchStart(bool preventNativeGestures) override;

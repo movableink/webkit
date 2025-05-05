@@ -277,6 +277,7 @@
 #include <WebCore/RemoteDOMWindow.h>
 #include <WebCore/RemoteFrame.h>
 #include <WebCore/RemoteFrameClient.h>
+#include <WebCore/RemoteFrameGeometryTransformer.h>
 #include <WebCore/RemoteFrameView.h>
 #include <WebCore/RemoteUserInputEventData.h>
 #include <WebCore/RenderImage.h>
@@ -3797,7 +3798,7 @@ void WebPage::cancelCurrentInteractionInformationRequest()
 }
 
 #if ENABLE(TOUCH_EVENTS)
-static HandleUserInputEventResult handleTouchEvent(FrameIdentifier frameID, const WebTouchEvent& touchEvent, Page* page)
+static Expected<bool, WebCore::RemoteFrameGeometryTransformer> handleTouchEvent(FrameIdentifier frameID, const WebTouchEvent& touchEvent, Page* page)
 {
     RefPtr frame = WebProcess::singleton().webFrame(frameID);
     if (!frame)
@@ -3811,14 +3812,27 @@ static HandleUserInputEventResult handleTouchEvent(FrameIdentifier frameID, cons
 }
 #endif
 
+RefPtr<WebCore::LocalFrame> WebPage::localRootFrame(std::optional<WebCore::FrameIdentifier> frameID)
+{
+    if (RefPtr webFrame = WebProcess::singleton().webFrame(frameID)) {
+        ASSERT(webFrame->coreLocalFrame());
+        ASSERT(webFrame->coreLocalFrame()->isRootFrame());
+        return webFrame->coreLocalFrame();
+    }
+    ASSERT(m_page);
+    ASSERT(m_page->localMainFrame());
+    RefPtr page = m_page;
+    return page ? page->localMainFrame() : nullptr;
+}
+
 #if ENABLE(IOS_TOUCH_EVENTS)
-HandleUserInputEventResult WebPage::dispatchTouchEvent(FrameIdentifier frameID, const WebTouchEvent& touchEvent)
+Expected<bool, WebCore::RemoteFrameGeometryTransformer> WebPage::dispatchTouchEvent(FrameIdentifier frameID, const WebTouchEvent& touchEvent)
 {
     SetForScope userIsInteractingChange { m_userIsInteracting, true };
     m_lastInteractionLocation = touchEvent.position();
     CurrentEvent currentEvent(touchEvent);
     auto handleTouchEventResult = handleTouchEvent(frameID, touchEvent, m_page.get());
-    updatePotentialTapSecurityOrigin(touchEvent, handleTouchEventResult.wasHandled());
+    updatePotentialTapSecurityOrigin(touchEvent, handleTouchEventResult.value_or(false));
     return handleTouchEventResult;
 }
 
@@ -3873,7 +3887,7 @@ void WebPage::touchEvent(const WebTouchEvent& touchEvent, CompletionHandler<void
 
     CurrentEvent currentEvent(touchEvent);
 
-    bool handled = handleTouchEvent(localMainFrame->frameID(), touchEvent, m_page.get()).wasHandled();
+    bool handled = handleTouchEvent(localMainFrame->frameID(), touchEvent, m_page.get()).value_or(false);
 
     completionHandler(touchEvent.type(), handled);
 }

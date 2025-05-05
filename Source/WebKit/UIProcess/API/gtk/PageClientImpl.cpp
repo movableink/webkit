@@ -455,7 +455,7 @@ void PageClientImpl::beganExitFullScreen(const IntRect& /* initialFrame */, cons
 #endif // ENABLE(FULLSCREEN_API)
 
 #if ENABLE(TOUCH_EVENTS)
-void PageClientImpl::doneWithTouchEvent(const NativeWebTouchEvent& event, bool wasEventHandled)
+void PageClientImpl::doneWithTouchEvent(const WebTouchEvent& event, bool wasEventHandled)
 {
     if (wasEventHandled)
         webkitWebViewBasePageGrabbedTouch(WEBKIT_WEB_VIEW_BASE(m_viewWidget));

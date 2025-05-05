@@ -28,6 +28,7 @@
 
 #include "EventDispatcherMessages.h"
 #include "MomentumEventDispatcher.h"
+#include "RemoteWebTouchEvent.h"
 #include "WebEventConversion.h"
 #include "WebPage.h"
 #include "WebPageProxyMessages.h"
@@ -216,6 +217,17 @@ void EventDispatcher::gestureEvent(FrameIdentifier frameID, PageIdentifier pageI
 #endif
 
 #if ENABLE(IOS_TOUCH_EVENTS)
+TouchEventData::TouchEventData(WebCore::FrameIdentifier frameID, const WebTouchEvent& event, CompletionHandler<void(bool, std::optional<RemoteWebTouchEvent>)>&& completionHandler)
+    : frameID(frameID)
+    , event(event)
+    , completionHandler(WTFMove(completionHandler)) { }
+
+TouchEventData::TouchEventData(TouchEventData&&) = default;
+
+TouchEventData::~TouchEventData() = default;
+
+TouchEventData& TouchEventData::operator=(TouchEventData&&) = default;
+
 void EventDispatcher::takeQueuedTouchEventsForPage(const WebPage& webPage, UniqueRef<TouchEventQueue>& destinationQueue)
 {
     Locker locker { m_touchEventsLock };
@@ -224,7 +236,7 @@ void EventDispatcher::takeQueuedTouchEventsForPage(const WebPage& webPage, Uniqu
         destinationQueue = makeUniqueRefFromNonNullUniquePtr(WTFMove(queue));
 }
 
-void EventDispatcher::touchEvent(PageIdentifier pageID, FrameIdentifier frameID, const WebTouchEvent& touchEvent, CompletionHandler<void(bool, std::optional<RemoteUserInputEventData>)>&& completionHandler)
+void EventDispatcher::touchEvent(PageIdentifier pageID, FrameIdentifier frameID, const WebTouchEvent& touchEvent, CompletionHandler<void(bool, std::optional<RemoteWebTouchEvent>)>&& completionHandler)
 {
     bool updateListWasEmpty;
     {

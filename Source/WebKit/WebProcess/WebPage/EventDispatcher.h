@@ -67,12 +67,18 @@ class ScrollingAccelerationCurve;
 class WebPage;
 class WebProcess;
 class WebWheelEvent;
+struct RemoteWebTouchEvent;
 
 #if ENABLE(IOS_TOUCH_EVENTS)
 struct TouchEventData {
+    TouchEventData(WebCore::FrameIdentifier, const WebTouchEvent&, CompletionHandler<void(bool, std::optional<RemoteWebTouchEvent>)>&&);
+    TouchEventData(TouchEventData&&);
+    ~TouchEventData();
+    TouchEventData& operator=(TouchEventData&&);
+
     WebCore::FrameIdentifier frameID;
     WebTouchEvent event;
-    CompletionHandler<void(bool, std::optional<WebCore::RemoteUserInputEventData>)> completionHandler;
+    CompletionHandler<void(bool, std::optional<RemoteWebTouchEvent>)> completionHandler;
 };
 #endif
 
@@ -120,7 +126,7 @@ private:
     void setScrollingAccelerationCurve(WebCore::PageIdentifier, std::optional<ScrollingAccelerationCurve>);
 #endif
 #if ENABLE(IOS_TOUCH_EVENTS)
-    void touchEvent(WebCore::PageIdentifier, WebCore::FrameIdentifier, const WebTouchEvent&, CompletionHandler<void(bool, std::optional<WebCore::RemoteUserInputEventData>)>&&);
+    void touchEvent(WebCore::PageIdentifier, WebCore::FrameIdentifier, const WebTouchEvent&, CompletionHandler<void(bool, std::optional<RemoteWebTouchEvent>)>&&);
 #endif
 #if ENABLE(MAC_GESTURE_EVENTS)
     void gestureEvent(WebCore::FrameIdentifier, WebCore::PageIdentifier, const WebGestureEvent&, CompletionHandler<void(std::optional<WebEventType>, bool, std::optional<WebCore::RemoteUserInputEventData>)>&&);

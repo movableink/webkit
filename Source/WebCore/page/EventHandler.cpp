@@ -99,6 +99,7 @@
 #include "Quirks.h"
 #include "Range.h"
 #include "RemoteFrame.h"
+#include "RemoteFrameGeometryTransformer.h"
 #include "RemoteFrameView.h"
 #include "RemoteUserInputEventData.h"
 #include "RenderFrameSet.h"
@@ -1868,6 +1869,22 @@ std::optional<RemoteUserInputEventData> EventHandler::userInputEventDataForRemot
     };
 }
 
+std::optional<RemoteFrameGeometryTransformer> EventHandler::geometryTransformerForRemoteFrame(RemoteFrame* remoteFrame)
+{
+    if (!remoteFrame)
+        return std::nullopt;
+
+    RefPtr frameView = m_frame->view();
+    if (!frameView)
+        return std::nullopt;
+
+    RefPtr remoteFrameView = remoteFrame->view();
+    if (!remoteFrameView)
+        return std::nullopt;
+
+    return RemoteFrameGeometryTransformer(remoteFrameView.releaseNonNull(), frameView.releaseNonNull(), remoteFrame->frameID());
+}
+
 static Scrollbar* scrollbarForMouseEvent(const MouseEventWithHitTestResults& mouseEvent, LocalFrameView* view)
 {
     if (view) {
@@ -1899,7 +1916,7 @@ HandleUserInputEventResult EventHandler::handleMousePressEvent(const PlatformMou
         return true;
 
 #if ENABLE(TOUCH_EVENTS)
-    bool defaultPrevented = dispatchSyntheticTouchEventIfEnabled(platformMouseEvent).wasHandled();
+    bool defaultPrevented = dispatchSyntheticTouchEventIfEnabled(platformMouseEvent);
     if (defaultPrevented)
         return true;
 #endif
@@ -2194,7 +2211,7 @@ HitTestResult EventHandler::getHitTestResultForMouseEvent(const PlatformMouseEve
 HandleUserInputEventResult EventHandler::handleMouseMoveEvent(const PlatformMouseEvent& platformMouseEvent, HitTestResult* hitTestResult, bool onlyUpdateScrollbars)
 {
 #if ENABLE(TOUCH_EVENTS)
-    bool defaultPrevented = dispatchSyntheticTouchEventIfEnabled(platformMouseEvent).wasHandled();
+    bool defaultPrevented = dispatchSyntheticTouchEventIfEnabled(platformMouseEvent);
     if (defaultPrevented)
         return true;
 #endif
@@ -2404,7 +2421,7 @@ HandleUserInputEventResult EventHandler::handleMouseReleaseEvent(const PlatformM
         return true;
 
 #if ENABLE(TOUCH_EVENTS)
-    bool defaultPrevented = dispatchSyntheticTouchEventIfEnabled(platformMouseEvent).wasHandled();
+    bool defaultPrevented = dispatchSyntheticTouchEventIfEnabled(platformMouseEvent);
     if (defaultPrevented)
         return true;
 #endif
@@ -5056,7 +5073,7 @@ static HitTestResult hitTestResultInFrame(LocalFrame* frame, const LayoutPoint& 
     return result;
 }
 
-HandleUserInputEventResult EventHandler::handleTouchEvent(const PlatformTouchEvent& event)
+Expected<bool, RemoteFrameGeometryTransformer> EventHandler::handleTouchEvent(const PlatformTouchEvent& event)
 {
     Ref frame = m_frame.get();
 
@@ -5292,7 +5309,7 @@ HandleUserInputEventResult EventHandler::handleTouchEvent(const PlatformTouchEve
 #endif // ENABLE(TOUCH_EVENTS) && !ENABLE(IOS_TOUCH_EVENTS)
 
 #if ENABLE(TOUCH_EVENTS)
-HandleUserInputEventResult EventHandler::dispatchSyntheticTouchEventIfEnabled(const PlatformMouseEvent& platformMouseEvent)
+bool EventHandler::dispatchSyntheticTouchEventIfEnabled(const PlatformMouseEvent& platformMouseEvent)
 {
 #if ENABLE(IOS_TOUCH_EVENTS)
     UNUSED_PARAM(platformMouseEvent);
@@ -5315,7 +5332,7 @@ HandleUserInputEventResult EventHandler::dispatchSyntheticTouchEventIfEnabled(co
         return true;
 
     SyntheticSingleTouchEvent touchEvent(platformMouseEvent);
-    return handleTouchEvent(touchEvent);
+    return handleTouchEvent(touchEvent).value_or(false);
 #endif
 }
 #endif // ENABLE(TOUCH_EVENTS)

@@ -212,6 +212,7 @@ struct WebHitTestResultData;
 
 #if ENABLE(TOUCH_EVENTS)
 class NativeWebTouchEvent;
+class WebTouchEvent;
 #endif
 
 #if ENABLE(FULLSCREEN_API)
@@ -440,7 +441,7 @@ public:
 
     virtual void doneWithKeyEvent(const NativeWebKeyboardEvent&, bool wasEventHandled) = 0;
 #if ENABLE(TOUCH_EVENTS)
-    virtual void doneWithTouchEvent(const NativeWebTouchEvent&, bool wasEventHandled) = 0;
+    virtual void doneWithTouchEvent(const WebTouchEvent&, bool wasEventHandled) = 0;
 #endif
 #if ENABLE(IOS_TOUCH_EVENTS)
     virtual void doneDeferringTouchStart(bool preventNativeGestures) = 0;

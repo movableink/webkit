@@ -494,6 +494,7 @@ set(WebKit_SERIALIZATION_IN_FILES
     Shared/ProvisionalFrameCreationParameters.serialization.in
     Shared/RTCNetwork.serialization.in
     Shared/RTCPacketOptions.serialization.in
+    Shared/RemoteWebTouchEvent.serialization.in
     Shared/RemoteWorkerInitializationData.serialization.in
     Shared/RemoteWorkerType.serialization.in
     Shared/ResourceLoadInfo.serialization.in

@@ -42,6 +42,7 @@
 #import "PrintInfo.h"
 #import "RemoteLayerTreeDrawingArea.h"
 #import "RemoteScrollingCoordinator.h"
+#import "RemoteWebTouchEvent.h"
 #import "RevealItem.h"
 #import "SandboxUtilities.h"
 #import "ShareableBitmapUtilities.h"
@@ -146,6 +147,9 @@
 #import <WebCore/PrintContext.h>
 #import <WebCore/Quirks.h>
 #import <WebCore/Range.h>
+#import <WebCore/RemoteFrame.h>
+#import <WebCore/RemoteFrameGeometryTransformer.h>
+#import <WebCore/RemoteFrameView.h>
 #import <WebCore/RenderBlock.h>
 #import <WebCore/RenderBoxInlines.h>
 #import <WebCore/RenderImage.h>
@@ -171,6 +175,7 @@
 #import <WebCore/WebEvent.h>
 #import <WebCore/WritingSuggestionData.h>
 #import <pal/system/ios/UserInterfaceIdiom.h>
+#import <wtf/CoroutineUtilities.h>
 #import <wtf/MathExtras.h>
 #import <wtf/MemoryPressureHandler.h>
 #import <wtf/RuntimeApplicationChecks.h>
@@ -862,13 +867,13 @@ void WebPage::generateSyntheticEditingCommand(SyntheticEditingCommandType comman
     frame->eventHandler().keyEvent(keyEvent);
 }
 
-void WebPage::handleSyntheticClick(Node& nodeRespondingToClick, const WebCore::FloatPoint& location, OptionSet<WebEventModifier> modifiers, WebCore::PointerID pointerId)
+void WebPage::handleSyntheticClick(std::optional<WebCore::FrameIdentifier> frameID, Node& nodeRespondingToClick, const WebCore::FloatPoint& location, OptionSet<WebEventModifier> modifiers, WebCore::PointerID pointerId)
 {
     auto& respondingDocument = nodeRespondingToClick.document();
     m_hasHandledSyntheticClick = true;
 
     if (!respondingDocument.settings().contentChangeObserverEnabled() || respondingDocument.quirks().shouldIgnoreContentObservationForClick(nodeRespondingToClick)) {
-        completeSyntheticClick(nodeRespondingToClick, location, modifiers, WebCore::SyntheticClickType::OneFingerTap, pointerId);
+        completeSyntheticClick(frameID, nodeRespondingToClick, location, modifiers, WebCore::SyntheticClickType::OneFingerTap, pointerId);
         return;
     }
 
@@ -878,11 +883,11 @@ void WebPage::handleSyntheticClick(Node& nodeRespondingToClick, const WebCore::F
     {
         LOG_WITH_STREAM(ContentObservation, stream << "handleSyntheticClick: node(" << &nodeRespondingToClick << ") " << location);
         ContentChangeObserver::MouseMovedScope observingScope(respondingDocument);
-        RefPtr localMainFrame = m_page->localMainFrame();
-        if (!localMainFrame)
+        RefPtr localRootFrame = this->localRootFrame(frameID);
+        if (!localRootFrame)
             return;
-        dispatchSyntheticMouseMove(*localMainFrame, location, modifiers, pointerId);
-        localMainFrame->protectedDocument()->updateStyleIfNeeded();
+        dispatchSyntheticMouseMove(*localRootFrame, location, modifiers, pointerId);
+        localRootFrame->protectedDocument()->updateStyleIfNeeded();
         if (m_isClosed)
             return;
     }
@@ -920,21 +925,21 @@ void WebPage::handleSyntheticClick(Node& nodeRespondingToClick, const WebCore::F
         return;
     }
     contentChangeObserver.stopContentObservation();
-    callOnMainRunLoop([protectedThis = Ref { *this }, targetNode = Ref<Node>(nodeRespondingToClick), location, modifiers, observedContentChange, pointerId] {
+    callOnMainRunLoop([protectedThis = Ref { *this }, targetNode = Ref<Node>(nodeRespondingToClick), location, modifiers, observedContentChange, pointerId, frameID] {
         if (protectedThis->m_isClosed || !protectedThis->corePage())
             return;
 
         auto shouldStayAtHoverState = observedContentChange == WKContentVisibilityChange;
         if (shouldStayAtHoverState) {
             // The move event caused new contents to appear. Don't send synthetic click event, but just ensure that the mouse is on the most recent content.
-            if (RefPtr localMainFrame = dynamicDowncast<WebCore::LocalFrame>(protectedThis->corePage()->mainFrame()))
-                dispatchSyntheticMouseMove(*localMainFrame, location, modifiers, pointerId);
+            if (RefPtr localRootFrame = protectedThis->localRootFrame(frameID))
+                dispatchSyntheticMouseMove(*localRootFrame, location, modifiers, pointerId);
             LOG(ContentObservation, "handleSyntheticClick: Observed meaningful visible change -> hover.");
             protectedThis->didHandleTapAsHover();
             return;
         }
         LOG(ContentObservation, "handleSyntheticClick: calling completeSyntheticClick -> click.");
-        protectedThis->completeSyntheticClick(targetNode, location, modifiers, WebCore::SyntheticClickType::OneFingerTap, pointerId);
+        protectedThis->completeSyntheticClick(frameID, targetNode, location, modifiers, WebCore::SyntheticClickType::OneFingerTap, pointerId);
     });
 }
 
@@ -958,7 +963,7 @@ void WebPage::didFinishContentChangeObserving(WKContentChange observedContentCha
         // Only dispatch the click if the document didn't get changed by any timers started by the move event.
         if (observedContentChange == WKContentNoChange) {
             LOG(ContentObservation, "No change was observed -> click.");
-            protectedThis->completeSyntheticClick(targetNode, location, modifiers, WebCore::SyntheticClickType::OneFingerTap, pointerId);
+            protectedThis->completeSyntheticClick(std::nullopt, targetNode, location, modifiers, WebCore::SyntheticClickType::OneFingerTap, pointerId);
             return;
         }
         // Ensure that the mouse is on the most recent content.
@@ -974,12 +979,12 @@ void WebPage::didFinishContentChangeObserving(WKContentChange observedContentCha
     m_pendingSyntheticClickPointerId = 0;
 }
 
-void WebPage::completeSyntheticClick(Node& nodeRespondingToClick, const WebCore::FloatPoint& location, OptionSet<WebEventModifier> modifiers, SyntheticClickType syntheticClickType, WebCore::PointerID pointerId)
+void WebPage::completeSyntheticClick(std::optional<WebCore::FrameIdentifier> frameID, Node& nodeRespondingToClick, const WebCore::FloatPoint& location, OptionSet<WebEventModifier> modifiers, SyntheticClickType syntheticClickType, WebCore::PointerID pointerId)
 {
     SetForScope completeSyntheticClickScope { m_completingSyntheticClick, true };
     IntPoint roundedAdjustedPoint = roundedIntPoint(location);
-    RefPtr localMainFrame = m_page->localMainFrame();
-    if (!localMainFrame) {
+    RefPtr localRootFrame = this->localRootFrame(frameID);
+    if (!localRootFrame) {
         invokePendingSyntheticClickCallback(SyntheticClickResult::PageInvalid);
         return;
     }
@@ -994,7 +999,7 @@ void WebPage::completeSyntheticClick(Node& nodeRespondingToClick, const WebCore:
     // FIXME: Pass caps lock state.
     auto platformModifiers = platform(modifiers);
 
-    bool handledPress = localMainFrame->eventHandler().handleMousePressEvent(PlatformMouseEvent(roundedAdjustedPoint, roundedAdjustedPoint, MouseButton::Left, PlatformEvent::Type::MousePressed, 1, platformModifiers, WallTime::now(), WebCore::ForceAtClick, syntheticClickType, pointerId)).wasHandled();
+    bool handledPress = localRootFrame->eventHandler().handleMousePressEvent(PlatformMouseEvent(roundedAdjustedPoint, roundedAdjustedPoint, MouseButton::Left, PlatformEvent::Type::MousePressed, 1, platformModifiers, WallTime::now(), WebCore::ForceAtClick, syntheticClickType, pointerId)).wasHandled();
     if (m_isClosed)
         return;
 
@@ -1004,7 +1009,7 @@ void WebPage::completeSyntheticClick(Node& nodeRespondingToClick, const WebCore:
         clearSelectionAfterTapIfNeeded();
 
     auto releaseEvent = PlatformMouseEvent { roundedAdjustedPoint, roundedAdjustedPoint, MouseButton::Left, PlatformEvent::Type::MouseReleased, 1, platformModifiers, WallTime::now(), ForceAtClick, syntheticClickType, pointerId };
-    bool handledRelease = localMainFrame->eventHandler().handleMouseReleaseEvent(releaseEvent).wasHandled();
+    bool handledRelease = localRootFrame->eventHandler().handleMouseReleaseEvent(releaseEvent).wasHandled();
     if (m_isClosed)
         return;
 
@@ -1055,9 +1060,9 @@ void WebPage::attemptSyntheticClick(const IntPoint& point, OptionSet<WebEventMod
     if (!frameRespondingToClick || lastLayerTreeTransactionId.lessThanSameProcess(*WebFrame::fromCoreFrame(*frameRespondingToClick)->firstLayerTreeTransactionIDAfterDidCommitLoad()))
         send(Messages::WebPageProxy::DidNotHandleTapAsClick(adjustedIntPoint));
     else if (m_interactionNode == nodeRespondingToClick)
-        completeSyntheticClick(*nodeRespondingToClick, adjustedPoint, modifiers, WebCore::SyntheticClickType::OneFingerTap);
+        completeSyntheticClick(std::nullopt, *nodeRespondingToClick, adjustedPoint, modifiers, WebCore::SyntheticClickType::OneFingerTap);
     else
-        handleSyntheticClick(*nodeRespondingToClick, adjustedPoint, modifiers);
+        handleSyntheticClick(std::nullopt, *nodeRespondingToClick, adjustedPoint, modifiers);
 }
 
 void WebPage::handleDoubleTapForDoubleClickAtPoint(const IntPoint& point, OptionSet<WebEventModifier> modifiers, TransactionID lastLayerTreeTransactionId)
@@ -1307,14 +1312,30 @@ void WebPage::handleTwoFingerTapAtPoint(const WebCore::IntPoint& point, OptionSe
         return;
     }
     sendTapHighlightForNodeIfNecessary(requestID, nodeRespondingToClick, point);
-    completeSyntheticClick(*nodeRespondingToClick, adjustedPoint, modifiers, WebCore::SyntheticClickType::TwoFingerTap);
+    completeSyntheticClick(std::nullopt, *nodeRespondingToClick, adjustedPoint, modifiers, WebCore::SyntheticClickType::TwoFingerTap);
 }
 
-void WebPage::potentialTapAtPosition(WebKit::TapIdentifier requestID, const WebCore::FloatPoint& position, bool shouldRequestMagnificationInformation)
+Awaitable<std::optional<WebCore::RemoteUserInputEventData>> WebPage::potentialTapAtPosition(std::optional<WebCore::FrameIdentifier> frameID, WebKit::TapIdentifier requestID, WebCore::FloatPoint position, bool shouldRequestMagnificationInformation)
 {
     RefPtr localMainFrame = m_page->localMainFrame();
-    if (localMainFrame)
-        m_potentialTapNode = localMainFrame->nodeRespondingToClickEvents(position, m_potentialTapLocation, m_potentialTapSecurityOrigin.get());
+
+    if (RefPtr localRootFrame = this->localRootFrame(frameID))
+        m_potentialTapNode = localRootFrame->nodeRespondingToClickEvents(position, m_potentialTapLocation, m_potentialTapSecurityOrigin.get());
+
+    RefPtr frameOwner = dynamicDowncast<HTMLFrameOwnerElement>(m_potentialTapNode.get());
+    if (RefPtr remoteFrame = frameOwner ? dynamicDowncast<RemoteFrame>(frameOwner->contentFrame()) : nullptr) {
+        RefPtr localFrame = frameOwner->document().frame();
+        if (RefPtr frameView = localFrame ? localFrame->view() : nullptr) {
+            if (RefPtr remoteFrameView = remoteFrame->view()) {
+                RemoteFrameGeometryTransformer transformer(remoteFrameView.releaseNonNull(), frameView.releaseNonNull(), remoteFrame->frameID());
+                // FIXME: Use a different type with a FloatPoint to avoid rounding to an int.
+                co_return WebCore::RemoteUserInputEventData {
+                    remoteFrame->frameID(),
+                    transformer.transformToRemoteFrameCoordinates(roundedIntPoint(position))
+                };
+            }
+        }
+    }
 
     auto lastTouchLocation = std::exchange(m_lastTouchLocationBeforeTap, { });
     bool ignorePotentialTap = [&] {
@@ -1341,7 +1362,7 @@ void WebPage::potentialTapAtPosition(WebKit::TapIdentifier requestID, const WebC
         // the user's touch has changed. Avoid dispatching a synthetic click in this case.
         RELEASE_LOG(ViewGestures, "Ignoring potential tap (distance from last touch: %.0f)", (position - *lastTouchLocation).diagonalLength());
         m_potentialTapNode = nullptr;
-        return;
+        co_return std::nullopt;
     }
 
     m_wasShowingInputViewForFocusedElementDuringLastPotentialTap = m_isShowingInputViewForFocusedElement;
@@ -1360,18 +1381,26 @@ void WebPage::potentialTapAtPosition(WebKit::TapIdentifier requestID, const WebC
 
         bool nodeIsRootLevel = is<WebCore::Document>(*m_potentialTapNode) || is<WebCore::HTMLBodyElement>(*m_potentialTapNode);
         bool nodeIsPluginElement = is<WebCore::HTMLPlugInElement>(*m_potentialTapNode);
+        // FIXME: This message should become part of the reply.
         send(Messages::WebPageProxy::HandleSmartMagnificationInformationForPotentialTap(requestID, absoluteBoundingRect, fitEntireRect, viewportMinimumScale, viewportMaximumScale, nodeIsRootLevel, nodeIsPluginElement));
     }
 
     sendTapHighlightForNodeIfNecessary(requestID, m_potentialTapNode.get(), position);
 #if ENABLE(TOUCH_EVENTS)
+    // FIXME: This message should become part of the reply.
     if (m_potentialTapNode && !m_potentialTapNode->allowsDoubleTapGesture())
         send(Messages::WebPageProxy::DisableDoubleTapGesturesDuringTapIfNecessary(requestID));
 #endif
+    co_return std::nullopt;
 }
 
-void WebPage::commitPotentialTap(OptionSet<WebEventModifier> modifiers, TransactionID lastLayerTreeTransactionId, WebCore::PointerID pointerId)
+Awaitable<std::optional<WebCore::FrameIdentifier>> WebPage::commitPotentialTap(std::optional<WebCore::FrameIdentifier> frameID, OptionSet<WebEventModifier> modifiers, TransactionID lastLayerTreeTransactionId, WebCore::PointerID pointerId)
 {
+    RefPtr frameOwner = dynamicDowncast<HTMLFrameOwnerElement>(m_potentialTapNode.get());
+    RefPtr remoteFrame = frameOwner ? dynamicDowncast<RemoteFrame>(frameOwner->contentFrame()) : nullptr;
+    if (remoteFrame)
+        co_return remoteFrame->frameID();
+
     auto invalidTargetForSingleClick = !m_potentialTapNode;
     if (!invalidTargetForSingleClick) {
         bool targetRenders = m_potentialTapNode->renderer();
@@ -1382,46 +1411,50 @@ void WebPage::commitPotentialTap(OptionSet<WebEventModifier> modifiers, Transact
         invalidTargetForSingleClick = !targetRenders && !is<HTMLAreaElement>(m_potentialTapNode);
     }
 
-    RefPtr localMainFrame = m_page->localMainFrame();
+    // FIXME: Remove m_potentialTapLocation. It seems unused.
+    RefPtr localRootFrame = this->localRootFrame(frameID);
 
     if (invalidTargetForSingleClick) {
-        if (localMainFrame) {
+        if (localRootFrame) {
             constexpr OptionSet hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AllowVisibleChildFrameContentOnly };
             auto roundedPoint = IntPoint { m_potentialTapLocation };
-            auto result = localMainFrame->eventHandler().hitTestResultAtPoint(roundedPoint, hitType);
-            localMainFrame->eventHandler().setLastTouchedNode(result.innerNode());
+            auto result = localRootFrame->eventHandler().hitTestResultAtPoint(roundedPoint, hitType);
+            localRootFrame->eventHandler().setLastTouchedNode(result.innerNode());
         }
 
         commitPotentialTapFailed();
-        return;
+        co_return std::nullopt;
     }
 
-    if (localMainFrame)
-        localMainFrame->eventHandler().setLastTouchedNode(nullptr);
+    if (localRootFrame)
+        localRootFrame->eventHandler().setLastTouchedNode(nullptr);
 
     FloatPoint adjustedPoint;
-    Node* nodeRespondingToClick = localMainFrame ? localMainFrame->nodeRespondingToClickEvents(m_potentialTapLocation, adjustedPoint, m_potentialTapSecurityOrigin.get()) : nullptr;
-    auto* frameRespondingToClick = nodeRespondingToClick ? nodeRespondingToClick->document().frame() : nullptr;
+    RefPtr nodeRespondingToClick = localRootFrame ? localRootFrame->nodeRespondingToClickEvents(m_potentialTapLocation, adjustedPoint, m_potentialTapSecurityOrigin.get()) : nullptr;
+    RefPtr element = dynamicDowncast<Element>(nodeRespondingToClick);
+    RefPtr frameRespondingToClick = nodeRespondingToClick ? nodeRespondingToClick->document().frame() : nullptr;
 
     if (!frameRespondingToClick) {
         commitPotentialTapFailed();
-        return;
+        co_return std::nullopt;
     }
 
     auto firstTransactionID = WebFrame::fromCoreFrame(*frameRespondingToClick)->firstLayerTreeTransactionIDAfterDidCommitLoad();
     if (firstTransactionID && lastLayerTreeTransactionId.lessThanSameProcess(*firstTransactionID)) {
         commitPotentialTapFailed();
-        return;
+        co_return std::nullopt;
     }
 
     if (m_potentialTapNode == nodeRespondingToClick)
-        handleSyntheticClick(*nodeRespondingToClick, adjustedPoint, modifiers, pointerId);
+        handleSyntheticClick(frameID, *nodeRespondingToClick, adjustedPoint, modifiers, pointerId);
     else
         commitPotentialTapFailed();
 
     m_potentialTapNode = nullptr;
     m_potentialTapLocation = FloatPoint();
     m_potentialTapSecurityOrigin = nullptr;
+
+    co_return std::nullopt;
 }
 
 void WebPage::commitPotentialTapFailed()
@@ -1434,6 +1467,8 @@ void WebPage::commitPotentialTapFailed()
     clearSelectionAfterTapIfNeeded();
     invokePendingSyntheticClickCallback(SyntheticClickResult::Failed);
 
+    // FIXME: These two messages should be merged into one, and ideally
+    // just sent as part of the IPC reply of WebPage::commitPotentialTap.
     send(Messages::WebPageProxy::CommitPotentialTapFailed());
     send(Messages::WebPageProxy::DidNotHandleTapAsClick(roundedIntPoint(m_potentialTapLocation)));
 }
@@ -5254,12 +5289,20 @@ void WebPage::didEndUserTriggeredZooming()
 }
 
 #if ENABLE(IOS_TOUCH_EVENTS)
+static std::optional<RemoteWebTouchEvent> transformEventIfNecessary(const Expected<bool, WebCore::RemoteFrameGeometryTransformer>& transformer, WebTouchEvent&& event)
+{
+    if (transformer)
+        return std::nullopt;
+    event.transformToRemoteFrameCoordinates(transformer.error());
+    return RemoteWebTouchEvent { transformer.error().remoteFrameID(), WTFMove(event) };
+}
+
 void WebPage::dispatchAsynchronousTouchEvents(UniqueRef<EventDispatcher::TouchEventQueue>&& queue)
 {
     for (auto& touchEventData : queue.get()) {
         auto handleTouchEventResult = dispatchTouchEvent(touchEventData.frameID, touchEventData.event);
         if (auto& completionHandler = touchEventData.completionHandler)
-            completionHandler(handleTouchEventResult.wasHandled(), handleTouchEventResult.remoteUserInputEventData());
+            completionHandler(handleTouchEventResult.value_or(false), transformEventIfNecessary(handleTouchEventResult, WTFMove(touchEventData.event)));
     }
 }
 

@@ -124,7 +124,7 @@ using ElementIdentifier = ObjectIdentifier<ElementIdentifierType>;
 }
 
 namespace WebKit {
-class NativeWebTouchEvent;
+class WebTouchEvent;
 class SmartMagnificationController;
 class WebOpenPanelResultListenerProxy;
 class WebPageProxy;
@@ -776,7 +776,7 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
 - (void)_setTextColorForWebView:(UIColor *)color sender:(id)sender;
 
 #if ENABLE(TOUCH_EVENTS)
-- (void)_touchEvent:(const WebKit::NativeWebTouchEvent&)touchEvent preventsNativeGestures:(BOOL)preventsDefault;
+- (void)_touchEvent:(const WebKit::WebTouchEvent&)touchEvent preventsNativeGestures:(BOOL)preventsDefault;
 #endif
 #if ENABLE(IOS_TOUCH_EVENTS)
 - (void)_doneDeferringTouchStart:(BOOL)preventNativeGestures;

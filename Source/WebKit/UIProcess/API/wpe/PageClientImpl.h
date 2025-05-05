@@ -118,7 +118,7 @@ private:
 
     void doneWithKeyEvent(const NativeWebKeyboardEvent&, bool) override;
 #if ENABLE(TOUCH_EVENTS)
-    void doneWithTouchEvent(const NativeWebTouchEvent&, bool) override;
+    void doneWithTouchEvent(const WebTouchEvent&, bool) override;
 #endif
     void wheelEventWasNotHandledByWebCore(const NativeWebWheelEvent&) override;
 
