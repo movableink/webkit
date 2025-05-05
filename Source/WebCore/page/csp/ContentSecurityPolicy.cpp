@@ -370,7 +370,8 @@ bool ContentSecurityPolicy::allowContentSecurityPolicySourceStarToMatchAnyProtoc
 }
 
 template<typename Predicate, typename... Args>
-typename std::enable_if<!std::is_convertible<Predicate, ContentSecurityPolicy::ViolatedDirectiveCallback>::value, bool>::type ContentSecurityPolicy::allPoliciesWithDispositionAllow(Disposition disposition, Predicate&& predicate, Args&&... args) const
+bool ContentSecurityPolicy::allPoliciesWithDispositionAllow(Disposition disposition, Predicate&& predicate, Args&&... args) const
+    requires (!std::is_convertible_v<Predicate, ContentSecurityPolicy::ViolatedDirectiveCallback>)
 {
     bool isReportOnly = disposition == ContentSecurityPolicy::Disposition::ReportOnly;
     for (auto& policy : m_policies) {
