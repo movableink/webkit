@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="../../http/tests/inspector/resources/inspector-test.js"></script>
+<script>
+const baseSourceMapTestDir = "../../imported/tc39-tg4/source-map-tests"
+function triggerScriptResource(scriptName) {
+    let script = document.createElement("script");
+    script.src = `${baseSourceMapTestDir}/resources/${scriptName}`;
+    document.body.appendChild(script);
+}
+
+function triggerDownloadingTestDescriptions() {
+    let xhr = new XMLHttpRequest;
+    xhr.open("GET", `${baseSourceMapTestDir}/source-map-spec-tests.json`, true);
+    xhr.onload = () => {
+        TestPage.dispatchEventToFrontend('PageIsReady', JSON.parse(xhr.responseText));
+    }
+    xhr.send();
+}
+
+function test()
+{
+    function checkMapping(resource, testCase, action)
+    {
+        const location = resource.createSourceCodeLocation(action.generatedLine, action.generatedColumn);
+        InspectorTest.expectThat(location.hasMappedLocation(), `Test location (${action.generatedLine}, ${action.generatedColumn}) should be mapped`);
+        InspectorTest.expectEqual(location.displayLineNumber, action.originalLine, `Original line: ${location.displayLineNumber}, expected: ${action.originalLine}`);
+        InspectorTest.expectEqual(location.displayColumnNumber, action.originalColumn, `Original column: ${location.displayColumnNumber}, expected: ${action.originalColumn}`);
+        InspectorTest.expectEqual(location.displaySourceCode.displayName, action.originalSource, `Original source: ${location.displaySourceCode.displayName}, expected: ${action.originalSource}`);
+    }
+
+    function checkIgnoreList(resource, testCase, action)
+    {
+        const sourceMap = resource.sourceMaps[0];
+        InspectorTest.assert(sourceMap);
+        const result = action.present.every((sourceName) => {
+            return sourceMap.resources.some((resource) => {
+                return resource.displayName.match(sourceName);
+            });
+        });
+        InspectorTest.expectThat(result, "Ignored sources should be in ignoreList");
+    }
+
+    function withTimeout(promise, seconds)
+    {
+        return Promise.race([promise, new Promise((resolve, reject) => {
+            setTimeout(resolve, seconds);
+        })]);
+    }
+
+    let suite = InspectorTest.createAsyncSuite("SourceMapSpec");
+
+    // Construct tests in this callback after the test JSON is fetched.
+    function continuation(testDescriptions) {
+        for (const testCase of testDescriptions.tests) {
+            suite.addTestCase({
+                name: testCase.name,
+                description: testCase.description,
+                async test() {
+                    InspectorTest.log("expecting " + (testCase.sourceMapIsValid ? "VALID" : "INVALID") + " source map");
+                    const [resourceEvent] = await Promise.all([
+                        withTimeout(WI.Frame.awaitEvent(WI.Frame.Event.ResourceWasAdded), 300),
+                        InspectorTest.evaluateInPage(`triggerScriptResource('${testCase.baseFile}');`)
+                    ]);
+                    let resource;
+                    let sourceMapEvent;
+                    if (resourceEvent !== undefined) {
+                        resource = resourceEvent.data.resource;
+                        sourceMapEvent = await withTimeout(resource.awaitEvent(WI.SourceCode.Event.SourceMapAdded), 75);
+                    }
+
+                    if (testCase.sourceMapIsValid) {
+                        InspectorTest.expectThat(resource && sourceMapEvent, "Script resource and source map event should have triggered");
+                        if (!resource)
+                            return;
+                        InspectorTest.expectEqual(resource.sourceMaps.length, 1, "Resource should have loaded 1 SourceMap.");
+                        InspectorTest.expectThat(resource.sourceMaps[0] instanceof WI.SourceMap, "SourceMap should be a WI.SourceMap instance.");
+                        if (!(resource.sourceMaps[0] instanceof WI.SourceMap))
+                            return;
+                    } else {
+                        InspectorTest.expectThat(resource, "Script resource should have loaded");
+                        if (!resource)
+                            return;
+                        const hasFailedSourceMap = WI.networkManager.isSourceMapURL(absoluteURL(testCase.sourceMapFile, resource.displayURL));
+                        InspectorTest.expectThat(hasFailedSourceMap, "Expected that there is an associated failed source map URL");
+                        InspectorTest.expectEqual(resource.sourceMaps.length, 0, "Expected no source map resource loaded");
+                    }
+
+                    if (testCase.testActions) {
+                        for (const action of testCase.testActions) {
+                            if (action.actionType === "checkMapping")
+                                checkMapping(resource, testCase, action);
+                            else if (action.actionType === "checkMappingTransitive")
+                                InspectorTest.log("Transitive mapping test ignored");
+                            else if (action.actionType === "checkIgnoreList")
+                                checkIgnoreList(resource, testCase, action);
+                        }
+                    }
+                }
+            });
+        }
+
+        suite.runTestCasesAndFinish();
+    }
+
+    InspectorTest.awaitEvent("PageIsReady")
+    .then((event) => {
+        continuation(event.data);
+    });
+
+    InspectorTest.evaluateInPage("triggerDownloadingTestDescriptions()");
+}
+</script>
+</head>
+<body onload="runTest()">
+<p>Run source map specification consumer test cases.</p>
+</body>
+</html>
