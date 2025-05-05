@@ -78,7 +78,6 @@ struct CSSParserContext {
     bool imageControlsEnabled : 1 { false };
 #endif
     bool colorLayersEnabled : 1 { false };
-    bool lightDarkColorEnabled : 1 { false };
     bool contrastColorEnabled : 1 { false };
     bool targetTextPseudoElementEnabled : 1 { false };
     bool viewTransitionTypesEnabled : 1 { false };

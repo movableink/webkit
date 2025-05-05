@@ -49,7 +49,6 @@ static void applyUASheetBehaviorsToContext(CSSParserContext& context)
     // FIXME: We should turn all of the features on from their WebCore Settings defaults.
     context.cssAppearanceBaseEnabled = true;
     context.cssTextUnderlinePositionLeftRightEnabled = true;
-    context.lightDarkColorEnabled = true;
     context.popoverAttributeEnabled = true;
     context.propertySettings.cssInputSecurityEnabled = true;
     context.propertySettings.cssCounterStyleAtRulesEnabled = true;
@@ -107,7 +106,6 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
     , imageControlsEnabled { document.settings().imageControlsEnabled() }
 #endif
     , colorLayersEnabled { document.settings().cssColorLayersEnabled() }
-    , lightDarkColorEnabled { document.settings().cssLightDarkEnabled() }
     , contrastColorEnabled { document.settings().cssContrastColorEnabled() }
     , targetTextPseudoElementEnabled { document.settings().targetTextPseudoElementEnabled() }
     , viewTransitionTypesEnabled { document.settings().viewTransitionsEnabled() && document.settings().viewTransitionTypesEnabled() }
@@ -149,17 +147,16 @@ void add(Hasher& hasher, const CSSParserContext& context)
         | context.imageControlsEnabled                      << 18
 #endif
         | context.colorLayersEnabled                        << 19
-        | context.lightDarkColorEnabled                     << 20
-        | context.contrastColorEnabled                      << 21
-        | context.targetTextPseudoElementEnabled            << 22
-        | context.viewTransitionTypesEnabled                << 23
-        | context.cssProgressFunctionEnabled                << 24
-        | context.cssMediaProgressFunctionEnabled           << 25
-        | context.cssContainerProgressFunctionEnabled       << 26
-        | context.cssRandomFunctionEnabled                  << 27
-        | context.cssTreeCountingFunctionsEnabled           << 28
-        | context.cssURLModifiersEnabled                    << 29
-        | context.cssAxisRelativePositionKeywordsEnabled    << 30;
+        | context.contrastColorEnabled                      << 20
+        | context.targetTextPseudoElementEnabled            << 21
+        | context.viewTransitionTypesEnabled                << 22
+        | context.cssProgressFunctionEnabled                << 23
+        | context.cssMediaProgressFunctionEnabled           << 24
+        | context.cssContainerProgressFunctionEnabled       << 25
+        | context.cssRandomFunctionEnabled                  << 26
+        | context.cssTreeCountingFunctionsEnabled           << 27
+        | context.cssURLModifiersEnabled                    << 28
+        | context.cssAxisRelativePositionKeywordsEnabled    << 29;
     add(hasher, context.baseURL, context.charset, context.propertySettings, context.mode, bits);
 }
 

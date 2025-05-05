@@ -664,9 +664,6 @@ static std::optional<CSS::Color> consumeLightDarkFunction(CSSParserTokenRange& r
 
     ASSERT(range.peek().functionId() == CSSValueLightDark);
 
-    if (!state.propertyParserState.context.lightDarkColorEnabled)
-        return std::nullopt;
-
     auto args = consumeFunction(range);
 
     auto lightColor = consumeColor(args, state);
