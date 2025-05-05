@@ -156,7 +156,6 @@ UIProcess/Cocoa/VideoPresentationManagerProxy.mm
 UIProcess/Cocoa/WKContactPicker.mm
 UIProcess/Cocoa/WKShareSheet.mm
 UIProcess/Cocoa/WKStorageAccessAlert.mm
-UIProcess/Cocoa/WKTextExtractionUtilities.mm
 UIProcess/Cocoa/WebKitSwiftSoftLink.h
 UIProcess/Cocoa/WebPageProxyCocoa.mm
 UIProcess/Cocoa/WebProcessPoolCocoa.mm

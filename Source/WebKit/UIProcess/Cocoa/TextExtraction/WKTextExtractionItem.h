@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if USE(APPLE_INTERNAL_SDK) || (!PLATFORM(WATCHOS) && !PLATFORM(APPLETV))
+
 #import <CoreGraphics/CoreGraphics.h>
 #import <Foundation/Foundation.h>
 
@@ -92,3 +94,5 @@ typedef NS_ENUM(NSInteger, WKTextExtractionContainer) {
 @end
 
 NS_ASSUME_NONNULL_END
+
+#endif // USE(APPLE_INTERNAL_SDK) || (!PLATFORM(WATCHOS) && !PLATFORM(APPLETV))

@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if USE(APPLE_INTERNAL_SDK) || (!PLATFORM(WATCHOS) && !PLATFORM(APPLETV))
+
 #import <wtf/Function.h>
 #import <wtf/RetainPtr.h>
 
@@ -40,9 +42,9 @@ struct Item;
 
 namespace WebKit {
 
-void prepareTextExtractionSupportIfNeeded();
-
 using RootViewToWebViewConverter = Function<WebCore::FloatRect(const WebCore::FloatRect&)>;
 RetainPtr<WKTextExtractionItem> createItem(const WebCore::TextExtraction::Item&, RootViewToWebViewConverter&&);
 
 } // namespace WebKit
+
+#endif // USE(APPLE_INTERNAL_SDK) || (!PLATFORM(WATCHOS) && !PLATFORM(APPLETV))

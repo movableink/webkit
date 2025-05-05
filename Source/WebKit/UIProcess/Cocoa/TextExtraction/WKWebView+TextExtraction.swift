@@ -23,8 +23,11 @@
 
 #if HAVE_UIINTELLIGENCESUPPORT_FRAMEWORK
 
-import WebKit
-import WebKitSwift
+#if compiler(>=6.0)
+internal import WebKit_Internal
+#else
+@_implementationOnly import WebKit_Internal
+#endif
 @_spiOnly import UIIntelligenceSupport
 
 #if canImport(UIKit)

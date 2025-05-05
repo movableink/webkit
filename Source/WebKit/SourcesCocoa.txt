@@ -431,6 +431,7 @@ UIProcess/Cocoa/ResourceLoadDelegate.mm
 UIProcess/Cocoa/SessionStateCoding.mm
 UIProcess/Cocoa/SystemPreviewControllerCocoa.mm
 UIProcess/Cocoa/TextCheckingController.mm
+UIProcess/Cocoa/TextExtraction/WKTextExtractionUtilities.mm
 UIProcess/Cocoa/UIDelegate.mm
 UIProcess/Cocoa/UIProcessLogInitializationCocoa.mm
 UIProcess/Cocoa/UIRemoteObjectRegistry.cpp
@@ -451,7 +452,6 @@ UIProcess/Cocoa/WKContactPicker.mm
 UIProcess/Cocoa/WKEditCommand.mm
 UIProcess/Cocoa/WKFullKeyboardAccessWatcher.mm
 UIProcess/Cocoa/WKReloadFrameErrorRecoveryAttempter.mm
-UIProcess/Cocoa/WKTextExtractionUtilities.mm
 UIProcess/Cocoa/WKTextPlaceholder.mm
 UIProcess/Cocoa/WKTextSelectionRect.mm
 UIProcess/Cocoa/WKWebViewContentProviderRegistry.mm

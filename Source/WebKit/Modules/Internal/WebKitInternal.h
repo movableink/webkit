@@ -31,6 +31,7 @@
 #import "WKPDFPageNumberIndicator.h"
 #import "WKPreferencesInternal.h"
 #import "WKScrollGeometry.h"
+#import "WKTextExtractionItem.h"
 #import "WKUIDelegateInternal.h"
 #import "WKWebViewConfigurationInternal.h"
 #import "WKWebViewInternal.h"

@@ -21,10 +21,17 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
+#if USE_APPLE_INTERNAL_SDK || (!os(tvOS) && !os(watchOS))
+
 import Foundation
-import WebKitSwift
+#if compiler(>=6.0)
+internal import WebKit_Internal
+#else
+@_implementationOnly import WebKit_Internal
+#endif
 
 // FIXME: Adopt `@objc @implementation` when support for macOS Sonoma is no longer needed.
+// FIXME: (rdar://110719676) Remove all `@objc deinit`s when support for macOS Sonoma is no longer needed.
 
 @_objcImplementation extension WKTextExtractionItem {
     let rectInWebView: CGRect
@@ -35,6 +42,10 @@ import WebKitSwift
         self.rectInWebView = rectInWebView
         self.children = children
     }
+
+#if compiler(<6.0)
+    @objc deinit { }
+#endif
 }
 
 @_objcImplementation extension WKTextExtractionContainerItem {
@@ -44,6 +55,10 @@ import WebKitSwift
         self.container = container
         super.init(with: rectInWebView, children: children)
     }
+
+#if compiler(<6.0)
+    @objc deinit { }
+#endif
 }
 
 @_objcImplementation extension WKTextExtractionEditable {
@@ -72,6 +87,10 @@ import WebKitSwift
         self.backingIsSecure = isSecure
         self.backingIsFocused = isFocused
     }
+
+#if compiler(<6.0)
+    @objc deinit { }
+#endif
 }
 
 @_objcImplementation extension WKTextExtractionLink {
@@ -88,6 +107,10 @@ import WebKitSwift
         self._url = url as NSURL
         self.range = range
     }
+
+#if compiler(<6.0)
+    @objc deinit { }
+#endif
 }
 
 @_objcImplementation extension WKTextExtractionTextItem {
@@ -103,6 +126,10 @@ import WebKitSwift
         self.editable = editable
         super.init(with: rectInWebView, children: children)
     }
+
+#if compiler(<6.0)
+    @objc deinit { }
+#endif
 }
 
 @_objcImplementation extension WKTextExtractionScrollableItem {
@@ -112,6 +139,10 @@ import WebKitSwift
         self.contentSize = contentSize
         super.init(with: rectInWebView, children: children)
     }
+
+#if compiler(<6.0)
+    @objc deinit { }
+#endif
 }
 
 @_objcImplementation extension WKTextExtractionImageItem {
@@ -123,6 +154,10 @@ import WebKitSwift
         self.altText = altText
         super.init(with: rectInWebView, children: children)
     }
+
+#if compiler(<6.0)
+    @objc deinit { }
+#endif
 }
 
 @_objcImplementation extension WKTextExtractionRequest {
@@ -140,4 +175,10 @@ import WebKitSwift
         completionHandler(item)
         self.completionHandler = nil
     }
+
+#if compiler(<6.0)
+    @objc deinit { }
+#endif
 }
+
+#endif // USE_APPLE_INTERNAL_SDK || (!os(tvOS) && !os(watchOS))
