@@ -265,11 +265,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
         return Exits;
 
     case ValueToInt32:
-        if (node->child1().useKind() == Int52RepUse)
-            break;
-        if (node->child1().useKind() == DoubleRepUse)
-            break;
-        return Exits;
+        break;
 
     case CompareStrictEq:
         if (node->isBinaryUseKind(BooleanUse) || node->isSymmetricBinaryUseKind(BooleanUse, UntypedUse))

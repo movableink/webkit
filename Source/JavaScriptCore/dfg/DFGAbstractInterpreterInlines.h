@@ -2947,13 +2947,16 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
 
     case MultiGetByVal: {
         ArrayMode mode = node->arrayMode();
+        bool mayIncludeNonNumber = !mode.isInBounds();
         for (unsigned i = 0; i < sizeof(ArrayModes) * CHAR_BIT; ++i) {
             ArrayModes oneArrayMode = 1ULL << i;
             if (node->arrayModes() & oneArrayMode) {
                 switch (oneArrayMode) {
+                case asArrayModesIgnoringTypedArrays(ArrayWithContiguous):
+                    mayIncludeNonNumber = true;
+                    FALLTHROUGH;
                 case asArrayModesIgnoringTypedArrays(ArrayWithInt32):
-                case asArrayModesIgnoringTypedArrays(ArrayWithDouble):
-                case asArrayModesIgnoringTypedArrays(ArrayWithContiguous): {
+                case asArrayModesIgnoringTypedArrays(ArrayWithDouble): {
                     if (mode.isInBounds() || mode.isOutOfBoundsSaneChain())
                         break;
                     clobberWorld();
@@ -2984,8 +2987,12 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             setNonCellTypeForNode(node, SpecFullDouble);
         } else if (node->hasInt52Result())
             setNonCellTypeForNode(node, SpecInt52Any);
-        else
-            makeHeapTopForNode(node);
+        else {
+            if (mayIncludeNonNumber)
+                makeHeapTopForNode(node);
+            else
+                setNonCellTypeForNode(node, SpecBytecodeNumber);
+        }
         break;
     }
 
