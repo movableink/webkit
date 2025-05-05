@@ -511,8 +511,10 @@ public:
     void addDamage(const Damage& damage)
     {
         Region region;
-        for (const auto& rect : damage)
-            region.unite(rect);
+        for (const auto& rect : damage) {
+            Region subRegion(rect);
+            region.unite(subRegion);
+        }
         m_damageInfo.append(WTFMove(region));
     }
 
