@@ -153,59 +153,6 @@ void LineWidth::updateLineDimension(LayoutUnit newLineTop, LayoutUnit newLineWid
     m_right = newLineRight;
 }
 
-void LineWidth::wrapNextToShapeOutside(bool isFirstLine)
-{
-    LayoutUnit lineHeight = m_block.lineHeight(isFirstLine, m_block.isHorizontalWritingMode() ? HorizontalLine : VerticalLine, PositionOfInteriorLineBoxes);
-    LayoutUnit lineLogicalTop = m_block.logicalHeight();
-    LayoutUnit newLineTop = lineLogicalTop;
-    LayoutUnit floatLogicalBottom = m_block.nextFloatLogicalBottomBelow(lineLogicalTop);
-
-    float newLineWidth;
-    float newLineLeft = m_left;
-    float newLineRight = m_right;
-    while (true) {
-        newLineWidth = availableWidthAtOffset(m_block, newLineTop, newLineLeft, newLineRight, lineHeight);
-        if (newLineWidth >= m_uncommittedWidth)
-            break;
-
-        if (newLineTop >= floatLogicalBottom)
-            break;
-
-        ++newLineTop;
-    }
-    updateLineDimension(newLineTop, LayoutUnit(newLineWidth), LayoutUnit(newLineLeft), LayoutUnit(newLineRight));
-}
-
-void LineWidth::fitBelowFloats(bool isFirstLine)
-{
-    ASSERT(!m_committedWidth);
-    ASSERT(!fitsOnLine());
-
-    LayoutUnit floatLogicalBottom;
-    LayoutUnit lastFloatLogicalBottom = m_block.logicalHeight();
-    float newLineWidth = m_availableWidth;
-    float newLineLeft = m_left;
-    float newLineRight = m_right;
-
-    FloatingObject* lastFloatFromPreviousLine = (m_block.containsFloats() ? m_block.m_floatingObjects->set().last().get() : 0);
-    if (lastFloatFromPreviousLine && lastFloatFromPreviousLine->renderer().shapeOutsideInfo())
-        return wrapNextToShapeOutside(isFirstLine);
-
-    while (true) {
-        floatLogicalBottom = m_block.nextFloatLogicalBottomBelow(lastFloatLogicalBottom);
-        if (floatLogicalBottom <= lastFloatLogicalBottom)
-            break;
-
-        newLineWidth = availableWidthAtOffset(m_block, floatLogicalBottom, newLineLeft, newLineRight);
-        lastFloatLogicalBottom = floatLogicalBottom;
-
-        if (newLineWidth >= m_uncommittedWidth)
-            break;
-    }
-
-    updateLineDimension(lastFloatLogicalBottom, LayoutUnit(newLineWidth), LayoutUnit(newLineLeft), LayoutUnit(newLineRight));
-}
-
 void LineWidth::setTrailingWhitespaceWidth(float collapsedWhitespace, float borderPaddingMargin)
 {
     m_trailingCollapsedWhitespaceWidth = collapsedWhitespace;

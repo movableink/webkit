@@ -479,9 +479,6 @@ inline bool BreakingContext::handleText()
                     m_hangsAtEnd = false;
             }
 
-            if (!m_width.hasCommitted() && m_autoWrap && !fitsOnLineOrHangsAtEnd())
-                m_width.fitBelowFloats(m_lineInfo.isFirstLine());
-
             if (m_autoWrap || breakWords) {
                 // If we break only after white-space, consider the current character
                 // as candidate width for this line.
@@ -665,9 +662,6 @@ inline void BreakingContext::commitAndUpdateLineBreakIfNeeded()
             return;
         }
 
-        if (!m_hangsAtEnd)
-            m_width.fitBelowFloats(m_lineInfo.isFirstLine());
-
         // |width| may have been adjusted because we got shoved down past a float (thus
         // giving us more room), so we need to retest, and only jump to
         // the end label if we still don't fit on the line. -dwh
@@ -675,10 +669,6 @@ inline void BreakingContext::commitAndUpdateLineBreakIfNeeded()
             m_atEnd = true;
             return;
         }
-    } else if (m_blockStyle.autoWrap() && !m_width.fitsOnLine() && !m_width.hasCommitted() && !m_hangsAtEnd) {
-        // If the container autowraps but the current child does not then we still need to ensure that it
-        // wraps and moves below any floats.
-        m_width.fitBelowFloats(m_lineInfo.isFirstLine());
     }
 
     if (!m_current.renderer()->isFloatingOrOutOfFlowPositioned()) {

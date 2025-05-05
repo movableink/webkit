@@ -508,7 +508,6 @@ void LegacyLineLayout::layoutRunsAndFloatsInRange(InlineBidiResolver& resolver)
         lineInfo.resetRunsFromLeadingWhitespace();
 
         end = lineBreaker.nextLineBreak(resolver, lineInfo, renderTextInfo);
-        m_flow.cachePriorCharactersIfNeeded(renderTextInfo.lineBreakIteratorFactory);
         renderTextInfo.lineBreakIteratorFactory.priorContext().reset();
         if (resolver.position().atEnd()) {
             // FIXME: We shouldn't be creating any runs in nextLineBreak to begin with!
