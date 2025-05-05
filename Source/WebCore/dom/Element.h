@@ -172,6 +172,7 @@ enum class Change : uint8_t;
 struct PseudoElementIdentifier;
 struct ResolutionContext;
 struct ResolvedStyle;
+struct UnadjustedStyle;
 }
 
 class Element : public ContainerNode {
@@ -745,7 +746,7 @@ public:
     virtual void didAttachRenderers();
     virtual void willDetachRenderers();
     virtual void didDetachRenderers();
-    virtual std::optional<Style::ResolvedStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* shadowHostStyle);
+    virtual std::optional<Style::UnadjustedStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* shadowHostStyle);
 
     LayoutRect absoluteEventHandlerBounds(bool& includesFixedPositionElements) override;
 
@@ -768,7 +769,7 @@ public:
 #endif
 
     Style::Resolver& styleResolver();
-    Style::ResolvedStyle resolveStyle(const Style::ResolutionContext&);
+    Style::UnadjustedStyle resolveStyle(const Style::ResolutionContext&);
 
     // Invalidates the style of a single element. Style is resolved lazily.
     // Descendant elements are resolved as needed, for example if an inherited property changes.

@@ -28,7 +28,7 @@ namespace Style {
 
 struct UnadjustedStyle {
     std::unique_ptr<RenderStyle> style;
-    std::unique_ptr<RenderStyle> userAgentAppearanceStyle;
+    std::unique_ptr<RenderStyle> userAgentAppearanceStyle { };
     std::unique_ptr<Relations> relations { };
     RefPtr<const MatchResult> matchResult { };
 };

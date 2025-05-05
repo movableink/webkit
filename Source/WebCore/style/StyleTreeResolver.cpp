@@ -156,16 +156,6 @@ ResolvedStyle TreeResolver::styleForStyleable(const Styleable& styleable, Resolu
     if (auto optionStyle = tryChoosePositionOption(styleable, existingStyle))
         return WTFMove(*optionStyle);
 
-    if (element.hasCustomStyleResolveCallbacks()) {
-        RenderStyle* shadowHostStyle = scope().shadowRoot ? m_update->elementStyle(*scope().shadowRoot->host()) : nullptr;
-        if (auto customStyle = element.resolveCustomStyle(resolutionContext, shadowHostStyle)) {
-            if (customStyle->relations)
-                commitRelations(WTFMove(customStyle->relations), *m_update);
-
-            return WTFMove(*customStyle);
-        }
-    }
-
     if (resolutionType == ResolutionType::FastPathInherit) {
         // If the only reason we are computing the style is that some parent inherited properties changed, we can just copy them.
         auto style = RenderStyle::clonePtr(*existingStyle);
@@ -174,6 +164,12 @@ ResolvedStyle TreeResolver::styleForStyleable(const Styleable& styleable, Resolu
     }
 
     auto unadjustedStyle = [&] {
+        if (element.hasCustomStyleResolveCallbacks()) {
+            RenderStyle* shadowHostStyle = scope().shadowRoot ? m_update->elementStyle(*scope().shadowRoot->host()) : nullptr;
+            if (auto customStyle = element.resolveCustomStyle(resolutionContext, shadowHostStyle))
+                return WTFMove(*customStyle);
+        }
+
         if (resolutionType == ResolutionType::FullWithMatchResultCache) {
             if (auto cachedResult = m_document->styleScope().matchResultCache().resultWithCurrentInlineStyle(element)) {
                 auto result = scope().resolver->unadjustedStyleForCachedMatchResult(element, resolutionContext, WTFMove(*cachedResult));
@@ -191,8 +187,11 @@ ResolvedStyle TreeResolver::styleForStyleable(const Styleable& styleable, Resolu
 
     auto style = WTFMove(unadjustedStyle.style);
 
-    Adjuster adjuster(m_document, *resolutionContext.parentStyle, resolutionContext.parentBoxStyle, &element);
-    adjuster.adjust(*style, unadjustedStyle.userAgentAppearanceStyle.get());
+    // Fully custom styles in UA shadow trees that don't originate from selector matching don't need adjusting.
+    if (unadjustedStyle.matchResult) {
+        Adjuster adjuster(m_document, *resolutionContext.parentStyle, resolutionContext.parentBoxStyle, &element);
+        adjuster.adjust(*style, unadjustedStyle.userAgentAppearanceStyle.get());
+    }
 
     return {
         .style = WTFMove(style),

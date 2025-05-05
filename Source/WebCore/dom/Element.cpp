@@ -2616,9 +2616,9 @@ Style::Resolver& Element::styleResolver()
     return document().checkedStyleScope()->resolver();
 }
 
-Style::ResolvedStyle Element::resolveStyle(const Style::ResolutionContext& resolutionContext)
+Style::UnadjustedStyle Element::resolveStyle(const Style::ResolutionContext& resolutionContext)
 {
-    return styleResolver().styleForElement(*this, resolutionContext);
+    return styleResolver().unadjustedStyleForElement(*this, resolutionContext);
 }
 
 void invalidateForSiblingCombinators(Element* sibling)
@@ -5641,7 +5641,7 @@ void Element::didDetachRenderers()
     ASSERT(hasCustomStyleResolveCallbacks());
 }
 
-std::optional<Style::ResolvedStyle> Element::resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle*)
+std::optional<Style::UnadjustedStyle> Element::resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle*)
 {
     ASSERT(hasCustomStyleResolveCallbacks());
     return std::nullopt;
