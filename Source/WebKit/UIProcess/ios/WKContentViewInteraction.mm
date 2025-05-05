@@ -13881,6 +13881,16 @@ inline static NSString *extendSelectionCommand(UITextLayoutDirection direction)
     return CGRectNull;
 }
 
+- (UIView *)selectionContainerViewBelowText
+{
+    return self._selectionContainerViewInternal;
+}
+
+- (UIView *)selectionContainerViewAboveText
+{
+    return self._selectionContainerViewInternal;
+}
+
 - (void)transposeCharactersAroundSelection
 {
     [self _executeEditCommand:@"transpose"];
@@ -14119,13 +14129,15 @@ static inline WKTextAnimationType toWKTextAnimationType(WebCore::TextAnimationTy
 
 - (UIView *)_selectionContainerViewAboveText
 {
-    // FIXME (280624): Once -selectionContainerView (or an equivalent) is available as API, we
-    // should adopt that and make this invoke RELEASE_ASSERT_ASYNC_TEXT_INTERACTIONS_DISABLED().
+    // FIXME: Consider adding RELEASE_ASSERT_ASYNC_TEXT_INTERACTIONS_DISABLED()
+    // once the changes in rdar://150645383 are in all relevant builds.
     return self._selectionContainerViewInternal;
 }
 
 - (UIView *)selectionContainerView
 {
+    // FIXME: Consider adding RELEASE_ASSERT_ASYNC_TEXT_INTERACTIONS_DISABLED()
+    // once the changes in rdar://150645383 are in all relevant builds.
     return self._selectionContainerViewInternal;
 }
 
