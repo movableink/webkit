@@ -1191,6 +1191,27 @@ GStreamerRegistryScanner::RegistryLookupResult GStreamerRegistryScanner::isRtpPa
     return factories.hasElementForMediaType(ElementFactories::Type::RtpPayloader, *gstCapsName);
 }
 
+bool GStreamerRegistryScanner::isRtpHeaderExtensionSupported(StringView uri)
+{
+#if GST_CHECK_VERSION(1, 20, 0)
+    return adoptGRef(gst_rtp_header_extension_create_from_uri(uri.toStringWithoutCopying().ascii().data()));
+#endif
+
+    for (auto& u : m_commonRtpExtensions) {
+        if (u == uri)
+            return true;
+    }
+    for (auto& u : m_allAudioRtpExtensions) {
+        if (u == uri)
+            return true;
+    }
+    for (auto& u : m_allVideoRtpExtensions) {
+        if (u == uri)
+            return true;
+    }
+    return false;
+}
+
 #endif // USE(GSTREAMER_WEBRTC)
 
 #undef GST_CAT_DEFAULT

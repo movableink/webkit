@@ -22,6 +22,7 @@
 #if ENABLE(WEB_RTC) && USE(GSTREAMER_WEBRTC)
 #include "GStreamerWebRTCUtils.h"
 
+#include "GStreamerRegistryScanner.h"
 #include "OpenSSLCryptoUniquePtr.h"
 #include "RTCIceCandidate.h"
 #include "RTCIceProtocol.h"
@@ -700,6 +701,17 @@ GRefPtr<GstCaps> capsFromSDPMedia(const GstSDPMedia* media)
                 auto fieldId = gstIdToString(id);
                 return !fieldId.startsWith("ssrc-"_s);
             });
+
+            // Remove unsupported RTP header extensions.
+            gstStructureFilterAndMapInPlace(structure, [&](auto id, auto value) -> bool {
+                auto fieldId = gstIdToString(id);
+                if (!fieldId.startsWith("extmap-"_s))
+                    return true;
+
+                auto uri = StringView::fromLatin1(g_value_get_string(value));
+                return GStreamerRegistryScanner::singleton().isRtpHeaderExtensionSupported(uri);
+            });
+
             // Align with caps from RealtimeOutgoingAudioSourceGStreamer
             setSsrcAudioLevelVadOn(structure);
         }
@@ -776,6 +788,210 @@ void forEachTransceiver(const GRefPtr<GstElement>& webrtcBin, Function<bool(GRef
     }
 }
 
+#define CRLF "\r\n"_s
+
+class SDPStringBuilder {
+public:
+    SDPStringBuilder(const GstSDPMessage*);
+
+    String toString() { return m_stringBuilder.toString(); }
+
+private:
+    void appendAttribute(const GstSDPAttribute*);
+    void appendConnection(const GstSDPConnection*);
+    void appendKey(const GstSDPKey*);
+    void appendBandwidth(const GstSDPBandwidth*);
+    void appendMedia(const GstSDPMedia*);
+
+    StringBuilder m_stringBuilder;
+};
+
+void SDPStringBuilder::appendAttribute(const GstSDPAttribute* attribute)
+{
+    if (!attribute->key)
+        return;
+
+    StringView key = unsafeSpan(attribute->key);
+    auto value = String::fromUTF8(attribute->value);
+    if (key == "extmap"_s) {
+        auto tokens = value.split(' ');
+        if (UNLIKELY(tokens.size() < 2))
+            return;
+        if (!GStreamerRegistryScanner::singleton().isRtpHeaderExtensionSupported(tokens[1]))
+            return;
+    }
+
+    m_stringBuilder.append("a="_s, key);
+    if (!value.isEmpty())
+        m_stringBuilder.append(':', value);
+    m_stringBuilder.append(CRLF);
+}
+
+void SDPStringBuilder::appendConnection(const GstSDPConnection* connection)
+{
+    if (!connection->nettype || !connection->addrtype || !connection->address)
+        return;
+
+    m_stringBuilder.append("c="_s, unsafeSpan(connection->nettype), ' ', unsafeSpan(connection->addrtype), ' ', unsafeSpan(connection->address));
+    if (gst_sdp_address_is_multicast(connection->nettype, connection->addrtype, connection->address)) {
+        StringView addrType = unsafeSpan(connection->addrtype);
+        if (addrType == "IP4"_s)
+            m_stringBuilder.append('/', connection->ttl);
+        if (connection->addr_number > 1)
+            m_stringBuilder.append('/', connection->addr_number);
+    }
+    m_stringBuilder.append(CRLF);
+}
+
+void SDPStringBuilder::appendBandwidth(const GstSDPBandwidth* bandwidth)
+{
+    m_stringBuilder.append("b="_s, unsafeSpan(bandwidth->bwtype), ':', bandwidth->bandwidth, CRLF);
+}
+
+void SDPStringBuilder::appendKey(const GstSDPKey* key)
+{
+    if (!key->type)
+        return;
+
+    m_stringBuilder.append("k="_s, unsafeSpan(key->type));
+
+    if (key->data)
+        m_stringBuilder.append(':', unsafeSpan(key->data));
+    m_stringBuilder.append(CRLF);
+}
+
+void SDPStringBuilder::appendMedia(const GstSDPMedia* media)
+{
+    m_stringBuilder.append("m="_s, unsafeSpan(gst_sdp_media_get_media(media)), ' ', gst_sdp_media_get_port(media));
+
+    auto ports = gst_sdp_media_get_num_ports(media);
+    if (ports > 1)
+        m_stringBuilder.append('/', ports);
+
+    m_stringBuilder.append(' ', unsafeSpan(gst_sdp_media_get_proto(media)));
+
+    unsigned totalFormats = gst_sdp_media_formats_len(media);
+    for (unsigned i = 0; i < totalFormats; i++)
+        m_stringBuilder.append(' ', unsafeSpan(gst_sdp_media_get_format(media, i)));
+    m_stringBuilder.append(CRLF);
+
+    if (const char* info = gst_sdp_media_get_information(media))
+        m_stringBuilder.append("i="_s, unsafeSpan(info), CRLF);
+
+    unsigned totalConnections = gst_sdp_media_connections_len(media);
+    for (unsigned i = 0; i < totalConnections; i++)
+        appendConnection(gst_sdp_media_get_connection(media, i));
+
+    auto totalBandwidths = gst_sdp_media_bandwidths_len(media);
+    for (unsigned i = 0; i < totalBandwidths; i++)
+        appendBandwidth(gst_sdp_media_get_bandwidth(media, i));
+
+    appendKey(gst_sdp_media_get_key(media));
+
+    unsigned totalAttributes = gst_sdp_media_attributes_len(media);
+    for (unsigned i = 0; i < totalAttributes; i++)
+        appendAttribute(gst_sdp_media_get_attribute(media, i));
+}
+
+String sdpAsString(const GstSDPMessage* sdp)
+{
+    SDPStringBuilder builder(sdp);
+    return builder.toString();
+}
+
+SDPStringBuilder::SDPStringBuilder(const GstSDPMessage* sdp)
+{
+    m_stringBuilder.append("v="_s, unsafeSpan(gst_sdp_message_get_version(sdp)), CRLF);
+
+    const auto origin = gst_sdp_message_get_origin(sdp);
+    if (origin->sess_id && origin->sess_version && origin->nettype && origin->addrtype && origin->addr) {
+        m_stringBuilder.append("o="_s, unsafeSpan(origin->username ? origin->username : "-"), ' ', unsafeSpan(origin->sess_id),
+            ' ', unsafeSpan(origin->sess_version), ' ', unsafeSpan(origin->nettype),
+            ' ', unsafeSpan(origin->addrtype), ' ', unsafeSpan(origin->addr), CRLF);
+    }
+
+    if (const char* name = gst_sdp_message_get_session_name(sdp))
+        m_stringBuilder.append("s="_s, unsafeSpan(name), CRLF);
+
+    if (const char* info = gst_sdp_message_get_information(sdp))
+        m_stringBuilder.append("i="_s, unsafeSpan(info), CRLF);
+
+    if (const char* uri = gst_sdp_message_get_uri(sdp))
+        m_stringBuilder.append("u="_s, unsafeSpan(uri), CRLF);
+
+    unsigned totalEmails = gst_sdp_message_emails_len(sdp);
+    for (unsigned i = 0; i < totalEmails; i++)
+        m_stringBuilder.append("e="_s, unsafeSpan(gst_sdp_message_get_email(sdp, i)), CRLF);
+
+    unsigned totalPhones = gst_sdp_message_phones_len(sdp);
+    for (unsigned i = 0; i < totalPhones; i++)
+        m_stringBuilder.append("p="_s, unsafeSpan(gst_sdp_message_get_phone(sdp, i)), CRLF);
+
+    appendConnection(gst_sdp_message_get_connection(sdp));
+
+    auto totalBandwidths = gst_sdp_message_bandwidths_len(sdp);
+    for (unsigned i = 0; i < totalBandwidths; i++)
+        appendBandwidth(gst_sdp_message_get_bandwidth(sdp, i));
+
+    if (!gst_sdp_message_times_len(sdp))
+        m_stringBuilder.append("t=0 0"_s, CRLF);
+    else {
+        unsigned totalTimes = gst_sdp_message_times_len(sdp);
+        for (unsigned i = 0; i < totalTimes; i++) {
+            const auto time = gst_sdp_message_get_time(sdp, i);
+
+            m_stringBuilder.append("t="_s, unsafeSpan(time->start), ' ', unsafeSpan(time->stop), CRLF);
+            if (time->repeat) {
+                m_stringBuilder.append("r="_s, unsafeSpan(g_array_index(time->repeat, char*, 0)));
+                for (unsigned ii = 0; ii < time->repeat->len; ii++)
+                    m_stringBuilder.append(' ', unsafeSpan(g_array_index(time->repeat, char*, i)));
+                m_stringBuilder.append(CRLF);
+            }
+        }
+    }
+
+    if (unsigned totalZones = gst_sdp_message_zones_len(sdp)) {
+        const auto zone = gst_sdp_message_get_zone(sdp, 0);
+        m_stringBuilder.append("z="_s, unsafeSpan(zone->time), ' ', unsafeSpan(zone->typed_time));
+        for (unsigned i = 1; i < totalZones; i++) {
+            const auto zone = gst_sdp_message_get_zone(sdp, i);
+            m_stringBuilder.append(' ', unsafeSpan(zone->time), ' ', unsafeSpan(zone->typed_time));
+        }
+        m_stringBuilder.append(CRLF);
+    }
+
+    appendKey(gst_sdp_message_get_key(sdp));
+
+    unsigned totalSessionAttributes = gst_sdp_message_attributes_len(sdp);
+    for (unsigned i = 0; i < totalSessionAttributes; i++)
+        appendAttribute(gst_sdp_message_get_attribute(sdp, i));
+
+    unsigned totalMedias = gst_sdp_message_medias_len(sdp);
+    for (unsigned i = 0; i < totalMedias; i++)
+        appendMedia(gst_sdp_message_get_media(sdp, i));
+}
+
+bool sdpMediaHasRTPHeaderExtension(const GstSDPMedia* media, const String& uri)
+{
+    unsigned totalAttributes = gst_sdp_media_attributes_len(media);
+    for (unsigned i = 0; i < totalAttributes; i++) {
+        const auto attribute = gst_sdp_media_get_attribute(media, i);
+        auto key = StringView::fromLatin1(attribute->key);
+        if (key != "extmap"_s)
+            continue;
+
+        auto value = String::fromUTF8(attribute->value);
+        Vector<String> tokens = value.split(' ');
+        if (UNLIKELY(tokens.size() < 2))
+            continue;
+
+        if (tokens[1] == uri)
+            return true;
+    }
+    return false;
+}
+
+#undef CRLF
 #undef GST_CAT_DEFAULT
 
 } // namespace WebCore

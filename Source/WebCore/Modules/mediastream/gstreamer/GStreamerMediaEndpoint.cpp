@@ -693,13 +693,13 @@ void GStreamerMediaEndpoint::doSetLocalDescription(const RTCSessionDescription* 
 
             GUniqueOutPtr<GstWebRTCSessionDescription> sessionDescription;
             gst_structure_get(reply, "offer", GST_TYPE_WEBRTC_SESSION_DESCRIPTION, &sessionDescription.outPtr(), nullptr);
-            GUniquePtr<char> sdp(gst_sdp_message_as_text(sessionDescription->sdp));
-            initialDescription = RTCSessionDescription::create(RTCSdpType::Offer, unsafeSpan(sdp.get()));
+            initialDescription = RTCSessionDescription::create(RTCSdpType::Offer, sdpAsString(sessionDescription->sdp));
             break;
         }
         case GST_WEBRTC_SIGNALING_STATE_HAVE_LOCAL_PRANSWER:
         case GST_WEBRTC_SIGNALING_STATE_HAVE_REMOTE_OFFER: {
             GST_DEBUG_OBJECT(m_pipeline.get(), "Empty local description, generating an answer");
+            auto pendingRemoteDescription = fetchDescription(m_webrtcBin.get(), "pending-remote"_s);
             g_signal_emit_by_name(m_webrtcBin.get(), "create-answer", nullptr, promise);
             auto result = gst_promise_wait(promise);
             const auto reply = gst_promise_get_reply(promise);
@@ -718,8 +718,15 @@ void GStreamerMediaEndpoint::doSetLocalDescription(const RTCSessionDescription* 
 
             GUniqueOutPtr<GstWebRTCSessionDescription> sessionDescription;
             gst_structure_get(reply, "answer", GST_TYPE_WEBRTC_SESSION_DESCRIPTION, &sessionDescription.outPtr(), nullptr);
-            GUniquePtr<char> sdp(gst_sdp_message_as_text(sessionDescription->sdp));
-            initialDescription = RTCSessionDescription::create(RTCSdpType::Answer, unsafeSpan(sdp.get()));
+
+            GUniquePtr<GstWebRTCSessionDescription> description;
+            if (pendingRemoteDescription) {
+                auto updatedAnswer = completeSDPAnswer(pendingRemoteDescription->second, sessionDescription->sdp);
+                description.reset(gst_webrtc_session_description_new(sessionDescription->type, updatedAnswer.release()));
+            } else
+                description.reset(sessionDescription.release());
+
+            initialDescription = RTCSessionDescription::create(RTCSdpType::Answer, sdpAsString(description->sdp));
             break;
         }
         case GST_WEBRTC_SIGNALING_STATE_CLOSED:
@@ -1239,6 +1246,7 @@ void GStreamerMediaEndpoint::doCreateAnswer()
 struct GStreamerMediaEndpointHolder {
     RefPtr<GStreamerMediaEndpoint> endPoint;
     RTCSdpType sdpType;
+    String pendingRemoteDescription;
 };
 WEBKIT_DEFINE_ASYNC_DATA_STRUCT(GStreamerMediaEndpointHolder)
 
@@ -1251,6 +1259,11 @@ void GStreamerMediaEndpoint::initiate(bool isInitiator, GstStructure* rawOptions
     auto* holder = createGStreamerMediaEndpointHolder();
     holder->endPoint = this;
     holder->sdpType = isInitiator ? RTCSdpType::Offer : RTCSdpType::Answer;
+
+    if (holder->sdpType == RTCSdpType::Answer) {
+        if (auto pendingRemoteDescription = fetchDescription(m_webrtcBin.get(), "pending-remote"_s))
+            holder->pendingRemoteDescription = pendingRemoteDescription->second;
+    }
 
     g_signal_emit_by_name(m_webrtcBin.get(), signalName.ascii().data(), options.get(), gst_promise_new_with_change_func([](GstPromise* rawPromise, gpointer userData) {
         auto* holder = static_cast<GStreamerMediaEndpointHolder*>(userData);
@@ -1274,11 +1287,14 @@ void GStreamerMediaEndpoint::initiate(bool isInitiator, GstStructure* rawOptions
         const char* sdpTypeString = holder->sdpType == RTCSdpType::Offer ? "offer" : "answer";
         gst_structure_get(reply, sdpTypeString, GST_TYPE_WEBRTC_SESSION_DESCRIPTION, &sessionDescription.outPtr(), nullptr);
 
-#ifndef GST_DISABLE_GST_DEBUG
-        GUniquePtr<char> sdp(gst_sdp_message_as_text(sessionDescription->sdp));
-        GST_DEBUG_OBJECT(holder->endPoint->pipeline(), "Created %s: %s", sdpTypeString, sdp.get());
-#endif
-        holder->endPoint->createSessionDescriptionSucceeded(GUniquePtr<GstWebRTCSessionDescription>(sessionDescription.release()));
+        GUniquePtr<GstWebRTCSessionDescription> description;
+        if (holder->sdpType == RTCSdpType::Answer) {
+            auto updatedAnswer = holder->endPoint->completeSDPAnswer(holder->pendingRemoteDescription, sessionDescription->sdp);
+            description.reset(gst_webrtc_session_description_new(sessionDescription->type, updatedAnswer.release()));
+        } else
+            description.reset(sessionDescription.release());
+
+        holder->endPoint->createSessionDescriptionSucceeded(WTFMove(description));
     }, holder, reinterpret_cast<GDestroyNotify>(destroyGStreamerMediaEndpointHolder)));
 }
 
@@ -2083,8 +2099,10 @@ void GStreamerMediaEndpoint::createSessionDescriptionSucceeded(GUniquePtr<GstWeb
         if (isStopped())
             return;
 
-        GUniquePtr<char> sdp(gst_sdp_message_as_text(description->sdp));
-        auto sdpString = String::fromUTF8(sdp.get());
+        auto sdpString = sdpAsString(description->sdp);
+#ifndef GST_DISABLE_GST_DEBUG
+        GST_DEBUG_OBJECT(pipeline(), "Created SDP %s: %s", description->type == GST_WEBRTC_SDP_TYPE_OFFER ? "offer" : "answer", sdpString.utf8().data());
+#endif
         if (description->type == GST_WEBRTC_SDP_TYPE_OFFER) {
             m_peerConnectionBackend.createOfferSucceeded(WTFMove(sdpString));
             return;
@@ -2480,6 +2498,41 @@ void GStreamerMediaEndpoint::startRTCLogs()
 void GStreamerMediaEndpoint::stopRTCLogs()
 {
     m_isGatheringRTCLogs = false;
+}
+
+GUniquePtr<GstSDPMessage> GStreamerMediaEndpoint::completeSDPAnswer(const String& pendingRemoteDescription, const GstSDPMessage* sdp)
+{
+    GUniqueOutPtr<GstSDPMessage> pendingSDP;
+    GUniqueOutPtr<GstSDPMessage> message;
+    gst_sdp_message_new_from_text(pendingRemoteDescription.utf8().data(), &pendingSDP.outPtr());
+
+    gst_sdp_message_copy(sdp, &message.outPtr());
+
+    // As per RFC 8829 section 5.3.1, "For each supported RTP header extension that is
+    // present in the offer, an "a=extmap" line" should be added to the answer.
+    unsigned totalMedias = gst_sdp_message_medias_len(message.get());
+    for (unsigned i = 0; i < totalMedias; i++) {
+        const auto offerMedia = gst_sdp_message_get_media(pendingSDP.get(), i);
+        auto media = const_cast<GstSDPMedia*>(gst_sdp_message_get_media(message.get(), i));
+
+        unsigned totalAttributes = gst_sdp_media_attributes_len(offerMedia);
+        for (unsigned ii = 0; ii < totalAttributes; ii++) {
+            const auto attribute = gst_sdp_media_get_attribute(offerMedia, ii);
+            auto key = StringView::fromLatin1(attribute->key);
+            if (key != "extmap"_s)
+                continue;
+
+            auto value = StringView::fromLatin1(attribute->value);
+            Vector<String> tokens = value.toStringWithoutCopying().split(' ');
+            if (UNLIKELY(tokens.size() < 2))
+                continue;
+
+            if (!sdpMediaHasRTPHeaderExtension(media, tokens[1]))
+                gst_sdp_media_add_attribute(media, attribute->key, attribute->value);
+        }
+    }
+
+    return GUniquePtr<GstSDPMessage>(message.release());
 }
 
 } // namespace WebCore

@@ -23,6 +23,12 @@ a=rtcp-fb:96 transport-cc
 a=fmtp:96 minptime=10;useinbandfec=1
 a=recvonly
 a=fingerprint:sha-256 {fingerprint:OK}
+a=extmap:1 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01
+a=extmap:2 urn:ietf:params:rtp-hdrext:sdes:mid
+a=extmap:3 urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id
+a=extmap:4 urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id
+a=extmap:5 urn:ietf:params:rtp-hdrext:ntp-64
+a=extmap:6 urn:ietf:params:rtp-hdrext:ssrc-audio-level
 ===
 
 PASS Answer with audio and video created
@@ -45,6 +51,12 @@ a=rtcp-fb:96 transport-cc
 a=fmtp:96 minptime=10;useinbandfec=1
 a=recvonly
 a=fingerprint:sha-256 {fingerprint:OK}
+a=extmap:1 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01
+a=extmap:2 urn:ietf:params:rtp-hdrext:sdes:mid
+a=extmap:3 urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id
+a=extmap:4 urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id
+a=extmap:5 urn:ietf:params:rtp-hdrext:ntp-64
+a=extmap:6 urn:ietf:params:rtp-hdrext:ssrc-audio-level
 m=video 9 UDP/TLS/RTP/SAVPF 97 96
 c=IN IP4 0.0.0.0
 a=ice-ufrag:{ice-ufrag:OK}
@@ -62,6 +74,12 @@ a=rtpmap:96 rtx/90000
 a=fmtp:96 apt=97
 a=recvonly
 a=fingerprint:sha-256 {fingerprint:OK}
+a=extmap:1 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01
+a=extmap:2 urn:ietf:params:rtp-hdrext:sdes:mid
+a=extmap:3 urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id
+a=extmap:4 urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id
+a=extmap:5 urn:ietf:params:rtp-hdrext:ntp-64
+a=extmap:6 http://www.webrtc.org/experiments/rtp-hdrext/color-space
 ===
 
 PASS successfullyParsed is true

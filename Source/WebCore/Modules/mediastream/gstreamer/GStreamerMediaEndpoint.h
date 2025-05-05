@@ -232,6 +232,8 @@ private:
     NetSimOptions netSimOptionsFromEnvironment(ASCIILiteral);
     NetSimOptions m_srcNetSimOptions;
     NetSimOptions m_sinkNetSimOptions;
+
+    GUniquePtr<GstSDPMessage> completeSDPAnswer(const String&, const GstSDPMessage*);
 };
 
 } // namespace WebCore
