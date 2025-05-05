@@ -3400,9 +3400,6 @@ webkit.org/b/63186 svg/zoom/page/zoom-svg-through-object-with-text.xhtml [ Skip 
 webkit.org/b/201918 svg/custom/ellipse-radius-auto-dynamic.svg [ Skip ]
 webkit.org/b/201918 svg/custom/rect-radius-auto-dynamic.svg [ Skip ]
 
-# Test disabled in r37513 for causing next test to hang
-animations/font-size-using-ems.html [ Skip ]
-
 # Tests disabled in r18642 due to font-dependent issue with Armenian numbering
 css2.1/t1202-counter-10-b.html [ Skip ]
 css2.1/t1202-counters-10-b.html [ Skip ]
