@@ -718,6 +718,7 @@ WebProcess/Model/WebModelPlayerProvider.cpp
 WebProcess/Model/ModelProcessConnection.cpp
 WebProcess/Model/ModelProcessModelPlayer.cpp
 WebProcess/Model/ModelProcessModelPlayerManager.cpp
+WebProcess/Model/ModelProcessModelPlayerTransformState.cpp
 
 WebProcess/GPU/GPUProcessConnection.cpp
 WebProcess/GPU/RemoteSharedResourceCacheProxy.cpp

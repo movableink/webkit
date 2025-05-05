@@ -1364,6 +1364,7 @@
 		523ADC8D2AFC2D2A00B352C3 /* AuthenticationServicesSoftLink.mm in Sources */ = {isa = PBXBuildFile; fileRef = 523ADC8C2AFC2D0400B352C3 /* AuthenticationServicesSoftLink.mm */; };
 		5252A51927E048740094BEB9 /* VirtualHidConnection.h in Headers */ = {isa = PBXBuildFile; fileRef = 5252A51727E048740094BEB9 /* VirtualHidConnection.h */; };
 		5252A51A27E048740094BEB9 /* VirtualHidConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5252A51827E048740094BEB9 /* VirtualHidConnection.cpp */; };
+		52597BBC2DC41A3200CAAF01 /* ModelProcessModelPlayerTransformState.h in Headers */ = {isa = PBXBuildFile; fileRef = 52597BBA2DC4138600CAAF01 /* ModelProcessModelPlayerTransformState.h */; };
 		52688AB427D7CE40003577A2 /* _WKResidentKeyRequirement.h in Headers */ = {isa = PBXBuildFile; fileRef = 52688AB327D7CE40003577A2 /* _WKResidentKeyRequirement.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		526C5722284ADCBC00E08955 /* CtapCcidDriver.h in Headers */ = {isa = PBXBuildFile; fileRef = 526C5720284ADCBC00E08955 /* CtapCcidDriver.h */; };
 		526C5723284ADCBC00E08955 /* CtapCcidDriver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 526C5721284ADCBC00E08955 /* CtapCcidDriver.cpp */; };
@@ -5984,6 +5985,8 @@
 		523ADC8C2AFC2D0400B352C3 /* AuthenticationServicesSoftLink.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AuthenticationServicesSoftLink.mm; sourceTree = "<group>"; };
 		5252A51727E048740094BEB9 /* VirtualHidConnection.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VirtualHidConnection.h; sourceTree = "<group>"; };
 		5252A51827E048740094BEB9 /* VirtualHidConnection.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = VirtualHidConnection.cpp; sourceTree = "<group>"; };
+		52597BBA2DC4138600CAAF01 /* ModelProcessModelPlayerTransformState.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ModelProcessModelPlayerTransformState.h; sourceTree = "<group>"; };
+		52597BBB2DC4138600CAAF01 /* ModelProcessModelPlayerTransformState.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ModelProcessModelPlayerTransformState.cpp; sourceTree = "<group>"; };
 		52688AB327D7CE40003577A2 /* _WKResidentKeyRequirement.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = _WKResidentKeyRequirement.h; sourceTree = "<group>"; };
 		526C5718284AD09500E08955 /* CcidConnection.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CcidConnection.h; sourceTree = "<group>"; };
 		526C5719284AD09500E08955 /* CcidConnection.mm */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; path = CcidConnection.mm; sourceTree = "<group>"; };
@@ -15330,6 +15333,8 @@
 				54BBB6092B80177C00BF1A8A /* ModelProcessModelPlayer.messages.in */,
 				54BBB5F72B7C3FE200BF1A8A /* ModelProcessModelPlayerManager.cpp */,
 				54BBB5F82B7C3FE200BF1A8A /* ModelProcessModelPlayerManager.h */,
+				52597BBB2DC4138600CAAF01 /* ModelProcessModelPlayerTransformState.cpp */,
+				52597BBA2DC4138600CAAF01 /* ModelProcessModelPlayerTransformState.h */,
 				BC2B411B2732F66E00A2D191 /* WebModelPlayerProvider.cpp */,
 				BC2B411A2732F66E00A2D191 /* WebModelPlayerProvider.h */,
 			);
@@ -17266,6 +17271,7 @@
 				57B8264C230603C100B72EB0 /* MockNfcService.h in Headers */,
 				EBA8D3B327A5E33F00CB7900 /* MockPushServiceConnection.h in Headers */,
 				7137BA8025F1542000914EE3 /* ModelElementController.h in Headers */,
+				52597BBC2DC41A3200CAAF01 /* ModelProcessModelPlayerTransformState.h in Headers */,
 				C0E3AA7C1209E83C00A49D01 /* Module.h in Headers */,
 				E539DFEB2A44A6A600769F09 /* MRUIKitSPI.h in Headers */,
 				2D50366B1BCDE17900E20BB3 /* NativeWebGestureEvent.h in Headers */,

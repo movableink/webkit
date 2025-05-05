@@ -27,7 +27,9 @@
 #include "ModelPlayer.h"
 
 #include "Color.h"
+#include "FloatPoint3D.h"
 #include "ModelPlayerAnimationState.h"
+#include "ModelPlayerTransformState.h"
 #include "TransformationMatrix.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -42,6 +44,26 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(ModelPlayer);
 ModelPlayer::~ModelPlayer() = default;
 
 std::optional<ModelPlayerAnimationState> ModelPlayer::currentAnimationState() const
+{
+    return std::nullopt;
+}
+
+std::optional<std::unique_ptr<ModelPlayerTransformState>> ModelPlayer::currentTransformState() const
+{
+    return std::nullopt;
+}
+
+std::optional<FloatPoint3D> ModelPlayer::boundingBoxCenter() const
+{
+    return std::nullopt;
+}
+
+std::optional<FloatPoint3D> ModelPlayer::boundingBoxExtents() const
+{
+    return std::nullopt;
+}
+
+std::optional<TransformationMatrix> ModelPlayer::entityTransform() const
 {
     return std::nullopt;
 }

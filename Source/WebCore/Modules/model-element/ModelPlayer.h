@@ -44,8 +44,10 @@
 namespace WebCore {
 
 class Color;
+class FloatPoint3D;
 class Model;
 class ModelPlayerAnimationState;
+class ModelPlayerTransformState;
 class SharedBuffer;
 class TransformationMatrix;
 
@@ -59,11 +61,15 @@ public:
 #endif
 
     virtual std::optional<ModelPlayerAnimationState> currentAnimationState() const;
+    virtual std::optional<std::unique_ptr<ModelPlayerTransformState>> currentTransformState() const;
 
     virtual void load(Model&, LayoutSize) = 0;
     virtual void sizeDidChange(LayoutSize) = 0;
     virtual PlatformLayer* layer() = 0;
     virtual std::optional<LayerHostingContextIdentifier> layerHostingContextIdentifier() = 0;
+    virtual std::optional<FloatPoint3D> boundingBoxCenter() const;
+    virtual std::optional<FloatPoint3D> boundingBoxExtents() const;
+    virtual std::optional<TransformationMatrix> entityTransform() const;
     virtual void setEntityTransform(TransformationMatrix);
     virtual void enterFullscreen() = 0;
     virtual bool supportsMouseInteraction();

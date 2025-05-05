@@ -31,8 +31,10 @@
 #include "ModelProcessModelPlayerManager.h"
 #include "ModelProcessModelPlayerProxy.h"
 #include "ModelProcessModelPlayerProxyMessages.h"
+#include "ModelProcessModelPlayerTransformState.h"
 #include "WebPage.h"
 #include "WebProcess.h"
+#include <WebCore/FloatPoint3D.h>
 #include <WebCore/LayerHostingContextIdentifier.h>
 #include <WebCore/Model.h>
 #include <WebCore/ModelPlayerAnimationState.h>
@@ -95,6 +97,8 @@ void ModelProcessModelPlayer::didFinishLoading(const WebCore::FloatPoint3D& boun
     RELEASE_LOG(ModelElement, "%p - ModelProcessModelPlayer didFinishLoading id=%" PRIu64, this, m_id.toUInt64());
     RELEASE_ASSERT(modelProcessEnabled());
 
+    m_boundingBoxCenter = boundingBoxCenter;
+    m_boundingBoxExtents = boundingBoxExtents;
     m_client->didFinishLoading(*this);
     m_client->didUpdateBoundingBox(*this, boundingBoxCenter, boundingBoxExtents);
 }
@@ -113,6 +117,7 @@ void ModelProcessModelPlayer::didUpdateEntityTransform(const WebCore::Transforma
 {
     RELEASE_ASSERT(modelProcessEnabled());
 
+    m_entityTransform = transform;
     m_client->didUpdateEntityTransform(*this, transform);
 }
 
@@ -138,6 +143,11 @@ void ModelProcessModelPlayer::didFinishEnvironmentMapLoading(bool succeeded)
 std::optional<WebCore::ModelPlayerAnimationState> ModelProcessModelPlayer::currentAnimationState() const
 {
     return m_animationState;
+}
+
+std::optional<std::unique_ptr<WebCore::ModelPlayerTransformState>> ModelProcessModelPlayer::currentTransformState() const
+{
+    return ModelProcessModelPlayerTransformState::create(m_entityTransform, m_boundingBoxCenter, m_boundingBoxExtents, m_hasPortal, m_stageModeOperation);
 }
 
 void ModelProcessModelPlayer::load(WebCore::Model& model, WebCore::LayoutSize size)
@@ -173,15 +183,31 @@ void ModelProcessModelPlayer::enterFullscreen()
 {
 }
 
+std::optional<WebCore::FloatPoint3D> ModelProcessModelPlayer::boundingBoxCenter() const
+{
+    return m_boundingBoxCenter;
+}
+
+std::optional<WebCore::FloatPoint3D> ModelProcessModelPlayer::boundingBoxExtents() const
+{
+    return m_boundingBoxExtents;
+}
+
+std::optional<WebCore::TransformationMatrix> ModelProcessModelPlayer::entityTransform() const
+{
+    return m_entityTransform;
+}
+
 /// This comes from JS side, so we need to tell Model Process about it. Not to be confused with didUpdateEntityTransform().
 void ModelProcessModelPlayer::setEntityTransform(WebCore::TransformationMatrix transform)
 {
+    m_entityTransform = transform;
     send(Messages::ModelProcessModelPlayerProxy::SetEntityTransform(transform));
 }
 
 bool ModelProcessModelPlayer::supportsTransform(WebCore::TransformationMatrix transform)
 {
-    return ModelProcessModelPlayerProxy::transformSupported(transform);
+    return ModelProcessModelPlayerTransformState::transformSupported(transform);
 }
 
 void ModelProcessModelPlayer::getCamera(CompletionHandler<void(std::optional<WebCore::HTMLModelElementCamera>&&)>&& completionHandler)

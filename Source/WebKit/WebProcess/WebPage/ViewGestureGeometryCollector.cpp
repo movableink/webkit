@@ -28,6 +28,7 @@
 
 #include "Logging.h"
 #include "MessageSenderInlines.h"
+#include "PluginView.h"
 #include "ViewGestureGeometryCollectorMessages.h"
 #include "WebFrame.h"
 #include "WebPage.h"

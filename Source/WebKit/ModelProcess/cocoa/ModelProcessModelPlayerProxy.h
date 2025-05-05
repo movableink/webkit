@@ -75,8 +75,6 @@ public:
 
     std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const;
 
-    static bool transformSupported(const simd_float4x4& transform);
-
     void invalidate();
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
     template<typename T> void send(T&& message);

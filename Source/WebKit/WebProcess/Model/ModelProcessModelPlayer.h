@@ -77,12 +77,16 @@ private:
     // WebCore::ModelPlayer overrides.
     WebCore::ModelPlayerIdentifier identifier() const final { return m_id; }
     std::optional<WebCore::ModelPlayerAnimationState> currentAnimationState() const final;
+    std::optional<std::unique_ptr<WebCore::ModelPlayerTransformState>> currentTransformState() const final;
     void load(WebCore::Model&, WebCore::LayoutSize) final;
     void sizeDidChange(WebCore::LayoutSize) final;
     PlatformLayer* layer() final;
     void handleMouseDown(const WebCore::LayoutPoint&, MonotonicTime) final;
     void handleMouseMove(const WebCore::LayoutPoint&, MonotonicTime) final;
     void handleMouseUp(const WebCore::LayoutPoint&, MonotonicTime) final;
+    std::optional<WebCore::FloatPoint3D> boundingBoxCenter() const final;
+    std::optional<WebCore::FloatPoint3D> boundingBoxExtents() const final;
+    std::optional<WebCore::TransformationMatrix> entityTransform() const final;
     void setEntityTransform(WebCore::TransformationMatrix) final;
     bool supportsTransform(WebCore::TransformationMatrix) final;
     void enterFullscreen() final;
@@ -120,6 +124,9 @@ private:
 
     std::optional<WebCore::LayerHostingContextIdentifier> m_layerHostingContextIdentifier;
 
+    std::optional<WebCore::TransformationMatrix> m_entityTransform;
+    std::optional<WebCore::FloatPoint3D> m_boundingBoxCenter;
+    std::optional<WebCore::FloatPoint3D> m_boundingBoxExtents;
     bool m_hasPortal { true };
     WebCore::StageModeOperation m_stageModeOperation { WebCore::StageModeOperation::None };
     double m_requestedPlaybackRate { 1.0 };
