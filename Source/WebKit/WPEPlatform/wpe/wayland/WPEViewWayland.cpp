@@ -380,7 +380,7 @@ static gboolean wpeViewWaylandRenderBuffer(WPEView* view, WPEBuffer* buffer, con
 
     auto* display = WPE_DISPLAY_WAYLAND(wpe_view_get_display(view));
     auto* wlCompositor = wpe_display_wayland_get_wl_compositor(display);
-    if (nDamageRects && LIKELY(wl_compositor_get_version(wlCompositor) >= 4)) {
+    if (nDamageRects && wl_compositor_get_version(wlCompositor) >= 4) [[likely]] {
         ASSERT(damageRects);
         for (unsigned i = 0; i < nDamageRects; ++i)
             wl_surface_damage_buffer(wlSurface, damageRects[i].x, damageRects[i].y, damageRects[i].width, damageRects[i].height);

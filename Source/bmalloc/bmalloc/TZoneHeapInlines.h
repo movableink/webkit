@@ -56,7 +56,7 @@ public: \
         static HeapRef s_heapRef; \
         static const TZoneSpecification s_heapSpec = { &s_heapRef, sizeof(_type), SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) }; \
     \
-        if (BUNLIKELY(!s_heapRef || size != sizeof(_type))) \
+        if (!s_heapRef || size != sizeof(_type)) [[unlikely]] \
             return ::bmalloc::api::tzoneAllocate ## _compactMode ## Slow(size, s_heapSpec); \
         BASSERT(::bmalloc::api::tzoneMallocFallback > TZoneMallocFallback::ForceDebugMalloc); \
         return ::bmalloc::api::tzoneAllocate ## _compactMode(s_heapRef); \

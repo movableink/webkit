@@ -49,8 +49,8 @@ static_assert(sizeof(HeapRef) == sizeof(pas_heap_ref*));
 void* tzoneAllocateNonCompactSlow(size_t requestedSize, const TZoneSpecification& spec)
 {
     HeapRef heapRef = *spec.addressOfHeapRef;
-    if (BUNLIKELY(tzoneMallocFallback != TZoneMallocFallback::DoNotFallBack)) {
-        if (BUNLIKELY(tzoneMallocFallback == TZoneMallocFallback::Undecided)) {
+    if (tzoneMallocFallback != TZoneMallocFallback::DoNotFallBack) [[unlikely]] {
+        if (tzoneMallocFallback == TZoneMallocFallback::Undecided) [[unlikely]] {
             TZoneHeapManager::ensureSingleton();
             return tzoneAllocateNonCompactSlow(requestedSize, spec);
         }
@@ -60,7 +60,7 @@ void* tzoneAllocateNonCompactSlow(size_t requestedSize, const TZoneSpecification
     }
 
     // Handle TZoneMallocFallback::DoNotFallBack.
-    if (BUNLIKELY(requestedSize != spec.size))
+    if (requestedSize != spec.size) [[unlikely]]
         heapRef = tzoneHeapManager->heapRefForTZoneTypeDifferentSize(requestedSize, spec);
 
     if (!heapRef) {
@@ -73,8 +73,8 @@ void* tzoneAllocateNonCompactSlow(size_t requestedSize, const TZoneSpecification
 void* tzoneAllocateCompactSlow(size_t requestedSize, const TZoneSpecification& spec)
 {
     HeapRef heapRef = *spec.addressOfHeapRef;
-    if (BUNLIKELY(tzoneMallocFallback != TZoneMallocFallback::DoNotFallBack)) {
-        if (BUNLIKELY(tzoneMallocFallback == TZoneMallocFallback::Undecided)) {
+    if (tzoneMallocFallback != TZoneMallocFallback::DoNotFallBack) [[unlikely]] {
+        if (tzoneMallocFallback == TZoneMallocFallback::Undecided) [[unlikely]] {
             TZoneHeapManager::ensureSingleton();
             return tzoneAllocateCompactSlow(requestedSize, spec);
         }
@@ -84,7 +84,7 @@ void* tzoneAllocateCompactSlow(size_t requestedSize, const TZoneSpecification& s
     }
 
     // Handle TZoneMallocFallback::DoNotFallBack.
-    if (BUNLIKELY(requestedSize != spec.size))
+    if (requestedSize != spec.size) [[unlikely]]
         heapRef = tzoneHeapManager->heapRefForTZoneTypeDifferentSize(requestedSize, spec);
 
     if (!heapRef) {

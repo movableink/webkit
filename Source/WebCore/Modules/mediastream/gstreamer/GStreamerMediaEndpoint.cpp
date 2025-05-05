@@ -2524,7 +2524,7 @@ GUniquePtr<GstSDPMessage> GStreamerMediaEndpoint::completeSDPAnswer(const String
 
             auto value = StringView::fromLatin1(attribute->value);
             Vector<String> tokens = value.toStringWithoutCopying().split(' ');
-            if (UNLIKELY(tokens.size() < 2))
+            if (tokens.size() < 2) [[unlikely]]
                 continue;
 
             if (!sdpMediaHasRTPHeaderExtension(media, tokens[1]))

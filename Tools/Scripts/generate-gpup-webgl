@@ -915,20 +915,20 @@ class webkit_ipc_cpp_impl(object):
         self.in_exprs += [webkit_ipc_convert_expr(cpp_expr(webkit_ipc_types[a.type], a.name), a.type)]
         if a.type.type_name in named_object_types:
             if self.is_create:
-                self.pre_call_stmts += [f"if (UNLIKELY(!{a.name})) {{", f"    ASSERT_IS_TESTING_IPC();", f"    return;", f"}}"]
+                self.pre_call_stmts += [f"if (!{a.name}) [[unlikely]] {{", f"    ASSERT_IS_TESTING_IPC();", f"    return;", f"}}"]
             if self.is_delete:
                 self.pre_call_stmts += [
-                    f"if (UNLIKELY(!m_objectNames.isValidKey({a.name}))) {{",
+                    f"if (!m_objectNames.isValidKey({a.name})) [[unlikely]] {{",
                     f"    ASSERT_IS_TESTING_IPC();",
                     f"    return;",
                     f"}}",
-                    f"if (UNLIKELY(!{a.name}))",
+                    f"if (!{a.name}) [[unlikely]]",
                     f"    return;",
                     f"{a.name} = m_objectNames.take({a.name});"
                 ]
             else:
                 self.pre_call_stmts += [
-                    f"if (UNLIKELY(!m_objectNames.isValidKey({a.name}))) {{",
+                    f"if (!m_objectNames.isValidKey({a.name})) [[unlikely]] {{",
                     f"    ASSERT_IS_TESTING_IPC();",
                     f"    return;",
                     f"}}",
@@ -979,7 +979,7 @@ class webkit_ipc_cpp_impl(object):
             self.args.args += [cpp_arg(webkit_ipc_get_message_forwarder_type(ipc_return_type), "name")]
             return_value_expr = cpp_expr(return_type, f"auto result")
             self.return_value_expr = return_value_expr
-            self.pre_call_stmts += [f"if (UNLIKELY(!m_objectNames.isValidKey(name))) {{"]
+            self.pre_call_stmts += [f"if (!m_objectNames.isValidKey(name)) [[unlikely]] {{"]
             self.pre_call_stmts += [f"    ASSERT_IS_TESTING_IPC();"]
             self.pre_call_stmts += [f"    return;"]
             self.pre_call_stmts += [f"}}"]

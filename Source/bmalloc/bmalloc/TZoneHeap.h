@@ -155,7 +155,7 @@ public: \
     \
     void* operator new(size_t size) \
     { \
-        if (BUNLIKELY(!s_heapRef || size != sizeof(_type))) \
+        if (!s_heapRef || size != sizeof(_type)) [[unlikely]] \
             BMUST_TAIL_CALL return operatorNewSlow(size); \
         BASSERT(::bmalloc::api::tzoneMallocFallback > TZoneMallocFallback::ForceDebugMalloc); \
         return ::bmalloc::api::tzoneAllocate ## _compactMode(s_heapRef); \

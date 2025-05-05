@@ -74,7 +74,12 @@ void EventContext::handleLocalEvents(Event& event, EventInvokePhase phase) const
     }
 #endif
 
-    if (!m_node || UNLIKELY(m_type == Type::Window)) {
+    if (!m_node) {
+        protectedCurrentTarget()->fireEventListeners(event, phase);
+        return;
+    }
+
+    if (m_type == Type::Window) [[unlikely]] {
         protectedCurrentTarget()->fireEventListeners(event, phase);
         return;
     }

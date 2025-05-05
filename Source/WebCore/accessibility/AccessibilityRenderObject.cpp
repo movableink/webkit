@@ -136,8 +136,15 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
+static Node* nodeForRenderer(RenderObject& renderer)
+{
+    if (!renderer.isRenderView()) [[likely]]
+        return renderer.node();
+    return &renderer.document();
+}
+
 AccessibilityRenderObject::AccessibilityRenderObject(AXID axID, RenderObject& renderer)
-    : AccessibilityNodeObject(axID, LIKELY(!renderer.isRenderView()) ? renderer.node() : &renderer.document())
+    : AccessibilityNodeObject(axID, nodeForRenderer(renderer))
     , m_renderer(renderer)
 {
 #if ASSERT_ENABLED

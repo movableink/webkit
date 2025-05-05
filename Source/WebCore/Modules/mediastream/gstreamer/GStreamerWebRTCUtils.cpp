@@ -815,7 +815,7 @@ void SDPStringBuilder::appendAttribute(const GstSDPAttribute* attribute)
     auto value = String::fromUTF8(attribute->value);
     if (key == "extmap"_s) {
         auto tokens = value.split(' ');
-        if (UNLIKELY(tokens.size() < 2))
+        if (tokens.size() < 2) [[unlikely]]
             return;
         if (!GStreamerRegistryScanner::singleton().isRtpHeaderExtensionSupported(tokens[1]))
             return;
@@ -982,7 +982,7 @@ bool sdpMediaHasRTPHeaderExtension(const GstSDPMedia* media, const String& uri)
 
         auto value = String::fromUTF8(attribute->value);
         Vector<String> tokens = value.split(' ');
-        if (UNLIKELY(tokens.size() < 2))
+        if (tokens.size() < 2) [[unlikely]]
             continue;
 
         if (tokens[1] == uri)

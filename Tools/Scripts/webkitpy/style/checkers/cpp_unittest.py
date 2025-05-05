@@ -5895,11 +5895,13 @@ class WebKitStyleTest(CppStyleTestBase):
             'if (othertrue == fontType)',
             '')
         self.assert_lint(
-            'if (LIKELY(foo == 0))',
-            '')
+            'if (foo == 0) [[likely]]',
+            'Tests for true/false, null/non-null, and zero/non-zero should all be done without equality comparisons.'
+            '  [readability/comparison_to_zero] [5]')
         self.assert_lint(
-            'if (UNLIKELY(foo == 0))',
-            '')
+            'if (foo == 0) [[unlikely]]',
+            'Tests for true/false, null/non-null, and zero/non-zero should all be done without equality comparisons.'
+            '  [readability/comparison_to_zero] [5]')
         self.assert_lint(
             'if ((a - b) == 0.5)',
             '')
@@ -5907,11 +5909,13 @@ class WebKitStyleTest(CppStyleTestBase):
             'if (0.5 == (a - b))',
             '')
         self.assert_lint(
-            'if (LIKELY(foo == NULL))',
-            'Use nullptr instead of NULL.  [readability/null] [5]')
+            'if (foo == NULL) [[likely]]',
+            ['Tests for true/false, null/non-null, and zero/non-zero should all be done without equality comparisons.  [readability/comparison_to_zero] [5]',
+                'Use nullptr instead of NULL.  [readability/null] [5]'])
         self.assert_lint(
-            'if (UNLIKELY(foo == NULL))',
-            'Use nullptr instead of NULL.  [readability/null] [5]')
+            'if (foo == NULL) [[unlikely]]',
+            ['Tests for true/false, null/non-null, and zero/non-zero should all be done without equality comparisons.  [readability/comparison_to_zero] [5]',
+                'Use nullptr instead of NULL.  [readability/null] [5]'])
 
     def test_directive_indentation(self):
         self.assert_lint(

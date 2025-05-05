@@ -2906,9 +2906,13 @@ void Element::updateEffectiveLangStateFromParent()
     }
 
     setEffectiveLangKnownToMatchDocumentElement(parent->effectiveLangKnownToMatchDocumentElement());
-    if (UNLIKELY(parent->hasRareData()) && !parent->elementRareData()->effectiveLang().isNull())
-        ensureElementRareData().setEffectiveLang(parent->elementRareData()->effectiveLang());
-    else if (hasRareData())
+    if (parent->hasRareData()) [[unlikely]] {
+        if (!parent->elementRareData()->effectiveLang().isNull()) {
+            ensureElementRareData().setEffectiveLang(parent->elementRareData()->effectiveLang());
+            return;
+        }
+    }
+    if (hasRareData())
         elementRareData()->setEffectiveLang(nullAtom());
 }
 
@@ -3075,7 +3079,13 @@ void Element::setEffectiveLangStateOnOldDocumentElement()
 
 bool Element::hasEffectiveLangState() const
 {
-    return effectiveLangKnownToMatchDocumentElement() || (UNLIKELY(hasRareData()) && !elementRareData()->effectiveLang().isNull());
+    if (effectiveLangKnownToMatchDocumentElement())
+        return true;
+
+    if (hasRareData()) [[unlikely]]
+        return !elementRareData()->effectiveLang().isNull();
+
+    return false;
 }
 
 void Element::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
