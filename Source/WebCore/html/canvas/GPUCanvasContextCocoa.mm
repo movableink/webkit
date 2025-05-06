@@ -248,13 +248,17 @@ static bool equalConfigurations(const auto& a, const auto& b)
         && a.colorSpace     == b.colorSpace;
 }
 
-static DestinationColorSpace toWebCoreColorSpace(const GPUPredefinedColorSpace& colorSpace)
+static DestinationColorSpace toWebCoreColorSpace(const GPUPredefinedColorSpace& colorSpace, const GPUCanvasToneMapping& toneMapping)
 {
     switch (colorSpace) {
     case GPUPredefinedColorSpace::SRGB:
-        return DestinationColorSpace::SRGB();
+        return toneMapping.mode == GPUCanvasToneMappingMode::Standard ? DestinationColorSpace::SRGB() : DestinationColorSpace::ExtendedSRGB();
     case GPUPredefinedColorSpace::DisplayP3:
-        return DestinationColorSpace::DisplayP3();
+#if ENABLE(PREDEFINED_COLOR_SPACE_DISPLAY_P3)
+        return toneMapping.mode == GPUCanvasToneMappingMode::Standard ? DestinationColorSpace::DisplayP3() : DestinationColorSpace::ExtendedDisplayP3();
+#else
+        return toneMapping.mode == GPUCanvasToneMappingMode::Standard ? DestinationColorSpace::SRGB() : DestinationColorSpace::ExtendedSRGB();
+#endif
     }
 
     return DestinationColorSpace::SRGB();
@@ -306,7 +310,7 @@ ExceptionOr<void> GPUCanvasContextCocoa::configure(GPUCanvasConfiguration&& conf
     m_layerContentsDisplayDelegate->setContentsFormat(textureFormat != WebGPU::TextureFormat::Rgba16float ? ContentsFormat::RGBA8 : ContentsFormat::RGBA16F);
 #endif
 
-    auto renderBuffers = m_compositorIntegration->recreateRenderBuffers(m_width, m_height, toWebCoreColorSpace(configuration.colorSpace), configuration.alphaMode == GPUCanvasAlphaMode::Premultiplied ? WebCore::AlphaPremultiplication::Premultiplied : WebCore::AlphaPremultiplication::Unpremultiplied, textureFormat, configuration.device->backing());
+    auto renderBuffers = m_compositorIntegration->recreateRenderBuffers(m_width, m_height, toWebCoreColorSpace(configuration.colorSpace, configuration.toneMapping), configuration.alphaMode == GPUCanvasAlphaMode::Premultiplied ? WebCore::AlphaPremultiplication::Premultiplied : WebCore::AlphaPremultiplication::Unpremultiplied, textureFormat, configuration.device->backing());
     // FIXME: This ASSERT() is wrong. It's totally possible for the IPC to the GPU process to timeout if the GPUP is busy, and return nothing here.
     ASSERT(!renderBuffers.isEmpty());
 
@@ -385,16 +389,7 @@ DestinationColorSpace GPUCanvasContextCocoa::colorSpace() const
     if (!m_configuration)
         return DestinationColorSpace::SRGB();
 
-    switch (m_configuration->colorSpace) {
-    case GPUPredefinedColorSpace::SRGB:
-        return DestinationColorSpace::SRGB();
-    case GPUPredefinedColorSpace::DisplayP3:
-#if ENABLE(PREDEFINED_COLOR_SPACE_DISPLAY_P3)
-        return DestinationColorSpace::DisplayP3();
-#else
-        return DestinationColorSpace::SRGB();
-#endif
-    }
+    return toWebCoreColorSpace(m_configuration->colorSpace, m_configuration->toneMapping);
 }
 
 RefPtr<GraphicsLayerContentsDisplayDelegate> GPUCanvasContextCocoa::layerContentsDisplayDelegate()

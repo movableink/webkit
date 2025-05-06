@@ -37,6 +37,7 @@ public:
     WEBCORE_EXPORT static const DestinationColorSpace& LinearSRGB();
 #if ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3)
     WEBCORE_EXPORT static const DestinationColorSpace& DisplayP3();
+    WEBCORE_EXPORT static const DestinationColorSpace& ExtendedDisplayP3();
 #endif
 #if ENABLE(DESTINATION_COLOR_SPACE_EXTENDED_SRGB)
     WEBCORE_EXPORT static const DestinationColorSpace& ExtendedSRGB();

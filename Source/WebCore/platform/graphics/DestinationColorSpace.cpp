@@ -89,6 +89,15 @@ const DestinationColorSpace& DestinationColorSpace::DisplayP3()
     return knownColorSpace<PlatformColorSpace::Name::DisplayP3>();
 #endif
 }
+
+const DestinationColorSpace& DestinationColorSpace::ExtendedDisplayP3()
+{
+#if USE(CG) || USE(SKIA)
+    return knownColorSpace<extendedDisplayP3ColorSpaceRef>();
+#else
+    return knownColorSpace<PlatformColorSpace::Name::ExtendedDisplayP3>();
+#endif
+}
 #endif
 
 #if ENABLE(DESTINATION_COLOR_SPACE_EXTENDED_SRGB)
