@@ -122,7 +122,7 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
         else if (tag == tfootTag)
             setProperty(AXProperty::TagName, TagName::tfoot);
 
-        setProperty(AXProperty::TextRuns, object.textRuns());
+        setProperty(AXProperty::TextRuns, std::make_shared<AXTextRuns>(object.textRuns()));
         setProperty(AXProperty::TextEmissionBehavior, object.textEmissionBehavior());
         if (roleValue() == AccessibilityRole::ListMarker) {
             setProperty(AXProperty::ListMarkerText, object.listMarkerText().isolatedCopy());
@@ -447,7 +447,7 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
 
         auto range = object.textInputMarkedTextMarkerRange();
         if (auto characterRange = range.characterRange(); range && characterRange)
-            setProperty(AXProperty::TextInputMarkedTextMarkerRange, std::pair<Markable<AXID>, CharacterRange>(range.start().objectID(), *characterRange));
+            setProperty(AXProperty::TextInputMarkedTextMarkerRange, std::make_shared<AXIDAndCharacterRange>(AXIDAndCharacterRange(range.start().objectID(), *characterRange)));
 
         setProperty(AXProperty::CanBeMultilineTextField, canBeMultilineTextField(object));
     }
@@ -636,11 +636,11 @@ void AXIsolatedObject::setProperty(AXProperty property, AXPropertyValueVariant&&
         [](InsideLink& typedValue) { return typedValue == InsideLink(); },
         [](Vector<Vector<Markable<AXID>>>& typedValue) { return typedValue.isEmpty(); },
         [](CharacterRange& typedValue) { return !typedValue.location && !typedValue.length; },
-        [](std::pair<Markable<AXID>, CharacterRange>& typedValue) {
-            return !typedValue.first && !typedValue.second.location && !typedValue.second.length;
+        [](std::shared_ptr<AXIDAndCharacterRange>& typedValue) {
+            return !typedValue || (!typedValue->first && !typedValue->second.location && !typedValue->second.length);
         },
 #if ENABLE(AX_THREAD_TEXT_APIS)
-        [](AXTextRuns& runs) { return !runs.size(); },
+        [](std::shared_ptr<AXTextRuns> typedValue) { return !typedValue || !typedValue->size(); },
         [](RetainPtr<CTFontRef>& typedValue) { return !typedValue; },
         [](FontOrientation typedValue) { return typedValue == FontOrientation::Horizontal; },
         [](TextEmissionBehavior typedValue) { return typedValue == TextEmissionBehavior::None; },
@@ -1270,8 +1270,9 @@ const AXTextRuns* AXIsolatedObject::textRuns() const
     size_t index = indexOfProperty(AXProperty::TextRuns);
     if (index == notFound)
         return nullptr;
+
     return WTF::switchOn(m_properties[index].second,
-        [] (const AXTextRuns& typedValue) -> const AXTextRuns* { return &typedValue; },
+        [] (const std::shared_ptr<AXTextRuns>& typedValue) -> const AXTextRuns* { return typedValue.get(); },
         [] (auto&) -> const AXTextRuns* { return nullptr; }
     );
 }
@@ -1983,13 +1984,18 @@ bool AXIsolatedObject::hasSameStyle(AXCoreObject& otherObject)
 
 AXTextMarkerRange AXIsolatedObject::textInputMarkedTextMarkerRange() const
 {
-    auto value = optionalAttributeValue<std::pair<Markable<AXID>, CharacterRange>>(AXProperty::TextInputMarkedTextMarkerRange);
-    if (!value)
-        return { };
+    size_t index = indexOfProperty(AXProperty::TextInputMarkedTextMarkerRange);
+    if (index == notFound)
+        return nullptr;
 
-    auto start = static_cast<unsigned>(value->second.location);
-    auto end = start + static_cast<unsigned>(value->second.length);
-    return { tree()->treeID(), value->first, start, end };
+    return WTF::switchOn(m_properties[index].second,
+        [&] (const std::shared_ptr<AXIDAndCharacterRange>& typedValue) -> AXTextMarkerRange {
+            auto start = static_cast<unsigned>(typedValue->second.location);
+            auto end = start + static_cast<unsigned>(typedValue->second.length);
+            return { tree()->treeID(), typedValue->first, start, end };
+        },
+        [] (auto&) -> AXTextMarkerRange { return { }; }
+    );
 }
 
 // The attribute this value is exposed as is not used by VoiceOver or any other AX client on macOS, so we intentionally don't cache it.

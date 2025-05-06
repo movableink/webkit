@@ -781,11 +781,11 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
             properties.append({ AXProperty::SupportsSetSize, axObject.supportsSetSize() });
             break;
         case AXProperty::TextInputMarkedTextMarkerRange: {
-            std::pair<Markable<AXID>, CharacterRange> value;
+            AXIDAndCharacterRange value;
             auto range = axObject.textInputMarkedTextMarkerRange();
             if (auto characterRange = range.characterRange(); range && characterRange)
                 value = { range.start().objectID(), *characterRange };
-            properties.append({ AXProperty::TextInputMarkedTextMarkerRange, WTFMove(value) });
+            properties.append({ AXProperty::TextInputMarkedTextMarkerRange, std::make_shared<AXIDAndCharacterRange>(value) });
             break;
         }
 #if ENABLE(AX_THREAD_TEXT_APIS)
@@ -817,7 +817,7 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
             properties.append({ AXProperty::TextColor, axObject.textColor() });
             break;
         case AXProperty::TextRuns:
-            properties.append({ AXProperty::TextRuns, axObject.textRuns() });
+            properties.append({ AXProperty::TextRuns, std::make_shared<AXTextRuns>(axObject.textRuns()) });
             break;
         case AXProperty::UnderlineColor:
             properties.append({ AXProperty::UnderlineColor, axObject.lineDecorationStyle().underlineColor });
