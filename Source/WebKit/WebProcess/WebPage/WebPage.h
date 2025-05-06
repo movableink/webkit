@@ -1298,6 +1298,7 @@ public:
     void requestInteractiveModelElementAtPoint(WebCore::IntPoint clientPosition);
     void stageModeSessionDidUpdate(std::optional<WebCore::ElementIdentifier>, const WebCore::TransformationMatrix&);
     void stageModeSessionDidEnd(std::optional<WebCore::ElementIdentifier>);
+    void didAnimateModelForDrag();
 #endif
 
     void beginPrinting(WebCore::FrameIdentifier, const PrintInfo&);

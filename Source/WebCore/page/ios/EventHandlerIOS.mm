@@ -827,6 +827,14 @@ DragStartRequestResult EventHandler::tryToBeginDragAtPoint(const IntPoint& clien
     // when we would process the next tap after a drag interaction.
     m_mousePressed = false;
 
+#if ENABLE(MODEL_PROCESS)
+    RefPtr targetElement = hitTestedMouseEvent.hitTestResult().targetElement();
+    if (RefPtr modelElement = dynamicDowncast<HTMLModelElement>(targetElement)) {
+        if (modelElement->tryAnimateModelToFitPortal())
+            return DragStartRequestResult::Delayed;
+    }
+#endif
+
     return handledDrag ? DragStartRequestResult::Started : DragStartRequestResult::Ended;
 }
 

@@ -529,6 +529,14 @@ void HTMLModelElement::renderingAbruptlyStopped()
     if (!document().hidden())
         createModelPlayer();
 }
+
+bool HTMLModelElement::tryAnimateModelToFitPortal()
+{
+    if (hasPortal() && m_modelPlayer)
+        return m_modelPlayer->animateModelToFitPortal();
+
+    return false;
+}
 #endif // ENABLE(MODEL_PROCESS)
 
 // MARK: - Fullscreen support.

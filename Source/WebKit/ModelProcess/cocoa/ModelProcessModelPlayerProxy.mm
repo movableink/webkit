@@ -756,6 +756,15 @@ bool ModelProcessModelPlayerProxy::stageModeInteractionInProgress() const
     return [m_stageModeInteractionDriver stageModeInteractionInProgress];
 }
 
+bool ModelProcessModelPlayerProxy::animateModelToFitPortal()
+{
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=291289
+    send(Messages::ModelProcessModelPlayer::DidAnimateModelForDrag());
+
+    // Return value is unused
+    return true;
+}
+
 void ModelProcessModelPlayerProxy::applyEnvironmentMapDataAndRelease()
 {
     if (m_transientEnvironmentMapData) {

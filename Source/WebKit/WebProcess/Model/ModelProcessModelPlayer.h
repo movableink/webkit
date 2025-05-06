@@ -73,6 +73,7 @@ private:
     void didUpdateEntityTransform(const WebCore::TransformationMatrix&);
     void didUpdateAnimationPlaybackState(bool isPaused, double playbackRate, Seconds duration, Seconds currentTime, MonotonicTime clockTimestamp);
     void didFinishEnvironmentMapLoading(bool succeeded);
+    void didAnimateModelForDrag();
 
     // WebCore::ModelPlayer overrides.
     WebCore::ModelPlayerIdentifier identifier() const final { return m_id; }
@@ -117,6 +118,7 @@ private:
     void beginStageModeTransform(const WebCore::TransformationMatrix&) final;
     void updateStageModeTransform(const WebCore::TransformationMatrix&) final;
     void endStageModeInteraction() final;
+    bool animateModelToFitPortal() final;
 
     WebCore::ModelPlayerIdentifier m_id;
     WeakPtr<WebPage> m_page;

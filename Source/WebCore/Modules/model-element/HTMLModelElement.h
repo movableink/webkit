@@ -162,6 +162,7 @@ public:
     WEBCORE_EXPORT void beginStageModeTransform(const TransformationMatrix&);
     WEBCORE_EXPORT void updateStageModeTransform(const TransformationMatrix&);
     WEBCORE_EXPORT void endStageModeInteraction();
+    WEBCORE_EXPORT bool tryAnimateModelToFitPortal();
 #endif
 
 #if PLATFORM(COCOA)
