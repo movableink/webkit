@@ -2163,3 +2163,8 @@ webkit.org/b/292227 [ x86_64 ] fast/webgpu/nocrash/fuzz-291168.html [ Skip ]
 webkit.org/b/292288 resize-observer/contain-instrinsic-size-should-not-leak-nodes.html [ Pass Failure ]
 
 webkit.org/b/292203 [ Debug ] imported/w3c/web-platform-tests/css/css-view-transitions/transition-in-hidden-page.html [ Pass Crash ]
+
+# webkit.org/b/292582 REGRESSION (294079@main): [ MacOS iOS WK2 ] 3X imported/w3c/web-platform-tests/navigation-api/navigate-event/navigate-form are consistent failures 
+imported/w3c/web-platform-tests/navigation-api/navigate-event/navigate-form-userInitiated.html [ Failure ]
+imported/w3c/web-platform-tests/navigation-api/navigate-event/navigate-form-with-target.html [ Failure ]
+imported/w3c/web-platform-tests/navigation-api/navigate-event/navigate-form.html [ Failure ]
