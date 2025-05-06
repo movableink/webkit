@@ -68,6 +68,7 @@
 #import <WebCore/UserAgent.h>
 #import <WebCore/ValidationBubble.h>
 #import <mach-o/dyld.h>
+#import <pal/spi/cocoa/WritingToolsSPI.h>
 #import <pal/spi/mac/NSApplicationSPI.h>
 #import <pal/spi/mac/NSMenuSPI.h>
 #import <wtf/FileHandle.h>
@@ -963,6 +964,29 @@ bool WebPageProxy::shouldEnableWritingToolsRequestedTool(WebCore::WritingTools::
         return editorState.hasPostLayoutData() && !editorState.postLayoutData->paragraphContextForCandidateRequest.isEmpty();
 
     return true;
+}
+
+void WebPageProxy::handleContextMenuWritingTools(const WebContextMenuItemData& item)
+{
+    WTRequestedTool tool = WTRequestedToolIndex;
+    switch (item.action()) {
+    case ContextMenuItemTagWritingTools:
+        break;
+    case ContextMenuItemTagProofread:
+        tool = WTRequestedToolProofread;
+        break;
+    case ContextMenuItemTagRewrite:
+        tool = WTRequestedToolRewrite;
+        break;
+    case ContextMenuItemTagSummarize:
+        tool = WTRequestedToolTransformSummary;
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
+    }
+
+    handleContextMenuWritingTools(convertToWebRequestedTool(tool));
 }
 
 void WebPageProxy::handleContextMenuWritingTools(WebCore::WritingTools::RequestedTool tool)

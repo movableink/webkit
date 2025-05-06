@@ -603,6 +603,12 @@ inline WKContextMenuItemTag toAPI(WebCore::ContextMenuAction action)
         return kWKContextMenuItemTagTranslate;
     case WebCore::ContextMenuItemTagWritingTools:
         return kWKContextMenuItemTagWritingTools;
+    case WebCore::ContextMenuItemTagProofread:
+        return kWKContextMenuItemTagProofread;
+    case WebCore::ContextMenuItemTagRewrite:
+        return kWKContextMenuItemTagRewrite;
+    case WebCore::ContextMenuItemTagSummarize:
+        return kWKContextMenuItemTagSummarize;
     case WebCore::ContextMenuItemTagCopySubject:
         return kWKContextMenuItemTagCopyCroppedImage;
     default:
@@ -823,6 +829,12 @@ inline WebCore::ContextMenuAction toImpl(WKContextMenuItemTag tag)
         return WebCore::ContextMenuItemTagTranslate;
     case kWKContextMenuItemTagWritingTools:
         return WebCore::ContextMenuItemTagWritingTools;
+    case kWKContextMenuItemTagProofread:
+        return WebCore::ContextMenuItemTagProofread;
+    case kWKContextMenuItemTagRewrite:
+        return WebCore::ContextMenuItemTagRewrite;
+    case kWKContextMenuItemTagSummarize:
+        return WebCore::ContextMenuItemTagSummarize;
     case kWKContextMenuItemTagCopyCroppedImage:
         return WebCore::ContextMenuItemTagCopySubject;
     case kWKContextMenuItemTagOpenLinkInThisWindow:

@@ -10244,6 +10244,15 @@ void WebPageProxy::contextMenuItemSelected(const WebContextMenuItemData& item, c
 #endif
         return;
 
+#if ENABLE(TOP_LEVEL_WRITING_TOOLS_CONTEXT_MENU_ITEMS)
+    case ContextMenuItemTagWritingTools:
+    case ContextMenuItemTagProofread:
+    case ContextMenuItemTagRewrite:
+    case ContextMenuItemTagSummarize:
+        handleContextMenuWritingTools(item);
+        return;
+#endif
+
     default:
         break;
     }

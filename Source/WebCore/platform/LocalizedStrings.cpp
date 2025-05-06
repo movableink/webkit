@@ -506,7 +506,26 @@ String contextMenuItemTagTranslate(const String& selectedString)
 #if ENABLE(WRITING_TOOLS)
 String contextMenuItemTagWritingTools()
 {
+#if ENABLE(TOP_LEVEL_WRITING_TOOLS_CONTEXT_MENU_ITEMS)
+    return WEB_UI_STRING("Show Writing Tools", "Writing Tools context menu item");
+#else
     return WEB_UI_STRING("Writing Tools", "Writing Tools context menu item");
+#endif
+}
+
+String contextMenuItemTagProofread()
+{
+    return WEB_UI_STRING("Proofread", "Proofread context menu item");
+}
+
+String contextMenuItemTagRewrite()
+{
+    return WEB_UI_STRING("Rewrite", "Rewrite context menu item");
+}
+
+String contextMenuItemTagSummarize()
+{
+    return WEB_UI_STRING("Summarize", "Summarize context menu item");
 }
 #endif
 

@@ -179,6 +179,9 @@ namespace WebCore {
 #endif
 #if ENABLE(WRITING_TOOLS)
     String contextMenuItemTagWritingTools();
+    String contextMenuItemTagProofread();
+    String contextMenuItemTagRewrite();
+    String contextMenuItemTagSummarize();
 #endif
 #if ENABLE(UNIFIED_PDF)
     WEBCORE_EXPORT String contextMenuItemPDFOpenWithDefaultViewer(const String& appName);

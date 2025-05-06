@@ -1249,6 +1249,9 @@
 /* VP8/9 Codec Level & Profile (Codec Strings) */
 "Profile %d, Level %s" = "Profile %d, Level %s";
 
+/* Proofread context menu item */
+"Proofread" = "Proofread";
+
 /* Undo action name */
 "Raise Baseline (Undo action name)" = "Raise Baseline";
 
@@ -1281,6 +1284,9 @@
 
 /* Reset button in date input context menu */
 "Reset Button Date/Time Context Menu" = "Reset";
+
+/* Rewrite context menu item */
+"Rewrite" = "Rewrite";
 
 /* Right to Left context menu item */
 "Right to Left" = "Right to Left";
@@ -1369,6 +1375,9 @@
 /* Title for Show Text action button */
 "Show Text" = "Show Text";
 
+/* Writing Tools context menu item */
+"Show Writing Tools" = "Show Writing Tools";
+
 /* Single Page context menu item */
 "Single Page" = "Single Page";
 
@@ -1452,6 +1461,9 @@
 
 /* Accessibility announcement that the suggestions list became visible. The format argument is for the first option in the list. */
 "Suggestions list visible, %@" = "Suggestions list visible, %@";
+
+/* Summarize context menu item */
+"Summarize" = "Summarize";
 
 /* Undo action name */
 "Superscript (Undo action name)" = "Superscript";

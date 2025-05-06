@@ -682,6 +682,15 @@ static NSString *menuItemIdentifier(const WebCore::ContextMenuAction action)
     case ContextMenuItemTagWritingTools:
         return _WKMenuItemIdentifierWritingTools;
 
+    case ContextMenuItemTagProofread:
+        return _WKMenuItemIdentifierProofread;
+
+    case ContextMenuItemTagRewrite:
+        return _WKMenuItemIdentifierRewrite;
+
+    case ContextMenuItemTagSummarize:
+        return _WKMenuItemIdentifierSummarize;
+
     case ContextMenuItemTagCopySubject:
         return _WKMenuItemIdentifierCopySubject;
 
@@ -804,7 +813,8 @@ void WebContextMenuProxyMac::getContextMenuFromItems(const Vector<WebContextMenu
 #if ENABLE(WRITING_TOOLS)
     if (!protectedPage()->canHandleContextMenuWritingTools() || isPopover) {
         filteredItems.removeAllMatching([] (auto& item) {
-            return item.action() == ContextMenuItemTagWritingTools;
+            auto action = item.action();
+            return action == ContextMenuItemTagWritingTools || action == ContextMenuItemTagProofread || action == ContextMenuItemTagRewrite || action == ContextMenuItemTagSummarize;
         });
     }
 #endif
@@ -885,32 +895,29 @@ void WebContextMenuProxyMac::getContextMenuItem(const WebContextMenuItemData& it
     }
 #endif
 
-#if ENABLE(WRITING_TOOLS)
+#if ENABLE(WRITING_TOOLS) && !ENABLE(TOP_LEVEL_WRITING_TOOLS_CONTEXT_MENU_ITEMS)
     if (item.action() == ContextMenuItemTagWritingTools) {
-        // FIXME: (rdar://127608508) Remove this `respondsToSelector` check when possible.
-        if ([NSMenuItem.class respondsToSelector:@selector(standardWritingToolsMenuItem)]) {
-            RetainPtr menuItem = [NSMenuItem standardWritingToolsMenuItem];
-            [[menuItem submenu] setAutoenablesItems:NO];
+        RetainPtr menuItem = [NSMenuItem standardWritingToolsMenuItem];
+        [[menuItem submenu] setAutoenablesItems:NO];
 
-            for (NSMenuItem *subItem in [menuItem submenu].itemArray) {
-                if (subItem.isSeparatorItem)
-                    continue;
+        for (NSMenuItem *subItem in [menuItem submenu].itemArray) {
+            if (subItem.isSeparatorItem)
+                continue;
 
-                bool shouldEnableItem = [&] {
-                    RefPtr page = this->page();
-                    if (!page)
-                        return false;
+            bool shouldEnableItem = [&] {
+                RefPtr page = this->page();
+                if (!page)
+                    return false;
 
-                    return page->shouldEnableWritingToolsRequestedTool(convertToWebRequestedTool((WTRequestedTool)[subItem tag]));
-                }();
+                return page->shouldEnableWritingToolsRequestedTool(convertToWebRequestedTool((WTRequestedTool)[subItem tag]));
+            }();
 
-                subItem.enabled = static_cast<BOOL>(shouldEnableItem);
-                subItem.target = WKMenuTarget.sharedMenuTarget;
-            }
-
-            completionHandler(menuItem.get());
-            return;
+            subItem.enabled = static_cast<BOOL>(shouldEnableItem);
+            subItem.target = WKMenuTarget.sharedMenuTarget;
         }
+
+        completionHandler(menuItem.get());
+        return;
     }
 #endif
 

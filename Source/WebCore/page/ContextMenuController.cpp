@@ -651,7 +651,10 @@ void ContextMenuController::contextMenuItemSelected(ContextMenuAction action, co
         break;
 
     case ContextMenuItemTagWritingTools:
-        // The Writing Tools context menu item action is handled in the client layer.
+    case ContextMenuItemTagProofread:
+    case ContextMenuItemTagRewrite:
+    case ContextMenuItemTagSummarize:
+        // Writing Tools context menu item actions are handled at the client layer.
         RELEASE_ASSERT_NOT_REACHED();
         break;
 
@@ -1194,6 +1197,11 @@ void ContextMenuController::populate()
                 appendItem(*separatorItem(), m_contextMenu.get());
                 ContextMenuItem writingToolsItem(ContextMenuItemType::Action, ContextMenuItemTagWritingTools, contextMenuItemTagWritingTools());
                 appendItem(writingToolsItem, m_contextMenu.get());
+#if ENABLE(TOP_LEVEL_WRITING_TOOLS_CONTEXT_MENU_ITEMS)
+                ContextMenuItem summarizeItem(ContextMenuItemType::Action, ContextMenuItemTagSummarize, contextMenuItemTagSummarize());
+                appendItem(summarizeItem, m_contextMenu.get());
+                appendItem(*separatorItem(), m_contextMenu.get());
+#endif
 #endif
 
                 ContextMenuItem SpeechMenuItem(ContextMenuItemType::Submenu, ContextMenuItemTagSpeechMenu, contextMenuItemTagSpeechMenu());
@@ -1351,6 +1359,22 @@ void ContextMenuController::populate()
             appendItem(*separatorItem(), m_contextMenu.get());
             ContextMenuItem writingToolsItem(ContextMenuItemType::Action, ContextMenuItemTagWritingTools, contextMenuItemTagWritingTools());
             appendItem(writingToolsItem, m_contextMenu.get());
+#if ENABLE(TOP_LEVEL_WRITING_TOOLS_CONTEXT_MENU_ITEMS)
+            bool editorHasText = [&] {
+                if (auto range = frame->editor().contextRangeForCandidateRequest())
+                    return !plainText(*range).isEmpty();
+
+                return false;
+            }();
+
+            if (editorHasText) {
+                ContextMenuItem proofreadItem(ContextMenuItemType::Action, ContextMenuItemTagProofread, contextMenuItemTagProofread());
+                appendItem(proofreadItem, m_contextMenu.get());
+                ContextMenuItem rewriteItem(ContextMenuItemType::Action, ContextMenuItemTagRewrite, contextMenuItemTagRewrite());
+                appendItem(rewriteItem, m_contextMenu.get());
+            }
+            appendItem(*separatorItem(), m_contextMenu.get());
+#endif
 #endif
 
 #if !PLATFORM(GTK)
@@ -1820,6 +1844,9 @@ void ContextMenuController::checkOrEnableIfNeeded(ContextMenuItem& item) const
         case ContextMenuItemTagLookUpImage:
         case ContextMenuItemTagTranslate:
         case ContextMenuItemTagWritingTools:
+        case ContextMenuItemTagProofread:
+        case ContextMenuItemTagRewrite:
+        case ContextMenuItemTagSummarize:
             break;
     }
 

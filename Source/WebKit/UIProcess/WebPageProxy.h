@@ -2416,6 +2416,7 @@ public:
 #endif
 #if ENABLE(CONTEXT_MENUS)
     bool canHandleContextMenuWritingTools() const;
+    void handleContextMenuWritingTools(const WebContextMenuItemData&);
     void handleContextMenuWritingTools(WebCore::WritingTools::RequestedTool);
 #endif
 #endif

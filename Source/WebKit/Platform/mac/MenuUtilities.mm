@@ -202,7 +202,13 @@ static NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bo
     case WebCore::ContextMenuItemTagTransformationsMenu:
     case WebCore::ContextMenuItemTagWritingDirectionMenu:
     case WebCore::ContextMenuItemTagWritingTools:
-        return nil;
+        return @"apple.writing.tools";
+    case WebCore::ContextMenuItemTagProofread:
+        return @"text.magnifyingglass";
+    case WebCore::ContextMenuItemTagRewrite:
+        return @"pencil.arrow.trianglehead.clockwise";
+    case WebCore::ContextMenuItemTagSummarize:
+        return @"text.line.3.summary";
     case WebCore::ContextMenuItemPDFAutoSize:
         return @"sparkle.magnifyingglass";
     case WebCore::ContextMenuItemPDFActualSize:
