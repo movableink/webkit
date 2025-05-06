@@ -73,7 +73,7 @@ public:
 
     String serializeNodes(Node& targetNode, SerializedNodes);
 
-    static void appendCharactersReplacingEntities(StringBuilder&, const String&, unsigned, unsigned, OptionSet<EntityMask>);
+    static void appendCharactersReplacingEntities(StringBuilder&, const String&, OptionSet<EntityMask>);
     void enableURLReplacement(UncheckedKeyHashMap<String, String>&& replacementURLStrings, UncheckedKeyHashMap<Ref<CSSStyleSheet>, String>&& replacementURLStringsForCSSStyleSheet);
 
 protected:

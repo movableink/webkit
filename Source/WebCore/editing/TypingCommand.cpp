@@ -438,7 +438,7 @@ RefPtr<DataTransfer> TypingCommand::inputEventDataTransfer() const
         return nullptr;
 
     StringBuilder htmlText;
-    MarkupAccumulator::appendCharactersReplacingEntities(htmlText, m_currentTextToInsert, 0, m_currentTextToInsert.length(), EntityMaskInHTMLPCDATA);
+    MarkupAccumulator::appendCharactersReplacingEntities(htmlText, m_currentTextToInsert, EntityMaskInHTMLPCDATA);
     return DataTransfer::createForInputEvent(m_currentTextToInsert, htmlText.toString());
 }
 

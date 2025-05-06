@@ -17,5 +17,6 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/html/syntax/serializing-html-fragments/escaping.html
 /LayoutTests/imported/w3c/web-platform-tests/html/syntax/serializing-html-fragments/initial-linefeed-pre.html
 /LayoutTests/imported/w3c/web-platform-tests/html/syntax/serializing-html-fragments/outerHTML.html
+/LayoutTests/imported/w3c/web-platform-tests/html/syntax/serializing-html-fragments/serializing-cdata-in-html-document.html
 /LayoutTests/imported/w3c/web-platform-tests/html/syntax/serializing-html-fragments/serializing.html
 /LayoutTests/imported/w3c/web-platform-tests/html/syntax/serializing-html-fragments/template.html

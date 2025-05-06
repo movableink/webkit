@@ -601,12 +601,12 @@ void StyledMarkupAccumulator::appendText(StringBuilder& out, const Text& text)
 
     if (!shouldAnnotate() || parentIsTextarea) {
         auto content = textContentRespectingRange(text);
-        appendCharactersReplacingEntities(out, content, 0, content.length(), entityMaskForText(text));
+        appendCharactersReplacingEntities(out, content, entityMaskForText(text));
     } else {
         const bool useRenderedText = !enclosingElementWithTag(firstPositionInNode(const_cast<Text*>(&text)), selectTag);
         String content = useRenderedText ? renderedTextRespectingRange(text) : textContentRespectingRange(text);
         StringBuilder buffer;
-        appendCharactersReplacingEntities(buffer, content, 0, content.length(), EntityMaskInPCDATA);
+        appendCharactersReplacingEntities(buffer, content, EntityMaskInPCDATA);
         out.append(convertHTMLTextToInterchangeFormat(buffer.toString(), &text));
     }
 
@@ -1446,7 +1446,7 @@ String urlToMarkup(const URL& url, const String& title)
 {
     StringBuilder markup;
     markup.append("<a href=\""_s, url.string(), "\">"_s);
-    MarkupAccumulator::appendCharactersReplacingEntities(markup, title, 0, title.length(), EntityMaskInPCDATA);
+    MarkupAccumulator::appendCharactersReplacingEntities(markup, title, EntityMaskInPCDATA);
     markup.append("</a>"_s);
     return markup.toString();
 }
