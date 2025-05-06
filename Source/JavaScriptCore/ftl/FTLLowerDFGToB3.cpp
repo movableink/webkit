@@ -743,15 +743,19 @@ private:
             compileExtractFromTuple();
             break;
         case JSConstant:
+            codeGenerationResult = CodeGenerationResult::NotGenerated;
             break;
         case DoubleConstant:
             compileDoubleConstant();
+            codeGenerationResult = CodeGenerationResult::NotGenerated;
             break;
         case Int52Constant:
             compileInt52Constant();
+            codeGenerationResult = CodeGenerationResult::NotGenerated;
             break;
         case LazyJSConstant:
             compileLazyJSConstant();
+            codeGenerationResult = CodeGenerationResult::NotGenerated;
             break;
         case DoubleRep:
             compileDoubleRep();
@@ -940,6 +944,7 @@ private:
             break;
         case AssertNotEmpty:
             compileAssertNotEmpty();
+            codeGenerationResult = CodeGenerationResult::NotGenerated;
             break;
         case CheckBadValue:
             compileCheckBadValue();
@@ -1043,6 +1048,7 @@ private:
             break;
         case ConstantStoragePointer:
             compileConstantStoragePointer();
+            codeGenerationResult = CodeGenerationResult::NotGenerated;
             break;
         case GetIndexedPropertyStorage:
             compileGetIndexedPropertyStorage();
@@ -1077,6 +1083,7 @@ private:
             break;
         case AssertInBounds:
             compileAssertInBounds();
+            codeGenerationResult = CodeGenerationResult::NotGenerated;
             break;
         case CheckInBounds:
             compileCheckInBounds();
