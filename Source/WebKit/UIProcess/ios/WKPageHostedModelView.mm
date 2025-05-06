@@ -123,7 +123,7 @@
             REEmbeddedStereoContentComponentSetEnableClipping(stereoContentComponent.get(), true);
 
             // FIXME: https://bugs.webkit.org/show_bug.cgi?id=290950
-            REEmbeddedStereoContentComponentSetLightingBlendDistance(stereoContentComponent.get(), 0.0);
+            REEmbeddedStereoContentComponentSetLightingBlendDistance(stereoContentComponent.get(), 0.1);
 
             REPortalCrossingFlagsComponentSetEnabled(portalCrossingComponent.get(), false);
             REPortalCrossingFlagsComponentSetInherited(portalCrossingComponent.get(), false);
