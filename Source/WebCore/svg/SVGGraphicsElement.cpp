@@ -51,6 +51,7 @@ SVGGraphicsElement::SVGGraphicsElement(const QualifiedName& tagName, Document& d
     : SVGElement(tagName, document, WTFMove(propertyRegistry), typeFlags)
     , SVGTests(this)
     , m_shouldIsolateBlending(false)
+    , m_transform(SVGAnimatedTransformList::create(this))
 {
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
@@ -67,7 +68,7 @@ Ref<SVGMatrix> SVGGraphicsElement::getCTMForBindings()
 
 AffineTransform SVGGraphicsElement::getCTM(StyleUpdateStrategy styleUpdateStrategy)
 {
-    return SVGLocatable::computeCTM(this, SVGLocatable::NearestViewportScope, styleUpdateStrategy);
+    return SVGLocatable::computeCTM(this, CTMScope::NearestViewportScope, styleUpdateStrategy);
 }
 
 Ref<SVGMatrix> SVGGraphicsElement::getScreenCTMForBindings()
@@ -77,7 +78,7 @@ Ref<SVGMatrix> SVGGraphicsElement::getScreenCTMForBindings()
 
 AffineTransform SVGGraphicsElement::getScreenCTM(StyleUpdateStrategy styleUpdateStrategy)
 {
-    return SVGLocatable::computeCTM(this, SVGLocatable::ScreenScope, styleUpdateStrategy);
+    return SVGLocatable::computeCTM(this, CTMScope::ScreenScope, styleUpdateStrategy);
 }
 
 Ref<const SVGTransformList> SVGGraphicsElement::protectedTransform() const

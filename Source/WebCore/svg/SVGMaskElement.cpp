@@ -33,6 +33,7 @@
 #include "SVGElementInlines.h"
 #include "SVGLayerTransformComputation.h"
 #include "SVGNames.h"
+#include "SVGParsingError.h"
 #include "SVGRenderSupport.h"
 #include "SVGStringList.h"
 #include "SVGUnitTypes.h"
@@ -70,7 +71,7 @@ Ref<SVGMaskElement> SVGMaskElement::create(const QualifiedName& tagName, Documen
 
 void SVGMaskElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
     switch (name.nodeName()) {
     case AttributeNames::maskUnitsAttr: {
         auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(newValue);

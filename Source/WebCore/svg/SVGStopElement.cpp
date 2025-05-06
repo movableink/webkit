@@ -37,6 +37,7 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGStopElement);
 
 inline SVGStopElement::SVGStopElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
+    , m_offset { SVGAnimatedNumber::create(this, 0) }
 {
     ASSERT(hasTagName(SVGNames::stopTag));
 

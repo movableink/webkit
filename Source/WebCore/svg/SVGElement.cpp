@@ -53,6 +53,7 @@
 #include "SVGGraphicsElement.h"
 #include "SVGImageElement.h"
 #include "SVGNames.h"
+#include "SVGParsingError.h"
 #include "SVGPropertyAnimatorFactory.h"
 #include "SVGRenderStyle.h"
 #include "SVGRenderSupport.h"
@@ -79,6 +80,7 @@ SVGElement::SVGElement(const QualifiedName& tagName, Document& document, UniqueR
     : StyledElement(tagName, document, typeFlags | TypeFlag::IsSVGElement | TypeFlag::HasCustomStyleResolveCallbacks)
     , m_propertyAnimatorFactory(makeUnique<SVGPropertyAnimatorFactory>())
     , m_propertyRegistry(WTFMove(propertyRegistry))
+    , m_className(SVGAnimatedString::create(this))
 {
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
@@ -157,19 +159,19 @@ bool SVGElement::isOutermostSVGSVGElement() const
 
 void SVGElement::reportAttributeParsingError(SVGParsingError error, const QualifiedName& name, const AtomString& value)
 {
-    if (error == NoError)
+    if (error == SVGParsingError::None)
         return;
 
     auto errorString = makeString('<', tagName(), "> attribute "_s, name.toString(), "=\""_s, value, "\""_s);
     Ref document = this->document();
     CheckedRef extensions = document->svgExtensions();
 
-    if (error == NegativeValueForbiddenError) {
+    if (error == SVGParsingError::ForbiddenNegativeValue) {
         extensions->reportError(makeString("Invalid negative value for "_s, errorString));
         return;
     }
 
-    if (error == ParsingAttributeFailedError) {
+    if (error == SVGParsingError::ParsingFailed) {
         extensions->reportError(makeString("Invalid value for "_s, errorString));
         return;
     }
@@ -1125,7 +1127,7 @@ void SVGElement::setInstanceUpdatesBlocked(bool value)
         m_svgRareData->setInstanceUpdatesBlocked(value);
 }
 
-AffineTransform SVGElement::localCoordinateSpaceTransform(SVGLocatable::CTMScope) const
+AffineTransform SVGElement::localCoordinateSpaceTransform(CTMScope) const
 {
     // To be overridden by SVGGraphicsElement (or as special case SVGTextElement and SVGPatternElement)
     return AffineTransform();

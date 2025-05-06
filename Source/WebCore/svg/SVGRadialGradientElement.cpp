@@ -34,6 +34,7 @@
 #include "RenderSVGResourceRadialGradient.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
+#include "SVGParsingError.h"
 #include "SVGStopElement.h"
 #include "SVGUnitTypes.h"
 #include <wtf/NeverDestroyed.h>
@@ -67,7 +68,7 @@ Ref<SVGRadialGradientElement> SVGRadialGradientElement::create(const QualifiedNa
 
 void SVGRadialGradientElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
 
     switch (name.nodeName()) {
     case AttributeNames::cxAttr:

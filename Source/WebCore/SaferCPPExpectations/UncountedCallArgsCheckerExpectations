@@ -1267,6 +1267,7 @@ svg/SVGCursorElement.cpp
 svg/SVGCursorElement.h
 svg/SVGElement.cpp
 svg/SVGElement.h
+svg/SVGElementInlines.h
 svg/SVGEllipseElement.h
 svg/SVGFEBlendElement.h
 svg/SVGFEColorMatrixElement.cpp

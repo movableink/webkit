@@ -48,6 +48,7 @@
 #include "SVGLength.h"
 #include "SVGMatrix.h"
 #include "SVGNumber.h"
+#include "SVGParsingError.h"
 #include "SVGPoint.h"
 #include "SVGRect.h"
 #include "SVGTransform.h"
@@ -196,7 +197,7 @@ void SVGSVGElement::attributeChanged(const QualifiedName& name, const AtomString
         }
     }
 
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
 
     switch (name.nodeName()) {
     case AttributeNames::xAttr:
@@ -207,7 +208,7 @@ void SVGSVGElement::attributeChanged(const QualifiedName& name, const AtomString
         break;
     case AttributeNames::widthAttr: {
         auto length = SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError, SVGLengthNegativeValuesMode::Forbid);
-        if (parseError != NoError || newValue.isEmpty()) {
+        if (parseError != SVGParsingError::None || newValue.isEmpty()) {
             // FIXME: This is definitely the correct behavior for a missing/removed attribute.
             // Not sure it's correct for the empty string or for something that can't be parsed.
             length = SVGLengthValue(SVGLengthMode::Width, "100%"_s);
@@ -217,7 +218,7 @@ void SVGSVGElement::attributeChanged(const QualifiedName& name, const AtomString
     }
     case AttributeNames::heightAttr: {
         auto length = SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError, SVGLengthNegativeValuesMode::Forbid);
-        if (parseError != NoError || newValue.isEmpty()) {
+        if (parseError != SVGParsingError::None || newValue.isEmpty()) {
             // FIXME: This is definitely the correct behavior for a removed attribute.
             // Not sure it's correct for the empty string or for something that can't be parsed.
             length = SVGLengthValue(SVGLengthMode::Height, "100%"_s);
@@ -394,7 +395,7 @@ Ref<SVGTransform> SVGSVGElement::createSVGTransformFromMatrix(DOMMatrix2DInit&& 
     return SVGTransform::create(transform);
 }
 
-AffineTransform SVGSVGElement::localCoordinateSpaceTransform(SVGLocatable::CTMScope mode) const
+AffineTransform SVGSVGElement::localCoordinateSpaceTransform(CTMScope mode) const
 {
     AffineTransform viewBoxTransform;
     if (!hasEmptyViewBox()) {
@@ -419,7 +420,7 @@ AffineTransform SVGSVGElement::localCoordinateSpaceTransform(SVGLocatable::CTMSc
     if (!isOutermostSVGSVGElement()) {
         SVGLengthContext lengthContext(this);
         transform.translate(x().value(lengthContext), y().value(lengthContext));
-    } else if (mode == SVGLocatable::ScreenScope) {
+    } else if (mode == CTMScope::ScreenScope) {
         if (CheckedPtr renderer = this->renderer()) {
             FloatPoint location;
             float zoomFactor = 1;

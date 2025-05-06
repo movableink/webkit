@@ -77,7 +77,7 @@
 #include "RenderTextControl.h"
 #include "RenderTreeUpdater.h"
 #include "RenderView.h"
-#include "SVGElement.h"
+#include "SVGElementInlines.h"
 #include "ScopedEventQueue.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"

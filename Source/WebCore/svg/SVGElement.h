@@ -22,30 +22,45 @@
 
 #pragma once
 
-#include "SVGAnimatedPropertyImpl.h"
-#include "SVGLocatable.h"
 #include "SVGNames.h"
-#include "SVGParsingError.h"
-#include "SVGPropertyOwnerRegistry.h"
+#include "SVGPropertyOwner.h"
 #include "SVGRenderStyleDefs.h"
 #include "StyledElement.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class AffineTransform;
 class Document;
+class SVGAnimatedProperty;
+class SVGAnimatedString;
+class SVGAttributeAnimator;
+class SVGConditionalProcessingAttributes;
 class SVGDocumentExtensions;
 class SVGElementRareData;
 class SVGPropertyAnimatorFactory;
+class SVGPropertyRegistry;
 class SVGResourceElementClient;
 class SVGSVGElement;
+class SVGTransformList;
 class SVGUseElement;
 class Settings;
 class Timer;
+
+enum class AnimationMode : uint8_t;
+enum class CTMScope : bool;
+enum class CalcMode : uint8_t;
+enum class SVGParsingError : uint8_t;
+
+template<typename PropertyType>
+class SVGAnimatedPrimitiveProperty;
+
+template<typename OwnerType, typename... BaseTypes>
+class SVGPropertyOwnerRegistry;
 
 class SVGElement : public StyledElement, public SVGPropertyOwner {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGElement);
@@ -63,7 +78,7 @@ public:
     virtual bool needsPendingResourceHandling() const { return true; }
     bool instanceUpdatesBlocked() const;
     void setInstanceUpdatesBlocked(bool);
-    virtual AffineTransform localCoordinateSpaceTransform(SVGLocatable::CTMScope) const;
+    virtual AffineTransform localCoordinateSpaceTransform(CTMScope) const;
 
     bool hasPendingResources() const { return hasEventTargetFlag(EventTargetFlag::HasPendingResources); }
     void setHasPendingResources() { setEventTargetFlag(EventTargetFlag::HasPendingResources, true); }
@@ -139,7 +154,7 @@ public:
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGElement>;
     const SVGPropertyRegistry& propertyRegistry() const { return m_propertyRegistry.get(); }
-    void detachAllProperties() { propertyRegistry().detachAllProperties(); }
+    inline void detachAllProperties(); // Defined in SVGElementInlines.h
 
     bool isAnimatedPropertyAttribute(const QualifiedName&) const;
     bool isAnimatedAttribute(const QualifiedName&) const;
@@ -162,7 +177,7 @@ public:
     ColorInterpolation colorInterpolation() const;
 
     // These are needed for the RenderTree, animation and DOM.
-    AtomString className() const { return AtomString { m_className->currentValue() }; }
+    inline AtomString className() const; // Defined in SVGElementInlines.h
     SVGAnimatedString& classNameAnimated() { return m_className; }
 
     SVGConditionalProcessingAttributes& conditionalProcessingAttributes();
@@ -219,7 +234,7 @@ private:
     std::unique_ptr<SVGPropertyAnimatorFactory> m_propertyAnimatorFactory;
 
     UniqueRef<SVGPropertyRegistry> m_propertyRegistry;
-    Ref<SVGAnimatedString> m_className { SVGAnimatedString::create(this) };
+    Ref<SVGAnimatedString> m_className;
 };
 
 class SVGElement::InstanceInvalidationGuard {

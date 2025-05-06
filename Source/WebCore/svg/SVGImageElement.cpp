@@ -35,6 +35,7 @@
 #include "RenderSVGImage.h"
 #include "SVGElementInlines.h"
 #include "SVGNames.h"
+#include "SVGParsingError.h"
 #include "XLinkNames.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -91,7 +92,7 @@ bool SVGImageElement::renderingTaintsOrigin() const
 
 void SVGImageElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
     switch (name.nodeName()) {
     case AttributeNames::preserveAspectRatioAttr:
         Ref { m_preserveAspectRatio }->setBaseValInternal(SVGPreserveAspectRatioValue { newValue });

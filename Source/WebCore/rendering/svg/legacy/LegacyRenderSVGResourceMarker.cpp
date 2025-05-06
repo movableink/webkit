@@ -94,7 +94,7 @@ std::optional<float> LegacyRenderSVGResourceMarker::angle() const
 
 AffineTransform LegacyRenderSVGResourceMarker::markerTransformation(const FloatPoint& origin, float autoAngle, float strokeWidth) const
 {
-    bool useStrokeWidth = markerElement().markerUnits() == SVGMarkerUnitsStrokeWidth;
+    bool useStrokeWidth = markerElement().markerUnits() == SVGMarkerUnitsType::StrokeWidth;
 
     AffineTransform transform;
     transform.translate(origin);
