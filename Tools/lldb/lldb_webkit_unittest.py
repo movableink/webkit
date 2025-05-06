@@ -153,17 +153,17 @@ class TestSummaryProviders(unittest.TestCase):
     def serial_test_WTFHashMap_tablesize_and_size(self):
         variable = self._sbFrame.FindVariable('hashMapOfInts')
         summary = lldb_webkit.WTFHashMap_SummaryProvider(variable, {})
-        self.assertEqual(summary, "{ tableSize = 8, keyCount = 2 }")
+        self.assertEqual(summary, "{ keyCount = 2, tableSize = 8 }")
 
     def serial_test_WTFHashMap_of_vectors_tablesize_and_size(self):
         variable = self._sbFrame.FindVariable('hashMapOfVectors')
         summary = lldb_webkit.WTFHashMap_SummaryProvider(variable, {})
-        self.assertEqual(summary, "{ tableSize = 8, keyCount = 1 }")
+        self.assertEqual(summary, "{ keyCount = 1, tableSize = 8 }")
 
     def serial_test_WTFHashSet_tablesize_and_size(self):
         variable = self._sbFrame.FindVariable('hashSetOfInts')
         summary = lldb_webkit.WTFHashSet_SummaryProvider(variable, {})
-        self.assertEqual(summary, "{ tableSize = 8, keyCount = 1 }")
+        self.assertEqual(summary, "{ keyCount = 1, tableSize = 8 }")
 
     # MARK: WTFOptionSet_SummaryProvider test cases
 
