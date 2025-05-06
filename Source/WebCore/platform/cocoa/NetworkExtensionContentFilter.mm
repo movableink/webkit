@@ -56,9 +56,9 @@ bool NetworkExtensionContentFilter::enabled()
     return isRequired();
 }
 
-UniqueRef<NetworkExtensionContentFilter> NetworkExtensionContentFilter::create(const PlatformContentFilter::FilterParameters&)
+Ref<NetworkExtensionContentFilter> NetworkExtensionContentFilter::create(const PlatformContentFilter::FilterParameters&)
 {
-    return makeUniqueRef<NetworkExtensionContentFilter>();
+    return adoptRef(*new NetworkExtensionContentFilter);
 }
 
 void NetworkExtensionContentFilter::initialize(const URL* url)

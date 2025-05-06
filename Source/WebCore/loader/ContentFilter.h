@@ -90,12 +90,12 @@ private:
     using State = PlatformContentFilter::State;
 
     struct Type {
-        Function<UniqueRef<PlatformContentFilter>(const PlatformContentFilter::FilterParameters&)> create;
+        Function<Ref<PlatformContentFilter>(const PlatformContentFilter::FilterParameters&)> create;
     };
     template <typename T> static Type type();
     WEBCORE_EXPORT static Vector<Type>& types();
 
-    using Container = Vector<UniqueRef<PlatformContentFilter>>;
+    using Container = Vector<Ref<PlatformContentFilter>>;
     friend std::unique_ptr<ContentFilter> std::make_unique<ContentFilter>(Container&&, ContentFilterClient&);
     ContentFilter(Container&&, ContentFilterClient&);
 
@@ -116,7 +116,7 @@ private:
     };
     Vector<ResourceDataItem> m_buffers;
     CachedResourceHandle<CachedRawResource> m_mainResource;
-    WeakPtr<const PlatformContentFilter> m_blockingContentFilter;
+    ThreadSafeWeakPtr<const PlatformContentFilter> m_blockingContentFilter;
     State m_state { State::Stopped };
     ResourceError m_blockedError;
     bool m_isLoadingBlockedPage { false };

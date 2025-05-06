@@ -97,7 +97,7 @@ bool ParentalControlsURLFilter::isEnabled() const
     return !!m_wcrBrowserEngineClient;
 }
 
-void ParentalControlsURLFilter::isURLAllowed(const URL& url, CompletionHandler<void(bool, NSData *)>&& completionHandler)
+void ParentalControlsURLFilter::isURLAllowed(const URL& url, CompletionHandler<void(bool, NSData *)>&& completionHandler, const WorkQueue& completionHandlerQueue)
 {
     ASSERT(isMainThread());
 
@@ -108,7 +108,7 @@ void ParentalControlsURLFilter::isURLAllowed(const URL& url, CompletionHandler<v
         ASSERT(isMainThread());
 
         completionHandler(!shouldBlock, replacementData);
-    }).get()];
+    }).get() onCompletionQueue:completionHandlerQueue.dispatchQueue()];
 }
 
 void ParentalControlsURLFilter::allowURL(const URL& url, CompletionHandler<void(bool)>&& completionHandler)

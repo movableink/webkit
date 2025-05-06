@@ -30,6 +30,7 @@
 #include <wtf/CheckedPtr.h>
 #include <wtf/Ref.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -50,9 +51,8 @@ class ResourceRequest;
 class ResourceResponse;
 class SharedBuffer;
 
-class PlatformContentFilter : public CanMakeWeakPtr<PlatformContentFilter>, public CanMakeCheckedPtr<PlatformContentFilter> {
+class PlatformContentFilter : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<PlatformContentFilter> {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(PlatformContentFilter);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PlatformContentFilter);
     WTF_MAKE_NONCOPYABLE(PlatformContentFilter);
 
 public:
