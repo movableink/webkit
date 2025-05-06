@@ -31,20 +31,6 @@
 namespace WebCore {
 
 struct MediaCapabilitiesEncodingInfo : MediaCapabilitiesInfo {
-    // FIXME(C++17): remove the following constructors once all compilers support extended
-    // aggregate initialization:
-    // <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0017r1.html>
-    MediaCapabilitiesEncodingInfo() = default;
-    MediaCapabilitiesEncodingInfo(MediaEncodingConfiguration&& supportedConfiguration)
-        : MediaCapabilitiesEncodingInfo({ }, WTFMove(supportedConfiguration))
-    {
-    }
-    MediaCapabilitiesEncodingInfo(MediaCapabilitiesInfo&& info, MediaEncodingConfiguration&& supportedConfiguration)
-        : MediaCapabilitiesInfo(WTFMove(info))
-        , supportedConfiguration(WTFMove(supportedConfiguration))
-    {
-    }
-
     MediaEncodingConfiguration supportedConfiguration;
 
     MediaCapabilitiesEncodingInfo isolatedCopy() const;

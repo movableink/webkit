@@ -203,7 +203,7 @@ void WebRTCProvider::createDecodingConfiguration(MediaDecodingConfiguration&& co
     ASSERT(configuration.type == MediaDecodingType::WebRTC);
 
     // FIXME: Validate additional parameters, in particular mime type parameters.
-    MediaCapabilitiesDecodingInfo info { WTFMove(configuration) };
+    MediaCapabilitiesDecodingInfo info { { }, WTFMove(configuration) };
 
 #if ENABLE(WEB_RTC)
     if (info.supportedConfiguration.video) {
@@ -240,7 +240,7 @@ void WebRTCProvider::createEncodingConfiguration(MediaEncodingConfiguration&& co
     ASSERT(configuration.type == MediaEncodingType::WebRTC);
 
     // FIXME: Validate additional parameters, in particular mime type parameters.
-    MediaCapabilitiesEncodingInfo info { WTFMove(configuration) };
+    MediaCapabilitiesEncodingInfo info { { }, WTFMove(configuration) };
 
 #if ENABLE(WEB_RTC)
     if (info.supportedConfiguration.video) {
