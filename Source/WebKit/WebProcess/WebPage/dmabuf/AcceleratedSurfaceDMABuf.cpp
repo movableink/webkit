@@ -681,7 +681,7 @@ void AcceleratedSurfaceDMABuf::didRenderFrame()
 #if ENABLE(DAMAGE_TRACKING)
     m_target->setDamage(WebCore::Damage(m_size));
     if (m_frameDamage) {
-        damageRects = m_frameDamage->copyToVector();
+        damageRects = m_frameDamage->rects();
         m_frameDamage = std::nullopt;
     }
 #endif

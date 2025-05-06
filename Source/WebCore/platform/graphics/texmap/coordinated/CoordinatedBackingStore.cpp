@@ -91,9 +91,11 @@ void CoordinatedBackingStore::paintToTextureMapper(TextureMapper& textureMapper,
             // area significantly in many cases.
             const auto tileIntRect = enclosingIntRect(tile.rect());
             Damage tileDamage(tileIntRect);
-            for (const auto& damageRect : *frameDamage)
+            for (const auto& damageRect : frameDamage->rects()) {
+                if (damageRect.isEmpty())
+                    continue;
                 tileDamage.add(intersection(tileIntRect, damageRect));
-
+            }
             for (const auto& tileDamageRect : tileDamage.rectsForPainting()) {
                 const auto sourceRect = FloatRect { FloatPoint { tileDamageRect.location() - tile.rect().location() }, tileDamageRect.size() };
                 textureMapper.drawTextureFragment(tile.texture(), sourceRect, tileDamageRect);
