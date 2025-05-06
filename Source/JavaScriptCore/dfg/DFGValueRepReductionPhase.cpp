@@ -73,9 +73,6 @@ private:
                     if constexpr (useKind != DoubleRepUse)
                         break;
 
-                    if (!isARM64() && !isX86_64_AVX())
-                        break;
-
                     switch (node->child1()->op()) {
                     case GetClosureVar:
                     case GetGlobalVar:
@@ -169,9 +166,6 @@ private:
                 case MultiGetByOffset:
                 case GetByOffset: {
                     if constexpr (useKind != DoubleRepUse)
-                        break;
-
-                    if (!isARM64() && !isX86_64_AVX())
                         break;
 
                     if (candidates.contains(node))
@@ -297,12 +291,6 @@ private:
                         case GetGlobalLexicalVariable:
                         case MultiGetByOffset:
                         case GetByOffset: {
-                            if (!isARM64() && !isX86_64_AVX()) {
-                                ok = false;
-                                dumpEscape("Unsupported incoming value to Phi: ", node);
-                                break;
-                            }
-
                             if constexpr (useKind != DoubleRepUse) {
                                 ok = false;
                                 dumpEscape("Phi Incoming Get is escaped: ", node);
@@ -416,12 +404,6 @@ private:
                             dumpEscape("Normal escape: ", user);
                             break;
                         }
-
-                        if (!isARM64() && !isX86_64_AVX()) {
-                            dumpEscape("Normal escape: ", user);
-                            ok = false;
-                            break;
-                        }
                         break;
 
                     case Upsilon: {
@@ -502,8 +484,6 @@ private:
                     case GetGlobalLexicalVariable:
                     case MultiGetByOffset:
                     case GetByOffset: {
-                        if (!isARM64() && !isX86_64_AVX())
-                            RELEASE_ASSERT_NOT_REACHED();
                         newChild = incomingValue;
                         break;
                     }
@@ -538,8 +518,6 @@ private:
             case GetGlobalLexicalVariable:
             case MultiGetByOffset:
             case GetByOffset: {
-                if (!isARM64() && !isX86_64_AVX())
-                    RELEASE_ASSERT_NOT_REACHED();
                 candidate->setResult(NodeResultDouble);
                 resultNode = candidate;
                 break;
@@ -581,26 +559,18 @@ private:
                     break;
 
                 case PutByOffset:
-                    if (!isARM64() && !isX86_64_AVX())
-                        RELEASE_ASSERT_NOT_REACHED();
                     user->child3() = Edge(resultNode, useKind);
                     break;
 
                 case MultiPutByOffset:
-                    if (!isARM64() && !isX86_64_AVX())
-                        RELEASE_ASSERT_NOT_REACHED();
                     user->child2() = Edge(resultNode, useKind);
                     break;
 
                 case PutClosureVar:
-                    if (!isARM64() && !isX86_64_AVX())
-                        RELEASE_ASSERT_NOT_REACHED();
                     user->child2() = Edge(resultNode, useKind);
                     break;
 
                 case PutGlobalVariable:
-                    if (!isARM64() && !isX86_64_AVX())
-                        RELEASE_ASSERT_NOT_REACHED();
                     user->child2() = Edge(resultNode, useKind);
                     break;
 

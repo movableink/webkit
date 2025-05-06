@@ -7669,8 +7669,25 @@ public:
 
     void sub64(FPRegisterID left, FPRegisterID right, FPRegisterID dest)
     {
-        ASSERT(supportsAVX());
-        m_assembler.vpsubq_rrr(right, left, dest);
+        if (supportsAVX()) {
+            m_assembler.vpsubq_rrr(right, left, dest);
+            return;
+        }
+
+        // SSE implementation uses macro assembler register.
+        if (dest == left) {
+            m_assembler.psubq_rr(right, dest);
+            return;
+        }
+
+        FPRegisterID safeRight = right;
+        if (dest == right) {
+            moveDouble(right, fpTempRegister);
+            safeRight = fpTempRegister;
+        }
+
+        moveDouble(left, dest);
+        m_assembler.psubq_rr(safeRight, dest);
     }
 
     void vectorAdd(SIMDInfo simdInfo, FPRegisterID left, FPRegisterID right, FPRegisterID dest)
