@@ -206,7 +206,7 @@ JSC_DEFINE_HOST_FUNCTION(mathProtoFuncHypot, (JSGlobalObject* globalObject, Call
         RETURN_IF_EXCEPTION(scope, { });
         return JSValue::encode(jsDoubleNumber(std::fabs(arg0)));
     }
-    if (argsCount == 2) {
+    if (argsCount == 2) [[likely]] {
         double arg0 = callFrame->uncheckedArgument(0).toNumber(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
         double arg1 = callFrame->uncheckedArgument(1).toNumber(globalObject);
@@ -215,7 +215,7 @@ JSC_DEFINE_HOST_FUNCTION(mathProtoFuncHypot, (JSGlobalObject* globalObject, Call
             return JSValue::encode(jsDoubleNumber(+std::numeric_limits<double>::infinity()));
         return JSValue::encode(jsDoubleNumber(std::hypot(arg0, arg1)));
     }
-    if (argsCount == 3) {
+    if (argsCount == 3) [[likely]] {
         double arg0 = callFrame->uncheckedArgument(0).toNumber(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
         double arg1 = callFrame->uncheckedArgument(1).toNumber(globalObject);
