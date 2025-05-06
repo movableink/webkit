@@ -49,7 +49,10 @@ extension View {
         environment(\.webViewAllowsLinkPreview, value)
     }
 
-    @_spi(Private)
+    /// Determines whether to allow people to select or otherwise interact with text.
+    @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
+    @available(watchOS, unavailable)
+    @available(tvOS, unavailable)
     public nonisolated func webViewTextSelection<S>(_ selectability: S) -> some View where S : TextSelectability {
         environment(\.webViewTextSelection, S.allowsSelection)
     }
