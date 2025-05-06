@@ -139,6 +139,7 @@ ViewPlatform::ViewPlatform(WPEDisplay* display, const API::PageConfiguration& co
 ViewPlatform::~ViewPlatform()
 {
     g_signal_handlers_disconnect_by_data(m_wpeView.get(), this);
+    dispatchPendingNextPresentationUpdateCallbacks();
     m_inputMethodFilter.setContext(nullptr);
     m_backingStore = nullptr;
 }
@@ -592,15 +593,21 @@ void ViewPlatform::didLosePointerLock()
 }
 #endif
 
+void ViewPlatform::dispatchPendingNextPresentationUpdateCallbacks()
+{
+    while (!m_nextPresentationUpdateCallbacks.isEmpty()) {
+        auto callback = m_nextPresentationUpdateCallbacks.takeLast();
+        callback();
+    }
+}
+
 void ViewPlatform::callAfterNextPresentationUpdate(CompletionHandler<void()>&& callback)
 {
-    RELEASE_ASSERT(!m_nextPresentationUpdateCallback);
-    m_nextPresentationUpdateCallback = WTFMove(callback);
+    m_nextPresentationUpdateCallbacks.insert(0, WTFMove(callback));
     if (!m_bufferRenderedID) {
         m_bufferRenderedID = g_signal_connect_after(m_wpeView.get(), "buffer-rendered", G_CALLBACK(+[](WPEView* view, WPEBuffer*, gpointer userData) {
             auto& webView = *reinterpret_cast<ViewPlatform*>(userData);
-            if (webView.m_nextPresentationUpdateCallback)
-                webView.m_nextPresentationUpdateCallback();
+            webView.dispatchPendingNextPresentationUpdateCallbacks();
         }), this);
     }
 }
