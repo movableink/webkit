@@ -40,6 +40,7 @@ public:
 
     virtual void addToWindow() = 0;
     virtual void removeFromWindow() = 0;
+    virtual void focus() { }
 
     virtual PlatformImage snapshot() = 0;
 

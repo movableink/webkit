@@ -47,6 +47,8 @@ private:
     void addToWindow() override;
     void removeFromWindow() override;
 
+    void focus() override;
+
     PlatformImage snapshot() override;
 
     GRefPtr<WPEDisplay> m_display;

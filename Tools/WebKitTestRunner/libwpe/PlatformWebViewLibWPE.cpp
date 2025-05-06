@@ -70,6 +70,7 @@ WKPageRef PlatformWebView::page()
 
 void PlatformWebView::focus()
 {
+    m_window->focus();
 }
 
 WKRect PlatformWebView::windowFrame()

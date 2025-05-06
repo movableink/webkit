@@ -68,6 +68,11 @@ void PlatformWebViewClientWPE::removeFromWindow()
     // FIXME: implement.
 }
 
+void PlatformWebViewClientWPE::focus()
+{
+    wpe_view_focus_in(WKViewGetView(m_view));
+}
+
 PlatformImage PlatformWebViewClientWPE::snapshot()
 {
     while (g_main_context_pending(nullptr))
