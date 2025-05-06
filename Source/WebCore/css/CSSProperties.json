@@ -8545,7 +8545,6 @@
             "codegen-properties": {
                 "animation-wrapper": "NonNormalizedDiscreteWrapper<ContentVisibility>",
                 "animation-wrapper-requires-non-normalized-discrete-interpolation": true,
-                "settings-flag": "cssContentVisibilityEnabled",
                 "parser-grammar": "<<values>>"
             },
             "status": {

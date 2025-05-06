@@ -1174,20 +1174,6 @@ CSSContainerProgressFunctionEnabled:
     WebCore:
       default: false
 
-CSSContentVisibilityEnabled:
-  type: bool
-  status: stable
-  category: css
-  humanReadableName: "CSS Content Visibility"
-  humanReadableDescription: "Enable CSS content-visibility"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 CSSContrastColorEnabled:
   type: bool
   category: css
