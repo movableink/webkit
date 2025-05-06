@@ -4,7 +4,7 @@
 
 #if ENABLE_WRITING_TOOLS && canImport(UIKit)
 
-internal import OSLog
+import OSLog
 import WebKit
 import WebKitSwift
 
