@@ -305,12 +305,16 @@ extension WKSLinearMediaPlayer {
     }
 
     private func maybeCreateSpatialOrImmersiveEntity() {
-        if swiftOnlyData.enteredFromInline || swiftOnlyData.peculiarEntity != nil || contentType == .immersive { return }
+        if swiftOnlyData.peculiarEntity != nil || contentType == .immersive { return }
         if swiftOnlyData.isImmersiveVideo {
             contentType = .immersive
             return
         }
-        guard let metadata = swiftOnlyData.spatialVideoMetadata else { return }
+        if swiftOnlyData.enteredFromInline || swiftOnlyData.spatialVideoMetadata == nil {
+            contentType = .planar
+            return
+        }
+        let metadata = swiftOnlyData.spatialVideoMetadata!
         swiftOnlyData.peculiarEntity = ContentType.makeSpatialEntity(videoMetadata: metadata.metadata, extruded: true)
         swiftOnlyData.peculiarEntity?.screenMode = spatialImmersive ? .immersive : .portal;
 // FIXME (147782145): Define a clang module for XPC to be used in Public SDK builds
