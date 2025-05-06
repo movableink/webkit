@@ -43,6 +43,7 @@
 #include "TextTrackList.h"
 #include "VTTRegion.h"
 #include "VTTRegionList.h"
+#include <numeric>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -564,7 +565,7 @@ RefPtr<TextTrackCue> TextTrack::matchCue(TextTrackCue& cue, TextTrackCue::CueMat
             }
         }
         
-        size_t index = (searchStart + searchEnd) / 2;
+        size_t index = std::midpoint(searchStart, searchEnd);
         existingCue = m_cues->item(index);
         if ((cue.startMediaTime() + startTimeVariance()) < existingCue->startMediaTime() || (match != TextTrackCue::IgnoreDuration && cue.hasEquivalentStartTime(*existingCue) && cue.endMediaTime() > existingCue->endMediaTime()))
             searchEnd = index;

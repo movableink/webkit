@@ -62,6 +62,7 @@
 #include "TreeScopeInlines.h"
 #include "UserAgentStyleSheets.h"
 #include "VisibleSelection.h"
+#include <numeric>
 #include <wtf/Range.h>
 #include <wtf/Scope.h>
 #include <wtf/WeakPtr.h>
@@ -675,7 +676,7 @@ void updateWithTextRecognitionResult(HTMLElement& element, const TextRecognition
                 continue;
             }
 
-            state.scale = (state.minScale + state.maxScale) / 2;
+            state.scale = std::midpoint(state.minScale, state.maxScale);
             setInlineStylesForBlock(state.container.get(), state.scale, targetHeight);
         }
 

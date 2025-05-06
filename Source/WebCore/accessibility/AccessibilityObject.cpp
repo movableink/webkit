@@ -102,6 +102,7 @@
 #include "TextIterator.h"
 #include "UserGestureIndicator.h"
 #include "VisibleUnits.h"
+#include <numeric>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/MakeString.h>
@@ -821,7 +822,7 @@ std::optional<BoundaryPoint> AccessibilityObject::lastBoundaryPointContainedInRe
         return boundaryPointsContainedInRect(startBoundary, boundary, rect, isFlippedWritingMode);
     };
 
-    int midIndex = leftIndex + (rightIndex - leftIndex) / 2;
+    int midIndex = std::midpoint(leftIndex, rightIndex);
     if (boundaryPointContainedInRect(boundaryPoints.at(midIndex))) {
         // We have a match if `midIndex` boundary point is contained in the rect, but the one at `midIndex - 1` isn't.
         if (indexIsValid(midIndex - 1) && !boundaryPointContainedInRect(boundaryPoints.at(midIndex - 1)))

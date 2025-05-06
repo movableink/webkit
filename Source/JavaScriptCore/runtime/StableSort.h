@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ArgList.h"
+#include <numeric>
 #include <wtf/Int128.h>
 #include <wtf/StdLibExtras.h>
 
@@ -59,7 +60,7 @@ static ALWAYS_INLINE void arrayInsertionSort(VM& vm, std::span<ElementType> span
         size_t left = 0;
         size_t right = i;
         for (; left < right;) {
-            size_t m = left + (right - left) / 2;
+            size_t m = std::midpoint(left, right);
             auto target = array[m];
             bool result = comparator(value, target);
             RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, void());

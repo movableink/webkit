@@ -41,6 +41,7 @@
 #include "TextSpacing.h"
 #include "UnicodeHelpers.h"
 #include "WidthIterator.h"
+#include <numeric>
 #include <wtf/text/CharacterProperties.h>
 #include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/TextBreakIterator.h>
@@ -334,7 +335,7 @@ TextUtil::WordBreakLeft TextUtil::breakWord(const InlineTextBox& inlineTextBox, 
             // Preserve the left width for the final split position so that we don't need to remeasure the left side again.
             auto leftSideWidth = InlineLayoutUnit { 0 };
             while (left < right) {
-                auto middle = userPerceivedCharacterBoundaryAlignedIndex((left + right) / 2);
+                auto middle = userPerceivedCharacterBoundaryAlignedIndex(std::midpoint(left, right));
                 ASSERT(middle >= left && middle < right);
                 auto endOfMiddleCharacter = nextUserPerceivedCharacterIndex(middle);
                 auto width = TextUtil::width(inlineTextBox, fontCascade, startPosition, endOfMiddleCharacter, contentLogicalLeft);

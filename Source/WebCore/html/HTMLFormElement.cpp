@@ -62,6 +62,7 @@
 #include "TypedElementDescendantIteratorInlines.h"
 #include "UserGestureIndicator.h"
 #include <limits>
+#include <numeric>
 #include <wtf/Ref.h>
 #include <wtf/SetForScope.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -516,7 +517,7 @@ unsigned HTMLFormElement::formElementIndexWithFormAttribute(Element* element, un
 
     // Does binary search on m_listedElements in order to find the index to be inserted.
     while (left != right) {
-        unsigned middle = left + ((right - left) / 2);
+        unsigned middle = std::midpoint(left, right);
         ASSERT(middle < m_listedElementsBeforeIndex || middle >= m_listedElementsAfterIndex);
         position = element->compareDocumentPosition(*m_listedElements[middle]);
         if (position & DOCUMENT_POSITION_FOLLOWING)

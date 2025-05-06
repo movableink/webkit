@@ -145,8 +145,8 @@ void HTMLMeterElement::setHigh(double high)
 
 double HTMLMeterElement::optimum() const
 {
-    double optimum = parseHTMLFloatingPointNumberValue(attributeWithoutSynchronization(optimumAttr), (max() + min()) / 2);
-    return std::min(std::max(optimum, min()), max());
+    double optimum = parseHTMLFloatingPointNumberValue(attributeWithoutSynchronization(optimumAttr), std::midpoint(min(), max()));
+    return std::clamp(optimum, min(), max());
 }
 
 void HTMLMeterElement::setOptimum(double optimum)

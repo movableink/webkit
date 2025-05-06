@@ -27,6 +27,7 @@
 #include "PlatformTimeRanges.h"
 
 #include <math.h>
+#include <numeric>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/PrintStream.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -376,7 +377,7 @@ size_t PlatformTimeRanges::findLastRangeIndexBefore(const MediaTime& start, cons
 
     first = 0;
     last = m_ranges.size() - 1;
-    middle = first + ((last - first) / 2);
+    middle = std::midpoint(first, last);
 
     while (first < last && middle > 0) {
         if (m_ranges[middle].isBeforeRange(range)) {
@@ -385,7 +386,7 @@ size_t PlatformTimeRanges::findLastRangeIndexBefore(const MediaTime& start, cons
         } else
             last = middle - 1;
 
-        middle = first + ((last - first) / 2);
+        middle = std::midpoint(first, last);
     }
     return index;
 }

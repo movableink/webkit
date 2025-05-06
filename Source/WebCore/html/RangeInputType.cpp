@@ -57,6 +57,7 @@
 #include "StepRange.h"
 #include "UserAgentParts.h"
 #include <limits>
+#include <numeric>
 #include <ranges>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -417,7 +418,7 @@ std::optional<Decimal> RangeInputType::findClosestTickMarkValue(const Decimal& v
     size_t middle;
     while (true) {
         ASSERT(left <= right);
-        middle = left + (right - left) / 2;
+        middle = std::midpoint(left, right);
         if (!middle)
             break;
         if (middle == m_tickMarkValues.size() - 1 && m_tickMarkValues[middle] < value) {

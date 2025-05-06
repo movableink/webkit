@@ -32,6 +32,7 @@
 #include "SuperSampler.h"
 #include "Yarr.h"
 #include "YarrCanonicalize.h"
+#include <numeric>
 #include <wtf/BitVector.h>
 #include <wtf/BumpPointerAllocator.h>
 #include <wtf/CheckedArithmetic.h>
@@ -499,7 +500,7 @@ public:
             size_t high = matches.size() - 1;
 
             while (low <= high) {
-                size_t mid = low + (high - low) / 2;
+                size_t mid = std::midpoint(low, high);
                 int diff = ch - matches[mid];
                 if (!diff)
                     return true;
@@ -528,7 +529,7 @@ public:
             size_t high = ranges.size() - 1;
 
             while (low <= high) {
-                size_t mid = low + (high - low) / 2;
+                size_t mid = std::midpoint(low, high);
                 int rangeBeginDiff = ch - ranges[mid].begin;
                 if (rangeBeginDiff >= 0 && ch <= ranges[mid].end)
                     return true;

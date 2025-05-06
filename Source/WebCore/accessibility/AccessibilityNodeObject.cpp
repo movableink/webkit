@@ -90,6 +90,7 @@
 #include "TypedElementDescendantIteratorInlines.h"
 #include "UserGestureIndicator.h"
 #include "VisibleUnits.h"
+#include <numeric>
 #include <wtf/Scope.h>
 #include <wtf/SetForScope.h>
 #include <wtf/StdLibExtras.h>
@@ -1024,7 +1025,7 @@ float AccessibilityNodeObject::valueForRange() const
     if (!value.isEmpty())
         return value.toFloat();
 
-    return isSpinButton() ? 0 : (minValueForRange() + maxValueForRange()) / 2;
+    return isSpinButton() ? 0 : std::midpoint(minValueForRange(), maxValueForRange());
 }
 
 float AccessibilityNodeObject::maxValueForRange() const

@@ -51,6 +51,7 @@
 
 #pragma once
 
+#include <numeric>
 #include <wtf/AlignedStorage.h>
 #include <wtf/HashTable.h>
 #include <wtf/text/StringHash.h>
@@ -740,8 +741,8 @@ constexpr unsigned RobinHoodHashTable<Key, Value, Extractor, HashFunctions, Trai
         // give us a load in the bounds [9/24, 15/24).
         double maxLoadRatio = loadFactor;
         double minLoadRatio = 1.0 / minLoad;
-        double averageLoadRatio = (maxLoadRatio + minLoadRatio) / 2;
-        double halfWayBetweenAverageAndMaxLoadRatio = (averageLoadRatio + maxLoadRatio) / 2;
+        double averageLoadRatio = std::midpoint(minLoadRatio, maxLoadRatio);
+        double halfWayBetweenAverageAndMaxLoadRatio = std::midpoint(averageLoadRatio, maxLoadRatio);
         return keyCount >= tableSize * halfWayBetweenAverageAndMaxLoadRatio;
     };
 

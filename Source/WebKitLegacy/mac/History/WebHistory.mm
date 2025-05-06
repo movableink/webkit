@@ -34,6 +34,7 @@
 #import "WebNSURLExtras.h"
 #import "WebVisitedLinkStore.h"
 #import <WebCore/HistoryItem.h>
+#import <numeric>
 #import <pal/spi/cocoa/NSCalendarDateSPI.h>
 #import <ranges>
 
@@ -207,7 +208,7 @@ static inline WebHistoryDateKey dateKey(NSTimeInterval date)
     unsigned low = 0;
     unsigned high = count;
     while (low < high) {
-        unsigned mid = low + (high - low) / 2;
+        unsigned mid = std::midpoint(low, high);
         if ([[entriesForDate objectAtIndex:mid] lastVisitedTimeInterval] >= entryDate)
             low = mid + 1;
         else

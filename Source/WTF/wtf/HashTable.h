@@ -24,6 +24,7 @@
 #include <atomic>
 #include <iterator>
 #include <mutex>
+#include <numeric>
 #include <string.h>
 #include <type_traits>
 #include <utility>
@@ -1236,8 +1237,8 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
             // give us a load in the bounds [9/24, 15/24).
             double maxLoadRatio = loadFactor;
             double minLoadRatio = 1.0 / minLoad;
-            double averageLoadRatio = (maxLoadRatio + minLoadRatio) / 2;
-            double halfWayBetweenAverageAndMaxLoadRatio = (averageLoadRatio + maxLoadRatio) / 2;
+            double averageLoadRatio = std::midpoint(minLoadRatio, maxLoadRatio);
+            double halfWayBetweenAverageAndMaxLoadRatio = std::midpoint(averageLoadRatio, maxLoadRatio);
             return keyCount >= tableSize * halfWayBetweenAverageAndMaxLoadRatio;
         };
 

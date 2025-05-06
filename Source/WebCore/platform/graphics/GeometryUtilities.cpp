@@ -29,6 +29,7 @@
 
 #include "FloatQuad.h"
 #include <numbers>
+#include <numeric>
 #include <wtf/MathExtras.h>
 #include <wtf/Vector.h>
 
@@ -198,7 +199,7 @@ bool ellipseContainsPoint(const FloatPoint& center, const FloatSize& radii, cons
 
 FloatPoint midPoint(const FloatPoint& first, const FloatPoint& second)
 {
-    return { (first.x() + second.x()) / 2, (first.y() + second.y()) / 2 };
+    return { std::midpoint(first.x(), second.x()), std::midpoint(first.y(), second.y()) };
 }
 
 static float dotProduct(const FloatSize& u, const FloatSize& v)

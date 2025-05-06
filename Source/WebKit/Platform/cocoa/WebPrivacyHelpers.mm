@@ -34,6 +34,7 @@
 #import <WebCore/DNS.h>
 #import <WebCore/LinkDecorationFilteringData.h>
 #import <WebCore/OrganizationStorageAccessPromptQuirk.h>
+#import <numeric>
 #import <pal/spi/cf/CFNetworkSPI.h>
 #import <pal/spi/cocoa/NetworkSPI.h>
 #import <time.h>
@@ -568,7 +569,7 @@ public:
             lower = upper;
         else {
             while (upper - lower > 1) {
-                auto middle = (lower + upper) / 2;
+                auto middle = std::midpoint(lower, upper);
                 auto compareResult = address <=> list[middle].m_network;
                 if (is_eq(compareResult))
                     return &list[middle];

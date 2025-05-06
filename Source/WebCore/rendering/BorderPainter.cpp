@@ -39,6 +39,7 @@
 #include "RenderBox.h"
 #include "RenderStyleInlines.h"
 #include "RenderTheme.h"
+#include <numeric>
 
 namespace WebCore {
 
@@ -1209,8 +1210,8 @@ void BorderPainter::drawLineForBoxSide(GraphicsContext& graphicsContext, const D
         if (((side == BoxSide::Top || side == BoxSide::Left) && adjacentWidth2 > 0) || ((side == BoxSide::Bottom || side == BoxSide::Right) && adjacentWidth2 < 0))
             offset4 = ceilToDevicePixel(adjacentWidth2 / 2, deviceScaleFactor);
 
-        float adjustedX = ceilToDevicePixel((x1 + x2) / 2, deviceScaleFactor);
-        float adjustedY = ceilToDevicePixel((y1 + y2) / 2, deviceScaleFactor);
+        float adjustedX = ceilToDevicePixel(std::midpoint(x1, x2), deviceScaleFactor);
+        float adjustedY = ceilToDevicePixel(std::midpoint(y1, y2), deviceScaleFactor);
         // Quads can't use the default snapping rect functions.
         x1 = roundToDevicePixel(x1, deviceScaleFactor);
         x2 = roundToDevicePixel(x2, deviceScaleFactor);
