@@ -95,12 +95,9 @@ Synchronousness JSModuleRecord::link(JSGlobalObject* globalObject, JSValue scrip
     if (SourceProfiler::g_profilerHook) [[unlikely]]
         SourceProfiler::profile(SourceProfiler::Type::Module, sourceCode());
 
-    ModuleProgramExecutable* executable = ModuleProgramExecutable::create(globalObject, sourceCode());
-    EXCEPTION_ASSERT(!!scope.exception() == !executable);
-    if (!executable) {
-        throwSyntaxError(globalObject, scope);
-        return Synchronousness::Sync;
-    }
+    ModuleProgramExecutable* executable = ModuleProgramExecutable::tryCreate(globalObject, sourceCode());
+    RETURN_IF_EXCEPTION(scope, Synchronousness::Sync);
+
     instantiateDeclarations(globalObject, executable, scriptFetcher);
     RETURN_IF_EXCEPTION(scope, Synchronousness::Sync);
     m_moduleProgramExecutable.set(vm, this, executable);
