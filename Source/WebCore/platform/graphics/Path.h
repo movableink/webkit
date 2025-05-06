@@ -45,12 +45,12 @@ class Path {
     WTF_MAKE_TZONE_ALLOCATED(Path);
 public:
     Path() = default;
-    WEBCORE_EXPORT Path(PathSegment&&);
+    Path(PathSegment&&);
     WEBCORE_EXPORT Path(Vector<PathSegment>&&);
     explicit Path(const Vector<FloatPoint>& points);
     Path(Ref<PathImpl>&&);
 
-    WEBCORE_EXPORT Path(const Path&);
+    Path(const Path&) = default;
     Path(Path&&) = default;
     Path& operator=(const Path&) = default;
     Path& operator=(Path&&) = default;
@@ -138,5 +138,10 @@ private:
 };
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Path&);
+
+inline Path::Path(PathSegment&& segment)
+    : m_data(WTFMove(segment))
+{
+}
 
 } // namespace WebCore

@@ -32,11 +32,6 @@
 
 namespace WebCore {
 
-PathSegment::PathSegment(Data&& data)
-    : m_data(WTFMove(data))
-{
-}
-
 FloatPoint PathSegment::calculateEndPoint(const FloatPoint& currentPoint, FloatPoint& lastMoveToPoint) const
 {
     return WTF::switchOn(m_data, [&](auto& data) {

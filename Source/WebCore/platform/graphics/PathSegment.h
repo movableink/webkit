@@ -56,7 +56,7 @@ public:
         PathCloseSubpath
     >;
 
-    WEBCORE_EXPORT PathSegment(Data&&);
+    PathSegment(Data&&);
 
     bool operator==(const PathSegment&) const = default;
 
@@ -85,4 +85,9 @@ using PathSegmentApplier = Function<void(const PathSegment&)>;
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const PathSegment&);
 
+
+inline PathSegment::PathSegment(Data&& data)
+    : m_data(WTFMove(data))
+{
+}
 } // namespace WebCore

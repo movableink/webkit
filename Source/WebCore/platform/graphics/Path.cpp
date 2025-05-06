@@ -61,11 +61,6 @@ Path::Path(Ref<PathImpl>&& impl)
 {
 }
 
-Path::Path(const Path& other)
-{
-    *this = other;
-}
-
 bool Path::definitelyEqual(const Path& other) const
 {
     if (&other == this)
@@ -90,11 +85,6 @@ bool Path::definitelyEqual(const Path& other) const
 
             return impl.ptr() && other.asImpl() && impl->definitelyEqual(*other.asImpl());
         });
-}
-
-Path::Path(PathSegment&& segment)
-{
-    m_data = WTFMove(segment);
 }
 
 PathImpl& Path::setImpl(Ref<PathImpl>&& impl)
