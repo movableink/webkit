@@ -5062,6 +5062,11 @@ IntersectionObserverData* Element::intersectionObserverDataIfExists()
     return hasRareData() ? elementRareData()->intersectionObserverData() : nullptr;
 }
 
+bool Element::mayHaveKeyframeEffects() const
+{
+    return hasRareData() && elementRareData()->hasAnimationRareData();
+}
+
 ElementAnimationRareData* Element::animationRareData(const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier) const
 {
     return hasRareData() ? elementRareData()->animationRareData(pseudoElementIdentifier) : nullptr;

@@ -92,27 +92,19 @@ void RenderTreeUpdater::GeneratedContent::updateCounters()
 
 static KeyframeEffectStack* keyframeEffectStackForElementAndPseudoId(const Element& element, PseudoId pseudoId)
 {
+    if (!element.mayHaveKeyframeEffects())
+        return nullptr;
+
     return element.keyframeEffectStack(pseudoId == PseudoId::None ? std::nullopt : std::optional(Style::PseudoElementIdentifier { pseudoId }));
 }
 
-static bool elementIsTargetedByKeyframeEffectRequiringPseudoElement(const Element* element, PseudoId pseudoId)
+static bool needsPseudoElementForAnimation(const Element& element, PseudoId pseudoId)
 {
-    if (auto* pseudoElement = dynamicDowncast<PseudoElement>(element))
-        return elementIsTargetedByKeyframeEffectRequiringPseudoElement(pseudoElement->hostElement(), pseudoId);
+    auto* stack = keyframeEffectStackForElementAndPseudoId(element, pseudoId);
+    if (!stack)
+        return false;
 
-    if (element) {
-        if (auto* stack = keyframeEffectStackForElementAndPseudoId(*element, pseudoId))
-            return stack->requiresPseudoElement();
-    }
-
-    return false;
-}
-
-static bool elementHasDisplayAnimationForPseudoId(const Element& element, PseudoId pseudoId)
-{
-    if (auto* stack = keyframeEffectStackForElementAndPseudoId(element, pseudoId))
-        return stack->containsProperty(CSSPropertyDisplay);
-    return false;
+    return stack->requiresPseudoElement() || stack->containsProperty(CSSPropertyDisplay);
 }
 
 static void createContentRenderers(RenderTreeBuilder& builder, RenderElement& pseudoRenderer, const RenderStyle& style, PseudoId pseudoId)
@@ -122,11 +114,27 @@ static void createContentRenderers(RenderTreeBuilder& builder, RenderElement& ps
             if (auto child = content->createContentRenderer(pseudoRenderer.document(), style); child && pseudoRenderer.isChildAllowed(*child, style))
                 builder.attach(pseudoRenderer, WTFMove(child));
         }
-    } else {
+    }
+#if ASSERT_ENABLED
+    else {
+        auto elementIsTargetedByKeyframeEffectRequiringPseudoElement = [](const Element& element, PseudoId pseudoId) {
+            if (auto* stack = keyframeEffectStackForElementAndPseudoId(element, pseudoId))
+                return stack->requiresPseudoElement();
+
+            return false;
+        };
+
         // The only valid scenario where this method is called without the "content" property being set
         // is the case where a pseudo-element has animations set on it via the Web Animations API.
-        ASSERT_UNUSED(pseudoId, elementIsTargetedByKeyframeEffectRequiringPseudoElement(pseudoRenderer.element(), pseudoId));
+        if (RefPtr pseudoElement = dynamicDowncast<PseudoElement>(pseudoRenderer.element())) {
+            RefPtr hostElement = pseudoElement->hostElement();
+            ASSERT(!is<PseudoElement>(hostElement));
+            ASSERT(elementIsTargetedByKeyframeEffectRequiringPseudoElement(*hostElement, pseudoId));
+        }
     }
+#else
+    UNUSED_PARAM(pseudoId);
+#endif
 }
 
 static void updateStyleForContentRenderers(RenderElement& pseudoRenderer, const RenderStyle& style)
@@ -139,16 +147,19 @@ static void updateStyleForContentRenderers(RenderElement& pseudoRenderer, const 
     }
 }
 
-void RenderTreeUpdater::GeneratedContent::updatePseudoElement(Element& current, const Style::ElementUpdate& elementUpdate, PseudoId pseudoId)
+void RenderTreeUpdater::GeneratedContent::updateBeforeOrAfterPseudoElement(Element& current, const Style::ElementUpdate& elementUpdate, PseudoId pseudoId)
 {
+    ASSERT(pseudoId == PseudoId::Before || pseudoId == PseudoId::After);
+
     PseudoElement* pseudoElement = pseudoId == PseudoId::Before ? current.beforePseudoElement() : current.afterPseudoElement();
 
     if (auto* renderer = pseudoElement ? pseudoElement->renderer() : nullptr)
         m_updater.renderTreePosition().invalidateNextSibling(*renderer);
 
-    auto* updateStyle = elementUpdate.style ? elementUpdate.style->getCachedPseudoStyle({ pseudoId }) : nullptr;
+    auto* updateStyle = (elementUpdate.style && elementUpdate.style->hasCachedPseudoStyles()) ? elementUpdate.style->getCachedPseudoStyle({ pseudoId }) : nullptr;
 
-    if (!needsPseudoElement(updateStyle) && !elementIsTargetedByKeyframeEffectRequiringPseudoElement(&current, pseudoId) && !elementHasDisplayAnimationForPseudoId(current, pseudoId)) {
+    ASSERT(!is<PseudoElement>(current));
+    if (!needsPseudoElement(updateStyle) && !needsPseudoElementForAnimation(current, pseudoId)) {
         if (pseudoElement) {
             if (pseudoId == PseudoId::Before)
                 removeBeforePseudoElement(current, m_updater.m_builder);

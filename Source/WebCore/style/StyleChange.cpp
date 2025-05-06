@@ -65,9 +65,6 @@ OptionSet<Change> determineChanges(const RenderStyle& s1, const RenderStyle& s2)
             return true;
         if (columnSpanNeedsNewRenderer())
             return true;
-        if (s1.hasTextCombine() != s2.hasTextCombine())
-            return true;
-        // When text-combine property has been changed, we need to prepare a separate renderer object.
         // When text-combine is on, we use RenderCombineText, otherwise RenderText.
         // https://bugs.webkit.org/show_bug.cgi?id=55069
         if (s1.hasTextCombine() != s2.hasTextCombine())

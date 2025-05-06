@@ -644,6 +644,7 @@ public:
     KeyframeEffectStack* keyframeEffectStack(const std::optional<Style::PseudoElementIdentifier>&) const;
     KeyframeEffectStack& ensureKeyframeEffectStack(const std::optional<Style::PseudoElementIdentifier>&);
     bool hasKeyframeEffects(const std::optional<Style::PseudoElementIdentifier>&) const;
+    bool mayHaveKeyframeEffects() const;
 
     const AnimationCollection* animations(const std::optional<Style::PseudoElementIdentifier>&) const;
     bool hasCompletedTransitionForProperty(const std::optional<Style::PseudoElementIdentifier>&, const AnimatableCSSProperty&) const;

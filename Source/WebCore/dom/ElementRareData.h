@@ -119,6 +119,7 @@ public:
     ScrollPosition savedLayerScrollPosition() const { return m_savedLayerScrollPosition; }
     void setSavedLayerScrollPosition(ScrollPosition position) { m_savedLayerScrollPosition = position; }
 
+    bool hasAnimationRareData() const { return !m_animationRareData.isEmpty(); }
     ElementAnimationRareData* animationRareData(const std::optional<Style::PseudoElementIdentifier>&) const;
     ElementAnimationRareData& ensureAnimationRareData(const std::optional<Style::PseudoElementIdentifier>&);
 

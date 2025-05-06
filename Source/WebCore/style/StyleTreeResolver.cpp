@@ -319,7 +319,7 @@ auto TreeResolver::resolveElement(Element& element, const RenderStyle* existingS
 
     // FIXME: These elements should not change renderer based on appearance property.
     if (RefPtr input = dynamicDowncast<HTMLInputElement>(element); (input && input->isSearchField())
-        || element.hasTagName(HTMLNames::meterTag)
+        || is<HTMLMeterElement>(element)
         || is<HTMLProgressElement>(element)) {
         if (existingStyle && update.style->usedAppearance() != existingStyle->usedAppearance()) {
             update.changes.add(Change::Renderer);
@@ -406,6 +406,7 @@ std::optional<ElementUpdate> TreeResolver::resolvePseudoElement(Element& element
 {
     if (elementUpdate.style->display() == DisplayType::None)
         return { };
+
     if (pseudoElementIdentifier.pseudoId == PseudoId::Backdrop && !element.isInTopLayer())
         return { };
     if (pseudoElementIdentifier.pseudoId == PseudoId::Marker && elementUpdate.style->display() != DisplayType::ListItem)
@@ -416,13 +417,13 @@ std::optional<ElementUpdate> TreeResolver::resolvePseudoElement(Element& element
         return { };
     if (pseudoElementIdentifier.pseudoId == PseudoId::WebKitScrollbar && elementUpdate.style->overflowX() != Overflow::Scroll && elementUpdate.style->overflowY() != Overflow::Scroll)
         return { };
-    auto isViewTransitionPseudoElement = pseudoElementIdentifier.pseudoId == PseudoId::ViewTransition
+
+    ASSERT_IMPLIES(pseudoElementIdentifier.pseudoId == PseudoId::ViewTransition
         || pseudoElementIdentifier.pseudoId == PseudoId::ViewTransitionGroup
         || pseudoElementIdentifier.pseudoId == PseudoId::ViewTransitionImagePair
         || pseudoElementIdentifier.pseudoId == PseudoId::ViewTransitionNew
-        || pseudoElementIdentifier.pseudoId == PseudoId::ViewTransitionOld;
-    if (isViewTransitionPseudoElement)
-        ASSERT(m_document->hasViewTransitionPseudoElementTree() && &element == m_document->documentElement());
+        || pseudoElementIdentifier.pseudoId == PseudoId::ViewTransitionOld,
+        m_document->hasViewTransitionPseudoElementTree() && &element == m_document->documentElement());
 
     if (!elementUpdate.style->hasPseudoStyle(pseudoElementIdentifier.pseudoId))
         return resolveAncestorPseudoElement(element, pseudoElementIdentifier, elementUpdate);
@@ -1352,6 +1353,7 @@ void TreeResolver::generatePositionOptionsIfNeeded(const ResolvedStyle& resolved
 
     if (!resolvedStyle.style || resolvedStyle.style->positionTryFallbacks().isEmpty())
         return;
+
     if (!resolvedStyle.style->hasOutOfFlowPosition())
         return;
 
@@ -1371,7 +1373,6 @@ void TreeResolver::generatePositionOptionsIfNeeded(const ResolvedStyle& resolved
     };
 
     auto options = generatePositionOptions();
-
 
     // If the fallbacks contain anchor references we need to resolve the anchors first and regenerate the options.
     if (hasUnresolvedAnchorPosition(styleable.element))

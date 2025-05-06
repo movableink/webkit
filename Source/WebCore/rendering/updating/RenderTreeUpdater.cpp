@@ -346,7 +346,7 @@ void RenderTreeUpdater::popParentsToDepth(unsigned depth)
 void RenderTreeUpdater::updateBeforeDescendants(Element& element, const Style::ElementUpdate* update)
 {
     if (update)
-        generatedContent().updatePseudoElement(element, *update, PseudoId::Before);
+        generatedContent().updateBeforeOrAfterPseudoElement(element, *update, PseudoId::Before);
 
     if (auto* before = element.beforePseudoElement())
         storePreviousRenderer(*before);
@@ -355,7 +355,7 @@ void RenderTreeUpdater::updateBeforeDescendants(Element& element, const Style::E
 void RenderTreeUpdater::updateAfterDescendants(Element& element, const Style::ElementUpdate* update)
 {
     if (update)
-        generatedContent().updatePseudoElement(element, *update, PseudoId::After);
+        generatedContent().updateBeforeOrAfterPseudoElement(element, *update, PseudoId::After);
 
     auto* renderer = element.renderer();
     if (!renderer)

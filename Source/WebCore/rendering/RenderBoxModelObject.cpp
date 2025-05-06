@@ -218,14 +218,14 @@ void RenderBoxModelObject::updateFromStyle()
 
     // Set the appropriate bits for a box model object.  Since all bits are cleared in styleWillChange,
     // we only check for bits that could possibly be set to true.
-    const RenderStyle& styleToUse = style();
+    const auto& styleToUse = style();
     setHasVisibleBoxDecorations(hasVisibleBoxDecorationStyle());
     setInline(styleToUse.isDisplayInlineType());
     setPositionState(styleToUse.position());
     setHorizontalWritingMode(styleToUse.writingMode().isHorizontal());
+    setPaintContainmentApplies(shouldApplyPaintContainment());
     if (writingMode().isBlockFlipped())
         view().frameView().setHasFlippedBlockRenderers(true);
-    setPaintContainmentApplies(shouldApplyPaintContainment());
 }
 
 static LayoutSize accumulateInFlowPositionOffsets(const RenderBoxModelObject& child)
