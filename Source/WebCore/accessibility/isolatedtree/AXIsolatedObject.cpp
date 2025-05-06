@@ -537,6 +537,9 @@ void AXIsolatedObject::setProperty(AXProperty property, AXPropertyValueVariant&&
         case AXProperty::HasBoldFont:
             setPropertyFlag(AXPropertyFlag::HasBoldFont, std::get<bool>(value));
             return;
+        case AXProperty::HasClickHandler:
+            setPropertyFlag(AXPropertyFlag::HasClickHandler, std::get<bool>(value));
+            return;
         case AXProperty::HasItalicFont:
             setPropertyFlag(AXPropertyFlag::HasItalicFont, std::get<bool>(value));
             return;
@@ -1182,6 +1185,8 @@ bool AXIsolatedObject::boolAttributeValue(AXProperty property) const
         return hasPropertyFlag(AXPropertyFlag::CanSetValueAttribute);
     case AXProperty::HasBoldFont:
         return hasPropertyFlag(AXPropertyFlag::HasBoldFont);
+    case AXProperty::HasClickHandler:
+        return hasPropertyFlag(AXPropertyFlag::HasClickHandler);
     case AXProperty::HasItalicFont:
         return hasPropertyFlag(AXPropertyFlag::HasItalicFont);
     case AXProperty::HasPlainText:
