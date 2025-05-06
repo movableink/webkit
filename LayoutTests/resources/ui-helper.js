@@ -2272,6 +2272,15 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static cancelFixedColorExtensionFadeAnimations()
+    {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        const script = "uiController.cancelFixedColorExtensionFadeAnimations()";
+        return new Promise(resolve => testRunner.runUIScript(script, resolve));
+    }
+
     static fixedContainerEdgeColors()
     {
         if (!this.isWebKit2())

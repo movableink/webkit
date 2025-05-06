@@ -446,4 +446,9 @@ void UIScriptControllerCocoa::cookiesForDomain(JSStringRef jsDomain, JSValueRef 
     }];
 }
 
+void UIScriptControllerCocoa::cancelFixedColorExtensionFadeAnimations() const
+{
+    [webView() _cancelFixedColorExtensionFadeAnimationsForTesting];
+}
+
 } // namespace WTR

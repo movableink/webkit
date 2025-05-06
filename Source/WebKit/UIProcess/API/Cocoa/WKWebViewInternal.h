@@ -107,6 +107,7 @@ struct AppHighlight;
 struct ExceptionDetails;
 struct DigitalCredentialsRequestData;
 struct TextAnimationData;
+enum class BoxSide : uint8_t;
 enum class WheelScrollGestureState : uint8_t;
 namespace WritingTools {
 enum class TextSuggestionState : uint8_t;
@@ -132,6 +133,7 @@ class ViewGestureController;
 #endif
 }
 
+@class WKColorExtensionView;
 @class WKContentView;
 @class WKPasswordView;
 @class WKScrollGeometry;
@@ -447,7 +449,7 @@ struct PerWebProcessState {
 #endif
 
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
-    WebCore::RectEdges<RetainPtr<CocoaView>> _fixedColorExtensionViews;
+    WebCore::RectEdges<RetainPtr<WKColorExtensionView>> _fixedColorExtensionViews;
 #endif
 }
 
@@ -519,6 +521,7 @@ struct PerWebProcessState {
 
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
 - (void)_updateFixedColorExtensionViewFrames;
+- (BOOL)_hasVisibleColorExtensionView:(WebCore::BoxSide)side;
 #endif
 
 #if ENABLE(GAMEPAD)

@@ -166,6 +166,7 @@ struct WKAppPrivacyReportTestingData {
 @property (nonatomic, readonly) NSColor *_sampledBottomFixedPositionContentColor;
 @property (nonatomic, readonly) NSColor *_sampledRightFixedPositionContentColor;
 #endif
+- (void)_cancelFixedColorExtensionFadeAnimationsForTesting;
 
 @end
 

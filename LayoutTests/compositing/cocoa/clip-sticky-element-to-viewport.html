@@ -39,6 +39,7 @@ addEventListener("load", async () => {
     await UIHelper.renderingUpdate();
     scrollTo(0, 350);
     await UIHelper.ensurePresentationUpdate();
+    await UIHelper.cancelFixedColorExtensionFadeAnimations();
     window.testRunner?.notifyDone();
 });
 </script>

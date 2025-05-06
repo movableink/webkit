@@ -68,6 +68,7 @@
 #import "WKBackForwardListInternal.h"
 #import "WKBackForwardListItemInternal.h"
 #import "WKBrowsingContextHandleInternal.h"
+#import "WKColorExtensionView.h"
 #import "WKContentWorldInternal.h"
 #import "WKDataDetectorTypesInternal.h"
 #import "WKDownloadInternal.h"
@@ -310,6 +311,13 @@ RetainPtr<NSError> nsErrorFromExceptionDetails(const std::optional<WebCore::Exce
 
     return adoptNS([[NSError alloc] initWithDomain:WKErrorDomain code:errorCode userInfo:userInfo.get()]);
 }
+
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+
+@interface WKWebView (WKColorExtensionView) <WKColorExtensionViewDelegate>
+@end
+
+#endif
 
 @implementation WKWebView
 
@@ -3124,20 +3132,18 @@ static WebCore::CocoaColor *sampledFixedPositionContentColor(const WebCore::Fixe
     if (!_page || !_page->protectedPreferences()->contentInsetBackgroundFillEnabled())
         return;
 
-    enum class HasFixedEdge : bool { No, Yes };
-
     RetainPtr parentView = [self _containerForFixedColorExtension];
     auto insets = [self _obscuredInsetsForFixedColorExtension];
-    auto updateExtensionView = [&](WebCore::BoxSide side) -> HasFixedEdge {
+    auto updateExtensionView = [&](WebCore::BoxSide side) {
         BOOL needsView = insets.at(side) > 0 && _fixedContainerEdges.hasFixedEdge(side);
         RetainPtr extensionView = _fixedColorExtensionViews.at(side);
         if (!needsView) {
-            [extensionView setHidden:YES];
-            return HasFixedEdge::No;
+            [extensionView fadeOut];
+            return;
         }
 
         if (!extensionView) {
-            extensionView = adoptNS([CocoaView new]);
+            extensionView = adoptNS([[WKColorExtensionView alloc] initWithFrame:CGRectZero delegate:self]);
 #if PLATFORM(MAC)
             [extensionView setWantsLayer:YES];
 #endif
@@ -3161,30 +3167,12 @@ static WebCore::CocoaColor *sampledFixedPositionContentColor(const WebCore::Fixe
         }
 
         RetainPtr predominantColor = cocoaColorOrNil(_fixedContainerEdges.predominantColor(side));
-        [extensionView setBackgroundColor:predominantColor.get() ?: [self underPageBackgroundColor]];
-        [extensionView setHidden:NO];
-        return HasFixedEdge::Yes;
+        [extensionView fadeToColor:predominantColor.get() ?: self.underPageBackgroundColor];
+        return;
     };
 
-#if PLATFORM(IOS_FAMILY)
-    UIRectEdge fixedEdges = UIRectEdgeNone;
-#endif
-
-    for (auto side : WebCore::allBoxSides) {
-        auto hasFixedEdge = updateExtensionView(side);
-#if PLATFORM(IOS_FAMILY)
-        if (hasFixedEdge == HasFixedEdge::Yes)
-            fixedEdges |= WebKit::uiRectEdgeForSide(side);
-#else
-        UNUSED_PARAM(hasFixedEdge);
-#endif
-    }
-
-#if PLATFORM(IOS_FAMILY)
-    [_scrollView _setFixedColorExtensionEdges:fixedEdges];
-#else
-    _impl->updateContentInsetFillViews();
-#endif
+    for (auto side : WebCore::allBoxSides)
+        updateExtensionView(side);
 
     [self _updateFixedColorExtensionViewFrames];
 }
@@ -3209,6 +3197,44 @@ static WebCore::CocoaColor *sampledFixedPositionContentColor(const WebCore::Fixe
 
     if (RetainPtr view = _fixedColorExtensionViews.bottom(); view && ![view isHidden])
         [view setFrame:[parentView convertRect:CGRectMake(insets.left(), bounds.height() - insets.bottom(), bounds.width() - insets.left() - insets.right(), insets.bottom()) fromView:self]];
+}
+
+- (void)_updateFixedColorExtensionEdges
+{
+#if PLATFORM(IOS_FAMILY)
+    [_scrollView _setFixedColorExtensionEdges:[&] {
+        UIRectEdge edges = UIRectEdgeNone;
+        if ([self _hasVisibleColorExtensionView:WebCore::BoxSide::Top])
+            edges |= UIRectEdgeTop;
+        if ([self _hasVisibleColorExtensionView:WebCore::BoxSide::Right])
+            edges |= UIRectEdgeRight;
+        if ([self _hasVisibleColorExtensionView:WebCore::BoxSide::Bottom])
+            edges |= UIRectEdgeBottom;
+        if ([self _hasVisibleColorExtensionView:WebCore::BoxSide::Left])
+            edges |= UIRectEdgeLeft;
+        return edges;
+    }()];
+#else
+    _impl->updateContentInsetFillViews();
+#endif
+}
+
+- (BOOL)_hasVisibleColorExtensionView:(WebCore::BoxSide)side
+{
+    RetainPtr view = _fixedColorExtensionViews.at(side);
+    return view && ![view isHiddenOrFadingOut];
+}
+
+#pragma mark - WKColorExtensionViewDelegate
+
+- (void)colorExtensionViewWillFadeOut:(WKColorExtensionView *)view
+{
+    [self _updateFixedColorExtensionEdges];
+}
+
+- (void)colorExtensionViewDidFadeIn:(WKColorExtensionView *)view
+{
+    [self _updateFixedColorExtensionEdges];
 }
 
 #endif // ENABLE(CONTENT_INSET_BACKGROUND_FILL)

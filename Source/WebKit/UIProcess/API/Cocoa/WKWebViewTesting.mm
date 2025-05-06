@@ -37,8 +37,10 @@
 #import "UserMediaProcessManager.h"
 #import "ViewGestureController.h"
 #import "ViewSnapshotStore.h"
+#import "WKColorExtensionView.h"
 #import "WKContentViewInteraction.h"
 #import "WKPreferencesInternal.h"
+#import "WKWebViewInternal.h"
 #import "WebPageProxy.h"
 #import "WebPageProxyTesting.h"
 #import "WebProcessPool.h"
@@ -47,6 +49,7 @@
 #import "WebsiteDataStore.h"
 #import "_WKFrameHandleInternal.h"
 #import "_WKInspectorInternal.h"
+#import <WebCore/BoxSides.h>
 #import <WebCore/NowPlayingInfo.h>
 #import <WebCore/ScrollingNodeID.h>
 #import <WebCore/ValidationBubble.h>
@@ -998,6 +1001,14 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
         @"opaque" : @(layer.get().opaque),
         @"opacity" : @(layer.get().opacity),
     };
+}
+
+- (void)_cancelFixedColorExtensionFadeAnimationsForTesting
+{
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    for (auto side : WebCore::allBoxSides)
+        [_fixedColorExtensionViews.at(side) cancelFadeAnimation];
+#endif
 }
 
 @end
