@@ -119,6 +119,9 @@ public:
 
     const PlatformVideoColorSpace& colorSpace() const { return m_colorSpace; }
 
+    bool hasNoTransformation() const { return m_rotation == VideoFrameRotation::None && !m_isMirrored; }
+    bool has90DegreeRotation() const { return m_rotation == VideoFrameRotation::Left || m_rotation == VideoFrameRotation::Right; }
+
 protected:
     WEBCORE_EXPORT VideoFrame(MediaTime presentationTime, bool isMirrored, Rotation, PlatformVideoColorSpace&& = { });
 

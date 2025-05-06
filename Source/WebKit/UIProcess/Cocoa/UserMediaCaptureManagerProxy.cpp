@@ -99,7 +99,7 @@ public:
 
     void whenReady(UserMediaCaptureManagerProxy::CreateSourceCallback&& createCallback)
     {
-        protectedSource()->whenReady([weakThis = WeakPtr { *this }, createCallback = WTFMove(createCallback)] (auto&& sourceError) mutable {
+        m_source->whenReady([weakThis = WeakPtr { *this }, createCallback = WTFMove(createCallback)] (auto&& sourceError) mutable {
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis) {
                 createCallback(CaptureSourceError { "Source is no longer needed"_s, MediaAccessDenialReason::InvalidAccess }, { }, { });
@@ -123,23 +123,23 @@ public:
     {
         m_shouldReset = true;
         m_isStopped = false;
-        protectedSource()->start();
+        m_source->start();
     }
 
     void stop()
     {
         m_isStopped = true;
-        protectedSource()->stop();
+        m_source->stop();
     }
 
     void end()
     {
         m_isStopped = true;
         m_isEnded = true;
-        protectedSource()->requestToEnd(*this);
+        m_source->requestToEnd(*this);
     }
 
-    void setShouldApplyRotation() { m_shouldApplyRotation = true; }
+    void setShouldApplyRotation() { m_source->setShouldApplyRotation(); }
     void setIsInBackground(bool value) { m_source->setIsInBackground(value); }
 
     bool isPowerEfficient()
@@ -151,7 +151,7 @@ public:
     {
         m_videoConstraints = constraints;
 
-        auto resultingConstraints = protectedSource()->extractVideoPresetConstraints(constraints);
+        auto resultingConstraints = m_source->extractVideoPresetConstraints(constraints);
 
         bool didChange = false;
         if (resultingConstraints.width) {
@@ -286,12 +286,12 @@ public:
 
     Ref<RealtimeMediaSource::PhotoCapabilitiesNativePromise> getPhotoCapabilities()
     {
-        return protectedSource()->getPhotoCapabilities();
+        return m_source->getPhotoCapabilities();
     }
 
     Ref<RealtimeMediaSource::PhotoSettingsNativePromise> getPhotoSettings()
     {
-        return protectedSource()->getPhotoSettings();
+        return m_source->getPhotoSettings();
     }
 
 private:
@@ -302,7 +302,8 @@ private:
         , m_source(WTFMove(source))
         , m_videoFrameObjectHeap(WTFMove(videoFrameObjectHeap))
     {
-        protectedSource()->addObserver(*this);
+        m_source->addObserver(*this);
+        m_source->setCanUseIOSurface();
     }
 
     // CheckedPtr interface
@@ -374,55 +375,19 @@ private:
             m_captureSemaphore->signal();
     }
 
-    RefPtr<VideoFrame> rotateVideoFrameIfNeeded(VideoFrame& frame)
-    {
-        if (m_shouldApplyRotation && frame.rotation() != VideoFrame::Rotation::None) {
-            auto pixelBuffer = rotatePixelBuffer(frame);
-            return VideoFrameCV::create(frame.presentationTime(), frame.isMirrored(), VideoFrame::Rotation::None, WTFMove(pixelBuffer));
-        }
-        return &frame;
-    }
-
     void videoFrameAvailable(VideoFrame& frame, VideoFrameTimeMetadata metadata) final
     {
-        auto videoFrame = rotateVideoFrameIfNeeded(frame);
-        if (!videoFrame)
-            return;
         if (m_resourceOwner)
-            videoFrame->setOwnershipIdentity(m_resourceOwner);
+            frame.setOwnershipIdentity(m_resourceOwner);
 
         RefPtr videoFrameObjectHeap = m_videoFrameObjectHeap;
         if (!videoFrameObjectHeap) {
-            m_connection->send(Messages::RemoteCaptureSampleManager::VideoFrameAvailableCV(m_id, videoFrame->pixelBuffer(), videoFrame->rotation(), videoFrame->isMirrored(), videoFrame->presentationTime(), metadata), 0);
+            m_connection->send(Messages::RemoteCaptureSampleManager::VideoFrameAvailableCV(m_id, frame.pixelBuffer(), frame.rotation(), frame.isMirrored(), frame.presentationTime(), metadata), 0);
             return;
         }
 
-        auto properties = videoFrameObjectHeap->add(*videoFrame);
+        auto properties = videoFrameObjectHeap->add(frame);
         m_connection->send(Messages::RemoteCaptureSampleManager::VideoFrameAvailable(m_id, properties, metadata), 0);
-    }
-
-    RetainPtr<CVPixelBufferRef> rotatePixelBuffer(VideoFrame& videoFrame)
-    {
-        if (!m_rotationSession)
-            m_rotationSession = makeUnique<ImageRotationSessionVT>();
-
-        ImageRotationSessionVT::RotationProperties rotation;
-        switch (videoFrame.rotation()) {
-        case VideoFrame::Rotation::None:
-            ASSERT_NOT_REACHED();
-            rotation.angle = 0;
-            break;
-        case VideoFrame::Rotation::UpsideDown:
-            rotation.angle = 180;
-            break;
-        case VideoFrame::Rotation::Right:
-            rotation.angle = 90;
-            break;
-        case VideoFrame::Rotation::Left:
-            rotation.angle = 270;
-            break;
-        }
-        return m_rotationSession->rotate(videoFrame, rotation, ImageRotationSessionVT::IsCGImageCompatible::No);
     }
 
     bool preventSourceFromEnding()

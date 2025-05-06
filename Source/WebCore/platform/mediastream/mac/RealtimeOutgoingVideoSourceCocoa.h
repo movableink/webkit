@@ -55,10 +55,6 @@ private:
     CVPixelBufferPoolRef pixelBufferPool(size_t width, size_t height);
 
     std::unique_ptr<ImageRotationSessionVT> m_rotationSession;
-    webrtc::VideoRotation m_currentRotationSessionAngle { webrtc::kVideoRotation_0 };
-    size_t m_rotatedWidth { 0 };
-    size_t m_rotatedHeight { 0 };
-    OSType m_rotatedFormat;
 
 #if !RELEASE_LOG_DISABLED
     size_t m_numberOfFrames { 0 };

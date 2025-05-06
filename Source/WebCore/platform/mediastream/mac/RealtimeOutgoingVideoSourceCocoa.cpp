@@ -67,6 +67,8 @@ RealtimeOutgoingVideoSourceCocoa::~RealtimeOutgoingVideoSourceCocoa() = default;
 
 void RealtimeOutgoingVideoSourceCocoa::videoFrameAvailable(VideoFrame& videoFrame, VideoFrameTimeMetadata)
 {
+    ASSERT(!m_shouldApplyRotation);
+
 #if !RELEASE_LOG_DISABLED
     if (!(++m_numberOfFrames % 60))
         ALWAYS_LOG(LOGIDENTIFIER, "frame ", m_numberOfFrames);
@@ -113,9 +115,14 @@ void RealtimeOutgoingVideoSourceCocoa::videoFrameAvailable(VideoFrame& videoFram
     // FIXME: We should use a pixel conformer for other pixel formats and kCVPixelFormatType_32BGRA.
     ASSERT(pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange || pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange || pixelFormat == kCVPixelFormatType_32BGRA);
 #endif
-    RetainPtr<CVPixelBufferRef> convertedBuffer = videoFrame.pixelBuffer();
-    if (shouldApplyRotation)
-        convertedBuffer = rotatePixelBuffer(convertedBuffer.get(), m_currentRotation);
+
+    RefPtr<VideoFrame> rotatedVideoFrame;
+    if (shouldApplyRotation) {
+        if (!m_rotationSession)
+            m_rotationSession = makeUnique<ImageRotationSessionVT>(ImageRotationSessionVT::ShouldUseIOSurface::No);
+        rotatedVideoFrame = m_rotationSession->applyRotation(videoFrame);
+    }
+    RetainPtr<CVPixelBufferRef> convertedBuffer = rotatedVideoFrame ? rotatedVideoFrame->pixelBuffer() : videoFrame.pixelBuffer();
 
     auto webrtcBuffer = webrtc::pixelBufferToFrame(convertedBuffer.get());
     if (videoFrameScaling != 1)
