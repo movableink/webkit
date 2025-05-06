@@ -161,19 +161,13 @@ std::optional<MatchedDeclarationsCache::Result> MatchedDeclarationsCache::find(u
     return std::nullopt;
 }
 
-void MatchedDeclarationsCache::add(const RenderStyle& style, const RenderStyle& parentStyle, const RenderStyle* userAgentAppearanceStyle, unsigned hash, const MatchResult& matchResult)
+void MatchedDeclarationsCache::add(const RenderStyle& style, const RenderStyle& parentStyle, unsigned hash, const MatchResult& matchResult)
 {
     constexpr unsigned additionsBetweenSweeps = 100;
     if (++m_additionsSinceLastSweep >= additionsBetweenSweeps && !m_sweepTimer.isActive()) {
         constexpr auto sweepDelay = 1_min;
         m_sweepTimer.startOneShot(sweepDelay);
     }
-
-    auto userAgentAppearanceStyleCopy = [&]() -> std::unique_ptr<RenderStyle> {
-        if (userAgentAppearanceStyle)
-            return RenderStyle::clonePtr(*userAgentAppearanceStyle);
-        return { };
-    };
 
     ASSERT(hash);
     // Note that we don't cache the original RenderStyle instance. It may be further modified.
@@ -185,7 +179,7 @@ void MatchedDeclarationsCache::add(const RenderStyle& style, const RenderStyle& 
         return newBucket;
     });
     if (addResult.iterator->value.size() < maxEntriesPerHash)
-        addResult.iterator->value.append(Entry { &matchResult, RenderStyle::clonePtr(style), RenderStyle::clonePtr(parentStyle), userAgentAppearanceStyleCopy() });
+        addResult.iterator->value.append(Entry { &matchResult, RenderStyle::clonePtr(style), RenderStyle::clonePtr(parentStyle) });
 }
 
 void MatchedDeclarationsCache::remove(unsigned hash)

@@ -77,7 +77,6 @@ inline UnadjustedStyle copy(const UnadjustedStyle& other)
 {
     return {
         .style = RenderStyle::clonePtr(*other.style),
-        .userAgentAppearanceStyle = other.userAgentAppearanceStyle ? RenderStyle::clonePtr(*other.userAgentAppearanceStyle) : nullptr,
         .relations = other.relations ? makeUnique<Relations>(*other.relations) : std::unique_ptr<Relations> { },
         .matchResult = other.matchResult
     };

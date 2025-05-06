@@ -190,7 +190,7 @@ ResolvedStyle TreeResolver::styleForStyleable(const Styleable& styleable, Resolu
     // Fully custom styles in UA shadow trees that don't originate from selector matching don't need adjusting.
     if (unadjustedStyle.matchResult) {
         Adjuster adjuster(m_document, *resolutionContext.parentStyle, resolutionContext.parentBoxStyle, &element);
-        adjuster.adjust(*style, unadjustedStyle.userAgentAppearanceStyle.get());
+        adjuster.adjust(*style);
     }
 
     return {
@@ -892,7 +892,7 @@ std::unique_ptr<RenderStyle> TreeResolver::resolveAgainInDifferentContext(const 
         return nullptr;
 
     Adjuster adjuster(m_document, parentStyle, resolutionContext.parentBoxStyle, !styleable.pseudoElementIdentifier ? &styleable.element : nullptr);
-    adjuster.adjust(*newStyle, nullptr);
+    adjuster.adjust(*newStyle);
 
     return newStyle;
 }

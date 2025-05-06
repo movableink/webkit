@@ -75,7 +75,7 @@ private:
 
     int baselinePosition(const RenderBox&) const override;
 
-    bool isControlStyled(const RenderStyle&, const RenderStyle& userAgentStyle) const override;
+    bool isControlStyled(const RenderStyle&) const override;
 
     // Methods for each appearance value.
     void adjustCheckboxStyle(RenderStyle&, const Element*) const override;

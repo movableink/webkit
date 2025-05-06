@@ -373,5 +373,22 @@ unsigned BuilderState::siblingIndex()
     return count;
 }
 
+void BuilderState::disableNativeAppearanceIfNeeded(CSSPropertyID propertyID, CascadeLevel cascadeLevel)
+{
+    auto shouldDisable = [&] {
+        if (cascadeLevel != CascadeLevel::Author)
+            return false;
+        if (!CSSProperty::disablesNativeAppearance(propertyID))
+            return false;
+        if (!applyPropertyToRegularStyle())
+            return false;
+        return element()->isDevolvableWidget() || RenderTheme::hasAppearanceForElementTypeFromUAStyle(*element());
+    };
+
+    if (shouldDisable())
+        style().setNativeAppearanceDisabled(true);
+}
+
+
 } // namespace Style
 } // namespace WebCore

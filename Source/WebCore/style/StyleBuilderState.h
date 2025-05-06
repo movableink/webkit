@@ -204,6 +204,8 @@ public:
     void setFontDescriptionVariantNumericOrdinal(FontVariantNumericOrdinal);
     void setFontDescriptionVariantNumericSlashedZero(FontVariantNumericSlashedZero);
 
+    void disableNativeAppearanceIfNeeded(CSSPropertyID, CascadeLevel);
+
 private:
     // See the comment in maybeUpdateFontForLetterSpacing() about why this needs to be a friend.
     friend void maybeUpdateFontForLetterSpacing(BuilderState&, CSSValue&);

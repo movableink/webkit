@@ -68,7 +68,7 @@ public:
     // metrics and defaults given the contents of the style.  This includes sophisticated operations like
     // selection of control size based off the font, the disabling of appearance when CSS properties that
     // disable native appearance are set, or if the appearance is not supported by the theme.
-    void adjustStyle(RenderStyle&, const Element*, const RenderStyle* userAgentAppearanceStyle);
+    void adjustStyle(RenderStyle&, const Element*);
 
     virtual bool canCreateControlPartForRenderer(const RenderObject&) const { return false; }
     virtual bool canCreateControlPartForBorderOnly(const RenderObject&) const { return false; }
@@ -115,7 +115,7 @@ public:
     virtual bool controlSupportsTints(const RenderObject&) const { return false; }
 
     // Whether or not the control has been styled enough by the author to disable the native appearance.
-    virtual bool isControlStyled(const RenderStyle&, const RenderStyle& userAgentStyle) const;
+    virtual bool isControlStyled(const RenderStyle&) const;
 
     // A general method asking if any control tinting is supported at all.
     virtual bool supportsControlTints() const { return false; }
@@ -246,6 +246,8 @@ public:
 
     virtual void paintPlatformResizer(const RenderLayerModelObject&, GraphicsContext&, const LayoutRect&);
     virtual void paintPlatformResizerFrame(const RenderLayerModelObject&, GraphicsContext&, const LayoutRect&);
+
+    static bool hasAppearanceForElementTypeFromUAStyle(const Element&);
 
 protected:
     ControlStyle extractControlStyleForRenderer(const RenderObject&) const;

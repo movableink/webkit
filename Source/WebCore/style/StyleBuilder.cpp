@@ -421,8 +421,8 @@ void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::
 
     BuilderGenerated::applyProperty(id, m_state, valueToApply.get(), valueType);
 
-    if (!isRevertOrRevertLayer && cascadeLevel == CascadeLevel::Author && m_state.element()->isDevolvableWidget() && CSSProperty::disablesNativeAppearance(id) && m_state.applyPropertyToRegularStyle())
-        style.setNativeAppearanceDisabled(true);
+    if (!isRevertOrRevertLayer)
+        m_state.disableNativeAppearanceIfNeeded(id, cascadeLevel);
 
     if (!isUnset && !isRevertOrRevertLayer && m_state.isCurrentPropertyInvalidAtComputedValueTime()) {
         // https://drafts.csswg.org/css-variables-2/#invalid-variables
