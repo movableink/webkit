@@ -100,7 +100,7 @@ WK_VERSIONED_SDK_ADDITIONS_PATH_YES = $(WK_WORKSPACE_DIR)/WebKitLibraries/SDKs/$
 
 // Partial SDK DBs used for analysis are checked in to WebKitLibraries, but the
 // internal build may override this location.
-WK_SDKDB_DIR = $(inherited:default=$(WK_WORKSPACE_DIR)/WebKitLibraries/SDKDBs/$(SDK_NAME));
+WK_SDKDB_DIR = $(inherited:default=$(WK_WORKSPACE_DIR)/WebKitLibraries/SDKDBs);
 
 WTF_BUILD_SCRIPTS_DIR = $(WTF_BUILD_SCRIPTS_DIR_$(CONFIGURATION));
 WTF_BUILD_SCRIPTS_DIR_Release = $(WTF_BUILD_SCRIPTS_DIR_engineering);

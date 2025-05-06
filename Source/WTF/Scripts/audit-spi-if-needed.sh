@@ -10,9 +10,20 @@ depfile="${SCRIPT_OUTPUT_FILE_0/%.timestamp/.d}"
 
 if [[ "${WK_AUDIT_SPI}" == YES && -f "${program}" ]]; then
     mkdir -p "${OBJROOT}/WebKitSDKDBs"
+
+    # WK_SDKDB_DIR is a directory of directories named according to SDK
+    # versions. Pick the versioned directory closest to the active SDK, but not
+    # greater. If all available directories are for newer SDKs, fall back to
+    # the last one.
+    for versioned_sdkdb_dir in $(printf '%s\n' ${WK_SDKDB_DIR}/${PLATFORM_NAME}* | sort -rV); do
+        if printf '%s\n' ${versioned_sdkdb_dir#${WK_SDKDB_DIR}/} ${SDK_NAME%.internal} | sort -CV; then
+            break
+        fi
+    done
+
     for arch in ${ARCHS}; do
         (set -x && "${program}" \
-         --sdkdb-dir "${WK_SDKDB_DIR}" \
+         --sdkdb-dir "${versioned_sdkdb_dir}" \
          --sdkdb-cache "${OBJROOT}/WebKitSDKDBs/${SDK_NAME}.sqlite3" \
          --sdk-dir "${SDKROOT}" --arch-name "${arch}" \
          --depfile "${depfile}" \
