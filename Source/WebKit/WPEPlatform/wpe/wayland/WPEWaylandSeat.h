@@ -48,6 +48,7 @@ public:
     WPEKeymap* keymap() const { return m_keymap.get(); }
     uint32_t pointerModifiers() const { return m_pointer.modifiers; }
     std::pair<double, double> pointerCoords() const { return std::pair<double, double>(m_pointer.x, m_pointer.y); }
+    uint32_t keyboardSerial() const { return m_keyboard.serial; }
     WPEAvailableInputDevices availableInputDevices() const;
 
     void startListening();
@@ -100,6 +101,7 @@ private:
         GWeakPtr<WPEToplevelWayland> toplevel;
         uint32_t modifiers { 0 };
         uint32_t time { 0 };
+        uint32_t serial { 0 };
 
         struct {
             std::optional<int32_t> rate;

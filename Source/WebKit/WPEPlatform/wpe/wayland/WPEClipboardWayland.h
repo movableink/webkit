@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Igalia S.L.
+ * Copyright (C) 2025 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,17 +22,25 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef __WPE_WAYLAND_H__
-#define __WPE_WAYLAND_H__
 
-#define __WPE_WAYLAND_H_INSIDE__
+#ifndef WPEClipboardWayland_h
+#define WPEClipboardWayland_h
 
-#include <wpe/wayland/WPEClipboardWayland.h>
+#if !defined(__WPE_WAYLAND_H_INSIDE__) && !defined(BUILDING_WEBKIT)
+#error "Only <wpe/wayland/wpe-wayland.h> can be included directly."
+#endif
+
+#include <glib-object.h>
+#include <wpe/wpe-platform.h>
 #include <wpe/wayland/WPEDisplayWayland.h>
-#include <wpe/wayland/WPEScreenWayland.h>
-#include <wpe/wayland/WPEToplevelWayland.h>
-#include <wpe/wayland/WPEViewWayland.h>
 
-#undef __WPE_WAYLAND_H_INSIDE__
+G_BEGIN_DECLS
 
-#endif /* __WPE_PLATFORM_H__ */
+#define WPE_TYPE_CLIPBOARD_WAYLAND (wpe_clipboard_wayland_get_type())
+WPE_API G_DECLARE_FINAL_TYPE (WPEClipboardWayland, wpe_clipboard_wayland, WPE, CLIPBOARD_WAYLAND, WPEClipboard)
+
+WPE_API WPEClipboard *wpe_clipboard_wayland_new (WPEDisplayWayland *display);
+
+G_END_DECLS
+
+#endif /* WPEClipboardWayland_h */

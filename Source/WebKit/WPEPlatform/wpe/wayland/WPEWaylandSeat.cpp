@@ -294,7 +294,7 @@ const struct wl_keyboard_listener WaylandSeat::s_keyboardListener = {
         wpe_keymap_xkb_update(WPE_KEYMAP_XKB(seat.m_keymap.get()), format, fd, size);
     },
     // enter
-    [](void* data, struct wl_keyboard*, uint32_t /*serial*/, struct wl_surface* surface, struct wl_array*)
+    [](void* data, struct wl_keyboard*, uint32_t serial, struct wl_surface* surface, struct wl_array*)
     {
         if (!surface)
             return;
@@ -309,6 +309,7 @@ const struct wl_keyboard_listener WaylandSeat::s_keyboardListener = {
         auto& seat = *static_cast<WaylandSeat*>(data);
         seat.m_keyboard.toplevel.reset(toplevelWayland);
         seat.m_keyboard.repeat.key = 0;
+        seat.m_keyboard.serial = serial;
 
         if (GRefPtr<WPEView> view = wpeToplevelWaylandGetVisibleFocusedView(toplevelWayland))
             wpe_view_focus_in(view.get());
@@ -329,6 +330,7 @@ const struct wl_keyboard_listener WaylandSeat::s_keyboardListener = {
         seat.m_keyboard.toplevel = nullptr;
         seat.m_keyboard.repeat.key = 0;
         seat.m_keyboard.repeat.deadline = { };
+        seat.m_keyboard.serial = 0;
 
         if (view)
             wpe_view_focus_out(view.get());

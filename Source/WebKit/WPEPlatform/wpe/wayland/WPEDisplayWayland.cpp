@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WPEDisplayWayland.h"
 
+#include "WPEClipboardWaylandPrivate.h"
 #include "WPEDisplayWaylandPrivate.h"
 #include "WPEEGLError.h"
 #include "WPEExtensions.h"
@@ -73,6 +74,7 @@ struct _WPEDisplayWaylandPrivate {
     struct wl_compositor* wlCompositor;
     struct xdg_wm_base* xdgWMBase;
     struct wl_shm* wlSHM;
+    struct wl_data_device_manager* wlDataDeviceManager;
     struct zwp_linux_dmabuf_v1* linuxDMABuf;
     struct zwp_linux_explicit_synchronization_v1* linuxExplicitSync;
 #if USE(LIBDRM)
@@ -90,6 +92,7 @@ struct _WPEDisplayWaylandPrivate {
     CString drmDevice;
     CString drmRenderNode;
     Vector<GRefPtr<WPEScreen>, 1> screens;
+    GRefPtr<WPEClipboard> clipboard;
     GRefPtr<GSource> eventSource;
 };
 WEBKIT_DEFINE_FINAL_TYPE_WITH_CODE(WPEDisplayWayland, wpe_display_wayland, WPE_TYPE_DISPLAY, WPEDisplay,
@@ -186,6 +189,10 @@ static void wpeDisplayWaylandDispose(GObject* object)
 
     priv->wlSeat = nullptr;
     priv->wlCursor = nullptr;
+    if (priv->clipboard) {
+        wpeClipboardWaylandInvalidate(WPE_CLIPBOARD_WAYLAND(priv->clipboard.get()));
+        priv->clipboard = nullptr;
+    }
     while (!priv->screens.isEmpty()) {
         auto screen = priv->screens.takeLast();
         wpe_screen_invalidate(screen.get());
@@ -206,6 +213,7 @@ static void wpeDisplayWaylandDispose(GObject* object)
     g_clear_pointer(&priv->linuxDMABuf, zwp_linux_dmabuf_v1_destroy);
     g_clear_pointer(&priv->linuxExplicitSync, zwp_linux_explicit_synchronization_v1_destroy);
     g_clear_pointer(&priv->wlSHM, wl_shm_destroy);
+    g_clear_pointer(&priv->wlDataDeviceManager, wl_data_device_manager_destroy);
     g_clear_pointer(&priv->xdgWMBase, xdg_wm_base_destroy);
     g_clear_pointer(&priv->wlCompositor, wl_compositor_destroy);
     g_clear_pointer(&priv->wlDisplay, wl_display_disconnect);
@@ -236,6 +244,8 @@ const struct wl_registry_listener registryListener = {
             wpe_display_screen_added(WPE_DISPLAY(display), screenPtr);
         } else if (interfaceName == "wl_shm"_s)
             priv->wlSHM = static_cast<struct wl_shm*>(wl_registry_bind(registry, name, &wl_shm_interface, 1));
+        else if (interfaceName == "wl_data_device_manager"_s)
+            priv->wlDataDeviceManager = static_cast<struct wl_data_device_manager*>(wl_registry_bind(registry, name, &wl_data_device_manager_interface, std::min<uint32_t>(version, 3)));
         else if (interfaceName == "zwp_linux_dmabuf_v1"_s)
             priv->linuxDMABuf = static_cast<struct zwp_linux_dmabuf_v1*>(wl_registry_bind(registry, name, &zwp_linux_dmabuf_v1_interface, std::min<uint32_t>(version, 4)));
         else if (interfaceName == "zwp_linux_explicit_synchronization_v1"_s)
@@ -375,6 +385,9 @@ static gboolean wpeDisplayWaylandSetup(WPEDisplayWayland* display, GError** erro
         xdg_wm_base_add_listener(priv->xdgWMBase, &xdgWMBaseListener, nullptr);
     if (priv->wlSeat) {
         priv->wlCursor = makeUnique<WPE::WaylandCursor>(display);
+        if (priv->wlDataDeviceManager)
+            priv->clipboard = adoptGRef(wpe_clipboard_wayland_new(display));
+
         priv->wlSeat->setAvailableInputDevicesChangedCallback([weakDisplay = GWeakPtr { display }](WPEAvailableInputDevices devices) {
             if (!weakDisplay)
                 return;
@@ -476,6 +489,12 @@ static WPEKeymap* wpeDisplayWaylandGetKeymap(WPEDisplay* display)
     return priv->wlSeat ? priv->wlSeat->keymap() : nullptr;
 }
 
+static WPEClipboard* wpeDisplayWaylandGetClipboard(WPEDisplay* display)
+{
+    auto* priv = WPE_DISPLAY_WAYLAND(display)->priv;
+    return priv->clipboard.get();
+}
+
 static WPEBufferDMABufFormats* wpeDisplayWaylandGetPreferredDMABufFormats(WPEDisplay* display)
 {
     auto* priv = WPE_DISPLAY_WAYLAND(display)->priv;
@@ -537,6 +556,11 @@ WPE::WaylandCursor* wpeDisplayWaylandGetCursor(WPEDisplayWayland* display)
     return display->priv->wlCursor.get();
 }
 
+struct wl_data_device_manager* wpeDisplayWaylandGetDataDeviceManager(WPEDisplayWayland* display)
+{
+    return display->priv->wlDataDeviceManager;
+}
+
 WPEScreen* wpeDisplayWaylandFindScreen(WPEDisplayWayland* display, struct wl_output* output)
 {
     for (const auto& screen : display->priv->screens) {
@@ -588,6 +612,7 @@ static void wpe_display_wayland_class_init(WPEDisplayWaylandClass* displayWaylan
     displayClass->create_input_method_context = wpeDisplayWaylandCreateInputMethodContext;
     displayClass->get_egl_display = wpeDisplayWaylandGetEGLDisplay;
     displayClass->get_keymap = wpeDisplayWaylandGetKeymap;
+    displayClass->get_clipboard = wpeDisplayWaylandGetClipboard;
     displayClass->get_preferred_dma_buf_formats = wpeDisplayWaylandGetPreferredDMABufFormats;
     displayClass->get_n_screens = wpeDisplayWaylandGetNScreens;
     displayClass->get_screen = wpeDisplayWaylandGetScreen;

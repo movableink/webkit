@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Igalia S.L.
+ * Copyright (C) 2025 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,17 +22,9 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef __WPE_WAYLAND_H__
-#define __WPE_WAYLAND_H__
 
-#define __WPE_WAYLAND_H_INSIDE__
+#pragma once
 
-#include <wpe/wayland/WPEClipboardWayland.h>
-#include <wpe/wayland/WPEDisplayWayland.h>
-#include <wpe/wayland/WPEScreenWayland.h>
-#include <wpe/wayland/WPEToplevelWayland.h>
-#include <wpe/wayland/WPEViewWayland.h>
+#include "WPEClipboardWayland.h"
 
-#undef __WPE_WAYLAND_H_INSIDE__
-
-#endif /* __WPE_PLATFORM_H__ */
+void wpeClipboardWaylandInvalidate(WPEClipboardWayland*);
