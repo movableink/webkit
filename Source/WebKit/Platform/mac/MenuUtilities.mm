@@ -201,6 +201,7 @@ static NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bo
     case WebCore::ContextMenuItemTagTextReplacement:
     case WebCore::ContextMenuItemTagTransformationsMenu:
     case WebCore::ContextMenuItemTagWritingDirectionMenu:
+        return nil;
     case WebCore::ContextMenuItemTagWritingTools:
         return @"apple.writing.tools";
     case WebCore::ContextMenuItemTagProofread:
