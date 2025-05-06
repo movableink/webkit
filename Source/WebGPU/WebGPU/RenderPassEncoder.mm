@@ -1080,12 +1080,6 @@ bool RenderPassEncoder::splitRenderPass()
     m_priorVertexDynamicOffsets.clear();
     m_priorFragmentDynamicOffsets.clear();
 
-    if (!m_splitPassEvent)
-        m_splitPassEvent = [m_device->device() newEvent];
-    ++m_passSplitCount;
-    [parentEncoder->commandBuffer() encodeSignalEvent:m_splitPassEvent value:m_passSplitCount];
-    [parentEncoder->commandBuffer() encodeWaitForEvent:m_splitPassEvent value:m_passSplitCount];
-
     m_renderCommandEncoder = [parentEncoder->commandBuffer() renderCommandEncoderWithDescriptor:m_metalDescriptor];
     parentEncoder->setExistingEncoder(m_renderCommandEncoder);
     if (m_viewport)

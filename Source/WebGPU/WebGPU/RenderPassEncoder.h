@@ -204,8 +204,6 @@ private:
     std::optional<WGPUColor> m_blendColor;
     std::optional<MTLScissorRect> m_scissorRect;
     std::optional<uint32_t> m_stencilReferenceValue;
-    id<MTLEvent> m_splitPassEvent { nil };
-    uint64_t m_passSplitCount { 0 };
     float m_depthClearValue { 0 };
     uint64_t m_drawCount { 0 };
     const uint64_t m_maxDrawCount { 0 };
