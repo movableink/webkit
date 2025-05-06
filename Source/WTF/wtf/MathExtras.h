@@ -412,6 +412,11 @@ constexpr uint32_t roundUpToPowerOfTwo(auto v)
     return std::bit_ceil(v);
 }
 
+constexpr bool isPowerOfTwo(auto value)
+{
+    return std::has_single_bit(value);
+}
+
 constexpr unsigned maskForSize(unsigned size)
 {
     if (!size)
@@ -771,6 +776,73 @@ inline bool isRepresentableAs(double value)
     return isRepresentableAsImpl<ResultType, double, int64_t>(value);
 }
 
+template<typename T>
+ALWAYS_INLINE constexpr T roundUpToMultipleOfImpl(size_t divisor, T x)
+{
+    T remainderMask = static_cast<T>(divisor) - 1;
+    return (x + remainderMask) & ~remainderMask;
+}
+
+// Efficient implementation that takes advantage of powers of two.
+template<typename T>
+inline constexpr T roundUpToMultipleOf(size_t divisor, T x)
+{
+    ASSERT_UNDER_CONSTEXPR_CONTEXT(divisor && isPowerOfTwo(divisor));
+    return roundUpToMultipleOfImpl<T>(divisor, x);
+}
+
+template<size_t divisor> constexpr size_t roundUpToMultipleOf(size_t x)
+{
+    static_assert(divisor && isPowerOfTwo(divisor));
+    return roundUpToMultipleOfImpl(divisor, x);
+}
+
+template<size_t divisor, typename T> inline constexpr T* roundUpToMultipleOf(T* x)
+{
+    static_assert(sizeof(T*) == sizeof(size_t));
+    return reinterpret_cast<T*>(roundUpToMultipleOf<divisor>(reinterpret_cast<size_t>(x)));
+}
+
+template<typename T>
+inline constexpr T roundUpToMultipleOfNonPowerOfTwo(size_t divisor, T x)
+{
+    T remainder = x % divisor;
+    if (!remainder)
+        return x;
+    return x + static_cast<T>(divisor - remainder);
+}
+
+template<typename T, typename C>
+inline constexpr Checked<T, C> roundUpToMultipleOfNonPowerOfTwo(Checked<T, C> divisor, Checked<T, C> x)
+{
+    if (x.hasOverflowed() || divisor.hasOverflowed())
+        return ResultOverflowed;
+    T remainder = x % divisor;
+    if (!remainder)
+        return x;
+    return x + static_cast<T>(divisor.value() - remainder);
+}
+
+template<typename T>
+inline constexpr T roundDownToMultipleOf(size_t divisor, T x)
+{
+    ASSERT_UNDER_CONSTEXPR_CONTEXT(divisor && isPowerOfTwo(divisor));
+    static_assert(sizeof(T) == sizeof(uintptr_t), "sizeof(T) must be equal to sizeof(uintptr_t).");
+    return static_cast<T>(mask(static_cast<uintptr_t>(x), ~(divisor - 1ul)));
+}
+
+template<typename T> inline constexpr T* roundDownToMultipleOf(size_t divisor, T* x)
+{
+    ASSERT_UNDER_CONSTEXPR_CONTEXT(isPowerOfTwo(divisor));
+    return reinterpret_cast<T*>(mask(reinterpret_cast<uintptr_t>(x), ~(divisor - 1ul)));
+}
+
+template<size_t divisor, typename T> constexpr T roundDownToMultipleOf(T x)
+{
+    static_assert(isPowerOfTwo(divisor), "'divisor' must be a power of two.");
+    return roundDownToMultipleOf(divisor, x);
+}
+
 } // namespace WTF
 
 using WTF::shuffleVector;
@@ -781,6 +853,10 @@ using WTF::getMSBSet;
 using WTF::isNaNConstExpr;
 using WTF::fabsConstExpr;
 using WTF::reverseBits32;
+using WTF::roundDownToMultipleOf;
+using WTF::roundUpToMultipleOf;
+using WTF::roundUpToMultipleOfNonPowerOfTwo;
 using WTF::roundUpToPowerOfTwo;
 using WTF::isIdentical;
 using WTF::isRepresentableAs;
+using WTF::isPowerOfTwo;

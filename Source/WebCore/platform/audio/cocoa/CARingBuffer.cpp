@@ -52,7 +52,7 @@ CARingBuffer::CARingBuffer(size_t bytesPerFrame, size_t frameCount, uint32_t num
     , m_frameCount(frameCount)
     , m_capacityBytes(computeCapacityBytes(bytesPerFrame, frameCount))
 {
-    ASSERT(WTF::isPowerOfTwo(frameCount));
+    ASSERT(isPowerOfTwo(frameCount));
 }
 
 CARingBuffer::~CARingBuffer() = default;
