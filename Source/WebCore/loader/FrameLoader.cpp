@@ -3514,11 +3514,11 @@ void FrameLoader::loadPostRequest(FrameLoadRequest&& request, const String& refe
     NewFrameOpenerPolicy openerPolicy = request.newFrameOpenerPolicy();
 
     const ResourceRequest& inRequest = request.resourceRequest();
-    URL url = inRequest.url();
+    const URL& url = inRequest.url();
     const String& contentType = inRequest.httpContentType();
     String origin = inRequest.httpOrigin();
 
-    ResourceRequest workingResourceRequest(WTFMove(url));
+    ResourceRequest workingResourceRequest(URL { url });
 
     if (!referrer.isEmpty())
         workingResourceRequest.setHTTPReferrer(referrer);
