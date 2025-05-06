@@ -553,6 +553,9 @@ _SKIPPED_FILES_WITHOUT_WARNING = [
 
     # Skia.
     os.path.join('Source', 'ThirdParty', 'skia'),
+
+    # test262 tests are imported.
+    os.path.join('JSTests', 'test262'),
     ]
 
 # Extensions of files which are allowed to contain carriage returns.
