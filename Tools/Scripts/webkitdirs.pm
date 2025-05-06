@@ -2491,13 +2491,20 @@ sub isCachedArgumentfileOutOfDate($@)
     }
 
     open(CONTENTS_FILE, $filename);
+    local $/; # Slurp whole input file at once.
     chomp(my $previousContents = <CONTENTS_FILE> || "");
     close(CONTENTS_FILE);
 
-    if ($previousContents ne $currentContents) {
-        print "Contents for file $filename have changed.\n";
-        print "Previous contents were: $previousContents\n\n";
-        print "New contents are: $currentContents\n";
+    my %old_lines = map { $_ => 1 } split /\n/, $previousContents;
+    my %new_lines = map { $_ => 1 } split /\n/, $currentContents;
+
+    my @removed = sort grep { !exists $new_lines{$_} } keys %old_lines;
+    my @added   = sort grep { !exists $old_lines{$_} } keys %new_lines;
+
+    if (@removed or @added) {
+        print "Contents for file $filename have changed:\n";
+        print "- $_\n" for @removed;
+        print "+ $_\n" for @added;
         return 1;
     }
 
@@ -2672,11 +2679,20 @@ sub shouldRemoveCMakeCache(@)
     # We check this first, because we always want to create this file for a fresh build.
     my $productDir = productDir();
     my $optionsCache = File::Spec->catdir($productDir, "build-webkit-options.txt");
-    my $joinedBuildArgs = join(" ", @buildArgs);
-    if (isCachedArgumentfileOutOfDate($optionsCache, $joinedBuildArgs)) {
+    my $buildArgsEnv = "ARGS=" . join(" ", @buildArgs);
+    my @relevantEnvFlags = ( "AR", "AS", "CC", "CXX", "LD", "NM", "RANLIB", "STRIP", # Toolchain
+                             "CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS", # Compiler and linker flags
+                             "PKG_CONFIG_LIBDIR", "PKG_CONFIG_PATH", # pkg-config
+                             "CPATH", "LIBRARY_PATH", # GCC/Clang include/lib helpers
+                             "CMAKE_MODULE_PATH", "CMAKE_PREFIX_PATH"); # CMake-specific
+    for my $envFlag (@relevantEnvFlags) {
+        my $flagValue = $ENV{$envFlag} || "";
+            $buildArgsEnv .= "\n" . $envFlag . "=" . $flagValue;
+    }
+    if (isCachedArgumentfileOutOfDate($optionsCache, $buildArgsEnv)) {
         File::Path::mkpath($productDir) unless -d $productDir;
         open(CACHED_ARGUMENTS, ">", $optionsCache);
-        print CACHED_ARGUMENTS $joinedBuildArgs;
+        print CACHED_ARGUMENTS $buildArgsEnv;
         close(CACHED_ARGUMENTS);
 
         return 1;
@@ -2740,7 +2756,10 @@ sub removeCMakeCache(@)
     my (@buildArgs) = @_;
     if (shouldRemoveCMakeCache(@buildArgs)) {
         my $cmakeCache = cmakeCachePath();
-        unlink($cmakeCache) if -e $cmakeCache;
+        if (-e $cmakeCache) {
+            print "Removing CMake Cache at " . $cmakeCache . "\n";
+            unlink($cmakeCache);
+        }
     }
 }
 
