@@ -39,36 +39,321 @@
 
 namespace WebCore {
 
+// Below contains two implementations per path element implementation:
+// the member to add the path element to the PathCG, and correspoding implementation
+// for adding path segment directly to the CGContext. Keep these in sync.
+
+static void addToCGPath(CGMutablePathRef, const PathSegment&);
+
+static inline void addToCGPath(CGMutablePathRef path, const PathCloseSubpath&)
+{
+    CGPathCloseSubpath(path);
+}
+
+static inline void addToCGContextPath(CGContextRef context, const PathCloseSubpath&)
+{
+    CGContextClosePath(context);
+}
+
+static inline void addToCGPath(CGMutablePathRef path, const PathMoveTo& moveTo)
+{
+    CGPathMoveToPoint(path, nullptr, moveTo.point.x(), moveTo.point.y());
+}
+
+static inline void addToCGContextPath(CGContextRef context, const PathMoveTo& segment)
+{
+    CGContextMoveToPoint(context, segment.point.x(), segment.point.y());
+}
+
+static inline void addToCGPath(CGMutablePathRef path, const PathLineTo& lineTo)
+{
+    CGPathAddLineToPoint(path, nullptr, lineTo.point.x(), lineTo.point.y());
+}
+
+static inline void addToCGContextPath(CGContextRef context, const PathLineTo& segment)
+{
+    CGContextAddLineToPoint(context, segment.point.x(), segment.point.y());
+}
+
+static inline void addToCGPath(CGMutablePathRef path, const PathQuadCurveTo& quadTo)
+{
+    CGPathAddQuadCurveToPoint(path, nullptr, quadTo.controlPoint.x(), quadTo.controlPoint.y(), quadTo.endPoint.x(), quadTo.endPoint.y());
+}
+
+static inline void addToCGContextPath(CGContextRef context, const PathQuadCurveTo& segment)
+{
+    CGContextAddQuadCurveToPoint(context, segment.controlPoint.x(), segment.controlPoint.y(), segment.endPoint.x(), segment.endPoint.y());
+}
+
+static inline void addToCGPath(CGMutablePathRef path, const PathBezierCurveTo& bezierTo)
+{
+    CGPathAddCurveToPoint(path, nullptr, bezierTo.controlPoint1.x(), bezierTo.controlPoint1.y(), bezierTo.controlPoint2.x(), bezierTo.controlPoint2.y(), bezierTo.endPoint.x(), bezierTo.endPoint.y());
+}
+
+static inline void addToCGContextPath(CGContextRef context, const PathBezierCurveTo& segment)
+{
+    CGContextAddCurveToPoint(context, segment.controlPoint1.x(), segment.controlPoint1.y(), segment.controlPoint2.x(), segment.controlPoint2.y(), segment.endPoint.x(), segment.endPoint.y());
+}
+
+static inline void addToCGPath(CGMutablePathRef path, const PathArcTo& arcTo)
+{
+    CGPathAddArcToPoint(path, nullptr, arcTo.controlPoint1.x(), arcTo.controlPoint1.y(), arcTo.controlPoint2.x(), arcTo.controlPoint2.y(), arcTo.radius);
+}
+
+static inline void addToCGContextPath(CGContextRef context, const PathArcTo& segment)
+{
+    CGContextAddArcToPoint(context, segment.controlPoint1.x(), segment.controlPoint1.y(), segment.controlPoint2.x(), segment.controlPoint2.y(), segment.radius);
+}
+
+static inline void addToCGPath(CGMutablePathRef path, const PathArc& arc)
+{
+    // CG's coordinate system increases the angle in the anticlockwise direction.
+    CGPathAddArc(path, nullptr, arc.center.x(), arc.center.y(), arc.radius, arc.startAngle, arc.endAngle, arc.direction == RotationDirection::Counterclockwise);
+}
+
+static inline void addToCGContextPath(CGContextRef context, const PathArc& segment)
+{
+    CGContextAddArc(context, segment.center.x(), segment.center.y(), segment.radius, segment.startAngle, segment.endAngle, segment.direction == RotationDirection::Counterclockwise);
+}
+
+static inline void addToCGPath(CGMutablePathRef path, const PathClosedArc& closedArc)
+{
+    addToCGPath(path, closedArc.arc);
+    addToCGPath(path, PathCloseSubpath());
+}
+
+static inline void addToCGContextPath(CGContextRef context, const PathClosedArc& segment)
+{
+    addToCGContextPath(context, segment.arc);
+    CGContextClosePath(context);
+}
+
+static inline AffineTransform ellipseTransform(const PathEllipse& ellipse)
+{
+    AffineTransform transform;
+    transform.translate(ellipse.center.x(), ellipse.center.y()).rotateRadians(ellipse.rotation).scale(ellipse.radiusX, ellipse.radiusY);
+    return transform;
+}
+
+static inline void addToCGPath(CGMutablePathRef path, const PathEllipse& ellipse)
+{
+    CGAffineTransform cgTransform = ellipseTransform(ellipse);
+    // CG coordinates system increases the angle in the anticlockwise direction.
+    CGPathAddArc(path, &cgTransform, 0, 0, 1, ellipse.startAngle, ellipse.endAngle, ellipse.direction == RotationDirection::Counterclockwise);
+}
+
+static inline void addToCGContextPath(CGContextRef context, const PathEllipse& segment)
+{
+    CGAffineTransform oldTransform = CGContextGetCTM(context);
+    CGContextConcatCTM(context, ellipseTransform(segment));
+    // CG coordinates system increases the angle in the anticlockwise direction.
+    CGContextAddArc(context, 0, 0, 1, segment.startAngle, segment.endAngle, segment.direction == RotationDirection::Counterclockwise);
+    CGContextSetCTM(context, oldTransform);
+}
+
+static inline void addToCGPath(CGMutablePathRef path, const PathEllipseInRect& ellipseInRect)
+{
+    CGPathAddEllipseInRect(path, nullptr, ellipseInRect.rect);
+}
+
+static inline void addToCGContextPath(CGContextRef context, const PathEllipseInRect& segment)
+{
+    CGContextAddEllipseInRect(context, segment.rect);
+}
+
+static inline void addToCGPath(CGMutablePathRef path, const PathRect& rect)
+{
+    CGPathAddRect(path, nullptr, rect.rect);
+}
+
+static inline void addToCGContextPath(CGContextRef context, const PathRect& segment)
+{
+    CGContextAddRect(context, segment.rect);
+}
+
+static void addEvenCornersRoundedRect(PlatformPathPtr platformPath, const FloatRect& rect, const FloatSize& radius)
+{
+    // Ensure that CG can render the rounded rect.
+    CGFloat radiusWidth = radius.width();
+    CGFloat radiusHeight = radius.height();
+    CGRect rectToDraw = rect;
+
+    CGFloat rectWidth = CGRectGetWidth(rectToDraw);
+    CGFloat rectHeight = CGRectGetHeight(rectToDraw);
+    if (2 * radiusWidth > rectWidth)
+        radiusWidth = rectWidth / 2 - std::numeric_limits<CGFloat>::epsilon();
+    if (2 * radiusHeight > rectHeight)
+        radiusHeight = rectHeight / 2 - std::numeric_limits<CGFloat>::epsilon();
+    CGPathAddRoundedRect(platformPath, nullptr, rectToDraw, radiusWidth, radiusHeight);
+}
+
+#if HAVE(CG_PATH_UNEVEN_CORNERS_ROUNDEDRECT)
+static void addUnevenCornersRoundedRect(CGMutablePathRef platformPath, const FloatRoundedRect& roundedRect)
+{
+    enum Corners {
+        BottomLeft,
+        BottomRight,
+        TopRight,
+        TopLeft
+    };
+
+    std::array<CGSize, 4> corners {
+        roundedRect.radii().bottomLeft(),
+        roundedRect.radii().bottomRight(),
+        roundedRect.radii().topRight(),
+        roundedRect.radii().topLeft()
+    };
+
+    CGRect rectToDraw = roundedRect.rect();
+    CGFloat rectWidth = CGRectGetWidth(rectToDraw);
+    CGFloat rectHeight = CGRectGetHeight(rectToDraw);
+
+    // Clamp the radii after conversion to CGFloats.
+    corners[TopRight].width = std::min(corners[TopRight].width, rectWidth - corners[TopLeft].width);
+    corners[BottomRight].width = std::min(corners[BottomRight].width, rectWidth - corners[BottomLeft].width);
+    corners[BottomLeft].height = std::min(corners[BottomLeft].height, rectHeight - corners[TopLeft].height);
+    corners[BottomRight].height = std::min(corners[BottomRight].height, rectHeight - corners[TopRight].height);
+
+    CGPathAddUnevenCornersRoundedRect(platformPath, nullptr, rectToDraw, corners.data());
+}
+#endif
+
+static inline void addToCGPath(CGMutablePathRef path, const PathRoundedRect& roundedRect)
+{
+    if (roundedRect.strategy == PathRoundedRect::Strategy::PreferNative) {
+        const auto& radii = roundedRect.roundedRect.radii();
+
+        if (radii.hasEvenCorners()) {
+            addEvenCornersRoundedRect(path, roundedRect.roundedRect.rect(), radii.topLeft());
+            return;
+        }
+
+#if HAVE(CG_PATH_UNEVEN_CORNERS_ROUNDEDRECT)
+        addUnevenCornersRoundedRect(path, roundedRect.roundedRect);
+        return;
+#endif
+    }
+
+    for (auto& segment : PathImpl::beziersForRoundedRect(roundedRect.roundedRect))
+        addToCGPath(path, segment);
+}
+
+static inline void addToCGPath(CGMutablePathRef path, const PathContinuousRoundedRect& continuousRoundedRect)
+{
+#if HAVE(CG_PATH_CONTINUOUS_ROUNDED_RECT)
+    CGPathAddContinuousRoundedRect(path, nullptr, continuousRoundedRect.rect, continuousRoundedRect.cornerWidth, continuousRoundedRect.cornerHeight);
+#else
+    // Continuous rounded rects are unavailable. Paint a normal rounded rect instead.
+    // FIXME: Determine if PreferNative is the optimal strategy here.
+    addToCGPath(path, PathRoundedRect { FloatRoundedRect { continuousRoundedRect.rect, FloatRoundedRect::Radii { continuousRoundedRect.cornerWidth, continuousRoundedRect.cornerHeight } }, PathRoundedRect::Strategy::PreferNative });
+#endif
+}
+
+static inline void addToCGContextPath(CGContextRef context, const PathRoundedRect& segment)
+{
+    // No API to add rounded rects to context.
+    RetainPtr path = adoptCF(CGPathCreateMutable());
+    addToCGPath(path.get(), segment);
+    // CGContextAddPath has a bug with existing MoveToPoints in context path.
+    // rdar://118395262
+    auto ctm = CGContextGetCTM(context);
+    RetainPtr transformedPath = adoptCF(CGPathCreateCopyByTransformingPath(path.get(), &ctm));
+    CGContextSetCTM(context, CGAffineTransformIdentity);
+    CGContextAddPath(context, transformedPath.get());
+    CGContextSetCTM(context, ctm);
+}
+
+static inline void addToCGContextPath(CGContextRef context, const PathContinuousRoundedRect& segment)
+{
+    // No API to add continuous rounded rects to context.
+    RetainPtr path = adoptCF(CGPathCreateMutable());
+    addToCGPath(path.get(), segment);
+    // CGContextAddPath has a bug with existing MoveToPoints in context path.
+    // rdar://118395262
+    auto ctm = CGContextGetCTM(context);
+    RetainPtr transformedPath = adoptCF(CGPathCreateCopyByTransformingPath(path.get(), &ctm));
+    CGContextSetCTM(context, CGAffineTransformIdentity);
+    CGContextAddPath(context, transformedPath.get());
+    CGContextSetCTM(context, ctm);
+}
+
+static inline void addToCGPath(CGMutablePathRef path, const PathDataLine& segment)
+{
+    addToCGPath(path, PathMoveTo { segment.start() });
+    addToCGPath(path, PathLineTo { segment.end() });
+}
+
+static inline void addToCGContextPath(CGContextRef context, const PathDataLine& segment)
+{
+    addToCGContextPath(context, PathMoveTo { segment.start() });
+    addToCGContextPath(context, PathLineTo { segment.end() });
+}
+
+static inline void addToCGPath(CGMutablePathRef path, const PathDataQuadCurve& segment)
+{
+    addToCGPath(path, PathMoveTo { segment.start });
+    addToCGPath(path, PathQuadCurveTo { segment.controlPoint, segment.endPoint });
+}
+
+static inline void addToCGContextPath(CGContextRef context, const PathDataQuadCurve& segment)
+{
+    addToCGContextPath(context, PathMoveTo { segment.start });
+    addToCGContextPath(context, PathQuadCurveTo { segment.controlPoint, segment.endPoint });
+}
+
+static inline void addToCGPath(CGMutablePathRef path, const PathDataBezierCurve& segment)
+{
+    addToCGPath(path, PathMoveTo { segment.start });
+    addToCGPath(path, PathBezierCurveTo { segment.controlPoint1, segment.controlPoint2, segment.endPoint });
+}
+
+static inline void addToCGContextPath(CGContextRef context, const PathDataBezierCurve& segment)
+{
+    addToCGContextPath(context, PathMoveTo { segment.start });
+    addToCGContextPath(context, PathBezierCurveTo { segment.controlPoint1, segment.controlPoint2, segment.endPoint });
+}
+
+static inline void addToCGPath(CGMutablePathRef path, const PathDataArc& segment)
+{
+    addToCGPath(path, PathMoveTo { segment.start });
+    addToCGPath(path, PathArcTo { segment.controlPoint1, segment.controlPoint2, segment.radius });
+}
+
+static inline void addToCGContextPath(CGContextRef context, const PathDataArc& segment)
+{
+    addToCGContextPath(context, PathMoveTo { segment.start });
+    addToCGContextPath(context, PathArcTo { segment.controlPoint1, segment.controlPoint2, segment.radius });
+}
+
+inline void addToCGPath(CGMutablePathRef path, const PathSegment& anySegment)
+{
+    WTF::switchOn(anySegment.data(),
+        [&](auto&& segment) {
+            addToCGPath(path, segment);
+        });
+}
+
+static inline void addToCGContextPath(CGContextRef context, const PathSegment& anySegment)
+{
+    WTF::switchOn(anySegment.data(),
+        [&](auto&& segment) {
+            addToCGContextPath(context, segment);
+        });
+}
+
 WTF_MAKE_TZONE_ALLOCATED_IMPL(PathCG);
 
-Ref<PathCG> PathCG::create()
+Ref<PathCG> PathCG::create(std::span<const PathSegment> segments)
 {
-    return adoptRef(*new PathCG);
-}
-
-Ref<PathCG> PathCG::create(const PathSegment& segment)
-{
-    auto pathCG = PathCG::create();
-    pathCG->addSegment(segment);
-    return pathCG;
-}
-
-Ref<PathCG> PathCG::create(const PathStream& stream)
-{
-    auto pathCG = PathCG::create();
-    for (auto& segment : stream.segments())
-        pathCG->addSegment(segment);
-    return pathCG;
+    RetainPtr platformPath = adoptCF(CGPathCreateMutable());
+    for (auto& segment : segments)
+        addToCGPath(platformPath.get(), segment);
+    return PathCG::create(WTFMove(platformPath));
 }
 
 Ref<PathCG> PathCG::create(RetainPtr<CGMutablePathRef>&& platformPath)
 {
     return adoptRef(*new PathCG(WTFMove(platformPath)));
-}
-
-PathCG::PathCG()
-    : m_platformPath(adoptCF(CGPathCreateMutable()))
-{
 }
 
 PathCG::PathCG(RetainPtr<CGMutablePathRef>&& platformPath)
@@ -111,239 +396,69 @@ PlatformPathPtr PathCG::ensureMutablePlatformPath()
     return m_platformPath.get();
 }
 
-// Below contains two implementations per path element implementation:
-// the member to add the path element to the PathCG, and correspoding implementation
-// for adding path segment directly to the CGContext. Keep these in sync.
-
 void PathCG::add(PathMoveTo moveTo)
 {
-    CGPathMoveToPoint(ensureMutablePlatformPath(), nullptr, moveTo.point.x(), moveTo.point.y());
-}
-
-static inline void addToCGContextPath(CGContextRef context, PathMoveTo segment)
-{
-    CGContextMoveToPoint(context, segment.point.x(), segment.point.y());
+    addToCGPath(ensureMutablePlatformPath(), moveTo);
 }
 
 void PathCG::add(PathLineTo lineTo)
 {
-    CGPathAddLineToPoint(ensureMutablePlatformPath(), nullptr, lineTo.point.x(), lineTo.point.y());
-}
-
-static inline void addToCGContextPath(CGContextRef context, PathLineTo segment)
-{
-    CGContextAddLineToPoint(context, segment.point.x(), segment.point.y());
+    addToCGPath(ensureMutablePlatformPath(), lineTo);
 }
 
 void PathCG::add(PathQuadCurveTo quadTo)
 {
-    CGPathAddQuadCurveToPoint(ensureMutablePlatformPath(), nullptr, quadTo.controlPoint.x(), quadTo.controlPoint.y(), quadTo.endPoint.x(), quadTo.endPoint.y());
-}
-
-static inline void addToCGContextPath(CGContextRef context, PathQuadCurveTo segment)
-{
-    CGContextAddQuadCurveToPoint(context, segment.controlPoint.x(), segment.controlPoint.y(), segment.endPoint.x(), segment.endPoint.y());
+    addToCGPath(ensureMutablePlatformPath(), quadTo);
 }
 
 void PathCG::add(PathBezierCurveTo bezierTo)
 {
-    CGPathAddCurveToPoint(ensureMutablePlatformPath(), nullptr, bezierTo.controlPoint1.x(), bezierTo.controlPoint1.y(), bezierTo.controlPoint2.x(), bezierTo.controlPoint2.y(), bezierTo.endPoint.x(), bezierTo.endPoint.y());
-}
-
-static inline void addToCGContextPath(CGContextRef context, PathBezierCurveTo segment)
-{
-    CGContextAddCurveToPoint(context, segment.controlPoint1.x(), segment.controlPoint1.y(), segment.controlPoint2.x(), segment.controlPoint2.y(), segment.endPoint.x(), segment.endPoint.y());
+    addToCGPath(ensureMutablePlatformPath(), bezierTo);
 }
 
 void PathCG::add(PathArcTo arcTo)
 {
-    CGPathAddArcToPoint(ensureMutablePlatformPath(), nullptr, arcTo.controlPoint1.x(), arcTo.controlPoint1.y(), arcTo.controlPoint2.x(), arcTo.controlPoint2.y(), arcTo.radius);
-}
-
-static inline void addToCGContextPath(CGContextRef context, PathArcTo segment)
-{
-    CGContextAddArcToPoint(context, segment.controlPoint1.x(), segment.controlPoint1.y(), segment.controlPoint2.x(), segment.controlPoint2.y(), segment.radius);
+    addToCGPath(ensureMutablePlatformPath(), arcTo);
 }
 
 void PathCG::add(PathArc arc)
 {
-    // CG's coordinate system increases the angle in the anticlockwise direction.
-    CGPathAddArc(ensureMutablePlatformPath(), nullptr, arc.center.x(), arc.center.y(), arc.radius, arc.startAngle, arc.endAngle, arc.direction == RotationDirection::Counterclockwise);
-}
-
-static inline void addToCGContextPath(CGContextRef context, PathArc segment)
-{
-    CGContextAddArc(context, segment.center.x(), segment.center.y(), segment.radius, segment.startAngle, segment.endAngle, segment.direction == RotationDirection::Counterclockwise);
+    addToCGPath(ensureMutablePlatformPath(), arc);
 }
 
 void PathCG::add(PathClosedArc closedArc)
 {
-    add(closedArc.arc);
-    add(PathCloseSubpath());
-}
-
-static inline void addToCGContextPath(CGContextRef context, PathClosedArc segment)
-{
-    addToCGContextPath(context, segment.arc);
-    CGContextClosePath(context);
-}
-
-static inline AffineTransform ellipseTransform(const PathEllipse& ellipse)
-{
-    AffineTransform transform;
-    transform.translate(ellipse.center.x(), ellipse.center.y()).rotateRadians(ellipse.rotation).scale(ellipse.radiusX, ellipse.radiusY);
-    return transform;
+    addToCGPath(ensureMutablePlatformPath(), closedArc);
 }
 
 void PathCG::add(PathEllipse ellipse)
 {
-    CGAffineTransform cgTransform = ellipseTransform(ellipse);
-    // CG coordinates system increases the angle in the anticlockwise direction.
-    CGPathAddArc(ensureMutablePlatformPath(), &cgTransform, 0, 0, 1, ellipse.startAngle, ellipse.endAngle, ellipse.direction == RotationDirection::Counterclockwise);
-}
-
-static inline void addToCGContextPath(CGContextRef context, PathEllipse segment)
-{
-    CGAffineTransform oldTransform = CGContextGetCTM(context);
-    CGContextConcatCTM(context, ellipseTransform(segment));
-    // CG coordinates system increases the angle in the anticlockwise direction.
-    CGContextAddArc(context, 0, 0, 1, segment.startAngle, segment.endAngle, segment.direction == RotationDirection::Counterclockwise);
-    CGContextSetCTM(context, oldTransform);
+    addToCGPath(ensureMutablePlatformPath(), ellipse);
 }
 
 void PathCG::add(PathEllipseInRect ellipseInRect)
 {
-    CGPathAddEllipseInRect(ensureMutablePlatformPath(), nullptr, ellipseInRect.rect);
-}
-
-static inline void addToCGContextPath(CGContextRef context, PathEllipseInRect segment)
-{
-    CGContextAddEllipseInRect(context, segment.rect);
+    addToCGPath(ensureMutablePlatformPath(), ellipseInRect);
 }
 
 void PathCG::add(PathRect rect)
 {
-    CGPathAddRect(ensureMutablePlatformPath(), nullptr, rect.rect);
+    addToCGPath(ensureMutablePlatformPath(), rect);
 }
-
-static inline void addToCGContextPath(CGContextRef context, PathRect segment)
-{
-    CGContextAddRect(context, segment.rect);
-}
-
-static void addEvenCornersRoundedRect(PlatformPathPtr platformPath, const FloatRect& rect, const FloatSize& radius)
-{
-    // Ensure that CG can render the rounded rect.
-    CGFloat radiusWidth = radius.width();
-    CGFloat radiusHeight = radius.height();
-    CGRect rectToDraw = rect;
-
-    CGFloat rectWidth = CGRectGetWidth(rectToDraw);
-    CGFloat rectHeight = CGRectGetHeight(rectToDraw);
-    if (2 * radiusWidth > rectWidth)
-        radiusWidth = rectWidth / 2 - std::numeric_limits<CGFloat>::epsilon();
-    if (2 * radiusHeight > rectHeight)
-        radiusHeight = rectHeight / 2 - std::numeric_limits<CGFloat>::epsilon();
-    CGPathAddRoundedRect(platformPath, nullptr, rectToDraw, radiusWidth, radiusHeight);
-}
-
-#if HAVE(CG_PATH_UNEVEN_CORNERS_ROUNDEDRECT)
-static void addUnevenCornersRoundedRect(PlatformPathPtr platformPath, const FloatRoundedRect& roundedRect)
-{
-    enum Corners {
-        BottomLeft,
-        BottomRight,
-        TopRight,
-        TopLeft
-    };
-
-    std::array<CGSize, 4> corners {
-        roundedRect.radii().bottomLeft(),
-        roundedRect.radii().bottomRight(),
-        roundedRect.radii().topRight(),
-        roundedRect.radii().topLeft()
-    };
-
-    CGRect rectToDraw = roundedRect.rect();
-    CGFloat rectWidth = CGRectGetWidth(rectToDraw);
-    CGFloat rectHeight = CGRectGetHeight(rectToDraw);
-
-    // Clamp the radii after conversion to CGFloats.
-    corners[TopRight].width = std::min(corners[TopRight].width, rectWidth - corners[TopLeft].width);
-    corners[BottomRight].width = std::min(corners[BottomRight].width, rectWidth - corners[BottomLeft].width);
-    corners[BottomLeft].height = std::min(corners[BottomLeft].height, rectHeight - corners[TopLeft].height);
-    corners[BottomRight].height = std::min(corners[BottomRight].height, rectHeight - corners[TopRight].height);
-
-    CGPathAddUnevenCornersRoundedRect(platformPath, nullptr, rectToDraw, corners.data());
-}
-#endif
 
 void PathCG::add(PathRoundedRect roundedRect)
 {
-    if (roundedRect.strategy == PathRoundedRect::Strategy::PreferNative) {
-        const auto& radii = roundedRect.roundedRect.radii();
-
-        if (radii.hasEvenCorners()) {
-            addEvenCornersRoundedRect(ensureMutablePlatformPath(), roundedRect.roundedRect.rect(), radii.topLeft());
-            return;
-        }
-
-#if HAVE(CG_PATH_UNEVEN_CORNERS_ROUNDEDRECT)
-        addUnevenCornersRoundedRect(ensureMutablePlatformPath(), roundedRect.roundedRect);
-        return;
-#endif
-    }
-
-    addBeziersForRoundedRect(roundedRect.roundedRect);
+    addToCGPath(ensureMutablePlatformPath(), roundedRect);
 }
 
 void PathCG::add(PathContinuousRoundedRect continuousRoundedRect)
 {
-#if HAVE(CG_PATH_CONTINUOUS_ROUNDED_RECT)
-    CGPathAddContinuousRoundedRect(ensureMutablePlatformPath(), nullptr, continuousRoundedRect.rect, continuousRoundedRect.cornerWidth, continuousRoundedRect.cornerHeight);
-#else
-    // Continuous rounded rects are unavailable. Paint a normal rounded rect instead.
-    // FIXME: Determine if PreferNative is the optimal strategy here.
-    add(PathRoundedRect { FloatRoundedRect { continuousRoundedRect.rect, FloatRoundedRect::Radii { continuousRoundedRect.cornerWidth, continuousRoundedRect.cornerHeight } }, PathRoundedRect::Strategy::PreferNative });
-#endif
+    addToCGPath(ensureMutablePlatformPath(), continuousRoundedRect);
 }
 
-static inline void addToCGContextPath(CGContextRef context, PathRoundedRect segment)
+void PathCG::add(PathCloseSubpath closeSubPath)
 {
-    // No API to add rounded rects to context.
-    Ref path = PathCG::create();
-    path->add(WTFMove(segment));
-    // CGContextAddPath has a bug with existing MoveToPoints in context path.
-    // rdar://118395262
-    auto ctm = CGContextGetCTM(context);
-    auto transformedPath = adoptCF(CGPathCreateCopyByTransformingPath(path->platformPath(), &ctm));
-    CGContextSetCTM(context, CGAffineTransformIdentity);
-    CGContextAddPath(context, transformedPath.get());
-    CGContextSetCTM(context, ctm);
-}
-
-static inline void addToCGContextPath(CGContextRef context, PathContinuousRoundedRect segment)
-{
-    // No API to add continuous rounded rects to context.
-    auto path = PathCG::create();
-    path->add(WTFMove(segment));
-    // CGContextAddPath has a bug with existing MoveToPoints in context path.
-    // rdar://118395262
-    auto ctm = CGContextGetCTM(context);
-    auto transformedPath = adoptCF(CGPathCreateCopyByTransformingPath(path->platformPath(), &ctm));
-    CGContextSetCTM(context, CGAffineTransformIdentity);
-    CGContextAddPath(context, transformedPath.get());
-    CGContextSetCTM(context, ctm);
-}
-
-void PathCG::add(PathCloseSubpath)
-{
-    CGPathCloseSubpath(ensureMutablePlatformPath());
-}
-
-static inline void addToCGContextPath(CGContextRef context, PathCloseSubpath)
-{
-    CGContextClosePath(context);
+    addToCGPath(ensureMutablePlatformPath(), closeSubPath);
 }
 
 void PathCG::addPath(const PathCG& path, const AffineTransform& transform)
@@ -545,38 +660,6 @@ FloatRect PathCG::strokeBoundingRect(NOESCAPE const Function<void(GraphicsContex
     CGContextRestoreGState(context);
 
     return zeroRectIfNull(box);
-}
-
-static inline void addToCGContextPath(CGContextRef context, PathDataLine segment)
-{
-    addToCGContextPath(context, PathMoveTo { segment.start() });
-    addToCGContextPath(context, PathLineTo { segment.end() });
-}
-
-static inline void addToCGContextPath(CGContextRef context, PathDataQuadCurve segment)
-{
-    addToCGContextPath(context, PathMoveTo { segment.start });
-    addToCGContextPath(context, PathQuadCurveTo { segment.controlPoint, segment.endPoint });
-}
-
-static inline void addToCGContextPath(CGContextRef context, PathDataBezierCurve segment)
-{
-    addToCGContextPath(context, PathMoveTo { segment.start });
-    addToCGContextPath(context, PathBezierCurveTo { segment.controlPoint1, segment.controlPoint2, segment.endPoint });
-}
-
-static inline void addToCGContextPath(CGContextRef context, PathDataArc segment)
-{
-    addToCGContextPath(context, PathMoveTo { segment.start });
-    addToCGContextPath(context, PathArcTo { segment.controlPoint1, segment.controlPoint2, segment.radius });
-}
-
-static inline void addToCGContextPath(CGContextRef context, PathSegment anySegment)
-{
-    WTF::switchOn(WTFMove(anySegment).data(),
-        [&](auto&& segment) {
-            addToCGContextPath(context, WTFMove(segment));
-        });
 }
 
 void addToCGContextPath(CGContextRef context, const Path& path)

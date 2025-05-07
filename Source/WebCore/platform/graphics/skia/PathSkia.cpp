@@ -42,22 +42,10 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 namespace WebCore {
 
-Ref<PathSkia> PathSkia::create()
+Ref<PathSkia> PathSkia::create(std::span<const PathSegment> segments)
 {
-    return adoptRef(*new PathSkia);
-}
-
-Ref<PathSkia> PathSkia::create(const PathSegment& segment)
-{
-    auto pathSkia = PathSkia::create();
-    pathSkia->addSegment(segment);
-    return pathSkia;
-}
-
-Ref<PathSkia> PathSkia::create(const PathStream& stream)
-{
-    auto pathSkia = PathSkia::create();
-    for (auto& segment : stream.segments())
+    Ref pathSkia = adoptRef(*new PathSkia);
+    for (auto& segment : segments)
         pathSkia->addSegment(segment);
     return pathSkia;
 }
@@ -191,8 +179,10 @@ void PathSkia::add(PathRoundedRect roundedRect)
 {
     if (roundedRect.strategy == PathRoundedRect::Strategy::PreferNative)
         m_platformPath.addRRect(roundedRect.roundedRect);
-    else
-        addBeziersForRoundedRect(roundedRect.roundedRect);
+    else {
+        for (auto& segment : beziersForRoundedRect(roundedRect.roundedRect))
+            addSegment(segment);
+    }
 }
 
 void PathSkia::add(PathContinuousRoundedRect continuousRoundedRect)

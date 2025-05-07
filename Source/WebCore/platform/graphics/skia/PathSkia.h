@@ -42,10 +42,7 @@ class PathStream;
 
 class PathSkia final : public PathImpl {
 public:
-    static Ref<PathSkia> create();
-    static Ref<PathSkia> create(const PathSegment&);
-    static Ref<PathSkia> create(const PathStream&);
-    static Ref<PathSkia> create(SkPath&&, RefPtr<PathStream>&&);
+    static Ref<PathSkia> create(std::span<const PathSegment> = { });
 
     PlatformPathPtr platformPath() const;
 

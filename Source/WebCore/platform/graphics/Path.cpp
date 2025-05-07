@@ -96,12 +96,12 @@ PathImpl& Path::setImpl(Ref<PathImpl>&& impl)
 
 PlatformPathImpl& Path::ensurePlatformPathImpl()
 {
-    if (auto segment = asSingle())
-        return downcast<PlatformPathImpl>(setImpl(PlatformPathImpl::create(WTFMove(*segment))));
+    if (auto* segment = asSingle())
+        return downcast<PlatformPathImpl>(setImpl(PlatformPathImpl::create(singleElementSpan(*segment))));
 
-    if (auto impl = asImpl()) {
-        if (auto* stream = dynamicDowncast<PathStream>(*impl))
-            return downcast<PlatformPathImpl>(setImpl(PlatformPathImpl::create(*stream)));
+    if (RefPtr impl = asImpl()) {
+        if (const auto* stream = dynamicDowncast<PathStream>(*impl))
+            return downcast<PlatformPathImpl>(setImpl(PlatformPathImpl::create(stream->segments())));
         return downcast<PlatformPathImpl>(*impl);
     }
 

@@ -37,22 +37,10 @@
 
 namespace WebCore {
 
-Ref<PathCairo> PathCairo::create()
+Ref<PathCairo> PathCairo::create(std::span<const PathSegment> segments)
 {
-    return adoptRef(*new PathCairo);
-}
-
-Ref<PathCairo> PathCairo::create(const PathSegment& segment)
-{
-    auto pathCairo = PathCairo::create();
-    pathCairo->addSegment(segment);
-    return pathCairo;
-}
-
-Ref<PathCairo> PathCairo::create(const PathStream& stream)
-{
-    auto pathCairo = PathCairo::create();
-    for (auto& segment : stream.segments())
+    Ref pathCairo = adoptRef(*new PathCairo);
+    for (auto& segment : segments)
         pathCairo->addSegment(segment);
     return pathCairo;
 }
@@ -321,7 +309,8 @@ void PathCairo::add(PathRect rect)
 
 void PathCairo::add(PathRoundedRect roundedRect)
 {
-    addBeziersForRoundedRect(roundedRect.roundedRect);
+    for (auto& segment : PathImpl::beziersForRoundedRect(roundedRect.roundedRect))
+        addSegment(segment);
 }
 
 void PathCairo::add(PathContinuousRoundedRect continuousRoundedRect)

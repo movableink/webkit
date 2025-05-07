@@ -68,7 +68,7 @@ public:
     virtual void add(PathCloseSubpath) = 0;
 
     void addLinesForRect(const FloatRect&);
-    void addBeziersForRoundedRect(const FloatRoundedRect&);
+    static Vector<PathSegment, 10> beziersForRoundedRect(const FloatRoundedRect&);
 
     virtual void applySegments(const PathSegmentApplier&) const;
     virtual bool applyElements(const PathElementApplier&) const = 0;
