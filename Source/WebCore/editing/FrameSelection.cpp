@@ -2539,6 +2539,16 @@ RefPtr<MutableStyleProperties> FrameSelection::copyTypingStyle() const
     return m_typingStyle->style()->mutableCopy();
 }
 
+void FrameSelection::setTypingStyle(RefPtr<EditingStyle>&& style)
+{
+    m_typingStyle = WTFMove(style);
+}
+
+void FrameSelection::clearTypingStyle()
+{
+    m_typingStyle = nullptr;
+}
+
 bool FrameSelection::shouldDeleteSelection(const VisibleSelection& selection) const
 {
 #if PLATFORM(IOS_FAMILY)
