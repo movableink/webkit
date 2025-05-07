@@ -31,6 +31,7 @@
 #include "ExecutableAllocationFuzz.h"
 #include "JITOperationValidation.h"
 #include "LinkBuffer.h"
+#include <bit>
 #include <wtf/ByteOrder.h>
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/FastBitVector.h>
@@ -438,7 +439,7 @@ static ALWAYS_INLINE JITReservation initializeJITPageReservation()
         {
             uint64_t pid = getCurrentProcessID();
             auto uuid = WTF::UUID::createVersion5(jscJITNamespace, std::span { std::bit_cast<const uint8_t*>(&pid), sizeof(pid) });
-            kdebug_trace(KDBG_CODE(DBG_DYLD, DBG_DYLD_UUID, DBG_DYLD_UUID_MAP_A), WTF::byteSwap64(uuid.high()), WTF::byteSwap64(uuid.low()), std::bit_cast<uintptr_t>(reservation.base), 0);
+            kdebug_trace(KDBG_CODE(DBG_DYLD, DBG_DYLD_UUID, DBG_DYLD_UUID_MAP_A), std::byteswap(uuid.high()), std::byteswap(uuid.low()), std::bit_cast<uintptr_t>(reservation.base), 0);
         }
 #elif USE(SYSPROF_CAPTURE)
         WTFEmitSignpost(reservation, InitJITPageReservation);
