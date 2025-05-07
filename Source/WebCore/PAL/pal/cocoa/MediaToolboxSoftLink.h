@@ -34,7 +34,6 @@ SOFT_LINK_FRAMEWORK_FOR_HEADER(PAL, MediaToolbox)
 
 SOFT_LINK_FUNCTION_MAY_FAIL_FOR_HEADER(PAL, MediaToolbox, FigPhotoDecompressionSetHardwareCutoff, void, (int, size_t numPixelsCutoff), (format, numPixelsCutoff))
 
-// FIXME: CoreMedia doesn't specify CF_RETURNS_RETAINED. See rdar://148150007.
 SOFT_LINK_FUNCTION_FOR_HEADER(PAL, MediaToolbox, FigVideoTargetCreateWithVideoReceiverEndpointID, OSStatus, (CFAllocatorRef allocator, xpc_object_t videoReceiverXPCEndpointID, CFDictionaryRef creationOptions, CF_RETURNS_RETAINED FigVideoTargetRef* videoTargetOut), (allocator, videoReceiverXPCEndpointID, creationOptions, videoTargetOut))
 #define FigVideoTargetCreateWithVideoReceiverEndpointID PAL::softLink_MediaToolbox_FigVideoTargetCreateWithVideoReceiverEndpointID
 
