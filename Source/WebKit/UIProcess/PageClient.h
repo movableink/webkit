@@ -342,7 +342,7 @@ public:
 #if PLATFORM(GTK)
     virtual void startDrag(WebCore::SelectionData&&, OptionSet<WebCore::DragOperation>, RefPtr<WebCore::ShareableBitmap>&& dragImage, WebCore::IntPoint&& dragImageHotspot) = 0;
 #else
-    virtual void startDrag(const WebCore::DragItem&, WebCore::ShareableBitmap::Handle&&) { }
+    virtual void startDrag(const WebCore::DragItem&, WebCore::ShareableBitmap::Handle&&, const std::optional<WebCore::ElementIdentifier>&) { }
 #endif
     virtual void didPerformDragOperation(bool) { }
     virtual void didPerformDragControllerAction() { }

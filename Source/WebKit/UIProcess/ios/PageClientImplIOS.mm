@@ -1052,12 +1052,12 @@ void PageClientImpl::didPerformDragOperation(bool handled)
     [contentView() _didPerformDragOperation:handled];
 }
 
-void PageClientImpl::startDrag(const DragItem& item, ShareableBitmap::Handle&& image)
+void PageClientImpl::startDrag(const DragItem& item, ShareableBitmap::Handle&& image, const std::optional<ElementIdentifier>& elementID)
 {
     auto bitmap = ShareableBitmap::create(WTFMove(image));
     if (!bitmap)
         return;
-    [contentView() _startDrag:bitmap->makeCGImageCopy() item:item];
+    [contentView() _startDrag:bitmap->makeCGImageCopy() item:item elementID:elementID];
 }
 
 void PageClientImpl::willReceiveEditDragSnapshot()

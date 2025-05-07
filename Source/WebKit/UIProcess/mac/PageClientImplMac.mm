@@ -383,8 +383,9 @@ void PageClientImpl::executeUndoRedo(UndoOrRedo undoOrRedo)
     return (undoOrRedo == UndoOrRedo::Undo) ? [[m_view undoManager] undo] : [[m_view undoManager] redo];
 }
 
-void PageClientImpl::startDrag(const WebCore::DragItem& item, ShareableBitmap::Handle&& image)
+void PageClientImpl::startDrag(const WebCore::DragItem& item, ShareableBitmap::Handle&& image, const std::optional<WebCore::ElementIdentifier>& elementID)
 {
+    UNUSED_PARAM(elementID);
     m_impl->startDrag(item, WTFMove(image));
 }
 

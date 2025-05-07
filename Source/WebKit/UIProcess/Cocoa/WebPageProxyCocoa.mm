@@ -327,10 +327,10 @@ bool WebPageProxy::scrollingUpdatesDisabledForTesting()
 
 #if ENABLE(DRAG_SUPPORT)
 
-void WebPageProxy::startDrag(const DragItem& dragItem, ShareableBitmap::Handle&& dragImageHandle)
+void WebPageProxy::startDrag(const DragItem& dragItem, ShareableBitmap::Handle&& dragImageHandle, const std::optional<ElementIdentifier>& elementID)
 {
     if (RefPtr pageClient = this->pageClient())
-        pageClient->startDrag(dragItem, WTFMove(dragImageHandle));
+        pageClient->startDrag(dragItem, WTFMove(dragImageHandle), elementID);
 }
 
 #endif

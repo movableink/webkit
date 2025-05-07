@@ -369,6 +369,11 @@ void DragDropInteractionState::clearStagedDragSource(DidBecomeActive didBecomeAc
     m_stagedDragSource = std::nullopt;
 }
 
+void DragDropInteractionState::setElementIdentifier(const std::optional<ElementIdentifier>& elementID)
+{
+    m_elementIdentifier = elementID;
+}
+
 void DragDropInteractionState::dragAndDropSessionsDidBecomeInactive()
 {
     auto previewViewsToRemove = takePreviewViewsForDragCancel();

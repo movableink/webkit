@@ -107,7 +107,7 @@ private:
     bool canUndoRedo(UndoOrRedo) override;
     void executeUndoRedo(UndoOrRedo) override;
     bool executeSavedCommandBySelector(const String& selector) override;
-    void startDrag(const WebCore::DragItem&, WebCore::ShareableBitmap::Handle&& image) override;
+    void startDrag(const WebCore::DragItem&, WebCore::ShareableBitmap::Handle&& image, const std::optional<WebCore::ElementIdentifier>&) override;
     void setPromisedDataForImage(const String& pasteboardName, Ref<WebCore::FragmentedSharedBuffer>&& imageBuffer, const String& filename, const String& extension, const String& title,
         const String& url, const String& visibleURL, RefPtr<WebCore::FragmentedSharedBuffer>&& archiveBuffer, const String& originIdentifier) override;
     void updateSecureInputState() override;

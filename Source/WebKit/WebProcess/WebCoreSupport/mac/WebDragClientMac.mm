@@ -86,7 +86,7 @@ static RefPtr<ShareableBitmap> convertDragImageToBitmap(DragImage image, const I
     return bitmap;
 }
 
-void WebDragClient::startDrag(DragItem dragItem, DataTransfer&, Frame& frame)
+void WebDragClient::startDrag(DragItem dragItem, DataTransfer&, Frame& frame, const std::optional<ElementIdentifier>& elementID)
 {
     auto& image = dragItem.image;
 
@@ -103,7 +103,7 @@ void WebDragClient::startDrag(DragItem dragItem, DataTransfer&, Frame& frame)
         return;
 
     m_page->willStartDrag();
-    m_page->send(Messages::WebPageProxy::StartDrag(dragItem, WTFMove(*handle)));
+    m_page->send(Messages::WebPageProxy::StartDrag(dragItem, WTFMove(*handle), elementID));
 }
 
 void WebDragClient::didConcludeEditDrag()

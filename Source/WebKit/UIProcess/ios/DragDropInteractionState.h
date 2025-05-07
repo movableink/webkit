@@ -41,6 +41,8 @@
 namespace WebCore {
 struct DragItem;
 struct TextIndicatorData;
+struct ElementIdentifierType;
+using ElementIdentifier = ObjectIdentifier<ElementIdentifierType>;
 }
 
 namespace WebKit {
@@ -85,6 +87,7 @@ public:
     void dropSessionDidEnterOrUpdate(id <UIDropSession>, const WebCore::DragData&);
     void dropSessionDidExit() { m_dropSession = nil; }
     void dropSessionWillPerformDrop() { m_isPerformingDrop = true; }
+    void setElementIdentifier(const std::optional<WebCore::ElementIdentifier>&);
 
     void dragAndDropSessionsDidBecomeInactive();
 
@@ -96,6 +99,7 @@ public:
     BlockPtr<void()> takeDragStartCompletionBlock() { return WTFMove(m_dragStartCompletionBlock); }
     BlockPtr<void(NSArray<UIDragItem *> *)> takeAddDragItemCompletionBlock() { return WTFMove(m_addDragItemCompletionBlock); }
     Vector<RetainPtr<UIView>> takePreviewViewsForDragCancel() { return std::exchange(m_previewViewsForDragCancel, { }); }
+    std::optional<WebCore::ElementIdentifier> elementIdentifier() const { return m_elementIdentifier; }
 
     void addDefaultDropPreview(UIDragItem *, UITargetedDragPreview *);
     UITargetedDragPreview *finalDropPreview(UIDragItem *) const;
@@ -123,6 +127,7 @@ private:
     Vector<DragSourceState> m_activeDragSources;
     DragItemToPreviewMap m_defaultDropPreviews;
     DragItemToPreviewMap m_finalDropPreviews;
+    std::optional<WebCore::ElementIdentifier> m_elementIdentifier;
 };
 
 } // namespace WebKit

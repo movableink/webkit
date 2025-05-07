@@ -10535,11 +10535,12 @@ static BOOL shouldEnableDragInteractionForPolicy(_WKDragInteractionPolicy policy
     [self cleanUpDragSourceSessionState];
 }
 
-- (void)_startDrag:(RetainPtr<CGImageRef>)image item:(const WebCore::DragItem&)item
+- (void)_startDrag:(RetainPtr<CGImageRef>)image item:(const WebCore::DragItem&)item elementID:(std::optional<WebCore::ElementIdentifier>)elementID
 {
     ASSERT(item.sourceAction);
 
 #if ENABLE(MODEL_PROCESS)
+    _dragDropInteractionState.setElementIdentifier(elementID);
     if (item.modelLayerID && _page) {
         if (RefPtr modelPresentationManager = _page->modelPresentationManagerProxy()) {
             if (RetainPtr viewForDragPreview = modelPresentationManager->startDragForModel(*item.modelLayerID)) {
@@ -10684,6 +10685,8 @@ static std::optional<WebCore::DragOperation> coreDragOperationForUIDropOperation
     if (_page) {
         if (RefPtr modelPresentationManager = _page->modelPresentationManagerProxy())
             modelPresentationManager->doneWithCurrentDragSession();
+
+        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=291293
     }
 #endif
 
