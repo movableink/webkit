@@ -2413,6 +2413,9 @@ void RenderBlockFlow::addFloatsToNewParent(RenderBlockFlow& toBlockFlow) const
     if (!m_floatingObjects)
         return;
 
+    if (layoutContext().isSkippedContentForLayout(toBlockFlow))
+        return;
+
     if (!toBlockFlow.m_floatingObjects)
         toBlockFlow.createFloatingObjects();
 
@@ -2569,6 +2572,7 @@ void RenderBlockFlow::insertFloatingBoxAndMarkForLayout(RenderBox& floatBox)
 FloatingObject& RenderBlockFlow::insertFloatingBox(RenderBox& floatBox)
 {
     ASSERT(floatBox.isFloating());
+    ASSERT(!layoutContext().isSkippedContentForLayout(*this));
 
     if (!m_floatingObjects)
         createFloatingObjects();
@@ -2901,6 +2905,7 @@ std::optional<LayoutUnit> RenderBlockFlow::lowestInitialLetterLogicalBottom() co
 
 LayoutUnit RenderBlockFlow::addOverhangingFloats(RenderBlockFlow& child, bool makeChildPaintOtherFloats)
 {
+    ASSERT(!layoutContext().isSkippedContentForLayout(*this));
     // Prevent floats from being added to the canvas by the root element, e.g., <html>.
     if (!child.containsFloats() || child.createsNewFormattingContext())
         return 0;
@@ -2975,6 +2980,7 @@ bool RenderBlockFlow::hasOverhangingFloat(RenderBox& renderer)
 void RenderBlockFlow::addIntrudingFloats(RenderBlockFlow* prev, RenderBlockFlow* container, LayoutUnit logicalLeftOffset, LayoutUnit logicalTopOffset)
 {
     ASSERT(!avoidsFloats());
+    ASSERT(!layoutContext().isSkippedContentForLayout(*this));
 
     // If we create our own block formatting context then our contents don't interact with floats outside it, even those from our parent.
     if (createsNewFormattingContext())
