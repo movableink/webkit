@@ -26,6 +26,8 @@
 #import "config.h"
 #import "WKColorExtensionView.h"
 
+#import <wtf/RetainPtr.h>
+
 @interface WKColorExtensionView () <CAAnimationDelegate>
 @end
 
@@ -62,7 +64,7 @@
 
     BOOL wasVisible = std::exchange(_isVisible, visible);
     if (wasVisible && !visible) {
-        [_delegate colorExtensionViewWillFadeOut:self];
+        [retainPtr(_delegate) colorExtensionViewWillFadeOut:self];
         _isDoneFadingIn = NO;
     }
 
@@ -98,7 +100,7 @@
     }
 
     if (!std::exchange(_isDoneFadingIn, YES))
-        [_delegate colorExtensionViewDidFadeIn:self];
+        [retainPtr(_delegate) colorExtensionViewDidFadeIn:self];
 }
 
 - (BOOL)isHiddenOrFadingOut
@@ -111,8 +113,9 @@
     if (!_targetColor)
         return;
 
-    [self.layer removeAnimationForKey:@"WKColorExtensionViewFade"];
-    self.layer.backgroundColor = [_targetColor CGColor];
+    RetainPtr layer = [self layer];
+    [layer removeAnimationForKey:@"WKColorExtensionViewFade"];
+    [layer setBackgroundColor:RetainPtr { [_targetColor CGColor] }.get()];
     self.hidden = !_isVisible;
 }
 
