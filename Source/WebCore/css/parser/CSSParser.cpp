@@ -1151,9 +1151,6 @@ RefPtr<StyleRuleScope> CSSParser::consumeScopeRule(CSSParserTokenRange prelude, 
 
 RefPtr<StyleRuleStartingStyle> CSSParser::consumeStartingStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
 {
-    if (!m_context.cssStartingStyleAtRuleEnabled)
-        return nullptr;
-
     if (!prelude.atEnd())
         return nullptr;
 

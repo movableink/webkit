@@ -1554,20 +1554,6 @@ CSSShapeFunctionEnabled:
     WebCore:
       default: true
 
-CSSStartingStyleAtRuleEnabled:
-  type: bool
-  status: stable
-  category: css
-  humanReadableName: "CSS @starting-style rule"
-  humanReadableDescription: "Enable CSS @starting-style rule"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 CSSStyleQueriesEnabled:
   type: bool
   status: stable
