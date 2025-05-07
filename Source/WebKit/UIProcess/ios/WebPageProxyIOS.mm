@@ -1319,7 +1319,7 @@ void WebPageProxy::requestDragStart(const WebCore::IntPoint& clientPosition, con
 
 void WebPageProxy::requestAdditionalItemsForDragSession(const IntPoint& clientPosition, const IntPoint& globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask, CompletionHandler<void(bool)>&& completionHandler)
 {
-    if (hasRunningProcess())
+    if (!hasRunningProcess())
         return completionHandler(false);
 
     m_legacyMainFrameProcess->sendWithAsyncReply(Messages::WebPage::RequestAdditionalItemsForDragSession(clientPosition, globalPosition, allowedActionsMask), WTFMove(completionHandler), webPageIDInMainFrameProcess());
