@@ -61,6 +61,11 @@ inline static UIImage *downArrow()
     return [UIImage systemImageNamed:@"chevron.down"];
 }
 
+inline static UIImage *checkmark()
+{
+    return [UIImage systemImageNamed:@"checkmark"];
+}
+
 inline static RetainPtr<UIToolbar> createToolbarWithItems(NSArray<UIBarButtonItem *> *items)
 {
     auto bar = adoptNS([[UIToolbar alloc] init]);
@@ -97,6 +102,15 @@ inline static RetainPtr<UIToolbar> createToolbarWithItems(NSArray<UIBarButtonIte
 - (CGFloat)_toolbarMargin
 {
     return 0;
+}
+
+- (BOOL)_useCheckmarkForDone
+{
+    return NO;
+}
+
+- (void)_adjustFlexibleSpaceItem:(UIBarButtonItem *)item
+{
 }
 #endif
 
@@ -174,11 +188,17 @@ inline static RetainPtr<UIToolbar> createToolbarWithItems(NSArray<UIBarButtonIte
     [items addObject:_nextItem.get()];
 
     _flexibleSpaceItem = adoptNS([[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil]);
+    if (self._useCheckmarkForDone)
+        [self _adjustFlexibleSpaceItem:_flexibleSpaceItem.get()];
+
     _autoFillButtonItemSpacer = adoptNS([[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil]);
     [_autoFillButtonItemSpacer setWidth:WebKit::fixedSpaceBetweenButtonItems];
 
     // iPad doesn't show the "Done" button since the keyboard has its own dismiss key.
-    _doneButton = adoptNS([[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(_done)]);
+    if (self._useCheckmarkForDone)
+        _doneButton = adoptNS([[UIBarButtonItem alloc] initWithImage:WebKit::checkmark() style:UIBarButtonItemStylePlain target:self action:@selector(_done)]);
+    else
+        _doneButton = adoptNS([[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(_done)]);
     [items addObject:_flexibleSpaceItem.get()];
     [items addObject:_doneButton.get()];
 
