@@ -459,3 +459,14 @@ function windows(windowSize)
 
     return @iteratorHelperCreate(generator, iterated);
 }
+
+// https://tc39.es/proposal-explicit-resource-management/#sec-%iteratorprototype%-object
+@overriddenName="[Symbol.dispose]"
+function dispose()
+{
+    "use strict";
+
+    var returnMethod = this.return;
+    if (returnMethod !== @undefined)
+        returnMethod.@call(this);
+}

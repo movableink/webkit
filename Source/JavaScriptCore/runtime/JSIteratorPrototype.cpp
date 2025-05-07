@@ -89,6 +89,9 @@ void JSIteratorPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
         // https://tc39.es/proposal-iterator-chunking/#sec-iterator.prototype.windows
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("windows"_s, jsIteratorPrototypeWindowsCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
     }
+
+    if (Options::useExplicitResourceManagement())
+        JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->disposeSymbol, jsIteratorPrototypeDisposeCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
 JSC_DEFINE_HOST_FUNCTION(iteratorProtoFuncIterator, (JSGlobalObject* globalObject, CallFrame* callFrame))
