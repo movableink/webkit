@@ -940,8 +940,10 @@ struct WKWebsiteData {
 
 - (void)_setStorageAccessPromptQuirkForTesting:(NSString *)topFrameDomain withSubFrameDomains:(NSArray<NSString *> *)subFrameDomains withTriggerPages:(NSArray<NSString *> *)triggerPages completionHandler:(void(^)(void))completionHandler
 {
-    if (!_websiteDataStore->isPersistent())
+    if (!_websiteDataStore->isPersistent()) {
+        completionHandler();
         return;
+    }
 
     _websiteDataStore->setStorageAccessPromptQuirkForTesting(topFrameDomain, makeVector<String>(subFrameDomains), makeVector<String>(triggerPages), makeBlockPtr(completionHandler));
 }
