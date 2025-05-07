@@ -31,6 +31,7 @@
 #include "Constraints.h"
 #include "WGSLShaderModule.h"
 #include <wtf/CheckedArithmetic.h>
+#include <wtf/MathExtras.h>
 #include <wtf/text/MakeString.h>
 
 namespace WGSL {
@@ -451,10 +452,9 @@ void AttributeValidator::visit(AST::StructureMember& member)
                 continue;
             }
             auto alignmentValue = constantValue->integerValue();
-            auto isPowerOf2 = !(alignmentValue & (alignmentValue - 1));
             if (alignmentValue < 1)
                 error(attribute.span(), "@align value must be positive"_s);
-            else if (!isPowerOf2)
+            else if (!isPowerOfTwo<std::make_unsigned_t<decltype(alignmentValue)>>(alignmentValue))
                 error(attribute.span(), "@align value must be a power of two"_s);
 
             if (!m_errors.isEmpty()) [[unlikely]] {

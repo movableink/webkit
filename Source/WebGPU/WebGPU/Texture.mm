@@ -1547,8 +1547,7 @@ static uint32_t maximumMiplevelCount(WGPUTextureDimension dimension, WGPUExtent3
         return 0;
     }
 
-    auto isPowerOf2 = !(m & (m - 1));
-    if (isPowerOf2)
+    if (isPowerOfTwo(m))
         return WTF::fastLog2(m) + 1;
     return WTF::fastLog2(m);
 }

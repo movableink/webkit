@@ -59,11 +59,6 @@ JS_EXPORT_PRIVATE extern PropertyTableStats* propertyTableStats;
 
 #endif
 
-inline constexpr bool isPowerOf2(unsigned v)
-{
-    return hasOneBitSet(v);
-}
-
 // compact <-> non-compact PropertyTable
 // We need to maintain two things, one is PropertyOffset and one is unsigned index in index buffer of PropertyTable.
 // But both are typically small. It is possible that we can get optimized table if both are fit in uint8_t, that's
