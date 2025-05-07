@@ -51,7 +51,6 @@ static void applyUASheetBehaviorsToContext(CSSParserContext& context)
     context.cssTextUnderlinePositionLeftRightEnabled = true;
     context.popoverAttributeEnabled = true;
     context.propertySettings.cssInputSecurityEnabled = true;
-    context.propertySettings.cssCounterStyleAtRulesEnabled = true;
     context.propertySettings.supportHDRDisplayEnabled = true;
     context.propertySettings.viewTransitionsEnabled = true;
     context.propertySettings.cssFieldSizingEnabled = true;

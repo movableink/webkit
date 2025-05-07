@@ -26,7 +26,6 @@
 // https://drafts.csswg.org/css-counter-styles/#csscounterstylerule
 
 [
-    EnabledBySetting=CSSCounterStyleAtRulesEnabled,
     Exposed=Window
 ] interface CSSCounterStyleRule : CSSRule {
    attribute DOMString name;

@@ -53,7 +53,7 @@ static bool isPredefinedCounterStyle(CSSValueID valueID)
     return valueID >= CSSValueDisc && valueID <= CSSValueEthiopicNumeric;
 }
 
-RefPtr<CSSValue> consumeCounterStyle(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+RefPtr<CSSValue> consumeCounterStyle(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <counter-style> = <counter-style-name> | <symbols()>
     // https://drafts.csswg.org/css-counter-styles-3/#typedef-counter-style
@@ -62,9 +62,7 @@ RefPtr<CSSValue> consumeCounterStyle(CSSParserTokenRange& range, CSS::PropertyPa
 
     if (auto predefinedValues = consumeIdent(range, isPredefinedCounterStyle))
         return predefinedValues;
-    if (state.context.propertySettings.cssCounterStyleAtRulesEnabled)
-        return consumeCustomIdent(range);
-    return nullptr;
+    return consumeCustomIdent(range);
 }
 
 AtomString consumeCounterStyleNameInPrelude(CSSParserTokenRange& prelude, CSSParserMode mode)

@@ -1012,9 +1012,6 @@ RefPtr<StyleRulePage> CSSParser::consumePageRule(CSSParserTokenRange prelude, CS
 
 RefPtr<StyleRuleCounterStyle> CSSParser::consumeCounterStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
 {
-    if (!m_context.propertySettings.cssCounterStyleAtRulesEnabled)
-        return nullptr;
-
     auto rangeCopy = prelude; // For inspector callbacks
     auto name = CSSPropertyParserHelpers::consumeCounterStyleNameInPrelude(rangeCopy, m_context.mode);
     if (name.isNull())

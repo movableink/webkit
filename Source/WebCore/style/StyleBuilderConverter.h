@@ -470,13 +470,8 @@ inline ListStyleType BuilderConverter::convertListStyleType(BuilderState& builde
             return { ListStyleType::Type::None, nullAtom() };
         return { ListStyleType::Type::CounterStyle, makeAtomString(primitiveValue->stringValue()) };
     }
-    if (primitiveValue->isCustomIdent()) {
-        ASSERT(builderState.document().settings().cssCounterStyleAtRulesEnabled());
+    if (primitiveValue->isCustomIdent())
         return { ListStyleType::Type::CounterStyle, makeAtomString(primitiveValue->stringValue()) };
-    }
-#if !ASSERT_ENABLED
-    UNUSED_PARAM(builderState);
-#endif
     return { ListStyleType::Type::String, makeAtomString(primitiveValue->stringValue()) };
 }
 

@@ -1216,20 +1216,6 @@ CSSCounterStyleAtRuleImageSymbolsEnabled:
     WebCore:
       default: false
 
-CSSCounterStyleAtRulesEnabled:
-  type: bool
-  status: stable
-  category: css
-  humanReadableName: "CSS @counter-style"
-  humanReadableDescription: "Enable support for CSS @counter-style rules"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 CSSDPropertyEnabled:
   type: bool
   status: preview

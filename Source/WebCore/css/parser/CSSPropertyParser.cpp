@@ -641,8 +641,6 @@ RefPtr<CSSCustomPropertyValue> CSSPropertyParser::parseTypedCustomPropertyValue(
 
 RefPtr<CSSValue> CSSPropertyParser::parseCounterStyleDescriptor(CSSPropertyID property, const String& string, const CSSParserContext& context)
 {
-    ASSERT(context.propertySettings.cssCounterStyleAtRulesEnabled);
-
     auto tokenizer = CSSTokenizer(string);
     auto range = tokenizer.tokenRange();
 
@@ -669,8 +667,6 @@ RefPtr<CSSValue> CSSPropertyParser::parseCounterStyleDescriptor(CSSPropertyID pr
 
 bool CSSPropertyParser::parseCounterStyleDescriptor(CSSPropertyID property)
 {
-    ASSERT(m_context.propertySettings.cssCounterStyleAtRulesEnabled);
-
     auto state = CSS::PropertyParserState {
         .context = m_context,
         .currentRule = StyleRuleType::CounterStyle,
