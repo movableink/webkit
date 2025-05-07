@@ -100,8 +100,9 @@ void RealtimeIncomingVideoSourceGStreamer::dispatchSample(GRefPtr<GstSample>&& s
     }
 
     ensureSizeAndFramerate(GRefPtr<GstCaps>(caps));
+    auto [rotation, isMirrored] = webkitGstBufferGetVideoRotation(buffer);
 
-    videoFrameAvailable(VideoFrameGStreamer::create(WTFMove(sample), std::nullopt, intrinsicSize(), fromGstClockTime(GST_BUFFER_PTS(buffer))), { });
+    videoFrameAvailable(VideoFrameGStreamer::create(WTFMove(sample), std::nullopt, intrinsicSize(), fromGstClockTime(GST_BUFFER_PTS(buffer)), rotation, isMirrored), { });
 }
 
 const GstStructure* RealtimeIncomingVideoSourceGStreamer::stats()

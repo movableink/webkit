@@ -91,6 +91,7 @@
 #endif
 
 #if USE(GSTREAMER_WEBRTC)
+#include "GStreamerRTPVideoRotationHeaderExtension.h"
 #include <gst/webrtc/webrtc-enumtypes.h>
 #endif
 
@@ -446,6 +447,10 @@ void registerWebKitGStreamerElements()
         gst_element_register(nullptr, "mediastreamsrc", GST_RANK_PRIMARY, WEBKIT_TYPE_MEDIA_STREAM_SRC);
 #endif
         registerInternalVideoEncoder();
+
+#if USE(GSTREAMER_WEBRTC)
+        gst_element_register(nullptr, "webkitrtpvideorotationheaderextension", GST_RANK_MARGINAL, WEBKIT_TYPE_GST_RTP_VIDEO_ROTATION_HEADER_EXTENSION);
+#endif
 
 #if ENABLE(MEDIA_SOURCE)
         gst_element_register(nullptr, "webkitmediasrc", GST_RANK_PRIMARY, WEBKIT_TYPE_MEDIA_SRC);

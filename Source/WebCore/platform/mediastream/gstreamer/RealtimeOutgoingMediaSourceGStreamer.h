@@ -68,7 +68,7 @@ public:
 
     void replaceTrack(RefPtr<MediaStreamTrackPrivate>&&);
 
-    virtual void teardown();
+    void teardown();
 
     virtual void dispatchBitrateRequest(uint32_t bitrate) = 0;
 
@@ -101,7 +101,6 @@ protected:
     std::optional<RealtimeMediaSourceSettings> m_initialSettings;
     GRefPtr<GstElement> m_bin;
     GRefPtr<GstElement> m_outgoingSource;
-    GRefPtr<GstElement> m_preProcessor;
     GRefPtr<GstElement> m_tee;
     GRefPtr<GstElement> m_rtpFunnel;
     GRefPtr<GstElement> m_rtpCapsfilter;
@@ -121,7 +120,6 @@ private:
 
     void stopOutgoingSource();
 
-    bool linkSource();
     virtual RTCRtpCapabilities rtpCapabilities() const = 0;
     void codecPreferencesChanged();
 

@@ -87,7 +87,10 @@ static void webKitGLVideoSinkConstructed(GObject* object)
     GST_OBJECT_FLAG_SET(GST_OBJECT_CAST(sink), GST_ELEMENT_FLAG_SINK);
     gst_bin_set_suppressed_flags(GST_BIN_CAST(sink), static_cast<GstElementFlags>(GST_ELEMENT_FLAG_SOURCE | GST_ELEMENT_FLAG_SINK));
 
-    sink->priv->appSink = makeGStreamerElement("appsink"_s, "webkit-gl-video-appsink"_s);
+    static Atomic<uint64_t> sinkCounter = 0;
+    auto sinkName = makeString("webkit-gl-video-appsink-"_s, sinkCounter.exchangeAdd(1));
+    sink->priv->appSink = makeGStreamerElement("appsink"_s, sinkName);
+
     ASSERT(sink->priv->appSink);
     g_object_set(sink->priv->appSink.get(), "enable-last-sample", FALSE, "emit-signals", TRUE, "max-buffers", 1, nullptr);
 

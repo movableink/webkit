@@ -416,6 +416,7 @@ protected:
     mutable Lock m_sampleMutex;
     GRefPtr<GstSample> m_sample WTF_GUARDED_BY_LOCK(m_sampleMutex);
 
+    mutable IntSize m_videoSizeFromCaps;
     mutable FloatSize m_videoSize;
     bool m_isUsingFallbackVideoSink { false };
     bool m_canRenderingBeAccelerated { false };
@@ -485,6 +486,8 @@ private:
     void didEnd();
     void setPlaybackFlags(bool isMediaStream);
     void recalculateDurationIfNeeded() const; // It's called from other const methods.
+
+    ImageOrientation getVideoOrientation(const GstTagList*);
 
     GstElement* createVideoSink();
     GstElement* createAudioSink();

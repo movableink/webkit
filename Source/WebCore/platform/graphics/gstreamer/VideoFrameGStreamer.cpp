@@ -417,13 +417,13 @@ RefPtr<VideoFrameGStreamer> VideoFrameGStreamer::createFromPixelBuffer(Ref<Pixel
 
         info = infoFromCaps(outputCaps);
         GRefPtr buffer = gst_sample_get_buffer(sample.get());
-        auto outputBuffer = webkitGstBufferSetVideoFrameTimeMetadata(WTFMove(buffer), WTFMove(metadata));
+        auto outputBuffer = webkitGstBufferSetVideoFrameMetadata(WTFMove(buffer), WTFMove(metadata), videoRotation, videoMirrored);
         gst_buffer_add_video_meta(outputBuffer.get(), GST_VIDEO_FRAME_FLAG_NONE, format, width, height);
         setBufferFields(outputBuffer.get(), presentationTime, frameRate);
         sample = adoptGRef(gst_sample_make_writable(sample.leakRef()));
         gst_sample_set_buffer(sample.get(), outputBuffer.get());
     } else {
-        auto outputBuffer = webkitGstBufferSetVideoFrameTimeMetadata(WTFMove(buffer), WTFMove(metadata));
+        auto outputBuffer = webkitGstBufferSetVideoFrameMetadata(WTFMove(buffer), WTFMove(metadata), videoRotation, videoMirrored);
         gst_buffer_add_video_meta(outputBuffer.get(), GST_VIDEO_FRAME_FLAG_NONE, format, width, height);
         setBufferFields(outputBuffer.get(), presentationTime, frameRate);
         sample = adoptGRef(gst_sample_new(outputBuffer.get(), caps.get(), nullptr, nullptr));
@@ -448,12 +448,9 @@ VideoFrameGStreamer::VideoFrameGStreamer(GRefPtr<GstSample>&& sample, std::optio
 
     setMemoryTypeFromCaps();
 
-    if (!metadata)
-        return;
-
     GRefPtr buffer = gst_sample_get_buffer(m_sample.get());
     RELEASE_ASSERT(buffer);
-    auto modifiedBuffer = webkitGstBufferSetVideoFrameTimeMetadata(WTFMove(buffer), WTFMove(metadata));
+    auto modifiedBuffer = webkitGstBufferSetVideoFrameMetadata(WTFMove(buffer), WTFMove(metadata), videoRotation, videoMirrored);
     m_sample = adoptGRef(gst_sample_make_writable(m_sample.leakRef()));
     gst_sample_set_buffer(m_sample.get(), modifiedBuffer.get());
 }
@@ -466,6 +463,10 @@ VideoFrameGStreamer::VideoFrameGStreamer(const GRefPtr<GstSample>& sample, Info&
 {
     ensureVideoFrameDebugCategoryInitialized();
     setMemoryTypeFromCaps();
+
+    auto buffer = gst_sample_get_buffer(sample.get());
+    auto [videoRotationFromMeta, isMirrored] = webkitGstBufferGetVideoRotation(buffer);
+    initializeCharacteristics(presentationTime, isMirrored, videoRotationFromMeta);
 }
 
 void VideoFrameGStreamer::setFrameRate(double frameRate)

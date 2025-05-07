@@ -167,10 +167,7 @@ void RealtimeOutgoingMediaSourceGStreamer::stopOutgoingSource()
 
     gst_element_set_locked_state(m_outgoingSource.get(), TRUE);
 
-    if (m_preProcessor)
-        gst_element_unlink_many(m_outgoingSource.get(), m_preProcessor.get(), m_tee.get(), nullptr);
-    else
-        gst_element_unlink(m_outgoingSource.get(), m_tee.get());
+    gst_element_unlink(m_outgoingSource.get(), m_tee.get());
 
     gst_element_set_state(m_outgoingSource.get(), GST_STATE_NULL);
     gst_bin_remove(GST_BIN_CAST(m_bin.get()), m_outgoingSource.get());
@@ -416,14 +413,6 @@ bool RealtimeOutgoingMediaSourceGStreamer::linkPacketizer(RefPtr<GStreamerRTPPac
     return true;
 }
 
-bool RealtimeOutgoingMediaSourceGStreamer::linkSource()
-{
-    if (m_preProcessor)
-        return gst_element_link_many(m_outgoingSource.get(), m_preProcessor.get(), m_tee.get(), nullptr);
-
-    return gst_element_link(m_outgoingSource.get(), m_tee.get());
-}
-
 bool RealtimeOutgoingMediaSourceGStreamer::configurePacketizers(GRefPtr<GstCaps>&& codecPreferences)
 {
     GST_DEBUG_OBJECT(m_bin.get(), "Configuring packetizers for caps %" GST_PTR_FORMAT, codecPreferences.get());
@@ -432,8 +421,8 @@ bool RealtimeOutgoingMediaSourceGStreamer::configurePacketizers(GRefPtr<GstCaps>
 
     if (m_outgoingSource) {
         auto srcPad = outgoingSourcePad();
-        if (!gst_pad_is_linked(srcPad.get()))
-            linkSource();
+        if (!gst_pad_is_linked(srcPad.get()) && !gst_element_link(m_outgoingSource.get(), m_tee.get()))
+            return false;
     }
 
     auto rtpCaps = adoptGRef(gst_caps_new_empty());
@@ -644,7 +633,6 @@ void RealtimeOutgoingMediaSourceGStreamer::teardown()
     m_packetizers.clear();
 
     m_bin.clear();
-    m_preProcessor.clear();
     m_tee.clear();
     m_rtpFunnel.clear();
     m_allowedCaps.clear();

@@ -139,6 +139,7 @@ platform/mediastream/gstreamer/GStreamerMediaStreamSource.cpp
 platform/mediastream/gstreamer/GStreamerMockDevice.cpp
 platform/mediastream/gstreamer/GStreamerMockDeviceProvider.cpp
 platform/mediastream/gstreamer/GStreamerRTPPacketizer.cpp
+platform/mediastream/gstreamer/GStreamerRTPVideoRotationHeaderExtension.cpp @no-unify
 platform/mediastream/gstreamer/GStreamerVideoCaptureSource.cpp
 platform/mediastream/gstreamer/GStreamerVideoCapturer.cpp
 platform/mediastream/gstreamer/GStreamerVideoRTPPacketizer.cpp

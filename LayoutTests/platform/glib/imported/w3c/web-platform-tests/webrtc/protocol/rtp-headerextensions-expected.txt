@@ -1,8 +1,0 @@
-
-PASS MID header extension is supported.
-PASS Audio level header extension is supported.
-FAIL Video orientation header extension is supported. assert_equals: expected 1 but got 0
-PASS Negotiates the subset of supported extensions offered
-PASS Supports header extensions with id=15
-PASS Supports two-byte header extensions
-

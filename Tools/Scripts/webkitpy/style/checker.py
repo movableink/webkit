@@ -301,6 +301,8 @@ _PATH_RULES_SPECIFIER = [
       os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerMockDevice.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerMockDeviceProvider.h'),
       os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerMockDeviceProvider.cpp'),
+      os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerRTPVideoRotationHeaderExtension.h'),
+      os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerRTPVideoRotationHeaderExtension.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'ProxyResolverSoup.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'ProxyResolverSoup.h'),
       os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'WebKitAutoconfigProxyResolver.cpp'),
