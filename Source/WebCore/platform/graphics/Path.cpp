@@ -390,105 +390,10 @@ std::optional<PathSegment> Path::singleSegment() const
 
 std::optional<PathDataLine> Path::singleDataLine() const
 {
-    if (auto segment = asSingle()) {
-        if (auto data = std::get_if<PathDataLine>(&segment->data()))
-            return *data;
+    if (auto segment = singleSegment()) {
+        if (auto* line = std::get_if<PathDataLine>(&segment->data()))
+            return *line;
     }
-
-    if (auto impl = asImpl())
-        return impl->singleDataLine();
-
-    return std::nullopt;
-}
-
-std::optional<PathRect> Path::singleRect() const
-{
-    if (auto segment = asSingle()) {
-        if (auto data = std::get_if<PathRect>(&segment->data()))
-            return *data;
-    }
-
-    if (auto impl = asImpl())
-        return impl->singleRect();
-
-    return std::nullopt;
-}
-
-std::optional<PathRoundedRect> Path::singleRoundedRect() const
-{
-    if (auto segment = asSingle()) {
-        if (auto data = std::get_if<PathRoundedRect>(&segment->data()))
-            return *data;
-    }
-
-    if (auto impl = asImpl())
-        return impl->singleRoundedRect();
-
-    return std::nullopt;
-}
-
-std::optional<PathContinuousRoundedRect> Path::singleContinuousRoundedRect() const
-{
-    if (auto segment = asSingle()) {
-        if (auto data = std::get_if<PathContinuousRoundedRect>(&segment->data()))
-            return *data;
-    }
-
-    if (auto impl = asImpl())
-        return impl->singleContinuousRoundedRect();
-
-    return std::nullopt;
-}
-
-std::optional<PathArc> Path::singleArc() const
-{
-    if (auto segment = asSingle()) {
-        if (auto data = std::get_if<PathArc>(&segment->data()))
-            return *data;
-    }
-
-    if (auto impl = asImpl())
-        return impl->singleArc();
-
-    return std::nullopt;
-}
-
-std::optional<PathClosedArc> Path::singleClosedArc() const
-{
-    if (auto segment = asSingle()) {
-        if (auto data = std::get_if<PathClosedArc>(&segment->data()))
-            return *data;
-    }
-
-    if (auto impl = asImpl())
-        return impl->singleClosedArc();
-
-    return std::nullopt;
-}
-
-std::optional<PathDataQuadCurve> Path::singleQuadCurve() const
-{
-    if (auto segment = asSingle()) {
-        if (auto data = std::get_if<PathDataQuadCurve>(&segment->data()))
-            return *data;
-    }
-
-    if (auto impl = asImpl())
-        return impl->singleQuadCurve();
-
-    return std::nullopt;
-}
-
-std::optional<PathDataBezierCurve> Path::singleBezierCurve() const
-{
-    if (auto segment = asSingle()) {
-        if (auto data = std::get_if<PathDataBezierCurve>(&segment->data()))
-            return *data;
-    }
-
-    if (auto impl = asImpl())
-        return impl->singleBezierCurve();
-
     return std::nullopt;
 }
 
