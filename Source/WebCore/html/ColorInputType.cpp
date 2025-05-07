@@ -61,12 +61,6 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(ColorInputType);
 
 using namespace HTMLNames;
 
-using LazySlowPathColorParsingParameters = std::tuple<
-    CSSPropertyParserHelpers::CSSColorParsingOptions,
-    CSS::PlatformColorResolutionState,
-    std::optional<CSS::PlatformColorResolutionDelegate>
->;
-
 // https://html.spec.whatwg.org/multipage/infrastructure.html#valid-simple-colour
 static bool isValidSimpleColor(StringView string)
 {
@@ -89,35 +83,28 @@ static std::optional<SRGBA<uint8_t>> parseSimpleColorValue(StringView string)
     return { { toASCIIHexValue(string[1], string[2]), toASCIIHexValue(string[3], string[4]), toASCIIHexValue(string[5], string[6]) } };
 }
 
-static LazySlowPathColorParsingParameters colorParsingParameters()
-{
-    return {
-        CSSPropertyParserHelpers::CSSColorParsingOptions {
-            .allowedColorTypes = { CSS::ColorType::Absolute, CSS::ColorType::Current, CSS::ColorType::System }
-        },
-        CSS::PlatformColorResolutionState {
-            .resolvedCurrentColor = Color::black
-        },
-        std::nullopt
-    };
-}
-
 static std::optional<Color> parseColorValue(StringView string, HTMLInputElement& context)
 {
     if (context.colorSpace().isNull())
         return parseSimpleColorValue(string);
-
+    using namespace CSSPropertyParserHelpers;
     auto document = context.protectedDocument();
     auto parserContext = document->cssParserContext();
     parserContext.mode = HTMLStandardMode;
-    auto color = CSSPropertyParserHelpers::parseColorRaw(string.toString(), parserContext, document, [] {
-        return colorParsingParameters();
-    });
+    auto colorString = string.toString();
+    auto color = parseColorRawSimple(colorString, parserContext);
+    if (color.isValid())
+        return color;
 
-    if (!color.isValid())
-        return { };
+    CSSColorParsingOptions options;
+    CSS::PlatformColorResolutionState state {
+        .resolvedCurrentColor = Color::black
+    };
+    color = parseColorRawGeneral(colorString, parserContext, document, options, state);
+    if (color.isValid())
+        return color;
 
-    return color;
+    return { };
 }
 
 static String serializeColorValue(Color input, HTMLInputElement& context)
@@ -270,7 +257,7 @@ void ColorInputType::handleDOMActivateEvent(Event& event)
     event.setDefaultHandled();
 }
 
-void ColorInputType::showPicker() 
+void ColorInputType::showPicker()
 {
     if (Chrome* chrome = this->chrome()) {
         if (RefPtr chooser = m_chooser)

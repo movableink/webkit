@@ -59,24 +59,16 @@ public:
     Ref<HTMLCanvasElement> m_canvasElement;
 };
 
-using LazySlowPathColorParsingParameters = std::tuple<
-    CSSPropertyParserHelpers::CSSColorParsingOptions,
-    CSS::PlatformColorResolutionState,
-    std::optional<CanvasStyleColorResolutionDelegate>
->;
-
 Color CanvasStyleColorResolutionDelegate::currentColor() const
 {
     if (!m_canvasElement->isConnected() || !m_canvasElement->inlineStyle())
         return Color::black;
 
     auto colorString = m_canvasElement->inlineStyle()->getPropertyValue(CSSPropertyColor);
-    auto color = CSSPropertyParserHelpers::parseColorRaw(WTFMove(colorString), m_canvasElement->cssParserContext(), m_canvasElement->document(), [] {
-        return LazySlowPathColorParsingParameters { { }, { }, std::nullopt };
-    });
-    if (!color.isValid())
-        return Color::black;
-    return color;
+    auto color = CSSPropertyParserHelpers::parseColorRaw(colorString, m_canvasElement->cssParserContext(), m_canvasElement->document());
+    if (color.isValid())
+        return color;
+    return Color::black;
 }
 
 static OptionSet<CSS::ColorType> allowedColorTypes(ScriptExecutionContext* scriptExecutionContext)
@@ -90,47 +82,49 @@ static OptionSet<CSS::ColorType> allowedColorTypes(ScriptExecutionContext* scrip
     return { CSS::ColorType::Absolute, CSS::ColorType::Current };
 }
 
-static LazySlowPathColorParsingParameters elementlessColorParsingParameters(ScriptExecutionContext* scriptExecutionContext)
-{
-    return {
-        CSSPropertyParserHelpers::CSSColorParsingOptions {
-            .allowedColorTypes = allowedColorTypes(scriptExecutionContext)
-        },
-        CSS::PlatformColorResolutionState {
-            .resolvedCurrentColor = Color::black
-        },
-        std::nullopt
-    };
-}
-
-static LazySlowPathColorParsingParameters colorParsingParameters(CanvasBase& canvasBase)
-{
-    RefPtr canvasElement = dynamicDowncast<HTMLCanvasElement>(canvasBase);
-    if (!canvasElement)
-        return elementlessColorParsingParameters(canvasBase.scriptExecutionContext());
-
-    return {
-        CSSPropertyParserHelpers::CSSColorParsingOptions { },
-        CSS::PlatformColorResolutionState { },
-        CanvasStyleColorResolutionDelegate(canvasElement.releaseNonNull())
-    };
-}
-
 Color parseColor(const String& colorString, CanvasBase& canvasBase)
 {
-    return CSSPropertyParserHelpers::parseColorRaw(colorString, canvasBase.cssParserContext(), *canvasBase.scriptExecutionContext(), [&] {
-        return colorParsingParameters(canvasBase);
-    });
+    using namespace CSSPropertyParserHelpers;
+    auto cssParserContext = canvasBase.cssParserContext();
+    auto color = parseColorRawSimple(colorString, cssParserContext);
+    if (color.isValid())
+        return color;
+
+    if (RefPtr canvasElement = dynamicDowncast<HTMLCanvasElement>(canvasBase)) {
+        RefPtr scriptExecutionContext = canvasElement->scriptExecutionContext();
+        CanvasStyleColorResolutionDelegate delegate(canvasElement.releaseNonNull());
+        CSSColorParsingOptions options;
+        CSS::PlatformColorResolutionState state {
+            .delegate = &delegate
+        };
+        return parseColorRawGeneral(colorString, cssParserContext, *scriptExecutionContext, options, state);
+    }
+
+    RefPtr scriptExecutionContext = canvasBase.scriptExecutionContext();
+    CSSColorParsingOptions options {
+        .allowedColorTypes = allowedColorTypes(scriptExecutionContext.get())
+    };
+    CSS::PlatformColorResolutionState state {
+        .resolvedCurrentColor = Color::black
+    };
+    return parseColorRawGeneral(colorString, cssParserContext, *scriptExecutionContext, options, state);
 }
 
 Color parseColor(const String& colorString, ScriptExecutionContext& scriptExecutionContext)
 {
     // FIXME: Add constructor for CSSParserContext that takes a ScriptExecutionContext to allow preferences to be
     //        checked correctly.
-
-    return CSSPropertyParserHelpers::parseColorRaw(colorString, CSSParserContext(HTMLStandardMode), scriptExecutionContext, [&] {
-        return elementlessColorParsingParameters(&scriptExecutionContext);
-    });
+    using namespace CSSPropertyParserHelpers;
+    auto color = parseColorRawSimple(colorString, CSSParserContext(HTMLStandardMode));
+    if (color.isValid())
+        return color;
+    CSSColorParsingOptions options {
+        .allowedColorTypes = allowedColorTypes(&scriptExecutionContext)
+    };
+    CSS::PlatformColorResolutionState state {
+        .resolvedCurrentColor = Color::black
+    };
+    return parseColorRawGeneral(colorString, CSSParserContext(HTMLStandardMode), scriptExecutionContext, options, state);
 }
 
 }

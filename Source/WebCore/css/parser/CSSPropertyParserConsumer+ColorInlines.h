@@ -33,21 +33,18 @@ namespace CSSPropertyParserHelpers {
 
 // MARK: <color> parsing (raw)
 
-template<typename F> WebCore::Color parseColorRaw(const String& string, const CSSParserContext& context, ScriptExecutionContext& scriptExecutionContext, NOESCAPE const F& lazySlowPathOptionsFunctor)
+inline WebCore::Color parseColorRawSimple(const String& string, const CSSParserContext& context)
 {
-    if (auto color = CSSParserFastPaths::parseSimpleColor(string, context))
-        return *color;
+    return CSSParserFastPaths::parseSimpleColor(string, context);
+}
 
-    // To avoid doing anything unnecessary before the fast path can run, callers bundle up
-    // a functor to generate the slow path parameters.
-    auto [options, eagerResolutionState, eagerResolutionDelegate] = lazySlowPathOptionsFunctor();
-
-    // If a delegate is provided, hook it up to the context here. By having it live on the stack,
-    // we avoid allocating it.
-    if (eagerResolutionDelegate)
-        eagerResolutionState.delegate = &eagerResolutionDelegate.value();
-
-    return parseColorRawSlow(string, context, scriptExecutionContext, options, eagerResolutionState);
+inline WebCore::Color parseColorRaw(const String& string, const CSSParserContext& context, ScriptExecutionContext& scriptExecutionContext)
+{
+    auto color = parseColorRawSimple(string, context);
+    if (color.isValid())
+        return color;
+    CSS::PlatformColorResolutionState state;
+    return parseColorRawGeneral(string, context, scriptExecutionContext, { }, state);
 }
 
 } // namespace CSSPropertyParserHelpers

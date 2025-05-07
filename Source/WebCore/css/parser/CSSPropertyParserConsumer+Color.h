@@ -66,10 +66,18 @@ RefPtr<CSSValue> consumeColor(CSSParserTokenRange&, CSS::PropertyParserState&, c
 WebCore::Color consumeColorRaw(CSSParserTokenRange&, CSS::PropertyParserState&, const CSSColorParsingOptions&, CSS::PlatformColorResolutionState&);
 
 // MARK: <color> parsing (raw)
-WEBCORE_EXPORT WebCore::Color parseColorRawSlow(const String&, const CSSParserContext&, ScriptExecutionContext&, const CSSColorParsingOptions&, CSS::PlatformColorResolutionState&);
 
+// Parse with default options.
 // NOTE: Callers must include CSSPropertyParserConsumer+ColorInlines.h to use this.
-template<typename F> WebCore::Color parseColorRaw(const String&, const CSSParserContext&, ScriptExecutionContext&, NOESCAPE const F& lazySlowPathOptionsFunctor);
+WebCore::Color parseColorRaw(const String&, const CSSParserContext&, ScriptExecutionContext&);
+
+// Fast variant to be used when ScriptExecutionContext is expensive to obtain or when need to pass parsing options.
+// If the result is invalid, callers should call parseColorRawGeneral().
+// NOTE: Callers must include CSSPropertyParserConsumer+ColorInlines.h to use this.
+WebCore::Color parseColorRawSimple(const String&, const CSSParserContext&);
+
+// Parse with specific options.
+WEBCORE_EXPORT WebCore::Color parseColorRawGeneral(const String&, const CSSParserContext&, ScriptExecutionContext&, const CSSColorParsingOptions&, CSS::PlatformColorResolutionState&);
 
 // FIXME: All callers are not getting the right Settings, keyword resolution and calc resolution
 // when using this function and should switch to parseColorRaw().

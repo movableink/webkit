@@ -2295,21 +2295,14 @@ ExceptionOr<void> Internals::setViewBaseBackgroundColor(const String& colorValue
     return Exception { ExceptionCode::SyntaxError };
 }
 
-using LazySlowPathColorParsingParameters = std::tuple<
-    CSSPropertyParserHelpers::CSSColorParsingOptions,
-    CSS::PlatformColorResolutionState,
-    std::optional<CSS::PlatformColorResolutionDelegate>
->;
-
 ExceptionOr<void> Internals::setUnderPageBackgroundColorOverride(const String& colorValue)
 {
     Document* document = contextDocument();
     if (!document || !document->page())
         return Exception { ExceptionCode::InvalidAccessError };
 
-    auto color = CSSPropertyParserHelpers::parseColorRaw(colorValue, document->cssParserContext(), *document, [] {
-        return LazySlowPathColorParsingParameters { { }, { }, std::nullopt };
-    });
+    auto cssParserContext = document->cssParserContext();
+    auto color = CSSPropertyParserHelpers::parseColorRaw(colorValue, cssParserContext, *document);
     if (!color.isValid())
         return Exception { ExceptionCode::SyntaxError };
 
