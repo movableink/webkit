@@ -75,7 +75,7 @@ public:
 
     WEBCORE_EXPORT bool needsUIProcess() const;
     WEBCORE_EXPORT bool canHandleRequest(const ResourceRequest&) const;
-    WEBCORE_EXPORT void requestUnblockAsync(DecisionHandlerFunction) const;
+    WEBCORE_EXPORT void requestUnblockAsync(DecisionHandlerFunction);
     void wrapWithDecisionHandler(const DecisionHandlerFunction&);
 
     const String& unblockURLHost() const { return m_unblockURLHost; }
@@ -98,7 +98,8 @@ public:
 
 private:
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
-    static RetainPtr<WebFilterEvaluator> unpackWebFilterEvaluatorData(Vector<uint8_t>&&);
+    bool hasWebFilterEvaluator() const;
+    RetainPtr<WebFilterEvaluator> webFilterEvaluator();
 #endif
 
     String m_unblockURLHost;
@@ -111,6 +112,7 @@ private:
     String m_configurationPath;
 #endif
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
+    Vector<uint8_t> m_webFilterEvaluatorData;
     RetainPtr<WebFilterEvaluator> m_webFilterEvaluator;
 #endif
     bool m_unblockedAfterRequest { false };

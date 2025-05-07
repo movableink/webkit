@@ -639,8 +639,20 @@ void ProvisionalPageProxy::bindAccessibilityTree(const String& plugID)
 #if ENABLE(CONTENT_FILTERING)
 void ProvisionalPageProxy::contentFilterDidBlockLoadForFrame(const WebCore::ContentFilterUnblockHandler& unblockHandler, FrameIdentifier frameID)
 {
-    if (RefPtr page = m_page.get())
-        page->contentFilterDidBlockLoadForFrameShared(protectedProcess(), unblockHandler, frameID);
+    RefPtr page = m_page.get();
+    if (!page)
+        return;
+
+#if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
+    bool usesWebContentRestrictions = false;
+#if HAVE(WEBCONTENTRESTRICTIONS)
+    usesWebContentRestrictions = page->protectedPreferences()->usesWebContentRestrictionsForFilter();
+#endif
+    if (usesWebContentRestrictions)
+        MESSAGE_CHECK(unblockHandler.webFilterEvaluatorData().isEmpty());
+#endif
+
+    page->contentFilterDidBlockLoadForFrameShared(protectedProcess(), unblockHandler, frameID);
 }
 #endif
 

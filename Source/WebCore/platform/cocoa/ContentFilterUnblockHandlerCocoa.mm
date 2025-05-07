@@ -93,7 +93,7 @@ ContentFilterUnblockHandler::ContentFilterUnblockHandler(
     , m_evaluatedURL(WTFMove(evaluatedURL))
 #endif
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
-    , m_webFilterEvaluator(unpackWebFilterEvaluatorData(WTFMove(webFilterEvaluatorData)))
+    , m_webFilterEvaluatorData(WTFMove(webFilterEvaluatorData))
 #endif
     , m_unblockedAfterRequest(unblockedAfterRequest)
 {
@@ -103,23 +103,49 @@ ContentFilterUnblockHandler::ContentFilterUnblockHandler(
 // FIXME: Remove the conversion to and from Vector<uint8_t> and serialize individual members when rdar://107281862 is resolved.
 Vector<uint8_t> ContentFilterUnblockHandler::webFilterEvaluatorData() const
 {
+    if (!m_webFilterEvaluatorData.isEmpty())
+        return m_webFilterEvaluatorData;
+
+    if (!m_webFilterEvaluator)
+        return { };
+
     NSError *error = nil;
     return makeVector([NSKeyedArchiver archivedDataWithRootObject:m_webFilterEvaluator.get() requiringSecureCoding:YES error:&error]);
 }
 
-RetainPtr<WebFilterEvaluator> ContentFilterUnblockHandler::unpackWebFilterEvaluatorData(Vector<uint8_t>&& vector)
+static RetainPtr<WebFilterEvaluator> unpackWebFilterEvaluatorData(Vector<uint8_t>&& vector)
 {
     NSError *error { nil };
     NSSet<Class> *classes = [NSSet setWithObjects:getWebFilterEvaluatorClass(), NSNumber.class, NSURL.class, NSString.class, NSMutableString.class, nil];
     NSData *data = [NSData dataWithBytesNoCopy:vector.data() length:vector.size() freeWhenDone:NO];
     return [NSKeyedUnarchiver _strictlyUnarchivedObjectOfClasses:classes fromData:data error:&error];
 }
+
+bool ContentFilterUnblockHandler::hasWebFilterEvaluator() const
+{
+    if (!m_webFilterEvaluatorData.isEmpty()) {
+        RELEASE_ASSERT(!m_webFilterEvaluator);
+        return true;
+    }
+    return !!m_webFilterEvaluator;
+}
+
+RetainPtr<WebFilterEvaluator> ContentFilterUnblockHandler::webFilterEvaluator()
+{
+    if (!m_webFilterEvaluatorData.isEmpty()) {
+        RELEASE_ASSERT(!m_webFilterEvaluator);
+        m_webFilterEvaluator = unpackWebFilterEvaluatorData(std::exchange(m_webFilterEvaluatorData, { }));
+    }
+
+    return m_webFilterEvaluator;
+}
+
 #endif
 
 void ContentFilterUnblockHandler::wrapWithDecisionHandler(const DecisionHandlerFunction& decisionHandler)
 {
     ContentFilterUnblockHandler wrapped { *this };
-    UnblockRequesterFunction wrappedRequester { [wrapped, decisionHandler](DecisionHandlerFunction wrappedDecisionHandler) {
+    UnblockRequesterFunction wrappedRequester { [wrapped, decisionHandler](DecisionHandlerFunction wrappedDecisionHandler) mutable {
         wrapped.requestUnblockAsync([wrappedDecisionHandler, decisionHandler](bool unblocked) {
             wrappedDecisionHandler(unblocked);
             decisionHandler(unblocked);
@@ -129,6 +155,7 @@ void ContentFilterUnblockHandler::wrapWithDecisionHandler(const DecisionHandlerF
     m_evaluatedURL = { };
 #endif
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
+    m_webFilterEvaluatorData.clear();
     m_webFilterEvaluator = nullptr;
 #endif
     std::swap(m_unblockRequester, wrappedRequester);
@@ -141,6 +168,10 @@ bool ContentFilterUnblockHandler::needsUIProcess() const
         return true;
 #endif
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
+    if (!m_webFilterEvaluatorData.isEmpty()) {
+        RELEASE_ASSERT(!m_webFilterEvaluator);
+        return true;
+    }
     return !!m_webFilterEvaluator;
 #else
     return false;
@@ -156,7 +187,7 @@ bool ContentFilterUnblockHandler::canHandleRequest(const ResourceRequest& reques
         hasEvaluatedURL = !!m_evaluatedURL;
 #endif
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
-        hasWebFilterEvaluator = !!m_webFilterEvaluator;
+        hasWebFilterEvaluator = this->hasWebFilterEvaluator();
 #endif
         if (!hasEvaluatedURL && !hasWebFilterEvaluator)
             return false;
@@ -175,7 +206,7 @@ bool ContentFilterUnblockHandler::canHandleRequest(const ResourceRequest& reques
     return isUnblockRequest;
 }
 
-void ContentFilterUnblockHandler::requestUnblockAsync(DecisionHandlerFunction decisionHandler) const
+void ContentFilterUnblockHandler::requestUnblockAsync(DecisionHandlerFunction decisionHandler)
 {
 #if HAVE(WEBCONTENTRESTRICTIONS)
     if (m_evaluatedURL) {
@@ -194,8 +225,8 @@ void ContentFilterUnblockHandler::requestUnblockAsync(DecisionHandlerFunction de
     }
 #endif
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
-    if (m_webFilterEvaluator) {
-        [m_webFilterEvaluator unblockWithCompletion:[decisionHandler](BOOL unblocked, NSError *) {
+    if (RetainPtr evaluator = webFilterEvaluator()) {
+        [evaluator unblockWithCompletion:[decisionHandler](BOOL unblocked, NSError *) {
             callOnMainThread([decisionHandler, unblocked] {
                 LOG(ContentFiltering, "WebFilterEvaluator %s the unblock request.\n", unblocked ? "allowed" : "did not allow");
                 decisionHandler(unblocked);
