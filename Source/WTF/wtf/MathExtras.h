@@ -499,9 +499,9 @@ inline typename std::enable_if<std::is_floating_point<T>::value, T>::type nanPro
     return std::isnan(a) || std::isnan(b) ? std::numeric_limits<T>::quiet_NaN() : std::max(a, b);
 }
 
-inline bool isIntegral(float value)
+inline constexpr bool isIntegral(float value)
 {
-    return static_cast<int>(value) == value;
+    return std::trunc(value) == value;
 }
 
 template<typename T>
