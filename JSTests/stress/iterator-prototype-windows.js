@@ -1,4 +1,4 @@
-//@ requireOptions("--useIteratorHelpers=1", "--useIteratorChunking=1")
+//@ requireOptions("--useIteratorChunking=1")
 
 function assert(a, text) {
     if (!a)

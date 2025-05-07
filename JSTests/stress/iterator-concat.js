@@ -1,4 +1,4 @@
-//@ requireOptions("--useIteratorHelpers=1", "--useIteratorSequencing=1")
+//@ requireOptions("--useIteratorSequencing=1")
 
 function shouldBe(actual, expected) {
     if (actual !== expected)

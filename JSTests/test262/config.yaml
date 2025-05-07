@@ -3,7 +3,6 @@
 flags:
   SharedArrayBuffer: useSharedArrayBuffer
   Atomics: useSharedArrayBuffer
-  iterator-helpers: useIteratorHelpers
   Temporal: useTemporal
   ShadowRealm: useShadowRealm
   Math.sumPrecise: useMathSumPreciseMethod
