@@ -32,11 +32,11 @@
 #include "CGUtilities.h"
 #include "GraphicsContextCG.h"
 #include "PathStream.h"
+#include <mutex>
 #include <pal/spi/cg/CoreGraphicsSPI.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/TZoneMallocInlines.h>
-
 namespace WebCore {
 
 // Below contains two implementations per path element implementation:
@@ -356,6 +356,16 @@ Ref<PathCG> PathCG::create(RetainPtr<CGMutablePathRef>&& platformPath)
     return adoptRef(*new PathCG(WTFMove(platformPath)));
 }
 
+PlatformPathPtr PathCG::emptyPlatformPath()
+{
+    static LazyNeverDestroyed<RetainPtr<CGMutablePathRef>> emptyPath;
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        emptyPath.construct(adoptCF(CGPathCreateMutable()));
+    });
+    return emptyPath.get().get();
+}
+
 PathCG::PathCG(RetainPtr<CGMutablePathRef>&& platformPath)
     : m_platformPath(WTFMove(platformPath))
 {
@@ -510,11 +520,6 @@ bool PathCG::applyElements(const PathElementApplier& applier) const
     return true;
 }
 
-bool PathCG::isEmpty() const
-{
-    return CGPathIsEmpty(platformPath());
-}
-
 FloatPoint PathCG::currentPoint() const
 {
     return CGPathGetCurrentPoint(platformPath());
@@ -563,9 +568,6 @@ static RetainPtr<CGMutablePathRef> copyCGPathClosingSubpaths(CGPathRef originalP
 
 bool PathCG::contains(const FloatPoint &point, WindRule rule) const
 {
-    if (isEmpty())
-        return false;
-
     if (!fastBoundingRect().contains(point))
         return false;
 
@@ -603,9 +605,6 @@ bool PathCG::strokeContains(const FloatPoint& point, NOESCAPE const Function<voi
 {
     ASSERT(strokeStyleApplier);
 
-    if (isEmpty())
-        return false;
-
     CGContextRef context = scratchContext();
 
     CGContextSaveGState(context);
@@ -641,9 +640,6 @@ FloatRect PathCG::boundingRect() const
 
 FloatRect PathCG::strokeBoundingRect(NOESCAPE const Function<void(GraphicsContext&)>& strokeStyleApplier) const
 {
-    if (isEmpty())
-        return { };
-
     CGContextRef context = scratchContext();
 
     CGContextSaveGState(context);

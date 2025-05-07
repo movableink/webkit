@@ -47,6 +47,8 @@ public:
     static Ref<PathCG> create(std::span<const PathSegment> = { });
     static Ref<PathCG> create(RetainPtr<CGMutablePathRef>&&);
 
+    static PlatformPathPtr emptyPlatformPath();
+
     PlatformPathPtr platformPath() const;
 
     void addPath(const PathCG&, const AffineTransform&);
@@ -80,8 +82,6 @@ private:
     PathCG(RetainPtr<CGMutablePathRef>&&);
 
     PlatformPathPtr ensureMutablePlatformPath();
-
-    bool isEmpty() const final;
 
     FloatPoint currentPoint() const final;
 

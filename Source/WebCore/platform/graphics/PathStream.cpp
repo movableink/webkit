@@ -102,7 +102,7 @@ Ref<PathImpl> PathStream::copy() const
 
 const PathMoveTo* PathStream::lastIfMoveTo() const
 {
-    if (isEmpty())
+    if (m_segments.isEmpty())
         return nullptr;
 
     return std::get_if<PathMoveTo>(&m_segments.last().data());
@@ -228,7 +228,7 @@ std::optional<PathSegment> PathStream::singleSegment() const
 
 bool PathStream::isClosed() const
 {
-    if (isEmpty())
+    if (m_segments.isEmpty())
         return false;
 
     return m_segments.last().closesSubpath();

@@ -77,8 +77,6 @@ public:
 
     virtual std::optional<PathSegment> singleSegment() const { return std::nullopt; }
 
-    virtual bool isEmpty() const = 0;
-
     virtual bool isClosed() const;
 
     virtual bool hasSubpaths() const;

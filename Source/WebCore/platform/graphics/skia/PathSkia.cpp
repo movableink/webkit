@@ -30,6 +30,7 @@
 #include "GraphicsContextSkia.h"
 #include "NotImplemented.h"
 #include "PathStream.h"
+#include <mutex>
 #include <numbers>
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
@@ -48,6 +49,16 @@ Ref<PathSkia> PathSkia::create(std::span<const PathSegment> segments)
     for (auto& segment : segments)
         pathSkia->addSegment(segment);
     return pathSkia;
+}
+
+PlatformPathPtr PathSkia::emptyPlatformPath()
+{
+    static LazyNeverDestroyed<SkPath> emptyPath;
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        emptyPath.construct();
+    });
+    return &emptyPath.get();
 }
 
 PathSkia::PathSkia(const SkPath& platformPath)
@@ -262,11 +273,6 @@ bool PathSkia::applyElements(const PathElementApplier& applier) const
     WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
-bool PathSkia::isEmpty() const
-{
-    return m_platformPath.isEmpty();
-}
-
 FloatPoint PathSkia::currentPoint() const
 {
     if (m_platformPath.countPoints() > 0) {
@@ -286,7 +292,7 @@ bool PathSkia::transform(const AffineTransform& matrix)
 
 bool PathSkia::contains(const FloatPoint& point, WindRule windRule) const
 {
-    if (isEmpty() || !std::isfinite(point.x()) || !std::isfinite(point.y()))
+    if (!std::isfinite(point.x()) || !std::isfinite(point.y()))
         return false;
 
     auto toSkiaFillType = [](const WindRule& windRule) -> SkPathFillType {
@@ -313,7 +319,7 @@ bool PathSkia::contains(const FloatPoint& point, WindRule windRule) const
 
 bool PathSkia::strokeContains(const FloatPoint& point, NOESCAPE const Function<void(GraphicsContext&)>& strokeStyleApplier) const
 {
-    if (isEmpty() || !std::isfinite(point.x()) || !std::isfinite(point.y()))
+    if (!std::isfinite(point.x()) || !std::isfinite(point.y()))
         return false;
 
     auto surface = SkSurfaces::Null(1, 1);
@@ -339,9 +345,6 @@ FloatRect PathSkia::boundingRect() const
 
 FloatRect PathSkia::strokeBoundingRect(NOESCAPE const Function<void(GraphicsContext&)>& strokeStyleApplier) const
 {
-    if (isEmpty())
-        return { };
-
     auto surface = SkSurfaces::Null(1, 1);
     GraphicsContextSkia graphicsContext(*surface->getCanvas(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified);
     strokeStyleApplier(graphicsContext);

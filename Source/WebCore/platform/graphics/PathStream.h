@@ -89,8 +89,6 @@ private:
 
     std::optional<PathSegment> singleSegment() const final;
 
-    bool isEmpty() const final { return m_segments.isEmpty(); }
-
     bool isClosed() const final;
     FloatPoint currentPoint() const final;
 

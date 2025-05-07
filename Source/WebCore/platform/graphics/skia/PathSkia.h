@@ -43,6 +43,7 @@ class PathStream;
 class PathSkia final : public PathImpl {
 public:
     static Ref<PathSkia> create(std::span<const PathSegment> = { });
+    static PlatformPathPtr emptyPlatformPath();
 
     PlatformPathPtr platformPath() const;
 
@@ -76,8 +77,6 @@ public:
 private:
     PathSkia() = default;
     explicit PathSkia(const SkPath&);
-
-    bool isEmpty() const final;
 
     FloatPoint currentPoint() const final;
 

@@ -75,7 +75,7 @@ public:
 
     WEBCORE_EXPORT void closeSubpath();
 
-    void addPath(const Path&, const AffineTransform&);
+    WEBCORE_EXPORT void addPath(const Path&, const AffineTransform&);
 
     void applySegments(const PathSegmentApplier&) const;
     WEBCORE_EXPORT void applyElements(const PathElementApplier&) const;
@@ -89,7 +89,7 @@ public:
     WEBCORE_EXPORT std::optional<PathSegment> singleSegment() const;
     std::optional<PathDataLine> singleDataLine() const;
 
-    WEBCORE_EXPORT bool isEmpty() const;
+    bool isEmpty() const;
     bool definitelySingleLine() const;
     WEBCORE_EXPORT PlatformPathPtr platformPath() const;
 
@@ -104,8 +104,8 @@ public:
     PathTraversalState traversalStateAtLength(float length) const;
     FloatPoint pointAtLength(float length) const;
 
-    bool contains(const FloatPoint&, WindRule = WindRule::NonZero) const;
-    bool strokeContains(const FloatPoint&, NOESCAPE const Function<void(GraphicsContext&)>& strokeStyleApplier) const;
+    WEBCORE_EXPORT bool contains(const FloatPoint&, WindRule = WindRule::NonZero) const;
+    WEBCORE_EXPORT bool strokeContains(const FloatPoint&, NOESCAPE const Function<void(GraphicsContext&)>& strokeStyleApplier) const;
 
     WEBCORE_EXPORT FloatRect fastBoundingRect() const;
     WEBCORE_EXPORT FloatRect boundingRect() const;
@@ -135,6 +135,11 @@ WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Path&);
 inline Path::Path(PathSegment&& segment)
     : m_data(WTFMove(segment))
 {
+}
+
+inline bool Path::isEmpty() const
+{
+    return std::holds_alternative<std::monostate>(m_data);
 }
 
 } // namespace WebCore

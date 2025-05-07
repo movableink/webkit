@@ -75,9 +75,6 @@ bool Path::definitelyEqual(const Path& other) const
             return otherSegment && segment == otherSegment.value();
         },
         [&](const DataRef<PathImpl>& impl) {
-            if (impl->isEmpty())
-                return other.isEmpty();
-
             if (auto singleSegment = impl->singleSegment()) {
                 auto otherSegment = other.singleSegment();
                 return otherSegment && singleSegment == otherSegment.value();
@@ -104,7 +101,7 @@ PlatformPathImpl& Path::ensurePlatformPathImpl()
             return downcast<PlatformPathImpl>(setImpl(PlatformPathImpl::create(stream->segments())));
         return downcast<PlatformPathImpl>(*impl);
     }
-
+    // Generally platform path is never empty. This should only be called during Path::add() on an empty path.
     return downcast<PlatformPathImpl>(setImpl(PlatformPathImpl::create()));
 }
 
@@ -115,12 +112,14 @@ PathImpl& Path::ensureImpl()
 
     if (auto impl = asImpl())
         return *impl;
-
+    ASSERT_NOT_REACHED(); // Impl is never empty.
     return setImpl(PathStream::create());
 }
 
 void Path::ensureImplForTesting()
 {
+    if (isEmpty())
+        return;
     ensureImpl();
 }
 
@@ -397,17 +396,6 @@ std::optional<PathDataLine> Path::singleDataLine() const
     return std::nullopt;
 }
 
-bool Path::isEmpty() const
-{
-    if (std::holds_alternative<std::monostate>(m_data))
-        return true;
-
-    if (auto impl = asImpl())
-        return impl->isEmpty();
-
-    return false;
-}
-
 bool Path::definitelySingleLine() const
 {
     return !!singleDataLine();
@@ -415,6 +403,9 @@ bool Path::definitelySingleLine() const
 
 PlatformPathPtr Path::platformPath() const
 {
+    if (isEmpty())
+        return PlatformPathImpl::emptyPlatformPath();
+
     return const_cast<Path&>(*this).ensurePlatformPathImpl().platformPath();
 }
 
