@@ -2805,20 +2805,6 @@ EditableLinkBehavior:
     WebCore:
       default: EditableLinkBehavior::Default
 
-ElementCheckVisibilityEnabled:
-  type: bool
-  status: stable
-  category: dom
-  humanReadableName: "element.checkVisibility() API"
-  humanReadableDescription: "Enable element.checkVisibility() API"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 EmbedElementEnabled:
   type: bool
   status: mature
