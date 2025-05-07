@@ -2383,13 +2383,6 @@ void WebViewImpl::pageDidScroll(const IntPoint& scrollPosition)
 #endif // HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 }
 
-void WebViewImpl::layerTreeCommitComplete()
-{
-#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
-    updateContentInsetFillBackdropLayerParentIfNeeded();
-#endif
-}
-
 #if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 
 NSRect WebViewImpl::scrollViewFrame()

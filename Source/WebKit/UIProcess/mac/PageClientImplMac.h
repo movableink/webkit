@@ -204,8 +204,6 @@ private:
 
     void setEditableElementIsFocused(bool) override;
 
-    void layerTreeCommitComplete() override;
-
     void scrollingNodeScrollViewDidScroll(WebCore::ScrollingNodeID) override;
 
     void registerInsertionUndoGrouping() override;
