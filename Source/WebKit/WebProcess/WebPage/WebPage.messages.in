@@ -45,7 +45,7 @@ messages -> WebPage WantsAsyncDispatchMessage {
     SetObscuredContentInsets(WebCore::FloatBoxExtent obscuredContentInsets)
 #endif
 
-    SetShouldSuppressHDR(bool shouldSuppressHDR)
+    [DeferSendingIfSuspended] SetShouldSuppressHDR(bool shouldSuppressHDR)
 
     SetUnderlayColor(WebCore::Color color)
     SetUnderPageBackgroundColorOverride(WebCore::Color underPageBackgroundColorOverride)
