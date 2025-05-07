@@ -34,6 +34,20 @@
 
 namespace WebCore {
 
+void AXIsolatedObject::initializeBasePlatformProperties(const Ref<const AccessibilityObject>& object)
+{
+    // These attributes are used to serve APIs on static text, but, we cache them on the highest-level ancestor
+    // to avoid caching the same value multiple times.
+    auto* parent = object->parentObject();
+    auto style = object->stylesForAttributedString();
+    std::optional<RetainPtr<CTFontRef>> parentFont = parent ? std::optional(parent->font()) : std::nullopt;
+    if (!parentFont || parentFont != style.font)
+        setProperty(AXProperty::Font, style.font);
+    std::optional<Color> parentTextColor = parent ? std::optional(parent->textColor()) : std::nullopt;
+    if (!parentTextColor || *parentTextColor != style.textColor)
+        setProperty(AXProperty::TextColor, WTFMove(style.textColor));
+}
+
 void AXIsolatedObject::initializePlatformProperties(const Ref<const AccessibilityObject>& object)
 {
     setProperty(AXProperty::HasApplePDFAnnotationAttribute, object->hasApplePDFAnnotationAttribute());
@@ -41,27 +55,15 @@ void AXIsolatedObject::initializePlatformProperties(const Ref<const Accessibilit
 #if ENABLE(AX_THREAD_TEXT_APIS)
     if (object->isStaticText()) {
         auto style = object->stylesForAttributedString();
+        // Font and TextColor are handled in initializeBasePlatformProperties, since ignored objects could be "containers" where those styles are set.
         setProperty(AXProperty::BackgroundColor, WTFMove(style.backgroundColor));
-        setProperty(AXProperty::Font, style.font);
         setProperty(AXProperty::HasLinethrough, style.hasLinethrough());
         setProperty(AXProperty::HasTextShadow, style.hasTextShadow);
         setProperty(AXProperty::HasUnderline, style.hasUnderline());
         setProperty(AXProperty::IsSubscript, style.isSubscript);
         setProperty(AXProperty::IsSuperscript, style.isSuperscript);
         setProperty(AXProperty::LinethroughColor, style.linethroughColor());
-        // FIXME: We're going to end up caching a lot of the same TextColor properties over and over.
-        //  1. Should we implement some kind of Color interning?
-        //  2. Or maybe have a "main" text color mechanism, where when we create the isolated tree, we try to compute the
-        //     "main" text color by walking n-number of RenderTexts. Then AXIsolatedObject::setProperty, if the Color is
-        //     equivalent to the "main" one, we consider the color to be "isDefaultValue", thus not caching it.
-        //       - Probably want to do this for both TextColor and BackgroundColor.
-        //       - Maybe set this as an OpportunisticTask to re-compute the main colors, and if it has changed, walk all
-        //         objects and uncache properties for those with the new "main" color? Not sure if this is worth it...
-        //       - Only trigger the walk if font-color changes?
-        // Resolve this FIXME before shipping AX_THREAD_TEXT_APIS.
-        setProperty(AXProperty::TextColor, WTFMove(style.textColor));
         setProperty(AXProperty::UnderlineColor, style.underlineColor());
-
         setProperty(AXProperty::FontOrientation, object->fontOrientation());
     }
     // FIXME: Can we compute this off the main-thread with our cached text runs?

@@ -403,7 +403,7 @@ public:
     // Cocoa API (attributed strings).
     AttributedStringStyle stylesForAttributedString() const final;
     RetainPtr<CTFontRef> font() const final;
-    Color textColor() const;
+    Color textColor() const final;
     Color backgroundColor() const;
     bool isSubscript() const;
     bool isSuperscript() const;

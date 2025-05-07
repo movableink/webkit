@@ -81,6 +81,7 @@ public:
     AXIsolatedObject* editableAncestor() const final { return Accessibility::editableAncestor(*this); };
     bool canSetFocusAttribute() const final { return boolAttributeValue(AXProperty::CanSetFocusAttribute); }
     AttributedStringStyle stylesForAttributedString() const final;
+    Color textColor() const final { return colorAttributeValue(AXProperty::TextColor); }
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
     const AXTextRuns* textRuns() const;
@@ -106,7 +107,7 @@ public:
     AXTextMarkerRange textMarkerRange() const final;
 
 #if PLATFORM(COCOA)
-    RetainPtr<CTFontRef> font() const final { return propertyValue<RetainPtr<CTFontRef>>(AXProperty::Font); }
+    RetainPtr<CTFontRef> font() const final { return fontAttributeValue(AXProperty::Font); }
 #endif
 
 private:
@@ -125,6 +126,7 @@ private:
 
     void initializeProperties(const Ref<AccessibilityObject>&);
     void initializePlatformProperties(const Ref<const AccessibilityObject>&);
+    void initializeBasePlatformProperties(const Ref<const AccessibilityObject>&);
 
     void setProperty(AXProperty, AXPropertyValueVariant&&);
     void setPropertyInVector(AXProperty property, AXPropertyValueVariant&& value)
@@ -166,6 +168,7 @@ private:
     AXIsolatedObject* objectAttributeValue(AXProperty) const;
     IntPoint intPointAttributeValue(AXProperty) const;
     Color colorAttributeValue(AXProperty) const;
+    RetainPtr<CTFontRef> fontAttributeValue(AXProperty) const;
     URL urlAttributeValue(AXProperty) const;
     uint64_t uint64AttributeValue(AXProperty) const;
     Path pathAttributeValue(AXProperty) const;

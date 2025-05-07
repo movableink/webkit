@@ -134,6 +134,7 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
         if (!language.isEmpty())
             setProperty(AXProperty::Language, WTFMove(language).isolatedCopy());
         setProperty(AXProperty::IsEnabled, object.isEnabled());
+        initializeBasePlatformProperties(axObject);
     };
 
     // Allocate a capacity based on the minimum properties an object has (based on measurements from a real webpage).
@@ -615,6 +616,11 @@ void AXIsolatedObject::setProperty(AXProperty property, AXPropertyValueVariant&&
         [](uint64_t typedValue) { return !typedValue; },
         [](AccessibilityButtonState& typedValue) { return typedValue == AccessibilityButtonState::Off; },
         [&](Color& typedValue) {
+            if (property == AXProperty::TextColor) {
+                auto* parent = parentObject();
+                return parent && typedValue == parent->textColor();
+            }
+
             if (property == AXProperty::ColorValue)
                 return typedValue == Color::black;
             return typedValue.toColorTypeLossy<SRGBA<uint8_t>>() == Color().toColorTypeLossy<SRGBA<uint8_t>>();
@@ -646,7 +652,10 @@ void AXIsolatedObject::setProperty(AXProperty property, AXPropertyValueVariant&&
         },
 #if ENABLE(AX_THREAD_TEXT_APIS)
         [](std::shared_ptr<AXTextRuns> typedValue) { return !typedValue || !typedValue->size(); },
-        [](RetainPtr<CTFontRef>& typedValue) { return !typedValue; },
+        [&](RetainPtr<CTFontRef>& typedValue) {
+            auto* parent = parentObject();
+            return parent && typedValue == parent->font();
+        },
         [](FontOrientation typedValue) { return typedValue == FontOrientation::Horizontal; },
         [](TextEmissionBehavior typedValue) { return typedValue == TextEmissionBehavior::None; },
         [](AXTextRunLineID typedValue) { return !typedValue; },
@@ -1131,12 +1140,27 @@ Path AXIsolatedObject::pathAttributeValue(AXProperty property) const
 Color AXIsolatedObject::colorAttributeValue(AXProperty property) const
 {
     size_t index = indexOfProperty(property);
-    if (index == notFound)
+    if (index == notFound) {
+        if (property == AXProperty::TextColor && parentObject())
+            return parentObject()->textColor();
         return Color();
+    }
 
     return WTF::switchOn(m_properties[index].second,
         [] (const Color& typedValue) -> Color { return typedValue; },
         [] (auto&) { return Color(); }
+    );
+}
+
+RetainPtr<CTFontRef> AXIsolatedObject::fontAttributeValue(AXProperty property) const
+{
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
+        return parentObject() ? parentObject()->font() : nullptr;
+
+    return WTF::switchOn(m_properties[index].second,
+        [] (const RetainPtr<CTFontRef>& typedValue) -> RetainPtr<CTFontRef> { return typedValue; },
+        [] (auto&) { return RetainPtr<CTFontRef>(); }
     );
 }
 

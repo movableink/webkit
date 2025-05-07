@@ -1155,6 +1155,7 @@ public:
     enum class SpellCheck : bool { No, Yes };
     virtual RetainPtr<NSAttributedString> attributedStringForTextMarkerRange(AXTextMarkerRange&&, SpellCheck) const = 0;
     virtual AttributedStringStyle stylesForAttributedString() const = 0;
+    virtual Color textColor() const = 0;
     virtual RetainPtr<CTFontRef> font() const = 0;
 #endif
 
