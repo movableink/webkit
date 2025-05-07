@@ -262,9 +262,6 @@ JSC_DECLARE_NOEXCEPT_JIT_OPERATION(jsRound, double, (double));
 namespace Math {
 
 // This macro defines a set of information about all known arith unary generic node.
-#define FOR_EACH_ARITH_UNARY_OP_CUSTOM(macro) \
-    macro(Log1p, log1p) \
-
 #define FOR_EACH_ARITH_UNARY_OP_STD(macro) \
     macro(Sin, sin) \
     macro(Sinh, sinh) \
@@ -284,10 +281,10 @@ namespace Math {
     macro(Cbrt, cbrt) \
     macro(Exp, exp) \
     macro(Expm1, expm1) \
+    macro(Log1p, log1p) \
 
 #define FOR_EACH_ARITH_UNARY_OP(macro) \
     FOR_EACH_ARITH_UNARY_OP_STD(macro) \
-    FOR_EACH_ARITH_UNARY_OP_CUSTOM(macro) \
 
 #define JSC_DEFINE_VIA_STD(capitalizedName, lowerName) \
     using std::lowerName; \
@@ -295,13 +292,6 @@ namespace Math {
     JSC_DECLARE_NOEXCEPT_JIT_OPERATION(lowerName##Float, float, (float));
 FOR_EACH_ARITH_UNARY_OP_STD(JSC_DEFINE_VIA_STD)
 #undef JSC_DEFINE_VIA_STD
-
-#define JSC_DEFINE_VIA_CUSTOM(capitalizedName, lowerName) \
-    JS_EXPORT_PRIVATE double lowerName(double); \
-    JSC_DECLARE_NOEXCEPT_JIT_OPERATION(lowerName##Double, double, (double)); \
-    JSC_DECLARE_NOEXCEPT_JIT_OPERATION(lowerName##Float, float, (float));
-FOR_EACH_ARITH_UNARY_OP_CUSTOM(JSC_DEFINE_VIA_CUSTOM)
-#undef JSC_DEFINE_VIA_CUSTOM
 
 template<typename FloatType>
 ALWAYS_INLINE FloatType fMax(FloatType a, FloatType b)

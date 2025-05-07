@@ -486,25 +486,6 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(jsRound, double, (double value))
 
 namespace Math {
 
-static ALWAYS_INLINE double log1pDoubleImpl(double value)
-{
-    if (value == 0.0)
-        return value;
-    return std::log1p(value);
-}
-
-static ALWAYS_INLINE float log1pFloatImpl(float value)
-{
-    if (value == 0.0)
-        return value;
-    return std::log1p(value);
-}
-
-double log1p(double value)
-{
-    return log1pDoubleImpl(value);
-}
-
 #define JSC_DEFINE_VIA_STD(capitalizedName, lowerName) \
     JSC_DEFINE_NOEXCEPT_JIT_OPERATION(lowerName##Double, double, (double value)) \
     { \
@@ -516,18 +497,6 @@ double log1p(double value)
     }
 FOR_EACH_ARITH_UNARY_OP_STD(JSC_DEFINE_VIA_STD)
 #undef JSC_DEFINE_VIA_STD
-
-#define JSC_DEFINE_VIA_CUSTOM(capitalizedName, lowerName) \
-    JSC_DEFINE_NOEXCEPT_JIT_OPERATION(lowerName##Double, double, (double value)) \
-    { \
-        return lowerName##DoubleImpl(value); \
-    } \
-    JSC_DEFINE_NOEXCEPT_JIT_OPERATION(lowerName##Float, float, (float value)) \
-    { \
-        return lowerName##FloatImpl(value); \
-    }
-FOR_EACH_ARITH_UNARY_OP_CUSTOM(JSC_DEFINE_VIA_CUSTOM)
-#undef JSC_DEFINE_VIA_CUSTOM
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(truncDouble, double, (double value))
 {
