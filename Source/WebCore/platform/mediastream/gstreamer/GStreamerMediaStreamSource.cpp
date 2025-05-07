@@ -576,7 +576,7 @@ public:
         return m_eosPending;
     }
 
-    GstStructure* queryAdditionalStats() final
+    GstStructure* queryAdditionalStats()
     {
         GUniquePtr<GstStructure> stats;
         auto query = adoptGRef(gst_query_new_custom(GST_QUERY_CUSTOM, gst_structure_new_empty("webkit-video-decoder-stats")));
