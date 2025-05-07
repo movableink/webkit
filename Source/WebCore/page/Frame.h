@@ -96,8 +96,8 @@ public:
     WEBCORE_EXPORT void detachFromPage();
 
     WEBCORE_EXPORT void setOwnerElement(HTMLFrameOwnerElement*);
-    inline HTMLFrameOwnerElement* ownerElement() const; // Defined in HTMLFrameOwnerElement.h.
-    inline RefPtr<HTMLFrameOwnerElement> protectedOwnerElement() const; // Defined in HTMLFrameOwnerElement.h.
+    inline HTMLFrameOwnerElement* ownerElement() const; // Defined in FrameInlines.h.
+    inline RefPtr<HTMLFrameOwnerElement> protectedOwnerElement() const; // Defined in FrameInlines.h.
 
     WEBCORE_EXPORT void disconnectOwnerElement();
     NavigationScheduler& navigationScheduler() const { return m_navigationScheduler.get(); }
