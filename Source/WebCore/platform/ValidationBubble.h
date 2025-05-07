@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -62,14 +62,14 @@ public:
 
 #if PLATFORM(GTK)
     using ShouldNotifyFocusEventsCallback = Function<void(PlatformView*, bool shouldNotifyFocusEvents)>;
-    static Ref<ValidationBubble> create(PlatformView* view, const String& message, const Settings& settings, ShouldNotifyFocusEventsCallback&& callback)
+    static Ref<ValidationBubble> create(PlatformView* view, String&& message, const Settings& settings, ShouldNotifyFocusEventsCallback&& callback)
     {
-        return adoptRef(*new ValidationBubble(view, message, settings, WTFMove(callback)));
+        return adoptRef(*new ValidationBubble(view, WTFMove(message), settings, WTFMove(callback)));
     }
 #else
-    static Ref<ValidationBubble> create(PlatformView* view, const String& message, const Settings& settings)
+    static Ref<ValidationBubble> create(PlatformView* view, String&& message, const Settings& settings)
     {
-        return adoptRef(*new ValidationBubble(view, message, settings));
+        return adoptRef(*new ValidationBubble(view, WTFMove(message), settings));
     }
 #endif
 
@@ -87,10 +87,10 @@ public:
 
 private:
 #if PLATFORM(GTK)
-    WEBCORE_EXPORT ValidationBubble(PlatformView*, const String& message, const Settings&, ShouldNotifyFocusEventsCallback&&);
+    WEBCORE_EXPORT ValidationBubble(PlatformView*, String&& message, const Settings&, ShouldNotifyFocusEventsCallback&&);
     void invalidate();
 #else
-    WEBCORE_EXPORT ValidationBubble(PlatformView*, const String& message, const Settings&);
+    WEBCORE_EXPORT ValidationBubble(PlatformView*, String&& message, const Settings&);
 #endif
 
 #if PLATFORM(COCOA)

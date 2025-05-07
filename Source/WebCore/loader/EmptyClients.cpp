@@ -630,7 +630,7 @@ void EmptyChromeClient::runOpenPanel(LocalFrame&, FileChooser&)
 {
 }
     
-void EmptyChromeClient::showShareSheet(ShareDataWithParsedURL&, CompletionHandler<void(bool)>&&)
+void EmptyChromeClient::showShareSheet(ShareDataWithParsedURL&&, CompletionHandler<void(bool)>&&)
 {
 }
 

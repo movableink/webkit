@@ -142,9 +142,9 @@ IntRect Chrome::rootViewToAccessibilityScreen(const IntRect& rect) const
 }
 
 #if PLATFORM(IOS_FAMILY)
-void Chrome::relayAccessibilityNotification(const String& notificationName, const RetainPtr<NSData>& notificationData) const
+void Chrome::relayAccessibilityNotification(String&& notificationName, RetainPtr<NSData>&& notificationData) const
 {
-    return m_client->relayAccessibilityNotification(notificationName, notificationData);
+    return m_client->relayAccessibilityNotification(WTFMove(notificationName), WTFMove(notificationData));
 }
 #endif
 
@@ -301,13 +301,13 @@ bool Chrome::canRunBeforeUnloadConfirmPanel()
     return m_client->canRunBeforeUnloadConfirmPanel();
 }
 
-bool Chrome::runBeforeUnloadConfirmPanel(const String& message, LocalFrame& frame)
+bool Chrome::runBeforeUnloadConfirmPanel(String&& message, LocalFrame& frame)
 {
     // Defer loads in case the client method runs a new event loop that would
     // otherwise cause the load to continue while we're in the middle of executing JavaScript.
     PageGroupLoadDeferrer deferrer(m_page, true);
 
-    return m_client->runBeforeUnloadConfirmPanel(message, frame);
+    return m_client->runBeforeUnloadConfirmPanel(WTFMove(message), frame);
 }
 
 void Chrome::closeWindow()
@@ -476,14 +476,14 @@ void Chrome::runOpenPanel(LocalFrame& frame, FileChooser& fileChooser)
     m_client->runOpenPanel(frame, fileChooser);
 }
 
-void Chrome::showShareSheet(ShareDataWithParsedURL& shareData, CompletionHandler<void(bool)>&& callback)
+void Chrome::showShareSheet(ShareDataWithParsedURL&& shareData, CompletionHandler<void(bool)>&& callback)
 {
-    m_client->showShareSheet(shareData, WTFMove(callback));
+    m_client->showShareSheet(WTFMove(shareData), WTFMove(callback));
 }
 
-void Chrome::showContactPicker(const ContactsRequestData& requestData, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&& callback)
+void Chrome::showContactPicker(ContactsRequestData&& requestData, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&& callback)
 {
-    m_client->showContactPicker(requestData, WTFMove(callback));
+    m_client->showContactPicker(WTFMove(requestData), WTFMove(callback));
 }
 
 #if HAVE(DIGITAL_CREDENTIALS_UI)

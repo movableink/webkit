@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -166,16 +166,16 @@ static WebValidationBubbleViewController *allocWebValidationBubbleViewController
 
 namespace WebCore {
 
-ValidationBubble::ValidationBubble(UIView *view, const String& message, const Settings&)
+ValidationBubble::ValidationBubble(UIView *view, String&& message, const Settings&)
     : m_view(view)
-    , m_message(message)
+    , m_message(WTFMove(message))
 {
     m_popoverController = adoptNS([allocWebValidationBubbleViewControllerInstance() init]);
     [m_popoverController setModalPresentationStyle:UIModalPresentationPopover];
     m_tapRecognizer = adoptNS([[WebValidationBubbleTapRecognizer alloc] initWithPopoverController:m_popoverController.get()]);
 
     UILabel *validationLabel = label(m_popoverController.get());
-    validationLabel.text = message.createNSString().get();
+    validationLabel.text = m_message.createNSString().get();
     m_fontSize = validationLabel.font.pointSize;
     CGSize labelSize = [validationLabel sizeThatFits:CGSizeMake(validationBubbleMaxLabelWidth, CGFLOAT_MAX)];
     [m_popoverController setPreferredContentSize:CGSizeMake(labelSize.width + validationBubbleHorizontalPadding * 2, labelSize.height + validationBubbleVerticalPadding * 2)];

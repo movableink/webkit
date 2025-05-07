@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -58,14 +58,14 @@ void WebValidationMessageClient::documentDetached(Document& document)
         hideValidationMessage(*m_currentAnchor);
 }
 
-void WebValidationMessageClient::showValidationMessage(const Element& anchor, const String& message)
+void WebValidationMessageClient::showValidationMessage(const Element& anchor, String&& message)
 {
     if (m_currentAnchor)
         hideValidationMessage(*m_currentAnchor);
 
     m_currentAnchor = anchor;
     m_currentAnchorRect = anchor.boundingBoxInRootViewCoordinates();
-    Ref { *m_page }->send(Messages::WebPageProxy::ShowValidationMessage(m_currentAnchorRect, message));
+    Ref { *m_page }->send(Messages::WebPageProxy::ShowValidationMessage(m_currentAnchorRect, WTFMove(message)));
 }
 
 void WebValidationMessageClient::hideValidationMessage(const Element& anchor)
