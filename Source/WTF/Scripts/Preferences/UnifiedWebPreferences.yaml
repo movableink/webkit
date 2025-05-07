@@ -3327,22 +3327,6 @@ GoogleAntiFlickerOptimizationQuirkEnabled:
     WebCore:
       default: true
 
-GraphicsContextFiltersEnabled:
-   type: bool
-   status: stable
-   category: media
-   webcoreOnChange: setNeedsRelayoutAllFrames
-   humanReadableName: "GraphicsContext Filter Rendering"
-   humanReadableDescription: "GraphicsContext Filter Rendering"
-   condition: USE(GRAPHICS_CONTEXT_FILTERS)
-   defaultValue:
-     WebKitLegacy:
-       default: true
-     WebKit:
-       default: true
-     WebCore:
-       default: true
-
 HTTPEquivEnabled:
   type: bool
   status: mature

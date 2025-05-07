@@ -4719,8 +4719,7 @@ OptionSet<FilterRenderingMode> Page::preferredFilterRenderingModes() const
         modes.add(FilterRenderingMode::Accelerated);
 #endif
 #if USE(GRAPHICS_CONTEXT_FILTERS)
-    if (settings().graphicsContextFiltersEnabled())
-        modes.add(FilterRenderingMode::GraphicsContext);
+    modes.add(FilterRenderingMode::GraphicsContext);
 #endif
     return modes;
 }
