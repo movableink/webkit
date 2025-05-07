@@ -138,13 +138,6 @@ void ModelProcessModelPlayer::didFinishEnvironmentMapLoading(bool succeeded)
     m_client->didFinishEnvironmentMapLoading(succeeded);
 }
 
-void ModelProcessModelPlayer::didAnimateModelForDrag()
-{
-    RELEASE_ASSERT(modelProcessEnabled());
-
-    m_page->didAnimateModelForDrag();
-}
-
 // MARK: - WebCore::ModelPlayer
 
 std::optional<WebCore::ModelPlayerAnimationState> ModelProcessModelPlayer::currentAnimationState() const
@@ -399,10 +392,9 @@ void ModelProcessModelPlayer::renderingAbruptlyStopped()
         m_client->renderingAbruptlyStopped();
 }
 
-bool ModelProcessModelPlayer::animateModelToFitPortal()
+void ModelProcessModelPlayer::animateModelToFitPortal(CompletionHandler<void(bool)>&& completionHandler)
 {
-    send(Messages::ModelProcessModelPlayerProxy::AnimateModelToFitPortal());
-    return true;
+    sendWithAsyncReply(Messages::ModelProcessModelPlayerProxy::AnimateModelToFitPortal(), WTFMove(completionHandler));
 }
 
 }

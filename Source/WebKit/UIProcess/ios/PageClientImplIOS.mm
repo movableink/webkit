@@ -1052,16 +1052,6 @@ void PageClientImpl::didPerformDragOperation(bool handled)
     [contentView() _didPerformDragOperation:handled];
 }
 
-void PageClientImpl::didHandleDragStartRequest(bool started)
-{
-    [contentView() _didHandleDragStartRequest:started];
-}
-
-void PageClientImpl::didHandleAdditionalDragItemsRequest(bool added)
-{
-    [contentView() _didHandleAdditionalDragItemsRequest:added];
-}
-
 void PageClientImpl::startDrag(const DragItem& item, ShareableBitmap::Handle&& image)
 {
     auto bitmap = ShareableBitmap::create(WTFMove(image));

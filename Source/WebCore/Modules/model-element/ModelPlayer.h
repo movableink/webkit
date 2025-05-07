@@ -111,7 +111,7 @@ public:
     virtual void updateStageModeTransform(const TransformationMatrix&);
     virtual void endStageModeInteraction();
     virtual void renderingAbruptlyStopped();
-    virtual bool animateModelToFitPortal();
+    virtual void animateModelToFitPortal(CompletionHandler<void(bool)>&&);
 #endif
 };
 

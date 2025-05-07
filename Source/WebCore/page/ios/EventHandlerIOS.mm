@@ -788,13 +788,13 @@ bool EventHandler::eventLoopHandleMouseDragged(const MouseEventWithHitTestResult
     return false;
 }
 
-DragStartRequestResult EventHandler::tryToBeginDragAtPoint(const IntPoint& clientPosition, const IntPoint&)
+void EventHandler::tryToBeginDragAtPoint(const IntPoint& clientPosition, const IntPoint&, CompletionHandler<void(bool)>&& completionHandler)
 {
     Ref frame = m_frame.get();
 
     RefPtr document = frame->document();
     if (!document)
-        return DragStartRequestResult::Ended;
+        return completionHandler(false);
 
     SetForScope shouldAllowMouseDownToStartDrag { m_shouldAllowMouseDownToStartDrag, true };
 
@@ -813,11 +813,11 @@ DragStartRequestResult EventHandler::tryToBeginDragAtPoint(const IntPoint& clien
     auto hitTestedMouseEvent = document->prepareMouseEvent(hitType, documentPoint, syntheticMouseMoveEvent);
 
     auto subframe = dynamicDowncast<LocalFrame>(subframeForHitTestResult(hitTestedMouseEvent));
-    if (subframe && subframe->eventHandler().tryToBeginDragAtPoint(adjustedClientPosition, adjustedGlobalPosition) == DragStartRequestResult::Started)
-        return DragStartRequestResult::Started;
+    if (subframe)
+        return subframe->eventHandler().tryToBeginDragAtPoint(adjustedClientPosition, adjustedGlobalPosition, WTFMove(completionHandler));
 
     if (!eventMayStartDrag(syntheticMousePressEvent))
-        return DragStartRequestResult::Ended;
+        return completionHandler(false);
 
     handleMousePressEvent(syntheticMousePressEvent);
     bool handledDrag = m_mouseDownMayStartDrag && handleMouseDraggedEvent(hitTestedMouseEvent, DontCheckDragHysteresis);
@@ -829,13 +829,11 @@ DragStartRequestResult EventHandler::tryToBeginDragAtPoint(const IntPoint& clien
 
 #if ENABLE(MODEL_PROCESS)
     RefPtr targetElement = hitTestedMouseEvent.hitTestResult().targetElement();
-    if (RefPtr modelElement = dynamicDowncast<HTMLModelElement>(targetElement)) {
-        if (modelElement->tryAnimateModelToFitPortal())
-            return DragStartRequestResult::Delayed;
-    }
+    if (RefPtr modelElement = dynamicDowncast<HTMLModelElement>(targetElement))
+        return modelElement->tryAnimateModelToFitPortal(handledDrag, WTFMove(completionHandler));
 #endif
 
-    return handledDrag ? DragStartRequestResult::Started : DragStartRequestResult::Ended;
+    return completionHandler(handledDrag);
 }
 
 bool EventHandler::supportsSelectionUpdatesOnMouseDrag() const

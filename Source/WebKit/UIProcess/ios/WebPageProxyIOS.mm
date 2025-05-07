@@ -1309,28 +1309,20 @@ void WebPageProxy::requestDocumentEditingContext(WebKit::DocumentEditingContextR
 
 #if ENABLE(DRAG_SUPPORT)
 
-void WebPageProxy::didHandleDragStartRequest(bool started)
+void WebPageProxy::requestDragStart(const WebCore::IntPoint& clientPosition, const WebCore::IntPoint& globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask, CompletionHandler<void(bool)>&& completionHandler)
 {
-    if (RefPtr pageClient = this->pageClient())
-        pageClient->didHandleDragStartRequest(started);
+    if (!hasRunningProcess())
+        return completionHandler(false);
+
+    m_legacyMainFrameProcess->sendWithAsyncReply(Messages::WebPage::RequestDragStart(clientPosition, globalPosition, allowedActionsMask), WTFMove(completionHandler), webPageIDInMainFrameProcess());
 }
 
-void WebPageProxy::didHandleAdditionalDragItemsRequest(bool added)
-{
-    if (RefPtr pageClient = this->pageClient())
-        pageClient->didHandleAdditionalDragItemsRequest(added);
-}
-
-void WebPageProxy::requestDragStart(const WebCore::IntPoint& clientPosition, const WebCore::IntPoint& globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask)
+void WebPageProxy::requestAdditionalItemsForDragSession(const IntPoint& clientPosition, const IntPoint& globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask, CompletionHandler<void(bool)>&& completionHandler)
 {
     if (hasRunningProcess())
-        m_legacyMainFrameProcess->send(Messages::WebPage::RequestDragStart(clientPosition, globalPosition, allowedActionsMask), webPageIDInMainFrameProcess());
-}
+        return completionHandler(false);
 
-void WebPageProxy::requestAdditionalItemsForDragSession(const IntPoint& clientPosition, const IntPoint& globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask)
-{
-    if (hasRunningProcess())
-        m_legacyMainFrameProcess->send(Messages::WebPage::RequestAdditionalItemsForDragSession(clientPosition, globalPosition, allowedActionsMask), webPageIDInMainFrameProcess());
+    m_legacyMainFrameProcess->sendWithAsyncReply(Messages::WebPage::RequestAdditionalItemsForDragSession(clientPosition, globalPosition, allowedActionsMask), WTFMove(completionHandler), webPageIDInMainFrameProcess());
 }
 
 void WebPageProxy::insertDroppedImagePlaceholders(const Vector<IntSize>& imageSizes, CompletionHandler<void(const Vector<IntRect>&, std::optional<WebCore::TextIndicatorData>)>&& completionHandler)

@@ -1111,19 +1111,17 @@ void WebPage::updateFocusedElementInformation()
 }
 
 #if ENABLE(DRAG_SUPPORT)
-void WebPage::requestDragStart(const IntPoint& clientPosition, const IntPoint& globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask)
+void WebPage::requestDragStart(const IntPoint& clientPosition, const IntPoint& globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask, CompletionHandler<void(bool)>&& completionHandler)
 {
     SetForScope allowedActionsForScope(m_allowedDragSourceActions, allowedActionsMask);
     RefPtr localMainFrame = m_page->localMainFrame();
     if (!localMainFrame)
-        return;
+        return completionHandler(false);
 
-    auto didHandleDrag = localMainFrame->eventHandler().tryToBeginDragAtPoint(clientPosition, globalPosition);
-    if (didHandleDrag != WebCore::DragStartRequestResult::Delayed)
-        send(Messages::WebPageProxy::DidHandleDragStartRequest(didHandleDrag == WebCore::DragStartRequestResult::Started));
+    localMainFrame->eventHandler().tryToBeginDragAtPoint(clientPosition, globalPosition, WTFMove(completionHandler));
 }
 
-void WebPage::requestAdditionalItemsForDragSession(const IntPoint& clientPosition, const IntPoint& globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask)
+void WebPage::requestAdditionalItemsForDragSession(const IntPoint& clientPosition, const IntPoint& globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask, CompletionHandler<void(bool)>&& completionHandler)
 {
     SetForScope allowedActionsForScope(m_allowedDragSourceActions, allowedActionsMask);
     // To augment the platform drag session with additional items, end the current drag session and begin a new drag session with the new drag item.
@@ -1133,14 +1131,11 @@ void WebPage::requestAdditionalItemsForDragSession(const IntPoint& clientPositio
     m_page->dragController().dragEnded();
     RefPtr localMainFrame = m_page->localMainFrame();
     if (!localMainFrame)
-        return;
+        return completionHandler(false);
 
     localMainFrame->eventHandler().dragSourceEndedAt(event, { }, MayExtendDragSession::Yes);
 
-    auto didHandleDrag = localMainFrame->eventHandler().tryToBeginDragAtPoint(clientPosition, globalPosition);
-
-    if (didHandleDrag != WebCore::DragStartRequestResult::Delayed)
-        send(Messages::WebPageProxy::DidHandleAdditionalDragItemsRequest(didHandleDrag == WebCore::DragStartRequestResult::Started));
+    localMainFrame->eventHandler().tryToBeginDragAtPoint(clientPosition, globalPosition, WTFMove(completionHandler));
 }
 
 void WebPage::insertDroppedImagePlaceholders(const Vector<IntSize>& imageSizes, CompletionHandler<void(const Vector<IntRect>&, std::optional<WebCore::TextIndicatorData>)>&& reply)
@@ -1411,7 +1406,6 @@ Awaitable<std::optional<WebCore::FrameIdentifier>> WebPage::commitPotentialTap(s
         invalidTargetForSingleClick = !targetRenders && !is<HTMLAreaElement>(m_potentialTapNode);
     }
 
-    // FIXME: Remove m_potentialTapLocation. It seems unused.
     RefPtr localRootFrame = this->localRootFrame(frameID);
 
     if (invalidTargetForSingleClick) {

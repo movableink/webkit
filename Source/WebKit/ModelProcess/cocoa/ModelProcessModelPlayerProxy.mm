@@ -756,13 +756,10 @@ bool ModelProcessModelPlayerProxy::stageModeInteractionInProgress() const
     return [m_stageModeInteractionDriver stageModeInteractionInProgress];
 }
 
-bool ModelProcessModelPlayerProxy::animateModelToFitPortal()
+void ModelProcessModelPlayerProxy::animateModelToFitPortal(CompletionHandler<void(bool)>&& completionHandler)
 {
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=291289
-    send(Messages::ModelProcessModelPlayer::DidAnimateModelForDrag());
-
-    // Return value is unused
-    return true;
+    completionHandler(true);
 }
 
 void ModelProcessModelPlayerProxy::applyEnvironmentMapDataAndRelease()

@@ -530,12 +530,12 @@ void HTMLModelElement::renderingAbruptlyStopped()
         createModelPlayer();
 }
 
-bool HTMLModelElement::tryAnimateModelToFitPortal()
+void HTMLModelElement::tryAnimateModelToFitPortal(bool handledDrag, CompletionHandler<void(bool)>&& completionHandler)
 {
     if (hasPortal() && m_modelPlayer)
-        return m_modelPlayer->animateModelToFitPortal();
+        return m_modelPlayer->animateModelToFitPortal(WTFMove(completionHandler));
 
-    return false;
+    completionHandler(handledDrag);
 }
 #endif // ENABLE(MODEL_PROCESS)
 

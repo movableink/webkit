@@ -94,10 +94,4 @@ enum class MayExtendDragSession : bool { No, Yes };
 enum class HasNonDefaultPasteboardData : bool { No, Yes };
 enum class DragHandlingMethod : uint8_t { None, EditPlainText, EditRichText, UploadFile, PageLoad, SetColor, NonDefault };
 
-enum class DragStartRequestResult : uint8_t {
-    Ended = 0,
-    Started,
-    Delayed
-};
-
 } // namespace WebCore

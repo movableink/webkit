@@ -1923,11 +1923,16 @@ static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
 - (BOOL)_requestStartDataInteraction:(CGPoint)clientPosition globalPosition:(CGPoint)globalPosition
 {
     WebThreadLock();
-    auto* localMainFrame = dynamicDowncast<WebCore::LocalFrame>(_private->page->mainFrame());
+    RefPtr localMainFrame = dynamicDowncast<WebCore::LocalFrame>(_private->page->mainFrame());
     if (!localMainFrame)
         return NO;
 
-    return localMainFrame->eventHandler().tryToBeginDragAtPoint(WebCore::IntPoint(clientPosition), WebCore::IntPoint(globalPosition)) == WebCore::DragStartRequestResult::Started;
+    auto result = Box<std::optional<bool>>::create();
+    localMainFrame->eventHandler().tryToBeginDragAtPoint(WebCore::IntPoint(clientPosition), WebCore::IntPoint(globalPosition), [result] (bool handled) mutable {
+        *result = handled;
+    });
+    ASSERT_WITH_MESSAGE(*result, "tryToBeginDragAtPoint should always complete synchronously in WebKitLegacy");
+    return result->value_or(false);
 }
 
 - (void)_startDrag:(const WebCore::DragItem&)dragItem

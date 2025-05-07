@@ -5599,12 +5599,6 @@ void WebPage::stageModeSessionDidEnd(std::optional<ElementIdentifier> elementID)
     if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame()))
         localMainFrame->eventHandler().stageModeSessionDidEnd(elementID);
 }
-
-void WebPage::didAnimateModelForDrag()
-{
-    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=291284
-    send(Messages::WebPageProxy::DidHandleDragStartRequest(true));
-}
 #endif
 
 WebUndoStep* WebPage::webUndoStep(WebUndoStepID stepID)
