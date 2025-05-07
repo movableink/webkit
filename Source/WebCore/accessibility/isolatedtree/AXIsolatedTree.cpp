@@ -958,7 +958,7 @@ void AXIsolatedTree::updateChildren(AccessibilityObject& axObject, ResolveNodeCh
             // Don't immediately resolve node changes in these recursive calls to updateChildren. This avoids duplicate node change creation in this scenario:
             //   1. Some subtree is updated in the below call to updateChildren.
             //   2. Later in this function, when updating axAncestor, we update some higher subtree that includes the updated subtree from step 1.
-            updateChildren(liveChild, ResolveNodeChanges::No);
+            queueNodeUpdate(liveChild->objectID(), NodeUpdateOptions::childrenUpdate());
         }
     }
 #endif // !ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
@@ -979,7 +979,7 @@ void AXIsolatedTree::updateChildren(AccessibilityObject& axObject, ResolveNodeCh
 
             // Propagate any subtree updates downwards for this already-existing child.
             if (auto* liveChild = dynamicDowncast<AccessibilityObject>(newChildren[i].get()); liveChild && liveChild->hasDirtySubtree())
-                updateChildren(*liveChild, ResolveNodeChanges::No);
+                queueNodeUpdate(liveChild->objectID(), NodeUpdateOptions::childrenUpdate());
         } else {
             // This is a new child, add it to the tree.
             childrenChanged = true;
@@ -1023,7 +1023,7 @@ void AXIsolatedTree::updateChildren(AccessibilityObject& axObject, ResolveNodeCh
 
     // Also queue updates to the target node itself and any properties that depend on children().
     if (childrenChanged || unconditionallyUpdate(axAncestor->roleValue())) {
-        updateNode(*axAncestor);
+        queueNodeUpdate(axAncestor->objectID(), NodeUpdateOptions::nodeUpdate());
         updateDependentProperties(*axAncestor);
     }
 
@@ -1041,7 +1041,7 @@ void AXIsolatedTree::updateChildrenForObjects(const ListHashSet<Ref<Accessibilit
 
     AXAttributeCacheEnabler enableCache(axObjectCache());
     for (auto& axObject : axObjects)
-        updateChildren(axObject.get(), ResolveNodeChanges::No);
+        queueNodeUpdate(axObject->objectID(), NodeUpdateOptions::childrenUpdate());
 
     queueRemovalsAndUnresolvedChanges();
 }
@@ -1199,7 +1199,7 @@ void AXIsolatedTree::updateRootScreenRelativePosition()
 
     CheckedPtr cache = m_axObjectCache.get();
     if (auto* axRoot = cache && cache->document() ? cache->getOrCreate(cache->document()->view()) : nullptr)
-        updateNodeProperties(*axRoot, { AXProperty::ScreenRelativePosition });
+        queueNodeUpdate(axRoot->objectID(), { AXProperty::ScreenRelativePosition });
 }
 
 void AXIsolatedTree::removeNode(AXID axID, std::optional<AXID> parentID)

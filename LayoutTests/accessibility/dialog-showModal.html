@@ -30,14 +30,14 @@
         output += expect("backgroundAccessible()", "true");
         document.getElementById("dialog").showModal();
 
-        // Background should be unaccessible after loading, since the
-        // dialog is displayed
+        // Background should be unaccessible after loading, since the dialog is displayed.
         output += "Dialog is displaying\n";
-        output += expect("backgroundAccessible()", "false");
-
-        // Close the dialog, background should be accessible.
-        document.getElementById("ok").click();
         setTimeout(async function() {
+            output += await expectAsync("backgroundAccessible()", "false");
+
+            // Close the dialog, background should be accessible.
+            document.getElementById("ok").click();
+
             await waitFor(() => backgroundAccessible());
             output += "Dialog is not displaying\n";
             output += expect("backgroundAccessible()", "true");

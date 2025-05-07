@@ -147,21 +147,7 @@ AccessibilityRole AccessibilityTableCell::determineAccessibilityRole()
     auto* parentTable = this->parentTable();
     if (!parentTable || !parentTable->isExposable())
         return defaultRole;
-
-    auto cellRole = parentTable->hasGridRole() ? AccessibilityRole::GridCell : AccessibilityRole::Cell;
-    // It's important that we temporarily set our m_role because:
-    // 1. isColumnHeader() and isRowHeader() call rowIndexRange() and columnIndexRange(), in turn calling
-    //    ensureIndexesUpToDate()
-    // 2. This causes our parentTable() to addChildren(), which causes the rows to addChildren(), then causing cells
-    //    (like `this`) to addChildren(). But it's possible we don't have an m_role yet, meaning `this` cell will be
-    //    erroneously ignored (because it is AccessibilityRole::Unknown until we return from this function to set it).
-    // 3. This causes the AX tree to be wrong.
-    SetForScope temporaryRole(m_role, m_role == AccessibilityRole::Unknown ? cellRole : m_role);
-
-    if (isColumnHeader())
-        return AccessibilityRole::ColumnHeader;
-
-    return isRowHeader() ? AccessibilityRole::RowHeader : cellRole;
+    return parentTable->hasGridRole() ? AccessibilityRole::GridCell : AccessibilityRole::Cell;
 }
     
 bool AccessibilityTableCell::isTableHeaderCell() const
@@ -187,6 +173,8 @@ bool AccessibilityTableCell::isTableHeaderCell() const
 
 bool AccessibilityTableCell::isColumnHeader() const
 {
+    if (roleValue() == AccessibilityRole::ColumnHeader)
+        return true;
     const AtomString& scope = getAttribute(scopeAttr);
     if (scope == "col"_s || scope == "colgroup"_s)
         return true;
@@ -215,6 +203,8 @@ bool AccessibilityTableCell::isColumnHeader() const
 
 bool AccessibilityTableCell::isRowHeader() const
 {
+    if (roleValue() == AccessibilityRole::RowHeader)
+        return true;
     const AtomString& scope = getAttribute(scopeAttr);
     if (scope == "row"_s || scope == "rowgroup"_s)
         return true;

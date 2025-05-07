@@ -139,7 +139,7 @@ AccessibilityTable* AccessibilityARIAGridRow::parentTable() const
 AccessibilityObject* AccessibilityARIAGridRow::rowHeader()
 {
     for (const auto& child : unignoredChildren()) {
-        if (child->roleValue() == AccessibilityRole::RowHeader)
+        if (child->isRowHeader())
             return &downcast<AccessibilityObject>(child.get());
     }
     return nullptr;

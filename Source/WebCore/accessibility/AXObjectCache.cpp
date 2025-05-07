@@ -1330,8 +1330,10 @@ void AXObjectCache::onEventListenerAdded(Node& node, const AtomString& eventType
     if (!isClickEvent(eventType))
         return;
 
-    if (RefPtr tree = AXIsolatedTree::treeForPageID(m_pageID))
-        tree->updateNodeProperties(get(node), { AXProperty::HasClickHandler });
+    if (RefPtr tree = AXIsolatedTree::treeForPageID(m_pageID)) {
+        if (auto* object = get(node))
+            tree->queueNodeUpdate(object->objectID(), { AXProperty::HasClickHandler });
+    }
 #else
     UNUSED_PARAM(node);
     UNUSED_PARAM(eventType);
@@ -1344,8 +1346,10 @@ void AXObjectCache::onEventListenerRemoved(Node& node, const AtomString& eventTy
     if (!isClickEvent(eventType))
         return;
 
-    if (RefPtr tree = AXIsolatedTree::treeForPageID(m_pageID))
-        tree->updateNodeProperties(get(node), { AXProperty::HasClickHandler });
+    if (RefPtr tree = AXIsolatedTree::treeForPageID(m_pageID)) {
+        if (auto* object = get(node))
+            tree->queueNodeUpdate(object->objectID(), { AXProperty::HasClickHandler });
+    }
 #else
     UNUSED_PARAM(node);
     UNUSED_PARAM(eventType);

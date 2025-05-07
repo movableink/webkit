@@ -386,17 +386,8 @@ public:
 
     void generateSubtree(AccessibilityObject&);
     bool shouldCreateNodeChange(AccessibilityObject&);
-    void updateNode(AccessibilityObject&);
     enum class ResolveNodeChanges : bool { No, Yes };
-    void updateChildren(AccessibilityObject&, ResolveNodeChanges = ResolveNodeChanges::Yes);
     void updateChildrenForObjects(const ListHashSet<Ref<AccessibilityObject>>&);
-    void updateNodeProperty(AccessibilityObject& object, AXProperty property) { updateNodeProperties(object, { property }); }
-    void updateNodeProperties(AccessibilityObject&, const AXPropertySet&);
-    void updateNodeProperties(AccessibilityObject* axObject, const AXPropertySet& properties)
-    {
-        if (axObject)
-            updateNodeProperties(*axObject, properties);
-    }
     void updateDependentProperties(AccessibilityObject&);
     void updatePropertiesForSelfAndDescendants(AccessibilityObject&, const AXPropertySet&);
     void updateFrame(AXID, IntRect&&);
@@ -529,6 +520,10 @@ private:
 #endif
         AttachWrapper attachWrapper { AttachWrapper::OnMainThread };
     };
+
+    void updateChildren(AccessibilityObject&, ResolveNodeChanges = ResolveNodeChanges::Yes);
+    void updateNode(AccessibilityObject&);
+    void updateNodeProperties(AccessibilityObject&, const AXPropertySet&);
 
     std::optional<NodeChange> nodeChangeForObject(Ref<AccessibilityObject>, AttachWrapper = AttachWrapper::OnMainThread);
     void collectNodeChangesForSubtree(AccessibilityObject&);

@@ -2877,11 +2877,16 @@ AccessibilityRole AccessibilityNodeObject::remapAriaRoleDueToParent(Accessibilit
 
 bool AccessibilityNodeObject::canSetSelectedAttribute() const
 {
+    if (isColumnHeader())
+        return false;
+
+    if (isRowHeader() && isEnabled())
+        return true;
+
     // Elements that can be selected
     switch (roleValue()) {
     case AccessibilityRole::Cell:
     case AccessibilityRole::GridCell:
-    case AccessibilityRole::RowHeader:
     case AccessibilityRole::Row:
     case AccessibilityRole::TabList:
     case AccessibilityRole::Tab:

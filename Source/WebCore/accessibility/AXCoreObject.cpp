@@ -775,7 +775,6 @@ bool AXCoreObject::supportsRequiredAttribute() const
     case AccessibilityRole::Button:
         return isFileUploadButton();
     case AccessibilityRole::Cell:
-    case AccessibilityRole::ColumnHeader:
     case AccessibilityRole::Checkbox:
     case AccessibilityRole::ComboBox:
     case AccessibilityRole::Grid:
@@ -784,7 +783,6 @@ bool AXCoreObject::supportsRequiredAttribute() const
     case AccessibilityRole::PopUpButton:
     case AccessibilityRole::RadioButton:
     case AccessibilityRole::RadioGroup:
-    case AccessibilityRole::RowHeader:
     case AccessibilityRole::Slider:
     case AccessibilityRole::SpinButton:
     case AccessibilityRole::Switch:
@@ -793,7 +791,7 @@ bool AXCoreObject::supportsRequiredAttribute() const
     case AccessibilityRole::ToggleButton:
         return true;
     default:
-        return false;
+        return isRowHeader() || isColumnHeader();
     }
 }
 
@@ -903,7 +901,7 @@ AXCoreObject* AXCoreObject::columnHeader()
         return nullptr;
 
     for (const auto& cell : unignoredChildren()) {
-        if (cell->roleValue() == AccessibilityRole::ColumnHeader)
+        if (cell->isColumnHeader())
             return cell.ptr();
     }
     return nullptr;

@@ -109,8 +109,9 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityListBox::visibleChildren(
 AccessibilityObject* AccessibilityListBox::listBoxOptionAccessibilityObject(HTMLElement* element) const
 {
     // FIXME: Why does AccessibilityMenuListPopup::menuListOptionAccessibilityObject check inRenderedDocument, but this does not?
-    if (auto* document = this->document())
-        return document->axObjectCache()->getOrCreate(element);
+    RefPtr document = this->document();
+    if (CheckedPtr cache = document ? document->axObjectCache() : nullptr)
+        return cache->getOrCreate(element);
     return nullptr;
 }
 

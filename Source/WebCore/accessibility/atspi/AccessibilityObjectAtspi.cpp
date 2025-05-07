@@ -1216,6 +1216,13 @@ std::optional<Atspi::Role> AccessibilityObjectAtspi::effectiveRole() const
             return Atspi::Role::Section;
         break;
     }
+    case AccessibilityRole::Cell:
+    case AccessibilityRole::GridCell: {
+        if (m_coreObject->isColumnHeader())
+            return Atspi::Role::ColumnHeader;
+        if (m_coreObject->isRowHeader())
+            return Atspi::Role::RowHeader;
+    }
     default:
         break;
     }

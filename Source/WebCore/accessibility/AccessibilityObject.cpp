@@ -1950,7 +1950,6 @@ bool AccessibilityObject::supportsReadOnly() const
     AccessibilityRole role = roleValue();
 
     return role == AccessibilityRole::Checkbox
-        || role == AccessibilityRole::ColumnHeader
         || role == AccessibilityRole::ComboBox
         || role == AccessibilityRole::Grid
         || role == AccessibilityRole::GridCell
@@ -1958,13 +1957,14 @@ bool AccessibilityObject::supportsReadOnly() const
         || role == AccessibilityRole::MenuItemCheckbox
         || role == AccessibilityRole::MenuItemRadio
         || role == AccessibilityRole::RadioGroup
-        || role == AccessibilityRole::RowHeader
         || role == AccessibilityRole::SearchField
         || role == AccessibilityRole::Slider
         || role == AccessibilityRole::SpinButton
         || role == AccessibilityRole::Switch
         || role == AccessibilityRole::TextField
         || role == AccessibilityRole::TreeGrid
+        || isColumnHeader()
+        || isRowHeader()
         || isSecureField();
 }
 
@@ -2767,6 +2767,12 @@ String AccessibilityObject::computedRoleString() const
     if (role == AccessibilityRole::LandmarkDocRegion)
         return reverseAriaRoleMap().get(enumToUnderlyingType(AccessibilityRole::LandmarkRegion));
 
+    if (isColumnHeader())
+        return reverseAriaRoleMap().get(enumToUnderlyingType(AccessibilityRole::ColumnHeader));
+
+    if (isRowHeader())
+        return reverseAriaRoleMap().get(enumToUnderlyingType(AccessibilityRole::RowHeader));
+
     return reverseAriaRoleMap().get(enumToUnderlyingType(role));
 }
 
@@ -3150,10 +3156,9 @@ void AccessibilityObject::setFocused(bool focus)
 
 AccessibilitySortDirection AccessibilityObject::sortDirection() const
 {
-    auto role = roleValue();
     // Only row and column headers are allowed to have aria-sort.
     // https://w3c.github.io/aria/#aria-sort
-    if (role != AccessibilityRole::ColumnHeader && role != AccessibilityRole::RowHeader)
+    if (!isColumnHeader() && !isRowHeader())
         return AccessibilitySortDirection::Invalid;
 
     auto& sortAttribute = getAttribute(aria_sortAttr);
@@ -3286,12 +3291,20 @@ bool AccessibilityObject::supportsExpanded() const
     if (is<HTMLDetailsElement>(node()))
         return true;
 
+    auto hasValidAriaExpandedValue = [this] () -> bool {
+        // Undefined values should not result in this attribute being exposed to ATs according to ARIA.
+        const AtomString& expanded = getAttribute(aria_expandedAttr);
+        return equalLettersIgnoringASCIICase(expanded, "true"_s) || equalLettersIgnoringASCIICase(expanded, "false"_s);
+    };
+
+    if (isColumnHeader() || isRowHeader())
+        return hasValidAriaExpandedValue();
+
     switch (roleValue()) {
     case AccessibilityRole::Details:
         return true;
     case AccessibilityRole::Button:
     case AccessibilityRole::Checkbox:
-    case AccessibilityRole::ColumnHeader:
     case AccessibilityRole::ComboBox:
     case AccessibilityRole::GridCell:
     case AccessibilityRole::Link:
@@ -3299,15 +3312,11 @@ bool AccessibilityObject::supportsExpanded() const
     case AccessibilityRole::MenuItemCheckbox:
     case AccessibilityRole::MenuItemRadio:
     case AccessibilityRole::Row:
-    case AccessibilityRole::RowHeader:
     case AccessibilityRole::Switch:
     case AccessibilityRole::Tab:
     case AccessibilityRole::TreeItem:
-    case AccessibilityRole::WebApplication: {
-        // Undefined values should not result in this attribute being exposed to ATs according to ARIA.
-        const AtomString& expanded = getAttribute(aria_expandedAttr);
-        return equalLettersIgnoringASCIICase(expanded, "true"_s) || equalLettersIgnoringASCIICase(expanded, "false"_s);
-    }
+    case AccessibilityRole::WebApplication:
+        return hasValidAriaExpandedValue();
     default:
         return false;
     }
