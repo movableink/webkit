@@ -209,28 +209,28 @@ public:
     {
         ASSERT(!size || (axis != Axis::Both));
         if (axis == Axis::Both || axis == Axis::Inline) {
-            m_overridingWidth = box.overridingBorderBoxLogicalWidth();
+            m_previousOverridingBorderBoxLogicalWidth = box.overridingBorderBoxLogicalWidth();
             SET_OR_CLEAR_OVERRIDING_SIZE(m_box, Width, size);
         }
         if (axis == Axis::Both || axis == Axis::Block) {
-            m_overridingHeight = box.overridingBorderBoxLogicalHeight();
+            m_previousOverridingBorderBoxLogicalHeight = box.overridingBorderBoxLogicalHeight();
             SET_OR_CLEAR_OVERRIDING_SIZE(m_box, Height, size);
         }
     }
     ~OverridingSizesScope()
     {
         if (m_axis == Axis::Inline || m_axis == Axis::Both)
-            SET_OR_CLEAR_OVERRIDING_SIZE(m_box, Width, m_overridingWidth);
+            SET_OR_CLEAR_OVERRIDING_SIZE(m_box, Width, m_previousOverridingBorderBoxLogicalWidth);
 
         if (m_axis == Axis::Block || m_axis == Axis::Both)
-            SET_OR_CLEAR_OVERRIDING_SIZE(m_box, Height, m_overridingHeight);
+            SET_OR_CLEAR_OVERRIDING_SIZE(m_box, Height, m_previousOverridingBorderBoxLogicalHeight);
     }
 
 private:
     RenderBox& m_box;
     Axis m_axis;
-    std::optional<LayoutUnit> m_overridingWidth;
-    std::optional<LayoutUnit> m_overridingHeight;
+    std::optional<LayoutUnit> m_previousOverridingBorderBoxLogicalWidth;
+    std::optional<LayoutUnit> m_previousOverridingBorderBoxLogicalHeight;
 };
 
 static void updateFlexItemDirtyBitsBeforeLayout(bool relayoutFlexItem, RenderBox& flexItem)
