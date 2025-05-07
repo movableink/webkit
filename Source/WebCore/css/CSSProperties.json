@@ -12364,7 +12364,6 @@
             },
             "size-adjust": {
                 "codegen-properties": {
-                    "settings-flag": "cssFontFaceSizeAdjustEnabled",
                     "parser-grammar": "<percentage [0,inf]>",
                     "parser-exported": true
                 },
