@@ -70,7 +70,6 @@ SOFT_LINK_FUNCTION_MAY_FAIL_FOR_HEADER(WebCore, VideoToolbox, VTGetHEVCCapabilit
 #define VTGetHEVCCapabilitesForFormatDescription softLink_VideoToolbox_VTGetHEVCCapabilitesForFormatDescription
 SOFT_LINK_FUNCTION_MAY_FAIL_FOR_HEADER(WebCore, VideoToolbox, VTCopyAV1DecoderCapabilitiesDictionary, CFDictionaryRef, (), ())
 #define VTCopyAV1DecoderCapabilitiesDictionary softLink_VideoToolbox_VTCopyAV1DecoderCapabilitiesDictionary
-// CoreMedia does not specify CF_RETURNS_RETAINED. See rdar://148150143.
 SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, VideoToolbox, VTSelectAndCreateVideoDecoderInstance, OSStatus, (CMVideoCodecType codecType, CFAllocatorRef allocator, CFDictionaryRef videoDecoderSpecification, CF_RETURNS_RETAINED VTVideoDecoderRef *decoderInstanceOut), (codecType, allocator, videoDecoderSpecification, decoderInstanceOut))
 #define VTSelectAndCreateVideoDecoderInstance softLink_VideoToolbox_VTSelectAndCreateVideoDecoderInstance
 SOFT_LINK_CONSTANT_FOR_HEADER(WebCore, VideoToolbox, kVTVideoDecoderSpecification_EnableHardwareAcceleratedVideoDecoder, CFStringRef)
