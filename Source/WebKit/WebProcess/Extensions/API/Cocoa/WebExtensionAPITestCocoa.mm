@@ -172,7 +172,7 @@ void WebExtensionAPITest::assertTrue(JSContextRef context, bool actualValue, NSS
     if (!webExtensionControllerProxy)
         return;
 
-    recordAssertionIfNeeded(actualValue);
+    recordAssertionIfNeeded(actualValue, message);
 
     WebProcess::singleton().send(Messages::WebExtensionController::TestResult(actualValue, message, location.first, location.second), webExtensionControllerProxy->identifier());
 }
@@ -202,7 +202,7 @@ void WebExtensionAPITest::assertDeepEq(JSContextRef context, JSValue *actualValu
     if (!webExtensionControllerProxy)
         return;
 
-    recordAssertionIfNeeded(deepEqual);
+    recordAssertionIfNeeded(deepEqual, message);
 
     WebProcess::singleton().send(Messages::WebExtensionController::TestEqual(deepEqual, expectedJSONValue, actualJSONValue, message, location.first, location.second), webExtensionControllerProxy->identifier());
 }
@@ -228,7 +228,7 @@ void WebExtensionAPITest::assertEquals(JSContextRef context, bool result, NSStri
     if (!webExtensionControllerProxy)
         return;
 
-    recordAssertionIfNeeded(result);
+    recordAssertionIfNeeded(result, message);
 
     WebProcess::singleton().send(Messages::WebExtensionController::TestEqual(result, expectedString, actualString, message, location.first, location.second), webExtensionControllerProxy->identifier());
 }
@@ -438,8 +438,17 @@ void WebExtensionAPITest::startNextTest()
 
     auto testComplete = [this, protectedThis = Ref { *this }, test](JSValue *result, JSValue *error) {
         if (error || m_hitAssertion) {
-            JSValue *errorMessageValue = error.isObject && [error hasProperty:@"message"] ? error[@"message"] : error;
-            WebProcess::singleton().send(Messages::WebExtensionController::TestFinished(test.testName, false, adoptNS([[NSString alloc] initWithFormat:@"Promise rejected with an error: %@", debugString(errorMessageValue)]).get(), test.location.first, test.location.second), test.webExtensionControllerIdentifier);
+            NSString *errorMessage;
+            if (error) {
+                JSValue *errorMessageValue = error.isObject && [error hasProperty:@"message"] ? error[@"message"] : error;
+                errorMessage = debugString(errorMessageValue);
+            } else if (!m_assertionMessage.isNull())
+                errorMessage = m_assertionMessage.createNSString().get();
+
+            errorMessage = errorMessage ? combineMessages(@"Promise rejected with an error: ", errorMessage) : @"Promise rejected without an error";
+
+            WebProcess::singleton().send(Messages::WebExtensionController::TestFinished(test.testName, false, errorMessage, test.location.first, test.location.second), test.webExtensionControllerIdentifier);
+
             [test.rejectCallback callWithArguments:nil];
         } else {
             WebProcess::singleton().send(Messages::WebExtensionController::TestFinished(test.testName, true, @"Promise resolved without an error.", test.location.first, test.location.second), test.webExtensionControllerIdentifier);

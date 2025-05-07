@@ -88,14 +88,17 @@ private:
     Deque<Test> m_testQueue;
     bool m_runningTest { false };
     bool m_hitAssertion { false };
+    String m_assertionMessage;
 
     JSValue *addTest(JSContextRef, JSValue *testFunction, String callingAPIName);
     void assertEquals(JSContextRef, bool result, NSString *expectedString, NSString *actualString, NSString *message);
     void startNextTest();
-    void recordAssertionIfNeeded(bool result)
+    void recordAssertionIfNeeded(bool result, const String& message)
     {
-        if (m_runningTest && !m_hitAssertion && !result)
+        if (m_runningTest && !result) {
             m_hitAssertion = true;
+            m_assertionMessage = message;
+        }
     }
 #endif
 };
