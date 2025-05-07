@@ -46,7 +46,7 @@
 
 namespace {
 
-NO_RETURN void usage()
+[[noreturn]] void usage()
 {
     printf("Usage: LockFairnessTest yieldspinlock|pausespinlock|wordlock|lock|barginglock|bargingwordlock|thunderlock|thunderwordlock|cascadelock|cascadewordlockhandofflock|unfairlock|mutex|all <num threads> <seconds per test> <microseconds in critical section>\n");
     exit(1);

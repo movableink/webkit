@@ -813,7 +813,7 @@ static const HashSet<CFTypeRef> alwaysAllowedClasses()
 }
 
 template<typename CharacterType>
-NO_RETURN static void crashWithClassName(std::span<const CharacterType> className) requires(sizeof(CharacterType) == 1)
+[[noreturn]] static void crashWithClassName(std::span<const CharacterType> className) requires(sizeof(CharacterType) == 1)
 {
     std::array<uint64_t, 6> values { 0, 0, 0, 0, 0, 0 };
     auto valuesAsBytes  = asMutableByteSpan(std::span { values });
@@ -821,7 +821,7 @@ NO_RETURN static void crashWithClassName(std::span<const CharacterType> classNam
     CRASH_WITH_INFO(values[0], values[1], values[2], values[3], values[4], values[5]);
 }
 
-NO_RETURN static void crashWithClassName(Class objectClass)
+[[noreturn]] static void crashWithClassName(Class objectClass)
 {
     crashWithClassName(span(NSStringFromClass(objectClass)));
 }

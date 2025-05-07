@@ -280,7 +280,7 @@ using namespace WebCore;
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WebProcess);
 
 #if !PLATFORM(GTK) && !PLATFORM(WPE)
-NO_RETURN static void callExit(IPC::Connection*)
+[[noreturn]] static void callExit(IPC::Connection*)
 {
     terminateProcess(EXIT_SUCCESS);
 }
@@ -1231,7 +1231,7 @@ void WebProcess::setInjectedBundleParameters(std::span<const uint8_t> value)
     injectedBundle->setBundleParameters(value);
 }
 
-NO_RETURN inline void failedToGetNetworkProcessConnection()
+[[noreturn]] inline void failedToGetNetworkProcessConnection()
 {
 #if PLATFORM(GTK) || PLATFORM(WPE)
     // GTK and WPE ports don't exit on send sync message failure.

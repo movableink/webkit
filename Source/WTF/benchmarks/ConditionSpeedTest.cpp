@@ -54,7 +54,7 @@ unsigned numConsumers;
 unsigned maxQueueSize;
 unsigned numMessagesPerProducer;
     
-NO_RETURN void usage()
+[[noreturn]] void usage()
 {
     printf("Usage: ConditionSpeedTest lock|mutex|all <num producers> <num consumers> <max queue size> <num messages per producer>\n");
     exit(1);

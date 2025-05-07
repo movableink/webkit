@@ -32,7 +32,7 @@
 #include <wtf/FileSystem.h>
 #include <wtf/WTFProcess.h>
 
-static NO_RETURN void printUsageStatement(bool help = false)
+[[noreturn]] static void printUsageStatement(bool help = false)
 {
     fprintf(stderr, "Usage: wgsl [options] <file> [entrypoint]\n");
     fprintf(stderr, "  -h|--help  Prints this help message\n");
