@@ -1077,9 +1077,6 @@ RefPtr<StyleRulePositionTry> CSSParser::consumePositionTryRule(CSSParserTokenRan
 
 RefPtr<StyleRuleScope> CSSParser::consumeScopeRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
 {
-    if (!m_context.cssScopeAtRuleEnabled)
-        return nullptr;
-
     auto preludeRangeCopy = prelude;
     CSSSelectorList scopeStart;
     CSSSelectorList scopeEnd;

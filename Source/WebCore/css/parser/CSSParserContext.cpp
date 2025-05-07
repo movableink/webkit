@@ -90,7 +90,6 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
     , masonryEnabled { document.settings().masonryEnabled() }
     , cssAppearanceBaseEnabled { document.settings().cssAppearanceBaseEnabled() }
     , cssPaintingAPIEnabled { document.settings().cssPaintingAPIEnabled() }
-    , cssScopeAtRuleEnabled { document.settings().cssScopeAtRuleEnabled() }
     , cssShapeFunctionEnabled { document.settings().cssShapeFunctionEnabled() }
     , cssStyleQueriesEnabled { document.settings().cssStyleQueriesEnabled() }
     , cssTextUnderlinePositionLeftRightEnabled { document.settings().cssTextUnderlinePositionLeftRightEnabled() }
@@ -132,29 +131,28 @@ void add(Hasher& hasher, const CSSParserContext& context)
         | context.masonryEnabled                            << 6
         | context.cssAppearanceBaseEnabled                  << 7
         | context.cssPaintingAPIEnabled                     << 8
-        | context.cssScopeAtRuleEnabled                     << 9
-        | context.cssShapeFunctionEnabled                   << 10
-        | context.cssTextUnderlinePositionLeftRightEnabled  << 11
-        | context.cssBackgroundClipBorderAreaEnabled        << 12
-        | context.cssWordBreakAutoPhraseEnabled             << 13
-        | context.popoverAttributeEnabled                   << 14
-        | context.sidewaysWritingModesEnabled               << 15
-        | context.cssTextWrapPrettyEnabled                  << 16
-        | context.thumbAndTrackPseudoElementsEnabled        << 17
+        | context.cssShapeFunctionEnabled                   << 9
+        | context.cssTextUnderlinePositionLeftRightEnabled  << 10
+        | context.cssBackgroundClipBorderAreaEnabled        << 11
+        | context.cssWordBreakAutoPhraseEnabled             << 12
+        | context.popoverAttributeEnabled                   << 13
+        | context.sidewaysWritingModesEnabled               << 14
+        | context.cssTextWrapPrettyEnabled                  << 15
+        | context.thumbAndTrackPseudoElementsEnabled        << 16
 #if ENABLE(SERVICE_CONTROLS)
-        | context.imageControlsEnabled                      << 18
+        | context.imageControlsEnabled                      << 17
 #endif
-        | context.colorLayersEnabled                        << 19
-        | context.contrastColorEnabled                      << 20
-        | context.targetTextPseudoElementEnabled            << 21
-        | context.viewTransitionTypesEnabled                << 22
-        | context.cssProgressFunctionEnabled                << 23
-        | context.cssMediaProgressFunctionEnabled           << 24
-        | context.cssContainerProgressFunctionEnabled       << 25
-        | context.cssRandomFunctionEnabled                  << 26
-        | context.cssTreeCountingFunctionsEnabled           << 27
-        | context.cssURLModifiersEnabled                    << 28
-        | context.cssAxisRelativePositionKeywordsEnabled    << 29;
+        | context.colorLayersEnabled                        << 18
+        | context.contrastColorEnabled                      << 19
+        | context.targetTextPseudoElementEnabled            << 20
+        | context.viewTransitionTypesEnabled                << 21
+        | context.cssProgressFunctionEnabled                << 22
+        | context.cssMediaProgressFunctionEnabled           << 23
+        | context.cssContainerProgressFunctionEnabled       << 24
+        | context.cssRandomFunctionEnabled                  << 25
+        | context.cssTreeCountingFunctionsEnabled           << 26
+        | context.cssURLModifiersEnabled                    << 27
+        | context.cssAxisRelativePositionKeywordsEnabled    << 28;
     add(hasher, context.baseURL, context.charset, context.propertySettings, context.mode, bits);
 }
 

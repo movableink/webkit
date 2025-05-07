@@ -28,7 +28,6 @@
 typedef USVString CSSOMString;
 
 [
-    EnabledBySetting=CSSScopeAtRuleEnabled,
     Exposed=Window
 ] interface CSSScopeRule : CSSGroupingRule {
     readonly attribute CSSOMString? start;

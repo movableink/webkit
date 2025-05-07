@@ -1456,20 +1456,6 @@ CSSRubyOverhangEnabled:
     WebCore:
       default: true
 
-CSSScopeAtRuleEnabled:
-  type: bool
-  status: stable
-  category: css
-  humanReadableName: "CSS Scoping (@scope)"
-  humanReadableDescription: "Enable the CSS Scoping feature with @scope rule"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 CSSScrollAnchoringEnabled:
   type: bool
   status: testable
