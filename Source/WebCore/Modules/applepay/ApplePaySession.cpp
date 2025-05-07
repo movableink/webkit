@@ -45,7 +45,7 @@
 #include "ApplePayShippingMethodSelectedEvent.h"
 #include "ApplePayShippingMethodUpdate.h"
 #include "ApplePayValidateMerchantEvent.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "EventNames.h"
 #include "EventTargetInlines.h"

@@ -301,16 +301,6 @@ void LocalFrame::setView(RefPtr<LocalFrameView>&& view)
     protectedLoader()->resetMultipleFormSubmissionProtection();
 }
 
-Ref<Editor> LocalFrame::protectedEditor()
-{
-    return editor();
-}
-
-Ref<const Editor> LocalFrame::protectedEditor() const
-{
-    return editor();
-}
-
 void LocalFrame::setDocument(RefPtr<Document>&& newDocument)
 {
     ASSERT(!newDocument || newDocument->frame() == this);
@@ -837,16 +827,6 @@ void LocalFrame::clearTimers()
     clearTimers(protectedView().get(), protectedDocument().get());
 }
 
-Ref<const FrameLoader> LocalFrame::protectedLoader() const
-{
-    return m_loader.get();
-}
-
-Ref<FrameLoader> LocalFrame::protectedLoader()
-{
-    return m_loader.get();
-}
-
 CheckedRef<ScriptController> LocalFrame::checkedScript()
 {
     return m_script.get();
@@ -1270,16 +1250,6 @@ LocalFrame* LocalFrame::contentFrameFromWindowOrFrameElement(JSContextRef contex
     return frameOwner ? dynamicDowncast<LocalFrame>(frameOwner->contentFrame()) : nullptr;
 }
 
-CheckedRef<EventHandler> LocalFrame::checkedEventHandler()
-{
-    return m_eventHandler.get();
-}
-
-CheckedRef<const EventHandler> LocalFrame::checkedEventHandler() const
-{
-    return m_eventHandler.get();
-}
-
 void LocalFrame::documentURLOrOriginDidChange()
 {
     if (!isMainFrame())
@@ -1319,11 +1289,6 @@ void LocalFrame::frameWasDisconnectedFromOwner() const
         window->willDetachDocumentFromFrame();
 
     protectedDocument()->detachFromFrame();
-}
-
-CheckedRef<FrameSelection> LocalFrame::checkedSelection() const
-{
-    return document()->selection();
 }
 
 void LocalFrame::storageAccessExceptionReceivedForDomain(const RegistrableDomain& domain)

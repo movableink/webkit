@@ -30,6 +30,7 @@
 
 #include "DOMWrapperWorld.h"
 #include "FrameDestructionObserverInlines.h"
+#include "FrameInlines.h"
 #include "LocalFrame.h"
 #include "Page.h"
 #include "UserContentController.h"

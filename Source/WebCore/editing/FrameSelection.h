@@ -343,7 +343,7 @@ private:
     void caretAnimationDidUpdate(CaretAnimator&) final;
 
     Document* document() final;
-    RefPtr<Document> protectedDocument() const { return m_document.get(); }
+    inline RefPtr<Document> protectedDocument() const; // Defined in DocumentInlines.h
 
     Node* caretNode() final;
 

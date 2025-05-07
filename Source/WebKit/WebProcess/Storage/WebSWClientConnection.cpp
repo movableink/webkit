@@ -45,10 +45,11 @@
 #include <WebCore/BackgroundFetchRequest.h>
 #include <WebCore/CookieChangeSubscription.h>
 #include <WebCore/DeprecatedGlobalSettings.h>
-#include <WebCore/Document.h>
+#include <WebCore/DocumentInlines.h>
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/FocusController.h>
 #include <WebCore/FrameDestructionObserverInlines.h>
+#include <WebCore/FrameInlines.h>
 #include <WebCore/LocalFrame.h>
 #include <WebCore/Page.h>
 #include <WebCore/ProcessIdentifier.h>

@@ -46,7 +46,7 @@
 #import <WebCore/FrameSelection.h>
 #import <WebCore/FrameSnapshotting.h>
 #import <WebCore/HitTestResult.h>
-#import <WebCore/LocalFrame.h>
+#import <WebCore/LocalFrameInlines.h>
 #import <WebCore/LocalFrameView.h>
 #import <WebCore/Position.h>
 #import <WebCore/Range.h>

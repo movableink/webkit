@@ -30,6 +30,7 @@
 
 #if ENABLE(GEOLOCATION)
 
+#include "DocumentInlines.h"
 #include "Geolocation.h"
 
 namespace WebCore {

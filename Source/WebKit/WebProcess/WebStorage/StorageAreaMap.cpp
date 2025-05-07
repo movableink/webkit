@@ -39,7 +39,7 @@
 #include <WebCore/Document.h>
 #include <WebCore/EventNames.h>
 #include <WebCore/LocalDOMWindow.h>
-#include <WebCore/LocalFrame.h>
+#include <WebCore/LocalFrameInlines.h>
 #include <WebCore/Page.h>
 #include <WebCore/SecurityOriginData.h>
 #include <WebCore/Storage.h>

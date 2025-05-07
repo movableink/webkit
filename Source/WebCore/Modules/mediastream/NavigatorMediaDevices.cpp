@@ -34,7 +34,7 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "Document.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "MediaDevices.h"
 #include "Navigator.h"
 #include <wtf/TZoneMallocInlines.h>

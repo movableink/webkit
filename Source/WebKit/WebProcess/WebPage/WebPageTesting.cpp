@@ -38,6 +38,8 @@
 #include <WebCore/Editor.h>
 #include <WebCore/FocusController.h>
 #include <WebCore/IntPoint.h>
+#include <WebCore/LocalFrameInlines.h>
+#include <WebCore/LocalFrameView.h>
 #include <WebCore/NotificationController.h>
 #include <WebCore/Page.h>
 #include <wtf/TZoneMallocInlines.h>

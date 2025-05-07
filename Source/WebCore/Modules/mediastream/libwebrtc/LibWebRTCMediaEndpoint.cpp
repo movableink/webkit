@@ -28,7 +28,7 @@
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
 #include "DeprecatedGlobalSettings.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "EventNames.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSRTCStatsReport.h"

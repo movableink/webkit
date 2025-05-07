@@ -52,9 +52,12 @@
 #import <WebCore/EditorClient.h>
 #import <WebCore/EventHandler.h>
 #import <WebCore/FloatPoint.h>
+#import <WebCore/FrameDestructionObserverInlines.h>
+#import <WebCore/FrameInlines.h>
 #import <WebCore/Image.h>
-#import <WebCore/LocalFrame.h>
+#import <WebCore/LocalFrameInlines.h>
 #import <WebCore/LocalFrameView.h>
+#import <WebCore/NodeInlines.h>
 #import <WebCore/Page.h>
 #import <WebCore/PagePasteboardContext.h>
 #import <WebCore/Pasteboard.h>

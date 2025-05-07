@@ -37,7 +37,7 @@
 #include <WebCore/FrameLoader.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/HTMLMediaElement.h>
-#include <WebCore/LocalFrame.h>
+#include <WebCore/LocalFrameInlines.h>
 #include <WebCore/LocalFrameView.h>
 #include <WebCore/NodeInlines.h>
 #include <wtf/URL.h>

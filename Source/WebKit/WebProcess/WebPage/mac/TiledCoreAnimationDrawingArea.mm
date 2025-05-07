@@ -48,6 +48,7 @@
 #import <QuartzCore/QuartzCore.h>
 #import <WebCore/DebugPageOverlays.h>
 #import <WebCore/DestinationColorSpace.h>
+#import <WebCore/FrameInlines.h>
 #import <WebCore/GraphicsContext.h>
 #import <WebCore/GraphicsLayerCA.h>
 #import <WebCore/LocalFrame.h>

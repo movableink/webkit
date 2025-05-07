@@ -27,7 +27,8 @@
 
 #if ENABLE(ENCRYPTED_MEDIA)
 
-#include "Document.h"
+#include "DocumentInlines.h"
+#include "FrameInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaKeySystemAccess.h"
 #include "LocalFrame.h"

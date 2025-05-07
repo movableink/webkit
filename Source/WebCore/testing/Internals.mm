@@ -34,6 +34,7 @@
 #import "FrameDestructionObserverInlines.h"
 #import "HTMLMediaElement.h"
 #import "HitTestResult.h"
+#import "LocalFrameInlines.h"
 #import "LocalFrameView.h"
 #import "MediaPlayerPrivate.h"
 #import "Range.h"

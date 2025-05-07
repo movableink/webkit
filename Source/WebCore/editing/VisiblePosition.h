@@ -28,6 +28,7 @@
 #include "EditingBoundary.h"
 #include "LayoutRect.h"
 #include "Position.h"
+#include "RenderObject.h"
 
 namespace WebCore {
 

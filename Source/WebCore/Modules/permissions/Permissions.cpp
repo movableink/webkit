@@ -27,7 +27,7 @@
 #include "Permissions.h"
 
 #include "DedicatedWorkerGlobalScope.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "Exception.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSPermissionDescriptor.h"

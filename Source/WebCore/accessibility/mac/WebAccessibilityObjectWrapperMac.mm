@@ -54,6 +54,7 @@
 #import "ChromeClient.h"
 #import "ContextMenuController.h"
 #import "DateComponents.h"
+#import "DocumentInlines.h"
 #import "ElementInlines.h"
 #import "Font.h"
 #import "FontCascade.h"

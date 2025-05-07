@@ -26,6 +26,7 @@
 #include "config.h"
 #include "JSDOMPromiseDeferred.h"
 
+#include "Document.h"
 #include "EventLoop.h"
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMPromise.h"

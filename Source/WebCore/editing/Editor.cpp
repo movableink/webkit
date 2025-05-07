@@ -65,6 +65,7 @@
 #include "File.h"
 #include "FocusController.h"
 #include "FontAttributes.h"
+#include "FrameInlines.h"
 #include "FrameLoader.h"
 #include "FrameTree.h"
 #include "GraphicsContext.h"
@@ -312,6 +313,13 @@ void TemporarySelectionChange::setSelection(const VisibleSelection& selection, I
 
     m_document->selection().setSelection(selection, options);
 }
+
+IgnoreSelectionChangeForScope::IgnoreSelectionChangeForScope(LocalFrame& frame)
+    : m_selectionChange(*frame.document(), std::nullopt, TemporarySelectionOption::IgnoreSelectionChanges)
+{
+}
+
+IgnoreSelectionChangeForScope::~IgnoreSelectionChangeForScope() = default;
 
 // When an event handler has moved the selection outside of a text control
 // we should use the target control's selection for this editing operation.

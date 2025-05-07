@@ -36,6 +36,7 @@
 #include "PasteboardWriterData.h"
 #include <wtf/RobinHoodHashSet.h>
 #include "ScrollView.h"
+#include "Text.h"
 #include "TextChecking.h"
 #include "TextEventInputType.h"
 #include "TextIteratorBehavior.h"
@@ -166,14 +167,10 @@ class IgnoreSelectionChangeForScope {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(IgnoreSelectionChangeForScope, WEBCORE_EXPORT);
     WTF_MAKE_NONCOPYABLE(IgnoreSelectionChangeForScope);
 public:
-    IgnoreSelectionChangeForScope(LocalFrame& frame)
-        : m_selectionChange(*frame.document(), std::nullopt, TemporarySelectionOption::IgnoreSelectionChanges)
-    {
-    }
+    WEBCORE_EXPORT IgnoreSelectionChangeForScope(LocalFrame&);
+    WEBCORE_EXPORT ~IgnoreSelectionChangeForScope();
 
     void invalidate() { m_selectionChange.invalidate(); }
-
-    ~IgnoreSelectionChangeForScope() = default;
 
 private:
     TemporarySelectionChange m_selectionChange;

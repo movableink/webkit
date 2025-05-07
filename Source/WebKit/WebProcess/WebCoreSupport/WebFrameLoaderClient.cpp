@@ -38,7 +38,7 @@
 #include "WebProcess.h"
 #include <WebCore/FrameLoader.h>
 #include <WebCore/HitTestResult.h>
-#include <WebCore/LocalFrame.h>
+#include <WebCore/LocalFrameInlines.h>
 #include <WebCore/PolicyChecker.h>
 
 #if PLATFORM(COCOA)

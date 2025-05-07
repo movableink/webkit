@@ -34,7 +34,7 @@
 #include "CookieListItem.h"
 #include "CookieStoreDeleteOptions.h"
 #include "CookieStoreGetOptions.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "EventNames.h"
 #include "EventTargetInterfaces.h"
 #include "EventTargetInlines.h"

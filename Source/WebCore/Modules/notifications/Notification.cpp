@@ -36,6 +36,7 @@
 #include "Notification.h"
 
 #include "DedicatedWorkerGlobalScope.h"
+#include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "EventTargetInlines.h"

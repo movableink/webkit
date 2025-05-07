@@ -32,8 +32,6 @@
 #include "KeyboardScrollingAnimator.h"
 #include "LayoutMilestone.h"
 #include "LoadSchedulingMode.h"
-#include "LocalFrame.h"
-#include "MediaProducer.h"
 #include "MediaSessionGroupIdentifier.h"
 #include "Pagination.h"
 #include "PlaybackTargetClientContextIdentifier.h"
@@ -137,6 +135,7 @@ class InspectorController;
 class IntSize;
 class WebRTCProvider;
 class LayoutRect;
+class LocalFrame;
 class LoginStatus;
 class LowPowerModeNotifier;
 class MediaCanStartListener;
@@ -238,7 +237,6 @@ enum class MediaProducerMediaState : uint32_t;
 enum class MediaProducerMediaCaptureKind : uint8_t;
 enum class MediaProducerMutedState : uint8_t;
 enum class RouteSharingPolicy : uint8_t;
-enum class ScriptTelemetryCategory : uint8_t;
 enum class ShouldRelaxThirdPartyCookieBlocking : bool;
 enum class ShouldTreatAsContinuingLoad : uint8_t;
 enum class VisibilityState : bool;
@@ -1759,33 +1757,6 @@ private:
     String m_presentingApplicationBundleIdentifier;
 #endif
 }; // class Page
-
-inline Page* Frame::page() const
-{
-    return m_page.get();
-}
-
-inline std::optional<PageIdentifier> Frame::pageID() const
-{
-    if (auto* page = this->page())
-        return page->identifier();
-    return std::nullopt;
-}
-
-inline RefPtr<Page> Frame::protectedPage() const
-{
-    return m_page.get();
-}
-
-inline Page* Document::page() const
-{
-    return m_frame ? m_frame->page() : nullptr;
-}
-
-inline RefPtr<Page> Document::protectedPage() const
-{
-    return page();
-}
 
 WTF::TextStream& operator<<(WTF::TextStream&, RenderingUpdateStep);
 

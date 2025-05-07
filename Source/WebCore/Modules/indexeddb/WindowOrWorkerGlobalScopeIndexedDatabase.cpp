@@ -28,7 +28,7 @@
 #include "config.h"
 #include "WindowOrWorkerGlobalScopeIndexedDatabase.h"
 
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "IDBConnectionProxy.h"
 #include "IDBFactory.h"
 #include "LocalDOMWindow.h"

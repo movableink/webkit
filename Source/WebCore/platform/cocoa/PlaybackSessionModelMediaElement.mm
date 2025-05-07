@@ -30,6 +30,7 @@
 
 #import "AddEventListenerOptions.h"
 #import "AudioTrackList.h"
+#import "DocumentInlines.h"
 #import "Event.h"
 #import "EventListener.h"
 #import "EventNames.h"

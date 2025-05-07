@@ -94,6 +94,7 @@
 #import <WebCore/RenderElement.h>
 #import <WebCore/RenderObject.h>
 #import <WebCore/RenderStyle.h>
+#import <WebCore/RenderTheme.h>
 #import <WebCore/RenderView.h>
 #import <WebCore/ScrollView.h>
 #import <WebCore/StyleInheritedData.h>

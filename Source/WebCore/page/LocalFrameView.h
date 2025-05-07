@@ -26,7 +26,6 @@
 
 #include "AdjustViewSizeOrNot.h"
 #include "Color.h"
-#include "Document.h"
 #include "FrameView.h"
 #include "LayoutMilestone.h"
 #include "LayoutRect.h"
@@ -452,11 +451,11 @@ public:
 
     WEBCORE_EXPORT void updateLayoutAndStyleIfNeededRecursive(OptionSet<LayoutOptions> = { });
 
-    void incrementVisuallyNonEmptyCharacterCount(const String&);
-    void incrementVisuallyNonEmptyPixelCount(const IntSize&);
+    inline void incrementVisuallyNonEmptyCharacterCount(const String&); // Defined in LocalFrameViewInlines.h
+    inline void incrementVisuallyNonEmptyPixelCount(const IntSize&); // Defined in LocalFrameViewInlines.h
     bool isVisuallyNonEmpty() const { return m_contentQualifiesAsVisuallyNonEmpty; }
 
-    bool hasEnoughContentForVisualMilestones() const;
+    inline bool hasEnoughContentForVisualMilestones() const; // Defined in LocalFrameViewInlines.h
     bool hasContentfulDescendants() const;
     void checkAndDispatchDidReachVisuallyNonEmptyState();
 
@@ -1105,38 +1104,6 @@ private:
     bool m_layerAccessPrevented { false };
 #endif
 };
-
-inline void LocalFrameView::incrementVisuallyNonEmptyPixelCount(const IntSize& size)
-{
-    if (m_visuallyNonEmptyPixelCount > visualPixelThreshold)
-        return;
-
-    auto area = size.area<RecordOverflow>() + m_visuallyNonEmptyPixelCount;
-    if (area.hasOverflowed()) [[unlikely]]
-        m_visuallyNonEmptyPixelCount = std::numeric_limits<decltype(m_visuallyNonEmptyPixelCount)>::max();
-    else
-        m_visuallyNonEmptyPixelCount = area;
-}
-
-inline void LocalFrameView::incrementVisuallyNonEmptyCharacterCount(const String& inlineText)
-{
-    if (m_visuallyNonEmptyCharacterCount > visualCharacterThreshold && m_hasReachedSignificantRenderedTextThreshold)
-        return;
-
-    incrementVisuallyNonEmptyCharacterCountSlowCase(inlineText);
-}
-
-inline bool LocalFrameView::hasEnoughContentForVisualMilestones() const
-{
-    if (!m_frame->page())
-        return false;
-    return isVisuallyNonEmpty() && hasContentfulDescendants() && (!m_frame->page()->requestedLayoutMilestones().contains(LayoutMilestone::DidRenderSignificantAmountOfText) || m_renderedSignificantAmountOfText);
-}
-
-inline RefPtr<LocalFrameView> LocalFrame::protectedView() const
-{
-    return m_view;
-}
 
 WTF::TextStream& operator<<(WTF::TextStream&, const LocalFrameView&);
 

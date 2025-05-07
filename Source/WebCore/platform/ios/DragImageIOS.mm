@@ -39,7 +39,7 @@
 #import "GraphicsContextCG.h"
 #import "Image.h"
 #import "ImageBuffer.h"
-#import "LocalFrame.h"
+#import "LocalFrameInlines.h"
 #import "NotImplemented.h"
 #import "Page.h"
 #import "Range.h"

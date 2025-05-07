@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "Document.h"
 #include "DragActions.h"
 #include "DragImage.h"
 #include "IntPoint.h"

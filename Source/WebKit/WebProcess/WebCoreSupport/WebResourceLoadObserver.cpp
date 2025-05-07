@@ -31,6 +31,7 @@
 #include "NetworkProcessConnection.h"
 #include "WebPage.h"
 #include "WebProcess.h"
+#include <WebCore/DocumentInlines.h>
 #include <WebCore/FrameDestructionObserverInlines.h>
 #include <WebCore/FrameLoader.h>
 #include <WebCore/HTMLFrameOwnerElement.h>

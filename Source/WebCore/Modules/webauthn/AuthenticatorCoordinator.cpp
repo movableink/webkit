@@ -37,6 +37,7 @@
 #include "CurrentUserDetailsOptions.h"
 #include "DocumentInlines.h"
 #include "FrameDestructionObserverInlines.h"
+#include "FrameInlines.h"
 #include "JSBasicCredential.h"
 #include "JSCredentialCreationOptions.h"
 #include "JSCredentialRequestOptions.h"

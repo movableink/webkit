@@ -33,6 +33,7 @@
 #include <JavaScriptCore/APICast.h>
 #include <WebCore/Document.h>
 #include <WebCore/FrameDestructionObserverInlines.h>
+#include <WebCore/FrameInlines.h>
 #include <WebCore/FrameLoader.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/HTMLFrameElement.h>
@@ -44,7 +45,7 @@
 #include <WebCore/HTMLTextAreaElement.h>
 #include <WebCore/IntRect.h>
 #include <WebCore/JSNode.h>
-#include <WebCore/LocalFrame.h>
+#include <WebCore/LocalFrameInlines.h>
 #include <WebCore/LocalFrameView.h>
 #include <WebCore/Node.h>
 #include <WebCore/Page.h>

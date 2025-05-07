@@ -30,7 +30,7 @@
 #import "PlatformUtilities.h"
 #import <JavaScriptCore/InitializeThreading.h>
 #import <WebCore/FrameLoadRequest.h>
-#import <WebCore/LocalFrame.h>
+#import <WebCore/LocalFrameInlines.h>
 #import <WebCore/Page.h>
 #import <WebCore/PageConfiguration.h>
 #import <WebCore/Document.h>

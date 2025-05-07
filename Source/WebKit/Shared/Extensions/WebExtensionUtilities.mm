@@ -38,6 +38,7 @@
 #import "WebExtensionAPITabs.h"
 #import "WebExtensionMessageSenderParameters.h"
 #import "WebFrame.h"
+#import <WebCore/DocumentInlines.h>
 #import <WebCore/LocalFrame.h>
 #import <objc/runtime.h>
 

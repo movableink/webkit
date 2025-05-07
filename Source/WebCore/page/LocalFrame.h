@@ -28,8 +28,9 @@
 #pragma once
 
 #include "AdjustViewSizeOrNot.h"
-#include "Document.h"
+#include "DOMPasteAccess.h"
 #include "Frame.h"
+#include "RegistrableDomain.h"
 #include "ScrollTypes.h"
 #include "UserScriptTypes.h"
 #include <wtf/CheckedRef.h>
@@ -103,6 +104,7 @@ enum class SandboxFlag : uint16_t;
 enum class WindowProxyProperty : uint8_t;
 
 using SandboxFlags = OptionSet<SandboxFlag>;
+using IntDegrees = int32_t;
 
 struct SimpleRange;
 
@@ -144,31 +146,31 @@ public:
 
     WEBCORE_EXPORT void willDetachPage();
 
-    Document* document() const;
-    RefPtr<Document> protectedDocument() const;
-    LocalFrameView* view() const;
+    inline Document* document() const; // Defined in LocalFrameInlines.h
+    inline RefPtr<Document> protectedDocument() const; // Defined in LocalFrameInlines.h
+    inline LocalFrameView* view() const; // Defined in LocalFrameInlines.h
     inline RefPtr<LocalFrameView> protectedView() const; // Defined in LocalFrameView.h.
     WEBCORE_EXPORT RefPtr<const LocalFrame> localMainFrame() const;
     WEBCORE_EXPORT RefPtr<LocalFrame> localMainFrame();
 
-    Editor& editor() { return protectedDocument()->editor(); }
-    const Editor& editor() const { return protectedDocument()->editor(); }
-    WEBCORE_EXPORT Ref<Editor> protectedEditor();
-    WEBCORE_EXPORT Ref<const Editor> protectedEditor() const;
+    inline Editor& editor(); // Defined in LocalFrameInlines.h
+    inline const Editor& editor() const; // Defined in LocalFrameInlines.h
+    inline Ref<Editor> protectedEditor(); // Defined in LocalFrameInlines.h
+    inline Ref<const Editor> protectedEditor() const; // Defined in LocalFrameInlines.h
 
     EventHandler& eventHandler() { return m_eventHandler; }
     const EventHandler& eventHandler() const { return m_eventHandler; }
-    WEBCORE_EXPORT CheckedRef<EventHandler> checkedEventHandler();
-    WEBCORE_EXPORT CheckedRef<const EventHandler> checkedEventHandler() const;
+    inline CheckedRef<EventHandler> checkedEventHandler(); // Defined in LocalFrameInlines.h
+    inline CheckedRef<const EventHandler> checkedEventHandler() const; // Defined in LocalFrameInlines.h
 
     const FrameLoader& loader() const { return m_loader.get(); }
     FrameLoader& loader() { return m_loader.get(); }
-    WEBCORE_EXPORT Ref<const FrameLoader> protectedLoader() const;
-    WEBCORE_EXPORT Ref<FrameLoader> protectedLoader();
+    inline Ref<const FrameLoader> protectedLoader() const; // Defined in LocalFrameInlines.h
+    inline Ref<FrameLoader> protectedLoader(); // Defined in LocalFrameInlines.h
 
-    FrameSelection& selection() { return document()->selection(); }
-    const FrameSelection& selection() const { return document()->selection(); }
-    CheckedRef<FrameSelection> checkedSelection() const;
+    inline FrameSelection& selection(); // Defined in LocalFrameInlines.h
+    inline const FrameSelection& selection() const; // Defined in LocalFrameInlines.h
+    CheckedRef<FrameSelection> checkedSelection() const; // Defined in LocalFrameInlines.h
     ScriptController& script() { return m_script; }
     const ScriptController& script() const { return m_script; }
     CheckedRef<ScriptController> checkedScript();
@@ -412,26 +414,6 @@ private:
     UniqueRef<EventHandler> m_eventHandler;
     UncheckedKeyHashSet<RegistrableDomain> m_storageAccessExceptionDomains;
 };
-
-inline LocalFrameView* LocalFrame::view() const
-{
-    return m_view.get();
-}
-
-inline Document* LocalFrame::document() const
-{
-    return m_doc.get();
-}
-
-inline RefPtr<Document> LocalFrame::protectedDocument() const
-{
-    return document();
-}
-
-inline LocalFrameView* Document::view() const
-{
-    return m_frame ? m_frame->view() : nullptr;
-}
 
 WTF::TextStream& operator<<(WTF::TextStream&, const LocalFrame&);
 

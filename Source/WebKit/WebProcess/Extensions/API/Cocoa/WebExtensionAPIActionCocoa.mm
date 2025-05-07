@@ -43,7 +43,7 @@
 #import "WebExtensionUtilities.h"
 #import "WebFrame.h"
 #import "WebProcess.h"
-#import <WebCore/LocalFrame.h>
+#import <WebCore/LocalFrameInlines.h>
 
 #if PLATFORM(IOS_FAMILY)
 #import <UIKit/UIKit.h>

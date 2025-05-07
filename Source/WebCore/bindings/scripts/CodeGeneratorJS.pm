@@ -3085,6 +3085,7 @@ sub GenerateHeader
     }
 
     $headerIncludes{"JSWindowProxy.h"} = 1 if $interfaceName eq "DOMWindow";
+    $headerIncludes{"EventTargetInlines.h"} = 1 if $parentClassName eq "JSEventTarget";
 
     my $exportMacro = GetExportMacroForJSClass($interface);
 
@@ -7968,6 +7969,9 @@ sub WriteData
         $include = "\"$include\"" unless $include =~ /^["<]/; # "
 
         if ($condition eq 1) {
+            if ($include eq "\"JSEventTarget.h\"") {
+                push @includes, "\"EventTargetInlines.h\"";
+            }
             push @includes, $include;
         } else {
             push @{$implIncludeConditions{$codeGenerator->GenerateConditionalStringFromAttributeValue($condition)}}, $include;

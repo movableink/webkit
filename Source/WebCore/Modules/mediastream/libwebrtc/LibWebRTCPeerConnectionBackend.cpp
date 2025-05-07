@@ -27,7 +27,7 @@
 
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "IceCandidate.h"
 #include "LibWebRTCAudioModule.h"
 #include "LibWebRTCDataChannelHandler.h"

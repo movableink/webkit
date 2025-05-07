@@ -35,7 +35,7 @@
 #import "WebViewInternal.h"
 #import <WebCore/Document.h>
 #import <WebCore/Geolocation.h>
-#import <WebCore/LocalFrame.h>
+#import <WebCore/LocalFrameInlines.h>
 #import <wtf/BlockObjCExceptions.h>
 #import <wtf/NakedPtr.h>
 #import <wtf/TZoneMallocInlines.h>

@@ -32,6 +32,7 @@
 #include "AudioTimestamp.h"
 #include "DOMAudioSession.h"
 #include "DocumentInlines.h"
+#include "FrameInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LocalDOMWindow.h"
 #include "Logging.h"

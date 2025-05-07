@@ -29,7 +29,7 @@
 #include "EventHandler.h"
 #include "EventNames.h"
 #include "LocalDOMWindow.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "PlatformKeyboardEvent.h"
 #include "WindowsKeyboardCodes.h"
 #include <wtf/TZoneMallocInlines.h>

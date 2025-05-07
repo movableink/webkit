@@ -27,6 +27,7 @@
 #include "CollectionTraversal.h"
 #include "Document.h"
 #include "HTMLNames.h"
+#include "NodeInlines.h"
 #include "NodeList.h"
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>

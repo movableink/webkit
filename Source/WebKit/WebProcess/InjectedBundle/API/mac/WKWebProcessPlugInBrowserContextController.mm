@@ -62,7 +62,7 @@
 #import <WebCore/DocumentFragment.h>
 #import <WebCore/HTMLFormElement.h>
 #import <WebCore/HTMLInputElement.h>
-#import <WebCore/LocalFrame.h>
+#import <WebCore/LocalFrameInlines.h>
 #import <WebCore/WebCoreObjCExtras.h>
 #import <wtf/AlignedStorage.h>
 #import <wtf/StdLibExtras.h>

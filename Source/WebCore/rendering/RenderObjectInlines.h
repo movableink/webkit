@@ -19,10 +19,10 @@
 
 #pragma once
 
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "FloatQuad.h"
 #include "FrameDestructionObserverInlines.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "RenderElement.h"
 #include "RenderObject.h"
 #include "RenderStyleInlines.h"

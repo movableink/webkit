@@ -29,7 +29,7 @@
 #include "BitmapImage.h"
 #include "FrameSnapshotting.h"
 #include "ImageBuffer.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
 #include "NotImplemented.h"
 #include "Position.h"

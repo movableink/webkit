@@ -33,8 +33,9 @@
 #include "Event.h"
 #include "EventNames.h"
 #include "EventTargetInterfaces.h"
+#include "FrameInlines.h"
 #include "LocalDOMWindow.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
 #include "Page.h"
 #include <wtf/TZoneMallocInlines.h>

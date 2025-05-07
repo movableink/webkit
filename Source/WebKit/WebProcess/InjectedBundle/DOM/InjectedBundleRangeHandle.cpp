@@ -33,6 +33,7 @@
 #include <WebCore/BoundaryPointInlines.h>
 #include <WebCore/Document.h>
 #include <WebCore/FloatRect.h>
+#include <WebCore/FrameInlines.h>
 #include <WebCore/FrameSelection.h>
 #include <WebCore/GeometryUtilities.h>
 #include <WebCore/GraphicsContext.h>

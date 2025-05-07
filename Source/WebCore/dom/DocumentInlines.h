@@ -35,9 +35,14 @@
 #include "ExtensionStyleSheets.h"
 #include "FocusOptions.h"
 #include "FrameDestructionObserverInlines.h"
+#include "FrameInlines.h"
+#include "FrameSelection.h"
 #include "LocalDOMWindow.h"
+#include "LocalFrameInlines.h"
+#include "LocalFrameView.h"
 #include "NodeIterator.h"
 #include "NodeInlines.h"
+#include "PageInlines.h"
 #include "ReportingScope.h"
 #include "SecurityOrigin.h"
 #include "TextResourceDecoder.h"
@@ -277,6 +282,32 @@ inline Ref<SecurityOrigin> Document::protectedSecurityOrigin() const
 inline Ref<DocumentSyncData> Document::syncData()
 {
     return m_syncData.get();
+}
+
+inline LocalFrameView* Document::view() const
+{
+    return m_frame ? m_frame->view() : nullptr;
+}
+
+inline RefPtr<LocalFrameView> Document::protectedView() const
+{
+    return view();
+}
+
+inline Page* Document::page() const
+{
+    return m_frame ? m_frame->page() : nullptr;
+}
+
+inline RefPtr<Page> Document::protectedPage() const
+{
+    return page();
+}
+
+// FIXME: Move to FrameSelectionInlines.h
+RefPtr<Document> FrameSelection::protectedDocument() const
+{
+    return m_document.get();
 }
 
 } // namespace WebCore

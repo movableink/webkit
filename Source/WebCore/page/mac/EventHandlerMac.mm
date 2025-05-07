@@ -36,6 +36,7 @@
 #import "DragController.h"
 #import "Editor.h"
 #import "FocusController.h"
+#import "FrameInlines.h"
 #import "FrameLoader.h"
 #import "HTMLBodyElement.h"
 #import "HTMLDocument.h"

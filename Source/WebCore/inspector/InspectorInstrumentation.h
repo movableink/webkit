@@ -34,6 +34,7 @@
 #include "CSSSelector.h"
 #include "CanvasBase.h"
 #include "CanvasRenderingContext.h"
+#include "DocumentInlines.h"
 #include "DocumentThreadableLoader.h"
 #include "Element.h"
 #include "Event.h"

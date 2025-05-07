@@ -687,10 +687,10 @@ public:
     Vector<AtomString> formElementsState() const;
     void setStateForNewFormElements(const Vector<AtomString>&);
 
-    inline LocalFrameView* view() const; // Defined in LocalFrame.h.
-    RefPtr<LocalFrameView> protectedView() const;
-    inline Page* page() const; // Defined in Page.h.
-    inline RefPtr<Page> protectedPage() const; // Defined in Page.h.
+    inline LocalFrameView* view() const; // Defined in DocumentInlines.h.
+    inline RefPtr<LocalFrameView> protectedView() const; // Defined in DocumentInlines.h.
+    inline Page* page() const; // Defined in DocumentInlines.h.
+    inline RefPtr<Page> protectedPage() const; // Defined in DocumentInlines.h.
     WEBCORE_EXPORT RefPtr<LocalFrame> localMainFrame() const;
     const Settings& settings() const { return m_settings.get(); }
     Ref<Settings> protectedSettings() const;

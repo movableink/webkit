@@ -31,6 +31,7 @@
 #include "DocumentType.h"
 #include "Element.h"
 #include "FTPDirectoryDocument.h"
+#include "FrameInlines.h"
 #include "FrameLoader.h"
 #include "HTMLDocument.h"
 #include "HTMLHeadElement.h"

@@ -33,7 +33,7 @@
 #import "WebFrameInternal.h"
 #import "WebHTMLViewInternal.h"
 #import "WebView.h"
-#import <WebCore/LocalFrame.h>
+#import <WebCore/LocalFrameInlines.h>
 #import <WebCore/SimpleRange.h>
 
 @interface NSWindow (WebNSWindowDetails)

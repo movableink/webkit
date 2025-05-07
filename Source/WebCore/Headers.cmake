@@ -1685,6 +1685,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/FocusDirection.h
     page/FragmentDirective.h
     page/Frame.h
+    page/FrameInlines.h
     page/FrameDestructionObserver.h
     page/FrameDestructionObserverInlines.h
     page/FrameIdentifier.h
@@ -1703,7 +1704,9 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/LocalDOMWindow.h
     page/LocalDOMWindowProperty.h
     page/LocalFrame.h
+    page/LocalFrameInlines.h
     page/LocalFrameView.h
+    page/LocalFrameViewInlines.h
     page/LocalFrameViewLayoutContext.h
     page/LoginStatus.h
     page/MediaCanStartListener.h

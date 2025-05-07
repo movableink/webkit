@@ -38,6 +38,7 @@
 
 namespace WebCore {
 
+class DocumentLoader;
 class FormState;
 class HistoryItem;
 class SerializedScriptValue;

@@ -27,7 +27,7 @@
 
 #if ENABLE(FULLSCREEN_API)
 
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "GCReachableRef.h"
 #include "HTMLMediaElement.h"
 #include "HTMLMediaElementEnums.h"

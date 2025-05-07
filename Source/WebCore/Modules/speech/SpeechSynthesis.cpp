@@ -32,6 +32,7 @@
 #include "EventNames.h"
 #include "EventTargetInlines.h"
 #include "FrameDestructionObserverInlines.h"
+#include "FrameInlines.h"
 #include "LocalFrame.h"
 #include "Page.h"
 #include "PlatformSpeechSynthesisVoice.h"

@@ -11539,11 +11539,6 @@ CheckedRef<const Style::Scope> Document::checkedStyleScope() const
     return m_styleScope.get();
 }
 
-RefPtr<LocalFrameView> Document::protectedView() const
-{
-    return view();
-}
-
 CheckedPtr<RenderView> Document::checkedRenderView() const
 {
     return m_renderView.get();

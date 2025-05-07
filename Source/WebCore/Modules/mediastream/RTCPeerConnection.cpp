@@ -37,7 +37,7 @@
 #if ENABLE(WEB_RTC)
 
 #include "DNS.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "FrameDestructionObserverInlines.h"

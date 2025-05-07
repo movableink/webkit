@@ -45,6 +45,7 @@
 #import <JavaScriptCore/JSLock.h>
 #import <WebCore/BoundaryPointInlines.h>
 #import <WebCore/Document.h>
+#import <WebCore/FrameDestructionObserverInlines.h>
 #import <WebCore/FrameLoader.h>
 #import <WebCore/HTMLInputElement.h>
 #import <WebCore/HTMLTextFormControlElement.h>
@@ -54,6 +55,7 @@
 #import <WebCore/PlatformWheelEvent.h>
 #import <WebCore/Range.h>
 #import <WebCore/RenderElement.h>
+#import <WebCore/RenderObjectInlines.h>
 #import <WebCore/RenderStyleInlines.h>
 #import <WebCore/RenderTreeAsText.h>
 #import <WebCore/ShadowRoot.h>

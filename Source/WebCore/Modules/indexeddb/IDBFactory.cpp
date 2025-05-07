@@ -26,7 +26,7 @@
 #include "config.h"
 #include "IDBFactory.h"
 
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "IDBBindingUtilities.h"
 #include "IDBConnectionProxy.h"

@@ -43,7 +43,7 @@
 #import <JavaScriptCore/APICast.h>
 #import <JavaScriptCore/ScriptCallStack.h>
 #import <JavaScriptCore/ScriptCallStackFactory.h>
-#import <WebCore/LocalFrame.h>
+#import <WebCore/LocalFrameInlines.h>
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 

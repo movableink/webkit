@@ -58,7 +58,7 @@
 #include "LayoutIntegrationLineLayout.h"
 #include "LegacyRenderSVGResourceClipper.h"
 #include "LocalFrame.h"
-#include "LocalFrameView.h"
+#include "LocalFrameViewInlines.h"
 #include "Page.h"
 #include "PaintInfo.h"
 #include "PositionedLayoutConstraints.h"

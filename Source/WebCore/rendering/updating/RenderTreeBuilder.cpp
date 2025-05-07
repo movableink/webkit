@@ -34,7 +34,7 @@
 #include "LegacyRenderSVGContainer.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LocalFrame.h"
-#include "LocalFrameView.h"
+#include "LocalFrameViewInlines.h"
 #include "LocalFrameViewLayoutContext.h"
 #include "NodeInlines.h"
 #include "RenderBlockInlines.h"

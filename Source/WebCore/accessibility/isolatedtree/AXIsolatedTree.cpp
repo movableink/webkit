@@ -33,6 +33,7 @@
 #include "AccessibilityTable.h"
 #include "AccessibilityTableCell.h"
 #include "AccessibilityTableRow.h"
+#include "DocumentInlines.h"
 #include "FrameSelection.h"
 #include "LocalFrameView.h"
 #include "Page.h"

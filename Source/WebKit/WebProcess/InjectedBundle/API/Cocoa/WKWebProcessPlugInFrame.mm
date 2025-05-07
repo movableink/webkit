@@ -41,7 +41,7 @@
 #import <WebCore/IntPoint.h>
 #import <WebCore/LinkIconCollector.h>
 #import <WebCore/LinkIconType.h>
-#import <WebCore/LocalFrame.h>
+#import <WebCore/LocalFrameInlines.h>
 #import <WebCore/WebCoreObjCExtras.h>
 #import <wtf/AlignedStorage.h>
 #import <wtf/cocoa/VectorCocoa.h>

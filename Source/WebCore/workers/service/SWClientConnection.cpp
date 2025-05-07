@@ -28,7 +28,7 @@
 
 #include "BackgroundFetchInformation.h"
 #include "BackgroundFetchRegistration.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "ExceptionData.h"
 #include "MessageEvent.h"
 #include "ResourceMonitor.h"
