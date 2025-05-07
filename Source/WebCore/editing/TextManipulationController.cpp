@@ -52,6 +52,7 @@
 #include "TextIterator.h"
 #include "TextManipulationItem.h"
 #include "VisibleUnits.h"
+#include <algorithm>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -867,7 +868,7 @@ auto TextManipulationController::replace(const ManipulationItemData& item, const
         } else
             tokensInCurrentNode = createUnit(content.text, *content.node).tokens;
 
-        bool isNodeIncluded = WTF::anyOf(tokensInCurrentNode, [] (auto& token) {
+        bool isNodeIncluded = std::ranges::any_of(tokensInCurrentNode, [](auto& token) {
             return !token.isExcluded;
         });
         for (auto& token : tokensInCurrentNode) {

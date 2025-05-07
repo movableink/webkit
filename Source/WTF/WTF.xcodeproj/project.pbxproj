@@ -511,7 +511,6 @@
 		DD3DC95D27A4BF8E007E5B61 /* ForbidHeapAllocation.h in Headers */ = {isa = PBXBuildFile; fileRef = FE86A8741E59440200111BBF /* ForbidHeapAllocation.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC95E27A4BF8E007E5B61 /* LoggingHashMap.h in Headers */ = {isa = PBXBuildFile; fileRef = 0F30BA8D1E78708E002CA847 /* LoggingHashMap.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC95F27A4BF8E007E5B61 /* WeakObjCPtr.h in Headers */ = {isa = PBXBuildFile; fileRef = 83ABB3C020B3823200BA3306 /* WeakObjCPtr.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		DD3DC96027A4BF8E007E5B61 /* Algorithms.h in Headers */ = {isa = PBXBuildFile; fileRef = CD6D9FCD1EEF3AD4008B0671 /* Algorithms.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC96127A4BF8E007E5B61 /* NoTailCalls.h in Headers */ = {isa = PBXBuildFile; fileRef = 526AEC911F6B4E5C00695F5D /* NoTailCalls.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC96227A4BF8E007E5B61 /* NakedPtr.h in Headers */ = {isa = PBXBuildFile; fileRef = FE8225301B2A1E5B00BA68FD /* NakedPtr.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC96427A4BF8E007E5B61 /* CrossThreadTask.h in Headers */ = {isa = PBXBuildFile; fileRef = 515F794D1CFC9F4A00CCED93 /* CrossThreadTask.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -1646,7 +1645,6 @@
 		CD48A87024C8A21600F5800C /* Observer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Observer.h; sourceTree = "<group>"; };
 		CD5497AA15857D0300B5BC30 /* MediaTime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MediaTime.cpp; sourceTree = "<group>"; };
 		CD5497AB15857D0300B5BC30 /* MediaTime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MediaTime.h; sourceTree = "<group>"; };
-		CD6D9FCD1EEF3AD4008B0671 /* Algorithms.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Algorithms.h; sourceTree = "<group>"; };
 		CDCC9BC422382FCE00FFB51C /* AggregateLogger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AggregateLogger.h; path = wtf/AggregateLogger.h; sourceTree = SOURCE_ROOT; };
 		CE1132832370634900A8C83B /* AnsiColors.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AnsiColors.h; sourceTree = "<group>"; };
 		CEA072A8236FFBF70018839C /* CrashReporter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CrashReporter.h; sourceTree = "<group>"; };
@@ -2211,7 +2209,6 @@
 				5363861E2CFE391C0034E883 /* AbstractThreadSafeRefCountedAndCanMakeWeakPtr.h */,
 				E3B8E6012961EA7600A8AEE3 /* AccessibleAddress.h */,
 				CDCC9BC422382FCE00FFB51C /* AggregateLogger.h */,
-				CD6D9FCD1EEF3AD4008B0671 /* Algorithms.h */,
 				466E7A792D66E57E0096FDA4 /* AlignedStorage.h */,
 				CE1132832370634900A8C83B /* AnsiColors.h */,
 				E37E96522702AD0700E1C36A /* ApproximateTime.cpp */,
@@ -3317,7 +3314,6 @@
 				E3B8E6032961EA7600A8AEE3 /* AccessibleAddress.h in Headers */,
 				E383AAC92B6C730B00058E60 /* AdaptiveStringSearcher.h in Headers */,
 				DD3DC8FA27A4BF8E007E5B61 /* AggregateLogger.h in Headers */,
-				DD3DC96027A4BF8E007E5B61 /* Algorithms.h in Headers */,
 				466E7A7A2D66E57E0096FDA4 /* AlignedStorage.h in Headers */,
 				DD3DC99627A4BF8E007E5B61 /* AnsiColors.h in Headers */,
 				DD3DC92527A4BF8E007E5B61 /* ApproximateTime.h in Headers */,

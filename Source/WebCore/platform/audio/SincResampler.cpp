@@ -36,7 +36,6 @@
 #include "AudioUtilities.h"
 #include "VectorMath.h"
 #include <numbers>
-#include <wtf/Algorithms.h>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/ParsingUtilities.h>

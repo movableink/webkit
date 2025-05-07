@@ -35,7 +35,6 @@
 #include "RemoteLegacyCDMSessionProxy.h"
 #include "RemoteLegacyCDMSessionProxyMessages.h"
 #include <WebCore/LegacyCDM.h>
-#include <wtf/Algorithms.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {

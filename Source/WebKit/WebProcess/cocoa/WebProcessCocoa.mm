@@ -59,6 +59,7 @@
 #import <JavaScriptCore/ConfigFile.h>
 #import <JavaScriptCore/Options.h>
 #import <WebCore/AVAssetMIMETypeCache.h>
+#import <algorithm>
 #import <pal/spi/cf/VideoToolboxSPI.h>
 #import <pal/spi/cg/ImageIOSPI.h>
 
@@ -1424,7 +1425,7 @@ void WebProcess::updatePageScreenProperties()
         return;
     }
 
-    bool allPagesAreOnHDRScreens = allOf(m_pageMap.values(), [] (auto& page) {
+    bool allPagesAreOnHDRScreens = std::ranges::all_of(m_pageMap.values(), [](auto& page) {
         return page && screenSupportsHighDynamicRange(page->localMainFrameView());
     });
     setShouldOverrideScreenSupportsHighDynamicRange(true, allPagesAreOnHDRScreens);

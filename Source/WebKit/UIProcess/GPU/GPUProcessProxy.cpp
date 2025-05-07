@@ -53,6 +53,7 @@
 #include <WebCore/LogInitialization.h>
 #include <WebCore/MockRealtimeMediaSourceCenter.h>
 #include <WebCore/ScreenProperties.h>
+#include <algorithm>
 #include <wtf/CompletionHandler.h>
 #include <wtf/LogInitialization.h>
 #include <wtf/MachSendRight.h>
@@ -468,7 +469,7 @@ void GPUProcessProxy::setShouldListenToVoiceActivity(const WebPageProxy& proxy, 
             return;
     }
 
-    bool shouldListenToVoiceActivity = anyOf(m_pagesListeningToVoiceActivity, [] (auto& page) {
+    bool shouldListenToVoiceActivity = std::ranges::any_of(m_pagesListeningToVoiceActivity, [](auto& page) {
         return page.shouldListenToVoiceActivity();
     });
     if (m_shouldListenToVoiceActivity == shouldListenToVoiceActivity)

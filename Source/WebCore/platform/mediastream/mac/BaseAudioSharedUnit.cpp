@@ -34,6 +34,7 @@
 #include "DeprecatedGlobalSettings.h"
 #include "Logging.h"
 #include "PlatformMediaSessionManager.h"
+#include <algorithm>
 
 namespace WebCore {
 
@@ -189,7 +190,7 @@ void BaseAudioSharedUnit::devicesChanged()
     if (persistentID.isEmpty())
         return;
 
-    if (WTF::anyOf(devices, [&persistentID] (auto& device) { return persistentID == device.persistentId(); })) {
+    if (std::ranges::any_of(devices, [&persistentID](auto& device) { return persistentID == device.persistentId(); })) {
         validateOutputDevice(m_outputDeviceID);
         return;
     }

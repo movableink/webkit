@@ -47,6 +47,7 @@
 #include <WebCore/RealtimeMediaSource.h>
 #include <WebCore/SecurityOriginData.h>
 #include <WebCore/UserMediaRequest.h>
+#include <algorithm>
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/Scope.h>
@@ -837,9 +838,9 @@ bool UserMediaPermissionRequestManagerProxy::shouldChangeDeniedToPromptForCamera
     if (!protocolHostAndPortAreEqual(URL(page->protectedPageLoadState()->activeURL()), origin.topOrigin.toURL()))
         return true;
 
-    return !anyOf(m_deniedRequests, [](auto& request) { return request.isVideoDenied; })
-        && !anyOf(m_pregrantedRequests, [](auto& request) { return request->requiresVideoCapture(); })
-        && !anyOf(m_grantedRequests, [](auto& request) { return request->requiresVideoCapture(); });
+    return !std::ranges::any_of(m_deniedRequests, [](auto& request) { return request.isVideoDenied; })
+        && !std::ranges::any_of(m_pregrantedRequests, [](auto& request) { return request->requiresVideoCapture(); })
+        && !std::ranges::any_of(m_grantedRequests, [](auto& request) { return request->requiresVideoCapture(); });
 }
 
 bool UserMediaPermissionRequestManagerProxy::shouldChangeDeniedToPromptForMicrophone(const ClientOrigin& origin) const
@@ -851,9 +852,9 @@ bool UserMediaPermissionRequestManagerProxy::shouldChangeDeniedToPromptForMicrop
     if (!protocolHostAndPortAreEqual(URL(page->protectedPageLoadState()->activeURL()), origin.topOrigin.toURL()))
         return true;
 
-    return !anyOf(m_deniedRequests, [](auto& request) { return request.isAudioDenied; })
-        && !anyOf(m_pregrantedRequests, [](auto& request) { return request->requiresAudioCapture(); })
-        && !anyOf(m_grantedRequests, [](auto& request) { return request->requiresAudioCapture(); });
+    return !std::ranges::any_of(m_deniedRequests, [](auto& request) { return request.isAudioDenied; })
+        && !std::ranges::any_of(m_pregrantedRequests, [](auto& request) { return request->requiresAudioCapture(); })
+        && !std::ranges::any_of(m_grantedRequests, [](auto& request) { return request->requiresAudioCapture(); });
 }
 
 bool UserMediaPermissionRequestManagerProxy::shouldChangePromptToGrantForCamera(const ClientOrigin& origin) const

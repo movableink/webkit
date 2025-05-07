@@ -33,6 +33,7 @@
 #include "UniqueIDBDatabase.h"
 #include "UniqueIDBDatabaseConnection.h"
 #include "UniqueIDBDatabaseManager.h"
+#include <algorithm>
 
 namespace WebCore {
 namespace IDBServer {
@@ -128,7 +129,7 @@ bool UniqueIDBDatabaseTransaction::shouldAbortDueToUnhandledRequestError(uint64_
     }
 
     auto pendingRequestResults = m_requestResults.subspan(handledRequestResultsCount);
-    return WTF::anyOf(pendingRequestResults, [&] (auto& error) {
+    return std::ranges::any_of(pendingRequestResults, [&](auto& error) {
         return !error.isNull();
     });
 }

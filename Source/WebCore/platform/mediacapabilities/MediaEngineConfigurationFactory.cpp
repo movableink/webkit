@@ -33,7 +33,7 @@
 #include "MediaDecodingConfiguration.h"
 #include "MediaEncodingConfiguration.h"
 #include "MediaEngineConfigurationFactoryMock.h"
-#include <wtf/Algorithms.h>
+#include <algorithm>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Vector.h>
 
@@ -89,12 +89,12 @@ void MediaEngineConfigurationFactory::installFactory(MediaEngineFactory&& factor
 
 bool MediaEngineConfigurationFactory::hasDecodingConfigurationFactory()
 {
-    return mockEnabled() || WTF::anyOf(factories(), [] (auto& factory) { return (bool)factory.createDecodingConfiguration; });
+    return mockEnabled() || std::ranges::any_of(factories(), [](auto& factory) { return (bool)factory.createDecodingConfiguration; });
 }
 
 bool MediaEngineConfigurationFactory::hasEncodingConfigurationFactory()
 {
-    return mockEnabled() || WTF::anyOf(factories(), [] (auto& factory) { return (bool)factory.createEncodingConfiguration; });
+    return mockEnabled() || std::ranges::any_of(factories(), [](auto& factory) { return (bool)factory.createEncodingConfiguration; });
 }
 
 void MediaEngineConfigurationFactory::createDecodingConfiguration(MediaDecodingConfiguration&& config, DecodingConfigurationCallback&& callback)

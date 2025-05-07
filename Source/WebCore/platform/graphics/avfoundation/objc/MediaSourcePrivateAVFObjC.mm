@@ -37,9 +37,9 @@
 #import "SourceBufferParserAVFObjC.h"
 #import "SourceBufferPrivateAVFObjC.h"
 #import "VideoMediaSampleRenderer.h"
+#import <algorithm>
 #import <objc/runtime.h>
 #import <ranges>
-#import <wtf/Algorithms.h>
 #import <wtf/NativePromise.h>
 #import <wtf/SoftLinking.h>
 #import <wtf/text/AtomString.h>
@@ -175,7 +175,7 @@ void MediaSourcePrivateAVFObjC::keyAdded()
 
 bool MediaSourcePrivateAVFObjC::hasSelectedVideo() const
 {
-    return std::ranges::any_of(m_activeSourceBuffers, [] (auto* sourceBuffer) {
+    return std::ranges::any_of(m_activeSourceBuffers, [](auto* sourceBuffer) {
         return downcast<SourceBufferPrivateAVFObjC>(sourceBuffer)->hasSelectedVideo();
     });
 }
@@ -279,7 +279,7 @@ void MediaSourcePrivateAVFObjC::attemptToDecryptWithInstance(CDMInstance& instan
 
 bool MediaSourcePrivateAVFObjC::waitingForKey() const
 {
-    return anyOf(m_sourceBuffers, [] (auto& sourceBuffer) {
+    return std::ranges::any_of(m_sourceBuffers, [](auto& sourceBuffer) {
         return sourceBuffer->waitingForKey();
     });
 }
@@ -317,7 +317,7 @@ void MediaSourcePrivateAVFObjC::failedToCreateRenderer(RendererType type)
 
 bool MediaSourcePrivateAVFObjC::needsVideoLayer() const
 {
-    return anyOf(m_sourceBuffers, [] (auto& sourceBuffer) {
+    return std::ranges::any_of(m_sourceBuffers, [](auto& sourceBuffer) {
         return downcast<SourceBufferPrivateAVFObjC>(sourceBuffer)->needsVideoLayer();
     });
 }

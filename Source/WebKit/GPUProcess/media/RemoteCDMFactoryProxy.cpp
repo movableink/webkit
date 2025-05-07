@@ -34,7 +34,6 @@
 #include "RemoteCDMInstanceSessionProxy.h"
 #include "RemoteCDMProxy.h"
 #include <WebCore/CDMFactory.h>
-#include <wtf/Algorithms.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {

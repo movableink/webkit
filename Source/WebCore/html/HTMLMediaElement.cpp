@@ -143,7 +143,6 @@
 #include <limits>
 #include <pal/SessionID.h>
 #include <ranges>
-#include <wtf/Algorithms.h>
 #include <wtf/JSONValues.h>
 #include <wtf/Language.h>
 #include <wtf/MathExtras.h>

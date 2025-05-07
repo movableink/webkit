@@ -338,6 +338,7 @@
 #include <JavaScriptCore/RegularExpression.h>
 #include <JavaScriptCore/ScriptCallStack.h>
 #include <JavaScriptCore/VM.h>
+#include <algorithm>
 #include <ctime>
 #include <ranges>
 #include <wtf/CryptographicallyRandomNumber.h>
@@ -585,7 +586,7 @@ void Document::configureSharedLogger()
     if (!logger)
         return;
 
-    bool alwaysOnLoggingAllowed = !allDocumentsMap().isEmpty() && WTF::allOf(allDocumentsMap().values(), [](auto& document) {
+    bool alwaysOnLoggingAllowed = !allDocumentsMap().isEmpty() && std::ranges::all_of(allDocumentsMap().values(), [](auto& document) {
         return document->isAlwaysOnLoggingAllowed();
     });
     logger->setEnabled(sharedLoggerOwner(), alwaysOnLoggingAllowed);

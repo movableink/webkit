@@ -322,6 +322,7 @@
 #include <WebCore/VisibleUnits.h>
 #include <WebCore/WritingDirection.h>
 #include <WebCore/markup.h>
+#include <algorithm>
 #include <pal/SessionID.h>
 #include <ranges>
 #include <wtf/CoroutineUtilities.h>
@@ -8980,7 +8981,7 @@ void WebPage::completeTextManipulation(const Vector<WebCore::TextManipulationIte
         return controller->completeManipulation(items);
     };
 
-    bool containsItemsForMultipleFrames = WTF::anyOf(items, [&](auto& item) {
+    bool containsItemsForMultipleFrames = std::ranges::any_of(items, [&](auto& item) {
         return currentFrameID != item.frameID;
     });
     if (!containsItemsForMultipleFrames)

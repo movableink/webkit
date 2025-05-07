@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include <wtf/Algorithms.h>
+#include <algorithm>
 #include <wtf/HashTable.h>
 #include <wtf/WeakPtr.h>
 
@@ -333,7 +333,7 @@ public:
     bool hasNullReferences() const
     {
         unsigned count = 0;
-        auto result = WTF::anyOf(m_map, [&] (auto& iterator) {
+        auto result = std::ranges::any_of(m_map, [&](auto& iterator) {
             ++count;
             return !iterator.key.get();
         });

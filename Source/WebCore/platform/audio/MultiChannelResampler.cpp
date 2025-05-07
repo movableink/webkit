@@ -35,7 +35,6 @@
 #include "AudioBus.h"
 #include "SincResampler.h"
 #include <functional>
-#include <wtf/Algorithms.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {

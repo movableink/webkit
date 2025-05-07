@@ -45,6 +45,7 @@
 #include "RealtimeMediaSourceSettings.h"
 #include "ThreadGlobalData.h"
 #include "VideoFrame.h"
+#include <algorithm>
 #include <math.h>
 #include <numbers>
 #include <wtf/NativePromise.h>
@@ -310,7 +311,7 @@ auto MockRealtimeVideoSource::getPhotoSettings() -> Ref<PhotoSettingsNativePromi
 
 static bool isZoomSupported(const Vector<VideoPreset>& presets)
 {
-    return anyOf(presets, [](auto& preset) {
+    return std::ranges::any_of(presets, [](auto& preset) {
         return preset.isZoomSupported();
     });
 }

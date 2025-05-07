@@ -106,6 +106,7 @@
 #include <WebCore/RegistrableDomain.h>
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/Site.h>
+#include <algorithm>
 #include <pal/SessionID.h>
 #include <wtf/CallbackAggregator.h>
 #include <wtf/CryptographicallyRandomNumber.h>
@@ -1963,7 +1964,7 @@ void WebProcessPool::updateProcessAssertions()
 bool WebProcessPool::isServiceWorkerPageID(WebPageProxyIdentifier pageID) const
 {
     // FIXME: This is inefficient.
-    return WTF::anyOf(remoteWorkerProcesses(), [pageID](auto& process) {
+    return std::ranges::any_of(remoteWorkerProcesses(), [pageID](auto& process) {
         return process.hasServiceWorkerPageProxy(pageID);
     });
     return false;
@@ -2410,7 +2411,7 @@ void WebProcessPool::setUseSeparateServiceWorkerProcess(bool useSeparateServiceW
 
 bool WebProcessPool::anyProcessPoolNeedsUIBackgroundAssertion()
 {
-    return WTF::anyOf(WebProcessPool::allProcessPools(), [](auto& processPool) {
+    return std::ranges::any_of(WebProcessPool::allProcessPools(), [](auto& processPool) {
         return processPool->shouldTakeUIBackgroundAssertion();
     });
 }
@@ -2477,14 +2478,14 @@ void WebProcessPool::isJITDisabledInAllRemoteWorkerProcesses(CompletionHandler<v
 
 bool WebProcessPool::hasServiceWorkerForegroundActivityForTesting() const
 {
-    return WTF::anyOf(remoteWorkerProcesses(), [](auto& process) {
+    return std::ranges::any_of(remoteWorkerProcesses(), [](auto& process) {
         return process.hasServiceWorkerForegroundActivityForTesting();
     });
 }
 
 bool WebProcessPool::hasServiceWorkerBackgroundActivityForTesting() const
 {
-    return WTF::anyOf(remoteWorkerProcesses(), [](auto& process) {
+    return std::ranges::any_of(remoteWorkerProcesses(), [](auto& process) {
         return process.hasServiceWorkerBackgroundActivityForTesting();
     });
 }

@@ -26,7 +26,6 @@
 #include <wtf/text/StringImpl.h>
 
 #include <atomic>
-#include <wtf/Algorithms.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/CString.h>

@@ -34,6 +34,7 @@
 #import "HTTPCookieAcceptPolicyCocoa.h"
 #import "ResourceRequest.h"
 #import "SameSiteInfo.h"
+#import <algorithm>
 #import <optional>
 #import <pal/spi/cf/CFNetworkSPI.h>
 #import <wtf/BlockObjCExceptions.h>
@@ -680,7 +681,7 @@ void NetworkStorageSession::deleteCookies(const ClientOrigin& origin, Completion
     auto domain = origin.clientOrigin.host();
 
     deleteCookiesMatching([&domain, &cachePartitions](auto *cookie) {
-        bool partitionMatched = anyOf(cachePartitions, [&cookie] (auto& cachePartition) {
+        bool partitionMatched = std::ranges::any_of(cachePartitions, [&cookie](auto& cachePartition) {
             return equalIgnoringNullity(cachePartition, String(cookie._storagePartition));
         });
         return partitionMatched && domain == String(cookie.domain);

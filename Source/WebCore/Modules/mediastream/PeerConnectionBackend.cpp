@@ -48,6 +48,7 @@
 #include "RTCSessionDescriptionInit.h"
 #include "RTCTrackEvent.h"
 #include "WebRTCProvider.h"
+#include <algorithm>
 #include <wtf/EnumTraits.h>
 #include <wtf/FilePrintStream.h>
 #include <wtf/UUID.h>
@@ -317,12 +318,12 @@ struct MediaStreamAndTrackItem {
 static void setAssociatedRemoteStreams(RTCRtpReceiver& receiver, const PeerConnectionBackend::TransceiverState& state, Vector<MediaStreamAndTrackItem>& addList, Vector<MediaStreamAndTrackItem>& removeList)
 {
     for (auto& currentStream : receiver.associatedStreams()) {
-        if (currentStream && !anyOf(state.receiverStreams, [&currentStream](auto& stream) { return stream->id() == currentStream->id(); }))
+        if (currentStream && !std::ranges::any_of(state.receiverStreams, [&currentStream](auto& stream) { return stream->id() == currentStream->id(); }))
             removeList.append({ Ref { *currentStream }, Ref { receiver.track() } });
     }
 
     for (auto& stream : state.receiverStreams) {
-        if (!anyOf(receiver.associatedStreams(), [&stream](auto& currentStream) { return stream->id() == currentStream->id(); }))
+        if (!std::ranges::any_of(receiver.associatedStreams(), [&stream](auto& currentStream) { return stream->id() == currentStream->id(); }))
             addList.append({ stream, Ref { receiver.track() } });
     }
 
@@ -453,7 +454,7 @@ void PeerConnectionBackend::setRemoteDescriptionSucceeded(std::optional<Descript
         Vector<MediaStreamAndTrackItem> removeList;
         if (transceiverStates) {
             for (auto& transceiver : peerConnection.currentTransceivers()) {
-                if (!anyOf(*transceiverStates, [&transceiver](auto& state) { return state.mid == transceiver->mid(); })) {
+                if (!std::ranges::any_of(*transceiverStates, [&transceiver](auto& state) { return state.mid == transceiver->mid(); })) {
                     for (auto& stream : transceiver->receiver().associatedStreams()) {
                         if (stream)
                             removeList.append({ Ref { *stream }, Ref { transceiver->receiver().track() } });

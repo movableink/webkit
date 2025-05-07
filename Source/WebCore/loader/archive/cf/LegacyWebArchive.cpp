@@ -59,6 +59,7 @@
 #include "StyleSheet.h"
 #include "StyleSheetList.h"
 #include "markup.h"
+#include <algorithm>
 #include <wtf/ListHashSet.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/URLHash.h>
@@ -778,7 +779,7 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString, bo
 
         ResolveURLs resolveURLs = ResolveURLs::No;
         // Base element is excluded, so all URLs should be replaced with absolute URL.
-        bool baseElementExcluded = WTF::anyOf(markupExclusionRules, [&] (auto& rule) {
+        bool baseElementExcluded = std::ranges::any_of(markupExclusionRules, [&](auto& rule) {
             return rule.elementLocalName == "base"_s;
         });
         if (!document->baseElementURL().isEmpty() && baseElementExcluded)

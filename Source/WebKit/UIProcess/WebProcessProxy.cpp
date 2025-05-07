@@ -102,11 +102,11 @@
 #include <WebCore/SharedMemory.h>
 #include <WebCore/SuddenTermination.h>
 #include <WebCore/WrappedCryptoKey.h>
+#include <algorithm>
 #include <optional>
 #include <pal/system/Sound.h>
 #include <ranges>
 #include <stdio.h>
-#include <wtf/Algorithms.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/ProcessPrivilege.h>
 #include <wtf/RunLoop.h>
@@ -842,7 +842,7 @@ bool WebProcessProxy::shouldDropNearSuspendedAssertionAfterDelay() const
         // The setting come from pages but this process has no page, we thus use the default setting value.
         return defaultShouldDropNearSuspendedAssertionAfterDelay();
     }
-    return WTF::anyOf(m_pageMap.values(), [](auto& page) { return page->preferences().shouldDropNearSuspendedAssertionAfterDelay(); });
+    return std::ranges::any_of(m_pageMap.values(), [](auto& page) { return page->preferences().shouldDropNearSuspendedAssertionAfterDelay(); });
 }
 
 void WebProcessProxy::addExistingWebPage(WebPageProxy& webPage, BeginsUsingDataStore beginsUsingDataStore)
@@ -2000,14 +2000,14 @@ String WebProcessProxy::environmentIdentifier() const
 
 void WebProcessProxy::updateAudibleMediaAssertions()
 {
-    bool hasAudibleMainPage = WTF::anyOf(pages(), [] (auto& page) {
+    bool hasAudibleMainPage = std::ranges::any_of(pages(), [](auto& page) {
 #if ENABLE(EXTENSION_CAPABILITIES)
         if (page->preferences().mediaCapabilityGrantsEnabled())
             return false;
 #endif
         return page->isPlayingAudio();
     });
-    bool hasAudibleRemotePage = WTF::anyOf(remotePages(), [](auto& remotePage) {
+    bool hasAudibleRemotePage = std::ranges::any_of(remotePages(), [](auto& remotePage) {
 #if ENABLE(EXTENSION_CAPABILITIES)
         if (RefPtr page = remotePage ? remotePage->protectedPage() : nullptr) {
             if (page->preferences().mediaCapabilityGrantsEnabled())
@@ -2035,10 +2035,10 @@ void WebProcessProxy::updateAudibleMediaAssertions()
 
 void WebProcessProxy::updateMediaStreamingActivity()
 {
-    bool hasMediaStreamingMainPage = WTF::anyOf(pages(), [] (auto& page) {
+    bool hasMediaStreamingMainPage = std::ranges::any_of(pages(), [](auto& page) {
         return page->hasMediaStreaming();
     });
-    bool hasMediaStreamingRemotePage = WTF::anyOf(remotePages(), [] (auto& remotePage) {
+    bool hasMediaStreamingRemotePage = std::ranges::any_of(remotePages(), [](auto& remotePage) {
         return remotePage ? remotePage->mediaState().contains(MediaProducerMediaState::HasStreamingActivity) : false;
     });
     bool hasMediaStreamingWebPage = hasMediaStreamingMainPage || hasMediaStreamingRemotePage;
@@ -2669,7 +2669,8 @@ void WebProcessProxy::updateRemoteWorkerProcessAssertion(RemoteWorkerType worker
 
     WEBPROCESSPROXY_RELEASE_LOG(ProcessSuspension, "updateRemoteWorkerProcessAssertion: workerType=%" PUBLIC_LOG_STRING, workerType == RemoteWorkerType::SharedWorker ? "shared" : "service");
 
-    bool shouldTakeForegroundActivity = WTF::anyOf(workerInformation->clientProcesses, [&](auto& process) {
+    // FIXME: Drop SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE once <rdar://150855062> is fixed.
+    SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE bool shouldTakeForegroundActivity = std::ranges::any_of(workerInformation->clientProcesses, [&](auto& process) {
         return &process != this && !!process.m_foregroundToken;
     });
     if (shouldTakeForegroundActivity) {
@@ -2678,7 +2679,8 @@ void WebProcessProxy::updateRemoteWorkerProcessAssertion(RemoteWorkerType worker
         return;
     }
 
-    bool shouldTakeBackgroundActivity = WTF::anyOf(workerInformation->clientProcesses, [&](auto& process) {
+    // FIXME: Drop SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE once <rdar://150855062> is fixed.
+    SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE bool shouldTakeBackgroundActivity = std::ranges::any_of(workerInformation->clientProcesses, [&](auto& process) {
         return &process != this && !!process.m_backgroundToken;
     });
     if (shouldTakeBackgroundActivity) {
@@ -3043,7 +3045,7 @@ void WebProcessProxy::updateRuntimeStatistics()
 
 bool WebProcessProxy::isAlwaysOnLoggingAllowed() const
 {
-    return WTF::allOf(pages(), [](auto& page) {
+    return std::ranges::all_of(pages(), [](auto& page) {
         return page->isAlwaysOnLoggingAllowed();
     });
 }

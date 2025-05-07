@@ -41,7 +41,6 @@
 #include <WebCore/Page.h>
 #include <pal/spi/cocoa/DataDetectorsCoreSPI.h>
 #include <pal/spi/mac/DataDetectorsSPI.h>
-#include <wtf/Algorithms.h>
 #include <wtf/IteratorRange.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RefPtr.h>

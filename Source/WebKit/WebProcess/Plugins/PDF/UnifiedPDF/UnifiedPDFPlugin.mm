@@ -110,8 +110,8 @@
 #include <WebCore/StyleColorOptions.h>
 #include <WebCore/VoidCallback.h>
 #include <WebCore/WheelEventDeltaFilter.h>
+#include <algorithm>
 #include <pal/spi/cg/CoreGraphicsSPI.h>
-#include <wtf/Algorithms.h>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/cocoa/TypeCastsCocoa.h>
@@ -2442,7 +2442,7 @@ auto UnifiedPDFPlugin::toContextMenuItemTag(int tagValue) -> ContextMenuItemTag
         ContextMenuItemTag::ZoomOut,
         ContextMenuItemTag::ActualSize,
     };
-    const auto isKnownContextMenuItemTag = WTF::anyOf(regularContextMenuItemTags, [tagValue](ContextMenuItemTag tag) {
+    const auto isKnownContextMenuItemTag = std::ranges::any_of(regularContextMenuItemTags, [tagValue](ContextMenuItemTag tag) {
         return tagValue == enumToUnderlyingType(tag);
     });
     return isKnownContextMenuItemTag ? static_cast<ContextMenuItemTag>(tagValue) : ContextMenuItemTag::Unknown;

@@ -32,6 +32,7 @@
 #include <WebCore/MemoryIDBBackingStore.h>
 #include <WebCore/SQLiteFileSystem.h>
 #include <WebCore/SQLiteIDBBackingStore.h>
+#include <algorithm>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebKit {
@@ -208,7 +209,7 @@ bool IDBStorageManager::isActive() const
 
 bool IDBStorageManager::hasDataInMemory() const
 {
-    return WTF::anyOf(m_databases.values(), [&] (auto& database) {
+    return std::ranges::any_of(m_databases.values(), [&](auto& database) {
         return database->hasDataInMemory();
     });
 }

@@ -27,6 +27,7 @@
 #include "IDBKeyData.h"
 
 #include "KeyedCoding.h"
+#include <algorithm>
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
@@ -408,9 +409,7 @@ bool IDBKeyData::isValidValue(const ValueVariant& variant)
     }, [&](const Date& date) {
         return !std::isnan(date.value);
     }, [&](const Vector<IDBKeyData>& keys) {
-        return WTF::allOf(keys, [](auto& key) {
-            return IDBKeyData::isValidValue(key.value());
-        });
+        return std::ranges::all_of(keys, IDBKeyData::isValidValue, &IDBKeyData::value);
     }, [&](const auto&) {
         return true;
     });

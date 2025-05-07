@@ -35,6 +35,7 @@
 #import <WebCore/PlatformScreen.h>
 #import <WebCore/ScreenProperties.h>
 #import <WebCore/WebMAudioUtilitiesCocoa.h>
+#import <algorithm>
 #import <pal/spi/cocoa/CoreServicesSPI.h>
 #import <pal/spi/cocoa/LaunchServicesSPI.h>
 #import <sysexits.h>
@@ -97,7 +98,7 @@ void GPUProcess::setScreenProperties(const WebCore::ScreenProperties& screenProp
         return;
     }
 
-    bool allScreensAreHDR = allOf(screenProperties.screenDataMap.values(), [] (auto& screenData) {
+    bool allScreensAreHDR = std::ranges::all_of(screenProperties.screenDataMap.values(), [](auto& screenData) {
         return screenData.screenSupportsHighDynamicRange;
     });
     setShouldOverrideScreenSupportsHighDynamicRange(true, allScreensAreHDR);

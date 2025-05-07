@@ -32,6 +32,7 @@
 #include "RealtimeMediaSourceCenter.h"
 #include "RealtimeMediaSourceSettings.h"
 #include <VideoFrame.h>
+#include <algorithm>
 #include <wtf/JSONValues.h>
 #include <wtf/MediaTime.h>
 
@@ -579,7 +580,7 @@ String SizeFrameRateAndZoom::toJSONString() const
 
 bool RealtimeVideoCaptureSource::canBePowerEfficient()
 {
-    return anyOf(presets(), [] (auto& preset) { return preset.isEfficient(); }) && anyOf(presets(), [] (auto& preset) { return !preset.isEfficient(); });
+    return std::ranges::any_of(presets(), [](auto& preset) { return preset.isEfficient(); }) && std::ranges::any_of(presets(), [](auto& preset) { return !preset.isEfficient(); });
 }
 
 

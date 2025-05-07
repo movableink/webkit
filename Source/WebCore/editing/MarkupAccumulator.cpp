@@ -54,6 +54,7 @@
 #include "XLinkNames.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
+#include <algorithm>
 #include <memory>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/URL.h>
@@ -883,9 +884,7 @@ static bool isElementExcludedByRule(const MarkupExclusionRule& rule, const Eleme
 
 bool MarkupAccumulator::shouldExcludeElement(const Element& element)
 {
-    return WTF::anyOf(m_exclusionRules, [&](auto& rule) {
-        return isElementExcludedByRule(rule, element);
-    });
+    return std::ranges::any_of(m_exclusionRules, std::bind(isElementExcludedByRule, std::placeholders::_1, std::ref(element)));
 }
 
 }

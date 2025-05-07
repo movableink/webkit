@@ -41,10 +41,10 @@
 #import "TextDecoder.h"
 #import "WebAVContentKeyGroup.h"
 #import <AVFoundation/AVContentKeySession.h>
+#import <algorithm>
 #import <objc/runtime.h>
 #import <pal/graphics/cocoa/WebAVContentKeyReportGroupExtras.h>
 #import <pal/spi/cocoa/AVFoundationSPI.h>
-#import <wtf/Algorithms.h>
 #import <wtf/FileSystem.h>
 #import <wtf/JSONValues.h>
 #import <wtf/LoggerHelper.h>
@@ -635,10 +635,10 @@ CDMInstanceSessionFairPlayStreamingAVFObjC* CDMInstanceFairPlayStreamingAVFObjC:
             continue;
 
         auto sessionKeys = sessionInterface->keyIDs();
-        if (anyOf(sessionKeys, [&](const Ref<SharedBuffer>& sessionKey) {
-            return keyIDs.findIf([&](const Ref<SharedBuffer>& keyID) {
+        if (std::ranges::any_of(sessionKeys, [&](auto& sessionKey) {
+            return keyIDs.containsIf([&](auto& keyID) {
                 return keyID.get() == sessionKey.get();
-            }) != notFound;
+            });
         }))
         return sessionInterface.get();
     }

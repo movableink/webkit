@@ -24,7 +24,6 @@
 #include <wtf/text/AtomString.h>
 
 #include <mutex>
-#include <wtf/Algorithms.h>
 #include <wtf/dtoa.h>
 #include <wtf/text/IntegerToStringConversion.h>
 #include <wtf/text/StringBuilder.h>

@@ -48,7 +48,6 @@
 #include <WebCore/LogInitialization.h>
 #include <WebCore/MemoryRelease.h>
 #include <WebCore/NowPlayingManager.h>
-#include <wtf/Algorithms.h>
 #include <wtf/CallbackAggregator.h>
 #include <wtf/Language.h>
 #include <wtf/LogInitialization.h>

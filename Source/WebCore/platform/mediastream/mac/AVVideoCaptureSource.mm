@@ -45,6 +45,7 @@
 #import <AVFoundation/AVCapturePhotoOutput.h>
 #import <AVFoundation/AVCaptureSession.h>
 #import <AVFoundation/AVError.h>
+#import <algorithm>
 #import <objc/runtime.h>
 #import <pal/avfoundation/MediaTimeAVFoundation.h>
 #import <pal/spi/cocoa/AVFoundationSPI.h>
@@ -449,7 +450,7 @@ void AVVideoCaptureSource::configurationChanged()
 
 static bool isZoomSupported(const Vector<VideoPreset>& presets)
 {
-    return anyOf(presets, [](auto& preset) {
+    return std::ranges::any_of(presets, [](auto& preset) {
         return preset.isZoomSupported();
     });
 }

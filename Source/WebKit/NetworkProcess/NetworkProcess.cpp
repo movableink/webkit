@@ -94,7 +94,7 @@
 #include <WebCore/SecurityOriginData.h>
 #include <WebCore/SecurityPolicy.h>
 #include <WebCore/UserContentURLPattern.h>
-#include <wtf/Algorithms.h>
+#include <algorithm>
 #include <wtf/CallbackAggregator.h>
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/OptionSet.h>
@@ -1150,7 +1150,7 @@ void NetworkProcess::hasLocalStorage(PAL::SessionID sessionID, const Registrable
 
     auto types = OptionSet<WebsiteDataType> { WebsiteDataType::LocalStorage };
     session->protectedStorageManager()->fetchData(types, NetworkStorageManager::ShouldComputeSize::No, [domain, completionHandler = WTFMove(completionHandler)](auto entries) mutable {
-        completionHandler(WTF::anyOf(entries, [&domain](auto& entry) {
+        completionHandler(std::ranges::any_of(entries, [&domain](auto& entry) {
             return domain.matches(entry.origin);
         }));
     });
@@ -3041,7 +3041,7 @@ void NetworkProcess::clearBundleIdentifier(CompletionHandler<void()>&& completio
 
 bool NetworkProcess::shouldDisableCORSForRequestTo(PageIdentifier pageIdentifier, const URL& url) const
 {
-    return WTF::anyOf(m_extensionCORSDisablingPatterns.get(pageIdentifier), [&] (const auto& pattern) {
+    return std::ranges::any_of(m_extensionCORSDisablingPatterns.get(pageIdentifier), [&](auto& pattern) {
         return pattern.matches(url);
     });
 }

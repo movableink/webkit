@@ -144,8 +144,8 @@
 #include <WebCore/SharedWorkerContextManager.h>
 #include <WebCore/SharedWorkerThreadProxy.h>
 #include <WebCore/UserGestureIndicator.h>
+#include <algorithm>
 #include <pal/Logging.h>
-#include <wtf/Algorithms.h>
 #include <wtf/CallbackAggregator.h>
 #include <wtf/DateMath.h>
 #include <wtf/Language.h>
@@ -2215,11 +2215,11 @@ void WebProcess::grantUserMediaDeviceSandboxExtensions(MediaDeviceSandboxExtensi
 static inline void checkDocumentsCaptureStateConsistency(const Vector<String>& extensionIDs)
 {
 #if ASSERT_ENABLED
-    bool isCapturingAudio = WTF::anyOf(Document::allDocumentsMap().values(), [](auto& document) {
-        return document->mediaState() & MediaProducer::MicrophoneCaptureMask;
+    bool isCapturingAudio = std::ranges::any_of(Document::allDocumentsMap().values(), [](auto& document) {
+        return static_cast<bool>(document->mediaState() & MediaProducer::MicrophoneCaptureMask);
     });
-    bool isCapturingVideo = WTF::anyOf(Document::allDocumentsMap().values(), [](auto& document) {
-        return document->mediaState() & MediaProducer::VideoCaptureMask;
+    bool isCapturingVideo = std::ranges::any_of(Document::allDocumentsMap().values(), [](auto& document) {
+        return static_cast<bool>(document->mediaState() & MediaProducer::VideoCaptureMask);
     });
 
     if (isCapturingAudio)
@@ -2269,7 +2269,7 @@ void WebProcess::clearCurrentModifierStateForTesting()
 
 bool WebProcess::areAllPagesThrottleable() const
 {
-    return WTF::allOf(m_pageMap.values(), [](auto& page) {
+    return std::ranges::all_of(m_pageMap.values(), [](auto& page) {
         return page->isThrottleable();
     });
 }

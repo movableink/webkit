@@ -45,7 +45,6 @@
 #include <pal/avfoundation/MediaTimeAVFoundation.h>
 #include <pal/spi/cf/CoreAudioSPI.h>
 #include <sys/time.h>
-#include <wtf/Algorithms.h>
 #include <wtf/Lock.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>

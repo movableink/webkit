@@ -44,7 +44,7 @@
 #include "CSSValueKeywords.h"
 #include "DOMMatrix.h"
 #include "ExceptionOr.h"
-#include <wtf/Algorithms.h>
+#include <algorithm>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
@@ -140,7 +140,7 @@ ExceptionOr<Ref<CSSTransformComponent>> CSSTransformValue::setItem(size_t index,
 bool CSSTransformValue::is2D() const
 {
     // https://drafts.css-houdini.org/css-typed-om/#dom-csstransformvalue-is2d
-    return WTF::allOf(m_components, [] (auto& component) {
+    return std::ranges::all_of(m_components, [](auto& component) {
         return component->is2D();
     });
 }

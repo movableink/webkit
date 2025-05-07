@@ -238,7 +238,7 @@ public:
     typedef ValueType& reference;
     typedef std::bidirectional_iterator_tag iterator_category;
 
-    ListHashSetIterator() { }
+    ListHashSetIterator() = default;
 
     // default copy, assignment and destructor are OK
 
@@ -247,8 +247,12 @@ public:
     ValueType* operator->() const { return get(); }
 
     iterator& operator++() { ++m_iterator; return *this; }
-
-    // postfix ++ intentionally omitted
+    iterator operator++(int)
+    {
+        iterator temp = *this;
+        ++(*this);
+        return temp;
+    }
 
     iterator& operator--() { --m_iterator; return *this; }
 
@@ -322,7 +326,12 @@ public:
         return *this;
     }
 
-    // postfix ++ intentionally omitted
+    const_iterator operator++(int)
+    {
+        const_iterator temp = *this;
+        ++(*this);
+        return temp;
+    }
 
     const_iterator& operator--()
     {

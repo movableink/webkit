@@ -41,7 +41,6 @@
 #include <WebCore/CommonAtomStrings.h>
 #include <WebCore/LogInitialization.h>
 #include <WebCore/MemoryRelease.h>
-#include <wtf/Algorithms.h>
 #include <wtf/CallbackAggregator.h>
 #include <wtf/LogInitialization.h>
 #include <wtf/MemoryPressureHandler.h>

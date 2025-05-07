@@ -31,6 +31,7 @@
 #include "Logging.h"
 #include "NowPlayingInfo.h"
 #include "PlatformMediaSession.h"
+#include <algorithm>
 #include <ranges>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -132,7 +133,7 @@ bool PlatformMediaSessionManager::activeAudioSessionRequired() const
     if (anyOfSessions([] (auto& session) { return session.activeAudioSessionRequired(); }))
         return true;
 
-    return WTF::anyOf(m_audioCaptureSources, [](auto& source) {
+    return std::ranges::any_of(m_audioCaptureSources, [](auto& source) {
         return source.isCapturingAudio();
     });
 #else
@@ -694,7 +695,7 @@ void PlatformMediaSessionManager::forEachSession(NOESCAPE const Function<void(Pl
 
 bool PlatformMediaSessionManager::anyOfSessions(NOESCAPE const Function<bool(const PlatformMediaSessionInterface&)>& predicate) const
 {
-    return WTF::anyOf(m_sessions, [&predicate](const auto& session) {
+    return std::ranges::any_of(m_sessions, [&predicate](auto& session) {
         return predicate(*session);
     });
 }

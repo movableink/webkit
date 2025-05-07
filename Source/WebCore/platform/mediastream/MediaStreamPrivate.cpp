@@ -39,7 +39,7 @@
 #include "GraphicsContext.h"
 #include "IntRect.h"
 #include "Logging.h"
-#include <wtf/Algorithms.h>
+#include <algorithm>
 #include <wtf/MainThread.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
@@ -127,7 +127,7 @@ void MediaStreamPrivate::forEachTrack(NOESCAPE const Function<void(MediaStreamTr
 
 bool MediaStreamPrivate::computeActiveState()
 {
-    return WTF::anyOf(m_trackSet, [](auto& track) { return !track.value->ended(); });
+    return std::ranges::any_of(m_trackSet, [](auto& track) { return !track.value->ended(); });
 }
 
 void MediaStreamPrivate::updateActiveState()

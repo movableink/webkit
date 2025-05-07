@@ -5,7 +5,6 @@ set(WTF_PUBLIC_HEADERS
     ASCIICType.h
     AccessibleAddress.h
     AggregateLogger.h
-    Algorithms.h
     AlignedStorage.h
     AnsiColors.h
     ApproximateTime.h
