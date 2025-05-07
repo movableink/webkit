@@ -312,10 +312,10 @@ static void testWebKitSettings(Test*, gconstpointer)
     webkit_settings_set_enable_encrypted_media(settings, TRUE);
     g_assert_true(webkit_settings_get_enable_encrypted_media(settings));
 
-    // MediaCapabilities is disabled by default
-    g_assert_false(webkit_settings_get_enable_media_capabilities(settings));
-    webkit_settings_set_enable_media_capabilities(settings, TRUE);
+    // MediaCapabilities is enabled by default
     g_assert_true(webkit_settings_get_enable_media_capabilities(settings));
+    webkit_settings_set_enable_media_capabilities(settings, FALSE);
+    g_assert_false(webkit_settings_get_enable_media_capabilities(settings));
 
     // File access from file URLs is not allowed by default.
     g_assert_false(webkit_settings_get_allow_file_access_from_file_urls(settings));
