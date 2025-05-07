@@ -253,7 +253,7 @@ private:
     bool isSelected() const final { return boolAttributeValue(AXProperty::IsSelected); }
     bool isFocused() const final { return tree()->focusedNodeID() == objectID(); }
     bool isMultiSelectable() const final { return boolAttributeValue(AXProperty::IsMultiSelectable); }
-    InsideLink insideLink() const final { return propertyValue<InsideLink>(AXProperty::InsideLink); }
+    bool isVisited() const final { return boolAttributeValue(AXProperty::IsVisited); }
     bool isRequired() const final { return boolAttributeValue(AXProperty::IsRequired); }
     bool isExpanded() const final { return boolAttributeValue(AXProperty::IsExpanded); }
     bool isFileUploadButton() const final { return boolAttributeValue(AXProperty::IsFileUploadButton); }

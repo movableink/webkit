@@ -175,7 +175,7 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXProperty::IsMultiSelectable, object.isMultiSelectable());
     setProperty(AXProperty::IsRequired, object.isRequired());
     setProperty(AXProperty::IsSelected, object.isSelected());
-    setProperty(AXProperty::InsideLink, object.insideLink());
+    setProperty(AXProperty::IsVisited, object.isVisited());
     setProperty(AXProperty::IsValueAutofillAvailable, object.isValueAutofillAvailable());
     setProperty(AXProperty::RoleDescription, object.roleDescription().isolatedCopy());
     setProperty(AXProperty::SubrolePlatformString, object.subrolePlatformString().isolatedCopy());
@@ -570,6 +570,9 @@ void AXIsolatedObject::setProperty(AXProperty property, AXPropertyValueVariant&&
         case AXProperty::IsTableRow:
             setPropertyFlag(AXPropertyFlag::IsTableRow, std::get<bool>(value));
             return;
+        case AXProperty::IsVisited:
+            setPropertyFlag(AXPropertyFlag::IsVisited, std::get<bool>(value));
+            return;
         case AXProperty::SupportsCheckedState:
             setPropertyFlag(AXPropertyFlag::SupportsCheckedState, std::get<bool>(value));
             return;
@@ -636,7 +639,6 @@ void AXIsolatedObject::setProperty(AXProperty property, AXPropertyValueVariant&&
         [](RetainPtr<NSAttributedString>& typedValue) { return !typedValue; },
         [](RetainPtr<id>& typedValue) { return !typedValue; },
 #endif
-        [](InsideLink& typedValue) { return typedValue == InsideLink(); },
         [](Vector<Vector<Markable<AXID>>>& typedValue) { return typedValue.isEmpty(); },
         [](CharacterRange& typedValue) { return !typedValue.location && !typedValue.length; },
         [](std::shared_ptr<AXIDAndCharacterRange>& typedValue) {
@@ -1207,6 +1209,8 @@ bool AXIsolatedObject::boolAttributeValue(AXProperty property) const
         return hasPropertyFlag(AXPropertyFlag::IsNonLayerSVGObject);
     case AXProperty::IsTableRow:
         return hasPropertyFlag(AXPropertyFlag::IsTableRow);
+    case AXProperty::IsVisited:
+        return hasPropertyFlag(AXPropertyFlag::IsVisited);
     case AXProperty::SupportsCheckedState:
         return hasPropertyFlag(AXPropertyFlag::SupportsCheckedState);
     case AXProperty::SupportsDragging:

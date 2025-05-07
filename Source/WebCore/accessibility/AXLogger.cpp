@@ -834,9 +834,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::InternalLinkElement:
         stream << "InternalLinkElement";
         break;
-    case AXProperty::InsideLink:
-        stream << "InsideLink";
-        break;
     case AXProperty::IsGrabbed:
         stream << "IsGrabbed";
         break;
@@ -977,6 +974,9 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
         break;
     case AXProperty::IsVisible:
         stream << "IsVisible";
+        break;
+    case AXProperty::IsVisited:
+        stream << "IsVisited";
         break;
     case AXProperty::IsWidget:
         stream << "IsWidget";

@@ -1298,7 +1298,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     }
 
     if ([attributeName isEqualToString: NSAccessibilityVisitedAttribute])
-        return [NSNumber numberWithBool: backingObject->isVisited()];
+        return [NSNumber numberWithBool: backingObject->isVisitedLink()];
 
     if ([attributeName isEqualToString: NSAccessibilityTitleAttribute]) {
         if (backingObject->isAttachment()) {

@@ -4991,7 +4991,7 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
             tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::IsVisible });
             break;
         case AXNotification::VisitedStateChanged:
-            tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::InsideLink });
+            tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::IsVisited });
             break;
         case AXNotification::ActiveDescendantChanged:
         case AXNotification::RoleChanged:

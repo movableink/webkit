@@ -966,9 +966,9 @@ public:
     virtual bool isOnScreen() const = 0;
     virtual bool isOffScreen() const = 0;
     virtual bool isPressed() const = 0;
-    virtual InsideLink insideLink() const = 0;
-    bool isUnvisited() const { return insideLink() == InsideLink::InsideUnvisited; }
-    bool isVisited() const { return insideLink() == InsideLink::InsideVisited; }
+    bool isUnvisitedLink() const { return isLink() && !isVisited(); }
+    bool isVisitedLink() const { return isLink() && isVisited(); }
+    virtual bool isVisited() const = 0;
     virtual bool isRequired() const = 0;
     bool supportsRequiredAttribute() const;
     virtual bool isExpanded() const = 0;

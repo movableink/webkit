@@ -673,9 +673,6 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
         case AXProperty::IdentifierAttribute:
             properties.append({ AXProperty::IdentifierAttribute, axObject.identifierAttribute().isolatedCopy() });
             break;
-        case AXProperty::InsideLink:
-            properties.append({ AXProperty::InsideLink, axObject.insideLink() });
-            break;
         case AXProperty::InternalLinkElement: {
             auto* linkElement = axObject.internalLinkElement();
             properties.append({ AXProperty::InternalLinkElement, linkElement ? std::optional { linkElement->objectID() } : std::nullopt });
@@ -709,6 +706,9 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
             break;
         case AXProperty::IsVisible:
             properties.append({ AXProperty::IsVisible, axObject.isVisible() });
+            break;
+        case AXProperty::IsVisited:
+            properties.append({ AXProperty::IsVisited, axObject.isVisited() });
             break;
         case AXProperty::MaxValueForRange:
             properties.append({ AXProperty::MaxValueForRange, axObject.maxValueForRange() });

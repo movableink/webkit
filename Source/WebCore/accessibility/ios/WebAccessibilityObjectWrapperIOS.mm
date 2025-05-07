@@ -672,7 +672,7 @@ static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descenda
         case AccessibilityRole::Link:
         case AccessibilityRole::WebCoreLink:
             traits |= [self _axLinkTrait];
-            if (parent->isVisited())
+            if (parent->isVisitedLink())
                 traits |= [self _axVisitedTrait];
             break;
         case AccessibilityRole::Heading:
@@ -784,7 +784,7 @@ static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descenda
     case AccessibilityRole::Link:
     case AccessibilityRole::WebCoreLink:
         traits |= [self _axLinkTrait];
-        if (self.axBackingObject->isVisited())
+        if (self.axBackingObject->isVisitedLink())
             traits |= [self _axVisitedTrait];
         break;
     case AccessibilityRole::ComboBox: {

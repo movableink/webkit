@@ -154,9 +154,9 @@ bool AXSearchManager::matchForSearchKeyAtIndex(Ref<AXCoreObject> axObject, const
     case AccessibilitySearchKey::Underline:
         return axObject->hasUnderline();
     case AccessibilitySearchKey::UnvisitedLink:
-        return axObject->isUnvisited();
+        return axObject->isUnvisitedLink();
     case AccessibilitySearchKey::VisitedLink:
-        return axObject->isVisited();
+        return axObject->isVisitedLink();
     default:
         return false;
     }

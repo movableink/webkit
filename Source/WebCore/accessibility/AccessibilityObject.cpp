@@ -1893,12 +1893,18 @@ bool AccessibilityObject::hasRowGroupTag() const
     return tag == theadTag || tag == tbodyTag || tag == tfootTag;
 }
 
-InsideLink AccessibilityObject::insideLink() const
+bool AccessibilityObject::isVisited() const
 {
+    if (!isLink()) {
+        // Note that this isLink() check is necessary in addition to the RenderStyle::isLink() check below, as multiple
+        // renderers can share the same style, e.g. RenderTexts within a link take their parent's (the link) style.
+        return false;
+    }
+
     auto* style = this->style();
     if (!style || !style->isLink())
-        return InsideLink::NotInside;
-    return style->insideLink();
+        return false;
+    return style->insideLink() == InsideLink::InsideVisited;
 }
 
 // If you call node->hasEditableStyle() since that will return true if an ancestor is editable.
