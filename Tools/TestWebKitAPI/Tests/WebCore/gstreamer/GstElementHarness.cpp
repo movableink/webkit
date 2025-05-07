@@ -33,6 +33,7 @@
 #include <WebCore/GStreamerElementHarness.h>
 #include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
+#include <wtf/glib/GUniquePtr.h>
 
 using namespace WebCore;
 
@@ -318,7 +319,7 @@ TEST_F(GStreamerTest, harnessDecodeMP4Video)
     GRefPtr<GstElement> element = gst_element_factory_make("decodebin3", nullptr);
 
     // Disable internal buffering in decodebin3.
-    for (auto child : GstIteratorAdaptor<GstElement>(GUniquePtr<GstIterator>(gst_bin_iterate_recurse(GST_BIN_CAST(element.get()))))) {
+    for (auto child : GstIteratorAdaptor<GstElement>(gst_bin_iterate_recurse(GST_BIN_CAST(element.get())))) {
         if (g_str_has_prefix(GST_OBJECT_NAME(GST_OBJECT_CAST(child)), "multiqueue")) {
             g_object_set(child, "max-size-buffers", 1, nullptr);
             break;

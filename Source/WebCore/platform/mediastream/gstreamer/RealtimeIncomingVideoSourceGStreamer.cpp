@@ -24,6 +24,7 @@
 
 #include "GStreamerCommon.h"
 #include "GStreamerWebRTCUtils.h"
+#include "GUniquePtrGStreamer.h"
 #include "VideoFrameGStreamer.h"
 #include <wtf/text/MakeString.h>
 
@@ -110,7 +111,7 @@ const GstStructure* RealtimeIncomingVideoSourceGStreamer::stats()
     m_stats.reset(gst_structure_new_empty("incoming-video-stats"));
 
     forEachVideoFrameObserver([&](auto& observer) {
-        auto stats = observer.queryAdditionalStats();
+        GUniquePtr<GstStructure> stats(observer.queryAdditionalStats());
         if (!stats)
             return;
 

@@ -60,7 +60,7 @@
 #include <wtf/text/WTFString.h>
 
 #if USE(GSTREAMER)
-#include "GUniquePtrGStreamer.h"
+#include <gst/gststructure.h>
 #include <wtf/glib/GRefPtr.h>
 #endif
 
@@ -145,7 +145,7 @@ public:
         virtual void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata) = 0;
 
 #if USE(GSTREAMER_WEBRTC)
-        virtual GUniquePtr<GstStructure> queryAdditionalStats() { return nullptr; }
+        virtual /* transfer full */ GstStructure* queryAdditionalStats() { return nullptr; }
 #endif
     };
 

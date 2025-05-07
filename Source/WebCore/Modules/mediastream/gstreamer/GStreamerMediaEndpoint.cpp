@@ -1097,7 +1097,7 @@ GRefPtr<GstPad> GStreamerMediaEndpoint::requestPad(const GRefPtr<GstCaps>& allow
             return false;
 
         bool isTransceiverAssociated = false;
-        for (auto pad : GstIteratorAdaptor<GstPad>(GUniquePtr<GstIterator>(gst_element_iterate_sink_pads(m_webrtcBin.get())))) {
+        for (auto pad : GstIteratorAdaptor<GstPad>(gst_element_iterate_sink_pads(m_webrtcBin.get()))) {
             GRefPtr<GstWebRTCRTPTransceiver> padTransceiver;
             g_object_get(pad, "transceiver", &padTransceiver.outPtr(), nullptr);
             if (padTransceiver.get() == transceiver.get()) {

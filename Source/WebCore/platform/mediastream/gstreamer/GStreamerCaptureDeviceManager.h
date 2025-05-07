@@ -29,6 +29,7 @@
 #include "GStreamerCaptureDevice.h"
 #include "GStreamerCapturer.h"
 #include "GStreamerVideoCapturer.h"
+#include "GUniquePtrGStreamer.h"
 #include "PipeWireCaptureDevice.h"
 #include "PipeWireCaptureDeviceManager.h"
 #include "RealtimeMediaSourceCenter.h"

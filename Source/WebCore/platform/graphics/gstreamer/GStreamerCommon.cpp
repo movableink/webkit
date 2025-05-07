@@ -24,6 +24,7 @@
 #if USE(GSTREAMER)
 
 #include "ApplicationGLib.h"
+#include "FloatSize.h"
 #include "GLVideoSinkGStreamer.h"
 #include "GStreamerAudioMixer.h"
 #include "GStreamerQuirks.h"
@@ -33,6 +34,7 @@
 #include "GstAllocatorFastMalloc.h"
 #include "IntSize.h"
 #include "PlatformDisplay.h"
+#include "PlatformVideoColorSpace.h"
 #include "SharedBuffer.h"
 #include "VideoSinkGStreamer.h"
 #include "WebKitAudioSinkGStreamer.h"
@@ -43,6 +45,7 @@
 #include <wtf/FileSystem.h>
 #include <wtf/HashMap.h>
 #include <wtf/MallocSpan.h>
+#include <wtf/MediaTime.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/PrintStream.h>
 #include <wtf/RecursiveLockAdapter.h>
@@ -690,6 +693,19 @@ uint64_t toGstUnsigned64Time(const MediaTime& mediaTime)
     if (time.isInvalid())
         return GST_CLOCK_TIME_NONE;
     return time.timeValue();
+}
+
+GstClockTime toGstClockTime(const Seconds& seconds)
+{
+    return toGstClockTime(MediaTime::createWithDouble(seconds.seconds()));
+}
+
+MediaTime fromGstClockTime(GstClockTime time)
+{
+    if (!GST_CLOCK_TIME_IS_VALID(time))
+        return WTF::MediaTime::invalidTime();
+
+    return WTF::MediaTime(GST_TIME_AS_USECONDS(time), G_USEC_PER_SEC);
 }
 
 RefPtr<GstMappedOwnedBuffer> GstMappedOwnedBuffer::create(GRefPtr<GstBuffer>&& buffer)

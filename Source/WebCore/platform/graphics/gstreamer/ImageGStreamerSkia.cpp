@@ -29,6 +29,7 @@
 #if ENABLE(VIDEO) && USE(GSTREAMER) && USE(SKIA)
 
 #include "NotImplemented.h"
+#include "PlatformVideoColorSpace.h"
 #include <skia/ColorSpaceSkia.h>
 #include <skia/core/SkImage.h>
 

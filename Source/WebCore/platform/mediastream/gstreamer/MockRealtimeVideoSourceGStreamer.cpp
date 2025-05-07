@@ -27,6 +27,7 @@
 #include "MockRealtimeVideoSourceGStreamer.h"
 
 #include "GStreamerCaptureDeviceManager.h"
+#include "IntSize.h"
 #include "MockRealtimeMediaSourceCenter.h"
 #include "PixelBuffer.h"
 #include "VideoFrameGStreamer.h"

@@ -26,6 +26,7 @@
 #include "GStreamerAudioCapturer.h"
 
 #include <gst/app/gstappsink.h>
+#include <wtf/MediaTime.h>
 
 namespace WebCore {
 

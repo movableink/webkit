@@ -26,6 +26,7 @@
 #include "GStreamerCommon.h"
 #include "GStreamerRegistryScanner.h"
 #include "HEVCUtilities.h"
+#include "IntSize.h"
 #include "VP9Utilities.h"
 #include "VideoEncoderPrivateGStreamer.h"
 #include <gst/rtp/rtp.h>
@@ -122,7 +123,7 @@ RefPtr<GStreamerVideoRTPPacketizer> GStreamerVideoRTPPacketizer::create(RefPtr<U
         payloadType = gstStructureGet<int>(encodingParameters.get(), "payload"_s);
 
     GRefPtr<GstElement> encoder = gst_element_factory_make("webkitvideoencoder", nullptr);
-    if (!videoEncoderSetCodec(WEBKIT_VIDEO_ENCODER(encoder.get()), WTFMove(codec))) {
+    if (!videoEncoderSetCodec(WEBKIT_VIDEO_ENCODER(encoder.get()), WTFMove(codec), { })) {
         GST_ERROR("Unable to set encoder format");
         return nullptr;
     }

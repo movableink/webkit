@@ -24,6 +24,7 @@
 #if ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
 
 #include "GStreamerMockDevice.h"
+#include "GUniquePtrGStreamer.h"
 #include "MockRealtimeMediaSourceCenter.h"
 #include <wtf/glib/WTFGType.h>
 

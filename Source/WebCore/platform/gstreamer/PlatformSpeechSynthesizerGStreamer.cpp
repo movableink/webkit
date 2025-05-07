@@ -34,6 +34,7 @@
 #include "PlatformSpeechSynthesisVoice.h"
 #include "WebKitAudioSinkGStreamer.h"
 #include "WebKitFliteSourceGStreamer.h"
+#include <wtf/MediaTime.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 

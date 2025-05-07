@@ -28,6 +28,7 @@
 #include "CDMProxy.h"
 #include "GStreamerCommon.h"
 #include "GStreamerEMEUtilities.h"
+#include "GUniquePtrGStreamer.h"
 #include <wtf/Condition.h>
 #include <wtf/PrintStream.h>
 #include <wtf/RunLoop.h>

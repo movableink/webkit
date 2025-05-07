@@ -25,6 +25,7 @@
 #include "GStreamerCommon.h"
 #include "GStreamerElementHarness.h"
 #include "GStreamerRegistryScanner.h"
+#include "GUniquePtrGStreamer.h"
 #include "VideoEncoderPrivateGStreamer.h"
 #include "VideoFrameGStreamer.h"
 #include <wtf/NeverDestroyed.h>
@@ -278,7 +279,7 @@ String GStreamerInternalVideoEncoder::initialize(const String& codecName)
 {
     GST_DEBUG_OBJECT(m_harness->element(), "Initializing encoder for codec %s", codecName.ascii().data());
     IntSize size { static_cast<int>(m_config.width), static_cast<int>(m_config.height) };
-    if (!videoEncoderSetCodec(WEBKIT_VIDEO_ENCODER(m_harness->element()), codecName, { size }))
+    if (!videoEncoderSetCodec(WEBKIT_VIDEO_ENCODER(m_harness->element()), codecName, size))
         return "Unable to set encoder format"_s;
 
     applyRates();

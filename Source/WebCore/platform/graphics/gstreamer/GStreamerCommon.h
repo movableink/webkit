@@ -20,23 +20,29 @@
 #pragma once
 
 #if USE(GSTREAMER)
-#include "FloatSize.h"
 #include "GRefPtrGStreamer.h"
-#include "GUniquePtrGStreamer.h"
-#include "PlatformVideoColorSpace.h"
+
+#include <gst/audio/audio-buffer.h>
+#include <gst/audio/audio-info.h>
 #include <gst/gst.h>
 #include <gst/video/video-format.h>
 #include <gst/video/video-info.h>
 #include <wtf/Logger.h>
-#include <wtf/MediaTime.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
+namespace WTF {
+class MediaTime;
+}
+
 namespace WebCore {
 
+class FloatSize;
 class IntSize;
 class SharedBuffer;
+
+struct PlatformVideoColorSpace;
 
 using TrackID = uint64_t;
 
@@ -88,25 +94,15 @@ void registerWebKitGStreamerVideoEncoder();
 void deinitializeGStreamer();
 
 unsigned getGstPlayFlag(const char* nick);
-uint64_t toGstUnsigned64Time(const MediaTime&);
+uint64_t toGstUnsigned64Time(const WTF::MediaTime&);
 
-inline GstClockTime toGstClockTime(const MediaTime& mediaTime)
+inline GstClockTime toGstClockTime(const WTF::MediaTime& mediaTime)
 {
     return static_cast<GstClockTime>(toGstUnsigned64Time(mediaTime));
 }
 
-inline GstClockTime toGstClockTime(const Seconds& seconds)
-{
-    return toGstClockTime(MediaTime::createWithDouble(seconds.seconds()));
-}
-
-inline MediaTime fromGstClockTime(GstClockTime time)
-{
-    if (!GST_CLOCK_TIME_IS_VALID(time))
-        return MediaTime::invalidTime();
-
-    return MediaTime(GST_TIME_AS_USECONDS(time), G_USEC_PER_SEC);
-}
+GstClockTime toGstClockTime(const Seconds&);
+WTF::MediaTime fromGstClockTime(GstClockTime);
 
 template<typename MapType, gboolean(mapFunction)(GstBuffer*, MapType*, GstMapFlags), void(unmapFunction)(GstBuffer*, MapType*)>
 class GstBufferMapper {
@@ -395,9 +391,14 @@ using GstStateLocker = ExternalLocker<void, gstStateLock, gstStateUnlock>;
 template <typename T>
 class GstIteratorAdaptor {
 public:
-    GstIteratorAdaptor(GUniquePtr<GstIterator>&& iter)
-        : m_iter(WTFMove(iter))
+    GstIteratorAdaptor(GstIterator* /* transfer full */ iter)
+        : m_iter(iter)
     { }
+
+    ~GstIteratorAdaptor()
+    {
+        gst_iterator_free(m_iter);
+    }
 
     class iterator {
     public:
@@ -444,17 +445,17 @@ public:
     {
         ASSERT(!m_started);
         m_started = true;
-        iterator iter { m_iter.get() };
+        iterator iter { m_iter };
         return ++iter;
     }
 
     iterator end()
     {
-        return { m_iter.get(), TRUE };
+        return { m_iter, TRUE };
     }
 
 private:
-    GUniquePtr<GstIterator> m_iter;
+    GstIterator* m_iter;
     bool m_started { false };
 };
 

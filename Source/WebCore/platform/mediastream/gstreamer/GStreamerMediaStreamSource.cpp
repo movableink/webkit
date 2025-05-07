@@ -576,7 +576,7 @@ public:
         return m_eosPending;
     }
 
-    GUniquePtr<GstStructure> queryAdditionalStats()
+    GstStructure* queryAdditionalStats() final
     {
         GUniquePtr<GstStructure> stats;
         auto query = adoptGRef(gst_query_new_custom(GST_QUERY_CUSTOM, gst_structure_new_empty("webkit-video-decoder-stats")));
@@ -588,7 +588,7 @@ public:
             stats.reset(gst_structure_new_empty("webkit-video-decoder-stats"));
 
         gst_structure_set(stats.get(), "track-identifier", G_TYPE_STRING, m_track->id().utf8().data(), nullptr);
-        return stats;
+        return stats.release();
     }
 
     bool isEnded() const { return m_isEnded; }

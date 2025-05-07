@@ -25,6 +25,7 @@
 #if ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
 
 #include "GStreamerCapturer.h"
+#include "IntSize.h"
 
 namespace WebCore {
 

@@ -24,6 +24,7 @@
 #if ENABLE(VIDEO) && USE(GSTREAMER)
 
 #include "GStreamerCommon.h"
+#include "GUniquePtrGStreamer.h"
 #include "HTTPHeaderNames.h"
 #include "MediaPlayerPrivateGStreamer.h"
 #include "PlatformMediaResourceLoader.h"

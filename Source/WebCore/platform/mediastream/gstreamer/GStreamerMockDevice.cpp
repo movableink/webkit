@@ -25,6 +25,7 @@
 
 #include "CaptureDevice.h"
 #include "GStreamerCommon.h"
+#include "GUniquePtrGStreamer.h"
 #include <wtf/glib/WTFGType.h>
 
 using namespace WebCore;

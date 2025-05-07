@@ -24,6 +24,7 @@
 
 #include "GStreamerCommon.h"
 #include "GStreamerVideoSinkCommon.h"
+#include "GUniquePtrGStreamer.h"
 #include "PlatformDisplay.h"
 #include <gst/gl/gl.h>
 #include <wtf/glib/WTFGType.h>

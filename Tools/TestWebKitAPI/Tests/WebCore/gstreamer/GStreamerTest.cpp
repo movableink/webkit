@@ -31,6 +31,8 @@
 
 #include <WebCore/GStreamerCodecUtilities.h>
 #include <WebCore/GStreamerCommon.h>
+#include <WebCore/GUniquePtrGStreamer.h>
+#include <WebCore/IntSize.h>
 #include <wtf/text/MakeString.h>
 
 using namespace WebCore;
@@ -151,7 +153,7 @@ TEST_F(GStreamerTest, capsFromCodecString)
     using namespace GStreamerCodecUtilities;
 
 #define TEST_CAPS_FROM_CODEC(codecString, expectedInputFormat, expectedOutputCaps) G_STMT_START { \
-        auto [input, output] = capsFromCodecString(codecString);        \
+        auto [input, output] = capsFromCodecString(codecString, { });   \
         auto inputStructure = gst_caps_get_structure(input.get(), 0);   \
         const char* inputFormat = gst_structure_get_string(inputStructure, "format"); \
         ASSERT_STREQ(inputFormat, expectedInputFormat);                 \
@@ -160,7 +162,7 @@ TEST_F(GStreamerTest, capsFromCodecString)
     } G_STMT_END
 
 #define TEST_CAPS_FROM_CODEC_FULL(codecString, expectedInputCaps, expectedOutputCaps) G_STMT_START { \
-        auto [input, output] = capsFromCodecString(codecString);        \
+        auto [input, output] = capsFromCodecString(codecString, { });   \
         GUniquePtr<char> inputCaps(gst_caps_to_string(input.get()));    \
         ASSERT_STREQ(inputCaps.get(), expectedInputCaps);               \
         GUniquePtr<char> outputCaps(gst_caps_to_string(output.get()));  \

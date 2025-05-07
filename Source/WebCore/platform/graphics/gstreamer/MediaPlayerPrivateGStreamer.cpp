@@ -95,7 +95,6 @@
 #include <wtf/URL.h>
 #include <wtf/UniStdExtras.h>
 #include <wtf/WallTime.h>
-#include <wtf/glib/GUniquePtr.h>
 #include <wtf/glib/RunLoopSourcePriority.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/CString.h>
@@ -4486,7 +4485,7 @@ std::optional<VideoFrameMetadata> MediaPlayerPrivateGStreamer::videoFrameMetadat
 
 static bool areAllSinksPlayingForBin(GstBin* bin)
 {
-    for (auto* element : GstIteratorAdaptor<GstElement>(GUniquePtr<GstIterator>(gst_bin_iterate_sinks(bin)))) {
+    for (auto* element : GstIteratorAdaptor<GstElement>(gst_bin_iterate_sinks(bin))) {
         if (GST_IS_BIN(element) && !areAllSinksPlayingForBin(GST_BIN_CAST(element)))
             return false;
 
@@ -4521,7 +4520,7 @@ void MediaPlayerPrivateGStreamer::checkPlayingConsistency()
 
 static void applyAudioSinkDevice(GstElement* audioSinkBin, const String& deviceId)
 {
-    for (auto* element : GstIteratorAdaptor<GstElement>(GUniquePtr<GstIterator>(gst_bin_iterate_sinks(GST_BIN_CAST(audioSinkBin))))) {
+    for (auto* element : GstIteratorAdaptor<GstElement>(gst_bin_iterate_sinks(GST_BIN_CAST(audioSinkBin)))) {
         // pulsesink and alsasink have a "device" property, whilst pipewiresink has "target-object"
         if (gstElementMatchesFactoryAndHasProperty(element, "pulsesink"_s, "device"_s) || gstElementMatchesFactoryAndHasProperty(element, "alsasink"_s, "device"_s))
             g_object_set(element, "device", deviceId.utf8().data(), nullptr);

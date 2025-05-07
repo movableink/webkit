@@ -30,6 +30,7 @@
 #include "GStreamerCommon.h"
 #include "GStreamerEMEUtilities.h"
 #include "GStreamerQuirks.h"
+#include "GUniquePtrGStreamer.h"
 #include "ImageOrientation.h"
 #include "Logging.h"
 #include "MainThreadNotifier.h"

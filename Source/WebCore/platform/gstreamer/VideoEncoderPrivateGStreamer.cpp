@@ -25,6 +25,8 @@
 
 #include "GStreamerCodecUtilities.h"
 #include "GStreamerCommon.h"
+#include "GUniquePtrGStreamer.h"
+#include "IntSize.h"
 #include "NotImplemented.h"
 #include <wtf/StdMap.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -488,11 +490,11 @@ EncoderId videoEncoderFindForFormat([[maybe_unused]] WebKitVideoEncoder* self, c
 
 bool videoEncoderSupportsCodec(WebKitVideoEncoder* self, const String& codecName)
 {
-    auto [_, outputCaps] = GStreamerCodecUtilities::capsFromCodecString(codecName);
+    auto [_, outputCaps] = GStreamerCodecUtilities::capsFromCodecString(codecName, { });
     return videoEncoderFindForFormat(self, outputCaps) != None;
 }
 
-bool videoEncoderSetCodec(WebKitVideoEncoder* self, const String& codecName, std::optional<IntSize> size, std::optional<double> frameRate)
+bool videoEncoderSetCodec(WebKitVideoEncoder* self, const String& codecName, const IntSize& size, std::optional<double> frameRate)
 {
     auto [inputCaps, outputCaps] = GStreamerCodecUtilities::capsFromCodecString(codecName, size, frameRate);
     GST_DEBUG_OBJECT(self, "Input caps: %" GST_PTR_FORMAT, inputCaps.get());

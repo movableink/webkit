@@ -27,6 +27,7 @@
 #include "GStreamerVideoCaptureSource.h"
 #include "PipeWireCaptureDevice.h"
 #include <wtf/UUID.h>
+#include <wtf/glib/GUniquePtr.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {

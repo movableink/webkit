@@ -20,8 +20,6 @@
 
 #include "config.h"
 #include "AppendPipeline.h"
-#include "AbortableTaskQueue.h"
-#include "MediaSourcePrivateGStreamer.h"
 
 #if ENABLE(VIDEO) && USE(GSTREAMER) && ENABLE(MEDIA_SOURCE)
 
@@ -33,6 +31,7 @@
 #include "InbandTextTrackPrivateGStreamer.h"
 #include "MediaDescription.h"
 #include "MediaSampleGStreamer.h"
+#include "MediaSourcePrivateGStreamer.h"
 #include "SourceBufferPrivateGStreamer.h"
 #include "VideoTrackPrivateGStreamer.h"
 #include <functional>
@@ -495,7 +494,7 @@ void AppendPipeline::didReceiveInitializationSegment()
 
     if (isFirstInitializationSegment) {
         // Create a Track object per pad.
-        for (GstPad* pad : GstIteratorAdaptor<GstPad>(GUniquePtr<GstIterator>(gst_element_iterate_src_pads(m_demux.get())))) {
+        for (GstPad* pad : GstIteratorAdaptor<GstPad>(gst_element_iterate_src_pads(m_demux.get()))) {
             auto [createTrackResult, track] = tryCreateTrackFromPad(pad);
             if (createTrackResult == CreateTrackResult::AppendParsingFailed) {
                 // appendParsingFailed() will immediately cause a resetParserState() which will stop demuxing, then the
@@ -510,7 +509,7 @@ void AppendPipeline::didReceiveInitializationSegment()
         UncheckedKeyHashSet<String> videoPadStreamIDs;
         UncheckedKeyHashSet<String> audioPadStreamIDs;
         UncheckedKeyHashSet<String> textPadStreamIDs;
-        for (auto pad : GstIteratorAdaptor<GstPad>(GUniquePtr<GstIterator>(gst_element_iterate_src_pads(m_demux.get())))) {
+        for (auto pad : GstIteratorAdaptor<GstPad>(gst_element_iterate_src_pads(m_demux.get()))) {
             auto [parsedCaps, streamType, presentationSize] = parseDemuxerSrcPadCaps(adoptGRef(gst_pad_get_current_caps(pad)).get());
             UNUSED_VARIABLE(parsedCaps);
             UNUSED_VARIABLE(presentationSize);
@@ -566,7 +565,7 @@ void AppendPipeline::didReceiveInitializationSegment()
 
         // Link pads to existing Track objects that don't have a linked pad yet. Existing linked
         // tracks are recycled if their stream type matches the new demuxer source pads.
-        for (GstPad* pad : GstIteratorAdaptor<GstPad>(GUniquePtr<GstIterator>(gst_element_iterate_src_pads(m_demux.get())))) {
+        for (GstPad* pad : GstIteratorAdaptor<GstPad>(gst_element_iterate_src_pads(m_demux.get()))) {
             if (!recycleTrackForPad(pad)) {
                 GST_WARNING_OBJECT(pipeline(), "Can't match pad to existing tracks in the AppendPipeline: %" GST_PTR_FORMAT, pad);
                 m_sourceBufferPrivate.appendParsingFailed();

@@ -28,6 +28,7 @@
 #include <wtf/Condition.h>
 #include <wtf/Forward.h>
 #include <wtf/Lock.h>
+#include <wtf/MediaTime.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
