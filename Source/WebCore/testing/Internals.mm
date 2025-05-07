@@ -36,12 +36,14 @@
 #import "HitTestResult.h"
 #import "LocalFrameInlines.h"
 #import "LocalFrameView.h"
+#import "Logging.h"
 #import "MediaPlayerPrivate.h"
 #import "Range.h"
 #import "SharedBuffer.h"
 #import "SimpleRange.h"
 #import "UTIUtilities.h"
 #import <AVFoundation/AVPlayer.h>
+#import <wtf/BlockPtr.h>
 
 #if PLATFORM(MAC)
 #import "NSScrollerImpDetails.h"
@@ -273,5 +275,33 @@ RetainPtr<VKCImageAnalysis> Internals::fakeImageAnalysisResultForTesting(const V
 }
 
 #endif // ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
+
+#if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
+bool Internals::emitWebCoreLogs(unsigned logCount, bool useMainThread) const
+{
+    auto blockPtr = makeBlockPtr([logCount] {
+        for (unsigned i = 0; i < logCount; i++)
+            RELEASE_LOG_FORWARDABLE(Testing, WEBCORE_TEST_LOG, i);
+    });
+    if (useMainThread)
+        dispatch_async(dispatch_get_main_queue(), blockPtr.get());
+    else
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), blockPtr.get());
+    return true;
+}
+
+bool Internals::emitLogs(const String& logString, unsigned logCount, bool useMainThread) const
+{
+    auto blockPtr = makeBlockPtr([logString, logCount] {
+        for (unsigned i = 0; i < logCount; i++)
+            RELEASE_LOG(Testing, "%s", logString.utf8().data());
+    });
+    if (useMainThread)
+        dispatch_async(dispatch_get_main_queue(), blockPtr.get());
+    else
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), blockPtr.get());
+    return true;
+}
+#endif // ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
 
 } // namespace WebCore

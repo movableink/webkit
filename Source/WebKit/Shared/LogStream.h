@@ -46,6 +46,8 @@ public:
     void setup(IPC::StreamServerConnectionHandle&&, LogStreamIdentifier, CompletionHandler<void(IPC::Semaphore& streamWakeUpSemaphore, IPC::Semaphore& streamClientWaitSemaphore)>&&);
     void stopListeningForIPC();
 
+    static unsigned logCountForTesting();
+
 private:
     LogStream(int32_t pid);
 

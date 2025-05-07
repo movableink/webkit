@@ -28,6 +28,7 @@
 
 #import "AudioSessionRoutingArbitratorProxy.h"
 #import "GPUProcessProxy.h"
+#import "LogStream.h"
 #import "MediaSessionCoordinatorProxyPrivate.h"
 #import "NetworkProcessProxy.h"
 #import "PlaybackSessionManagerProxy.h"
@@ -1008,6 +1009,15 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
     for (auto side : WebCore::allBoxSides)
         [_fixedColorExtensionViews.at(side) cancelFadeAnimation];
+#endif
+}
+
+- (unsigned)_forwardedLogsCountForTesting
+{
+#if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
+    return WebKit::LogStream::logCountForTesting();
+#else
+    return 0;
 #endif
 }
 

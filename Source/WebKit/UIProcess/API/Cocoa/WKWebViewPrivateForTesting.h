@@ -168,6 +168,8 @@ struct WKAppPrivacyReportTestingData {
 #endif
 - (void)_cancelFixedColorExtensionFadeAnimationsForTesting;
 
+- (unsigned)_forwardedLogsCountForTesting;
+
 @end
 
 typedef NS_ENUM(NSInteger, _WKMediaSessionReadyState) {

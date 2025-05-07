@@ -1341,6 +1341,11 @@ enum ContentsFormat {
     boolean hasSandboxIOKitOpenAccessToClass(DOMString process, DOMString ioKitClass);
     boolean hasSandboxUnixSyscallAccess(DOMString process, unsigned long syscall);
 
+#if defined(ENABLE_LOGD_BLOCKING_IN_WEBCONTENT) && ENABLE_LOGD_BLOCKING_IN_WEBCONTENT
+    boolean emitWebCoreLogs(unsigned long logCount, boolean useMainThread);
+    boolean emitLogs(DOMString logString, unsigned long logCount, boolean useMainThread);
+#endif
+
     DOMString systemColorForCSSValue(DOMString cssValue, boolean useDarkModeAppearance, boolean useElevatedUserInterfaceLevel);
     DOMString focusRingColor();
 

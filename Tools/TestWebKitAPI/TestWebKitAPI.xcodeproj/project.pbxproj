@@ -1282,6 +1282,7 @@
 		E38D65CB23A45FAA0063D69A /* PackedRefPtr.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E38D65C923A45FA90063D69A /* PackedRefPtr.cpp */; };
 		E38EDC372B1D673A00963F9B /* MonospaceFontTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E38EDC2F2B1D673A00963F9B /* MonospaceFontTests.cpp */; };
 		E394AE6F23F2303E005B4936 /* GrantAccessToMobileAssets.mm in Sources */ = {isa = PBXBuildFile; fileRef = E394AE6E23F2303E005B4936 /* GrantAccessToMobileAssets.mm */; };
+		E39FC1482DC7AB5000589CFA /* LogForwarding.mm in Sources */ = {isa = PBXBuildFile; fileRef = E39FC1472DC7AB5000589CFA /* LogForwarding.mm */; };
 		E3A1E77F21B25B39008C6007 /* URLParserTextEncoding.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E3A1E77E21B25B39008C6007 /* URLParserTextEncoding.cpp */; };
 		E3A1E78221B25B7A008C6007 /* URL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E3A1E78021B25B79008C6007 /* URL.cpp */; };
 		E3A1E78521B25B91008C6007 /* URLParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E3A1E78421B25B91008C6007 /* URLParser.cpp */; };
@@ -3750,6 +3751,7 @@
 		E394AE6E23F2303E005B4936 /* GrantAccessToMobileAssets.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = GrantAccessToMobileAssets.mm; sourceTree = "<group>"; };
 		E3953F951F2CF32100A76A2E /* Signals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Signals.cpp; sourceTree = "<group>"; };
 		E398BC0F2041C76300387136 /* UniqueArray.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = UniqueArray.cpp; sourceTree = "<group>"; };
+		E39FC1472DC7AB5000589CFA /* LogForwarding.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = LogForwarding.mm; sourceTree = "<group>"; };
 		E3A1E77E21B25B39008C6007 /* URLParserTextEncoding.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = URLParserTextEncoding.cpp; sourceTree = "<group>"; };
 		E3A1E78021B25B79008C6007 /* URL.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = URL.cpp; sourceTree = "<group>"; };
 		E3A1E78421B25B91008C6007 /* URLParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = URLParser.cpp; sourceTree = "<group>"; };
@@ -4328,6 +4330,7 @@
 				E394AE6E23F2303E005B4936 /* GrantAccessToMobileAssets.mm */,
 				F460F656261116EA0064F2B6 /* InjectedBundleHitTest.mm */,
 				E35B908123F60DD0000011FF /* LocalizedDeviceModel.mm */,
+				E39FC1472DC7AB5000589CFA /* LogForwarding.mm */,
 				1CF087D725ED7F73004148CB /* MobileAssetSandboxCheck.mm */,
 				C104BC1E2547237100C078C9 /* OverrideAppleLanguagesPreference.mm */,
 				E325C90623E3870200BC7D3B /* PictureInPictureSupport.mm */,
@@ -7366,6 +7369,7 @@
 				5778D05622110A2600899E3B /* LoadWebArchive.mm in Sources */,
 				F4EC78102ADF8BC300C37592 /* LoadWebViewWithEmptyAppName.mm in Sources */,
 				E35B908223F60DD0000011FF /* LocalizedDeviceModel.mm in Sources */,
+				E39FC1482DC7AB5000589CFA /* LogForwarding.mm in Sources */,
 				076E507F1F4513D6006E9F5A /* Logging.cpp in Sources */,
 				6BF4A683239ED4CD00E2F45B /* LoginStatus.cpp in Sources */,
 				510A920A24D5048900BFD89C /* LogitechF310.mm in Sources */,

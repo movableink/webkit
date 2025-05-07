@@ -178,6 +178,7 @@ namespace WebCore {
     M(Style) \
     M(StyleSheets) \
     M(SVG) \
+    M(Testing) \
     M(TextAutosizing) \
     M(TextDecoding) \
     M(TextFragment) \

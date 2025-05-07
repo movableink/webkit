@@ -1405,7 +1405,12 @@ public:
     bool hasSandboxMachLookupAccessToXPCServiceName(const String& process, const String& service);
     bool hasSandboxIOKitOpenAccessToClass(const String& process, const String& ioKitClass);
     bool hasSandboxUnixSyscallAccess(const String& process, unsigned syscall) const;
-        
+
+#if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
+    bool emitWebCoreLogs(unsigned logCount, bool useMainThread) const;
+    bool emitLogs(const String& logString, unsigned logCount, bool useMainThread) const;
+#endif
+
     String highlightPseudoElementColor(const AtomString& highlightName, Element&);
 
     String windowLocationHost(DOMWindow&);

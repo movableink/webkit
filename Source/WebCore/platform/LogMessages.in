@@ -127,3 +127,5 @@ POLICYCHECKIER_CHECKNAVIGATIONPOLICY_CONTINUE_INITIAL_EMPTY_DOCUMENT, "[pageID=%
 LOCALFRAMEVIEW_FIRING_FIRST_VISUALLY_NON_EMPTY_LAYOUT_MILESTONE, "[pageID=%" PRIu64 ", frameID=%" PRIu64 ", isMainFrame=%d] LocalFrameView::fireLayoutRelatedMilestonesIfNeeded: Firing first visually non-empty layout milestone on the main frame", (uint64_t, uint64_t, int), DEFAULT, Layout
 LOCALFRAMEVIEW_FIRING_RESIZE_EVENTS_DISABLED_FOR_PAGE, "[pageID=%" PRIu64 ", frameID=%" PRIu64 ", isMainFrame=%d] LocalFrameView::scheduleResizeEventIfNeeded: Not firing resize events because they are temporarily disabled for this page", (uint64_t, uint64_t, int), DEFAULT, Events
 LOCALFRAMEVIEW_NOT_PAINTING_LAYOUT_NEEDED, "    [pageID=%" PRIu64 ", frameID=%" PRIu64 ", isMainFrame=%d] LocalFrameView::paintContents: Not painting because render tree needs layout", (uint64_t, uint64_t, int), DEFAULT, Layout
+
+WEBCORE_TEST_LOG, "WebCore log message for testing (%u)", (unsigned), DEFAULT, Testing

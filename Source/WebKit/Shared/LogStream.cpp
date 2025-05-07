@@ -41,6 +41,8 @@
 
 namespace WebKit {
 
+static std::atomic<unsigned> globalLogCountForTesting { 0 };
+
 LogStream::LogStream(int32_t pid)
     : m_pid(pid)
 {
@@ -73,6 +75,8 @@ void LogStream::logOnBehalfOfWebContent(std::span<const uint8_t> logSubsystem, s
     if (isNullTerminated(logSubsystem) && isNullTerminated(logCategory)) {
         auto subsystem = byteCast<char>(logSubsystem.data());
         auto category = byteCast<char>(logCategory.data());
+        if (equalSpans("Testing\0"_span, logCategory))
+            globalLogCountForTesting++;
         osLog = adoptOSObject(os_log_create(subsystem, category));
     }
 
@@ -100,6 +104,11 @@ void LogStream::setup(IPC::StreamServerConnectionHandle&& serverConnection, LogS
         logStreamConnection->startReceivingMessages(*this, Messages::LogStream::messageReceiverName(), m_logStreamIdentifier->toUInt64());
         completionHandler(logQueue.get()->wakeUpSemaphore(), logStreamConnection->clientWaitSemaphore());
     }
+}
+
+unsigned LogStream::logCountForTesting()
+{
+    return globalLogCountForTesting;
 }
 
 #if __has_include("LogMessagesImplementations.h")

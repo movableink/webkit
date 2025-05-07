@@ -90,6 +90,9 @@ def generate_message_receiver_implementations_file(log_messages, log_messages_re
             file.write(")\n")
             file.write("{\n")
 
+            if category == "Testing":
+                file.write("    globalLogCountForTesting++;\n")
+
             if category == "Default":
                 file.write("    auto osLogPointer = OS_LOG_DEFAULT;\n")
             else:
