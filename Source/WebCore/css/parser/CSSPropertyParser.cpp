@@ -3163,7 +3163,7 @@ bool CSSPropertyParser::consumeTextWrapShorthand(CSS::PropertyParserState& state
     for (unsigned propertiesParsed = 0; propertiesParsed < 2 && !m_range.atEnd(); ++propertiesParsed) {
         if (!mode && (mode = CSSPropertyParsing::consumeTextWrapMode(m_range)))
             continue;
-        if (m_context.propertySettings.cssTextWrapStyleEnabled && !style && (style = CSSPropertyParsing::consumeTextWrapStyle(m_range, state)))
+        if (!style && (style = CSSPropertyParsing::consumeTextWrapStyle(m_range, state)))
             continue;
         // If we didn't find at least one match, this is an invalid shorthand and we have to ignore it.
         return false;

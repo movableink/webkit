@@ -1638,20 +1638,6 @@ CSSTextWrapPrettyEnabled:
      WebCore:
        default: true
 
-CSSTextWrapStyleEnabled:
-  type: bool
-  status: stable
-  category: css
-  humanReadableName: "CSS text-wrap-style property"
-  humanReadableDescription: "Enable the property text-wrap-style, defined in CSS Text 4"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 CSSTransformStyleSeparatedEnabled:
   type: bool
   status: testable

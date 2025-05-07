@@ -7818,7 +7818,6 @@
                 }
             ],
             "codegen-properties": {
-                "settings-flag": "cssTextWrapStyleEnabled",
                 "parser-grammar": "<<values>>",
                 "parser-exported": true
             },
