@@ -122,6 +122,14 @@ struct TZoneSpecification {
 #endif
 };
 
+template<typename T>
+inline constexpr bool requiresCompactPointers()
+{
+    if constexpr (requires { std::remove_pointer_t<T>::allowCompactPointers; })
+        return std::remove_pointer_t<T>::allowCompactPointers;
+    return false;
+}
+
 BEXPORT void determineTZoneMallocFallback();
 
 BEXPORT void* tzoneAllocateCompact(HeapRef);
@@ -158,6 +166,8 @@ public: \
         if (!s_heapRef || size != sizeof(_type)) [[unlikely]] \
             BMUST_TAIL_CALL return operatorNewSlow(size); \
         BASSERT(::bmalloc::api::tzoneMallocFallback > TZoneMallocFallback::ForceDebugMalloc); \
+        if constexpr (::bmalloc::api::requiresCompactPointers<_type>()) \
+            return ::bmalloc::api::tzoneAllocateCompact(s_heapRef); \
         return ::bmalloc::api::tzoneAllocate ## _compactMode(s_heapRef); \
     } \
     \
@@ -182,6 +192,8 @@ private: \
     static _exportMacro BNO_INLINE void* operatorNewSlow(size_t size) \
     { \
         static const TZoneSpecification s_heapSpec = { &s_heapRef, sizeof(_type), SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) }; \
+        if constexpr (::bmalloc::api::requiresCompactPointers<_type>()) \
+            return ::bmalloc::api::tzoneAllocateCompactSlow(size, s_heapSpec); \
         return ::bmalloc::api::tzoneAllocate ## _compactMode ## Slow(size, s_heapSpec); \
     }
 
