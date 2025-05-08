@@ -315,7 +315,7 @@ public:
 
 #if USE(AVFOUNDATION)
     virtual AVPlayer *objCAVFoundationAVPlayer() const { return nullptr; }
-    virtual void setDecompressionSessionPreferences(bool, bool) { }
+    virtual void setDecompressionSessionPreferences(bool, bool, bool) { }
 #endif
 
     virtual bool performTaskAtTime(Function<void()>&&, const MediaTime&) { return false; }

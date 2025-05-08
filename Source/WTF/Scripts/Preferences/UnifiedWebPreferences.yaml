@@ -8350,6 +8350,24 @@ VideoQualityIncludesDisplayCompositingEnabled:
     WebCore:
       default: false
 
+VideoRendererProtectedFallbackDisabled:
+  type: bool
+  status: stable
+  category: media
+  humanReadableName: "VideoMediaSampleRenderer fallback to AVSBDL for protected content disabled"
+  humanReadableDescription: "VideoMediaSampleRenderer fallback to AVSBDL for protected content disabled"
+  condition: USE(AVFOUNDATION)
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      "USE(MODERN_AVCONTENTKEYSESSION)": true
+      default: false
+    WebCore:
+      "USE(MODERN_AVCONTENTKEYSESSION)": true
+      default: false
+  sharedPreferenceForWebProcess: true
+
 ViewGestureDebuggingEnabled:
   type: bool
   status: embedder

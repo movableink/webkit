@@ -64,6 +64,7 @@ public:
     bool prefersDecompressionSession() const;
     void setPrefersDecompressionSession(bool);
     bool isUsingDecompressionSession() const { return m_isUsingDecompressionSession; }
+    void setUseDecompressionSessionForProtectedFallback(bool);
 
     void setTimebase(RetainPtr<CMTimebaseRef>&&);
     RetainPtr<CMTimebaseRef> timebase() const;
@@ -108,6 +109,7 @@ private:
     void clearTimebase();
     using TimebaseAndTimerSource = std::pair<RetainPtr<CMTimebaseRef>, OSObjectPtr<dispatch_source_t>>;
     TimebaseAndTimerSource timebaseAndTimerSource() const;
+    MediaTime currentTime() const;
 
     WebSampleBufferVideoRendering *rendererOrDisplayLayer() const;
 
@@ -134,14 +136,14 @@ private:
     size_t decodedSamplesCount() const;
     RetainPtr<CMSampleBufferRef> nextDecodedSample() const;
     CMTime nextDecodedSampleEndTime() const;
-    CMTime lastDecodedSampleTime() const;
-    bool hasIncomingOutOfOrderFrame(const CMTime&) const;
-    CMTime minimumUpcomingSampleTime(CMSampleBufferRef) const;
+    MediaTime lastDecodedSampleTime() const;
+    bool hasIncomingOutOfOrderFrame(const MediaTime&) const;
+    MediaTime minimumUpcomingSampleTime(const MediaTime&) const;
 
     void assignResourceOwner(CMSampleBufferRef);
     bool areSamplesQueuesReadyForMoreMediaData(size_t waterMark) const;
     void maybeBecomeReadyForMoreMediaData();
-    bool shouldDecodeSample(CMSampleBufferRef, bool displaying);
+    bool shouldDecodeSample(const MediaSample&);
 
     void notifyHasAvailableVideoFrame(const MediaTime&, double, FlushId);
     void notifyErrorHasOccurred(OSStatus);
@@ -162,7 +164,7 @@ private:
     TimebaseAndTimerSource m_timebaseAndTimerSource WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<EffectiveRateChangedListener> m_effectiveRateChangedListener;
     std::atomic<FlushId> m_flushId { 0 };
-    Deque<std::pair<RetainPtr<CMSampleBufferRef>, FlushId>> m_compressedSampleQueue WTF_GUARDED_BY_CAPABILITY(dispatcher().get());
+    Deque<std::pair<Ref<const MediaSample>, FlushId>> m_compressedSampleQueue WTF_GUARDED_BY_CAPABILITY(dispatcher().get());
     std::atomic<uint32_t> m_compressedSampleQueueSize { 0 };
     static constexpr MediaTime s_decodeAhead { 133, 1000 };
     RetainPtr<CMBufferQueueRef> m_decodedSampleQueue; // created on the main thread, immutable after creation.
@@ -180,6 +182,7 @@ private:
     std::optional<uint32_t> m_currentCodec;
     std::atomic<bool> m_gotDecodingError { false };
     bool m_needsFlushing WTF_GUARDED_BY_CAPABILITY(mainThread) { false };
+    bool m_useDecompressionSessionForProtectedFallback { true };
 
     // B-Frame tracker.
     MediaTime m_highestPresentationTime WTF_GUARDED_BY_CAPABILITY(mainThread) { MediaTime::invalidTime() };
@@ -188,9 +191,14 @@ private:
     // Playback Statistics
     std::atomic<unsigned> m_totalVideoFrames { 0 };
     std::atomic<unsigned> m_droppedVideoFrames { 0 };
+    unsigned m_droppedVideoFramesOffset WTF_GUARDED_BY_CAPABILITY(mainThread) { 0 };
     std::atomic<unsigned> m_corruptedVideoFrames { 0 };
     std::atomic<unsigned> m_presentedVideoFrames { 0 };
     MediaTime m_totalFrameDelay { MediaTime::zeroTime() };
+
+    // Protected samples
+    bool m_protectedContentEncountered { false };
+    bool m_wasProtected { false };
 
     Function<void(const MediaTime&, double)> m_hasAvailableFrameCallback WTF_GUARDED_BY_CAPABILITY(mainThread);
     Function<void(OSStatus)> m_errorOccurredFunction WTF_GUARDED_BY_CAPABILITY(mainThread);

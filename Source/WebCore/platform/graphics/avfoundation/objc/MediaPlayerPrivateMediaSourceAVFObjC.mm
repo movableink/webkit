@@ -1115,6 +1115,7 @@ Ref<VideoMediaSampleRenderer> MediaPlayerPrivateMediaSourceAVFObjC::createVideoM
     });
     videoRenderer->setResourceOwner(m_resourceOwner);
     videoRenderer->setPrefersDecompressionSession(m_preferDecompressionSession);
+    videoRenderer->setUseDecompressionSessionForProtectedFallback(m_videoRendererProtectedFallbackDisabled);
     return videoRenderer;
 }
 

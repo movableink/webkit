@@ -545,11 +545,12 @@ bool MediaPlayer::load(const URL& url, const LoadOptions& options, MediaSourcePr
 }
 
 #if USE(AVFOUNDATION)
-void MediaPlayer::setDecompressionSessionPreferences(bool preferDecompressionSession, bool canFallbackToDecompressionSession)
+void MediaPlayer::setDecompressionSessionPreferences(bool preferDecompressionSession, bool canFallbackToDecompressionSession, bool videoRendererProtectedFallbackDisabled)
 {
     m_preferDecompressionSession = preferDecompressionSession;
     m_canFallbackToDecompressionSession = canFallbackToDecompressionSession;
-    m_private->setDecompressionSessionPreferences(preferDecompressionSession, canFallbackToDecompressionSession);
+    m_videoRendererProtectedFallbackDisabled = videoRendererProtectedFallbackDisabled;
+    m_private->setDecompressionSessionPreferences(preferDecompressionSession, canFallbackToDecompressionSession, videoRendererProtectedFallbackDisabled);
 }
 #endif
 
@@ -645,7 +646,7 @@ void MediaPlayer::loadWithNextMediaEngine(const MediaPlayerFactory* current)
         if (playerPrivate) {
             client().mediaPlayerEngineUpdated();
 #if USE(AVFOUNDATION)
-            playerPrivate->setDecompressionSessionPreferences(m_preferDecompressionSession, m_canFallbackToDecompressionSession);
+            playerPrivate->setDecompressionSessionPreferences(m_preferDecompressionSession, m_canFallbackToDecompressionSession, m_videoRendererProtectedFallbackDisabled);
 #endif
             if (m_pageIsVisible)
                 playerPrivate->setPageIsVisible(m_pageIsVisible);
