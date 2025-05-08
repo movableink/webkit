@@ -1776,12 +1776,13 @@ void WebProcessPool::startedUsingGamepads(IPC::Connection& connection)
         return;
 
     bool wereAnyProcessesUsingGamepads = !m_processesUsingGamepads.isEmptyIgnoringNullReferences();
-
-    ASSERT(!m_processesUsingGamepads.contains(*proxy));
-    m_processesUsingGamepads.add(*proxy);
-
     if (!wereAnyProcessesUsingGamepads)
         UIGamepadProvider::singleton().processPoolStartedUsingGamepads(*this);
+
+    // Add the process proxy after notifying the UIGamepadProvider so that any gamepad connected while starting
+    // to monitor gamepads doesn't produce a GamepadConnected message, and it's only sent as initial gamepad.
+    ASSERT(!m_processesUsingGamepads.contains(*proxy));
+    m_processesUsingGamepads.add(*proxy);
 
     proxy->send(Messages::WebProcess::SetInitialGamepads(UIGamepadProvider::singleton().snapshotGamepads()), 0);
 }
