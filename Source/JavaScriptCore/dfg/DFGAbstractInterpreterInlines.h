@@ -2985,7 +2985,9 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         if (node->hasDoubleResult()) {
             // We say SpecFullDouble since it will involve Float16 / Float32 / Float64 TypedArrays.
             setNonCellTypeForNode(node, SpecFullDouble);
-        } else if (node->hasInt52Result())
+        } else if (node->hasInt32Result())
+            setNonCellTypeForNode(node, SpecInt32Only);
+        else if (node->hasInt52Result())
             setNonCellTypeForNode(node, SpecInt52Any);
         else {
             if (mayIncludeNonNumber)

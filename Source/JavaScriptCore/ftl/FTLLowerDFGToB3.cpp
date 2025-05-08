@@ -6631,6 +6631,13 @@ IGNORE_CLANG_WARNINGS_END
                             ASSERT(expectedType == ArrayWithInt32);
                             finalResult = m_out.signExt32To64(unboxInt32(result));
                         }
+                    } else if (m_node->hasInt32Result()) {
+                        if (result->type() == Double)
+                            finalResult = doubleToInt32(result);
+                        else {
+                            ASSERT(expectedType == ArrayWithInt32);
+                            finalResult = unboxInt32(result);
+                        }
                     } else {
                         if (result->type() == Double)
                             finalResult = boxDouble(result);
@@ -6640,6 +6647,7 @@ IGNORE_CLANG_WARNINGS_END
 
                     if (arrayMode.isInBoundsSaneChain()) {
                         ASSERT(!m_node->hasInt52Result());
+                        ASSERT(!m_node->hasInt32Result());
                         if (m_node->hasDoubleResult()) {
                             ASSERT(result->type() == Double);
                             finalResult = m_out.select(isHole, m_out.constDouble(std::bit_cast<int64_t>(PNaN)), finalResult);
@@ -6655,6 +6663,7 @@ IGNORE_CLANG_WARNINGS_END
 
                 ASSERT(!m_node->hasDoubleResult());
                 ASSERT(!m_node->hasInt52Result());
+                ASSERT(!m_node->hasInt32Result());
                 LBasicBlock fastCase = m_out.newBlock();
                 LBasicBlock slowCase = m_out.newBlock();
 
@@ -6761,7 +6770,9 @@ IGNORE_CLANG_WARNINGS_END
                         else
                             result = m_out.zeroExt(unboxedResult, Int64);
                         results.append(m_out.anchor(result));
-                    } else {
+                    } else if (m_node->hasInt32Result())
+                        results.append(m_out.anchor(unboxedResult));
+                    else {
                         auto speculateOrAdjust = [&](LValue result) {
                             if (elementSize(type) < 4 || isSigned(type))
                                 return boxInt32(result);
@@ -6776,7 +6787,9 @@ IGNORE_CLANG_WARNINGS_END
                         results.append(m_out.anchor(speculateOrAdjust(unboxedResult)));
                     }
                 } else {
-                    ASSERT(!m_node->hasInt52Result()); // Right now, it is yes. We extend later.
+                    // Right now, it is yes. We extend later.
+                    ASSERT(!m_node->hasInt52Result());
+                    ASSERT(!m_node->hasInt32Result());
                     if (m_node->hasDoubleResult())
                         results.append(m_out.anchor(unboxedResult));
                     else
@@ -6862,6 +6875,8 @@ IGNORE_CLANG_WARNINGS_END
         m_out.appendTo(continuation, lastNext);
         if (m_node->hasDoubleResult())
             setDouble(m_out.phi(Double, results));
+        else if (m_node->hasInt32Result())
+            setInt32(m_out.phi(Int32, results));
         else if (m_node->hasInt52Result())
             setStrictInt52(m_out.phi(Int64, results));
         else
