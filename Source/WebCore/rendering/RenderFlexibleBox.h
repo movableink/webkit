@@ -134,7 +134,7 @@ protected:
     bool shouldResetChildLogicalHeightBeforeLayout(const RenderBox&) const override { return m_shouldResetFlexItemLogicalHeightBeforeLayout; }
 
 private:
-    friend class FlexLayoutAlgorithm;
+    friend class FlexLineBuilder;
     enum class FlexSign : uint8_t {
         PositiveFlexibility,
         NegativeFlexibility,

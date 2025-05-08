@@ -29,7 +29,7 @@
  */
 
 #include "config.h"
-#include "FlexibleBoxAlgorithm.h"
+#include "FlexLineBuilder.h"
 
 #include "RenderBox.h"
 #include "RenderStyleInlines.h"
@@ -49,7 +49,7 @@ FlexLayoutItem::FlexLayoutItem(RenderBox& flexItem, LayoutUnit flexBaseContentSi
     ASSERT(!flexItem.isOutOfFlowPositioned());
 }
 
-FlexLayoutAlgorithm::FlexLayoutAlgorithm(RenderFlexibleBox& flexbox, LayoutUnit lineBreakLength, const RenderFlexibleBox::FlexLayoutItems& allItems, LayoutUnit gapBetweenItems, LayoutUnit gapBetweenLines)
+FlexLineBuilder::FlexLineBuilder(RenderFlexibleBox& flexbox, LayoutUnit lineBreakLength, const RenderFlexibleBox::FlexLayoutItems& allItems, LayoutUnit gapBetweenItems, LayoutUnit gapBetweenLines)
     : m_flexbox(flexbox)
     , m_lineBreakLength(lineBreakLength)
     , m_allItems(allItems)
@@ -58,7 +58,7 @@ FlexLayoutAlgorithm::FlexLayoutAlgorithm(RenderFlexibleBox& flexbox, LayoutUnit 
 {
 }
 
-bool FlexLayoutAlgorithm::canFitItemWithTrimmedMarginEnd(const FlexLayoutItem& flexLayoutItem, LayoutUnit sumHypotheticalMainSize) const
+bool FlexLineBuilder::canFitItemWithTrimmedMarginEnd(const FlexLayoutItem& flexLayoutItem, LayoutUnit sumHypotheticalMainSize) const
 {
     auto marginTrim = m_flexbox.style().marginTrim();
     if ((m_flexbox.isHorizontalFlow() && marginTrim.contains(MarginTrimType::InlineEnd)) || (m_flexbox.isColumnFlow() && marginTrim.contains(MarginTrimType::BlockEnd)))
@@ -66,7 +66,7 @@ bool FlexLayoutAlgorithm::canFitItemWithTrimmedMarginEnd(const FlexLayoutItem& f
     return false;
 }
 
-void FlexLayoutAlgorithm::removeMarginEndFromFlexSizes(FlexLayoutItem& flexLayoutItem, LayoutUnit& sumFlexBaseSize, LayoutUnit& sumHypotheticalMainSize) const
+void FlexLineBuilder::removeMarginEndFromFlexSizes(FlexLayoutItem& flexLayoutItem, LayoutUnit& sumFlexBaseSize, LayoutUnit& sumHypotheticalMainSize) const
 {
     LayoutUnit margin;
     if (m_flexbox.isHorizontalFlow())
@@ -75,9 +75,9 @@ void FlexLayoutAlgorithm::removeMarginEndFromFlexSizes(FlexLayoutItem& flexLayou
         margin = flexLayoutItem.renderer->marginAfter(m_flexbox.writingMode());
     sumFlexBaseSize -= margin;
     sumHypotheticalMainSize -= margin;
-} 
+}
 
-bool FlexLayoutAlgorithm::computeNextFlexLine(size_t& nextIndex, RenderFlexibleBox::FlexLayoutItems& lineItems, LayoutUnit& sumFlexBaseSize, double& totalFlexGrow, double& totalFlexShrink, double& totalWeightedFlexShrink, LayoutUnit& sumHypotheticalMainSize)
+bool FlexLineBuilder::computeNextFlexLine(size_t& nextIndex, RenderFlexibleBox::FlexLayoutItems& lineItems, LayoutUnit& sumFlexBaseSize, double& totalFlexGrow, double& totalFlexShrink, double& totalWeightedFlexShrink, LayoutUnit& sumHypotheticalMainSize)
 {
     lineItems.clear();
     sumFlexBaseSize = 0_lu;

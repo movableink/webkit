@@ -73,11 +73,11 @@ public:
     bool everHadLayout { false };
 };
 
-class FlexLayoutAlgorithm {
-    WTF_MAKE_NONCOPYABLE(FlexLayoutAlgorithm);
+class FlexLineBuilder {
+    WTF_MAKE_NONCOPYABLE(FlexLineBuilder);
 
 public:
-    FlexLayoutAlgorithm(RenderFlexibleBox&, LayoutUnit lineBreakLength, const RenderFlexibleBox::FlexLayoutItems& allItems, LayoutUnit gapBetweenItems, LayoutUnit gapBetweenLines);
+    FlexLineBuilder(RenderFlexibleBox&, LayoutUnit lineBreakLength, const RenderFlexibleBox::FlexLayoutItems& allItems, LayoutUnit gapBetweenItems, LayoutUnit gapBetweenLines);
 
     // The hypothetical main size of an item is the flex base size clamped
     // according to its min and max main size properties

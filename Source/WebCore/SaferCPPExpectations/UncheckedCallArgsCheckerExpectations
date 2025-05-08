@@ -655,7 +655,7 @@ rendering/ContentfulPaintChecker.cpp
 rendering/CounterNode.cpp
 rendering/EllipsisBoxPainter.cpp
 rendering/FixedTableLayout.cpp
-rendering/FlexibleBoxAlgorithm.cpp
+rendering/FlexLineBuilder.cpp
 rendering/FloatingObjects.cpp
 rendering/GridMasonryLayout.cpp
 rendering/GridTrackSizingAlgorithm.cpp

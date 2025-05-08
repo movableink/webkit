@@ -60,7 +60,7 @@ platform/mac/WebPlaybackControlsManager.h
 platform/mock/DeviceOrientationClientMock.h
 rendering/BackgroundPainter.h
 rendering/BidiRun.h
-rendering/FlexibleBoxAlgorithm.h
+rendering/FlexLineBuilder.h
 rendering/GlyphDisplayListCache.cpp
 rendering/GridMasonryLayout.h
 rendering/GridTrackSizingAlgorithm.h

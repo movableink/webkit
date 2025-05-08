@@ -422,7 +422,7 @@ rendering/CaretRectComputation.cpp
 rendering/CounterNode.cpp
 rendering/EllipsisBoxPainter.cpp
 rendering/FixedTableLayout.cpp
-rendering/FlexibleBoxAlgorithm.cpp
+rendering/FlexLineBuilder.cpp
 rendering/FloatingObjects.cpp
 rendering/GridBaselineAlignment.cpp
 rendering/GridLayoutFunctions.cpp
