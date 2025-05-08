@@ -48,7 +48,12 @@ public:
     StreamConnectionEncoder(MessageName messageName, std::span<uint8_t> stream)
         : m_buffer(stream)
     {
-        *this << messageName;
+        // Instead of using *this << messageName, manually encode the messageName since we
+        // know the stream buffer is bigger than needed as per API contract.
+        auto bytes = asBytes(singleElementSpan(messageName));
+        ASSERT(stream.size() > bytes.size()); // By API contract.
+        memcpySpan(m_buffer, bytes);
+        m_encodedSize = bytes.size();
     }
 
     ~StreamConnectionEncoder() = default;
