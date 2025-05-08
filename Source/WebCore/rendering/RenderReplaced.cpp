@@ -116,17 +116,13 @@ void RenderReplaced::styleDidChange(StyleDifference diff, const RenderStyle* old
         intrinsicSizeChanged();
 }
 
-static void issueFullRepaintOnSizeChangeIfNeeded(RenderReplaced& renderer)
+static bool shouldRepaintOnSizeChange(RenderReplaced& renderer)
 {
-    auto shouldRepaintOnSizeChange = [&] {
-        if (is<RenderHTMLCanvas>(renderer))
-            return true;
-        if (auto* renderImage = dynamicDowncast<RenderImage>(renderer); renderImage && !is<RenderMedia>(*renderImage) && !renderImage->isShowingMissingOrImageError())
-            return true;
-        return false;
-    };
-    if (shouldRepaintOnSizeChange())
-        renderer.repaint();
+    if (is<RenderHTMLCanvas>(renderer))
+        return true;
+    if (auto* renderImage = dynamicDowncast<RenderImage>(renderer); renderImage && !is<RenderMedia>(*renderImage) && !renderImage->isShowingMissingOrImageError())
+        return true;
+    return false;
 }
 
 void RenderReplaced::layout()
@@ -152,7 +148,8 @@ void RenderReplaced::layout()
 
     if (replacedContentRect() != oldContentRect) {
         setPreferredLogicalWidthsDirty(true);
-        issueFullRepaintOnSizeChangeIfNeeded(*this);
+        if (shouldRepaintOnSizeChange(*this))
+            repaint();
     }
 }
 

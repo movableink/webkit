@@ -43,7 +43,7 @@ function testOnLoad()
     context.strokeStyle = "red";
     context.stroke();
 
-    setTimeout(() => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
         if (window.internals)
             window.internals.startTrackingRepaints();
         document.getElementById('container').style.width = "3400px";
@@ -53,7 +53,7 @@ function testOnLoad()
         }
         if (window.testRunner)
             testRunner.notifyDone();
-    }, 1000);
+    }));
 }
 
 window.addEventListener('load', testOnLoad, false);

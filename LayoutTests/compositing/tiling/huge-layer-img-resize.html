@@ -49,9 +49,9 @@ function testOnLoad()
     img.src = canvas.toDataURL();
 }
 
-async function onImageLoad()
+function onImageLoad()
 {
-    setTimeout(() => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
         if (window.internals)
             window.internals.startTrackingRepaints();
         document.getElementById('container').style.width = "3400px";
@@ -61,7 +61,7 @@ async function onImageLoad()
         }
         if (window.testRunner)
             testRunner.notifyDone();
-    }, 1000);
+    }));
 }
 
 window.addEventListener('load', testOnLoad, false);
