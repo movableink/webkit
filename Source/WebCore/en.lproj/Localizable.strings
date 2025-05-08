@@ -178,9 +178,6 @@
 /* Allow button title in speech recognition prompt */
 "Allow (speechrecognition)" = "Allow";
 
-/* Allow displaying QuickLook Preview of 3D model */
-"Allow (usdz QuickLook Preview)" = "Allow";
-
 /* Allow button title in user media prompt */
 "Allow (usermedia)" = "Allow";
 
@@ -1135,9 +1132,6 @@
 /* Title for Open in External Application Link action button */
 "Open in “%@”" = "Open in “%@”";
 
-/* Open this 3D model? */
-"Open this 3D model?" = "Open this 3D model?";
-
 /* context menu item for PDF */
 "Open with %@" = "Open with %@";
 
@@ -1725,6 +1719,15 @@
 
 /* Title for View Immersive action button while in fullscreen */
 "View Immersive" = "View Immersive";
+
+/* Allow displaying QuickLook Preview of 3D model */
+"View in AR (usdz QuickLook Preview)" = "View in AR";
+
+/* View in AR? */
+"View in AR?" = "View in AR?";
+
+/* View in AR? description */
+"You can view this object in 3D and place it in your surroundings using augmented reality." = "You can view this object in 3D and place it in your surroundings using augmented reality.";
 
 /* Title for View Spatial Photo action button */
 "View Spatial Photo" = "View Spatial Photo";
