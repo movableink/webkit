@@ -684,6 +684,15 @@ void PlaybackSessionManagerProxy::clearPlaybackControlsManager()
     if (!m_controlsManagerContextId)
         return;
 
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    if (RefPtr page = m_page.get()) {
+        if (RefPtr videoPresentationManager = page->videoPresentationManager()) {
+            if (RefPtr controlsManagerInterface = videoPresentationManager->controlsManagerInterface())
+                controlsManagerInterface->cleanupExternalPlayback();
+        }
+    }
+#endif
+
     removeClientForContext(*m_controlsManagerContextId);
     m_controlsManagerContextId = std::nullopt;
     m_controlsManagerContextIsVideo = false;

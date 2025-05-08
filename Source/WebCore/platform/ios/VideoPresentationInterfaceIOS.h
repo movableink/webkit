@@ -112,6 +112,8 @@ public:
     WEBCORE_EXPORT void failedToRestoreFullscreen();
     WEBCORE_EXPORT virtual void enterExternalPlayback(CompletionHandler<void(bool, UIViewController *)>&&, CompletionHandler<void(bool)>&&);
     WEBCORE_EXPORT virtual void exitExternalPlayback();
+    virtual bool cleanupExternalPlayback() { return false; }
+
 
     enum class ExitFullScreenReason {
         DoneButtonTapped,
@@ -232,7 +234,6 @@ protected:
     virtual void updateRouteSharingPolicy() = 0;
     virtual void setupPlayerViewController() = 0;
     virtual void invalidatePlayerViewController() = 0;
-    virtual bool cleanupExternalPlayback() { return false; }
     virtual UIViewController *playerViewController() const = 0;
     WEBCORE_EXPORT void doSetup();
 
