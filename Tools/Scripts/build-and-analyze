@@ -176,6 +176,8 @@ def main(args):
         make_command.extend(['CC={}'.format(analyzer_path), 'CPLUSPLUS={}'.format(analyzer_path)])
     if args.preprocessor_additions:
         make_command.extend(['GCC_PREPROCESSOR_ADDITIONS={}'.format(args.preprocessor_additions)])
+    if args.scheme:
+        make_command.extend(['SCHEME={}'.format(args.scheme)])
 
     commands = [
         [set_webkit_config_path, '--{}'.format(args.configuration)],
@@ -227,6 +229,8 @@ def parse_args():
                         help='SDKROOT to use (default: macosx).')
     parser.add_argument('--scan-build-path', dest='scan_build_path_arg', default=None,
                         help='Path to scan-build for OpenSource.')
+    parser.add_argument('--scheme', dest='scheme', default=None,
+                        help='Xcode scheme to use when performing Build and Analyze.')
     parser.add_argument('--preprocessor-additions', default=None,
                         help='Additional preprocessor macros.')
     parser.add_argument('--dry-run', default=False,
