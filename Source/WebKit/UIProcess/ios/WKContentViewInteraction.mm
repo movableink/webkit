@@ -1806,11 +1806,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     return _interactionViewsContainerView.get();
 }
 
-- (CGFloat)inverseScale
-{
-    return 1 / [[self layer] transform].m11;
-}
-
 - (UIScrollView *)_scroller
 {
     return [_webView scrollView];
@@ -6460,37 +6455,6 @@ static void logTextInteraction(const char* methodName, UIGestureRecognizer *loup
     return [self _wk_convertQuad:quad toCoordinateSpace:[self _selectionContainerViewInternal]];
 }
 
-- (WebCore::FloatRect)_scaledCaretRectForSelectionStart:(WebCore::FloatRect)caretRect
-{
-    // The logical height of the caret is scaled inversely by the view's zoom scale
-    // to achieve the visual effect that the caret is narrow when zoomed in and wide
-    // when zoomed out.
-    double inverseScale = [self inverseScale];
-    if (caretRect.width() < caretRect.height())
-        caretRect.setWidth(caretRect.width() * inverseScale);
-    else
-        caretRect.setHeight(caretRect.height() * inverseScale);
-    return caretRect;
-}
-
-- (WebCore::FloatRect)_scaledCaretRectForSelectionEnd:(WebCore::FloatRect)caretRect
-{
-    // The logical height of the caret is scaled inversely by the view's zoom scale
-    // to achieve the visual effect that the caret is narrow when zoomed in and wide
-    // when zoomed out.
-    double inverseScale = [self inverseScale];
-    if (caretRect.width() < caretRect.height()) {
-        float originalWidth = caretRect.width();
-        caretRect.setWidth(originalWidth * inverseScale);
-        caretRect.move(caretRect.width() - originalWidth, 0);
-    } else {
-        float originalHeight = caretRect.height();
-        caretRect.setHeight(caretRect.height() * inverseScale);
-        caretRect.move(0, caretRect.height() - originalHeight);
-    }
-    return caretRect;
-}
-
 - (UITextRange *)selectedTextRange
 {
     auto& editorState = _page->editorState();
@@ -6507,8 +6471,8 @@ static void logTextInteraction(const char* methodName, UIGestureRecognizer *loup
     if (_cachedSelectedTextRange)
         return _cachedSelectedTextRange.get();
 
-    auto caretStartRect = [self _scaledCaretRectForSelectionStart:_page->editorState().visualData->caretRectAtStart];
-    auto caretEndRect = [self _scaledCaretRectForSelectionEnd:_page->editorState().visualData->caretRectAtEnd];
+    auto caretStartRect = _page->editorState().visualData->caretRectAtStart;
+    auto caretEndRect = _page->editorState().visualData->caretRectAtEnd;
     auto selectionRects = [self _textSelectionRects:_page->editorState().visualData->selectionGeometries];
     auto selectedTextLength = editorState.postLayoutData->selectedTextLength;
 
@@ -6555,12 +6519,10 @@ static void logTextInteraction(const char* methodName, UIGestureRecognizer *loup
         return nil;
     auto& postLayoutData = *editorState.postLayoutData;
     auto& visualData = *editorState.visualData;
-    auto unscaledCaretRectAtStart = visualData.markedTextCaretRectAtStart;
-    auto unscaledCaretRectAtEnd = visualData.markedTextCaretRectAtEnd;
-    auto isRange = unscaledCaretRectAtStart != unscaledCaretRectAtEnd;
+    auto caretStartRect = visualData.markedTextCaretRectAtStart;
+    auto caretEndRect = visualData.markedTextCaretRectAtEnd;
+    auto isRange = caretStartRect != caretEndRect;
     auto isContentEditable = editorState.isContentEditable;
-    auto caretStartRect = [self _scaledCaretRectForSelectionStart:unscaledCaretRectAtStart];
-    auto caretEndRect = [self _scaledCaretRectForSelectionEnd:unscaledCaretRectAtEnd];
     auto selectionRects = [self _textSelectionRects:visualData.markedTextRects];
     auto selectedTextLength = postLayoutData.markedText.length();
     return [WKTextRange textRangeWithState:!hasComposition isRange:isRange isEditable:isContentEditable startRect:caretStartRect endRect:caretEndRect selectionRects:selectionRects selectedTextLength:selectedTextLength];
