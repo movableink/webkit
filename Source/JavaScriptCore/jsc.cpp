@@ -199,7 +199,7 @@ namespace {
 
 #define EXIT_EXCEPTION 3
 
-NO_RETURN_WITH_VALUE static void jscExit(int status)
+[[noreturn]] static void jscExit(int status)
 {
     waitForAsynchronousDisassembly();
     
@@ -352,7 +352,7 @@ static JSC_DECLARE_HOST_FUNCTION(functionJSCOptions);
 static JSC_DECLARE_HOST_FUNCTION(functionReoptimizationRetryCount);
 static JSC_DECLARE_HOST_FUNCTION(functionTransferArrayBuffer);
 static JSC_DECLARE_HOST_FUNCTION(functionFailNextNewCodeBlock);
-static NO_RETURN_WITH_VALUE JSC_DECLARE_HOST_FUNCTION(functionQuit);
+[[noreturn]] static JSC_DECLARE_HOST_FUNCTION(functionQuit);
 static JSC_DECLARE_HOST_FUNCTION(functionFalse);
 static JSC_DECLARE_HOST_FUNCTION(functionUndefined1);
 static JSC_DECLARE_HOST_FUNCTION(functionUndefined2);

@@ -260,12 +260,6 @@
 #define NEVER_INLINE __attribute__((__noinline__))
 #endif
 
-/* NO_RETURN */
-
-#if !defined(NO_RETURN)
-#define NO_RETURN __attribute((__noreturn__))
-#endif
-
 /* NOT_TAIL_CALLED */
 
 #if !defined(NOT_TAIL_CALLED)
@@ -303,12 +297,6 @@
 /* RETURNS_NONNULL */
 #if !defined(RETURNS_NONNULL)
 #define RETURNS_NONNULL __attribute__((returns_nonnull))
-#endif
-
-/* NO_RETURN_WITH_VALUE */
-
-#if !defined(NO_RETURN_WITH_VALUE)
-#define NO_RETURN_WITH_VALUE NO_RETURN
 #endif
 
 /* OBJC_CLASS */

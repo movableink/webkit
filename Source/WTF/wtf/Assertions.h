@@ -129,6 +129,14 @@
 extern "C" {
 #endif
 
+/*
+   This header file needs to be compatible with C code, [noreturn]] cannot be used here.
+   Use [[noreturn]] in WebKit except this header file.
+*/
+#if !defined(NO_RETURN_FOR_C)
+#define NO_RETURN_FOR_C __attribute((__noreturn__))
+#endif
+
 /* CRASH() - Raises a fatal error resulting in program termination and triggering either the debugger or the crash reporter.
 
    Use CRASH() in response to known, unrecoverable errors like out-of-memory.
@@ -137,7 +145,7 @@ extern "C" {
 
    Signals are ignored by the crash reporter on OS X so we must do better.
 */
-#define NO_RETURN_DUE_TO_CRASH NO_RETURN
+#define NO_RETURN_DUE_TO_CRASH NO_RETURN_FOR_C
 
 #ifdef __cplusplus
 enum class WTFLogChannelState : uint8_t { Off, On, OnWithAccumulation };
