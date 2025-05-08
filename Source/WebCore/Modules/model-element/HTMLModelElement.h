@@ -163,6 +163,7 @@ public:
     WEBCORE_EXPORT void updateStageModeTransform(const TransformationMatrix&);
     WEBCORE_EXPORT void endStageModeInteraction();
     WEBCORE_EXPORT void tryAnimateModelToFitPortal(bool handledDrag, CompletionHandler<void(bool)>&&);
+    WEBCORE_EXPORT void resetModelTransformAfterDrag();
 #endif
 
 #if PLATFORM(COCOA)

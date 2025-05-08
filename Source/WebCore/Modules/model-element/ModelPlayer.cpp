@@ -167,6 +167,11 @@ void ModelPlayer::animateModelToFitPortal(CompletionHandler<void(bool)>&& comple
 {
     completionHandler(false);
 }
+
+void ModelPlayer::resetModelTransformAfterDrag()
+{
+}
+
 #endif // ENABLE(MODEL_PROCESS)
 
 }

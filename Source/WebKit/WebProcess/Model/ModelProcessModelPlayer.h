@@ -118,6 +118,7 @@ private:
     void updateStageModeTransform(const WebCore::TransformationMatrix&) final;
     void endStageModeInteraction() final;
     void animateModelToFitPortal(CompletionHandler<void(bool)>&&) final;
+    void resetModelTransformAfterDrag() final;
 
     WebCore::ModelPlayerIdentifier m_id;
     WeakPtr<WebPage> m_page;

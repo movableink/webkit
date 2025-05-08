@@ -368,6 +368,10 @@ messages -> WebPage WantsAsyncDispatchMessage {
     StageModeSessionDidEnd(std::optional<WebCore::ElementIdentifier> elementID)
 #endif
 
+#if ENABLE(MODEL_PROCESS) && ENABLE(DRAG_SUPPORT)
+    ModelDragEnded(WebCore::ElementIdentifier elementID)
+#endif
+
 #if PLATFORM(IOS_FAMILY) && ENABLE(DRAG_SUPPORT)
     RequestDragStart(WebCore::IntPoint clientPosition, WebCore::IntPoint globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask) -> (bool started)
     RequestAdditionalItemsForDragSession(WebCore::IntPoint clientPosition, WebCore::IntPoint globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask) -> (bool started)

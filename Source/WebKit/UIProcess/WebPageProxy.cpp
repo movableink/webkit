@@ -3829,6 +3829,12 @@ void WebPageProxy::setDragCaretRect(const IntRect& dragCaretRect)
     pageClient->didChangeDragCaretRect(previousRect, dragCaretRect);
 }
 
+#if ENABLE(MODEL_PROCESS)
+void WebPageProxy::modelDragEnded(const WebCore::ElementIdentifier elementIdentifier)
+{
+    send(Messages::WebPage::ModelDragEnded(elementIdentifier));
+}
+#endif
 #endif
 
 #if ENABLE(MODEL_PROCESS)

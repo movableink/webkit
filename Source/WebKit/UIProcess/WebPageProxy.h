@@ -1625,6 +1625,9 @@ public:
 #if PLATFORM(GTK)
     void startDrag(WebCore::SelectionData&&, OptionSet<WebCore::DragOperation>, std::optional<WebCore::ShareableBitmapHandle>&& dragImage, WebCore::IntPoint&& dragImageHotspot);
 #endif
+#if ENABLE(MODEL_PROCESS)
+    void modelDragEnded(const WebCore::ElementIdentifier);
+#endif
 #endif
 
     void processDidBecomeUnresponsive();

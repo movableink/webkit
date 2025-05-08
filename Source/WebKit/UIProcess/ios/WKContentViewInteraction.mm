@@ -10648,7 +10648,8 @@ static std::optional<WebCore::DragOperation> coreDragOperationForUIDropOperation
         if (RefPtr modelPresentationManager = _page->modelPresentationManagerProxy())
             modelPresentationManager->doneWithCurrentDragSession();
 
-        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=291293
+        if (_dragDropInteractionState.elementIdentifier())
+            _page->modelDragEnded(_dragDropInteractionState.elementIdentifier().value());
     }
 #endif
 

@@ -397,6 +397,11 @@ void ModelProcessModelPlayer::animateModelToFitPortal(CompletionHandler<void(boo
     sendWithAsyncReply(Messages::ModelProcessModelPlayerProxy::AnimateModelToFitPortal(), WTFMove(completionHandler));
 }
 
+void ModelProcessModelPlayer::resetModelTransformAfterDrag()
+{
+    send(Messages::ModelProcessModelPlayerProxy::ResetModelTransformAfterDrag());
+}
+
 }
 
 #endif // ENABLE(MODEL_PROCESS)

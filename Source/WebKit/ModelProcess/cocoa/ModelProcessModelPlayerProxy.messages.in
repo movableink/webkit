@@ -43,6 +43,7 @@ messages -> ModelProcessModelPlayerProxy {
     UpdateStageModeTransform(WebCore::TransformationMatrix transform)
     EndStageModeInteraction()
     AnimateModelToFitPortal() -> (bool success)
+    ResetModelTransformAfterDrag()
 }
 
 #endif

@@ -745,6 +745,11 @@ void ModelProcessModelPlayerProxy::endStageModeInteraction()
     [m_stageModeInteractionDriver interactionDidEnd];
 }
 
+void ModelProcessModelPlayerProxy::resetModelTransformAfterDrag()
+{
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=291289
+}
+
 void ModelProcessModelPlayerProxy::stageModeInteractionDidUpdateModel()
 {
     if (stageModeInteractionInProgress() && m_modelRKEntity)

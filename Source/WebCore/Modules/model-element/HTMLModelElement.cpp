@@ -537,6 +537,11 @@ void HTMLModelElement::tryAnimateModelToFitPortal(bool handledDrag, CompletionHa
 
     completionHandler(handledDrag);
 }
+void HTMLModelElement::resetModelTransformAfterDrag()
+{
+    if (hasPortal() && m_modelPlayer)
+        m_modelPlayer->resetModelTransformAfterDrag();
+}
 #endif // ENABLE(MODEL_PROCESS)
 
 // MARK: - Fullscreen support.

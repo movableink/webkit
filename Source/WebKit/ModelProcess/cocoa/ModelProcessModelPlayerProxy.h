@@ -133,6 +133,7 @@ public:
     void beginStageModeTransform(const WebCore::TransformationMatrix&) final;
     void updateStageModeTransform(const WebCore::TransformationMatrix&) final;
     void endStageModeInteraction() final;
+    void resetModelTransformAfterDrag() final;
     void stageModeInteractionDidUpdateModel();
     void animateModelToFitPortal(CompletionHandler<void(bool)>&&) final;
 

@@ -112,6 +112,7 @@ public:
     virtual void endStageModeInteraction();
     virtual void renderingAbruptlyStopped();
     virtual void animateModelToFitPortal(CompletionHandler<void(bool)>&&);
+    virtual void resetModelTransformAfterDrag();
 #endif
 };
 

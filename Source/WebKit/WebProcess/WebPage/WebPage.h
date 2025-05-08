@@ -1292,6 +1292,9 @@ public:
     void didStartDrag();
     void dragCancelled();
     OptionSet<WebCore::DragSourceAction> allowedDragSourceActions() const { return m_allowedDragSourceActions; }
+#if ENABLE(MODEL_PROCESS)
+    void modelDragEnded(WebCore::ElementIdentifier);
+#endif
 #endif
 
 #if ENABLE(MODEL_PROCESS)
