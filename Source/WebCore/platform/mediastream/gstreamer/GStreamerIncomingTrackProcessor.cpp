@@ -61,12 +61,7 @@ void GStreamerIncomingTrackProcessor::configure(ThreadSafeWeakPtr<GStreamerMedia
     }
     m_data.caps = WTFMove(caps);
 
-    m_data.mediaStreamBinName = makeString("incoming-"_s, typeName, "-track-"_s, unsafeSpan(GST_OBJECT_NAME(m_pad.get())));
-    m_bin = gst_bin_new(m_data.mediaStreamBinName.ascii().data());
     GST_DEBUG_OBJECT(m_bin.get(), "Processing track with caps %" GST_PTR_FORMAT, m_data.caps.get());
-
-    g_object_get(m_pad.get(), "transceiver", &m_data.transceiver.outPtr(), nullptr);
-
     auto structure = gst_caps_get_structure(m_data.caps.get(), 0);
     if (auto ssrc = gstStructureGet<unsigned>(structure, "ssrc"_s)) {
         m_data.ssrc = *ssrc;
@@ -77,6 +72,15 @@ void GStreamerIncomingTrackProcessor::configure(ThreadSafeWeakPtr<GStreamerMedia
                 m_sdpMsIdAndTrackId = { components[0], components[1] };
         }
     }
+
+    if (auto mid = gstStructureGetString(structure, "a-mid"))
+        m_data.mid = mid.toString();
+
+    m_data.mediaStreamBinName = makeString("incoming-"_s, typeName, "-track-"_s, m_data.ssrc, '-', unsafeSpan(GST_OBJECT_NAME(m_pad.get())));
+    m_bin = gst_bin_new(m_data.mediaStreamBinName.ascii().data());
+
+    g_object_get(m_pad.get(), "transceiver", &m_data.transceiver.outPtr(), nullptr);
+
     if (auto msIdAttribute = gstStructureGetString(structure, "a-msid"_s)) {
         if (msIdAttribute.startsWith(' '))
             m_sdpMsIdAndTrackId = { emptyString(), msIdAttribute.substring(1).toString() };

@@ -1002,6 +1002,131 @@ bool sdpMediaHasRTPHeaderExtension(const GstSDPMedia* media, const String& uri)
 }
 
 #undef CRLF
+
+GRefPtr<GstCaps> extractMidAndRidFromRTPBuffer(const GstMappedRtpBuffer& buffer, const GstSDPMessage* sdp)
+{
+    unsigned totalMedias = gst_sdp_message_medias_len(sdp);
+    for (unsigned i = 0; i < totalMedias; i++) {
+        const auto media = gst_sdp_message_get_media(sdp, i);
+        auto mediaCaps = adoptGRef(gst_caps_new_empty_simple("application/x-rtp"));
+        uint8_t midExtID = 0;
+        uint8_t ridExtID = 0;
+
+        gst_sdp_media_attributes_to_caps(media, mediaCaps.get());
+        auto s = gst_caps_get_structure(mediaCaps.get(), 0);
+        for (int ii = 0; ii < gst_structure_n_fields(s); ii++) {
+            auto name = StringView::fromLatin1(gst_structure_nth_field_name(s, ii));
+            if (!name.startsWith("extmap-"_s))
+                continue;
+
+            auto value = gstStructureGetString(s, name);
+            if (value == StringView::fromLatin1(GST_RTP_HDREXT_BASE "sdes:mid")) {
+                auto id = parseInteger<uint8_t>(name.substring(7));
+                if (!id) [[unlikely]]
+                    continue;
+                if (*id && *id < 15)
+                    midExtID = *id;
+            } else if (value == StringView::fromLatin1(GST_RTP_HDREXT_BASE "sdes:rtp-stream-id")) {
+                auto id = parseInteger<uint8_t>(name.substring(7));
+                if (!id) [[unlikely]]
+                    continue;
+                if (*id && *id < 15)
+                    ridExtID = *id;
+            }
+            if (midExtID && ridExtID)
+                break;
+        }
+
+        if (!midExtID)
+            continue;
+
+        GST_DEBUG("Probed midExtID %u and ridExtID %u from SDP", midExtID, ridExtID);
+
+        uint8_t* pdata;
+        uint16_t bits;
+        unsigned wordLength;
+        if (!gst_rtp_buffer_get_extension_data(buffer.mappedData(), &bits, reinterpret_cast<gpointer*>(&pdata), &wordLength))
+            continue;
+
+        GstRTPHeaderExtensionFlags extensionFlags;
+        gsize byteLength = wordLength * 4;
+        guint headerUnitTypes;
+        gsize offset = 0;
+        GUniquePtr<char> mid, rid;
+
+        if (bits == 0xBEDE) {
+            headerUnitTypes = 1;
+            extensionFlags = static_cast<GstRTPHeaderExtensionFlags>(GST_RTP_HEADER_EXTENSION_ONE_BYTE);
+        } else if (bits >> 4 == 0x100) {
+            headerUnitTypes = 2;
+            extensionFlags = static_cast<GstRTPHeaderExtensionFlags>(GST_RTP_HEADER_EXTENSION_TWO_BYTE);
+        } else {
+            GST_DEBUG("Unknown extension bit pattern 0x%02x%02x", bits >> 8, bits & 0xff);
+            continue;
+        }
+
+        while (true) {
+            guint8 readId, readLength;
+
+            // Not enough remaining data.
+            if (offset + headerUnitTypes >= byteLength)
+                break;
+
+            if (extensionFlags & GST_RTP_HEADER_EXTENSION_ONE_BYTE) {
+                readId = GST_READ_UINT8(pdata + offset) >> 4;
+                readLength = (GST_READ_UINT8(pdata + offset) & 0x0F) + 1;
+                offset++;
+
+                // Padding.
+                if (!readId)
+                    continue;
+
+                // Special id for possible future expansion.
+                if (readId == 15)
+                    break;
+            } else {
+                readId = GST_READ_UINT8(pdata + offset);
+                offset += 1;
+
+                // Padding.
+                if (!readId)
+                    continue;
+
+                readLength = GST_READ_UINT8(pdata + offset);
+                offset++;
+            }
+            GST_TRACE("Found rtp header extension with id %u and length %u", readId, readLength);
+
+            // Ignore extension headers where the size does not fit.
+            if (offset + readLength > byteLength) {
+                GST_WARNING("Extension length extends past the size of the extension data");
+                break;
+            }
+
+            const char* data = reinterpret_cast<const char*>(&pdata[offset]);
+            if (readId == midExtID)
+                mid.reset(g_strndup(data, readLength));
+            else if (readId == ridExtID)
+                rid.reset(g_strndup(data, readLength));
+
+            if (rid && mid)
+                break;
+
+            offset += readLength;
+        }
+
+        if (mid) {
+            gst_caps_set_simple(mediaCaps.get(), "a-mid", G_TYPE_STRING, mid.get(), nullptr);
+
+            if (rid)
+                gst_caps_set_simple(mediaCaps.get(), "a-rid", G_TYPE_STRING, rid.get(), nullptr);
+
+            return mediaCaps;
+        }
+    }
+    return nullptr;
+}
+
 #undef GST_CAT_DEFAULT
 
 } // namespace WebCore

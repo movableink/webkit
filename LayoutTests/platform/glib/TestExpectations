@@ -2429,7 +2429,10 @@ webkit.org/b/286481 imported/w3c/web-platform-tests/webrtc/protocol/rtp-demuxing
 imported/w3c/web-platform-tests/webrtc/protocol/missing-fields.html [ Failure ]
 
 # Simulcast support is not complete yet.
-webkit.org/b/235885 imported/w3c/web-platform-tests/webrtc/simulcast [ Skip ]
+imported/w3c/web-platform-tests/webrtc/simulcast [ Pass ]
+imported/w3c/web-platform-tests/webrtc/simulcast/negotiation-encodings.https.html [ Failure ]
+imported/w3c/web-platform-tests/webrtc/simulcast/setParameters-encodings.https.html [ Failure ]
+imported/w3c/web-platform-tests/webrtc/simulcast/setParameters-maxFramerate.https.html [ Failure ]
 webkit.org/b/235885 imported/w3c/web-platform-tests/webrtc/protocol/simulcast-answer.html [ Skip ]
 webkit.org/b/235885 imported/w3c/web-platform-tests/webrtc/protocol/simulcast-offer.html [ Skip ]
 

@@ -347,6 +347,8 @@ String sdpAsString(const GstSDPMessage*);
 
 bool sdpMediaHasRTPHeaderExtension(const GstSDPMedia*, const String&);
 
+WARN_UNUSED_RETURN GRefPtr<GstCaps> extractMidAndRidFromRTPBuffer(const GstMappedRtpBuffer&, const GstSDPMessage*);
+
 } // namespace WebCore
 
 #endif // ENABLE(WEB_RTC) && USE(GSTREAMER_WEBRTC)
