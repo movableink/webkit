@@ -309,7 +309,7 @@ class RadarClient(object):
 
         found = self.parent.issues.get(problem_id)
         if not found:
-            return None
+            raise Radar.exceptions.RadarAccessDeniedResponseException('Unable to access radar')
         return RadarModel(self, found, additional_fields=additional_fields)
 
     def find_radars(self, query, return_find_results_directly=False):
