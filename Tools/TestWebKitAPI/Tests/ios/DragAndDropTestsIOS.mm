@@ -2355,6 +2355,41 @@ TEST(DragAndDropTests, CanHitTestStageModeModel)
 
     EXPECT_TRUE([simulator stageModeHitTestValidModel]);
 }
+
+TEST(DragAndDropTests, CanHitTestNestedStageModeModel)
+{
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    for (_WKFeature *feature in [WKPreferences _features]) {
+        if ([feature.key isEqualToString:@"ModelElementEnabled"] || [feature.key isEqualToString:@"ModelProcessEnabled"])
+            [[configuration preferences] _setEnabled:YES forFeature:feature];
+    }
+
+    RetainPtr messageHandler = adoptNS([[ModelLoadingMessageHandler alloc] init]);
+    [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"modelLoading"];
+
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500) configuration:configuration.get()]);
+    [webView synchronouslyLoadTestPageNamed:@"simple-nested-model-page"];
+    while (![messageHandler didLoadModel])
+        Util::spinRunLoop();
+
+    RetainPtr simulator = adoptNS([[DragAndDropSimulator alloc] initWithWebView:webView.get()]);
+
+    // Case 1: Hitting out of the model should fail
+    [simulator hitTestForStageModeAt:CGPointMake(320, 500)];
+
+    while ([simulator awaitingStageModeHitResult])
+        Util::spinRunLoop();
+
+    EXPECT_FALSE([simulator stageModeHitTestValidModel]);
+
+    // Case 2: Hitting a model with stagemode='orbit' should succeed
+    [simulator hitTestForStageModeAt:CGPointMake(50, 50)];
+
+    while ([simulator awaitingStageModeHitResult])
+        Util::spinRunLoop();
+
+    EXPECT_TRUE([simulator stageModeHitTestValidModel]);
+}
 #endif
 
 } // namespace TestWebKitAPI

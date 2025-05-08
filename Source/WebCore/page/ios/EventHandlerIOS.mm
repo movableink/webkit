@@ -726,6 +726,11 @@ std::optional<ElementIdentifier> EventHandler::requestInteractiveModelElementAtP
     auto documentPoint = frameView->windowToContents(syntheticMousePressEvent.position());
     auto hitTestedMouseEvent = document->prepareMouseEvent(hitType, documentPoint, syntheticMousePressEvent);
 
+    if (RefPtr subframe = dynamicDowncast<LocalFrame>(subframeForHitTestResult(hitTestedMouseEvent))) {
+        if (std::optional<ElementIdentifier> elementID = subframe->eventHandler().requestInteractiveModelElementAtPoint(adjustedClientPosition))
+            return elementID;
+    }
+
     RefPtr targetElement = hitTestedMouseEvent.hitTestResult().targetElement();
     if (RefPtr modelElement = dynamicDowncast<HTMLModelElement>(targetElement)) {
         if (modelElement->supportsStageModeInteraction()) {
