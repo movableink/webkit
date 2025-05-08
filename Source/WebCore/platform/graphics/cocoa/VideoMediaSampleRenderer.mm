@@ -452,9 +452,11 @@ void VideoMediaSampleRenderer::enqueueSample(const MediaSample& sample)
 
     if (!m_useDecompressionSessionForProtectedFallback && !m_protectedContentEncountered && sample.isProtected()) {
         m_protectedContentEncountered = true;
+#if !PLATFORM(WATCHOS)
         auto numberOfDroppedVideoFrames = [renderer() videoPerformanceMetrics].numberOfDroppedVideoFrames;
         if (m_droppedVideoFrames >= numberOfDroppedVideoFrames)
             m_droppedVideoFramesOffset = m_droppedVideoFrames - numberOfDroppedVideoFrames;
+#endif
     }
     bool hasOutOfOrderFrames = m_highestPresentationTime.isValid() && sample.presentationTime() < m_highestPresentationTime;
     if (!hasOutOfOrderFrames)
