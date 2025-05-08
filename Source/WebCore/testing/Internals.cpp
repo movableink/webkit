@@ -209,6 +209,7 @@
 #include "SWClientConnection.h"
 #include "ScriptController.h"
 #include "ScriptedAnimationController.h"
+#include "ScrollToOptions.h"
 #include "ScrollbarsControllerMock.h"
 #include "ScrollingCoordinator.h"
 #include "ScrollingMomentumCalculator.h"

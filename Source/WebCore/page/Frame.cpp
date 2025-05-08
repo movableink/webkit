@@ -26,6 +26,7 @@
 #include "config.h"
 #include "Frame.h"
 
+#include "ContainerNodeInlines.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "HTMLFrameOwnerElement.h"

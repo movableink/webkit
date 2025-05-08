@@ -897,7 +897,7 @@ ExceptionOr<String> DOMWindow::btoa(const String& stringToEncode)
     auto* localThis = dynamicDowncast<LocalDOMWindow>(*this);
     if (!localThis)
         return Exception { ExceptionCode::SecurityError };
-    return Base64Utilities::btoa(stringToEncode);
+    return WindowOrWorkerGlobalScope::btoa(stringToEncode);
 }
 
 ExceptionOr<String> DOMWindow::atob(const String& stringToEncode)
@@ -905,7 +905,7 @@ ExceptionOr<String> DOMWindow::atob(const String& stringToEncode)
     auto* localThis = dynamicDowncast<LocalDOMWindow>(*this);
     if (!localThis)
         return Exception { ExceptionCode::SecurityError };
-    return Base64Utilities::atob(stringToEncode);
+    return WindowOrWorkerGlobalScope::atob(stringToEncode);
 }
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)

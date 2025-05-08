@@ -38,6 +38,7 @@ class JSValue;
 
 namespace WebCore {
 
+class JSDOMGlobalObject;
 class Navigation;
 class SerializedScriptValue;
 

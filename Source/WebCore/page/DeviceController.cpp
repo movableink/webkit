@@ -29,6 +29,7 @@
 
 #include "DeviceClient.h"
 #include "Document.h"
+#include "SecurityOrigin.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {

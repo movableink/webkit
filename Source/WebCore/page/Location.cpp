@@ -245,7 +245,7 @@ ExceptionOr<void> Location::replace(LocalDOMWindow& activeWindow, LocalDOMWindow
         return { };
     ASSERT(frame->window());
 
-    auto* firstFrame = firstWindow.frame();
+    RefPtr firstFrame = firstWindow.localFrame();
     if (!firstFrame || !firstFrame->document())
         return { };
 
@@ -295,7 +295,7 @@ ExceptionOr<void> Location::setLocation(LocalDOMWindow& incumbentWindow, LocalDO
     RefPtr frame = this->frame();
     ASSERT(frame);
 
-    RefPtr firstFrame = firstWindow.frame();
+    RefPtr firstFrame = firstWindow.localFrame();
     if (!firstFrame || !firstFrame->document())
         return { };
 
