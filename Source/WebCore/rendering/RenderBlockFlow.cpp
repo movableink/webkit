@@ -209,6 +209,16 @@ void RenderBlockFlow::rebuildFloatingObjectSetFromIntrudingFloats()
     if (layoutContext().isSkippedContentRootForLayout(*this))
         return;
 
+    auto mayHaveStaleFloatingObjects = [&] {
+        if (style().isSkippedRootOrSkippedContent())
+            return true;
+        if (auto wasSkipped = wasSkippedDuringLastLayoutDueToContentVisibility())
+            return *wasSkipped;
+        return false;
+    };
+    if (mayHaveStaleFloatingObjects())
+        m_floatingObjects = { };
+
     UncheckedKeyHashSet<CheckedPtr<RenderBox>> oldIntrudingFloatSet;
 
     if (m_floatingObjects) {
