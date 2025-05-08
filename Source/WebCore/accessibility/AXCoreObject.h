@@ -721,16 +721,19 @@ enum class ForceLayout : bool { No, Yes };
 // Use this struct to store the isIgnored data that depends on the parents, so that in addChildren()
 // we avoid going up the parent chain for each element while traversing the tree with useful information already.
 struct AccessibilityIsIgnoredFromParentData {
-    AXCoreObject* parent { nullptr };
-    bool isAXHidden { false };
-    bool isPresentationalChildOfAriaRole { false };
-    bool isDescendantOfBarrenParent { false };
+    bool isValid : 1;
+    bool isAXHidden : 1;
+    bool isPresentationalChildOfAriaRole : 1;
+    bool isDescendantOfBarrenParent : 1;
 
     AccessibilityIsIgnoredFromParentData(AXCoreObject* parent = nullptr)
-        : parent(parent)
+        : isValid(!!parent)
+        , isAXHidden(false)
+        , isPresentationalChildOfAriaRole(false)
+        , isDescendantOfBarrenParent(false)
     { }
 
-    bool isNull() const { return !parent; }
+    bool isNull() const { return !isValid; }
 };
 
 struct LineDecorationStyle {

@@ -12,7 +12,6 @@ Modules/screen-wake-lock/NavigatorScreenWakeLock.h
 Modules/storage/StorageManager.cpp
 Modules/webdatabase/DatabaseTask.h
 Modules/webdatabase/SQLTransactionBackend.h
-accessibility/AXCoreObject.h
 accessibility/AXSearchManager.h
 bindings/js/JSEventTargetCustom.h
 bindings/js/JSLazyEventListener.cpp

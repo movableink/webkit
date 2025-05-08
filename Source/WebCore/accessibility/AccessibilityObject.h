@@ -932,19 +932,19 @@ private:
 
 protected: // FIXME: Make the data members private.
     AccessibilityChildrenVector m_children;
-    mutable bool m_childrenInitialized { false };
 private:
-    OptionSet<AXAncestorFlag> m_ancestorFlags;
-    AccessibilityObjectInclusion m_lastKnownIsIgnoredValue { AccessibilityObjectInclusion::DefaultBehavior };
 #if PLATFORM(IOS_FAMILY)
     InlineTextPrediction m_lastPresentedTextPrediction;
     InlineTextPrediction m_lastPresentedTextPredictionComplete;
 #endif
+    OptionSet<AXAncestorFlag> m_ancestorFlags;
+    AccessibilityObjectInclusion m_lastKnownIsIgnoredValue { AccessibilityObjectInclusion::DefaultBehavior };
 protected: // FIXME: Make the data members private.
     // FIXME: This can be replaced by AXAncestorFlags.
     AccessibilityIsIgnoredFromParentData m_isIgnoredFromParentData;
     bool m_childrenDirty { false };
     bool m_subtreeDirty { false };
+    mutable bool m_childrenInitialized { false };
 };
 
 inline bool AccessibilityObject::hasDisplayContents() const
