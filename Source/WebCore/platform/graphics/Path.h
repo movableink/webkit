@@ -57,23 +57,20 @@ public:
 
     WEBCORE_EXPORT bool definitelyEqual(const Path&) const;
 
-    WEBCORE_EXPORT void moveTo(const FloatPoint&);
-
-    WEBCORE_EXPORT void addLineTo(const FloatPoint&);
-    WEBCORE_EXPORT void addQuadCurveTo(const FloatPoint& controlPoint, const FloatPoint& endPoint);
-    WEBCORE_EXPORT void addBezierCurveTo(const FloatPoint& controlPoint1, const FloatPoint& controlPoint2, const FloatPoint& endPoint);
+    void moveTo(const FloatPoint&);
+    void addLineTo(const FloatPoint&);
+    void addQuadCurveTo(const FloatPoint& controlPoint, const FloatPoint& endPoint);
+    void addBezierCurveTo(const FloatPoint& controlPoint1, const FloatPoint& controlPoint2, const FloatPoint& endPoint);
     void addArcTo(const FloatPoint& point1, const FloatPoint& point2, float radius);
-
     void addArc(const FloatPoint&, float radius, float startAngle, float endAngle, RotationDirection);
     void addEllipse(const FloatPoint&, float radiusX, float radiusY, float rotation, float startAngle, float endAngle, RotationDirection);
     void addEllipseInRect(const FloatRect&);
-    WEBCORE_EXPORT void addRect(const FloatRect&);
+    void addRect(const FloatRect&);
     WEBCORE_EXPORT void addRoundedRect(const FloatRoundedRect&, PathRoundedRect::Strategy = PathRoundedRect::Strategy::PreferNative);
     void addRoundedRect(const FloatRect&, const FloatSize& roundingRadii, PathRoundedRect::Strategy = PathRoundedRect::Strategy::PreferNative);
     void addContinuousRoundedRect(const FloatRect&, float cornerWidth, float cornerHeight);
     void addRoundedRect(const RoundedRect&);
-
-    WEBCORE_EXPORT void closeSubpath();
+    void closeSubpath();
 
     WEBCORE_EXPORT void addPath(const Path&, const AffineTransform&);
 
@@ -116,7 +113,7 @@ public:
 private:
     PlatformPathImpl& ensurePlatformPathImpl();
     PathImpl& setImpl(Ref<PathImpl>&&);
-    PathImpl& ensureImpl();
+    WEBCORE_EXPORT PathImpl& ensureImpl();
 
     PathSegment* asSingle() { return std::get_if<PathSegment>(&m_data); }
     const PathSegment* asSingle() const { return std::get_if<PathSegment>(&m_data); }
@@ -124,8 +121,7 @@ private:
     PathImpl* asImpl();
     const PathImpl* asImpl() const;
 
-    const PathMoveTo* asSingleMoveTo() const;
-    const PathArc* asSingleArc() const;
+    std::optional<FloatPoint> initialMoveToPoint() const;
 
     Variant<std::monostate, PathSegment, DataRef<PathImpl>> m_data;
 };
@@ -140,6 +136,125 @@ inline Path::Path(PathSegment&& segment)
 inline bool Path::isEmpty() const
 {
     return std::holds_alternative<std::monostate>(m_data);
+}
+
+inline void Path::moveTo(const FloatPoint& point)
+{
+    if (isEmpty())
+        m_data = PathSegment(PathMoveTo { point });
+    else
+        ensureImpl().add(PathMoveTo { point });
+}
+
+inline void Path::addLineTo(const FloatPoint& point)
+{
+    if (auto initial = initialMoveToPoint())
+        m_data = PathSegment(PathDataLine { *initial, point });
+    else
+        ensureImpl().add(PathLineTo { point });
+}
+
+inline void Path::addQuadCurveTo(const FloatPoint& controlPoint, const FloatPoint& endPoint)
+{
+    if (auto initial = initialMoveToPoint())
+        m_data = PathSegment(PathDataQuadCurve { *initial, controlPoint, endPoint });
+    else
+        ensureImpl().add(PathQuadCurveTo { controlPoint, endPoint });
+}
+
+inline void Path::addBezierCurveTo(const FloatPoint& controlPoint1, const FloatPoint& controlPoint2, const FloatPoint& endPoint)
+{
+    if (auto initial = initialMoveToPoint())
+        m_data = PathSegment(PathDataBezierCurve { *initial, controlPoint1, controlPoint2, endPoint });
+    else
+        ensureImpl().add(PathBezierCurveTo { controlPoint1, controlPoint2, endPoint });
+}
+
+inline void Path::addArcTo(const FloatPoint& point1, const FloatPoint& point2, float radius)
+{
+    if (auto initial = initialMoveToPoint())
+        m_data = PathSegment(PathDataArc { *initial, point1, point2, radius });
+    else
+        ensureImpl().add(PathArcTo { point1, point2, radius });
+}
+
+inline void Path::addArc(const FloatPoint& point, float radius, float startAngle, float endAngle, RotationDirection direction)
+{
+    // Workaround for <rdar://problem/5189233> CGPathAddArc hangs or crashes when passed inf as start or end angle,
+    // as well as http://bugs.webkit.org/show_bug.cgi?id=16449, since cairo_arc() functions hang or crash when
+    // passed inf as radius or start/end angle.
+    if (!std::isfinite(radius) || !std::isfinite(startAngle) || !std::isfinite(endAngle))
+        return;
+
+    if (isEmpty())
+        m_data = PathSegment(PathArc { point, radius, startAngle, endAngle, direction });
+    else
+        ensureImpl().add(PathArc { point, radius, startAngle, endAngle, direction });
+}
+
+inline void Path::addEllipse(const FloatPoint& point, float radiusX, float radiusY, float rotation, float startAngle, float endAngle, RotationDirection direction)
+{
+    if (isEmpty())
+        m_data = PathSegment(PathEllipse { point, radiusX, radiusY, rotation, startAngle, endAngle, direction });
+    else
+        ensureImpl().add(PathEllipse { point, radiusX, radiusY, rotation, startAngle, endAngle, direction });
+}
+
+inline void Path::addEllipseInRect(const FloatRect& rect)
+{
+    if (isEmpty())
+        m_data = PathSegment(PathEllipseInRect { rect });
+    else
+        ensureImpl().add(PathEllipseInRect { rect });
+}
+
+inline void Path::addRect(const FloatRect& rect)
+{
+    if (isEmpty())
+        m_data = PathSegment(PathRect { rect });
+    else
+        ensureImpl().add(PathRect { rect });
+}
+
+inline void Path::closeSubpath()
+{
+    if (std::holds_alternative<std::monostate>(m_data))
+        return;
+    if (const auto* segment = std::get_if<PathSegment>(&m_data)) {
+        const auto* data = &segment->data();
+        if (auto* arc = std::get_if<PathArc>(data)) {
+            m_data = PathSegment(PathClosedArc { *arc });
+            return;
+        }
+        if (std::holds_alternative<PathCloseSubpath>(*data))
+            return;
+    }
+    auto& impl = ensureImpl();
+    if (impl.isClosed())
+        return;
+    impl.add(PathCloseSubpath { });
+}
+
+inline FloatPoint Path::currentPoint() const
+{
+    if (std::holds_alternative<std::monostate>(m_data))
+        return { 0, 0 };
+    if (const auto* segment = std::get_if<PathSegment>(&m_data)) {
+        FloatPoint lastMoveToPoint;
+        return segment->calculateEndPoint({ }, lastMoveToPoint);
+    }
+    return asImpl()->currentPoint();
+}
+
+inline std::optional<FloatPoint> Path::initialMoveToPoint() const
+{
+    if (std::holds_alternative<std::monostate>(m_data))
+        return FloatPoint { 0, 0 };
+    if (const auto* segment = std::get_if<PathSegment>(&m_data)) {
+        if (const auto* moveTo = std::get_if<PathMoveTo>(&segment->data()))
+            return moveTo->point;
+    }
+    return std::nullopt;
 }
 
 } // namespace WebCore
