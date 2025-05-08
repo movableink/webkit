@@ -27,12 +27,9 @@
 
 #pragma once
 
-#include "AdjustViewSizeOrNot.h"
 #include "DOMPasteAccess.h"
 #include "Frame.h"
-#include "RegistrableDomain.h"
-#include "ScrollTypes.h"
-#include "UserScriptTypes.h"
+#include "ScrollbarMode.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/HashSet.h>
 #include <wtf/UniqueRef.h>
@@ -71,6 +68,7 @@ namespace WebCore {
 
 class Color;
 class LocalDOMWindow;
+class DOMWrapperWorld;
 class DataDetectionResultsStorage;
 class Document;
 class Editor;
@@ -91,21 +89,26 @@ class LocalFrameLoaderClient;
 class LocalFrameView;
 class Node;
 class Page;
+class RegistrableDomain;
 class RenderLayer;
 class RenderView;
 class RenderWidget;
 class ResourceMonitor;
 class ScriptController;
 class SecurityOrigin;
+class UserScript;
 class VisiblePosition;
 class Widget;
 
+enum class AdjustViewSize : bool;
 enum class SandboxFlag : uint16_t;
+enum class UserScriptInjectionTime : bool;
 enum class WindowProxyProperty : uint8_t;
 
 using SandboxFlags = OptionSet<SandboxFlag>;
 using IntDegrees = int32_t;
 
+struct OverrideScreenSize;
 struct SimpleRange;
 
 #if PLATFORM(IOS_FAMILY)
@@ -204,7 +207,7 @@ public:
 
     WEBCORE_EXPORT static LocalFrame* frameForWidget(const Widget&);
 
-    WEBCORE_EXPORT void setPrinting(bool printing, const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkRatio, AdjustViewSizeOrNot);
+    WEBCORE_EXPORT void setPrinting(bool printing, const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkRatio, AdjustViewSize);
     bool shouldUsePrintingLayout() const;
     WEBCORE_EXPORT FloatSize resizePageRectsKeepingRatio(const FloatSize& originalSize, const FloatSize& expectedSize);
 
@@ -402,17 +405,16 @@ private:
     unsigned m_selfOnlyRefCount { 0 };
     bool m_hasHadUserInteraction { false };
 
-
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
     OptionSet<WindowProxyProperty> m_accessedWindowProxyPropertiesViaOpener;
 #endif
 
-    FloatSize m_overrideScreenSize;
+    std::unique_ptr<OverrideScreenSize> m_overrideScreenSize;
 
     const WeakPtr<LocalFrame> m_rootFrame;
     SandboxFlags m_sandboxFlags;
     UniqueRef<EventHandler> m_eventHandler;
-    UncheckedKeyHashSet<RegistrableDomain> m_storageAccessExceptionDomains;
+    std::unique_ptr<HashSet<RegistrableDomain>> m_storageAccessExceptionDomains;
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const LocalFrame&);

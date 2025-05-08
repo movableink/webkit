@@ -1643,7 +1643,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     page/ActivityState.h
     page/ActivityStateChangeObserver.h
-    page/AdjustViewSizeOrNot.h
+    page/AdjustViewSize.h
     page/AlternativeTextClient.h
     page/AttachmentElementClient.h
     page/AutoplayEvent.h
@@ -1957,6 +1957,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/ScrollView.h
     platform/ScrollableArea.h
     platform/Scrollbar.h
+    platform/ScrollbarMode.h
     platform/ScrollbarTheme.h
     platform/ScrollbarThemeComposite.h
     platform/ScrollingEffectsController.h

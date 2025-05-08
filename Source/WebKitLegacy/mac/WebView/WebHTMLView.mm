@@ -3338,7 +3338,7 @@ IGNORE_WARNINGS_END
                 pageSize = WebCore::FloatSize(minPageLogicalHeight, minPageLogicalWidth);
                 originalPageSize = WebCore::FloatSize(originalPageHeight, originalPageWidth);
             }
-            coreView->forceLayoutForPagination(pageSize, originalPageSize, maximumShrinkRatio, adjustViewSize ? WebCore::AdjustViewSize : WebCore::DoNotAdjustViewSize);
+            coreView->forceLayoutForPagination(pageSize, originalPageSize, maximumShrinkRatio, adjustViewSize ? WebCore::AdjustViewSize::Yes : WebCore::AdjustViewSize::No);
         } else {
             coreView->forceLayout(!adjustViewSize);
             if (adjustViewSize)

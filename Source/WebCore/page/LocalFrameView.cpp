@@ -5535,7 +5535,7 @@ void LocalFrameView::forceLayout(bool allowSubtreeLayout)
     layoutContext().layout();
 }
 
-void LocalFrameView::forceLayoutForPagination(const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkFactor, AdjustViewSizeOrNot shouldAdjustViewSize)
+void LocalFrameView::forceLayoutForPagination(const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkFactor, AdjustViewSize shouldAdjustViewSize)
 {
     if (!renderView())
         return;
@@ -5589,7 +5589,7 @@ void LocalFrameView::forceLayoutForPagination(const FloatSize& pageSize, const F
         renderView.addLayoutOverflow(overflow); // This is how we clip in case we overflow again.
     }
 
-    if (shouldAdjustViewSize)
+    if (shouldAdjustViewSize == AdjustViewSize::Yes)
         adjustViewSize();
 }
 

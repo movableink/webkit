@@ -42,6 +42,7 @@
 #include "LocalFrame.h"
 #include "MediationRequirement.h"
 #include "Page.h"
+#include "PermissionsPolicy.h"
 #include "VisibilityState.h"
 #include <Logging.h>
 #include <wtf/JSONValues.h>

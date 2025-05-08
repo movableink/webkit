@@ -28,7 +28,6 @@
 #include "FrameIdentifier.h"
 #include "FrameTree.h"
 #include "FrameTreeSyncData.h"
-#include "OwnerPermissionsPolicyData.h"
 #include "PageIdentifier.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/Ref.h>
@@ -50,6 +49,8 @@ class RenderWidget;
 class Settings;
 class WeakPtrImplWithEventTargetData;
 class WindowProxy;
+
+struct OwnerPermissionsPolicyData;
 
 enum class AdvancedPrivacyProtections : uint16_t;
 enum class SandboxFlag : uint16_t;
@@ -158,7 +159,7 @@ private:
     mutable UniqueRef<NavigationScheduler> m_navigationScheduler;
     WeakPtr<Frame> m_opener;
     WeakHashSet<Frame> m_openedFrames;
-    std::optional<OwnerPermissionsPolicyData> m_ownerPermisssionsPolicyOverride;
+    std::unique_ptr<OwnerPermissionsPolicyData> m_ownerPermisssionsPolicyOverride;
 
     Ref<FrameTreeSyncData> m_frameTreeSyncData;
 };

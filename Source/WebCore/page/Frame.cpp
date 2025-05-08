@@ -33,6 +33,7 @@
 #include "HTMLIFrameElement.h"
 #include "LocalDOMWindow.h"
 #include "NavigationScheduler.h"
+#include "OwnerPermissionsPolicyData.h"
 #include "Page.h"
 #include "RemoteFrame.h"
 #include "RenderElement.h"
@@ -277,13 +278,13 @@ void Frame::setOwnerElement(HTMLFrameOwnerElement* element)
 
 void Frame::setOwnerPermissionsPolicy(OwnerPermissionsPolicyData&& ownerPermissionsPolicy)
 {
-    m_ownerPermisssionsPolicyOverride = WTFMove(ownerPermissionsPolicy);
+    m_ownerPermisssionsPolicyOverride = makeUnique<OwnerPermissionsPolicyData>(WTFMove(ownerPermissionsPolicy));
 }
 
 std::optional<OwnerPermissionsPolicyData> Frame::ownerPermissionsPolicy() const
 {
     if (m_ownerPermisssionsPolicyOverride)
-        return m_ownerPermisssionsPolicyOverride;
+        return *m_ownerPermisssionsPolicyOverride;
 
     RefPtr owner = ownerElement();
     if (!owner)

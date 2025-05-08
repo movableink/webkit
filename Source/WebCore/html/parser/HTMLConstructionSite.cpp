@@ -58,6 +58,7 @@
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "Text.h"
+#include "UserScriptTypes.h"
 #include <unicode/ubrk.h>
 #include <wtf/text/TextBreakIterator.h>
 

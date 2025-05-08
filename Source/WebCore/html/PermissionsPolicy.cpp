@@ -33,6 +33,7 @@
 #include "HTMLIFrameElement.h"
 #include "HTMLNames.h"
 #include "LocalDOMWindow.h"
+#include "OwnerPermissionsPolicyData.h"
 #include "Quirks.h"
 #include "SecurityOrigin.h"
 #include <wtf/TZoneMalloc.h>
