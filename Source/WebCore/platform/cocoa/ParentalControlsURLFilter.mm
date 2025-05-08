@@ -105,8 +105,6 @@ void ParentalControlsURLFilter::isURLAllowed(const URL& url, CompletionHandler<v
         return completionHandler(true, nullptr);
 
     [m_wcrBrowserEngineClient evaluateURL:url.createNSURL().get() withCompletion:makeBlockPtr([completionHandler = WTFMove(completionHandler)](BOOL shouldBlock, NSData *replacementData) mutable {
-        ASSERT(isMainThread());
-
         completionHandler(!shouldBlock, replacementData);
     }).get() onCompletionQueue:completionHandlerQueue.dispatchQueue()];
 }
