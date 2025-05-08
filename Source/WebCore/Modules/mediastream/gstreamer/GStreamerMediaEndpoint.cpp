@@ -2073,11 +2073,11 @@ void GStreamerMediaEndpoint::onIceCandidate(guint sdpMLineIndex, gchararray cand
     if (candidateString.isEmpty())
         return;
 
-    m_statsCollector->invalidateCache();
-
     callOnMainThread([protectedThis = Ref(*this), this, sdp = WTFMove(candidateString).isolatedCopy(), sdpMLineIndex]() mutable {
         if (isStopped())
             return;
+
+        m_statsCollector->invalidateCache();
 
         String mid;
         GUniqueOutPtr<GstWebRTCSessionDescription> description;

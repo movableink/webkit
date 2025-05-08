@@ -444,6 +444,7 @@ void GStreamerStatsCollector::getStats(CollectorCallback&& callback, const GRefP
 
 void GStreamerStatsCollector::invalidateCache()
 {
+    ASSERT(isMainThread());
     m_cachedGlobalReport = std::nullopt;
     m_cachedReportsPerPad.clear();
 }
