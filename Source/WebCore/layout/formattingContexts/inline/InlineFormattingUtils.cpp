@@ -332,13 +332,8 @@ InlineLayoutUnit InlineFormattingUtils::inlineItemWidth(const InlineItem& inline
     if (layoutBox.isReplacedBox())
         return boxGeometry.marginBoxWidth();
 
-    if (inlineItem.isInlineBoxStart()) {
-        auto logicalWidth = boxGeometry.marginStart() + boxGeometry.borderStart() + boxGeometry.paddingStart();
-        auto& style = useFirstLineStyle ? inlineItem.firstLineStyle() : inlineItem.style();
-        if (style.boxDecorationBreak() == BoxDecorationBreak::Clone)
-            logicalWidth += boxGeometry.borderEnd() + boxGeometry.paddingEnd();
-        return logicalWidth;
-    }
+    if (inlineItem.isInlineBoxStart())
+        return boxGeometry.marginStart() + boxGeometry.borderStart() + boxGeometry.paddingStart();
 
     if (inlineItem.isInlineBoxEnd())
         return boxGeometry.marginEnd() + boxGeometry.borderEnd() + boxGeometry.paddingEnd();
