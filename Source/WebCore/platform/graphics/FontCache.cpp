@@ -427,7 +427,7 @@ static void dispatchToAllFontCaches(F function)
 
     for (auto& thread : WorkerOrWorkletThread::workerOrWorkletThreads()) {
         thread.runLoop().postTask([function](ScriptExecutionContext&) {
-            if (auto fontCache = FontCache::forCurrentThreadIfExists())
+            if (CheckedPtr fontCache = FontCache::forCurrentThreadIfExists())
                 function(*fontCache);
         });
     }

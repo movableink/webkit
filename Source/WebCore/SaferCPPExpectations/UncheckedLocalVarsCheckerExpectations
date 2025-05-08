@@ -399,7 +399,6 @@ platform/ScrollView.cpp
 platform/Widget.cpp
 platform/animation/AcceleratedEffect.cpp
 platform/cocoa/VideoPresentationModelVideoElement.mm
-platform/graphics/FontCache.cpp
 platform/graphics/GraphicsLayer.cpp
 platform/graphics/SystemFallbackFontCache.cpp
 platform/graphics/ca/GraphicsLayerCA.cpp
