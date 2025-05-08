@@ -1632,10 +1632,8 @@ void NetworkResourceLoader::tryStoreAsCacheEntry()
 void NetworkResourceLoader::didReceiveMainResourceResponse(const WebCore::ResourceResponse& response)
 {
     LOADER_RELEASE_LOG("didReceiveMainResourceResponse:");
-#if ENABLE(NETWORK_CACHE_SPECULATIVE_REVALIDATION)
     if (CheckedPtr speculativeLoadManager = m_cache ? m_cache->speculativeLoadManager() : nullptr)
         speculativeLoadManager->registerMainResourceLoadResponse(globalFrameID(), originalRequest(), response);
-#endif
 }
 
 void NetworkResourceLoader::initializeReportingEndpoints(const ResourceResponse& response)

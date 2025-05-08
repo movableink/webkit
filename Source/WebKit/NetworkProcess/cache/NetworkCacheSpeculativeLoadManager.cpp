@@ -24,8 +24,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(NETWORK_CACHE_SPECULATIVE_REVALIDATION)
 #include "NetworkCacheSpeculativeLoadManager.h"
 
 #include "Logging.h"
@@ -655,5 +653,3 @@ void SpeculativeLoadManager::retrieveSubresourcesEntry(const Key& storageKey, WT
 } // namespace NetworkCache
 
 } // namespace WebKit
-
-#endif // ENABLE(NETWORK_CACHE_SPECULATIVE_REVALIDATION)

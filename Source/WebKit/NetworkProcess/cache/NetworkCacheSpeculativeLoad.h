@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(NETWORK_CACHE_SPECULATIVE_REVALIDATION) || ENABLE(NETWORK_CACHE_STALE_WHILE_REVALIDATE)
-
 #include "NetworkCache.h"
 #include "NetworkCacheEntry.h"
 #include "NetworkLoadClient.h"
@@ -92,5 +90,3 @@ bool requestsHeadersMatch(const WebCore::ResourceRequest& speculativeValidationR
 
 } // namespace NetworkCache
 } // namespace WebKit
-
-#endif // ENABLE(NETWORK_CACHE_SPECULATIVE_REVALIDATION) || ENABLE(NETWORK_CACHE_STALE_WHILE_REVALIDATE)

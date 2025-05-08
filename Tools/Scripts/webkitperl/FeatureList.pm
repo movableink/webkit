@@ -105,8 +105,6 @@ my (
     $lcmsSupport,
     $mouseCursorScaleSupport,
     $navigatorStandaloneSupport,
-    $networkCacheSpeculativeRevalidationSupport,
-    $networkCacheStaleWhileRevalidateSupport,
     $notificationsSupport,
     $offscreenCanvasSupport,
     $offscreenCanvasInWorkersSupport,
@@ -299,12 +297,6 @@ my @features = (
 
     { option => "navigator-standalone", desc => "Toogle standalone navigator support",
       define => "ENABLE_NAVIGATOR_STANDALONE", value => \$navigatorStandaloneSupport },
-
-    { option => "network-cache-speculative-revalidation", desc => "Toogle network cache speculative revalidation support",
-      define => "ENABLE_NETWORK_CACHE_SPECULATIVE_REVALIDATION", value => \$networkCacheSpeculativeRevalidationSupport },
-
-    { option => "network-cache-stale-while-revalidate", desc => "Toogle network cache stale-while-revalidate caching strategy",
-      define => "ENABLE_NETWORK_CACHE_STALE_WHILE_REVALIDATE", value => \$networkCacheStaleWhileRevalidateSupport },
 
     { option => "notifications", desc => "Toggle Notifications support",
       define => "ENABLE_NOTIFICATIONS", value => \$notificationsSupport },
