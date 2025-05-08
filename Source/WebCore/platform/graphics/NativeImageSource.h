@@ -39,7 +39,7 @@ private:
     IntSize size(ImageOrientation = ImageOrientation::Orientation::FromImage) const final { return m_frame.size(); }
     DestinationColorSpace colorSpace() const final { return m_frame.nativeImage()->colorSpace(); }
     std::optional<Color> singlePixelSolidColor() const final { return m_frame.nativeImage()->singlePixelSolidColor(); }
-    bool hasHDRContent() const final { return colorSpace().usesITUR_2100TF(); }
+    bool hasHDRContent() const final { return m_frame.nativeImage()->hasHDRContent(); }
 
     const ImageFrame& primaryImageFrame(const std::optional<SubsamplingLevel>& = std::nullopt) final { return m_frame; }
 

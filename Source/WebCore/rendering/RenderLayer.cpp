@@ -5915,6 +5915,10 @@ static bool hasVisibleBoxDecorationsOrBackground(const RenderElement& renderer)
 #if HAVE(SUPPORT_HDR_DISPLAY)
 static bool rendererHasHDRContent(const RenderElement& renderer)
 {
+    auto& style = renderer.style();
+    if (style.dynamicRangeLimit() == Style::DynamicRangeLimit(CSS::Keyword::Standard { }))
+        return false;
+
     if (CheckedPtr imageRenderer = dynamicDowncast<RenderImage>(renderer)) {
         if (auto* cachedImage = imageRenderer->cachedImage()) {
             if (cachedImage->hasHDRContent())
@@ -5934,24 +5938,21 @@ static bool rendererHasHDRContent(const RenderElement& renderer)
 #endif
     }
 
-    auto styleHasHDRContent = [](const auto* style) {
-        if (!style)
-            return false;
-
-        if (style->hasBackgroundImage()) {
-            if (style->backgroundLayers().hasHDRContent())
+    auto styleHasHDRContent = [](const auto& style) {
+        if (style.hasBackgroundImage()) {
+            if (style.backgroundLayers().hasHDRContent())
                 return true;
         }
 
-        if (style->hasBorderImage()) {
-            auto image = style->borderImage().image();
+        if (style.hasBorderImage()) {
+            auto image = style.borderImage().image();
             if (auto* cachedImage = image ? image->cachedImage() : nullptr) {
                 if (cachedImage->hasHDRContent())
                     return true;
             }
         }
 
-        if (auto image = style->listStyleImage()) {
+        if (auto image = style.listStyleImage()) {
             if (auto* cachedImage = image->cachedImage()) {
                 if (cachedImage->hasHDRContent())
                     return true;
@@ -5961,7 +5962,7 @@ static bool rendererHasHDRContent(const RenderElement& renderer)
         return false;
     };
 
-    return styleHasHDRContent(&renderer.style());
+    return styleHasHDRContent(style);
 }
 #endif
 

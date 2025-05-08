@@ -122,7 +122,7 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
             orientation = currentFrameOrientation();
 
         auto headroom = options.headroom();
-        if (headroom == Headroom::FromImage && hasHDRContentForTesting())
+        if (hasHDRContentForTesting() && options.dynamicRangeLimit() != PlatformDynamicRangeLimit::standard())
             fillWithSolidColor(context, destinationRect, Color::gold, options.compositeOperator());
         else {
             if (headroom == Headroom::FromImage)
