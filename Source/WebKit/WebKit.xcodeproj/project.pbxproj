@@ -1102,7 +1102,6 @@
 		41DC459C1E3DBB2800B11F51 /* LibWebRTCSocketClient.h in Headers */ = {isa = PBXBuildFile; fileRef = 41DC459A1E3DBB2400B11F51 /* LibWebRTCSocketClient.h */; };
 		41E0A7CB23B645CD00561060 /* WebSocketChannel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 417915AC2256BB7400D6F97E /* WebSocketChannel.cpp */; };
 		41E242E026E0C908009A8C64 /* NetworkRTCUtilitiesCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = 41E242DF26E0C904009A8C64 /* NetworkRTCUtilitiesCocoa.mm */; };
-		41F898F028ED69470070549C /* LibWebRTCCodecs.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4172198A23B6128200AE5686 /* LibWebRTCCodecs.cpp */; };
 		41FAF5F51E3C0649001AE678 /* WebRTCResolver.h in Headers */ = {isa = PBXBuildFile; fileRef = 41FAF5F41E3C0641001AE678 /* WebRTCResolver.h */; };
 		41FAF5F81E3C1021001AE678 /* LibWebRTCResolver.h in Headers */ = {isa = PBXBuildFile; fileRef = 41FAF5F61E3C0B47001AE678 /* LibWebRTCResolver.h */; };
 		42057BEC2AD435E0001B963B /* DisbursementRequest.h in Headers */ = {isa = PBXBuildFile; fileRef = 42057BE92AD433C6001B963B /* DisbursementRequest.h */; };
@@ -20298,7 +20297,6 @@
 			files = (
 				2D9FB21C237523830049F936 /* AuxiliaryProcessMain.cpp in Sources */,
 				E31586D42AD610F30062ED2A /* ExtensionEventHandler.mm in Sources */,
-				41F898F028ED69470070549C /* LibWebRTCCodecs.cpp in Sources */,
 				2D9FB21D237523830049F936 /* XPCServiceMain.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
