@@ -476,7 +476,7 @@ public:
 
     IntPoint remoteFrameOffset() const final;
 #if PLATFORM(COCOA)
-    RemoteAXObjectRef remoteParentObject() const final;
+    RetainPtr<RemoteAXObjectRef> remoteParent() const final;
     FloatRect convertRectToPlatformSpace(const FloatRect&, AccessibilityConversionSpace) const final;
     RetainPtr<id> remoteFramePlatformElement() const override { return nil; }
 #endif

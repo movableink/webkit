@@ -1064,6 +1064,11 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::PlaceholderValue:
         stream << "PlaceholderValue";
         break;
+#if PLATFORM(COCOA)
+    case AXProperty::PlatformWidget:
+        stream << "PlatformWidget";
+        break;
+#endif
     case AXProperty::PosInSet:
         stream << "PosInSet";
         break;
@@ -1082,6 +1087,11 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::RemoteFramePlatformElement:
         stream << "RemoteFramePlatformElement";
         break;
+#if PLATFORM(COCOA)
+    case AXProperty::RemoteParent:
+        stream << "RemoteParent";
+        break;
+#endif
     case AXProperty::RolePlatformString:
         stream << "RolePlatformString";
         break;

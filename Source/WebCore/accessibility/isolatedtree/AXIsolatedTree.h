@@ -236,12 +236,18 @@ enum class AXProperty : uint16_t {
     OuterHTML,
     Path,
     PlaceholderValue,
+#if PLATFORM(COCOA)
+    PlatformWidget,
+#endif
     PosInSet,
     PreventKeyboardDOMEventDispatch,
     RadioButtonGroup,
     RelativeFrame,
     RemoteFrameOffset,
     RemoteFramePlatformElement,
+#if PLATFORM(COCOA)
+    RemoteParent,
+#endif
     RolePlatformString,
     RoleDescription,
     Rows,
@@ -301,6 +307,7 @@ using AXIDAndCharacterRange = std::pair<Markable<AXID>, CharacterRange>;
 using AXPropertyValueVariant = Variant<std::nullptr_t, Markable<AXID>, String, bool, int, unsigned, double, float, uint64_t, WallTime, DateComponentsType, AccessibilityButtonState, Color, std::shared_ptr<URL>, LayoutRect, FloatPoint, FloatRect, IntPoint, IntRect, std::pair<unsigned, unsigned>, std::optional<unsigned>, Vector<AccessibilityText>, Vector<AXID>, Vector<std::pair<Markable<AXID>, Markable<AXID>>>, Vector<String>, std::shared_ptr<Path>, OptionSet<AXAncestorFlag>, Vector<Vector<Markable<AXID>>>, CharacterRange, std::shared_ptr<AXIDAndCharacterRange>, TagName, std::optional<AccessibilityOrientation>
 #if PLATFORM(COCOA)
     , RetainPtr<NSAttributedString>
+    , RetainPtr<NSView>
     , RetainPtr<id>
     , OptionSet<SpeakAs>
 #endif // PLATFORM(COCOA)

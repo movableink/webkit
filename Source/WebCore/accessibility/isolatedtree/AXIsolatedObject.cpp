@@ -643,6 +643,7 @@ void AXIsolatedObject::setProperty(AXProperty property, AXPropertyValueVariant&&
         [](OptionSet<AXAncestorFlag>& typedValue) { return typedValue.isEmpty(); },
 #if PLATFORM(COCOA)
         [](RetainPtr<NSAttributedString>& typedValue) { return !typedValue; },
+        [](RetainPtr<NSView>& typedValue) { return !typedValue; },
         [](RetainPtr<id>& typedValue) { return !typedValue; },
 #endif
         [](Vector<Vector<Markable<AXID>>>& typedValue) { return typedValue.isEmpty(); },
@@ -2159,7 +2160,7 @@ Widget* AXIsolatedObject::widget() const
 PlatformWidget AXIsolatedObject::platformWidget() const
 {
 #if PLATFORM(COCOA)
-    return m_platformWidget.get();
+    return propertyValue<RetainPtr<NSView>>(AXProperty::PlatformWidget).get();
 #else
     return m_platformWidget;
 #endif

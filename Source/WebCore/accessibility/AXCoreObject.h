@@ -1106,7 +1106,7 @@ public:
     virtual AXCoreObject* focusedUIElement() const = 0;
 
 #if PLATFORM(COCOA)
-    virtual RemoteAXObjectRef remoteParentObject() const = 0;
+    virtual RetainPtr<RemoteAXObjectRef> remoteParent() const = 0;
 #endif
     virtual AXCoreObject* parentObject() const = 0;
     virtual AXCoreObject* parentObjectUnignored() const;

@@ -112,8 +112,8 @@ void AXIsolatedObject::initializePlatformProperties(const Ref<const Accessibilit
     }
 
     if (object->isScrollView()) {
-        m_platformWidget = object->platformWidget();
-        m_remoteParent = object->remoteParentObject();
+        setProperty(AXProperty::PlatformWidget, RetainPtr(object->platformWidget()));
+        setProperty(AXProperty::RemoteParent, object->remoteParent());
     }
 }
 
@@ -135,13 +135,13 @@ AttributedStringStyle AXIsolatedObject::stylesForAttributedString() const
     };
 }
 
-RemoteAXObjectRef AXIsolatedObject::remoteParentObject() const
+RetainPtr<RemoteAXObjectRef> AXIsolatedObject::remoteParent() const
 {
     auto* scrollView = Accessibility::findAncestor<AXCoreObject>(*this, true, [] (const AXCoreObject& object) {
         return object.isScrollView();
     });
     auto* isolatedObject = dynamicDowncast<AXIsolatedObject>(scrollView);
-    return isolatedObject ? isolatedObject->m_remoteParent.get() : nil;
+    return isolatedObject ? isolatedObject->propertyValue<RetainPtr<id>>(AXProperty::RemoteParent) : nil;
 }
 
 FloatRect AXIsolatedObject::primaryScreenRect() const

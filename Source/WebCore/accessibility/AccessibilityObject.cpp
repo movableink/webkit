@@ -2110,7 +2110,7 @@ const AccessibilityScrollView* AccessibilityObject::ancestorAccessibilityScrollV
 }
 
 #if PLATFORM(COCOA)
-RemoteAXObjectRef AccessibilityObject::remoteParentObject() const
+RetainPtr<RemoteAXObjectRef> AccessibilityObject::remoteParent() const
 {
     auto* document = this->document();
     auto* frame = document ? document->frame() : nullptr;

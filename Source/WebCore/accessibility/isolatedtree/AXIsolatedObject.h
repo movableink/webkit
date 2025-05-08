@@ -547,7 +547,7 @@ private:
     bool isPlugin() const final { return boolAttributeValue(AXProperty::IsPlugin); }
 
 #if PLATFORM(COCOA)
-    RemoteAXObjectRef remoteParentObject() const final;
+    RetainPtr<RemoteAXObjectRef> remoteParent() const final;
     FloatRect convertRectToPlatformSpace(const FloatRect&, AccessibilityConversionSpace) const final;
 #endif
     Page* page() const final;
@@ -574,21 +574,20 @@ private:
     String innerHTML() const final;
     String outerHTML() const final;
 
-    // FIXME: Make this a ThreadSafeWeakPtr<AXIsolatedTree>.
-    RefPtr<AXIsolatedTree> m_cachedTree;
-    Markable<AXID> m_parentID;
-    bool m_childrenDirty { true };
     Vector<AXID> m_childrenIDs;
     Vector<Ref<AXCoreObject>> m_children;
     AXPropertyVector m_properties;
+
+    // FIXME: Make this a ThreadSafeWeakPtr<AXIsolatedTree>.
+    RefPtr<AXIsolatedTree> m_cachedTree;
+    Markable<AXID> m_parentID;
+
     OptionSet<AXPropertyFlag> m_propertyFlags;
     // Some objects (e.g. display:contents) form their geometry through their children.
     bool m_getsGeometryFromChildren { false };
+    bool m_childrenDirty { true };
 
-#if PLATFORM(COCOA)
-    RetainPtr<NSView> m_platformWidget;
-    RetainPtr<RemoteAXObjectRef> m_remoteParent;
-#else
+#if !PLATFORM(COCOA)
     PlatformWidget m_platformWidget;
 #endif
 };

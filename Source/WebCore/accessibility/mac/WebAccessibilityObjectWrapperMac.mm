@@ -964,7 +964,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 - (id)remoteAccessibilityParentObject
 {
     RefPtr<AXCoreObject> backingObject = self.axBackingObject;
-    return backingObject ? backingObject->remoteParentObject() : nil;
+    return backingObject ? backingObject->remoteParent().get() : nil;
 }
 
 static void convertToVector(NSArray* array, AccessibilityObject::AccessibilityChildrenVector& vector)
@@ -1144,7 +1144,7 @@ static id scrollViewParent(AXCoreObject& axObject)
     if (auto platformWidget = axObject.platformWidget())
         return NSAccessibilityUnignoredAncestor(platformWidget);
 
-    return axObject.remoteParentObject();
+    return axObject.remoteParent().get();
 }
 
 - (id)windowElement:(NSString *)attributeName
