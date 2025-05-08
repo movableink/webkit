@@ -696,6 +696,10 @@ set(bmalloc_LIBRARIES
     ${CMAKE_DL_LIBS}
 )
 
+if (ENABLE_MALLOC_HEAP_BREAKDOWN)
+    list(APPEND bmalloc_FRAMEWORKS ${MALLOC_HEAP_BREAKDOWN_FRAMEWORKS})
+endif ()
+
 if (ATOMICS_REQUIRE_LIBATOMIC)
     list(APPEND bmalloc_LIBRARIES atomic)
 endif ()
@@ -714,6 +718,10 @@ add_definitions(-DPAS_BMALLOC=1)
 
 if (MSVC)
     add_compile_options(/wd4206)
+endif ()
+
+if (ENABLE_MALLOC_HEAP_BREAKDOWN)
+    add_definitions(-DBENABLE_MALLOC_HEAP_BREAKDOWN=1)
 endif ()
 
 WEBKIT_FRAMEWORK_DECLARE(bmalloc)

@@ -723,6 +723,10 @@ if (NOT USE_SYSTEM_MALLOC)
     list(APPEND WebKit_FRAMEWORKS bmalloc)
 endif ()
 
+if (ENABLE_MALLOC_HEAP_BREAKDOWN)
+    list(APPEND WebKit_FRAMEWORKS ${MALLOC_HEAP_BREAKDOWN_FRAMEWORKS})
+endif ()
+
 set(WebProcess_LIBRARIES WebKit)
 set(NetworkProcess_LIBRARIES WebKit)
 set(GPUProcess_LIBRARIES WebKit)

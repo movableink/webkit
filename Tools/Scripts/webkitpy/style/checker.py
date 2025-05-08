@@ -228,6 +228,22 @@ _PATH_RULES_SPECIFIER = [
      ["-readability/naming/underscores"]),
 
     ([
+     # MALLOC_HEAP_BREAKDOWN framework for non-apple ports exposes C-style header.
+     os.path.join('Source', 'WTF', 'wtf', 'malloc_heap_breakdown', 'malloc', 'malloc.h')],
+     ["-readability/naming/underscores", "-readability/parameter_name", "-readability/null"]),
+
+    ([
+     # MALLOC_HEAP_BREAKDOWN framework for non-apple ports is a first-party code, but it doesn't
+     # use WTF as it's indirect WTF's dependency.
+     os.path.join('Source', 'WTF', 'wtf', 'malloc_heap_breakdown', 'main.cpp')],
+     ["-readability/naming/underscores",
+      "-safercpp/atoi",
+      "-safercpp/printf",
+      "-runtime/lock_guard",
+      "-runtime/wtf_make_unique",
+      "-runtime/wtf_move"]),
+
+    ([
       # To use GStreamer GL without conflicts of GL symbols,
       # we should include gst/gl/gl.h before including OpenGL[ES]Shims
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'MediaPlayerPrivateGStreamer.cpp')],

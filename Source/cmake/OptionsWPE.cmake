@@ -423,6 +423,10 @@ if (USE_LIBBACKTRACE)
     endif ()
 endif ()
 
+if (ENABLE_MALLOC_HEAP_BREAKDOWN)
+    set(MALLOC_HEAP_BREAKDOWN_FRAMEWORKS MallocHeapBreakdown)
+endif ()
+
 # Using DERIVED_SOURCES_DIR is deprecated
 set(DERIVED_SOURCES_DIR "${CMAKE_BINARY_DIR}/DerivedSources")
 set(DERIVED_SOURCES_WEBKIT_DIR ${DERIVED_SOURCES_DIR}/WebKit)

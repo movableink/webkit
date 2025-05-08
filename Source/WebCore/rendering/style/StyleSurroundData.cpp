@@ -23,6 +23,7 @@
 #include "StyleSurroundData.h"
 
 #include "RenderStyleDifference.h"
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 

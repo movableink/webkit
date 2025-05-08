@@ -444,6 +444,10 @@ if (APPLE)
     set(ENABLE_GTKDOC OFF)
 endif ()
 
+if (ENABLE_MALLOC_HEAP_BREAKDOWN)
+    set(MALLOC_HEAP_BREAKDOWN_FRAMEWORKS MallocHeapBreakdown)
+endif ()
+
 # Using DERIVED_SOURCES_DIR is deprecated
 set(DERIVED_SOURCES_DIR "${CMAKE_BINARY_DIR}/DerivedSources")
 

@@ -45,6 +45,7 @@ set(TestRunnerShared_DERIVED_SOURCES_DIR "${CMAKE_BINARY_DIR}/TestRunnerShared/D
 set(DumpRenderTree_DERIVED_SOURCES_DIR "${CMAKE_BINARY_DIR}/DumpRenderTree/DerivedSources")
 set(WebKitTestRunner_DERIVED_SOURCES_DIR "${CMAKE_BINARY_DIR}/WebKitTestRunner/DerivedSources")
 
+set(MallocHeapBreakdown_FRAMEWORK_HEADERS_DIR "${CMAKE_BINARY_DIR}/MallocHeapBreakdown/Headers")
 set(bmalloc_FRAMEWORK_HEADERS_DIR "${CMAKE_BINARY_DIR}/bmalloc/Headers")
 set(ANGLE_FRAMEWORK_HEADERS_DIR "${CMAKE_BINARY_DIR}/ANGLE/Headers")
 set(Skia_FRAMEWORK_HEADERS_DIR "${CMAKE_BINARY_DIR}/Skia/Headers")

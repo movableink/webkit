@@ -33,6 +33,7 @@
 #include "CSSMarkup.h"
 #include "CSSPropertyParser.h"
 #include <wtf/HexNumber.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
