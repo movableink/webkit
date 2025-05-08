@@ -112,7 +112,7 @@ const ViewportArguments& LocalFrame::viewportArguments() const
 
 void LocalFrame::setViewportArguments(const ViewportArguments& arguments)
 {
-    m_viewportArguments = arguments;
+    m_viewportArguments.get() = arguments;
 }
 
 NSArray *LocalFrame::wordsInCurrentParagraph() const
@@ -611,20 +611,20 @@ void LocalFrame::updateLayout() const
         view->adjustViewSize();
 }
 
-NSRect LocalFrame::caretRect()
+IntRect LocalFrame::caretRect()
 {
     VisibleSelection visibleSelection = selection().selection();
     if (visibleSelection.isNone())
-        return CGRectZero;
+        return { };
     return visibleSelection.isCaret() ? selection().absoluteCaretBounds() : VisiblePosition(visibleSelection.end()).absoluteCaretBounds();
 }
 
-NSRect LocalFrame::rectForScrollToVisible()
+IntRect LocalFrame::rectForScrollToVisible()
 {
     VisibleSelection selection(this->selection().selection());
 
     if (selection.isNone())
-        return CGRectZero;
+        return { };
 
     if (selection.isCaret())
         return caretRect();
@@ -668,46 +668,46 @@ void LocalFrame::dispatchPageShowEventBeforeResume()
 
 void LocalFrame::setRangedSelectionBaseToCurrentSelection()
 {
-    m_rangedSelectionBase = selection().selection();
+    m_rangedSelectionBase.get() = selection().selection();
 }
 
 void LocalFrame::setRangedSelectionBaseToCurrentSelectionStart()
 {
     const VisibleSelection& visibleSelection = selection().selection();
-    m_rangedSelectionBase = VisibleSelection(visibleSelection.start(), visibleSelection.affinity());
+    m_rangedSelectionBase.get() = VisibleSelection(visibleSelection.start(), visibleSelection.affinity());
 }
 
 void LocalFrame::setRangedSelectionBaseToCurrentSelectionEnd()
 {
     const VisibleSelection& visibleSelection = selection().selection();
-    m_rangedSelectionBase = VisibleSelection(visibleSelection.end(), visibleSelection.affinity());
+    m_rangedSelectionBase.get() = VisibleSelection(visibleSelection.end(), visibleSelection.affinity());
 }
 
 VisibleSelection LocalFrame::rangedSelectionBase() const
 {
-    return m_rangedSelectionBase;
+    return m_rangedSelectionBase.get();
 }
 
 void LocalFrame::clearRangedSelectionInitialExtent()
 {
-    m_rangedSelectionInitialExtent = VisibleSelection();
+    m_rangedSelectionInitialExtent.get() = VisibleSelection();
 }
 
 void LocalFrame::setRangedSelectionInitialExtentToCurrentSelectionStart()
 {
     const VisibleSelection& visibleSelection = selection().selection();
-    m_rangedSelectionInitialExtent = VisibleSelection(visibleSelection.start(), visibleSelection.affinity());
+    m_rangedSelectionInitialExtent.get() = VisibleSelection(visibleSelection.start(), visibleSelection.affinity());
 }
 
 void LocalFrame::setRangedSelectionInitialExtentToCurrentSelectionEnd()
 {
     const VisibleSelection& visibleSelection = selection().selection();
-    m_rangedSelectionInitialExtent = VisibleSelection(visibleSelection.end(), visibleSelection.affinity());
+    m_rangedSelectionInitialExtent.get() = VisibleSelection(visibleSelection.end(), visibleSelection.affinity());
 }
 
 VisibleSelection LocalFrame::rangedSelectionInitialExtent() const
 {
-    return m_rangedSelectionInitialExtent;
+    return m_rangedSelectionInitialExtent.get();
 }
 
 void LocalFrame::recursiveSetUpdateAppearanceEnabled(bool enabled)

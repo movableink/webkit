@@ -181,6 +181,11 @@ LocalFrame::LocalFrame(Page& page, ClientCreator&& clientCreator, FrameIdentifie
     : Frame(page, identifier, FrameType::Local, ownerElement, parent, opener, WTFMove(frameTreeSyncData))
     , m_loader(makeUniqueRefWithoutRefCountedCheck<FrameLoader>(*this, WTFMove(clientCreator)))
     , m_script(makeUniqueRef<ScriptController>(*this))
+#if PLATFORM(IOS_FAMILY)
+    , m_viewportArguments(makeUniqueRef<ViewportArguments>())
+    , m_rangedSelectionBase(makeUniqueRef<VisibleSelection>())
+    , m_rangedSelectionInitialExtent(makeUniqueRef<VisibleSelection>())
+#endif
     , m_pageZoomFactor(parentPageZoomFactor(this))
     , m_textZoomFactor(parentTextZoomFactor(this))
     , m_rootFrame(WebCore::rootFrame(*this))

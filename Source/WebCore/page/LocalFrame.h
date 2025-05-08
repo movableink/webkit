@@ -35,12 +35,6 @@
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakRef.h>
 
-#if PLATFORM(IOS_FAMILY)
-#include "Timer.h"
-#include "ViewportArguments.h"
-#include "VisibleSelection.h"
-#endif
-
 #if PLATFORM(WIN)
 #include "FrameWin.h"
 #endif
@@ -74,6 +68,7 @@ class Document;
 class Editor;
 class Element;
 class EventHandler;
+class FloatPoint;
 class FloatSize;
 class FrameDestructionObserver;
 class FrameLoader;
@@ -101,6 +96,12 @@ class VisiblePosition;
 class Widget;
 
 enum class AdjustViewSize : bool;
+
+#if PLATFORM(IOS_FAMILY)
+class VisibleSelection;
+struct ViewportArguments;
+#endif
+
 enum class SandboxFlag : uint16_t;
 enum class UserScriptInjectionTime : bool;
 enum class WindowProxyProperty : uint8_t;
@@ -282,8 +283,8 @@ public:
 #if PLATFORM(IOS_FAMILY)
     WEBCORE_EXPORT int preferredHeight() const;
     WEBCORE_EXPORT void updateLayout() const;
-    WEBCORE_EXPORT NSRect caretRect();
-    WEBCORE_EXPORT NSRect rectForScrollToVisible();
+    WEBCORE_EXPORT IntRect caretRect();
+    WEBCORE_EXPORT IntRect rectForScrollToVisible();
 
     // This function is used by Legacy WebKit.
     WEBCORE_EXPORT void setTimersPaused(bool);
@@ -389,10 +390,10 @@ private:
 
     void setTimersPausedInternal(bool);
 
-    ViewportArguments m_viewportArguments;
+    UniqueRef<ViewportArguments> m_viewportArguments;
+    UniqueRef<VisibleSelection> m_rangedSelectionBase;
+    UniqueRef<VisibleSelection> m_rangedSelectionInitialExtent;
     bool m_selectionChangeCallbacksDisabled { false };
-    VisibleSelection m_rangedSelectionBase;
-    VisibleSelection m_rangedSelectionInitialExtent;
 #endif
 
     float m_pageZoomFactor;
