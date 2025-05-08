@@ -87,6 +87,7 @@ public:
 
 protected:
     virtual bool hasCachedListData() const = 0;
+    virtual void didUpdateCachedListData() { }
     virtual void updateList(CompletionHandler<void()>&&) = 0;
 #ifdef __OBJC__
     virtual WPResourceType resourceType() const = 0;
@@ -126,7 +127,6 @@ protected:
         didUpdateCachedListData();
     }
 
-    virtual void didUpdateCachedListData() { }
     bool hasCachedListData() const final { return !m_cachedListData.isEmpty(); }
 
     BackingDataType m_cachedListData;
