@@ -708,7 +708,17 @@ GRefPtr<GstCaps> capsFromSDPMedia(const GstSDPMedia* media)
                 if (!fieldId.startsWith("extmap-"_s))
                     return true;
 
-                auto uri = StringView::fromLatin1(g_value_get_string(value));
+                StringView uri;
+                if (G_VALUE_HOLDS_STRING(value))
+                    uri = StringView::fromLatin1(g_value_get_string(value));
+                else if (GST_VALUE_HOLDS_ARRAY(value) && gst_value_array_get_size(value) >= 2) {
+                    // Handle the case where the extension is declared as an array (direction, uri, parameters).
+                    const auto uriValue = gst_value_array_get_value(value, 1);
+                    uri = StringView::fromLatin1(g_value_get_string(uriValue));
+                }
+                if (uri.isEmpty()) [[unlikely]]
+                    return true;
+
                 return GStreamerRegistryScanner::singleton().isRtpHeaderExtensionSupported(uri);
             });
 
