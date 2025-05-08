@@ -63,11 +63,6 @@ RenderPtr<RenderElement> HTMLProgressElement::createElementRenderer(RenderStyle&
     return createRenderer<RenderProgress>(*this, WTFMove(style));
 }
 
-bool HTMLProgressElement::childShouldCreateRenderer(const Node& child) const
-{
-    return hasShadowRootParent(child) && HTMLElement::childShouldCreateRenderer(child);
-}
-
 RenderProgress* HTMLProgressElement::renderProgress() const
 {
     if (auto* renderProgress = dynamicDowncast<RenderProgress>(renderer()))
