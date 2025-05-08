@@ -29,7 +29,6 @@
 #if ENABLE(REMOTE_INSPECTOR)
 #include "AutomationSessionClientWin.h"
 #include "WebAutomationSession.h"
-#include "WebsiteDataStore.h"
 #include <wtf/RunLoop.h>
 
 namespace WebKit {
@@ -61,12 +60,6 @@ void AutomationClient::requestAutomationSession(const String& sessionIdentifier,
     session->setSessionIdentifier(sessionIdentifier);
     session->setClient(WTF::makeUnique<AutomationSessionClient>(sessionIdentifier, capabilities));
     m_processPool->setAutomationSession(WTFMove(session));
-
-    if (capabilities.acceptInsecureCertificates) {
-        WebsiteDataStore::forEachWebsiteDataStore([] (auto& dataStore) {
-            dataStore.setIgnoreTLSErrors(true);
-        });
-    }
 }
 
 void AutomationClient::closeAutomationSession()
