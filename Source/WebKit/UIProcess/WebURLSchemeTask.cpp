@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -146,7 +146,7 @@ auto WebURLSchemeTask::didPerformRedirection(WebCore::ResourceResponse&& respons
     return ExceptionType::None;
 }
 
-auto WebURLSchemeTask::didReceiveResponse(const ResourceResponse& response) -> ExceptionType
+auto WebURLSchemeTask::didReceiveResponse(ResourceResponse&& response) -> ExceptionType
 {
     ASSERT(RunLoop::isMain());
 
@@ -167,7 +167,7 @@ auto WebURLSchemeTask::didReceiveResponse(const ResourceResponse& response) -> E
     if (isSync())
         m_syncResponse = response;
 
-    m_process->send(Messages::WebPage::URLSchemeTaskDidReceiveResponse(m_urlSchemeHandler->identifier(), m_resourceLoaderID, response), *m_webPageID);
+    m_process->send(Messages::WebPage::URLSchemeTaskDidReceiveResponse(m_urlSchemeHandler->identifier(), m_resourceLoaderID, WTFMove(response)), *m_webPageID);
     return ExceptionType::None;
 }
 

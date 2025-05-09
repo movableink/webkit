@@ -125,7 +125,7 @@ static void processResponse(Ref<Client>&& client, Expected<Ref<FetchResponse>, s
             resourceResponse.setCertificateInfo(WTFMove(certificateInfo));
     }
 
-    client->didReceiveResponse(resourceResponse);
+    client->didReceiveResponse(WTFMove(resourceResponse));
 
     if (response->isBodyReceivedByChunk()) {
         client->setCancelledCallback([response = WeakPtr { response.get() }] {

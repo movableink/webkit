@@ -58,7 +58,7 @@ void AboutSchemeHandler::platformStartTask(WebPageProxy&, WebURLSchemeTask& task
 
     if (auto* handler = handlerForURL(url)) {
         handler->loadContent(url, [task = Ref { task }](auto&& response, auto&& buffer) mutable {
-            task->didReceiveResponse(response);
+            task->didReceiveResponse(WTFMove(response));
             task->didReceiveData(WTFMove(buffer));
             task->didComplete({ });
         });
@@ -66,7 +66,7 @@ void AboutSchemeHandler::platformStartTask(WebPageProxy&, WebURLSchemeTask& task
     }
 
     WebCore::ResourceResponse response(WTF::URL { url }, "text/html"_s, 0, "UTF-8"_s);
-    task.didReceiveResponse(response);
+    task.didReceiveResponse(WTFMove(response));
     task.didComplete({ });
 }
 

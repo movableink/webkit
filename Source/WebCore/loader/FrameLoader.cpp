@@ -3605,7 +3605,8 @@ ResourceLoaderIdentifier FrameLoader::loadResourceSynchronously(const ResourceRe
 
     applyUserAgentIfNeeded(initialRequest);
 
-    ResourceRequest newRequest(initialRequest);
+    URL initialRequestURL = initialRequest.url();
+    ResourceRequest newRequest = WTFMove(initialRequest);
     auto identifier = requestFromDelegate(newRequest, IsMainResourceLoad::No, error);
 
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -3617,7 +3618,7 @@ ResourceLoaderIdentifier FrameLoader::loadResourceSynchronously(const ResourceRe
                 ContentExtensions::applyResultsToRequest(WTFMove(results), page.get(), newRequest);
                 if (blockedLoad) {
                     newRequest = { };
-                    error = ResourceError(errorDomainWebKitInternal, 0, initialRequest.url(), emptyString());
+                    error = ResourceError(errorDomainWebKitInternal, 0, WTFMove(initialRequestURL), emptyString());
                     response = { };
                     data = nullptr;
                 }

@@ -40,9 +40,9 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(WebsitePoliciesData);
 void WebsitePoliciesData::applyToDocumentLoader(WebsitePoliciesData&& websitePolicies, WebCore::DocumentLoader& documentLoader)
 {
     documentLoader.setCustomHeaderFields(WTFMove(websitePolicies.customHeaderFields));
-    documentLoader.setCustomUserAgent(websitePolicies.customUserAgent);
-    documentLoader.setCustomUserAgentAsSiteSpecificQuirks(websitePolicies.customUserAgentAsSiteSpecificQuirks);
-    documentLoader.setCustomNavigatorPlatform(websitePolicies.customNavigatorPlatform);
+    documentLoader.setCustomUserAgent(WTFMove(websitePolicies.customUserAgent));
+    documentLoader.setCustomUserAgentAsSiteSpecificQuirks(WTFMove(websitePolicies.customUserAgentAsSiteSpecificQuirks));
+    documentLoader.setCustomNavigatorPlatform(WTFMove(websitePolicies.customNavigatorPlatform));
     documentLoader.setAllowPrivacyProxy(websitePolicies.allowPrivacyProxy);
 
 #if ENABLE(DEVICE_ORIENTATION)

@@ -59,7 +59,7 @@ void InspectorResourceURLSchemeHandler::platformStartTask(WebPageProxy&, WebURLS
     WebCore::ResourceResponse response(WTFMove(requestURL), WTFMove(contentType), file->size(), "UTF-8"_s);
     auto data = WebCore::SharedBuffer::create(file->span());
 
-    task.didReceiveResponse(response);
+    task.didReceiveResponse(WTFMove(response));
     task.didReceiveData(WTFMove(data));
     task.didComplete({ });
 }

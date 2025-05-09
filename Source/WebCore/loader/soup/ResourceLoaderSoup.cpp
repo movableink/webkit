@@ -70,7 +70,7 @@ void ResourceLoader::loadGResource()
         response.setHTTPStatusText("OK"_s);
         response.setHTTPHeaderField(HTTPHeaderName::ContentType, contentTypeString);
         response.setSource(ResourceResponse::Source::Network);
-        loader->deliverResponseAndData(response, SharedBuffer::create(bytes.get()));
+        loader->deliverResponseAndData(WTFMove(response), SharedBuffer::create(bytes.get()));
     }, protectedThis.leakRef()));
 
     g_task_set_priority(task.get(), RunLoopSourcePriority::AsyncIONetwork);

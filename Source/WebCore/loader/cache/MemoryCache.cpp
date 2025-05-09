@@ -2,7 +2,7 @@
     Copyright (C) 1998 Lars Knoll (knoll@mpi-hd.mpg.de)
     Copyright (C) 2001 Dirk Mueller (mueller@kde.org)
     Copyright (C) 2002 Waldo Bastian (bastian@kde.org)
-    Copyright (C) 2004, 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2025 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -208,7 +208,7 @@ CachedResource* MemoryCache::resourceForRequestImpl(const ResourceRequest& reque
     ASSERT(isMainThread());
     URL url = removeFragmentIdentifierIfNeeded(request.url());
 
-    auto key = std::make_pair(url, request.cachePartition());
+    auto key = std::make_pair(WTFMove(url), request.cachePartition());
     return resources.get(key).get();
 }
 

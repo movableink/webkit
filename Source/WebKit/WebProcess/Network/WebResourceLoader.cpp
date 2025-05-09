@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -200,7 +200,7 @@ void WebResourceLoader::didReceiveResponse(ResourceResponse&& response, PrivateR
                 return;
             }
 
-            coreLoader->didReceiveResponse(inspectorResponse, [this, protectedThis = Ref { *this }, interceptedRequestIdentifier, policyDecisionCompletionHandler = WTFMove(policyDecisionCompletionHandler), overrideData = WTFMove(overrideData)]() mutable {
+            coreLoader->didReceiveResponse(ResourceResponse { inspectorResponse }, [this, protectedThis = Ref { *this }, interceptedRequestIdentifier, policyDecisionCompletionHandler = WTFMove(policyDecisionCompletionHandler), overrideData = WTFMove(overrideData)]() mutable {
                 RefPtr coreLoader = m_coreLoader;
                 if (policyDecisionCompletionHandler)
                     policyDecisionCompletionHandler();
@@ -224,7 +224,7 @@ void WebResourceLoader::didReceiveResponse(ResourceResponse&& response, PrivateR
         return;
     }
 
-    coreLoader->didReceiveResponse(response, WTFMove(policyDecisionCompletionHandler));
+    coreLoader->didReceiveResponse(WTFMove(response), WTFMove(policyDecisionCompletionHandler));
 }
 
 void WebResourceLoader::didReceiveData(IPC::SharedBufferReference&& data, uint64_t bytesTransferredOverNetwork)

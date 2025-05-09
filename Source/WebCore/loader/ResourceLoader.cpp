@@ -213,9 +213,9 @@ void ResourceLoader::init(ResourceRequest&& clientRequest, CompletionHandler<voi
     });
 }
 
-void ResourceLoader::deliverResponseAndData(const ResourceResponse& response, RefPtr<FragmentedSharedBuffer>&& buffer)
+void ResourceLoader::deliverResponseAndData(ResourceResponse&& response, RefPtr<FragmentedSharedBuffer>&& buffer)
 {
-    didReceiveResponse(response, [this, protectedThis = Ref { *this }, buffer = WTFMove(buffer)]() mutable {
+    didReceiveResponse(WTFMove(response), [this, protectedThis = Ref { *this }, buffer = WTFMove(buffer)]() mutable {
         if (reachedTerminalState())
             return;
 
@@ -350,7 +350,7 @@ void ResourceLoader::loadDataURL()
 
         auto dataSize = decodeResult->data.size();
         ResourceResponse dataResponse = ResourceResponse::dataURLResponse(url, decodeResult.value());
-        this->didReceiveResponse(dataResponse, [this, protectedThis = WTFMove(protectedThis), dataSize, data = SharedBuffer::create(WTFMove(decodeResult->data))]() {
+        this->didReceiveResponse(WTFMove(dataResponse), [this, protectedThis = WTFMove(protectedThis), dataSize, data = SharedBuffer::create(WTFMove(decodeResult->data))]() {
             if (!this->reachedTerminalState() && dataSize && m_request.httpMethod() != "HEAD"_s)
                 this->didReceiveBuffer(data, dataSize, DataPayloadWholeResource);
 
@@ -593,7 +593,7 @@ void ResourceLoader::didBlockAuthenticationChallenge()
         frame->protectedDocument()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, makeString("Blocked "_s, m_request.url().stringCenterEllipsizedToLength(), " from asking for credentials because it is a cross-origin request."_s));
 }
 
-void ResourceLoader::didReceiveResponse(const ResourceResponse& r, CompletionHandler<void()>&& policyCompletionHandler)
+void ResourceLoader::didReceiveResponse(ResourceResponse&& r, CompletionHandler<void()>&& policyCompletionHandler)
 {
     ASSERT(!m_reachedTerminalState);
     CompletionHandlerCallingScope completionHandlerCaller(WTFMove(policyCompletionHandler));
@@ -624,7 +624,7 @@ void ResourceLoader::didReceiveResponse(const ResourceResponse& r, CompletionHan
 
     logResourceResponseSource(frame.get(), r.source());
 
-    m_response = r;
+    m_response = WTFMove(r);
 
     RefPtr frameLoader = this->frameLoader();
     if (frameLoader && m_options.sendLoadCallbacks == SendCallbackPolicy::SendCallbacks && m_identifier)
@@ -823,7 +823,7 @@ void ResourceLoader::didReceiveResponseAsync(ResourceHandle*, ResourceResponse&&
         completionHandler();
         return;
     }
-    didReceiveResponse(response, WTFMove(completionHandler));
+    didReceiveResponse(WTFMove(response), WTFMove(completionHandler));
 }
 
 void ResourceLoader::didReceiveData(ResourceHandle*, const SharedBuffer& buffer, int encodedDataLength)

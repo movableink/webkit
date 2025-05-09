@@ -572,7 +572,7 @@ void DocumentLoader::handleSubstituteDataLoadNow()
     }
 #endif
 
-    responseReceived(response, nullptr);
+    responseReceived(WTFMove(response), nullptr);
 }
 
 bool DocumentLoader::setControllingServiceWorkerRegistration(ServiceWorkerRegistrationData&& data)
@@ -917,7 +917,7 @@ bool DocumentLoader::shouldClearContentSecurityPolicyForResponse(const ResourceR
     return response.httpHeaderField(HTTPHeaderName::ContentSecurityPolicy).isNull() && !m_isLoadingMultipartContent;
 }
 
-void DocumentLoader::responseReceived(CachedResource& resource, const ResourceResponse& response, CompletionHandler<void()>&& completionHandler)
+void DocumentLoader::responseReceived(const CachedResource& resource, const ResourceResponse& response, CompletionHandler<void()>&& completionHandler)
 {
     ASSERT_UNUSED(resource, m_mainResource == &resource);
 
@@ -954,21 +954,21 @@ void DocumentLoader::responseReceived(CachedResource& resource, const ResourceRe
     }
 
     if (m_canUseServiceWorkers && response.source() == ResourceResponse::Source::MemoryCache) {
-        matchRegistration(response.url(), [this, protectedThis = Ref { *this }, response, completionHandler = WTFMove(completionHandler)](auto&& registrationData) mutable {
+        matchRegistration(response.url(), [this, protectedThis = Ref { *this }, response = ResourceResponse { response }, completionHandler = WTFMove(completionHandler)](auto&& registrationData) mutable {
             if (!m_mainDocumentError.isNull() || !m_frame) {
                 completionHandler();
                 return;
             }
             if (registrationData)
                 m_serviceWorkerRegistrationData = makeUnique<ServiceWorkerRegistrationData>(WTFMove(*registrationData));
-            responseReceived(response, WTFMove(completionHandler));
+            responseReceived(WTFMove(response), WTFMove(completionHandler));
         });
         return;
     }
-    responseReceived(response, WTFMove(completionHandler));
+    responseReceived(ResourceResponse { response }, WTFMove(completionHandler));
 }
 
-void DocumentLoader::responseReceived(const ResourceResponse& response, CompletionHandler<void()>&& completionHandler)
+void DocumentLoader::responseReceived(ResourceResponse&& response, CompletionHandler<void()>&& completionHandler)
 {
     ASSERT(response.certificateInfo());
     CompletionHandlerCallingScope completionHandlerCaller(WTFMove(completionHandler));
@@ -1027,7 +1027,7 @@ void DocumentLoader::responseReceived(const ResourceResponse& response, Completi
     } else if (response.isMultipart())
         m_isLoadingMultipartContent = true;
 
-    m_response = response;
+    m_response = WTFMove(response);
 
     if (m_identifierForLoadWithoutResourceLoader) {
         if (m_mainResource && m_mainResource->wasRedirected()) {
@@ -2589,7 +2589,7 @@ void DocumentLoader::addPendingContentExtensionDisplayNoneSelector(const String&
 
 #if USE(QUICK_LOOK)
 
-void DocumentLoader::previewResponseReceived(CachedResource& resource, const ResourceResponse& response)
+void DocumentLoader::previewResponseReceived(const CachedResource& resource, const ResourceResponse& response)
 {
     ASSERT_UNUSED(resource, m_mainResource == &resource);
     m_response = response;

@@ -249,7 +249,7 @@ void RemoteInspectorProtocolHandler::platformStartTask(WebPageProxy& pageProxy, 
     auto html = htmlBuilder.toString().utf8();
     auto data = SharedBuffer::create(html.span());
     ResourceResponse response(WTFMove(requestURL), "text/html"_s, html.length(), "UTF-8"_s);
-    task.didReceiveResponse(response);
+    task.didReceiveResponse(WTFMove(response));
     task.didReceiveData(WTFMove(data));
     task.didComplete(ResourceError());
 }

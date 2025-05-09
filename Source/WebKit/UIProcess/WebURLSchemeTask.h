@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -82,7 +82,7 @@ public:
     };
     ExceptionType willPerformRedirection(WebCore::ResourceResponse&&, WebCore::ResourceRequest&&,  Function<void(WebCore::ResourceRequest&&)>&&);
     ExceptionType didPerformRedirection(WebCore::ResourceResponse&&, WebCore::ResourceRequest&&);
-    ExceptionType didReceiveResponse(const WebCore::ResourceResponse&);
+    ExceptionType didReceiveResponse(WebCore::ResourceResponse&&);
     ExceptionType didReceiveData(Ref<WebCore::SharedBuffer>&&);
     ExceptionType didComplete(const WebCore::ResourceError&);
 

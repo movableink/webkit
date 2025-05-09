@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011, 2012 Google Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -392,7 +393,7 @@ void DocumentThreadableLoader::dataSent(CachedResource& resource, unsigned long 
     m_client->didSendData(bytesSent, totalBytesToBeSent);
 }
 
-void DocumentThreadableLoader::responseReceived(CachedResource& resource, const ResourceResponse& response, CompletionHandler<void()>&& completionHandler)
+void DocumentThreadableLoader::responseReceived(const CachedResource& resource, const ResourceResponse& response, CompletionHandler<void()>&& completionHandler)
 {
     ASSERT_UNUSED(resource, &resource == m_resource);
     ResourceResponse responseWithCorrectFragmentIdentifier;
@@ -402,17 +403,17 @@ void DocumentThreadableLoader::responseReceived(CachedResource& resource, const 
     }
 
     if (!m_responsesCanBeOpaque) {
-        ResourceResponse responseWithoutTainting = responseWithCorrectFragmentIdentifier.isNull() ? response : responseWithCorrectFragmentIdentifier;
+        ResourceResponse responseWithoutTainting = responseWithCorrectFragmentIdentifier.isNull() ? response : WTFMove(responseWithCorrectFragmentIdentifier);
         responseWithoutTainting.setTainting(ResourceResponse::Tainting::Basic);
-        didReceiveResponse(*m_resource->resourceLoaderIdentifier(), responseWithoutTainting);
+        didReceiveResponse(*m_resource->resourceLoaderIdentifier(), WTFMove(responseWithoutTainting));
     } else
-        didReceiveResponse(*m_resource->resourceLoaderIdentifier(), responseWithCorrectFragmentIdentifier.isNull() ? response : responseWithCorrectFragmentIdentifier);
+        didReceiveResponse(*m_resource->resourceLoaderIdentifier(), responseWithCorrectFragmentIdentifier.isNull() ? ResourceResponse { response } : WTFMove(responseWithCorrectFragmentIdentifier));
 
     if (completionHandler)
         completionHandler();
 }
 
-void DocumentThreadableLoader::didReceiveResponse(ResourceLoaderIdentifier identifier, const ResourceResponse& response)
+void DocumentThreadableLoader::didReceiveResponse(ResourceLoaderIdentifier identifier, ResourceResponse&& response)
 {
     ASSERT(m_client);
     ASSERT(response.type() != ResourceResponse::Type::Error);
@@ -431,7 +432,7 @@ void DocumentThreadableLoader::didReceiveResponse(ResourceLoaderIdentifier ident
         return;
 
     if (options().filteringPolicy == ResponseFilteringPolicy::Disable) {
-        m_client->didReceiveResponse(m_document->identifier(), identifier, response);
+        m_client->didReceiveResponse(m_document->identifier(), identifier, WTFMove(response));
         return;
     }
 
@@ -445,7 +446,7 @@ void DocumentThreadableLoader::didReceiveResponse(ResourceLoaderIdentifier ident
         return;
     }
     ASSERT(response.type() == ResourceResponse::Type::Opaqueredirect || response.source() == ResourceResponse::Source::ServiceWorker || response.source() == ResourceResponse::Source::MemoryCache);
-    m_client->didReceiveResponse(m_document->identifier(), identifier, response);
+    m_client->didReceiveResponse(m_document->identifier(), identifier, WTFMove(response));
 }
 
 void DocumentThreadableLoader::dataReceived(CachedResource& resource, const SharedBuffer& buffer)
@@ -507,7 +508,7 @@ void DocumentThreadableLoader::didFinishLoading(std::optional<ResourceLoaderIden
         if (resource->resourceBuffer())
             buffer = resource->resourceBuffer()->makeContiguous();
         if (options().filteringPolicy == ResponseFilteringPolicy::Disable) {
-            m_client->didReceiveResponse(m_document->identifier(), identifier, response);
+            m_client->didReceiveResponse(m_document->identifier(), identifier, WTFMove(response));
             if (buffer)
                 m_client->didReceiveData(*buffer);
         } else {
@@ -638,7 +639,7 @@ void DocumentThreadableLoader::loadRequest(ResourceRequest&& request, SecurityCh
         if (requestURL.protocolIsFile()) {
             // We don't want XMLHttpRequest to raise an exception for file:// resources, see <rdar://problem/4962298>.
             // FIXME: XMLHttpRequest quirks should be in XMLHttpRequest code, not in DocumentThreadableLoader.cpp.
-            didReceiveResponse(identifier, response);
+            didReceiveResponse(identifier, WTFMove(response));
             didFinishLoading(identifier, { });
             return;
         }
@@ -681,13 +682,15 @@ void DocumentThreadableLoader::loadRequest(ResourceRequest&& request, SecurityCh
             }
         }
     }
-    didReceiveResponse(identifier, response);
+
+    const auto* timing = response.deprecatedNetworkLoadMetricsOrNull();
+    auto resourceTiming = ResourceTiming::fromSynchronousLoad(requestURL, m_options.initiatorType, loadTiming, timing ? *timing : NetworkLoadMetrics::emptyMetrics(), response, securityOrigin());
+
+    didReceiveResponse(identifier, WTFMove(response));
 
     if (data)
         didReceiveData(*data);
 
-    const auto* timing = response.deprecatedNetworkLoadMetricsOrNull();
-    auto resourceTiming = ResourceTiming::fromSynchronousLoad(requestURL, m_options.initiatorType, loadTiming, timing ? *timing : NetworkLoadMetrics::emptyMetrics(), response, securityOrigin());
     if (options().initiatorContext == InitiatorContext::Worker)
         finishedTimingForWorkerLoad(resourceTiming);
     else {

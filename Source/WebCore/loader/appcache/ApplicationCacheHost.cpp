@@ -253,7 +253,7 @@ static inline RefPtr<SharedBuffer> bufferFromResource(ApplicationCacheResource& 
     return SharedBuffer::createWithContentsOfFile(resource.path());
 }
 
-bool ApplicationCacheHost::maybeLoadSynchronously(ResourceRequest& request, ResourceError& error, ResourceResponse& response, RefPtr<SharedBuffer>& data)
+bool ApplicationCacheHost::maybeLoadSynchronously(const ResourceRequest& request, ResourceError& error, ResourceResponse& response, RefPtr<SharedBuffer>& data)
 {
     RefPtr<ApplicationCacheResource> resource;
     if (!shouldLoadResourceFromApplicationCache(request, resource))

@@ -480,10 +480,10 @@ static bool isOpaqueRedirectResponseWithoutLocationHeader(const ResourceResponse
 }
 #endif
 
-void CachedResource::setResponse(const ResourceResponse& newResponse)
+void CachedResource::setResponse(ResourceResponse&& newResponse)
 {
     ASSERT(response().type() == ResourceResponse::Type::Default || isOpaqueRedirectResponseWithoutLocationHeader(response()));
-    mutableResponse() = newResponse;
+    mutableResponseData().m_response = WTFMove(newResponse);
     m_varyingHeaderValues = collectVaryingRequestHeaders(protectedCookieJar().get(), m_resourceRequest, response());
 
     if (response().source() == ResourceResponse::Source::ServiceWorker) {
@@ -495,11 +495,11 @@ void CachedResource::setResponse(const ResourceResponse& newResponse)
         mutableResponse().setTainting(m_responseTainting);
 }
 
-void CachedResource::responseReceived(const ResourceResponse& response)
+void CachedResource::responseReceived(ResourceResponse&& response)
 {
-    setResponse(response);
-    m_responseTimestamp = WallTime::now();
     String encoding = response.textEncodingName();
+    setResponse(WTFMove(response));
+    m_responseTimestamp = WallTime::now();
     if (!encoding.isNull())
         setEncoding(encoding);
 }
@@ -1055,10 +1055,10 @@ void CachedResource::tryReplaceEncodedData(SharedBuffer& newBuffer)
 
 #if USE(QUICK_LOOK)
 
-void CachedResource::previewResponseReceived(const ResourceResponse& response)
+void CachedResource::previewResponseReceived(ResourceResponse&& response)
 {
     ASSERT(response.url().protocolIs(QLPreviewProtocol));
-    CachedResource::responseReceived(response);
+    CachedResource::responseReceived(WTFMove(response));
 }
 
 #endif

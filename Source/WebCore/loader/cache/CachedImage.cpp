@@ -633,11 +633,11 @@ void CachedImage::error(CachedResource::Status status)
     notifyObservers();
 }
 
-void CachedImage::responseReceived(const ResourceResponse& newResponse)
+void CachedImage::responseReceived(ResourceResponse&& newResponse)
 {
     if (!response().isNull())
         clear();
-    CachedResource::responseReceived(newResponse);
+    CachedResource::responseReceived(WTFMove(newResponse));
 }
 
 void CachedImage::destroyDecodedData()

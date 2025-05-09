@@ -113,8 +113,8 @@ private:
     void didFinishLoadingManifest();
     void didFailLoadingManifest(ApplicationCacheResourceLoader::Error);
 
-    void didFailLoadingEntry(ApplicationCacheResourceLoader::Error, const URL&, unsigned type);
-    void didFinishLoadingEntry(const URL&);
+    void didFailLoadingEntry(ApplicationCacheResourceLoader::Error, URL&&, unsigned type);
+    void didFinishLoadingEntry(URL&&);
 
     void didReachMaxAppCacheSize();
     void didReachOriginQuota(int64_t totalSpaceNeeded);

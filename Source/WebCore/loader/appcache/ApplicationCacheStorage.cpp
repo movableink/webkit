@@ -1135,7 +1135,7 @@ RefPtr<ApplicationCache> ApplicationCacheStorage::loadCache(unsigned storageID)
         String headers = cacheStatement->columnText(5);
         parseHeaders(headers, response);
         
-        auto resource = ApplicationCacheResource::create(response.url(), response, type, WTFMove(data), path);
+        auto resource = ApplicationCacheResource::create(URL { response.url() }, WTFMove(response), type, WTFMove(data), WTFMove(path));
 
         if (type & ApplicationCacheResource::Manifest)
             cache->setManifestResource(WTFMove(resource));

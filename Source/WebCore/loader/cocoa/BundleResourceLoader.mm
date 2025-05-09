@@ -73,7 +73,7 @@ void loadResourceFromBundle(ResourceLoader& loader, const String& subdirectory)
             // Allow images to load.
             response.addHTTPHeaderField(HTTPHeaderName::AccessControlAllowOrigin, "*"_s);
 
-            protectedLoader->deliverResponseAndData(response, WTFMove(buffer));
+            protectedLoader->deliverResponseAndData(WTFMove(response), WTFMove(buffer));
         });
     });
 }

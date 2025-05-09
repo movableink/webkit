@@ -2,7 +2,7 @@
     Copyright (C) 1998 Lars Knoll (knoll@mpi-hd.mpg.de)
     Copyright (C) 2001 Dirk Mueller <mueller@kde.org>
     Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
-    Copyright (C) 2004, 2005, 2006, 2007 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2025 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -120,8 +120,6 @@ public:
 private:
     void clear();
 
-    CachedImage(CachedImage&, const ResourceRequest&, PAL::SessionID);
-
     void setBodyDataFrom(const CachedResource&) final;
 
     void createImage();
@@ -145,7 +143,7 @@ private:
     EncodedDataStatus updateImageData(bool allDataReceived);
     void updateData(const SharedBuffer&) override;
     void error(CachedResource::Status) override;
-    void responseReceived(const ResourceResponse&) override;
+    void responseReceived(ResourceResponse&&) override;
 
     // For compatibility, images keep loading even if there are HTTP errors.
     bool shouldIgnoreHTTPStatusCodeErrors() const override { return true; }

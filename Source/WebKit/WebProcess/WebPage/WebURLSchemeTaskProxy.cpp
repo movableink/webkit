@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -124,12 +124,12 @@ void WebURLSchemeTaskProxy::didPerformRedirection(WebCore::ResourceResponse&& re
     loader->willSendRequest(WTFMove(request), redirectResponse, WTFMove(innerCompletionHandler));
 }
 
-void WebURLSchemeTaskProxy::didReceiveResponse(const ResourceResponse& response)
+void WebURLSchemeTaskProxy::didReceiveResponse(ResourceResponse&& response)
 {
     if (m_waitingForCompletionHandler) {
         WEBURLSCHEMETASKPROXY_RELEASE_LOG("didReceiveResponse: Received response during redirect processing, queuing it.");
-        queueTask([this, protectedThis = Ref { *this }, response] {
-            didReceiveResponse(response);
+        queueTask([this, protectedThis = Ref { *this }, response = WTFMove(response)] mutable {
+            didReceiveResponse(WTFMove(response));
         });
         return;
     }
@@ -139,7 +139,7 @@ void WebURLSchemeTaskProxy::didReceiveResponse(const ResourceResponse& response)
         return;
 
     m_waitingForCompletionHandler = true;
-    loader->didReceiveResponse(response, [this, protectedThis = Ref { *this }] {
+    loader->didReceiveResponse(WTFMove(response), [this, protectedThis = Ref { *this }] {
         m_waitingForCompletionHandler = false;
         processNextPendingTask();
     });

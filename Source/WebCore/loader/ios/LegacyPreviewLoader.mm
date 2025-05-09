@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -127,11 +127,11 @@ void LegacyPreviewLoader::previewConverterDidStartConverting(PreviewConverter& c
 
     if (m_shouldDecidePolicyBeforeLoading) {
         m_hasProcessedResponse = true;
-        resourceLoader->didReceivePreviewResponse(response);
+        resourceLoader->didReceivePreviewResponse(WTFMove(response));
         return;
     }
 
-    resourceLoader->didReceiveResponse(response, [this, weakThis = WeakPtr { static_cast<PreviewConverterClient&>(*this) }, converter = Ref { converter }] {
+    resourceLoader->didReceiveResponse(WTFMove(response), [this, weakThis = WeakPtr { static_cast<PreviewConverterClient&>(*this) }, converter = Ref { converter }] {
         if (!weakThis)
             return;
 
