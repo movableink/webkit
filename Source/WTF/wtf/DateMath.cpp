@@ -81,7 +81,6 @@
 #include <wtf/ASCIICType.h>
 #include <wtf/Language.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/StdLibExtras.h>
 #include <wtf/ThreadSpecific.h>
 #include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
@@ -103,9 +102,15 @@ static Vector<UChar>& innerTimeZoneOverride() WTF_REQUIRES_LOCK(innerTimeZoneOve
 
 /* Constants */
 
-const std::array<ASCIILiteral, 7> weekdayName { "Mon"_s, "Tue"_s, "Wed"_s, "Thu"_s, "Fri"_s, "Sat"_s, "Sun"_s };
 const std::array<ASCIILiteral, 12> monthName { "Jan"_s, "Feb"_s, "Mar"_s, "Apr"_s, "May"_s, "Jun"_s, "Jul"_s, "Aug"_s, "Sep"_s, "Oct"_s, "Nov"_s, "Dec"_s };
 const std::array<ASCIILiteral, 12> monthFullName { "January"_s, "February"_s, "March"_s, "April"_s, "May"_s, "June"_s, "July"_s, "August"_s, "September"_s, "October"_s, "November"_s, "December"_s };
+
+
+ASCIILiteral weekdayName(Weekday weekday)
+{
+    static constexpr std::array<ASCIILiteral, 7> weekdayName { "Sun"_s, "Mon"_s, "Tue"_s, "Wed"_s, "Thu"_s, "Fri"_s, "Sat"_s };
+    return weekdayName[weekday.c_encoding()];
+}
 
 // Day of year for the first day of each month, where index 0 is January, and day 0 is January 1.
 // First for non-leap years, then for leap years.
@@ -972,10 +977,10 @@ double parseDate(std::span<const LChar> dateString)
 }
 
 // See http://tools.ietf.org/html/rfc2822#section-3.3 for more information.
-String makeRFC2822DateString(unsigned dayOfWeek, unsigned day, unsigned month, unsigned year, unsigned hours, unsigned minutes, unsigned seconds, int utcOffset)
+String makeRFC2822DateString(Weekday dayOfWeek, unsigned day, unsigned month, unsigned year, unsigned hours, unsigned minutes, unsigned seconds, int utcOffset)
 {
     StringBuilder stringBuilder;
-    stringBuilder.append(weekdayName[dayOfWeek], ", "_s, day, ' ', monthName[month], ' ', year, ' ');
+    stringBuilder.append(weekdayName(dayOfWeek), ", "_s, day, ' ', monthName[month], ' ', year, ' ');
 
     appendTwoDigitNumber(stringBuilder, hours);
     stringBuilder.append(':');

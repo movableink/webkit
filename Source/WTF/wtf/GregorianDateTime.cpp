@@ -82,7 +82,7 @@ void GregorianDateTime::setToCurrentLocalTime()
     m_month = systemTime.wMonth - 1;
     m_monthDay = systemTime.wDay;
     m_yearDay = dayInYear(m_year, m_month, m_monthDay);
-    m_weekDay = systemTime.wDayOfWeek;
+    m_weekDay = Weekday { systemTime.wDayOfWeek };
     m_hour = systemTime.wHour;
     m_minute = systemTime.wMinute;
     m_second = systemTime.wSecond;
@@ -101,7 +101,7 @@ void GregorianDateTime::setToCurrentLocalTime()
     m_month = localTM.tm_mon;
     m_monthDay = localTM.tm_mday;
     m_yearDay = localTM.tm_yday;
-    m_weekDay = localTM.tm_wday;
+    m_weekDay = Weekday { unsignedCast(localTM.tm_wday) };
     m_hour = localTM.tm_hour;
     m_minute = localTM.tm_min;
     m_second = localTM.tm_sec;

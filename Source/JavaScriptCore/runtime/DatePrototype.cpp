@@ -500,7 +500,7 @@ JSC_DEFINE_HOST_FUNCTION(dateProtoFuncGetDay, (JSGlobalObject* globalObject, Cal
     const GregorianDateTime* gregorianDateTime = thisDateObj->gregorianDateTime(vm.dateCache);
     if (!gregorianDateTime)
         return JSValue::encode(jsNaN());
-    return JSValue::encode(jsNumber(gregorianDateTime->weekDay()));
+    return JSValue::encode(jsNumber(gregorianDateTime->weekDay().c_encoding()));
 }
 
 JSC_DEFINE_HOST_FUNCTION(dateProtoFuncGetUTCDay, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -515,7 +515,7 @@ JSC_DEFINE_HOST_FUNCTION(dateProtoFuncGetUTCDay, (JSGlobalObject* globalObject, 
     const GregorianDateTime* gregorianDateTime = thisDateObj->gregorianDateTimeUTC(vm.dateCache);
     if (!gregorianDateTime)
         return JSValue::encode(jsNaN());
-    return JSValue::encode(jsNumber(gregorianDateTime->weekDay()));
+    return JSValue::encode(jsNumber(gregorianDateTime->weekDay().c_encoding()));
 }
 
 JSC_DEFINE_HOST_FUNCTION(dateProtoFuncGetHours, (JSGlobalObject* globalObject, CallFrame* callFrame))
