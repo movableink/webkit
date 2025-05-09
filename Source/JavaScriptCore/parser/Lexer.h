@@ -92,6 +92,14 @@ public:
     String sourceURLDirective() const { return m_sourceURLDirective; }
     String sourceMappingURLDirective() const { return m_sourceMappingURLDirective; }
     void clear();
+    void clearErrorCodeAndBuffers()
+    {
+        m_error = 0;
+        m_lexErrorMessage = String();
+
+        m_buffer8.shrink(0);
+        m_buffer16.shrink(0);
+    }
     void setOffset(int offset, int lineStartOffset)
     {
         m_error = 0;

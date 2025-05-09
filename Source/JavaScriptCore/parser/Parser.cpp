@@ -3283,6 +3283,9 @@ template <class TreeBuilder> TreeSourceElements Parser<LexerType>::parseClassFie
     TreeSourceElements sourceElements = context.createSourceElements();
     currentScope()->setIsClassScope();
 
+    // Clear errors from parsing anything before the initializer expressions.
+    m_lexer->clearErrorCodeAndBuffers();
+
     for (auto definition : classElementDefinitions) {
         auto position = definition.position;
         bool hasLineTerminatorBeforeToken = false;
