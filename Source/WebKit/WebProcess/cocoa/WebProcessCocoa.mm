@@ -811,6 +811,16 @@ static void prewarmLogs()
 }
 #endif // PLATFORM(IOS_FAMILY)
 
+static bool shouldIgnoreLogMessage(const char* logSubsystem)
+{
+    auto subsystem = unsafeSpan8(logSubsystem);
+    if (equal(subsystem, "com.apple.xpc"_s))
+        return true;
+    if (equal(subsystem, "com.apple.CoreAnalytics"_s))
+        return true;
+    return false;
+}
+
 void WebProcess::registerLogHook()
 {
     static os_log_hook_t prevHook = nullptr;
@@ -836,6 +846,9 @@ void WebProcess::registerLogHook()
         if (type & (OS_LOG_TYPE_DEBUG | OS_LOG_TYPE_INFO))
             return;
 #endif
+
+        if (shouldIgnoreLogMessage(msg->subsystem))
+            return;
 
         auto logChannel = unsafeSpan8IncludingNullTerminator(msg->subsystem);
         auto logCategory = unsafeSpan8IncludingNullTerminator(msg->category);
