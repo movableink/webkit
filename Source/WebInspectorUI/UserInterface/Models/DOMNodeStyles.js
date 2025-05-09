@@ -362,7 +362,7 @@ WI.DOMNodeStyles = class DOMNodeStyles extends WI.Object
     {
         selector = selector || this._node.appropriateSelectorFor(true);
 
-        let result = new WI.WrappedPromise;
+        let result = Promise.withResolvers();
         let target = WI.assumingMainTarget();
 
         function completed()
@@ -450,8 +450,7 @@ WI.DOMNodeStyles = class DOMNodeStyles extends WI.Object
     changeRuleSelector(rule, selector)
     {
         selector = selector || "";
-        let result = new WI.WrappedPromise;
-
+        let result = Promise.withResolvers();
         let target = WI.assumingMainTarget();
 
         function ruleSelectorChanged(error, rulePayload)
