@@ -1333,8 +1333,9 @@ void RenderLayer::recursiveUpdateLayerPositions(OptionSet<UpdateLayerPositionsFl
 
     }
 
-    if (!isRenderViewLayer() && renderer().canContainFixedPositionObjects()) {
-        flags.add(SeenFixedContainingBlockLayer);
+    if (!isRenderViewLayer()) {
+        if (renderer().canContainFixedPositionObjects())
+            flags.add(SeenFixedContainingBlockLayer);
 
         if (transform()) {
             flags.add(SeenTransformedLayer);
