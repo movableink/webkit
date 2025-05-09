@@ -1054,6 +1054,9 @@ void LocalFrameView::obscuredContentInsetsDidChange(const FloatBoxExtent& newObs
 
     if (platformWidget())
         platformSetContentInsets(newObscuredContentInsets);
+
+    if (RefPtr document = m_frame->document())
+        document->updateViewportUnitsOnResize();
     
     renderView->setNeedsLayout();
     layoutContext().layout();
