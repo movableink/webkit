@@ -1542,6 +1542,7 @@ private:
             break;
         case InvalidationPoint:
             compileInvalidationPoint();
+            codeGenerationResult = CodeGenerationResult::NotGenerated;
             break;
         case IsEmpty:
             compileIsEmpty();
@@ -1852,6 +1853,7 @@ private:
         case FilterCheckPrivateBrandStatus:
         case FilterSetPrivateBrandStatus:
             compileFilterICStatus();
+            codeGenerationResult = CodeGenerationResult::NotGenerated;
             break;
         case DateGetInt32OrNaN:
         case DateGetTime:
