@@ -89,9 +89,7 @@ protected:
     virtual bool hasCachedListData() const = 0;
     virtual void didUpdateCachedListData() { }
     virtual void updateList(CompletionHandler<void()>&&) = 0;
-#ifdef __OBJC__
-    virtual WPResourceType resourceType() const = 0;
-#endif
+    virtual unsigned resourceTypeValue() const = 0;
 
     RetainPtr<WKWebPrivacyNotificationListener> m_notificationListener;
     WeakHashSet<ListDataObserver> m_observers;
@@ -138,34 +136,30 @@ public:
 
 private:
     void didUpdateCachedListData() final { m_cachedListData.shrinkToFit(); }
-#ifdef __OBJC__
-    WPResourceType resourceType() const final;
-#endif
+    unsigned resourceTypeValue() const final;
 };
 
 class StorageAccessPromptQuirkController : public ListDataController<StorageAccessPromptQuirkController, Vector<WebCore::OrganizationStorageAccessPromptQuirk>> {
 private:
     void updateList(CompletionHandler<void()>&&) final;
     void didUpdateCachedListData() final;
-#ifdef __OBJC__
-    WPResourceType resourceType() const final;
-#endif
+    unsigned resourceTypeValue() const final;
 };
 
 class StorageAccessUserAgentStringQuirkController : public ListDataController<StorageAccessUserAgentStringQuirkController, HashMap<WebCore::RegistrableDomain, String>> {
 private:
     void updateList(CompletionHandler<void()>&&) final;
-#ifdef __OBJC__
-    WPResourceType resourceType() const final;
-#endif
+    unsigned resourceTypeValue() const final;
 };
 
 class ScriptTelemetryController : public ListDataController<ScriptTelemetryController, ScriptTelemetryRules> {
 private:
     void updateList(CompletionHandler<void()>&&) final;
     void didUpdateCachedListData() final;
+    unsigned resourceTypeValue() const final;
 #ifdef __OBJC__
-    WPResourceType resourceType() const final;
+    // FIXME: Remove when WebPrivacyHelpersAdditions.mm no longer depends on it.
+    WPResourceType resourceType() const;
 #endif
 };
 

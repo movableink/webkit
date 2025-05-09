@@ -102,7 +102,7 @@ Ref<ListDataObserver> ListDataControllerBase::observeUpdates(Function<void()>&& 
 {
     ASSERT(RunLoop::isMain());
     if (!m_notificationListener) {
-        m_notificationListener = adoptNS([[WKWebPrivacyNotificationListener alloc] initWithType:resourceType() callback:^{
+        m_notificationListener = adoptNS([[WKWebPrivacyNotificationListener alloc] initWithType:static_cast<WPResourceType>(resourceTypeValue()) callback:^{
             updateList([weakThis = WeakPtr { *this }] {
                 RefPtr protectedThis = weakThis.get();
                 if (!protectedThis)
@@ -136,7 +136,7 @@ void ListDataControllerBase::initializeIfNeeded()
     });
 }
 
-WPResourceType LinkDecorationFilteringController::resourceType() const
+unsigned LinkDecorationFilteringController::resourceTypeValue() const
 {
     return WPResourceTypeLinkFilteringData;
 }
@@ -224,9 +224,9 @@ void requestLinkDecorationFilteringData(LinkFilteringRulesCallback&& callback)
     }];
 }
 
-WPResourceType StorageAccessPromptQuirkController::resourceType() const
+unsigned StorageAccessPromptQuirkController::resourceTypeValue() const
 {
-    return static_cast<WPResourceType>(WPResourceTypeStorageAccessPromptQuirksData);
+    return WPResourceTypeStorageAccessPromptQuirksData;
 }
 
 void StorageAccessPromptQuirkController::didUpdateCachedListData()
@@ -295,9 +295,9 @@ void StorageAccessPromptQuirkController::updateList(CompletionHandler<void()>&& 
     }];
 }
 
-WPResourceType StorageAccessUserAgentStringQuirkController::resourceType() const
+unsigned StorageAccessUserAgentStringQuirkController::resourceTypeValue() const
 {
-    return static_cast<WPResourceType>(WPResourceTypeStorageAccessUserAgentStringQuirksData);
+    return WPResourceTypeStorageAccessUserAgentStringQuirksData;
 }
 
 void StorageAccessUserAgentStringQuirkController::updateList(CompletionHandler<void()>&& completionHandler)
@@ -758,12 +758,12 @@ void ScriptTelemetryController::updateList(CompletionHandler<void()>&& completio
 {
     RunLoop::protectedMain()->dispatch(WTFMove(completion));
 }
-
-WPResourceType ScriptTelemetryController::resourceType() const
-{
-    return static_cast<WPResourceType>(9);
-}
 #endif
+
+unsigned ScriptTelemetryController::resourceTypeValue() const
+{
+    return 9;
+}
 
 void ScriptTelemetryController::didUpdateCachedListData()
 {
