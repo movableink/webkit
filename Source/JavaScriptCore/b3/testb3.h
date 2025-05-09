@@ -553,9 +553,7 @@ EffectiveType modelLoad(EffectiveType value)
     } u;
     
     u.original = value;
-    if (std::is_signed<LoadedType>::value)
-        return static_cast<EffectiveType>(u.loaded);
-    return static_cast<EffectiveType>(static_cast<typename std::make_unsigned<EffectiveType>::type>(u.loaded));
+    return static_cast<EffectiveType>(static_cast<std::make_unsigned_t<EffectiveType>>(u.loaded));
 }
 
 template<>

@@ -117,8 +117,7 @@ size_t strlenSpan(std::span<T, Extent> span) requires(sizeof(T) == 1)
 
 template<typename CharacterType> inline constexpr bool isLatin1(CharacterType character)
 {
-    using UnsignedCharacterType = typename std::make_unsigned<CharacterType>::type;
-    return static_cast<UnsignedCharacterType>(character) <= static_cast<UnsignedCharacterType>(0xFF);
+    return unsignedCast(character) <= 0xFFu;
 }
 
 template<> ALWAYS_INLINE constexpr bool isLatin1(LChar)

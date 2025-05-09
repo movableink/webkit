@@ -269,13 +269,10 @@ constexpr std::underlying_type_t<E> enumNamesMax()
 template<typename E>
 constexpr size_t enumNamesSize()
 {
-    using Underlying = std::underlying_type_t<E>;
-    using Unsigned = std::make_unsigned_t<Underlying>;
-
-    constexpr Underlying min = enumNamesMin<E>();
-    constexpr Underlying max = enumNamesMax<E>();
+    constexpr auto min = enumNamesMin<E>();
+    constexpr auto max = enumNamesMax<E>();
     static_assert(min <= max, "Invalid enum range: min must be <= max.");
-    return static_cast<size_t>(static_cast<Unsigned>(max - min)) + 1;
+    return static_cast<size_t>(max - min) + 1;
 }
 
 template<typename E, size_t... Is>

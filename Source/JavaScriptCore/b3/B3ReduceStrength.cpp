@@ -160,7 +160,7 @@ public:
     template<typename T>
     static IntRange rangeForZShr(int32_t shiftAmount)
     {
-        typename std::make_unsigned<T>::type mask = 0;
+        std::make_unsigned_t<T> mask = 0;
         mask--;
         mask >>= shiftAmount;
         return rangeForMask<T>(static_cast<T>(mask));
@@ -313,7 +313,7 @@ public:
             return rangeForZShr<T>(shiftAmount);
 
         // If the input range is non-negative, then this just brings the range closer to zero.
-        typedef typename std::make_unsigned<T>::type UnsignedT;
+        using UnsignedT = std::make_unsigned_t<T>;
         UnsignedT newMin = static_cast<UnsignedT>(m_min) >> static_cast<UnsignedT>(shiftAmount);
         UnsignedT newMax = static_cast<UnsignedT>(m_max) >> static_cast<UnsignedT>(shiftAmount);
         

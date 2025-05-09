@@ -30,6 +30,7 @@
 #include <limits>
 #include <stdint.h>
 #include <type_traits>
+#include <wtf/StdLibExtras.h>
 
 /* On Linux with clang, libgcc is usually used instead of compiler-rt, and it does
  * not provide the __mulodi4 symbol used by clang for __builtin_mul_overflow
@@ -163,7 +164,7 @@ template <typename Target, typename Source> struct BoundsChecker<Target, Source,
     {
         // When converting value to unsigned Source, value will become a big value if value is negative.
         // Casted value will become bigger than Target::max as Source is bigger than Target.
-        return static_cast<std::make_unsigned_t<Source>>(value) <= std::numeric_limits<Target>::max();
+        return unsignedCast(value) <= std::numeric_limits<Target>::max();
     }
 };
 
@@ -1002,6 +1003,13 @@ template<typename T> bool isSumSmallerThanOrEqual(T a, T b, T bound)
     return !sum.hasOverflowed() && sum.value() <= bound;
 }
 
+template<typename ToType, typename FromType>
+inline ToType safeCast(FromType value)
+{
+    RELEASE_ASSERT(isInBounds<ToType>(value));
+    return static_cast<ToType>(value);
+}
+
 }
 
 using WTF::AssertNoOverflow;
@@ -1024,5 +1032,6 @@ using WTF::checkedProduct;
 using WTF::differenceOverflows;
 using WTF::isInBounds;
 using WTF::productOverflows;
+using WTF::safeCast;
 using WTF::sumOverflows;
 using WTF::isSumSmallerThanOrEqual;

@@ -454,7 +454,7 @@ void AttributeValidator::visit(AST::StructureMember& member)
             auto alignmentValue = constantValue->integerValue();
             if (alignmentValue < 1)
                 error(attribute.span(), "@align value must be positive"_s);
-            else if (!isPowerOfTwo<std::make_unsigned_t<decltype(alignmentValue)>>(alignmentValue))
+            else if (!isPowerOfTwo(unsignedCast(alignmentValue)))
                 error(attribute.span(), "@align value must be a power of two"_s);
 
             if (!m_errors.isEmpty()) [[unlikely]] {

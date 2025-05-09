@@ -34,6 +34,7 @@
 #include <numbers>
 #include <stdint.h>
 #include <stdlib.h>
+#include <wtf/CheckedArithmetic.h>
 #include <wtf/StdLibExtras.h>
 
 #if OS(OPENBSD)
@@ -555,8 +556,7 @@ constexpr unsigned clzConstexpr(T value)
 {
     constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
 
-    using UT = typename std::make_unsigned<T>::type;
-    UT uValue = value;
+    auto uValue = unsignedCast(value);
 
     unsigned zeroCount = 0;
     for (int i = bitSize - 1; i >= 0; i--) {
@@ -572,8 +572,7 @@ inline unsigned clz(T value)
 {
     constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
 
-    using UT = typename std::make_unsigned<T>::type;
-    UT uValue = value;
+    auto uValue = unsignedCast(value);
 
     constexpr unsigned bitSize64 = sizeof(uint64_t) * CHAR_BIT;
     if (uValue)
@@ -586,8 +585,7 @@ constexpr unsigned ctzConstexpr(T value)
 {
     constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
 
-    using UT = typename std::make_unsigned<T>::type;
-    UT uValue = value;
+    auto uValue = unsignedCast(value);
 
     unsigned zeroCount = 0;
     for (unsigned i = 0; i < bitSize; i++) {
@@ -605,8 +603,7 @@ inline unsigned ctz(T value)
 {
     constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
 
-    using UT = typename std::make_unsigned<T>::type;
-    UT uValue = value;
+    auto uValue = unsignedCast(value);
 
     if (uValue)
         return __builtin_ctzll(uValue);
@@ -693,7 +690,7 @@ template<typename T>
 requires std::is_integral_v<T>
 constexpr T negate(T v)
 {
-    return static_cast<T>(~static_cast<std::make_unsigned_t<T>>(v) + 1U);
+    return static_cast<T>(~unsignedCast(v) + 1U);
 }
 
 template<typename BitsType, typename InputType>

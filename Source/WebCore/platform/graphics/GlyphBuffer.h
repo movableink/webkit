@@ -36,6 +36,7 @@
 #include <climits>
 #include <limits>
 #include <wtf/CheckedRef.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -85,7 +86,7 @@ public:
     std::optional<GlyphBufferStringOffset> checkedStringOffsetAt(size_t index, unsigned stringLength) const
     {
         auto result = uncheckedStringOffsetAt(index);
-        if (static_cast<std::make_unsigned_t<GlyphBufferStringOffset>>(result) >= stringLength)
+        if (unsignedCast(result) >= stringLength)
             return std::nullopt;
         return result;
     }

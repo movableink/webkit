@@ -78,6 +78,7 @@
 #include <bitset>
 #include <memory>
 #include <optional>
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
@@ -821,7 +822,7 @@ RefPtr<StyleRuleFontFeatureValuesBlock> CSSParser::consumeFontFeatureValuesRuleB
             ASSERT(value->isInteger());
             auto tagInteger = value->resolveAsIntegerDeprecated();
             ASSERT(tagInteger >= 0);
-            values.append(std::make_unsigned_t<int>(tagInteger));
+            values.append(unsignedCast(tagInteger));
             if (maxValues && values.size() > *maxValues)
                 return { };
         }

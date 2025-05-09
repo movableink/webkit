@@ -24,6 +24,7 @@
 #include <array>
 #include <unicode/utypes.h>
 #include <wtf/FastMalloc.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/LChar.h>
 
 namespace WTF {
@@ -51,7 +52,7 @@ public:
         template<typename CharType>
         static constexpr UChar convert(CharType character)
         {
-            return static_cast<std::make_unsigned_t<CharType>>((character));
+            return unsignedCast(character);
         }
     };
 

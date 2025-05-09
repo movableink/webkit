@@ -41,7 +41,6 @@
 #include <utility>
 #include <wtf/Assertions.h>
 #include <wtf/Brigand.h>
-#include <wtf/CheckedArithmetic.h>
 #include <wtf/Compiler.h>
 #include <wtf/GetPtr.h>
 #include <wtf/IterationStatus.h>
@@ -188,13 +187,6 @@ inline std::span<std::byte> alignedBytes(std::span<std::byte> buffer, size_t ali
 inline std::span<const std::byte> alignedBytes(std::span<const std::byte> buffer, size_t alignment)
 {
     return buffer.subspan(alignedBytesCorrection(buffer, alignment));
-}
-
-template<typename ToType, typename FromType>
-inline ToType safeCast(FromType value)
-{
-    RELEASE_ASSERT(isInBounds<ToType>(value));
-    return static_cast<ToType>(value);
 }
 
 // Returns a count of the number of bits set in 'bits'.
@@ -1250,6 +1242,11 @@ template<ByteType T, typename U> constexpr auto byteCast(const U& value)
     return ByteCastTraits<U>::template cast<T>(value);
 }
 
+template<typename T> constexpr auto unsignedCast(T value) requires (std::is_integral_v<T> || std::is_enum_v<T>)
+{
+    return static_cast<std::make_unsigned_t<T>>(value);
+}
+
 // This is like std::invocable but it takes the expected signature rather than just the arguments.
 template<typename Functor, typename Signature> concept Invocable = requires(std::decay_t<Functor>&& f, std::function<Signature> expected) {
     { expected = std::move(f) };
@@ -1550,7 +1547,6 @@ using WTF::memmoveSpan;
 using WTF::memsetSpan;
 using WTF::mergeDeduplicatedSorted;
 using WTF::reinterpretCastSpanStartTo;
-using WTF::safeCast;
 using WTF::secureMemsetSpan;
 using WTF::singleElementSpan;
 using WTF::skip;
@@ -1563,6 +1559,7 @@ using WTF::stringToDouble;
 using WTF::toTwosComplement;
 using WTF::tryBinarySearch;
 using WTF::unsafeMakeSpan;
+using WTF::unsignedCast;
 using WTF::valueOrCompute;
 using WTF::valueOrDefault;
 using WTF::weakOrderingCast;
