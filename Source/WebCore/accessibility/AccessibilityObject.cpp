@@ -2798,12 +2798,6 @@ SRGBA<uint8_t> AccessibilityObject::colorValue() const
 }
 
 #if !PLATFORM(MAC)
-String AccessibilityObject::rolePlatformDescription()
-{
-    // FIXME: implement in other platforms.
-    return String();
-}
-
 String AccessibilityObject::subrolePlatformString() const
 {
     return String();
@@ -2817,40 +2811,6 @@ String AccessibilityObject::embeddedImageDescription() const
         return { };
 
     return renderImage->accessibilityDescription();
-}
-
-// ARIA spec: User agents must not expose the aria-roledescription property if the element to which aria-roledescription is applied does not have a valid WAI-ARIA role or does not have an implicit WAI-ARIA role semantic.
-bool AccessibilityObject::supportsARIARoleDescription() const
-{
-    switch (roleValue()) {
-    case AccessibilityRole::Generic:
-    case AccessibilityRole::Unknown:
-        return false;
-    default:
-        return true;
-    }
-}
-
-String AccessibilityObject::roleDescription()
-{
-    // aria-roledescription takes precedence over any other rule.
-    if (supportsARIARoleDescription()) {
-        auto roleDescription = getAttributeTrimmed(aria_roledescriptionAttr);
-        if (!roleDescription.isEmpty())
-            return roleDescription;
-    }
-
-    auto roleDescription = rolePlatformDescription();
-    if (!roleDescription.isEmpty())
-        return roleDescription;
-
-    if (roleValue() == AccessibilityRole::Figure)
-        return AXFigureText();
-
-    if (roleValue() == AccessibilityRole::Suggestion)
-        return AXSuggestionRoleDescriptionText();
-
-    return { };
 }
 
 bool AccessibilityObject::supportsDatetimeAttribute() const
@@ -3840,10 +3800,11 @@ AccessibilityRole AccessibilityObject::buttonRoleType() const
     return AccessibilityRole::Button;
 }
 
-bool AccessibilityObject::isFileUploadButton() const
+std::optional<InputType::Type> AccessibilityObject::inputType() const
 {
     RefPtr input = dynamicDowncast<HTMLInputElement>(node());
-    return input && input->isFileUpload();
+    RefPtr inputType = input ? input->inputType() : nullptr;
+    return inputType ? std::optional(inputType->type()) : std::nullopt;
 }
 
 bool AccessibilityObject::isIgnoredByDefault() const

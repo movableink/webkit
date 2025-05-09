@@ -70,11 +70,6 @@ HTMLAttachmentElement* AccessibilityAttachment::attachmentElement() const
     ASSERT(is<HTMLAttachmentElement>(node()));
     return dynamicDowncast<HTMLAttachmentElement>(node());
 }
-    
-String AccessibilityAttachment::roleDescription()
-{
-    return AXAttachmentRoleText();
-}
 
 bool AccessibilityAttachment::computeIsIgnored() const
 {

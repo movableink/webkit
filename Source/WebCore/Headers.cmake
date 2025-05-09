@@ -1420,6 +1420,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     html/ImageDataStorageFormat.h
     html/ImageDocument.h
     html/InputMode.h
+    html/InputType.h
     html/LinkIconCollector.h
     html/LinkIconType.h
     html/LinkRelAttribute.h

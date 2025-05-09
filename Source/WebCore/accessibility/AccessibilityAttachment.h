@@ -48,7 +48,6 @@ private:
 
     bool isAttachmentElement() const final { return true; }
 
-    String roleDescription() final;
     float valueForRange() const final;
     bool computeIsIgnored() const final;
     void accessibilityText(Vector<AccessibilityText>&) const final;

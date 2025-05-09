@@ -2774,7 +2774,7 @@ void AXObjectCache::handleRoleChanged(Element& element, const AtomString& oldVal
     AXLOG(makeString("oldValue "_s, oldValue, " new value "_s, newValue));
     ASSERT(oldValue != newValue);
 
-    auto* object = get(element);
+    RefPtr object = get(element);
     if (!object)
         return;
 
@@ -2812,16 +2812,28 @@ void AXObjectCache::handleRoleChanged(AccessibilityObject& axObject, Accessibili
 #endif
 }
 
-void AXObjectCache::handleRoleDescriptionChanged(Element& element)
+void AXObjectCache::handleARIARoleDescriptionChanged(Element& element)
 {
-    auto* object = get(element);
+    RefPtr object = get(element);
     if (!object)
         return;
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    updateIsolatedTree(object, AXNotification::RoleDescriptionChanged);
+    updateIsolatedTree(object.get(), AXNotification::ARIARoleDescriptionChanged);
 #endif
 }
+
+void AXObjectCache::handleInputTypeChanged(Element& element)
+{
+    RefPtr object = get(element);
+    if (!object)
+        return;
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    updateIsolatedTree(object.get(), AXNotification::InputTypeChanged);
+#endif
+}
+
 
 void AXObjectCache::deferAttributeChangeIfNeeded(Element& element, const QualifiedName& attrName, const AtomString& oldValue, const AtomString& newValue)
 {
@@ -3111,7 +3123,7 @@ void AXObjectCache::handleAttributeChange(Element* element, const QualifiedName&
     else if (attrName == aria_requiredAttr)
         postNotification(element, AXNotification::RequiredStatusChanged);
     else if (attrName == aria_roledescriptionAttr)
-        handleRoleDescriptionChanged(*element);
+        handleARIARoleDescriptionChanged(*element);
     else if (attrName == aria_rowcountAttr)
         handleRowCountChanged(get(*element), element->protectedDocument().ptr());
     else if (attrName == aria_rowspanAttr) {
@@ -3128,6 +3140,8 @@ void AXObjectCache::handleAttributeChange(Element* element, const QualifiedName&
     else if (attrName == aria_brailleroledescriptionAttr)
         postNotification(element, AXNotification::BrailleRoleDescriptionChanged);
 #endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    else if (attrName == typeAttr)
+        handleInputTypeChanged(*element);
 }
 
 void AXObjectCache::handleLabelChanged(AccessibilityObject* object)
@@ -4857,6 +4871,9 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
         case AXNotification::ARIAColumnIndexChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::AXColumnIndex });
             break;
+        case AXNotification::ARIARoleDescriptionChanged:
+            tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::ARIARoleDescription });
+            break;
         case AXNotification::ARIARowIndexChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::AXRowIndex });
             break;
@@ -4907,6 +4924,9 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
         case AXNotification::FocusableStateChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::CanSetFocusAttribute });
             break;
+        case AXNotification::InputTypeChanged:
+            tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::InputType });
+            break;
         case AXNotification::MaximumValueChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { { AXProperty::MaxValueForRange, AXProperty::ValueForRange } });
             break;
@@ -4943,9 +4963,6 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
             break;
         case AXNotification::RequiredStatusChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::IsRequired });
-            break;
-        case AXNotification::RoleDescriptionChanged:
-            tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::RoleDescription });
             break;
         case AXNotification::RowIndexChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { { AXProperty::RowIndexRange, AXProperty::RowIndex } });

@@ -613,6 +613,9 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
             properties.append({ AXProperty::AccessibilityText, WTFMove(axTextValue) });
             break;
         }
+        case AXProperty::ARIARoleDescription:
+            properties.append({ AXProperty::ARIARoleDescription, axObject.ariaRoleDescription().isolatedCopy() });
+            break;
         case AXProperty::ValueAutofillButtonType:
             properties.append({ AXProperty::ValueAutofillButtonType, static_cast<int>(axObject.valueAutofillButtonType()) });
             properties.append({ AXProperty::IsValueAutofillAvailable, axObject.isValueAutofillAvailable() });
@@ -674,6 +677,10 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
         case AXProperty::IdentifierAttribute:
             properties.append({ AXProperty::IdentifierAttribute, axObject.identifierAttribute().isolatedCopy() });
             break;
+        case AXProperty::InputType:
+            if (std::optional inputType = axObject.inputType())
+                properties.append({ AXProperty::InputType, *inputType });
+            break;
         case AXProperty::InternalLinkElement: {
             auto* linkElement = axObject.internalLinkElement();
             properties.append({ AXProperty::InternalLinkElement, linkElement ? std::optional { linkElement->objectID() } : std::nullopt });
@@ -731,9 +738,6 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
             break;
         case AXProperty::HasRemoteFrameChild:
             properties.append({ AXProperty::HasRemoteFrameChild, axObject.hasRemoteFrameChild() });
-            break;
-        case AXProperty::RoleDescription:
-            properties.append({ AXProperty::RoleDescription, axObject.roleDescription().isolatedCopy() });
             break;
         case AXProperty::RowIndex:
             properties.append({ AXProperty::RowIndex, axObject.rowIndex() });

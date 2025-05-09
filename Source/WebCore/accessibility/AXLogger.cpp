@@ -653,6 +653,9 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::ActionVerb:
         stream << "ActionVerb";
         break;
+    case AXProperty::ARIARoleDescription:
+        stream << "ARIARoleDescription";
+        break;
     case AXProperty::BackgroundColor:
         stream << "BackgroundColor";
         break;
@@ -831,6 +834,9 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::InnerHTML:
         stream << "InnerHTML";
         break;
+    case AXProperty::InputType:
+        stream << "InputType";
+        break;
     case AXProperty::InternalLinkElement:
         stream << "InternalLinkElement";
         break;
@@ -870,9 +876,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::IsFieldset:
         stream << "IsFieldset";
         break;
-    case AXProperty::IsFileUploadButton:
-        stream << "IsFileUploadButton";
-        break;
     case AXProperty::IsIgnored:
         stream << "IsIgnored";
         break;
@@ -881,12 +884,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
         break;
     case AXProperty::IsInlineText:
         stream << "IsInlineText";
-        break;
-    case AXProperty::IsRadioInput:
-        stream << "IsRadioInput";
-        break;
-    case AXProperty::IsInputImage:
-        stream << "IsInputImage";
         break;
     case AXProperty::IsKeyboardFocusable:
         stream << "IsKeyboardFocusable";
@@ -1094,9 +1091,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
 #endif
     case AXProperty::RolePlatformString:
         stream << "RolePlatformString";
-        break;
-    case AXProperty::RoleDescription:
-        stream << "RoleDescription";
         break;
     case AXProperty::Rows:
         stream << "Rows";

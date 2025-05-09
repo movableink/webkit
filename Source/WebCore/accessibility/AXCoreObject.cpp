@@ -49,6 +49,12 @@ bool AXCoreObject::isList() const
     return role == AccessibilityRole::List || role == AccessibilityRole::DescriptionList;
 }
 
+bool AXCoreObject::isFileUploadButton() const
+{
+    std::optional type = inputType();
+    return type ? *type == InputType::Type::File : false;
+}
+
 bool AXCoreObject::isMenuRelated() const
 {
     switch (roleValue()) {
@@ -73,6 +79,15 @@ bool AXCoreObject::isMenuItem() const
     default:
         return false;
     }
+}
+
+bool AXCoreObject::isInputImage() const
+{
+    if (roleValue() != AccessibilityRole::Button)
+        return false;
+
+    std::optional type = inputType();
+    return type ?  *type == InputType::Type::Image : false;
 }
 
 bool AXCoreObject::isControl() const
@@ -759,6 +774,18 @@ bool AXCoreObject::isActiveDescendantOfFocusedContainer() const
     return false;
 }
 
+// ARIA spec: User agents must not expose the aria-roledescription property if the element to which aria-roledescription is applied does not have a valid WAI-ARIA role or does not have an implicit WAI-ARIA role semantic.
+bool AXCoreObject::supportsARIARoleDescription() const
+{
+    switch (roleValue()) {
+    case AccessibilityRole::Generic:
+    case AccessibilityRole::Unknown:
+        return false;
+    default:
+        return true;
+    }
+}
+
 bool AXCoreObject::supportsRangeValue() const
 {
     return isProgressIndicator()
@@ -803,6 +830,12 @@ bool AXCoreObject::isRootWebArea() const
     RefPtr parent = parentObject();
     // If the parent is a scroll area, and the scroll area has no parent, we are at the root web area.
     return parent && parent->roleValue() == AccessibilityRole::ScrollArea && !parent->parentObject();
+}
+
+bool AXCoreObject::isRadioInput() const
+{
+    std::optional type = inputType();
+    return type ? *type == InputType::Type::Radio : false;
 }
 
 String AXCoreObject::popupValue() const
@@ -1006,6 +1039,31 @@ bool AXCoreObject::containsOnlyStaticText() const
         return true;
     });
     return hasText && !nonTextDescendant;
+}
+
+String AXCoreObject::roleDescription()
+{
+    if (hasAttachmentTag())
+        return AXAttachmentRoleText();
+
+    // aria-roledescription takes precedence over any other rule.
+    if (supportsARIARoleDescription()) {
+        auto roleDescription = ariaRoleDescription();
+        if (!roleDescription.isEmpty())
+            return roleDescription;
+    }
+
+    auto roleDescription = rolePlatformDescription();
+    if (!roleDescription.isEmpty())
+        return roleDescription;
+
+    if (roleValue() == AccessibilityRole::Figure)
+        return AXFigureText();
+
+    if (roleValue() == AccessibilityRole::Suggestion)
+        return AXSuggestionRoleDescriptionText();
+
+    return { };
 }
 
 String AXCoreObject::ariaLandmarkRoleDescription() const

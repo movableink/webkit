@@ -165,6 +165,7 @@ protected:
     macro(AutocorrectionOccured) \
     macro(AutofillTypeChanged) \
     macro(ARIAColumnIndexChanged) \
+    macro(ARIARoleDescriptionChanged) \
     macro(ARIARowIndexChanged) \
     macro(BrailleLabelChanged) \
     macro(BrailleRoleDescriptionChanged) \
@@ -193,6 +194,7 @@ protected:
     macro(HasPopupChanged) \
     macro(IdAttributeChanged) \
     macro(ImageOverlayChanged) \
+    macro(InputTypeChanged) \
     macro(IsAtomicChanged) \
     macro(KeyShortcutsChanged) \
     macro(LabelChanged) \
@@ -207,7 +209,6 @@ protected:
     macro(PopoverTargetChanged) \
     macro(PositionInSetChanged) \
     macro(RoleChanged) \
-    macro(RoleDescriptionChanged) \
     macro(RowIndexChanged) \
     macro(RowSpanChanged) \
     macro(CellScopeChanged) \
@@ -764,8 +765,9 @@ private:
     void deferRowspanChange(AccessibilityObject*);
     void handleChildrenChanged(AccessibilityObject&);
     void handleAllDeferredChildrenChanged();
+    void handleInputTypeChanged(Element&);
     void handleRoleChanged(Element&, const AtomString&, const AtomString&);
-    void handleRoleDescriptionChanged(Element&);
+    void handleARIARoleDescriptionChanged(Element&);
     void handleMenuOpened(Element&);
     void handleLiveRegionCreated(Element&);
     void handleMenuItemSelected(Element*);

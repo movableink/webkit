@@ -139,6 +139,8 @@ public:
 
     bool isPresentingAttachedView() const;
 
+    RefPtr<InputType> inputType() const;
+
     bool isSteppable() const; // stepUp()/stepDown() for user-interaction.
     WEBCORE_EXPORT bool isTextButton() const;
     bool isRadioButton() const;

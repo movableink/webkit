@@ -1954,6 +1954,11 @@ bool HTMLInputElement::isPresentingAttachedView() const
     return m_inputType->isPresentingAttachedView();
 }
 
+RefPtr<InputType> HTMLInputElement::inputType() const
+{
+    return m_inputType;
+}
+
 bool HTMLInputElement::isSteppable() const
 {
     return m_inputType->isSteppable();

@@ -50,9 +50,7 @@ public:
 
     bool isBusy() const final;
     bool isDetached() const override { return !m_node; }
-    bool isRadioInput() const final;
     bool isFieldset() const final;
-    bool isInputImage() const final;
     bool isMultiSelectable() const override;
     bool isNativeImage() const;
     bool isNativeTextControl() const final;

@@ -205,11 +205,10 @@ private:
     // Attribute retrieval overrides.
     bool isSecureField() const final { return boolAttributeValue(AXProperty::IsSecureField); }
     bool isAttachment() const final { return boolAttributeValue(AXProperty::IsAttachment); }
-    bool isInputImage() const final { return boolAttributeValue(AXProperty::IsInputImage); }
-    bool isRadioInput() const final { return boolAttributeValue(AXProperty::IsRadioInput); }
 
     bool isKeyboardFocusable() const final { return boolAttributeValue(AXProperty::IsKeyboardFocusable); }
-    
+    bool isOutput() const final { return propertyValue<TagName>(AXProperty::TagName) == TagName::output; }
+
     // Table support.
     AXIsolatedObject* exposedTableAncestor(bool includeSelf = false) const final { return Accessibility::exposedTableAncestor(*this, includeSelf); }
     AccessibilityChildrenVector columns() final { return tree()->objectsForIDs(vectorAttributeValue<AXID>(AXProperty::Columns)); }
@@ -259,7 +258,8 @@ private:
     bool isVisited() const final { return boolAttributeValue(AXProperty::IsVisited); }
     bool isRequired() const final { return boolAttributeValue(AXProperty::IsRequired); }
     bool isExpanded() const final { return boolAttributeValue(AXProperty::IsExpanded); }
-    bool isFileUploadButton() const final { return boolAttributeValue(AXProperty::IsFileUploadButton); }
+    bool isDescriptionList() const { return propertyValue<TagName>(AXProperty::TagName) == TagName::dl; }
+    std::optional<InputType::Type> inputType() const final { return optionalAttributeValue<InputType::Type>(AXProperty::InputType); };
     FloatPoint screenRelativePosition() const final;
     IntPoint remoteFrameOffset() const final;
     std::optional<IntRect> cachedRelativeFrame() const { return optionalAttributeValue<IntRect>(AXProperty::RelativeFrame); }
@@ -312,8 +312,8 @@ private:
     String expandedTextValue() const final { return stringAttributeValue(AXProperty::ExpandedTextValue); }
     bool supportsExpandedTextValue() const final { return boolAttributeValue(AXProperty::SupportsExpandedTextValue); }
     SRGBA<uint8_t> colorValue() const final;
-    String roleDescription() final { return stringAttributeValue(AXProperty::RoleDescription); }
     String subrolePlatformString() const final { return stringAttributeValue(AXProperty::SubrolePlatformString); }
+    String ariaRoleDescription() const final { return stringAttributeValue(AXProperty::ARIARoleDescription); };
     LayoutRect elementRect() const final;
     IntPoint clickPoint() final;
     void accessibilityText(Vector<AccessibilityText>& texts) const final;

@@ -121,16 +121,15 @@ public:
     virtual bool isSearchField() const { return false; }
     bool isAttachment() const override { return false; }
     bool isMediaTimeline() const { return false; }
-    bool isFileUploadButton() const final;
-    bool isInputImage() const override { return false; }
     virtual bool isSliderThumb() const { return false; }
-    bool isRadioInput() const override { return false; }
     bool isLabel() const { return isAccessibilityLabelInstance() || labelForObjects().size(); }
+
+    std::optional<InputType::Type> inputType() const final;
 
     virtual bool isListInstance() const { return false; }
     virtual bool isUnorderedList() const { return false; }
     virtual bool isOrderedList() const { return false; }
-    virtual bool isDescriptionList() const { return false; }
+    bool isDescriptionList() const override { return false; }
 
     // Table support.
     bool isTable() const override { return false; }
@@ -190,7 +189,7 @@ public:
     bool isStyleFormatGroup() const;
     bool isFigureElement() const;
     bool isKeyboardFocusable() const final;
-    bool isOutput() const;
+    bool isOutput() const final;
 
     bool isChecked() const override { return false; }
     bool isEnabled() const override { return false; }
@@ -270,7 +269,6 @@ public:
     WEBCORE_EXPORT static bool isARIAControl(AccessibilityRole);
     bool supportsCheckedState() const override;
 
-    bool supportsARIARoleDescription() const;
     bool supportsARIAOwns() const override { return false; }
 
     String explicitPopupValue() const final;
@@ -431,8 +429,9 @@ public:
     SRGBA<uint8_t> colorValue() const override;
 
     virtual AccessibilityRole determineAccessibilityRole() = 0;
-    String roleDescription() override;
     String subrolePlatformString() const final;
+
+    String ariaRoleDescription() const final { return getAttributeTrimmed(HTMLNames::aria_roledescriptionAttr); };
 
     AXObjectCache* axObjectCache() const override;
 
@@ -898,7 +897,6 @@ protected:
 
     virtual bool shouldIgnoreAttributeRole() const { return false; }
     virtual AccessibilityRole buttonRoleType() const;
-    String rolePlatformDescription();
     bool dispatchTouchEvent();
 
     static bool isARIAInput(AccessibilityRole);

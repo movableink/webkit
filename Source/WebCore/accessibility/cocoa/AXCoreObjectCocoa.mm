@@ -302,6 +302,117 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
+String AXCoreObject::rolePlatformDescription()
+{
+    // Attachments have the AXImage role, but may have different subroles.
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    if (isAttachment())
+        return [[wrapper() attachmentView] accessibilityAttributeValue:NSAccessibilityRoleDescriptionAttribute];
+
+    if (isRemoteFrame())
+        return [remoteFramePlatformElement().get() accessibilityAttributeValue:NSAccessibilityRoleDescriptionAttribute];
+ALLOW_DEPRECATED_DECLARATIONS_END
+
+    RetainPtr axRole = rolePlatformString().createNSString();
+
+    if ([axRole isEqualToString:NSAccessibilityGroupRole]) {
+        if (isOutput())
+            return AXOutputText();
+
+        String ariaLandmarkRoleDescription = this->ariaLandmarkRoleDescription();
+        if (!ariaLandmarkRoleDescription.isEmpty())
+            return ariaLandmarkRoleDescription;
+
+        switch (roleValue()) {
+        case AccessibilityRole::Audio:
+            return localizedMediaControlElementString("AudioElement"_s);
+        case AccessibilityRole::Definition:
+            return AXDefinitionText();
+        case AccessibilityRole::DescriptionListTerm:
+        case AccessibilityRole::Term:
+            return AXDescriptionListTermText();
+        case AccessibilityRole::DescriptionListDetail:
+            return AXDescriptionListDetailText();
+        case AccessibilityRole::Details:
+            return AXDetailsText();
+        case AccessibilityRole::Feed:
+            return AXFeedText();
+        case AccessibilityRole::Footer:
+            return AXFooterRoleDescriptionText();
+        case AccessibilityRole::Mark:
+            return AXMarkText();
+        case AccessibilityRole::Video:
+            return localizedMediaControlElementString("VideoElement"_s);
+        case AccessibilityRole::GraphicsDocument:
+            return AXARIAContentGroupText("ARIADocument"_s);
+        default:
+            return { };
+        }
+    }
+
+    if ([axRole isEqualToString:NSAccessibilityWebAreaRole])
+        return AXWebAreaText();
+
+    if ([axRole isEqualToString:NSAccessibilityLinkRole])
+        return AXLinkText();
+
+    if ([axRole isEqualToString:NSAccessibilityListMarkerRole])
+        return AXListMarkerText();
+
+    if ([axRole isEqualToString:NSAccessibilityImageMapRole])
+        return AXImageMapText();
+
+    if ([axRole isEqualToString:NSAccessibilityHeadingRole])
+        return AXHeadingText();
+
+    if ([axRole isEqualToString:NSAccessibilityTextFieldRole]) {
+        if (std::optional type = inputType()) {
+            switch (*type) {
+            case InputType::Type::Email:
+                return AXEmailFieldText();
+            case InputType::Type::Telephone:
+                return AXTelephoneFieldText();
+            case InputType::Type::URL:
+                return AXURLFieldText();
+            case InputType::Type::Number:
+                return AXNumberFieldText();
+            case InputType::Type::Date:
+                return AXDateFieldText();
+            case InputType::Type::Time:
+                return AXTimeFieldText();
+            case InputType::Type::Week:
+                return AXWeekFieldText();
+            case InputType::Type::Month:
+                return AXMonthFieldText();
+            case InputType::Type::DateTimeLocal:
+                return AXDateTimeFieldText();
+            default:
+                break;
+            }
+        }
+    }
+
+    if (isFileUploadButton())
+        return AXFileUploadButtonText();
+
+    // Only returning for DL (not UL or OL) because description changed with HTML5 from 'definition list' to
+    // superset 'description list' and does not return the same values in AX API on some OS versions.
+    if (isDescriptionList())
+        return AXDescriptionListText();
+
+    if (roleValue() == AccessibilityRole::HorizontalRule)
+        return AXHorizontalRuleDescriptionText();
+
+    // AppKit also returns AXTab for the role description for a tab item.
+    if (isTabItem())
+        return NSAccessibilityRoleDescription(@"AXTab", nil);
+
+    if (isSummary())
+        return AXSummaryText();
+
+    return { };
+}
+
 String AXCoreObject::rolePlatformString()
 {
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN

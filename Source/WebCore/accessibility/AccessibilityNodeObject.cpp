@@ -785,14 +785,6 @@ bool AccessibilityNodeObject::isSecureField() const
     return input->isSecureField();
 }
 
-bool AccessibilityNodeObject::isInputImage() const
-{
-    if (roleValue() != AccessibilityRole::Button)
-        return false;
-    RefPtr input = dynamicDowncast<HTMLInputElement>(node());
-    return input && input->isImageButton();
-}
-
 bool AccessibilityNodeObject::isEnabled() const
 {
     // ARIA says that the disabled status applies to the current element and all descendant elements.
@@ -1083,12 +1075,6 @@ std::optional<AccessibilityOrientation> AccessibilityNodeObject::orientationFrom
 bool AccessibilityNodeObject::isBusy() const
 {
     return elementAttributeValue(aria_busyAttr);
-}
-
-bool AccessibilityNodeObject::isRadioInput() const
-{
-    auto* inputElement = dynamicDowncast<HTMLInputElement>(node());
-    return inputElement ? inputElement->isRadioButton() : false;
 }
 
 bool AccessibilityNodeObject::isFieldset() const
