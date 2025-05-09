@@ -8302,6 +8302,7 @@
         "web-platform-tests/dom/traversal/unfinished/008.xml",
         "web-platform-tests/dom/traversal/unfinished/009.xml",
         "web-platform-tests/dom/traversal/unfinished/010.xml",
+        "web-platform-tests/dom/xslt/encoding-single-chunk-ref.html",
         "web-platform-tests/dom/xslt/large-cdata-ref.html",
         "web-platform-tests/dom/xslt/sort-ref.html",
         "web-platform-tests/domxpath/001.html",
