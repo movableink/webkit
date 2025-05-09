@@ -189,12 +189,8 @@
     )
 
     (allow sysctl-read (sysctl-name "kern.bootsessionuuid"))
-#if HAVE(SANDBOX_STATE_FLAGS)
     (with-filter (require-not (webcontent-process-launched))
         (allow sysctl-read (sysctl-name "kern.boottime")))
-#else
-    (allow sysctl-read (sysctl-name "kern.boottime"))
-#endif
 
     (mobile-preferences-read
         "com.apple.Metal" ;; <rdar://problem/25535471>
@@ -673,12 +669,8 @@
 (deny sysctl-read (with no-report)
     (sysctl-name "vm.task_no_footprint_for_debug"))
 
-#if HAVE(SANDBOX_STATE_FLAGS)
 (with-filter (require-not (webcontent-process-launched))
     (allow sysctl-read (sysctl-name "vm.malloc_ranges"))) ;; <rdar://problem/105161083>
-#else
-(allow sysctl-read (sysctl-name "vm.malloc_ranges")) ;; <rdar://problem/105161083>
-#endif
 
 (allow iokit-get-properties
     (iokit-property "AAPL,DisplayPipe")
@@ -849,7 +841,7 @@
 
 #if ENABLE(WEBCONTENT_GPU_SANDBOX_EXTENSIONS_BLOCKING)
 (deny iokit-open-service (with no-report))
-#elif HAVE(SANDBOX_STATE_FLAGS)
+#else
 (with-filter (state-flag "BlockIOKitInWebContentSandbox")
     (deny iokit-open-service)
     (deny iokit-open-user-client (with telemetry-backtrace)
@@ -1056,12 +1048,8 @@
     (syscall-unix-in-use-after-launch)
     (syscall-unix-in-use-after-launch-blocked-in-lockdown-mode))
 
-#if HAVE(SANDBOX_STATE_FLAGS)
 (with-filter (require-not (webcontent-process-launched))
     (allow syscall-unix (syscall-unix-only-in-use-during-launch)))
-#else
-(allow syscall-unix (syscall-unix-only-in-use-during-launch))
-#endif
 
 (allow syscall-unix
     (syscall-unix-rarely-in-use)
@@ -1171,14 +1159,6 @@
 (define-once (mach-bootstrap-message-numbers-post-launch)
     (message-number 206 207 711 712 800 804 904))
 
-(define (allow-mach-bootstrap-with-filter)
-    (allow mach-bootstrap
-        (apply-message-filter
-            (deny mach-message-send (with telemetry))
-            (allow mach-message-send
-                (mach-bootstrap-message-numbers)))))
-
-#if HAVE(SANDBOX_STATE_FLAGS)
 (allow mach-bootstrap
     (apply-message-filter
         (deny mach-message-send (with no-report))
@@ -1190,9 +1170,6 @@
 #endif
         (with-filter (require-not (webcontent-process-launched))
             (allow mach-message-send (mach-bootstrap-message-numbers)))))
-#else
-(allow-mach-bootstrap-with-filter)
-#endif
 
 (define (syscall-mach-only-in-use-during-launch)
     (machtrap-number
@@ -1255,7 +1232,6 @@
 (when (defined? 'MSC_mach_msg2_trap)
     (allow syscall-mach (machtrap-number MSC_mach_msg2_trap)))
 
-#if HAVE(SANDBOX_STATE_FLAGS)
 (with-filter (require-not (webcontent-process-launched))
     (allow syscall-mach
         (syscall-mach-only-in-use-during-launch)))
@@ -1264,7 +1240,6 @@
         (with telemetry)
         (with message "Mach syscall used after launch")
         (syscall-mach-only-in-use-during-launch)))
-#endif
 
 (with-filter (lockdown-mode)
     (deny syscall-mach (with telemetry) (with message "Lockdown mode")
@@ -1372,7 +1347,6 @@
     (kernel-mig-routine-in-use-watchos))
 #endif
 
-#if HAVE(SANDBOX_STATE_FLAGS)
 (with-filter (require-not (webcontent-process-launched))
     (allow syscall-mig
         (kernel-mig-routine-only-in-use-during-launch)))
@@ -1386,7 +1360,6 @@
 #else
 (with-filter (require-not (state-flag "BlockIOKitInWebContentSandbox"))
     (allow syscall-mig (kernel-mig-routines-iokit-service)))
-#endif
 #endif
 
 #if HAVE(HARDENED_MACH_EXCEPTIONS)
