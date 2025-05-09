@@ -2954,7 +2954,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                 switch (oneArrayMode) {
                 case asArrayModesIgnoringTypedArrays(ArrayWithContiguous):
                     mayIncludeNonNumber = true;
-                    FALLTHROUGH;
+                    [[fallthrough]];
                 case asArrayModesIgnoringTypedArrays(ArrayWithInt32):
                 case asArrayModesIgnoringTypedArrays(ArrayWithDouble): {
                     if (mode.isInBounds() || mode.isOutOfBoundsSaneChain())
