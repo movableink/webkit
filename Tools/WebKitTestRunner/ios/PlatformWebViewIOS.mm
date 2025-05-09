@@ -58,6 +58,7 @@ static Vector<WebKitTestRunnerWindow *> allWindows;
 @implementation WebKitTestRunnerWindow
 @synthesize platformWebView = _platformWebView;
 
+ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
 - (id)initWithFrame:(CGRect)frame
 {
     allWindows.append(self);
@@ -67,6 +68,7 @@ static Vector<WebKitTestRunnerWindow *> allWindows;
 
     return self;
 }
+ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
 - (void)becomeKeyWindow
 {
