@@ -2301,6 +2301,11 @@ static void webkitWebViewBaseTouchSwipe(WebKitWebViewBase* webViewBase, gdouble 
     }
 }
 
+static void webkitWebViewBaseTouchPressed(WebKitWebViewBase* webViewBase, gint nPress, gdouble x, gdouble y, GtkGesture* gesture)
+{
+    gtk_widget_grab_focus(GTK_WIDGET(webViewBase));
+}
+
 static void webkitWebViewBaseConstructed(GObject* object)
 {
     G_OBJECT_CLASS(webkit_web_view_base_parent_class)->constructed(object);
@@ -2410,6 +2415,15 @@ static void webkitWebViewBaseConstructed(GObject* object)
     gtk_gesture_group(gesture, priv->touchGestureGroup);
     gtk_gesture_single_set_touch_only(GTK_GESTURE_SINGLE(gesture), TRUE);
     g_signal_connect_object(gesture, "swipe", G_CALLBACK(webkitWebViewBaseTouchSwipe), viewWidget, G_CONNECT_SWAPPED);
+
+#if USE(GTK4)
+    gesture = gtk_gesture_click_new();
+    gtk_widget_add_controller(viewWidget, GTK_EVENT_CONTROLLER(gesture));
+
+    gtk_gesture_group(gesture, priv->touchGestureGroup);
+    gtk_gesture_single_set_touch_only(GTK_GESTURE_SINGLE(gesture), TRUE);
+    g_signal_connect_object(gesture, "pressed", G_CALLBACK(webkitWebViewBaseTouchPressed), viewWidget, G_CONNECT_SWAPPED);
+#endif
 
     priv->displayID = ScreenManager::singleton().primaryDisplayID();
 }
