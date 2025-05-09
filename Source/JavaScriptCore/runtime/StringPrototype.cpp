@@ -643,6 +643,11 @@ static ALWAYS_INLINE bool splitStringByOneCharacterImpl(Indice& result, StringIm
     return false;
 }
 
+static bool isASCIIIdentifierStart(UChar ch)
+{
+    return isASCIIAlpha(ch) || ch == '_' || ch == '$';
+}
+
 // ES 21.1.3.17 String.prototype.split(separator, limit)
 JSC_DEFINE_HOST_FUNCTION(stringProtoFuncSplitFast, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
@@ -719,10 +724,12 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncSplitFast, (JSGlobalObject* globalObject
             auto view = thisString->view(globalObject);
             RETURN_IF_EXCEPTION(scope, { });
 
+            bool encounteredNonAtoms = false;
             for (unsigned i = 0; i < resultSize; ++i) {
                 unsigned end = result[i];
                 JSString* string = nullptr;
-                if (makeAtomStringsArray) {
+                const bool isPotentiallyIdentifier = start < end && isASCIIIdentifierStart(view->characterAt(start));
+                if (makeAtomStringsArray && isPotentiallyIdentifier) {
                     auto subView = view->substring(start, end - start);
                     auto identifier = subView.is8Bit() ? Identifier::fromString(vm, subView.span8()) : Identifier::fromString(vm, subView.span16());
 
@@ -733,9 +740,14 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncSplitFast, (JSGlobalObject* globalObject
                 } else {
                     string = jsSubstring(globalObject, thisString, start, end - start);
                     RETURN_IF_EXCEPTION(scope, { });
+                    encounteredNonAtoms = true;
                 }
                 newButterfly->setIndex(vm, i, string);
                 start = end + separatorLength;
+            }
+            if (makeAtomStringsArray && encounteredNonAtoms) {
+                Structure* replacementStructure = vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous);
+                newButterfly->setStructure(vm, replacementStructure);
             }
             vm.stringSplitCache.set(input, separator, newButterfly);
             Structure* arrayStructure = globalObject->originalArrayStructureForIndexingType(CopyOnWriteArrayWithContiguous);
@@ -789,8 +801,10 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncSplitFast, (JSGlobalObject* globalObject
                 if (makeAtomStringsArray) {
                     Identifier identifier = string->toIdentifier(globalObject);
                     RETURN_IF_EXCEPTION(scope, { });
-                    auto* atomized = vm.atomStringToJSStringMap.ensureValue(identifier.impl(), [&] { return string; });
-                    string = atomized;
+                    DeferGC defer(vm);
+                    string = vm.atomStringToJSStringMap.ensureValue(identifier.impl(), [&] {
+                        return string; // string was already atomized by toIdentifier()
+                    });
                 }
                 newButterfly->setIndex(vm, i, string);
             }
