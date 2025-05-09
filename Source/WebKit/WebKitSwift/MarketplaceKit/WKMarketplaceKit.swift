@@ -21,7 +21,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if USE_APPLE_INTERNAL_SDK && HAVE_MARKETPLACE_KIT
+#if HAVE_MARKETPLACE_KIT
 
 import Foundation
 import WebKitSwift
@@ -31,7 +31,7 @@ import OSLog
 internal import MarketplaceKit
 
 @objc @implementation extension WKMarketplaceKit {
-    private static let logger = Logger(subsystem: "com.apple.WebKit", category: "Loading")
+    @nonobjc private static let logger = Logger(subsystem: "com.apple.WebKit", category: "Loading")
 
     class func requestAppInstallation(withTopOrigin topOrigin: URL, url: URL) async throws {
         do {
@@ -44,4 +44,4 @@ internal import MarketplaceKit
     }
 }
 
-#endif // USE_APPLE_INTERNAL_SDK && HAVE_MARKETPLACE_KIT
+#endif // HAVE_MARKETPLACE_KIT

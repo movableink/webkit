@@ -442,7 +442,7 @@ static void trySOAuthorization(Ref<API::NavigationAction>&& navigationAction, We
 #endif
 }
 
-#if USE(APPLE_INTERNAL_SDK) && HAVE(MARKETPLACE_KIT)
+#if HAVE(MARKETPLACE_KIT)
 
 static bool isMarketplaceKitURL(const URL& url)
 {
@@ -487,16 +487,16 @@ static void interceptMarketplaceKitNavigation(Ref<API::NavigationAction>&& actio
     }).get()];
 }
 
-#endif // USE(APPLE_INTERNAL_SDK) && HAVE(MARKETPLACE_KIT)
+#endif // HAVE(MARKETPLACE_KIT)
 
 static void tryInterceptNavigation(Ref<API::NavigationAction>&& navigationAction, WebPageProxy& page, WTF::Function<void(bool)>&& completionHandler)
 {
-#if USE(APPLE_INTERNAL_SDK) && HAVE(MARKETPLACE_KIT)
+#if HAVE(MARKETPLACE_KIT)
     if (isMarketplaceKitURL(navigationAction->request().url())) {
         interceptMarketplaceKitNavigation(WTFMove(navigationAction), page);
         return completionHandler(true /* interceptedNavigation */);
     }
-#endif // USE(APPLE_INTERNAL_SDK) && HAVE(MARKETPLACE_KIT)
+#endif // HAVE(MARKETPLACE_KIT)
 
 #if HAVE(APP_LINKS)
     if (navigationAction->shouldOpenAppLinks()) {
@@ -680,13 +680,13 @@ void NavigationState::NavigationClient::decidePolicyForNavigationAction(WebPageP
                 break;
 
             case _WKNavigationActionPolicyAllowWithoutTryingAppLink:
-#if USE(APPLE_INTERNAL_SDK) && HAVE(MARKETPLACE_KIT)
+#if HAVE(MARKETPLACE_KIT)
                 if (isMarketplaceKitURL(navigationAction->request().url())) {
                     interceptMarketplaceKitNavigation(WTFMove(navigationAction), webPageProxy);
                     localListener->ignore();
                     return;
                 }
-#endif // USE(APPLE_INTERNAL_SDK) && HAVE(MARKETPLACE_KIT)
+#endif // HAVE(MARKETPLACE_KIT)
 
                 trySOAuthorization(WTFMove(navigationAction), webPageProxy, [localListener = WTFMove(localListener), websitePolicies = WTFMove(apiWebsitePolicies)] (bool optimizedLoad) {
                     if (optimizedLoad) {
