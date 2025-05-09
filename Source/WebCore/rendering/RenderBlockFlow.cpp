@@ -596,7 +596,7 @@ void RenderBlockFlow::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit 
     LayoutUnit alignContentShift = 0_lu;
     // Alignment isn't supported when fragmenting.
     // Table cell alignment is handled in RenderTableCell::computeIntrinsicPadding.
-    if ((!isPaginated || pageRemaining > newHeight) && (settings().alignContentOnBlocksEnabled()) && !isRenderTableCell()) {
+    if ((!isPaginated || pageRemaining > newHeight) && !isRenderTableCell()) {
         alignContentShift = shiftForAlignContent(oldHeight, repaintLogicalTop, repaintLogicalBottom);
         oldClientAfterEdge += alignContentShift;
         if (alignContentShift < 0)
