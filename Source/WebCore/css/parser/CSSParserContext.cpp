@@ -91,7 +91,6 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
     , cssAppearanceBaseEnabled { document.settings().cssAppearanceBaseEnabled() }
     , cssPaintingAPIEnabled { document.settings().cssPaintingAPIEnabled() }
     , cssShapeFunctionEnabled { document.settings().cssShapeFunctionEnabled() }
-    , cssStyleQueriesEnabled { document.settings().cssStyleQueriesEnabled() }
     , cssTextUnderlinePositionLeftRightEnabled { document.settings().cssTextUnderlinePositionLeftRightEnabled() }
     , cssBackgroundClipBorderAreaEnabled  { document.settings().cssBackgroundClipBorderAreaEnabled() }
     , cssWordBreakAutoPhraseEnabled { document.settings().cssWordBreakAutoPhraseEnabled() }

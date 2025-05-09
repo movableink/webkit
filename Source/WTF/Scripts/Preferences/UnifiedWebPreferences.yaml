@@ -1526,20 +1526,6 @@ CSSShapeFunctionEnabled:
     WebCore:
       default: true
 
-CSSStyleQueriesEnabled:
-  type: bool
-  status: stable
-  category: css
-  humanReadableName: "CSS style queries"
-  humanReadableDescription: "Enable CSS style queries for custom properties"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 CSSTextAutospaceEnabled:
   type: bool
   status: stable
