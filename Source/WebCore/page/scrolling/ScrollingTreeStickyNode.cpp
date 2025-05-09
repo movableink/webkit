@@ -83,10 +83,10 @@ FloatPoint ScrollingTreeStickyNode::computeClippingLayerPosition() const
     return computeLayerPosition();
 }
 
-FloatPoint ScrollingTreeStickyNode::computeAnchorLayerPosition() const
+std::optional<FloatRect> ScrollingTreeStickyNode::findConstrainingRect() const
 {
     FloatSize offsetFromStickyAncestors;
-    auto computeLayerPositionForScrollingNode = [&](ScrollingTreeNode& scrollingNode) {
+    auto computeConstrainingRectForScrollingNode = [&](ScrollingTreeNode& scrollingNode) {
         FloatRect constrainingRect;
         if (auto* frameScrollingNode = dynamicDowncast<ScrollingTreeFrameScrollingNode>(scrollingNode))
             constrainingRect = frameScrollingNode->layoutViewport();
@@ -95,7 +95,7 @@ FloatPoint ScrollingTreeStickyNode::computeAnchorLayerPosition() const
             constrainingRect.move(overflowScrollingNode->scrollDeltaSinceLastCommit());
         }
         constrainingRect.move(-offsetFromStickyAncestors);
-        return m_constraints.anchorLayerPositionForConstrainingRect(constrainingRect);
+        return constrainingRect;
     };
 
     for (RefPtr ancestor = parent(); ancestor; ancestor = ancestor->parent()) {
@@ -104,21 +104,29 @@ FloatPoint ScrollingTreeStickyNode::computeAnchorLayerPosition() const
             if (!overflowNode)
                 break;
 
-            return computeLayerPositionForScrollingNode(*overflowNode);
+            return computeConstrainingRectForScrollingNode(*overflowNode);
         }
 
         if (is<ScrollingTreeScrollingNode>(*ancestor))
-            return computeLayerPositionForScrollingNode(*ancestor);
+            return computeConstrainingRectForScrollingNode(*ancestor);
 
         if (auto* stickyNode = dynamicDowncast<ScrollingTreeStickyNode>(*ancestor))
             offsetFromStickyAncestors += stickyNode->scrollDeltaSinceLastCommit();
 
         if (is<ScrollingTreeFixedNode>(*ancestor)) {
             // FIXME: Do we need scrolling tree nodes at all for nested cases?
-            return m_constraints.layerPositionAtLastLayout();
+            return std::nullopt;
         }
     }
     ASSERT_NOT_REACHED();
+    return std::nullopt;
+}
+
+FloatPoint ScrollingTreeStickyNode::computeAnchorLayerPosition() const
+{
+    if (auto constrainingRect = findConstrainingRect())
+        return m_constraints.anchorLayerPositionForConstrainingRect(*constrainingRect);
+
     return m_constraints.layerPositionAtLastLayout();
 }
 

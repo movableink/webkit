@@ -52,6 +52,7 @@
 #import <WebCore/ScrollingTreeOverflowScrollingNode.h>
 #import <WebCore/ScrollingTreePluginScrollingNode.h>
 #import <WebCore/ScrollingTreePositionedNode.h>
+#import <WebCore/ScrollingTreeStickyNodeCocoa.h>
 #import <tuple>
 #import <wtf/TZoneMallocInlines.h>
 
@@ -109,10 +110,23 @@ UIScrollView *RemoteScrollingCoordinatorProxyIOS::scrollViewForScrollingNodeID(s
 void RemoteScrollingCoordinatorProxyIOS::removeDestroyedLayerIDs(const Vector<WebCore::PlatformLayerIdentifier>& destroyedLayers)
 {
     for (auto layerID : destroyedLayers) {
-        m_fixedScrollingNodeLayerIDs.remove(layerID);
-        m_overlayRegionLayerIDs.remove(layerID);
+        m_fixedScrollingNodesByLayerID.remove(layerID);
         m_scrollingNodesByLayerID.remove(layerID);
     }
+}
+
+HashSet<WebCore::PlatformLayerIdentifier> RemoteScrollingCoordinatorProxyIOS::fixedScrollingNodeLayerIDs() const
+{
+    HashSet<WebCore::PlatformLayerIdentifier> actuallyFixed;
+    for (auto& [layerID, scrollingNodeID] : m_fixedScrollingNodesByLayerID) {
+        auto* treeNode = scrollingTree().nodeForID(scrollingNodeID);
+        if (auto* scrollingNode = dynamicDowncast<ScrollingTreeStickyNodeCocoa>(treeNode)) {
+            if (scrollingNode->isCurrentlySticking())
+                actuallyFixed.add(layerID);
+        } else
+            actuallyFixed.add(layerID);
+    }
+    return actuallyFixed;
 }
 
 Vector<WKBaseScrollView*> RemoteScrollingCoordinatorProxyIOS::overlayRegionScrollViewCandidates() const
@@ -140,7 +154,7 @@ void RemoteScrollingCoordinatorProxyIOS::connectStateNodeLayers(ScrollingStateTr
                 currNode->setLayer(remoteLayerTreeNode->layer());
 #if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
             if (platformLayerID && (currNode->isFixedNode() || currNode->isStickyNode()))
-                m_fixedScrollingNodeLayerIDs.add(*platformLayerID);
+                m_fixedScrollingNodesByLayerID.add(*platformLayerID, currNode->scrollingNodeID());
             if (platformLayerID && currNode->isScrollingNode())
                 m_scrollingNodesByLayerID.add(*platformLayerID, currNode->scrollingNodeID());
 #endif

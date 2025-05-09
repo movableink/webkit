@@ -52,6 +52,7 @@ protected:
     bool commitStateBeforeChildren(const ScrollingStateNode&) override;
 
     FloatPoint computeClippingLayerPosition() const;
+    std::optional<FloatRect> findConstrainingRect() const;
     FloatPoint computeAnchorLayerPosition() const;
     void dumpProperties(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const override;
 

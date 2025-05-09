@@ -93,6 +93,20 @@ bool ScrollingTreeStickyNodeCocoa::hasViewportClippingLayer() const
     return m_viewportAnchorLayer && m_layer != m_viewportAnchorLayer;
 }
 
+bool ScrollingTreeStickyNodeCocoa::isCurrentlySticking() const
+{
+    if (auto constrainingRect = findConstrainingRect()) {
+        auto stickyOffset = m_constraints.computeStickyOffset(*constrainingRect);
+        auto stickyRect = m_constraints.stickyBoxRect();
+        auto containingRect = m_constraints.containingBlockRect();
+
+        return stickyOffset.height() > 0
+            && stickyOffset.height() < containingRect.height() - stickyRect.height();
+    }
+
+    return false;
+}
+
 FloatPoint ScrollingTreeStickyNodeCocoa::layerTopLeft() const
 {
     FloatRect layerBounds = [m_layer bounds];
