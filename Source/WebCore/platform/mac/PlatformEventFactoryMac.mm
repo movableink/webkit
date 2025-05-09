@@ -272,7 +272,7 @@ String keyForKeyEvent(NSEvent *event)
     // https://developer.apple.com/reference/appkit/nsevent/1534183-characters
     if (!length)
         return "Dead"_s;
-    // High unicode codepoints are coded with a character sequence in Mac OS X.
+    // High unicode codepoints are coded with a character sequence in macOS.
     if (length > 1)
         return s;
     return keyForCharCode([s characterAtIndex:0]);

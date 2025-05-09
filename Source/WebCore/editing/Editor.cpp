@@ -2620,7 +2620,7 @@ void Editor::learnSpelling()
     if (!client())
         return;
         
-    // FIXME: On Mac OS X, when use "learn" button on "Spelling and Grammar" panel, we don't call this function. It should remove misspelling markers around the learned word, see <rdar://problem/5396072>.
+    // FIXME: On macOS, when use "learn" button on "Spelling and Grammar" panel, we don't call this function. It should remove misspelling markers around the learned word, see <rdar://problem/5396072>.
 
     if (auto selectedRange = document().selection().selection().toNormalizedRange())
         removeMarkers(*selectedRange, DocumentMarkerType::Spelling);

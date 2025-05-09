@@ -216,7 +216,7 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
 
 bool RenderLayerModelObject::shouldPlaceVerticalScrollbarOnLeft() const
 {
-// RTL Scrollbars require some system support, and this system support does not exist on certain versions of OS X. iOS uses a separate mechanism.
+// RTL Scrollbars require some system support, and this system support does not exist on certain versions of macOS. iOS uses a separate mechanism.
 #if PLATFORM(IOS_FAMILY)
     return false;
 #else

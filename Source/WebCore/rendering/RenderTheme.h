@@ -87,7 +87,7 @@ public:
     void paintDecorations(const RenderBox&, const PaintInfo&, const LayoutRect&);
 
     // The remaining methods should be implemented by the platform-specific portion of the theme, e.g.,
-    // RenderThemeMac.cpp for Mac OS X.
+    // RenderThemeMac.cpp for macOS.
 
     virtual String extraDefaultStyleSheet() { return String(); }
 #if ENABLE(VIDEO)
@@ -120,7 +120,7 @@ public:
     // A general method asking if any control tinting is supported at all.
     virtual bool supportsControlTints() const { return false; }
 
-    // Some controls may spill out of their containers (e.g., the check on an OS X checkbox).  When these controls repaint,
+    // Some controls may spill out of their containers (e.g., the check on a macOS checkbox). When these controls repaint,
     // the theme needs to communicate this inflated rect to the engine so that it can invalidate the whole control.
     virtual void inflateRectForControlRenderer(const RenderObject&, FloatRect&) { }
     virtual void adjustRepaintRect(const RenderBox&, FloatRect&) { }

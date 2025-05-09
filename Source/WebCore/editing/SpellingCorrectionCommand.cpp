@@ -42,7 +42,7 @@
 namespace WebCore {
 
 #if USE(AUTOCORRECTION_PANEL)
-// On Mac OS X, we use this command to keep track of user undoing a correction for the first time.
+// On macOS, we use this command to keep track of user undoing a correction for the first time.
 // This information is needed by spell checking service to update user specific data.
 class SpellingCorrectionRecordUndoCommand : public SimpleEditCommand {
 public:

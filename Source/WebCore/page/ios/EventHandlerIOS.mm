@@ -579,7 +579,7 @@ HandleUserInputEventResult EventHandler::passMouseReleaseEventToSubframe(MouseEv
 
 OptionSet<PlatformEvent::Modifier> EventHandler::accessKeyModifiers()
 {
-    // Control+Option key combinations are usually unused on Mac OS X, but not when VoiceOver is enabled.
+    // Control+Option key combinations are usually unused on macOS, but not when VoiceOver is enabled.
     // So, we use Control in this case, even though it conflicts with Emacs-style key bindings.
     // See <https://bugs.webkit.org/show_bug.cgi?id=21107> for more detail.
     if (AXObjectCache::accessibilityEnhancedUserInterfaceEnabled())

@@ -128,7 +128,7 @@ void Font::platformInit()
 
     // The Open Font Format describes the OS/2 USE_TYPO_METRICS flag as follows:
     // "If set, it is strongly recommended to use OS/2.sTypoAscender - OS/2.sTypoDescender+ OS/2.sTypoLineGap as a value for default line spacing for this font."
-    // On OS X, we only apply this rule in the important case of fonts with a MATH table.
+    // On macOS, we only apply this rule in the important case of fonts with a MATH table.
     if (CTFontHasTable(getCTFont(), kCTFontTableMATH)) {
         short typoAscent, typoDescent, typoLineGap;
         if (OpenType::tryGetTypoMetrics(getCTFont(), typoAscent, typoDescent, typoLineGap)) {

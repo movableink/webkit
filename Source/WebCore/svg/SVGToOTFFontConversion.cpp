@@ -1396,7 +1396,7 @@ SVGToOTFFontConverter::SVGToOTFFontConverter(const SVGFontElement& fontElement)
         m_xHeight = scaleUnitsPerEm(m_fontFaceElement->xHeight());
         m_capHeight = scaleUnitsPerEm(m_fontFaceElement->capHeight());
 
-        // Some platforms, including OS X, use 0 ascent and descent to mean that the platform should synthesize
+        // Some platforms, including macOS, use 0 ascent and descent to mean that the platform should synthesize
         // a value based on a heuristic. However, SVG fonts can legitimately have 0 for ascent or descent.
         // Specifing a single FUnit gets us as close to 0 as we can without triggering the synthesis.
         if (!m_ascent)

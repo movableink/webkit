@@ -175,7 +175,7 @@ RefPtr<SharedBuffer> Editor::imageInWebArchiveFormat(Element& imageElement)
 
 RefPtr<SharedBuffer> Editor::dataSelectionForPasteboard(const String& pasteboardType)
 {
-    // FIXME: The interface to this function is awkward. We'd probably be better off with three separate functions. As of this writing, this is only used in WebKit2 to implement the method -[WKView writeSelectionToPasteboard:types:], which is only used to support OS X services.
+    // FIXME: The interface to this function is awkward. We'd probably be better off with three separate functions. As of this writing, this is only used in WebKit2 to implement the method -[WKView writeSelectionToPasteboard:types:], which is only used to support macOS services.
 
     // FIXME: Does this function really need to use adjustedSelectionRange()? Because writeSelectionToPasteboard() just uses selectedRange(). This is the only function in WebKit that uses adjustedSelectionRange.
     if (!canCopy())
