@@ -57,14 +57,34 @@ function skipContent() {
     }
 }
 
+async function checkNodesCollectedByGC() {
+    let nodeCount = 0;
+    let timeRemainingInMs = 1000;
+    const intervalTimeInMs = 10;
+
+    while (timeRemainingInMs > 0) {
+        gc();
+        await nextRendering();
+        nodeCount = internals.referencingNodeCount(document);
+
+        if (nodeCount < initialNodeCount + CISCount * 0.8)
+            return nodeCount;
+
+        timeRemainingInMs -= intervalTimeInMs;
+        await new Promise(resolve => setTimeout(resolve, intervalTimeInMs));
+    }
+
+    return nodeCount; 
+}
+
 promise_test(async function () {
     createNodes();
     await nextRendering();
     removeNodes();
     await nextRendering();
-    gc();
-    await nextRendering();
-    assert_equals(internals.referencingNodeCount(document) < initialNodeCount + CISCount * 0.8, true, 'More than 20% of nodes should be collected');
+
+    let nodeCount = await checkNodesCollectedByGC();
+    assert_equals(nodeCount < initialNodeCount + CISCount * 0.8, true, 'More than 20% of nodes should be collected');
 }, "Remove nodes after observing");
 
 promise_test(async function () {
@@ -75,9 +95,9 @@ promise_test(async function () {
     await nextRendering();
     removeNodes();
     await nextRendering();
-    gc();
-    await nextRendering();
-    assert_equals(internals.referencingNodeCount(document) < initialNodeCount + CISCount * 0.8, true, 'More than 20% of nodes should be collected');
+
+    let nodeCount = await checkNodesCollectedByGC();
+    assert_equals(nodeCount < initialNodeCount + CISCount * 0.8, true, 'More than 20% of nodes should be collected');
 }, "Remove nodes after skipping content");
 </script>
 </body>
