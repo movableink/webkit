@@ -81,6 +81,8 @@ protected:
 private:
     LayoutUnit computeConstrainedLogicalWidth() const;
 
+    void computeAspectRatioAdjustedIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const;
+
     virtual RenderBox* embeddedContentBox() const { return 0; }
     ASCIILiteral renderName() const override { return "RenderReplaced"_s; }
 
