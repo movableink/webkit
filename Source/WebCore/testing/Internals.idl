@@ -1452,4 +1452,6 @@ enum ContentsFormat {
     undefined setResourceMonitorNetworkUsageThreshold(unsigned long threshold, double randomness);
     attribute boolean shouldSkipResourceMonitorThrottling;
 #endif
+
+    [Conditional=MODEL_ELEMENT] undefined disableModelLoadDelaysForTesting();
 };

@@ -1306,6 +1306,11 @@ public:
     WEBCORE_EXPORT void setPresentingApplicationBundleIdentifier(String&&);
 #endif
 
+#if ENABLE(MODEL_ELEMENT)
+    bool shouldDisableModelLoadDelaysForTesting() const { return m_modelLoadDelaysDisabledForTesting; }
+    void disableModelLoadDelaysForTesting() { m_modelLoadDelaysDisabledForTesting = true; }
+#endif
+
 private:
     explicit Page(PageConfiguration&&);
 
@@ -1755,6 +1760,10 @@ private:
 
 #if PLATFORM(COCOA)
     String m_presentingApplicationBundleIdentifier;
+#endif
+
+#if ENABLE(MODEL_ELEMENT)
+    bool m_modelLoadDelaysDisabledForTesting { false };
 #endif
 }; // class Page
 

@@ -10375,6 +10375,13 @@ void WebPage::frameViewLayoutOrVisualViewportChanged(const LocalFrameView& frame
 #endif
 }
 
+#if ENABLE(MODEL_ELEMENT)
+bool WebPage::shouldDisableModelLoadDelaysForTesting() const
+{
+    return m_page && m_page->shouldDisableModelLoadDelaysForTesting();
+}
+#endif
+
 } // namespace WebKit
 
 #undef WEBPAGE_RELEASE_LOG

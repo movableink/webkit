@@ -84,6 +84,14 @@ void ModelProcessModelPlayerManagerProxy::deleteModelPlayer(WebCore::ModelPlayer
         m_modelConnectionToWebProcess->modelProcess().tryExitIfUnusedAndUnderMemoryPressure();
 }
 
+void ModelProcessModelPlayerManagerProxy::unloadModelPlayer(WebCore::ModelPlayerIdentifier identifier)
+{
+    ASSERT(RunLoop::isMain());
+
+    deleteModelPlayer(identifier);
+    m_modelConnectionToWebProcess->didUnloadModelPlayer(identifier);
+}
+
 void ModelProcessModelPlayerManagerProxy::didReceivePlayerMessage(IPC::Connection& connection, IPC::Decoder& decoder)
 {
     ASSERT(RunLoop::isMain());

@@ -7155,6 +7155,16 @@ struct WebCore::CookieChangeSubscription {
     URL url()
 }
 
+class WebCore::ModelPlayerAnimationState {
+    bool autoplay()
+    bool loop()
+    bool paused()
+    Seconds duration()
+    std::optional<double> effectivePlaybackRate()
+    std::optional<Seconds> lastCachedCurrentTime()
+    std::optional<MonotonicTime> lastCachedClockTimestamp()
+}
+
 #if ENABLE(MODEL_PROCESS)
 enum class WebCore::ModelContextDisablePortal : bool
 

@@ -26,6 +26,9 @@
 [EnabledBy=ModelElementEnabled && ModelProcessEnabled]
 messages -> ModelProcessModelPlayerProxy {
     CreateLayer()
+    ReloadModel(Ref<WebCore::Model> model, WebCore::LayoutSize layoutSize, std::optional<WebCore::TransformationMatrix> entityTransformToRestore, std::optional<WebCore::ModelPlayerAnimationState> animationStateToRestore)
+    ModelVisibilityDidChange(bool isVisible)
+    DisableUnloadDelayForTesting()
     
     # WebCore::ModelPlayer
     LoadModel(Ref<WebCore::Model> url, WebCore::LayoutSize layoutSize)

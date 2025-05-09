@@ -43,6 +43,11 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(ModelPlayer);
 
 ModelPlayer::~ModelPlayer() = default;
 
+bool ModelPlayer::isPlaceholder() const
+{
+    return false;
+}
+
 std::optional<ModelPlayerAnimationState> ModelPlayer::currentAnimationState() const
 {
     return std::nullopt;
@@ -51,6 +56,14 @@ std::optional<ModelPlayerAnimationState> ModelPlayer::currentAnimationState() co
 std::optional<std::unique_ptr<ModelPlayerTransformState>> ModelPlayer::currentTransformState() const
 {
     return std::nullopt;
+}
+
+void ModelPlayer::reload(Model&, LayoutSize, ModelPlayerAnimationState&, std::unique_ptr<ModelPlayerTransformState>&&)
+{
+}
+
+void ModelPlayer::visibilityStateDidChange()
+{
 }
 
 std::optional<FloatPoint3D> ModelPlayer::boundingBoxCenter() const
@@ -156,10 +169,6 @@ void ModelPlayer::updateStageModeTransform(const TransformationMatrix&)
 }
 
 void ModelPlayer::endStageModeInteraction()
-{
-}
-
-void ModelPlayer::renderingAbruptlyStopped()
 {
 }
 

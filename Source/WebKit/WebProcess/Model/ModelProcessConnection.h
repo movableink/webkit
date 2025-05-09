@@ -29,6 +29,7 @@
 
 #include "Connection.h"
 #include "MessageReceiverMap.h"
+#include <WebCore/ModelPlayerIdentifier.h>
 #include <wtf/AbstractThreadSafeRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakHashSet.h>
@@ -94,6 +95,7 @@ private:
 
     // Messages.
     void didInitialize(std::optional<ModelProcessConnectionInfo>&&);
+    void didUnloadModelPlayer(WebCore::ModelPlayerIdentifier);
 
     // The connection from the web process to the model process.
     Ref<IPC::Connection> m_connection;

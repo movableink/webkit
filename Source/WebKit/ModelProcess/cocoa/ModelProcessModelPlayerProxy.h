@@ -35,8 +35,10 @@
 #include <WebCore/Color.h>
 #include <WebCore/LayerHostingContextIdentifier.h>
 #include <WebCore/ModelPlayer.h>
+#include <WebCore/ModelPlayerAnimationState.h>
 #include <WebCore/ModelPlayerIdentifier.h>
 #include <WebCore/StageModeOperations.h>
+#include <WebCore/TransformationMatrix.h>
 #include <WebKitAdditions/REPtr.h>
 #include <WebKitAdditions/REModelLoaderClient.h>
 #include <simd/simd.h>
@@ -79,6 +81,7 @@ public:
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
     template<typename T> void send(T&& message);
 
+    void unloadModelTimerFired();
     void updateTransform();
     void updateOpacity();
     void startAnimating();
@@ -87,6 +90,8 @@ public:
     // Messages
     void createLayer();
     void loadModel(Ref<WebCore::Model>&&, WebCore::LayoutSize);
+    void reloadModel(Ref<WebCore::Model>&&, WebCore::LayoutSize, std::optional<WebCore::TransformationMatrix> transformToRestore, std::optional<WebCore::ModelPlayerAnimationState> animationStateToRestore);
+    void modelVisibilityDidChange(bool isVisible);
 
     // WebCore::REModelLoaderClient overrides.
     void didFinishLoading(WebCore::REModelLoader&, Ref<WebCore::REModel>) final;
@@ -139,6 +144,8 @@ public:
 
     USING_CAN_MAKE_WEAKPTR(WebCore::REModelLoaderClient);
 
+    void disableUnloadDelayForTesting() { m_unloadDelayDisabledForTesting = true; }
+
 private:
     ModelProcessModelPlayerProxy(ModelProcessModelPlayerManagerProxy&, WebCore::ModelPlayerIdentifier, Ref<IPC::Connection>&&, const std::optional<String>&);
 
@@ -150,6 +157,7 @@ private:
     void notifyModelPlayerOfEntityTransformChange();
 
     WebCore::ModelPlayerIdentifier m_id;
+    bool m_isVisible { true };
     Ref<IPC::Connection> m_webProcessConnection;
     WeakPtr<ModelProcessModelPlayerManagerProxy> m_manager;
 
@@ -182,6 +190,12 @@ private:
     WebCore::StageModeOperation m_stageModeOperation { WebCore::StageModeOperation::None };
 
     std::optional<String> m_attributionTaskID;
+    std::optional<WebCore::TransformationMatrix> m_entityTransformToRestore;
+    std::optional<WebCore::ModelPlayerAnimationState> m_animationStateToRestore;
+    RunLoop::Timer m_unloadModelTimer;
+
+    // For testing
+    bool m_unloadDelayDisabledForTesting { false };
 };
 
 } // namespace WebKit

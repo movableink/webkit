@@ -48,6 +48,11 @@ ModelProcessModelPlayerTransformState::ModelProcessModelPlayerTransformState(std
 {
 }
 
+std::unique_ptr<WebCore::ModelPlayerTransformState> ModelProcessModelPlayerTransformState::clone() const
+{
+    return makeUnique<ModelProcessModelPlayerTransformState>(m_entityTransform, m_boundingBoxCenter, m_boundingBoxExtents, m_hasPortal, m_stageModeOperation);
+}
+
 static bool areSameSignAndAlmostEqual(float a, float b, float tolerance)
 {
     if (a * b < 0)

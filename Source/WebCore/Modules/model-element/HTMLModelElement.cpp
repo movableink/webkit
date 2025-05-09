@@ -52,12 +52,16 @@
 #include "JSHTMLModelElementCamera.h"
 #include "LayoutRect.h"
 #include "LayoutSize.h"
+#include "Logging.h"
 #include "MIMETypeRegistry.h"
 #include "Model.h"
 #include "ModelPlayer.h"
+#include "ModelPlayerAnimationState.h"
 #include "ModelPlayerProvider.h"
+#include "ModelPlayerTransformState.h"
 #include "MouseEvent.h"
 #include "Page.h"
+#include "PlaceholderModelPlayer.h"
 #include "RenderBoxInlines.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
@@ -77,6 +81,8 @@ namespace WebCore {
 using namespace HTMLNames;
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLModelElement);
+
+static const Seconds reloadModelDelay { 1_s };
 
 HTMLModelElement::HTMLModelElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document, { TypeFlag::HasCustomStyleResolveCallbacks, TypeFlag::HasDidMoveToNewDocument })
@@ -106,6 +112,20 @@ Ref<HTMLModelElement> HTMLModelElement::create(const QualifiedName& tagName, Doc
     auto model = adoptRef(*new HTMLModelElement(tagName, document));
     model->suspendIfNeeded();
     return model;
+}
+
+void HTMLModelElement::suspend(ReasonForSuspension reasonForSuspension)
+{
+    RELEASE_LOG(ModelElement, "%p - HTMLModelElement::suspend(): %d", this, static_cast<int>(reasonForSuspension));
+
+    if (reasonForSuspension == ReasonForSuspension::BackForwardCache)
+        unloadModelPlayer(true);
+}
+
+void HTMLModelElement::resume()
+{
+    RELEASE_LOG(ModelElement, "%p - HTMLModelElement::resume()", this);
+    startReloadModelTimer();
 }
 
 RefPtr<Model> HTMLModelElement::model() const
@@ -146,8 +166,18 @@ URL HTMLModelElement::selectModelSource() const
 
 void HTMLModelElement::visibilityStateChanged()
 {
-    if (!document().hidden() && !m_modelPlayer)
-        createModelPlayer();
+    if (m_modelPlayer)
+        m_modelPlayer->visibilityStateDidChange();
+
+    if (!isVisible()) {
+        m_reloadModelTimer = nullptr;
+        return;
+    }
+
+    if (m_modelPlayer && !m_modelPlayer->isPlaceholder())
+        return;
+
+    startReloadModelTimer();
 }
 
 void HTMLModelElement::sourcesChanged()
@@ -339,6 +369,98 @@ void HTMLModelElement::deleteModelPlayer()
     m_modelPlayer = nullptr;
 }
 
+void HTMLModelElement::unloadModelPlayer(bool onSuspend)
+{
+    if (!m_modelPlayer || m_modelPlayer->isPlaceholder())
+        return;
+
+    auto animationState = m_modelPlayer->currentAnimationState();
+    auto transformState = m_modelPlayer->currentTransformState();
+    if (!animationState || !transformState) {
+        RELEASE_LOG(ModelElement, "%p - HTMLModelElement: Model player cannot handle temporary unload", this);
+        m_modelPlayer = nullptr;
+        return;
+    }
+
+    RELEASE_LOG(ModelElement, "%p - HTMLModelElement: Temporarily unload model player: %p", this, m_modelPlayer.get());
+    deleteModelPlayer();
+
+    m_modelPlayer = PlaceholderModelPlayer::create(onSuspend, *animationState, WTFMove(*transformState));
+}
+
+void HTMLModelElement::reloadModelPlayer()
+{
+    if (!m_modelPlayer) {
+        RELEASE_LOG_INFO(ModelElement, "%p - HTMLModelElement::reloadModelPlayer: no model player", this);
+        createModelPlayer();
+        return;
+    }
+
+    if (!m_modelPlayer->isPlaceholder()) {
+        RELEASE_LOG_INFO(ModelElement, "%p - HTMLModelElement::reloadModelPlayer: no placeholder to reload", this);
+        return;
+    }
+
+    if (!m_model) {
+        RELEASE_LOG_INFO(ModelElement, "%p - HTMLModelElement::reloadModelPlayer: no model to reload", this);
+        return;
+    }
+
+    auto size = contentSize();
+    if (size.isEmpty()) {
+        RELEASE_LOG_INFO(ModelElement, "%p - HTMLModelElement::reloadModelPlayer: content size is empty", this);
+        return;
+    }
+
+    ASSERT(document().page());
+
+    auto animationState = m_modelPlayer->currentAnimationState();
+    auto transformState = m_modelPlayer->currentTransformState();
+    ASSERT(animationState && transformState);
+
+    if (!m_modelPlayerProvider)
+        m_modelPlayerProvider = document().page()->modelPlayerProvider();
+    if (RefPtr protectedModelPlayerProvider = m_modelPlayerProvider.get())
+        m_modelPlayer = protectedModelPlayerProvider->createModelPlayer(*this);
+    if (!m_modelPlayer) {
+        RELEASE_LOG_ERROR(ModelElement, "%p - HTMLModelElement: Failed to create model player to reload with", this);
+        return;
+    }
+
+    RELEASE_LOG(ModelElement, "%p - HTMLModelElement: Reloading previous states to new model player: %p", this, m_modelPlayer.get());
+    m_modelPlayer->reload(*m_model, size, *animationState, WTFMove(*transformState));
+
+#if ENABLE(MODEL_PROCESS)
+    if (m_environmentMapData)
+        m_modelPlayer->setEnvironmentMap(m_environmentMapData.takeAsContiguous().get());
+    else if (!m_environmentMapURL.isEmpty())
+        environmentMapRequestResource();
+#endif
+}
+
+void HTMLModelElement::startReloadModelTimer()
+{
+    if (m_reloadModelTimer)
+        return;
+
+    Seconds delay = document().page() && document().page()->shouldDisableModelLoadDelaysForTesting() ? 0_s : reloadModelDelay;
+    m_reloadModelTimer = document().checkedEventLoop()->scheduleTask(delay, TaskSource::ModelElement, [weakThis = WeakPtr { *this }] {
+        if (weakThis)
+            weakThis->reloadModelTimerFired();
+    });
+}
+
+void HTMLModelElement::reloadModelTimerFired()
+{
+    m_reloadModelTimer = nullptr;
+
+    if (!isVisible())
+        return;
+
+    RELEASE_LOG(ModelElement, "%p - HTMLModelElement: Reloading model player after becoming visible", this);
+    reloadModelPlayer();
+}
+
 bool HTMLModelElement::usesPlatformLayer() const
 {
     return m_modelPlayer && m_modelPlayer->layer();
@@ -424,6 +546,11 @@ std::optional<PlatformLayerIdentifier> HTMLModelElement::modelContentsLayerID() 
         return std::nullopt;
 
     return graphicsLayer->contentsLayerIDForModel();
+}
+
+bool HTMLModelElement::isVisible() const
+{
+    return !document().hidden();
 }
 
 #if ENABLE(MODEL_PROCESS)
@@ -521,15 +648,6 @@ void HTMLModelElement::endStageModeInteraction()
         m_modelPlayer->endStageModeInteraction();
 }
 
-void HTMLModelElement::renderingAbruptlyStopped()
-{
-    m_modelPlayer = nullptr;
-
-    // FIXME: rdar://148027600 Prevent infinite reloading of model.
-    if (!document().hidden())
-        createModelPlayer();
-}
-
 void HTMLModelElement::tryAnimateModelToFitPortal(bool handledDrag, CompletionHandler<void(bool)>&& completionHandler)
 {
     if (hasPortal() && m_modelPlayer)
@@ -537,11 +655,27 @@ void HTMLModelElement::tryAnimateModelToFitPortal(bool handledDrag, CompletionHa
 
     completionHandler(handledDrag);
 }
+
 void HTMLModelElement::resetModelTransformAfterDrag()
 {
     if (hasPortal() && m_modelPlayer)
         m_modelPlayer->resetModelTransformAfterDrag();
 }
+
+void HTMLModelElement::didUnload(ModelPlayer& modelPlayer)
+{
+    if (m_modelPlayer != &modelPlayer)
+        return;
+
+    unloadModelPlayer(false);
+
+    if (!isVisible())
+        return;
+
+    // FIXME: rdar://148027600 Prevent infinite reloading of model.
+    startReloadModelTimer();
+}
+
 #endif // ENABLE(MODEL_PROCESS)
 
 // MARK: - Fullscreen support.

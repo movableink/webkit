@@ -34,6 +34,7 @@ messages -> ModelProcessModelPlayer {
     DidUpdateEntityTransform(WebCore::TransformationMatrix transform)
     DidUpdateAnimationPlaybackState(bool isPaused, double playbackRate, Seconds duration, Seconds currentTime, MonotonicTime clockTimestamp)
     DidFinishEnvironmentMapLoading(bool succeeded)
+    DidUnload()
 }
 
 #endif // ENABLE(MODEL_PROCESS)

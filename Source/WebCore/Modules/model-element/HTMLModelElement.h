@@ -31,6 +31,7 @@
 #include "CachedRawResource.h"
 #include "CachedRawResourceClient.h"
 #include "CachedResourceHandle.h"
+#include "EventLoop.h"
 #include "ExceptionOr.h"
 #include "HTMLElement.h"
 #include "HTMLModelElementCamera.h"
@@ -79,6 +80,8 @@ public:
     // ActiveDOMObject.
     void ref() const final { HTMLElement::ref(); }
     void deref() const final { HTMLElement::deref(); }
+    void suspend(ReasonForSuspension) final;
+    void resume() final;
 
     // VisibilityChangeClient.
     void visibilityStateChanged() final;
@@ -184,6 +187,10 @@ private:
     void modelDidChange();
     void createModelPlayer();
     void deleteModelPlayer();
+    void unloadModelPlayer(bool onSuspend);
+    void reloadModelPlayer();
+    void startReloadModelTimer();
+    void reloadModelTimerFired();
 
     RefPtr<GraphicsLayer> graphicsLayer() const;
 
@@ -218,9 +225,10 @@ private:
     void didUpdateEntityTransform(ModelPlayer&, const TransformationMatrix&) final;
     void didUpdateBoundingBox(ModelPlayer&, const FloatPoint3D&, const FloatPoint3D&) final;
     void didFinishEnvironmentMapLoading(bool succeeded) final;
-    void renderingAbruptlyStopped() final;
+    void didUnload(ModelPlayer&) final;
 #endif
     std::optional<PlatformLayerIdentifier> modelContentsLayerID() const final;
+    bool isVisible() const final;
 
     Node::InsertedIntoAncestorResult insertedIntoAncestor(InsertionType , ContainerNode& parentOfInsertedTree) override;
     void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree) override;
@@ -264,6 +272,7 @@ private:
     bool m_shouldCreateModelPlayerUponRendererAttachment { false };
 
     RefPtr<ModelPlayer> m_modelPlayer;
+    EventLoopTimerHandle m_reloadModelTimer;
 #if ENABLE(MODEL_PROCESS)
     Ref<DOMMatrixReadOnly> m_entityTransform;
     Ref<DOMPointReadOnly> m_boundingBoxCenter;

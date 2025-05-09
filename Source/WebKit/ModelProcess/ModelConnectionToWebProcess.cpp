@@ -162,6 +162,11 @@ void ModelConnectionToWebProcess::configureLoggingChannel(const String& channelN
 #endif
 }
 
+void ModelConnectionToWebProcess::didUnloadModelPlayer(WebCore::ModelPlayerIdentifier modelPlayerIdentifier)
+{
+    m_connection->send(Messages::ModelProcessConnection::DidUnloadModelPlayer(modelPlayerIdentifier), 0);
+}
+
 bool ModelConnectionToWebProcess::allowsExitUnderMemoryPressure() const
 {
     // FIXME: Should allow exit if we have no models.

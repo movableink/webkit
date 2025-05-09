@@ -62,6 +62,8 @@ public:
     void didReceiveMessageFromWebProcess(IPC::Connection& connection, IPC::Decoder& decoder) { didReceiveMessage(connection, decoder); }
     void didReceivePlayerMessage(IPC::Connection&, IPC::Decoder&);
 
+    void unloadModelPlayer(WebCore::ModelPlayerIdentifier);
+
 private:
     explicit ModelProcessModelPlayerManagerProxy(ModelConnectionToWebProcess&);
 

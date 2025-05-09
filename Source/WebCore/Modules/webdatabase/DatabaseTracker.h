@@ -29,6 +29,7 @@
 #pragma once
 
 #include "DatabaseDetails.h"
+#include "DatabaseManagerClient.h"
 #include "ExceptionOr.h"
 #include "SQLiteDatabase.h"
 #include "SecurityOriginData.h"

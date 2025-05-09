@@ -7895,4 +7895,15 @@ ExceptionOr<Vector<Internals::FrameDamage>> Internals::getFrameDamageHistory() c
 }
 #endif
 
+#if ENABLE(MODEL_ELEMENT)
+void Internals::disableModelLoadDelaysForTesting()
+{
+    RefPtr document = contextDocument();
+    if (!document || !document->page())
+        return;
+
+    document->page()->disableModelLoadDelaysForTesting();
+}
+#endif
+
 } // namespace WebCore

@@ -35,15 +35,16 @@ class TransformationMatrix;
 class WEBCORE_EXPORT ModelPlayerTransformState {
 public:
     virtual ~ModelPlayerTransformState() = default;
+    virtual std::unique_ptr<ModelPlayerTransformState> clone() const = 0;
 
     virtual std::optional<TransformationMatrix> entityTransform() const = 0;
     virtual void setEntityTransform(TransformationMatrix) = 0;
     virtual bool isEntityTransformSupported(const TransformationMatrix&) const = 0;
 
-#if ENABLE(MODEL_PROCESS)
     virtual std::optional<FloatPoint3D> boundingBoxCenter() const = 0;
     virtual std::optional<FloatPoint3D> boundingBoxExtents() const = 0;
 
+#if ENABLE(MODEL_PROCESS)
     virtual bool hasPortal() const = 0;
     virtual void setHasPortal(bool) = 0;
     virtual StageModeOperation stageMode() const = 0;

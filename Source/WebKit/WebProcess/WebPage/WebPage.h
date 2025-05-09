@@ -1984,6 +1984,10 @@ public:
 
     void setNeedsFixedContainerEdgesUpdate() { m_needsFixedContainerEdgesUpdate = true; }
 
+#if ENABLE(MODEL_ELEMENT)
+    bool shouldDisableModelLoadDelaysForTesting() const;
+#endif
+
 private:
     WebPage(WebCore::PageIdentifier, WebPageCreationParameters&&);
 

@@ -539,8 +539,10 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/model-element/HTMLModelElement.h
     Modules/model-element/HTMLModelElementCamera.h
     Modules/model-element/ModelPlayer.h
+    Modules/model-element/ModelPlayerAnimationState.h
     Modules/model-element/ModelPlayerClient.h
     Modules/model-element/ModelPlayerProvider.h
+    Modules/model-element/ModelPlayerTransformState.h
 
     Modules/model-element/dummy/DummyModelPlayer.h
     Modules/model-element/dummy/DummyModelPlayerProvider.h

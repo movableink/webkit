@@ -34,6 +34,7 @@
 #include "ScopedActiveMessageReceiveQueue.h"
 #include "SharedPreferencesForWebProcess.h"
 #include "WebPageProxyIdentifier.h"
+#include <WebCore/ModelPlayerIdentifier.h>
 #include <WebCore/PageIdentifier.h>
 #include <WebCore/ProcessIdentifier.h>
 #include <WebCore/ProcessIdentity.h>
@@ -96,6 +97,7 @@ public:
 
     const WebCore::ProcessIdentity& webProcessIdentity() const { return m_webProcessIdentity; }
 
+    void didUnloadModelPlayer(WebCore::ModelPlayerIdentifier);
     bool allowsExitUnderMemoryPressure() const;
 
     void lowMemoryHandler(WTF::Critical, WTF::Synchronous);

@@ -42,7 +42,6 @@
 #import <WebCore/LayerHostingContextIdentifier.h>
 #import <WebCore/Model.h>
 #import <WebCore/ResourceError.h>
-#import <WebCore/TransformationMatrix.h>
 #import <WebKitAdditions/REModel.h>
 #import <WebKitAdditions/REModelLoader.h>
 #import <WebKitAdditions/REPtr.h>
@@ -89,6 +88,8 @@
 @end
 
 namespace WebKit {
+
+static const Seconds unloadModelDelay { 4_s };
 
 class RKModelUSD final : public WebCore::REModel {
 public:
@@ -229,6 +230,7 @@ ModelProcessModelPlayerProxy::ModelProcessModelPlayerProxy(ModelProcessModelPlay
     , m_webProcessConnection(WTFMove(connection))
     , m_manager(manager)
     , m_attributionTaskID(attributionTaskID)
+    , m_unloadModelTimer(RunLoop::main(), this, &ModelProcessModelPlayerProxy::unloadModelTimerFired)
 {
     RELEASE_LOG(ModelElement, "%p - ModelProcessModelPlayerProxy initialized id=%" PRIu64, this, identifier.toUInt64());
     m_objCAdapter = adoptNS([[WKModelProcessModelPlayerProxyObjCAdapter alloc] initWithModelProcessModelPlayerProxy:*this]);
@@ -301,6 +303,45 @@ void ModelProcessModelPlayerProxy::loadModel(Ref<WebCore::Model>&& model, WebCor
 {
     // FIXME: Change the IPC message to land on load() directly
     load(model, layoutSize);
+}
+
+void ModelProcessModelPlayerProxy::reloadModel(Ref<WebCore::Model>&& model, WebCore::LayoutSize layoutSize, std::optional<WebCore::TransformationMatrix> entityTransformToRestore, std::optional<WebCore::ModelPlayerAnimationState> animationStateToRestore)
+{
+    m_entityTransformToRestore = WTFMove(entityTransformToRestore);
+    m_animationStateToRestore = WTFMove(animationStateToRestore);
+    if (m_animationStateToRestore) {
+        m_autoplay = m_animationStateToRestore->autoplay();
+        m_loop = m_animationStateToRestore->loop();
+        if (auto playbackRate = m_animationStateToRestore->effectivePlaybackRate())
+            m_playbackRate = *playbackRate;
+    }
+
+    load(model, layoutSize);
+}
+
+void ModelProcessModelPlayerProxy::modelVisibilityDidChange(bool isVisible)
+{
+    m_unloadModelTimer.stop();
+
+    m_isVisible = isVisible;
+
+    if (m_isVisible)
+        m_unloadModelTimer.stop();
+    else
+        m_unloadModelTimer.startOneShot(m_unloadDelayDisabledForTesting ? 0_s : unloadModelDelay);
+}
+
+void ModelProcessModelPlayerProxy::unloadModelTimerFired()
+{
+    if (m_isVisible)
+        return;
+
+    RefPtr strongManager = m_manager.get();
+    if (!strongManager)
+        return;
+
+    RELEASE_LOG(ModelElement, "%p - ModelProcessModelPlayerProxy::unloadModelTimerFired(): inform manager to unload model id=%" PRIu64, this, m_id.toUInt64());
+    strongManager->unloadModelPlayer(m_id);
 }
 
 // MARK: - RE stuff
@@ -516,12 +557,22 @@ void ModelProcessModelPlayerProxy::didFinishLoading(WebCore::REModelLoader& load
     if (!canLoadWithRealityKit)
         RENetworkMarkEntityMetadataDirty(m_model->rootEntity());
 
-    computeTransform(true);
-    updateTransform();
+    if (m_entityTransformToRestore) {
+        setEntityTransform(*m_entityTransformToRestore);
+        m_entityTransformToRestore = std::nullopt;
+    } else {
+        computeTransform(true);
+        updateTransform();
+    }
     [m_stageModeInteractionDriver setContainerTransformInPortal];
 
     updateOpacity();
     startAnimating();
+    if (m_animationStateToRestore) {
+        [m_modelRKEntity setPaused:m_animationStateToRestore->paused()];
+        [m_modelRKEntity setCurrentTime:m_animationStateToRestore->currentTime().seconds()];
+        m_animationStateToRestore = std::nullopt;
+    }
 
     applyEnvironmentMapDataAndRelease();
 
@@ -560,7 +611,7 @@ void ModelProcessModelPlayerProxy::load(WebCore::Model& model, WebCore::LayoutSi
 
 void ModelProcessModelPlayerProxy::sizeDidChange(WebCore::LayoutSize layoutSize)
 {
-    RELEASE_LOG(ModelElement, "%p - ModelProcessModelPlayerProxy::sizeDidChange w=%lf h=%lf id=%" PRIu64, this, layoutSize.width().toDouble(), layoutSize.height().toDouble(), m_id.toUInt64());
+    RELEASE_LOG_INFO(ModelElement, "%p - ModelProcessModelPlayerProxy::sizeDidChange w=%lf h=%lf id=%" PRIu64, this, layoutSize.width().toDouble(), layoutSize.height().toDouble(), m_id.toUInt64());
     [m_layer setFrame:CGRectMake(0, 0, layoutSize.width().toDouble(), layoutSize.height().toDouble())];
 }
 

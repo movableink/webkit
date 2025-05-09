@@ -69,6 +69,8 @@ Ref<ModelProcessModelPlayer> ModelProcessModelPlayerManager::createModelProcessM
     modelProcessConnection().connection().send(Messages::ModelProcessModelPlayerManagerProxy::CreateModelPlayer(identifier), 0);
 
     auto player = ModelProcessModelPlayer::create(identifier, page, client);
+    if (page.shouldDisableModelLoadDelaysForTesting())
+        player->disableUnloadDelayForTesting();
     m_players.add(identifier, player);
 
     return player;
@@ -87,6 +89,12 @@ void ModelProcessModelPlayerManager::didReceivePlayerMessage(IPC::Connection& co
         player->didReceiveMessage(connection, decoder);
 }
 
+void ModelProcessModelPlayerManager::didUnloadModelProcessModelPlayer(WebCore::ModelPlayerIdentifier modelPlayerIdentifier)
+{
+    if (const auto& player = m_players.take(modelPlayerIdentifier))
+        player->didUnload();
+}
+
 void ModelProcessModelPlayerManager::modelProcessConnectionDidClose(ModelProcessConnection&)
 {
     m_modelProcessConnection = nullptr;
@@ -94,7 +102,7 @@ void ModelProcessModelPlayerManager::modelProcessConnectionDidClose(ModelProcess
     auto playersToNotify = m_players;
     for (auto& entry : playersToNotify) {
         if (RefPtr player = entry.value.get())
-            player->renderingAbruptlyStopped();
+            player->didUnload();
     }
 }
 

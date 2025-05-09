@@ -528,9 +528,12 @@ const char* TestController::platformLibraryPathForTesting()
     return [platformLibraryPath.get() UTF8String];
 }
 
-void TestController::setHidden(bool)
+void TestController::setHidden(bool hidden)
 {
-    // FIXME: implement for iOS
+    if (hidden)
+        mainWebView()->removeFromWindow();
+    else
+        mainWebView()->addToWindow();
 }
 
 static UIKeyboardInputMode *swizzleCurrentInputMode()

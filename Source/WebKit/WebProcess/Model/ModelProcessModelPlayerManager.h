@@ -55,6 +55,7 @@ public:
     void deleteModelProcessModelPlayer(WebCore::ModelPlayer&);
 
     void didReceivePlayerMessage(IPC::Connection&, IPC::Decoder&);
+    void didUnloadModelProcessModelPlayer(WebCore::ModelPlayerIdentifier);
 
     // ModelProcessConnection::Client
     void modelProcessConnectionDidClose(ModelProcessConnection&) override;

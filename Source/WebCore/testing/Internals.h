@@ -1577,6 +1577,10 @@ public:
     ExceptionOr<Vector<FrameDamage>> getFrameDamageHistory() const;
 #endif // ENABLE(DAMAGE_TRACKING)
 
+#if ENABLE(MODEL_ELEMENT)
+    void disableModelLoadDelaysForTesting();
+#endif
+
 private:
     explicit Internals(Document&);
 

@@ -60,10 +60,14 @@ public:
     virtual ModelPlayerIdentifier identifier() const = 0;
 #endif
 
+    virtual bool isPlaceholder() const;
     virtual std::optional<ModelPlayerAnimationState> currentAnimationState() const;
     virtual std::optional<std::unique_ptr<ModelPlayerTransformState>> currentTransformState() const;
 
     virtual void load(Model&, LayoutSize) = 0;
+    virtual void reload(Model&, LayoutSize, ModelPlayerAnimationState&, std::unique_ptr<ModelPlayerTransformState>&&);
+    virtual void visibilityStateDidChange();
+
     virtual void sizeDidChange(LayoutSize) = 0;
     virtual PlatformLayer* layer() = 0;
     virtual std::optional<LayerHostingContextIdentifier> layerHostingContextIdentifier() = 0;
@@ -110,7 +114,6 @@ public:
     virtual void beginStageModeTransform(const TransformationMatrix&);
     virtual void updateStageModeTransform(const TransformationMatrix&);
     virtual void endStageModeInteraction();
-    virtual void renderingAbruptlyStopped();
     virtual void animateModelToFitPortal(CompletionHandler<void(bool)>&&);
     virtual void resetModelTransformAfterDrag();
 #endif

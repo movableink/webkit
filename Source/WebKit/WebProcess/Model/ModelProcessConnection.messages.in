@@ -29,6 +29,7 @@
 ]
 messages -> ModelProcessConnection WantsDispatchMessage {
     DidInitialize(struct std::optional<WebKit::ModelProcessConnectionInfo> info) CanDispatchOutOfOrder
+    DidUnloadModelPlayer(WebCore::ModelPlayerIdentifier identifier)
 }
 
 #endif // ENABLE(MODEL_PROCESS)

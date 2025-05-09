@@ -51,9 +51,10 @@ public:
 
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
 
-    void renderingAbruptlyStopped() final;
-
     std::optional<WebCore::LayerHostingContextIdentifier> layerHostingContextIdentifier() { return m_layerHostingContextIdentifier; };
+    void didUnload();
+
+    void disableUnloadDelayForTesting();
 
 private:
     explicit ModelProcessModelPlayer(WebCore::ModelPlayerIdentifier, WebPage&, WebCore::ModelPlayerClient&);
@@ -79,6 +80,8 @@ private:
     std::optional<WebCore::ModelPlayerAnimationState> currentAnimationState() const final;
     std::optional<std::unique_ptr<WebCore::ModelPlayerTransformState>> currentTransformState() const final;
     void load(WebCore::Model&, WebCore::LayoutSize) final;
+    void reload(WebCore::Model&, WebCore::LayoutSize, WebCore::ModelPlayerAnimationState&, std::unique_ptr<WebCore::ModelPlayerTransformState>&&) final;
+    void visibilityStateDidChange() final;
     void sizeDidChange(WebCore::LayoutSize) final;
     PlatformLayer* layer() final;
     void handleMouseDown(const WebCore::LayoutPoint&, MonotonicTime) final;

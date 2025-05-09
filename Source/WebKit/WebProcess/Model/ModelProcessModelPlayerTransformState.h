@@ -44,6 +44,7 @@ public:
 
 private:
     // ModelPlayerTransformState overrides
+    std::unique_ptr<WebCore::ModelPlayerTransformState> clone() const final;
     std::optional<WebCore::TransformationMatrix> entityTransform() const final { return m_entityTransform; }
     void setEntityTransform(WebCore::TransformationMatrix) final;
     bool isEntityTransformSupported(const WebCore::TransformationMatrix&) const final;
