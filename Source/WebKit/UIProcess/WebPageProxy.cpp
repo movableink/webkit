@@ -6761,8 +6761,10 @@ void WebPageProxy::didReceiveServerRedirectForProvisionalLoadForFrameShared(Ref<
 
     // FIXME: We should message check that navigationID is not zero here, but it's currently zero for some navigations through the back/forward cache.
     RefPtr navigation = navigationID ? protectedNavigationState()->navigation(*navigationID) : nullptr;
-    if (navigation)
+    if (navigation) {
         navigation->appendRedirectionURL(request.url());
+        navigation->resetRequestStart();
+    }
 
     Ref pageLoadState = internals().pageLoadState;
     auto transaction = pageLoadState->transaction();
@@ -7697,9 +7699,8 @@ void WebPageProxy::mainFramePluginHandlesPageScaleGestureDidChange(bool mainFram
 }
 
 #if !PLATFORM(COCOA)
-void WebPageProxy::beginSafeBrowsingCheck(const URL&, bool, WebFramePolicyListenerProxy& listener)
+void WebPageProxy::beginSafeBrowsingCheck(const URL&, RefPtr<API::Navigation>, WebFrameProxy&)
 {
-    listener.didReceiveSafeBrowsingResults({ });
 }
 #endif
 
@@ -7887,8 +7888,8 @@ void WebPageProxy::decidePolicyForNavigationAction(Ref<WebProcessProxy>&& proces
         frameInfo,
         requestURL = request.url(),
         protectedPageClient = RefPtr { pageClient() }
-    ] (PolicyAction policyAction, API::WebsitePolicies* policies, ProcessSwapRequestedByClient processSwapRequestedByClient, RefPtr<BrowsingWarning>&& safeBrowsingWarning, std::optional<NavigatingToAppBoundDomain> isAppBoundDomain, WasNavigationIntercepted wasNavigationIntercepted) mutable {
-        WEBPAGEPROXY_RELEASE_LOG(Loading, "decidePolicyForNavigationAction: listener called: frameID=%" PRIu64 ", isMainFrame=%d, navigationID=%" PRIu64  ", policyAction=%" PUBLIC_LOG_STRING ", safeBrowsingWarning=%d, isAppBoundDomain=%d, wasNavigationIntercepted=%d", frame->frameID().toUInt64(), frame->isMainFrame(), navigation ? navigation->navigationID().toUInt64() : 0, toString(policyAction).characters(), !!safeBrowsingWarning, !!isAppBoundDomain, wasNavigationIntercepted == WasNavigationIntercepted::Yes);
+    ] (PolicyAction policyAction, API::WebsitePolicies* policies, ProcessSwapRequestedByClient processSwapRequestedByClient, std::optional<NavigatingToAppBoundDomain> isAppBoundDomain, WasNavigationIntercepted wasNavigationIntercepted) mutable {
+        WEBPAGEPROXY_RELEASE_LOG(Loading, "decidePolicyForNavigationAction: listener called: frameID=%" PRIu64 ", isMainFrame=%d, navigationID=%" PRIu64  ", policyAction=%" PUBLIC_LOG_STRING ", isAppBoundDomain=%d, wasNavigationIntercepted=%d", frame->frameID().toUInt64(), frame->isMainFrame(), navigation ? navigation->navigationID().toUInt64() : 0, toString(policyAction).characters(), !!isAppBoundDomain, wasNavigationIntercepted == WasNavigationIntercepted::Yes);
 
         navigation->setWebsitePolicies(WTFMove(policies));
         auto completionHandlerWrapper = [
@@ -7937,7 +7938,8 @@ void WebPageProxy::decidePolicyForNavigationAction(Ref<WebProcessProxy>&& proces
 
         protectedPageClient->clearBrowsingWarning();
 
-        if (safeBrowsingWarning) {
+        if (RefPtr safeBrowsingWarning = navigation->safeBrowsingWarning()) {
+            navigation->setSafeBrowsingWarning(nullptr);
             if (frame->isMainFrame() && safeBrowsingWarning->url().isValid()) {
                 Ref protectedPageLoadState = pageLoadState();
                 auto transaction = protectedPageLoadState->transaction();
@@ -7963,7 +7965,7 @@ void WebPageProxy::decidePolicyForNavigationAction(Ref<WebProcessProxy>&& proces
                 auto transaction = protectedPageLoadState->transaction();
                 protectedPageLoadState->setTitleFromBrowsingWarning(transaction, { });
 
-                switchOn(result, [&protectedThis, &completionHandler] (const URL& url) {
+                switchOn(result, [&] (const URL& url) {
                     completionHandler(PolicyAction::Ignore);
                     protectedThis->loadRequest({ URL { url } });
                 }, [&protectedThis, &completionHandler, policyAction] (ContinueUnsafeLoad continueUnsafeLoad) {
@@ -7984,9 +7986,9 @@ void WebPageProxy::decidePolicyForNavigationAction(Ref<WebProcessProxy>&& proces
         }
         completionHandlerWrapper(policyAction);
 
-    }, shouldExpectSafeBrowsingResult, shouldExpectAppBoundDomainResult, shouldWaitForInitialLinkDecorationFilteringData);
+    }, ShouldExpectSafeBrowsingResult::No, shouldExpectAppBoundDomainResult, shouldWaitForInitialLinkDecorationFilteringData);
     if (shouldExpectSafeBrowsingResult == ShouldExpectSafeBrowsingResult::Yes)
-        beginSafeBrowsingCheck(request.url(), frame.isMainFrame(), listener);
+        beginSafeBrowsingCheck(request.url(), navigation, frame);
     if (shouldWaitForInitialLinkDecorationFilteringData == ShouldWaitForInitialLinkDecorationFilteringData::Yes)
         waitForInitialLinkDecorationFilteringData(listener);
 #if ENABLE(APP_BOUND_DOMAINS)
@@ -8130,10 +8132,9 @@ void WebPageProxy::decidePolicyForNewWindowAction(IPC::Connection& connection, N
     bool shouldOpenAppLinks = m_mainFrame && m_mainFrame->url().host() != request.url().host();
     auto navigationAction = API::NavigationAction::create(WTFMove(navigationActionData), sourceFrameInfo.get(), nullptr, frameName, ResourceRequest(request), URL { }, shouldOpenAppLinks, WTFMove(userInitiatedActivity));
     
-    Ref listener = frame->setUpPolicyListenerProxy([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler), navigationAction] (PolicyAction policyAction, API::WebsitePolicies*, ProcessSwapRequestedByClient processSwapRequestedByClient, RefPtr<BrowsingWarning>&& safeBrowsingWarning, std::optional<NavigatingToAppBoundDomain>, WasNavigationIntercepted) mutable {
+    Ref listener = frame->setUpPolicyListenerProxy([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler), navigationAction] (PolicyAction policyAction, API::WebsitePolicies*, ProcessSwapRequestedByClient processSwapRequestedByClient, std::optional<NavigatingToAppBoundDomain>, WasNavigationIntercepted) mutable {
         // FIXME: Assert the API::WebsitePolicies* is nullptr here once clients of WKFramePolicyListenerUseWithPolicies go away.
         RELEASE_ASSERT(processSwapRequestedByClient == ProcessSwapRequestedByClient::No);
-        ASSERT_UNUSED(safeBrowsingWarning, !safeBrowsingWarning);
 
         receivedPolicyDecision(policyAction, nullptr, nullptr, WTFMove(navigationAction), WillContinueLoadInNewProcess::No, std::nullopt, std::nullopt, WTFMove(completionHandler));
     }, ShouldExpectSafeBrowsingResult::No, ShouldExpectAppBoundDomainResult::No, ShouldWaitForInitialLinkDecorationFilteringData::No);
@@ -8170,10 +8171,27 @@ void WebPageProxy::decidePolicyForResponseShared(Ref<WebProcessProxy>&& process,
         m_openedMainFrameName = { };
     }
 
-    Ref listener = frame->setUpPolicyListenerProxy([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler), navigation = WTFMove(navigation), process, navigationResponse, request] (PolicyAction policyAction, API::WebsitePolicies*, ProcessSwapRequestedByClient processSwapRequestedByClient, RefPtr<BrowsingWarning>&& safeBrowsingWarning, std::optional<NavigatingToAppBoundDomain>, WasNavigationIntercepted) mutable {
+    auto expectSafeBrowsing = ShouldExpectSafeBrowsingResult::No;
+    MonotonicTime requestStart;
+
+    if (navigation && navigation->safeBrowsingCheckOngoing()) {
+        expectSafeBrowsing = ShouldExpectSafeBrowsingResult::Yes;
+        requestStart = navigation->requestStart();
+    }
+
+    Ref listener = frame->setUpPolicyListenerProxy([
+        this,
+        protectedThis = Ref { *this },
+        completionHandler = WTFMove(completionHandler),
+        frameInfo = WTFMove(frameInfo),
+        navigation,
+        process,
+        navigationResponse,
+        request,
+        frame
+    ] (PolicyAction policyAction, API::WebsitePolicies*, ProcessSwapRequestedByClient processSwapRequestedByClient, std::optional<NavigatingToAppBoundDomain>, WasNavigationIntercepted) mutable {
         // FIXME: Assert the API::WebsitePolicies* is nullptr here once clients of WKFramePolicyListenerUseWithPolicies go away.
         RELEASE_ASSERT(processSwapRequestedByClient == ProcessSwapRequestedByClient::No);
-        ASSERT_UNUSED(safeBrowsingWarning, !safeBrowsingWarning);
 
         bool shouldForceDownload = [&] {
             if (policyAction != PolicyAction::Use || process->lockdownMode() != WebProcessProxy::LockdownMode::Enabled)
@@ -8190,16 +8208,73 @@ void WebPageProxy::decidePolicyForResponseShared(Ref<WebProcessProxy>&& process,
         }();
         if (shouldForceDownload)
             policyAction = PolicyAction::Download;
+#if USE(QUICK_LOOK) && ENABLE(QUICKLOOK_SANDBOX_RESTRICTIONS)
+        bool supportsMIMEType = PreviewConverter::supportsMIMEType(navigationResponse->response().mimeType());
+#endif
+        auto completionHandlerWrapper = [navigation, protectedThis, request, navigationResponse = WTFMove(navigationResponse), frameInfo = WTFMove(frameInfo), completionHandler = WTFMove(completionHandler)]  (PolicyAction policyAction) mutable {
+            protectedThis->receivedNavigationResponsePolicyDecision(policyAction, navigation.get(), request, WTFMove(navigationResponse), WTFMove(completionHandler));
+        };
+        if (navigation && navigation->safeBrowsingWarning()) {
+            RefPtr safeBrowsingWarning = navigation->safeBrowsingWarning();
+            if (frame->isMainFrame() && safeBrowsingWarning->url().isValid()) {
+                Ref protectedPageLoadState = pageLoadState();
+                auto transaction = protectedPageLoadState->transaction();
+                protectedPageLoadState->setPendingAPIRequest(transaction, { navigation->navigationID(), safeBrowsingWarning->url().string() });
+                protectedPageLoadState->commitChanges();
+            }
+
+            if (!frame->isMainFrame()) {
+                auto error = interruptedForPolicyChangeError(navigation->currentRequest());
+                m_navigationClient->didFailProvisionalNavigationWithError(*this, FrameInfoData { frameInfo }, navigation.get(), request.url(), error, nullptr);
+                WEBPAGEPROXY_RELEASE_LOG(Loading, "decidePolicyForResponseShared: Ignoring request to load subframe resource because Safe Browsing found a match.");
+                completionHandlerWrapper(PolicyAction::Ignore);
+                return;
+            }
+
+            Ref protectedPageLoadState = pageLoadState();
+            auto transaction = protectedPageLoadState->transaction();
+            protectedPageLoadState->setTitleFromBrowsingWarning(transaction, safeBrowsingWarning->title());
+            navigation->setSafeBrowsingWarning(nullptr);
+            protectedThis->protectedPageClient()->showBrowsingWarning(*safeBrowsingWarning, [protectedThis = WTFMove(protectedThis), completionHandler = WTFMove(completionHandlerWrapper), policyAction] (auto&& result) mutable {
+
+                Ref protectedPageLoadState = protectedThis->pageLoadState();
+                auto transaction = protectedPageLoadState->transaction();
+                protectedPageLoadState->setTitleFromBrowsingWarning(transaction, { });
+
+                switchOn(result, [&] (const URL& url) {
+                    completionHandler(PolicyAction::Ignore);
+                    protectedThis->loadRequest(URL { url });
+                }, [&protectedThis, &completionHandler, policyAction] (ContinueUnsafeLoad continueUnsafeLoad) {
+                    switch (continueUnsafeLoad) {
+                    case ContinueUnsafeLoad::No:
+                        if (!protectedThis->hasCommittedAnyProvisionalLoads())
+                            protectedThis->m_uiClient->close(protectedThis.ptr());
+                        completionHandler(PolicyAction::Ignore);
+                        break;
+                    case ContinueUnsafeLoad::Yes:
+                        completionHandler(policyAction);
+                        break;
+                    }
+                });
+            });
+            m_uiClient->didShowSafeBrowsingWarning();
+            return;
+        }
 
 #if USE(QUICK_LOOK) && ENABLE(QUICKLOOK_SANDBOX_RESTRICTIONS)
-        if (policyAction == PolicyAction::Use && PreviewConverter::supportsMIMEType(navigationResponse->response().mimeType())) {
+        if (policyAction == PolicyAction::Use && supportsMIMEType) {
             auto auditToken = process->connection().getAuditToken();
             bool status = sandbox_enable_state_flag("EnableQuickLookSandboxResources", *auditToken);
             WEBPAGEPROXY_RELEASE_LOG(Sandbox, "Enabling EnableQuickLookSandboxResources state flag, status = %d", status);
         }
 #endif
-        receivedNavigationResponsePolicyDecision(policyAction, navigation.get(), request, WTFMove(navigationResponse), WTFMove(completionHandler));
-    }, ShouldExpectSafeBrowsingResult::No, ShouldExpectAppBoundDomainResult::No, ShouldWaitForInitialLinkDecorationFilteringData::No);
+        completionHandlerWrapper(policyAction);
+    }, expectSafeBrowsing , ShouldExpectAppBoundDomainResult::No, ShouldWaitForInitialLinkDecorationFilteringData::No);
+    if (expectSafeBrowsing == ShouldExpectSafeBrowsingResult::Yes && navigation) {
+        RunLoop::protectedMain()->dispatchAfter(MonotonicTime::now() - requestStart, [listener] () mutable {
+            listener->didReceiveSafeBrowsingResults({ });
+        });
+    }
 
     if (m_policyClient)
         m_policyClient->decidePolicyForResponse(*this, *frame, response, request, canShowMIMEType, WTFMove(listener));

@@ -26,6 +26,7 @@
 #include "config.h"
 #include "APINavigation.h"
 
+#include "BrowsingWarning.h"
 #include "WebBackForwardListFrameItem.h"
 #include "WebBackForwardListItem.h"
 #include <WebCore/RegistrableDomain.h>
@@ -104,6 +105,11 @@ Navigation::~Navigation()
 {
 }
 
+void Navigation::resetRequestStart()
+{
+    m_requestStart = MonotonicTime::now();
+}
+
 void Navigation::setCurrentRequest(ResourceRequest&& request, ProcessIdentifier processIdentifier)
 {
     m_currentRequest = WTFMove(request);
@@ -140,6 +146,42 @@ void Navigation::markRequestAsFromClientInput()
     m_requestIsFromClientInput = true;
     if (m_lastNavigationAction)
         m_lastNavigationAction->isRequestFromClientOrUserInput = true;
+}
+
+void Navigation::setSafeBrowsingCheckOngoing(size_t index, bool ongoing)
+{
+    if (ongoing)
+        m_ongoingSafeBrowsingChecks.add(index);
+    else
+        m_ongoingSafeBrowsingChecks.remove(index);
+}
+
+bool Navigation::safeBrowsingCheckOngoing(size_t index)
+{
+    return m_ongoingSafeBrowsingChecks.contains(index);
+}
+
+bool Navigation::safeBrowsingCheckOngoing()
+{
+    return !m_ongoingSafeBrowsingChecks.isEmpty();
+}
+
+RefPtr<WebKit::BrowsingWarning> Navigation::safeBrowsingWarning()
+{
+    return m_safeBrowsingWarning;
+}
+
+void Navigation::setSafeBrowsingWarning(RefPtr<WebKit::BrowsingWarning>&& safeBrowsingWarning)
+{
+    m_safeBrowsingWarning = WTFMove(safeBrowsingWarning);
+}
+
+size_t Navigation::redirectChainIndex(const WTF::URL& url)
+{
+    size_t index = m_redirectChain.find(url);
+    if (index == WTF::notFound)
+        index = m_redirectChain.size();
+    return index;
 }
 
 #if !LOG_DISABLED

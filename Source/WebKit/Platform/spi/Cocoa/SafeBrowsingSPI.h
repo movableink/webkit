@@ -36,6 +36,7 @@ DECLARE_SYSTEM_HEADER
 #import <SafariSafeBrowsing/SafariSafeBrowsing.h>
 
 #else
+NS_ASSUME_NONNULL_BEGIN
 
 typedef NSString * SSBProvider NS_STRING_ENUM;
 
@@ -74,8 +75,11 @@ WTF_EXTERN_C_END
 + (SSBLookupContext *)sharedLookupContext;
 
 - (void)lookUpURL:(NSURL *)URL completionHandler:(void (^)(SSBLookupResult *, NSError *))completionHandler;
+- (void)lookUpURL:(NSURL *)URL isMainFrame:(bool)isMainFrame hasHighConfidenceOfSafety:(BOOL)hasHighConfidenceOfSafety completionHandler:(void (^)(SSBLookupResult *, NSError * _Nullable))completionHandler;
 
 @end
+
+NS_ASSUME_NONNULL_END
 
 #endif
 
