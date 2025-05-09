@@ -66,7 +66,7 @@ private:
     void repositionCueSnapToLinesNotSet();
     void repositionGenericCue();
 
-    RenderBlockFlow& backdropBox() const;
+    RenderBlockFlow* backdropBox() const;
     RenderInline* cueBox() const;
 
     WeakPtr<VTTCue, WeakPtrImplWithEventTargetData> m_cue;
