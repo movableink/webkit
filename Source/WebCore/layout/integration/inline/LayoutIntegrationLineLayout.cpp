@@ -150,6 +150,9 @@ static bool shouldInvalidateLineLayoutPathAfterChangeFor(const RenderBlockFlow& 
 
     auto rootHasNonSupportedRenderer = [&] (bool shouldOnlyCheckForRelativeDimension = false) {
         for (auto* sibling = rootBlockContainer.firstChild(); sibling; sibling = sibling->nextSibling()) {
+            if (auto* inlineBox = dynamicDowncast<RenderInline>(*sibling); inlineBox && !inlineBox->style().textAutospace().isNoAutospace())
+                return true;
+
             auto siblingHasRelativeDimensions = false;
             if (auto* renderBox = dynamicDowncast<RenderBox>(*sibling); renderBox && renderBox->hasRelativeDimensions())
                 siblingHasRelativeDimensions = true;

@@ -150,6 +150,7 @@ void InlineItemsBuilder::computeInlineBoxBoundaryTextSpacings(const InlineItemLi
                 ASSERT_NOT_REACHED();
                 // Skip unbalanced inline box start/end pairs.
                 processInlineBoxBoundary = false;
+                currentCharacterDepth = 0;
                 continue;
             }
             processInlineBoxBoundary = true;
