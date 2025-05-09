@@ -29,11 +29,13 @@
 
 #import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
+#import "TestCocoa.h"
 #import "TestNavigationDelegate.h"
 #import "TestWKWebView.h"
 #import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebViewPrivateForTesting.h>
 #import <wtf/RetainPtr.h>
 
 @interface FullscreenChangeMessageHandler : NSObject <WKScriptMessageHandler>
@@ -144,6 +146,24 @@ TEST(ObscuredContentInsets, SetAndGetObscuredContentInsets)
     EXPECT_TRUE(NSEdgeInsetsEqual([webView _obscuredContentInsets], finalInsets));
 }
 
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+
+TEST(ObscuredContentInsets, ResizeContentInsetFillView)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 400, 600)]);
+    [webView _setAutomaticallyAdjustsContentInsets:NO];
+    [webView _setObscuredContentInsets:NSEdgeInsetsMake(100, 100, 0, 0) immediate:NO];
+    [webView synchronouslyLoadTestPageNamed:@"simple"];
+    [webView waitForNextPresentationUpdate];
+    EXPECT_EQ(NSMakeRect(0, 0, 400, 100), [webView _contentInsetFillViewForTesting].frame);
+
+    [webView setFrame:NSMakeRect(0, 0, 800, 600)];
+    [webView waitForNextVisibleContentRectUpdate];
+    [webView waitForNextPresentationUpdate];
+    EXPECT_EQ(NSMakeRect(0, 0, 800, 100), [webView _contentInsetFillViewForTesting].frame);
+}
+
+#endif // ENABLE(CONTENT_INSET_BACKGROUND_FILL)
 
 } // namespace TestWebKitAPI
 

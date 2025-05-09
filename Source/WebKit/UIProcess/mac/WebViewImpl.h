@@ -791,6 +791,7 @@ public:
 
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
     void updateContentInsetFillViews();
+    WKNSContentInsetFillView *topContentInsetFillView() const { return m_topContentInsetFillView.get(); }
 #endif
 
 private:

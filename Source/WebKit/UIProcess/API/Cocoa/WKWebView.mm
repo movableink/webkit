@@ -1982,6 +1982,9 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
 
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
     [self _updateFixedColorExtensionViews];
+#if PLATFORM(MAC)
+    _impl->updateContentInsetFillViews();
+#endif
 #endif
 
     auto maximumViewportInsetSize = WebCore::FloatSize(maximumViewportInset.left + additionalInsets.left() + maximumViewportInset.right, maximumViewportInset.top + additionalInsets.top() + maximumViewportInset.bottom);

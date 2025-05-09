@@ -28,6 +28,7 @@
 
 #if PLATFORM(MAC)
 
+#import "AppKitSPI.h"
 #import "AudioSessionRoutingArbitratorProxy.h"
 #import "WKNSData.h"
 #import "WKWebViewMac.h"
@@ -151,6 +152,15 @@
 - (BOOL)_hasFlagsChangedEventMonitorForTesting
 {
     return _impl->hasFlagsChangedEventMonitor();
+}
+
+- (NSView *)_contentInsetFillViewForTesting
+{
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    return _impl->topContentInsetFillView();
+#else
+    return nil;
+#endif
 }
 
 @end
