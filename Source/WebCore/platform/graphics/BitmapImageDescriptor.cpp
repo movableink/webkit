@@ -47,7 +47,7 @@ MetadataType BitmapImageDescriptor::imageMetadata(MetadataType& cachedValue, con
     if (!decoder)
         return defaultValue;
 
-    if (!decoder->isSizeAvailable())
+    if (!isSizeAvailable())
         return defaultValue;
 
     cachedValue = (*decoder.*functor)();
@@ -90,7 +90,20 @@ MetadataType BitmapImageDescriptor::primaryNativeImageMetadata(MetadataType& cac
 
 EncodedDataStatus BitmapImageDescriptor::encodedDataStatus() const
 {
-    return imageMetadata(m_encodedDataStatus, EncodedDataStatus::Unknown, CachedFlag::EncodedDataStatus, &ImageDecoder::encodedDataStatus);
+    if (m_cachedFlags.contains(CachedFlag::EncodedDataStatus))
+        return m_encodedDataStatus;
+
+    RefPtr decoder = m_source->decoderIfExists();
+    if (!decoder)
+        return EncodedDataStatus::Unknown;
+
+    m_encodedDataStatus = decoder->encodedDataStatus();
+    m_cachedFlags.add(CachedFlag::EncodedDataStatus);
+
+    if (m_encodedDataStatus >= EncodedDataStatus::SizeAvailable)
+        m_source->didDecodeProperties(decoder->bytesDecodedToDetermineProperties());
+
+    return m_encodedDataStatus;
 }
 
 IntSize BitmapImageDescriptor::size(ImageOrientation orientation) const
@@ -217,7 +230,7 @@ SubsamplingLevel BitmapImageDescriptor::maximumSubsamplingLevel() const
     if (!decoder)
         return SubsamplingLevel::Default;
 
-    if (!decoder->isSizeAvailable())
+    if (!isSizeAvailable())
         return SubsamplingLevel::Default;
 
     // FIXME: this value was chosen to be appropriate for Apple ports since the image

@@ -48,6 +48,7 @@ public:
     void clear() { m_cachedFlags = { }; }
 
     EncodedDataStatus encodedDataStatus() const;
+    bool isSizeAvailable() const { return encodedDataStatus() >= EncodedDataStatus::SizeAvailable; }
     IntSize size(ImageOrientation = ImageOrientation::Orientation::FromImage) const;
     IntSize sourceSize(ImageOrientation = ImageOrientation::Orientation::FromImage) const;
     std::optional<IntSize> densityCorrectedSize() const;
