@@ -79,9 +79,16 @@ class FlexLineBuilder {
 public:
     FlexLineBuilder(RenderFlexibleBox&, LayoutUnit lineBreakLength, const RenderFlexibleBox::FlexLayoutItems& allItems, LayoutUnit gapBetweenItems, LayoutUnit gapBetweenLines);
 
-    // The hypothetical main size of an item is the flex base size clamped
-    // according to its min and max main size properties
-    bool computeNextFlexLine(size_t& nextIndex, RenderFlexibleBox::FlexLayoutItems& lineItems, LayoutUnit& sumFlexBaseSize, double& totalFlexGrow, double& totalFlexShrink, double& totalWeightedFlexShrink, LayoutUnit& sumHypotheticalMainSize);
+    struct FlexingLineData {
+        RenderFlexibleBox::FlexLayoutItems lineItems;
+        LayoutUnit sumFlexBaseSize;
+        double totalFlexGrow { 0 };
+        double totalFlexShrink { 0 };
+        double totalWeightedFlexShrink { 0 };
+        LayoutUnit sumHypotheticalMainSize;
+    };
+
+    std::optional<FlexingLineData> computeNextFlexLine(size_t& nextIndex);
 
 private:
     bool isMultiline() const { return m_flexbox.style().flexWrap() != FlexWrap::NoWrap; }
