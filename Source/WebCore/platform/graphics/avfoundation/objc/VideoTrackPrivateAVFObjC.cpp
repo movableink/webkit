@@ -38,21 +38,21 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(VideoTrackPrivateAVFObjC);
 
 VideoTrackPrivateAVFObjC::VideoTrackPrivateAVFObjC(AVPlayerItemTrack* track)
-    : VideoTrackPrivateAVFObjC(makeUnique<AVTrackPrivateAVFObjCImpl>(track))
+    : VideoTrackPrivateAVFObjC(AVTrackPrivateAVFObjCImpl::create(track))
 {
 }
 
 VideoTrackPrivateAVFObjC::VideoTrackPrivateAVFObjC(AVAssetTrack* track)
-    : VideoTrackPrivateAVFObjC(makeUnique<AVTrackPrivateAVFObjCImpl>(track))
+    : VideoTrackPrivateAVFObjC(AVTrackPrivateAVFObjCImpl::create(track))
 {
 }
 
 VideoTrackPrivateAVFObjC::VideoTrackPrivateAVFObjC(MediaSelectionOptionAVFObjC& option)
-    : VideoTrackPrivateAVFObjC(makeUnique<AVTrackPrivateAVFObjCImpl>(option))
+    : VideoTrackPrivateAVFObjC(AVTrackPrivateAVFObjCImpl::create(option))
 {
 }
 
-VideoTrackPrivateAVFObjC::VideoTrackPrivateAVFObjC(std::unique_ptr<AVTrackPrivateAVFObjCImpl>&& impl)
+VideoTrackPrivateAVFObjC::VideoTrackPrivateAVFObjC(Ref<AVTrackPrivateAVFObjCImpl>&& impl)
     : m_impl(WTFMove(impl))
     , m_videoTrackConfigurationObserver([this] { videoTrackConfigurationChanged(); })
 {

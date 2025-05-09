@@ -57,7 +57,7 @@ private:
     
     void resetPropertiesFromTrack();
 
-    std::unique_ptr<AVTrackPrivateAVFObjCImpl> m_impl;
+    const Ref<AVTrackPrivateAVFObjCImpl> m_impl;
 };
 
 }

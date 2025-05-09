@@ -430,6 +430,13 @@ template<> struct LogArgument<Logger::LogSiteIdentifier> {
 template<> struct LogArgument<const void*> {
     WTF_EXPORT_PRIVATE static String toString(const void*);
 };
+template<typename T>
+struct LogArgument<std::optional<T>> {
+    static String toString(const std::optional<T>& value)
+    {
+        return value ? LogArgument<T>::toString(value.value()) : "nullopt"_s;
+    }
+};
 
 #ifdef __OBJC__
 template<> struct LogArgument<id> {

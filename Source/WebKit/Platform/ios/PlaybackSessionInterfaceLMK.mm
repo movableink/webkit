@@ -37,6 +37,7 @@
 #import <WebCore/SharedBuffer.h>
 #import <WebCore/SpatialVideoMetadata.h>
 #import <WebCore/TimeRanges.h>
+#import <WebCore/VideoProjectionMetadata.h>
 #import <wtf/OSObjectPtr.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/WeakPtr.h>
@@ -387,9 +388,9 @@ void PlaybackSessionInterfaceLMK::spatialVideoMetadataChanged(const std::optiona
     [m_player setSpatialVideoMetadata:spatialVideoMetadata.get()];
 }
 
-void PlaybackSessionInterfaceLMK::isImmersiveVideoChanged(bool value)
+void PlaybackSessionInterfaceLMK::videoProjectionMetadataChanged(const std::optional<WebCore::VideoProjectionMetadata>& metadata)
 {
-    [m_player setIsImmersiveVideo:value];
+    [m_player setIsImmersiveVideo:!!metadata];
 }
 
 void PlaybackSessionInterfaceLMK::startObservingNowPlayingMetadata()

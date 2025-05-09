@@ -52,6 +52,7 @@
 #include "SpatialVideoMetadata.h"
 #include "VideoFrame.h"
 #include "VideoFrameMetadata.h"
+#include "VideoProjectionMetadata.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <wtf/Identified.h>
 #include <wtf/Lock.h>
@@ -2190,6 +2191,33 @@ String convertSpatialVideoMetadataToString(const SpatialVideoMetadata& metadata)
         WTF::LogArgument<float>::toString(metadata.horizontalFOVDegrees),
         WTF::LogArgument<float>::toString(metadata.baseline),
         WTF::LogArgument<float>::toString(metadata.disparityAdjustment), '}');
+}
+
+String convertEnumerationToString(VideoProjectionMetadataKind kind)
+{
+    static const std::array<NeverDestroyed<String>, 7> values {
+        MAKE_STATIC_STRING_IMPL("Unknown"),
+        MAKE_STATIC_STRING_IMPL("Equirectangular"),
+        MAKE_STATIC_STRING_IMPL("HalfEquirectangular"),
+        MAKE_STATIC_STRING_IMPL("EquiAngularCubemap"),
+        MAKE_STATIC_STRING_IMPL("Parametric"),
+        MAKE_STATIC_STRING_IMPL("Pyramid"),
+        MAKE_STATIC_STRING_IMPL("AppleImmersiveVideo"),
+    };
+    static_assert(!static_cast<size_t>(VideoProjectionMetadataKind::Unknown), "VideoProjectionMetadataKind::Unknown is not 0 as expected");
+    static_assert(static_cast<size_t>(VideoProjectionMetadataKind::Equirectangular) == 1, "VideoProjectionMetadataKind::Equirectangular is not 1 as expected");
+    static_assert(static_cast<size_t>(VideoProjectionMetadataKind::HalfEquirectangular) == 2, "VideoProjectionMetadataKind::HalfEquirectangular is not 2 as expected");
+    static_assert(static_cast<size_t>(VideoProjectionMetadataKind::EquiAngularCubemap) == 3, "VideoProjectionMetadataKind::EquiAngularCubemap is not 3 as expected");
+    static_assert(static_cast<size_t>(VideoProjectionMetadataKind::Parametric) == 4, "VideoProjectionMetadataKind::Parametric is not 4 as expected");
+    static_assert(static_cast<size_t>(VideoProjectionMetadataKind::Pyramid) == 5, "VideoProjectionMetadataKind::Pyramid is not 5 as expected");
+    static_assert(static_cast<size_t>(VideoProjectionMetadataKind::AppleImmersiveVideo) == 6, "VideoProjectionMetadataKind::AppleImmersiveVideo is not 6 as expected");
+    ASSERT(static_cast<size_t>(kind) < std::size(values));
+    return values[static_cast<size_t>(kind)];
+}
+
+String convertVideoProjectionMetadataToString(const VideoProjectionMetadata& metadata)
+{
+    return makeString('{', convertEnumerationToString(metadata.kind), '}');
 }
 
 } // namespace WebCore

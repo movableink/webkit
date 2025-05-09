@@ -50,9 +50,9 @@ messages -> PlaybackSessionManagerProxy {
 #endif
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     SupportsLinearMediaPlayerChanged(WebCore::MediaPlayerClientIdentifier contextId, bool supportsLinearMediaPlayer)
-    SpatialVideoMetadataChanged(WebCore::MediaPlayerClientIdentifier contextId, struct std::optional<WebCore::SpatialVideoMetadata> metadata);
-    IsImmersiveVideoChanged(WebCore::MediaPlayerClientIdentifier contextId, bool value);
 #endif
+    SpatialVideoMetadataChanged(WebCore::MediaPlayerClientIdentifier contextId, struct std::optional<WebCore::SpatialVideoMetadata> metadata);
+    VideoProjectionMetadataChanged(WebCore::MediaPlayerClientIdentifier contextId, struct std::optional<WebCore::VideoProjectionMetadata> metadata);
     SetUpPlaybackControlsManagerWithID(WebCore::MediaPlayerClientIdentifier contextId, bool isVideo)
     ClearPlaybackControlsManager()
 

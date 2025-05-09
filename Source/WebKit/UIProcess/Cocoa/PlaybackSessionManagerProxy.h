@@ -42,9 +42,8 @@
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashSet.h>
-#if ENABLE(LINEAR_MEDIA_PLAYER)
 #include <WebCore/SpatialVideoMetadata.h>
-#endif
+#include <WebCore/VideoProjectionMetadata.h>
 
 namespace WebKit {
 
@@ -100,9 +99,10 @@ public:
 #endif
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     void supportsLinearMediaPlayerChanged(bool);
-    void spatialVideoMetadataChanged(const std::optional<WebCore::SpatialVideoMetadata>&);
-    void isImmersiveVideoChanged(bool);
 #endif
+
+    void spatialVideoMetadataChanged(const std::optional<WebCore::SpatialVideoMetadata>&);
+    void videoProjectionMetadataChanged(const std::optional<WebCore::VideoProjectionMetadata>&);
 
     bool wirelessVideoPlaybackDisabled() const final { return m_wirelessVideoPlaybackDisabled; }
     const WebCore::VideoReceiverEndpoint& videoReceiverEndpoint() { return m_videoReceiverEndpoint; }
@@ -232,9 +232,9 @@ private:
     WebCore::AudioSessionSoundStageSize m_soundStageSize { 0 };
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     bool m_supportsLinearMediaPlayer { false };
-    std::optional<WebCore::SpatialVideoMetadata> m_spatialVideoMetadata;
-    bool m_isImmersiveVideo { false };
 #endif
+    std::optional<WebCore::SpatialVideoMetadata> m_spatialVideoMetadata;
+    std::optional<WebCore::VideoProjectionMetadata> m_videoProjectionMetadata;
 
 #if !RELEASE_LOG_DISABLED
     uint64_t m_logIdentifier { 0 };
@@ -310,9 +310,9 @@ private:
 #endif
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     void supportsLinearMediaPlayerChanged(PlaybackSessionContextIdentifier, bool);
-    void spatialVideoMetadataChanged(PlaybackSessionContextIdentifier, const std::optional<WebCore::SpatialVideoMetadata>&);
-    void isImmersiveVideoChanged(PlaybackSessionContextIdentifier, bool);
 #endif
+    void spatialVideoMetadataChanged(PlaybackSessionContextIdentifier, const std::optional<WebCore::SpatialVideoMetadata>&);
+    void videoProjectionMetadataChanged(PlaybackSessionContextIdentifier, const std::optional<WebCore::VideoProjectionMetadata>&);
 
     // Messages to PlaybackSessionManager
 #if HAVE(PIP_SKIP_PREROLL)

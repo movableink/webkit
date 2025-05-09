@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "SpatialVideoMetadata.h"
 #include <optional>
 #include <wtf/Forward.h>
 
@@ -35,11 +34,13 @@ namespace WebCore {
 
 class FloatSize;
 struct PlatformVideoColorSpace;
+struct SpatialVideoMetadata;
+struct VideoProjectionMetadata;
 
 FloatSize presentationSizeFromFormatDescription(CMFormatDescriptionRef);
 std::optional<PlatformVideoColorSpace> colorSpaceFromFormatDescription(CMFormatDescriptionRef);
 String codecFromFormatDescription(CMFormatDescriptionRef);
-using VideoMetadata = Variant<SpatialVideoMetadata, bool>;
-std::optional<VideoMetadata> videoMetadataFromFormatDescription(CMFormatDescriptionRef);
+std::optional<SpatialVideoMetadata> spatialVideoMetadataFromFormatDescription(CMFormatDescriptionRef);
+std::optional<VideoProjectionMetadata> videoProjectionMetadataFromFormatDescription(CMFormatDescriptionRef);
 
 } // namespace WebCore

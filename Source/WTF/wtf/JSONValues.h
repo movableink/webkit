@@ -108,6 +108,7 @@ public:
     RefPtr<Array> asArray();
 
     static RefPtr<Value> parseJSON(StringView);
+    static std::optional<Ref<Value>> optionalParseJSON(StringView);
 
     String toJSONString() const;
 

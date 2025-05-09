@@ -2508,6 +2508,12 @@ void HTMLMediaElement::audioTrackLanguageChanged(AudioTrack& track)
         audioTracks->scheduleChangeEvent();
 }
 
+void HTMLMediaElement::audioTrackConfigurationChanged(AudioTrack& track)
+{
+    UNUSED_PARAM(track);
+    ALWAYS_LOG(LOGIDENTIFIER, ", "_s, MediaElementSession::descriptionForTrack(track));
+}
+
 void HTMLMediaElement::willRemoveAudioTrack(AudioTrack& track)
 {
     removeAudioTrack(track);
@@ -2577,6 +2583,12 @@ void HTMLMediaElement::videoTrackSelectedChanged(VideoTrack& track)
     if (RefPtr videoTracks = m_videoTracks; videoTracks && videoTracks->contains(track))
         videoTracks->scheduleChangeEvent();
     checkForAudioAndVideo();
+}
+
+void HTMLMediaElement::videoTrackConfigurationChanged(VideoTrack& track)
+{
+    UNUSED_PARAM(track);
+    ALWAYS_LOG(LOGIDENTIFIER, ", "_s, MediaElementSession::descriptionForTrack(track));
 }
 
 void HTMLMediaElement::videoTrackKindChanged(VideoTrack& track)
@@ -4989,6 +5001,7 @@ void HTMLMediaElement::addAudioTrack(Ref<AudioTrack>&& track)
     track->setLogger(protectedLogger(), logIdentifier());
 #endif
     track->addClient(*this);
+    ALWAYS_LOG(LOGIDENTIFIER, "id: "_s, track->id(), ", "_s, MediaElementSession::descriptionForTrack(track));
     ensureAudioTracks().append(WTFMove(track));
 }
 
@@ -5020,6 +5033,7 @@ void HTMLMediaElement::addVideoTrack(Ref<VideoTrack>&& track)
     track->setLogger(protectedLogger(), logIdentifier());
 #endif
     track->addClient(*this);
+    ALWAYS_LOG(LOGIDENTIFIER, "id: "_s, track->id(), ", "_s, MediaElementSession::descriptionForTrack(track));
     ensureVideoTracks().append(WTFMove(track));
 }
 
@@ -5028,6 +5042,7 @@ void HTMLMediaElement::removeAudioTrack(Ref<AudioTrack>&& track)
     if (!m_audioTracks || !m_audioTracks->contains(track))
         return;
     track->clearClient(*this);
+    ALWAYS_LOG(LOGIDENTIFIER, "id: "_s, track->id(), ", "_s, MediaElementSession::descriptionForTrack(track));
     m_audioTracks->remove(track.get());
 }
 
@@ -5065,6 +5080,7 @@ void HTMLMediaElement::removeVideoTrack(Ref<VideoTrack>&& track)
     if (!m_videoTracks || !m_videoTracks->contains(track))
         return;
     track->clearClient(*this);
+    ALWAYS_LOG(LOGIDENTIFIER, "id: "_s, track->id(), ", "_s, MediaElementSession::descriptionForTrack(track));
     RefPtr { m_videoTracks }->remove(track);
 }
 

@@ -59,6 +59,11 @@ header: <wtf/text/AtomString.h>
     [Validator='WTF::UUID::isValid(*high, *low)'] uint64_t low();
 }
 
+header: <wtf/JSONValues.h>
+[RefCounted, CustomHeader, CreateUsing=optionalParseJSON] class WTF::JSONImpl::Value {
+    String toJSONString();
+}
+
 header: <wtf/ObjectIdentifier.h>
 template: class WebKit::WebURLSchemeHandler
 template: enum class WebCore::AXIDType

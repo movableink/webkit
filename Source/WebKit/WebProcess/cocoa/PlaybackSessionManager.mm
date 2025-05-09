@@ -171,19 +171,17 @@ void PlaybackSessionInterfaceContext::isInWindowFullscreenActiveChanged(bool isI
         manager->isInWindowFullscreenActiveChanged(m_contextId, isInWindow);
 }
 
-#if ENABLE(LINEAR_MEDIA_PLAYER)
 void PlaybackSessionInterfaceContext::spatialVideoMetadataChanged(const std::optional<WebCore::SpatialVideoMetadata>& metadata)
 {
     if (m_manager)
         m_manager->spatialVideoMetadataChanged(m_contextId, metadata);
 }
 
-void PlaybackSessionInterfaceContext::isImmersiveVideoChanged(bool value)
+void PlaybackSessionInterfaceContext::videoProjectionMetadataChanged(const std::optional<VideoProjectionMetadata>& value)
 {
     if (m_manager)
-        m_manager->isImmersiveVideoChanged(m_contextId, value);
+        m_manager->videoProjectionMetadataChanged(m_contextId, value);
 }
-#endif
 
 #pragma mark - PlaybackSessionManager
 
@@ -480,17 +478,15 @@ void PlaybackSessionManager::isInWindowFullscreenActiveChanged(PlaybackSessionCo
     m_page->send(Messages::PlaybackSessionManagerProxy::IsInWindowFullscreenActiveChanged(contextId, inWindow));
 }
 
-#if ENABLE(LINEAR_MEDIA_PLAYER)
 void PlaybackSessionManager::spatialVideoMetadataChanged(PlaybackSessionContextIdentifier contextId, const std::optional<WebCore::SpatialVideoMetadata>& metadata)
 {
     m_page->send(Messages::PlaybackSessionManagerProxy::SpatialVideoMetadataChanged(contextId, metadata));
 }
 
-void PlaybackSessionManager::isImmersiveVideoChanged(PlaybackSessionContextIdentifier contextId, bool value)
+void PlaybackSessionManager::videoProjectionMetadataChanged(PlaybackSessionContextIdentifier contextId, const std::optional<VideoProjectionMetadata>& value)
 {
-    m_page->send(Messages::PlaybackSessionManagerProxy::IsImmersiveVideoChanged(contextId, value));
+    m_page->send(Messages::PlaybackSessionManagerProxy::VideoProjectionMetadataChanged(contextId, value));
 }
-#endif
 
 #pragma mark Messages from PlaybackSessionManagerProxy:
 

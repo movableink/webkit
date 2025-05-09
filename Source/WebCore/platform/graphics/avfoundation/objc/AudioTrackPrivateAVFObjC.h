@@ -77,11 +77,11 @@ private:
     AudioTrackPrivateAVFObjC(AVPlayerItemTrack*);
     AudioTrackPrivateAVFObjC(AVAssetTrack*);
     AudioTrackPrivateAVFObjC(MediaSelectionOptionAVFObjC&);
-    AudioTrackPrivateAVFObjC(std::unique_ptr<AVTrackPrivateAVFObjCImpl>&&);
+    AudioTrackPrivateAVFObjC(Ref<AVTrackPrivateAVFObjCImpl>&&);
 
     void resetPropertiesFromTrack();
     void audioTrackConfigurationChanged();
-    std::unique_ptr<AVTrackPrivateAVFObjCImpl> m_impl;
+    const Ref<AVTrackPrivateAVFObjCImpl> m_impl;
 
     using AudioTrackConfigurationObserver = Observer<void()>;
     AudioTrackConfigurationObserver m_audioTrackConfigurationObserver;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,35 +25,45 @@
 
 #pragma once
 
-#if ENABLE(VIDEO)
-
-#include <wtf/WeakPtr.h>
+#include <wtf/JSONValues.h>
+#include <wtf/RefPtr.h>
 
 namespace WebCore {
-class AudioTrackClient;
-}
+
+enum class VideoProjectionMetadataKind : uint8_t {
+    Unknown,
+    Equirectangular,
+    HalfEquirectangular,
+    EquiAngularCubemap,
+    Parametric,
+    Pyramid,
+    AppleImmersiveVideo,
+};
+
+struct VideoProjectionMetadata {
+    using Kind = VideoProjectionMetadataKind;
+    Kind kind;
+
+    RefPtr<JSON::Value> parameters;
+
+    friend bool operator==(const VideoProjectionMetadata&, const VideoProjectionMetadata&) = default;
+};
+
+WEBCORE_EXPORT String convertVideoProjectionMetadataToString(const VideoProjectionMetadata&);
+WEBCORE_EXPORT String convertEnumerationToString(VideoProjectionMetadataKind);
+
+} // namespace WebCore
 
 namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::AudioTrackClient> : std::true_type { };
-}
 
-namespace WebCore {
+template<typename> struct LogArgument;
 
-class AudioTrack;
-
-class AudioTrackClient : public CanMakeWeakPtr<AudioTrackClient> {
-public:
-    virtual ~AudioTrackClient() = default;
-    virtual void audioTrackEnabledChanged(AudioTrack&) { }
-    virtual void audioTrackIdChanged(AudioTrack&) { }
-    virtual void audioTrackKindChanged(AudioTrack&) { }
-    virtual void audioTrackLabelChanged(AudioTrack&) { }
-    virtual void audioTrackLanguageChanged(AudioTrack&) { }
-    virtual void audioTrackConfigurationChanged(AudioTrack&) { }
-    virtual void willRemoveAudioTrack(AudioTrack&) { }
+template <>
+struct LogArgument<WebCore::VideoProjectionMetadata> {
+    static String toString(const WebCore::VideoProjectionMetadata& metadata)
+    {
+        return convertVideoProjectionMetadataToString(metadata);
+    }
 };
 
 }
-
-#endif

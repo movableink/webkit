@@ -2281,6 +2281,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/VelocityData.h
     platform/graphics/VideoLayerManager.h
     platform/graphics/VideoPlaybackQualityMetrics.h
+    platform/graphics/VideoProjectionMetadata.h
     platform/graphics/VideoTarget.h
     platform/graphics/VideoTrackPrivate.h
     platform/graphics/VideoTrackPrivateClient.h

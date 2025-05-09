@@ -75,11 +75,11 @@ private:
     explicit VideoTrackPrivateAVFObjC(AVPlayerItemTrack*);
     explicit VideoTrackPrivateAVFObjC(AVAssetTrack*);
     explicit VideoTrackPrivateAVFObjC(MediaSelectionOptionAVFObjC&);
-    explicit VideoTrackPrivateAVFObjC(std::unique_ptr<AVTrackPrivateAVFObjCImpl>&&);
+    explicit VideoTrackPrivateAVFObjC(Ref<AVTrackPrivateAVFObjCImpl>&&);
 
     void resetPropertiesFromTrack();
     void videoTrackConfigurationChanged();
-    std::unique_ptr<AVTrackPrivateAVFObjCImpl> m_impl;
+    const Ref<AVTrackPrivateAVFObjCImpl> m_impl;
 
     using VideoTrackConfigurationObserver = Observer<void()>;
     VideoTrackConfigurationObserver m_videoTrackConfigurationObserver;

@@ -81,6 +81,7 @@ using SequesteredArenaMalloc = FastMalloc;
 namespace JSONImpl {
 class Array;
 class Object;
+class Value;
 template<typename> class ArrayOf;
 }
 

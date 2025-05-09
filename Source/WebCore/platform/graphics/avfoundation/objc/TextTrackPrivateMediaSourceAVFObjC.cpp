@@ -38,7 +38,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(TextTrackPrivateMediaSourceAVFObjC);
 
 TextTrackPrivateMediaSourceAVFObjC::TextTrackPrivateMediaSourceAVFObjC(AVAssetTrack* track, CueFormat format)
     : InbandTextTrackPrivateAVF(0, format, [] { })
-    , m_impl(makeUniqueRef<AVTrackPrivateAVFObjCImpl>(track))
+    , m_impl(AVTrackPrivateAVFObjCImpl::create(track))
 {
     resetPropertiesFromTrack();
 }

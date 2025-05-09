@@ -36,21 +36,21 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioTrackPrivateAVFObjC);
 
 AudioTrackPrivateAVFObjC::AudioTrackPrivateAVFObjC(AVPlayerItemTrack* track)
-    : AudioTrackPrivateAVFObjC(makeUnique<AVTrackPrivateAVFObjCImpl>(track))
+    : AudioTrackPrivateAVFObjC(AVTrackPrivateAVFObjCImpl::create(track))
 {
 }
 
 AudioTrackPrivateAVFObjC::AudioTrackPrivateAVFObjC(AVAssetTrack* track)
-    : AudioTrackPrivateAVFObjC(makeUnique<AVTrackPrivateAVFObjCImpl>(track))
+    : AudioTrackPrivateAVFObjC(AVTrackPrivateAVFObjCImpl::create(track))
 {
 }
 
 AudioTrackPrivateAVFObjC::AudioTrackPrivateAVFObjC(MediaSelectionOptionAVFObjC& option)
-    : AudioTrackPrivateAVFObjC(makeUnique<AVTrackPrivateAVFObjCImpl>(option))
+    : AudioTrackPrivateAVFObjC(AVTrackPrivateAVFObjCImpl::create(option))
 {
 }
 
-AudioTrackPrivateAVFObjC::AudioTrackPrivateAVFObjC(std::unique_ptr<AVTrackPrivateAVFObjCImpl>&& impl)
+AudioTrackPrivateAVFObjC::AudioTrackPrivateAVFObjC(Ref<AVTrackPrivateAVFObjCImpl>&& impl)
     : m_impl(WTFMove(impl))
     , m_audioTrackConfigurationObserver([this] { audioTrackConfigurationChanged(); })
 {

@@ -58,14 +58,6 @@ struct LogArgument<Vector<T>> {
     }
 };
 
-template<typename T>
-struct LogArgument<std::optional<T>> {
-    static String toString(const std::optional<T>& value)
-    {
-        return value ? "nullopt"_s : LogArgument<T>::toString(value.value());
-    }
-};
-
 }
 
 namespace WebCore {

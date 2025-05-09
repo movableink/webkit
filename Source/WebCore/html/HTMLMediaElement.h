@@ -448,6 +448,7 @@ public:
     void audioTrackKindChanged(AudioTrack&) final;
     void audioTrackLabelChanged(AudioTrack&) final;
     void audioTrackLanguageChanged(AudioTrack&) final;
+    void audioTrackConfigurationChanged(AudioTrack&) final;
     void willRemoveAudioTrack(AudioTrack&) final;
 
     // TextTrackClient
@@ -466,6 +467,7 @@ public:
     void videoTrackLabelChanged(VideoTrack&) final;
     void videoTrackLanguageChanged(VideoTrack&) final;
     void videoTrackSelectedChanged(VideoTrack&) final;
+    void videoTrackConfigurationChanged(VideoTrack&) final;
     void willRemoveVideoTrack(VideoTrack&) final;
 
     void setTextTrackRepresentataionBounds(const IntRect&);

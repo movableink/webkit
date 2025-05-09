@@ -60,6 +60,7 @@
 #include "SourceBuffer.h"
 #include "TextTrack.h"
 #include "TextTrackList.h"
+#include "VideoProjectionMetadata.h"
 #include "VideoTrack.h"
 #include "VideoTrackConfiguration.h"
 #include "VideoTrackList.h"
@@ -1644,6 +1645,26 @@ void MediaElementSession::clientCharacteristicsChanged(bool positionChanged)
 }
 
 #if !RELEASE_LOG_DISABLED
+String MediaElementSession::descriptionForTrack(const AudioTrack& track)
+{
+    return track.configuration().codec();
+}
+
+String MediaElementSession::descriptionForTrack(const VideoTrack& track)
+{
+    StringBuilder builder;
+
+    builder.append(track.configuration().width(), 'x', track.configuration().height());
+    if (!track.configuration().codec().isEmpty())
+        builder.append(' ', track.configuration().codec());
+    if (track.configuration().spatialVideoMetadata())
+        builder.append(" spatial"_s);
+    if (auto metadata = track.configuration().videoProjectionMetadata())
+        builder.append(' ', convertEnumerationToString(metadata->kind));
+
+    return builder.toString();
+}
+
 String MediaElementSession::description() const
 {
     RefPtr element = protectedElement();
@@ -1656,18 +1677,13 @@ String MediaElementSession::description() const
     builder.append(", "_s, element->localizedSourceType());
 
     if (RefPtr videoTracks = element->videoTracks()) {
-        if (RefPtr selectedVideoTrack = videoTracks->selectedItem()) {
-            builder.append(", "_s, selectedVideoTrack->configuration().width(), 'x', selectedVideoTrack->configuration().height());
-            if (!selectedVideoTrack->configuration().codec().isEmpty())
-                builder.append(' ', selectedVideoTrack->configuration().codec());
-        }
+        if (RefPtr selectedVideoTrack = videoTracks->selectedItem())
+            builder.append(", "_s, descriptionForTrack(*selectedVideoTrack));
     }
 
     if (RefPtr audioTracks = element->audioTracks()) {
-        if (RefPtr enabledAudioTrack = audioTracks->firstEnabled()) {
-            if (!enabledAudioTrack->configuration().codec().isEmpty())
-                builder.append(", "_s, enabledAudioTrack->configuration().codec());
-        }
+        if (RefPtr enabledAudioTrack = audioTracks->firstEnabled())
+            builder.append(", "_s, descriptionForTrack(*enabledAudioTrack));
     }
 
     if (RefPtr textTracks = element->textTracks()) {

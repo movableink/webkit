@@ -58,6 +58,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(PlaybackSessionModelMediaElement);
 PlaybackSessionModelMediaElement::PlaybackSessionModelMediaElement()
     : EventListener(EventListener::CPPEventListenerType)
     , m_soundStageSize { AudioSessionSoundStageSize::Automatic }
+    , m_videoTrackConfigurationObserver { [&] { videoTrackConfigurationChanged(); } }
 {
 }
 
@@ -260,6 +261,12 @@ void PlaybackSessionModelMediaElement::updateForEventName(const WTF::AtomString&
         }
     }
 }
+
+void PlaybackSessionModelMediaElement::videoTrackConfigurationChanged()
+{
+    maybeUpdateVideoMetadata();
+}
+
 void PlaybackSessionModelMediaElement::addClient(PlaybackSessionModelClient& client)
 {
     ASSERT(!m_clients.contains(&client));
@@ -527,7 +534,6 @@ void PlaybackSessionModelMediaElement::updateMediaSelectionOptions()
 
 void PlaybackSessionModelMediaElement::maybeUpdateVideoMetadata()
 {
-#if ENABLE(LINEAR_MEDIA_PLAYER)
     RefPtr mediaElement = m_mediaElement;
     if (!mediaElement)
         return;
@@ -546,18 +552,19 @@ void PlaybackSessionModelMediaElement::maybeUpdateVideoMetadata()
 
     auto spatialVideoMetadata = selectedItem ? selectedItem->configuration().spatialVideoMetadata() : std::nullopt;
     if (spatialVideoMetadata != m_spatialVideoMetadata) {
+        m_spatialVideoMetadata = WTFMove(spatialVideoMetadata);
+        ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER, "spatialVideoMetadata: ", m_spatialVideoMetadata);
         for (auto& client : m_clients)
             client->spatialVideoMetadataChanged(spatialVideoMetadata);
-        m_spatialVideoMetadata = WTFMove(spatialVideoMetadata);
     }
 
-    bool isImmersiveVideo = selectedItem && selectedItem->configuration().isImmersiveVideo();
-    if (isImmersiveVideo != m_isImmersiveVideo) {
+    auto videoProjectionMetadata = selectedItem ? selectedItem->configuration().videoProjectionMetadata() : std::nullopt;
+    if (videoProjectionMetadata != m_videoProjectionMetadata) {
+        m_videoProjectionMetadata = videoProjectionMetadata;
+        ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER, "videoProjectionMetadata: ", m_videoProjectionMetadata);
         for (auto& client : m_clients)
-            client->isImmersiveVideoChanged(isImmersiveVideo);
-        m_isImmersiveVideo = isImmersiveVideo;
+            client->videoProjectionMetadataChanged(m_videoProjectionMetadata);
     }
-#endif
 }
 
 void PlaybackSessionModelMediaElement::updateMediaSelectionIndices()
@@ -676,7 +683,7 @@ double PlaybackSessionModelMediaElement::liveUpdateInterval() const
         return mediaElement->liveUpdateInterval();
     return 0;
 }
-    
+
 bool PlaybackSessionModelMediaElement::canPlayFastReverse() const
 {
     if (RefPtr mediaElement = m_mediaElement)
@@ -847,6 +854,12 @@ const Logger* PlaybackSessionModelMediaElement::loggerPtr() const
         return &mediaElement->logger();
     return nullptr;
 }
+
+WTFLogChannel& PlaybackSessionModelMediaElement::logChannel() const
+{
+    return LogMedia;
+}
+
 #endif
 
 } // namespace WebCore

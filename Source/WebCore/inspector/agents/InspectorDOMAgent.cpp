@@ -3168,6 +3168,28 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDOMAgent::setAllowEditingUserA
     return { };
 }
 
+static Inspector::Protocol::DOM::VideoProjectionMetadataKind videoProjectionMetadataKind(VideoProjectionMetadataKind kind)
+{
+    switch (kind) {
+    case VideoProjectionMetadataKind::Unknown:
+        return Inspector::Protocol::DOM::VideoProjectionMetadataKind::Unknown;
+    case VideoProjectionMetadataKind::Equirectangular:
+        return Inspector::Protocol::DOM::VideoProjectionMetadataKind::Equirectangular;
+    case VideoProjectionMetadataKind::HalfEquirectangular:
+        return Inspector::Protocol::DOM::VideoProjectionMetadataKind::HalfEquirectangular;
+    case VideoProjectionMetadataKind::EquiAngularCubemap:
+        return Inspector::Protocol::DOM::VideoProjectionMetadataKind::EquiAngularCubemap;
+    case VideoProjectionMetadataKind::Parametric:
+        return Inspector::Protocol::DOM::VideoProjectionMetadataKind::Parametric;
+    case VideoProjectionMetadataKind::Pyramid:
+        return Inspector::Protocol::DOM::VideoProjectionMetadataKind::Pyramid;
+    case VideoProjectionMetadataKind::AppleImmersiveVideo:
+        return Inspector::Protocol::DOM::VideoProjectionMetadataKind::AppleImmersiveVideo;
+    }
+    ASSERT_NOT_REACHED();
+    return Inspector::Protocol::DOM::VideoProjectionMetadataKind::Unknown;
+}
+
 Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::DOM::MediaStats>> InspectorDOMAgent::getMediaStats(Inspector::Protocol::DOM::NodeId nodeId)
 {
 #if ENABLE(VIDEO)
@@ -3231,6 +3253,22 @@ Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::DOM::MediaStats>> In
             .setHeight(configuration.height())
             .setWidth(configuration.width())
             .release();
+        if (auto metadata = configuration.spatialVideoMetadata()) {
+            auto metadataJSON = Inspector::Protocol::DOM::SpatialVideoMetadata::create()
+                .setWidth(metadata->size.width())
+                .setHeight(metadata->size.height())
+                .setHorizontalFOVDegrees(metadata->horizontalFOVDegrees)
+                .setBaseline(metadata->baseline)
+                .setDisparityAdjustment(metadata->disparityAdjustment)
+                .release();
+            videoJSON->setSpatialVideoMetadata(WTFMove(metadataJSON));
+        }
+        if (auto metadata = configuration.videoProjectionMetadata()) {
+            auto metadataJSON = Inspector::Protocol::DOM::VideoProjectionMetadata::create()
+                .setKind(videoProjectionMetadataKind(metadata->kind))
+                .release();
+            videoJSON->setVideoProjectionMetadata(WTFMove(metadataJSON));
+        }
         stats->setVideo(WTFMove(videoJSON));
     }
 

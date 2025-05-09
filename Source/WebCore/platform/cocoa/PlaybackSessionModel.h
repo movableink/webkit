@@ -47,6 +47,7 @@ class TimeRanges;
 class PlaybackSessionModelClient;
 struct MediaSelectionOption;
 struct SpatialVideoMetadata;
+struct VideoProjectionMetadata;
 
 enum class AudioSessionSoundStageSize : uint8_t;
 
@@ -187,10 +188,10 @@ public:
     virtual void isInWindowFullscreenActiveChanged(bool) { }
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     virtual void supportsLinearMediaPlayerChanged(bool) { }
-    virtual void spatialVideoMetadataChanged(const std::optional<SpatialVideoMetadata>&) { };
-    virtual void isImmersiveVideoChanged(bool) { };
     virtual void didSetVideoReceiverEndpoint() { };
 #endif
+    virtual void spatialVideoMetadataChanged(const std::optional<SpatialVideoMetadata>&) { };
+    virtual void videoProjectionMetadataChanged(const std::optional<VideoProjectionMetadata>&) { };
     virtual void ensureControlsManager() { }
     virtual void modelDestroyed() { }
 };

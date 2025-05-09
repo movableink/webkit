@@ -103,10 +103,8 @@ private:
     void volumeChanged(double) final;
     void isPictureInPictureSupportedChanged(bool) final;
     void isInWindowFullscreenActiveChanged(bool) final;
-#if ENABLE(LINEAR_MEDIA_PLAYER)
     void spatialVideoMetadataChanged(const std::optional<WebCore::SpatialVideoMetadata>&) final;
-    void isImmersiveVideoChanged(bool) final;
-#endif
+    void videoProjectionMetadataChanged(const std::optional<WebCore::VideoProjectionMetadata>&) final;
 
     PlaybackSessionInterfaceContext(PlaybackSessionManager&, PlaybackSessionContextIdentifier);
 
@@ -188,7 +186,7 @@ private:
     void isPictureInPictureSupportedChanged(PlaybackSessionContextIdentifier, bool);
     void isInWindowFullscreenActiveChanged(PlaybackSessionContextIdentifier, bool);
     void spatialVideoMetadataChanged(PlaybackSessionContextIdentifier, const std::optional<WebCore::SpatialVideoMetadata>&);
-    void isImmersiveVideoChanged(PlaybackSessionContextIdentifier, bool);
+    void videoProjectionMetadataChanged(PlaybackSessionContextIdentifier, const std::optional<WebCore::VideoProjectionMetadata>&);
 #if HAVE(PIP_SKIP_PREROLL)
     void canSkipAdChanged(PlaybackSessionContextIdentifier, bool);
 #endif

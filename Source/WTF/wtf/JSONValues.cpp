@@ -545,6 +545,14 @@ RefPtr<Value> Value::parseJSON(StringView json)
     return result;
 }
 
+std::optional<Ref<Value>> Value::optionalParseJSON(StringView json)
+{
+    auto value = parseJSON(json);
+    if (value)
+        return value.releaseNonNull();
+    return std::nullopt;
+}
+
 String Value::toJSONString() const
 {
     StringBuilder result;

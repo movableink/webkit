@@ -58,12 +58,14 @@ enum class MediaPlaybackDenialReason {
     InvalidState,
 };
 
+class AudioTrack;
 class Document;
 class HTMLMediaElement;
 class MediaMetadata;
 class MediaSession;
 class MediaElementSessionObserver;
 class SourceBuffer;
+class VideoTrack;
 
 struct MediaPositionState;
 
@@ -187,6 +189,8 @@ public:
     std::optional<MediaUsageInfo> mediaUsageInfo() const { return m_mediaUsageInfo; }
 
 #if !RELEASE_LOG_DISABLED
+    static String descriptionForTrack(const VideoTrack&);
+    static String descriptionForTrack(const AudioTrack&);
     String description() const final;
     ASCIILiteral logClassName() const final { return "MediaElementSession"_s; }
 #endif
