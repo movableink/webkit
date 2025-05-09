@@ -540,7 +540,6 @@
 		97FA1A8729C085A60052D650 /* wgslc.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = wgslc.cpp; path = WGSL/wgslc.cpp; sourceTree = SOURCE_ROOT; };
 		97FA1AA229C0BB700052D650 /* wgslc.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = wgslc.xcconfig; sourceTree = "<group>"; };
 		DD5697FC2DC1311D00050321 /* rdar150228472.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = rdar150228472.swift; sourceTree = "<group>"; };
-		DD8EE22A2CE6AC77004DD6F8 /* SwiftCXXThunk.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SwiftCXXThunk.h; sourceTree = "<group>"; };
 		DD8EE22F2CE6B4B3004DD6F8 /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -679,7 +678,6 @@
 				1CEBD80D2716C3D800A5254D /* ShaderModule.h */,
 				1C5ACAB0273A426D0095F8D5 /* ShaderModule.mm */,
 				0DE2BFAC2C150DF700D04AEB /* ShaderStage.h */,
-				DD8EE22A2CE6AC77004DD6F8 /* SwiftCXXThunk.h */,
 				1C5ACA99273A426D0095F8D5 /* Texture.h */,
 				1C5ACAB1273A426D0095F8D5 /* Texture.mm */,
 				1C5ACADD273A4F3D0095F8D5 /* TextureView.h */,

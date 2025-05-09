@@ -25,10 +25,12 @@
 
 #pragma once
 
+#include <wtf/StdLibExtras.h>
+
 /*
  A system of macros to make it more ergonomic to implement C++ class member functions in Swift.
 
- Use HAS_SWIFTCXX_THUNK (from WebGPUExt.h) in headers, to mark a C++ member function as having
+ Use HAS_SWIFTCXX_THUNK (from wtf/Compiler.h) in headers, to mark a C++ member function as having
  a specialized definition in Swift.
 
  Use DEFINE_SWIFTCXX_THUNK in implementation sources, to define a function that calls through to a
@@ -36,49 +38,47 @@
  available through reverse interop.
  */
 
-#define REMOVE_PARENTHESIS(X) REMOVE_PARENTHESIS_IMPL X
-#define REMOVE_PARENTHESIS_IMPL(...) __VA_ARGS__
-
-#define CONCAT(A, B) A##B
+#define _WTF_REMOVE_PARENTHESIS(X) _WTF_REMOVE_PARENTHESIS_IMPL X
+#define _WTF_REMOVE_PARENTHESIS_IMPL(...) __VA_ARGS__
 
 #define _DEFINE_SWIFTCXX_THUNK0(Class, Member, ReturnType) \
 ReturnType Class::Member() { \
-    return CONCAT(Class, _##Member##_thunk)(this); \
+    return WTF_CONCAT(Class, _##Member##_thunk)(this); \
 }
 
 #define _DEFINE_SWIFTCXX_THUNK1(Class, Member, ReturnType, TypeOfArg1) \
-ReturnType Class::Member(REMOVE_PARENTHESIS((TypeOfArg1)) arg1) { \
-    return CONCAT(Class, _##Member##_thunk)(this, arg1); \
+ReturnType Class::Member(_WTF_REMOVE_PARENTHESIS((TypeOfArg1)) arg1) { \
+    return WTF_CONCAT(Class, _##Member##_thunk)(this, arg1); \
 }
 
 #define _DEFINE_SWIFTCXX_THUNK2(Class, Member, ReturnType, TypeOfArg1, TypeOfArg2) \
-ReturnType Class::Member(REMOVE_PARENTHESIS((TypeOfArg1)) arg1, REMOVE_PARENTHESIS((TypeOfArg2)) arg2) { \
-    return CONCAT(Class, _##Member##_thunk)(this, arg1, arg2); \
+ReturnType Class::Member(_WTF_REMOVE_PARENTHESIS((TypeOfArg1)) arg1, _WTF_REMOVE_PARENTHESIS((TypeOfArg2)) arg2) { \
+    return WTF_CONCAT(Class, _##Member##_thunk)(this, arg1, arg2); \
 }
 
 #define _DEFINE_SWIFTCXX_THUNK3(Class, Member, ReturnType, TypeOfArg1, TypeOfArg2, TypeOfArg3) \
-ReturnType Class::Member(REMOVE_PARENTHESIS((TypeOfArg1)) arg1, REMOVE_PARENTHESIS((TypeOfArg2)) arg2, REMOVE_PARENTHESIS((TypeOfArg3)) arg3) { \
-    return CONCAT(Class, _##Member##_thunk)(this, arg1, arg2, arg3); \
+ReturnType Class::Member(_WTF_REMOVE_PARENTHESIS((TypeOfArg1)) arg1, _WTF_REMOVE_PARENTHESIS((TypeOfArg2)) arg2, _WTF_REMOVE_PARENTHESIS((TypeOfArg3)) arg3) { \
+    return WTF_CONCAT(Class, _##Member##_thunk)(this, arg1, arg2, arg3); \
 }
 
 #define _DEFINE_SWIFTCXX_THUNK4(Class, Member, ReturnType, TypeOfArg1, TypeOfArg2, TypeOfArg3, TypeOfArg4) \
-ReturnType Class::Member(REMOVE_PARENTHESIS((TypeOfArg1)) arg1, REMOVE_PARENTHESIS((TypeOfArg2)) arg2, REMOVE_PARENTHESIS((TypeOfArg3)) arg3, REMOVE_PARENTHESIS((TypeOfArg4)) arg4) { \
-    return CONCAT(Class, _##Member##_thunk)(this, arg1, arg2, arg3, arg4); \
+ReturnType Class::Member(_WTF_REMOVE_PARENTHESIS((TypeOfArg1)) arg1, _WTF_REMOVE_PARENTHESIS((TypeOfArg2)) arg2, _WTF_REMOVE_PARENTHESIS((TypeOfArg3)) arg3, _WTF_REMOVE_PARENTHESIS((TypeOfArg4)) arg4) { \
+    return WTF_CONCAT(Class, _##Member##_thunk)(this, arg1, arg2, arg3, arg4); \
 }
 
 #define _DEFINE_SWIFTCXX_THUNK5(Class, Member, ReturnType, TypeOfArg1, TypeOfArg2, TypeOfArg3, TypeOfArg4, TypeOfArg5) \
-ReturnType Class::Member(REMOVE_PARENTHESIS((TypeOfArg1)) arg1, REMOVE_PARENTHESIS((TypeOfArg2)) arg2, REMOVE_PARENTHESIS((TypeOfArg3)) arg3, REMOVE_PARENTHESIS((TypeOfArg4)) arg4, REMOVE_PARENTHESIS((TypeOfArg5)) arg5) { \
-    return CONCAT(Class, _##Member##_thunk)(this, arg1, arg2, arg3, arg4, arg5); \
+ReturnType Class::Member(_WTF_REMOVE_PARENTHESIS((TypeOfArg1)) arg1, _WTF_REMOVE_PARENTHESIS((TypeOfArg2)) arg2, _WTF_REMOVE_PARENTHESIS((TypeOfArg3)) arg3, _WTF_REMOVE_PARENTHESIS((TypeOfArg4)) arg4, _WTF_REMOVE_PARENTHESIS((TypeOfArg5)) arg5) { \
+    return WTF_CONCAT(Class, _##Member##_thunk)(this, arg1, arg2, arg3, arg4, arg5); \
 }
 
 #define _DEFINE_SWIFTCXX_THUNK6(Class, Member, ReturnType, TypeOfArg1, TypeOfArg2, TypeOfArg3, TypeOfArg4, TypeOfArg5, TypeOfArg6) \
-ReturnType Class::Member(REMOVE_PARENTHESIS((TypeOfArg1)) arg1, REMOVE_PARENTHESIS((TypeOfArg2)) arg2, REMOVE_PARENTHESIS((TypeOfArg3)) arg3, REMOVE_PARENTHESIS((TypeOfArg4)) arg4, REMOVE_PARENTHESIS((TypeOfArg5)) arg5, REMOVE_PARENTHESIS((TypeOfArg6)) arg6) { \
-    return CONCAT(Class, _##Member##_thunk)(this, arg1, arg2, arg3, arg4, arg5, arg6); \
+ReturnType Class::Member(_WTF_REMOVE_PARENTHESIS((TypeOfArg1)) arg1, _WTF_REMOVE_PARENTHESIS((TypeOfArg2)) arg2, _WTF_REMOVE_PARENTHESIS((TypeOfArg3)) arg3, _WTF_REMOVE_PARENTHESIS((TypeOfArg4)) arg4, _WTF_REMOVE_PARENTHESIS((TypeOfArg5)) arg5, _WTF_REMOVE_PARENTHESIS((TypeOfArg6)) arg6) { \
+    return WTF_CONCAT(Class, _##Member##_thunk)(this, arg1, arg2, arg3, arg4, arg5, arg6); \
 }
 
 #define _DEFINE_SWIFTCXX_THUNK7(Class, Member, ReturnType, TypeOfArg1, TypeOfArg2, TypeOfArg3, TypeOfArg4, TypeOfArg5, TypeOfArg6, TypeOfArg7) \
-ReturnType Class::Member(REMOVE_PARENTHESIS(TypeOfArg1) arg1, REMOVE_PARENTHESIS((TypeOfArg2)) arg2, REMOVE_PARENTHESIS((TypeOfArg3)) arg3, REMOVE_PARENTHESIS((TypeOfArg4)) arg4, REMOVE_PARENTHESIS((TypeOfArg5)) arg5, REMOVE_PARENTHESIS((TypeOfArg6)) arg6, REMOVE_PARENTHESIS((TypeOfArg7)) arg7) { \
-    return CONCAT(Class, _##Member##_thunk)(this, arg1, arg2, arg3, arg4, arg5, arg6, arg7); \
+ReturnType Class::Member(_WTF_REMOVE_PARENTHESIS(TypeOfArg1) arg1, _WTF_REMOVE_PARENTHESIS((TypeOfArg2)) arg2, _WTF_REMOVE_PARENTHESIS((TypeOfArg3)) arg3, _WTF_REMOVE_PARENTHESIS((TypeOfArg4)) arg4, _WTF_REMOVE_PARENTHESIS((TypeOfArg5)) arg5, _WTF_REMOVE_PARENTHESIS((TypeOfArg6)) arg6, _WTF_REMOVE_PARENTHESIS((TypeOfArg7)) arg7) { \
+    return WTF_CONCAT(Class, _##Member##_thunk)(this, arg1, arg2, arg3, arg4, arg5, arg6, arg7); \
 }
 
 

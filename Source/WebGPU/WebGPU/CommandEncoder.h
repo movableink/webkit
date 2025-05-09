@@ -28,7 +28,6 @@
 #import "BindableResource.h"
 #import "CommandBuffer.h"
 #import "CommandsMixin.h"
-#import "SwiftCXXThunk.h"
 #import "WebGPU.h"
 #import "WebGPUExt.h"
 #import <wtf/FastMalloc.h>
@@ -36,6 +35,7 @@
 #import <wtf/Ref.h>
 #import <wtf/RefCountedAndCanMakeWeakPtr.h>
 #import <wtf/RetainReleaseSwift.h>
+#import <wtf/SwiftCXXThunk.h>
 #import <wtf/TZoneMalloc.h>
 #import <wtf/Vector.h>
 #import <wtf/WeakPtr.h>

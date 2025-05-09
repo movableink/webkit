@@ -649,3 +649,7 @@
     ALLOW_COMMA_END \
     ALLOW_DEPRECATED_DECLARATIONS_END \
     ALLOW_UNUSED_PARAMETERS_END
+
+// Used to indicate that a class member has a specialized implementation in Swift. See
+// "SwiftCXXThunk.h".
+#define HAS_SWIFTCXX_THUNK  NS_REFINED_FOR_SWIFT

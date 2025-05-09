@@ -27,7 +27,6 @@
 
 #import "BindableResource.h"
 #import "Instance.h"
-#import "SwiftCXXThunk.h"
 #import "WebGPU.h"
 #import "WebGPUExt.h"
 #import <Metal/Metal.h>
@@ -40,6 +39,7 @@
 #import <wtf/Ref.h>
 #import <wtf/RefCountedAndCanMakeWeakPtr.h>
 #import <wtf/RetainReleaseSwift.h>
+#import <wtf/SwiftCXXThunk.h>
 #import <wtf/TZoneMalloc.h>
 #import <wtf/WeakPtr.h>
 
