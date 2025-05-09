@@ -533,6 +533,17 @@ void PlaybackSessionModelMediaElement::maybeUpdateVideoMetadata()
         return;
     RefPtr videoTracks = mediaElement->videoTracks();
     auto* selectedItem = videoTracks ? videoTracks->selectedItem() : nullptr;
+
+    // Occasionally, when tearing down an AVAssetTrack in a HLS stream, the tracks
+    // exposed to web content are recreated, and a "removetrack" event is fired before
+    // the subsequent "addtrack" event is fired. This leads to a brief moment when
+    // there is no "selected" video track. In this case, ignore the update and
+    // return early.
+    if (!selectedItem && (m_spatialVideoMetadata || m_videoProjectionMetadata)) {
+        ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER, "no selected item, but have cached spatial metadata or projection metadata; bailing");
+        return;
+    }
+
     auto spatialVideoMetadata = selectedItem ? selectedItem->configuration().spatialVideoMetadata() : std::nullopt;
     if (spatialVideoMetadata != m_spatialVideoMetadata) {
         for (auto& client : m_clients)
