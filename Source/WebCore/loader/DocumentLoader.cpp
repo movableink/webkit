@@ -1559,8 +1559,6 @@ void DocumentLoader::detachFromFrame(LoadWillContinueInAnotherProcess loadWillCo
         m_contentFilter->stopFilteringMainResource();
 #endif
 
-    m_applicationCacheHost->setDOMApplicationCache(nullptr);
-
     cancelPolicyCheckIfNeeded();
 
     // cancelPolicyCheckIfNeeded can clear m_frame if the policy check

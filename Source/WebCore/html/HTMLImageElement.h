@@ -41,6 +41,7 @@ class HTMLFormElement;
 class HTMLImageLoader;
 class HTMLMapElement;
 class Image;
+class SecurityOrigin;
 
 struct ImageCandidate;
 

@@ -738,8 +738,6 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCustomStateSet.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCustomStateSet.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCustomXPathNSResolver.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCustomXPathNSResolver.h
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSDOMApplicationCache.cpp
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSDOMApplicationCache.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSDOMAudioSession.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSDOMAudioSession.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSDOMBindingInternalsBuiltins.cpp

@@ -180,7 +180,6 @@ public:
 #if PLATFORM(IOS) || PLATFORM(VISION)
     WEBCORE_EXPORT bool allowLayeredFullscreenVideos() const;
 #endif
-    bool shouldEnableApplicationCacheQuirk() const;
     bool shouldEnableFontLoadingAPIQuirk() const;
     bool needsVideoShouldMaintainAspectRatioQuirk() const;
 

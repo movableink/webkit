@@ -2040,7 +2040,6 @@ loader/appcache/ApplicationCacheManifestParser.cpp
 loader/appcache/ApplicationCacheResource.cpp
 loader/appcache/ApplicationCacheResourceLoader.cpp
 loader/appcache/ApplicationCacheStorage.cpp
-loader/appcache/DOMApplicationCache.cpp
 loader/archive/Archive.cpp
 loader/archive/ArchiveFactory.cpp
 loader/archive/ArchiveResource.cpp
@@ -3710,7 +3709,6 @@ JSCustomElementRegistry.cpp
 JSCustomEvent.cpp
 JSCustomStateSet.cpp
 JSCurrentUserDetailsOptions.cpp
-JSDOMApplicationCache.cpp
 JSDOMAudioSession.cpp
 JSDOMCSSCustomPropertyDescriptor.cpp
 JSDOMCSSNamespace.cpp

@@ -1510,7 +1510,6 @@ JS_BINDING_IDLS := \
     $(WebCore)/inspector/RTCLogsCallback.idl \
     $(WebCore)/loader/COEPInheritenceViolationReportBody.idl \
     $(WebCore)/loader/CORPViolationReportBody.idl \
-    $(WebCore)/loader/appcache/DOMApplicationCache.idl \
     $(WebCore)/page/BarProp.idl \
     $(WebCore)/page/Crypto.idl \
     $(WebCore)/page/DOMSelection.idl \

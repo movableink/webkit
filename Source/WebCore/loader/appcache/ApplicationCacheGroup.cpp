@@ -34,7 +34,6 @@
 #include "ApplicationCacheStorage.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "DOMApplicationCache.h"
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "EventNames.h"

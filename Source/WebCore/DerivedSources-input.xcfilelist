@@ -1837,7 +1837,6 @@ $(PROJECT_DIR)/inspector/InspectorFrontendHost.idl
 $(PROJECT_DIR)/inspector/RTCLogsCallback.idl
 $(PROJECT_DIR)/loader/COEPInheritenceViolationReportBody.idl
 $(PROJECT_DIR)/loader/CORPViolationReportBody.idl
-$(PROJECT_DIR)/loader/appcache/DOMApplicationCache.idl
 $(PROJECT_DIR)/make-hash-tools.pl
 $(PROJECT_DIR)/mathml/MathMLElement.idl
 $(PROJECT_DIR)/mathml/MathMLMathElement.idl

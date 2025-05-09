@@ -45,7 +45,6 @@ class ApplicationCacheGroup;
 class ApplicationCacheResource;
 class ApplicationCacheStorage;
 class SharedBuffer;
-class DOMApplicationCache;
 class DocumentLoader;
 class LocalFrame;
 class ResourceError;
@@ -117,7 +116,6 @@ public:
     bool swapCache();
     void abort();
 
-    void setDOMApplicationCache(DOMApplicationCache*);
     void notifyDOMApplicationCache(const AtomString& eventType, int progressTotal, int progressDone);
 
     void stopLoadingInFrame(LocalFrame&);
@@ -152,7 +150,6 @@ private:
     ApplicationCache* mainResourceApplicationCache() const { return m_mainResourceApplicationCache.get(); }
     bool maybeLoadFallbackForMainError(const ResourceRequest&, const ResourceError&);
 
-    WeakPtr<DOMApplicationCache, WeakPtrImplWithEventTargetData> m_domApplicationCache;
     SingleThreadWeakRef<DocumentLoader> m_documentLoader;
 
     bool m_defersEvents { true }; // Events are deferred until after document onload.

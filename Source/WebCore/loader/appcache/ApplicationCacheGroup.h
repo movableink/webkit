@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ApplicationCacheResourceLoader.h"
-#include "DOMApplicationCache.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>

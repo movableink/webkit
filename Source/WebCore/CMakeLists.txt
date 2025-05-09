@@ -1433,7 +1433,6 @@ set(WebCore_NON_SVG_IDL_FILES
 
     loader/COEPInheritenceViolationReportBody.idl
     loader/CORPViolationReportBody.idl
-    loader/appcache/DOMApplicationCache.idl
 
     mathml/MathMLElement.idl
     mathml/MathMLMathElement.idl
