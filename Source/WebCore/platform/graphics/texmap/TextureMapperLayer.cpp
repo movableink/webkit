@@ -1508,6 +1508,10 @@ bool TextureMapperLayer::syncAnimations(MonotonicTime time)
     m_animations.apply(applicationResults, time);
 
     m_layerTransforms.localTransform = applicationResults.transform.value_or(m_state.transform);
+#if ENABLE(DAMAGE_TRACKING)
+    if (canInferDamage() && m_currentOpacity != applicationResults.opacity.value_or(m_state.opacity))
+        damageWholeLayer();
+#endif
     m_currentOpacity = applicationResults.opacity.value_or(m_state.opacity);
     m_currentFilters = applicationResults.filters.value_or(m_state.filters);
 
