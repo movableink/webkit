@@ -380,7 +380,7 @@ def llintLocate(debugger, commond, result, internal_dict):
     thread = process.GetSelectedThread()
     jscModule = target.module["JavaScriptCore"]
 
-    frame = thread.GetFrameAtIndex(0)
+    frame = thread.GetSelectedFrame()
     pc = frame.GetPC()
 
     if frame.GetSymbol() and frame.GetSymbol().GetName() == "jsc_llint_begin":
