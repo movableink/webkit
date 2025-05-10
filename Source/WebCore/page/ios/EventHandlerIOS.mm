@@ -50,6 +50,9 @@
 #import "Pasteboard.h"
 #import "PlatformEventFactoryIOS.h"
 #import "PlatformKeyboardEvent.h"
+#import "RemoteFrame.h"
+#import "RemoteFrameGeometryTransformer.h"
+#import "RemoteFrameView.h"
 #import "RenderWidgetInlines.h"
 #import "RenderObjectInlines.h"
 #import "ScrollingCoordinatorTypes.h"
@@ -793,7 +796,7 @@ bool EventHandler::eventLoopHandleMouseDragged(const MouseEventWithHitTestResult
     return false;
 }
 
-void EventHandler::tryToBeginDragAtPoint(const IntPoint& clientPosition, const IntPoint&, CompletionHandler<void(bool)>&& completionHandler)
+void EventHandler::tryToBeginDragAtPoint(const IntPoint& clientPosition, const IntPoint&, CompletionHandler<void(Expected<bool, RemoteFrameGeometryTransformer>)>&& completionHandler)
 {
     Ref frame = m_frame.get();
 
@@ -814,12 +817,18 @@ void EventHandler::tryToBeginDragAtPoint(const IntPoint& clientPosition, const I
     PlatformMouseEvent syntheticMouseMoveEvent(adjustedClientPosition, adjustedGlobalPosition, MouseButton::Left, PlatformEvent::Type::MouseMoved, 0, { }, WallTime::now(), 0, SyntheticClickType::NoTap);
 
     constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::Active, HitTestRequest::Type::DisallowUserAgentShadowContent };
-    auto documentPoint = frame->view() ? frame->view()->windowToContents(syntheticMouseMoveEvent.position()) : syntheticMouseMoveEvent.position();
+    RefPtr frameView = frame->view();
+    auto documentPoint = frameView ? frameView->windowToContents(syntheticMouseMoveEvent.position()) : syntheticMouseMoveEvent.position();
     auto hitTestedMouseEvent = document->prepareMouseEvent(hitType, documentPoint, syntheticMouseMoveEvent);
 
-    auto subframe = dynamicDowncast<LocalFrame>(subframeForHitTestResult(hitTestedMouseEvent));
-    if (subframe)
-        return subframe->eventHandler().tryToBeginDragAtPoint(adjustedClientPosition, adjustedGlobalPosition, WTFMove(completionHandler));
+    if (RefPtr subframe = subframeForHitTestResult(hitTestedMouseEvent)) {
+        if (RefPtr localSubframe = dynamicDowncast<LocalFrame>(subframe.get()))
+            return localSubframe->eventHandler().tryToBeginDragAtPoint(adjustedClientPosition, adjustedGlobalPosition, WTFMove(completionHandler));
+        if (RefPtr remoteSubframe = dynamicDowncast<RemoteFrame>(subframe.get())) {
+            if (RefPtr remoteFrameView = remoteSubframe->view(); remoteFrameView && frameView)
+                return completionHandler(makeUnexpected(RemoteFrameGeometryTransformer(remoteFrameView.releaseNonNull(), frameView.releaseNonNull(), remoteSubframe->frameID())));
+        }
+    }
 
     if (!eventMayStartDrag(syntheticMousePressEvent))
         return completionHandler(false);

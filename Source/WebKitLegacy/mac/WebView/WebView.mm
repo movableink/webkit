@@ -212,6 +212,7 @@
 #import <WebCore/ProgressTracker.h>
 #import <WebCore/Range.h>
 #import <WebCore/RemoteFrameClient.h>
+#import <WebCore/RemoteFrameGeometryTransformer.h>
 #import <WebCore/RemoteUserInputEventData.h>
 #import <WebCore/RenderStyleInlines.h>
 #import <WebCore/RenderTheme.h>
@@ -1928,8 +1929,9 @@ static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
         return NO;
 
     auto result = Box<std::optional<bool>>::create();
-    localMainFrame->eventHandler().tryToBeginDragAtPoint(WebCore::IntPoint(clientPosition), WebCore::IntPoint(globalPosition), [result] (bool handled) mutable {
-        *result = handled;
+    localMainFrame->eventHandler().tryToBeginDragAtPoint(WebCore::IntPoint(clientPosition), WebCore::IntPoint(globalPosition), [result] (auto handled) mutable {
+        ASSERT_WITH_MESSAGE(handled.has_value(), "tryToBeginDragAtPoint should never run into a RemoteFrame in WebKitLegacy");
+        *result = handled.value_or(false);
     });
     ASSERT_WITH_MESSAGE(*result, "tryToBeginDragAtPoint should always complete synchronously in WebKitLegacy");
     return result->value_or(false);

@@ -29,6 +29,7 @@
 #if PLATFORM(IOS_FAMILY)
 
 #import "DocumentEditingContext.h"
+#import "DragInitiationResult.h"
 #import "DrawingArea.h"
 #import "EditingRange.h"
 #import "EditorState.h"
@@ -1111,17 +1112,27 @@ void WebPage::updateFocusedElementInformation()
 }
 
 #if ENABLE(DRAG_SUPPORT)
-void WebPage::requestDragStart(const IntPoint& clientPosition, const IntPoint& globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask, CompletionHandler<void(bool)>&& completionHandler)
+Awaitable<DragInitiationResult> WebPage::requestDragStart(std::optional<WebCore::FrameIdentifier> remoteFrameID, IntPoint clientPosition, IntPoint globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask)
 {
     SetForScope allowedActionsForScope(m_allowedDragSourceActions, allowedActionsMask);
-    RefPtr localMainFrame = m_page->localMainFrame();
-    if (!localMainFrame)
-        return completionHandler(false);
+    RefPtr localRootFrame = this->localRootFrame(remoteFrameID);
+    if (!localRootFrame)
+        co_return { false };
 
-    localMainFrame->eventHandler().tryToBeginDragAtPoint(clientPosition, globalPosition, WTFMove(completionHandler));
+    auto handledOrTransformer = co_await AwaitableFromCompletionHandler<Expected<bool, RemoteFrameGeometryTransformer>> { [=] (auto completionHandler) {
+        localRootFrame->eventHandler().tryToBeginDragAtPoint(clientPosition, globalPosition, WTFMove(completionHandler));
+    } };
+    if (handledOrTransformer)
+        co_return { *handledOrTransformer };
+    auto& transformer = handledOrTransformer.error();
+    co_return { DragInitiationResult::RemoteFrameData {
+        transformer.remoteFrameID(),
+        transformer.transformToRemoteFrameCoordinates(clientPosition),
+        transformer.transformToRemoteFrameCoordinates(globalPosition)
+    } };
 }
 
-void WebPage::requestAdditionalItemsForDragSession(const IntPoint& clientPosition, const IntPoint& globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask, CompletionHandler<void(bool)>&& completionHandler)
+Awaitable<DragInitiationResult> WebPage::requestAdditionalItemsForDragSession(std::optional<WebCore::FrameIdentifier> rootFrameID, IntPoint clientPosition, IntPoint globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask)
 {
     SetForScope allowedActionsForScope(m_allowedDragSourceActions, allowedActionsMask);
     // To augment the platform drag session with additional items, end the current drag session and begin a new drag session with the new drag item.
@@ -1131,11 +1142,21 @@ void WebPage::requestAdditionalItemsForDragSession(const IntPoint& clientPositio
     m_page->dragController().dragEnded();
     RefPtr localMainFrame = m_page->localMainFrame();
     if (!localMainFrame)
-        return completionHandler(false);
+        co_return { false };
 
     localMainFrame->eventHandler().dragSourceEndedAt(event, { }, MayExtendDragSession::Yes);
 
-    localMainFrame->eventHandler().tryToBeginDragAtPoint(clientPosition, globalPosition, WTFMove(completionHandler));
+    auto handledOrTransformer = co_await AwaitableFromCompletionHandler<Expected<bool, RemoteFrameGeometryTransformer>> { [=] (auto completionHandler) {
+        localMainFrame->eventHandler().tryToBeginDragAtPoint(clientPosition, globalPosition, WTFMove(completionHandler));
+    } };
+    if (handledOrTransformer)
+        co_return { *handledOrTransformer };
+    auto& transformer = handledOrTransformer.error();
+    co_return { DragInitiationResult::RemoteFrameData {
+        transformer.remoteFrameID(),
+        transformer.transformToRemoteFrameCoordinates(clientPosition),
+        transformer.transformToRemoteFrameCoordinates(globalPosition)
+    } };
 }
 
 void WebPage::insertDroppedImagePlaceholders(const Vector<IntSize>& imageSizes, CompletionHandler<void(const Vector<IntRect>&, std::optional<WebCore::TextIndicatorData>)>&& reply)

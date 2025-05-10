@@ -34,6 +34,7 @@
 #import "APIWebsitePolicies.h"
 #import "Connection.h"
 #import "DocumentEditingContext.h"
+#import "DragInitiationResult.h"
 #import "DrawingAreaProxy.h"
 #import "EditingRange.h"
 #import "GlobalFindInPageState.h"
@@ -1309,20 +1310,38 @@ void WebPageProxy::requestDocumentEditingContext(WebKit::DocumentEditingContextR
 
 #if ENABLE(DRAG_SUPPORT)
 
-void WebPageProxy::requestDragStart(const WebCore::IntPoint& clientPosition, const WebCore::IntPoint& globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask, CompletionHandler<void(bool)>&& completionHandler)
+void WebPageProxy::requestDragStart(std::optional<WebCore::FrameIdentifier> remoteFrameID, const WebCore::IntPoint& clientPosition, const WebCore::IntPoint& globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask, CompletionHandler<void(bool)>&& completionHandler)
 {
     if (!hasRunningProcess())
         return completionHandler(false);
 
-    m_legacyMainFrameProcess->sendWithAsyncReply(Messages::WebPage::RequestDragStart(clientPosition, globalPosition, allowedActionsMask), WTFMove(completionHandler), webPageIDInMainFrameProcess());
+    sendWithAsyncReplyToProcessContainingFrame(remoteFrameID, Messages::WebPage::RequestDragStart(remoteFrameID, clientPosition, globalPosition, allowedActionsMask), Messages::WebPage::RequestDragStart::Reply { [weakThis = WeakPtr { *this }, allowedActionsMask, completionHandler = WTFMove(completionHandler)] (auto result) mutable {
+        WTF::switchOn(result.result, [&] (bool handled) {
+            completionHandler(handled);
+        }, [&] (DragInitiationResult::RemoteFrameData& data) {
+            RefPtr protectedThis = weakThis.get();
+            if (!protectedThis)
+                return completionHandler(false);
+            protectedThis->requestDragStart(data.targetFrameID, data.transformedClientPosition, data.transformedGlobalPosition, allowedActionsMask, WTFMove(completionHandler));
+        });
+    } });
 }
 
-void WebPageProxy::requestAdditionalItemsForDragSession(const IntPoint& clientPosition, const IntPoint& globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask, CompletionHandler<void(bool)>&& completionHandler)
+void WebPageProxy::requestAdditionalItemsForDragSession(std::optional<WebCore::FrameIdentifier> remoteFrameID, const IntPoint& clientPosition, const IntPoint& globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask, CompletionHandler<void(bool)>&& completionHandler)
 {
     if (!hasRunningProcess())
         return completionHandler(false);
 
-    m_legacyMainFrameProcess->sendWithAsyncReply(Messages::WebPage::RequestAdditionalItemsForDragSession(clientPosition, globalPosition, allowedActionsMask), WTFMove(completionHandler), webPageIDInMainFrameProcess());
+    sendWithAsyncReplyToProcessContainingFrame(remoteFrameID, Messages::WebPage::RequestAdditionalItemsForDragSession(remoteFrameID, clientPosition, globalPosition, allowedActionsMask), Messages::WebPage::RequestAdditionalItemsForDragSession::Reply { [weakThis = WeakPtr { *this }, allowedActionsMask, completionHandler = WTFMove(completionHandler)] (auto result) mutable {
+        WTF::switchOn(result.result, [&] (bool handled) {
+            completionHandler(handled);
+        }, [&] (DragInitiationResult::RemoteFrameData& data) {
+            RefPtr protectedThis = weakThis.get();
+            if (!protectedThis)
+                return completionHandler(false);
+            protectedThis->requestAdditionalItemsForDragSession(data.targetFrameID, data.transformedClientPosition, data.transformedGlobalPosition, allowedActionsMask, WTFMove(completionHandler));
+        });
+    } });
 }
 
 void WebPageProxy::insertDroppedImagePlaceholders(const Vector<IntSize>& imageSizes, CompletionHandler<void(const Vector<IntRect>&, std::optional<WebCore::TextIndicatorData>)>&& completionHandler)

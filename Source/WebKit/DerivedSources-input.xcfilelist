@@ -501,6 +501,7 @@ $(PROJECT_DIR)/Shared/ios/GestureTypes.serialization.in
 $(PROJECT_DIR)/Shared/ios/HardwareKeyboardState.serialization.in
 $(PROJECT_DIR)/Shared/ios/InteractionInformationAtPosition.serialization.in
 $(PROJECT_DIR)/Shared/ios/InteractionInformationRequest.serialization.in
+$(PROJECT_DIR)/Shared/ios/DragInitiationResult.serialization.in
 $(PROJECT_DIR)/Shared/ios/WebAutocorrectionContext.serialization.in
 $(PROJECT_DIR)/Shared/ios/WebAutocorrectionData.serialization.in
 $(PROJECT_DIR)/Shared/mac/PDFContextMenuItem.serialization.in

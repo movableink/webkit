@@ -25,32 +25,22 @@
 
 #pragma once
 
-#include "FrameIdentifier.h"
+#if PLATFORM(IOS_FAMILY)
 
-namespace WebCore {
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/IntPoint.h>
 
-class IntPoint;
-class FloatPoint;
-class LocalFrameView;
-class RemoteFrameView;
+namespace WebKit {
 
-class RemoteFrameGeometryTransformer {
-public:
-    WEBCORE_EXPORT RemoteFrameGeometryTransformer(Ref<RemoteFrameView>&&, Ref<LocalFrameView>&&, FrameIdentifier);
-    WEBCORE_EXPORT RemoteFrameGeometryTransformer(RemoteFrameGeometryTransformer&&);
-    RemoteFrameGeometryTransformer(const RemoteFrameGeometryTransformer&) = delete;
-    WEBCORE_EXPORT RemoteFrameGeometryTransformer& operator=(RemoteFrameGeometryTransformer&&);
-    RemoteFrameGeometryTransformer& operator=(const RemoteFrameGeometryTransformer&) = delete;
-    WEBCORE_EXPORT ~RemoteFrameGeometryTransformer();
-
-    WEBCORE_EXPORT IntPoint transformToRemoteFrameCoordinates(IntPoint pointInContents) const;
-    WEBCORE_EXPORT FloatPoint transformToRemoteFrameCoordinates(FloatPoint pointInContents) const;
-    FrameIdentifier remoteFrameID() const { return m_remoteFrameID; }
-
-private:
-    Ref<RemoteFrameView> m_remoteView;
-    Ref<LocalFrameView> m_localView;
-    FrameIdentifier m_remoteFrameID;
+struct DragInitiationResult {
+    struct RemoteFrameData {
+        WebCore::FrameIdentifier targetFrameID;
+        WebCore::IntPoint transformedClientPosition;
+        WebCore::IntPoint transformedGlobalPosition;
+    };
+    Variant<bool, RemoteFrameData> result;
 };
 
-} // namespace WebCore
+} // namespace WebKit
+
+#endif
