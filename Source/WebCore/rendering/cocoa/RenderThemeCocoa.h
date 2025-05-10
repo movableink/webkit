@@ -76,6 +76,10 @@ protected:
     bool paintTextField(const RenderObject&, const PaintInfo&, const FloatRect&) override;
     void paintTextFieldDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) override;
 
+    void adjustTextControlInnerContainerStyle(RenderStyle&, const RenderStyle&, const Element*) const override;
+    void adjustTextControlInnerPlaceholderStyle(RenderStyle&, const RenderStyle&, const Element*) const override;
+    void adjustTextControlInnerTextStyle(RenderStyle&, const RenderStyle&, const Element*) const override;
+
     void adjustTextAreaStyle(RenderStyle&, const Element*) const override;
     bool paintTextArea(const RenderObject&, const PaintInfo&, const FloatRect&) override;
     void paintTextAreaDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) override;

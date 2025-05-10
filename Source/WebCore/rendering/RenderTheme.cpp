@@ -912,7 +912,9 @@ bool RenderTheme::paint(const RenderBox& box, const PaintInfo& paintInfo, const 
     case StyleAppearance::SliderThumbVertical:
         return paintSliderThumb(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::TextField:
+        return paintTextField(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::TextArea:
+        return paintTextArea(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::Listbox:
         return true;
     case StyleAppearance::InnerSpinButton:
@@ -951,23 +953,19 @@ bool RenderTheme::paint(const RenderBox& box, const PaintInfo& paintInfo, const 
     return true; // We don't support the appearance, so let the normal background/border paint.
 }
 
-bool RenderTheme::paintBorderOnly(const RenderBox& box, const PaintInfo& paintInfo, const LayoutRect& rect)
+bool RenderTheme::paintBorderOnly(const RenderBox& box, const PaintInfo& paintInfo)
 {
     if (paintInfo.context().paintingDisabled())
         return false;
 
 #if PLATFORM(IOS_FAMILY)
-    UNUSED_PARAM(rect);
     return box.style().usedAppearance() != StyleAppearance::None && box.style().usedAppearance() != StyleAppearance::Base;
 #else
-    FloatRect devicePixelSnappedRect = snapRectToDevicePixels(rect, box.document().deviceScaleFactor());
     // Call the appropriate paint method based off the appearance value.
     switch (box.style().usedAppearance()) {
     case StyleAppearance::TextField:
-        return paintTextField(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::Listbox:
     case StyleAppearance::TextArea:
-        return paintTextArea(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::MenulistButton:
     case StyleAppearance::SearchField:
         return true;

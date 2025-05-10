@@ -939,4 +939,34 @@ bool RenderThemeCocoa::supportsFocusRing(const RenderObject& renderer, const Ren
     return RenderTheme::supportsFocusRing(renderer, style);
 }
 
+void RenderThemeCocoa::adjustTextControlInnerContainerStyle(RenderStyle& style, const RenderStyle& shadowHostStyle, const Element* shadowHost) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustTextControlInnerContainerStyleForVectorBasedControls(style, shadowHostStyle, shadowHost))
+        return;
+#endif
+
+    RenderTheme::adjustTextControlInnerContainerStyle(style, shadowHostStyle, shadowHost);
+}
+
+void RenderThemeCocoa::adjustTextControlInnerPlaceholderStyle(RenderStyle& style, const RenderStyle& shadowHostStyle, const Element* shadowHost) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustTextControlInnerPlaceholderStyleForVectorBasedControls(style, shadowHostStyle, shadowHost))
+        return;
+#endif
+
+    RenderTheme::adjustTextControlInnerPlaceholderStyle(style, shadowHostStyle, shadowHost);
+}
+
+void RenderThemeCocoa::adjustTextControlInnerTextStyle(RenderStyle& style, const RenderStyle& shadowHostStyle, const Element* shadowHost) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustTextControlInnerTextStyleForVectorBasedControls(style, shadowHostStyle, shadowHost))
+        return;
+#endif
+
+    RenderTheme::adjustTextControlInnerTextStyle(style, shadowHostStyle, shadowHost);
+}
+
 }

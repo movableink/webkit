@@ -83,7 +83,7 @@ public:
     bool paint(const RenderBox&, ControlPart&, const PaintInfo&, const LayoutRect&);
     bool paint(const RenderBox&, const PaintInfo&, const LayoutRect&);
     
-    bool paintBorderOnly(const RenderBox&, const PaintInfo&, const LayoutRect&);
+    bool paintBorderOnly(const RenderBox&, const PaintInfo&);
     void paintDecorations(const RenderBox&, const PaintInfo&, const LayoutRect&);
 
     // The remaining methods should be implemented by the platform-specific portion of the theme, e.g.,
@@ -248,6 +248,10 @@ public:
     virtual void paintPlatformResizerFrame(const RenderLayerModelObject&, GraphicsContext&, const LayoutRect&);
 
     static bool hasAppearanceForElementTypeFromUAStyle(const Element&);
+
+    virtual void adjustTextControlInnerContainerStyle(RenderStyle&, const RenderStyle&, const Element*) const { }
+    virtual void adjustTextControlInnerPlaceholderStyle(RenderStyle&, const RenderStyle&, const Element*) const { }
+    virtual void adjustTextControlInnerTextStyle(RenderStyle&, const RenderStyle&, const Element*) const { }
 
 protected:
     ControlStyle extractControlStyleForRenderer(const RenderObject&) const;
