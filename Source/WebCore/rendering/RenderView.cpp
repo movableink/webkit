@@ -21,6 +21,7 @@
 #include "config.h"
 #include "RenderView.h"
 
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "Element.h"
 #include "FloatQuad.h"

@@ -26,6 +26,7 @@
 #include "config.h"
 #include "RenderTreeUpdaterGeneratedContent.h"
 
+#include "ContainerNodeInlines.h"
 #include "ContentData.h"
 #include "Editor.h"
 #include "ElementInlines.h"
@@ -34,7 +35,7 @@
 #include "PseudoElement.h"
 #include "RenderCounter.h"
 #include "RenderDescendantIterator.h"
-#include "RenderElement.h"
+#include "RenderElementInlines.h"
 #include "RenderImage.h"
 #include "RenderQuote.h"
 #include "RenderStyleInlines.h"

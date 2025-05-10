@@ -48,6 +48,7 @@
 #include "NodeRenderStyle.h"
 #include "NullGraphicsContext.h"
 #include "ReferenceFilterOperation.h"
+#include "RenderElementInlines.h"
 #include "RenderImage.h"
 #include "RenderIterator.h"
 #include "RenderObjectInlines.h"

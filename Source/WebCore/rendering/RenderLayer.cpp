@@ -51,6 +51,7 @@
 #include "BitmapImage.h"
 #include "BorderShape.h"
 #include "BoxLayoutShape.h"
+#include "ContainerNodeInlines.h"
 #include "CSSFilter.h"
 #include "CSSPropertyNames.h"
 #include "Chrome.h"

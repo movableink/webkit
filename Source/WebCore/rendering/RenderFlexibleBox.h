@@ -134,7 +134,6 @@ protected:
     bool shouldResetChildLogicalHeightBeforeLayout(const RenderBox&) const override { return m_shouldResetFlexItemLogicalHeightBeforeLayout; }
 
 private:
-    friend class FlexLineBuilder;
     enum class FlexSign : uint8_t {
         PositiveFlexibility,
         NegativeFlexibility,
@@ -209,9 +208,23 @@ private:
     Overflow crossAxisOverflowForFlexItem(const RenderBox& flexItem) const;
     void cacheFlexItemMainSize(const RenderBox& flexItem);
 
+
+
     void performFlexLayout(RelayoutChildren);
+
+    struct FlexingLineData {
+        RenderFlexibleBox::FlexLayoutItems lineItems;
+        LayoutUnit sumFlexBaseSize;
+        double totalFlexGrow { 0 };
+        double totalFlexShrink { 0 };
+        double totalWeightedFlexShrink { 0 };
+        LayoutUnit sumHypotheticalMainSize;
+    };
+    std::optional<FlexingLineData> computeNextFlexLine(size_t& nextIndex, const Vector<FlexLayoutItem>& allItems, LayoutUnit lineBreakLength, LayoutUnit gapBetweenItems);
+
     LayoutUnit autoMarginOffsetInMainAxis(const FlexLayoutItems&, LayoutUnit& availableFreeSpace);
     void updateAutoMarginsInMainAxis(RenderBox& flexItem, LayoutUnit autoMarginOffset);
+
     void initializeMarginTrimState(); 
     // Start margin parallel with the cross axis
     bool shouldTrimMainAxisMarginStart() const;
@@ -225,6 +238,9 @@ private:
     void trimCrossAxisMarginStart(const FlexLayoutItem&);
     void trimCrossAxisMarginEnd(const FlexLayoutItem&);
     bool isChildEligibleForMarginTrim(MarginTrimType, const RenderBox&) const final;
+    bool canFitItemWithTrimmedMarginEnd(const FlexLayoutItem&, LayoutUnit sumHypotheticalMainSize, LayoutUnit lineBreakLength) const;
+    void removeMarginEndFromFlexSizes(FlexLayoutItem&, LayoutUnit& sumFlexBaseSize, LayoutUnit& sumHypotheticalMainSize) const;
+
     bool hasAutoMarginsInCrossAxis(const RenderBox& flexItem) const;
     bool updateAutoMarginsInCrossAxis(RenderBox& flexItem, LayoutUnit availableAlignmentSpace);
     void repositionLogicalHeightDependentFlexItems(FlexLineStates&, LayoutUnit gapBetweenLines);

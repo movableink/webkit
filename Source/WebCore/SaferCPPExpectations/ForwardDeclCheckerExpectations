@@ -133,8 +133,6 @@ rendering/style/StyleCachedImage.cpp
 rendering/svg/SVGRenderingContext.h
 style/StyleBuilderState.h
 style/StyleScope.h
-svg/properties/SVGAnimationAdditiveListFunctionImpl.h
-svg/properties/SVGAnimationAdditiveValueFunctionImpl.h
 testing/Internals.cpp
 workers/DedicatedWorkerThread.cpp
 workers/Worker.h

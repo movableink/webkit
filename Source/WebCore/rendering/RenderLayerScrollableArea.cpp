@@ -75,6 +75,7 @@
 #include "RenderScrollbar.h"
 #include "RenderScrollbarPart.h"
 #include "RenderStyleInlines.h"
+#include "RenderTheme.h"
 #include "RenderView.h"
 #include "ScrollAnimator.h"
 #include "ScrollbarTheme.h"
