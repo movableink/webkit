@@ -8035,7 +8035,7 @@ void HTMLMediaElement::createMediaPlayer() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     player->setInFullscreenOrPictureInPicture(isFullscreen());
 
 #if USE(AVFOUNDATION) && ENABLE(MEDIA_SOURCE)
-    player->setDecompressionSessionPreferences(document().settings().mediaSourcePrefersDecompressionSession(), document().settings().mediaSourceCanFallbackToDecompressionSession(), document().settings().videoRendererProtectedFallbackDisabled());
+    player->setDecompressionSessionPreferences(document().settings().mediaSourcePrefersDecompressionSession(), document().settings().videoRendererProtectedFallbackDisabled());
 #endif
     schedulePlaybackControlsManagerUpdate();
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA) && ENABLE(ENCRYPTED_MEDIA)

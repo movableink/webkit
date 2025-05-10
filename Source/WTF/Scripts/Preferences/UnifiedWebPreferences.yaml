@@ -5011,22 +5011,6 @@ MediaSessionPlaylistEnabled:
     WebCore:
       default: true
 
-MediaSourceCanFallbackToDecompressionSession:
-  type: bool
-  status: stable
-  category: media
-  humanReadableName: "MediaSource automatically falls back to DecompressionSession"
-  humanReadableDescription: "MediaSource automatically falls back to DecompressionSession"
-  condition: ENABLE(MEDIA_SOURCE) && USE(AVFOUNDATION)
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-  sharedPreferenceForWebProcess: true
-
 MediaSourceEnabled:
   type: bool
   status: embedder

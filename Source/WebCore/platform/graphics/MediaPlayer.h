@@ -719,7 +719,7 @@ public:
 
 #if USE(AVFOUNDATION)
     AVPlayer *objCAVFoundationAVPlayer() const;
-    void setDecompressionSessionPreferences(bool, bool, bool);
+    void setDecompressionSessionPreferences(bool, bool);
 #endif
 
     bool performTaskAtTime(Function<void()>&&, const MediaTime&);
@@ -876,7 +876,6 @@ private:
     ProcessIdentity m_processIdentity;
 #if USE(AVFOUNDATION)
     bool m_preferDecompressionSession { false };
-    bool m_canFallbackToDecompressionSession { false };
     bool m_videoRendererProtectedFallbackDisabled { true };
 #endif
 

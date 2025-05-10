@@ -801,6 +801,7 @@ void MediaPlayerPrivateMediaSourceAVFObjC::acceleratedRenderingStateChanged()
     RefPtr renderer = layerOrVideoRenderer();
     if (willUseDecompressionSessionIfNeeded()) {
         if (renderer && !renderer->isUsingDecompressionSession()) {
+            // Gathering video frame metadata changed.
             if (RefPtr mediaSourcePrivate = m_mediaSourcePrivate)
                 mediaSourcePrivate->videoRendererWillReconfigure(*renderer);
             renderer->setPrefersDecompressionSession(true);
@@ -1143,7 +1144,7 @@ bool MediaPlayerPrivateMediaSourceAVFObjC::willUseDecompressionSessionIfNeeded()
     if (!canUseDecompressionSession())
         return false;
 
-    return m_preferDecompressionSession || (m_canFallbackToDecompressionSession && m_isGatheringVideoFrameMetadata);
+    return m_preferDecompressionSession || m_isGatheringVideoFrameMetadata;
 }
 
 bool MediaPlayerPrivateMediaSourceAVFObjC::shouldBePlaying() const

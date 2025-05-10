@@ -341,10 +341,9 @@ private:
 
     void isInFullscreenOrPictureInPictureChanged(bool) final;
 
-    void setDecompressionSessionPreferences(bool preferDecompressionSession, bool canFallbackToDecompressionSession, bool videoRendererProtectedFallbackDisabled) final
+    void setDecompressionSessionPreferences(bool preferDecompressionSession, bool videoRendererProtectedFallbackDisabled) final
     {
         m_preferDecompressionSession = preferDecompressionSession;
-        m_canFallbackToDecompressionSession = canFallbackToDecompressionSession;
         m_videoRendererProtectedFallbackDisabled = videoRendererProtectedFallbackDisabled;
     }
 
@@ -430,7 +429,6 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     bool m_shouldMaintainAspectRatio { true };
     bool m_needsPlaceholderImage { false };
     bool m_preferDecompressionSession { false };
-    bool m_canFallbackToDecompressionSession { false };
     bool m_videoRendererProtectedFallbackDisabled { true };
     LoadOptions m_loadOptions;
 #if HAVE(SPATIAL_TRACKING_LABEL)
