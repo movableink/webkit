@@ -208,8 +208,6 @@ private:
     void setForPage() { m_isForPage = true; }
     void setImplicit() { m_isImplicit = true; }
 
-    unsigned simpleSelectorSpecificityForPage() const;
-
     unsigned m_relation : 4 { enumToUnderlyingType(Relation::DescendantSpace) };
     mutable unsigned m_match : 5 { enumToUnderlyingType(Match::Unknown) };
     mutable unsigned m_pseudoType : 8 { 0 }; // PseudoType.
