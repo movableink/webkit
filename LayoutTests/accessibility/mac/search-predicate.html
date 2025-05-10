@@ -12,7 +12,7 @@
 <blockquote>second block quote level 1</blockquote>
 <p style="color:black; font-family:sans-serif; font-weight:bold; text-decoration:underline;">sans-serif black bold text with underline</p>
 <p style="color:blue; font-family:serif; font-style:italic;">serif blue italic text</p>
-<form>
+<form aria-label="form">
 <input type="text" /><br />
 <input type="checkbox" value="Checkbox" /> checkbox<br />
 <input type="submit" value="Submit" />
@@ -170,7 +170,7 @@
         // Landmark.
         resultElement = containerElement.uiElementForSearchPredicate(startElement, true, "AXLandmarkSearchKey", "", false);
         output += expect("resultElement.role", "'AXRole: AXGroup'");
-        output += expect("resultElement.subrole", "'AXSubrole: AXLandmarkBanner'");
+        output += expect("resultElement.subrole", "'AXSubrole: AXLandmarkForm'");
 
         // Link.
         resultElement = containerElement.uiElementForSearchPredicate(startElement, true, "AXLinkSearchKey", "", false);

@@ -250,6 +250,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     // ARIA content subroles.
     switch (role) {
+    case AccessibilityRole::Form:
+        return "AXLandmarkForm"_s;
     case AccessibilityRole::LandmarkBanner:
         return "AXLandmarkBanner"_s;
     case AccessibilityRole::LandmarkComplementary:

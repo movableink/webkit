@@ -65,6 +65,7 @@
 #define NSAccessibilityFieldsetSubrole @"AXFieldset"
 #define NSAccessibilityFileUploadButtonSubrole @"AXFileUploadButton"
 #define NSAccessibilityFooterSubrole @"AXFooter"
+#define NSAccessibilityFormSubrole @"AXLandmarkForm"
 #define NSAccessibilityInsertStyleGroupSubrole @"AXInsertStyleGroup"
 #define NSAccessibilityKeyboardInputStyleGroupSubrole @"AXKeyboardInputStyleGroup"
 #define NSAccessibilityLandmarkBannerSubrole @"AXLandmarkBanner"

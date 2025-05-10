@@ -154,6 +154,7 @@ bool AXCoreObject::isImplicitlyInteractive() const
 bool AXCoreObject::isLandmark() const
 {
     switch (roleValue()) {
+    case AccessibilityRole::Form:
     case AccessibilityRole::LandmarkBanner:
     case AccessibilityRole::LandmarkComplementary:
     case AccessibilityRole::LandmarkContentInfo:
@@ -1095,6 +1096,8 @@ String AXCoreObject::roleDescription()
 String AXCoreObject::ariaLandmarkRoleDescription() const
 {
     switch (roleValue()) {
+    case AccessibilityRole::Form:
+        return AXARIAContentGroupText("ARIALandmarkForm"_s);
     case AccessibilityRole::LandmarkBanner:
         return AXARIAContentGroupText("ARIALandmarkBanner"_s);
     case AccessibilityRole::LandmarkComplementary:
