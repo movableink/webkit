@@ -61,7 +61,11 @@
         viewController.initialURL = url;
 
     if (!self.window)
+// FIXME: rdar://151039019 (Replace using 'init' in AppDelegate.m with non-deprecated method)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         self.window = [[UIWindow alloc] init];
+#pragma clang diagnostic pop
     self.window.rootViewController = viewController;
     [self.window makeKeyAndVisible];
 
