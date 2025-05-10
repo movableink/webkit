@@ -68,7 +68,7 @@ void CSSFontFace::appendSources(CSSFontFace& fontFace, CSSValueList& srcList, Sc
             if (!local->svgFontFaceElement())
                 fontFace.adoptSource(makeUnique<CSSFontFaceSource>(fontFace, local->fontFaceName()));
             else if (allowDownloading)
-                fontFace.adoptSource(makeUnique<CSSFontFaceSource>(fontFace, local->fontFaceName(), *local->svgFontFaceElement()));
+                fontFace.adoptSource(makeUnique<CSSFontFaceSource>(fontFace, local->fontFaceName(),  CheckedRef { *local->svgFontFaceElement() }));
         } else {
             if (allowDownloading) {
                 if (auto request = downcast<CSSFontFaceSrcResourceValue>(const_cast<CSSValue&>(src)).fontLoadRequest(*context, isInitiatingElementInUserAgentShadowTree))
@@ -439,7 +439,7 @@ void CSSFontFace::timeoutFired()
     fontLoadEventOccurred();
 }
 
-Document* CSSFontFace::document()
+RefPtr<Document> CSSFontFace::protectedDocument()
 {
     if (m_wrapper)
         return dynamicDowncast<Document>(m_wrapper->scriptExecutionContext());
@@ -642,7 +642,7 @@ size_t CSSFontFace::pump(ExternalResourceDownloadPolicy policy)
             if (policy == ExternalResourceDownloadPolicy::Allow || !source->requiresExternalResource()) {
                 if (policy == ExternalResourceDownloadPolicy::Allow && m_status == Status::Pending)
                     setStatus(Status::Loading);
-                source->load(document());
+                source->load(protectedDocument().get());
             }
         }
 
@@ -714,7 +714,7 @@ RefPtr<Font> CSSFontFace::font(const FontDescription& fontDescription, bool synt
     for (size_t i = startIndex; i < m_sources.size(); ++i) {
         auto& source = m_sources[i];
         if (source->status() == CSSFontFaceSource::Status::Pending && (policy == ExternalResourceDownloadPolicy::Allow || !source->requiresExternalResource()))
-            source->load(document());
+            source->load(protectedDocument().get());
 
         switch (source->status()) {
         case CSSFontFaceSource::Status::Pending:

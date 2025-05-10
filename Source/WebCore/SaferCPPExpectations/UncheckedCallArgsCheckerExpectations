@@ -142,7 +142,6 @@ bindings/js/WorkerModuleScriptLoader.cpp
 bridge/objc/WebScriptObject.mm
 bridge/runtime_method.cpp
 contentextensions/ContentExtensionsBackend.cpp
-css/CSSFontFace.cpp
 css/CSSImageValue.cpp
 css/CSSStyleProperties.cpp
 css/CSSStyleSheet.cpp
