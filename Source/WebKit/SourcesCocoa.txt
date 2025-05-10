@@ -662,6 +662,8 @@ WebProcess/cocoa/UserMediaCaptureManager.cpp
 WebProcess/cocoa/VideoPresentationManager.mm
 WebProcess/cocoa/WebProcessCocoa.mm
 
+WebProcess/cocoa/IdentityDocumentServices/DigitalCredentialsRequestValidatorBridge.mm
+
 WebProcess/EntryPoint/Cocoa/XPCService/WebContentServiceEntryPoint.mm
 
 WebProcess/Extensions/Bindings/JSWebExtensionWrapper.cpp
@@ -793,6 +795,7 @@ AuxiliaryProcessMessageReceiver.cpp
 DownloadProxyMessageReceiver.cpp
 DrawingAreaMessageReceiver.cpp
 DrawingAreaProxyMessageReceiver.cpp
+DigitalCredentialsCoordinatorMessageReceiver.cpp
 EventDispatcherMessageReceiver.cpp
 GPUConnectionToWebProcessMessageReceiver.cpp
 GPUProcessConnectionMessageReceiver.cpp

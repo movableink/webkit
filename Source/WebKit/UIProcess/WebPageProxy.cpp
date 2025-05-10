@@ -72,6 +72,7 @@
 #include "ColorControlSupportsAlpha.h"
 #include "Connection.h"
 #include "DidFilterKnownLinkDecoration.h"
+#include "DigitalCredentialsCoordinatorMessages.h"
 #include "DownloadManager.h"
 #include "DownloadProxy.h"
 #include "DragControllerAction.h"
@@ -213,6 +214,7 @@
 #include <WebCore/DiagnosticLoggingKeys.h>
 #include <WebCore/DigitalCredentialRequest.h>
 #include <WebCore/DigitalCredentialRequestOptions.h>
+#include <WebCore/DigitalCredentialsProtocols.h>
 #include <WebCore/DigitalCredentialsRequestData.h>
 #include <WebCore/DigitalCredentialsResponseData.h>
 #include <WebCore/DragController.h>
@@ -9033,7 +9035,7 @@ void WebPageProxy::showContactPicker(IPC::Connection& connection, ContactsReques
 }
 
 #if ENABLE(WEB_AUTHN)
-void WebPageProxy::showDigitalCredentialsPicker(IPC::Connection& connection, const WebCore::DigitalCredentialsRequestData& requestData, WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&& completionHandler)
+void WebPageProxy::showDigitalCredentialsPicker(IPC::Connection& connection, const WebCore::DigitalCredentialsRequestData& requestData, CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&& completionHandler)
 {
     MESSAGE_CHECK_COMPLETION_BASE(
         protectedPreferences()->digitalCredentialsEnabled(),
@@ -9054,7 +9056,16 @@ void WebPageProxy::showDigitalCredentialsPicker(IPC::Connection& connection, con
 #endif
 }
 
-void WebPageProxy::dismissDigitalCredentialsPicker(IPC::Connection& connection, WTF::CompletionHandler<void(bool)>&& completionHandler)
+void WebPageProxy::fetchRawDigitalCredentialRequests(CompletionHandler<void(Vector<Variant<WebCore::MobileDocumentRequest, WebCore::OpenID4VPRequest>>)>&& completionHandler)
+{
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+    sendWithAsyncReply(Messages::DigitalCredentialsCoordinator::ProvideRawDigitalCredentialRequests(), WTFMove(completionHandler));
+#else
+    completionHandler({ });
+#endif
+}
+
+void WebPageProxy::dismissDigitalCredentialsPicker(IPC::Connection& connection, CompletionHandler<void(bool)>&& completionHandler)
 {
     MESSAGE_CHECK_COMPLETION_BASE(
         protectedPreferences()->digitalCredentialsEnabled(),
