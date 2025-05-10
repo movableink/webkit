@@ -593,16 +593,23 @@ void RenderBlockFlow::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit 
     updateLogicalHeight();
     LayoutUnit newHeight = logicalHeight();
 
-    LayoutUnit alignContentShift = 0_lu;
-    // Alignment isn't supported when fragmenting.
-    // Table cell alignment is handled in RenderTableCell::computeIntrinsicPadding.
-    if ((!isPaginated || pageRemaining > newHeight) && !isRenderTableCell()) {
+    LayoutUnit alignContentShift;
+    auto shouldApplyAlignContent = [&] {
+        // Alignment isn't supported when fragmenting.
+        if (isPaginated && pageRemaining <= newHeight)
+            return false;
+        // Table cell alignment is handled in RenderTableCell::computeIntrinsicPadding.
+        if (isRenderTableCell())
+            return false;
+        return !is<HTMLInputElement>(element());
+    };
+    if (shouldApplyAlignContent()) {
         alignContentShift = shiftForAlignContent(oldHeight, repaintLogicalTop, repaintLogicalBottom);
         oldClientAfterEdge += alignContentShift;
         if (alignContentShift < 0)
             ensureRareBlockFlowData().m_alignContentShift = alignContentShift;
     } else if (hasRareBlockFlowData())
-        rareBlockFlowData()->m_alignContentShift = 0_lu;
+        rareBlockFlowData()->m_alignContentShift = { };
 
     {
         // FIXME: This could be removed once relayoutForPagination() either stop recursing or we manage to
@@ -622,7 +629,7 @@ void RenderBlockFlow::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit 
         }
 
         bool heightChanged = (previousHeight != newHeight);
-        if (heightChanged || alignContentShift != 0_lu)
+        if (heightChanged || alignContentShift)
             relayoutChildren = RelayoutChildren::Yes;
         if (isDocumentElementRenderer())
             layoutPositionedObjects(RelayoutChildren::Yes);
