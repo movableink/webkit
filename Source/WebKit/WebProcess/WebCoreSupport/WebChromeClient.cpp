@@ -551,7 +551,7 @@ bool WebChromeClient::canRunBeforeUnloadConfirmPanel()
     return page && page->canRunBeforeUnloadConfirmPanel();
 }
 
-bool WebChromeClient::runBeforeUnloadConfirmPanel(String&& message, LocalFrame& frame)
+bool WebChromeClient::runBeforeUnloadConfirmPanel(const String& message, LocalFrame& frame)
 {
     auto webFrame = WebFrame::fromCoreFrame(frame);
 
@@ -563,7 +563,7 @@ bool WebChromeClient::runBeforeUnloadConfirmPanel(String&& message, LocalFrame& 
 
     auto relay = AXRelayProcessSuspendedNotification(*page);
 
-    auto sendResult = page->sendSyncWithDelayedReply(Messages::WebPageProxy::RunBeforeUnloadConfirmPanel(webFrame->frameID(), webFrame->info(), WTFMove(message)));
+    auto sendResult = page->sendSyncWithDelayedReply(Messages::WebPageProxy::RunBeforeUnloadConfirmPanel(webFrame->frameID(), webFrame->info(), message));
     auto [shouldClose] = sendResult.takeReplyOr(false);
     return shouldClose;
 }
@@ -1001,16 +1001,16 @@ void WebChromeClient::runOpenPanel(LocalFrame& frame, FileChooser& fileChooser)
     page->send(Messages::WebPageProxy::RunOpenPanel(webFrame->frameID(), webFrame->info(), fileChooser.settings()));
 }
     
-void WebChromeClient::showShareSheet(ShareDataWithParsedURL&& shareData, CompletionHandler<void(bool)>&& callback)
+void WebChromeClient::showShareSheet(ShareDataWithParsedURL& shareData, CompletionHandler<void(bool)>&& callback)
 {
     if (RefPtr page = m_page.get())
-        page->showShareSheet(WTFMove(shareData), WTFMove(callback));
+        page->showShareSheet(shareData, WTFMove(callback));
 }
 
-void WebChromeClient::showContactPicker(WebCore::ContactsRequestData&& requestData, WTF::CompletionHandler<void(std::optional<Vector<WebCore::ContactInfo>>&&)>&& callback)
+void WebChromeClient::showContactPicker(const WebCore::ContactsRequestData& requestData, WTF::CompletionHandler<void(std::optional<Vector<WebCore::ContactInfo>>&&)>&& callback)
 {
     if (RefPtr page = m_page.get())
-        page->showContactPicker(WTFMove(requestData), WTFMove(callback));
+        page->showContactPicker(requestData, WTFMove(callback));
 }
 
 #if HAVE(DIGITAL_CREDENTIALS_UI)

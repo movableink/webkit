@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,17 +44,16 @@ void FrameLoadState::removeObserver(FrameLoadStateObserver& observer)
     ASSERT_UNUSED(result, result);
 }
 
-void FrameLoadState::didStartProvisionalLoad(URL&& url)
+void FrameLoadState::didStartProvisionalLoad(const URL& url)
 {
     ASSERT(m_provisionalURL.isEmpty());
 
     m_state = State::Provisional;
-    m_provisionalURL = WTFMove(url);
-    const URL& urlForObserver = m_provisionalURL;
+    m_provisionalURL = url;
 
-    forEachObserver([&urlForObserver](FrameLoadStateObserver& observer) {
-        observer.didReceiveProvisionalURL(urlForObserver);
-        observer.didStartProvisionalLoad(urlForObserver);
+    forEachObserver([&url](FrameLoadStateObserver& observer) {
+        observer.didReceiveProvisionalURL(url);
+        observer.didStartProvisionalLoad(url);
     });
 }
 
@@ -68,22 +67,21 @@ void FrameLoadState::didSuspend()
     });
 }
 
-void FrameLoadState::didExplicitOpen(URL&& url)
+void FrameLoadState::didExplicitOpen(const URL& url)
 {
     ASSERT(!url.isNull());
     m_provisionalURL = { };
-    setURL(WTFMove(url));
+    setURL(url);
 }
 
-void FrameLoadState::didReceiveServerRedirectForProvisionalLoad(URL&& url)
+void FrameLoadState::didReceiveServerRedirectForProvisionalLoad(const URL& url)
 {
     ASSERT(m_state == State::Provisional);
 
-    m_provisionalURL = WTFMove(url);
-    const URL& urlForObserver = m_provisionalURL;
+    m_provisionalURL = url;
 
-    forEachObserver([&urlForObserver](FrameLoadStateObserver& observer) {
-        observer.didReceiveProvisionalURL(urlForObserver);
+    forEachObserver([&url](FrameLoadStateObserver& observer) {
+        observer.didReceiveProvisionalURL(url);
     });
 }
 
@@ -107,7 +105,8 @@ void FrameLoadState::didCommitLoad()
 
     m_state = State::Committed;
     ASSERT(!m_provisionalURL.isNull());
-    m_url = m_provisionalURL.isNull() ? aboutBlankURL() : std::exchange(m_provisionalURL, { });
+    m_url = m_provisionalURL.isNull() ? aboutBlankURL() : m_provisionalURL;
+    m_provisionalURL = { };
 
     forEachObserver([&](FrameLoadStateObserver& observer) {
         observer.didCommitProvisionalLoad();
@@ -138,19 +137,18 @@ void FrameLoadState::didFailLoad()
     });
 }
 
-void FrameLoadState::didSameDocumentNotification(URL&& url)
+void FrameLoadState::didSameDocumentNotification(const URL& url)
 {
     ASSERT(!url.isNull());
-    setURL(url.isNull() ? URL { aboutBlankURL() } : WTFMove(url));
+    setURL(url.isNull() ? aboutBlankURL() : url);
 }
 
-void FrameLoadState::setURL(URL&& url)
+void FrameLoadState::setURL(const URL& url)
 {
-    m_url = WTFMove(url);
-    const URL& urlForObserver = m_url;
-    forEachObserver([&urlForObserver](FrameLoadStateObserver& observer) {
+    m_url = url;
+    forEachObserver([&url](FrameLoadStateObserver& observer) {
         observer.didCancelProvisionalLoad();
-        observer.didReceiveProvisionalURL(urlForObserver);
+        observer.didReceiveProvisionalURL(url);
         observer.didCommitProvisionalLoad();
     });
 }
