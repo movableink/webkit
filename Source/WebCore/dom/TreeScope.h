@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "HitTestSource.h"
 #include <memory>
 #include <wtf/Forward.h>
@@ -64,6 +63,7 @@ class ShadowRoot;
 class TreeScopeOrderedMap;
 class WeakPtrImplWithEventTargetData;
 struct SVGResourcesMap;
+template<typename> class ExceptionOr;
 
 class TreeScope : public NoVirtualDestructorBase {
     friend class Document;

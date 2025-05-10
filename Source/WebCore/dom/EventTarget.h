@@ -32,7 +32,6 @@
 
 #include "EventListenerMap.h"
 #include "EventListenerOptions.h"
-#include "ExceptionOr.h"
 #include "ScriptWrappable.h"
 #include <memory>
 #include <wtf/CheckedPtr.h>
@@ -48,10 +47,11 @@ class JSObject;
 namespace WebCore {
 
 enum class EventTargetInterfaceType : uint8_t;
-struct AddEventListenerOptions;
 class DOMWrapperWorld;
 class EventTarget;
 class JSEventListener;
+struct AddEventListenerOptions;
+template<typename> class ExceptionOr;
 
 struct EventTargetData {
     WTF_MAKE_TZONE_ALLOCATED(EventTargetData);

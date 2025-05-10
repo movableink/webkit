@@ -26,6 +26,7 @@
 #include "config.h"
 #include "DOMTokenList.h"
 
+#include "ExceptionOr.h"
 #include "SpaceSplitString.h"
 #include <wtf/HashSet.h>
 #include <wtf/SetForScope.h>

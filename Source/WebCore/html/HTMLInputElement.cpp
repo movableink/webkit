@@ -1213,6 +1213,11 @@ ExceptionOr<void> HTMLInputElement::setValue(const String& value, TextFieldEvent
     return { };
 }
 
+void HTMLInputElement::setValueForUser(const String& value)
+{
+    setValue(value, DispatchInputAndChangeEvent);
+}
+
 void HTMLInputElement::setValueInternal(const String& sanitizedValue, TextFieldEventBehavior eventBehavior)
 {
     m_valueIfDirty = sanitizedValue;

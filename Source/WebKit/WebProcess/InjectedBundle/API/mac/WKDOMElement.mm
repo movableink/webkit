@@ -28,6 +28,7 @@
 
 #import "WKDOMInternals.h"
 #import <WebCore/Element.h>
+#import <WebCore/ExceptionOr.h>
 
 @implementation WKDOMElement
 

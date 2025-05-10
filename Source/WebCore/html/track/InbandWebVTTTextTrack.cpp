@@ -28,6 +28,7 @@
 
 #if ENABLE(VIDEO)
 
+#include "ExceptionOr.h"
 #include "InbandTextTrackPrivate.h"
 #include "Logging.h"
 #include "ScriptExecutionContext.h"

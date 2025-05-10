@@ -36,6 +36,7 @@
 
 namespace WebCore {
 
+class Exception;
 class WebCodecsEncodedVideoChunk;
 class WebCodecsErrorCallback;
 class WebCodecsEncodedVideoChunkOutputCallback;
