@@ -720,13 +720,21 @@ const AXCoreObject::AccessibilityChildrenVector& AXIsolatedObject::children(bool
     ASSERT(!isMainThread());
 #endif
     if (updateChildrenIfNeeded && m_childrenDirty) {
-        m_children = WTF::compactMap(m_childrenIDs, [&](auto& childID) -> std::optional<Ref<AXCoreObject>> {
-            if (RefPtr child = tree()->objectForID(childID))
+        unsigned index = 0;
+        m_children = WTF::compactMap(m_childrenIDs, [&] (auto& childID) -> std::optional<Ref<AXCoreObject>> {
+            if (RefPtr child = tree()->objectForID(childID)) {
+                if (setChildIndexInParent(*child, index))
+                    ++index;
                 return child.releaseNonNull();
+            }
             return std::nullopt;
         });
         m_childrenDirty = false;
         ASSERT(m_children.size() == m_childrenIDs.size());
+
+#ifndef NDEBUG
+        verifyChildrenIndexInParent();
+#endif
     }
     return m_children;
 }

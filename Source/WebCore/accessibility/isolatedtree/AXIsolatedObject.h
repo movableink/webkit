@@ -574,6 +574,10 @@ private:
     String innerHTML() const final;
     String outerHTML() const final;
 
+#ifndef NDEBUG
+    void verifyChildrenIndexInParent() const final { return AXCoreObject::verifyChildrenIndexInParent(m_children); }
+#endif
+
     Vector<AXID> m_childrenIDs;
     Vector<Ref<AXCoreObject>> m_children;
     AXPropertyVector m_properties;

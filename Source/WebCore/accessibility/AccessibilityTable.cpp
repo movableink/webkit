@@ -486,6 +486,10 @@ void AccessibilityTable::addChildren()
     // update their roles now that the table knows its status.
     // see bug: https://bugs.webkit.org/show_bug.cgi?id=147001
     updateChildrenRoles();
+
+#ifndef NDEBUG
+    verifyChildrenIndexInParent();
+#endif
 }
 
 // Returns the number of columns the table should have.

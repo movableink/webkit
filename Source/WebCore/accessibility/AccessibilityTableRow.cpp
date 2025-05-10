@@ -174,6 +174,10 @@ void AccessibilityTableRow::addChildren()
             tableCell->setAXColIndexFromRow(*colIndex + index);
         index++;
     }
+
+#ifndef NDEBUG
+    verifyChildrenIndexInParent();
+#endif
 }
 
 std::optional<unsigned> AccessibilityTableRow::axColumnIndex() const

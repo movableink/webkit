@@ -671,6 +671,11 @@ void AccessibilityObject::insertChild(AccessibilityObject& child, unsigned index
     }
 #endif // USE(ATSPI)
 
+    auto insert = [this] (Ref<AXCoreObject>&& object, unsigned index) {
+        std::ignore = setChildIndexInParent(object.get(), index);
+        m_children.insert(index, WTFMove(object));
+    };
+
     auto thisAncestorFlags = computeAncestorFlags();
     child.initializeAncestorFlags(thisAncestorFlags);
     setIsIgnoredFromParentDataForChild(child);
@@ -687,7 +692,7 @@ void AccessibilityObject::insertChild(AccessibilityObject& child, unsigned index
                 // Calls to `child.isIgnored()` or `child.children()` can cause layout, which in turn can cause this object to clear its m_children. This can cause `insertionIndex` to no longer be valid. Detect this and break early if necessary.
                 if (insertionIndex > m_children.size())
                     break;
-                m_children.insert(insertionIndex, grandchild);
+                insert(WTFMove(grandchild), insertionIndex);
                 ++insertionIndex;
             }
         }
@@ -695,13 +700,27 @@ void AccessibilityObject::insertChild(AccessibilityObject& child, unsigned index
         // Table component child-parent relationships often don't line up properly, hence the need for methods
         // like parentTable() and parentRow(). Exclude them from this ASSERT.
         ASSERT(isTableComponent(child) || isTableComponent(*this) || child.parentObject() == this);
-        m_children.insert(index, child);
+        insert(Ref { child }, index);
     }
     
     // Reset the child's m_isIgnoredFromParentData since we are done adding that child and its children.
     child.clearIsIgnoredFromParentData();
 }
-    
+
+void AccessibilityObject::resetChildrenIndexInParent() const
+{
+    if (!shouldSetChildIndexInParent())
+        return;
+
+    unsigned index = 0;
+    for (const auto& child : m_children) {
+        bool didSet = setChildIndexInParent(child.get(), index);
+        // We check shouldSetChildIndexInParent above, so this should always be true.
+        ASSERT_UNUSED(didSet, didSet);
+        ++index;
+    }
+}
+
 AXCoreObject::AccessibilityChildrenVector AccessibilityObject::findMatchingObjects(AccessibilitySearchCriteria&& criteria)
 {
     if (auto* cache = axObjectCache())

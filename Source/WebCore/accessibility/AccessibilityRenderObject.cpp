@@ -2580,12 +2580,6 @@ RenderObject* AccessibilityRenderObject::markerRenderer() const
     return renderListItem->markerRenderer();
 }
 
-void AccessibilityRenderObject::addListItemMarker()
-{
-    if (auto* marker = markerRenderer())
-        insertChild(axObjectCache()->getOrCreate(*marker), 0);
-}
-
 void AccessibilityRenderObject::updateRoleAfterChildrenCreation()
 {
     // If a menu does not have valid menuitem children, it should not be exposed as a menu.
@@ -2647,13 +2641,18 @@ void AccessibilityRenderObject::addChildren()
         addChild(object);
     };
 
+    WeakPtr cache = axObjectCache();
+    auto addListItemMarker = [&] () {
+        if (CheckedPtr marker = markerRenderer(); marker && cache)
+            addChild(cache->getOrCreate(*marker));
+    };
+
 #if !USE(ATSPI)
     // Non-ATSPI platforms walk the DOM to build the accessibility tree.
     // Ideally this would be the case for all platforms, but there are GLib tests that rely on anonymous renderers
     // being part of the accessibility tree.
     RefPtr node = dynamicDowncast<ContainerNode>(this->node());
     auto* element = dynamicDowncast<Element>(node.get());
-    WeakPtr cache = axObjectCache();
 
     // ::before and ::after pseudos should be the first and last children of the element
     // that generates them (rather than being siblings to the generating element).
@@ -2661,6 +2660,9 @@ void AccessibilityRenderObject::addChildren()
         if (RefPtr pseudoObject = cache ? cache->getOrCreate(*beforePseudo) : nullptr)
             addChildIfNeeded(*pseudoObject);
     }
+
+    // If |this| has an associated list marker, it should be the first child (or second if |this| has a ::before pseudo).
+    addListItemMarker();
 
     if (node && !(element && element->isPseudoElement()) && cache) {
         // If we have a DOM node, use the DOM to find accessible children.
@@ -2690,6 +2692,7 @@ void AccessibilityRenderObject::addChildren()
     }
 #else
     // USE(ATPSI) within this block. Walk the render tree (primarily -- see comments for AccessibilityObject::iterator)
+    addListItemMarker();
     // to build the accessibility tree.
     // FIXME: Consider removing this ATSPI-only branch with https://bugs.webkit.org/show_bug.cgi?id=282117.
     for (auto& object : AXChildIterator(*this))
@@ -2703,7 +2706,6 @@ void AccessibilityRenderObject::addChildren()
     addImageMapChildren();
     addTextFieldChildren();
     addRemoteSVGChildren();
-    addListItemMarker();
 #if PLATFORM(COCOA)
     updateAttachmentViewParents();
 #endif
@@ -2711,6 +2713,10 @@ void AccessibilityRenderObject::addChildren()
 
     m_subtreeDirty = false;
     updateRoleAfterChildrenCreation();
+
+#ifndef NDEBUG
+    verifyChildrenIndexInParent();
+#endif
 }
 
 void AccessibilityRenderObject::setAccessibleName(const AtomString& name)

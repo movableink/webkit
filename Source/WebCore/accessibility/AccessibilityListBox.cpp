@@ -67,6 +67,10 @@ void AccessibilityListBox::addChildren()
 
     for (const auto& listItem : selectElement->listItems())
         addChild(listBoxOptionAccessibilityObject(listItem.get()), DescendIfIgnored::No);
+
+#ifndef NDEBUG
+    verifyChildrenIndexInParent();
+#endif
 }
 
 void AccessibilityListBox::setSelectedChildren(const AccessibilityChildrenVector& children)

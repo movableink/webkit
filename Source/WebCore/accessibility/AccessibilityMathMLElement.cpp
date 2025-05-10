@@ -84,6 +84,10 @@ void AccessibilityMathMLElement::addChildren()
         addChild(object);
 
     m_subtreeDirty = false;
+
+#ifndef NDEBUG
+    verifyChildrenIndexInParent();
+#endif
 }
 
 String AccessibilityMathMLElement::textUnderElement(TextUnderElementMode mode) const

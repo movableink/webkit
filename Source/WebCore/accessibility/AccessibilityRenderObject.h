@@ -186,7 +186,6 @@ private:
     void addImageMapChildren();
     void addAttachmentChildren();
     void addRemoteSVGChildren();
-    void addListItemMarker();
 #if PLATFORM(COCOA)
     void updateAttachmentViewParents();
 #endif

@@ -98,6 +98,10 @@ void AccessibilitySlider::addChildren()
         cache->remove(thumb->objectID());
     else
         addChild(thumb.get());
+
+#ifndef NDEBUG
+    verifyChildrenIndexInParent();
+#endif
 }
 
 AccessibilityObject* AccessibilitySlider::elementAccessibilityHitTest(const IntPoint& point) const

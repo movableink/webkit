@@ -324,6 +324,22 @@ AXCoreObject* AXCoreObject::firstUnignoredChild()
 }
 #endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
 
+#ifndef NDEBUG
+void AXCoreObject::verifyChildrenIndexInParent(const AccessibilityChildrenVector& children) const
+{
+    if (!shouldSetChildIndexInParent()) {
+        // Due to known irregularities in how the accessibility tree is built, we don't want to
+        // do this verification for some types of objects, as it will always fail. At the time this
+        // was written, this is specifically table columns and table header containers, which insert
+        // cells as their children despite not being their "true" parent.
+        return;
+    }
+
+    for (unsigned i = 0; i < children.size(); i++)
+        ASSERT(children[i]->indexInParent() == i);
+}
+#endif
+
 AXCoreObject* AXCoreObject::nextInPreOrder(bool updateChildrenIfNeeded, AXCoreObject* stayWithin)
 {
     const auto& children = childrenIncludingIgnored(updateChildrenIfNeeded);
@@ -379,6 +395,20 @@ AXCoreObject* AXCoreObject::deepestLastChildIncludingIgnored(bool updateChildren
     return deepestChild.ptr();
 }
 
+size_t AXCoreObject::indexInSiblings(const AccessibilityChildrenVector& siblings) const
+{
+    unsigned indexOfThis = indexInParent();
+    if (indexOfThis >= siblings.size() || siblings[indexOfThis]->objectID() != objectID()) [[unlikely]] {
+        // If this happens, the accessibility tree is an incorrect state.
+        ASSERT_NOT_REACHED();
+
+        return siblings.findIf([this] (const Ref<AXCoreObject>& object) {
+            return object.ptr() == this;
+        });
+    }
+    return indexOfThis;
+}
+
 AXCoreObject* AXCoreObject::nextSiblingIncludingIgnored(bool updateChildrenIfNeeded) const
 {
     RefPtr parent = parentObject();
@@ -386,9 +416,7 @@ AXCoreObject* AXCoreObject::nextSiblingIncludingIgnored(bool updateChildrenIfNee
         return nullptr;
 
     const auto& siblings = parent->childrenIncludingIgnored(updateChildrenIfNeeded);
-    size_t indexOfThis = siblings.findIf([this] (const Ref<AXCoreObject>& object) {
-        return object.ptr() == this;
-    });
+    size_t indexOfThis = indexInSiblings(siblings);
     if (indexOfThis == notFound)
         return nullptr;
 
@@ -402,9 +430,7 @@ AXCoreObject* AXCoreObject::previousSiblingIncludingIgnored(bool updateChildrenI
         return nullptr;
 
     const auto& siblings = parent->childrenIncludingIgnored(updateChildrenIfNeeded);
-    size_t indexOfThis = siblings.findIf([this] (const Ref<AXCoreObject>& object) {
-        return object.ptr() == this;
-    });
+    size_t indexOfThis = indexInSiblings(siblings);
     if (indexOfThis == notFound)
         return nullptr;
 

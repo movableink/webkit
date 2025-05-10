@@ -1329,6 +1329,31 @@ public:
     AXCoreObject* previousSiblingIncludingIgnored(bool updateChildrenIfNeeded);
     AXCoreObject* deepestLastChildIncludingIgnored(bool updateChildrenIfNeeded);
 
+    void setIndexInParent(unsigned index)
+    {
+        m_indexInParent = index;
+    }
+    bool shouldSetChildIndexInParent() const
+    {
+        auto role = roleValue();
+        // Columns and table header containers add cells as children, but are not their "true" parent
+        // (the rows are), so these two roles should not update their children's index-in-parent.
+        return role != AccessibilityRole::Column && role != AccessibilityRole::TableHeaderContainer;
+    }
+    // Returns true if setting the index-in-parent was successful.
+    bool setChildIndexInParent(AXCoreObject& child, unsigned index) const
+    {
+        bool shouldSetChildIndex = shouldSetChildIndexInParent();
+        if (shouldSetChildIndex)
+            child.setIndexInParent(index);
+        return shouldSetChildIndex;
+    }
+    unsigned indexInParent() const { return m_indexInParent; }
+#ifndef NDEBUG
+    virtual void verifyChildrenIndexInParent() const = 0;
+    void verifyChildrenIndexInParent(const AccessibilityChildrenVector&) const;
+#endif
+
     virtual void detachFromParent() = 0;
 
     AccessibilityChildrenVector listboxSelectedChildren();
@@ -1533,7 +1558,7 @@ protected:
     explicit AXCoreObject(AXID axID)
         : m_id(axID)
     { }
-    AccessibilityRole m_role { AccessibilityRole::Unknown };
+
 
 private:
     virtual String dbgInternal(bool, OptionSet<AXDebugStringOption>) const = 0;
@@ -1544,6 +1569,17 @@ private:
 
     void ariaTreeRows(AXCoreObject::AccessibilityChildrenVector& rows, AXCoreObject::AccessibilityChildrenVector& ancestors);
 
+    size_t indexInSiblings(const AccessibilityChildrenVector&) const;
+
+// MARK: Member variables
+protected:
+    AccessibilityRole m_role { AccessibilityRole::Unknown };
+    // This index always refers to the parent's m_children. Keep in mind that when
+    // ENABLE(INCLUDE_IGNORE_IN_CORE_AX_TREE), m_children includes ignored objects, so cannot be
+    // used to determine the place of |this| relative to its unignored siblings (only its ignored ones).
+    unsigned m_indexInParent;
+
+private:
     AXID m_id;
 #if PLATFORM(COCOA)
     RetainPtr<WebAccessibilityObjectWrapper> m_wrapper;

@@ -906,6 +906,11 @@ protected:
     bool allowsTextRanges() const;
     unsigned getLengthForTextRange() const;
 
+#ifndef NDEBUG
+    void verifyChildrenIndexInParent() const final { return AXCoreObject::verifyChildrenIndexInParent(m_children); }
+#endif
+    void resetChildrenIndexInParent() const;
+
 private:
     ProcessID processID() const final { return legacyPresentingApplicationPID(); }
     bool hasAncestorFlag(AXAncestorFlag flag) const { return ancestorFlagsAreInitialized() && m_ancestorFlags.contains(flag); }

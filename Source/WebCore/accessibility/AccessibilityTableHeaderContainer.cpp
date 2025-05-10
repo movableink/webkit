@@ -74,6 +74,10 @@ void AccessibilityTableHeaderContainer::addChildren()
 
     for (const auto& child : m_children)
         m_headerRect.unite(child->elementRect());
+
+#ifndef NDEBUG
+    verifyChildrenIndexInParent();
+#endif
 }
 
 } // namespace WebCore
