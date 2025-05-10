@@ -131,6 +131,8 @@ public:
     bool wasUserInitiated() const { return m_lastNavigationAction && !!m_lastNavigationAction->userGestureTokenIdentifier; }
     bool isRequestFromClientOrUserInput() const;
     void markRequestAsFromClientInput();
+    void markAsFromLoadData() { m_isFromLoadData = true; }
+    bool isFromLoadData() const { return m_isFromLoadData; }
 
     bool shouldPerformDownload() const { return m_lastNavigationAction && !m_lastNavigationAction->downloadAttribute.isNull(); }
 
@@ -215,11 +217,12 @@ private:
     std::optional<WebKit::NavigationActionData> m_lastNavigationAction;
     std::optional<WebKit::FrameInfoData> m_originatingFrameInfo;
     WebCore::SecurityOriginData m_destinationFrameSecurityOrigin;
-    bool m_userContentExtensionsEnabled { true };
     WebKit::WebContentMode m_effectiveContentMode { WebKit::WebContentMode::Recommended };
     Ref<WebKit::ProcessThrottler::TimedActivity> m_clientNavigationActivity;
-    bool m_isLoadedWithNavigationShared { false };
-    bool m_requestIsFromClientInput { false };
+    bool m_userContentExtensionsEnabled : 1 { true };
+    bool m_isLoadedWithNavigationShared : 1 { false };
+    bool m_requestIsFromClientInput : 1 { false };
+    bool m_isFromLoadData : 1 { false };
     RefPtr<API::WebsitePolicies> m_websitePolicies;
     std::optional<OptionSet<WebCore::AdvancedPrivacyProtections>> m_originatorAdvancedPrivacyProtections;
     MonotonicTime m_requestStart { MonotonicTime::now() };
