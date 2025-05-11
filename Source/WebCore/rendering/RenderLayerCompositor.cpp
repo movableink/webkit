@@ -4200,6 +4200,11 @@ ViewportConstrainedSublayers RenderLayerCompositor::viewportConstrainedSublayers
         if (compositingAncestor != m_renderView.layer())
             return Anchor;
 
+#if ENABLE(FULLSCREEN_API)
+        if (RefPtr fullscreen = m_renderView.document().fullscreenIfExists(); fullscreen && fullscreen->isFullscreen())
+            return Anchor;
+#endif
+
         return ClippingAndAnchor;
     };
 
