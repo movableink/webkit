@@ -3306,9 +3306,9 @@ void Session::relayBidiCommand(const String& message, unsigned commandId, Functi
     m_host->sendCommandToBackend("processBidiMessage"_s, WTFMove(parameters), [protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler), commandId](SessionHost::CommandResponse&& response) {
         if (response.isError) {
             auto errorCode = CommandResult::ErrorCode::UnknownError;
-            auto errorMessage = response.responseObject->getString("message"_s);
-            if (errorMessage.isNull())
-                errorMessage = "Unknown error"_s;
+            std::optional<String> errorMessage;
+            if (response.responseObject)
+                errorMessage = response.responseObject->getString("message"_s);
             completionHandler(WebSocketMessageHandler::Message::fail(errorCode, std::nullopt, errorMessage, { commandId }));
         }
     });

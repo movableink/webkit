@@ -46,9 +46,11 @@ void SessionHost::inspectorDisconnected()
 {
     Ref<SessionHost> protectedThis(*this);
     // Browser closed or crashed, finish all pending commands with error.
+    RefPtr<JSON::Object> errorResponse = JSON::Object::create();
+    errorResponse->setString("message"_s, "Session terminated without a reply"_s);
     for (auto messageID : copyToVector(m_commandRequests.keys())) {
         auto responseHandler = m_commandRequests.take(messageID);
-        responseHandler({ nullptr, true });
+        responseHandler({ errorResponse , true });
     }
 
 #if ENABLE(WEBDRIVER_BIDI)
