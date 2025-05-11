@@ -1723,7 +1723,7 @@ TEST(WKWebsiteDataStore, MigrateServiceWorkerRegistrationToGeneralStorageDirecto
     [webView loadRequest:server.request()];
     EXPECT_WK_STREQ("Found registration", getNextMessage().body);
     
-    __block NSString *originDirectoryString = nil;
+    __block RetainPtr<NSString> originDirectoryString = nil;
     auto url = [server.request() URL];
     done = false;
     [configuration.get().websiteDataStore _originDirectoryForTesting:url topOrigin:url type:WKWebsiteDataTypeServiceWorkerRegistrations completionHandler:^(NSString *result) {
