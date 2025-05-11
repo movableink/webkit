@@ -105,11 +105,10 @@
                         const options = {
                             digital: {
                                 // Results in TypeError when allowed, NotAllowedError when disallowed
-                                requests: [{ data: {}, protocol: "openid4vp" }],
+                                requests: [],
                             },
                             mediation: "required",
                         };
-                        await test_driver.bless("User activation");
                         const { data } = await new Promise((resolve) => {
                             window.addEventListener("message", resolve, {
                                 once: true,
@@ -130,7 +129,7 @@
                             assert_equals(name, "NotAllowedError", fullMessage);
                         }
                         iframe.remove();
-                    }, `Policy to use: ${details.policy}, is cross-origin: ${details.crossOrigin}, is allowed by policy: ${details.expectIsAllowed}`);
+                    }, `With Get: Policy to use: ${details.policy}, is cross-origin: ${details.crossOrigin}, is allowed by policy: ${details.expectIsAllowed}`);
                 }
             }
         </script>

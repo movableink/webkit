@@ -1,3 +1,3 @@
 
-PASS non-fully active document behavior for CredentialsContainer
+FAIL non-fully active document behavior for CredentialsContainer promise_test: Unhandled rejection with value: object "TypeError: null is not an object (evaluating 'navigator.credentials.get')"
 

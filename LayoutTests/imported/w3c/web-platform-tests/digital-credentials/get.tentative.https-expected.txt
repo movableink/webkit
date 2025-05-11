@@ -1,6 +1,6 @@
 
 
-PASS Calling navigator.credentials.get() without an digital member same origin.
+PASS Calling navigator.credentials.get() without a digital member same origin.
 PASS navigator.credentials.get() API rejects if there are no credential request.
 PASS navigator.credentials.get() API rejects if there are no credential request for same-origin iframe.
 PASS navigator.credentials.get() API rejects if there are no credential request in cross-origin iframe.

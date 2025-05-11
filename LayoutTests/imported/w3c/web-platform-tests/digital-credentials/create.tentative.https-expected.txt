@@ -1,13 +1,16 @@
 
 
-PASS navigator.credentials.create() frame just returns null.
-FAIL navigator.credentials.create() same-origin iframe just returns null. promise_test: Unhandled rejection with value: object "NotAllowedError: The document is not focused."
-FAIL navigator.credentials.create() cross-origin iframe results in null. assert_equals: expected null but got object "[object Object]"
-PASS navigator.credentials.create() ignores mediations.
-PASS navigator.credentials.create() ignores mediations in same-origin iframe.
-FAIL navigator.credentials.create() ignores mediations in cross-origin iframe. assert_equals: expected null but got object "[object Object]"
-PASS navigator.credentials.create() rejects if called with an aborted controller.
-PASS navigator.credentials.create() rejects if called with an aborted controller in same-origin iframe.
-PASS navigator.credentials.create() rejects if called with an aborted controller in cross-origin iframe.
+FAIL Calling navigator.credentials.create() without a digital member same origin. assert_unreached: Should have rejected: undefined Reached unreachable code
+FAIL navigator.credentials.create() API rejects if there are no credential request. assert_unreached: Should have rejected: undefined Reached unreachable code
+FAIL navigator.credentials.create() API rejects if there are no credential request for same-origin iframe. promise_rejects_js: function "function() { throw e }" threw object "NotAllowedError: The document is not focused." ("NotAllowedError") expected instance of function "function TypeError() {
+    [native code]
+}" ("TypeError")
+FAIL navigator.credentials.create() API rejects if there are no credential request in cross-origin iframe. promise_test: Unhandled rejection with value: object "TypeError: null is not an object (evaluating 'result.constructor')"
+PASS navigator.credentials.create() promise is rejected if called with an aborted controller.
+PASS navigator.credentials.create() promise is rejected if called with an aborted controller in same-origin iframe.
+PASS navigator.credentials.create() promise is rejected if called with an aborted signal in cross-origin iframe.
+FAIL navigator.credentials.create() promise is rejected if abort controller is aborted after call to create(). assert_unreached: Should have rejected: undefined Reached unreachable code
+FAIL navigator.credentials.create() promise is rejected if abort controller is aborted after call to create() in cross-origin iframe. assert_equals: expected "AbortError" but got "NotAllowedError"
 PASS Adding mediations together with abort signal respects the abort signal.
+FAIL Mediation is required to create a DigitalCredential. assert_unreached: Should have rejected: undefined Reached unreachable code
 
