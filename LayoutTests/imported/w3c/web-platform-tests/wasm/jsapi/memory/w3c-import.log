@@ -20,5 +20,9 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/wasm/jsapi/memory/constructor-types.tentative.any.js
 /LayoutTests/imported/w3c/web-platform-tests/wasm/jsapi/memory/constructor.any.js
 /LayoutTests/imported/w3c/web-platform-tests/wasm/jsapi/memory/grow.any.js
+/LayoutTests/imported/w3c/web-platform-tests/wasm/jsapi/memory/to-fixed-length-buffer-shared.any.js
+/LayoutTests/imported/w3c/web-platform-tests/wasm/jsapi/memory/to-fixed-length-buffer.any.js
+/LayoutTests/imported/w3c/web-platform-tests/wasm/jsapi/memory/to-resizable-buffer-shared.any.js
+/LayoutTests/imported/w3c/web-platform-tests/wasm/jsapi/memory/to-resizable-buffer.any.js
 /LayoutTests/imported/w3c/web-platform-tests/wasm/jsapi/memory/toString.any.js
 /LayoutTests/imported/w3c/web-platform-tests/wasm/jsapi/memory/type.tentative.any.js

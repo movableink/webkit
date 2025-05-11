@@ -1,0 +1,35 @@
+
+PASS #1 Reinitialize the default imports
+PASS #2 Test that WebAssembly compilation fails
+PASS #3 Test that WebAssembly compilation fails
+PASS #4 Test that WebAssembly compilation fails
+PASS #5 Reinitialize the default imports
+PASS #6 Test that WebAssembly instantiation succeeds
+PASS #7 Test that WebAssembly instantiation succeeds
+PASS #8 Run a WebAssembly test without special assertions
+PASS #9 Test that WebAssembly instantiation succeeds
+PASS #10 Run a WebAssembly test without special assertions
+PASS #11 Test that WebAssembly instantiation succeeds
+PASS #12 Run a WebAssembly test without special assertions
+PASS #13 Test that WebAssembly instantiation succeeds
+PASS #14 Run a WebAssembly test without special assertions
+PASS #15 Test that WebAssembly instantiation succeeds
+PASS #16 Run a WebAssembly test without special assertions
+PASS #17 Test that WebAssembly instantiation succeeds
+PASS #18 Run a WebAssembly test without special assertions
+PASS #19 Test that WebAssembly instantiation succeeds
+PASS #20 Run a WebAssembly test without special assertions
+PASS #21 Test that WebAssembly instantiation succeeds
+PASS #22 Run a WebAssembly test without special assertions
+PASS #23 Test that WebAssembly instantiation succeeds
+PASS #24 Run a WebAssembly test without special assertions
+PASS #25 Test that WebAssembly instantiation succeeds
+PASS #26 Run a WebAssembly test without special assertions
+PASS #27 Test that WebAssembly instantiation succeeds
+PASS #28 Run a WebAssembly test without special assertions
+PASS #29 Test that WebAssembly instantiation succeeds
+PASS #30 Run a WebAssembly test without special assertions
+PASS #31 Test that WebAssembly compilation fails
+PASS #32 Test that WebAssembly compilation fails
+PASS #33 Test that WebAssembly compilation fails
+

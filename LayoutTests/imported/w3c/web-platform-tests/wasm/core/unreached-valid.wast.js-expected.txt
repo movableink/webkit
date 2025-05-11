@@ -1,0 +1,11 @@
+
+PASS #1 Reinitialize the default imports
+PASS #2 Reinitialize the default imports
+PASS #3 Test that WebAssembly instantiation succeeds
+PASS #4 Test that a WebAssembly code traps
+PASS #5 Test that a WebAssembly code traps
+PASS #6 Test that a WebAssembly code traps
+PASS #7 Test that a WebAssembly code traps
+PASS #8 Test that WebAssembly instantiation succeeds
+PASS #9 Test that a WebAssembly code traps
+

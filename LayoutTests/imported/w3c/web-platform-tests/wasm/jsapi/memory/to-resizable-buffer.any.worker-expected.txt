@@ -1,0 +1,7 @@
+
+FAIL API surface assert_equals: expected "object" but got "undefined"
+FAIL toResizableBuffer caching behavior memory.toResizableBuffer is not a function. (In 'memory.toResizableBuffer()', 'memory.toResizableBuffer' is undefined)
+FAIL toResizableBuffer max size memory.toResizableBuffer is not a function. (In 'memory.toResizableBuffer()', 'memory.toResizableBuffer' is undefined)
+FAIL Resizing a Memory's resizable buffer memory.toResizableBuffer is not a function. (In 'memory.toResizableBuffer()', 'memory.toResizableBuffer' is undefined)
+FAIL Resizable buffers from Memory cannot be detached by JS memory.toResizableBuffer is not a function. (In 'memory.toResizableBuffer()', 'memory.toResizableBuffer' is undefined)
+

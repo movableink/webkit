@@ -4394,6 +4394,13 @@ imported/w3c/web-platform-tests/upgrade-insecure-requests/gen/top.meta/unset/img
 
 fullscreen/full-screen-enter-while-exiting-mid-completion-handler.html [ Skip ]
 
+# Failures in new tests introduced by a re-sync of imported wasm tests: https://bugs.webkit.org/show_bug.cgi?id=292629
+# These are benign and caused by the difference in the URLs appearing in the expected and actual output
+imported/w3c/web-platform-tests/wasm/core/data.wast.js.html [ Failure Pass ]
+imported/w3c/web-platform-tests/wasm/core/elem.wast.js.html [ Failure Pass ]
+imported/w3c/web-platform-tests/wasm/core/global.wast.js.html [ Failure Pass ]
+imported/w3c/web-platform-tests/wasm/core/unreached-invalid.wast.js.html [ Failure Pass ]
+
 # End: Common failures between GTK and WPE.
 
 #////////////////////////////////////////////////////////////////////////////////////////

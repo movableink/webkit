@@ -1,0 +1,1608 @@
+
+PASS #1 Reinitialize the default imports
+PASS #2 Test that WebAssembly compilation fails
+PASS #3 Test that WebAssembly compilation fails
+PASS #4 Test that WebAssembly compilation fails
+PASS #5 Test that WebAssembly compilation fails
+PASS #6 Test that WebAssembly compilation fails
+PASS #7 Test that WebAssembly compilation fails
+PASS #8 Test that WebAssembly compilation fails
+PASS #9 Test that WebAssembly compilation fails
+PASS #10 Reinitialize the default imports
+PASS #11 Test that WebAssembly instantiation succeeds
+PASS #12 Test that WebAssembly instantiation succeeds
+PASS #13 Run a WebAssembly test without special assertions
+PASS #14 Test that WebAssembly instantiation succeeds
+PASS #15 Run a WebAssembly test without special assertions
+PASS #16 Test that WebAssembly instantiation succeeds
+PASS #17 Run a WebAssembly test without special assertions
+PASS #18 Test that WebAssembly instantiation succeeds
+PASS #19 Run a WebAssembly test without special assertions
+PASS #20 Test that WebAssembly instantiation succeeds
+PASS #21 Run a WebAssembly test without special assertions
+PASS #22 Test that WebAssembly instantiation succeeds
+PASS #23 Run a WebAssembly test without special assertions
+PASS #24 Test that WebAssembly instantiation succeeds
+PASS #25 Run a WebAssembly test without special assertions
+PASS #26 Test that WebAssembly instantiation succeeds
+PASS #27 Run a WebAssembly test without special assertions
+PASS #28 Test that WebAssembly instantiation succeeds
+PASS #29 Run a WebAssembly test without special assertions
+PASS #30 Test that WebAssembly instantiation succeeds
+PASS #31 Run a WebAssembly test without special assertions
+PASS #32 Test that WebAssembly instantiation succeeds
+PASS #33 Run a WebAssembly test without special assertions
+PASS #34 Test that WebAssembly instantiation succeeds
+PASS #35 Run a WebAssembly test without special assertions
+PASS #36 Test that WebAssembly instantiation succeeds
+PASS #37 Run a WebAssembly test without special assertions
+PASS #38 Test that WebAssembly instantiation succeeds
+PASS #39 Run a WebAssembly test without special assertions
+PASS #40 Test that WebAssembly instantiation succeeds
+PASS #41 Run a WebAssembly test without special assertions
+PASS #42 Test that WebAssembly instantiation succeeds
+PASS #43 Run a WebAssembly test without special assertions
+PASS #44 Test that WebAssembly instantiation succeeds
+PASS #45 Run a WebAssembly test without special assertions
+PASS #46 Test that WebAssembly instantiation succeeds
+PASS #47 Run a WebAssembly test without special assertions
+PASS #48 Test that WebAssembly instantiation succeeds
+PASS #49 Run a WebAssembly test without special assertions
+PASS #50 Test that WebAssembly instantiation succeeds
+PASS #51 Run a WebAssembly test without special assertions
+PASS #52 Test that WebAssembly instantiation succeeds
+PASS #53 Run a WebAssembly test without special assertions
+PASS #54 Test that WebAssembly instantiation succeeds
+PASS #55 Run a WebAssembly test without special assertions
+PASS #56 Test that WebAssembly instantiation succeeds
+PASS #57 Run a WebAssembly test without special assertions
+PASS #58 Test that WebAssembly instantiation succeeds
+PASS #59 Run a WebAssembly test without special assertions
+PASS #60 Test that WebAssembly instantiation succeeds
+PASS #61 Run a WebAssembly test without special assertions
+PASS #62 Test that WebAssembly instantiation succeeds
+PASS #63 Run a WebAssembly test without special assertions
+PASS #64 Test that WebAssembly instantiation succeeds
+PASS #65 Run a WebAssembly test without special assertions
+PASS #66 Test that WebAssembly instantiation succeeds
+PASS #67 Run a WebAssembly test without special assertions
+PASS #68 Test that WebAssembly instantiation succeeds
+PASS #69 Run a WebAssembly test without special assertions
+PASS #70 Test that WebAssembly instantiation succeeds
+PASS #71 Run a WebAssembly test without special assertions
+PASS #72 Test that WebAssembly instantiation succeeds
+PASS #73 Run a WebAssembly test without special assertions
+PASS #74 Test that WebAssembly instantiation succeeds
+PASS #75 Run a WebAssembly test without special assertions
+PASS #76 Test that WebAssembly instantiation succeeds
+PASS #77 Run a WebAssembly test without special assertions
+PASS #78 Test that WebAssembly instantiation succeeds
+PASS #79 Run a WebAssembly test without special assertions
+PASS #80 Test that WebAssembly instantiation succeeds
+PASS #81 Run a WebAssembly test without special assertions
+PASS #82 Test that WebAssembly instantiation succeeds
+PASS #83 Run a WebAssembly test without special assertions
+PASS #84 Test that WebAssembly instantiation succeeds
+PASS #85 Run a WebAssembly test without special assertions
+PASS #86 Test that WebAssembly instantiation succeeds
+PASS #87 Run a WebAssembly test without special assertions
+PASS #88 Test that WebAssembly instantiation succeeds
+PASS #89 Run a WebAssembly test without special assertions
+PASS #90 Test that WebAssembly instantiation succeeds
+PASS #91 Run a WebAssembly test without special assertions
+PASS #92 Test that WebAssembly instantiation succeeds
+PASS #93 Run a WebAssembly test without special assertions
+PASS #94 Test that WebAssembly instantiation succeeds
+PASS #95 Run a WebAssembly test without special assertions
+PASS #96 Test that WebAssembly instantiation succeeds
+PASS #97 Run a WebAssembly test without special assertions
+PASS #98 Test that WebAssembly instantiation succeeds
+PASS #99 Run a WebAssembly test without special assertions
+PASS #100 Test that WebAssembly instantiation succeeds
+PASS #101 Run a WebAssembly test without special assertions
+PASS #102 Test that WebAssembly instantiation succeeds
+PASS #103 Run a WebAssembly test without special assertions
+PASS #104 Test that WebAssembly instantiation succeeds
+PASS #105 Run a WebAssembly test without special assertions
+PASS #106 Test that WebAssembly instantiation succeeds
+PASS #107 Run a WebAssembly test without special assertions
+PASS #108 Test that WebAssembly instantiation succeeds
+PASS #109 Run a WebAssembly test without special assertions
+PASS #110 Test that WebAssembly instantiation succeeds
+PASS #111 Run a WebAssembly test without special assertions
+PASS #112 Test that WebAssembly instantiation succeeds
+PASS #113 Run a WebAssembly test without special assertions
+PASS #114 Test that WebAssembly instantiation succeeds
+PASS #115 Run a WebAssembly test without special assertions
+PASS #116 Test that WebAssembly instantiation succeeds
+PASS #117 Run a WebAssembly test without special assertions
+PASS #118 Test that WebAssembly instantiation succeeds
+PASS #119 Run a WebAssembly test without special assertions
+PASS #120 Test that WebAssembly instantiation succeeds
+PASS #121 Run a WebAssembly test without special assertions
+PASS #122 Test that WebAssembly instantiation succeeds
+PASS #123 Run a WebAssembly test without special assertions
+PASS #124 Test that WebAssembly instantiation succeeds
+PASS #125 Run a WebAssembly test without special assertions
+PASS #126 Test that WebAssembly instantiation succeeds
+PASS #127 Run a WebAssembly test without special assertions
+PASS #128 Test that WebAssembly instantiation succeeds
+PASS #129 Run a WebAssembly test without special assertions
+PASS #130 Test that WebAssembly instantiation succeeds
+PASS #131 Run a WebAssembly test without special assertions
+PASS #132 Test that WebAssembly instantiation succeeds
+PASS #133 Run a WebAssembly test without special assertions
+PASS #134 Test that WebAssembly instantiation succeeds
+PASS #135 Run a WebAssembly test without special assertions
+PASS #136 Test that WebAssembly instantiation succeeds
+PASS #137 Run a WebAssembly test without special assertions
+PASS #138 Test that WebAssembly instantiation succeeds
+PASS #139 Run a WebAssembly test without special assertions
+PASS #140 Test that WebAssembly instantiation succeeds
+PASS #141 Run a WebAssembly test without special assertions
+PASS #142 Test that WebAssembly instantiation succeeds
+PASS #143 Run a WebAssembly test without special assertions
+PASS #144 Test that WebAssembly instantiation succeeds
+PASS #145 Run a WebAssembly test without special assertions
+PASS #146 Test that WebAssembly instantiation succeeds
+PASS #147 Run a WebAssembly test without special assertions
+PASS #148 Test that WebAssembly instantiation succeeds
+PASS #149 Run a WebAssembly test without special assertions
+PASS #150 Test that WebAssembly instantiation succeeds
+PASS #151 Run a WebAssembly test without special assertions
+PASS #152 Test that WebAssembly instantiation succeeds
+PASS #153 Run a WebAssembly test without special assertions
+PASS #154 Test that WebAssembly instantiation succeeds
+PASS #155 Run a WebAssembly test without special assertions
+PASS #156 Test that WebAssembly instantiation succeeds
+PASS #157 Run a WebAssembly test without special assertions
+PASS #158 Test that WebAssembly instantiation succeeds
+PASS #159 Run a WebAssembly test without special assertions
+PASS #160 Test that WebAssembly instantiation succeeds
+PASS #161 Run a WebAssembly test without special assertions
+PASS #162 Test that WebAssembly instantiation succeeds
+PASS #163 Run a WebAssembly test without special assertions
+PASS #164 Test that WebAssembly instantiation succeeds
+PASS #165 Run a WebAssembly test without special assertions
+PASS #166 Test that WebAssembly instantiation succeeds
+PASS #167 Run a WebAssembly test without special assertions
+PASS #168 Test that WebAssembly instantiation succeeds
+PASS #169 Run a WebAssembly test without special assertions
+PASS #170 Test that WebAssembly instantiation succeeds
+PASS #171 Run a WebAssembly test without special assertions
+PASS #172 Test that WebAssembly instantiation succeeds
+PASS #173 Run a WebAssembly test without special assertions
+PASS #174 Test that WebAssembly instantiation succeeds
+PASS #175 Run a WebAssembly test without special assertions
+PASS #176 Test that WebAssembly instantiation succeeds
+PASS #177 Run a WebAssembly test without special assertions
+PASS #178 Test that WebAssembly instantiation succeeds
+PASS #179 Run a WebAssembly test without special assertions
+PASS #180 Test that WebAssembly instantiation succeeds
+PASS #181 Run a WebAssembly test without special assertions
+PASS #182 Test that WebAssembly instantiation succeeds
+PASS #183 Run a WebAssembly test without special assertions
+PASS #184 Test that WebAssembly instantiation succeeds
+PASS #185 Run a WebAssembly test without special assertions
+PASS #186 Test that WebAssembly instantiation succeeds
+PASS #187 Run a WebAssembly test without special assertions
+PASS #188 Test that WebAssembly instantiation succeeds
+PASS #189 Run a WebAssembly test without special assertions
+PASS #190 Test that WebAssembly instantiation succeeds
+PASS #191 Run a WebAssembly test without special assertions
+PASS #192 Test that WebAssembly instantiation succeeds
+PASS #193 Run a WebAssembly test without special assertions
+PASS #194 Test that WebAssembly instantiation succeeds
+PASS #195 Run a WebAssembly test without special assertions
+PASS #196 Test that WebAssembly instantiation succeeds
+PASS #197 Run a WebAssembly test without special assertions
+PASS #198 Test that WebAssembly instantiation succeeds
+PASS #199 Run a WebAssembly test without special assertions
+PASS #200 Test that WebAssembly instantiation succeeds
+PASS #201 Run a WebAssembly test without special assertions
+PASS #202 Test that WebAssembly instantiation succeeds
+PASS #203 Run a WebAssembly test without special assertions
+PASS #204 Test that WebAssembly instantiation succeeds
+PASS #205 Run a WebAssembly test without special assertions
+PASS #206 Test that WebAssembly instantiation succeeds
+PASS #207 Run a WebAssembly test without special assertions
+PASS #208 Test that WebAssembly instantiation succeeds
+PASS #209 Run a WebAssembly test without special assertions
+PASS #210 Test that WebAssembly instantiation succeeds
+PASS #211 Run a WebAssembly test without special assertions
+PASS #212 Test that WebAssembly instantiation succeeds
+PASS #213 Run a WebAssembly test without special assertions
+PASS #214 Test that WebAssembly instantiation succeeds
+PASS #215 Run a WebAssembly test without special assertions
+PASS #216 Test that WebAssembly instantiation succeeds
+PASS #217 Run a WebAssembly test without special assertions
+PASS #218 Test that WebAssembly instantiation succeeds
+PASS #219 Run a WebAssembly test without special assertions
+PASS #220 Test that WebAssembly instantiation succeeds
+PASS #221 Run a WebAssembly test without special assertions
+PASS #222 Test that WebAssembly instantiation succeeds
+PASS #223 Run a WebAssembly test without special assertions
+PASS #224 Test that WebAssembly instantiation succeeds
+PASS #225 Run a WebAssembly test without special assertions
+PASS #226 Test that WebAssembly instantiation succeeds
+PASS #227 Run a WebAssembly test without special assertions
+PASS #228 Test that WebAssembly instantiation succeeds
+PASS #229 Run a WebAssembly test without special assertions
+PASS #230 Test that WebAssembly instantiation succeeds
+PASS #231 Run a WebAssembly test without special assertions
+PASS #232 Test that WebAssembly instantiation succeeds
+PASS #233 Run a WebAssembly test without special assertions
+PASS #234 Test that WebAssembly instantiation succeeds
+PASS #235 Run a WebAssembly test without special assertions
+PASS #236 Test that WebAssembly instantiation succeeds
+PASS #237 Run a WebAssembly test without special assertions
+PASS #238 Test that WebAssembly instantiation succeeds
+PASS #239 Run a WebAssembly test without special assertions
+PASS #240 Test that WebAssembly instantiation succeeds
+PASS #241 Run a WebAssembly test without special assertions
+PASS #242 Test that WebAssembly instantiation succeeds
+PASS #243 Run a WebAssembly test without special assertions
+PASS #244 Test that WebAssembly instantiation succeeds
+PASS #245 Run a WebAssembly test without special assertions
+PASS #246 Test that WebAssembly instantiation succeeds
+PASS #247 Run a WebAssembly test without special assertions
+PASS #248 Test that WebAssembly instantiation succeeds
+PASS #249 Run a WebAssembly test without special assertions
+PASS #250 Test that WebAssembly instantiation succeeds
+PASS #251 Run a WebAssembly test without special assertions
+PASS #252 Test that WebAssembly instantiation succeeds
+PASS #253 Run a WebAssembly test without special assertions
+PASS #254 Test that WebAssembly instantiation succeeds
+PASS #255 Run a WebAssembly test without special assertions
+PASS #256 Test that WebAssembly instantiation succeeds
+PASS #257 Run a WebAssembly test without special assertions
+PASS #258 Test that WebAssembly instantiation succeeds
+PASS #259 Run a WebAssembly test without special assertions
+PASS #260 Test that WebAssembly instantiation succeeds
+PASS #261 Run a WebAssembly test without special assertions
+PASS #262 Test that WebAssembly instantiation succeeds
+PASS #263 Run a WebAssembly test without special assertions
+PASS #264 Test that WebAssembly instantiation succeeds
+PASS #265 Run a WebAssembly test without special assertions
+PASS #266 Test that WebAssembly instantiation succeeds
+PASS #267 Run a WebAssembly test without special assertions
+PASS #268 Test that WebAssembly instantiation succeeds
+PASS #269 Run a WebAssembly test without special assertions
+PASS #270 Test that WebAssembly instantiation succeeds
+PASS #271 Run a WebAssembly test without special assertions
+PASS #272 Test that WebAssembly instantiation succeeds
+PASS #273 Run a WebAssembly test without special assertions
+PASS #274 Test that WebAssembly instantiation succeeds
+PASS #275 Run a WebAssembly test without special assertions
+PASS #276 Test that WebAssembly instantiation succeeds
+PASS #277 Run a WebAssembly test without special assertions
+PASS #278 Test that WebAssembly instantiation succeeds
+PASS #279 Run a WebAssembly test without special assertions
+PASS #280 Test that WebAssembly instantiation succeeds
+PASS #281 Run a WebAssembly test without special assertions
+PASS #282 Test that WebAssembly instantiation succeeds
+PASS #283 Run a WebAssembly test without special assertions
+PASS #284 Test that WebAssembly instantiation succeeds
+PASS #285 Run a WebAssembly test without special assertions
+PASS #286 Test that WebAssembly instantiation succeeds
+PASS #287 Run a WebAssembly test without special assertions
+PASS #288 Test that WebAssembly instantiation succeeds
+PASS #289 Run a WebAssembly test without special assertions
+PASS #290 Test that WebAssembly instantiation succeeds
+PASS #291 Run a WebAssembly test without special assertions
+PASS #292 Test that WebAssembly instantiation succeeds
+PASS #293 Run a WebAssembly test without special assertions
+PASS #294 Test that WebAssembly instantiation succeeds
+PASS #295 Run a WebAssembly test without special assertions
+PASS #296 Test that WebAssembly instantiation succeeds
+PASS #297 Run a WebAssembly test without special assertions
+PASS #298 Test that WebAssembly instantiation succeeds
+PASS #299 Run a WebAssembly test without special assertions
+PASS #300 Test that WebAssembly instantiation succeeds
+PASS #301 Run a WebAssembly test without special assertions
+PASS #302 Test that WebAssembly instantiation succeeds
+PASS #303 Run a WebAssembly test without special assertions
+PASS #304 Test that WebAssembly instantiation succeeds
+PASS #305 Run a WebAssembly test without special assertions
+PASS #306 Test that WebAssembly instantiation succeeds
+PASS #307 Run a WebAssembly test without special assertions
+PASS #308 Test that WebAssembly instantiation succeeds
+PASS #309 Run a WebAssembly test without special assertions
+PASS #310 Test that WebAssembly instantiation succeeds
+PASS #311 Run a WebAssembly test without special assertions
+PASS #312 Test that WebAssembly instantiation succeeds
+PASS #313 Run a WebAssembly test without special assertions
+PASS #314 Test that WebAssembly instantiation succeeds
+PASS #315 Run a WebAssembly test without special assertions
+PASS #316 Test that WebAssembly instantiation succeeds
+PASS #317 Run a WebAssembly test without special assertions
+PASS #318 Test that WebAssembly instantiation succeeds
+PASS #319 Run a WebAssembly test without special assertions
+PASS #320 Test that WebAssembly instantiation succeeds
+PASS #321 Run a WebAssembly test without special assertions
+PASS #322 Test that WebAssembly instantiation succeeds
+PASS #323 Run a WebAssembly test without special assertions
+PASS #324 Test that WebAssembly instantiation succeeds
+PASS #325 Run a WebAssembly test without special assertions
+PASS #326 Test that WebAssembly instantiation succeeds
+PASS #327 Run a WebAssembly test without special assertions
+PASS #328 Test that WebAssembly instantiation succeeds
+PASS #329 Run a WebAssembly test without special assertions
+PASS #330 Test that WebAssembly instantiation succeeds
+PASS #331 Run a WebAssembly test without special assertions
+PASS #332 Test that WebAssembly instantiation succeeds
+PASS #333 Run a WebAssembly test without special assertions
+PASS #334 Test that WebAssembly instantiation succeeds
+PASS #335 Run a WebAssembly test without special assertions
+PASS #336 Test that WebAssembly instantiation succeeds
+PASS #337 Run a WebAssembly test without special assertions
+PASS #338 Test that WebAssembly instantiation succeeds
+PASS #339 Run a WebAssembly test without special assertions
+PASS #340 Test that WebAssembly instantiation succeeds
+PASS #341 Run a WebAssembly test without special assertions
+PASS #342 Test that WebAssembly instantiation succeeds
+PASS #343 Run a WebAssembly test without special assertions
+PASS #344 Test that WebAssembly instantiation succeeds
+PASS #345 Run a WebAssembly test without special assertions
+PASS #346 Test that WebAssembly instantiation succeeds
+PASS #347 Run a WebAssembly test without special assertions
+PASS #348 Test that WebAssembly instantiation succeeds
+PASS #349 Run a WebAssembly test without special assertions
+PASS #350 Test that WebAssembly instantiation succeeds
+PASS #351 Run a WebAssembly test without special assertions
+PASS #352 Test that WebAssembly instantiation succeeds
+PASS #353 Run a WebAssembly test without special assertions
+PASS #354 Test that WebAssembly instantiation succeeds
+PASS #355 Run a WebAssembly test without special assertions
+PASS #356 Test that WebAssembly instantiation succeeds
+PASS #357 Run a WebAssembly test without special assertions
+PASS #358 Test that WebAssembly instantiation succeeds
+PASS #359 Run a WebAssembly test without special assertions
+PASS #360 Test that WebAssembly instantiation succeeds
+PASS #361 Run a WebAssembly test without special assertions
+PASS #362 Test that WebAssembly instantiation succeeds
+PASS #363 Run a WebAssembly test without special assertions
+PASS #364 Test that WebAssembly instantiation succeeds
+PASS #365 Run a WebAssembly test without special assertions
+PASS #366 Test that WebAssembly instantiation succeeds
+PASS #367 Run a WebAssembly test without special assertions
+PASS #368 Test that WebAssembly instantiation succeeds
+PASS #369 Run a WebAssembly test without special assertions
+PASS #370 Test that WebAssembly instantiation succeeds
+PASS #371 Run a WebAssembly test without special assertions
+PASS #372 Test that WebAssembly instantiation succeeds
+PASS #373 Run a WebAssembly test without special assertions
+PASS #374 Test that WebAssembly instantiation succeeds
+PASS #375 Run a WebAssembly test without special assertions
+PASS #376 Test that WebAssembly instantiation succeeds
+PASS #377 Run a WebAssembly test without special assertions
+PASS #378 Test that WebAssembly instantiation succeeds
+PASS #379 Run a WebAssembly test without special assertions
+PASS #380 Test that WebAssembly instantiation succeeds
+PASS #381 Run a WebAssembly test without special assertions
+PASS #382 Test that WebAssembly instantiation succeeds
+PASS #383 Run a WebAssembly test without special assertions
+PASS #384 Test that WebAssembly instantiation succeeds
+PASS #385 Run a WebAssembly test without special assertions
+PASS #386 Test that WebAssembly instantiation succeeds
+PASS #387 Run a WebAssembly test without special assertions
+PASS #388 Test that WebAssembly instantiation succeeds
+PASS #389 Run a WebAssembly test without special assertions
+PASS #390 Test that WebAssembly instantiation succeeds
+PASS #391 Run a WebAssembly test without special assertions
+PASS #392 Test that WebAssembly instantiation succeeds
+PASS #393 Run a WebAssembly test without special assertions
+PASS #394 Test that WebAssembly instantiation succeeds
+PASS #395 Run a WebAssembly test without special assertions
+PASS #396 Test that WebAssembly instantiation succeeds
+PASS #397 Run a WebAssembly test without special assertions
+PASS #398 Test that WebAssembly instantiation succeeds
+PASS #399 Run a WebAssembly test without special assertions
+PASS #400 Test that WebAssembly instantiation succeeds
+PASS #401 Run a WebAssembly test without special assertions
+PASS #402 Test that WebAssembly instantiation succeeds
+PASS #403 Run a WebAssembly test without special assertions
+PASS #404 Test that WebAssembly instantiation succeeds
+PASS #405 Run a WebAssembly test without special assertions
+PASS #406 Test that WebAssembly instantiation succeeds
+PASS #407 Run a WebAssembly test without special assertions
+PASS #408 Test that WebAssembly instantiation succeeds
+PASS #409 Run a WebAssembly test without special assertions
+PASS #410 Test that WebAssembly instantiation succeeds
+PASS #411 Run a WebAssembly test without special assertions
+PASS #412 Test that WebAssembly instantiation succeeds
+PASS #413 Run a WebAssembly test without special assertions
+PASS #414 Test that WebAssembly instantiation succeeds
+PASS #415 Run a WebAssembly test without special assertions
+PASS #416 Test that WebAssembly instantiation succeeds
+PASS #417 Run a WebAssembly test without special assertions
+PASS #418 Test that WebAssembly instantiation succeeds
+PASS #419 Run a WebAssembly test without special assertions
+PASS #420 Test that WebAssembly instantiation succeeds
+PASS #421 Run a WebAssembly test without special assertions
+PASS #422 Test that WebAssembly instantiation succeeds
+PASS #423 Run a WebAssembly test without special assertions
+PASS #424 Test that WebAssembly instantiation succeeds
+PASS #425 Run a WebAssembly test without special assertions
+PASS #426 Test that WebAssembly instantiation succeeds
+PASS #427 Run a WebAssembly test without special assertions
+PASS #428 Test that WebAssembly instantiation succeeds
+PASS #429 Run a WebAssembly test without special assertions
+PASS #430 Test that WebAssembly instantiation succeeds
+PASS #431 Run a WebAssembly test without special assertions
+PASS #432 Test that WebAssembly instantiation succeeds
+PASS #433 Run a WebAssembly test without special assertions
+PASS #434 Test that WebAssembly instantiation succeeds
+PASS #435 Run a WebAssembly test without special assertions
+PASS #436 Test that WebAssembly instantiation succeeds
+PASS #437 Run a WebAssembly test without special assertions
+PASS #438 Test that WebAssembly instantiation succeeds
+PASS #439 Run a WebAssembly test without special assertions
+PASS #440 Test that WebAssembly instantiation succeeds
+PASS #441 Run a WebAssembly test without special assertions
+PASS #442 Test that WebAssembly instantiation succeeds
+PASS #443 Run a WebAssembly test without special assertions
+PASS #444 Test that WebAssembly instantiation succeeds
+PASS #445 Run a WebAssembly test without special assertions
+PASS #446 Test that WebAssembly instantiation succeeds
+PASS #447 Run a WebAssembly test without special assertions
+PASS #448 Test that WebAssembly instantiation succeeds
+PASS #449 Run a WebAssembly test without special assertions
+PASS #450 Test that WebAssembly instantiation succeeds
+PASS #451 Run a WebAssembly test without special assertions
+PASS #452 Test that WebAssembly instantiation succeeds
+PASS #453 Run a WebAssembly test without special assertions
+PASS #454 Test that WebAssembly instantiation succeeds
+PASS #455 Run a WebAssembly test without special assertions
+PASS #456 Test that WebAssembly instantiation succeeds
+PASS #457 Run a WebAssembly test without special assertions
+PASS #458 Test that WebAssembly instantiation succeeds
+PASS #459 Run a WebAssembly test without special assertions
+PASS #460 Test that WebAssembly instantiation succeeds
+PASS #461 Run a WebAssembly test without special assertions
+PASS #462 Test that WebAssembly instantiation succeeds
+PASS #463 Run a WebAssembly test without special assertions
+PASS #464 Test that WebAssembly instantiation succeeds
+PASS #465 Run a WebAssembly test without special assertions
+PASS #466 Test that WebAssembly instantiation succeeds
+PASS #467 Run a WebAssembly test without special assertions
+PASS #468 Test that WebAssembly instantiation succeeds
+PASS #469 Run a WebAssembly test without special assertions
+PASS #470 Test that WebAssembly instantiation succeeds
+PASS #471 Run a WebAssembly test without special assertions
+PASS #472 Test that WebAssembly instantiation succeeds
+PASS #473 Run a WebAssembly test without special assertions
+PASS #474 Test that WebAssembly instantiation succeeds
+PASS #475 Run a WebAssembly test without special assertions
+PASS #476 Test that WebAssembly instantiation succeeds
+PASS #477 Run a WebAssembly test without special assertions
+PASS #478 Test that WebAssembly instantiation succeeds
+PASS #479 Run a WebAssembly test without special assertions
+PASS #480 Test that WebAssembly instantiation succeeds
+PASS #481 Run a WebAssembly test without special assertions
+PASS #482 Test that WebAssembly instantiation succeeds
+PASS #483 Run a WebAssembly test without special assertions
+PASS #484 Test that WebAssembly instantiation succeeds
+PASS #485 Run a WebAssembly test without special assertions
+PASS #486 Test that WebAssembly instantiation succeeds
+PASS #487 Run a WebAssembly test without special assertions
+PASS #488 Test that WebAssembly instantiation succeeds
+PASS #489 Run a WebAssembly test without special assertions
+PASS #490 Test that WebAssembly instantiation succeeds
+PASS #491 Run a WebAssembly test without special assertions
+PASS #492 Test that WebAssembly instantiation succeeds
+PASS #493 Run a WebAssembly test without special assertions
+PASS #494 Test that WebAssembly instantiation succeeds
+PASS #495 Run a WebAssembly test without special assertions
+PASS #496 Test that WebAssembly instantiation succeeds
+PASS #497 Run a WebAssembly test without special assertions
+PASS #498 Test that WebAssembly instantiation succeeds
+PASS #499 Run a WebAssembly test without special assertions
+PASS #500 Test that WebAssembly instantiation succeeds
+PASS #501 Run a WebAssembly test without special assertions
+PASS #502 Test that WebAssembly instantiation succeeds
+PASS #503 Run a WebAssembly test without special assertions
+PASS #504 Test that WebAssembly instantiation succeeds
+PASS #505 Run a WebAssembly test without special assertions
+PASS #506 Test that WebAssembly instantiation succeeds
+PASS #507 Run a WebAssembly test without special assertions
+PASS #508 Test that WebAssembly instantiation succeeds
+PASS #509 Run a WebAssembly test without special assertions
+PASS #510 Test that WebAssembly instantiation succeeds
+PASS #511 Run a WebAssembly test without special assertions
+PASS #512 Test that WebAssembly instantiation succeeds
+PASS #513 Run a WebAssembly test without special assertions
+PASS #514 Test that WebAssembly instantiation succeeds
+PASS #515 Run a WebAssembly test without special assertions
+PASS #516 Test that WebAssembly instantiation succeeds
+PASS #517 Run a WebAssembly test without special assertions
+PASS #518 Test that WebAssembly instantiation succeeds
+PASS #519 Run a WebAssembly test without special assertions
+PASS #520 Test that WebAssembly instantiation succeeds
+PASS #521 Run a WebAssembly test without special assertions
+PASS #522 Test that WebAssembly instantiation succeeds
+PASS #523 Run a WebAssembly test without special assertions
+PASS #524 Test that WebAssembly instantiation succeeds
+PASS #525 Run a WebAssembly test without special assertions
+PASS #526 Test that WebAssembly instantiation succeeds
+PASS #527 Run a WebAssembly test without special assertions
+PASS #528 Test that WebAssembly instantiation succeeds
+PASS #529 Run a WebAssembly test without special assertions
+PASS #530 Test that WebAssembly instantiation succeeds
+PASS #531 Run a WebAssembly test without special assertions
+PASS #532 Test that WebAssembly instantiation succeeds
+PASS #533 Run a WebAssembly test without special assertions
+PASS #534 Test that WebAssembly instantiation succeeds
+PASS #535 Run a WebAssembly test without special assertions
+PASS #536 Test that WebAssembly instantiation succeeds
+PASS #537 Run a WebAssembly test without special assertions
+PASS #538 Test that WebAssembly instantiation succeeds
+PASS #539 Run a WebAssembly test without special assertions
+PASS #540 Test that WebAssembly instantiation succeeds
+PASS #541 Run a WebAssembly test without special assertions
+PASS #542 Test that WebAssembly instantiation succeeds
+PASS #543 Run a WebAssembly test without special assertions
+PASS #544 Test that WebAssembly instantiation succeeds
+PASS #545 Run a WebAssembly test without special assertions
+PASS #546 Test that WebAssembly instantiation succeeds
+PASS #547 Run a WebAssembly test without special assertions
+PASS #548 Test that WebAssembly instantiation succeeds
+PASS #549 Run a WebAssembly test without special assertions
+PASS #550 Test that WebAssembly instantiation succeeds
+PASS #551 Run a WebAssembly test without special assertions
+PASS #552 Test that WebAssembly instantiation succeeds
+PASS #553 Run a WebAssembly test without special assertions
+PASS #554 Test that WebAssembly instantiation succeeds
+PASS #555 Run a WebAssembly test without special assertions
+PASS #556 Test that WebAssembly instantiation succeeds
+PASS #557 Run a WebAssembly test without special assertions
+PASS #558 Test that WebAssembly instantiation succeeds
+PASS #559 Run a WebAssembly test without special assertions
+PASS #560 Test that WebAssembly instantiation succeeds
+PASS #561 Run a WebAssembly test without special assertions
+PASS #562 Test that WebAssembly instantiation succeeds
+PASS #563 Run a WebAssembly test without special assertions
+PASS #564 Test that WebAssembly instantiation succeeds
+PASS #565 Run a WebAssembly test without special assertions
+PASS #566 Test that WebAssembly instantiation succeeds
+PASS #567 Run a WebAssembly test without special assertions
+PASS #568 Test that WebAssembly instantiation succeeds
+PASS #569 Run a WebAssembly test without special assertions
+PASS #570 Test that WebAssembly instantiation succeeds
+PASS #571 Run a WebAssembly test without special assertions
+PASS #572 Test that WebAssembly instantiation succeeds
+PASS #573 Run a WebAssembly test without special assertions
+PASS #574 Test that WebAssembly instantiation succeeds
+PASS #575 Run a WebAssembly test without special assertions
+PASS #576 Test that WebAssembly instantiation succeeds
+PASS #577 Run a WebAssembly test without special assertions
+PASS #578 Test that WebAssembly instantiation succeeds
+PASS #579 Run a WebAssembly test without special assertions
+PASS #580 Test that WebAssembly instantiation succeeds
+PASS #581 Run a WebAssembly test without special assertions
+PASS #582 Test that WebAssembly instantiation succeeds
+PASS #583 Run a WebAssembly test without special assertions
+PASS #584 Test that WebAssembly instantiation succeeds
+PASS #585 Run a WebAssembly test without special assertions
+PASS #586 Test that WebAssembly instantiation succeeds
+PASS #587 Run a WebAssembly test without special assertions
+PASS #588 Test that WebAssembly instantiation succeeds
+PASS #589 Run a WebAssembly test without special assertions
+PASS #590 Test that WebAssembly instantiation succeeds
+PASS #591 Run a WebAssembly test without special assertions
+PASS #592 Test that WebAssembly instantiation succeeds
+PASS #593 Run a WebAssembly test without special assertions
+PASS #594 Test that WebAssembly instantiation succeeds
+PASS #595 Run a WebAssembly test without special assertions
+PASS #596 Test that WebAssembly instantiation succeeds
+PASS #597 Run a WebAssembly test without special assertions
+PASS #598 Test that WebAssembly instantiation succeeds
+PASS #599 Run a WebAssembly test without special assertions
+PASS #600 Test that WebAssembly instantiation succeeds
+PASS #601 Run a WebAssembly test without special assertions
+PASS #602 Test that WebAssembly instantiation succeeds
+PASS #603 Run a WebAssembly test without special assertions
+PASS #604 Test that WebAssembly instantiation succeeds
+PASS #605 Run a WebAssembly test without special assertions
+PASS #606 Test that WebAssembly instantiation succeeds
+PASS #607 Run a WebAssembly test without special assertions
+PASS #608 Test that WebAssembly instantiation succeeds
+PASS #609 Run a WebAssembly test without special assertions
+PASS #610 Test that WebAssembly instantiation succeeds
+PASS #611 Run a WebAssembly test without special assertions
+PASS #612 Test that WebAssembly instantiation succeeds
+PASS #613 Run a WebAssembly test without special assertions
+PASS #614 Test that WebAssembly instantiation succeeds
+PASS #615 Run a WebAssembly test without special assertions
+PASS #616 Test that WebAssembly instantiation succeeds
+PASS #617 Run a WebAssembly test without special assertions
+PASS #618 Test that WebAssembly instantiation succeeds
+PASS #619 Run a WebAssembly test without special assertions
+PASS #620 Test that WebAssembly instantiation succeeds
+PASS #621 Run a WebAssembly test without special assertions
+PASS #622 Test that WebAssembly instantiation succeeds
+PASS #623 Run a WebAssembly test without special assertions
+PASS #624 Test that WebAssembly instantiation succeeds
+PASS #625 Run a WebAssembly test without special assertions
+PASS #626 Test that WebAssembly instantiation succeeds
+PASS #627 Run a WebAssembly test without special assertions
+PASS #628 Test that WebAssembly instantiation succeeds
+PASS #629 Run a WebAssembly test without special assertions
+PASS #630 Test that WebAssembly instantiation succeeds
+PASS #631 Run a WebAssembly test without special assertions
+PASS #632 Test that WebAssembly instantiation succeeds
+PASS #633 Run a WebAssembly test without special assertions
+PASS #634 Test that WebAssembly instantiation succeeds
+PASS #635 Run a WebAssembly test without special assertions
+PASS #636 Test that WebAssembly instantiation succeeds
+PASS #637 Run a WebAssembly test without special assertions
+PASS #638 Test that WebAssembly instantiation succeeds
+PASS #639 Run a WebAssembly test without special assertions
+PASS #640 Test that WebAssembly instantiation succeeds
+PASS #641 Run a WebAssembly test without special assertions
+PASS #642 Test that WebAssembly instantiation succeeds
+PASS #643 Run a WebAssembly test without special assertions
+PASS #644 Test that WebAssembly instantiation succeeds
+PASS #645 Run a WebAssembly test without special assertions
+PASS #646 Test that WebAssembly instantiation succeeds
+PASS #647 Run a WebAssembly test without special assertions
+PASS #648 Test that WebAssembly instantiation succeeds
+PASS #649 Run a WebAssembly test without special assertions
+PASS #650 Test that WebAssembly instantiation succeeds
+PASS #651 Run a WebAssembly test without special assertions
+PASS #652 Test that WebAssembly instantiation succeeds
+PASS #653 Run a WebAssembly test without special assertions
+PASS #654 Test that WebAssembly instantiation succeeds
+PASS #655 Run a WebAssembly test without special assertions
+PASS #656 Test that WebAssembly instantiation succeeds
+PASS #657 Run a WebAssembly test without special assertions
+PASS #658 Test that WebAssembly instantiation succeeds
+PASS #659 Run a WebAssembly test without special assertions
+PASS #660 Test that WebAssembly instantiation succeeds
+PASS #661 Run a WebAssembly test without special assertions
+PASS #662 Test that WebAssembly instantiation succeeds
+PASS #663 Run a WebAssembly test without special assertions
+PASS #664 Test that WebAssembly instantiation succeeds
+PASS #665 Run a WebAssembly test without special assertions
+PASS #666 Test that WebAssembly instantiation succeeds
+PASS #667 Run a WebAssembly test without special assertions
+PASS #668 Test that WebAssembly instantiation succeeds
+PASS #669 Run a WebAssembly test without special assertions
+PASS #670 Test that WebAssembly instantiation succeeds
+PASS #671 Run a WebAssembly test without special assertions
+PASS #672 Test that WebAssembly instantiation succeeds
+PASS #673 Run a WebAssembly test without special assertions
+PASS #674 Test that WebAssembly instantiation succeeds
+PASS #675 Run a WebAssembly test without special assertions
+PASS #676 Test that WebAssembly instantiation succeeds
+PASS #677 Run a WebAssembly test without special assertions
+PASS #678 Test that WebAssembly instantiation succeeds
+PASS #679 Run a WebAssembly test without special assertions
+PASS #680 Test that WebAssembly instantiation succeeds
+PASS #681 Run a WebAssembly test without special assertions
+PASS #682 Test that WebAssembly instantiation succeeds
+PASS #683 Run a WebAssembly test without special assertions
+PASS #684 Test that WebAssembly instantiation succeeds
+PASS #685 Run a WebAssembly test without special assertions
+PASS #686 Test that WebAssembly instantiation succeeds
+PASS #687 Run a WebAssembly test without special assertions
+PASS #688 Test that WebAssembly instantiation succeeds
+PASS #689 Run a WebAssembly test without special assertions
+PASS #690 Test that WebAssembly instantiation succeeds
+PASS #691 Run a WebAssembly test without special assertions
+PASS #692 Test that WebAssembly instantiation succeeds
+PASS #693 Run a WebAssembly test without special assertions
+PASS #694 Test that WebAssembly instantiation succeeds
+PASS #695 Run a WebAssembly test without special assertions
+PASS #696 Test that WebAssembly instantiation succeeds
+PASS #697 Run a WebAssembly test without special assertions
+PASS #698 Test that WebAssembly instantiation succeeds
+PASS #699 Run a WebAssembly test without special assertions
+PASS #700 Test that WebAssembly instantiation succeeds
+PASS #701 Run a WebAssembly test without special assertions
+PASS #702 Test that WebAssembly instantiation succeeds
+PASS #703 Run a WebAssembly test without special assertions
+PASS #704 Test that WebAssembly instantiation succeeds
+PASS #705 Run a WebAssembly test without special assertions
+PASS #706 Test that WebAssembly instantiation succeeds
+PASS #707 Run a WebAssembly test without special assertions
+PASS #708 Test that WebAssembly instantiation succeeds
+PASS #709 Run a WebAssembly test without special assertions
+PASS #710 Test that WebAssembly instantiation succeeds
+PASS #711 Run a WebAssembly test without special assertions
+PASS #712 Test that WebAssembly instantiation succeeds
+PASS #713 Run a WebAssembly test without special assertions
+PASS #714 Test that WebAssembly instantiation succeeds
+PASS #715 Run a WebAssembly test without special assertions
+PASS #716 Test that WebAssembly instantiation succeeds
+PASS #717 Run a WebAssembly test without special assertions
+PASS #718 Test that WebAssembly instantiation succeeds
+PASS #719 Run a WebAssembly test without special assertions
+PASS #720 Test that WebAssembly instantiation succeeds
+PASS #721 Run a WebAssembly test without special assertions
+PASS #722 Test that WebAssembly instantiation succeeds
+PASS #723 Run a WebAssembly test without special assertions
+PASS #724 Test that WebAssembly instantiation succeeds
+PASS #725 Run a WebAssembly test without special assertions
+PASS #726 Test that WebAssembly instantiation succeeds
+PASS #727 Run a WebAssembly test without special assertions
+PASS #728 Test that WebAssembly instantiation succeeds
+PASS #729 Run a WebAssembly test without special assertions
+PASS #730 Test that WebAssembly instantiation succeeds
+PASS #731 Run a WebAssembly test without special assertions
+PASS #732 Test that WebAssembly instantiation succeeds
+PASS #733 Run a WebAssembly test without special assertions
+PASS #734 Test that WebAssembly instantiation succeeds
+PASS #735 Run a WebAssembly test without special assertions
+PASS #736 Test that WebAssembly instantiation succeeds
+PASS #737 Run a WebAssembly test without special assertions
+PASS #738 Test that WebAssembly instantiation succeeds
+PASS #739 Run a WebAssembly test without special assertions
+PASS #740 Test that WebAssembly instantiation succeeds
+PASS #741 Run a WebAssembly test without special assertions
+PASS #742 Test that WebAssembly instantiation succeeds
+PASS #743 Run a WebAssembly test without special assertions
+PASS #744 Test that WebAssembly instantiation succeeds
+PASS #745 Run a WebAssembly test without special assertions
+PASS #746 Test that WebAssembly instantiation succeeds
+PASS #747 Run a WebAssembly test without special assertions
+PASS #748 Test that WebAssembly instantiation succeeds
+PASS #749 Run a WebAssembly test without special assertions
+PASS #750 Test that WebAssembly instantiation succeeds
+PASS #751 Run a WebAssembly test without special assertions
+PASS #752 Test that WebAssembly instantiation succeeds
+PASS #753 Run a WebAssembly test without special assertions
+PASS #754 Test that WebAssembly instantiation succeeds
+PASS #755 Run a WebAssembly test without special assertions
+PASS #756 Test that WebAssembly instantiation succeeds
+PASS #757 Run a WebAssembly test without special assertions
+PASS #758 Test that WebAssembly instantiation succeeds
+PASS #759 Run a WebAssembly test without special assertions
+PASS #760 Test that WebAssembly instantiation succeeds
+PASS #761 Run a WebAssembly test without special assertions
+PASS #762 Test that WebAssembly instantiation succeeds
+PASS #763 Run a WebAssembly test without special assertions
+PASS #764 Test that WebAssembly instantiation succeeds
+PASS #765 Run a WebAssembly test without special assertions
+PASS #766 Test that WebAssembly instantiation succeeds
+PASS #767 Run a WebAssembly test without special assertions
+PASS #768 Test that WebAssembly instantiation succeeds
+PASS #769 Run a WebAssembly test without special assertions
+PASS #770 Test that WebAssembly instantiation succeeds
+PASS #771 Run a WebAssembly test without special assertions
+PASS #772 Test that WebAssembly instantiation succeeds
+PASS #773 Run a WebAssembly test without special assertions
+PASS #774 Test that WebAssembly instantiation succeeds
+PASS #775 Run a WebAssembly test without special assertions
+PASS #776 Test that WebAssembly instantiation succeeds
+PASS #777 Run a WebAssembly test without special assertions
+PASS #778 Test that WebAssembly instantiation succeeds
+PASS #779 Run a WebAssembly test without special assertions
+PASS #780 Test that WebAssembly instantiation succeeds
+PASS #781 Run a WebAssembly test without special assertions
+PASS #782 Test that WebAssembly instantiation succeeds
+PASS #783 Run a WebAssembly test without special assertions
+PASS #784 Test that WebAssembly instantiation succeeds
+PASS #785 Run a WebAssembly test without special assertions
+PASS #786 Test that WebAssembly instantiation succeeds
+PASS #787 Run a WebAssembly test without special assertions
+PASS #788 Test that WebAssembly instantiation succeeds
+PASS #789 Run a WebAssembly test without special assertions
+PASS #790 Test that WebAssembly instantiation succeeds
+PASS #791 Run a WebAssembly test without special assertions
+PASS #792 Test that WebAssembly instantiation succeeds
+PASS #793 Run a WebAssembly test without special assertions
+PASS #794 Test that WebAssembly instantiation succeeds
+PASS #795 Run a WebAssembly test without special assertions
+PASS #796 Test that WebAssembly instantiation succeeds
+PASS #797 Run a WebAssembly test without special assertions
+PASS #798 Test that WebAssembly instantiation succeeds
+PASS #799 Run a WebAssembly test without special assertions
+PASS #800 Test that WebAssembly instantiation succeeds
+PASS #801 Run a WebAssembly test without special assertions
+PASS #802 Test that WebAssembly instantiation succeeds
+PASS #803 Run a WebAssembly test without special assertions
+PASS #804 Test that WebAssembly instantiation succeeds
+PASS #805 Run a WebAssembly test without special assertions
+PASS #806 Test that WebAssembly instantiation succeeds
+PASS #807 Run a WebAssembly test without special assertions
+PASS #808 Test that WebAssembly instantiation succeeds
+PASS #809 Run a WebAssembly test without special assertions
+PASS #810 Test that WebAssembly instantiation succeeds
+PASS #811 Run a WebAssembly test without special assertions
+PASS #812 Test that WebAssembly instantiation succeeds
+PASS #813 Run a WebAssembly test without special assertions
+PASS #814 Test that WebAssembly instantiation succeeds
+PASS #815 Run a WebAssembly test without special assertions
+PASS #816 Test that WebAssembly instantiation succeeds
+PASS #817 Run a WebAssembly test without special assertions
+PASS #818 Test that WebAssembly instantiation succeeds
+PASS #819 Run a WebAssembly test without special assertions
+PASS #820 Test that WebAssembly instantiation succeeds
+PASS #821 Run a WebAssembly test without special assertions
+PASS #822 Test that WebAssembly instantiation succeeds
+PASS #823 Run a WebAssembly test without special assertions
+PASS #824 Test that WebAssembly instantiation succeeds
+PASS #825 Run a WebAssembly test without special assertions
+PASS #826 Test that WebAssembly instantiation succeeds
+PASS #827 Run a WebAssembly test without special assertions
+PASS #828 Test that WebAssembly instantiation succeeds
+PASS #829 Run a WebAssembly test without special assertions
+PASS #830 Test that WebAssembly instantiation succeeds
+PASS #831 Run a WebAssembly test without special assertions
+PASS #832 Test that WebAssembly instantiation succeeds
+PASS #833 Run a WebAssembly test without special assertions
+PASS #834 Test that WebAssembly instantiation succeeds
+PASS #835 Run a WebAssembly test without special assertions
+PASS #836 Test that WebAssembly instantiation succeeds
+PASS #837 Run a WebAssembly test without special assertions
+PASS #838 Test that WebAssembly instantiation succeeds
+PASS #839 Run a WebAssembly test without special assertions
+PASS #840 Test that WebAssembly instantiation succeeds
+PASS #841 Run a WebAssembly test without special assertions
+PASS #842 Test that WebAssembly instantiation succeeds
+PASS #843 Run a WebAssembly test without special assertions
+PASS #844 Test that WebAssembly instantiation succeeds
+PASS #845 Run a WebAssembly test without special assertions
+PASS #846 Test that WebAssembly instantiation succeeds
+PASS #847 Run a WebAssembly test without special assertions
+PASS #848 Test that WebAssembly instantiation succeeds
+PASS #849 Run a WebAssembly test without special assertions
+PASS #850 Test that WebAssembly instantiation succeeds
+PASS #851 Run a WebAssembly test without special assertions
+PASS #852 Test that WebAssembly instantiation succeeds
+PASS #853 Run a WebAssembly test without special assertions
+PASS #854 Test that WebAssembly instantiation succeeds
+PASS #855 Run a WebAssembly test without special assertions
+PASS #856 Test that WebAssembly instantiation succeeds
+PASS #857 Run a WebAssembly test without special assertions
+PASS #858 Test that WebAssembly instantiation succeeds
+PASS #859 Run a WebAssembly test without special assertions
+PASS #860 Test that WebAssembly instantiation succeeds
+PASS #861 Run a WebAssembly test without special assertions
+PASS #862 Test that WebAssembly instantiation succeeds
+PASS #863 Run a WebAssembly test without special assertions
+PASS #864 Test that WebAssembly instantiation succeeds
+PASS #865 Run a WebAssembly test without special assertions
+PASS #866 Test that WebAssembly instantiation succeeds
+PASS #867 Run a WebAssembly test without special assertions
+PASS #868 Test that WebAssembly instantiation succeeds
+PASS #869 Run a WebAssembly test without special assertions
+PASS #870 Test that WebAssembly instantiation succeeds
+PASS #871 Run a WebAssembly test without special assertions
+PASS #872 Test that WebAssembly instantiation succeeds
+PASS #873 Run a WebAssembly test without special assertions
+PASS #874 Test that WebAssembly instantiation succeeds
+PASS #875 Run a WebAssembly test without special assertions
+PASS #876 Test that WebAssembly instantiation succeeds
+PASS #877 Run a WebAssembly test without special assertions
+PASS #878 Test that WebAssembly instantiation succeeds
+PASS #879 Run a WebAssembly test without special assertions
+PASS #880 Test that WebAssembly instantiation succeeds
+PASS #881 Run a WebAssembly test without special assertions
+PASS #882 Test that WebAssembly instantiation succeeds
+PASS #883 Run a WebAssembly test without special assertions
+PASS #884 Test that WebAssembly instantiation succeeds
+PASS #885 Run a WebAssembly test without special assertions
+PASS #886 Test that WebAssembly instantiation succeeds
+PASS #887 Run a WebAssembly test without special assertions
+PASS #888 Test that WebAssembly instantiation succeeds
+PASS #889 Run a WebAssembly test without special assertions
+PASS #890 Test that WebAssembly instantiation succeeds
+PASS #891 Run a WebAssembly test without special assertions
+PASS #892 Test that WebAssembly instantiation succeeds
+PASS #893 Run a WebAssembly test without special assertions
+PASS #894 Test that WebAssembly instantiation succeeds
+PASS #895 Run a WebAssembly test without special assertions
+PASS #896 Test that WebAssembly instantiation succeeds
+PASS #897 Run a WebAssembly test without special assertions
+PASS #898 Test that WebAssembly instantiation succeeds
+PASS #899 Run a WebAssembly test without special assertions
+PASS #900 Test that WebAssembly instantiation succeeds
+PASS #901 Run a WebAssembly test without special assertions
+PASS #902 Test that WebAssembly instantiation succeeds
+PASS #903 Run a WebAssembly test without special assertions
+PASS #904 Test that WebAssembly instantiation succeeds
+PASS #905 Run a WebAssembly test without special assertions
+PASS #906 Test that WebAssembly instantiation succeeds
+PASS #907 Run a WebAssembly test without special assertions
+PASS #908 Test that WebAssembly instantiation succeeds
+PASS #909 Run a WebAssembly test without special assertions
+PASS #910 Test that WebAssembly instantiation succeeds
+PASS #911 Run a WebAssembly test without special assertions
+PASS #912 Test that WebAssembly instantiation succeeds
+PASS #913 Run a WebAssembly test without special assertions
+PASS #914 Test that WebAssembly instantiation succeeds
+PASS #915 Run a WebAssembly test without special assertions
+PASS #916 Test that WebAssembly instantiation succeeds
+PASS #917 Run a WebAssembly test without special assertions
+PASS #918 Test that WebAssembly instantiation succeeds
+PASS #919 Run a WebAssembly test without special assertions
+PASS #920 Test that WebAssembly instantiation succeeds
+PASS #921 Run a WebAssembly test without special assertions
+PASS #922 Test that WebAssembly instantiation succeeds
+PASS #923 Run a WebAssembly test without special assertions
+PASS #924 Test that WebAssembly instantiation succeeds
+PASS #925 Run a WebAssembly test without special assertions
+PASS #926 Test that WebAssembly instantiation succeeds
+PASS #927 Run a WebAssembly test without special assertions
+PASS #928 Test that WebAssembly instantiation succeeds
+PASS #929 Run a WebAssembly test without special assertions
+PASS #930 Test that WebAssembly instantiation succeeds
+PASS #931 Run a WebAssembly test without special assertions
+PASS #932 Test that WebAssembly instantiation succeeds
+PASS #933 Run a WebAssembly test without special assertions
+PASS #934 Test that WebAssembly instantiation succeeds
+PASS #935 Run a WebAssembly test without special assertions
+PASS #936 Test that WebAssembly instantiation succeeds
+PASS #937 Run a WebAssembly test without special assertions
+PASS #938 Test that WebAssembly instantiation succeeds
+PASS #939 Run a WebAssembly test without special assertions
+PASS #940 Test that WebAssembly instantiation succeeds
+PASS #941 Run a WebAssembly test without special assertions
+PASS #942 Test that WebAssembly instantiation succeeds
+PASS #943 Run a WebAssembly test without special assertions
+PASS #944 Test that WebAssembly instantiation succeeds
+PASS #945 Run a WebAssembly test without special assertions
+PASS #946 Test that WebAssembly instantiation succeeds
+PASS #947 Run a WebAssembly test without special assertions
+PASS #948 Test that WebAssembly instantiation succeeds
+PASS #949 Run a WebAssembly test without special assertions
+PASS #950 Test that WebAssembly instantiation succeeds
+PASS #951 Run a WebAssembly test without special assertions
+PASS #952 Test that WebAssembly instantiation succeeds
+PASS #953 Run a WebAssembly test without special assertions
+PASS #954 Test that WebAssembly instantiation succeeds
+PASS #955 Run a WebAssembly test without special assertions
+PASS #956 Test that WebAssembly instantiation succeeds
+PASS #957 Run a WebAssembly test without special assertions
+PASS #958 Test that WebAssembly instantiation succeeds
+PASS #959 Run a WebAssembly test without special assertions
+PASS #960 Test that WebAssembly instantiation succeeds
+PASS #961 Run a WebAssembly test without special assertions
+PASS #962 Test that WebAssembly instantiation succeeds
+PASS #963 Run a WebAssembly test without special assertions
+PASS #964 Test that WebAssembly instantiation succeeds
+PASS #965 Run a WebAssembly test without special assertions
+PASS #966 Test that WebAssembly instantiation succeeds
+PASS #967 Run a WebAssembly test without special assertions
+PASS #968 Test that WebAssembly instantiation succeeds
+PASS #969 Run a WebAssembly test without special assertions
+PASS #970 Test that WebAssembly instantiation succeeds
+PASS #971 Run a WebAssembly test without special assertions
+PASS #972 Test that WebAssembly instantiation succeeds
+PASS #973 Run a WebAssembly test without special assertions
+PASS #974 Test that WebAssembly instantiation succeeds
+PASS #975 Run a WebAssembly test without special assertions
+PASS #976 Test that WebAssembly instantiation succeeds
+PASS #977 Run a WebAssembly test without special assertions
+PASS #978 Test that WebAssembly instantiation succeeds
+PASS #979 Run a WebAssembly test without special assertions
+PASS #980 Test that WebAssembly instantiation succeeds
+PASS #981 Run a WebAssembly test without special assertions
+PASS #982 Test that WebAssembly instantiation succeeds
+PASS #983 Run a WebAssembly test without special assertions
+PASS #984 Test that WebAssembly instantiation succeeds
+PASS #985 Run a WebAssembly test without special assertions
+PASS #986 Test that WebAssembly instantiation succeeds
+PASS #987 Run a WebAssembly test without special assertions
+PASS #988 Test that WebAssembly instantiation succeeds
+PASS #989 Run a WebAssembly test without special assertions
+PASS #990 Test that WebAssembly instantiation succeeds
+PASS #991 Run a WebAssembly test without special assertions
+PASS #992 Test that WebAssembly instantiation succeeds
+PASS #993 Run a WebAssembly test without special assertions
+PASS #994 Test that WebAssembly instantiation succeeds
+PASS #995 Run a WebAssembly test without special assertions
+PASS #996 Test that WebAssembly instantiation succeeds
+PASS #997 Run a WebAssembly test without special assertions
+PASS #998 Test that WebAssembly instantiation succeeds
+PASS #999 Run a WebAssembly test without special assertions
+PASS #1000 Test that WebAssembly instantiation succeeds
+PASS #1001 Run a WebAssembly test without special assertions
+PASS #1002 Test that WebAssembly instantiation succeeds
+PASS #1003 Run a WebAssembly test without special assertions
+PASS #1004 Test that WebAssembly instantiation succeeds
+PASS #1005 Run a WebAssembly test without special assertions
+PASS #1006 Test that WebAssembly instantiation succeeds
+PASS #1007 Run a WebAssembly test without special assertions
+PASS #1008 Test that WebAssembly instantiation succeeds
+PASS #1009 Run a WebAssembly test without special assertions
+PASS #1010 Test that WebAssembly instantiation succeeds
+PASS #1011 Run a WebAssembly test without special assertions
+PASS #1012 Test that WebAssembly instantiation succeeds
+PASS #1013 Run a WebAssembly test without special assertions
+PASS #1014 Test that WebAssembly instantiation succeeds
+PASS #1015 Run a WebAssembly test without special assertions
+PASS #1016 Test that WebAssembly instantiation succeeds
+PASS #1017 Run a WebAssembly test without special assertions
+PASS #1018 Test that WebAssembly instantiation succeeds
+PASS #1019 Run a WebAssembly test without special assertions
+PASS #1020 Test that WebAssembly instantiation succeeds
+PASS #1021 Run a WebAssembly test without special assertions
+PASS #1022 Test that WebAssembly instantiation succeeds
+PASS #1023 Run a WebAssembly test without special assertions
+PASS #1024 Test that WebAssembly instantiation succeeds
+PASS #1025 Run a WebAssembly test without special assertions
+PASS #1026 Test that WebAssembly instantiation succeeds
+PASS #1027 Run a WebAssembly test without special assertions
+PASS #1028 Test that WebAssembly instantiation succeeds
+PASS #1029 Run a WebAssembly test without special assertions
+PASS #1030 Test that WebAssembly instantiation succeeds
+PASS #1031 Run a WebAssembly test without special assertions
+PASS #1032 Test that WebAssembly instantiation succeeds
+PASS #1033 Run a WebAssembly test without special assertions
+PASS #1034 Test that WebAssembly instantiation succeeds
+PASS #1035 Run a WebAssembly test without special assertions
+PASS #1036 Test that WebAssembly instantiation succeeds
+PASS #1037 Run a WebAssembly test without special assertions
+PASS #1038 Test that WebAssembly instantiation succeeds
+PASS #1039 Run a WebAssembly test without special assertions
+PASS #1040 Test that WebAssembly instantiation succeeds
+PASS #1041 Run a WebAssembly test without special assertions
+PASS #1042 Test that WebAssembly instantiation succeeds
+PASS #1043 Run a WebAssembly test without special assertions
+PASS #1044 Test that WebAssembly instantiation succeeds
+PASS #1045 Run a WebAssembly test without special assertions
+PASS #1046 Test that WebAssembly instantiation succeeds
+PASS #1047 Run a WebAssembly test without special assertions
+PASS #1048 Test that WebAssembly instantiation succeeds
+PASS #1049 Run a WebAssembly test without special assertions
+PASS #1050 Test that WebAssembly instantiation succeeds
+PASS #1051 Run a WebAssembly test without special assertions
+PASS #1052 Test that WebAssembly instantiation succeeds
+PASS #1053 Run a WebAssembly test without special assertions
+PASS #1054 Test that WebAssembly instantiation succeeds
+PASS #1055 Run a WebAssembly test without special assertions
+PASS #1056 Test that WebAssembly instantiation succeeds
+PASS #1057 Run a WebAssembly test without special assertions
+PASS #1058 Test that WebAssembly instantiation succeeds
+PASS #1059 Run a WebAssembly test without special assertions
+PASS #1060 Test that WebAssembly instantiation succeeds
+PASS #1061 Run a WebAssembly test without special assertions
+PASS #1062 Test that WebAssembly instantiation succeeds
+PASS #1063 Run a WebAssembly test without special assertions
+PASS #1064 Test that WebAssembly instantiation succeeds
+PASS #1065 Run a WebAssembly test without special assertions
+PASS #1066 Test that WebAssembly instantiation succeeds
+PASS #1067 Run a WebAssembly test without special assertions
+PASS #1068 Test that WebAssembly instantiation succeeds
+PASS #1069 Run a WebAssembly test without special assertions
+PASS #1070 Test that WebAssembly instantiation succeeds
+PASS #1071 Run a WebAssembly test without special assertions
+PASS #1072 Test that WebAssembly instantiation succeeds
+PASS #1073 Run a WebAssembly test without special assertions
+PASS #1074 Test that WebAssembly instantiation succeeds
+PASS #1075 Run a WebAssembly test without special assertions
+PASS #1076 Test that WebAssembly instantiation succeeds
+PASS #1077 Run a WebAssembly test without special assertions
+PASS #1078 Test that WebAssembly instantiation succeeds
+PASS #1079 Run a WebAssembly test without special assertions
+PASS #1080 Test that WebAssembly instantiation succeeds
+PASS #1081 Run a WebAssembly test without special assertions
+PASS #1082 Test that WebAssembly instantiation succeeds
+PASS #1083 Run a WebAssembly test without special assertions
+PASS #1084 Test that WebAssembly instantiation succeeds
+PASS #1085 Run a WebAssembly test without special assertions
+PASS #1086 Test that WebAssembly instantiation succeeds
+PASS #1087 Run a WebAssembly test without special assertions
+PASS #1088 Test that WebAssembly instantiation succeeds
+PASS #1089 Run a WebAssembly test without special assertions
+PASS #1090 Test that WebAssembly instantiation succeeds
+PASS #1091 Run a WebAssembly test without special assertions
+PASS #1092 Test that WebAssembly instantiation succeeds
+PASS #1093 Run a WebAssembly test without special assertions
+PASS #1094 Test that WebAssembly instantiation succeeds
+PASS #1095 Run a WebAssembly test without special assertions
+PASS #1096 Test that WebAssembly instantiation succeeds
+PASS #1097 Run a WebAssembly test without special assertions
+PASS #1098 Test that WebAssembly instantiation succeeds
+PASS #1099 Run a WebAssembly test without special assertions
+PASS #1100 Test that WebAssembly instantiation succeeds
+PASS #1101 Run a WebAssembly test without special assertions
+PASS #1102 Test that WebAssembly instantiation succeeds
+PASS #1103 Run a WebAssembly test without special assertions
+PASS #1104 Test that WebAssembly instantiation succeeds
+PASS #1105 Run a WebAssembly test without special assertions
+PASS #1106 Test that WebAssembly instantiation succeeds
+PASS #1107 Run a WebAssembly test without special assertions
+PASS #1108 Test that WebAssembly instantiation succeeds
+PASS #1109 Run a WebAssembly test without special assertions
+PASS #1110 Test that WebAssembly instantiation succeeds
+PASS #1111 Run a WebAssembly test without special assertions
+PASS #1112 Test that WebAssembly instantiation succeeds
+PASS #1113 Run a WebAssembly test without special assertions
+PASS #1114 Test that WebAssembly instantiation succeeds
+PASS #1115 Run a WebAssembly test without special assertions
+PASS #1116 Test that WebAssembly instantiation succeeds
+PASS #1117 Run a WebAssembly test without special assertions
+PASS #1118 Test that WebAssembly instantiation succeeds
+PASS #1119 Run a WebAssembly test without special assertions
+PASS #1120 Test that WebAssembly instantiation succeeds
+PASS #1121 Run a WebAssembly test without special assertions
+PASS #1122 Test that WebAssembly instantiation succeeds
+PASS #1123 Run a WebAssembly test without special assertions
+PASS #1124 Test that WebAssembly instantiation succeeds
+PASS #1125 Run a WebAssembly test without special assertions
+PASS #1126 Test that WebAssembly instantiation succeeds
+PASS #1127 Run a WebAssembly test without special assertions
+PASS #1128 Test that WebAssembly instantiation succeeds
+PASS #1129 Run a WebAssembly test without special assertions
+PASS #1130 Test that WebAssembly instantiation succeeds
+PASS #1131 Run a WebAssembly test without special assertions
+PASS #1132 Test that WebAssembly instantiation succeeds
+PASS #1133 Run a WebAssembly test without special assertions
+PASS #1134 Test that WebAssembly instantiation succeeds
+PASS #1135 Run a WebAssembly test without special assertions
+PASS #1136 Test that WebAssembly instantiation succeeds
+PASS #1137 Run a WebAssembly test without special assertions
+PASS #1138 Test that WebAssembly instantiation succeeds
+PASS #1139 Run a WebAssembly test without special assertions
+PASS #1140 Test that WebAssembly instantiation succeeds
+PASS #1141 Run a WebAssembly test without special assertions
+PASS #1142 Test that WebAssembly instantiation succeeds
+PASS #1143 Run a WebAssembly test without special assertions
+PASS #1144 Test that WebAssembly instantiation succeeds
+PASS #1145 Run a WebAssembly test without special assertions
+PASS #1146 Test that WebAssembly instantiation succeeds
+PASS #1147 Run a WebAssembly test without special assertions
+PASS #1148 Test that WebAssembly instantiation succeeds
+PASS #1149 Run a WebAssembly test without special assertions
+PASS #1150 Test that WebAssembly instantiation succeeds
+PASS #1151 Run a WebAssembly test without special assertions
+PASS #1152 Test that WebAssembly instantiation succeeds
+PASS #1153 Run a WebAssembly test without special assertions
+PASS #1154 Test that WebAssembly instantiation succeeds
+PASS #1155 Run a WebAssembly test without special assertions
+PASS #1156 Test that WebAssembly instantiation succeeds
+PASS #1157 Run a WebAssembly test without special assertions
+PASS #1158 Test that WebAssembly instantiation succeeds
+PASS #1159 Run a WebAssembly test without special assertions
+PASS #1160 Test that WebAssembly instantiation succeeds
+PASS #1161 Run a WebAssembly test without special assertions
+PASS #1162 Test that WebAssembly instantiation succeeds
+PASS #1163 Run a WebAssembly test without special assertions
+PASS #1164 Test that WebAssembly instantiation succeeds
+PASS #1165 Run a WebAssembly test without special assertions
+PASS #1166 Test that WebAssembly instantiation succeeds
+PASS #1167 Run a WebAssembly test without special assertions
+PASS #1168 Test that WebAssembly instantiation succeeds
+PASS #1169 Run a WebAssembly test without special assertions
+PASS #1170 Test that WebAssembly instantiation succeeds
+PASS #1171 Run a WebAssembly test without special assertions
+PASS #1172 Test that WebAssembly instantiation succeeds
+PASS #1173 Run a WebAssembly test without special assertions
+PASS #1174 Test that WebAssembly instantiation succeeds
+PASS #1175 Run a WebAssembly test without special assertions
+PASS #1176 Test that WebAssembly instantiation succeeds
+PASS #1177 Run a WebAssembly test without special assertions
+PASS #1178 Test that WebAssembly instantiation succeeds
+PASS #1179 Run a WebAssembly test without special assertions
+PASS #1180 Test that WebAssembly instantiation succeeds
+PASS #1181 Run a WebAssembly test without special assertions
+PASS #1182 Test that WebAssembly instantiation succeeds
+PASS #1183 Run a WebAssembly test without special assertions
+PASS #1184 Test that WebAssembly instantiation succeeds
+PASS #1185 Run a WebAssembly test without special assertions
+PASS #1186 Test that WebAssembly instantiation succeeds
+PASS #1187 Run a WebAssembly test without special assertions
+PASS #1188 Test that WebAssembly instantiation succeeds
+PASS #1189 Run a WebAssembly test without special assertions
+PASS #1190 Test that WebAssembly instantiation succeeds
+PASS #1191 Run a WebAssembly test without special assertions
+PASS #1192 Test that WebAssembly instantiation succeeds
+PASS #1193 Run a WebAssembly test without special assertions
+PASS #1194 Test that WebAssembly instantiation succeeds
+PASS #1195 Run a WebAssembly test without special assertions
+PASS #1196 Test that WebAssembly instantiation succeeds
+PASS #1197 Run a WebAssembly test without special assertions
+PASS #1198 Test that WebAssembly instantiation succeeds
+PASS #1199 Run a WebAssembly test without special assertions
+PASS #1200 Test that WebAssembly instantiation succeeds
+PASS #1201 Run a WebAssembly test without special assertions
+PASS #1202 Test that WebAssembly instantiation succeeds
+PASS #1203 Run a WebAssembly test without special assertions
+PASS #1204 Test that WebAssembly instantiation succeeds
+PASS #1205 Run a WebAssembly test without special assertions
+PASS #1206 Test that WebAssembly instantiation succeeds
+PASS #1207 Run a WebAssembly test without special assertions
+PASS #1208 Test that WebAssembly instantiation succeeds
+PASS #1209 Run a WebAssembly test without special assertions
+PASS #1210 Test that WebAssembly instantiation succeeds
+PASS #1211 Run a WebAssembly test without special assertions
+PASS #1212 Test that WebAssembly instantiation succeeds
+PASS #1213 Run a WebAssembly test without special assertions
+PASS #1214 Test that WebAssembly instantiation succeeds
+PASS #1215 Run a WebAssembly test without special assertions
+PASS #1216 Test that WebAssembly instantiation succeeds
+PASS #1217 Run a WebAssembly test without special assertions
+PASS #1218 Test that WebAssembly instantiation succeeds
+PASS #1219 Run a WebAssembly test without special assertions
+PASS #1220 Test that WebAssembly instantiation succeeds
+PASS #1221 Run a WebAssembly test without special assertions
+PASS #1222 Test that WebAssembly instantiation succeeds
+PASS #1223 Run a WebAssembly test without special assertions
+PASS #1224 Test that WebAssembly instantiation succeeds
+PASS #1225 Run a WebAssembly test without special assertions
+PASS #1226 Test that WebAssembly instantiation succeeds
+PASS #1227 Run a WebAssembly test without special assertions
+PASS #1228 Test that WebAssembly instantiation succeeds
+PASS #1229 Run a WebAssembly test without special assertions
+PASS #1230 Test that WebAssembly instantiation succeeds
+PASS #1231 Run a WebAssembly test without special assertions
+PASS #1232 Test that WebAssembly instantiation succeeds
+PASS #1233 Run a WebAssembly test without special assertions
+PASS #1234 Test that WebAssembly instantiation succeeds
+PASS #1235 Run a WebAssembly test without special assertions
+PASS #1236 Test that WebAssembly instantiation succeeds
+PASS #1237 Run a WebAssembly test without special assertions
+PASS #1238 Test that WebAssembly instantiation succeeds
+PASS #1239 Run a WebAssembly test without special assertions
+PASS #1240 Test that WebAssembly instantiation succeeds
+PASS #1241 Run a WebAssembly test without special assertions
+PASS #1242 Test that WebAssembly instantiation succeeds
+PASS #1243 Run a WebAssembly test without special assertions
+PASS #1244 Test that WebAssembly instantiation succeeds
+PASS #1245 Run a WebAssembly test without special assertions
+PASS #1246 Test that WebAssembly instantiation succeeds
+PASS #1247 Run a WebAssembly test without special assertions
+PASS #1248 Test that WebAssembly instantiation succeeds
+PASS #1249 Run a WebAssembly test without special assertions
+PASS #1250 Test that WebAssembly instantiation succeeds
+PASS #1251 Run a WebAssembly test without special assertions
+PASS #1252 Test that WebAssembly instantiation succeeds
+PASS #1253 Run a WebAssembly test without special assertions
+PASS #1254 Test that WebAssembly instantiation succeeds
+PASS #1255 Run a WebAssembly test without special assertions
+PASS #1256 Test that WebAssembly instantiation succeeds
+PASS #1257 Run a WebAssembly test without special assertions
+PASS #1258 Test that WebAssembly instantiation succeeds
+PASS #1259 Run a WebAssembly test without special assertions
+PASS #1260 Test that WebAssembly instantiation succeeds
+PASS #1261 Run a WebAssembly test without special assertions
+PASS #1262 Test that WebAssembly instantiation succeeds
+PASS #1263 Run a WebAssembly test without special assertions
+PASS #1264 Test that WebAssembly instantiation succeeds
+PASS #1265 Run a WebAssembly test without special assertions
+PASS #1266 Test that WebAssembly instantiation succeeds
+PASS #1267 Run a WebAssembly test without special assertions
+PASS #1268 Test that WebAssembly instantiation succeeds
+PASS #1269 Run a WebAssembly test without special assertions
+PASS #1270 Test that WebAssembly instantiation succeeds
+PASS #1271 Run a WebAssembly test without special assertions
+PASS #1272 Test that WebAssembly instantiation succeeds
+PASS #1273 Run a WebAssembly test without special assertions
+PASS #1274 Test that WebAssembly instantiation succeeds
+PASS #1275 Run a WebAssembly test without special assertions
+PASS #1276 Test that WebAssembly instantiation succeeds
+PASS #1277 Run a WebAssembly test without special assertions
+PASS #1278 Test that WebAssembly instantiation succeeds
+PASS #1279 Run a WebAssembly test without special assertions
+PASS #1280 Test that WebAssembly instantiation succeeds
+PASS #1281 Run a WebAssembly test without special assertions
+PASS #1282 Test that WebAssembly instantiation succeeds
+PASS #1283 Run a WebAssembly test without special assertions
+PASS #1284 Test that WebAssembly instantiation succeeds
+PASS #1285 Run a WebAssembly test without special assertions
+PASS #1286 Test that WebAssembly instantiation succeeds
+PASS #1287 Run a WebAssembly test without special assertions
+PASS #1288 Test that WebAssembly instantiation succeeds
+PASS #1289 Run a WebAssembly test without special assertions
+PASS #1290 Test that WebAssembly instantiation succeeds
+PASS #1291 Run a WebAssembly test without special assertions
+PASS #1292 Test that WebAssembly instantiation succeeds
+PASS #1293 Run a WebAssembly test without special assertions
+PASS #1294 Test that WebAssembly instantiation succeeds
+PASS #1295 Run a WebAssembly test without special assertions
+PASS #1296 Test that WebAssembly instantiation succeeds
+PASS #1297 Run a WebAssembly test without special assertions
+PASS #1298 Test that WebAssembly instantiation succeeds
+PASS #1299 Run a WebAssembly test without special assertions
+PASS #1300 Test that WebAssembly instantiation succeeds
+PASS #1301 Run a WebAssembly test without special assertions
+PASS #1302 Test that WebAssembly instantiation succeeds
+PASS #1303 Run a WebAssembly test without special assertions
+PASS #1304 Test that WebAssembly instantiation succeeds
+PASS #1305 Run a WebAssembly test without special assertions
+PASS #1306 Test that WebAssembly instantiation succeeds
+PASS #1307 Run a WebAssembly test without special assertions
+PASS #1308 Test that WebAssembly instantiation succeeds
+PASS #1309 Run a WebAssembly test without special assertions
+PASS #1310 Test that WebAssembly instantiation succeeds
+PASS #1311 Run a WebAssembly test without special assertions
+PASS #1312 Test that WebAssembly instantiation succeeds
+PASS #1313 Run a WebAssembly test without special assertions
+PASS #1314 Test that WebAssembly instantiation succeeds
+PASS #1315 Run a WebAssembly test without special assertions
+PASS #1316 Test that WebAssembly instantiation succeeds
+PASS #1317 Run a WebAssembly test without special assertions
+PASS #1318 Test that WebAssembly instantiation succeeds
+PASS #1319 Run a WebAssembly test without special assertions
+PASS #1320 Test that WebAssembly instantiation succeeds
+PASS #1321 Run a WebAssembly test without special assertions
+PASS #1322 Test that WebAssembly instantiation succeeds
+PASS #1323 Run a WebAssembly test without special assertions
+PASS #1324 Test that WebAssembly instantiation succeeds
+PASS #1325 Run a WebAssembly test without special assertions
+PASS #1326 Test that WebAssembly instantiation succeeds
+PASS #1327 Run a WebAssembly test without special assertions
+PASS #1328 Test that WebAssembly instantiation succeeds
+PASS #1329 Run a WebAssembly test without special assertions
+PASS #1330 Test that WebAssembly instantiation succeeds
+PASS #1331 Run a WebAssembly test without special assertions
+PASS #1332 Test that WebAssembly instantiation succeeds
+PASS #1333 Run a WebAssembly test without special assertions
+PASS #1334 Test that WebAssembly instantiation succeeds
+PASS #1335 Run a WebAssembly test without special assertions
+PASS #1336 Test that WebAssembly instantiation succeeds
+PASS #1337 Run a WebAssembly test without special assertions
+PASS #1338 Test that WebAssembly instantiation succeeds
+PASS #1339 Run a WebAssembly test without special assertions
+PASS #1340 Test that WebAssembly instantiation succeeds
+PASS #1341 Run a WebAssembly test without special assertions
+PASS #1342 Test that WebAssembly instantiation succeeds
+PASS #1343 Run a WebAssembly test without special assertions
+PASS #1344 Test that WebAssembly instantiation succeeds
+PASS #1345 Run a WebAssembly test without special assertions
+PASS #1346 Test that WebAssembly instantiation succeeds
+PASS #1347 Run a WebAssembly test without special assertions
+PASS #1348 Test that WebAssembly instantiation succeeds
+PASS #1349 Run a WebAssembly test without special assertions
+PASS #1350 Test that WebAssembly instantiation succeeds
+PASS #1351 Run a WebAssembly test without special assertions
+PASS #1352 Test that WebAssembly instantiation succeeds
+PASS #1353 Run a WebAssembly test without special assertions
+PASS #1354 Test that WebAssembly instantiation succeeds
+PASS #1355 Run a WebAssembly test without special assertions
+PASS #1356 Test that WebAssembly instantiation succeeds
+PASS #1357 Run a WebAssembly test without special assertions
+PASS #1358 Test that WebAssembly instantiation succeeds
+PASS #1359 Run a WebAssembly test without special assertions
+PASS #1360 Test that WebAssembly instantiation succeeds
+PASS #1361 Run a WebAssembly test without special assertions
+PASS #1362 Test that WebAssembly instantiation succeeds
+PASS #1363 Run a WebAssembly test without special assertions
+PASS #1364 Test that WebAssembly instantiation succeeds
+PASS #1365 Run a WebAssembly test without special assertions
+PASS #1366 Test that WebAssembly instantiation succeeds
+PASS #1367 Run a WebAssembly test without special assertions
+PASS #1368 Test that WebAssembly instantiation succeeds
+PASS #1369 Run a WebAssembly test without special assertions
+PASS #1370 Test that WebAssembly instantiation succeeds
+PASS #1371 Run a WebAssembly test without special assertions
+PASS #1372 Test that WebAssembly instantiation succeeds
+PASS #1373 Run a WebAssembly test without special assertions
+PASS #1374 Test that WebAssembly instantiation succeeds
+PASS #1375 Run a WebAssembly test without special assertions
+PASS #1376 Test that WebAssembly instantiation succeeds
+PASS #1377 Run a WebAssembly test without special assertions
+PASS #1378 Test that WebAssembly instantiation succeeds
+PASS #1379 Run a WebAssembly test without special assertions
+PASS #1380 Test that WebAssembly instantiation succeeds
+PASS #1381 Run a WebAssembly test without special assertions
+PASS #1382 Test that WebAssembly instantiation succeeds
+PASS #1383 Run a WebAssembly test without special assertions
+PASS #1384 Test that WebAssembly instantiation succeeds
+PASS #1385 Run a WebAssembly test without special assertions
+PASS #1386 Test that WebAssembly instantiation succeeds
+PASS #1387 Run a WebAssembly test without special assertions
+PASS #1388 Test that WebAssembly instantiation succeeds
+PASS #1389 Run a WebAssembly test without special assertions
+PASS #1390 Test that WebAssembly instantiation succeeds
+PASS #1391 Run a WebAssembly test without special assertions
+PASS #1392 Test that WebAssembly instantiation succeeds
+PASS #1393 Run a WebAssembly test without special assertions
+PASS #1394 Test that WebAssembly instantiation succeeds
+PASS #1395 Run a WebAssembly test without special assertions
+PASS #1396 Test that WebAssembly instantiation succeeds
+PASS #1397 Run a WebAssembly test without special assertions
+PASS #1398 Test that WebAssembly instantiation succeeds
+PASS #1399 Run a WebAssembly test without special assertions
+PASS #1400 Test that WebAssembly instantiation succeeds
+PASS #1401 Run a WebAssembly test without special assertions
+PASS #1402 Test that WebAssembly instantiation succeeds
+PASS #1403 Run a WebAssembly test without special assertions
+PASS #1404 Test that WebAssembly instantiation succeeds
+PASS #1405 Run a WebAssembly test without special assertions
+PASS #1406 Test that WebAssembly instantiation succeeds
+PASS #1407 Run a WebAssembly test without special assertions
+PASS #1408 Test that WebAssembly instantiation succeeds
+PASS #1409 Run a WebAssembly test without special assertions
+PASS #1410 Test that WebAssembly instantiation succeeds
+PASS #1411 Run a WebAssembly test without special assertions
+PASS #1412 Test that WebAssembly instantiation succeeds
+PASS #1413 Run a WebAssembly test without special assertions
+PASS #1414 Test that WebAssembly instantiation succeeds
+PASS #1415 Run a WebAssembly test without special assertions
+PASS #1416 Test that WebAssembly instantiation succeeds
+PASS #1417 Run a WebAssembly test without special assertions
+PASS #1418 Test that WebAssembly instantiation succeeds
+PASS #1419 Run a WebAssembly test without special assertions
+PASS #1420 Test that WebAssembly instantiation succeeds
+PASS #1421 Run a WebAssembly test without special assertions
+PASS #1422 Test that WebAssembly instantiation succeeds
+PASS #1423 Run a WebAssembly test without special assertions
+PASS #1424 Test that WebAssembly instantiation succeeds
+PASS #1425 Run a WebAssembly test without special assertions
+PASS #1426 Test that WebAssembly instantiation succeeds
+PASS #1427 Run a WebAssembly test without special assertions
+PASS #1428 Test that WebAssembly instantiation succeeds
+PASS #1429 Run a WebAssembly test without special assertions
+PASS #1430 Test that WebAssembly instantiation succeeds
+PASS #1431 Run a WebAssembly test without special assertions
+PASS #1432 Test that WebAssembly instantiation succeeds
+PASS #1433 Run a WebAssembly test without special assertions
+PASS #1434 Test that WebAssembly instantiation succeeds
+PASS #1435 Run a WebAssembly test without special assertions
+PASS #1436 Test that WebAssembly instantiation succeeds
+PASS #1437 Run a WebAssembly test without special assertions
+PASS #1438 Test that WebAssembly instantiation succeeds
+PASS #1439 Run a WebAssembly test without special assertions
+PASS #1440 Test that WebAssembly instantiation succeeds
+PASS #1441 Run a WebAssembly test without special assertions
+PASS #1442 Test that WebAssembly instantiation succeeds
+PASS #1443 Run a WebAssembly test without special assertions
+PASS #1444 Test that WebAssembly instantiation succeeds
+PASS #1445 Run a WebAssembly test without special assertions
+PASS #1446 Test that WebAssembly instantiation succeeds
+PASS #1447 Run a WebAssembly test without special assertions
+PASS #1448 Test that WebAssembly instantiation succeeds
+PASS #1449 Run a WebAssembly test without special assertions
+PASS #1450 Test that WebAssembly instantiation succeeds
+PASS #1451 Run a WebAssembly test without special assertions
+PASS #1452 Test that WebAssembly instantiation succeeds
+PASS #1453 Run a WebAssembly test without special assertions
+PASS #1454 Test that WebAssembly instantiation succeeds
+PASS #1455 Run a WebAssembly test without special assertions
+PASS #1456 Test that WebAssembly instantiation succeeds
+PASS #1457 Run a WebAssembly test without special assertions
+PASS #1458 Test that WebAssembly instantiation succeeds
+PASS #1459 Run a WebAssembly test without special assertions
+PASS #1460 Test that WebAssembly instantiation succeeds
+PASS #1461 Run a WebAssembly test without special assertions
+PASS #1462 Test that WebAssembly instantiation succeeds
+PASS #1463 Run a WebAssembly test without special assertions
+PASS #1464 Test that WebAssembly instantiation succeeds
+PASS #1465 Run a WebAssembly test without special assertions
+PASS #1466 Test that WebAssembly instantiation succeeds
+PASS #1467 Run a WebAssembly test without special assertions
+PASS #1468 Test that WebAssembly instantiation succeeds
+PASS #1469 Run a WebAssembly test without special assertions
+PASS #1470 Test that WebAssembly instantiation succeeds
+PASS #1471 Run a WebAssembly test without special assertions
+PASS #1472 Test that WebAssembly instantiation succeeds
+PASS #1473 Run a WebAssembly test without special assertions
+PASS #1474 Test that WebAssembly instantiation succeeds
+PASS #1475 Run a WebAssembly test without special assertions
+PASS #1476 Test that WebAssembly instantiation succeeds
+PASS #1477 Run a WebAssembly test without special assertions
+PASS #1478 Test that WebAssembly instantiation succeeds
+PASS #1479 Run a WebAssembly test without special assertions
+PASS #1480 Test that WebAssembly instantiation succeeds
+PASS #1481 Run a WebAssembly test without special assertions
+PASS #1482 Test that WebAssembly instantiation succeeds
+PASS #1483 Run a WebAssembly test without special assertions
+PASS #1484 Test that WebAssembly instantiation succeeds
+PASS #1485 Run a WebAssembly test without special assertions
+PASS #1486 Test that WebAssembly instantiation succeeds
+PASS #1487 Run a WebAssembly test without special assertions
+PASS #1488 Test that WebAssembly instantiation succeeds
+PASS #1489 Run a WebAssembly test without special assertions
+PASS #1490 Test that WebAssembly instantiation succeeds
+PASS #1491 Run a WebAssembly test without special assertions
+PASS #1492 Test that WebAssembly instantiation succeeds
+PASS #1493 Run a WebAssembly test without special assertions
+PASS #1494 Test that WebAssembly instantiation succeeds
+PASS #1495 Run a WebAssembly test without special assertions
+PASS #1496 Test that WebAssembly instantiation succeeds
+PASS #1497 Run a WebAssembly test without special assertions
+PASS #1498 Test that WebAssembly instantiation succeeds
+PASS #1499 Run a WebAssembly test without special assertions
+PASS #1500 Test that WebAssembly instantiation succeeds
+PASS #1501 Run a WebAssembly test without special assertions
+PASS #1502 Test that WebAssembly instantiation succeeds
+PASS #1503 Run a WebAssembly test without special assertions
+PASS #1504 Test that WebAssembly instantiation succeeds
+PASS #1505 Run a WebAssembly test without special assertions
+PASS #1506 Test that WebAssembly instantiation succeeds
+PASS #1507 Run a WebAssembly test without special assertions
+PASS #1508 Test that WebAssembly instantiation succeeds
+PASS #1509 Run a WebAssembly test without special assertions
+PASS #1510 Test that WebAssembly instantiation succeeds
+PASS #1511 Run a WebAssembly test without special assertions
+PASS #1512 Test that WebAssembly instantiation succeeds
+PASS #1513 Run a WebAssembly test without special assertions
+PASS #1514 Test that WebAssembly instantiation succeeds
+PASS #1515 Run a WebAssembly test without special assertions
+PASS #1516 Test that WebAssembly instantiation succeeds
+PASS #1517 Run a WebAssembly test without special assertions
+PASS #1518 Test that WebAssembly instantiation succeeds
+PASS #1519 Run a WebAssembly test without special assertions
+PASS #1520 Test that WebAssembly instantiation succeeds
+PASS #1521 Run a WebAssembly test without special assertions
+PASS #1522 Test that WebAssembly instantiation succeeds
+PASS #1523 Run a WebAssembly test without special assertions
+PASS #1524 Test that WebAssembly instantiation succeeds
+PASS #1525 Run a WebAssembly test without special assertions
+PASS #1526 Test that WebAssembly instantiation succeeds
+PASS #1527 Run a WebAssembly test without special assertions
+PASS #1528 Test that WebAssembly instantiation succeeds
+PASS #1529 Run a WebAssembly test without special assertions
+PASS #1530 Test that WebAssembly instantiation succeeds
+PASS #1531 Run a WebAssembly test without special assertions
+PASS #1532 Test that WebAssembly instantiation succeeds
+PASS #1533 Run a WebAssembly test without special assertions
+PASS #1534 Test that WebAssembly instantiation succeeds
+PASS #1535 Run a WebAssembly test without special assertions
+PASS #1536 Test that WebAssembly instantiation succeeds
+PASS #1537 Run a WebAssembly test without special assertions
+PASS #1538 Test that WebAssembly instantiation succeeds
+PASS #1539 Run a WebAssembly test without special assertions
+PASS #1540 Test that WebAssembly instantiation succeeds
+PASS #1541 Run a WebAssembly test without special assertions
+PASS #1542 Test that WebAssembly instantiation succeeds
+PASS #1543 Run a WebAssembly test without special assertions
+PASS #1544 Test that WebAssembly instantiation succeeds
+PASS #1545 Run a WebAssembly test without special assertions
+PASS #1546 Test that WebAssembly instantiation succeeds
+PASS #1547 Run a WebAssembly test without special assertions
+PASS #1548 Test that WebAssembly instantiation succeeds
+PASS #1549 Run a WebAssembly test without special assertions
+PASS #1550 Test that WebAssembly instantiation succeeds
+PASS #1551 Run a WebAssembly test without special assertions
+PASS #1552 Test that WebAssembly instantiation succeeds
+PASS #1553 Run a WebAssembly test without special assertions
+PASS #1554 Test that WebAssembly instantiation succeeds
+PASS #1555 Run a WebAssembly test without special assertions
+PASS #1556 Test that WebAssembly instantiation succeeds
+PASS #1557 Run a WebAssembly test without special assertions
+PASS #1558 Test that WebAssembly instantiation succeeds
+PASS #1559 Run a WebAssembly test without special assertions
+PASS #1560 Test that WebAssembly instantiation succeeds
+PASS #1561 Run a WebAssembly test without special assertions
+PASS #1562 Test that WebAssembly instantiation succeeds
+PASS #1563 Run a WebAssembly test without special assertions
+PASS #1564 Test that WebAssembly instantiation succeeds
+PASS #1565 Run a WebAssembly test without special assertions
+PASS #1566 Test that WebAssembly instantiation succeeds
+PASS #1567 Run a WebAssembly test without special assertions
+PASS #1568 Test that WebAssembly instantiation succeeds
+PASS #1569 Run a WebAssembly test without special assertions
+PASS #1570 Test that WebAssembly instantiation succeeds
+PASS #1571 Run a WebAssembly test without special assertions
+PASS #1572 Test that WebAssembly instantiation succeeds
+PASS #1573 Run a WebAssembly test without special assertions
+PASS #1574 Test that WebAssembly instantiation succeeds
+PASS #1575 Run a WebAssembly test without special assertions
+PASS #1576 Test that WebAssembly instantiation succeeds
+PASS #1577 Run a WebAssembly test without special assertions
+PASS #1578 Test that WebAssembly instantiation succeeds
+PASS #1579 Run a WebAssembly test without special assertions
+PASS #1580 Test that WebAssembly instantiation succeeds
+PASS #1581 Run a WebAssembly test without special assertions
+PASS #1582 Test that WebAssembly instantiation succeeds
+PASS #1583 Run a WebAssembly test without special assertions
+PASS #1584 Test that WebAssembly instantiation succeeds
+PASS #1585 Run a WebAssembly test without special assertions
+PASS #1586 Test that WebAssembly instantiation succeeds
+PASS #1587 Run a WebAssembly test without special assertions
+PASS #1588 Test that WebAssembly instantiation succeeds
+PASS #1589 Run a WebAssembly test without special assertions
+PASS #1590 Test that WebAssembly compilation fails
+PASS #1591 Test that WebAssembly compilation fails
+PASS #1592 Test that WebAssembly compilation fails
+PASS #1593 Test that WebAssembly compilation fails
+PASS #1594 Test that WebAssembly compilation fails
+PASS #1595 Test that WebAssembly compilation fails
+PASS #1596 Test that WebAssembly compilation fails
+PASS #1597 Test that WebAssembly compilation fails
+PASS #1598 Test that WebAssembly instantiation succeeds
+PASS #1599 Test that WebAssembly instantiation succeeds
+PASS #1600 Run a WebAssembly test without special assertions
+PASS #1601 Test that WebAssembly instantiation succeeds
+PASS #1602 Run a WebAssembly test without special assertions
+PASS #1603 Test that WebAssembly instantiation succeeds
+PASS #1604 Run a WebAssembly test without special assertions
+PASS #1605 Test that WebAssembly instantiation succeeds
+PASS #1606 Run a WebAssembly test without special assertions
+

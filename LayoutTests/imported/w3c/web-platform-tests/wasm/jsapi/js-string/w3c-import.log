@@ -14,7 +14,7 @@ Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
 List of files:
-/LayoutTests/imported/w3c/web-platform-tests/wasm/jsapi/js-string/basic.tentative.any.js
-/LayoutTests/imported/w3c/web-platform-tests/wasm/jsapi/js-string/constants.tentative.any.js
-/LayoutTests/imported/w3c/web-platform-tests/wasm/jsapi/js-string/imports.tentative.any.js
+/LayoutTests/imported/w3c/web-platform-tests/wasm/jsapi/js-string/basic.any.js
+/LayoutTests/imported/w3c/web-platform-tests/wasm/jsapi/js-string/constants.any.js
+/LayoutTests/imported/w3c/web-platform-tests/wasm/jsapi/js-string/imports.any.js
 /LayoutTests/imported/w3c/web-platform-tests/wasm/jsapi/js-string/polyfill.js

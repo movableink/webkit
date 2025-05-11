@@ -4428,3 +4428,22 @@ fast/text/combining-character-sequence-vertical.html [ ImageOnlyFailure ]
 fast/text/complex-initial-advance.html [ ImageOnlyFailure ]
 fast/text/font-loading-local.html [ Failure ]
 fast/text/midword-break-before-surrogate-pair.html [ Failure ]
+
+# Failures in new tests introduced by a re-sync of imported wasm tests: https://bugs.webkit.org/show_bug.cgi?id=292629
+# We believe they are benign and caused by one of the two things:
+# 1) the difference in the URLs appearing in the expected and actual output
+imported/w3c/web-platform-tests/wasm/core/data.wast.js.html [ Failure Pass ]
+imported/w3c/web-platform-tests/wasm/core/elem.wast.js.html [ Failure Pass ]
+imported/w3c/web-platform-tests/wasm/core/global.wast.js.html [ Failure Pass ]
+imported/w3c/web-platform-tests/wasm/core/unreached-invalid.wast.js.html [ Failure Pass ]
+# 2) tests timing out on wimpy Windows test machines
+imported/w3c/web-platform-tests/wasm/core/f32.wast.js.html [ Timeout Pass ]
+imported/w3c/web-platform-tests/wasm/core/f32_cmp.wast.js.html [ Timeout Pass ]
+imported/w3c/web-platform-tests/wasm/core/f64.wast.js.html [ Timeout Pass ]
+imported/w3c/web-platform-tests/wasm/core/f64_cmp.wast.js.html [ Timeout Pass ]
+imported/w3c/web-platform-tests/wasm/core/simd/simd_f32x4_arith.wast.js.html [ Timeout Pass ]
+imported/w3c/web-platform-tests/wasm/core/simd/simd_f32x4_cmp.wast.js.html [ Timeout Pass ]
+imported/w3c/web-platform-tests/wasm/core/simd/simd_f32x4_pmin_pmax.wast.js.html [ Timeout Pass ]
+imported/w3c/web-platform-tests/wasm/core/simd/simd_f64x2_arith.wast.js.html [ Timeout Pass ]
+imported/w3c/web-platform-tests/wasm/core/simd/simd_f64x2_cmp.wast.js.html [ Timeout Pass ]
+imported/w3c/web-platform-tests/wasm/core/simd/simd_f64x2_pmin_pmax.wast.js.html [ Timeout Pass ]

@@ -1,0 +1,850 @@
+
+PASS #1 Reinitialize the default imports
+PASS #2 Test that WebAssembly compilation fails
+PASS #3 Test that WebAssembly compilation fails
+PASS #4 Test that WebAssembly compilation fails
+PASS #5 Test that WebAssembly compilation fails
+PASS #6 Test that WebAssembly compilation fails
+PASS #7 Test that WebAssembly compilation fails
+PASS #8 Test that WebAssembly compilation fails
+PASS #9 Test that WebAssembly compilation fails
+PASS #10 Test that WebAssembly compilation fails
+PASS #11 Test that WebAssembly compilation fails
+PASS #12 Test that WebAssembly compilation fails
+PASS #13 Test that WebAssembly compilation fails
+PASS #14 Test that WebAssembly compilation fails
+PASS #15 Test that WebAssembly compilation fails
+PASS #16 Test that WebAssembly compilation fails
+PASS #17 Test that WebAssembly compilation fails
+PASS #18 Test that WebAssembly compilation fails
+PASS #19 Test that WebAssembly compilation fails
+PASS #20 Test that WebAssembly compilation fails
+PASS #21 Test that WebAssembly compilation fails
+PASS #22 Test that WebAssembly compilation fails
+PASS #23 Test that WebAssembly compilation fails
+PASS #24 Test that WebAssembly compilation fails
+PASS #25 Test that WebAssembly compilation fails
+PASS #26 Test that WebAssembly compilation fails
+PASS #27 Test that WebAssembly compilation fails
+PASS #28 Test that WebAssembly compilation fails
+PASS #29 Test that WebAssembly compilation fails
+PASS #30 Test that WebAssembly compilation fails
+PASS #31 Test that WebAssembly compilation fails
+PASS #32 Test that WebAssembly compilation fails
+PASS #33 Test that WebAssembly compilation fails
+PASS #34 Test that WebAssembly compilation fails
+PASS #35 Test that WebAssembly compilation fails
+PASS #36 Test that WebAssembly compilation fails
+PASS #37 Test that WebAssembly compilation fails
+PASS #38 Test that WebAssembly compilation fails
+PASS #39 Test that WebAssembly compilation fails
+PASS #40 Test that WebAssembly compilation fails
+PASS #41 Test that WebAssembly compilation fails
+PASS #42 Test that WebAssembly compilation fails
+PASS #43 Test that WebAssembly compilation fails
+PASS #44 Test that WebAssembly compilation fails
+PASS #45 Test that WebAssembly compilation fails
+PASS #46 Test that WebAssembly compilation fails
+PASS #47 Test that WebAssembly compilation fails
+PASS #48 Test that WebAssembly compilation fails
+PASS #49 Test that WebAssembly compilation fails
+PASS #50 Test that WebAssembly compilation fails
+PASS #51 Test that WebAssembly compilation fails
+PASS #52 Test that WebAssembly compilation fails
+PASS #53 Test that WebAssembly compilation fails
+PASS #54 Test that WebAssembly compilation fails
+PASS #55 Test that WebAssembly compilation fails
+PASS #56 Test that WebAssembly compilation fails
+PASS #57 Test that WebAssembly compilation fails
+PASS #58 Test that WebAssembly compilation fails
+PASS #59 Test that WebAssembly compilation fails
+PASS #60 Test that WebAssembly compilation fails
+PASS #61 Test that WebAssembly compilation fails
+PASS #62 Test that WebAssembly compilation fails
+PASS #63 Test that WebAssembly compilation fails
+PASS #64 Test that WebAssembly compilation fails
+PASS #65 Test that WebAssembly compilation fails
+PASS #66 Test that WebAssembly compilation fails
+PASS #67 Test that WebAssembly compilation fails
+PASS #68 Test that WebAssembly compilation fails
+PASS #69 Reinitialize the default imports
+PASS #70 Test that WebAssembly instantiation succeeds
+PASS #71 Test that WebAssembly instantiation succeeds
+PASS #72 Run a WebAssembly test without special assertions
+PASS #73 Test that a WebAssembly code traps
+PASS #74 Test that a WebAssembly code traps
+PASS #75 Test that a WebAssembly code returns a specific result
+PASS #76 Test that a WebAssembly code returns a specific result
+PASS #77 Test that a WebAssembly code returns a specific result
+PASS #78 Test that a WebAssembly code returns a specific result
+PASS #79 Test that a WebAssembly code traps
+PASS #80 Test that a WebAssembly code returns a specific result
+PASS #81 Test that a WebAssembly code returns a specific result
+PASS #82 Test that a WebAssembly code returns a specific result
+PASS #83 Test that a WebAssembly code returns a specific result
+PASS #84 Test that a WebAssembly code traps
+PASS #85 Test that a WebAssembly code returns a specific result
+PASS #86 Test that a WebAssembly code returns a specific result
+PASS #87 Test that a WebAssembly code returns a specific result
+PASS #88 Test that a WebAssembly code returns a specific result
+PASS #89 Test that a WebAssembly code returns a specific result
+PASS #90 Test that a WebAssembly code traps
+PASS #91 Test that a WebAssembly code traps
+PASS #92 Test that a WebAssembly code traps
+PASS #93 Test that a WebAssembly code traps
+PASS #94 Test that a WebAssembly code traps
+PASS #95 Test that a WebAssembly code traps
+PASS #96 Test that a WebAssembly code traps
+PASS #97 Test that a WebAssembly code traps
+PASS #98 Test that a WebAssembly code traps
+PASS #99 Test that a WebAssembly code traps
+PASS #100 Test that a WebAssembly code traps
+PASS #101 Test that a WebAssembly code traps
+PASS #102 Test that a WebAssembly code traps
+PASS #103 Test that WebAssembly instantiation succeeds
+PASS #104 Run a WebAssembly test without special assertions
+PASS #105 Test that a WebAssembly code traps
+PASS #106 Test that a WebAssembly code traps
+PASS #107 Test that a WebAssembly code returns a specific result
+PASS #108 Test that a WebAssembly code returns a specific result
+PASS #109 Test that a WebAssembly code returns a specific result
+PASS #110 Test that a WebAssembly code returns a specific result
+PASS #111 Test that a WebAssembly code traps
+PASS #112 Test that a WebAssembly code traps
+PASS #113 Test that a WebAssembly code traps
+PASS #114 Test that a WebAssembly code traps
+PASS #115 Test that a WebAssembly code traps
+PASS #116 Test that a WebAssembly code traps
+PASS #117 Test that a WebAssembly code returns a specific result
+PASS #118 Test that a WebAssembly code returns a specific result
+PASS #119 Test that a WebAssembly code returns a specific result
+PASS #120 Test that a WebAssembly code returns a specific result
+PASS #121 Test that a WebAssembly code returns a specific result
+PASS #122 Test that a WebAssembly code returns a specific result
+PASS #123 Test that a WebAssembly code traps
+PASS #124 Test that a WebAssembly code traps
+PASS #125 Test that a WebAssembly code traps
+PASS #126 Test that a WebAssembly code traps
+PASS #127 Test that a WebAssembly code traps
+PASS #128 Test that a WebAssembly code traps
+PASS #129 Test that a WebAssembly code traps
+PASS #130 Test that a WebAssembly code traps
+PASS #131 Test that a WebAssembly code traps
+PASS #132 Test that a WebAssembly code traps
+PASS #133 Test that a WebAssembly code traps
+PASS #134 Test that a WebAssembly code traps
+PASS #135 Test that WebAssembly instantiation succeeds
+PASS #136 Run a WebAssembly test without special assertions
+PASS #137 Test that a WebAssembly code traps
+PASS #138 Test that a WebAssembly code traps
+PASS #139 Test that a WebAssembly code returns a specific result
+PASS #140 Test that a WebAssembly code returns a specific result
+PASS #141 Test that a WebAssembly code returns a specific result
+PASS #142 Test that a WebAssembly code returns a specific result
+PASS #143 Test that a WebAssembly code traps
+PASS #144 Test that a WebAssembly code returns a specific result
+PASS #145 Test that a WebAssembly code returns a specific result
+PASS #146 Test that a WebAssembly code returns a specific result
+PASS #147 Test that a WebAssembly code returns a specific result
+PASS #148 Test that a WebAssembly code traps
+PASS #149 Test that a WebAssembly code returns a specific result
+PASS #150 Test that a WebAssembly code traps
+PASS #151 Test that a WebAssembly code returns a specific result
+PASS #152 Test that a WebAssembly code returns a specific result
+PASS #153 Test that a WebAssembly code returns a specific result
+PASS #154 Test that a WebAssembly code returns a specific result
+PASS #155 Test that a WebAssembly code traps
+PASS #156 Test that a WebAssembly code returns a specific result
+PASS #157 Test that a WebAssembly code traps
+PASS #158 Test that a WebAssembly code returns a specific result
+PASS #159 Test that a WebAssembly code traps
+PASS #160 Test that a WebAssembly code returns a specific result
+PASS #161 Test that a WebAssembly code returns a specific result
+PASS #162 Test that a WebAssembly code traps
+PASS #163 Test that a WebAssembly code traps
+PASS #164 Test that a WebAssembly code traps
+PASS #165 Test that a WebAssembly code traps
+PASS #166 Test that a WebAssembly code traps
+PASS #167 Test that WebAssembly instantiation succeeds
+PASS #168 Run a WebAssembly test without special assertions
+PASS #169 Test that a WebAssembly code traps
+PASS #170 Test that a WebAssembly code traps
+PASS #171 Test that a WebAssembly code returns a specific result
+PASS #172 Test that a WebAssembly code returns a specific result
+PASS #173 Test that a WebAssembly code returns a specific result
+PASS #174 Test that a WebAssembly code returns a specific result
+PASS #175 Test that a WebAssembly code traps
+PASS #176 Test that a WebAssembly code returns a specific result
+PASS #177 Test that a WebAssembly code returns a specific result
+PASS #178 Test that a WebAssembly code returns a specific result
+PASS #179 Test that a WebAssembly code returns a specific result
+PASS #180 Test that a WebAssembly code traps
+PASS #181 Test that a WebAssembly code returns a specific result
+PASS #182 Test that a WebAssembly code returns a specific result
+PASS #183 Test that a WebAssembly code returns a specific result
+PASS #184 Test that a WebAssembly code returns a specific result
+PASS #185 Test that a WebAssembly code returns a specific result
+PASS #186 Test that a WebAssembly code traps
+PASS #187 Test that a WebAssembly code traps
+PASS #188 Test that a WebAssembly code traps
+PASS #189 Test that a WebAssembly code traps
+PASS #190 Test that a WebAssembly code traps
+PASS #191 Test that a WebAssembly code traps
+PASS #192 Test that a WebAssembly code traps
+PASS #193 Test that a WebAssembly code traps
+PASS #194 Test that a WebAssembly code traps
+PASS #195 Test that a WebAssembly code traps
+PASS #196 Test that a WebAssembly code traps
+PASS #197 Test that a WebAssembly code traps
+PASS #198 Test that a WebAssembly code traps
+PASS #199 Test that WebAssembly instantiation succeeds
+PASS #200 Run a WebAssembly test without special assertions
+PASS #201 Test that a WebAssembly code traps
+PASS #202 Test that a WebAssembly code traps
+PASS #203 Test that a WebAssembly code returns a specific result
+PASS #204 Test that a WebAssembly code returns a specific result
+PASS #205 Test that a WebAssembly code returns a specific result
+PASS #206 Test that a WebAssembly code returns a specific result
+PASS #207 Test that a WebAssembly code traps
+PASS #208 Test that a WebAssembly code traps
+PASS #209 Test that a WebAssembly code traps
+PASS #210 Test that a WebAssembly code traps
+PASS #211 Test that a WebAssembly code traps
+PASS #212 Test that a WebAssembly code traps
+PASS #213 Test that a WebAssembly code returns a specific result
+PASS #214 Test that a WebAssembly code returns a specific result
+PASS #215 Test that a WebAssembly code returns a specific result
+PASS #216 Test that a WebAssembly code returns a specific result
+PASS #217 Test that a WebAssembly code returns a specific result
+PASS #218 Test that a WebAssembly code returns a specific result
+PASS #219 Test that a WebAssembly code traps
+PASS #220 Test that a WebAssembly code traps
+PASS #221 Test that a WebAssembly code traps
+PASS #222 Test that a WebAssembly code traps
+PASS #223 Test that a WebAssembly code traps
+PASS #224 Test that a WebAssembly code traps
+PASS #225 Test that a WebAssembly code traps
+PASS #226 Test that a WebAssembly code traps
+PASS #227 Test that a WebAssembly code traps
+PASS #228 Test that a WebAssembly code traps
+PASS #229 Test that a WebAssembly code traps
+PASS #230 Test that a WebAssembly code traps
+PASS #231 Test that WebAssembly instantiation succeeds
+PASS #232 Run a WebAssembly test without special assertions
+PASS #233 Test that a WebAssembly code traps
+PASS #234 Test that a WebAssembly code traps
+PASS #235 Test that a WebAssembly code returns a specific result
+PASS #236 Test that a WebAssembly code returns a specific result
+PASS #237 Test that a WebAssembly code returns a specific result
+PASS #238 Test that a WebAssembly code returns a specific result
+PASS #239 Test that a WebAssembly code traps
+PASS #240 Test that a WebAssembly code returns a specific result
+PASS #241 Test that a WebAssembly code returns a specific result
+PASS #242 Test that a WebAssembly code returns a specific result
+PASS #243 Test that a WebAssembly code returns a specific result
+PASS #244 Test that a WebAssembly code traps
+PASS #245 Test that a WebAssembly code returns a specific result
+PASS #246 Test that a WebAssembly code traps
+PASS #247 Test that a WebAssembly code returns a specific result
+PASS #248 Test that a WebAssembly code returns a specific result
+PASS #249 Test that a WebAssembly code returns a specific result
+PASS #250 Test that a WebAssembly code returns a specific result
+PASS #251 Test that a WebAssembly code traps
+PASS #252 Test that a WebAssembly code returns a specific result
+PASS #253 Test that a WebAssembly code traps
+PASS #254 Test that a WebAssembly code returns a specific result
+PASS #255 Test that a WebAssembly code traps
+PASS #256 Test that a WebAssembly code returns a specific result
+PASS #257 Test that a WebAssembly code returns a specific result
+PASS #258 Test that a WebAssembly code traps
+PASS #259 Test that a WebAssembly code traps
+PASS #260 Test that a WebAssembly code traps
+PASS #261 Test that a WebAssembly code traps
+PASS #262 Test that a WebAssembly code traps
+PASS #263 Test that WebAssembly compilation fails
+PASS #264 Test that WebAssembly compilation fails
+PASS #265 Test that WebAssembly compilation fails
+PASS #266 Test that WebAssembly compilation fails
+PASS #267 Test that WebAssembly instantiation succeeds
+PASS #268 Run a WebAssembly test without special assertions
+PASS #269 Test that WebAssembly instantiation succeeds
+PASS #270 Test that a WebAssembly code traps
+PASS #271 Test that WebAssembly instantiation succeeds
+PASS #272 Run a WebAssembly test without special assertions
+PASS #273 Test that WebAssembly instantiation succeeds
+PASS #274 Run a WebAssembly test without special assertions
+PASS #275 Test that WebAssembly instantiation succeeds
+PASS #276 Test that a WebAssembly code traps
+PASS #277 Test that WebAssembly instantiation succeeds
+PASS #278 Test that a WebAssembly code traps
+PASS #279 Test that WebAssembly instantiation succeeds
+PASS #280 Test that a WebAssembly code traps
+PASS #281 Test that WebAssembly instantiation succeeds
+PASS #282 Test that a WebAssembly code traps
+PASS #283 Test that WebAssembly instantiation succeeds
+PASS #284 Run a WebAssembly test without special assertions
+PASS #285 Test that WebAssembly instantiation succeeds
+PASS #286 Test that a WebAssembly code traps
+PASS #287 Test that WebAssembly instantiation succeeds
+PASS #288 Run a WebAssembly test without special assertions
+PASS #289 Test that WebAssembly instantiation succeeds
+PASS #290 Test that a WebAssembly code traps
+PASS #291 Test that WebAssembly instantiation succeeds
+PASS #292 Run a WebAssembly test without special assertions
+PASS #293 Test that WebAssembly instantiation succeeds
+PASS #294 Test that a WebAssembly code traps
+PASS #295 Test that WebAssembly instantiation succeeds
+PASS #296 Test that a WebAssembly code traps
+PASS #297 Test that WebAssembly instantiation succeeds
+PASS #298 Run a WebAssembly test without special assertions
+PASS #299 Test that WebAssembly instantiation succeeds
+PASS #300 Test that a WebAssembly code traps
+PASS #301 Test that WebAssembly instantiation succeeds
+PASS #302 Run a WebAssembly test without special assertions
+PASS #303 Test that WebAssembly instantiation succeeds
+PASS #304 Test that a WebAssembly code traps
+PASS #305 Test that WebAssembly instantiation succeeds
+PASS #306 Run a WebAssembly test without special assertions
+PASS #307 Test that WebAssembly instantiation succeeds
+PASS #308 Test that a WebAssembly code traps
+PASS #309 Test that WebAssembly compilation fails
+PASS #310 Test that WebAssembly compilation fails
+PASS #311 Test that WebAssembly compilation fails
+PASS #312 Test that WebAssembly compilation fails
+PASS #313 Test that WebAssembly compilation fails
+PASS #314 Test that WebAssembly compilation fails
+PASS #315 Test that WebAssembly compilation fails
+PASS #316 Test that WebAssembly compilation fails
+PASS #317 Test that WebAssembly compilation fails
+PASS #318 Test that WebAssembly compilation fails
+PASS #319 Test that WebAssembly compilation fails
+PASS #320 Test that WebAssembly compilation fails
+PASS #321 Test that WebAssembly compilation fails
+PASS #322 Test that WebAssembly compilation fails
+PASS #323 Test that WebAssembly compilation fails
+PASS #324 Test that WebAssembly compilation fails
+PASS #325 Test that WebAssembly compilation fails
+PASS #326 Test that WebAssembly compilation fails
+PASS #327 Test that WebAssembly compilation fails
+PASS #328 Test that WebAssembly compilation fails
+PASS #329 Test that WebAssembly compilation fails
+PASS #330 Test that WebAssembly compilation fails
+PASS #331 Test that WebAssembly compilation fails
+PASS #332 Test that WebAssembly compilation fails
+PASS #333 Test that WebAssembly compilation fails
+PASS #334 Test that WebAssembly compilation fails
+PASS #335 Test that WebAssembly compilation fails
+PASS #336 Test that WebAssembly compilation fails
+PASS #337 Test that WebAssembly compilation fails
+PASS #338 Test that WebAssembly compilation fails
+PASS #339 Test that WebAssembly compilation fails
+PASS #340 Test that WebAssembly compilation fails
+PASS #341 Test that WebAssembly compilation fails
+PASS #342 Test that WebAssembly compilation fails
+PASS #343 Test that WebAssembly compilation fails
+PASS #344 Test that WebAssembly compilation fails
+PASS #345 Test that WebAssembly compilation fails
+PASS #346 Test that WebAssembly compilation fails
+PASS #347 Test that WebAssembly compilation fails
+PASS #348 Test that WebAssembly compilation fails
+PASS #349 Test that WebAssembly compilation fails
+PASS #350 Test that WebAssembly compilation fails
+PASS #351 Test that WebAssembly compilation fails
+PASS #352 Test that WebAssembly compilation fails
+PASS #353 Test that WebAssembly compilation fails
+PASS #354 Test that WebAssembly compilation fails
+PASS #355 Test that WebAssembly compilation fails
+PASS #356 Test that WebAssembly compilation fails
+PASS #357 Test that WebAssembly compilation fails
+PASS #358 Test that WebAssembly compilation fails
+PASS #359 Test that WebAssembly compilation fails
+PASS #360 Test that WebAssembly compilation fails
+PASS #361 Test that WebAssembly compilation fails
+PASS #362 Test that WebAssembly compilation fails
+PASS #363 Test that WebAssembly compilation fails
+PASS #364 Test that WebAssembly compilation fails
+PASS #365 Test that WebAssembly compilation fails
+PASS #366 Test that WebAssembly compilation fails
+PASS #367 Test that WebAssembly compilation fails
+PASS #368 Test that WebAssembly compilation fails
+PASS #369 Test that WebAssembly compilation fails
+PASS #370 Test that WebAssembly compilation fails
+PASS #371 Test that WebAssembly compilation fails
+PASS #372 Test that WebAssembly instantiation succeeds
+PASS #373 Test that a WebAssembly code traps
+PASS #374 Test that a WebAssembly code traps
+PASS #375 Test that a WebAssembly code traps
+PASS #376 Test that a WebAssembly code traps
+PASS #377 Test that a WebAssembly code traps
+PASS #378 Test that a WebAssembly code traps
+PASS #379 Test that a WebAssembly code traps
+PASS #380 Test that a WebAssembly code traps
+PASS #381 Test that a WebAssembly code traps
+PASS #382 Test that a WebAssembly code traps
+PASS #383 Test that a WebAssembly code traps
+PASS #384 Test that a WebAssembly code traps
+PASS #385 Test that a WebAssembly code traps
+PASS #386 Test that a WebAssembly code traps
+PASS #387 Test that a WebAssembly code traps
+PASS #388 Test that a WebAssembly code traps
+PASS #389 Test that a WebAssembly code traps
+PASS #390 Test that a WebAssembly code traps
+PASS #391 Test that a WebAssembly code traps
+PASS #392 Test that a WebAssembly code traps
+PASS #393 Test that a WebAssembly code traps
+PASS #394 Test that a WebAssembly code traps
+PASS #395 Test that a WebAssembly code traps
+PASS #396 Test that a WebAssembly code traps
+PASS #397 Test that a WebAssembly code traps
+PASS #398 Test that a WebAssembly code traps
+PASS #399 Test that a WebAssembly code traps
+PASS #400 Test that a WebAssembly code traps
+PASS #401 Test that a WebAssembly code traps
+PASS #402 Test that a WebAssembly code traps
+PASS #403 Test that a WebAssembly code traps
+PASS #404 Test that a WebAssembly code traps
+PASS #405 Test that a WebAssembly code traps
+PASS #406 Test that WebAssembly instantiation succeeds
+PASS #407 Test that a WebAssembly code traps
+PASS #408 Test that a WebAssembly code traps
+PASS #409 Test that a WebAssembly code traps
+PASS #410 Test that a WebAssembly code traps
+PASS #411 Test that a WebAssembly code traps
+PASS #412 Test that a WebAssembly code traps
+PASS #413 Test that a WebAssembly code traps
+PASS #414 Test that a WebAssembly code traps
+PASS #415 Test that a WebAssembly code traps
+PASS #416 Test that a WebAssembly code traps
+PASS #417 Test that a WebAssembly code traps
+PASS #418 Test that a WebAssembly code traps
+PASS #419 Test that a WebAssembly code traps
+PASS #420 Test that a WebAssembly code traps
+PASS #421 Test that a WebAssembly code traps
+PASS #422 Test that a WebAssembly code traps
+PASS #423 Test that a WebAssembly code traps
+PASS #424 Test that a WebAssembly code traps
+PASS #425 Test that a WebAssembly code traps
+PASS #426 Test that a WebAssembly code traps
+PASS #427 Test that a WebAssembly code traps
+PASS #428 Test that a WebAssembly code traps
+PASS #429 Test that a WebAssembly code traps
+PASS #430 Test that a WebAssembly code traps
+PASS #431 Test that a WebAssembly code traps
+PASS #432 Test that a WebAssembly code traps
+PASS #433 Test that a WebAssembly code traps
+PASS #434 Test that a WebAssembly code traps
+PASS #435 Test that a WebAssembly code traps
+PASS #436 Test that a WebAssembly code traps
+PASS #437 Test that a WebAssembly code traps
+PASS #438 Test that a WebAssembly code traps
+PASS #439 Test that a WebAssembly code traps
+PASS #440 Test that WebAssembly instantiation succeeds
+PASS #441 Test that a WebAssembly code traps
+PASS #442 Test that a WebAssembly code traps
+PASS #443 Test that a WebAssembly code traps
+PASS #444 Test that a WebAssembly code traps
+PASS #445 Test that a WebAssembly code traps
+PASS #446 Test that a WebAssembly code traps
+PASS #447 Test that a WebAssembly code traps
+PASS #448 Test that a WebAssembly code traps
+PASS #449 Test that a WebAssembly code traps
+PASS #450 Test that a WebAssembly code traps
+PASS #451 Test that a WebAssembly code traps
+PASS #452 Test that a WebAssembly code traps
+PASS #453 Test that a WebAssembly code traps
+PASS #454 Test that a WebAssembly code traps
+PASS #455 Test that a WebAssembly code traps
+PASS #456 Test that a WebAssembly code traps
+PASS #457 Test that a WebAssembly code traps
+PASS #458 Test that a WebAssembly code traps
+PASS #459 Test that a WebAssembly code traps
+PASS #460 Test that a WebAssembly code traps
+PASS #461 Test that a WebAssembly code traps
+PASS #462 Test that a WebAssembly code traps
+PASS #463 Test that a WebAssembly code traps
+PASS #464 Test that a WebAssembly code traps
+PASS #465 Test that a WebAssembly code traps
+PASS #466 Test that a WebAssembly code traps
+PASS #467 Test that a WebAssembly code traps
+PASS #468 Test that a WebAssembly code traps
+PASS #469 Test that a WebAssembly code traps
+PASS #470 Test that a WebAssembly code traps
+PASS #471 Test that a WebAssembly code traps
+PASS #472 Test that a WebAssembly code traps
+PASS #473 Test that a WebAssembly code traps
+PASS #474 Test that a WebAssembly code traps
+PASS #475 Test that a WebAssembly code traps
+PASS #476 Test that a WebAssembly code traps
+PASS #477 Test that a WebAssembly code traps
+PASS #478 Test that a WebAssembly code traps
+PASS #479 Test that a WebAssembly code traps
+PASS #480 Test that a WebAssembly code traps
+PASS #481 Test that a WebAssembly code traps
+PASS #482 Test that a WebAssembly code traps
+PASS #483 Test that a WebAssembly code traps
+PASS #484 Test that a WebAssembly code traps
+PASS #485 Test that a WebAssembly code traps
+PASS #486 Test that a WebAssembly code traps
+PASS #487 Test that a WebAssembly code traps
+PASS #488 Test that a WebAssembly code traps
+PASS #489 Test that a WebAssembly code traps
+PASS #490 Test that a WebAssembly code traps
+PASS #491 Test that a WebAssembly code traps
+PASS #492 Test that a WebAssembly code traps
+PASS #493 Test that a WebAssembly code traps
+PASS #494 Test that a WebAssembly code traps
+PASS #495 Test that a WebAssembly code traps
+PASS #496 Test that a WebAssembly code traps
+PASS #497 Test that a WebAssembly code traps
+PASS #498 Test that a WebAssembly code traps
+PASS #499 Test that a WebAssembly code traps
+PASS #500 Test that a WebAssembly code traps
+PASS #501 Test that a WebAssembly code traps
+PASS #502 Test that a WebAssembly code traps
+PASS #503 Test that a WebAssembly code traps
+PASS #504 Test that a WebAssembly code traps
+PASS #505 Test that a WebAssembly code traps
+PASS #506 Test that a WebAssembly code traps
+PASS #507 Test that a WebAssembly code traps
+PASS #508 Test that a WebAssembly code traps
+PASS #509 Test that a WebAssembly code traps
+PASS #510 Test that a WebAssembly code traps
+PASS #511 Test that a WebAssembly code traps
+PASS #512 Test that a WebAssembly code traps
+PASS #513 Test that a WebAssembly code traps
+PASS #514 Test that a WebAssembly code traps
+PASS #515 Test that a WebAssembly code traps
+PASS #516 Test that a WebAssembly code traps
+PASS #517 Test that a WebAssembly code traps
+PASS #518 Test that a WebAssembly code traps
+PASS #519 Test that a WebAssembly code traps
+PASS #520 Test that a WebAssembly code traps
+PASS #521 Test that a WebAssembly code traps
+PASS #522 Test that a WebAssembly code traps
+PASS #523 Test that a WebAssembly code traps
+PASS #524 Test that a WebAssembly code traps
+PASS #525 Test that a WebAssembly code traps
+PASS #526 Test that a WebAssembly code traps
+PASS #527 Test that a WebAssembly code traps
+PASS #528 Test that a WebAssembly code traps
+PASS #529 Test that a WebAssembly code traps
+PASS #530 Test that a WebAssembly code traps
+PASS #531 Test that a WebAssembly code traps
+PASS #532 Test that a WebAssembly code traps
+PASS #533 Test that a WebAssembly code traps
+PASS #534 Test that a WebAssembly code traps
+PASS #535 Test that a WebAssembly code traps
+PASS #536 Test that a WebAssembly code traps
+PASS #537 Test that a WebAssembly code traps
+PASS #538 Test that a WebAssembly code traps
+PASS #539 Test that a WebAssembly code traps
+PASS #540 Test that a WebAssembly code traps
+PASS #541 Test that a WebAssembly code traps
+PASS #542 Test that a WebAssembly code traps
+PASS #543 Test that a WebAssembly code traps
+PASS #544 Test that a WebAssembly code traps
+PASS #545 Test that a WebAssembly code traps
+PASS #546 Test that a WebAssembly code traps
+PASS #547 Test that a WebAssembly code traps
+PASS #548 Test that a WebAssembly code traps
+PASS #549 Test that a WebAssembly code traps
+PASS #550 Test that a WebAssembly code traps
+PASS #551 Test that a WebAssembly code traps
+PASS #552 Test that a WebAssembly code traps
+PASS #553 Test that a WebAssembly code traps
+PASS #554 Test that a WebAssembly code traps
+PASS #555 Test that a WebAssembly code traps
+PASS #556 Test that a WebAssembly code traps
+PASS #557 Test that a WebAssembly code traps
+PASS #558 Test that a WebAssembly code traps
+PASS #559 Test that a WebAssembly code traps
+PASS #560 Test that a WebAssembly code traps
+PASS #561 Test that a WebAssembly code traps
+PASS #562 Test that a WebAssembly code traps
+PASS #563 Test that a WebAssembly code traps
+PASS #564 Test that a WebAssembly code traps
+PASS #565 Test that a WebAssembly code traps
+PASS #566 Test that a WebAssembly code traps
+PASS #567 Test that a WebAssembly code traps
+PASS #568 Test that a WebAssembly code traps
+PASS #569 Test that a WebAssembly code traps
+PASS #570 Test that a WebAssembly code traps
+PASS #571 Test that a WebAssembly code traps
+PASS #572 Test that a WebAssembly code traps
+PASS #573 Test that a WebAssembly code traps
+PASS #574 Test that a WebAssembly code traps
+PASS #575 Test that a WebAssembly code traps
+PASS #576 Test that a WebAssembly code traps
+PASS #577 Test that a WebAssembly code traps
+PASS #578 Test that a WebAssembly code traps
+PASS #579 Test that a WebAssembly code traps
+PASS #580 Test that a WebAssembly code traps
+PASS #581 Test that a WebAssembly code traps
+PASS #582 Test that a WebAssembly code traps
+PASS #583 Test that a WebAssembly code traps
+PASS #584 Test that a WebAssembly code traps
+PASS #585 Test that a WebAssembly code traps
+PASS #586 Test that a WebAssembly code traps
+PASS #587 Test that a WebAssembly code traps
+PASS #588 Test that a WebAssembly code traps
+PASS #589 Test that a WebAssembly code traps
+PASS #590 Test that a WebAssembly code traps
+PASS #591 Test that a WebAssembly code traps
+PASS #592 Test that a WebAssembly code traps
+PASS #593 Test that a WebAssembly code traps
+PASS #594 Test that a WebAssembly code traps
+PASS #595 Test that a WebAssembly code traps
+PASS #596 Test that a WebAssembly code traps
+PASS #597 Test that a WebAssembly code traps
+PASS #598 Test that a WebAssembly code traps
+PASS #599 Test that a WebAssembly code traps
+PASS #600 Test that a WebAssembly code traps
+PASS #601 Test that a WebAssembly code traps
+PASS #602 Test that WebAssembly instantiation succeeds
+PASS #603 Test that a WebAssembly code traps
+PASS #604 Test that a WebAssembly code traps
+PASS #605 Test that a WebAssembly code traps
+PASS #606 Test that a WebAssembly code traps
+PASS #607 Test that a WebAssembly code traps
+PASS #608 Test that a WebAssembly code traps
+PASS #609 Test that a WebAssembly code traps
+PASS #610 Test that a WebAssembly code traps
+PASS #611 Test that a WebAssembly code traps
+PASS #612 Test that a WebAssembly code traps
+PASS #613 Test that a WebAssembly code traps
+PASS #614 Test that a WebAssembly code traps
+PASS #615 Test that a WebAssembly code traps
+PASS #616 Test that a WebAssembly code traps
+PASS #617 Test that a WebAssembly code traps
+PASS #618 Test that a WebAssembly code traps
+PASS #619 Test that a WebAssembly code traps
+PASS #620 Test that a WebAssembly code traps
+PASS #621 Test that a WebAssembly code traps
+PASS #622 Test that a WebAssembly code traps
+PASS #623 Test that a WebAssembly code traps
+PASS #624 Test that a WebAssembly code traps
+PASS #625 Test that a WebAssembly code traps
+PASS #626 Test that a WebAssembly code traps
+PASS #627 Test that a WebAssembly code traps
+PASS #628 Test that a WebAssembly code traps
+PASS #629 Test that a WebAssembly code traps
+PASS #630 Test that a WebAssembly code traps
+PASS #631 Test that a WebAssembly code traps
+PASS #632 Test that a WebAssembly code traps
+PASS #633 Test that a WebAssembly code traps
+PASS #634 Test that a WebAssembly code traps
+PASS #635 Test that a WebAssembly code traps
+PASS #636 Test that a WebAssembly code traps
+PASS #637 Test that a WebAssembly code traps
+PASS #638 Test that a WebAssembly code traps
+PASS #639 Test that a WebAssembly code traps
+PASS #640 Test that a WebAssembly code traps
+PASS #641 Test that a WebAssembly code traps
+PASS #642 Test that a WebAssembly code traps
+PASS #643 Test that a WebAssembly code traps
+PASS #644 Test that a WebAssembly code traps
+PASS #645 Test that a WebAssembly code traps
+PASS #646 Test that a WebAssembly code traps
+PASS #647 Test that a WebAssembly code traps
+PASS #648 Test that a WebAssembly code traps
+PASS #649 Test that a WebAssembly code traps
+PASS #650 Test that a WebAssembly code traps
+PASS #651 Test that a WebAssembly code traps
+PASS #652 Test that a WebAssembly code traps
+PASS #653 Test that a WebAssembly code traps
+PASS #654 Test that a WebAssembly code traps
+PASS #655 Test that a WebAssembly code traps
+PASS #656 Test that a WebAssembly code traps
+PASS #657 Test that a WebAssembly code traps
+PASS #658 Test that a WebAssembly code traps
+PASS #659 Test that a WebAssembly code traps
+PASS #660 Test that a WebAssembly code traps
+PASS #661 Test that a WebAssembly code traps
+PASS #662 Test that a WebAssembly code traps
+PASS #663 Test that a WebAssembly code traps
+PASS #664 Test that a WebAssembly code traps
+PASS #665 Test that a WebAssembly code traps
+PASS #666 Test that a WebAssembly code traps
+PASS #667 Test that a WebAssembly code traps
+PASS #668 Test that a WebAssembly code traps
+PASS #669 Test that a WebAssembly code traps
+PASS #670 Test that a WebAssembly code traps
+PASS #671 Test that a WebAssembly code traps
+PASS #672 Test that a WebAssembly code traps
+PASS #673 Test that a WebAssembly code traps
+PASS #674 Test that a WebAssembly code traps
+PASS #675 Test that a WebAssembly code traps
+PASS #676 Test that a WebAssembly code traps
+PASS #677 Test that a WebAssembly code traps
+PASS #678 Test that a WebAssembly code traps
+PASS #679 Test that a WebAssembly code traps
+PASS #680 Test that a WebAssembly code traps
+PASS #681 Test that a WebAssembly code traps
+PASS #682 Test that a WebAssembly code traps
+PASS #683 Test that a WebAssembly code traps
+PASS #684 Test that a WebAssembly code traps
+PASS #685 Test that a WebAssembly code traps
+PASS #686 Test that a WebAssembly code traps
+PASS #687 Test that a WebAssembly code traps
+PASS #688 Test that a WebAssembly code traps
+PASS #689 Test that a WebAssembly code traps
+PASS #690 Test that a WebAssembly code traps
+PASS #691 Test that a WebAssembly code traps
+PASS #692 Test that a WebAssembly code traps
+PASS #693 Test that a WebAssembly code traps
+PASS #694 Test that a WebAssembly code traps
+PASS #695 Test that a WebAssembly code traps
+PASS #696 Test that a WebAssembly code traps
+PASS #697 Test that a WebAssembly code traps
+PASS #698 Test that a WebAssembly code traps
+PASS #699 Test that a WebAssembly code traps
+PASS #700 Test that a WebAssembly code traps
+PASS #701 Test that a WebAssembly code traps
+PASS #702 Test that a WebAssembly code traps
+PASS #703 Test that a WebAssembly code traps
+PASS #704 Test that a WebAssembly code traps
+PASS #705 Test that a WebAssembly code traps
+PASS #706 Test that a WebAssembly code traps
+PASS #707 Test that a WebAssembly code traps
+PASS #708 Test that a WebAssembly code traps
+PASS #709 Test that a WebAssembly code traps
+PASS #710 Test that a WebAssembly code traps
+PASS #711 Test that a WebAssembly code traps
+PASS #712 Test that a WebAssembly code traps
+PASS #713 Test that a WebAssembly code traps
+PASS #714 Test that a WebAssembly code traps
+PASS #715 Test that a WebAssembly code traps
+PASS #716 Test that a WebAssembly code traps
+PASS #717 Test that a WebAssembly code traps
+PASS #718 Test that a WebAssembly code traps
+PASS #719 Test that a WebAssembly code traps
+PASS #720 Test that a WebAssembly code traps
+PASS #721 Test that a WebAssembly code traps
+PASS #722 Test that a WebAssembly code traps
+PASS #723 Test that a WebAssembly code traps
+PASS #724 Test that a WebAssembly code traps
+PASS #725 Test that a WebAssembly code traps
+PASS #726 Test that a WebAssembly code traps
+PASS #727 Test that a WebAssembly code traps
+PASS #728 Test that a WebAssembly code traps
+PASS #729 Test that a WebAssembly code traps
+PASS #730 Test that a WebAssembly code traps
+PASS #731 Test that a WebAssembly code traps
+PASS #732 Test that a WebAssembly code traps
+PASS #733 Test that a WebAssembly code traps
+PASS #734 Test that a WebAssembly code traps
+PASS #735 Test that a WebAssembly code traps
+PASS #736 Test that a WebAssembly code traps
+PASS #737 Test that a WebAssembly code traps
+PASS #738 Test that a WebAssembly code traps
+PASS #739 Test that a WebAssembly code traps
+PASS #740 Test that a WebAssembly code traps
+PASS #741 Test that a WebAssembly code traps
+PASS #742 Test that a WebAssembly code traps
+PASS #743 Test that a WebAssembly code traps
+PASS #744 Test that a WebAssembly code traps
+PASS #745 Test that a WebAssembly code traps
+PASS #746 Test that a WebAssembly code traps
+PASS #747 Test that a WebAssembly code traps
+PASS #748 Test that a WebAssembly code traps
+PASS #749 Test that a WebAssembly code traps
+PASS #750 Test that a WebAssembly code traps
+PASS #751 Test that a WebAssembly code traps
+PASS #752 Test that a WebAssembly code traps
+PASS #753 Test that a WebAssembly code traps
+PASS #754 Test that a WebAssembly code traps
+PASS #755 Test that a WebAssembly code traps
+PASS #756 Test that a WebAssembly code traps
+PASS #757 Test that a WebAssembly code traps
+PASS #758 Test that a WebAssembly code traps
+PASS #759 Test that a WebAssembly code traps
+PASS #760 Test that a WebAssembly code traps
+PASS #761 Test that a WebAssembly code traps
+PASS #762 Test that a WebAssembly code traps
+PASS #763 Test that a WebAssembly code traps
+PASS #764 Test that WebAssembly instantiation succeeds
+PASS #765 Test that a WebAssembly code traps
+PASS #766 Test that a WebAssembly code traps
+PASS #767 Test that a WebAssembly code traps
+PASS #768 Test that a WebAssembly code traps
+PASS #769 Test that a WebAssembly code traps
+PASS #770 Test that a WebAssembly code traps
+PASS #771 Test that a WebAssembly code traps
+PASS #772 Test that a WebAssembly code traps
+PASS #773 Test that a WebAssembly code traps
+PASS #774 Test that a WebAssembly code traps
+PASS #775 Test that a WebAssembly code traps
+PASS #776 Test that a WebAssembly code traps
+PASS #777 Test that a WebAssembly code traps
+PASS #778 Test that a WebAssembly code traps
+PASS #779 Test that a WebAssembly code traps
+PASS #780 Test that a WebAssembly code traps
+PASS #781 Test that a WebAssembly code traps
+PASS #782 Test that a WebAssembly code traps
+PASS #783 Test that a WebAssembly code traps
+PASS #784 Test that a WebAssembly code traps
+PASS #785 Test that a WebAssembly code traps
+PASS #786 Test that a WebAssembly code traps
+PASS #787 Test that a WebAssembly code traps
+PASS #788 Test that a WebAssembly code traps
+PASS #789 Test that a WebAssembly code traps
+PASS #790 Test that a WebAssembly code traps
+PASS #791 Test that a WebAssembly code traps
+PASS #792 Test that a WebAssembly code traps
+PASS #793 Test that a WebAssembly code traps
+PASS #794 Test that a WebAssembly code traps
+PASS #795 Test that a WebAssembly code traps
+PASS #796 Test that a WebAssembly code traps
+PASS #797 Test that a WebAssembly code traps
+PASS #798 Test that a WebAssembly code traps
+PASS #799 Test that a WebAssembly code traps
+PASS #800 Test that a WebAssembly code traps
+PASS #801 Test that a WebAssembly code traps
+PASS #802 Test that a WebAssembly code traps
+PASS #803 Test that a WebAssembly code traps
+PASS #804 Test that a WebAssembly code traps
+PASS #805 Test that a WebAssembly code traps
+PASS #806 Test that a WebAssembly code traps
+PASS #807 Test that a WebAssembly code traps
+PASS #808 Test that a WebAssembly code traps
+PASS #809 Test that a WebAssembly code traps
+PASS #810 Test that a WebAssembly code traps
+PASS #811 Test that a WebAssembly code traps
+PASS #812 Test that a WebAssembly code traps
+PASS #813 Test that a WebAssembly code traps
+PASS #814 Test that a WebAssembly code traps
+PASS #815 Test that a WebAssembly code traps
+PASS #816 Test that a WebAssembly code traps
+PASS #817 Test that a WebAssembly code traps
+PASS #818 Test that a WebAssembly code traps
+PASS #819 Test that a WebAssembly code traps
+PASS #820 Test that a WebAssembly code traps
+PASS #821 Test that a WebAssembly code traps
+PASS #822 Test that a WebAssembly code traps
+PASS #823 Test that a WebAssembly code traps
+PASS #824 Test that a WebAssembly code traps
+PASS #825 Test that a WebAssembly code traps
+PASS #826 Test that a WebAssembly code traps
+PASS #827 Test that a WebAssembly code traps
+PASS #828 Test that a WebAssembly code traps
+PASS #829 Test that a WebAssembly code traps
+PASS #830 Test that WebAssembly instantiation succeeds
+PASS #831 Test that a WebAssembly code traps
+PASS #832 Test that a WebAssembly code traps
+PASS #833 Test that a WebAssembly code traps
+PASS #834 Test that a WebAssembly code traps
+PASS #835 Test that a WebAssembly code traps
+PASS #836 Test that a WebAssembly code traps
+PASS #837 Test that a WebAssembly code traps
+PASS #838 Test that a WebAssembly code traps
+PASS #839 Test that a WebAssembly code traps
+PASS #840 Test that a WebAssembly code traps
+PASS #841 Test that a WebAssembly code traps
+PASS #842 Test that a WebAssembly code traps
+PASS #843 Test that a WebAssembly code traps
+PASS #844 Test that a WebAssembly code traps
+PASS #845 Test that a WebAssembly code traps
+PASS #846 Test that a WebAssembly code traps
+PASS #847 Test that a WebAssembly code traps
+PASS #848 Test that WebAssembly instantiation succeeds
+
