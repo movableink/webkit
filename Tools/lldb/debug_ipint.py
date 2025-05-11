@@ -9,6 +9,13 @@ import bisect
 import struct
 from pathlib import Path
 
+# ANSI escapes
+RESET = '\033[0m'
+BOLD = '\033[1m'
+DIM = '\033[2m'
+RED = '\033[31m'
+CYAN = '\033[36m'
+
 ARCH = 'arm64'
 
 if ARCH == 'arm64':
@@ -98,68 +105,85 @@ go_commands.AppendString("c")
 
 breakpoints = []
 breakpoints_enabled = []
-breakpoint_locs = []
+instruction_locs = []
 
 
-def print_value(mem, result):
-    print(' '.join(f'{x:02x}' for x in mem), file=result)
-    # interpret as a bunch of stuff
-    SP = ' ' * 10
-    print(f'{SP}\033[92mi32\033[0m{SP}{SP}\033[93mf32\033[0m{SP}{SP}\033[94mi64\033[0m{SP}{SP}\033[95mf64\033[0m', file=result)
+def print_value(mem, result, prefix=None):
+    raw = ' '.join(f'{x:02x}' for x in mem)
     i32 = struct.unpack('ixxxxxxxxxxxx', mem)[0]
     f32 = struct.unpack('fxxxxxxxxxxxx', mem)[0]
     i64 = struct.unpack('qxxxxxxxx', mem)[0]
     f64 = struct.unpack('dxxxxxxxx', mem)[0]
-    print(f'{i32:^23}{f32:^23.5f}{i64:^23}{f64:^23.5f}', file=result)
+    interpretations = f'{DIM}i32:{RESET}{i32}  {DIM}f32:{RESET}{f32}  {DIM}i64{RESET}:{i64}  {DIM}f64{RESET}:{f64}'
+    print(f'{prefix}{CYAN}{raw}{RESET}  {interpretations}', file=result)
 
 
-def print_stack(proc, frame, result, num_entries=None):
-    gprs = {}
-    for reg in frame.regs[0]:
-        gprs[reg.name] = int(reg.value[2:], 16)
-    pl = gprs[PL_REG]
-
+def print_stack(proc, frame, pl, result):
     ptr = frame.sp
+    slot_count = (pl - ptr) // 16
+    slot_text = 'empty' if slot_count == 0 else '1 entry' if slot_count == 1 else f'{slot_count} entries'
+
+    print(f'Stack: {DIM}({slot_text}){RESET}', file=result)
     i = 0
-
-    print(f'stack height: {(pl - ptr) // 16}', file=result)
-
-    if ptr == pl:
-        print('no stack entries', file=result)
-    else:
-        print('(top of stack)', file=result)
-
-    while ptr != pl and (num_entries is None or i < num_entries):
-        print(f'\n---- stack[{i:2}] ----', file=result)
+    while ptr != pl:
         error = lldb.SBError()
         mem = proc.ReadMemory(ptr, 16, error)
         if error.Success():
             mem = bytearray(mem)
-            print_value(mem, result)
+            print_value(mem, result, "  ")
         else:
-            print(f'can\'t read stack memory at address 0x{ptr:016x} :(', file=result)
+            print(f'{RED}can\'t read stack memory at address 0x{ptr:016x} :({RESET}', file=result)
             break
         ptr += 16
         i += 1
 
 
+def get_load_address(breakpoint):
+    for loc in breakpoint.locations:
+        if loc.IsResolved():
+            return loc.GetLoadAddress()
+    # if failed to find a proper resolved one, return something at least
+    return breakpoint.locations[0].GetLoadAddress()
+
+
+def get_instruction_addresses(target):
+    result = []
+    for instr in IPINT_INSTRUCTIONS:
+        contexts = target.FindSymbols(f'ipint_{instr}')
+        addr = contexts[0].GetSymbol().GetStartAddress().GetLoadAddress(target)
+        if addr == 0xffffffffffffffff:
+            # unresolved, let's try again later
+            return []
+        result.append(addr)
+    return result
+
+
+def find_instruction(pc, target):
+    global instruction_locs
+    if not instruction_locs:
+        instruction_locs = get_instruction_addresses(target)
+        if not instruction_locs:  # still empty, not resolved yet
+            return -1
+    return bisect.bisect(instruction_locs, pc) - 1
+
+
 def ipint_state(debugger, command, exe_ctx, result, internal_dict):
-    print("Current interpreter state:", file=result)
-    print("--------------------------", file=result)
+    target = debugger.GetSelectedTarget()
+    proc = target.process
+    thread = proc.GetSelectedThread()
+    top_frame = thread.frame[0]
+    this_frame = thread.GetSelectedFrame()
+    regs = top_frame.GetRegisters()
 
-    proc = debugger.GetTargetAtIndex(0).process
-    frame = proc.selected_thread.frame[0]
-    regs = frame.regs
+    print('--------------- IPInt state ---------------', file=result)
 
-    # Figure out where we are if breakpoints is populated
-    if len(breakpoints) != 0:
-        # current PC
-        pc = frame.pc
-        i = bisect.bisect(breakpoint_locs, pc) - 1
-        if i < 0:
-            print(f'\033[1m\033[91mnot in IPInt bounds!!!\033[0m')
-        else:
-            print(f'\033[1mCurrently executing: \033[93m{IPINT_INSTRUCTIONS[i]}\033[0m', file=result)
+    # current PC
+    pc = this_frame.pc
+    i = find_instruction(pc, target)
+    if i < 0:
+        print(f'Instruction = {RED}<none>{RESET} (not in IPInt)', file=result)
+    else:
+        print(f'Instruction = {BOLD}{IPINT_INSTRUCTIONS[i]}{RESET}', file=result)
 
     gprs = {}
     for reg in regs[0]:
@@ -168,35 +192,36 @@ def ipint_state(debugger, command, exe_ctx, result, internal_dict):
     # PC = x26
     pc = gprs[PC_REG]
     mc = gprs[MC_REG]
+    pl = gprs[PL_REG]
 
-    print(f'PC = 0x{pc:x}', file=result)
-
-    # preview 8 bytes of PC
+    # preview 16 bytes of PC
     if True:
         error = lldb.SBError()
-        mem = proc.ReadMemory(pc, 8, error)
+        mem = proc.ReadMemory(pc, 16, error)
         if error.Success():
-            print(' '.join(f'{x:02x}' for x in mem), file=result)
+            pc_data = ' '.join(f'{x:02x}' for x in mem)
         else:
-            print('???', file=result)
-    print('', file=result)
+            pc_data = '???'
+        print(f'PC = 0x{pc:x} -> {CYAN}{pc_data}{RESET}', file=result)
 
     if mc != 0:
-        print(f'MC = 0x{mc:x}', file=result)
-
-        # preview 8 bytes of MC
+        # preview 16 bytes of MC
         if True:
             error = lldb.SBError()
-            mem = proc.ReadMemory(mc, 8, error)
+            mem = proc.ReadMemory(mc, 16, error)
             if error.Success():
-                print(' '.join(f'{x:02x}' for x in mem), file=result)
+                mc_data = ' '.join(f'{x:02x}' for x in mem)
             else:
-                print('???', file=result)
-        print('', file=result)
+                mc_data = '???'
+        print(f'MC = 0x{mc:x} -> {CYAN}{mc_data}{RESET}', file=result)
     else:
-        print('\033[1m\033[94mno metadata generated\033[0m\n', file=result)
+        print('MC = {RED}<none>{RESET} (no metadata generated)', file=result)
 
-    print_stack(proc, frame, result, 2)
+    if i < 0:
+        print("Stack unknown: not in IPInt", file=result)
+    else:
+        print_stack(proc, this_frame, pl, result)
+    print('-------------------------------------------', file=result)
 
 
 def ipint_stack(debugger, command, exec_ctx, result, internal_dict):
@@ -281,7 +306,6 @@ def set_breakpoints(debugger, command, exe_ctx, result, internal_dict):
         brk = target.BreakpointCreateByName(f'ipint_{instr}')
         brk.SetCommandLineCommands(stop_commands)
         breakpoints.append(brk)
-        breakpoint_locs.append(brk.locations[0].GetLoadAddress())
     print("done!", file=result)
 
 
