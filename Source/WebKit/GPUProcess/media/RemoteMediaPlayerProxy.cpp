@@ -202,10 +202,6 @@ void RemoteMediaPlayerProxy::loadMediaSource(URL&& url, const MediaPlayer::LoadO
         m_mediaSourceProxy = adoptRef(*new RemoteMediaSourceProxy(*manager, mediaSourceIdentifier, *this));
 
     RefPtr player = m_player;
-#if USE(AVFOUNDATION) && ENABLE(MEDIA_SOURCE)
-    if (auto preferences = sharedPreferencesForWebProcess())
-        player->setDecompressionSessionPreferences(preferences->mediaSourcePrefersDecompressionSession, preferences->videoRendererProtectedFallbackDisabled);
-#endif
     player->load(url, options, *protectedMediaSourceProxy());
 
     if (reattached)

@@ -1930,7 +1930,7 @@ void MediaPlayerPrivateWebM::setVideoRenderer(WebSampleBufferVideoRendering *ren
 
     videoRenderer = VideoMediaSampleRenderer::create(renderer);
     m_videoRenderer = videoRenderer;
-    videoRenderer->setPrefersDecompressionSession(true);
+    videoRenderer->setPreferences(VideoMediaSampleRendererPreference::PrefersDecompressionSession);
     videoRenderer->setTimebase([m_synchronizer timebase]);
     videoRenderer->notifyWhenDecodingErrorOccurred([weakThis = WeakPtr { *this }](OSStatus) {
         RefPtr protectedThis = weakThis.get();

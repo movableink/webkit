@@ -544,16 +544,6 @@ bool MediaPlayer::load(const URL& url, const LoadOptions& options, MediaSourcePr
     loadWithNextMediaEngine(nullptr);
     return m_currentMediaEngine;
 }
-
-#if USE(AVFOUNDATION)
-void MediaPlayer::setDecompressionSessionPreferences(bool preferDecompressionSession, bool videoRendererProtectedFallbackDisabled)
-{
-    m_preferDecompressionSession = preferDecompressionSession;
-    m_videoRendererProtectedFallbackDisabled = videoRendererProtectedFallbackDisabled;
-    m_private->setDecompressionSessionPreferences(preferDecompressionSession, videoRendererProtectedFallbackDisabled);
-}
-#endif
-
 #endif // ENABLE(MEDIA_SOURCE)
 
 #if ENABLE(MEDIA_STREAM)
@@ -645,9 +635,6 @@ void MediaPlayer::loadWithNextMediaEngine(const MediaPlayerFactory* current)
         m_private = playerPrivate;
         if (playerPrivate) {
             client().mediaPlayerEngineUpdated();
-#if USE(AVFOUNDATION)
-            playerPrivate->setDecompressionSessionPreferences(m_preferDecompressionSession, m_videoRendererProtectedFallbackDisabled);
-#endif
             if (m_pageIsVisible)
                 playerPrivate->setPageIsVisible(m_pageIsVisible);
             if (m_visibleInViewport)

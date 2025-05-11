@@ -4713,11 +4713,18 @@ header: <WebCore/MediaPlayer.h>
     MediaTime positiveThreshold;
 };
 
+[OptionSet] enum class WebCore::VideoMediaSampleRendererPreference : uint8_t {
+    PrefersDecompressionSession,
+    ProtectedFallbackDisabled,
+    UseDecompressionSessionForProtectedContent
+};
+
 header: <WebCore/MediaPlayer.h>
 [CustomHeader] struct WebCore::MediaPlayerLoadOptions {
     WebCore::ContentType contentType;
     bool requiresRemotePlayback;
     bool supportsLimitedMatroska;
+    OptionSet<WebCore::VideoMediaSampleRendererPreference> videoMediaSampleRendererPreferences;
 };
 
 #endif

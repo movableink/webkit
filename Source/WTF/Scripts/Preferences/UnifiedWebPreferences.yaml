@@ -8312,15 +8312,29 @@ VideoRendererProtectedFallbackDisabled:
   category: media
   humanReadableName: "VideoMediaSampleRenderer fallback to AVSBDL for protected content disabled"
   humanReadableDescription: "VideoMediaSampleRenderer fallback to AVSBDL for protected content disabled"
-  condition: USE(AVFOUNDATION)
+  condition: USE(MODERN_AVCONTENTKEYSESSION_WITH_VTDECOMPRESSIONSESSION)
   defaultValue:
     WebKitLegacy:
       default: false
     WebKit:
-      "USE(MODERN_AVCONTENTKEYSESSION)": true
+      default: true
+    WebCore:
+      default: true
+  sharedPreferenceForWebProcess: true
+
+VideoRendererUseDecompressionSessionForProtected:
+  type: bool
+  status: preview
+  category: media
+  humanReadableName: "VideoMediaSampleRenderer use DecompressionSession for protected content"
+  humanReadableDescription: "VideoMediaSampleRenderer use DecompressionSession for protected content"
+  condition: USE(MODERN_AVCONTENTKEYSESSION_WITH_VTDECOMPRESSIONSESSION)
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
       default: false
     WebCore:
-      "USE(MODERN_AVCONTENTKEYSESSION)": true
       default: false
   sharedPreferenceForWebProcess: true
 

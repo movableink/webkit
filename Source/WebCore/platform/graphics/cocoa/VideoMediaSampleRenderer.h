@@ -26,6 +26,7 @@
 #pragma once
 
 #include "FrameRateMonitor.h"
+#include "MediaPlayerEnums.h"
 #include "ProcessIdentity.h"
 #include "SampleMap.h"
 #include <CoreMedia/CMTime.h>
@@ -61,10 +62,10 @@ public:
     static Ref<VideoMediaSampleRenderer> create(WebSampleBufferVideoRendering *renderer) { return adoptRef(*new VideoMediaSampleRenderer(renderer)); }
     ~VideoMediaSampleRenderer();
 
+    using Preferences = VideoMediaSampleRendererPreferences;
     bool prefersDecompressionSession() const;
-    void setPrefersDecompressionSession(bool);
+    void setPreferences(Preferences);
     bool isUsingDecompressionSession() const { return m_isUsingDecompressionSession; }
-    void setUseDecompressionSessionForProtectedFallback(bool);
 
     void setTimebase(RetainPtr<CMTimebaseRef>&&);
     RetainPtr<CMTimebaseRef> timebase() const;
@@ -154,6 +155,8 @@ private:
     void ensureOnDispatcherSync(Function<void()>&&) const;
     dispatch_queue_t dispatchQueue() const;
     RefPtr<WebCoreDecompressionSession> decompressionSession() const;
+    bool useDecompressionSessionForProtectedFallback() const;
+    bool useDecompressionSessionForProtectedContent() const;
 
     const RefPtr<WTF::WorkQueue> m_workQueue;
     RetainPtr<AVSampleBufferDisplayLayer> m_displayLayer;
@@ -178,11 +181,10 @@ private:
     std::optional<CMTime> m_nextScheduledPurge WTF_GUARDED_BY_CAPABILITY(dispatcher().get());
 
     Function<void()> m_readyForMoreSampleFunction;
-    bool m_prefersDecompressionSession WTF_GUARDED_BY_CAPABILITY(mainThread) { false };
+    Preferences m_preferences;
     std::optional<uint32_t> m_currentCodec;
     std::atomic<bool> m_gotDecodingError { false };
     bool m_needsFlushing WTF_GUARDED_BY_CAPABILITY(mainThread) { false };
-    bool m_useDecompressionSessionForProtectedFallback { true };
 
     // B-Frame tracker.
     MediaTime m_highestPresentationTime WTF_GUARDED_BY_CAPABILITY(mainThread) { MediaTime::invalidTime() };

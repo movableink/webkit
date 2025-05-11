@@ -194,6 +194,16 @@ RefPtr<WebCoreDecompressionSession> VideoMediaSampleRenderer::decompressionSessi
     return m_decompressionSession;
 }
 
+bool VideoMediaSampleRenderer::useDecompressionSessionForProtectedFallback() const
+{
+    return useDecompressionSessionForProtectedContent() || m_preferences.contains(VideoMediaSampleRendererPreference::ProtectedFallbackDisabled);
+}
+
+bool VideoMediaSampleRenderer::useDecompressionSessionForProtectedContent() const
+{
+    return m_preferences.contains(VideoMediaSampleRendererPreference::UseDecompressionSessionForProtectedContent);
+}
+
 size_t VideoMediaSampleRenderer::decodedSamplesCount() const
 {
     return m_decodedSampleQueue ? PAL::CMBufferQueueGetBufferCount(m_decodedSampleQueue.get()) : 0;
@@ -338,22 +348,17 @@ bool VideoMediaSampleRenderer::prefersDecompressionSession() const
 {
     assertIsMainThread();
 
-    return m_prefersDecompressionSession;
+    return m_preferences.contains(VideoMediaSampleRendererPreference::PrefersDecompressionSession);
 }
 
-void VideoMediaSampleRenderer::setPrefersDecompressionSession(bool prefers)
+void VideoMediaSampleRenderer::setPreferences(Preferences preferences)
 {
     assertIsMainThread();
 
-    if (m_prefersDecompressionSession == prefers || isUsingDecompressionSession())
+    if (m_preferences == preferences || isUsingDecompressionSession())
         return;
 
-    m_prefersDecompressionSession = prefers;
-}
-
-void VideoMediaSampleRenderer::setUseDecompressionSessionForProtectedFallback(bool use)
-{
-    m_useDecompressionSessionForProtectedFallback = use;
+    m_preferences = preferences;
 }
 
 void VideoMediaSampleRenderer::setTimebase(RetainPtr<CMTimebaseRef>&& timebase)
@@ -442,7 +447,7 @@ void VideoMediaSampleRenderer::enqueueSample(const MediaSample& sample)
     }
 #endif
 
-    if (!decompressionSession() && (!renderer() || ((prefersDecompressionSession() || needsDecompressionSession || isUsingDecompressionSession()) && !sample.isProtected())))
+    if (!decompressionSession() && (!renderer() || ((prefersDecompressionSession() || needsDecompressionSession || isUsingDecompressionSession()) && (!sample.isProtected() || useDecompressionSessionForProtectedContent()))))
         initializeDecompressionSession();
 
     if (!isUsingDecompressionSession()) {
@@ -450,7 +455,7 @@ void VideoMediaSampleRenderer::enqueueSample(const MediaSample& sample)
         return;
     }
 
-    if (!m_useDecompressionSessionForProtectedFallback && !m_protectedContentEncountered && sample.isProtected()) {
+    if (!useDecompressionSessionForProtectedFallback() && !m_protectedContentEncountered && sample.isProtected()) {
         m_protectedContentEncountered = true;
 #if !PLATFORM(WATCHOS)
         auto numberOfDroppedVideoFrames = [renderer() videoPerformanceMetrics].numberOfDroppedVideoFrames;
@@ -522,12 +527,12 @@ void VideoMediaSampleRenderer::decodeNextSampleIfNeeded()
 
     auto cmSample = sample->platformSample().sample.cmSampleBuffer;
 
-    if (!m_useDecompressionSessionForProtectedFallback && m_wasProtected != sample->isProtected()) {
+    if (!useDecompressionSessionForProtectedFallback() && m_wasProtected != sample->isProtected()) {
         ASSERT(sample->isSync());
         RELEASE_LOG(Media, "Changing protection type (was:%d) content at:%0.2f", m_wasProtected, sample->presentationTime().toFloat());
         m_wasProtected = sample->isProtected();
     }
-    if (!m_useDecompressionSessionForProtectedFallback && m_wasProtected) {
+    if (!useDecompressionSessionForProtectedFallback() && m_wasProtected) {
         decodedFrameAvailable(cmSample, flushId);
         decodeNextSampleIfNeeded();
         return;
