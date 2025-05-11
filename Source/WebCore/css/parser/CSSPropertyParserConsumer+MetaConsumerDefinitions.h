@@ -39,6 +39,20 @@ namespace CSSPropertyParserHelpers {
 
 template<typename> struct ConsumerDefinition;
 
+// Used to check that a specialization of ConsumerDefinition exists.
+struct HasConsumerDefinition {
+private:
+    template<typename T, typename U = decltype(ConsumerDefinition<T>{})>
+    static constexpr bool exists(int) { return true; }
+
+    template<typename T>
+    static constexpr bool exists(char) { return false; }
+
+public:
+    template<typename T>
+    static constexpr bool check() { return exists<T>(0); }
+};
+
 // FIXME: Bailing on infinity during validation does not seem to match the intent of the spec,
 // though due to the use of "implementation-defined" it may still be conforming. The spec states:
 //
