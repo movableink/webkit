@@ -81,7 +81,7 @@ typedef unsigned long long uint64_t;
 #define PRIu32        "lu"
 #define PRIx32        "lx"
 #define PRIX32        "lX"
-#else    // OSX
+#else	// OSX
 #define PRId32        "d"
 #define PRIi32        "i"
 #define PRIo32        "o"

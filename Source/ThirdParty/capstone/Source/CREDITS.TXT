@@ -2,18 +2,20 @@ This file credits all the contributors of the Capstone engine project.
 
 Key developers
 ==============
-1. Nguyen Anh Quynh <aquynh -at- gmail.com>
-    - Core engine
-    - Bindings: Python, Ruby, OCaml, Java, C#
+Nguyen Anh Quynh <aquynh -at- gmail.com>
+Chenxu Wu (kabeor) <kabeor00 -at- gmail.com>
 
-2. Tan Sheng Di <shengdi -at- coseinc.com>
-    - Bindings: Ruby
 
-3. Ben Nagy <ben -at- coseinc.com>
-    - Bindings: Ruby, Go
+Past key developers
+===================
+Tan Sheng Di <shengdi -at- coseinc.com>
+	- Bindings: Ruby
 
-4. Dang Hoang Vu <dang.hvu -at- gmail.com>
-    - Bindings: Java
+Ben Nagy <ben -at- coseinc.com>
+	- Bindings: Ruby, Go
+
+Dang Hoang Vu <dang.hvu -at- gmail.com>
+	- Bindings: Java
 
 
 Beta testers (in random order)
@@ -77,7 +79,12 @@ Fotis Loukos: TMS320C64x architecture.
 Wolfgang Schwotzer: M680X architecture.
 Philippe Antoine: Integration with oss-fuzz and various fixes.
 Stephen Eckels (stevemk14ebr): x86 encoding features
+Tong Yu(Spike) & Kai Jern, Lau (xwings): WASM architecture.
 Sebastian Macke: MOS65XX architecture
 Ilya Leoshkevich: SystemZ architecture improvements.
 Do Minh Tuan: Regression testing tool (cstest)
-Kevin Foo (chfl4gs): PyPI github actions workflow.
+david942j: BPF (both classic and extended) architecture.
+fanfuqiang & citypw & porto703 : RISCV architecture.
+Josh "blacktop" Maine: Arm64 architecture improvements.
+Finn Wilkinson: AArch64 update to Armv9.2-a (SME + SVE2 support)
+Billow & Sidneyp : TriCore architecture.
