@@ -49,6 +49,10 @@
 #include "WKSharedSimulationConnectionHelper.h"
 #endif
 
+#if USE(EXTENSIONKIT)
+#import "WKProcessExtension.h"
+#endif
+
 #import <pal/cocoa/AVFoundationSoftLink.h>
 
 namespace WebKit {
@@ -140,6 +144,11 @@ void GPUProcess::platformInitializeGPUProcess(GPUProcessCreationParameters& para
 
 #if USE(SANDBOX_EXTENSIONS_FOR_CACHE_AND_TEMP_DIRECTORY_ACCESS) && USE(EXTENSIONKIT)
     MTLSetShaderCachePath(parameters.containerCachesDirectory.createNSString().get());
+#endif
+
+#if USE(EXTENSIONKIT)
+    if (WKProcessExtension.sharedInstance)
+        [WKProcessExtension.sharedInstance lockdownSandbox:@"1.0"];
 #endif
 }
 
