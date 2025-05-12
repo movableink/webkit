@@ -1858,6 +1858,11 @@ bool Quirks::shouldSupportHoverMediaQueries() const
 #endif
 }
 
+bool Quirks::shouldRewriteMediaRangeRequestForURL(const URL& url) const
+{
+    return needsQuirks() && m_quirksData.needsMediaRewriteRangeRequestQuirk && RegistrableDomain(url).string() == "bing.com"_s;
+}
+
 URL Quirks::topDocumentURL() const
 {
     if (!m_topDocumentURLForTesting.isEmpty()) [[unlikely]]
@@ -2302,6 +2307,7 @@ static void handleBingQuirks(QuirksData& quirksData, const URL& quirksURL, const
     // bing.com rdar://126573838
     auto topDocumentHost = quirksURL.host();
     quirksData.needsBingGestureEventQuirk = topDocumentHost == "www.bing.com"_s && startsWithLettersIgnoringASCIICase(quirksURL.path(), "/maps"_s);
+    quirksData.needsMediaRewriteRangeRequestQuirk = true;
 }
 
 static void handleBungalowQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)

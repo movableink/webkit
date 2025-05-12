@@ -255,6 +255,8 @@ public:
 
     bool shouldSupportHoverMediaQueries() const;
 
+    bool shouldRewriteMediaRangeRequestForURL(const URL&) const;
+
 private:
     bool needsQuirks() const;
     bool isDomain(const String&) const;
