@@ -38,6 +38,7 @@
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
+#include <wtf/WeakPtrImpl.h>
 
 namespace JSC {
 class JSValue;

@@ -28,6 +28,7 @@
 
 #include "HTTPHeaderNames.h"
 #include <utility>
+#include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {

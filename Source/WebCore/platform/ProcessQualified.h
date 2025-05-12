@@ -26,8 +26,10 @@
 #pragma once
 
 #include "ProcessIdentifier.h"
+#include <wtf/GetPtr.h>
 #include <wtf/Hasher.h>
 #include <wtf/Markable.h>
+#include <wtf/text/IntegerToStringConversion.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 

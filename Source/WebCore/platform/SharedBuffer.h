@@ -29,13 +29,16 @@
 #include <JavaScriptCore/Forward.h>
 #include <span>
 #include <utility>
+#include <variant>
 #include <wtf/FileSystem.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
 #include <wtf/MappedFileData.h>
+#include <wtf/RawPtrTraits.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/Variant.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 

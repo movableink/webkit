@@ -1741,6 +1741,7 @@ def generate_message_names_header(receivers):
     result.append('#pragma once\n')
     result.append('\n')
     result.append('#include <algorithm>\n')
+    result.append('#include <array>\n')
     result.append('#include <wtf/EnumTraits.h>\n')
     result.append('#include <wtf/text/ASCIILiteral.h>\n')
     result.append('\n')

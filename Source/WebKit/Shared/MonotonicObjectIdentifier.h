@@ -26,6 +26,7 @@
 #pragma once
 
 #include <wtf/ArgumentCoder.h>
+#include <wtf/CheckedArithmetic.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/HashTraits.h>
 #include <wtf/text/TextStream.h>

@@ -29,9 +29,11 @@
 #include "MessageNames.h"
 #include "ReceiverMatcher.h"
 #include "SyncRequestID.h"
+#include <memory>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
+#include <wtf/Markable.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/StdLibExtras.h>

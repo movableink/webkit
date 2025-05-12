@@ -31,6 +31,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <wtf/Assertions.h>
+#include <wtf/ForbidHeapAllocation.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashTraits.h>

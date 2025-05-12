@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <unicode/umachine.h>
 #include <wtf/text/AtomStringImpl.h>
 
 namespace JSC {

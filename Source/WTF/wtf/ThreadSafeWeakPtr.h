@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/Atomics.h>
 #include <wtf/Lock.h>
 #include <wtf/MainThread.h>
 #include <wtf/RefPtr.h>

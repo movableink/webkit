@@ -28,6 +28,7 @@
 
 #include <wtf/CanMakeWeakPtr.h>
 #include <wtf/CompactRefPtrTuple.h>
+#include <wtf/GetPtr.h>
 #include <wtf/Packed.h>
 #include <wtf/WeakPtrFactory.h>
 #include <wtf/WeakRef.h>

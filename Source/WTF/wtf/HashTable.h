@@ -23,6 +23,7 @@
 
 #include <atomic>
 #include <iterator>
+#include <memory>
 #include <mutex>
 #include <numeric>
 #include <string.h>

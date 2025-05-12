@@ -30,6 +30,8 @@
 #include "ScriptBuffer.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "ServiceWorkerIdentifier.h"
+#include <wtf/HashIterators.h>
+#include <wtf/KeyValuePair.h>
 #include <wtf/ObjectIdentifier.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/URLHash.h>

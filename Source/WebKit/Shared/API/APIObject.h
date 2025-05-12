@@ -25,6 +25,9 @@
 
 #pragma once
 
+#include <wtf/HashTable.h>
+#include <wtf/Noncopyable.h>
+#include <wtf/Platform.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>

@@ -48,12 +48,14 @@
 #include "Synchronousness.h"
 #include "WeakHandleOwner.h"
 #include <wtf/AutomaticThread.h>
+#include <wtf/Box.h>
 #include <wtf/ConcurrentPtrHashSet.h>
 #include <wtf/Deque.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/Markable.h>
+#include <wtf/NotFound.h>
 #include <wtf/ParallelHelperPool.h>
 #include <wtf/Threading.h>
 

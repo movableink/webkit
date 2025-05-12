@@ -29,6 +29,8 @@
 #include "Options.h"
 #include "PageCount.h"
 
+#include <set>
+
 #include <wtf/CagedPtr.h>
 #include <wtf/Expected.h>
 #include <wtf/Function.h>

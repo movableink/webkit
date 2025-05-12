@@ -28,6 +28,7 @@
 #include "ThreadTimers.h"
 #include <functional>
 #include <wtf/CheckedRef.h>
+#include <wtf/CompactRefPtrTuple.h>
 #include <wtf/Function.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/Noncopyable.h>

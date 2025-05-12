@@ -33,6 +33,7 @@
 #include <WebCore/ProcessIdentifier.h>
 #include <memory>
 #include <wtf/CheckedRef.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/ProcessID.h>
@@ -42,6 +43,7 @@
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/VectorHash.h>
+#include <wtf/WeakPtrFactory.h>
 
 namespace WebCore {
 class SharedBuffer;

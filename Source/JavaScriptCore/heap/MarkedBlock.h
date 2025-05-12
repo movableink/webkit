@@ -30,6 +30,7 @@
 #include <wtf/Atomics.h>
 #include <wtf/BitSet.h>
 #include <wtf/CountingLock.h>
+#include <wtf/DebugHeap.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/IterationStatus.h>
 #include <wtf/PageBlock.h>

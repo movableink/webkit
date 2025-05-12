@@ -28,6 +28,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include <wtf/Forward.h>
 #include <wtf/GetPtr.h>
 #include <wtf/HashTable.h>
+#include <wtf/RobinHoodHashTable.h>
 
 namespace WTF {
 

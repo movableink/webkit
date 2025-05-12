@@ -37,6 +37,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
+#include <wtf/text/OrdinalNumber.h>
 #include <wtf/text/TextPosition.h>
 
 namespace JSC {

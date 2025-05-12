@@ -80,9 +80,12 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include <wtf/ThreadSafeRefCountedWithSuppressingSaferCPPChecking.h>
 #include <wtf/ThreadSafeWeakHashSet.h>
 #include <wtf/UniqueArray.h>
+#include <wtf/WeakRandom.h>
 #include <wtf/text/AdaptiveStringSearcher.h>
+#include <wtf/text/StringImpl.h>
 #include <wtf/text/SymbolImpl.h>
 #include <wtf/text/SymbolRegistry.h>
+#include <wtf/text/UniquedStringImpl.h>
 
 #if ENABLE(REGEXP_TRACING)
 #include <wtf/ListHashSet.h>

@@ -27,6 +27,8 @@
 
 #include "APIFeatureStatus.h"
 #include "APIObject.h"
+#include <span>
+#include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
 
 namespace API {

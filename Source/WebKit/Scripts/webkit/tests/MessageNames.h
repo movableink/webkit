@@ -25,6 +25,7 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <wtf/EnumTraits.h>
 #include <wtf/text/ASCIILiteral.h>
 

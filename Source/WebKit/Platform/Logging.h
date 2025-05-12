@@ -26,6 +26,7 @@
 #pragma once
 
 #include <wtf/Assertions.h>
+#include <wtf/Platform.h>
 #include <wtf/text/WTFString.h>
 
 #if __has_include("WebKitLogDefinitions.h")
