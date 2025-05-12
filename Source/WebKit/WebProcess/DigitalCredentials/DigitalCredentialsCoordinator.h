@@ -42,6 +42,8 @@ struct DigitalCredentialsResponseData;
 struct ExceptionData;
 struct MobileDocumentRequest;
 struct OpenID4VPRequest;
+struct PageIdentifierType;
+using PageIdentifier = ObjectIdentifier<PageIdentifierType>;
 }
 
 namespace WebKit {
@@ -53,6 +55,7 @@ class DigitalCredentialsCoordinator : public WebCore::CredentialRequestCoordinat
 
 public:
     explicit DigitalCredentialsCoordinator(WebPage&);
+    ~DigitalCredentialsCoordinator();
 
     static Ref<DigitalCredentialsCoordinator> create(WebPage&);
     void ref() const final { RefCounted::ref(); }
@@ -69,6 +72,7 @@ private:
 
     RefPtr<WebPage> protectedPage() const;
     WeakPtr<WebPage> m_page;
+    const WebCore::PageIdentifier m_pageIdentifier;
     Vector<WebCore::UnvalidatedDigitalCredentialRequest> m_rawRequests;
 };
 

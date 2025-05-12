@@ -45,8 +45,14 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(DigitalCredentialsCoordinator);
 
 DigitalCredentialsCoordinator::DigitalCredentialsCoordinator(WebPage& page)
     : m_page(page)
+    , m_pageIdentifier(page.identifier())
 {
-    WebProcess::singleton().addMessageReceiver(Messages::DigitalCredentialsCoordinator::messageReceiverName(), m_page->identifier(), *this);
+    WebProcess::singleton().addMessageReceiver(Messages::DigitalCredentialsCoordinator::messageReceiverName(), m_pageIdentifier, *this);
+}
+
+DigitalCredentialsCoordinator::~DigitalCredentialsCoordinator()
+{
+    WebProcess::singleton().removeMessageReceiver(Messages::DigitalCredentialsCoordinator::messageReceiverName(), m_pageIdentifier);
 }
 
 Ref<DigitalCredentialsCoordinator> DigitalCredentialsCoordinator::create(WebPage& webPage)
