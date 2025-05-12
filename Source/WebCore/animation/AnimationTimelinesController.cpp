@@ -333,10 +333,9 @@ void AnimationTimelinesController::cacheCurrentTime(ReducedResolutionSeconds new
 
 void AnimationTimelinesController::processPendingAnimations()
 {
-    if (m_isSuspended)
+    if (m_isSuspended || !m_cachedCurrentTime)
         return;
 
-    ASSERT(m_cachedCurrentTime);
     ASSERT(!m_pendingAnimationsProcessingTaskCancellationGroup.hasPendingTask());
 
     auto pendingAnimations = std::exchange(m_pendingAnimations, { });
