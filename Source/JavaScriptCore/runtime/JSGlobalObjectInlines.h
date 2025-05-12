@@ -531,6 +531,8 @@ inline Structure* JSGlobalObject::errorStructure(ErrorType errorType) const
         return m_URIErrorStructure.get(this);
     case ErrorType::AggregateError:
         return m_aggregateErrorStructure.get(this);
+    case ErrorType::SuppressedError:
+        return m_suppressedErrorStructure.get(this);
     }
     ASSERT_NOT_REACHED();
     return nullptr;

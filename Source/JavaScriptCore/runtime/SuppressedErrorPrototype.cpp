@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2025 Sosuke Suzuki <aosukeke@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,55 +23,24 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "config.h"
+#include "SuppressedErrorPrototype.h"
 
-#include <wtf/text/ASCIILiteral.h>
+#include "CallFrame.h"
+#include "JSCInlines.h"
+#include "ThrowScope.h"
 
 namespace JSC {
 
-#define JSC_ERROR_TYPES(macro) \
-    macro(Error) \
-    macro(EvalError) \
-    macro(RangeError) \
-    macro(ReferenceError) \
-    macro(SyntaxError) \
-    macro(TypeError) \
-    macro(URIError) \
-    macro(AggregateError) \
-    macro(SuppressedError) \
+SuppressedErrorPrototype::SuppressedErrorPrototype(VM& vm, Structure* structure)
+    : Base(vm, structure)
+{
+}
 
-#define JSC_ERROR_TYPES_WITH_EXTENSION(macro) \
-    JSC_ERROR_TYPES(macro) \
-    macro(OutOfMemoryError) \
-
-enum class ErrorType : uint8_t {
-#define DECLARE_ERROR_TYPES_ENUM(name) name,
-    JSC_ERROR_TYPES(DECLARE_ERROR_TYPES_ENUM)
-#undef DECLARE_ERROR_TYPES_ENUM
-};
-
-#define COUNT_ERROR_TYPES(name) 1 +
-static constexpr unsigned NumberOfErrorType {
-    JSC_ERROR_TYPES(COUNT_ERROR_TYPES) 0
-};
-#undef COUNT_ERROR_TYPES
-
-enum class ErrorTypeWithExtension : uint8_t {
-#define DECLARE_ERROR_TYPES_ENUM(name) name,
-    JSC_ERROR_TYPES_WITH_EXTENSION(DECLARE_ERROR_TYPES_ENUM)
-#undef DECLARE_ERROR_TYPES_ENUM
-};
-
-ASCIILiteral errorTypeName(ErrorType);
-ASCIILiteral errorTypeName(ErrorTypeWithExtension);
+void SuppressedErrorPrototype::finishCreation(VM& vm)
+{
+    Base::finishCreation(vm, errorTypeName(ErrorType::SuppressedError));
+    ASSERT(inherits(info()));
+}
 
 } // namespace JSC
-
-namespace WTF {
-
-class PrintStream;
-
-void printInternal(PrintStream&, JSC::ErrorType);
-void printInternal(PrintStream&, JSC::ErrorTypeWithExtension);
-
-} // namespace WTF

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2025 Sosuke Suzuki <aosukeke@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,53 +25,33 @@
 
 #pragma once
 
-#include <wtf/text/ASCIILiteral.h>
+#include "ErrorPrototype.h"
 
 namespace JSC {
 
-#define JSC_ERROR_TYPES(macro) \
-    macro(Error) \
-    macro(EvalError) \
-    macro(RangeError) \
-    macro(ReferenceError) \
-    macro(SyntaxError) \
-    macro(TypeError) \
-    macro(URIError) \
-    macro(AggregateError) \
-    macro(SuppressedError) \
+class SuppressedErrorPrototype final : public ErrorPrototypeBase {
+public:
+    using Base = ErrorPrototypeBase;
 
-#define JSC_ERROR_TYPES_WITH_EXTENSION(macro) \
-    JSC_ERROR_TYPES(macro) \
-    macro(OutOfMemoryError) \
+    template<typename CellType, SubspaceAccess>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(SuppressedErrorPrototype, Base);
+        return &vm.plainObjectSpace();
+    }
 
-enum class ErrorType : uint8_t {
-#define DECLARE_ERROR_TYPES_ENUM(name) name,
-    JSC_ERROR_TYPES(DECLARE_ERROR_TYPES_ENUM)
-#undef DECLARE_ERROR_TYPES_ENUM
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
+
+    static SuppressedErrorPrototype* create(VM& vm, Structure* structure)
+    {
+        SuppressedErrorPrototype* prototype = new (NotNull, allocateCell<SuppressedErrorPrototype>(vm)) SuppressedErrorPrototype(vm, structure);
+        prototype->finishCreation(vm);
+        return prototype;
+    }
+
+private:
+    SuppressedErrorPrototype(VM&, Structure*);
+    void finishCreation(VM&);
 };
-
-#define COUNT_ERROR_TYPES(name) 1 +
-static constexpr unsigned NumberOfErrorType {
-    JSC_ERROR_TYPES(COUNT_ERROR_TYPES) 0
-};
-#undef COUNT_ERROR_TYPES
-
-enum class ErrorTypeWithExtension : uint8_t {
-#define DECLARE_ERROR_TYPES_ENUM(name) name,
-    JSC_ERROR_TYPES_WITH_EXTENSION(DECLARE_ERROR_TYPES_ENUM)
-#undef DECLARE_ERROR_TYPES_ENUM
-};
-
-ASCIILiteral errorTypeName(ErrorType);
-ASCIILiteral errorTypeName(ErrorTypeWithExtension);
 
 } // namespace JSC
-
-namespace WTF {
-
-class PrintStream;
-
-void printInternal(PrintStream&, JSC::ErrorType);
-void printInternal(PrintStream&, JSC::ErrorTypeWithExtension);
-
-} // namespace WTF

@@ -1064,6 +1064,9 @@ runtime/Structure.cpp
 runtime/StructureCache.cpp
 runtime/StructureChain.cpp
 runtime/StructureRareData.cpp
+runtime/SuppressedError.cpp
+runtime/SuppressedErrorConstructor.cpp
+runtime/SuppressedErrorPrototype.cpp
 runtime/Symbol.cpp
 runtime/SymbolConstructor.cpp
 runtime/SymbolObject.cpp

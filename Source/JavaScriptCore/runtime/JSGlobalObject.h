@@ -239,6 +239,7 @@ public:
     LazyClassStructure m_typeErrorStructure;
     LazyClassStructure m_URIErrorStructure;
     LazyClassStructure m_aggregateErrorStructure;
+    LazyClassStructure m_suppressedErrorStructure;
 
     WriteBarrier<ObjectConstructor> m_objectConstructor;
     WriteBarrier<ArrayConstructor> m_arrayConstructor;
@@ -1202,6 +1203,8 @@ private:
     void initializeErrorConstructor(LazyClassStructure::Initializer&);
 
     void initializeAggregateErrorConstructor(LazyClassStructure::Initializer&);
+
+    void initializeSuppressedErrorConstructor(LazyClassStructure::Initializer&);
 
     JS_EXPORT_PRIVATE void init(VM&);
     void initStaticGlobals(VM&);

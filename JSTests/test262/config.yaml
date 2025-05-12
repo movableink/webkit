@@ -49,7 +49,6 @@ skip:
     - test/staging/explicit-resource-management
     - test/built-ins/DisposableStack
     - test/built-ins/AsyncDisposableStack
-    - test/built-ins/NativeErrors/SuppressedError
     - test/language/statements/using
     - test/language/statements/await-using
   files:

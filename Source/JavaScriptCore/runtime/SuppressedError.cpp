@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2025 Sosuke Suzuki <aosukeke@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,55 +23,31 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "config.h"
+#include "SuppressedError.h"
 
-#include <wtf/text/ASCIILiteral.h>
+#include "ExceptionScope.h"
+#include "JSCJSValueInlines.h"
+#include "JSGlobalObjectInlines.h"
 
 namespace JSC {
 
-#define JSC_ERROR_TYPES(macro) \
-    macro(Error) \
-    macro(EvalError) \
-    macro(RangeError) \
-    macro(ReferenceError) \
-    macro(SyntaxError) \
-    macro(TypeError) \
-    macro(URIError) \
-    macro(AggregateError) \
-    macro(SuppressedError) \
+ErrorInstance* createSuppressedError(JSGlobalObject* globalObject, VM& vm, Structure* structure, JSValue error, JSValue suppressed, JSValue message, ErrorInstance::SourceAppender appender, RuntimeType type, bool useCurrentFrame)
+{
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
-#define JSC_ERROR_TYPES_WITH_EXTENSION(macro) \
-    JSC_ERROR_TYPES(macro) \
-    macro(OutOfMemoryError) \
+    String messageString = message.isUndefined() ? String() : message.toWTFString(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-enum class ErrorType : uint8_t {
-#define DECLARE_ERROR_TYPES_ENUM(name) name,
-    JSC_ERROR_TYPES(DECLARE_ERROR_TYPES_ENUM)
-#undef DECLARE_ERROR_TYPES_ENUM
-};
+    auto* suppressedError = ErrorInstance::create(vm, structure, messageString, JSValue(), appender, type, ErrorType::SuppressedError, useCurrentFrame);
 
-#define COUNT_ERROR_TYPES(name) 1 +
-static constexpr unsigned NumberOfErrorType {
-    JSC_ERROR_TYPES(COUNT_ERROR_TYPES) 0
-};
-#undef COUNT_ERROR_TYPES
+    suppressedError->putDirect(vm, vm.propertyNames->error, error, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-enum class ErrorTypeWithExtension : uint8_t {
-#define DECLARE_ERROR_TYPES_ENUM(name) name,
-    JSC_ERROR_TYPES_WITH_EXTENSION(DECLARE_ERROR_TYPES_ENUM)
-#undef DECLARE_ERROR_TYPES_ENUM
-};
+    suppressedError->putDirect(vm, vm.propertyNames->suppressed, suppressed, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-ASCIILiteral errorTypeName(ErrorType);
-ASCIILiteral errorTypeName(ErrorTypeWithExtension);
+    return suppressedError;
+}
 
 } // namespace JSC
-
-namespace WTF {
-
-class PrintStream;
-
-void printInternal(PrintStream&, JSC::ErrorType);
-void printInternal(PrintStream&, JSC::ErrorTypeWithExtension);
-
-} // namespace WTF

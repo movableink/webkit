@@ -315,7 +315,10 @@
     macro(written) \
     macro(year) \
     macro(years) \
-    macro(yearsDisplay)
+    macro(yearsDisplay) \
+    macro(error) \
+    macro(suppressed) \
+    macro(SuppressedError)
 
 #define JSC_COMMON_IDENTIFIERS_EACH_PRIVATE_FIELD(macro) \
     macro(constructor)
