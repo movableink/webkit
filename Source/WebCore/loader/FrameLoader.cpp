@@ -4270,7 +4270,7 @@ bool FrameLoader::shouldTreatURLAsSameAsCurrent(const SecurityOrigin* requesterO
         return false;
     if (requesterOrigin && (!m_frame->document() || !requesterOrigin->isSameOriginAs(m_frame->protectedDocument()->protectedSecurityOrigin())))
         return false;
-    return url == currentHistoryItem->url() || url == currentHistoryItem->originalURL();
+    return url == currentHistoryItem->url();
 }
 
 bool FrameLoader::shouldTreatURLAsSrcdocDocument(const URL& url) const
