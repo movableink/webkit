@@ -84,6 +84,7 @@ enum class AXPropertyFlag : uint32_t {
 };
 
 enum class AXProperty : uint16_t {
+    ARIALevel,
     ARIARoleDescription,
 #if !ENABLE(AX_THREAD_TEXT_APIS)
     // Rather than caching text content as property when ENABLE(AX_THREAD_TEXT_APIS), we should
@@ -152,8 +153,6 @@ enum class AXProperty : uint16_t {
     IsSuperscript,
     HasTextShadow,
     HasUnderline,
-    HeadingLevel,
-    HierarchicalLevel,
     HorizontalScrollBar,
     IdentifierAttribute,
     IncrementButton,

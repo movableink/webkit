@@ -110,6 +110,18 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
         const auto& tag = object.tagName();
         if (tag == bodyTag)
             setProperty(AXProperty::TagName, TagName::body);
+        else if (tag == h1Tag)
+            setProperty(AXProperty::TagName, TagName::h1);
+        else if (tag == h2Tag)
+            setProperty(AXProperty::TagName, TagName::h2);
+        else if (tag == h3Tag)
+            setProperty(AXProperty::TagName, TagName::h3);
+        else if (tag == h4Tag)
+            setProperty(AXProperty::TagName, TagName::h4);
+        else if (tag == h5Tag)
+            setProperty(AXProperty::TagName, TagName::h5);
+        else if (tag == h6Tag)
+            setProperty(AXProperty::TagName, TagName::h6);
 #if ENABLE(AX_THREAD_TEXT_APIS)
         else if (tag == markTag)
             setProperty(AXProperty::TagName, TagName::mark);
@@ -181,7 +193,6 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXProperty::CanSetFocusAttribute, object.canSetFocusAttribute());
     setProperty(AXProperty::CanSetValueAttribute, object.canSetValueAttribute());
     setProperty(AXProperty::CanSetSelectedAttribute, object.canSetSelectedAttribute());
-    setProperty(AXProperty::HeadingLevel, object.headingLevel());
     setProperty(AXProperty::ValueDescription, object.valueDescription().isolatedCopy());
     setProperty(AXProperty::ValueForRange, object.valueForRange());
     setProperty(AXProperty::MaxValueForRange, object.maxValueForRange());
@@ -207,7 +218,6 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXProperty::ExplicitAutoCompleteValue, object.explicitAutoCompleteValue().isolatedCopy());
     setProperty(AXProperty::ColorValue, object.colorValue());
     setProperty(AXProperty::ExplicitOrientation, object.explicitOrientation());
-    setProperty(AXProperty::HierarchicalLevel, object.hierarchicalLevel());
     setProperty(AXProperty::ExplicitLiveRegionStatus, object.explicitLiveRegionStatus().isolatedCopy());
     setProperty(AXProperty::ExplicitLiveRegionRelevant, object.explicitLiveRegionRelevant().isolatedCopy());
     setProperty(AXProperty::LiveRegionAtomic, object.liveRegionAtomic());
@@ -319,9 +329,10 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
         setProperty(AXProperty::CellScope, object.cellScope().isolatedCopy());
     }
 
+    bool isTableRow = object.isTableRow();
     if (object.isTableColumn())
         setProperty(AXProperty::ColumnIndex, object.columnIndex());
-    else if (object.isTableRow()) {
+    else if (isTableRow) {
         setProperty(AXProperty::IsTableRow, true);
         setProperty(AXProperty::RowIndex, object.rowIndex());
     }
@@ -332,10 +343,11 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
         setObjectProperty(AXProperty::DisclosedByRow, object.disclosedByRow());
     }
 
-    if (object.isARIATreeGridRow() || object.isTableRow())
+    if (object.isARIATreeGridRow() || isTableRow)
         setObjectProperty(AXProperty::RowHeader, object.rowHeader());
 
-    if (object.isTreeItem()) {
+    bool isTreeItem = object.isTreeItem();
+    if (isTreeItem) {
         setProperty(AXProperty::IsTreeItem, true);
         setObjectVectorProperty(AXProperty::DisclosedRows, object.disclosedRows());
     }
@@ -453,6 +465,9 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
 
         setProperty(AXProperty::CanBeMultilineTextField, canBeMultilineTextField(object));
     }
+
+    if (object.isHeading() || isTableRow || isTreeItem)
+        setProperty(AXProperty::ARIALevel, object.ariaLevel());
 
     // These properties are only needed on the AXCoreObject interface due to their use in ATSPI,
     // so only cache them for ATSPI.
@@ -2276,6 +2291,27 @@ AXIsolatedObject* AXIsolatedObject::headerContainer()
             return downcast<AXIsolatedObject>(child.ptr());
     }
     return nullptr;
+}
+
+unsigned AXIsolatedObject::headingTagLevel() const
+{
+    TagName tag = propertyValue<TagName>(AXProperty::TagName);
+    switch (tag) {
+    case TagName::h1:
+        return 1;
+    case TagName::h2:
+        return 2;
+    case TagName::h3:
+        return 3;
+    case TagName::h4:
+        return 4;
+    case TagName::h5:
+        return 5;
+    case TagName::h6:
+        return 6;
+    default:
+        return 0;
+    }
 }
 
 #if !PLATFORM(MAC)

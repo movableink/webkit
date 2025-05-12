@@ -664,7 +664,7 @@ static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descenda
     // Trait information also needs to be gathered from the parents above the object.
     // The parentObject is needed instead of the unignoredParentObject, because a table might be ignored, but information still needs to be gathered from it.
     for (auto* parent = backingObject->parentObject(); parent; parent = parent->parentObject()) {
-        AccessibilityRole parentRole = parent->roleValue();
+        auto parentRole = parent->roleValue();
         if (parentRole == AccessibilityRole::WebArea)
             break;
 

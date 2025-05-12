@@ -274,7 +274,7 @@ private:
     String datetimeAttributeValue() const final { return stringAttributeValue(AXProperty::DatetimeAttributeValue); }
     bool canSetValueAttribute() const final { return boolAttributeValue(AXProperty::CanSetValueAttribute); }
     bool canSetSelectedAttribute() const final { return boolAttributeValue(AXProperty::CanSetSelectedAttribute); }
-    unsigned headingLevel() const final { return unsignedAttributeValue(AXProperty::HeadingLevel); }
+    unsigned headingTagLevel() const final;
     AccessibilityButtonState checkboxOrRadioValue() const final { return propertyValue<AccessibilityButtonState>(AXProperty::ButtonState); }
     String valueDescription() const final { return stringAttributeValue(AXProperty::ValueDescription); }
     float valueForRange() const final { return floatAttributeValue(AXProperty::ValueForRange); }
@@ -373,7 +373,7 @@ private:
     {
         return propertyValue<std::optional<AccessibilityOrientation>>(AXProperty::ExplicitOrientation);
     }
-    unsigned hierarchicalLevel() const final { return unsignedAttributeValue(AXProperty::HierarchicalLevel); }
+    unsigned ariaLevel() const final { return unsignedAttributeValue(AXProperty::ARIALevel); }
     String language() const final { return stringAttributeValue(AXProperty::Language); }
     void setSelectedChildren(const AccessibilityChildrenVector&) final;
     AccessibilityChildrenVector visibleChildren() final { return tree()->objectsForIDs(vectorAttributeValue<AXID>(AXProperty::VisibleChildren)); }

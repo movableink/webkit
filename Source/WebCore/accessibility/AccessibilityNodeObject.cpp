@@ -983,15 +983,8 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityNodeObject::radioButtonGr
     return result;
 }
 
-unsigned AccessibilityNodeObject::headingLevel() const
+unsigned AccessibilityNodeObject::headingTagLevel() const
 {
-    // headings can be in block flow and non-block flow
-    if (isHeading()) {
-        int level = getIntegralAttribute(aria_levelAttr);
-        if (level > 0)
-            return level;
-    }
-
     const auto& tag = tagName();
     if (tag == h1Tag)
         return 1;
@@ -2102,33 +2095,6 @@ URL AccessibilityNodeObject::url() const
 #endif
 
     return URL();
-}
-
-unsigned AccessibilityNodeObject::hierarchicalLevel() const
-{
-    RefPtr element = dynamicDowncast<Element>(node());
-    if (!element)
-        return 0;
-
-    if (!element->attributeWithoutSynchronization(aria_levelAttr).isEmpty())
-        return element->getIntegralAttribute(aria_levelAttr);
-
-    // Only tree item will calculate its level through the DOM currently.
-    if (roleValue() != AccessibilityRole::TreeItem)
-        return 0;
-
-    // Hierarchy leveling starts at 1, to match the aria-level spec.
-    // We measure tree hierarchy by the number of groups that the item is within.
-    unsigned level = 1;
-    for (AccessibilityObject* parent = parentObject(); parent; parent = parent->parentObject()) {
-        AccessibilityRole parentRole = parent->ariaRoleAttribute();
-        if (parentRole == AccessibilityRole::Group)
-            level++;
-        else if (parentRole == AccessibilityRole::Tree)
-            break;
-    }
-
-    return level;
 }
 
 void AccessibilityNodeObject::setIsExpanded(bool expand)

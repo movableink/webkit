@@ -1023,7 +1023,8 @@ public:
     virtual bool isIgnored() const = 0;
 
     unsigned blockquoteLevel() const;
-    virtual unsigned headingLevel() const = 0;
+    unsigned headingLevel() const;
+    virtual unsigned headingTagLevel() const = 0;
     virtual AccessibilityButtonState checkboxOrRadioValue() const = 0;
     virtual String valueDescription() const = 0;
     virtual float valueForRange() const = 0;
@@ -1259,8 +1260,9 @@ public:
 
     virtual String language() const = 0;
     String languageIncludingAncestors() const;
+    virtual unsigned ariaLevel() const = 0;
     // 1-based, to match the aria-level spec.
-    virtual unsigned hierarchicalLevel() const = 0;
+    unsigned hierarchicalLevel() const;
     virtual bool isInlineText() const = 0;
 
     virtual void setFocused(bool) = 0;

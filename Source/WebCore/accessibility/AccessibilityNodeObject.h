@@ -78,7 +78,6 @@ public:
     void setFocused(bool) override;
     bool isFocused() const final;
     bool canSetFocusAttribute() const override;
-    unsigned headingLevel() const final;
 
     bool canSetValueAttribute() const override;
 
@@ -91,10 +90,11 @@ public:
     std::optional<AccessibilityOrientation> orientationFromARIA() const;
     std::optional<AccessibilityOrientation> explicitOrientation() const override { return orientationFromARIA(); }
 
+    unsigned headingTagLevel() const final;
+
     AccessibilityButtonState checkboxOrRadioValue() const final;
 
     URL url() const override;
-    unsigned hierarchicalLevel() const final;
     String textUnderElement(TextUnderElementMode = TextUnderElementMode()) const override;
     String accessibilityDescriptionForChildren() const;
     String description() const override;

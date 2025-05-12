@@ -257,7 +257,7 @@ public:
     bool isShowingValidationMessage() const;
     String validationMessage() const;
 
-    unsigned headingLevel() const override { return 0; }
+    unsigned headingTagLevel() const override { return 0; }
     AccessibilityButtonState checkboxOrRadioValue() const override;
     String valueDescription() const override { return String(); }
     float valueForRange() const override { return 0.0f; }
@@ -490,9 +490,9 @@ public:
     Document* topDocument() const;
     RenderView* topRenderer() const;
     ScrollView* scrollView() const override { return nullptr; }
+    unsigned ariaLevel() const final;
     String language() const final;
     // 1-based, to match the aria-level spec.
-    unsigned hierarchicalLevel() const override { return 0; }
     bool isInlineText() const final;
 
     // Ensures that the view is focused and active before attempting to set focus to an AccessibilityObject.

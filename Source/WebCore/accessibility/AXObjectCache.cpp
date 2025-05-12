@@ -4927,6 +4927,9 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
         case AXNotification::InputTypeChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::InputType });
             break;
+        case AXNotification::LevelChanged:
+            tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::ARIALevel });
+            break;
         case AXNotification::MaximumValueChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { { AXProperty::MaxValueForRange, AXProperty::ValueForRange } });
             break;
@@ -5021,7 +5024,6 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
         case AXNotification::HasPopupChanged:
         case AXNotification::InvalidStatusChanged:
         case AXNotification::IsAtomicChanged:
-        case AXNotification::LevelChanged:
         case AXNotification::LiveRegionStatusChanged:
         case AXNotification::LiveRegionRelevantChanged:
         case AXNotification::PlaceholderChanged:

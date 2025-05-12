@@ -1156,6 +1156,45 @@ unsigned AXCoreObject::blockquoteLevel() const
     return level;
 }
 
+unsigned AXCoreObject::headingLevel() const
+{
+    if (isHeading()) {
+        unsigned level = ariaLevel();
+        if (level > 0)
+            return level;
+    }
+
+    unsigned tagLevel = headingTagLevel();
+    if (tagLevel > 0)
+        return tagLevel;
+
+    return 0;
+}
+
+unsigned AXCoreObject::hierarchicalLevel() const
+{
+    unsigned level = ariaLevel();
+    if (level > 0)
+        return level;
+
+    // Only tree item will calculate its level through the DOM currently.
+    if (roleValue() != AccessibilityRole::TreeItem)
+        return 0;
+
+    // Hierarchy leveling starts at 1, to match the aria-level spec.
+    // We measure tree hierarchy by the number of groups that the item is within.
+    level = 1;
+    for (RefPtr ancestor = parentObject(); ancestor; ancestor = ancestor->parentObject()) {
+        auto ancestorRole = ancestor->roleValue();
+        if (ancestorRole == AccessibilityRole::Group)
+            level++;
+        else if (ancestorRole == AccessibilityRole::Tree)
+            break;
+    }
+
+    return level;
+}
+
 bool AXCoreObject::supportsPressAction() const
 {
     if (roleValue() == AccessibilityRole::Presentational)

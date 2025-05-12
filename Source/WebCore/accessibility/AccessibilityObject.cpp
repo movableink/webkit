@@ -1448,6 +1448,12 @@ RenderView* AccessibilityObject::topRenderer() const
     return nullptr;
 }
 
+unsigned AccessibilityObject::ariaLevel() const
+{
+    int level = getIntegralAttribute(aria_levelAttr);
+    return level > 0 ? level : 0;
+}
+
 String AccessibilityObject::language() const
 {
     const auto& lang = getAttribute(langAttr);

@@ -656,6 +656,9 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::ARIARoleDescription:
         stream << "ARIARoleDescription";
         break;
+    case AXProperty::ARIALevel:
+        stream << "ARIALevel";
+        break;
     case AXProperty::BackgroundColor:
         stream << "BackgroundColor";
         break;
@@ -812,12 +815,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
         break;
     case AXProperty::HasUnderline:
         stream << "HasUnderline";
-        break;
-    case AXProperty::HeadingLevel:
-        stream << "HeadingLevel";
-        break;
-    case AXProperty::HierarchicalLevel:
-        stream << "HierarchicalLevel";
         break;
     case AXProperty::HorizontalScrollBar:
         stream << "HorizontalScrollBar";
