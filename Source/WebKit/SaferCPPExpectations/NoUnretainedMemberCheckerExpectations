@@ -129,3 +129,7 @@ WebProcess/InjectedBundle/API/mac/WKDOMRange.h
 WebProcess/InjectedBundle/API/mac/WKDOMText.h
 WebProcess/InjectedBundle/API/mac/WKDOMTextIterator.h
 WebProcess/InjectedBundle/API/mac/WKWebProcessPlugInBrowserContextController.h
+WebKitSwift/IdentityDocumentServices/WKISO18013Request.h
+WebKitSwift/IdentityDocumentServices/WKIdentityDocumentPresentmentMobileDocumentRequest.h
+WebKitSwift/IdentityDocumentServices/WKIdentityDocumentPresentmentRequest.h
+WebKitSwift/IdentityDocumentServices/WKIdentityDocumentPresentmentResponse.h
