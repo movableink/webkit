@@ -143,7 +143,13 @@ public:
     // Borrows the raw pointer from GRefPtr.
     // The pointer is guaranteed to be valid for as long as GRefPtr holds an owning reference
     // to that object.
-    T* /* (transfer none) */ get() const { return m_ptr; }
+    T* /* (transfer none) */ get() const LIFETIME_BOUND { return m_ptr; }
+    // Same as get(), but clang won't complain if you return the pointer to your callee.
+    // Generally unsafe: to use, you must guarantee that the object will still have strong
+    // references by the time your function returns.
+    // Only used for C API functions returning (transfer none) of objects where the above
+    // can be established, e.g. objects stored in a global dictionary.
+    T* /* (transfer none) */ getUncheckedLifetime() const { return m_ptr; }
     T& operator*() const { return *m_ptr; }
     ALWAYS_INLINE T* operator->() const { return m_ptr; }
 

@@ -370,7 +370,7 @@ GVariant* wpe_settings_get_value(WPESettings* settingsObject, const char* key, G
         return nullptr;
     }
 
-    return iter->value.value().get();
+    return iter->value.value().getUncheckedLifetime();
 }
 
 #define g_variant_get_string(str) g_variant_get_string(str, nullptr)
