@@ -130,6 +130,8 @@ void ResourceMonitorThrottler::clearAllData()
 {
     ASSERT(!isMainThread());
 
+    m_throttlersByHost.clear();
+
     if (m_persistence)
         m_persistence->deleteAllRecords();
 }

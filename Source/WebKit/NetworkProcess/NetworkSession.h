@@ -299,7 +299,6 @@ public:
     Ref<WebCore::ResourceMonitorThrottlerHolder> protectedResourceMonitorThrottler();
 
     void clearResourceMonitorThrottlerData(CompletionHandler<void()>&&);
-    void resetResourceMonitorThrottlerForTesting();
 #endif
 
 #if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)

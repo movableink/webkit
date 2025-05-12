@@ -3247,8 +3247,9 @@ ShouldRelaxThirdPartyCookieBlocking NetworkProcess::shouldRelaxThirdPartyCookieB
 void NetworkProcess::resetResourceMonitorThrottlerForTesting(PAL::SessionID sessionID, CompletionHandler<void()>&& completionHandler)
 {
     if (CheckedPtr session = networkSession(sessionID))
-        session->resetResourceMonitorThrottlerForTesting();
-    completionHandler();
+        session->clearResourceMonitorThrottlerData(WTFMove(completionHandler));
+    else
+        completionHandler();
 }
 #endif
 

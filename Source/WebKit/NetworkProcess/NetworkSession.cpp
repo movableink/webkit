@@ -964,16 +964,9 @@ Ref<WebCore::ResourceMonitorThrottlerHolder> NetworkSession::protectedResourceMo
 
 void NetworkSession::clearResourceMonitorThrottlerData(CompletionHandler<void()>&& completionHandler)
 {
-    if (RefPtr throttler = m_resourceMonitorThrottler)
-        throttler->clearAllData(WTFMove(completionHandler));
-    else
-        completionHandler();
+    protectedResourceMonitorThrottler()->clearAllData(WTFMove(completionHandler));
 }
 
-void NetworkSession::resetResourceMonitorThrottlerForTesting()
-{
-    m_resourceMonitorThrottler = nullptr;
-}
 #endif
 
 } // namespace WebKit
