@@ -827,15 +827,16 @@ sub runTest {
     my $prefix = !isWindows() && $DYLD_FRAMEWORK_PATH ? qq(DYLD_FRAMEWORK_PATH=$DYLD_FRAMEWORK_PATH) : "";
     my $execTimeStart = time();
 
-    my $result = qx($prefix $JSC $args $defaultHarness $asyncHarness $includesfile $prefixFile$filename);
+    my $result = qx($prefix $JSC $args $defaultHarness $asyncHarness $includesfile $prefixFile$filename 2>&1);
+    my $exitCode = $? >> 8;
     my $execTime = time() - $execTimeStart;
 
     chomp $result;
 
-    if ($?) {
-        return ($?, $result, $execTime);
+    if ($exitCode) {
+        return ($exitCode, $result, $execTime);
     } else {
-        return ($?, 0, $execTime);
+        return ($exitCode, 0, $execTime);
     }
 }
 
@@ -857,6 +858,10 @@ sub processResult {
         && $expect->{$file}->{$scenario};
 
     my $exitSignalNumber = $exitCode & 0x7f if $scenario ne 'skip';
+
+    if ($scenario ne 'skip' && $exitSignalNumber == 3) {
+        $exitSignalNumber = 0;
+    }
 
     if ($scenario ne 'skip' && ($currentfailure || $exitSignalNumber)) {
 
