@@ -193,8 +193,23 @@ void ARKitBadgeSystemImage::draw(GraphicsContext& graphicsContext, const FloatRe
     [sourceOverFilter setValue:saturationFilter.outputImage forKey:kCIInputBackgroundImageKey];
 
     RetainPtr<CIContext> ciContext = [CIContext context];
-    ASSERT(!isInGPUProcess());
-    RetainPtr<CGImageRef> cgImage = adoptCF([ciContext createCGImage:sourceOverFilter.outputImage fromRect:flippedInsetBadgeRect]);
+
+    RetainPtr<CGImageRef> cgImage;
+#if HAVE(IOSURFACE_COREIMAGE_SUPPORT)
+    if (isInGPUProcess()) {
+        // Crop the result to the badge location.
+        CIImage *croppedImage = [sourceOverFilter.outputImage imageByCroppingToRect:flippedInsetBadgeRect];
+        CIImage *translatedImage = [croppedImage imageByApplyingTransform:CGAffineTransformMakeTranslation(-flippedInsetBadgeRect.origin.x, -flippedInsetBadgeRect.origin.y)];
+
+        auto surfaceDimension = useSmallBadge ? smallBadgeDimension : largeBadgeDimension;
+        std::unique_ptr<IOSurface> badgeSurface = IOSurface::create(&IOSurfacePool::sharedPoolSingleton(), { surfaceDimension, surfaceDimension }, DestinationColorSpace::SRGB());
+        IOSurfaceRef surface = badgeSurface->surface();
+        [ciContext render:translatedImage toIOSurface:surface bounds:badgeRect colorSpace:sRGBColorSpaceRef()];
+        auto surfaceContext = badgeSurface->createPlatformContext();
+        cgImage = badgeSurface->createImage(surfaceContext.get());
+    } else
+#endif
+    cgImage = adoptCF([ciContext createCGImage:sourceOverFilter.outputImage fromRect:flippedInsetBadgeRect]);
 
     // Before we render the result, we should clip to a circle around the badge rectangle.
     CGContextSaveGState(ctx);
