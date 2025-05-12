@@ -805,6 +805,14 @@ inline constexpr Checked<T, C> roundUpToMultipleOfNonPowerOfTwo(Checked<T, C> di
     return x + static_cast<T>(divisor.value() - remainder);
 }
 
+// Returns positive distance to next multiple of a power-of-two divisor.
+template<size_t divisor>
+inline constexpr size_t distanceToMultipleOf(size_t x)
+{
+    static_assert(divisor && isPowerOfTwo(divisor));
+    return (divisor - (x % divisor)) % divisor;
+}
+
 template<typename T>
 inline constexpr T roundDownToMultipleOf(size_t divisor, T x)
 {
@@ -838,6 +846,7 @@ using WTF::reverseBits32;
 using WTF::roundDownToMultipleOf;
 using WTF::roundUpToMultipleOf;
 using WTF::roundUpToMultipleOfNonPowerOfTwo;
+using WTF::distanceToMultipleOf;
 using WTF::roundUpToPowerOfTwo;
 using WTF::isIdentical;
 using WTF::isRepresentableAs;
