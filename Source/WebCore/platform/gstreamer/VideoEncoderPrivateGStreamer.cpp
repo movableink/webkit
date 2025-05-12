@@ -211,11 +211,7 @@ struct _WebKitVideoEncoderPrivate {
     EncoderId encoderId;
     GRefPtr<GstElement> encoder;
     GRefPtr<GstElement> parser;
-    GRefPtr<GstElement> capsFilter;
-    GRefPtr<GstElement> inputCapsFilter;
     GRefPtr<GstElement> outputCapsFilter;
-    GRefPtr<GstElement> videoConvert;
-    GRefPtr<GstElement> videoScale;
     GRefPtr<GstCaps> encodedCaps;
     unsigned bitrate;
     BitrateMode bitrateMode;
@@ -285,8 +281,7 @@ static bool videoEncoderSetEncoder(WebKitVideoEncoder* self, EncoderId encoderId
 {
     ASSERT(encoderId != EncoderId::None);
 
-    auto* structure = gst_caps_get_structure(encodedCaps.get(), 0);
-    if (structure) {
+    if (auto structure = gst_caps_get_structure(encodedCaps.get(), 0)) {
         auto width = gstStructureGet<int>(structure, "width"_s);
         if (width && *width > MAX_WIDTH) {
             GST_WARNING_OBJECT(self, "Encoded width (%d) is too high. Maximum allowed: %d.", *width, MAX_WIDTH);
@@ -299,164 +294,102 @@ static bool videoEncoderSetEncoder(WebKitVideoEncoder* self, EncoderId encoderId
         }
     }
 
-    auto* priv = self->priv;
+    auto priv = self->priv;
     auto srcPad = adoptGRef(gst_element_get_static_pad(GST_ELEMENT_CAST(self), "src"));
 
     priv->encodedCaps = WTFMove(encodedCaps);
 
-    gst_element_set_locked_state(GST_ELEMENT_CAST(self), TRUE);
-
-    if (priv->capsFilter) {
-        gst_element_set_locked_state(priv->capsFilter.get(), TRUE);
-        auto sinkPad = adoptGRef(gst_element_get_static_pad(priv->capsFilter.get(), "sink"));
-        auto peerPad = adoptGRef(gst_pad_get_peer(sinkPad.get()));
-        auto peer = adoptGRef(gst_pad_get_parent_element(peerPad.get()));
-        gst_element_set_state(priv->capsFilter.get(), GST_STATE_NULL);
-        gst_element_unlink(peer.get(), priv->capsFilter.get());
-        gst_bin_remove(GST_BIN_CAST(self), priv->capsFilter.get());
-        sinkPad.clear();
-        priv->capsFilter.clear();
-    }
-
     auto encoderDefinition = Encoders::definition(encoderId);
     ASSERT(encoderDefinition);
 
-    bool shouldLinkEncoder = false;
-    if (priv->encoderId != encoderId) {
-        if (priv->encoder) {
-#ifndef GST_DISABLE_GST_DEBUG
-            auto previousEncoder = Encoders::definition(priv->encoderId);
-            GST_DEBUG_OBJECT(self, "Switching from %s to %s", previousEncoder->name.characters(), encoderDefinition->name.characters());
-#endif
-            gst_element_set_locked_state(priv->encoder.get(), TRUE);
-            gst_element_set_state(priv->encoder.get(), GST_STATE_NULL);
-            gst_element_unlink(priv->inputCapsFilter.get(), priv->encoder.get());
-            gst_bin_remove(GST_BIN_CAST(self), priv->encoder.get());
-        }
-        priv->encoder = gst_element_factory_create(encoderDefinition->factory.get(), nullptr);
-        gst_bin_add(GST_BIN_CAST(self), priv->encoder.get());
-        shouldLinkEncoder = true;
-    } else {
-        GST_DEBUG_OBJECT(self, "Reconfiguring existing %s encoder", encoderDefinition->name.characters());
-        gst_element_set_state(priv->encoder.get(), GST_STATE_READY);
-    }
-
-    if (priv->parser) {
-        gst_element_set_locked_state(priv->parser.get(), TRUE);
-        gst_element_set_state(priv->parser.get(), GST_STATE_NULL);
-        gst_element_unlink_many(priv->encoder.get(), priv->parser.get(), priv->outputCapsFilter.get(), nullptr);
-        gst_bin_remove(GST_BIN_CAST(self), priv->parser.get());
-        priv->parser.clear();
-    }
-
+    priv->encoder = gst_element_factory_create(encoderDefinition->factory.get(), nullptr);
     priv->encoderId = encoderId;
-
-    if (!priv->inputCapsFilter) {
-        priv->inputCapsFilter = gst_element_factory_make("capsfilter", nullptr);
-        gst_bin_add(GST_BIN_CAST(self), priv->inputCapsFilter.get());
-    }
+    auto inputCapsFilter = gst_element_factory_make("capsfilter", nullptr);
+    g_object_set(inputCapsFilter, "caps", inputCaps.get(), nullptr);
+    gst_bin_add_many(GST_BIN_CAST(self), priv->encoder.get(), inputCapsFilter, nullptr);
 
     // Keep videoconvertscale disabled for now due to some performance issues.
     // https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/3815
     auto useVideoConvertScale = StringView::fromLatin1(std::getenv("WEBKIT_GST_USE_VIDEOCONVERT_SCALE"));
+    GRefPtr<GstElement> videoConvert, videoScale;
     if (useVideoConvertScale == "1"_s) {
-        if (!priv->videoConvert) {
-            priv->videoConvert = makeGStreamerElement("videoconvertscale"_s);
-            gst_bin_add(GST_BIN_CAST(self), priv->videoConvert.get());
-
-            auto sinkPadTarget = adoptGRef(gst_element_get_static_pad(priv->videoConvert.get(), "sink"));
-            auto sinkPad = adoptGRef(gst_element_get_static_pad(GST_ELEMENT_CAST(self), "sink"));
-            gst_ghost_pad_set_target(GST_GHOST_PAD(sinkPad.get()), sinkPadTarget.get());
-        } else {
-            gst_element_unlink(priv->videoConvert.get(), priv->inputCapsFilter.get());
-            auto caps = adoptGRef(gst_caps_new_any());
-            g_object_set(priv->inputCapsFilter.get(), "caps", caps.get(), nullptr);
+        videoConvert = makeGStreamerElement("videoconvertscale"_s);
+        if (!videoConvert) {
+            gst_printerrln("videoconvertscale element not found. Please install gst-plugins-base.");
+            return false;
         }
+        gst_bin_add(GST_BIN_CAST(self), videoConvert.get());
     } else {
-        if (!priv->videoScale) {
-            priv->videoScale = makeGStreamerElement("videoscale"_s);
-            gst_bin_add(GST_BIN_CAST(self), priv->videoScale.get());
+        videoScale = makeGStreamerElement("videoscale"_s);
+        if (!videoScale) {
+            gst_printerrln("videoscale element not found. Please install gst-plugins-base.");
+            return false;
         }
-
-        if (!priv->videoConvert) {
-            priv->videoConvert = makeGStreamerElement("videoconvert"_s);
-            gst_bin_add(GST_BIN_CAST(self), priv->videoConvert.get());
-
-            auto sinkPadTarget = adoptGRef(gst_element_get_static_pad(priv->videoConvert.get(), "sink"));
-            auto sinkPad = adoptGRef(gst_element_get_static_pad(GST_ELEMENT_CAST(self), "sink"));
-            gst_ghost_pad_set_target(GST_GHOST_PAD(sinkPad.get()), sinkPadTarget.get());
-        } else {
-            gst_element_unlink_many(priv->videoConvert.get(), priv->videoScale.get(), priv->inputCapsFilter.get(), nullptr);
-            auto caps = adoptGRef(gst_caps_new_any());
-            g_object_set(priv->inputCapsFilter.get(), "caps", caps.get(), nullptr);
+        videoConvert = makeGStreamerElement("videoconvert"_s);
+        if (!videoConvert) {
+            gst_printerrln("videoconvertscale element not found. Please install gst-plugins-base.");
+            return false;
         }
+        gst_bin_add_many(GST_BIN_CAST(self), videoScale.get(), videoConvert.get(), nullptr);
     }
+
+    auto sinkPadTarget = adoptGRef(gst_element_get_static_pad(videoConvert.get(), "sink"));
+    auto sinkPad = adoptGRef(gst_element_get_static_pad(GST_ELEMENT_CAST(self), "sink"));
+    gst_ghost_pad_set_target(GST_GHOST_PAD(sinkPad.get()), sinkPadTarget.get());
 
     if (encoderDefinition->parserName) {
         priv->parser = makeGStreamerElement(encoderDefinition->parserName);
-
-        if (!priv->outputCapsFilter) {
-            priv->outputCapsFilter = gst_element_factory_make("capsfilter", nullptr);
-            gst_bin_add(GST_BIN_CAST(self), priv->outputCapsFilter.get());
+        if (!priv->parser) {
+            gst_printerrln("Parser %s element not found", encoderDefinition->parserName.characters());
+            return false;
         }
+
+        priv->outputCapsFilter = gst_element_factory_make("capsfilter", nullptr);
+        gst_bin_add_many(GST_BIN_CAST(self), priv->parser.get(), priv->outputCapsFilter.get(), nullptr);
     }
 
-    g_object_set(self->priv->inputCapsFilter.get(), "caps", inputCaps.get(), nullptr);
-
     encoderDefinition->setupEncoder(self);
-
     encoderDefinition->setBitrateMode(priv->encoder.get(), priv->bitrateMode);
     encoderDefinition->setLatencyMode(priv->encoder.get(), priv->latencyMode);
 
     if (useVideoConvertScale) {
-        if (!gst_element_link(priv->videoConvert.get(), priv->inputCapsFilter.get())) {
+        if (!gst_element_link(videoConvert.get(), inputCapsFilter)) {
             GST_WARNING_OBJECT(self, "Failed to link videoconvertscale and input capsfilter");
             return false;
         }
-    } else {
-        if (!gst_element_link_many(priv->videoConvert.get(), priv->videoScale.get(), priv->inputCapsFilter.get(), nullptr)) {
-            GST_WARNING_OBJECT(self, "Failed to link videoconvert, videoscale and input capsfilter");
-            return false;
-        }
+    } else if (!gst_element_link_many(videoConvert.get(), videoScale.get(), inputCapsFilter, nullptr)) {
+        GST_WARNING_OBJECT(self, "Failed to link videoconvert, videoscale and input capsfilter");
+        return false;
     }
 
-    if (shouldLinkEncoder && !gst_element_link(priv->inputCapsFilter.get(), priv->encoder.get())) {
+    if (!gst_element_link(inputCapsFilter, priv->encoder.get())) {
         GST_WARNING_OBJECT(self, "Failed to link input capsfilter to encoder");
         return false;
     }
 
-    if (priv->parser) {
-        gst_bin_add(GST_BIN_CAST(self), priv->parser.get());
-        if (shouldLinkEncoder && !gst_element_link(priv->encoder.get(), priv->outputCapsFilter.get())) {
-            GST_WARNING_OBJECT(self, "Failed to link encoder to output capsfilter");
-            return false;
-        }
-        if (!gst_element_link(priv->outputCapsFilter.get(), priv->parser.get())) {
-            GST_WARNING_OBJECT(self, "Failed to link output capsfilter to parser");
-            return false;
-        }
+    if (priv->parser && !gst_element_link_many(priv->encoder.get(), priv->outputCapsFilter.get(), priv->parser.get(), nullptr)) {
+        GST_WARNING_OBJECT(self, "Failed to link encoder to parser");
+        return false;
     }
 
-    priv->capsFilter = gst_element_factory_make("capsfilter", nullptr);
+    auto capsFilter = gst_element_factory_make("capsfilter", nullptr);
     if (encoderDefinition->encodedFormat)
-        g_object_set(priv->capsFilter.get(), "caps", encoderDefinition->encodedFormat.get(), nullptr);
+        g_object_set(capsFilter, "caps", encoderDefinition->encodedFormat.get(), nullptr);
     else
-        g_object_set(priv->capsFilter.get(), "caps", priv->encodedCaps.get(), nullptr);
+        g_object_set(capsFilter, "caps", priv->encodedCaps.get(), nullptr);
 
-    gst_bin_add(GST_BIN_CAST(self), priv->capsFilter.get());
+    gst_bin_add(GST_BIN_CAST(self), capsFilter);
 
-    auto srcPadTarget = adoptGRef(gst_element_get_static_pad(priv->capsFilter.get(), "src"));
+    auto srcPadTarget = adoptGRef(gst_element_get_static_pad(capsFilter, "src"));
     gst_ghost_pad_set_target(GST_GHOST_PAD(srcPad.get()), srcPadTarget.get());
 
-    if (!gst_element_link(priv->parser ? priv->parser.get() : priv->encoder.get(), priv->capsFilter.get())) {
+    if (!gst_element_link(priv->parser ? priv->parser.get() : priv->encoder.get(), capsFilter)) {
         GST_WARNING_OBJECT(self, "Failed to link to final capsfilter");
         return false;
     }
 
     gst_bin_sync_children_states(GST_BIN_CAST(self));
-    gst_element_set_locked_state(GST_ELEMENT_CAST(self), FALSE);
     GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN_CAST(self), GST_DEBUG_GRAPH_SHOW_ALL, "configured-encoder");
-
     videoEncoderSetBitrate(self, priv->bitrate);
     return true;
 }
@@ -496,6 +429,11 @@ bool videoEncoderSupportsCodec(WebKitVideoEncoder* self, const String& codecName
 
 bool videoEncoderSetCodec(WebKitVideoEncoder* self, const String& codecName, const IntSize& size, std::optional<double> frameRate)
 {
+    if (self->priv->encoder) {
+        GST_ERROR_OBJECT(self, "Encoder already configured");
+        return false;
+    }
+
     auto [inputCaps, outputCaps] = GStreamerCodecUtilities::capsFromCodecString(codecName, size, frameRate);
     GST_DEBUG_OBJECT(self, "Input caps: %" GST_PTR_FORMAT, inputCaps.get());
     GST_DEBUG_OBJECT(self, "Output caps: %" GST_PTR_FORMAT, outputCaps.get());
