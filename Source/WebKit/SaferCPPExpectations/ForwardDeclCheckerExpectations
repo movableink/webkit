@@ -43,3 +43,4 @@ WebSWContextManagerConnectionMessages.h
 WebSWServerConnectionMessages.h
 WebSharedWorkerContextManagerConnectionMessages.h
 WebSharedWorkerServerConnectionMessages.h
+WebUserContentControllerProxyMessages.h

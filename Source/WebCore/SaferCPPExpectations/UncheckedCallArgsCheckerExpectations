@@ -498,7 +498,6 @@ layout/layouttree/LayoutBox.cpp
 layout/layouttree/LayoutContainingBlockChainIterator.h
 layout/layouttree/LayoutTreeBuilder.cpp
 loader/ApplicationManifestLoader.cpp
-loader/ContentFilter.cpp
 loader/CrossOriginPreflightChecker.cpp
 loader/DocumentLoader.cpp
 loader/DocumentThreadableLoader.cpp
