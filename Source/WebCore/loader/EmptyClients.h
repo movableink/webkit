@@ -30,6 +30,8 @@
 
 #include "ChromeClient.h"
 #include "CryptoClient.h"
+#include "ExceptionOr.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
