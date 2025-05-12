@@ -68,6 +68,7 @@ list(APPEND WebDriver_SOURCES ${WebDriver_DERIVED_SOURCES_DIR}/WebDriverAtoms.cp
 
 if (ANDROID AND (PORT STREQUAL WPE))
     set(WebDriver_TARGET_TYPE LIBRARY)
+    set(WebDriver_LIBRARY_TYPE SHARED)
 else ()
     set(WebDriver_TARGET_TYPE EXECUTABLE)
 endif ()
