@@ -122,7 +122,7 @@ elsif ARMv7
 
     const sc0 = t4
     const sc1 = t5
-    const sc2 = t6
+    const sc2 = csr0
     const sc3 = t7
 else
     const PC = invalidGPR
@@ -612,7 +612,13 @@ macro ipintCatchCommon()
     loadp VM::targetInterpreterPCForThrow[t3], PC
     loadp VM::targetInterpreterMetadataPCForThrow[t3], MC
 
+if ARMv7
+    push MC
+end
     getIPIntCallee()
+if ARMv7
+    pop MC
+end
 
     loadp CodeBlock[cfr], wasmInstance
     if ARM64 or ARM64E
@@ -630,16 +636,21 @@ macro ipintCatchCommon()
         loadi Wasm::IPIntCallee::m_numRethrowSlotsToAlloc[ws0], t1
         loadi Wasm::IPIntCallee::m_localSizeToAlloc[ws0], t0
     end
-    addq t1, t0
-    mulq LocalSize, t0
-    addq IPIntCalleeSaveSpaceStackAligned, t0
-    subq cfr, t0, PL
+    addp t1, t0
+    mulp LocalSize, t0
+    addp IPIntCalleeSaveSpaceStackAligned, t0
+    subp cfr, t0, PL
 
     loadi [MC], t0
     addp t1, t0
-    lshiftq StackValueShift, t0
-    addq IPIntCalleeSaveSpaceStackAligned, t0
+    lshiftp StackValueShift, t0
+    addp IPIntCalleeSaveSpaceStackAligned, t0
+if ARMv7
+    move cfr, sp
+    subp sp, t0, sp
+else
     subp cfr, t0, sp
+end
 
 if X86_64
     loadp UnboxedWasmCalleeStackSlot[cfr], ws0
@@ -690,7 +701,7 @@ end
 
 global _ipint_table_catch_entry
 _ipint_table_catch_entry:
-if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
+if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     ipintCatchCommon()
 if X86_64
     initPCRelative(ipint_table_catch_entry, IB)
@@ -713,7 +724,7 @@ end
 
 global _ipint_table_catch_ref_entry
 _ipint_table_catch_ref_entry:
-if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
+if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     ipintCatchCommon()
 if X86_64
     initPCRelative(ipint_table_catch_ref_entry, IB)
@@ -736,7 +747,7 @@ end
 
 global _ipint_table_catch_all_entry
 _ipint_table_catch_all_entry:
-if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
+if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     ipintCatchCommon()
 if X86_64
     initPCRelative(ipint_table_catch_all_entry, IB)
@@ -759,7 +770,7 @@ end
 
 global _ipint_table_catch_allref_entry
 _ipint_table_catch_allref_entry:
-if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
+if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     ipintCatchCommon()
 if X86_64
     initPCRelative(ipint_table_catch_allref_entry, IB)
