@@ -228,8 +228,9 @@ Fetched 2 remotes!
                     self.assertEqual(
                         file.read(),
                         '''Generated commit message
-# Please populate the above commit message. Lines starting
-# with '#' will be ignored
+# Please populate the above commit message. Lines starting with '#'
+# will be ignored. For any files or functions that don't have an
+# associated comment, please remove them from the commit message.
 
 # 'On branch main
 # Your branch is up to date with 'origin/main'.

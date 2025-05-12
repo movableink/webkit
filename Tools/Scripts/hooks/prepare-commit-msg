@@ -342,8 +342,9 @@ def main(file_name=None, source=None, sha=None):
             commit_message_file.write(message(source=source, sha=sha))
 
         commit_message_file.write('''
-# Please populate the above commit message. Lines starting
-# with '#' will be ignored
+# Please populate the above commit message. Lines starting with '#'
+# will be ignored. For any files or functions that don't have an
+# associated comment, please remove them from the commit message.
 
 ''')
         if sha:
