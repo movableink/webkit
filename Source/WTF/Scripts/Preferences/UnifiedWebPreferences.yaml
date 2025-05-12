@@ -2462,20 +2462,6 @@ DefaultTextEncodingName:
     WebCore:
       default: '{ }'
 
-DeprecateAESCFBWebCryptoEnabled:
-  type: bool
-  status: stable
-  category: dom
-  humanReadableName: "Deprecate AES-CFB Web Crypto"
-  humanReadableDescription: "Enable Deprecation of AES-CFB from Web Crypto"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 DeprecationReportingEnabled:
   type: bool
   status: testable

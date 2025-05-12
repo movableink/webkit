@@ -940,37 +940,6 @@ webkit.org/b/169916 imported/blink/css3/blending/mix-blend-mode-with-squashing-l
 
 
 #////////////////////////////////////////////////////////////////////////////////////////
-# Crypto tests
-#////////////////////////////////////////////////////////////////////////////////////////
-
-# These are failures that will be enabled once the relevant parts of implementation land.
-webkit.org/b/133122 crypto/subtle/aes-cfb-generate-export-key-jwk-length-128.html [ Skip ]
-webkit.org/b/133122 crypto/subtle/aes-cfb-generate-export-key-jwk-length-192.html [ Skip ]
-webkit.org/b/133122 crypto/subtle/aes-cfb-generate-export-key-jwk-length-256.html [ Skip ]
-webkit.org/b/133122 crypto/subtle/aes-cfb-generate-export-raw-key.html [ Skip ]
-webkit.org/b/133122 crypto/subtle/aes-cfb-generate-key-encrypt-decrypt.html [ Skip ]
-webkit.org/b/133122 crypto/subtle/aes-cfb-generate-key.html [ Skip ]
-webkit.org/b/133122 crypto/subtle/aes-cfb-import-jwk-key-length-128.html [ Skip ]
-webkit.org/b/133122 crypto/subtle/aes-cfb-import-jwk-key-length-192.html [ Skip ]
-webkit.org/b/133122 crypto/subtle/aes-cfb-import-jwk-key-length-256.html [ Skip ]
-webkit.org/b/133122 crypto/subtle/aes-cfb-import-key-decrypt.html [ Skip ]
-webkit.org/b/133122 crypto/subtle/aes-cfb-import-key-encrypt.html [ Skip ]
-webkit.org/b/133122 crypto/subtle/aes-cfb-import-key-unwrap-jwk-key.html [ Skip ]
-webkit.org/b/133122 crypto/subtle/aes-cfb-import-key-unwrap-raw-key.html [ Skip ]
-webkit.org/b/133122 crypto/subtle/aes-cfb-import-key-wrap-jwk-key.html [ Skip ]
-webkit.org/b/133122 crypto/subtle/aes-cfb-import-key-wrap-raw-key.html [ Skip ]
-webkit.org/b/133122 crypto/subtle/aes-cfb-import-raw-key.html [ Skip ]
-webkit.org/b/133122 crypto/workers/subtle/aes-cfb-import-key-decrypt.html [ Skip ]
-webkit.org/b/133122 crypto/workers/subtle/aes-cfb-import-key-encrypt.html [ Skip ]
-webkit.org/b/133122 crypto/workers/subtle/aes-cfb-import-key-unwrap-key.html [ Skip ]
-webkit.org/b/133122 crypto/workers/subtle/aes-cfb-import-key-wrap-key.html [ Skip ]
-
-#////////////////////////////////////////////////////////////////////////////////////////
-# End of Crypto tests
-#////////////////////////////////////////////////////////////////////////////////////////
-
-
-#////////////////////////////////////////////////////////////////////////////////////////
 # CSS-related bugs
 #////////////////////////////////////////////////////////////////////////////////////////
 

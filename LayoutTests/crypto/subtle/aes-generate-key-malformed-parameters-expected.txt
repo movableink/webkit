@@ -21,10 +21,10 @@ PASS crypto.subtle.generateKey({name: "aes-kw", length: 128}, extractable, ["sig
 PASS crypto.subtle.generateKey({name: "aes-kw", length: 128}, extractable, ["verify"]) rejected promise  with SyntaxError: A required parameter was missing or out-of-range.
 PASS crypto.subtle.generateKey({name: "aes-kw", length: 128}, extractable, ["deriveKey"]) rejected promise  with SyntaxError: A required parameter was missing or out-of-range.
 PASS crypto.subtle.generateKey({name: "aes-kw", length: 128}, extractable, ["deriveBits"]) rejected promise  with SyntaxError: A required parameter was missing or out-of-range.
-PASS crypto.subtle.generateKey({name: "aes-cfb-8", length: 128}, extractable, ["sign"]) rejected promise  with SyntaxError: A required parameter was missing or out-of-range.
-PASS crypto.subtle.generateKey({name: "aes-cfb-8", length: 128}, extractable, ["verify"]) rejected promise  with SyntaxError: A required parameter was missing or out-of-range.
-PASS crypto.subtle.generateKey({name: "aes-cfb-8", length: 128}, extractable, ["deriveKey"]) rejected promise  with SyntaxError: A required parameter was missing or out-of-range.
-PASS crypto.subtle.generateKey({name: "aes-cfb-8", length: 128}, extractable, ["deriveBits"]) rejected promise  with SyntaxError: A required parameter was missing or out-of-range.
+PASS crypto.subtle.generateKey({name: "aes-cfb-8", length: 128}, extractable, ["sign"]) rejected promise  with NotSupportedError: AES-CFB support is deprecated.
+PASS crypto.subtle.generateKey({name: "aes-cfb-8", length: 128}, extractable, ["verify"]) rejected promise  with NotSupportedError: AES-CFB support is deprecated.
+PASS crypto.subtle.generateKey({name: "aes-cfb-8", length: 128}, extractable, ["deriveKey"]) rejected promise  with NotSupportedError: AES-CFB support is deprecated.
+PASS crypto.subtle.generateKey({name: "aes-cfb-8", length: 128}, extractable, ["deriveBits"]) rejected promise  with NotSupportedError: AES-CFB support is deprecated.
 PASS crypto.subtle.generateKey({name: "aes-gcm", length: 128}, extractable, ["sign"]) rejected promise  with SyntaxError: A required parameter was missing or out-of-range.
 PASS crypto.subtle.generateKey({name: "aes-gcm", length: 128}, extractable, ["verify"]) rejected promise  with SyntaxError: A required parameter was missing or out-of-range.
 PASS crypto.subtle.generateKey({name: "aes-gcm", length: 128}, extractable, ["deriveKey"]) rejected promise  with SyntaxError: A required parameter was missing or out-of-range.

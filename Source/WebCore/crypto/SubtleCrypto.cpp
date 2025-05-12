@@ -81,6 +81,7 @@ enum class Operations : uint8_t {
 };
 
 constexpr auto AESCFBDeprecation = "AES-CFB support is deprecated"_s;
+constexpr auto RSAESPKCS1Deprecation = "RSAES-PKCS1-v1_5 support is deprecated"_s;
 
 static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAlgorithmParameters(JSGlobalObject&, WebCore::SubtleCrypto::AlgorithmIdentifier, Operations);
 
@@ -90,13 +91,6 @@ static ExceptionOr<CryptoAlgorithmIdentifier> toHashIdentifier(JSGlobalObject& s
     if (digestParams.hasException())
         return digestParams.releaseException();
     return digestParams.returnValue()->identifier;
-}
-
-static bool isAESCFBWebCryptoDeprecated(JSGlobalObject& state)
-{
-    auto& globalObject = *JSC::jsCast<JSDOMGlobalObject*>(&state);
-    auto* context = globalObject.scriptExecutionContext();
-    return context && context->settingsValues().deprecateAESCFBWebCryptoEnabled;
 }
 
 static bool isSafeCurvesEnabled(JSGlobalObject& state)
@@ -130,8 +124,8 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
     auto params = convertDictionary<CryptoAlgorithmParameters>(state, value.get());
     if (params.hasException(scope)) [[unlikely]]
         return Exception { ExceptionCode::ExistingExceptionError };
-    if (params.returnValue().name == "RSAES-PKCS1-v1_5"_s || params.returnValue().name == "rsaes-pkcs1-v1_5"_s)
-        return Exception { ExceptionCode::NotSupportedError, "RSAES-PKCS1-v1_5 support is deprecated"_s };
+    if (equalIgnoringASCIICase(params.returnValue().name, "RSAES-PKCS1-v1_5"_s))
+        return Exception { ExceptionCode::NotSupportedError, RSAESPKCS1Deprecation };
 
     auto identifier = CryptoAlgorithmRegistry::singleton().identifier(params.returnValue().name);
     if (!identifier) [[unlikely]]
@@ -149,7 +143,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
     case Operations::Decrypt:
         switch (*identifier) {
         case CryptoAlgorithmIdentifier::RSAES_PKCS1_v1_5:
-            return Exception { ExceptionCode::NotSupportedError, "RSAES-PKCS1-v1_5 support is deprecated"_s };
+            return Exception { ExceptionCode::NotSupportedError, RSAESPKCS1Deprecation };
         case CryptoAlgorithmIdentifier::RSA_OAEP: {
             auto params = convertDictionary<CryptoAlgorithmRsaOaepParams>(state, value.get());
             if (params.hasException(scope)) [[unlikely]]
@@ -158,9 +152,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
             break;
         }
         case CryptoAlgorithmIdentifier::AES_CFB:
-            if (isAESCFBWebCryptoDeprecated(state))
-                return Exception { ExceptionCode::NotSupportedError, AESCFBDeprecation };
-            [[fallthrough]];
+            return Exception { ExceptionCode::NotSupportedError, AESCFBDeprecation };
         case CryptoAlgorithmIdentifier::AES_CBC: {
             auto params = convertDictionary<CryptoAlgorithmAesCbcCfbParams>(state, value.get());
             if (params.hasException(scope)) [[unlikely]]
@@ -234,7 +226,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
     case Operations::GenerateKey:
         switch (*identifier) {
         case CryptoAlgorithmIdentifier::RSAES_PKCS1_v1_5:
-            return Exception { ExceptionCode::NotSupportedError, "RSAES-PKCS1-v1_5 support is deprecated"_s };
+            return Exception { ExceptionCode::NotSupportedError, RSAESPKCS1Deprecation };
         case CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5:
         case CryptoAlgorithmIdentifier::RSA_PSS:
         case CryptoAlgorithmIdentifier::RSA_OAEP: {
@@ -250,9 +242,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
             break;
         }
         case CryptoAlgorithmIdentifier::AES_CFB:
-            if (isAESCFBWebCryptoDeprecated(state))
-                return Exception { ExceptionCode::NotSupportedError, AESCFBDeprecation };
-            [[fallthrough]];
+            return Exception { ExceptionCode::NotSupportedError, AESCFBDeprecation };
         case CryptoAlgorithmIdentifier::AES_CTR:
         case CryptoAlgorithmIdentifier::AES_CBC:
         case CryptoAlgorithmIdentifier::AES_GCM:
@@ -356,7 +346,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
     case Operations::ImportKey:
         switch (*identifier) {
         case CryptoAlgorithmIdentifier::RSAES_PKCS1_v1_5:
-            return Exception { ExceptionCode::NotSupportedError, "RSAES-PKCS1-v1_5 support is deprecated"_s };
+            return Exception { ExceptionCode::NotSupportedError, RSAESPKCS1Deprecation };
         case CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5:
         case CryptoAlgorithmIdentifier::RSA_PSS:
         case CryptoAlgorithmIdentifier::RSA_OAEP: {
@@ -372,9 +362,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
             break;
         }
         case CryptoAlgorithmIdentifier::AES_CFB:
-            if (isAESCFBWebCryptoDeprecated(state))
-                return Exception { ExceptionCode::NotSupportedError, AESCFBDeprecation };
-            [[fallthrough]];
+            return Exception { ExceptionCode::NotSupportedError, AESCFBDeprecation };
         case CryptoAlgorithmIdentifier::AES_CTR:
         case CryptoAlgorithmIdentifier::AES_CBC:
         case CryptoAlgorithmIdentifier::AES_GCM:
@@ -432,9 +420,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
     case Operations::GetKeyLength:
         switch (*identifier) {
         case CryptoAlgorithmIdentifier::AES_CFB:
-            if (isAESCFBWebCryptoDeprecated(state))
-                return Exception { ExceptionCode::NotSupportedError, AESCFBDeprecation };
-            [[fallthrough]];
+            return Exception { ExceptionCode::NotSupportedError, AESCFBDeprecation };
         case CryptoAlgorithmIdentifier::AES_CTR:
         case CryptoAlgorithmIdentifier::AES_CBC:
         case CryptoAlgorithmIdentifier::AES_GCM:
@@ -582,13 +568,12 @@ static Vector<uint8_t> copyToVector(BufferSource&& data)
     return data.span();
 }
 
-static bool isSupportedExportKey(JSGlobalObject& state, CryptoAlgorithmIdentifier identifier)
+static bool isSupportedExportKey(CryptoAlgorithmIdentifier identifier)
 {
     switch (identifier) {
+    case CryptoAlgorithmIdentifier::AES_CFB:
     case CryptoAlgorithmIdentifier::RSAES_PKCS1_v1_5:
         return false;
-    case CryptoAlgorithmIdentifier::AES_CFB:
-        return !isAESCFBWebCryptoDeprecated(state);
     case CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5:
     case CryptoAlgorithmIdentifier::RSA_PSS:
     case CryptoAlgorithmIdentifier::RSA_OAEP:
@@ -1036,7 +1021,7 @@ void SubtleCrypto::importKey(JSC::JSGlobalObject& state, KeyFormat format, KeyDa
 
 void SubtleCrypto::exportKey(KeyFormat format, CryptoKey& key, Ref<DeferredPromise>&& promise)
 {
-    if (!isSupportedExportKey(*promise->globalObject(), key.algorithmIdentifier())) {
+    if (!isSupportedExportKey(key.algorithmIdentifier())) {
         promise->reject(Exception { ExceptionCode::NotSupportedError });
         return;
     }
@@ -1107,7 +1092,7 @@ void SubtleCrypto::wrapKey(JSC::JSGlobalObject& state, KeyFormat format, CryptoK
         return;
     }
 
-    if (!isSupportedExportKey(state, key.algorithmIdentifier())) {
+    if (!isSupportedExportKey(key.algorithmIdentifier())) {
         promise->reject(Exception { ExceptionCode::NotSupportedError });
         return;
     }
