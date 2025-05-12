@@ -103,7 +103,7 @@
 /Source/WebCore/Modules/contact-picker @marcoscaceres
 /Source/WebCore/Modules/entriesapi @cdumez
 /Source/WebCore/Modules/geolocation @cdumez @marcoscaceres
-/Source/WebCore/Modules/model-element @graouts @marcoscaceres
+/Source/WebCore/Modules/model-element @marcoscaceres
 /Source/WebCore/Modules/notifications @cdumez
 /Source/WebCore/Modules/paymentrequest @aprotyas @marcoscaceres
 /Source/WebCore/Modules/permissions @marcoscaceres
