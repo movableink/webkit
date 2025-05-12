@@ -98,9 +98,9 @@ public:
 
     inline unsigned propertyCount() const;
     inline bool isEmpty() const;
-    inline PropertyReference propertyAt(unsigned) const;
+    inline PropertyReference propertyAt(unsigned) const LIFETIME_BOUND;
 
-    Iterator<StyleProperties> begin() const { return { *this }; }
+    Iterator<StyleProperties> begin() const LIFETIME_BOUND { return { *this }; }
     static constexpr std::nullptr_t end() { return nullptr; }
     inline unsigned size() const;
 

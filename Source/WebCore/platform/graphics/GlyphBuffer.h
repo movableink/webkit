@@ -59,18 +59,18 @@ public:
         m_offsetsInString.clear();
     }
 
-    std::span<const Font*> fonts(size_t from = 0, size_t count = std::dynamic_extent) { return m_fonts.mutableSpan().subspan(from, count); }
-    std::span<GlyphBufferGlyph> glyphs(size_t from = 0, size_t count = std::dynamic_extent) { return m_glyphs.mutableSpan().subspan(from, count); }
-    std::span<GlyphBufferAdvance> advances(size_t from = 0, size_t count = std::dynamic_extent) { return m_advances.mutableSpan().subspan(from, count); }
-    std::span<GlyphBufferOrigin> origins(size_t from = 0, size_t count = std::dynamic_extent) { return m_origins.mutableSpan().subspan(from, count); }
-    std::span<GlyphBufferStringOffset> offsetsInString(size_t from = 0, size_t count = std::dynamic_extent) { return m_offsetsInString.mutableSpan().subspan(from, count); }
-    std::span<const Font* const> fonts(size_t from = 0, size_t count = std::dynamic_extent) const { return m_fonts.subspan(from, count); }
-    std::span<const GlyphBufferGlyph> glyphs(size_t from = 0, size_t count = std::dynamic_extent) const { return m_glyphs.subspan(from, count); }
-    std::span<const GlyphBufferAdvance> advances(size_t from = 0, size_t count = std::dynamic_extent) const { return m_advances.subspan(from, count); }
-    std::span<const GlyphBufferOrigin> origins(size_t from = 0, size_t count = std::dynamic_extent) const { return m_origins.subspan(from, count); }
-    std::span<const GlyphBufferStringOffset> offsetsInString(size_t from = 0, size_t count = std::dynamic_extent) const { return m_offsetsInString.subspan(from, count); }
+    std::span<const Font*> fonts(size_t from = 0, size_t count = std::dynamic_extent) LIFETIME_BOUND { return m_fonts.mutableSpan().subspan(from, count); }
+    std::span<GlyphBufferGlyph> glyphs(size_t from = 0, size_t count = std::dynamic_extent) LIFETIME_BOUND { return m_glyphs.mutableSpan().subspan(from, count); }
+    std::span<GlyphBufferAdvance> advances(size_t from = 0, size_t count = std::dynamic_extent) LIFETIME_BOUND { return m_advances.mutableSpan().subspan(from, count); }
+    std::span<GlyphBufferOrigin> origins(size_t from = 0, size_t count = std::dynamic_extent) LIFETIME_BOUND { return m_origins.mutableSpan().subspan(from, count); }
+    std::span<GlyphBufferStringOffset> offsetsInString(size_t from = 0, size_t count = std::dynamic_extent) LIFETIME_BOUND { return m_offsetsInString.mutableSpan().subspan(from, count); }
+    std::span<const Font* const> fonts(size_t from = 0, size_t count = std::dynamic_extent) const LIFETIME_BOUND { return m_fonts.subspan(from, count); }
+    std::span<const GlyphBufferGlyph> glyphs(size_t from = 0, size_t count = std::dynamic_extent) const LIFETIME_BOUND { return m_glyphs.subspan(from, count); }
+    std::span<const GlyphBufferAdvance> advances(size_t from = 0, size_t count = std::dynamic_extent) const LIFETIME_BOUND { return m_advances.subspan(from, count); }
+    std::span<const GlyphBufferOrigin> origins(size_t from = 0, size_t count = std::dynamic_extent) const LIFETIME_BOUND { return m_origins.subspan(from, count); }
+    std::span<const GlyphBufferStringOffset> offsetsInString(size_t from = 0, size_t count = std::dynamic_extent) const LIFETIME_BOUND { return m_offsetsInString.subspan(from, count); }
 
-    const Font& fontAt(size_t index) const
+    const Font& fontAt(size_t index) const LIFETIME_BOUND
     {
         ASSERT(m_fonts[index]);
         return *m_fonts[index];
@@ -79,7 +79,7 @@ public:
     Ref<const Font> protectedFontAt(size_t index) const { return fontAt(index); }
 
     GlyphBufferGlyph glyphAt(size_t index) const { return m_glyphs[index]; }
-    GlyphBufferAdvance& advanceAt(size_t index) { return m_advances[index]; }
+    GlyphBufferAdvance& advanceAt(size_t index) LIFETIME_BOUND { return m_advances[index]; }
     GlyphBufferAdvance advanceAt(size_t index) const { return m_advances[index]; }
     GlyphBufferOrigin originAt(size_t index) const { return m_origins[index]; }
     GlyphBufferStringOffset uncheckedStringOffsetAt(size_t index) const { return m_offsetsInString[index]; }
@@ -92,7 +92,7 @@ public:
     }
 
     void setInitialAdvance(GlyphBufferAdvance initialAdvance) { m_initialAdvance = initialAdvance; }
-    const GlyphBufferAdvance& initialAdvance() const { return m_initialAdvance; }
+    const GlyphBufferAdvance& initialAdvance() const LIFETIME_BOUND { return m_initialAdvance; }
     void expandInitialAdvance(float width) { setWidth(m_initialAdvance, WebCore::width(m_initialAdvance) + width); }
     void expandInitialAdvance(GlyphBufferAdvance additionalAdvance)
     {

@@ -77,7 +77,7 @@ private:
 
 class TextIteratorCopyableText {
 public:
-    StringView text() const { return m_singleCharacter ? StringView(WTF::span(m_singleCharacter)) : StringView(m_string).substring(m_offset, m_length); }
+    StringView text() const LIFETIME_BOUND { return m_singleCharacter ? StringView(WTF::span(m_singleCharacter)) : StringView(m_string).substring(m_offset, m_length); }
     void appendToStringBuilder(StringBuilder&) const;
 
     void reset();

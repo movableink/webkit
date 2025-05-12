@@ -347,9 +347,9 @@ public:
         {
         }
 
-        std::span<const DataType> span() const { return unsafeMakeSpan(data(), length()); }
+        std::span<const DataType> span() const LIFETIME_BOUND { return unsafeMakeSpan(data(), length()); }
 
-        const DataType* data() const
+        const DataType* data() const LIFETIME_BOUND
         {
             return WTF::switchOn(m_variant,
                 [] (const RefPtr<TypedArray>& typedArray) -> const DataType* { return typedArray->data(); },

@@ -140,12 +140,12 @@ public:
     // When the hash table is empty, just return the same iterator for end as for begin.
     // This is more efficient because we don't have to skip all the empty and deleted
     // buckets, and iterating an empty table is a common case that's worth optimizing.
-    iterator begin() { return isEmpty() ? end() : makeIterator(m_table); }
-    iterator end() { return makeKnownGoodIterator(m_table + tableSize()); }
-    const_iterator begin() const { return isEmpty() ? end() : makeConstIterator(m_table); }
-    const_iterator end() const { return makeKnownGoodConstIterator(m_table + tableSize()); }
+    iterator begin() LIFETIME_BOUND { return isEmpty() ? end() : makeIterator(m_table); }
+    iterator end() LIFETIME_BOUND { return makeKnownGoodIterator(m_table + tableSize()); }
+    const_iterator begin() const LIFETIME_BOUND { return isEmpty() ? end() : makeConstIterator(m_table); }
+    const_iterator end() const LIFETIME_BOUND { return makeKnownGoodConstIterator(m_table + tableSize()); }
 
-    iterator random()
+    iterator random() LIFETIME_BOUND
     {
         if (isEmpty())
             return end();
@@ -157,7 +157,7 @@ public:
         }
     }
 
-    const_iterator random() const { return static_cast<const_iterator>(const_cast<RobinHoodHashTable*>(this)->random()); }
+    const_iterator random() const LIFETIME_BOUND { return static_cast<const_iterator>(const_cast<RobinHoodHashTable*>(this)->random()); }
 
     unsigned size() const { return keyCount(); }
     unsigned capacity() const { return tableSize(); }

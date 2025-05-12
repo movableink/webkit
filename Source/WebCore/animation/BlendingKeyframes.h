@@ -135,15 +135,15 @@ public:
     void clear();
     bool isEmpty() const { return m_keyframes.isEmpty(); }
     size_t size() const { return m_keyframes.size(); }
-    const BlendingKeyframe& operator[](size_t index) const { return m_keyframes[index]; }
+    const BlendingKeyframe& operator[](size_t index) const LIFETIME_BOUND { return m_keyframes[index]; }
 
     void copyKeyframes(const BlendingKeyframes&);
     bool hasImplicitKeyframes() const;
     bool hasImplicitKeyframeForProperty(AnimatableCSSProperty) const;
     void fillImplicitKeyframes(const KeyframeEffect&, const RenderStyle& elementStyle);
 
-    auto begin() const { return m_keyframes.begin(); }
-    auto end() const { return m_keyframes.end(); }
+    auto begin() const LIFETIME_BOUND { return m_keyframes.begin(); }
+    auto end() const LIFETIME_BOUND { return m_keyframes.end(); }
 
     bool usesContainerUnits() const;
     bool usesRelativeFontWeight() const;

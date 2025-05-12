@@ -84,8 +84,8 @@ public:
     private:
         pointer m_ptr = nullptr;
     };
-    const_iterator begin() const { return { first() }; };
-    const_iterator end() const { return { }; }
+    const_iterator begin() const LIFETIME_BOUND { return { first() }; };
+    const_iterator end() const LIFETIME_BOUND { return { }; }
 
     bool hasExplicitNestingParent() const;
     bool hasOnlyNestingSelector() const;

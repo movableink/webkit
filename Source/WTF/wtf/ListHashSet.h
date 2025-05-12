@@ -104,26 +104,26 @@ public:
     unsigned capacity() const;
     bool isEmpty() const;
 
-    iterator begin() { return makeIterator(m_head); }
-    iterator end() { return makeIterator(nullptr); }
-    const_iterator begin() const { return makeConstIterator(m_head); }
-    const_iterator end() const { return makeConstIterator(nullptr); }
+    iterator begin() LIFETIME_BOUND { return makeIterator(m_head); }
+    iterator end() LIFETIME_BOUND { return makeIterator(nullptr); }
+    const_iterator begin() const LIFETIME_BOUND { return makeConstIterator(m_head); }
+    const_iterator end() const LIFETIME_BOUND { return makeConstIterator(nullptr); }
 
-    iterator random() { return makeIterator(m_impl.random()); }
-    const_iterator random() const { return makeIterator(m_impl.random()); }
+    iterator random() LIFETIME_BOUND { return makeIterator(m_impl.random()); }
+    const_iterator random() const LIFETIME_BOUND { return makeIterator(m_impl.random()); }
 
-    reverse_iterator rbegin() { return reverse_iterator(end()); }
-    reverse_iterator rend() { return reverse_iterator(begin()); }
-    const_reverse_iterator rbegin() const { return const_reverse_iterator(end()); }
-    const_reverse_iterator rend() const { return const_reverse_iterator(begin()); }
+    reverse_iterator rbegin() LIFETIME_BOUND { return reverse_iterator(end()); }
+    reverse_iterator rend() LIFETIME_BOUND { return reverse_iterator(begin()); }
+    const_reverse_iterator rbegin() const LIFETIME_BOUND { return const_reverse_iterator(end()); }
+    const_reverse_iterator rend() const LIFETIME_BOUND { return const_reverse_iterator(begin()); }
 
-    ValueType& first();
-    const ValueType& first() const;
+    ValueType& first() LIFETIME_BOUND;
+    const ValueType& first() const LIFETIME_BOUND;
     void removeFirst();
     ValueType takeFirst();
 
-    ValueType& last();
-    const ValueType& last() const;
+    ValueType& last() LIFETIME_BOUND;
+    const ValueType& last() const LIFETIME_BOUND;
     void removeLast();
     ValueType takeLast();
 

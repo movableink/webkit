@@ -56,11 +56,11 @@ struct OpaqueJSString : public ThreadSafeRefCounted<OpaqueJSString> {
     JS_EXPORT_PRIVATE ~OpaqueJSString();
 
     bool is8Bit() { return m_string.is8Bit(); }
-    std::span<const LChar> span8() { return m_string.span8(); }
-    std::span<const UChar> span16() { return m_string.span16(); }
+    std::span<const LChar> span8() LIFETIME_BOUND { return m_string.span8(); }
+    std::span<const UChar> span16() LIFETIME_BOUND { return m_string.span16(); }
     unsigned length() { return m_string.length(); }
 
-    const UChar* characters();
+    const UChar* characters() LIFETIME_BOUND;
 
     JS_EXPORT_PRIVATE String string() const;
     JSC::Identifier identifier(JSC::VM*) const;

@@ -208,10 +208,10 @@ protected:
 
     WTF_EXPORT_PRIVATE void remove(const String& name);
 
-    iterator begin() { return m_map.begin(); }
-    iterator end() { return m_map.end(); }
-    const_iterator begin() const { return m_map.begin(); }
-    const_iterator end() const { return m_map.end(); }
+    iterator begin() LIFETIME_BOUND { return m_map.begin(); }
+    iterator end() LIFETIME_BOUND { return m_map.end(); }
+    const_iterator begin() const LIFETIME_BOUND { return m_map.begin(); }
+    const_iterator end() const LIFETIME_BOUND { return m_map.end(); }
 
     OrderStorage keys() const { return m_order; }
 

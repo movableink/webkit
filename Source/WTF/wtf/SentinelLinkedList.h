@@ -135,10 +135,10 @@ public:
     
     bool isOnList(T*);
 
-    iterator begin();
-    iterator end();
-    const_iterator begin() const;
-    const_iterator end() const;
+    iterator begin() LIFETIME_BOUND;
+    iterator end() LIFETIME_BOUND;
+    const_iterator begin() const LIFETIME_BOUND;
+    const_iterator end() const LIFETIME_BOUND;
     
     bool isEmpty() { return begin() == end(); }
     

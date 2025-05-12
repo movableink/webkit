@@ -73,8 +73,8 @@ public:
     void appendSubstring(const String&, unsigned offset, unsigned length = String::MaxLength);
     WTF_EXPORT_PRIVATE void appendQuotedJSONString(const String&);
 
-    const String& toString();
-    const String& toStringPreserveCapacity() const;
+    const String& toString() LIFETIME_BOUND;
+    const String& toStringPreserveCapacity() const LIFETIME_BOUND;
     AtomString toAtomString() const;
 
 #if USE(FOUNDATION) && defined(__OBJC__)

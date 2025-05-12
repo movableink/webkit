@@ -238,7 +238,7 @@ class DeadCellStorage {
 public:
     DeadCellStorage() = default;
     void append(MarkedBlock::AtomNumberType cell) { return m_deadCells.append(cell); }
-    std::span<const MarkedBlock::AtomNumberType> span() const { return m_deadCells.span(); }
+    std::span<const MarkedBlock::AtomNumberType> span() const LIFETIME_BOUND { return m_deadCells.span(); }
 private:
     Vector<MarkedBlock::AtomNumberType, storageSize> m_deadCells;
 };

@@ -102,7 +102,7 @@ public:
         bool operator==(const UnicodeRange&) const = default;
     };
 
-    std::span<const UnicodeRange> ranges() const { ASSERT(m_status != Status::Failure); return m_ranges.span(); }
+    std::span<const UnicodeRange> ranges() const LIFETIME_BOUND { ASSERT(m_status != Status::Failure); return m_ranges.span(); }
 
     RefPtr<CSSValue> familyCSSValue() const;
 

@@ -268,11 +268,11 @@ public:
     std::optional<bool> discontinuity() const { return m_discontinuity; }
     void setDiscontinuity(bool discontinuity) { m_discontinuity = discontinuity; }
 
-    const MediaSampleItem& operator[](size_t index) const { return m_samples[index]; }
-    const MediaSampleItem& first() const { return m_samples.first(); }
-    const MediaSampleItem& last() const { return m_samples.last(); }
-    SamplesVector::const_iterator begin() const { return m_samples.begin(); }
-    SamplesVector::const_iterator end() const { return m_samples.end(); }
+    const MediaSampleItem& operator[](size_t index) const LIFETIME_BOUND { return m_samples[index]; }
+    const MediaSampleItem& first() const LIFETIME_BOUND { return m_samples.first(); }
+    const MediaSampleItem& last() const LIFETIME_BOUND { return m_samples.last(); }
+    SamplesVector::const_iterator begin() const LIFETIME_BOUND { return m_samples.begin(); }
+    SamplesVector::const_iterator end() const LIFETIME_BOUND { return m_samples.end(); }
 
 private:
     RefPtr<const TrackInfo> m_info;

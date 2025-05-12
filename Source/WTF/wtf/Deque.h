@@ -66,23 +66,23 @@ public:
     size_t size() const { return m_start <= m_end ? m_end - m_start : m_end + m_buffer.capacity() - m_start; }
     bool isEmpty() const { return m_start == m_end; }
 
-    iterator begin() { return iterator(this, m_start); }
-    iterator end() { return iterator(this, m_end); }
-    const_iterator begin() const { return const_iterator(this, m_start); }
-    const_iterator end() const { return const_iterator(this, m_end); }
-    reverse_iterator rbegin() { return reverse_iterator(end()); }
-    reverse_iterator rend() { return reverse_iterator(begin()); }
-    const_reverse_iterator rbegin() const { return const_reverse_iterator(end()); }
-    const_reverse_iterator rend() const { return const_reverse_iterator(begin()); }
+    iterator begin() LIFETIME_BOUND { return iterator(this, m_start); }
+    iterator end() LIFETIME_BOUND { return iterator(this, m_end); }
+    const_iterator begin() const LIFETIME_BOUND { return const_iterator(this, m_start); }
+    const_iterator end() const LIFETIME_BOUND { return const_iterator(this, m_end); }
+    reverse_iterator rbegin() LIFETIME_BOUND { return reverse_iterator(end()); }
+    reverse_iterator rend() LIFETIME_BOUND { return reverse_iterator(begin()); }
+    const_reverse_iterator rbegin() const LIFETIME_BOUND { return const_reverse_iterator(end()); }
+    const_reverse_iterator rend() const LIFETIME_BOUND { return const_reverse_iterator(begin()); }
     
     template<typename U> bool contains(const U&) const;
 
-    T& first() { return m_buffer.capacitySpan()[m_start]; }
-    const T& first() const { return m_buffer.capacitySpan()[m_start]; }
+    T& first() LIFETIME_BOUND { return m_buffer.capacitySpan()[m_start]; }
+    const T& first() const LIFETIME_BOUND { return m_buffer.capacitySpan()[m_start]; }
     T takeFirst();
 
-    T& last() { return m_end ? m_buffer.capacitySpan()[m_end - 1] : m_buffer.capacitySpan().back(); }
-    const T& last() const { return m_end ? m_buffer.capacitySpan()[m_end - 1] : m_buffer.capacitySpan().back(); }
+    T& last() LIFETIME_BOUND { return m_end ? m_buffer.capacitySpan()[m_end - 1] : m_buffer.capacitySpan().back(); }
+    const T& last() const LIFETIME_BOUND { return m_end ? m_buffer.capacitySpan()[m_end - 1] : m_buffer.capacitySpan().back(); }
     T takeLast();
 
     void append(T&& value) { append<T>(std::forward<T>(value)); }

@@ -53,7 +53,7 @@ public:
     bool isEmpty() const { return !propertyCount(); }
     PropertyReference propertyAt(unsigned index) const;
 
-    Iterator<MutableStyleProperties> begin() const { return { *this }; }
+    Iterator<MutableStyleProperties> begin() const LIFETIME_BOUND { return { *this }; }
     static constexpr std::nullptr_t end() { return nullptr; }
     unsigned size() const { return propertyCount(); }
 

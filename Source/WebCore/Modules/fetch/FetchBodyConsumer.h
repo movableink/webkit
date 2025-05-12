@@ -61,7 +61,7 @@ public:
     void append(const SharedBuffer&);
 
     bool hasData() const { return !!m_buffer; }
-    const FragmentedSharedBuffer* data() const { return m_buffer.get().get(); }
+    const FragmentedSharedBuffer* data() const LIFETIME_BOUND { return m_buffer.get().get(); }
     void setData(Ref<FragmentedSharedBuffer>&&);
 
     RefPtr<FragmentedSharedBuffer> takeData();

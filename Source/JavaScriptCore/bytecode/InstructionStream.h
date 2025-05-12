@@ -162,12 +162,12 @@ private:
     };
 
 public:
-    inline iterator begin() const
+    inline iterator begin() const LIFETIME_BOUND
     {
         return iterator { m_instructions, 0 };
     }
 
-    inline iterator end() const
+    inline iterator end() const LIFETIME_BOUND
     {
         return iterator { m_instructions, m_instructions.size() };
     }

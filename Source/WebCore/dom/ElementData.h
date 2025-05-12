@@ -63,7 +63,7 @@ public:
     unsigned length() const;
     bool isEmpty() const { return !length(); }
 
-    std::span<const Attribute> attributes() const;
+    std::span<const Attribute> attributes() const LIFETIME_BOUND;
     const Attribute& attributeAt(unsigned index) const;
     const Attribute* findAttributeByName(const QualifiedName&) const;
     unsigned findAttributeIndexByName(const QualifiedName&) const;
@@ -175,7 +175,7 @@ public:
     Attribute& attributeAt(unsigned index);
     Attribute* findAttributeByName(const QualifiedName&);
 
-    std::span<const Attribute> attributes() const { return m_attributeVector.span(); }
+    std::span<const Attribute> attributes() const LIFETIME_BOUND { return m_attributeVector.span(); }
 
     UniqueElementData();
     explicit UniqueElementData(const ShareableElementData&);

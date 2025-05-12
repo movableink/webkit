@@ -78,7 +78,7 @@ public:
     bool isNull() const;
     bool isEmpty() const { return !size(); }
 
-    std::span<const uint8_t> span() const;
+    std::span<const uint8_t> span() const LIFETIME_BOUND;
     size_t size() const;
     bool isMap() const { return m_isMap; }
     RefPtr<WebCore::SharedMemory> tryCreateSharedMemory() const;

@@ -300,8 +300,8 @@ public:
         unsigned m_index;
     };
 
-    iterator begin() const { return iterator(*this, 0); }
-    iterator end() const { return iterator(*this, size()); }
+    iterator begin() const LIFETIME_BOUND { return iterator(*this, 0); }
+    iterator end() const LIFETIME_BOUND { return iterator(*this, size()); }
 
     const SparseCollection<StackSlot>& stackSlots() const { return m_stackSlots; }
     SparseCollection<StackSlot>& stackSlots() { return m_stackSlots; }

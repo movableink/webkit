@@ -82,7 +82,7 @@ class SharedMemoryHandle;
 class DataSegment : public ThreadSafeRefCounted<DataSegment> {
 public:
     size_t size() const { return span().size(); }
-    WEBCORE_EXPORT std::span<const uint8_t> span() const;
+    WEBCORE_EXPORT std::span<const uint8_t> span() const LIFETIME_BOUND;
 
     WEBCORE_EXPORT static Ref<DataSegment> create(Vector<uint8_t>&&);
 
@@ -221,8 +221,8 @@ public:
         const Ref<const DataSegment> segment;
     };
     using DataSegmentVector = Vector<DataSegmentVectorEntry, 1>;
-    DataSegmentVector::const_iterator begin() const { return m_segments.begin(); }
-    DataSegmentVector::const_iterator end() const { return m_segments.end(); }
+    DataSegmentVector::const_iterator begin() const LIFETIME_BOUND { return m_segments.begin(); }
+    DataSegmentVector::const_iterator end() const LIFETIME_BOUND { return m_segments.end(); }
     bool hasOneSegment() const { return m_segments.size() == 1; }
 
     // begin and end take O(1) time, this takes O(log(N)) time.

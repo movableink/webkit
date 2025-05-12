@@ -217,13 +217,13 @@ public:
         IndexType m_shift;
     };
 
-    iterator begin() const
+    iterator begin() const LIFETIME_BOUND
     {
         if (isBitVector())
             return { m_inline.bitVector.begin(), m_min };
         return { m_inline.hashSet.begin(), m_min };
     }
-    iterator end() const
+    iterator end() const LIFETIME_BOUND
     {
         if (isBitVector())
             return { m_inline.bitVector.end(), m_min };

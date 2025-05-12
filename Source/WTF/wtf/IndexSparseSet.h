@@ -96,8 +96,8 @@ public:
     EntryType* get(unsigned);
 
     typedef typename ValueList::const_iterator const_iterator;
-    const_iterator begin() const;
-    const_iterator end() const;
+    const_iterator begin() const LIFETIME_BOUND;
+    const_iterator end() const LIFETIME_BOUND;
     
     void sort();
 

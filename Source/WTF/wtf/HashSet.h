@@ -75,8 +75,8 @@ public:
 
     void reserveInitialCapacity(unsigned keyCount) { m_impl.reserveInitialCapacity(keyCount); }
 
-    iterator begin() const;
-    iterator end() const;
+    iterator begin() const LIFETIME_BOUND;
+    iterator end() const LIFETIME_BOUND;
 
     iterator random() const { return m_impl.random(); }
 

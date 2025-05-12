@@ -85,8 +85,8 @@ public:
     size_t size() const { return m_stops.size(); }
     bool isEmpty() const { return m_stops.isEmpty(); }
 
-    StopVector::const_iterator begin() const { return m_stops.begin(); }
-    StopVector::const_iterator end() const { return m_stops.end(); }
+    StopVector::const_iterator begin() const LIFETIME_BOUND { return m_stops.begin(); }
+    StopVector::const_iterator end() const LIFETIME_BOUND { return m_stops.end(); }
 
     template<typename MapFunction> GradientColorStops mapColors(MapFunction&& mapFunction) const
     {

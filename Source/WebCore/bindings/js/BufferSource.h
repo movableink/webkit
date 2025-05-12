@@ -63,13 +63,13 @@ public:
         }, m_variant);
     }
 
-    std::span<const uint8_t> span() const
+    std::span<const uint8_t> span() const LIFETIME_BOUND
     {
         return WTF::visit([](auto& buffer) {
             return buffer ? buffer->span() : std::span<const uint8_t> { };
         }, m_variant);
     }
-    std::span<uint8_t> mutableSpan()
+    std::span<uint8_t> mutableSpan() LIFETIME_BOUND
     {
         return WTF::visit([](auto& buffer) {
             return buffer ? buffer->mutableSpan() : std::span<uint8_t> { };

@@ -107,8 +107,8 @@ private:
     inline std::span<uint8_t> bytes();
 
     // NB: It's *HIGHLY* recommended that you don't use these directly since you'll have to remember to clean up the alignment for v128.
-    uint8_t* data() { return reinterpret_cast<uint8_t*>(this) + offsetOfData(); }
-    const uint8_t* data() const { return const_cast<JSWebAssemblyArray*>(this)->data(); }
+    uint8_t* data() LIFETIME_BOUND { return reinterpret_cast<uint8_t*>(this) + offsetOfData(); }
+    const uint8_t* data() const LIFETIME_BOUND { return const_cast<JSWebAssemblyArray*>(this)->data(); }
 
     JSWebAssemblyArray(VM&, WebAssemblyGCStructure*, unsigned);
 

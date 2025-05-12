@@ -69,8 +69,8 @@ public:
 
     ExceptionOr<void> copyTo(BufferSource&&);
 
-    std::span<const uint8_t> span() const { return m_storage->data().buffer.span(); }
-    WebCodecsEncodedVideoChunkStorage& storage() { return m_storage.get(); }
+    std::span<const uint8_t> span() const LIFETIME_BOUND { return m_storage->data().buffer.span(); }
+    WebCodecsEncodedVideoChunkStorage& storage() LIFETIME_BOUND { return m_storage.get(); }
 
 private:
     explicit WebCodecsEncodedVideoChunk(Init&&);

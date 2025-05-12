@@ -60,12 +60,12 @@ public:
     String releaseString() { return WTFMove(m_string); }
 
     // FIXME: What guarantees this isn't a SymbolImpl rather than an AtomStringImpl?
-    AtomStringImpl* impl() const { SUPPRESS_MEMORY_UNSAFE_CAST return static_cast<AtomStringImpl*>(m_string.impl()); }
+    AtomStringImpl* impl() const LIFETIME_BOUND { SUPPRESS_MEMORY_UNSAFE_CAST return static_cast<AtomStringImpl*>(m_string.impl()); }
     RefPtr<AtomStringImpl> releaseImpl() { return static_pointer_cast<AtomStringImpl>(m_string.releaseImpl()); }
 
     bool is8Bit() const { return m_string.is8Bit(); }
-    std::span<const LChar> span8() const { return m_string.span8(); }
-    std::span<const UChar> span16() const { return m_string.span16(); }
+    std::span<const LChar> span8() const LIFETIME_BOUND { return m_string.span8(); }
+    std::span<const UChar> span16() const LIFETIME_BOUND { return m_string.span16(); }
     unsigned length() const { return m_string.length(); }
 
     UChar operator[](unsigned int i) const { return m_string[i]; }

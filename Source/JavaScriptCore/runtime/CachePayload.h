@@ -41,7 +41,7 @@ public:
     JS_EXPORT_PRIVATE ~CachePayload();
 
     size_t size() const { return span().size(); }
-    JS_EXPORT_PRIVATE std::span<const uint8_t> span() const;
+    JS_EXPORT_PRIVATE std::span<const uint8_t> span() const LIFETIME_BOUND;
 
 private:
     using DataType = Variant<MallocSpan<uint8_t, VMMalloc>, FileSystem::MappedFileData>;

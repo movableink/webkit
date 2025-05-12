@@ -175,7 +175,7 @@ public:
         return equal(*bucket, value);
     }
 
-    iterator begin() const
+    iterator begin() const LIFETIME_BOUND
     {
         iterator it;
         it.m_index = std::numeric_limits<unsigned>::max();
@@ -190,7 +190,7 @@ public:
         return it;
     }
 
-    iterator end() const
+    iterator end() const LIFETIME_BOUND
     {
         iterator it;
         it.m_index = m_capacity;

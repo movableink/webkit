@@ -81,8 +81,8 @@ public:
 
     void dump(PrintStream& out) const;
 
-    BitVector::iterator begin() const { return m_bitVector.begin(); }
-    BitVector::iterator end() const { return m_bitVector.end(); }
+    BitVector::iterator begin() const LIFETIME_BOUND { return m_bitVector.begin(); }
+    BitVector::iterator end() const LIFETIME_BOUND { return m_bitVector.end(); }
 
 private:
     static constexpr unsigned wordSize = sizeof(WordType) * 8;

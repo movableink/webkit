@@ -184,10 +184,10 @@ public:
     auto values() const { return m_keys.values(); }
     KeyStoreIDType id() const { return m_id; }
 
-    auto begin() { return m_keys.begin(); }
-    auto begin() const { return m_keys.begin(); }
-    auto end() { return m_keys.end(); }
-    auto end() const { return m_keys.end(); }
+    auto begin() LIFETIME_BOUND { return m_keys.begin(); }
+    auto begin() const LIFETIME_BOUND { return m_keys.begin(); }
+    auto end() LIFETIME_BOUND { return m_keys.end(); }
+    auto end() const LIFETIME_BOUND { return m_keys.end(); }
 
 protected:
     UncheckedKeyHashMap<KeyIDType, RefPtr<T>> m_keys;

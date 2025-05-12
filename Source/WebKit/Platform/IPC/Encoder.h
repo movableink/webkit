@@ -92,8 +92,8 @@ public:
         return *this;
     }
 
-    std::span<uint8_t> mutableSpan() { return capacityBuffer().first(m_bufferSize); }
-    std::span<const uint8_t> span() const { return capacityBuffer().first(m_bufferSize); }
+    std::span<uint8_t> mutableSpan() LIFETIME_BOUND { return capacityBuffer().first(m_bufferSize); }
+    std::span<const uint8_t> span() const LIFETIME_BOUND { return capacityBuffer().first(m_bufferSize); }
 
     void addAttachment(Attachment&&);
     Vector<Attachment> releaseAttachments();
