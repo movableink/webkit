@@ -10435,10 +10435,9 @@ bool WebPageProxy::didChooseFilesForOpenPanelWithImageTranscoding(const Vector<S
     if (transcodingMIMEType.isNull()) {
         // For designated sites which are sending "image/*", we need to force the mimetype
         // to be able to transcode from HEIC to JPEG.
-        if (protectedPreferences()->needsSiteSpecificQuirks()) {
-            if (Quirks::shouldTranscodeHeicImagesForURL(URL { currentURL() }))
-                transcodingMIMEType = "image/jpeg"_s;
-        } else
+        if (protectedPreferences()->needsSiteSpecificQuirks() && Quirks::shouldTranscodeHeicImagesForURL(URL { currentURL() }))
+            transcodingMIMEType = "image/jpeg"_s;
+        else
             return false;
     }
 
