@@ -695,12 +695,11 @@ Vector<Ref<StyleRuleBase>> CSSParser::consumeNestedGroupRules(CSSParserTokenRang
                 if (m_observerWrapper)
                     m_observerWrapper->observer().markRuleBodyContainsImplicitlyNestedProperties();
             }
-            for (auto& rule : topContext().m_parsedRules)
-                rules.append(rule);
+            rules.appendVector(topContext().m_parsedRules);
         });
     } else {
-        consumeRuleList(block, RuleList::Regular, [&rules](Ref<StyleRuleBase> rule) {
-            rules.append(rule);
+        consumeRuleList(block, RuleList::Regular, [&rules](Ref<StyleRuleBase>&& rule) {
+            rules.append(WTFMove(rule));
         });
     }
     rules.shrinkToFit();
