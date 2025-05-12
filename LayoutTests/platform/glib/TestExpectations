@@ -1998,6 +1998,9 @@ media/audioSession [ Skip ]
 http/tests/webrtc/audioSessionInFrames.html [ Skip ]
 http/wpt/webrtc/rtcNetworkInterface.html [ Failure ]
 
+webkit.org/b/292839 media/media-fullscreen-not-in-document.html [ Timeout ]
+webkit.org/b/292842 fast/mediastream/stream-switch.html [ Timeout ]
+
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Media-related bugs
 #////////////////////////////////////////////////////////////////////////////////////////
@@ -2142,6 +2145,8 @@ webkit.org/b/218010 imported/w3c/web-platform-tests/webaudio/the-audio-api/the-a
 
 webkit.org/b/264729 imported/w3c/web-platform-tests/fetch/metadata/generated/audioworklet.https.sub.html [ Pass Crash DumpJSConsoleLogInStdErr ]
 
+webkit.org/b/292838 webaudio/crashtest/audioworklet-concurrent-resampler-crash.html [ Timeout ]
+
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of WebAudio-related bugs
 #////////////////////////////////////////////////////////////////////////////////////////
@@ -2164,6 +2169,7 @@ webkit.org/b/172812 webgl/max-active-contexts-webglcontextlost-prevent-default.h
 webkit.org/b/210239 fast/canvas/webgl/out-of-bounds-simulated-vertexAttrib0-drawArrays.html [ Slow ]
 
 webkit.org/b/251195 webgl/1.0.x/conformance/extensions/ext-color-buffer-half-float.html [ Failure ]
+webkit.org/b/195714 fast/canvas/webgl/texImage2D-video-flipY-true.html [ Timeout ]
 
 # No colorspaces in non-Cocoa WebGL.
 
@@ -3251,7 +3257,7 @@ Bug(GLIB) http/tests/contentextensions/text-track-blocked.html [ Failure ]
 Bug(GLIB) http/tests/contentextensions/top-url.html [ Failure ]
 Bug(GLIB) http/tests/contentextensions/allowlist.html [ Failure ]
 
-webkit.org/b/68512 accessibility/aria-hidden-updates-alldescendants.html [ Failure ]
+webkit.org/b/68512 accessibility/aria-hidden-updates-alldescendants.html [ Failure Timeout ]
 
 # locale-specific shaping isn't implemented on any non-Cocoa port yet.
 webkit.org/b/77568 fast/text/locale-shaping-complex.html [ ImageOnlyFailure ]
@@ -3506,7 +3512,7 @@ webkit.org/b/252878 imported/w3c/web-platform-tests/websockets/opening-handshake
 webkit.org/b/201259 http/wpt/beacon/cors/crossorigin-arraybufferview-no-preflight.html [ Failure ]
 webkit.org/b/201268 accessibility/insert-newline.html [ Timeout ]
 webkit.org/b/201982 fast/images/exif-orientation-border-image.html [ ImageOnlyFailure ]
-webkit.org/b/202225 accessibility/misspelling-range.html [ Failure ]
+webkit.org/b/202225 accessibility/misspelling-range.html [ Failure Timeout ]
 
 # Service worker tests flaky or failing.
 webkit.org/b/201981 http/wpt/resource-timing/rt-resources-per-worker.html [ Failure Pass ]
@@ -4314,6 +4320,8 @@ webkit.org/b/277255 fast/forms/datalist/datalist-searchinput-appearance.html [ F
 webkit.org/b/277255 fast/dynamic/layer-hit-test-crash.html [ Failure Pass ]
 
 webkit.org/b/124566 fast/dom/SelectorAPI/resig-SelectorsAPI-test.xhtml [ Skip ] # Timeout
+
+webkit.org/b/292843 fast/dom/Window/open-window-min-size.html [ Timeout ]
 
 # Failures related with compositing tests.
 webkit.org/b/169918 compositing/fixed-with-fixed-layout.html [ Crash Pass ]
