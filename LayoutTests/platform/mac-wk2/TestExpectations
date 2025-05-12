@@ -2171,3 +2171,5 @@ imported/w3c/web-platform-tests/navigation-api/navigate-event/navigate-form.html
 webkit.org/b/292650 http/tests/iframe-monitor/throttler.html [ Timeout ]
 
 webkit.org/b/292794 [ Debug ] http/tests/media/media-play-stream-chunked-icy.html [ Pass Crash ]
+
+webkit.org/b/292883 http/wpt/service-workers/basic-fetch-with-contentfilter.https.html [ Pass Failure ]
