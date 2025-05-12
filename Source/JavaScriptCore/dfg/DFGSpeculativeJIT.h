@@ -243,8 +243,7 @@ public:
     }
     GPRReg allocate(GPRReg specific)
     {
-        if (specific == InvalidGPRReg)
-            allocate();
+        ASSERT(specific != InvalidGPRReg);
 #if ENABLE(DFG_REGISTER_ALLOCATION_VALIDATION)
         addRegisterAllocationAtOffset(debugOffset());
 #endif
@@ -2384,10 +2383,6 @@ class JSValueRegsTemporary {
 public:
     JSValueRegsTemporary();
     JSValueRegsTemporary(SpeculativeJIT*);
-    JSValueRegsTemporary(SpeculativeJIT*, GPRReg specificPayload);
-#if USE(JSVALUE32_64)
-    JSValueRegsTemporary(SpeculativeJIT*, GPRReg specificPayload, GPRReg specificTag);
-#endif
     template<typename T>
     JSValueRegsTemporary(SpeculativeJIT*, ReuseTag, T& operand, WhichValueWord resultRegWord = PayloadWord);
     JSValueRegsTemporary(SpeculativeJIT*, ReuseTag, JSValueOperand&);

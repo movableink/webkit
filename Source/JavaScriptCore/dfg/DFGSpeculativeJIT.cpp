@@ -1410,6 +1410,7 @@ GPRTemporary::GPRTemporary(SpeculativeJIT* jit, GPRReg specific)
     : m_jit(jit)
     , m_gpr(InvalidGPRReg)
 {
+    ASSERT(specific != InvalidGPRReg);
     m_gpr = m_jit->allocate(specific);
 }
 
@@ -1438,16 +1439,6 @@ JSValueRegsTemporary::JSValueRegsTemporary(SpeculativeJIT* jit)
     : m_gpr(jit)
 #else
     : m_payloadGPR(jit)
-    , m_tagGPR(jit)
-#endif
-{
-}
-
-JSValueRegsTemporary::JSValueRegsTemporary(SpeculativeJIT* jit, GPRReg specificPayload)
-#if USE(JSVALUE64)
-    : m_gpr(jit, specificPayload)
-#else
-    : m_payloadGPR(jit, specificPayload)
     , m_tagGPR(jit)
 #endif
 {
