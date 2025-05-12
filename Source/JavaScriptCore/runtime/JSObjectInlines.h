@@ -35,8 +35,11 @@
 #include "JSTypedArrays.h"
 #include "Lookup.h"
 #include "MegamorphicCache.h"
+#include "ObjectInitializationScope.h"
+#include "SparseArrayValueMap.h"
 #include "StructureInlines.h"
 #include "TypedArrayType.h"
+#include "VM.h"
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -55,6 +58,75 @@ inline Structure* JSNonFinalObject::createStructure(VM& vm, JSGlobalObject* glob
 inline Structure* JSFinalObject::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype, unsigned inlineCapacity)
 {
     return Structure::create(vm, globalObject, prototype, typeInfo(), info(), defaultIndexingType, inlineCapacity);
+}
+
+inline void JSObject::setButterfly(VM& vm, Butterfly* butterfly)
+{
+    if (isX86() || vm.heap.mutatorShouldBeFenced()) {
+        WTF::storeStoreFence();
+        m_butterfly.set(vm, this, butterfly);
+        WTF::storeStoreFence();
+        return;
+    }
+
+    m_butterfly.set(vm, this, butterfly);
+}
+
+inline void JSObject::nukeStructureAndSetButterfly(VM& vm, StructureID oldStructureID, Butterfly* butterfly)
+{
+    if (isX86() || vm.heap.mutatorShouldBeFenced()) {
+        setStructureIDDirectly(oldStructureID.nuke());
+        WTF::storeStoreFence();
+        m_butterfly.set(vm, this, butterfly);
+        WTF::storeStoreFence();
+        return;
+    }
+
+    m_butterfly.set(vm, this, butterfly);
+}
+
+inline JSValue JSObject::get(JSGlobalObject* globalObject, PropertyName propertyName) const
+{
+    VM& vm = getVM(globalObject);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    PropertySlot slot(this, PropertySlot::InternalMethodType::Get);
+    bool hasProperty = const_cast<JSObject*>(this)->getPropertySlot(globalObject, propertyName, slot);
+
+    EXCEPTION_ASSERT(!scope.exception() || vm.hasPendingTerminationException() || !hasProperty);
+    RETURN_IF_EXCEPTION(scope, jsUndefined());
+
+    if (hasProperty)
+        RELEASE_AND_RETURN(scope, slot.getValue(globalObject, propertyName));
+
+    return jsUndefined();
+}
+
+inline JSValue JSObject::get(JSGlobalObject* globalObject, unsigned propertyName) const
+{
+    VM& vm = getVM(globalObject);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    PropertySlot slot(this, PropertySlot::InternalMethodType::Get);
+    bool hasProperty = const_cast<JSObject*>(this)->getPropertySlot(globalObject, propertyName, slot);
+
+    EXCEPTION_ASSERT(!scope.exception() || vm.hasPendingTerminationException() || !hasProperty);
+    RETURN_IF_EXCEPTION(scope, jsUndefined());
+
+    if (hasProperty)
+        RELEASE_AND_RETURN(scope, slot.getValue(globalObject, propertyName));
+
+    return jsUndefined();
+}
+
+template<typename T, typename PropertyNameType>
+inline T JSObject::getAs(JSGlobalObject* globalObject, PropertyNameType propertyName) const
+{
+    JSValue value = get(globalObject, propertyName);
+#if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
+    VM& vm = getVM(globalObject);
+    if (vm.exceptionForInspection())
+        return nullptr;
+#endif
+    return jsCast<T>(value);
 }
 
 template<typename CellType, SubspaceAccess>
@@ -950,6 +1022,159 @@ void JSObject::forEachOwnIndexedProperty(JSGlobalObject* globalObject, const Fun
         break;
     }
 
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+}
+
+inline void JSObject::initializeIndex(ObjectInitializationScope& scope, unsigned i, JSValue v)
+{
+    initializeIndex(scope, i, v, indexingType());
+}
+
+ALWAYS_INLINE void JSObject::initializeIndex(ObjectInitializationScope& scope, unsigned i, JSValue v, IndexingType indexingType)
+{
+    VM& vm = scope.vm();
+    Butterfly* butterfly = m_butterfly.get();
+    switch (indexingType) {
+    case ALL_UNDECIDED_INDEXING_TYPES: {
+        setIndexQuicklyToUndecided(vm, i, v);
+        break;
+    }
+    case ALL_INT32_INDEXING_TYPES: {
+        ASSERT(i < butterfly->publicLength());
+        ASSERT(i < butterfly->vectorLength());
+        if (!v.isInt32()) {
+            convertInt32ToDoubleOrContiguousWhilePerformingSetIndex(vm, i, v);
+            break;
+        }
+        [[fallthrough]];
+    }
+    case ALL_CONTIGUOUS_INDEXING_TYPES: {
+        ASSERT(i < butterfly->publicLength());
+        ASSERT(i < butterfly->vectorLength());
+        butterfly->contiguous().at(this, i).set(vm, this, v);
+        break;
+    }
+    case ALL_DOUBLE_INDEXING_TYPES: {
+        ASSERT(i < butterfly->publicLength());
+        ASSERT(i < butterfly->vectorLength());
+        if (!v.isNumber()) {
+            convertDoubleToContiguousWhilePerformingSetIndex(vm, i, v);
+            return;
+        }
+        double value = v.asNumber();
+        if (value != value) {
+            convertDoubleToContiguousWhilePerformingSetIndex(vm, i, v);
+            return;
+        }
+        butterfly->contiguousDouble().at(this, i) = value;
+        break;
+    }
+    case ALL_ARRAY_STORAGE_INDEXING_TYPES: {
+        ArrayStorage* storage = butterfly->arrayStorage();
+        ASSERT(i < storage->length());
+        ASSERT(i < storage->m_numValuesInVector);
+        storage->m_vector[i].set(vm, this, v);
+        break;
+    }
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+}
+
+inline void JSObject::initializeIndexWithoutBarrier(ObjectInitializationScope& scope, unsigned i, JSValue v)
+{
+    initializeIndexWithoutBarrier(scope, i, v, indexingType());
+}
+
+ALWAYS_INLINE void JSObject::initializeIndexWithoutBarrier(ObjectInitializationScope&, unsigned i, JSValue v, IndexingType indexingType)
+{
+    Butterfly* butterfly = m_butterfly.get();
+    switch (indexingType) {
+    case ALL_UNDECIDED_INDEXING_TYPES: {
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
+    }
+    case ALL_INT32_INDEXING_TYPES: {
+        ASSERT(i < butterfly->publicLength());
+        ASSERT(i < butterfly->vectorLength());
+        RELEASE_ASSERT(v.isInt32());
+        [[fallthrough]];
+    }
+    case ALL_CONTIGUOUS_INDEXING_TYPES: {
+        ASSERT(i < butterfly->publicLength());
+        ASSERT(i < butterfly->vectorLength());
+        butterfly->contiguous().at(this, i).setWithoutWriteBarrier(v);
+        break;
+    }
+    case ALL_DOUBLE_INDEXING_TYPES: {
+        ASSERT(i < butterfly->publicLength());
+        ASSERT(i < butterfly->vectorLength());
+        RELEASE_ASSERT(v.isNumber());
+        double value = v.asNumber();
+        RELEASE_ASSERT(value == value);
+        butterfly->contiguousDouble().at(this, i) = value;
+        break;
+    }
+    case ALL_ARRAY_STORAGE_INDEXING_TYPES: {
+        ArrayStorage* storage = butterfly->arrayStorage();
+        ASSERT(i < storage->length());
+        ASSERT(i < storage->m_numValuesInVector);
+        storage->m_vector[i].setWithoutWriteBarrier(v);
+        break;
+    }
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+}
+
+inline bool JSObject::canHaveExistingOwnIndexedGetterSetterProperties()
+{
+    if (!hasIndexedProperties(indexingType()))
+        return false;
+
+    switch (indexingType()) {
+    case ALL_BLANK_INDEXING_TYPES:
+    case ALL_UNDECIDED_INDEXING_TYPES:
+    case ALL_INT32_INDEXING_TYPES:
+    case ALL_CONTIGUOUS_INDEXING_TYPES:
+    case ALL_DOUBLE_INDEXING_TYPES:
+        return false;
+    case ALL_ARRAY_STORAGE_INDEXING_TYPES: {
+        SparseArrayValueMap* map = m_butterfly->arrayStorage()->m_sparseMap.get();
+        if (!map)
+            return false;
+        return map->hasAnyKindOfGetterSetterProperties();
+    }
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+}
+
+inline unsigned JSObject::canHaveExistingOwnIndexedProperties() const
+{
+    if (!hasIndexedProperties(indexingType()))
+        return false;
+
+    switch (indexingType()) {
+    case ALL_BLANK_INDEXING_TYPES:
+    case ALL_UNDECIDED_INDEXING_TYPES:
+        return false;
+    case ALL_INT32_INDEXING_TYPES:
+    case ALL_CONTIGUOUS_INDEXING_TYPES:
+    case ALL_DOUBLE_INDEXING_TYPES:
+        return m_butterfly->publicLength();
+    case ALL_ARRAY_STORAGE_INDEXING_TYPES: {
+        ArrayStorage* storage = m_butterfly->arrayStorage();
+        unsigned usedVectorLength = std::min(storage->length(), storage->vectorLength());
+        if (usedVectorLength)
+            return true;
+        SparseArrayValueMap* map = storage->m_sparseMap.get();
+        if (!map)
+            return false;
+        return map->size();
+    }
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }

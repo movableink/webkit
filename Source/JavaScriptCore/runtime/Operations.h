@@ -25,6 +25,7 @@
 #include "ExceptionHelpers.h"
 #include "JSBigInt.h"
 #include "JSGlobalObject.h"
+#include "JSString.h"
 #include <wtf/text/MakeString.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN

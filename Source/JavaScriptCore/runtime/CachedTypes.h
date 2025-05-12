@@ -36,6 +36,7 @@ namespace JSC {
 class BytecodeCacheError;
 class CachedBytecode;
 class SourceCodeKey;
+class SourceProvider;
 class UnlinkedCodeBlock;
 class UnlinkedFunctionCodeBlock;
 class UnlinkedFunctionExecutable;

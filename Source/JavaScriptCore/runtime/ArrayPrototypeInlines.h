@@ -27,6 +27,7 @@
 
 #include "ArrayConstructor.h"
 #include "ArrayPrototype.h"
+#include "CommonIdentifiers.h"
 #include "Error.h"
 #include "ExceptionHelpers.h"
 #include "GetVM.h"

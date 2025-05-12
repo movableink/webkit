@@ -30,6 +30,7 @@
 #include "StringAdaptors.h"
 #include "TrustedType.h"
 #include <JavaScriptCore/JSGlobalObject.h>
+#include <JavaScriptCore/JSString.h>
 
 namespace WebCore {
 

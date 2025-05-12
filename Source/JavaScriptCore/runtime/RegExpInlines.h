@@ -70,6 +70,12 @@ private:
 };
 #endif // REGEXP_FUNC_TEST_DATA_GEN
 
+template<typename CellType, SubspaceAccess mode>
+inline GCClient::IsoSubspace* RegExp::subspaceFor(VM& vm)
+{
+    return &vm.regExpSpace();
+}
+
 inline Structure* RegExp::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
     return Structure::create(vm, globalObject, prototype, TypeInfo(CellType, StructureFlags), info());

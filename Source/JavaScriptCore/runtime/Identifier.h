@@ -22,7 +22,7 @@
 
 #include "ArrayConventions.h"
 #include "PrivateName.h"
-#include "VM.h"
+#include "SmallStrings.h"
 #include <wtf/text/CString.h>
 #include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/UniquedStringImpl.h>
@@ -158,13 +158,13 @@ public:
 private:
     AtomString m_string;
 
-    Identifier(VM& vm, std::span<const LChar> string) : m_string(add(vm, string)) { ASSERT(m_string.impl()->isAtom()); }
-    Identifier(VM& vm, std::span<const UChar> string) : m_string(add(vm, string)) { ASSERT(m_string.impl()->isAtom()); }
-    ALWAYS_INLINE Identifier(VM& vm, ASCIILiteral literal) : m_string(add(vm, literal)) { ASSERT(m_string.impl()->isAtom()); }
-    Identifier(VM&, AtomStringImpl*);
-    Identifier(VM&, const AtomString&);
-    Identifier(VM& vm, const String& string) : m_string(add(vm, string.impl())) { ASSERT(m_string.impl()->isAtom()); }
-    Identifier(VM& vm, StringImpl* rep) : m_string(add(vm, rep)) { ASSERT(m_string.impl()->isAtom()); }
+    inline Identifier(VM&, std::span<const LChar>); // Defined in IdentifierInlines.h
+    inline Identifier(VM&, std::span<const UChar>); // Defined in IdentifierInlines.h
+    ALWAYS_INLINE Identifier(VM&, ASCIILiteral); // Defined in IdentifierInlines.h
+    inline Identifier(VM&, AtomStringImpl*); // Defined in IdentifierInlines.h
+    inline Identifier(VM&, const AtomString&); // Defined in IdentifierInlines.h
+    inline Identifier(VM&, const String&);
+    inline Identifier(VM&, StringImpl*);
 
     Identifier(VM&, Ref<AtomStringImpl>&& impl)
         : m_string(WTFMove(impl))
@@ -177,12 +177,12 @@ private:
     static bool equal(const Identifier& a, const Identifier& b) { return a.m_string.impl() == b.m_string.impl(); }
     static bool equal(const Identifier& a, const LChar* b) { return equal(a.m_string.impl(), b); }
 
-    template <typename T> static Ref<AtomStringImpl> add(VM&, std::span<const T>);
+    template <typename T> inline static Ref<AtomStringImpl> add(VM&, std::span<const T>); // Defined in IdentifierInlines.h
     static Ref<AtomStringImpl> add8(VM&, std::span<const UChar>);
     template <typename T> ALWAYS_INLINE static constexpr bool canUseSingleCharacterString(T);
 
     static Ref<AtomStringImpl> add(VM&, StringImpl*);
-    static Ref<AtomStringImpl> add(VM&, ASCIILiteral);
+    inline static Ref<AtomStringImpl> add(VM&, ASCIILiteral); // Defined in IdentifierInlines.h
 
 #ifndef NDEBUG
     JS_EXPORT_PRIVATE static void checkCurrentAtomStringTable(VM&);
@@ -200,27 +200,6 @@ template <> ALWAYS_INLINE constexpr bool Identifier::canUseSingleCharacterString
 template <> ALWAYS_INLINE constexpr bool Identifier::canUseSingleCharacterString(UChar c)
 {
     return (c <= maxSingleCharacterString);
-}
-
-template <typename T>
-Ref<AtomStringImpl> Identifier::add(VM& vm, std::span<const T> string)
-{
-    if (string.size() == 1) {
-        T c = string.front();
-        if (canUseSingleCharacterString(c))
-            return vm.smallStrings.singleCharacterStringRep(c);
-    }
-    if (string.empty())
-        return *static_cast<AtomStringImpl*>(StringImpl::empty());
-
-    return *AtomStringImpl::add(string);
-}
-
-inline Ref<AtomStringImpl> Identifier::add(VM& vm, ASCIILiteral literal)
-{
-    if (literal.length() == 1)
-        return vm.smallStrings.singleCharacterStringRep(literal.characterAt(0));
-    return AtomStringImpl::add(literal);
 }
 
 inline bool operator==(const Identifier& a, const Identifier& b)

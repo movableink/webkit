@@ -42,7 +42,6 @@
 #include "StructureTransitionTable.h"
 #include "TypeInfoBlob.h"
 #include "Watchpoint.h"
-#include "WriteBarrierInlines.h"
 #include <wtf/Atomics.h>
 #include <wtf/CompactPointerTuple.h>
 #include <wtf/CompactPtr.h>
@@ -224,10 +223,7 @@ public:
     ~Structure();
     
     template<typename CellType, SubspaceAccess>
-    static GCClient::IsoSubspace* subspaceFor(VM& vm)
-    {
-        return &vm.structureSpace();
-    }
+    inline static GCClient::IsoSubspace* subspaceFor(VM&); // Defined in StructureInlines.h
 
     JS_EXPORT_PRIVATE static bool isValidPrototype(JSValue);
 
@@ -252,13 +248,7 @@ protected:
     }
 
 private:
-    void finishCreation(VM& vm, CreatingEarlyCellTag)
-    {
-        Base::finishCreation(vm, this, CreatingEarlyCell);
-        ASSERT(m_prototype);
-        ASSERT(m_prototype.isNull());
-        ASSERT(!vm.structureStructure);
-    }
+    inline void finishCreation(VM&, CreatingEarlyCellTag); // Defined in StructureInlines.h
 
     void validateFlags();
 

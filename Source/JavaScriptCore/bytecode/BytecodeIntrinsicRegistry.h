@@ -27,6 +27,7 @@
 #pragma once
 
 #include "Identifier.h"
+#include "Strong.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/TZoneMalloc.h>

@@ -39,6 +39,7 @@
 #include "SymbolPrototype.h"
 #include "Watchpoint.h"
 #include "WebAssemblyGCStructure.h"
+#include "WriteBarrierInlines.h"
 #include <wtf/CompactRefPtr.h>
 #include <wtf/Threading.h>
 
@@ -96,6 +97,20 @@ inline Structure* Structure::create(VM& vm, Structure* previous, DeferredStructu
         RELEASE_ASSERT_NOT_REACHED();
         return nullptr;
     }
+}
+
+template<typename CellType, SubspaceAccess>
+inline GCClient::IsoSubspace* Structure::subspaceFor(VM& vm)
+{
+    return &vm.structureSpace();
+}
+
+inline void Structure::finishCreation(VM& vm, CreatingEarlyCellTag)
+{
+    Base::finishCreation(vm, this, CreatingEarlyCell);
+    ASSERT(m_prototype);
+    ASSERT(m_prototype.isNull());
+    ASSERT(!vm.structureStructure);
 }
 
 inline bool Structure::mayInterceptIndexedAccesses() const

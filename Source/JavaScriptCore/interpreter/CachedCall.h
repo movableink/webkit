@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "ArgList.h"
 #include "CallLinkInfoBase.h"
 #include "ExceptionHelpers.h"
 #include "JSFunction.h"

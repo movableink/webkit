@@ -26,6 +26,7 @@
 #pragma once
 
 #include "CagedBarrierPtr.h"
+#include "CommonIdentifiers.h"
 #include "DirectArgumentsOffset.h"
 #include "GenericArgumentsImpl.h"
 #include <wtf/CagedPtr.h>
