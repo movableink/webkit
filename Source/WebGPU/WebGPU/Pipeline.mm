@@ -116,8 +116,15 @@ std::optional<LibraryCreationResult> createLibrary(id<MTLDevice> device, const S
 
     for (auto& kvp : entryPointInformation.specializationConstants) {
         auto& specializationConstant = kvp.value;
-        if (!specializationConstant.defaultValue || wgslConstantValues.contains(kvp.value.mangledName))
+        if (!specializationConstant.defaultValue || wgslConstantValues.contains(kvp.value.mangledName)) {
+            if (!specializationConstant.defaultValue && !wgslConstantValues.contains(kvp.value.mangledName)) {
+                if (error)
+                    *error = [NSError errorWithDomain:@"WebGPU" code:1 userInfo:@{ NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Override %s is used in shader but not provided", kvp.key.utf8().data()] }];
+                return std::nullopt;
+            }
+
             continue;
+        }
 
         auto constantValue = WGSL::evaluate(*kvp.value.defaultValue, wgslConstantValues);
         if (!constantValue) {
