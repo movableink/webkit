@@ -324,6 +324,9 @@ void HTMLModelElement::createModelPlayer()
     if (size.isEmpty())
         return;
 
+    if (m_modelPlayer)
+        deleteModelPlayer();
+
     ASSERT(document().page());
 #if ENABLE(MODEL_PROCESS)
     m_entityTransform = DOMMatrixReadOnly::create(TransformationMatrix::identity, DOMMatrixReadOnly::Is2D::No);
@@ -378,7 +381,7 @@ void HTMLModelElement::unloadModelPlayer(bool onSuspend)
     auto transformState = m_modelPlayer->currentTransformState();
     if (!animationState || !transformState) {
         RELEASE_LOG(ModelElement, "%p - HTMLModelElement: Model player cannot handle temporary unload", this);
-        m_modelPlayer = nullptr;
+        deleteModelPlayer();
         return;
     }
 
