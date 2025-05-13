@@ -111,6 +111,12 @@ void WebPasteboardProxy::readBuffer(IPC::Connection&, const String&, const Strin
     completionHandler({ });
 }
 
+static void setClipboardContentFromSpan(WPEClipboardContent* content, const char* type, const std::span<const char>& text)
+{
+    GRefPtr<GBytes> bytes = adoptGRef(g_bytes_new(text.data(), text.size()));
+    wpe_clipboard_content_set_bytes(content, type, bytes.get());
+}
+
 void WebPasteboardProxy::writeToClipboard(const String&, SelectionData&& selectionData)
 {
 #if ENABLE(WPE_PLATFORM)
@@ -118,10 +124,10 @@ void WebPasteboardProxy::writeToClipboard(const String&, SelectionData&& selecti
         GRefPtr<WPEClipboardContent> content = adoptGRef(wpe_clipboard_content_new());
         if (selectionData.hasText())
             wpe_clipboard_content_set_text(content.get(), selectionData.text().utf8().data());
-        if (selectionData.hasMarkup()) {
-            auto text = selectionData.markup().utf8();
-            wpe_clipboard_content_set_markup(content.get(), text.data(), text.length());
-        }
+        if (selectionData.hasMarkup())
+            setClipboardContentFromSpan(content.get(), "text/html", selectionData.markup().utf8().span());
+        if (selectionData.hasURIList())
+            setClipboardContentFromSpan(content.get(), "text/uri-list", selectionData.uriList().utf8().span());
 
         auto* clipboard = wpe_display_get_clipboard(wpe_display_get_primary());
         wpe_clipboard_set_content(clipboard, content.get());
@@ -200,10 +206,10 @@ void WebPasteboardProxy::writeCustomData(IPC::Connection&, const Vector<Pasteboa
             } else if (std::holds_alternative<String>(stringOrBuffer)) {
                 if (type == "text/plain"_s)
                     wpe_clipboard_content_set_text(content.get(), std::get<String>(stringOrBuffer).utf8().data());
-                else if (type == "text/html"_s) {
-                    auto text = std::get<String>(stringOrBuffer).utf8();
-                    wpe_clipboard_content_set_markup(content.get(), text.data(), text.length());
-                }
+                else if (type == "text/html"_s)
+                    setClipboardContentFromSpan(content.get(), "text/html", std::get<String>(stringOrBuffer).utf8().span());
+                else if (type == "text/uri-list"_s)
+                    setClipboardContentFromSpan(content.get(), "text/uri-list", std::get<String>(stringOrBuffer).utf8().span());
             }
         });
 
@@ -230,6 +236,8 @@ static PasteboardItemInfo pasteboardItemInfoFromFormats(Vector<String>&& formats
         info.webSafeTypesByFidelity.append("text/plain"_s);
     if (formats.contains("text/html"_s))
         info.webSafeTypesByFidelity.append("text/html"_s);
+    if (formats.contains("text/uri-list"_s))
+        info.webSafeTypesByFidelity.append("text/uri-list"_s);
     info.platformTypesByFidelity = WTFMove(formats);
     return info;
 }

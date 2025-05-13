@@ -77,9 +77,6 @@ WPE_API WPEClipboardContent *wpe_clipboard_content_ref        (WPEClipboardConte
 WPE_API void                 wpe_clipboard_content_unref      (WPEClipboardContent *content);
 WPE_API void                 wpe_clipboard_content_set_text   (WPEClipboardContent *content,
                                                                const char          *text);
-WPE_API void  	      	     wpe_clipboard_content_set_markup (WPEClipboardContent *content,
-                                                               const char          *markup,
-                                                               gssize               length);
 WPE_API void                 wpe_clipboard_content_set_bytes  (WPEClipboardContent *content,
                                                                const char          *format,
                                                                GBytes              *bytes);

@@ -51,7 +51,6 @@ WEBKIT_DEFINE_TYPE(WPEClipboard, wpe_clipboard, G_TYPE_OBJECT)
 
 struct _WPEClipboardContent {
     std::optional<CString> text;
-    std::optional<CString> markup;
     std::optional<HashMap<const char*, GRefPtr<GBytes>>> buffers;
     int referenceCount { 1 };
 };
@@ -238,8 +237,6 @@ void wpe_clipboard_set_content(WPEClipboard* clipboard, WPEClipboardContent* con
             g_ptr_array_add(formats.get(), static_cast<gpointer>(const_cast<char*>(g_intern_static_string("text/plain"))));
             g_ptr_array_add(formats.get(), static_cast<gpointer>(const_cast<char*>(g_intern_static_string("text/plain;charset=utf-8"))));
         }
-        if (content->markup)
-            g_ptr_array_add(formats.get(), static_cast<gpointer>(const_cast<char*>(g_intern_static_string("text/html"))));
         if (content->buffers) {
             for (const auto* format : content->buffers->keys())
                 g_ptr_array_add(formats.get(), static_cast<gpointer>(const_cast<char*>(format)));
@@ -395,23 +392,6 @@ void wpe_clipboard_content_set_text(WPEClipboardContent* content, const char* te
 }
 
 /**
- * wpe_clipboard_content_set_markup:
- * @content: a #WPEClipboardContent
- * @markup: text markup to set
- * @length: lenght of text, or -1 if @markup is nul-terminated.
- *
- * Set @markup text on @content
- */
-void wpe_clipboard_content_set_markup(WPEClipboardContent* content, const char* markup, gssize length)
-{
-    g_return_if_fail(content);
-
-    if (length < 0)
-        length = markup ? strlen(markup) : 0;
-    content->markup = CString(std::span<const char>(markup, length));
-}
-
-/**
  * wpe_clipboard_content_set_bytes:
  * @content: a #WPEClipboardContent
  * @format: a format
@@ -449,9 +429,6 @@ gboolean wpe_clipboard_content_serialize(WPEClipboardContent* content, const cha
     if (internalFormat == g_intern_static_string("text/plain") || internalFormat == g_intern_static_string("text/plain;charset=utf-8")) {
         if (content->text)
             return g_output_stream_write_all(stream, content->text->data(), content->text->length(), nullptr, nullptr, nullptr);
-    } else if (internalFormat == g_intern_static_string("text/html")) {
-        if (content->markup)
-            return g_output_stream_write_all(stream, content->markup->data(), content->markup->length(), nullptr, nullptr, nullptr);
     } else if (content->buffers) {
         if (auto* bytes = content->buffers->get(internalFormat)) {
             gsize dataLength;
