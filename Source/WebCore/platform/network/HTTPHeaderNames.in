@@ -77,7 +77,6 @@ Location
 Origin
 Ping-From
 Ping-To
-Purpose
 Pragma
 Proxy-Authorization
 Range
@@ -89,6 +88,7 @@ Reporting-Endpoints
 Sec-Fetch-Dest
 Sec-Fetch-Mode
 Sec-Fetch-Site
+Sec-Purpose
 Sec-WebSocket-Accept
 Sec-WebSocket-Extensions
 Sec-WebSocket-Key

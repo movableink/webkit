@@ -20,4 +20,4 @@ def main(request, response):
 <body onload="test()">
 """
 
-    return headers, document % {'prefetch': isomorphic_decode(request.headers.get(b"Purpose", b"")), 'url': request.url }
+    return headers, document % {'prefetch': isomorphic_decode(request.headers.get(b"Sec-Purpose", b"")), 'url': request.url }

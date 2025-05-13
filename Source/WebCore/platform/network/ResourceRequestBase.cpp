@@ -436,7 +436,7 @@ void ResourceRequestBase::clearPurpose()
 {
     updateResourceRequest();
 
-    m_requestData.m_httpHeaderFields.remove(HTTPHeaderName::Purpose);
+    m_requestData.m_httpHeaderFields.remove(HTTPHeaderName::SecPurpose);
 
     m_platformRequestUpdated = false;
 }

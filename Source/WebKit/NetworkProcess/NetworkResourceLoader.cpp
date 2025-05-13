@@ -2023,7 +2023,7 @@ void NetworkResourceLoader::logSlowCacheRetrieveIfNeeded(const NetworkCache::Cac
 bool NetworkResourceLoader::isCrossOriginPrefetch() const
 {
     auto& request = originalRequest();
-    return request.httpHeaderField(HTTPHeaderName::Purpose) == "prefetch"_s && !m_parameters.protectedSourceOrigin()->canRequest(request.url(), connectionToWebProcess().originAccessPatterns());
+    return request.httpHeaderField(HTTPHeaderName::SecPurpose) == "prefetch"_s && !m_parameters.protectedSourceOrigin()->canRequest(request.url(), connectionToWebProcess().originAccessPatterns());
 }
 
 void NetworkResourceLoader::setWorkerStart(MonotonicTime value)
