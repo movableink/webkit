@@ -85,7 +85,7 @@
 
 #define PAS_MEDIUM_SHARING_SHIFT         3
 
-#define PAS_MIN_OBJECTS_PER_PAGE         6
+#define PAS_MIN_OBJECTS_PER_PAGE         10
 
 #ifdef PAS_LIBMALLOC
 #define PAS_DEALLOCATION_LOG_SIZE        10
