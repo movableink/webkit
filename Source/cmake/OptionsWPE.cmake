@@ -424,7 +424,7 @@ if (USE_LIBBACKTRACE)
 endif ()
 
 if (ENABLE_MALLOC_HEAP_BREAKDOWN)
-    set(MALLOC_HEAP_BREAKDOWN_FRAMEWORKS MallocHeapBreakdown)
+    set(MALLOC_HEAP_BREAKDOWN_LIBRARIES MallocHeapBreakdown)
 endif ()
 
 # Using DERIVED_SOURCES_DIR is deprecated
