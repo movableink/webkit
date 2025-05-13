@@ -701,15 +701,11 @@ ElementUpdate TreeResolver::createAnimatedElementUpdate(ResolvedStyle&& resolved
         if (oldStyle && (oldStyle->hasTransitions() || resolvedStyle.style->hasTransitions()))
             styleable.updateCSSTransitions(*oldStyle, *resolvedStyle.style, newStyleOriginatedAnimations);
 
-        if ((oldStyle && oldStyle->scrollTimelines().size()) || resolvedStyle.style->scrollTimelines().size()
-            || (oldStyle && oldStyle->scrollTimelineNames().size()) || resolvedStyle.style->scrollTimelineNames().size()) {
+        if ((oldStyle && oldStyle->hasScrollTimelines()) || resolvedStyle.style->hasScrollTimelines())
             styleable.updateCSSScrollTimelines(oldStyle, *resolvedStyle.style);
-        }
 
-        if ((oldStyle && oldStyle->viewTimelines().size()) || resolvedStyle.style->viewTimelines().size()
-            || (oldStyle && oldStyle->viewTimelineNames().size()) || resolvedStyle.style->viewTimelineNames().size()) {
+        if ((oldStyle && oldStyle->hasViewTimelines()) || resolvedStyle.style->hasViewTimelines())
             styleable.updateCSSViewTimelines(oldStyle, *resolvedStyle.style);
-        }
 
         if ((oldStyle && oldStyle->timelineScope().type != NameScope::Type::None) || resolvedStyle.style->timelineScope().type != NameScope::Type::None) {
             CheckedRef styleOriginatedTimelinesController = element.protectedDocument()->ensureStyleOriginatedTimelinesController();

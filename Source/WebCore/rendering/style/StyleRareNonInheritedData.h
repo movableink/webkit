@@ -119,6 +119,16 @@ public:
 
     bool hasBackdropFilters() const;
 
+    bool hasScrollTimelines() const
+    {
+        return scrollTimelines.size() || scrollTimelineNames.size();
+    }
+
+    bool hasViewTimelines() const
+    {
+        return viewTimelines.size() || viewTimelineNames.size();
+    }
+
     OptionSet<Containment> usedContain() const;
 
     Markable<Length> containIntrinsicWidth;

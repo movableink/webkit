@@ -1034,6 +1034,7 @@ public:
     inline const Vector<Ref<ScrollTimeline>>& scrollTimelines() const;
     inline const Vector<ScrollAxis>& scrollTimelineAxes() const;
     inline const Vector<AtomString>& scrollTimelineNames() const;
+    inline bool hasScrollTimelines() const;
     inline void setScrollTimelineAxes(const Vector<ScrollAxis>&);
     inline void setScrollTimelineNames(const Vector<AtomString>&);
 
@@ -1041,6 +1042,7 @@ public:
     inline const Vector<ScrollAxis>& viewTimelineAxes() const;
     inline const Vector<ViewTimelineInsets>& viewTimelineInsets() const;
     inline const Vector<AtomString>& viewTimelineNames() const;
+    inline bool hasViewTimelines() const;
     inline void setViewTimelineAxes(const Vector<ScrollAxis>&);
     inline void setViewTimelineInsets(const Vector<ViewTimelineInsets>&);
     inline void setViewTimelineNames(const Vector<AtomString>&);
