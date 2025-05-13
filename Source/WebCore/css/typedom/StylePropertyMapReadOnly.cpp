@@ -41,6 +41,7 @@
 #include "CSSUnparsedValue.h"
 #include "CSSValueList.h"
 #include "Document.h"
+#include "ExceptionOr.h"
 
 namespace WebCore {
 

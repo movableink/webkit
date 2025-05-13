@@ -27,7 +27,8 @@
 #include "CachePolicy.h"
 #include "CachedCSSStyleSheet.h"
 #include "CommonAtomStrings.h"
-#include "Document.h"
+#include "DocumentInlines.h"
+#include "FrameInlines.h"
 #include "FrameLoader.h"
 #include "LocalFrame.h"
 #include "MediaList.h"
@@ -700,4 +701,4 @@ void StyleSheetContents::shrinkToFit()
     m_childRules.shrinkToFit();
 }
 
-}
+} // namespace WebCore

@@ -37,6 +37,7 @@
 #include "CSSPrimitiveValue.h"
 #include "CSSUnits.h"
 #include "CalculationCategory.h"
+#include "ExceptionOr.h"
 #include <cmath>
 #include <wtf/TZoneMallocInlines.h>
 
