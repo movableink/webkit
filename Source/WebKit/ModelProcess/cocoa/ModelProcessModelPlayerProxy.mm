@@ -422,7 +422,7 @@ static CGFloat effectivePointsPerMeter(CALayer *caLayer)
 
 static RESRT modelStandardizedTransformSRT(RESRT originalSRT)
 {
-    constexpr float defaultScaleFactor = 0.32f;
+    constexpr float defaultScaleFactor = 0.36f;
 
     originalSRT.scale *= defaultScaleFactor;
     originalSRT.translation *= defaultScaleFactor;
@@ -432,7 +432,7 @@ static RESRT modelStandardizedTransformSRT(RESRT originalSRT)
 
 static RESRT modelLocalizedTransformSRT(RESRT originalSRT)
 {
-    constexpr float defaultScaleFactor = 0.32f;
+    constexpr float defaultScaleFactor = 0.36f;
 
     originalSRT.scale /= defaultScaleFactor;
     originalSRT.translation /= defaultScaleFactor;
