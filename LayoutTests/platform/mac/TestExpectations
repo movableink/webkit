@@ -74,6 +74,8 @@ media/media-source/remoteplayback-from-source-element.html [ Pass ]
 # Individually failing tests should be marked in separate expectations.
 [ Sonoma+ ] imported/w3c/web-platform-tests/css/css-text/word-break/auto-phrase [ Pass ]
 
+fast/canvas/gradient-into-p3-canvas.html [ Pass ]
+
 #//////////////////////////////////////////////////////////////////////////////////////////
 # End platform-specific directories.
 #//////////////////////////////////////////////////////////////////////////////////////////

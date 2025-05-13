@@ -43,15 +43,18 @@ struct ColorConvertedToInterpolationColorSpaceStop {
 
 class GradientRendererCG {
 public:
-    GradientRendererCG(ColorInterpolationMethod, const GradientColorStops&);
+    GradientRendererCG(ColorInterpolationMethod, const GradientColorStops&, std::optional<DestinationColorSpace>);
 
     void drawLinearGradient(CGContextRef, CGPoint startPoint, CGPoint endPoint, CGGradientDrawingOptions);
     void drawRadialGradient(CGContextRef, CGPoint startCenter, CGFloat startRadius, CGPoint endCenter, CGFloat endRadius, CGGradientDrawingOptions);
     void drawConicGradient(CGContextRef, CGPoint center, CGFloat angle);
 
+    std::optional<DestinationColorSpace> colorSpace() const;
+
 private:
     struct Gradient {
         RetainPtr<CGGradientRef> gradient;
+        std::optional<DestinationColorSpace> colorSpace;
     };
 
     struct Shading {
@@ -85,8 +88,8 @@ private:
 
     using Strategy = Variant<Gradient, Shading>;
 
-    Strategy pickStrategy(ColorInterpolationMethod, const GradientColorStops&) const;
-    Strategy makeGradient(ColorInterpolationMethod, const GradientColorStops&) const;
+    Strategy pickStrategy(ColorInterpolationMethod, const GradientColorStops&, std::optional<DestinationColorSpace>) const;
+    Strategy makeGradient(ColorInterpolationMethod, const GradientColorStops&, std::optional<DestinationColorSpace>) const;
     Strategy makeShading(ColorInterpolationMethod, const GradientColorStops&) const;
 
     Strategy m_strategy;

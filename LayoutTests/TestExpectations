@@ -7609,6 +7609,9 @@ webkit.org/b/271428 fast/text/bidi-text-and-partial-layout-crash.html [ Skip ]
 # At the time of writing this test consumes all available IOSurfaces. If the next test is image-buffer-backend-variants.html, that will fail.
 fast/canvas/2d.context.many.small.html [ Slow Skip ]
 
+# Requires Display-P3 support
+fast/canvas/gradient-into-p3-canvas.html [ Failure ]
+
 webkit.org/b/268995 [ Debug ] fast/misc/out-of-flow-position-inside-mathml-crash.html [ Skip ]
 
 webkit.org/b/261557 media/video-remove-insert-repaints.html [ Pass Crash ]

@@ -106,7 +106,9 @@ public:
 
 #if USE(CG)
     void paint(GraphicsContext&);
-    void paint(CGContextRef);
+    // If the DestinationColorSpace is present, the gradient may cache a platform renderer using colors converted into this colorspace,
+    // which can be more efficient to render since it avoids colorspace conversions when lower level frameworks render the gradient.
+    void paint(CGContextRef, std::optional<DestinationColorSpace> = { });
 #endif
 
 #if USE(SKIA)
