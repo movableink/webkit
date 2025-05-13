@@ -48,7 +48,7 @@ public:
     {
     }
 
-    operator bool() const { return !!m_object; }
+    explicit operator bool() const { return !!m_object; }
 
     const WTF::UUID& object() const { return m_object; }
     ProcessIdentifier processIdentifier() const { return m_processIdentifier; }

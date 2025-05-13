@@ -1204,9 +1204,10 @@ void SWServer::registerServiceWorkerClient(ClientOrigin&& clientOrigin, ServiceW
             m_clientsById.remove(previousIdentifier);
             m_clientsToBeCreatedById.remove(previousIdentifier);
             m_clientToControllingRegistration.remove(previousIdentifier);
-            m_clientIdentifiersPerOrigin.ensure(clientOrigin, [] {
+            bool isRemoved = m_clientIdentifiersPerOrigin.ensure(clientOrigin, [] {
                 return Clients { };
-            }).iterator->value.identifiers.remove(previousIdentifier);
+            }).iterator->value.identifiers.removeFirst(previousIdentifier);
+            ASSERT_UNUSED(isRemoved, isRemoved);
         } else {
             ASSERT(m_visibleClientIdToInternalClientIdMap.get(data.identifier.object().toString()) == clientIdentifier);
             ASSERT(m_clientsById.contains(clientIdentifier));
