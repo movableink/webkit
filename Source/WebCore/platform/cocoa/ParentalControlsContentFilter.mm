@@ -36,7 +36,6 @@
 #import <pal/spi/cocoa/WebFilterEvaluatorSPI.h>
 #import <wtf/SoftLinking.h>
 #import <wtf/TZoneMallocInlines.h>
-#import <wtf/WorkQueue.h>
 #import <wtf/cocoa/SpanCocoa.h>
 
 #if HAVE(WEBCONTENTRESTRICTIONS)
@@ -54,16 +53,6 @@ SOFT_LINK_CLASS_OPTIONAL(WebContentAnalysis, WebFilterEvaluator);
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ParentalControlsContentFilter);
-
-#if HAVE(WEBCONTENTRESTRICTIONS)
-
-static WorkQueue& globalQueue()
-{
-    static MainThreadNeverDestroyed<Ref<WorkQueue>> queue = WorkQueue::create("ParentalControlsContentFilter queue"_s);
-    return queue.get();
-}
-
-#endif
 
 bool ParentalControlsContentFilter::enabled() const
 {
@@ -87,9 +76,9 @@ bool ParentalControlsContentFilter::enabled() const
 #endif
 }
 
-Ref<ParentalControlsContentFilter> ParentalControlsContentFilter::create(const PlatformContentFilter::FilterParameters& params)
+UniqueRef<ParentalControlsContentFilter> ParentalControlsContentFilter::create(const PlatformContentFilter::FilterParameters& params)
 {
-    return adoptRef(*new ParentalControlsContentFilter(params));
+    return makeUniqueRef<ParentalControlsContentFilter>(params);
 }
 
 ParentalControlsContentFilter::ParentalControlsContentFilter(const PlatformContentFilter::FilterParameters& params)
@@ -128,10 +117,10 @@ void ParentalControlsContentFilter::responseReceived(const ResourceResponse& res
 #else
         auto& filter = ParentalControlsURLFilter::singleton();
 #endif
-        filter.isURLAllowed(*m_evaluatedURL, [weakThis = ThreadSafeWeakPtr { *this }](bool isAllowed, auto replacementData) {
-            if (RefPtr protectedThis = weakThis.get())
-                protectedThis->didReceiveAllowDecisionOnQueue(isAllowed, replacementData);
-        }, globalQueue());
+        filter.isURLAllowed(*m_evaluatedURL, [weakThis = WeakPtr { *this }](bool isAllowed, auto replacementData) {
+            if (CheckedPtr checkedThis = weakThis.get())
+                checkedThis->updateFilterState(isAllowed ? State::Allowed : State::Blocked, replacementData);
+        });
         return;
     }
 #endif
@@ -169,18 +158,8 @@ void ParentalControlsContentFilter::addData(const SharedBuffer& data)
 void ParentalControlsContentFilter::finishedAddingData()
 {
 #if HAVE(WEBCONTENTRESTRICTIONS)
-    if (m_usesWebContentRestrictions) {
-        if (m_state != State::Filtering)
-            return;
-
-        // Callers expect state is ready after finishing adding data.
-        Locker resultLocker { m_resultLock };
-        while (!m_isAllowdByWebContentRestrictions)
-            m_resultCondition.wait(m_resultLock);
-        m_state = *m_isAllowdByWebContentRestrictions ? State::Allowed : State::Blocked;
-        m_replacementData = std::exchange(m_webContentRestrictionsReplacementData, nullptr);
+    if (m_usesWebContentRestrictions)
         return;
-    }
 #endif
 
 #if HAVE(WEBCONTENTANALYSIS_FRAMEWORK)
@@ -237,32 +216,10 @@ void ParentalControlsContentFilter::updateFilterState()
 
 #if HAVE(WEBCONTENTRESTRICTIONS)
 
-void ParentalControlsContentFilter::didReceiveAllowDecisionOnQueue(bool isAllowed, NSData *replacementData)
+void ParentalControlsContentFilter::updateFilterState(State state, NSData *replacementData)
 {
-    ASSERT(!isMainThread());
-
-    Locker resultLocker { m_resultLock };
-    ASSERT(!m_isAllowdByWebContentRestrictions);
-    m_isAllowdByWebContentRestrictions = isAllowed;
-    m_webContentRestrictionsReplacementData = replacementData;
-
-    callOnMainRunLoop([weakThis = ThreadSafeWeakPtr { *this }]() {
-        if (RefPtr protectedThis = weakThis.get())
-            protectedThis->updateFilterStateOnMain();
-    });
-}
-
-void ParentalControlsContentFilter::updateFilterStateOnMain()
-{
-    ASSERT(isMainThread());
-
-    if (m_state != State::Filtering)
-        return;
-
-    Locker resultLocker { m_resultLock };
-    ASSERT(m_isAllowdByWebContentRestrictions);
-    m_state = *m_isAllowdByWebContentRestrictions ? State::Allowed : State::Blocked;
-    m_replacementData = std::exchange(m_webContentRestrictionsReplacementData, nullptr);
+    m_state = state;
+    m_replacementData = replacementData;
 }
 
 #endif

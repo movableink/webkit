@@ -261,7 +261,7 @@ inline void ContentFilter::forEachContentFilterUntilBlocked(Function&& function)
         function(contentFilter.get());
 
         if (contentFilter->didBlockData()) {
-            ASSERT(!m_blockingContentFilter.get());
+            ASSERT(!m_blockingContentFilter);
             m_blockingContentFilter = contentFilter.get();
             didDecide(State::Blocked);
             return;
@@ -286,9 +286,7 @@ void ContentFilter::didDecide(State state)
         return;
 
     Ref client = m_client.get();
-    RefPtr blockingContentFilter = m_blockingContentFilter.get();
-    ASSERT(blockingContentFilter);
-    m_blockedError = client->contentFilterDidBlock(blockingContentFilter->unblockHandler(), blockingContentFilter->unblockRequestDeniedScript());
+    m_blockedError = client->contentFilterDidBlock(m_blockingContentFilter->unblockHandler(), m_blockingContentFilter->unblockRequestDeniedScript());
     client->cancelMainResourceLoadForContentFilter(m_blockedError);
 }
 
@@ -350,9 +348,7 @@ void ContentFilter::handleProvisionalLoadFailure(const ResourceError& error)
 {
     ASSERT(willHandleProvisionalLoadFailure(error));
 
-    RefPtr blockingContentFilter = m_blockingContentFilter.get();
-    ASSERT(blockingContentFilter);
-    RefPtr replacementData { blockingContentFilter->replacementData() };
+    RefPtr replacementData { m_blockingContentFilter->replacementData() };
     ResourceResponse response { URL(), "text/html"_s, static_cast<long long>(replacementData->size()), "UTF-8"_s };
     SubstituteData substituteData { WTFMove(replacementData), URL { error.failingURL() }, WTFMove(response), SubstituteData::SessionHistoryVisibility::Hidden };
     SetForScope loadingBlockedPage { m_isLoadingBlockedPage, true };
