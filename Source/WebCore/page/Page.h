@@ -775,8 +775,8 @@ public:
     WEBCORE_EXPORT void setIsInWindow(bool);
     bool isInWindow() const { return m_activityState.contains(ActivityState::IsInWindow); }
 
-    void setIsClosing() { m_isClosing = true; }
-    bool isClosing() const { return m_isClosing; }
+    void setIsClosing();
+    bool isClosing() const;
 
     void setIsRestoringCachedPage(bool value) { m_isRestoringCachedPage = value; }
     bool isRestoringCachedPage() const { return m_isRestoringCachedPage; }
@@ -1570,7 +1570,6 @@ private:
     unsigned m_renderingUpdateCount { 0 };
     bool m_isTrackingRenderingUpdates { false };
 
-    bool m_isClosing { false };
     bool m_isRestoringCachedPage { false };
 
     MediaProducerMediaStateFlags m_mediaState;

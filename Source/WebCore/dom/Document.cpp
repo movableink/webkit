@@ -733,6 +733,7 @@ void Document::populateDocumentSyncDataForNewlyConstructedDocument(ProcessSyncDa
     case ProcessSyncDataType::DocumentSecurityOrigin:
     case ProcessSyncDataType::DocumentURL:
     case ProcessSyncDataType::HasInjectedUserScript:
+    case ProcessSyncDataType::IsClosing:
     case ProcessSyncDataType::IsAutofocusProcessed:
     case ProcessSyncDataType::UserDidInteractWithPage:
     case ProcessSyncDataType::FrameCanCreatePaymentSession:

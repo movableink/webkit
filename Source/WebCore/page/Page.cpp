@@ -851,6 +851,18 @@ void Page::setMainFrameURLAndOrigin(const URL& url, RefPtr<SecurityOrigin>&& ori
     processSyncClient().broadcastTopDocumentSyncDataToOtherProcesses(m_topDocumentSyncData.get());
 }
 
+void Page::setIsClosing()
+{
+    m_topDocumentSyncData->isClosing = true;
+    if (settings().siteIsolationEnabled())
+        processSyncClient().broadcastIsClosingToOtherProcesses(true);
+}
+
+bool Page::isClosing() const
+{
+    return m_topDocumentSyncData->isClosing;
+}
+
 #if ENABLE(DOM_AUDIO_SESSION)
 void Page::setAudioSessionType(DOMAudioSessionType audioSessionType)
 {
@@ -923,6 +935,7 @@ void Page::updateProcessSyncData(const ProcessSyncData& data)
     case ProcessSyncDataType::DocumentURL:
     case ProcessSyncDataType::HasInjectedUserScript:
     case ProcessSyncDataType::IsAutofocusProcessed:
+    case ProcessSyncDataType::IsClosing:
     case ProcessSyncDataType::UserDidInteractWithPage:
 #if ENABLE(DOM_AUDIO_SESSION)
     case ProcessSyncDataType::AudioSessionType:

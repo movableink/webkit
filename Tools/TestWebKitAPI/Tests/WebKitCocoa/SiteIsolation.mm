@@ -647,6 +647,30 @@ TEST(SiteIsolation, WindowOpenRedirect)
     }
 }
 
+void pollUntilOpenedWindowIsClosed(RetainPtr<WKWebView> webView, bool& finished)
+{
+    [webView evaluateJavaScript:@"openedWindow.closed" completionHandler:makeBlockPtr([webView, &finished](id result, NSError *error) {
+        if ([result boolValue])
+            finished = true;
+        else
+            pollUntilOpenedWindowIsClosed(webView, finished);
+    }).get()];
+}
+
+TEST(SiteIsolation, ClosedStatePropagation)
+{
+    HTTPServer server({
+        { "/example"_s, { "<script>let openedWindow = window.open('https://webkit.org/webkit')</script>"_s } },
+        { "/webkit"_s, { "hi"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+    auto [opener, opened] = openerAndOpenedViews(server);
+    [opened.webView evaluateJavaScript:@"window.close()" completionHandler:nil];
+
+    __block bool openerSawClosedState = false;
+    pollUntilOpenedWindowIsClosed(opener.webView, openerSawClosedState);
+    Util::run(&openerSawClosedState);
+}
+
 TEST(SiteIsolation, CloseAfterWindowOpen)
 {
     HTTPServer server({
