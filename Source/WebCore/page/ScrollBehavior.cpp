@@ -44,7 +44,7 @@ bool useSmoothScrolling(ScrollBehavior behavior, Element* associatedElement)
     if (associatedElement == associatedElement->document().scrollingElement())
         associatedElement = associatedElement->document().documentElement();
 
-    if (!associatedElement->renderer() || !associatedElement->document().settings().CSSOMViewSmoothScrollingEnabled())
+    if (!associatedElement->renderer())
         return false;
 
     // https://drafts.csswg.org/cssom-view/#scrolling

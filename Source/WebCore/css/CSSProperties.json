@@ -11046,7 +11046,6 @@
                 "smooth"
             ],
             "codegen-properties": {
-                "settings-flag": "CSSOMViewSmoothScrollingEnabled",
                 "style-builder-converter": "SmoothScrolling",
                 "render-style-name-for-methods": "UseSmoothScrolling",
                 "parser-grammar": "<<values>>"

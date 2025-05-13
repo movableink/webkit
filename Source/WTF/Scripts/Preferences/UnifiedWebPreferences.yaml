@@ -1329,20 +1329,6 @@ CSSOMViewScrollingAPIEnabled:
     WebCore:
       default: false
 
-CSSOMViewSmoothScrollingEnabled:
-  type: bool
-  status: stable
-  category: css
-  humanReadableName: "CSSOM View Smooth Scrolling"
-  humanReadableDescription: "Enable DOM API and CSS property for 'smooth' scroll behavior"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: false
-
 CSSPaintingAPIEnabled:
   type: bool
   status: testable
