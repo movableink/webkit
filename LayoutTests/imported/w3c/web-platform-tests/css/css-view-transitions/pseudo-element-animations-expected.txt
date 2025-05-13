@@ -1,3 +1,5 @@
 
-PASS CSS Animations on view transitions are canceled and restarted when the view transition starts and ends.
+PASS The specified CSS Animations work on view transition pseudos.
+FAIL The specified CSS Animations and script animations work on view transition pseudos assert_equals: expected "0.5" but got ""
+FAIL The specified CSS Animations are removed if setting display:none. assert_equals: Has 3 CSS Animations. expected 3 but got 5
 

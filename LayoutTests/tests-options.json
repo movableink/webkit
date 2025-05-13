@@ -1976,6 +1976,9 @@
     "imported/w3c/web-platform-tests/css/css-view-transitions/navigation/skip-outbound-vt-before-reveal.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/css/css-view-transitions/nested-elements-in-overflow.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/css/css-view-transitions/new-content-captures-different-size.html": [
         "slow"
     ],
