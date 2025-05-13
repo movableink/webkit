@@ -2423,3 +2423,5 @@ webkit.org/b/291459 [ Release ] imported/w3c/web-platform-tests/css/css-shapes/s
 webkit.org/b/291785 [ Release ] security/decode-buffer-size.html [ Timeout ]
 
 webkit.org/b/292846 [ Debug ] inspector/model/source-map-spec.html [ Failure ]
+
+webkit.org/b/292957 imported/w3c/web-platform-tests/css/css-position/multicol/vlr-ltr-ltr-in-multicols.html [ Pass Failure ]
