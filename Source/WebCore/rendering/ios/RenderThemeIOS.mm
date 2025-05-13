@@ -216,6 +216,15 @@ void RenderThemeIOS::adjustRadioStyle(RenderStyle& style, const Element* element
     style.setBorderRadius({ static_cast<int>(size / 2), static_cast<int>(size / 2) });
 }
 
+static void applyCommonNonCapsuleBorderRadiusToStyle(RenderStyle& style)
+{
+    if (style.hasExplicitlySetBorderRadius())
+        return;
+
+    constexpr int commonNonCapsuleBorderRadius = 5;
+    style.setBorderRadius({ { commonNonCapsuleBorderRadius, LengthType::Fixed }, { commonNonCapsuleBorderRadius, LengthType::Fixed } });
+}
+
 void RenderThemeIOS::adjustTextFieldStyle(RenderStyle& style, const Element* element) const
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
@@ -224,6 +233,8 @@ void RenderThemeIOS::adjustTextFieldStyle(RenderStyle& style, const Element* ele
         return;
     }
 #endif
+
+    applyCommonNonCapsuleBorderRadiusToStyle(style);
 
     if (!element)
         return;
@@ -319,10 +330,11 @@ void RenderThemeIOS::adjustTextAreaStyle(RenderStyle& style, const Element* elem
         RenderThemeCocoa::adjustTextAreaStyle(style, element);
         return;
     }
+#else
+    UNUSED_PARAM(element);
 #endif
 
-    if (!element)
-        return;
+    applyCommonNonCapsuleBorderRadiusToStyle(style);
 
     if (!PAL::currentUserInterfaceIdiomIsVision())
         return;
@@ -444,6 +456,8 @@ static void adjustInputElementButtonStyle(RenderStyle& style, const HTMLInputEle
 {
     // Always Enforce "padding: 0 0.5em".
     applyCommonButtonPaddingToStyle(style, inputElement);
+
+    applyCommonNonCapsuleBorderRadiusToStyle(style);
 
     // Don't adjust the style if the width is specified.
     if (style.logicalWidth().isFixed() && style.logicalWidth().value() > 0)
@@ -842,6 +856,8 @@ void RenderThemeIOS::adjustSearchFieldStyle(RenderStyle& style, const Element* e
 #endif
 
     RenderTheme::adjustSearchFieldStyle(style, element);
+
+    applyCommonNonCapsuleBorderRadiusToStyle(style);
 
     if (!element)
         return;

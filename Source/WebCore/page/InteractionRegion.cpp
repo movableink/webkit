@@ -257,6 +257,20 @@ static bool hasTransparentContainerStyle(const RenderStyle& style)
             || !(style.borderTopWidth() && style.borderRightWidth() && style.borderBottomWidth() && style.borderLeftWidth()));
 }
 
+static bool canTweakShapeForStyle(const RenderStyle& style)
+{
+    if (!hasTransparentContainerStyle(style))
+        return false;
+
+    switch (style.usedAppearance()) {
+    case StyleAppearance::TextField:
+    case StyleAppearance::TextArea:
+        return false;
+    default:
+        return true;
+    }
+}
+
 static bool colorIsChallengingToHighlight(const Color& color)
 {
     constexpr double luminanceThreshold = 0.01;
@@ -624,7 +638,7 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
 
     bool canTweakShape = !isPhoto
         && !clipPath
-        && hasTransparentContainerStyle(style);
+        && canTweakShapeForStyle(style);
 
     if (canTweakShape) {
         // We can safely tweak the bounds and radius without causing visual mismatch.

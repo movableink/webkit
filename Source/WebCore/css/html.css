@@ -429,7 +429,6 @@ input {
     color: CanvasText;
     background-color: Canvas;
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
-    border-radius: 5px;
     border: 1px solid -apple-system-secondary-label;
     font: 11px system-ui;
     padding-block: 0.2em 0.3em;
