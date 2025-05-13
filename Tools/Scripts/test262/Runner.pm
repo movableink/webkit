@@ -859,6 +859,9 @@ sub processResult {
 
     my $exitSignalNumber = $exitCode & 0x7f if $scenario ne 'skip';
 
+    # JSC exits with code 3 if the program throws an uncaught exception.
+    # So, set $exitSignalNumber to 0 to indicate that the program
+    # didn't crash.
     if ($scenario ne 'skip' && $exitSignalNumber == 3) {
         $exitSignalNumber = 0;
     }
@@ -878,9 +881,9 @@ sub processResult {
 
         my $newFail = '';
         $newFail = '! NEW ' if $isnewfailure;
-        $newFail = "$newFail (Exit code: $exitCode) " if $exitSignalNumber;
+        $newFail = "$newFail" if $exitSignalNumber;
         my $failMsg = '';
-        $failMsg = "FAIL $file ($scenario)\n";
+        $failMsg = "FAIL $file ($scenario) (Exit code: $exitCode)\n";
 
         my $featuresList = '';
 
