@@ -99,6 +99,8 @@ bool ResourceMonitorPersistence::openDatabase(String&& directoryPath)
     FileSystem::makeAllDirectories(directoryPath);
 
     m_sqliteDB = makeUnique<SQLiteDatabase>();
+    // This database is accessed from serial queue ResourceMonitorThrottlerHolder::sharedWorkQueueSingleton().
+    m_sqliteDB->disableThreadingChecks();
 
     auto reportErrorAndCloseDatabase = [&](ASCIILiteral action) {
         reportSQLError("openDatabase"_s, action);
