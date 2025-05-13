@@ -127,6 +127,7 @@
 #import <WebCore/WebCoreFullScreenWindow.h>
 #import <WebCore/WebCoreNSFontManagerExtras.h>
 #import <WebCore/WebPlaybackControlsManager.h>
+#import <WebCore/WebTextIndicatorLayer.h>
 #import <WebKit/WKShareSheet.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/WebBackForwardList.h>
@@ -1285,6 +1286,7 @@ WebViewImpl::WebViewImpl(WKWebView *view, WebProcessPool& processPool, Ref<API::
     , m_undoTarget(adoptNS([[WKEditorUndoTarget alloc] init]))
     , m_windowVisibilityObserver(adoptNS([[WKWindowVisibilityObserver alloc] initWithView:view impl:*this]))
     , m_accessibilitySettingsObserver(adoptNS([[WKAccessibilitySettingsObserver alloc] initWithImpl:*this]))
+    , m_textIndicatorTimer(RunLoop::main(), this, &WebViewImpl::startTextIndicatoreFadeOut)
     , m_contentRelativeViewsHysteresis(makeUnique<PAL::HysteresisActivity>([this](auto state) { this->contentRelativeViewsHysteresisTimerFired(state); }, 500_ms))
     , m_mouseTrackingObserver(adoptNS([[WKMouseTrackingObserver alloc] initWithViewImpl:*this]))
     , m_primaryTrackingArea(adoptNS([[NSTrackingArea alloc] initWithRect:view.frame options:trackingAreaOptions() owner:m_mouseTrackingObserver.get() userInfo:nil]))
@@ -1723,9 +1725,6 @@ RetainPtr<NSSet> WebViewImpl::pdfHUDs()
 
 void WebViewImpl::renewGState()
 {
-    if (m_textIndicatorWindow)
-        dismissContentRelativeChildWindowsWithAnimation(false);
-
     suppressContentRelativeChildViews(ContentRelativeChildViewsSuppressionType::TemporarilyRemove);
 
     // Update the view frame.
@@ -3460,35 +3459,72 @@ void WebViewImpl::preferencesDidChange()
 
 void WebViewImpl::setTextIndicator(WebCore::TextIndicator& textIndicator, WebCore::TextIndicatorLifetime lifetime)
 {
-    if (!m_textIndicatorWindow)
-        m_textIndicatorWindow = makeUnique<WebCore::TextIndicatorWindow>(m_view.getAutoreleased());
+    if (m_textIndicator == &textIndicator)
+        return;
 
-    NSRect textBoundingRectInScreenCoordinates = [[m_view window] convertRectToScreen:[m_view convertRect:textIndicator.textBoundingRectInRootViewCoordinates() toView:nil]];
+    teardownTextIndicatorLayer();
+    m_textIndicatorTimer.stop();
 
-    m_textIndicatorWindow->setTextIndicator(textIndicator, NSRectToCGRect(textBoundingRectInScreenCoordinates), lifetime);
+    m_textIndicator = &textIndicator;
+
+    CGRect frame = m_textIndicator->textBoundingRectInRootViewCoordinates();
+    m_textIndicatorLayer = adoptNS([[WebTextIndicatorLayer alloc] initWithFrame:frame
+        textIndicator:m_textIndicator margin:CGSizeZero offset:CGPointZero]);
+
+    [[m_layerHostingView layer] addSublayer:m_textIndicatorLayer.get()];
+
+    if (m_textIndicator->presentationTransition() != WebCore::TextIndicatorPresentationTransition::None)
+        [m_textIndicatorLayer present];
+
+    if (lifetime == TextIndicatorLifetime::Temporary)
+        m_textIndicatorTimer.startOneShot(WebCore::timeBeforeFadeStarts);
 }
 
 void WebViewImpl::updateTextIndicator(WebCore::TextIndicator& textIndicator)
 {
-    if (!m_textIndicatorWindow)
-        m_textIndicatorWindow = makeUnique<WebCore::TextIndicatorWindow>(m_view.getAutoreleased());
-
-    NSRect textBoundingRectInScreenCoordinates = [[m_view window] convertRectToScreen:[m_view convertRect:textIndicator.textBoundingRectInRootViewCoordinates() toView:nil]];
-
-    m_textIndicatorWindow->updateTextIndicator(textIndicator, NSRectToCGRect(textBoundingRectInScreenCoordinates));
+    if (m_textIndicator && m_textIndicatorLayer)
+        setTextIndicator(textIndicator, TextIndicatorLifetime::Temporary);
 }
 
 void WebViewImpl::clearTextIndicatorWithAnimation(WebCore::TextIndicatorDismissalAnimation animation)
 {
-    if (m_textIndicatorWindow)
-        m_textIndicatorWindow->clearTextIndicator(animation);
-    m_textIndicatorWindow = nullptr;
+    RefPtr<WebCore::TextIndicator> textIndicator = WTFMove(m_textIndicator);
+
+    if ([m_textIndicatorLayer isFadingOut])
+        return;
+
+    if (textIndicator && textIndicator->wantsManualAnimation() && [m_textIndicatorLayer hasCompletedAnimation] && animation == WebCore::TextIndicatorDismissalAnimation::FadeOut) {
+        startTextIndicatoreFadeOut();
+        return;
+    }
+
+    teardownTextIndicatorLayer();
 }
 
-void WebViewImpl::setTextIndicatorAnimationProgress(float progress)
+void WebViewImpl::setTextIndicatorAnimationProgress(float animationProgress)
 {
-    if (m_textIndicatorWindow)
-        m_textIndicatorWindow->setAnimationProgress(progress);
+    if (!m_textIndicator)
+        return;
+
+    [m_textIndicatorLayer setAnimationProgress:animationProgress];
+}
+
+void WebViewImpl::teardownTextIndicatorLayer()
+{
+    [m_textIndicatorLayer removeFromSuperlayer];
+    m_textIndicatorLayer = nil;
+}
+
+void WebViewImpl::startTextIndicatoreFadeOut()
+{
+    [m_textIndicatorLayer setFadingOut:YES];
+
+    [m_textIndicatorLayer hideWithCompletionHandler:[weakThis = WeakPtr { *this }] {
+        if (!weakThis)
+            return;
+
+        weakThis->teardownTextIndicatorLayer();
+    }];
 }
 
 void WebViewImpl::dismissContentRelativeChildWindowsWithAnimation(bool animate)

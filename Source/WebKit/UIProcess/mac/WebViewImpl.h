@@ -40,7 +40,7 @@
 #include <WebCore/PlatformPlaybackSessionInterface.h>
 #include <WebCore/ScrollTypes.h>
 #include <WebCore/ShareableBitmap.h>
-#include <WebCore/TextIndicatorWindow.h>
+#include <WebCore/TextIndicator.h>
 #include <WebCore/UserInterfaceLayoutDirection.h>
 #include <WebKit/WKDragDestinationAction.h>
 #include <WebKit/_WKOverlayScrollbarStyle.h>
@@ -66,6 +66,7 @@ OBJC_CLASS NSTextInputContext;
 OBJC_CLASS NSTextPlaceholder;
 OBJC_CLASS NSView;
 OBJC_CLASS QLPreviewPanel;
+OBJC_CLASS WebTextIndicatorLayer;
 OBJC_CLASS WKAccessibilitySettingsObserver;
 OBJC_CLASS WKBrowsingContextController;
 OBJC_CLASS WKDOMPasteMenuDelegate;
@@ -470,6 +471,8 @@ public:
     void updateTextIndicator(WebCore::TextIndicator&);
     void clearTextIndicatorWithAnimation(WebCore::TextIndicatorDismissalAnimation);
     void setTextIndicatorAnimationProgress(float);
+    void teardownTextIndicatorLayer();
+    void startTextIndicatoreFadeOut();
     void dismissContentRelativeChildWindowsFromViewOnly();
     void dismissContentRelativeChildWindowsWithAnimation(bool);
     void dismissContentRelativeChildWindowsWithAnimationFromViewOnly(bool);
@@ -950,7 +953,9 @@ private:
 
     id m_flagsChangedEventMonitor { nullptr };
 
-    std::unique_ptr<WebCore::TextIndicatorWindow> m_textIndicatorWindow;
+    RunLoop::Timer m_textIndicatorTimer;
+    RefPtr<WebCore::TextIndicator> m_textIndicator;
+    RetainPtr<WebTextIndicatorLayer> m_textIndicatorLayer;
 
     std::unique_ptr<PAL::HysteresisActivity> m_contentRelativeViewsHysteresis;
 
