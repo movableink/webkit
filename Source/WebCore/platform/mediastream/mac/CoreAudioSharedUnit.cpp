@@ -285,6 +285,7 @@ OSStatus CoreAudioSharedUnit::setupAudioUnit()
     mach_timebase_info(&timebaseInfo);
     m_DTSConversionRatio = 1e-9 * static_cast<double>(timebaseInfo.numer) / static_cast<double>(timebaseInfo.denom);
 
+    bool isEchoCancellationChanging = m_shouldUseVPIO != enableEchoCancellation();
     m_shouldUseVPIO = enableEchoCancellation();
     auto result = m_creationCallback ? m_creationCallback(m_shouldUseVPIO) : CoreAudioSharedInternalUnit::create(m_shouldUseVPIO);
     if (!result.has_value())
@@ -300,6 +301,12 @@ OSStatus CoreAudioSharedUnit::setupAudioUnit()
             if (m_speakerSamplesProducer)
                 m_speakerSamplesProducer->canRenderAudioChanged();
         }
+    }
+
+    if (isEchoCancellationChanging) {
+        forEachClient([](auto& client) {
+            client.echoCancellationChanged();
+        });
     }
 
 #if HAVE(VPIO_DUCKING_LEVEL_API)

@@ -61,6 +61,7 @@ public:
     CMClockRef timebaseClock();
 
     void handleNewCurrentMicrophoneDevice(const CaptureDevice&);
+    void echoCancellationChanged();
 
     WTF_ABSTRACT_THREAD_SAFE_REF_COUNTED_AND_CAN_MAKE_WEAK_PTR_IMPL;
     virtual ~CoreAudioCaptureSource();
@@ -109,6 +110,7 @@ private:
 
     bool m_canResumeAfterInterruption { true };
     bool m_isReadyToStart { false };
+    bool m_echoCancellationChanging { false };
 
     std::optional<bool> m_echoCancellationCapability;
     BaseAudioSharedUnit* m_overrideUnit { nullptr };
