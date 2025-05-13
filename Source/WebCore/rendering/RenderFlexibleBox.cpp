@@ -64,57 +64,6 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderFlexibleBox);
 
-class FlexLayoutItem {
-public:
-    FlexLayoutItem(RenderBox& flexItem, LayoutUnit flexBaseContentSize, LayoutUnit mainAxisBorderAndPadding, LayoutUnit mainAxisMargin, std::pair<LayoutUnit, LayoutUnit> minMaxSizes, bool everHadLayout)
-        : renderer(flexItem)
-        , flexBaseContentSize(flexBaseContentSize)
-        , mainAxisBorderAndPadding(mainAxisBorderAndPadding)
-        , mainAxisMargin(mainAxisMargin)
-        , minMaxSizes(minMaxSizes)
-        , hypotheticalMainContentSize(constrainSizeByMinMax(flexBaseContentSize))
-        , frozen(false)
-        , everHadLayout(everHadLayout)
-    {
-        ASSERT(!flexItem.isOutOfFlowPositioned());
-    }
-
-    LayoutUnit hypotheticalMainAxisMarginBoxSize() const
-    {
-        return hypotheticalMainContentSize + mainAxisBorderAndPadding + mainAxisMargin;
-    }
-
-    LayoutUnit flexBaseMarginBoxSize() const
-    {
-        return flexBaseContentSize + mainAxisBorderAndPadding + mainAxisMargin;
-    }
-
-    LayoutUnit flexedMarginBoxSize() const
-    {
-        return flexedContentSize + mainAxisBorderAndPadding + mainAxisMargin;
-    }
-
-    const RenderStyle& style() const
-    {
-        return renderer->style();
-    }
-
-    LayoutUnit constrainSizeByMinMax(const LayoutUnit size) const
-    {
-        return std::max(minMaxSizes.first, std::min(size, minMaxSizes.second));
-    }
-
-    CheckedRef<RenderBox> renderer;
-    LayoutUnit flexBaseContentSize;
-    const LayoutUnit mainAxisBorderAndPadding;
-    mutable LayoutUnit mainAxisMargin;
-    const std::pair<LayoutUnit, LayoutUnit> minMaxSizes;
-    const LayoutUnit hypotheticalMainContentSize;
-    LayoutUnit flexedContentSize;
-    bool frozen { false };
-    bool everHadLayout { false };
-};
-
 struct RenderFlexibleBox::LineState {
     LineState(LayoutUnit crossAxisOffset, LayoutUnit crossAxisExtent, std::optional<BaselineAlignmentState> baselineAlignmentState, FlexLayoutItems&& flexLayoutItems)
         : crossAxisOffset(crossAxisOffset)
@@ -1458,7 +1407,7 @@ void RenderFlexibleBox::performFlexLayout(RelayoutChildren relayoutChildren)
     repositionLogicalHeightDependentFlexItems(lineStates, gapBetweenLines);
 }
 
-std::optional<RenderFlexibleBox::FlexingLineData> RenderFlexibleBox::computeNextFlexLine(size_t& nextIndex, const Vector<FlexLayoutItem>& allItems, LayoutUnit lineBreakLength, LayoutUnit gapBetweenItems)
+std::optional<RenderFlexibleBox::FlexingLineData> RenderFlexibleBox::computeNextFlexLine(size_t& nextIndex, const FlexLayoutItems& allItems, LayoutUnit lineBreakLength, LayoutUnit gapBetweenItems)
 {
     if (nextIndex >= allItems.size())
         return { };
@@ -1827,7 +1776,7 @@ void RenderFlexibleBox::maybeCacheFlexItemMainIntrinsicSize(RenderBox& flexItem,
     }
 }
 
-FlexLayoutItem RenderFlexibleBox::constructFlexLayoutItem(RenderBox& flexItem, RelayoutChildren relayoutChildren)
+RenderFlexibleBox::FlexLayoutItem RenderFlexibleBox::constructFlexLayoutItem(RenderBox& flexItem, RelayoutChildren relayoutChildren)
 {
     auto everHadLayout = flexItem.everHadLayout();
     flexItem.clearOverridingSize();
