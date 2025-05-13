@@ -24,22 +24,25 @@ function test()
     function checkMapping(resource, testCase, action)
     {
         const location = resource.createSourceCodeLocation(action.generatedLine, action.generatedColumn);
-        InspectorTest.expectThat(location.hasMappedLocation(), `Test location (${action.generatedLine}, ${action.generatedColumn}) should be mapped`);
-        InspectorTest.expectEqual(location.displayLineNumber, action.originalLine, `Original line: ${location.displayLineNumber}, expected: ${action.originalLine}`);
-        InspectorTest.expectEqual(location.displayColumnNumber, action.originalColumn, `Original column: ${location.displayColumnNumber}, expected: ${action.originalColumn}`);
-        InspectorTest.expectEqual(location.displaySourceCode.displayName, action.originalSource, `Original source: ${location.displaySourceCode.displayName}, expected: ${action.originalSource}`);
+        if (action.originalLine !== null && action.originalColumn !== null) {
+            InspectorTest.expectTrue(location.hasMappedLocation(), `Test location (${action.generatedLine}, ${action.generatedColumn}) should be mapped.`);
+            InspectorTest.expectEqual(location.displayLineNumber, action.originalLine, `Mapped line should be ${action.originalLine}.`);
+            InspectorTest.expectEqual(location.displayColumnNumber, action.originalColumn, `Mapped column should be ${action.originalColumn}.`);
+            InspectorTest.expectTrue((!action.originalSource && !location.displaySourceCode.urlComponents.path) || location.displaySourceCode.urlComponents.path.endsWith(action.originalSource), `Mapped source should be '${action.originalSource}'.`);
+        } else {
+            InspectorTest.expectFalse(location.hasMappedLocation(), `Test location (${action.generatedLine}, ${action.generatedColumn}) should not be mapped.`);
+            InspectorTest.expectEqual(location.displayLineNumber, action.generatedLine, `Generated line should be ${action.generatedLine}.`);
+            InspectorTest.expectEqual(location.displayColumnNumber, action.generatedColumn, `Generated column should be ${action.generatedColumn}.`);
+            InspectorTest.expectTrue(location.displaySourceCode.urlComponents.path.endsWith(testCase.baseFile), `Generated path should be '${testCase.baseFile}'.`);
+        }
     }
 
     function checkIgnoreList(resource, testCase, action)
     {
         const sourceMap = resource.sourceMaps[0];
         InspectorTest.assert(sourceMap);
-        const result = action.present.every((sourceName) => {
-            return sourceMap.resources.some((resource) => {
-                return resource.displayName.match(sourceName);
-            });
-        });
-        InspectorTest.expectThat(result, "Ignored sources should be in ignoreList");
+        for (let sourceName of action.present)
+            InspectorTest.expectThat(sourceMap.resources.some((resource) => resource.urlComponents.path.endsWith(sourceName)), `Should have resource '${sourceName}'.`);
     }
 
     function withTimeout(promise, seconds)

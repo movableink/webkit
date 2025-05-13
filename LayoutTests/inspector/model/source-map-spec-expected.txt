@@ -100,10 +100,10 @@ PASS: Expected no source map resource loaded
 
 -- Running test case: sourcesContentNotStringOrNull
 expecting INVALID source map
-WARN: Source Map "sources-not-string-or-null.js.map" has invalid "sources"
-FAIL: Script resource should have loaded
-    Expected: truthy
-    Actual: undefined
+WARN: Source Map "sources-content-not-string-or-null.js.map" has invalid "sourcesContent"
+PASS: Script resource should have loaded
+PASS: Expected that there is an associated failed source map URL
+PASS: Expected no source map resource loaded
 
 -- Running test case: sourcesAndSourcesContentBothNull
 expecting VALID source map
@@ -177,7 +177,7 @@ expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Ignored sources should be in ignoreList
+PASS: Should have resource 'empty-original.js'.
 
 -- Running test case: ignoreListWrongType1
 expecting INVALID source map
@@ -549,304 +549,296 @@ expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Test location (0, 0) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 9) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 9, expected: 9
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 15) should be mapped
-PASS: Original line: 1, expected: 1
-PASS: Original column: 2, expected: 2
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 22) should be mapped
-PASS: Original line: 1, expected: 1
-PASS: Original column: 9, expected: 9
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 24) should be mapped
-PASS: Original line: 2, expected: 2
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 25) should be mapped
-PASS: Original line: 3, expected: 3
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 34) should be mapped
-PASS: Original line: 3, expected: 3
-PASS: Original column: 9, expected: 9
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 40) should be mapped
-PASS: Original line: 4, expected: 4
-PASS: Original column: 2, expected: 2
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 47) should be mapped
-PASS: Original line: 4, expected: 4
-PASS: Original column: 9, expected: 9
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 49) should be mapped
-PASS: Original line: 5, expected: 5
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 50) should be mapped
-PASS: Original line: 6, expected: 6
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 56) should be mapped
-PASS: Original line: 7, expected: 7
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
+PASS: Test location (0, 0) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 9) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 15) should be mapped.
+PASS: Mapped line should be 1.
+PASS: Mapped column should be 2.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 22) should be mapped.
+PASS: Mapped line should be 1.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 24) should be mapped.
+PASS: Mapped line should be 2.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 25) should be mapped.
+PASS: Mapped line should be 3.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 34) should be mapped.
+PASS: Mapped line should be 3.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 40) should be mapped.
+PASS: Mapped line should be 4.
+PASS: Mapped column should be 2.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 47) should be mapped.
+PASS: Mapped line should be 4.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 49) should be mapped.
+PASS: Mapped line should be 5.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 50) should be mapped.
+PASS: Mapped line should be 6.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 56) should be mapped.
+PASS: Mapped line should be 7.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
 
 -- Running test case: sourceRootResolution
 expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Test location (0, 0) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 0, expected: 0
-FAIL: Original source: basic-mapping-original.js, expected: theroot/basic-mapping-original.js
-    Expected: "theroot/basic-mapping-original.js"
-    Actual: "basic-mapping-original.js"
-PASS: Test location (0, 9) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 9, expected: 9
-FAIL: Original source: basic-mapping-original.js, expected: theroot/basic-mapping-original.js
-    Expected: "theroot/basic-mapping-original.js"
-    Actual: "basic-mapping-original.js"
+PASS: Test location (0, 0) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'theroot/basic-mapping-original.js'.
+PASS: Test location (0, 9) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'theroot/basic-mapping-original.js'.
 
 -- Running test case: sourceResolutionAbsoluteURL
 expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Test location (0, 0) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 0, expected: 0
-FAIL: Original source: basic-mapping-original.js, expected: /baz/quux/basic-mapping-original.js
-    Expected: "/baz/quux/basic-mapping-original.js"
-    Actual: "basic-mapping-original.js"
-PASS: Test location (0, 9) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 9, expected: 9
-FAIL: Original source: basic-mapping-original.js, expected: /baz/quux/basic-mapping-original.js
-    Expected: "/baz/quux/basic-mapping-original.js"
-    Actual: "basic-mapping-original.js"
+PASS: Test location (0, 0) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be '/baz/quux/basic-mapping-original.js'.
+PASS: Test location (0, 9) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be '/baz/quux/basic-mapping-original.js'.
 
 -- Running test case: basicMappingWithIndexMap
 expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Test location (0, 0) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 9) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 9, expected: 9
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 15) should be mapped
-PASS: Original line: 1, expected: 1
-PASS: Original column: 2, expected: 2
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 22) should be mapped
-PASS: Original line: 1, expected: 1
-PASS: Original column: 9, expected: 9
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 24) should be mapped
-PASS: Original line: 2, expected: 2
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 25) should be mapped
-PASS: Original line: 3, expected: 3
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 34) should be mapped
-PASS: Original line: 3, expected: 3
-PASS: Original column: 9, expected: 9
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 40) should be mapped
-PASS: Original line: 4, expected: 4
-PASS: Original column: 2, expected: 2
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 47) should be mapped
-PASS: Original line: 4, expected: 4
-PASS: Original column: 9, expected: 9
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 49) should be mapped
-PASS: Original line: 5, expected: 5
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 50) should be mapped
-PASS: Original line: 6, expected: 6
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 56) should be mapped
-PASS: Original line: 7, expected: 7
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
+PASS: Test location (0, 0) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 9) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 15) should be mapped.
+PASS: Mapped line should be 1.
+PASS: Mapped column should be 2.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 22) should be mapped.
+PASS: Mapped line should be 1.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 24) should be mapped.
+PASS: Mapped line should be 2.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 25) should be mapped.
+PASS: Mapped line should be 3.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 34) should be mapped.
+PASS: Mapped line should be 3.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 40) should be mapped.
+PASS: Mapped line should be 4.
+PASS: Mapped column should be 2.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 47) should be mapped.
+PASS: Mapped line should be 4.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 49) should be mapped.
+PASS: Mapped line should be 5.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 50) should be mapped.
+PASS: Mapped line should be 6.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 56) should be mapped.
+PASS: Mapped line should be 7.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
 
 -- Running test case: indexMapWithMissingFile
 expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Test location (0, 0) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 9) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 9, expected: 9
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 15) should be mapped
-PASS: Original line: 1, expected: 1
-PASS: Original column: 2, expected: 2
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 22) should be mapped
-PASS: Original line: 1, expected: 1
-PASS: Original column: 9, expected: 9
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 24) should be mapped
-PASS: Original line: 2, expected: 2
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 25) should be mapped
-PASS: Original line: 3, expected: 3
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 34) should be mapped
-PASS: Original line: 3, expected: 3
-PASS: Original column: 9, expected: 9
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 40) should be mapped
-PASS: Original line: 4, expected: 4
-PASS: Original column: 2, expected: 2
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 47) should be mapped
-PASS: Original line: 4, expected: 4
-PASS: Original column: 9, expected: 9
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 49) should be mapped
-PASS: Original line: 5, expected: 5
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 50) should be mapped
-PASS: Original line: 6, expected: 6
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 56) should be mapped
-PASS: Original line: 7, expected: 7
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
+PASS: Test location (0, 0) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 9) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 15) should be mapped.
+PASS: Mapped line should be 1.
+PASS: Mapped column should be 2.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 22) should be mapped.
+PASS: Mapped line should be 1.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 24) should be mapped.
+PASS: Mapped line should be 2.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 25) should be mapped.
+PASS: Mapped line should be 3.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 34) should be mapped.
+PASS: Mapped line should be 3.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 40) should be mapped.
+PASS: Mapped line should be 4.
+PASS: Mapped column should be 2.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 47) should be mapped.
+PASS: Mapped line should be 4.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 49) should be mapped.
+PASS: Mapped line should be 5.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 50) should be mapped.
+PASS: Mapped line should be 6.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 56) should be mapped.
+PASS: Mapped line should be 7.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
 
 -- Running test case: indexMapWithTwoConcatenatedSources
 expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Test location (0, 0) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 9) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 9, expected: 9
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 15) should be mapped
-PASS: Original line: 1, expected: 1
-PASS: Original column: 2, expected: 2
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 22) should be mapped
-PASS: Original line: 1, expected: 1
-PASS: Original column: 9, expected: 9
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 24) should be mapped
-PASS: Original line: 2, expected: 2
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 25) should be mapped
-PASS: Original line: 3, expected: 3
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 34) should be mapped
-PASS: Original line: 3, expected: 3
-PASS: Original column: 9, expected: 9
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 40) should be mapped
-PASS: Original line: 4, expected: 4
-PASS: Original column: 2, expected: 2
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 47) should be mapped
-PASS: Original line: 4, expected: 4
-PASS: Original column: 9, expected: 9
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 49) should be mapped
-PASS: Original line: 5, expected: 5
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 50) should be mapped
-PASS: Original line: 6, expected: 6
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 56) should be mapped
-PASS: Original line: 7, expected: 7
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 62) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 0, expected: 0
-PASS: Original source: second-source-original.js, expected: second-source-original.js
-PASS: Test location (0, 71) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 9, expected: 9
-PASS: Original source: second-source-original.js, expected: second-source-original.js
-PASS: Test location (0, 77) should be mapped
-PASS: Original line: 1, expected: 1
-PASS: Original column: 2, expected: 2
-PASS: Original source: second-source-original.js, expected: second-source-original.js
-PASS: Test location (0, 83) should be mapped
-PASS: Original line: 1, expected: 1
-PASS: Original column: 9, expected: 9
-PASS: Original source: second-source-original.js, expected: second-source-original.js
-PASS: Test location (0, 88) should be mapped
-PASS: Original line: 2, expected: 2
-PASS: Original column: 0, expected: 0
-PASS: Original source: second-source-original.js, expected: second-source-original.js
-PASS: Test location (0, 89) should be mapped
-PASS: Original line: 3, expected: 3
-PASS: Original column: 0, expected: 0
-PASS: Original source: second-source-original.js, expected: second-source-original.js
+PASS: Test location (0, 0) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 9) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 15) should be mapped.
+PASS: Mapped line should be 1.
+PASS: Mapped column should be 2.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 22) should be mapped.
+PASS: Mapped line should be 1.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 24) should be mapped.
+PASS: Mapped line should be 2.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 25) should be mapped.
+PASS: Mapped line should be 3.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 34) should be mapped.
+PASS: Mapped line should be 3.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 40) should be mapped.
+PASS: Mapped line should be 4.
+PASS: Mapped column should be 2.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 47) should be mapped.
+PASS: Mapped line should be 4.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 49) should be mapped.
+PASS: Mapped line should be 5.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 50) should be mapped.
+PASS: Mapped line should be 6.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 56) should be mapped.
+PASS: Mapped line should be 7.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 62) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'second-source-original.js'.
+PASS: Test location (0, 71) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'second-source-original.js'.
+PASS: Test location (0, 77) should be mapped.
+PASS: Mapped line should be 1.
+PASS: Mapped column should be 2.
+PASS: Mapped source should be 'second-source-original.js'.
+PASS: Test location (0, 83) should be mapped.
+PASS: Mapped line should be 1.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'second-source-original.js'.
+PASS: Test location (0, 88) should be mapped.
+PASS: Mapped line should be 2.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'second-source-original.js'.
+PASS: Test location (0, 89) should be mapped.
+PASS: Mapped line should be 3.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'second-source-original.js'.
 
 -- Running test case: sourcesNullSourcesContentNonNull
 expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Test location (0, 0) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 0, expected: 0
-PASS: Original source: null, expected: null
-PASS: Test location (0, 9) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 9, expected: 9
-PASS: Original source: null, expected: null
+PASS: Test location (0, 0) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'null'.
+PASS: Test location (0, 9) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'null'.
 
 -- Running test case: sourcesNonNullSourcesContentNull
 expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Test location (0, 0) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 0, expected: 0
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
-PASS: Test location (0, 9) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 9, expected: 9
-PASS: Original source: basic-mapping-original.js, expected: basic-mapping-original.js
+PASS: Test location (0, 0) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'basic-mapping-original.js'.
+PASS: Test location (0, 9) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 9.
+PASS: Mapped source should be 'basic-mapping-original.js'.
 
 -- Running test case: transitiveMapping
 expecting VALID source map
@@ -881,126 +873,118 @@ expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Test location (0, 15) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 0, expected: 0
-PASS: Original source: vlq-valid-single-digit-original.js, expected: vlq-valid-single-digit-original.js
+PASS: Test location (0, 15) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'vlq-valid-single-digit-original.js'.
 
 -- Running test case: vlqValidNegativeDigit
 expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Test location (2, 15) should be mapped
-PASS: Original line: 1, expected: 1
-PASS: Original column: 3, expected: 3
-PASS: Original source: vlq-valid-negative-digit-original.js, expected: vlq-valid-negative-digit-original.js
-PASS: Test location (2, 2) should be mapped
-PASS: Original line: 1, expected: 1
-PASS: Original column: 1, expected: 1
-PASS: Original source: vlq-valid-negative-digit-original.js, expected: vlq-valid-negative-digit-original.js
+PASS: Test location (2, 15) should be mapped.
+PASS: Mapped line should be 1.
+PASS: Mapped column should be 3.
+PASS: Mapped source should be 'vlq-valid-negative-digit-original.js'.
+PASS: Test location (2, 2) should be mapped.
+PASS: Mapped line should be 1.
+PASS: Mapped column should be 1.
+PASS: Mapped source should be 'vlq-valid-negative-digit-original.js'.
 
 -- Running test case: vlqValidContinuationBitPresent1
 expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Test location (0, 15) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 1, expected: 1
-PASS: Original source: vlq-valid-continuation-bit-present-1-original.js, expected: vlq-valid-continuation-bit-present-1-original.js
+PASS: Test location (0, 15) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 1.
+PASS: Mapped source should be 'vlq-valid-continuation-bit-present-1-original.js'.
 
 -- Running test case: vlqValidContinuationBitPresent2
 expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Test location (2, 16) should be mapped
-PASS: Original line: 1, expected: 1
-PASS: Original column: 1, expected: 1
-PASS: Original source: vlq-valid-continuation-bit-present-2-original.js, expected: vlq-valid-continuation-bit-present-2-original.js
+PASS: Test location (2, 16) should be mapped.
+PASS: Mapped line should be 1.
+PASS: Mapped column should be 1.
+PASS: Mapped source should be 'vlq-valid-continuation-bit-present-2-original.js'.
 
 -- Running test case: mappingSemanticsSingleFieldSegment
 expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Test location (0, 0) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 1, expected: 1
-PASS: Original source: mapping-semantics-single-field-segment-original.js, expected: mapping-semantics-single-field-segment-original.js
-FAIL: Test location (0, 2) should be mapped
-    Expected: truthy
-    Actual: false
-FAIL: Original line: 0, expected: null
-    Expected: null
-    Actual: 0
-FAIL: Original column: 2, expected: null
-    Expected: null
-    Actual: 2
-FAIL: Original source: mapping-semantics-single-field-segment.js, expected: null
-    Expected: null
-    Actual: "mapping-semantics-single-field-segment.js"
+PASS: Test location (0, 0) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 1.
+PASS: Mapped source should be 'mapping-semantics-single-field-segment-original.js'.
+PASS: Test location (0, 2) should not be mapped.
+PASS: Generated line should be 0.
+PASS: Generated column should be 2.
+PASS: Generated path should be 'mapping-semantics-single-field-segment.js'.
 
 -- Running test case: mappingSemanticsFourFieldSegment
 expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Test location (0, 1) should be mapped
-PASS: Original line: 2, expected: 2
-PASS: Original column: 2, expected: 2
-PASS: Original source: mapping-semantics-four-field-segment-original.js, expected: mapping-semantics-four-field-segment-original.js
+PASS: Test location (0, 1) should be mapped.
+PASS: Mapped line should be 2.
+PASS: Mapped column should be 2.
+PASS: Mapped source should be 'mapping-semantics-four-field-segment-original.js'.
 
 -- Running test case: mappingSemanticsFiveFieldSegment
 expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Test location (0, 1) should be mapped
-PASS: Original line: 2, expected: 2
-PASS: Original column: 2, expected: 2
-PASS: Original source: mapping-semantics-five-field-segment-original.js, expected: mapping-semantics-five-field-segment-original.js
+PASS: Test location (0, 1) should be mapped.
+PASS: Mapped line should be 2.
+PASS: Mapped column should be 2.
+PASS: Mapped source should be 'mapping-semantics-five-field-segment-original.js'.
 
 -- Running test case: mappingSemanticsColumnReset
 expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Test location (0, 1) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 0, expected: 0
-PASS: Original source: mapping-semantics-column-reset-original.js, expected: mapping-semantics-column-reset-original.js
-PASS: Test location (1, 1) should be mapped
-PASS: Original line: 1, expected: 1
-PASS: Original column: 0, expected: 0
-PASS: Original source: mapping-semantics-column-reset-original.js, expected: mapping-semantics-column-reset-original.js
+PASS: Test location (0, 1) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'mapping-semantics-column-reset-original.js'.
+PASS: Test location (1, 1) should be mapped.
+PASS: Mapped line should be 1.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'mapping-semantics-column-reset-original.js'.
 
 -- Running test case: mappingSemanticsRelative1
 expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Test location (0, 1) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 0, expected: 0
-PASS: Original source: mapping-semantics-relative-1-original.js, expected: mapping-semantics-relative-1-original.js
-PASS: Test location (0, 5) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 4, expected: 4
-PASS: Original source: mapping-semantics-relative-1-original.js, expected: mapping-semantics-relative-1-original.js
+PASS: Test location (0, 1) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 0.
+PASS: Mapped source should be 'mapping-semantics-relative-1-original.js'.
+PASS: Test location (0, 5) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 4.
+PASS: Mapped source should be 'mapping-semantics-relative-1-original.js'.
 
 -- Running test case: mappingSemanticsRelative2
 expecting VALID source map
 PASS: Script resource and source map event should have triggered
 PASS: Resource should have loaded 1 SourceMap.
 PASS: SourceMap should be a WI.SourceMap instance.
-PASS: Test location (0, 1) should be mapped
-PASS: Original line: 0, expected: 0
-PASS: Original column: 2, expected: 2
-PASS: Original source: mapping-semantics-relative-2-original.js, expected: mapping-semantics-relative-2-original.js
-PASS: Test location (1, 2) should be mapped
-PASS: Original line: 1, expected: 1
-PASS: Original column: 2, expected: 2
-PASS: Original source: mapping-semantics-relative-2-original.js, expected: mapping-semantics-relative-2-original.js
+PASS: Test location (0, 1) should be mapped.
+PASS: Mapped line should be 0.
+PASS: Mapped column should be 2.
+PASS: Mapped source should be 'mapping-semantics-relative-2-original.js'.
+PASS: Test location (1, 2) should be mapped.
+PASS: Mapped line should be 1.
+PASS: Mapped column should be 2.
+PASS: Mapped source should be 'mapping-semantics-relative-2-original.js'.
 
