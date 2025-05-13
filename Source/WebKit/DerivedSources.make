@@ -1016,6 +1016,14 @@ WEBKIT_ADDITIONS_SWIFT_FILES = \
 	MaterialAdditions.swift \
 	WKSeparatedImageView.swift \
 	CredentialUpdaterShim.swift \
+	ISO18013MobileDocumentRequest+Extras.swift \
+	WKIdentityDocumentPresentmentController.swift \
+	WKIdentityDocumentPresentmentMobileDocumentRequest.swift \
+	WKIdentityDocumentPresentmentMobileDocumentRequest+Extras.swift \
+	WKIdentityDocumentPresentmentRawRequest.swift \
+	WKIdentityDocumentPresentmentRequest.swift \
+	WKIdentityDocumentPresentmentResponse.swift \
+	WKIdentityDocumentRawRequestValidator.swift \
 	WKPDFPageNumberIndicatorAdditions.swift \
 #
 

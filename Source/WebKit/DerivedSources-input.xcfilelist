@@ -5,6 +5,8 @@ $(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/AdditionalPlatformHave.h
 $(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/ISO18013MobileDocumentRequest+Extras.swift.in
 $(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/MaterialAdditions.swift.in
 $(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/WKIdentityDocumentPresentmentController.swift.in
+$(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/WKIdentityDocumentPresentmentMobileDocumentRequest.swift.in
+$(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/WKIdentityDocumentPresentmentMobileDocumentRequest+Extras.swift.in
 $(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/WKIdentityDocumentPresentmentRawRequest.swift.in
 $(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/WKIdentityDocumentPresentmentRequest.swift.in
 $(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/WKIdentityDocumentPresentmentResponse.swift.in

@@ -2520,6 +2520,11 @@
 		F4648E92296E81FA00744170 /* WebPrivacyHelpers.h in Headers */ = {isa = PBXBuildFile; fileRef = F4648E90296E81F500744170 /* WebPrivacyHelpers.h */; };
 		F4660BC225DEF08100E86598 /* PasteboardAccessIntent.h in Headers */ = {isa = PBXBuildFile; fileRef = F4660BC125DEF08100E86598 /* PasteboardAccessIntent.h */; };
 		F468770B2C6402650068A20C /* CocoaWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = F468770A2C6402650068A20C /* CocoaWindow.h */; };
+		F46C342D2DCD350D00B476F8 /* WKIdentityDocumentPresentmentMobileDocumentRequest+Extras.swift in Sources */ = {isa = PBXBuildFile; fileRef = F46C342C2DCD350D00B476F8 /* WKIdentityDocumentPresentmentMobileDocumentRequest+Extras.swift */; };
+		F46C342F2DCD367600B476F8 /* WKIdentityDocumentPresentmentResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = F46C342E2DCD367600B476F8 /* WKIdentityDocumentPresentmentResponse.swift */; };
+		F46C34312DCD368400B476F8 /* WKIdentityDocumentPresentmentRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = F46C34302DCD368400B476F8 /* WKIdentityDocumentPresentmentRequest.swift */; };
+		F46C34332DCD369200B476F8 /* WKIdentityDocumentPresentmentRawRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = F46C34322DCD369200B476F8 /* WKIdentityDocumentPresentmentRawRequest.swift */; };
+		F46C34352DCD369B00B476F8 /* WKIdentityDocumentPresentmentController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F46C34342DCD369B00B476F8 /* WKIdentityDocumentPresentmentController.swift */; };
 		F48523B62C76962C00C71FC2 /* CoreIPCNSURLProtectionSpace.mm in Sources */ = {isa = PBXBuildFile; fileRef = F48523B52C76961C00C71FC2 /* CoreIPCNSURLProtectionSpace.mm */; };
 		F48523B72C769D8700C71FC2 /* CoreIPCNSURLProtectionSpace.h in Headers */ = {isa = PBXBuildFile; fileRef = F48523B42C76961C00C71FC2 /* CoreIPCNSURLProtectionSpace.h */; };
 		F48570A32644BEC500C05F71 /* Timeout.h in Headers */ = {isa = PBXBuildFile; fileRef = F48570A22644BEC400C05F71 /* Timeout.h */; };
@@ -2559,6 +2564,8 @@
 		F4D59C032DCBDC9F004492FB /* WKIdentityDocumentPresentmentRequest.h in Headers */ = {isa = PBXBuildFile; fileRef = F4E08FDA2D84AE0500322226 /* WKIdentityDocumentPresentmentRequest.h */; };
 		F4D59C042DCBDC9F004492FB /* WKIdentityDocumentPresentmentDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = F4E090942D889CB800322226 /* WKIdentityDocumentPresentmentDelegate.h */; };
 		F4D59C122DCC0292004492FB /* WKIdentityDocumentPresentmentError.mm in Sources */ = {isa = PBXBuildFile; fileRef = 07B2E4182DC1890E00A0155E /* WKIdentityDocumentPresentmentError.mm */; };
+		F4D59C192DCD2F60004492FB /* WKIdentityDocumentRawRequestValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4D59C182DCD2F60004492FB /* WKIdentityDocumentRawRequestValidator.swift */; };
+		F4D59C1B2DCD30FE004492FB /* WKIdentityDocumentPresentmentMobileDocumentRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4D59C1A2DCD30FE004492FB /* WKIdentityDocumentPresentmentMobileDocumentRequest.swift */; };
 		F4D5F51D206087A10038BBA8 /* WKTextInputListViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = F4D5F519206087A00038BBA8 /* WKTextInputListViewController.h */; };
 		F4D5F51F206087A10038BBA8 /* WKQuickboardViewControllerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = F4D5F51B206087A10038BBA8 /* WKQuickboardViewControllerDelegate.h */; };
 		F4D985C82690FC1200BBCCBE /* _WKTapHandlingResult.h in Headers */ = {isa = PBXBuildFile; fileRef = F4D985C72690FBEF00BBCCBE /* _WKTapHandlingResult.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -2576,6 +2583,7 @@
 		F4E090952D889D6A00322226 /* WKIdentityDocumentPresentmentDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = F4E090942D889CB800322226 /* WKIdentityDocumentPresentmentDelegate.h */; };
 		F4E090992D88AAC300322226 /* WKIdentityDocumentPresentmentRawRequest.h in Headers */ = {isa = PBXBuildFile; fileRef = F4E090962D88A66F00322226 /* WKIdentityDocumentPresentmentRawRequest.h */; };
 		F4E28A362C923814008120DD /* ScriptTelemetry.h in Headers */ = {isa = PBXBuildFile; fileRef = F4E28A352C923814008120DD /* ScriptTelemetry.h */; };
+		F4E44EB72DCD33E800A304C4 /* ISO18013MobileDocumentRequest+Extras.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4E44EB62DCD33E800A304C4 /* ISO18013MobileDocumentRequest+Extras.swift */; };
 		F4E727232A547F0400CE34FD /* WKTouchEventsGestureRecognizerTypes.h in Headers */ = {isa = PBXBuildFile; fileRef = F4E727222A547E2100CE34FD /* WKTouchEventsGestureRecognizerTypes.h */; };
 		F4EB4AFD269CD7F300D297AE /* OSStateSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = F4EB4AFC269CD23600D297AE /* OSStateSPI.h */; };
 		F4EC69CC2D0D1E3A001F903E /* CursorContext.h in Headers */ = {isa = PBXBuildFile; fileRef = F4EC69C92D0D001A001F903E /* CursorContext.h */; };
@@ -8449,6 +8457,11 @@
 		F4648E91296E81F500744170 /* WebPrivacyHelpers.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WebPrivacyHelpers.mm; sourceTree = "<group>"; };
 		F4660BC125DEF08100E86598 /* PasteboardAccessIntent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PasteboardAccessIntent.h; sourceTree = "<group>"; };
 		F468770A2C6402650068A20C /* CocoaWindow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CocoaWindow.h; sourceTree = "<group>"; };
+		F46C342C2DCD350D00B476F8 /* WKIdentityDocumentPresentmentMobileDocumentRequest+Extras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WKIdentityDocumentPresentmentMobileDocumentRequest+Extras.swift"; path = "$(BUILT_PRODUCTS_DIR)/DerivedSources/WebKit/WKIdentityDocumentPresentmentMobileDocumentRequest+Extras.swift"; sourceTree = "<group>"; };
+		F46C342E2DCD367600B476F8 /* WKIdentityDocumentPresentmentResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WKIdentityDocumentPresentmentResponse.swift; path = "$(BUILT_PRODUCTS_DIR)/DerivedSources/WebKit/WKIdentityDocumentPresentmentResponse.swift"; sourceTree = "<group>"; };
+		F46C34302DCD368400B476F8 /* WKIdentityDocumentPresentmentRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WKIdentityDocumentPresentmentRequest.swift; path = "$(BUILT_PRODUCTS_DIR)/DerivedSources/WebKit/WKIdentityDocumentPresentmentRequest.swift"; sourceTree = "<group>"; };
+		F46C34322DCD369200B476F8 /* WKIdentityDocumentPresentmentRawRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WKIdentityDocumentPresentmentRawRequest.swift; path = "$(BUILT_PRODUCTS_DIR)/DerivedSources/WebKit/WKIdentityDocumentPresentmentRawRequest.swift"; sourceTree = "<group>"; };
+		F46C34342DCD369B00B476F8 /* WKIdentityDocumentPresentmentController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WKIdentityDocumentPresentmentController.swift; path = "$(BUILT_PRODUCTS_DIR)/DerivedSources/WebKit/WKIdentityDocumentPresentmentController.swift"; sourceTree = "<group>"; };
 		F476894628D2B5CD00073641 /* LayerTreeContext.serialization.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = LayerTreeContext.serialization.in; sourceTree = "<group>"; };
 		F48523B42C76961C00C71FC2 /* CoreIPCNSURLProtectionSpace.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CoreIPCNSURLProtectionSpace.h; sourceTree = "<group>"; };
 		F48523B52C76961C00C71FC2 /* CoreIPCNSURLProtectionSpace.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CoreIPCNSURLProtectionSpace.mm; sourceTree = "<group>"; };
@@ -8506,6 +8519,8 @@
 		F4CF1E9C25E40DCC000F9D73 /* GestureRecognizerConsistencyEnforcer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = GestureRecognizerConsistencyEnforcer.mm; path = ios/GestureRecognizerConsistencyEnforcer.mm; sourceTree = "<group>"; };
 		F4D188ED29B99B4500D838D4 /* PrivateClickMeasurementEphemeralStore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PrivateClickMeasurementEphemeralStore.h; sourceTree = "<group>"; };
 		F4D188EE29B99B4500D838D4 /* PrivateClickMeasurementEphemeralStore.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PrivateClickMeasurementEphemeralStore.cpp; sourceTree = "<group>"; };
+		F4D59C182DCD2F60004492FB /* WKIdentityDocumentRawRequestValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WKIdentityDocumentRawRequestValidator.swift; path = "$(BUILT_PRODUCTS_DIR)/DerivedSources/WebKit/WKIdentityDocumentRawRequestValidator.swift"; sourceTree = "<group>"; };
+		F4D59C1A2DCD30FE004492FB /* WKIdentityDocumentPresentmentMobileDocumentRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WKIdentityDocumentPresentmentMobileDocumentRequest.swift; path = "$(BUILT_PRODUCTS_DIR)/DerivedSources/WebKit/WKIdentityDocumentPresentmentMobileDocumentRequest.swift"; sourceTree = "<group>"; };
 		F4D5F519206087A00038BBA8 /* WKTextInputListViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = WKTextInputListViewController.h; path = ios/forms/WKTextInputListViewController.h; sourceTree = "<group>"; };
 		F4D5F51A206087A10038BBA8 /* WKTextInputListViewController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = WKTextInputListViewController.mm; path = ios/forms/WKTextInputListViewController.mm; sourceTree = "<group>"; };
 		F4D5F51B206087A10038BBA8 /* WKQuickboardViewControllerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = WKQuickboardViewControllerDelegate.h; path = ios/forms/WKQuickboardViewControllerDelegate.h; sourceTree = "<group>"; };
@@ -8530,6 +8545,7 @@
 		F4E28A372C923C71008120DD /* ScriptTelemetry.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ScriptTelemetry.cpp; sourceTree = "<group>"; };
 		F4E28A382C923C71008120DD /* ScriptTelemetry.serialization.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = ScriptTelemetry.serialization.in; sourceTree = "<group>"; };
 		F4E2B44A268FDE1A00327ABC /* TapHandlingResult.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = TapHandlingResult.h; path = ios/TapHandlingResult.h; sourceTree = "<group>"; };
+		F4E44EB62DCD33E800A304C4 /* ISO18013MobileDocumentRequest+Extras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "ISO18013MobileDocumentRequest+Extras.swift"; path = "$(BUILT_PRODUCTS_DIR)/DerivedSources/WebKit/ISO18013MobileDocumentRequest+Extras.swift"; sourceTree = "<group>"; };
 		F4E47BB527B5AE5B00813B38 /* CocoaImage.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CocoaImage.mm; sourceTree = "<group>"; };
 		F4E727222A547E2100CE34FD /* WKTouchEventsGestureRecognizerTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = WKTouchEventsGestureRecognizerTypes.h; path = ios/WKTouchEventsGestureRecognizerTypes.h; sourceTree = "<group>"; };
 		F4E8912E2AB7C344005AEBC3 /* WKTapHighlightView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = WKTapHighlightView.h; path = ios/WKTapHighlightView.h; sourceTree = "<group>"; };
@@ -16621,15 +16637,23 @@
 		F4D59BEB2DCBD862004492FB /* IdentityDocumentServices */ = {
 			isa = PBXGroup;
 			children = (
+				F4E44EB62DCD33E800A304C4 /* ISO18013MobileDocumentRequest+Extras.swift */,
 				F4E07AC52D84701600322226 /* WKIdentityDocumentPresentmentController.h */,
+				F46C34342DCD369B00B476F8 /* WKIdentityDocumentPresentmentController.swift */,
 				F4E090942D889CB800322226 /* WKIdentityDocumentPresentmentDelegate.h */,
 				F4EE79472D9D92A500628E3B /* WKIdentityDocumentPresentmentError.h */,
 				07B2E4182DC1890E00A0155E /* WKIdentityDocumentPresentmentError.mm */,
+				F46C342C2DCD350D00B476F8 /* WKIdentityDocumentPresentmentMobileDocumentRequest+Extras.swift */,
 				F4E08FDE2D84B55600322226 /* WKIdentityDocumentPresentmentMobileDocumentRequest.h */,
+				F4D59C1A2DCD30FE004492FB /* WKIdentityDocumentPresentmentMobileDocumentRequest.swift */,
 				F4E090962D88A66F00322226 /* WKIdentityDocumentPresentmentRawRequest.h */,
+				F46C34322DCD369200B476F8 /* WKIdentityDocumentPresentmentRawRequest.swift */,
 				F4E08FDA2D84AE0500322226 /* WKIdentityDocumentPresentmentRequest.h */,
+				F46C34302DCD368400B476F8 /* WKIdentityDocumentPresentmentRequest.swift */,
 				F4E08FE62D8893F500322226 /* WKIdentityDocumentPresentmentResponse.h */,
+				F46C342E2DCD367600B476F8 /* WKIdentityDocumentPresentmentResponse.swift */,
 				F4F94ADE2D91B2A80087FE6F /* WKIdentityDocumentRawRequestValidator.h */,
+				F4D59C182DCD2F60004492FB /* WKIdentityDocumentRawRequestValidator.swift */,
 				E88885662DC914C400C572B8 /* WKISO18013Request.h */,
 			);
 			path = IdentityDocumentServices;
@@ -21071,6 +21095,7 @@
 				CDF1B915266F396A0007EC10 /* GroupSession.swift in Sources */,
 				0735F31E2D3760BC0003D029 /* IntelligenceTextEffectChunk.swift in Sources */,
 				0735F31C2D3760AA0003D029 /* IntelligenceTextEffectViewManager.swift in Sources */,
+				F4E44EB72DCD33E800A304C4 /* ISO18013MobileDocumentRequest+Extras.swift in Sources */,
 				A1098E6D2BB6436400449EE0 /* LinearMediaKitExtras.swift in Sources */,
 				A14F9B772B68CA6C00AD9C56 /* LinearMediaPlayer.swift in Sources */,
 				A14F9B642B686DD300AD9C56 /* LinearMediaTypes.swift in Sources */,
@@ -21079,7 +21104,14 @@
 				DD5697CD2DC06F7700050321 /* rdar150228472.swift in Sources */,
 				528952812C70797900D0357E /* RKEntity.swift in Sources */,
 				440DB5B72C1914DC0021639B /* TextAnimationManager.swift in Sources */,
+				F46C34352DCD369B00B476F8 /* WKIdentityDocumentPresentmentController.swift in Sources */,
 				F4D59C122DCC0292004492FB /* WKIdentityDocumentPresentmentError.mm in Sources */,
+				F46C342D2DCD350D00B476F8 /* WKIdentityDocumentPresentmentMobileDocumentRequest+Extras.swift in Sources */,
+				F4D59C1B2DCD30FE004492FB /* WKIdentityDocumentPresentmentMobileDocumentRequest.swift in Sources */,
+				F46C34332DCD369200B476F8 /* WKIdentityDocumentPresentmentRawRequest.swift in Sources */,
+				F46C34312DCD368400B476F8 /* WKIdentityDocumentPresentmentRequest.swift in Sources */,
+				F46C342F2DCD367600B476F8 /* WKIdentityDocumentPresentmentResponse.swift in Sources */,
+				F4D59C192DCD2F60004492FB /* WKIdentityDocumentRawRequestValidator.swift in Sources */,
 				077FD1A02CC7569200C5D9E0 /* WKIntelligenceReplacementTextEffectCoordinator.swift in Sources */,
 				0735F3222D38B09E0003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.swift in Sources */,
 				EB0FBFA72B66C61E00269CC1 /* WKMarketplaceKit.swift in Sources */,
