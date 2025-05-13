@@ -40,6 +40,7 @@ public:
     static ParentalControlsURLFilter& singleton();
 #endif
 
+    void resetIsEnabled();
     bool isEnabled() const;
     void isURLAllowed(const URL&, CompletionHandler<void(bool, NSData *)>&&);
     void allowURL(const URL&, CompletionHandler<void(bool)>&&);
@@ -50,8 +51,13 @@ private:
 #else
     ParentalControlsURLFilter();
 #endif
+    RetainPtr<WCRBrowserEngineClient> effectiveWCRBrowserEngineClient();
 
+    mutable std::optional<bool> m_isEnabled;
     RetainPtr<WCRBrowserEngineClient> m_wcrBrowserEngineClient;
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    String m_configurationPath;
+#endif
 };
 
 } // namespace WebCore
