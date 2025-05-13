@@ -328,7 +328,7 @@ public:
     }
     template<typename T> void encodeInteger(T object)
     {
-        encodeSpan(std::span(&object, 1));
+        encodeSpan(singleElementSpan(object));
     }
 private:
     Vector<uint8_t> m_bytes;
