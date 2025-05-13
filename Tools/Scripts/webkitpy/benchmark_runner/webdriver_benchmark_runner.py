@@ -1,5 +1,7 @@
 import json
 import logging
+import time
+import os
 
 from webkitpy.benchmark_runner.benchmark_runner import BenchmarkRunner
 
@@ -25,6 +27,8 @@ class WebDriverBenchmarkRunner(BenchmarkRunner):
             self._browser_driver.diagnose_test_failure(self._diagnose_dir, error)
             raise error
         else:
+            if not any(file.startswith('test-successful-screenshot-') for file in os.listdir(self._diagnose_dir)):
+                self._browser_driver._save_screenshot_to_path(self._diagnose_dir, f'test-successful-screenshot-{int(time.time())}.jpg')
             self._browser_driver.close_browsers()
 
         return json.loads(result)

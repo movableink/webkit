@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import time
 
 from webkitcorepy import NullContext, Timeout
 
@@ -47,6 +48,8 @@ class WebServerBenchmarkRunner(BenchmarkRunner):
             self._browser_driver.diagnose_test_failure(self._diagnose_dir, error)
             raise error
         else:
+            if not any(file.startswith('test-successful-screenshot-') for file in os.listdir(self._diagnose_dir)):
+                self._browser_driver._save_screenshot_to_path(self._diagnose_dir, f'test-successful-screenshot-{int(time.time())}.jpg')
             self._browser_driver.close_browsers()
         finally:
             self._http_server_driver.kill_server()
