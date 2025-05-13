@@ -31,6 +31,7 @@
 #import "VideoPresentationInterfaceLMK.h"
 #import "WKSLinearMediaPlayer.h"
 #import "WKSLinearMediaTypes.h"
+#import <WebCore/ExceptionOr.h>
 #import <WebCore/MediaSelectionOption.h>
 #import <WebCore/NowPlayingInfo.h>
 #import <WebCore/PlaybackSessionModel.h>
