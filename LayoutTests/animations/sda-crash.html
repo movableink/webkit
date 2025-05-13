@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+
+    <style>
+        @keyframes grow-progress {
+            from { background-color: green; }
+            to { background-color: red; }
+        }
+
+        #container {
+            overflow: scroll;
+            width: 100px;
+            height: 100px;
+            animation: grow-progress linear forwards;
+            animation-timeline: scroll(self);
+        }
+
+        #content {
+            width: 200px;
+            height: 200px;
+        }
+    </style>
+    <script src="../resources/ui-helper.js"></script>
+    <script>
+        if (window.testRunner) {
+            testRunner.dumpAsText();
+            testRunner.waitUntilDone();
+        }
+
+        async function doTest()
+        {
+            await UIHelper.startMonitoringWheelEvents();
+
+            const container = document.getElementById("container");
+            container.scrollTo(0, container.scrollHeight - container.clientHeight);
+            await UIHelper.waitForScrollCompletion();
+
+            const elem = document.getElementById("content");
+            elem.style.width = "0px";
+            elem.style.height = "0px";
+            await UIHelper.ensurePresentationUpdate();
+
+            testRunner.notifyDone();
+        }
+
+        window.addEventListener('load', doTest, false);
+    </script>
+    
+    <head>
+        <div>This test passes if it does not crash</div>
+        <div id="container">
+            <div id="content"></div>
+        </div>
+    </head>
+</html>

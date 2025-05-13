@@ -153,6 +153,8 @@ imported/w3c/web-platform-tests/requestidlecallback [ Pass ]
 imported/w3c/web-platform-tests/requestidlecallback/deadline-max-rAF.html [ Pass Failure ]
 http/tests/eventloop/idle-callback-not-affected-by-timers-in-cross-origin.html [ Pass ]
 
+animations/sda-crash.html [ Pass ]
+
 #//////////////////////////////////////////////////////////////////////////////////////////
 # End platform-specific directories.
 #//////////////////////////////////////////////////////////////////////////////////////////
