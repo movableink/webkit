@@ -1045,7 +1045,7 @@ class YarrGenerator final : public YarrJITInfo {
     {
         ASSERT(term->type == PatternTerm::Type::CharacterClass);
 
-        if (term->isFixedWidthCharacterClass())
+        if (term->isFixedWidthCharacterClass() && !term->invert())
             m_jit.add32(MacroAssembler::TrustedImm32(term->characterClass->hasNonBMPCharacters() ? 2 : 1), m_regs.index);
         else {
             m_jit.add32(MacroAssembler::TrustedImm32(1), m_regs.index);
@@ -1150,6 +1150,20 @@ class YarrGenerator final : public YarrJITInfo {
 #endif
                 tryReadUnicodeCharImpl<TryReadUnicodeCharCodeLocation::CompiledInline, TryReadUnicodeCharGenFirstNonBMPOptimization::DontUseOptimization>(m_jit, resultReg);
         }
+    }
+
+    void tryReadNonBMPUnicodeChar(Checked<unsigned> negativeCharacterOffset, MacroAssembler::RegisterID resultReg, MacroAssembler::RegisterID indexReg)
+    {
+        ASSERT(m_charSize == CharSize::Char16);
+
+        MacroAssembler::BaseIndex address = negativeOffsetIndexedAddress(negativeCharacterOffset, resultReg, indexReg);
+
+        m_jit.getEffectiveAddress(address, m_regs.regUnicodeInputAndTrail);
+
+        if (resultReg == m_regs.regT0)
+            m_jit.nearCallThunk(CodeLocationLabel { m_vm->getCTIStub(tryReadUnicodeCharThunkGenerator).retaggedCode<NoPtrTag>() });
+        else
+            tryReadUnicodeCharImpl<TryReadUnicodeCharCodeLocation::CompiledInline, TryReadUnicodeCharGenFirstNonBMPOptimization::DontUseOptimization>(m_jit, resultReg);
     }
 #endif
 
@@ -2676,18 +2690,25 @@ class YarrGenerator final : public YarrJITInfo {
         const MacroAssembler::RegisterID scratch = m_regs.regT2;
         m_usesT2 = true;
 
+        MacroAssembler::JumpList done;
+
         if (m_decodeSurrogatePairs)
             op.m_jumps.append(jumpIfNoAvailableInput());
 
         Checked<unsigned> scaledMaxCount = term->quantityMaxCount;
 #if ENABLE(YARR_JIT_UNICODE_EXPRESSIONS)
-        if (m_decodeSurrogatePairs && term->characterClass->hasOnlyNonBMPCharacters() && !term->invert())
+        bool nonBMPOnly = false;
+        if (m_decodeSurrogatePairs && term->characterClass->hasOnlyNonBMPCharacters() && !term->invert()) {
             scaledMaxCount *= 2;
+            nonBMPOnly = true;
+        }
 #endif
         m_jit.sub32(m_regs.index, MacroAssembler::Imm32(scaledMaxCount), countRegister);
 
         MacroAssembler::Label loop(&m_jit);
         readCharacter(op.m_checkedOffset - term->inputPosition - scaledMaxCount, character, countRegister);
+
+        MacroAssembler::Label nonBMPLoop(&m_jit);
 
         matchCharacterClassTermInner(term, op.m_jumps, character, scratch);
 
@@ -2706,8 +2727,19 @@ class YarrGenerator final : public YarrJITInfo {
         } else
 #endif
             m_jit.add32(MacroAssembler::TrustedImm32(1), countRegister);
+
+#if ENABLE(YARR_JIT_UNICODE_EXPRESSIONS)
+        if (nonBMPOnly) {
+            done.append(m_jit.branch32(MacroAssembler::Equal, countRegister, m_regs.index));
+            tryReadNonBMPUnicodeChar(op.m_checkedOffset - term->inputPosition - scaledMaxCount, character, countRegister);
+            m_jit.jump().linkTo(nonBMPLoop, &m_jit);
+        } else
+#endif
         m_jit.branch32(MacroAssembler::NotEqual, countRegister, m_regs.index).linkTo(loop, &m_jit);
+
+        done.link(&m_jit);
     }
+
     void backtrackCharacterClassFixed(size_t opIndex)
     {
         backtrackTermDefault(opIndex);
@@ -2750,11 +2782,15 @@ class YarrGenerator final : public YarrJITInfo {
             m_jit.add32(MacroAssembler::TrustedImm32(1), m_regs.index);
         m_jit.add32(MacroAssembler::TrustedImm32(1), countRegister);
 
-        if (term->quantityMaxCount != quantifyInfinite) {
-            m_jit.branch32(MacroAssembler::NotEqual, countRegister, MacroAssembler::Imm32(term->quantityMaxCount)).linkTo(loop, &m_jit);
-            failures.append(m_jit.jump());
-        } else
+        if (term->quantityMaxCount == quantifyInfinite)
             m_jit.jump(loop);
+        else {
+            m_jit.branch32(MacroAssembler::NotEqual, countRegister, MacroAssembler::Imm32(term->quantityMaxCount)).linkTo(loop, &m_jit);
+            if (!failuresDecrementIndex.empty()) {
+                // Don't emit the superfluous jump to the next instruction if we don't have any failuresDecrementIndex jumps to link.
+                failures.append(m_jit.jump());
+            }
+        }
 
         if (!failuresDecrementIndex.empty()) {
             failuresDecrementIndex.link(&m_jit);
