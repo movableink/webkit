@@ -2114,8 +2114,6 @@ webkit.org/b/218010 imported/w3c/web-platform-tests/webaudio/the-audio-api/the-a
 
 webkit.org/b/264729 imported/w3c/web-platform-tests/fetch/metadata/generated/audioworklet.https.sub.html [ Pass Crash DumpJSConsoleLogInStdErr ]
 
-webkit.org/b/292838 webaudio/crashtest/audioworklet-concurrent-resampler-crash.html [ Timeout ]
-
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of WebAudio-related bugs
 #////////////////////////////////////////////////////////////////////////////////////////

@@ -34,6 +34,7 @@
 #include <wtf/glib/GUniquePtr.h>
 #include <wtf/glib/RunLoopSourcePriority.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
@@ -58,6 +59,14 @@ static unsigned long maximumNumberOfOutputChannels()
     static int count = 0;
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
+        auto maxFromEnvironment = StringView::fromLatin1(g_getenv("WEBKIT_GST_MAX_NUMBER_OF_AUDIO_OUTPUT_CHANNELS"));
+        if (!maxFromEnvironment.isEmpty()) {
+            if (auto value = WTF::parseInteger<int>(maxFromEnvironment)) {
+                count = *value;
+                return;
+            }
+        }
+
         auto monitor = adoptGRef(gst_device_monitor_new());
         auto caps = adoptGRef(gst_caps_new_empty_simple("audio/x-raw"));
         gst_device_monitor_add_filter(monitor.get(), "Audio/Sink", caps.get());

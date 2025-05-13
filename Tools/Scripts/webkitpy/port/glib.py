@@ -120,6 +120,10 @@ class GLibPort(Port):
         # Match our WebRTC stats cache expiration time with LibWebRTC, since some tests actually expect this.
         environment['WEBKIT_GST_WEBRTC_STATS_CACHE_EXPIRATION_TIME_MS'] = '50'
 
+        # Fake a sound card with 2 output channels. Apparently we cannot assume test bots have an
+        # actual sound card.
+        environment['WEBKIT_GST_MAX_NUMBER_OF_AUDIO_OUTPUT_CHANNELS'] = '2'
+
         # Disable SIMD optimization in GStreamer's ORC. Some bots (WPE release) crash in ORC's optimizations.
         environment['ORC_CODE'] = 'backup'
 
