@@ -43,6 +43,7 @@
 #include "LayoutPhase.h"
 #include "LayoutSize.h"
 #include "LayoutState.h"
+#include "PathOperation.h"
 #include "RenderBlock.h"
 #include "RenderBox.h"
 #include "RenderChildIterator.h"

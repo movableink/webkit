@@ -61,6 +61,7 @@
 #include "UnicodeBidi.h"
 #include "ViewTimeline.h"
 #include "WebAnimationTypes.h"
+#include "WillChangeData.h"
 
 #if ENABLE(APPLE_PAY)
 #include "ApplePayButtonPart.h"

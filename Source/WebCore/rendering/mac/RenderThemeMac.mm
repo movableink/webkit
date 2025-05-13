@@ -53,6 +53,7 @@
 #import "LocalizedStrings.h"
 #import "Logging.h"
 #import "PaintInfo.h"
+#import "PathOperation.h"
 #import "PathUtilities.h"
 #import "RenderAttachment.h"
 #import "RenderMedia.h"

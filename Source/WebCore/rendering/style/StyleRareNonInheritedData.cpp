@@ -21,9 +21,12 @@
 #include "config.h"
 #include "StyleRareNonInheritedData.h"
 
+#include "PathOperation.h"
 #include "RenderCounter.h"
 #include "RenderStyleDifference.h"
 #include "RenderStyleInlines.h"
+#include "RotateTransformOperation.h"
+#include "ScaleTransformOperation.h"
 #include "ShadowData.h"
 #include "StyleImage.h"
 #include "StyleReflection.h"

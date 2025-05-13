@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include "PathOperation.h"
 #include "RenderStyleInlines.h"
 #include "StyleReflection.h"
 

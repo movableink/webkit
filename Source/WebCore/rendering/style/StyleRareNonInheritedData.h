@@ -26,18 +26,14 @@
 
 #include "CSSPropertyNames.h"
 #include "CounterDirectives.h"
-#include "FillLayer.h"
 #include "GapLength.h"
 #include "LengthPoint.h"
 #include "LineClampValue.h"
 #include "NameScope.h"
 #include "NinePieceImage.h"
 #include "OffsetRotation.h"
-#include "PathOperation.h"
 #include "PositionArea.h"
 #include "PositionTryFallback.h"
-#include "RotateTransformOperation.h"
-#include "ScaleTransformOperation.h"
 #include "ScopedName.h"
 #include "ScrollAxis.h"
 #include "ScrollTimeline.h"
@@ -57,8 +53,6 @@
 #include "TranslateTransformOperation.h"
 #include "ViewTimeline.h"
 #include "ViewTransitionName.h"
-#include "WebAnimationTypes.h"
-#include "WillChangeData.h"
 #include <memory>
 #include <wtf/DataRef.h>
 #include <wtf/Markable.h>
@@ -75,6 +69,9 @@ using namespace CSS::Literals;
 
 class AnimationList;
 class ContentData;
+class PathOperation;
+class RotateTransformOperation;
+class ScaleTransformOperation;
 class ShadowData;
 class StyleCustomPropertyData;
 class StyleDeprecatedFlexibleBoxData;
@@ -86,6 +83,7 @@ class StyleMultiColData;
 class StyleReflection;
 class StyleResolver;
 class StyleTransformData;
+class WillChangeData;
 
 struct LengthSize;
 struct StyleMarqueeData;

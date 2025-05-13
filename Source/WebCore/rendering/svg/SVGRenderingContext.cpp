@@ -34,6 +34,7 @@
 #include "LegacyRenderSVGRoot.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
+#include "PathOperation.h"
 #include "RenderLayer.h"
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"

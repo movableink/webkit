@@ -56,6 +56,7 @@
 #include "MathMLElement.h"
 #include "NodeName.h"
 #include "Page.h"
+#include "PathOperation.h"
 #include "Quirks.h"
 #include "RenderBox.h"
 #include "RenderStyleSetters.h"

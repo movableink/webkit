@@ -49,6 +49,7 @@
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "Page.h"
+#include "PathOperation.h"
 #include "PlatformMouseEvent.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RenderAncestorIterator.h"

@@ -31,6 +31,7 @@
 #include "FontCascade.h"
 #include "HTMLNames.h"
 #include "KeyboardEvent.h"
+#include "PathOperation.h"
 #include "PlatformLocale.h"
 #include "RenderBlock.h"
 #include "RenderStyleSetters.h"

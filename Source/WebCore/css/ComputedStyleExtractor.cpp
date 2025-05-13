@@ -75,6 +75,7 @@
 #include "GridPositionsResolver.h"
 #include "HTMLFrameOwnerElement.h"
 #include "NodeRenderStyle.h"
+#include "PathOperation.h"
 #include "PerspectiveTransformOperation.h"
 #include "PseudoElementIdentifier.h"
 #include "QuotesData.h"
