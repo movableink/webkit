@@ -49,9 +49,9 @@ static void keepNetworkProcessActive()
 
 // FIXME: Re-enable this test once webkit.org/b/290203 is resolved.
 #if defined(NDEBUG)
-TEST(IndexedDB, DISABLED_IndexedDBSuspendImminently)
-#else
 TEST(IndexedDB, IndexedDBSuspendImminently)
+#else
+TEST(IndexedDB, DISABLED_IndexedDBSuspendImminently)
 #endif
 {
     readyToContinue = false;
