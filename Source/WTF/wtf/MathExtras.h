@@ -487,7 +487,7 @@ inline typename std::enable_if<std::is_floating_point<T>::value, T>::type nanPro
 
 inline constexpr bool isIntegral(float value)
 {
-    return std::trunc(value) == value;
+    return !std::isinf(value) && std::trunc(value) == value;
 }
 
 template<typename T>

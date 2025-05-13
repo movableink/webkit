@@ -642,6 +642,23 @@ TEST(WTF, fastLog2)
     EXPECT_EQ(WTF::fastLog2(std::numeric_limits<uint32_t>::max()), 32u);
 }
 
+TEST(WTF, isIntegral)
+{
+    EXPECT_TRUE(WTF::isIntegral(0));
+    EXPECT_TRUE(WTF::isIntegral(-0));
+    EXPECT_TRUE(WTF::isIntegral(1));
+    EXPECT_TRUE(WTF::isIntegral(-1));
+    EXPECT_FALSE(WTF::isIntegral(0.1f));
+    EXPECT_FALSE(WTF::isIntegral(-0.1f));
+    EXPECT_FALSE(WTF::isIntegral(std::numbers::pi_v<float>));
+    EXPECT_TRUE(WTF::isIntegral(std::numeric_limits<float>::max()));
+    EXPECT_FALSE(WTF::isIntegral(std::numeric_limits<float>::min()));
+    EXPECT_TRUE(WTF::isIntegral(std::numeric_limits<float>::lowest()));
+    EXPECT_FALSE(WTF::isIntegral(std::numeric_limits<float>::infinity()));
+    EXPECT_FALSE(WTF::isIntegral(-std::numeric_limits<float>::infinity()));
+    EXPECT_FALSE(WTF::isIntegral(std::numeric_limits<float>::quiet_NaN()));
+}
+
 TEST(WTF, negate)
 {
     auto expected_int8_t = WTF::negate<int8_t>(0);
