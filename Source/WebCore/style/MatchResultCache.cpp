@@ -170,6 +170,14 @@ void MatchResultCache::update(CachedMatchResult& result, const RenderStyle& styl
     result.styleToUpdate.get() = RenderStyle::clone(style);
 }
 
+void MatchResultCache::updateForFastPathInherit(const Element& element, const RenderStyle& parentStyle)
+{
+    auto entry = m_entries.get(element);
+    if (!entry)
+        return;
+    entry->unadjustedStyle.style->fastPathInheritFrom(parentStyle);
+}
+
 void MatchResultCache::set(const Element& element, const UnadjustedStyle& unadjustedStyle)
 {
     // For now we cache match results if there is mutable inline style. This way we can avoid

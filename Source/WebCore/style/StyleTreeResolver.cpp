@@ -160,6 +160,7 @@ ResolvedStyle TreeResolver::styleForStyleable(const Styleable& styleable, Resolu
         // If the only reason we are computing the style is that some parent inherited properties changed, we can just copy them.
         auto style = RenderStyle::clonePtr(*existingStyle);
         style->fastPathInheritFrom(parent().style);
+        m_document->styleScope().matchResultCache().updateForFastPathInherit(element, parent().style);
         return { WTFMove(style) };
     }
 

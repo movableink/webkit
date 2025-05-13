@@ -50,6 +50,7 @@ public:
 
     const std::optional<CachedMatchResult> resultWithCurrentInlineStyle(const Element&);
     static void update(CachedMatchResult&, const RenderStyle&);
+    void updateForFastPathInherit(const Element&, const RenderStyle& parentStyle);
     void set(const Element&, const UnadjustedStyle&);
 
 private:
