@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,13 @@
 
 #pragma once
 
+#import <wtf/Platform.h>
+
+#if USE(APPLE_INTERNAL_SDK) && ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)
+
 #import <Foundation/Foundation.h>
+
+NS_ASSUME_NONNULL_BEGIN
 
 typedef NS_ENUM(NSInteger, WKGroupSessionState) {
     WKGroupSessionStateWaiting = 0,
@@ -34,31 +40,26 @@ typedef NS_ENUM(NSInteger, WKGroupSessionState) {
 };
 
 @class AVPlaybackCoordinator;
-@class NSURL;
-@class NSUUID;
-@class WKGroupSession;
-@class WKURLActivity;
 
-NS_ASSUME_NONNULL_BEGIN
-
-@interface WKGroupSessionObserver : NSObject
-@property (nonatomic, copy) void (^ _Nullable newSessionCallback)(WKGroupSession *);
-- (nonnull instancetype)init;
+@interface WKURLActivity : NSObject
+@property (nonatomic, copy, readonly, nullable) NSURL *fallbackURL;
 @end
 
 @interface WKGroupSession : NSObject
-@property (nonatomic, readonly, strong) WKURLActivity *activity;
+@property (nonatomic, readonly) WKURLActivity *activity;
 @property (nonatomic, readonly, copy) NSUUID *uuid;
 @property (nonatomic, readonly) WKGroupSessionState state;
-@property (nonatomic, copy) void (^ _Nullable newActivityCallback)(WKURLActivity *);
-@property (nonatomic, copy) void (^ _Nullable stateChangedCallback)(WKGroupSessionState);
+@property (nonatomic, copy, nullable) void (^newActivityCallback)(WKURLActivity *);
+@property (nonatomic, copy, nullable) void (^stateChangedCallback)(WKGroupSessionState);
 - (void)join;
 - (void)leave;
 - (void)coordinateWithCoordinator:(AVPlaybackCoordinator *)playbackCoordinator;
 @end
 
-@interface WKURLActivity : NSObject
-@property (nonatomic, copy) NSURL * _Nullable fallbackURL;
+@interface WKGroupSessionObserver : NSObject
+@property (nonatomic, copy, nullable) void (^newSessionCallback)(WKGroupSession *);
 @end
 
 NS_ASSUME_NONNULL_END
+
+#endif // USE(APPLE_INTERNAL_SDK) && ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)

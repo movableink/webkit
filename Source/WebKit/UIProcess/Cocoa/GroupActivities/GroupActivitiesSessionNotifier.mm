@@ -26,7 +26,7 @@
 #import "config.h"
 #import "GroupActivitiesSessionNotifier.h"
 
-#if ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)
+#if USE(APPLE_INTERNAL_SDK) && ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)
 
 #import "GroupActivitiesCoordinator.h"
 #import "WKGroupSession.h"
@@ -136,4 +136,4 @@ RefPtr<GroupActivitiesSession> GroupActivitiesSessionNotifier::takeSessionForURL
 
 }
 
-#endif
+#endif // USE(APPLE_INTERNAL_SDK) && ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)

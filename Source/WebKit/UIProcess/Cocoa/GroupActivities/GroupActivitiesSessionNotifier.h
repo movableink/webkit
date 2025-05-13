@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)
+#if USE(APPLE_INTERNAL_SDK) && ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)
 
 #include "GroupActivitiesSession.h"
 #include <wtf/HashMap.h>
@@ -67,4 +67,4 @@ private:
 
 }
 
-#endif
+#endif // USE(APPLE_INTERNAL_SDK) && ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)

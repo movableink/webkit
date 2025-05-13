@@ -26,7 +26,7 @@
 #import "config.h"
 #import "GroupActivitiesCoordinator.h"
 
-#if ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)
+#if USE(APPLE_INTERNAL_SDK) && ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)
 
 #import "WKGroupSession.h"
 #import <WebCore/NotImplemented.h>
@@ -285,4 +285,4 @@ void GroupActivitiesCoordinator::issuePrepareTransitionCommand(AVDelegatingPlayb
 
 }
 
-#endif
+#endif // USE(APPLE_INTERNAL_SDK) && ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)
