@@ -17,6 +17,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/break-within-bases/basic-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/break-within-bases/basic-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/break-within-bases/basic.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/break-within-bases/break-spaces-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/break-within-bases/no-break-opportunity-at-end-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/break-within-bases/no-break-opportunity-at-end-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/break-within-bases/no-break-opportunity-at-end.html

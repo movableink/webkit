@@ -6634,6 +6634,9 @@ imported/w3c/web-platform-tests/css/css-ruby/ruby-whitespace-001.html [ ImageOnl
 imported/w3c/web-platform-tests/css/css-ruby/ruby-whitespace-002.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-ruby/ruby-with-floats-002.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-ruby/ruby-with-floats-003.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-ruby/collapse-trailing-whitespace.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-ruby/ruby-align-002.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-ruby/ruby-align-002a.html [ ImageOnlyFailure ]
 
 # These tests are trying to use a WPT domain that are infrastructure doesn't support.
 imported/w3c/web-platform-tests/html/browsers/browsing-the-web/navigating-across-documents/replace-before-load/form-submit-cross-frame-crossorigin.sub.html [ Skip ]
