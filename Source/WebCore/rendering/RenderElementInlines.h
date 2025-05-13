@@ -87,33 +87,30 @@ inline bool RenderElement::isBlockBox() const
     return isBlockLevelBox() && isBlockContainer();
 }
 
-inline bool RenderElement::canContainAbsolutelyPositionedObjects() const
+inline bool RenderElement::mayContainOutOfFlowPositionedObjects(const RenderStyle* styleToUse) const
 {
+    auto& style = styleToUse ? *styleToUse : this->style();
     return isRenderView()
-        || style().position() != PositionType::Static
-        || (canEstablishContainingBlockWithTransform() && hasTransformRelatedProperty())
-        || (hasBackdropFilter() && !isDocumentElementRenderer())
+        || (canEstablishContainingBlockWithTransform() && (styleToUse ? styleToUse->hasTransformRelatedProperty() : hasTransformRelatedProperty()))
+        || (style.hasBackdropFilter() && !isDocumentElementRenderer())
 #if HAVE(CORE_MATERIAL)
-        || (hasAppleVisualEffectRequiringBackdropFilter() && !isDocumentElementRenderer())
+        || (style.hasAppleVisualEffectRequiringBackdropFilter() && !isDocumentElementRenderer())
 #endif
-        || (isRenderBlock() && style().willChange() && style().willChange()->createsContainingBlockForAbsolutelyPositioned(isDocumentElementRenderer()))
         || isRenderOrLegacyRenderSVGForeignObject()
-        || shouldApplyLayoutContainment()
-        || shouldApplyPaintContainment();
+        || shouldApplyLayoutContainment(styleToUse)
+        || shouldApplyPaintContainment(styleToUse);
 }
 
-inline bool RenderElement::canContainFixedPositionObjects() const
+inline bool RenderElement::canContainAbsolutelyPositionedObjects(const RenderStyle* styleToUse) const
 {
-    return isRenderView()
-        || (canEstablishContainingBlockWithTransform() && hasTransformRelatedProperty())
-        || (hasBackdropFilter() && !isDocumentElementRenderer())
-#if HAVE(CORE_MATERIAL)
-        || (hasAppleVisualEffectRequiringBackdropFilter() && !isDocumentElementRenderer())
-#endif
-        || (isRenderBlock() && style().willChange() && style().willChange()->createsContainingBlockForOutOfFlowPositioned(isDocumentElementRenderer()))
-        || isRenderOrLegacyRenderSVGForeignObject()
-        || shouldApplyLayoutContainment()
-        || shouldApplyPaintContainment();
+    auto& style = styleToUse ? *styleToUse : this->style();
+    return mayContainOutOfFlowPositionedObjects(styleToUse) || style.position() != PositionType::Static || (isRenderBlock() && style.willChange() && style.willChange()->createsContainingBlockForAbsolutelyPositioned(isDocumentElementRenderer()));
+}
+
+inline bool RenderElement::canContainFixedPositionObjects(const RenderStyle* styleToUse) const
+{
+    auto& style = styleToUse ? *styleToUse : this->style();
+    return mayContainOutOfFlowPositionedObjects(styleToUse) || (isRenderBlock() && style.willChange() && style.willChange()->createsContainingBlockForOutOfFlowPositioned(isDocumentElementRenderer()));
 }
 
 inline bool RenderElement::createsGroupForStyle(const RenderStyle& style)
@@ -171,9 +168,9 @@ inline bool RenderElement::shouldApplySizeOrInlineSizeContainment() const
     return shouldApplySizeContainment() || shouldApplyInlineSizeContainment();
 }
 
-inline bool RenderElement::shouldApplyLayoutContainment() const
+inline bool RenderElement::shouldApplyLayoutContainment(const RenderStyle* styleToUse) const
 {
-    return element() && WebCore::shouldApplyLayoutContainment(style(), *element());
+    return element() && WebCore::shouldApplyLayoutContainment(styleToUse ? *styleToUse : style(), *element());
 }
 
 inline bool RenderElement::shouldApplySizeContainment() const
@@ -191,9 +188,9 @@ inline bool RenderElement::shouldApplyStyleContainment() const
     return element() && WebCore::shouldApplyStyleContainment(style(), *element());
 }
 
-inline bool RenderElement::shouldApplyPaintContainment() const
+inline bool RenderElement::shouldApplyPaintContainment(const RenderStyle* styleToUse) const
 {
-    return element() && WebCore::shouldApplyPaintContainment(style(), *element());
+    return element() && WebCore::shouldApplyPaintContainment(styleToUse ? *styleToUse : style(), *element());
 }
 
 inline bool RenderElement::visibleToHitTesting(const std::optional<HitTestRequest>& request) const

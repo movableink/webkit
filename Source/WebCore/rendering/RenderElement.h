@@ -103,16 +103,16 @@ public:
     const Layout::ElementBox* layoutBox() const;
 
     // Note that even if these 2 "canContain" functions return true for a particular renderer, it does not necessarily mean the renderer is the containing block (see containingBlockForAbsolute(Fixed)Position).
-    inline bool canContainFixedPositionObjects() const;
-    inline bool canContainAbsolutelyPositionedObjects() const;
+    inline bool canContainFixedPositionObjects(const RenderStyle* styleToUse = nullptr) const;
+    inline bool canContainAbsolutelyPositionedObjects(const RenderStyle* styleToUse = nullptr) const;
     bool canEstablishContainingBlockWithTransform() const;
 
-    inline bool shouldApplyLayoutContainment() const;
+    inline bool shouldApplyLayoutContainment(const RenderStyle* styleToUse = nullptr) const;
     inline bool shouldApplySizeContainment() const;
     inline bool shouldApplyInlineSizeContainment() const;
     inline bool shouldApplySizeOrInlineSizeContainment() const;
     inline bool shouldApplyStyleContainment() const;
-    inline bool shouldApplyPaintContainment() const;
+    inline bool shouldApplyPaintContainment(const RenderStyle* styleToUse = nullptr) const;
     inline bool shouldApplyAnyContainment() const;
 
     bool hasEligibleContainmentForSizeQuery() const;
@@ -397,6 +397,8 @@ private:
 
     RenderObject* firstChildSlow() const final { return firstChild(); }
     RenderObject* lastChildSlow() const final { return lastChild(); }
+
+    inline bool mayContainOutOfFlowPositionedObjects(const RenderStyle* styleToUse = nullptr) const;
 
     RenderElement* rendererForPseudoStyleAcrossShadowBoundary() const;
 
