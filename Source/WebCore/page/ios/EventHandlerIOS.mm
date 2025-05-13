@@ -622,12 +622,12 @@ void EventHandler::cancelSelectionAutoscroll()
     m_autoscrollController->stopAutoscrollTimer();
 }
 
-static IntPoint adjustAutoscrollDestinationForInsetEdges(IntPoint autoscrollPoint, std::optional<IntPoint> initialAutoscrollPoint, FloatRect unobscuredRootViewRect)
+static IntPoint adjustAutoscrollDestinationForInsetEdges(IntPoint autoscrollPoint, std::optional<IntPoint> initialAutoscrollPoint, FloatRect unobscuredRootViewRect, float zoomScale)
 {
     IntPoint resultPoint = autoscrollPoint;
 
-    const float edgeInset = 100;
-    const float maximumScrollingSpeed = 40;
+    const float edgeInset = 100 / zoomScale;
+    const float maximumScrollingSpeed = 40 / zoomScale;
     const float insetDistanceThreshold = edgeInset / 2;
 
     // FIXME: Ideally we would only inset on edges that touch the edge of the screen,
@@ -687,6 +687,10 @@ IntPoint EventHandler::targetPositionInWindowForSelectionAutoscroll() const
     if (!frame->isMainFrame())
         return m_targetAutoscrollPositionInRootView;
 
+    RefPtr page = frame->page();
+    if (!page)
+        return m_targetAutoscrollPositionInRootView;
+
     Ref frameView = *frame->view();
 
     // All work is done in "unscrolled" root view coordinates (as if delegatesScrolling were off),
@@ -697,7 +701,7 @@ IntPoint EventHandler::targetPositionInWindowForSelectionAutoscroll() const
     FloatRect unobscuredContentRectInUnscrolledRootView = frameView->contentsToRootView(frameView->unobscuredContentRect());
     unobscuredContentRectInUnscrolledRootView.move(-scrollPosition);
 
-    return adjustAutoscrollDestinationForInsetEdges(m_targetAutoscrollPositionInUnscrolledRootView, m_initialAutoscrollPositionInUnscrolledRootView, unobscuredContentRectInUnscrolledRootView) + scrollPosition;
+    return adjustAutoscrollDestinationForInsetEdges(m_targetAutoscrollPositionInUnscrolledRootView, m_initialAutoscrollPositionInUnscrolledRootView, unobscuredContentRectInUnscrolledRootView, page->pageScaleFactor()) + scrollPosition;
 }
 
 bool EventHandler::shouldUpdateAutoscroll()
