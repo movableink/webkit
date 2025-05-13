@@ -642,6 +642,8 @@ static ThunkGenerator thunkGeneratorForIntrinsic(Intrinsic intrinsic)
         return charCodeAtThunkGenerator;
     case CharAtIntrinsic:
         return charAtThunkGenerator;
+    case StringPrototypeAtIntrinsic:
+        return stringAtThunkGenerator;
     case StringPrototypeCodePointAtIntrinsic:
         return stringPrototypeCodePointAtThunkGenerator;
     case Clz32Intrinsic:

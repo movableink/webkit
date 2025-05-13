@@ -626,6 +626,8 @@ MacroAssemblerCodeRef<JITThunkPtrTag> stringGetByValGenerator(VM& vm)
     return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "string_get_by_val"_s, "String get_by_val stub");
 }
 
+enum class RelativeNegativeIndex : bool { No, Yes };
+template <RelativeNegativeIndex relativeNegativeIndex>
 static void stringCharLoad(SpecializedThunkJIT& jit)
 {
     // load string
@@ -638,6 +640,13 @@ static void stringCharLoad(SpecializedThunkJIT& jit)
 
     // load index
     jit.loadInt32Argument(0, SpecializedThunkJIT::regT1); // regT1 contains the index
+
+    if constexpr (relativeNegativeIndex == RelativeNegativeIndex::Yes) {
+        SpecializedThunkJIT::Jump positiveIndex = jit.branch32(MacroAssembler::GreaterThanOrEqual, SpecializedThunkJIT::regT1, MacroAssembler ::TrustedImm32(0));
+        // Adjust negative index: index = length + index
+        jit.add32(SpecializedThunkJIT::regT2, SpecializedThunkJIT::regT1);
+        positiveIndex.link(jit);
+    }
 
     // Do an unsigned compare to simultaneously filter negative indices as well as indices that are too large
     jit.appendFailure(jit.branch32(MacroAssembler::AboveOrEqual, SpecializedThunkJIT::regT1, SpecializedThunkJIT::regT2));
@@ -667,7 +676,7 @@ static void charToString(SpecializedThunkJIT& jit, VM& vm, MacroAssembler::Regis
 MacroAssemblerCodeRef<JITThunkPtrTag> charCodeAtThunkGenerator(VM& vm)
 {
     SpecializedThunkJIT jit(vm, 1);
-    stringCharLoad(jit);
+    stringCharLoad<RelativeNegativeIndex::No>(jit);
     jit.returnInt32(SpecializedThunkJIT::regT0);
     return jit.finalize(vm.jitStubs->ctiNativeTailCall(vm), "charCodeAt");
 }
@@ -675,7 +684,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> charCodeAtThunkGenerator(VM& vm)
 MacroAssemblerCodeRef<JITThunkPtrTag> charAtThunkGenerator(VM& vm)
 {
     SpecializedThunkJIT jit(vm, 1);
-    stringCharLoad(jit);
+    stringCharLoad<RelativeNegativeIndex::No>(jit);
     charToString(jit, vm, SpecializedThunkJIT::regT0, SpecializedThunkJIT::regT0, SpecializedThunkJIT::regT1);
     jit.returnJSCell(SpecializedThunkJIT::regT0);
     return jit.finalize(vm.jitStubs->ctiNativeTailCall(vm), "charAt");
@@ -689,6 +698,15 @@ MacroAssemblerCodeRef<JITThunkPtrTag> fromCharCodeThunkGenerator(VM& vm)
     charToString(jit, vm, SpecializedThunkJIT::regT0, SpecializedThunkJIT::regT0, SpecializedThunkJIT::regT1);
     jit.returnJSCell(SpecializedThunkJIT::regT0);
     return jit.finalize(vm.jitStubs->ctiNativeTailCall(vm), "fromCharCode");
+}
+
+MacroAssemblerCodeRef<JITThunkPtrTag> stringAtThunkGenerator(VM& vm)
+{
+    SpecializedThunkJIT jit(vm, 1);
+    stringCharLoad<RelativeNegativeIndex::Yes>(jit);
+    charToString(jit, vm, SpecializedThunkJIT::regT0, SpecializedThunkJIT::regT0, SpecializedThunkJIT::regT1);
+    jit.returnJSCell(SpecializedThunkJIT::regT0);
+    return jit.finalize(vm.jitStubs->ctiNativeTailCall(vm), "at");
 }
 
 MacroAssemblerCodeRef<JITThunkPtrTag> globalIsNaNThunkGenerator(VM& vm)
