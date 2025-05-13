@@ -30,7 +30,6 @@
 #include "CryptoKeyFormat.h"
 #include "CryptoKeyPair.h"
 #include "CryptoKeyUsage.h"
-#include "ExceptionOr.h"
 #include "JsonWebKey.h"
 #include <pal/crypto/CryptoDigest.h>
 #include <wtf/Function.h>
@@ -42,6 +41,9 @@ namespace WebCore {
 
 class CryptoAlgorithmParameters;
 class ScriptExecutionContext;
+template<typename> class ExceptionOr;
+
+enum class ExceptionCode : uint8_t;
 
 using KeyData = Variant<Vector<uint8_t>, JsonWebKey>;
 using KeyOrKeyPair = Variant<RefPtr<CryptoKey>, CryptoKeyPair>;

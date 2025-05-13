@@ -29,6 +29,7 @@
 #include "BroadcastChannelRegistry.h"
 #include "EventNames.h"
 #include "EventTargetInlines.h"
+#include "ExceptionOr.h"
 #include "MessageEvent.h"
 #include "Page.h"
 #include "PartitionedSecurityOrigin.h"

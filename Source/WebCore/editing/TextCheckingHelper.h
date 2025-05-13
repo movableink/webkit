@@ -20,7 +20,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "SimpleRange.h"
 #include "TextChecking.h"
 
@@ -33,6 +32,8 @@ class TextCheckerClient;
 class VisibleSelection;
 
 struct TextCheckingResult;
+
+template<typename> class ExceptionOr;
 
 // FIXME: Should move this class to its own header.
 class TextCheckingParagraph {

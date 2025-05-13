@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
-#include "ExceptionOr.h"
 #include "WebTransportOptions.h"
 #include "WebTransportReliabilityMode.h"
 #include "WebTransportSessionClient.h"
@@ -63,6 +62,8 @@ struct WebTransportBidirectionalStreamConstructionParameters;
 struct WebTransportCloseInfo;
 struct WebTransportSendStreamOptions;
 struct WebTransportHash;
+
+template<typename> class ExceptionOr;
 
 class WebTransport : public WebTransportSessionClient, public ActiveDOMObject {
 public:

@@ -26,6 +26,7 @@
 #include "config.h"
 #include "ServiceWorkerRoute.h"
 
+#include "ExceptionOr.h"
 #include "FetchOptions.h"
 #include "HTTPParsers.h"
 #include "ResourceRequest.h"

@@ -33,7 +33,6 @@
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
 #include "EventTargetInterfaces.h"
-#include "ExceptionOr.h"
 #include "IDLTypes.h"
 #include "ImageBuffer.h"
 #include "IntSize.h"
@@ -64,6 +63,8 @@ class OffscreenCanvasRenderingContext2D;
 class WebGL2RenderingContext;
 class WebGLRenderingContext;
 class WebGLRenderingContextBase;
+
+template<typename> class ExceptionOr;
 
 using OffscreenRenderingContext = Variant<
 #if ENABLE(WEBGL)

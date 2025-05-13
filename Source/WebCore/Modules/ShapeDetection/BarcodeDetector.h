@@ -26,7 +26,6 @@
 #pragma once
 
 #include "BarcodeDetectorInterface.h"
-#include "ExceptionOr.h"
 #include "ImageBitmap.h"
 #include "JSDOMPromiseDeferredForward.h"
 #include <wtf/Ref.h>
@@ -34,10 +33,12 @@
 
 namespace WebCore {
 
-struct BarcodeDetectorOptions;
-enum class BarcodeFormat : uint8_t;
-struct DetectedBarcode;
 class ScriptExecutionContext;
+struct BarcodeDetectorOptions;
+struct DetectedBarcode;
+template<typename> class ExceptionOr;
+
+enum class BarcodeFormat : uint8_t;
 
 class BarcodeDetector : public RefCounted<BarcodeDetector> {
 public:

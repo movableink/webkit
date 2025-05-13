@@ -28,7 +28,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "SQLiteDatabase.h"
 #include <wtf/Deque.h>
 #include <wtf/Lock.h>
@@ -49,6 +48,7 @@ class SQLTransactionErrorCallback;
 class SQLTransactionWrapper;
 class VoidCallback;
 class SecurityOriginData;
+template<typename> class ExceptionOr;
 
 using DatabaseGUID = int;
 

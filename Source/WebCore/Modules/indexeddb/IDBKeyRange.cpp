@@ -26,6 +26,7 @@
 #include "config.h"
 #include "IDBKeyRange.h"
 
+#include "ExceptionOr.h"
 #include "IDBBindingUtilities.h"
 #include "IDBKey.h"
 #include "IDBKeyData.h"

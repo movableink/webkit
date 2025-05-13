@@ -52,6 +52,7 @@ namespace WebCore {
 
 class DeferredPromise;
 class Document;
+class Exception;
 class MediaStream;
 class MediaStreamTrack;
 class PeerConnectionBackend;
@@ -77,6 +78,7 @@ struct RTCOfferOptions;
 struct RTCRtpTransceiverInit;
 
 template<typename IDLType> class DOMPromiseDeferred;
+template<typename> class ExceptionOr;
 
 namespace PeerConnection {
 using SessionDescriptionPromise = DOMPromiseDeferred<IDLDictionary<RTCSessionDescriptionInit>>;

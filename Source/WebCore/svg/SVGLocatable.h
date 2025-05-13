@@ -22,13 +22,13 @@
 #pragma once
 
 #include "AffineTransform.h"
-#include "ExceptionOr.h"
 
 namespace WebCore {
 
 class FloatRect;
 class SVGElement;
 class SVGMatrix;
+template<typename> class ExceptionOr;
 
 enum class CTMScope : bool {
     NearestViewportScope, // Used for getCTM()

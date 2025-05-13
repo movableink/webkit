@@ -30,7 +30,6 @@
 #pragma once
 
 #include "DOMFormData.h"
-#include "ExceptionOr.h"
 #include "FetchBodyConsumer.h"
 #include "FormData.h"
 #include "ReadableStream.h"
@@ -42,6 +41,8 @@ class DeferredPromise;
 class FetchBodyOwner;
 class FetchBodySource;
 class ScriptExecutionContext;
+
+template<typename> class ExceptionOr;
 
 class FetchBody {
 public:

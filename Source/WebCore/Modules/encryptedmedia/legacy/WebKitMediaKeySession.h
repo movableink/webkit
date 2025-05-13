@@ -31,7 +31,6 @@
 #include "ContextDestructionObserverInlines.h"
 #include "EventTarget.h"
 #include "EventTargetInterfaces.h"
-#include "ExceptionOr.h"
 #include "LegacyCDMSession.h"
 #include "Timer.h"
 #include <JavaScriptCore/Forward.h>
@@ -41,6 +40,7 @@ namespace WebCore {
 
 class WebKitMediaKeyError;
 class WebKitMediaKeys;
+template<typename> class ExceptionOr;
 
 class WebKitMediaKeySession final : public RefCounted<WebKitMediaKeySession>, public EventTarget, public ActiveDOMObject, private LegacyCDMSessionClient {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebKitMediaKeySession);

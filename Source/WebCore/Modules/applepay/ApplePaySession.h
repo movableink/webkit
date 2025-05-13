@@ -32,7 +32,6 @@
 #include "ApplePayPaymentRequest.h"
 #include "EventTarget.h"
 #include "EventTargetInterfaces.h"
-#include "ExceptionOr.h"
 #include "PaymentSession.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -58,6 +57,7 @@ struct ApplePayShippingMethod;
 struct ApplePayPaymentMethodUpdate;
 struct ApplePayShippingContactUpdate;
 struct ApplePayShippingMethodUpdate;
+template<typename> class ExceptionOr;
 
 class ApplePaySession final : public PaymentSession, public ActiveDOMObject, public EventTarget {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ApplePaySession);

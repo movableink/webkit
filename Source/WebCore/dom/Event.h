@@ -27,7 +27,6 @@
 #include "EventInit.h"
 #include "EventInterfaces.h"
 #include "EventOptions.h"
-#include "ExceptionOr.h"
 #include "ScriptWrappable.h"
 #include <wtf/MonotonicTime.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>

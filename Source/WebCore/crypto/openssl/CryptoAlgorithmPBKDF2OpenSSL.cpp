@@ -28,6 +28,7 @@
 
 #include "CryptoAlgorithmPbkdf2Params.h"
 #include "CryptoKeyRaw.h"
+#include "ExceptionOr.h"
 #include "OpenSSLUtilities.h"
 #include <openssl/evp.h>
 

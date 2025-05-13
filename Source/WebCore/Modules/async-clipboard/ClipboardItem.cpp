@@ -31,6 +31,7 @@
 #include "ClipboardItemBindingsDataSource.h"
 #include "ClipboardItemPasteboardDataSource.h"
 #include "CommonAtomStrings.h"
+#include "ExceptionOr.h"
 #include "Navigator.h"
 #include "PasteboardCustomData.h"
 #include "PasteboardItemInfo.h"

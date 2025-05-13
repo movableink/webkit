@@ -42,6 +42,7 @@
 #include "CryptoKeyEC.h"
 #include "CryptoKeyHMAC.h"
 #include "DeviceResponseConverter.h"
+#include "ExceptionOr.h"
 #include "WebAuthenticationConstants.h"
 #include "WebAuthenticationUtils.h"
 #if HAVE(SWIFT_CPP_INTEROP)

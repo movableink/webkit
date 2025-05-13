@@ -27,6 +27,7 @@
 #include "CryptoAlgorithmHMAC.h"
 
 #include "CryptoKeyHMAC.h"
+#include "ExceptionOr.h"
 #include "OpenSSLCryptoUniquePtr.h"
 #include "OpenSSLUtilities.h"
 #include <openssl/evp.h>

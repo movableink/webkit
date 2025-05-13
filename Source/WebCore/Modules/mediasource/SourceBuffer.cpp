@@ -43,6 +43,7 @@
 #include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "ExceptionOr.h"
 #include "HTMLMediaElement.h"
 #include "InbandTextTrack.h"
 #include "InbandTextTrackPrivate.h"

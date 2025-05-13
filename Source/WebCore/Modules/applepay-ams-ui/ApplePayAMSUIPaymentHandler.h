@@ -29,7 +29,6 @@
 
 #include "ApplePayAMSUIRequest.h"
 #include "ContextDestructionObserver.h"
-#include "ExceptionOr.h"
 #include "PaymentHandler.h"
 #include "PaymentRequest.h"
 #include <wtf/Function.h>
@@ -49,6 +48,8 @@ class Page;
 
 struct AddressErrors;
 struct PayerErrorFields;
+
+template<typename> class ExceptionOr;
 
 enum class PaymentComplete;
 

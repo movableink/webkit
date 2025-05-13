@@ -40,6 +40,7 @@
 #import "_WKMockUserNotificationCenter.h"
 #import "_WKWebPushActionInternal.h"
 
+#import <WebCore/ExceptionOr.h>
 #import <WebCore/LocalizedStrings.h>
 #import <WebCore/NotificationData.h>
 #import <WebCore/NotificationPayload.h>

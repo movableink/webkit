@@ -28,6 +28,7 @@
 
 #if ENABLE(WEBXR)
 
+#include "ExceptionOr.h"
 #include "WebXRBoundedReferenceSpace.h"
 #include "WebXRJointPose.h"
 #include "WebXRJointSpace.h"

@@ -28,11 +28,12 @@
 #if ENABLE(WEB_CODECS)
 
 #include "BufferSource.h"
-#include "ExceptionOr.h"
 #include "WebCodecsEncodedVideoChunkData.h"
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 class WebCodecsEncodedVideoChunkStorage : public ThreadSafeRefCounted<WebCodecsEncodedVideoChunkStorage> {
 public:

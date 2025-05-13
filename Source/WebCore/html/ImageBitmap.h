@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "IDLTypes.h"
 #include "ScriptWrappable.h"
 #include <atomic>
@@ -71,6 +70,7 @@ enum class RenderingMode : uint8_t;
 struct ImageBitmapOptions;
 
 template<typename IDLType> class DOMPromiseDeferred;
+template<typename> class ExceptionOr;
 
 class DetachedImageBitmap {
 public:

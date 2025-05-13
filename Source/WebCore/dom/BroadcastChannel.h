@@ -30,7 +30,6 @@
 #include "ClientOrigin.h"
 #include "EventTarget.h"
 #include "EventTargetInterfaces.h"
-#include "ExceptionOr.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 
@@ -42,6 +41,7 @@ class JSValue;
 namespace WebCore {
 
 class SerializedScriptValue;
+template<typename> class ExceptionOr;
 
 class BroadcastChannel : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<BroadcastChannel>, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(BroadcastChannel);

@@ -35,7 +35,6 @@
 #include "EventTarget.h"
 #include "EventTargetInterfaces.h"
 #include "ExceptionCode.h"
-#include "ExceptionOr.h"
 #include "FileReaderLoader.h"
 #include "FileReaderLoaderClient.h"
 #include "FileReaderSync.h"
@@ -49,6 +48,7 @@ class ArrayBuffer;
 namespace WebCore {
 
 class Blob;
+template<typename> class ExceptionOr;
 
 class FileReader final : public RefCounted<FileReader>, public ActiveDOMObject, public EventTarget, private FileReaderLoaderClient {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(FileReader);

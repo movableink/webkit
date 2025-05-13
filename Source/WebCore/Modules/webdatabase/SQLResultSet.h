@@ -28,11 +28,12 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "SQLResultSetRowList.h"
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 class SQLResultSet : public ThreadSafeRefCounted<SQLResultSet> {
 public:

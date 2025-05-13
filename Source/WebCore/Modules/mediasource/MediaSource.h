@@ -34,7 +34,6 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
 #include "HTMLMediaElement.h"
 #include "MediaPlayer.h"
 #include "MediaPromiseTypes.h"
@@ -63,6 +62,7 @@ class TextTrack;
 class TimeRanges;
 class VideoTrack;
 class VideoTrackPrivate;
+template<typename> class ExceptionOr;
 
 enum class MediaSourceReadyState { Closed, Open, Ended };
 

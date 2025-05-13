@@ -40,6 +40,7 @@
 #import <WebCore/Event.h>
 #import <WebCore/EventLoop.h>
 #import <WebCore/EventNames.h>
+#import <WebCore/ExceptionOr.h>
 #import <WebCore/HTMLInputElement.h>
 #import <WebCore/HTMLNames.h>
 #import <WebCore/HTMLOptionElement.h>

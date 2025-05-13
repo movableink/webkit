@@ -28,7 +28,6 @@
 #if ENABLE(WEB_RTC)
 
 #include "ActiveDOMObject.h"
-#include "ExceptionOr.h"
 #include "JSDOMPromiseDeferredForward.h"
 #include "RTCRtpTransformBackend.h"
 #include <JavaScriptCore/JSCJSValue.h>
@@ -49,6 +48,8 @@ class SimpleReadableStreamSource;
 class WritableStream;
 
 struct MessageWithMessagePorts;
+
+template<typename> class ExceptionOr;
 
 enum class RTCRtpScriptTransformerIdentifierType { };
 using RTCRtpScriptTransformerIdentifier = AtomicObjectIdentifier<RTCRtpScriptTransformerIdentifierType>;

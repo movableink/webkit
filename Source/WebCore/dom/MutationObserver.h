@@ -31,7 +31,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "GCReachableRef.h"
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
@@ -53,6 +52,7 @@ class MutationObserverRegistration;
 class MutationRecord;
 class Node;
 class WindowEventLoop;
+template<typename> class ExceptionOr;
 
 enum class MutationObserverOptionType : uint8_t {
     // MutationType

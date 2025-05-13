@@ -30,7 +30,6 @@
 #pragma once
 
 #include "ContextDestructionObserver.h"
-#include "ExceptionOr.h"
 
 namespace JSC {
 class ArrayBufferView;
@@ -39,6 +38,7 @@ class ArrayBufferView;
 namespace WebCore {
 
 class SubtleCrypto;
+template<typename> class ExceptionOr;
 
 class Crypto : public ContextDestructionObserver, public RefCounted<Crypto> {
 public:

@@ -31,6 +31,7 @@
 #include "Blob.h"
 #include "EventNames.h"
 #include "ExceptionCode.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
 #include "MessageEvent.h"
 #include "RTCDataChannelRemoteHandler.h"

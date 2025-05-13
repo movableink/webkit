@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include <wtf/Deque.h>
 #include <wtf/RefCounted.h>
 
@@ -38,6 +37,7 @@ namespace WebCore {
 class DOMPromise;
 class ReadableStream;
 class WritableStream;
+template<typename> class ExceptionOr;
 
 class WebTransportDatagramDuplexStream : public RefCounted<WebTransportDatagramDuplexStream> {
 public:

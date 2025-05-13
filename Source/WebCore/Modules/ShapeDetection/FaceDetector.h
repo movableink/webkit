@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
+
 #include "FaceDetectorInterface.h"
 #include "ImageBitmap.h"
 #include "JSDOMPromiseDeferredForward.h"
@@ -34,9 +34,10 @@
 
 namespace WebCore {
 
+class ScriptExecutionContext;
 struct FaceDetectorOptions;
 struct DetectedFace;
-class ScriptExecutionContext;
+template<typename> class ExceptionOr;
 
 class FaceDetector : public RefCounted<FaceDetector> {
 public:

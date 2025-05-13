@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "TrustedHTML.h"
 #include "TrustedScript.h"
 #include "TrustedScriptURL.h"
@@ -43,6 +42,7 @@ namespace WebCore {
 class Exception;
 class ScriptExecutionContext;
 class QualifiedName;
+template<typename> class ExceptionOr;
 
 enum class TrustedType : int8_t {
     TrustedHTML,

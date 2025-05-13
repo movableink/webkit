@@ -32,6 +32,7 @@
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "EventTargetInlines.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
 #include "Page.h"
 #include "SecurityOriginData.h"

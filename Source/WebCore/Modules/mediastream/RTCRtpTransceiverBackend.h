@@ -26,12 +26,13 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "ExceptionOr.h"
 #include "RTCRtpTransceiverDirection.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
+
 struct RTCRtpCodecCapability;
+template<typename> class ExceptionOr;
 
 class RTCRtpTransceiverBackend {
 public:

@@ -28,6 +28,7 @@
 
 #include "CryptoAlgorithmRsaOaepParams.h"
 #include "CryptoKeyRSA.h"
+#include "ExceptionOr.h"
 #include "OpenSSLUtilities.h"
 #include <wtf/StdLibExtras.h>
 

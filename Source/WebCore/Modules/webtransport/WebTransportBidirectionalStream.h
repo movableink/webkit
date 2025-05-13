@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -40,6 +39,7 @@ public:
 
     WebTransportReceiveStream& readable() { return m_readable.get(); }
     WebTransportSendStream& writable() { return m_writable.get(); }
+
 private:
     WebTransportBidirectionalStream(Ref<WebTransportReceiveStream>&&, Ref<WebTransportSendStream>&&);
 

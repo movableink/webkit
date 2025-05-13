@@ -33,7 +33,6 @@
 #include "XREye.h"
 #include "XRGPUProjectionLayerInit.h"
 
-#include <ExceptionOr.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
@@ -64,6 +63,8 @@ struct XREquirectLayerInit;
 struct XRGPUProjectionLayerInit;
 struct XRProjectionLayerInit;
 struct XRQuadLayerInit;
+
+template<typename> class ExceptionOr;
 
 // https://github.com/immersive-web/WebXR-WebGPU-Binding/blob/main/explainer.md
 class XRGPUBinding : public RefCounted<XRGPUBinding> {

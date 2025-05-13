@@ -35,7 +35,6 @@
 #include "EventLoop.h"
 #include "EventTarget.h"
 #include "EventTargetInterfaces.h"
-#include "ExceptionOr.h"
 #include "ThreadableLoaderClient.h"
 #include "Timer.h"
 #include <wtf/URL.h>
@@ -46,6 +45,7 @@ namespace WebCore {
 class MessageEvent;
 class TextResourceDecoder;
 class ThreadableLoader;
+template<typename> class ExceptionOr;
 
 class EventSource final : public RefCounted<EventSource>, public EventTarget, private ThreadableLoaderClient, public ActiveDOMObject {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(EventSource);

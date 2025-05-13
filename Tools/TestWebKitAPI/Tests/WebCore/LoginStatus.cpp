@@ -25,6 +25,7 @@
 
 #include "config.h"
 
+#include <WebCore/ExceptionOr.h>
 #include <WebCore/LoginStatus.h>
 #include <WebCore/RegistrableDomain.h>
 #include <wtf/Seconds.h>

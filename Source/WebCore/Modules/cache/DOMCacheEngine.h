@@ -33,9 +33,11 @@
 #include "ResourceResponse.h"
 #include "SharedBuffer.h"
 #include <wtf/CompletionHandler.h>
+#include <wtf/CrossThreadCopier.h>
 
 namespace WebCore {
 
+class Exception;
 class ScriptExecutionContext;
 
 struct CacheQueryOptions;

@@ -26,7 +26,6 @@
 
 #include "BufferSource.h"
 #include "CompressionStream.h"
-#include "ExceptionOr.h"
 #include "Formats.h"
 #include "SharedBuffer.h"
 #include "ZStream.h"
@@ -38,6 +37,8 @@
 #include <zlib.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 class DecompressionStreamDecoder : public RefCounted<DecompressionStreamDecoder> {
 public:

@@ -30,7 +30,6 @@
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
 #include "EventTargetInterfaces.h"
-#include "ExceptionOr.h"
 #include "IDLTypes.h"
 #include "PaymentDetailsInit.h"
 #include "PaymentMethodChangeEvent.h"
@@ -51,6 +50,7 @@ enum class PaymentShippingType;
 struct PaymentDetailsUpdate;
 struct PaymentMethodData;
 template<typename IDLType> class DOMPromiseDeferred;
+template<typename> class ExceptionOr;
 
 class PaymentRequest final : public ActiveDOMObject, public EventTarget, public RefCounted<PaymentRequest> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PaymentRequest);

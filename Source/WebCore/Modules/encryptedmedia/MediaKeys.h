@@ -31,7 +31,6 @@
 #if ENABLE(ENCRYPTED_MEDIA)
 
 #include "CDMInstance.h"
-#include "ExceptionOr.h"
 #include "MediaKeySessionType.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -51,6 +50,7 @@ class BufferSource;
 class DeferredPromise;
 class Document;
 class MediaKeySession;
+template<typename> class ExceptionOr;
 
 class MediaKeys final
     : public RefCounted<MediaKeys>

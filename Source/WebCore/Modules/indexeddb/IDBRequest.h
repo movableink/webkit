@@ -26,7 +26,6 @@
 #pragma once
 
 #include "EventTarget.h"
-#include "ExceptionOr.h"
 #include "IDBActiveDOMObject.h"
 #include "IDBError.h"
 #include "IDBGetAllResult.h"
@@ -58,6 +57,7 @@ class IDBResultData;
 class IDBTransaction;
 class ThreadSafeDataBuffer;
 class WebCoreOpaqueRoot;
+template<typename> class ExceptionOr;
 
 namespace IDBClient {
 class IDBConnectionProxy;

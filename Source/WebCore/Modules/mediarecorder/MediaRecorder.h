@@ -29,7 +29,6 @@
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
 #include "EventTargetInterfaces.h"
-#include "ExceptionOr.h"
 #include "MediaRecorderPrivateOptions.h"
 #include "MediaStream.h"
 #include "MediaStreamTrackPrivate.h"
@@ -42,6 +41,7 @@ namespace WebCore {
 class Blob;
 class Document;
 class MediaRecorderPrivate;
+template<typename> class ExceptionOr;
 
 class MediaRecorder final
     : public ActiveDOMObject

@@ -27,7 +27,6 @@
 
 #if ENABLE(USER_MESSAGE_HANDLERS)
 
-#include "ExceptionOr.h"
 #include "FrameDestructionObserver.h"
 #include "UserMessageHandlerDescriptor.h"
 
@@ -39,6 +38,7 @@ class JSValue;
 namespace WebCore {
 
 class DeferredPromise;
+template<typename> class ExceptionOr;
 
 class UserMessageHandler : public RefCounted<UserMessageHandler>, public FrameDestructionObserver {
 public:

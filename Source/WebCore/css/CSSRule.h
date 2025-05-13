@@ -23,7 +23,6 @@
 #pragma once
 
 #include "CSSParserEnum.h"
-#include "ExceptionOr.h"
 #include "StyleRuleType.h"
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TypeCasts.h>
@@ -36,6 +35,8 @@ class StyleRule;
 class StyleRuleWithNesting;
 
 struct CSSParserContext;
+
+template<typename> class ExceptionOr;
 
 namespace CSS {
 struct SerializationContext;

@@ -27,7 +27,6 @@
 
 #include "CachedRawResourceClient.h"
 #include "CachedResourceHandle.h"
-#include "ExceptionOr.h"
 #include "FetchBody.h"
 #include "Supplementable.h"
 #include <wtf/CheckedRef.h>
@@ -40,6 +39,7 @@ class CachedRawResource;
 class Document;
 class Navigator;
 class ResourceError;
+template<typename> class ExceptionOr;
 
 class NavigatorBeacon final : public Supplement<Navigator>, private CachedRawResourceClient {
     WTF_MAKE_TZONE_ALLOCATED(NavigatorBeacon);

@@ -28,7 +28,6 @@
 #include "ActiveDOMObject.h"
 #include "Document.h"
 #include "Element.h"
-#include "ExceptionOr.h"
 #include "ImageBuffer.h"
 #include "MutableStyleProperties.h"
 #include "Styleable.h"
@@ -55,6 +54,7 @@ class RenderLayerModelObject;
 class RenderViewTransitionCapture;
 class RenderLayerModelObject;
 class ViewTransitionTypeSet;
+template<typename> class ExceptionOr;
 
 enum class ViewTransitionPhase : uint8_t {
     PendingCapture,

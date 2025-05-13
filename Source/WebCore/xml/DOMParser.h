@@ -18,8 +18,9 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include <wtf/WeakPtr.h>
+#include <wtf/text/AtomString.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -27,6 +28,7 @@ class Document;
 class WeakPtrImplWithEventTargetData;
 class Settings;
 class TrustedHTML;
+template<typename> class ExceptionOr;
 
 class DOMParser : public RefCounted<DOMParser> {
 public:

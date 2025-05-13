@@ -30,7 +30,6 @@
 #pragma once
 
 #include "AudioArray.h"
-#include "ExceptionOr.h"
 #include "FloatPoint3D.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -39,6 +38,7 @@ namespace WebCore {
 
 class AudioParam;
 class BaseAudioContext;
+template<typename> class ExceptionOr;
 
 // AudioListener maintains the state of the listener in the audio scene as defined in the OpenAL specification.
 

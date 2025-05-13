@@ -27,9 +27,9 @@
 
 #if ENABLE(WEBXR_LAYERS)
 
+#include "ExceptionOr.h"
 #include "XREye.h"
 
-#include <ExceptionOr.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>

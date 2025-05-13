@@ -28,7 +28,6 @@
 #include "BackgroundFetchRecordIdentifier.h"
 #include "BackgroundFetchStore.h"
 #include "ClientOrigin.h"
-#include "ExceptionOr.h"
 #include "NotificationPayload.h"
 #include "PageIdentifier.h"
 #include "SWServerDelegate.h"
@@ -84,6 +83,8 @@ struct ServiceWorkerContextData;
 struct ServiceWorkerRegistrationData;
 struct ServiceWorkerRoute;
 struct WorkerFetchResult;
+
+template<typename> class ExceptionOr;
 
 class SWServer : public RefCountedAndCanMakeWeakPtr<SWServer> {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(SWServer, WEBCORE_EXPORT);

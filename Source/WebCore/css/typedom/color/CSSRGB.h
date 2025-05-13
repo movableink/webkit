@@ -26,9 +26,10 @@
 #pragma once
 
 #include "CSSOMColorValue.h"
-#include "ExceptionOr.h"
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 using CSSColorRGBComp = Variant<double, RefPtr<CSSNumericValue>, String, RefPtr<CSSKeywordValue>>;
 using RectifiedCSSColorRGBComp = Variant<RefPtr<CSSNumericValue>, RefPtr<CSSKeywordValue>>;

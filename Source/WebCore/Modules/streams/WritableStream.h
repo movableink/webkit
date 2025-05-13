@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "JSDOMGlobalObject.h"
 #include <JavaScriptCore/Strong.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -36,6 +35,7 @@ namespace WebCore {
 class InternalWritableStream;
 class JSDOMGlobalObject;
 class WritableStreamSink;
+template<typename> class ExceptionOr;
 
 class WritableStream : public RefCountedAndCanMakeWeakPtr<WritableStream> {
 public:

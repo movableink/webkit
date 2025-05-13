@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "GPUColorDict.h"
 #include "GPUIndexFormat.h"
 #include "GPUIntegralTypes.h"
@@ -45,6 +44,7 @@ class GPUBuffer;
 class GPUQuerySet;
 class GPURenderBundle;
 class GPURenderPipeline;
+template<typename> class ExceptionOr;
 
 namespace WebGPU {
 class Device;

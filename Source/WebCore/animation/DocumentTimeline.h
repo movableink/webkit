@@ -28,7 +28,6 @@
 #include "AnimationFrameRate.h"
 #include "AnimationTimeline.h"
 #include "DocumentTimelineOptions.h"
-#include "ExceptionOr.h"
 #include "Timer.h"
 #include <wtf/Ref.h>
 #include <wtf/WeakPtr.h>

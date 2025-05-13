@@ -29,7 +29,6 @@
 #if ENABLE(WEBXR)
 
 #include "CanvasObserver.h"
-#include "ExceptionOr.h"
 #include "FloatRect.h"
 #include "GraphicsTypesGL.h"
 #include "PlatformXR.h"
@@ -51,6 +50,7 @@ class WebXRSession;
 class WebXRView;
 class WebXRViewport;
 struct XRWebGLLayerInit;
+template<typename> class ExceptionOr;
 
 class WebXRWebGLLayer : public WebXRLayer, private CanvasObserver {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRWebGLLayer);

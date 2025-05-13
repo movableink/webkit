@@ -34,7 +34,6 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "ExceptionOr.h"
 #include "MediaStreamRequest.h"
 #include "RealtimeMediaSource.h"
 #include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>

@@ -28,7 +28,6 @@
 #include "ActiveDOMObject.h"
 #include "CSSFontFace.h"
 #include "CSSPropertyNames.h"
-#include "ExceptionOr.h"
 #include "IDLTypes.h"
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakPtr.h>
@@ -41,6 +40,7 @@ class ArrayBufferView;
 namespace WebCore {
 
 template<typename IDLType> class DOMPromiseProxyWithResolveCallback;
+template<typename> class ExceptionOr;
 
 class FontFace final : public RefCounted<FontFace>, public ActiveDOMObject, public CSSFontFaceClient {
 public:

@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "GPUIntegralTypes.h"
 #include "GPUTextureAspect.h"
 #include "GPUTextureDimension.h"
@@ -44,6 +43,8 @@ class GPUTextureView;
 
 struct GPUTextureDescriptor;
 struct GPUTextureViewDescriptor;
+
+template<typename> class ExceptionOr;
 
 class GPUTexture : public RefCountedAndCanMakeWeakPtr<GPUTexture> {
 public:

@@ -29,7 +29,6 @@
 #pragma once
 
 #include "ByteArrayPixelBuffer.h"
-#include "ExceptionOr.h"
 #include "ImageDataArray.h"
 #include "ImageDataSettings.h"
 #include "IntSize.h"
@@ -38,6 +37,8 @@
 #include <wtf/Forward.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 class ImageData : public RefCounted<ImageData> {
 public:

@@ -32,6 +32,7 @@
 #import "CDMKeySystemConfiguration.h"
 #import "CDMMediaCapability.h"
 #import "ContentKeyGroupFactoryAVFObjC.h"
+#import "ExceptionOr.h"
 #import "InitDataRegistry.h"
 #import "Logging.h"
 #import "MediaSampleAVFObjC.h"

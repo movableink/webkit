@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "GPUIndexFormat.h"
 #include "GPUIntegralTypes.h"
 #include "GPURenderBundleDescriptor.h"
@@ -43,6 +42,7 @@ class GPUBindGroup;
 class GPUBuffer;
 class GPURenderBundle;
 class GPURenderPipeline;
+template<typename> class ExceptionOr;
 
 class GPURenderBundleEncoder : public RefCounted<GPURenderBundleEncoder> {
 public:

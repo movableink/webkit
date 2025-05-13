@@ -30,7 +30,6 @@
 #include "ContextDestructionObserverInlines.h"
 #include "EventTarget.h"
 #include "EventTargetInterfaces.h"
-#include "ExceptionOr.h"
 #include "MessagePortChannel.h"
 #include "MessagePortIdentifier.h"
 #include "MessageWithMessagePorts.h"
@@ -48,6 +47,8 @@ class LocalFrame;
 class WebCoreOpaqueRoot;
 
 struct StructuredSerializeOptions;
+
+template<typename> class ExceptionOr;
 
 class MessagePort final : public ActiveDOMObject, public EventTarget, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MessagePort> {
     WTF_MAKE_NONCOPYABLE(MessagePort);

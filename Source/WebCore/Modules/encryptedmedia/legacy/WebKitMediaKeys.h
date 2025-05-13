@@ -27,7 +27,6 @@
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
 
-#include "ExceptionOr.h"
 #include "LegacyCDM.h"
 #include <JavaScriptCore/Forward.h>
 #include <wtf/Vector.h>
@@ -39,6 +38,7 @@ class Document;
 class WeakPtrImplWithEventTargetData;
 class HTMLMediaElement;
 class WebKitMediaKeySession;
+template<typename> class ExceptionOr;
 
 class WebKitMediaKeys final : public RefCounted<WebKitMediaKeys>, private LegacyCDMClient {
     WTF_MAKE_FAST_ALLOCATED;

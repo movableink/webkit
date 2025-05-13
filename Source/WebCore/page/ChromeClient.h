@@ -28,6 +28,7 @@
 #include "DisabledAdaptations.h"
 #include "DocumentStorageAccess.h"
 #include "ExceptionData.h"
+#include "ExceptionOr.h"
 #include "FocusDirection.h"
 #include "HTMLMediaElementEnums.h"
 #include "HighlightVisibility.h"
@@ -172,8 +173,6 @@ enum class TextAnimationRunMode : uint8_t;
 
 enum class MediaProducerMediaState : uint32_t;
 using MediaProducerMediaStateFlags = OptionSet<MediaProducerMediaState>;
-
-template<typename> class ExceptionOr;
 
 namespace ShapeDetection {
 class BarcodeDetector;

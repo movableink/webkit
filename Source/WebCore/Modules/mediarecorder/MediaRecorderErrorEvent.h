@@ -30,6 +30,7 @@
 namespace WebCore {
 
 class DOMException;
+class Exception;
 
 class MediaRecorderErrorEvent final : public Event {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaRecorderErrorEvent);

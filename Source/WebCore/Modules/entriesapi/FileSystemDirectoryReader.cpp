@@ -30,6 +30,7 @@
 #include "DOMFileSystem.h"
 #include "Document.h"
 #include "ErrorCallback.h"
+#include "ExceptionOr.h"
 #include "FileSystemDirectoryEntry.h"
 #include "FileSystemEntriesCallback.h"
 #include "ScriptExecutionContext.h"

@@ -37,6 +37,7 @@
 #include <WebCore/CryptoKeyAES.h>
 #include <WebCore/CryptoKeyEC.h>
 #include <WebCore/CryptoKeyHMAC.h>
+#include <WebCore/ExceptionOr.h>
 #include <WebCore/FidoConstants.h>
 #include <WebCore/Pin.h>
 #include <WebCore/WebAuthenticationConstants.h>

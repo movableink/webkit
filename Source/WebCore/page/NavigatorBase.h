@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ContextDestructionObserver.h"
-#include "ExceptionOr.h"
 #include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -43,6 +42,7 @@ class ServiceWorkerContainer;
 class StorageManager;
 class WebCoreOpaqueRoot;
 class WebLockManager;
+template<typename> class ExceptionOr;
 
 class NavigatorBase : public RefCountedAndCanMakeWeakPtr<NavigatorBase>, public ContextDestructionObserver, public CanMakeCheckedPtr<NavigatorBase> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(NavigatorBase);

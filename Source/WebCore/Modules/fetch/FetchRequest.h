@@ -29,7 +29,6 @@
 #pragma once
 
 #include "AbortSignal.h"
-#include "ExceptionOr.h"
 #include "FetchBodyOwner.h"
 #include "FetchIdentifier.h"
 #include "FetchOptions.h"
@@ -44,6 +43,7 @@ class Blob;
 class ScriptExecutionContext;
 class URLSearchParams;
 class WebCoreOpaqueRoot;
+template<typename> class ExceptionOr;
 
 class FetchRequest final : public FetchBodyOwner {
 public:

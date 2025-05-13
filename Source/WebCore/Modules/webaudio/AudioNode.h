@@ -28,7 +28,6 @@
 #include "ChannelCountMode.h"
 #include "ChannelInterpretation.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
 #include <wtf/Forward.h>
 #include <wtf/LoggerHelper.h>
 
@@ -37,10 +36,11 @@
 namespace WebCore {
 
 class AudioNodeInput;
-struct AudioNodeOptions;
 class AudioNodeOutput;
 class AudioParam;
 class BaseAudioContext;
+struct AudioNodeOptions;
+template<typename> class ExceptionOr;
 
 enum class NoiseInjectionPolicy : uint8_t;
 

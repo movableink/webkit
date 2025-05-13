@@ -32,6 +32,7 @@
 #include "AbstractWorker.h"
 
 #include "ContentSecurityPolicy.h"
+#include "ExceptionOr.h"
 #include "OriginAccessPatterns.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"

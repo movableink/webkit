@@ -28,6 +28,7 @@
 
 #include "DOMWrapperWorld.h"
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "LocalDOMWindow.h"
 #include "MessagePort.h"
 #include "Performance.h"

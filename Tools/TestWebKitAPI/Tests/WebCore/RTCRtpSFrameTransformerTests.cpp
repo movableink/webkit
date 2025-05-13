@@ -27,6 +27,7 @@
 
 #if ENABLE(WEB_RTC)
 
+#include <WebCore/ExceptionOr.h>
 #include <WebCore/RTCRtpSFrameTransformer.h>
 #include <WebCore/SFrameUtils.h>
 #include <wtf/Vector.h>

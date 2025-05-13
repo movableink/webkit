@@ -27,7 +27,6 @@
 
 #include "CSSStyleSheet.h"
 #include "Element.h"
-#include "ExceptionOr.h"
 #include "FloatSize.h"
 #include "HTMLInterchange.h"
 #include "MarkupExclusionRule.h"
@@ -54,6 +53,8 @@ class VisibleSelection;
 
 struct PresentationSize;
 struct SimpleRange;
+
+template<typename> class ExceptionOr;
 
 void replaceSubresourceURLs(Ref<DocumentFragment>&&, UncheckedKeyHashMap<AtomString, AtomString>&&);
 void removeSubresourceURLAttributes(Ref<DocumentFragment>&&, Function<bool(const URL&)> shouldRemoveURL);

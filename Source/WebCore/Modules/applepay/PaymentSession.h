@@ -27,7 +27,6 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "ExceptionOr.h"
 #include "PaymentSessionBase.h"
 
 namespace WebCore {
@@ -41,6 +40,7 @@ class PaymentMethod;
 class PaymentSessionError;
 class ScriptExecutionContext;
 struct ApplePayShippingMethod;
+template<typename> class ExceptionOr;
 
 class PaymentSession : public virtual PaymentSessionBase {
 public:

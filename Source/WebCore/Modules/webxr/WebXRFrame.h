@@ -28,7 +28,6 @@
 #if ENABLE(WEBXR)
 
 #include "DOMHighResTimeStamp.h"
-#include "ExceptionOr.h"
 #include "PlatformXR.h"
 #include <JavaScriptCore/Float32Array.h>
 #include <wtf/Ref.h>
@@ -46,6 +45,7 @@ class WebXRReferenceSpace;
 class WebXRSession;
 class WebXRSpace;
 class WebXRViewerPose;
+template<typename> class ExceptionOr;
 
 class WebXRFrame : public RefCounted<WebXRFrame> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRFrame);

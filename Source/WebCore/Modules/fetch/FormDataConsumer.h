@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include <span>
 #include <wtf/Function.h>
@@ -39,6 +38,7 @@ namespace WebCore {
 class BlobLoader;
 class FormData;
 class ScriptExecutionContext;
+template<typename> class ExceptionOr;
 
 class FormDataConsumer : public RefCountedAndCanMakeWeakPtr<FormDataConsumer> {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(FormDataConsumer, WEBCORE_EXPORT);

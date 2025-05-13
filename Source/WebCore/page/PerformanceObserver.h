@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "PerformanceEntry.h"
 #include "PerformanceObserverCallback.h"
 #include <wtf/OptionSet.h>
@@ -37,6 +36,7 @@ namespace WebCore {
 
 class Performance;
 class ScriptExecutionContext;
+template<typename> class ExceptionOr;
 
 class PerformanceObserver : public RefCounted<PerformanceObserver> {
 public:

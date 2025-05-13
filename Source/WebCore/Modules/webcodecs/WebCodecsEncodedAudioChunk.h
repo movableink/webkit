@@ -29,11 +29,12 @@
 #if ENABLE(WEB_CODECS)
 
 #include "BufferSource.h"
-#include "ExceptionOr.h"
 #include "WebCodecsEncodedAudioChunkData.h"
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 class WebCodecsEncodedAudioChunkStorage : public ThreadSafeRefCounted<WebCodecsEncodedAudioChunkStorage> {
 public:

@@ -28,7 +28,6 @@
 
 #include "Blob.h"
 #include "DetachedRTCDataChannel.h"
-#include "ExceptionOr.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <JavaScriptCore/JSCJSValue.h>
 #include <JavaScriptCore/Strong.h>
@@ -82,6 +81,8 @@ class IDBValue;
 class MessagePort;
 class DetachedImageBitmap;
 class FragmentedSharedBuffer;
+template<typename> class ExceptionOr;
+
 enum class SerializationReturnCode;
 
 enum class SerializationErrorMode { NonThrowing, Throwing };

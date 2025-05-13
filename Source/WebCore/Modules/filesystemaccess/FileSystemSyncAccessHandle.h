@@ -27,7 +27,6 @@
 
 #include "ActiveDOMObject.h"
 #include "BufferSource.h"
-#include "ExceptionOr.h"
 #include "FileSystemSyncAccessHandleIdentifier.h"
 #include "IDLTypes.h"
 #include <wtf/Deque.h>
@@ -40,6 +39,7 @@ namespace WebCore {
 
 class FileSystemFileHandle;
 template<typename> class DOMPromiseDeferred;
+template<typename> class ExceptionOr;
 
 class FileSystemSyncAccessHandle : public RefCountedAndCanMakeWeakPtr<FileSystemSyncAccessHandle>, public ActiveDOMObject {
 public:

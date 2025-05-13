@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "LocalDOMWindowProperty.h"
 #include "ScriptWrappable.h"
 
 namespace WebCore {
 
 class StorageArea;
+template<typename> class ExceptionOr;
 
 class Storage final : public ScriptWrappable, public RefCounted<Storage>, public LocalDOMWindowProperty {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Storage);

@@ -30,10 +30,11 @@
 
 #if ENABLE(WEB_CODECS)
 
-#include <ExceptionOr.h>
 #include <span>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 bool isValidAudioDataInit(const WebCodecsAudioData::Init&);
 

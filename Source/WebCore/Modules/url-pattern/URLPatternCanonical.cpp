@@ -26,6 +26,7 @@
 #include "config.h"
 #include "URLPatternCanonical.h"
 
+#include "ExceptionOr.h"
 #include "URLDecomposition.h"
 #include "URLPattern.h"
 #include <wtf/URL.h>

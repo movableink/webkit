@@ -29,7 +29,6 @@
 #include "CanvasBase.h"
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
 #include "ImageBuffer.h"
 #include "IntSize.h"
 #include "PaintRenderingContext2D.h"

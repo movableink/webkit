@@ -33,6 +33,7 @@
 #include "AudioNodeOutput.h"
 #include "AudioSourceProvider.h"
 #include "AudioUtilities.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
 #include "MediaElementAudioSourceOptions.h"
 #include "MediaPlayer.h"

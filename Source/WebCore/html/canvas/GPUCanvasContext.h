@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "GPUBasedCanvasRenderingContext.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -40,9 +39,10 @@ namespace WebCore {
 
 class CanvasBase;
 class GPU;
-struct GPUCanvasConfiguration;
 class GPUTexture;
 class ImageBitmap;
+struct GPUCanvasConfiguration;
+template<typename> class ExceptionOr;
 
 class GPUCanvasContext : public GPUBasedCanvasRenderingContext {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(GPUCanvasContext);

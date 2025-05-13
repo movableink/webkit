@@ -28,6 +28,7 @@
 
 #include "CryptoAlgorithmAesKeyParams.h"
 #include "CryptoKeyAES.h"
+#include "ExceptionOr.h"
 
 namespace WebCore {
 

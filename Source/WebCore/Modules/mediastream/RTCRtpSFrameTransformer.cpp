@@ -28,6 +28,7 @@
 
 #if ENABLE(WEB_RTC)
 
+#include "ExceptionOr.h"
 #include "SFrameUtils.h"
 #include <algorithm>
 #include <wtf/StdLibExtras.h>

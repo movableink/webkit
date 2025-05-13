@@ -31,13 +31,14 @@
 #pragma once
 
 #include "EventTarget.h"
-#include "ExceptionOr.h"
 #include "FetchOptions.h"
 
 namespace WebCore {
 
+class Exception;
 struct FetchOptions;
 struct WorkerOptions;
+template<typename> class ExceptionOr;
 
 class AbstractWorker : public RefCounted<AbstractWorker>, public EventTarget {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AbstractWorker);

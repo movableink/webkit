@@ -32,7 +32,6 @@
 #include "CachedRawResourceClient.h"
 #include "CachedResourceHandle.h"
 #include "EventLoop.h"
-#include "ExceptionOr.h"
 #include "HTMLElement.h"
 #include "HTMLModelElementCamera.h"
 #include "IDLTypes.h"
@@ -62,6 +61,7 @@ class MouseEvent;
 
 template<typename IDLType> class DOMPromiseDeferred;
 template<typename IDLType> class DOMPromiseProxyWithResolveCallback;
+template<typename> class ExceptionOr;
 
 #if ENABLE(MODEL_PROCESS)
 template<typename IDLType> class DOMPromiseProxy;

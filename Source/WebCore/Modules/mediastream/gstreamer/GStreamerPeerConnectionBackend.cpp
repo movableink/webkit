@@ -23,6 +23,7 @@
 #if USE(GSTREAMER_WEBRTC)
 
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "GStreamerCommon.h"
 #include "GStreamerMediaEndpoint.h"
 #include "GStreamerRtpReceiverBackend.h"

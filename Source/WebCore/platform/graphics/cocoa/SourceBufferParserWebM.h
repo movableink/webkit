@@ -27,7 +27,6 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
-#include "ExceptionOr.h"
 #include "LibWebRTCMacros.h"
 #include "MediaSample.h"
 #include "SharedBuffer.h"
@@ -54,6 +53,7 @@ namespace WebCore {
 
 class PacketDurationParser;
 struct TrackInfo;
+template<typename> class ExceptionOr;
 
 class WebMParser
     : private webm::Callback

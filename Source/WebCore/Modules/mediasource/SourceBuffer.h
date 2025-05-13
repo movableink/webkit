@@ -37,7 +37,6 @@
 #include "AudioTrackClient.h"
 #include "EventTarget.h"
 #include "EventTargetInterfaces.h"
-#include "ExceptionOr.h"
 #include "SourceBufferPrivate.h"
 #include "SourceBufferPrivateClient.h"
 #include "TextTrackClient.h"
@@ -59,6 +58,7 @@ class TextTrackList;
 class TimeRanges;
 class VideoTrackList;
 class WebCoreOpaqueRoot;
+template<typename> class ExceptionOr;
 
 class SourceBuffer
     : public RefCounted<SourceBuffer>

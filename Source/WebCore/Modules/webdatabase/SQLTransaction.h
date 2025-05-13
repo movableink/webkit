@@ -28,7 +28,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "SQLCallbackWrapper.h"
 #include "SQLTransactionBackend.h"
 #include "SQLTransactionStateMachine.h"
@@ -46,6 +45,7 @@ class SQLTransactionBackend;
 class SQLTransactionCallback;
 class SQLTransactionErrorCallback;
 class VoidCallback;
+template<typename> class ExceptionOr;
 
 class SQLTransactionWrapper : public ThreadSafeRefCounted<SQLTransactionWrapper> {
 public:

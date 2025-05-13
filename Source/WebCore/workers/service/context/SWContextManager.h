@@ -26,7 +26,6 @@
 #pragma once
 
 #include "BackgroundFetchInformation.h"
-#include "ExceptionOr.h"
 #include "PageIdentifier.h"
 #include "PushSubscriptionData.h"
 #include "ServiceWorkerClientData.h"
@@ -46,6 +45,8 @@ class SerializedScriptValue;
 class ServiceWorkerGlobalScope;
 
 struct NotificationPayload;
+
+template<typename> class ExceptionOr;
 
 class SWContextManager {
 public:

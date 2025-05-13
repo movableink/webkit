@@ -27,7 +27,6 @@
 
 #include "CanvasRenderingContext.h"
 
-#include "ExceptionOr.h"
 #include "ImageBitmapRenderingContextSettings.h"
 #include <memory>
 #include <wtf/RefPtr.h>
@@ -37,6 +36,7 @@ namespace WebCore {
 class ImageBitmap;
 class ImageBuffer;
 class OffscreenCanvas;
+template<typename> class ExceptionOr;
 
 #if ENABLE(OFFSCREEN_CANVAS)
 using ImageBitmapCanvas = Variant<RefPtr<HTMLCanvasElement>, RefPtr<OffscreenCanvas>>;

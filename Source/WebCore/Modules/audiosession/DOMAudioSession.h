@@ -31,11 +31,12 @@
 #include "AudioSession.h"
 #include "EventTarget.h"
 #include "EventTargetInterfaces.h"
-#include "ExceptionOr.h"
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 enum class DOMAudioSessionType : uint8_t { Auto, Playback, Transient, TransientSolo, Ambient, PlayAndRecord };
 enum class DOMAudioSessionState : uint8_t { Inactive, Active, Interrupted };

@@ -28,13 +28,13 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "Path.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
 struct DOMPointInit;
+template<typename> class ExceptionOr;
 
 class CanvasPath {
 public:

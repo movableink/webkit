@@ -23,7 +23,6 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTargetInterfaces.h"
-#include "ExceptionOr.h"
 #include "FormData.h"
 #include "ResourceResponse.h"
 #include "SharedBuffer.h"
@@ -53,6 +52,7 @@ class ThreadableLoader;
 class URLSearchParams;
 class XMLHttpRequestUpload;
 struct OwnedString;
+template<typename> class ExceptionOr;
 
 class XMLHttpRequest final : public ActiveDOMObject, public RefCounted<XMLHttpRequest>, private ThreadableLoaderClient, public XMLHttpRequestEventTarget {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(XMLHttpRequest, WEBCORE_EXPORT);

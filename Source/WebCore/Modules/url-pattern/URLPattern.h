@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "URLPatternComponent.h"
 #include "URLPatternInit.h"
 #include <wtf/Forward.h>
@@ -39,6 +38,8 @@ namespace WebCore {
 class ScriptExecutionContext;
 struct URLPatternOptions;
 struct URLPatternResult;
+template<typename> class ExceptionOr;
+
 enum class BaseURLStringType : bool { Pattern, URL };
 
 namespace URLPatternUtilities {

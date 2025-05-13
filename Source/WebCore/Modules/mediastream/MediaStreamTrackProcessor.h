@@ -26,7 +26,6 @@
 
 #if ENABLE(MEDIA_STREAM) && ENABLE(WEB_CODECS)
 
-#include "ExceptionOr.h"
 #include "MediaStreamTrack.h"
 #include "ReadableStreamSource.h"
 #include "RealtimeMediaSource.h"
@@ -42,6 +41,7 @@ namespace WebCore {
 class ReadableStream;
 class ScriptExecutionContext;
 class WebCodecsVideoFrame;
+template<typename> class ExceptionOr;
 
 class MediaStreamTrackProcessor
     : public RefCounted<MediaStreamTrackProcessor>

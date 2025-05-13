@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
-#include "ExceptionOr.h"
 #include "IDBCursorDirection.h"
 #include "IDBIndexIdentifier.h"
 #include "IDBKeyPath.h"
@@ -57,6 +56,8 @@ class WeakPtrImplWithEventTargetData;
 class WebCoreOpaqueRoot;
 
 struct IDBKeyRangeData;
+
+template<typename> class ExceptionOr;
 
 namespace IndexedDB {
 enum class ObjectStoreOverwriteMode : uint8_t;

@@ -29,7 +29,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "GetComposedRangesOptions.h"
 #include "LocalDOMWindowProperty.h"
 #include <wtf/Forward.h>
@@ -46,6 +45,8 @@ class StaticRange;
 class VisibleSelection;
 
 struct SimpleRange;
+
+template<typename> class ExceptionOr;
 
 class DOMSelection : public RefCounted<DOMSelection>, public LocalDOMWindowProperty {
 public:

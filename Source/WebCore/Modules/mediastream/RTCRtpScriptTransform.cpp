@@ -30,6 +30,7 @@
 
 #include "ErrorEvent.h"
 #include "EventNames.h"
+#include "ExceptionOr.h"
 #include "JSDOMGlobalObject.h"
 #include "MessageChannel.h"
 #include "RTCRtpScriptTransformer.h"

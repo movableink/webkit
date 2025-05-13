@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "JSDOMGlobalObject.h"
 #include "JSValueInWrappedObject.h"
 #include <JavaScriptCore/Strong.h>
@@ -39,6 +38,7 @@ class InternalWritableStream;
 class JSDOMGlobalObject;
 class ReadableStream;
 class WritableStream;
+template<typename> class ExceptionOr;
 
 class TransformStream : public RefCounted<TransformStream> {
 public:

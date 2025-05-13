@@ -27,6 +27,7 @@
 #include "WebFakeXRInputController.h"
 
 #if ENABLE(WEBXR)
+#include "ExceptionOr.h"
 #include "WebFakeXRDevice.h"
 #include "XRHandJoint.h"
 #include <ranges>

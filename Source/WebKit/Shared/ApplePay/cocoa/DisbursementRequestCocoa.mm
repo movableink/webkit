@@ -37,6 +37,7 @@
 
 #import <pal/spi/cocoa/PassKitSPI.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/URL.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
 #import <pal/cocoa/PassKitSoftLink.h>

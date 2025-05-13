@@ -55,6 +55,7 @@
 #include "CSSValuePool.h"
 #include "CSSVariableData.h"
 #include "CSSVariableReferenceValue.h"
+#include "ExceptionOr.h"
 #include "RenderStyle.h"
 #include "StylePropertiesInlines.h"
 #include "StylePropertyShorthand.h"

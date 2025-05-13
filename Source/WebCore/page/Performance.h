@@ -36,7 +36,6 @@
 #include "DOMHighResTimeStamp.h"
 #include "EventTarget.h"
 #include "EventTargetInterfaces.h"
-#include "ExceptionOr.h"
 #include "ReducedResolutionSeconds.h"
 #include "ScriptExecutionContext.h"
 #include "Timer.h"
@@ -67,6 +66,7 @@ class ResourceTiming;
 class ScriptExecutionContext;
 struct PerformanceMarkOptions;
 struct PerformanceMeasureOptions;
+template<typename> class ExceptionOr;
 
 class Performance final : public RefCounted<Performance>, public ContextDestructionObserver, public EventTarget {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Performance);

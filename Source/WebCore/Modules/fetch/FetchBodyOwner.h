@@ -30,7 +30,6 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
-#include "ExceptionOr.h"
 #include "FetchBody.h"
 #include "FetchBodySource.h"
 #include "FetchHeaders.h"
@@ -42,6 +41,8 @@
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FetchBodyOwner);
 

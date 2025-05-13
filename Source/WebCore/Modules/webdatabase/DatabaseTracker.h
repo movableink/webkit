@@ -30,7 +30,6 @@
 
 #include "DatabaseDetails.h"
 #include "DatabaseManagerClient.h"
-#include "ExceptionOr.h"
 #include "SQLiteDatabase.h"
 #include "SecurityOriginData.h"
 #include "SecurityOriginHash.h"
@@ -50,6 +49,7 @@ class DatabaseManagerClient;
 class OriginLock;
 class SecurityOrigin;
 class SecurityOriginData;
+template<typename> class ExceptionOr;
 
 enum class CurrentQueryBehavior { Interrupt, RunToCompletion };
 

@@ -26,13 +26,13 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "FloatPoint.h"
 
 namespace WebCore {
 
 class Gradient;
 class ScriptExecutionContext;
+template<typename> class ExceptionOr;
 
 class CanvasGradient : public RefCounted<CanvasGradient> {
 public:

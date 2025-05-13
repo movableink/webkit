@@ -29,7 +29,6 @@
 
 #include "AuthenticationResponseJSON.h"
 #include "BasicCredential.h"
-#include "ExceptionOr.h"
 #include "IDLTypes.h"
 #include "RegistrationResponseJSON.h"
 #include <wtf/Forward.h>
@@ -39,6 +38,7 @@ namespace WebCore {
 enum class AuthenticatorAttachment : uint8_t;
 class AuthenticatorResponse;
 class Document;
+
 typedef IDLRecord<IDLDOMString, IDLBoolean> PublicKeyCredentialClientCapabilities;
 typedef Variant<RegistrationResponseJSON, AuthenticationResponseJSON> PublicKeyCredentialJSON;
 
@@ -52,6 +52,7 @@ struct AllAcceptedCredentialsOptions;
 struct CurrentUserDetailsOptions;
 
 template<typename IDLType> class DOMPromiseDeferred;
+template<typename> class ExceptionOr;
 
 class PublicKeyCredential final : public BasicCredential {
 public:

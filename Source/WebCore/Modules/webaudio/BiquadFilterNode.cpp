@@ -28,6 +28,7 @@
 #if ENABLE(WEB_AUDIO)
 
 #include "BiquadFilterNode.h"
+#include "ExceptionOr.h"
 #include <JavaScriptCore/Float32Array.h>
 #include <wtf/TZoneMallocInlines.h>
 

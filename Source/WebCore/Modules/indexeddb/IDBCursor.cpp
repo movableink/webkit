@@ -26,6 +26,7 @@
 #include "config.h"
 #include "IDBCursor.h"
 
+#include "ExceptionOr.h"
 #include "IDBBindingUtilities.h"
 #include "IDBDatabase.h"
 #include "IDBGetResult.h"

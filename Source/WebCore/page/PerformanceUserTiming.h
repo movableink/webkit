@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "PerformanceMark.h"
 #include "PerformanceMeasure.h"
 #include <wtf/HashMap.h>
@@ -39,6 +38,7 @@ class JSGlobalObject;
 namespace WebCore {
 
 class Performance;
+template<typename> class ExceptionOr;
 
 using PerformanceEntryMap = UncheckedKeyHashMap<String, Vector<Ref<PerformanceEntry>>>;
 

@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "GPUIntegralTypes.h"
 #include "WebGPUComputePassEncoder.h"
 #include <JavaScriptCore/Uint32Array.h>
@@ -41,6 +40,7 @@ class GPUBindGroup;
 class GPUBuffer;
 class GPUComputePipeline;
 class GPUQuerySet;
+template<typename> class ExceptionOr;
 
 namespace WebGPU {
 class Device;

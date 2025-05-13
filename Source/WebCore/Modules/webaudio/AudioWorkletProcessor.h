@@ -30,7 +30,6 @@
 
 #if ENABLE(WEB_AUDIO)
 #include "AudioArray.h"
-#include "ExceptionOr.h"
 #include "JSValueInWrappedObject.h"
 #include "ScriptWrappable.h"
 #include <wtf/Forward.h>
@@ -54,6 +53,7 @@ class JSCallbackDataStrong;
 class MessagePort;
 class ScriptExecutionContext;
 class WebCoreOpaqueRoot;
+template<typename> class ExceptionOr;
 
 class AudioWorkletProcessor : public ScriptWrappable, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<AudioWorkletProcessor> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AudioWorkletProcessor);

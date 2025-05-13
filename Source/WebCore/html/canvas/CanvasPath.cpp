@@ -37,6 +37,7 @@
 
 #include "AffineTransform.h"
 #include "DOMPointInit.h"
+#include "ExceptionOr.h"
 #include "FloatRect.h"
 #include "FloatRoundedRect.h"
 #include "FloatSize.h"

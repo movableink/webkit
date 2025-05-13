@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "SVGParsingError.h"
 #include "SVGPropertyTraits.h"
 #include <wtf/TZoneMalloc.h>
@@ -32,6 +31,7 @@ class CSSPrimitiveValue;
 class CSSToLengthConversionData;
 class Element;
 class SVGLengthContext;
+template<typename> class ExceptionOr;
 
 enum class SVGLengthType : uint8_t {
     Unknown = 0,

@@ -28,7 +28,6 @@
 #if ENABLE(MEDIA_SESSION)
 
 #include "ActiveDOMObject.h"
-#include "ExceptionOr.h"
 #include "MediaPositionState.h"
 #include "MediaProducer.h"
 #include "MediaSessionAction.h"
@@ -60,8 +59,9 @@ class MediaMetadata;
 class MediaSessionCoordinator;
 class MediaSessionCoordinatorPrivate;
 class Navigator;
-template<typename> class DOMPromiseDeferred;
 struct NowPlayingInfo;
+template<typename> class DOMPromiseDeferred;
+template<typename> class ExceptionOr;
 
 class MediaSessionObserver : public CanMakeWeakPtr<MediaSessionObserver> {
 public:

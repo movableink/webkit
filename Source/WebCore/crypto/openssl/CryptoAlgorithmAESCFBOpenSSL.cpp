@@ -28,6 +28,7 @@
 
 #include "CryptoAlgorithmAesCbcCfbParams.h"
 #include "CryptoKeyAES.h"
+#include "ExceptionOr.h"
 #include "OpenSSLUtilities.h"
 #include <wtf/StdLibExtras.h>
 

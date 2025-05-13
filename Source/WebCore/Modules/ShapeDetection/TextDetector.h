@@ -34,8 +34,9 @@
 
 namespace WebCore {
 
-struct DetectedText;
 class ScriptExecutionContext;
+struct DetectedText;
+template<typename> class ExceptionOr;
 
 class TextDetector : public RefCounted<TextDetector> {
 public:

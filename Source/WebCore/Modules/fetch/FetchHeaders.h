@@ -28,7 +28,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "FetchHeadersGuard.h"
 #include "HTTPHeaderMap.h"
 #include <wtf/HashTraits.h>
@@ -37,6 +36,7 @@
 namespace WebCore {
 
 class ScriptExecutionContext;
+template<typename> class ExceptionOr;
 
 class FetchHeaders : public RefCounted<FetchHeaders> {
 public:

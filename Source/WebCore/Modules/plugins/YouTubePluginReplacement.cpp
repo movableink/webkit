@@ -26,6 +26,7 @@
 #include "config.h"
 #include "YouTubePluginReplacement.h"
 
+#include "ExceptionOr.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLNames.h"
 #include "HTMLPlugInElement.h"

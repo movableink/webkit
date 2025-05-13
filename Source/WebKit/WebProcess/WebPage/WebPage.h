@@ -177,6 +177,7 @@ class DocumentLoader;
 class DocumentSyncData;
 class DragData;
 class WeakPtrImplWithEventTargetData;
+class Exception;
 class FontAttributeChanges;
 class FontChanges;
 class Frame;

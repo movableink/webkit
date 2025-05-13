@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "IDBCursorDirection.h"
 #include "IDBCursorInfo.h"
 #include "IDBKeyPath.h"
@@ -41,6 +40,7 @@ class IDBGetResult;
 class IDBIndex;
 class IDBObjectStore;
 class IDBTransaction;
+template<typename> class ExceptionOr;
 
 class IDBCursor : public ScriptWrappable, public RefCounted<IDBCursor> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(IDBCursor);

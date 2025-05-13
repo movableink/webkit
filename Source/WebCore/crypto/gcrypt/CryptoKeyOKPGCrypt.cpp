@@ -21,6 +21,7 @@
 #include "CryptoKeyOKP.h"
 
 #include "CryptoKeyPair.h"
+#include "ExceptionOr.h"
 #include "GCryptRFC7748.h"
 #include "GCryptRFC8032.h"
 #include "GCryptUtilities.h"

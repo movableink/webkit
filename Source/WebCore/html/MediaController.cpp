@@ -30,6 +30,7 @@
 #if ENABLE(VIDEO)
 
 #include "EventNames.h"
+#include "ExceptionOr.h"
 #include "HTMLMediaElement.h"
 #include "TimeRanges.h"
 #include <pal/system/Clock.h>

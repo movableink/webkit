@@ -31,6 +31,7 @@
 namespace WebCore {
 
 class AudioBus;
+class Exception;
 struct AudioIOPosition;
 
 class AudioDestinationNode : public AudioNode {
