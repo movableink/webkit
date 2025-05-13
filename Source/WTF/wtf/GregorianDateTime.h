@@ -37,7 +37,7 @@ class GregorianDateTime final {
 public:
     GregorianDateTime() = default;
     WTF_EXPORT_PRIVATE explicit GregorianDateTime(double ms, LocalTimeOffset);
-    explicit GregorianDateTime(int year, int month, int yearDay, int monthDay, Weekday weekDay, int hour, int minute, int second, int utcOffsetInMinute, bool isDST)
+    explicit GregorianDateTime(int year, int month, int yearDay, int monthDay, int weekDay, int hour, int minute, int second, int utcOffsetInMinute, bool isDST)
         : m_year(year)
         , m_month(month)
         , m_yearDay(yearDay)
@@ -55,7 +55,7 @@ public:
     inline int month() const { return m_month; }
     inline int yearDay() const { return m_yearDay; }
     inline int monthDay() const { return m_monthDay; }
-    inline Weekday weekDay() const { return m_weekDay; }
+    inline int weekDay() const { return m_weekDay; }
     inline int hour() const { return m_hour; }
     inline int minute() const { return m_minute; }
     inline int second() const { return m_second; }
@@ -66,7 +66,7 @@ public:
     inline void setMonth(int month) { m_month = month; }
     inline void setYearDay(int yearDay) { m_yearDay = yearDay; }
     inline void setMonthDay(int monthDay) { m_monthDay = monthDay; }
-    inline void setWeekDay(Weekday weekDay) { m_weekDay = weekDay; }
+    inline void setWeekDay(int weekDay) { m_weekDay = weekDay; }
     inline void setHour(int hour) { m_hour = hour; }
     inline void setMinute(int minute) { m_minute = minute; }
     inline void setSecond(int second) { m_second = second; }
@@ -95,7 +95,7 @@ public:
         ret.tm_mon = m_month;
         ret.tm_yday = m_yearDay;
         ret.tm_mday = m_monthDay;
-        ret.tm_wday = m_weekDay.c_encoding();
+        ret.tm_wday = m_weekDay;
         ret.tm_hour = m_hour;
         ret.tm_min = m_minute;
         ret.tm_sec = m_second;
@@ -113,7 +113,7 @@ private:
     int m_month { 0 };
     int m_yearDay { 0 };
     int m_monthDay { 0 };
-    Weekday m_weekDay { 0 };
+    int m_weekDay { 0 };
     int m_hour { 0 };
     int m_minute { 0 };
     int m_second { 0 };

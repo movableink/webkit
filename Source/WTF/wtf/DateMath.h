@@ -47,7 +47,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <time.h>
-#include <wtf/StdLibExtras.h>
 #include <wtf/WallTime.h>
 #include <wtf/text/WTFString.h>
 
@@ -56,19 +55,6 @@ namespace WTF {
 enum TimeType {
     UTCTime = 0,
     LocalTime
-};
-
-// FIXME: Replace with std::chrono::weekday once supported by the Playstation port.
-// The API matches std::chrono::weekday to facilitate transition.
-// 0 is Sunday, 1 is Monday, 2 is Tuesday, ...
-class Weekday {
-public:
-    explicit Weekday(unsigned weekday)
-        : m_weekday(static_cast<uint8_t>(weekday == 7 ? 0 : weekday))
-    { }
-    unsigned c_encoding() const { return m_weekday; }
-private:
-    uint8_t m_weekday;
 };
 
 struct LocalTimeOffset {
@@ -95,7 +81,7 @@ WTF_EXPORT_PRIVATE double parseES5Date(std::span<const LChar> dateString, bool& 
 WTF_EXPORT_PRIVATE double parseDate(std::span<const LChar> dateString);
 WTF_EXPORT_PRIVATE double parseDate(std::span<const LChar> dateString, bool& isLocalTime);
 // dayOfWeek: [0, 6] 0 being Monday, day: [1, 31], month: [0, 11], year: ex: 2011, hours: [0, 23], minutes: [0, 59], seconds: [0, 59], utcOffset: [-720,720]. 
-WTF_EXPORT_PRIVATE String makeRFC2822DateString(Weekday dayOfWeek, unsigned day, unsigned month, unsigned year, unsigned hours, unsigned minutes, unsigned seconds, int utcOffset);
+WTF_EXPORT_PRIVATE String makeRFC2822DateString(unsigned dayOfWeek, unsigned day, unsigned month, unsigned year, unsigned hours, unsigned minutes, unsigned seconds, int utcOffset);
 
 inline double jsCurrentTime()
 {
@@ -103,12 +89,11 @@ inline double jsCurrentTime()
     return floor(WallTime::now().secondsSinceEpoch().milliseconds());
 }
 
+extern WTF_EXPORT_PRIVATE const std::array<ASCIILiteral, 7> weekdayName;
 extern WTF_EXPORT_PRIVATE const std::array<ASCIILiteral, 12> monthName;
 extern WTF_EXPORT_PRIVATE const std::array<ASCIILiteral, 12> monthFullName;
 extern WTF_EXPORT_PRIVATE const std::array<std::array<int, 12>, 2> firstDayOfMonth;
 extern WTF_EXPORT_PRIVATE const std::array<int8_t, 12> daysInMonths;
-
-WTF_EXPORT_PRIVATE ASCIILiteral weekdayName(Weekday);
 
 static constexpr double hoursPerDay = 24.0;
 static constexpr double minutesPerHour = 60.0;
@@ -388,18 +373,18 @@ inline int msToSeconds(double ms)
 }
 
 // 0: Sunday, 1: Monday, etc.
-inline Weekday msToWeekDay(double ms)
+inline int msToWeekDay(double ms)
 {
     int wd = (static_cast<int>(msToDays(ms)) + 4) % 7;
     if (wd < 0)
         wd += 7;
-    return Weekday { unsignedCast(wd) };
+    return wd;
 }
 
-inline Weekday weekDay(int32_t days)
+inline int32_t weekDay(int32_t days)
 {
     int32_t result = (days + 4) % 7;
-    return Weekday { unsignedCast(result >= 0 ? result : result + 7) };
+    return result >= 0 ? result : result + 7;
 }
 
 inline int monthFromDayInYear(int dayInYear, bool leapYear)
@@ -483,8 +468,8 @@ inline double timeToMS(double hour, double min, double sec, double ms)
 // ECMA 262 - 15.9.1.9.
 inline int32_t equivalentYear(int32_t year)
 {
-    auto weekDay = WTF::weekDay(daysFromYearMonth(year, 0));
-    int recentYear = (isLeapYear(year) ? 1956 : 1967) + (weekDay.c_encoding() * 12) % 28;
+    int weekDay = WTF::weekDay(daysFromYearMonth(year, 0));
+    int recentYear = (isLeapYear(year) ? 1956 : 1967) + (weekDay * 12) % 28;
     // Find the year in the range 2008..2037 that is equivalent mod 28.
     // Add 3*28 to give a positive argument to the modulus operator.
     return 2008 + (recentYear + 3 * 28 - 2008) % 28;

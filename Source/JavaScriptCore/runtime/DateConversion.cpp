@@ -65,7 +65,7 @@ String formatDateTime(const GregorianDateTime& t, DateTimeFormat format, bool as
     StringBuilder builder;
 
     if (appendDate) {
-        builder.append(WTF::weekdayName(t.weekDay()));
+        builder.append(WTF::weekdayName[(t.weekDay() + 6) % 7]);
 
         if (asUTCVariant) {
             builder.append(", "_s);

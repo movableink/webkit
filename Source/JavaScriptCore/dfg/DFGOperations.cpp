@@ -5028,7 +5028,7 @@ JSC_DEFINE_JIT_OPERATION(operationDateGetDay, EncodedJSValue, (VM* vmPointer, Da
     const GregorianDateTime* gregorianDateTime = date->gregorianDateTime(vm.dateCache);
     if (!gregorianDateTime)
         OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->weekDay().c_encoding())));
+    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->weekDay())));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDateGetUTCDay, EncodedJSValue, (VM* vmPointer, DateInstance* date))
@@ -5041,7 +5041,7 @@ JSC_DEFINE_JIT_OPERATION(operationDateGetUTCDay, EncodedJSValue, (VM* vmPointer,
     const GregorianDateTime* gregorianDateTime = date->gregorianDateTimeUTC(vm.dateCache);
     if (!gregorianDateTime)
         OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->weekDay().c_encoding())));
+    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->weekDay())));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDateGetHours, EncodedJSValue, (VM* vmPointer, DateInstance* date))
