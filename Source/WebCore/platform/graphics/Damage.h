@@ -113,6 +113,14 @@ public:
     ALWAYS_INLINE bool isEmpty() const  { return m_rects.isEmpty(); }
     ALWAYS_INLINE Mode mode() const { return m_mode; }
 
+    Region regionForTesting() const
+    {
+        Region region;
+        for (const auto& rect : m_rects)
+            region.unite(Region { rect });
+        return region;
+    }
+
     // Removes empty and overlapping rects. May clip to grid.
     Rects rectsForPainting() const
     {
@@ -351,26 +359,6 @@ private:
     IntRect m_minimumBoundingRectangle;
 
     friend bool operator==(const Damage&, const Damage&) = default;
-};
-
-class FrameDamageHistory {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    const Vector<Region>& damageInformation() const { return m_damageInfo; }
-
-    void addDamage(const Damage& damage)
-    {
-        Region region;
-        for (const auto& rect : damage.rects()) {
-            Region subRegion(rect);
-            region.unite(subRegion);
-        }
-        m_damageInfo.append(WTFMove(region));
-    }
-
-private:
-    // Use a Region to remove overlaps so that Damage rects are more predictable from the testing perspective.
-    Vector<Region> m_damageInfo;
 };
 
 static inline WTF::TextStream& operator<<(WTF::TextStream& ts, const Damage& damage)

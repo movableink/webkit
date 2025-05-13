@@ -7871,13 +7871,9 @@ ExceptionOr<Vector<Internals::FrameDamage>> Internals::getFrameDamageHistory() c
     if (!document || !document->page())
         return Exception { ExceptionCode::NotSupportedError };
 
-    const auto* damageForTesting = document->page()->chrome().client().damageHistoryForTesting();
-    if (!damageForTesting)
-        return Exception { ExceptionCode::NotSupportedError };
-
     Vector<Internals::FrameDamage> damageDetails;
     size_t sequenceId = 0;
-    for (const auto& region : damageForTesting->damageInformation()) {
+    document->page()->chrome().client().foreachRegionInDamageHistoryForTesting([&](const auto& region) {
         FrameDamage details;
         details.sequenceId = sequenceId++;
 
@@ -7889,7 +7885,7 @@ ExceptionOr<Vector<Internals::FrameDamage>> Internals::getFrameDamageHistory() c
             return DOMRectReadOnly::create(rect.x(), rect.y(), rect.width(), rect.height());
         });
         damageDetails.append(WTFMove(details));
-    }
+    });
 
     return damageDetails;
 }

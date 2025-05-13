@@ -120,6 +120,7 @@ class Node;
 class Page;
 class PopupMenu;
 class PopupMenuClient;
+class Region;
 class RegistrableDomain;
 class SearchPopupMenu;
 class SVGImageElement;
@@ -759,8 +760,7 @@ public:
 
 #if ENABLE(DAMAGE_TRACKING)
     virtual void resetDamageHistoryForTesting() { }
-
-    virtual WebCore::FrameDamageHistory* damageHistoryForTesting() const { return nullptr; }
+    virtual void foreachRegionInDamageHistoryForTesting(Function<void(const Region&)>&&) const { }
 #endif
 
     WEBCORE_EXPORT virtual ~ChromeClient();

@@ -2364,27 +2364,17 @@ void WebChromeClient::resetDamageHistoryForTesting()
     if (!m_page)
         return;
 
-    const auto* drawingArea = m_page->drawingArea();
-    if (!drawingArea)
-        return;
-
-    if (auto* frameDamageForTesting = drawingArea->frameDamageForTesting())
-        frameDamageForTesting->resetFrameDamageHistory();
+    if (auto* drawingArea = m_page->drawingArea())
+        drawingArea->resetDamageHistoryForTesting();
 }
 
-WebCore::FrameDamageHistory* WebChromeClient::damageHistoryForTesting() const
+void WebChromeClient::foreachRegionInDamageHistoryForTesting(Function<void(const Region&)>&& callback) const
 {
     if (!m_page)
-        return nullptr;
+        return;
 
-    const auto* drawingArea = m_page->drawingArea();
-    if (!drawingArea)
-        return nullptr;
-
-    if (const auto* frameDamageForTesting = drawingArea->frameDamageForTesting())
-        return frameDamageForTesting->frameDamageHistory();
-
-    return nullptr;
+    if (const auto* drawingArea = m_page->drawingArea())
+        drawingArea->foreachRegionInDamageHistoryForTesting(WTFMove(callback));
 }
 #endif
 

@@ -660,6 +660,30 @@ void LayerTreeHost::preferredBufferFormatsDidChange()
 }
 #endif
 
+#if ENABLE(DAMAGE_TRACKING)
+void LayerTreeHost::notifyFrameDamageForTesting(Region&& damageRegion)
+{
+    Locker locker { m_frameDamageHistoryForTestingLock };
+    m_frameDamageHistoryForTesting.append(WTFMove(damageRegion));
+}
+
+void LayerTreeHost::resetDamageHistoryForTesting()
+{
+    {
+        Locker locker { m_frameDamageHistoryForTestingLock };
+        m_frameDamageHistoryForTesting.clear();
+    }
+    m_compositor->enableFrameDamageNotificationForTesting();
+}
+
+void LayerTreeHost::foreachRegionInDamageHistoryForTesting(Function<void(const Region&)>&& callback)
+{
+    Locker locker { m_frameDamageHistoryForTestingLock };
+    for (const auto& region : m_frameDamageHistoryForTesting)
+        callback(region);
+}
+#endif
+
 } // namespace WebKit
 
 #endif // USE(COORDINATED_GRAPHICS)

@@ -38,12 +38,17 @@
 #include <WebCore/PlatformScreen.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
+#include <wtf/Lock.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RunLoop.h>
 #include <wtf/TZoneMalloc.h>
 
 #if !HAVE(DISPLAY_LINK)
 #include "ThreadedDisplayRefreshMonitor.h"
+#endif
+
+#if ENABLE(DAMAGE_TRACKING)
+#include <WebCore/Region.h>
 #endif
 
 namespace WebCore {
@@ -132,7 +137,9 @@ public:
 #endif
 
 #if ENABLE(DAMAGE_TRACKING)
-    FrameDamageForTesting* frameDamageForTesting() const { return m_compositor.get(); }
+    void notifyFrameDamageForTesting(WebCore::Region&&);
+    void resetDamageHistoryForTesting();
+    void foreachRegionInDamageHistoryForTesting(Function<void(const WebCore::Region&)>&&);
 #endif
 
 #if PLATFORM(WPE) && USE(GBM) && ENABLE(WPE_PLATFORM)
@@ -224,6 +231,11 @@ private:
 #endif
 
     uint32_t m_compositionRequestID { 0 };
+
+#if ENABLE(DAMAGE_TRACKING)
+    Lock m_frameDamageHistoryForTestingLock;
+    Vector<WebCore::Region> m_frameDamageHistoryForTesting WTF_GUARDED_BY_LOCK(m_frameDamageHistoryForTestingLock);
+#endif
 };
 
 } // namespace WebKit

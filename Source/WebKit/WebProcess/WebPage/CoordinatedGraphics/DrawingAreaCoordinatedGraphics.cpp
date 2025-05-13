@@ -797,9 +797,16 @@ void DrawingAreaCoordinatedGraphics::preferredBufferFormatsDidChange()
 #endif
 
 #if ENABLE(DAMAGE_TRACKING)
-FrameDamageForTesting* DrawingAreaCoordinatedGraphics::frameDamageForTesting() const
+void DrawingAreaCoordinatedGraphics::resetDamageHistoryForTesting()
 {
-    return m_layerTreeHost ? m_layerTreeHost->frameDamageForTesting() : nullptr;
+    if (m_layerTreeHost)
+        m_layerTreeHost->resetDamageHistoryForTesting();
+}
+
+void DrawingAreaCoordinatedGraphics::foreachRegionInDamageHistoryForTesting(Function<void(const Region&)>&& callback) const
+{
+    if (m_layerTreeHost)
+        m_layerTreeHost->foreachRegionInDamageHistoryForTesting(WTFMove(callback));
 }
 #endif
 

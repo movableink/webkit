@@ -562,8 +562,7 @@ private:
 
 #if ENABLE(DAMAGE_TRACKING)
     void resetDamageHistoryForTesting() final;
-
-    WebCore::FrameDamageHistory* damageHistoryForTesting() const final;
+    void foreachRegionInDamageHistoryForTesting(Function<void(const WebCore::Region&)>&& callback) const final;
 #endif
 
     void setNeedsFixedContainerEdgesUpdate() final;

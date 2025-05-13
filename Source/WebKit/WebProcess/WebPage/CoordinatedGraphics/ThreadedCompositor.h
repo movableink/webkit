@@ -43,10 +43,6 @@
 #include "ThreadedDisplayRefreshMonitor.h"
 #endif
 
-#if ENABLE(DAMAGE_TRACKING)
-#include "FrameDamageForTesting.h"
-#endif
-
 namespace WebCore {
 class TextureMapper;
 class TransformationMatrix;
@@ -57,11 +53,7 @@ class AcceleratedSurface;
 class CoordinatedSceneState;
 class LayerTreeHost;
 
-class ThreadedCompositor : public ThreadSafeRefCounted<ThreadedCompositor>, public CanMakeThreadSafeCheckedPtr<ThreadedCompositor>
-#if ENABLE(DAMAGE_TRACKING)
-    , public FrameDamageForTesting
-#endif
-{
+class ThreadedCompositor : public ThreadSafeRefCounted<ThreadedCompositor>, public CanMakeThreadSafeCheckedPtr<ThreadedCompositor> {
     WTF_MAKE_TZONE_ALLOCATED(ThreadedCompositor);
     WTF_MAKE_NONCOPYABLE(ThreadedCompositor);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ThreadedCompositor);
@@ -106,8 +98,7 @@ public:
 
 #if ENABLE(DAMAGE_TRACKING)
     void setDamagePropagation(WebCore::Damage::Propagation);
-    WebCore::FrameDamageHistory* frameDamageHistory() const { return m_frameDamageHistory.get(); }
-    void resetFrameDamageHistory();
+    void enableFrameDamageNotificationForTesting();
 #endif
 
 private:
@@ -165,8 +156,11 @@ private:
     } m_fpsCounter;
 
 #if ENABLE(DAMAGE_TRACKING)
-    WebCore::Damage::Propagation m_damagePropagation { WebCore::Damage::Propagation::None };
-    std::unique_ptr<WebCore::TextureMapperDamageVisualizer> m_damageVisualizer;
+    struct {
+        WebCore::Damage::Propagation propagation { WebCore::Damage::Propagation::None };
+        std::unique_ptr<WebCore::TextureMapperDamageVisualizer> visualizer;
+        std::atomic<bool> shouldNotifyFrameDamageForTesting { false };
+    } m_damage;
 #endif
 
     std::atomic<uint32_t> m_compositionRequestID { 0 };
@@ -181,9 +175,6 @@ private:
     } m_display;
 
     Ref<ThreadedDisplayRefreshMonitor> m_displayRefreshMonitor;
-#endif
-#if ENABLE(DAMAGE_TRACKING)
-    std::unique_ptr<WebCore::FrameDamageHistory> m_frameDamageHistory;
 #endif
 };
 
