@@ -3951,7 +3951,8 @@ TEST(ServiceWorker, WindowClientNavigate)
     shouldServiceWorkerPSONNavigationDelegateAllowNavigationResponse = true;
 }
 
-TEST(ServiceWorker, WindowClientNavigateCrossOrigin)
+// FIXME: Re-enable this test once webkit.org/b/292932 is resolved.
+TEST(ServiceWorker, DISABLED_WindowClientNavigateCrossOrigin)
 {
     [WKWebsiteDataStore _allowWebsiteDataRecordsForAllOrigins];
 

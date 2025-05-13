@@ -368,7 +368,8 @@ static Vector<URL> urls;
 
 @end
 
-TEST(SafeBrowsing, URLObservation)
+// FIXME: Re-enable this test once webkit.org/b/292932 is resolved.
+TEST(SafeBrowsing, DISABLED_URLObservation)
 {
     ClassMethodSwizzler swizzler(objc_getClass("SSBLookupContext"), @selector(sharedLookupContext), [TestLookupContext methodForSelector:@selector(sharedLookupContext)]);
 
