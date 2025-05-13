@@ -3007,15 +3007,9 @@ void RenderBlock::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoint
         inlineContinuation->addFocusRingRects(rects, flooredLayoutPoint(LayoutPoint(additionalOffset + inlineContinuation->containingBlock()->location() - location())), paintContainer);
 }
 
-RenderPtr<RenderBlock> RenderBlock::createAnonymousBlockWithStyleAndDisplay(Document& document, const RenderStyle& style, DisplayType display)
+RenderPtr<RenderBlock> RenderBlock::createAnonymousBlockWithStyle(Document& document, const RenderStyle& style)
 {
-    // FIXME: Do we need to convert all our inline displays to block-type in the anonymous logic ?
-    RenderPtr<RenderBlock> newBox;
-    if (display == DisplayType::Flex || display == DisplayType::InlineFlex)
-        newBox = createRenderer<RenderFlexibleBox>(RenderObject::Type::FlexibleBox, document, RenderStyle::createAnonymousStyleWithDisplay(style, DisplayType::Flex));
-    else
-        newBox = createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, document, RenderStyle::createAnonymousStyleWithDisplay(style, DisplayType::Block));
-    
+    RenderPtr<RenderBlock> newBox = createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, document, RenderStyle::createAnonymousStyleWithDisplay(style, DisplayType::Block));
     newBox->initializeStyle();
     return newBox;
 }
