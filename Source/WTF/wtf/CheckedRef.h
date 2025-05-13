@@ -31,8 +31,6 @@
 #include <wtf/HashTraits.h>
 #include <wtf/RawPtrTraits.h>
 #include <wtf/SingleThreadIntegralWrapper.h>
-#include <wtf/StackTrace.h>
-#include <wtf/text/WTFString.h>
 
 #if ASSERT_ENABLED
 #include <wtf/Threading.h>
