@@ -344,7 +344,7 @@ void RenderBlock::removePositionedObjectsIfNeeded(const RenderStyle& oldStyle, c
         outOfFlowDescendantsHaveNewContainingBlock = hadLayoutContainment && !willHaveLayoutContainment;
     if (outOfFlowDescendantsHaveNewContainingBlock) {
         // Our out-of-flow descendants will be inserted into a new containing block's positioned objects list during the next layout.
-        removePositionedObjects(nullptr, NewContainingBlock);
+        removePositionedObjects({ }, ContainingBlockState::NewContainingBlock);
         return;
     }
 
@@ -362,7 +362,7 @@ void RenderBlock::removePositionedObjectsIfNeeded(const RenderStyle& oldStyle, c
             containingBlock = containingBlock->parent();
         }
         if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(containingBlock))
-            renderBlock->removePositionedObjects(this, NewContainingBlock);
+            renderBlock->removePositionedObjects(this, ContainingBlockState::NewContainingBlock);
     }
 }
 
@@ -1905,42 +1905,54 @@ void RenderBlock::removePositionedObject(const RenderBox& rendererToRemove)
     positionedDescendantsMap().removeDescendant(rendererToRemove);
 }
 
+static inline void markRendererAndParentForLayout(RenderBox& renderer)
+{
+    renderer.setChildNeedsLayout(MarkOnlyThis);
+    if (renderer.needsPreferredWidthsRecalculation())
+        renderer.setPreferredLogicalWidthsDirty(true, MarkOnlyThis);
+    auto* parentBlock = RenderObject::containingBlockForPositionType(PositionType::Static, renderer);
+    if (!parentBlock) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+    // Parent has to be mark for layout to run static positioning on the out-of-flow content.
+    parentBlock->setChildNeedsLayout();
+}
+
 void RenderBlock::removePositionedObjects(const RenderBlock* newContainingBlockCandidate, ContainingBlockState containingBlockState)
 {
     auto* positionedDescendants = positionedObjects();
     if (!positionedDescendants)
         return;
-    
-    Vector<CheckedRef<RenderBox>, 16> renderersToRemove;
-    for (auto& renderer : *positionedDescendants) {
-        if (newContainingBlockCandidate && !renderer.isDescendantOf(newContainingBlockCandidate))
-            continue;
-        renderersToRemove.append(renderer);
-        if (containingBlockState == NewContainingBlock) {
-            renderer.setChildNeedsLayout(MarkOnlyThis);
-            if (renderer.needsPreferredWidthsRecalculation())
-                renderer.setPreferredLogicalWidthsDirty(true, MarkOnlyThis);
-        }
-        // It is the parent block's job to add positioned children to positioned objects list of its containing block.
-        // Dirty the parent to ensure this happens. We also need to make sure the new containing block is dirty as well so
-        // that it gets to these new positioned objects.
-        auto* parent = renderer.parent();
-        while (parent && !is<RenderBlock>(parent))
-            parent = parent->parent();
-        if (parent)
-            parent->setChildNeedsLayout();
 
-        if (renderer.isFixedPositioned())
-            view().setNeedsLayout();
-        else if (auto* newContainingBlock = containingBlock()) {
-            // During style change, at this point the renderer's containing block is still "this" renderer, and "this" renderer is still positioned.
-            // FIXME: During subtree moving, this is mostly invalid but either the subtree is detached (we don't even get here) or renderers
-            // are already marked dirty.
-            for (; newContainingBlock && !newContainingBlock->canContainAbsolutelyPositionedObjects(); newContainingBlock = newContainingBlock->containingBlock()) { }
-            if (newContainingBlock)
-                newContainingBlock->setNeedsLayout();
+    Vector<CheckedRef<RenderBox>, 16> renderersToRemove;
+    if (!newContainingBlockCandidate) {
+        // We don't form containing block for these boxes anymore (either through style change or internal render tree shuffle)
+        for (auto& renderer : *positionedDescendants) {
+            renderersToRemove.append(renderer);
+
+            markRendererAndParentForLayout(renderer);
+            auto markNewContainingBlockForLayout = [&] {
+                auto isAbsolutePositioned = renderer.isAbsolutelyPositioned();
+                // During style change we can't tell which ancestor is going to be the final containing block, so let's just mark the new candidate dirty.
+                auto* newContainingBlock = containingBlock();
+                for (; newContainingBlock && (isAbsolutePositioned ? !newContainingBlock->canContainAbsolutelyPositionedObjects() : newContainingBlock->canContainFixedPositionObjects()); newContainingBlock = newContainingBlock->containingBlock()) { }
+                if (newContainingBlock)
+                    newContainingBlock->setNeedsLayout();
+            };
+            markNewContainingBlockForLayout();
         }
-    }
+    } else if (containingBlockState == ContainingBlockState::NewContainingBlock) {
+        // Some of the positioned boxes are getting transferred over to newContainingBlockCandidate.
+        for (auto& renderer : *positionedDescendants) {
+            if (!renderer.isDescendantOf(newContainingBlockCandidate))
+                continue;
+            renderersToRemove.append(renderer);
+            markRendererAndParentForLayout(renderer);
+        }
+    } else
+        ASSERT_NOT_REACHED();
+
     for (auto& renderer : renderersToRemove)
         removePositionedObject(renderer);
 }

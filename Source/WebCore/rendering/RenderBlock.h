@@ -43,7 +43,6 @@ struct RenderBlockRareData;
 using TrackedRendererListHashSet = SingleThreadWeakListHashSet<RenderBox>;
 
 enum CaretType { CursorCaret, DragCaret };
-enum ContainingBlockState { NewContainingBlock, SameContainingBlock };
 enum class RelayoutChildren : bool { No, Yes };
 
 enum TextRunFlag {
@@ -79,7 +78,8 @@ public:
 
     void insertPositionedObject(RenderBox&);
     static void removePositionedObject(const RenderBox&);
-    void removePositionedObjects(const RenderBlock*, ContainingBlockState = SameContainingBlock);
+    enum class ContainingBlockState : bool { NewContainingBlock, SameContainingBlock };
+    void removePositionedObjects(const RenderBlock*, ContainingBlockState = ContainingBlockState::SameContainingBlock);
 
     TrackedRendererListHashSet* positionedObjects() const;
     bool hasPositionedObjects() const
