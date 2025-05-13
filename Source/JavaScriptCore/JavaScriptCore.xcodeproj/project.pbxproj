@@ -6783,7 +6783,7 @@
 			isa = PBXGroup;
 			children = (
 				652A3A1A1651A92400A80AFE /* ARM64 */,
-				E33D1FE7277F303F00A45FBB /* Zydis */,
+				E33D1FE7277F303F00A45FBB /* zydis */,
 				652A3A201651C66100A80AFE /* ARM64Disassembler.cpp */,
 				0F9D336E165DBB8D005AD387 /* Disassembler.cpp */,
 				0FF4272F158EBD44004CB9FF /* Disassembler.h */,
@@ -10111,7 +10111,7 @@
 			path = codegen;
 			sourceTree = "<group>";
 		};
-		E33D1FE7277F303F00A45FBB /* Zydis */ = {
+		E33D1FE7277F303F00A45FBB /* zydis */ = {
 			isa = PBXGroup;
 			children = (
 				E390287B2DD1E7CD0083D675 /* Zydis.c */,
@@ -10119,8 +10119,8 @@
 				E390287A2DD1E7CD0083D675 /* Zydis.h */,
 				E3B4683E2DD25DFC00F7DBBF /* Zydis.h.inc */,
 			);
-			name = Zydis;
-			path = disassembler/zydis/Zydis;
+			name = zydis;
+			path = disassembler/zydis;
 			sourceTree = "<group>";
 		};
 		E3FF752D1D9CE9EA00C7E16D /* domjit */ = {
