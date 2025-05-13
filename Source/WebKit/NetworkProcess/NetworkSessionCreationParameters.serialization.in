@@ -77,7 +77,6 @@ enum class WebKit::AllowsCellularAccess : bool;
     String webPushMachServiceName;
     String webPushPartitionString;
     bool enablePrivateClickMeasurementDebugMode;
-    bool isBlobRegistryTopOriginPartitioningEnabled;
     bool isOptInCookiePartitioningEnabled;
     bool shouldSendPrivateTokenIPCForTesting;
     uint64_t cookiesVersion;

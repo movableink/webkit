@@ -1502,12 +1502,6 @@ void NetworkProcess::setPrivateClickMeasurementDebugMode(PAL::SessionID sessionI
         session->setPrivateClickMeasurementDebugMode(enabled);
 }
 
-void NetworkProcess::setBlobRegistryTopOriginPartitioningEnabled(PAL::SessionID sessionID, bool enabled) const
-{
-    if (auto* session = networkSession(sessionID))
-        session->setBlobRegistryTopOriginPartitioningEnabled(enabled);
-}
-
 void NetworkProcess::setShouldSendPrivateTokenIPCForTesting(PAL::SessionID sessionID, bool enabled) const
 {
     if (auto* session = networkSession(sessionID))

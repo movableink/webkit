@@ -212,7 +212,6 @@ NetworkSession::NetworkSession(NetworkProcess& networkProcess, const NetworkSess
 
     setTrackingPreventionEnabled(parameters.resourceLoadStatisticsParameters.enabled);
 
-    setBlobRegistryTopOriginPartitioningEnabled(parameters.isBlobRegistryTopOriginPartitioningEnabled);
     setShouldSendPrivateTokenIPCForTesting(parameters.shouldSendPrivateTokenIPCForTesting);
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
     setOptInCookiePartitioningEnabled(parameters.isOptInCookiePartitioningEnabled);
@@ -532,12 +531,6 @@ void NetworkSession::setPrivateClickMeasurementDebugMode(bool enabled)
 void NetworkSession::firePrivateClickMeasurementTimerImmediatelyForTesting()
 {
     m_privateClickMeasurement->startTimerImmediatelyForTesting();
-}
-
-void NetworkSession::setBlobRegistryTopOriginPartitioningEnabled(bool enabled)
-{
-    RELEASE_LOG(Storage, "NetworkSession::setBlobRegistryTopOriginPartitioningEnabled as %" PUBLIC_LOG_STRING " for session %" PRIu64, enabled ? "enabled" : "disabled", m_sessionID.toUInt64());
-    m_blobRegistry.setPartitioningEnabled(enabled);
 }
 
 void NetworkSession::setShouldSendPrivateTokenIPCForTesting(bool enabled)

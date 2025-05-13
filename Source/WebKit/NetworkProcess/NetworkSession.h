@@ -242,7 +242,6 @@ public:
     void setPrivateClickMeasurementDebugMode(bool);
     bool privateClickMeasurementDebugModeEnabled() const { return m_privateClickMeasurementDebugModeEnabled; }
 
-    void setBlobRegistryTopOriginPartitioningEnabled(bool);
     void setShouldSendPrivateTokenIPCForTesting(bool);
     bool shouldSendPrivateTokenIPCForTesting() const { return m_shouldSendPrivateTokenIPCForTesting; }
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)

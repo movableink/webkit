@@ -2013,15 +2013,6 @@ void WebsiteDataStore::setPrivateTokenIPCForTesting(bool enabled)
     protectedNetworkProcess()->send(Messages::NetworkProcess::SetShouldSendPrivateTokenIPCForTesting(sessionID(), enabled), 0);
 }
 
-bool WebsiteDataStore::isBlobRegistryPartitioningEnabled() const
-{
-    return std::ranges::any_of(m_processes, [](auto& process) {
-        return std::ranges::any_of(process.pages(), [](auto& page) {
-            return page->preferences().blobRegistryTopOriginPartitioningEnabled();
-        });
-    });
-}
-
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
 bool WebsiteDataStore::isOptInCookiePartitioningEnabled() const
 {
@@ -2035,19 +2026,12 @@ bool WebsiteDataStore::isOptInCookiePartitioningEnabled() const
 
 void WebsiteDataStore::propagateSettingUpdates()
 {
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
     RefPtr networkProcess = networkProcessIfExists();
     if (!networkProcess)
         return;
 
-    bool enabled = isBlobRegistryPartitioningEnabled();
-    if (m_isBlobRegistryPartitioningEnabled != enabled) {
-        m_isBlobRegistryPartitioningEnabled = enabled;
-        // FIXME: Send these updates in a single message.
-        networkProcess->send(Messages::NetworkProcess::SetBlobRegistryTopOriginPartitioningEnabled(sessionID(), enabled), 0);
-    }
-
-#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
-    enabled = isOptInCookiePartitioningEnabled();
+    bool enabled = isOptInCookiePartitioningEnabled();
     if (m_isOptInCookiePartitioningEnabled != enabled && trackingPreventionEnabled()) {
         m_isOptInCookiePartitioningEnabled = enabled;
         networkProcess->send(Messages::NetworkProcess::SetOptInCookiePartitioningEnabled(sessionID(), enabled), 0);
@@ -2187,7 +2171,6 @@ WebsiteDataStoreParameters WebsiteDataStore::parameters()
     networkSessionParameters.pcmMachServiceName = m_configuration->pcmMachServiceName();
     networkSessionParameters.webPushMachServiceName = m_configuration->webPushMachServiceName();
     networkSessionParameters.webPushPartitionString = m_configuration->webPushPartitionString();
-    networkSessionParameters.isBlobRegistryTopOriginPartitioningEnabled = isBlobRegistryPartitioningEnabled();
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
     networkSessionParameters.isOptInCookiePartitioningEnabled = isOptInCookiePartitioningEnabled();
 #endif

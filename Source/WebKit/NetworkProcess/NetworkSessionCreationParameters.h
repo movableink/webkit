@@ -103,7 +103,6 @@ struct NetworkSessionCreationParameters {
     String webPushMachServiceName;
     String webPushPartitionString;
     bool enablePrivateClickMeasurementDebugMode { false };
-    bool isBlobRegistryTopOriginPartitioningEnabled { false };
     bool isOptInCookiePartitioningEnabled { false };
     bool shouldSendPrivateTokenIPCForTesting { false };
     uint64_t cookiesVersion { 0 };
