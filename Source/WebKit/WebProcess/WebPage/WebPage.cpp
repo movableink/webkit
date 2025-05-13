@@ -4962,8 +4962,11 @@ void WebPage::willCommitLayerTree(RemoteLayerTreeTransaction& layerTransaction, 
     layerTransaction.setThemeColor(page->themeColor());
     layerTransaction.setPageExtendedBackgroundColor(page->pageExtendedBackgroundColor());
     layerTransaction.setSampledPageTopColor(page->sampledPageTopColor());
-    if (std::exchange(m_needsFixedContainerEdgesUpdate, false))
-        layerTransaction.setFixedContainerEdges(frameView->fixedContainerEdges(sidesRequiringFixedContainerEdges()));
+    if (std::exchange(m_needsFixedContainerEdgesUpdate, false)) {
+        auto fixedContainerEdges = frameView->fixedContainerEdges(sidesRequiringFixedContainerEdges());
+        protectedCorePage()->setLastTopFixedContainerColor(fixedContainerEdges.predominantColor(BoxSide::Top));
+        layerTransaction.setFixedContainerEdges(WTFMove(fixedContainerEdges));
+    }
 
     layerTransaction.setBaseLayoutViewportSize(frameView->baseLayoutViewportSize());
     layerTransaction.setMinStableLayoutViewportOrigin(frameView->minStableLayoutViewportOrigin());

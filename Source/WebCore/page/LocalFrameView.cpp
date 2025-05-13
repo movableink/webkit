@@ -1926,7 +1926,22 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
     if (!page)
         return { };
 
-    if (!hasViewportConstrainedObjects())
+    bool mayUseSampledTopColor = [&] {
+        if (scrollPosition().y() > minimumScrollPosition().y())
+            return false;
+
+        auto lastColor = page->lastTopFixedContainerColor();
+        if (!lastColor.isVisible())
+            return false;
+
+        auto sampledTopColor = page->sampledPageTopColor();
+        if (!sampledTopColor.isVisible())
+            return false;
+
+        return PageColorSampler::colorsAreSimilar(lastColor, sampledTopColor);
+    }();
+
+    if (!hasViewportConstrainedObjects() && !mayUseSampledTopColor)
         return { };
 
     RefPtr document = m_frame->document();
@@ -1938,7 +1953,6 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
     static constexpr auto sampleRectThickness = 2;
     static constexpr auto sampleRectMargin = 4;
     static constexpr auto thinBorderWidth = 10;
-    static constexpr auto minimumCoverageForLeftAndRightSides = 0.5;
 
     struct FixedContainerResult {
         RefPtr<Element> container;
@@ -1953,6 +1967,24 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
         fixedRect.intersect(view->unscaledDocumentRect());
     fixedRect.contract({ sampleRectMargin });
     unclampedFixedRect.contract({ sampleRectMargin });
+
+    auto lengthOnSide = [](BoxSide side, const LayoutRect& rect) -> LayoutUnit {
+        switch (side) {
+        case BoxSide::Top:
+        case BoxSide::Bottom:
+            return rect.width();
+        case BoxSide::Right:
+        case BoxSide::Left:
+            return rect.height();
+        }
+        return { };
+    };
+
+    auto isNearlyViewportSized = [&](BoxSide side, const RenderObject& renderer) {
+        static constexpr auto minimumRatio = 0.8;
+        auto elementRect = enclosingLayoutRect(renderer.absoluteBoundingBoxRect());
+        return lengthOnSide(side, elementRect) > minimumRatio * lengthOnSide(side, fixedRect);
+    };
 
     auto midpointOnSide = [&](BoxSide side, const LayoutRect& rect) -> LayoutPoint {
         switch (side) {
@@ -2012,7 +2044,7 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
         return { hitTestRect };
     };
 
-    auto primaryBackgroundColorForRenderer = [](const RenderElement& renderer) -> Color {
+    auto primaryBackgroundColorForRenderer = [&](BoxSide side, const RenderElement& renderer) -> Color {
         CheckedPtr box = dynamicDowncast<RenderBox>(renderer);
         if (!box)
             return { };
@@ -2025,6 +2057,9 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
 
         auto& styleColor = renderer.style().backgroundColor();
         if (!styleColor.isResolvedColor())
+            return { };
+
+        if (!isNearlyViewportSized(side, renderer))
             return { };
 
         return styleColor.resolvedColor();
@@ -2056,9 +2091,7 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
         }
 
         if (side == BoxSide::Left || side == BoxSide::Right) {
-            FloatRect fixedRectEdge = computeSampleRectIgnoringBorderWidth(fixedRect, side);
-            FloatRect intersectionRect = intersection(fixedRectEdge, renderer.absoluteBoundingBoxRect());
-            if (intersectionRect.area() / fixedRectEdge.area() < minimumCoverageForLeftAndRightSides)
+            if (!isNearlyViewportSized(side, renderer))
                 return TooSmall;
         }
 
@@ -2108,15 +2141,14 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
         for (CheckedRef ancestor : lineageOfType<RenderElement>(*renderer)) {
             if (ancestor->hasBackdropFilter())
                 foundBackdropFilter = true;
-            else if (auto color = primaryBackgroundColorForRenderer(ancestor); color.isVisible()) {
+            else if (auto color = primaryBackgroundColorForRenderer(side, ancestor); color.isVisible()) {
                 if (!primaryBackgroundColor.isVisible())
                     primaryBackgroundColor = WTFMove(color);
                 else if (primaryBackgroundColor != color)
                     hasMultipleBackgroundColors = true;
             }
 
-            auto candidateResult = containerEdgeCandidateResult(side, ancestor);
-            switch (candidateResult) {
+            switch (containerEdgeCandidateResult(side, ancestor)) {
             case NoLayer:
             case NotFixedOrSticky:
             case IsScrollable:
@@ -2219,6 +2251,31 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
 
         edges.colors.setAt(side, PageColorSampler::predominantColor(*page, computeSamplingRect(result.container->renderStyle(), side)));
     }
+
+    auto edgeColorFromSampledTopColor = [&] -> std::optional<Color> {
+        if (scrollPosition().y() > minimumScrollPosition().y())
+            return { };
+
+        auto lastColor = page->lastTopFixedContainerColor();
+        if (!lastColor.isVisible())
+            return { };
+
+        auto sampledTopColor = page->sampledPageTopColor();
+        if (!sampledTopColor.isVisible())
+            return { };
+
+        auto newColor = edges.predominantColor(BoxSide::Top);
+        if (newColor.isVisible() && !PageColorSampler::colorsAreSimilar(newColor, sampledTopColor))
+            return { };
+
+        if (!PageColorSampler::colorsAreSimilar(lastColor, sampledTopColor))
+            return { };
+
+        return sampledTopColor;
+    };
+
+    if (auto color = edgeColorFromSampledTopColor())
+        edges.colors.setAt(BoxSide::Top, WTFMove(*color));
 
     return edges;
 }

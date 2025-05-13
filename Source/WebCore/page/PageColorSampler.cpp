@@ -279,6 +279,15 @@ std::optional<Color> PageColorSampler::sampleTop(Page& page)
         return averageColor(std::span(samples));
 }
 
+bool PageColorSampler::colorsAreSimilar(const Color& a, const Color& b)
+{
+    static constexpr auto maxDistanceSquaredForSimilarColors = 36;
+    auto [redA, greenA, blueA, alphaA] = a.toResolvedColorComponentsInColorSpace(DestinationColorSpace::SRGB());
+    auto [redB, greenB, blueB, alphaB] = b.toResolvedColorComponentsInColorSpace(DestinationColorSpace::SRGB());
+    auto distance = pow(255 * (redA - redB), 2) + pow(255 * (greenA - greenB), 2) + pow(255 * (blueA - blueB), 2);
+    return distance <= maxDistanceSquaredForSimilarColors;
+}
+
 Variant<PredominantColorType, Color> PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteRect)
 {
     RefPtr frame = page.localMainFrame();
@@ -311,7 +320,7 @@ Variant<PredominantColorType, Color> PageColorSampler::predominantColor(Page& pa
         return PredominantColorType::None;
 
     static constexpr auto sampleCount = 29;
-    static constexpr auto minimumSampleCountForPredominantColor = 0.5 * sampleCount;
+    static constexpr auto minimumSampleCountForPredominantColor = 0.67 * sampleCount;
     static constexpr auto bytesPerPixel = 4;
 
     auto isNearlyTransparent = [](const Color& color) {
@@ -345,14 +354,6 @@ Variant<PredominantColorType, Color> PageColorSampler::predominantColor(Page& pa
             return { WTFMove(color) };
         }
     }
-
-    auto colorsAreSimilar = [](const Color& a, const Color& b) {
-        static constexpr auto maxDistanceSquaredForSimilarColors = 36;
-        auto [redA, greenA, blueA, alphaA] = a.toResolvedColorComponentsInColorSpace(DestinationColorSpace::SRGB());
-        auto [redB, greenB, blueB, alphaB] = b.toResolvedColorComponentsInColorSpace(DestinationColorSpace::SRGB());
-        auto distance = pow(255 * (redA - redB), 2) + pow(255 * (greenA - greenB), 2) + pow(255 * (blueA - blueB), 2);
-        return distance <= maxDistanceSquaredForSimilarColors;
-    };
 
     using PairType = std::pair<Color, unsigned>;
     Vector<PairType> colorsByDescendingFrequency;

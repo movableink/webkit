@@ -887,6 +887,9 @@ public:
     WEBCORE_EXPORT Color pageExtendedBackgroundColor() const;
     WEBCORE_EXPORT Color sampledPageTopColor() const;
 
+    void setLastTopFixedContainerColor(Color&& color) { m_lastTopFixedContainerColor = WTFMove(color); }
+    Color lastTopFixedContainerColor() const { return m_lastTopFixedContainerColor; }
+
 #if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
     WEBCORE_EXPORT std::optional<SpatialBackdropSource> spatialBackdropSource() const;
 #endif
@@ -1681,6 +1684,7 @@ private:
 
     Color m_underPageBackgroundColorOverride;
     std::optional<Color> m_sampledPageTopColor;
+    Color m_lastTopFixedContainerColor;
 
     const bool m_httpsUpgradeEnabled { true };
     mutable Markable<MediaSessionGroupIdentifier> m_mediaSessionGroupIdentifier;

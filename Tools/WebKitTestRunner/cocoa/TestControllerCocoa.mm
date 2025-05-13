@@ -343,6 +343,14 @@ void TestController::platformCreateWebView(WKPageConfigurationRef, const TestOpt
             [copiedConfiguration _setContentSecurityPolicyModeForExtension:_WKContentSecurityPolicyModeForExtensionManifestV3];
     }
 
+    static constexpr auto sampledPageTopColorMaxDifference = 30;
+    static constexpr auto sampledPageTopColorMinHeight = 5;
+    [copiedConfiguration _setSampledPageTopColorMaxDifference:options.pageTopColorSamplingEnabled() ? sampledPageTopColorMaxDifference : 0];
+    [copiedConfiguration _setSampledPageTopColorMinHeight:options.pageTopColorSamplingEnabled() ? sampledPageTopColorMinHeight : 0];
+#if HAVE(INLINE_PREDICTIONS)
+    [copiedConfiguration setAllowsInlinePredictions:options.allowsInlinePredictions()];
+#endif
+
     configureWebpagePreferences(copiedConfiguration.get(), options);
 
     auto applicationManifest = options.applicationManifest();
@@ -717,9 +725,6 @@ void TestController::configureWebpagePreferences(WKWebViewConfiguration *configu
     [webpagePreferences setPreferredContentMode:contentMode(options)];
 #endif
     configuration.defaultWebpagePreferences = webpagePreferences.get();
-#if HAVE(INLINE_PREDICTIONS)
-    configuration.allowsInlinePredictions = options.allowsInlinePredictions();
-#endif
 }
 
 WKRetainPtr<WKStringRef> TestController::takeViewPortSnapshot()

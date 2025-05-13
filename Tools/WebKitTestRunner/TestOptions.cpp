@@ -215,6 +215,7 @@ const TestFeatures& TestOptions::defaults()
             { "useHardwareKeyboardMode", false },
             { "enableMetalDebugDevice", false },
             { "enableMetalShaderValidation", false },
+            { "pageTopColorSamplingEnabled", false },
         };
         features.doubleTestRunnerFeatures = {
             { "contentInset.top", 0 },
@@ -290,6 +291,7 @@ const std::unordered_map<std::string, TestHeaderKeyType>& TestOptions::keyTypeMa
         { "useHardwareKeyboardMode", TestHeaderKeyType::BoolTestRunner },
         { "enableMetalDebugDevice", TestHeaderKeyType::BoolTestRunner },
         { "enableMetalShaderValidation", TestHeaderKeyType::BoolTestRunner },
+        { "pageTopColorSamplingEnabled", TestHeaderKeyType::BoolTestRunner },
 
         { "contentInset.top", TestHeaderKeyType::DoubleTestRunner },
         { "obscuredInset.top", TestHeaderKeyType::DoubleTestRunner },

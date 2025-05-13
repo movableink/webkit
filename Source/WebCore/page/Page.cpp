@@ -1821,6 +1821,8 @@ void Page::didCommitLoad()
         geolocationController->didNavigatePage();
 #endif
 
+    m_lastTopFixedContainerColor = { };
+
     m_elementTargetingController->reset();
 
     m_reportedScriptsWithTelemetry.clear();
