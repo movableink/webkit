@@ -3535,9 +3535,13 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
 
     case NewRegExpUntyped: {
         ASSERT(node->structure()->classInfoForCells() == RegExpObject::info());
-        if (node->child1().useKind() != StringUse || node->child2().useKind() != StringUse)
-            clobberWorld();
-        setForNode(node, node->structure());
+        if (node->child1().useKind() == StringUse && node->child2().useKind() == StringUse) {
+            setForNode(node, node->structure());
+            break;
+        }
+
+        clobberWorld();
+        makeHeapTopForNode(node);
         break;
     }
 
