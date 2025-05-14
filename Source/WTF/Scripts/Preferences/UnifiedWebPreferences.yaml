@@ -1272,20 +1272,6 @@ CSSLineFitEdgeEnabled:
     WebCore:
       default: false
 
-CSSMarginTrimEnabled:
-  type: bool
-  status: stable
-  category: css
-  humanReadableName: "CSS margin-trim property"
-  humanReadableDescription: "Enable margin-trim CSS property"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 CSSMediaProgressFunctionEnabled:
   type: bool
   category: css
