@@ -290,7 +290,7 @@ struct FastMalloc {
 
     static constexpr ALWAYS_INLINE size_t nextCapacity(size_t capacity)
     {
-        return capacity + capacity / 4 + 1;
+        return std::max(capacity + capacity / 2, capacity + 1);
     }
 
     using CompactMalloc = FastCompactMalloc;
@@ -342,7 +342,7 @@ struct FastCompactMalloc {
 
     static constexpr ALWAYS_INLINE size_t nextCapacity(size_t capacity)
     {
-        return capacity + capacity / 4 + 1;
+        return std::max(capacity + capacity / 2, capacity + 1);
     }
 };
 
