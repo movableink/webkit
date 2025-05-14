@@ -99,7 +99,7 @@ void PlaybackSessionInterfaceContext::playbackStartedTimeChanged(double playback
         manager->playbackStartedTimeChanged(m_contextId, playbackStartedTime);
 }
 
-void PlaybackSessionInterfaceContext::seekableRangesChanged(const WebCore::PlatformTimeRanges& ranges, double lastModifiedTime, double liveUpdateInterval)
+void PlaybackSessionInterfaceContext::seekableRangesChanged(const WebCore::TimeRanges& ranges, double lastModifiedTime, double liveUpdateInterval)
 {
     if (RefPtr manager = m_manager.get())
         manager->seekableRangesChanged(m_contextId, ranges, lastModifiedTime, liveUpdateInterval);
@@ -412,9 +412,15 @@ void PlaybackSessionManager::rateChanged(PlaybackSessionContextIdentifier contex
     m_page->send(Messages::PlaybackSessionManagerProxy::RateChanged(contextId, playbackState, playbackRate, defaultPlaybackRate));
 }
 
-void PlaybackSessionManager::seekableRangesChanged(PlaybackSessionContextIdentifier contextId, const WebCore::PlatformTimeRanges& timeRanges, double lastModifiedTime, double liveUpdateInterval)
+void PlaybackSessionManager::seekableRangesChanged(PlaybackSessionContextIdentifier contextId, const WebCore::TimeRanges& timeRanges, double lastModifiedTime, double liveUpdateInterval)
 {
-    m_page->send(Messages::PlaybackSessionManagerProxy::SeekableRangesVectorChanged(contextId, timeRanges, lastModifiedTime, liveUpdateInterval));
+    Vector<std::pair<double, double>> rangesVector;
+    for (unsigned i = 0; i < timeRanges.length(); i++) {
+        double start = timeRanges.ranges().start(i).toDouble();
+        double end = timeRanges.ranges().end(i).toDouble();
+        rangesVector.append({ start, end });
+    }
+    m_page->send(Messages::PlaybackSessionManagerProxy::SeekableRangesVectorChanged(contextId, WTFMove(rangesVector), lastModifiedTime, liveUpdateInterval));
 }
 
 void PlaybackSessionManager::canPlayFastReverseChanged(PlaybackSessionContextIdentifier contextId, bool value)

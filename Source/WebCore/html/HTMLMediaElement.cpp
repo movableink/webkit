@@ -6273,20 +6273,15 @@ Ref<TimeRanges> HTMLMediaElement::played()
 
 Ref<TimeRanges> HTMLMediaElement::seekable() const
 {
-    return TimeRanges::create(platformSeekable());
-}
-
-PlatformTimeRanges HTMLMediaElement::platformSeekable() const
-{
 #if ENABLE(MEDIA_SOURCE)
     if (m_mediaSource)
         return m_mediaSource->seekable();
 #endif
 
     if (m_player)
-        return m_player->seekable();
+        return TimeRanges::create(m_player->seekable());
 
-    return { };
+    return TimeRanges::create();
 }
 
 double HTMLMediaElement::seekableTimeRangesLastModifiedTime() const

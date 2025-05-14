@@ -477,11 +477,11 @@ Ref<MediaPromise> MediaSource::seekToTime(const MediaTime& time)
     return MediaPromise::createAndResolve();
 }
 
-PlatformTimeRanges MediaSource::seekable()
+Ref<TimeRanges> MediaSource::seekable()
 {
-    if (RefPtr mediaSourcePrivate = protectedPrivate())
-        return mediaSourcePrivate->seekable();
-    return { };
+    if (RefPtr msp = protectedPrivate())
+        return TimeRanges::create(msp->seekable());
+    return TimeRanges::create();
 }
 
 ExceptionOr<void> MediaSource::setLiveSeekableRange(double start, double end)

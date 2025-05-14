@@ -81,7 +81,7 @@ public:
     void bufferedTimeChanged(double);
     void playbackStartedTimeChanged(double);
     void rateChanged(OptionSet<WebCore::PlaybackSessionModel::PlaybackState>, double playbackRate, double defaultPlaybackRate);
-    void seekableRangesChanged(const WebCore::PlatformTimeRanges&, double lastModifiedTime, double liveUpdateInterval);
+    void seekableRangesChanged(WebCore::TimeRanges&, double lastModifiedTime, double liveUpdateInterval);
     void canPlayFastReverseChanged(bool);
     void audioMediaSelectionOptionsChanged(const Vector<WebCore::MediaSelectionOption>& options, uint64_t index);
     void legibleMediaSelectionOptionsChanged(const Vector<WebCore::MediaSelectionOption>& options, uint64_t index);
@@ -164,7 +164,7 @@ private:
     bool isScrubbing() const final { return m_isScrubbing; }
     double defaultPlaybackRate() const final { return m_defaultPlaybackRate; }
     double playbackRate() const final { return m_playbackRate; }
-    WebCore::PlatformTimeRanges seekableRanges() const final { return m_seekableRanges; }
+    Ref<WebCore::TimeRanges> seekableRanges() const final { return m_seekableRanges.copyRef(); }
     double seekableTimeRangesLastModifiedTime() const final { return m_seekableTimeRangesLastModifiedTime; }
     double liveUpdateInterval() const { return m_liveUpdateInterval; }
     bool canPlayFastReverse() const final { return m_canPlayFastReverse; }
@@ -210,7 +210,7 @@ private:
     bool m_isScrubbing { false };
     double m_defaultPlaybackRate { 0 };
     double m_playbackRate { 0 };
-    WebCore::PlatformTimeRanges m_seekableRanges;
+    Ref<WebCore::TimeRanges> m_seekableRanges { WebCore::TimeRanges::create() };
     double m_seekableTimeRangesLastModifiedTime { 0 };
     double m_liveUpdateInterval { 0 };
     bool m_canPlayFastReverse { false };
@@ -289,7 +289,7 @@ private:
     void swapFullscreenModes(PlaybackSessionContextIdentifier, PlaybackSessionContextIdentifier);
     void currentTimeChanged(PlaybackSessionContextIdentifier, double currentTime, double hostTime);
     void bufferedTimeChanged(PlaybackSessionContextIdentifier, double bufferedTime);
-    void seekableRangesVectorChanged(PlaybackSessionContextIdentifier, const WebCore::PlatformTimeRanges&, double lastModifiedTime, double liveUpdateInterval);
+    void seekableRangesVectorChanged(PlaybackSessionContextIdentifier, Vector<std::pair<double, double>> ranges, double lastModifiedTime, double liveUpdateInterval);
     void canPlayFastReverseChanged(PlaybackSessionContextIdentifier, bool value);
     void audioMediaSelectionOptionsChanged(PlaybackSessionContextIdentifier, Vector<WebCore::MediaSelectionOption> options, uint64_t selectedIndex);
     void legibleMediaSelectionOptionsChanged(PlaybackSessionContextIdentifier, Vector<WebCore::MediaSelectionOption> options, uint64_t selectedIndex);

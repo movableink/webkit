@@ -49,11 +49,9 @@ std::optional<VideoFrameMetadata> MediaPlayerPrivateInterface::videoFrameMetadat
 
 const PlatformTimeRanges& MediaPlayerPrivateInterface::seekable() const
 {
-    auto maxTimeSeekable = this->maxTimeSeekable();
-    if (maxTimeSeekable == MediaTime::zeroTime())
+    if (maxTimeSeekable() == MediaTime::zeroTime())
         return PlatformTimeRanges::emptyRanges();
-    ASSERT(maxTimeSeekable.isValid());
-    m_seekable = { minTimeSeekable(), maxTimeSeekable };
+    m_seekable = { minTimeSeekable(), maxTimeSeekable() };
     return m_seekable;
 }
 

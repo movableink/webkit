@@ -208,11 +208,12 @@ void PlaybackSessionModelMediaElement::updateForEventName(const WTF::AtomString&
     if (all
         || eventName == eventNames().progressEvent) {
         auto bufferedTime = this->bufferedTime();
+        auto seekableRanges = this->seekableRanges();
         auto seekableTimeRangesLastModifiedTime = this->seekableTimeRangesLastModifiedTime();
         auto liveUpdateInterval = this->liveUpdateInterval();
         for (auto& client : m_clients) {
             client->bufferedTimeChanged(bufferedTime);
-            client->seekableRangesChanged(seekableRanges(), seekableTimeRangesLastModifiedTime, liveUpdateInterval);
+            client->seekableRangesChanged(seekableRanges, seekableTimeRangesLastModifiedTime, liveUpdateInterval);
         }
     }
 
@@ -662,11 +663,11 @@ double PlaybackSessionModelMediaElement::playbackRate() const
     return 0;
 }
 
-PlatformTimeRanges PlaybackSessionModelMediaElement::seekableRanges() const
+Ref<TimeRanges> PlaybackSessionModelMediaElement::seekableRanges() const
 {
     if (RefPtr mediaElement = m_mediaElement; mediaElement && mediaElement->supportsSeeking())
-        return mediaElement->platformSeekable();
-    return { };
+        return mediaElement->seekable();
+    return TimeRanges::create();
 }
 
 double PlaybackSessionModelMediaElement::seekableTimeRangesLastModifiedTime() const

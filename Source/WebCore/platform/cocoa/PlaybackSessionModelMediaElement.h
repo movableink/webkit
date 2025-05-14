@@ -115,7 +115,7 @@ public:
     bool isScrubbing() const final { return false; }
     double defaultPlaybackRate() const final;
     double playbackRate() const final;
-    PlatformTimeRanges seekableRanges() const final;
+    Ref<TimeRanges> seekableRanges() const final;
     double seekableTimeRangesLastModifiedTime() const final;
     double liveUpdateInterval() const final;
     bool canPlayFastReverse() const final;

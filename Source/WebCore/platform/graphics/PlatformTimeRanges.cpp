@@ -203,8 +203,10 @@ MediaTime PlatformTimeRanges::minimumBufferedTime() const
 
 void PlatformTimeRanges::add(const MediaTime& start, const MediaTime& end, AddTimeRangeOption addTimeRangeOption)
 {
+#if !PLATFORM(MAC) // https://bugs.webkit.org/show_bug.cgi?id=180253
     ASSERT(start.isValid());
     ASSERT(end.isValid());
+#endif
     ASSERT(start <= end);
 
     auto startTime = start;

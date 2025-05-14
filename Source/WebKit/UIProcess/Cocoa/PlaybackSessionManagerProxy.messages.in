@@ -30,7 +30,7 @@
 messages -> PlaybackSessionManagerProxy {
     CurrentTimeChanged(WebCore::MediaPlayerClientIdentifier contextId, double currentTime, double hostTime)
     BufferedTimeChanged(WebCore::MediaPlayerClientIdentifier contextId, double bufferedTime)
-    SeekableRangesVectorChanged(WebCore::MediaPlayerClientIdentifier contextId, WebCore::PlatformTimeRanges ranges, double lastModifiedTime, double liveUpdateInterval)
+    SeekableRangesVectorChanged(WebCore::MediaPlayerClientIdentifier contextId, Vector<std::pair<double, double>> ranges, double lastModifiedTime, double liveUpdateInterval)
     CanPlayFastReverseChanged(WebCore::MediaPlayerClientIdentifier contextId, bool value)
     AudioMediaSelectionOptionsChanged(WebCore::MediaPlayerClientIdentifier contextId, Vector<WebCore::MediaSelectionOption> options, uint64_t selectedIndex)
     LegibleMediaSelectionOptionsChanged(WebCore::MediaPlayerClientIdentifier contextId, Vector<WebCore::MediaSelectionOption> options, uint64_t selectedIndex)

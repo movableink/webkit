@@ -65,7 +65,7 @@ PlatformTimeRanges MediaSourceInterfaceMainThread::buffered() const
     return m_mediaSource->buffered();
 }
 
-PlatformTimeRanges MediaSourceInterfaceMainThread::seekable() const
+Ref<TimeRanges> MediaSourceInterfaceMainThread::seekable() const
 {
     return m_mediaSource->seekable();
 }
