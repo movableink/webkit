@@ -40,6 +40,7 @@
 #include <WebCore/ModelPlayerAnimationState.h>
 #include <WebCore/Page.h>
 #include <WebCore/ResourceError.h>
+#include <WebCore/Settings.h>
 #include <WebCore/TransformationMatrix.h>
 
 namespace WebKit {
