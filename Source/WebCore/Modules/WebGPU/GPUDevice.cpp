@@ -432,7 +432,7 @@ RefPtr<GPUPipelineLayout> GPUDevice::createAutoPipelineLayout()
 
 ExceptionOr<Ref<GPUPipelineLayout>> GPUDevice::createPipelineLayout(const GPUPipelineLayoutDescriptor& pipelineLayoutDescriptor)
 {
-    RefPtr pipelineLayout = m_backing->createPipelineLayout(pipelineLayoutDescriptor.convertToBacking());
+    RefPtr pipelineLayout = m_backing->createPipelineLayout(pipelineLayoutDescriptor.convertToBacking(m_backing));
     if (!pipelineLayout)
         return Exception { ExceptionCode::InvalidStateError, "GPUDevice.createPipelineLayout: Unable to make pipeline layout."_s };
     return GPUPipelineLayout::create(pipelineLayout.releaseNonNull());

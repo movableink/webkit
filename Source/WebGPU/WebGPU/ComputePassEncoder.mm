@@ -449,16 +449,26 @@ static void setCommandEncoder(const BindGroupEntryUsageData::Resource& resource,
     });
 }
 
-void ComputePassEncoder::setBindGroup(uint32_t groupIndex, const BindGroup& group, std::optional<Vector<uint32_t>>&& dynamicOffsets)
+void ComputePassEncoder::setBindGroup(uint32_t groupIndex, const BindGroup* groupPtr, std::optional<Vector<uint32_t>>&& dynamicOffsets)
 {
     RETURN_IF_FINISHED();
-    if (!isValidToUseWith(group, *this)) {
-        makeInvalid(@"GPUComputePassEncoder.setBindGroup: invalid bind group");
+
+    auto dynamicOffsetCount = (groupPtr && groupPtr->bindGroupLayout()) ? groupPtr->bindGroupLayout()->dynamicBufferCount() : 0;
+    if (groupIndex >= m_device->limits().maxBindGroups || (dynamicOffsets && dynamicOffsetCount != dynamicOffsets->size())) {
+        makeInvalid(@"GPUComputePassEncoder.setBindGroup: groupIndex >= limits.maxBindGroups");
         return;
     }
 
-    if (groupIndex >= m_device->limits().maxBindGroups) {
-        makeInvalid(@"GPUComputePassEncoder.setBindGroup: groupIndex >= limits.maxBindGroups");
+    if (!groupPtr) {
+        m_bindGroups.remove(groupIndex);
+        m_bindGroupResources.remove(groupIndex);
+        m_bindGroupDynamicOffsets.remove(groupIndex);
+        m_maxDynamicOffsetAtIndex[groupIndex] = 0;
+    }
+
+    auto& group = *groupPtr;
+    if (!isValidToUseWith(group, *this)) {
+        makeInvalid(@"GPUComputePassEncoder.setBindGroup: invalid bind group");
         return;
     }
 
@@ -576,7 +586,7 @@ void wgpuComputePassEncoderPushDebugGroup(WGPUComputePassEncoder computePassEnco
 
 void wgpuComputePassEncoderSetBindGroup(WGPUComputePassEncoder computePassEncoder, uint32_t groupIndex, WGPUBindGroup group, std::optional<Vector<uint32_t>>&& dynamicOffsets)
 {
-    WebGPU::protectedFromAPI(computePassEncoder)->setBindGroup(groupIndex, WebGPU::protectedFromAPI(group), WTFMove(dynamicOffsets));
+    WebGPU::protectedFromAPI(computePassEncoder)->setBindGroup(groupIndex, group ? WebGPU::protectedFromAPI(group).ptr() : nullptr, WTFMove(dynamicOffsets));
 }
 
 void wgpuComputePassEncoderSetPipeline(WGPUComputePassEncoder computePassEncoder, WGPUComputePipeline pipeline)

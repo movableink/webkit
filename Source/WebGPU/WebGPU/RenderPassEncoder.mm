@@ -1287,6 +1287,18 @@ void RenderPassEncoder::executeBundles(Vector<Ref<RenderBundle>>&& bundles)
 
         incrementDrawCount(bundle->drawCount());
 
+        for (const auto& resource : bundle->resources()) {
+            if ((resource.renderStages & (MTLRenderStageVertex | MTLRenderStageFragment)) && resource.mtlResources.size())
+                [renderCommandEncoder() useResources:&resource.mtlResources[0] count:resource.mtlResources.size() usage:resource.usage stages:resource.renderStages];
+
+            ASSERT(resource.mtlResources.size() == resource.resourceUsages.size());
+            for (size_t i = 0, resourceCount = resource.mtlResources.size(); i < resourceCount; ++i) {
+                auto& resourceUsage = resource.resourceUsages[i];
+                addResourceToActiveResources(resourceUsage.resource, resourceUsage.usage);
+                setCommandEncoder(resourceUsage.resource);
+            }
+        }
+
         for (RenderBundleICBWithResources* icb in bundle->renderBundlesResources()) {
             commandEncoder = renderCommandEncoder();
 
@@ -1296,19 +1308,6 @@ void RenderPassEncoder::executeBundles(Vector<Ref<RenderBundle>>&& bundles)
             [commandEncoder setFrontFacingWinding:icb.frontFace];
             [commandEncoder setDepthClipMode:icb.depthClipMode];
             [commandEncoder setDepthBias:icb.depthBias slopeScale:icb.depthBiasSlopeScale clamp:icb.depthBiasClamp];
-            ASSERT(icb.resources);
-
-            for (const auto& resource : *icb.resources) {
-                if ((resource.renderStages & (MTLRenderStageVertex | MTLRenderStageFragment)) && resource.mtlResources.size())
-                    [renderCommandEncoder() useResources:&resource.mtlResources[0] count:resource.mtlResources.size() usage:resource.usage stages:resource.renderStages];
-
-                ASSERT(resource.mtlResources.size() == resource.resourceUsages.size());
-                for (size_t i = 0, resourceCount = resource.mtlResources.size(); i < resourceCount; ++i) {
-                    auto& resourceUsage = resource.resourceUsages[i];
-                    addResourceToActiveResources(resourceUsage.resource, resourceUsage.usage);
-                    setCommandEncoder(resourceUsage.resource);
-                }
-            }
 
             id<MTLIndirectCommandBuffer> indirectCommandBuffer = icb.indirectCommandBuffer;
             [renderCommandEncoder() executeCommandsInBuffer:indirectCommandBuffer withRange:NSMakeRange(0, indirectCommandBuffer.size)];
@@ -1410,17 +1409,27 @@ void RenderPassEncoder::pushDebugGroup(String&& groupLabel)
     [m_renderCommandEncoder pushDebugGroup:groupLabel.createNSString().get()];
 }
 
-void RenderPassEncoder::setBindGroup(uint32_t groupIndex, const BindGroup& group, std::optional<Vector<uint32_t>>&& dynamicOffsets)
+void RenderPassEncoder::setBindGroup(uint32_t groupIndex, const BindGroup* groupPtr, std::optional<Vector<uint32_t>>&& dynamicOffsets)
 {
     RETURN_IF_FINISHED();
 
-    if (!isValidToUseWith(group, *this)) {
-        makeInvalid(@"setBindGroup: invalid bind group");
+    auto dynamicOffsetCount = (groupPtr && groupPtr->bindGroupLayout()) ? groupPtr->bindGroupLayout()->dynamicBufferCount() : 0;
+    if (groupIndex >= m_device->limits().maxBindGroups || (dynamicOffsets && dynamicOffsetCount != dynamicOffsets->size())) {
+        makeInvalid(@"setBindGroup: groupIndex >= limits.maxBindGroups");
         return;
     }
 
-    if (groupIndex >= m_device->limits().maxBindGroups) {
-        makeInvalid(@"setBindGroup: groupIndex >= limits.maxBindGroups");
+    if (!groupPtr) {
+        m_bindGroups.remove(groupIndex);
+        m_bindGroupDynamicOffsets.remove(groupIndex);
+        m_bindGroupDynamicOffsetsChanged[groupIndex] = true;
+        m_maxDynamicOffsetAtIndex[groupIndex] = 0;
+        return;
+    }
+
+    auto& group = *groupPtr;
+    if (!isValidToUseWith(group, *this)) {
+        makeInvalid(@"setBindGroup: invalid bind group");
         return;
     }
 
@@ -1709,7 +1718,7 @@ void wgpuRenderPassEncoderPushDebugGroup(WGPURenderPassEncoder renderPassEncoder
 
 void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder renderPassEncoder, uint32_t groupIndex, WGPUBindGroup group, std::optional<Vector<uint32_t>>&& dynamicOffsets)
 {
-    WebGPU::protectedFromAPI(renderPassEncoder)->setBindGroup(groupIndex, WebGPU::protectedFromAPI(group), WTFMove(dynamicOffsets));
+    WebGPU::protectedFromAPI(renderPassEncoder)->setBindGroup(groupIndex, group ? WebGPU::protectedFromAPI(group).ptr() : nullptr, WTFMove(dynamicOffsets));
 }
 
 void wgpuRenderPassEncoderSetBlendConstant(WGPURenderPassEncoder renderPassEncoder, const WGPUColor* color)

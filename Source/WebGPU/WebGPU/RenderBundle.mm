@@ -50,10 +50,11 @@ namespace WebGPU {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderBundle);
 
-RenderBundle::RenderBundle(NSArray<RenderBundleICBWithResources*> *resources, RefPtr<RenderBundleEncoder> encoder, const WGPURenderBundleEncoderDescriptor& descriptor, uint64_t commandCount, bool makeSubmitInvalid, HashSet<RefPtr<const BindGroup>>&& bindGroups, Device& device)
+RenderBundle::RenderBundle(NSArray<RenderBundleICBWithResources*> *resources, Vector<WebGPU::BindableResources>&& bindableResources, RefPtr<RenderBundleEncoder> encoder, const WGPURenderBundleEncoderDescriptor& descriptor, uint64_t commandCount, bool makeSubmitInvalid, HashSet<RefPtr<const BindGroup>>&& bindGroups, Device& device)
     : m_device(device)
     , m_renderBundleEncoder(encoder)
     , m_renderBundlesResources(resources)
+    , m_resources(WTFMove(bindableResources))
     , m_descriptor(descriptor)
     , m_descriptorColorFormats(descriptor.colorFormatsSpan())
     , m_bindGroups(bindGroups)

@@ -64,10 +64,10 @@ private:
 
     void end() final;
 
-    void setBindGroup(Index32, const BindGroup&,
+    void setBindGroup(Index32, const BindGroup*,
         std::optional<Vector<BufferDynamicOffset>>&&) final;
 
-    void setBindGroup(Index32, const BindGroup&,
+    void setBindGroup(Index32, const BindGroup*,
         std::span<const uint32_t> dynamicOffsetsArrayBuffer,
         Size64 dynamicOffsetsDataStart,
         Size32 dynamicOffsetsDataLength) final;

@@ -306,8 +306,7 @@ void Queue::commitMTLCommandBuffer(id<MTLCommandBuffer> commandBuffer)
                     default:
                         break;
                     }
-                    if (fatal)
-                        WTFLogAlways("Encountered fatal command buffer error %@, underlying error %@", error, underlyingError); // NOLINT
+                    WTFLogAlways("Encountered %s command buffer error %@, underlying error %@", fatal ? "fatal" : "non-fatal", error, underlyingError); // NOLINT
                     RELEASE_ASSERT(!fatal);
                 }
             }
@@ -463,6 +462,14 @@ void Queue::synchronizeResourceAndWait(id<MTLBuffer> buffer)
 #else
     UNUSED_PARAM(buffer);
 #endif
+}
+
+id<MTLIndirectCommandBuffer> Queue::trimICB(id<MTLIndirectCommandBuffer> dest, id<MTLIndirectCommandBuffer> src, NSUInteger newSize)
+{
+    ensureBlitCommandEncoder();
+    [m_blitCommandEncoder copyIndirectCommandBuffer:src sourceRange:NSMakeRange(0, newSize) destination:dest destinationIndex:0];
+
+    return dest;
 }
 
 static std::pair<uint32_t, uint16_t> maxIndexValueSlow(std::span<uint8_t> data)

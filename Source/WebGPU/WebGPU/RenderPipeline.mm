@@ -1357,6 +1357,7 @@ std::pair<Ref<RenderPipeline>, NSString*> Device::createRenderPipeline(const WGP
     const ShaderModule::VertexStageIn* vertexStageIn = nullptr;
     const ShaderModule::VertexOutputs* vertexOutputs = nullptr;
     BufferBindingSizesForPipeline minimumBufferSizes;
+    uint32_t vertexShaderBindingCount = 0;
     {
         if (descriptor.vertex.nextInChain)
             return returnInvalidRenderPipeline(*this, isAsync, "Vertex module has an invalid chain"_s);
@@ -1376,6 +1377,7 @@ std::pair<Ref<RenderPipeline>, NSString*> Device::createRenderPipeline(const WGP
         if (!libraryCreationResult)
             return returnInvalidRenderPipeline(*this, isAsync, error.localizedDescription ?: @"Vertex library failed creation");
 
+        vertexShaderBindingCount = std::min<uint32_t>(libraryCreationResult->entryPointInformation.bindingCount, std::numeric_limits<uint32_t>::max());
         const auto& entryPointInformation = libraryCreationResult->entryPointInformation;
         if (!pipelineLayout) {
             if (NSString* error = addPipelineLayouts(bindGroupEntries, entryPointInformation.defaultLayout))
@@ -1599,10 +1601,10 @@ std::pair<Ref<RenderPipeline>, NSString*> Device::createRenderPipeline(const WGP
         if (!generatedPipelineLayout->isValid())
             return returnInvalidRenderPipeline(*this, isAsync, "Generated pipeline layout is not valid"_s);
 
-        return std::make_pair(RenderPipeline::create(renderPipelineState, mtlPrimitiveType, mtlIndexType, mtlFrontFace, mtlCullMode, mtlDepthClipMode, depthStencilDescriptor, WTFMove(generatedPipelineLayout), depthBias, depthBiasSlopeScale, depthBiasClamp, sampleMask, mtlRenderPipelineDescriptor, colorAttachmentCount, descriptor, WTFMove(requiredBufferIndices), WTFMove(minimumBufferSizes), ++m_renderPipelineId, *this), nil);
+        return std::make_pair(RenderPipeline::create(renderPipelineState, mtlPrimitiveType, mtlIndexType, mtlFrontFace, mtlCullMode, mtlDepthClipMode, depthStencilDescriptor, WTFMove(generatedPipelineLayout), depthBias, depthBiasSlopeScale, depthBiasClamp, sampleMask, mtlRenderPipelineDescriptor, colorAttachmentCount, descriptor, WTFMove(requiredBufferIndices), WTFMove(minimumBufferSizes), ++m_renderPipelineId, vertexShaderBindingCount, *this), nil);
     }
 
-    return std::make_pair(RenderPipeline::create(renderPipelineState, mtlPrimitiveType, mtlIndexType, mtlFrontFace, mtlCullMode, mtlDepthClipMode, depthStencilDescriptor, const_cast<PipelineLayout&>(*pipelineLayout), depthBias, depthBiasSlopeScale, depthBiasClamp, sampleMask, mtlRenderPipelineDescriptor, colorAttachmentCount, descriptor, WTFMove(requiredBufferIndices), WTFMove(minimumBufferSizes), ++m_renderPipelineId, *this), nil);
+    return std::make_pair(RenderPipeline::create(renderPipelineState, mtlPrimitiveType, mtlIndexType, mtlFrontFace, mtlCullMode, mtlDepthClipMode, depthStencilDescriptor, const_cast<PipelineLayout&>(*pipelineLayout), depthBias, depthBiasSlopeScale, depthBiasClamp, sampleMask, mtlRenderPipelineDescriptor, colorAttachmentCount, descriptor, WTFMove(requiredBufferIndices), WTFMove(minimumBufferSizes), ++m_renderPipelineId, vertexShaderBindingCount, *this), nil);
 }
 
 void Device::createRenderPipelineAsync(const WGPURenderPipelineDescriptor& descriptor, CompletionHandler<void(WGPUCreatePipelineAsyncStatus, Ref<RenderPipeline>&&, String&& message)>&& callback)
@@ -1618,7 +1620,7 @@ void Device::createRenderPipelineAsync(const WGPURenderPipelineDescriptor& descr
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderPipeline);
 
-RenderPipeline::RenderPipeline(id<MTLRenderPipelineState> renderPipelineState, MTLPrimitiveType primitiveType, std::optional<MTLIndexType> indexType, MTLWinding frontFace, MTLCullMode cullMode, MTLDepthClipMode clipMode, MTLDepthStencilDescriptor *depthStencilDescriptor, Ref<PipelineLayout>&& pipelineLayout, float depthBias, float depthBiasSlopeScale, float depthBiasClamp, uint32_t sampleMask, MTLRenderPipelineDescriptor* renderPipelineDescriptor, uint32_t colorAttachmentCount, const WGPURenderPipelineDescriptor& descriptor, RequiredBufferIndicesContainer&& requiredBufferIndices, BufferBindingSizesForPipeline&& minimumBufferSizes, uint64_t uniqueId, Device& device)
+RenderPipeline::RenderPipeline(id<MTLRenderPipelineState> renderPipelineState, MTLPrimitiveType primitiveType, std::optional<MTLIndexType> indexType, MTLWinding frontFace, MTLCullMode cullMode, MTLDepthClipMode clipMode, MTLDepthStencilDescriptor *depthStencilDescriptor, Ref<PipelineLayout>&& pipelineLayout, float depthBias, float depthBiasSlopeScale, float depthBiasClamp, uint32_t sampleMask, MTLRenderPipelineDescriptor* renderPipelineDescriptor, uint32_t colorAttachmentCount, const WGPURenderPipelineDescriptor& descriptor, RequiredBufferIndicesContainer&& requiredBufferIndices, BufferBindingSizesForPipeline&& minimumBufferSizes, uint64_t uniqueId, uint32_t vertexShaderBindingCount, Device& device)
     : m_renderPipelineState(renderPipelineState)
     , m_device(device)
     , m_primitiveType(primitiveType)
@@ -1644,6 +1646,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     , m_minimumBufferSizes(minimumBufferSizes)
     , m_uniqueId(uniqueId)
+    , m_vertexShaderBindingCount(vertexShaderBindingCount)
 {
     if (descriptor.depthStencil)
         m_descriptor.depthStencil = &m_descriptorDepthStencil;
@@ -1817,6 +1820,9 @@ const BufferBindingSizesForBindGroup* RenderPipeline::minimumBufferSizes(uint32_
 
 RefPtr<RenderPipeline> RenderPipeline::recomputeLastStrideAsStride() const
 {
+    if (m_lastStrideAsStridePipeline)
+        return m_lastStrideAsStridePipeline;
+
     MTLRenderPipelineDescriptor* clonedRenderPipelineDescriptor = [m_renderPipelineDescriptor copy];
 
     auto requiredBufferIndices = m_requiredBufferIndices;
@@ -1837,7 +1843,8 @@ RefPtr<RenderPipeline> RenderPipeline::recomputeLastStrideAsStride() const
     }
 
     auto minimumBufferSizes = m_minimumBufferSizes;
-    return RenderPipeline::create(renderPipelineState, m_primitiveType, m_indexType, m_frontFace, m_cullMode, m_clipMode, m_depthStencilDescriptor, m_pipelineLayout.copyRef(), m_depthBias, m_depthBiasSlopeScale, m_depthBiasClamp, m_sampleMask, clonedRenderPipelineDescriptor, m_colorAttachmentCount, m_descriptor, WTFMove(requiredBufferIndices), WTFMove(minimumBufferSizes), m_uniqueId, m_device);
+    m_lastStrideAsStridePipeline = RenderPipeline::create(renderPipelineState, m_primitiveType, m_indexType, m_frontFace, m_cullMode, m_clipMode, m_depthStencilDescriptor, m_pipelineLayout.copyRef(), m_depthBias, m_depthBiasSlopeScale, m_depthBiasClamp, m_sampleMask, clonedRenderPipelineDescriptor, m_colorAttachmentCount, m_descriptor, WTFMove(requiredBufferIndices), WTFMove(minimumBufferSizes), m_uniqueId, m_vertexShaderBindingCount, m_device);
+    return m_lastStrideAsStridePipeline;
 }
 
 } // namespace WebGPU

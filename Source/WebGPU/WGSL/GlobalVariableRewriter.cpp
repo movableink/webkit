@@ -1603,6 +1603,7 @@ AST::StructureMember& RewriteGlobalVariables::createArgumentBufferEntry(unsigned
     bindingValue.m_inferredType = m_shaderModule.types().abstractIntType();
     bindingValue.setConstantValue(binding);
     auto& bindingAttribute = m_shaderModule.astBuilder().construct<AST::BindingAttribute>(span, bindingValue);
+    ++m_entryPointInformation->bindingCount;
     return m_shaderModule.astBuilder().construct<AST::StructureMember>(
         span,
         AST::Identifier::make(name),
