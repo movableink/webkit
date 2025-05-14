@@ -27,6 +27,7 @@ internal import SwiftUI
 @MainActor
 struct WebViewRepresentable {
     let page: WebPage
+    let safeAreaInsets: EdgeInsets
 
     func makePlatformView(context: Context) -> CocoaWebViewAdapter {
         // FIXME: Make this more robust by figuring out what happens when a WebPage moves between representables.
@@ -37,6 +38,7 @@ struct WebViewRepresentable {
 
         let parent = CocoaWebViewAdapter()
         parent.webView = page.backingWebView
+        parent.extrinsicSafeAreaInsets = safeAreaInsets
         page.isBoundToWebView = true
 
         return parent
@@ -46,6 +48,7 @@ struct WebViewRepresentable {
         let webView = page.backingWebView
         let environment = context.environment
 
+        platformView.extrinsicSafeAreaInsets = safeAreaInsets
         platformView.webView = webView
 
         webView.allowsBackForwardNavigationGestures = environment.webViewAllowsBackForwardNavigationGestures.value != .disabled

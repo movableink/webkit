@@ -68,14 +68,17 @@ public struct WebView: View {
     private let storage: Storage
 
     public var body: some View {
-        WebViewRepresentable(page: storage.webPage)
-            .onChange(of: storage.url, initial: true) {
-                guard let url = storage.url else {
-                    return
-                }
+        GeometryReader { proxy in
+            WebViewRepresentable(page: storage.webPage, safeAreaInsets: proxy.safeAreaInsets)
+                .onChange(of: storage.url, initial: true) {
+                    guard let url = storage.url else {
+                        return
+                    }
 
-                storage.webPage.load(URLRequest(url: url))
-            }
+                    storage.webPage.load(URLRequest(url: url))
+                }
+                .ignoresSafeArea()
+        }
     }
 }
 

@@ -32,6 +32,34 @@ typealias CocoaView = NSView
 
 @MainActor
 class CocoaWebViewAdapter: CocoaView, PlatformTextSearching {
+
+#if os(iOS)
+    var extrinsicSafeAreaInsets: EdgeInsets? = nil {
+        didSet {
+            guard oldValue != extrinsicSafeAreaInsets else {
+                return
+            }
+            safeAreaInsetsDidChange()
+        }
+    }
+
+    override var safeAreaInsets: UIEdgeInsets {
+        guard let extrinsicSafeAreaInsets else {
+            return .zero
+        }
+
+        var leftSafeArea = extrinsicSafeAreaInsets.leading
+        var rightSafeArea = extrinsicSafeAreaInsets.trailing
+
+        if effectiveUserInterfaceLayoutDirection == .rightToLeft {
+            leftSafeArea = extrinsicSafeAreaInsets.trailing
+            rightSafeArea = extrinsicSafeAreaInsets.leading
+        }
+
+        return UIEdgeInsets(top: extrinsicSafeAreaInsets.top, left: leftSafeArea, bottom: extrinsicSafeAreaInsets.bottom, right: rightSafeArea)
+    }
+#endif
+
     // MARK: PlatformTextSearching conformance
 
 #if os(macOS)
