@@ -308,7 +308,7 @@ Vector<WebKit::WebPlatformTouchPoint> ViewPlatform::touchPointsForEvent(WPEEvent
         double x, y;
         wpe_event_get_position(currentEvent, &x, &y);
         WebCore::IntPoint position(x, y);
-        points.append(WebPlatformTouchPoint(it.key, stateForEvent(it.key, currentEvent), position, position));
+        points.append(WebPlatformTouchPoint(it.key, stateForEvent(it.key, event), position, position));
     }
     return points;
 }
