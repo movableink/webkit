@@ -683,12 +683,22 @@ TEST(SiteIsolation, ClosedStatePropagation)
         { "/example"_s, { "<script>let openedWindow = window.open('https://webkit.org/webkit')</script>"_s } },
         { "/webkit"_s, { "hi"_s } }
     }, HTTPServer::Protocol::HttpsProxy);
-    auto [opener, opened] = openerAndOpenedViews(server);
-    [opened.webView evaluateJavaScript:@"window.close()" completionHandler:nil];
 
-    __block bool openerSawClosedState = false;
-    pollUntilOpenedWindowIsClosed(opener.webView, openerSawClosedState);
-    Util::run(&openerSawClosedState);
+    {
+        bool openerSawClosedState = false;
+        auto [opener, opened] = openerAndOpenedViews(server);
+        [opened.webView evaluateJavaScript:@"window.close()" completionHandler:nil];
+        pollUntilOpenedWindowIsClosed(opener.webView, openerSawClosedState);
+        Util::run(&openerSawClosedState);
+    }
+
+    {
+        bool openerSawClosedState = false;
+        auto [opener, opened] = openerAndOpenedViews(server);
+        [opened.webView _close];
+        pollUntilOpenedWindowIsClosed(opener.webView, openerSawClosedState);
+        Util::run(&openerSawClosedState);
+    }
 }
 
 TEST(SiteIsolation, CloseAfterWindowOpen)

@@ -1826,9 +1826,25 @@ void WebPageProxy::close()
     Ref processPool = m_configuration->processPool();
     processPool->protectedBackForwardCache()->removeEntriesForPage(*this);
 
-    RunLoop::currentSingleton().dispatch([destinationID = webPageIDInMainFrameProcess(), process, preventProcessShutdownScope = process->shutdownPreventingScope()] {
-        process->send(Messages::WebPage::Close(), destinationID);
+    struct ProcessToClose {
+        Ref<WebProcessProxy> process;
+        WebCore::PageIdentifier pageID;
+        WebProcessProxy::ShutdownPreventingScopeCounter::Token shutdownPreventingScope;
+    };
+    Vector<ProcessToClose> processesToClose;
+    forEachWebContentProcess([&](auto& process, auto pageID) {
+        processesToClose.append({
+            process,
+            pageID,
+            process.shutdownPreventingScope()
+        });
     });
+    // Delay sending close message to next runloop cycle to avoid white flash.
+    RunLoop::currentSingleton().dispatch([processesToClose = WTFMove(processesToClose)] {
+        for (auto [process, pageID, scope] : processesToClose)
+            process->send(Messages::WebPage::Close(), pageID);
+    });
+
     process->removeWebPage(*this, WebProcessProxy::EndsUsingDataStore::Yes);
     removeAllMessageReceivers();
     processPool->protectedSupplement<WebNotificationManagerProxy>()->clearNotifications(this);
