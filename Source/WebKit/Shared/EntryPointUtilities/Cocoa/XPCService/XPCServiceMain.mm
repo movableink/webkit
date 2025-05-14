@@ -95,9 +95,6 @@ static void initializeLogd(bool disableLogging)
     }
 #else
     UNUSED_PARAM(disableLogging);
-#endif
-
-    os_trace_set_mode(OS_TRACE_MODE_INFO | OS_TRACE_MODE_DEBUG);
 
     // Log a long message to make sure the XPC connection to the log daemon for oversized messages is opened.
     // This is needed to block launchd after the WebContent process has launched, since access to launchd is
@@ -106,6 +103,7 @@ static void initializeLogd(bool disableLogging)
     memsetSpan(std::span { stringWithSpaces }, ' ');
     stringWithSpaces.back() = '\0';
     RELEASE_LOG(Process, "Initialized logd %s", stringWithSpaces.data());
+#endif
 }
 
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
