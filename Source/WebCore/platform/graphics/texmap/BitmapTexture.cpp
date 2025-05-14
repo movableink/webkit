@@ -371,11 +371,6 @@ BitmapTexture::~BitmapTexture()
         glDeleteRenderbuffers(1, &m_stencilBufferObject);
 }
 
-void BitmapTexture::copyFromExternalTexture(GLuint sourceTextureID)
-{
-    copyFromExternalTexture(sourceTextureID, { 0, 0, m_size.width(), m_size.height() }, { });
-}
-
 void BitmapTexture::copyFromExternalTexture(GLuint sourceTextureID, const IntRect& targetRect, const IntSize& sourceOffset)
 {
     RELEASE_ASSERT(sourceOffset.width() + targetRect.width() <= m_size.width());
@@ -412,11 +407,6 @@ void BitmapTexture::copyFromExternalTexture(GLuint sourceTextureID, const IntRec
     glBindTexture(GL_TEXTURE_2D, boundTexture);
     glActiveTexture(boundActiveTexture);
     glDeleteFramebuffers(1, &copyFbo);
-}
-
-void BitmapTexture::copyFromExternalTexture(BitmapTexture& sourceTexture, const IntRect& sourceRect, const IntSize& destinationOffset)
-{
-    copyFromExternalTexture(sourceTexture.id(), sourceRect, destinationOffset);
 }
 
 OptionSet<TextureMapperFlags> BitmapTexture::colorConvertFlags() const

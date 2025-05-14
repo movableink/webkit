@@ -90,8 +90,6 @@ public:
 
     ClipStack& clipStack() { return m_clipStack; }
 
-    void copyFromExternalTexture(GLuint textureID);
-    void copyFromExternalTexture(BitmapTexture& sourceTexture, const IntRect& sourceRect, const IntSize& destinationOffset);
     void copyFromExternalTexture(GLuint sourceTextureID, const IntRect& targetRect, const IntSize& sourceOffset);
 
     OptionSet<TextureMapperFlags> colorConvertFlags() const;

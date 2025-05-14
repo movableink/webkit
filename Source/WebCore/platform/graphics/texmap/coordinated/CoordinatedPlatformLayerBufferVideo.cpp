@@ -81,8 +81,9 @@ std::unique_ptr<CoordinatedPlatformLayerBuffer> CoordinatedPlatformLayerBufferVi
     if (!textureID)
         return nullptr;
 
-    auto texture = BitmapTexture::create(buffer.size());
-    texture->copyFromExternalTexture(textureID);
+    auto size = buffer.size();
+    auto texture = BitmapTexture::create(size);
+    texture->copyFromExternalTexture(textureID, { IntPoint::zero(), size }, { });
     return CoordinatedPlatformLayerBufferRGB::create(WTFMove(texture), m_flags, nullptr);
 }
 
