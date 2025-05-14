@@ -621,7 +621,7 @@ void Scope::invalidateStyleAfterStyleSheetChange(const StyleSheetChange& styleSh
     invalidator.invalidateStyle(*this);
 }
 
-void Scope::updateResolver(Vector<RefPtr<CSSStyleSheet>>& activeStyleSheets, ResolverUpdateType updateType)
+void Scope::updateResolver(std::span<const RefPtr<CSSStyleSheet>> activeStyleSheets, ResolverUpdateType updateType)
 {
     if (updateType == ResolverUpdateType::Reconstruct) {
         clearResolver();
@@ -644,10 +644,8 @@ void Scope::updateResolver(Vector<RefPtr<CSSStyleSheet>>& activeStyleSheets, Res
     ASSERT(updateType == ResolverUpdateType::Additive);
     ASSERT(activeStyleSheets.size() >= m_activeStyleSheets.size());
 
-    unsigned firstNewIndex = m_activeStyleSheets.size();
-    Vector<RefPtr<CSSStyleSheet>> newStyleSheets;
-    newStyleSheets.append(activeStyleSheets.subspan(firstNewIndex));
-    m_resolver->appendAuthorStyleSheets(newStyleSheets);
+    auto firstNewIndex = m_activeStyleSheets.size();
+    m_resolver->appendAuthorStyleSheets(activeStyleSheets.subspan(firstNewIndex));
 }
 
 const Vector<RefPtr<CSSStyleSheet>> Scope::activeStyleSheetsForInspector()

@@ -199,7 +199,7 @@ private:
     StyleSheetChange analyzeStyleSheetChange(const Vector<RefPtr<CSSStyleSheet>>& newStylesheets);
     void invalidateStyleAfterStyleSheetChange(const StyleSheetChange&);
 
-    void updateResolver(Vector<RefPtr<CSSStyleSheet>>&, ResolverUpdateType);
+    void updateResolver(std::span<const RefPtr<CSSStyleSheet>>, ResolverUpdateType);
     void createDocumentResolver();
     void createOrFindSharedShadowTreeResolver();
     void unshareShadowTreeResolverBeforeMutation();
