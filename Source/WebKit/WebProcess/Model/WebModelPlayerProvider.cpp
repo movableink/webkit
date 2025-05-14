@@ -26,11 +26,11 @@
 #include "config.h"
 #include "WebModelPlayerProvider.h"
 
-#include "Settings.h"
 #include "WebPage.h"
 #include "WebProcess.h"
 #include <WebCore/ModelPlayer.h>
 #include <WebCore/Page.h>
+#include <WebCore/Settings.h>
 #include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(ARKIT_INLINE_PREVIEW_MAC)
