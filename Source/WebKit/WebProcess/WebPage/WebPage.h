@@ -60,14 +60,8 @@
 #include <WebCore/SimpleRange.h>
 #include <WebCore/SnapshotIdentifier.h>
 #include <WebCore/SubstituteData.h>
-#include <WebCore/TextManipulationController.h>
-#include <WebCore/TextManipulationItem.h>
-#include <WebCore/Timer.h>
-#include <WebCore/UserActivity.h>
 #include <WebCore/UserContentTypes.h>
-#include <WebCore/UserMediaRequestIdentifier.h>
 #include <WebCore/UserScriptTypes.h>
-#include <WebCore/VisibilityState.h>
 #include <WebCore/WebCoreKeyboardUIMode.h>
 #include <memory>
 #include <pal/HysteresisActivity.h>
@@ -314,11 +308,15 @@ struct TargetedElementInfo;
 struct TargetedElementRequest;
 struct TextAnimationData;
 struct TextCheckingResult;
+struct TextManipulationControllerExclusionRule;
+struct TextManipulationControllerManipulationResult;
+struct TextManipulationItem;
 struct TextRecognitionOptions;
 struct TextRecognitionResult;
 #if HAVE(TRANSLATION_UI_SERVICES) && ENABLE(CONTEXT_MENUS)
 struct TranslationContextMenuInfo;
 #endif
+struct UserMediaRequestIdentifierType;
 struct ViewportArguments;
 
 #if HAVE(DIGITAL_CREDENTIALS_UI)
@@ -336,6 +334,7 @@ using NavigationIdentifier = ObjectIdentifier<NavigationIdentifierType, uint64_t
 using PlatformDisplayID = uint32_t;
 using ScrollingNodeID = ProcessQualified<ObjectIdentifier<ScrollingNodeIDType>>;
 using ScrollOffset = IntPoint;
+using UserMediaRequestIdentifier = ObjectIdentifier<UserMediaRequestIdentifierType>;
 
 namespace TextExtraction {
 struct Item;
@@ -1686,8 +1685,8 @@ public:
     RefPtr<WebCore::Element> elementForContext(const WebCore::ElementContext&) const;
     std::optional<WebCore::ElementContext> contextForElement(const WebCore::Element&) const;
 
-    void startTextManipulations(Vector<WebCore::TextManipulationController::ExclusionRule>&&, bool includesSubframes, CompletionHandler<void()>&&);
-    void completeTextManipulation(const Vector<WebCore::TextManipulationItem>&, CompletionHandler<void(const WebCore::TextManipulationController::ManipulationResult&)>&&);
+    void startTextManipulations(Vector<WebCore::TextManipulationControllerExclusionRule>&&, bool includesSubframes, CompletionHandler<void()>&&);
+    void completeTextManipulation(const Vector<WebCore::TextManipulationItem>&, CompletionHandler<void(const WebCore::TextManipulationControllerManipulationResult&)>&&);
 
 #if ENABLE(APPLE_PAY)
     WebPaymentCoordinator* paymentCoordinator();
@@ -2932,7 +2931,6 @@ private:
     OptionSet<WebCore::ActivityState> m_activityState;
 
     bool m_isAppNapEnabled { true };
-    UserActivity m_userActivity;
 
     Markable<WebCore::NavigationIdentifier> m_pendingNavigationID;
 
@@ -3031,7 +3029,6 @@ private:
     WeakPtr<WebCore::Node, WebCore::WeakPtrImplWithEventTargetData> m_lastNodeBeforeWritingSuggestions;
 
     bool m_textManipulationIncludesSubframes { false };
-    std::optional<Vector<WebCore::TextManipulationController::ExclusionRule>> m_textManipulationExclusionRules;
 
     Vector<String> m_corsDisablingPatterns;
 

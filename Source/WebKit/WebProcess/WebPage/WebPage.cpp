@@ -310,6 +310,7 @@
 #include <WebCore/SubstituteData.h>
 #include <WebCore/TextExtraction.h>
 #include <WebCore/TextIterator.h>
+#include <WebCore/TextManipulationController.h>
 #include <WebCore/TextRecognitionOptions.h>
 #include <WebCore/TranslationContextMenuInfo.h>
 #include <WebCore/UserContentURLPattern.h>
@@ -659,7 +660,6 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
 #endif
     , m_layerVolatilityTimer(*this, &WebPage::layerVolatilityTimerFired)
     , m_activityState(parameters.activityState)
-    , m_userActivity("App nap disabled for page due to user activity"_s)
     , m_userInterfaceLayoutDirection(parameters.userInterfaceLayoutDirection)
     , m_overrideContentSecurityPolicy { WTFMove(parameters.overrideContentSecurityPolicy) }
     , m_cpuLimit(parameters.cpuLimit)
@@ -1397,9 +1397,9 @@ void WebPage::updateThrottleState()
     // The UserActivity prevents App Nap. So if we want to allow App Nap of the page, stop the activity.
     // If the page should not be app nap'd, start it.
     if (isThrottleable)
-        m_userActivity.stop();
+        m_internals->userActivity.stop();
     else
-        m_userActivity.start();
+        m_internals->userActivity.start();
 
     if (m_page && m_page->settings().serviceWorkersEnabled()) {
         RunLoop::protectedMain()->dispatch([isThrottleable] {
@@ -3512,7 +3512,7 @@ void WebPage::mouseEvent(FrameIdentifier frameID, const WebMouseEvent& mouseEven
 {
     SetForScope userIsInteractingChange { m_userIsInteracting, true };
 
-    m_userActivity.impulse();
+    m_internals->userActivity.impulse();
 
     bool shouldHandleEvent = true;
 #if ENABLE(DRAG_SUPPORT)
@@ -3669,7 +3669,7 @@ void WebPage::handleWheelEvent(FrameIdentifier frameID, const WebWheelEvent& eve
 
 std::pair<HandleUserInputEventResult, OptionSet<EventHandling>> WebPage::wheelEvent(const FrameIdentifier& frameID, const WebWheelEvent& wheelEvent, OptionSet<WheelEventProcessingSteps> processingSteps)
 {
-    m_userActivity.impulse();
+    m_internals->userActivity.impulse();
 
     CurrentEvent currentEvent(wheelEvent);
 
@@ -3707,7 +3707,7 @@ void WebPage::keyEvent(FrameIdentifier frameID, const WebKeyboardEvent& keyboard
 {
     SetForScope userIsInteractingChange { m_userIsInteracting, true };
 
-    m_userActivity.impulse();
+    m_internals->userActivity.impulse();
 
     PlatformKeyboardEvent::setCurrentModifierState(platform(keyboardEvent).modifiers());
 
@@ -8934,7 +8934,7 @@ void WebPage::startTextManipulations(Vector<WebCore::TextManipulationController:
     if (!m_page)
         return completionHandler();
 
-    m_textManipulationExclusionRules = WTFMove(exclusionRules);
+    m_internals->textManipulationExclusionRules = WTFMove(exclusionRules);
     m_textManipulationIncludesSubframes = includeSubframes;
     if (m_textManipulationIncludesSubframes) {
         for (RefPtr<Frame> frame = m_mainFrame->coreFrame(); frame; frame = frame->tree().traverseNext())
@@ -8953,7 +8953,7 @@ void WebPage::startTextManipulationForFrame(WebCore::Frame& frame)
     if (!document || document->textManipulationControllerIfExists())
         return;
 
-    auto exclusionRules = *m_textManipulationExclusionRules;
+    auto exclusionRules = *m_internals->textManipulationExclusionRules;
     document->textManipulationController().startObservingParagraphs([webPage = WeakPtr { *this }] (Document& document, const Vector<WebCore::TextManipulationItem>& items) {
         RefPtr frame = document.frame();
         if (!webPage || !frame)

@@ -264,6 +264,8 @@
 #include <WebCore/TextCheckerClient.h>
 #include <WebCore/TextExtractionTypes.h>
 #include <WebCore/TextIndicator.h>
+#include <WebCore/TextManipulationController.h>
+#include <WebCore/TextManipulationItem.h>
 #include <WebCore/ValidationBubble.h>
 #include <WebCore/WindowFeatures.h>
 #include <WebCore/WrappedCryptoKey.h>
