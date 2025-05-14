@@ -9901,6 +9901,8 @@
         "web-platform-tests/html/rendering/replaced-elements/images/input-image-content-ref.html",
         "web-platform-tests/html/rendering/replaced-elements/images/revoked-blob-print-ref.html",
         "web-platform-tests/html/rendering/replaced-elements/images/space-ref.html",
+        "web-platform-tests/html/rendering/replaced-elements/the-option-element/option-label-whitespace-2-ref.html",
+        "web-platform-tests/html/rendering/replaced-elements/the-option-element/option-label-whitespace-ref.html",
         "web-platform-tests/html/rendering/replaced-elements/the-option-element/option-with-br-ref.html",
         "web-platform-tests/html/rendering/replaced-elements/the-option-element/select-multiple-covered-by-abspos-ref.html",
         "web-platform-tests/html/rendering/replaced-elements/the-select-element/select-1-block-size-ref.html",
