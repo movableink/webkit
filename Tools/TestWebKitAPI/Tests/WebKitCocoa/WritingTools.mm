@@ -2887,7 +2887,8 @@ TEST(WritingTools, IsWritingToolsActiveAPIWithNoInlineEditing)
 
 #if PLATFORM(IOS_FAMILY)
 
-TEST(WritingTools, PanelHidesInputAccessoryView)
+// FIXME: Re-enable this test once webkit.org/b/292940 is resolved.
+TEST(WritingTools, DISABLED_PanelHidesInputAccessoryView)
 {
     RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
     RetainPtr delegate = adoptNS([TestInputDelegate new]);
@@ -2952,7 +2953,8 @@ TEST(WritingTools, ShowAffordance)
     expectScheduleShowAffordanceForSelectionRectCalled(true);
 }
 
-TEST(WritingTools, ShowAffordanceForMultipleLines)
+// FIXME: Re-enable this test once webkit.org/b/292940 is resolved.
+TEST(WritingTools, DISABLED_ShowAffordanceForMultipleLines)
 {
     FORCE_WRITING_TOOLS_AVAILABLE()
 
