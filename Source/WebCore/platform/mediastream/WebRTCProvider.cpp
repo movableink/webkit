@@ -206,14 +206,14 @@ void WebRTCProvider::createDecodingConfiguration(MediaDecodingConfiguration&& co
     MediaCapabilitiesDecodingInfo info { { }, WTFMove(configuration) };
 
 #if ENABLE(WEB_RTC)
-    if (info.supportedConfiguration.video) {
-        ContentType contentType { info.supportedConfiguration.video->contentType };
+    if (info.configuration.video) {
+        ContentType contentType { info.configuration.video->contentType };
         auto codec = codecCapability(contentType, videoDecodingCapabilities());
         if (!codec) {
             callback({ });
             return;
         }
-        if (auto infoOverride = videoDecodingCapabilitiesOverride(*info.supportedConfiguration.video)) {
+        if (auto infoOverride = videoDecodingCapabilitiesOverride(*info.configuration.video)) {
             if (!infoOverride->supported) {
                 callback({ });
                 return;
@@ -222,8 +222,8 @@ void WebRTCProvider::createDecodingConfiguration(MediaDecodingConfiguration&& co
             info.powerEfficient = infoOverride->powerEfficient;
         }
     }
-    if (info.supportedConfiguration.audio) {
-        ContentType contentType { info.supportedConfiguration.audio->contentType };
+    if (info.configuration.audio) {
+        ContentType contentType { info.configuration.audio->contentType };
         auto codec = codecCapability(contentType, audioDecodingCapabilities());
         if (!codec) {
             callback({ });
@@ -243,14 +243,14 @@ void WebRTCProvider::createEncodingConfiguration(MediaEncodingConfiguration&& co
     MediaCapabilitiesEncodingInfo info { { }, WTFMove(configuration) };
 
 #if ENABLE(WEB_RTC)
-    if (info.supportedConfiguration.video) {
-        ContentType contentType { info.supportedConfiguration.video->contentType };
+    if (info.configuration.video) {
+        ContentType contentType { info.configuration.video->contentType };
         auto codec = codecCapability(contentType, videoEncodingCapabilities());
         if (!codec) {
             callback({ });
             return;
         }
-        if (auto infoOverride = videoEncodingCapabilitiesOverride(*info.supportedConfiguration.video)) {
+        if (auto infoOverride = videoEncodingCapabilitiesOverride(*info.configuration.video)) {
             if (!infoOverride->supported) {
                 callback({ });
                 return;
@@ -259,8 +259,8 @@ void WebRTCProvider::createEncodingConfiguration(MediaEncodingConfiguration&& co
             info.powerEfficient = infoOverride->powerEfficient;
         }
     }
-    if (info.supportedConfiguration.audio) {
-        ContentType contentType { info.supportedConfiguration.audio->contentType };
+    if (info.configuration.audio) {
+        ContentType contentType { info.configuration.audio->contentType };
         auto codec = codecCapability(contentType, audioEncodingCapabilities());
         if (!codec) {
             callback({ });

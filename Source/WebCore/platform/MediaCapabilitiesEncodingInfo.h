@@ -31,15 +31,14 @@
 namespace WebCore {
 
 struct MediaCapabilitiesEncodingInfo : MediaCapabilitiesInfo {
-    MediaEncodingConfiguration supportedConfiguration;
+    MediaEncodingConfiguration configuration;
 
     MediaCapabilitiesEncodingInfo isolatedCopy() const;
-
 };
 
 inline MediaCapabilitiesEncodingInfo MediaCapabilitiesEncodingInfo::isolatedCopy() const
 {
-    return { MediaCapabilitiesInfo::isolatedCopy(), supportedConfiguration.isolatedCopy() };
+    return { MediaCapabilitiesInfo::isolatedCopy(), configuration.isolatedCopy() };
 }
 
 } // namespace WebCore

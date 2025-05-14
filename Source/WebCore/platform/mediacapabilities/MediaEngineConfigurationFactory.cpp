@@ -122,7 +122,7 @@ void MediaEngineConfigurationFactory::createDecodingConfiguration(MediaDecodingC
                 return;
             }
 
-            factoryCallback(factoryCallback, nextFactories.subspan(1), WTFMove(info.supportedConfiguration), WTFMove(callback));
+            factoryCallback(factoryCallback, nextFactories.subspan(1), WTFMove(info.configuration), WTFMove(callback));
         });
     };
     factoryCallback(factoryCallback, factories().span(), WTFMove(config), WTFMove(callback));
@@ -153,7 +153,7 @@ void MediaEngineConfigurationFactory::createEncodingConfiguration(MediaEncodingC
                 return;
             }
 
-            factoryCallback(factoryCallback, nextFactories.subspan(1), WTFMove(info.supportedConfiguration), WTFMove(callback));
+            factoryCallback(factoryCallback, nextFactories.subspan(1), WTFMove(info.configuration), WTFMove(callback));
         });
     };
     factoryCallback(factoryCallback, factories().span(), WTFMove(config), WTFMove(callback));
