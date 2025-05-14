@@ -44,6 +44,7 @@
 #include <gst/app/gstappsrc.h>
 #include <gst/base/gstflowcombiner.h>
 #include <wtf/UUID.h>
+#include <wtf/glib/GThreadSafeWeakPtr.h>
 #include <wtf/glib/WTFGType.h>
 #include <wtf/text/MakeString.h>
 
@@ -1077,17 +1078,16 @@ static void webkitMediaStreamSrcEnsureStreamCollectionPosted(WebKitMediaStreamSr
 {
     GST_DEBUG_OBJECT(self, "Posting stream collection");
     DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
-    callOnMainThreadAndWait([element = GRefPtr<GstElement>(GST_ELEMENT_CAST(self))] {
-        auto self = WEBKIT_MEDIA_STREAM_SRC_CAST(element.get());
+    callOnMainThreadAndWait([&] {
         auto streamCollection = webkitMediaStreamSrcCreateStreamCollection(self);
         GST_DEBUG_OBJECT(self, "Posting stream collection message containing %u streams", gst_stream_collection_get_size(streamCollection.get()));
-        gst_element_post_message(element.get(), gst_message_new_stream_collection(GST_OBJECT_CAST(self), streamCollection.get()));
+        gst_element_post_message(GST_ELEMENT_CAST(self), gst_message_new_stream_collection(GST_OBJECT_CAST(self), streamCollection.get()));
     });
     GST_DEBUG_OBJECT(self, "Stream collection posted");
 }
 
 struct ProbeData {
-    GRefPtr<GstElement> element;
+    GThreadSafeWeakPtr<GstElement> element;
     RealtimeMediaSource::Type sourceType;
     GRefPtr<GstEvent> streamStartEvent;
     GRefPtr<GstStreamCollection> collection;
@@ -1096,9 +1096,13 @@ WEBKIT_DEFINE_ASYNC_DATA_STRUCT(ProbeData);
 
 static GstPadProbeReturn webkitMediaStreamSrcPadProbeCb(GstPad* pad, GstPadProbeInfo* info, ProbeData* data)
 {
-    GstEvent* event = GST_PAD_PROBE_INFO_EVENT(info);
-    [[maybe_unused]] WebKitMediaStreamSrc* self = WEBKIT_MEDIA_STREAM_SRC_CAST(data->element.get());
+    auto element = data->element.get();
+    if (!element)
+        return GST_PAD_PROBE_REMOVE;
 
+    [[maybe_unused]] WebKitMediaStreamSrc* self = WEBKIT_MEDIA_STREAM_SRC_CAST(element.get());
+
+    auto event = GST_PAD_PROBE_INFO_EVENT(info);
     GST_DEBUG_OBJECT(self, "Event %" GST_PTR_FORMAT, event);
     switch (GST_EVENT_TYPE(event)) {
     case GST_EVENT_STREAM_START: {
@@ -1164,7 +1168,7 @@ void webkitMediaStreamSrcAddTrack(WebKitMediaStreamSrc* self, MediaStreamTrackPr
 
     auto pad = adoptGRef(gst_element_get_static_pad(element, "src"));
     auto data = createProbeData();
-    data->element = GST_ELEMENT_CAST(self);
+    data->element.reset(GST_ELEMENT_CAST(self));
     data->sourceType = track->source().type();
     data->collection = webkitMediaStreamSrcCreateStreamCollection(self);
     data->streamStartEvent = adoptGRef(gst_event_new_stream_start(gst_stream_get_stream_id(stream.get())));
