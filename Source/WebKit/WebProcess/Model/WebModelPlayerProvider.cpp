@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WebModelPlayerProvider.h"
 
+#include "Settings.h"
 #include "WebPage.h"
 #include "WebProcess.h"
 #include <WebCore/ModelPlayer.h>
