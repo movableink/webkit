@@ -112,6 +112,7 @@ namespace JSC {
     macro(WithScopeType, SpecObjectOther) \
     /* End JSScope types. */ \
     \
+    macro(DisposableStackType, SpecObjectOther) \
     macro(ModuleNamespaceObjectType, SpecObjectOther) \
     macro(ShadowRealmType, SpecObjectOther) \
     macro(RegExpObjectType, SpecRegExpObject) \

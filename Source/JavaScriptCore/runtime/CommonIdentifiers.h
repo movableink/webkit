@@ -318,7 +318,8 @@
     macro(yearsDisplay) \
     macro(error) \
     macro(suppressed) \
-    macro(SuppressedError)
+    macro(SuppressedError) \
+    macro(DisposableStack)
 
 #define JSC_COMMON_IDENTIFIERS_EACH_PRIVATE_FIELD(macro) \
     macro(constructor)

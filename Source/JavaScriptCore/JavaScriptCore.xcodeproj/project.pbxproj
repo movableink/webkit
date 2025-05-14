@@ -1432,6 +1432,11 @@
 		8BC0648B1E1ABA9400B2B8CA /* AsyncGeneratorFunctionConstructor.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BC064841E1A4FD100B2B8CA /* AsyncGeneratorFunctionConstructor.h */; };
 		8BC064921E1ADCC400B2B8CA /* AsyncGeneratorPrototype.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BC064901E1AD6AC00B2B8CA /* AsyncGeneratorPrototype.h */; };
 		8BC064961E1D845C00B2B8CA /* AsyncIteratorPrototype.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BC064941E1D828B00B2B8CA /* AsyncIteratorPrototype.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		8C9F78DA2DCF65F400868239 /* DisposableStackConstructor.h in Headers */ = {isa = PBXBuildFile; fileRef = 8C9F78D92DCF65F400868239 /* DisposableStackConstructor.h */; };
+		8C9F78E12DCF660E00868239 /* DisposableStackPrototype.h in Headers */ = {isa = PBXBuildFile; fileRef = 8C9F78E02DCF660E00868239 /* DisposableStackPrototype.h */; };
+		8C9F78E32DCF661700868239 /* DisposableStackPrototypeInlines.h in Headers */ = {isa = PBXBuildFile; fileRef = 8C9F78E22DCF661700868239 /* DisposableStackPrototypeInlines.h */; };
+		8C9F78F62DD0ED9E00868239 /* JSDisposableStack.h in Headers */ = {isa = PBXBuildFile; fileRef = 8C9F78F52DD0ED9E00868239 /* JSDisposableStack.h */; };
+		8C9F78F82DD0EDA400868239 /* JSDisposableStackInlines.h in Headers */ = {isa = PBXBuildFile; fileRef = 8C9F78F72DD0EDA400868239 /* JSDisposableStackInlines.h */; };
 		8CB955CB2C8AF8E100282DA2 /* JSAsyncFromSyncIterator.h in Headers */ = {isa = PBXBuildFile; fileRef = 8CB955CA2C8AF8E100282DA2 /* JSAsyncFromSyncIterator.h */; };
 		8CB955CD2C8AF8F500282DA2 /* JSAsyncFromSyncIteratorInlines.h in Headers */ = {isa = PBXBuildFile; fileRef = 8CB955CC2C8AF8F500282DA2 /* JSAsyncFromSyncIteratorInlines.h */; };
 		8CB955D12C8E9A0C00282DA2 /* JSRegExpStringIterator.h in Headers */ = {isa = PBXBuildFile; fileRef = 8CB955D02C8E9A0C00282DA2 /* JSRegExpStringIterator.h */; };
@@ -4799,6 +4804,14 @@
 		8BC064941E1D828B00B2B8CA /* AsyncIteratorPrototype.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AsyncIteratorPrototype.h; sourceTree = "<group>"; };
 		8C469C292D8EBC8A008C6403 /* StringReplaceCache.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = StringReplaceCache.cpp; sourceTree = "<group>"; };
 		8C9F78BF2DC8836D00868239 /* AsyncIteratorPrototype.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = AsyncIteratorPrototype.js; sourceTree = "<group>"; };
+		8C9F78D82DCF65EB00868239 /* DisposableStackConstructor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = DisposableStackConstructor.cpp; sourceTree = "<group>"; };
+		8C9F78D92DCF65F400868239 /* DisposableStackConstructor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DisposableStackConstructor.h; sourceTree = "<group>"; };
+		8C9F78DF2DCF660700868239 /* DisposableStackPrototype.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = DisposableStackPrototype.cpp; sourceTree = "<group>"; };
+		8C9F78E02DCF660E00868239 /* DisposableStackPrototype.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DisposableStackPrototype.h; sourceTree = "<group>"; };
+		8C9F78E22DCF661700868239 /* DisposableStackPrototypeInlines.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DisposableStackPrototypeInlines.h; sourceTree = "<group>"; };
+		8C9F78F42DD0ED9700868239 /* JSDisposableStack.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JSDisposableStack.cpp; sourceTree = "<group>"; };
+		8C9F78F52DD0ED9E00868239 /* JSDisposableStack.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JSDisposableStack.h; sourceTree = "<group>"; };
+		8C9F78F72DD0EDA400868239 /* JSDisposableStackInlines.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JSDisposableStackInlines.h; sourceTree = "<group>"; };
 		8CB955C92C8AF8D000282DA2 /* JSAsyncFromSyncIterator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JSAsyncFromSyncIterator.cpp; sourceTree = "<group>"; };
 		8CB955CA2C8AF8E100282DA2 /* JSAsyncFromSyncIterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSAsyncFromSyncIterator.h; sourceTree = "<group>"; };
 		8CB955CC2C8AF8F500282DA2 /* JSAsyncFromSyncIteratorInlines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSAsyncFromSyncIteratorInlines.h; sourceTree = "<group>"; };
@@ -8124,6 +8137,11 @@
 				14386A731DD69895008652C4 /* DirectEvalExecutable.h */,
 				FE54DEFE1E8D742800A892C5 /* DisallowScope.h */,
 				FE54DEFA1E8C6D7200A892C5 /* DisallowVMEntry.h */,
+				8C9F78D82DCF65EB00868239 /* DisposableStackConstructor.cpp */,
+				8C9F78D92DCF65F400868239 /* DisposableStackConstructor.h */,
+				8C9F78DF2DCF660700868239 /* DisposableStackPrototype.cpp */,
+				8C9F78E02DCF660E00868239 /* DisposableStackPrototype.h */,
+				8C9F78E22DCF661700868239 /* DisposableStackPrototypeInlines.h */,
 				E31618101EC5FE080006A218 /* DOMAnnotation.h */,
 				E31618111EC5FE080006A218 /* DOMAttributeGetterSetter.cpp */,
 				E31618121EC5FE080006A218 /* DOMAttributeGetterSetter.h */,
@@ -8398,6 +8416,9 @@
 				C2A7F687160432D400F76B98 /* JSDestructibleObject.h */,
 				0F7DF1391E29710E0095951B /* JSDestructibleObjectHeapCellType.cpp */,
 				0F7DF13A1E29710E0095951B /* JSDestructibleObjectHeapCellType.h */,
+				8C9F78F42DD0ED9700868239 /* JSDisposableStack.cpp */,
+				8C9F78F52DD0ED9E00868239 /* JSDisposableStack.h */,
+				8C9F78F72DD0EDA400868239 /* JSDisposableStackInlines.h */,
 				A7B4ACAE1484C9CE00B38A36 /* JSExportMacros.h */,
 				5300740C22DD6F6600B9ACB3 /* JSFinalizationRegistry.cpp */,
 				533D074622C2D9D1004D2FE2 /* JSFinalizationRegistry.h */,
@@ -10817,6 +10838,9 @@
 				FE54DEFF1E8D76FA00A892C5 /* DisallowScope.h in Headers */,
 				FE54DEFB1E8C6D8800A892C5 /* DisallowVMEntry.h in Headers */,
 				0FF42731158EBD54004CB9FF /* Disassembler.h in Headers */,
+				8C9F78DA2DCF65F400868239 /* DisposableStackConstructor.h in Headers */,
+				8C9F78E12DCF660E00868239 /* DisposableStackPrototype.h in Headers */,
+				8C9F78E32DCF661700868239 /* DisposableStackPrototypeInlines.h in Headers */,
 				E31618131EC5FE170006A218 /* DOMAnnotation.h in Headers */,
 				E31618151EC5FE270006A218 /* DOMAttributeGetterSetter.h in Headers */,
 				278D26072A70CF21007F5BC3 /* DOMAttributeGetterSetterInlines.h in Headers */,
@@ -11257,6 +11281,8 @@
 				978801411471AD920041B016 /* JSDateMath.h in Headers */,
 				C2A7F688160432D400F76B98 /* JSDestructibleObject.h in Headers */,
 				0F7DF13C1E2971130095951B /* JSDestructibleObjectHeapCellType.h in Headers */,
+				8C9F78F62DD0ED9E00868239 /* JSDisposableStack.h in Headers */,
+				8C9F78F82DD0EDA400868239 /* JSDisposableStackInlines.h in Headers */,
 				FE384EE61ADDB7AD0055DE2C /* JSDollarVM.h in Headers */,
 				86E3C614167BABD7006D760A /* JSExport.h in Headers */,
 				A7B4ACAF1484C9CE00B38A36 /* JSExportMacros.h in Headers */,

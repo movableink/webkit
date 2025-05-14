@@ -66,6 +66,7 @@
 #include "JSCustomGetterFunction.h"
 #include "JSCustomSetterFunction.h"
 #include "JSDataView.h"
+#include "JSDisposableStack.h"
 #include "JSFunction.h"
 #include "JSGlobalLexicalEnvironment.h"
 #include "JSGlobalObject.h"

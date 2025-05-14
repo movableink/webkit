@@ -990,6 +990,9 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/DirectEvalExecutable.h
     runtime/DisallowScope.h
     runtime/DisallowVMEntry.h
+    runtime/DisposableStackConstructor.h
+    runtime/DisposableStackPrototype.h
+    runtime/DisposableStackPrototypeInlines.h
     runtime/DumpContext.h
     runtime/ECMAMode.h
     runtime/EnsureStillAliveHere.h
@@ -1072,6 +1075,8 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/JSDateMath.h
     runtime/JSDestructibleObject.h
     runtime/JSDestructibleObjectHeapCellType.h
+    runtime/JSDisposableStack.h
+    runtime/JSDisposableStackInlines.h
     runtime/JSExportMacros.h
     runtime/JSFunction.h
     runtime/JSFunctionInlines.h
