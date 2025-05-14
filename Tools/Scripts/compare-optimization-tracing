@@ -37,10 +37,11 @@ from collections import defaultdict
 #
 # Usage Examples:
 # compare-optimization-tracing -v -a <BUILD_A_PATH> -b <BUILD_B_PATH> --test <SINGLE_TEST_PATH> --filter FTL
+# compare-optimization-tracing -v -a <BUILD_A_PATH> --a-option "--usePartialLoopUnrolling=0 --maxLoopUnrollingCount=5" -b <BUILD_B_PATH> --b-option "--usePartialLoopUnrolling=1 --maxLoopUnrollingCount=10" --test <SINGLE_TEST_PATH> --filter FTL
 # compare-optimization-tracing -v -a <BUILD_A_PATH> -b <BUILD_B_PATH> --test "-e \"testList='crypto'\" cli.js" --cwd <BENCHMARK_WORKING_DIR> --filter FTL
 # compare-optimization-tracing -v -a <BUILD_A_PATH> -b <BUILD_B_PATH> --test-list <TEST_LIST_FILE_PATH> --cwd <BENCHMARK_WORKING_DIR> --filter FTL
 
-def run_jsc_and_capture(verbose, build_path, jsc_args, cwd):
+def run_jsc_and_capture(verbose, build_path, jsc_args, cwd, extra_options=""):
     jsc_binary = os.path.join(build_path, "jsc")
     env = os.environ.copy()
     env["DYLD_FRAMEWORK_PATH"] = build_path
@@ -51,7 +52,7 @@ def run_jsc_and_capture(verbose, build_path, jsc_args, cwd):
         "--dumpOptimizationTracing=1",
     ]
 
-    command = [jsc_binary] + jsc_args + required_options
+    command = [jsc_binary] + jsc_args + required_options + shlex.split(extra_options)
 
     if verbose:
         def human_friendly_quote(arg):
@@ -125,12 +126,12 @@ def run_comparison_for_test(args, jsc_args, test_name):
 
     if args.verbose:
         print("Running build A...")
-    output_a = run_jsc_and_capture(args.verbose, args.build_a, jsc_args, args.cwd)
+    output_a = run_jsc_and_capture(args.verbose, args.build_a, jsc_args, args.cwd, extra_options=args.a_option)
     categories_a = extract_lines_by_category(output_a, args.filter)
 
     if args.verbose:
         print("Running build B...")
-    output_b = run_jsc_and_capture(args.verbose, args.build_b, jsc_args, args.cwd)
+    output_b = run_jsc_and_capture(args.verbose, args.build_b, jsc_args, args.cwd, extra_options=args.b_option)
     categories_b = extract_lines_by_category(output_b, args.filter)
 
     all_categories = set(categories_a.keys()).union(categories_b.keys())
@@ -168,7 +169,9 @@ def run_comparison_for_test(args, jsc_args, test_name):
 def main():
     parser = argparse.ArgumentParser(description="Compare JIT output categorized by optimization between two JSC builds.")
     parser.add_argument('-a', '--build-a', required=True, help="Path to build A")
+    parser.add_argument('--a-option', default="", help="Extra JSC options for build A (quoted string of space-delimited options)")
     parser.add_argument('-b', '--build-b', required=True, help="Path to build B")
+    parser.add_argument('--b-option', default="", help="Extra JSC options for build B (quoted string of space-delimited options)")
     parser.add_argument('--test', help="Test file or CLI args (quoted)")
     parser.add_argument('--test-list', help="Path to a file with one test name per line (replaces 'crypto' in --test)")
     parser.add_argument('--cwd', default='.', help="Working directory (default: current directory)")
