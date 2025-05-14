@@ -928,13 +928,21 @@ UncheckedKeyHashSet<AnimatableCSSProperty> TreeResolver::applyCascadeAfterAnimat
     return styleBuilder.overriddenAnimatedProperties();
 }
 
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+void TreeResolver::pushParent(Element& element, const RenderStyle& style, OptionSet<Change> changes, DescendantsToResolve descendantsToResolve, IsInDisplayNoneTree isInDisplayNoneTree, bool didAXUpdateFontSubtree, bool didAXUpdateTextColorSubtree)
+#else
 void TreeResolver::pushParent(Element& element, const RenderStyle& style, OptionSet<Change> changes, DescendantsToResolve descendantsToResolve, IsInDisplayNoneTree isInDisplayNoneTree)
+#endif
 {
     scope().selectorMatchingState.selectorFilter.pushParent(&element);
     if (style.containerType() != ContainerType::Normal)
         scope().selectorMatchingState.containerQueryEvaluationState.sizeQueryContainers.append(element);
 
     Parent parent(element, style, changes, descendantsToResolve, isInDisplayNoneTree);
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    parent.didAXUpdateFontSubtree = didAXUpdateFontSubtree;
+    parent.didAXUpdateTextColorSubtree = didAXUpdateTextColorSubtree;
+#endif
 
     if (auto* shadowRoot = element.shadowRoot()) {
         pushScope(*shadowRoot);
@@ -1147,6 +1155,10 @@ void TreeResolver::resolveComposedTree()
         auto changes = OptionSet<Change> { };
         auto descendantsToResolve = DescendantsToResolve::None;
 
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+        bool didAXUpdateFontSubtree = parent.didAXUpdateFontSubtree;
+        bool didAXUpdateTextColorSubtree = parent.didAXUpdateTextColorSubtree;
+#endif
         auto resolutionType = determineResolutionType(element, style, parent.descendantsToResolve, parent.changes);
         if (resolutionType) {
             element.resetComputedStyle();
@@ -1161,8 +1173,15 @@ void TreeResolver::resolveComposedTree()
 
             if (element.hasCustomStyleResolveCallbacks())
                 element.didRecalcStyle(elementUpdate.changes);
-            if (CheckedPtr cache = m_document->existingAXObjectCache())
+            if (CheckedPtr cache = m_document->existingAXObjectCache()) {
                 cache->onStyleChange(element, elementUpdate.changes, style, elementUpdate.style.get());
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+                if (!didAXUpdateFontSubtree)
+                    didAXUpdateFontSubtree = cache->onFontChange(element, style, elementUpdate.style.get());
+                if (!didAXUpdateTextColorSubtree)
+                    didAXUpdateTextColorSubtree = cache->onTextColorChange(element, style, elementUpdate.style.get());
+#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+            }
 
             style = elementUpdate.style.get();
             changes = elementUpdate.changes;
@@ -1209,8 +1228,11 @@ void TreeResolver::resolveComposedTree()
         resetDescendantStyleRelations(element, descendantsToResolve);
 
         auto isInDisplayNoneTree = parent.isInDisplayNoneTree == IsInDisplayNoneTree::Yes || !style || style->display() == DisplayType::None;
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+        pushParent(element, *style, changes, descendantsToResolve, isInDisplayNoneTree ? IsInDisplayNoneTree::Yes : IsInDisplayNoneTree::No, didAXUpdateFontSubtree, didAXUpdateTextColorSubtree);
+#else
         pushParent(element, *style, changes, descendantsToResolve, isInDisplayNoneTree ? IsInDisplayNoneTree::Yes : IsInDisplayNoneTree::No);
-
+#endif
         it.traverseNext();
     }
 

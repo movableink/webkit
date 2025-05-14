@@ -800,9 +800,17 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
         case AXProperty::BackgroundColor:
             properties.append({ AXProperty::BackgroundColor, axObject.backgroundColor() });
             break;
-        case AXProperty::Font:
-            properties.append({ AXProperty::Font, axObject.font() });
+        case AXProperty::Font: {
+            if (RefPtr parent = axObject.parentObject()) {
+                RetainPtr font = axObject.font();
+                if (font != parent->font()) {
+                    properties.append({ AXProperty::Font, WTFMove(font) });
+                    break;
+                }
+            }
+            properties.append({ AXProperty::Font, nullptr });
             break;
+        }
         case AXProperty::HasLinethrough:
             properties.append({ AXProperty::HasLinethrough, axObject.lineDecorationStyle().hasLinethrough });
             break;
@@ -821,9 +829,18 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
         case AXProperty::LinethroughColor:
             properties.append({ AXProperty::LinethroughColor, axObject.lineDecorationStyle().linethroughColor });
             break;
-        case AXProperty::TextColor:
-            properties.append({ AXProperty::TextColor, axObject.textColor() });
+        case AXProperty::TextColor: {
+            if (RefPtr parent = axObject.parentObject()) {
+                auto color = axObject.textColor();
+                if (color != parent->textColor()) {
+                    properties.append({ AXProperty::TextColor, color });
+                    break;
+                }
+            }
+            // Setting text color to nullptr will remove it from the property map, and allow it to be inherited from an ancestor.
+            properties.append({ AXProperty::TextColor, nullptr });
             break;
+        }
         case AXProperty::TextRuns:
             properties.append({ AXProperty::TextRuns, std::make_shared<AXTextRuns>(axObject.textRuns()) });
             break;

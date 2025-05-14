@@ -121,7 +121,7 @@ AttributedStringStyle AXIsolatedObject::stylesForAttributedString() const
 {
     return {
         font(),
-        colorAttributeValue(AXProperty::TextColor),
+        textColor(),
         colorAttributeValue(AXProperty::BackgroundColor),
         boolAttributeValue(AXProperty::IsSubscript),
         boolAttributeValue(AXProperty::IsSuperscript),

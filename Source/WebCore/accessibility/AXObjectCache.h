@@ -397,6 +397,12 @@ public:
     void onSlottedContentChange(const HTMLSlotElement&);
     void onStyleChange(Element&, OptionSet<Style::Change>, const RenderStyle* oldStyle, const RenderStyle* newStyle);
     void onStyleChange(RenderText&, StyleDifference, const RenderStyle* oldStyle, const RenderStyle& newStyle);
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    // Returns true if the font changes, requiring all descendants to update the Font property.
+    bool onFontChange(Element&, const RenderStyle*, const RenderStyle*);
+    // Returns true if the text color changes, requiring all descendants to update the TextColor property.
+    bool onTextColorChange(Element&, const RenderStyle*, const RenderStyle*);
+#endif
     void onTextSecurityChanged(HTMLInputElement&);
     void onTitleChange(Document&);
     void onValidityChange(Element&);

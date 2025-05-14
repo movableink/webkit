@@ -2042,6 +2042,50 @@ void AXObjectCache::onStyleChange(Element& element, OptionSet<Style::Change> cha
 #endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 }
 
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+bool AXObjectCache::onFontChange(Element& element, const RenderStyle* oldStyle, const RenderStyle* newStyle)
+{
+    if (!oldStyle || !newStyle)
+        return false;
+
+    RefPtr object = get(element);
+    if (!object)
+        return false;
+
+    RefPtr tree = AXIsolatedTree::treeForPageID(m_pageID);
+    if (!tree)
+        return false;
+
+    if (!oldStyle->fontCascadeEqual(*newStyle)) {
+        tree->updatePropertiesForSelfAndDescendants(*object, { AXProperty::Font });
+        return true;
+    }
+
+    return false;
+}
+
+bool AXObjectCache::onTextColorChange(Element& element, const RenderStyle* oldStyle, const RenderStyle* newStyle)
+{
+    if (!oldStyle || !newStyle)
+        return false;
+
+    RefPtr object = get(element);
+    if (!object)
+        return false;
+
+    RefPtr tree = AXIsolatedTree::treeForPageID(m_pageID);
+    if (!tree)
+        return false;
+
+    if (oldStyle->visitedDependentColor(CSSPropertyColor) != newStyle->visitedDependentColor(CSSPropertyColor)) {
+        tree->updatePropertiesForSelfAndDescendants(*object, { AXProperty::TextColor });
+        return true;
+    }
+
+    return false;
+}
+#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+
 void AXObjectCache::onStyleChange(RenderText& renderText, StyleDifference difference, const RenderStyle* oldStyle, const RenderStyle& newStyle)
 {
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
@@ -2081,12 +2125,6 @@ void AXObjectCache::onStyleChange(RenderText& renderText, StyleDifference differ
         return;
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
-    if (!oldStyle->fontCascadeEqual(newStyle))
-        tree->queueNodeUpdate(object->objectID(), { AXProperty::Font });
-
-    if (oldStyle->visitedDependentColor(CSSPropertyColor) != newStyle.visitedDependentColor(CSSPropertyColor))
-        tree->queueNodeUpdate(object->objectID(), { AXProperty::TextColor });
-
     if (oldStyle->visitedDependentColor(CSSPropertyBackgroundColor) != newStyle.visitedDependentColor(CSSPropertyBackgroundColor))
         tree->queueNodeUpdate(object->objectID(), { AXProperty::BackgroundColor });
 

@@ -116,6 +116,12 @@ private:
         bool needsUpdateQueryContainerDependentStyle { false };
         IsInDisplayNoneTree isInDisplayNoneTree { IsInDisplayNoneTree::No };
 
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+        // Used to determine whether the AXObjectCache has already propagated down font and color updates for the current subtree.
+        bool didAXUpdateFontSubtree { false };
+        bool didAXUpdateTextColorSubtree { false };
+#endif
+
         Parent(Document&);
         Parent(Element&, const RenderStyle&, OptionSet<Change>, DescendantsToResolve, IsInDisplayNoneTree);
     };
@@ -130,7 +136,11 @@ private:
     void pushEnclosingScope();
     void popScope();
 
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    void pushParent(Element&, const RenderStyle&, OptionSet<Change>, DescendantsToResolve, IsInDisplayNoneTree, bool, bool);
+#else
     void pushParent(Element&, const RenderStyle&, OptionSet<Change>, DescendantsToResolve, IsInDisplayNoneTree);
+#endif
     void popParent();
     void popParentsToDepth(unsigned depth);
 

@@ -179,6 +179,15 @@ private:
     template<typename T> std::optional<T> optionalAttributeValue(AXProperty) const;
     template<typename T> T propertyValue(AXProperty) const;
 
+#ifndef NDEBUG
+    // The color of |this| without any ancestry traversal.
+    Color cachedTextColor() const;
+#if PLATFORM(COCOA)
+    // The font of |this| without any ancestry traversal.
+    RetainPtr<CTFontRef> cachedFont() const;
+#endif // PLATFORM(COCOA)
+#endif // NDEBUG
+
     // The following method performs a lazy caching of the given property.
     // If the property is already in m_properties, returns the existing value.
     // If not, retrieves the property from the main thread and cache it for later use.
