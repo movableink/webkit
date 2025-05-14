@@ -477,7 +477,7 @@ FloatRect TileController::adjustTileCoverageForDesktopPageScrolling(const FloatR
 }
 #endif
 
-FloatRect TileController::adjustTileCoverageWithScrollingVelocity(const FloatRect& coverageRect, const FloatSize& newSize, const FloatRect& visibleRect, float contentsScale) const
+FloatRect TileController::adjustTileCoverageWithScrollingVelocity(const FloatRect& coverageRect, const FloatSize& newSize, const FloatRect& visibleRect, float contentsScale, MonotonicTime timestamp) const
 {
     if (m_tileCoverage == CoverageForVisibleArea || MemoryPressureHandler::singleton().isUnderMemoryPressure())
         return visibleRect;
@@ -485,8 +485,7 @@ FloatRect TileController::adjustTileCoverageWithScrollingVelocity(const FloatRec
     double horizontalMargin = kDefaultTileSize / contentsScale;
     double verticalMargin = kDefaultTileSize / contentsScale;
 
-    MonotonicTime currentTime = MonotonicTime::now();
-    Seconds timeDelta = currentTime - m_velocity.lastUpdateTime;
+    Seconds timeDelta = timestamp - m_velocity.lastUpdateTime;
 
     FloatRect futureRect = visibleRect;
     futureRect.setLocation(FloatPoint(
@@ -546,6 +545,8 @@ FloatRect TileController::adjustTileCoverageRectForScrolling(const FloatRect& co
     UNUSED_PARAM(previousVisibleRect);
 #endif
 
+    MonotonicTime currentTime = MonotonicTime::now();
+
     auto computeVelocityIfNecessary = [&](FloatPoint scrollOffset) {
         if (m_haveExternalVelocityData)
             return;
@@ -553,12 +554,12 @@ FloatRect TileController::adjustTileCoverageRectForScrolling(const FloatRect& co
         if (!m_historicalVelocityData)
             m_historicalVelocityData = makeUnique<HistoricalVelocityData>();
 
-        m_velocity = m_historicalVelocityData->velocityForNewData(scrollOffset, contentsScale, MonotonicTime::now());
+        m_velocity = m_historicalVelocityData->velocityForNewData(scrollOffset, contentsScale, currentTime);
     };
     
     computeVelocityIfNecessary(visibleRect.location());
 
-    return adjustTileCoverageWithScrollingVelocity(coverageRect, newSize, visibleRect, contentsScale);
+    return adjustTileCoverageWithScrollingVelocity(coverageRect, newSize, visibleRect, contentsScale, currentTime);
 }
 
 void TileController::scheduleTileRevalidation(Seconds interval)
