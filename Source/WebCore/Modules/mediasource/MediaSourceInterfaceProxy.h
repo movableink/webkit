@@ -50,7 +50,7 @@ public:
     virtual bool isClosed() const = 0;
     virtual MediaTime duration() const = 0;
     virtual PlatformTimeRanges buffered() const = 0;
-    virtual Ref<TimeRanges> seekable() const = 0;
+    virtual PlatformTimeRanges seekable() const = 0;
     virtual bool isStreamingContent() const = 0;
     virtual bool attachToElement(WeakPtr<HTMLMediaElement>&&) = 0;
     virtual void detachFromElement() = 0;

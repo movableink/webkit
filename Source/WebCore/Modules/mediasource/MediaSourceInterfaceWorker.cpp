@@ -78,11 +78,11 @@ PlatformTimeRanges MediaSourceInterfaceWorker::buffered() const
     return PlatformTimeRanges::emptyRanges();
 }
 
-Ref<TimeRanges> MediaSourceInterfaceWorker::seekable() const
+PlatformTimeRanges MediaSourceInterfaceWorker::seekable() const
 {
     if (RefPtr mediaSourcePrivate = m_handle->mediaSourcePrivate(); mediaSourcePrivate && !isClosed())
-        return TimeRanges::create(mediaSourcePrivate->seekable());
-    return TimeRanges::create();
+        return mediaSourcePrivate->seekable();
+    return { };
 }
 
 bool MediaSourceInterfaceWorker::isStreamingContent() const

@@ -61,7 +61,7 @@ public:
     void durationChanged(double) final;
     void currentTimeChanged(double /*currentTime*/, double /*anchorTime*/) final;
     void rateChanged(OptionSet<PlaybackSessionModel::PlaybackState>, double /* playbackRate */, double /* defaultPlaybackRate */) final;
-    void seekableRangesChanged(const TimeRanges&, double /*lastModifiedTime*/, double /*liveUpdateInterval*/) final;
+    void seekableRangesChanged(const PlatformTimeRanges&, double /*lastModifiedTime*/, double /*liveUpdateInterval*/) final;
     void audioMediaSelectionOptionsChanged(const Vector<MediaSelectionOption>& /*options*/, uint64_t /*selectedIndex*/) final;
     void legibleMediaSelectionOptionsChanged(const Vector<MediaSelectionOption>& /*options*/, uint64_t /*selectedIndex*/) final;
     void audioMediaSelectionIndexChanged(uint64_t) final;

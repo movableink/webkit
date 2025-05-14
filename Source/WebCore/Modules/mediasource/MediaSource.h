@@ -110,7 +110,7 @@ public:
     void elementIsShuttingDown();
     void detachFromElement();
     bool isSeeking() const { return !!m_pendingSeekTarget; }
-    Ref<TimeRanges> seekable();
+    PlatformTimeRanges seekable();
     ExceptionOr<void> setLiveSeekableRange(double start, double end);
     ExceptionOr<void> clearLiveSeekableRange();
 

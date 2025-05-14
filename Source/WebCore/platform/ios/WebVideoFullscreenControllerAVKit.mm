@@ -160,7 +160,7 @@ private:
     bool isScrubbing() const override { return false; }
     double defaultPlaybackRate() const override;
     double playbackRate() const override;
-    Ref<TimeRanges> seekableRanges() const override;
+    PlatformTimeRanges seekableRanges() const override;
     double seekableTimeRangesLastModifiedTime() const override;
     double liveUpdateInterval() const override;
     bool canPlayFastReverse() const override;
@@ -190,7 +190,7 @@ private:
     void currentTimeChanged(double currentTime, double anchorTime) override;
     void bufferedTimeChanged(double) override;
     void rateChanged(OptionSet<PlaybackSessionModel::PlaybackState>, double playbackRate, double defaultPlaybackRate) override;
-    void seekableRangesChanged(const TimeRanges&, double lastModifiedTime, double liveUpdateInterval) override;
+    void seekableRangesChanged(const PlatformTimeRanges&, double lastModifiedTime, double liveUpdateInterval) override;
     void canPlayFastReverseChanged(bool) override;
     void audioMediaSelectionOptionsChanged(const Vector<MediaSelectionOption>& options, uint64_t selectedIndex) override;
     void legibleMediaSelectionOptionsChanged(const Vector<MediaSelectionOption>& options, uint64_t selectedIndex) override;
@@ -470,11 +470,11 @@ void VideoFullscreenControllerContext::videoDimensionsChanged(const FloatSize& v
         client->videoDimensionsChanged(videoDimensions);
 }
 
-void VideoFullscreenControllerContext::seekableRangesChanged(const TimeRanges& timeRanges, double lastModifiedTime, double liveUpdateInterval)
+void VideoFullscreenControllerContext::seekableRangesChanged(const PlatformTimeRanges& timeRanges, double lastModifiedTime, double liveUpdateInterval)
 {
     if (WebThreadIsCurrent()) {
-        RunLoop::protectedMain()->dispatch([protectedThis = Ref { *this }, platformTimeRanges = timeRanges.ranges(), lastModifiedTime, liveUpdateInterval] {
-            protectedThis->seekableRangesChanged(TimeRanges::create(platformTimeRanges), lastModifiedTime, liveUpdateInterval);
+        RunLoop::protectedMain()->dispatch([protectedThis = Ref { *this }, timeRanges, lastModifiedTime, liveUpdateInterval] {
+            protectedThis->seekableRangesChanged(timeRanges, lastModifiedTime, liveUpdateInterval);
         });
         return;
     }
@@ -931,10 +931,10 @@ double VideoFullscreenControllerContext::playbackRate() const
     return m_playbackModel ? m_playbackModel->playbackRate() : 0;
 }
 
-Ref<TimeRanges> VideoFullscreenControllerContext::seekableRanges() const
+PlatformTimeRanges VideoFullscreenControllerContext::seekableRanges() const
 {
     ASSERT(isUIThread());
-    return m_playbackModel ? m_playbackModel->seekableRanges() : TimeRanges::create();
+    return m_playbackModel ? m_playbackModel->seekableRanges() : PlatformTimeRanges::emptyRanges();
 }
 
 double VideoFullscreenControllerContext::seekableTimeRangesLastModifiedTime() const
