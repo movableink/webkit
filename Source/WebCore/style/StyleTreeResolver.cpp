@@ -1197,22 +1197,24 @@ void TreeResolver::resolveComposedTree()
         if (!style)
             resetStyleForNonRenderedDescendants(element);
 
-        auto queryContainerAction = updateStateForQueryContainer(element, style, changes, descendantsToResolve);
+        auto queryContainerAction = updateStateForQueryContainer(element, style, descendantsToResolve);
         auto anchorPositionedElementAction = updateAnchorPositioningState(element, style, changes);
+
+        resumeDescendantResolutionIfNeeded(element, changes, descendantsToResolve);
 
         bool shouldIterateChildren = [&] {
             // display::none, no need to resolve descendants.
             if (!style)
                 return false;
-            // Style resolution will be resumed after the container has been resolved.
-            if (queryContainerAction == LayoutInterleavingAction::SkipDescendants)
+
+            // Style resolution will be resumed after the container or anchor-positioned element has been resolved.
+            if (queryContainerAction == LayoutInterleavingAction::SkipDescendants || anchorPositionedElementAction == LayoutInterleavingAction::SkipDescendants) {
+                deferDescendantResolution(element, changes, descendantsToResolve);
                 return false;
-            // Style resolution will be resumed after the anchor-positioned element has been resolved.
-            if (anchorPositionedElementAction == LayoutInterleavingAction::SkipDescendants)
-                return false;
+            }
+
             return element.childNeedsStyleRecalc() || descendantsToResolve != DescendantsToResolve::None;
         }();
-
 
         if (!m_didSeePendingStylesheet)
             m_didSeePendingStylesheet = hasLoadingStylesheet(m_document->styleScope(), element, !shouldIterateChildren);
@@ -1253,30 +1255,45 @@ const RenderStyle* TreeResolver::existingStyle(const Element& element)
     return style;
 }
 
-auto TreeResolver::updateStateForQueryContainer(Element& element, const RenderStyle* style, OptionSet<Change>& changes, DescendantsToResolve& descendantsToResolve) -> LayoutInterleavingAction
+void TreeResolver::deferDescendantResolution(Element& element, OptionSet<Change> changes, DescendantsToResolve descendantsToResolve)
+{
+    m_deferredDescendantResolutionStates.add(element, DeferredDescendantResolutionState {
+        .changes = changes,
+        .descendantsToResolve = descendantsToResolve
+    });
+}
+
+void TreeResolver::resumeDescendantResolutionIfNeeded(Element& element, OptionSet<Change>& changes, DescendantsToResolve& descendantsToResolve)
+{
+    auto it = m_deferredDescendantResolutionStates.find(element);
+    if (it == m_deferredDescendantResolutionStates.end())
+        return;
+
+    const auto& state = it->value;
+
+    changes |= state.changes;
+    descendantsToResolve = std::max(descendantsToResolve, state.descendantsToResolve);
+
+    m_deferredDescendantResolutionStates.remove(it);
+}
+
+auto TreeResolver::updateStateForQueryContainer(Element& element, const RenderStyle* style, DescendantsToResolve& descendantsToResolve) -> LayoutInterleavingAction
 {
     if (!style)
         return LayoutInterleavingAction::None;
 
-    auto tryRestoreState = [&](auto& state) {
-        if (!state)
-            return;
-        changes |= state->changes;
-        descendantsToResolve = std::max(descendantsToResolve, state->descendantsToResolve);
-        state = { };
-    };
-
-    if (auto it = m_queryContainerStates.find(element); it != m_queryContainerStates.end()) {
-        tryRestoreState(it->value);
+    if (m_queryContainerStates.contains(element))
         return LayoutInterleavingAction::None;
-    }
 
     auto* existingStyle = element.renderOrDisplayContentsStyle();
     if (style->containerType() != ContainerType::Normal || (existingStyle && existingStyle->containerType() != ContainerType::Normal)) {
-        // If any of the queries use font-size relative units then a font size change may affect their evaluation.
+        // If any of the queries use font-size relative units then a font size change
+        // may affect their evaluation, so force re-evaluating all descendants.
         if (styleChangeAffectsRelativeUnits(*style, existingStyle))
             descendantsToResolve = DescendantsToResolve::All;
-        m_queryContainerStates.add(element, QueryContainerState { changes, descendantsToResolve });
+
+        m_queryContainerStates.add(element, QueryContainerState { });
+
         return LayoutInterleavingAction::SkipDescendants;
     }
 
@@ -1313,11 +1330,12 @@ std::unique_ptr<Update> TreeResolver::resolve()
     m_parentStack.clear();
     popScope();
 
-    for (auto& containerAndState : m_queryContainerStates) {
+    for (auto& [element, state] : m_queryContainerStates) {
         // Ensure that resumed resolution reaches the container.
-        if (containerAndState.value && !containerAndState.value->invalidated) {
-            containerAndState.key->invalidateForResumingQueryContainerResolution();
-            containerAndState.value->invalidated = true;
+        if (!state.invalidated) {
+            element->invalidateForResumingQueryContainerResolution();
+            state.invalidated = true;
+
             m_needsInterleavedLayout = true;
         }
     }

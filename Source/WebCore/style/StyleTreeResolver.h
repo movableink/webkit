@@ -77,7 +77,17 @@ private:
     enum class LayoutInterleavingAction : uint8_t { None, SkipDescendants };
     enum class DescendantsToResolve : uint8_t { None, RebuildAllUsingExisting, ChildrenWithExplicitInherit, Children, All };
 
-    LayoutInterleavingAction updateStateForQueryContainer(Element&, const RenderStyle*, OptionSet<Change>&, DescendantsToResolve&);
+    LayoutInterleavingAction updateStateForQueryContainer(Element&, const RenderStyle*, DescendantsToResolve&);
+
+    // For elements requiring style/layout interleaving (anchor-positioned and query
+    // containers), descendant resolution is deferred on the first style resolution
+    // pass and resumed in subsequent passes.
+    // When deferral is needed, deferDescendantResolution saves the internal state
+    // relevant to which descendants should be resolved.
+    void deferDescendantResolution(Element&, OptionSet<Change>, DescendantsToResolve);
+    // When descendant resolution can be resumed, resumeDescendantResolutionIfNeeded
+    // restores the previously saved state (if there is)
+    void resumeDescendantResolutionIfNeeded(Element&, OptionSet<Change>&, DescendantsToResolve&);
 
     std::pair<ElementUpdate, DescendantsToResolve> resolveElement(Element&, const RenderStyle* existingStyle, ResolutionType);
 
@@ -170,12 +180,6 @@ private:
 
     bool hasUnresolvedAnchorPosition(const Element&) const;
 
-    struct QueryContainerState {
-        OptionSet<Change> changes;
-        DescendantsToResolve descendantsToResolve { DescendantsToResolve::None };
-        bool invalidated { false };
-    };
-
     CheckedRef<Document> m_document;
     std::unique_ptr<RenderStyle> m_documentElementStyle;
 
@@ -183,8 +187,19 @@ private:
     Vector<Parent, 32> m_parentStack;
     bool m_didSeePendingStylesheet { false };
 
-    UncheckedKeyHashMap<Ref<Element>, std::optional<QueryContainerState>> m_queryContainerStates;
+    // States relevant to deferring and resuming descendant resolution.
+    // Also see deferDescendantResolution and resumeDescendantResolutionIfNeeded.
+    struct DeferredDescendantResolutionState {
+        OptionSet<Change> changes;
+        DescendantsToResolve descendantsToResolve { DescendantsToResolve::None };
+    };
+    UncheckedKeyHashMap<Ref<Element>, DeferredDescendantResolutionState> m_deferredDescendantResolutionStates;
     bool m_needsInterleavedLayout { false };
+
+    struct QueryContainerState {
+        bool invalidated { false };
+    };
+    UncheckedKeyHashMap<Ref<Element>, QueryContainerState> m_queryContainerStates;
 
     // This state gets passes to the style builder and holds state for a single tree resolution, including over any interleaving.
     TreeResolutionState m_treeResolutionState;
