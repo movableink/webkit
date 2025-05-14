@@ -1559,6 +1559,7 @@ public:
     void getImageBufferResourceLimits(ImageBufferResourceLimitsPromise&&);
 
     void setResourceCachingDisabledByWebInspector(bool);
+    ExceptionOr<void> lowerAllFrameMemoryMonitorLimits();
 
 #if ENABLE(CONTENT_EXTENSIONS)
     void setResourceMonitorNetworkUsageThreshold(size_t threshold, double randomness = ResourceMonitorChecker::defaultNetworkUsageThresholdRandomness);

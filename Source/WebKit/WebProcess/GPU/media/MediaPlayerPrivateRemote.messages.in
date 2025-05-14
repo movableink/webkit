@@ -105,6 +105,7 @@ messages -> MediaPlayerPrivateRemote {
 #endif
 
     CommitAllTransactions() -> ()
+    ReportGPUMemoryFootprint(uint64_t memoryFootPrint)
 }
 
 #endif

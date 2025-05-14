@@ -287,6 +287,7 @@ public:
     virtual void mediaPlayerDidRemoveAudioTrack(AudioTrackPrivate&) { }
     virtual void mediaPlayerDidRemoveTextTrack(InbandTextTrackPrivate&) { }
     virtual void mediaPlayerDidRemoveVideoTrack(VideoTrackPrivate&) { }
+    virtual void mediaPlayerDidReportGPUMemoryFootprint(size_t) { }
 
     virtual void mediaPlayerReloadAndResumePlaybackIfNeeded() { }
 
@@ -681,6 +682,8 @@ public:
     String languageOfPrimaryAudioTrack() const;
 
     size_t extraMemoryCost() const;
+
+    void reportGPUMemoryFootprint(uint64_t) const;
 
     unsigned long long fileSize() const;
 

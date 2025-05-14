@@ -337,6 +337,7 @@ public:
     ScrollbarMode scrollingMode() const { return m_scrollingMode; }
     WEBCORE_EXPORT void updateScrollingMode() final;
     WEBCORE_EXPORT void setScrollingMode(ScrollbarMode);
+    WEBCORE_EXPORT void showMemoryMonitorError();
 
 #if ENABLE(CONTENT_EXTENSIONS)
     WEBCORE_EXPORT void showResourceMonitoringError();

@@ -114,6 +114,7 @@ public:
     void setReadyState(WebCore::MediaPlayer::ReadyState);
 
     void commitAllTransactions(CompletionHandler<void()>&&);
+    void reportGPUMemoryFootprint(uint64_t);
     void networkStateChanged(RemoteMediaPlayerState&&);
     void readyStateChanged(RemoteMediaPlayerState&&, WebCore::MediaPlayer::ReadyState);
     void volumeChanged(double);

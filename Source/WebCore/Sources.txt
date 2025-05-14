@@ -2017,6 +2017,7 @@ loader/ResourceLoadObserver.cpp
 loader/ResourceLoadStatistics.cpp
 loader/ResourceLoader.cpp
 loader/ResourceMonitor.cpp
+loader/FrameMemoryMonitor.cpp
 loader/ResourceMonitorChecker.cpp
 loader/ResourceMonitorPersistence.cpp
 loader/ResourceMonitorThrottler.cpp

@@ -145,6 +145,7 @@ public:
     bool shouldEnableSpeakerSelectionPermissionsPolicyQuirk() const;
     bool shouldEnableEnumerateDeviceQuirk() const;
 #endif
+    bool shouldUnloadHeavyFrame() const;
 
     bool needsCanPlayAfterSeekedQuirk() const;
 

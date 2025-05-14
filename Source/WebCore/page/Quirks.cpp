@@ -913,6 +913,11 @@ bool Quirks::shouldEnableEnumerateDeviceQuirk() const
 }
 #endif
 
+bool Quirks::shouldUnloadHeavyFrame() const
+{
+    return needsQuirks() && m_quirksData.shouldUnloadHeavyFrames;
+}
+
 // hulu.com rdar://55041979
 bool Quirks::needsCanPlayAfterSeekedQuirk() const
 {
@@ -2203,6 +2208,17 @@ static void handleWarbyParkerQuirks(QuirksData& quirksData, const URL& quirksURL
 }
 #endif
 
+static void handleDailyMailCoUkQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
+{
+    if (quirksDomainString != "dailymail.co.uk"_s)
+        return;
+
+    UNUSED_PARAM(quirksURL);
+    UNUSED_PARAM(documentURL);
+
+    quirksData.shouldUnloadHeavyFrames = true;
+}
+
 #if ENABLE(TEXT_AUTOSIZING)
 static void handleYCombinatorQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
 {
@@ -2919,6 +2935,7 @@ void Quirks::determineRelevantQuirks()
         { "zomato"_s, &handleZomatoQuirks },
 #endif
         { "zoom"_s, &handleZoomQuirks },
+        { "dailymail"_s, &handleDailyMailCoUkQuirks }
     });
 
     auto findResult = dispatchMap->find(quirkDomainWithoutPSL);

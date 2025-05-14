@@ -431,6 +431,7 @@ public:
     void mediaPlayerDidRemoveAudioTrack(AudioTrackPrivate&) final;
     void mediaPlayerDidRemoveTextTrack(InbandTextTrackPrivate&) final;
     void mediaPlayerDidRemoveVideoTrack(VideoTrackPrivate&) final;
+    void mediaPlayerDidReportGPUMemoryFootprint(size_t) final;
 
     Vector<RefPtr<PlatformTextTrack>> outOfBandTrackSources() final;
 

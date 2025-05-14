@@ -95,6 +95,7 @@
 #include "FormController.h"
 #include "FragmentDirectiveGenerator.h"
 #include "FrameLoader.h"
+#include "FrameMemoryMonitor.h"
 #include "GCObservation.h"
 #include "GridPosition.h"
 #include "HEVCUtilities.h"
@@ -7814,6 +7815,18 @@ void Internals::setResourceCachingDisabledByWebInspector(bool disabled)
         return;
 
     document->page()->setResourceCachingDisabledByWebInspector(disabled);
+}
+
+ExceptionOr<void> Internals::lowerAllFrameMemoryMonitorLimits()
+{
+    RefPtr document = contextDocument();
+
+    if (!document || !document->frame())
+        return Exception { ExceptionCode::InvalidAccessError };
+
+
+    document->frameMemoryMonitor().lowerAllMemoryLimitsForTesting();
+    return { };
 }
 
 void Internals::setTopDocumentURLForQuirks(const String& urlString)

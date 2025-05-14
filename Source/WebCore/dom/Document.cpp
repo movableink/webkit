@@ -102,6 +102,7 @@
 #include "FormController.h"
 #include "FragmentDirective.h"
 #include "FrameLoader.h"
+#include "FrameMemoryMonitor.h"
 #include "GCReachableRef.h"
 #include "GPUCanvasContext.h"
 #include "GenericCachedHTMLCollection.h"
@@ -946,6 +947,7 @@ void Document::commonTeardown()
     clearScriptedAnimationController();
 
     m_documentFragmentForInnerOuterHTML = nullptr;
+    m_frameMemoryMonitor = nullptr;
 
     auto intersectionObservers = m_intersectionObservers;
     for (auto& weakIntersectionObserver : intersectionObservers) {
@@ -11595,6 +11597,21 @@ void Document::elementDisconnectedFromDocument(const Element& element)
 {
     if (m_cachedFirstElementWithAttribute && m_cachedFirstElementWithAttribute->second == &element)
         m_cachedFirstElementWithAttribute = std::nullopt;
+}
+
+FrameMemoryMonitor& Document::frameMemoryMonitor()
+{
+    ASSERT(!frame()->isMainFrame());
+
+    if (!m_frameMemoryMonitor)
+        m_frameMemoryMonitor = FrameMemoryMonitor::create(*frame());
+
+    return *m_frameMemoryMonitor;
+}
+
+Ref<FrameMemoryMonitor> Document::protectedFrameMemoryMonitor()
+{
+    return frameMemoryMonitor();
 }
 
 #if ENABLE(CONTENT_EXTENSIONS)

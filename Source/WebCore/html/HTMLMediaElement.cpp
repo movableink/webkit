@@ -63,6 +63,7 @@
 #include "EventTargetInlines.h"
 #include "FourCC.h"
 #include "FrameLoader.h"
+#include "FrameMemoryMonitor.h"
 #include "HTMLAudioElement.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLSourceElement.h"
@@ -5018,6 +5019,15 @@ void HTMLMediaElement::mediaPlayerDidRemoveTextTrack(InbandTextTrackPrivate& tra
 void HTMLMediaElement::mediaPlayerDidRemoveVideoTrack(VideoTrackPrivate& track)
 {
     track.willBeRemoved();
+}
+
+void HTMLMediaElement::mediaPlayerDidReportGPUMemoryFootprint(size_t footPrint)
+{
+
+    RefPtr frame = document().frame();
+
+    if (frame && !frame->isMainFrame())
+        document().protectedFrameMemoryMonitor()->setUsage(footPrint);
 }
 
 void HTMLMediaElement::addAudioTrack(Ref<AudioTrack>&& track)

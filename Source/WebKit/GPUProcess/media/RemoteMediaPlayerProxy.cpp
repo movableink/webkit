@@ -58,6 +58,7 @@
 #include <WebCore/ResourceError.h>
 #include <WebCore/SecurityOrigin.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/MemoryFootprint.h>
 
 #if ENABLE(ENCRYPTED_MEDIA)
 #include "RemoteCDMFactoryProxy.h"
@@ -343,6 +344,8 @@ void RemoteMediaPlayerProxy::setRate(double rate)
 void RemoteMediaPlayerProxy::didLoadingProgress(CompletionHandler<void(bool)>&& completionHandler)
 {
     protectedPlayer()->didLoadingProgress(WTFMove(completionHandler));
+
+    protectedConnection()->send(Messages::MediaPlayerPrivateRemote::ReportGPUMemoryFootprint(WTF::memoryFootprint()), m_id);
 }
 
 void RemoteMediaPlayerProxy::setPresentationSize(const WebCore::IntSize& size)

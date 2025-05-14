@@ -1520,6 +1520,59 @@ void LocalFrame::reportResourceMonitoringWarning()
 
 #endif
 
+static String generateFrameMemoryMonitorErrorHTML(OptionSet<ColorScheme> colorScheme)
+{
+    constexpr auto lightAndDarkColorScheme = ":root { color-scheme: light dark } "_s;
+    constexpr auto darkOnlyColorScheme = ":root { color-scheme: only dark } "_s;
+    constexpr auto lightStyle = "p { color: black } "_s;
+    constexpr auto darkStyle = "p { color: white } "_s;
+    constexpr auto empty = ""_s;
+
+    bool needDarkStyle = colorScheme.contains(ColorScheme::Dark);
+    bool needLightStyle = !needDarkStyle || colorScheme.contains(ColorScheme::Light);
+    bool conditionalStyle = needDarkStyle && needLightStyle;
+
+    const auto& colorSchemeStyle = conditionalStyle ? lightAndDarkColorScheme : needDarkStyle ? darkOnlyColorScheme : empty;
+    const auto& darkStyleOpen = conditionalStyle ? "@media (prefers-color-scheme: dark) { "_s : empty;
+    const auto& darkStyleClose = conditionalStyle ? "} "_s : empty;
+
+    return makeString(
+        "<style> body { background-color: gray }"_s,
+        colorSchemeStyle,
+        lightStyle,
+        darkStyleOpen,
+        (needDarkStyle ? darkStyle : empty),
+        darkStyleClose,
+        "</style><p>"_s,
+        WEB_UI_STRING("This frame is hidden for using too many system resources.", "Description HTML for frame unloaded by ResourceMonitor"),
+        "</p>"_s
+    );
+}
+
+void LocalFrame::showMemoryMonitorError()
+{
+    RefPtr iframeElement = dynamicDowncast<HTMLIFrameElement>(ownerElement());
+    RefPtr document = this->document();
+    if (!iframeElement || !document)
+        return;
+
+    for (RefPtr<Frame> frame = this; frame; frame = frame->tree().traverseNext()) {
+        if (RefPtr localFrame = dynamicDowncast<LocalFrame>(frame)) {
+            if (RefPtr window = localFrame->window())
+                window->removeAllEventListeners();
+        }
+    }
+
+    OptionSet<ColorScheme> colorScheme { ColorScheme::Light };
+
+#if ENABLE(DARK_MODE_CSS)
+    if (CheckedPtr style = iframeElement->existingComputedStyle())
+        colorScheme = document->resolvedColorScheme(style.get());
+#endif
+
+    iframeElement->setSrcdoc(generateFrameMemoryMonitorErrorHTML(colorScheme), SubstituteData::SessionHistoryVisibility::Hidden);
+}
+
 bool LocalFrame::frameCanCreatePaymentSession() const
 {
 #if ENABLE(APPLE_PAY)

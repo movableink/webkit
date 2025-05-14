@@ -1578,6 +1578,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     loader/FrameLoaderClient.h
     loader/FrameLoaderStateMachine.h
     loader/FrameLoaderTypes.h
+    loader/FrameMemoryMonitor.h
     loader/FrameNetworkingContext.h
     loader/HTTPHeaderField.h
     loader/HistoryController.h

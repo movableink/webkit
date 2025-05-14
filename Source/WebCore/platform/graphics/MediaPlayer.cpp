@@ -1721,6 +1721,11 @@ size_t MediaPlayer::extraMemoryCost() const
     return playerPrivate ? playerPrivate->extraMemoryCost() : 0;
 }
 
+void MediaPlayer::reportGPUMemoryFootprint(uint64_t footPrint) const
+{
+    client().mediaPlayerDidReportGPUMemoryFootprint(footPrint);
+}
+
 unsigned long long MediaPlayer::fileSize() const
 {
     if (!m_private)

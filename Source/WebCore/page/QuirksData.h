@@ -80,6 +80,7 @@ struct WEBCORE_EXPORT QuirksData {
     bool shouldPreventOrientationMediaQueryFromEvaluatingToLandscapeQuirk : 1 { false };
     bool shouldUseLegacySelectPopoverDismissalBehaviorInDataActivationQuirk : 1 { false };
     bool shouldDispatchPlayPauseEventsOnResume : 1 { false };
+    bool shouldUnloadHeavyFrames : 1 { false };
 
     // Requires check at moment of use
     std::optional<bool> needsDisableDOMPasteAccessQuirk;

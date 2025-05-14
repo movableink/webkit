@@ -1530,6 +1530,12 @@ size_t MediaPlayerPrivateRemote::extraMemoryCost() const
     return 0;
 }
 
+void MediaPlayerPrivateRemote::reportGPUMemoryFootprint(uint64_t footPrint)
+{
+    if (auto player = m_player.get())
+        player->reportGPUMemoryFootprint(footPrint);
+}
+
 void MediaPlayerPrivateRemote::updateVideoPlaybackMetricsUpdateInterval(const Seconds& interval)
 {
     m_videoPlaybackMetricsUpdateInterval = interval;

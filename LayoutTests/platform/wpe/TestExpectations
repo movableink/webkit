@@ -1745,3 +1745,5 @@ webkit.org/b/291636 svg/text/timeout-long-text-content.html [ Skip ]
 webkit.org/b/286580 http/tests/media/clearkey/clear-key-session-id.html [ Skip ]
 
 webkit.org/b/292841 fullscreen/exit-full-screen-video-crash.html [ Timeout ]
+
+http/tests/iframe-memory-monitor/media-video-autoplay-in-frames.html [ Skip ]
