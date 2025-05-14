@@ -156,7 +156,7 @@ public:
     void setErrorState();
 
 private:
-    CSSFontFace(const Settings::Values*, StyleRuleFontFace*, FontFace*, bool isLocalFallback);
+    CSSFontFace(const SettingsValues*, StyleRuleFontFace*, FontFace*, bool isLocalFallback);
 
     size_t pump(ExternalResourceDownloadPolicy);
     void setStatus(Status);

@@ -41,6 +41,7 @@
 #include "RenderTable.h"
 #include "RenderTextControl.h"
 #include "RenderView.h"
+#include "Settings.h"
 #include "StyleContentAlignmentData.h"
 #include "StyleSelfAlignmentData.h"
 #include <pal/Logging.h>

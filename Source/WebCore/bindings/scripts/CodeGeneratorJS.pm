@@ -4290,7 +4290,8 @@ sub GenerateRuntimeEnableConditionalString
 
         my @flags = split(/&/, $context->extendedAttributes->{EnabledBySetting});
         my $exposedToWindowOnly = $interface->extendedAttributes->{Exposed} && $interface->extendedAttributes->{Exposed} eq "Window";
-        AddToImplIncludes($exposedToWindowOnly ? "Document.h" : "ScriptExecutionContext.h");
+        AddToImplIncludes($exposedToWindowOnly ? "DocumentInlines.h" : "ScriptExecutionContext.h");
+        AddToImplIncludes("Settings.h");
         foreach my $flag (@flags) {
             my @orflags = split(/\|/, $flag);
             my @orconjuncts;

@@ -45,6 +45,7 @@
 #include <WebCore/LocalFrame.h>
 #include <WebCore/LocalFrameView.h>
 #include <WebCore/Page.h>
+#include <WebCore/Settings.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebKit {

@@ -31,6 +31,7 @@
 #include <WebCore/FrameDestructionObserverInlines.h>
 #include <WebCore/LocalFrame.h>
 #include <WebCore/Page.h>
+#include <WebCore/Settings.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {

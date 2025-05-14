@@ -52,6 +52,7 @@
 #include "JSRsaOaepParams.h"
 #include "JSRsaPssParams.h"
 #include "JSX25519Params.h"
+#include "Settings.h"
 #include <JavaScriptCore/JSONObject.h>
 #include <wtf/text/WTFString.h>
 

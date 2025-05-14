@@ -31,6 +31,7 @@
 #include "FetchRequestCredentials.h"
 #include "ScriptExecutionContext.h"
 #include "ScriptSourceCode.h"
+#include "Settings.h"
 #include "WorkerOrWorkletGlobalScope.h"
 #include "WorkerOrWorkletScriptController.h"
 #include <JavaScriptCore/ConsoleMessage.h>
@@ -109,7 +110,7 @@ private:
     std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>&) final { RELEASE_ASSERT_NOT_REACHED(); return std::nullopt; }
     URL completeURL(const String&, ForceUTF8 = ForceUTF8::No) const final;
     String userAgent(const URL&) const final;
-    const Settings::Values& settingsValues() const final { return m_settingsValues; }
+    const SettingsValues& settingsValues() const final { return m_settingsValues; }
 
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
 
@@ -121,7 +122,7 @@ private:
 
     std::unique_ptr<WorkerMessagePortChannelProvider> m_messagePortChannelProvider;
 
-    Settings::Values m_settingsValues;
+    SettingsValues m_settingsValues;
 };
 
 } // namespace WebCore

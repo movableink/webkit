@@ -34,6 +34,7 @@
 #include "JSDOMPromiseDeferred.h"
 #include "JSWebCodecsVideoEncoderSupport.h"
 #include "Logging.h"
+#include "Settings.h"
 #include "WebCodecsControlMessage.h"
 #include "WebCodecsEncodedVideoChunk.h"
 #include "WebCodecsEncodedVideoChunkMetadata.h"
@@ -69,7 +70,7 @@ WebCodecsVideoEncoder::WebCodecsVideoEncoder(ScriptExecutionContext& context, In
 
 WebCodecsVideoEncoder::~WebCodecsVideoEncoder() = default;
 
-static bool isSupportedEncoderCodec(const String& codec, const Settings::Values& settings)
+static bool isSupportedEncoderCodec(const String& codec, const SettingsValues& settings)
 {
     return codec.startsWith("vp8"_s) || codec.startsWith("vp09.00"_s) || codec.startsWith("avc1."_s)
 #if ENABLE(WEB_RTC)

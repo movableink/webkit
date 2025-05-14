@@ -36,6 +36,7 @@
 #include "ImageBitmap.h"
 #include "PlatformCALayerDelegatedContents.h"
 #include "RenderBox.h"
+#include "Settings.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {

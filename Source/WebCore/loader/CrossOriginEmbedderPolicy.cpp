@@ -39,6 +39,7 @@
 #include "ResourceResponse.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
+#include "Settings.h"
 #include "ViolationReportType.h"
 #include <wtf/persistence/PersistentCoders.h>
 #include <wtf/text/MakeString.h>

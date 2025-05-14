@@ -42,6 +42,7 @@
 #include <WebCore/NativeImage.h>
 #include <WebCore/Page.h>
 #include <WebCore/PlatformMediaSessionManager.h>
+#include <WebCore/Settings.h>
 #include <WebCore/VP9UtilitiesCocoa.h>
 #include <WebCore/VideoFrameCV.h>
 #include <wtf/MainThread.h>

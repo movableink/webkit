@@ -764,7 +764,7 @@ public:
     void stopActiveDOMObjects() final;
     GraphicsClient* graphicsClient() final;
 
-    const Settings::Values& settingsValues() const final { return settings().values(); }
+    inline const SettingsValues& settingsValues() const final;
 
     void suspendDeviceMotionAndOrientationUpdates();
     void resumeDeviceMotionAndOrientationUpdates();

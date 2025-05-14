@@ -38,7 +38,7 @@ struct WorkletParameters {
     float sampleRate;
     String identifier;
     PAL::SessionID sessionID;
-    Settings::Values settingsValues;
+    SettingsValues settingsValues;
     ReferrerPolicy referrerPolicy;
     bool isAudioContextRealTime;
     OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections;

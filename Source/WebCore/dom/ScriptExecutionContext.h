@@ -33,8 +33,8 @@
 #include "ScriptExecutionContextIdentifier.h"
 #include "SecurityContext.h"
 #include "ServiceWorkerIdentifier.h"
-#include "Settings.h"
 #include "StorageBlockingPolicy.h"
+#include "Timer.h"
 #include <JavaScriptCore/ConsoleTypes.h>
 #include <JavaScriptCore/HandleTypes.h>
 #include <pal/SessionID.h>
@@ -93,6 +93,7 @@ enum class NoiseInjectionPolicy : uint8_t;
 enum class ScriptTelemetryCategory : uint8_t;
 enum class TaskSource : uint8_t;
 struct CryptoKeyData;
+struct SettingsValues;
 
 #if ENABLE(NOTIFICATIONS)
 class NotificationClient;
@@ -136,7 +137,7 @@ public:
 
     virtual String userAgent(const URL&) const = 0;
 
-    virtual const Settings::Values& settingsValues() const = 0;
+    virtual const SettingsValues& settingsValues() const = 0;
 
     virtual NotificationClient* notificationClient() { return nullptr; }
     virtual std::optional<PAL::SessionID> sessionID() const { return std::nullopt; }

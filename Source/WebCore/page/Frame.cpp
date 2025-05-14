@@ -39,6 +39,7 @@
 #include "RenderElement.h"
 #include "RenderWidget.h"
 #include "ScrollingCoordinator.h"
+#include "Settings.h"
 #include "WindowProxy.h"
 #include <wtf/NeverDestroyed.h>
 

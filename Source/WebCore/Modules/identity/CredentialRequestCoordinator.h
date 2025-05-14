@@ -42,6 +42,7 @@ class BasicCredential;
 class CredentialRequestCoordinatorClient;
 class Document;
 class LocalFrame;
+class Page;
 struct DigitalCredentialsRequestData;
 struct DigitalCredentialsResponseData;
 struct ExceptionData;

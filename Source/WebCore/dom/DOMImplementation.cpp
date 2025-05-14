@@ -28,6 +28,7 @@
 #include "CSSStyleSheet.h"
 #include "ContentType.h"
 #include "DeprecatedGlobalSettings.h"
+#include "DocumentInlines.h"
 #include "DocumentType.h"
 #include "Element.h"
 #include "FTPDirectoryDocument.h"

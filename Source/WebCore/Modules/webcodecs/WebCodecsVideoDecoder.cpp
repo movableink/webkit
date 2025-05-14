@@ -40,6 +40,7 @@
 #include "OffscreenCanvas.h"
 #include "SVGImageElement.h"
 #include "ScriptExecutionContext.h"
+#include "Settings.h"
 #include "WebCodecsControlMessage.h"
 #include "WebCodecsEncodedVideoChunk.h"
 #include "WebCodecsErrorCallback.h"
@@ -69,7 +70,7 @@ WebCodecsVideoDecoder::WebCodecsVideoDecoder(ScriptExecutionContext& context, In
 
 WebCodecsVideoDecoder::~WebCodecsVideoDecoder() = default;
 
-static bool isSupportedDecoderCodec(const String& codec, const Settings::Values& settings)
+static bool isSupportedDecoderCodec(const String& codec, const SettingsValues& settings)
 {
     return codec.startsWith("vp8"_s) || codec.startsWith("vp09.00"_s) || codec.startsWith("avc1."_s)
 #if ENABLE(WEB_RTC)

@@ -31,6 +31,7 @@
 #include "ImageBitmap.h"
 #include "ReportingClient.h"
 #include "ScriptExecutionContext.h"
+#include "Settings.h"
 #include "Supplementable.h"
 #include "WindowOrWorkerGlobalScope.h"
 #include "WorkerOrWorkletGlobalScope.h"
@@ -160,7 +161,7 @@ public:
     std::unique_ptr<FontLoadRequest> fontLoadRequest(const String& url, bool isSVG, bool isInitiatingElementInUserAgentShadowTree, LoadedFromOpaqueSource) final;
     void beginLoadingFontSoon(FontLoadRequest&) final;
 
-    const Settings::Values& settingsValues() const final { return m_settingsValues; }
+    const SettingsValues& settingsValues() const final { return m_settingsValues; }
 
     FetchOptions::Credentials credentials() const { return m_credentials; }
 
@@ -246,7 +247,7 @@ private:
     std::unique_ptr<CSSValuePool> m_cssValuePool;
     std::unique_ptr<WorkerClient> m_workerClient;
     RefPtr<CSSFontSelector> m_cssFontSelector;
-    Settings::Values m_settingsValues;
+    SettingsValues m_settingsValues;
     WorkerType m_workerType;
     FetchOptions::Credentials m_credentials;
     RefPtr<WorkerStorageConnection> m_storageConnection;

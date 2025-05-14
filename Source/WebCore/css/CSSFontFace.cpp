@@ -95,7 +95,7 @@ static Variant<Ref<MutableStyleProperties>, Ref<StyleRuleFontFace>> propertiesOr
     return MutableStyleProperties::create();
 }
 
-CSSFontFace::CSSFontFace(const Settings::Values* settings, StyleRuleFontFace* connection, FontFace* wrapper, bool isLocalFallback)
+CSSFontFace::CSSFontFace(const SettingsValues* settings, StyleRuleFontFace* connection, FontFace* wrapper, bool isLocalFallback)
     : m_propertiesOrCSSConnection(propertiesOrCSSConnection(connection))
     , m_wrapper(wrapper)
     , m_isLocalFallback(isLocalFallback)

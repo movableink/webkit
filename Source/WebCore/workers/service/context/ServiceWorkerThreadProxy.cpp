@@ -28,6 +28,7 @@
 
 #include "BadgeClient.h"
 #include "CacheStorageProvider.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "EventLoop.h"
 #include "EventNames.h"

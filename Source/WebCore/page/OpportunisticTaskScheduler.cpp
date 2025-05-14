@@ -30,6 +30,7 @@
 #include "GCController.h"
 #include "IdleCallbackController.h"
 #include "Page.h"
+#include "Settings.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/JSGlobalObject.h>
 #include <wtf/DataLog.h>

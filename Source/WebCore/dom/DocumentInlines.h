@@ -45,6 +45,7 @@
 #include "PageInlines.h"
 #include "ReportingScope.h"
 #include "SecurityOrigin.h"
+#include "Settings.h"
 #include "TextResourceDecoder.h"
 #include "UndoManager.h"
 #include "WebCoreOpaqueRoot.h"
@@ -204,6 +205,11 @@ inline CachedResourceLoader& Document::cachedResourceLoader()
 inline Ref<CachedResourceLoader> Document::protectedCachedResourceLoader() const
 {
     return const_cast<Document&>(*this).cachedResourceLoader();
+}
+
+inline const SettingsValues& Document::settingsValues() const
+{
+    return settings().values();
 }
 
 inline RefPtr<DocumentParser> Document::protectedParser() const

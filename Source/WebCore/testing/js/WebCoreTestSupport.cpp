@@ -29,6 +29,7 @@
 
 #include "DeprecatedGlobalSettings.h"
 #include "DocumentFragment.h"
+#include "DocumentInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameInlines.h"
 #include "InternalSettings.h"

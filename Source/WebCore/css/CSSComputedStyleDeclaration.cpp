@@ -36,6 +36,7 @@
 #include "RenderBox.h"
 #include "RenderBoxModelObject.h"
 #include "RenderStyleInlines.h"
+#include "Settings.h"
 #include "ShorthandSerializer.h"
 #include "StylePropertiesInlines.h"
 #include "StylePropertyShorthand.h"

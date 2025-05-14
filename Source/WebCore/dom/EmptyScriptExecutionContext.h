@@ -31,6 +31,7 @@
 #include "ReferrerPolicy.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
+#include "Settings.h"
 #include <JavaScriptCore/JSGlobalObject.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -104,7 +105,7 @@ private:
     void addMessage(MessageSource, MessageLevel, const String&, const String&, unsigned, unsigned, RefPtr<Inspector::ScriptCallStack>&&, JSC::JSGlobalObject* = nullptr, unsigned long = 0) final { }
     void logExceptionToConsole(const String&, const String&, int, int, RefPtr<Inspector::ScriptCallStack>&&) final { }
 
-    const Settings::Values& settingsValues() const final { return m_settingsValues; }
+    const SettingsValues& settingsValues() const final { return m_settingsValues; }
 
 #if ENABLE(NOTIFICATIONS)
     NotificationClient* notificationClient() final { return nullptr; }
@@ -136,7 +137,7 @@ private:
     URL m_url;
     Ref<EmptyEventLoop> m_eventLoop;
     std::unique_ptr<EventLoopTaskGroup> m_eventLoopTaskGroup;
-    Settings::Values m_settingsValues;
+    SettingsValues m_settingsValues;
 };
 
 } // namespace WebCore

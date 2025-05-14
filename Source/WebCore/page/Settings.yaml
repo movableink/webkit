@@ -260,7 +260,7 @@ MaximumHTMLParserDOMTreeDepth:
   type: uint32_t
   defaultValue:
     WebCore:
-      default: defaultMaximumHTMLParserDOMTreeDepth
+      default: SettingsBase::defaultMaximumHTMLParserDOMTreeDepth
 
 MaximumSourceBufferSize:
   comment: >-
