@@ -33,6 +33,7 @@
 #include "JSExposedStar.h"
 #include "JSShadowRealmGlobalScope.h"
 #include "ScriptExecutionContext.h"
+#include "Settings.h"
 #include "ShadowRealmGlobalScope.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/HeapAnalyzer.h>

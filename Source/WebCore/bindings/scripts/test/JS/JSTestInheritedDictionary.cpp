@@ -28,6 +28,7 @@
 #include "JSDOMGlobalObject.h"
 #include "JSVoidCallback.h"
 #include "ScriptExecutionContext.h"
+#include "Settings.h"
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/ObjectConstructor.h>
 

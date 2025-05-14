@@ -40,6 +40,7 @@
 #include "JSDOMWrapperCache.h"
 #include "JSTestObj.h"
 #include "ScriptExecutionContext.h"
+#include "Settings.h"
 #include "TestNamespaceObject.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/JSCInlines.h>

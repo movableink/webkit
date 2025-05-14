@@ -22,7 +22,7 @@
 #include "JSTestEnabledBySetting.h"
 
 #include "ActiveDOMObject.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "ExtendedDOMClientIsoSubspaces.h"
 #include "ExtendedDOMIsoSubspaces.h"
 #include "JSDOMAttribute.h"
@@ -35,6 +35,7 @@
 #include "JSDOMWrapperCache.h"
 #include "JSTestSubObj.h"
 #include "ScriptExecutionContext.h"
+#include "Settings.h"
 #include "TestEnabledBySettingSupplemental.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/FunctionPrototype.h>

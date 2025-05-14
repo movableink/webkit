@@ -23,7 +23,7 @@
 
 #include "ActiveDOMObject.h"
 #include "DeprecatedGlobalSettings.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "ExtendedDOMClientIsoSubspaces.h"
 #include "ExtendedDOMIsoSubspaces.h"
 #include "JSDOMAttribute.h"
@@ -44,6 +44,7 @@
 #include "JSTestDefaultToJSONIndirectInheritance.h"
 #include "JSTestDefaultToJSONInheritFinal.h"
 #include "ScriptExecutionContext.h"
+#include "Settings.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/HeapAnalyzer.h>
 #include <JavaScriptCore/JSArray.h>
