@@ -51,6 +51,15 @@ public:
     using UpdateFunction = CheckedInt32 (*)(CheckedInt32, CheckedInt32);
 
     struct LoopData {
+        explicit LoopData(const NaturalLoop* naturalLoop)
+            : loop(naturalLoop)
+        {
+            for (uint32_t i = 0; i < loopSize(); ++i) {
+                if (!loopBody(i)->isJumpPad())
+                    ++nonJumpPadBlockCount;
+            }
+        }
+
         uint32_t loopSize() { return loop->size(); }
         BasicBlock* loopBody(uint32_t i) { return loop->at(i).node(); }
         BasicBlock* header() const { return loop->header().node(); }
@@ -85,16 +94,6 @@ public:
         bool isNumericComputationNode(Node*);
         bool isLocalAccessNode(Node*);
 
-        uint32_t nonPadBlockCount()
-        {
-            uint32_t count = 0;
-            for (uint32_t i = 0; i < loopSize(); ++i) {
-                if (!loopBody(i)->isJumpPad())
-                    ++count;
-            }
-            return count;
-        }
-
         // Ratio of this count to total material node count
         double ratio(uint32_t count) { return materialNodeCount ? static_cast<double>(count) / materialNodeCount : 0.0; }
 
@@ -118,6 +117,7 @@ public:
 
         std::optional<bool> invertCondition { };
 
+        uint32_t nonJumpPadBlockCount { 0 };
         uint32_t materialNodeCount { 0 };
         uint32_t putByValCount { 0 };
         uint32_t getByValCount { 0 };
@@ -205,7 +205,7 @@ public:
             dataLogLnIf(Options::verboseLoopUnrolling(), "\nTry unroll innerMostLoop=", *loop, " with innerMostOuterLoop=", outerLoop ? *outerLoop : NaturalLoop());
         }
 
-        LoopData data = { loop };
+        LoopData data(loop);
 
         if (Options::disallowLoopUnrollingForNonInnermost() && !data.loop->isInnerMostLoop())
             return false;
@@ -632,7 +632,7 @@ bool LoopUnrollingPhase::LoopData::isProfitableToUnroll()
 {
     auto isNumericHotLoop = [&]() {
         // Unroll hot loops dominated by numeric computations and local access
-        return nonPadBlockCount() == 1
+        return nonJumpPadBlockCount == 1
             && ratio(numericComputationCount) > 0.3
             && ratio(localAccessCount) > 0.4
             && materialNodeCount > 160 // FIXME: Remove this threshold rdar://150955614.
@@ -685,7 +685,8 @@ void LoopUnrollingPhase::dumpLoopNodeTypeStats(LoopData& data)
     for (uint32_t i = 0; i < data.loopSize(); ++i) {
         BasicBlock* body = data.loopBody(i);
         for (Node* node : *body)
-            ++counter[static_cast<uint32_t>(node->op())];
+            if (data.isMaterialNode(m_graph, node))
+                ++counter[static_cast<uint32_t>(node->op())];
     }
 
     for (uint32_t i = 0; i < counter.size(); i++) {
@@ -759,6 +760,8 @@ void LoopUnrollingPhase::LoopData::dump(PrintStream& out) const
         out.print("inverseCondition=", shouldInvertCondition(), ", ");
     else
         out.print("inverseCondition=<NULL>, ");
+
+    out.print("nonJumpPadBlockCount=", nonJumpPadBlockCount, ", ");
 
     out.print("materialNodeCount=", materialNodeCount);
 }
