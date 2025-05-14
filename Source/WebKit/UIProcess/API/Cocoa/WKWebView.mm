@@ -39,6 +39,7 @@
 #import "ContentAsStringIncludesChildFrames.h"
 #import "DefaultWebBrowserChecks.h"
 #import "DiagnosticLoggingClient.h"
+#import "EditingRange.h"
 #import "FindClient.h"
 #import "FullscreenClient.h"
 #import "GlobalFindInPageState.h"

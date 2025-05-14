@@ -56,4 +56,16 @@ TEST(FragmentDirectiveGeneration, GenerateFragment)
     TestWebKitAPI::Util::run(&done);
 }
 
+TEST(FragmentDirectiveGeneration, VerifyFragmentRanges)
+{
+    RetainPtr webView = createWebViewForFragmentDirectiveGenerationWithHTML(@"Test Page", @"location.href = \"#:~:text=Page\"");
+
+    __block bool done = false;
+    [webView _textFragmentRangesWithCompletionHandlerForTesting:^(NSArray<NSValue *> * fragmentRanges) {
+        EXPECT_TRUE(NSEqualRanges(fragmentRanges[0].rangeValue, NSMakeRange(5, 4)));
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+}
+
 } // namespace TestWebKitAPI

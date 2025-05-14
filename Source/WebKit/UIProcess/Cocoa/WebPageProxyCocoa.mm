@@ -824,7 +824,16 @@ void WebPageProxy::createTextFragmentDirectiveFromSelection(CompletionHandler<vo
         return;
 
     protectedLegacyMainFrameProcess()->sendWithAsyncReply(Messages::WebPage::CreateTextFragmentDirectiveFromSelection(), WTFMove(completionHandler), webPageIDInMainFrameProcess());
+}
 
+void WebPageProxy::getTextFragmentRanges(CompletionHandler<void(const Vector<EditingRange>&&)>&& completionHandler)
+{
+    if (!hasRunningProcess()) {
+        completionHandler({ });
+        return;
+    }
+
+    protectedLegacyMainFrameProcess()->sendWithAsyncReply(Messages::WebPage::GetTextFragmentRanges(), WTFMove(completionHandler), webPageIDInMainFrameProcess());
 }
 
 #if ENABLE(APP_HIGHLIGHTS)

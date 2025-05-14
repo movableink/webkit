@@ -1004,6 +1004,19 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
     };
 }
 
+- (void)_textFragmentRangesWithCompletionHandlerForTesting:(void(^)(NSArray<NSValue *> *fragmentRanges))completionHandler
+{
+    _page->getTextFragmentRanges([completion = makeBlockPtr(completionHandler)](const Vector<WebKit::EditingRange> editingRanges) {
+        RetainPtr<NSMutableArray<NSValue *>> resultRanges = [NSMutableArray array];
+        for (auto editingRange : editingRanges) {
+            NSRange resultRange = editingRange;
+            if (resultRange.location != NSNotFound)
+                [resultRanges addObject:[NSValue valueWithRange:resultRange]];
+        }
+        completion(resultRanges.get());
+    });
+}
+
 - (void)_cancelFixedColorExtensionFadeAnimationsForTesting
 {
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)

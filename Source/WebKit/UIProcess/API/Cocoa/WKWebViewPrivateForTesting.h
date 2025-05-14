@@ -156,6 +156,8 @@ struct WKAppPrivacyReportTestingData {
 
 - (void)_setMediaVolumeForTesting:(float)volume;
 
+- (void)_textFragmentRangesWithCompletionHandlerForTesting:(void(^)(NSArray<NSValue *> *fragmentRanges))completionHandler WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
+
 @property (nonatomic, readonly) _WKRectEdge _fixedContainerEdges;
 #if TARGET_OS_IPHONE
 @property (nonatomic, readonly) UIColor *_sampledLeftFixedPositionContentColor;

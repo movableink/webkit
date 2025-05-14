@@ -2368,6 +2368,7 @@ public:
     void copyLinkWithHighlight();
 
     void createTextFragmentDirectiveFromSelection(CompletionHandler<void(URL&&)>&&);
+    void getTextFragmentRanges(CompletionHandler<void(const Vector<EditingRange>&&)>&&);
 
 #if ENABLE(APP_HIGHLIGHTS)
     void createAppHighlightInSelectedRange(WebCore::CreateNewGroupForHighlight, WebCore::HighlightRequestOriginatedInApp);

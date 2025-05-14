@@ -9417,6 +9417,34 @@ void WebPage::createTextFragmentDirectiveFromSelection(CompletionHandler<void(UR
     completionHandler(WTFMove(url));
 }
 
+void WebPage::getTextFragmentRanges(CompletionHandler<void(const Vector<EditingRange>&&)>&& completionHandler)
+{
+    RefPtr focusedOrMainFrame = protectedCorePage()->checkedFocusController()->focusedOrMainFrame();
+    if (!focusedOrMainFrame) {
+        completionHandler({ });
+        return;
+    }
+    RefPtr document = focusedOrMainFrame->document();
+
+    RefPtr frame = document->frame();
+    if (!frame) {
+        completionHandler({ });
+        return;
+    }
+
+    Vector<EditingRange> editingRanges;
+    if (RefPtr highlightRegistry = document->fragmentHighlightRegistryIfExists()) {
+        for (auto& highlight : highlightRegistry->map()) {
+            for (auto& highlightRange : highlight.value->highlightRanges()) {
+                Ref<AbstractRange> range = highlightRange->range();
+                editingRanges.append(EditingRange::fromRange(*frame, makeSimpleRange(range)));
+            }
+        }
+    }
+
+    completionHandler(WTFMove(editingRanges));
+}
+
 #if ENABLE(APP_HIGHLIGHTS)
 WebCore::CreateNewGroupForHighlight WebPage::highlightIsNewGroup() const
 {
