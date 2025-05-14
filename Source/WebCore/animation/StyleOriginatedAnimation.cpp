@@ -226,7 +226,7 @@ AnimationEffectPhase StyleOriginatedAnimation::phaseWithoutEffect() const
         return AnimationEffectPhase::Idle;
 
     // Since we don't have an effect, the duration will be zero so the phase is 'before' if the current time is less than zero.
-    return *animationCurrentTime < 0_s ? AnimationEffectPhase::Before : AnimationEffectPhase::After;
+    return *animationCurrentTime < animationCurrentTime->matchingZero() ? AnimationEffectPhase::Before : AnimationEffectPhase::After;
 }
 
 WebAnimationTime StyleOriginatedAnimation::effectTimeAtStart() const
