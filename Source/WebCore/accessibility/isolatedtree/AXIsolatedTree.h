@@ -301,7 +301,7 @@ using AXPropertySet = HashSet<AXProperty, IntHash<AXProperty>, WTF::StrongEnumHa
 using AXIDAndCharacterRange = std::pair<Markable<AXID>, CharacterRange>;
 
 // If this type is modified, the switchOn statment in AXIsolatedObject::setProperty must be updated as well.
-using AXPropertyValueVariant = Variant<std::nullptr_t, Markable<AXID>, String, bool, int, unsigned, double, float, uint64_t, WallTime, DateComponentsType, AccessibilityButtonState, Color, std::shared_ptr<URL>, LayoutRect, FloatPoint, FloatRect, InputType::Type, IntPoint, IntRect, std::pair<unsigned, unsigned>, std::optional<unsigned>, Vector<AccessibilityText>, Vector<AXID>, Vector<std::pair<Markable<AXID>, Markable<AXID>>>, Vector<String>, std::shared_ptr<Path>, OptionSet<AXAncestorFlag>, Vector<Vector<Markable<AXID>>>, CharacterRange, std::shared_ptr<AXIDAndCharacterRange>, TagName, std::optional<AccessibilityOrientation>
+using AXPropertyValueVariant = Variant<std::nullptr_t, Markable<AXID>, String, bool, int, unsigned, double, float, uint64_t, WallTime, DateComponentsType, AccessibilityButtonState, Color, std::shared_ptr<URL>, LayoutRect, FloatPoint, FloatRect, InputType::Type, IntPoint, IntRect, std::pair<unsigned, unsigned>, Vector<AccessibilityText>, Vector<AXID>, Vector<std::pair<Markable<AXID>, Markable<AXID>>>, Vector<String>, std::shared_ptr<Path>, OptionSet<AXAncestorFlag>, Vector<Vector<Markable<AXID>>>, CharacterRange, std::shared_ptr<AXIDAndCharacterRange>, TagName, AccessibilityOrientation
 #if PLATFORM(COCOA)
     , RetainPtr<NSAttributedString>
     , RetainPtr<NSView>
@@ -319,7 +319,7 @@ using AXPropertyValueVariant = Variant<std::nullptr_t, Markable<AXID>, String, b
 using AXPropertyVector = Vector<std::pair<AXProperty, AXPropertyValueVariant>>;
 WTF::TextStream& operator<<(WTF::TextStream&, const AXPropertyVector&);
 
-static_assert(sizeof(AXPropertyValueVariant) == 32, "The AX property value variant should not be larger than 32.");
+static_assert(sizeof(AXPropertyValueVariant) == 24, "The AX property value variant should not be larger than 24.");
 
 struct AXPropertyChange {
     AXID axID; // ID of the object whose properties changed.

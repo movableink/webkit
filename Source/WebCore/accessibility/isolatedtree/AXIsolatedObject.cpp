@@ -217,7 +217,7 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXProperty::AccessKey, object.accessKey().isolatedCopy());
     setProperty(AXProperty::ExplicitAutoCompleteValue, object.explicitAutoCompleteValue().isolatedCopy());
     setProperty(AXProperty::ColorValue, object.colorValue());
-    setProperty(AXProperty::ExplicitOrientation, object.explicitOrientation());
+    setOptionalProperty(AXProperty::ExplicitOrientation, object.explicitOrientation());
     setProperty(AXProperty::ExplicitLiveRegionStatus, object.explicitLiveRegionStatus().isolatedCopy());
     setProperty(AXProperty::ExplicitLiveRegionRelevant, object.explicitLiveRegionRelevant().isolatedCopy());
     setProperty(AXProperty::LiveRegionAtomic, object.liveRegionAtomic());
@@ -322,8 +322,8 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
         setProperty(AXProperty::IsExposedTableCell, true);
         setProperty(AXProperty::ColumnIndexRange, object.columnIndexRange());
         setProperty(AXProperty::RowIndexRange, object.rowIndexRange());
-        setProperty(AXProperty::AXColumnIndex, object.axColumnIndex());
-        setProperty(AXProperty::AXRowIndex, object.axRowIndex());
+        setOptionalProperty(AXProperty::AXColumnIndex, object.axColumnIndex());
+        setOptionalProperty(AXProperty::AXRowIndex, object.axRowIndex());
         setProperty(AXProperty::IsColumnHeader, object.isColumnHeader());
         setProperty(AXProperty::IsRowHeader, object.isRowHeader());
         setProperty(AXProperty::CellScope, object.cellScope().isolatedCopy());
@@ -538,6 +538,13 @@ void AXIsolatedObject::setObjectVectorProperty(AXProperty property, const Access
     setProperty(property, axIDs(objects));
 }
 
+template<typename T>
+void AXIsolatedObject::setOptionalProperty(AXProperty property, const std::optional<T>& value)
+{
+    if (value)
+        setProperty(property, *value);
+}
+
 void AXIsolatedObject::setProperty(AXProperty property, AXPropertyValueVariant&& value)
 {
     if (std::holds_alternative<bool>(value)) {
@@ -675,8 +682,7 @@ void AXIsolatedObject::setProperty(AXProperty property, AXPropertyValueVariant&&
         [] (WallTime& time) { return !time; },
         [] (TagName& tag) { return tag == TagName::Unknown; },
         [] (DateComponentsType& typedValue) { return typedValue == DateComponentsType::Invalid; },
-        [] (std::optional<AccessibilityOrientation>& typedValue) { return !typedValue; },
-        [] (std::optional<unsigned>& typedValue) { return !typedValue; },
+        [] (AccessibilityOrientation) { return false; },
         [] (OptionSet<SpeakAs>& typedValue) { return typedValue.isEmpty(); },
         [](auto&) {
             ASSERT_NOT_REACHED();

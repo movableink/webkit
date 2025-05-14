@@ -151,6 +151,7 @@ private:
     void shrinkPropertiesAfterUpdates() { m_properties.shrinkToFit(); }
     void setObjectProperty(AXProperty, AXCoreObject*);
     void setObjectVectorProperty(AXProperty, const AccessibilityChildrenVector&);
+    template<typename T> void setOptionalProperty(AXProperty, const std::optional<T>&);
 
     void setPropertyFlag(AXPropertyFlag, bool);
     bool hasPropertyFlag(AXPropertyFlag) const;
@@ -239,8 +240,8 @@ private:
     std::pair<unsigned, unsigned> rowIndexRange() const final { return indexRangePairAttributeValue(AXProperty::RowIndexRange); }
     // Returns the start location and column span of the cell.
     std::pair<unsigned, unsigned> columnIndexRange() const final { return indexRangePairAttributeValue(AXProperty::ColumnIndexRange); }
-    std::optional<unsigned> axColumnIndex() const final { return propertyValue<std::optional<unsigned>>(AXProperty::AXColumnIndex); }
-    std::optional<unsigned> axRowIndex() const final { return propertyValue<std::optional<unsigned>>(AXProperty::AXRowIndex); }
+    std::optional<unsigned> axColumnIndex() const final { return optionalAttributeValue<unsigned>(AXProperty::AXColumnIndex); }
+    std::optional<unsigned> axRowIndex() const final { return optionalAttributeValue<unsigned>(AXProperty::AXRowIndex); }
     bool isColumnHeader() const final { return boolAttributeValue(AXProperty::IsColumnHeader); }
     bool isRowHeader() const final { return boolAttributeValue(AXProperty::IsRowHeader); }
     String cellScope() const final { return stringAttributeValue(AXProperty::CellScope); }
@@ -378,10 +379,7 @@ private:
 #endif
     AXIsolatedObject* focusableAncestor() final { return Accessibility::focusableAncestor(*this); }
     AXIsolatedObject* highestEditableAncestor() final { return Accessibility::highestEditableAncestor(*this); }
-    virtual std::optional<AccessibilityOrientation> explicitOrientation() const
-    {
-        return propertyValue<std::optional<AccessibilityOrientation>>(AXProperty::ExplicitOrientation);
-    }
+    virtual std::optional<AccessibilityOrientation> explicitOrientation() const { return optionalAttributeValue<AccessibilityOrientation>(AXProperty::ExplicitOrientation); }
     unsigned ariaLevel() const final { return unsignedAttributeValue(AXProperty::ARIALevel); }
     String language() const final { return stringAttributeValue(AXProperty::Language); }
     void setSelectedChildren(const AccessibilityChildrenVector&) final;

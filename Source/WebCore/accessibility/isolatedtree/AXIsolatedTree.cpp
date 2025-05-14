@@ -632,9 +632,11 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
         case AXProperty::BrailleRoleDescription:
             properties.append({ AXProperty::BrailleRoleDescription, axObject.brailleRoleDescription().isolatedCopy() });
             break;
-        case AXProperty::AXColumnIndex:
-            properties.append({ AXProperty::AXColumnIndex, axObject.axColumnIndex() });
+        case AXProperty::AXColumnIndex: {
+            if (std::optional<unsigned> columnIndex = axObject.axColumnIndex())
+                properties.append({ AXProperty::AXColumnIndex, *columnIndex });
             break;
+        }
         case AXProperty::CanSetFocusAttribute:
             properties.append({ AXProperty::CanSetFocusAttribute, axObject.canSetFocusAttribute() });
             break;
@@ -668,9 +670,11 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
         case AXProperty::DocumentLinks:
             properties.append({ AXProperty::DocumentLinks, axIDs(axObject.documentLinks()) });
             break;
-        case AXProperty::ExplicitOrientation:
-            properties.append({ AXProperty::ExplicitOrientation, axObject.explicitOrientation() });
+        case AXProperty::ExplicitOrientation: {
+            if (std::optional<AccessibilityOrientation> orientation = axObject.explicitOrientation())
+                properties.append({ AXProperty::ExplicitOrientation, *orientation });
             break;
+        }
         case AXProperty::ExtendedDescription:
             properties.append({ AXProperty::ExtendedDescription, axObject.extendedDescription().isolatedCopy() });
             break;
@@ -748,9 +752,11 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
         case AXProperty::RowIndexRange:
             properties.append({ AXProperty::RowIndexRange, axObject.rowIndexRange() });
             break;
-        case AXProperty::AXRowIndex:
-            properties.append({ AXProperty::AXRowIndex, axObject.axRowIndex() });
+        case AXProperty::AXRowIndex: {
+            if (std::optional<unsigned> rowIndex = axObject.axRowIndex())
+                properties.append({ AXProperty::AXRowIndex, *rowIndex });
             break;
+        }
         case AXProperty::CellScope:
             properties.append({ AXProperty::CellScope, axObject.cellScope().isolatedCopy() });
             break;
