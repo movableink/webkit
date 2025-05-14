@@ -70,12 +70,12 @@ G_END_DECLS
 #if ENABLE(2022_GLIB_API)
 /**
  * WebKitNetworkProxySettings:
- * @See_also: #WebKitWebsiteDataManager
+ * @See_also: #WebKitNetworkSession
  *
  * Configures network proxies.
  *
  * WebKitNetworkProxySettings can be used to provide a custom proxy configuration
- * to a #WebKitWebsiteDataManager. You need to call webkit_website_data_manager_set_network_proxy_settings()
+ * to a #WebKitNetworkSession. You need to call webkit_network_session_set_network_proxy_settings()
  * with %WEBKIT_NETWORK_PROXY_MODE_CUSTOM and a WebKitNetworkProxySettings.
  *
  * Since: 2.16
@@ -83,12 +83,12 @@ G_END_DECLS
 #else
 /**
  * WebKitNetworkProxySettings:
- * @See_also: #WebKitWebContext
+ * @See_also: #WebKitWebsiteDataManager
  *
  * Configures network proxies.
  *
  * WebKitNetworkProxySettings can be used to provide a custom proxy configuration
- * to a #WebKitWebContext. You need to call webkit_web_context_set_network_proxy_settings()
+ * to a #WebKitWebsiteDataManager. You need to call webkit_website_data_manager_set_network_proxy_settings()
  * with %WEBKIT_NETWORK_PROXY_MODE_CUSTOM and a WebKitNetworkProxySettings.
  *
  * Since: 2.16
