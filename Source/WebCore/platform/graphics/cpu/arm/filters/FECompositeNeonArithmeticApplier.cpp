@@ -96,7 +96,7 @@ inline void FECompositeNeonArithmeticApplier::applyPlatform(const uint8_t* sourc
     computePixels<1, 1>(source, destination, pixelArrayLength, k1, k2, k3, k4);
 }
 
-bool FECompositeNeonArithmeticApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
+bool FECompositeNeonArithmeticApplier::apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
     Ref input = inputs[0];
     Ref input2 = inputs[1];

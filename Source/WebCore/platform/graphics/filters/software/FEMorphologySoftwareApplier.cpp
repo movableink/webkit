@@ -145,7 +145,7 @@ void FEMorphologySoftwareApplier::applyPlatform(const PaintingData& paintingData
     applyPlatformGeneric(paintingData, 0, paintingData.height);
 }
 
-bool FEMorphologySoftwareApplier::apply(const Filter& filter, const FilterImageVector& inputs, FilterImage& result) const
+bool FEMorphologySoftwareApplier::apply(const Filter& filter, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
     Ref input = inputs[0];
 

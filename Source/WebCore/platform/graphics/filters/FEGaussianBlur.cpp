@@ -148,7 +148,7 @@ IntOutsets FEGaussianBlur::calculateOutsets(const FloatSize& stdDeviation)
     return { outsetSize.height(), outsetSize.width(), outsetSize.height(), outsetSize.width() };
 }
 
-bool FEGaussianBlur::resultIsAlphaImage(const FilterImageVector& inputs) const
+bool FEGaussianBlur::resultIsAlphaImage(std::span<const Ref<FilterImage>> inputs) const
 {
     return inputs[0]->isAlphaImage();
 }

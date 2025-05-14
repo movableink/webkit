@@ -116,7 +116,7 @@ Vector<float> FEColorMatrix::normalizedFloats(const Vector<float>& values)
     return normalizedValues;
 }
 
-bool FEColorMatrix::resultIsAlphaImage(const FilterImageVector&) const
+bool FEColorMatrix::resultIsAlphaImage(std::span<const Ref<FilterImage>>) const
 {
     return m_type == ColorMatrixType::FECOLORMATRIX_TYPE_LUMINANCETOALPHA;
 }

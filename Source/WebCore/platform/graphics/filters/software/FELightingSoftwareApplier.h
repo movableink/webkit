@@ -124,7 +124,7 @@ protected:
 
     virtual void applyPlatformParallel(const LightingData&, const LightSource::PaintingData&) const = 0;
     void applyPlatform(const LightingData&) const;
-    bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const final;
+    bool apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const final;
 };
 
 } // namespace WebCore

@@ -131,7 +131,7 @@ inline void FECompositeSoftwareArithmeticApplier::applyPlatform(std::span<unsign
     }
 }
 
-bool FECompositeSoftwareArithmeticApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
+bool FECompositeSoftwareArithmeticApplier::apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
     Ref input = inputs[0];
     Ref input2 = inputs[1];

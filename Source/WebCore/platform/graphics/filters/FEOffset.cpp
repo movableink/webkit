@@ -90,7 +90,7 @@ IntOutsets FEOffset::calculateOutsets(const FloatSize& offset)
     return outsets;
 }
 
-bool FEOffset::resultIsAlphaImage(const FilterImageVector& inputs) const
+bool FEOffset::resultIsAlphaImage(std::span<const Ref<FilterImage>> inputs) const
 {
     return inputs[0]->isAlphaImage();
 }

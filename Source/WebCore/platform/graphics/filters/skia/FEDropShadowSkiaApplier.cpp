@@ -44,7 +44,7 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(FEDropShadowSkiaApplier);
 
-bool FEDropShadowSkiaApplier::apply(const Filter& filter, const FilterImageVector& inputs, FilterImage& result) const
+bool FEDropShadowSkiaApplier::apply(const Filter& filter, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
     ASSERT(inputs.size() == 1);
     Ref input = inputs[0];

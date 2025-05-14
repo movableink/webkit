@@ -86,7 +86,7 @@ FloatRect FEMorphology::calculateImageRect(const Filter& filter, std::span<const
     return filter.clipToMaxEffectRect(imageRect, primitiveSubregion);
 }
 
-bool FEMorphology::resultIsAlphaImage(const FilterImageVector& inputs) const
+bool FEMorphology::resultIsAlphaImage(std::span<const Ref<FilterImage>> inputs) const
 {
     return inputs[0]->isAlphaImage();
 }

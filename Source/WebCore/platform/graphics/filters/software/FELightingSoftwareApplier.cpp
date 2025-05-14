@@ -172,7 +172,7 @@ void FELightingSoftwareApplier::applyPlatform(const LightingData& data) const
     }
 }
 
-bool FELightingSoftwareApplier::apply(const Filter& filter, const FilterImageVector& inputs, FilterImage& result) const
+bool FELightingSoftwareApplier::apply(const Filter& filter, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
     Ref input = inputs[0];
 
