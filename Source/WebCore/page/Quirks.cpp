@@ -1717,22 +1717,19 @@ bool Quirks::needsBingGestureEventQuirk(EventTarget* target) const
 }
 
 // spotify.com rdar://140707449
-bool Quirks::shouldAvoidStartingSelectionOnMouseDown(const Node& target) const
+bool Quirks::shouldAvoidStartingSelectionOnMouseDownOverPointerCursor(const Node& target) const
 {
-#if PLATFORM(MAC)
     if (!needsQuirks())
         return false;
 
-    if (!m_quirksData.shouldAvoidStartingSelectionOnMouseDown)
+    if (!m_quirksData.shouldAvoidStartingSelectionOnMouseDownOverPointerCursor)
         return false;
 
     if (CheckedPtr style = target.renderStyle()) {
-        if (style->usedTouchActions().contains(TouchAction::None) && style->cursor() == CursorType::Pointer)
+        if (style->cursor() == CursorType::Pointer)
             return true;
     }
-#else
-    UNUSED_PARAM(target);
-#endif
+
     return false;
 }
 
@@ -2555,6 +2552,9 @@ static void handlePremierLeagueQuirks(QuirksData& quirksData, const URL& quirksU
 
     // premierleague.com: rdar://68938833
     quirksData.shouldDispatchPlayPauseEventsOnResume = true;
+
+    // premierleague.com: rdar://136791737
+    quirksData.shouldAvoidStartingSelectionOnMouseDownOverPointerCursor = true;
 }
 
 static void handleSFUSDQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
@@ -2603,9 +2603,7 @@ static void handleSpotifyQuirks(QuirksData& quirksData, const URL& quirksURL, co
 
     // spotify.com rdar://138918575
     quirksData.needsBodyScrollbarWidthNoneDisabledQuirk = true;
-#if PLATFORM(MAC)
-    quirksData.shouldAvoidStartingSelectionOnMouseDown = true;
-#endif
+    quirksData.shouldAvoidStartingSelectionOnMouseDownOverPointerCursor = true;
 }
 
 static void handleVictoriasSecretQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)

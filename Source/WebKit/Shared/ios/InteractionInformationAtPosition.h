@@ -59,7 +59,7 @@ struct InteractionInformationAtPosition {
         Selectable,
         UnselectableDueToFocusableElement,
         UnselectableDueToLargeElementBounds,
-        UnselectableDueToUserSelectNone,
+        UnselectableDueToUserSelectNoneOrQuirk,
         UnselectableDueToMediaControls,
     };
 

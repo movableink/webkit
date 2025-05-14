@@ -81,6 +81,7 @@
 #import <WebCore/DiagnosticLoggingClient.h>
 #import <WebCore/DiagnosticLoggingKeys.h>
 #import <WebCore/Document.h>
+#import <WebCore/DocumentInlines.h>
 #import <WebCore/DocumentLoader.h>
 #import <WebCore/DocumentMarkerController.h>
 #import <WebCore/DragController.h>
@@ -132,6 +133,7 @@
 #import <WebCore/LocalFrameView.h>
 #import <WebCore/MediaSessionManagerIOS.h>
 #import <WebCore/Node.h>
+#import <WebCore/NodeInlines.h>
 #import <WebCore/NodeList.h>
 #import <WebCore/NodeRenderStyle.h>
 #import <WebCore/NotImplemented.h>
@@ -3659,7 +3661,7 @@ static void selectionPositionInformation(WebPage& page, const InteractionInforma
 
     info.selectability = ([&] {
         if (renderer->style().usedUserSelect() == UserSelect::None)
-            return InteractionInformationAtPosition::Selectability::UnselectableDueToUserSelectNone;
+            return InteractionInformationAtPosition::Selectability::UnselectableDueToUserSelectNoneOrQuirk;
 
         if (RefPtr element = dynamicDowncast<Element>(*hitNode)) {
             if (isAssistableElement(*element))
@@ -3674,6 +3676,9 @@ static void selectionPositionInformation(WebPage& page, const InteractionInforma
             if (hostVideoElementIgnoringImageOverlay(*hitNode))
                 return InteractionInformationAtPosition::Selectability::UnselectableDueToMediaControls;
         }
+
+        if (hitNode->protectedDocument()->quirks().shouldAvoidStartingSelectionOnMouseDownOverPointerCursor(*hitNode))
+            return InteractionInformationAtPosition::Selectability::UnselectableDueToUserSelectNoneOrQuirk;
 
         return InteractionInformationAtPosition::Selectability::Selectable;
     })();
