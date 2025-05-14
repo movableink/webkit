@@ -8628,7 +8628,7 @@ static void checkSettingsControlledByLockdownMode(WKWebView *webView, ShouldBeEn
     EXPECT_EQ(runJSCheck("!!window.FileSystemHandle"_s), isShowingInitialEmptyDocument != IsShowingInitialEmptyDocument::Yes && shouldBeEnabled == ShouldBeEnabled::Yes); // File System Access.
     EXPECT_EQ(runJSCheck("!!window.HTMLModelElement"_s), shouldBeEnabled == ShouldBeEnabled::Yes); // AR (Model)
     EXPECT_EQ(runJSCheck("!!window.PictureInPictureEvent"_s), shouldBeEnabled == ShouldBeEnabled::Yes); // Picture in Picture API.
-    EXPECT_EQ(runJSCheck("!!window.SpeechRecognitionEvent"_s), shouldBeEnabled == ShouldBeEnabled::Yes); // Speech recognition.
+    EXPECT_EQ(runJSCheck("!!window.SpeechRecognitionEvent"_s), isShowingInitialEmptyDocument != IsShowingInitialEmptyDocument::Yes && shouldBeEnabled == ShouldBeEnabled::Yes); // Speech recognition.
 #if ENABLE(SPEECH_SYNTHESIS)
     EXPECT_EQ(runJSCheck("!!window.SpeechSynthesisEvent"_s), shouldBeEnabled == ShouldBeEnabled::Yes); // Speech synthesis.
 #endif
