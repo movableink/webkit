@@ -45,13 +45,6 @@ function test()
             InspectorTest.expectThat(sourceMap.resources.some((resource) => resource.urlComponents.path.endsWith(sourceName)), `Should have resource '${sourceName}'.`);
     }
 
-    function withTimeout(promise, seconds)
-    {
-        return Promise.race([promise, new Promise((resolve, reject) => {
-            setTimeout(resolve, seconds);
-        })]);
-    }
-
     let suite = InspectorTest.createAsyncSuite("SourceMapSpec");
 
     // Construct tests in this callback after the test JSON is fetched.
@@ -61,30 +54,20 @@ function test()
                 name: testCase.name,
                 description: testCase.description,
                 async test() {
-                    InspectorTest.log("expecting " + (testCase.sourceMapIsValid ? "VALID" : "INVALID") + " source map");
-                    const [resourceEvent] = await Promise.all([
-                        withTimeout(WI.Frame.awaitEvent(WI.Frame.Event.ResourceWasAdded), 300),
+                    let [resourceWasAdded] = await Promise.all([
+                        WI.Frame.awaitEvent(WI.Frame.Event.ResourceWasAdded),
                         InspectorTest.evaluateInPage(`triggerScriptResource('${testCase.baseFile}');`)
                     ]);
-                    let resource;
-                    let sourceMapEvent;
-                    if (resourceEvent !== undefined) {
-                        resource = resourceEvent.data.resource;
-                        sourceMapEvent = await withTimeout(resource.awaitEvent(WI.SourceCode.Event.SourceMapAdded), 75);
-                    }
+                    let {resource} = resourceWasAdded.data;
 
                     if (testCase.sourceMapIsValid) {
-                        InspectorTest.expectThat(resource && sourceMapEvent, "Script resource and source map event should have triggered");
-                        if (!resource)
-                            return;
+                        await resource.awaitEvent(WI.SourceCode.Event.SourceMapAdded);
                         InspectorTest.expectEqual(resource.sourceMaps.length, 1, "Resource should have loaded 1 SourceMap.");
                         InspectorTest.expectThat(resource.sourceMaps[0] instanceof WI.SourceMap, "SourceMap should be a WI.SourceMap instance.");
                         if (!(resource.sourceMaps[0] instanceof WI.SourceMap))
                             return;
                     } else {
-                        InspectorTest.expectThat(resource, "Script resource should have loaded");
-                        if (!resource)
-                            return;
+                        await WI.networkManager.awaitEvent(WI.NetworkManager.Event.SourceMapParseFailed);
                         const hasFailedSourceMap = WI.networkManager.isSourceMapURL(absoluteURL(testCase.sourceMapFile, resource.displayURL));
                         InspectorTest.expectThat(hasFailedSourceMap, "Expected that there is an associated failed source map URL");
                         InspectorTest.expectEqual(resource.sourceMaps.length, 0, "Expected no source map resource loaded");

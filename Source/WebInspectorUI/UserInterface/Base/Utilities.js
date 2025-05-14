@@ -158,6 +158,22 @@ Object.defineProperty(Map.prototype, "firstKey",
     }
 });
 
+Object.defineProperty(Map.prototype, "firstValue",
+{
+    get()
+    {
+        return this.values().next().value;
+    }
+});
+
+Object.defineProperty(Map.prototype, "lastKey",
+{
+    get()
+    {
+        return Array.from(this.keys()).lastValue;
+    }
+});
+
 Object.defineProperty(WeakMap.prototype, "getOrInitialize",
 {
     value(key, initialValue)

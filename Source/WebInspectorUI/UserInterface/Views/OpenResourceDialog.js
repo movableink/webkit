@@ -342,7 +342,6 @@ WI.OpenResourceDialog = class OpenResourceDialog extends WI.Dialog
         if (!this.representedObjectIsValid(resource))
             return;
 
-        // Recurse on source maps if any exist.
         for (let sourceMap of resource.sourceMaps) {
             for (let sourceMapResource of sourceMap.resources)
                 this._addResource(sourceMapResource, suppressFilterUpdate);
