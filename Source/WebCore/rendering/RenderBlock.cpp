@@ -329,27 +329,20 @@ RenderBlock::~RenderBlock()
     // Do not add any more code here. Add it to willBeDestroyed() instead.
 }
 
-void RenderBlock::removePositionedObjectsIfNeeded(const RenderStyle& oldStyle, const RenderStyle& newStyle)
+void RenderBlock::removePositionedObjectsIfNeededOnStyleChange(const RenderStyle& oldStyle, const RenderStyle& newStyle)
 {
-    bool hadTransform = oldStyle.hasTransformRelatedProperty();
-    bool willHaveTransform = newStyle.hasTransformRelatedProperty();
-    bool hadLayoutContainment = oldStyle.containsLayout();
-    bool willHaveLayoutContainment = newStyle.containsLayout();
-    if (oldStyle.position() == newStyle.position() && hadTransform == willHaveTransform && hadLayoutContainment == willHaveLayoutContainment)
-        return;
+    auto wasContainingBlockForFixedContent = canContainFixedPositionObjects(&oldStyle);
+    auto wasContainingBlockForAbsoluteContent = canContainAbsolutelyPositionedObjects(&oldStyle);
+    auto isContainingBlockForFixedContent = canContainFixedPositionObjects(&newStyle);
+    auto isContainingBlockForAbsoluteContent = canContainAbsolutelyPositionedObjects(&newStyle);
 
-    // We are no longer the containing block for out-of-flow descendants.
-    bool outOfFlowDescendantsHaveNewContainingBlock = (hadTransform && !willHaveTransform) || (newStyle.position() == PositionType::Static && !willHaveTransform);
-    if (hadLayoutContainment != willHaveLayoutContainment)
-        outOfFlowDescendantsHaveNewContainingBlock = hadLayoutContainment && !willHaveLayoutContainment;
-    if (outOfFlowDescendantsHaveNewContainingBlock) {
-        // Our out-of-flow descendants will be inserted into a new containing block's positioned objects list during the next layout.
+    if ((wasContainingBlockForFixedContent && !isContainingBlockForFixedContent) || (wasContainingBlockForAbsoluteContent && !isContainingBlockForAbsoluteContent)) {
+        // We are no longer the containing block for out-of-flow descendants.
         removePositionedObjects({ }, ContainingBlockState::NewContainingBlock);
-        return;
     }
 
-    // We are a new containing block.
-    if (oldStyle.position() == PositionType::Static && !hadTransform) {
+    if ((!wasContainingBlockForFixedContent && isContainingBlockForFixedContent) || (!wasContainingBlockForAbsoluteContent && isContainingBlockForAbsoluteContent)) {
+        // We are a new containing block.
         // Remove our absolutely positioned descendants from their current containing block.
         // They will be inserted into our positioned objects list during layout.
         auto* containingBlock = parent();
@@ -371,7 +364,7 @@ void RenderBlock::styleWillChange(StyleDifference diff, const RenderStyle& newSt
     const RenderStyle* oldStyle = hasInitializedStyle() ? &style() : nullptr;
     setReplacedOrAtomicInline(newStyle.isDisplayInlineType());
     if (oldStyle) {
-        removePositionedObjectsIfNeeded(*oldStyle, newStyle);
+        removePositionedObjectsIfNeededOnStyleChange(*oldStyle, newStyle);
         if (isLegend() && !oldStyle->isFloating() && newStyle.isFloating())
             setIsExcludedFromNormalLayout(false);
     }

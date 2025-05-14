@@ -416,7 +416,7 @@ private:
 
     RenderFragmentedFlow* updateCachedEnclosingFragmentedFlow(RenderFragmentedFlow*) const;
 
-    void removePositionedObjectsIfNeeded(const RenderStyle& oldStyle, const RenderStyle& newStyle);
+    void removePositionedObjectsIfNeededOnStyleChange(const RenderStyle& oldStyle, const RenderStyle& newStyle);
 
     void absoluteQuadsIgnoringContinuation(const FloatRect&, Vector<FloatQuad>&, bool* wasFixed) const override;
 
