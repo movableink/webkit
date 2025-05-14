@@ -6294,7 +6294,6 @@
                 "animation-wrapper": "PathOperationWrapper",
                 "animation-wrapper-acceleration": "threaded-only",
                 "style-builder-converter": "PathOperation",
-                "settings-flag": "cssMotionPathEnabled",
                 "parser-function": "consumeOffsetPath",
                 "parser-grammar-unused": "none | <ray()> | <path()> | <url> | [ <basic-shape> && <coord-box>? ] | <coord-box>",
                 "parser-grammar-unused-reason": "Needs support for transforming parsed input to minimal form and the strong value representation."
@@ -6312,7 +6311,6 @@
                 "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
                 "animation-wrapper-acceleration": "threaded-only",
                 "style-builder-converter": "Length",
-                "settings-flag": "cssMotionPathEnabled",
                 "parser-grammar": "<length-percentage>"
             },
             "specification": {
@@ -6331,7 +6329,6 @@
                 "animation-wrapper": "LengthPointOrAutoWrapper",
                 "animation-wrapper-acceleration": "threaded-only",
                 "style-builder-converter": "PositionOrAutoOrNormal",
-                "settings-flag": "cssMotionPathEnabled",
                 "parser-grammar": "normal | auto | <position>"
             },
             "specification": {
@@ -6349,7 +6346,6 @@
                 "animation-wrapper": "LengthPointOrAutoWrapper",
                 "animation-wrapper-acceleration": "threaded-only",
                 "style-builder-converter": "PositionOrAuto",
-                "settings-flag": "cssMotionPathEnabled",
                 "parser-grammar": "auto | <position>"
             },
             "specification": {
@@ -6369,7 +6365,6 @@
                 "animation-wrapper-requires-override-parameters": [],
                 "animation-wrapper-acceleration": "threaded-only",
                 "style-builder-converter": "OffsetRotate",
-                "settings-flag": "cssMotionPathEnabled",
                 "parser-grammar": "[ [ auto | reverse ] || <angle> ]@(type=CSSOffsetRotateValue)"
             },
             "specification": {
@@ -6385,8 +6380,7 @@
                     "offset-distance",
                     "offset-rotate",
                     "offset-anchor"
-                ],
-                "settings-flag": "cssMotionPathEnabled"
+                ]
             },
             "specification": {
                 "category": "css-motion-path",

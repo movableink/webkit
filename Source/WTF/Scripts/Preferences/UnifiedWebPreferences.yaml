@@ -1286,20 +1286,6 @@ CSSMediaProgressFunctionEnabled:
     WebCore:
       default: false
 
-CSSMotionPathEnabled:
-  type: bool
-  status: stable
-  category: css
-  humanReadableName: "CSS Motion Path"
-  humanReadableDescription: "Enable CSS Motion Path support"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 CSSOMViewScrollingAPIEnabled:
   type: bool
   status: stable
