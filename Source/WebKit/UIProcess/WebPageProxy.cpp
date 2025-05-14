@@ -5264,19 +5264,20 @@ void WebPageProxy::setApplicationNameForUserAgent(const String& applicationName)
     setUserAgent(standardUserAgent(m_applicationNameForUserAgent));
 }
 
-void WebPageProxy::setCustomUserAgent(const String& customUserAgent)
+void WebPageProxy::setCustomUserAgent(String&& customUserAgent)
 {
     if (m_customUserAgent == customUserAgent)
         return;
 
-    m_customUserAgent = customUserAgent;
+    m_customUserAgent = WTFMove(customUserAgent);
 
     if (m_customUserAgent.isEmpty()) {
         setUserAgent(standardUserAgent(m_applicationNameForUserAgent));
         return;
     }
 
-    setUserAgent(String { m_customUserAgent }, IsCustomUserAgent::Yes);
+    if (m_userAgent != m_customUserAgent)
+        setUserAgent(String { m_customUserAgent }, IsCustomUserAgent::Yes);
 }
 
 void WebPageProxy::resumeActiveDOMObjectsAndAnimations()

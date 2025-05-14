@@ -681,7 +681,7 @@ Document::Document(LocalFrame* frame, const Settings& settings, const URL& url, 
     // and fast/dom/location-new-window-no-crash.html, respectively.
     // FIXME: Can/should we unify this behavior?
     if ((frame && frame->ownerElement()) || !url.isEmpty())
-        setURL(url);
+        setURL(URL { url });
 
     if (!frame)
         setUsesNullCustomElementRegistry();
@@ -3936,7 +3936,7 @@ ExceptionOr<void> Document::open(Document* entryDocument)
         auto newURL = entryDocument->url();
         if (entryDocument != this)
             newURL.removeFragmentIdentifier();
-        setURL(newURL);
+        setURL(WTFMove(newURL));
         auto newCookieURL = entryDocument->cookieURL();
         if (entryDocument != this)
             newCookieURL.removeFragmentIdentifier();
@@ -4448,9 +4448,9 @@ String Document::documentURI() const
     );
 }
 
-void Document::setURL(const URL& url)
+void Document::setURL(URL&& url)
 {
-    URL newURL = url.isEmpty() ? aboutBlankURL() : url;
+    URL newURL = url.isEmpty() ? aboutBlankURL() : WTFMove(url);
     if (newURL == m_url)
         return;
 
@@ -4463,7 +4463,7 @@ void Document::setURL(const URL& url)
     if (SecurityOrigin::shouldIgnoreHost(newURL))
         newURL.removeHostAndPort();
     // SecurityContext::securityOrigin may not be initialized at this time if setURL() is called in the constructor, therefore calling topOrigin() is not always safe.
-    auto topOrigin = isTopDocument() && !SecurityContext::securityOrigin() ? SecurityOrigin::create(url)->data() : this->topOrigin().data();
+    auto topOrigin = isTopDocument() && !SecurityContext::securityOrigin() ? SecurityOrigin::create(newURL)->data() : this->topOrigin().data();
     m_syncData->documentURL = newURL;
     m_url = { WTFMove(newURL), topOrigin };
     if (m_frame)
@@ -8265,7 +8265,7 @@ void Document::updateURLForPushOrReplaceState(const URL& url)
     if (!frame)
         return;
 
-    setURL(url);
+    setURL(URL { url });
     frame->loader().setOutgoingReferrer(url);
 
     if (RefPtr documentLoader = loader())

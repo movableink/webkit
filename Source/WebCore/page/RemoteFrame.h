@@ -65,12 +65,12 @@ public:
     void updateRemoteFrameAccessibilityOffset(IntPoint);
     void unbindRemoteAccessibilityFrames(int);
 
-    void setCustomUserAgent(const String& customUserAgent) { m_customUserAgent = customUserAgent; }
+    void setCustomUserAgent(String&& customUserAgent) { m_customUserAgent = WTFMove(customUserAgent); }
     String customUserAgent() const final;
-    void setCustomUserAgentAsSiteSpecificQuirks(const String& customUserAgentAsSiteSpecificQuirks) { m_customUserAgentAsSiteSpecificQuirks = customUserAgentAsSiteSpecificQuirks; }
+    void setCustomUserAgentAsSiteSpecificQuirks(String&& customUserAgentAsSiteSpecificQuirks) { m_customUserAgentAsSiteSpecificQuirks = WTFMove(customUserAgentAsSiteSpecificQuirks); }
     String customUserAgentAsSiteSpecificQuirks() const final;
 
-    void setCustomNavigatorPlatform(const String& customNavigatorPlatform) { m_customNavigatorPlatform = customNavigatorPlatform; }
+    void setCustomNavigatorPlatform(String&& customNavigatorPlatform) { m_customNavigatorPlatform = WTFMove(customNavigatorPlatform); }
     String customNavigatorPlatform() const final;
 
     void setAdvancedPrivacyProtections(OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections) { m_advancedPrivacyProtections = advancedPrivacyProtections; }

@@ -1257,7 +1257,7 @@ void FrameLoader::loadInSameDocument(URL url, RefPtr<SerializedScriptValue> stat
     // Update the data source's request with the new URL to fake the URL change
     URL oldURL = document->url();
 
-    document->setURL(url);
+    document->setURL(URL { url });
     setOutgoingReferrer(url);
     protectedDocumentLoader()->replaceRequestURLForSameDocumentNavigation(url);
     if (isNewNavigation && !shouldTreatURLAsSameAsCurrent(requesterOrigin, url) && !stateObject) {
@@ -3434,7 +3434,7 @@ void FrameLoader::scheduleRefreshIfNeeded(Document& document, const String& cont
     if (parseMetaHTTPEquivRefresh(content, delay, urlString)) {
         auto completedURL = urlString.isEmpty() ? document.url() : document.completeURL(urlString);
         if (!completedURL.protocolIsJavaScript())
-            protectedFrame()->protectedNavigationScheduler()->scheduleRedirect(document, delay, completedURL, isMetaRefresh);
+            protectedFrame()->protectedNavigationScheduler()->scheduleRedirect(document, delay, WTFMove(completedURL), isMetaRefresh);
         else {
             auto message = makeString("Refused to refresh "_s, document.url().stringCenterEllipsizedToLength(), " to a javascript: URL"_s);
             document.addConsoleMessage(MessageSource::Security, MessageLevel::Error, message);

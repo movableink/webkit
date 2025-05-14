@@ -1095,12 +1095,12 @@ void WebProcess::removeWebFrame(FrameIdentifier frameID, WebPage* page)
     page->send(Messages::WebPageProxy::DidDestroyFrame(frameID));
 }
 
-WebPageGroupProxy* WebProcess::webPageGroup(const WebPageGroupData& pageGroupData)
+WebPageGroupProxy* WebProcess::webPageGroup(WebPageGroupData&& pageGroupData)
 {
     auto result = m_pageGroupMap.add(pageGroupData.pageGroupID, nullptr);
     if (result.isNewEntry) {
         ASSERT(!result.iterator->value);
-        result.iterator->value = WebPageGroupProxy::create(pageGroupData);
+        result.iterator->value = WebPageGroupProxy::create(WTFMove(pageGroupData));
     }
 
     return result.iterator->value.get();

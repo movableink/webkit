@@ -456,7 +456,7 @@ void WebFrame::createProvisionalFrame(ProvisionalFrameCreationParameters&& param
     m_provisionalFrame = localFrame.ptr();
     m_frameIDBeforeProvisionalNavigation = parameters.frameIDBeforeProvisionalNavigation;
     localFrame->init();
-    localFrame->protectedDocument()->setURL(aboutBlankURL());
+    localFrame->protectedDocument()->setURL(URL { aboutBlankURL() });
 
     if (parameters.layerHostingContextIdentifier)
         setLayerHostingContextIdentifier(*parameters.layerHostingContextIdentifier);

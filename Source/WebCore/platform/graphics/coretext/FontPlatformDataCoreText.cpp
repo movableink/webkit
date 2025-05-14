@@ -293,9 +293,9 @@ FontPlatformData::IPCData FontPlatformData::toIPCData() const
 
     auto options = CTFontDescriptorGetOptions(fontDescriptor.get());
     auto referenceURL = adoptCF(static_cast<CFURLRef>(CTFontCopyAttribute(font, kCTFontReferenceURLAttribute)));
-    auto urlString = CFURLGetString(referenceURL.get());
+    auto urlString = retainPtr(CFURLGetString(referenceURL.get()));
     auto postScriptName = adoptCF(CTFontCopyPostScriptName(font)).get();
-    return FontPlatformSerializedData { options, urlString, postScriptName, FontPlatformSerializedAttributes::fromCF(attributes.get()) };
+    return FontPlatformSerializedData { options, WTFMove(urlString), WTFMove(postScriptName), FontPlatformSerializedAttributes::fromCF(attributes.get()) };
 }
 
 #define EXTRACT_TYPED_VALUE(key, cfType, target) { \

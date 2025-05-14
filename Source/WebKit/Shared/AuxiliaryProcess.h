@@ -162,7 +162,7 @@ protected:
     virtual void accessibilitySettingsDidChange() { }
 #endif
 
-    void applyProcessCreationParameters(const AuxiliaryProcessCreationParameters&);
+    void applyProcessCreationParameters(AuxiliaryProcessCreationParameters&&);
 
 #if PLATFORM(MAC)
     static void openDirectoryCacheInvalidated(SandboxExtension::Handle&&);

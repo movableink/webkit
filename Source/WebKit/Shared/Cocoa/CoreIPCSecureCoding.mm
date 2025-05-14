@@ -69,7 +69,7 @@ const HashSet<String>* classNamesExemptFromSecureCodingCrash()
     return internalClassNamesExemptFromSecureCodingCrash().get();
 }
 
-void applyProcessCreationParameters(const AuxiliaryProcessCreationParameters& parameters)
+void applyProcessCreationParameters(AuxiliaryProcessCreationParameters&& parameters)
 {
     RELEASE_ASSERT(isInAuxiliaryProcess());
 

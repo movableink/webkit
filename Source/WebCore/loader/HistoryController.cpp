@@ -796,7 +796,7 @@ void HistoryController::setCurrentItemTitle(const StringWithDirection& title)
 {
     // FIXME: This ignores the title's direction.
     if (RefPtr currentItem = m_currentItem)
-        currentItem->setTitle(title.string);
+        currentItem->setTitle(String { title.string });
 }
 
 bool HistoryController::currentItemShouldBeReplaced() const
@@ -856,7 +856,7 @@ void HistoryController::initializeItem(HistoryItem& item, RefPtr<DocumentLoader>
     item.setTarget(m_frame->tree().uniqueName());
     item.setFrameID(m_frame->frameID());
     // FIXME: Should store the title direction as well.
-    item.setTitle(title.string);
+    item.setTitle(WTFMove(title.string));
     item.setOriginalURLString(originalURL.string());
 
     if (!unreachableURL.isEmpty() || documentLoader->response().httpStatusCode() >= 400)

@@ -168,13 +168,13 @@ protected:
     SecurityOrigin* securityOrigin() const { return m_securityOrigin.get(); }
     RefPtr<SecurityOrigin> protectedSecurityOrigin() const { return m_securityOrigin; }
     const URL& url() const { return m_url; }
-    String referrer() const { return m_referrer; }
+    const String& referrer() const { return m_referrer; }
 
 private:
     Ref<Document> m_initiatingDocument;
     RefPtr<SecurityOrigin> m_securityOrigin;
     URLKeepingBlobAlive m_url;
-    String m_referrer;
+    const String m_referrer;
     bool m_haveToldClient { false };
 };
 

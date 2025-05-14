@@ -61,14 +61,14 @@ void LogChannels::clearAllLogChannelsToAccumulate()
     m_logChannelsNeedInitialization = true;
 }
 
-void LogChannels::initializeLogChannelsIfNecessary(std::optional<String> logChannelString)
+void LogChannels::initializeLogChannelsIfNecessary(String&& logChannelString)
 {
-    if (!m_logChannelsNeedInitialization && !logChannelString)
+    if (!m_logChannelsNeedInitialization)
         return;
 
     m_logChannelsNeedInitialization = false;
 
-    String enabledChannelsString = logChannelString ? logChannelString.value() : logLevelString();
+    String enabledChannelsString = !logChannelString.isEmpty() ? WTFMove(logChannelString) : logLevelString();
     WTFInitializeLogChannelStatesFromString(m_logChannels.data(), m_logChannels.size(), enabledChannelsString.utf8().data());
 }
 

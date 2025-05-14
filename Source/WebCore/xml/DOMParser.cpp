@@ -67,7 +67,7 @@ ExceptionOr<Ref<Document>> DOMParser::parseFromString(Variant<RefPtr<TrustedHTML
         document->setContextDocument(*m_contextDocument.get());
     document->setMarkupUnsafe(stringValueHolder.releaseReturnValue(), { });
     if (m_contextDocument) {
-        document->setURL(m_contextDocument->url());
+        document->setURL(URL { m_contextDocument->url() });
         document->setSecurityOriginPolicy(m_contextDocument->securityOriginPolicy());
     }
     return document.releaseNonNull();

@@ -198,10 +198,10 @@ void WebRemoteFrameClient::applyWebsitePolicies(WebsitePoliciesData&& websitePol
         return;
     }
 
-    coreFrame->setCustomUserAgent(websitePolicies.customUserAgent);
-    coreFrame->setCustomUserAgentAsSiteSpecificQuirks(websitePolicies.customUserAgentAsSiteSpecificQuirks);
+    coreFrame->setCustomUserAgent(WTFMove(websitePolicies.customUserAgent));
+    coreFrame->setCustomUserAgentAsSiteSpecificQuirks(WTFMove(websitePolicies.customUserAgentAsSiteSpecificQuirks));
     coreFrame->setAdvancedPrivacyProtections(websitePolicies.advancedPrivacyProtections);
-    coreFrame->setCustomNavigatorPlatform(websitePolicies.customNavigatorPlatform);
+    coreFrame->setCustomNavigatorPlatform(WTFMove(websitePolicies.customNavigatorPlatform));
 }
 
 void WebRemoteFrameClient::updateScrollingMode(ScrollbarMode scrollingMode)

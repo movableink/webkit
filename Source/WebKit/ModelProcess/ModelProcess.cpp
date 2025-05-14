@@ -200,7 +200,7 @@ void ModelProcess::initializeModelProcess(ModelProcessCreationParameters&& param
 
     WKREEngine::enableRestrictiveRenderingMode(parameters.restrictiveRenderingMode);
 
-    applyProcessCreationParameters(parameters.auxiliaryProcessParameters);
+    applyProcessCreationParameters(WTFMove(parameters.auxiliaryProcessParameters));
     RELEASE_LOG(Process, "%p - ModelProcess::initializeModelProcess:", this);
     WTF::Thread::setCurrentThreadIsUserInitiated();
     WebCore::initializeCommonAtomStrings();

@@ -299,7 +299,7 @@ void NetworkProcess::initializeNetworkProcess(NetworkProcessCreationParameters&&
 {
     CompletionHandlerCallingScope callCompletionHandler(WTFMove(completionHandler));
 
-    applyProcessCreationParameters(parameters.auxiliaryProcessParameters);
+    applyProcessCreationParameters(WTFMove(parameters.auxiliaryProcessParameters));
 #if HAVE(SEC_KEY_PROXY)
     WTF::setProcessPrivileges({ ProcessPrivilege::CanAccessRawCookies });
 #else

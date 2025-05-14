@@ -1666,9 +1666,9 @@ private:
 #endif
 
     Vector<UserContentURLPattern> m_corsDisablingPatterns;
-    HashSet<String> m_maskedURLSchemes;
+    const HashSet<String> m_maskedURLSchemes;
     Vector<UserStyleSheet> m_userStyleSheetsPendingInjection;
-    std::optional<MemoryCompactLookupOnlyRobinHoodHashSet<String>> m_allowedNetworkHosts;
+    const std::optional<MemoryCompactLookupOnlyRobinHoodHashSet<String>> m_allowedNetworkHosts;
     bool m_isTakingSnapshotsForApplicationSuspension { false };
     bool m_loadsSubresources { true };
     bool m_canUseCredentialStorage { true };

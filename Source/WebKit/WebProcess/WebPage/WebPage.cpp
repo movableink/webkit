@@ -751,7 +751,7 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
     }
 #endif
 
-    m_pageGroup = WebProcess::singleton().webPageGroup(parameters.pageGroupData);
+    m_pageGroup = WebProcess::singleton().webPageGroup(WTFMove(parameters.pageGroupData));
 
     auto frameType = parameters.remotePageParameters ? Frame::FrameType::Remote : Frame::FrameType::Local;
     ASSERT(!parameters.remotePageParameters || parameters.remotePageParameters->frameTreeParameters.frameID == parameters.mainFrameIdentifier);

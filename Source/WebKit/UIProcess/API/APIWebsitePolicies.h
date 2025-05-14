@@ -79,13 +79,12 @@ public:
     void setUserContentController(RefPtr<WebKit::WebUserContentControllerProxy>&&);
 
     void setCustomUserAgent(WTF::String&& customUserAgent) { m_data.customUserAgent = WTFMove(customUserAgent); }
-    void setCustomUserAgent(const WTF::String& customUserAgent) { m_data.customUserAgent = customUserAgent; }
     const WTF::String& customUserAgent() const { return m_data.customUserAgent; }
 
-    void setCustomUserAgentAsSiteSpecificQuirks(const WTF::String& customUserAgent) { m_data.customUserAgentAsSiteSpecificQuirks = customUserAgent; }
+    void setCustomUserAgentAsSiteSpecificQuirks(WTF::String&& customUserAgent) { m_data.customUserAgentAsSiteSpecificQuirks = WTFMove(customUserAgent); }
     const WTF::String& customUserAgentAsSiteSpecificQuirks() const { return m_data.customUserAgentAsSiteSpecificQuirks; }
 
-    void setCustomNavigatorPlatform(const WTF::String& customNavigatorPlatform) { m_data.customNavigatorPlatform = customNavigatorPlatform; }
+    void setCustomNavigatorPlatform(WTF::String&& customNavigatorPlatform) { m_data.customNavigatorPlatform = WTFMove(customNavigatorPlatform); }
     const WTF::String& customNavigatorPlatform() const { return m_data.customNavigatorPlatform; }
 
     WebKit::WebContentMode preferredContentMode() const { return m_data.preferredContentMode; }

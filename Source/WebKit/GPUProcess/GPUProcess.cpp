@@ -214,7 +214,7 @@ void GPUProcess::initializeGPUProcess(GPUProcessCreationParameters&& parameters,
 {
     CompletionHandlerCallingScope callCompletionHandler(WTFMove(completionHandler));
 
-    applyProcessCreationParameters(parameters.auxiliaryProcessParameters);
+    applyProcessCreationParameters(WTFMove(parameters.auxiliaryProcessParameters));
     RELEASE_LOG(Process, "%p - GPUProcess::initializeGPUProcess:", this);
     WTF::Thread::setCurrentThreadIsUserInitiated();
     WebCore::initializeCommonAtomStrings();

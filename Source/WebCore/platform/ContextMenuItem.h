@@ -211,6 +211,7 @@ public:
 
     bool isNull() const;
 
+    void setTitle(String&& title) { m_title = WTFMove(title); }
     void setTitle(const String& title) { m_title = title; }
     const String& title() const { return m_title; }
 

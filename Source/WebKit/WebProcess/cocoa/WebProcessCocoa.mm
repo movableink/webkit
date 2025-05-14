@@ -364,7 +364,7 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     unsetenv("BSServiceDomains");
 #endif
 
-    applyProcessCreationParameters(parameters.auxiliaryProcessParameters);
+    applyProcessCreationParameters(WTFMove(parameters.auxiliaryProcessParameters));
 
     setQOS(parameters.latencyQOS, parameters.throughputQOS);
 
