@@ -28,7 +28,6 @@
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "CrossOriginEmbedderPolicy.h"
 #include "CrossOriginOpenerPolicy.h"
-#include "ReferrerPolicy.h"
 
 namespace WebCore {
 

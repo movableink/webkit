@@ -29,7 +29,6 @@
 #include "ReportBody.h"
 #include "ViolationReportType.h"
 #include <wtf/ArgumentCoder.h>
-#include <wtf/URL.h>
 
 namespace WebCore {
 
