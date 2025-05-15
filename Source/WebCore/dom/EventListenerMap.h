@@ -40,6 +40,10 @@
 #include <wtf/Threading.h>
 #include <wtf/text/AtomString.h>
 
+#if PLATFORM(IOS_FAMILY)
+#include "WebCoreThread.h"
+#endif
+
 namespace WebCore {
 
 class EventTarget;
@@ -95,6 +99,10 @@ public:
 private:
     void releaseAssertOrSetThreadUID()
     {
+#if PLATFORM(IOS_FAMILY)
+        if (WebThreadIsEnabled())
+            return;
+#endif
         if (m_threadUID)
             RELEASE_ASSERT(m_threadUID == Thread::currentSingleton().uid());
         else
