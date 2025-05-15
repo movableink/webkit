@@ -292,6 +292,22 @@ void WebPasteboardProxy::getPasteboardItemsCount(IPC::Connection&, const String&
 
 void WebPasteboardProxy::readURLFromPasteboard(IPC::Connection& connection, size_t index, const String&, std::optional<WebPageProxyIdentifier>, CompletionHandler<void(String&& url, String&& title)>&& completionHandler)
 {
+#if ENABLE(WPE_PLATFORM)
+    if (usingWPEPlatformAPI()) {
+        if (index) {
+            // We don't support more than one item in the clipboard.
+            completionHandler({ }, { });
+            return;
+        }
+
+        auto* clipboard = wpe_display_get_clipboard(wpe_display_get_primary());
+        if (GRefPtr<GBytes> bytes = adoptGRef(wpe_clipboard_read_bytes(clipboard, "text/uri-list"))) {
+            auto buffer = FragmentedSharedBuffer::create(bytes.get())->makeContiguous();
+            completionHandler(String(buffer->span()), { });
+            return;
+        }
+    }
+#endif
     completionHandler({ }, { });
 }
 
@@ -300,6 +316,7 @@ void WebPasteboardProxy::readBufferFromPasteboard(IPC::Connection& connection, s
 #if ENABLE(WPE_PLATFORM)
     if (usingWPEPlatformAPI()) {
         if (index && index.value()) {
+            // We don't support more than one item in the clipboard.
             completionHandler({ });
             return;
         }
