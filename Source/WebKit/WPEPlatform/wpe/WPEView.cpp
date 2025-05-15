@@ -176,17 +176,6 @@ static void wpeViewGetProperty(GObject* object, guint propId, GValue* value, GPa
     }
 }
 
-static void wpeViewConstructed(GObject* object)
-{
-    G_OBJECT_CLASS(wpe_view_parent_class)->constructed(object);
-    auto* view = WPE_VIEW(object);
-    auto* priv = view->priv;
-    auto settings = wpe_display_get_settings(priv->display.get());
-
-    GVariant* toplevelSize = wpe_settings_get_value(settings, WPE_SETTING_TOPLEVEL_DEFAULT_SIZE, nullptr);
-    g_variant_get(toplevelSize, "(uu)", &priv->width, &priv->height);
-}
-
 static void wpeViewDispose(GObject* object)
 {
     wpe_view_set_toplevel(WPE_VIEW(object), nullptr);
@@ -208,7 +197,6 @@ static void wpe_view_class_init(WPEViewClass* viewClass)
     GObjectClass* objectClass = G_OBJECT_CLASS(viewClass);
     objectClass->set_property = wpeViewSetProperty;
     objectClass->get_property = wpeViewGetProperty;
-    objectClass->constructed = wpeViewConstructed;
     objectClass->dispose = wpeViewDispose;
 
 #if USE(ATK)

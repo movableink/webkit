@@ -86,10 +86,17 @@ static void wpeToplevelConstructed(GObject* object)
     G_OBJECT_CLASS(wpe_toplevel_parent_class)->constructed(object);
 
     s_toplevelList = g_list_prepend(s_toplevelList, object);
+
+    auto* toplevel = WPE_TOPLEVEL(object);
+    auto* priv = toplevel->priv;
+    auto* settings = wpe_display_get_settings(priv->display.get());
+    GVariant* toplevelSize = wpe_settings_get_value(settings, WPE_SETTING_TOPLEVEL_DEFAULT_SIZE, nullptr);
+    g_variant_get(toplevelSize, "(uu)", &priv->width, &priv->height);
+
 #if USE(ATK)
     auto* atkRoot = atk_get_root();
     if (WPE_IS_APPLICATION_ACCESSIBLE_ATK(atkRoot))
-        wpeApplicationAccessibleAtkToplevelCreated(WPE_APPLICATION_ACCESSIBLE_ATK(atkRoot), WPE_TOPLEVEL(object));
+        wpeApplicationAccessibleAtkToplevelCreated(WPE_APPLICATION_ACCESSIBLE_ATK(atkRoot), toplevel);
 #endif
 }
 
