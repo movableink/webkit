@@ -178,10 +178,10 @@ class TestFactory(Factory):
             self.addStep(InstallWpeDependencies())
         elif platform == 'win':
             self.addStep(InstallWinDependencies())
+        self.addStep(KillOldProcesses())
         self.getProduct()
         if self.willTriggerCrashLogSubmission:
             self.addStep(WaitForCrashCollection())
-        self.addStep(KillOldProcesses())
         if self.LayoutTestClass:
             self.addStep(RunWebKitTestsInStressMode(num_iterations=10, layout_test_class=self.LayoutTestClass))
             self.addStep(self.LayoutTestClass())
@@ -198,9 +198,9 @@ class StressTestFactory(TestFactory):
 
     def __init__(self, platform, configuration=None, architectures=None, triggered_by=None, additionalArguments=None, checkRelevance=False, **kwargs):
         Factory.__init__(self, platform=platform, configuration=configuration, architectures=architectures, buildOnly=False, triggered_by=triggered_by, additionalArguments=additionalArguments, checkRelevance=checkRelevance)
+        self.addStep(KillOldProcesses())
         self.getProduct()
         self.addStep(WaitForCrashCollection())
-        self.addStep(KillOldProcesses())
         self.addStep(RunWebKitTestsInStressMode())
         self.addStep(TriggerCrashLogSubmission())
         self.addStep(SetBuildSummary())
@@ -227,9 +227,9 @@ class JSCBuildAndTestsFactory(Factory):
 class JSCTestsFactory(Factory):
     def __init__(self, platform, configuration='release', architectures=None, remotes=None, additionalArguments=None, **kwargs):
         Factory.__init__(self, platform=platform, configuration=configuration, architectures=architectures, buildOnly=False, remotes=remotes, additionalArguments=additionalArguments, checkRelevance=True)
+        self.addStep(KillOldProcesses())
         self.addStep(DownloadBuiltProduct())
         self.addStep(ExtractBuiltProduct())
-        self.addStep(KillOldProcesses())
         self.addStep(RunJavaScriptCoreTests())
 
 
