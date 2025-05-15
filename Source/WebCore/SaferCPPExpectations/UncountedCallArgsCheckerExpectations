@@ -524,7 +524,7 @@ dom/ElementInlines.h
 dom/ElementInternals.cpp
 dom/ElementIteratorInlines.h
 dom/ElementTraversal.h
-dom/EmptyScriptExecutionContext.h
+dom/EmptyScriptExecutionContextInlines.h
 dom/EventListenerMap.h
 dom/EventPath.cpp
 dom/ExtensionStyleSheets.cpp

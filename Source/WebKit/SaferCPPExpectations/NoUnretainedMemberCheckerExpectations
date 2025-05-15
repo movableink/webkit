@@ -103,7 +103,6 @@ UIProcess/API/Cocoa/_WKWebPushMessage.h
 UIProcess/API/Cocoa/_WKWebPushSubscriptionData.h
 UIProcess/API/Cocoa/_WKWebsiteDataStoreConfiguration.h
 UIProcess/API/mac/WKViewInternal.h
-UIProcess/Cocoa/GroupActivities/WKGroupSession.h
 UIProcess/Cocoa/TextExtraction/WKTextExtractionItem.h
 UIProcess/Inspector/mac/WKInspectorViewController.h
 UIProcess/Inspector/mac/WebInspectorUIProxyMac.mm
