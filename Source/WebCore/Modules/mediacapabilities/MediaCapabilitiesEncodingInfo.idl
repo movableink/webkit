@@ -27,5 +27,5 @@
     EnabledBySetting=MediaCapabilitiesEnabled,
     JSGenerateToJSObject,
 ] dictionary MediaCapabilitiesEncodingInfo : MediaCapabilitiesInfo {
-    [EnabledBySetting=MediaCapabilitiesExtensionsEnabled] MediaEncodingConfiguration configuration;
+    [EnabledBySetting=MediaCapabilitiesExtensionsEnabled] required MediaEncodingConfiguration configuration;
 };

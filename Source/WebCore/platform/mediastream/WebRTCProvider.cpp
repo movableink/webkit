@@ -210,12 +210,12 @@ void WebRTCProvider::createDecodingConfiguration(MediaDecodingConfiguration&& co
         ContentType contentType { info.configuration.video->contentType };
         auto codec = codecCapability(contentType, videoDecodingCapabilities());
         if (!codec) {
-            callback({ });
+            callback({ { }, WTFMove(info.configuration) });
             return;
         }
         if (auto infoOverride = videoDecodingCapabilitiesOverride(*info.configuration.video)) {
             if (!infoOverride->supported) {
-                callback({ });
+                callback({ { }, WTFMove(info.configuration) });
                 return;
             }
             info.smooth = infoOverride->smooth;
@@ -226,7 +226,7 @@ void WebRTCProvider::createDecodingConfiguration(MediaDecodingConfiguration&& co
         ContentType contentType { info.configuration.audio->contentType };
         auto codec = codecCapability(contentType, audioDecodingCapabilities());
         if (!codec) {
-            callback({ });
+            callback({ { }, WTFMove(info.configuration) });
             return;
         }
     }
@@ -247,12 +247,12 @@ void WebRTCProvider::createEncodingConfiguration(MediaEncodingConfiguration&& co
         ContentType contentType { info.configuration.video->contentType };
         auto codec = codecCapability(contentType, videoEncodingCapabilities());
         if (!codec) {
-            callback({ });
+            callback({ { }, WTFMove(info.configuration) });
             return;
         }
         if (auto infoOverride = videoEncodingCapabilitiesOverride(*info.configuration.video)) {
             if (!infoOverride->supported) {
-                callback({ });
+                callback({ { }, WTFMove(info.configuration) });
                 return;
             }
             info.smooth = infoOverride->smooth;
@@ -263,7 +263,7 @@ void WebRTCProvider::createEncodingConfiguration(MediaEncodingConfiguration&& co
         ContentType contentType { info.configuration.audio->contentType };
         auto codec = codecCapability(contentType, audioEncodingCapabilities());
         if (!codec) {
-            callback({ });
+            callback({ { }, WTFMove(info.configuration) });
             return;
         }
     }
