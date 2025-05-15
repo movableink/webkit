@@ -639,6 +639,28 @@ TEST(SiteIsolation, LoadStringAfterOpen)
     EXPECT_WK_STREQ([opened.uiDelegate waitForAlert], "false");
 }
 
+TEST(SiteIsolation, LoadDuringOpen)
+{
+    HTTPServer server({
+        { "/example"_s, { "window.open('https://webkit.org/webkit')"_s } },
+        { "/webkit"_s, { "hi"_s } },
+    }, HTTPServer::Protocol::HttpsProxy);
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
+    RetainPtr uiDelegate = adoptNS([TestUIDelegate new]);
+    uiDelegate.get().createWebViewWithConfiguration = [&](WKWebViewConfiguration *configuration, WKNavigationAction *action, WKWindowFeatures *windowFeatures) -> WKWebView * {
+        RetainPtr auxiliary = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectZero configuration:[webView configuration]]);
+        auxiliary.get().navigationDelegate = navigationDelegate.get();
+        [auxiliary loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+        [navigationDelegate waitForDidFinishNavigation];
+        return nil;
+    };
+    [webView setUIDelegate:uiDelegate.get()];
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+    [webView evaluateJavaScript:@"window.open('https://webkit.org/webkit');alert('done')" completionHandler:nil];
+    EXPECT_WK_STREQ([uiDelegate waitForAlert], "done");
+}
+
 TEST(SiteIsolation, WindowOpenRedirect)
 {
     HTTPServer server({
@@ -1167,7 +1189,7 @@ TEST(SiteIsolation, ChildNavigatingToDomainLoadedOnADifferentPage)
     EXPECT_NE(mainFramePid, 0);
     EXPECT_NE(childFramePid, 0);
     EXPECT_NE(mainFramePid, childFramePid);
-    EXPECT_EQ(firstFramePID, childFramePid);
+    EXPECT_NE(firstFramePID, childFramePid);
     EXPECT_WK_STREQ(mainFrame.info.securityOrigin.host, "example.com");
     EXPECT_WK_STREQ(childFrame.info.securityOrigin.host, "webkit.org");
 }
@@ -4092,7 +4114,7 @@ TEST(SiteIsolation, ReuseConfigurationLoadHTMLString)
     [webView2 loadHTMLString:@"hi!" baseURL:[NSURL URLWithString:@"https://webkit.org/"]];
     [webView2 _test_waitForDidFinishNavigation];
 
-    EXPECT_EQ([webView1 _webProcessIdentifier], [webView2 _webProcessIdentifier]);
+    EXPECT_NE([webView1 _webProcessIdentifier], [webView2 _webProcessIdentifier]);
 }
 
 static void callMethodOnFirstVideoElementInFrame(WKWebView *webView, NSString *methodName, WKFrameInfo *frame)

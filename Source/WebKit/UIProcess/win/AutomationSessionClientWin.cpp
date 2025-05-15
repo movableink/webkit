@@ -53,7 +53,6 @@ void AutomationSessionClient::requestNewPageWithOptions(WebKit::WebAutomationSes
         if (processProxy->pageCount()) {
             Ref firstPage = *processProxy->pages().begin();
             Ref configuration = firstPage->configuration().copy();
-            Ref browsingContextGroup = firstPage->protectedBrowsingContextGroup();
 
             WebCore::WindowFeatures windowFeatures;
             // FIXME: Attributes of the window of firstPage should be set to windowFeatures.
@@ -61,7 +60,6 @@ void AutomationSessionClient::requestNewPageWithOptions(WebKit::WebAutomationSes
             //        https://webkit.org/b/290979
             configuration->setWindowFeatures(WTFMove(windowFeatures));
             configuration->setRelatedPage(firstPage);
-            configuration->setBrowsingContextGroup(WTFMove(browsingContextGroup));
             configuration->setControlledByAutomation(true);
 
             NavigationActionData navigationActionData {
