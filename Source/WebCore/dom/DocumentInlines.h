@@ -32,6 +32,7 @@
 #include "DocumentParser.h"
 #include "DocumentSyncData.h"
 #include "Element.h"
+#include "EventLoop.h"
 #include "ExtensionStyleSheets.h"
 #include "FocusOptions.h"
 #include "FrameDestructionObserverInlines.h"
@@ -116,14 +117,19 @@ inline ScriptModuleLoader& Document::moduleLoader()
     return *m_moduleLoader;
 }
 
-CSSFontSelector& Document::fontSelector()
+inline CheckedRef<EventLoopTaskGroup> Document::checkedEventLoop()
+{
+    return eventLoop();
+}
+
+inline CSSFontSelector& Document::fontSelector()
 {
     if (!m_fontSelector)
         return ensureFontSelector();
     return *m_fontSelector;
 }
 
-const CSSFontSelector& Document::fontSelector() const
+inline const CSSFontSelector& Document::fontSelector() const
 {
     if (!m_fontSelector)
         return const_cast<Document&>(*this).ensureFontSelector();

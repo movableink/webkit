@@ -30,7 +30,7 @@
 #include "Document.h"
 #include "Event.h"
 #include "EventLoop.h"
-#include "ScriptExecutionContext.h"
+#include "ScriptExecutionContextInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {

@@ -29,6 +29,7 @@
 #include "FetchOptions.h"
 #include "ScriptExecutionContext.h"
 #include "WorkerThreadType.h"
+#include <pal/SessionID.h>
 
 namespace WebCore {
 

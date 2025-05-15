@@ -39,6 +39,7 @@
 #include "SecurityOrigin.h"
 #include "SecurityOriginData.h"
 #include "WindowEventLoop.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {

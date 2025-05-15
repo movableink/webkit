@@ -41,6 +41,7 @@
 #include "ContentExtensionRule.h"
 #include "ContentRuleListResults.h"
 #include "CookieStore.h"
+#include "CrossOriginMode.h"
 #include "CrossOriginOpenerPolicy.h"
 #include "Crypto.h"
 #include "CustomElementRegistry.h"

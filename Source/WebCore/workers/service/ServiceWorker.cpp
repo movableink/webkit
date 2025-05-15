@@ -32,7 +32,7 @@
 #include "Logging.h"
 #include "MessagePort.h"
 #include "SWClientConnection.h"
-#include "ScriptExecutionContext.h"
+#include "ScriptExecutionContextInlines.h"
 #include "SerializedScriptValue.h"
 #include "ServiceWorkerClientData.h"
 #include "ServiceWorkerContainer.h"

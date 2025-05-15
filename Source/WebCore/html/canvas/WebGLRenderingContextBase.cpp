@@ -97,6 +97,7 @@
 #include "PermissionsPolicy.h"
 #include "RenderBox.h"
 #include "Settings.h"
+#include "ScriptExecutionContextInlines.h"
 #include "WebCodecsVideoFrame.h"
 #include "WebCoreOpaqueRootInlines.h"
 #include "WebGL2RenderingContext.h"

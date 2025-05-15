@@ -385,6 +385,7 @@ enum class WebCore::ScreenOrientationType : uint8_t {
     LandscapeSecondary
 };
 
+header: <WebCore/StorageBlockingPolicy.h>
 enum class WebCore::StorageBlockingPolicy : uint8_t {
     AllowAll,
     BlockThirdParty,

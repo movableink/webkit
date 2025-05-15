@@ -43,6 +43,7 @@
 #import "PageGroup.h"
 #import "TextTrackList.h"
 #import "TimeRanges.h"
+#import "UserGestureIndicator.h"
 #import "VideoTrack.h"
 #import "VideoTrackConfiguration.h"
 #import "VideoTrackList.h"

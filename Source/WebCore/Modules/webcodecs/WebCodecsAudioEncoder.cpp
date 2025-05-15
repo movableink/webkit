@@ -37,6 +37,7 @@
 #include "JSWebCodecsAudioEncoderSupport.h"
 #include "Logging.h"
 #include "OpusEncoderConfig.h"
+#include "ScriptExecutionContextInlines.h"
 #include "SecurityOrigin.h"
 #include "WebCodecsAudioData.h"
 #include "WebCodecsAudioEncoderConfig.h"
@@ -47,6 +48,7 @@
 #include "WebCodecsErrorCallback.h"
 #include "WebCodecsUtilities.h"
 #include <JavaScriptCore/ArrayBuffer.h>
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>

@@ -27,6 +27,7 @@
 
 #if ENABLE(WEB_AUTHN)
 
+#include "ActiveDOMObject.h"
 #include "DigitalCredentialsProtocols.h"
 #include "JSDOMPromiseDeferred.h"
 #include "UnvalidatedDigitalCredentialRequest.h"

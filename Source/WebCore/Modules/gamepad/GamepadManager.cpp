@@ -38,6 +38,7 @@
 #include "Navigator.h"
 #include "NavigatorGamepad.h"
 #include "PlatformGamepad.h"
+#include "UserGestureIndicator.h"
 #include <wtf/NeverDestroyed.h>
 
 #if PLATFORM(VISION)

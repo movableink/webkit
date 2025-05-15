@@ -32,6 +32,7 @@
 #include "HTMLFormElement.h"
 #include "NodeRareData.h"
 #include "ValidationMessage.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/Ref.h>
 #include <wtf/TZoneMallocInlines.h>
 

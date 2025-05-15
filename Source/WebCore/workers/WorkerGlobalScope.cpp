@@ -34,6 +34,7 @@
 #include "CacheStorageProvider.h"
 #include "CommonVM.h"
 #include "ContentSecurityPolicy.h"
+#include "CrossOriginMode.h"
 #include "Crypto.h"
 #include "CryptoKeyData.h"
 #include "DocumentInlines.h"

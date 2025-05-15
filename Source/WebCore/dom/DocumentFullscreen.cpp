@@ -54,6 +54,7 @@
 #include "SVGElementTypeHelpers.h"
 #include "SVGSVGElement.h"
 #include "Settings.h"
+#include "UserGestureIndicator.h"
 #include <wtf/LoggerHelper.h>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>

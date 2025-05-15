@@ -66,6 +66,7 @@
 #include "TextNodeTraversal.h"
 #include "TypedElementDescendantIteratorInlines.h"
 #include "UserAgentParts.h"
+#include "UserGestureIndicator.h"
 #include "UserTypingGestureIndicator.h"
 #include <wtf/TZoneMallocInlines.h>
 

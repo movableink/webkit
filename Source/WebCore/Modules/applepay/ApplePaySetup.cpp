@@ -36,6 +36,7 @@
 #include "PaymentCoordinatorClient.h"
 #include "PaymentSession.h"
 #include "Settings.h"
+#include "UserGestureIndicator.h"
 #include <wtf/CompletionHandler.h>
 
 namespace WebCore {

@@ -38,6 +38,7 @@
 #include "PictureInPictureEvent.h"
 #include "PictureInPictureSupport.h"
 #include "PictureInPictureWindow.h"
+#include "UserGestureIndicator.h"
 #include "VideoTrackList.h"
 #include <wtf/TZoneMallocInlines.h>
 

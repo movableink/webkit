@@ -49,6 +49,7 @@
 #include "RenderElement.h"
 #include "ScriptDisallowedScope.h"
 #include "ValidationMessage.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/Ref.h>
 #include <wtf/SetForScope.h>
 #include <wtf/TZoneMallocInlines.h>

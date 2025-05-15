@@ -32,6 +32,7 @@
 #include "CachedScript.h"
 #include "CommonVM.h"
 #include "ContentSecurityPolicy.h"
+#include "CrossOriginMode.h"
 #include "CrossOriginOpenerPolicy.h"
 #include "DOMTimer.h"
 #include "DatabaseContext.h"
@@ -59,6 +60,7 @@
 #include "SWContextManager.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
+#include "ScriptExecutionContextInlines.h"
 #include "ScriptTelemetryCategory.h"
 #include "ServiceWorker.h"
 #include "ServiceWorkerGlobalScope.h"
@@ -127,6 +129,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(ScriptExecutionContext::Task);
 
 ScriptExecutionContext::ScriptExecutionContext(Type type, std::optional<ScriptExecutionContextIdentifier> contextIdentifier)
     : m_identifier(contextIdentifier ? *contextIdentifier : ScriptExecutionContextIdentifier::generate())
+    , m_storageBlockingPolicy { StorageBlockingPolicy::AllowAll }
     , m_type(type)
 {
 }
@@ -444,6 +447,11 @@ void ScriptExecutionContext::didCreateDestructionObserver(ContextDestructionObse
 void ScriptExecutionContext::willDestroyDestructionObserver(ContextDestructionObserver& observer)
 {
     m_destructionObservers.remove(&observer);
+}
+
+std::optional<PAL::SessionID> ScriptExecutionContext::sessionID() const
+{
+    return std::nullopt;
 }
 
 RefPtr<RTCDataChannelRemoteHandlerConnection> ScriptExecutionContext::createRTCDataChannelRemoteHandlerConnection()
@@ -875,11 +883,6 @@ ScriptExecutionContext::NotificationCallbackIdentifier ScriptExecutionContext::a
 CompletionHandler<void()> ScriptExecutionContext::takeNotificationCallback(NotificationCallbackIdentifier identifier)
 {
     return m_notificationCallbacks.take(identifier);
-}
-
-CheckedRef<EventLoopTaskGroup> ScriptExecutionContext::checkedEventLoop()
-{
-    return eventLoop();
 }
 
 void ScriptExecutionContext::ref()

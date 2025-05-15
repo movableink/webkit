@@ -33,8 +33,9 @@
 #include "JSDOMPromiseDeferred.h"
 #include "JSFetchResponse.h"
 #include "MultiCacheQueryOptions.h"
-#include "ScriptExecutionContext.h"
+#include "ScriptExecutionContextInlines.h"
 #include "SecurityOrigin.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 

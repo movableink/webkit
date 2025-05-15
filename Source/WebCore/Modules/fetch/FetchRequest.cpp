@@ -41,6 +41,7 @@
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "WebCoreOpaqueRoot.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {

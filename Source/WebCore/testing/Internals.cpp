@@ -209,6 +209,7 @@
 #include "SVGSVGElement.h"
 #include "SWClientConnection.h"
 #include "ScriptController.h"
+#include "ScriptExecutionContextInlines.h"
 #include "ScriptedAnimationController.h"
 #include "ScrollToOptions.h"
 #include "ScrollbarsControllerMock.h"

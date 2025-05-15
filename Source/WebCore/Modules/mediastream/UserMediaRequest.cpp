@@ -54,6 +54,7 @@
 #include "Settings.h"
 #include "UserMediaController.h"
 #include "WindowEventLoop.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <algorithm>
 #include <wtf/Scope.h>
 

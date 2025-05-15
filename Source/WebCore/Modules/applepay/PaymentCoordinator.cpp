@@ -42,6 +42,7 @@
 #include "PaymentCoordinatorClient.h"
 #include "PaymentSession.h"
 #include "UserContentProvider.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>

@@ -34,7 +34,7 @@
 #include "JSDOMPromiseDeferred.h"
 #include "JSFetchRequest.h"
 #include "JSFetchResponse.h"
-#include "ScriptExecutionContext.h"
+#include "ScriptExecutionContextInlines.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/URL.h>
 

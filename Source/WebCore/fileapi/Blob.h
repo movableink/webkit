@@ -31,6 +31,7 @@
 
 #pragma once
 
+#include "ActiveDOMObject.h"
 #include "BlobPropertyBag.h"
 #include "BlobURL.h"
 #include "FileReaderLoader.h"

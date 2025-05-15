@@ -35,6 +35,7 @@
 #include "JSWebTransportCloseInfo.h"
 #include "JSWebTransportSendStream.h"
 #include "ReadableStream.h"
+#include "ScriptExecutionContextInlines.h"
 #include "SocketProvider.h"
 #include "WebTransportBidirectionalStreamConstructionParameters.h"
 #include "WebTransportBidirectionalStreamSource.h"

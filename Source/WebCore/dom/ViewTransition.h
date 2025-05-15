@@ -28,6 +28,7 @@
 #include "ActiveDOMObject.h"
 #include "Document.h"
 #include "Element.h"
+#include "EventLoop.h"
 #include "ImageBuffer.h"
 #include "MutableStyleProperties.h"
 #include "Styleable.h"

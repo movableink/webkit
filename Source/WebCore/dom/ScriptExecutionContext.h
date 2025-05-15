@@ -27,51 +27,64 @@
 
 #pragma once
 
-#include "ActiveDOMObject.h"
-#include "CrossOriginMode.h"
-#include "DOMTimer.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "SecurityContext.h"
 #include "ServiceWorkerIdentifier.h"
-#include "StorageBlockingPolicy.h"
 #include "Timer.h"
-#include <JavaScriptCore/ConsoleTypes.h>
-#include <JavaScriptCore/HandleTypes.h>
-#include <pal/SessionID.h>
-#include <wtf/CheckedRef.h>
-#include <wtf/CompletionHandler.h>
-#include <wtf/CrossThreadTask.h>
+#include <wtf/Forward.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
-#include <wtf/NativePromise.h>
 #include <wtf/ObjectIdentifier.h>
-#include <wtf/OptionSet.h>
-#include <wtf/URL.h>
-#include <wtf/WeakPtr.h>
+#include <wtf/WeakHashSet.h>
 #include <wtf/text/WTFString.h>
+
+namespace WTF {
+class CrossThreadTask;
+class NativePromiseRequest;
+class URL;
+} // namespace WTF
+
+using WTF::CrossThreadTask;
+using WTF::NativePromiseRequest;
+using WTF::URL;
 
 namespace JSC {
 class CallFrame;
 class Exception;
+class JSGlobalObject;
 class JSPromise;
 class VM;
+enum class MessageLevel : uint8_t;
+enum class MessageSource : uint8_t;
+enum class MessageType : uint8_t;
 enum class ScriptExecutionStatus;
 enum class TrustedTypesEnforcement;
 }
+
+using JSC::MessageSource;
+using JSC::MessageLevel;
 
 namespace Inspector {
 class ConsoleMessage;
 class ScriptCallStack;
 }
 
+namespace PAL {
+class SessionID;
+} // namespace PAL
+
 namespace WebCore {
 
+class ActiveDOMObject;
 class EventLoop;
 class CachedScript;
 class CSSFontSelector;
 class CSSValuePool;
+class ContextDestructionObserver;
+class DOMTimer;
 class DatabaseContext;
 class DeferredPromise;
+class Document;
 class EventQueue;
 class EventLoopTaskGroup;
 class EventTarget;
@@ -88,9 +101,12 @@ class ServiceWorkerContainer;
 class SocketProvider;
 class WebCoreOpaqueRoot;
 enum class AdvancedPrivacyProtections : uint16_t;
+enum class CrossOriginMode : bool;
 enum class LoadedFromOpaqueSource : bool;
 enum class NoiseInjectionPolicy : uint8_t;
+enum class ReasonForSuspension : uint8_t;
 enum class ScriptTelemetryCategory : uint8_t;
+enum class StorageBlockingPolicy : uint8_t;
 enum class TaskSource : uint8_t;
 struct CryptoKeyData;
 struct SettingsValues;
@@ -127,7 +143,7 @@ public:
     virtual bool isJSExecutionForbidden() const = 0;
 
     virtual EventLoopTaskGroup& eventLoop() = 0;
-    CheckedRef<EventLoopTaskGroup> checkedEventLoop();
+    inline CheckedRef<EventLoopTaskGroup> checkedEventLoop();
 
     virtual const URL& url() const = 0;
     enum class ForceUTF8 : bool { No, Yes };
@@ -140,7 +156,7 @@ public:
     virtual const SettingsValues& settingsValues() const = 0;
 
     virtual NotificationClient* notificationClient() { return nullptr; }
-    virtual std::optional<PAL::SessionID> sessionID() const { return std::nullopt; }
+    virtual std::optional<PAL::SessionID> sessionID() const;
 
     virtual void disableEval(const String& errorMessage) = 0;
     virtual void disableWebAssembly(const String& errorMessage) = 0;
@@ -255,21 +271,16 @@ public:
     virtual void postTask(Task&&) = 0; // Executes the task on context's thread asynchronously.
 
     template<typename... Arguments>
-    void postCrossThreadTask(Arguments&&... arguments)
-    {
-        postTask([crossThreadTask = createCrossThreadTask(arguments...)](ScriptExecutionContext&) mutable {
-            crossThreadTask.performTask();
-        });
-    }
+    inline void postCrossThreadTask(Arguments&&...);
 
     void postTaskToResponsibleDocument(Function<void(Document&)>&&);
 
     // Gets the next id in a circular sequence from 1 to 2^31-1.
     int circularSequentialID();
 
-    bool addTimeout(int timeoutId, DOMTimer& timer) { return m_timeouts.add(timeoutId, &timer).isNewEntry; }
-    RefPtr<DOMTimer> takeTimeout(int timeoutId) { return m_timeouts.take(timeoutId); }
-    DOMTimer* findTimeout(int timeoutId) { return m_timeouts.get(timeoutId); }
+    inline bool addTimeout(int timeoutId, DOMTimer&); // Defined in ScriptExecutionContextInlines.h
+    inline RefPtr<DOMTimer> takeTimeout(int timeoutId); // Defined in ScriptExecutionContextInlines.h
+    inline DOMTimer* findTimeout(int timeoutId); // Defined in ScriptExecutionContextInlines.h
 
     virtual JSC::VM& vm() = 0;
     virtual Ref<JSC::VM> protectedVM();
@@ -321,7 +332,7 @@ public:
 
     void registerServiceWorker(ServiceWorker&);
     void unregisterServiceWorker(ServiceWorker&);
-    ServiceWorker* serviceWorker(ServiceWorkerIdentifier identifier) { return m_serviceWorkers.get(identifier); }
+    inline ServiceWorker* serviceWorker(ServiceWorkerIdentifier);
 
     ServiceWorkerContainer* serviceWorkerContainer();
     ServiceWorkerContainer* ensureServiceWorkerContainer();
@@ -358,50 +369,19 @@ public:
     WEBCORE_EXPORT NotificationCallbackIdentifier addNotificationCallback(CompletionHandler<void()>&&);
     WEBCORE_EXPORT CompletionHandler<void()> takeNotificationCallback(NotificationCallbackIdentifier);
 
-    template<typename Promise, typename Task>
-    void enqueueTaskWhenSettled(Ref<Promise>&& promise, TaskSource taskSource, Task&& task)
-    {
-        auto request = makeUnique<NativePromiseRequest>();
-        WeakPtr weakRequest { *request };
-        auto command = promise->whenSettled(nativePromiseDispatcher(), [weakThis = WeakPtr { *this }, taskSource, task = WTFMove(task), request = WTFMove(request)] (auto&& result) mutable {
-            request->complete();
-            RefPtr protectedThis = weakThis.get();
-            if (!protectedThis)
-                return;
-            protectedThis->eventLoop().queueTask(taskSource, [task = WTFMove(task), result = WTFMove(result)] () mutable {
-                task(WTFMove(result));
-            });
-        });
-        if (weakRequest) {
-            m_nativePromiseRequests.add(*weakRequest);
-            command->track(*weakRequest);
-        }
-    }
+    template<typename Promise, typename TaskType>
+    void enqueueTaskWhenSettled(Ref<Promise>&&, TaskSource, TaskType&&);
 
-    template<typename Promise, typename Task, typename Finalizer>
-    void enqueueTaskWhenSettled(Ref<Promise>&& promise, TaskSource taskSource, Task&& task, Finalizer&& finalizer)
-    {
-        enqueueTaskWhenSettled(WTFMove(promise), taskSource, CompletionHandlerWithFinalizer<void(typename Promise::Result&&)>(WTFMove(task), WTFMove(finalizer)));
-    }
+    template<typename Promise, typename TaskType, typename Finalizer>
+    void enqueueTaskWhenSettled(Ref<Promise>&&, TaskSource, TaskType&&, Finalizer&&);
 
     bool isAlwaysOnLoggingAllowed() const;
 
 protected:
     class AddConsoleMessageTask : public Task {
     public:
-        AddConsoleMessageTask(std::unique_ptr<Inspector::ConsoleMessage>&& consoleMessage)
-            : Task([&consoleMessage](ScriptExecutionContext& context) {
-                context.addConsoleMessage(WTFMove(consoleMessage));
-            })
-        {
-        }
-
-        AddConsoleMessageTask(MessageSource source, MessageLevel level, const String& message)
-            : Task([source, level, message = message.isolatedCopy()](ScriptExecutionContext& context) {
-                context.addConsoleMessage(source, level, message);
-            })
-        {
-        }
+        inline AddConsoleMessageTask(std::unique_ptr<Inspector::ConsoleMessage>&&);
+        inline AddConsoleMessageTask(MessageSource, MessageLevel, const String&);
     };
 
     ReasonForSuspension reasonForSuspendingActiveDOMObjects() const { return m_reasonForSuspendingActiveDOMObjects; }
@@ -464,7 +444,7 @@ private:
 
     UncheckedKeyHashMap<NotificationCallbackIdentifier, CompletionHandler<void()>> m_notificationCallbacks;
 
-    StorageBlockingPolicy m_storageBlockingPolicy { StorageBlockingPolicy::AllowAll };
+    StorageBlockingPolicy m_storageBlockingPolicy;
     ReasonForSuspension m_reasonForSuspendingActiveDOMObjects { static_cast<ReasonForSuspension>(-1) };
 
     Type m_type;

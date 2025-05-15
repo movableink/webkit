@@ -33,7 +33,7 @@
 #include "DOMException.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSWebCodecsAudioDecoderSupport.h"
-#include "ScriptExecutionContext.h"
+#include "ScriptExecutionContextInlines.h"
 #include "WebCodecsAudioData.h"
 #include "WebCodecsAudioDataOutputCallback.h"
 #include "WebCodecsControlMessage.h"

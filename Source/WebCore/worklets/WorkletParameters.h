@@ -28,6 +28,7 @@
 #include "AdvancedPrivacyProtections.h"
 #include "Settings.h"
 #include <JavaScriptCore/RuntimeFlags.h>
+#include <pal/SessionID.h>
 #include <wtf/URL.h>
 
 namespace WebCore {

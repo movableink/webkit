@@ -35,6 +35,7 @@
 #include "JSWebCodecsVideoEncoderSupport.h"
 #include "Logging.h"
 #include "Settings.h"
+#include "ScriptExecutionContextInlines.h"
 #include "WebCodecsControlMessage.h"
 #include "WebCodecsEncodedVideoChunk.h"
 #include "WebCodecsEncodedVideoChunkMetadata.h"
@@ -45,6 +46,7 @@
 #include "WebCodecsVideoEncoderEncodeOptions.h"
 #include "WebCodecsVideoFrame.h"
 #include <JavaScriptCore/ArrayBuffer.h>
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>

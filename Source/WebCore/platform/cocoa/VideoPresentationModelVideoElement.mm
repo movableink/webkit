@@ -45,6 +45,7 @@
 #import "PlaybackSessionModelMediaElement.h"
 #import "TextTrackList.h"
 #import "TimeRanges.h"
+#import "UserGestureIndicator.h"
 #import <QuartzCore/CoreAnimation.h>
 #import <wtf/LoggerHelper.h>
 #import <wtf/NeverDestroyed.h>

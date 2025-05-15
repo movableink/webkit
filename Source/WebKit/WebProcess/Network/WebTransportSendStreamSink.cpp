@@ -30,6 +30,7 @@
 #include <WebCore/Exception.h>
 #include <WebCore/IDLTypes.h>
 #include <WebCore/JSDOMGlobalObject.h>
+#include <WebCore/ScriptExecutionContextInlines.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/RunLoop.h>
 

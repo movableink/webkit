@@ -45,6 +45,7 @@
 namespace WebCore {
 
 class GPUDevice;
+class WeakPtrImplWithEventTargetData;
 template<typename> class ExceptionOr;
 
 class GPUBuffer : public RefCountedAndCanMakeWeakPtr<GPUBuffer> {
