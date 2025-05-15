@@ -524,7 +524,7 @@ dom/ElementInlines.h
 dom/ElementInternals.cpp
 dom/ElementIteratorInlines.h
 dom/ElementTraversal.h
-dom/EmptyScriptExecutionContextInlines.h
+dom/EmptyScriptExecutionContext.h
 dom/EventListenerMap.h
 dom/EventPath.cpp
 dom/ExtensionStyleSheets.cpp
@@ -557,7 +557,7 @@ dom/Range.cpp
 dom/RangeBoundaryPoint.h
 dom/RejectedPromiseTracker.cpp
 dom/ScriptExecutionContext.cpp
-dom/ScriptExecutionContext.h
+dom/ScriptExecutionContextInlines.h
 dom/ScriptRunner.cpp
 dom/SecurityContext.cpp
 dom/SelectorQuery.cpp
