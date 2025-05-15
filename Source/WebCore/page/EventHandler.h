@@ -27,6 +27,7 @@
 
 #include "Cursor.h"
 #include "DragActions.h"
+#include "ElementIdentifier.h"
 #include "FocusDirection.h"
 #include "HitTestRequest.h"
 #include "ImmediateActionStage.h"
