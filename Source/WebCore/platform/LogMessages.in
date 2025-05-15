@@ -74,6 +74,7 @@ FRAMELOADER_LOADURLINTOCHILDFRAME, "[pageID=%" PRIu64 " frameID=%" PRIu64 " isMa
 FRAMELOADER_CONTINUELOADAFTERNAVIGATIONPOLICY_CANNOT_CONTINUE, "[pageID=%" PRIu64 " frameID=%" PRIu64 " isMainFrame=%d] FrameLoader::continueLoadAfterNavigationPolicy: can't continue loading frame due to the following reasons (allowNavigationToInvalidURL = %d, requestURLIsValid = %d, navigationPolicyDecision = %d)", (uint64_t, uint64_t, int, int, int, int), DEFAULT, ResourceLoading
 FRAMELOADER_LOAD_FRAMELOADREQUEST, "[pageID=%" PRIu64 " frameID=%" PRIu64 " isMainFrame=%d] FrameLoader::load (FrameLoadRequest): frame load started", (uint64_t, uint64_t, int), DEFAULT, ResourceLoading
 FRAMELOADER_LOAD_DOCUMENTLOADER, "[pageID=%" PRIu64 " frameID=%" PRIu64 " isMainFrame=%d] FrameLoader::load (DocumentLoader): frame load started", (uint64_t, uint64_t, int), DEFAULT, ResourceLoading
+FRAMELOADER_RELOAD, "[pageID=%" PRIu64 " frameID=%" PRIu64 " isMainFrame=%d] FrameLoader::reload: frame load started", (uint64_t, uint64_t, int), DEFAULT, ResourceLoading
 
 RESOURCELOADER_WILLSENDREQUESTINTERNAL, "[pageID=%" PRIu64 ", frameID=%" PRIu64 ", resourceID=%" PRIu64 "] ResourceLoader::willSendRequestInternal: calling completion handler", (uint64_t, uint64_t, uint64_t), DEFAULT, Network
 
