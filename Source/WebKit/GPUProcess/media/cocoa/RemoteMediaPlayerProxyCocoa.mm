@@ -58,7 +58,7 @@ void RemoteMediaPlayerProxy::setVideoLayerSizeIfPossible(const WebCore::FloatSiz
     // We do not want animations here.
     [CATransaction begin];
     [CATransaction setDisableActions:YES];
-    [m_inlineLayerHostingContext->rootLayer() setFrame:CGRectMake(0, 0, size.width(), size.height())];
+    [m_inlineLayerHostingContext->protectedRootLayer() setFrame:CGRectMake(0, 0, size.width(), size.height())];
     [CATransaction commit];
 }
 

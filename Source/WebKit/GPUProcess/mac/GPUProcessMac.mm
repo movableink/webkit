@@ -68,7 +68,8 @@ void GPUProcess::updateProcessName()
 {
 #if !PLATFORM(MACCATALYST)
     RetainPtr applicationName = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"%@ Graphics and Media", "visible name of the GPU process. The argument is the application name."), m_uiProcessName.createNSString().get()]);
-    auto result = _LSSetApplicationInformationItem(kLSDefaultSessionID, _LSGetCurrentApplicationASN(), _kLSDisplayNameKey, (CFStringRef)applicationName.get(), nullptr);
+    RetainPtr asn = _LSGetCurrentApplicationASN();
+    auto result = _LSSetApplicationInformationItem(kLSDefaultSessionID, asn.get(), _kLSDisplayNameKey, (CFStringRef)applicationName.get(), nullptr);
     ASSERT_UNUSED(result, result == noErr);
 #endif
 }

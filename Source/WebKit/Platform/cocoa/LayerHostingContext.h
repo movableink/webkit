@@ -78,6 +78,7 @@ public:
 
     void setRootLayer(CALayer *);
     CALayer *rootLayer() const;
+    RetainPtr<CALayer> protectedRootLayer() const;
 
     LayerHostingContextID contextID() const;
     void invalidate();
