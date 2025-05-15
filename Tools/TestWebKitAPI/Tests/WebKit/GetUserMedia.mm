@@ -54,6 +54,10 @@
 #import <wtf/text/StringBuilder.h>
 #import <wtf/text/WTFString.h>
 
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
+#import <WebKitLegacy/WebView.h>
+#endif
+
 static bool done;
 
 @interface UserMediaCaptureUIDelegateForParameters : NSObject<WKUIDelegate>
@@ -2055,6 +2059,31 @@ TEST(WebKit2, getUserMediaWithDeviceChangeWebPage)
     TestWebKitAPI::Util::run(&done);
     done = false;
 }
+
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
+TEST(WebKit, GetUserMediaWithWebThread)
+{
+    [WebView enableWebThread];
+
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    auto processPoolConfig = adoptNS([[_WKProcessPoolConfiguration alloc] init]);
+    initializeMediaCaptureConfiguration(configuration.get());
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500) configuration:configuration.get() processPoolConfiguration:processPoolConfig.get()]);
+    auto delegate = adoptNS([[UserMediaCaptureUIDelegate alloc] init]);
+    [webView setUIDelegate:delegate.get()];
+
+    [webView _setMediaCaptureReportingDelayForTesting:0];
+
+    [webView loadTestPageNamed:@"getUserMedia"];
+    EXPECT_TRUE(waitUntilCaptureState(webView.get(), _WKMediaCaptureStateDeprecatedActiveCamera));
+
+    [webView stringByEvaluatingJavaScript:@"stop()"];
+    EXPECT_TRUE(waitUntilCaptureState(webView.get(), _WKMediaCaptureStateDeprecatedNone));
+
+    [webView stringByEvaluatingJavaScript:@"captureAudio()"];
+    EXPECT_TRUE(waitUntilCaptureState(webView.get(), _WKMediaCaptureStateDeprecatedActiveMicrophone));
+}
+#endif // PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
 
 } // namespace TestWebKitAPI
 
