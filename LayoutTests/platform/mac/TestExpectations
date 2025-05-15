@@ -74,8 +74,6 @@ media/media-source/remoteplayback-from-source-element.html [ Pass ]
 # Individually failing tests should be marked in separate expectations.
 [ Sonoma+ ] imported/w3c/web-platform-tests/css/css-text/word-break/auto-phrase [ Pass ]
 
-fast/canvas/gradient-into-p3-canvas.html [ Pass ]
-
 #//////////////////////////////////////////////////////////////////////////////////////////
 # End platform-specific directories.
 #//////////////////////////////////////////////////////////////////////////////////////////
@@ -1857,6 +1855,7 @@ webkit.org/b/231463 fast/css/accent-color/range.html [ ImageOnlyFailure ]
 
 # display-p3 canvas and ImageData are Cocoa only for now.
 fast/canvas/canvas-color-space-display-p3-ImageData.html [ Pass ]
+fast/canvas/gradient-into-p3-canvas.html [ Pass ]
 imported/w3c/web-platform-tests/html/canvas/element/manual/wide-gamut-canvas/canvas-display-p3-drawImage.https.html [ Pass ]
 imported/w3c/web-platform-tests/html/canvas/element/manual/wide-gamut-canvas/canvas-display-p3-drawImage-ImageBitmap-Blob.html [ Pass ]
 imported/w3c/web-platform-tests/html/canvas/element/manual/wide-gamut-canvas/canvas-display-p3-drawImage-ImageBitmap-ImageBitmap.html [ Pass ]

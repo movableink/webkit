@@ -5819,6 +5819,7 @@ webkit.org/b/256888 imported/w3c/web-platform-tests/css/css-color/color-mix-basi
 # display-p3 canvas and ImageData are Cocoa only for now.
 fast/canvas/canvas-color-space-display-p3-ImageData.html [ Failure ]
 fast/canvas/canvas-color-space-display-p3.html [ ImageOnlyFailure ]
+fast/canvas/gradient-into-p3-canvas.html [ Failure ]
 imported/w3c/web-platform-tests/html/canvas/element/manual/wide-gamut-canvas/canvas-display-p3-drawImage.https.html [ Failure ]
 imported/w3c/web-platform-tests/html/canvas/element/manual/wide-gamut-canvas/canvas-display-p3-drawImage-ImageBitmap-Blob.html [ Failure ]
 imported/w3c/web-platform-tests/html/canvas/element/manual/wide-gamut-canvas/canvas-display-p3-drawImage-ImageBitmap-ImageBitmap.html [ Failure ]
@@ -7615,9 +7616,6 @@ webkit.org/b/271428 fast/text/bidi-text-and-partial-layout-crash.html [ Skip ]
 
 # At the time of writing this test consumes all available IOSurfaces. If the next test is image-buffer-backend-variants.html, that will fail.
 fast/canvas/2d.context.many.small.html [ Slow Skip ]
-
-# Requires Display-P3 support
-fast/canvas/gradient-into-p3-canvas.html [ Failure ]
 
 webkit.org/b/268995 [ Debug ] fast/misc/out-of-flow-position-inside-mathml-crash.html [ Skip ]
 
