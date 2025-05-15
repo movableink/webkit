@@ -81,6 +81,9 @@ private:
     RetainPtr<WebInterruptionObserverHelper> m_interruptionObserverHelper;
     String m_sceneIdentifier;
     SoundStageSize m_soundStageSize { SoundStageSize::Automatic };
+#if PLATFORM(IOS_FAMILY_SIMULATOR)
+    bool m_isFakingPlayAndRecordForTesting { false };
+#endif
 };
 
 }
