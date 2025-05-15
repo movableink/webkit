@@ -45,7 +45,7 @@ struct ExtractorState {
     Ref<Element> element;
     const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier;
 
-    RenderElement* renderer;
+    const RenderElement* renderer;
 
     bool allowVisitedStyle;
 

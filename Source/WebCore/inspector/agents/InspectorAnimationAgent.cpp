@@ -160,15 +160,19 @@ static Ref<JSON::ArrayOf<Inspector::Protocol::Animation::Keyframe>> buildObjectF
             for (auto property : properties) {
                 --count;
                 WTF::switchOn(property,
-                    [&] (CSSPropertyID cssPropertyId) {
-                        stylePayloadBuilder.append(nameString(cssPropertyId), ": "_s);
-                        if (auto value = computedStyleExtractor.valueForPropertyInStyle(style, cssPropertyId, CSSValuePool::singleton(), renderer))
-                            stylePayloadBuilder.append(value->cssText(CSS::defaultSerializationContext()));
+                    [&](CSSPropertyID cssPropertyId) {
+                        stylePayloadBuilder.append(
+                            nameString(cssPropertyId),
+                            ": "_s,
+                            computedStyleExtractor.propertyValueSerializationInStyle(style, cssPropertyId, CSS::defaultSerializationContext(), CSSValuePool::singleton(), renderer)
+                        );
                     },
-                    [&] (const AtomString& customProperty) {
-                        stylePayloadBuilder.append(customProperty, ": "_s);
-                        if (auto value = computedStyleExtractor.customPropertyValue(customProperty))
-                            stylePayloadBuilder.append(value->cssText(CSS::defaultSerializationContext()));
+                    [&](const AtomString& customProperty) {
+                        stylePayloadBuilder.append(
+                            customProperty,
+                            ": "_s,
+                            computedStyleExtractor.customPropertyValueSerialization(customProperty, CSS::defaultSerializationContext())
+                        );
                     }
                 );
                 stylePayloadBuilder.append(';');

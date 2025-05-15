@@ -85,12 +85,10 @@ protected:
 
         // Don't include any properties resulting from CSS Transitions/Animations or SMIL animations, as we want to retrieve the "base value".
         targetElement.setUseOverrideComputedStyle(true);
-        RefPtr value = Style::Extractor(&targetElement).propertyValue(id);
+        auto serialization = Style::Extractor(&targetElement).propertyValueSerialization(id, CSS::defaultSerializationContext());
         targetElement.setUseOverrideComputedStyle(false);
-        if (!value)
-            return String();
 
-        return value->cssText(CSS::defaultSerializationContext());
+        return serialization;
     }
 
     String computeInheritedCSSPropertyValue(SVGElement& targetElement) const

@@ -44,6 +44,10 @@ class RenderStyle;
 enum CSSPropertyID : uint16_t;
 enum CSSValueID : uint16_t;
 
+namespace CSS {
+struct SerializationContext;
+}
+
 namespace Style {
 
 class Extractor {
@@ -57,11 +61,23 @@ public:
 
     enum class UpdateLayout : bool { No, Yes };
 
-    bool hasProperty(CSSPropertyID) const;
+    // Extract a CSSValue for the specified property.
     RefPtr<CSSValue> propertyValue(CSSPropertyID, UpdateLayout = UpdateLayout::Yes, ExtractorState::PropertyValueType = ExtractorState::PropertyValueType::Resolved) const;
-    RefPtr<CSSValue> valueForPropertyInStyle(const RenderStyle&, CSSPropertyID, CSSValuePool&, RenderElement* = nullptr, ExtractorState::PropertyValueType = ExtractorState::PropertyValueType::Resolved) const;
-    String customPropertyText(const AtomString& propertyName) const;
+
+    // Extract a serialized value for the specified property.
+    String propertyValueSerialization(CSSPropertyID, const CSS::SerializationContext&, UpdateLayout = UpdateLayout::Yes, ExtractorState::PropertyValueType = ExtractorState::PropertyValueType::Resolved) const;
+
+    // Extract a CSSValue for the specified property using the provided RenderStyle and RenderElement.
+    RefPtr<CSSValue> propertyValueInStyle(const RenderStyle&, CSSPropertyID, CSSValuePool&, const RenderElement* = nullptr, ExtractorState::PropertyValueType = ExtractorState::PropertyValueType::Resolved) const;
+
+    // Extract a serialized value for the specified property using the provided RenderStyle and RenderElement.
+    String propertyValueSerializationInStyle(const RenderStyle&, CSSPropertyID, const CSS::SerializationContext&, CSSValuePool&, const RenderElement* = nullptr, ExtractorState::PropertyValueType = ExtractorState::PropertyValueType::Resolved) const;
+
+    // Extract a CSSValue for the specified custom property.
     RefPtr<CSSValue> customPropertyValue(const AtomString& propertyName) const;
+
+    // Extract a serialized value for the specified custom property.
+    String customPropertyValueSerialization(const AtomString& propertyName, const CSS::SerializationContext&) const;
 
     // Helper methods for HTML editing.
     Ref<MutableStyleProperties> copyProperties(std::span<const CSSPropertyID>) const;
@@ -75,7 +91,10 @@ public:
 
 private:
     // The renderer we should use for resolving layout-dependent properties.
-    RenderElement* styledRenderer() const;
+    const RenderElement* computeRenderer() const;
+
+    // The RenderStyle we should use for resolving non-layout-dependent properties.
+    const RenderStyle* computeStyle(CSSPropertyID, UpdateLayout, std::unique_ptr<RenderStyle>&) const;
 
     RefPtr<Element> m_element;
     std::optional<Style::PseudoElementIdentifier> m_pseudoElementIdentifier;

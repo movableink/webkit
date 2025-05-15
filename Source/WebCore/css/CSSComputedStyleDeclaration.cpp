@@ -82,6 +82,11 @@ Ref<CSSComputedStyleDeclaration> CSSComputedStyleDeclaration::createEmpty(Elemen
     return adoptRef(*new CSSComputedStyleDeclaration(element, IsEmpty::Yes));
 }
 
+Style::Extractor CSSComputedStyleDeclaration::extractor() const
+{
+    return Style::Extractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementIdentifier);
+}
+
 String CSSComputedStyleDeclaration::cssText() const
 {
     return emptyString();
@@ -92,25 +97,11 @@ ExceptionOr<void> CSSComputedStyleDeclaration::setCssText(const String&)
     return Exception { ExceptionCode::NoModificationAllowedError };
 }
 
-// In CSS 2.1 the returned object should actually contain the "used values"
-// rather then the "computed values" (despite the name saying otherwise).
-//
-// See;
-// http://www.w3.org/TR/CSS21/cascade.html#used-value
-// http://www.w3.org/TR/DOM-Level-2-Style/css.html#CSS-CSSStyleDeclaration
-// https://developer.mozilla.org/en-US/docs/Web/API/Window/getComputedStyle#Notes
-RefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropertyID propertyID, Style::Extractor::UpdateLayout updateLayout) const
-{
-    if (!isExposed(propertyID, protectedSettings().get()) || m_isEmpty)
-        return nullptr;
-    return Style::Extractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementIdentifier).propertyValue(propertyID, updateLayout);
-}
-
 Ref<MutableStyleProperties> CSSComputedStyleDeclaration::copyProperties() const
 {
     if (m_isEmpty)
         return MutableStyleProperties::create();
-    return Style::Extractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementIdentifier).copyProperties();
+    return extractor().copyProperties();
 }
 
 const Settings* CSSComputedStyleDeclaration::settings() const
@@ -133,25 +124,7 @@ String CSSComputedStyleDeclaration::getPropertyValue(CSSPropertyID propertyID) c
     if (m_isEmpty)
         return emptyString(); // FIXME: Should this be null instead, as it is in StyleProperties::getPropertyValue?
 
-    auto canUseShorthandSerializerForPropertyValue = [&]() {
-        switch (propertyID) {
-        case CSSPropertyGap:
-        case CSSPropertyGridArea:
-        case CSSPropertyGridColumn:
-        case CSSPropertyGridRow:
-        case CSSPropertyGridTemplate:
-            return true;
-        default:
-            return false;
-        }
-    };
-    if (isShorthand(propertyID) && canUseShorthandSerializerForPropertyValue())
-        return serializeShorthandValue(CSS::defaultSerializationContext(), { m_element.ptr(), m_allowVisitedStyle, m_pseudoElementIdentifier }, propertyID);
-
-    auto value = getPropertyCSSValue(propertyID);
-    if (!value)
-        return emptyString(); // FIXME: Should this be null instead, as it is in StyleProperties::getPropertyValue?
-    return value->cssText(CSS::defaultSerializationContext());
+    return extractor().propertyValueSerialization(propertyID, CSS::defaultSerializationContext());
 }
 
 unsigned CSSComputedStyleDeclaration::length() const
@@ -212,33 +185,35 @@ RefPtr<DeprecatedCSSOMValue> CSSComputedStyleDeclaration::getPropertyCSSValue(co
         return nullptr;
 
     if (isCustomPropertyName(propertyName)) {
-        auto value = Style::Extractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementIdentifier).customPropertyValue(AtomString { propertyName });
+        auto value = extractor().customPropertyValue(AtomString { propertyName });
         if (!value)
             return nullptr;
         return value->createDeprecatedCSSOMWrapper(*this);
     }
 
-    CSSPropertyID propertyID = cssPropertyID(propertyName);
+    auto propertyID = cssPropertyID(propertyName);
     if (!propertyID)
         return nullptr;
-    auto value = getPropertyCSSValue(propertyID);
+
+    auto value = extractor().propertyValue(propertyID);
     if (!value)
         return nullptr;
     return value->createDeprecatedCSSOMWrapper(*this);
 }
 
-String CSSComputedStyleDeclaration::getPropertyValue(const String &propertyName)
+String CSSComputedStyleDeclaration::getPropertyValue(const String& propertyName)
 {
     if (m_isEmpty)
         return String();
 
     if (isCustomPropertyName(propertyName))
-        return Style::Extractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementIdentifier).customPropertyText(AtomString { propertyName });
+        return extractor().customPropertyValueSerialization(AtomString { propertyName }, CSS::defaultSerializationContext());
 
-    CSSPropertyID propertyID = cssPropertyID(propertyName);
+    auto propertyID = cssPropertyID(propertyName);
     if (!propertyID)
         return String();
-    return getPropertyValue(propertyID);
+
+    return extractor().propertyValueSerialization(propertyID, CSS::defaultSerializationContext());
 }
 
 String CSSComputedStyleDeclaration::getPropertyPriority(const String&)

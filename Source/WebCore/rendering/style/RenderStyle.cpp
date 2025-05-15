@@ -1314,8 +1314,8 @@ inline static bool changedCustomPaintWatchedProperty(const RenderStyle& a, const
                     CSSPropertyID propertyID = cssPropertyID(name);
                     if (!propertyID)
                         continue;
-                    valueA = extractor.valueForPropertyInStyle(a, propertyID, pool);
-                    valueB = extractor.valueForPropertyInStyle(b, propertyID, pool);
+                    valueA = extractor.propertyValueInStyle(a, propertyID, pool);
+                    valueB = extractor.propertyValueInStyle(b, propertyID, pool);
                 }
 
                 if ((valueA && !valueB) || (!valueA && valueB))

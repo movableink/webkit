@@ -260,7 +260,7 @@ template<CSSPropertyID propertyID> Ref<CSSValue> extractZoomAdjustedInsetValue(E
     if (!offset.isAuto())
         return ExtractorConverter::convertLength(state, offset);
 
-    auto offsetUsedStyleRelative = [&](RenderBox& box) -> LayoutUnit {
+    auto offsetUsedStyleRelative = [&](const RenderBox& box) -> LayoutUnit {
         // For relatively positioned boxes, the offset is with respect to the top edges
         // of the box itself. This ties together top/bottom and left/right to be
         // opposites of each other.
@@ -288,7 +288,7 @@ template<CSSPropertyID propertyID> Ref<CSSValue> extractZoomAdjustedInsetValue(E
     if (box->isRelativelyPositioned())
         return ExtractorConverter::convertNumberAsPixels(state, offsetUsedStyleRelative(*box));
 
-    auto offsetUsedStyleOutOfFlowPositioned = [&](RenderBlock& container, RenderBox& box) {
+    auto offsetUsedStyleOutOfFlowPositioned = [&](const RenderBlock& container, const RenderBox& box) {
         // For out-of-flow positioned boxes, the offset is how far an box's margin
         // edge is offset below the edge of the box's containing block.
         // See http://www.w3.org/TR/CSS2/visuren.html#position-props

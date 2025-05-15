@@ -58,8 +58,7 @@ RefPtr<CSSValue> ComputedStylePropertyMapReadOnly::propertyValue(CSSPropertyID p
 
 String ComputedStylePropertyMapReadOnly::shorthandPropertySerialization(CSSPropertyID propertyID) const
 {
-    auto value = propertyValue(propertyID);
-    return value ? value->cssText(CSS::defaultSerializationContext()) : String();
+    return Style::Extractor { m_element.get() }.propertyValueSerialization(propertyID, CSS::defaultSerializationContext(), Style::Extractor::UpdateLayout::Yes, Style::ExtractorState::PropertyValueType::Computed);
 }
 
 RefPtr<CSSValue> ComputedStylePropertyMapReadOnly::customPropertyValue(const AtomString& property) const

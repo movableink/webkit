@@ -42,6 +42,7 @@
 #include "RenderElementInlines.h"
 #include "RenderObjectInlines.h"
 #include "SVGElement.h"
+#include "ShorthandSerializer.h"
 #include "StyleExtractorGenerated.h"
 #include "StyleInterpolation.h"
 #include "StylePrimitiveNumericTypes+Conversions.h"
@@ -123,7 +124,7 @@ bool Extractor::useFixedFontDefaultSize() const
     return style->fontDescription().useFixedDefaultSize();
 }
 
-RenderElement* Extractor::styledRenderer() const
+const RenderElement* Extractor::computeRenderer() const
 {
     RefPtr element = m_element;
     if (!element)
@@ -241,13 +242,13 @@ RefPtr<CSSValue> Extractor::customPropertyValue(const AtomString& propertyName) 
     return const_cast<CSSCustomPropertyValue*>(style->customPropertyValue(propertyName));
 }
 
-String Extractor::customPropertyText(const AtomString& propertyName) const
+String Extractor::customPropertyValueSerialization(const AtomString& propertyName, const CSS::SerializationContext& serializationContext) const
 {
     RefPtr propertyValue = customPropertyValue(propertyName);
-    return propertyValue ? propertyValue->cssText(CSS::defaultSerializationContext()) : emptyString();
+    return propertyValue ? propertyValue->cssText(serializationContext) : emptyString();
 }
 
-static bool isLayoutDependent(CSSPropertyID propertyID, const RenderStyle* style, RenderObject* renderer)
+static bool isLayoutDependent(CSSPropertyID propertyID, const RenderStyle* style, const RenderObject* renderer)
 {
     auto isNonReplacedInline = [](auto& renderer) {
         return renderer.isInline() && !renderer.isReplacedOrAtomicInline();
@@ -354,7 +355,7 @@ static bool isLayoutDependent(CSSPropertyID propertyID, const RenderStyle* style
     }
 }
 
-RefPtr<CSSValue> Extractor::propertyValue(CSSPropertyID propertyID, UpdateLayout updateLayout, ExtractorState::PropertyValueType valueType) const
+const RenderStyle* Extractor::computeStyle(CSSPropertyID propertyID, UpdateLayout updateLayout, std::unique_ptr<RenderStyle>& ownedStyle) const
 {
     RefPtr element = m_element.get();
     if (!element)
@@ -365,7 +366,6 @@ RefPtr<CSSValue> Extractor::propertyValue(CSSPropertyID propertyID, UpdateLayout
         return nullptr;
     }
 
-    std::unique_ptr<RenderStyle> ownedStyle;
     const RenderStyle* style = nullptr;
     auto forcedLayout = ForcedLayout::No;
 
@@ -373,17 +373,18 @@ RefPtr<CSSValue> Extractor::propertyValue(CSSPropertyID propertyID, UpdateLayout
         Ref document = element->document();
 
         updateStyleIfNeededForProperty(*element, propertyID);
-        if (propertyID == CSSPropertyDisplay && !styledRenderer()) {
+        auto renderer = computeRenderer();
+        if (propertyID == CSSPropertyDisplay && !renderer) {
             RefPtr svgElement = dynamicDowncast<SVGElement>(*element);
             if (svgElement && !svgElement->isValid())
                 return nullptr;
         }
 
-        style = computeRenderStyleForProperty(*element, m_pseudoElementIdentifier, propertyID, ownedStyle, styledRenderer());
+        style = computeRenderStyleForProperty(*element, m_pseudoElementIdentifier, propertyID, ownedStyle, renderer);
 
         forcedLayout = [&] {
             // FIXME: Some of these cases could be narrowed down or optimized better.
-            if (isLayoutDependent(propertyID, style, styledRenderer()))
+            if (isLayoutDependent(propertyID, style, renderer))
                 return ForcedLayout::Yes;
             // FIXME: Why?
             if (element->isInShadowTree())
@@ -411,20 +412,60 @@ RefPtr<CSSValue> Extractor::propertyValue(CSSPropertyID propertyID, UpdateLayout
     }
 
     if (updateLayout == UpdateLayout::No || forcedLayout != ForcedLayout::No)
-        style = computeRenderStyleForProperty(*element, m_pseudoElementIdentifier, propertyID, ownedStyle, styledRenderer());
+        style = computeRenderStyleForProperty(*element, m_pseudoElementIdentifier, propertyID, ownedStyle, computeRenderer());
 
+    return style;
+}
+
+RefPtr<CSSValue> Extractor::propertyValue(CSSPropertyID propertyID, UpdateLayout updateLayout, ExtractorState::PropertyValueType valueType) const
+{
+    std::unique_ptr<RenderStyle> ownedStyle;
+    auto style = computeStyle(propertyID, updateLayout, ownedStyle);
     if (!style)
         return nullptr;
 
-    return valueForPropertyInStyle(*style, propertyID, CSSValuePool::singleton(), valueType == ExtractorState::PropertyValueType::Resolved ? styledRenderer() : nullptr, valueType);
+    return propertyValueInStyle(
+        *style,
+        propertyID,
+        CSSValuePool::singleton(),
+        valueType == ExtractorState::PropertyValueType::Resolved ? computeRenderer() : nullptr,
+        valueType
+    );
 }
 
-bool Extractor::hasProperty(CSSPropertyID propertyID) const
+String Extractor::propertyValueSerialization(CSSPropertyID propertyID, const CSS::SerializationContext& serializationContext, UpdateLayout updateLayout, ExtractorState::PropertyValueType valueType) const
 {
-    return propertyValue(propertyID);
+    std::unique_ptr<RenderStyle> ownedStyle;
+    auto style = computeStyle(propertyID, updateLayout, ownedStyle);
+    if (!style)
+        return emptyString();
+
+    auto canUseShorthandSerializerForPropertyValue = [&]() {
+        switch (propertyID) {
+        case CSSPropertyGap:
+        case CSSPropertyGridArea:
+        case CSSPropertyGridColumn:
+        case CSSPropertyGridRow:
+        case CSSPropertyGridTemplate:
+            return true;
+        default:
+            return false;
+        }
+    };
+    if (isShorthand(propertyID) && canUseShorthandSerializerForPropertyValue())
+        return serializeShorthandValue(serializationContext, *this, propertyID);
+
+    return propertyValueSerializationInStyle(
+        *style,
+        propertyID,
+        serializationContext,
+        CSSValuePool::singleton(),
+        valueType == ExtractorState::PropertyValueType::Resolved ? computeRenderer() : nullptr,
+        valueType
+    );
 }
 
-RefPtr<CSSValue> Extractor::valueForPropertyInStyle(const RenderStyle& style, CSSPropertyID propertyID, CSSValuePool& cssValuePool, RenderElement* renderer, ExtractorState::PropertyValueType valueType) const
+RefPtr<CSSValue> Extractor::propertyValueInStyle(const RenderStyle& style, CSSPropertyID propertyID, CSSValuePool& cssValuePool, const RenderElement* renderer, ExtractorState::PropertyValueType valueType) const
 {
     ASSERT(isExposed(propertyID, m_element->document().settings()));
 
@@ -438,6 +479,14 @@ RefPtr<CSSValue> Extractor::valueForPropertyInStyle(const RenderStyle& style, CS
         .pool = cssValuePool,
     };
     return ExtractorGenerated::extractValue(state, propertyID);
+}
+
+String Extractor::propertyValueSerializationInStyle(const RenderStyle& style, CSSPropertyID propertyID, const CSS::SerializationContext& serializationContext, CSSValuePool& cssValuePool, const RenderElement* renderer, ExtractorState::PropertyValueType valueType) const
+{
+    auto value = propertyValueInStyle(style, propertyID, cssValuePool, renderer, valueType);
+    if (!value)
+        return emptyString();
+    return value->cssText(serializationContext);
 }
 
 bool Extractor::propertyMatches(CSSPropertyID propertyID, const CSSValue* value) const

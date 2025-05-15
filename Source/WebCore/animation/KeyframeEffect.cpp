@@ -1048,10 +1048,8 @@ auto KeyframeEffect::getKeyframes() -> Vector<ComputedKeyframe>
                         styleString = styleProperties->getPropertyValue(cssPropertyId);
                 }
             }
-            if (styleString.isEmpty()) {
-                if (auto cssValue = computedStyleExtractor.valueForPropertyInStyle(style, cssPropertyId, CSSValuePool::singleton(), nullptr, Style::ExtractorState::PropertyValueType::Computed))
-                    styleString = cssValue->cssText(CSS::defaultSerializationContext());
-            }
+            if (styleString.isEmpty())
+                styleString = computedStyleExtractor.propertyValueSerializationInStyle(style, cssPropertyId, CSS::defaultSerializationContext(), CSSValuePool::singleton(), nullptr, Style::ExtractorState::PropertyValueType::Computed);
             computedKeyframe.styleStrings.set(cssPropertyId, styleString);
         };
 
