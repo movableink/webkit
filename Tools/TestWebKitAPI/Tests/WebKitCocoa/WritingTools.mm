@@ -2214,7 +2214,12 @@ static bool didInvokeUpdateState = false;
 
 @end
 
+// FIXME: Re-enable this test once webkit.org/b/292940 is resolved.
+#if PLATFORM(MAC) || defined(NDEBUG)
 TEST(WritingTools, RevealOffScreenSuggestionWhenActive)
+#else
+TEST(WritingTools, DISABLED_RevealOffScreenSuggestionWhenActive)
+#endif
 {
     auto firstSuggestion = adoptNS([[WTTextSuggestion alloc] initWithOriginalRange:NSMakeRange(0, 4) replacement:@"ZZZZ"]);
     auto secondSuggestion = adoptNS([[WTTextSuggestion alloc] initWithOriginalRange:NSMakeRange(12, 4) replacement:@"YYYY"]);
