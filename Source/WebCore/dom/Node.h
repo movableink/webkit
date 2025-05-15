@@ -484,7 +484,6 @@ public:
     // -----------------------------------------------------------------------------
     // Integration with rendering tree
 
-    // As renderer() includes a branch you should avoid calling it repeatedly in hot code paths.
     RenderObject* renderer() const { return m_renderer; }
     inline CheckedPtr<RenderObject> checkedRenderer() const; // Defined in NodeInlines.h
     void setRenderer(RenderObject*); // Defined in NodeInlines.h
