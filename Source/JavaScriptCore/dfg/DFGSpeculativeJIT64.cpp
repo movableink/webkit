@@ -6455,33 +6455,14 @@ void SpeculativeJIT::compile(Node* node)
 #if ENABLE(FTL_JIT)        
     case CheckTierUpInLoop: {
         Jump callTierUp = branchAdd32(PositiveOrZero, TrustedImm32(Options::ftlTierUpCounterIncrementForLoop()), Address(GPRInfo::jitDataRegister, JITData::offsetOfTierUpCounter()));
-
-        Label toNextOperation = label();
-
-        Vector<SilentRegisterSavePlan> savePlans;
-        silentSpillAllRegistersImpl(false, savePlans, InvalidGPRReg);
         BytecodeIndex bytecodeIndex = node->origin.semantic.bytecodeIndex();
-
-        addSlowPathGeneratorLambda([=, this]() {
-            callTierUp.link(this);
-
-            silentSpill(savePlans);
-            callOperationWithoutExceptionCheck(operationTriggerTierUpNowInLoop, TrustedImmPtr(&vm()), TrustedImm32(bytecodeIndex.asBits()));
-            silentFill(savePlans);
-
-            jump().linkTo(toNextOperation, this);
-        });
+        addSlowPathGenerator(slowPathCall(callTierUp, this, operationTriggerTierUpNowInLoop, SpillRegistersMode::NeedToSpill, ExceptionCheckRequirement::CheckNotNeeded, NoResult, TrustedImmPtr(&vm()), TrustedImm32(bytecodeIndex.asBits())));
         break;
     }
         
     case CheckTierUpAtReturn: {
-        Jump done = branchAdd32(Signed, TrustedImm32(Options::ftlTierUpCounterIncrementForReturn()), Address(GPRInfo::jitDataRegister, JITData::offsetOfTierUpCounter()));
-        
-        silentSpillAllRegisters(InvalidGPRReg);
-        callOperationWithoutExceptionCheck(operationTriggerTierUpNow, TrustedImmPtr(&vm()));
-        silentFillAllRegisters();
-        
-        done.link(this);
+        Jump callTierUp = branchAdd32(PositiveOrZero, TrustedImm32(Options::ftlTierUpCounterIncrementForReturn()), Address(GPRInfo::jitDataRegister, JITData::offsetOfTierUpCounter()));
+        addSlowPathGenerator(slowPathCall(callTierUp, this, operationTriggerTierUpNow, SpillRegistersMode::NeedToSpill, ExceptionCheckRequirement::CheckNotNeeded, NoResult, TrustedImmPtr(&vm())));
         break;
     }
         
