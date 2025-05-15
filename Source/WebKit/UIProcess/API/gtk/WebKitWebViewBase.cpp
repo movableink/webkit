@@ -2154,6 +2154,7 @@ static void webkitWebViewBaseTouchLongPress(WebKitWebViewBase* webViewBase, gdou
 
 static void webkitWebViewBaseTouchPress(WebKitWebViewBase* webViewBase, int nPress, double x, double y, GtkGesture*)
 {
+    gtk_widget_grab_focus(GTK_WIDGET(webViewBase));
     webViewBase->priv->isLongPressed = false;
 }
 
