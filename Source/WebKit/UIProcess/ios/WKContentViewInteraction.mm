@@ -8830,7 +8830,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _focusedFormControlView = adoptNS([[WKFocusedFormControlView alloc] initWithFrame:self.webView.bounds delegate:self]);
     [_focusedFormControlView hide:NO];
     [_webView addSubview:_focusedFormControlView.get()];
-    [self setInputDelegate:_focusedFormControlView.get()];
+    [self setInputDelegate:static_cast<id<UITextInputDelegate>>(_focusedFormControlView.get())];
 }
 
 - (void)removeFocusedFormControlOverlay
