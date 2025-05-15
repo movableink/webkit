@@ -54,6 +54,7 @@
             "name": "removeUserContext",
             "description": "Closes a user context and all navigables in it without running beforeunload handlers.",
             "spec": "https://w3c.github.io/webdriver-bidi/#command-browser-removeUserContext",
+            "async": true,
             "parameters": [
                 { "name": "userContext", "$ref": "BidiBrowser.UserContext", "description": "User context id." }
             ]

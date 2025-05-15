@@ -51,6 +51,8 @@ public:
     void processBidiMessage(const String&);
     void sendBidiMessage(const String&);
 
+    BidiBrowserAgent& browserAgent() const { return *m_browserAgent; }
+
     // Inspector::FrontendChannel methods. Domain events sent via WebDriverBidi domain notifiers are packaged up
     // by FrontendRouter and are then sent back out-of-process via WebAutomationSession::sendBidiMessage().
     Inspector::FrontendChannel::ConnectionType connectionType() const override { return Inspector::FrontendChannel::ConnectionType::Local; };

@@ -28,8 +28,10 @@
 
 #if ENABLE(WEBDRIVER_BIDI)
 
+#include "WebPageProxy.h"
 #include "WebProcessPool.h"
 #include "WebsiteDataStore.h"
+#include <wtf/Vector.h>
 
 namespace WebKit {
 
@@ -49,6 +51,18 @@ BidiUserContext::BidiUserContext(WebsiteDataStore& dataStore, WebProcessPool& pr
 #endif // PLATFORM(GTK)
 
 BidiUserContext::~BidiUserContext() = default;
+
+Vector<Ref<WebPageProxy>> BidiUserContext::allPages() const
+{
+    Vector<Ref<WebPageProxy>> pages;
+    for (Ref process : m_processPool->processes()) {
+        for (Ref page : process->pages()) {
+            if (page->websiteDataStore() == m_dataStore.get())
+                pages.append(WTFMove(page));
+        }
+    }
+    return pages;
+}
 
 } // namespace WebKit
 

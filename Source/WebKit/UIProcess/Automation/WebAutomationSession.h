@@ -163,6 +163,9 @@ public:
     void keyboardEventsFlushedForPage(const WebPageProxy&);
     void mouseEventsFlushedForPage(const WebPageProxy&);
     void wheelEventsFlushedForPage(const WebPageProxy&);
+#if ENABLE(WEBDRIVER_BIDI)
+    void didCreatePage(WebPageProxy&);
+#endif
     void willClosePage(const WebPageProxy&);
     void handleRunOpenPanel(const WebPageProxy&, const WebFrameProxy&, const API::OpenPanelParameters&, WebOpenPanelResultListenerProxy&);
     void willShowJavaScriptDialog(WebPageProxy&, const String& message, std::optional<String>&& defaultValue);

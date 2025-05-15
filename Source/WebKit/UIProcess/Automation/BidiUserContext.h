@@ -39,6 +39,7 @@ typedef struct _WebKitWebContext WebKitWebContext;
 
 namespace WebKit {
 
+class WebPageProxy;
 class WebProcessPool;
 class WebsiteDataStore;
 
@@ -55,6 +56,8 @@ public:
 
     WebsiteDataStore& dataStore() const { return m_dataStore.get(); }
     WebProcessPool& processPool() const { return m_processPool.get(); }
+
+    Vector<Ref<WebPageProxy>> allPages() const;
 
 private:
 

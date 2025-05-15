@@ -914,6 +914,13 @@ WebPageProxy::WebPageProxy(PageClient& pageClient, WebProcessProxy& process, Ref
 #endif
     m_inspectorController->init();
 
+#if ENABLE(WEBDRIVER_BIDI)
+    if (m_controlledByAutomation) {
+        if (RefPtr automationSession = m_configuration->processPool().automationSession())
+            automationSession->didCreatePage(*this);
+    }
+#endif
+
 #if ENABLE(IPC_TESTING_API)
     if (m_preferences->ipcTestingAPIEnabled() && m_preferences->ignoreInvalidMessageWhenIPCTestingAPIEnabled())
         process.setIgnoreInvalidMessageForTesting();

@@ -29,8 +29,8 @@
 
 #include "WebDriverBidiBackendDispatchers.h"
 #include <JavaScriptCore/InspectorBackendDispatcher.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 #if PLATFORM(GTK)
@@ -42,6 +42,7 @@ namespace WebKit {
 
 class BidiUserContext;
 class WebAutomationSession;
+class WebPageProxy;
 class WebProcessPool;
 class WebsiteDataStore;
 
@@ -51,18 +52,24 @@ public:
     BidiBrowserAgent(WebAutomationSession&, Inspector::BackendDispatcher&);
     ~BidiBrowserAgent() override;
 
+    void didCreatePage(WebPageProxy&);
+    void willClosePage(const WebPageProxy&);
+
+private:
+    struct BidiUserContextDeletionRecord;
+
     // Inspector::BidiBrowserBackendDispatcherHandler methods.
     Inspector::CommandResult<void> close() override;
     Inspector::CommandResult<String> createUserContext() override;
     Inspector::CommandResult<Ref<JSON::ArrayOf<Inspector::Protocol::BidiBrowser::UserContextInfo>>> getUserContexts() override;
-    Inspector::CommandResult<void> removeUserContext(const String& userContext) override;
+    void removeUserContext(const String& userContext, Inspector::CommandCallback<void>&&) override;
 
-private:
     std::unique_ptr<BidiUserContext> platformCreateUserContext(String& error);
 
     WeakPtr<WebAutomationSession> m_session;
     Ref<Inspector::BidiBrowserBackendDispatcher> m_browserDomainDispatcher;
     HashMap<String, std::unique_ptr<BidiUserContext>> m_userContexts;
+    HashMap<String, std::unique_ptr<BidiUserContextDeletionRecord>> m_userContextsPendingDeletion;
 };
 
 } // namespace WebKit

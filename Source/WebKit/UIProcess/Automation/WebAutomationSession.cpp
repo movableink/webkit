@@ -68,6 +68,7 @@
 #endif
 
 #if ENABLE(WEBDRIVER_BIDI)
+#include "BidiBrowserAgent.h"
 #include "WebDriverBidiProcessor.h"
 #endif
 
@@ -934,6 +935,13 @@ void WebAutomationSession::wheelEventsFlushedForPage(const WebPageProxy& page)
 #endif
 }
 
+#if ENABLE(WEBDRIVER_BIDI)
+void WebAutomationSession::didCreatePage(WebPageProxy& page)
+{
+    m_bidiProcessor->browserAgent().didCreatePage(page);
+}
+#endif
+
 void WebAutomationSession::willClosePage(const WebPageProxy& page)
 {
     String handle = handleForWebPageProxy(page);
@@ -958,6 +966,10 @@ void WebAutomationSession::willClosePage(const WebPageProxy& page)
     // Then tell the input dispatcher to cancel so timers are stopped, and let it go out of scope.
     if (auto inputDispatcher = m_inputDispatchersByPage.take(page.identifier()))
         inputDispatcher->cancel();
+#endif
+
+#if ENABLE(WEBDRIVER_BIDI)
+    m_bidiProcessor->browserAgent().willClosePage(page);
 #endif
 }
 
