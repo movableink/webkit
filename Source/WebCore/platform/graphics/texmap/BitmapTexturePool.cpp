@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
- * Copyright (C) 2015 Igalia S.L.
+ * Copyright (C) 2015, 2025 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,6 +55,11 @@ Ref<BitmapTexture> BitmapTexturePool::acquireTexture(const IntSize& size, Option
         [&](Entry& entry) {
             return entry.m_texture->refCount() == 1
                 && entry.m_texture->size() == size
+#if USE(GBM)
+                && entry.m_texture->flags().contains(BitmapTexture::Flags::BackedByDMABuf) == flags.contains(BitmapTexture::Flags::BackedByDMABuf)
+                && entry.m_texture->flags().contains(BitmapTexture::Flags::ForceLinearBuffer) == flags.contains(BitmapTexture::Flags::ForceLinearBuffer)
+#endif
+                && entry.m_texture->flags().contains(BitmapTexture::Flags::UseNearestTextureFilter) == flags.contains(BitmapTexture::Flags::UseNearestTextureFilter)
                 && entry.m_texture->flags().contains(BitmapTexture::Flags::DepthBuffer) == flags.contains(BitmapTexture::Flags::DepthBuffer);
         });
 
@@ -62,8 +67,10 @@ Ref<BitmapTexture> BitmapTexturePool::acquireTexture(const IntSize& size, Option
         m_textures.append(Entry(BitmapTexture::create(size, flags)));
         selectedEntry = &m_textures.last();
         m_poolSize += size.unclampedArea();
-    } else
+    } else {
+        RELEASE_ASSERT(size == selectedEntry->m_texture->size());
         selectedEntry->m_texture->reset(size, flags);
+    }
 
     enterLimitExceededModeIfNeeded();
 

@@ -159,5 +159,6 @@ if (USE_GBM)
         platform/graphics/gbm/DRMDeviceManager.h
         platform/graphics/gbm/DRMDeviceNode.h
         platform/graphics/gbm/GraphicsContextGLTextureMapperGBM.h
+        platform/graphics/gbm/MemoryMappedGPUBuffer.h
     )
 endif ()

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Nokia Corporation and/or its subsidiary(-ies)
+ * Copyright (C) 2025 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,6 +27,10 @@
 #include "GraphicsLayer.h"
 #include "TextureMapper.h"
 #include <wtf/SystemTracing.h>
+
+#if USE(SKIA)
+#include "SkiaPaintingEngine.h"
+#endif
 
 namespace WebCore {
 
@@ -60,9 +65,16 @@ void CoordinatedBackingStoreTile::processPendingUpdates(TextureMapper& textureMa
         FloatRect unscaledTileRect(update.tileRect);
         unscaledTileRect.scale(1. / m_scale);
 
-        OptionSet<BitmapTexture::Flags> flags;
+        OptionSet<BitmapTexture::Flags> flags { BitmapTexture::Flags::UseNearestTextureFilter };
         if (update.buffer->supportsAlpha())
             flags.add(BitmapTexture::Flags::SupportsAlpha);
+
+#if USE(SKIA) && USE(GBM)
+        if (SkiaPaintingEngine::shouldUseLinearTileTextures()) {
+            flags.add(BitmapTexture::Flags::BackedByDMABuf);
+            flags.add(BitmapTexture::Flags::ForceLinearBuffer);
+        }
+#endif
 
         WTFBeginSignpost(this, AcquireTexture);
         if (!m_texture || unscaledTileRect != m_rect) {

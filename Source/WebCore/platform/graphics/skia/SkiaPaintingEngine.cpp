@@ -410,6 +410,22 @@ SkiaPaintingEngine::HybridPaintingStrategy SkiaPaintingEngine::hybridPaintingStr
     return strategy;
 }
 
+bool SkiaPaintingEngine::shouldUseLinearTileTextures()
+{
+    static std::once_flag onceFlag;
+    static bool shouldUseLinearTextures = false;
+
+    std::call_once(onceFlag, [] {
+        if (const char* envString = getenv("WEBKIT_SKIA_USE_LINEAR_TILE_TEXTURES")) {
+            auto envStringView = StringView::fromLatin1(envString);
+            if (envStringView == "1"_s)
+                shouldUseLinearTextures = true;
+        }
+    });
+
+    return shouldUseLinearTextures;
+}
+
 } // namespace WebCore
 
 #endif // USE(COORDINATED_GRAPHICS) && USE(SKIA)

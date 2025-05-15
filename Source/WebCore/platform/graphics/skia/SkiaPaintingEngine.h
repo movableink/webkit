@@ -64,6 +64,7 @@ public:
     static unsigned minimumAreaForGPUPainting();
     static float minimumFractionOfTasksUsingGPUPainting();
     static HybridPaintingStrategy hybridPaintingStrategy();
+    static bool shouldUseLinearTileTextures();
 
     bool useThreadedRendering() const { return m_cpuWorkerPool || m_gpuWorkerPool; }
 
