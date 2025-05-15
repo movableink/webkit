@@ -85,18 +85,8 @@ void CoordinatedBackingStore::paintToTextureMapper(TextureMapper& textureMapper,
 
 #if ENABLE(DAMAGE_TRACKING)
         if (canUseDamageToDrawTextureFragment && allEdgesExposed == TextureMapper::AllEdgesExposed::No && tile.texture().isOpaque() && !tile.texture().filterOperation()) {
-            // We use Damage here as it's a convenient way to track per-tile damage.
-            // If the tile size is big enough, the Damage will have a better resolution
-            // and will allow more than one "draw" operation thus reducing the re-painted
-            // area significantly in many cases.
-            const auto tileIntRect = enclosingIntRect(tile.rect());
-            Damage tileDamage(tileIntRect);
-            for (const auto& damageRect : frameDamage->rects()) {
-                if (damageRect.isEmpty())
-                    continue;
-                tileDamage.add(intersection(tileIntRect, damageRect));
-            }
-            for (const auto& tileDamageRect : tileDamage.rectsForPainting()) {
+            const auto tileDamageRect = intersection(tile.rect(), frameDamage->bounds());
+            if (!tileDamageRect.isEmpty()) {
                 const auto sourceRect = FloatRect { FloatPoint { tileDamageRect.location() - tile.rect().location() }, tileDamageRect.size() };
                 textureMapper.drawTextureFragment(tile.texture(), sourceRect, tileDamageRect);
             }

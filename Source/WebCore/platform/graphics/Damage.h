@@ -122,28 +122,6 @@ public:
         return region;
     }
 
-    // Removes empty and overlapping rects. May clip to grid.
-    Rects rectsForPainting() const
-    {
-        if (m_rects.size() <= 1 || m_mode != Mode::Rectangles)
-            return m_rects;
-
-        Rects rects;
-        for (int row = 0; row < m_gridCells.height(); ++row) {
-            for (int col = 0; col < m_gridCells.width(); ++col) {
-                const IntRect cellRect = { { m_rect.x() + col * m_cellSize.width(), m_rect.y() + row * m_cellSize.height() }, m_cellSize };
-                IntRect minimumBoundingRectangleContaingOverlaps;
-                for (const auto& rect : m_rects) {
-                    if (!rect.isEmpty())
-                        minimumBoundingRectangleContaingOverlaps.unite(intersection(cellRect, rect));
-                }
-                if (!minimumBoundingRectangleContaingOverlaps.isEmpty())
-                    rects.append(minimumBoundingRectangleContaingOverlaps);
-            }
-        }
-        return rects;
-    }
-
     void makeFull()
     {
         if (m_mode == Mode::Full)
