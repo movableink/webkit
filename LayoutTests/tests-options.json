@@ -3413,13 +3413,13 @@
     "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/coep-with-same-site.https.html": [
         "slow"
     ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/coep.https.html": [
-        "slow"
-    ],
     "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/coop-csp-sandbox-navigate.https.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/coop-navigated-history-popup.https.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/coop-noopener-allow-popups.https.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/header-parsing-failures.https.html": [
@@ -3489,9 +3489,6 @@
         "slow"
     ],
     "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/no-https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/popup-coop-by-sw-from-coop.https.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/popup-coop-by-sw.https.html": [
@@ -3581,37 +3578,10 @@
     "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/reporting/access-reporting/access-to-coop-page-from-other_coop-ro_cross-origin.https.html": [
         "slow"
     ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/reporting/access-reporting/openee-accessed_openee-coop-ro.https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/reporting/access-reporting/openee-accessed_openee-coop.https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/reporting/access-reporting/openee-accessed_opener-coop-ro.https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/reporting/access-reporting/openee-accessed_opener-coop.https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/reporting/access-reporting/opener-accessed_openee-coop-ro.https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/reporting/access-reporting/opener-accessed_openee-coop.https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/reporting/access-reporting/opener-accessed_opener-coop-ro.https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/reporting/access-reporting/opener-accessed_opener-coop.https.html": [
-        "slow"
-    ],
     "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/reporting/access-reporting/property-indexed-getter.https.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/reporting/access-reporting/property-named-getter.https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/reporting/access-reporting/property.https.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/reporting/access-reporting/report-to-both_coop-ro.https.html": [
@@ -3665,46 +3635,16 @@
     "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/reporting/navigation-reporting/reporting-popup-same-origin.https.html": [
         "slow"
     ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/reporting/navigation-reporting/reporting-popup-unafe-none-report-to.https.html": [
-        "slow"
-    ],
     "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/reporting/navigation-reporting/reporting-popup-unsafe-none-report-to.https.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/reporting/navigation-reporting/reporting-redirect-with-same-origin-allow-popups.https.html": [
         "slow"
     ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/iframe-popup-to-so.https.html": [
+    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/reporting/tentative/access-to-noopener-page-from-no-coop-ro.https.html": [
         "slow"
     ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/iframe-popup-to-soap.https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/iframe-popup-to-un.https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/iframe-popup.https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/popup-so.https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/popup-soap.https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/popup-u.https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/popup-un.https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/popup-with-cross-origin.https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/popup-with-same-origin.https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/popup-with-same-site.https.html": [
+    "imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/noopener/coop-noopener-allow-popups-restrict-properties.https.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/html/dom/documents/resource-metadata-management/document-lastModified-01.html": [
