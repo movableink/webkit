@@ -366,6 +366,7 @@ void GStreamerCaptureDeviceManager::refreshCaptureDevices()
             GST_INFO_OBJECT(GST_MESSAGE_SRC(message), "Device added: %s", name.get());
 #endif
             manager->addDevice(WTFMove(device));
+            manager->deviceChanged();
             break;
         case GST_MESSAGE_DEVICE_REMOVED:
             gst_message_parse_device_removed(message, &device.outPtr());
@@ -374,6 +375,7 @@ void GStreamerCaptureDeviceManager::refreshCaptureDevices()
             GST_INFO_OBJECT(GST_MESSAGE_SRC(message), "Device removed: %s", name.get());
 #endif
             manager->removeDevice(WTFMove(device));
+            manager->deviceChanged();
             break;
         case GST_MESSAGE_DEVICE_CHANGED: {
             GRefPtr<GstDevice> oldDevice;
