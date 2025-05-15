@@ -144,7 +144,6 @@
 		DD20DDC627BC90D70093D175 /* LookupSoftLink.h in Headers */ = {isa = PBXBuildFile; fileRef = 44E1A8AD21FA54DA00C3048E /* LookupSoftLink.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD20DDC727BC90D70093D175 /* QuickLookUISoftLink.h in Headers */ = {isa = PBXBuildFile; fileRef = F4C85A4D2658551A005B89CC /* QuickLookUISoftLink.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD20DDC827BC90D70093D175 /* ScreenCaptureKitSoftLink.h in Headers */ = {isa = PBXBuildFile; fileRef = 07789180273B14FF00E408D1 /* ScreenCaptureKitSoftLink.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		DD20DDC927BC90D70093D175 /* CFLocaleSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 0C2DA0671F33CA8400DBC317 /* CFLocaleSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD20DDCA27BC90D70093D175 /* CFNetworkConnectionCacheSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 0C2DA0681F33CA8400DBC317 /* CFNetworkConnectionCacheSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD20DDCB27BC90D70093D175 /* CFNetworkSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 0C2DA0691F33CA8400DBC317 /* CFNetworkSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD20DDCC27BC90D70093D175 /* CFNotificationCenterSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 445097BB26EBF66D003EF771 /* CFNotificationCenterSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -472,7 +471,6 @@
 		0C00CFD11F68CE4600AAC26D /* MediaTimeAVFoundation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MediaTimeAVFoundation.cpp; sourceTree = "<group>"; };
 		0C00CFD21F68CE4600AAC26D /* MediaTimeAVFoundation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MediaTimeAVFoundation.h; sourceTree = "<group>"; };
 		0C2D9E721EEF5AF600DBC317 /* ExportMacros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ExportMacros.h; sourceTree = "<group>"; };
-		0C2DA0671F33CA8400DBC317 /* CFLocaleSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CFLocaleSPI.h; sourceTree = "<group>"; };
 		0C2DA0681F33CA8400DBC317 /* CFNetworkConnectionCacheSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CFNetworkConnectionCacheSPI.h; sourceTree = "<group>"; };
 		0C2DA0691F33CA8400DBC317 /* CFNetworkSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CFNetworkSPI.h; sourceTree = "<group>"; };
 		0C2DA06A1F33CA8400DBC317 /* CFUtilitiesSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CFUtilitiesSPI.h; sourceTree = "<group>"; };
@@ -831,7 +829,6 @@
 		0C2DA0661F33CA3A00DBC317 /* cf */ = {
 			isa = PBXGroup;
 			children = (
-				0C2DA0671F33CA8400DBC317 /* CFLocaleSPI.h */,
 				0C2DA0681F33CA8400DBC317 /* CFNetworkConnectionCacheSPI.h */,
 				0C2DA0691F33CA8400DBC317 /* CFNetworkSPI.h */,
 				445097BB26EBF66D003EF771 /* CFNotificationCenterSPI.h */,
@@ -1423,7 +1420,6 @@
 				3CBEEDE928A1861D00221FAE /* BarcodeSupportSPI.h in Headers */,
 				F4F0A5502B634D88001A54E5 /* BrowserEngineKitSPI.h in Headers */,
 				DD20DE0F27BC90D80093D175 /* CelestialSPI.h in Headers */,
-				DD20DDC927BC90D70093D175 /* CFLocaleSPI.h in Headers */,
 				DD20DDCA27BC90D70093D175 /* CFNetworkConnectionCacheSPI.h in Headers */,
 				DD20DDCB27BC90D70093D175 /* CFNetworkSPI.h in Headers */,
 				DD20DDCC27BC90D70093D175 /* CFNotificationCenterSPI.h in Headers */,

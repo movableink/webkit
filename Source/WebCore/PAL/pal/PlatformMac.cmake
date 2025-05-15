@@ -38,7 +38,6 @@ list(APPEND PAL_PUBLIC_HEADERS
     mac/LookupSoftLink.h
     mac/QuickLookUISoftLink.h
 
-    spi/cf/CFLocaleSPI.h
     spi/cf/CFNetworkConnectionCacheSPI.h
     spi/cf/CFNetworkSPI.h
     spi/cf/CFNotificationCenterSPI.h
