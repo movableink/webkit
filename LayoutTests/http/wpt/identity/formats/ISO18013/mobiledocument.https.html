@@ -35,7 +35,7 @@
         const allRequests = [];
         for (const data of invalidData) {
             const request = {
-                protocol: "iso.org.mdoc",
+                protocol: "org-iso-mdoc",
                 data,
             };
             await promise_rejects_js(
@@ -67,7 +67,7 @@
         );
 
         const idlValidRequest = {
-            protocol: "iso.org.mdoc",
+            protocol: "org-iso-mdoc",
             data: { deviceRequest: "abc", encryptionInfo: "123" },
         };
         options.digital.requests.push(idlValidRequest);
@@ -88,7 +88,7 @@
                 digital: {
                     requests: [
                         {
-                            protocol: "iso.org.mdoc",
+                            protocol: "org-iso-mdoc",
                             data: invalidRequest,
                         },
                     ],

@@ -2475,13 +2475,7 @@ sub GetEnumerationValueName
     return "EmptyString" if $name eq "";
     return "WebRTC" if $name eq "webrtc";
 
-    my @parts = split("-", $name);
-    @parts = map {
-        my $part = $_;
-        my @dotParts = split(/\./, $part);
-        join("", map { $codeGenerator->WK_ucfirst($_) } @dotParts)
-    } @parts;
-    $name = join("", @parts);
+    $name = join("", map { $codeGenerator->WK_ucfirst($_) } split("-", $name));
     $name = "_$name" if $name =~ /^\d/;
     return $name;
 }
