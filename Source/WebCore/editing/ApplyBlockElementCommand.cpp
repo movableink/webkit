@@ -217,7 +217,7 @@ void ApplyBlockElementCommand::rangeForParagraphSplittingTextNodesIfNeeded(const
 
         // Avoid obtanining the start of next paragraph for start
         if (preservesNewLine && isNewLineAtPosition(start) && !isNewLineAtPosition(start.previous()) && start.offsetInContainerNode() > 0)
-            start = startOfParagraph(end.previous()).deepEquivalent();
+            start = startOfParagraph(start.previous()).deepEquivalent();
 
         // If start is in the middle of a text node, split.
         if (!collapsesWhiteSpace && start.offsetInContainerNode() > 0) {
