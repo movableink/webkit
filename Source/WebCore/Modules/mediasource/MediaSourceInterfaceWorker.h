@@ -43,7 +43,7 @@ private:
     bool isClosed() const final;
     MediaTime duration() const final;
     PlatformTimeRanges buffered() const final;
-    Ref<TimeRanges> seekable() const final;
+    PlatformTimeRanges seekable() const final;
     bool isStreamingContent() const final;
     bool attachToElement(WeakPtr<HTMLMediaElement>&&) final;
     void detachFromElement() final;

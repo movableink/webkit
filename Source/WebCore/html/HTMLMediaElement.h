@@ -317,6 +317,7 @@ public:
     void updatePlaybackRate();
     Ref<TimeRanges> played() override;
     Ref<TimeRanges> seekable() const override;
+    PlatformTimeRanges platformSeekable() const;
     double seekableTimeRangesLastModifiedTime() const;
     double liveUpdateInterval() const;
     WEBCORE_EXPORT bool ended() const;

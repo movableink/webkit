@@ -255,9 +255,9 @@ void PlaybackSessionInterfaceAVKit::rateChanged(OptionSet<PlaybackSessionModel::
         [m_contentSource setRate:playbackState.contains(PlaybackSessionModel::PlaybackState::Playing) ? playbackRate : 0];
 }
 
-void PlaybackSessionInterfaceAVKit::seekableRangesChanged(const TimeRanges& timeRanges, double, double)
+void PlaybackSessionInterfaceAVKit::seekableRangesChanged(const PlatformTimeRanges& timeRanges, double, double)
 {
-    [m_contentSource setSeekableTimeRanges:makeNSArray(timeRanges.ranges()).get()];
+    [m_contentSource setSeekableTimeRanges:makeNSArray(timeRanges).get()];
 }
 
 void PlaybackSessionInterfaceAVKit::canPlayFastReverseChanged(bool canPlayFastReverse)

@@ -378,9 +378,9 @@ void PlaybackSessionModelContext::rateChanged(OptionSet<WebCore::PlaybackSession
         client->rateChanged(m_playbackState, m_playbackRate, m_defaultPlaybackRate);
 }
 
-void PlaybackSessionModelContext::seekableRangesChanged(WebCore::TimeRanges& seekableRanges, double lastModifiedTime, double liveUpdateInterval)
+void PlaybackSessionModelContext::seekableRangesChanged(const WebCore::PlatformTimeRanges& seekableRanges, double lastModifiedTime, double liveUpdateInterval)
 {
-    INFO_LOG_IF_POSSIBLE(LOGIDENTIFIER, seekableRanges.ranges());
+    INFO_LOG_IF_POSSIBLE(LOGIDENTIFIER, seekableRanges);
     m_seekableRanges = seekableRanges;
     m_seekableTimeRangesLastModifiedTime = lastModifiedTime;
     m_liveUpdateInterval = liveUpdateInterval;
@@ -738,15 +738,8 @@ void PlaybackSessionManagerProxy::bufferedTimeChanged(PlaybackSessionContextIden
     ensureModel(contextId)->bufferedTimeChanged(bufferedTime);
 }
 
-void PlaybackSessionManagerProxy::seekableRangesVectorChanged(PlaybackSessionContextIdentifier contextId, Vector<std::pair<double, double>> ranges, double lastModifiedTime, double liveUpdateInterval)
+void PlaybackSessionManagerProxy::seekableRangesVectorChanged(PlaybackSessionContextIdentifier contextId, const WebCore::PlatformTimeRanges& timeRanges, double lastModifiedTime, double liveUpdateInterval)
 {
-    Ref<TimeRanges> timeRanges = TimeRanges::create();
-    for (const auto& range : ranges) {
-        ASSERT(isfinite(range.first));
-        ASSERT(!isfinite(range.second) || range.second >= range.first);
-        timeRanges->add(range.first, range.second);
-    }
-
     ensureModel(contextId)->seekableRangesChanged(timeRanges, lastModifiedTime, liveUpdateInterval);
 }
 

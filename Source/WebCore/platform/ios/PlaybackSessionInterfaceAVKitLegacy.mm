@@ -139,9 +139,9 @@ void PlaybackSessionInterfaceAVKitLegacy::rateChanged(OptionSet<PlaybackSessionM
         [m_playerController setRate:playbackState.contains(PlaybackSessionModel::PlaybackState::Playing) ? playbackRate : 0. fromJavaScript:YES];
 }
 
-void PlaybackSessionInterfaceAVKitLegacy::seekableRangesChanged(const TimeRanges& timeRanges, double lastModifiedTime, double liveUpdateInterval)
+void PlaybackSessionInterfaceAVKitLegacy::seekableRangesChanged(const PlatformTimeRanges& timeRanges, double lastModifiedTime, double liveUpdateInterval)
 {
-    [m_playerController setSeekableTimeRanges:makeNSArray(timeRanges.ranges()).get()];
+    [m_playerController setSeekableTimeRanges:makeNSArray(timeRanges).get()];
     [m_playerController setSeekableTimeRangesLastModifiedTime:lastModifiedTime];
     [m_playerController setLiveUpdateInterval:liveUpdateInterval];
 }

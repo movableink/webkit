@@ -91,7 +91,7 @@ private:
     void bufferedTimeChanged(double) final;
     void playbackStartedTimeChanged(double playbackStartedTime) final;
     void rateChanged(OptionSet<WebCore::PlaybackSessionModel::PlaybackState>, double playbackRate, double defaultPlaybackRate) final;
-    void seekableRangesChanged(const WebCore::TimeRanges&, double lastModifiedTime, double liveUpdateInterval) final;
+    void seekableRangesChanged(const WebCore::PlatformTimeRanges&, double lastModifiedTime, double liveUpdateInterval) final;
     void canPlayFastReverseChanged(bool value) final;
     void audioMediaSelectionOptionsChanged(const Vector<WebCore::MediaSelectionOption>& options, uint64_t selectedIndex) final;
     void legibleMediaSelectionOptionsChanged(const Vector<WebCore::MediaSelectionOption>& options, uint64_t selectedIndex) final;
@@ -173,7 +173,7 @@ private:
     void bufferedTimeChanged(PlaybackSessionContextIdentifier, double bufferedTime);
     void playbackStartedTimeChanged(PlaybackSessionContextIdentifier, double playbackStartedTime);
     void rateChanged(PlaybackSessionContextIdentifier, OptionSet<WebCore::PlaybackSessionModel::PlaybackState>, double playbackRate, double defaultPlaybackRate);
-    void seekableRangesChanged(PlaybackSessionContextIdentifier, const WebCore::TimeRanges&, double lastModifiedTime, double liveUpdateInterval);
+    void seekableRangesChanged(PlaybackSessionContextIdentifier, const WebCore::PlatformTimeRanges&, double lastModifiedTime, double liveUpdateInterval);
     void canPlayFastReverseChanged(PlaybackSessionContextIdentifier, bool value);
     void audioMediaSelectionOptionsChanged(PlaybackSessionContextIdentifier, const Vector<WebCore::MediaSelectionOption>& options, uint64_t selectedIndex);
     void legibleMediaSelectionOptionsChanged(PlaybackSessionContextIdentifier, const Vector<WebCore::MediaSelectionOption>& options, uint64_t selectedIndex);
