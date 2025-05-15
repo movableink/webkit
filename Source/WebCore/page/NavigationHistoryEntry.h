@@ -30,6 +30,7 @@
 #include "EventTarget.h"
 #include "HistoryItem.h"
 #include "ReferrerPolicy.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include <wtf/RefCounted.h>
 
 namespace JSC {

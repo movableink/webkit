@@ -29,7 +29,7 @@
 
 #include "CrossOriginEmbedderPolicy.h"
 #include "CrossOriginOpenerPolicy.h"
-#include "SandboxFlags.h"
+#include "ReferrerPolicy.h"
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
