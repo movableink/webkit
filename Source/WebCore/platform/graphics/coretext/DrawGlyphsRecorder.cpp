@@ -88,11 +88,7 @@ UniqueRef<GraphicsContext> DrawGlyphsRecorder::createInternalContext()
     CGContextDelegateSetCallback(contextDelegate.get(), deDrawGlyphs, reinterpret_cast<CGContextDelegateCallback>(&WebCore::drawGlyphs));
     CGContextDelegateSetCallback(contextDelegate.get(), deDrawImage, reinterpret_cast<CGContextDelegateCallback>(&drawImage));
     CGContextDelegateSetCallback(contextDelegate.get(), deDrawPath, reinterpret_cast<CGContextDelegateCallback>(&drawPath));
-#if HAVE(CORE_TEXT_FIX_FOR_RADAR_93925620)
     auto contextType = kCGContextTypeUnknown;
-#else
-    auto contextType = kCGContextTypeWindow;
-#endif
     auto context = adoptCF(CGContextCreateWithDelegate(contextDelegate.get(), contextType, nullptr, nullptr));
     return makeUniqueRef<GraphicsContextCG>(context.get());
 }
