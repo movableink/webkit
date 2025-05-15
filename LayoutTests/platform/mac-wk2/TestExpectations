@@ -105,7 +105,7 @@ imported/w3c/web-platform-tests/media-source/dedicated-worker/mediasource-worker
 http/tests/security/contentSecurityPolicy/manifest-src-allowed.html [ Pass ]
 http/tests/security/contentSecurityPolicy/manifest-src-blocked.html [ Pass ]
 http/wpt/content-security-policy/sandbox-manifest-blocked.html [ Pass ]
-http/wpt/content-security-policy/sandbox-manifest-blocked-cross-origin.sub.html [ Pass ]
+
 applicationmanifest/ [ Pass ]
 
 webkit.org/b/187183 http/tests/security/pasteboard-file-url.html [ Pass ]
@@ -2169,3 +2169,5 @@ webkit.org/b/292794 [ Debug ] http/tests/media/media-play-stream-chunked-icy.htm
 webkit.org/b/292883 http/wpt/service-workers/basic-fetch-with-contentfilter.https.html [ Pass Failure ]
 
 webkit.org/b/283410 media/media-vp8-webm-with-poster.html [ Pass ImageOnlyFailure ]
+
+webkit.org/b/293023 http/wpt/content-security-policy/sandbox-manifest-blocked-cross-origin.sub.html [ Pass Failure ]
