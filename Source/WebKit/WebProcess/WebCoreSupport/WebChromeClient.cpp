@@ -105,6 +105,7 @@
 #include <WebCore/SecurityOrigin.h>
 #include <WebCore/SecurityOriginData.h>
 #include <WebCore/Settings.h>
+#include <WebCore/SystemPreviewInfo.h>
 #include <WebCore/TextDetectorInterface.h>
 #include <WebCore/TextIndicator.h>
 #include <WebCore/TextRecognitionOptions.h>

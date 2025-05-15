@@ -55,6 +55,7 @@
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include "Settings.h"
+#include "SystemPreviewInfo.h"
 #include "URLKeepingBlobAlive.h"
 #include "UserGestureIndicator.h"
 #include <wtf/RuntimeApplicationChecks.h>

@@ -308,6 +308,7 @@
 #include <WebCore/SubframeLoader.h>
 #include <WebCore/SubresourceLoader.h>
 #include <WebCore/SubstituteData.h>
+#include <WebCore/SystemPreviewInfo.h>
 #include <WebCore/TextExtraction.h>
 #include <WebCore/TextIterator.h>
 #include <WebCore/TextManipulationController.h>

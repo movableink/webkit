@@ -215,6 +215,7 @@ struct CharacterRange;
 struct NavigationAPIMethodTracker;
 struct ProcessSyncData;
 struct SimpleRange;
+struct SystemPreviewInfo;
 struct TextIndicatorData;
 struct TextRecognitionResult;
 struct WindowFeatures;

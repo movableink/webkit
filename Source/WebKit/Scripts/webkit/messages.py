@@ -1196,7 +1196,6 @@ def headers_for_type(type, for_implementation_file=False):
         'WebCore::SupportsSpatialAudioPlayback': ['<WebCore/MediaSessionHelperIOS.h>'],
         'WebCore::SuspendedUnderLock': ['<WebCore/MediaSessionHelperIOS.h>'],
         'WebCore::SWServerConnectionIdentifier': ['<WebCore/ServiceWorkerTypes.h>'],
-        'WebCore::SystemPreviewInfo': ['<WebCore/FrameLoaderTypes.h>'],
         'WebCore::TargetedElementAdjustment': ['<WebCore/ElementTargetingTypes.h>'],
         'WebCore::TargetedElementInfo': ['<WebCore/ElementTargetingTypes.h>'],
         'WebCore::TargetedElementRequest': ['<WebCore/ElementTargetingTypes.h>'],

@@ -261,6 +261,7 @@
 #include <WebCore/Site.h>
 #include <WebCore/SleepDisabler.h>
 #include <WebCore/StoredCredentialsPolicy.h>
+#include <WebCore/SystemPreviewInfo.h>
 #include <WebCore/TextCheckerClient.h>
 #include <WebCore/TextExtractionTypes.h>
 #include <WebCore/TextIndicator.h>

@@ -30,7 +30,10 @@
 #include "MessageReceiver.h"
 #include <WebCore/CertificateInfo.h>
 #include <WebCore/FrameLoaderTypes.h>
+#include <WebCore/IntSize.h>
 #include <WebCore/LayerHostingContextIdentifier.h>
+#include <WebCore/PageIdentifier.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/ListHashSet.h>

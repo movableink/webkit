@@ -152,6 +152,7 @@ struct FocusOptions;
 struct GraphicsDeviceAdapter;
 struct MockWebAuthenticationConfiguration;
 struct ShareDataWithParsedURL;
+struct SystemPreviewInfo;
 struct TextIndicatorData;
 struct TextRecognitionOptions;
 struct ViewportArguments;

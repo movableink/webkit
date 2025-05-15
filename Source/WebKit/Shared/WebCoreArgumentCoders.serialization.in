@@ -2085,8 +2085,7 @@ struct WebCore::ElementAnimationContext {
     bool isAnimating;
 };
 
-header: <WebCore/FrameLoaderTypes.h>
-[CustomHeader] struct WebCore::SystemPreviewInfo {
+struct WebCore::SystemPreviewInfo {
     WebCore::ElementContext element;
     WebCore::IntRect previewRect;
     bool isPreview;
