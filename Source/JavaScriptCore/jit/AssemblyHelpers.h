@@ -1808,9 +1808,14 @@ public:
 
     static void emitStoreStructureWithTypeInfo(AssemblyHelpers& jit, TrustedImmPtr structure, RegisterID dest);
 
-    Jump barrierBranchWithoutFence(GPRReg cell)
+    // Branch taken if the cell does not need a store barrier.
+    // When reverse is true, branch taken when the store barrier is needed.
+    Jump barrierBranchWithoutFence(GPRReg cell, bool reverse = false)
     {
-        return branch8(Above, Address(cell, JSCell::cellStateOffset()), TrustedImm32(blackThreshold));
+        auto cond = Above;
+        if (reverse)
+            cond = BelowOrEqual;
+        return branch8(cond, Address(cell, JSCell::cellStateOffset()), TrustedImm32(blackThreshold));
     }
 
     Jump barrierBranchWithoutFence(JSCell* cell)
@@ -1819,10 +1824,15 @@ public:
         return branch8(Above, AbsoluteAddress(address), TrustedImm32(blackThreshold));
     }
     
-    Jump barrierBranch(VM& vm, GPRReg cell, GPRReg scratchGPR)
+    // Branch taken if the cell does not need a memory fence or store barrier.
+    // When reverse is true, branch taken when the memory barrier or store barrier is needed.
+    Jump barrierBranch(VM& vm, GPRReg cell, GPRReg scratchGPR, bool reverse = false)
     {
+        auto cond = Above;
+        if (reverse)
+            cond = BelowOrEqual;
         load8(Address(cell, JSCell::cellStateOffset()), scratchGPR);
-        return branch32(Above, scratchGPR, AbsoluteAddress(vm.heap.addressOfBarrierThreshold()));
+        return branch32(cond, scratchGPR, AbsoluteAddress(vm.heap.addressOfBarrierThreshold()));
     }
 
     Jump barrierBranch(VM& vm, JSCell* cell, GPRReg scratchGPR)

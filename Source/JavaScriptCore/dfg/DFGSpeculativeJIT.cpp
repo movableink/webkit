@@ -12794,32 +12794,38 @@ void SpeculativeJIT::linkBranches()
 void SpeculativeJIT::compileStoreBarrier(Node* node)
 {
     ASSERT(node->op() == StoreBarrier || node->op() == FencedStoreBarrier);
-    
+
     bool isFenced = node->op() == FencedStoreBarrier;
-    
     SpeculateCellOperand base(this, node->child1());
-    GPRTemporary scratch1(this);
-    
     GPRReg baseGPR = base.gpr();
-    GPRReg scratch1GPR = scratch1.gpr();
-    
-    JumpList ok;
-    
+
+    Jump slowCase;
     if (isFenced) {
-        ok.append(barrierBranch(vm(), baseGPR, scratch1GPR));
-        
-        Jump noFence = jumpIfMutatorFenceNotNeeded(vm());
-        memoryFence();
-        ok.append(barrierBranchWithoutFence(baseGPR));
-        noFence.link(this);
+        GPRTemporary scratch(this);
+        slowCase = barrierBranch(vm(), baseGPR, scratch.gpr(), true);
     } else
-        ok.append(barrierBranchWithoutFence(baseGPR));
+        slowCase = barrierBranchWithoutFence(baseGPR, true);
 
-    silentSpillAllRegisters(InvalidGPRReg);
-    callOperationWithoutExceptionCheck(operationWriteBarrierSlowPath, TrustedImmPtr(&vm()), baseGPR);
-    silentFillAllRegisters();
+    Label done = label();
 
-    ok.link(this);
+    Vector<SilentRegisterSavePlan> savePlans;
+    silentSpillAllRegistersImpl(false, savePlans, InvalidGPRReg);
+
+    addSlowPathGeneratorLambda([=, this, savePlans = WTFMove(savePlans)]() {
+        slowCase.link(this);
+
+        if (isFenced) {
+            Jump noFence = jumpIfMutatorFenceNotNeeded(vm());
+            memoryFence();
+            barrierBranchWithoutFence(baseGPR).linkTo(done, this);
+            noFence.link(this);
+        }
+        silentSpill(savePlans);
+        callOperationWithoutExceptionCheck(operationWriteBarrierSlowPath, TrustedImmPtr(&vm()), baseGPR);
+        silentFill(savePlans);
+
+        jump().linkTo(done, this);
+    });
 
     noResult(node);
 }
