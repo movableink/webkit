@@ -45,8 +45,6 @@
 #include <sanitizer/asan_interface.h>
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace JSC {
 class LLIntOffsetsExtractor;
 }
@@ -66,6 +64,8 @@ struct VectorDestructor<false, T>
 {
     static void destruct(T*, T*) { }
 };
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 template<typename T>
 struct VectorDestructor<true, T>
@@ -1701,11 +1701,7 @@ inline void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::ins
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
 inline void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::remove(size_t position)
 {
-    T* spot = mutableSpan().subspan(position).data();
-    spot->~T();
-    TypeOperations::moveOverlapping(spot + 1, end(), spot);
-    asanBufferSizeWillChangeTo(m_size - 1);
-    --m_size;
+    remove(position, 1);
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
@@ -1798,6 +1794,8 @@ inline unsigned Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>:
     m_size -= matchCount;
     return matchCount;
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
 inline void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::reverse()
@@ -2149,5 +2147,3 @@ using WTF::compactMap;
 using WTF::flatMap;
 using WTF::insertInUniquedSortedVector;
 using WTF::removeRepeatedElements;
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
