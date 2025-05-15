@@ -759,7 +759,7 @@ String WorkerGlobalScope::endpointURIForToken(const String& token) const
     return reportingScope().endpointURIForToken(token);
 }
 
-void WorkerGlobalScope::sendReportToEndpoints(const URL&, const Vector<String>& /*endpointURIs*/, const Vector<String>& /*endpointTokens*/, Ref<FormData>&&, ViolationReportType)
+void WorkerGlobalScope::sendReportToEndpoints(const URL&, std::span<const String> /*endpointURIs*/, std::span<const String> /*endpointTokens*/, Ref<FormData>&&, ViolationReportType)
 {
     notImplemented();
 }
