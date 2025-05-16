@@ -171,9 +171,13 @@ void InlineContentConstrainer::updateCachedWidths()
     // Cache inline item widths to speed up later computations.
     for (size_t i = 0; i < m_numberOfInlineItems; i++) {
         const auto& item = m_inlineItemList[i];
-        m_inlineItemWidths[i] = m_inlineFormattingContext.formattingUtils().inlineItemWidth(item, 0, false);
+        auto isWordSeparator = false;
+        if (auto* textItem = dynamicDowncast<InlineTextItem>(item))
+            isWordSeparator = textItem->isWordSeparator();
+
+        m_inlineItemWidths[i] = m_inlineFormattingContext.formattingUtils().inlineItemWidth(item, 0, false) +  (isWordSeparator ? item.style().wordSpacing() : 0.0f);
         m_inlineItemWidthsMax = std::max(m_inlineItemWidthsMax, m_inlineItemWidths[i]);
-        m_firstLineStyleInlineItemWidths[i] = m_inlineFormattingContext.formattingUtils().inlineItemWidth(item, 0, true);
+        m_firstLineStyleInlineItemWidths[i] = m_inlineFormattingContext.formattingUtils().inlineItemWidth(item, 0, true) + (isWordSeparator ? item.firstLineStyle().wordSpacing() : 0.0f);
         m_inlineItemWidthsMax = std::max(m_inlineItemWidthsMax, m_firstLineStyleInlineItemWidths[i]);
     }
     m_hasValidInlineItemWidthCache = true;
@@ -308,18 +312,17 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::computeParagraphLeve
     if (currentChunkSize > 0)
         chunkSizes.append(currentChunkSize);
 
-
     // Constrain each chunk
     auto constrainChunk = [&](auto chunkStart, auto chunkSize) -> std::optional<Vector<LayoutUnit>> {
         const bool isFirstChunk = !chunkStart;
         auto rangeToConstrain = InlineItemRange { m_originalLineInlineItemRanges[chunkStart].startIndex(), m_originalLineInlineItemRanges[chunkStart + chunkSize - 1].endIndex() };
         if (rangeToConstrain.startIndex() >= rangeToConstrain.endIndex())
             return { };
-        InlineLayoutUnit totalWidth = 0;
-        for (size_t line = 0; line < chunkSize; line++)
-            totalWidth += m_originalLineConstraints[chunkStart + line];
-
         if (wrapStyle == TextWrapStyle::Balance) {
+            InlineLayoutUnit totalWidth = 0.f;
+            for (size_t line = 0; line < chunkSize; line++)
+                totalWidth += m_originalLineConstraints[chunkStart + line];
+
             const InlineLayoutUnit idealLineWidth = totalWidth / chunkSize;
             if (m_numberOfLinesInOriginalLayout <= maximumLinesToBalanceWithLineRequirement)
                 return balanceRangeWithLineRequirement(rangeToConstrain, idealLineWidth, chunkSize, isFirstChunk);
