@@ -38,6 +38,7 @@
 #include "ResourceResponse.h"
 #include "SecurityOrigin.h"
 #include "ThreadableLoader.h"
+#include "ThreadableLoaderClient.h"
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {

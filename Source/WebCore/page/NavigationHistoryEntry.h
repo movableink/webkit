@@ -49,6 +49,8 @@ public:
     static Ref<NavigationHistoryEntry> create(Navigation&, Ref<HistoryItem>&&);
     static Ref<NavigationHistoryEntry> create(Navigation&, const NavigationHistoryEntry&);
 
+    ~NavigationHistoryEntry();
+
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
 

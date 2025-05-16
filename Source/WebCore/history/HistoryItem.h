@@ -33,9 +33,7 @@
 #include "FrameLoaderTypes.h"
 #include "IntPoint.h"
 #include "IntRect.h"
-#include "LengthBox.h"
 #include "PolicyContainer.h"
-#include "SerializedScriptValue.h"
 #include <memory>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
@@ -60,6 +58,7 @@ class FormData;
 class HistoryItem;
 class Image;
 class ResourceRequest;
+class SerializedScriptValue;
 
 class HistoryItemClient : public RefCounted<HistoryItemClient> {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(HistoryItemClient, WEBCORE_EXPORT);

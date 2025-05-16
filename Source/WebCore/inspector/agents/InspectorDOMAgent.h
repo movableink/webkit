@@ -78,6 +78,7 @@ class RenderObject;
 class RevalidateStyleAttributeTask;
 class ShadowRoot;
 
+enum class ExceptionCode : uint8_t;
 enum class PlatformEventModifier : uint8_t;
 
 struct Styleable;

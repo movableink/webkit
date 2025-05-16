@@ -74,6 +74,8 @@ Ref<NavigationHistoryEntry> NavigationHistoryEntry::create(Navigation& navigatio
     return entry;
 }
 
+NavigationHistoryEntry::~NavigationHistoryEntry() = default;
+
 ScriptExecutionContext* NavigationHistoryEntry::scriptExecutionContext() const
 {
     return ContextDestructionObserver::scriptExecutionContext();

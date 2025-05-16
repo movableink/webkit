@@ -32,6 +32,7 @@
 namespace WebCore {
 
 class DOMPromise;
+class DeferredPromise;
 class Exception;
 
 class NavigationTransition final : public RefCounted<NavigationTransition> {
