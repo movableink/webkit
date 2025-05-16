@@ -1385,6 +1385,13 @@ OptionSet<AdvancedPrivacyProtections> LocalFrame::advancedPrivacyProtections() c
     return { };
 }
 
+AutoplayPolicy LocalFrame::autoplayPolicy() const
+{
+    if (RefPtr documentLoader = loader().activeDocumentLoader())
+        return documentLoader->autoplayPolicy();
+    return AutoplayPolicy::Default;
+}
+
 SandboxFlags LocalFrame::effectiveSandboxFlags() const
 {
     auto effectiveSandboxFlags = m_sandboxFlags;

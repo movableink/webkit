@@ -1315,6 +1315,9 @@ public:
     void disableModelLoadDelaysForTesting() { m_modelLoadDelaysDisabledForTesting = true; }
 #endif
 
+    bool requiresUserGestureForAudioPlayback() const;
+    bool requiresUserGestureForVideoPlayback() const;
+
 private:
     explicit Page(PageConfiguration&&);
 

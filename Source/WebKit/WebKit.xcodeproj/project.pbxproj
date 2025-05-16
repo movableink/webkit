@@ -3196,6 +3196,7 @@
 		024C319E2C23915300786A67 /* WebPageTesting.messages.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = WebPageTesting.messages.in; sourceTree = "<group>"; };
 		0250C24E2B5DCAFB00D05C0B /* FindStringCallbackAggregator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FindStringCallbackAggregator.cpp; sourceTree = "<group>"; };
 		0250C24F2B5DCB0100D05C0B /* FindStringCallbackAggregator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FindStringCallbackAggregator.h; sourceTree = "<group>"; };
+		025F62AD2DD69BFE00573F15 /* WebsiteAutoplayPolicy.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebsiteAutoplayPolicy.cpp; sourceTree = "<group>"; };
 		02660A7B2C40992C0074EDC5 /* WebExtensionAPISidebarActionCocoa.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WebExtensionAPISidebarActionCocoa.mm; sourceTree = "<group>"; };
 		02660A7D2C4099AD0074EDC5 /* WebExtensionAPISidePanelCocoa.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WebExtensionAPISidePanelCocoa.mm; sourceTree = "<group>"; };
 		0269BED22C8FDDC600DC2FEC /* WebProcessActivityState.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebProcessActivityState.cpp; sourceTree = "<group>"; };
@@ -9884,6 +9885,7 @@
 				51F8FA3A2AB7549C00C8413B /* WebPushMessage.cpp */,
 				517B5F96275EC5E5002DC22D /* WebPushMessage.h */,
 				5CABE07A28F60E8A00D83FD9 /* WebPushMessage.serialization.in */,
+				025F62AD2DD69BFE00573F15 /* WebsiteAutoplayPolicy.cpp */,
 				5C8DD37F1FE4519200F2A556 /* WebsiteAutoplayPolicy.h */,
 				2D9BECFD2B30B16200D0AE99 /* WebsiteAutoplayPolicy.serialization.in */,
 				5C8DD3811FE455CA00F2A556 /* WebsiteAutoplayQuirk.h */,
@@ -21107,8 +21109,8 @@
 				DD5697CD2DC06F7700050321 /* rdar150228472.swift in Sources */,
 				528952812C70797900D0357E /* RKEntity.swift in Sources */,
 				440DB5B72C1914DC0021639B /* TextAnimationManager.swift in Sources */,
-				F46C34352DCD369B00B476F8 /* WKIdentityDocumentPresentmentController.swift in Sources */,
 				CDF1B915266F396A0007EC10 /* WKGroupSession.swift in Sources */,
+				F46C34352DCD369B00B476F8 /* WKIdentityDocumentPresentmentController.swift in Sources */,
 				F4D59C122DCC0292004492FB /* WKIdentityDocumentPresentmentError.mm in Sources */,
 				F46C342D2DCD350D00B476F8 /* WKIdentityDocumentPresentmentMobileDocumentRequest+Extras.swift in Sources */,
 				F4D59C1B2DCD30FE004492FB /* WKIdentityDocumentPresentmentMobileDocumentRequest.swift in Sources */,

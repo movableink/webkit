@@ -56,6 +56,7 @@ RemoteFrame::RemoteFrame(Page& page, ClientCreator&& clientCreator, FrameIdentif
     , m_window(RemoteDOMWindow::create(*this, GlobalWindowIdentifier { Process::identifier(), WindowIdentifier::generate() }))
     , m_client(clientCreator(*this))
     , m_layerHostingContextIdentifier(layerHostingContextIdentifier)
+    , m_autoplayPolicy(AutoplayPolicy::Default)
 {
     setView(RemoteFrameView::create(*this));
 }
@@ -170,6 +171,11 @@ void RemoteFrame::updateScrollingMode()
 RefPtr<SecurityOrigin> RemoteFrame::frameDocumentSecurityOrigin() const
 {
     return frameTreeSyncData().frameDocumentSecurityOrigin;
+}
+
+AutoplayPolicy RemoteFrame::autoplayPolicy() const
+{
+    return m_autoplayPolicy;
 }
 
 } // namespace WebCore

@@ -152,8 +152,8 @@ AudioContext::AudioContext(Document& document, const AudioContextOptions& contex
 void AudioContext::constructCommon()
 {
     ASSERT(document());
-    RefPtr mainFrameDocument = document()->mainFrameDocument();
-    if (!mainFrameDocument || mainFrameDocument->requiresUserGestureForAudioPlayback())
+    RefPtr page = document()->page();
+    if (!page || page->requiresUserGestureForAudioPlayback())
         addBehaviorRestriction(BehaviorRestrictionFlags::RequireUserGestureForAudioStartRestriction);
 
 #if PLATFORM(COCOA)

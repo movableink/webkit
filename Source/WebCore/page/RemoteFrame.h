@@ -40,6 +40,7 @@ class RemoteFrameView;
 class WeakPtrImplWithEventTargetData;
 
 enum class AdvancedPrivacyProtections : uint16_t;
+enum class AutoplayPolicy : uint8_t;
 enum class RenderAsTextFlag : uint16_t;
 
 class RemoteFrame final : public Frame {
@@ -76,6 +77,9 @@ public:
     void setAdvancedPrivacyProtections(OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections) { m_advancedPrivacyProtections = advancedPrivacyProtections; }
     OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const final;
 
+    void setAutoplayPolicy(AutoplayPolicy autoplayPolicy) { m_autoplayPolicy = autoplayPolicy; }
+    AutoplayPolicy autoplayPolicy() const final;
+
     void updateScrollingMode() final;
 
 private:
@@ -103,6 +107,7 @@ private:
     String m_customUserAgentAsSiteSpecificQuirks;
     String m_customNavigatorPlatform;
     OptionSet<AdvancedPrivacyProtections> m_advancedPrivacyProtections;
+    AutoplayPolicy m_autoplayPolicy;
     bool m_preventsParentFromBeingComplete { true };
 };
 

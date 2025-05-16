@@ -5686,4 +5686,20 @@ void Page::setPresentingApplicationAuditToken(std::optional<audit_token_t> prese
 }
 #endif
 
+bool Page::requiresUserGestureForAudioPlayback() const
+{
+    auto autoplayPolicy = m_mainFrame->autoplayPolicy();
+    if (autoplayPolicy != AutoplayPolicy::Default)
+        return autoplayPolicy == AutoplayPolicy::AllowWithoutSound || autoplayPolicy == AutoplayPolicy::Deny;
+    return m_settings->requiresUserGestureForAudioPlayback();
+}
+
+bool Page::requiresUserGestureForVideoPlayback() const
+{
+    auto autoplayPolicy = m_mainFrame->autoplayPolicy();
+    if (autoplayPolicy != AutoplayPolicy::Default)
+        return autoplayPolicy == AutoplayPolicy::Deny;
+    return m_settings->requiresUserGestureForVideoPlayback();
+}
+
 } // namespace WebCore

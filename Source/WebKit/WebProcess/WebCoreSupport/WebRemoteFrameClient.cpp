@@ -202,6 +202,7 @@ void WebRemoteFrameClient::applyWebsitePolicies(WebsitePoliciesData&& websitePol
     coreFrame->setCustomUserAgentAsSiteSpecificQuirks(WTFMove(websitePolicies.customUserAgentAsSiteSpecificQuirks));
     coreFrame->setAdvancedPrivacyProtections(websitePolicies.advancedPrivacyProtections);
     coreFrame->setCustomNavigatorPlatform(WTFMove(websitePolicies.customNavigatorPlatform));
+    coreFrame->setAutoplayPolicy(core(websitePolicies.autoplayPolicy));
 }
 
 void WebRemoteFrameClient::updateScrollingMode(ScrollbarMode scrollingMode)

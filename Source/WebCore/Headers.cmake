@@ -1662,6 +1662,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/AlternativeTextClient.h
     page/AttachmentElementClient.h
     page/AutoplayEvent.h
+    page/AutoplayPolicy.h
     page/CacheStorageProvider.h
     page/CaptionUserPreferences.h
     page/Chrome.h

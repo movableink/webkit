@@ -30,6 +30,7 @@
 #pragma once
 
 #include "AdvancedPrivacyProtections.h"
+#include "AutoplayPolicy.h"
 #include "CachedRawResourceClient.h"
 #include "CachedResourceHandle.h"
 #include "ContentFilterClient.h"
@@ -112,13 +113,6 @@ enum class LoadWillContinueInAnotherProcess : bool;
 enum class ShouldContinue;
 
 using ResourceLoaderMap = HashSet<RefPtr<ResourceLoader>>;
-
-enum class AutoplayPolicy : uint8_t {
-    Default, // Uses policies specified in document settings.
-    Allow,
-    AllowWithoutSound,
-    Deny,
-};
 
 enum class AutoplayQuirk : uint8_t {
     SynthesizedPauseEvents = 1 << 0,

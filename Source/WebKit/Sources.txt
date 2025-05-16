@@ -267,6 +267,7 @@ Shared/WebPushMessage.cpp
 Shared/WebTouchEvent.cpp
 Shared/WebWheelEventCoalescer.cpp
 Shared/WebWheelEvent.cpp
+Shared/WebsiteAutoplayPolicy.cpp
 Shared/WebsitePoliciesData.cpp
 
 Shared/API/APIArray.cpp

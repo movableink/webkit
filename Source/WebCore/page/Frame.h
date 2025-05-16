@@ -53,6 +53,7 @@ class WindowProxy;
 struct OwnerPermissionsPolicyData;
 
 enum class AdvancedPrivacyProtections : uint16_t;
+enum class AutoplayPolicy : uint8_t;
 enum class SandboxFlag : uint16_t;
 enum class ScrollbarMode : uint8_t;
 
@@ -120,6 +121,7 @@ public:
     virtual String customUserAgentAsSiteSpecificQuirks() const = 0;
     virtual String customNavigatorPlatform() const = 0;
     virtual OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const = 0;
+    virtual AutoplayPolicy autoplayPolicy() const = 0;
 
     virtual void updateSandboxFlags(SandboxFlags, NotifyUIProcess);
 

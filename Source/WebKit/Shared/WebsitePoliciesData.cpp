@@ -75,21 +75,7 @@ void WebsitePoliciesData::applyToDocumentLoader(WebsitePoliciesData&& websitePol
         quirks.add(WebCore::AutoplayQuirk::PerDocumentAutoplayBehavior);
 
     documentLoader.setAllowedAutoplayQuirks(quirks);
-
-    switch (websitePolicies.autoplayPolicy) {
-    case WebsiteAutoplayPolicy::Default:
-        documentLoader.setAutoplayPolicy(WebCore::AutoplayPolicy::Default);
-        break;
-    case WebsiteAutoplayPolicy::Allow:
-        documentLoader.setAutoplayPolicy(WebCore::AutoplayPolicy::Allow);
-        break;
-    case WebsiteAutoplayPolicy::AllowWithoutSound:
-        documentLoader.setAutoplayPolicy(WebCore::AutoplayPolicy::AllowWithoutSound);
-        break;
-    case WebsiteAutoplayPolicy::Deny:
-        documentLoader.setAutoplayPolicy(WebCore::AutoplayPolicy::Deny);
-        break;
-    }
+    documentLoader.setAutoplayPolicy(core(websitePolicies.autoplayPolicy));
 
     switch (websitePolicies.popUpPolicy) {
     case WebsitePopUpPolicy::Default:
