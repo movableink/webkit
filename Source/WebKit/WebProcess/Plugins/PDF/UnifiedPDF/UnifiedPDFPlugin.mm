@@ -2806,9 +2806,10 @@ static NSData *htmlDataFromSelection(PDFSelection *selection)
     if ([selection respondsToSelector:@selector(htmlData)])
         return [selection htmlData];
 #endif
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    return [[selection html] dataUsingEncoding:NSUTF8StringEncoding];
-ALLOW_DEPRECATED_DECLARATIONS_END
+    auto attributedString = selection.attributedString;
+    return [attributedString dataFromRange:NSMakeRange(0, attributedString.length)
+                        documentAttributes:@{ NSDocumentTypeDocumentAttribute : NSHTMLTextDocumentType }
+                                     error:nil];
 }
 
 bool UnifiedPDFPlugin::performCopyEditingOperation() const
