@@ -1392,7 +1392,9 @@ String ShorthandSerializer::serializeAnimationRange() const
     auto* startList = dynamicDowncast<CSSValueList>(startValue);
     auto* endList = dynamicDowncast<CSSValueList>(endValue);
     if (startList && endList) {
-        ASSERT(startList->size() == endList->size());
+        if (startList->size() != endList->size())
+            return emptyString();
+
         for (unsigned i = 0; i < startList->size(); i++) {
             auto start = startList->item(i);
             RefPtr startPair = dynamicDowncast<CSSValuePair>(start);
