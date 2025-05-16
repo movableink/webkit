@@ -27,6 +27,7 @@
 #import "VideoMediaSampleRenderer.h"
 
 #import "EffectiveRateChangedListener.h"
+#import "FourCC.h"
 #import "IOSurface.h"
 #import "Logging.h"
 #import "MediaSampleAVFObjC.h"
@@ -547,15 +548,10 @@ void VideoMediaSampleRenderer::decodeNextSampleIfNeeded()
 
         assertIsCurrent(dispatcher().get());
 
-        if (LOG_CHANNEL(MediaPerformance).level >= WTFLogLevel::Debug) {
-            auto now = MonotonicTime::now();
-            m_frameRateMonitor.update();
-            RELEASE_LOG_DEBUG(MediaPerformance, "VideoMediaSampleRenderer decoding rate:%0.1fHz rolling:%0.1f decoder rate:%0.1fHz compressed queue:%u decoded queue:%zu bframes:%d", 1.0f / Seconds { now - std::exchange(m_timeSinceLastDecode, now) }.value(), m_frameRateMonitor.observedFrameRate(), 1.0f / Seconds { now - startTime }.value(), m_compressedSampleQueueSize.load(), decodedSamplesCount(), m_hasOutOfOrderFrames);
-        }
-
         m_isDecodingSample = false;
 
         if (flushId != m_flushId || (!result && result.error() == noErr)) {
+            RELEASE_LOG(Media, "Decoder was flushed");
             decodeNextSampleIfNeeded();
             return;
         }
@@ -594,6 +590,17 @@ void VideoMediaSampleRenderer::decodeNextSampleIfNeeded()
                 protectedThis->notifyErrorHasOccurred(status);
             });
             return;
+        }
+
+        if (LOG_CHANNEL(MediaPerformance).level >= WTFLogLevel::Debug) {
+            auto now = MonotonicTime::now();
+            m_frameRateMonitor.update();
+            OSType format = '----';
+            if (result->size() && (*result)[0]) {
+                RetainPtr imageBuffer = (CVPixelBufferRef)PAL::CMSampleBufferGetImageBuffer(static_cast<CMSampleBufferRef>((*result)[0].get()));
+                format = CVPixelBufferGetPixelFormatType(imageBuffer.get());
+            }
+            RELEASE_LOG_DEBUG(MediaPerformance, "VideoMediaSampleRenderer decoding rate:%0.1fHz rolling:%0.1f decoder rate:%0.1fHz compressed queue:%u decoded queue:%zu bframes:%d hw:%d format:%s", 1.0f / Seconds { now - std::exchange(m_timeSinceLastDecode, now) }.value(), m_frameRateMonitor.observedFrameRate(), 1.0f / Seconds { now - startTime }.value(), m_compressedSampleQueueSize.load(), decodedSamplesCount(), m_hasOutOfOrderFrames, protectedThis->decompressionSession()->isHardwareAccelerated(), &FourCC(format).string()[0]);
         }
 
         if (displaying) {

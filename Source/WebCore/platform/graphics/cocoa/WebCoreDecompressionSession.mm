@@ -108,7 +108,10 @@ Expected<RetainPtr<VTDecompressionSessionRef>, OSStatus> WebCoreDecompressionSes
 
         NSDictionary *attributes;
         if (m_mode == OpenGL)
-            attributes = @{ (__bridge NSString *)kCVPixelBufferIOSurfacePropertiesKey: @{ /* empty dictionary */ } };
+            attributes = @{
+                (__bridge NSString *)kCVPixelBufferIOSurfaceCoreAnimationCompatibilityKey: (id)kCFBooleanTrue,
+                (__bridge NSString *)kCVPixelBufferIOSurfacePropertiesKey: @{ /* empty dictionary */ }
+            };
         else {
             attributes = @{
                 (__bridge NSString *)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA),
