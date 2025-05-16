@@ -625,7 +625,7 @@ AtomString TextUtil::ellipsisTextInInlineDirection(bool isHorizontal)
 
 InlineLayoutUnit TextUtil::hyphenWidth(const RenderStyle& style)
 {
-    return std::max(0.f, style.fontCascade().width(TextRun { StringView { style.hyphenString() } }));
+    return std::max(0.f, style.fontCascade().width(StringView { style.hyphenString() }));
 }
 
 bool TextUtil::hasHangablePunctuationStart(const InlineTextItem& inlineTextItem, const RenderStyle& style)
