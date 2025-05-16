@@ -38,6 +38,7 @@
 
 #include "AudioSession.h"
 #include "DocumentInlines.h"
+#include "ExceptionCode.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaStream.h"
 #include "JSOverconstrainedError.h"
