@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -255,9 +255,7 @@ IntPoint ScrollView::platformScreenToContents(const IntPoint& point) const
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS
     if (NSView* documentView = this->documentView()) {
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        NSPoint windowCoord = [[documentView window] convertScreenToBase: point];
-ALLOW_DEPRECATED_DECLARATIONS_END
+        NSPoint windowCoord = [[documentView window] convertPointFromScreen: point];
         return IntPoint([documentView convertPoint:windowCoord fromView:nil]);
     }
     END_BLOCK_OBJC_EXCEPTIONS

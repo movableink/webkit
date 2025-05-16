@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -204,10 +204,7 @@ void WebPopupMenuProxyMac::showPopupMenu(const IntRect& rect, TextDirection text
 
     [NSApp postEvent:fakeEvent.get() atStart:YES];
     fakeEvent = [NSEvent mouseEventWithType:NSEventTypeMouseMoved
-                                   location:[[m_webView window]
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-                        convertScreenToBase:[NSEvent mouseLocation]]
-ALLOW_DEPRECATED_DECLARATIONS_END
+                                   location:[[m_webView window] convertPointFromScreen:[NSEvent mouseLocation]]
                               modifierFlags:[initiatingNSEvent modifierFlags]
                                   timestamp:[initiatingNSEvent timestamp]
                                windowNumber:[initiatingNSEvent windowNumber]

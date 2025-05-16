@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -4122,9 +4122,7 @@ void WebViewImpl::draggedImage(NSImage *, CGPoint endPoint, NSDragOperation oper
 
 void WebViewImpl::sendDragEndToPage(CGPoint endPoint, NSDragOperation dragOperationMask)
 {
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    NSPoint windowImageLoc = [[m_view window] convertScreenToBase:NSPointFromCGPoint(endPoint)];
-ALLOW_DEPRECATED_DECLARATIONS_END
+    NSPoint windowImageLoc = [[m_view window] convertPointFromScreen:NSPointFromCGPoint(endPoint)];
     NSPoint windowMouseLoc = windowImageLoc;
 
     // Prevent queued mouseDragged events from coming after the drag and fake mouseUp event.
@@ -5355,11 +5353,8 @@ void WebViewImpl::characterIndexForPoint(NSPoint point, void(^completionHandler)
     LOG(TextInput, "characterIndexForPoint:(%f, %f)", point.x, point.y);
 
     RetainPtr window = [m_view window];
-
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     if (window)
-        point = [window convertScreenToBase:point];
-ALLOW_DEPRECATED_DECLARATIONS_END
+        point = [window convertPointFromScreen:point];
     point = [m_view convertPoint:point fromView:nil];  // the point is relative to the main frame
 
     m_page->characterIndexForPointAsync(WebCore::IntPoint(point), [completionHandler = makeBlockPtr(completionHandler)](uint64_t result) {
