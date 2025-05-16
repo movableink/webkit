@@ -3637,6 +3637,24 @@ enum class WebCore::WasPrivateRelayed : bool;
     std::optional<WebCore::CertificateInfo> certificateInfo;
 };
 
+#if PLATFORM(COCOA)
+[RefCounted, CreateUsing=createWithData] class WebCore::ArchiveResource {
+    Ref<WebCore::FragmentedSharedBuffer> protectedData();
+    URL url();
+    String mimeType();
+    String textEncoding();
+    String frameName();
+    WebCore::ResourceResponse response();
+    String relativeFilePath();
+};
+
+[RefCounted, CreateUsing=create] class WebCore::LegacyWebArchive {
+    Ref<WebCore::ArchiveResource> protectedMainResource();
+    Vector<Ref<WebCore::ArchiveResource>> subresources();
+    Vector<WebCore::FrameIdentifier> subframeIdentifiers();
+};
+#endif
+
 enum class WebCore::ReferrerPolicy : uint8_t {
     EmptyString,
     NoReferrer,

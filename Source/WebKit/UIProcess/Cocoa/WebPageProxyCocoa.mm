@@ -72,6 +72,7 @@
 #import <WebCore/DragItem.h>
 #import <WebCore/GeometryUtilities.h>
 #import <WebCore/HighlightVisibility.h>
+#import <WebCore/LegacyWebArchive.h>
 #import <WebCore/LocalCurrentGraphicsContext.h>
 #import <WebCore/NetworkExtensionContentFilter.h>
 #import <WebCore/NotImplemented.h>
@@ -95,6 +96,7 @@
 #import <wtf/BlockPtr.h>
 #import <wtf/SoftLinking.h>
 #import <wtf/cf/TypeCastsCF.h>
+#import <wtf/cf/VectorCF.h>
 #import <wtf/cocoa/SpanCocoa.h>
 
 #if ENABLE(MEDIA_USAGE)
@@ -1559,6 +1561,74 @@ void WebPageProxy::decodeImageData(Ref<WebCore::SharedBuffer>&& buffer, std::opt
     ensureProtectedRunningProcess()->sendWithAsyncReply(Messages::WebPage::DecodeImageData(WTFMove(buffer), preferredSize), [preventProcessShutdownScope = protectedLegacyMainFrameProcess()->shutdownPreventingScope(), completionHandler = WTFMove(completionHandler)] (auto result) mutable {
         completionHandler(WTFMove(result));
     }, webPageIDInMainFrameProcess());
+}
+
+void WebPageProxy::getWebArchiveData(CompletionHandler<void(API::Data*)>&& completionHandler)
+{
+    RefPtr mainFrame = m_mainFrame;
+    if (!mainFrame)
+        return completionHandler(nullptr);
+
+    class WebArchvieCallbackAggregator final : public ThreadSafeRefCounted<WebArchvieCallbackAggregator, WTF::DestructionThread::MainRunLoop> {
+    public:
+        using Callback = CompletionHandler<void(RefPtr<LegacyWebArchive>&&)>;
+        static Ref<WebArchvieCallbackAggregator> create(WebCore::FrameIdentifier rootFrameIdentifier, Callback&& callback)
+        {
+            return adoptRef(*new WebArchvieCallbackAggregator(rootFrameIdentifier, WTFMove(callback)));
+        }
+
+        RefPtr<WebCore::LegacyWebArchive> completeFrameArchive(FrameIdentifier identifier)
+        {
+            RefPtr archive = m_frameArchives.take(identifier);
+            if (!archive)
+                return archive;
+
+            for (auto subframeIdentifier : archive->subframeIdentifiers()) {
+                if (auto subframeArchive = completeFrameArchive(subframeIdentifier))
+                    archive->appendSubframeArchive(subframeArchive.releaseNonNull());
+            }
+
+            return archive;
+        }
+
+        ~WebArchvieCallbackAggregator()
+        {
+            if (m_callback)
+                m_callback(completeFrameArchive(m_rootFrameIdentifier));
+        }
+
+        void addResult(HashMap<WebCore::FrameIdentifier, Ref<WebCore::LegacyWebArchive>>&& frameArchives)
+        {
+            for (auto&& [frameIdentifier, archive] : frameArchives)
+                m_frameArchives.set(frameIdentifier, WTFMove(archive));
+        }
+
+    private:
+        WebArchvieCallbackAggregator(WebCore::FrameIdentifier rootFrameIdentifier, Callback&& callback)
+            : m_rootFrameIdentifier(rootFrameIdentifier)
+            , m_callback(WTFMove(callback))
+        {
+        }
+
+        WebCore::FrameIdentifier m_rootFrameIdentifier;
+        Callback m_callback;
+        HashMap<WebCore::FrameIdentifier, Ref<WebCore::LegacyWebArchive>> m_frameArchives;
+    };
+
+    auto callbackAggregator = WebArchvieCallbackAggregator::create(mainFrame->frameID(), [completionHandler = WTFMove(completionHandler)](auto webArchive) mutable {
+        if (!webArchive)
+            return completionHandler(nullptr);
+
+        RetainPtr data = webArchive->rawDataRepresentation();
+        if (!data)
+            return completionHandler(nullptr);
+        completionHandler(API::Data::create(span(data.get())).ptr());
+    });
+    forEachWebContentProcess([&](auto& webProcess, auto pageID) {
+        webProcess.sendWithAsyncReply(Messages::WebPage::GetWebArchives(), [callbackAggregator](auto&& result) {
+            callbackAggregator->addResult(WTFMove(result));
+        }, pageID);
+    });
 }
 
 String WebPageProxy::presentingApplicationBundleIdentifier() const
