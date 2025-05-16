@@ -2174,3 +2174,5 @@ webkit.org/b/293023 http/wpt/content-security-policy/sandbox-manifest-blocked-cr
 webkit.org/b/293142 http/wpt/content-security-policy/sandbox-manifest-blocked.html [ Pass Failure ]
 
 webkit.org/b/293132 http/tests/contentextensions/make-https.html [ Pass Failure ]
+
+webkit.org/b/293145 [ Debug arm64 ] imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-for-user-scroll.html [ Pass Failure ]
