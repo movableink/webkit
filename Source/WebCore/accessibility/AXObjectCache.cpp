@@ -587,6 +587,18 @@ ContainerNode* composedParentIgnoringDocumentFragments(Node* node)
     return node ? composedParentIgnoringDocumentFragments(*node) : nullptr;
 }
 
+ElementName elementName(Node* node)
+{
+    auto* element = dynamicDowncast<Element>(node);
+    return element ? element->elementName() : ElementName::Unknown;
+}
+
+ElementName elementName(Node& node)
+{
+    auto* element = dynamicDowncast<Element>(node);
+    return element ? element->elementName() : ElementName::Unknown;
+}
+
 bool hasAccNameAttribute(Element& element)
 {
     auto trimmed = [&] (const auto& attribute) {
@@ -682,8 +694,8 @@ bool hasPresentationRole(Element& element)
 
 bool isRowGroup(Element& element)
 {
-    auto tagName = element.localName();
-    return tagName == theadTag || tagName == tbodyTag || tagName == tfootTag || hasRole(element, "rowgroup"_s);
+    auto name = element.elementName();
+    return name == ElementName::HTML_thead || name == ElementName::HTML_tbody || name == ElementName::HTML_tfoot || hasRole(element, "rowgroup"_s);
 }
 
 bool isRowGroup(Node* node)
@@ -698,8 +710,8 @@ static bool isAccessibilityList(Element& element)
         return true;
 
     // Call it a list if it has no ARIA role and a list tag.
-    auto tagName = element.localName();
-    return hasRole(element, nullAtom()) && (tagName == ulTag || tagName == olTag || tagName == dlTag || tagName == menuTag);
+    auto name = element.elementName();
+    return hasRole(element, nullAtom()) && (name == ElementName::HTML_ul || name == ElementName::HTML_ol || name == ElementName::HTML_dl || name == ElementName::HTML_menu);
 }
 
 static bool isAccessibilityTree(Element& element)
@@ -1478,7 +1490,7 @@ void AXObjectCache::handleChildrenChanged(AccessibilityObject& object)
         for (const auto& describedObject : parent->descriptionForObjects())
             postNotification(&downcast<AccessibilityObject>(describedObject.get()), nullptr, AXNotification::ExtendedDescriptionChanged);
 
-        if (parent->hasTagName(captionTag))
+        if (parent->hasElementName(ElementName::HTML_caption))
             foundTableCaption = true;
         else if (foundTableCaption && parent->isTable()) {
             postNotification(parent.get(), nullptr, AXNotification::TextChanged);
@@ -3038,7 +3050,7 @@ void AXObjectCache::handleAttributeChange(Element* element, const QualifiedName&
         postNotification(element, AXNotification::ControlledObjectsChanged);
     else if (attrName == aria_valuenowAttr || attrName == aria_valuetextAttr)
         postNotification(element, AXNotification::ValueChanged);
-    else if (attrName == aria_labelAttr && element->hasTagName(htmlTag)) {
+    else if (attrName == aria_labelAttr && element->elementName() == ElementName::HTML_html) {
         // When aria-label changes on an <html> element, it's the web area who needs to re-compute its accessibility text.
         handleTextChanged(get(element->protectedDocument().ptr()));
     } else if (attrName == aria_labelAttr || attrName == aria_labeledbyAttr || attrName == aria_labelledbyAttr) {
@@ -3379,7 +3391,7 @@ CharacterOffset AXObjectCache::traverseToOffsetInRange(const SimpleRange& range,
                             currentNode = shadowHost;
                             continue;
                         }
-                    } else if (previousNode && previousNode->isTextNode() && previousNode->isDescendantOf(currentNode) && currentNode->hasTagName(pTag)) {
+                    } else if (previousNode && previousNode->isTextNode() && previousNode->isDescendantOf(currentNode) && elementName(currentNode) == ElementName::HTML_p) {
                         // TextIterator is emitting an extra newline after the <p> element. We should
                         // ignore that since the extra text node is not in the DOM tree.
                         currentNode = previousNode;
@@ -3482,7 +3494,7 @@ std::optional<SimpleRange> AXObjectCache::rangeMatchesTextNearRange(const Simple
 
 static bool isReplacedNodeOrBR(Node& node)
 {
-    return AccessibilityObject::replacedNodeNeedsCharacter(node) || node.hasTagName(brTag);
+    return AccessibilityObject::replacedNodeNeedsCharacter(node) || WebCore::elementName(node) == ElementName::HTML_br;
 }
 
 static bool characterOffsetsInOrder(const CharacterOffset& characterOffset1, const CharacterOffset& characterOffset2)
@@ -4085,8 +4097,8 @@ static bool characterOffsetNodeIsBR(const CharacterOffset& characterOffset)
 {
     if (characterOffset.isNull())
         return false;
-    
-    return characterOffset.node->hasTagName(brTag);
+
+    return WebCore::elementName(*characterOffset.node) == ElementName::HTML_br;
 }
     
 static Node* parentEditingBoundary(Node* node)
@@ -5405,7 +5417,8 @@ bool AXObjectCache::addRelation(Element& origin, Element& target, AXRelation rel
 
 static bool canHaveRelations(Element& element)
 {
-    return !(element.hasTagName(metaTag) || element.hasTagName(headTag) || element.hasTagName(scriptTag) || element.hasTagName(htmlTag) || element.hasTagName(styleTag));
+    auto elementName = element.elementName();
+    return !(elementName == ElementName::HTML_meta || elementName == ElementName::HTML_head || elementName == ElementName::HTML_script || elementName == ElementName::HTML_html || elementName == ElementName::HTML_style);
 }
 
 static bool relationCausesCycle(AccessibilityObject* origin, AccessibilityObject* target, AXRelation relation)
@@ -5661,9 +5674,9 @@ void AXObjectCache::addLabelForRelation(Element& origin)
     if (RefPtr label = dynamicDowncast<HTMLLabelElement>(origin)) {
         if (RefPtr control = Accessibility::controlForLabelElement(*label))
             addedRelation = addRelation(origin, *control, AXRelation::LabelFor);
-    } else if (origin.hasTagName(figcaptionTag)) {
-        RefPtr parent = origin.parentNode();
-        if (parent && parent->hasTagName(figureTag))
+    } else if (origin.elementName() == ElementName::HTML_figcaption) {
+        RefPtr parent = dynamicDowncast<Element>(origin.parentNode());
+        if (parent && parent->elementName() == ElementName::HTML_figure)
             addedRelation = addRelation(RefPtr { getOrCreate(origin) }.get(), RefPtr { getOrCreate(*parent) }.get(), AXRelation::LabelFor);
     }
 

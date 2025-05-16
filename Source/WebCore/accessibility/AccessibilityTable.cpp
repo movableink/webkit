@@ -167,13 +167,14 @@ bool AccessibilityTable::isDataTable() const
 
         // If there's a colgroup or col element, it's probably a data table.
         for (const auto& child : childrenOfType<HTMLElement>(*tableElement)) {
-            if (child.hasTagName(colTag) || child.hasTagName(colgroupTag))
+            auto elementName = child.elementName();
+            if (elementName == ElementName::HTML_col || elementName == ElementName::HTML_colgroup)
                 return true;
         }
     }
     
     // The following checks should only apply if this is a real <table> element.
-    if (!hasTagName(tableTag))
+    if (!hasElementName(ElementName::HTML_table))
         return false;
     
     // If the author has used ARIA to specify a valid column or row count, assume they
@@ -239,13 +240,14 @@ bool AccessibilityTable::isDataTable() const
         bool rowIsAllTableHeaderCells = true;
         for (RefPtr currentElement = currentParent ? currentParent->firstElementChild() : nullptr; currentElement; currentElement = currentElement->nextElementSibling()) {
             if (auto* tableSectionElement = dynamicDowncast<HTMLTableSectionElement>(currentElement.get())) {
-                if (tableSectionElement->hasTagName(theadTag)) {
+                auto elementName = tableSectionElement->elementName();
+                if (elementName == ElementName::HTML_thead) {
                     if (topSectionIndicatesLayoutTable(tableSectionElement))
                         return false;
-                } else if (tableSectionElement->hasTagName(tbodyTag))
+                } else if (elementName == ElementName::HTML_tbody)
                     firstBody = firstBody ? firstBody : tableSectionElement;
                 else {
-                    ASSERT_WITH_MESSAGE(tableSectionElement->hasTagName(tfootTag), "table section elements should always have either thead, tbody, or tfoot tag");
+                    ASSERT_WITH_MESSAGE(elementName == ElementName::HTML_tfoot, "table section elements should always have either thead, tbody, or tfoot tag");
                     firstFoot = firstFoot ? firstFoot : tableSectionElement;
                 }
             } else if (auto* tableRow = dynamicDowncast<HTMLTableRowElement>(currentElement.get())) {
@@ -268,7 +270,7 @@ bool AccessibilityTable::isDataTable() const
             } else if (auto* cell = dynamicDowncast<HTMLTableCellElement>(currentElement.get())) {
                 cellCount++;
 
-                bool isTHCell = cell->hasTagName(thTag);
+                bool isTHCell = cell->elementName() == ElementName::HTML_th;
                 if (!isTHCell && rowIsAllTableHeaderCells)
                     rowIsAllTableHeaderCells = false;
                 if (auto* parentNode = cell->parentNode()) {
@@ -714,7 +716,7 @@ unsigned AccessibilityTable::computeCellSlots()
         auto* element = dynamicDowncast<Element>(node);
         // Step 8: While the current element is not one of the following elements, advance the
         // current element to the next child of the table.
-        bool descendantIsRow = element && (element->hasTagName(trTag) || hasRole(*element, "row"_s));
+        bool descendantIsRow = element && (element->elementName() == ElementName::HTML_tr || hasRole(*element, "row"_s));
         bool descendantIsRowGroup = !descendantIsRow && element && isRowGroup(*element);
 
 #if !ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
@@ -766,7 +768,7 @@ unsigned AccessibilityTable::computeCellSlots()
             endRowGroup();
 
         // Step 15: If the current element is a tfoot...
-        if (element->hasTagName(tfootTag)) {
+        if (element->elementName() == ElementName::HTML_tfoot) {
             // ...then add that element to the list of pending tfoot elements
             pendingTfootElements.append(*element);
             // ...advance the current element to the next child of the table.

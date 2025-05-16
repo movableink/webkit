@@ -333,13 +333,14 @@ AccessibilityRole AccessibilityNodeObject::determineAccessibilityRoleFromNode(Tr
     if (is<HTMLImageElement>(*element) && element->hasAttributeWithoutSynchronization(usemapAttr))
         return AccessibilityRole::ImageMap;
 
-    if (element->hasTagName(liTag))
+    auto elementName = element->elementName();
+    if (elementName == ElementName::HTML_li)
         return AccessibilityRole::ListItem;
-    if (element->hasTagName(buttonTag))
+    if (elementName == ElementName::HTML_button)
         return buttonRoleType();
-    if (element->hasTagName(legendTag))
+    if (elementName == ElementName::HTML_legend)
         return AccessibilityRole::Legend;
-    if (element->hasTagName(canvasTag))
+    if (elementName == ElementName::HTML_canvas)
         return AccessibilityRole::Canvas;
 
     if (RefPtr input = dynamicDowncast<HTMLInputElement>(*element))
@@ -351,66 +352,66 @@ AccessibilityRole AccessibilityNodeObject::determineAccessibilityRoleFromNode(Tr
     if (headingLevel())
         return AccessibilityRole::Heading;
 
-    if (element->hasTagName(codeTag))
+    if (elementName == ElementName::HTML_code)
         return AccessibilityRole::Code;
-    if (element->hasTagName(delTag) || element->hasTagName(sTag))
+    if (elementName == ElementName::HTML_del || elementName == ElementName::HTML_s)
         return AccessibilityRole::Deletion;
-    if (element->hasTagName(insTag))
+    if (elementName == ElementName::HTML_ins)
         return AccessibilityRole::Insertion;
-    if (element->hasTagName(subTag))
+    if (elementName == ElementName::HTML_sub)
         return AccessibilityRole::Subscript;
-    if (element->hasTagName(supTag))
+    if (elementName == ElementName::HTML_sup)
         return AccessibilityRole::Superscript;
-    if (element->hasTagName(strongTag))
+    if (elementName == ElementName::HTML_strong)
         return AccessibilityRole::Strong;
 
-    if (element->hasTagName(kbdTag)
-        || element->hasTagName(preTag)
-        || element->hasTagName(sampTag)
-        || element->hasTagName(varTag)
-        || element->hasTagName(citeTag))
+    if (elementName == ElementName::HTML_kbd
+        || elementName == ElementName::HTML_pre
+        || elementName == ElementName::HTML_samp
+        || elementName == ElementName::HTML_var
+        || elementName == ElementName::HTML_cite)
         return treatStyleFormatGroupAsInline == TreatStyleFormatGroupAsInline::Yes ? AccessibilityRole::Inline : AccessibilityRole::TextGroup;
 
-    if (element->hasTagName(ddTag))
+    if (elementName == ElementName::HTML_dd)
         return AccessibilityRole::DescriptionListDetail;
-    if (element->hasTagName(dtTag))
+    if (elementName == ElementName::HTML_dt)
         return AccessibilityRole::DescriptionListTerm;
-    if (element->hasTagName(dlTag))
+    if (elementName == ElementName::HTML_dl)
         return AccessibilityRole::DescriptionList;
 
-    if (element->hasTagName(menuTag)
-        || element->hasTagName(olTag)
-        || element->hasTagName(ulTag))
+    if (elementName == ElementName::HTML_menu
+        || elementName == ElementName::HTML_ol
+        || elementName == ElementName::HTML_ul)
         return AccessibilityRole::List;
 
-    if (element->hasTagName(fieldsetTag))
+    if (elementName == ElementName::HTML_fieldset)
         return AccessibilityRole::Group;
-    if (element->hasTagName(figureTag))
+    if (elementName == ElementName::HTML_figure)
         return AccessibilityRole::Figure;
-    if (element->hasTagName(pTag))
+    if (elementName == ElementName::HTML_p)
         return AccessibilityRole::Paragraph;
 
     if (is<HTMLLabelElement>(*element))
         return AccessibilityRole::Label;
-    if (element->hasTagName(dfnTag)) {
+    if (elementName == ElementName::HTML_dfn) {
         // Confusingly, the `dfn` element represents a term being defined, making it equivalent to the "term" ARIA
         // role rather than the "definition" ARIA role. The "definition" ARIA role has no HTML equivalent.
         // https://html.spec.whatwg.org/multipage/text-level-semantics.html#the-dfn-element
         // https://w3c.github.io/aria/#term and https://w3c.github.io/aria/#definition
         return AccessibilityRole::Term;
     }
-    if (element->hasTagName(divTag) && !isNonNativeTextControl())
+    if (elementName == ElementName::HTML_div && !isNonNativeTextControl())
         return AccessibilityRole::Generic;
     if (is<HTMLFormElement>(*element))
         return AccessibilityRole::Form;
-    if (element->hasTagName(articleTag))
+    if (elementName == ElementName::HTML_article)
         return AccessibilityRole::DocumentArticle;
-    if (element->hasTagName(mainTag))
+    if (elementName == ElementName::HTML_main)
         return AccessibilityRole::LandmarkMain;
-    if (element->hasTagName(navTag))
+    if (elementName == ElementName::HTML_nav)
         return AccessibilityRole::LandmarkNavigation;
 
-    if (element->hasTagName(asideTag)) {
+    if (elementName == ElementName::HTML_aside) {
         if (ariaRoleAttribute() == AccessibilityRole::LandmarkComplementary || !isDescendantOfElementType({ asideTag, articleTag, sectionTag, navTag }))
             return AccessibilityRole::LandmarkComplementary;
 
@@ -419,25 +420,25 @@ AccessibilityRole AccessibilityNodeObject::determineAccessibilityRoleFromNode(Tr
         return WebCore::hasAccNameAttribute(*element) ? AccessibilityRole::LandmarkComplementary : AccessibilityRole::Generic;
     }
 
-    if (element->hasTagName(searchTag))
+    if (elementName == ElementName::HTML_search)
         return AccessibilityRole::LandmarkSearch;
 
-    if (element->hasTagName(sectionTag)) {
+    if (elementName == ElementName::HTML_section) {
         // https://w3c.github.io/html-aam/#el-section
         // The default role attribute value for the section element, region, became a landmark in ARIA 1.1.
         // The HTML AAM spec says it is "strongly recommended" that ATs only convey and provide navigation
         // for section elements which have names.
         return WebCore::hasAccNameAttribute(*element) ? AccessibilityRole::LandmarkRegion : AccessibilityRole::TextGroup;
     }
-    if (element->hasTagName(addressTag))
+    if (elementName == ElementName::HTML_address)
         return AccessibilityRole::Group;
-    if (element->hasTagName(blockquoteTag))
+    if (elementName == ElementName::HTML_blockquote)
         return AccessibilityRole::Blockquote;
-    if (element->hasTagName(captionTag) || element->hasTagName(figcaptionTag))
+    if (elementName == ElementName::HTML_caption || elementName == ElementName::HTML_figcaption)
         return AccessibilityRole::Caption;
-    if (element->hasTagName(dialogTag))
+    if (elementName == ElementName::HTML_dialog)
         return AccessibilityRole::ApplicationDialog;
-    if (element->hasTagName(markTag) || equalLettersIgnoringASCIICase(getAttribute(roleAttr), "mark"_s))
+    if (elementName == ElementName::HTML_mark || equalLettersIgnoringASCIICase(getAttribute(roleAttr), "mark"_s))
         return AccessibilityRole::Mark;
     if (is<HTMLDetailsElement>(*element))
         return AccessibilityRole::Details;
@@ -457,17 +458,17 @@ AccessibilityRole AccessibilityNodeObject::determineAccessibilityRoleFromNode(Tr
 #endif
 
 #if ENABLE(MODEL_ELEMENT)
-    if (element->hasTagName(modelTag))
+    if (elementName == ElementName::HTML_model)
         return AccessibilityRole::Model;
 #endif
 
     // The HTML element should not be exposed as an element. That's what the RenderView element does.
-    if (element->hasTagName(htmlTag))
+    if (elementName == ElementName::HTML_html)
         return AccessibilityRole::Ignored;
 
     // There should only be one banner/contentInfo per page. If header/footer are being used within an article or section then it should not be exposed as whole page's banner/contentInfo.
     // https://w3c.github.io/html-aam/#el-header
-    if (element->hasTagName(headerTag)) {
+    if (elementName == ElementName::HTML_header) {
         if (!isDescendantOfElementType({ articleTag, asideTag, mainTag, navTag, sectionTag }))
             return AccessibilityRole::LandmarkBanner;
         return AccessibilityRole::Generic;
@@ -476,19 +477,19 @@ AccessibilityRole AccessibilityNodeObject::determineAccessibilityRoleFromNode(Tr
     // http://webkit.org/b/190138 Footers should become contentInfo's if scoped to body (and consequently become a landmark).
     // It should remain a footer if scoped to main, sectioning elements (article, aside, nav, section) or root sectioning element (blockquote, details, dialog, fieldset, figure, td).
     // https://w3c.github.io/html-aam/#el-footer
-    if (element->hasTagName(footerTag)) {
+    if (elementName == ElementName::HTML_footer) {
         if (!isDescendantOfElementType({ articleTag, asideTag, navTag, sectionTag, mainTag, blockquoteTag, detailsTag, dialogTag, fieldsetTag, figureTag, tdTag }))
             return AccessibilityRole::LandmarkContentInfo;
         return AccessibilityRole::Footer;
     }
 
-    if (element->hasTagName(timeTag))
+    if (elementName == ElementName::HTML_time)
         return AccessibilityRole::Time;
-    if (element->hasTagName(hrTag))
+    if (elementName == ElementName::HTML_hr)
         return AccessibilityRole::HorizontalRule;
-    if (element->hasTagName(emTag))
+    if (elementName == ElementName::HTML_em)
         return AccessibilityRole::Emphasis;
-    if (element->hasTagName(hgroupTag))
+    if (elementName == ElementName::HTML_hgroup)
         return AccessibilityRole::Group;
 
     // If the element does not have role, but it has ARIA attributes, or accepts tab focus, accessibility should fallback to exposing it as a group.
@@ -607,7 +608,7 @@ void AccessibilityNodeObject::addChildren()
         return;
 
     // The only time we add children from the DOM tree to a node with a renderer is when it's a canvas.
-    if (renderer() && !node->hasTagName(canvasTag))
+    if (renderer() && WebCore::elementName(*node) != ElementName::HTML_canvas)
         return;
 
     CheckedPtr cache = axObjectCache();
@@ -637,8 +638,8 @@ void AccessibilityNodeObject::addChildren()
 
 bool AccessibilityNodeObject::canHaveChildren() const
 {
-    // When <noscript> is not being used (its renderer() == 0), ignore its children.
-    if (node() && !renderer() && node()->hasTagName(noscriptTag))
+    // When <noscript> is not being used (its renderer() == 0), ignore its children
+    if (node() && !renderer() && WebCore::elementName(node()) == ElementName::HTML_noscript)
         return false;
     // If this is an AccessibilityRenderObject, then it's okay if this object
     // doesn't have a node - there are some renderers that don't have associated
@@ -703,7 +704,7 @@ bool AccessibilityNodeObject::computeIsIgnored() const
     if (node->isTextNode() && !renderer()) {
         RefPtr parent = node->parentNode();
         // Fallback content in iframe nodes should be ignored.
-        if (parent && parent->hasTagName(iframeTag) && parent->renderer())
+        if (WebCore::elementName(parent.get()) == ElementName::HTML_iframe && parent->renderer())
             return true;
 
         // Whitespace only text elements should be ignored when they have no renderer.
@@ -782,7 +783,8 @@ bool AccessibilityNodeObject::isNativeImage() const
     if (is<HTMLImageElement>(*node))
         return true;
 
-    if (node->hasTagName(appletTag) || node->hasTagName(embedTag) || node->hasTagName(objectTag))
+    auto elementName = WebCore::elementName(node);
+    if (elementName == ElementName::HTML_applet || elementName == ElementName::HTML_embed || elementName == ElementName::HTML_object)
         return true;
 
     if (RefPtr input = dynamicDowncast<HTMLInputElement>(*node))
@@ -985,18 +987,18 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityNodeObject::radioButtonGr
 
 unsigned AccessibilityNodeObject::headingTagLevel() const
 {
-    const auto& tag = tagName();
-    if (tag == h1Tag)
+    auto elementName = this->elementName();
+    if (elementName == ElementName::HTML_h1)
         return 1;
-    if (tag == h2Tag)
+    if (elementName == ElementName::HTML_h2)
         return 2;
-    if (tag == h3Tag)
+    if (elementName == ElementName::HTML_h3)
         return 3;
-    if (tag == h4Tag)
+    if (elementName == ElementName::HTML_h4)
         return 4;
-    if (tag == h5Tag)
+    if (elementName == ElementName::HTML_h5)
         return 5;
-    if (tag == h6Tag)
+    if (elementName == ElementName::HTML_h6)
         return 6;
 
     return 0;
@@ -1086,11 +1088,7 @@ bool AccessibilityNodeObject::isBusy() const
 
 bool AccessibilityNodeObject::isFieldset() const
 {
-    Node* node = this->node();
-    if (!node)
-        return false;
-
-    return node->hasTagName(fieldsetTag);
+    return elementName() == ElementName::HTML_fieldset;
 }
 
 AccessibilityButtonState AccessibilityNodeObject::checkboxOrRadioValue() const
@@ -1213,10 +1211,11 @@ bool AccessibilityNodeObject::toggleDetailsAncestor()
 
 static RefPtr<Element> nodeActionElement(Node& node)
 {
+    auto elementName = WebCore::elementName(node);
     if (RefPtr input = dynamicDowncast<HTMLInputElement>(node)) {
         if (!input->isDisabledFormControl() && (input->isRadioButton() || input->isCheckbox() || input->isTextButton() || input->isFileUpload() || input->isImageButton()))
             return input;
-    } else if (node.hasTagName(buttonTag) || node.hasTagName(selectTag))
+    } else if (elementName == ElementName::HTML_button || elementName == ElementName::HTML_select)
         return &downcast<Element>(node);
 
     return nullptr;
@@ -1568,7 +1567,7 @@ bool AccessibilityNodeObject::isGenericFocusableElement() const
     // cases already, so we don't need to include them here.
     if (role == AccessibilityRole::WebArea)
         return false;
-    if (node() && node()->hasTagName(bodyTag))
+    if (elementName() == ElementName::HTML_body)
         return false;
 
     // An SVG root is focusable by default, but it's probably not interactive, so don't
@@ -1609,7 +1608,7 @@ AccessibilityObject* AccessibilityNodeObject::captionForFigure() const
 
     Node* node = this->node();
     for (Node* child = node->firstChild(); child; child = child->nextSibling()) {
-        if (child->hasTagName(figcaptionTag))
+        if (WebCore::elementName(*child) == ElementName::HTML_figcaption)
             return cache->getOrCreate(*child);
     }
     return nullptr;
@@ -1617,7 +1616,7 @@ AccessibilityObject* AccessibilityNodeObject::captionForFigure() const
 
 bool AccessibilityNodeObject::usesAltTagForTextComputation() const
 {
-    bool usesAltTag = isImage() || isInputImage() || isNativeImage() || isCanvas() || (node() && node()->hasTagName(imgTag));
+    bool usesAltTag = isImage() || isInputImage() || isNativeImage() || isCanvas() || elementName() == ElementName::HTML_img;
 #if ENABLE(MODEL_ELEMENT)
     usesAltTag |= isModel();
 #endif
@@ -1864,7 +1863,7 @@ void AccessibilityNodeObject::visibleText(Vector<AccessibilityText>& textOrder) 
     }
 
     // If this node isn't rendered, there's no inner text we can extract from a select element.
-    if (!isAccessibilityRenderObject() && node->hasTagName(selectTag))
+    if (!isAccessibilityRenderObject() && WebCore::elementName(*node) == ElementName::HTML_select)
         return;
 
     if (dependsOnTextUnderElement()) {
@@ -1963,7 +1962,8 @@ String AccessibilityNodeObject::alternativeTextForWebArea() const
     }
 
     if (auto* owner = document->ownerElement()) {
-        if (owner->hasTagName(frameTag) || owner->hasTagName(iframeTag)) {
+        auto elementName = owner->elementName();
+        if (elementName == ElementName::HTML_frame || elementName == ElementName::HTML_iframe) {
             const AtomString& title = owner->attributeWithoutSynchronization(titleAttr);
             if (!title.isEmpty())
                 return title;
@@ -2324,7 +2324,7 @@ String AccessibilityNodeObject::title() const
     }
 
     // For <select> elements, title should be empty if they are not rendered or have role PopUpButton.
-    if (node && node->hasTagName(selectTag)
+    if (WebCore::elementName(*node) == ElementName::HTML_select
         && (!isAccessibilityRenderObject() || roleValue() == AccessibilityRole::PopUpButton))
         return { };
 

@@ -194,7 +194,7 @@ std::optional<BoundaryPoint> AXTextMarker::boundaryPoint() const
     RefPtr node = characterOffset.node;
 
     int offset = characterOffset.startIndex + characterOffset.offset;
-    if (AccessibilityObject::replacedNodeNeedsCharacter(*node) || node->hasTagName(HTMLNames::brTag))
+    if (AccessibilityObject::replacedNodeNeedsCharacter(*node) || WebCore::elementName(*node) == ElementName::HTML_br)
         node = nodeAndOffsetForReplacedNode(*node, offset, characterOffset.offset);
     if (!node)
         return std::nullopt;

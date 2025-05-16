@@ -34,6 +34,7 @@
 #include "LayoutRect.h"
 #include "LocalFrameLoaderClient.h"
 #include "LocalizedStrings.h"
+#include "NodeName.h"
 #include "SimpleRange.h"
 #include "TextChecking.h"
 #include "TextIteratorBehavior.h"
@@ -1541,6 +1542,9 @@ public:
     virtual AXCoreObject* exposedTableAncestor(bool includeSelf = false) const = 0;
 
     virtual AccessibilityChildrenVector documentLinks() = 0;
+
+    virtual bool hasElementName(ElementName tag) const = 0;
+    virtual ElementName elementName() const = 0;
 
     virtual bool hasAttachmentTag() const = 0;
     virtual bool hasBodyTag() const = 0;

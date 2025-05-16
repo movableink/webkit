@@ -394,16 +394,16 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return "AXCodeStyleGroup"_s;
 
     using namespace HTMLNames;
-    const auto& tag = tagName();
-    if (tag == kbdTag)
+    auto elementName = this->elementName();
+    if (elementName == ElementName::HTML_kbd)
         return "AXKeyboardInputStyleGroup"_s;
-    if (tag == preTag)
+    if (elementName == ElementName::HTML_pre)
         return "AXPreformattedStyleGroup"_s;
-    if (tag == sampTag)
+    if (elementName == ElementName::HTML_samp)
         return "AXSampleStyleGroup"_s;
-    if (tag == varTag)
+    if (elementName == ElementName::HTML_var)
         return "AXVariableStyleGroup"_s;
-    if (tag == citeTag)
+    if (elementName == ElementName::HTML_cite)
         return "AXCiteStyleGroup"_s;
     ASSERT_WITH_MESSAGE(!isStyleFormatGroup(), "Should've been able to compute a subrole for style format group object");
 

@@ -742,6 +742,9 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::DocumentURI:
         stream << "DocumentURI";
         break;
+    case AXProperty::ElementName:
+        stream << "ElementName";
+        break;
     case AXProperty::EmbeddedImageDescription:
         stream << "EmbeddedImageDescription";
         break;
@@ -1160,9 +1163,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
         break;
     case AXProperty::SupportsSetSize:
         stream << "SupportsSetSize";
-        break;
-    case AXProperty::TagName:
-        stream << "TagName";
         break;
     case AXProperty::TextContentPrefixFromListMarker:
         stream << "TextContentPrefixFromListMarker";

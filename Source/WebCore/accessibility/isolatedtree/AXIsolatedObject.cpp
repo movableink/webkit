@@ -107,34 +107,36 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
 
         // These properties are cached for all objects, ignored and unignored.
         setProperty(AXProperty::HasClickHandler, object.hasClickHandler());
-        const auto& tag = object.tagName();
-        if (tag == bodyTag)
-            setProperty(AXProperty::TagName, TagName::body);
-        else if (tag == h1Tag)
-            setProperty(AXProperty::TagName, TagName::h1);
-        else if (tag == h2Tag)
-            setProperty(AXProperty::TagName, TagName::h2);
-        else if (tag == h3Tag)
-            setProperty(AXProperty::TagName, TagName::h3);
-        else if (tag == h4Tag)
-            setProperty(AXProperty::TagName, TagName::h4);
-        else if (tag == h5Tag)
-            setProperty(AXProperty::TagName, TagName::h5);
-        else if (tag == h6Tag)
-            setProperty(AXProperty::TagName, TagName::h6);
+        auto elementName = object.elementName();
+        if (elementName == ElementName::HTML_body)
+            setProperty(AXProperty::ElementName, ElementName::HTML_body);
+        else if (elementName == ElementName::HTML_h1)
+            setProperty(AXProperty::ElementName, ElementName::HTML_h1);
+        else if (elementName == ElementName::HTML_h2)
+            setProperty(AXProperty::ElementName, ElementName::HTML_h2);
+        else if (elementName == ElementName::HTML_h3)
+            setProperty(AXProperty::ElementName, ElementName::HTML_h3);
+        else if (elementName == ElementName::HTML_h4)
+            setProperty(AXProperty::ElementName, ElementName::HTML_h4);
+        else if (elementName == ElementName::HTML_h5)
+            setProperty(AXProperty::ElementName, ElementName::HTML_h5);
+        else if (elementName == ElementName::HTML_h6)
+            setProperty(AXProperty::ElementName, ElementName::HTML_h6);
+        else if (elementName == ElementName::HTML_th)
+            setProperty(AXProperty::ElementName, ElementName::HTML_th);
 #if ENABLE(AX_THREAD_TEXT_APIS)
-        else if (tag == markTag)
-            setProperty(AXProperty::TagName, TagName::mark);
-        else if (tag == attachmentTag)
-            setProperty(AXProperty::TagName, TagName::attachment);
-        else if (tag == theadTag)
-            setProperty(AXProperty::TagName, TagName::thead);
-        else if (tag == tbodyTag)
-            setProperty(AXProperty::TagName, TagName::tbody);
-        else if (tag == tfootTag)
-            setProperty(AXProperty::TagName, TagName::tfoot);
-        else if (tag == outputTag)
-            setProperty(AXProperty::TagName, TagName::output);
+        else if (elementName == ElementName::HTML_mark)
+            setProperty(AXProperty::ElementName, ElementName::HTML_mark);
+        else if (elementName == ElementName::HTML_attachment)
+            setProperty(AXProperty::ElementName, ElementName::HTML_attachment);
+        else if (elementName == ElementName::HTML_thead)
+            setProperty(AXProperty::ElementName, ElementName::HTML_thead);
+        else if (elementName == ElementName::HTML_tbody)
+            setProperty(AXProperty::ElementName, ElementName::HTML_tbody);
+        else if (elementName == ElementName::HTML_tfoot)
+            setProperty(AXProperty::ElementName, ElementName::HTML_tfoot);
+        else if (elementName == ElementName::HTML_output)
+            setProperty(AXProperty::ElementName, ElementName::HTML_output);
 
         setProperty(AXProperty::TextRuns, std::make_shared<AXTextRuns>(object.textRuns()));
         setProperty(AXProperty::TextEmissionBehavior, object.textEmissionBehavior());
@@ -680,7 +682,7 @@ void AXIsolatedObject::setProperty(AXProperty property, AXPropertyValueVariant&&
         [](AXTextRunLineID typedValue) { return !typedValue; },
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
         [] (WallTime& time) { return !time; },
-        [] (TagName& tag) { return tag == TagName::Unknown; },
+        [] (ElementName& name) { return name == ElementName::Unknown; },
         [] (DateComponentsType& typedValue) { return typedValue == DateComponentsType::Invalid; },
         [] (AccessibilityOrientation) { return false; },
         [] (OptionSet<SpeakAs>& typedValue) { return typedValue.isEmpty(); },
@@ -2001,8 +2003,8 @@ Vector<AXTextMarkerRange> AXIsolatedObject::misspellingRanges() const
 
 bool AXIsolatedObject::hasRowGroupTag() const
 {
-    auto tag = propertyValue<TagName>(AXProperty::TagName);
-    return tag == TagName::thead || tag == TagName::tbody || tag == TagName::tfoot;
+    auto elementName = this->elementName();
+    return elementName == ElementName::HTML_thead || elementName == ElementName::HTML_tbody || elementName == ElementName::HTML_tfoot;
 }
 
 bool AXIsolatedObject::hasSameFont(AXCoreObject& otherObject)
@@ -2337,19 +2339,19 @@ AXIsolatedObject* AXIsolatedObject::headerContainer()
 
 unsigned AXIsolatedObject::headingTagLevel() const
 {
-    TagName tag = propertyValue<TagName>(AXProperty::TagName);
-    switch (tag) {
-    case TagName::h1:
+    auto name = elementName();
+    switch (name) {
+    case ElementName::HTML_h1:
         return 1;
-    case TagName::h2:
+    case ElementName::HTML_h2:
         return 2;
-    case TagName::h3:
+    case ElementName::HTML_h3:
         return 3;
-    case TagName::h4:
+    case ElementName::HTML_h4:
         return 4;
-    case TagName::h5:
+    case ElementName::HTML_h5:
         return 5;
-    case TagName::h6:
+    case ElementName::HTML_h6:
         return 6;
     default:
         return 0;

@@ -77,8 +77,8 @@ bool AccessibilityList::isUnorderedList() const
     if (ariaRoleAttribute() == AccessibilityRole::List)
         return true;
 
-    auto* node = this->node();
-    return node && (node->hasTagName(menuTag) || node->hasTagName(ulTag));
+    auto elementName = this->elementName();
+    return elementName == ElementName::HTML_menu || elementName == ElementName::HTML_ul;
 }
 
 bool AccessibilityList::isOrderedList() const
@@ -87,14 +87,12 @@ bool AccessibilityList::isOrderedList() const
     if (ariaRoleAttribute() == AccessibilityRole::Directory)
         return true;
 
-    auto* node = this->node();
-    return node && node->hasTagName(olTag);
+    return elementName() == ElementName::HTML_ol;
 }
 
 bool AccessibilityList::isDescriptionList() const
 {
-    auto* node = this->node();
-    return node && node->hasTagName(dlTag);
+    return elementName() == ElementName::HTML_dl;
 }
 
 bool AccessibilityList::childHasPseudoVisibleListItemMarkers(const Node* node)
@@ -178,7 +176,7 @@ AccessibilityRole AccessibilityList::determineAccessibilityRoleWithCleanChildren
                 if (!hasVisibleMarkers && (renderListItem->style().listStyleType().type != ListStyleType::Type::None || renderListItem->style().listStyleImage() || childHasPseudoVisibleListItemMarkers(renderListItem->element())))
                     hasVisibleMarkers = true;
                 listItemCount++;
-            } else if (node && node->hasTagName(liTag)) {
+            } else if (WebCore::elementName(node.get()) == ElementName::HTML_li) {
                 // Inline elements that are in a list with an explicit role should also count.
                 if (m_ariaRole == AccessibilityRole::List)
                     listItemCount++;

@@ -1345,11 +1345,12 @@ bool AccessibilityRenderObject::computeIsIgnored() const
     // objects are often containers with meaningful information, the inclusion of a span can have
     // the side effect of causing the immediate parent accessible to be ignored. This is especially
     // problematic for platforms which have distinct roles for textual block elements.
-    if (node && node->hasTagName(spanTag))
+    auto elementName = WebCore::elementName(node);
+    if (elementName == ElementName::HTML_span)
         return true;
 
     // Other non-ignored host language elements
-    if (node && node->hasTagName(dfnTag))
+    if (elementName == ElementName::HTML_dfn)
         return false;
     
     if (isStyleFormatGroup())
@@ -1818,7 +1819,7 @@ RefPtr<Element> AccessibilityRenderObject::rootEditableElementForPosition(const 
     for (RefPtr ancestor = position.anchorElementAncestor(); ancestor && ancestor != rootEditableElement; ancestor = ancestor->parentElement()) {
         if (elementIsTextControl(*ancestor))
             result = ancestor;
-        if (ancestor->hasTagName(bodyTag))
+        if (ancestor->elementName() == ElementName::HTML_body)
             break;
     }
     return result ? result : rootEditableElement;
@@ -2166,7 +2167,8 @@ AccessibilityObject* AccessibilityRenderObject::observableObject() const
 String AccessibilityRenderObject::expandedTextValue() const
 {
     if (AccessibilityObject* parent = parentObject()) {
-        if (parent->hasTagName(abbrTag) || parent->hasTagName(acronymTag))
+        auto parentName = parent->elementName();
+        if (parentName == ElementName::HTML_abbr || parentName == ElementName::HTML_acronym)
             return parent->getAttribute(titleAttr);
     }
 
@@ -2176,8 +2178,10 @@ String AccessibilityRenderObject::expandedTextValue() const
 bool AccessibilityRenderObject::supportsExpandedTextValue() const
 {
     if (roleValue() == AccessibilityRole::StaticText) {
-        if (AccessibilityObject* parent = parentObject())
-            return parent->hasTagName(abbrTag) || parent->hasTagName(acronymTag);
+        if (AccessibilityObject* parent = parentObject()) {
+            auto parentName = parent->elementName();
+            return parentName == ElementName::HTML_abbr || parentName == ElementName::HTML_acronym;
+        }
     }
     
     return false;
@@ -2474,7 +2478,7 @@ void AccessibilityRenderObject::addCanvasChildren()
 {
     // Add the unrendered canvas children as AX nodes, unless we're not using a canvas renderer
     // because JS is disabled for example.
-    if (!node() || !node()->hasTagName(canvasTag) || (renderer() && !renderer()->isRenderHTMLCanvas()))
+    if (elementName() != ElementName::HTML_canvas || (renderer() && !renderer()->isRenderHTMLCanvas()))
         return;
 
     // If it's a canvas, it won't have rendered children, but it might have accessible fallback content.

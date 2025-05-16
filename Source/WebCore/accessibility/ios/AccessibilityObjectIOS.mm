@@ -246,7 +246,7 @@ static unsigned blockquoteLevel(RenderObject* renderer)
 
     unsigned result = 0;
     for (Node* node = renderer->node(); node; node = node->parentNode()) {
-        if (node->hasTagName(HTMLNames::blockquoteTag))
+        if (WebCore::elementName(*node) == ElementName::HTML_blockquote)
             ++result;
     }
 

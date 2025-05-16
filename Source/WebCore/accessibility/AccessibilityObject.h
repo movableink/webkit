@@ -564,13 +564,13 @@ public:
 
     String nameAttribute() const final;
     int getIntegralAttribute(const QualifiedName&) const;
-    bool hasTagName(const QualifiedName&) const;
-    bool hasAttachmentTag() const final { return hasTagName(HTMLNames::attachmentTag); }
-    bool hasBodyTag() const final { return hasTagName(HTMLNames::bodyTag); }
-    bool hasMarkTag() const final { return hasTagName(HTMLNames::markTag); }
+    bool hasElementName(const ElementName) const final;
+    bool hasAttachmentTag() const final { return hasElementName(ElementName::HTML_attachment); }
+    bool hasBodyTag() const final { return hasElementName(ElementName::HTML_body); }
+    bool hasMarkTag() const final { return hasElementName(ElementName::HTML_mark); }
     bool hasRowGroupTag() const final;
 
-    const AtomString& tagName() const;
+    ElementName elementName() const final;
     bool hasDisplayContents() const;
 
     std::optional<SimpleRange> simpleRange() const final;

@@ -34,7 +34,6 @@
 #include "ColorHash.h"
 #include "PageIdentifier.h"
 #include "RenderStyleConstants.h"
-#include "TagName.h"
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
 #include <wtf/RefPtr.h>
@@ -127,6 +126,7 @@ enum class AXProperty : uint16_t {
     DocumentEncoding,
     DocumentLinks,
     DocumentURI,
+    ElementName,
     EmbeddedImageDescription,
     ExpandedTextValue,
     ExplicitAutoCompleteValue,
@@ -271,7 +271,6 @@ enum class AXProperty : uint16_t {
     SupportsPath,
     SupportsPosInSet,
     SupportsSetSize,
-    TagName,
     TextContentPrefixFromListMarker,
 #if !ENABLE(AX_THREAD_TEXT_APIS)
     // Rather than caching text content as property when ENABLE(AX_THREAD_TEXT_APIS), we should
@@ -301,7 +300,7 @@ using AXPropertySet = HashSet<AXProperty, IntHash<AXProperty>, WTF::StrongEnumHa
 using AXIDAndCharacterRange = std::pair<Markable<AXID>, CharacterRange>;
 
 // If this type is modified, the switchOn statment in AXIsolatedObject::setProperty must be updated as well.
-using AXPropertyValueVariant = Variant<std::nullptr_t, Markable<AXID>, String, bool, int, unsigned, double, float, uint64_t, WallTime, DateComponentsType, AccessibilityButtonState, Color, std::shared_ptr<URL>, LayoutRect, FloatPoint, FloatRect, InputType::Type, IntPoint, IntRect, std::pair<unsigned, unsigned>, Vector<AccessibilityText>, Vector<AXID>, Vector<std::pair<Markable<AXID>, Markable<AXID>>>, Vector<String>, std::shared_ptr<Path>, OptionSet<AXAncestorFlag>, Vector<Vector<Markable<AXID>>>, CharacterRange, std::shared_ptr<AXIDAndCharacterRange>, TagName, AccessibilityOrientation
+using AXPropertyValueVariant = Variant<std::nullptr_t, Markable<AXID>, String, bool, int, unsigned, double, float, uint64_t, WallTime, DateComponentsType, AccessibilityButtonState, Color, std::shared_ptr<URL>, LayoutRect, FloatPoint, FloatRect, InputType::Type, IntPoint, IntRect, std::pair<unsigned, unsigned>, Vector<AccessibilityText>, Vector<AXID>, Vector<std::pair<Markable<AXID>, Markable<AXID>>>, Vector<String>, std::shared_ptr<Path>, OptionSet<AXAncestorFlag>, Vector<Vector<Markable<AXID>>>, CharacterRange, std::shared_ptr<AXIDAndCharacterRange>, ElementName, AccessibilityOrientation
 #if PLATFORM(COCOA)
     , RetainPtr<NSAttributedString>
     , RetainPtr<NSView>

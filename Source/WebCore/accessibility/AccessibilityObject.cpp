@@ -76,6 +76,7 @@
 #include "LocalizedStrings.h"
 #include "MathMLNames.h"
 #include "NodeList.h"
+#include "NodeName.h"
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "PositionInlines.h"
@@ -1914,8 +1915,8 @@ std::optional<VisiblePosition> AccessibilityObject::previousLineStartPositionInt
 
 bool AccessibilityObject::hasRowGroupTag() const
 {
-    const auto& tag = tagName();
-    return tag == theadTag || tag == tbodyTag || tag == tfootTag;
+    auto elementName = this->elementName();
+    return elementName == ElementName::HTML_thead || elementName == ElementName::HTML_tbody || elementName == ElementName::HTML_tfoot;
 }
 
 bool AccessibilityObject::isVisited() const
@@ -1945,7 +1946,7 @@ bool AccessibilityObject::dependsOnTextUnderElement() const
     switch (roleValue()) {
     case AccessibilityRole::PopUpButton:
         // Native popup buttons should not use their descendant's text as a title. That value is retrieved through stringValue().
-        if (hasTagName(selectTag))
+        if (hasElementName(ElementName::HTML_select))
             break;
         [[fallthrough]];
     case AccessibilityRole::Summary:
@@ -2451,10 +2452,9 @@ bool AccessibilityObject::ignoredFromModalPresence() const
     return !isModalDescendant(*modalNode);
 }
 
-bool AccessibilityObject::hasTagName(const QualifiedName& tagName) const
+bool AccessibilityObject::hasElementName(ElementName name) const
 {
-    RefPtr element = dynamicDowncast<Element>(node());
-    return element && element->hasTagName(tagName);
+    return elementName() == name;
 }
 
 bool AccessibilityObject::hasAttribute(const QualifiedName& attribute) const
@@ -2840,7 +2840,8 @@ String AccessibilityObject::embeddedImageDescription() const
 
 bool AccessibilityObject::supportsDatetimeAttribute() const
 {
-    return hasTagName(insTag) || hasTagName(delTag) || hasTagName(timeTag);
+    auto elementName = this->elementName();
+    return elementName == ElementName::HTML_ins || elementName == ElementName::HTML_del || elementName == ElementName::HTML_time;
 }
 
 String AccessibilityObject::datetimeAttributeValue() const
@@ -4047,10 +4048,10 @@ AccessibilityObject* AccessibilityObject::radioGroupAncestor() const
     });
 }
 
-const AtomString& AccessibilityObject::tagName() const
+ElementName AccessibilityObject::elementName() const
 {
     auto* element = this->element();
-    return element ? element->localName() : nullAtom();
+    return element ? element->elementName() : ElementName::Unknown;
 }
 
 bool AccessibilityObject::isStyleFormatGroup() const
@@ -4058,21 +4059,17 @@ bool AccessibilityObject::isStyleFormatGroup() const
     if (isCode())
         return true;
 
-    Node* node = this->node();
-    if (!node)
-        return false;
-    
-    return node->hasTagName(kbdTag) || node->hasTagName(codeTag)
-    || node->hasTagName(preTag) || node->hasTagName(sampTag)
-    || node->hasTagName(varTag) || node->hasTagName(citeTag)
-    || node->hasTagName(insTag) || node->hasTagName(delTag)
-    || node->hasTagName(supTag) || node->hasTagName(subTag);
+    auto elementName = this->elementName();
+    return elementName == ElementName::HTML_kbd || elementName == ElementName::HTML_code
+    || elementName == ElementName::HTML_pre || elementName == ElementName::HTML_samp
+    || elementName == ElementName::HTML_var || elementName == ElementName::HTML_cite
+    || elementName == ElementName::HTML_ins || elementName == ElementName::HTML_del
+    || elementName == ElementName::HTML_sup || elementName == ElementName::HTML_sub;
 }
 
 bool AccessibilityObject::isFigureElement() const
 {
-    Node* node = this->node();
-    return node && node->hasTagName(figureTag);
+    return elementName() == ElementName::HTML_figure;
 }
 
 bool AccessibilityObject::isKeyboardFocusable() const
@@ -4084,8 +4081,7 @@ bool AccessibilityObject::isKeyboardFocusable() const
 
 bool AccessibilityObject::isOutput() const
 {
-    Node* node = this->node();
-    return node && node->hasTagName(outputTag);
+    return elementName() == ElementName::HTML_output;
 }
     
 bool AccessibilityObject::isContainedBySecureField() const

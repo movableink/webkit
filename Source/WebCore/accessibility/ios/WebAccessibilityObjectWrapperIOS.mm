@@ -870,7 +870,7 @@ static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descenda
 {
     // If an SVG group element has a title, it should be an accessible element on iOS.
     Node* node = self.axBackingObject->node();
-    if (node && node->hasTagName(SVGNames::gTag) && [[self accessibilityLabel] length] > 0)
+    if (WebCore::elementName(node) == ElementName::SVG_g && [[self accessibilityLabel] length] > 0)
         return YES;
     
     return NO;
@@ -2107,11 +2107,11 @@ static RenderObject* rendererForView(WAKView* view)
     // Use this to check if an object is the child of a summary object.
     // And return the summary's parent, which is the expandable details object.
     return Accessibility::findAncestor<AccessibilityObject>(object, true, [&] (const AccessibilityObject& object) {
-        const auto& tag = object.tagName();
-        if (tag == summaryTag)
+        auto elementName = object.elementName();
+        if (elementName == ElementName::HTML_summary)
             foundSummary = true;
 
-        return tag == detailsTag && foundSummary;
+        return elementName == ElementName::HTML_details && foundSummary;
     });
 }
 
@@ -2119,7 +2119,7 @@ static RenderObject* rendererForView(WAKView* view)
 {
     // Use this to check if an object is inside a details object.
     if (AccessibilityObject* details = Accessibility::findAncestor<AccessibilityObject>(*object, true, [] (const AccessibilityObject& object) {
-        return object.hasTagName(detailsTag);
+        return object.hasElementName(ElementName::HTML_details);
     }))
         return details;
     return nil;

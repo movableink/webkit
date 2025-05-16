@@ -857,9 +857,9 @@ UncheckedKeyHashMap<String, String> AccessibilityObjectAtspi::attributes() const
 
     RefPtr liveObject = dynamicDowncast<AccessibilityObject>(m_coreObject);
 
-    String tagName = liveObject->tagName();
-    if (!tagName.isEmpty())
-        map.add("tag"_s, tagName);
+    auto tagName = tagNameForElementName(liveObject->elementName());
+    if (tagName != TagName::Unknown)
+        map.add("tag"_s, tagNameAsString(tagName));
 
     if (auto* element = m_coreObject->element()) {
         String id = element->getIdAttribute().string();

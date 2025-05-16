@@ -32,6 +32,7 @@
 #include "AXObjectCache.h"
 #include "IntPoint.h"
 #include "LayoutRect.h"
+#include "NodeName.h"
 #include "Path.h"
 #include "RenderStyleConstants.h"
 #include <wtf/Forward.h>
@@ -64,9 +65,9 @@ public:
     bool hasClickHandler() const final { return boolAttributeValue(AXProperty::HasClickHandler); }
     FloatRect relativeFrame() const final;
 
-    bool hasAttachmentTag() const final { return propertyValue<TagName>(AXProperty::TagName) == TagName::attachment; }
-    bool hasBodyTag() const final { return propertyValue<TagName>(AXProperty::TagName) == TagName::body; }
-    bool hasMarkTag() const final { return propertyValue<TagName>(AXProperty::TagName) == TagName::mark; }
+    bool hasAttachmentTag() const final { return elementName() == ElementName::HTML_attachment; }
+    bool hasBodyTag() const final { return elementName() == ElementName::HTML_body; }
+    bool hasMarkTag() const final { return elementName() == ElementName::HTML_mark; }
     bool hasRowGroupTag() const final;
 
     const AccessibilityChildrenVector& children(bool updateChildrenIfNeeded = true) final;
@@ -217,7 +218,7 @@ private:
     bool isAttachment() const final { return boolAttributeValue(AXProperty::IsAttachment); }
 
     bool isKeyboardFocusable() const final { return boolAttributeValue(AXProperty::IsKeyboardFocusable); }
-    bool isOutput() const final { return propertyValue<TagName>(AXProperty::TagName) == TagName::output; }
+    bool isOutput() const final { return elementName() == ElementName::HTML_output; }
 
     // Table support.
     AXIsolatedObject* exposedTableAncestor(bool includeSelf = false) const final { return Accessibility::exposedTableAncestor(*this, includeSelf); }
@@ -268,7 +269,7 @@ private:
     bool isVisited() const final { return boolAttributeValue(AXProperty::IsVisited); }
     bool isRequired() const final { return boolAttributeValue(AXProperty::IsRequired); }
     bool isExpanded() const final { return boolAttributeValue(AXProperty::IsExpanded); }
-    bool isDescriptionList() const { return propertyValue<TagName>(AXProperty::TagName) == TagName::dl; }
+    bool isDescriptionList() const final { return elementName() == ElementName::HTML_dl; }
     std::optional<InputType::Type> inputType() const final { return optionalAttributeValue<InputType::Type>(AXProperty::InputType); };
     FloatPoint screenRelativePosition() const final;
     IntPoint remoteFrameOffset() const final;
@@ -566,6 +567,8 @@ private:
     bool isInDescriptionListTerm() const final;
 
     String nameAttribute() const final { return stringAttributeValue(AXProperty::NameAttribute); }
+    bool hasElementName(ElementName name) const final { return elementName() == name; };
+    ElementName elementName() const final { return propertyValue<ElementName>(AXProperty::ElementName); }
 #if PLATFORM(COCOA)
     bool hasApplePDFAnnotationAttribute() const final { return boolAttributeValue(AXProperty::HasApplePDFAnnotationAttribute); }
     RetainPtr<id> remoteFramePlatformElement() const final;
