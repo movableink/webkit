@@ -173,7 +173,7 @@
    The alignment requirement is taken together with the minalign argument (the allocator uses
    whichever is bigger), but it's a bit more optimal to convey alignment using the alignment part
    of the type than by passing it to minalign. */
-#define PAS_TYPED_BOUND_FOR_PARTIAL_VIEWS                       10
+#define PAS_TYPED_BOUND_FOR_PARTIAL_VIEWS                       0
 #define PAS_TYPED_BOUND_FOR_BASELINE_ALLOCATORS                 0
 #define PAS_TYPED_BOUND_FOR_NO_VIEW_CACHE                       UINT_MAX
 #define PAS_TYPED_MAX_SEGREGATED_OBJECT_SIZE                    UINT_MAX
@@ -184,7 +184,7 @@
    Implementing these as segregated heaps is valid since sizes get segregated and different-sized
    objects will only overlap at the header. However, FIXME: we need flex heaps to use a large heap
    that won't overlap objects in these heaps as if they were arrays. */
-#define PAS_FLEX_BOUND_FOR_PARTIAL_VIEWS                        10
+#define PAS_FLEX_BOUND_FOR_PARTIAL_VIEWS                        0
 #define PAS_FLEX_BOUND_FOR_BASELINE_ALLOCATORS                  0
 #define PAS_FLEX_BOUND_FOR_NO_VIEW_CACHE                        UINT_MAX
 #define PAS_FLEX_MAX_SEGREGATED_OBJECT_SIZE                     UINT_MAX
