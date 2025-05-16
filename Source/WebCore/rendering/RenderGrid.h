@@ -34,6 +34,11 @@
 #include "RenderBlock.h"
 #include <wtf/TZoneMalloc.h>
 
+namespace WTF {
+template<typename T>
+class Range;
+}
+
 namespace WebCore {
 
 class GridArea;
@@ -181,6 +186,7 @@ private:
 
     unsigned clampAutoRepeatTracks(GridTrackSizingDirection, unsigned autoRepeatTracks) const;
 
+    WTF::Range<size_t> autoRepeatTracksRange(GridTrackSizingDirection) const;
     std::unique_ptr<OrderedTrackIndexSet> computeEmptyTracksForAutoRepeat(GridTrackSizingDirection) const;
 
     enum class ShouldUpdateGridAreaLogicalSize : bool { No, Yes };
@@ -287,6 +293,7 @@ private:
 
     AutoRepeatType autoRepeatColumnsType() const;
     AutoRepeatType autoRepeatRowsType() const;
+    AutoRepeatType autoRepeatType(GridTrackSizingDirection direction) const { return direction == GridTrackSizingDirection::ForColumns ? autoRepeatColumnsType() : autoRepeatRowsType(); }
 
     bool canCreateIntrinsicLogicalHeightsForRowSizingFirstPassCache() const;
 

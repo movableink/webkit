@@ -40,6 +40,7 @@
 #include "RenderObjectInlines.h"
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
+#include <wtf/Range.h>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -937,6 +938,14 @@ unsigned RenderGrid::computeAutoRepeatTracksCount(GridTrackSizingDirection direc
     return repetitions * autoRepeatTrackListLength;
 }
 
+WTF::Range<size_t> RenderGrid::autoRepeatTracksRange(GridTrackSizingDirection direction) const
+{
+    auto insertionPoint = direction == GridTrackSizingDirection::ForColumns ? style().gridAutoRepeatColumnsInsertionPoint() : style().gridAutoRepeatRowsInsertionPoint();
+    auto firstAutoRepeatTrack = insertionPoint + currentGrid().explicitGridStart(direction);
+    auto lastAutoRepeatTrack = firstAutoRepeatTrack + currentGrid().autoRepeatTracks(direction);
+
+    return { firstAutoRepeatTrack, lastAutoRepeatTrack };
+}
 
 std::unique_ptr<OrderedTrackIndexSet> RenderGrid::computeEmptyTracksForAutoRepeat(GridTrackSizingDirection direction) const
 {
@@ -946,16 +955,14 @@ std::unique_ptr<OrderedTrackIndexSet> RenderGrid::computeEmptyTracksForAutoRepea
         return nullptr;
 
     std::unique_ptr<OrderedTrackIndexSet> emptyTrackIndexes;
-    unsigned insertionPoint = isRowAxis ? style().gridAutoRepeatColumnsInsertionPoint() : style().gridAutoRepeatRowsInsertionPoint();
-    unsigned firstAutoRepeatTrack = insertionPoint + currentGrid().explicitGridStart(direction);
-    unsigned lastAutoRepeatTrack = firstAutoRepeatTrack + currentGrid().autoRepeatTracks(direction);
+    auto autoRepeatTracksRange = this->autoRepeatTracksRange(direction);
 
-    if (!currentGrid().hasGridItems() || (shouldCheckExplicitIntrinsicInnerLogicalSize(direction) && !explicitIntrinsicInnerLogicalSize(direction))) {
+    if (!currentGrid().hasGridItems()) {
         emptyTrackIndexes = makeUnique<OrderedTrackIndexSet>();
-        for (unsigned trackIndex = firstAutoRepeatTrack; trackIndex < lastAutoRepeatTrack; ++trackIndex)
+        for (unsigned trackIndex = autoRepeatTracksRange.begin(); trackIndex < autoRepeatTracksRange.end(); ++trackIndex)
             emptyTrackIndexes->add(trackIndex);
     } else {
-        for (unsigned trackIndex = firstAutoRepeatTrack; trackIndex < lastAutoRepeatTrack; ++trackIndex) {
+        for (unsigned trackIndex = autoRepeatTracksRange.begin(); trackIndex < autoRepeatTracksRange.end(); ++trackIndex) {
             GridIterator iterator(currentGrid(), direction, trackIndex);
             if (!iterator.nextGridItem()) {
                 if (!emptyTrackIndexes)

@@ -38,6 +38,7 @@
 #include "RenderStyleConstants.h"
 #include "StyleSelfAlignmentData.h"
 #include <ranges>
+#include <wtf/Range.h>
 #include <wtf/StdMap.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
@@ -244,12 +245,22 @@ LayoutUnit GridTrackSizingAlgorithm::computeTrackBasedSize() const
     if (isDirectionInMasonryDirection())
         return m_renderGrid->masonryContentSize();
 
+    auto tracksToAccumulateFrom = [&]() {
+        if (m_renderGrid->shouldCheckExplicitIntrinsicInnerLogicalSize(m_direction) && m_renderGrid->autoRepeatType(m_direction) == AutoRepeatType::Fit) {
+            auto allTracks = tracks(m_direction);
+            auto autoRepeatTracksRange = m_renderGrid->autoRepeatTracksRange(m_direction);
+            allTracks.remove(autoRepeatTracksRange.begin(), autoRepeatTracksRange.distance());
+            return allTracks;
+        }
+        return tracks(m_direction);
+    }();
+
+
     LayoutUnit size;
-    auto& allTracks = tracks(m_direction);
-    for (auto& track : allTracks)
+    for (auto& track : tracksToAccumulateFrom)
         size += track.baseSize();
 
-    size += m_renderGrid->guttersSize(m_direction, 0, allTracks.size(), availableSpace());
+    size += m_renderGrid->guttersSize(m_direction, 0, tracksToAccumulateFrom.size(), availableSpace());
 
     return size;
 }
@@ -1016,9 +1027,16 @@ void GridTrackSizingAlgorithm::computeGridContainerIntrinsicSizes()
 
     m_minContentSize = m_maxContentSize = 0_lu;
 
+    bool hasAutoRepeatFitTracks = m_renderGrid->autoRepeatType(m_direction) == AutoRepeatType::Fit;
+    auto autoRepeatTracksRange = m_renderGrid->autoRepeatTracksRange(m_direction);
     Vector<GridTrack>& allTracks = tracks(m_direction);
-    for (auto& track : allTracks) {
+    for (size_t trackIndex = 0; trackIndex < allTracks.size(); ++trackIndex) {
+        auto& track = allTracks[trackIndex];
         ASSERT(m_strategy->isComputingSizeOrInlineSizeContainment() || !track.infiniteGrowthPotential());
+
+        if (m_strategy->isComputingSizeOrInlineSizeContainment() && hasAutoRepeatFitTracks && autoRepeatTracksRange.contains(trackIndex))
+            continue;
+
         m_minContentSize += track.baseSize();
         m_maxContentSize += track.growthLimitIsInfinite() ? track.baseSize() : track.growthLimit();
         // The growth limit caps must be cleared now in order to properly sort
