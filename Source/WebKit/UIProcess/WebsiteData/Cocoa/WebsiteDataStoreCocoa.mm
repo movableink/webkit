@@ -364,7 +364,7 @@ String WebsiteDataStore::defaultCookieStorageFile(const String& baseDirectory)
     if (baseDirectory.isEmpty())
         return { };
 
-    return FileSystem::pathByAppendingComponents(baseDirectory, { "Cookies"_s, "Cookies.binarycookies"_s });
+    return FileSystem::pathByAppendingComponents(baseDirectory, std::initializer_list<StringView>({ "Cookies"_s, "Cookies.binarycookies"_s }));
 }
 
 String WebsiteDataStore::defaultSearchFieldHistoryDirectory(const String& baseDirectory)

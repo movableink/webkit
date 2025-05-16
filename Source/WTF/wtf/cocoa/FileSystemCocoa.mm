@@ -189,7 +189,7 @@ NSString *createTemporaryDirectory(NSString *directoryPrefix)
 std::pair<FileHandle, CString> createTemporaryFileInDirectory(const String& directory, const String& suffix)
 {
     auto fsSuffix = fileSystemRepresentation(suffix);
-    auto templatePath = pathByAppendingComponents(directory, { StringView { "XXXXXX"_s }, StringView { suffix } });
+    auto templatePath = pathByAppendingComponents(directory, std::initializer_list<StringView>({ "XXXXXX"_s, suffix }));
     auto fsTemplatePath = fileSystemRepresentation(templatePath);
     auto fileHandle = FileHandle::adopt(mkstemps(fsTemplatePath.mutableSpanIncludingNullTerminator().data(), fsSuffix.length()));
     return { WTFMove(fileHandle), WTFMove(fsTemplatePath) };

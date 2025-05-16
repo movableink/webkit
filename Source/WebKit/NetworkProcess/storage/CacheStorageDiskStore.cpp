@@ -65,7 +65,7 @@ static SHA1::Digest computeSHA1(std::span<const uint8_t> span, FileSystem::Salt 
 
 static String recordFilePathWithDirectory(const String& directory, const NetworkCache::Key& key)
 {
-    return FileSystem::pathByAppendingComponents(directory, { key.partitionHashAsString(), key.type(), key.hashAsString() });
+    return FileSystem::pathByAppendingComponents(directory, std::initializer_list<StringView>({ key.partitionHashAsString(), key.type(), key.hashAsString() }));
 }
 
 struct RecordMetaData {

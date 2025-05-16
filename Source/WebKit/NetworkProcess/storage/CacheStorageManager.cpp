@@ -186,7 +186,7 @@ HashSet<WebCore::ClientOrigin> CacheStorageManager::originsOfCacheStorageData(co
 {
     HashSet<WebCore::ClientOrigin> result;
     for (auto& originName : FileSystem::listDirectory(rootDirectory)) {
-        auto originFile = FileSystem::pathByAppendingComponents(rootDirectory, { originName, originFileName });
+        auto originFile = FileSystem::pathByAppendingComponents(rootDirectory, std::initializer_list<StringView>({ originName, originFileName }));
         if (auto origin = WebCore::StorageUtilities::readOriginFromFile(originFile))
             result.add(*origin);
     }

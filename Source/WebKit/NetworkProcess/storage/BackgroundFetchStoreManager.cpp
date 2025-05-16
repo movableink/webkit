@@ -111,7 +111,7 @@ void BackgroundFetchStoreManager::clearFetch(const String& identifier, Completio
         return;
     }
 
-    auto filePath = FileSystem::pathByAppendingComponents(m_path, { identifier });
+    auto filePath = FileSystem::pathByAppendingComponents(m_path, std::initializer_list<StringView>({ identifier }));
     m_ioQueue->dispatch([queue = Ref { m_taskQueue }, directoryPath = m_path.isolatedCopy(), identifier = identifier.isolatedCopy(), callback = WTFMove(callback)]() mutable {
         for (auto& fileName : FileSystem::listDirectory(directoryPath)) {
             if (fileName.startsWith(identifier))
@@ -133,7 +133,7 @@ void BackgroundFetchStoreManager::clearAllFetches(const Vector<String>& identifi
     }
 
     auto filePaths = map(identifiers, [this](auto& identifier) -> String {
-        return FileSystem::pathByAppendingComponents(m_path, { identifier });
+        return FileSystem::pathByAppendingComponents(m_path, std::initializer_list<StringView>({ identifier }));
     });
     m_ioQueue->dispatch([queue = Ref { m_taskQueue }, filePaths = crossThreadCopy(WTFMove(filePaths)), callback = WTFMove(callback)]() mutable {
         for (auto& filePath : filePaths) {
@@ -183,7 +183,7 @@ void BackgroundFetchStoreManager::storeFetchAfterQuotaCheck(const String& identi
         return;
     }
 
-    auto filePath = FileSystem::pathByAppendingComponents(m_path, { identifier });
+    auto filePath = FileSystem::pathByAppendingComponents(m_path, std::initializer_list<StringView>({ identifier }));
     m_ioQueue->dispatch([queue = Ref { m_taskQueue }, filePath = WTFMove(filePath).isolatedCopy(), responseBodyIndexToClear, data = WTFMove(data), callback = WTFMove(callback)]() mutable {
         // FIXME: Cover the case of partial write.
         auto writtenSize = FileSystem::overwriteEntireFile(filePath, data);

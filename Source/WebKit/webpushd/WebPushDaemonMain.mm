@@ -122,7 +122,7 @@ static String getWebPushDirectoryPathWithMigrationIfNecessary()
 {
 #if PLATFORM(MAC) && !ENABLE(RELOCATABLE_WEBPUSHD)
     String libraryPath = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES)[0];
-    String oldPath = FileSystem::pathByAppendingComponents(libraryPath, { "WebKit"_s, "WebPush"_s });
+    String oldPath = FileSystem::pathByAppendingComponents(libraryPath, std::initializer_list<StringView>({ "WebKit"_s, "WebPush"_s }));
 
     RetainPtr containerURL = [[NSFileManager defaultManager] containerURLForSecurityApplicationGroupIdentifier:@"group.com.apple.webkit.webpushd"];
 
@@ -131,7 +131,7 @@ static String getWebPushDirectoryPathWithMigrationIfNecessary()
     RELEASE_ASSERT_WITH_MESSAGE(canReadContainer, "Could not access webpushd group container: %s", error.description.UTF8String);
 
     String containerPath = [containerURL path];
-    String newPath = FileSystem::pathByAppendingComponents(containerPath, { "Library"_s, "WebKit"_s, "WebPush"_s });
+    String newPath = FileSystem::pathByAppendingComponents(containerPath, std::initializer_list<StringView>({ "Library"_s, "WebKit"_s, "WebPush"_s }));
 
     String oldDatabasePath = FileSystem::pathByAppendingComponent(oldPath, "PushDatabase.db"_s);
     String newDatabasePath = FileSystem::pathByAppendingComponent(newPath, "PushDatabase.db"_s);
@@ -144,7 +144,7 @@ static String getWebPushDirectoryPathWithMigrationIfNecessary()
     return newPath;
 #else
     String libraryPath = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES)[0];
-    return FileSystem::pathByAppendingComponents(libraryPath, { "WebKit"_s, "WebPush"_s });
+    return FileSystem::pathByAppendingComponents(libraryPath, std::initializer_list<StringView>({ "WebKit"_s, "WebPush"_s }));
 #endif
 }
 

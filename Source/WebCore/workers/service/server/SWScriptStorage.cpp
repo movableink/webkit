@@ -73,7 +73,7 @@ String SWScriptStorage::saltPath() const
 
 String SWScriptStorage::registrationDirectory(const ServiceWorkerRegistrationKey& registrationKey) const
 {
-    return FileSystem::pathByAppendingComponents(m_directory, { sha2Hash(registrationKey.topOrigin().toString()), sha2Hash(registrationKey.scope()) });
+    return FileSystem::pathByAppendingComponents(m_directory, std::initializer_list<StringView>({ sha2Hash(registrationKey.topOrigin().toString()), sha2Hash(registrationKey.scope()) }));
 }
 
 String SWScriptStorage::scriptPath(const ServiceWorkerRegistrationKey& registrationKey, const URL& scriptURL) const

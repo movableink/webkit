@@ -256,7 +256,7 @@ String pathByAppendingComponent(StringView path, StringView component)
     return makeString(path, '/', component);
 }
 
-String pathByAppendingComponents(StringView path, const Vector<StringView>& components)
+String pathByAppendingComponents(StringView path, std::span<const StringView> components)
 {
     StringBuilder builder;
     builder.append(path);

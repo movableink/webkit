@@ -105,7 +105,7 @@ static String originDirectoryPath(const String& rootPath, const WebCore::ClientO
 
     auto encodedTopOrigin = encode(origin.topOrigin.toString(), salt);
     auto encodedOpeningOrigin = encode(origin.clientOrigin.toString(), salt);
-    return FileSystem::pathByAppendingComponents(rootPath, { encodedTopOrigin, encodedOpeningOrigin });
+    return FileSystem::pathByAppendingComponents(rootPath, std::initializer_list<StringView> { encodedTopOrigin, encodedOpeningOrigin });
 }
 
 static String originFilePath(const String& directory)

@@ -770,7 +770,7 @@ String pathByAppendingComponent(StringView path, StringView component)
     return fromStdFileSystemPath(toStdFileSystemPath(path) / toStdFileSystemPath(component));
 }
 
-String pathByAppendingComponents(StringView path, const Vector<StringView>& components)
+String pathByAppendingComponents(StringView path, std::span<const StringView> components)
 {
     auto fsPath = toStdFileSystemPath(path);
     for (auto& component : components)
