@@ -1219,6 +1219,10 @@ TEST(ResourceLoadStatistics, BackForwardPerPageData)
     doneFlag = false;
     [dataStore _loadedSubresourceDomainsFor:webView.get() completionHandler:^(NSArray<NSString *> *domains) {
         EXPECT_EQ(static_cast<int>([domains count]), 1);
+        if (domains.count != 1) {
+            doneFlag = true;
+            return;
+        }
         EXPECT_WK_STREQ([domains objectAtIndex:0], @"example1.com");
         doneFlag = true;
     }];
@@ -1232,6 +1236,10 @@ TEST(ResourceLoadStatistics, BackForwardPerPageData)
     doneFlag = false;
     [dataStore _loadedSubresourceDomainsFor:webView.get() completionHandler:^(NSArray<NSString *> *domains) {
         EXPECT_EQ(static_cast<int>([domains count]), 1);
+        if (domains.count != 1) {
+            doneFlag = true;
+            return;
+        }
         EXPECT_WK_STREQ([domains objectAtIndex:0], @"example2.com");
         doneFlag = true;
     }];
@@ -1245,6 +1253,10 @@ TEST(ResourceLoadStatistics, BackForwardPerPageData)
     doneFlag = false;
     [dataStore _loadedSubresourceDomainsFor:webView.get() completionHandler:^(NSArray<NSString *> *domains) {
         EXPECT_EQ(static_cast<int>([domains count]), 1);
+        if (domains.count != 1) {
+            doneFlag = true;
+            return;
+        }
         EXPECT_WK_STREQ([domains objectAtIndex:0], @"example1.com");
         doneFlag = true;
     }];
@@ -1258,6 +1270,10 @@ TEST(ResourceLoadStatistics, BackForwardPerPageData)
     doneFlag = false;
     [dataStore _loadedSubresourceDomainsFor:webView.get() completionHandler:^(NSArray<NSString *> *domains) {
         EXPECT_EQ(static_cast<int>([domains count]), 1);
+        if (domains.count != 1) {
+            doneFlag = true;
+            return;
+        }
         EXPECT_WK_STREQ([domains objectAtIndex:0], @"example2.com");
         doneFlag = true;
     }];

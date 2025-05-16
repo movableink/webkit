@@ -145,6 +145,8 @@ def parse_args(args):
         optparse.make_option('--additional-env-var', type='string', action='append', default=[],
                              help='Passes that environment variable to the tests (--additional-env-var=NAME=VALUE)'),
 
+        optparse.make_option('--site-isolation', action='store_true', default=False,
+                             help='Enable Site Isolation'),
         optparse.make_option('--remote-layer-tree', action='store_true', default=False,
                              help='Use the remote layer tree drawing model (macOS WebKit2 only)'),
         optparse.make_option('--no-remote-layer-tree', action='store_true', default=False,
