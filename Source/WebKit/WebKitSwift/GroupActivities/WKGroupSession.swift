@@ -135,13 +135,9 @@ fileprivate extension WKGroupSessionState {
     override init() {
         super.init()
 
-        // FIXME: rdar://151088688 Fix Swift 6 strict concurrency errors in `WKGroupSession.swift`.
-
-        incomingSessionsTask = Task.detached { [weak self] in
+        incomingSessionsTask = Task { [weak self] in
             for await newSession in URLActivity.sessions() {
-                DispatchQueue.main.async { [weak self] in
-                    self?.receivedSession(newSession)
-                }
+                self?.receivedSession(newSession)
             }
         }
     }

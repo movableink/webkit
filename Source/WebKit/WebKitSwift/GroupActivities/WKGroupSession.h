@@ -45,6 +45,7 @@ typedef NS_ENUM(NSInteger, WKGroupSessionState) {
 @property (nonatomic, copy, readonly, nullable) NSURL *fallbackURL;
 @end
 
+NS_SWIFT_UI_ACTOR
 @interface WKGroupSession : NSObject
 @property (nonatomic, readonly) WKURLActivity *activity;
 @property (nonatomic, readonly, copy) NSUUID *uuid;
@@ -56,6 +57,7 @@ typedef NS_ENUM(NSInteger, WKGroupSessionState) {
 - (void)coordinateWithCoordinator:(AVPlaybackCoordinator *)playbackCoordinator;
 @end
 
+NS_SWIFT_UI_ACTOR
 @interface WKGroupSessionObserver : NSObject
 @property (nonatomic, copy, nullable) void (^newSessionCallback)(WKGroupSession *);
 @end
