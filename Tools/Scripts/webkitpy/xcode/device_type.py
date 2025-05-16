@@ -78,6 +78,7 @@ class DeviceType(object):
         elif self.hardware_family.lower().startswith('ipad') or self.hardware_family.lower().startswith('iphone'):
             self.software_variant = 'iOS'
         elif self.hardware_family.lower().split(' ')[-1].startswith('vision'):
+            self.hardware_family = 'Vision'
             self.software_variant = 'visionOS'
 
     def check_consistency(self):
@@ -88,6 +89,8 @@ class DeviceType(object):
                 assert self.software_variant == 'tvOS'
             elif self.hardware_family in ('iPhone', 'iPad'):
                 assert self.software_variant == 'iOS'
+            elif self.hardware_family == 'Vision':
+                assert self.software_variant == 'visionOS'
 
         if self.hardware_type is not None:
             assert self.hardware_family is not None
