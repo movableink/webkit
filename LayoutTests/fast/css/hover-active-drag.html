@@ -19,59 +19,63 @@
   <pre id="console"></pre>
 </body>
 
-<script src="../../resources/js-test-pre.js"></script>
+<script src="../../resources/js-test.js"></script>
 <script>
   function shouldHaveBackground(element, bg) {
     background = getComputedStyle(element, null).getPropertyValue("background-color")
     shouldBeEqualToString('background', bg)
   }
 
-  if (window.testRunner) {
+  jsTestIsAsync = true;
+
+  onload = async () => {
     description("Dragging out of an element should cause it to lose :hover")
+    testRunner?.dumpAsText();
     var box = document.getElementById('box')
     var box2 = document.getElementById('box2')
-    testRunner.dumpAsText();
 
     eventSender.dragMode = false;
     // This mouse click seems to be required for WebKit's event handling to
     // pick up the :hover class. See https://bugs.webkit.org/show_bug.cgi?id=74264
-    eventSender.mouseDown()
-    eventSender.mouseUp()
+    await eventSender.asyncMouseDown()
+    await eventSender.asyncMouseUp()
 
     // Move into the first box.
-    eventSender.mouseMoveTo(50, 50)
+    await eventSender.asyncMouseMoveTo(50, 50)
     shouldHaveBackground(box, 'rgb(255, 0, 0)')
     shouldHaveBackground(box2, 'rgb(0, 0, 0)')
 
-    eventSender.mouseDown()
+    await eventSender.asyncMouseDown()
     shouldHaveBackground(box, 'rgb(255, 255, 0)')
     shouldHaveBackground(box2, 'rgb(0, 0, 0)')
 
     // With the mouse still down, move into the second box.
-    eventSender.mouseMoveTo(50, 150)
+    await eventSender.asyncMouseMoveTo(50, 150)
     shouldHaveBackground(box, 'rgb(0, 255, 0)')
     shouldHaveBackground(box2, 'rgb(0, 0, 0)')
 
     // Mouse still down, move outside of both boxes.
-    eventSender.mouseMoveTo(400, 50)
+    await eventSender.asyncMouseMoveTo(400, 50)
     shouldHaveBackground(box, 'rgb(0, 255, 0)')
     shouldHaveBackground(box2, 'rgb(0, 0, 0)')
 
-    eventSender.mouseUp()
+    await eventSender.asyncMouseUp()
     shouldHaveBackground(box, 'rgb(0, 0, 0)')
     shouldHaveBackground(box2, 'rgb(0, 0, 0)')
 
     // Move into the textarea.
-    eventSender.mouseMoveTo(50, 250)
+    await eventSender.asyncMouseMoveTo(50, 250)
     shouldHaveBackground(textarea, 'rgb(255, 0, 0)')
 
-    eventSender.mouseDown()
+    await eventSender.asyncMouseDown()
     shouldHaveBackground(textarea, 'rgb(255, 255, 0)')
 
-    eventSender.mouseMoveTo(400, 250)
+    await eventSender.asyncMouseMoveTo(400, 250)
     shouldHaveBackground(textarea, 'rgb(0, 255, 0)')
 
-    eventSender.mouseUp()
+    await eventSender.asyncMouseUp()
     shouldHaveBackground(textarea, 'rgb(0, 0, 0)')
+
+    finishJSTest();
   }
 </script>
