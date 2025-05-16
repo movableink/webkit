@@ -818,6 +818,7 @@ void ModelProcessModelPlayerProxy::animateModelToFitPortal(CompletionHandler<voi
     completionHandler(true);
 }
 
+#if HAVE(MODEL_MEMORY_ATTRIBUTION)
 static void setIBLAssetOwnership(const String& attributionTaskID, REAssetRef iblAsset)
 {
     const char* attributionIDString = attributionTaskID.utf8().data();
@@ -835,6 +836,7 @@ static void setIBLAssetOwnership(const String& attributionTaskID, REAssetRef ibl
         REAssetSetMemoryAttributionTarget(specularTexture.get(), attributionIDString);
     }
 }
+#endif
 
 void ModelProcessModelPlayerProxy::applyEnvironmentMapDataAndRelease()
 {
@@ -842,10 +844,12 @@ void ModelProcessModelPlayerProxy::applyEnvironmentMapDataAndRelease()
         if (m_transientEnvironmentMapData->size() > 0) {
             [m_modelRKEntity applyIBLData:m_transientEnvironmentMapData->createNSData().get() attributionHandler:makeBlockPtr([weakThis = WeakPtr { *this }] (REAssetRef coreEnvironmentResourceAsset) {
                 RefPtr protectedThis = weakThis.get();
-                if (!protectedThis || !protectedThis->m_attributionTaskID)
+                if (!protectedThis || !protectedThis->m_attributionTaskID || !coreEnvironmentResourceAsset)
                     return;
 
+#if HAVE(MODEL_MEMORY_ATTRIBUTION)
                 setIBLAssetOwnership(*(protectedThis->m_attributionTaskID), coreEnvironmentResourceAsset);
+#endif
             }).get() withCompletion:makeBlockPtr([weakThis = WeakPtr { *this }] (BOOL succeeded) {
                 RefPtr protectedThis = weakThis.get();
                 if (!protectedThis)
@@ -923,10 +927,12 @@ void ModelProcessModelPlayerProxy::applyDefaultIBL()
 {
     [m_modelRKEntity applyDefaultIBLWithAttributionHandler:makeBlockPtr([weakThis = WeakPtr { *this }] (REAssetRef coreEnvironmentResourceAsset) {
         RefPtr protectedThis = weakThis.get();
-        if (!protectedThis || !protectedThis->m_attributionTaskID)
+        if (!protectedThis || !protectedThis->m_attributionTaskID || !coreEnvironmentResourceAsset)
             return;
 
+#if HAVE(MODEL_MEMORY_ATTRIBUTION)
         setIBLAssetOwnership(*(protectedThis->m_attributionTaskID), coreEnvironmentResourceAsset);
+#endif
     }).get()];
 }
 
