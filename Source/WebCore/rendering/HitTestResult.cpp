@@ -41,6 +41,7 @@
 #include "ImageOverlay.h"
 #include "LocalFrame.h"
 #include "NodeInlines.h"
+#include "OriginAccessPatterns.h"
 #include "Page.h"
 #include "PseudoElement.h"
 #include "Range.h"
@@ -217,6 +218,40 @@ bool HitTestResult::isSelected() const
         return false;
 
     return frame->selection().contains(m_hitTestLocation.point());
+}
+
+bool HitTestResult::allowsFollowingLink() const
+{
+    auto linkURL = absoluteLinkURL();
+    if (linkURL.isEmpty())
+        return false;
+
+    RefPtr innerFrame = innerNodeFrame();
+    if (!innerFrame)
+        return false;
+
+    RefPtr document = innerFrame->document();
+    if (!document)
+        return false;
+
+    return document->protectedSecurityOrigin()->canDisplay(linkURL, OriginAccessPatternsForWebProcess::singleton());
+}
+
+bool HitTestResult::allowsFollowingImageURL() const
+{
+    auto linkURL = absoluteImageURL();
+    if (linkURL.isEmpty())
+        return false;
+
+    RefPtr innerFrame = innerNodeFrame();
+    if (!innerFrame)
+        return false;
+
+    RefPtr document = innerFrame->document();
+    if (!document)
+        return false;
+
+    return document->protectedSecurityOrigin()->canDisplay(linkURL, OriginAccessPatternsForWebProcess::singleton());
 }
 
 String HitTestResult::selectedText() const
