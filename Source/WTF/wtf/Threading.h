@@ -209,6 +209,7 @@ public:
     WTF_EXPORT_PRIVATE static void setCurrentThreadIsUserInteractive(int relativePriority = 0);
     WTF_EXPORT_PRIVATE static void setCurrentThreadIsUserInitiated(int relativePriority = 0);
     WTF_EXPORT_PRIVATE static QOS currentThreadQOS();
+    WTF_EXPORT_PRIVATE static bool currentThreadIsRealtime();
 
 #if HAVE(QOS_CLASSES)
     WTF_EXPORT_PRIVATE static void setGlobalMaxQOSClass(qos_class_t);
@@ -378,6 +379,8 @@ protected:
     bool m_didUnregisterFromAllThreads : 1 { false };
     bool m_isJSThread : 1 { false };
     unsigned m_gcThreadType : 2 { static_cast<unsigned>(GCThreadType::None) };
+
+    bool m_isRealtime : 1 { false };
 
     // Lock & ParkingLot rely on ThreadSpecific. But Thread object can be destroyed even after ThreadSpecific things are destroyed.
     // Use WordLock since WordLock does not depend on ThreadSpecific and this "Thread".

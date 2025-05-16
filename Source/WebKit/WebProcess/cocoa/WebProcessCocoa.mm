@@ -847,6 +847,9 @@ void WebProcess::registerLogHook()
             return;
 #endif
 
+        if (Thread::currentThreadIsRealtime())
+            return;
+
         if (shouldIgnoreLogMessage(msg->subsystem))
             return;
 
