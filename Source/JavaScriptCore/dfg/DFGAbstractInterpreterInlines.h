@@ -2346,8 +2346,8 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                 || node->isBinaryUseKind(SymbolUse)
                 || node->isBinaryUseKind(StringUse)
                 || node->isBinaryUseKind(StringIdentUse)
-                || node->isBinaryUseKind(ObjectUse)
-                || node->isSymmetricBinaryUseKind(ObjectUse, ObjectOrOtherUse)
+                || (node->op() == CompareEq && node->isBinaryUseKind(ObjectUse))
+                || (node->op() == CompareEq && node->isSymmetricBinaryUseKind(ObjectUse, ObjectOrOtherUse))
                 || value.isType(SpecInt32Only)
                 || value.isType(SpecInt52Any)
                 || value.isType(SpecAnyIntAsDouble)
@@ -2355,7 +2355,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                 || value.isType(SpecString)
                 || value.isType(SpecBoolean)
                 || value.isType(SpecSymbol)
-                || value.isType(SpecObject)
+                || (node->op() == CompareEq && value.isType(SpecObject))
                 || value.isType(SpecOther)) {
                 switch (node->op()) {
                 case CompareLess:
