@@ -871,7 +871,8 @@ LastNavigationWasAppInitiated SWServer::clientIsAppInitiatedForRegistrableDomain
     auto& clientsForRegistrableDomain = clientsByRegistrableDomainIterator->value;
     for (auto& client : clientsForRegistrableDomain) {
         auto data = m_clientsById.find(client);
-        ASSERT(data != m_clientsById.end());
+        if (data == m_clientsById.end())
+            continue;
         if (data->value->lastNavigationWasAppInitiated == LastNavigationWasAppInitiated::Yes)
             return LastNavigationWasAppInitiated::Yes;
     }
