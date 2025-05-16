@@ -188,11 +188,13 @@ BEGIN {
        &shouldBuild32Bit
        &shouldBuildForCrossTarget
        &shouldUseFlatpak
+       &shouldUseVcpkg
        &sourceDir
        &splitVersionString
        &tsanIsEnabled
        &ubsanIsEnabled
        &usesCryptexPath
+       &vcpkgArgsFromFeatures
        &willUseAppleTVDeviceSDK
        &willUseAppleTVSimulatorSDK
        &willUseIOSDeviceSDK
@@ -2314,11 +2316,6 @@ sub windowsSourceSourceDir()
     return File::Spec->catdir(windowsSourceDir(), "Source");
 }
 
-sub windowsLibrariesDir()
-{
-    return File::Spec->catdir(windowsSourceDir(), "WebKitLibraries", "win");
-}
-
 sub windowsOutputDir()
 {
     return File::Spec->catdir(windowsSourceDir(), "WebKitBuild");
@@ -2663,6 +2660,11 @@ sub shouldUseFlatpak()
     return ((! inFlatpakSandbox()) and (@prefix == 0) and -e getUserFlatpakPath());
 }
 
+sub shouldUseVcpkg()
+{
+    return isWin() || (isJSCOnly() && isWindows());
+}
+
 sub cmakeCachePath()
 {
     return File::Spec->catdir(productDir(), "CMakeCache.txt");
@@ -2835,7 +2837,10 @@ sub generateBuildSystemFromCMakeProject
 
     push @args, "-DLTO_MODE=$ltoMode" if ltoMode();
 
-    if (isPlayStation()) {
+    if (shouldUseVcpkg()) {
+        push @args, '-DCMAKE_TOOLCHAIN_FILE="' . $ENV{VCPKG_ROOT} . '\\scripts\\buildsystems\\vcpkg.cmake"';
+        push @args, '-DVCPKG_TARGET_TRIPLET=x64-windows-webkit'
+    } elsif (isPlayStation()) {
         my $toolChainFile = $ENV{'CMAKE_TOOLCHAIN_FILE'} || "Platform/PlayStation5";
         push @args, '-DCMAKE_TOOLCHAIN_FILE=' . $toolChainFile;
     }
@@ -2992,6 +2997,51 @@ sub cmakeArgsFromFeatures(\@;$)
         }
     }
     return @args;
+}
+
+sub vcpkgArgsFromFeatures(\@;$)
+{
+    my ($featuresArrayRef, $enableExperimentalFeatures) = @_;
+
+    my @args;
+    my $avif = 0;
+    my $jpegxl = 1;
+    my $lcms = 1;
+    my $skia = 1;
+    my $woff2 = 1;
+
+    if (isJSCOnly()) {
+        return;
+    }
+
+    foreach (@$featuresArrayRef) {
+        my $featureName = $_->{define};
+        if ($featureName) {
+            my $featureValue = ${$_->{value}}; # Undef to let the build system use its default.
+            if (defined($featureValue)) {
+                if ($featureName eq "USE_AVIF") { 
+                    $avif = $featureValue;
+                } elsif ($featureName eq "USE_JPEGXL") { 
+                    $jpegxl = $featureValue;
+                } elsif ($featureName eq "USE_LCMS") {
+                    $lcms = $featureValue;
+                } elsif ($featureName eq "USE_SKIA") { 
+                    $skia = $featureValue;
+                } elsif ($featureName eq "USE_WOFF2") { 
+                    $woff2 = $featureValue;
+                }
+            }
+        }
+    }
+
+    push @args, "web";
+    push @args, "avif" if $avif;
+    push @args, "jpeg-xl" if $jpegxl;
+    push @args, "lcms" if $lcms;
+    push @args, $skia ? "skia" : "cairo";
+    push @args, "woff2" if $woff2;
+
+    return "-DVCPKG_MANIFEST_FEATURES=" . join(";", @args);
 }
 
 sub cmakeBasedPortName()

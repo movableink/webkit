@@ -23,35 +23,4 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import importlib
-import json
-import os
-import sys
-import zipfile
-
-download = importlib.import_module('download-github-release')
-
-repo = 'WebKitForWindows/WebKitRequirements'
-file = 'WebKitRequirementsWin64.zip'
-output = os.getenv('WEBKIT_LIBRARIES', 'WebKitLibraries/win')
-options = [repo, file, '-o', output]
-
-if os.getenv('GITHUB_TOKEN'):
-    options += ['-t', os.getenv('GITHUB_TOKEN')]
-
-# Check if there's a specific version to request
-config_path = os.path.join(output, file) + '.config'
-if os.path.exists(config_path):
-    with open(config_path) as config_file:
-        options += ['-r', json.load(config_file)['tag_name']]
-
-result = download.main(options)
-
-# Only unzip if required
-if result == download.Status.DOWNLOADED:
-    print('Extracting release to {}...'.format(output))
-    zip = zipfile.ZipFile(os.path.join(output, file), 'r')
-    zip.extractall(output)
-    zip.close()
-elif result == download.Status.COULD_NOT_FIND:
-    sys.exit(1)
+print('update-webkit-win-libs.py is deprecated')

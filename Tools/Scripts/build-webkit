@@ -81,7 +81,6 @@ my $ltoMode = "default";
 my $useWorkspace = 1;
 my $startTime = time();
 my $archs32bit = 0;
-my $skipLibraryUpdate = 0;
 my $useCCache = -1;
 my $exportCompileCommands = 0;
 
@@ -173,7 +172,6 @@ my %options = (
     'no-experimental-features' => \$noExperimentalFeatures,
     'lto-mode=s' => \$ltoMode,
     'use-workspace!' => \$useWorkspace,
-    'skip-library-update' => \$skipLibraryUpdate,
     'use-ccache!' => \$useCCache,
     'export-compile-commands' => \$exportCompileCommands
 );
@@ -227,8 +225,12 @@ if (!isCMakeBuild()) {
     }
 }
 
-if ((isAppleWebKit() || isWin() || isPlayStation()) && !-d "WebKitLibraries") {
+if ((isAppleWebKit() || isPlayStation()) && !-d "WebKitLibraries") {
     die "Error: No WebKitLibraries directory found. Please do a fresh checkout.\n";
+}
+
+if (shouldUseVcpkg() && ! defined $ENV{"VCPKG_ROOT"}) {
+    die "Error: VCPKG_ROOT is unset. Please set that environment variable to the location of vcpkg.exe.\n";
 }
 
 my @options = ();
@@ -290,9 +292,6 @@ if (isAppleCocoaWebKit()) {
         # Build Tools needed for Apple ports (except for tvOS)
         push @projects, ("Tools/DumpRenderTree", "Tools/WebKitTestRunner", "Source/ThirdParty/gtest", "Tools/TestWebKitAPI");
     }
-
-} elsif (!$skipLibraryUpdate && (isWin() || (isJSCOnly() && isWindows()))) {
-    (system("python Tools/Scripts/update-webkit-win-libs.py") == 0) or die;
 }
 
 # If asked to build just the WebKit project, overwrite the projects
@@ -330,6 +329,8 @@ my $baseProductDir = baseProductDir();
 if (isWin() || isPlayStation() || (isJSCOnly() && isWindows())) {
     my @featureArgs = cmakeArgsFromFeatures(@features, !$noExperimentalFeatures);
     removeCMakeCache(@featureArgs);
+
+    push @cmakeArgs, vcpkgArgsFromFeatures(@features, !$noExperimentalFeatures) if shouldUseVcpkg();
 
     chdirWebKit();
     if (exitStatus(generateBuildSystemFromCMakeProject($prefixPath, @featureArgs, @cmakeArgs))) {
