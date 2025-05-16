@@ -98,17 +98,7 @@ RenderTheme::RenderTheme()
 
 RenderTheme::~RenderTheme() = default;
 
-static bool parentOfElementUsesPrimitiveAppearance(const Element& element)
-{
-    if (RefPtr parent = element.parentOrShadowHostElement()) {
-        if (CheckedPtr computedStyle = parent->computedStyle())
-            return computedStyle->usedAppearance() == StyleAppearance::None;
-    }
-
-    return false;
-}
-
-StyleAppearance RenderTheme::adjustAppearanceForElement(RenderStyle& style, const Element* element, StyleAppearance autoAppearance) const
+StyleAppearance RenderTheme::adjustAppearanceForElement(RenderStyle& style, const RenderStyle& parentStyle, const Element* element, StyleAppearance autoAppearance) const
 {
     if (!element) {
         style.setUsedAppearance(StyleAppearance::None);
@@ -126,7 +116,7 @@ StyleAppearance RenderTheme::adjustAppearanceForElement(RenderStyle& style, cons
     if ((autoAppearance == StyleAppearance::ColorWellSwatch
         || autoAppearance == StyleAppearance::ColorWellSwatchOverlay
         || autoAppearance == StyleAppearance::ColorWellSwatchWrapper)
-        && parentOfElementUsesPrimitiveAppearance(*element)) {
+        && (parentStyle.usedAppearance() == StyleAppearance::None)) {
             style.setUsedAppearance(StyleAppearance::None);
             return StyleAppearance::None;
     }
@@ -252,10 +242,10 @@ bool RenderTheme::hasAppearanceForElementTypeFromUAStyle(const Element& element)
         || (element.isInUserAgentShadowTree() && element.userAgentPart() == UserAgentParts::webkitListButton());
 }
 
-void RenderTheme::adjustStyle(RenderStyle& style, const Element* element)
+void RenderTheme::adjustStyle(RenderStyle& style, const RenderStyle& parentStyle, const Element* element)
 {
     auto autoAppearance = autoAppearanceForElement(style, element);
-    auto appearance = adjustAppearanceForElement(style, element, autoAppearance);
+    auto appearance = adjustAppearanceForElement(style, parentStyle, element, autoAppearance);
     if (appearance == StyleAppearance::None || appearance == StyleAppearance::Base)
         return;
 

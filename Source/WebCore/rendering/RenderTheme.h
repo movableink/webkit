@@ -68,7 +68,7 @@ public:
     // metrics and defaults given the contents of the style.  This includes sophisticated operations like
     // selection of control size based off the font, the disabling of appearance when CSS properties that
     // disable native appearance are set, or if the appearance is not supported by the theme.
-    void adjustStyle(RenderStyle&, const Element*);
+    void adjustStyle(RenderStyle&, const RenderStyle& parentStyle, const Element*);
 
     virtual bool canCreateControlPartForRenderer(const RenderObject&) const { return false; }
     virtual bool canCreateControlPartForBorderOnly(const RenderObject&) const { return false; }
@@ -430,7 +430,7 @@ protected:
 
 private:
     StyleAppearance autoAppearanceForElement(RenderStyle&, const Element*) const;
-    StyleAppearance adjustAppearanceForElement(RenderStyle&, const Element*, StyleAppearance) const;
+    StyleAppearance adjustAppearanceForElement(RenderStyle&, const RenderStyle& parentStyle, const Element*, StyleAppearance) const;
 
     Color spellingMarkerColor(OptionSet<StyleColorOptions>) const;
     Color dictationAlternativesMarkerColor(OptionSet<StyleColorOptions>) const;
