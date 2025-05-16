@@ -2176,3 +2176,5 @@ webkit.org/b/293142 http/wpt/content-security-policy/sandbox-manifest-blocked.ht
 webkit.org/b/293132 http/tests/contentextensions/make-https.html [ Pass Failure ]
 
 webkit.org/b/293145 [ Debug arm64 ] imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-for-user-scroll.html [ Pass Failure ]
+
+webkit.org/b/293149 [ X86_64 ] media/media-vp9-yuv422p10.html [ Pass ImageOnlyFailure ]
