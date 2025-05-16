@@ -253,20 +253,20 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
 }
 
 template<typename T>
-static void dispatchEventWithType(const Vector<T*>& targets, Event& event)
+static void dispatchEventWithType(std::span<T* const> targets, Event& event)
 {
     ASSERT(targets.size() >= 1);
-    ASSERT(*targets.begin());
+    ASSERT(targets.front());
 
     EventPath eventPath { targets };
-    event.setTarget(RefPtr { *targets.begin() });
+    event.setTarget(RefPtr { targets.front() });
     event.setEventPath(eventPath);
     event.resetBeforeDispatch();
     dispatchEventInDOM(event, eventPath);
     event.resetAfterDispatch();
 }
 
-void EventDispatcher::dispatchEvent(const Vector<EventTarget*>& targets, Event& event)
+void EventDispatcher::dispatchEvent(std::span<EventTarget* const> targets, Event& event)
 {
     dispatchEventWithType<EventTarget>(targets, event);
 }

@@ -630,7 +630,7 @@ void IDBTransaction::dispatchEvent(Event& event)
 
     Ref protectedThis { *this };
 
-    EventDispatcher::dispatchEvent({ this, m_database.ptr() }, event);
+    EventDispatcher::dispatchEvent(std::initializer_list<EventTarget*>({ this, m_database.ptr() }), event);
 
     if (!event.isTrusted())
         return;

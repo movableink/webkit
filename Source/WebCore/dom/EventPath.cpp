@@ -281,9 +281,9 @@ Vector<Ref<EventTarget>> EventPath::computePathUnclosedToTarget(const EventTarge
     return path;
 }
 
-EventPath::EventPath(const Vector<EventTarget*>& targets)
+EventPath::EventPath(std::span<EventTarget* const> targets)
 {
-    m_path = targets.map([&](auto* target) {
+    m_path = WTF::map(targets, [&](auto* target) {
         ASSERT(target);
         ASSERT(!is<Node>(target));
         return EventContext { EventContext::Type::Normal, nullptr, target, *targets.begin(), 0 };
