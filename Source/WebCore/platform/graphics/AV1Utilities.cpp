@@ -180,15 +180,6 @@ template<> bool isValidEnum<WebCore::AV1ConfigurationMatrixCoefficients>(std::un
 
 namespace WebCore {
 
-template<typename E>
-std::optional<E> parseEnumFromStringView(StringView stringView)
-{
-    auto value = parseInteger<std::underlying_type_t<E>>(stringView);
-    if (!value || !isValidEnum<E>(*value))
-        return std::nullopt;
-    return static_cast<E>(*value);
-}
-
 std::optional<AV1CodecConfigurationRecord> parseAV1CodecParameters(StringView codecView)
 {
     // Ref: https://aomediacodec.github.io/av1-isobmff/#codecsparam

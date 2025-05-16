@@ -528,13 +528,14 @@ std::optional<MediaCapabilitiesDecodingInfo> LibWebRTCProvider::videoDecodingCap
         }
         info.powerEfficient = decodingInfo ? decodingInfo->powerEfficient : isSupportingVP9HardwareDecoder();
         info.smooth = decodingInfo ? decodingInfo->smooth : isVPSoftwareDecoderSmooth(configuration);
-    } else if (equalLettersIgnoringASCIICase(containerType, "video/h264"_s)) {
-        // FIXME: Provide more granular H.264 decoder information.
-        info.powerEfficient = info.smooth = isH264EncoderSmooth(configuration);
-    } else if (equalLettersIgnoringASCIICase(containerType, "video/h265"_s))
+    } else if (equalLettersIgnoringASCIICase(containerType, "video/h264"_s))
         info.powerEfficient = info.smooth = true;
-    else if (equalLettersIgnoringASCIICase(containerType, "video/av1"_s))
+    else if (equalLettersIgnoringASCIICase(containerType, "video/h265"_s))
+        info.powerEfficient = info.smooth = true;
+    else if (equalLettersIgnoringASCIICase(containerType, "video/av1"_s)) {
+        // FIXME: Set value to true if AV1 is only enabled when HW decoder support is enabled.
         info.powerEfficient = false;
+    }
 
     info.supported = true;
     return { info };
