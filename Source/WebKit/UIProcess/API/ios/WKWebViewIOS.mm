@@ -1020,13 +1020,16 @@ static void changeContentOffsetBoundedInValidRange(UIScrollView *scrollView, Web
     [_scrollView _setScrollEnabledInternal:YES];
     if (!layerTreeTransaction.scaleWasSetByUIProcess() && ![_scrollView isZooming] && ![_scrollView isZoomBouncing] && ![_scrollView _wk_isZoomAnimating] && !WebKit::scalesAreEssentiallyEqual([_scrollView zoomScale], layerTreeTransaction.pageScaleFactor())) {
         LOG_WITH_STREAM(VisibleRects, stream << " updating scroll view with pageScaleFactor " << layerTreeTransaction.pageScaleFactor());
+        UIEdgeInsets contentInsets = [_scrollView adjustedContentInset];
+        CGPoint minimumContentOffset = CGPointMake(-contentInsets.left, -contentInsets.top);
+        CGPoint contentOffset = [_scrollView contentOffset];
 
         // When web-process-originated scale changes occur, pin the
         // scroll position to the top edge of the content,
         // instead of the center (which UIScrollView does by default).
         CGFloat scaleRatio = layerTreeTransaction.pageScaleFactor() / [_scrollView zoomScale];
-        CGFloat contentOffsetY = [_scrollView contentOffset].y * scaleRatio;
-        CGFloat contentOffsetX = [_scrollView contentOffset].x * scaleRatio;
+        CGFloat contentOffsetX = minimumContentOffset.x + ((contentOffset.x - minimumContentOffset.x) * scaleRatio);
+        CGFloat contentOffsetY = minimumContentOffset.y + ((contentOffset.y - minimumContentOffset.y) * scaleRatio);
 
         [_scrollView setZoomScale:layerTreeTransaction.pageScaleFactor()];
 
