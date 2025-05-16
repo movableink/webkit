@@ -1376,6 +1376,14 @@
    },
    {
       "emails" : [
+         "b_forward@apple.com",
+         "brenfwd@gmail.com"
+      ],
+      "github" : "brenfwd",
+      "name" : "Brenden Forward"
+   },
+   {
+      "emails" : [
          "bfulgham@webkit.org",
          "bfulgham@apple.com"
       ],
