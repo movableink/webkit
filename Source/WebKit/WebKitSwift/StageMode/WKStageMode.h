@@ -23,9 +23,12 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if defined(TARGET_OS_VISION) && TARGET_OS_VISION
-#import "RealityKitBridging.h"
 #import <Foundation/Foundation.h>
+#import <wtf/Platform.h>
+
+#if ENABLE(MODEL_PROCESS)
+
+#import "RealityKitBridging.h"
 #import <simd/simd.h>
 
 NS_ASSUME_NONNULL_BEGIN

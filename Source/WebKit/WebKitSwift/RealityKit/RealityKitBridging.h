@@ -24,11 +24,13 @@
  */
 
 #import <Foundation/Foundation.h>
+#import <wtf/Platform.h>
 
-#if defined(TARGET_OS_VISION) && TARGET_OS_VISION
+#if ENABLE(MODEL_PROCESS)
 
 #import <simd/simd.h>
 
+typedef struct REAsset *REAssetRef;
 typedef struct REEntity *REEntityRef;
 
 NS_ASSUME_NONNULL_BEGIN
@@ -65,10 +67,10 @@ typedef struct {
 - (instancetype)initWithCoreEntity:(REEntityRef)coreEntity;
 - (void)setParentCoreEntity:(REEntityRef)parentCoreEntity preservingWorldTransform:(BOOL)preservingWorldTransform NS_SWIFT_NAME(setParent(_:preservingWorldTransform:));
 - (void)setUpAnimationWithAutoPlay:(BOOL)autoPlay;
-- (void)applyIBLData:(NSData *)data withCompletion:(void (^)(BOOL success))completion;
+- (void)applyIBLData:(NSData *)data attributionHandler:(void (^)(REAssetRef coreEnvironmentResourceAsset))attributionHandler withCompletion:(void (^)(BOOL success))completion;
 - (void)interactionContainerDidRecenterFromTransform:(simd_float4x4)transform NS_SWIFT_NAME(interactionContainerDidRecenter(_:));
 - (void)recenterEntityAtTransform:(WKEntityTransform)transform NS_SWIFT_NAME(recenterEntity(at:));
-- (void)applyDefaultIBL NS_SWIFT_NAME(applyDefaultIBL());
+- (void)applyDefaultIBLWithAttributionHandler:(void (^)(REAssetRef coreEnvironmentResourceAsset))attributionHandler NS_SWIFT_NAME(applyDefaultIBL(attributionHandler:));
 @end
 
 NS_ASSUME_NONNULL_END

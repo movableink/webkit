@@ -21,16 +21,16 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if os(visionOS)
+#if ENABLE_MODEL_PROCESS
 
 import Combine
 import CoreGraphics
 import Foundation
- @_spi(RealityKit) import RealityKit
- @_spi(RealityKit_Webkit) import RealityKit
 import WebKitSwift
 import os
 import simd
+@_spi(RealityKit) @_spi(Private) import RealityFoundation
+@_spi(RealityKit_Webkit) import RealityKit
 
 private extension Logger {
     static let realityKitEntity = Logger(subsystem: "com.apple.WebKit", category: "RealityKitEntity")
@@ -83,7 +83,7 @@ public final class WKSRKEntity: NSObject {
     }
 
     @objc(initWithCoreEntity:) init(with coreEntity: REEntityRef) {
-        entity = Entity.__fromCore(__EntityRef.__fromCore(coreEntity))
+        entity = Entity.fromCore(coreEntity)
     }
 
     @objc(name) public var name: String {
@@ -313,7 +313,7 @@ public final class WKSRKEntity: NSObject {
         return context.makeImage()
     }
 
-    @objc(applyIBLData:withCompletion:) public func applyIBL(data: Data, completion: @escaping (Bool) -> Void) {
+    @objc(applyIBLData:attributionHandler:withCompletion:) public func applyIBL(data: Data, attributionHandler: @escaping (REAssetRef) -> Void, completion: @escaping (Bool) -> Void) {
         guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil) else {
             Logger.realityKitEntity.error("Cannot get CGImageSource from IBL image data.")
             completion(false)
@@ -332,6 +332,10 @@ public final class WKSRKEntity: NSObject {
                 let environment = try await EnvironmentResource(cube: textureResource, options: .init())
 
                 await MainActor.run {
+                    if let coreEnvironmentResourceAsset = environment.coreIBLAsset?.__as(REAssetRef.self) {
+                        attributionHandler(coreEnvironmentResourceAsset)
+                    }
+
                     entity.components[VirtualEnvironmentProbeComponent.self] = .init(source: .single(.init(environment: environment)))
                     entity.components[ImageBasedLightComponent.self] = .init(source: .none)
                     entity.components[ImageBasedLightReceiverComponent.self] = .init(imageBasedLight: entity)
@@ -347,13 +351,17 @@ public final class WKSRKEntity: NSObject {
         }
     }
     
-    @objc(applyDefaultIBL) func applyDefaultIBL()
+    @objc(applyDefaultIBLWithAttributionHandler:) func applyDefaultIBL(attributionHandler: @escaping (REAssetRef) -> Void)
     {
         Task {
             do {
 #if canImport(RealityFoundation, _version: 380)
                 let environment = await EnvironmentResource.defaultObject()
                 await MainActor.run {
+                    if let coreEnvironmentResourceAsset = environment.coreIBLAsset?.__as(REAssetRef.self) {
+                        attributionHandler(coreEnvironmentResourceAsset)
+                    }
+
                     entity.components[VirtualEnvironmentProbeComponent.self] = .init(source: .single(.init(environment: environment)))
                     entity.components[ImageBasedLightComponent.self] = .init(source: .none)
                     entity.components[ImageBasedLightReceiverComponent.self] = .init(imageBasedLight: entity)
@@ -373,7 +381,7 @@ public final class WKSRKEntity: NSObject {
     }
 
     @objc(setParentCoreEntity:preservingWorldTransform:) public func setParent(_ coreEntity: REEntityRef, preservingWorldTransform: Bool) {
-        let parentEntity = Entity.__fromCore(__EntityRef.__fromCore(coreEntity))
+        let parentEntity = Entity.fromCore(coreEntity)
         entity.setParent(parentEntity, preservingWorldTransform: preservingWorldTransform)
     }
     

@@ -818,28 +818,51 @@ void ModelProcessModelPlayerProxy::animateModelToFitPortal(CompletionHandler<voi
     completionHandler(true);
 }
 
+static void setIBLAssetOwnership(const String& attributionTaskID, REAssetRef iblAsset)
+{
+    const char* attributionIDString = attributionTaskID.utf8().data();
+
+    if (REPtr<REAssetRef> skyboxTexture = REIBLAssetGetSkyboxTexture(iblAsset)) {
+        RELEASE_LOG_DEBUG(ModelElement, "Attributing skyboxTexture to task ID: %s", attributionIDString);
+        REAssetSetMemoryAttributionTarget(skyboxTexture.get(), attributionIDString);
+    }
+    if (REPtr<REAssetRef> diffuseTexture = REIBLAssetGetDiffuseTexture(iblAsset)) {
+        RELEASE_LOG_DEBUG(ModelElement, "Attributing diffuseTexture to task ID: %s", attributionIDString);
+        REAssetSetMemoryAttributionTarget(diffuseTexture.get(), attributionIDString);
+    }
+    if (REPtr<REAssetRef> specularTexture = REIBLAssetGetSpecularTexture(iblAsset)) {
+        RELEASE_LOG_DEBUG(ModelElement, "Attributing specularTexture to task ID: %s", attributionIDString);
+        REAssetSetMemoryAttributionTarget(specularTexture.get(), attributionIDString);
+    }
+}
+
 void ModelProcessModelPlayerProxy::applyEnvironmentMapDataAndRelease()
 {
     if (m_transientEnvironmentMapData) {
         if (m_transientEnvironmentMapData->size() > 0) {
-            [m_modelRKEntity applyIBLData:m_transientEnvironmentMapData->createNSData().get() withCompletion:makeBlockPtr([weakThis = WeakPtr { *this }] (BOOL succeeded) {
+            [m_modelRKEntity applyIBLData:m_transientEnvironmentMapData->createNSData().get() attributionHandler:makeBlockPtr([weakThis = WeakPtr { *this }] (REAssetRef coreEnvironmentResourceAsset) {
+                RefPtr protectedThis = weakThis.get();
+                if (!protectedThis || !protectedThis->m_attributionTaskID)
+                    return;
+
+                setIBLAssetOwnership(*(protectedThis->m_attributionTaskID), coreEnvironmentResourceAsset);
+            }).get() withCompletion:makeBlockPtr([weakThis = WeakPtr { *this }] (BOOL succeeded) {
                 RefPtr protectedThis = weakThis.get();
                 if (!protectedThis)
                     return;
 
                 if (!succeeded)
-                    [protectedThis->m_modelRKEntity applyDefaultIBL];
+                    protectedThis->applyDefaultIBL();
 
                 protectedThis->send(Messages::ModelProcessModelPlayer::DidFinishEnvironmentMapLoading(succeeded));
             }).get()];
         } else {
-            [m_modelRKEntity applyDefaultIBL];
+            applyDefaultIBL();
             send(Messages::ModelProcessModelPlayer::DidFinishEnvironmentMapLoading(true));
         }
         m_transientEnvironmentMapData = nullptr;
-    } else {
-        [m_modelRKEntity applyDefaultIBL];
-    }
+    } else
+        applyDefaultIBL();
 }
 
 void ModelProcessModelPlayerProxy::setHasPortal(bool hasPortal)
@@ -894,6 +917,17 @@ void ModelProcessModelPlayerProxy::applyStageModeOperationToDriver()
         break;
     }
     }
+}
+
+void ModelProcessModelPlayerProxy::applyDefaultIBL()
+{
+    [m_modelRKEntity applyDefaultIBLWithAttributionHandler:makeBlockPtr([weakThis = WeakPtr { *this }] (REAssetRef coreEnvironmentResourceAsset) {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis || !protectedThis->m_attributionTaskID)
+            return;
+
+        setIBLAssetOwnership(*(protectedThis->m_attributionTaskID), coreEnvironmentResourceAsset);
+    }).get()];
 }
 
 } // namespace WebKit

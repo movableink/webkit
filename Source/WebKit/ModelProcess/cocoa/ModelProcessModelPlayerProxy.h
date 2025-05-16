@@ -155,6 +155,7 @@ private:
     bool stageModeInteractionInProgress() const;
     void updateTransformSRT();
     void notifyModelPlayerOfEntityTransformChange();
+    void applyDefaultIBL();
 
     WebCore::ModelPlayerIdentifier m_id;
     bool m_isVisible { true };
