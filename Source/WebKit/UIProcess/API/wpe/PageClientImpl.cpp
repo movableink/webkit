@@ -46,6 +46,7 @@
 #include <WebCore/NotImplemented.h>
 #include <WebCore/PasteboardCustomData.h>
 #include <WebCore/SharedBuffer.h>
+#include <WebCore/SystemSettings.h>
 #include <wpe/wpe.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -519,6 +520,11 @@ AtkObject* PageClientImpl::accessible()
     return ATK_OBJECT(static_cast<WKWPE::ViewLegacy&>(m_view).accessible());
 }
 #endif
+
+bool PageClientImpl::effectiveAppearanceIsDark() const
+{
+    return WebCore::SystemSettings::singleton().darkMode().value_or(false);
+}
 
 void PageClientImpl::didChangeWebPageID() const
 {

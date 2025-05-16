@@ -37,6 +37,7 @@
 #include "ScreenManager.h"
 #include "WebPreferences.h"
 #include <WebCore/Cursor.h>
+#include <WebCore/SystemSettings.h>
 
 #if USE(CAIRO)
 #include <WebCore/RefPtrCairo.h>
@@ -134,10 +135,16 @@ ViewPlatform::ViewPlatform(WPEDisplay* display, const API::PageConfiguration& co
 
     auto& pageConfiguration = m_pageProxy->configuration();
     m_pageProxy->initializeWebPage(pageConfiguration.openedSite(), pageConfiguration.initialSandboxFlags());
+
+    WebCore::SystemSettings::singleton().addObserver([this](const auto& state) {
+        if (state.darkMode)
+            page().effectiveAppearanceDidChange();
+    }, this);
 }
 
 ViewPlatform::~ViewPlatform()
 {
+    WebCore::SystemSettings::singleton().removeObserver(this);
     g_signal_handlers_disconnect_by_data(m_wpeView.get(), this);
     dispatchPendingNextPresentationUpdateCallbacks();
     m_inputMethodFilter.setContext(nullptr);

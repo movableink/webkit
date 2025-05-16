@@ -178,6 +178,8 @@ private:
 
     WebCore::UserInterfaceLayoutDirection userInterfaceLayoutDirection() override;
 
+    bool effectiveAppearanceIsDark() const override;
+
     void didChangeWebPageID() const override;
 
     void selectionDidChange() override;
