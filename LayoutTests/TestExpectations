@@ -6830,25 +6830,7 @@ imported/w3c/web-platform-tests/webtransport/constructor.https.any.html [ Skip ]
 imported/w3c/web-platform-tests/webtransport/back-forward-cache-with-open-webtransport-connection.https.window.html [ Skip ]
 imported/w3c/web-platform-tests/webtransport/back-forward-cache-with-closed-webtransport-connection.https.window.html [ Skip ]
 
-# These tests are slow and sometime time out in debug.
-[ Debug ] imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/iframe-popup-to-so.https.html?1-2 [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/iframe-popup-to-so.https.html?3-4 [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/iframe-popup-to-so.https.html?5-6 [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/iframe-popup-to-so.https.html?7-8 [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/iframe-popup-to-so.https.html?9-last [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/iframe-popup-to-soap.https.html?1-2 [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/iframe-popup-to-soap.https.html?3-4 [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/iframe-popup-to-soap.https.html?5-6 [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/iframe-popup-to-soap.https.html?7-8 [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/iframe-popup-to-soap.https.html?9-last [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/html/cross-origin-opener-policy/iframe-popup-same-origin-allow-popups-to-same-origin.https.html?1-2 [ Skip ]
-[ debug ] imported/w3c/web-platform-tests/html/cross-origin-opener-policy/iframe-popup-same-origin-allow-popups-to-same-origin.https.html?3-4 [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/html/cross-origin-opener-policy/iframe-popup-same-origin-allow-popups-to-same-origin.https.html?5-6 [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/html/cross-origin-opener-policy/iframe-popup-same-origin-allow-popups-to-same-origin.https.html?7-8 [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/html/cross-origin-opener-policy/iframe-popup-same-origin-allow-popups-to-same-origin.https.html?9-last [ Skip ]
-
 # Some of Canvas Layer API features are not supported yet.
-
 imported/w3c/web-platform-tests/html/canvas/element/layers/2d.layer.anisotropic-blur.isotropic.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/canvas/element/layers/2d.layer.anisotropic-blur.mostly-x.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/canvas/element/layers/2d.layer.anisotropic-blur.mostly-y.html [ ImageOnlyFailure ]
