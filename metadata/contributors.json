@@ -1069,8 +1069,10 @@
    },
    {
       "emails" : [
+         "a_renevier@apple.com",
          "a.renevier@samsung.com"
       ],
+      "github" : "arenevier",
       "name" : "Arno Renevier",
       "nicks" : [
          "arno"
