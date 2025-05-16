@@ -276,6 +276,7 @@ struct PerWebProcessState {
     _WKSelectionAttributes _selectionAttributes;
     _WKRenderingProgressEvents _observedRenderingProgressEvents;
     BOOL _usePlatformFindUI;
+    BOOL _usesAutomaticContentInsetBackgroundFill;
 
     CocoaEdgeInsets _minimumViewportInset;
     CocoaEdgeInsets _maximumViewportInset;

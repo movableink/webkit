@@ -1565,6 +1565,23 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     );
 }
 
+- (void)_setUsesAutomaticContentInsetBackgroundFill:(BOOL)value
+{
+    if (_usesAutomaticContentInsetBackgroundFill == value)
+        return;
+
+    _usesAutomaticContentInsetBackgroundFill = value;
+
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    _impl->updateContentInsetFillViews();
+#endif
+}
+
+- (BOOL)_usesAutomaticContentInsetBackgroundFill
+{
+    return _usesAutomaticContentInsetBackgroundFill;
+}
+
 - (void)_setAutomaticallyAdjustsContentInsets:(BOOL)automaticallyAdjustsContentInsets
 {
     _impl->setAutomaticallyAdjustsContentInsets(automaticallyAdjustsContentInsets);
