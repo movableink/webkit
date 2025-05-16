@@ -949,7 +949,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/CSSVariableData.h
     css/CSSVariableReferenceValue.h
     css/ComputedStyleDependencies.h
-    css/Counter.h
     css/DeprecatedCSSOMCounter.h
     css/DeprecatedCSSOMPrimitiveValue.h
     css/DeprecatedCSSOMRGBColor.h

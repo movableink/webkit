@@ -43,7 +43,6 @@ class Quad;
 class Rect;
 
 struct ComputedStyleDependencies;
-struct Counter;
 
 enum CSSPropertyID : uint16_t;
 enum CSSValueID : uint16_t;
