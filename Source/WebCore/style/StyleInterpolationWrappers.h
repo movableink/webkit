@@ -427,6 +427,20 @@ private:
     void (RenderStyle::*m_setter)(T);
 };
 
+class FontSizeWrapper final : public Wrapper<float> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+public:
+    FontSizeWrapper()
+        : Wrapper<float>(CSSPropertyID::CSSPropertyFontSize, &RenderStyle::computedFontSize, &RenderStyle::setFontSize)
+    {
+    }
+
+    bool equals(const RenderStyle& a, const RenderStyle& b) const final
+    {
+        return a.specifiedFontSize() == b.specifiedFontSize();
+    }
+};
+
 class DiscreteFontDescriptionWrapper : public WrapperBase {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:

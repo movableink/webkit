@@ -644,8 +644,8 @@
             ],
             "codegen-properties": {
                 "accepts-quirky-length": true,
-                "animation-wrapper": "Wrapper<float>",
-                "animation-wrapper-requires-computed-getter": true,
+                "animation-wrapper": "FontSizeWrapper",
+                "animation-wrapper-requires-override-parameters": [],
                 "style-builder-custom": "All",
                 "style-extractor-custom": true,
                 "high-priority": true,
