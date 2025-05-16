@@ -2060,8 +2060,13 @@ TEST(WebKit2, getUserMediaWithDeviceChangeWebPage)
     done = false;
 }
 
+// FIXME: Re-enable this test once webkit.org/b/293136 is resolved.
 #if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
+#if defined(NDEBUG)
 TEST(WebKit, GetUserMediaWithWebThread)
+#else
+TEST(WebKit, DISABLED_GetUserMediaWithWebThread)
+#endif
 {
     [WebView enableWebThread];
 
