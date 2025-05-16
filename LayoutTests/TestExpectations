@@ -7896,4 +7896,6 @@ imported/w3c/web-platform-tests/css/cssom/adoptedstylesheets-adopt-style.tentati
 imported/w3c/web-platform-tests/wasm/jsapi/jspi/js-promise-integration.any.html [ Pass Failure ]
 imported/w3c/web-platform-tests/wasm/webapi/esm-integration/script-src-blocks-wasm.tentative.sub.html [ Pass Failure ]
 
+webkit.org/b/293108 webanimations/document-teardown-due-to-last-reference-crash.html [ Pass Timeout ]
+
 http/tests/iframe-memory-monitor/video-iframe.html [ Skip ]

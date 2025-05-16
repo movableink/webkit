@@ -133,7 +133,9 @@ void WebAnimation::remove()
     // This object could be deleted after either clearing the effect or timeline relationship.
     Ref protectedThis { *this };
     setEffectInternal(nullptr);
-    setTimeline(nullptr);
+    setTimelineInternal(nullptr);
+    m_holdTime = std::nullopt;
+    m_startTime = std::nullopt;
 }
 
 void WebAnimation::suspendEffectInvalidation()
