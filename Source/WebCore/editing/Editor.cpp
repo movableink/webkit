@@ -1252,7 +1252,7 @@ void Editor::appliedEditing(CompositeEditCommand& command)
 
     bool wasUserEdit = [&command] {
         RefPtr typingCommand = dynamicDowncast<TypingCommand>(command);
-        return !typingCommand || !typingCommand->triggeringEventWasCreatedFromBindings();
+        return !typingCommand || !typingCommand->triggeringEventIsUntrusted();
     }();
     notifyTextFromControls(composition->startingRootEditableElement(), composition->endingRootEditableElement(), wasUserEdit);
 
