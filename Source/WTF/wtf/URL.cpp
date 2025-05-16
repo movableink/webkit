@@ -1283,7 +1283,7 @@ Vector<KeyValuePair<String, String>> differingQueryParameters(const URL& firstUR
         return firstQueryParameters;
     
     auto compare = [] (const KeyValuePair<String, String>& a, const KeyValuePair<String, String>& b) {
-        if (int result = codePointCompare(a.key, b.key))
+        if (auto result = codePointCompare(a.key, b.key); is_neq(result))
             return result;
         return codePointCompare(a.value, b.value);
         
@@ -1300,11 +1300,11 @@ Vector<KeyValuePair<String, String>> differingQueryParameters(const URL& firstUR
     size_t indexInSecondQueryParameters = 0;
     Vector<KeyValuePair<String, String>> differingQueryParameters;
     while (indexInFirstQueryParameters < totalFirstQueryParameters && indexInSecondQueryParameters < totalSecondQueryParameters) {
-        int comparison = compare(firstQueryParameters[indexInFirstQueryParameters], secondQueryParameters[indexInSecondQueryParameters]);
-        if (comparison < 0) {
+        auto comparison = compare(firstQueryParameters[indexInFirstQueryParameters], secondQueryParameters[indexInSecondQueryParameters]);
+        if (is_lt(comparison)) {
             differingQueryParameters.append(firstQueryParameters[indexInFirstQueryParameters]);
             indexInFirstQueryParameters++;
-        } else if (comparison > 0) {
+        } else if (is_gt(comparison)) {
             differingQueryParameters.append(secondQueryParameters[indexInSecondQueryParameters]);
             indexInSecondQueryParameters++;
         } else {

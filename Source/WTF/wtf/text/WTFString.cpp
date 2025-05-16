@@ -62,7 +62,7 @@ String::String(const char* nullTerminatedString)
 {
 }
 
-int codePointCompare(const String& a, const String& b)
+std::strong_ordering codePointCompare(const String& a, const String& b)
 {
     return codePointCompare(a.impl(), b.impl());
 }

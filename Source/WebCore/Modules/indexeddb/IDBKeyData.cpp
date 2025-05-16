@@ -284,13 +284,8 @@ std::weak_ordering operator<=>(const IDBKeyData& a, const IDBKeyData& b)
     }
     case IndexedDB::KeyType::Binary:
         return compareBinaryKeyData(std::get<ThreadSafeDataBuffer>(a.m_value), std::get<ThreadSafeDataBuffer>(b.m_value));
-    case IndexedDB::KeyType::String: {
-        // FIXME: codePointCompare() should return a std::strong_ordering.
-        int comparison = codePointCompare(std::get<String>(a.m_value), std::get<String>(b.m_value));
-        if (!comparison)
-            return std::weak_ordering::equivalent;
-        return comparison < 0 ? std::weak_ordering::less : std::weak_ordering::greater;
-    }
+    case IndexedDB::KeyType::String:
+        return codePointCompare(std::get<String>(a.m_value), std::get<String>(b.m_value));
     case IndexedDB::KeyType::Date:
         return weakOrderingCast(std::get<IDBKeyData::Date>(a.m_value).value <=> std::get<IDBKeyData::Date>(b.m_value).value);
     case IndexedDB::KeyType::Number:

@@ -646,8 +646,9 @@ size_t reverseFind(std::span<const LChar>, UChar matchCharacter, size_t start = 
 
 template<size_t inlineCapacity> bool equalIgnoringNullity(const Vector<UChar, inlineCapacity>&, StringImpl*);
 
-template<typename CharacterType1, typename CharacterType2> int codePointCompare(std::span<const CharacterType1>, std::span<const CharacterType2>);
-int codePointCompare(const StringImpl*, const StringImpl*);
+template<typename CharacterType1, typename CharacterType2>
+std::strong_ordering codePointCompare(std::span<const CharacterType1> characters1, std::span<const CharacterType2> characters2);
+std::strong_ordering codePointCompare(const StringImpl* string1, const StringImpl* string2);
 
 bool isUnicodeWhitespace(UChar);
 
@@ -773,7 +774,7 @@ template<size_t inlineCapacity> inline bool equalIgnoringNullity(const Vector<UC
     return equalIgnoringNullity(a.data(), a.size(), b);
 }
 
-template<typename CharacterType1, typename CharacterType2> inline int codePointCompare(std::span<const CharacterType1> characters1, std::span<const CharacterType2> characters2)
+template<typename CharacterType1, typename CharacterType2> inline std::strong_ordering codePointCompare(std::span<const CharacterType1> characters1, std::span<const CharacterType2> characters2)
 {
     size_t commonLength = std::min(characters1.size(), characters2.size());
 
@@ -787,20 +788,20 @@ template<typename CharacterType1, typename CharacterType2> inline int codePointC
     }
 
     if (position < commonLength)
-        return (characters1Ptr[0] > characters2Ptr[0]) ? 1 : -1;
+        return (characters1Ptr[0] > characters2Ptr[0]) ? std::strong_ordering::greater : std::strong_ordering::less;
 
     if (characters1.size() == characters2.size())
-        return 0;
-    return (characters1.size() > characters2.size()) ? 1 : -1;
+        return std::strong_ordering::equal;
+    return (characters1.size() > characters2.size()) ? std::strong_ordering::greater : std::strong_ordering::less;
 }
 
-inline int codePointCompare(const StringImpl* string1, const StringImpl* string2)
+inline std::strong_ordering codePointCompare(const StringImpl* string1, const StringImpl* string2)
 {
     // FIXME: Should null strings compare as less than empty strings rather than equal to them?
     if (!string1)
-        return (string2 && string2->length()) ? -1 : 0;
+        return (string2 && string2->length()) ? std::strong_ordering::less : std::strong_ordering::equal;
     if (!string2)
-        return string1->length() ? 1 : 0;
+        return string1->length() ? std::strong_ordering::greater : std::strong_ordering::equal;
 
     bool string1Is8Bit = string1->is8Bit();
     bool string2Is8Bit = string2->is8Bit();

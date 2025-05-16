@@ -448,7 +448,7 @@ String makeStringByReplacingAll(StringView string, UChar target, UChar replaceme
     return StringImpl::createByReplacingInCharacters(characters, target, replacement, i);
 }
 
-int codePointCompare(StringView lhs, StringView rhs)
+std::strong_ordering codePointCompare(StringView lhs, StringView rhs)
 {
     bool lhsIs8Bit = lhs.is8Bit();
     bool rhsIs8Bit = rhs.is8Bit();

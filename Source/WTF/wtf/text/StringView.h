@@ -1185,7 +1185,7 @@ inline bool equalIgnoringNullity(StringView a, StringView b)
     return equal(a, b);
 }
 
-WTF_EXPORT_PRIVATE int codePointCompare(StringView, StringView);
+WTF_EXPORT_PRIVATE std::strong_ordering codePointCompare(StringView, StringView);
 
 inline bool hasUnpairedSurrogate(StringView string)
 {

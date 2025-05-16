@@ -344,7 +344,7 @@ NSString * nsStringNilIfNull(const String&);
 
 #endif
 
-WTF_EXPORT_PRIVATE int codePointCompare(const String&, const String&);
+WTF_EXPORT_PRIVATE std::strong_ordering codePointCompare(const String&, const String&);
 bool codePointCompareLessThan(const String&, const String&);
 
 // Shared global empty and null string.

@@ -319,7 +319,7 @@ inline bool equalIgnoringASCIICase(const AtomString& a, ASCIILiteral b)
     return equalIgnoringASCIICase(a.string(), b);
 }
 
-inline int codePointCompare(const AtomString& a, const AtomString& b)
+inline std::strong_ordering codePointCompare(const AtomString& a, const AtomString& b)
 {
     return codePointCompare(a.string(), b.string());
 }
