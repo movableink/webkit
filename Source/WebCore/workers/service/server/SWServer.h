@@ -351,6 +351,9 @@ private:
 
     ResourceRequest createScriptRequest(const URL&, const ServiceWorkerJobData&, SWServerRegistration&);
 
+    enum class ShouldUpdateRegistrations : bool { No, Yes };
+    void unregisterServiceWorkerClientInternal(const ClientOrigin&, ScriptExecutionContextIdentifier, ShouldUpdateRegistrations);
+
     WeakPtr<SWServerDelegate> m_delegate;
 
     HashMap<SWServerConnectionIdentifier, Ref<Connection>> m_connections;

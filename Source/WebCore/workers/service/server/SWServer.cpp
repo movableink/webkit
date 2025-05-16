@@ -1198,17 +1198,7 @@ void SWServer::registerServiceWorkerClient(ClientOrigin&& clientOrigin, ServiceW
 
     auto addResult = m_visibleClientIdToInternalClientIdMap.add(data.identifier.object().toString(), clientIdentifier);
     if (!addResult.isNewEntry) {
-        if (addResult.iterator->value.processIdentifier() != clientIdentifier.processIdentifier()) {
-            // The client is being process-swapped, we clear the hash maps so that they get properly populated.
-            auto previousIdentifier = addResult.iterator->value;
-            m_clientsById.remove(previousIdentifier);
-            m_clientsToBeCreatedById.remove(previousIdentifier);
-            m_clientToControllingRegistration.remove(previousIdentifier);
-            bool isRemoved = m_clientIdentifiersPerOrigin.ensure(clientOrigin, [] {
-                return Clients { };
-            }).iterator->value.identifiers.removeFirst(previousIdentifier);
-            ASSERT_UNUSED(isRemoved, isRemoved);
-        } else {
+        if (addResult.iterator->value.processIdentifier() == clientIdentifier.processIdentifier()) {
             ASSERT(m_visibleClientIdToInternalClientIdMap.get(data.identifier.object().toString()) == clientIdentifier);
             ASSERT(m_clientsById.contains(clientIdentifier));
             if (data.isFocused)
@@ -1216,6 +1206,10 @@ void SWServer::registerServiceWorkerClient(ClientOrigin&& clientOrigin, ServiceW
             m_clientsById.set(clientIdentifier, makeUniqueRef<ServiceWorkerClientData>(WTFMove(data)));
             return;
         }
+
+        // The client is being process-swapped, we clear the hash maps so that they get properly populated.
+        unregisterServiceWorkerClientInternal(clientOrigin, clientIdentifier, ShouldUpdateRegistrations::No);
+        m_visibleClientIdToInternalClientIdMap.add(data.identifier.object().toString(), clientIdentifier);
     }
 
     ASSERT(!m_clientsById.contains(clientIdentifier));
@@ -1276,14 +1270,10 @@ std::optional<SWServer::GatheredClientData> SWServer::gatherClientData(const Cli
     };
 }
 
-void SWServer::unregisterServiceWorkerClient(const ClientOrigin& clientOrigin, ScriptExecutionContextIdentifier clientIdentifier)
+void SWServer::unregisterServiceWorkerClientInternal(const ClientOrigin& clientOrigin, ScriptExecutionContextIdentifier clientIdentifier, ShouldUpdateRegistrations shouldUpdateRegistrations)
 {
-    auto clientIterator = m_clientsById.find(clientIdentifier);
-    if (clientIterator != m_clientsById.end() && clientIterator->value->identifier.processIdentifier() != clientIdentifier.processIdentifier())
-        return;
-
     auto clientRegistrableDomain = clientOrigin.clientRegistrableDomain();
-    auto appInitiatedValueBefore = clientIsAppInitiatedForRegistrableDomain(clientOrigin.clientRegistrableDomain());
+    auto appInitiatedValueBefore = clientIsAppInitiatedForRegistrableDomain(clientRegistrableDomain);
 
     m_clientsById.remove(clientIdentifier);
     m_clientsToBeCreatedById.remove(clientIdentifier);
@@ -1296,28 +1286,28 @@ void SWServer::unregisterServiceWorkerClient(const ClientOrigin& clientOrigin, S
     if (clientsForRegistrableDomain.isEmpty())
         m_clientsByRegistrableDomain.remove(clientsByRegistrableDomainIterator);
 
-    // If the client that's going away is a service worker page then we need to unregister its service worker.
     bool didUnregister = false;
-    if (RefPtr registration = m_serviceWorkerPageIdentifierToRegistrationMap.get(clientIdentifier)) {
-        removeFromScopeToRegistrationMap(registration->key());
-        if (RefPtr preinstallingServiceWorker = registration->preInstallationWorker()) {
-            if (CheckedPtr jobQueue = m_jobQueues.get(registration->key()))
-                jobQueue->cancelJobsFromServiceWorker(preinstallingServiceWorker->identifier());
+    if (shouldUpdateRegistrations == ShouldUpdateRegistrations::Yes) {
+        // If the client that's going away is a service worker page then we need to unregister its service worker.
+        if (RefPtr registration = m_serviceWorkerPageIdentifierToRegistrationMap.get(clientIdentifier)) {
+            removeFromScopeToRegistrationMap(registration->key());
+            if (RefPtr preinstallingServiceWorker = registration->preInstallationWorker()) {
+                if (CheckedPtr jobQueue = m_jobQueues.get(registration->key()))
+                    jobQueue->cancelJobsFromServiceWorker(preinstallingServiceWorker->identifier());
+            }
+            registration->clear(); // Will destroy the registration.
+            ASSERT(!m_serviceWorkerPageIdentifierToRegistrationMap.contains(clientIdentifier));
+            didUnregister = true;
         }
-        registration->clear(); // Will destroy the registration.
-        ASSERT(!m_serviceWorkerPageIdentifierToRegistrationMap.contains(clientIdentifier));
-        didUnregister = true;
     }
 
     auto iterator = m_clientIdentifiersPerOrigin.find(clientOrigin);
     ASSERT(iterator != m_clientIdentifiersPerOrigin.end());
 
     auto& clientIdentifiers = iterator->value.identifiers;
-    clientIdentifiers.removeFirstMatching([&] (const auto& identifier) {
-        return clientIdentifier == identifier;
-    });
+    clientIdentifiers.removeFirst(clientIdentifier);
 
-    if (clientIdentifiers.isEmpty()) {
+    if (clientIdentifiers.isEmpty() && shouldUpdateRegistrations == ShouldUpdateRegistrations::Yes) {
         ASSERT(!iterator->value.terminateServiceWorkersTimer);
         iterator->value.terminateServiceWorkersTimer = makeUnique<Timer>([clientOrigin, clientRegistrableDomain, weakThis = WeakPtr { *this }] {
             RefPtr protectedThis = weakThis.get();
@@ -1346,20 +1336,33 @@ void SWServer::unregisterServiceWorkerClient(const ClientOrigin& clientOrigin, S
         iterator->value.terminateServiceWorkersTimer->startOneShot(m_isProcessTerminationDelayEnabled && !MemoryPressureHandler::singleton().isUnderMemoryPressure() && !shouldContextConnectionBeTerminatedWhenPossible && !didUnregister ? defaultTerminationDelay : 0_s);
     }
 
-    // If the app-bound value changed after this client was removed, we know it was the only app-bound
-    // client for its origin, and we should update all workers to reflect this.
-    auto appInitiatedValueAfter = clientIsAppInitiatedForRegistrableDomain(clientOrigin.clientRegistrableDomain());
-    if (appInitiatedValueBefore != appInitiatedValueAfter)
-        updateAppInitiatedValueForWorkers(clientOrigin, appInitiatedValueAfter);
+    if (shouldUpdateRegistrations == ShouldUpdateRegistrations::Yes) {
+        // If the app-bound value changed after this client was removed, we know it was the only app-bound
+        // client for its origin, and we should update all workers to reflect this.
+        auto appInitiatedValueAfter = clientIsAppInitiatedForRegistrableDomain(clientOrigin.clientRegistrableDomain());
+        if (appInitiatedValueBefore != appInitiatedValueAfter)
+            updateAppInitiatedValueForWorkers(clientOrigin, appInitiatedValueAfter);
+    }
 
     auto registrationIterator = m_clientToControllingRegistration.find(clientIdentifier);
     if (registrationIterator == m_clientToControllingRegistration.end())
         return;
 
-    if (RefPtr registration = m_registrations.get(registrationIterator->value))
-        registration->removeClientUsingRegistration(clientIdentifier); // May destroy the registration.
+    if (shouldUpdateRegistrations == ShouldUpdateRegistrations::Yes) {
+        if (RefPtr registration = m_registrations.get(registrationIterator->value))
+            registration->removeClientUsingRegistration(clientIdentifier); // May destroy the registration.
+    }
 
     m_clientToControllingRegistration.remove(registrationIterator);
+}
+
+void SWServer::unregisterServiceWorkerClient(const ClientOrigin& clientOrigin, ScriptExecutionContextIdentifier clientIdentifier)
+{
+    auto clientIterator = m_clientsById.find(clientIdentifier);
+    if (clientIterator != m_clientsById.end() && clientIterator->value->identifier.processIdentifier() != clientIdentifier.processIdentifier())
+        return;
+
+    unregisterServiceWorkerClientInternal(clientOrigin, clientIdentifier, ShouldUpdateRegistrations::Yes);
 }
 
 std::optional<ServiceWorkerRegistrationIdentifier> SWServer::clientIdentifierToControllingRegistration(ScriptExecutionContextIdentifier clientIdentifier) const
