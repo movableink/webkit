@@ -55,7 +55,7 @@ template<bool isSpecialCharacter(UChar), typename CharacterType, std::size_t Ext
 enum class TrailingZerosPolicy : bool { Keep, Truncate };
 
 class String final {
-    WTF_MAKE_FAST_COMPACT_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     // Construct a null string, distinguishable from an empty string.
     String() = default;

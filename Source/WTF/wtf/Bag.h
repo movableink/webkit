@@ -157,10 +157,6 @@ private:
     typename PtrTraits::StorageType m_head { nullptr };
 };
 
-template<typename T>
-using PackedBag = Bag<T, PackedPtrTraits<T>>;
-
 } // namespace WTF
 
 using WTF::Bag;
-using WTF::PackedBag;

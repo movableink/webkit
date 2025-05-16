@@ -47,7 +47,7 @@ enum SentinelTag { Sentinel };
 
 template<typename T, typename PassedPtrTraits = RawPtrTraits<T>>
 class BasicRawSentinelNode {
-    WTF_MAKE_FAST_COMPACT_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     using PtrTraits = typename PassedPtrTraits::template RebindTraits<BasicRawSentinelNode>;
 
@@ -315,11 +315,7 @@ IGNORE_GCC_WARNINGS_END
     other.m_sentinel.setPrev(&other.m_sentinel);
 }
 
-template<typename T>
-using PackedRawSentinelNode = BasicRawSentinelNode<T, PackedPtrTraits<T>>;
-
 }
 
 using WTF::BasicRawSentinelNode;
-using WTF::PackedRawSentinelNode;
 using WTF::SentinelLinkedList;
