@@ -36,7 +36,7 @@
         F_SETNOSIGPIPE))
 
 (with-filter (mac-policy-name "Sandbox")
-    (allow system-mac-syscall (mac-syscall-number 5)))
+    (allow system-mac-syscall (mac-syscall-number 5 65)))
 
 (allow iokit-open-service
     (iokit-registry-entry-class
