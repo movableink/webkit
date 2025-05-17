@@ -128,6 +128,12 @@ ShadowRoot::~ShadowRoot()
 Node::InsertedIntoAncestorResult ShadowRoot::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
     DocumentFragment::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    if (!hasScopedCustomElementRegistry() && usesNullCustomElementRegistry() && !parentOfInsertedTree.usesNullCustomElementRegistry()) {
+        if (RefPtr registry = CustomElementRegistry::registryForElement(*host())) {
+            clearUsesNullCustomElementRegistry();
+            setCustomElementRegistry(*registry);
+        }
+    }
     if (insertionType.connectedToDocument) {
         protectedDocument()->didInsertInDocumentShadowRoot(*this);
         if (m_hasScopedCustomElementRegistry) {
