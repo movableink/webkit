@@ -25,7 +25,7 @@
 
 #import <Foundation/Foundation.h>
 
-#if defined(TARGET_OS_IOS) && TARGET_OS_IOS
+#if (defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_VISION) && TARGET_OS_VISION)
 
 #import <UIKit/UIKit.h>
 
