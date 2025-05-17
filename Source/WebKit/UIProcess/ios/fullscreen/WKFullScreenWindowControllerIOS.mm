@@ -614,7 +614,9 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
     _preferredDarkness = UIApplication.sharedApplication.mrui_activeStage.preferredDarkness;
 
     UIWindowScene *windowScene = window.windowScene;
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     _sceneSize = windowScene.coordinateSpace.bounds.size;
+ALLOW_DEPRECATED_DECLARATIONS_END
     _sceneMinimumSize = windowScene.sizeRestrictions.minimumSize;
     _sceneChromeOptions = windowScene.mrui_placement.preferredChromeOptions;
     _sceneResizingBehavior = windowScene.mrui_placement.preferredResizingBehavior;
@@ -1884,7 +1886,9 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
         [_lastKnownParentWindow setFrame:adjustedOriginalWindowFrame];
         [_window setFrame:adjustedFullscreenWindowFrame];
 
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         [self _updateOrnamentOffsetsForTemporarySceneSize:[_window windowScene].coordinateSpace.bounds.size];
+ALLOW_DEPRECATED_DECLARATIONS_END
     });
 }
 
@@ -1975,7 +1979,9 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
 
             UIWindowScene *scene = [inWindow windowScene];
 
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             [inWindow setFrame:scene.coordinateSpace.bounds];
+ALLOW_DEPRECATED_DECLARATIONS_END
 
             if (enter) {
                 if ([controller _sceneAspectRatioLockingEnabled])

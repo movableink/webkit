@@ -1983,7 +1983,9 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
 - (void)_updateLastKnownWindowSizeAndOrientation
 {
     UIWindowScene *scene = self.window.windowScene;
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     _lastKnownWindowSizeAndOrientation = { scene.coordinateSpace.bounds.size, scene.interfaceOrientation };
+ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 - (void)didMoveToWindow
