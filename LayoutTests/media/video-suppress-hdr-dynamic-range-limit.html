@@ -34,28 +34,28 @@ window.addEventListener('load', async event => {
         videos = document.getElementById("videos");
 
         internals.setPageShouldSuppressHDR(false);
-        verifyVideos({video: 'videon', limit: '""', computed: '"no-limit"', value: '1.0'});
-        verifyVideos({video: 'videoc', limit: '""', computed: '"constrained-high"', value: '0.5'});
-        verifyVideos({video: 'videos', limit: '""', computed: '"standard"', value: '0.0'});
+        verifyVideo({video: 'videon', limit: '""', computed: '"no-limit"', value: '1.0'});
+        verifyVideo({video: 'videoc', limit: '"constrained-high"', computed: '"constrained-high"', value: '0.5'});
+        verifyVideo({video: 'videos', limit: '"standard"', computed: '"standard"', value: '0.0'});
 
         internals.setPageShouldSuppressHDR(true);
-        verifyVideos({video: 'videon', limit: '""', computed: '"no-limit"', value: '0.5'});
-        verifyVideos({video: 'videoc', limit: '""', computed: '"constrained-high"', value: '0.5'});
-        verifyVideos({video: 'videos', limit: '""', computed: '"standard"', value: '0.0'});
+        verifyVideo({video: 'videon', limit: '""', computed: '"no-limit"', value: '0.5'});
+        verifyVideo({video: 'videoc', limit: '"constrained-high"', computed: '"constrained-high"', value: '0.5'});
+        verifyVideo({video: 'videos', limit: '"standard"', computed: '"standard"', value: '0.0'});
 
         video2 = document.createElement("video");
         video1.append(video2);
-        verifyVideos({video: 'video2', limit: '""', computed: '"no-limit"', value: '0.5'});
+        verifyVideo({video: 'video2', limit: '""', computed: '"no-limit"', value: '0.5'});
 
         internals.setPageShouldSuppressHDR(false);
-        verifyVideos({video: 'videon', limit: '""', computed: '"no-limit"', value: '1.0'});
-        verifyVideos({video: 'videoc', limit: '""', computed: '"constrained-high"', value: '0.5'});
-        verifyVideos({video: 'videos', limit: '""', computed: '"standard"', value: '0.0'});
-        verifyVideos({video: 'video2', limit: '""', computed: '"no-limit"', value: '1.0'});
+        verifyVideo({video: 'videon', limit: '""', computed: '"no-limit"', value: '1.0'});
+        verifyVideo({video: 'videoc', limit: '"constrained-high"', computed: '"constrained-high"', value: '0.5'});
+        verifyVideo({video: 'videos', limit: '"standard"', computed: '"standard"', value: '0.0'});
+        verifyVideo({video: 'video2', limit: '""', computed: '"no-limit"', value: '1.0'});
 
         video3 = document.createElement("video");
         video2.append(video3);
-        verifyVideos({video: 'video3', limit: '""', computed: '"no-limit"', value: '1.0'});
+        verifyVideo({video: 'video3', limit: '""', computed: '"no-limit"', value: '1.0'});
     }
 });
 </script>
