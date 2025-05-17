@@ -77,6 +77,7 @@
 #include "EventNames.h"
 #include "ExtensionStyleSheets.h"
 #include "FilterRenderingMode.h"
+#include "FixedContainerEdges.h"
 #include "FocusController.h"
 #include "FontCache.h"
 #include "FragmentDirectiveGenerator.h"
@@ -439,6 +440,7 @@ Page::Page(PageConfiguration&& pageConfiguration)
     , m_allowedNetworkHosts(WTFMove(pageConfiguration.allowedNetworkHosts))
     , m_loadsSubresources(pageConfiguration.loadsSubresources)
     , m_shouldRelaxThirdPartyCookieBlocking(pageConfiguration.shouldRelaxThirdPartyCookieBlocking)
+    , m_fixedContainerEdges(makeUniqueRef<FixedContainerEdges>())
     , m_httpsUpgradeEnabled(pageConfiguration.httpsUpgradeEnabled)
     , m_portsForUpgradingInsecureSchemeForTesting(WTFMove(pageConfiguration.portsForUpgradingInsecureSchemeForTesting))
     , m_storageProvider(WTFMove(pageConfiguration.storageProvider))
@@ -1821,7 +1823,7 @@ void Page::didCommitLoad()
         geolocationController->didNavigatePage();
 #endif
 
-    m_lastTopFixedContainerColor = { };
+    m_fixedContainerEdges = makeUniqueRef<FixedContainerEdges>();
 
     m_elementTargetingController->reset();
 
@@ -5239,6 +5241,24 @@ void Page::setObscuredInsets(const FloatBoxExtent& insets)
     m_chrome->client().setNeedsFixedContainerEdgesUpdate();
 }
 #endif
+
+void Page::updateFixedContainerEdges(BoxSideSet sides)
+{
+    RefPtr mainFrame = localMainFrame();
+    if (!mainFrame)
+        return;
+
+    RefPtr frameView = mainFrame->view();
+    if (!frameView)
+        return;
+
+    m_fixedContainerEdges = makeUniqueRef<FixedContainerEdges>(frameView->fixedContainerEdges(sides));
+}
+
+Color Page::lastTopFixedContainerColor() const
+{
+    return m_fixedContainerEdges->predominantColor(BoxSide::Top);
+}
 
 void Page::setPortsForUpgradingInsecureSchemeForTesting(uint16_t upgradeFromInsecurePort, uint16_t upgradeToSecurePort)
 {

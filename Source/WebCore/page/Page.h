@@ -222,6 +222,7 @@ struct ApplePayAMSUIRequest;
 struct AttributedString;
 struct CharacterRange;
 struct ClientOrigin;
+struct FixedContainerEdges;
 struct NavigationAPIMethodTracker;
 struct ProcessSyncData;
 struct SimpleRange;
@@ -237,6 +238,7 @@ using SharedStringHash = uint32_t;
 
 enum class ActivityState : uint16_t;
 enum class AdvancedPrivacyProtections : uint16_t;
+enum class BoxSideFlag : uint8_t;
 enum class CanWrap : bool;
 enum class ContentSecurityPolicyModeForExtension : uint8_t;
 enum class DidWrap : bool;
@@ -906,8 +908,9 @@ public:
     WEBCORE_EXPORT Color pageExtendedBackgroundColor() const;
     WEBCORE_EXPORT Color sampledPageTopColor() const;
 
-    void setLastTopFixedContainerColor(Color&& color) { m_lastTopFixedContainerColor = WTFMove(color); }
-    Color lastTopFixedContainerColor() const { return m_lastTopFixedContainerColor; }
+    WEBCORE_EXPORT void updateFixedContainerEdges(OptionSet<BoxSideFlag>);
+    const FixedContainerEdges& fixedContainerEdges() const { return m_fixedContainerEdges; }
+    Color lastTopFixedContainerColor() const;
 
 #if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
     WEBCORE_EXPORT std::optional<SpatialBackdropSource> spatialBackdropSource() const;
@@ -1706,7 +1709,7 @@ private:
 
     Color m_underPageBackgroundColorOverride;
     std::optional<Color> m_sampledPageTopColor;
-    Color m_lastTopFixedContainerColor;
+    UniqueRef<FixedContainerEdges> m_fixedContainerEdges;
 
     const bool m_httpsUpgradeEnabled { true };
     mutable Markable<MediaSessionGroupIdentifier> m_mediaSessionGroupIdentifier;

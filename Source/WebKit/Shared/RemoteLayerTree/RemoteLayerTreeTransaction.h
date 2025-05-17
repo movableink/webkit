@@ -259,7 +259,7 @@ public:
 #endif
 
     const std::optional<WebCore::FixedContainerEdges>& fixedContainerEdges() const { return m_fixedContainerEdges; }
-    void setFixedContainerEdges(WebCore::FixedContainerEdges&& edges) { m_fixedContainerEdges = { WTFMove(edges) }; }
+    void setFixedContainerEdges(const WebCore::FixedContainerEdges& edges) { m_fixedContainerEdges = edges; }
 
 private:
     friend struct IPC::ArgumentCoder<RemoteLayerTreeTransaction, void>;

@@ -26,6 +26,11 @@
 #include "config.h"
 #include "NativeImage.h"
 
+#include "FloatRect.h"
+#include "GraphicsContext.h"
+#include "ImageBuffer.h"
+#include "RenderingMode.h"
+
 #if USE(SKIA)
 #include "GLFence.h"
 #endif

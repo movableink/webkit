@@ -2276,6 +2276,7 @@ platform/EventTrackingRegions.cpp
 platform/FileChooser.cpp
 platform/FileMonitor.cpp
 platform/FileStream.cpp
+platform/FixedContainerEdges.cpp
 platform/FrameRateMonitor.cpp
 platform/KeyboardScroll.cpp
 platform/KeyboardScrollingAnimator.cpp

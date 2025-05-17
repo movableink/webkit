@@ -35,28 +35,29 @@ enum class PredominantColorType : uint8_t {
     Multiple,
 };
 
-using FixedContainerEdge = Variant<WebCore::PredominantColorType, WebCore::Color>;
+using FixedContainerEdge = Variant<PredominantColorType, Color>;
 
 struct FixedContainerEdges {
+    WTF_MAKE_TZONE_ALLOCATED(FixedContainerEdges);
+public:
     RectEdges<FixedContainerEdge> colors { PredominantColorType::None, PredominantColorType::None, PredominantColorType::None, PredominantColorType::None };
 
-    bool hasFixedEdge(BoxSide side) const
+    FixedContainerEdges() = default;
+    FixedContainerEdges(const FixedContainerEdges&) = default;
+    FixedContainerEdges(RectEdges<FixedContainerEdge>&& edgeColors)
+        : colors { WTFMove(edgeColors) }
     {
-        return WTF::visit(WTF::makeVisitor([&](PredominantColorType type) {
-            return type != PredominantColorType::None;
-        }, [&](const Color&) {
-            return true;
-        }), colors.at(side));
     }
 
-    Color predominantColor(BoxSide side) const
+    FixedContainerEdges(FixedContainerEdges&& other)
+        : colors { WTFMove(other.colors) }
     {
-        return WTF::visit(WTF::makeVisitor([&](PredominantColorType) -> Color {
-            return { };
-        }, [&](const Color& color) {
-            return color;
-        }), colors.at(side));
     }
+
+    FixedContainerEdges& operator=(const FixedContainerEdges&) = default;
+
+    WEBCORE_EXPORT bool hasFixedEdge(BoxSide) const;
+    WEBCORE_EXPORT Color predominantColor(BoxSide) const;
 
     bool operator==(const FixedContainerEdges&) const = default;
 };
