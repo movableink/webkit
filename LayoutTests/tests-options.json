@@ -3854,9 +3854,6 @@
     "imported/w3c/web-platform-tests/html/semantics/forms/the-input-element/show-picker-user-gesture.html": [
         "slow"
     ],
-    "imported/w3c/web-platform-tests/html/semantics/forms/the-input-element/show-picker.html": [
-        "slow"
-    ],
     "imported/w3c/web-platform-tests/html/semantics/forms/the-select-element/show-picker-multiple.html": [
         "slow"
     ],

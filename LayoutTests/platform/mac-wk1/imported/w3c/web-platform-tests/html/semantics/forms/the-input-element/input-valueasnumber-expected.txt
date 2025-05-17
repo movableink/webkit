@@ -16,14 +16,18 @@ PASS valueAsNumber getter on type month (actual value: , expected valueAsNumber:
 PASS valueAsNumber getter on type month (actual value: 0000-12, expected valueAsNumber: NaN)
 PASS valueAsNumber getter on type month (actual value: 2019-00, expected valueAsNumber: NaN)
 FAIL valueAsNumber getter on type month (actual value: 2019-12, expected valueAsNumber: 599) assert_equals: expected 599 but got NaN
+FAIL valueAsNumber getter on type month (actual value: 1969-12, expected valueAsNumber: -1) assert_equals: expected -1 but got NaN
 FAIL valueAsNumber setter on type month (actual valueAsNumber: 599, expected value: 2019-12) The object is in an invalid state.
+FAIL valueAsNumber setter on type month (actual valueAsNumber: -1, expected value: 1969-12) The object is in an invalid state.
 PASS valueAsNumber getter on type week (actual value: , expected valueAsNumber: NaN)
 PASS valueAsNumber getter on type week (actual value: 0000-W50, expected valueAsNumber: NaN)
 PASS valueAsNumber getter on type week (actual value: 2019-W00, expected valueAsNumber: NaN)
 PASS valueAsNumber getter on type week (actual value: 2019-W60, expected valueAsNumber: NaN)
 FAIL valueAsNumber getter on type week (actual value: 2019-W50, expected valueAsNumber: 1575849600000) assert_equals: expected 1575849600000 but got NaN
+FAIL valueAsNumber getter on type week (actual value: 1969-W20, expected valueAsNumber: -20217600000) assert_equals: expected -20217600000 but got NaN
 FAIL valueAsNumber setter on type week (actual valueAsNumber: 0, expected value: 1970-W01) The object is in an invalid state.
 FAIL valueAsNumber setter on type week (actual valueAsNumber: 1575849600000, expected value: 2019-W50) The object is in an invalid state.
+FAIL valueAsNumber setter on type week (actual valueAsNumber: -20217600000, expected value: 1969-W20) The object is in an invalid state.
 PASS valueAsNumber getter on type time (actual value: , expected valueAsNumber: NaN)
 PASS valueAsNumber getter on type time (actual value: 24:00, expected valueAsNumber: NaN)
 PASS valueAsNumber getter on type time (actual value: 00:60, expected valueAsNumber: NaN)
