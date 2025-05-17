@@ -308,7 +308,7 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         orientation = application.statusBarOrientation;
 ALLOW_DEPRECATED_DECLARATIONS_END
     else if (auto windowScene = self.window.windowScene)
-        orientation = windowScene.interfaceOrientation;
+        orientation = windowScene.effectiveGeometry.interfaceOrientation;
     return deviceOrientationForUIInterfaceOrientation(orientation);
 }
 

@@ -781,7 +781,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (UIInterfaceOrientation)interfaceOrientation
 {
-    return self.window.windowScene.interfaceOrientation;
+    return self.window.windowScene.effectiveGeometry.interfaceOrientation;
 }
 
 #if HAVE(SPATIAL_TRACKING_LABEL)
