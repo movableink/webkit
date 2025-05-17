@@ -40,7 +40,7 @@ public:
     Site(const Site&) = default;
     Site& operator=(const Site&) = default;
 
-    const String& protocol() const { return m_protocol; }
+    WEBCORE_EXPORT const String& protocol() const;
     const RegistrableDomain& domain() const { return m_domain; }
     WEBCORE_EXPORT String toString() const;
     bool isEmpty() const { return m_domain.isEmpty(); }
