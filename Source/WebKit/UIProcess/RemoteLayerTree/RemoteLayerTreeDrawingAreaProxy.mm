@@ -311,10 +311,6 @@ void RemoteLayerTreeDrawingAreaProxy::commitLayerTreeTransaction(IPC::Connection
     TraceScope tracingScope(CommitLayerTreeStart, CommitLayerTreeEnd);
     ProcessState& state = processStateForConnection(connection);
 
-    static constexpr size_t maxChangedLayers = 1024 * 10; // Limit number of changed layer properties per transaction to 1024 * 10 = 10240 to not exceed mach message size limits to CoreAnimation.
-    size_t changedCount = layerTreeTransaction.changedLayerProperties().size();
-    MESSAGE_CHECK_WITH_MESSAGE_BASE(changedCount <= maxChangedLayers, connection, "Too many changed layer properties in one transaction.");
-
     LOG_WITH_STREAM(RemoteLayerTree, stream << "RemoteLayerTreeDrawingAreaProxy::commitLayerTree transaction:" << layerTreeTransaction.description());
     LOG_WITH_STREAM(RemoteLayerTree, stream << "RemoteLayerTreeDrawingAreaProxy::commitLayerTree scrolling tree:" << scrollingTreeTransaction.description());
 
