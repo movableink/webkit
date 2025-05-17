@@ -461,6 +461,9 @@ public:
     bool useWPEPlatformAPI() const { return m_useWPEPlatformAPI; }
 #endif
 
+    void setUseWorkQueue(bool useWorkQueue) { m_useWorkQueue = useWorkQueue; }
+    bool useWorkQueue() const { return m_useWorkQueue; }
+
 private:
     WKRetainPtr<WKPageConfigurationRef> generatePageConfiguration(const TestOptions&);
     WKRetainPtr<WKContextConfigurationRef> generateContextConfiguration(const TestOptions&) const;
@@ -814,6 +817,7 @@ private:
     bool m_dumpFullScreenCallbacks { false };
     bool m_waitBeforeFinishingFullscreenExit { false };
     bool m_scrollDuringEnterFullscreen { false };
+    bool m_useWorkQueue { false };
 
 #if PLATFORM(WPE)
     bool m_useWPEPlatformAPI { false };

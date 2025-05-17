@@ -185,7 +185,6 @@ private:
     WKBundleFrameRef m_topLoadingFrame { nullptr };
 
     bool m_dumpPixels { false };
-    bool m_useWorkQueue { false };
     bool m_pixelResultIsPending { false };
     bool m_accessibilityIsolatedTreeMode { false };
 

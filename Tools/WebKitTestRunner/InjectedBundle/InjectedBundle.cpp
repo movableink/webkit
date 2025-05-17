@@ -387,8 +387,6 @@ void InjectedBundle::beginTesting(WKDictionaryRef settings, BegingTestingMode te
 
 void InjectedBundle::done(bool forceRepaint)
 {
-    m_useWorkQueue = false;
-
     setTopLoadingFrame(0);
 
     m_accessibilityController->resetToConsistentState();
@@ -413,7 +411,6 @@ void InjectedBundle::clearResourceLoadStatistics()
 
 void InjectedBundle::reloadFromOrigin()
 {
-    m_useWorkQueue = true;
     postPageMessage("ReloadFromOrigin");
 }
 
@@ -576,19 +573,15 @@ void InjectedBundle::setCacheModel(int model)
 
 bool InjectedBundle::shouldProcessWorkQueue() const
 {
-    if (!m_useWorkQueue)
-        return false;
-
     WKTypeRef result = nullptr;
-    WKBundlePagePostSynchronousMessageForTesting(page()->page(), toWK("IsWorkQueueEmpty").get(), 0, &result);
+    WKBundlePagePostSynchronousMessageForTesting(page()->page(), toWK("ShouldProcessWorkQueue").get(), 0, &result);
 
     // The IPC failed. This happens when swapping processes on navigation because the WebPageProxy unregisters itself
     // as a MessageReceiver from the old WebProcessProxy and register itself with the new WebProcessProxy instead.
     if (!result)
         return false;
 
-    auto isEmpty = booleanValue(adoptWK(result).get());
-    return !isEmpty;
+    return booleanValue(adoptWK(result).get());
 }
 
 void InjectedBundle::processWorkQueue()
@@ -598,19 +591,16 @@ void InjectedBundle::processWorkQueue()
 
 void InjectedBundle::queueBackNavigation(unsigned howFarBackward)
 {
-    m_useWorkQueue = true;
     postPageMessage("QueueBackNavigation", adoptWK(WKUInt64Create(howFarBackward)));
 }
 
 void InjectedBundle::queueForwardNavigation(unsigned howFarForward)
 {
-    m_useWorkQueue = true;
     postPageMessage("QueueForwardNavigation", adoptWK(WKUInt64Create(howFarForward)));
 }
 
 void InjectedBundle::queueLoad(WKStringRef url, WKStringRef target, bool shouldOpenExternalURLs)
 {
-    m_useWorkQueue = true;
     auto body = adoptWK(WKMutableDictionaryCreate());
     setValue(body, "url", url);
     setValue(body, "target", target);
@@ -620,7 +610,6 @@ void InjectedBundle::queueLoad(WKStringRef url, WKStringRef target, bool shouldO
 
 void InjectedBundle::queueLoadHTMLString(WKStringRef content, WKStringRef baseURL, WKStringRef unreachableURL)
 {
-    m_useWorkQueue = true;
     auto body = adoptWK(WKMutableDictionaryCreate());
     setValue(body, "content", content);
     if (baseURL)
@@ -632,19 +621,16 @@ void InjectedBundle::queueLoadHTMLString(WKStringRef content, WKStringRef baseUR
 
 void InjectedBundle::queueReload()
 {
-    m_useWorkQueue = true;
     postPageMessage("QueueReload");
 }
 
 void InjectedBundle::queueLoadingScript(WKStringRef script)
 {
-    m_useWorkQueue = true;
     postPageMessage("QueueLoadingScript", script);
 }
 
 void InjectedBundle::queueNonLoadingScript(WKStringRef script)
 {
-    m_useWorkQueue = true;
     postPageMessage("QueueNonLoadingScript", script);
 }
 

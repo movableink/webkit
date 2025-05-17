@@ -363,6 +363,7 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
     }
 
     if (WKStringIsEqualToUTF8CString(messageName, "Done")) {
+        TestController::singleton().setUseWorkQueue(false);
         auto messageBodyDictionary = dictionaryValue(messageBody);
         m_pixelResultIsPending = booleanValue(messageBodyDictionary, "PixelResultIsPending");
         if (!m_pixelResultIsPending) {
@@ -481,11 +482,13 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
     }
 
     if (WKStringIsEqualToUTF8CString(messageName, "QueueBackNavigation")) {
+        TestController::singleton().setUseWorkQueue(true);
         TestController::singleton().workQueueManager().queueBackNavigation(uint64Value(messageBody));
         return;
     }
 
     if (WKStringIsEqualToUTF8CString(messageName, "QueueForwardNavigation")) {
+        TestController::singleton().setUseWorkQueue(true);
         TestController::singleton().workQueueManager().queueForwardNavigation(uint64Value(messageBody));
         return;
     }
@@ -495,6 +498,7 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
         auto url = toWTFString(stringValue(loadDataDictionary, "url"));
         auto target = toWTFString(stringValue(loadDataDictionary, "target"));
         auto shouldOpenExternalURLs = booleanValue(loadDataDictionary, "shouldOpenExternalURLs");
+        TestController::singleton().setUseWorkQueue(true);
         TestController::singleton().workQueueManager().queueLoad(url, target, shouldOpenExternalURLs);
         return;
     }
@@ -504,22 +508,26 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
         auto contentWK = stringValue(loadDataDictionary, "content");
         auto baseURLWK = stringValue(loadDataDictionary, "baseURL");
         auto unreachableURLWK = stringValue(loadDataDictionary, "unreachableURL");
+        TestController::singleton().setUseWorkQueue(true);
         TestController::singleton().workQueueManager().queueLoadHTMLString(toWTFString(contentWK), baseURLWK ? toWTFString(baseURLWK) : String(), unreachableURLWK ? toWTFString(unreachableURLWK) : String());
         return;
     }
 
     if (WKStringIsEqualToUTF8CString(messageName, "QueueReload")) {
+        TestController::singleton().setUseWorkQueue(true);
         TestController::singleton().workQueueManager().queueReload();
         return;
     }
 
     if (WKStringIsEqualToUTF8CString(messageName, "QueueLoadingScript")) {
+        TestController::singleton().setUseWorkQueue(true);
         WKStringRef script = stringValue(messageBody);
         TestController::singleton().workQueueManager().queueLoadingScript(toWTFString(script));
         return;
     }
 
     if (WKStringIsEqualToUTF8CString(messageName, "QueueNonLoadingScript")) {
+        TestController::singleton().setUseWorkQueue(true);
         WKStringRef script = stringValue(messageBody);
         TestController::singleton().workQueueManager().queueNonLoadingScript(toWTFString(script));
         return;
@@ -662,6 +670,7 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
 #endif
 
     if (WKStringIsEqualToUTF8CString(messageName, "ReloadFromOrigin")) {
+        TestController::singleton().setUseWorkQueue(true);
         TestController::singleton().reloadFromOrigin();
         return;
     }
@@ -789,8 +798,8 @@ WKRetainPtr<WKTypeRef> TestInvocation::didReceiveSynchronousMessageFromInjectedB
         return nullptr;
     }
 
-    if (WKStringIsEqualToUTF8CString(messageName, "IsWorkQueueEmpty"))
-        return adoptWK(WKBooleanCreate(TestController::singleton().workQueueManager().isWorkQueueEmpty()));
+    if (WKStringIsEqualToUTF8CString(messageName, "ShouldProcessWorkQueue"))
+        return adoptWK(WKBooleanCreate(TestController::singleton().useWorkQueue() && !TestController::singleton().workQueueManager().isWorkQueueEmpty()));
 
     if (WKStringIsEqualToUTF8CString(messageName, "DidReceiveServerRedirectForProvisionalNavigation"))
         return adoptWK(WKBooleanCreate(TestController::singleton().didReceiveServerRedirectForProvisionalNavigation()));
