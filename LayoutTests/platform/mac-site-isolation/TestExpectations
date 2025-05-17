@@ -12280,7 +12280,6 @@ fast/loader/images-enabled-unset-can-block-image-and-can-reload-in-place.html [ 
 fast/loader/main-document-url-for-non-http-loads.html [ Failure ]
 fast/loader/onload-bad-scheme-for-frame.html [ Failure ]
 fast/loader/onload-willSendRequest-null-for-frame.html [ Failure ]
-fast/loader/policy-delegate-action-hit-test-zoomed.html [ Failure ]
 fast/loader/redirect-to-invalid-url-using-javascript-disallowed.html [ Failure ]
 fast/loader/redirect-to-invalid-url-using-meta-refresh-calls-policy-delegate.html [ Failure ]
 fast/loader/redirect-to-invalid-url-using-meta-refresh-disallowed-async-delegates.html [ Failure ]

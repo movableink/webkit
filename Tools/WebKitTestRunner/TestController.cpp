@@ -128,6 +128,8 @@ static constexpr auto pathSeparator = '/';
 const WTF::Seconds TestController::defaultShortTimeout = 5_s;
 const WTF::Seconds TestController::noTimeout = -1_s;
 
+static const double ZoomMultiplierRatio = 1.2;
+
 static WKURLRef blankURL()
 {
     static WKURLRef staticBlankURL = WKURLCreateWithUTF8CString("about:blank");
@@ -2610,14 +2612,14 @@ void TestController::didReceiveSynchronousMessageFromInjectedBundle(WKStringRef 
         if (WKStringIsEqualToUTF8CString(subMessageName, "SetPageZoom")) {
             auto* page = mainWebView()->page();
             WKPageSetTextZoomFactor(page, 1);
-            WKPageSetPageZoomFactor(page, doubleValue(dictionary, "ZoomFactor"));
+            WKPageSetPageZoomFactor(page, WKPageGetPageZoomFactor(page) * (booleanValue(dictionary, "ZoomIn") ? ZoomMultiplierRatio : (1.0 / ZoomMultiplierRatio)));
             return completionHandler(nullptr);
         }
 
         if (WKStringIsEqualToUTF8CString(subMessageName, "SetTextZoom")) {
             auto* page = mainWebView()->page();
             WKPageSetPageZoomFactor(page, 1);
-            WKPageSetTextZoomFactor(page, doubleValue(dictionary, "ZoomFactor"));
+            WKPageSetTextZoomFactor(page, WKPageGetTextZoomFactor(page) * (booleanValue(dictionary, "ZoomIn") ? ZoomMultiplierRatio : (1.0 / ZoomMultiplierRatio)));
             return completionHandler(nullptr);
         }
 
