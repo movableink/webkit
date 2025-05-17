@@ -3,6 +3,7 @@ accessibility/cocoa/AXCoreObjectCocoa.mm
 accessibility/mac/WebAccessibilityObjectWrapperBase.mm
 bridge/objc/WebScriptObject.h
 page/EventHandler.h
+platform/MediaSample.h
 platform/cocoa/WebAVPlayerLayer.h
 platform/graphics/avfoundation/objc/ImageDecoderAVFObjC.mm
 platform/graphics/ca/cocoa/WebVideoContainerLayer.h

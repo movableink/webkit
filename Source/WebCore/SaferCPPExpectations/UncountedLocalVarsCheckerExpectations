@@ -392,7 +392,6 @@ html/canvas/EXTDisjointTimerQueryWebGL2.cpp
 html/canvas/EXTPolygonOffsetClamp.cpp
 html/canvas/GPUBasedCanvasRenderingContext.cpp
 html/canvas/GPUCanvasContextCocoa.mm
-html/canvas/ImageBitmapRenderingContext.cpp
 html/canvas/OESDrawBuffersIndexed.cpp
 html/canvas/OESVertexArrayObject.cpp
 html/canvas/OffscreenCanvasRenderingContext2D.cpp
@@ -651,7 +650,6 @@ rendering/svg/RenderSVGShape.cpp
 rendering/svg/RenderSVGTransformableContainer.cpp
 rendering/svg/SVGRenderSupport.cpp
 rendering/svg/SVGRenderTreeAsText.cpp
-rendering/svg/SVGRenderingContext.cpp
 rendering/svg/SVGTextBoxPainter.cpp
 rendering/svg/SVGTextChunk.cpp
 rendering/svg/SVGTextLayoutAttributesBuilder.cpp
@@ -729,7 +727,6 @@ svg/SVGMPathElement.cpp
 svg/SVGMaskElement.cpp
 svg/SVGSVGElement.cpp
 svg/SVGSwitchElement.cpp
-svg/SVGTextContentElement.cpp
 svg/SVGToOTFFontConversion.cpp
 svg/SVGUseElement.cpp
 svg/graphics/SVGImage.cpp

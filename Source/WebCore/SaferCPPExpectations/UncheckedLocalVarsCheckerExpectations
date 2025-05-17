@@ -433,7 +433,6 @@ rendering/LegacyInlineIterator.h
 rendering/LegacyInlineIteratorInlines.h
 rendering/LegacyInlineTextBox.cpp
 rendering/LegacyLineLayout.cpp
-rendering/LegacyRootInlineBox.cpp
 rendering/MarkedText.cpp
 rendering/MotionPath.cpp
 rendering/PositionedLayoutConstraints.cpp
@@ -651,7 +650,6 @@ svg/SVGMaskElement.cpp
 svg/SVGSVGElement.cpp
 svg/SVGStopElement.cpp
 svg/SVGSwitchElement.cpp
-svg/SVGTextContentElement.cpp
 svg/SVGToOTFFontConversion.cpp
 svg/SVGUseElement.cpp
 svg/graphics/SVGImage.cpp
