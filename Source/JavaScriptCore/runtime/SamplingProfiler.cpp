@@ -504,8 +504,7 @@ void SamplingProfiler::processUnverifiedStackTraces()
                 location.lineColumn = codeBlock->lineColumnForBytecodeIndex(bytecodeIndex);
                 location.bytecodeIndex = bytecodeIndex;
             }
-            if (codeBlock->hasHash())
-                location.codeBlockHash = codeBlock->hash();
+            location.codeBlockHash = codeBlock->hash();
             location.jitType = jitType;
         };
 

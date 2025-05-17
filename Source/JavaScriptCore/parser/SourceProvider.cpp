@@ -42,6 +42,22 @@ SourceProvider::SourceProvider(const SourceOrigin& sourceOrigin, String&& source
 
 SourceProvider::~SourceProvider() = default;
 
+void SourceProvider::lockUnderlyingBuffer()
+{
+    if (!m_lockingCount++)
+        lockUnderlyingBufferImpl();
+}
+
+void SourceProvider::unlockUnderlyingBuffer()
+{
+    if (!--m_lockingCount)
+        unlockUnderlyingBufferImpl();
+}
+
+void SourceProvider::lockUnderlyingBufferImpl() { }
+
+void SourceProvider::unlockUnderlyingBufferImpl() { }
+
 void SourceProvider::getID()
 {
     if (!m_id) {

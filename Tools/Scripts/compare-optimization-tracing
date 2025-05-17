@@ -47,7 +47,6 @@ def run_jsc_and_capture(verbose, build_path, jsc_args, cwd, extra_options=""):
     env["DYLD_FRAMEWORK_PATH"] = build_path
 
     required_options = [
-        "--alwaysComputeHash=1",
         "--useConcurrentJIT=0",
         "--dumpOptimizationTracing=1",
     ]

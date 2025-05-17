@@ -194,7 +194,6 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, verboseDFGFailure, false, Normal, nullptr) \
     v(Bool, verboseFTLToJSThunk, false, Normal, nullptr) \
     v(Bool, verboseFTLFailure, false, Normal, nullptr) \
-    v(Bool, alwaysComputeHash, false, Normal, nullptr) \
     v(Bool, testTheFTL, false, Normal, nullptr) \
     v(Bool, verboseSanitizeStack, false, Normal, nullptr) \
     v(Bool, useGenerationalGC, true, Normal, nullptr) \

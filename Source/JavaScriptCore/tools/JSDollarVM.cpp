@@ -2021,7 +2021,7 @@ JSC_DEFINE_HOST_FUNCTION(functionWasmStreamingParserAddBytes, (JSGlobalObject* g
     BaseWebAssemblySourceProvider* provider = nullptr;
     if (auto* source = jsDynamicCast<JSSourceCode*>(value))
         provider = static_cast<BaseWebAssemblySourceProvider*>(source->sourceCode().provider());
-    WebAssemblySourceProviderBufferGuard guard(provider);
+    SourceProviderBufferGuard guard(provider);
 
     auto data = getWasmBufferFromValue(globalObject, value, guard);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -2121,7 +2121,7 @@ JSC_DEFINE_HOST_FUNCTION(functionWasmStreamingCompilerAddBytes, (JSGlobalObject*
     BaseWebAssemblySourceProvider* provider = nullptr;
     if (auto* source = jsDynamicCast<JSSourceCode*>(value))
         provider = static_cast<BaseWebAssemblySourceProvider*>(source->sourceCode().provider());
-    WebAssemblySourceProviderBufferGuard guard(provider);
+    SourceProviderBufferGuard guard(provider);
 
     auto data = getWasmBufferFromValue(globalObject, value, guard);
     RETURN_IF_EXCEPTION(scope, { });

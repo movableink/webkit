@@ -852,31 +852,6 @@ void Options::notifyOptionsChanged()
             || Options::dumpOMGDisassembly())
             Options::needDisassemblySupport() = true;
 
-        if (Options::logJIT()
-            || Options::needDisassemblySupport()
-            || Options::dumpBytecodeAtDFGTime()
-            || Options::dumpGraphAtEachPhase()
-            || Options::dumpDFGGraphAtEachPhase()
-            || Options::dumpDFGFTLGraphAtEachPhase()
-            || Options::dumpB3GraphAtEachPhase()
-            || Options::dumpAirGraphAtEachPhase()
-            || Options::verboseCompilation()
-            || Options::verboseFTLCompilation()
-            || Options::logCompilationChanges()
-            || Options::validateGraph()
-            || Options::validateGraphAtEachPhase()
-            || Options::verboseOSR()
-            || Options::verboseCompilationQueue()
-            || Options::reportCompileTimes()
-            || Options::reportBaselineCompileTimes()
-            || Options::reportDFGCompileTimes()
-            || Options::reportFTLCompileTimes()
-            || Options::logPhaseTimes()
-            || Options::verboseCFA()
-            || Options::verboseDFGFailure()
-            || Options::verboseFTLFailure())
-            Options::alwaysComputeHash() = true;
-
         if (OptionsHelper::wasOverridden(jitPolicyScaleID))
             scaleJITPolicy();
 
@@ -916,9 +891,6 @@ void Options::notifyOptionsChanged()
             Options::forceAllFunctionsToUseSIMD() = true;
         }
     }
-
-    if (Options::dumpFuzzerAgentPredictions())
-        Options::alwaysComputeHash() = true;
 
     if (!Options::useConcurrentGC())
         Options::collectContinuously() = false;

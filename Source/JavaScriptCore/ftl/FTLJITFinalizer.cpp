@@ -67,7 +67,7 @@ bool JITFinalizer::finalize()
         size_t baselineCodeSize = 0;
         if (auto jitCode = baselineCodeBlock->jitCode())
             baselineCodeSize = jitCode->size();
-        dataLogLn("FTL: codeSize:(", m_jitCode->size(), "),nodes:(", m_jitCode->numberOfCompiledDFGNodes(), "),baselineCodeSize:(", baselineCodeSize, "),bytecodeCost:(", baselineCodeBlock->bytecodeCost(), ")");
+        dataLogLn("FTL: name:(", codeBlock->inferredNameWithHash(), "),codeSize:(", m_jitCode->size(), "),nodes:(", m_jitCode->numberOfCompiledDFGNodes(), "),baselineCodeSize:(", baselineCodeSize, "),bytecodeCost:(", baselineCodeBlock->bytecodeCost(), ")");
     }
 
     if (m_plan.compilation()) [[unlikely]]

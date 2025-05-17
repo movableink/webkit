@@ -203,8 +203,6 @@ public:
     String inferredNameWithHash() const;
     CodeBlockHash hash() const;
     bool hasHash() const;
-    bool isSafeToComputeHash() const;
-    CString hashAsStringIfPossible() const;
     CString sourceCodeForTools() const;
     CString sourceCodeOnOneLine() const; // As sourceCodeForTools(), but replaces all whitespace runs with a single space.
     void dumpAssumingJITType(PrintStream&, JITType) const;

@@ -69,7 +69,7 @@ ALWAYS_INLINE uint32_t toNonWrappingUint32(JSGlobalObject* globalObject, JSValue
     return { };
 }
 
-ALWAYS_INLINE std::span<const uint8_t> getWasmBufferFromValue(JSGlobalObject* globalObject, JSValue value, const WebAssemblySourceProviderBufferGuard&)
+ALWAYS_INLINE std::span<const uint8_t> getWasmBufferFromValue(JSGlobalObject* globalObject, JSValue value, const SourceProviderBufferGuard&)
 {
     VM& vm = getVM(globalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
@@ -116,7 +116,7 @@ ALWAYS_INLINE Vector<uint8_t> createSourceBufferFromValue(VM& vm, JSGlobalObject
     BaseWebAssemblySourceProvider* provider = nullptr;
     if (auto* source = jsDynamicCast<JSSourceCode*>(value))
         provider = static_cast<BaseWebAssemblySourceProvider*>(source->sourceCode().provider());
-    WebAssemblySourceProviderBufferGuard bufferGuard(provider);
+    SourceProviderBufferGuard bufferGuard(provider);
 
     auto data = getWasmBufferFromValue(globalObject, value, bufferGuard);
     RETURN_IF_EXCEPTION(throwScope, { });
