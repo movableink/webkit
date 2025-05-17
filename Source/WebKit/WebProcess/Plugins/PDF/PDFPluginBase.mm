@@ -1519,6 +1519,15 @@ Color PDFPluginBase::pluginBackgroundColor()
     return color.get();
 }
 
+unsigned PDFPluginBase::countFindMatches(const String& target, WebCore::FindOptions options, unsigned maxMatchCount)
+{
+    if (!target.length())
+        return 0;
+
+    NSStringCompareOptions nsOptions = options.contains(FindOption::CaseInsensitive) ? NSCaseInsensitiveSearch : 0;
+    return [[m_pdfDocument findString:target.createNSString().get() withOptions:nsOptions] count];
+}
+
 } // namespace WebKit
 
 #endif // ENABLE(PDF_PLUGIN)

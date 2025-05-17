@@ -1297,17 +1297,6 @@ void PDFPlugin::showDefinitionForAttributedString(NSAttributedString *string, CG
     }
 }
 
-unsigned PDFPlugin::countFindMatches(const String& target, WebCore::FindOptions options, unsigned /*maxMatchCount*/)
-{
-    // FIXME: Why is it OK to ignore the passed-in maximum match count?
-
-    if (!target.length())
-        return 0;
-
-    NSStringCompareOptions nsOptions = options.contains(FindOption::CaseInsensitive) ? NSCaseInsensitiveSearch : 0;
-    return [[m_pdfDocument findString:target.createNSString().get() withOptions:nsOptions] count];
-}
-
 PDFSelection *PDFPlugin::nextMatchForString(const String& target, bool searchForward, bool caseSensitive, bool wrapSearch, PDFSelection *initialSelection, bool startInSelection)
 {
     if (!target.length())
