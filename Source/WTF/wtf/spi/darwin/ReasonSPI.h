@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,11 +25,9 @@
 
 #pragma once
 
-DECLARE_SYSTEM_HEADER
+#include <wtf/Compiler.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+DECLARE_SYSTEM_HEADER
 
 #if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 130000) \
     || ((PLATFORM(IOS) || PLATFORM(MACCATALYST)) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 160000) \
@@ -37,19 +35,25 @@ extern "C" {
     || (PLATFORM(APPLETV) && __TV_OS_VERSION_MIN_REQUIRED >= 160000) \
     || PLATFORM(VISION)
 #if USE(APPLE_INTERNAL_SDK) && !defined(__swift__)
-#include <sys/reason.h>
+#include <os/reason_private.h>
 #else
-void abort_with_reason(uint32_t reason_namespace, uint64_t reason_code, const char *reason_string, uint64_t reason_flags);
-#endif
+
+WTF_EXTERN_C_BEGIN
+
+void abort_with_reason(uint32_t reasonNamespace, uint64_t reasonCode, const char *reasonString, uint64_t reasonFlags) __attribute__((noreturn, cold));
+
+int os_fault_with_payload(uint32_t reasonNamespace, uint64_t reasonCode, void *payload, uint32_t payloadSize, const char *reasonString, uint64_t reasonFlags) __attribute__((cold));
+
+int terminate_with_reason(int pid, uint32_t reasonNamespace, uint64_t reasonCode, const char *reasonString, uint64_t reasonFlags);
+
+WTF_EXTERN_C_END
+
+#endif // USE(APPLE_INTERNAL_SDK) && !defined(__swift__)
 
 #else
 
 #define abort_with_reason(reason_namespace, reason_code, reason_string, reason_flags)  CRASH()
 
-#endif
-
-#ifdef __cplusplus
-}
 #endif
 
 #if !USE(APPLE_INTERNAL_SDK) || defined(__swift__)

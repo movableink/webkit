@@ -48,7 +48,7 @@
 #include <wtf/ExportMacros.h>
 
 #if OS(DARWIN)
-#include <wtf/spi/darwin/AbortWithReasonSPI.h>
+#include <wtf/spi/darwin/ReasonSPI.h>
 #endif
 
 #if USE(OS_LOG)

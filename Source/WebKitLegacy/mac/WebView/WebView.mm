@@ -284,6 +284,7 @@
 #import <wtf/WorkQueue.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
+#import <wtf/spi/darwin/ReasonSPI.h>
 #import <wtf/spi/darwin/dyldSPI.h>
 
 #if !PLATFORM(IOS_FAMILY)
@@ -5045,6 +5046,9 @@ IGNORE_WARNINGS_END
     if (initialized)
         return;
     initialized = YES;
+
+    if (WTF::CocoaApplication::isAppleApplication() && !((rand() * 100) % 100))
+        os_fault_with_payload(OS_REASON_WEBKIT, 0, nullptr, 0, "WebView initialized", 0);
 
 #if !PLATFORM(IOS_FAMILY)
     JSC::initialize();

@@ -929,7 +929,7 @@
 		FE1E2C42224187C600F6B729 /* PlatformRegisters.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FE1E2C41224187C600F6B729 /* PlatformRegisters.cpp */; };
 		FE35D09227DC5ECC009DFA5B /* StackCheck.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FE35D09127DC5ECC009DFA5B /* StackCheck.cpp */; };
 		FE499A6F2CD153B000E34F32 /* OverflowPolicy.h in Headers */ = {isa = PBXBuildFile; fileRef = FE499A6E2CD153B000E34F32 /* OverflowPolicy.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		FE6997E129D241630078B9C6 /* AbortWithReasonSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = FE6997E029D241630078B9C6 /* AbortWithReasonSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		FE6997E129D241630078B9C6 /* ReasonSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = FE6997E029D241630078B9C6 /* ReasonSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		FE7ACFEF285DC2F9007FC8E9 /* RawHex.h in Headers */ = {isa = PBXBuildFile; fileRef = FE7ACFEE285DC2F8007FC8E9 /* RawHex.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		FE9B8B1A28B1453D0088C6E1 /* CodePtr.h in Headers */ = {isa = PBXBuildFile; fileRef = FE9B8B1928B1453D0088C6E1 /* CodePtr.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		FE9B8B1E28B1B1C70088C6E1 /* CodePtr.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FE9B8B1D28B1B1C60088C6E1 /* CodePtr.cpp */; };
@@ -1985,7 +1985,7 @@
 		FE35D09127DC5ECC009DFA5B /* StackCheck.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StackCheck.cpp; sourceTree = "<group>"; };
 		FE3842342325CC80009DD445 /* ResourceUsage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ResourceUsage.h; sourceTree = "<group>"; };
 		FE499A6E2CD153B000E34F32 /* OverflowPolicy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OverflowPolicy.h; sourceTree = "<group>"; };
-		FE6997E029D241630078B9C6 /* AbortWithReasonSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AbortWithReasonSPI.h; sourceTree = "<group>"; };
+		FE6997E029D241630078B9C6 /* ReasonSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ReasonSPI.h; sourceTree = "<group>"; };
 		FE7497E4208FFCAA0003565B /* PtrTag.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PtrTag.h; sourceTree = "<group>"; };
 		FE7ACFEE285DC2F8007FC8E9 /* RawHex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RawHex.h; sourceTree = "<group>"; };
 		FE8225301B2A1E5B00BA68FD /* NakedPtr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NakedPtr.h; sourceTree = "<group>"; };
@@ -3160,13 +3160,13 @@
 		DDF306CF27C08654006A526F /* darwin */ = {
 			isa = PBXGroup;
 			children = (
-				FE6997E029D241630078B9C6 /* AbortWithReasonSPI.h */,
 				DDF306D727C08654006A526F /* CodeSignSPI.h */,
 				DDF306D527C08654006A526F /* DataVaultSPI.h */,
 				DDF306D327C08654006A526F /* DispatchSPI.h */,
 				DDF306D227C08654006A526F /* dyldSPI.h */,
 				DDF306D027C08654006A526F /* OSVariantSPI.h */,
 				DDF306D427C08654006A526F /* ProcessMemoryFootprint.h */,
+				FE6997E029D241630078B9C6 /* ReasonSPI.h */,
 				DDF306D127C08654006A526F /* SandboxSPI.h */,
 				DDF306D627C08654006A526F /* XPCSPI.h */,
 			);
@@ -3310,7 +3310,6 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FE6997E129D241630078B9C6 /* AbortWithReasonSPI.h in Headers */,
 				144EB7462CBC94B100926E1B /* AbstractRefCounted.h in Headers */,
 				1404B3E52CBC954D00A7471C /* AbstractRefCountedAndCanMakeWeakPtr.h in Headers */,
 				5363861F2CFE391C0034E883 /* AbstractThreadSafeRefCountedAndCanMakeWeakPtr.h in Headers */,
@@ -3654,6 +3653,7 @@
 				DD3DC99027A4BF8E007E5B61 /* RawPtrTraits.h in Headers */,
 				DD3DC91427A4BF8E007E5B61 /* RawValueTraits.h in Headers */,
 				DD3DC89D27A4BF8E007E5B61 /* ReadWriteLock.h in Headers */,
+				FE6997E129D241630078B9C6 /* ReasonSPI.h in Headers */,
 				DD3DC8EC27A4BF8E007E5B61 /* RecursableLambda.h in Headers */,
 				DD3DC91827A4BF8E007E5B61 /* RecursiveLockAdapter.h in Headers */,
 				DD3DC94127A4BF8E007E5B61 /* RedBlackTree.h in Headers */,
