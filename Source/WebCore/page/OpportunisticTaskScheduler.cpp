@@ -27,6 +27,7 @@
 #include "OpportunisticTaskScheduler.h"
 
 #include "CommonVM.h"
+#include "Document.h"
 #include "GCController.h"
 #include "IdleCallbackController.h"
 #include "Page.h"

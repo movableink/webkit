@@ -25,20 +25,21 @@
 #include "BackForwardItemIdentifier.h"
 #include "BoxExtents.h"
 #include "Color.h"
+#include "DocumentEnums.h"
 #include "FindOptions.h"
 #include "FrameLoaderTypes.h"
 #include "HistoryItem.h"
 #include "IntRectHash.h"
-#include "KeyboardScrollingAnimator.h"
-#include "LayoutMilestone.h"
 #include "LoadSchedulingMode.h"
 #include "MediaSessionGroupIdentifier.h"
+#include "PageIdentifier.h"
 #include "Pagination.h"
 #include "PlaybackTargetClientContextIdentifier.h"
+#include "ProcessSwapDisposition.h"
 #include "RegistrableDomain.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include "ScriptTelemetryCategory.h"
 #include "ScrollTypes.h"
-#include "SpatialBackdropSource.h"
 #include "Supplementable.h"
 #include "Timer.h"
 #include "UserInterfaceLayoutDirection.h"
@@ -73,6 +74,7 @@
 
 namespace JSC {
 class Debugger;
+class JSGlobalObject;
 }
 
 namespace PAL {
@@ -97,6 +99,7 @@ class AccessibilityRootAtspi;
 class ApplePayAMSUIPaymentHandler;
 class ActivityStateChangeObserver;
 class AlternativeTextClient;
+class AnimationTimelinesController;
 class ApplicationCacheStorage;
 class AttachmentElementClient;
 class AuthenticatorCoordinator;
@@ -110,6 +113,7 @@ class ContextMenuController;
 class CookieJar;
 class CryptoClient;
 class DOMRectList;
+class DOMWrapperWorld;
 class DatabaseProvider;
 class DeviceOrientationUpdateProvider;
 class DiagnosticLoggingClient;
@@ -123,7 +127,9 @@ class ElementTargetingController;
 class Element;
 class FocusController;
 class FormData;
+class Frame;
 class HTMLElement;
+class HTMLImageElement;
 class HTMLMediaElement;
 class HistoryItem;
 class HistoryItemClient;
@@ -133,7 +139,7 @@ class ImageOverlayController;
 class InspectorClient;
 class InspectorController;
 class IntSize;
-class WebRTCProvider;
+class KeyboardScrollingAnimator;
 class LayoutRect;
 class LocalFrame;
 class LoginStatus;
@@ -172,6 +178,7 @@ class SocketProvider;
 class SpeechRecognitionProvider;
 class SpeechSynthesisClient;
 class SpeechRecognitionConnection;
+class StorageConnection;
 class StorageNamespace;
 class StorageNamespaceProvider;
 class StorageProvider;
@@ -184,6 +191,8 @@ class ValidatedFormListedElement;
 class ValidationMessageClient;
 class VisibleSelection;
 class VisitedLinkStore;
+class WeakPtrImplWithEventTargetData;
+class WebRTCProvider;
 class WheelEventDeltaFilter;
 class WheelEventTestMonitor;
 class WindowEventLoop;
@@ -212,12 +221,15 @@ struct AXTreeData;
 struct ApplePayAMSUIRequest;
 struct AttributedString;
 struct CharacterRange;
+struct ClientOrigin;
 struct NavigationAPIMethodTracker;
 struct ProcessSyncData;
 struct SimpleRange;
+struct SpatialBackdropSource;
 struct SystemPreviewInfo;
 struct TextIndicatorData;
 struct TextRecognitionResult;
+struct ViewportArguments;
 struct WindowFeatures;
 
 using PlatformDisplayID = uint32_t;
@@ -231,7 +243,9 @@ enum class DidWrap : bool;
 enum class DisabledAdaptations : uint8_t;
 enum class DocumentClass : uint16_t;
 enum class EventTrackingRegionsEventType : uint8_t;
+enum class FindOption : uint16_t;
 enum class FilterRenderingMode : uint8_t;
+enum class LayoutMilestone : uint16_t;
 enum class LoginStatusAuthenticationType : uint8_t;
 enum class MediaPlaybackTargetContextMockState : uint8_t;
 enum class MediaProducerMediaState : uint32_t;
@@ -241,6 +255,10 @@ enum class RouteSharingPolicy : uint8_t;
 enum class ShouldRelaxThirdPartyCookieBlocking : bool;
 enum class ShouldTreatAsContinuingLoad : uint8_t;
 enum class VisibilityState : bool;
+
+#if ENABLE(DOM_AUDIO_SESSION)
+enum class DOMAudioSessionType : uint8_t;
+#endif
 
 using MediaProducerMediaStateFlags = OptionSet<MediaProducerMediaState>;
 using MediaProducerMutedStateFlags = OptionSet<MediaProducerMutedState>;
@@ -439,7 +457,7 @@ public:
     unsigned subframeCount() const;
 
     void setCurrentKeyboardScrollingAnimator(KeyboardScrollingAnimator*);
-    KeyboardScrollingAnimator* currentKeyboardScrollingAnimator() const { return m_currentKeyboardScrollingAnimator.get(); }
+    KeyboardScrollingAnimator* currentKeyboardScrollingAnimator() const; // Deinfed in PageInlines.h
 
     bool shouldApplyScreenFingerprintingProtections(Document&) const;
 

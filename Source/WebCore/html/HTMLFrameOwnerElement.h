@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "Document.h"
 #include "Frame.h"
 #include "HTMLElement.h"
 #include "ReferrerPolicy.h"

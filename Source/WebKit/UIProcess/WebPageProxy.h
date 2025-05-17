@@ -34,6 +34,7 @@
 #include <WebCore/LayerTreeAsTextOptions.h>
 #include <WebCore/NavigationIdentifier.h>
 #include <WebCore/NowPlayingMetadataObserver.h>
+#include <WebCore/ProcessSwapDisposition.h>
 #include <WebCore/ProcessSyncData.h>
 #include <WebCore/SnapshotIdentifier.h>
 #include <WebCore/SpatialBackdropSource.h>

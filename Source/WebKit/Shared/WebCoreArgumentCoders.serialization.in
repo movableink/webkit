@@ -9136,7 +9136,7 @@ enum class WebCore::ShouldGoToHistoryItem : uint8_t {
     ItemUnknown
 };
 
-header: <WebCore/HistoryItem.h>
+header: <WebCore/ProcessSwapDisposition.h>
 enum class WebCore::ProcessSwapDisposition : uint8_t {
     None,
     COOP,

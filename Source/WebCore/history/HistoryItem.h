@@ -70,8 +70,6 @@ protected:
     HistoryItemClient() = default;
 };
 
-enum class ProcessSwapDisposition : uint8_t { None, COOP, Other };
-
 class HistoryItem : public RefCountedAndCanMakeWeakPtr<HistoryItem> {
 public:
     using Client = HistoryItemClient;

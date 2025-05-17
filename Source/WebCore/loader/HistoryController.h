@@ -32,6 +32,7 @@
 #include "BackForwardItemIdentifier.h"
 #include "FrameLoader.h"
 #include "HistoryItem.h"
+#include "ProcessSwapDisposition.h"
 
 namespace WebCore {
 

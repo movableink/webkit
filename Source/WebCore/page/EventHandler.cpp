@@ -85,7 +85,7 @@
 #include "MouseEventWithHitTestResults.h"
 #include "NodeInlines.h"
 #include "NotImplemented.h"
-#include "Page.h"
+#include "PageInlines.h"
 #include "PageOverlayController.h"
 #include "Pasteboard.h"
 #include "PlatformEvent.h"

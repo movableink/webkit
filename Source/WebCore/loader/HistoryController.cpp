@@ -47,6 +47,7 @@
 #include "Logging.h"
 #include "Navigation.h"
 #include "Page.h"
+#include "ProcessSwapDisposition.h"
 #include "ScrollingCoordinator.h"
 #include "SerializedScriptValue.h"
 #include "SharedStringHash.h"

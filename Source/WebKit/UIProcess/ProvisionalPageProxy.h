@@ -39,6 +39,7 @@
 #include <WebCore/FrameLoaderClient.h>
 #include <WebCore/HistoryItem.h>
 #include <WebCore/NavigationIdentifier.h>
+#include <WebCore/ProcessSwapDisposition.h>
 #include <WebCore/ResourceRequest.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>

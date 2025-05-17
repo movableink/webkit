@@ -87,6 +87,7 @@
 #include <WebCore/PluginData.h>
 #include <WebCore/PluginDocument.h>
 #include <WebCore/PolicyChecker.h>
+#include <WebCore/ProcessSwapDisposition.h>
 #include <WebCore/ProgressTracker.h>
 #include <WebCore/Quirks.h>
 #include <WebCore/ResourceError.h>
