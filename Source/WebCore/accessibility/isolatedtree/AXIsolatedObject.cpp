@@ -343,10 +343,8 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
         setProperty(AXProperty::IsARIATreeGridRow, true);
         setObjectVectorProperty(AXProperty::DisclosedRows, object.disclosedRows());
         setObjectProperty(AXProperty::DisclosedByRow, object.disclosedByRow());
-    }
-
-    if (object.isARIATreeGridRow() || isTableRow)
-        setObjectProperty(AXProperty::RowHeader, object.rowHeader());
+    } else if (object.isAccessibilityARIAGridRowInstance())
+        setProperty(AXProperty::IsARIAGridRow, true);
 
     bool isTreeItem = object.isTreeItem();
     if (isTreeItem) {

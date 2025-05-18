@@ -253,10 +253,10 @@ private:
     // Table row support.
     bool isTableRow() const final { return boolAttributeValue(AXProperty::IsTableRow); }
     unsigned rowIndex() const final { return unsignedAttributeValue(AXProperty::RowIndex); }
-    AXIsolatedObject* rowHeader() final { return objectAttributeValue(AXProperty::RowHeader); };
 
     // ARIA tree/grid row support.
     bool isARIATreeGridRow() const final { return boolAttributeValue(AXProperty::IsARIATreeGridRow); }
+    bool isARIAGridRow() const final { return boolAttributeValue(AXProperty::IsARIAGridRow) || isARIATreeGridRow(); }
     AccessibilityChildrenVector disclosedRows() final { return tree()->objectsForIDs(vectorAttributeValue<AXID>(AXProperty::DisclosedRows)); }
     AXIsolatedObject* disclosedByRow() const final { return objectAttributeValue(AXProperty::DisclosedByRow); }
 
@@ -490,7 +490,6 @@ private:
     // Functions that should never be called on an isolated tree object. ASSERT that these are not reached;
     bool isAccessibilityRenderObject() const final;
     bool isAccessibilityTableInstance() const final;
-    bool isAccessibilityARIAGridRowInstance() const final { return false; }
     bool isAccessibilityARIAGridCellInstance() const final { return false; }
     bool isAXRemoteFrame() const final { return false; }
     bool isNativeTextControl() const final;

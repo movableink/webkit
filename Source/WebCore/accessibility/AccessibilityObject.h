@@ -107,7 +107,7 @@ public:
     virtual bool isAccessibilitySVGRoot() const { return false; }
     bool isAccessibilityTableInstance() const override { return false; }
     virtual bool isAccessibilityTableColumnInstance() const { return false; }
-    bool isAccessibilityARIAGridRowInstance() const override { return false; }
+    virtual bool isAccessibilityARIAGridRowInstance() const { return false; }
     bool isAccessibilityARIAGridCellInstance() const override { return false; }
     virtual bool isAccessibilityLabelInstance() const { return false; }
     virtual bool isAccessibilityListBoxInstance() const { return false; }
@@ -167,6 +167,7 @@ public:
     bool ignoredByRowAncestor() const;
 
     // ARIA tree/grid row support.
+    bool isARIAGridRow() const override { return false; }
     bool isARIATreeGridRow() const override { return false; }
     AccessibilityChildrenVector disclosedRows() override; // ARIATreeItem implementation. AccessibilityARIAGridRow overrides this method.
     AccessibilityObject* disclosedByRow() const override { return nullptr; }

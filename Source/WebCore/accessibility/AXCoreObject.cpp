@@ -967,6 +967,32 @@ AXCoreObject* AXCoreObject::columnHeader()
     return nullptr;
 }
 
+AXCoreObject* AXCoreObject::rowHeader()
+{
+    const auto& rowChildren = unignoredChildren();
+    if (rowChildren.isEmpty())
+        return nullptr;
+
+    bool isARIAGridRow = this->isARIAGridRow();
+
+    Ref firstCell = rowChildren[0].get();
+    if (!isARIAGridRow && !firstCell->hasElementName(ElementName::HTML_th))
+        return nullptr;
+
+    // Verify that the row header is not part of an entire row of headers.
+    // In that case, it is unlikely this is a row header (for non-grid rows).
+    for (const auto& child : rowChildren) {
+        // We found a non-header cell, so this is not an entire row of headers -- return the original header cell.
+        if (!isARIAGridRow && !child->hasElementName(ElementName::HTML_th))
+            return firstCell.ptr();
+
+        // For grid rows, the first header encountered is the row header.
+        if (isARIAGridRow && child->isRowHeader())
+            return child.ptr();
+    }
+    return nullptr;
+}
+
 AXCoreObject::AccessibilityChildrenVector AXCoreObject::columnHeaders()
 {
     AccessibilityChildrenVector headers;

@@ -160,6 +160,7 @@ enum class AXProperty : uint16_t {
     InnerHTML,
     InternalLinkElement,
     IsGrabbed,
+    IsARIAGridRow,
     IsARIATreeGridRow,
     IsAnonymousMathOperator,
     IsAttachment,
@@ -248,7 +249,6 @@ enum class AXProperty : uint16_t {
 #endif
     RolePlatformString,
     Rows,
-    RowHeader,
     RowHeaders,
     RowIndex,
     RowIndexRange,

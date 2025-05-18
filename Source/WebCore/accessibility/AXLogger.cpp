@@ -843,6 +843,9 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::IsGrabbed:
         stream << "IsGrabbed";
         break;
+    case AXProperty::IsARIAGridRow:
+        stream << "IsARIAGridRow";
+        break;
     case AXProperty::IsARIATreeGridRow:
         stream << "IsARIATreeGridRow";
         break;
@@ -1094,9 +1097,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
         break;
     case AXProperty::Rows:
         stream << "Rows";
-        break;
-    case AXProperty::RowHeader:
-        stream << "RowHeader";
         break;
     case AXProperty::RowHeaders:
         stream << "RowHeaders";

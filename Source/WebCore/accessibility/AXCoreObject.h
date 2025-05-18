@@ -812,7 +812,6 @@ public:
     virtual bool isAccessibilityObject() const = 0;
     virtual bool isAccessibilityRenderObject() const = 0;
     virtual bool isAccessibilityTableInstance() const = 0;
-    virtual bool isAccessibilityARIAGridRowInstance() const = 0;
     virtual bool isAccessibilityARIAGridCellInstance() const = 0;
     virtual bool isAXIsolatedObjectInstance() const = 0;
     virtual bool isAXRemoteFrame() const = 0;
@@ -903,9 +902,10 @@ public:
     // Table row support.
     virtual bool isTableRow() const = 0;
     virtual unsigned rowIndex() const = 0;
-    virtual AXCoreObject* rowHeader() { return nullptr; }
+    AXCoreObject* rowHeader();
 
     // ARIA tree/grid row support.
+    virtual bool isARIAGridRow() const = 0;
     virtual bool isARIATreeGridRow() const = 0;
     virtual AccessibilityChildrenVector disclosedRows() = 0; // Also implemented by ARIATreeItems.
     virtual AXCoreObject* disclosedByRow() const = 0;

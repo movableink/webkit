@@ -40,8 +40,6 @@ public:
     static Ref<AccessibilityTableRow> create(AXID, Node&);
     virtual ~AccessibilityTableRow();
 
-    // retrieves the "row" header (a th tag in the rightmost column)
-    AccessibilityObject* rowHeader() override;
     virtual AccessibilityTable* parentTable() const;
 
     void setRowIndex(unsigned);

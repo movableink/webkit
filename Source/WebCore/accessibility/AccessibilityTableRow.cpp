@@ -127,26 +127,6 @@ void AccessibilityTableRow::setRowIndex(unsigned rowIndex)
 #endif
 }
 
-AccessibilityObject* AccessibilityTableRow::rowHeader()
-{
-    const auto& rowChildren = unignoredChildren();
-    if (rowChildren.isEmpty())
-        return nullptr;
-    
-    Ref firstCell = rowChildren[0].get();
-    if (!firstCell->node() || !firstCell->node()->hasTagName(thTag))
-        return nullptr;
-
-    // Verify that the row header is not part of an entire row of headers.
-    // In that case, it is unlikely this is a row header.
-    for (const auto& child : rowChildren) {
-        // We found a non-header cell, so this is not an entire row of headers -- return the original header cell.
-        if (child->node() && !child->node()->hasTagName(thTag))
-            return &downcast<AccessibilityObject>(firstCell.get());
-    }
-    return nullptr;
-}
-
 void AccessibilityTableRow::addChildren()
 {
     // If the element specifies its cells through aria-owns, return that first.

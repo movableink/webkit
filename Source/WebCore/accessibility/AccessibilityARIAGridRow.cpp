@@ -136,13 +136,4 @@ AccessibilityTable* AccessibilityARIAGridRow::parentTable() const
     }));
 }
 
-AccessibilityObject* AccessibilityARIAGridRow::rowHeader()
-{
-    for (const auto& child : unignoredChildren()) {
-        if (child->isRowHeader())
-            return &downcast<AccessibilityObject>(child.get());
-    }
-    return nullptr;
-}
-
 } // namespace WebCore
