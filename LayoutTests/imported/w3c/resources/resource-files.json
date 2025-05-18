@@ -4638,6 +4638,8 @@
         "web-platform-tests/css/css-position/sticky/reference/position-sticky-top-and-bottom-003-ref.html",
         "web-platform-tests/css/css-position/z-index-blend-will-change-overlapping-layers-ref.html",
         "web-platform-tests/css/css-properties-values-api/registered-property-change-style-002-ref.html",
+        "web-platform-tests/css/css-properties-values-api/registered-property-computation-color-001-ref.html",
+        "web-platform-tests/css/css-properties-values-api/registered-property-computation-color-003-ref.html",
         "web-platform-tests/css/css-pseudo/active-selection-051-ref.html",
         "web-platform-tests/css/css-pseudo/backdrop-animate-002-ref.html",
         "web-platform-tests/css/css-pseudo/before-after-dynamic-custom-property-001-ref.html",
