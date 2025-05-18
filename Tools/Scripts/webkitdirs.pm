@@ -182,7 +182,6 @@ BEGIN {
        &setXcodeSDK
        &setupMacWebKitEnvironment
        &setupUnixWebKitEnvironment
-       &setupWindowsWebKitEnvironment
        &sharedCommandLineOptions
        &sharedCommandLineOptionsUsage
        &shouldBuild32Bit
@@ -2338,7 +2337,6 @@ sub setupCygwinEnv()
 
     print "Building results into: ", baseProductDir(), "\n";
     print "WEBKIT_OUTPUTDIR is set to: ", $ENV{"WEBKIT_OUTPUTDIR"}, "\n";
-    print "WEBKIT_LIBRARIES is set to: ", $ENV{"WEBKIT_LIBRARIES"}, "\n";
 
     # We will actually use MSBuild to build WebKit, but we need to find the Visual Studio install (above) to make
     # sure we use the right options.
@@ -3160,17 +3158,6 @@ sub setupUnixWebKitEnvironment($)
     my ($productDir) = @_;
 
     $ENV{TEST_RUNNER_INJECTED_BUNDLE_FILENAME} = File::Spec->catfile($productDir, "lib", "libTestRunnerInjectedBundle.so");
-}
-
-sub setupWindowsWebKitEnvironment()
-{
-    my $lib;
-    if ($ENV{WEBKIT_LIBRARIES}) {
-        $lib = File::Spec->catfile($ENV{WEBKIT_LIBRARIES}, 'bin');
-    } else  {
-        $lib = File::Spec->catfile(sourceDir(), 'WebKitLibraries', 'win', 'bin');
-    }
-    $ENV{PATH} = $lib . ';' . $ENV{PATH};
 }
 
 sub setupIOSWebKitEnvironment($)
