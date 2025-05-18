@@ -335,14 +335,6 @@ class DeleteStaleBuildFiles(shell.Compile):
         return shell.Compile.start(self)
 
 
-class InstallWindowsDependencies(shell.ShellCommandNewStyle):
-    name = 'windows-requirements'
-    description = ['updating windows dependencies']
-    descriptionDone = ['updated windows dependencies']
-    command = ['python3', './Tools/Scripts/update-webkit-win-libs.py']
-    haltOnFailure = True
-
-
 class InstallGtkDependencies(shell.ShellCommandNewStyle, CustomFlagsMixin):
     name = "jhbuild"
     description = ["updating gtk dependencies"]
