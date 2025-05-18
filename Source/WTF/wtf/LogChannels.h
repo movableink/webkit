@@ -42,7 +42,7 @@ public:
     WTF_EXPORT_PRIVATE bool isLogChannelEnabled(const String& name);
     WTF_EXPORT_PRIVATE void setLogChannelToAccumulate(const String& name);
     WTF_EXPORT_PRIVATE void clearAllLogChannelsToAccumulate();
-    WTF_EXPORT_PRIVATE void initializeLogChannelsIfNecessary(String&& = { });
+    WTF_EXPORT_PRIVATE void initializeLogChannelsIfNecessary(std::optional<String> = std::nullopt);
     WTF_EXPORT_PRIVATE WTFLogChannel* getLogChannel(const String& name);
 
 protected:

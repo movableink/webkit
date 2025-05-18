@@ -240,9 +240,9 @@ void AuxiliaryProcess::shutDown()
 void AuxiliaryProcess::applyProcessCreationParameters(AuxiliaryProcessCreationParameters&& parameters)
 {
 #if !LOG_DISABLED || !RELEASE_LOG_DISABLED
-    WTF::logChannels().initializeLogChannelsIfNecessary(WTFMove(parameters.wtfLoggingChannels));
-    WebCore::logChannels().initializeLogChannelsIfNecessary(WTFMove(parameters.webCoreLoggingChannels));
-    WebKit::logChannels().initializeLogChannelsIfNecessary(WTFMove(parameters.webKitLoggingChannels));
+    WTF::logChannels().initializeLogChannelsIfNecessary(parameters.wtfLoggingChannels);
+    WebCore::logChannels().initializeLogChannelsIfNecessary(parameters.webCoreLoggingChannels);
+    WebKit::logChannels().initializeLogChannelsIfNecessary(parameters.webKitLoggingChannels);
 #endif
 #if PLATFORM(COCOA)
     SecureCoding::applyProcessCreationParameters(WTFMove(parameters));
