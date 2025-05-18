@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -72,6 +72,7 @@ typedef struct _SoupCookie SoupCookie;
 #include "CookieStorageObserver.h"
 OBJC_CLASS NSArray;
 OBJC_CLASS NSHTTPCookie;
+OBJC_CLASS NSHTTPCookieStorage;
 OBJC_CLASS NSMutableSet;
 #endif
 
@@ -152,14 +153,6 @@ public:
     PAL::SessionID sessionID() const { return m_sessionID; }
     CredentialStorage& credentialStorage() { return m_credentialStorage; }
 
-#ifdef __OBJC__
-    WEBCORE_EXPORT RetainPtr<NSHTTPCookieStorage> nsCookieStorage() const;
-#endif
-
-#if PLATFORM(COCOA)
-    WEBCORE_EXPORT ~NetworkStorageSession();
-#endif
-
 #if PLATFORM(COCOA) || USE(SOUP)
     enum class IsInMemoryCookieStore : bool { No, Yes };
 #endif
@@ -169,6 +162,9 @@ public:
     WEBCORE_EXPORT static RetainPtr<CFURLStorageSessionRef> createCFStorageSessionForIdentifier(CFStringRef identifier, ShouldDisableCFURLCache = ShouldDisableCFURLCache::No);
     WEBCORE_EXPORT NetworkStorageSession(PAL::SessionID, RetainPtr<CFURLStorageSessionRef>&&, RetainPtr<CFHTTPCookieStorageRef>&&, IsInMemoryCookieStore = IsInMemoryCookieStore::No);
     WEBCORE_EXPORT explicit NetworkStorageSession(PAL::SessionID);
+    WEBCORE_EXPORT ~NetworkStorageSession();
+
+    WEBCORE_EXPORT RetainPtr<NSHTTPCookieStorage> nsCookieStorage() const;
 
     // May be null, in which case a Foundation default should be used.
     CFURLStorageSessionRef platformSession() { return m_platformSession.get(); }
