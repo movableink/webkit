@@ -44,7 +44,7 @@ public:
     using ValueType = typename ValueTraits::TraitType;
 
 private:
-    using HashTableType = typename TableTraitsArg::template TableType<ValueType, ValueType, IdentityExtractor, HashFunctions, ValueTraits, ValueTraits, shouldValidateKey, FastMalloc>;
+    using HashTableType = typename TableTraitsArg::template TableType<ValueType, ValueType, IdentityExtractor, HashFunctions, ValueTraits, ValueTraits, FastMalloc>;
 
 public:
     // HashSet iterators have the following structure:
@@ -292,65 +292,65 @@ inline auto HashSet<T, U, V, W, shouldValidateKey>::end() const -> iterator
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 inline auto HashSet<T, U, V, W, shouldValidateKey>::find(const ValueType& value) const -> iterator
 {
-    return m_impl.find(value); 
+    return m_impl.template find<shouldValidateKey>(value);
 }
 
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 inline bool HashSet<T, U, V, W, shouldValidateKey>::contains(const ValueType& value) const
 {
-    return m_impl.contains(value); 
+    return m_impl.template contains<shouldValidateKey>(value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename HashTranslator, typename T>
 inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::find(const T& value) const -> iterator
 {
-    return m_impl.template find<HashSetTranslatorAdapter<HashTranslator>>(value);
+    return m_impl.template find<HashSetTranslatorAdapter<HashTranslator>, shouldValidateKey>(value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename HashTranslator, typename T>
 inline bool HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::contains(const T& value) const
 {
-    return m_impl.template contains<HashSetTranslatorAdapter<HashTranslator>>(value);
+    return m_impl.template contains<HashSetTranslatorAdapter<HashTranslator>, shouldValidateKey>(value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename HashTranslator, typename T>
 inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::ensure(T&& key, NOESCAPE const Invocable<ValueType()> auto& functor) -> AddResult
 {
-    return m_impl.template add<HashSetEnsureTranslatorAdaptor<Traits, HashTranslator>>(std::forward<T>(key), functor);
+    return m_impl.template add<HashSetEnsureTranslatorAdaptor<Traits, HashTranslator>, shouldValidateKey>(std::forward<T>(key), functor);
 }
 
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 inline auto HashSet<T, U, V, W, shouldValidateKey>::add(const ValueType& value) -> AddResult
 {
-    return m_impl.add(value);
+    return m_impl.template add<shouldValidateKey>(value);
 }
 
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 inline auto HashSet<T, U, V, W, shouldValidateKey>::add(ValueType&& value) -> AddResult
 {
-    return m_impl.add(WTFMove(value));
+    return m_impl.template add<shouldValidateKey>(WTFMove(value));
 }
 
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 inline void HashSet<T, U, V, W, shouldValidateKey>::addVoid(const ValueType& value)
 {
-    m_impl.add(value);
+    m_impl.template add<shouldValidateKey>(value);
 }
 
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 inline void HashSet<T, U, V, W, shouldValidateKey>::addVoid(ValueType&& value)
 {
-    m_impl.add(WTFMove(value));
+    m_impl.template add<shouldValidateKey>(WTFMove(value));
 }
 
 template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename HashTranslator>
 inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::add(const auto& value) -> AddResult
 {
-    return m_impl.template addPassingHashCode<HashSetTranslatorAdapter<HashTranslator>>(value, [&]() ALWAYS_INLINE_LAMBDA { return value; });
+    return m_impl.template addPassingHashCode<HashSetTranslatorAdapter<HashTranslator>, shouldValidateKey>(value, [&]() ALWAYS_INLINE_LAMBDA { return value; });
 }
 
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
@@ -508,14 +508,14 @@ template<typename Value, typename HashFunctions, typename Traits, typename Table
 template<typename V>
 inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) const -> typename std::enable_if<IsSmartPtr<V>::value, iterator>::type
 {
-    return m_impl.template find<HashSetTranslator<Traits, HashFunctions>>(value);
+    return m_impl.template find<HashSetTranslator<Traits, HashFunctions>, shouldValidateKey>(value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename V>
 inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) const -> typename std::enable_if<IsSmartPtr<V>::value, bool>::type
 {
-    return m_impl.template contains<HashSetTranslator<Traits, HashFunctions>>(value);
+    return m_impl.template contains<HashSetTranslator<Traits, HashFunctions>, shouldValidateKey>(value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
