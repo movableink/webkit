@@ -53,9 +53,9 @@ constexpr float piOverFourFloat = static_cast<float>(piOverFourDouble);
 // Work around a bug in Win, where atan2(+-infinity, +-infinity) yields NaN instead of specific values.
 extern "C" inline double wtf_atan2(double x, double y)
 {
-    double posInf = std::numeric_limits<double>::infinity();
-    double negInf = -std::numeric_limits<double>::infinity();
-    double nan = std::numeric_limits<double>::quiet_NaN();
+    constexpr double posInf = std::numeric_limits<double>::infinity();
+    constexpr double negInf = -std::numeric_limits<double>::infinity();
+    constexpr double nan = std::numeric_limits<double>::quiet_NaN();
 
     double result = nan;
 
