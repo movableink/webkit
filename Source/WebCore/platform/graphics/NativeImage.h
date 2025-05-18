@@ -27,9 +27,6 @@
 
 #pragma once
 
-#include "Color.h"
-#include "ImagePaintingOptions.h"
-#include "IntSize.h"
 #include "PlatformImage.h"
 #include "RenderingResource.h"
 #include <wtf/TZoneMalloc.h>
@@ -37,8 +34,14 @@
 
 namespace WebCore {
 
+class Color;
+class DestinationColorSpace;
+class FloatRect;
 class GraphicsContext;
+class IntSize;
 class NativeImageBackend;
+struct Headroom;
+struct ImagePaintingOptions;
 
 class NativeImage final : public RenderingResource {
     WTF_MAKE_TZONE_ALLOCATED(NativeImage);

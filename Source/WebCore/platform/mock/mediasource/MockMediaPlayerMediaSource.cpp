@@ -28,6 +28,7 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
+#include "DestinationColorSpace.h"
 #include "MediaPlayer.h"
 #include "MediaSourcePrivate.h"
 #include "MediaSourcePrivateClient.h"
