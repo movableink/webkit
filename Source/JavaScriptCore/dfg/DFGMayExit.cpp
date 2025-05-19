@@ -347,6 +347,11 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
         }
         break;
 
+    case MakeRope: {
+        result = ExitsForExceptions;
+        break;
+    }
+
     case StringReplaceString: {
         if (node->child3().useKind() == StringUse) {
             result = ExitsForExceptions;

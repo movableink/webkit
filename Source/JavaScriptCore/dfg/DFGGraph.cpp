@@ -702,9 +702,7 @@ void Graph::dethread()
 {
     if (m_form == LoadStore || m_form == SSA)
         return;
-    
-    dataLogLnIf(logCompilationChanges(), "Dethreading DFG graph.");
-    
+
     for (BlockIndex blockIndex = m_blocks.size(); blockIndex--;) {
         BasicBlock* block = m_blocks[blockIndex].get();
         if (!block)
