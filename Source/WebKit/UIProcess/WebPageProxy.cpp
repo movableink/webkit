@@ -7797,13 +7797,6 @@ void WebPageProxy::decidePolicyForNavigationAction(Ref<WebProcessProxy>&& proces
     if (navigationID && !fromAPI)
         protectedPageLoadState->clearPendingAPIRequest(*transaction);
 
-    if (!checkURLReceivedFromCurrentOrPreviousWebProcess(process, request.url())) {
-        WEBPAGEPROXY_RELEASE_LOG_ERROR(Process, "Ignoring request to load this main resource because it is outside the sandbox");
-        return completionHandler(PolicyDecision { isNavigatingToAppBoundDomain() });
-    }
-
-    MESSAGE_CHECK_URL(process, originalRequest.url());
-
     Ref navigationState = *m_navigationState;
     RefPtr<API::Navigation> navigation;
     if (navigationID)
@@ -7834,6 +7827,19 @@ void WebPageProxy::decidePolicyForNavigationAction(Ref<WebProcessProxy>&& proces
         if (!navigation)
             navigation = navigationState->createLoadRequestNavigation(process->coreProcessIdentifier(), ResourceRequest(request), backForwardList->protectedCurrentItem());
     }
+
+    if (!checkURLReceivedFromCurrentOrPreviousWebProcess(process, request.url())) {
+        WEBPAGEPROXY_RELEASE_LOG_ERROR(Process, "Ignoring request to load this main resource because it is outside the sandbox");
+#if PLATFORM(COCOA)
+        if (WTF::linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::DidFailProvisionalNavigationWithErrorForFileURLNavigation)) {
+            WebCore::ResourceError error { errorDomainWebKitInternal, 0, { }, "Ignoring request to load this main resource because it is outside the sandbox"_s };
+            m_navigationClient->didFailProvisionalNavigationWithError(*this, FrameInfoData { frameInfo }, navigation.get(), request.url(), error, nullptr);
+        }
+#endif
+        return completionHandler(PolicyDecision { isNavigatingToAppBoundDomain() });
+    }
+
+    MESSAGE_CHECK_URL(process, originalRequest.url());
 
     navigationID = navigation->navigationID();
 
