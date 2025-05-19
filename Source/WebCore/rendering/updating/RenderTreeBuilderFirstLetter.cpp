@@ -167,48 +167,47 @@ void RenderTreeBuilder::FirstLetter::updateStyle(RenderBlock& firstLetterBlock, 
 {
     RenderElement* firstLetter = currentChild.parent();
     ASSERT(firstLetter->isFirstLetter());
+    ASSERT(firstLetter->isFloating() || firstLetter->isInline());
     if (!firstLetter || !firstLetter->parent())
         return;
 
     auto& firstLetterContainer = *firstLetter->parent();
-
     auto pseudoStyle = styleForFirstLetter(firstLetterContainer);
     if (!pseudoStyle) {
         ASSERT_NOT_REACHED();
         return;
     }
 
-    ASSERT(firstLetter->isFloating() || firstLetter->isInline());
-
-    if (Style::determineChanges(firstLetter->style(), *pseudoStyle).contains(Style::Change::Renderer)) {
-        // The first-letter renderer needs to be replaced. Create a new renderer of the right type.
-        RenderPtr<RenderBoxModelObject> newFirstLetter;
-        if (pseudoStyle->display() == DisplayType::Inline)
-            newFirstLetter = createRenderer<RenderInline>(RenderObject::Type::Inline, firstLetterBlock.document(), WTFMove(*pseudoStyle));
-        else
-            newFirstLetter = createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, firstLetterBlock.document(), WTFMove(*pseudoStyle));
-        newFirstLetter->initializeStyle();
-        newFirstLetter->setIsFirstLetter();
-
-        // Move the first letter into the new renderer.
-        while (RenderObject* child = firstLetter->firstChild()) {
-            auto toMove = m_builder.detach(*firstLetter, *child, WillBeDestroyed::No);
-            m_builder.attach(*newFirstLetter, WTFMove(toMove));
-        }
-
-        if (RenderTextFragment* remainingText = downcast<RenderBoxModelObject>(*firstLetter).firstLetterRemainingText()) {
-            ASSERT(remainingText->isAnonymous() || remainingText->textNode()->renderer() == remainingText);
-            // Replace the old renderer with the new one.
-            remainingText->setFirstLetter(*newFirstLetter);
-            newFirstLetter->setFirstLetterRemainingText(*remainingText);
-        }
-        WeakPtr nextSibling = firstLetter->nextSibling();
-        m_builder.destroy(*firstLetter);
-        m_builder.attach(firstLetterContainer, WTFMove(newFirstLetter), nextSibling.get());
+    if (!Style::determineChanges(firstLetter->style(), *pseudoStyle).contains(Style::Change::Renderer)) {
+        firstLetter->setStyle(WTFMove(*pseudoStyle));
         return;
     }
 
-    firstLetter->setStyle(WTFMove(*pseudoStyle));
+    // The first-letter renderer needs to be replaced. Create a new renderer of the right type.
+    RenderPtr<RenderBoxModelObject> newFirstLetter;
+    if (pseudoStyle->display() == DisplayType::Inline)
+        newFirstLetter = createRenderer<RenderInline>(RenderObject::Type::Inline, firstLetterBlock.document(), WTFMove(*pseudoStyle));
+    else
+        newFirstLetter = createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, firstLetterBlock.document(), WTFMove(*pseudoStyle));
+    newFirstLetter->initializeStyle();
+    newFirstLetter->setIsFirstLetter();
+
+    // Move the first letter into the new renderer.
+    while (RenderObject* child = firstLetter->firstChild()) {
+        auto toMove = m_builder.detach(*firstLetter, *child, WillBeDestroyed::No);
+        m_builder.attach(*newFirstLetter, WTFMove(toMove));
+    }
+
+    WeakPtr remainingText = downcast<RenderBoxModelObject>(*firstLetter).firstLetterRemainingText();
+    ASSERT(!remainingText || remainingText->isAnonymous() || remainingText->textNode()->renderer() == remainingText);
+    WeakPtr nextSibling = firstLetter->nextSibling();
+    m_builder.destroy(*firstLetter);
+    if (remainingText) {
+        // Replace the old renderer with the new one.
+        remainingText->setFirstLetter(*newFirstLetter);
+        newFirstLetter->setFirstLetterRemainingText(*remainingText);
+    }
+    m_builder.attach(firstLetterContainer, WTFMove(newFirstLetter), nextSibling.get());
 }
 
 void RenderTreeBuilder::FirstLetter::createRenderers(RenderText& currentTextChild)
