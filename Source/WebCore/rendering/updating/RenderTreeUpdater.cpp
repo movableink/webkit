@@ -910,12 +910,18 @@ void RenderTreeUpdater::tearDownLeftoverPaginationRenderersIfNeeded(Element& roo
 {
     if (&root != root.document().documentElement())
         return;
-    for (auto* child = root.document().renderView()->firstChild(); child;) {
+    WeakPtr renderView = root.document().renderView();
+    for (auto* child = renderView->firstChild(); child;) {
         auto* nextSibling = child->nextSibling();
-        if (is<RenderMultiColumnFlow>(*child) || is<RenderMultiColumnSet>(*child))
+        if (is<RenderMultiColumnFlow>(*child)) {
+            ASSERT(renderView->multiColumnFlow());
+            renderView->clearMultiColumnFlow();
+            builder.destroyAndCleanUpAnonymousWrappers(*child, root.renderer());
+        } else if (is<RenderMultiColumnSet>(*child))
             builder.destroyAndCleanUpAnonymousWrappers(*child, root.renderer());
         child = nextSibling;
     }
+    ASSERT(!renderView->multiColumnFlow());
 }
 
 void RenderTreeUpdater::tearDownLeftoverChildrenOfComposedTree(Element& element, RenderTreeBuilder& builder)
