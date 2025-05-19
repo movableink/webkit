@@ -398,7 +398,6 @@ OBJC_CLASS NSWindow;
 OBJC_CLASS QLPreviewPanel;
 OBJC_CLASS STWebpageController;
 OBJC_CLASS SYNotesActivationObserver;
-OBJC_CLASS WKQLThumbnailLoadOperation;
 OBJC_CLASS WKQuickLookPreviewController;
 OBJC_CLASS WKWebView;
 OBJC_CLASS _WKRemoteObjectRegistry;
