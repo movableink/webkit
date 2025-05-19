@@ -1,5 +1,0 @@
-
-
-PASS Recorder with sampling rate change
-FAIL Recorder WebM with sampling rate change assert_greater_than: video got recorded past change of sample rate expected a number greater than 0.5 but got 0.314
-

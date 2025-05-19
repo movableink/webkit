@@ -2584,18 +2584,24 @@ void MediaPlayerPrivateGStreamer::configureElement(GstElement* element)
     // is not an issue in 1.22. Streams parsing is not needed for MediaStream cases because we do it
     // upfront for incoming WebRTC MediaStreams. It is however needed for MSE, otherwise decodebin3
     // might not auto-plug hardware decoders.
+    bool isBlob = m_url.protocolIs("blob"_s);
     auto nameView = StringView::fromLatin1(elementName.get());
-    if (webkitGstCheckVersion(1, 22, 0) && nameView.startsWith("urisourcebin"_s) && (isMediaSource() || isMediaStreamPlayer()))
+    if (webkitGstCheckVersion(1, 22, 0) && nameView.startsWith("urisourcebin"_s) && (isBlob || isMediaSource() || isMediaStreamPlayer()))
         g_object_set(element, "use-buffering", FALSE, "parse-streams", !isMediaStreamPlayer(), nullptr);
 
     if (nameView.startsWith("parsebin"_s))
         configureParsebin(element);
 
-    // In case of playbin3 with <video ... preload="auto">, instantiate
-    // downloadbuffer element, otherwise the playbin3 would instantiate
-    // a queue element instead .
-    if (nameView.startsWith("urisourcebin"_s) && !m_isLegacyPlaybin && !isMediaSource() && !isMediaStreamPlayer() && m_preload == MediaPlayer::Preload::Auto)
-        g_object_set(element, "download", TRUE, nullptr);
+    // In case of playbin3 with <video ... preload="auto">, instantiate downloadbuffer element,
+    // otherwise the playbin3 would instantiate a queue element instead. When playing blob URIs,
+    // configure urisourcebin to setup a ring buffer so that downstream demuxers operate in pull
+    // mode. Some demuxers (matroskademux) don't work as well in push mode.
+    if (nameView.startsWith("urisourcebin"_s) && !m_isLegacyPlaybin && m_preload == MediaPlayer::Preload::Auto) {
+        if (isBlob)
+            g_object_set(element, "ring-buffer-max-size", 2 * MB, nullptr);
+        else if (!isMediaSource() && !isMediaStreamPlayer())
+            g_object_set(element, "download", TRUE, nullptr);
+    }
 
     // Collect processing time metrics for video decoders and converters.
     if ((classifiers.contains("Converter"_s) || classifiers.contains("Decoder"_s)) && classifiers.contains("Video"_s) && !classifiers.contains("Parser"_s) && !classifiers.contains("Sink"_s))
@@ -3286,11 +3292,12 @@ void MediaPlayerPrivateGStreamer::createGSTPlayBin(const URL& url)
     GST_INFO("Creating pipeline for %s player", player->isVideoPlayer() ? "video" : "audio");
     ASCIILiteral playbinName = "playbin"_s;
 
-    // MSE and Mediastream require playbin3. Regular playback can use playbin3 on-demand with the
+    // MSE, Blob and Mediastream require playbin3. Regular playback can use playbin3 on-demand with the
     // WEBKIT_GST_USE_PLAYBIN3 environment variable.
-    const char* usePlaybin3 = g_getenv("WEBKIT_GST_USE_PLAYBIN3");
+    auto usePlaybin3 = StringView::fromLatin1(g_getenv("WEBKIT_GST_USE_PLAYBIN3"));
     bool isMediaStream = url.protocolIs("mediastream"_s);
-    if (isMediaSource() || isMediaStream || (usePlaybin3 && !strcmp(usePlaybin3, "1")))
+    bool isBlob = url.protocolIs("blob"_s);
+    if (isMediaSource() || isMediaStream || isBlob || usePlaybin3 == "1"_s)
         playbinName = "playbin3"_s;
 
     ASSERT(!m_pipeline);
@@ -3299,7 +3306,7 @@ void MediaPlayerPrivateGStreamer::createGSTPlayBin(const URL& url)
     if (elementId.isEmpty())
         elementId = "media-player"_s;
 
-    auto type = isMediaSource() ? "MSE-"_s : isMediaStream ? "mediastream-"_s : ""_s;
+    auto type = isMediaSource() ? "MSE-"_s : isMediaStream ? "mediastream-"_s : isBlob ? "blob-" : ""_s;
 
     m_isLegacyPlaybin = playbinName == "playbin"_s;
 
