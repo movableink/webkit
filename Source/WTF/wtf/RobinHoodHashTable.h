@@ -373,7 +373,7 @@ ALWAYS_INLINE auto RobinHoodHashTable<Key, Value, Extractor, HashFunctions, Trai
 template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, typename SizePolicy, typename Malloc>
 inline void RobinHoodHashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits, SizePolicy, Malloc>::initializeBucket(ValueType& bucket)
 {
-    HashTableBucketInitializer<Traits::emptyValueIsZero>::template initialize<Traits>(bucket);
+    initializeHashTableBucket<Traits>(bucket);
 }
 
 template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, typename SizePolicy, typename Malloc>

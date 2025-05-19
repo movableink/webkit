@@ -687,8 +687,8 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
         while (true) {
             ValueType* entry = table + i;
                 
-            // we count on the compiler to optimize out this branch
-            if (HashFunctions::safeToCompareToEmptyOrDeleted) {
+            // We count on the compiler to optimize out this branch.
+            if constexpr (HashFunctions::safeToCompareToEmptyOrDeleted) {
                 if (HashTranslator::equal(Extractor::extract(*entry), key))
                     return entry;
                 
@@ -783,8 +783,8 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
         while (true) {
             ValueType* entry = table + i;
             
-            // we count on the compiler to optimize out this branch
-            if (HashFunctions::safeToCompareToEmptyOrDeleted) {
+            // We count on the compiler to optimize out this branch.
+            if constexpr (HashFunctions::safeToCompareToEmptyOrDeleted) {
                 if (isEmptyBucket(*entry))
                     return makeLookupResult(deletedEntry ? deletedEntry : entry, false, h);
                 
@@ -833,29 +833,22 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
         internalCheckTableConsistency();
     }
 
-    template<bool emptyValueIsZero> struct HashTableBucketInitializer;
-
-    template<> struct HashTableBucketInitializer<false> {
-        template<typename Traits, typename Value> static void initialize(Value& bucket)
-        {
-            Traits::template constructEmptyValue<Traits>(bucket);
-        }
-    };
-
-    template<> struct HashTableBucketInitializer<true> {
-        template<typename Traits, typename Value> static void initialize(Value& bucket)
-        {
+    template<typename Traits, typename Value>
+    static void initializeHashTableBucket(Value& bucket)
+    {
+        if constexpr (Traits::emptyValueIsZero) {
             // This initializes the bucket without copying the empty value.
             // That makes it possible to use this with types that don't support copying.
             // The memset to 0 looks like a slow operation but is optimized by the compilers.
             zeroBytes(bucket);
-        }
-    };
+        } else
+            Traits::template constructEmptyValue<Traits>(bucket);
+    }
     
     template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, typename Malloc>
     inline void HashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits, Malloc>::initializeBucket(ValueType& bucket)
     {
-        HashTableBucketInitializer<Traits::emptyValueIsZero>::template initialize<Traits>(bucket);
+        initializeHashTableBucket<Traits>(bucket);
     }
 
     template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, typename Malloc>
@@ -891,8 +884,8 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
         while (true) {
             entry = table + i;
             
-            // we count on the compiler to optimize out this branch
-            if (HashFunctions::safeToCompareToEmptyOrDeleted) {
+            // We count on the compiler to optimize out this branch.
+            if constexpr (HashFunctions::safeToCompareToEmptyOrDeleted) {
                 if (isEmptyBucket(*entry))
                     break;
                 
@@ -1180,7 +1173,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
 
         // would use a template member function with explicit specializations here, but
         // gcc doesn't appear to support that
-        if (Traits::emptyValueIsZero)
+        if constexpr (Traits::emptyValueIsZero)
             return reinterpret_cast_ptr<ValueType*>(static_cast<char*>(Malloc::zeroedMalloc(metadataSize + size * sizeof(ValueType))) + metadataSize);
 
         ValueType* result = reinterpret_cast_ptr<ValueType*>(static_cast<char*>(Malloc::malloc(metadataSize + size * sizeof(ValueType))) + metadataSize);
@@ -1203,7 +1196,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
     template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, typename Malloc>
     auto HashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits, Malloc>::expand(ValueType* entry) -> ValueType*
     {
-        if (KeyTraits::hasIsReleasedWeakValueFunction)
+        if constexpr (KeyTraits::hasIsReleasedWeakValueFunction)
             deleteReleasedWeakBuckets();
 
         unsigned newSize;
@@ -1222,6 +1215,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
     constexpr unsigned HashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits, Malloc>::computeBestTableSize(unsigned keyCount)
     {
         unsigned bestTableSize = roundUpToPowerOfTwo(keyCount);
+        static constexpr double minLoadRatio = 1.0 / minLoad;
 
         if (HashTableSizePolicy::shouldExpand(keyCount, bestTableSize))
             bestTableSize *= 2;
@@ -1234,7 +1228,6 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
             // to avoid being too close to loadMax and bring the ratio close to 11/24. This
             // give us a load in the bounds [9/24, 15/24).
             double maxLoadRatio = loadFactor;
-            double minLoadRatio = 1.0 / minLoad;
             double averageLoadRatio = std::midpoint(minLoadRatio, maxLoadRatio);
             double halfWayBetweenAverageAndMaxLoadRatio = std::midpoint(averageLoadRatio, maxLoadRatio);
             return keyCount >= tableSize * halfWayBetweenAverageAndMaxLoadRatio;
@@ -1249,8 +1242,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
             if (aboveThresholdForEagerExpansion(largeLoadFactor, keyCount, bestTableSize))
                 bestTableSize *= 2;
         }
-        unsigned minimumTableSize = KeyTraits::minimumTableSize;
-        return std::max(bestTableSize, minimumTableSize);
+        return std::max(bestTableSize, KeyTraits::minimumTableSize);
     }
 
     template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, typename Malloc>
@@ -1469,7 +1461,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
     {
         Locker locker { *table->m_mutex };
         typename HashTableType::const_iterator* next;
-        for (typename HashTableType::const_iterator* p = table->m_iterators; p; p = next) {
+        for (auto* p = table->m_iterators; p; p = next) {
             next = p->m_next;
             p->m_table = nullptr;
             p->m_next = nullptr;
@@ -1543,7 +1535,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
         using pointer = const value_type*;
         using reference = const value_type&;
 
-        HashTableConstIteratorAdapter() {}
+        HashTableConstIteratorAdapter() = default;
         HashTableConstIteratorAdapter(const typename HashTableType::const_iterator& impl) : m_impl(impl) {}
 
         const ValueType* get() const { return (const ValueType*)m_impl.get(); }
@@ -1563,7 +1555,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
         using pointer = value_type*;
         using reference = value_type&;
 
-        HashTableIteratorAdapter() {}
+        HashTableIteratorAdapter() = default;
         HashTableIteratorAdapter(const typename HashTableType::iterator& impl) : m_impl(impl) {}
 
         ValueType* get() const { return (ValueType*)m_impl.get(); }
