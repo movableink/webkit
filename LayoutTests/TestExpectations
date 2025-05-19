@@ -2686,9 +2686,6 @@ imported/w3c/web-platform-tests/css/css-content/quotes-first-letter-002.html [ I
 imported/w3c/web-platform-tests/css/css-content/quotes-first-letter-004.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-content/quotes-first-letter-005.html [ ImageOnlyFailure ]
 
-# Causes the following test to be flaky.
-webkit.org/b/148950 imported/w3c/web-platform-tests/html/semantics/document-metadata/the-base-element/base_href_specified.sub.html [ Skip ]
-
 imported/w3c/web-platform-tests/html/browsers/history/the-history-interface/history_go_zero.html [ Pass Failure ]
 
 # Imported w3c tests for clip-path that don't pass yet
