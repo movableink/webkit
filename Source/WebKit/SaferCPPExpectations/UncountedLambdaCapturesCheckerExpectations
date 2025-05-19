@@ -2,7 +2,5 @@ NetworkProcess/Classifier/WebResourceLoadStatisticsStore.cpp
 NetworkProcess/cocoa/NetworkSessionCocoa.mm
 Platform/IPC/StreamClientConnection.h
 Shared/Cocoa/AuxiliaryProcessCocoa.mm
-UIProcess/RemoteLayerTree/mac/RemoteLayerTreeEventDispatcher.mm
 UIProcess/WebProcessCache.cpp
 UIProcess/mac/PageClientImplMac.mm
-WebProcess/WebPage/EventDispatcher.cpp

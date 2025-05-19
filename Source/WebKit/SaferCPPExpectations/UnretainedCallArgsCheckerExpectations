@@ -59,7 +59,6 @@ Shared/Cocoa/RevealItem.mm
 Shared/Cocoa/WKKeyedCoder.mm
 Shared/Cocoa/WKNSError.mm
 Shared/Cocoa/WKNSURLRequest.mm
-Shared/Cocoa/WKObject.h
 Shared/Cocoa/WebIconUtilities.mm
 Shared/Cocoa/XPCEndpoint.mm
 Shared/Cocoa/XPCEndpointClient.mm
