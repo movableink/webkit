@@ -492,8 +492,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
             ASSERT(!m_table);
             ASSERT(!tableSize());
 
-            unsigned minimumTableSize = KeyTraits::minimumTableSize;
-            unsigned newTableSize = std::max(minimumTableSize, computeBestTableSize(keyCount));
+            unsigned newTableSize = computeBestTableSize(keyCount);
 
             m_table = allocateTable(newTableSize);
             setTableSize(newTableSize);
@@ -1257,8 +1256,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
     template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, typename Malloc>
     void HashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits, Malloc>::shrinkToBestSize()
     {
-        unsigned minimumTableSize = KeyTraits::minimumTableSize;
-        rehash(std::max(minimumTableSize, computeBestTableSize(keyCount())), nullptr);
+        rehash(computeBestTableSize(keyCount()), nullptr);
     }
 
     template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, typename Malloc>
