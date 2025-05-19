@@ -3327,19 +3327,6 @@ HostedBlurMaterialInMediaControlsEnabled:
     WebCore:
       default: false
 
-HyperlinkAuditingEnabled:
-  type: bool
-  status: embedder
-  humanReadableName: "Hyperlink Auditing"
-  humanReadableDescription: "Enable Hyperlink Auditing"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: false
-
 ICECandidateFilteringEnabled:
   type: bool
   status: internal

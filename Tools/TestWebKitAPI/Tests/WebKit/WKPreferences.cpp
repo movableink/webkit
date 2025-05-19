@@ -82,7 +82,6 @@ TEST(WebKit, WKPreferencesDefaults)
     EXPECT_FALSE(WKPreferencesGetShouldPrintBackgrounds(preference));
     EXPECT_TRUE(WKPreferencesGetJavaScriptCanOpenWindowsAutomatically(preference));
 #endif
-    EXPECT_TRUE(WKPreferencesGetHyperlinkAuditingEnabled(preference));
     EXPECT_WK_STREQ(expectedStandardFontFamily, adoptWK(WKPreferencesCopyStandardFontFamily(preference)));
     EXPECT_WK_STREQ(expectedFixedFontFamily, adoptWK(WKPreferencesCopyFixedFontFamily(preference)));
     EXPECT_WK_STREQ(expectedSerifFontFamily, adoptWK(WKPreferencesCopySerifFontFamily(preference)));

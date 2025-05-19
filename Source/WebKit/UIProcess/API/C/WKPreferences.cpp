@@ -184,16 +184,6 @@ bool WKPreferencesGetJavaScriptCanOpenWindowsAutomatically(WKPreferencesRef pref
     return toProtectedImpl(preferencesRef)->javaScriptCanOpenWindowsAutomatically();
 }
 
-void WKPreferencesSetHyperlinkAuditingEnabled(WKPreferencesRef preferencesRef, bool hyperlinkAuditingEnabled)
-{
-    toProtectedImpl(preferencesRef)->setHyperlinkAuditingEnabled(hyperlinkAuditingEnabled);
-}
-
-bool WKPreferencesGetHyperlinkAuditingEnabled(WKPreferencesRef preferencesRef)
-{
-    return toProtectedImpl(preferencesRef)->hyperlinkAuditingEnabled();
-}
-
 void WKPreferencesSetStandardFontFamily(WKPreferencesRef preferencesRef, WKStringRef family)
 {
     toProtectedImpl(preferencesRef)->setStandardFontFamily(toWTFString(family));
@@ -1712,6 +1702,15 @@ bool WKPreferencesGetRequestVideoFrameCallbackEnabled(WKPreferencesRef preferenc
 
 
 // The following are all deprecated and do nothing. They should be removed when possible.
+
+void WKPreferencesSetHyperlinkAuditingEnabled(WKPreferencesRef, bool)
+{
+}
+
+bool WKPreferencesGetHyperlinkAuditingEnabled(WKPreferencesRef)
+{
+    return true;
+}
 
 void WKPreferencesSetDNSPrefetchingEnabled(WKPreferencesRef, bool)
 {

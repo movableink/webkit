@@ -12,7 +12,6 @@ function test() {
         if (window.testRunner && window.internals) {
             testRunner.setStatisticsShouldDowngradeReferrer(false, function () { });
             testRunner.dumpAsText();
-            internals.settings.setHyperlinkAuditingEnabled(true);
             testRunner.waitUntilDone();
         }
         testCalled = true;

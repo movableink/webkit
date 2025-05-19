@@ -824,14 +824,16 @@ static void webkit_settings_class_init(WebKitSettingsClass* klass)
      *
      * The hyperlink auditing specification is available at
      * http://www.whatwg.org/specs/web-apps/current-work/multipage/links.html#hyperlink-auditing.
+     *
+     * Deprecated: 2.50
      */
     sObjProperties[PROP_ENABLE_HYPERLINK_AUDITING] =
         g_param_spec_boolean(
             "enable-hyperlink-auditing",
             _("Enable hyperlink auditing"),
             _("Whether <a ping> should be able to send pings."),
-            FEATURE_DEFAULT(HyperlinkAuditingEnabled),
-            readWriteConstructParamFlags);
+            TRUE,
+            static_cast<GParamFlags>(readWriteConstructParamFlags | G_PARAM_DEPRECATED));
 
     /**
      * WebKitSettings:default-font-family:
@@ -2147,12 +2149,16 @@ void webkit_settings_set_javascript_can_open_windows_automatically(WebKitSetting
  * Get the #WebKitSettings:enable-hyperlink-auditing property.
  *
  * Returns: %TRUE If hyper link auditing is enabled or %FALSE otherwise.
+ *
+ * Deprecated: 2.50.
  */
 gboolean webkit_settings_get_enable_hyperlink_auditing(WebKitSettings* settings)
 {
     g_return_val_if_fail(WEBKIT_IS_SETTINGS(settings), FALSE);
 
-    return settings->priv->preferences->hyperlinkAuditingEnabled();
+    g_warning("webkit_settings_get_enable_hyperlink_auditing is deprecated and always returns FALSE.");
+
+    return FALSE;
 }
 
 /**
@@ -2161,18 +2167,15 @@ gboolean webkit_settings_get_enable_hyperlink_auditing(WebKitSettings* settings)
  * @enabled: Value to be set
  *
  * Set the #WebKitSettings:enable-hyperlink-auditing property.
+ *
+ * Deprecated: 2.50.
  */
 void webkit_settings_set_enable_hyperlink_auditing(WebKitSettings* settings, gboolean enabled)
 {
     g_return_if_fail(WEBKIT_IS_SETTINGS(settings));
 
-    WebKitSettingsPrivate* priv = settings->priv;
-    bool currentValue = priv->preferences->hyperlinkAuditingEnabled();
-    if (currentValue == enabled)
-        return;
-
-    priv->preferences->setHyperlinkAuditingEnabled(enabled);
-    g_object_notify_by_pspec(G_OBJECT(settings), sObjProperties[PROP_ENABLE_HYPERLINK_AUDITING]);
+    if (!enabled)
+        g_warning("webkit_settings_set_enable_hyperlink_auditing is deprecated and does nothing.");
 }
 
 /**

@@ -176,10 +176,10 @@ WEBKIT_API void
 webkit_settings_set_javascript_can_open_windows_automatically  (WebKitSettings *settings,
                                                                 gboolean        enabled);
 
-WEBKIT_API gboolean
+WEBKIT_DEPRECATED gboolean
 webkit_settings_get_enable_hyperlink_auditing                  (WebKitSettings *settings);
 
-WEBKIT_API void
+WEBKIT_DEPRECATED void
 webkit_settings_set_enable_hyperlink_auditing                  (WebKitSettings *settings,
                                                                 gboolean        enabled);
 

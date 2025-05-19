@@ -339,9 +339,6 @@ void HTMLAnchorElement::sendPings(const URL& destinationURL)
     if (!document().frame())
         return;
 
-    if (!document().settings().hyperlinkAuditingEnabled())
-        return;
-
     const auto& pingValue = attributeWithoutSynchronization(pingAttr);
     if (pingValue.isNull())
         return;
