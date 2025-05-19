@@ -4560,6 +4560,7 @@ String MediaPlayerPrivateGStreamer::codecForStreamId(TrackID streamId)
 #if ENABLE(MEDIA_TELEMETRY)
 MediaTelemetryReport::DrmType MediaPlayerPrivateGStreamer::getDrm() const
 {
+#if ENABLE(ENCRYPTED_MEDIA)
     if (!m_pipeline)
         return MediaTelemetryReport::DrmType::None;
 
@@ -4571,11 +4572,11 @@ MediaTelemetryReport::DrmType MediaPlayerPrivateGStreamer::getDrm() const
     if (!drmCdmInstanceStructure)
         return MediaTelemetryReport::DrmType::None;
 
-    const GValue* drmCdmInstanceVal = gst_structure_get_value(drmCdmInstanceStructure, "cdm-instance");
-    if (!drmCdmInstanceVal)
+    const GValue* drmCdmInstanceValue = gst_structure_get_value(drmCdmInstanceStructure, "cdm-instance");
+    if (!drmCdmInstanceValue)
         return MediaTelemetryReport::DrmType::None;
 
-    const CDMInstance* drmCdmInstance = static_cast<const CDMInstance*>(g_value_get_pointer(drmCdmInstanceVal));
+    const CDMInstance* drmCdmInstance = static_cast<const CDMInstance*>(g_value_get_pointer(drmCdmInstanceValue));
     if (!drmCdmInstance)
         return MediaTelemetryReport::DrmType::None;
 
@@ -4585,8 +4586,10 @@ MediaTelemetryReport::DrmType MediaPlayerPrivateGStreamer::getDrm() const
     if (GStreamerEMEUtilities::isWidevineKeySystem(keySystem))
         return MediaTelemetryReport::DrmType::Widevine;
     return MediaTelemetryReport::DrmType::Unknown;
+#endif // ENABLE(ENCRYPTED_MEDIA)
+    return MediaTelemetryReport::DrmType::None;
 }
-#endif
+#endif // ENABLE(MEDIA_TELEMETRY)
 
 #undef GST_CAT_DEFAULT
 
