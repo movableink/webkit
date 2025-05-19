@@ -38,6 +38,7 @@ public: \
     using HeapRef = ::bmalloc::api::HeapRef; \
     using SizeAndAlignment = ::bmalloc::api::SizeAndAlignment; \
     using TZoneMallocFallback = ::bmalloc::api::TZoneMallocFallback; \
+    using CompactAllocationMode = ::bmalloc::CompactAllocationMode; \
     \
     BINLINE void* operator new(size_t, void* p) { return p; } \
     BINLINE void* operator new[](size_t, void* p) { return p; } \
@@ -54,7 +55,7 @@ public: \
     void* operator new(size_t size) \
     { \
         static HeapRef s_heapRef; \
-        static const TZoneSpecification s_heapSpec = { &s_heapRef, sizeof(_type), SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) }; \
+        static const TZoneSpecification s_heapSpec = { &s_heapRef, sizeof(_type), CompactAllocationMode:: _compactMode, SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) }; \
     \
         if (!s_heapRef || size != sizeof(_type)) { [[unlikely]] \
             if constexpr (::bmalloc::api::requiresCompactPointers<_type>()) \
@@ -89,7 +90,7 @@ private: \
 #define MAKE_BTZONE_MALLOCED_IMPL(_type, _compactMode) \
 ::bmalloc::api::HeapRef _type::s_heapRef; \
 \
-const TZoneSpecification _type::s_heapSpec = { &_type::s_heapRef, sizeof(_type), SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) }; \
+const TZoneSpecification _type::s_heapSpec = { &_type::s_heapRef, sizeof(_type), CompactAllocationMode:: _compactMode, SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) }; \
 \
 void* _type::operatorNewSlow(size_t size) \
 { \

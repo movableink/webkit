@@ -91,12 +91,12 @@ void* tzoneAllocateCompactSlow(size_t requestedSize, const TZoneSpecification& s
         heapRef = tzoneHeapManager->heapRefForTZoneType(spec);
         *spec.addressOfHeapRef = heapRef;
     }
-    return bmalloc_iso_allocate_inline(TO_PAS_HEAPREF(heapRef), pas_maybe_compact_allocation_mode);
+    return bmalloc_iso_allocate_inline(TO_PAS_HEAPREF(heapRef), pas_always_compact_allocation_mode);
 }
 
 void* tzoneAllocateCompact(HeapRef heapRef)
 {
-    return bmalloc_iso_allocate_inline(TO_PAS_HEAPREF(heapRef), pas_maybe_compact_allocation_mode);
+    return bmalloc_iso_allocate_inline(TO_PAS_HEAPREF(heapRef), pas_always_compact_allocation_mode);
 }
 
 void* tzoneAllocateNonCompact(HeapRef heapRef)

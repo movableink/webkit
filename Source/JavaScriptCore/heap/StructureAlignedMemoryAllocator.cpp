@@ -86,7 +86,7 @@ void* StructureAlignedMemoryAllocator::tryReallocateMemory(void*, size_t)
 #if !USE(SYSTEM_MALLOC)
 
 static const bmalloc_type structureHeapType { BMALLOC_TYPE_INITIALIZER(MarkedBlock::blockSize, MarkedBlock::blockSize, "Structure Heap") };
-static pas_primitive_heap_ref structureHeap { BMALLOC_AUXILIARY_HEAP_REF_INITIALIZER(&structureHeapType) };
+static pas_primitive_heap_ref structureHeap { BMALLOC_AUXILIARY_HEAP_REF_INITIALIZER(&structureHeapType, pas_bmalloc_heap_ref_kind_compact) };
 
 #endif
 
@@ -120,7 +120,7 @@ public:
     {
 #if !USE(SYSTEM_MALLOC)
         if (!m_useDebugHeap) [[likely]]
-            return bmalloc_try_allocate_auxiliary_with_alignment_inline(&structureHeap, MarkedBlock::blockSize, MarkedBlock::blockSize, pas_maybe_compact_allocation_mode);
+            return bmalloc_try_allocate_auxiliary_with_alignment_inline(&structureHeap, MarkedBlock::blockSize, MarkedBlock::blockSize, pas_always_compact_allocation_mode);
 #endif
 
         size_t freeIndex;

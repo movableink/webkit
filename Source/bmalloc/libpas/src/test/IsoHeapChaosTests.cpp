@@ -106,7 +106,8 @@ pas_heap_ref* createBmallocHeapRefForSize(size_t size)
 
     return new pas_heap_ref(
         BMALLOC_HEAP_REF_INITIALIZER(
-            new bmalloc_type(BMALLOC_TYPE_INITIALIZER((unsigned)size, 1, strdup(stringOut.str().c_str())))));
+            new bmalloc_type(BMALLOC_TYPE_INITIALIZER((unsigned)size, 1, strdup(stringOut.str().c_str()))),
+            pas_bmalloc_heap_ref_kind_non_compact));
 }
 #endif // PAS_ENABLE_BMALLOC
 
@@ -1144,7 +1145,7 @@ void addAllTests()
             "bmalloc-gigacage",
             [] () {
                 static const bmalloc_type gigacageType = BMALLOC_TYPE_INITIALIZER(1, 1, "Gigacage");
-                gigacageHeapRef = BMALLOC_AUXILIARY_HEAP_REF_INITIALIZER(&gigacageType);
+                gigacageHeapRef = BMALLOC_AUXILIARY_HEAP_REF_INITIALIZER(&gigacageType, pas_bmalloc_heap_ref_kind_compact);
 
                 size_t reservationSize = 1000000000;
                 void* reservation = malloc(reservationSize);

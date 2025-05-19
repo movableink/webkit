@@ -35,6 +35,7 @@
 
 #include "Algorithm.h"
 #include "BInline.h"
+#include "CompactAllocationMode.h"
 
 #define BUSE_TZONE_SPEC_NAME_ARG 0
 #if BUSE_TZONE_SPEC_NAME_ARG
@@ -116,6 +117,7 @@ struct SizeAndAlignment {
 struct TZoneSpecification {
     HeapRef* addressOfHeapRef;
     unsigned size;
+    CompactAllocationMode allocationMode;
     SizeAndAlignment::Value sizeAndAlignment;
 #if BUSE_TZONE_SPEC_NAME_ARG
     const char* name;
@@ -144,6 +146,7 @@ public: \
     using HeapRef = ::bmalloc::api::HeapRef; \
     using SizeAndAlignment = ::bmalloc::api::SizeAndAlignment; \
     using TZoneMallocFallback = ::bmalloc::api::TZoneMallocFallback; \
+    using CompactAllocationMode = ::bmalloc::CompactAllocationMode; \
 private: \
     static _exportMacro HeapRef s_heapRef; \
     static _exportMacro const TZoneSpecification s_heapSpec; \
@@ -191,7 +194,7 @@ private: \
 private: \
     static _exportMacro BNO_INLINE void* operatorNewSlow(size_t size) \
     { \
-        static const TZoneSpecification s_heapSpec = { &s_heapRef, sizeof(_type), SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) }; \
+        static const TZoneSpecification s_heapSpec = { &s_heapRef, sizeof(_type), CompactAllocationMode:: _compactMode, SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) }; \
         if constexpr (::bmalloc::api::requiresCompactPointers<_type>()) \
             return ::bmalloc::api::tzoneAllocateCompactSlow(size, s_heapSpec); \
         return ::bmalloc::api::tzoneAllocate ## _compactMode ## Slow(size, s_heapSpec); \

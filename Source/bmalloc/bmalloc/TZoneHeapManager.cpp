@@ -329,6 +329,25 @@ static char* nameForType(LockHolder&, unsigned typeSize, unsigned alignment, uns
     return &typeNameTemplate.string[0];
 }
 
+static char* nameForTypeNonCompact(LockHolder&, unsigned typeSize, unsigned alignment)
+{
+    for (unsigned i = 0; i < SizeBase64Size; ++i) {
+        typeNameTemplate.nameTemplate.sizeBase64[SizeBase64Size - i - 1] = base64Chars[typeSize % 64];
+        typeSize >>= 6;
+    }
+
+    for (unsigned i = 0; i < AlignmentBase64Size; ++i) {
+        typeNameTemplate.nameTemplate.alignmentBase64[AlignmentBase64Size - i - 1] = base64Chars[alignment % 64];
+        alignment >>= 6;
+    }
+
+    // Use the index bytes to say that this heap is non-compact.
+    typeNameTemplate.nameTemplate.index[0] = 'N';
+    typeNameTemplate.nameTemplate.index[1] = 'C';
+
+    return &typeNameTemplate.string[0];
+}
+
 static char* nameForTypeUpdateIndex(LockHolder&, unsigned index)
 {
     for (unsigned i = 0; i < IndexSize; ++i) {
@@ -521,6 +540,21 @@ TZoneHeapManager::TZoneTypeBuckets* TZoneHeapManager::populateBucketsForSizeClas
     buckets->bucketUseCounts.resize(bucketCount);
 #endif
 
+    // Fill in non-compact bucket.
+
+#if TZONE_VERBOSE_DEBUG
+    char* typeName = nameForTypeNonCompact(lock, SizeAndAlignment::decodeSize(sizeAndAlignment), SizeAndAlignment::decodeAlignment(sizeAndAlignment));
+    memcpy(buckets->nonCompactBucket.typeName, typeName, typeNameLen);
+#else
+    PAS_UNUSED_PARAM(lock);
+    setNextTypeName(buckets->nonCompactBucket.typeName, typeNameLen);
+#endif
+    buckets->nonCompactBucket.type.size = SizeAndAlignment::decodeSize(sizeAndAlignment);
+    buckets->nonCompactBucket.type.alignment = SizeAndAlignment::decodeAlignment(sizeAndAlignment);
+    buckets->nonCompactBucket.type.name = buckets->nonCompactBucket.typeName;
+    buckets->nonCompactBucket.heapref.type = (const pas_heap_type*)(&buckets->nonCompactBucket.type);
+    buckets->nonCompactBucket.heapref.is_non_compact_heap = true;
+
     for (unsigned i = 0; i < bucketCount; ++i) {
 #if TZONE_VERBOSE_DEBUG
         char* typeName = !i ? nameForType(lock, SizeAndAlignment::decodeSize(sizeAndAlignment), SizeAndAlignment::decodeAlignment(sizeAndAlignment), i) : nameForTypeUpdateIndex(lock, i);
@@ -534,6 +568,7 @@ TZoneHeapManager::TZoneTypeBuckets* TZoneHeapManager::populateBucketsForSizeClas
         buckets->buckets[i].type.name = buckets->buckets[i].typeName;
 
         buckets->buckets[i].heapref.type = (const pas_heap_type*)(&buckets->buckets[i].type);
+        buckets->buckets[i].heapref.is_non_compact_heap = false;
     }
 
     m_heapRefsBySizeAndAlignment.set(sizeAndAlignment, buckets);
@@ -548,6 +583,9 @@ BINLINE pas_heap_ref* TZoneHeapManager::heapRefForTZoneType(const TZoneSpecifica
         bucketsForSize = bucket.value();
     else
         bucketsForSize = populateBucketsForSizeClass(lock, spec.sizeAndAlignment);
+
+    if (spec.allocationMode == CompactAllocationMode::NonCompact && PAS_USE_COMPACT_ONLY_TZONE_HEAP)
+        return &bucketsForSize->nonCompactBucket.heapref;
 
     unsigned bucket = tzoneBucketForKey(spec, bucketsForSize->numberOfBuckets, lock);
 
@@ -600,6 +638,7 @@ pas_heap_ref* TZoneHeapManager::TZoneHeapManager::heapRefForTZoneTypeDifferentSi
     TZoneSpecification newSpec = {
         spec.addressOfHeapRef,
         static_cast<unsigned>(requestedSize),
+        spec.allocationMode,
         SizeAndAlignment::encode(newSize, alignment),
 #if BUSE_TZONE_SPEC_NAME_ARG
         spec.name

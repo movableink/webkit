@@ -30,6 +30,11 @@
 
 PAS_BEGIN_EXTERN_C;
 
+#ifndef PAS_USE_COMPACT_ONLY_HEAP
+#define PAS_USE_COMPACT_ONLY_HEAP 0
+#define PAS_USE_COMPACT_ONLY_TZONE_HEAP 0
+#endif
+
 enum pas_allocation_mode {
     /* We are allocating an object from ordinary memory and don't plan on
        compacting its address. */
