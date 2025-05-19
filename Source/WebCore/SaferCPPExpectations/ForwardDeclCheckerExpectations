@@ -113,7 +113,6 @@ platform/graphics/angle/GraphicsContextGLANGLE.cpp
 platform/graphics/ca/PlatformCALayer.h
 platform/graphics/ca/TileController.cpp
 platform/graphics/mac/LegacyDisplayRefreshMonitorMac.h
-platform/mediarecorder/MediaRecorderPrivateEncoder.h
 platform/mediastream/libwebrtc/LibWebRTCDav1dDecoder.cpp
 platform/mediastream/mac/CoreAudioSharedUnit.h
 platform/network/cocoa/CredentialCocoa.h
