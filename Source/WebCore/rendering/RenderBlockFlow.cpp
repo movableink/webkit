@@ -178,8 +178,7 @@ void RenderBlockFlow::willBeDestroyed()
     if (svgTextLayout())
         svgTextLayout()->deleteLegacyRootBox();
 
-    // NOTE: This jumps down to RenderBox, bypassing RenderBlock since it would do duplicate work.
-    RenderBox::willBeDestroyed();
+    RenderBlock::willBeDestroyed();
 }
 
 RenderMultiColumnFlow* RenderBlockFlow::multiColumnFlowSlowCase() const
