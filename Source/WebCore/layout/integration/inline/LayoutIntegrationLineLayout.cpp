@@ -28,7 +28,6 @@
 
 #include "BlockFormattingState.h"
 #include "BlockLayoutState.h"
-#include "ElementInlines.h"
 #include "EventRegion.h"
 #include "FormattingContextBoxIterator.h"
 #include "HitTestLocation.h"
@@ -48,18 +47,12 @@
 #include "PaintInfo.h"
 #include "PlacedFloats.h"
 #include "RenderBlockFlow.h"
-#include "RenderBoxInlines.h"
-#include "RenderChildIterator.h"
 #include "RenderDescendantIterator.h"
-#include "RenderElementInlines.h"
-#include "RenderFrameSet.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"
 #include "RenderLayoutState.h"
 #include "RenderLineBreak.h"
 #include "RenderView.h"
-#include "SVGTextFragment.h"
-#include "Settings.h"
 #include "ShapeOutsideInfo.h"
 #include <wtf/Assertions.h>
 #include <wtf/Range.h>
