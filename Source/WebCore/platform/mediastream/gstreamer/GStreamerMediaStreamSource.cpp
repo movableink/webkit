@@ -29,6 +29,7 @@
 #include "AudioTrackPrivateMediaStream.h"
 #include "GStreamerAudioData.h"
 #include "GStreamerCommon.h"
+#include "GUniquePtrGStreamer.h"
 #include "MediaStreamPrivate.h"
 #include "VideoFrameGStreamer.h"
 #include "VideoFrameMetadataGStreamer.h"
