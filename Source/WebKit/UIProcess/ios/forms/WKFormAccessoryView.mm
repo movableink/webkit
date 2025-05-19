@@ -188,11 +188,14 @@ inline static RetainPtr<UIToolbar> createToolbarWithItems(NSArray<UIBarButtonIte
     [items addObject:_nextItem.get()];
 
     _flexibleSpaceItem = adoptNS([[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil]);
-    if (self._useCheckmarkForDone)
-        [self _adjustFlexibleSpaceItem:_flexibleSpaceItem.get()];
 
     _autoFillButtonItemSpacer = adoptNS([[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil]);
     [_autoFillButtonItemSpacer setWidth:WebKit::fixedSpaceBetweenButtonItems];
+
+    if (self._useCheckmarkForDone) {
+        [self _adjustFlexibleSpaceItem:_flexibleSpaceItem.get()];
+        [self _adjustFlexibleSpaceItem:_autoFillButtonItemSpacer.get()];
+    }
 
     // iPad doesn't show the "Done" button since the keyboard has its own dismiss key.
     if (self._useCheckmarkForDone)
