@@ -97,9 +97,7 @@ public:
         return objects && !objects->isEmptyIgnoringNullReferences();
     }
     static bool hasPercentHeightContainerMap();
-    static bool hasPercentHeightDescendant(RenderBox&);
     static void clearPercentHeightDescendantsFrom(RenderBox&);
-    static void removePercentHeightDescendantIfNeeded(RenderBox&);
 
     bool isContainingBlockAncestorFor(RenderObject&) const;
 

@@ -1957,6 +1957,9 @@ void RenderBlock::addPercentHeightDescendant(RenderBox& descendant)
 
 void RenderBlock::removePercentHeightDescendant(RenderBox& descendant)
 {
+    // We query the map directly, rather than looking at style's
+    // logicalHeight()/logicalMinHeight()/logicalMaxHeight() since those
+    // can change with writing mode/directional changes.
     removeFromTrackedRendererMaps(descendant);
 }
 
@@ -1970,41 +1973,14 @@ bool RenderBlock::hasPercentHeightContainerMap()
     return percentHeightContainerMap;
 }
 
-bool RenderBlock::hasPercentHeightDescendant(RenderBox& descendant)
-{
-    // We don't null check percentHeightContainerMap since the caller
-    // already ensures this and we need to call this function on every
-    // descendant in clearPercentHeightDescendantsFrom().
-    ASSERT(percentHeightContainerMap);
-    return percentHeightContainerMap->contains(descendant);
-}
-
-void RenderBlock::removePercentHeightDescendantIfNeeded(RenderBox& descendant)
-{
-    // We query the map directly, rather than looking at style's
-    // logicalHeight()/logicalMinHeight()/logicalMaxHeight() since those
-    // can change with writing mode/directional changes.
-    if (!hasPercentHeightContainerMap())
-        return;
-
-    if (!hasPercentHeightDescendant(descendant))
-        return;
-
-    removePercentHeightDescendant(descendant);
-}
-
 void RenderBlock::clearPercentHeightDescendantsFrom(RenderBox& parent)
 {
-    ASSERT(percentHeightContainerMap);
-    for (RenderObject* child = parent.firstChild(); child; child = child->nextInPreOrder(&parent)) {
-        CheckedPtr box = dynamicDowncast<RenderBox>(*child);
-        if (!box)
-            continue;
- 
-        if (!hasPercentHeightDescendant(*box))
-            continue;
+    if (!percentHeightContainerMap)
+        return;
 
-        removePercentHeightDescendant(*box);
+    for (RenderObject* child = parent.firstChild(); child; child = child->nextInPreOrder(&parent)) {
+        if (CheckedPtr box = dynamicDowncast<RenderBox>(*child))
+            removeFromTrackedRendererMaps(*box);
     }
 }
 

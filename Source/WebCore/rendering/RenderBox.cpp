@@ -331,7 +331,7 @@ void RenderBox::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle
 
     const RenderStyle& newStyle = style();
     if (needsLayout() && oldStyle) {
-        RenderBlock::removePercentHeightDescendantIfNeeded(*this);
+        RenderBlock::removePercentHeightDescendant(*this);
 
         // Normally we can do optimized positioning layout for absolute/fixed positioned objects. There is one special case, however, which is
         // when the positioned object's margin-before is changed. In this case the parent has to get a layout in order to run margin collapsing
