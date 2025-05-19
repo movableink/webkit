@@ -202,6 +202,7 @@ PAS_BEGIN_EXTERN_C;
 static PAS_ALWAYS_INLINE void pas_zero_memory(void* memory, size_t size)
 {
     PAS_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    PAS_PROFILE(ZERO_MEMORY, memory, size);
     memset(memory, 0, size);
     PAS_ALLOW_UNSAFE_BUFFER_USAGE_END
 }

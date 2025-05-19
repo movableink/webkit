@@ -98,10 +98,10 @@ pas_try_allocate_for_reallocate_and_copy(
     if (result.begin) {
         if (verbose)
             pas_log("result.begin = %p\n", (void*)result.begin);
-        PAS_PROFILE(TRY_REALLOCATE_AND_COPY, result.begin);
         size_t copy_size = PAS_MIN(new_size, old_size);
         if (verbose)
             pas_log("copying size %zu from %p to %p\n", copy_size, old_ptr, (void*)result.begin);
+        PAS_PROFILE(TRY_REALLOCATE_AND_COPY, result.begin, old_ptr, copy_size);
         memcpy((void*)result.begin, old_ptr, copy_size);
         if (verbose)
             pas_log("\t...done copying size %zu from %p to %p\n", copy_size, old_ptr, (void*)result.begin);
