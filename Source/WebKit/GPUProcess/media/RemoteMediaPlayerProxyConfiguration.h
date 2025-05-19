@@ -60,7 +60,6 @@ struct RemoteMediaPlayerProxyConfiguration {
     bool shouldUsePersistentCache { false };
     bool isVideo { false };
     bool renderingCanBeAccelerated { false };
-    bool prefersSandboxedParsing { false };
     bool shouldDisableHDR { false };
 #if PLATFORM(IOS_FAMILY)
     bool canShowWhileLocked { false };

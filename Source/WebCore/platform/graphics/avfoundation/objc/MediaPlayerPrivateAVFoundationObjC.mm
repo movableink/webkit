@@ -897,7 +897,7 @@ void MediaPlayerPrivateAVFoundationObjC::createAVAssetForURL(const URL& url, Ret
     if (!identifier.isEmpty())
         [options setObject:identifier.createNSString().get() forKey:AVURLAssetClientBundleIdentifierKey];
 #endif
-    if (player->prefersSandboxedParsing() && PAL::canLoad_AVFoundation_AVAssetPrefersSandboxedParsingOptionKey())
+    if (PAL::canLoad_AVFoundation_AVAssetPrefersSandboxedParsingOptionKey())
         [options setObject:@YES forKey:AVAssetPrefersSandboxedParsingOptionKey];
 
     if (player->inPrivateBrowsingMode() && PAL::canLoad_AVFoundation_AVURLAssetDoNotLogURLsKey())

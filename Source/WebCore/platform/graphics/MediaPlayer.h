@@ -337,8 +337,6 @@ public:
     virtual void mediaPlayerOnNewVideoFrameMetadata(VideoFrameMetadata&&, RetainPtr<CVPixelBufferRef>&&) { }
 #endif
 
-    virtual bool mediaPlayerPrefersSandboxedParsing() const { return false; }
-
     virtual bool mediaPlayerShouldDisableHDR() const { return false; }
 
     virtual FloatSize mediaPlayerVideoLayerSize() const { return { }; }
@@ -770,8 +768,6 @@ public:
     void playerContentBoxRectChanged(const LayoutRect&);
 
     String lastErrorMessage() const;
-
-    bool prefersSandboxedParsing() const { return client().mediaPlayerPrefersSandboxedParsing(); }
 
     void renderVideoWillBeDestroyed();
 

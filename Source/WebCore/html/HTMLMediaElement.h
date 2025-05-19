@@ -912,7 +912,6 @@ private:
     const std::optional<Vector<FourCC>>& allowedMediaCaptionFormatTypes() const final;
 
     void mediaPlayerBufferedTimeRangesChanged() final;
-    bool mediaPlayerPrefersSandboxedParsing() const final;
 
     bool mediaPlayerShouldDisableHDR() const final { return shouldDisableHDR(); }
 

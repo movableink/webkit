@@ -8648,11 +8648,6 @@ void HTMLMediaElement::mediaPlayerBufferedTimeRangesChanged()
     });
 }
 
-bool HTMLMediaElement::mediaPlayerPrefersSandboxedParsing() const
-{
-    return document().settings().preferSandboxedMediaParsing();
-}
-
 void HTMLMediaElement::removeBehaviorRestrictionsAfterFirstUserGesture(MediaElementSession::BehaviorRestrictions mask)
 {
     MediaElementSession::BehaviorRestrictions restrictionsToRemove = mask &

@@ -185,7 +185,6 @@ Ref<MediaPlayerPrivateInterface> RemoteMediaPlayerManager::createRemoteMediaPlay
     proxyConfiguration.allowedMediaCaptionFormatTypes = player->allowedMediaCaptionFormatTypes();
     proxyConfiguration.playerContentBoxRect = player->playerContentBoxRect();
 
-    proxyConfiguration.prefersSandboxedParsing = player->prefersSandboxedParsing();
 #if PLATFORM(IOS_FAMILY)
     proxyConfiguration.canShowWhileLocked = player->canShowWhileLocked();
 #endif
