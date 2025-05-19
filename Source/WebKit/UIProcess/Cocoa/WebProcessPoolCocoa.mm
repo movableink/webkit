@@ -352,9 +352,11 @@ void WebProcessPool::platformInitialize(NeedsGlobalStaticInitialization needsGlo
             logProcessPoolState(pool.get());
     });
 
+#if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
     PAL::registerNotifyCallback("com.apple.WebKit.restrictedDomains"_s, ^{
         RestrictedOpenerDomainsController::shared();
     });
+#endif
 
 }
 
@@ -1380,6 +1382,7 @@ static RefPtr<WebCompiledContentRuleList> createCompiledContentRuleList(WKConten
 
 void WebProcessPool::platformLoadResourceMonitorRuleList(CompletionHandler<void(RefPtr<WebCompiledContentRuleList>)>&& completionHandler)
 {
+#if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
     RELEASE_LOG(ResourceMonitoring, "WebProcessPool::platformLoadResourceMonitorRuleList request to load rule list.");
 
     ResourceMonitorURLsController::singleton().prepare([weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)](WKContentRuleList *list, bool updated) mutable {
@@ -1394,6 +1397,9 @@ void WebProcessPool::platformLoadResourceMonitorRuleList(CompletionHandler<void(
         }
         completionHandler(WTFMove(ruleList));
     });
+#else
+    completionHandler(nullptr);
+#endif
 }
 
 void WebProcessPool::platformCompileResourceMonitorRuleList(const String& rulesText, CompletionHandler<void(RefPtr<WebCompiledContentRuleList>)>&& completionHandler)
