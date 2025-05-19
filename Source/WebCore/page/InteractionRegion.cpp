@@ -48,6 +48,7 @@
 #include "LegacyRenderSVGShapeInlines.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
+#include "NativeImage.h"
 #include "Page.h"
 #include "PathOperation.h"
 #include "PlatformMouseEvent.h"

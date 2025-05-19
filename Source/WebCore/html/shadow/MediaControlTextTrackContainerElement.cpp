@@ -44,6 +44,7 @@
 #include "LocalFrame.h"
 #include "LocalizedStrings.h"
 #include "Logging.h"
+#include "NativeImage.h"
 #include "PODInterval.h"
 #include "Page.h"
 #include "PageGroup.h"

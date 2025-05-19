@@ -43,6 +43,7 @@
 #include "Gradient.h"
 #include "ImageBuffer.h"
 #include "IntRect.h"
+#include "NativeImage.h"
 #include "NotImplemented.h"
 #include "RefPtrCairo.h"
 

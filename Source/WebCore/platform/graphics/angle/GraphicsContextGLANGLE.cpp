@@ -36,6 +36,7 @@
 #include "IntRect.h"
 #include "IntSize.h"
 #include "Logging.h"
+#include "NativeImage.h"
 #include "NotImplemented.h"
 #include <algorithm>
 #include <cstring>

@@ -27,6 +27,7 @@
 #include "ImageBufferShareableBitmapBackend.h"
 
 #include <WebCore/GraphicsContext.h>
+#include <WebCore/NativeImage.h>
 #include <WebCore/PixelBuffer.h>
 #include <WebCore/ShareableBitmap.h>
 #include <wtf/StdLibExtras.h>

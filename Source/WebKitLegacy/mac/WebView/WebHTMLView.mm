@@ -107,6 +107,7 @@
 #import <WebCore/HTMLNames.h>
 #import <WebCore/HitTestResult.h>
 #import <WebCore/Image.h>
+#import <WebCore/ImageAdapter.h>
 #import <WebCore/KeyboardEvent.h>
 #import <WebCore/LegacyNSPasteboardTypes.h>
 #import <WebCore/LegacyWebArchive.h>

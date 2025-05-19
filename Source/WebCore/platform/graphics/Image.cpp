@@ -31,9 +31,11 @@
 #include "BitmapImage.h"
 #include "DeprecatedGlobalSettings.h"
 #include "GraphicsContext.h"
+#include "ImageAdapter.h"
 #include "ImageObserver.h"
 #include "Length.h"
 #include "MIMETypeRegistry.h"
+#include "NativeImage.h"
 #include "SVGImage.h"
 #include "ShareableBitmap.h"
 #include "SharedBuffer.h"
@@ -180,6 +182,26 @@ void Image::fillWithSolidColor(GraphicsContext& ctxt, const FloatRect& dstRect, 
     ctxt.setCompositeOperation(color.isOpaque() && op == CompositeOperator::SourceOver ? CompositeOperator::Copy : op);
     ctxt.fillRect(dstRect, color);
     ctxt.setCompositeOperation(previousOperator);
+}
+
+RefPtr<NativeImage> Image::nativeImage(const DestinationColorSpace&)
+{
+    return nullptr;
+}
+
+RefPtr<NativeImage> Image::nativeImageAtIndex(unsigned)
+{
+    return nativeImage();
+}
+
+RefPtr<NativeImage> Image::currentNativeImage()
+{
+    return nativeImage();
+}
+
+RefPtr<NativeImage> Image::currentPreTransformedNativeImage(ImageOrientation)
+{
+    return currentNativeImage();
 }
 
 void Image::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
@@ -384,6 +406,11 @@ void Image::computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsic
     intrinsicHeight = Length(intrinsicRatio.height(), LengthType::Fixed);
 }
 
+FloatSize Image::sourceSize(ImageOrientation orientation) const
+{
+    return size(orientation);
+}
+
 void Image::startAnimationAsynchronously()
 {
     if (!m_animationStartTimer)
@@ -445,11 +472,21 @@ TextStream& operator<<(TextStream& ts, const Image& image)
     return ts;
 }
 
+bool Image::animationPending() const
+{
+    return m_animationStartTimer && m_animationStartTimer->isActive();
+}
+
 bool Image::gSystemAllowsAnimationControls = false;
 
 void Image::setSystemAllowsAnimationControls(bool allowsControls)
 {
     gSystemAllowsAnimationControls = allowsControls;
+}
+
+std::optional<Color> Image::singlePixelSolidColor() const
+{
+    return std::nullopt;
 }
 
 } // namespace WebCore

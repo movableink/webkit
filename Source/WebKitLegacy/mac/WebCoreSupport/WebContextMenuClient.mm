@@ -46,6 +46,7 @@
 #import <WebCore/DestinationColorSpace.h>
 #import <WebCore/Document.h>
 #import <WebCore/GraphicsContext.h>
+#import <WebCore/ImageAdapter.h>
 #import <WebCore/ImageBuffer.h>
 #import <WebCore/LocalFrame.h>
 #import <WebCore/LocalFrameView.h>

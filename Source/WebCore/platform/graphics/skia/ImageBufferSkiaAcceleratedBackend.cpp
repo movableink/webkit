@@ -31,6 +31,7 @@
 #include "GLContext.h"
 #include "GLFence.h"
 #include "IntRect.h"
+#include "NativeImage.h"
 #include "PixelBuffer.h"
 #include "PixelBufferConversion.h"
 #include "PlatformDisplay.h"

@@ -30,6 +30,7 @@
 
 #import "AudioUtilities.h"
 #import "DeprecatedGlobalSettings.h"
+#import "ImageAdapter.h"
 #import "Logging.h"
 #import "MediaConfiguration.h"
 #import "MediaPlayer.h"

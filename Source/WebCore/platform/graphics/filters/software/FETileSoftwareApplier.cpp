@@ -27,6 +27,7 @@
 #include "Filter.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
+#include "NativeImage.h"
 #include "Pattern.h"
 #include <wtf/TZoneMallocInlines.h>
 

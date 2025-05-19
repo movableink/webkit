@@ -49,6 +49,7 @@
 #include "HTMLProgressElement.h"
 #include "HTMLSelectElement.h"
 #include "HTMLTextAreaElement.h"
+#include "ImageAdapter.h"
 #include "ImageControlsButtonPart.h"
 #include "InnerSpinButtonPart.h"
 #include "LocalFrame.h"

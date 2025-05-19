@@ -39,6 +39,7 @@
 #include "ImageBuffer.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSPlaneLayout.h"
+#include "NativeImage.h"
 #include "OffscreenCanvas.h"
 #include "PixelBuffer.h"
 #include "SVGImageElement.h"

@@ -32,6 +32,7 @@
 
 #if PLATFORM(COCOA)
 #include "RemoteVideoFrameObjectHeapProxyProcessor.h"
+#include <WebCore/NativeImage.h>
 #endif
 
 namespace WebKit {

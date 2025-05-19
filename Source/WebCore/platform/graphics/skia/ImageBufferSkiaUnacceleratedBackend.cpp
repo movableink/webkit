@@ -29,6 +29,7 @@
 #if USE(SKIA)
 #include "FontRenderOptions.h"
 #include "IntRect.h"
+#include "NativeImage.h"
 #include "PixelBuffer.h"
 #include "SkiaSpanExtras.h"
 #include <skia/core/SkPixmap.h>

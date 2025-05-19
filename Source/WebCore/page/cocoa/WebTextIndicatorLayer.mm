@@ -28,6 +28,7 @@
 
 #import "GeometryUtilities.h"
 #import "GraphicsContext.h"
+#import "NativeImage.h"
 #import "PathUtilities.h"
 #import "TextIndicator.h"
 #import "TextIndicatorWindow.h"

@@ -36,6 +36,7 @@
 #include <WebCore/GeometryUtilities.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/ImageBuffer.h>
+#include <WebCore/NativeImage.h>
 #include <wtf/NumberOfCores.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>

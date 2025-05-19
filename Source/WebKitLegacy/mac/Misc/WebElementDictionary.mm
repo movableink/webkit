@@ -39,6 +39,7 @@
 #import <WebCore/DragController.h>
 #import <WebCore/HitTestResult.h>
 #import <WebCore/Image.h>
+#import <WebCore/ImageAdapter.h>
 #import <WebCore/LocalFrame.h>
 #import <WebCore/WebCoreJITOperations.h>
 #import <WebCore/WebCoreObjCExtras.h>

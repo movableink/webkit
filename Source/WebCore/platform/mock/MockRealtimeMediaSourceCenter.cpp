@@ -35,6 +35,7 @@
 #include "MediaConstraints.h"
 #include "MockRealtimeAudioSource.h"
 #include "MockRealtimeVideoSource.h"
+#include "NativeImage.h"
 #include "NotImplemented.h"
 #include "RealtimeMediaSourceSettings.h"
 #include <math.h>

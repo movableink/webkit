@@ -33,6 +33,7 @@
 #import "TestWKWebView.h"
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <WebCore/Image.h>
+#import <WebCore/ImageAdapter.h>
 #import <WebCore/NativeImage.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <wtf/Expected.h>

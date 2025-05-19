@@ -27,6 +27,7 @@
 #include "ShareableBitmap.h"
 
 #include "GraphicsContext.h"
+#include "NativeImage.h"
 #include "SharedMemory.h"
 #include <wtf/DebugHeap.h>
 

@@ -37,6 +37,7 @@
 #import "FontSelector.h"
 #import "GraphicsContextCG.h"
 #import "Image.h"
+#import "ImageAdapter.h"
 #import "LocalDefaultSystemAppearance.h"
 #import "NodeInlines.h"
 #import "Page.h"

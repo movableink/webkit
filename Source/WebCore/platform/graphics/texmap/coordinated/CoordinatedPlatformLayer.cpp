@@ -37,6 +37,7 @@
 #include "CoordinatedTileBuffer.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayerCoordinated.h"
+#include "NativeImage.h"
 #include "TextureMapperLayer.h"
 #include <wtf/MainThread.h>
 

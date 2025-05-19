@@ -32,6 +32,7 @@
 #include "Logging.h"
 #include "MediaDeviceHashSalts.h"
 #include "MediaSampleAVFObjC.h"
+#include "NativeImage.h"
 #include "RealtimeMediaSource.h"
 #include "RealtimeMediaSourceCenter.h"
 #include "RealtimeMediaSourceSettings.h"

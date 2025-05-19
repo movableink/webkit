@@ -101,6 +101,7 @@
 #import <WebCore/HistoryController.h>
 #import <WebCore/HistoryItem.h>
 #import <WebCore/HitTestResult.h>
+#import <WebCore/ImageAdapter.h>
 #import <WebCore/LoaderNSURLExtras.h>
 #import <WebCore/LocalFrame.h>
 #import <WebCore/LocalFrameView.h>

@@ -29,6 +29,7 @@
 #include "ImageBufferShareableBitmapBackend.h"
 #include <WebCore/ChromeClient.h>
 #include <WebCore/ImageBuffer.h>
+#include <WebCore/NativeImage.h>
 
 namespace WebKit {
 using namespace WebCore;

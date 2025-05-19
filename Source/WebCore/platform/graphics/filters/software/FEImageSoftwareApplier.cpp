@@ -29,6 +29,7 @@
 #include "FEImage.h"
 #include "Filter.h"
 #include "GraphicsContext.h"
+#include "NativeImage.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {

@@ -27,6 +27,7 @@
 #include "GraphicsContext.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LocalFrameView.h"
+#include "NativeImage.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGFitToViewBox.h"
 #include "SVGRenderStyle.h"

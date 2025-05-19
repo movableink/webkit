@@ -40,6 +40,7 @@
 #import "Image.h"
 #import "ImageBuffer.h"
 #import "LocalFrameInlines.h"
+#import "NativeImage.h"
 #import "NotImplemented.h"
 #import "Page.h"
 #import "Range.h"

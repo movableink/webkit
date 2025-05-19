@@ -31,6 +31,7 @@
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
 #include "HostWindow.h"
+#include "ImageAdapter.h"
 #include "Logging.h"
 #include "PlatformMouseEvent.h"
 #include "PlatformWheelEvent.h"

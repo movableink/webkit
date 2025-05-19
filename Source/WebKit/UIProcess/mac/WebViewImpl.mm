@@ -104,6 +104,7 @@
 #import <WebCore/FixedContainerEdges.h>
 #import <WebCore/FontAttributeChanges.h>
 #import <WebCore/FontAttributes.h>
+#import <WebCore/ImageAdapter.h>
 #import <WebCore/LegacyNSPasteboardTypes.h>
 #import <WebCore/LoaderNSURLExtras.h>
 #import <WebCore/LocalizedStrings.h>

@@ -33,6 +33,7 @@
 #import <WebCore/DragItem.h>
 #import <WebCore/Image.h>
 #import <WebCore/LocalCurrentTraitCollection.h>
+#import <WebCore/NativeImage.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
 namespace WebKit {

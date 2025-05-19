@@ -60,6 +60,7 @@
 #import "HTMLOListElement.h"
 #import "HTMLTableCellElement.h"
 #import "HTMLTextAreaElement.h"
+#import "ImageAdapter.h"
 #import "LoaderNSURLExtras.h"
 #import "LocalFrame.h"
 #import "LocalizedStrings.h"

@@ -39,6 +39,7 @@
 #include "Gradient.h"
 #include "GraphicsContextCairo.h"
 #include "ImageBuffer.h"
+#include "NativeImage.h"
 #include <type_traits>
 #include <wtf/ZippedRange.h>
 #include <wtf/text/TextStream.h>

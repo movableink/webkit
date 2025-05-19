@@ -37,6 +37,7 @@
 #include "Gradient.h"
 #include "GraphicsContext.h"
 #include "Image.h"
+#include "NativeImage.h"
 #include "SharedBuffer.h"
 #include "SystemImage.h"
 #include "TextFlags.h"

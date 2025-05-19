@@ -42,6 +42,7 @@
 #include "HWndDC.h"
 #include "HitTestResult.h"
 #include "Image.h"
+#include "ImageAdapter.h"
 #include "LocalFrame.h"
 #include "NotImplemented.h"
 #include "Range.h"

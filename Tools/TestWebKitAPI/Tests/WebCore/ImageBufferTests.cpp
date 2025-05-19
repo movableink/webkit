@@ -31,6 +31,7 @@
 #include <WebCore/Color.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/ImageBuffer.h>
+#include <WebCore/NativeImage.h>
 #include <WebCore/PixelBuffer.h>
 #include <cmath>
 #include <type_traits>

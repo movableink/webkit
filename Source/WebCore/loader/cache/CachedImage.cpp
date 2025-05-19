@@ -32,6 +32,7 @@
 #include "Font.h"
 #include "FrameLoader.h"
 #include "FrameLoaderTypes.h"
+#include "ImageAdapter.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
 #include "LocalFrameView.h"

@@ -27,6 +27,7 @@
 #pragma once
 
 #include "Image.h"
+#include "Timer.h"
 #include <wtf/URL.h>
 
 namespace WebCore {

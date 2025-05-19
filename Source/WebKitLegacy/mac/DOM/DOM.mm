@@ -49,9 +49,11 @@
 #import <WebCore/HTMLNames.h>
 #import <WebCore/HTMLTableCellElement.h>
 #import <WebCore/Image.h>
+#import <WebCore/ImageAdapter.h>
 #import <WebCore/JSNode.h>
 #import <WebCore/KeyboardEvent.h>
 #import <WebCore/LocalFrame.h>
+#import <WebCore/NativeImage.h>
 #import <WebCore/NodeFilter.h>
 #import <WebCore/NodeRenderStyle.h>
 #import <WebCore/Page.h>

@@ -38,6 +38,7 @@
 #include "UIGamepadProvider.h"
 #include "WebPreferences.h"
 #include <WebCore/Cursor.h>
+#include <WebCore/NativeImage.h>
 #include <WebCore/SystemSettings.h>
 #include <wtf/glib/GUniquePtr.h>
 
