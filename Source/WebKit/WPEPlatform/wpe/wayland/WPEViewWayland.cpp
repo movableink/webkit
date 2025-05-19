@@ -358,10 +358,22 @@ static gboolean wpeViewWaylandRenderBuffer(WPEView* view, WPEBuffer* buffer, con
     if (!wlBuffer)
         return FALSE;
 
+    auto* toplevel = wpe_view_get_toplevel(view);
+    if (wpe_toplevel_get_state(toplevel) & WPE_TOPLEVEL_STATE_MAXIMIZED) {
+        // The surface is maximized. The window geometry specified in the configure
+        // event must be obeyed by the client, or the xdg_wm_base.invalid_surface_state
+        // error is raised.
+        auto scale = wpe_view_get_scale(view);
+        if (wpe_view_get_width(view) * scale != wpe_buffer_get_width(buffer) || wpe_view_get_height(view) * scale != wpe_buffer_get_height(buffer)) {
+            wpe_view_buffer_rendered(view, buffer);
+            return TRUE;
+        }
+    }
+
     auto* priv = WPE_VIEW_WAYLAND(view)->priv;
     priv->buffer = buffer;
 
-    wpeToplevelWaylandUpdateOpaqueRegion(WPE_TOPLEVEL_WAYLAND(wpe_view_get_toplevel(view)));
+    wpeToplevelWaylandUpdateOpaqueRegion(WPE_TOPLEVEL_WAYLAND(toplevel));
 
     auto* wlSurface = wpe_view_wayland_get_wl_surface(WPE_VIEW_WAYLAND(view));
     wl_surface_attach(wlSurface, wlBuffer, 0, 0);
