@@ -120,7 +120,6 @@ private:
 
     IntSize m_size;
     OptionSet<BufferFlag> m_flags;
-    bool m_isLocked { false };
     struct gbm_bo* m_bo { nullptr };
     uint64_t m_modifier { 0 };
     Vector<EGLAttrib> m_eglAttributes;
