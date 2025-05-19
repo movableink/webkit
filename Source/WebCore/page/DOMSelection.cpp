@@ -236,7 +236,7 @@ ExceptionOr<void> DOMSelection::collapse(Node* node, unsigned offset)
         }
         if (auto result = Range::checkNodeOffsetPair(*node, offset); result.hasException())
             return result.releaseException();
-        if (!(frame->settings().selectionAPIForShadowDOMEnabled() && node->isConnected() && frame->document() == &node->document())
+        if (!(node->isConnected() && frame->document() == &node->document())
             && &node->rootNode() != frame->document())
             return { };
     } else {
@@ -300,13 +300,8 @@ ExceptionOr<void> DOMSelection::setBaseAndExtent(Node* baseNode, unsigned baseOf
         if (auto result = Range::checkNodeOffsetPair(*extentNode, extentOffset); result.hasException())
             return result.releaseException();
         Ref document = *frame->document();
-        if (frame->settings().selectionAPIForShadowDOMEnabled()) {
-            if (!document->isShadowIncludingInclusiveAncestorOf(baseNode) || !document->isShadowIncludingInclusiveAncestorOf(extentNode))
-                return { };
-        } else {
-            if (!document->contains(*baseNode) || !document->contains(*extentNode))
-                return { };
-        }
+        if (!document->isShadowIncludingInclusiveAncestorOf(baseNode) || !document->isShadowIncludingInclusiveAncestorOf(extentNode))
+            return { };
     } else {
         if (!isValidForPosition(baseNode) || !isValidForPosition(extentNode))
             return { };
@@ -380,8 +375,7 @@ ExceptionOr<void> DOMSelection::extend(Node& node, unsigned offset)
         return Exception { ExceptionCode::InvalidStateError, "extend() requires a Range to be added to the Selection"_s };
 
     if (frame->settings().liveRangeSelectionEnabled()) {
-        if (!(frame->settings().selectionAPIForShadowDOMEnabled() && node.isConnected() && frame->document() == &node.document())
-            && &node.rootNode() != frame->document())
+        if (!(node.isConnected() && frame->document() == &node.document()) && &node.rootNode() != frame->document())
             return { };
         if (auto result = Range::checkNodeOffsetPair(node, offset); result.hasException())
             return result.releaseException();
