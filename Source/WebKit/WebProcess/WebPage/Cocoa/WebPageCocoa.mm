@@ -1320,6 +1320,11 @@ void WebPage::drawPagesToPDFFromPDFDocument(CGContextRef context, PDFDocument *p
 
 #else
 
+void WebPage::drawPDFDocument(CGContextRef, PDFDocument *, const PrintInfo&, const WebCore::IntRect&)
+{
+    notImplemented();
+}
+
 void WebPage::computePagesForPrintingPDFDocument(WebCore::FrameIdentifier, const PrintInfo&, Vector<IntRect>&)
 {
     notImplemented();
