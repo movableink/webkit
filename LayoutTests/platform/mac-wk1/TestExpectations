@@ -3117,3 +3117,8 @@ webkit.org/b/292218 [ Sonoma Release ] media/media-source/media-source-video-ren
 webkit.org/b/292395 [ Debug ] fast/picture/viewport-resize.html [ Pass Crash ]
 
 http/tests/iframe-memory-monitor/media-video-autoplay-in-frames.html [ Skip ]
+
+# webkit.org/b/293249 third-party cookie blocking is not supported in WK1
+http/tests/navigation/ping-attribute/cross-site-url-anchor-cookie-preexisting-cookie.html [ Skip ]
+http/tests/navigation/ping-attribute/cross-site-url-anchor-cookie.html [ Skip ]
+http/tests/websocket/tests/hybi/websocket-allowed-setting-cookie-as-third-party-with-third-party-cookie-blocking.https.html [ Skip ]
