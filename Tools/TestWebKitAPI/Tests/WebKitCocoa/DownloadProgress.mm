@@ -399,12 +399,7 @@ static void* progressObservingContext = &progressObservingContext;
 // End-to-end test of subscribing to progress on a successful download. The client
 // should be able to receive an NSProgress that is updated as the download makes
 // progress, and the NSProgress should be unpublished when the download finishes.
-// FIXME rdar://145103161
-#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
-TEST(DownloadProgress, DISABLED_BasicSubscriptionAndProgressUpdates)
-#else
 TEST(DownloadProgress, BasicSubscriptionAndProgressUpdates)
-#endif
 {
     auto testRunner = adoptNS([[DownloadProgressTestRunner alloc] init]);
 
@@ -428,12 +423,7 @@ TEST(DownloadProgress, BasicSubscriptionAndProgressUpdates)
 }
 
 // Similar test as before, but initiating the download before receiving its response.
-// FIXME rdar://145103161
-#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
-TEST(DownloadProgress, DISABLED_StartDownloadFromNavigationAction)
-#else
 TEST(DownloadProgress, StartDownloadFromNavigationAction)
-#endif
 {
     auto testRunner = adoptNS([[DownloadProgressTestRunner alloc] init]);
 
@@ -449,12 +439,7 @@ TEST(DownloadProgress, StartDownloadFromNavigationAction)
 }
 
 // If the download is canceled, the progress should be unpublished.
-// FIXME rdar://145103161
-#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
-TEST(DownloadProgress, DISABLED_LoseProgressWhenDownloadIsCanceled)
-#else
 TEST(DownloadProgress, LoseProgressWhenDownloadIsCanceled)
-#endif
 {
     auto testRunner = adoptNS([[DownloadProgressTestRunner alloc] init]);
 
@@ -470,12 +455,7 @@ TEST(DownloadProgress, LoseProgressWhenDownloadIsCanceled)
 }
 
 // If the download fails, the progress should be unpublished.
-// FIXME rdar://145103161
-#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
-TEST(DownloadProgress, DISABLED_LoseProgressWhenDownloadFails)
-#else
 TEST(DownloadProgress, LoseProgressWhenDownloadFails)
-#endif
 {
     auto testRunner = adoptNS([[DownloadProgressTestRunner alloc] init]);
 
@@ -491,12 +471,7 @@ TEST(DownloadProgress, LoseProgressWhenDownloadFails)
 }
 
 // Canceling the progress should cancel the download.
-// FIXME rdar://145103161
-#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
-TEST(DownloadProgress, DISABLED_CancelDownloadWhenProgressIsCanceled)
-#else
 TEST(DownloadProgress, CancelDownloadWhenProgressIsCanceled)
-#endif
 {
     auto testRunner = adoptNS([[DownloadProgressTestRunner alloc] init]);
 
@@ -526,12 +501,7 @@ TEST(DownloadProgress, PublishProgressAfterDownloadFinished)
 }
 
 // Test the behavior of a download of unknown length.
-// FIXME rdar://145103161
-#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
-TEST(DownloadProgress, DISABLED_IndeterminateDownloadSize)
-#else
 TEST(DownloadProgress, IndeterminateDownloadSize)
-#endif
 {
     auto testRunner = adoptNS([[DownloadProgressTestRunner alloc] init]);
 
@@ -553,12 +523,7 @@ TEST(DownloadProgress, IndeterminateDownloadSize)
 }
 
 // Test the behavior when a download continues returning data beyond its expected length.
-// FIXME rdar://145103161
-#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
-TEST(DownloadProgress, DISABLED_ExtraData)
-#else
 TEST(DownloadProgress, ExtraData)
-#endif
 {
     auto testRunner = adoptNS([[DownloadProgressTestRunner alloc] init]);
 
@@ -578,12 +543,7 @@ TEST(DownloadProgress, ExtraData)
 }
 
 // Clients should be able to publish progress on a download that has already started.
-// FIXME rdar://145103161
-#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
-TEST(DownloadProgress, DISABLED_PublishProgressOnPartialDownload)
-#else
 TEST(DownloadProgress, PublishProgressOnPartialDownload)
-#endif
 {
     auto testRunner = adoptNS([[DownloadProgressTestRunner alloc] init]);
 
@@ -608,12 +568,7 @@ TEST(DownloadProgress, PublishProgressOnPartialDownload)
     [testRunner.get() tearDown];
 }
 
-// FIXME rdar://145103161
-#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
-TEST(DownloadProgress, DISABLED_ProgressExtendedAttributeSetAfterPartialDownloadStops)
-#else
 TEST(DownloadProgress, ProgressExtendedAttributeSetAfterPartialDownloadStops)
-#endif
 {
     auto testRunner = adoptNS([[DownloadProgressTestRunner alloc] init]);
 

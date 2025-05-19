@@ -121,16 +121,18 @@ void Download::platformCancelNetworkLoad(CompletionHandler<void(std::span<const 
 void Download::platformDestroyDownload()
 {
 #if HAVE(MODERN_DOWNLOADPROGRESS)
-    m_bookmarkURL = nil;
-    [m_progress cancel];
-#else
+    if (enableModernDownloadProgress()) {
+        m_bookmarkURL = nil;
+        [m_progress cancel];
+        return;
+    }
+#endif
     if (m_progress)
 #if HAVE(NSPROGRESS_PUBLISHING_SPI)
         [m_progress _unpublish];
 #else
         [m_progress unpublish];
 #endif // HAVE(NSPROGRESS_PUBLISHING_SPI)
-#endif // HAVE(MODERN_DOWNLOADPROGRESS)
 }
 
 #if HAVE(MODERN_DOWNLOADPROGRESS)
