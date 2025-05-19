@@ -104,7 +104,7 @@ RenderView::RenderView(Document& document, RenderStyle&& style)
 
 RenderView::~RenderView()
 {
-    ASSERT_WITH_MESSAGE(m_rendererCount == 1, "All other renderers in this render tree should have been destroyed");
+    ASSERT_WITH_MESSAGE(!m_rendererCount, "All renderers should be in the process of being deleted.");
 
     deleteLines();
 }

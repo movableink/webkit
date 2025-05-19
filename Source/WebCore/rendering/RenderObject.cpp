@@ -172,7 +172,6 @@ RenderObject::RenderObject(Type type, Node& node, OptionSet<TypeFlag> typeFlags,
 RenderObject::~RenderObject()
 {
     clearLayoutBox();
-    checkedView()->didDestroyRenderer();
     ASSERT(!m_hasAXObject);
 #ifndef NDEBUG
     renderObjectCounter.decrement();
@@ -1800,8 +1799,10 @@ void RenderObject::willBeDestroyed()
         // FIXME: Continuations should be anonymous.
         ASSERT(!node->renderer() || node->renderer() == this || (is<RenderElement>(*this) && downcast<RenderElement>(*this).isContinuation()));
         if (node->renderer() == this)
-            node->setRenderer(nullptr);
+            node->setRenderer({ });
     }
+
+    checkedView()->willDestroyRenderer();
 
     removeRareData();
 }
