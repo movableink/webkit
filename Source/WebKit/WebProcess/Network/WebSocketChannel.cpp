@@ -122,7 +122,8 @@ String WebSocketChannel::extensions()
 
 WebSocketChannel::ConnectStatus WebSocketChannel::connect(const URL& url, const String& protocol)
 {
-    if (!m_document)
+    RefPtr document = m_document.get();
+    if (!document)
         return ConnectStatus::KO;
 
     if (WebProcess::singleton().webSocketChannelManager().hasReachedSocketLimit()) {
@@ -133,7 +134,7 @@ WebSocketChannel::ConnectStatus WebSocketChannel::connect(const URL& url, const 
         return ConnectStatus::KO;
     }
 
-    auto request = webSocketConnectRequest(*m_document, url);
+    auto request = webSocketConnectRequest(*document, url);
     if (!request)
         return ConnectStatus::KO;
 
@@ -147,29 +148,27 @@ WebSocketChannel::ConnectStatus WebSocketChannel::connect(const URL& url, const 
     std::optional<FrameIdentifier> frameID;
     std::optional<PageIdentifier> pageID;
     StoredCredentialsPolicy storedCredentialsPolicy { StoredCredentialsPolicy::Use };
-    if (auto* frame = m_document ? m_document->frame() : nullptr) {
-        RefPtr mainFrame = m_document->localMainFrame();
-        if (!mainFrame)
-            return ConnectStatus::KO; 
-        frameID = mainFrame->frameID();
-        pageID = mainFrame->pageID();
-        if (auto* mainFrameDocumentLoader = mainFrame->document() ? mainFrame->document()->loader() : nullptr) {
-            auto* policySourceDocumentLoader = mainFrameDocumentLoader;
-            if (!policySourceDocumentLoader->request().url().hasSpecialScheme() && frame->document()->url().protocolIsInHTTPFamily())
-                policySourceDocumentLoader = frame->document()->loader();
+    RefPtr frame = document->frame();
+    RefPtr mainFrame = document->localMainFrame();
+    if (!mainFrame)
+        return ConnectStatus::KO;
+    frameID = mainFrame->frameID();
+    pageID = mainFrame->pageID();
+    if (RefPtr policySourceDocumentLoader = mainFrame->document() ? mainFrame->protectedDocument()->loader() : nullptr) {
+        if (!policySourceDocumentLoader->request().url().hasSpecialScheme() && frame->document()->url().protocolIsInHTTPFamily())
+            policySourceDocumentLoader = frame->protectedDocument()->loader();
 
-            if (policySourceDocumentLoader) {
-                allowPrivacyProxy = policySourceDocumentLoader->allowPrivacyProxy();
-                advancedPrivacyProtections = policySourceDocumentLoader->advancedPrivacyProtections();
-            }
+        if (policySourceDocumentLoader) {
+            allowPrivacyProxy = policySourceDocumentLoader->allowPrivacyProxy();
+            advancedPrivacyProtections = policySourceDocumentLoader->advancedPrivacyProtections();
         }
-        if (auto* page = mainFrame->page())
-            storedCredentialsPolicy = page->canUseCredentialStorage() ? StoredCredentialsPolicy::Use : StoredCredentialsPolicy::DoNotUse;
     }
+    if (auto* page = mainFrame->page())
+        storedCredentialsPolicy = page->canUseCredentialStorage() ? StoredCredentialsPolicy::Use : StoredCredentialsPolicy::DoNotUse;
 
     m_inspector.didCreateWebSocket(url);
     m_url = request->url();
-    MessageSender::send(Messages::NetworkConnectionToWebProcess::CreateSocketChannel { *request, protocol, identifier(), m_webPageProxyID, frameID, pageID, m_document->clientOrigin(), WebProcess::singleton().hadMainFrameMainResourcePrivateRelayed(), allowPrivacyProxy, advancedPrivacyProtections, storedCredentialsPolicy });
+    MessageSender::send(Messages::NetworkConnectionToWebProcess::CreateSocketChannel { *request, protocol, identifier(), m_webPageProxyID, frameID, pageID, document->clientOrigin(), WebProcess::singleton().hadMainFrameMainResourcePrivateRelayed(), allowPrivacyProxy, advancedPrivacyProtections, storedCredentialsPolicy });
     return ConnectStatus::OK;
 }
 
@@ -332,7 +331,8 @@ void WebSocketChannel::didClose(unsigned short code, String&& reason)
 
 void WebSocketChannel::logErrorMessage(const String& errorMessage)
 {
-    if (!m_document)
+    RefPtr document = m_document.get();
+    if (!document)
         return;
 
     String consoleMessage;
@@ -340,7 +340,7 @@ void WebSocketChannel::logErrorMessage(const String& errorMessage)
         consoleMessage = makeString("WebSocket connection to '"_s, m_url.string(), "' failed: "_s, errorMessage);
     else
         consoleMessage = makeString("WebSocket connection failed: "_s, errorMessage);
-    m_document->addConsoleMessage(MessageSource::Network, MessageLevel::Error, consoleMessage);
+    document->addConsoleMessage(MessageSource::Network, MessageLevel::Error, consoleMessage);
 }
 
 void WebSocketChannel::didReceiveMessageError(String&& errorMessage)

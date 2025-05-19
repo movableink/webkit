@@ -107,7 +107,6 @@ WebProcess/Inspector/WebInspectorInternal.cpp
 WebProcess/Inspector/WebInspectorUI.cpp
 WebProcess/Network/WebLoaderStrategy.cpp
 WebProcess/Network/WebResourceLoader.cpp
-WebProcess/Network/WebSocketChannel.cpp
 WebProcess/Network/webrtc/LibWebRTCDnsResolverFactory.cpp
 WebProcess/Network/webrtc/LibWebRTCNetwork.cpp
 WebProcess/Network/webrtc/LibWebRTCNetwork.h
