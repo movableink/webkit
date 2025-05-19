@@ -257,6 +257,8 @@ public:
         return nullptr;
     }
     void removeBufferFromCache(uint64_t address) { m_bufferMap.remove(address); }
+    uint32_t appleGPUFamily() const { return m_appleGPUFamily; }
+
 private:
     Device(id<MTLDevice>, id<MTLCommandQueue> defaultQueue, HardwareCapabilities&&, Adapter&);
     Device(Adapter&);
@@ -341,6 +343,7 @@ private:
     uint64_t m_computePipelineId { 0 };
     uint32_t m_bindGroupLayoutId { 0 };
     uint32_t m_bindGroupId { 0 };
+    uint32_t m_appleGPUFamily { 0 };
     bool m_supressAllErrors { false };
     const uint32_t m_maxVerticesPerDrawCall { 0 };
     bool m_shaderValidationEnabled { true };

@@ -276,6 +276,25 @@ static uint32_t computeMaxCountForDevice(id<MTLDevice> device)
     return result;
 }
 
+static uint32_t computeAppleGPUFamily(id<MTLDevice> device)
+{
+#if ENABLE(WEBGPU_BY_DEFAULT)
+    if ([device supportsFamily:MTLGPUFamilyApple9])
+        return 9;
+    if ([device supportsFamily:MTLGPUFamilyApple8])
+        return 8;
+#endif
+    if ([device supportsFamily:MTLGPUFamilyApple7])
+        return 7;
+    if ([device supportsFamily:MTLGPUFamilyApple6])
+        return 6;
+    if ([device supportsFamily:MTLGPUFamilyApple5])
+        return 5;
+    if ([device supportsFamily:MTLGPUFamilyApple4])
+        return 4;
+    return 0xFF;
+}
+
 Device::Device(id<MTLDevice> device, id<MTLCommandQueue> defaultQueue, HardwareCapabilities&& capabilities, Adapter& adapter)
     : m_device(device)
     , m_defaultQueue(Queue::create(defaultQueue, adapter, *this))
@@ -283,6 +302,7 @@ Device::Device(id<MTLDevice> device, id<MTLCommandQueue> defaultQueue, HardwareC
     , m_capabilities(WTFMove(capabilities))
     , m_adapter(adapter)
     , m_instance(adapter.weakInstance())
+    , m_appleGPUFamily(computeAppleGPUFamily(device))
     , m_maxVerticesPerDrawCall(computeMaxCountForDevice(device))
 {
 #if ENABLE(WEBGPU_SWIFT)

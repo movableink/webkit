@@ -120,7 +120,7 @@ inline Variant<PrepareResult, Error> prepareImpl(ShaderModule& shaderModule, con
     return result;
 }
 
-Variant<String, Error> generate(ShaderModule& shaderModule, PrepareResult& prepareResult, HashMap<String, ConstantValue>& constantValues)
+Variant<String, Error> generate(ShaderModule& shaderModule, PrepareResult& prepareResult, HashMap<String, ConstantValue>& constantValues, unsigned appleGPUFamily)
 {
     PhaseTimes phaseTimes;
     String result;
@@ -128,7 +128,7 @@ Variant<String, Error> generate(ShaderModule& shaderModule, PrepareResult& prepa
         return { *maybeError };
     {
         PhaseTimer phaseTimer("generateMetalCode", phaseTimes);
-        result = Metal::generateMetalCode(shaderModule, prepareResult, constantValues);
+        result = Metal::generateMetalCode(shaderModule, prepareResult, constantValues, appleGPUFamily);
     }
     logPhaseTimes(phaseTimes);
     return { result };

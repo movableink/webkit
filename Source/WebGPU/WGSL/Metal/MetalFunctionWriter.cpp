@@ -114,12 +114,13 @@ DEFINE_VOLATILE_HELPER(pack_float_to_unorm4x8, PackFloatToUnorm4x8)
 
 class FunctionDefinitionWriter : public AST::Visitor {
 public:
-    FunctionDefinitionWriter(ShaderModule& shaderModule, StringBuilder& stringBuilder, PrepareResult& prepareResult, const HashMap<String, ConstantValue>& constantValues)
+    FunctionDefinitionWriter(ShaderModule& shaderModule, StringBuilder& stringBuilder, PrepareResult& prepareResult, const HashMap<String, ConstantValue>& constantValues, unsigned appleGPUFamily)
         : m_helperGenerator(stringBuilder)
         , m_output(stringBuilder)
         , m_shaderModule(shaderModule)
         , m_prepareResult(prepareResult)
         , m_constantValues(constantValues)
+        , m_metalAppleGPUFamily(appleGPUFamily)
     {
     }
 
@@ -188,6 +189,7 @@ public:
 
     StringBuilder& stringBuilder() { return m_body; }
     Indentation<4>& indent() { return m_indent; }
+    unsigned metalAppleGPUFamily() const { return m_metalAppleGPUFamily; }
 
 private:
     void emitNecessaryHelpers();
@@ -214,6 +216,7 @@ private:
     HashSet<AST::Function*> m_visitedFunctions;
     PrepareResult& m_prepareResult;
     const HashMap<String, ConstantValue>& m_constantValues;
+    unsigned m_metalAppleGPUFamily { 0 };
 };
 
 static ASCIILiteral serializeAddressSpace(AddressSpace addressSpace)
@@ -1884,7 +1887,11 @@ static void atomicFunction(ASCIILiteral name, FunctionDefinitionWriter* writer, 
 
 static void emitAtomicLoad(FunctionDefinitionWriter* writer, AST::CallExpression& call)
 {
+    if (writer->metalAppleGPUFamily() >= 9)
+        writer->stringBuilder().append("({ volatile auto __wgslAtomicLoadResult = "_s);
     atomicFunction("atomic_load_explicit"_s, writer, call);
+    if (writer->metalAppleGPUFamily() >= 9)
+        writer->stringBuilder().append("; __wgslAtomicLoadResult; })"_s);
 }
 
 static void emitAtomicStore(FunctionDefinitionWriter* writer, AST::CallExpression& call)
@@ -2543,7 +2550,7 @@ void FunctionDefinitionWriter::visit(AST::DiscardStatement&)
 #if CPU(X86_64)
     m_body.append("__asm volatile(\"\"); discard_fragment()"_s);
 #else
-    m_body.append("{ volatile bool __wgslDiscardFragmentWorkaround = true; if (__wgslDiscardFragmentWorkaround) discard_fragment(); }"_s);
+    m_body.append("discard_fragment();"_s);
 #endif
 }
 
@@ -2899,9 +2906,9 @@ void FunctionDefinitionWriter::serializeConstant(const Type* type, ConstantValue
         });
 }
 
-void emitMetalFunctions(StringBuilder& stringBuilder, ShaderModule& shaderModule, PrepareResult& prepareResult, const HashMap<String, ConstantValue>& constantValues)
+void emitMetalFunctions(StringBuilder& stringBuilder, ShaderModule& shaderModule, PrepareResult& prepareResult, const HashMap<String, ConstantValue>& constantValues, unsigned appleGPUFamily)
 {
-    FunctionDefinitionWriter functionDefinitionWriter(shaderModule, stringBuilder, prepareResult, constantValues);
+    FunctionDefinitionWriter functionDefinitionWriter(shaderModule, stringBuilder, prepareResult, constantValues, appleGPUFamily);
     functionDefinitionWriter.write();
 }
 
