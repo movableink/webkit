@@ -32,59 +32,19 @@ namespace WGSL::AST {
 
 Builder::Builder(Builder&& other)
 {
-    m_arena = std::exchange(other.m_arena, { });
-    m_arenas = WTFMove(other.m_arenas);
     m_nodes = WTFMove(other.m_nodes);
 }
-
-Builder::~Builder()
-{
-    size_t size = m_nodes.size();
-    for (size_t i = 0; i < size; ++i)
-        m_nodes[i]->~Node();
-}
-
-void Builder::allocateArena()
-{
-    m_arenas.append(Arena::create(arenaSize));
-    m_arena = m_arenas.last()->span();
-
-#if ASAN_ENABLED
-    __asan_poison_memory_region(m_arena.data(), m_arena.size());
-#endif
-}
-
-#if ASAN_ENABLED
-bool Builder::canPoison()
-{
-    bool canPoison;
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [&] {
-        uintptr_t address;
-        __asan_poison_memory_region(&address, sizeof(address));
-        canPoison = __asan_address_is_poisoned(&address);
-    });
-    return canPoison;
-}
-#endif
 
 auto Builder::saveCurrentState() -> State
 {
     State state;
-    state.m_arena = m_arena;
-    state.m_numberOfArenas = m_arenas.size();
     state.m_numberOfNodes = m_nodes.size();
-    allocateArena();
     return state;
 }
 
 void Builder::restore(State&& state)
 {
-    for (size_t i = state.m_numberOfNodes; i < m_nodes.size(); ++i)
-        m_nodes[i]->~Node();
     m_nodes.shrink(state.m_numberOfNodes);
-    m_arena = state.m_arena;
-    m_arenas.shrink(state.m_numberOfArenas);
 }
 
 } // namespace WGSL::AST

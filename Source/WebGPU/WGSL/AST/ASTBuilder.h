@@ -53,33 +53,15 @@ class Node;
 class Builder {
     WTF_MAKE_NONCOPYABLE(Builder);
 
-    using Arena = EmbeddedFixedVector<uint8_t>;
-
 public:
-    static constexpr size_t arenaSize = 0x4000 - sizeof(Arena);
-
     Builder() = default;
     Builder(Builder&&);
-    ~Builder();
 
     template<typename T, typename... Arguments, typename = std::enable_if_t<std::is_base_of_v<Node, T>>>
     T& construct(Arguments&&... arguments)
     {
-        constexpr size_t size = sizeof(T);
-        constexpr size_t alignedSize = alignSize(size);
-        static_assert(alignedSize <= arenaSize);
-        if (m_arena.size() < alignedSize) [[unlikely]]
-            allocateArena();
-
-#if ASAN_ENABLED
-        RELEASE_ASSERT(!canPoison() || __asan_address_is_poisoned(m_arena.data()));
-        __asan_unpoison_memory_region(m_arena.data(), size);
-#endif
-
-        auto* node = new (m_arena.data()) T(std::forward<Arguments>(arguments)...);
-        skip(m_arena, alignedSize);
-        m_nodes.append(node);
-        return *node;
+        m_nodes.append(std::unique_ptr<T>(new T(std::forward<Arguments>(arguments)...)));
+        return *uncheckedDowncast<T>(m_nodes.last().get());
     }
 
     class State {
@@ -87,8 +69,6 @@ public:
     private:
         State() = default;
 
-        std::span<uint8_t> m_arena;
-        unsigned m_numberOfArenas;
         unsigned m_numberOfNodes;
     };
 
@@ -96,21 +76,7 @@ public:
     void restore(State&&);
 
 private:
-    static constexpr size_t alignSize(size_t size)
-    {
-        return (size + sizeof(WTF::AllocAlignmentInteger) - 1) & ~(sizeof(WTF::AllocAlignmentInteger) - 1);
-    }
-
-#if ASAN_ENABLED
-    static bool canPoison();
-#endif
-
-    void allocateArena();
-
-    std::span<uint8_t> m_arena { };
-    uint8_t* m_arenaEnd { nullptr };
-    Vector<UniqueRef<Arena>> m_arenas;
-    Vector<Node*> m_nodes;
+    Vector<std::unique_ptr<Node>> m_nodes;
 };
 
 } // namespace AST
