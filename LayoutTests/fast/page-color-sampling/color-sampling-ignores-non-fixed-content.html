@@ -48,7 +48,7 @@
         colorAfterFading = await UIHelper.fixedContainerEdgeColors();
 
         shouldBeEqualToString("colorBeforeFading.top", "rgba(255, 100, 0, 0.8)");
-        shouldBeNull("colorAfterFading.top");
+        shouldBeEqualToString("colorAfterFading.top", "rgba(255, 100, 0, 0.8)");
         finishJSTest();
     });
     </script>

@@ -1917,14 +1917,16 @@ static bool isHiddenOrNearlyTransparent(const RenderBox& box)
     return false;
 }
 
-FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
+std::pair<FixedContainerEdges, WeakElementEdges> LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
 {
+    WeakElementEdges containers;
+    FixedContainerEdges edges;
     if (sides.isEmpty())
-        return { };
+        return { WTFMove(edges), WTFMove(containers) };
 
     RefPtr page = m_frame->page();
     if (!page)
-        return { };
+        return { WTFMove(edges), WTFMove(containers) };
 
     bool mayUseSampledTopColor = [&] {
         if (scrollPosition().y() > minimumScrollPosition().y())
@@ -1942,11 +1944,11 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
     }();
 
     if (!hasViewportConstrainedObjects() && !mayUseSampledTopColor)
-        return { };
+        return { WTFMove(edges), WTFMove(containers) };
 
     RefPtr document = m_frame->document();
     if (!document)
-        return { };
+        return { WTFMove(edges), WTFMove(containers) };
 
     TraceScope tracingScope { FixedContainerEdgeSamplingStart, FixedContainerEdgeSamplingEnd };
 
@@ -2228,8 +2230,6 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
         return samplingRect;
     };
 
-    FixedContainerEdges edges;
-
     for (auto sideFlag : sides) {
         auto side = boxSideFromFlag(sideFlag);
         auto result = findFixedContainer(side, IgnoreCSSPointerEvents::Yes);
@@ -2238,6 +2238,8 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
 
         if (!result.container)
             continue;
+
+        containers.setAt(side, *result.container);
 
         if (result.foundBackdropFilter) {
             edges.colors.setAt(side, PredominantColorType::Multiple);
@@ -2277,7 +2279,7 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
     if (auto color = edgeColorFromSampledTopColor())
         edges.colors.setAt(BoxSide::Top, WTFMove(*color));
 
-    return edges;
+    return { WTFMove(edges), WTFMove(containers) };
 }
 
 FloatPoint LocalFrameView::positionForInsetClipLayer(const FloatPoint& scrollPosition, const FloatBoxExtent& obscuredContentInset)

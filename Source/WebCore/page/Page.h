@@ -238,6 +238,7 @@ using SharedStringHash = uint32_t;
 
 enum class ActivityState : uint16_t;
 enum class AdvancedPrivacyProtections : uint16_t;
+enum class BoxSide : uint8_t;
 enum class BoxSideFlag : uint8_t;
 enum class CanWrap : bool;
 enum class ContentSecurityPolicyModeForExtension : uint8_t;
@@ -354,6 +355,7 @@ constexpr auto allRenderingUpdateSteps = updateRenderingSteps | OptionSet<Render
 #endif
 };
 
+using WeakElementEdges = RectEdges<WeakPtr<Element, WeakPtrImplWithEventTargetData>>;
 
 class Page : public RefCountedAndCanMakeWeakPtr<Page>, public Supplementable<Page> {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(Page, WEBCORE_EXPORT);
@@ -909,8 +911,8 @@ public:
     WEBCORE_EXPORT Color sampledPageTopColor() const;
 
     WEBCORE_EXPORT void updateFixedContainerEdges(OptionSet<BoxSideFlag>);
-    const FixedContainerEdges& fixedContainerEdges() const { return m_fixedContainerEdges; }
     Color lastTopFixedContainerColor() const;
+    const FixedContainerEdges& fixedContainerEdges() const { return m_fixedContainerEdgesAndElements.first; }
 
 #if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
     WEBCORE_EXPORT std::optional<SpatialBackdropSource> spatialBackdropSource() const;
@@ -1709,7 +1711,7 @@ private:
 
     Color m_underPageBackgroundColorOverride;
     std::optional<Color> m_sampledPageTopColor;
-    UniqueRef<FixedContainerEdges> m_fixedContainerEdges;
+    std::pair<UniqueRef<FixedContainerEdges>, WeakElementEdges> m_fixedContainerEdgesAndElements;
 
     const bool m_httpsUpgradeEnabled { true };
     mutable Markable<MediaSessionGroupIdentifier> m_mediaSessionGroupIdentifier;

@@ -63,7 +63,7 @@
         await UIHelper.ensurePresentationUpdate();
 
         colorsAfterScrolling = await UIHelper.fixedContainerEdgeColors();
-        shouldBeNull("colorsAfterScrolling.top");
+        shouldBeEqualToString("colorsAfterScrolling.top", "rgb(250, 60, 0)");
         shouldBeNull("colorsAfterScrolling.left");
         shouldBeNull("colorsAfterScrolling.right");
         shouldBeNull("colorsAfterScrolling.bottom");

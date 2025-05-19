@@ -440,7 +440,7 @@ Page::Page(PageConfiguration&& pageConfiguration)
     , m_allowedNetworkHosts(WTFMove(pageConfiguration.allowedNetworkHosts))
     , m_loadsSubresources(pageConfiguration.loadsSubresources)
     , m_shouldRelaxThirdPartyCookieBlocking(pageConfiguration.shouldRelaxThirdPartyCookieBlocking)
-    , m_fixedContainerEdges(makeUniqueRef<FixedContainerEdges>())
+    , m_fixedContainerEdgesAndElements(std::make_pair(makeUniqueRef<FixedContainerEdges>(), WeakElementEdges { }))
     , m_httpsUpgradeEnabled(pageConfiguration.httpsUpgradeEnabled)
     , m_portsForUpgradingInsecureSchemeForTesting(WTFMove(pageConfiguration.portsForUpgradingInsecureSchemeForTesting))
     , m_storageProvider(WTFMove(pageConfiguration.storageProvider))
@@ -1823,7 +1823,7 @@ void Page::didCommitLoad()
         geolocationController->didNavigatePage();
 #endif
 
-    m_fixedContainerEdges = makeUniqueRef<FixedContainerEdges>();
+    m_fixedContainerEdgesAndElements = std::make_pair(makeUniqueRef<FixedContainerEdges>(), WeakElementEdges { });
 
     m_elementTargetingController->reset();
 
@@ -5252,12 +5252,29 @@ void Page::updateFixedContainerEdges(BoxSideSet sides)
     if (!frameView)
         return;
 
-    m_fixedContainerEdges = makeUniqueRef<FixedContainerEdges>(frameView->fixedContainerEdges(sides));
+    auto [edges, elements] = frameView->fixedContainerEdges(sides);
+    for (auto sideFlag : sides) {
+        auto side = boxSideFromFlag(sideFlag);
+        if (edges.hasFixedEdge(side))
+            continue;
+
+        WeakPtr lastElement = m_fixedContainerEdgesAndElements.second.at(side);
+        if (!lastElement)
+            continue;
+
+        if (!lastElement->renderer())
+            continue;
+
+        elements.setAt(side, WTFMove(lastElement));
+        edges.colors.setAt(side, m_fixedContainerEdgesAndElements.first->colors.at(side));
+    }
+
+    m_fixedContainerEdgesAndElements = std::make_pair(makeUniqueRef<FixedContainerEdges>(WTFMove(edges)), WTFMove(elements));
 }
 
 Color Page::lastTopFixedContainerColor() const
 {
-    return m_fixedContainerEdges->predominantColor(BoxSide::Top);
+    return m_fixedContainerEdgesAndElements.first->predominantColor(BoxSide::Top);
 }
 
 void Page::setPortsForUpgradingInsecureSchemeForTesting(uint16_t upgradeFromInsecurePort, uint16_t upgradeToSecurePort)
