@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Igalia S.L.
+ * Copyright (C) 2025 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,39 +22,37 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef __WPE_PLATFORM_H__
-#define __WPE_PLATFORM_H__
 
-#define __WPE_PLATFORM_H_INSIDE__
+#ifndef WPEGamepadManager_h
+#define WPEGamepadManager_h
 
-#include <wpe/WPEBuffer.h>
-#include <wpe/WPEBufferDMABuf.h>
-#include <wpe/WPEBufferDMABufFormats.h>
-#include <wpe/WPEBufferSHM.h>
-#include <wpe/WPEClipboard.h>
-#include <wpe/WPEColor.h>
-#include <wpe/WPEConfig.h>
+#if !defined(__WPE_PLATFORM_H_INSIDE__) && !defined(BUILDING_WEBKIT)
+#error "Only <wpe/wpe-platform.h> can be included directly."
+#endif
+
+#include <glib-object.h>
 #include <wpe/WPEDefines.h>
-#include <wpe/WPEDisplay.h>
-#include <wpe/WPEEGLError.h>
-#include <wpe/WPEEnumTypes.h>
-#include <wpe/WPEEvent.h>
 #include <wpe/WPEGamepad.h>
-#include <wpe/WPEGamepadManager.h>
-#include <wpe/WPEGestureController.h>
-#include <wpe/WPEInputMethodContext.h>
-#include <wpe/WPEKeymap.h>
-#include <wpe/WPEKeyUnicode.h>
-#include <wpe/WPEKeymapXKB.h>
-#include <wpe/WPEKeysyms.h>
-#include <wpe/WPEKeysyms.h>
-#include <wpe/WPERectangle.h>
-#include <wpe/WPEScreen.h>
-#include <wpe/WPEToplevel.h>
-#include <wpe/WPEVersion.h>
-#include <wpe/WPEView.h>
-#include <wpe/WPEViewAccessible.h>
 
-#undef __WPE_PLATFORM_H_INSIDE__
+G_BEGIN_DECLS
 
-#endif /* __WPE_PLATFORM_H__ */
+#define WPE_TYPE_GAMEPAD_MANAGER (wpe_gamepad_manager_get_type())
+WPE_DECLARE_DERIVABLE_TYPE (WPEGamepadManager, wpe_gamepad_manager, WPE, GAMEPAD_MANAGER, GObject)
+
+struct _WPEGamepadManagerClass
+{
+    GObjectClass parent_class;
+
+    gpointer padding[32];
+};
+
+WPE_API void         wpe_gamepad_manager_add_device    (WPEGamepadManager *manager,
+                                                        WPEGamepad        *gamepad);
+WPE_API void         wpe_gamepad_manager_remove_device (WPEGamepadManager *manager,
+                                                        WPEGamepad        *gamepad);
+WPE_API WPEGamepad **wpe_gamepad_manager_list_devices  (WPEGamepadManager *manager,
+                                                        gsize             *n_devices);
+
+G_END_DECLS
+
+#endif /* WPEGamepadManager_h */

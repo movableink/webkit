@@ -58,6 +58,10 @@ public:
     void requestExitFullScreen();
 #endif
 
+#if ENABLE(GAMEPAD)
+    static WebKit::WebPageProxy* platformWebPageProxyForGamepadInput();
+#endif
+
     void updateAcceleratedSurface(uint64_t);
     WebKit::RendererBufferFormat renderBufferFormat() const;
 

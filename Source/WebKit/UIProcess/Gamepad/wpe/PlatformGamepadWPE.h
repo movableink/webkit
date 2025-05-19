@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2020 RDK Management  All rights reserved.
- * Copyright (C) 2022 Igalia S.L.
+ * Copyright (C) 2025 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,37 +25,31 @@
 
 #pragma once
 
-#if ENABLE(GAMEPAD) && USE(LIBWPE)
+#if ENABLE(WPE_PLATFORM)
+#include <WebCore/PlatformGamepad.h>
+#include <wtf/glib/GRefPtr.h>
 
-#include "PlatformGamepad.h"
-#include <wpe/wpe.h>
+typedef struct _WPEGamepad WPEGamepad;
 
-#if WPE_CHECK_VERSION(1, 13, 90)
+namespace WebKit {
 
-namespace WebCore {
-
-class GamepadLibWPE final : public PlatformGamepad {
+class PlatformGamepadWPE final : public WebCore::PlatformGamepad {
 public:
-    GamepadLibWPE(struct wpe_gamepad_provider*, uintptr_t, unsigned);
-    virtual ~GamepadLibWPE();
-
-    const Vector<SharedGamepadValue>& axisValues() const final { return m_axisValues; }
-    const Vector<SharedGamepadValue>& buttonValues() const final { return m_buttonValues; }
-
-    const struct wpe_gamepad* wpeGamepad() const { return m_gamepad.get(); }
+    PlatformGamepadWPE(WPEGamepad*, unsigned index);
+    virtual ~PlatformGamepadWPE();
 
 private:
-    void buttonPressedOrReleased(unsigned, bool);
-    void absoluteAxisChanged(unsigned, double);
+    const Vector<WebCore::SharedGamepadValue>& buttonValues() const final { return m_buttonValues; }
+    const Vector<WebCore::SharedGamepadValue>& axisValues() const final { return m_axisValues; }
 
-    Vector<SharedGamepadValue> m_buttonValues;
-    Vector<SharedGamepadValue> m_axisValues;
+    void buttonEvent(size_t button, bool isPressed);
+    void axisEvent(size_t axis, double value);
 
-    std::unique_ptr<struct wpe_gamepad, void(*)(struct wpe_gamepad*)> m_gamepad;
+    GRefPtr<WPEGamepad> m_gamepad;
+    Vector<WebCore::SharedGamepadValue> m_buttonValues;
+    Vector<WebCore::SharedGamepadValue> m_axisValues;
 };
 
-} // namespace WebCore
+} // namespace WebKit
 
-#endif // WPE_CHECK_VERSION(1, 13, 90)
-
-#endif // ENABLE(GAMEPAD) && USE(LIBWPE)
+#endif // ENABLE(WPE_PLATFORM)

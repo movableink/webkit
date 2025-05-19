@@ -48,6 +48,10 @@
 #include <xf86drm.h>
 #endif
 
+#if USE(MANETTE)
+#include "WPEGamepadManagerManette.h"
+#endif
+
 /**
  * WPEDisplay:
  *
@@ -692,7 +696,7 @@ WPEAvailableInputDevices wpe_display_get_available_input_devices(WPEDisplay* dis
  *
  * This function should only be called by platform implementations.
  */
-void wpe_display_set_available_input_devices(WPEDisplay *display, WPEAvailableInputDevices devices)
+void wpe_display_set_available_input_devices(WPEDisplay* display, WPEAvailableInputDevices devices)
 {
     g_return_if_fail(WPE_IS_DISPLAY(display));
 
@@ -701,4 +705,25 @@ void wpe_display_set_available_input_devices(WPEDisplay *display, WPEAvailableIn
 
     display->priv->availableInputDevices = devices;
     g_object_notify_by_pspec(G_OBJECT(display), sObjProperties[PROP_AVAILABLE_INPUT_DEVICES]);
+}
+
+/**
+ * wpe_display_create_gamepad_manager:
+ * @display: a #WPEDisplay
+ *
+ * Create a #WPEGamepadManager to handle gamepads
+ *
+ * Returns: (transfer full) (nullable): a new #WPEGamepadManager or %NULL if not supported
+ */
+WPEGamepadManager* wpe_display_create_gamepad_manager(WPEDisplay* display)
+{
+    g_return_val_if_fail(WPE_IS_DISPLAY(display), nullptr);
+
+    auto* wpeDisplayClass = WPE_DISPLAY_GET_CLASS(display);
+    auto* manager = wpeDisplayClass->create_gamepad_manager ? wpeDisplayClass->create_gamepad_manager(display) : nullptr;
+#if USE(MANETTE)
+    if (!manager)
+        manager = wpeGamepadManagerManetteCreate();
+#endif
+    return manager;
 }

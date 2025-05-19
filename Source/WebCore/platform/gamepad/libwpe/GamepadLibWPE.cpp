@@ -27,10 +27,9 @@
 #include "config.h"
 #include "GamepadLibWPE.h"
 
-#if ENABLE(GAMEPAD) && USE(LIBWPE)
+#if ENABLE(GAMEPAD) && USE(LIBWPE) && WPE_CHECK_VERSION(1, 13, 90)
 
 #include "GamepadProviderLibWPE.h"
-#include <wpe/wpe.h>
 
 namespace WebCore {
 
@@ -86,4 +85,4 @@ void GamepadLibWPE::absoluteAxisChanged(unsigned axis, double value)
 
 } // namespace WebCore
 
-#endif // ENABLE(GAMEPAD) && USE(LIBWPE)
+#endif // ENABLE(GAMEPAD) && USE(LIBWPE) && WPE_CHECK_VERSION(1, 13, 90)

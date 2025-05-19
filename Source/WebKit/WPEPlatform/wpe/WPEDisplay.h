@@ -34,6 +34,7 @@
 #include <wpe/WPEBufferDMABufFormats.h>
 #include <wpe/WPEClipboard.h>
 #include <wpe/WPEDefines.h>
+#include <wpe/WPEGamepadManager.h>
 #include <wpe/WPEInputMethodContext.h>
 #include <wpe/WPEKeymap.h>
 #include <wpe/WPEScreen.h>
@@ -74,6 +75,7 @@ struct _WPEDisplayClass
     gboolean                (* use_explicit_sync)             (WPEDisplay *display);
     WPEInputMethodContext  *(* create_input_method_context)   (WPEDisplay *display,
                                                                WPEView    *view);
+    WPEGamepadManager      *(* create_gamepad_manager)        (WPEDisplay *display);
 
     gpointer padding[32];
 };
@@ -118,6 +120,7 @@ WPE_API WPESettings             *wpe_display_get_settings                  (WPED
 WPE_API WPEAvailableInputDevices wpe_display_get_available_input_devices   (WPEDisplay *display);
 WPE_API void                     wpe_display_set_available_input_devices   (WPEDisplay *display,
                                                                             WPEAvailableInputDevices devices);
+WPE_API WPEGamepadManager       *wpe_display_create_gamepad_manager        (WPEDisplay *display);
 
 G_END_DECLS
 

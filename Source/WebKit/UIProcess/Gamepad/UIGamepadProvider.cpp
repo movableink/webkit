@@ -190,7 +190,7 @@ void UIGamepadProvider::viewBecameInactive(WebPageProxy& page)
 #endif
 
     RefPtr pageForGamepadInput = platformWebPageProxyForGamepadInput();
-    if (pageForGamepadInput == &page)
+    if (!pageForGamepadInput || pageForGamepadInput == &page)
         platformStopMonitoringInput();
 }
 
@@ -224,7 +224,7 @@ Vector<std::optional<GamepadData>> UIGamepadProvider::snapshotGamepads()
     });
 }
 
-#if !PLATFORM(COCOA) && !(USE(MANETTE) && OS(LINUX)) && !USE(LIBWPE)
+#if !PLATFORM(COCOA) && !(USE(MANETTE) && OS(LINUX)) && !USE(LIBWPE) && !USE(WPE_PLATFORM)
 
 void UIGamepadProvider::platformSetDefaultGamepadProvider()
 {
@@ -245,7 +245,7 @@ void UIGamepadProvider::platformStartMonitoringInput()
 {
 }
 
-#endif // !PLATFORM(COCOA) && !(USE(MANETTE) && OS(LINUX))
+#endif // !PLATFORM(COCOA) && !(USE(MANETTE) && OS(LINUX)) && !USE(LIBWPE) && !USE(WPE_PLATFORM)
 
 }
 

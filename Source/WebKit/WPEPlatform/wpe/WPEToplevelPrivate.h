@@ -33,7 +33,6 @@
 typedef struct _AtkObject AtkObject;
 #endif
 
-GList* wpeToplevelList();
 void wpeToplevelAddView(WPEToplevel*, WPEView*);
 void wpeToplevelRemoveView(WPEToplevel*, WPEView*);
 GRefPtr<WPEView> wpeToplevelGetView(WPEToplevel*, size_t);

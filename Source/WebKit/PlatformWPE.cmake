@@ -404,6 +404,7 @@ list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/UIProcess/Launcher/glib"
     "${WEBKIT_DIR}/UIProcess/Launcher/libwpe"
     "${WEBKIT_DIR}/UIProcess/Notifications/glib/"
+    "${WEBKIT_DIR}/UIProcess/Gamepad/wpe"
     "${WEBKIT_DIR}/UIProcess/geoclue"
     "${WEBKIT_DIR}/UIProcess/glib"
     "${WEBKIT_DIR}/UIProcess/gstreamer"

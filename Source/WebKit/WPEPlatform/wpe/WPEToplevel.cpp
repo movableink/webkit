@@ -185,14 +185,6 @@ static void wpe_toplevel_class_init(WPEToplevelClass* toplevelClass)
     g_object_class_install_properties(objectClass, N_PROPERTIES, sObjProperties.data());
 }
 
-GList* wpeToplevelList()
-{
-    GList* toplevels = nullptr;
-    for (auto* iter = s_toplevelList; iter; iter = g_list_next(iter))
-        toplevels = g_list_prepend(toplevels, iter->data);
-    return toplevels;
-}
-
 void wpeToplevelAddView(WPEToplevel* toplevel, WPEView* view)
 {
     toplevel->priv->views.add(view);
@@ -231,6 +223,21 @@ AtkObject* wpeToplevelGetAccessibleAtk(WPEToplevel* toplevel)
     return toplevel->priv->accessible.get();
 }
 #endif
+
+/**
+ * wpe_toplevel_list:
+ *
+ * Get a list of all #WPEToplevel
+ *
+ * Returns: (transfer container) (element-type WPEToplevel): a #Glist of WPEToplevel
+ */
+GList* wpe_toplevel_list()
+{
+    GList* toplevels = nullptr;
+    for (auto* iter = s_toplevelList; iter; iter = g_list_next(iter))
+        toplevels = g_list_prepend(toplevels, iter->data);
+    return toplevels;
+}
 
 /**
  * wpe_toplevel_get_display:

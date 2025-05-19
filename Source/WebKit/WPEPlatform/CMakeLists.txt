@@ -22,6 +22,8 @@ set(WPEPlatform_SOURCES
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEEGLError.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEEvent.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEExtensions.cpp
+    ${WEBKIT_DIR}/WPEPlatform/wpe/WPEGamepad.cpp
+    ${WEBKIT_DIR}/WPEPlatform/wpe/WPEGamepadManager.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEInputMethodContext.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEInputMethodContextNone.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEKeyUnicode.cpp
@@ -51,6 +53,8 @@ set(WPEPlatform_INSTALLED_HEADERS
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEDisplay.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEEGLError.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEEvent.h
+    ${WEBKIT_DIR}/WPEPlatform/wpe/WPEGamepad.h
+    ${WEBKIT_DIR}/WPEPlatform/wpe/WPEGamepadManager.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEInputMethodContext.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEKeyUnicode.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEKeymap.h
@@ -134,6 +138,17 @@ if (USE_ATK)
         ${WEBKIT_DIR}/WPEPlatform/wpe/atk/WPEApplicationAccessibleAtk.cpp
         ${WEBKIT_DIR}/WPEPlatform/wpe/atk/WPEToplevelAccessibleAtk.cpp
         ${WEBKIT_DIR}/WPEPlatform/wpe/atk/WPEViewAccessibleAtk.cpp
+    )
+endif ()
+
+if (USE_MANETTE)
+    list(APPEND WPEPlatform_LIBRARIES
+        Manette::Manette
+    )
+
+    list(APPEND WPEPlatform_SOURCES
+        ${WEBKIT_DIR}/WPEPlatform/wpe/WPEGamepadManagerManette.cpp
+        ${WEBKIT_DIR}/WPEPlatform/wpe/WPEGamepadManette.cpp
     )
 endif ()
 
