@@ -559,6 +559,16 @@ private:
                 }
                 break;
             }
+
+            case StringObjectUse:
+            case StringOrStringObjectUse: {
+                if (child1->op() == NewStringObject && child1->child1().useKind() == KnownStringUse) {
+                    m_node->convertToIdentityOn(child1->child1().node());
+                    m_changed = true;
+                }
+                break;
+            }
+
             case KnownPrimitiveUse:
                 break;
 
