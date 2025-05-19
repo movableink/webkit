@@ -30,6 +30,7 @@
 #import "Font.h"
 #import "GraphicsContextCG.h"
 #import "IOSurface.h"
+#import "ImageAdapter.h"
 #import "IntRect.h"
 #import <CoreText/CoreText.h>
 #import <numeric>
