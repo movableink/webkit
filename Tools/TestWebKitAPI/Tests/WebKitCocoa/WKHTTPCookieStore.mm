@@ -1138,3 +1138,44 @@ TEST(WKHTTPCookieStore, CookiesSetInAnotherStoreBeforeLoad)
 
     EXPECT_WK_STREQ(server.lastRequestCookies(), "SessionCookieName=CookieValue");
 }
+
+TEST(WKHTTPCookieStore, SetCookies)
+{
+    RetainPtr<NSHTTPCookie> sessionCookie = [NSHTTPCookie cookieWithProperties:@{
+        NSHTTPCookiePath: @"/",
+        NSHTTPCookieName: @"SessionCookieName",
+        NSHTTPCookieValue: @"CookieValue",
+        NSHTTPCookieDomain: @"127.0.0.1",
+    }];
+
+    RetainPtr<NSHTTPCookie> persistentCookie = [NSHTTPCookie cookieWithProperties:@{
+        NSHTTPCookiePath: @"/",
+        NSHTTPCookieName: @"PersistentCookieName",
+        NSHTTPCookieValue: @"CookieValue",
+        NSHTTPCookieDomain: @"127.0.0.1",
+        NSHTTPCookieExpires: [NSDate distantFuture],
+    }];
+
+    RetainPtr websiteDataStore = [WKWebsiteDataStore nonPersistentDataStore];
+    RetainPtr configuration = adoptNS([WKWebViewConfiguration new]);
+    configuration.get().websiteDataStore = websiteDataStore.get();
+    __block bool done = false;
+    [websiteDataStore.get().httpCookieStore setCookies:@[sessionCookie.get(), persistentCookie.get()] completionHandler:^{
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    auto sortFunction = ^(NSHTTPCookie *cookie1, NSHTTPCookie *cookie2) {
+        return [cookie1.name compare:cookie2.name];
+    };
+    [websiteDataStore.get().httpCookieStore getAllCookies:^(NSArray<NSHTTPCookie *> *cookies) {
+        EXPECT_EQ([cookies count], 2u);
+        auto sortedCookies = [cookies sortedArrayUsingComparator:sortFunction];
+        EXPECT_WK_STREQ(@"PersistentCookieName", [[sortedCookies objectAtIndex:0] name]);
+        EXPECT_WK_STREQ(@"SessionCookieName", [[sortedCookies objectAtIndex:1] name]);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+}

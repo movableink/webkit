@@ -106,6 +106,21 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 
 }
 
+static std::optional<WebCore::Cookie> makeVectorElement(const WebCore::Cookie*, id arrayElement)
+{
+    if (NSHTTPCookie *nsCookie = dynamic_objc_cast<NSHTTPCookie>(arrayElement))
+        return WebCore::Cookie { nsCookie };
+
+    return std::nullopt;
+}
+
+- (void)setCookies:(NSArray<NSHTTPCookie *> *)cookies completionHandler:(void (^)(void))completionHandler
+{
+    _cookieStore->setCookies(makeVector<WebCore::Cookie>(cookies), [completionHandler = makeBlockPtr(completionHandler)]() {
+        completionHandler();
+    });
+}
+
 - (void)deleteCookie:(NSHTTPCookie *)cookie completionHandler:(void (^)(void))completionHandler
 {
     _cookieStore->deleteCookie(cookie, [handler = adoptNS([completionHandler copy])]() {
@@ -206,14 +221,6 @@ static WKCookiePolicy toWKCookiePolicy(WebCore::HTTPCookieAcceptPolicy policy)
 }
 
 #if !TARGET_OS_IPHONE
-
-static std::optional<WebCore::Cookie> makeVectorElement(const WebCore::Cookie*, id arrayElement)
-{
-    if (NSHTTPCookie *nsCookie = dynamic_objc_cast<NSHTTPCookie>(arrayElement))
-        return WebCore::Cookie { nsCookie };
-
-    return std::nullopt;
-}
 
 - (void)_setCookies:(NSArray<NSHTTPCookie *> *)cookies completionHandler:(void (^)(void))completionHandler
 {
