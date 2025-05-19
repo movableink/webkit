@@ -49,11 +49,17 @@
 # - PC: (Program Counter) IPInt's program counter. This records the interpreter's position in Wasm bytecode.
 # - MC: (Metadata Counter) IPInt's metadata pointer. This records the corresponding position in generated metadata.
 # - WI: (Wasm Instance) pointer to the current JSWebAssemblyInstance object. This is used for accessing
-#       function-specific data (callee-save).
+#       function-specific data.
 # - PL: (Pointer to Locals) pointer to the address of local 0 in the current function. This is used for accessing
 #       locals quickly.
-# - MB: (Memory Base) pointer to the current Wasm memory base address (callee-save).
-# - BC: (Bounds Check) the size of the current Wasm memory region, for bounds checking (callee-save).
+# - MB: (Memory Base) pointer to the current Wasm memory base address.
+# - BC: (Bounds Check) the size of the current Wasm memory region, for bounds checking.
+#
+# Additionally, there are a few registers that are optionally supported for optimization:
+# - IB: (Instruction Base) pointer to the address of the `unreachable` (0x00) label, removing the need to reload
+#       this address at every dispatch.
+# - HR: (Hoist Register) used for hoisting the load of the next opcode in Wasm instructions with low register
+#       pressure, helping reduce the impact of load misses.
 #
 # Finally, we provide four "sc" (safe for call) registers which are guaranteed to not overlap with argument
 # registers (sc0, sc1, sc2, sc3)
@@ -65,6 +71,9 @@ if ARM64 or ARM64E
     const PL = t6
     const MB = csr3
     const BC = csr4
+
+    const IB = t7
+    const HR = t3
 
     const sc0 = ws0
     const sc1 = ws1
@@ -78,6 +87,9 @@ elsif X86_64
     const MB = csr3
     const BC = csr4
 
+    const IB = t7
+    const HR = t3
+
     const sc0 = ws0
     const sc1 = ws1
     const sc2 = csr3
@@ -89,6 +101,9 @@ elsif RISCV64
     const PL = csr10
     const MB = csr3
     const BC = csr4
+
+    const IB = invalidGPR
+    const HR = invalidGPR
 
     const sc0 = ws0
     const sc1 = ws1
@@ -102,6 +117,9 @@ elsif ARMv7
     const MB = invalidGPR
     const BC = invalidGPR
 
+    const IB = invalidGPR
+    const HR = invalidGPR
+
     const sc0 = t4
     const sc1 = t5
     const sc2 = csr0
@@ -113,6 +131,9 @@ else
     const PL = invalidGPR
     const MB = invalidGPR
     const BC = invalidGPR
+
+    const IB = invalidGPR
+    const HR = invalidGPR
 
     const sc0 = invalidGPR
     const sc1 = invalidGPR
@@ -151,6 +172,30 @@ const UnboxedWasmCalleeStackSlot = CallerFrame - constexpr Wasm::numberOfIPIntCa
 const IPIntCalleeSaveSpaceAsVirtualRegisters = constexpr Wasm::numberOfIPIntCalleeSaveRegisters + constexpr Wasm::numberOfIPIntInternalRegisters
 const IPIntCalleeSaveSpaceStackAligned = (IPIntCalleeSaveSpaceAsVirtualRegisters * SlotSize + StackAlignment - 1) & ~StackAlignmentMask
 const IPIntCalleeSaveSpaceStackAligned = 2*IPIntCalleeSaveSpaceStackAligned
+
+# ---------------------------
+# 1.2: Optional optimizations
+# ---------------------------
+
+macro IfIPIntUsesIB(m)
+    if ARM64 or ARM64E or X86_64
+        m()
+    end
+end
+
+macro IfIPIntUsesHR(m, m2)
+    if ARM64 or ARM64E
+        m()
+    else
+        m2()
+    end
+end
+
+macro HoistNextOpcode(offset)
+    IfIPIntUsesHR(macro()
+        loadb offset[PC], HR
+    end, macro() end)
+end
 
 ##############################
 # 2. Core interpreter macros #
@@ -304,18 +349,18 @@ macro operationCall(fn)
     if ARM64 or ARM64E
         push PL, ws0
     elsif X86_64
-        push PL
-        # preserve 16 byte alignment.
-        subq MachineRegisterSize, sp
+        push PL, IB
     end
     fn()
     if ARM64 or ARM64E
         pop ws0, PL
     elsif X86_64
-        addq MachineRegisterSize, sp
-        pop PL
+        pop IB, PL
     end
     pop MC, PC
+    if ARM64 or ARM64E
+        pcrtoaddr _ipint_unreachable, IB
+    end
 end
 
 macro operationCallMayThrow(fn)
@@ -326,9 +371,7 @@ macro operationCallMayThrow(fn)
     if ARM64 or ARM64E
         push PL, ws0
     elsif X86_64
-        push PL
-        # preserve 16 byte alignment.
-        subq MachineRegisterSize, sp
+        push PL, IB
     end
     fn()
     bpneq r1, (constexpr JSC::IPInt::SlowPathExceptionTag), .continuation
@@ -338,10 +381,12 @@ macro operationCallMayThrow(fn)
     if ARM64 or ARM64E
         pop ws0, PL
     elsif X86_64
-        addq MachineRegisterSize, sp
-        pop PL
+        pop IB, PL
     end
     pop MC, PC
+    if ARM64 or ARM64E
+        pcrtoaddr _ipint_unreachable, IB
+    end
 end
 
 # Exception handling
@@ -528,6 +573,13 @@ if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     # OSR Check
     ipintPrologueOSR(5)
 
+    IfIPIntUsesIB(macro ()
+if ARM64 or ARM64E
+        pcrtoaddr _ipint_unreachable, IB
+elsif X86_64
+        leap (_ipint_unreachable - _ipint_entry_relativePCBase)[PL], IB
+end
+    end)
     move sp, PL
 
     loadp Wasm::IPIntCallee::m_bytecode[ws0], PC
@@ -569,6 +621,9 @@ if ARMv7
 end
 
     loadp CodeBlock[cfr], wasmInstance
+    if ARM64 or ARM64E
+        pcrtoaddr _ipint_unreachable, IB
+    end
     loadp Wasm::IPIntCallee::m_bytecode[ws0], t1
     addp t1, PC
     loadp Wasm::IPIntCallee::m_metadata[ws0], t1
@@ -606,6 +661,10 @@ global _ipint_catch_entry
 _ipint_catch_entry:
 if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
     ipintCatchCommon()
+if X86_64
+    initPCRelative(ipint_catch_entry, IB)
+    leap (_ipint_unreachable - _ipint_catch_entry_relativePCBase)[IB], IB
+end
 
     move cfr, a1
     move sp, a2
@@ -623,6 +682,10 @@ global _ipint_catch_all_entry
 _ipint_catch_all_entry:
 if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
     ipintCatchCommon()
+if X86_64
+    initPCRelative(ipint_catch_all_entry, IB)
+    leap (_ipint_unreachable - _ipint_catch_all_entry_relativePCBase)[IB], IB
+end
 
     move cfr, a1
     move 0, a2
@@ -640,6 +703,10 @@ global _ipint_table_catch_entry
 _ipint_table_catch_entry:
 if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     ipintCatchCommon()
+if X86_64
+    initPCRelative(ipint_table_catch_entry, IB)
+    leap (_ipint_unreachable - _ipint_table_catch_entry_relativePCBase)[IB], IB
+end
 
     # push arguments but no ref: sp in a2, call normal operation
 
@@ -659,6 +726,10 @@ global _ipint_table_catch_ref_entry
 _ipint_table_catch_ref_entry:
 if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     ipintCatchCommon()
+if X86_64
+    initPCRelative(ipint_table_catch_ref_entry, IB)
+    leap (_ipint_unreachable - _ipint_table_catch_ref_entry_relativePCBase)[IB], IB
+end
 
     # push both arguments and ref
 
@@ -678,6 +749,10 @@ global _ipint_table_catch_all_entry
 _ipint_table_catch_all_entry:
 if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     ipintCatchCommon()
+if X86_64
+    initPCRelative(ipint_table_catch_all_entry, IB)
+    leap (_ipint_unreachable - _ipint_table_catch_all_entry_relativePCBase)[IB], IB
+end
 
     # do nothing: 0 in sp for no arguments, call normal operation
 
@@ -697,6 +772,10 @@ global _ipint_table_catch_allref_entry
 _ipint_table_catch_allref_entry:
 if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     ipintCatchCommon()
+if X86_64
+    initPCRelative(ipint_table_catch_allref_entry, IB)
+    leap (_ipint_unreachable - _ipint_table_catch_allref_entry_relativePCBase)[IB], IB
+end
 
     # push only the ref
 

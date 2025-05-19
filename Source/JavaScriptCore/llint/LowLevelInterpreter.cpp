@@ -111,7 +111,7 @@ using WebConfig::g_config;
 
 #define OFFLINE_ASM_OPCODE_LABEL(opcode) DEFINE_OPCODE(opcode) USE_LABEL(opcode); TRACE_OPCODE(opcode);
 
-#define OFFLINE_ASM_GLOBAL_LABEL(label)  .global label label: USE_LABEL(label);
+#define OFFLINE_ASM_GLOBAL_LABEL(label)  label: USE_LABEL(label);
 
 #if ENABLE(LABEL_TRACING)
 #define TRACE_LABEL(prefix, label) dataLog(#prefix, ": ", #label, "\n")
