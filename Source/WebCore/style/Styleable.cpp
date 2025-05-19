@@ -132,8 +132,10 @@ RenderElement* Styleable::renderer() const
         }
         break;
     case PseudoId::ViewTransition:
-        if (element.renderer() && element.renderer()->isDocumentElementRenderer())
-            return element.renderer()->view().viewTransitionRoot().get();
+        if (element.renderer() && element.renderer()->isDocumentElementRenderer()) {
+            if (WeakPtr containingBlock = element.renderer()->view().viewTransitionContainingBlock())
+                return containingBlock->firstChildBox();
+        }
         break;
     case PseudoId::ViewTransitionGroup:
     case PseudoId::ViewTransitionImagePair:

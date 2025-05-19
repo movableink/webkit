@@ -619,7 +619,7 @@ bool RenderLayer::shouldBeNormalFlowOnly() const
 
 bool RenderLayer::shouldBeCSSStackingContext() const
 {
-    return !renderer().style().hasAutoUsedZIndex() || renderer().shouldApplyLayoutContainment() || renderer().shouldApplyPaintContainment() || renderer().requiresRenderingConsolidationForViewTransition() || renderer().isRenderViewTransitionCapture() || renderer().isViewTransitionRoot() || isRenderViewLayer();
+    return !renderer().style().hasAutoUsedZIndex() || renderer().shouldApplyLayoutContainment() || renderer().shouldApplyPaintContainment() || renderer().requiresRenderingConsolidationForViewTransition() || renderer().isRenderViewTransitionCapture() ||  renderer().isViewTransitionRoot() || renderer().isViewTransitionContainingBlock() || isRenderViewLayer();
 }
 
 bool RenderLayer::computeCanBeBackdropRoot() const
@@ -852,10 +852,10 @@ void RenderLayer::rebuildZOrderLists(std::unique_ptr<Vector<RenderLayer*>>& posZ
     }
 
     if (isRenderViewLayer() && renderer().document().hasViewTransitionPseudoElementTree()) {
-        if (WeakPtr viewTransitionRoot = renderer().view().viewTransitionRoot(); viewTransitionRoot && viewTransitionRoot->hasLayer()) {
+        if (WeakPtr viewTransitionContainingBlock = renderer().view().viewTransitionContainingBlock(); viewTransitionContainingBlock && viewTransitionContainingBlock->hasLayer()) {
             if (!posZOrderList)
                 posZOrderList = makeUnique<Vector<RenderLayer*>>();
-            posZOrderList->append(viewTransitionRoot->layer());
+            posZOrderList->append(viewTransitionContainingBlock->layer());
         }
     }
 }
@@ -897,7 +897,7 @@ void RenderLayer::setWasOmittedFromZOrderTree()
 void RenderLayer::collectLayers(std::unique_ptr<Vector<RenderLayer*>>& positiveZOrderList, std::unique_ptr<Vector<RenderLayer*>>& negativeZOrderList, OptionSet<Compositing>& accumulatedDirtyFlags)
 {
     ASSERT(!descendantDependentFlagsAreDirty());
-    if (establishesTopLayer() || renderer().isViewTransitionRoot())
+    if (establishesTopLayer() || renderer().isViewTransitionContainingBlock())
         return;
 
     bool isStacking = isStackingContext();

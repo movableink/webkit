@@ -30,6 +30,7 @@
 #include "RenderDescendantIterator.h"
 #include "RenderElement.h"
 #include "RenderStyleInlines.h"
+#include "RenderStyleSetters.h"
 #include "RenderTreeUpdater.h"
 #include "RenderView.h"
 #include "RenderViewTransitionCapture.h"
@@ -51,8 +52,8 @@ RenderTreeUpdater::ViewTransition::ViewTransition(RenderTreeUpdater& updater)
 void RenderTreeUpdater::ViewTransition::updatePseudoElementTree(RenderElement& documentElementRenderer, StyleDifference minimalStyleDifference)
 {
     auto destroyPseudoElementTreeIfNeeded = [&documentElementRenderer, this]() {
-        if (WeakPtr viewTransitionRoot = documentElementRenderer.view().viewTransitionRoot())
-            m_updater.m_builder.destroy(*viewTransitionRoot);
+        if (WeakPtr viewTransitionContainingBlock = documentElementRenderer.view().viewTransitionContainingBlock())
+            m_updater.m_builder.destroy(*viewTransitionContainingBlock);
     };
 
     Ref document = documentElementRenderer.document();
@@ -75,16 +76,34 @@ void RenderTreeUpdater::ViewTransition::updatePseudoElementTree(RenderElement& d
 
     auto newRootStyle = RenderStyle::clone(*rootStyle);
 
+    WeakPtr viewTransitionContainingBlock = documentElementRenderer.view().viewTransitionContainingBlock();
+    if (!viewTransitionContainingBlock) {
+        auto containingBlockStyle = RenderStyle::createAnonymousStyleWithDisplay(documentElementRenderer.view().style(), DisplayType::Block);
+        containingBlockStyle.setPosition(PositionType::Fixed);
+        containingBlockStyle.setPointerEvents(PointerEvents::None);
+
+        // FIXME: Bug 285400 - Correctly account for scrollbars and insets.
+        containingBlockStyle.setLeft(Length(0, LengthType::Fixed));
+        containingBlockStyle.setRight(Length(0, LengthType::Fixed));
+        containingBlockStyle.setTop(Length(0, LengthType::Fixed));
+        containingBlockStyle.setBottom(Length(0, LengthType::Fixed));
+
+        auto newViewTransitionContainingBlock = WebCore::createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, document, WTFMove(containingBlockStyle), RenderObject::BlockFlowFlag::IsViewTransitionContainingBlock);
+        newViewTransitionContainingBlock->initializeStyle();
+        documentElementRenderer.view().setViewTransitionContainingBlock(*newViewTransitionContainingBlock.get());
+        viewTransitionContainingBlock = newViewTransitionContainingBlock.get();
+        m_updater.m_builder.attach(*documentElementRenderer.parent(), WTFMove(newViewTransitionContainingBlock));
+    }
+
     // Create ::view-transition as needed.
-    WeakPtr viewTransitionRoot = documentElementRenderer.view().viewTransitionRoot();
+    WeakPtr viewTransitionRoot = dynamicDowncast<RenderBlockFlow>(viewTransitionContainingBlock->firstChildBox());
     if (viewTransitionRoot)
         viewTransitionRoot->setStyle(WTFMove(newRootStyle), minimalStyleDifference);
     else {
         auto newViewTransitionRoot = WebCore::createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, document, WTFMove(newRootStyle));
         newViewTransitionRoot->initializeStyle();
-        documentElementRenderer.view().setViewTransitionRoot(*newViewTransitionRoot.get());
         viewTransitionRoot = newViewTransitionRoot.get();
-        m_updater.m_builder.attach(*documentElementRenderer.parent(), WTFMove(newViewTransitionRoot));
+        m_updater.m_builder.attach(*viewTransitionContainingBlock, WTFMove(newViewTransitionRoot));
     }
 
     // No groups. The map is constant during the duration of the transition, so we don't need to handle deletions.
@@ -93,7 +112,7 @@ void RenderTreeUpdater::ViewTransition::updatePseudoElementTree(RenderElement& d
 
     // Traverse named elements map to update/build all ::view-transition-group().
     Vector<SingleThreadWeakPtr<RenderObject>> descendantsToDelete;
-    auto* currentGroup = documentElementRenderer.view().viewTransitionRoot()->firstChildBox();
+    auto* currentGroup = viewTransitionRoot->firstChildBox();
     for (auto& name : activeViewTransition->namedElements().keys()) {
         ASSERT(!currentGroup || currentGroup->style().pseudoElementType() == PseudoId::ViewTransitionGroup);
         if (currentGroup && name == currentGroup->style().pseudoElementNameArgument()) {
@@ -105,7 +124,7 @@ void RenderTreeUpdater::ViewTransition::updatePseudoElementTree(RenderElement& d
                 updatePseudoElementGroup(*style, *currentGroup, documentElementRenderer, minimalStyleDifference);
             currentGroup = currentGroup->nextSiblingBox();
         } else
-            buildPseudoElementGroup(name, documentElementRenderer, currentGroup);
+            buildPseudoElementGroup(*viewTransitionRoot, name, documentElementRenderer, currentGroup);
     }
 
     for (auto& descendant : descendantsToDelete) {
@@ -144,7 +163,7 @@ static RenderPtr<RenderBox> createRendererIfNeeded(RenderElement& documentElemen
 }
 
 
-void RenderTreeUpdater::ViewTransition::buildPseudoElementGroup(const AtomString& name, RenderElement& documentElementRenderer, RenderObject* beforeChild)
+void RenderTreeUpdater::ViewTransition::buildPseudoElementGroup(RenderBlockFlow& viewTransitionRoot, const AtomString& name, RenderElement& documentElementRenderer, RenderObject* beforeChild)
 {
     auto viewTransitionGroup = createRendererIfNeeded(documentElementRenderer, name, PseudoId::ViewTransitionGroup);
     auto viewTransitionImagePair = viewTransitionGroup ? createRendererIfNeeded(documentElementRenderer, name, PseudoId::ViewTransitionImagePair) : nullptr;
@@ -162,7 +181,7 @@ void RenderTreeUpdater::ViewTransition::buildPseudoElementGroup(const AtomString
 
     if (viewTransitionGroup) {
         documentElementRenderer.view().addViewTransitionGroup(name, *viewTransitionGroup.get());
-        m_updater.m_builder.attach(*documentElementRenderer.view().viewTransitionRoot(), WTFMove(viewTransitionGroup), beforeChild);
+        m_updater.m_builder.attach(viewTransitionRoot, WTFMove(viewTransitionGroup), beforeChild);
     }
 }
 

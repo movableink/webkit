@@ -1387,6 +1387,8 @@ imported/w3c/web-platform-tests/css/css-view-transitions/transition-in-hidden-pa
 imported/w3c/web-platform-tests/css/css-view-transitions/navigation/hide-before-reveal.html [ Failure ]
 imported/w3c/web-platform-tests/css/css-view-transitions/navigation/pageswap-push-from-click.html [ Failure ]
 
+imported/w3c/web-platform-tests/css/css-view-transitions/snapshot-containing-block-static-iframe.html [ ImageOnlyFailure ]
+
 # Needs special fuzziness on iOS.
 imported/w3c/web-platform-tests/css/css-view-transitions/rotated-cat-off-top-edge.html [ ImageOnlyFailure ]
 

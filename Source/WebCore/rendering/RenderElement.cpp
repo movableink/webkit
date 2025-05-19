@@ -839,7 +839,7 @@ void RenderElement::propagateStyleToAnonymousChildren(StylePropagationType propa
 {
     // FIXME: We could save this call when the change only affected non-inherited properties.
     for (CheckedRef elementChild : childrenOfType<RenderElement>(*this)) {
-        if (!elementChild->isAnonymous() || elementChild->style().pseudoElementType() != PseudoId::None)
+        if (!elementChild->isAnonymous() || elementChild->style().pseudoElementType() != PseudoId::None || elementChild->isViewTransitionContainingBlock())
             continue;
 
         bool isBlockOrRuby = is<RenderBlock>(elementChild.get()) || elementChild->style().display() == DisplayType::Ruby;

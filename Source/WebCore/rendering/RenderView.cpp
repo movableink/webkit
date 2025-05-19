@@ -1132,14 +1132,14 @@ SingleThreadWeakHashSet<RenderCounter> RenderView::takeCountersNeedingUpdate()
     return std::exchange(m_countersNeedingUpdate, { });
 }
 
-SingleThreadWeakPtr<RenderBlockFlow> RenderView::viewTransitionRoot() const
+SingleThreadWeakPtr<RenderBlockFlow> RenderView::viewTransitionContainingBlock() const
 {
-    return m_viewTransitionRoot;
+    return m_viewTransitionContainingBlock;
 }
 
-void RenderView::setViewTransitionRoot(RenderBlockFlow& renderer)
+void RenderView::setViewTransitionContainingBlock(RenderBlockFlow& renderer)
 {
-    m_viewTransitionRoot = renderer;
+    m_viewTransitionContainingBlock = renderer;
 }
 
 void RenderView::addViewTransitionGroup(const AtomString& name, RenderBox& group)

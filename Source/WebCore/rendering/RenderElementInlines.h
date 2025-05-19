@@ -67,7 +67,8 @@ inline bool RenderElement::isAnonymousBlock() const
         && !isRenderListMarker()
         && !isRenderFragmentedFlow()
         && !isRenderMultiColumnSet()
-        && !isRenderView();
+        && !isRenderView()
+        && !isViewTransitionContainingBlock();
 }
 
 inline bool RenderElement::isBlockContainer() const
@@ -98,7 +99,8 @@ inline bool RenderElement::mayContainOutOfFlowPositionedObjects(const RenderStyl
 #endif
         || isRenderOrLegacyRenderSVGForeignObject()
         || shouldApplyLayoutContainment(styleToUse)
-        || shouldApplyPaintContainment(styleToUse);
+        || shouldApplyPaintContainment(styleToUse)
+        || isViewTransitionContainingBlock();
 }
 
 inline bool RenderElement::canContainAbsolutelyPositionedObjects(const RenderStyle* styleToUse) const

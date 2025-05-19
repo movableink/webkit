@@ -252,6 +252,7 @@ public:
         IsFragmentedFlow = 1 << 1,
         IsTextControl = 1 << 2,
         IsSVGBlock = 1 << 3,
+        IsViewTransitionContainingBlock = 1 << 4,
     };
 
     enum class LineBreakFlag : uint8_t {
@@ -496,6 +497,8 @@ public:
 
     bool isRenderScrollbarPart() const { return type() == Type::ScrollbarPart; }
     bool isRenderVTTCue() const { return type() == Type::VTTCue; }
+
+    bool isViewTransitionContainingBlock() const { return isRenderBlockFlow() && m_typeSpecificFlags.blockFlowFlags().contains(BlockFlowFlag::IsViewTransitionContainingBlock); }
 
     inline bool isDocumentElementRenderer() const; // Defined in RenderObjectInlines.h
     inline bool isBody() const; // Defined in RenderObjectInlines.h
