@@ -502,8 +502,8 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
             setKeyCount(0);
         }
 
-        template<ShouldValidateKey shouldValidateKey> AddResult add(const ValueType& value) { return add<IdentityTranslatorType, shouldValidateKey>(Extractor::extract(value), [&]() ALWAYS_INLINE_LAMBDA { return value; }); }
-        template<ShouldValidateKey shouldValidateKey> AddResult add(ValueType&& value) { return add<IdentityTranslatorType, shouldValidateKey>(Extractor::extract(value), [&]() ALWAYS_INLINE_LAMBDA { return WTFMove(value); }); }
+        template<ShouldValidateKey shouldValidateKey = ShouldValidateKey::Yes> AddResult add(const ValueType& value) { return add<IdentityTranslatorType, shouldValidateKey>(Extractor::extract(value), [&]() ALWAYS_INLINE_LAMBDA { return value; }); }
+        template<ShouldValidateKey shouldValidateKey = ShouldValidateKey::Yes> AddResult add(ValueType&& value) { return add<IdentityTranslatorType, shouldValidateKey>(Extractor::extract(value), [&]() ALWAYS_INLINE_LAMBDA { return WTFMove(value); }); }
 
         // A special version of add() that finds the object by hashing and comparing
         // with some other type, to avoid the cost of type conversion if the object is already
@@ -511,9 +511,9 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
         template<typename HashTranslator, ShouldValidateKey> AddResult add(auto&& key, NOESCAPE const std::invocable<> auto& functor);
         template<typename HashTranslator, ShouldValidateKey> AddResult addPassingHashCode(auto&& key, NOESCAPE const std::invocable<> auto& functor);
 
-        template<ShouldValidateKey shouldValidateKey> iterator find(const KeyType& key) { return find<IdentityTranslatorType, shouldValidateKey>(key); }
-        template<ShouldValidateKey shouldValidateKey> const_iterator find(const KeyType& key) const { return find<IdentityTranslatorType, shouldValidateKey>(key); }
-        template<ShouldValidateKey shouldValidateKey> bool contains(const KeyType& key) const { return contains<IdentityTranslatorType, shouldValidateKey>(key); }
+        template<ShouldValidateKey shouldValidateKey = ShouldValidateKey::Yes> iterator find(const KeyType& key) { return find<IdentityTranslatorType, shouldValidateKey>(key); }
+        template<ShouldValidateKey shouldValidateKey = ShouldValidateKey::Yes> const_iterator find(const KeyType& key) const { return find<IdentityTranslatorType, shouldValidateKey>(key); }
+        template<ShouldValidateKey shouldValidateKey = ShouldValidateKey::Yes> bool contains(const KeyType& key) const { return contains<IdentityTranslatorType, shouldValidateKey>(key); }
 
         template<typename HashTranslator, ShouldValidateKey, typename T> iterator find(const T&);
         template<typename HashTranslator, ShouldValidateKey, typename T> const_iterator find(const T&) const;
@@ -535,8 +535,8 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
         static bool isDeletedBucket(const ValueType& value) { return KeyTraits::isDeletedValue(Extractor::extract(value)); }
         static bool isEmptyOrDeletedBucket(const ValueType& value) { return isEmptyBucket(value) || isDeletedBucket(value); }
 
-        template<ShouldValidateKey shouldValidateKey> ValueType* lookup(const Key& key) { return lookup<IdentityTranslatorType, shouldValidateKey>(key); }
-        template<typename HashTranslator, ShouldValidateKey, typename T> ValueType* lookup(const T&);
+        template<ShouldValidateKey shouldValidateKey = ShouldValidateKey::Yes> ValueType* lookup(const Key& key) { return lookup<IdentityTranslatorType, shouldValidateKey>(key); }
+        template<typename HashTranslator, ShouldValidateKey = ShouldValidateKey::Yes, typename T> ValueType* lookup(const T&);
         template<typename HashTranslator, ShouldValidateKey, typename T> ValueType* inlineLookup(const T&);
 
         ALWAYS_INLINE bool isNullStorage() const { return !m_table; }
