@@ -46,7 +46,7 @@ static bool generatesLineBoxesForInlineChild(RenderBlock& current, RenderObject*
     return !it.atEnd();
 }
 
-static RenderBlock* getParentOfFirstLineBox(RenderBlock& current, RenderObject& marker)
+static RenderBlock* getParentOfFirstLineBox(RenderBlock& current, const RenderObject& marker)
 {
     bool inQuirksMode = current.document().inQuirksMode();
     for (auto& child : childrenOfType<RenderObject>(current)) {
@@ -99,43 +99,50 @@ void RenderTreeBuilder::List::updateItemMarker(RenderListItem& listItemRenderer)
     }
 
     auto newStyle = listItemRenderer.computeMarkerStyle();
-    RenderPtr<RenderListMarker> newMarkerRenderer;
-    auto* markerRenderer = listItemRenderer.markerRenderer();
-    if (markerRenderer)
+    if (auto* markerRenderer = listItemRenderer.markerRenderer()) {
         markerRenderer->setStyle(WTFMove(newStyle));
-    else {
-        newMarkerRenderer = WebCore::createRenderer<RenderListMarker>(listItemRenderer, WTFMove(newStyle));
-        newMarkerRenderer->initializeStyle();
-        markerRenderer = newMarkerRenderer.get();
-        listItemRenderer.setMarkerRenderer(*markerRenderer);
+        auto* currentParent = markerRenderer->parent();
+        if (!currentParent) {
+            ASSERT_NOT_REACHED();
+            return;
+        }
+
+        auto* newParent = getParentOfFirstLineBox(listItemRenderer, *markerRenderer);
+        if (!newParent) {
+            if (currentParent->isAnonymousBlock()) {
+                // If the marker is currently contained inside an anonymous box. then we are the only item in that anonymous box
+                // (since no line box parent was found). It's ok to just leave the marker where it is in this case.
+                return;
+            }
+            newParent = &listItemRenderer;
+            if (auto* multiColumnFlow = listItemRenderer.multiColumnFlow())
+                newParent = multiColumnFlow;
+        }
+
+        if (newParent == currentParent)
+            return;
+
+        m_builder.attach(*newParent, m_builder.detach(*currentParent, *markerRenderer, WillBeDestroyed::No, RenderTreeBuilder::CanCollapseAnonymousBlock::No), firstNonMarkerChild(*newParent));
+        // If current parent is an anonymous block that has lost all its children, destroy it.
+        if (currentParent->isAnonymousBlock() && !currentParent->firstChild() && !downcast<RenderBlock>(*currentParent).continuation())
+            m_builder.destroy(*currentParent);
+        return;
     }
 
-    RenderElement* currentParent = markerRenderer->parent();
-    RenderBlock* newParent = getParentOfFirstLineBox(listItemRenderer, *markerRenderer);
+    RenderPtr<RenderListMarker> newMarkerRenderer = WebCore::createRenderer<RenderListMarker>(listItemRenderer, WTFMove(newStyle));
+    newMarkerRenderer->initializeStyle();
+    listItemRenderer.setMarkerRenderer(*newMarkerRenderer);
+    auto* newParent = getParentOfFirstLineBox(listItemRenderer, *newMarkerRenderer);
     if (!newParent) {
         // If the marker is currently contained inside an anonymous box,
         // then we are the only item in that anonymous box (since no line box
         // parent was found). It's ok to just leave the marker where it is
         // in this case.
-        if (currentParent && currentParent->isAnonymousBlock())
-            return;
+        newParent = &listItemRenderer;
         if (auto* multiColumnFlow = listItemRenderer.multiColumnFlow())
             newParent = multiColumnFlow;
-        else
-            newParent = &listItemRenderer;
     }
-
-    if (newParent == currentParent)
-        return;
-
-    if (currentParent)
-        m_builder.attach(*newParent, m_builder.detach(*currentParent, *markerRenderer, WillBeDestroyed::No, RenderTreeBuilder::CanCollapseAnonymousBlock::No), firstNonMarkerChild(*newParent));
-    else
-        m_builder.attach(*newParent, WTFMove(newMarkerRenderer), firstNonMarkerChild(*newParent));
-
-    // If current parent is an anonymous block that has lost all its children, destroy it.
-    if (currentParent && currentParent->isAnonymousBlock() && !currentParent->firstChild() && !downcast<RenderBlock>(*currentParent).continuation())
-        m_builder.destroy(*currentParent);
+    m_builder.attach(*newParent, WTFMove(newMarkerRenderer), firstNonMarkerChild(*newParent));
 }
 
 }
