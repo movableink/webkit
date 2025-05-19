@@ -31,7 +31,7 @@
 #include "PageIdentifier.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/Ref.h>
-#include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
@@ -59,7 +59,7 @@ enum class ScrollbarMode : uint8_t;
 
 using SandboxFlags = OptionSet<SandboxFlag>;
 
-class Frame : public ThreadSafeRefCounted<Frame, WTF::DestructionThread::Main>, public CanMakeWeakPtr<Frame> {
+class Frame : public RefCountedAndCanMakeWeakPtr<Frame> {
 public:
     virtual ~Frame();
 
