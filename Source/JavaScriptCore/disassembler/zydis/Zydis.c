@@ -36,9 +36,11 @@ IGNORE_WARNINGS_BEGIN("documentation")
 IGNORE_WARNINGS_BEGIN("unsafe-buffer-usage")
 IGNORE_WARNINGS_BEGIN("implicit-fallthrough")
 IGNORE_WARNINGS_BEGIN("unused-local-typedef")
+IGNORE_WARNINGS_BEGIN("sign-compare")
 
 #include "Zydis.c.inc"
 
+IGNORE_WARNINGS_END
 IGNORE_WARNINGS_END
 IGNORE_WARNINGS_END
 IGNORE_WARNINGS_END
