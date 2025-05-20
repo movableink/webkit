@@ -36,6 +36,7 @@
 #include "WebProcess.h"
 #include <WebCore/FloatPoint3D.h>
 #include <WebCore/LayerHostingContextIdentifier.h>
+#include <WebCore/MimeTypeRegistry.h>
 #include <WebCore/Model.h>
 #include <WebCore/ModelPlayerAnimationState.h>
 #include <WebCore/Page.h>
@@ -154,6 +155,13 @@ std::optional<std::unique_ptr<WebCore::ModelPlayerTransformState>> ModelProcessM
 void ModelProcessModelPlayer::load(WebCore::Model& model, WebCore::LayoutSize size)
 {
     RELEASE_LOG(ModelElement, "%p - ModelProcessModelPlayer load model id=%" PRIu64, this, m_id.toUInt64());
+
+    if (!WebCore::MIMETypeRegistry::isUSDMIMEType(model.mimeType())) {
+        RELEASE_LOG(ModelElement, "%p - ModelProcessModelPlayer::load: Found unexpected model mimetype: %s", this, model.mimeType().utf8().data());
+        if (m_client)
+            m_client->logWarning(*this, makeString("Unexpected USDZ MIME type \""_s, model.mimeType(), "\" in <model> element. Expected \"model/vnd.usdz+zip\". Some features of <model> may not work properly. The model may fail to render in a future release."_s));
+    }
+
     send(Messages::ModelProcessModelPlayerProxy::LoadModel(model, size));
 }
 

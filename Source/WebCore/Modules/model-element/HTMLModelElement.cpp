@@ -60,6 +60,7 @@
 #include "ModelPlayerProvider.h"
 #include "ModelPlayerTransformState.h"
 #include "MouseEvent.h"
+#include "NodeInlines.h"
 #include "Page.h"
 #include "PlaceholderModelPlayer.h"
 #include "RenderBoxInlines.h"
@@ -68,6 +69,7 @@
 #include "RenderLayerModelObject.h"
 #include "RenderModel.h"
 #include "RenderReplaced.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/Seconds.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
@@ -498,6 +500,13 @@ void HTMLModelElement::didUpdateLayerHostingContextIdentifier(ModelPlayer& model
 
     if (CheckedPtr renderer = this->renderer())
         renderer->updateFromElement();
+}
+
+void HTMLModelElement::logWarning(ModelPlayer& modelPlayer, const String& warningMessage)
+{
+    ASSERT_UNUSED(modelPlayer, &modelPlayer == m_modelPlayer);
+
+    protectedDocument()->addConsoleMessage(MessageSource::Other, MessageLevel::Warning, warningMessage);
 }
 
 void HTMLModelElement::didFinishLoading(ModelPlayer& modelPlayer)

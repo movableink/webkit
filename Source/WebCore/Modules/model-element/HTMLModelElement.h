@@ -230,6 +230,7 @@ private:
 #endif
     std::optional<PlatformLayerIdentifier> modelContentsLayerID() const final;
     bool isVisible() const final;
+    void logWarning(ModelPlayer&, const String&) final;
 
     Node::InsertedIntoAncestorResult insertedIntoAncestor(InsertionType , ContainerNode& parentOfInsertedTree) override;
     void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree) override;
