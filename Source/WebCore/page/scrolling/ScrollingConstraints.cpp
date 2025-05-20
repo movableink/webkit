@@ -107,7 +107,12 @@ FloatSize StickyPositionViewportConstraints::computeStickyOffset(const FloatRect
 FloatPoint StickyPositionViewportConstraints::anchorLayerPositionForConstrainingRect(const FloatRect& constrainingRect) const
 {
     FloatSize offset = computeStickyOffset(constrainingRect);
-    return (m_layerPositionAtLastLayout + m_anchorLayerOffsetAtLastLayout) + offset - m_stickyOffsetAtLastLayout;
+    return anchorLayerPositionAtLastLayout() + offset - m_stickyOffsetAtLastLayout;
+}
+
+FloatPoint StickyPositionViewportConstraints::anchorLayerPositionAtLastLayout() const
+{
+    return m_layerPositionAtLastLayout + m_anchorLayerOffsetAtLastLayout;
 }
 
 TextStream& operator<<(TextStream& ts, ScrollPositioningBehavior behavior)

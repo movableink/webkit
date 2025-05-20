@@ -194,8 +194,7 @@ bool ScrollingStateStickyNode::hasViewportClippingLayer() const
 
 FloatSize ScrollingStateStickyNode::scrollDeltaSinceLastCommit(const LayoutRect& viewportRect) const
 {
-    auto layerPosition = hasViewportClippingLayer() ? computeClippingLayerPosition(viewportRect) : computeAnchorLayerPosition(viewportRect);
-    return layerPosition - m_constraints.layerPositionAtLastLayout();
+    return computeAnchorLayerPosition(viewportRect) - m_constraints.anchorLayerPositionAtLastLayout();
 }
 
 void ScrollingStateStickyNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const

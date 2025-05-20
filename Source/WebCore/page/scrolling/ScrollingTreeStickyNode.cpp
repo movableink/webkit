@@ -132,8 +132,7 @@ FloatPoint ScrollingTreeStickyNode::computeAnchorLayerPosition() const
 
 FloatSize ScrollingTreeStickyNode::scrollDeltaSinceLastCommit() const
 {
-    auto layerPosition = hasViewportClippingLayer() ? computeClippingLayerPosition() : computeAnchorLayerPosition();
-    return layerPosition - m_constraints.layerPositionAtLastLayout();
+    return computeAnchorLayerPosition() - m_constraints.anchorLayerPositionAtLastLayout();
 }
 
 } // namespace WebCore
