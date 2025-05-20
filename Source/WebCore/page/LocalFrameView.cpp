@@ -2247,7 +2247,7 @@ std::pair<FixedContainerEdges, WeakElementEdges> LocalFrameView::fixedContainerE
         }
 
         if (result.backgroundColor.isVisible()) {
-            edges.colors.setAt(side, WTFMove(result.backgroundColor));
+            edges.colors.setAt(side, result.backgroundColor.colorWithAlpha(1));
             continue;
         }
 
