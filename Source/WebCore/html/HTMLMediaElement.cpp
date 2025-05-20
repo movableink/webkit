@@ -8008,13 +8008,15 @@ PlatformDynamicRangeLimit HTMLMediaElement::computePlayerDynamicRangeLimit() con
         return m_platformDynamicRangeLimit;
 
     bool shouldSuppressHDR = [this]() {
-        if (m_videoFullscreenMode == VideoFullscreenModeStandard)
-            return false;
+        if (!document().settings().suppressHDRShouldBeAllowedInFullscreenVideo()) {
+            if (m_videoFullscreenMode == VideoFullscreenModeStandard)
+                return false;
 
 #if ENABLE(FULLSCREEN_API)
-        if (m_isChildOfElementFullscreen)
-            return false;
+            if (m_isChildOfElementFullscreen)
+                return false;
 #endif
+        }
 
         if (Page* page = document().page())
             return page->shouldSuppressHDR();
