@@ -1949,6 +1949,16 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
         m_stringPrototypeSymbolIteratorWatchpoint->install(vm);
     }
     {
+        ObjectPropertyCondition condition = setupAdaptiveWatchpoint(this, m_stringPrototype.get(), vm.propertyNames->toString);
+        m_stringPrototypeToStringWatchpoint = makeUnique<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>>(this, condition, m_stringToStringWatchpointSet);
+        m_stringPrototypeToStringWatchpoint->install(vm);
+    }
+    {
+        ObjectPropertyCondition condition = setupAdaptiveWatchpoint(this, m_stringPrototype.get(), vm.propertyNames->valueOf);
+        m_stringPrototypeValueOfWatchpoint = makeUnique<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>>(this, condition, m_stringValueOfWatchpointSet);
+        m_stringPrototypeValueOfWatchpoint->install(vm);
+    }
+    {
         m_regExpPrototypeExecWatchpoint = makeUnique<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>>(this, setupAdaptiveWatchpoint(this, m_regExpPrototype.get(), vm.propertyNames->exec), m_regExpPrimordialPropertiesWatchpointSet);
         m_regExpPrototypeExecWatchpoint->install(vm);
         m_regExpPrototypeFlagsWatchpoint = makeUnique<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>>(this, setupAdaptiveWatchpoint(this, m_regExpPrototype.get(), vm.propertyNames->flags), m_regExpPrimordialPropertiesWatchpointSet);
@@ -1979,6 +1989,14 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
         m_stringPrototypeSymbolReplaceMissWatchpoint->install(vm);
         m_objectPrototypeSymbolReplaceMissWatchpoint = makeUnique<ObjectAdaptiveStructureWatchpoint>(this, absenceObjectPrototype, m_stringSymbolReplaceWatchpointSet);
         m_objectPrototypeSymbolReplaceMissWatchpoint->install(vm);
+    }
+    {
+        auto absenceStringPrototype = setupAbsenceAdaptiveWatchpoint(this, m_stringPrototype.get(), vm.propertyNames->toPrimitiveSymbol, objectPrototype());
+        auto absenceObjectPrototype = setupAbsenceAdaptiveWatchpoint(this, m_objectPrototype.get(), vm.propertyNames->toPrimitiveSymbol, nullptr);
+        m_stringPrototypeSymbolToPrimitiveMissWatchpoint = makeUnique<ObjectAdaptiveStructureWatchpoint>(this, absenceStringPrototype, m_stringSymbolToPrimitiveWatchpointSet);
+        m_stringPrototypeSymbolToPrimitiveMissWatchpoint->install(vm);
+        m_objectPrototypeSymbolToPrimitiveMissWatchpoint = makeUnique<ObjectAdaptiveStructureWatchpoint>(this, absenceObjectPrototype, m_stringSymbolToPrimitiveWatchpointSet);
+        m_objectPrototypeSymbolToPrimitiveMissWatchpoint->install(vm);
     }
     {
         auto absenceArrayPrototype = setupAbsenceAdaptiveWatchpoint(this, m_arrayPrototype.get(), vm.propertyNames->negativeOneIdentifier, objectPrototype());

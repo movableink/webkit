@@ -1880,26 +1880,6 @@ bool Graph::getRegExpPrototypeProperty(JSObject* regExpPrototype, Structure* reg
     return true;
 }
 
-bool Graph::isStringPrototypeMethodSane(JSGlobalObject* globalObject, UniquedStringImpl* uid)
-{
-    ObjectPropertyConditionSet conditions = generateConditionsForPrototypeEquivalenceConcurrently(m_vm, globalObject, globalObject->stringObjectStructure(), globalObject->stringPrototype(), uid);
-
-    if (!conditions.isValid())
-        return false;
-
-    ObjectPropertyCondition equivalenceCondition = conditions.slotBaseCondition();
-    RELEASE_ASSERT(equivalenceCondition.hasRequiredValue());
-    JSFunction* function = jsDynamicCast<JSFunction*>(equivalenceCondition.condition().requiredValue());
-    if (!function)
-        return false;
-
-    if (function->executable()->intrinsicFor(CodeForCall) != StringPrototypeValueOfIntrinsic)
-        return false;
-    
-    return watchConditions(conditions);
-}
-
-
 bool Graph::canOptimizeStringObjectAccess(const CodeOrigin& codeOrigin)
 {
     if (m_plan.isUnlinked())
@@ -1908,13 +1888,7 @@ bool Graph::canOptimizeStringObjectAccess(const CodeOrigin& codeOrigin)
     if (hasExitSite(codeOrigin, BadCache) || hasExitSite(codeOrigin, BadConstantCache))
         return false;
 
-    JSGlobalObject* globalObject = globalObjectFor(codeOrigin);
-    Structure* stringObjectStructure = globalObjectFor(codeOrigin)->stringObjectStructure();
-    registerStructure(stringObjectStructure);
-    ASSERT(stringObjectStructure->storedPrototype().isObject());
-    ASSERT(stringObjectStructure->storedPrototype().asCell()->classInfo() == StringPrototype::info());
-
-    if (!watchConditions(generateConditionsForPropertyMissConcurrently(m_vm, globalObject, stringObjectStructure, m_vm.propertyNames->toPrimitiveSymbol.impl())))
+    if (!isWatchingStringSymbolToPrimitiveWatchpoint(codeOrigin))
         return false;
 
     // We're being conservative here. We want DFG's ToString on StringObject to be
@@ -1922,9 +1896,13 @@ bool Graph::canOptimizeStringObjectAccess(const CodeOrigin& codeOrigin)
     // (that would call toString()). We don't want the DFG to have to distinguish
     // between the two, just because that seems like it would get confusing. So we
     // just require both methods to be sane.
-    if (!isStringPrototypeMethodSane(globalObject, m_vm.propertyNames->valueOf.impl()))
+    if (!isWatchingStringValueOfWatchpoint(codeOrigin))
         return false;
-    return isStringPrototypeMethodSane(globalObject, m_vm.propertyNames->toString.impl());
+
+    if (!isWatchingStringToStringWatchpoint(codeOrigin))
+        return false;
+
+    return true;
 }
 
 bool Graph::willCatchExceptionInMachineFrame(CodeOrigin codeOrigin, CodeOrigin& opCatchOriginOut, HandlerInfo*& catchHandlerOut)

@@ -1728,7 +1728,7 @@ private:
             if (op == StringReplace
                 && node->child1()->shouldSpeculateString()
                 && node->child2()->shouldSpeculateString()
-                && m_graph.isWatchingStringSymbolReplaceWatchpoint(node)) {
+                && m_graph.isWatchingStringSymbolReplaceWatchpoint(node->origin.semantic)) {
                 node->setOp(StringReplaceString);
                 fixEdge<StringUse>(node->child1());
                 fixEdge<StringUse>(node->child2());
