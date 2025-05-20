@@ -274,6 +274,7 @@ WTF_EXTERN_C_END
     M(StreamClientConnection) \
     M(ScrollingPerformanceTestFingerDownInterval) \
     M(ScrollingPerformanceTestMomentumInterval) \
+    M(WebKitPerformance) \
 
 #define DECLARE_WTF_SIGNPOST_NAME_ENUM(name) WTFOSSignpostName ## name,
 

@@ -52,13 +52,29 @@
 #include "ResourceResponse.h"
 #include "ScriptExecutionContext.h"
 #include <ranges>
+#include <wtf/SystemTracing.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Performance);
 
 static Seconds timePrecision { 1_ms };
+
+static bool isSignpostEnabled()
+{
+    static bool flag = false;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        const char* value = getenv("WebKitPerformanceSignpostEnabled");
+        if (value) {
+            if (auto result = parseInteger<int>(StringView::fromLatin1(value)); result && result.value())
+                flag = true;
+        }
+    });
+    return flag;
+}
 
 Performance::Performance(ScriptExecutionContext* context, MonotonicTime timeOrigin)
     : ContextDestructionObserver(context)
@@ -377,6 +393,16 @@ ExceptionOr<Ref<PerformanceMeasure>> Performance::measure(JSC::JSGlobalObject& g
     auto measure = m_userTiming->measure(globalObject, measureName, WTFMove(startOrMeasureOptions), endMark);
     if (measure.hasException())
         return measure.releaseException();
+
+    if (isSignpostEnabled()) {
+#if OS(DARWIN)
+        Ref entry { measure.returnValue() };
+        auto startTime = (m_timeOrigin + Seconds::fromMilliseconds(entry->startTime())).approximateContinuousTime();
+        auto endTime = startTime + Seconds::fromMilliseconds(entry->duration());
+        auto message = measureName.utf8();
+        WTFEmitSignpostAlways(entry.ptr(), WebKitPerformance, "%{public}s %{public, signpost.description:begin_time}llu %{public, signpost.description:end_time}llu", message.data(), startTime.toMachContinuousTime(), endTime.toMachContinuousTime());
+#endif
+    }
 
     queueEntry(measure.returnValue().get());
     return measure.releaseReturnValue();
