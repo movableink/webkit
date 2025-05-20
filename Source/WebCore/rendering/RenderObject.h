@@ -1143,6 +1143,7 @@ protected:
     inline Node& nodeForNonAnonymous() const; // Defined in RenderObjectInlines.h
 
     virtual void willBeDestroyed();
+    void setIsBeingDestroyed() { m_stateBitfields.setFlag(StateFlag::BeingDestroyed); }
 
     void scheduleLayout(RenderElement* layoutRoot);
     void setNeedsPositionedMovementLayoutBit(bool b) { m_stateBitfields.setFlag(StateFlag::NeedsPositionedMovementLayout, b); }

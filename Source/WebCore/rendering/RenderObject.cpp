@@ -1828,7 +1828,7 @@ void RenderObject::destroy()
     RELEASE_ASSERT(!m_previous);
     RELEASE_ASSERT(!m_stateBitfields.hasFlag(StateFlag::BeingDestroyed));
 
-    m_stateBitfields.setFlag(StateFlag::BeingDestroyed);
+    setIsBeingDestroyed();
 
     willBeDestroyed();
 
