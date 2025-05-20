@@ -290,6 +290,8 @@ void RenderTreeUpdater::updateRenderTree(ContainerNode& root)
 
         if (!mayHaveRenderedDescendants) {
             it.traverseNextSkippingChildren();
+            if (&element == element.document().documentElement())
+                viewTransition().updatePseudoElementTree(nullptr, StyleDifference::Equal);
             continue;
         }
 
@@ -358,8 +360,11 @@ void RenderTreeUpdater::updateAfterDescendants(Element& element, const Style::El
         generatedContent().updateBeforeOrAfterPseudoElement(element, *update, PseudoId::After);
 
     auto* renderer = element.renderer();
-    if (!renderer)
+    if (!renderer) {
+        if (&element == element.document().documentElement())
+            viewTransition().updatePseudoElementTree(nullptr, StyleDifference::Equal);
         return;
+    }
 
     StyleDifference minimalStyleDifference = StyleDifference::Equal;
     if (update && update->recompositeLayer)
@@ -368,7 +373,7 @@ void RenderTreeUpdater::updateAfterDescendants(Element& element, const Style::El
     generatedContent().updateBackdropRenderer(*renderer, minimalStyleDifference);
     generatedContent().updateWritingSuggestionsRenderer(*renderer, minimalStyleDifference);
     if (&element == element.document().documentElement())
-        viewTransition().updatePseudoElementTree(*renderer, minimalStyleDifference);
+        viewTransition().updatePseudoElementTree(renderer, minimalStyleDifference);
 
     m_builder.updateAfterDescendants(*renderer);
 
@@ -941,6 +946,21 @@ void RenderTreeUpdater::tearDownLeftoverChildrenOfComposedTree(Element& element,
 RenderView& RenderTreeUpdater::renderView()
 {
     return *m_document->renderView();
+}
+
+void RenderTreeUpdater::destroyAndCancelAnimationsForSubtree(RenderElement& renderer)
+{
+    auto styleable = Styleable::fromRenderer(renderer);
+    if (styleable)
+        styleable->cancelStyleOriginatedAnimations();
+
+    for (auto& descendant : descendantsOfType<RenderElement>(renderer)) {
+        auto styleable = Styleable::fromRenderer(descendant);
+        if (styleable)
+            styleable->cancelStyleOriginatedAnimations();
+    }
+
+    m_builder.destroy(renderer);
 }
 
 }

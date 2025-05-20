@@ -805,17 +805,6 @@ void ViewTransition::clearViewTransition()
     Ref document = *this->document();
     ASSERT(document->activeViewTransition() == this);
 
-    // End animations on pseudo-elements so they can run again.
-    if (RefPtr documentElement = document->documentElement()) {
-        Styleable(*documentElement, Style::PseudoElementIdentifier { PseudoId::ViewTransition }).cancelStyleOriginatedAnimations();
-        for (auto& name : namedElements().keys()) {
-            Styleable(*documentElement, Style::PseudoElementIdentifier { PseudoId::ViewTransitionGroup, name }).cancelStyleOriginatedAnimations();
-            Styleable(*documentElement, Style::PseudoElementIdentifier { PseudoId::ViewTransitionImagePair, name }).cancelStyleOriginatedAnimations();
-            Styleable(*documentElement, Style::PseudoElementIdentifier { PseudoId::ViewTransitionNew, name }).cancelStyleOriginatedAnimations();
-            Styleable(*documentElement, Style::PseudoElementIdentifier { PseudoId::ViewTransitionOld, name }).cancelStyleOriginatedAnimations();
-        }
-    }
-
     for (auto& [name, capturedElement] : m_namedElements.map()) {
         if (auto newStyleable = capturedElement->newElement.styleable())
             newStyleable->setCapturedInViewTransition(nullAtom());
