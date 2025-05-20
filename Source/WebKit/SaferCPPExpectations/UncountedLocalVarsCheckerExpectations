@@ -12,7 +12,6 @@ UIProcess/ViewGestureController.cpp
 UIProcess/WebPageProxy.cpp
 UIProcess/mac/WebViewImpl.mm
 WebProcess/Automation/WebAutomationSessionProxy.cpp
-WebProcess/EncryptedMedia/MediaKeySystemPermissionRequestManager.cpp
 WebProcess/Extensions/Bindings/JSWebExtensionWrapper.cpp
 WebProcess/FullScreen/WebFullScreenManager.cpp
 WebProcess/GPU/webrtc/SampleBufferDisplayLayerManager.cpp
@@ -30,7 +29,6 @@ WebProcess/InjectedBundle/InjectedBundleScriptWorld.cpp
 WebProcess/InjectedBundle/mac/InjectedBundleMac.mm
 WebProcess/Inspector/WebInspectorClient.cpp
 WebProcess/Inspector/WebInspectorInternal.cpp
-WebProcess/MediaStream/UserMediaPermissionRequestManager.cpp
 WebProcess/Model/mac/ARKitInlinePreviewModelPlayerMac.mm
 WebProcess/Network/WebLoaderStrategy.cpp
 WebProcess/Network/webrtc/LibWebRTCNetworkManager.cpp

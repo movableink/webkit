@@ -472,7 +472,7 @@ void WebLoaderStrategy::scheduleLoadFromNetworkProcess(ResourceLoader& resourceL
     if (frame && !frame->isMainFrame())
         loadParameters.shouldRecordFrameLoadForStorageAccess = frame->settings().requestStorageAccessThrowsExceptionUntilReload();
 
-    auto* document = frame ? frame->document() : nullptr;
+    RefPtr document = frame ? frame->document() : nullptr;
     if (resourceLoader.options().cspResponseHeaders)
         loadParameters.cspResponseHeaders = resourceLoader.options().cspResponseHeaders;
     else if (document && !document->shouldBypassMainWorldContentSecurityPolicy() && resourceLoader.options().contentSecurityPolicyImposition == ContentSecurityPolicyImposition::DoPolicyCheck) {
@@ -715,7 +715,7 @@ void WebLoaderStrategy::networkProcessCrashed()
 static bool shouldClearReferrerOnHTTPSToHTTPRedirect(LocalFrame* frame)
 {
     if (frame) {
-        if (auto* document = frame->document())
+        if (RefPtr document = frame->document())
             return document->referrerPolicy() == ReferrerPolicy::NoReferrerWhenDowngrade;
     }
     return true;
@@ -960,7 +960,7 @@ void WebLoaderStrategy::preconnectTo(WebCore::ResourceRequest&& request, WebPage
     }
 
     auto* mainFrame = dynamicDowncast<WebCore::LocalFrame>(webPage.mainFrame());
-    if (auto* document = mainFrame ? mainFrame->document() : nullptr) {
+    if (RefPtr document = mainFrame ? mainFrame->document() : nullptr) {
         if (shouldPreconnectAsFirstParty == ShouldPreconnectAsFirstParty::Yes)
             request.setFirstPartyForCookies(request.url());
         else
