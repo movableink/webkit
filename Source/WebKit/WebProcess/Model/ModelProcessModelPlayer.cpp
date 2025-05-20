@@ -36,7 +36,7 @@
 #include "WebProcess.h"
 #include <WebCore/FloatPoint3D.h>
 #include <WebCore/LayerHostingContextIdentifier.h>
-#include <WebCore/MimeTypeRegistry.h>
+#include <WebCore/MIMETypeRegistry.h>
 #include <WebCore/Model.h>
 #include <WebCore/ModelPlayerAnimationState.h>
 #include <WebCore/Page.h>
