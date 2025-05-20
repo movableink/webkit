@@ -150,6 +150,13 @@ static NSURL *URLFromString(const WTF::String& urlString)
     return _WKHitTestResultElementTypeNone;
 }
 
+- (NSURLResponse *)linkLocalResourceResponse
+{
+    if (auto& response = _hitTestResult->linkLocalResourceResponse())
+        return response->nsURLResponse();
+    return nil;
+}
+
 - (WKFrameInfo *)frameInfo
 {
     if (auto frameInfo = _hitTestResult->frameInfo())

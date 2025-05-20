@@ -1510,4 +1510,24 @@ void WebFrame::setAppBadge(const WebCore::SecurityOriginData& origin, std::optio
     send(Messages::WebFrameProxy::SetAppBadge(origin, badge));
 }
 
+std::optional<ResourceResponse> WebFrame::resourceResponseForURL(const URL& url) const
+{
+    RefPtr localFrame = dynamicDowncast<LocalFrame>(m_coreFrame.get());
+    if (!localFrame)
+        return std::nullopt;
+
+    RefPtr loader = localFrame->loader().documentLoader();
+    if (!loader)
+        return std::nullopt;
+
+    if (loader->url() == url)
+        return loader->response();
+
+    RefPtr resource = loader->subresource(url);
+    if (resource)
+        return resource->response();
+
+    return std::nullopt;
+}
+
 } // namespace WebKit

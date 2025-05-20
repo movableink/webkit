@@ -256,6 +256,8 @@ public:
 
     void setAppBadge(const WebCore::SecurityOriginData&, std::optional<uint64_t> badge);
 
+    std::optional<WebCore::ResourceResponse> resourceResponseForURL(const URL&) const;
+
 private:
     WebFrame(WebPage&, WebCore::FrameIdentifier);
 

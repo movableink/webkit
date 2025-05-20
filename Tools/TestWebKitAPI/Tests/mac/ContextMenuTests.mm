@@ -767,6 +767,25 @@ TEST(ContextMenuTests, HitTestResultLinkLocalDataMIMEType)
     Util::run(&gotProposedMenu);
 }
 
+TEST(ContextMenuTests, HitTestResultLinkLocalResourceResponse)
+{
+    _WKContextMenuElementInfo *elementInfo;
+    NSURLResponse* linkLocalResourceResponse;
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 400, 400)]);
+    [webView synchronouslyLoadHTMLString:@"<a href='sunset-in-cupertino-600px.jpg'><img src='sunset-in-cupertino-600px.jpg'></img></a>"];
+    elementInfo = [webView rightClickAtPointAndWaitForContextMenu:NSMakePoint(200, 200)];
+    linkLocalResourceResponse = elementInfo.hitTestResult.linkLocalResourceResponse;
+    EXPECT_NOT_NULL(linkLocalResourceResponse);
+    EXPECT_WK_STREQ(linkLocalResourceResponse.suggestedFilename, "sunset-in-cupertino-600px.jpg");
+    EXPECT_WK_STREQ(linkLocalResourceResponse.MIMEType, "image/jpeg");
+
+    [webView synchronouslyLoadHTMLString:@"<a href='https://webkit.org/'><img src='sunset-in-cupertino-600px.jpg'></img></a>"];
+    elementInfo = [webView rightClickAtPointAndWaitForContextMenu:NSMakePoint(200, 200)];
+    linkLocalResourceResponse = elementInfo.hitTestResult.linkLocalResourceResponse;
+    EXPECT_NULL(linkLocalResourceResponse);
+}
+
 TEST(ContextMenuTests, HitTestResultLinkSuggestedFilename)
 {
     auto delegate = adoptNS([[TestUIDelegate alloc] init]);

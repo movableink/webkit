@@ -68,6 +68,18 @@ static String linkLocalDataMIMETypeFromHitTestResult(const HitTestResult& hitTes
     return webFrame->mimeTypeForResourceWithURL(hitTestResult.absoluteLinkURL());
 }
 
+static std::optional<ResourceResponse> linkLocalResourceFromHitTestResult(const HitTestResult& hitTestResult)
+{
+    if (!hitTestResult.hasLocalDataForLinkURL())
+        return std::nullopt;
+
+    RefPtr webFrame = webFrameFromHitTestResult(hitTestResult);
+    if (!webFrame)
+        return std::nullopt;
+
+    return webFrame->resourceResponseForURL(hitTestResult.absoluteLinkURL());
+}
+
 static String imageSuggestedFilenameFromHitTestResult(const HitTestResult& hitTestResult)
 {
     if (!hitTestResult.hasEntireImage())
@@ -84,7 +96,7 @@ WebHitTestResultData::WebHitTestResultData()
 {
 }
 
-WebHitTestResultData::WebHitTestResultData(const HitTestResult& hitTestResult, const String& toolTipText)
+WebHitTestResultData::WebHitTestResultData(const HitTestResult& hitTestResult, const String& tooltipText, bool includeImage)
     : absoluteImageURL(hitTestResult.absoluteImageURL().string())
     , absolutePDFURL(hitTestResult.absolutePDFURL().string())
     , absoluteLinkURL(hitTestResult.absoluteLinkURL().string())
@@ -92,6 +104,7 @@ WebHitTestResultData::WebHitTestResultData(const HitTestResult& hitTestResult, c
     , linkLabel(hitTestResult.textContent())
     , linkTitle(hitTestResult.titleDisplayString())
     , linkSuggestedFilename(hitTestResult.linkSuggestedFilename())
+    , imageSuggestedFilename(imageSuggestedFilenameFromHitTestResult(hitTestResult))
     , isContentEditable(hitTestResult.isContentEditable())
     , elementBoundingBox(elementBoundingBoxInWindowCoordinates(hitTestResult))
     , isScrollbar(IsScrollbar::No)
@@ -101,52 +114,18 @@ WebHitTestResultData::WebHitTestResultData(const HitTestResult& hitTestResult, c
     , isDownloadableMedia(hitTestResult.isDownloadableMedia())
     , mediaIsInFullscreen(hitTestResult.mediaIsInFullscreen())
     , isActivePDFAnnotation(false)
-    , elementType(ElementType::None)
+    , elementType(elementTypeFromHitTestResult(hitTestResult))
     , frameInfo(frameInfoDataFromHitTestResult(hitTestResult))
-    , toolTipText(toolTipText)
+    , toolTipText(tooltipText)
+    , linkLocalDataMIMEType(linkLocalDataMIMETypeFromHitTestResult(hitTestResult))
     , hasLocalDataForLinkURL(hitTestResult.hasLocalDataForLinkURL())
     , hasEntireImage(hitTestResult.hasEntireImage())
     , allowsFollowingLink(hitTestResult.allowsFollowingLink())
     , allowsFollowingImageURL(hitTestResult.allowsFollowingImageURL())
+    , linkLocalResourceResponse(linkLocalResourceFromHitTestResult(hitTestResult))
 {
     if (auto* scrollbar = hitTestResult.scrollbar())
         isScrollbar = scrollbar->orientation() == ScrollbarOrientation::Horizontal ? IsScrollbar::Horizontal : IsScrollbar::Vertical;
-
-    elementType = elementTypeFromHitTestResult(hitTestResult);
-    linkLocalDataMIMEType = linkLocalDataMIMETypeFromHitTestResult(hitTestResult);
-    imageSuggestedFilename = imageSuggestedFilenameFromHitTestResult(hitTestResult);
-}
-
-WebHitTestResultData::WebHitTestResultData(const HitTestResult& hitTestResult, bool includeImage)
-    : absoluteImageURL(hitTestResult.absoluteImageURL().string())
-    , absolutePDFURL(hitTestResult.absolutePDFURL().string())
-    , absoluteLinkURL(hitTestResult.absoluteLinkURL().string())
-    , absoluteMediaURL(hitTestResult.absoluteMediaURL().string())
-    , linkLabel(hitTestResult.textContent())
-    , linkTitle(hitTestResult.titleDisplayString())
-    , linkSuggestedFilename(hitTestResult.linkSuggestedFilename())
-    , isContentEditable(hitTestResult.isContentEditable())
-    , elementBoundingBox(elementBoundingBoxInWindowCoordinates(hitTestResult))
-    , isScrollbar(IsScrollbar::No)
-    , isSelected(hitTestResult.isSelected())
-    , isTextNode(is<Text>(hitTestResult.innerNode()))
-    , isOverTextInsideFormControlElement(hitTestResult.isOverTextInsideFormControlElement())
-    , isDownloadableMedia(hitTestResult.isDownloadableMedia())
-    , mediaIsInFullscreen(hitTestResult.mediaIsInFullscreen())
-    , isActivePDFAnnotation(false)
-    , elementType(ElementType::None)
-    , frameInfo(frameInfoDataFromHitTestResult(hitTestResult))
-    , hasLocalDataForLinkURL(hitTestResult.hasLocalDataForLinkURL())
-    , hasEntireImage(hitTestResult.hasEntireImage())
-    , allowsFollowingLink(hitTestResult.allowsFollowingLink())
-    , allowsFollowingImageURL(hitTestResult.allowsFollowingImageURL())
-{
-    if (auto* scrollbar = hitTestResult.scrollbar())
-        isScrollbar = scrollbar->orientation() == ScrollbarOrientation::Horizontal ? IsScrollbar::Horizontal : IsScrollbar::Vertical;
-
-    elementType = elementTypeFromHitTestResult(hitTestResult);
-    linkLocalDataMIMEType = linkLocalDataMIMETypeFromHitTestResult(hitTestResult);
-    imageSuggestedFilename = imageSuggestedFilenameFromHitTestResult(hitTestResult);
 
     if (!includeImage)
         return;
@@ -178,7 +157,13 @@ WebHitTestResultData::WebHitTestResultData(const HitTestResult& hitTestResult, b
     }
 }
 
-WebHitTestResultData::WebHitTestResultData(const String& absoluteImageURL, const String& absolutePDFURL, const String& absoluteLinkURL, const String& absoluteMediaURL, const String& linkLabel, const String& linkTitle, const String& linkSuggestedFilename, const String& imageSuggestedFilename, bool isContentEditable, const WebCore::IntRect& elementBoundingBox, const WebKit::WebHitTestResultData::IsScrollbar& isScrollbar, bool isSelected, bool isTextNode, bool isOverTextInsideFormControlElement, bool isDownloadableMedia, bool mediaIsInFullscreen, bool isActivePDFAnnotation, const WebHitTestResultData::ElementType& elementType, std::optional<FrameInfoData>&& frameInfo, std::optional<WebCore::RemoteUserInputEventData> remoteUserInputEventData, const String& lookupText, const String& toolTipText, const String& imageText, std::optional<WebCore::SharedMemory::Handle>&& imageHandle, const RefPtr<WebCore::ShareableBitmap>& imageBitmap, const String& sourceImageMIMEType, const String& linkLocalDataMIMEType, bool hasLocalDataForLinkURL, bool hasEntireImage, bool allowsFollowingLink, bool allowsFollowingImageURL,
+WebHitTestResultData::WebHitTestResultData(const HitTestResult& hitTestResult, const String& toolTipText)
+    : WebHitTestResultData(hitTestResult, toolTipText, false) { }
+
+WebHitTestResultData::WebHitTestResultData(const HitTestResult& hitTestResult, bool includeImage)
+    : WebHitTestResultData(hitTestResult, String(), includeImage) { }
+
+WebHitTestResultData::WebHitTestResultData(const String& absoluteImageURL, const String& absolutePDFURL, const String& absoluteLinkURL, const String& absoluteMediaURL, const String& linkLabel, const String& linkTitle, const String& linkSuggestedFilename, const String& imageSuggestedFilename, bool isContentEditable, const WebCore::IntRect& elementBoundingBox, const WebKit::WebHitTestResultData::IsScrollbar& isScrollbar, bool isSelected, bool isTextNode, bool isOverTextInsideFormControlElement, bool isDownloadableMedia, bool mediaIsInFullscreen, bool isActivePDFAnnotation, const WebHitTestResultData::ElementType& elementType, std::optional<FrameInfoData>&& frameInfo, std::optional<WebCore::RemoteUserInputEventData> remoteUserInputEventData, const String& lookupText, const String& toolTipText, const String& imageText, std::optional<WebCore::SharedMemory::Handle>&& imageHandle, const RefPtr<WebCore::ShareableBitmap>& imageBitmap, const String& sourceImageMIMEType, const String& linkLocalDataMIMEType, bool hasLocalDataForLinkURL, bool hasEntireImage, bool allowsFollowingLink, bool allowsFollowingImageURL, std::optional<WebCore::ResourceResponse>&& linkLocalResourceResponse,
 #if PLATFORM(MAC)
     const WebHitTestResultPlatformData& platformData,
 #endif
@@ -213,6 +198,7 @@ WebHitTestResultData::WebHitTestResultData(const String& absoluteImageURL, const
         , hasEntireImage(hasEntireImage)
         , allowsFollowingLink(allowsFollowingLink)
         , allowsFollowingImageURL(allowsFollowingImageURL)
+        , linkLocalResourceResponse(linkLocalResourceResponse)
 #if PLATFORM(MAC)
         , platformData(platformData)
 #endif
