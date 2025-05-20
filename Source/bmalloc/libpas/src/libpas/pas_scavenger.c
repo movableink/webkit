@@ -193,6 +193,8 @@ static void* scavenger_thread_main(void* arg)
     pthread_set_qos_class_self_np(configured_qos_class, 0);
 #endif
 
+    PAS_PROFILE(SCAVENGER_THREAD_MAIN, data);
+
     for (;;) {
         pas_page_sharing_pool_scavenge_result scavenge_result;
         bool should_shut_down;
