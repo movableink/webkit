@@ -231,7 +231,7 @@ void Buffer::setCommandEncoder(CommandEncoder& commandEncoder, bool mayModifyBuf
 #endif
         commandEncoder.addBuffer(m_buffer);
 
-    if (m_state == State::Mapped || m_state == State::MappedAtCreation)
+    if (m_state != State::Unmapped)
         commandEncoder.incrementBufferMapCount();
     if (isDestroyed())
         commandEncoder.makeSubmitInvalid();
@@ -371,13 +371,13 @@ void Buffer::mapAsync(WGPUMapModeFlags mode, size_t offset, size_t size, Complet
     }
 
     setState(State::MappingPending);
+    incrementBufferMapCount();
 
     m_mapMode = mode;
 
     device->protectedQueue()->onSubmittedWorkDone([protectedThis = Ref { *this }, offset, rangeSize, callback = WTFMove(callback)](WGPUQueueWorkDoneStatus status) mutable {
         if (protectedThis->m_state == State::MappingPending) {
             protectedThis->setState(State::Mapped);
-            protectedThis->incrementBufferMapCount();
 
             protectedThis->m_mappingRange = { offset, offset + rangeSize };
 
