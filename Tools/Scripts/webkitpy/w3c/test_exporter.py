@@ -30,6 +30,8 @@ import os
 import json
 
 from webkitcorepy import string_utils
+from webkitbugspy import Tracker
+from webkitscmpy import local
 
 from webkitpy.common.checkout.scm.git import Git
 from webkitpy.common.host import Host
@@ -52,7 +54,7 @@ EXCLUDED_FILE_SUFFIXES = ['-expected.txt', '-expected.html', '-expected-mismatch
 
 
 class WebPlatformTestExporter(object):
-    def __init__(self, host, options, gitClass=Git, bugzillaClass=Bugzilla, WPTGitHubClass=WPTGitHub, WPTLinterClass=WPTLinter):
+    def __init__(self, host, options, gitClass=Git, bugzillaClass=Bugzilla, WPTGitHubClass=WPTGitHub, WPTLinterClass=WPTLinter, repository=None):
         self._host = host
         self._filesystem = host.filesystem
         self._options = options
@@ -60,14 +62,26 @@ class WebPlatformTestExporter(object):
         self._host.initialize_scm()
 
         self._WPTGitHubClass = WPTGitHubClass
-        self._gitClass = gitClass
+        self._gitClass = gitClass  # FIXME: Move git operations to webkitscmpy
+        self._repository = repository or local.Git(os.path.abspath(os.getcwd()))
         self._bugzilla = bugzillaClass()
         self._bug_id = options.bug_id
+        self._bug = None
+
+        issue = None
         if not self._bug_id:
             if options.attachment_id:
-                self._bug_id = self._bugzilla.bug_id_for_attachment_id(options.attachment_id)
+                self._bug_id = self._bugzilla.bug_id_for_attachment_id(options.attachment_id)  # FIXME: Dependency on webkitpy.bugzilla should be removed when patch workflow is disabled
             elif options.git_commit:
                 self._bug_id = self._host.checkout().bug_id_for_this_commit(options.git_commit)
+
+        if Tracker.instance() and (isinstance(self._bug_id, int) or string_utils.decode(self._bug_id).isnumeric()):
+            issue = Tracker.instance().issue(int(self._bug_id))
+        else:
+            issue = Tracker.from_string(self._bug_id)
+        if issue:
+            self._bug_id = issue.id
+            self._bug = issue
 
         if not self._options.repository_directory:
             webkit_finder = WebKitFinder(self._filesystem)
@@ -75,10 +89,9 @@ class WebPlatformTestExporter(object):
 
         self._linter = WPTLinterClass(self._options.repository_directory, host.filesystem)
 
-        self._bugzilla_url = "https://bugs.webkit.org/show_bug.cgi?id=" + str(self._bug_id)
         self._commit_message = options.message
         if not self._commit_message:
-            self._commit_message = 'WebKit export of ' + self._bugzilla_url if self._bug_id else 'Export made from a WebKit repository'
+            self._commit_message = f'WebKit export of {issue.link}' if issue else 'Export made from a WebKit repository'
 
     @property
     def username(self):
@@ -311,10 +324,10 @@ class WebPlatformTestExporter(object):
             return
 
         _log.info('Making pull request')
-        title = self._bugzilla.fetch_bug_dictionary(self._bug_id)["title"].replace("[", "\\[").replace("]", "\\]")
+        title = self._bug.title.replace("[", "\\[").replace("]", "\\]")
         # NOTE: this should contain the exact string "WebKit export" to match the condition in
         # https://github.com/web-platform-tests/wpt-pr-bot/blob/f53e625c4871010277dc68336b340b5cd86e2a10/lib/metadata/index.js#L87
-        description = "WebKit export from bug: [%s](https://bugs.webkit.org/show_bug.cgi?id=%s)" % (title, self._bug_id)
+        description = f'WebKit export from bug: [{title}]({self._bug.link})'
         pr_number = self.create_wpt_pull_request(self._wpt_fork_remote + ':' + self._public_branch_name, self._commit_message, description)
         if pr_number:
             try:
@@ -323,8 +336,9 @@ class WebPlatformTestExporter(object):
                 _log.warning(e)
                 _log.info('Could not add label "%s" to pr #%s. User "%s" may not have permission to update labels in the %s/%s repo.' % (WEBKIT_EXPORT_PR_LABEL, pr_number, self.username, WPT_GH_ORG, WPT_GH_REPO_NAME))
         if self._bug_id and pr_number:
-            pr_url = WPT_PR_URL + str(pr_number)
-            self._bugzilla.post_comment_to_bug(self._bug_id, "Submitted web-platform-tests pull request: " + pr_url, see_also=[pr_url])
+            pr_url = f'{WPT_PR_URL}{pr_number}'
+            self._bug.add_related_links([pr_url])
+            self._bug.add_comment(f'Submitted web-platform-tests pull request: {pr_url}')
 
     def create_wpt_pull_request(self, remote_branch_name, title, body):
         pr_number = None
@@ -415,7 +429,7 @@ def parse_args(args):
     parser = argparse.ArgumentParser(prog='export-w3c-test-changes ...', description=description, formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument('-g', '--git-commit', dest='git_commit', default=None, help='Git commit to apply')
-    parser.add_argument('-b', '--bug', dest='bug_id', default=None, help='Bug ID to search for patch')
+    parser.add_argument('-b', '--bug', dest='bug_id', default=None, help='Bug ID or URL to search for patch')
     parser.add_argument('-a', '--attachment', dest='attachment_id', default=None, help='Attachment ID to search for patch')
     parser.add_argument('-n', '--name', dest='username', default=None, help='github user name if GITHUB_USERNAME is not defined or github.username in the WPT repo config is not defined')
     parser.add_argument('-t', '--token', dest='token', default=None, help='github token, needed for creating pull requests only if GITHUB_TOKEN env variable is not defined or github.token in the WPT repo config is not defined')

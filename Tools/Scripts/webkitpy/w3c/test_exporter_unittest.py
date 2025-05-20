@@ -20,18 +20,29 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest
+import os
+from unittest.mock import patch
 
 from webkitpy.common.host_mock import MockHost
 from webkitpy.common.system.filesystem_mock import MockFileSystem
 from webkitpy.common.system.executive_mock import MockExecutive2
 from webkitpy.w3c.test_exporter import WebPlatformTestExporter, parse_args
 from webkitpy.w3c.wpt_github_mock import MockWPTGitHub
+from webkitbugspy import bugzilla, mocks as bmocks, Tracker
+from webkitcorepy import mocks as wkmocks, testing
+from webkitscmpy import mocks as mocks
 
 mock_linter = None
 
-class TestExporterTest(unittest.TestCase):
+
+class TestExporterTest(testing.PathTestCase):
     maxDiff = None
+    BUGZILLA_URL = 'https://bugs.example.com'
+    basepath = 'mock/repository'
+
+    def setUp(self):
+        super().setUp()
+        os.mkdir(os.path.join(self.path, '.git'))
 
     class MockBugzilla(object):
         def __init__(self):
@@ -121,11 +132,20 @@ class TestExporterTest(unittest.TestCase):
             return 0
 
     def test_export(self):
-        host = TestExporterTest.MyMockHost()
-        host.web.responses.append({'status_code': 200, 'body': '{"login": "USER"}'})
-        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1234', '-c', '-n', 'USER', '-t', 'TOKEN'])
-        exporter = WebPlatformTestExporter(host, options, TestExporterTest.MockGit, TestExporterTest.MockBugzilla, MockWPTGitHub, TestExporterTest.MockWPTLinter)
-        exporter.do_export()
+        with bmocks.Bugzilla(self.BUGZILLA_URL.split('://')[1], issues=bmocks.ISSUES, environment=wkmocks.Environment(
+            BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+            BUGS_EXAMPLE_COM_PASSWORD='password',
+        )), mocks.local.Git(self.path) as repo, patch('webkitbugspy.Tracker._trackers', [bugzilla.Tracker(self.BUGZILLA_URL)]):
+            host = TestExporterTest.MyMockHost()
+            host.web.responses.append({'status_code': 200, 'body': '{"login": "USER"}'})
+            options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1', '-c', '-n', 'USER', '-t', 'TOKEN'])
+            exporter = WebPlatformTestExporter(host, options, TestExporterTest.MockGit, TestExporterTest.MockBugzilla, MockWPTGitHub, TestExporterTest.MockWPTLinter, repo)
+            exporter.do_export()
+
+            issue = Tracker.from_string('{}/show_bug.cgi?id=1'.format(self.BUGZILLA_URL))
+            self.assertEqual(issue.comments[-1].content, 'Submitted web-platform-tests pull request: https://github.com/web-platform-tests/wpt/pull/5678')
+            self.assertEqual(issue.related_links, ['https://github.com/web-platform-tests/wpt/pull/5678'])
+
         self.assertEqual(exporter._github.calls, ['create_pr', 'add_label "webkit-export"'])
         self.assertTrue('WebKit export' in exporter._github.pull_requests_created[0][1])
         self.assertEqual(exporter._git.calls, [
@@ -133,48 +153,60 @@ class TestExporterTest(unittest.TestCase):
             'fetch',
             'checkout master',
             'reset hard origin/master',
-            'checkout new branch wpt-export-for-webkit-1234',
+            'checkout new branch wpt-export-for-webkit-1',
             'apply_mail_patch patch.temp -3',
-            'commit -a -m WebKit export of https://bugs.webkit.org/show_bug.cgi?id=1234',
+            'commit -a -m WebKit export of https://bugs.example.com/show_bug.cgi?id=1',
             'remote ',
             'remote add USER https://USER@github.com/USER/wpt.git',
             'remote get-url USER',
-            'push USER wpt-export-for-webkit-1234:wpt-export-for-webkit-1234 -f',
+            'push USER wpt-export-for-webkit-1:wpt-export-for-webkit-1 -f',
             'checkout master',
-            'delete branch wpt-export-for-webkit-1234'])
-        self.assertEqual(exporter._bugzilla.calls, [
-            'fetch bug 1234',
-            'Append https://github.com/web-platform-tests/wpt/pull/5678 to see also list',
-            'post comment to bug 1234 : Submitted web-platform-tests pull request: https://github.com/web-platform-tests/wpt/pull/5678'])
+            'delete branch wpt-export-for-webkit-1'])
         self.assertEqual(mock_linter.calls, ['/mock-checkout/WebKitBuild/w3c-tests/web-platform-tests', 'lint'])
 
     def test_export_with_specific_branch(self):
-        host = TestExporterTest.MyMockHost()
-        host.web.responses.append({'status_code': 200, 'body': '{"login": "USER"}'})
-        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1234', '-c', '-n', 'USER', '-t', 'TOKEN', '-bn', 'wpt-export-branch'])
-        exporter = WebPlatformTestExporter(host, options, TestExporterTest.MockGit, TestExporterTest.MockBugzilla, MockWPTGitHub, TestExporterTest.MockWPTLinter)
-        exporter.do_export()
+        with bmocks.Bugzilla(self.BUGZILLA_URL.split('://')[1], issues=bmocks.ISSUES, environment=wkmocks.Environment(
+            BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+            BUGS_EXAMPLE_COM_PASSWORD='password',
+        )), mocks.local.Git(self.path) as repo, patch('webkitbugspy.Tracker._trackers', [bugzilla.Tracker(self.BUGZILLA_URL)]):
+            host = TestExporterTest.MyMockHost()
+            host.web.responses.append({'status_code': 200, 'body': '{"login": "USER"}'})
+            options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1', '-c', '-n', 'USER', '-t', 'TOKEN', '-bn', 'wpt-export-branch'])
+            exporter = WebPlatformTestExporter(host, options, TestExporterTest.MockGit, TestExporterTest.MockBugzilla, MockWPTGitHub, TestExporterTest.MockWPTLinter, repo)
+            exporter.do_export()
+            issue = Tracker.from_string('{}/show_bug.cgi?id=1'.format(self.BUGZILLA_URL))
+            self.assertEqual(issue.comments[-1].content, 'Submitted web-platform-tests pull request: https://github.com/web-platform-tests/wpt/pull/5678')
+            self.assertEqual(issue.related_links, ['https://github.com/web-platform-tests/wpt/pull/5678'])
+
         self.assertEqual(exporter._git.calls, [
             '/mock-checkout/WebKitBuild/w3c-tests/web-platform-tests',
             'fetch',
             'checkout master',
             'reset hard origin/master',
-            'checkout new branch wpt-export-for-webkit-1234',
+            'checkout new branch wpt-export-for-webkit-1',
             'apply_mail_patch patch.temp -3',
-            'commit -a -m WebKit export of https://bugs.webkit.org/show_bug.cgi?id=1234',
+            'commit -a -m WebKit export of https://bugs.example.com/show_bug.cgi?id=1',
             'remote ',
             'remote add USER https://USER@github.com/USER/wpt.git',
             'remote get-url USER',
-            'push USER wpt-export-for-webkit-1234:wpt-export-branch -f',
+            'push USER wpt-export-for-webkit-1:wpt-export-branch -f',
             'checkout master',
-            'delete branch wpt-export-for-webkit-1234'])
+            'delete branch wpt-export-for-webkit-1'])
 
     def test_export_no_clean(self):
-        host = TestExporterTest.MyMockHost()
-        host.web.responses.append({'status_code': 200, 'body': '{"login": "USER"}'})
-        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1234', '-c', '-n', 'USER', '-t', 'TOKEN', '--no-clean'])
-        exporter = WebPlatformTestExporter(host, options, TestExporterTest.MockGit, TestExporterTest.MockBugzilla, MockWPTGitHub, TestExporterTest.MockWPTLinter)
-        exporter.do_export()
+        with bmocks.Bugzilla(self.BUGZILLA_URL.split('://')[1], issues=bmocks.ISSUES, environment=wkmocks.Environment(
+            BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+            BUGS_EXAMPLE_COM_PASSWORD='password',
+        )), mocks.local.Git(self.path) as repo, patch('webkitbugspy.Tracker._trackers', [bugzilla.Tracker(self.BUGZILLA_URL)]):
+            host = TestExporterTest.MyMockHost()
+            host.web.responses.append({'status_code': 200, 'body': '{"login": "USER"}'})
+            options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1', '-c', '-n', 'USER', '-t', 'TOKEN', '--no-clean'])
+            exporter = WebPlatformTestExporter(host, options, TestExporterTest.MockGit, TestExporterTest.MockBugzilla, MockWPTGitHub, TestExporterTest.MockWPTLinter, repo)
+            exporter.do_export()
+            issue = Tracker.from_string('{}/show_bug.cgi?id=1'.format(self.BUGZILLA_URL))
+            self.assertEqual(issue.comments[-1].content, 'Submitted web-platform-tests pull request: https://github.com/web-platform-tests/wpt/pull/5678')
+            self.assertEqual(issue.related_links, ['https://github.com/web-platform-tests/wpt/pull/5678'])
+
         self.assertEqual(exporter._github.calls, ['create_pr', 'add_label "webkit-export"'])
         self.assertTrue('WebKit export' in exporter._github.pull_requests_created[0][1])
         self.assertEqual(exporter._git.calls, [
@@ -182,30 +214,30 @@ class TestExporterTest(unittest.TestCase):
             'fetch',
             'checkout master',
             'reset hard origin/master',
-            'checkout new branch wpt-export-for-webkit-1234',
+            'checkout new branch wpt-export-for-webkit-1',
             'apply_mail_patch patch.temp -3',
-            'commit -a -m WebKit export of https://bugs.webkit.org/show_bug.cgi?id=1234',
+            'commit -a -m WebKit export of https://bugs.example.com/show_bug.cgi?id=1',
             'remote ',
             'remote add USER https://USER@github.com/USER/wpt.git',
             'remote get-url USER',
-            'push USER wpt-export-for-webkit-1234:wpt-export-for-webkit-1234 -f'])
-        self.assertEqual(exporter._bugzilla.calls, [
-            'fetch bug 1234',
-            'Append https://github.com/web-platform-tests/wpt/pull/5678 to see also list',
-            'post comment to bug 1234 : Submitted web-platform-tests pull request: https://github.com/web-platform-tests/wpt/pull/5678'])
+            'push USER wpt-export-for-webkit-1:wpt-export-for-webkit-1 -f'])
         self.assertEqual(mock_linter.calls, ['/mock-checkout/WebKitBuild/w3c-tests/web-platform-tests', 'lint'])
 
     def test_export_interactive_mode(self):
-        host = TestExporterTest.MyMockHost()
-        host.web.responses.append({'status_code': 200, 'body': '{"login": "USER"}'})
-        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1234', '-c', '-n', 'USER', '-t', 'TOKEN', '--interactive'])
-        exporter = WebPlatformTestExporter(host, options, TestExporterTest.MockGit, TestExporterTest.MockBugzilla, MockWPTGitHub, TestExporterTest.MockWPTLinter)
-        exporter.do_export()
+        with bmocks.Bugzilla(self.BUGZILLA_URL.split('://')[1], issues=bmocks.ISSUES, environment=wkmocks.Environment(
+            BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+            BUGS_EXAMPLE_COM_PASSWORD='password',
+        )), mocks.local.Git(self.path) as repo, patch('webkitbugspy.Tracker._trackers', [bugzilla.Tracker(self.BUGZILLA_URL)]):
+            host = TestExporterTest.MyMockHost()
+            host.web.responses.append({'status_code': 200, 'body': '{"login": "USER"}'})
+            options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1', '-c', '-n', 'USER', '-t', 'TOKEN', '--interactive'])
+            exporter = WebPlatformTestExporter(host, options, TestExporterTest.MockGit, TestExporterTest.MockBugzilla, MockWPTGitHub, TestExporterTest.MockWPTLinter, repo)
+            exporter.do_export()
 
     def test_export_invalid_token(self):
         host = TestExporterTest.MyMockHost()
         host.web.responses.append({'status_code': 401})
-        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1234', '-c', '-n', 'USER', '-t', 'TOKEN'])
+        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1', '-c', '-n', 'USER', '-t', 'TOKEN'])
         exporter = WebPlatformTestExporter(host, options, TestExporterTest.MockGit, TestExporterTest.MockBugzilla, MockWPTGitHub, TestExporterTest.MockWPTLinter)
         with self.assertRaises(Exception) as context:
             exporter.do_export()
@@ -214,7 +246,7 @@ class TestExporterTest(unittest.TestCase):
     def test_export_wrong_token(self):
         host = TestExporterTest.MyMockHost()
         host.web.responses.append({'status_code': 200, 'body': '{"login": "DIFF_USER"}'})
-        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1234', '-c', '-n', 'USER', '-t', 'TOKEN'])
+        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1', '-c', '-n', 'USER', '-t', 'TOKEN'])
         exporter = WebPlatformTestExporter(host, options, TestExporterTest.MockGit, TestExporterTest.MockBugzilla, MockWPTGitHub, TestExporterTest.MockWPTLinter)
         with self.assertRaises(Exception) as context:
             exporter.do_export()
@@ -222,14 +254,14 @@ class TestExporterTest(unittest.TestCase):
 
     def test_has_wpt_changes(self):
         host = TestExporterTest.MyMockHost()
-        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1234', '-c', '-n', 'USER', '-t', 'TOKEN'])
+        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1', '-c', '-n', 'USER', '-t', 'TOKEN'])
         exporter = WebPlatformTestExporter(host, options, TestExporterTest.MockGit, TestExporterTest.MockBugzilla, MockWPTGitHub, TestExporterTest.MockWPTLinter)
         self.assertTrue(exporter.has_wpt_changes())
 
     def test_has_no_wpt_changes_for_no_diff(self):
         host = TestExporterTest.MyMockHost()
         host._mockSCM.mock_format_patch_result = None
-        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1234', '-c', '-n', 'USER', '-t', 'TOKEN'])
+        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1', '-c', '-n', 'USER', '-t', 'TOKEN'])
         exporter = WebPlatformTestExporter(host, options, TestExporterTest.MockGit, TestExporterTest.MockBugzilla, MockWPTGitHub, TestExporterTest.MockWPTLinter)
         self.assertFalse(exporter.has_wpt_changes())
 
@@ -249,7 +281,7 @@ diff --git a/LayoutTests/imported/w3c/web-platform-tests/fetch/api/headers/heade
 
 +change to expected
 """
-        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1234', '-c', '-n', 'USER', '-t', 'TOKEN'])
+        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1', '-c', '-n', 'USER', '-t', 'TOKEN'])
         exporter = WebPlatformTestExporter(host, options, TestExporterTest.MockGit, TestExporterTest.MockBugzilla, MockWPTGitHub, TestExporterTest.MockWPTLinter)
         self.assertFalse(exporter.has_wpt_changes())
 
@@ -261,7 +293,7 @@ diff --git a/LayoutTests/imported/w3c/web-platform-tests/css/css-counter-styles/
 
 +change to expected-mismatch
 """
-        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1234', '-c', '-n', 'USER', '-t', 'TOKEN'])
+        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1', '-c', '-n', 'USER', '-t', 'TOKEN'])
         exporter = WebPlatformTestExporter(host, options, TestExporterTest.MockGit, TestExporterTest.MockBugzilla, MockWPTGitHub, TestExporterTest.MockWPTLinter)
         self.assertFalse(exporter.has_wpt_changes())
 
@@ -273,6 +305,6 @@ diff --git a/LayoutTests/imported/w3c/web-platform-tests/fetch/api/headers/w3c-i
 
 +change to w3c import
 """
-        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1234', '-c', '-n', 'USER', '-t', 'TOKEN'])
+        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-b', '1', '-c', '-n', 'USER', '-t', 'TOKEN'])
         exporter = WebPlatformTestExporter(host, options, TestExporterTest.MockGit, TestExporterTest.MockBugzilla, MockWPTGitHub, TestExporterTest.MockWPTLinter)
         self.assertFalse(exporter.has_wpt_changes())
