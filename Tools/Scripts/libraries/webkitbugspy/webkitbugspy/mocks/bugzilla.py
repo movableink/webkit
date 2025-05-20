@@ -166,6 +166,8 @@ class Bugzilla(Base, mocks.Requests):
                 issue['related']['regressed_by'] = data['regressed_by']
             if data.get('regressions'):
                 issue['related']['regressions'] = data['regressions']
+            if data.get('see_also'):
+                issue['related_links'] = data['see_also']['add']
 
             keywords = data.get('keywords', {})
             if keywords:
@@ -241,7 +243,7 @@ class Bugzilla(Base, mocks.Requests):
                     ) for user in issue.get('watchers', [])
                 ], see_also=[
                     'https://{}/show_bug.cgi?id={}'.format(self.hosts[0], n) for n in issue.get('references', [])
-                ],
+                ] + issue.get('related_links', []),
             )],
         ), url=url)
 

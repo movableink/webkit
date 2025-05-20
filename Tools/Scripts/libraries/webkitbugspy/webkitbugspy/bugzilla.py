@@ -283,8 +283,9 @@ class Tracker(GenericTracker):
             else:
                 sys.stderr.write("Failed to fetch comments for '{}'\n".format(issue.link))
 
-        if member in ('duplicates', 'references'):
+        if member in ('duplicates', 'references', 'see_also'):
             issue._references = []
+            issue._related_links = []
             refs = set()
 
             for text in chain(
@@ -311,6 +312,7 @@ class Tracker(GenericTracker):
             response = response.json().get('bugs', []) if response.status_code == 200 else None
             if response:
                 for link in response[0].get('see_also', []):
+                    issue._related_links.append(link)
                     candidate = GenericTracker.from_string(link) or self.from_string(link)
                     if not candidate or candidate.link in refs or candidate.id == issue.id:
                         continue
@@ -339,7 +341,7 @@ class Tracker(GenericTracker):
 
         return issue
 
-    def set(self, issue, assignee=None, opened=None, why=None, project=None, component=None, version=None, original=None, keywords=None, source_changes=None, state=None, substate=None, **properties):
+    def set(self, issue, assignee=None, opened=None, why=None, project=None, component=None, version=None, original=None, keywords=None, source_changes=None, state=None, substate=None, see_also=None, **properties):
         update_dict = dict()
 
         if properties:
@@ -400,6 +402,9 @@ class Tracker(GenericTracker):
 
         if keywords is not None:
             update_dict['keywords'] = dict(set=keywords)
+
+        if see_also is not None:
+            update_dict['see_also'] = dict(add=see_also)
 
         if update_dict:
             update_dict['ids'] = [issue.id]

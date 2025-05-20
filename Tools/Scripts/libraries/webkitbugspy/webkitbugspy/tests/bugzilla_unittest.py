@@ -748,3 +748,15 @@ What component in 'WebKit' should the bug be associated with?:
             captured.stderr.getvalue(),
             'Bugzilla does not support source changes at this time\n',
         )
+
+    def test_related_links(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], environment=wkmocks.Environment(
+                BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+                BUGS_EXAMPLE_COM_PASSWORD='password',
+        ), users=mocks.USERS, issues=mocks.ISSUES), mocks.Radar(users=mocks.USERS, issues=mocks.ISSUES, projects=mocks.PROJECTS,):
+
+            tracker = bugzilla.Tracker(self.URL)
+            self.assertEqual(tracker.issue(1).related_links, [])
+            self.assertTrue(tracker.issue(1).add_related_links([f'{self.URL}/show_bug.cgi?id=2', 'other.tracker.com/123']))
+            self.assertEqual(tracker.issue(1).related_links, [f'{self.URL}/show_bug.cgi?id=2', 'other.tracker.com/123'])
+            self.assertEqual(tracker.issue(1).references, [tracker.issue(2)])

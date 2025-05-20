@@ -204,6 +204,7 @@ class Tracker(GenericTracker):
     def populate(self, issue, member=None):
         issue._link = 'rdar://{}'.format(issue.id)
         issue._labels = []
+        issue._related_links = []  # We don't yet have a defined idiom for "related links" in radar
         if (not self.client or not self.library) and member:
             sys.stderr.write('radarclient inaccessible on this machine\n')
             return issue
@@ -316,7 +317,7 @@ class Tracker(GenericTracker):
         return issue
 
     @handle_access_exception
-    def set(self, issue, assignee=None, opened=None, why=None, project=None, component=None, version=None, original=None, keywords=None, source_changes=None, state=None, substate=None, resolution=None, **properties):
+    def set(self, issue, assignee=None, opened=None, why=None, project=None, component=None, version=None, original=None, keywords=None, source_changes=None, state=None, substate=None, resolution=None, see_also=None, **properties):
         if not self.client or not self.library:
             sys.stderr.write('radarclient inaccessible on this machine\n')
             return None
@@ -436,6 +437,10 @@ class Tracker(GenericTracker):
         if source_changes:
             did_change = True
             radar.sourceChanges = '\n'.join(source_changes)
+
+        if see_also:
+            sys.stderr.write('Radar does not support the see_also field at this time\n')
+            return None
 
         if did_change:
             radar.commit_changes()

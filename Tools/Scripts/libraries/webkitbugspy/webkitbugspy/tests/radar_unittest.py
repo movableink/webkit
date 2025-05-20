@@ -579,3 +579,14 @@ What version of 'WebKit Text' should the bug be associated with?:
                     'Repo1, merged, a4daad5b9fbd26d557088037f54dc0935a437182',
                     'Repo2, merged, 604395a516c13cff80d4b0400e43a4c322dbb32f',
                 ])
+
+    def test_related_links(self):
+        with OutputCapture() as captured, mocks.Radar(issues=mocks.ISSUES):
+            tracker = radar.Tracker()
+            self.assertEqual(tracker.issue(1).references, [])
+            self.assertIsNone(tracker.issue(1).add_related_links(['12345']))
+
+        self.assertEqual(
+            captured.stderr.getvalue(),
+            'Radar does not support the see_also field at this time\n',
+        )

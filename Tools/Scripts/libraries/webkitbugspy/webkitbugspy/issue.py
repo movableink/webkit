@@ -73,6 +73,7 @@ class Issue(object):
         self._watchers = None
         self._comments = None
         self._references = None
+        self._related_links = None
 
         self._labels = None
         self._project = None
@@ -206,6 +207,15 @@ class Issue(object):
         if self._references is None:
             self.tracker.populate(self, 'references')
         return self._references or []
+
+    @property
+    def related_links(self):
+        if self._related_links is None:
+            self.tracker.populate(self, 'see_also')
+        return self._related_links
+
+    def add_related_links(self, see_also):
+        return self.tracker.set(self, see_also=see_also)
 
     def add_comment(self, text):
         return self.tracker.add_comment(self, text)
