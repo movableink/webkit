@@ -580,7 +580,7 @@ static bool removingNodeRemovesPosition(Node& node, const Position& position)
         return true;
 
     RefPtr element = dynamicDowncast<Element>(node);
-    return element && element->isShadowIncludingInclusiveAncestorOf(position.anchorNode());
+    return element && element->isShadowIncludingInclusiveAncestorOf(position.protectedAnchorNode().get());
 }
 
 void DragCaretController::nodeWillBeRemoved(Node& node)
@@ -610,10 +610,10 @@ void DragCaretController::clearCaretPositionWithoutUpdatingStyle()
 static void setNodeContainsSelectionEndPoint(const Position& position, bool value)
 {
     // We use anchorNode instead of containerNode() because nodeWillBeRemoved must update position when anchored node is removed.
-    for (Node* currentNode = position.anchorNode(); currentNode; currentNode = currentNode->parentOrShadowHostNode()) {
+    for (RefPtr currentNode = position.anchorNode(); currentNode; currentNode = currentNode->parentOrShadowHostNode()) {
         if (currentNode->containsSelectionEndPoint() == value) {
 #if ASSERT_ENABLED
-            for (Node* ancestor = currentNode; ancestor; ancestor = ancestor->parentOrShadowHostNode())
+            for (RefPtr ancestor = currentNode; ancestor; ancestor = ancestor->parentOrShadowHostNode())
                 ASSERT(ancestor->containsSelectionEndPoint() == value);
 #endif
             break;
@@ -621,7 +621,7 @@ static void setNodeContainsSelectionEndPoint(const Position& position, bool valu
         currentNode->setContainsSelectionEndPoint(value);
     }
 #if ASSERT_ENABLED
-    for (Node* ancestor = position.anchorNode(); ancestor; ancestor = ancestor->parentOrShadowHostNode())
+    for (RefPtr ancestor = position.anchorNode(); ancestor; ancestor = ancestor->parentOrShadowHostNode())
         ASSERT(ancestor->containsSelectionEndPoint() == value);
 #endif
 }
@@ -749,7 +749,7 @@ void FrameSelection::respondToNodeModification(Node& node, bool anchorRemoved, b
             // Trigger a selection update so the selection will be set again.
             m_selectionRevealIntent = AXTextStateChangeIntent();
             m_pendingSelectionUpdate = true;
-            renderView->frameView().scheduleSelectionUpdate();
+            renderView->protectedFrameView()->scheduleSelectionUpdate();
         }
     }
 
@@ -2012,7 +2012,7 @@ Color CaretBase::computeCaretColor(const RenderStyle& elementStyle, const Node* 
 #else
         auto cssColorValue = CSSValueAppleSystemBlue;
 #endif
-        auto styleColorOptions = node->document().styleColorOptions(&elementStyle);
+        auto styleColorOptions = node->protectedDocument()->styleColorOptions(&elementStyle);
         auto systemAccentColor = RenderTheme::singleton().systemColor(cssColorValue, styleColorOptions | StyleColorOptions::UseSystemAppearance);
         return elementStyle.colorByApplyingColorFilter(systemAccentColor);
     }
@@ -2156,7 +2156,7 @@ void FrameSelection::selectFrameElementInParentIfFullySelected()
     RefPtr parent { dynamicDowncast<LocalFrame>(frame->tree().parent()) };
     if (!parent)
         return;
-    Page* page = document->page();
+    RefPtr page = document->page();
     if (!page)
         return;
 
@@ -2187,7 +2187,7 @@ void FrameSelection::selectFrameElementInParentIfFullySelected()
 
     // Focus on the parent frame, and then select from before this element to after.
     VisibleSelection newSelection(beforeOwnerElement, afterOwnerElement);
-    if (parent->selection().shouldChangeSelection(newSelection) && page) {
+    if (parent->selection().shouldChangeSelection(newSelection)) {
         page->checkedFocusController()->setFocusedFrame(parent.get());
         // Previous focus can trigger DOM events, ensure the selection did not become orphan.
         if (newSelection.isOrphan())
@@ -2489,11 +2489,13 @@ void FrameSelection::setFocusedElementIfNeeded(OptionSet<SetSelectionOption> opt
     if (isNone() || !isFocused())
         return;
 
-    bool caretBrowsing = m_document->settings().caretBrowsingEnabled();
+    auto document = protectedDocument();
+    bool caretBrowsing = document->settings().caretBrowsingEnabled();
     if (caretBrowsing) {
         if (RefPtr anchor = enclosingAnchorElement(m_selection.base())) {
-            CheckedRef focusController { m_document->page()->focusController() };
-            focusController->setFocusedElement(anchor.get(), *m_document->frame());
+            CheckedRef focusController { document->page()->focusController() };
+            Ref frame = *document->frame();
+            focusController->setFocusedElement(anchor.get(), frame);
             return;
         }
     }
@@ -2508,16 +2510,16 @@ void FrameSelection::setFocusedElementIfNeeded(OptionSet<SetSelectionOption> opt
                 FocusOptions focusOptions;
                 if (options & SetSelectionOption::ForBindings)
                     focusOptions.trigger = FocusTrigger::Bindings;
-                m_document->page()->checkedFocusController()->setFocusedElement(target.get(), *m_document->frame(), focusOptions);
+                document->protectedPage()->checkedFocusController()->setFocusedElement(target.get(), *document->protectedFrame(), focusOptions);
                 return;
             }
             target = target->parentOrShadowHostElement();
         }
-        m_document->setFocusedElement(nullptr);
+        document->setFocusedElement(nullptr);
     }
 
     if (caretBrowsing)
-        m_document->page()->checkedFocusController()->setFocusedElement(nullptr, *m_document->frame());
+        document->protectedPage()->checkedFocusController()->setFocusedElement(nullptr, *document->protectedFrame());
 }
 
 void DragCaretController::paintDragCaret(LocalFrame* frame, GraphicsContext& p, const LayoutPoint& paintOffset) const
