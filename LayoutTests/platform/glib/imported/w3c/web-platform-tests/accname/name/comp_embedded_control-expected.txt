@@ -45,7 +45,7 @@ FAIL checkbox label with embedded combobox (span) assert_equals: <input type="ch
 PASS label of embedded combobox (span) inside checkbox label
 FAIL checkbox label with embedded combobox (div) assert_equals: <input type="checkbox" data-expectedlabel="Flash the screen 3 times" data-testname="checkbox label with embedded combobox (div)" class="ex"> expected "Flash the screen 3 times" but got "Flash the screen number of times times"
 PASS label of embedded combobox (div) inside checkbox label
-FAIL checkbox label with embedded listbox>option[aria-selected=true] assert_equals: <input type="checkbox" data-expectedlabel="Flash the screen 3 times" data-testname="checkbox label with embedded listbox>option[aria-selected=true]" class="ex"> expected "Flash the screen 3 times" but got "Flash the screen number of times times"
+FAIL checkbox label with embedded listbox>option[aria-selected=true] assert_equals: <input type="checkbox" data-expectedlabel="Flash the screen 3 times" data-testname="checkbox label with embedded listbox&gt;option[aria-selected=true]" class="ex"> expected "Flash the screen 3 times" but got "Flash the screen number of times times"
 PASS label of embedded listbox>option[aria-selected=true] inside checkbox label
 FAIL checkbox label with embedded input[type=range] assert_equals: <input type="checkbox" data-expectedlabel="Flash the screen 3 times" data-testname="checkbox label with embedded input[type=range]" class="ex"> expected "Flash the screen 3 times" but got "Flash the screen number of times times"
 PASS label of embedded input[type=range] inside checkbox label

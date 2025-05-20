@@ -63,7 +63,8 @@ constexpr OptionSet<EntityMask> EntityMaskInPCDATA = { EntityMask::Amp, EntityMa
 constexpr auto EntityMaskInHTMLPCDATA = EntityMaskInPCDATA | EntityMask::Nbsp;
 constexpr OptionSet<EntityMask> EntityMaskInAttributeValue = { EntityMask::Amp, EntityMask::Lt, EntityMask::Gt,
     EntityMask::Quot, EntityMask::Tab, EntityMask::LineFeed, EntityMask::CarriageReturn };
-constexpr auto EntityMaskInHTMLAttributeValue = { EntityMask::Amp, EntityMask::Quot, EntityMask::Nbsp };
+constexpr auto EntityMaskInHTMLAttributeValue = { EntityMask::Amp, EntityMask::Lt, EntityMask::Gt, EntityMask::Quot, EntityMask::Nbsp };
+constexpr auto EntityMaskInHTMLLegacyAttributeValue = { EntityMask::Amp, EntityMask::Quot, EntityMask::Nbsp };
 
 class MarkupAccumulator {
     WTF_MAKE_NONCOPYABLE(MarkupAccumulator);
@@ -75,6 +76,8 @@ public:
 
     static void appendCharactersReplacingEntities(StringBuilder&, const String&, OptionSet<EntityMask>);
     void enableURLReplacement(UncheckedKeyHashMap<String, String>&& replacementURLStrings, UncheckedKeyHashMap<Ref<CSSStyleSheet>, String>&& replacementURLStringsForCSSStyleSheet);
+
+    static SerializationSyntax serializationSyntax(Document&);
 
 protected:
     unsigned length() const { return m_markup.length(); }

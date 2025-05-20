@@ -6,9 +6,9 @@ PASS innerHTML 3 <a b="c"></a>
 PASS innerHTML 4 <a b="&amp;"></a>
 PASS innerHTML 5 <a b="&nbsp;"></a>
 PASS innerHTML 6 <a b="&quot;"></a>
-PASS innerHTML 7 <a b="<"></a>
-PASS innerHTML 8 <a b=">"></a>
-PASS innerHTML 9 <a href="javascript:&quot;<>&quot;"></a>
+PASS innerHTML 7 <a b="&lt;"></a>
+PASS innerHTML 8 <a b="&gt;"></a>
+PASS innerHTML 9 <a href="javascript:&quot;&lt;&gt;&quot;"></a>
 PASS innerHTML 10 <svg xlink:href="a"></svg>
 PASS innerHTML 11 <svg xmlns:svg="test"></svg>
 PASS innerHTML 12 a
@@ -35,9 +35,9 @@ PASS outerHTML 3 <span><a b="c"></a></span>
 PASS outerHTML 4 <span><a b="&amp;"></a></span>
 PASS outerHTML 5 <span><a b="&nbsp;"></a></span>
 PASS outerHTML 6 <span><a b="&quot;"></a></span>
-PASS outerHTML 7 <span><a b="<"></a></span>
-PASS outerHTML 8 <span><a b=">"></a></span>
-PASS outerHTML 9 <span><a href="javascript:&quot;<>&quot;"></a></span>
+PASS outerHTML 7 <span><a b="&lt;"></a></span>
+PASS outerHTML 8 <span><a b="&gt;"></a></span>
+PASS outerHTML 9 <span><a href="javascript:&quot;&lt;&gt;&quot;"></a></span>
 PASS outerHTML 10 <span><svg xlink:href="a"></svg></span>
 PASS outerHTML 11 <span><svg xmlns:svg="test"></svg></span>
 PASS outerHTML 12 <span>a</span>

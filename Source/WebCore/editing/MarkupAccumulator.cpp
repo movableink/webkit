@@ -445,8 +445,20 @@ StringBuilder MarkupAccumulator::takeMarkup()
 
 void MarkupAccumulator::appendAttributeValue(StringBuilder& result, const String& attribute)
 {
-    appendCharactersReplacingEntities(result, attribute,
-        inXMLFragmentSerialization() ? EntityMaskInAttributeValue : EntityMaskInHTMLAttributeValue);
+    auto entityMask = [&] -> OptionSet<EntityMask> {
+        switch (m_serializationSyntax) {
+        case SerializationSyntax::XML:
+            return EntityMaskInAttributeValue;
+        case SerializationSyntax::HTML:
+            return EntityMaskInHTMLAttributeValue;
+        case SerializationSyntax::HTMLLegacyAttributeValue:
+            return EntityMaskInHTMLLegacyAttributeValue;
+        default:
+            ASSERT_NOT_REACHED();
+            return EntityMaskInAttributeValue;
+        }
+    }();
+    appendCharactersReplacingEntities(result, attribute, entityMask);
 }
 
 void MarkupAccumulator::appendCustomAttributes(StringBuilder&, const Element&, Namespaces*)
@@ -885,6 +897,13 @@ static bool isElementExcludedByRule(const MarkupExclusionRule& rule, const Eleme
 bool MarkupAccumulator::shouldExcludeElement(const Element& element)
 {
     return std::ranges::any_of(m_exclusionRules, std::bind(isElementExcludedByRule, std::placeholders::_1, std::ref(element)));
+}
+
+SerializationSyntax MarkupAccumulator::serializationSyntax(Document& document)
+{
+    if (!document.isHTMLDocument())
+        return SerializationSyntax::XML;
+    return document.settings().htmlLegacyAttributeValueSerializationEnabled() ? SerializationSyntax::HTMLLegacyAttributeValue : SerializationSyntax::HTML;
 }
 
 }
