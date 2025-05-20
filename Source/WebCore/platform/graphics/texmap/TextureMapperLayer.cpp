@@ -478,12 +478,13 @@ void TextureMapperLayer::collectDamageSelf(TextureMapperPaintOptions& options, D
     if (targetRect.isEmpty())
         return;
 
-    if ((!isFlattened() || m_flattenedLayer->needsUpdate())
+    if (m_parent
+        && (!isFlattened() || m_flattenedLayer->needsUpdate())
         && !m_state.backgroundColor.isValid()
         && !m_backingStore
         && (!m_state.solidColor.isValid() || !m_state.solidColor.isVisible())
         && !m_contentsLayer) {
-        // Layers that have no visuals on their own should not contribute to the damage.
+        // Layers that have no visuals on their own should not contribute to the damage - except for the root layer.
         return;
     }
 
