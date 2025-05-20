@@ -80,6 +80,7 @@ Performance::Performance(ScriptExecutionContext* context, MonotonicTime timeOrig
     : ContextDestructionObserver(context)
     , m_resourceTimingBufferFullTimer(*this, &Performance::resourceTimingBufferFullTimerFired) // FIXME: Migrate this to the event loop as well. https://bugs.webkit.org/show_bug.cgi?id=229044
     , m_timeOrigin(timeOrigin)
+    , m_continuousTimeOrigin(timeOrigin.approximateContinuousTime())
 {
     ASSERT(m_timeOrigin);
 }
@@ -397,10 +398,17 @@ ExceptionOr<Ref<PerformanceMeasure>> Performance::measure(JSC::JSGlobalObject& g
     if (isSignpostEnabled()) {
 #if OS(DARWIN)
         Ref entry { measure.returnValue() };
-        auto startTime = (m_timeOrigin + Seconds::fromMilliseconds(entry->startTime())).approximateContinuousTime();
-        auto endTime = startTime + Seconds::fromMilliseconds(entry->duration());
+        auto startTime = m_continuousTimeOrigin + Seconds::fromMilliseconds(entry->startTime());
+        auto endTime = m_continuousTimeOrigin + Seconds::fromMilliseconds(entry->startTime() + entry->duration());
+        uint64_t platformStartTime = startTime.toMachContinuousTime();
+        uint64_t platformEndTime = endTime.toMachContinuousTime();
+        uint64_t correctedStartTime = std::min(platformStartTime, platformEndTime);
+        uint64_t correctedEndTime = std::max(platformStartTime, platformEndTime);
+        // Because signpost intervals are closed invervals [start, end], we decrease the endTime by 1 if startTime and endTime is not the same.
+        if (correctedStartTime != correctedEndTime)
+            correctedEndTime -= 1;
         auto message = measureName.utf8();
-        WTFEmitSignpostAlways(entry.ptr(), WebKitPerformance, "%{public}s %{public, signpost.description:begin_time}llu %{public, signpost.description:end_time}llu", message.data(), startTime.toMachContinuousTime(), endTime.toMachContinuousTime());
+        WTFEmitSignpostAlways(entry.ptr(), WebKitPerformance, "%{public}s %{public, signpost.description:begin_time}llu %{public, signpost.description:end_time}llu", message.data(), correctedStartTime, correctedEndTime);
 #endif
     }
 
