@@ -46,9 +46,7 @@ namespace WebCore {
 
 NSPoint globalPoint(const NSPoint& windowPoint, NSWindow *window)
 {
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    return flipScreenPoint([window convertBaseToScreen:windowPoint], screen(window));
-ALLOW_DEPRECATED_DECLARATIONS_END
+    return flipScreenPoint([window convertPointToScreen:windowPoint], screen(window));
 }
 
 NSPoint globalPointForEvent(NSEvent *event)

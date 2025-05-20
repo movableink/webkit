@@ -242,9 +242,7 @@ IntRect ScrollView::platformContentsToScreen(const IntRect& rect) const
     if (NSView* documentView = this->documentView()) {
         NSRect tempRect = rect;
         tempRect = [documentView convertRect:tempRect toView:nil];
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        tempRect.origin = [[documentView window] convertBaseToScreen:tempRect.origin];
-ALLOW_DEPRECATED_DECLARATIONS_END
+        tempRect.origin = [[documentView window] convertPointToScreen:tempRect.origin];
         return enclosingIntRect(tempRect);
     }
     END_BLOCK_OBJC_EXCEPTIONS
