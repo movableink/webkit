@@ -418,10 +418,14 @@ void MediaDevices::enumerateDevices(EnumerateDevicesPromise&& promise)
         return;
     }
 
-    controller->enumerateMediaDevices(*document, [weakThis = WeakPtr { *this }, promise = WTFMove(promise)](Vector<CaptureDeviceWithCapabilities>&& newDevices, MediaDeviceHashSalts&& deviceIDHashSalts) mutable {
+    controller->enumerateMediaDevices(*document, [weakThis = WeakPtr { *this }, promise = WTFMove(promise), userGestureToken = UserGestureIndicator::currentUserGesture()](Vector<CaptureDeviceWithCapabilities>&& newDevices, MediaDeviceHashSalts&& deviceIDHashSalts) mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
+
+        std::optional<UserGestureIndicator> gestureIndicator;
+        if (userGestureToken)
+            gestureIndicator.emplace(userGestureToken, UserGestureToken::GestureScope::MediaOnly, UserGestureToken::IsPropagatedFromFetch::Yes);
 
         protectedThis->exposeDevices(WTFMove(newDevices), WTFMove(deviceIDHashSalts), WTFMove(promise));
     });
@@ -438,8 +442,8 @@ void MediaDevices::scheduledEventTimerFired()
     if (!document)
         return;
 
-    document->whenVisible([activity = makePendingActivity(*this), this, protectedThis = Ref { *this }] {
-        queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, Event::create(eventNames().devicechangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    document->whenVisible([activity = makePendingActivity(*this)] {
+        activity->object().queueTaskForDeviceChangeEvent(UserActivation::Yes);
     });
 }
 
@@ -494,7 +498,19 @@ void MediaDevices::willStartMediaCapture(bool microphone, bool camera)
     if (!shouldFireDeviceChangeEvent || !m_listeningForDeviceChanges)
         return;
 
-    queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, Event::create(eventNames().devicechangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    queueTaskForDeviceChangeEvent(microphone ? UserActivation::Yes : UserActivation::No);
+}
+
+void MediaDevices::queueTaskForDeviceChangeEvent(UserActivation userActivation)
+{
+    queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [userActivation](auto& mediaDevices) {
+        std::optional<UserGestureIndicator> gestureIndicator;
+        if (userActivation == UserActivation::Yes) {
+            RefPtr document = mediaDevices.document();
+            gestureIndicator.emplace(IsProcessingUserGesture::Potentially, document.get(), UserGestureType::Other);
+        }
+        mediaDevices.dispatchEvent(Event::create(eventNames().devicechangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    });
 }
 
 } // namespace WebCore
