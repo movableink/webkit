@@ -1527,7 +1527,7 @@ void RenderLayerBacking::updateGeometry(const RenderLayer* compositedAncestor)
 
     bool isRunningAcceleratedTransformAnimation = false;
     if (auto styleable = Styleable::fromRenderer(renderer()))
-        isRunningAcceleratedTransformAnimation = styleable->isRunningAcceleratedTransformAnimation();
+        isRunningAcceleratedTransformAnimation = styleable->isRunningAcceleratedAnimationOfProperty(CSSPropertyTransform);
 
     updateTransform(style);
     updateOpacity(style);

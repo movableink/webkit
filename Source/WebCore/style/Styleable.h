@@ -79,7 +79,7 @@ struct Styleable {
 
     bool mayHaveNonZeroOpacity() const;
 
-    bool isRunningAcceleratedTransformAnimation() const;
+    bool isRunningAcceleratedAnimationOfProperty(CSSPropertyID) const;
 
     bool hasRunningAcceleratedAnimations() const;
 

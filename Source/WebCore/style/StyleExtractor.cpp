@@ -200,18 +200,14 @@ bool Extractor::updateStyleIfNeededForProperty(Element& element, CSSPropertyID p
     return true;
 }
 
-static inline const RenderStyle* computeRenderStyleForProperty(Element& element, const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier, CSSPropertyID propertyID, std::unique_ptr<RenderStyle>& ownedStyle, SingleThreadWeakPtr<RenderElement> renderer)
+static inline const RenderStyle* computeRenderStyleForProperty(Element& element, const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier, CSSPropertyID propertyID, std::unique_ptr<RenderStyle>& ownedStyle)
 {
-    if (!renderer)
-        renderer = element.renderer();
-
-    if (renderer && renderer->isComposited() && Style::Interpolation::isAccelerated(propertyID, element.document().settings())) {
-        ownedStyle = renderer->animatedStyle();
-        if (pseudoElementIdentifier) {
-            // FIXME: This cached pseudo style will only exist if the animation has been run at least once.
-            return ownedStyle->getCachedPseudoStyle(*pseudoElementIdentifier);
+    if (Style::Interpolation::isAccelerated(propertyID, element.document().settings())) {
+        Styleable styleable(element, pseudoElementIdentifier);
+        if (styleable.renderer() && styleable.isRunningAcceleratedAnimationOfProperty(propertyID)) {
+            ownedStyle = styleable.renderer()->animatedStyle();
+            return ownedStyle.get();
         }
-        return ownedStyle.get();
     }
 
     return element.computedStyle(pseudoElementIdentifier);
@@ -226,7 +222,7 @@ RefPtr<CSSValue> Extractor::customPropertyValue(const AtomString& propertyName) 
     updateStyleIfNeededForProperty(*element, CSSPropertyCustom);
 
     std::unique_ptr<RenderStyle> ownedStyle;
-    auto* style = computeRenderStyleForProperty(*element, m_pseudoElementIdentifier, CSSPropertyCustom, ownedStyle, nullptr);
+    auto* style = computeRenderStyleForProperty(*element, m_pseudoElementIdentifier, CSSPropertyCustom, ownedStyle);
     if (!style)
         return nullptr;
 
@@ -235,7 +231,7 @@ RefPtr<CSSValue> Extractor::customPropertyValue(const AtomString& propertyName) 
     if (document->hasStyleWithViewportUnits()) {
         if (RefPtr owner = document->ownerElement()) {
             owner->document().updateLayout();
-            style = computeRenderStyleForProperty(*element, m_pseudoElementIdentifier, CSSPropertyCustom, ownedStyle, nullptr);
+            style = computeRenderStyleForProperty(*element, m_pseudoElementIdentifier, CSSPropertyCustom, ownedStyle);
         }
     }
 
@@ -380,7 +376,7 @@ const RenderStyle* Extractor::computeStyle(CSSPropertyID propertyID, UpdateLayou
                 return nullptr;
         }
 
-        style = computeRenderStyleForProperty(*element, m_pseudoElementIdentifier, propertyID, ownedStyle, renderer);
+        style = computeRenderStyleForProperty(*element, m_pseudoElementIdentifier, propertyID, ownedStyle);
 
         forcedLayout = [&] {
             // FIXME: Some of these cases could be narrowed down or optimized better.
@@ -412,7 +408,7 @@ const RenderStyle* Extractor::computeStyle(CSSPropertyID propertyID, UpdateLayou
     }
 
     if (updateLayout == UpdateLayout::No || forcedLayout != ForcedLayout::No)
-        style = computeRenderStyleForProperty(*element, m_pseudoElementIdentifier, propertyID, ownedStyle, computeRenderer());
+        style = computeRenderStyleForProperty(*element, m_pseudoElementIdentifier, propertyID, ownedStyle);
 
     return style;
 }

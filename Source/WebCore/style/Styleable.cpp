@@ -225,14 +225,14 @@ bool Styleable::mayHaveNonZeroOpacity() const
     return false;
 }
 
-bool Styleable::isRunningAcceleratedTransformAnimation() const
+bool Styleable::isRunningAcceleratedAnimationOfProperty(CSSPropertyID property) const
 {
     auto* effectStack = keyframeEffectStack();
     if (!effectStack)
         return false;
 
     for (const auto& effect : effectStack->sortedEffects()) {
-        if (effect->isCurrentlyAffectingProperty(CSSPropertyTransform, KeyframeEffect::Accelerated::Yes))
+        if (effect->isCurrentlyAffectingProperty(property, KeyframeEffect::Accelerated::Yes))
             return true;
     }
 
