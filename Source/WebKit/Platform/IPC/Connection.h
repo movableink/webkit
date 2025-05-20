@@ -86,7 +86,6 @@ enum class SendOption : uint8_t {
     // This is the default for synchronous messages.
     DispatchMessageEvenWhenWaitingForSyncReply = 1 << 0,
     DispatchMessageEvenWhenWaitingForUnboundedSyncReply = 1 << 1,
-    IgnoreFullySynchronousMode = 1 << 2,
 #if ENABLE(IPC_TESTING_API)
     IPCTestingMessage = 1 << 3,
 #endif
