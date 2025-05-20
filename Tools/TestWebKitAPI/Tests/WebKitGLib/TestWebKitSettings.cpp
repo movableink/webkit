@@ -89,6 +89,15 @@ static void testWebKitSettings(Test*, gconstpointer)
     webkit_settings_set_javascript_can_open_windows_automatically(settings, TRUE);
     g_assert_true(webkit_settings_get_javascript_can_open_windows_automatically(settings));
 
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    // Hyperlink auditing is deprecated and always enabled.
+    Test::removeLogFatalFlag(G_LOG_LEVEL_WARNING);
+    g_assert_true(webkit_settings_get_enable_hyperlink_auditing(settings));
+    webkit_settings_set_enable_hyperlink_auditing(settings, FALSE);
+    g_assert_true(webkit_settings_get_enable_hyperlink_auditing(settings));
+    Test::addLogFatalFlag(G_LOG_LEVEL_WARNING);
+    ALLOW_DEPRECATED_DECLARATIONS_END
+
     // Default font family is "sans-serif".
     g_assert_cmpstr(webkit_settings_get_default_font_family(settings), ==, "sans-serif");
     webkit_settings_set_default_font_family(settings, "monospace");

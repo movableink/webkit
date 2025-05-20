@@ -2154,11 +2154,9 @@ void webkit_settings_set_javascript_can_open_windows_automatically(WebKitSetting
  */
 gboolean webkit_settings_get_enable_hyperlink_auditing(WebKitSettings* settings)
 {
-    g_return_val_if_fail(WEBKIT_IS_SETTINGS(settings), FALSE);
+    g_return_val_if_fail(WEBKIT_IS_SETTINGS(settings), TRUE);
 
-    g_warning("webkit_settings_get_enable_hyperlink_auditing is deprecated and always returns FALSE.");
-
-    return FALSE;
+    return TRUE;
 }
 
 /**
