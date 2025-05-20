@@ -509,6 +509,7 @@ ALWAYS_INLINE float Font::widthForGlyph(Glyph glyph, SyntheticBoldInclusion Synt
 
 #if !LOG_DISABLED
 WEBCORE_EXPORT TextStream& operator<<(TextStream&, const Font&);
+TextStream& operator<<(TextStream&, const GlyphBuffer&);
 #endif
 
 } // namespace WebCore

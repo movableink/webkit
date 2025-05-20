@@ -684,6 +684,28 @@ TextStream& operator<<(TextStream& ts, const Font& font)
     ts << font.description();
     return ts;
 }
+
+WTF::TextStream& operator<<(WTF::TextStream& ts, const GlyphBuffer& glyphBuffer)
+{
+    ts << "glyphBuffer: " << &glyphBuffer;
+    auto initialAdvance = glyphBuffer.initialAdvance();
+    ts << ", initial advance: width:" <<  width(initialAdvance) << " height:" << height(initialAdvance);
+    for (size_t index = 0; index < glyphBuffer.size(); ++index) {
+        auto advance = glyphBuffer.advanceAt(index);
+        auto& font = glyphBuffer.fontAt(index);
+        auto glyph =  glyphBuffer.glyphAt(index);
+        auto bounds = font.boundsForGlyph(glyph);
+        ts << "\n"_s;
+        ts << "glyph index: " << index;
+        ts << ", glyph: " << glyph;
+        ts << ", font: " <<  &font;
+        ts << ", advance: width:" <<  width(advance) << " height:" << height(advance);
+        ts << ", string index: "  << glyphBuffer.uncheckedStringOffsetAt(index);
+        ts << ", origin: " << glyphBuffer.originAt(index);
+        ts << ", glyph bounds: " << bounds;
+    }
+    return ts;
+}
 #endif
 
 } // namespace WebCore
