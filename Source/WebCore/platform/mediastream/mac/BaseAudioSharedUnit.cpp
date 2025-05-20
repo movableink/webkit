@@ -91,6 +91,7 @@ const static OSStatus lowPriorityError2 = 561017449;
 void BaseAudioSharedUnit::startProducingData()
 {
     ASSERT(isMainThread());
+    ASSERT(m_isAllowedToStart);
 
     if (m_suspended)
         resume();

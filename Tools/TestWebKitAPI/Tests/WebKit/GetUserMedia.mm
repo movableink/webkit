@@ -2060,15 +2060,13 @@ TEST(WebKit2, getUserMediaWithDeviceChangeWebPage)
     done = false;
 }
 
-// FIXME: Re-enable this test once webkit.org/b/293136 is resolved.
 #if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
-#if defined(NDEBUG)
 TEST(WebKit, GetUserMediaWithWebThread)
-#else
-TEST(WebKit, DISABLED_GetUserMediaWithWebThread)
-#endif
 {
+#if defined(NDEBUG)
+    // We only enable web thread in release builds as our main thread assertions are not handling well web thread existence
     [WebView enableWebThread];
+#endif
 
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
     auto processPoolConfig = adoptNS([[_WKProcessPoolConfiguration alloc] init]);
