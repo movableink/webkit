@@ -41,6 +41,7 @@
 #include "PageIdentifier.h"
 #include "PlaybackTargetClientContextIdentifier.h"
 #include "PseudoElementIdentifier.h"
+#include "QualifiedName.h"
 #include "RegistrableDomain.h"
 #include "RenderPtr.h"
 #include "ReportingClient.h"

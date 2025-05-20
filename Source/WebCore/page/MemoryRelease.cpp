@@ -26,6 +26,7 @@
 #include "config.h"
 #include "MemoryRelease.h"
 
+#include "AsyncNodeDeletionQueueInlines.h"
 #include "BackForwardCache.h"
 #include "CSSFontSelector.h"
 #include "CSSValuePool.h"

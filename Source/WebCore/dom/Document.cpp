@@ -31,6 +31,7 @@
 #include "AXObjectCache.h"
 #include "AnimationTimelinesController.h"
 #include "ApplicationManifest.h"
+#include "AsyncNodeDeletionQueueInlines.h"
 #include "Attr.h"
 #include "BeforeUnloadEvent.h"
 #include "CDATASection.h"

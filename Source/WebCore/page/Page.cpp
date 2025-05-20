@@ -29,6 +29,7 @@
 #include "AppHighlightStorage.h"
 #include "ApplicationCacheStorage.h"
 #include "ArchiveResource.h"
+#include "AsyncNodeDeletionQueueInlines.h"
 #include "AttachmentElementClient.h"
 #include "AuthenticatorCoordinator.h"
 #include "AuthenticatorCoordinatorClient.h"
