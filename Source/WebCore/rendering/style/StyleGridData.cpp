@@ -244,6 +244,11 @@ WTF::TextStream& operator<<(WTF::TextStream& ts, const GridTrackEntry& entry)
     return ts;
 }
 
+WTF::TextStream& operator<<(WTF::TextStream& ts, const NamedGridLinesMap& namedGridLinesMap)
+{
+    return ts << namedGridLinesMap.map;
+}
+
 Ref<StyleGridData> StyleGridData::copy() const
 {
     return adoptRef(*new StyleGridData(*this));

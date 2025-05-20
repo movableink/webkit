@@ -81,6 +81,7 @@ inline WTF::TextStream& operator<<(WTF::TextStream& stream, const GridTrackList&
 
 WTF::TextStream& operator<<(WTF::TextStream&, const RepeatEntry&);
 WTF::TextStream& operator<<(WTF::TextStream&, const GridTrackEntry&);
+WTF::TextStream& operator<<(WTF::TextStream&, const NamedGridLinesMap&);
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleGridData);
 class StyleGridData : public RefCounted<StyleGridData> {
