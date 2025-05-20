@@ -65,9 +65,7 @@ static HashMap<BroadcastChannelIdentifier, ScriptExecutionContextIdentifier>& ch
 
 static PartitionedSecurityOrigin partitionedSecurityOriginFromContext(ScriptExecutionContext& context)
 {
-    Ref securityOrigin { *context.securityOrigin() };
-    Ref topOrigin { context.settingsValues().broadcastChannelOriginPartitioningEnabled ? context.topOrigin() : securityOrigin.get() };
-    return { WTFMove(topOrigin), WTFMove(securityOrigin) };
+    return { context.topOrigin(), context.protectedSecurityOrigin().releaseNonNull() };
 }
 
 class BroadcastChannel::MainThreadBridge : public ThreadSafeRefCounted<MainThreadBridge, WTF::DestructionThread::Main>, public Identified<BroadcastChannelIdentifier> {

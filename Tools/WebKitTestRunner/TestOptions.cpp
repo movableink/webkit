@@ -86,7 +86,6 @@ const TestFeatures& TestOptions::defaults()
             { "AppBadgeEnabled", true },
             { "AsyncFrameScrollingEnabled", false },
             { "AsyncOverflowScrollingEnabled", false },
-            { "BroadcastChannelOriginPartitioningEnabled", false },
             { "BuiltInNotificationsEnabled", false },
             { "CSSOMViewScrollingAPIEnabled", true },
             { "CSSUnprefixedBackdropFilterEnabled", true },

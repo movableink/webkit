@@ -992,20 +992,6 @@ BroadcastChannelEnabled:
     WebCore:
       default: true
 
-BroadcastChannelOriginPartitioningEnabled:
-  type: bool
-  status: stable
-  category: dom
-  humanReadableName: "BroadcastChannel Origin Partitioning"
-  humanReadableDescription: "BroadcastChannel Origin Partitioning"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 BuiltInNotificationsEnabled:
   type: bool
   status: unstable
