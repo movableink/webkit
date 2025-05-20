@@ -92,6 +92,13 @@ static Layout::Box::ElementAttributes elementAttributes(const RenderElement& ren
 
 BoxTreeUpdater::BoxTreeUpdater(RenderBlock& rootRenderer)
     : m_rootRenderer(rootRenderer)
+    , m_document(rootRenderer.document())
+{
+}
+
+BoxTreeUpdater::BoxTreeUpdater(RenderBlock& rootRenderer, const Document& document)
+    : m_rootRenderer(rootRenderer)
+    , m_document(document)
 {
 }
 
@@ -125,6 +132,9 @@ CheckedRef<Layout::ElementBox> BoxTreeUpdater::build()
 
 void BoxTreeUpdater::tearDown()
 {
+    if (m_document->renderTreeBeingDestroyed())
+        return rootLayoutBox().destroyChildren();
+
     Vector<CheckedRef<Layout::Box>> boxesToDetach;
     for (auto& constLayoutBox : formattingContextBoxes(rootLayoutBox())) {
         auto& layoutBox = const_cast<Layout::Box&>(constLayoutBox);

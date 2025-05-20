@@ -166,6 +166,7 @@ private:
 
 private:
     CheckedPtr<Layout::ElementBox> m_rootLayoutBox;
+    CheckedPtr<Document> m_document;
     WeakPtr<Layout::LayoutState> m_layoutState;
     Layout::BlockFormattingState& m_blockFormattingState;
     Layout::InlineContentCache& m_inlineContentCache;

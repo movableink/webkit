@@ -228,6 +228,7 @@ static const InlineDisplay::Line& lastLineWithInlineContent(const InlineDisplay:
 
 LineLayout::LineLayout(RenderBlockFlow& flow)
     : m_rootLayoutBox(BoxTreeUpdater { flow }.build())
+    , m_document(flow.document())
     , m_layoutState(flow.view().layoutState())
     , m_blockFormattingState(layoutState().ensureBlockFormattingState(rootLayoutBox()))
     , m_inlineContentCache(layoutState().inlineContentCache(rootLayoutBox()))
@@ -240,7 +241,7 @@ LineLayout::~LineLayout()
     auto& rootRenderer = flow();
     auto shouldPopulateBreakingPositionCache = [&] {
         auto mayHaveInvalidContent = isDamaged() || !m_inlineContent;
-        if (rootRenderer.document().renderTreeBeingDestroyed() || mayHaveInvalidContent)
+        if (m_document->renderTreeBeingDestroyed() || mayHaveInvalidContent)
             return false;
         return !m_inlineContentCache.inlineItems().isPopulatedFromCache();
     };
@@ -253,7 +254,7 @@ LineLayout::~LineLayout()
     m_lineDamage = { };
     m_rootLayoutBox = nullptr;
 
-    BoxTreeUpdater { rootRenderer }.tearDown();
+    BoxTreeUpdater { rootRenderer, *m_document }.tearDown();
 }
 
 static inline bool isContentRenderer(const RenderObject& renderer)
