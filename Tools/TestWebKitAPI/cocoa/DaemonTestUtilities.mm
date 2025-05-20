@@ -31,6 +31,20 @@
 #import <mach-o/dyld.h>
 #import <wtf/Vector.h>
 
+#if USE(APPLE_INTERNAL_SDK)
+// AppServerSupport cannot be safely imported within modules, so avoid putting
+// this SPI declaration in headers.
+#import <AppServerSupport/OSLaunchdJob.h>
+#else
+#import <Foundation/NSError.h>
+NS_ASSUME_NONNULL_BEGIN
+@interface OSLaunchdJob : NSObject
+- (instancetype)initWithPlist:(xpc_object_t)plist;
+- (BOOL)submit:(NSError * _Nullable __autoreleasing * _Nullable)errorOut;
+@end
+NS_ASSUME_NONNULL_END
+#endif
+
 NS_ASSUME_NONNULL_BEGIN
 
 #if PLATFORM(IOS) || PLATFORM(VISION)
