@@ -261,7 +261,7 @@
       "factory": "iOSTestsFactory", "platform": "ios-simulator-18",
       "configuration": "release",
       "triggered_by": ["ios-18-sim-build-ews"],
-      "additionalArguments": ["--child-processes=5", "imported/w3c/web-platform-tests"],
+      "additionalArguments": ["--child-processes=4", "imported/w3c/web-platform-tests"],
       "workernames": ["ews191", "ews192", "ews193", "ews194", "ews195", "ews196", "ews197", "ews198"]
     },
     {
