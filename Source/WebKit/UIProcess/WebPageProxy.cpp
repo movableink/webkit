@@ -5004,6 +5004,9 @@ void WebPageProxy::receivedNavigationActionPolicyDecision(WebProcessProxy& proce
         receivedPolicyDecision(policyAction, navigation.ptr(), navigation->websitePolicies(), WTFMove(navigationAction), WillContinueLoadInNewProcess::No, WTFMove(optionalHandle), WTFMove(message), WTFMove(completionHandler));
     };
 
+    if (processSwapRequestedByClient == ProcessSwapRequestedByClient::Yes)
+        m_browsingContextGroup = BrowsingContextGroup::create();
+
     m_configuration->protectedProcessPool()->processForNavigation(*this, frame, *navigation, sourceURL, processSwapRequestedByClient, lockdownMode, loadedWebArchive, frameInfo, WTFMove(websiteDataStore), WTFMove(continueWithProcessForNavigation));
 }
 
