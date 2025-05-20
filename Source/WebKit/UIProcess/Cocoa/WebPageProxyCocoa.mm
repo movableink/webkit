@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -193,9 +193,9 @@ void WebPageProxy::layerTreeCommitComplete()
 
 #if ENABLE(DATA_DETECTION)
 
-void WebPageProxy::setDataDetectionResult(const DataDetectionResult& dataDetectionResult)
+void WebPageProxy::setDataDetectionResult(DataDetectionResult&& dataDetectionResult)
 {
-    m_dataDetectionResults = dataDetectionResult.results;
+    m_dataDetectionResults = WTFMove(dataDetectionResult.results);
 }
 
 void WebPageProxy::handleClickForDataDetectionResult(const DataDetectorElementInfo& info, const IntPoint& clickLocation)

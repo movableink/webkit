@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -93,10 +93,10 @@ ASCIILiteral AXObjectCache::notificationPlatformName(AXNotification notification
     return name;
 }
 
-void AXObjectCache::relayNotification(const String& notificationName, RetainPtr<NSData> notificationData)
+void AXObjectCache::relayNotification(String&& notificationName, RetainPtr<NSData>&& notificationData)
 {
     if (RefPtr page = document() ? document()->page() : nullptr)
-        page->chrome().relayAccessibilityNotification(notificationName, notificationData);
+        page->chrome().relayAccessibilityNotification(WTFMove(notificationName), WTFMove(notificationData));
 }
 
 void AXObjectCache::postPlatformNotification(AccessibilityObject& object, AXNotification notification)

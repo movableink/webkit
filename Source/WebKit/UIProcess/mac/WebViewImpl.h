@@ -534,7 +534,7 @@ public:
     void setInspectorAttachmentView(NSView *);
     RetainPtr<NSView> inspectorAttachmentView();
     
-    void showShareSheet(const WebCore::ShareDataWithParsedURL&, WTF::CompletionHandler<void(bool)>&&, WKWebView *);
+    void showShareSheet(WebCore::ShareDataWithParsedURL&&, WTF::CompletionHandler<void(bool)>&&, WKWebView *);
     void shareSheetDidDismiss(WKShareSheet *);
 
 #if HAVE(DIGITAL_CREDENTIALS_UI)

@@ -2854,7 +2854,7 @@ void WebViewImpl::selectionDidChange()
     [m_view _web_editorStateDidChange];
 }
 
-void WebViewImpl::showShareSheet(const WebCore::ShareDataWithParsedURL& data, WTF::CompletionHandler<void(bool)>&& completionHandler, WKWebView *view)
+void WebViewImpl::showShareSheet(WebCore::ShareDataWithParsedURL&& data, WTF::CompletionHandler<void(bool)>&& completionHandler, WKWebView *view)
 {
     if (_shareSheet)
         [_shareSheet dismissIfNeededWithReason:WebKit::PickerDismissalReason::ResetState];

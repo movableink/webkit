@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,9 +50,9 @@ static const CGFloat horizontalPadding = 5;
 static const CGFloat verticalPadding = 5;
 static const CGFloat maxLabelWidth = 300;
 
-ValidationBubble::ValidationBubble(NSView* view, const String& message, const Settings& settings)
+ValidationBubble::ValidationBubble(NSView* view, String&& message, const Settings& settings)
     : m_view(view)
-    , m_message(message)
+    , m_message(WTFMove(message))
 {
     RetainPtr<NSViewController> controller = adoptNS([[NSViewController alloc] init]);
 
@@ -63,7 +63,7 @@ ValidationBubble::ValidationBubble(NSView* view, const String& message, const Se
     [label setEditable:NO];
     [label setDrawsBackground:NO];
     [label setBordered:NO];
-    [label setStringValue:message.createNSString().get()];
+    [label setStringValue:m_message.createNSString().get()];
     m_fontSize = std::max(settings.minimumFontSize, 13.0);
     [label setFont:[NSFont systemFontOfSize:m_fontSize]];
     [label setMaximumNumberOfLines:4];

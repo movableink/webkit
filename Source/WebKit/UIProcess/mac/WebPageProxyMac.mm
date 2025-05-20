@@ -701,13 +701,13 @@ void WebPageProxy::rootViewToWindow(const WebCore::IntRect& viewRect, WebCore::I
     windowRect = pageClient ? pageClient->rootViewToWindow(viewRect) : WebCore::IntRect { };
 }
 
-void WebPageProxy::showValidationMessage(const IntRect& anchorClientRect, const String& message)
+void WebPageProxy::showValidationMessage(const IntRect& anchorClientRect, String&& message)
 {
     RefPtr pageClient = this->pageClient();
     if (!pageClient)
         return;
 
-    m_validationBubble = protectedPageClient()->createValidationBubble(message, { protectedPreferences()->minimumFontSize() });
+    m_validationBubble = protectedPageClient()->createValidationBubble(WTFMove(message), { protectedPreferences()->minimumFontSize() });
     RefPtr { m_validationBubble }->showRelativeTo(anchorClientRect);
 }
 

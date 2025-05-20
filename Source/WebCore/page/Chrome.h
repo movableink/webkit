@@ -120,7 +120,7 @@ public:
     IntRect rootViewToAccessibilityScreen(const IntRect&) const override;
     PlatformPageClient platformPageClient() const override;
 #if PLATFORM(IOS_FAMILY)
-    void relayAccessibilityNotification(const String&, const RetainPtr<NSData>&) const override;
+    void relayAccessibilityNotification(String&&, RetainPtr<NSData>&&) const override;
 #endif
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
@@ -187,7 +187,7 @@ public:
     void setResizable(bool);
 
     bool canRunBeforeUnloadConfirmPanel();
-    bool runBeforeUnloadConfirmPanel(const String& message, LocalFrame&);
+    bool runBeforeUnloadConfirmPanel(String&& message, LocalFrame&);
 
     void closeWindow();
 
@@ -211,8 +211,8 @@ public:
     std::unique_ptr<WorkerClient> createWorkerClient(SerialFunctionDispatcher&);
 
     void runOpenPanel(LocalFrame&, FileChooser&);
-    void showShareSheet(ShareDataWithParsedURL&, CompletionHandler<void(bool)>&&);
-    void showContactPicker(const ContactsRequestData&, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&&);
+    void showShareSheet(ShareDataWithParsedURL&&, CompletionHandler<void(bool)>&&);
+    void showContactPicker(ContactsRequestData&&, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&&);
 
 #if HAVE(DIGITAL_CREDENTIALS_UI)
     void showDigitalCredentialsPicker(const DigitalCredentialsRequestData&, WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&&);

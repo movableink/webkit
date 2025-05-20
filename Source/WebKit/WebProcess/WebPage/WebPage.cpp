@@ -4252,12 +4252,12 @@ String WebPage::userAgent(const URL& webCoreURL) const
     return m_userAgent;
 }
 
-void WebPage::setUserAgent(const String& userAgent)
+void WebPage::setUserAgent(String&& userAgent)
 {
     if (m_userAgent == userAgent)
         return;
 
-    m_userAgent = userAgent;
+    m_userAgent = WTFMove(userAgent);
 
     if (RefPtr page = m_page)
         page->userAgentChanged();
@@ -4879,7 +4879,7 @@ void WebPage::setDataDetectionResults(NSArray *detectionResults)
     send(Messages::WebPageProxy::SetDataDetectionResult(dataDetectionResult));
 }
 
-void WebPage::removeDataDetectedLinks(CompletionHandler<void(const DataDetectionResult&)>&& completionHandler)
+void WebPage::removeDataDetectedLinks(CompletionHandler<void(DataDetectionResult&&)>&& completionHandler)
 {
     for (RefPtr frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame.get());
@@ -4900,11 +4900,11 @@ void WebPage::removeDataDetectedLinks(CompletionHandler<void(const DataDetection
     completionHandler({ });
 }
 
-static void detectDataInFrame(const Ref<Frame>& frame, OptionSet<WebCore::DataDetectorType> dataDetectorTypes, const std::optional<double>& dataDetectionReferenceDate, UniqueRef<DataDetectionResult>&& mainFrameResult, CompletionHandler<void(const DataDetectionResult&)>&& completionHandler)
+static void detectDataInFrame(const Ref<Frame>& frame, OptionSet<WebCore::DataDetectorType> dataDetectorTypes, const std::optional<double>& dataDetectionReferenceDate, UniqueRef<DataDetectionResult>&& mainFrameResult, CompletionHandler<void(DataDetectionResult&&)>&& completionHandler)
 {
     RefPtr localFrame = dynamicDowncast<LocalFrame>(frame.get());
     if (!localFrame) {
-        completionHandler(mainFrameResult.get());
+        completionHandler(WTFMove(mainFrameResult.get()));
         return;
     }
 
@@ -4915,7 +4915,7 @@ static void detectDataInFrame(const Ref<Frame>& frame, OptionSet<WebCore::DataDe
 
         RefPtr next = localFrame->tree().traverseNext();
         if (!next) {
-            completionHandler(mainFrameResult.get());
+            completionHandler(WTFMove(mainFrameResult.get()));
             return;
         }
 
@@ -4923,7 +4923,7 @@ static void detectDataInFrame(const Ref<Frame>& frame, OptionSet<WebCore::DataDe
     });
 }
 
-void WebPage::detectDataInAllFrames(OptionSet<WebCore::DataDetectorType> dataDetectorTypes, CompletionHandler<void(const DataDetectionResult&)>&& completionHandler)
+void WebPage::detectDataInAllFrames(OptionSet<WebCore::DataDetectorType> dataDetectorTypes, CompletionHandler<void(DataDetectionResult&&)>&& completionHandler)
 {
     auto mainFrameResult = makeUniqueRef<DataDetectionResult>();
     detectDataInFrame(protectedCorePage()->protectedMainFrame().get(), dataDetectorTypes, m_dataDetectionReferenceDate, WTFMove(mainFrameResult), WTFMove(completionHandler));
@@ -8679,14 +8679,14 @@ void WebPage::shouldAllowDeviceOrientationAndMotionAccess(FrameIdentifier frameI
 }
 #endif
     
-void WebPage::showShareSheet(ShareDataWithParsedURL& shareData, WTF::CompletionHandler<void(bool)>&& callback)
+void WebPage::showShareSheet(ShareDataWithParsedURL&& shareData, WTF::CompletionHandler<void(bool)>&& callback)
 {
     sendWithAsyncReply(Messages::WebPageProxy::ShowShareSheet(WTFMove(shareData)), WTFMove(callback));
 }
 
-void WebPage::showContactPicker(const WebCore::ContactsRequestData& requestData, CompletionHandler<void(std::optional<Vector<WebCore::ContactInfo>>&&)>&& callback)
+void WebPage::showContactPicker(WebCore::ContactsRequestData&& requestData, CompletionHandler<void(std::optional<Vector<WebCore::ContactInfo>>&&)>&& callback)
 {
-    sendWithAsyncReply(Messages::WebPageProxy::ShowContactPicker(requestData), WTFMove(callback));
+    sendWithAsyncReply(Messages::WebPageProxy::ShowContactPicker(WTFMove(requestData)), WTFMove(callback));
 }
 
 #if HAVE(DIGITAL_CREDENTIALS_UI)

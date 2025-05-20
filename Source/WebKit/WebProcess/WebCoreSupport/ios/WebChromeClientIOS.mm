@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -194,10 +194,10 @@ bool WebChromeClient::showDataDetectorsUIForElement(const Element& element, cons
     return true;
 }
 
-void WebChromeClient::relayAccessibilityNotification(const String& notificationName, const RetainPtr<NSData>& notificationData) const
+void WebChromeClient::relayAccessibilityNotification(String&& notificationName, RetainPtr<NSData>&& notificationData) const
 {
     if (RefPtr page = m_page.get())
-        page->relayAccessibilityNotification(notificationName, notificationData);
+        page->relayAccessibilityNotification(WTFMove(notificationName), WTFMove(notificationData));
 }
 
 } // namespace WebKit

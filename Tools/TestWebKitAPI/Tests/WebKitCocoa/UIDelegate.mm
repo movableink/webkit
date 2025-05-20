@@ -874,12 +874,7 @@ TEST(WebKit, PrintFrame)
     TestWebKitAPI::Util::run(&drawFooterCalled);
 }
 
-// FIXME(rdar://problem/150940868)
-#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 140000
-TEST(WebKit, DISABLED_PrintPreview)
-#else
 TEST(WebKit, PrintPreview)
-#endif
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
     auto delegate = adoptNS([[PrintDelegate alloc] init]);

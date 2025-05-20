@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -279,9 +279,9 @@ bool WebFrameProxy::isDisplayingPDFDocument() const
     return MIMETypeRegistry::isPDFMIMEType(m_MIMEType);
 }
 
-void WebFrameProxy::didStartProvisionalLoad(const URL& url)
+void WebFrameProxy::didStartProvisionalLoad(URL&& url)
 {
-    m_frameLoadState.didStartProvisionalLoad(url);
+    m_frameLoadState.didStartProvisionalLoad(WTFMove(url));
 }
 
 void WebFrameProxy::didExplicitOpen(URL&& url, String&& mimeType)
@@ -290,9 +290,9 @@ void WebFrameProxy::didExplicitOpen(URL&& url, String&& mimeType)
     m_frameLoadState.didExplicitOpen(WTFMove(url));
 }
 
-void WebFrameProxy::didReceiveServerRedirectForProvisionalLoad(const URL& url)
+void WebFrameProxy::didReceiveServerRedirectForProvisionalLoad(URL&& url)
 {
-    m_frameLoadState.didReceiveServerRedirectForProvisionalLoad(url);
+    m_frameLoadState.didReceiveServerRedirectForProvisionalLoad(WTFMove(url));
 }
 
 void WebFrameProxy::didFailProvisionalLoad()
@@ -333,14 +333,14 @@ void WebFrameProxy::didFailLoad()
         m_navigateCallback({ }, { });
 }
 
-void WebFrameProxy::didSameDocumentNavigation(const URL& url)
+void WebFrameProxy::didSameDocumentNavigation(URL&& url)
 {
-    m_frameLoadState.didSameDocumentNotification(url);
+    m_frameLoadState.didSameDocumentNotification(WTFMove(url));
 }
 
-void WebFrameProxy::didChangeTitle(const String& title)
+void WebFrameProxy::didChangeTitle(String&& title)
 {
-    m_title = title;
+    m_title = WTFMove(title);
 }
 
 WebFramePolicyListenerProxy& WebFrameProxy::setUpPolicyListenerProxy(CompletionHandler<void(PolicyAction, API::WebsitePolicies*, ProcessSwapRequestedByClient, std::optional<NavigatingToAppBoundDomain>, WasNavigationIntercepted)>&& completionHandler, ShouldExpectSafeBrowsingResult expectSafeBrowsingResult, ShouldExpectAppBoundDomainResult expectAppBoundDomainResult, ShouldWaitForInitialLinkDecorationFilteringData shouldWaitForInitialLinkDecorationFilteringData)
@@ -434,7 +434,7 @@ void WebFrameProxy::disconnect()
         parentFrame->m_childFrames.remove(*this);
 }
 
-void WebFrameProxy::didCreateSubframe(WebCore::FrameIdentifier frameID, const String& frameName, SandboxFlags effectiveSandboxFlags, WebCore::ScrollbarMode scrollingMode)
+void WebFrameProxy::didCreateSubframe(WebCore::FrameIdentifier frameID, String&& frameName, SandboxFlags effectiveSandboxFlags, WebCore::ScrollbarMode scrollingMode)
 {
     // The DecidePolicyForNavigationActionSync IPC is synchronous and may therefore get processed before the DidCreateSubframe one.
     // When this happens, decidePolicyForNavigationActionSync() calls didCreateSubframe() and we need to ignore the DidCreateSubframe
@@ -449,8 +449,8 @@ void WebFrameProxy::didCreateSubframe(WebCore::FrameIdentifier frameID, const St
 
     Ref child = WebFrameProxy::create(*page, m_frameProcess, frameID, effectiveSandboxFlags, scrollingMode, nullptr, IsMainFrame::No);
     child->m_parentFrame = *this;
-    child->m_frameName = frameName;
-    page->observeAndCreateRemoteSubframesInOtherProcesses(child, frameName);
+    child->m_frameName = WTFMove(frameName);
+    page->observeAndCreateRemoteSubframesInOtherProcesses(child, child->m_frameName);
     m_childFrames.add(WTFMove(child));
 }
 
@@ -471,7 +471,7 @@ void WebFrameProxy::prepareForProvisionalLoadInProcess(WebProcessProxy& process,
     });
 }
 
-void WebFrameProxy::commitProvisionalFrame(IPC::Connection& connection, FrameIdentifier frameID, FrameInfoData&& frameInfo, ResourceRequest&& request, std::optional<WebCore::NavigationIdentifier> navigationID, const String& mimeType, bool frameHasCustomContentProvider, FrameLoadType frameLoadType, const CertificateInfo& certificateInfo, bool usedLegacyTLS, bool privateRelayed, const String& proxyName, WebCore::ResourceResponseSource source, bool containsPluginDocument, HasInsecureContent hasInsecureContent, MouseEventPolicy mouseEventPolicy, const UserData& userData)
+void WebFrameProxy::commitProvisionalFrame(IPC::Connection& connection, FrameIdentifier frameID, FrameInfoData&& frameInfo, ResourceRequest&& request, std::optional<WebCore::NavigationIdentifier> navigationID, String&& mimeType, bool frameHasCustomContentProvider, FrameLoadType frameLoadType, const CertificateInfo& certificateInfo, bool usedLegacyTLS, bool privateRelayed, String&& proxyName, WebCore::ResourceResponseSource source, bool containsPluginDocument, HasInsecureContent hasInsecureContent, MouseEventPolicy mouseEventPolicy, const UserData& userData)
 {
     ASSERT(m_page);
     if (m_provisionalFrame) {
@@ -479,7 +479,7 @@ void WebFrameProxy::commitProvisionalFrame(IPC::Connection& connection, FrameIde
         if (RefPtr process = std::exchange(m_provisionalFrame, nullptr)->takeFrameProcess())
             m_frameProcess = process.releaseNonNull();
     }
-    protectedPage()->didCommitLoadForFrame(connection, frameID, WTFMove(frameInfo), WTFMove(request), navigationID, mimeType, frameHasCustomContentProvider, frameLoadType, certificateInfo, usedLegacyTLS, privateRelayed, proxyName, source, containsPluginDocument, hasInsecureContent, mouseEventPolicy, userData);
+    protectedPage()->didCommitLoadForFrame(connection, frameID, WTFMove(frameInfo), WTFMove(request), navigationID, WTFMove(mimeType), frameHasCustomContentProvider, frameLoadType, certificateInfo, usedLegacyTLS, privateRelayed, WTFMove(proxyName), source, containsPluginDocument, hasInsecureContent, mouseEventPolicy, userData);
 }
 
 void WebFrameProxy::getFrameInfo(CompletionHandler<void(std::optional<FrameInfoData>&&)>&& completionHandler)

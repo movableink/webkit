@@ -3940,7 +3940,7 @@ bool FrameLoader::dispatchBeforeUnloadEvent(Chrome& chrome, FrameLoader* frameLo
     frameLoaderBeingNavigated->m_currentNavigationHasShownBeforeUnloadConfirmPanel = true;
 
     String text = document->displayStringModifiedByEncoding(beforeUnloadEvent->returnValue());
-    return chrome.runBeforeUnloadConfirmPanel(text, protectedFrame());
+    return chrome.runBeforeUnloadConfirmPanel(WTFMove(text), protectedFrame());
 }
 
 void FrameLoader::executeJavaScriptURL(const URL& url, const NavigationAction& action)

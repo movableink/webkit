@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -856,7 +856,7 @@ void NavigationState::NavigationClient::didReceiveServerRedirectForProvisionalNa
     [navigationDelegate webView:navigationState->webView().get() didReceiveServerRedirectForProvisionalNavigation:wrapper(navigation)];
 }
 
-void NavigationState::NavigationClient::willPerformClientRedirect(WebPageProxy& page, const WTF::String& urlString, double delay)
+void NavigationState::NavigationClient::willPerformClientRedirect(WebPageProxy& page, WTF::String&& urlString, double delay)
 {
     RefPtr navigationState = m_navigationState.get();
     if (!navigationState)
@@ -869,7 +869,7 @@ void NavigationState::NavigationClient::willPerformClientRedirect(WebPageProxy& 
     if (!navigationDelegate)
         return;
 
-    URL url { urlString };
+    URL url { WTFMove(urlString) };
 
     [static_cast<id<WKNavigationDelegatePrivate>>(navigationDelegate) _webView:navigationState->webView().get() willPerformClientRedirectToURL:url.createNSURL().get() delay:delay];
 }

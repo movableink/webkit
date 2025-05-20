@@ -771,10 +771,10 @@ void WebPageProxy::registerWebProcessAccessibilityToken(std::span<const uint8_t>
         pageClient->accessibilityWebProcessTokenReceived(data, protectedLegacyMainFrameProcess()->protectedConnection()->remoteProcessID());
 }
 
-void WebPageProxy::relayAccessibilityNotification(const String& notificationName, std::span<const uint8_t> data)
+void WebPageProxy::relayAccessibilityNotification(String&& notificationName, std::span<const uint8_t> data)
 {
     if (RefPtr pageClient = this->pageClient())
-        pageClient->relayAccessibilityNotification(notificationName, toNSData(data).get());
+        pageClient->relayAccessibilityNotification(WTFMove(notificationName), toNSData(data));
 }
 
 void WebPageProxy::assistiveTechnologyMakeFirstResponder()
@@ -1221,13 +1221,13 @@ void WebPageProxy::dispatchDidUpdateEditorState()
     m_waitingForPostLayoutEditorStateUpdateAfterFocusingElement = false;
 }
 
-void WebPageProxy::showValidationMessage(const IntRect& anchorClientRect, const String& message)
+void WebPageProxy::showValidationMessage(const IntRect& anchorClientRect, String&& message)
 {
     RefPtr pageClient = this->pageClient();
     if (!pageClient)
         return;
 
-    m_validationBubble = pageClient->createValidationBubble(message, { m_preferences->minimumFontSize() });
+    m_validationBubble = pageClient->createValidationBubble(WTFMove(message), { m_preferences->minimumFontSize() });
 
     // FIXME: When in element fullscreen, UIClient::presentingViewController() may not return the
     // WKFullScreenViewController even though that is the presenting view controller of the WKWebView.

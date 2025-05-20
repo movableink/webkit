@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -644,7 +644,7 @@ public:
     void updateRelations(Element&, const QualifiedName&);
 
 #if PLATFORM(IOS_FAMILY)
-    void relayNotification(const String&, RetainPtr<NSData>);
+    void relayNotification(String&&, RetainPtr<NSData>&&);
 #endif
 
 #if PLATFORM(MAC)
