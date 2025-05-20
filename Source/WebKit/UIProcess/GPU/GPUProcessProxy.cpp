@@ -107,7 +107,7 @@ static WeakPtr<GPUProcessProxy>& singleton()
 
 static RefPtr<GPUProcessProxy>& keptAliveGPUProcessProxy()
 {
-    static MainThreadNeverDestroyed<RefPtr<GPUProcessProxy>> keptAliveGPUProcessProxy;
+    static MainRunLoopNeverDestroyed<RefPtr<GPUProcessProxy>> keptAliveGPUProcessProxy;
     return keptAliveGPUProcessProxy.get();
 }
 

@@ -49,7 +49,7 @@ using PortChannelPortMap = HashMap<WebExtensionPortChannelIdentifier, HashSet<We
 
 static PortChannelPortMap& webExtensionPorts()
 {
-    static MainThreadNeverDestroyed<PortChannelPortMap> ports;
+    static MainRunLoopNeverDestroyed<PortChannelPortMap> ports;
     return ports;
 }
 

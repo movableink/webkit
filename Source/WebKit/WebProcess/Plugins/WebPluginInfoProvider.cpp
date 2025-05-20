@@ -37,7 +37,7 @@ namespace WebKit {
 
 WebPluginInfoProvider& WebPluginInfoProvider::singleton()
 {
-    static MainThreadNeverDestroyed<Ref<WebPluginInfoProvider>> pluginInfoProvider = adoptRef(*new WebPluginInfoProvider);
+    static MainRunLoopNeverDestroyed<Ref<WebPluginInfoProvider>> pluginInfoProvider = adoptRef(*new WebPluginInfoProvider);
     return pluginInfoProvider.get();
 }
 

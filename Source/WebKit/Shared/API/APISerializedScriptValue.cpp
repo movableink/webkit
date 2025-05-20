@@ -43,7 +43,7 @@ class SharedJSContextWK {
 public:
     static SharedJSContextWK& singleton()
     {
-        static MainThreadNeverDestroyed<SharedJSContextWK> sharedContext;
+        static MainRunLoopNeverDestroyed<SharedJSContextWK> sharedContext;
         return sharedContext.get();
     }
 
@@ -87,7 +87,7 @@ public:
     }
 
 private:
-    friend class NeverDestroyed<SharedJSContextWK, MainThreadAccessTraits>;
+    friend class NeverDestroyed<SharedJSContextWK, MainRunLoopAccessTraits>;
 
     SharedJSContextWK()
         : m_timer(RunLoop::main(), this, &SharedJSContextWK::releaseContextIfNecessary)

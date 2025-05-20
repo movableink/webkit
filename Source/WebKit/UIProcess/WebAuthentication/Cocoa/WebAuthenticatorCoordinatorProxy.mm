@@ -482,7 +482,7 @@ RetainPtr<NSArray> WebAuthenticatorCoordinatorProxy::requestsForAssertion(const 
 
 WeakPtr<WebAuthenticatorCoordinatorProxy>& WebAuthenticatorCoordinatorProxy::activeConditionalMediationProxy()
 {
-    static MainThreadNeverDestroyed<WeakPtr<WebAuthenticatorCoordinatorProxy>> proxy;
+    static MainRunLoopNeverDestroyed<WeakPtr<WebAuthenticatorCoordinatorProxy>> proxy;
     return proxy.get();
 }
 

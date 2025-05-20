@@ -46,7 +46,7 @@ public:
     {
         ASSERT(isInWebProcess());
 
-        static MainThreadNeverDestroyed<SharedJSContext> sharedContext;
+        static MainRunLoopNeverDestroyed<SharedJSContext> sharedContext;
         return sharedContext.get();
     }
 
@@ -90,7 +90,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     }
 
 private:
-    friend class NeverDestroyed<SharedJSContext, MainThreadAccessTraits>;
+    friend class NeverDestroyed<SharedJSContext, MainRunLoopAccessTraits>;
 
     SharedJSContext()
         : m_timer(RunLoop::main(), this, &SharedJSContext::releaseContextIfNecessary)

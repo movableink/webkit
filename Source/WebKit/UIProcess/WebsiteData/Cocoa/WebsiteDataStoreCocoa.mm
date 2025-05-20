@@ -91,7 +91,7 @@ static std::atomic<bool> keyExists = false;
 #if ENABLE(MANAGED_DOMAINS)
 static WorkQueue& managedDomainQueueSingleton()
 {
-    static MainThreadNeverDestroyed<Ref<WorkQueue>> queue = WorkQueue::create("com.apple.WebKit.ManagedDomains"_s);
+    static MainRunLoopNeverDestroyed<Ref<WorkQueue>> queue = WorkQueue::create("com.apple.WebKit.ManagedDomains"_s);
     return queue.get();
 }
 static std::atomic<bool> hasInitializedManagedDomains = false;

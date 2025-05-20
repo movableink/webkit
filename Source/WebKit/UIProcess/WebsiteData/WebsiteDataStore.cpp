@@ -120,7 +120,7 @@ void WebsiteDataStore::allowWebsiteDataRecordsForAllOrigins()
 
 static HashMap<String, PAL::SessionID>& activeGeneralStorageDirectories()
 {
-    static MainThreadNeverDestroyed<HashMap<String, PAL::SessionID>> directoryToSessionMap;
+    static MainRunLoopNeverDestroyed<HashMap<String, PAL::SessionID>> directoryToSessionMap;
     return directoryToSessionMap;
 }
 
@@ -138,7 +138,7 @@ static String computeMediaKeyFile(const String& mediaKeyDirectory)
 
 WorkQueue& WebsiteDataStore::websiteDataStoreIOQueueSingleton()
 {
-    static MainThreadNeverDestroyed<Ref<WorkQueue>> queue = WorkQueue::create("com.apple.WebKit.WebsiteDataStoreIO"_s);
+    static MainRunLoopNeverDestroyed<Ref<WorkQueue>> queue = WorkQueue::create("com.apple.WebKit.WebsiteDataStoreIO"_s);
     return queue.get();
 }
 

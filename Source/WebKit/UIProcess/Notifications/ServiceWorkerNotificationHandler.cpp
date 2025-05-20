@@ -37,7 +37,7 @@ namespace WebKit {
 
 ServiceWorkerNotificationHandler& ServiceWorkerNotificationHandler::singleton()
 {
-    static MainThreadNeverDestroyed<Ref<ServiceWorkerNotificationHandler>> handler = adoptRef(*new ServiceWorkerNotificationHandler);
+    static MainRunLoopNeverDestroyed<Ref<ServiceWorkerNotificationHandler>> handler = adoptRef(*new ServiceWorkerNotificationHandler);
     return handler.get();
 }
 

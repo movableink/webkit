@@ -101,7 +101,7 @@ class ListDataController : public ListDataControllerBase {
 public:
     static DerivedType& sharedSingleton()
     {
-        static MainThreadNeverDestroyed<DerivedType> sharedInstance;
+        static MainRunLoopNeverDestroyed<DerivedType> sharedInstance;
         return sharedInstance.get();
     }
 
@@ -117,7 +117,7 @@ public:
     const BackingDataType& cachedListData() const { return m_cachedListData; }
 
 protected:
-    friend class NeverDestroyed<DerivedType, MainThreadAccessTraits>;
+    friend class NeverDestroyed<DerivedType, MainRunLoopAccessTraits>;
 
     void setCachedListData(BackingDataType&& data)
     {
@@ -170,7 +170,7 @@ public:
     RestrictedOpenerType lookup(const WebCore::RegistrableDomain&) const;
 
 private:
-    friend class NeverDestroyed<RestrictedOpenerDomainsController, MainThreadAccessTraits>;
+    friend class NeverDestroyed<RestrictedOpenerDomainsController, MainRunLoopAccessTraits>;
     RestrictedOpenerDomainsController();
     void scheduleNextUpdate(ContinuousApproximateTime);
     void update();
@@ -188,7 +188,7 @@ public:
     void getSource(CompletionHandler<void(String&&)>&&);
 
 private:
-    friend class NeverDestroyed<ResourceMonitorURLsController, MainThreadAccessTraits>;
+    friend class NeverDestroyed<ResourceMonitorURLsController, MainRunLoopAccessTraits>;
     ResourceMonitorURLsController() = default;
 };
 

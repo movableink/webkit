@@ -266,7 +266,7 @@ void StorageAccessPromptQuirkController::updateList(CompletionHandler<void()>&& 
         return;
     }
 
-    static MainThreadNeverDestroyed<Vector<CompletionHandler<void()>, 1>> lookupCompletionHandlers;
+    static MainRunLoopNeverDestroyed<Vector<CompletionHandler<void()>, 1>> lookupCompletionHandlers;
     lookupCompletionHandlers->append(WTFMove(completionHandler));
     if (lookupCompletionHandlers->size() > 1)
         return;
@@ -308,7 +308,7 @@ void StorageAccessUserAgentStringQuirkController::updateList(CompletionHandler<v
         return;
     }
 
-    static MainThreadNeverDestroyed<Vector<CompletionHandler<void()>, 1>> lookupCompletionHandlers;
+    static MainRunLoopNeverDestroyed<Vector<CompletionHandler<void()>, 1>> lookupCompletionHandlers;
     lookupCompletionHandlers->append(WTFMove(completionHandler));
     if (lookupCompletionHandlers->size() > 1)
         return;
@@ -334,7 +334,7 @@ void StorageAccessUserAgentStringQuirkController::updateList(CompletionHandler<v
 
 RestrictedOpenerDomainsController& RestrictedOpenerDomainsController::shared()
 {
-    static MainThreadNeverDestroyed<RestrictedOpenerDomainsController> sharedInstance;
+    static MainRunLoopNeverDestroyed<RestrictedOpenerDomainsController> sharedInstance;
     return sharedInstance.get();
 }
 
@@ -408,7 +408,7 @@ RestrictedOpenerType RestrictedOpenerDomainsController::lookup(const WebCore::Re
 
 ResourceMonitorURLsController& ResourceMonitorURLsController::singleton()
 {
-    static MainThreadNeverDestroyed<ResourceMonitorURLsController> sharedInstance;
+    static MainRunLoopNeverDestroyed<ResourceMonitorURLsController> sharedInstance;
     return sharedInstance.get();
 }
 
@@ -420,7 +420,7 @@ void ResourceMonitorURLsController::prepare(CompletionHandler<void(WKContentRule
         return;
     }
 
-    static MainThreadNeverDestroyed<Vector<CompletionHandler<void(WKContentRuleList*, bool)>, 1>> lookupCompletionHandlers;
+    static MainRunLoopNeverDestroyed<Vector<CompletionHandler<void(WKContentRuleList*, bool)>, 1>> lookupCompletionHandlers;
     lookupCompletionHandlers->append(WTFMove(completionHandler));
     if (lookupCompletionHandlers->size() > 1)
         return;
@@ -444,7 +444,7 @@ void ResourceMonitorURLsController::getSource(CompletionHandler<void(String&&)>&
         return;
     }
 
-    static MainThreadNeverDestroyed<Vector<CompletionHandler<void(NSString *)>, 1>> lookupCompletionHandlers;
+    static MainRunLoopNeverDestroyed<Vector<CompletionHandler<void(NSString *)>, 1>> lookupCompletionHandlers;
     lookupCompletionHandlers->append(WTFMove(completionHandler));
     if (lookupCompletionHandlers->size() > 1)
         return;
