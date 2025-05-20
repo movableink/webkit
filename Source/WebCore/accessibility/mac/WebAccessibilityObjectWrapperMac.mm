@@ -2371,7 +2371,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     AXTRACE("WebAccessibilityObjectWrapper _accessibilityShowContextMenu"_s);
     ASSERT(isMainThread());
 
-    RefPtr<AXCoreObject> backingObject = self.axBackingObject;
+    RefPtr<AccessibilityObject> backingObject = dynamicDowncast<AccessibilityObject>(self.axBackingObject);
     if (!backingObject) {
         AXLOG(makeString("No backingObject for wrapper "_s, hex(reinterpret_cast<uintptr_t>(self))));
         return;
@@ -3691,8 +3691,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     return subarray;
 }
-
-
 @end
 
 #endif // PLATFORM(MAC)

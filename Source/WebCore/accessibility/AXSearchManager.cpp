@@ -242,6 +242,7 @@ static void appendChildrenToArray(Ref<AXCoreObject> object, bool isForward, RefP
         // We should only ever hit this case with a live object (not an isolated object), as it would require startObject to be ignored,
         // and we should never have created an isolated object from an ignored live object.
         // FIXME: This is not true for ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE), fix this before shipping it.
+        // FIXME: We hit this ASSERT on google.com. https://bugs.webkit.org/show_bug.cgi?id=293263
         ASSERT(is<AccessibilityObject>(startObject));
         auto* newStartObject = dynamicDowncast<AccessibilityObject>(startObject.get());
         // Get the un-ignored sibling based on the search direction, and update the searchPosition.

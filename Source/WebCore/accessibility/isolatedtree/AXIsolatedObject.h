@@ -52,9 +52,10 @@ struct AXTextRuns;
 class AXIsolatedObject final : public AXCoreObject {
     friend class AXIsolatedTree;
 public:
-    static Ref<AXIsolatedObject> create(const Ref<AccessibilityObject>&, AXIsolatedTree*);
+    static Ref<AXIsolatedObject> create(IsolatedObjectData&&);
     ~AXIsolatedObject();
 
+    // FIXME: tree()->treeID() is never optional, so this shouldn't return an optional either.
     std::optional<AXID> treeID() const final { return tree()->treeID(); }
     String dbgInternal(bool, OptionSet<AXDebugStringOption>) const final;
 
@@ -119,15 +120,12 @@ private:
     std::optional<AXID> parent() const { return m_parentID; }
     void setParent(std::optional<AXID> axID) { m_parentID = axID; }
 
-    AXIsolatedTree* tree() const { return m_cachedTree.get(); }
+    AXIsolatedTree* tree() const { return m_tree.ptr(); }
 
     AXIsolatedObject(const Ref<AccessibilityObject>&, AXIsolatedTree*);
+    AXIsolatedObject(IsolatedObjectData&&);
     bool isAXIsolatedObjectInstance() const final { return true; }
     AccessibilityObject* associatedAXObject() const;
-
-    void initializeProperties(const Ref<AccessibilityObject>&);
-    void initializePlatformProperties(const Ref<const AccessibilityObject>&);
-    void initializeBasePlatformProperties(const Ref<const AccessibilityObject>&);
 
     void setProperty(AXProperty, AXPropertyValueVariant&&);
     void setPropertyInVector(AXProperty property, AXPropertyValueVariant&& value)
@@ -152,12 +150,9 @@ private:
     void shrinkPropertiesAfterUpdates() { m_properties.shrinkToFit(); }
     void setObjectProperty(AXProperty, AXCoreObject*);
     void setObjectVectorProperty(AXProperty, const AccessibilityChildrenVector&);
-    template<typename T> void setOptionalProperty(AXProperty, const std::optional<T>&);
 
     void setPropertyFlag(AXPropertyFlag, bool);
     bool hasPropertyFlag(AXPropertyFlag) const;
-
-    static bool canBeMultilineTextField(AccessibilityObject&);
 
     // FIXME: consolidate all AttributeValue retrieval in a single template method.
     bool boolAttributeValue(AXProperty) const;
@@ -207,8 +202,15 @@ private:
     }
     template<typename U> void performFunctionOnMainThread(U&& lambda) const
     {
-        Accessibility::performFunctionOnMainThread([lambda = WTFMove(lambda), protectedThis = Ref { *this }] () mutable {
-            if (RefPtr object = protectedThis->associatedAXObject())
+        // Because this is an async dispatch to the main-thread, there's no guarantee |this| will be kept
+        // alive by the secondary thread. Avoid any issues by simply sending our object ID, and our associated
+        // AXObjectCache ID, then having the main-thread re-hydrate the equivalent main-thread accessibility object,
+        // if it's still alive by the time the dispatch is serviced.
+        Accessibility::performFunctionOnMainThread([lambda = WTFMove(lambda), axID = objectID(), cacheID = treeID()] () mutable {
+            WeakPtr cache = AXTreeStore<AXObjectCache>::axObjectCacheForID(cacheID);
+            if (!cache)
+                return;
+            if (RefPtr object = cache->objectForID(axID))
                 lambda(object.get());
         });
     }
@@ -285,7 +287,6 @@ private:
     String datetimeAttributeValue() const final { return stringAttributeValue(AXProperty::DatetimeAttributeValue); }
     bool canSetValueAttribute() const final { return boolAttributeValue(AXProperty::CanSetValueAttribute); }
     bool canSetSelectedAttribute() const final { return boolAttributeValue(AXProperty::CanSetSelectedAttribute); }
-    unsigned headingTagLevel() const final;
     AccessibilityButtonState checkboxOrRadioValue() const final { return propertyValue<AccessibilityButtonState>(AXProperty::ButtonState); }
     String valueDescription() const final { return stringAttributeValue(AXProperty::ValueDescription); }
     float valueForRange() const final { return floatAttributeValue(AXProperty::ValueForRange); }
@@ -560,7 +561,6 @@ private:
     Page* page() const final;
     Document* document() const final;
     LocalFrameView* documentFrameView() const final;
-    ScrollView* scrollView() const final;
     void detachFromParent() final;
 
     bool isInDescriptionListTerm() const final;
@@ -592,7 +592,7 @@ private:
     AXPropertyVector m_properties;
 
     // FIXME: Make this a ThreadSafeWeakPtr<AXIsolatedTree>.
-    RefPtr<AXIsolatedTree> m_cachedTree;
+    Ref<AXIsolatedTree> m_tree;
     Markable<AXID> m_parentID;
 
     OptionSet<AXPropertyFlag> m_propertyFlags;
@@ -604,6 +604,9 @@ private:
     PlatformWidget m_platformWidget;
 #endif
 };
+
+void appendPlatformProperties(AXPropertyVector&, OptionSet<AXPropertyFlag>&, const Ref<AccessibilityObject>&);
+void appendBasePlatformProperties(AXPropertyVector&, OptionSet<AXPropertyFlag>&, const Ref<AccessibilityObject>&);
 
 template<typename T>
 inline T AXIsolatedObject::propertyValue(AXProperty property) const

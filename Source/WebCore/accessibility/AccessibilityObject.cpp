@@ -700,6 +700,7 @@ void AccessibilityObject::insertChild(AccessibilityObject& child, unsigned index
     } else {
         // Table component child-parent relationships often don't line up properly, hence the need for methods
         // like parentTable() and parentRow(). Exclude them from this ASSERT.
+        // FIXME: We hit this ASSERT on gmail.com. https://bugs.webkit.org/show_bug.cgi?id=293264
         ASSERT(isTableComponent(child) || isTableComponent(*this) || child.parentObject() == this);
         insert(Ref { child }, index);
     }

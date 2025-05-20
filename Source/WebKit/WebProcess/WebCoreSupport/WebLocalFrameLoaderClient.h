@@ -237,7 +237,7 @@ private:
     RemoteAXObjectRef accessibilityRemoteObject() final;
     WebCore::IntPoint accessibilityRemoteFrameOffset() final;
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    void setAXIsolatedTreeRoot(WebCore::AXCoreObject*) final;
+    void setIsolatedTree(Ref<WebCore::AXIsolatedTree>&&) final;
 #endif
     void willCacheResponse(WebCore::DocumentLoader*, WebCore::ResourceLoaderIdentifier, NSCachedURLResponse*, CompletionHandler<void(NSCachedURLResponse *)>&&) const final;
 

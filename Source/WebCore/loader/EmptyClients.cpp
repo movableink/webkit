@@ -1094,7 +1094,7 @@ IntPoint EmptyFrameLoaderClient::accessibilityRemoteFrameOffset()
 }
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-void EmptyFrameLoaderClient::setAXIsolatedTreeRoot(WebCore::AXCoreObject*)
+void EmptyFrameLoaderClient::setIsolatedTree(Ref<WebCore::AXIsolatedTree>&&)
 {
 }
 #endif

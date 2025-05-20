@@ -35,6 +35,8 @@ typedef struct _GVariantBuilder GVariantBuilder;
 
 namespace WebCore {
 
+class AXCoreObject;
+
 using RelationMap = UncheckedKeyHashMap<Atspi::Relation, Vector<Ref<AccessibilityObjectAtspi>>, IntHash<Atspi::Relation>, WTF::StrongEnumHashTraits<Atspi::Relation>>;
 
 class AccessibilityObjectAtspi final : public RefCounted<AccessibilityObjectAtspi> {

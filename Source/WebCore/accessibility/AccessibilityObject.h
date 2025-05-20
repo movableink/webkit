@@ -63,7 +63,7 @@ class ScrollableArea;
 
 enum class CommandType: uint8_t;
 
-class AccessibilityObject : public AXCoreObject, public CanMakeWeakPtr<AccessibilityObject> {
+class AccessibilityObject : public AXCoreObject {
 public:
     virtual ~AccessibilityObject();
 
@@ -258,7 +258,6 @@ public:
     bool isShowingValidationMessage() const;
     String validationMessage() const;
 
-    unsigned headingTagLevel() const override { return 0; }
     AccessibilityButtonState checkboxOrRadioValue() const override;
     String valueDescription() const override { return String(); }
     float valueForRange() const override { return 0.0f; }
@@ -490,7 +489,7 @@ public:
     RefPtr<LocalFrame> localMainFrame() const;
     Document* topDocument() const;
     RenderView* topRenderer() const;
-    ScrollView* scrollView() const override { return nullptr; }
+    virtual ScrollView* scrollView() const { return nullptr; }
     unsigned ariaLevel() const final;
     String language() const final;
     // 1-based, to match the aria-level spec.

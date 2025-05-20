@@ -35,6 +35,7 @@
 #import "WebFrame.h"
 #import "WebPage.h"
 #import "WebProcess.h"
+#import <WebCore/AXIsolatedObject.h>
 #import <WebCore/AXObjectCache.h>
 #import <WebCore/Document.h>
 #import <WebCore/FrameTree.h>
@@ -98,8 +99,11 @@ namespace ax = WebCore::Accessibility;
 {
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     if (!isMainRunLoop()) {
-        if (RefPtr root = m_isolatedTreeRoot.get())
-            return root->wrapper();
+        if (RefPtr tree = m_isolatedTree.get()) {
+            tree->applyPendingChanges();
+            if (RefPtr root = tree->rootNode())
+                return root->wrapper();
+        }
     }
 #endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 
@@ -118,7 +122,6 @@ namespace ax = WebCore::Accessibility;
 #endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
             return protectedSelf.get().accessibilityPluginObject;
         }
-
 
         if (auto cache = protectedSelf.get().axObjectCache) {
             // It's possible we were given a null frame (this is explicitly expected when off the main-thread, since
@@ -169,7 +172,7 @@ namespace ax = WebCore::Accessibility;
     m_size = size;
 }
 
-- (void)setIsolatedTreeRoot:(NakedPtr<WebCore::AXCoreObject>)root
+- (void)setIsolatedTree:(Ref<WebCore::AXIsolatedTree>&&)tree
 {
     ASSERT(isMainRunLoop());
 
@@ -178,7 +181,7 @@ namespace ax = WebCore::Accessibility;
         // of the plugin accessiblity tree.
         return;
     }
-    m_isolatedTreeRoot = root.get();
+    m_isolatedTree = tree.get();
 }
 
 - (void)setWindow:(id)window

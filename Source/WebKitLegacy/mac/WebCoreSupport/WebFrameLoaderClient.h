@@ -221,7 +221,7 @@ private:
     RemoteAXObjectRef accessibilityRemoteObject() final { return 0; }
     WebCore::IntPoint accessibilityRemoteFrameOffset() final { return { }; }
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    void setAXIsolatedTreeRoot(WebCore::AXCoreObject*) final { }
+    void setIsolatedTree(Ref<WebCore::AXIsolatedTree>&&) final { }
 #endif
 
     RetainPtr<WebFramePolicyListener> setUpPolicyListener(WebCore::FramePolicyFunction&&, WebCore::PolicyAction defaultPolicy, NSURL *appLinkURL, NSURL* referrerURL);

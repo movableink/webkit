@@ -34,8 +34,12 @@
 
 namespace WebCore {
 
-void AXIsolatedObject::initializeBasePlatformProperties(const Ref<const AccessibilityObject>& object)
+void appendBasePlatformProperties(AXPropertyVector& properties, OptionSet<AXPropertyFlag>& propertyFlags, const Ref<AccessibilityObject>& object)
 {
+    auto setProperty = [&] (AXProperty property, AXPropertyValueVariant&& value) {
+        setPropertyIn(property, WTFMove(value), properties, propertyFlags);
+    };
+
     // These attributes are used to serve APIs on static text, but, we cache them on the highest-level ancestor
     // to avoid caching the same value multiple times.
     auto* parent = object->parentObject();
@@ -48,8 +52,12 @@ void AXIsolatedObject::initializeBasePlatformProperties(const Ref<const Accessib
         setProperty(AXProperty::TextColor, WTFMove(style.textColor));
 }
 
-void AXIsolatedObject::initializePlatformProperties(const Ref<const AccessibilityObject>& object)
+void appendPlatformProperties(AXPropertyVector& properties, OptionSet<AXPropertyFlag>& propertyFlags, const Ref<AccessibilityObject>& object)
 {
+    auto setProperty = [&] (AXProperty property, AXPropertyValueVariant&& value) {
+        setPropertyIn(property, WTFMove(value), properties, propertyFlags);
+    };
+
     setProperty(AXProperty::HasApplePDFAnnotationAttribute, object->hasApplePDFAnnotationAttribute());
     setProperty(AXProperty::SpeakAs, object->speakAs());
 #if ENABLE(AX_THREAD_TEXT_APIS)

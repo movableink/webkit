@@ -300,10 +300,11 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 - (void)attachIsolatedObject:(AXIsolatedObject*)isolatedObject
 {
+    ASSERT(!isMainThread());
     ASSERT(isolatedObject && (!_identifier || *_identifier == isolatedObject->objectID()));
+
     m_isolatedObject = isolatedObject;
-    if (isMainThread())
-        m_isolatedObjectInitialized = true;
+    m_isolatedObjectInitialized = !!isolatedObject;
 
     if (!_identifier)
         _identifier = m_isolatedObject.get()->objectID();
@@ -311,7 +312,7 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
 
 - (BOOL)hasIsolatedObject
 {
-    return !!m_isolatedObject.get();
+    return m_isolatedObjectInitialized.load();
 }
 #endif
 
@@ -326,6 +327,7 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
 - (void)detachIsolatedObject:(AccessibilityDetachmentType)detachmentType
 {
     m_isolatedObject = nullptr;
+    m_isolatedObjectInitialized = false;
 }
 #endif
 
@@ -337,11 +339,17 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
     retainPtr(self).autorelease();
 
     auto* backingObject = self.axBackingObject;
-    if (!backingObject)
+    if (!backingObject) {
+        if (!isMainThread()) {
+            // It's possible our backing object just hasn't been attached yet.
+            // Try again after making sure all isolated trees are up-to-date, which could
+            // attach an object to this wrapper.
+            AXTreeStore<AXIsolatedTree>::applyPendingChangesForAllIsolatedTrees();
+            return m_isolatedObject.get();
+        }
         return nil;
-
+    }
     backingObject->updateBackingStore();
-
     return self.axBackingObject;
 }
 #else
@@ -377,7 +385,7 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     ASSERT(AXObjectCache::isIsolatedTreeEnabled());
-    return m_isolatedObject.get().get();
+    return m_isolatedObject.get();
 #else
     ASSERT_NOT_REACHED();
     return nullptr;

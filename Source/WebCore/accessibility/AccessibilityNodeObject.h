@@ -90,8 +90,6 @@ public:
     std::optional<AccessibilityOrientation> orientationFromARIA() const;
     std::optional<AccessibilityOrientation> explicitOrientation() const override { return orientationFromARIA(); }
 
-    unsigned headingTagLevel() const final;
-
     AccessibilityButtonState checkboxOrRadioValue() const final;
 
     URL url() const override;

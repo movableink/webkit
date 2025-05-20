@@ -67,6 +67,7 @@ public:
     static WeakPtr<AXObjectCache> axObjectCacheForID(std::optional<AXID>);
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     static RefPtr<AXIsolatedTree> isolatedTreeForID(std::optional<AXID>);
+    static void applyPendingChangesForAllIsolatedTrees();
 #endif
 
 protected:

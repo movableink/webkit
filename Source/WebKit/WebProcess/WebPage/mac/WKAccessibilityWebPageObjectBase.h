@@ -37,7 +37,7 @@ class WebPage;
 }
 
 namespace WebCore {
-class AXCoreObject;
+class AXIsolatedTree;
 }
 
 @interface WKAccessibilityWebPageObjectBase : NSObject {
@@ -47,7 +47,7 @@ class AXCoreObject;
     Lock m_cacheLock;
     WebCore::FloatPoint m_position WTF_GUARDED_BY_LOCK(m_cacheLock);
     WebCore::IntSize m_size WTF_GUARDED_BY_LOCK(m_cacheLock);
-    ThreadSafeWeakPtr<WebCore::AXCoreObject> m_isolatedTreeRoot;
+    ThreadSafeWeakPtr<WebCore::AXIsolatedTree> m_isolatedTree;
 
     Lock m_windowLock;
     WeakObjCPtr<id> m_window;
@@ -66,7 +66,7 @@ class AXCoreObject;
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 - (void)setPosition:(const WebCore::FloatPoint&)point;
 - (void)setSize:(const WebCore::IntSize&)size;
-- (void)setIsolatedTreeRoot:(NakedPtr<WebCore::AXCoreObject>)root;
+- (void)setIsolatedTree:(Ref<WebCore::AXIsolatedTree>&&)tree;
 - (void)setWindow:(id)window;
 #endif
 - (void)setRemoteParent:(id)parent;

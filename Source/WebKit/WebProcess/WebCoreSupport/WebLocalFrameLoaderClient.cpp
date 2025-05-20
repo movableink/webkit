@@ -1833,11 +1833,11 @@ RemoteAXObjectRef WebLocalFrameLoaderClient::accessibilityRemoteObject()
 }
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-void WebLocalFrameLoaderClient::setAXIsolatedTreeRoot(WebCore::AXCoreObject* axObject)
+void WebLocalFrameLoaderClient::setIsolatedTree(Ref<WebCore::AXIsolatedTree>&& tree)
 {
     ASSERT(isMainRunLoop());
     if (RefPtr webPage = m_frame->page())
-        webPage->setAXIsolatedTreeRoot(axObject);
+        webPage->setIsolatedTree(WTFMove(tree));
 }
 #endif
 

@@ -1063,21 +1063,11 @@ void AXObjectCache::buildIsolatedTree()
     }
 }
 
-AXCoreObject* AXObjectCache::isolatedTreeRootObject()
-{
-    if (auto tree = getOrCreateIsolatedTree())
-        return tree->rootNode();
-
-    // Should not get here, couldn't create the IsolatedTree.
-    ASSERT_NOT_REACHED();
-    return nullptr;
-}
-
-void AXObjectCache::setIsolatedTreeRoot(AXCoreObject* root)
+void AXObjectCache::setIsolatedTree(Ref<AXIsolatedTree> tree)
 {
     ASSERT(isMainThread());
     if (RefPtr frame = m_document ? m_document->frame() : nullptr)
-        frame->loader().client().setAXIsolatedTreeRoot(root);
+        frame->loader().client().setIsolatedTree(WTFMove(tree));
 }
 #endif
 
@@ -1087,8 +1077,13 @@ AXCoreObject* AXObjectCache::rootObjectForFrame(LocalFrame& frame)
         return nullptr;
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    if (isIsolatedTreeEnabled())
-        return isolatedTreeRootObject();
+    if (isIsolatedTreeEnabled()) {
+        RefPtr tree = getOrCreateIsolatedTree();
+        if (!isMainThread()) {
+            tree->applyPendingChanges();
+            return tree->rootNode();
+        }
+    }
 #endif
 
     return getOrCreate(frame.view());

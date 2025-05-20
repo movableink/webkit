@@ -44,7 +44,7 @@ void AXObjectCache::attachWrapper(AccessibilityObject& axObject)
 
 void AXObjectCache::platformPerformDeferredCacheUpdate()
 {
-    auto handleParentChanged = [&](const AXCoreObject& axObject) {
+    auto handleParentChanged = [&](const AccessibilityObject& axObject) {
         auto* wrapper = axObject.wrapper();
         if (!wrapper)
             return;

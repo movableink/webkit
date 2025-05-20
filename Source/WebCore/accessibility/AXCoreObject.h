@@ -792,7 +792,7 @@ enum class TextEmissionBehavior : uint8_t {
     DoubleNewline
 };
 
-class AXCoreObject : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<AXCoreObject> {
+class AXCoreObject : public RefCountedAndCanMakeWeakPtr<AXCoreObject> {
 public:
     virtual ~AXCoreObject() = default;
     String dbg(bool verbose = false) const { return dbgInternal(verbose, { }); }
@@ -1026,7 +1026,6 @@ public:
 
     unsigned blockquoteLevel() const;
     unsigned headingLevel() const;
-    virtual unsigned headingTagLevel() const = 0;
     virtual AccessibilityButtonState checkboxOrRadioValue() const = 0;
     virtual String valueDescription() const = 0;
     virtual float valueForRange() const = 0;
@@ -1256,7 +1255,6 @@ public:
     virtual Page* page() const = 0;
     virtual Document* document() const = 0;
     virtual LocalFrameView* documentFrameView() const = 0;
-    virtual ScrollView* scrollView() const = 0;
     // Should eliminate the need for exposing scrollView().
     AXCoreObject* axScrollView() const;
 
@@ -1566,6 +1564,10 @@ protected:
         : m_id(axID)
     { }
 
+    explicit AXCoreObject(AXID axID, AccessibilityRole role)
+        : m_role(role)
+        , m_id(axID)
+    { }
 
 private:
     virtual String dbgInternal(bool, OptionSet<AXDebugStringOption>) const = 0;

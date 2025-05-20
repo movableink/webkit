@@ -520,9 +520,9 @@ void WebPage::cacheAXSize(const WebCore::IntSize& size)
     [m_mockAccessibilityElement setSize:size];
 }
 
-void WebPage::setAXIsolatedTreeRoot(WebCore::AXCoreObject* root)
+void WebPage::setIsolatedTree(Ref<WebCore::AXIsolatedTree>&& tree)
 {
-    [m_mockAccessibilityElement setIsolatedTreeRoot:root];
+    [m_mockAccessibilityElement setIsolatedTree:WTFMove(tree)];
 }
 #endif
 
