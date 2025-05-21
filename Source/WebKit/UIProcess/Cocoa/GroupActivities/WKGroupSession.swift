@@ -28,7 +28,11 @@ import AVFoundation
 import Combine
 import Foundation
 @_spi(Safari) import GroupActivities
-import WebKitSwift
+#if compiler(>=6.0)
+internal import WebKit_Internal
+#else
+@_implementationOnly import WebKit_Internal
+#endif
 
 fileprivate extension WKGroupSessionState {
     init(_ state: GroupSession<URLActivity>.State) {
@@ -56,14 +60,16 @@ fileprivate extension WKGroupSessionState {
         _urlActivity as! URLActivity
     }
 
-    var fallbackURL: URL? {
-         urlActivity.webpageURL
-    }
+    var fallbackURL: URL? { urlActivity.webpageURL }
 
     @nonobjc fileprivate convenience init(activity: URLActivity) {
         self.init()
         self._urlActivity = activity as Any
     }
+
+#if compiler(<6.0)
+    @objc deinit { }
+#endif
 }
 
 @_objcImplementation extension WKGroupSession {
@@ -125,6 +131,10 @@ fileprivate extension WKGroupSessionState {
 
         callback(.init(state))
     }
+
+#if compiler(<6.0)
+    @objc deinit { }
+#endif
 }
 
 @_objcImplementation extension WKGroupSessionObserver {
@@ -142,10 +152,6 @@ fileprivate extension WKGroupSessionState {
         }
     }
 
-    deinit {
-        incomingSessionsTask?.cancel()
-    }
-
     @nonobjc final private func receivedSession(_ session: GroupSession<URLActivity>) {
         guard let callback = newSessionCallback else {
             return
@@ -153,6 +159,10 @@ fileprivate extension WKGroupSessionState {
 
         callback(.init(groupSession: session))
     }
+
+#if compiler(<6.0)
+    @objc deinit { }
+#endif
 }
 
 #endif // USE_APPLE_INTERNAL_SDK && ENABLE_MEDIA_SESSION_COORDINATOR && HAVE_GROUP_ACTIVITIES

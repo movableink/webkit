@@ -25,7 +25,6 @@
 
 #import "LinearMediaKitExtras.h"
 #import "RealityKitBridging.h"
-#import "WKGroupSession.h"
 #import "WKIntelligenceReplacementTextEffectCoordinator.h"
 #import "WKIntelligenceSmartReplyTextEffectCoordinator.h"
 #import "WKIntelligenceTextEffectCoordinator.h"
