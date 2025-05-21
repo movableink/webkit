@@ -46,7 +46,7 @@ static id<MTLComputePipelineState> createComputePipelineState(id<MTLDevice> devi
 #endif
 
     computePipelineDescriptor.computeFunction = function;
-    computePipelineDescriptor.maxTotalThreadsPerThreadgroup = size.width * size.height * size.depth;
+    UNUSED_PARAM(size);
     for (size_t i = 0; i < pipelineLayout.numberOfBindGroupLayouts(); ++i)
         computePipelineDescriptor.buffers[i].mutability = MTLMutabilityImmutable; // Argument buffers are always immutable in WebGPU.
     computePipelineDescriptor.label = label;

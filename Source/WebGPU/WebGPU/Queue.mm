@@ -266,6 +266,13 @@ void Queue::waitForAllCommitedWorkToComplete()
     } while (commandBuffer);
 }
 
+template<unsigned errorCode>
+[[noreturn]] void crashGPUProcess(NSError* error, NSError* underlyingError)
+{
+    WTFLogAlways("Encountered fatal command buffer error %@, underlying error %@", error, underlyingError); // NOLINT
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
 void Queue::commitMTLCommandBuffer(id<MTLCommandBuffer> commandBuffer)
 {
     if (!commandBuffer || commandBuffer.status >= MTLCommandBufferStatusCommitted || !isValid()) {
@@ -291,23 +298,19 @@ void Queue::commitMTLCommandBuffer(id<MTLCommandBuffer> commandBuffer)
                 if (underlyingError.code == 0x10a || underlyingError.code == 0x5)
                     loseTheDevice = false;
                 else {
-                    bool fatal = false;
+#define makeCase(N) case N: crashGPUProcess<N>(error, underlyingError);
                     switch (underlyingError.code) {
-                    case 8: // kIOGPUCommandBufferCallbackErrorOutOfMemory = 8,
-                    case 9: // kIOGPUCommandBufferCallbackErrorInvalidResource = 9,
-                    case 10: // kIOGPUCommandBufferCallbackErrorInvalidInput = 10,
-                    case 11: // kIOGPUCommandBufferCallbackErrorPageFault = 11,
-                    case 12: // kIOGPUCommandBufferCallbackErrorExceededHardwareLimit = 12,
-                    case 13: // kIOGPUCommandBufferCallbackErrorOutOfMemoryForParameterBuffer = 13,
-                    case 16: // kIOGPUCommandBufferCallbackErrorProtectionViolation = 16,
-                    case 17: // kIOGPUCommandBufferCallbackErrorStackOverflow = 17,
-                        fatal = true;
+                        makeCase(9); // kIOGPUCommandBufferCallbackErrorInvalidResource = 9,
+                        makeCase(10); // kIOGPUCommandBufferCallbackErrorInvalidInput = 10,
+                        makeCase(11); // kIOGPUCommandBufferCallbackErrorPageFault = 11,
+                        makeCase(16); // kIOGPUCommandBufferCallbackErrorProtectionViolation = 16,
+                        makeCase(17); // kIOGPUCommandBufferCallbackErrorStackOverflow = 17,
                         break;
                     default:
                         break;
                     }
-                    WTFLogAlways("Encountered %s command buffer error %@, underlying error %@", fatal ? "fatal" : "non-fatal", error, underlyingError); // NOLINT
-                    RELEASE_ASSERT(!fatal);
+#undef makeCase
+                    WTFLogAlways("Encountered non-fatal command buffer error %@, underlying error %@", error, underlyingError); // NOLINT
                 }
             }
         }
