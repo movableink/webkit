@@ -262,6 +262,7 @@ public:
     static void consoleCountReset(WorkerOrWorkletGlobalScope&, JSC::JSGlobalObject*, const String& label);
 
     static void takeHeapSnapshot(Frame&, const String& title);
+    static void takeHeapSnapshot(WorkerOrWorkletGlobalScope&, const String& title);
     static void startConsoleTiming(Frame&, JSC::JSGlobalObject*, const String& label);
     static void startConsoleTiming(WorkerOrWorkletGlobalScope&, JSC::JSGlobalObject*, const String& label);
     static void logConsoleTiming(Frame&, JSC::JSGlobalObject*, const String& label, Ref<Inspector::ScriptArguments>&&);
@@ -269,8 +270,11 @@ public:
     static void stopConsoleTiming(Frame&, JSC::JSGlobalObject*, const String& label);
     static void stopConsoleTiming(WorkerOrWorkletGlobalScope&, JSC::JSGlobalObject*, const String& label);
     static void consoleTimeStamp(Frame&, Ref<Inspector::ScriptArguments>&&);
+    static void consoleTimeStamp(WorkerOrWorkletGlobalScope&, Ref<Inspector::ScriptArguments>&&);
     static void startProfiling(Page&, const String& title);
+    static void startProfiling(WorkerOrWorkletGlobalScope&, const String& title);
     static void stopProfiling(Page&, const String& title);
+    static void stopProfiling(WorkerOrWorkletGlobalScope&, const String& title);
     static void consoleStartRecordingCanvas(CanvasRenderingContext&, JSC::JSGlobalObject&, JSC::JSObject* options);
     static void consoleStopRecordingCanvas(CanvasRenderingContext&);
 
@@ -1627,6 +1631,12 @@ inline void InspectorInstrumentation::takeHeapSnapshot(Frame& frame, const Strin
         takeHeapSnapshotImpl(*agents, title);
 }
 
+inline void InspectorInstrumentation::takeHeapSnapshot(WorkerOrWorkletGlobalScope& globalScope, const String& title)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    takeHeapSnapshotImpl(instrumentingAgents(globalScope), title);
+}
+
 inline void InspectorInstrumentation::startConsoleTiming(Frame& frame, JSC::JSGlobalObject* exec, const String& label)
 {
     if (auto* agents = instrumentingAgents(frame))
@@ -1667,16 +1677,34 @@ inline void InspectorInstrumentation::consoleTimeStamp(Frame& frame, Ref<Inspect
         consoleTimeStampImpl(*agents, WTFMove(arguments));
 }
 
+inline void InspectorInstrumentation::consoleTimeStamp(WorkerOrWorkletGlobalScope& globalScope, Ref<Inspector::ScriptArguments>&& arguments)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    consoleTimeStampImpl(instrumentingAgents(globalScope), WTFMove(arguments));
+}
+
 inline void InspectorInstrumentation::startProfiling(Page& page, const String &title)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
     startProfilingImpl(instrumentingAgents(page), title);
 }
 
+inline void InspectorInstrumentation::startProfiling(WorkerOrWorkletGlobalScope& globalScope, const String &title)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    startProfilingImpl(instrumentingAgents(globalScope), title);
+}
+
 inline void InspectorInstrumentation::stopProfiling(Page& page, const String &title)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
     stopProfilingImpl(instrumentingAgents(page), title);
+}
+
+inline void InspectorInstrumentation::stopProfiling(WorkerOrWorkletGlobalScope& globalScope, const String &title)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    stopProfilingImpl(instrumentingAgents(globalScope), title);
 }
 
 inline void InspectorInstrumentation::consoleStartRecordingCanvas(CanvasRenderingContext& context, JSC::JSGlobalObject& exec, JSC::JSObject* options)

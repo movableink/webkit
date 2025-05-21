@@ -84,16 +84,15 @@ WI.TimelineManager = class TimelineManager extends WI.Object
         if (!this._enabled)
             return;
 
-        if (target.hasDomain("Timeline")) {
-            // COMPATIBILITY (iOS 13): Timeline.enable did not exist yet.
-            if (target.hasCommand("Timeline.enable"))
-                target.TimelineAgent.enable();
+        // COMPATIBILITY (iOS 13): Timeline.enable did not exist yet.
+        // COMPATIBILITY (iOS X.Y, macOS X.Y): `Timeline.enable` did not exist yet for Worker targets.
+        if (target.hasCommand("Timeline.enable"))
+            target.TimelineAgent.enable();
 
-            this._updateAutoCaptureInstruments([target]);
+        this._updateAutoCaptureInstruments([target]);
 
-            if (target.hasCommand("Timeline.setAutoCaptureEnabled"))
-                target.TimelineAgent.setAutoCaptureEnabled(this._autoCaptureOnPageLoad);
-        }
+        if (target.hasCommand("Timeline.setAutoCaptureEnabled"))
+            target.TimelineAgent.setAutoCaptureEnabled(this._autoCaptureOnPageLoad);
     }
 
     transitionPageTarget()
@@ -271,6 +270,7 @@ WI.TimelineManager = class TimelineManager extends WI.Object
 
         for (let target of WI.targets) {
             // COMPATIBILITY (iOS 13): Timeline.disable did not exist yet.
+            // COMPATIBILITY (iOS X.Y, macOS X.Y): `Timeline.disable` did not exist yet for Worker targets.
             if (target.hasCommand("Timeline.disable"))
                 target.TimelineAgent.disable();
         }
@@ -1425,6 +1425,7 @@ WI.TimelineManager = class TimelineManager extends WI.Object
         let enabledTimelineTypes = this.enabledTimelineTypes;
 
         for (let target of targets) {
+            // COMPATIBILITY (iOS X.Y, macOS X.Y): `Timeline.setInstruments` did not exist yet for Worker targets.
             if (!target.hasCommand("Timeline.setInstruments"))
                 continue;
 
