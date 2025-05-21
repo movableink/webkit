@@ -6700,6 +6700,15 @@ class TestValidateCommitterAndReviewer(BuildStepMixinAdditions, unittest.TestCas
         self.expectOutcome(result=SUCCESS, state_string='Validated committer, valid reviewer not found')
         return self.runStep()
 
+    def test_success_integration(self):
+        self.setupStep(ValidateCommitterAndReviewer())
+        ValidateCommitterAndReviewer.get_reviewers = lambda x, pull_request, repository_url=None: ['webkit-reviewer']
+        self.setProperty('github.number', '1234')
+        self.setProperty('owners', ['webkit-integration'])
+        self.expectHidden(False)
+        self.expectOutcome(result=SUCCESS, state_string='Validated committer and reviewer')
+        return self.runStep()
+
     def test_failure_load_contributors_patch(self):
         self.setupStep(ValidateCommitterAndReviewer())
         self.setProperty('patch_id', '1234')
