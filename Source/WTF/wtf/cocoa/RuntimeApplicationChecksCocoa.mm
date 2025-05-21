@@ -498,12 +498,6 @@ bool IOSApplication::isMobileStore()
     return isMobileStore;
 }
 
-bool IOSApplication::isSpringBoard()
-{
-    static bool isSpringBoard = applicationBundleIsEqualTo("com.apple.springboard"_s);
-    return isSpringBoard;
-}
-
 // FIXME: this needs to be changed when the WebProcess is changed to an XPC service.
 bool IOSApplication::isWebProcess()
 {
