@@ -586,6 +586,8 @@ void CoreAudioSharedUnit::cleanupAudioUnit()
     }
 
     updateVoiceActivityDetection();
+    updateMutedState();
+
     m_ioUnit = nullptr;
 
     m_microphoneSampleBuffer = nullptr;
@@ -694,7 +696,7 @@ void CoreAudioSharedUnit::isProducingMicrophoneSamplesChanged()
 
 void CoreAudioSharedUnit::updateMutedState(SyncUpdate syncUpdate)
 {
-    UInt32 muteUplinkOutput = !isProducingMicrophoneSamples();
+    UInt32 muteUplinkOutput = m_ioUnit && isProducingData() && !isProducingMicrophoneSamples();
 
     if (syncUpdate == SyncUpdate::No && muteUplinkOutput) {
         RELEASE_LOG_INFO(WebRTC, "CoreAudioSharedUnit::updateMutedState(%p) delaying mute in case unit gets stopped or unmuted soon", this);
@@ -824,6 +826,7 @@ void CoreAudioSharedUnit::stopInternal()
     setIsInBackground(false);
 #endif
     updateVoiceActivityDetection();
+    updateMutedState();
 }
 
 void CoreAudioSharedUnit::registerSpeakerSamplesProducer(CoreAudioSpeakerSamplesProducer& producer)
