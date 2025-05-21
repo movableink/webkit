@@ -499,7 +499,7 @@ void VideoMediaSampleRenderer::decodeNextSampleIfNeeded()
     if (m_compressedSampleQueue.isEmpty())
         return;
 
-    if (auto currentTime = this->currentTime(); currentTime && !m_wasProtected) {
+    if (auto currentTime = this->currentTime(); currentTime.isValid() && !m_wasProtected) {
         auto aheadTime = currentTime + s_decodeAhead;
         auto endTime = lastDecodedSampleTime();
         if (endTime.isValid() && endTime > aheadTime && decodedSamplesCount() >= 3) {
@@ -620,7 +620,7 @@ bool VideoMediaSampleRenderer::shouldDecodeSample(const MediaSample& sample)
         return true;
 
     auto currentTime = this->currentTime();
-    if (!currentTime)
+    if (currentTime.isInvalid())
         return true;
 
     if (sample.presentationEndTime() >= currentTime)
