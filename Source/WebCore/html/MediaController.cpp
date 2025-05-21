@@ -396,7 +396,9 @@ void MediaController::updateReadyState()
     // Otherwise, let it have the lowest value of the readyState IDL attributes of all of its
     // mediagroup elements.
     ReadyState oldReadyState = m_readyState;
-    ReadyState newReadyState = std::ranges::min(readyStates).value_or(HAVE_NOTHING);
+    ReadyState newReadyState = HAVE_NOTHING;
+    if (std::ranges::distance(readyStates) > 0)
+        newReadyState = std::ranges::min(readyStates).value_or(HAVE_NOTHING);
     if (newReadyState == oldReadyState)
         return;
 
