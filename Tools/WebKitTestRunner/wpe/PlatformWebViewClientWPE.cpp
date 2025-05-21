@@ -49,6 +49,7 @@ PlatformWebViewClientWPE::PlatformWebViewClientWPE(WKPageConfigurationRef config
     wpe_settings_set_uint32(settings, WPE_SETTING_DOUBLE_CLICK_TIME, 500, WPE_SETTINGS_SOURCE_APPLICATION, nullptr);
     m_view = WKViewCreate(m_display.get(), configuration);
     auto* wpeView = WKViewGetView(m_view);
+    wpe_view_focus_in(wpeView);
     wpe_toplevel_resize(wpe_view_get_toplevel(wpeView), 800, 600);
     g_signal_connect(wpeView, "buffer-rendered", G_CALLBACK(+[](WPEView*, WPEBuffer* buffer, gpointer userData) {
         auto& view = *static_cast<PlatformWebViewClientWPE*>(userData);
