@@ -54,7 +54,6 @@ async function main() {
     }, { exceptions: true });
 
     const tryTableInstance = await instantiate(tryTableWat, legacyInstance);
-    print(Object.keys(tryTableInstance));
 
     for (let i = 0; i < 1000; i++)
         tryTableInstance.exports.trigger();
