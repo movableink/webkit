@@ -41,7 +41,7 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MultiChannelResampler);
 
-MultiChannelResampler::MultiChannelResampler(double scaleFactor, unsigned numberOfChannels, unsigned requestFrames, Function<void(AudioBus*, size_t framesToProcess)>&& provideInput)
+MultiChannelResampler::MultiChannelResampler(double scaleFactor, unsigned numberOfChannels, unsigned requestFrames, Function<void(AudioBus&, size_t framesToProcess)>&& provideInput)
     : m_numberOfChannels(numberOfChannels)
     , m_provideInput(WTFMove(provideInput))
     , m_multiChannelBus(AudioBus::create(numberOfChannels, requestFrames))
@@ -83,11 +83,14 @@ void MultiChannelResampler::process(AudioBus* destination, size_t framesToProces
 
 void MultiChannelResampler::provideInputForChannel(std::span<float> buffer, size_t framesToProcess, unsigned channelIndex)
 {
+    if (!m_multiChannelBus)
+        return;
+
     ASSERT(channelIndex < m_multiChannelBus->numberOfChannels());
     ASSERT(framesToProcess <= m_multiChannelBus->length());
 
     if (!channelIndex)
-        m_provideInput(m_multiChannelBus.get(), framesToProcess);
+        m_provideInput(*m_multiChannelBus, framesToProcess);
 
     // Copy the channel data from what we received from m_multiChannelProvider.
     memcpySpan(buffer, m_multiChannelBus->channel(channelIndex)->span().first(framesToProcess));

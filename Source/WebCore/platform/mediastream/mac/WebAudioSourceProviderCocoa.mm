@@ -62,30 +62,30 @@ void WebAudioSourceProviderCocoa::setClient(WeakPtr<AudioSourceProviderClient>&&
     hasNewClient(m_client.get());
 }
 
-void WebAudioSourceProviderCocoa::provideInput(AudioBus* bus, size_t framesToProcess)
+void WebAudioSourceProviderCocoa::provideInput(AudioBus& bus, size_t framesToProcess)
 {
     if (!m_lock.tryLock()) {
-        bus->zero();
+        bus.zero();
         return;
     }
     Locker locker { AdoptLock, m_lock };
     if (!m_dataSource || !m_audioBufferList) {
-        bus->zero();
+        bus.zero();
         return;
     }
 
     if (m_writeCount <= m_readCount) {
-        bus->zero();
+        bus.zero();
         return;
     }
 
-    if (bus->numberOfChannels() < m_audioBufferList->bufferCount()) {
-        bus->zero();
+    if (bus.numberOfChannels() < m_audioBufferList->bufferCount()) {
+        bus.zero();
         return;
     }
 
-    for (unsigned i = 0; i < bus->numberOfChannels(); ++i) {
-        auto& channel = *bus->channel(i);
+    for (unsigned i = 0; i < bus.numberOfChannels(); ++i) {
+        auto& channel = *bus.channel(i);
         if (i >= m_audioBufferList->bufferCount()) {
             channel.zero();
             continue;
@@ -96,7 +96,7 @@ void WebAudioSourceProviderCocoa::provideInput(AudioBus* bus, size_t framesToPro
         buffer->mDataByteSize = channel.length() * sizeof(float);
     }
 
-    ASSERT(framesToProcess <= bus->length());
+    ASSERT(framesToProcess <= bus.length());
     m_dataSource->pullSamples(*m_audioBufferList->list(), framesToProcess, m_readCount, 0, AudioSampleDataSource::Copy);
     m_readCount += framesToProcess;
 }

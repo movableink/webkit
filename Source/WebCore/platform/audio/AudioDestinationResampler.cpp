@@ -46,9 +46,9 @@ AudioDestinationResampler::AudioDestinationResampler(const CreationOptions& opti
 {
     if (options.sampleRate != outputSampleRate) {
         double scaleFactor = static_cast<double>(options.sampleRate) / outputSampleRate;
-        m_resampler = makeUnique<MultiChannelResampler>(scaleFactor, options.numberOfOutputChannels, AudioUtilities::renderQuantumSize, [this](AudioBus* bus, size_t framesToProcess) {
+        m_resampler = makeUnique<MultiChannelResampler>(scaleFactor, options.numberOfOutputChannels, AudioUtilities::renderQuantumSize, [this](AudioBus& bus, size_t framesToProcess) {
             ASSERT_UNUSED(framesToProcess, framesToProcess == AudioUtilities::renderQuantumSize);
-            callRenderCallback(nullptr, bus, AudioUtilities::renderQuantumSize, m_outputTimestamp);
+            callRenderCallback(nullptr, &bus, AudioUtilities::renderQuantumSize, m_outputTimestamp);
         });
     }
 }

@@ -70,7 +70,7 @@ private:
 #endif
 
     // AudioSourceProvider
-    void provideInput(AudioBus*, size_t) final;
+    void provideInput(AudioBus&, size_t) final;
     void setClient(WeakPtr<AudioSourceProviderClient>&&) final;
 
     void prepare(const AudioStreamBasicDescription&);

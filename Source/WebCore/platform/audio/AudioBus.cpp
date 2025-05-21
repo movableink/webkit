@@ -45,7 +45,7 @@ constexpr unsigned MaxBusChannels = 32;
 
 RefPtr<AudioBus> AudioBus::create(unsigned numberOfChannels, size_t length, bool allocate)
 {
-    ASSERT(numberOfChannels <= MaxBusChannels);
+    RELEASE_ASSERT(numberOfChannels <= MaxBusChannels);
     if (numberOfChannels > MaxBusChannels)
         return nullptr;
 

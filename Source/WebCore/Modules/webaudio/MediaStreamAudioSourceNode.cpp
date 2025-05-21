@@ -125,14 +125,16 @@ void MediaStreamAudioSourceNode::setFormat(size_t numberOfChannels, float source
     }
 }
 
-void MediaStreamAudioSourceNode::provideInput(AudioBus* bus, size_t framesToProcess)
+void MediaStreamAudioSourceNode::provideInput(AudioBus& bus, size_t framesToProcess)
 {
     m_provider->provideInput(bus, framesToProcess);
 }
 
 void MediaStreamAudioSourceNode::process(size_t numberOfFrames)
 {
-    AudioBus* outputBus = output(0)->bus();
+    RefPtr outputBus = output(0)->bus();
+    if (!outputBus)
+        return;
 
     // Use tryLock() to avoid contention in the real-time audio thread.
     // If we fail to acquire the lock then the MediaStream must be in the middle of
@@ -154,11 +156,11 @@ void MediaStreamAudioSourceNode::process(size_t numberOfFrames)
 
     if (m_multiChannelResampler) {
         ASSERT(m_sourceSampleRate != sampleRate());
-        m_multiChannelResampler->process(outputBus, numberOfFrames);
+        m_multiChannelResampler->process(outputBus.get(), numberOfFrames);
     } else {
         // Bypass the resampler completely if the source is at the context's sample-rate.
         ASSERT(m_sourceSampleRate == sampleRate());
-        provideInput(outputBus, numberOfFrames);
+        provideInput(*outputBus, numberOfFrames);
     }
 }
 

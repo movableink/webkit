@@ -83,6 +83,9 @@ void AudioResampler::process(AudioSourceProvider* provider, AudioBus* destinatio
         return;
 
     RefPtr sourceBus = m_sourceBus;
+    if (!sourceBus)
+        return;
+
     // Setup the source bus.
     for (unsigned i = 0; i < numberOfChannels; ++i) {
         // Figure out how many frames we need to get from the provider, and a pointer to the buffer.
@@ -96,7 +99,7 @@ void AudioResampler::process(AudioSourceProvider* provider, AudioBus* destinatio
     }
 
     // Ask the provider to supply the desired number of source frames.
-    provider->provideInput(sourceBus.get(), sourceBus->length());
+    provider->provideInput(*sourceBus, sourceBus->length());
 
     // Now that we have the source data, resample each channel into the destination bus.
     // FIXME: optimize for the common stereo case where it's faster to process both left/right channels in the same inner loop.

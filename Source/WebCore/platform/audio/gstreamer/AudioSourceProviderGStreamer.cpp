@@ -66,22 +66,22 @@ static void onGStreamerDeinterleavePadRemovedCallback(GstElement*, GstPad* pad, 
     provider->handleRemovedDeinterleavePad(pad);
 }
 
-static void copyGStreamerBuffersToAudioChannel(GstAdapter* adapter, AudioBus* bus , int channelNumber, size_t framesToProcess)
+static void copyGStreamerBuffersToAudioChannel(GstAdapter* adapter, AudioBus& bus , int channelNumber, size_t framesToProcess)
 {
     auto available = gst_adapter_available(adapter);
     if (!available) {
         GST_TRACE("Adapter empty, silencing bus");
-        bus->zero();
+        bus.zero();
         return;
     }
 
     GST_TRACE("%zu samples available for channel %d (%zu frames requested)", available, channelNumber, framesToProcess);
     size_t bytes = framesToProcess * sizeof(float);
     if (available >= bytes) {
-        gst_adapter_copy(adapter, bus->channel(channelNumber)->mutableData(), 0, bytes);
+        gst_adapter_copy(adapter, bus.channel(channelNumber)->mutableData(), 0, bytes);
         gst_adapter_flush(adapter, bytes);
     } else
-        bus->zero();
+        bus.zero();
 }
 
 AudioSourceProviderGStreamer::AudioSourceProviderGStreamer()
@@ -229,7 +229,7 @@ void AudioSourceProviderGStreamer::configureAudioBin(GstElement* audioBin, GstEl
     gst_element_link_pads_full(audioResample2, "src", audioSink, "sink", GST_PAD_LINK_CHECK_NOTHING);
 }
 
-void AudioSourceProviderGStreamer::provideInput(AudioBus* bus, size_t framesToProcess)
+void AudioSourceProviderGStreamer::provideInput(AudioBus& bus, size_t framesToProcess)
 {
     GST_TRACE("Fetching buffers from adapters");
     if (!m_adapterLock.tryLock())
