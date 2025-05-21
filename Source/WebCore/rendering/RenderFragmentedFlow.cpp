@@ -97,8 +97,6 @@ void RenderFragmentedFlow::invalidateFragments(MarkingBehavior markingParents)
     }
 
     m_fragmentRangeMap.clear();
-    m_breakBeforeToFragmentMap.clear();
-    m_breakAfterToFragmentMap.clear();
     if (m_lineToFragmentMap)
         m_lineToFragmentMap->clear();
     setNeedsLayout(markingParents);

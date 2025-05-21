@@ -244,11 +244,6 @@ protected:
     using RenderFragmentContainerRangeMap = SingleThreadWeakHashMap<const RenderBox, RenderFragmentContainerRange>;
     RenderFragmentContainerRangeMap m_fragmentRangeMap;
 
-    // Map a box with a fragment break to the auto height fragment affected by that break. 
-    using RenderBoxToFragmentMap = UncheckedKeyHashMap<SingleThreadWeakRef<RenderBox>, SingleThreadWeakRef<RenderFragmentContainer>>;
-    RenderBoxToFragmentMap m_breakBeforeToFragmentMap;
-    RenderBoxToFragmentMap m_breakAfterToFragmentMap;
-
     FragmentIntervalTree m_fragmentIntervalTree;
 
     CurrentRenderFragmentContainerMaintainer* m_currentFragmentMaintainer;
