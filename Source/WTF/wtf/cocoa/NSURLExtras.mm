@@ -198,7 +198,7 @@ static RetainPtr<NSData> dataWithUserTypedString(NSString *string)
     
     auto outBytesSpan = outBytes.releaseBuffer().leakSpan();
     return adoptNS([[NSData alloc] initWithBytesNoCopy:outBytesSpan.data() length:outBytesSpan.size() deallocator:^(void* bytes, NSUInteger) {
-        FastMalloc::free(bytes);
+        VectorBufferMalloc::free(bytes);
     }]); // adopts outBytes
 }
 
