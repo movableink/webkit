@@ -29,6 +29,7 @@
 #include "DecodingOptions.h"
 #include "DestinationColorSpace.h"
 #include "FloatRect.h"
+#include "ImageAdapter.h"
 #include "ImageOrientation.h"
 #include "ImagePaintingOptions.h"
 #include "ImageTypes.h"
@@ -46,7 +47,6 @@ class FloatPoint;
 class FloatSize;
 class FragmentedSharedBuffer;
 class GraphicsContext;
-class ImageAdapter;
 class NativeImage;
 class ShareableBitmap;
 class Timer;
