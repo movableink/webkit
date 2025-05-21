@@ -331,13 +331,16 @@ NSString* PipelineLayout::errorValidatingBindGroupCompatibility(const PipelineLa
     if (!m_bindGroupLayouts)
         return nil;
 
+    auto setBindGroupsSize = bindGroups.size();
     auto& bindGroupLayouts = *m_bindGroupLayouts;
     auto numberOfBindGroupsInPipeline = bindGroupLayouts.size();
+    if (setBindGroupsSize < numberOfBindGroupsInPipeline) {
+        if (numberOfBindGroupsInPipeline == 1 && !bindGroupLayouts[0]->entries().size())
+            return nil;
+        return [NSString stringWithFormat:@"number of bind groups set(%u) is less than the pipeline uses(%zu)", setBindGroupsSize, numberOfBindGroupsInPipeline];
+    }
 
     for (size_t bindGroupIndex = 0; bindGroupIndex < numberOfBindGroupsInPipeline; ++bindGroupIndex) {
-        if (!bindGroupLayouts[bindGroupIndex]->entries().size())
-            continue;
-
         auto it = bindGroups.find(bindGroupIndex);
         if (it == bindGroups.end() || !it->value.get())
             return [NSString stringWithFormat:@"can not find bind group in pipeline for bindGroup index %zu", bindGroupIndex];

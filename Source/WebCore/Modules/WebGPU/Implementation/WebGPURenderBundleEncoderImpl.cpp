@@ -87,14 +87,14 @@ void RenderBundleEncoderImpl::drawIndexedIndirect(const Buffer& indirectBuffer, 
     wgpuRenderBundleEncoderDrawIndexedIndirect(m_backing.get(), protectedConvertToBackingContext()->convertToBacking(indirectBuffer), indirectOffset);
 }
 
-void RenderBundleEncoderImpl::setBindGroup(Index32 index, const BindGroup* bindGroup,
+void RenderBundleEncoderImpl::setBindGroup(Index32 index, const BindGroup& bindGroup,
     std::optional<Vector<BufferDynamicOffset>>&& dynamicOffsets)
 {
     auto backingOffsets = valueOrDefault(dynamicOffsets);
-    wgpuRenderBundleEncoderSetBindGroupWithDynamicOffsets(m_backing.get(), index, bindGroup ? protectedConvertToBackingContext()->convertToBacking(*bindGroup) : nullptr, WTFMove(dynamicOffsets));
+    wgpuRenderBundleEncoderSetBindGroupWithDynamicOffsets(m_backing.get(), index, protectedConvertToBackingContext()->convertToBacking(bindGroup), WTFMove(dynamicOffsets));
 }
 
-void RenderBundleEncoderImpl::setBindGroup(Index32, const BindGroup*,
+void RenderBundleEncoderImpl::setBindGroup(Index32, const BindGroup&,
     std::span<const uint32_t>,
     Size64,
     Size32)

@@ -39,20 +39,20 @@ class ConvertToBackingContext;
 class RemoteBindGroupLayoutProxy final : public WebCore::WebGPU::BindGroupLayout {
     WTF_MAKE_TZONE_ALLOCATED(RemoteBindGroupLayoutProxy);
 public:
-    static Ref<RemoteBindGroupLayoutProxy> create(RemoteGPUProxy& parent, ConvertToBackingContext& convertToBackingContext, WebGPUIdentifier identifier)
+    static Ref<RemoteBindGroupLayoutProxy> create(RemoteDeviceProxy& parent, ConvertToBackingContext& convertToBackingContext, WebGPUIdentifier identifier)
     {
         return adoptRef(*new RemoteBindGroupLayoutProxy(parent, convertToBackingContext, identifier));
     }
 
     virtual ~RemoteBindGroupLayoutProxy();
 
-    RemoteGPUProxy& parent() { return m_parent; }
-    RemoteGPUProxy& root() { return m_parent; }
+    RemoteDeviceProxy& parent() { return m_parent; }
+    RemoteGPUProxy& root() { return m_parent->root(); }
 
 private:
     friend class DowncastConvertToBackingContext;
 
-    RemoteBindGroupLayoutProxy(RemoteGPUProxy&, ConvertToBackingContext&, WebGPUIdentifier);
+    RemoteBindGroupLayoutProxy(RemoteDeviceProxy&, ConvertToBackingContext&, WebGPUIdentifier);
 
     RemoteBindGroupLayoutProxy(const RemoteBindGroupLayoutProxy&) = delete;
     RemoteBindGroupLayoutProxy(RemoteBindGroupLayoutProxy&&) = delete;
@@ -71,7 +71,7 @@ private:
 
     WebGPUIdentifier m_backing;
     Ref<ConvertToBackingContext> m_convertToBackingContext;
-    Ref<RemoteGPUProxy> m_parent;
+    Ref<RemoteDeviceProxy> m_parent;
 };
 
 } // namespace WebKit::WebGPU

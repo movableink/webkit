@@ -220,7 +220,6 @@ struct EntryPointInformation {
     HashMap<String, SpecializationConstant> specializationConstants;
     Variant<Vertex, Fragment, Compute> typedEntryPoint;
     size_t sizeForWorkgroupVariables { 0 };
-    size_t bindingCount { 0 };
 };
 
 } // namespace Reflection

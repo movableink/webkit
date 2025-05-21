@@ -30,7 +30,6 @@
 
 #include "RemoteRenderPassEncoderMessages.h"
 #include "WebGPUConvertToBackingContext.h"
-#include <WebCore/WebGPUBindGroup.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebKit::WebGPU {
@@ -112,25 +111,21 @@ void RemoteRenderPassEncoderProxy::drawIndexedIndirect(const WebCore::WebGPU::Bu
     UNUSED_VARIABLE(sendResult);
 }
 
-void RemoteRenderPassEncoderProxy::setBindGroup(WebCore::WebGPU::Index32 index, const WebCore::WebGPU::BindGroup* bindGroup,
+void RemoteRenderPassEncoderProxy::setBindGroup(WebCore::WebGPU::Index32 index, const WebCore::WebGPU::BindGroup& bindGroup,
     std::optional<Vector<WebCore::WebGPU::BufferDynamicOffset>>&& dynamicOffsets)
 {
-    std::optional<WebGPUIdentifier> convertedBindGroup;
-    if (bindGroup)
-        convertedBindGroup = protectedConvertToBackingContext()->convertToBacking(*bindGroup);
+    auto convertedBindGroup = protectedConvertToBackingContext()->convertToBacking(bindGroup);
 
     auto sendResult = send(Messages::RemoteRenderPassEncoder::SetBindGroup(index, convertedBindGroup, dynamicOffsets));
     UNUSED_VARIABLE(sendResult);
 }
 
-void RemoteRenderPassEncoderProxy::setBindGroup(WebCore::WebGPU::Index32 index, const WebCore::WebGPU::BindGroup* bindGroup,
+void RemoteRenderPassEncoderProxy::setBindGroup(WebCore::WebGPU::Index32 index, const WebCore::WebGPU::BindGroup& bindGroup,
     std::span<const uint32_t> dynamicOffsetsArrayBuffer,
     WebCore::WebGPU::Size64 dynamicOffsetsDataStart,
     WebCore::WebGPU::Size32 dynamicOffsetsDataLength)
 {
-    std::optional<WebGPUIdentifier> convertedBindGroup;
-    if (bindGroup)
-        convertedBindGroup = protectedConvertToBackingContext()->convertToBacking(*bindGroup);
+    auto convertedBindGroup = protectedConvertToBackingContext()->convertToBacking(bindGroup);
 
     auto sendResult = send(Messages::RemoteRenderPassEncoder::SetBindGroup(index, convertedBindGroup, Vector<WebCore::WebGPU::BufferDynamicOffset>(dynamicOffsetsArrayBuffer.subspan(dynamicOffsetsDataStart, dynamicOffsetsDataLength))));
     UNUSED_VARIABLE(sendResult);

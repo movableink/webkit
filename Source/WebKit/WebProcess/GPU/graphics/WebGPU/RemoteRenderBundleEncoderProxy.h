@@ -83,10 +83,10 @@ private:
     void drawIndirect(const WebCore::WebGPU::Buffer& indirectBuffer, WebCore::WebGPU::Size64 indirectOffset) final;
     void drawIndexedIndirect(const WebCore::WebGPU::Buffer& indirectBuffer, WebCore::WebGPU::Size64 indirectOffset) final;
 
-    void setBindGroup(WebCore::WebGPU::Index32, const WebCore::WebGPU::BindGroup*,
+    void setBindGroup(WebCore::WebGPU::Index32, const WebCore::WebGPU::BindGroup&,
         std::optional<Vector<WebCore::WebGPU::BufferDynamicOffset>>&& dynamicOffsets) final;
 
-    void setBindGroup(WebCore::WebGPU::Index32, const WebCore::WebGPU::BindGroup*,
+    void setBindGroup(WebCore::WebGPU::Index32, const WebCore::WebGPU::BindGroup&,
         std::span<const uint32_t> dynamicOffsetsArrayBuffer,
         WebCore::WebGPU::Size64 dynamicOffsetsDataStart,
         WebCore::WebGPU::Size32 dynamicOffsetsDataLength) final;

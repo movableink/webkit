@@ -1,4 +1,4 @@
-CONSOLE MESSAGE: can not find bind group in pipeline for bindGroup index 0
+CONSOLE MESSAGE: number of bind groups set(0) is less than the pipeline uses(1)
 layer at (0,0) size 800x600
   RenderView at (0,0) size 800x600
 layer at (0,0) size 800x600

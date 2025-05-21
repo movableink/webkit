@@ -44,9 +44,397 @@ FAIL :number_of_bind_group_layouts_exceeds_the_maximum_value: assert_unreached:
     @http://127.0.0.1:8000/webgpu/webgpu/api/validation/createPipelineLayout.spec.js:129:26
  Reached unreachable code
 PASS :bind_group_layouts,device_mismatch:
-PASS :bind_group_layouts,null_bind_group_layouts:
-PASS :bind_group_layouts,create_pipeline_with_null_bind_group_layouts:
+FAIL :bind_group_layouts,null_bind_group_layouts: assert_unreached:
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["Null"]
+    Type error
+    createPipelineLayout@[native code]
+    @http://127.0.0.1:8000/webgpu/webgpu/api/validation/createPipelineLayout.spec.js:218:34
+    expectValidationError@http://127.0.0.1:8000/webgpu/webgpu/gpu_test.js:1301:27
+    @http://127.0.0.1:8000/webgpu/webgpu/api/validation/createPipelineLayout.spec.js:217:26
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["Undefined"]
+    Type error
+    createPipelineLayout@[native code]
+    @http://127.0.0.1:8000/webgpu/webgpu/api/validation/createPipelineLayout.spec.js:218:34
+    expectValidationError@http://127.0.0.1:8000/webgpu/webgpu/gpu_test.js:1301:27
+    @http://127.0.0.1:8000/webgpu/webgpu/api/validation/createPipelineLayout.spec.js:217:26
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["Null","NonEmpty"]
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["Undefined","NonEmpty"]
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["NonEmpty","Null"]
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["NonEmpty","Undefined"]
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["Null","NonEmpty","NonEmpty"]
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["Undefined","NonEmpty","NonEmpty"]
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["NonEmpty","Null","NonEmpty"]
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["NonEmpty","Undefined","NonEmpty"]
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["NonEmpty","NonEmpty","Null"]
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["NonEmpty","NonEmpty","Undefined"]
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["Null","NonEmpty","NonEmpty","NonEmpty"]
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["Undefined","NonEmpty","NonEmpty","NonEmpty"]
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["NonEmpty","Null","NonEmpty","NonEmpty"]
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["NonEmpty","Undefined","NonEmpty","NonEmpty"]
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["NonEmpty","NonEmpty","Null","NonEmpty"]
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["NonEmpty","NonEmpty","Undefined","NonEmpty"]
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["NonEmpty","NonEmpty","NonEmpty","Null"]
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: bindGroupLayouts=["NonEmpty","NonEmpty","NonEmpty","Undefined"]
+    Type error
+      at (elided: only 2 shown)
+  - INFO: subcase: bindGroupLayouts=["Null"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["Undefined"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["Null","NonEmpty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["Undefined","NonEmpty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["NonEmpty","Null"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["NonEmpty","Undefined"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["Null","NonEmpty","NonEmpty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["Undefined","NonEmpty","NonEmpty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["NonEmpty","Null","NonEmpty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["NonEmpty","Undefined","NonEmpty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["NonEmpty","NonEmpty","Null"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["NonEmpty","NonEmpty","Undefined"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["Null","NonEmpty","NonEmpty","NonEmpty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["Undefined","NonEmpty","NonEmpty","NonEmpty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["NonEmpty","Null","NonEmpty","NonEmpty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["NonEmpty","Undefined","NonEmpty","NonEmpty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["NonEmpty","NonEmpty","Null","NonEmpty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["NonEmpty","NonEmpty","Undefined","NonEmpty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["NonEmpty","NonEmpty","NonEmpty","Null"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["NonEmpty","NonEmpty","NonEmpty","Undefined"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["Empty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["Empty","NonEmpty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["NonEmpty","Empty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["Empty","NonEmpty","NonEmpty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["NonEmpty","Empty","NonEmpty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["NonEmpty","NonEmpty","Empty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["Empty","NonEmpty","NonEmpty","NonEmpty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["NonEmpty","Empty","NonEmpty","NonEmpty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["NonEmpty","NonEmpty","Empty","NonEmpty"]
+    OK
+  - INFO: subcase: bindGroupLayouts=["NonEmpty","NonEmpty","NonEmpty","Empty"]
+    OK
+ Reached unreachable code
+FAIL :bind_group_layouts,create_pipeline_with_null_bind_group_layouts: assert_unreached:
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=0;emptyBindGroupLayoutIndexMissedInShader=true
+    Type error
+    createPipelineLayout@[native code]
+    @http://127.0.0.1:8000/webgpu/webgpu/api/validation/createPipelineLayout.spec.js:271:47
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=0;emptyBindGroupLayoutIndexMissedInShader=false
+    Type error
+    createPipelineLayout@[native code]
+    @http://127.0.0.1:8000/webgpu/webgpu/api/validation/createPipelineLayout.spec.js:271:47
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=1;emptyBindGroupLayoutIndexMissedInShader=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=1;emptyBindGroupLayoutIndexMissedInShader=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=2;emptyBindGroupLayoutIndexMissedInShader=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=2;emptyBindGroupLayoutIndexMissedInShader=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=3;emptyBindGroupLayoutIndexMissedInShader=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=3;emptyBindGroupLayoutIndexMissedInShader=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=0;emptyBindGroupLayoutIndexMissedInShader=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=0;emptyBindGroupLayoutIndexMissedInShader=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=1;emptyBindGroupLayoutIndexMissedInShader=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=1;emptyBindGroupLayoutIndexMissedInShader=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=2;emptyBindGroupLayoutIndexMissedInShader=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=2;emptyBindGroupLayoutIndexMissedInShader=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=3;emptyBindGroupLayoutIndexMissedInShader=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=3;emptyBindGroupLayoutIndexMissedInShader=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=0;emptyBindGroupLayoutIndexMissedInShader=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=0;emptyBindGroupLayoutIndexMissedInShader=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=1;emptyBindGroupLayoutIndexMissedInShader=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=1;emptyBindGroupLayoutIndexMissedInShader=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=2;emptyBindGroupLayoutIndexMissedInShader=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=2;emptyBindGroupLayoutIndexMissedInShader=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=3;emptyBindGroupLayoutIndexMissedInShader=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=3;emptyBindGroupLayoutIndexMissedInShader=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=0;emptyBindGroupLayoutIndexMissedInShader=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=0;emptyBindGroupLayoutIndexMissedInShader=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=1;emptyBindGroupLayoutIndexMissedInShader=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=1;emptyBindGroupLayoutIndexMissedInShader=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=2;emptyBindGroupLayoutIndexMissedInShader=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=2;emptyBindGroupLayoutIndexMissedInShader=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=3;emptyBindGroupLayoutIndexMissedInShader=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=3;emptyBindGroupLayoutIndexMissedInShader=false
+    Type error
+      at (elided: only 2 shown)
+  - INFO: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=0;emptyBindGroupLayoutIndexMissedInShader=true
+    OK
+  - INFO: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=0;emptyBindGroupLayoutIndexMissedInShader=false
+    OK
+  - INFO: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=1;emptyBindGroupLayoutIndexMissedInShader=true
+    OK
+  - INFO: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=1;emptyBindGroupLayoutIndexMissedInShader=false
+    OK
+  - INFO: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=2;emptyBindGroupLayoutIndexMissedInShader=true
+    OK
+  - INFO: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=2;emptyBindGroupLayoutIndexMissedInShader=false
+    OK
+  - INFO: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=3;emptyBindGroupLayoutIndexMissedInShader=true
+    OK
+  - INFO: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=3;emptyBindGroupLayoutIndexMissedInShader=false
+    OK
+  - INFO: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=0;emptyBindGroupLayoutIndexMissedInShader=true
+    OK
+  - INFO: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=0;emptyBindGroupLayoutIndexMissedInShader=false
+    OK
+  - INFO: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=1;emptyBindGroupLayoutIndexMissedInShader=true
+    OK
+  - INFO: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=1;emptyBindGroupLayoutIndexMissedInShader=false
+    OK
+  - INFO: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=2;emptyBindGroupLayoutIndexMissedInShader=true
+    OK
+  - INFO: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=2;emptyBindGroupLayoutIndexMissedInShader=false
+    OK
+  - INFO: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=3;emptyBindGroupLayoutIndexMissedInShader=true
+    OK
+  - INFO: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=3;emptyBindGroupLayoutIndexMissedInShader=false
+    OK
+  - INFO: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=0;emptyBindGroupLayoutIndexMissedInShader=true
+    OK
+  - INFO: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=0;emptyBindGroupLayoutIndexMissedInShader=false
+    OK
+  - INFO: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=1;emptyBindGroupLayoutIndexMissedInShader=true
+    OK
+  - INFO: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=1;emptyBindGroupLayoutIndexMissedInShader=false
+    OK
+  - INFO: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=2;emptyBindGroupLayoutIndexMissedInShader=true
+    OK
+  - INFO: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=2;emptyBindGroupLayoutIndexMissedInShader=false
+    OK
+  - INFO: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=3;emptyBindGroupLayoutIndexMissedInShader=true
+    OK
+  - INFO: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=3;emptyBindGroupLayoutIndexMissedInShader=false
+    OK
+  - INFO: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=0;emptyBindGroupLayoutIndexMissedInShader=true
+    OK
+  - INFO: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=0;emptyBindGroupLayoutIndexMissedInShader=false
+    OK
+  - INFO: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=1;emptyBindGroupLayoutIndexMissedInShader=true
+    OK
+  - INFO: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=1;emptyBindGroupLayoutIndexMissedInShader=false
+    OK
+  - INFO: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=2;emptyBindGroupLayoutIndexMissedInShader=true
+    OK
+  - INFO: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=2;emptyBindGroupLayoutIndexMissedInShader=false
+    OK
+  - INFO: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=3;emptyBindGroupLayoutIndexMissedInShader=true
+    OK
+  - INFO: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=3;emptyBindGroupLayoutIndexMissedInShader=false
+    OK
+ Reached unreachable code
 FAIL :bind_group_layouts,set_pipeline_with_null_bind_group_layouts: assert_unreached:
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=0;setBindGroupOnEmptyBindGroupLayoutIndex=true
+    Type error
+    createPipelineLayout@[native code]
+    @http://127.0.0.1:8000/webgpu/webgpu/api/validation/createPipelineLayout.spec.js:416:47
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=0;setBindGroupOnEmptyBindGroupLayoutIndex=false
+    Type error
+    createPipelineLayout@[native code]
+    @http://127.0.0.1:8000/webgpu/webgpu/api/validation/createPipelineLayout.spec.js:416:47
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=1;setBindGroupOnEmptyBindGroupLayoutIndex=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=1;setBindGroupOnEmptyBindGroupLayoutIndex=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=2;setBindGroupOnEmptyBindGroupLayoutIndex=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=2;setBindGroupOnEmptyBindGroupLayoutIndex=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=3;setBindGroupOnEmptyBindGroupLayoutIndex=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=3;setBindGroupOnEmptyBindGroupLayoutIndex=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=0;setBindGroupOnEmptyBindGroupLayoutIndex=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=0;setBindGroupOnEmptyBindGroupLayoutIndex=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=1;setBindGroupOnEmptyBindGroupLayoutIndex=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=1;setBindGroupOnEmptyBindGroupLayoutIndex=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=2;setBindGroupOnEmptyBindGroupLayoutIndex=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=2;setBindGroupOnEmptyBindGroupLayoutIndex=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=3;setBindGroupOnEmptyBindGroupLayoutIndex=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Render";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=3;setBindGroupOnEmptyBindGroupLayoutIndex=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=0;setBindGroupOnEmptyBindGroupLayoutIndex=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=0;setBindGroupOnEmptyBindGroupLayoutIndex=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=1;setBindGroupOnEmptyBindGroupLayoutIndex=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=1;setBindGroupOnEmptyBindGroupLayoutIndex=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=2;setBindGroupOnEmptyBindGroupLayoutIndex=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=2;setBindGroupOnEmptyBindGroupLayoutIndex=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=3;setBindGroupOnEmptyBindGroupLayoutIndex=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=3;setBindGroupOnEmptyBindGroupLayoutIndex=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=0;setBindGroupOnEmptyBindGroupLayoutIndex=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=0;setBindGroupOnEmptyBindGroupLayoutIndex=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=1;setBindGroupOnEmptyBindGroupLayoutIndex=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=1;setBindGroupOnEmptyBindGroupLayoutIndex=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=2;setBindGroupOnEmptyBindGroupLayoutIndex=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=2;setBindGroupOnEmptyBindGroupLayoutIndex=false
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=3;setBindGroupOnEmptyBindGroupLayoutIndex=true
+    Type error
+      at (elided: only 2 shown)
+  - EXCEPTION: TypeError: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=3;setBindGroupOnEmptyBindGroupLayoutIndex=false
+    Type error
+      at (elided: only 2 shown)
   - INFO: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=0;setBindGroupOnEmptyBindGroupLayoutIndex=true
     OK
   - INFO: subcase: pipelineType="Render";emptyBindGroupLayoutType="Null";emptyBindGroupLayoutIndex=0;setBindGroupOnEmptyBindGroupLayoutIndex=false
@@ -111,8 +499,5 @@ FAIL :bind_group_layouts,set_pipeline_with_null_bind_group_layouts: assert_unrea
     OK
   - INFO: subcase: pipelineType="Compute";emptyBindGroupLayoutType="Undefined";emptyBindGroupLayoutIndex=3;setBindGroupOnEmptyBindGroupLayoutIndex=false
     OK
-  - EXCEPTION: Error: Unexpected validation error occurred: Validation failure.
-    TestFailedButDeviceReusable@
-    @http://127.0.0.1:8000/webgpu/webgpu/util/device_pool.js:442:44
  Reached unreachable code
 

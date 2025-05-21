@@ -100,7 +100,6 @@ public:
     void retainTimestampsForOneUpdate(NSMutableSet<id<MTLCounterSampleBuffer>> *);
     void waitForAllCommitedWorkToComplete();
     void synchronizeResourceAndWait(id<MTLBuffer>);
-    id<MTLIndirectCommandBuffer> trimICB(id<MTLIndirectCommandBuffer> dest, id<MTLIndirectCommandBuffer> src, NSUInteger newSize);
 private:
     Queue(id<MTLCommandQueue>, Adapter&, Device&);
     Queue(Adapter&, Device&);

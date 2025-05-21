@@ -104,7 +104,6 @@ private:
 
     RefPtr<WebCore::WebGPU::CommandEncoder> createCommandEncoder(const std::optional<WebCore::WebGPU::CommandEncoderDescriptor>&) final;
     Ref<WebCore::WebGPU::CommandEncoder> createInvalidCommandEncoder();
-    Ref<WebCore::WebGPU::BindGroupLayout> createEmptyBindGroupLayout();
     RefPtr<WebCore::WebGPU::RenderBundleEncoder> createRenderBundleEncoder(const WebCore::WebGPU::RenderBundleEncoderDescriptor&) final;
 
     RefPtr<WebCore::WebGPU::QuerySet> createQuerySet(const WebCore::WebGPU::QuerySetDescriptor&) final;
@@ -117,7 +116,6 @@ private:
     void resolveDeviceLostPromise(CompletionHandler<void(WebCore::WebGPU::DeviceLostReason)>&&) final;
 
     Ref<ConvertToBackingContext> protectedConvertToBackingContext() const;
-    Ref<WebCore::WebGPU::BindGroupLayout> emptyBindGroupLayout() const final;
 
     Ref<WebCore::WebGPU::CommandEncoder> invalidCommandEncoder() final;
     Ref<WebCore::WebGPU::CommandBuffer> invalidCommandBuffer() final;
@@ -138,7 +136,6 @@ private:
     Ref<WebCore::WebGPU::RenderPassEncoder> m_invalidRenderPassEncoder;
     Ref<WebCore::WebGPU::ComputePassEncoder> m_invalidComputePassEncoder;
     Ref<WebCore::WebGPU::CommandBuffer> m_invalidCommandBuffer;
-    Ref<WebCore::WebGPU::BindGroupLayout> m_emptyBindGroupLayout;
 };
 
 } // namespace WebKit::WebGPU

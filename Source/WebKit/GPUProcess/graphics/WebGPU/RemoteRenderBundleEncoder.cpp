@@ -147,20 +147,15 @@ void RemoteRenderBundleEncoder::drawIndexedIndirect(WebGPUIdentifier indirectBuf
     protectedBacking()->drawIndexedIndirect(*convertedIndirectBuffer, indirectOffset);
 }
 
-void RemoteRenderBundleEncoder::setBindGroup(WebCore::WebGPU::Index32 index, std::optional<WebGPUIdentifier> bindGroup,
+void RemoteRenderBundleEncoder::setBindGroup(WebCore::WebGPU::Index32 index, WebGPUIdentifier bindGroup,
     std::optional<Vector<WebCore::WebGPU::BufferDynamicOffset>>&& dynamicOffsets)
 {
-    if (!bindGroup) {
-        protectedBacking()->setBindGroup(index, nullptr, WTFMove(dynamicOffsets));
-        return;
-    }
-
-    RefPtr convertedBindGroup = protectedObjectHeap()->convertBindGroupFromBacking(*bindGroup).get();
+    auto convertedBindGroup = protectedObjectHeap()->convertBindGroupFromBacking(bindGroup);
     ASSERT(convertedBindGroup);
     if (!convertedBindGroup)
         return;
 
-    protectedBacking()->setBindGroup(index, convertedBindGroup.get(), WTFMove(dynamicOffsets));
+    protectedBacking()->setBindGroup(index, *convertedBindGroup, WTFMove(dynamicOffsets));
 }
 
 void RemoteRenderBundleEncoder::pushDebugGroup(String&& groupLabel)

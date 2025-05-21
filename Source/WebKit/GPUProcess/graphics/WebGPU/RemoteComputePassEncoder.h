@@ -88,7 +88,7 @@ private:
 
     void end();
 
-    void setBindGroup(WebCore::WebGPU::Index32, std::optional<WebGPUIdentifier>,
+    void setBindGroup(WebCore::WebGPU::Index32, WebGPUIdentifier,
         std::optional<Vector<WebCore::WebGPU::BufferDynamicOffset>>&&);
 
     void pushDebugGroup(String&& groupLabel);
