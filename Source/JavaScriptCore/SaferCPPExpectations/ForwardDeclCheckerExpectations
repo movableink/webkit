@@ -13,7 +13,6 @@ bytecode/CodeOrigin.h
 bytecode/GetByStatus.h
 bytecode/ICStatusMap.h
 bytecode/Repatch.cpp
-bytecode/StructureStubClearingWatchpoint.h
 dfg/DFGCommon.h
 dfg/DFGEdge.h
 dfg/DFGInlineCacheWrapper.h

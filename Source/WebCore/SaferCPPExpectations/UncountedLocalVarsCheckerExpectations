@@ -68,8 +68,6 @@ Modules/webaudio/ConstantSourceNode.cpp
 Modules/webaudio/ConvolverNode.cpp
 Modules/webaudio/DynamicsCompressorNode.cpp
 Modules/webaudio/GainNode.cpp
-Modules/webaudio/MediaElementAudioSourceNode.cpp
-Modules/webaudio/MediaStreamAudioSourceNode.cpp
 Modules/webaudio/OscillatorNode.cpp
 Modules/webaudio/PannerNode.cpp
 Modules/webaudio/ScriptProcessorNode.cpp

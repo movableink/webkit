@@ -104,6 +104,7 @@ interpreter/Interpreter.cpp
 jit/BaselineJITPlan.cpp
 jit/ExecutableAllocator.cpp
 jit/GCAwareJITStubRoutine.cpp
+jit/GdbJIT.cpp
 jit/ICStats.cpp
 jit/ICStats.h
 jit/JIT.cpp
