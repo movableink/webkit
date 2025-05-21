@@ -133,7 +133,7 @@ struct WEBCORE_EXPORT QuirksData {
     bool shouldSupportHoverMediaQueriesQuirk : 1 { false };
 #endif
 
-#if PLATFORM(IOS_FAMILY) || ENABLE(DESKTOP_CONTENT_MODE_QUIRKS)
+#if PLATFORM(IOS_FAMILY)
     bool shouldHideCoarsePointerCharacteristicsQuirk : 1 { false };
 #endif
 
