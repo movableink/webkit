@@ -1060,6 +1060,26 @@ Length RenderFlexibleBox::mainSizeLengthForFlexItem(RenderBox::SizeType sizeType
     return { };
 }
 
+double RenderFlexibleBox::preferredAspectRatioForFlexItem(const RenderBox& flexItem) const
+{
+    auto flexItemAspectRatio = [&] {
+        auto flexItemIntrinsicSize = LayoutSize { flexItem.intrinsicLogicalWidth(), flexItem.intrinsicLogicalHeight() };
+        if (flexItem.isRenderOrLegacyRenderSVGRoot())
+            return downcast<RenderReplaced>(flexItem).computeIntrinsicAspectRatio();
+        if (flexItem.style().aspectRatioType() == AspectRatioType::Ratio || (flexItem.style().aspectRatioType() == AspectRatioType::AutoAndRatio && flexItemIntrinsicSize.isEmpty()))
+            return flexItem.style().aspectRatioLogicalWidth() / flexItem.style().aspectRatioLogicalHeight();
+        if (auto* replacedElement = dynamicDowncast<RenderReplaced>(flexItem))
+            return replacedElement->computeIntrinsicAspectRatio();
+
+        ASSERT(flexItem.intrinsicLogicalHeight());
+        return flexItem.intrinsicLogicalWidth().toDouble() / flexItem.intrinsicLogicalHeight().toDouble();
+    };
+
+    if (mainAxisIsFlexItemInlineAxis(flexItem))
+        return flexItemAspectRatio();
+    return 1 / flexItemAspectRatio();
+}
+
 // FIXME: computeMainSizeFromAspectRatioUsing may need to return an std::optional<LayoutUnit> in the future
 // rather than returning indefinite sizes as 0/-1.
 LayoutUnit RenderFlexibleBox::computeMainSizeFromAspectRatioUsing(const RenderBox& flexItem, Length crossSizeLength) const
@@ -1091,18 +1111,6 @@ LayoutUnit RenderFlexibleBox::computeMainSizeFromAspectRatioUsing(const RenderBo
     }
 
     auto flexItemIntrinsicSize = flexItem.intrinsicSize();
-    auto preferredAspectRatio = [&] {
-        if (flexItem.isRenderOrLegacyRenderSVGRoot())
-            return downcast<RenderReplaced>(flexItem).computeIntrinsicAspectRatio();
-        if (flexItem.style().aspectRatioType() == AspectRatioType::Ratio || (flexItem.style().aspectRatioType() == AspectRatioType::AutoAndRatio && flexItemIntrinsicSize.isEmpty()))
-            return flexItem.style().aspectRatioWidth() / flexItem.style().aspectRatioHeight();
-        if (auto* replacedElement = dynamicDowncast<RenderReplaced>(flexItem))
-            return replacedElement->computeIntrinsicAspectRatio();
-
-        ASSERT(flexItemIntrinsicSize.height());
-        return flexItemIntrinsicSize.width().toDouble() / flexItemIntrinsicSize.height().toDouble();
-    };
-
     LayoutUnit borderAndPadding;
     if (flexItem.style().aspectRatioType() == AspectRatioType::Ratio || (flexItem.style().aspectRatioType() == AspectRatioType::AutoAndRatio && flexItemIntrinsicSize.isEmpty())) {
         if (flexItem.style().boxSizingForAspectRatio() == BoxSizing::ContentBox)
@@ -1112,9 +1120,8 @@ LayoutUnit RenderFlexibleBox::computeMainSizeFromAspectRatioUsing(const RenderBo
     } else
         crossSize = adjustForBoxSizing(flexItem, crossSize);
 
-    if (isHorizontalFlow())
-        return std::max(0_lu, LayoutUnit(crossSize * preferredAspectRatio()) - borderAndPadding);
-    return std::max(0_lu, LayoutUnit(crossSize / preferredAspectRatio()) - borderAndPadding);
+    auto preferredAspectRatio = preferredAspectRatioForFlexItem(flexItem);
+    return std::max(0_lu, LayoutUnit(crossSize * preferredAspectRatio) - borderAndPadding);
 }
 
 void RenderFlexibleBox::setFlowAwareLocationForFlexItem(RenderBox& flexItem, const LayoutPoint& location)
