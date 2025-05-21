@@ -30,12 +30,10 @@ import re
 
 from webkitpy.results.upload import Upload
 from webkitpy.results.options import upload_args
+from webkitpy.safer_cpp.checkers import Checker
 from libraries.webkitscmpy.webkitscmpy import Commit
 from libraries.webkitscmpy.webkitscmpy import local, log, remote
 
-CHECKERS = ['ForwardDeclChecker', 'MemoryUnsafeCastChecker', 'NoUncountedMemberChecker', 'NoUncheckedPtrMemberChecker', 'NoUnretainedMemberChecker', 'RefCntblBaseVirtualDtor', 'RetainPtrCtorAdoptChecker', 'UncheckedCallArgsChecker',
-     'UncheckedLocalVarsChecker', 'UncountedCallArgsChecker', 'UncountedLambdaCapturesChecker', 'UncountedLocalVarsChecker', 'UnretainedLambdaCapturesChecker', 'UnretainedCallArgsChecker', 'UnretainedLocalVarsChecker']
-PROJECTS = ['JavaScriptCore', 'WebCore', 'WebDriver', 'WebGPU', 'WebInspectorUI', 'WebKit', 'WebKitLegacy', 'WTF']
 STATIC_ANALYZER_UNEXPECTED = 'StaticAnalyzerUnexpectedRegressions'
 UNEXPECTED_PASS = {'actual': 'PASS', 'expected': 'FAIL'}
 UNEXPECTED_FAILURE = {'actual': 'FAIL', 'expected': 'PASS'}
@@ -148,9 +146,10 @@ def compare_project_results_to_expectations(args, new_path, project, upload_only
     project_results_for_upload = {}
 
     # Compare the list of dirty files to the expectations list of files
-    for checker in CHECKERS:
+    for checker in Checker.enumerate():
+        checker_name = checker.name()
         # Get unexpected clean and buggy files per checker
-        buggy_files, clean_files, current_results = find_diff(args, os.path.join(os.path.dirname(__file__), f'../../Source/{project}/SaferCPPExpectations/{checker}Expectations'), f'{new_path}/{project}/{checker}Files')
+        buggy_files, clean_files, current_results = find_diff(args, checker.expectations_path(project), f'{new_path}/{project}/{checker_name}Files')
         unexpected_clean_files.update(clean_files)
         unexpected_buggy_files.update(buggy_files)
 
@@ -161,27 +160,27 @@ def compare_project_results_to_expectations(args, new_path, project, upload_only
         with open(f'{new_path}/issues_per_file.json') as f:
             issues_per_file = json.load(f)
         for file_name in buggy_files:
-            unexpected_issues.update(list(issues_per_file[checker][file_name].keys()))
-            unexpected_result_paths.update(list(issues_per_file[checker][file_name].values()))
+            unexpected_issues.update(list(issues_per_file[checker_name][file_name].keys()))
+            unexpected_result_paths.update(list(issues_per_file[checker_name][file_name].values()))
         unexpected_result_paths_total.update(unexpected_result_paths)
         unexpected_issues_total.update(unexpected_issues)
 
         if not upload_only:
             # Set up JSON object
-            project_results_passes[checker] = list(clean_files)
-            project_results_failures[checker] = list(buggy_files)
+            project_results_passes[checker_name] = list(clean_files)
+            project_results_failures[checker_name] = list(buggy_files)
 
             # Create sorted files for each unexpected list - these need the .txt to be displayed in browser
             subprocess.run(['mkdir', '-p', f'{args.build_output}/{STATIC_ANALYZER_UNEXPECTED}/{project}'])
-            with open(f'{args.build_output}/{STATIC_ANALYZER_UNEXPECTED}/{project}/UnexpectedPasses{checker}.txt', 'a') as f:
+            with open(f'{args.build_output}/{STATIC_ANALYZER_UNEXPECTED}/{project}/UnexpectedPasses{checker_name}.txt', 'a') as f:
                 f.write('\n'.join(sorted(clean_files)))
-            with open(f'{args.build_output}/{STATIC_ANALYZER_UNEXPECTED}/{project}/UnexpectedFailures{checker}.txt', 'a') as f:
+            with open(f'{args.build_output}/{STATIC_ANALYZER_UNEXPECTED}/{project}/UnexpectedFailures{checker_name}.txt', 'a') as f:
                 f.write('\n'.join(sorted(buggy_files)))
-            with open(f'{new_path}/{project}/UnexpectedIssues{checker}', 'a') as f:
+            with open(f'{new_path}/{project}/UnexpectedIssues{checker_name}', 'a') as f:
                 f.write('\n'.join(unexpected_issues))
 
             if clean_files or buggy_files or unexpected_issues:
-                print(f'\n{checker}:')
+                print(f'\n{checker_name}:')
                 print(f'    Unexpected passing files: {len(clean_files)}')
                 print(f'    Unexpected failing files: {len(buggy_files)}')
                 print(f'    Unexpected issues: {len(unexpected_issues)}')
@@ -190,13 +189,13 @@ def compare_project_results_to_expectations(args, new_path, project, upload_only
             if not file in project_results_for_upload.keys():
                 project_results_for_upload[file] = {}
             if file in buggy_files:
-                project_results_for_upload[file][checker] = UNEXPECTED_FAILURE
+                project_results_for_upload[file][checker_name] = UNEXPECTED_FAILURE
             else:
-                project_results_for_upload[file][checker] = EXPECTED_FAILURE
+                project_results_for_upload[file][checker_name] = EXPECTED_FAILURE
         for file in clean_files:
             if not file in project_results_for_upload.keys():
                 project_results_for_upload[file] = {}
-            project_results_for_upload[file][checker] = UNEXPECTED_PASS
+            project_results_for_upload[file][checker_name] = UNEXPECTED_PASS
 
     if unexpected_issues_total and args.scan_build and not upload_only:
         create_filtered_results_dir(args, project, unexpected_result_paths_total, STATIC_ANALYZER_UNEXPECTED)
@@ -216,9 +215,10 @@ def compare_project_results_by_run(args, archive_path, new_path, project):
     project_results_passes = {}
     project_results_failures = {}
 
-    for checker in CHECKERS:
-        _, fixed_issues, _ = find_diff(args, f'{archive_path}/{checker}Issues', f'{new_path}/{project}/{checker}Issues')
-        new_files, fixed_files, _ = find_diff(args, f'{archive_path}/{checker}Files', f'{new_path}/{project}/{checker}Files')
+    for checker in Checker.enumerate():
+        checker_name = checker.name()
+        _, fixed_issues, _ = find_diff(args, f'{archive_path}/{checker_name}Issues', f'{new_path}/{project}/{checker_name}Issues')
+        new_files, fixed_files, _ = find_diff(args, f'{archive_path}/{checker_name}Files', f'{new_path}/{project}/{checker_name}Files')
         fixed_issues_total.update(fixed_issues)
         fixed_files_total.update(fixed_files)
         new_files_total.update(new_files)
@@ -235,8 +235,8 @@ def compare_project_results_by_run(args, archive_path, new_path, project):
         new_issues_total.update(new_issues)
 
         # JSON
-        project_results_passes[checker] = list(fixed_files)
-        project_results_failures[checker] = list(new_files)
+        project_results_passes[checker_name] = list(fixed_files)
+        project_results_failures[checker_name] = list(new_files)
 
         if fixed_issues or fixed_files or new_issues or new_files:
             print(f'\n{checker}:')
@@ -306,7 +306,7 @@ def compare_results(args):
     new_path = os.path.abspath(f'{args.new_dir}')
     archive_path = os.path.abspath(f'{args.archived_dir}') if args.archived_dir else ''
 
-    for project in PROJECTS:
+    for project in Checker.projects():
         project_results_for_upload = None
         print(f'\n------ {project} ------')
         if args.check_expectations:
