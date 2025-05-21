@@ -5576,6 +5576,9 @@ LayoutRect RenderLayer::calculateLayerBounds(const RenderLayer* ancestorLayer, c
     if ((flags & ExcludeHiddenDescendants) && this != ancestorLayer && !hasVisibleContent() && !hasVisibleDescendant())
         return LayoutRect();
 
+    if ((flags & ExcludeViewTransitionCapturedDescendants) && this != ancestorLayer && renderer().capturedInViewTransition() && !renderer().isDocumentElementRenderer())
+        return LayoutRect();
+
     if (isRenderViewLayer()) {
         // The root layer is always just the size of the document.
         return renderer().view().unscaledDocumentRect();

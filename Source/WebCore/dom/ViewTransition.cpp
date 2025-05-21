@@ -405,7 +405,7 @@ static LayoutRect captureOverflowRect(RenderLayerModelObject& renderer)
         return { { }, LayoutSize { frameView->frameRect().width(), frameView->frameRect().height() } };
     }
 
-    return renderer.layer()->calculateLayerBounds(renderer.layer(), LayoutSize(), { RenderLayer::IncludeFilterOutsets, RenderLayer::ExcludeHiddenDescendants, RenderLayer::IncludeCompositedDescendants, RenderLayer::PreserveAncestorFlags });
+    return renderer.layer()->calculateLayerBounds(renderer.layer(), LayoutSize(), { RenderLayer::IncludeFilterOutsets, RenderLayer::ExcludeHiddenDescendants, RenderLayer::IncludeCompositedDescendants, RenderLayer::PreserveAncestorFlags, RenderLayer::ExcludeViewTransitionCapturedDescendants });
 }
 
 // The computed local-to-absolute transform, and layer bounds don't include the position

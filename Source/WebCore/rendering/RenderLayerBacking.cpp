@@ -717,7 +717,7 @@ void RenderLayerBacking::updateTransform(const RenderStyle& style)
         if (RefPtr activeViewTransition = renderer().document().activeViewTransition()) {
             if (CheckedPtr viewTransitionCapture = activeViewTransition->viewTransitionNewPseudoForCapturedElement(renderer())) {
                 t.scaleNonUniform(viewTransitionCapture->scale().width(), viewTransitionCapture->scale().height());
-                t.translate(viewTransitionCapture->captureContentInset().x(), viewTransitionCapture->captureContentInset().y());
+                t.translateRight(viewTransitionCapture->captureContentInset().x(), viewTransitionCapture->captureContentInset().y());
             }
             if (m_owningLayer.isRenderViewLayer()) {
                 auto scrollPosition = renderer().view().frameView().scrollPosition();
