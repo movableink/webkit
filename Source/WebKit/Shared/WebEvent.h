@@ -54,6 +54,8 @@ public:
     WebEvent(WebEventType, OptionSet<WebEventModifier>, WallTime timestamp, WTF::UUID authorizationToken);
     WebEvent(WebEventType, OptionSet<WebEventModifier>, WallTime timestamp);
 
+    virtual ~WebEvent() = default;
+
     WebEventType type() const { return m_type; }
 
     bool shiftKey() const { return m_modifiers.contains(WebEventModifier::ShiftKey); }

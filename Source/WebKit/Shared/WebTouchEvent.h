@@ -231,7 +231,6 @@ public:
     bool allTouchPointsAreReleased() const;
 
 #if USE(LIBWPE)
-    virtual ~WebTouchEvent() { }
     virtual bool isNativeWebTouchEvent() const { return false; }
 #endif
 
