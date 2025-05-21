@@ -139,7 +139,9 @@ public:
     LayoutRect logicalRectToPhysicalRect(const LayoutPoint& physicalPosition, const LayoutRect& logicalRect);
 
     void addContinuationWithOutline(RenderInline*);
-    bool paintsContinuationOutline(RenderInline*);
+#if ASSERT_ENABLED
+    bool paintsContinuationOutline(const RenderInline&);
+#endif
 
     RenderPtr<RenderBlock> createAnonymousBlock() const;
 

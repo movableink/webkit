@@ -244,7 +244,7 @@ static PositionedDescendantsMap& positionedDescendantsMap()
     return mapForPositionedDescendants;
 }
 
-using ContinuationOutlineTableMap = UncheckedKeyHashMap<SingleThreadWeakRef<RenderBlock>, std::unique_ptr<ListHashSet<SingleThreadWeakRef<RenderInline>>>>;
+using ContinuationOutlineTableMap = SingleThreadWeakHashMap<RenderBlock, std::unique_ptr<SingleThreadWeakListHashSet<RenderInline>>>;
 
 // Allocated only when some of these fields have non-default values
 
@@ -263,7 +263,7 @@ public:
     std::optional<SingleThreadWeakPtr<RenderFragmentedFlow>> m_enclosingFragmentedFlow;
 };
 
-using RenderBlockRareDataMap = UncheckedKeyHashMap<SingleThreadWeakRef<const RenderBlock>, std::unique_ptr<RenderBlockRareData>>;
+using RenderBlockRareDataMap = SingleThreadWeakHashMap<const RenderBlock, std::unique_ptr<RenderBlockRareData>>;
 static RenderBlockRareDataMap* gRareDataMap;
 
 // This class helps dispatching the 'overflow' event on layout change. overflow can be set on RenderBoxes, yet the existing code
@@ -324,7 +324,7 @@ RenderBlock::~RenderBlock()
 {
     // Blocks can be added to gRareDataMap during willBeDestroyed(), so this code can't move there.
     if (renderBlockHasRareData())
-        gRareDataMap->remove(this);
+        gRareDataMap->remove(*this);
 
     // Do not add any more code here. Add it to willBeDestroyed() instead.
 }
@@ -1407,10 +1407,10 @@ void RenderBlock::addContinuationWithOutline(RenderInline* flow)
     ASSERT(!flow->layer() && !flow->isContinuation());
     
     auto* table = continuationOutlineTable();
-    auto* continuations = table->get(this);
+    auto* continuations = table->get(*this);
     if (!continuations) {
-        continuations = new ListHashSet<SingleThreadWeakRef<RenderInline>>;
-        table->set(*this, std::unique_ptr<ListHashSet<SingleThreadWeakRef<RenderInline>>>(continuations));
+        continuations = new SingleThreadWeakListHashSet<RenderInline>;
+        table->set(*this, std::unique_ptr<SingleThreadWeakListHashSet<RenderInline>>(continuations));
     }
     
     continuations->add(*flow);
@@ -1485,32 +1485,31 @@ bool RenderBlock::createsNewFormattingContext() const
         || establishesIndependentFormattingContext();
 }
 
-bool RenderBlock::paintsContinuationOutline(RenderInline* flow)
+#if ASSERT_ENABLED
+bool RenderBlock::paintsContinuationOutline(const RenderInline& renderer)
 {
-    auto* table = continuationOutlineTable();
-    auto* continuations = table->get(this);
-    if (!continuations)
-        return false;
-
-    return continuations->contains(flow);
+    if (auto* continuations = continuationOutlineTable()->get(*this))
+        return continuations->contains(renderer);
+    return false;
 }
+#endif
 
 void RenderBlock::paintContinuationOutlines(PaintInfo& info, const LayoutPoint& paintOffset)
 {
     auto* table = continuationOutlineTable();
-    auto continuations = table->take(this);
+    auto continuations = table->take(*this);
     if (!continuations)
         return;
 
     LayoutPoint accumulatedPaintOffset = paintOffset;
     // Paint each continuation outline.
-    for (auto& flow : *continuations) {
+    for (auto& renderInline : *continuations) {
         // Need to add in the coordinates of the intervening blocks.
-        RenderBlock* block = flow->containingBlock();
+        auto* block = renderInline.containingBlock();
         for ( ; block && block != this; block = block->containingBlock())
             accumulatedPaintOffset.moveBy(block->location());
         ASSERT(block);
-        flow->paintOutline(info, accumulatedPaintOffset);
+        renderInline.paintOutline(info, accumulatedPaintOffset);
     }
 }
 
