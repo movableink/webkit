@@ -23,7 +23,11 @@
 
 #if ENABLE(MODEL_PROCESS)
 
-[EnabledBy=ModelElementEnabled && ModelProcessEnabled]
+[
+    DispatchedFrom=WebContent,
+    DispatchedTo=Model,
+    EnabledBy=ModelElementEnabled && ModelProcessEnabled
+]
 messages -> ModelProcessModelPlayerProxy {
     CreateLayer()
     ReloadModel(Ref<WebCore::Model> model, WebCore::LayoutSize layoutSize, std::optional<WebCore::TransformationMatrix> entityTransformToRestore, std::optional<WebCore::ModelPlayerAnimationState> animationStateToRestore)
