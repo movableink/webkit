@@ -37,7 +37,9 @@ class RealtimeOutgoingMediaSourceGStreamer : public ThreadSafeRefCountedAndCanMa
 public:
     ~RealtimeOutgoingMediaSourceGStreamer();
     void start();
-    void stop();
+
+    using StoppedCallback = CompletionHandler<void()>;
+    void stop(StoppedCallback&&);
 
     const RefPtr<MediaStreamTrackPrivate>& track() const { return m_track; }
 
@@ -66,7 +68,7 @@ public:
     virtual WARN_UNUSED_RETURN GRefPtr<GstPad> outgoingSourcePad() const = 0;
     virtual RefPtr<GStreamerRTPPacketizer> createPacketizer(RefPtr<UniqueSSRCGenerator>, const GstStructure*, GUniquePtr<GstStructure>&&) = 0;
 
-    void replaceTrack(RefPtr<MediaStreamTrackPrivate>&&);
+    void replaceTrack(RefPtr<MediaStreamTrack>&&);
 
     void teardown();
 
@@ -118,7 +120,8 @@ private:
 
     void sourceMutedChanged();
 
-    void stopOutgoingSource();
+    void stopOutgoingSource(StoppedCallback&&);
+    void removeOutgoingSource();
 
     virtual RTCRtpCapabilities rtpCapabilities() const = 0;
     void codecPreferencesChanged();

@@ -1250,6 +1250,8 @@ webkit.org/b/292271 fast/mediastream/mediaStream-with-rotation.html [ Skip ]
 # No support for Matroska container in GStreamer port.
 http/wpt/mediarecorder/MediaRecorder-matroska-AV-audio-video-dataavailable.html
 
+webkit.org/b/293119 http/wpt/mediarecorder/MediaRecorder-webm-AV-audio-video-dataavailable.html [ Timeout Failure ]
+
 # The "Pausing and resuming the recording should impact the video duration" test fails.
 webkit.org/b/285813 http/wpt/mediarecorder/pause-recording.html [ Failure ]
 
@@ -1964,7 +1966,6 @@ http/tests/webrtc/audioSessionInFrames.html [ Skip ]
 http/wpt/webrtc/rtcNetworkInterface.html [ Failure ]
 
 webkit.org/b/292839 media/media-fullscreen-not-in-document.html [ Timeout ]
-webkit.org/b/292842 fast/mediastream/stream-switch.html [ Timeout ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Media-related bugs

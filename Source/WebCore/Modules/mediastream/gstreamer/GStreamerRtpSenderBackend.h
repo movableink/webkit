@@ -75,7 +75,6 @@ public:
         );
     }
 
-    void clearSource();
     void setSource(Source&&);
     void takeSource(GStreamerRtpSenderBackend&);
 
@@ -85,6 +84,7 @@ public:
     void dispatchBitrateRequest(uint32_t bitrate);
 
 private:
+    void clearSource();
     bool replaceTrack(RTCRtpSender&, MediaStreamTrack*) final;
     RTCRtpSendParameters getParameters() const final;
     void setParameters(const RTCRtpSendParameters&, DOMPromiseDeferred<void>&&) final;

@@ -143,28 +143,78 @@ void RealtimeOutgoingMediaSourceGStreamer::start()
     startUpdatingStats();
 }
 
-void RealtimeOutgoingMediaSourceGStreamer::stop()
+void RealtimeOutgoingMediaSourceGStreamer::stop(StoppedCallback&& callback)
 {
+    if (m_isStopped) {
+        callback();
+        return;
+    }
+
     GST_DEBUG_OBJECT(m_bin.get(), "Stopping outgoing source");
     m_isStopped = true;
-    stopOutgoingSource();
-    m_track = nullptr;
+    stopOutgoingSource(WTFMove(callback));
 }
 
-void RealtimeOutgoingMediaSourceGStreamer::stopOutgoingSource()
+struct ProbeData {
+    ThreadSafeWeakPtr<RealtimeOutgoingMediaSourceGStreamer> source;
+    RealtimeOutgoingMediaSourceGStreamer::StoppedCallback callback;
+};
+WEBKIT_DEFINE_ASYNC_DATA_STRUCT(ProbeData);
+
+void RealtimeOutgoingMediaSourceGStreamer::stopOutgoingSource(StoppedCallback&& callback)
 {
     GST_DEBUG_OBJECT(m_bin.get(), "Stopping outgoing source %" GST_PTR_FORMAT, m_outgoingSource.get());
-    if (m_track)
-        m_track->removeObserver(*this);
 
-    if (!m_outgoingSource)
+    if (!m_outgoingSource) {
+        callback();
         return;
+    }
 
-    if (WEBKIT_IS_MEDIA_STREAM_SRC(m_outgoingSource.get()))
-        webkitMediaStreamSrcSignalEndOfStream(WEBKIT_MEDIA_STREAM_SRC_CAST(m_outgoingSource.get()));
-    else
+    auto data = createProbeData();
+    data->source = this;
+    data->callback = WTFMove(callback);
+    auto pad = adoptGRef(gst_element_get_static_pad(m_tee.get(), "sink"));
+    auto probeId = gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, reinterpret_cast<GstPadProbeCallback>(+[](GstPad*, GstPadProbeInfo* info, gpointer userData) -> GstPadProbeReturn {
+        auto event = GST_PAD_PROBE_INFO_EVENT(info);
+        if (GST_EVENT_TYPE(event) != GST_EVENT_EOS)
+            return GST_PAD_PROBE_OK;
+
+        auto data = reinterpret_cast<ProbeData*>(userData);
+        auto self = data->source.get();
+        if (!self) {
+            data->callback();
+            return GST_PAD_PROBE_REMOVE;
+        }
+        gst_element_call_async(self->m_bin.get(), reinterpret_cast<GstElementCallAsyncFunc>(+[](GstElement*, gpointer userData) {
+            auto data = reinterpret_cast<ProbeData*>(userData);
+            auto self = data->source.get();
+            if (!self) {
+                data->callback();
+                return;
+            }
+            self->removeOutgoingSource();
+            if (self->m_track)
+                self->m_track->removeObserver(*self);
+            data->callback();
+        }), data, reinterpret_cast<GDestroyNotify>(destroyProbeData));
+        return GST_PAD_PROBE_OK;
+    }), data, reinterpret_cast<GDestroyNotify>(destroyProbeData));
+
+    if (WEBKIT_IS_MEDIA_STREAM_SRC(m_outgoingSource.get())) {
+        if (!webkitMediaStreamSrcSignalEndOfStream(WEBKIT_MEDIA_STREAM_SRC_CAST(m_outgoingSource.get()))) {
+            auto callback = WTFMove(data->callback);
+            gst_pad_remove_probe(pad.get(), probeId);
+            removeOutgoingSource();
+            if (m_track)
+                m_track->removeObserver(*this);
+            callback();
+        }
+    } else
         gst_element_send_event(m_outgoingSource.get(), gst_event_new_eos());
+}
 
+void RealtimeOutgoingMediaSourceGStreamer::removeOutgoingSource()
+{
     gst_element_set_locked_state(m_outgoingSource.get(), TRUE);
 
     gst_element_unlink(m_outgoingSource.get(), m_tee.get());
@@ -329,15 +379,23 @@ void RealtimeOutgoingMediaSourceGStreamer::codecPreferencesChanged()
     m_isStopped = false;
 }
 
-void RealtimeOutgoingMediaSourceGStreamer::replaceTrack(RefPtr<MediaStreamTrackPrivate>&& newTrack)
+void RealtimeOutgoingMediaSourceGStreamer::replaceTrack(RefPtr<MediaStreamTrack>&& newTrack)
 {
     if (!m_track)
         return;
 
     m_track->removeObserver(*this);
-    webkitMediaStreamSrcReplaceTrack(WEBKIT_MEDIA_STREAM_SRC_CAST(m_outgoingSource.get()), RefPtr(newTrack));
-    m_track = WTFMove(newTrack);
-    m_track->addObserver(*this);
+    RefPtr<MediaStreamTrackPrivate> trackPrivate;
+    if (newTrack)
+        trackPrivate = &(newTrack->privateTrack());
+
+    webkitMediaStreamSrcReplaceTrack(WEBKIT_MEDIA_STREAM_SRC_CAST(m_outgoingSource.get()), RefPtr(trackPrivate));
+    if (!newTrack)
+        return;
+
+    m_track = WTFMove(trackPrivate);
+    if (m_track)
+        m_track->addObserver(*this);
 }
 
 void RealtimeOutgoingMediaSourceGStreamer::setInitialParameters(GUniquePtr<GstStructure>&& parameters)
@@ -609,37 +667,39 @@ void RealtimeOutgoingMediaSourceGStreamer::stopUpdatingStats()
 
 void RealtimeOutgoingMediaSourceGStreamer::teardown()
 {
+    GST_DEBUG_OBJECT(m_bin.get(), "Tearing down");
     if (m_transceiver)
         g_signal_handlers_disconnect_by_data(m_transceiver.get(), this);
 
-    stopOutgoingSource();
-    stopUpdatingStats();
+    stopOutgoingSource([&] {
+        stopUpdatingStats();
 
-    if (GST_IS_PAD(m_webrtcSinkPad.get())) {
-        auto srcPad = adoptGRef(gst_element_get_static_pad(m_bin.get(), "src"));
-        if (gst_pad_unlink(srcPad.get(), m_webrtcSinkPad.get())) {
-            GST_DEBUG_OBJECT(m_bin.get(), "Removing webrtcbin pad %" GST_PTR_FORMAT, m_webrtcSinkPad.get());
-            if (auto parent = adoptGRef(gst_pad_get_parent_element(m_webrtcSinkPad.get())))
-                gst_element_release_request_pad(parent.get(), m_webrtcSinkPad.get());
+        if (GST_IS_PAD(m_webrtcSinkPad.get())) {
+            auto srcPad = adoptGRef(gst_element_get_static_pad(m_bin.get(), "src"));
+            if (gst_pad_unlink(srcPad.get(), m_webrtcSinkPad.get())) {
+                GST_DEBUG_OBJECT(m_bin.get(), "Removing webrtcbin pad %" GST_PTR_FORMAT, m_webrtcSinkPad.get());
+                if (auto parent = adoptGRef(gst_pad_get_parent_element(m_webrtcSinkPad.get())))
+                    gst_element_release_request_pad(parent.get(), m_webrtcSinkPad.get());
+            }
         }
-    }
 
-    gst_element_set_locked_state(m_bin.get(), TRUE);
-    gst_element_set_state(m_bin.get(), GST_STATE_NULL);
-    if (auto pipeline = adoptGRef(gst_element_get_parent(m_bin.get())))
-        gst_bin_remove(GST_BIN_CAST(pipeline.get()), m_bin.get());
-    gst_element_set_locked_state(m_bin.get(), FALSE);
+        gst_element_set_locked_state(m_bin.get(), TRUE);
+        gst_element_set_state(m_bin.get(), GST_STATE_NULL);
+        if (auto pipeline = adoptGRef(gst_element_get_parent(m_bin.get())))
+            gst_bin_remove(GST_BIN_CAST(pipeline.get()), m_bin.get());
+        gst_element_set_locked_state(m_bin.get(), FALSE);
 
-    m_packetizers.clear();
+        m_packetizers.clear();
 
-    m_bin.clear();
-    m_tee.clear();
-    m_rtpFunnel.clear();
-    m_allowedCaps.clear();
-    m_transceiver.clear();
-    m_sender.clear();
-    m_webrtcSinkPad.clear();
-    m_parameters.reset();
+        m_bin.clear();
+        m_tee.clear();
+        m_rtpFunnel.clear();
+        m_allowedCaps.clear();
+        m_transceiver.clear();
+        m_sender.clear();
+        m_webrtcSinkPad.clear();
+        m_parameters.reset();
+    });
 }
 
 RealtimeMediaSource::Type RealtimeOutgoingMediaSourceGStreamer::type() const

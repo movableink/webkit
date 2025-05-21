@@ -4493,13 +4493,17 @@ std::optional<VideoFrameMetadata> MediaPlayerPrivateGStreamer::videoFrameMetadat
 static bool areAllSinksPlayingForBin(GstBin* bin)
 {
     for (auto* element : GstIteratorAdaptor<GstElement>(gst_bin_iterate_sinks(bin))) {
-        if (GST_IS_BIN(element) && !areAllSinksPlayingForBin(GST_BIN_CAST(element)))
+        if (GST_IS_BIN(element) && !areAllSinksPlayingForBin(GST_BIN_CAST(element))) {
+            GST_WARNING_OBJECT(element, "Unexpectedly not in PLAYING state");
             return false;
+        }
 
         GstState state, pending;
         gst_element_get_state(element, &state, &pending, 0);
-        if (state != GST_STATE_PLAYING && pending != GST_STATE_PLAYING)
+        if (state != GST_STATE_PLAYING && pending != GST_STATE_PLAYING) {
+            GST_WARNING_OBJECT(element, "Unexpectedly not in PLAYING state");
             return false;
+        }
     }
     return true;
 }
@@ -4507,6 +4511,12 @@ static bool areAllSinksPlayingForBin(GstBin* bin)
 void MediaPlayerPrivateGStreamer::checkPlayingConsistency()
 {
     if (!pipeline())
+        return;
+
+    // Do not check "playing consistency" for mediastream cases, because the pipeline can reach a
+    // state where a track was added, then removed and added again and then the audio sink would be
+    // in a PAUSED-to-PAUSED transition until it has received a new buffer.
+    if (isMediaStreamPlayer())
         return;
 
     GstState state, pending;

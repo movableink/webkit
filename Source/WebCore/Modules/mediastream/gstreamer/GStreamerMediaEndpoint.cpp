@@ -1212,7 +1212,6 @@ void GStreamerMediaEndpoint::removeTrack(GStreamerRtpSenderBackend& sender)
 {
     GST_DEBUG_OBJECT(m_pipeline.get(), "Removing track");
     sender.stopSource();
-    sender.clearSource();
     onNegotiationNeeded();
 }
 
