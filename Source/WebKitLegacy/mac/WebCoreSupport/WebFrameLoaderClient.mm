@@ -2028,12 +2028,8 @@ static NSImage *webGetNSImage(WebCore::Image* image, NSSize size)
     NSImage* nsImage = image->adapter().nsImage();
     if (!nsImage)
         return nil;
-    if (!NSEqualSizes([nsImage size], size)) {
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        [nsImage setScalesWhenResized:YES];
-ALLOW_DEPRECATED_DECLARATIONS_END
+    if (!NSEqualSizes([nsImage size], size))
         [nsImage setSize:size];
-    }
     return nsImage;
 }
 #endif // !PLATFORM(IOS_FAMILY)

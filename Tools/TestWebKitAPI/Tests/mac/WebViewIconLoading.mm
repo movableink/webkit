@@ -63,9 +63,6 @@ static NSImage *imageFromData(NSData *data)
 {
     auto image = adoptNS([[NSImage alloc] initWithData:data]);
 
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    [image setScalesWhenResized:YES];
-ALLOW_DEPRECATED_DECLARATIONS_END
     [image setSize:NSMakeSize(16, 16)];
 
     return image.autorelease();
