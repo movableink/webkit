@@ -94,7 +94,7 @@ public:
     void enumerateDevices(EnumerateDevicesPromise&&);
     MediaTrackSupportedConstraints getSupportedConstraints();
 
-    String deviceIdToPersistentId(const String& deviceId) const { return m_audioOutputDeviceIdToPersistentId.get(deviceId); }
+    String deviceIdToPersistentId(const String&) const;
 
     void willStartMediaCapture(bool microphone, bool camera);
 

@@ -2724,6 +2724,19 @@ ExposeCaptureDevicesAfterCaptureEnabled:
     WebCore:
       default: false
 
+ExposeDefaultSpeakerAsSpecificDeviceEnabled:
+  type: bool
+  status: internal
+  category: media
+  humanReadableName: "Expose the system default speaker as a specific device"
+  humanReadableDescription: "Expose the system default speaker as a specific device"
+  condition: ENABLE(MEDIA_STREAM)
+  defaultValue:
+    WebKit:
+      default: true
+    WebCore:
+      default: true
+
 ExposeSpeakersEnabled:
   type: bool
   status: internal

@@ -34,6 +34,7 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "AudioMediaStreamTrackRenderer.h"
 #include "AudioSession.h"
 #include "CaptureDeviceWithCapabilities.h"
 #include "DocumentInlines.h"
@@ -45,6 +46,7 @@
 #include "JSInputDeviceInfo.h"
 #include "JSMediaDeviceInfo.h"
 #include "LocalFrame.h"
+#include "LocalizedStrings.h"
 #include "Logging.h"
 #include "MediaTrackSupportedConstraints.h"
 #include "PermissionsPolicy.h"
@@ -347,6 +349,19 @@ static inline bool haveMicrophoneDevice(const Vector<CaptureDeviceWithCapabiliti
     });
 }
 
+String MediaDevices::deviceIdToPersistentId(const String& deviceId) const
+{
+    if (deviceId == AudioMediaStreamTrackRenderer::defaultDeviceID())
+        return deviceId;
+
+    return m_audioOutputDeviceIdToPersistentId.get(deviceId);
+}
+
+static RefPtr<MediaDeviceInfo> createDefaultSpeakerAsSpecificDevice(const CaptureDevice& defaultRealDevice, const String& groupId)
+{
+    return MediaDeviceInfo::create(makeString(defaultSystemSpeakerLabel(), " - "_s, defaultRealDevice.label()), AudioMediaStreamTrackRenderer::defaultDeviceID(), groupId, MediaDeviceInfo::Kind::Audiooutput);
+}
+
 void MediaDevices::exposeDevices(Vector<CaptureDeviceWithCapabilities>&& newDevices, MediaDeviceHashSalts&& deviceIDHashSalts, EnumerateDevicesPromise&& promise)
 {
     if (isContextStopped())
@@ -357,6 +372,7 @@ void MediaDevices::exposeDevices(Vector<CaptureDeviceWithCapabilities>&& newDevi
     bool canAccessCamera = checkCameraAccess(document);
     bool canAccessMicrophone = checkMicrophoneAccess(document);
     bool canAccessSpeaker = checkSpeakerAccess(document);
+    bool shouldExposeDefaultSpeakerAsSpecificDevice = document->frame()->settings().exposeDefaultSpeakerAsSpecificDeviceEnabled();
 
     m_audioOutputDeviceIdToPersistentId.clear();
 
@@ -380,8 +396,13 @@ void MediaDevices::exposeDevices(Vector<CaptureDeviceWithCapabilities>&& newDevi
 
         if (newDevice.type() == CaptureDevice::DeviceType::Speaker) {
             if (exposeSpeakersWithoutMicrophoneAccess(document) || haveMicrophoneDevice(newDevices, newDevice.groupId())) {
+                if (shouldExposeDefaultSpeakerAsSpecificDevice) {
+                    shouldExposeDefaultSpeakerAsSpecificDevice = false;
+                    devices.append(createDefaultSpeakerAsSpecificDevice(newDevice, groupId));
+                }
+
                 m_audioOutputDeviceIdToPersistentId.add(deviceId, newDevice.persistentId());
-                devices.append(RefPtr<MediaDeviceInfo> { MediaDeviceInfo::create(newDevice.label(), WTFMove(deviceId), WTFMove(groupId), toMediaDeviceInfoKind(newDevice.type())) });
+                devices.append(RefPtr { MediaDeviceInfo::create(newDevice.label(), WTFMove(deviceId), WTFMove(groupId), MediaDeviceInfo::Kind::Audiooutput) });
             }
         } else {
             if (newDevice.type() == CaptureDevice::DeviceType::Camera && !newDevice.label().isEmpty())
