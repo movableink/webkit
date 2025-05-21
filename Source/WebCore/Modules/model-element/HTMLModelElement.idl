@@ -28,7 +28,9 @@
     EnabledBySetting=ModelElementEnabled,
     ExportToWrappedFunction,
     Exposed=Window,
-    JSGenerateToNativeObject
+    JSGenerateToNativeObject,
+    ReportExtraMemoryCost,
+    ReportExternalMemoryCost
 ] interface HTMLModelElement : HTMLElement {
     [CEReactions=NotNeeded, Reflect] attribute unsigned long width;
     [CEReactions=NotNeeded, Reflect] attribute unsigned long height;

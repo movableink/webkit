@@ -215,6 +215,7 @@ void HTMLModelElement::setSourceURL(const URL& url)
     m_sourceURL = url;
 
     m_data.reset();
+    m_dataMemoryCost.store(0, std::memory_order_relaxed);
     m_dataComplete = false;
     m_model = nullptr;
 
@@ -239,6 +240,7 @@ void HTMLModelElement::setSourceURL(const URL& url)
 
     if (m_sourceURL.isEmpty()) {
         ActiveDOMObject::queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        reportExtraMemoryCost();
         return;
     }
 
@@ -527,6 +529,8 @@ void HTMLModelElement::didFinishLoading(ModelPlayer& modelPlayer)
 {
     ASSERT_UNUSED(modelPlayer, &modelPlayer == m_modelPlayer);
 
+    reportExtraMemoryCost();
+
     if (CheckedPtr renderer = this->renderer())
         renderer->updateFromElement();
     if (!m_readyPromise->isFulfilled())
@@ -538,6 +542,9 @@ void HTMLModelElement::didFailLoading(ModelPlayer& modelPlayer, const ResourceEr
     ASSERT_UNUSED(modelPlayer, &modelPlayer == m_modelPlayer);
     if (!m_readyPromise->isFulfilled())
         m_readyPromise->reject(Exception { ExceptionCode::AbortError });
+
+    m_dataMemoryCost.store(0, std::memory_order_relaxed);
+    reportExtraMemoryCost();
 }
 
 RefPtr<GraphicsLayer> HTMLModelElement::graphicsLayer() const
@@ -646,8 +653,11 @@ void HTMLModelElement::didFinishEnvironmentMapLoading(bool succeeded)
     if (!m_environmentMapURL.isEmpty() && !m_environmentMapReadyPromise->isFulfilled()) {
         if (succeeded)
             m_environmentMapReadyPromise->resolve();
-        else
+        else {
             m_environmentMapReadyPromise->reject(Exception { ExceptionCode::AbortError });
+            m_environmentMapDataMemoryCost.store(0, std::memory_order_relaxed);
+        }
+        reportExtraMemoryCost();
     }
 }
 
@@ -990,6 +1000,7 @@ void HTMLModelElement::setEnvironmentMap(const URL& url)
         return;
 
     m_environmentMapURL = url;
+    m_environmentMapDataMemoryCost.store(0, std::memory_order_relaxed);
 
     environmentMapResetAndReject(Exception { ExceptionCode::AbortError });
     m_environmentMapReadyPromise = makeUniqueRef<EnvironmentMapPromise>();
@@ -998,6 +1009,7 @@ void HTMLModelElement::setEnvironmentMap(const URL& url)
         // sending a message with empty data to indicate resource removal
         if (m_modelPlayer)
             m_modelPlayer->setEnvironmentMap(SharedBuffer::create());
+        reportExtraMemoryCost();
         return;
     }
 
@@ -1067,8 +1079,10 @@ void HTMLModelElement::environmentMapResourceFinished()
             m_modelPlayer->setEnvironmentMap(SharedBuffer::create());
         return;
     }
-    if (m_modelPlayer)
+    if (m_modelPlayer) {
+        m_environmentMapDataMemoryCost.store(m_environmentMapData.size(), std::memory_order_relaxed);
         m_modelPlayer->setEnvironmentMap(m_environmentMapData.takeAsContiguous().get());
+    }
 
     m_environmentMapResource->removeClient(*this);
     m_environmentMapResource = nullptr;
@@ -1099,6 +1113,7 @@ void HTMLModelElement::modelResourceFinished()
     }
 
     m_dataComplete = true;
+    m_dataMemoryCost.store(m_data.size(), std::memory_order_relaxed);
     m_model = Model::create(m_data.takeAsContiguous().get(), m_resource->mimeType(), m_resource->url());
 
     ActiveDOMObject::queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, Event::create(eventNames().loadEvent, Event::CanBubble::No, Event::IsCancelable::No));
@@ -1352,6 +1367,41 @@ void HTMLModelElement::removedFromAncestor(RemovalType removalType, ContainerNod
         deleteModelPlayer();
     }
 }
+
+void HTMLModelElement::reportExtraMemoryCost()
+{
+    const size_t currentCost = memoryCost();
+    if (m_reportedDataMemoryCost < currentCost) {
+        auto* context = Node::scriptExecutionContext();
+        if (!context)
+            return;
+        JSC::VM& vm = context->vm();
+        JSC::JSLockHolder lock(vm);
+        ASSERT_WITH_MESSAGE(vm.currentThreadIsHoldingAPILock(), "Extra memory reporting expects to happen from one thread");
+        vm.heap.reportExtraMemoryAllocated(nullptr, currentCost - m_reportedDataMemoryCost);
+        m_reportedDataMemoryCost = currentCost;
+    }
+}
+
+size_t HTMLModelElement::memoryCost() const
+{
+    // May be called from GC threads.
+    auto cost = m_dataMemoryCost.load(std::memory_order_relaxed);
+#if ENABLE(MODEL_PROCESS)
+    cost += m_environmentMapDataMemoryCost.load(std::memory_order_relaxed);
+#endif
+    return cost;
+}
+
+#if ENABLE(RESOURCE_USAGE)
+size_t HTMLModelElement::externalMemoryCost() const
+{
+    // For the purposes of Web Inspector, external memory means memory reported as
+    // 1) being traceable from JS objects, i.e. GC owned memory
+    // 2) not allocated from "Page" category, e.g. from bmalloc.
+    return memoryCost();
+}
+#endif
 
 }
 

@@ -181,6 +181,11 @@ public:
     WEBCORE_EXPORT String inlinePreviewUUIDForTesting() const;
 #endif
 
+    size_t memoryCost() const;
+#if ENABLE(RESOURCE_USAGE)
+    size_t externalMemoryCost() const;
+#endif
+
 private:
     HTMLModelElement(const QualifiedName&, Document&);
 
@@ -249,6 +254,8 @@ private:
 
     LayoutSize contentSize() const;
 
+    void reportExtraMemoryCost();
+
 #if ENABLE(MODEL_PROCESS)
     bool autoplay() const;
     void updateAutoplay();
@@ -269,6 +276,8 @@ private:
     URL m_sourceURL;
     CachedResourceHandle<CachedRawResource> m_resource;
     SharedBufferBuilder m_data;
+    mutable std::atomic<size_t> m_dataMemoryCost { 0 };
+    size_t m_reportedDataMemoryCost { 0 };
     WeakPtr<ModelPlayerProvider> m_modelPlayerProvider;
     RefPtr<Model> m_model;
     UniqueRef<ReadyPromise> m_readyPromise;
@@ -285,6 +294,7 @@ private:
     double m_playbackRate { 1.0 };
     URL m_environmentMapURL;
     SharedBufferBuilder m_environmentMapData;
+    mutable std::atomic<size_t> m_environmentMapDataMemoryCost { 0 };
     CachedResourceHandle<CachedRawResource> m_environmentMapResource;
     UniqueRef<EnvironmentMapPromise> m_environmentMapReadyPromise;
 #endif
