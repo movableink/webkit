@@ -71,6 +71,10 @@ struct WebViewRepresentable {
         }
 #endif
 
+        if let scrollInputBehavior = environment.webViewScrollInputBehaviorContext {
+            webView.configureScrollInputBehavior(scrollInputBehavior.behavior, for: scrollInputBehavior.input)
+        }
+
         if EquatableScrollBounceBehavior(environment.verticalScrollBounceBehavior) == .always || EquatableScrollBounceBehavior(environment.verticalScrollBounceBehavior) == .automatic {
             webView.alwaysBounceVertical = true
             webView.bouncesVertically = true
