@@ -1,6 +1,31 @@
+# Copyright (C) 2024-2025 Apple Inc. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
+# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+# THE POSSIBILITY OF SUCH DAMAGE.
+
 ##########
 # Macros #
 ##########
+
+const StackValueShift = 4
 
 # Callee Save
 
@@ -122,7 +147,7 @@ end
 
 macro peekDouble(i, reg)
     if ARMv7
-        loadi (i*16)[sp], reg
+        loadi (i * StackValueSize)[sp], reg
     else
         break
     end
@@ -130,7 +155,7 @@ end
 
 macro peekQuad(i, hi, lo)
     if ARMv7
-        load2ia (i*16)[sp], lo, hi
+        load2ia (i * StackValueSize)[sp], lo, hi
     else
         break
     end
@@ -397,14 +422,14 @@ ipintOp(_br, macro()
     #
     # [sp + k + numToPop] = [sp + k] for k in numToKeep-1 -> 0
     move t0, t2
-    lshiftp 4, t2
+    lshiftp StackValueShift, t2
     leap [sp, t2], t2
 
 .ipint_br_poploop:
     bpeq t4, 0, .ipint_br_popend
     subp 1, t4
     move t4, t3
-    lshiftp 4, t3
+    lshiftp StackValueShift, t3
     load2ia [sp, t3], t0, t1
     store2ia t0, t1, [t2, t3]
     load2ia 8[sp, t3], t0, t1
@@ -412,7 +437,7 @@ ipintOp(_br, macro()
     jmp .ipint_br_poploop
 .ipint_br_popend:
     loadh IPInt::BranchTargetMetadata::toPop[MC], t0
-    lshiftp 4, t0
+    lshiftp StackValueShift, t0
     leap [sp, t0], sp
     loadi IPInt::BlockMetadata::deltaPC[MC], t0
     loadi IPInt::BlockMetadata::deltaMC[MC], t1

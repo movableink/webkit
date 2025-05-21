@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 Apple Inc. All rights reserved.
+# Copyright (C) 2023-2025 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -150,9 +150,9 @@ const MachineRegisterSize = constexpr (sizeof(CPURegister))
 const SlotSize = constexpr (sizeof(Register))
 
 # amount of memory a local takes up on the stack (16 bytes for a v128)
-const LocalSize = 16
-const StackValueSize = 16
-const StackValueShift = 4
+const V128ISize = 16
+const LocalSize = V128ISize
+const StackValueSize = V128ISize
 
 const wasmInstance = csr0
 if X86_64 or ARM64 or ARM64E or RISCV64
@@ -268,7 +268,7 @@ end
 
 macro checkStackOverflow(callee, scratch)
     loadi Wasm::IPIntCallee::m_maxFrameSizeInV128[callee], scratch
-    lshiftp 4, scratch
+    mulp V128ISize, scratch
     subp cfr, scratch, scratch
 
 if not ADDRESS64
@@ -643,7 +643,7 @@ end
 
     loadi [MC], t0
     addp t1, t0
-    lshiftp StackValueShift, t0
+    mulp StackValueSize, t0
     addp IPIntCalleeSaveSpaceStackAligned, t0
 if ARMv7
     move cfr, sp
