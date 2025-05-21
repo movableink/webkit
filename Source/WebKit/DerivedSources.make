@@ -1014,7 +1014,6 @@ all : JSWebExtensionAPIUnified.mm $(EXTENSION_INTERFACES:%=JS%.h) $(EXTENSION_IN
 ifeq ($(USE_INTERNAL_SDK),YES)
 WEBKIT_ADDITIONS_SWIFT_FILES = \
 	MaterialAdditions.swift \
-	WebPageWebViewAdditions.swift \
 	WKSeparatedImageView.swift \
 	CredentialUpdaterShim.swift \
 	ISO18013MobileDocumentRequest+Extras.swift \
