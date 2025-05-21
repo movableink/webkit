@@ -74,9 +74,7 @@ void PDFDocumentImage::drawPDFPage(GraphicsContext& context)
     bool allowsSubpixelQuantization = CGContextGetAllowsFontSubpixelQuantization(context.platformContext());
     bool allowsSubpixelPositioning = CGContextGetAllowsFontSubpixelPositioning(context.platformContext());
 
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    [[m_document pageAtIndex:0] drawWithBox:kPDFDisplayBoxCropBox];
-ALLOW_DEPRECATED_DECLARATIONS_END
+    [[m_document pageAtIndex:0] drawWithBox:kPDFDisplayBoxCropBox toContext:context.platformContext()];
 
     CGContextSetAllowsFontSmoothing(context.platformContext(), allowsSmoothing);
     CGContextSetAllowsFontSubpixelQuantization(context.platformContext(), allowsSubpixelQuantization);

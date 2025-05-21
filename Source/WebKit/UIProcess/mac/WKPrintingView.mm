@@ -480,9 +480,8 @@ static RetainPtr<NSString> linkDestinationName(PDFDocument *document, PDFDestina
     CGContextTranslateCTM(context.get(), point.x, point.y);
     CGContextScaleCTM(context.get(), _totalScaleFactorForPrinting, -_totalScaleFactorForPrinting);
     CGContextTranslateCTM(context.get(), 0, -[pdfPage boundsForBox:kPDFDisplayBoxMediaBox].size.height);
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    [pdfPage drawWithBox:kPDFDisplayBoxMediaBox];
-ALLOW_DEPRECATED_DECLARATIONS_END
+
+    [pdfPage drawWithBox:kPDFDisplayBoxMediaBox toContext:context.get()];
 
     CGAffineTransform transform = CGContextGetCTM(context.get());
 
