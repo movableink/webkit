@@ -16,6 +16,9 @@ None
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/META.yml
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/WEB_FEATURES.yml
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/caret-color-visited-inheritance-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/caret-color-visited-inheritance-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/caret-color-visited-inheritance.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/case-insensitive-parent-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/case-insensitive-parent-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/case-insensitive-parent.html
@@ -207,6 +210,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/has-display-none-checked-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/has-display-none-checked.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/has-matches-to-uninserted-elements.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/has-nth-of-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/has-relative-argument.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/has-sibling-chrome-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/has-specificity.html
@@ -352,6 +356,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/nth-child-specificity-4-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/nth-child-specificity-4-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/nth-child-specificity-4.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/nth-child-spurious-brace-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/nth-last-child-invalid.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/nth-last-child-of-classname-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/nth-last-child-of-classname-ref.html
@@ -397,8 +402,11 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/only-of-type.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/open-pseudo.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/placeholder-shown.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/popover-open-with-has-sibling-selector-expected.xht
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/popover-open-with-has-sibling-selector.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/pseudo-enabled-disabled.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/pseudo-where-crash.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/quirks-mode-import.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/remove-hovered-element-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/remove-hovered-element-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/remove-hovered-element.html
@@ -458,6 +466,15 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/sharing-in-svg-use-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/sharing-in-svg-use.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/spurious-brace-crash.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/text-emphasis-visited-inheritance-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/text-emphasis-visited-inheritance-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/text-emphasis-visited-inheritance.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/text-fill-color-visited-inheritance-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/text-fill-color-visited-inheritance-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/text-fill-color-visited-inheritance.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/text-stroke-color-visited-inheritance-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/text-stroke-color-visited-inheritance-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/text-stroke-color-visited-inheritance.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/user-invalid-form-submission-invalidation-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/user-invalid-form-submission-invalidation-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/user-invalid-form-submission-invalidation.html

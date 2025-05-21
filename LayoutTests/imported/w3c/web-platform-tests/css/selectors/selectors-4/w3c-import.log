@@ -14,6 +14,14 @@ Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
 List of files:
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/selectors-4/details-open-pseudo-001-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/selectors-4/details-open-pseudo-001-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/selectors-4/details-open-pseudo-001.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/selectors-4/details-open-pseudo-002-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/selectors-4/details-open-pseudo-002.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/selectors-4/details-open-pseudo-003-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/selectors-4/details-open-pseudo-003-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/selectors-4/details-open-pseudo-003.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/selectors-4/lang-000-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/selectors-4/lang-000-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/selectors-4/lang-000.html

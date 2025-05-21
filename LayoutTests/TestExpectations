@@ -1828,6 +1828,8 @@ imported/w3c/web-platform-tests/css/selectors/case-insensitive-parent.html [ Ima
 imported/w3c/web-platform-tests/css/selectors/selectors-4/lang-017.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/selectors/selectors-4/lang-018.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/selectors/selectors-4/lang-020.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/selectors/selectors-4/details-open-pseudo-001.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/selectors/selectors-4/details-open-pseudo-002.html [ ImageOnlyFailure ]
 
 # This test is bit heavy for debug
 [ Debug ] imported/w3c/web-platform-tests/css/selectors/invalidation/has-complexity.html [ Skip ]
