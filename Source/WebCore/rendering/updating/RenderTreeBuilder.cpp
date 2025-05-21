@@ -266,7 +266,7 @@ void RenderTreeBuilder::attachInternal(RenderElement& parent, RenderPtr<RenderOb
         if (auto* enclosingFragmentedFlow = parent.enclosingFragmentedFlow()) {
             auto columnSpannerPlaceholderForBeforeChild = [&]() -> RenderMultiColumnSpannerPlaceholder* {
                 auto* multiColumnFlow = dynamicDowncast<RenderMultiColumnFlow>(enclosingFragmentedFlow);
-                return multiColumnFlow ? multiColumnFlow->findColumnSpannerPlaceholder(beforeChildBox) : nullptr;
+                return multiColumnFlow ? multiColumnFlow->findColumnSpannerPlaceholder(*beforeChildBox) : nullptr;
             };
 
             if (auto* spannerPlaceholder = columnSpannerPlaceholderForBeforeChild())

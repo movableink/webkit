@@ -211,10 +211,11 @@ public:
     }
 
     template<typename T, typename V>
-    void set(const T& key, V&& value)
+    AddResult set(const T& key, V&& value)
     {
         amortizedCleanupIfNeeded();
-        m_map.set(makeKeyImpl(key), std::forward<V>(value));
+        auto addResult = m_map.set(makeKeyImpl(key), std::forward<V>(value));
+        return AddResult { WeakHashMapIterator(*this, addResult.iterator), addResult.isNewEntry };
     }
 
     iterator find(const KeyType& key)

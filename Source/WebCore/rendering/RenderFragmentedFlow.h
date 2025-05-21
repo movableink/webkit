@@ -204,7 +204,7 @@ protected:
 
     bool getFragmentRangeForBoxFromCachedInfo(const RenderBox&, RenderFragmentContainer*& startFragment, RenderFragmentContainer*& endFragment) const;
 
-    void removeRenderBoxFragmentInfo(RenderBox&);
+    void removeRenderBoxFragmentInfo(const RenderBox&);
     void removeLineFragmentInfo(const RenderBlockFlow&);
 
     class RenderFragmentContainerRange {
@@ -241,7 +241,7 @@ protected:
     std::unique_ptr<ContainingFragmentMap> m_lineToFragmentMap;
 
     // Map a box to the list of fragments in which the box is rendered.
-    using RenderFragmentContainerRangeMap = UncheckedKeyHashMap<SingleThreadWeakRef<const RenderBox>, RenderFragmentContainerRange>;
+    using RenderFragmentContainerRangeMap = SingleThreadWeakHashMap<const RenderBox, RenderFragmentContainerRange>;
     RenderFragmentContainerRangeMap m_fragmentRangeMap;
 
     // Map a box with a fragment break to the auto height fragment affected by that break. 
