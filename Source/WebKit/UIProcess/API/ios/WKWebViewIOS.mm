@@ -1164,6 +1164,8 @@ static void changeContentOffsetBoundedInValidRange(UIScrollView *scrollView, Web
 #if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
     if (_page && _page->preferences().overlayRegionsEnabled())
         [self _updateOverlayRegions:layerTreeTransaction.changedLayerProperties() destroyedLayers:layerTreeTransaction.destroyedLayers()];
+    else
+        [self _resetOverlayRegions];
 #endif
 }
 
@@ -1386,6 +1388,24 @@ static void configureScrollViewWithOverlayRegionsIDs(WKBaseScrollView* scrollVie
 
     return overlayRegionScrollView;
 }
+
+#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
+- (void)_resetOverlayRegions
+{
+    if (!_page)
+        return;
+
+    CheckedPtr scrollingCoordinatorProxy = downcast<WebKit::RemoteScrollingCoordinatorProxyIOS>(_page->scrollingCoordinatorProxy());
+    if (!scrollingCoordinatorProxy)
+        return;
+
+    [_scrollView _updateOverlayRegionsBehavior:NO];
+
+    auto candidates = scrollingCoordinatorProxy->overlayRegionScrollViewCandidates();
+    for (auto *scrollView : candidates)
+        [scrollView _updateOverlayRegionsBehavior:NO];
+}
+#endif
 
 - (void)_updateOverlayRegions:(const WebKit::LayerPropertiesMap&)changedLayerPropertiesMap destroyedLayers:(const Vector<WebCore::PlatformLayerIdentifier>&)destroyedLayers
 {
