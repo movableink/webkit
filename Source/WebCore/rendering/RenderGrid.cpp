@@ -2352,7 +2352,7 @@ std::optional<LayoutRange> RenderGrid::gridAreaRowRangeForOutOfFlow(const Render
     if (!areaSize)
         return std::nullopt;
     LayoutRange range(borderBefore(), areaSize->value());
-    if (auto line = m_outOfFlowItemRow.get(&gridItem))
+    if (auto line = m_outOfFlowItemRow.get(gridItem))
         range.moveTo(m_rowPositions[line.value()]);
     return range;
 }
@@ -2364,7 +2364,7 @@ std::optional<LayoutRange> RenderGrid::gridAreaColumnRangeForOutOfFlow(const Ren
     if (!areaSize)
         return std::nullopt;
     LayoutRange range(borderStart(), areaSize->value());
-    if (auto line = m_outOfFlowItemColumn.get(&gridItem))
+    if (auto line = m_outOfFlowItemColumn.get(gridItem))
         range.moveTo(m_columnPositions[line.value()]);
     return range;
 }
