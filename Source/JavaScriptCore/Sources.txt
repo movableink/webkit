@@ -638,6 +638,7 @@ jit/ExecutableAllocationFuzz.cpp
 jit/ExecutableAllocator.cpp
 jit/ExecutableMemoryHandle.cpp
 jit/GCAwareJITStubRoutine.cpp
+jit/GdbJIT.cpp
 jit/GPRInfo.cpp
 jit/ICStats.cpp
 jit/JIT.cpp

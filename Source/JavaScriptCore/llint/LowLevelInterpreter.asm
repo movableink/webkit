@@ -145,6 +145,39 @@ end
 if ARMv7s
 end
 
+nop
+
+# This may seem strange; We duplicate these table entries because
+# different lldb versions seem to sometimes have off-by-one errors otherwise.
+if ARM64 or ARM64E
+# See GdbJIT.cpp for a detailed explanation of how these DWARF directives work.
+emit ".cfi_startproc"
+nop
+emit ".cfi_def_cfa fp, 16"
+emit ".cfi_offset lr, -8"
+emit ".cfi_offset fp, -16"
+nop
+emit ".cfi_def_cfa fp, 0"
+emit ".cfi_offset lr, 0"
+emit ".cfi_offset fp, 0"
+nop
+emit ".cfi_def_cfa fp, 16"
+emit ".cfi_offset lr, -8"
+emit ".cfi_offset fp, -16"
+nop
+elsif ARMv7
+emit ".cfi_startproc"
+nop
+emit ".cfi_def_cfa r7, 8"
+emit ".cfi_offset lr, -4"
+emit ".cfi_offset fp, -8"
+nop
+emit ".cfi_def_cfa r7, 8"
+emit ".cfi_offset lr, -4"
+emit ".cfi_offset fp, -8"
+nop
+end # if ARMv7
+
 # First come the common protocols that both interpreters use. Note that each
 # of these must have an ASSERT() in LLIntData.cpp
 
@@ -1795,7 +1828,6 @@ else
     _vmEntryToNative:
 end
     doVMEntry(makeHostFunctionCall)
-
 if ARM64E
     global _vmEntryToYarrJITAfter
 end
@@ -2958,6 +2990,11 @@ _wasm_ipint_call_return_location_wide32:
 end # WEBASSEMBLY
 
 include? LowLevelInterpreterAdditions
+
+if ARM64 or ARM64E or ARMv7
+# See GdbJIT.cpp for a detailed explanation.
+emit ".cfi_endproc"
+end
 
 global _llintPCRangeEnd
 _llintPCRangeEnd:

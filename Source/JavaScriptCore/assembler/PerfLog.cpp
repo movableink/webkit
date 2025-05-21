@@ -214,11 +214,11 @@ void PerfLog::flush(const AbstractLocker&)
     fflush(m_file);
 }
 
-void PerfLog::log(CString&& name, MacroAssemblerCodeRef<LinkBufferPtrTag> code)
+void PerfLog::log(const CString& name, MacroAssemblerCodeRef<LinkBufferPtrTag> code)
 {
     auto timestamp = ProfilerSupport::generateTimestamp();
     auto tid = getCurrentThreadID();
-    ProfilerSupport::singleton().queue().dispatch([name = WTFMove(name), code, tid, timestamp] {
+    ProfilerSupport::singleton().queue().dispatch([name = name, code, tid, timestamp] {
         PerfLog& logger = singleton();
         size_t size = code.size();
         auto* executableAddress = code.code().untaggedPtr<const uint8_t*>();

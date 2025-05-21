@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2018 Yusuke Suzuki <yusukesuzuki@slowstart.org>.
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Igalia, S.L. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -21,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #pragma once
@@ -35,27 +34,38 @@
 #include <wtf/TZoneMalloc.h>
 #include <wtf/text/CString.h>
 
+extern "C" {
+struct JITCodeEntry;
+
+struct GdbJITAddressRegionLess {
+    inline bool operator()(const std::span<const uint8_t>& a, const std::span<const uint8_t>& b) const
+    {
+        if (a.data() == b.data()) return a.size() < b.size();
+        return a.data() < b.data();
+    }
+};
+
+using GdbJITCodeMap = std::map<std::span<const uint8_t>, JITCodeEntry*, GdbJITAddressRegionLess>;
+}
+
 namespace JSC {
 
-class PerfLog {
-    WTF_MAKE_TZONE_ALLOCATED(PerfLog);
-    WTF_MAKE_NONCOPYABLE(PerfLog);
-    friend class LazyNeverDestroyed<PerfLog>;
+// This is a little helper for writing DWARF information
+// so that GDB can recognize our jit functions.
+// This file originally came from v8/src/diagnostics/gdb-jit.h
+class GdbJIT {
+    WTF_MAKE_TZONE_ALLOCATED(GdbJIT);
+    WTF_MAKE_NONCOPYABLE(GdbJIT);
+    friend class LazyNeverDestroyed<GdbJIT>;
 public:
     static void log(const CString& name, MacroAssemblerCodeRef<LinkBufferPtrTag>);
 
 private:
-    PerfLog();
-    static PerfLog& singleton();
+    GdbJIT() = default;
+    static GdbJIT& singleton();
 
-    void write(const AbstractLocker&, const void*, size_t) WTF_REQUIRES_LOCK(m_lock);
-    void flush(const AbstractLocker&) WTF_REQUIRES_LOCK(m_lock);
-
-    FILE* m_file { nullptr };
-    void* m_marker { nullptr };
-    uint64_t m_codeIndex { 0 };
-    int m_fd { -1 };
     Lock m_lock;
+    GdbJITCodeMap m_map;
 };
 
 } // namespace JSC

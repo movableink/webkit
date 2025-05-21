@@ -30,6 +30,7 @@
 
 #include "CodeBlock.h"
 #include "Disassembler.h"
+#include "GdbJIT.h"
 #include "JITCode.h"
 #include "Options.h"
 #include "PerfLog.h"
@@ -62,18 +63,22 @@ static const char* profileName(LinkBuffer::Profile profile)
 LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithoutDisassemblyImpl(ASCIILiteral simpleName)
 {
     performFinalization();
-    
+
     ASSERT(m_didAllocate);
     CodeRef<LinkBufferPtrTag> codeRef(m_executableMemory ? CodeRef<LinkBufferPtrTag>(*m_executableMemory) : CodeRef<LinkBufferPtrTag>::createSelfManagedCodeRef(m_code));
 
-    if (Options::useJITDump()) [[unlikely]]
-        logJITCodeForJITDump(codeRef, simpleName);
+    logJITCodeForJITDump(codeRef, simpleName);
 
     return codeRef;
 }
 
 void LinkBuffer::logJITCodeForJITDump(CodeRef<LinkBufferPtrTag>& codeRef, ASCIILiteral simpleName)
 {
+    if (!Options::useJITDump() && !Options::useGdbJITInfo()) [[likely]]
+        return;
+    if (m_isRewriting)
+        return;
+
     auto dumpSimpleName = [&](StringPrintStream& out, ASCIILiteral simpleName) {
         if (simpleName.isNull())
             out.print("unspecified");
@@ -116,8 +121,13 @@ void LinkBuffer::logJITCodeForJITDump(CodeRef<LinkBufferPtrTag>& codeRef, ASCIIL
         dumpSimpleName(out, simpleName);
         break;
     }
-    if (!m_isRewriting)
-        PerfLog::log(out.toCString(), codeRef);
+    auto finalName = out.toCString();
+
+    if (Options::useGdbJITInfo()) [[unlikely]]
+        GdbJIT::log(finalName, codeRef);
+
+    if (Options::useJITDump()) [[unlikely]]
+        PerfLog::log(finalName, codeRef);
 }
 
 LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithDisassemblyImpl(bool dumpDisassembly, ASCIILiteral simpleName, const char* format, ...)
