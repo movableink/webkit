@@ -1464,7 +1464,7 @@ void GdbJIT::log(const CString& name, MacroAssemblerCodeRef<LinkBufferPtrTag> co
     auto region = unsafeMakeSpan(executableAddress, size);
     removeJITCodeEntries(logger.m_map, region);
     auto* entry = createELFObject(CodeDescription::create(name, region));
-    bool shouldDump = true;
+    bool shouldDump = false;
     addJITCodeEntry(logger.m_map, region, entry, shouldDump, name);
 }
 
