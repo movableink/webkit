@@ -40,18 +40,21 @@ class NetworkSession;
 
 struct NetworkLoadParameters;
 
-class PreconnectTask final : public NetworkLoadClient {
+class PreconnectTask final : public RefCounted<PreconnectTask>, public NetworkLoadClient {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PreconnectTask);
 public:
-    PreconnectTask(NetworkSession&, NetworkLoadParameters&&, CompletionHandler<void(const WebCore::ResourceError&, const WebCore::NetworkLoadMetrics&)>&&);
+    static Ref<PreconnectTask> create(NetworkSession&, NetworkLoadParameters&&);
     ~PreconnectTask();
 
     void setH2PingCallback(const URL&, CompletionHandler<void(Expected<WTF::Seconds, WebCore::ResourceError>&&)>&&);
-    void setTimeout(Seconds);
-    void start();
+    void start(CompletionHandler<void(const WebCore::ResourceError&, const WebCore::NetworkLoadMetrics&)>&& = { }, Seconds timeout = 60_s);
 
 private:
+    PreconnectTask(NetworkSession&, NetworkLoadParameters&&);
+
+    void didTimeout();
+
     // NetworkLoadClient.
     bool isSynchronous() const final { return false; }
     bool isAllowedToAskUserForCredentials() const final { return false; }
@@ -62,12 +65,9 @@ private:
     void didFinishLoading(const WebCore::NetworkLoadMetrics&) final;
     void didFailLoading(const WebCore::ResourceError&) final;
 
-    void didFinish(const WebCore::ResourceError&, const WebCore::NetworkLoadMetrics&);
-
     const Ref<NetworkLoad> m_networkLoad;
     CompletionHandler<void(const WebCore::ResourceError&, const WebCore::NetworkLoadMetrics&)> m_completionHandler;
-    Seconds m_timeout;
-    WebCore::Timer m_timeoutTimer;
+    std::unique_ptr<WebCore::Timer> m_timeoutTimer;
 };
 
 } // namespace WebKit

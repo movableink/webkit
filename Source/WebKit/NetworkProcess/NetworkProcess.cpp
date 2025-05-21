@@ -1545,20 +1545,19 @@ void NetworkProcess::preconnectTo(PAL::SessionID sessionID, WebPageProxyIdentifi
     NetworkLoadParameters parametersForAdditionalPreconnect = parameters;
 
     session->protectedNetworkLoadScheduler()->startedPreconnectForMainResource(url, userAgent);
-    auto task = new PreconnectTask(*session, WTFMove(parameters), [weakSession = WeakPtr { *session }, url, userAgent, parametersForAdditionalPreconnect = WTFMove(parametersForAdditionalPreconnect)](const WebCore::ResourceError& error, const WebCore::NetworkLoadMetrics& metrics) mutable {
+    Ref task = PreconnectTask::create(*session, WTFMove(parameters));
+    task->start([weakSession = WeakPtr { *session }, url, userAgent, parametersForAdditionalPreconnect = WTFMove(parametersForAdditionalPreconnect)](const WebCore::ResourceError& error, const WebCore::NetworkLoadMetrics& metrics) mutable {
         if (CheckedPtr session = weakSession.get()) {
             session->protectedNetworkLoadScheduler()->finishedPreconnectForMainResource(url, userAgent, error);
 #if ENABLE(ADDITIONAL_PRECONNECT_ON_HTTP_1X)
             if (equalLettersIgnoringASCIICase(metrics.protocol, "http/1.1"_s)) {
                 auto parameters = parametersForAdditionalPreconnect;
-                auto task = new PreconnectTask(*session, WTFMove(parameters), [](const WebCore::ResourceError& error, const WebCore::NetworkLoadMetrics& metrics) { });
+                Ref task = PreconnectTask::create(*session, WTFMove(parameters));
                 task->start();
             }
 #endif // ENABLE(ADDITIONAL_PRECONNECT_ON_HTTP_1X)
         }
-    });
-    task->setTimeout(10_s);
-    task->start();
+    }, 10_s);
 #else
     UNUSED_PARAM(url);
     UNUSED_PARAM(userAgent);
