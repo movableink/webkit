@@ -91,10 +91,11 @@ ParentalControlsURLFilter::ParentalControlsURLFilter() = default;
 
 static void webContentFilterTypeDidChange(CFNotificationCenterRef, void*, CFStringRef, const void*, CFDictionaryRef)
 {
-    ParentalControlsURLFilter::singleton().resetIsEnabled();
 #if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
     for (auto& filter : allFiltersWithConfigurationPath().values())
-        filter.resetIsEnabled();
+        filter->resetIsEnabled();
+#else
+    ParentalControlsURLFilter::singleton().resetIsEnabled();
 #endif
 }
 
