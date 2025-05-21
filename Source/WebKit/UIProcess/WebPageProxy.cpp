@@ -11957,6 +11957,9 @@ WebPageCreationParameters WebPageProxy::creationParameters(WebProcessProxy& proc
 
     parameters.hasReceivedAXRequestInUIProcess = m_configuration->processPool().hasReceivedAXRequestInUIProcess();
 
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    parameters.defaultContentInsetBackgroundFillEnabled = defaultContentInsetBackgroundFillEnabled();
+#endif
     return parameters;
 }
 

@@ -272,6 +272,10 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
 
     bool hasReceivedAXRequestInUIProcess;
     bool shouldSendConsoleLogsToUIProcessForTesting;
+
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    bool defaultContentInsetBackgroundFillEnabled;
+#endif
 }
 
 [Nested] struct WebKit::RemotePageParameters {

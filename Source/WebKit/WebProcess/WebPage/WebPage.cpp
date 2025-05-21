@@ -492,6 +492,10 @@
 #include "CoreIPCAuditToken.h"
 #endif
 
+#if __has_include(<WebKitAdditions/WebPreferencesDefaultValuesAdditions.h>)
+#include <WebKitAdditions/WebPreferencesDefaultValuesAdditions.h>
+#endif
+
 namespace WebKit {
 using namespace JSC;
 using namespace WebCore;
@@ -697,6 +701,10 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
 #endif
 {
     WEBPAGE_RELEASE_LOG(Loading, "constructor:");
+
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL) && __has_include(<WebKitAdditions/WebPreferencesDefaultValuesAdditions.h>)
+    cachedValueDefaultContentInsetBackgroundFillEnabled() = parameters.defaultContentInsetBackgroundFillEnabled;
+#endif
 
 #if PLATFORM(COCOA)
 #if HAVE(SANDBOX_STATE_FLAGS)

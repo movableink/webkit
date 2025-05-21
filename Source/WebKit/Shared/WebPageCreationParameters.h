@@ -350,6 +350,10 @@ struct WebPageCreationParameters {
 #endif
     bool hasReceivedAXRequestInUIProcess { false };
     bool shouldSendConsoleLogsToUIProcessForTesting { false };
+
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    bool defaultContentInsetBackgroundFillEnabled { false };
+#endif
 };
 
 } // namespace WebKit
