@@ -29,15 +29,38 @@
 
 namespace WTF {
 
-class PreciseSum {
+namespace Xsum {
+
+struct SmallAccumulator final {
+    explicit SmallAccumulator(const int addsUntilPropagate, const int64_t inf, const int64_t nan);
+    ~SmallAccumulator() = default;
+
+    Vector<int64_t> chunk; // Chunks making up small accumulator
+    int addsUntilPropagate; // Number of remaining adds before carry
+    int64_t inf; // If non-zero, +Inf, -Inf, or NaN
+    int64_t nan; // If non-zero, a NaN value with payload
+};
+
+} // namespace Xsum
+
+class PreciseSum final {
 public:
-    WTF_EXPORT_PRIVATE void add(double);
+    explicit PreciseSum();
+    ~PreciseSum() = default;
+
+    WTF_EXPORT_PRIVATE void addList(const std::span<const double> vec);
+    WTF_EXPORT_PRIVATE void add(double value);
     WTF_EXPORT_PRIVATE double compute();
 
 private:
-    bool m_everyValueIsNegativeZero { true };
-    Vector<double> m_partials;
-    double m_overflow { 0 };
+    Xsum::SmallAccumulator m_smallAccumulator;
+    size_t m_sizeCount;
+    bool m_hasPosNumber;
+
+    void xsumSmallAddInfNan(int64_t ivalue);
+    inline void xsumAdd1NoCarry(double value);
+    int xsumCarryPropagate();
+    ALWAYS_INLINE void incrementWhenValueAdded(double value);
 };
 
 } // namespace WTF
