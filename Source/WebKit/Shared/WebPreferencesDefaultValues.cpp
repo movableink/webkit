@@ -232,16 +232,6 @@ bool defaultLinearMediaPlayerEnabled()
 #endif
 }
 
-bool defaultLiveRangeSelectionEnabled()
-{
-#if PLATFORM(IOS_FAMILY)
-    static bool enableForAllApps = linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::LiveRangeSelectionEnabledForAllApps);
-    if (!enableForAllApps && WTF::IOSApplication::isGmail())
-        return false;
-#endif
-    return true;
-}
-
 bool defaultShowModalDialogEnabled()
 {
 #if PLATFORM(COCOA)

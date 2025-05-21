@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -52,19 +52,14 @@ class DOMSelection : public RefCounted<DOMSelection>, public LocalDOMWindowPrope
 public:
     static Ref<DOMSelection> create(LocalDOMWindow&);
 
-    RefPtr<Node> baseNode() const;
-    RefPtr<Node> extentNode() const;
-    unsigned baseOffset() const;
-    unsigned extentOffset() const;
     String type() const;
     String direction() const;
-    ExceptionOr<void> setBaseAndExtent(Node* baseNode, unsigned baseOffset, Node* extentNode, unsigned extentOffset);
+    ExceptionOr<void> setBaseAndExtent(Node& anchorNode, unsigned anchorOffset, Node& focusNode, unsigned focusOffset);
     ExceptionOr<void> setPosition(Node*, unsigned offset);
     void modify(const String& alter, const String& direction, const String& granularity);
 
     // The anchor and focus are the start and end of the selection, and
     // reflect the direction in which the selection was made by the user.
-    // The base and extent are different, because they don't reflect expansion.
     RefPtr<Node> anchorNode() const;
     unsigned anchorOffset() const;
     RefPtr<Node> focusNode() const;
@@ -99,13 +94,9 @@ private:
 
     Position anchorPosition() const;
     Position focusPosition() const;
-    Position basePosition() const;
-    Position extentPosition() const;
 
     RefPtr<Node> shadowAdjustedNode(const Position&) const;
     unsigned shadowAdjustedOffset(const Position&) const;
-
-    bool isValidForPosition(Node*) const;
 };
 
 } // namespace WebCore

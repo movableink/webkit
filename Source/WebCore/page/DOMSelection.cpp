@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,7 +40,6 @@
 #include "NodeInlines.h"
 #include "Quirks.h"
 #include "Range.h"
-#include "Settings.h"
 #include "ShadowRoot.h"
 #include "StaticRange.h"
 #include "TextIterator.h"
@@ -75,9 +74,7 @@ std::optional<SimpleRange> DOMSelection::range() const
     RefPtr frame = this->frame();
     if (!frame)
         return std::nullopt;
-    auto range = frame->settings().liveRangeSelectionEnabled()
-        ? frame->selection().selection().range()
-        : frame->selection().selection().firstRange();
+    auto range = frame->selection().selection().range();
     if (!range || range->start.container->isInShadowTree())
         return std::nullopt;
     return range;
@@ -88,10 +85,7 @@ Position DOMSelection::anchorPosition() const
     RefPtr frame = this->frame();
     if (!frame)
         return { };
-    if (frame->settings().liveRangeSelectionEnabled())
-        return frame->selection().selection().anchor();
-    auto& selection = frame->selection().selection();
-    return (selection.isBaseFirst() ? selection.start() : selection.end()).parentAnchoredEquivalent();
+    return frame->selection().selection().anchor();
 }
 
 Position DOMSelection::focusPosition() const
@@ -99,32 +93,7 @@ Position DOMSelection::focusPosition() const
     RefPtr frame = this->frame();
     if (!frame)
         return { };
-    if (frame->settings().liveRangeSelectionEnabled())
-        return frame->selection().selection().focus();
-    auto& selection = frame->selection().selection();
-    return (selection.isBaseFirst() ? selection.end() : selection.start()).parentAnchoredEquivalent();
-}
-
-Position DOMSelection::basePosition() const
-{
-    // FIXME: Remove this once liveRangeSelectionEnabled is always on, since base and anchor should be the same thing.
-    RefPtr frame = this->frame();
-    if (!frame)
-        return { };
-    if (frame->settings().liveRangeSelectionEnabled())
-        return frame->selection().selection().anchor();
-    return frame->selection().selection().base().parentAnchoredEquivalent();
-}
-
-Position DOMSelection::extentPosition() const
-{
-    // FIXME: Remove this once liveRangeSelectionEnabled is always on, since extent and focus should be the same thing.
-    RefPtr frame = this->frame();
-    if (!frame)
-        return { };
-    if (frame->settings().liveRangeSelectionEnabled())
-        return frame->selection().selection().focus();
-    return frame->selection().selection().extent().parentAnchoredEquivalent();
+    return frame->selection().selection().focus();
 }
 
 RefPtr<Node> DOMSelection::anchorNode() const
@@ -147,26 +116,6 @@ unsigned DOMSelection::focusOffset() const
     return shadowAdjustedOffset(focusPosition());
 }
 
-RefPtr<Node> DOMSelection::baseNode() const
-{
-    return shadowAdjustedNode(basePosition());
-}
-
-unsigned DOMSelection::baseOffset() const
-{
-    return shadowAdjustedOffset(basePosition());
-}
-
-RefPtr<Node> DOMSelection::extentNode() const
-{
-    return shadowAdjustedNode(extentPosition());
-}
-
-unsigned DOMSelection::extentOffset() const
-{
-    return shadowAdjustedOffset(extentPosition());
-}
-
 bool DOMSelection::isCollapsed() const
 {
     RefPtr frame = this->frame();
@@ -181,18 +130,10 @@ String DOMSelection::type() const
     RefPtr frame = this->frame();
     if (!frame)
         return "None"_s;
-    auto& selection = frame->selection();
-    if (frame->settings().liveRangeSelectionEnabled()) {
-        auto range = frame->selection().selection().range();
-        if (!range)
-            return "None"_s;
-        if (range->collapsed())
-            return "Caret"_s;
-        return "Range"_s;
-    }
-    if (selection.isNone())
+    auto range = frame->selection().selection().range();
+    if (!range)
         return "None"_s;
-    if (selection.isCaret())
+    if (range->collapsed())
         return "Caret"_s;
     return "Range"_s;
 }
@@ -214,14 +155,11 @@ unsigned DOMSelection::rangeCount() const
     RefPtr frame = this->frame();
     if (!frame)
         return 0;
-    if (frame->settings().liveRangeSelectionEnabled()) {
-        if (frame->selection().associatedLiveRange())
-            return 1;
-        if (selectionShadowAncestor(*frame))
-            return 1;
-        return 0;
-    }
-    return frame->selection().isNone() ? 0 : 1;
+    if (frame->selection().associatedLiveRange())
+        return 1;
+    if (selectionShadowAncestor(*frame))
+        return 1;
+    return 0;
 }
 
 ExceptionOr<void> DOMSelection::collapse(Node* node, unsigned offset)
@@ -229,20 +167,14 @@ ExceptionOr<void> DOMSelection::collapse(Node* node, unsigned offset)
     RefPtr frame = this->frame();
     if (!frame)
         return { };
-    if (frame->settings().liveRangeSelectionEnabled()) {
-        if (!node) {
-            removeAllRanges();
-            return { };
-        }
-        if (auto result = Range::checkNodeOffsetPair(*node, offset); result.hasException())
-            return result.releaseException();
-        if (!(node->isConnected() && frame->document() == &node->document())
-            && &node->rootNode() != frame->document())
-            return { };
-    } else {
-        if (!isValidForPosition(node))
-            return { };
+    if (!node) {
+        removeAllRanges();
+        return { };
     }
+    if (auto result = Range::checkNodeOffsetPair(*node, offset); result.hasException())
+        return result.releaseException();
+    if (!(node->isConnected() && frame->document() == &node->document()) && &node->rootNode() != frame->document())
+        return { };
     CheckedRef selection = frame->selection();
     selection->disassociateLiveRange();
     selection->moveTo(makeContainerOffsetPosition(node, offset), Affinity::Downstream);
@@ -257,11 +189,8 @@ ExceptionOr<void> DOMSelection::collapseToEnd()
     CheckedRef selection = frame->selection();
     if (selection->isNone())
         return Exception { ExceptionCode::InvalidStateError };
-    if (frame->settings().liveRangeSelectionEnabled()) {
-        selection->disassociateLiveRange();
-        selection->moveTo(selection->selection().uncanonicalizedEnd(), Affinity::Downstream);
-    } else
-        selection->moveTo(selection->selection().end(), Affinity::Downstream);
+    selection->disassociateLiveRange();
+    selection->moveTo(selection->selection().uncanonicalizedEnd(), Affinity::Downstream);
     return { };
 }
 
@@ -273,11 +202,8 @@ ExceptionOr<void> DOMSelection::collapseToStart()
     CheckedRef selection = frame->selection();
     if (selection->isNone())
         return Exception { ExceptionCode::InvalidStateError };
-    if (frame->settings().liveRangeSelectionEnabled()) {
-        selection->disassociateLiveRange();
-        selection->moveTo(selection->selection().uncanonicalizedStart(), Affinity::Downstream);
-    } else
-        selection->moveTo(selection->selection().start(), Affinity::Downstream);
+    selection->disassociateLiveRange();
+    selection->moveTo(selection->selection().uncanonicalizedStart(), Affinity::Downstream);
     return { };
 }
 
@@ -286,29 +212,21 @@ void DOMSelection::empty()
     removeAllRanges();
 }
 
-ExceptionOr<void> DOMSelection::setBaseAndExtent(Node* baseNode, unsigned baseOffset, Node* extentNode, unsigned extentOffset)
+ExceptionOr<void> DOMSelection::setBaseAndExtent(Node& anchorNode, unsigned anchorOffset, Node& focusNode, unsigned focusOffset)
 {
     RefPtr frame = this->frame();
     if (!frame)
         return { };
-    if (frame->settings().liveRangeSelectionEnabled()) {
-        // FIXME: We should do this by making the arguments non-nullable in the IDL file, once liveRangeSelectionEnabled is always true.
-        if (!baseNode || !extentNode)
-            return Exception { ExceptionCode::TypeError };
-        if (auto result = Range::checkNodeOffsetPair(*baseNode, baseOffset); result.hasException())
-            return result.releaseException();
-        if (auto result = Range::checkNodeOffsetPair(*extentNode, extentOffset); result.hasException())
-            return result.releaseException();
-        Ref document = *frame->document();
-        if (!document->isShadowIncludingInclusiveAncestorOf(baseNode) || !document->isShadowIncludingInclusiveAncestorOf(extentNode))
-            return { };
-    } else {
-        if (!isValidForPosition(baseNode) || !isValidForPosition(extentNode))
-            return { };
-    }
+    if (auto result = Range::checkNodeOffsetPair(anchorNode, anchorOffset); result.hasException())
+        return result.releaseException();
+    if (auto result = Range::checkNodeOffsetPair(focusNode, focusOffset); result.hasException())
+        return result.releaseException();
+    Ref document = *frame->document();
+    if (!document->isShadowIncludingInclusiveAncestorOf(&anchorNode) || !document->isShadowIncludingInclusiveAncestorOf(&focusNode))
+        return { };
     CheckedRef selection = frame->selection();
     selection->disassociateLiveRange();
-    selection->moveTo(makeContainerOffsetPosition(baseNode, baseOffset), makeContainerOffsetPosition(extentNode, extentOffset), Affinity::Downstream);
+    selection->moveTo(makeContainerOffsetPosition(&anchorNode, anchorOffset), makeContainerOffsetPosition(&focusNode, focusOffset), Affinity::Downstream);
     return { };
 }
 
@@ -371,26 +289,18 @@ ExceptionOr<void> DOMSelection::extend(Node& node, unsigned offset)
     if (!frame)
         return { };
 
-    if (rangeCount() < 1 && !(frame->settings().liveRangeSelectionEnabled() && frame->selection().isCaretOrRange()))
+    if (rangeCount() < 1 && !(frame->selection().isCaretOrRange()))
         return Exception { ExceptionCode::InvalidStateError, "extend() requires a Range to be added to the Selection"_s };
 
-    if (frame->settings().liveRangeSelectionEnabled()) {
-        if (!(node.isConnected() && frame->document() == &node.document()) && &node.rootNode() != frame->document())
-            return { };
-        if (auto result = Range::checkNodeOffsetPair(node, offset); result.hasException())
-            return result.releaseException();
-        CheckedRef selection = frame->selection();
-        auto newSelection = selection->selection();
-        newSelection.setExtent(makeContainerOffsetPosition(&node, offset));
-        selection->disassociateLiveRange();
-        selection->setSelection(WTFMove(newSelection));
-    } else {
-        if (offset > node.length())
-            return Exception { ExceptionCode::IndexSizeError };
-        if (!isValidForPosition(&node))
-            return { };
-        frame->checkedSelection()->setExtent(makeContainerOffsetPosition(&node, offset), Affinity::Downstream);
-    }
+    if (!(node.isConnected() && frame->document() == &node.document()) && &node.rootNode() != frame->document())
+        return { };
+    if (auto result = Range::checkNodeOffsetPair(node, offset); result.hasException())
+        return result.releaseException();
+    CheckedRef selection = frame->selection();
+    auto newSelection = selection->selection();
+    newSelection.setExtent(makeContainerOffsetPosition(&node, offset));
+    selection->disassociateLiveRange();
+    selection->setSelection(WTFMove(newSelection));
     return { };
 }
 
@@ -407,14 +317,9 @@ ExceptionOr<Ref<Range>> DOMSelection::getRangeAt(unsigned index)
     if (index >= rangeCount())
         return Exception { ExceptionCode::IndexSizeError };
     Ref frame = this->frame().releaseNonNull();
-    if (frame->settings().liveRangeSelectionEnabled()) {
-        if (RefPtr liveRange = frame->selection().associatedLiveRange())
-            return liveRange.releaseNonNull();
-        return createLiveRangeBeforeShadowHostWithSelection(frame.get()).releaseNonNull();
-    }
-    if (RefPtr liveRange = createLiveRangeBeforeShadowHostWithSelection(frame.get()))
+    if (RefPtr liveRange = frame->selection().associatedLiveRange())
         return liveRange.releaseNonNull();
-    return createLiveRange(*frame->selection().selection().firstRange());
+    return createLiveRangeBeforeShadowHostWithSelection(frame.get()).releaseNonNull();
 }
 
 void DOMSelection::removeAllRanges()
@@ -431,18 +336,8 @@ void DOMSelection::addRange(Range& liveRange)
     if (!frame)
         return;
     CheckedRef selection = frame->selection();
-    if (frame->settings().liveRangeSelectionEnabled()) {
-        if (selection->isNone())
-            selection->associateLiveRange(liveRange);
-        return;
-    }
-    auto range = makeSimpleRange(liveRange);
-    if (auto selectedRange = selection->selection().toNormalizedRange()) {
-        if (!selectedRange->start.container->containingShadowRoot() && intersects(*selectedRange, range))
-            selection->setSelection(unionRange(*selectedRange, range));
-        return;
-    }
-    selection->setSelection(WTFMove(range));
+    if (selection->isNone())
+        selection->associateLiveRange(liveRange);
 }
 
 ExceptionOr<void> DOMSelection::removeRange(Range& liveRange)
@@ -450,7 +345,6 @@ ExceptionOr<void> DOMSelection::removeRange(Range& liveRange)
     RefPtr frame = this->frame();
     if (!frame)
         return { };
-    ASSERT(frame->settings().liveRangeSelectionEnabled());
     if (&liveRange != frame->selection().associatedLiveRange())
         return Exception { ExceptionCode::NotFoundError };
     removeAllRanges();
@@ -507,23 +401,12 @@ void DOMSelection::deleteFromDocument()
     RefPtr frame = this->frame();
     if (!frame)
         return;
-    if (frame->settings().liveRangeSelectionEnabled()) {
-        if (RefPtr range = frame->selection().associatedLiveRange())
-            range->deleteContents();
-        return;
-    }
-    auto selectedRange = frame->selection().selection().toNormalizedRange();
-    if (!selectedRange || selectedRange->start.container->containingShadowRoot())
-        return;
-    createLiveRange(*selectedRange)->deleteContents();
-    frame->checkedSelection()->setSelectedRange(makeSimpleRange(selectedRange->start), Affinity::Downstream, FrameSelection::ShouldCloseTyping::No);
+    if (RefPtr range = frame->selection().associatedLiveRange())
+        range->deleteContents();
 }
 
 bool DOMSelection::containsNode(Node& node, bool allowPartial) const
 {
-    // FIXME: The rule implemented here for text nodes is wrong, and was added to work around anomalies caused when we canonicalize selection endpoints.
-    if (node.isTextNode() && !node.document().settings().liveRangeSelectionEnabled())
-        allowPartial = true;
     auto range = this->range();
     return range && (allowPartial ? intersects(*range, node) : contains(*range, node));
 }
@@ -532,7 +415,7 @@ ExceptionOr<void> DOMSelection::selectAllChildren(Node& node)
 {
     // This doesn't (and shouldn't) select the characters in a node if passed a text node.
     // Selection API specification seems to have this wrong: https://github.com/w3c/selection-api/issues/125
-    return setBaseAndExtent(&node, 0, &node, node.countChildNodes());
+    return setBaseAndExtent(node, 0, node, node.countChildNodes());
 }
 
 String DOMSelection::toString() const
@@ -545,11 +428,7 @@ String DOMSelection::toString() const
     if (!frame->document()->quirks().needsToCopyUserSelectNoneQuirk())
         options.add(TextIteratorBehavior::IgnoresUserSelectNone);
 
-    if (frame->settings().liveRangeSelectionEnabled()) {
-        auto range = frame->selection().selection().range();
-        return range ? plainText(*range, options) : emptyString();
-    }
-    auto range = frame->selection().selection().firstRange();
+    auto range = frame->selection().selection().range();
     return range ? plainText(*range, options) : emptyString();
 }
 
@@ -583,13 +462,6 @@ unsigned DOMSelection::shadowAdjustedOffset(const Position& position) const
         return position.computeOffsetInContainerNode();
 
     return adjustedNode->computeNodeIndex();
-}
-
-bool DOMSelection::isValidForPosition(Node* node) const
-{
-    RefPtr frame = this->frame();
-    ASSERT(!frame->settings().liveRangeSelectionEnabled());
-    return frame && (!node || &node->document() == frame->document());
 }
 
 } // namespace WebCore

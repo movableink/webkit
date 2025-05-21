@@ -212,7 +212,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::FullySuspendsBackgroundContent);
         disableBehavior(SDKAlignedBehavior::RunningBoardThrottling);
         disableBehavior(SDKAlignedBehavior::PopoverAttributeEnabled);
-        disableBehavior(SDKAlignedBehavior::LiveRangeSelectionEnabledForAllApps);
         disableBehavior(SDKAlignedBehavior::DoesNotOverrideUAFromNSUserDefault);
         disableBehavior(SDKAlignedBehavior::EvaluateJavaScriptWithoutTransientActivation);
         disableBehavior(SDKAlignedBehavior::ResettingTransitionCancelsRunningTransitionQuirk);
@@ -484,12 +483,6 @@ bool IOSApplication::isIMDb()
 {
     static bool isIMDb = applicationBundleIsEqualTo("com.imdb.imdb"_s);
     return isIMDb;
-}
-
-bool IOSApplication::isGmail()
-{
-    static bool isGmail = applicationBundleIsEqualTo("com.google.Gmail"_s);
-    return isGmail;
 }
 
 bool IOSApplication::isWebBookmarksD()

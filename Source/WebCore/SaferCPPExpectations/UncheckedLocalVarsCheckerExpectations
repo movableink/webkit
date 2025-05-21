@@ -345,7 +345,6 @@ loader/cache/MemoryCache.cpp
 mathml/MathMLSelectElement.cpp
 page/AutoscrollController.cpp
 page/ContextMenuController.cpp
-page/DOMSelection.cpp
 page/DebugPageOverlays.cpp
 page/DeviceController.cpp
 page/DragController.cpp

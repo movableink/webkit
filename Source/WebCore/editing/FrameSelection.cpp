@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -658,7 +658,7 @@ void FrameSelection::nodeWillBeRemoved(Node& node)
 {
     // There can't be a selection inside a fragment, so if a fragment's node is being removed,
     // the selection in the document that created the fragment needs no adjustment.
-    if ((isNone() && !m_document->settings().liveRangeSelectionEnabled()) || !node.isConnected())
+    if (!node.isConnected())
         return;
 
     if (!node.containsSelectionEndPoint()) {
@@ -686,7 +686,7 @@ void FrameSelection::respondToNodeModification(Node& node, bool anchorRemoved, b
     bool clearRenderTreeSelection = false;
     bool clearDOMTreeSelection = false;
 
-    if (m_document->settings().liveRangeSelectionEnabled() && (anchorRemoved || focusRemoved)) {
+    if (anchorRemoved || focusRemoved) {
         Position anchor = m_selection.anchor();
         Position focus = m_selection.focus();
         if (anchorRemoved)
@@ -788,28 +788,17 @@ void FrameSelection::textWasReplaced(CharacterData& node, unsigned offset, unsig
     Position extent = m_selection.extent();
     Position start = m_selection.start();
     Position end = m_selection.end();
-    if (m_document->settings().liveRangeSelectionEnabled()) {
-        updatePositionAfterAdoptingTextReplacement(anchor, node, offset, oldLength, newLength);
-        updatePositionAfterAdoptingTextReplacement(focus, node, offset, oldLength, newLength);
-    }
+    updatePositionAfterAdoptingTextReplacement(anchor, node, offset, oldLength, newLength);
+    updatePositionAfterAdoptingTextReplacement(focus, node, offset, oldLength, newLength);
     updatePositionAfterAdoptingTextReplacement(base, node, offset, oldLength, newLength);
     updatePositionAfterAdoptingTextReplacement(extent, node, offset, oldLength, newLength);
     updatePositionAfterAdoptingTextReplacement(start, node, offset, oldLength, newLength);
     updatePositionAfterAdoptingTextReplacement(end, node, offset, oldLength, newLength);
 
-    bool liveRangeSelectionEnabled = node.document().settings().liveRangeSelectionEnabled();
-    if ((liveRangeSelectionEnabled && (anchor != m_selection.anchor() || focus != m_selection.focus()))
+    if ((anchor != m_selection.anchor() || focus != m_selection.focus())
         || base != m_selection.base() || extent != m_selection.extent() || start != m_selection.start() || end != m_selection.end()) {
         VisibleSelection newSelection;
-
-        if (liveRangeSelectionEnabled)
-            newSelection.setWithoutValidation(anchor, focus);
-        else if (base != extent)
-            newSelection.setWithoutValidation(base, extent);
-        else if (m_selection.directionality() == Directionality::Strong && !m_selection.isBaseFirst())
-            newSelection.setWithoutValidation(end, start);
-        else
-            newSelection.setWithoutValidation(start, end);
+        newSelection.setWithoutValidation(anchor, focus);
 
         setSelection(newSelection, { SetSelectionOption::DoNotSetFocus, SetSelectionOption::MaintainLiveRange });
     }

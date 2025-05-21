@@ -115,7 +115,6 @@ enum class SDKAlignedBehavior {
     UsesGameControllerPhysicalInputProfile,
     ScreenOrientationAPIEnabled,
     PopoverAttributeEnabled,
-    LiveRangeSelectionEnabledForAllApps,
     DoesNotOverrideUAFromNSUserDefault,
     EvaluateJavaScriptWithoutTransientActivation,
     ResettingTransitionCancelsRunningTransitionQuirk,
@@ -208,7 +207,6 @@ WTF_EXPORT_PRIVATE bool isFirefox();
 WTF_EXPORT_PRIVATE bool isHimalaya();
 WTF_EXPORT_PRIVATE bool isHoYoLAB();
 WTF_EXPORT_PRIVATE bool isIMDb();
-WTF_EXPORT_PRIVATE bool isGmail();
 WTF_EXPORT_PRIVATE bool isJWLibrary();
 WTF_EXPORT_PRIVATE bool isLaBanquePostale();
 WTF_EXPORT_PRIVATE bool isLutron();

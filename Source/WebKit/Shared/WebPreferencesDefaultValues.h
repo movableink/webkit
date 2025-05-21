@@ -154,7 +154,6 @@ bool defaultShouldDropNearSuspendedAssertionAfterDelay();
 bool defaultShouldTakeNearSuspendedAssertion();
 bool defaultShowModalDialogEnabled();
 bool defaultLinearMediaPlayerEnabled();
-bool defaultLiveRangeSelectionEnabled();
 
 bool defaultShouldEnableScreenOrientationAPI();
 bool defaultPopoverAttributeEnabled();

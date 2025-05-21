@@ -4315,20 +4315,6 @@ LinkSanitizerEnabled:
     WebCore:
       default: false
 
-LiveRangeSelectionEnabled:
-  type: bool
-  status: stable
-  category: dom
-  humanReadableName: "Live Ranges in Selection"
-  humanReadableDescription: "Live range behavior for ranges in the Selection object"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: WebKit::defaultLiveRangeSelectionEnabled()
-    WebCore:
-      default: true
-
 LoadDeferringEnabled:
   type: bool
   status: embedder

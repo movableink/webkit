@@ -1398,7 +1398,6 @@ editing/selection/4895428-4.html [ Failure ]
 editing/selection/after-line-break.html [ Failure ]
 editing/selection/select-out-of-editable.html [ Failure ]
 editing/selection/shift-click-includes-existing-selection.html [ Failure ]
-editing/selection/shift-click.html [ Failure ]
 editing/selection/user-select-all-with-shift.html [ Failure ]
 editing/style/preserve-selection-direction.html [ Failure ]
 
