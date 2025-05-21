@@ -74,17 +74,6 @@ static WebMouseEventButton buttonForWPEButton(guint button)
     return WebMouseEventButton::None;
 }
 
-static WebMouseEventButton buttonFromWPEModifiers(WPEModifiers modifiers)
-{
-    if (modifiers & WPE_MODIFIER_POINTER_BUTTON1)
-        return WebMouseEventButton::Left;
-    if (modifiers & WPE_MODIFIER_POINTER_BUTTON2)
-        return WebMouseEventButton::Middle;
-    if (modifiers & WPE_MODIFIER_POINTER_BUTTON3)
-        return WebMouseEventButton::Right;
-    return WebMouseEventButton::None;
-}
-
 static FloatPoint movementDeltaFromEvent(WPEEvent* event)
 {
     double x, y;
@@ -148,7 +137,6 @@ WebMouseEvent WebEventFactory::createWebMouseEvent(WPEEvent* event)
     case WPE_EVENT_POINTER_ENTER:
     case WPE_EVENT_POINTER_LEAVE:
         type = WebEventType::MouseMove;
-        button = buttonFromWPEModifiers(modifiers);
         movementDelta = movementDeltaFromEvent(event);
         break;
     default:
