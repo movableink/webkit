@@ -1315,11 +1315,9 @@ private:
     WEBCORE_EXPORT const RenderObject::RenderObjectRareData& rareData() const;
     RenderObjectRareData& ensureRareData();
     void removeRareData();
-    
-    using RareDataMap = UncheckedKeyHashMap<SingleThreadWeakRef<const RenderObject>, std::unique_ptr<RenderObjectRareData>>;
 
+    using RareDataMap = SingleThreadWeakHashMap<const RenderObject, std::unique_ptr<RenderObjectRareData>>;
     static RareDataMap& rareDataMap();
-
 };
 
 class RenderObject::SetLayoutNeededForbiddenScope {
