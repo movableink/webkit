@@ -37,6 +37,7 @@
 #include "AccessibilitySpinButton.h"
 #include "AccessibilityTable.h"
 #include "CachedImage.h"
+#include "ComplexTextController.h"
 #include "ComposedTreeIterator.h"
 #include "DocumentSVG.h"
 #include "Editing.h"
@@ -46,6 +47,7 @@
 #include "EventTargetInlines.h"
 #include "FloatRect.h"
 #include "FocusOptions.h"
+#include "FontCascade.h"
 #include "FrameLoader.h"
 #include "FrameSelection.h"
 #include "HTMLAreaElement.h"
@@ -120,6 +122,7 @@
 #include "TextIterator.h"
 #include "TypedElementDescendantIteratorInlines.h"
 #include "VisibleUnits.h"
+#include "WidthIterator.h"
 #include <algorithm>
 #include <ranges>
 #include <wtf/NeverDestroyed.h>
@@ -1499,16 +1502,38 @@ AXTextRuns AccessibilityRenderObject::textRuns()
             distanceFromBoundsInDirection = isHorizontal ? lineBox->contentLogicalLeft() + containingBlockOffset - elementRect().x() : -textRun.xPos() + containingBlockOffset - elementRect().y();
         }
 
-        auto appendCharacterWidth = [&] (unsigned characterIndex) {
-            float characterWidth = textBox->fontCascade().widthForCharacterInRun(textRun, characterIndex);
+        // Populate GlyphBuffer with all of the glyphs for the text runs, enabling us to measure character widths.
+        const FontCascade& fontCascade = textBox->fontCascade();
+        GlyphBuffer glyphBuffer;
+        if (fontCascade.codePath(textRun) == FontCascade::CodePath::Complex) {
+            ComplexTextController complexTextController(fontCascade, textRun, true, nil);
+            complexTextController.advance(text.length(), &glyphBuffer);
+        } else {
+            WidthIterator simpleIterator(fontCascade, textRun);
+            simpleIterator.advance(text.length(), glyphBuffer);
+        }
+
+        // Iterate over the glyphs and populate characterWidths. Sometimes multiple characters correspond to just
+        // a single glyph so we might need to insert extras zeros into characterWidths for those indexes that
+        // don't correspond to a glyph.
+        characterWidths.reserveCapacity(text.length());
+        unsigned characterIndex = 0;
+        for (unsigned glyphIndex = 0; glyphIndex < glyphBuffer.size() && characterIndex < text.length(); glyphIndex++) {
+            unsigned newCharacterIndex = glyphBuffer.uncheckedStringOffsetAt(glyphIndex);
+            float characterWidth = WebCore::width(glyphBuffer.advanceAt(glyphIndex));
+            while (characterIndex + 1 < newCharacterIndex && characterIndex < text.length()) {
+                characterWidths.append(0);
+                characterIndex++;
+            }
+
+            // Round to integer widths, using the fractional part of accumulatedDistanceFromStart to avoid accumulating rounding errors.
             characterWidths.append(static_cast<uint16_t>(characterWidth + fmod(accumulatedDistanceFromStart, 1)));
             accumulatedDistanceFromStart += characterWidth;
-        };
+            characterIndex = newCharacterIndex;
+        }
 
         if (!collapseTabs && !collapseNewlines) {
             lineString.append(text);
-            for (unsigned i = 0; i < text.length(); i++)
-                appendCharacterWidth(i);
             return;
         }
 
@@ -1521,8 +1546,6 @@ AXTextRuns AccessibilityRenderObject::textRuns()
                 lineString.append(' ');
             else
                 lineString.append(character);
-
-            appendCharacterWidth(i);
         }
     };
 
