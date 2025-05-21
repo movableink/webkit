@@ -75,7 +75,6 @@ enum class SDKAlignedBehavior {
     MutationEventsDisabledByDefault,
     NoClientCertificateLookup,
     NoExpandoIndexedPropertiesOnWindow,
-    NoIMDbCSSOMViewScrollingQuirk,
     NoLaBanquePostaleQuirks,
     NoMoviStarPlusCORSPreflightQuirk,
     NoPokerBrosBuiltInTagQuirk,
@@ -206,7 +205,6 @@ WTF_EXPORT_PRIVATE bool isFeedly();
 WTF_EXPORT_PRIVATE bool isFirefox();
 WTF_EXPORT_PRIVATE bool isHimalaya();
 WTF_EXPORT_PRIVATE bool isHoYoLAB();
-WTF_EXPORT_PRIVATE bool isIMDb();
 WTF_EXPORT_PRIVATE bool isJWLibrary();
 WTF_EXPORT_PRIVATE bool isLaBanquePostale();
 WTF_EXPORT_PRIVATE bool isLutron();

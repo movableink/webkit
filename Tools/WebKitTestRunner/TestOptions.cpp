@@ -87,7 +87,6 @@ const TestFeatures& TestOptions::defaults()
             { "AsyncFrameScrollingEnabled", false },
             { "AsyncOverflowScrollingEnabled", false },
             { "BuiltInNotificationsEnabled", false },
-            { "CSSOMViewScrollingAPIEnabled", true },
             { "CSSUnprefixedBackdropFilterEnabled", true },
             { "CaptureAudioInGPUProcessEnabled", captureAudioInGPUProcessEnabledValue },
             { "CaptureAudioInUIProcessEnabled", false },

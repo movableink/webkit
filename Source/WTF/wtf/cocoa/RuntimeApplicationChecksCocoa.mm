@@ -141,7 +141,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::HasUIContextMenuInteraction);
         disableBehavior(SDKAlignedBehavior::WKContentViewDoesNotOverrideKeyCommands);
         disableBehavior(SDKAlignedBehavior::SupportsOverflowHiddenOnMainFrame);
-        disableBehavior(SDKAlignedBehavior::NoIMDbCSSOMViewScrollingQuirk);
         disableBehavior(SDKAlignedBehavior::DownloadDelegatesCalledOnTheMainThread);
     }
 
@@ -477,12 +476,6 @@ bool IOSApplication::isSafariViewService()
 {
     static bool isSafariViewService = applicationBundleIsEqualTo("com.apple.SafariViewService"_s);
     return isSafariViewService;
-}
-
-bool IOSApplication::isIMDb()
-{
-    static bool isIMDb = applicationBundleIsEqualTo("com.imdb.imdb"_s);
-    return isIMDb;
 }
 
 bool IOSApplication::isWebBookmarksD()

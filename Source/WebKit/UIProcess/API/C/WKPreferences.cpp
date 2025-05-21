@@ -1560,16 +1560,6 @@ void WKPreferencesSetAllowMediaContentTypesRequiringHardwareSupportAsFallback(WK
     return toProtectedImpl(preferencesRef)->setAllowMediaContentTypesRequiringHardwareSupportAsFallback(allow);
 }
 
-void WKPreferencesSetCSSOMViewScrollingAPIEnabled(WKPreferencesRef preferencesRef, bool flag)
-{
-    toProtectedImpl(preferencesRef)->setCSSOMViewScrollingAPIEnabled(flag);
-}
-
-bool WKPreferencesGetCSSOMViewScrollingAPIEnabled(WKPreferencesRef preferencesRef)
-{
-    return toProtectedImpl(preferencesRef)->cssOMViewScrollingAPIEnabled();
-}
-
 void WKPreferencesSetShouldAllowUserInstalledFonts(WKPreferencesRef preferencesRef, bool flag)
 {
     toProtectedImpl(preferencesRef)->setShouldAllowUserInstalledFonts(flag);
@@ -1702,6 +1692,15 @@ bool WKPreferencesGetRequestVideoFrameCallbackEnabled(WKPreferencesRef preferenc
 
 
 // The following are all deprecated and do nothing. They should be removed when possible.
+
+void WKPreferencesSetCSSOMViewScrollingAPIEnabled(WKPreferencesRef, bool)
+{
+}
+
+bool WKPreferencesGetCSSOMViewScrollingAPIEnabled(WKPreferencesRef)
+{
+    return true;
+}
 
 void WKPreferencesSetHyperlinkAuditingEnabled(WKPreferencesRef, bool)
 {

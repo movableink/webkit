@@ -2542,16 +2542,6 @@ static RetainPtr<NSString>& classIBCreatorID()
     return [self _boolValueForKey:WebKitDirectoryUploadEnabledPreferenceKey];
 }
 
-- (BOOL)CSSOMViewScrollingAPIEnabled
-{
-    return [self _boolValueForKey:WebKitCSSOMViewScrollingAPIEnabledPreferenceKey];
-}
-
-- (void)setCSSOMViewScrollingAPIEnabled:(BOOL)flag
-{
-    [self _setBoolValue:flag forKey:WebKitCSSOMViewScrollingAPIEnabledPreferenceKey];
-}
-
 - (BOOL)mediaUserGestureInheritsFromDocument
 {
     return [self _boolValueForKey:WebKitMediaUserGestureInheritsFromDocument];
@@ -2951,6 +2941,15 @@ static RetainPtr<NSString>& classIBCreatorID()
 
 // The preferences in this category are deprecated and have no effect. They should
 // be removed when it is considered safe to do so.
+
+- (BOOL)CSSOMViewScrollingAPIEnabled
+{
+    return YES;
+}
+
+- (void)setCSSOMViewScrollingAPIEnabled:(BOOL)flag
+{
+}
 
 - (BOOL)hyperlinkAuditingEnabled
 {
