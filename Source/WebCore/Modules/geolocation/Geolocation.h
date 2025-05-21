@@ -75,6 +75,8 @@ public:
     WEBCORE_EXPORT void resetIsAllowed();
     bool isAllowed() const { return m_allowGeolocation == Yes; }
 
+    bool hasBeenRequested() const { return m_hasBeenRequested; }
+
     void positionChanged();
     void setError(GeolocationError&);
     bool shouldBlockGeolocationRequests();
@@ -160,6 +162,8 @@ private:
     Watchers m_watchers;
     GeoNotifierSet m_pendingForPermissionNotifiers;
     RefPtr<GeolocationPosition> m_lastPosition;
+
+    bool m_hasBeenRequested { false };
 
     enum { Unknown, InProgress, Yes, No } m_allowGeolocation { Unknown };
     String m_authorizationToken;

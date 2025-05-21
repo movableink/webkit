@@ -29,11 +29,14 @@
 #include "DedicatedWorkerGlobalScope.h"
 #include "DocumentInlines.h"
 #include "Exception.h"
+#include "Geolocation.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSPermissionDescriptor.h"
 #include "JSPermissionStatus.h"
 #include "LocalFrame.h"
+#include "Navigator.h"
 #include "NavigatorBase.h"
+#include "NavigatorGeolocation.h"
 #include "Page.h"
 #include "PermissionController.h"
 #include "PermissionDescriptor.h"
@@ -168,6 +171,17 @@ void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, DO
                 return;
             }
 
+#if ENABLE(GEOLOCATION)
+            if (permissionDescriptor.name == PermissionName::Geolocation) {
+                if (auto geolocationPermissionState = determineGeolocationPermissionState(*permissionState, document))
+                    permissionState = geolocationPermissionState;
+                else {
+                    promise.reject(Exception { ExceptionCode::InvalidStateError, "The Document does not have a Geolocation object"_s });
+                    return;
+                }
+            }
+#endif
+
             promise.resolve(PermissionStatus::create(document, *permissionState, permissionDescriptor, PermissionQuerySource::Window, WTFMove(page)));
         });
         return;
@@ -177,17 +191,33 @@ void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, DO
     auto completionHandler = [originData = WTFMove(originData).isolatedCopy(), permissionDescriptor, contextIdentifier = workerGlobalScope.identifier(), source = *source, promise = WTFMove(promise)] (auto& context) mutable {
         ASSERT(isMainThread());
 
-        auto& document = downcast<Document>(context);
-        if (!document.page()) {
+        Ref document = downcast<Document>(context);
+        if (!document->page()) {
             ScriptExecutionContext::postTaskTo(contextIdentifier, [promise = WTFMove(promise)](auto&) mutable {
                 promise.reject(Exception { ExceptionCode::InvalidStateError, "The page does not exist"_s });
             });
             return;
         }
 
-        auto page = source == PermissionQuerySource::DedicatedWorker ? WeakPtr { *document.page() } : nullptr;
+        auto page = source == PermissionQuerySource::DedicatedWorker ? WeakPtr { *document->page() } : nullptr;
 
-        PermissionController::shared().query(ClientOrigin { document.topOrigin().data(), WTFMove(originData) }, permissionDescriptor, page, source, [contextIdentifier, permissionDescriptor, promise = WTFMove(promise), source, page](auto permissionState) mutable {
+        PermissionController::shared().query(ClientOrigin { document->topOrigin().data(), WTFMove(originData) }, permissionDescriptor, page, source, [contextIdentifier, permissionDescriptor, promise = WTFMove(promise), source, page, document](auto permissionState) mutable {
+            ASSERT(isMainThread());
+
+#if ENABLE(GEOLOCATION)
+            if (permissionDescriptor.name == PermissionName::Geolocation) {
+                if (auto geolocationPermissionState = determineGeolocationPermissionState(*permissionState, document))
+                    permissionState = geolocationPermissionState;
+                else {
+                    ScriptExecutionContext::postTaskTo(contextIdentifier, [promise = WTFMove(promise)](auto&) mutable {
+                        promise.reject(Exception { ExceptionCode::InvalidStateError, "The Document does not have a Geolocation object"_s });
+                    });
+
+                    return;
+                }
+            }
+#endif
+
             ScriptExecutionContext::postTaskTo(contextIdentifier, [promise = WTFMove(promise), permissionState, permissionDescriptor, source, page = WTFMove(page)](auto& context) mutable {
                 if (!permissionState) {
                     promise.reject(Exception { ExceptionCode::NotSupportedError, "Permissions::query does not support this API"_s });
@@ -202,5 +232,33 @@ void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, DO
     if (auto* workerLoaderProxy = workerGlobalScope.thread().workerLoaderProxy())
         workerLoaderProxy->postTaskToLoader(WTFMove(completionHandler));
 }
+
+#if ENABLE(GEOLOCATION)
+
+static std::optional<PermissionState> determineGeolocationPermissionState(PermissionState permissionState, const Document& document)
+{
+    RefPtr domWindow = document.domWindow();
+    if (!domWindow)
+        return std::nullopt;
+
+    RefPtr geolocation = NavigatorGeolocation::optionalGeolocation(domWindow->protectedNavigator());
+
+    switch (permissionState) {
+    case PermissionState::Granted:
+        return PermissionState::Granted;
+    case PermissionState::Denied:
+        if (!geolocation || !geolocation->hasBeenRequested())
+            return PermissionState::Prompt;
+        return PermissionState::Denied;
+    case PermissionState::Prompt:
+        if (!geolocation || !geolocation->hasBeenRequested())
+            return PermissionState::Prompt;
+        return geolocation->isAllowed() ? PermissionState::Granted : PermissionState::Denied;
+    };
+
+    return std::nullopt;
+}
+
+#endif // ENABLE(GEOLOCATION)
 
 } // namespace WebCore

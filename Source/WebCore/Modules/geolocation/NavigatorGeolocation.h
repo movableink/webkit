@@ -39,6 +39,7 @@ public:
     static NavigatorGeolocation* from(Navigator&);
 
     static Geolocation* geolocation(Navigator&);
+    static Geolocation* optionalGeolocation(Navigator&);
     Geolocation* geolocation() const;
 
 #if PLATFORM(IOS_FAMILY)
