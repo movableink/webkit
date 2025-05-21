@@ -52,6 +52,7 @@
 #include "JSHTMLModelElementCamera.h"
 #include "LayoutRect.h"
 #include "LayoutSize.h"
+#include "LegacySchemeRegistry.h"
 #include "Logging.h"
 #include "MIMETypeRegistry.h"
 #include "Model.h"
@@ -187,6 +188,25 @@ void HTMLModelElement::sourcesChanged()
     setSourceURL(selectModelSource());
 }
 
+CachedResourceRequest HTMLModelElement::createResourceRequest(const URL& resourceURL, FetchOptions::Destination destination)
+{
+    ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
+    options.destination = destination;
+    options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
+
+    auto crossOriginAttribute = parseCORSSettingsAttribute(attributeWithoutSynchronization(HTMLNames::crossoriginAttr));
+    // Make sure CORS is always enabled by passing a non-null cross origin attribute
+    if (crossOriginAttribute.isNull()) {
+        auto documentOrigin = protectedDocument()->protectedSecurityOrigin();
+        if (LegacySchemeRegistry::shouldTreatURLSchemeAsCORSEnabled(documentOrigin->protocol()) || documentOrigin->protocol() != resourceURL.protocol())
+            crossOriginAttribute = "anonymous"_s;
+    }
+    auto request = createPotentialAccessControlRequest(ResourceRequest { URL { resourceURL } }, WTFMove(options), document(), crossOriginAttribute);
+    request.setInitiator(*this);
+
+    return request;
+}
+
 void HTMLModelElement::setSourceURL(const URL& url)
 {
     if (url == m_sourceURL)
@@ -196,6 +216,7 @@ void HTMLModelElement::setSourceURL(const URL& url)
 
     m_data.reset();
     m_dataComplete = false;
+    m_model = nullptr;
 
     if (m_resource) {
         m_resource->removeClient(*this);
@@ -221,14 +242,7 @@ void HTMLModelElement::setSourceURL(const URL& url)
         return;
     }
 
-    ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
-    options.destination = FetchOptions::Destination::Model;
-    // FIXME: Set other options.
-
-    auto crossOriginAttribute = parseCORSSettingsAttribute(attributeWithoutSynchronization(HTMLNames::crossoriginAttr));
-    auto request = createPotentialAccessControlRequest(ResourceRequest { URL { m_sourceURL } }, WTFMove(options), document(), crossOriginAttribute);
-    request.setInitiator(*this);
-
+    auto request = createResourceRequest(m_sourceURL, FetchOptions::Destination::Model);
     auto resource = document().protectedCachedResourceLoader()->requestModelResource(WTFMove(request));
     if (!resource.has_value()) {
         ActiveDOMObject::queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
@@ -1012,13 +1026,7 @@ URL HTMLModelElement::selectEnvironmentMapURL() const
 
 void HTMLModelElement::environmentMapRequestResource()
 {
-    ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
-    options.destination = FetchOptions::Destination::Environmentmap;
-
-    auto crossOriginAttribute = parseCORSSettingsAttribute(attributeWithoutSynchronization(HTMLNames::crossoriginAttr));
-    auto request = createPotentialAccessControlRequest(ResourceRequest { URL { m_environmentMapURL } }, WTFMove(options), document(), crossOriginAttribute);
-    request.setInitiator(*this);
-
+    auto request = createResourceRequest(m_environmentMapURL, FetchOptions::Destination::Environmentmap);
     auto resource = document().protectedCachedResourceLoader()->requestEnvironmentMapResource(WTFMove(request));
     if (!resource.has_value()) {
         if (!m_environmentMapReadyPromise->isFulfilled())

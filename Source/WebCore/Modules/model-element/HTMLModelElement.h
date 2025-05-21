@@ -49,6 +49,7 @@
 
 namespace WebCore {
 
+class CachedResourceRequest;
 class DOMMatrixReadOnly;
 class DOMPointReadOnly;
 class Event;
@@ -196,6 +197,8 @@ private:
     RefPtr<GraphicsLayer> graphicsLayer() const;
 
     HTMLModelElement& readyPromiseResolve();
+
+    CachedResourceRequest createResourceRequest(const URL&, FetchOptions::Destination);
 
     // ActiveDOMObject.
     bool virtualHasPendingActivity() const final;
