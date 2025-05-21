@@ -101,9 +101,7 @@ static WebCore::FloatBoxExtent coreBoxExtentsFromEdgeInsets(NSEdgeInsets insets)
     , NSFilePromiseProviderDelegate
     , NSDraggingSource
 #endif
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
     , NSScrollViewSeparatorTrackingAdapter
-#endif
     >
 @end
 
@@ -1091,8 +1089,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
 #pragma mark - NSScrollViewSeparatorTrackingAdapter
 
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
-
 - (NSRect)scrollViewFrame
 {
     if (!_impl)
@@ -1106,8 +1102,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         return NO;
     return _impl->hasScrolledContentsUnderTitlebar();
 }
-
-#endif // HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 
 #pragma mark – NSAdaptiveImageGlyph
 

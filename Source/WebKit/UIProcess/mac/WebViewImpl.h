@@ -346,11 +346,9 @@ public:
 
     void pageDidScroll(const WebCore::IntPoint&);
 
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
     NSRect scrollViewFrame();
     bool hasScrolledContentsUnderTitlebar();
     void updateTitlebarAdjacencyState();
-#endif
 
     RetainPtr<NSView> hitTest(CGPoint);
 
@@ -1042,11 +1040,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     RetainPtr<WKTextAnimationManager> m_textAnimationTypeManager;
 #endif
 
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
     bool m_pageIsScrolledToTop { true };
     bool m_isRegisteredScrollViewSeparatorTrackingAdapter { false };
     NSRect m_lastScrollViewFrame { NSZeroRect };
-#endif
 
     RetainPtr<NSMenu> m_domPasteMenu;
     RetainPtr<WKDOMPasteMenuDelegate> m_domPasteMenuDelegate;

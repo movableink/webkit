@@ -41,10 +41,7 @@ DECLARE_SYSTEM_HEADER
 #import <AppKit/NSPreviewRepresentingActivityItem_Private.h>
 #import <AppKit/NSTextInputClient_Private.h>
 #import <AppKit/NSWindow_Private.h>
-
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 #import <AppKit/NSScrollViewSeparatorTrackingAdapter_Private.h>
-#endif
 
 #else
 
@@ -57,12 +54,10 @@ DECLARE_SYSTEM_HEADER
 @property (readonly) NSString *localizedDisplayName;
 @end
 
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 @protocol NSScrollViewSeparatorTrackingAdapter
 @property (readonly) NSRect scrollViewFrame;
 @property (readonly) BOOL hasScrolledContentsUnderTitlebar;
 @end
-#endif
 
 @class NSTextPlaceholder;
 
@@ -85,10 +80,8 @@ typedef NS_OPTIONS(NSUInteger, NSWindowShadowOptions) {
 @property (readonly) NSWindowShadowOptions shadowOptions;
 @property CGFloat titlebarAlphaValue;
 
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 - (BOOL)registerScrollViewSeparatorTrackingAdapter:(NSObject<NSScrollViewSeparatorTrackingAdapter> *)adapter;
 - (void)unregisterScrollViewSeparatorTrackingAdapter:(NSObject<NSScrollViewSeparatorTrackingAdapter> *)adapter;
-#endif
 
 @end
 

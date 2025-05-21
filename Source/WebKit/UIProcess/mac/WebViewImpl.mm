@@ -1377,9 +1377,7 @@ WebViewImpl::WebViewImpl(WKWebView *view, WebProcessPool& processPool, Ref<API::
     m_page->setFullscreenClient(makeUnique<WebKit::FullscreenClient>(view));
 #endif
 
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
     m_lastScrollViewFrame = scrollViewFrame();
-#endif
 
 #if HAVE(REDESIGNED_TEXT_CURSOR) && PLATFORM(MAC)
     m_textInputNotifications = subscribeToTextInputNotifications(this);
@@ -1769,7 +1767,6 @@ void WebViewImpl::updateWindowAndViewFrames()
     if (clipsToVisibleRect())
         updateViewExposedRect();
 
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
     NSRect scrollViewFrame = this->scrollViewFrame();
     if (!NSEqualRects(m_lastScrollViewFrame, scrollViewFrame)) {
         m_lastScrollViewFrame = scrollViewFrame;
@@ -1777,7 +1774,6 @@ void WebViewImpl::updateWindowAndViewFrames()
     }
 
     updateTitlebarAdjacencyState();
-#endif
 
     if (m_didScheduleWindowAndViewFrameUpdate)
         return;
@@ -2266,12 +2262,10 @@ void WebViewImpl::viewWillMoveToWindowImpl(NSWindow *window)
     if (!m_isPreparingToUnparentView)
         [m_windowVisibilityObserver startObserving:window];
 
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
     if (m_isRegisteredScrollViewSeparatorTrackingAdapter) {
         [currentWindow unregisterScrollViewSeparatorTrackingAdapter:(NSObject<NSScrollViewSeparatorTrackingAdapter> *)m_view.get().get()];
         m_isRegisteredScrollViewSeparatorTrackingAdapter = false;
     }
-#endif
 }
 
 void WebViewImpl::viewWillMoveToWindow(NSWindow *window)
@@ -2344,18 +2338,14 @@ void WebViewImpl::viewDidHide()
 {
     LOG(ActivityState, "WebViewImpl %p (page %llu) viewDidHide", this, m_page->identifier().toUInt64());
     m_page->activityStateDidChange(WebCore::ActivityState::IsVisible);
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
     updateTitlebarAdjacencyState();
-#endif
 }
 
 void WebViewImpl::viewDidUnhide()
 {
     LOG(ActivityState, "WebViewImpl %p (page %llu) viewDidUnhide", this, m_page->identifier().toUInt64());
     m_page->activityStateDidChange(WebCore::ActivityState::IsVisible);
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
     updateTitlebarAdjacencyState();
-#endif
 }
 
 void WebViewImpl::activeSpaceDidChange()
@@ -2366,7 +2356,6 @@ void WebViewImpl::activeSpaceDidChange()
 
 void WebViewImpl::pageDidScroll(const IntPoint& scrollPosition)
 {
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
     bool pageIsScrolledToTop = scrollPosition.y() <= 0;
     if (pageIsScrolledToTop == m_pageIsScrolledToTop)
         return;
@@ -2380,14 +2369,15 @@ void WebViewImpl::pageDidScroll(const IntPoint& scrollPosition)
 #endif
 
     [m_view didChangeValueForKey:@"hasScrolledContentsUnderTitlebar"];
-#endif // HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 }
-
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 
 NSRect WebViewImpl::scrollViewFrame()
 {
-    return [m_view convertRect:[m_view bounds] toView:nil];
+    auto insets = obscuredContentInsets();
+    FloatRect boundsAdjustedByHorizontalInsets = [m_view bounds];
+    boundsAdjustedByHorizontalInsets.shiftXEdgeBy(insets.left());
+    boundsAdjustedByHorizontalInsets.shiftMaxXEdgeBy(-insets.right());
+    return [m_view convertRect:boundsAdjustedByHorizontalInsets toView:nil];
 }
 
 bool WebViewImpl::hasScrolledContentsUnderTitlebar()
@@ -2411,8 +2401,6 @@ void WebViewImpl::updateTitlebarAdjacencyState()
         m_isRegisteredScrollViewSeparatorTrackingAdapter = false;
     }
 }
-
-#endif // HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 
 void WebViewImpl::scrollToRect(const WebCore::FloatRect& targetRect, const WebCore::FloatPoint& origin)
 {

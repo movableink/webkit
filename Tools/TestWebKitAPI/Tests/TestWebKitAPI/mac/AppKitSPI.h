@@ -37,10 +37,7 @@ DECLARE_SYSTEM_HEADER
 #import <AppKit/NSMenu_Private.h>
 #import <AppKit/NSTextInputClient_Private.h>
 #import <AppKit/NSWindow_Private.h>
-
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 #import <AppKit/NSScrollViewSeparatorTrackingAdapter_Private.h>
-#endif
 
 #else
 
@@ -97,12 +94,10 @@ NSString * const NSInspectorBarTextAlignmentItemIdentifier = @"NSInspectorBarTex
 - (void)setInspectorBar:(NSInspectorBar *)bar;
 @end
 
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 @protocol NSScrollViewSeparatorTrackingAdapter
 @property (readonly) NSRect scrollViewFrame;
 @property (readonly) BOOL hasScrolledContentsUnderTitlebar;
 @end
-#endif
 
 @interface NSMenu (SPI)
 @property (readonly) NSView *_presentingView;

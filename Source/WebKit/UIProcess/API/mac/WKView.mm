@@ -64,10 +64,8 @@
 @end
 #endif
 
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 @interface WKView () <NSScrollViewSeparatorTrackingAdapter>
 @end
-#endif
 
 #if ENABLE(DRAG_SUPPORT)
 
@@ -939,8 +937,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
 #endif // HAVE(TOUCH_BAR)
 
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
-
 - (NSRect)scrollViewFrame
 {
     return { };
@@ -950,8 +946,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 {
     return NO;
 }
-
-#endif // HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 
 #if ENABLE(DRAG_SUPPORT)
 
