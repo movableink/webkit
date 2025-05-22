@@ -168,8 +168,7 @@ self.addEventListener('install', (event) => {
 });
 )SWRESOURCE"_s;
 
-// Fixme rdar://145508632 https://bugs.webkit.org/show_bug.cgi?id=288408
-TEST(WKWebsiteDataStore, DISABLED_RemoveDataWaitUntilWebProcessesExit)
+TEST(WKWebsiteDataStore, RemoveDataWaitUntilWebProcessesExit)
 {
     readyToContinue = false;
     [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:[WKWebsiteDataStore _allWebsiteDataTypesIncludingPrivate] modifiedSince:[NSDate distantPast] completionHandler:^() {
@@ -211,6 +210,10 @@ TEST(WKWebsiteDataStore, DISABLED_RemoveDataWaitUntilWebProcessesExit)
     readyToContinue = false;
     [[configuration websiteDataStore] fetchDataRecordsOfTypes:[WKWebsiteDataStore _allWebsiteDataTypesIncludingPrivate] completionHandler:^(NSArray<WKWebsiteDataRecord *> *dataRecords) {
         EXPECT_EQ(dataRecords.count, 0u);
+        for (WKWebsiteDataRecord* record in dataRecords) {
+            for (NSString *type in record.dataTypes)
+                NSLog(@"Unexpected record with type: [%@]", type);
+        }
         readyToContinue = true;
     }];
     TestWebKitAPI::Util::run(&readyToContinue);
