@@ -158,7 +158,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::InitializeWebKit2MainThreadAssertion);
         disableBehavior(SDKAlignedBehavior::WKWebsiteDataStoreInitReturningNil);
         disableBehavior(SDKAlignedBehavior::WebSQLDisabledByDefaultInLegacyWebKit);
-        disableBehavior(SDKAlignedBehavior::NoLaBanquePostaleQuirks);
         disableBehavior(SDKAlignedBehavior::NoPokerBrosBuiltInTagQuirk);
     }
 
@@ -610,12 +609,6 @@ bool IOSApplication::isEssentialSkeleton()
 {
     static bool isEssentialSkeleton = applicationBundleIsEqualTo("com.3d4medical.EssentialSkeleton"_s);
     return isEssentialSkeleton;
-}
-
-bool IOSApplication::isLaBanquePostale()
-{
-    static bool isLaBanquePostale = applicationBundleIsEqualTo("fr.labanquepostale.moncompte"_s);
-    return isLaBanquePostale;
 }
 
 bool IOSApplication::isESPNFantasySports()

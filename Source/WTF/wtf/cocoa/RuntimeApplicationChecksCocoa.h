@@ -75,7 +75,6 @@ enum class SDKAlignedBehavior {
     MutationEventsDisabledByDefault,
     NoClientCertificateLookup,
     NoExpandoIndexedPropertiesOnWindow,
-    NoLaBanquePostaleQuirks,
     NoMoviStarPlusCORSPreflightQuirk,
     NoPokerBrosBuiltInTagQuirk,
     NoShowModalDialog,
@@ -206,7 +205,6 @@ WTF_EXPORT_PRIVATE bool isFirefox();
 WTF_EXPORT_PRIVATE bool isHimalaya();
 WTF_EXPORT_PRIVATE bool isHoYoLAB();
 WTF_EXPORT_PRIVATE bool isJWLibrary();
-WTF_EXPORT_PRIVATE bool isLaBanquePostale();
 WTF_EXPORT_PRIVATE bool isLutron();
 WTF_EXPORT_PRIVATE bool isMailCompositionService();
 WTF_EXPORT_PRIVATE bool isMiniBrowser();

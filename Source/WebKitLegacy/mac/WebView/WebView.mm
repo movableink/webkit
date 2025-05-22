@@ -1335,31 +1335,6 @@ static RetainPtr<CFMutableSetRef>& allWebViewsSet()
 
 #endif
 
-#if PLATFORM(IOS) || PLATFORM(VISION)
-static bool needsLaBanquePostaleQuirks()
-{
-    static bool needsQuirks = WTF::IOSApplication::isLaBanquePostale() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoLaBanquePostaleQuirks);
-    return needsQuirks;
-}
-
-static RetainPtr<NSString> createLaBanquePostaleQuirksScript()
-{
-    NSURL *scriptURL = [[NSBundle bundleForClass:WebView.class] URLForResource:@"LaBanquePostaleQuirks" withExtension:@"js"];
-    NSStringEncoding encoding;
-    return adoptNS([[NSString alloc] initWithContentsOfURL:scriptURL usedEncoding:&encoding error:nullptr]);
-}
-
-- (void)_injectLaBanquePostaleQuirks
-{
-    ASSERT(needsLaBanquePostaleQuirks());
-    static NeverDestroyed<RetainPtr<NSString>> quirksScript = createLaBanquePostaleQuirksScript();
-
-    using namespace WebCore;
-    auto userScript = makeUnique<UserScript>(quirksScript.get().get(), URL(), Vector<String>(), Vector<String>(), UserScriptInjectionTime::DocumentEnd, UserContentInjectedFrames::InjectInAllFrames);
-    _private->group->userContentController().addUserScript(*core(WebScriptWorld.world), WTFMove(userScript));
-}
-#endif
-
 #if PLATFORM(IOS_FAMILY)
 static bool isInternalInstall()
 {
@@ -1586,11 +1561,6 @@ static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
 
     _private->page->setCanStartMedia([self window]);
     _private->page->settings().setLocalStorageDatabasePath([[self preferences] _localStorageDatabasePath]);
-
-#if PLATFORM(IOS) || PLATFORM(VISION)
-    if (needsLaBanquePostaleQuirks())
-        [self _injectLaBanquePostaleQuirks];
-#endif
 
 #if PLATFORM(IOS_FAMILY)
     // Preserve the behavior we had before <rdar://problem/7580867>
