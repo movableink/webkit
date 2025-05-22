@@ -2172,5 +2172,3 @@ webkit.org/b/292883 http/wpt/service-workers/basic-fetch-with-contentfilter.http
 webkit.org/b/283410 media/media-vp8-webm-with-poster.html [ Pass ImageOnlyFailure ]
 
 webkit.org/b/293145 [ Debug arm64 ] imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-for-user-scroll.html [ Pass Failure ]
-
-webkit.org/b/293149 [ X86_64 ] media/media-vp9-yuv422p10.html [ Pass ImageOnlyFailure ]
