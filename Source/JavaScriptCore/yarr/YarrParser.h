@@ -51,31 +51,31 @@ enum class CharacterClassSetOp : uint8_t {
 template <class T> concept YarrSyntaxCheckable = requires (T& checker, Vector<Vector<char32_t>>& disjunctionStrings, const String& subpatternName) {
     { checker.assertionBOL() } -> std::same_as<void>;
     { checker.assertionEOL() } -> std::same_as<void>;
-    { checker.assertionWordBoundary(bool{}) } -> std::same_as<void>;
+    { checker.assertionWordBoundary(bool { }) } -> std::same_as<void>;
     { checker.atomPatternCharacter(char32_t { }, bool { }) } -> std::same_as<void>;
-    { checker.atomBuiltInCharacterClass(BuiltInCharacterClassID{}, bool{}) } -> std::same_as<void>;
-    { checker.atomCharacterClassBegin(bool{}) } -> std::same_as<void>;
+    { checker.atomBuiltInCharacterClass(BuiltInCharacterClassID { }, bool { }) } -> std::same_as<void>;
+    { checker.atomCharacterClassBegin(bool { }) } -> std::same_as<void>;
     { checker.atomCharacterClassBegin() } -> std::same_as<void>;
-    { checker.atomCharacterClassAtom(UChar{}) } -> std::same_as<void>;
-    { checker.atomCharacterClassRange(UChar{}, UChar{}) } -> std::same_as<void>;
+    { checker.atomCharacterClassAtom(UChar { }) } -> std::same_as<void>;
+    { checker.atomCharacterClassRange(UChar { }, UChar { }) } -> std::same_as<void>;
     { checker.atomPatternCharacter(char32_t { }, bool { }) } -> std::same_as<void>;
-    { checker.atomCharacterClassBuiltIn(BuiltInCharacterClassID{}, bool{}) } -> std::same_as<void>;
+    { checker.atomCharacterClassBuiltIn(BuiltInCharacterClassID { }, bool { }) } -> std::same_as<void>;
     { checker.atomClassStringDisjunction(disjunctionStrings) } -> std::same_as<void>;
-    { checker.atomCharacterClassSetOp(CharacterClassSetOp{}) } -> std::same_as<void>;
-    { checker.atomCharacterClassPushNested() } -> std::same_as<void>;
-    { checker.atomCharacterClassPopNested() } -> std::same_as<void>;
+    { checker.atomCharacterClassSetOp(CharacterClassSetOp { }) } -> std::same_as<void>;
+    { checker.atomCharacterClassPushNested(bool { }) } -> std::same_as<void>;
+    { checker.atomCharacterClassPopNested(bool { }) } -> std::same_as<void>;
     { checker.atomCharacterClassEnd() } -> std::same_as<void>;
     { checker.atomParenthesesSubpatternBegin() } -> std::same_as<void>;
-    { checker.atomParenthesesSubpatternBegin(bool{}) } -> std::same_as<void>;
-    { checker.atomParenthesesSubpatternBegin(bool{}, std::optional<String>{}) } -> std::same_as<void>;
-    { checker.atomParentheticalAssertionBegin(bool{}, MatchDirection{}) } -> std::same_as<void>;
-    { checker.atomParentheticalModifierBegin(OptionSet<Flags>{}, OptionSet<Flags>{})} -> std::same_as<void>;
+    { checker.atomParenthesesSubpatternBegin(bool { }) } -> std::same_as<void>;
+    { checker.atomParenthesesSubpatternBegin(bool { }, std::optional<String> { }) } -> std::same_as<void>;
+    { checker.atomParentheticalAssertionBegin(bool { }, MatchDirection { }) } -> std::same_as<void>;
+    { checker.atomParentheticalModifierBegin(OptionSet<Flags> { }, OptionSet<Flags> { }) } -> std::same_as<void>;
     { checker.atomParenthesesEnd() } -> std::same_as<void>;
-    { checker.atomBackReference(unsigned{}) } -> std::same_as<void>;
+    { checker.atomBackReference(unsigned { }) } -> std::same_as<void>;
     { checker.atomNamedBackReference(subpatternName) } -> std::same_as<void>;
     { checker.atomNamedForwardReference(subpatternName) } -> std::same_as<void>;
-    { checker.quantifyAtom(unsigned{}, unsigned{}, bool{}) } -> std::same_as<void>;
-    { checker.disjunction(CreateDisjunctionPurpose{}) } -> std::same_as<void>;
+    { checker.quantifyAtom(unsigned { }, unsigned { }, bool { }) } -> std::same_as<void>;
+    { checker.disjunction(CreateDisjunctionPurpose { }) } -> std::same_as<void>;
     { checker.resetForReparsing() } -> std::same_as<void>;
 };
 
@@ -433,7 +433,9 @@ private:
 
         void nestedClassBegin(bool invert)
         {
-            m_delegate.atomCharacterClassPushNested();
+            flushCachedCharacterIfNeeded();
+
+            m_delegate.atomCharacterClassPushNested(invert);
             nestedParseState.append(NestingState(m_setOp, m_mayContainStrings, m_inverted));
             m_setOp = CharacterClassSetOp::Default;
             m_mayContainStrings = false;
@@ -459,7 +461,7 @@ private:
             m_inverted = lastState.m_inverted;
             m_mayContainStrings = lastState.m_mayContainStrings;
 
-            m_delegate.atomCharacterClassPopNested();
+            m_delegate.atomCharacterClassPopNested(m_inverted);
             m_state = ClassSetConstructionState::AfterSetOperand;
             computeMayContainStrings(rhsMayContainStrings);
             return false;
@@ -1364,7 +1366,8 @@ private:
         };
 
         while (!atEndOfPattern()) {
-            switch (peek()) {
+            auto ch = peek();
+            switch (ch) {
             case ']':
                 consume();
                 if (classSetConstructor.nestedClassEnd())
@@ -2232,8 +2235,8 @@ private:
  *    void atomCharacterClassBuiltIn(BuiltInCharacterClassID classID, bool invert)
  *    void atomClassStringDisjunction(Vector<Vector<char32_t>>&)
  *    void atomCharacterClassSetOp(CharacterClassSetOp setOp)
- *    void atomCharacterClassPushNested()
- *    void atomCharacterClassPopNested()
+ *    void atomCharacterClassPushNested(bool invert)
+ *    void atomCharacterClassPopNested(bool invert)
  *    void atomCharacterClassEnd()
  *    void atomParenthesesSubpatternBegin(bool capture = true, std::optional<String> groupName);
  *    void atomParentheticalAssertionBegin(bool invert, MatchDirection matchDirection);

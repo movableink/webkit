@@ -216,12 +216,12 @@ public:
         // Nothing to do here.
     }
 
-    void atomCharacterClassPushNested()
+    void atomCharacterClassPushNested(bool)
     {
         // Nothing to do here.
     }
 
-    void atomCharacterClassPopNested()
+    void atomCharacterClassPopNested(bool)
     {
         // Nothing to do here.
     }

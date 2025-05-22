@@ -45,8 +45,8 @@ public:
     void atomCharacterClassBuiltIn(BuiltInCharacterClassID, bool) { }
     void atomClassStringDisjunction(Vector<Vector<char32_t>>&) { }
     void atomCharacterClassSetOp(CharacterClassSetOp) { }
-    void atomCharacterClassPushNested() { }
-    void atomCharacterClassPopNested() { }
+    void atomCharacterClassPushNested(bool) { }
+    void atomCharacterClassPopNested(bool) { }
     void atomCharacterClassEnd() { }
     void atomParenthesesSubpatternBegin(bool = true, std::optional<String> = std::nullopt) { }
     void atomParentheticalAssertionBegin(bool, MatchDirection) { }

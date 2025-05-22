@@ -368,6 +368,15 @@ public:
         performSetOpWithMatches(matches, emptyRanges, matchesUnicode, emptyRanges);
     }
 
+    void invertMatches()
+    {
+        if (!m_strings.isEmpty())
+            m_invertedStrings = true;
+
+        asciiInvert();
+        unicodeInvert();
+    }
+
     void performSetOpWith(CharacterClassConstructor* rhs)
     {
         performSetOpWithStrings(rhs->m_strings);
@@ -757,6 +766,55 @@ private:
         m_ranges.swap(resultRanges);
     }
 
+    void asciiInvert()
+    {
+        Vector<char32_t> resultMatches;
+        Vector<CharacterRange> resultRanges;
+        WTF::BitSet<0x80> ASCIIBitSet;
+
+        for (auto match : m_matches)
+            ASCIIBitSet.set(match);
+
+        for (auto range : m_ranges) {
+            for (char32_t ch = range.begin; ch <= range.end; ch++)
+                ASCIIBitSet.set(ch);
+        }
+
+        ASCIIBitSet.invert();
+
+        bool firstCharUnset = true;
+        char32_t lo = 0;
+        char32_t hi = 0;
+
+        auto addCharToResults = [&]() {
+            if (lo == hi)
+                resultMatches.append(lo);
+            else
+                resultRanges.append(CharacterRange(lo, hi));
+        };
+
+        for (auto setVal : ASCIIBitSet) {
+            char32_t ch = setVal;
+            if (firstCharUnset) {
+                lo = hi = ch;
+                firstCharUnset = false;
+            } else {
+                if (ch == hi + 1)
+                    hi = ch;
+                else {
+                    addCharToResults();
+                    lo = hi = ch;
+                }
+            }
+        }
+
+        if (!firstCharUnset)
+            addCharToResults();
+
+        m_matches.swap(resultMatches);
+        m_ranges.swap(resultRanges);
+    }
+
     void unicodeOpSorted(const Vector<char32_t>& rhsMatchesUnicode, const Vector<CharacterRange>& rhsRangesUnicode)
     {
         Vector<char32_t> resultMatches;
@@ -910,6 +968,24 @@ private:
 
         m_matchesUnicode.swap(resultMatches);
         m_rangesUnicode.swap(resultRanges);
+    }
+
+    void unicodeInvert()
+    {
+        auto currentSetOp = m_setOp;
+        m_setOp = CharacterClassSetOp::Subtraction;
+
+        Vector<char32_t> matches { };
+        Vector<CharacterRange> ranges {
+            CharacterRange(0x0080, UCHAR_MAX_VALUE)
+        };
+
+        std::swap(m_matchesUnicode, matches);
+        std::swap(m_rangesUnicode, ranges);
+
+        unicodeOpSorted(matches, ranges);
+
+        m_setOp = currentSetOp;
     }
 
     void coalesceTables()
@@ -1287,21 +1363,26 @@ public:
         m_currentCharacterClassConstructor->combiningSetOp(setOp);
     }
 
-    void atomCharacterClassPushNested()
+    void atomCharacterClassPushNested(bool invert)
     {
         m_characterClassStack.append(CharacterClassConstructor(ignoreCase(), m_pattern.compileMode()));
         m_currentCharacterClassConstructor = &m_characterClassStack.last();
+        m_invertCharacterClass = invert;
     }
 
-    void atomCharacterClassPopNested()
+    void atomCharacterClassPopNested(bool invert)
     {
         if (m_characterClassStack.isEmpty())
             return;
+
+        if (m_invertCharacterClass)
+            m_currentCharacterClassConstructor->invertMatches();
 
         CharacterClassConstructor* priorCharacterClassConstructor = m_characterClassStack.size() == 1 ? &m_baseCharacterClassConstructor : &m_characterClassStack[m_characterClassStack.size() - 2];
         priorCharacterClassConstructor->performSetOpWith(m_currentCharacterClassConstructor);
         m_characterClassStack.removeLast();
         m_currentCharacterClassConstructor = priorCharacterClassConstructor;
+        m_invertCharacterClass = invert;
     }
 
     void atomCharacterClassEnd()
