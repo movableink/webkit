@@ -1116,6 +1116,8 @@ imported/w3c/web-platform-tests/IndexedDB/fire-success-event-exception.html [ Du
 imported/w3c/web-platform-tests/css/css-properties-values-api/url-resolution.html [ DumpJSConsoleLogInStdErr ]
 imported/w3c/web-platform-tests/subresource-integrity [ DumpJSConsoleLogInStdErr ]
 
+imported/w3c/web-platform-tests/subresource-integrity/integrity-policy [ Skip ]
+
 webkit.org/b/222750 imported/w3c/web-platform-tests/html/semantics/scripting-1/the-script-element/css-module/css-module-worker-test.html [ Pass Failure Crash DumpJSConsoleLogInStdErr ]
 
 [ Debug ] imported/w3c/web-platform-tests/service-workers/service-worker/clients-matchall-order.https.html [ Slow Pass Failure ]
