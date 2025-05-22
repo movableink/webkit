@@ -1489,8 +1489,7 @@ inline void RenderLayer::setIsHiddenByOverflowTruncation(bool isHidden)
     if (m_isHiddenByOverflowTruncation == isHidden)
         return;
     m_isHiddenByOverflowTruncation = isHidden;
-    m_visibleContentStatusDirty = true;
-    setNeedsPositionUpdate();
+    dirtyVisibleContentStatus();
 }
 
 #if ASSERT_ENABLED
@@ -1535,4 +1534,3 @@ void showPaintOrderTree(const WebCore::RenderLayer*);
 void showPaintOrderTree(const WebCore::RenderObject*);
 void showLayerPositionTree(const WebCore::RenderLayer* root, const WebCore::RenderLayer* mark = nullptr);
 #endif
-
