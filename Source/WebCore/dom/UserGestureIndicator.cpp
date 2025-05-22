@@ -151,7 +151,7 @@ UserGestureIndicator::UserGestureIndicator(std::optional<IsProcessingUserGesture
     }
 }
 
-UserGestureIndicator::UserGestureIndicator(RefPtr<UserGestureToken> token, UserGestureToken::GestureScope scope, UserGestureToken::IsPropagatedFromFetch isPropagatedFromFetch)
+UserGestureIndicator::UserGestureIndicator(RefPtr<UserGestureToken> token, UserGestureToken::GestureScope scope, UserGestureToken::ShouldPropagateToMicroTask shouldPropagateToMicroTask)
 {
     // Silently ignore UserGestureIndicators on non main threads.
     if (!isMainThread())
@@ -162,7 +162,7 @@ UserGestureIndicator::UserGestureIndicator(RefPtr<UserGestureToken> token, UserG
 
     if (token) {
         token->setScope(scope);
-        token->setIsPropagatedFromFetch(isPropagatedFromFetch);
+        token->setShouldPropagateToMicroTask(shouldPropagateToMicroTask);
         currentToken() = token;
     }
 }
@@ -175,7 +175,7 @@ UserGestureIndicator::~UserGestureIndicator()
     if (auto token = currentToken()) {
         token->resetDOMPasteAccess();
         token->resetScope();
-        token->resetIsPropagatedFromFetch();
+        token->resetShouldPropagateToMicroTask();
     }
 
     currentToken() = m_previousToken;

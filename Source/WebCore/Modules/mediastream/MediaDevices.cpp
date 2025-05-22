@@ -446,7 +446,7 @@ void MediaDevices::enumerateDevices(EnumerateDevicesPromise&& promise)
 
         std::optional<UserGestureIndicator> gestureIndicator;
         if (userGestureToken)
-            gestureIndicator.emplace(userGestureToken, UserGestureToken::GestureScope::MediaOnly, UserGestureToken::IsPropagatedFromFetch::Yes);
+            gestureIndicator.emplace(userGestureToken, UserGestureToken::GestureScope::MediaOnly, UserGestureToken::ShouldPropagateToMicroTask::Yes);
 
         protectedThis->exposeDevices(WTFMove(newDevices), WTFMove(deviceIDHashSalts), WTFMove(promise));
     });
