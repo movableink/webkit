@@ -34,6 +34,7 @@
 #import "TestNavigationDelegate.h"
 #import "TestResourceLoadDelegate.h"
 #import "TestWKWebView.h"
+#import "WKWebViewConfigurationExtras.h"
 #import <WebKit/WKNavigationDelegate.h>
 #import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/WKUIDelegatePrivate.h>
@@ -759,5 +760,26 @@ TEST(SafeBrowsing, MultipleRedirectsLastPhishing)
         TestWebKitAPI::Util::spinRunLoop();
 }
 
+TEST(SafeBrowsing, PostResponseInjectedBundleSkipsDecidePolicyForResponse)
+{
+    delayDuration = 25_ms;
+    TestWebKitAPI::HTTPServer server({
+        { "/test"_s, { "test"_s } },
+    });
+    WKWebViewConfiguration *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"SkipDecidePolicyForResponsePlugIn"];
+
+    ClassMethodSwizzler swizzler(objc_getClass("SSBLookupContext"), @selector(sharedLookupContext), [DelayedLookupContext methodForSelector:@selector(sharedLookupContext)]);
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration]);
+    [webView configuration].preferences.fraudulentWebsiteWarningEnabled = YES;
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [delegate allowAnyTLSCertificate];
+    navigationFinished = false;
+    [webView setNavigationDelegate:delegate.get()];
+    [webView evaluateJavaScript:@"window.location = 'https://example2.com/test'" completionHandler:nil];
+
+    while (![webView _safeBrowsingWarning])
+        TestWebKitAPI::Util::spinRunLoop();
+}
 
 #endif // HAVE(SAFE_BROWSING)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,35 +25,9 @@
 
 #pragma once
 
-#include "DownloadID.h"
-#include "NavigatingToAppBoundDomain.h"
-#include "SafeBrowsingCheckOngoing.h"
-#include "SandboxExtension.h"
-#include "WebsitePoliciesData.h"
-#include <WebCore/NavigationIdentifier.h>
-
-namespace JSC {
-enum class MessageLevel : uint8_t;
-enum class MessageSource : uint8_t;
-}
-
 namespace WebKit {
 
-struct PolicyDecisionConsoleMessage {
-    JSC::MessageLevel messageLevel;
-    JSC::MessageSource messageSource;
-    String message;
-};
+enum class SafeBrowsingCheckOngoing : bool { No, Yes };
 
-struct PolicyDecision {
-    std::optional<NavigatingToAppBoundDomain> isNavigatingToAppBoundDomain { std::nullopt };
-    WebCore::PolicyAction policyAction { WebCore::PolicyAction::Ignore };
-    std::optional<WebCore::NavigationIdentifier> navigationID { std::nullopt };
-    std::optional<DownloadID> downloadID { std::nullopt };
-    std::optional<WebsitePoliciesData> websitePoliciesData { std::nullopt };
-    std::optional<SandboxExtension::Handle> sandboxExtensionHandle { std::nullopt };
-    std::optional<PolicyDecisionConsoleMessage> consoleMessage { std::nullopt };
-    SafeBrowsingCheckOngoing isSafeBrowsingCheckOngoing { SafeBrowsingCheckOngoing::No };
-};
+}
 
-} // namespace WebKit

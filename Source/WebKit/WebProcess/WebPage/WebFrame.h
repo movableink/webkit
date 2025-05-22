@@ -235,6 +235,9 @@ public:
     std::optional<NavigatingToAppBoundDomain> isTopFrameNavigatingToAppBoundDomain() const;
 #endif
 
+    void setIsSafeBrowsingCheckOngoing(SafeBrowsingCheckOngoing isSafeBrowsingCheckOngoing) { m_isSafeBrowsingCheckOngoing = isSafeBrowsingCheckOngoing; };
+    SafeBrowsingCheckOngoing isSafeBrowsingCheckOngoing() const { return m_isSafeBrowsingCheckOngoing; }
+
     Markable<WebCore::LayerHostingContextIdentifier> layerHostingContextIdentifier() { return m_layerHostingContextIdentifier; }
 
     OptionSet<WebCore::AdvancedPrivacyProtections> advancedPrivacyProtections() const;
@@ -290,6 +293,7 @@ private:
     std::optional<TransactionID> m_firstLayerTreeTransactionIDAfterDidCommitLoad;
 #endif
     std::optional<NavigatingToAppBoundDomain> m_isNavigatingToAppBoundDomain;
+    SafeBrowsingCheckOngoing m_isSafeBrowsingCheckOngoing { SafeBrowsingCheckOngoing::No };
     Markable<WebCore::LayerHostingContextIdentifier> m_layerHostingContextIdentifier;
     Markable<WebCore::FrameIdentifier> m_frameIDBeforeProvisionalNavigation;
 };
