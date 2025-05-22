@@ -3,68 +3,11 @@
 #include "config.h"
 #include "CSSPropertyParsing.h"
 
-#include "CSSFunctionValue.h"
-#include "CSSOffsetRotateValue.h"
 #include "CSSParserContext.h"
 #include "CSSParserIdioms.h"
 #include "CSSPropertyParser.h"
-#include "CSSPropertyParserConsumer+Align.h"
-#include "CSSPropertyParserConsumer+Anchor.h"
-#include "CSSPropertyParserConsumer+AngleDefinitions.h"
-#include "CSSPropertyParserConsumer+Animations.h"
-#include "CSSPropertyParserConsumer+AppleVisualEffect.h"
-#include "CSSPropertyParserConsumer+Attr.h"
-#include "CSSPropertyParserConsumer+Background.h"
-#include "CSSPropertyParserConsumer+Box.h"
-#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
-#include "CSSPropertyParserConsumer+Color.h"
-#include "CSSPropertyParserConsumer+ColorAdjust.h"
-#include "CSSPropertyParserConsumer+Content.h"
-#include "CSSPropertyParserConsumer+CounterStyles.h"
-#include "CSSPropertyParserConsumer+Display.h"
-#include "CSSPropertyParserConsumer+Easing.h"
-#include "CSSPropertyParserConsumer+Filter.h"
-#include "CSSPropertyParserConsumer+Font.h"
-#include "CSSPropertyParserConsumer+Grid.h"
-#include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+Image.h"
-#include "CSSPropertyParserConsumer+Inline.h"
-#include "CSSPropertyParserConsumer+IntegerDefinitions.h"
-#include "CSSPropertyParserConsumer+LengthDefinitions.h"
-#include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
-#include "CSSPropertyParserConsumer+List.h"
-#include "CSSPropertyParserConsumer+Lists.h"
-#include "CSSPropertyParserConsumer+Masking.h"
-#include "CSSPropertyParserConsumer+Motion.h"
-#include "CSSPropertyParserConsumer+NumberDefinitions.h"
-#include "CSSPropertyParserConsumer+Percentage.h"
-#include "CSSPropertyParserConsumer+PercentageDefinitions.h"
-#include "CSSPropertyParserConsumer+Position.h"
-#include "CSSPropertyParserConsumer+PositionTry.h"
-#include "CSSPropertyParserConsumer+Primitives.h"
-#include "CSSPropertyParserConsumer+Ratio.h"
-#include "CSSPropertyParserConsumer+ResolutionDefinitions.h"
-#include "CSSPropertyParserConsumer+SVG.h"
-#include "CSSPropertyParserConsumer+ScrollSnap.h"
-#include "CSSPropertyParserConsumer+Scrollbars.h"
-#include "CSSPropertyParserConsumer+Shapes.h"
-#include "CSSPropertyParserConsumer+String.h"
-#include "CSSPropertyParserConsumer+Syntax.h"
-#include "CSSPropertyParserConsumer+TextDecoration.h"
-#include "CSSPropertyParserConsumer+TimeDefinitions.h"
-#include "CSSPropertyParserConsumer+Timeline.h"
-#include "CSSPropertyParserConsumer+Transform.h"
-#include "CSSPropertyParserConsumer+Transitions.h"
-#include "CSSPropertyParserConsumer+UI.h"
-#include "CSSPropertyParserConsumer+URL.h"
-#include "CSSPropertyParserConsumer+UnicodeRange.h"
-#include "CSSPropertyParserConsumer+ViewTransition.h"
-#include "CSSPropertyParserConsumer+WillChange.h"
+#include "CSSPropertyParserCustom.h"
 #include "CSSPropertyParserState.h"
-#include "CSSQuadValue.h"
-#include "CSSTransformListValue.h"
-#include "CSSValuePair.h"
-#include "CSSValuePool.h"
 #include "DeprecatedGlobalSettings.h"
 
 namespace WebCore {
@@ -3205,7 +3148,7 @@ RefPtr<CSSValue> CSSPropertyParsing::consumeSharedRuleExported(CSSParserTokenRan
     return consumeString(range);
 }
 
-RefPtr<CSSValue> CSSPropertyParsing::parseStyleProperty(CSSParserTokenRange& range, CSSPropertyID id, CSS::PropertyParserState& state)
+RefPtr<CSSValue> CSSPropertyParsing::parseStylePropertyLonghand(CSSParserTokenRange& range, CSSPropertyID id, CSS::PropertyParserState& state)
 {
     if (!isExposed(id, state.context.propertySettings) && !isInternal(id)) {
         // Allow internal properties as we use them to parse several internal-only-shorthands (e.g. background-repeat),
@@ -3404,6 +3347,26 @@ RefPtr<CSSValue> CSSPropertyParsing::parseStyleProperty(CSSParserTokenRange& ran
         return consumeTestUsingSharedRuleWithOverrideFunction(range, state);
     default:
         return { };
+    }
+}
+
+bool CSSPropertyParsing::parseStylePropertyShorthand(CSSParserTokenRange& range, CSSPropertyID id, CSS::PropertyParserState& state, CSS::PropertyParserResult& result)
+{
+    ASSERT(isShorthand(id));
+
+    switch (id) {
+    case CSSPropertyID::CSSPropertyFont:
+        return CSS::PropertyParserCustom::consumeFontShorthand(range, state, fontShorthand(), result);
+    case CSSPropertyID::CSSPropertyTestShorthandOne:
+        return CSS::PropertyParserCustom::consumeValues2Shorthand(range, state, testShorthandOneShorthandForParsing(), result);
+    case CSSPropertyID::CSSPropertyTestShorthandTwo:
+        if (!state.context.propertySettings.cssSettingsShorthandEnabled) {
+            ASSERT_NOT_REACHED();
+            return false;
+        }
+        return CSS::PropertyParserCustom::consumeValues2Shorthand(range, state, testShorthandTwoShorthand(), result);
+    default:
+        return false;
     }
 }
 

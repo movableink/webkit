@@ -416,6 +416,10 @@ public:
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testLogicalPropertyGroupPhysicalVertical());
     }
+    static RefPtr<CSSValue> extractValueTestShorthandTwoShorthand(ExtractorState& extractorState)
+    {
+        return extractValues2Shorthand(extractorState, testShorthandTwoShorthand());
+    }
 };
 
 RefPtr<CSSValue> ExtractorGenerated::extractValue(ExtractorState& extractorState, CSSPropertyID id)
@@ -638,6 +642,9 @@ RefPtr<CSSValue> ExtractorGenerated::extractValue(ExtractorState& extractorState
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline:
         // Logical properties are handled by recursing using the direction resolved property.
         return extractValue(extractorState, CSSProperty::resolveDirectionAwareProperty(id, extractorState.style.writingMode()));
+    case CSSPropertyID::CSSPropertyAll:
+        // Skipped - Not computable
+        return nullptr;
     case CSSPropertyID::CSSPropertyFont:
         ASSERT(isShorthand(id));
         return ExtractorCustom::extractValueFontShorthand(extractorState);
@@ -646,7 +653,7 @@ RefPtr<CSSValue> ExtractorGenerated::extractValue(ExtractorState& extractorState
         return ExtractorCustom::extractValueTestShorthandOneShorthand(extractorState);
     case CSSPropertyID::CSSPropertyTestShorthandTwo:
         ASSERT(isShorthand(id));
-        return ExtractorCustom::extractValueTestShorthandTwoShorthand(extractorState);
+        return ExtractorFunctions::extractValueTestShorthandTwoShorthand(extractorState);
     }
     ASSERT_NOT_REACHED();
     return nullptr;

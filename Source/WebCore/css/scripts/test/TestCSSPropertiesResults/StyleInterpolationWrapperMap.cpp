@@ -135,6 +135,7 @@ WrapperMap::WrapperMap()
         new DiscreteWrapper(CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalVertical, &RenderStyle::testLogicalPropertyGroupPhysicalVertical, &RenderStyle::setTestLogicalPropertyGroupPhysicalVertical), // CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalVertical
         nullptr, // CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock - logical, handled via resolution to physical
         nullptr, // CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline - logical, handled via resolution to physical
+        nullptr, // CSSPropertyID::CSSPropertyAll - shorthand, will perform fix-up below
         nullptr, // CSSPropertyID::CSSPropertyFont - shorthand, will perform fix-up below
         nullptr, // CSSPropertyID::CSSPropertyTestShorthandOne - shorthand, will perform fix-up below
         nullptr, // CSSPropertyID::CSSPropertyTestShorthandTwo - shorthand, will perform fix-up below
@@ -142,6 +143,7 @@ WrapperMap::WrapperMap()
 {
     // Build animatable shorthand wrappers from longhand wrappers initialized above.
 
+    m_wrappers[CSSPropertyID::CSSPropertyAll] = makeShorthandWrapper(CSSPropertyID::CSSPropertyAll, m_wrappers);
     m_wrappers[CSSPropertyID::CSSPropertyFont] = makeShorthandWrapper(CSSPropertyID::CSSPropertyFont, m_wrappers);
     m_wrappers[CSSPropertyID::CSSPropertyTestShorthandOne] = makeShorthandWrapper(CSSPropertyID::CSSPropertyTestShorthandOne, m_wrappers);
     m_wrappers[CSSPropertyID::CSSPropertyTestShorthandTwo] = makeShorthandWrapper(CSSPropertyID::CSSPropertyTestShorthandTwo, m_wrappers);

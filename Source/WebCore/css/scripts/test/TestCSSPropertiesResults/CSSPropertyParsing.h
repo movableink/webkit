@@ -12,25 +12,28 @@ class CSSValue;
 
 namespace CSS {
 
+struct PropertyParserResult;
 struct PropertyParserState;
 
 } // namespace CSS
 
 struct CSSPropertyParsing {
     // Parse and return a single longhand style property.
-    static RefPtr<CSSValue> parseStyleProperty(CSSParserTokenRange&, CSSPropertyID id, CSS::PropertyParserState&);
+    static RefPtr<CSSValue> parseStylePropertyLonghand(CSSParserTokenRange&, CSSPropertyID, CSS::PropertyParserState&);
+    // Parse a shorthand style property, adding longhands to the provided result collection. Returns true on success, false on failure.
+    static bool parseStylePropertyShorthand(CSSParserTokenRange&, CSSPropertyID, CSS::PropertyParserState&, CSS::PropertyParserResult&);
     // Fast path bare-keyword support.
     static bool isKeywordValidForStyleProperty(CSSPropertyID, CSSValueID, CSS::PropertyParserState&);
     static bool isKeywordFastPathEligibleStyleProperty(CSSPropertyID);
 
-    // Parse and return a single longhand @first-at-rule descriptor.
-    static RefPtr<CSSValue> parseFirstAtRuleDescriptor(CSSParserTokenRange&, CSSPropertyID id, CSS::PropertyParserState&);
+    // Parse and return a single @first-at-rule descriptor.
+    static RefPtr<CSSValue> parseFirstAtRuleDescriptor(CSSParserTokenRange&, CSSPropertyID, CSS::PropertyParserState&);
     // Fast path bare-keyword support.
     static bool isKeywordValidForFirstAtRuleDescriptor(CSSPropertyID, CSSValueID, CSS::PropertyParserState&);
     static bool isKeywordFastPathEligibleFirstAtRuleDescriptor(CSSPropertyID);
 
-    // Parse and return a single longhand @second-at-rule descriptor.
-    static RefPtr<CSSValue> parseSecondAtRuleDescriptor(CSSParserTokenRange&, CSSPropertyID id, CSS::PropertyParserState&);
+    // Parse and return a single @second-at-rule descriptor.
+    static RefPtr<CSSValue> parseSecondAtRuleDescriptor(CSSParserTokenRange&, CSSPropertyID, CSS::PropertyParserState&);
     // Fast path bare-keyword support.
     static bool isKeywordValidForSecondAtRuleDescriptor(CSSPropertyID, CSSValueID, CSS::PropertyParserState&);
     static bool isKeywordFastPathEligibleSecondAtRuleDescriptor(CSSPropertyID);

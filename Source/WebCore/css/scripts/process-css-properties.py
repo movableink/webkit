@@ -494,6 +494,7 @@ class StylePropertyCodeGenProperties:
         Schema.Entry("parser-grammar", allowed_types=[str]),
         Schema.Entry("parser-grammar-unused", allowed_types=[str]),
         Schema.Entry("parser-grammar-unused-reason", allowed_types=[str]),
+        Schema.Entry("parser-shorthand", allowed_types=[str]),
         Schema.Entry("render-style-getter", allowed_types=[str]),
         Schema.Entry("render-style-initial", allowed_types=[str]),
         Schema.Entry("render-style-name-for-methods", allowed_types=[str]),
@@ -502,6 +503,8 @@ class StylePropertyCodeGenProperties:
         Schema.Entry("settings-flag", allowed_types=[str]),
         Schema.Entry("sink-priority", allowed_types=[bool], default_value=False),
         Schema.Entry("shorthand-pattern", allowed_types=[str]),
+        Schema.Entry("shorthand-parser-pattern", allowed_types=[str]),
+        Schema.Entry("shorthand-style-extractor-pattern", allowed_types=[str]),
         Schema.Entry("skip-codegen", allowed_types=[bool], default_value=False),
         Schema.Entry("skip-parser", allowed_types=[bool], default_value=False),
         Schema.Entry("skip-style-builder", allowed_types=[bool], default_value=False),
@@ -588,6 +591,14 @@ class StylePropertyCodeGenProperties:
             json_value["style-builder-converter"] = json_value["style-converter"]
             json_value["style-extractor-converter"] = json_value["style-converter"]
 
+        if "shorthand-pattern" in json_value:
+            if "shorthand-parser-pattern" in json_value:
+                raise Exception(f"{key_path} can't specify both 'shorthand-pattern' and 'shorthand-parser-pattern'.")
+            if "shorthand-style-extractor-pattern" in json_value:
+                raise Exception(f"{key_path} can't specify both 'shorthand-pattern' and 'shorthand-style-extractor-pattern'.")
+            json_value["shorthand-parser-pattern"] = json_value["shorthand-pattern"]
+            json_value["shorthand-style-extractor-pattern"] = json_value["shorthand-pattern"]
+
         if "logical-property-group" in json_value:
             if json_value.get("longhands"):
                 raise Exception(f"{key_path} is a shorthand, but belongs to a logical property group.")
@@ -597,6 +608,9 @@ class StylePropertyCodeGenProperties:
             json_value["longhands"] = list(compact_map(lambda value: Longhand.from_json(parsing_context, f"{key_path}.codegen-properties", value), json_value["longhands"]))
             if not json_value["longhands"]:
                 del json_value["longhands"]
+            else:
+                if "parser-shorthand" not in json_value:
+                    json_value["parser-shorthand"] = f"{property_name.id_without_prefix_with_lowercase_first_letter}Shorthand"
 
         if json_value.get("top-priority", False):
             if json_value.get("top-priority-reason") is None:
@@ -621,7 +635,7 @@ class StylePropertyCodeGenProperties:
                 raise Exception(f"{key_path} can't be both a cascade alias and a shorthand.")
 
         if json_value.get("parser-grammar"):
-            for entry_name in ["parser-function", "skip-parser", "longhands"]:
+            for entry_name in ["parser-function", "skip-parser"]:
                 if entry_name in json_value:
                     raise Exception(f"{key_path} can't have both 'parser-grammar' and '{entry_name}'.")
             grammar = Grammar.from_string(parsing_context, f"{key_path}", name, json_value["parser-grammar"])
@@ -644,7 +658,7 @@ class StylePropertyCodeGenProperties:
         if json_value.get("parser-function"):
             if "parser-grammar-unused" not in json_value:
                 raise Exception(f"{key_path} must have 'parser-grammar-unused' specified when using 'parser-function'.")
-            for entry_name in ["skip-parser", "longhands", "parser-grammar"]:
+            for entry_name in ["skip-parser", "parser-grammar"]:
                 if entry_name in json_value:
                     raise Exception(f"{key_path} can't have both 'parser-function' and '{entry_name}'.")
 
@@ -910,6 +924,10 @@ class StyleProperties:
     @property
     def noun(self):
         return 'property'
+
+    @property
+    def supports_shorthands(self):
+        return True
 
     @staticmethod
     def from_json(parsing_context, key_path, json_value):
@@ -1238,6 +1256,10 @@ class DescriptorSet:
     @property
     def noun(self):
         return 'descriptor'
+
+    @property
+    def supports_shorthands(self):
+        return False
 
     @property
     def all(self):
@@ -4373,7 +4395,7 @@ class GenerateStyleExtractorGenerated:
         to.write(f"static RefPtr<CSSValue> extractValue{property.id_without_prefix}Shorthand(ExtractorState& extractorState)")
         to.write(f"{{")
         with to.indent():
-            to.write(f"return extract{property.codegen_properties.shorthand_pattern}Shorthand(extractorState, {property.id_without_prefix_with_lowercase_first_letter}Shorthand());")
+            to.write(f"return extract{property.codegen_properties.shorthand_style_extractor_pattern}Shorthand(extractorState, {property.id_without_prefix_with_lowercase_first_letter}Shorthand());")
         to.write(f"}}")
 
     def _generate_style_extractor_generated_cpp_value_extractor(self, to, property):
@@ -4418,7 +4440,7 @@ class GenerateStyleExtractorGenerated:
                 if property.codegen_properties.is_logical:
                     continue
                 if property.codegen_properties.longhands:
-                    if not property.codegen_properties.shorthand_pattern:
+                    if not property.codegen_properties.shorthand_style_extractor_pattern:
                         continue
                     self._generate_style_extractor_generated_cpp_shorthand_value_extractor(to, property)
                 else:
@@ -4441,7 +4463,7 @@ class GenerateStyleExtractorGenerated:
             def scope_for_function(property):
                 if property.codegen_properties.style_extractor_custom:
                     return "ExtractorCustom"
-                if property.codegen_properties.longhands and not property.codegen_properties.shorthand_pattern:
+                if property.codegen_properties.longhands and not property.codegen_properties.shorthand_style_extractor_pattern:
                     return "ExtractorCustom"
                 return "ExtractorFunctions"
 
@@ -4691,11 +4713,11 @@ class GenerateCSSPropertyParsing:
 
     @property
     def all_property_parsing_collections(self):
-        ParsingCollection = collections.namedtuple('ParsingCollection', ['id', 'name', 'noun', 'consumers'])
+        ParsingCollection = collections.namedtuple('ParsingCollection', ['id', 'name', 'noun', 'supports_shorthands', 'consumers'])
 
         result = []
         for set in self.properties_and_descriptors.all_sets:
-            result += [ParsingCollection(set.id, set.name, set.noun, list(self.property_consumers[property] for property in set.all))]
+            result += [ParsingCollection(set.id, set.name, set.noun, set.supports_shorthands, list(self.property_consumers[property] for property in set.all))]
         return result
 
     @property
@@ -4737,6 +4759,7 @@ class GenerateCSSPropertyParsing:
                     self.generation_context.generate_forward_declarations(
                         to=writer,
                         structs=[
+                            "PropertyParserResult",
                             "PropertyParserState",
                         ]
                     )
@@ -4761,68 +4784,11 @@ class GenerateCSSPropertyParsing:
             self.generation_context.generate_includes(
                 to=writer,
                 headers=[
-                    "CSSFunctionValue.h",
-                    "CSSOffsetRotateValue.h",
                     "CSSParserContext.h",
                     "CSSParserIdioms.h",
                     "CSSPropertyParser.h",
-                    "CSSPropertyParserConsumer+Align.h",
-                    "CSSPropertyParserConsumer+Anchor.h",
-                    "CSSPropertyParserConsumer+AngleDefinitions.h",
-                    "CSSPropertyParserConsumer+Animations.h",
-                    "CSSPropertyParserConsumer+AppleVisualEffect.h",
-                    "CSSPropertyParserConsumer+Attr.h",
-                    "CSSPropertyParserConsumer+Background.h",
-                    "CSSPropertyParserConsumer+Box.h",
-                    "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h",
-                    "CSSPropertyParserConsumer+Color.h",
-                    "CSSPropertyParserConsumer+ColorAdjust.h",
-                    "CSSPropertyParserConsumer+Content.h",
-                    "CSSPropertyParserConsumer+CounterStyles.h",
-                    "CSSPropertyParserConsumer+Display.h",
-                    "CSSPropertyParserConsumer+Easing.h",
-                    "CSSPropertyParserConsumer+Filter.h",
-                    "CSSPropertyParserConsumer+Font.h",
-                    "CSSPropertyParserConsumer+Grid.h",
-                    "CSSPropertyParserConsumer+Ident.h",
-                    "CSSPropertyParserConsumer+Image.h",
-                    "CSSPropertyParserConsumer+Inline.h",
-                    "CSSPropertyParserConsumer+IntegerDefinitions.h",
-                    "CSSPropertyParserConsumer+LengthDefinitions.h",
-                    "CSSPropertyParserConsumer+LengthPercentageDefinitions.h",
-                    "CSSPropertyParserConsumer+List.h",
-                    "CSSPropertyParserConsumer+Lists.h",
-                    "CSSPropertyParserConsumer+Masking.h",
-                    "CSSPropertyParserConsumer+Motion.h",
-                    "CSSPropertyParserConsumer+NumberDefinitions.h",
-                    "CSSPropertyParserConsumer+Percentage.h",
-                    "CSSPropertyParserConsumer+PercentageDefinitions.h",
-                    "CSSPropertyParserConsumer+Position.h",
-                    "CSSPropertyParserConsumer+PositionTry.h",
-                    "CSSPropertyParserConsumer+Primitives.h",
-                    "CSSPropertyParserConsumer+Ratio.h",
-                    "CSSPropertyParserConsumer+ResolutionDefinitions.h",
-                    "CSSPropertyParserConsumer+SVG.h",
-                    "CSSPropertyParserConsumer+ScrollSnap.h",
-                    "CSSPropertyParserConsumer+Scrollbars.h",
-                    "CSSPropertyParserConsumer+Shapes.h",
-                    "CSSPropertyParserConsumer+String.h",
-                    "CSSPropertyParserConsumer+Syntax.h",
-                    "CSSPropertyParserConsumer+TextDecoration.h",
-                    "CSSPropertyParserConsumer+TimeDefinitions.h",
-                    "CSSPropertyParserConsumer+Timeline.h",
-                    "CSSPropertyParserConsumer+Transform.h",
-                    "CSSPropertyParserConsumer+Transitions.h",
-                    "CSSPropertyParserConsumer+UI.h",
-                    "CSSPropertyParserConsumer+URL.h",
-                    "CSSPropertyParserConsumer+UnicodeRange.h",
-                    "CSSPropertyParserConsumer+ViewTransition.h",
-                    "CSSPropertyParserConsumer+WillChange.h",
+                    "CSSPropertyParserCustom.h",
                     "CSSPropertyParserState.h",
-                    "CSSQuadValue.h",
-                    "CSSTransformListValue.h",
-                    "CSSValuePair.h",
-                    "CSSValuePool.h",
                     "DeprecatedGlobalSettings.h",
                 ]
             )
@@ -4838,7 +4804,11 @@ class GenerateCSSPropertyParsing:
                 )
 
                 for parsing_collection in self.all_property_parsing_collections:
-                    self._generate_css_property_parsing_cpp_parse_property(
+                    self._generate_css_property_parsing_cpp_parse_longhand_property(
+                        to=writer,
+                        parsing_collection=parsing_collection
+                    )
+                    self._generate_css_property_parsing_cpp_parse_shorthand_property(
                         to=writer,
                         parsing_collection=parsing_collection
                     )
@@ -4864,8 +4834,11 @@ class GenerateCSSPropertyParsing:
 
         with to.indent():
             for parsing_collection in self.all_property_parsing_collections:
-                to.write(f"// Parse and return a single longhand {parsing_collection.name} {parsing_collection.noun}.")
-                to.write(f"static RefPtr<CSSValue> parse{parsing_collection.id}(CSSParserTokenRange&, CSSPropertyID id, CSS::PropertyParserState&);")
+                to.write(f"// Parse and return a single {'longhand ' if parsing_collection.supports_shorthands else ''}{parsing_collection.name} {parsing_collection.noun}.")
+                to.write(f"static RefPtr<CSSValue> parse{parsing_collection.id}{'Longhand' if parsing_collection.supports_shorthands else ''}(CSSParserTokenRange&, CSSPropertyID, CSS::PropertyParserState&);")
+                if parsing_collection.supports_shorthands:
+                    to.write(f"// Parse a shorthand {parsing_collection.name} {parsing_collection.noun}, adding longhands to the provided result collection. Returns true on success, false on failure.")
+                    to.write(f"static bool parse{parsing_collection.id}Shorthand(CSSParserTokenRange&, CSSPropertyID, CSS::PropertyParserState&, CSS::PropertyParserResult&);")
                 to.write(f"// Fast path bare-keyword support.")
                 to.write(f"static bool isKeywordValidFor{parsing_collection.id}(CSSPropertyID, CSSValueID, CSS::PropertyParserState&);")
                 to.write(f"static bool isKeywordFastPathEligible{parsing_collection.id}(CSSPropertyID);")
@@ -4945,8 +4918,8 @@ class GenerateCSSPropertyParsing:
         for shared_grammar_rule_consumer in self.all_shared_grammar_rule_consumers:
             shared_grammar_rule_consumer.generate_definition(to=to)
 
-    def _generate_css_property_parsing_cpp_parse_property(self, *, to, parsing_collection):
-        to.write(f"RefPtr<CSSValue> CSSPropertyParsing::parse{parsing_collection.id}(CSSParserTokenRange& range, CSSPropertyID id, CSS::PropertyParserState& state)")
+    def _generate_css_property_parsing_cpp_parse_longhand_property(self, *, to, parsing_collection):
+        to.write(f"RefPtr<CSSValue> CSSPropertyParsing::parse{parsing_collection.id}{'Longhand' if parsing_collection.supports_shorthands else ''}(CSSParserTokenRange& range, CSSPropertyID id, CSS::PropertyParserState& state)")
 
         to.write(f"{{")
         with to.indent():
@@ -5000,6 +4973,47 @@ class GenerateCSSPropertyParsing:
             to.write(f"default:")
             with to.indent():
                 to.write(f"return {{ }};")
+            to.write(f"}}")
+        to.write(f"}}")
+        to.newline()
+
+    def _generate_css_property_parsing_cpp_parse_shorthand_property(self, *, to, parsing_collection):
+        if not parsing_collection.supports_shorthands:
+            return
+        to.write(f"bool CSSPropertyParsing::parse{parsing_collection.id}Shorthand(CSSParserTokenRange& range, CSSPropertyID id, CSS::PropertyParserState& state, CSS::PropertyParserResult& result)")
+
+        to.write(f"{{")
+        with to.indent():
+            to.write(f"ASSERT(isShorthand(id));")
+            to.newline()
+
+            to.write(f"switch (id) {{")
+
+            for consumer in parsing_collection.consumers:
+                if not consumer.property.codegen_properties.longhands:
+                    continue
+                if consumer.property.codegen_properties.skip_parser:
+                    continue
+
+                to.write(f"case {consumer.property.id}:")
+                with to.indent():
+                    if consumer.property.codegen_properties.settings_flag and not consumer.property.codegen_properties.internal_only:
+                        to.write(f"if (!state.context.propertySettings.{consumer.property.codegen_properties.settings_flag}) {{")
+                        with to.indent():
+                            to.write(f"ASSERT_NOT_REACHED();")
+                            to.write(f"return false;")
+                        to.write(f"}}")
+
+                    if consumer.property.codegen_properties.parser_function:
+                        to.write(f"return CSS::PropertyParserCustom::{consumer.property.codegen_properties.parser_function}(range, state, {consumer.property.codegen_properties.parser_shorthand}(), result);")
+                    elif consumer.property.codegen_properties.shorthand_parser_pattern:
+                        to.write(f"return CSS::PropertyParserCustom::consume{consumer.property.codegen_properties.shorthand_parser_pattern}Shorthand(range, state, {consumer.property.codegen_properties.parser_shorthand}(), result);")
+                    else:
+                        raise Exception(f"Shorthand property '{consumer.property}' has unknown parsing method.")
+
+            to.write(f"default:")
+            with to.indent():
+                to.write(f"return false;")
             to.write(f"}}")
         to.write(f"}}")
         to.newline()
@@ -7213,11 +7227,11 @@ class BNFRepetitionModifier:
         if self.kind is None:
             return "[UNSET RepetitionModifier]"
         elif self.kind == BNFRepetitionModifier.Kind.EXACT:
-            return '{' + self.min + '}'
+            return '{' + str(self.min) + '}'
         elif self.kind == BNFRepetitionModifier.Kind.AT_LEAST:
-            return '{' + self.min + ',}'
+            return '{' + str(self.min) + ',}'
         elif self.kind == BNFRepetitionModifier.Kind.BETWEEN:
-            return '{' + self.min + ',' + self.max + '}'
+            return '{' + str(self.min) + ',' + str(self.max) + '}'
         raise Exception("Unknown repetition kind: {self.kind}")
 
 
@@ -7620,6 +7634,8 @@ class BNFParserState(enum.Enum):
     INTERNAL_REFERENCE_INITIAL = enum.auto()
     INTERNAL_REFERENCE_SEEN_ID = enum.auto()
     REFERENCE_INITIAL = enum.auto()
+    REFERENCE_SEEN_QUOTE_OPEN = enum.auto()
+    REFERENCE_SEEN_QUOTE_AND_ID = enum.auto()
     REFERENCE_SEEN_FUNCTION_OPEN = enum.auto()
     REFERENCE_SEEN_ID_OR_FUNCTION = enum.auto()
     REFERENCE_STRING_ATTRIBUTE_INITIAL = enum.auto()
@@ -7688,6 +7704,8 @@ class BNFParser:
             BNFParserState.INTERNAL_REFERENCE_INITIAL: BNFParser.parse_INTERNAL_REFERENCE_INITIAL,
             BNFParserState.INTERNAL_REFERENCE_SEEN_ID: BNFParser.parse_INTERNAL_REFERENCE_SEEN_ID,
             BNFParserState.REFERENCE_INITIAL: BNFParser.parse_REFERENCE_INITIAL,
+            BNFParserState.REFERENCE_SEEN_QUOTE_OPEN: BNFParser.parse_REFERENCE_SEEN_QUOTE_OPEN,
+            BNFParserState.REFERENCE_SEEN_QUOTE_AND_ID: BNFParser.parse_REFERENCE_SEEN_QUOTE_AND_ID,
             BNFParserState.REFERENCE_SEEN_FUNCTION_OPEN: BNFParser.parse_REFERENCE_SEEN_FUNCTION_OPEN,
             BNFParserState.REFERENCE_SEEN_ID_OR_FUNCTION: BNFParser.parse_REFERENCE_SEEN_ID_OR_FUNCTION,
             BNFParserState.REFERENCE_STRING_ATTRIBUTE_INITIAL: BNFParser.parse_REFERENCE_STRING_ATTRIBUTE_INITIAL,
@@ -8086,6 +8104,10 @@ class BNFParser:
             self.enter_new_function(token, state)
             return
 
+        if token.name == BNFToken.LBRACE:
+            self.enter_new_repetition_modifier(token, state)
+            return
+
         if token.name in BNFParser.SIMPLE_MULTIPLIERS:
             self.process_simple_multiplier(token, state)
             return
@@ -8170,6 +8192,30 @@ class BNFParser:
         if token.name == BNFToken.ID:
             self.transition_top(to=BNFParserState.REFERENCE_SEEN_ID_OR_FUNCTION)
             state.node.name = token.value
+            return
+
+        if token.name == BNFToken.SQUOTE:
+            self.transition_top(to=BNFParserState.REFERENCE_SEEN_QUOTE_OPEN)
+            return
+
+        if token.name == BNFToken.ID:
+            self.transition_top(to=BNFParserState.REFERENCE_SEEN_ID_OR_FUNCTION)
+            state.node.name = token.value
+            return
+
+        raise self.unexpected(token, state)
+
+    def parse_REFERENCE_SEEN_QUOTE_OPEN(self, token, state):
+        if token.name == BNFToken.ID:
+            self.transition_top(to=BNFParserState.REFERENCE_SEEN_QUOTE_AND_ID)
+            state.node.name = "'" + token.value + "'"
+            return
+
+        raise self.unexpected(token, state)
+
+    def parse_REFERENCE_SEEN_QUOTE_AND_ID(self, token, state):
+        if token.name == BNFToken.SQUOTE:
+            self.transition_top(to=BNFParserState.REFERENCE_SEEN_ID_OR_FUNCTION)
             return
 
         raise self.unexpected(token, state)

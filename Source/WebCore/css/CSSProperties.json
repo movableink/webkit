@@ -285,7 +285,10 @@
                     "block-step-align",
                     "block-step-round"
                 ],
-                "settings-flag": "cssRhythmicSizingEnabled"
+                "settings-flag": "cssRhythmicSizingEnabled",
+                "parser-function": "consumeBlockStepShorthand",
+                "parser-grammar-unused": "<'block-step-size'> || <'block-step-insert'> || <'block-step-align'> || <'block-step-round'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-rhythm",
@@ -791,7 +794,10 @@
                     "text-box-trim",
                     "text-box-edge"
                 ],
-                "settings-flag": "cssTextBoxTrimEnabled"
+                "settings-flag": "cssTextBoxTrimEnabled",
+                "parser-function": "consumeTextBoxShorthand",
+                "parser-grammar-unused": "normal | [ <'text-box-trim'> || <'text-box-edge'> ]",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-inline",
@@ -1162,7 +1168,10 @@
                     "font-synthesis-weight",
                     "font-synthesis-style",
                     "font-synthesis-small-caps"
-                ]
+                ],
+                "parser-function": "consumeFontSynthesisShorthand",
+                "parser-grammar-unused": "none | [ weight || style || small-caps || position]",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-fonts-4",
@@ -1277,7 +1286,10 @@
                         "value": "font-variation-settings",
                         "enable-if": "ENABLE_VARIATION_FONTS"
                     }
-                ]
+                ],
+                "parser-function": "consumeFontShorthand",
+                "parser-grammar-unused": "[ [ <'font-style'> || <font-variant-css2> || <'font-weight'> || <font-width-css3> ]? <'font-size'> [ / <'line-height'> ]? <'font-family'> ] | <system-family-name>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-fonts",
@@ -1297,7 +1309,10 @@
                     "font-variant-east-asian",
                     "font-variant-position",
                     "font-variant-emoji"
-                ]
+                ],
+                "parser-function": "consumeFontVariantShorthand",
+                "parser-grammar-unused": "normal | none | [ [ <common-lig-values> || <discretionary-lig-values> || <historical-lig-values> || <contextual-alt-values> ] || [ small-caps | all-small-caps | petite-caps | all-petite-caps | unicase | titling-caps ] || [ stylistic(<feature-value-name>) || historical-forms || styleset(<feature-value-name>#) || character-variant(<feature-value-name>#) || swash(<feature-value-name>) || ornaments(<feature-value-name>) || annotation(<feature-value-name>) ] || [ <numeric-figure-values> || <numeric-spacing-values> || <numeric-fraction-values> || ordinal || slashed-zero ] || [ <east-asian-variant-values> || <east-asian-width-values> || ruby ] || [ sub | super ] || [ text | emoji | unicode ] ]",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-fonts",
@@ -1362,7 +1377,10 @@
                 "longhands": [
                     "text-orientation"
                 ],
-                "shorthand-pattern": "Single"
+                "shorthand-pattern": "Single",
+                "parser-function": "consumeWebkitTextOrientationShorthand",
+                "parser-grammar-unused": "sideways-right@(aliased-to=sideways) | <'text-orientation'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-writing-modes",
@@ -1672,7 +1690,8 @@
                 "longhands": [
                     "all"
                 ],
-                "skip-style-extractor": true
+                "skip-style-extractor": true,
+                "skip-parser": true
             },
             "specification": {
                 "category": "css-cascade",
@@ -1696,7 +1715,10 @@
                     "animation-timeline",
                     "animation-range-start",
                     "animation-range-end"
-                ]
+                ],
+                "parser-function": "consumeAnimationShorthand",
+                "parser-grammar-unused": "<single-animation>#",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-animations",
@@ -1870,7 +1892,10 @@
                 ],
                 "animation-property": true,
                 "separator": ",",
-                "settings-flag": "scrollDrivenAnimationsEnabled"
+                "settings-flag": "scrollDrivenAnimationsEnabled",
+                "parser-function": "consumeAnimationRangeShorthand",
+                "parser-grammar-unused": "[ <'animation-range-start'> <'animation-range-end'>? ]#",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "scroll-animations",
@@ -1982,7 +2007,10 @@
                     "background-origin",
                     "background-clip",
                     "background-color"
-                ]
+                ],
+                "parser-function": "consumeBackgroundShorthand",
+                "parser-grammar-unused": "<bg-layer># , <final-bg-layer>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -2152,7 +2180,10 @@
                     "background-position-x",
                     "background-position-y"
                 ],
-                "accepts-quirky-length": true
+                "accepts-quirky-length": true,
+                "parser-function": "consumeBackgroundPositionShorthand",
+                "parser-grammar-unused": "<bg-position>#",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -2351,7 +2382,10 @@
                     "border-image-width",
                     "border-image-outset",
                     "border-image-repeat"
-                ]
+                ],
+                "parser-function": "consumeBorderShorthand",
+                "parser-grammar-unused": "<'border-top-width'> || <'border-top-style'> || <'border-top-color'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -2367,7 +2401,10 @@
                     "border-block-end-style",
                     "border-block-start-color",
                     "border-block-end-color"
-                ]
+                ],
+                "parser-function": "consumeBorderBlockShorthand",
+                "parser-grammar-unused": "<'border-block-start'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -2380,7 +2417,9 @@
                     "border-block-start-color",
                     "border-block-end-color"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-grammar-unused": "<'border-top-color'>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -2397,7 +2436,9 @@
                     "border-block-end-style",
                     "border-block-end-color"
                 ],
-                "shorthand-pattern": "Standard"
+                "shorthand-pattern": "Standard",
+                "parser-grammar-unused": "<'border-top-width'> || <'border-top-style'> || <color>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -2492,7 +2533,9 @@
                     "border-block-start-style",
                     "border-block-start-color"
                 ],
-                "shorthand-pattern": "Standard"
+                "shorthand-pattern": "Standard",
+                "parser-grammar-unused": "<'border-top-width'> || <'border-top-style'> || <color>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -2583,7 +2626,9 @@
                     "border-block-start-style",
                     "border-block-end-style"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-grammar-unused": "<'border-top-style'>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -2596,7 +2641,9 @@
                     "border-block-start-width",
                     "border-block-end-width"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-grammar-unused": "<'border-top-width'>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -2610,7 +2657,9 @@
                     "border-bottom-style",
                     "border-bottom-color"
                 ],
-                "shorthand-pattern": "Standard"
+                "shorthand-pattern": "Standard",
+                "parser-grammar-unused": "<'border-top-width'> || <'border-top-style'> || <'border-top-color'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -2762,7 +2811,9 @@
                     "border-left-color"
                 ],
                 "accepts-quirky-color": true,
-                "shorthand-pattern": "4Value"
+                "shorthand-pattern": "4Value",
+                "parser-grammar-unused": "<'border-top-color'>{1,4}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -2811,7 +2862,10 @@
                     "border-image-width",
                     "border-image-outset",
                     "border-image-repeat"
-                ]
+                ],
+                "parser-function": "consumeBorderImageShorthand",
+                "parser-grammar-unused": "<border-image>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -2928,7 +2982,10 @@
                     "border-inline-end-style",
                     "border-inline-start-color",
                     "border-inline-end-color"
-                ]
+                ],
+                "parser-function": "consumeBorderInlineShorthand",
+                "parser-grammar-unused": "<'border-block-start'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -2941,7 +2998,9 @@
                     "border-inline-start-color",
                     "border-inline-end-color"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-grammar-unused": "<'border-top-color'>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -2958,7 +3017,9 @@
                     "border-inline-end-style",
                     "border-inline-end-color"
                 ],
-                "shorthand-pattern": "Standard"
+                "shorthand-pattern": "Standard",
+                "parser-grammar-unused": "<'border-top-width'> || <'border-top-style'> || <color>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -3053,7 +3114,9 @@
                     "border-inline-start-style",
                     "border-inline-start-color"
                 ],
-                "shorthand-pattern": "Standard"
+                "shorthand-pattern": "Standard",
+                "parser-grammar-unused": "<'border-top-width'> || <'border-top-style'> || <color>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -3144,7 +3207,9 @@
                     "border-inline-start-style",
                     "border-inline-end-style"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-grammar-unused": "<'border-top-style'>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -3157,7 +3222,9 @@
                     "border-inline-start-width",
                     "border-inline-end-width"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-grammar-unused": "<'border-top-width'>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -3171,7 +3238,9 @@
                     "border-left-style",
                     "border-left-color"
                 ],
-                "shorthand-pattern": "Standard"
+                "shorthand-pattern": "Standard",
+                "parser-grammar-unused": "<'border-top-width'> || <'border-top-style'> || <'border-top-color'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -3261,7 +3330,10 @@
                     "border-top-right-radius",
                     "border-bottom-right-radius",
                     "border-bottom-left-radius"
-                ]
+                ],
+                "parser-function": "consumeBorderRadiusShorthand",
+                "parser-grammar-unused": "<length-percentage [0,inf]>{1,4} [ / <length-percentage [0,inf]>{1,4} ]?",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -3275,7 +3347,9 @@
                     "border-right-style",
                     "border-right-color"
                 ],
-                "shorthand-pattern": "Standard"
+                "shorthand-pattern": "Standard",
+                "parser-grammar-unused": "<'border-top-width'> || <'border-top-style'> || <'border-top-color'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -3367,7 +3441,11 @@
                     "-webkit-border-horizontal-spacing",
                     "-webkit-border-vertical-spacing"
                 ],
-                "accepts-quirky-length": true
+                "accepts-quirky-length": true,
+                "parser-function": "consumeBorderSpacingShorthand",
+                "parser-function-comment": "FIXME: Can probably use shorthand-pattern Values2",
+                "parser-grammar-unused": "<length [0,inf]>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-22",
@@ -3416,7 +3494,9 @@
                     "border-bottom-style",
                     "border-left-style"
                 ],
-                "shorthand-pattern": "4Value"
+                "shorthand-pattern": "4Value",
+                "parser-grammar-unused": "<'border-top-style'>{1,4}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -3430,7 +3510,9 @@
                     "border-top-style",
                     "border-top-color"
                 ],
-                "shorthand-pattern": "Standard"
+                "shorthand-pattern": "Standard",
+                "parser-grammar-unused": "<'border-top-width'> || <'border-top-style'> || <'border-top-color'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -3566,7 +3648,9 @@
                     "border-left-width"
                 ],
                 "accepts-quirky-length": true,
-                "shorthand-pattern": "4Value"
+                "shorthand-pattern": "4Value",
+                "parser-grammar-unused": "<'border-top-width'>{1,4}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -3930,7 +4014,9 @@
                     "corner-bottom-left-shape"
                 ],
                 "disables-native-appearance": true,
-                "shorthand-pattern": "4Value"
+                "shorthand-pattern": "4Value",
+                "parser-grammar-unused": "<'corner-top-left-shape'>{1,4}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-borders",
@@ -4723,7 +4809,9 @@
                     "bottom",
                     "left"
                 ],
-                "shorthand-pattern": "4Value"
+                "shorthand-pattern": "4Value",
+                "parser-grammar-unused": "<'top'>{1,4}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -4736,7 +4824,9 @@
                     "inset-block-start",
                     "inset-block-end"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-grammar-unused": "<'top'>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -4779,7 +4869,9 @@
                     "inset-inline-start",
                     "inset-inline-end"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-grammar-unused": "<'top'>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -4949,7 +5041,10 @@
                     "list-style-image",
                     "list-style-type"
                 ],
-                "shorthand-pattern": "Standard"
+                "shorthand-pattern": "Standard",
+                "parser-function": "consumeListStyleShorthand",
+                "parser-grammar-unused": "<'list-style-position'> || <'list-style-image'> || <'list-style-type'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-lists",
@@ -5109,7 +5204,9 @@
                     "margin-left"
                 ],
                 "accepts-quirky-length": true,
-                "shorthand-pattern": "4Value"
+                "shorthand-pattern": "4Value",
+                "parser-grammar-unused": "<'margin-top'>{1,4}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-22",
@@ -5122,7 +5219,9 @@
                     "margin-block-start",
                     "margin-block-end"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-grammar-unused": "<'margin-left'>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -5200,7 +5299,9 @@
                     "margin-inline-start",
                     "margin-inline-end"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-grammar-unused": "<'margin-left'>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -5355,7 +5456,10 @@
                     "marker-end"
                 ],
                 "skip-style-extractor": true,
-                "skip-style-extractor-comment": "FIXME: Figure out and document why this has no computed value"
+                "skip-style-extractor-comment": "FIXME: Figure out and document why this has no computed value",
+                "parser-function": "consumeMarkerShorthand",
+                "parser-grammar-unused": "<'marker-start'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "svg",
@@ -5433,7 +5537,10 @@
                     "mask-border-width",
                     "mask-border-outset",
                     "mask-border-repeat"
-                ]
+                ],
+                "parser-function": "consumeMaskShorthand",
+                "parser-grammar-unused": "<mask-layer>#",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-masking",
@@ -5448,7 +5555,10 @@
                     "mask-border-width",
                     "mask-border-outset",
                     "mask-border-repeat"
-                ]
+                ],
+                "parser-function": "consumeMaskBorderShorthand",
+                "parser-grammar-unused": "<mask-border>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-masking",
@@ -5710,7 +5820,10 @@
                 "longhands": [
                     "-webkit-mask-position-x",
                     "-webkit-mask-position-y"
-                ]
+                ],
+                "parser-function": "consumeMaskPositionShorthand",
+                "parser-grammar-unused": "<position>#",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-masking",
@@ -5722,7 +5835,10 @@
                 "longhands": [
                     "-webkit-mask-position-x",
                     "-webkit-mask-position-y"
-                ]
+                ],
+                "parser-function": "consumeBackgroundPositionShorthand",
+                "parser-grammar-unused": "<bg-position>#",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "status": "non-standard",
             "specification": {
@@ -6458,7 +6574,10 @@
                     "offset-distance",
                     "offset-rotate",
                     "offset-anchor"
-                ]
+                ],
+                "parser-function": "consumeOffsetShorthand",
+                "parser-grammar-unused": "[ <'offset-position'>? [ <'offset-path'> [ <'offset-distance'> || <'offset-rotate'> ]? ]? ] [ / <'offset-anchor'> ]?",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-motion-path",
@@ -6506,7 +6625,9 @@
                     "outline-style",
                     "outline-width"
                 ],
-                "shorthand-pattern": "Standard"
+                "shorthand-pattern": "Standard",
+                "parser-grammar-unused": "<'outline-color'> || <'outline-style'> || <'outline-width'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-ui",
@@ -6594,7 +6715,10 @@
                     "overflow-x",
                     "overflow-y"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-function": "consumeOverflowShorthand",
+                "parser-grammar-unused": "<'overflow-block'>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-overflow",
@@ -6750,7 +6874,11 @@
                     "overscroll-behavior-x",
                     "overscroll-behavior-y"
                 ],
-                "settings-flag": "overscrollBehaviorEnabled"
+                "settings-flag": "overscrollBehaviorEnabled",
+                "parser-function": "consumeOverscrollBehaviorShorthand",
+                "parser-function-comment": "FIXME: Can probably use shorthand-pattern Values2",
+                "parser-grammar-unused": "[ contain | none | auto ]{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "url": "https://drafts.csswg.org/css-overscroll-1/#propdef-overscroll-behavior"
@@ -6853,7 +6981,9 @@
                     "padding-left"
                 ],
                 "accepts-quirky-length": true,
-                "shorthand-pattern": "4Value"
+                "shorthand-pattern": "4Value",
+                "parser-grammar-unused": "<'padding-top'>{1,4}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-22",
@@ -6866,7 +6996,9 @@
                     "padding-block-start",
                     "padding-block-end"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-grammar-unused": "<'padding-left'>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -6939,7 +7071,9 @@
                     "padding-inline-start",
                     "padding-inline-end"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-grammar-unused": "<'padding-left'>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-logical-props",
@@ -7072,7 +7206,11 @@
                 "longhands": [
                     "break-after"
                 ],
-                "style-extractor-converter": "PageBreak"
+                "style-extractor-converter": "PageBreak",
+                "parser-function": "consumePageBreakAfterShorthand",
+                "parser-grammar-unused": "auto | always | avoid | left | right",
+                "parser-grammar-comment": "FIXME: For these legacy shorthands, we could consider using the aliased-to mechanism to implement the identifier mappings",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-22",
@@ -7084,7 +7222,11 @@
                 "longhands": [
                     "break-before"
                 ],
-                "style-extractor-converter": "PageBreak"
+                "style-extractor-converter": "PageBreak",
+                "parser-function": "consumePageBreakBeforeShorthand",
+                "parser-grammar-unused": "auto | always | avoid | left | right",
+                "parser-grammar-comment": "FIXME: For these legacy shorthands, we could consider using the aliased-to mechanism to implement the identifier mappings",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-22",
@@ -7096,7 +7238,11 @@
                 "longhands": [
                     "break-inside"
                 ],
-                "style-extractor-converter": "PageBreak"
+                "style-extractor-converter": "PageBreak",
+                "parser-function": "consumePageBreakInsideShorthand",
+                "parser-grammar-unused": "avoid | auto",
+                "parser-grammar-comment": "FIXME: For these legacy shorthands, we could consider using the aliased-to mechanism to implement the identifier mappings",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-22",
@@ -7724,11 +7870,14 @@
                 "longhands": [
                     "text-decoration-line"
                 ],
-                "shorthand-pattern": "Single"
+                "shorthand-pattern": "Single",
+                "parser-grammar-unused": "<'text-decoration-line'>",
+                "parser-grammar-unused-comment": "Current spec has 'text-decoration' specified as a shorthand with grammar '<'text-decoration-line'> || <'text-decoration-style'> || <'text-decoration-color'>'",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
-                "category": "css-22",
-                "url": "https://www.w3.org/TR/CSS2/text.html#propdef-text-decoration"
+                "category": "css-text-decor",
+                "url": "https://drafts.csswg.org/css-text-decor/#text-decoration-property"
             }
         },
         "text-group-align": {
@@ -7866,7 +8015,10 @@
                 "longhands": [
                     "text-wrap-mode",
                     "text-wrap-style"
-                ]
+                ],
+                "parser-function": "consumeTextWrapShorthand",
+                "parser-grammar-unused": "<'text-wrap-mode'> || <'text-wrap-style'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-text",
@@ -7952,7 +8104,11 @@
                     "transition-timing-function",
                     "transition-delay",
                     "transition-behavior"
-                ]
+                ],
+                "parser-function": "consumeAnimationShorthand",
+                "parser-shorthand": "transitionShorthandForParsing",
+                "parser-grammar-unused": "<single-transition>#",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-transitions",
@@ -8171,7 +8327,10 @@
                 "longhands": [
                     "white-space-collapse",
                     "text-wrap-mode"
-                ]
+                ],
+                "parser-function": "consumeWhiteSpaceShorthand",
+                "parser-grammar-unused": "normal | pre | pre-wrap | pre-line | [ <'white-space-collapse'> || <'text-wrap-mode'> ]",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-text",
@@ -8479,7 +8638,11 @@
                     "contain-intrinsic-width",
                     "contain-intrinsic-height"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-function": "consumeContainIntrinsicSizeShorthand",
+                "parser-function-comment": "FIXME: Can probably use 2Value",
+                "parser-grammar-unused": "<'contain-intrinsic-width'>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-sizing",
@@ -8592,7 +8755,10 @@
                 "longhands": [
                     "container-name",
                     "container-type"
-                ]
+                ],
+                "parser-function": "consumeContainerShorthand",
+                "parser-grammar-unused": "<'container-name'> [ / <'container-type'> ]?",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-contain",
@@ -8695,7 +8861,10 @@
                 "longhands": [
                     "background-size"
                 ],
-                "shorthand-pattern": "Single"
+                "shorthand-pattern": "Single",
+                "parser-function": "consumeWebkitBackgroundSizeShorthand",
+                "parser-grammar-unused": "<single-webkit-background-size>#",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "status": {
                 "comment": "FIXME: Should be a cascade-alias like the other -webkit-background-* properties, rather than a shorthand. Differs from background-size only in the interpretation of a single value: '-webkit-background-size: l;' is equivalent to 'background-size: l l;' whereas 'background-size: l;' is equivalent to 'background-size: l auto;'"
@@ -8722,7 +8891,10 @@
                     "border-image-width",
                     "border-image-outset",
                     "border-image-repeat"
-                ]
+                ],
+                "parser-function": "consumeWebkitBorderImageShorthand",
+                "parser-grammar-unused": "<-webkit-border-image>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "status": {
                 "comment": "Differs from border-image in that it always includes the 'fill' keyword in 'border-image-slice', and makes length values in 'border-image-width' override the corresponding 'border-*-width'."
@@ -8735,7 +8907,10 @@
                     "border-top-right-radius",
                     "border-bottom-right-radius",
                     "border-bottom-left-radius"
-                ]
+                ],
+                "parser-function": "consumeWebkitBorderRadiusShorthand",
+                "parser-grammar-unused": "<length-percentage [0,inf]>{1,4} [ / <length-percentage [0,inf]>{1,4} ]?",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "status": {
                 "comment": "Differs from border-radius only in the interpretation of a value consisting of two lengths: '-webkit-border-radius: l1 l2;' is equivalent to 'border-radius: l1 / l2;'."
@@ -8927,7 +9102,11 @@
                 "longhands": [
                     "break-after"
                 ],
-                "style-extractor-converter": "WebkitColumnBreak"
+                "style-extractor-converter": "WebkitColumnBreak",
+                "parser-function": "consumeWebkitColumnBreakAfterShorthand",
+                "parser-grammar-unused": "auto | always | avoid",
+                "parser-grammar-comment": "FIXME: For these legacy shorthands, we could consider using the aliased-to mechanism to implement the identifier mappings",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification":  {
                 "category": "css-multicol",
@@ -8943,7 +9122,11 @@
                 "longhands": [
                     "break-before"
                 ],
-                "style-extractor-converter": "WebkitColumnBreak"
+                "style-extractor-converter": "WebkitColumnBreak",
+                "parser-function": "consumeWebkitColumnBreakBeforeShorthand",
+                "parser-grammar-unused": "auto | always | avoid",
+                "parser-grammar-comment": "FIXME: For these legacy shorthands, we could consider using the aliased-to mechanism to implement the identifier mappings",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification":  {
                 "category": "css-multicol",
@@ -8959,7 +9142,11 @@
                 "longhands": [
                     "break-inside"
                 ],
-                "style-extractor-converter": "WebkitColumnBreak"
+                "style-extractor-converter": "WebkitColumnBreak",
+                "parser-function": "consumeWebkitColumnBreakInsideShorthand",
+                "parser-grammar-unused": "avoid | auto",
+                "parser-grammar-comment": "FIXME: For these legacy shorthands, we could consider using the aliased-to mechanism to implement the identifier mappings",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification":  {
                 "category": "css-multicol",
@@ -9053,7 +9240,10 @@
                     "row-gap",
                     "column-gap"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-function": "consumeAlignShorthand",
+                "parser-grammar-unused": "<'row-gap'> <'column-gap'>?",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-align",
@@ -9085,11 +9275,13 @@
                     "column-rule-style",
                     "column-rule-color"
                 ],
-                "shorthand-pattern": "Standard"
+                "shorthand-pattern": "Standard",
+                "parser-grammar-unused": "<'column-rule-width'> || <'column-rule-style'> || <'column-rule-color'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification":  {
                 "category": "css-multicol",
-                "url": "https://www.w3.org/TR/css3-multicol/#column-rule"
+                "url": "https://www.w3.org/TR/css-multicol-1/#cr"
             }
         },
         "column-rule-color": {
@@ -9206,7 +9398,10 @@
                 "longhands": [
                     "column-width",
                     "column-count"
-                ]
+                ],
+                "parser-function": "consumeColumnsShorthand",
+                "parser-grammar-unused": "<'column-width'> || <'column-count'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification":  {
                 "category": "css-multicol",
@@ -9437,7 +9632,10 @@
                     "flex-shrink",
                     "flex-basis"
                 ],
-                "shorthand-pattern": "Standard"
+                "shorthand-pattern": "Standard",
+                "parser-function": "consumeFlexShorthand",
+                "parser-grammar-unused": "none | [ [ <'flex-grow'> <'flex-shrink'>? ] || <'flex-basis'> ]",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-flexbox",
@@ -9530,7 +9728,10 @@
                 "longhands": [
                     "flex-direction",
                     "flex-wrap"
-                ]
+                ],
+                "shorthand-parser-pattern": "Standard",
+                "parser-grammar-unused": "<'flex-direction'> || <'flex-wrap'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-flexbox",
@@ -9710,7 +9911,10 @@
                     "align-content",
                     "justify-content"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-function": "consumeAlignShorthand",
+                "parser-grammar-unused": "<'align-content'> <'justify-content'>?",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-align",
@@ -9723,7 +9927,10 @@
                     "align-items",
                     "justify-items"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-function": "consumeAlignShorthand",
+                "parser-grammar-unused": "<'align-items'> <'justify-items'>?",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-align",
@@ -9736,7 +9943,10 @@
                     "align-self",
                     "justify-self"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-function": "consumeAlignShorthand",
+                "parser-grammar-unused": "<'align-self'> <'justify-self'>?",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-align",
@@ -9752,7 +9962,10 @@
                     "grid-auto-flow",
                     "grid-auto-rows",
                     "grid-auto-columns"
-                ]
+                ],
+                "parser-function": "consumeGridShorthand",
+                "parser-grammar-unused": "<grid>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-grid",
@@ -9766,7 +9979,10 @@
                     "grid-column-start",
                     "grid-row-end",
                     "grid-column-end"
-                ]
+                ],
+                "parser-function": "consumeGridAreaShorthand",
+                "parser-grammar-unused": "<grid-line> [ / <grid-line> ]{0,3}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-grid",
@@ -9841,7 +10057,10 @@
                     "grid-template-rows",
                     "grid-template-columns",
                     "grid-template-areas"
-                ]
+                ],
+                "parser-function": "consumeGridTemplateShorthand",
+                "parser-grammar-unused": "<grid-template>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-grid",
@@ -9917,7 +10136,10 @@
                 "longhands": [
                     "grid-column-start",
                     "grid-column-end"
-                ]
+                ],
+                "parser-function": "consumeGridItemPositionShorthand",
+                "parser-grammar-unused": "<grid-line> [ / <grid-line> ]?",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-grid",
@@ -9929,7 +10151,10 @@
                 "longhands": [
                     "grid-row-start",
                     "grid-row-end"
-                ]
+                ],
+                "parser-function": "consumeGridItemPositionShorthand",
+                "parser-grammar-unused": "<grid-line> [ / <grid-line> ]?",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-grid",
@@ -10152,7 +10377,10 @@
                     "block-ellipsis",
                     "continue"
                 ],
-                "settings-flag": "cssLineClampEnabled"
+                "settings-flag": "cssLineClampEnabled",
+                "parser-function": "consumeLineClampShorthand",
+                "parser-grammar-unused": "none | [ <integer [1,inf]> <'block-ellipsis'>? ]",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-inline",
@@ -10291,7 +10519,10 @@
                     "-webkit-mask-clip"
                 ],
                 "skip-style-extractor": true,
-                "skip-style-extractor-comment": "FIXME: Figure out and document why this has no computed value"
+                "skip-style-extractor-comment": "FIXME: Figure out and document why this has no computed value",
+                "parser-function": "consumeBackgroundShorthand",
+                "parser-grammar-unused": "<-webkit-mask>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "comment": "Differs from the unprefixed property in accepting -webkit-mask-source-type in place of mask-mode",
             "specification": {
@@ -10307,7 +10538,10 @@
                     "mask-border-width",
                     "mask-border-outset",
                     "mask-border-repeat"
-                ]
+                ],
+                "parser-function": "consumeWebkitMaskBoxImageShorthand",
+                "parser-grammar-unused": "<-webkit-mask-box-image>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "status": {
                 "status": "obsolete",
@@ -10453,7 +10687,10 @@
                 "longhands": [
                     "perspective"
                 ],
-                "shorthand-pattern": "Single"
+                "shorthand-pattern": "Single",
+                "parser-function": "consumeWebkitPerspectiveShorthand",
+                "parser-grammar-unused": "<'perspective'> | <number [0,inf]>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-transforms",
@@ -10471,11 +10708,14 @@
                 "longhands": [
                     "perspective-origin-x",
                     "perspective-origin-y"
-                ]
+                ],
+                "parser-function": "consumePerspectiveOriginShorthand",
+                "parser-grammar-unused": "<position>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-transforms",
-                "url": "https://www.w3.org/TR/css-transforms-1/#propdef-perspective-origin"
+                "url": "https://www.w3.org/TR/css-transforms-2/#propdef-perspective-origin"
             }
         },
         "perspective-origin-x": {
@@ -10594,7 +10834,9 @@
                     "text-decoration-style",
                     "text-decoration-color"
                 ],
-                "shorthand-pattern": "Standard"
+                "shorthand-pattern": "Standard",
+                "parser-grammar-unused": "<'text-decoration-line'> || <'text-decoration-style'> || <'text-decoration-color'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "status": {
                 "status": "experimental"
@@ -10677,7 +10919,10 @@
                 ],
                 "longhands": [
                     "text-decoration-skip-ink"
-                ]
+                ],
+                "parser-function": "consumeTextDecorationSkipShorthand",
+                "parser-grammar-unused": "none | auto | ink@(aliased-to=auto)",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-text-decor",
@@ -10790,7 +11035,11 @@
                 "longhands": [
                     "text-emphasis-style",
                     "text-emphasis-color"
-                ]
+                ],
+                "shorthand-pattern-comment": "FIXME: Can probably use shorthand-pattern Standard for extractor",
+                "shorthand-parser-pattern": "Standard",
+                "parser-grammar-unused": "<'text-emphasis-style'> || <'text-emphasis-color'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-text-decor",
@@ -10892,7 +11141,10 @@
                     "-webkit-text-stroke-color"
                 ],
                 "skip-style-extractor": true,
-                "skip-style-extractor-comment": "FIXME: Figure out and document why this has no computed value"
+                "skip-style-extractor-comment": "FIXME: Figure out and document why this has no computed value",
+                "shorthand-pattern": "Standard",
+                "parser-grammar-unused": "<'-webkit-text-stroke-width'> || <'-webkit-text-stroke-color'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "status": "non-standard"
         },
@@ -10978,7 +11230,10 @@
                     "transform-origin-x",
                     "transform-origin-y",
                     "transform-origin-z"
-                ]
+                ],
+                "parser-function": "consumeTransformOriginShorthand",
+                "parser-grammar-unused": "<transform-origin>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-transforms",
@@ -11210,7 +11465,9 @@
                 "aliases": [
                     "scroll-snap-margin"
                 ],
-                "shorthand-pattern": "4Value"
+                "shorthand-pattern": "4Value",
+                "parser-grammar-unused": "<'scroll-margin-top'>{1,4}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -11375,7 +11632,9 @@
                     "scroll-margin-block-start",
                     "scroll-margin-block-end"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-grammar-unused": "<'scroll-left'>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -11388,7 +11647,9 @@
                     "scroll-margin-inline-start",
                     "scroll-margin-inline-end"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-grammar-unused": "<'scroll-left'>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -11403,7 +11664,9 @@
                     "scroll-padding-bottom",
                     "scroll-padding-left"
                 ],
-                "shorthand-pattern": "4Value"
+                "shorthand-pattern": "4Value",
+                "parser-grammar-unused": "<'scroll-padding-top'>{1,4}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -11580,7 +11843,9 @@
                     "scroll-padding-block-start",
                     "scroll-padding-block-end"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-grammar-unused": "<'scroll-padding-left'>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -11593,7 +11858,9 @@
                     "scroll-padding-inline-start",
                     "scroll-padding-inline-end"
                 ],
-                "shorthand-pattern": "2Value"
+                "shorthand-pattern": "2Value",
+                "parser-grammar-unused": "<'scroll-padding-left'>{1,2}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -11663,7 +11930,10 @@
                     "scroll-timeline-name",
                     "scroll-timeline-axis"
                 ],
-                "settings-flag": "scrollDrivenAnimationsEnabled"
+                "settings-flag": "scrollDrivenAnimationsEnabled",
+                "parser-function": "consumeScrollTimelineShorthand",
+                "parser-grammar-unused": "[ <'scroll-timeline-name'> <'scroll-timeline-axis'>? ]#",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "scroll-animations",
@@ -11853,7 +12123,10 @@
                     "view-timeline-axis",
                     "view-timeline-inset"
                 ],
-                "settings-flag": "scrollDrivenAnimationsEnabled"
+                "settings-flag": "scrollDrivenAnimationsEnabled",
+                "parser-function": "consumeViewTimelineShorthand",
+                "parser-grammar-unused": "[ <'view-timeline-name'> [ <'view-timeline-axis'> || <'view-timeline-inset'> ]? ]#",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "scroll-animations",
@@ -12030,7 +12303,10 @@
                     "position-try-order",
                     "position-try-fallbacks"
                 ],
-                "settings-flag": "cssAnchorPositioningEnabled"
+                "settings-flag": "cssAnchorPositioningEnabled",
+                "parser-function": "consumePositionTryShorthand",
+                "parser-grammar-unused": "<'position-try-order'>? <'position-try-fallbacks'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
             "specification": {
                 "category": "css-anchor-position",

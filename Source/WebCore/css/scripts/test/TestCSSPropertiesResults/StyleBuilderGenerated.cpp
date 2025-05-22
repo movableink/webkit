@@ -2559,6 +2559,10 @@ void BuilderGenerated::applyProperty(CSSPropertyID id, BuilderState& builderStat
         break;
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline:
         break;
+    case CSSPropertyID::CSSPropertyAll:
+        ASSERT(isShorthand(id));
+        ASSERT_NOT_REACHED();
+        break;
     case CSSPropertyID::CSSPropertyFont:
         ASSERT(isShorthand(id));
         ASSERT_NOT_REACHED();

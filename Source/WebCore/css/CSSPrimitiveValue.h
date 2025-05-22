@@ -754,6 +754,12 @@ inline bool isValueID(const Ref<CSSValue>& value, CSSValueID id)
     return isValueID(value.get(), id);
 }
 
+inline bool isCustomIdentValue(const CSSValue& value)
+{
+    auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value);
+    return primitiveValue && primitiveValue->isCustomIdent();
+}
+
 inline bool CSSValue::isValueID() const
 {
     auto* value = dynamicDowncast<CSSPrimitiveValue>(*this);

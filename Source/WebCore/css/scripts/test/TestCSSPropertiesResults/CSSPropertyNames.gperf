@@ -234,6 +234,7 @@ constexpr ASCIILiteral propertyNameStrings[numCSSProperties] = {
     "test-logical-property-group-physical-vertical"_s,
     "test-logical-property-group-logical-block"_s,
     "test-logical-property-group-logical-inline"_s,
+    "all"_s,
     "font"_s,
     "test-shorthand-one"_s,
     "test-shorthand-two"_s,
@@ -358,6 +359,7 @@ test-logical-property-group-physical-horizontal, CSSPropertyID::CSSPropertyTestL
 test-logical-property-group-physical-vertical, CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalVertical
 test-logical-property-group-logical-block, CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock
 test-logical-property-group-logical-inline, CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline
+all, CSSPropertyID::CSSPropertyAll
 font, CSSPropertyID::CSSPropertyFont
 test-shorthand-one, CSSPropertyID::CSSPropertyTestShorthandOne
 test-shorthand-two, CSSPropertyID::CSSPropertyTestShorthandTwo
@@ -432,6 +434,8 @@ static bool isExposedNotInvalidAndNotInternal(CSSPropertyID id, const CSSPropert
         return settings.cssDescriptorEnabled;
     case CSSPropertyID::CSSPropertyTestSettingsOne:
         return settings.cssSettingsOneEnabled;
+    case CSSPropertyID::CSSPropertyTestShorthandTwo:
+        return settings.cssSettingsShorthandEnabled;
     default:
         return true;
     }
@@ -444,6 +448,8 @@ static bool isExposedNotInvalidAndNotInternal(CSSPropertyID id, const Settings& 
         return settings.cssDescriptorEnabled();
     case CSSPropertyID::CSSPropertyTestSettingsOne:
         return settings.cssSettingsOneEnabled();
+    case CSSPropertyID::CSSPropertyTestShorthandTwo:
+        return settings.cssSettingsShorthandEnabled();
     default:
         return true;
     }
@@ -588,6 +594,7 @@ constexpr bool isInheritedPropertyTable[cssPropertyIDEnumValueCount] = {
     false, // CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalVertical
     false, // CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock
     false, // CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline
+    false, // CSSPropertyID::CSSPropertyAll
     false, // CSSPropertyID::CSSPropertyFont
     false, // CSSPropertyID::CSSPropertyTestShorthandOne
     false, // CSSPropertyID::CSSPropertyTestShorthandTwo
@@ -877,19 +884,22 @@ std::span<const CSSPropertyID> CSSProperty::allAcceleratedAnimationProperties([[
 CSSPropertySettings::CSSPropertySettings(const Settings& settings)
     : cssDescriptorEnabled { settings.cssDescriptorEnabled() }
     , cssSettingsOneEnabled { settings.cssSettingsOneEnabled() }
+    , cssSettingsShorthandEnabled { settings.cssSettingsShorthandEnabled() }
 {
 }
 
 bool operator==(const CSSPropertySettings& a, const CSSPropertySettings& b)
 {
     return a.cssDescriptorEnabled == b.cssDescriptorEnabled
-        && a.cssSettingsOneEnabled == b.cssSettingsOneEnabled;
+        && a.cssSettingsOneEnabled == b.cssSettingsOneEnabled
+        && a.cssSettingsShorthandEnabled == b.cssSettingsShorthandEnabled;
 }
 
 void add(Hasher& hasher, const CSSPropertySettings& settings)
 {
     uint64_t bits = settings.cssDescriptorEnabled << 0
-        | settings.cssSettingsOneEnabled << 1;
+        | settings.cssSettingsOneEnabled << 1
+        | settings.cssSettingsShorthandEnabled << 2;
     add(hasher, bits);
 }
 

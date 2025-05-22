@@ -117,9 +117,10 @@ enum CSSPropertyID : uint16_t {
     CSSPropertyTestLogicalPropertyGroupPhysicalVertical = 103,
     CSSPropertyTestLogicalPropertyGroupLogicalBlock = 104,
     CSSPropertyTestLogicalPropertyGroupLogicalInline = 105,
-    CSSPropertyFont = 106,
-    CSSPropertyTestShorthandOne = 107,
-    CSSPropertyTestShorthandTwo = 108,
+    CSSPropertyAll = 106,
+    CSSPropertyFont = 107,
+    CSSPropertyTestShorthandOne = 108,
+    CSSPropertyTestShorthandTwo = 109,
 };
 
 // Enum value of the first "real" CSS property, which excludes
@@ -127,10 +128,10 @@ enum CSSPropertyID : uint16_t {
 constexpr uint16_t firstCSSProperty = 2;
 // Total number of enum values in the CSSPropertyID enum. If making an array
 // that can be indexed into using the enum value, use this as the size.
-constexpr uint16_t cssPropertyIDEnumValueCount = 109;
+constexpr uint16_t cssPropertyIDEnumValueCount = 110;
 // Number of "real" CSS properties. This differs from cssPropertyIDEnumValueCount,
 // as this doesn't consider CSSPropertyInvalid and CSSPropertyCustom.
-constexpr uint16_t numCSSProperties = 107;
+constexpr uint16_t numCSSProperties = 108;
 constexpr unsigned maxCSSPropertyNameLength = 114;
 constexpr auto firstTopPriorityProperty = CSSPropertyID::CSSPropertyTestTopPriority;
 constexpr auto lastTopPriorityProperty = CSSPropertyID::CSSPropertyTestTopPriority;
@@ -144,7 +145,7 @@ constexpr auto firstLogicalGroupLogicalProperty = CSSPropertyID::CSSPropertyTest
 constexpr auto lastLogicalGroupLogicalProperty = CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline;
 constexpr auto firstLogicalGroupProperty = firstLogicalGroupPhysicalProperty;
 constexpr auto lastLogicalGroupProperty = lastLogicalGroupLogicalProperty;
-constexpr auto firstShorthandProperty = CSSPropertyID::CSSPropertyFont;
+constexpr auto firstShorthandProperty = CSSPropertyID::CSSPropertyAll;
 constexpr auto lastShorthandProperty = CSSPropertyID::CSSPropertyTestShorthandTwo;
 constexpr uint16_t numCSSPropertyLonghands = firstShorthandProperty - firstCSSProperty;
 extern const std::array<CSSPropertyID, 102> computedPropertyIDs;
@@ -154,6 +155,7 @@ struct CSSPropertySettings {
 
     bool cssDescriptorEnabled : 1 { false };
     bool cssSettingsOneEnabled : 1 { false };
+    bool cssSettingsShorthandEnabled : 1 { false };
 
     CSSPropertySettings() = default;
     explicit CSSPropertySettings(const Settings&);

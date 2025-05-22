@@ -148,7 +148,11 @@
                 "longhands": [
                     "test-logical-property-group-physical-horizontal",
                     "test-logical-property-group-physical-vertical"
-                ]
+                ],
+                "shorthand-parser-pattern": "Values2",
+                "parser-shorthand": "testShorthandOneShorthandForParsing",
+                "parser-grammar-unused": "<'test-logical-property-group-physical-horizontal'> || <'test-logical-property-group-physical-vertical'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             }
         },
         "test-shorthand-two": {
@@ -156,7 +160,11 @@
                 "longhands": [
                     "test-logical-property-group-logical-block",
                     "test-logical-property-group-logical-inline"
-                ]
+                ],
+                "settings-flag": "cssSettingsShorthandEnabled",
+                "shorthand-pattern": "Values2",
+                "parser-grammar-unused": "<'test-logical-property-group-logical-block'> || <'test-logical-property-group-logical-inline'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             }
         },
         "font": {
@@ -164,7 +172,19 @@
                 "longhands": [
                     "test-sink-priority",
                     "test-high-priority"
-                ]
+                ],
+                "parser-function": "consumeFontShorthand",
+                "parser-grammar-unused": "<'test-sink-priority'> || <'test-high-priority'>",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
+            }
+        },
+        "all": {
+            "codegen-properties": {
+                "longhands": [
+                    "all"
+                ],
+                "skip-style-extractor": true,
+                "skip-parser": true
             }
         },
 
