@@ -525,8 +525,16 @@ bool RenderStyle::descendantAffectingNonInheritedPropertiesEqual(const RenderSty
         || m_nonInheritedData->miscData.ptr() == other.m_nonInheritedData->miscData.ptr())
         return true;
 
-    return m_nonInheritedData->miscData->alignItems == other.m_nonInheritedData->miscData->alignItems
-        && m_nonInheritedData->miscData->justifyItems == other.m_nonInheritedData->miscData->justifyItems;
+    if (m_nonInheritedData->miscData->alignItems != other.m_nonInheritedData->miscData->alignItems)
+        return false;
+
+    if (m_nonInheritedData->miscData->justifyItems != other.m_nonInheritedData->miscData->justifyItems)
+        return false;
+
+    if (m_nonInheritedData->miscData->usedAppearance != other.m_nonInheritedData->miscData->usedAppearance)
+        return false;
+
+    return true;
 }
 
 bool RenderStyle::borderAndBackgroundEqual(const RenderStyle& other) const
