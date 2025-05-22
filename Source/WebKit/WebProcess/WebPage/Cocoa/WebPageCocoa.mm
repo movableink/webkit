@@ -169,7 +169,7 @@ void WebPage::setHasLaunchedWebContentProcess()
         auto auditToken = WebProcess::singleton().auditTokenForSelf();
 #if USE(EXTENSIONKIT)
         if (WKProcessExtension.sharedInstance)
-            [WKProcessExtension.sharedInstance lockdownSandbox:@"1.0"];
+            [WKProcessExtension.sharedInstance lockdownSandbox:@"2.0"];
 #endif
         sandbox_enable_state_flag("local:WebContentProcessLaunched", *auditToken);
         hasSetLaunchVariable = true;

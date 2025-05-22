@@ -149,7 +149,7 @@ void GPUProcess::platformInitializeGPUProcess(GPUProcessCreationParameters& para
 
 #if USE(EXTENSIONKIT)
     if (WKProcessExtension.sharedInstance)
-        [WKProcessExtension.sharedInstance lockdownSandbox:@"1.0"];
+        [WKProcessExtension.sharedInstance lockdownSandbox:@"2.0"];
 #endif
 }
 

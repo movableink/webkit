@@ -282,16 +282,18 @@
     (allow mach-lookup
         (global-name "com.apple.CARenderServer"))
 
-    (allow iokit-open-user-client
-        (iokit-user-client-class "IOSurfaceAcceleratorClient")
-        (apply-message-filter
-            (GPU_PROCESS_IOKIT_DEFAULT_FILTER_OPERATION (with telemetry) (with message "IOSurfaceAcceleratorClient")
-                iokit-async-external-method
-                iokit-external-trap
-                iokit-external-method)
-            (allow iokit-external-method
-                (iokit-method-number 1 10))))
-        
+    (with-filter (require-not (sandbox-version-2))
+        (allow iokit-open-user-client (iokit-user-client-class "IOSurfaceAcceleratorClient")))
+    (with-filter (sandbox-version-2)
+        (allow iokit-open-user-client (iokit-user-client-class "IOSurfaceAcceleratorClient")
+            (apply-message-filter
+                (GPU_PROCESS_IOKIT_DEFAULT_FILTER_OPERATION (with telemetry) (with message "IOSurfaceAcceleratorClient")
+                    iokit-async-external-method
+                    iokit-external-trap
+                    iokit-external-method)
+                (allow iokit-external-method
+                    (iokit-method-number 1 10)))))
+
     (allow iokit-open-user-client
         (iokit-user-client-class "IOSurfaceRootUserClient")
         (apply-message-filter
