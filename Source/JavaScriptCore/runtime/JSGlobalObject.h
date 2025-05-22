@@ -683,8 +683,8 @@ public:
     std::optional<unsigned> stackTraceLimit() const { return m_stackTraceLimit; }
     void setStackTraceLimit(std::optional<unsigned> value) { m_stackTraceLimit = value; }
 
-    void startSignpost(String&&);
-    void stopSignpost(String&&);
+    JS_EXPORT_PRIVATE void startSignpost(String&&);
+    JS_EXPORT_PRIVATE void stopSignpost(String&&);
 
 protected:
     JS_EXPORT_PRIVATE explicit JSGlobalObject(VM&, Structure*, const GlobalObjectMethodTable* = nullptr);
