@@ -29,6 +29,10 @@
 
 OBJC_CLASS WCRBrowserEngineClient;
 
+namespace WTF {
+class WorkQueue;
+}
+
 namespace WebCore {
 
 class ParentalControlsURLFilter {
@@ -42,7 +46,7 @@ public:
 
     void resetIsEnabled();
     bool isEnabled() const;
-    void isURLAllowed(const URL&, CompletionHandler<void(bool, NSData *)>&&);
+    void isURLAllowedWithQueue(const URL&, CompletionHandler<void(bool, NSData *)>&&, WTF::WorkQueue& completionHandlerQueue);
     void allowURL(const URL&, CompletionHandler<void(bool)>&&);
 
 private:

@@ -128,17 +128,21 @@ bool ParentalControlsURLFilter::isEnabled() const
     return *m_isEnabled;
 }
 
-void ParentalControlsURLFilter::isURLAllowed(const URL& url, CompletionHandler<void(bool, NSData *)>&& completionHandler)
+void ParentalControlsURLFilter::isURLAllowedWithQueue(const URL& url, CompletionHandler<void(bool, NSData *)>&& completionHandler, WTF::WorkQueue& completionHandlerQueue)
 {
     ASSERT(isMainThread());
 
     RetainPtr wcrBrowserEngineClient = effectiveWCRBrowserEngineClient();
-    if (!wcrBrowserEngineClient)
-        return completionHandler(true, nullptr);
+    if (!wcrBrowserEngineClient) {
+        completionHandlerQueue.dispatch([completionHandler = WTFMove(completionHandler)]() mutable {
+            completionHandler(true, nullptr);
+        });
+        return;
+    }
 
     [wcrBrowserEngineClient evaluateURL:url.createNSURL().get() withCompletion:makeBlockPtr([url = url.isolatedCopy(), completionHandler = WTFMove(completionHandler)](BOOL shouldBlock, NSData *replacementData) mutable {
         completionHandler(!shouldBlock, replacementData);
-    }).get()];
+    }).get() onCompletionQueue:completionHandlerQueue.dispatchQueue()];
 }
 
 void ParentalControlsURLFilter::allowURL(const URL& url, CompletionHandler<void(bool)>&& completionHandler)
