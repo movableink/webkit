@@ -87,7 +87,7 @@ void LinkBuffer::logJITCodeForJITDump(CodeRef<LinkBufferPtrTag>& codeRef, ASCIIL
     };
 
     StringPrintStream out;
-    out.print(profileName(m_profile), ": ");
+    out.print("JSC-", profileName(m_profile), ": ");
     switch (m_profile) {
     case Profile::Baseline:
     case Profile::DFG:
