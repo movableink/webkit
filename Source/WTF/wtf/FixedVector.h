@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -94,33 +94,33 @@ public:
         fill(value);
     }
 
-    template<size_t inlineCapacity, typename OverflowHandler>
-    explicit FixedVector(const Vector<T, inlineCapacity, OverflowHandler>& other)
+    template<size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename VectorMalloc>
+    explicit FixedVector(const Vector<T, inlineCapacity, OverflowHandler, minCapacity, VectorMalloc>& other)
         : m_storage(other.isEmpty() ? nullptr : Storage::createFromVector(other).moveToUniquePtr())
     { }
 
     // FIXME: Should we remove this now that it's not required for HashTable::add? This assignment is non-trivial and
     // should probably go through the explicit constructor.
-    template<size_t inlineCapacity, typename OverflowHandler>
-    FixedVector& operator=(const Vector<T, inlineCapacity, OverflowHandler>& other)
+    template<size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename VectorMalloc>
+    FixedVector& operator=(const Vector<T, inlineCapacity, OverflowHandler, minCapacity, VectorMalloc>& other)
     {
         m_storage = other.isEmpty() ? nullptr : Storage::createFromVector(other).moveToUniquePtr();
         return *this;
     }
 
-    template<size_t inlineCapacity, typename OverflowHandler>
-    explicit FixedVector(Vector<T, inlineCapacity, OverflowHandler>&& other)
+    template<size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename VectorMalloc>
+    explicit FixedVector(Vector<T, inlineCapacity, OverflowHandler, minCapacity, VectorMalloc>&& other)
     {
-        Vector<T, inlineCapacity, OverflowHandler> target = WTFMove(other);
+        auto target = WTFMove(other);
         m_storage = target.isEmpty() ? nullptr : Storage::createFromVector(WTFMove(target)).moveToUniquePtr();
     }
 
     // FIXME: Should we remove this now that it's not required for HashTable::add? This assignment is non-trivial and
     // should probably go through the explicit constructor.
-    template<size_t inlineCapacity, typename OverflowHandler>
-    FixedVector& operator=(Vector<T, inlineCapacity, OverflowHandler>&& other)
+    template<size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename VectorMalloc>
+    FixedVector& operator=(Vector<T, inlineCapacity, OverflowHandler, minCapacity, VectorMalloc>&& other)
     {
-        Vector<T, inlineCapacity, OverflowHandler> target = WTFMove(other);
+        auto target = WTFMove(other);
         m_storage = target.isEmpty() ? nullptr : Storage::createFromVector(WTFMove(target)).moveToUniquePtr();
         return *this;
     }

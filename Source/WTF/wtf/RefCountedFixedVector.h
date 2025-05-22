@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,17 +50,17 @@ public:
         return adoptRef(*new (NotNull, fastMalloc(Base::allocationSize(size))) RefCountedFixedVectorBase(size, first, last));
     }
 
-    template<size_t inlineCapacity, typename OverflowHandler>
-    static Ref<RefCountedFixedVectorBase> createFromVector(const Vector<T, inlineCapacity, OverflowHandler>& other)
+    template<size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename VectorMalloc>
+    static Ref<RefCountedFixedVectorBase> createFromVector(const Vector<T, inlineCapacity, OverflowHandler, minCapacity, VectorMalloc>& other)
     {
         unsigned size = Checked<uint32_t> { other.size() }.value();
         return adoptRef(*new (NotNull, fastMalloc(Base::allocationSize(size))) RefCountedFixedVectorBase(size, std::begin(other), std::end(other)));
     }
 
-    template<size_t inlineCapacity, typename OverflowHandler>
-    static Ref<RefCountedFixedVectorBase> createFromVector(Vector<T, inlineCapacity, OverflowHandler>&& other)
+    template<size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename VectorMalloc>
+    static Ref<RefCountedFixedVectorBase> createFromVector(Vector<T, inlineCapacity, OverflowHandler, minCapacity, VectorMalloc>&& other)
     {
-        Vector<T, inlineCapacity, OverflowHandler> container = WTFMove(other);
+        auto container = WTFMove(other);
         unsigned size = Checked<uint32_t> { container.size() }.value();
         return adoptRef(*new (NotNull, fastMalloc(Base::allocationSize(size))) RefCountedFixedVectorBase(size, std::move_iterator { container.begin() }, std::move_iterator { container.end() }));
     }
