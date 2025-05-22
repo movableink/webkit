@@ -519,4 +519,24 @@ WebCore::PlatformGestureEvent platform(const WebGestureEvent& webEvent)
 }
 #endif
 
+#if PLATFORM(GTK) || PLATFORM(WPE) || USE(LIBWPE)
+WallTime wallTimeForEventTimeInMilliseconds(uint64_t timestamp)
+{
+    if (!timestamp)
+        return WallTime::now();
+
+    // GTK and WPE events provide a timestamp as uint32_t, which is too small for full millisecond timestamps since
+    // the epoch. They are expected to be just timestamps with monotonic behavior to be compared among themselves,
+    // not against WallTime-like measurements. Thus the need to define a reference origin based on the first event
+    // received.
+    static WallTime firstEventWallTime;
+    static uint64_t firstEventTimestamp = 0;
+    if (!firstEventTimestamp) {
+        firstEventTimestamp = timestamp;
+        firstEventWallTime = WallTime::now();
+    }
+    return firstEventWallTime + Seconds::fromMilliseconds(timestamp - firstEventTimestamp);
+}
+#endif
+
 } // namespace WebKit

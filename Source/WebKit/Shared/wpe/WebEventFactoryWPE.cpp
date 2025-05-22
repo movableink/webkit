@@ -27,6 +27,7 @@
 #include "WebEventFactory.h"
 
 #if ENABLE(WPE_PLATFORM)
+#include "WebEventConversion.h"
 #include <WebCore/FloatPoint.h>
 #include <WebCore/Scrollbar.h>
 #include <wpe/wpe-platform.h>
@@ -42,7 +43,7 @@ static WallTime wallTimeForEvent(WPEEvent* event)
     auto time = wpe_event_get_time(event);
     if (!time)
         return WallTime::now();
-    return MonotonicTime::fromRawSeconds(time / 1000.).approximateWallTime();
+    return wallTimeForEventTimeInMilliseconds(time);
 }
 
 static OptionSet<WebEventModifier> modifiersFromWPEModifiers(WPEModifiers wpeModifiers)
