@@ -409,14 +409,16 @@ void RenderBox::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle
     }
 }
 
-static bool gridStyleHasNotChanged(const RenderStyle& style, const RenderStyle* oldStyle)
+static bool hasEquivalentGridPositioningStyle(const RenderStyle& style, const RenderStyle& oldStyle)
 {
-    return (oldStyle->gridItemColumnStart() == style.gridItemColumnStart()
-        && oldStyle->gridItemColumnEnd() == style.gridItemColumnEnd()
-        && oldStyle->gridItemRowStart() == style.gridItemRowStart()
-        && oldStyle->gridItemRowEnd() == style.gridItemRowEnd()
-        && oldStyle->order() == style.order()
-        && oldStyle->hasOutOfFlowPosition() == style.hasOutOfFlowPosition());
+    return (oldStyle.gridItemColumnStart() == style.gridItemColumnStart()
+        && oldStyle.gridItemColumnEnd() == style.gridItemColumnEnd()
+        && oldStyle.gridItemRowStart() == style.gridItemRowStart()
+        && oldStyle.gridItemRowEnd() == style.gridItemRowEnd()
+        && oldStyle.order() == style.order()
+        && oldStyle.hasOutOfFlowPosition() == style.hasOutOfFlowPosition())
+        && (oldStyle.gridSubgridColumns() == style.gridSubgridColumns() || style.orderedNamedGridColumnLines().map.isEmpty())
+        && (oldStyle.gridSubgridRows() == style.gridSubgridRows() || style.orderedNamedGridRowLines().map.isEmpty());
 }
 
 void RenderBox::updateGridPositionAfterStyleChange(const RenderStyle& style, const RenderStyle* oldStyle)
@@ -429,7 +431,7 @@ void RenderBox::updateGridPositionAfterStyleChange(const RenderStyle& style, con
 
     // Positioned items don't participate on the layout of the grid,
     // so we don't need to mark the grid as dirty if they change positions.
-    if ((oldStyle->hasOutOfFlowPosition() && style.hasOutOfFlowPosition()) || gridStyleHasNotChanged(style, oldStyle))
+    if ((oldStyle->hasOutOfFlowPosition() && style.hasOutOfFlowPosition()) || hasEquivalentGridPositioningStyle(style, *oldStyle))
         return;
 
     // It should be possible to not dirty the grid in some cases (like moving an
