@@ -27,3 +27,4 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/selection/caret/editing-host-has-only-invisible-br.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/caret/empty-elements.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/caret/move-around-contenteditable-false.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/caret/move-around-generated-content.html

@@ -21,6 +21,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/dom/ranges/Range-collapse.html
 /LayoutTests/imported/w3c/web-platform-tests/dom/ranges/Range-commonAncestorContainer-2.html
 /LayoutTests/imported/w3c/web-platform-tests/dom/ranges/Range-commonAncestorContainer.html
+/LayoutTests/imported/w3c/web-platform-tests/dom/ranges/Range-compareBoundaryPoints-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/dom/ranges/Range-compareBoundaryPoints.html
 /LayoutTests/imported/w3c/web-platform-tests/dom/ranges/Range-comparePoint-2.html
 /LayoutTests/imported/w3c/web-platform-tests/dom/ranges/Range-comparePoint.html
@@ -28,6 +29,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/dom/ranges/Range-deleteContents.html
 /LayoutTests/imported/w3c/web-platform-tests/dom/ranges/Range-detach.html
 /LayoutTests/imported/w3c/web-platform-tests/dom/ranges/Range-extractContents.html
+/LayoutTests/imported/w3c/web-platform-tests/dom/ranges/Range-in-shadow-after-the-shadow-removed.html
 /LayoutTests/imported/w3c/web-platform-tests/dom/ranges/Range-insertNode.html
 /LayoutTests/imported/w3c/web-platform-tests/dom/ranges/Range-intersectsNode-2.html
 /LayoutTests/imported/w3c/web-platform-tests/dom/ranges/Range-intersectsNode-binding.html
