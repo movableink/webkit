@@ -83,9 +83,8 @@ void validateWasmValue(uint64_t wasmValue, Type expectedType)
                 HeapVerifier::validateCell(value.asCell());
         }
 
-
-        if (!isExternref(expectedType) && !isI31ref(expectedType))
-            ASSERT(value.isCell());
+        if (isI31ref(expectedType))
+            ASSERT(value.isInt32());
 
         if (isStructref(expectedType))
             ASSERT(jsDynamicCast<JSWebAssemblyStruct*>(value));
