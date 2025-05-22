@@ -1011,7 +1011,9 @@ bool JSArray::appendMemcpy(JSGlobalObject* globalObject, VM& vm, unsigned startI
         unsigned index = startIndex;
         for (EncodedJSValue encodedDouble : values)
             data[index++] = JSValue::decode(encodedDouble).asNumber();
-    } else {
+    } else if (type == ArrayWithInt32)
+        memcpy(butterfly()->contiguous().data() + startIndex, std::bit_cast<const WriteBarrier<Unknown>*>(values.data()), sizeof(JSValue) * values.size());
+    else {
         gcSafeMemcpy(butterfly()->contiguous().data() + startIndex, std::bit_cast<const WriteBarrier<Unknown>*>(values.data()), sizeof(JSValue) * values.size());
         vm.writeBarrier(this);
     }
@@ -1075,7 +1077,9 @@ bool JSArray::appendMemcpy(JSGlobalObject* globalObject, VM& vm, unsigned startI
     } else if (type == ArrayWithDouble) {
         // Double array storage do not need to be safe against GC since they are not scanned.
         memcpy(butterfly()->contiguousDouble().data() + startIndex, otherArray->butterfly()->contiguousDouble().data(), sizeof(JSValue) * otherLength);
-    } else {
+    } else if (type == ArrayWithInt32)
+        memcpy(butterfly()->contiguous().data() + startIndex, otherArray->butterfly()->contiguous().data(), sizeof(JSValue) * otherLength);
+    else {
         gcSafeMemcpy(butterfly()->contiguous().data() + startIndex, otherArray->butterfly()->contiguous().data(), sizeof(JSValue) * otherLength);
         vm.writeBarrier(this);
     }
