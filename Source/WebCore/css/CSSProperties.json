@@ -4310,7 +4310,8 @@
             }
         },
         "dynamic-range-limit": {
-            "animation-type": "see prose",
+            "animation-type": "not animatable",
+            "animation-type-comment": "FIXME: Specs say it's animatable, but dynamic-range-limit-mix() cannot be implemented yet; see webkit.org/b/293339",
             "inherited": true,
             "initial": "constrained-high",
             "values": [
@@ -4319,7 +4320,7 @@
                 "no-limit"
             ],
             "codegen-properties": {
-                "animation-wrapper": "StyleTypeWrapper",
+                "animation-wrapper-comment": "FIXME: Use StyleTypeWrapper when dynamic-range-limit-mix() is implemented; see webkit.org/b/293339",
                 "settings-flag": "supportHDRDisplayEnabled",
                 "style-converter": "DynamicRangeLimit",
                 "parser-function": "consumeDynamicRangeLimit",

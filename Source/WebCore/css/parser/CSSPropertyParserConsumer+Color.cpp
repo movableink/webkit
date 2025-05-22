@@ -1013,6 +1013,9 @@ std::optional<CSS::DynamicRangeLimit> consumeUnresolvedDynamicRangeLimit(CSSPars
         break;
     }
 
+    if (!propertyParserState.context.cssDynamicRangeLimitMixEnabled)
+        return { };
+
     if (range.peek().functionId() == CSSValueDynamicRangeLimitMix) {
         if (auto mix = consumeUnresolvedDynamicRangeLimitMix(range, propertyParserState))
             return CSS::DynamicRangeLimit { WTFMove(*mix) };
