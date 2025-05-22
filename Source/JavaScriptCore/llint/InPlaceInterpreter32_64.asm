@@ -224,9 +224,9 @@ macro ipintEntry()
     # Allocate space for locals and rethrow values
     loadi Wasm::IPIntCallee::m_localSizeToAlloc[ws0], argumINTTmp
     loadi Wasm::IPIntCallee::m_numRethrowSlotsToAlloc[ws0], argumINTEnd
-    mulq LocalSize, argumINTEnd
+    mulp LocalSize, argumINTEnd
     mulp LocalSize, argumINTTmp
-    subq argumINTEnd, sp
+    subp argumINTEnd, sp
     move sp, argumINTEnd
     subp argumINTTmp, sp
     move sp, argumINTDsp

@@ -28,6 +28,7 @@
 #include "Options.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/Platform.h>
 #include <wtf/PtrTag.h>
 
 namespace JSC {
