@@ -2,8 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <title>CSS Text level 4 Test: text-wrap-style should account for word-spacing</title>
+    <link rel="author" title="Yulun Wu">
+    <link rel="help" href="https://www.w3.org/TR/css-text-4/#word-spacing-property">
+    <link rel="help" href="https://www.w3.org/TR/css-text-4/#text-wrap-style">
+    <link rel="match" href="reference/text-wrap-balance-word-spacing-001-ref.html">
+    <link rel="stylesheet" type="text/css" href="/fonts/ahem.css"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
     <style>
       body {
         font-family: "Ahem";
@@ -12,17 +17,17 @@
       }
       .spacing-10-balance {
         word-spacing: 10px;
-        text-wrap: balance;
+        text-wrap-style: balance;
       }
       .spacing-30-balance {
         word-spacing: 30px;
-        text-wrap: balance;
+        text-wrap-style: balance;
       }
       .spacing-30 {
         word-spacing: 30px;
       }
       .balance-first-line-spacing-30 {
-        text-wrap: balance;
+        text-wrap-style: balance;
       }
       .balance-first-line-spacing-30::first-line {
         word-spacing: 30px;
