@@ -73,11 +73,11 @@ static std::optional<ShaderModuleParameters> findShaderModuleParameters(const WG
     return { { *wgsl, hints } };
 }
 
-id<MTLLibrary> ShaderModule::createLibrary(id<MTLDevice> device, const String& msl, String&& label, NSError** error, uint32_t appleGPUFamily)
+id<MTLLibrary> ShaderModule::createLibrary(id<MTLDevice> device, const String& msl, String&& label, NSError** error, WGSL::DeviceState&& deviceState)
 {
     static bool requireSafeMath = false;
     auto options = [MTLCompileOptions new];
-    options.preprocessorMacros = @{ @"__wgslMetalAppleGPUFamily" : [NSString stringWithFormat:@"%u", appleGPUFamily] };
+    options.preprocessorMacros = @{ @"__wgslMetalAppleGPUFamily" : [NSString stringWithFormat:@"%u", deviceState.appleGPUFamily] };
 #if ENABLE(WEBGPU_BY_DEFAULT)
     static auto mathMode = MTLMathModeRelaxed;
     static auto mathFunctions = MTLMathFloatingPointFunctionsFast;
@@ -132,12 +132,18 @@ static RefPtr<ShaderModule> earlyCompileShaderModule(Device& device, Variant<WGS
         return nullptr;
     auto& result = std::get<WGSL::PrepareResult>(prepareResult);
     HashMap<String, WGSL::ConstantValue> wgslConstantValues;
-    auto generationResult = WGSL::generate(shaderModule, result, wgslConstantValues, device.appleGPUFamily());
+    auto generationResult = WGSL::generate(shaderModule, result, wgslConstantValues, WGSL::DeviceState {
+        .appleGPUFamily = device.appleGPUFamily(),
+        .shaderValidationEnabled = device.isShaderValidationEnabled()
+    });
     if (std::holds_alternative<WGSL::Error>(generationResult))
         return nullptr;
     auto& msl = std::get<String>(generationResult);
     NSError *error = nil;
-    auto library = ShaderModule::createLibrary(device.device(), msl, WTFMove(label), &error, device.appleGPUFamily());
+    auto library = ShaderModule::createLibrary(device.device(), msl, WTFMove(label), &error, WGSL::DeviceState {
+        .appleGPUFamily = device.appleGPUFamily(),
+        .shaderValidationEnabled = device.isShaderValidationEnabled()
+    });
     if (!library)
         return nullptr;
     return ShaderModule::create(WTFMove(checkResult), WTFMove(hints), WTFMove(result.entryPoints), library, device);

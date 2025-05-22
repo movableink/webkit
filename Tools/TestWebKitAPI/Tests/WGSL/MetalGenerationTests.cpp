@@ -45,7 +45,10 @@ inline Expected<String, WGSL::FailedCheck> translate(const String& wgsl, const S
     if (auto* maybeError = std::get_if<WGSL::Error>(&prepareResult))
         return makeUnexpected(WGSL::FailedCheck { { *maybeError }, { } });
     HashMap<String, WGSL::ConstantValue> constantValues;
-    auto generationResult = WGSL::generate(ast, std::get<WGSL::PrepareResult>(prepareResult), constantValues);
+    auto generationResult = WGSL::generate(ast, std::get<WGSL::PrepareResult>(prepareResult), constantValues, WGSL::DeviceState {
+        .appleGPUFamily = 4,
+        .shaderValidationEnabled = false
+    });
     if (auto* maybeError = std::get_if<WGSL::Error>(&generationResult))
         return makeUnexpected(WGSL::FailedCheck { { *maybeError }, { } });
     return { WTFMove(std::get<String>(generationResult)) };
