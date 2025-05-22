@@ -145,17 +145,26 @@ bool TrackBuffer::reenqueueMediaForTime(const MediaTime& time, const MediaTime& 
 
     // Fill the decode queue with the non-displaying samples.
     for (auto iter = reverseLastSyncSampleIter; iter != reverseCurrentSampleIter; --iter) {
-        auto copy = Ref { iter->second }->createNonDisplayingCopy();
+        Ref copy = Ref { iter->second }->createNonDisplayingCopy();
         DecodeOrderSampleMap::KeyType decodeKey(copy->decodeTime(), copy->presentationTime());
         m_decodeQueue.insert(DecodeOrderSampleMap::MapType::value_type(decodeKey, WTFMove(copy)));
     }
 
     // Fill the decode queue with the remaining samples.
-    for (auto iter = currentSampleDTSIterator; iter != m_samples.decodeOrder().end(); ++iter)
-        m_decodeQueue.insert(*iter);
+    if (currentSampleDTSIterator != m_samples.decodeOrder().end())
+        m_decodeQueue.insert(*currentSampleDTSIterator);
+    for (auto iter = ++currentSampleDTSIterator; iter != m_samples.decodeOrder().end(); ++iter) {
+        Ref frame = iter->second;
+        if (frame->presentationTime() < time) {
+            Ref copy = frame->createNonDisplayingCopy();
+            DecodeOrderSampleMap::KeyType decodeKey(copy->decodeTime(), copy->presentationTime());
+            m_decodeQueue.insert(DecodeOrderSampleMap::MapType::value_type(decodeKey, WTFMove(copy)));
+        } else
+            m_decodeQueue.insert(*iter);
+    }
 
     m_needsReenqueueing = false;
-    
+
     return true;
 }
 
