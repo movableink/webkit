@@ -27,7 +27,9 @@
 #include "config.h"
 #include "GamepadProviderLibWPE.h"
 
-#if ENABLE(GAMEPAD) && USE(LIBWPE) && WPE_CHECK_VERSION(1, 13, 90)
+#if ENABLE(GAMEPAD) && USE(LIBWPE)
+
+#if WPE_CHECK_VERSION(1, 13, 90)
 
 #include "GamepadLibWPE.h"
 #include "GamepadProviderClient.h"
@@ -234,4 +236,5 @@ void GamepadProviderLibWPE::stopEffects(unsigned, const String&, CompletionHandl
 
 } // namespace WebCore
 
+#endif // ENABLE(GAMEPAD) && USE(LIBWPE) && WPE_CHECK_VERSION(1, 13, 90)
 #endif // ENABLE(GAMEPAD) && USE(LIBWPE) && WPE_CHECK_VERSION(1, 13, 90)

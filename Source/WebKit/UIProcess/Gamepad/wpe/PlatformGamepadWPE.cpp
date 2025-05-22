@@ -26,7 +26,7 @@
 #include "config.h"
 #include "PlatformGamepadWPE.h"
 
-#if ENABLE(WPE_PLATFORM)
+#if ENABLE(GAMEPAD) && ENABLE(WPE_PLATFORM)
 #include <wpe/wpe-platform.h>
 
 namespace WebKit {
@@ -78,4 +78,4 @@ void PlatformGamepadWPE::axisEvent(size_t axis, double value)
 
 } // namespace WebKit
 
-#endif // ENABLE(WPE_PLATFORM)
+#endif // ENABLE(GAMEPAD) && ENABLE(WPE_PLATFORM)

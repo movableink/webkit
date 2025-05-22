@@ -26,7 +26,7 @@
 #include "config.h"
 #include "GamepadProviderWPE.h"
 
-#if ENABLE(WPE_PLATFORM)
+#if ENABLE(GAMEPAD) && ENABLE(WPE_PLATFORM)
 #include "PlatformGamepadWPE.h"
 #include <WebCore/GamepadProviderClient.h>
 #include <WebCore/NotImplemented.h>
@@ -181,4 +181,4 @@ void GamepadProviderWPE::notifyInput(PlatformGamepadWPE& gamepad, ShouldMakeGame
 
 } // namespace WebKit
 
-#endif // ENABLE(WPE_PLATFORM)
+#endif // ENABLE(GAMEPAD) && ENABLE(WPE_PLATFORM)

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WPE_PLATFORM)
+#if ENABLE(GAMEPAD) && ENABLE(WPE_PLATFORM)
 #include <WebCore/PlatformGamepad.h>
 #include <wtf/glib/GRefPtr.h>
 
@@ -52,4 +52,4 @@ private:
 
 } // namespace WebKit
 
-#endif // ENABLE(WPE_PLATFORM)
+#endif // ENABLE(GAMEPAD) && ENABLE(WPE_PLATFORM)
