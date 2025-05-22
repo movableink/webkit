@@ -231,6 +231,16 @@ void RenderTreeBuilder::destroy(RenderObject& renderer, CanCollapseAnonymousBloc
     };
     // FIXME: webkit.org/b/182909.
     tearDownSubTreeIfApplicable();
+
+    auto delayDestroyRendererIfApplicable = [&] {
+        CheckedRef rendererToDelete = *toDestroy;
+        if (rendererToDelete->view().layoutContext().addToDetachedRendererList(WTFMove(toDestroy))) {
+            rendererToDelete->willBeDestroyed();
+            rendererToDelete->setIsBeingDestroyed();
+            rendererToDelete->weakPtrFactory().revokeAll();
+        }
+    };
+    delayDestroyRendererIfApplicable();
 }
 
 void RenderTreeBuilder::attach(RenderElement& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)

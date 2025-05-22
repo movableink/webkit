@@ -5178,10 +5178,10 @@ void Page::performOpportunisticallyScheduledTasks(MonotonicTime deadline)
         options.add(JSC::VM::SchedulerOptions::HasImminentlyScheduledWork);
     commonVM().performOpportunisticallyScheduledTasks(deadline, options);
 
-    deleteRemovedNodes();
+    deleteRemovedNodesAndDetachedRenderers();
 }
 
-void Page::deleteRemovedNodes()
+void Page::deleteRemovedNodesAndDetachedRenderers()
 {
     RefPtr localMainFrame = dynamicDowncast<LocalFrame>(mainFrame());
     if (!localMainFrame)
@@ -5194,6 +5194,7 @@ void Page::deleteRemovedNodes()
         if (!document)
             return;
         document->asyncNodeDeletionQueue().deleteNodesNow();
+        document->view()->layoutContext().deleteDetachedRenderersNow();
     });
 }
 

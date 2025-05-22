@@ -118,6 +118,7 @@ class RenderObject : public CachedImageClient {
     friend class RenderElement;
     friend class RenderLayer;
     friend class RenderLayerScrollableArea;
+    friend class RenderTreeBuilder;
 public:
     enum class Type : uint8_t {
 #if ENABLE(ATTACHMENT_ELEMENT)

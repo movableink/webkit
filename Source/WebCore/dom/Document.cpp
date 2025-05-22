@@ -3486,6 +3486,10 @@ void Document::destroyRenderTree()
         // FIXME: This is a workaround for leftover content (see webkit.org/b/182547).
         while (m_renderView->firstChild())
             builder.destroy(*m_renderView->firstChild());
+
+        if (RefPtr view = this->view())
+            view->layoutContext().deleteDetachedRenderersNow();
+
         m_renderView->destroy();
     }
     m_renderView.release();

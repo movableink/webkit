@@ -29,6 +29,7 @@
 #include "RenderLayerModelObject.h"
 #include "Timer.h"
 #include <wtf/CheckedRef.h>
+#include <wtf/SegmentedVector.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
@@ -157,6 +158,9 @@ public:
     void startTrackingRenderLayerPositionUpdates() { m_renderLayerPositionUpdateCount = 0; }
     unsigned renderLayerPositionUpdateCount() const { return m_renderLayerPositionUpdateCount; }
 
+    bool addToDetachedRendererList(RenderPtr<RenderObject>&& renderer) const { return m_detachedRendererList.append(WTFMove(renderer)); }
+    void deleteDetachedRenderersNow() const { m_detachedRendererList.clear(); }
+
 private:
     friend class LayoutScope;
     friend class LayoutStateMaintainer;
@@ -260,6 +264,16 @@ private:
         bool operator==(const RepaintRectEnvironment&) const = default;
     };
     RepaintRectEnvironment m_lastRepaintRectEnvironment;
+
+    class DetachedRendererList {
+    public:
+        bool append(RenderPtr<RenderObject>&&);
+        void clear() { m_renderers.clear(); }
+
+    private:
+        SegmentedVector<std::unique_ptr<RenderObject>, 50> m_renderers;
+    };
+    mutable DetachedRendererList m_detachedRendererList;
 };
 
 } // namespace WebCore

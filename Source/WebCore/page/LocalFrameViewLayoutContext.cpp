@@ -753,6 +753,27 @@ void LocalFrameViewLayoutContext::popLayoutState()
     }
 }
 
+bool LocalFrameViewLayoutContext::DetachedRendererList::append(RenderPtr<RenderObject>&& detachedRenderer)
+{
+    ASSERT(!detachedRenderer->parent());
+    ASSERT(!detachedRenderer->beingDestroyed());
+
+    if (detachedRenderer->renderTreeBeingDestroyed())
+        return false;
+
+    if (is<RenderWidget>(detachedRenderer)) {
+        // FIXME: Cleanup RenderWidget's destruction process (ref vs. delete this. see RenderObject::destroy)
+        return false;
+    }
+
+    static constexpr int maximumNumberOfDetachedRenderers = 5000;
+    if (m_renderers.size() == maximumNumberOfDetachedRenderers)
+        clear();
+
+    m_renderers.append(detachedRenderer.release());
+    return true;
+}
+
 void LocalFrameViewLayoutContext::setBoxNeedsTransformUpdateAfterContainerLayout(RenderBox& box, RenderBlock& container)
 {
     auto it = m_containersWithDescendantsNeedingTransformUpdate.ensure(container, [] { return Vector<SingleThreadWeakPtr<RenderBox>>({ }); });
