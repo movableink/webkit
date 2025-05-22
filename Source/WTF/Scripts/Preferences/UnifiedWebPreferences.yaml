@@ -1118,6 +1118,20 @@ CSSColorLayersEnabled:
     WebCore:
       default: false
 
+CSSConstrainedDynamicRangeLimitEnabled:
+  type: bool
+  category: css
+  status: testable
+  humanReadableName: "CSS dynamic-range-limit: constrained-high"
+  humanReadableDescription: "Enable support for CSS dynamic-range-limit value constrained-high"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 CSSContainerProgressFunctionEnabled:
   type: bool
   category: css

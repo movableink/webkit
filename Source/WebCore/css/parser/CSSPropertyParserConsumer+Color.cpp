@@ -1004,6 +1004,8 @@ std::optional<CSS::DynamicRangeLimit> consumeUnresolvedDynamicRangeLimit(CSSPars
         range.consumeIncludingWhitespace();
         return CSS::DynamicRangeLimit { CSS::Keyword::Standard { } };
     case CSSValueConstrainedHigh:
+        if (!propertyParserState.context.cssConstrainedDynamicRangeLimitEnabled)
+            return { };
         range.consumeIncludingWhitespace();
         return CSS::DynamicRangeLimit { CSS::Keyword::ConstrainedHigh { } };
     case CSSValueNoLimit:
