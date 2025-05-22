@@ -132,7 +132,9 @@ OptionSet<FilterRenderingMode> FEColorMatrix::supportedFilterRenderingModes() co
     modes.add(FilterRenderingMode::Accelerated);
 #endif
 #if HAVE(CGSTYLE_COLORMATRIX_BLUR)
-    if (m_type == ColorMatrixType::FECOLORMATRIX_TYPE_MATRIX)
+    if (m_type == ColorMatrixType::FECOLORMATRIX_TYPE_MATRIX
+        || m_type == ColorMatrixType::FECOLORMATRIX_TYPE_SATURATE
+        || m_type == ColorMatrixType::FECOLORMATRIX_TYPE_HUEROTATE)
         modes.add(FilterRenderingMode::GraphicsContext);
 #endif
     return modes;
@@ -160,9 +162,25 @@ std::unique_ptr<FilterEffectApplier> FEColorMatrix::createSoftwareApplier() cons
 
 std::optional<GraphicsStyle> FEColorMatrix::createGraphicsStyle(GraphicsContext&, const Filter&) const
 {
-    std::array<float, 20> values;
-    std::copy_n(m_values.begin(), std::min<size_t>(m_values.size(), 20), values.begin());
-    return GraphicsColorMatrix { values };
+    switch (m_type) {
+    case ColorMatrixType::FECOLORMATRIX_TYPE_MATRIX: {
+        RELEASE_ASSERT(m_values.size() == 20);
+        GraphicsColorMatrix result;
+        std::copy_n(m_values.begin(), std::min<size_t>(m_values.size(), 20), result.values.begin());
+        return result;
+    }
+    case ColorMatrixType::FECOLORMATRIX_TYPE_SATURATE:
+        return GraphicsColorMatrix { ColorMatrix<5, 4>(saturationColorMatrix(m_values[0])).data() };
+
+    case ColorMatrixType::FECOLORMATRIX_TYPE_HUEROTATE:
+        return GraphicsColorMatrix { ColorMatrix<5, 4>(hueRotateColorMatrix(m_values[0])).data() };
+
+    default:
+        ASSERT_NOT_REACHED();
+        break;
+    }
+
+    return { };
 }
 
 static TextStream& operator<<(TextStream& ts, const ColorMatrixType& type)

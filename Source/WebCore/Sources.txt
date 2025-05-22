@@ -2611,6 +2611,7 @@ platform/graphics/filters/FilterFunction.cpp
 platform/graphics/filters/FilterImage.cpp
 platform/graphics/filters/FilterOperation.cpp
 platform/graphics/filters/FilterOperations.cpp
+platform/graphics/filters/FilterRenderingMode.cpp
 platform/graphics/filters/FilterResults.cpp
 platform/graphics/filters/PointLightSource.cpp
 platform/graphics/filters/SourceAlpha.cpp

@@ -35,6 +35,7 @@
 #include "GLContext.h"
 #include "ImageBuffer.h"
 #include "IntRect.h"
+#include "NativeImage.h"
 #include "NotImplemented.h"
 #include "PlatformDisplay.h"
 #include "ProcessCapabilities.h"

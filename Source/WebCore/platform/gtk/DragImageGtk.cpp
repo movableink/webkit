@@ -21,6 +21,7 @@
 
 #include "Element.h"
 #include "Image.h"
+#include "NativeImage.h"
 #include "TextFlags.h"
 #include "TextIndicator.h"
 #include <cairo.h>

@@ -1,5 +1,6 @@
 img {
     margin: 10px;
+    image-rendering: crisp-edges;
 }
 
 svg {
