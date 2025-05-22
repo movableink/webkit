@@ -11749,7 +11749,7 @@ IGNORE_CLANG_WARNINGS_END
 
     void compileGetGlobalObject()
     {
-        LValue structure = loadStructure(lowCell(m_node->child1()));
+        LValue structure = loadStructure(lowObject(m_node->child1()));
         setJSValue(m_out.loadPtr(structure, m_heaps.Structure_globalObject));
     }
 

@@ -7966,9 +7966,15 @@ void SpeculativeJIT::compileGetGlobalObject(Node* node)
 {
     SpeculateCellOperand object(this, node->child1());
     GPRTemporary result(this);
-    emitLoadStructure(vm(), object.gpr(), result.gpr());
-    loadPtr(Address(result.gpr(), Structure::globalObjectOffset()), result.gpr());
-    cellResult(result.gpr(), node);
+
+    GPRReg objectGPR = object.gpr();
+    GPRReg resultGPR = result.gpr();
+
+    speculateObject(node->child1(), objectGPR);
+
+    emitLoadStructure(vm(), objectGPR, resultGPR);
+    loadPtr(Address(resultGPR, Structure::globalObjectOffset()), resultGPR);
+    cellResult(resultGPR, node);
 }
 
 void SpeculativeJIT::compileGetGlobalThis(Node* node)
