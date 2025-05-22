@@ -1,0 +1,23 @@
+
+FAIL <img sizes="auto"> - contain assert_equals: expected "size" but got "none"
+FAIL <img sizes="auto"> - contain-intrinsic-size assert_equals: expected "300px 150px" but got "none"
+FAIL <img sizes="auto" width="10" height="20"> - contain assert_equals: expected "size" but got "none"
+FAIL <img sizes="auto" width="10" height="20"> - contain-intrinsic-size assert_equals: expected "300px 150px" but got "none"
+FAIL <img sizes="AuTo"> - contain assert_equals: expected "size" but got "none"
+FAIL <img sizes="AuTo"> - contain-intrinsic-size assert_equals: expected "300px 150px" but got "none"
+FAIL <img sizes="auto,xyz"> - contain assert_equals: expected "size" but got "none"
+FAIL <img sizes="auto,xyz"> - contain-intrinsic-size assert_equals: expected "300px 150px" but got "none"
+FAIL <img sizes="AuTo,xyz"> - contain assert_equals: expected "size" but got "none"
+FAIL <img sizes="AuTo,xyz"> - contain-intrinsic-size assert_equals: expected "300px 150px" but got "none"
+PASS <img> - contain
+PASS <img> - contain-intrinsic-size
+PASS <img sizes=""> - contain
+PASS <img sizes=""> - contain-intrinsic-size
+PASS <img sizes="xyz,auto"> - contain
+PASS <img sizes="xyz,auto"> - contain-intrinsic-size
+PASS <img> (in <picture>) - contain
+PASS <img> (in <picture>) - contain-intrinsic-size
+FAIL <img sizes="auto" class="test-important"> - contain assert_equals: expected "size" but got "style"
+PASS <img sizes="auto" class="test-important"> - contain-intrinsic-size
+
+

@@ -16,6 +16,8 @@ None
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/attributes-for-embedded-content-and-images/align.html
 /LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/attributes-for-embedded-content-and-images/canvas-aspect-ratio.html
+/LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/attributes-for-embedded-content-and-images/canvas-dimension-attributes-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/attributes-for-embedded-content-and-images/canvas-dimension-attributes.html
 /LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/attributes-for-embedded-content-and-images/content-aspect-ratio.html
 /LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/attributes-for-embedded-content-and-images/embedded-and-images-presentational-hints-ascii-case-insensitive.html
 /LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/attributes-for-embedded-content-and-images/img-alt-crash-001.html
@@ -53,3 +55,4 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/attributes-for-embedded-content-and-images/object_border_pixel.xhtml
 /LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/attributes-for-embedded-content-and-images/picture-aspect-ratio.html
 /LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/attributes-for-embedded-content-and-images/video-aspect-ratio.html
+/LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/attributes-for-embedded-content-and-images/video-intrinsic-width-height.html
