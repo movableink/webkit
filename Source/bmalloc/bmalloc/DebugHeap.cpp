@@ -221,7 +221,7 @@ bool pas_debug_heap_is_enabled(pas_heap_config_kind kind)
 void* pas_debug_heap_malloc(size_t size)
 {
     auto debugHeap = DebugHeap::getExisting();
-    PAS_PROFILE(DEBUG_HEAP_ALLOCATION, debugHeap, size, 1, pas_non_compact_allocation_mode);
+    PAS_PROFILE(DEBUG_HEAP_ALLOCATION, debugHeap, size, 0, pas_non_compact_allocation_mode);
     return debugHeap->malloc(size, FailureAction::ReturnNull);
 }
 
@@ -242,7 +242,7 @@ void* pas_debug_heap_realloc(void* ptr, size_t size)
 void* pas_debug_heap_malloc_compact(size_t size)
 {
     auto debugHeap = DebugHeap::getExisting();
-    PAS_PROFILE(DEBUG_HEAP_ALLOCATION, debugHeap, size, 1, pas_always_compact_allocation_mode);
+    PAS_PROFILE(DEBUG_HEAP_ALLOCATION, debugHeap, size, 0, pas_always_compact_allocation_mode);
     return debugHeap->malloc(size, FailureAction::ReturnNull);
 }
 
