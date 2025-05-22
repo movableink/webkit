@@ -1502,7 +1502,8 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::truncSaturated(Ext1OpType truncationOp,
 PartialResult WARN_UNUSED_RETURN BBQJIT::addRefI31(ExpressionType value, ExpressionType& result)
 {
     if (value.isConst()) {
-        result = Value::fromI64((((value.asI32() & 0x7fffffff) << 1) >> 1) | JSValue::NumberTag);
+        uint32_t lo32 = (value.asI32() << 1) >> 1;
+        result = Value::fromI64(lo32 | JSValue::NumberTag);
         LOG_INSTRUCTION("RefI31", value, RESULT(result));
         return { };
     }

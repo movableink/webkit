@@ -3621,7 +3621,7 @@ ipintOp(_ref_i31, macro()
     lshifti 0x1, t0
     rshifti 0x1, t0
     orq TagNumber, t0
-    pushInt32(t0)
+    pushQuad(t0)
 
     advancePC(2)
     nextIPIntInstruction()
