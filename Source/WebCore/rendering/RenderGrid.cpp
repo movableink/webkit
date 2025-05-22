@@ -289,14 +289,14 @@ static void cacheBaselineAlignedGridItems(const RenderGrid& grid, GridTrackSizin
             if (inner && inner->isSubgridInParentDirection(GridTrackSizingDirection::ForRows))
                 innerAlignmentContextTypes.add(GridLayoutFunctions::isOrthogonalGridItem(grid, gridItem) ? GridTrackSizingDirection::ForColumns : GridTrackSizingDirection::ForRows);
             else if (grid.isBaselineAlignmentForGridItem(gridItem, GridTrackSizingDirection::ForRows))
-                algorithm.cacheBaselineAlignedItem(gridItem, gridAxisForDirection(GridTrackSizingDirection::ForRows), cachingRowSubgridsForRootGrid);
+                algorithm.cacheBaselineAlignedItem(gridItem, GridTrackSizingDirection::ForRows, cachingRowSubgridsForRootGrid);
         }
 
         if (alignmentContextTypes.contains(GridTrackSizingDirection::ForColumns)) {
             if (inner && inner->isSubgridInParentDirection(GridTrackSizingDirection::ForColumns))
                 innerAlignmentContextTypes.add(GridLayoutFunctions::isOrthogonalGridItem(grid, gridItem) ? GridTrackSizingDirection::ForRows : GridTrackSizingDirection::ForColumns);
             else if (grid.isBaselineAlignmentForGridItem(gridItem, GridTrackSizingDirection::ForColumns))
-                algorithm.cacheBaselineAlignedItem(gridItem, gridAxisForDirection(GridTrackSizingDirection::ForColumns), cachingRowSubgridsForRootGrid);
+                algorithm.cacheBaselineAlignedItem(gridItem, GridTrackSizingDirection::ForColumns, cachingRowSubgridsForRootGrid);
         }
 
         if (inner && cachingRowSubgridsForRootGrid)
@@ -769,7 +769,7 @@ void RenderGrid::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, Layo
     performPreLayoutForGridItems(algorithm, ShouldUpdateGridAreaLogicalSize::No);
 
     if (m_baselineItemsCached)
-        algorithm.copyBaselineItemsCache(m_trackSizingAlgorithm, gridAxisForDirection(GridTrackSizingDirection::ForColumns));
+        algorithm.copyBaselineItemsCache(m_trackSizingAlgorithm, GridTrackSizingDirection::ForColumns);
     else {
         auto emptyCallback = [](RenderBox*) { };
         cacheBaselineAlignedGridItems(*this, algorithm, { GridTrackSizingDirection::ForColumns }, emptyCallback, !isSubgridRows());
@@ -2058,7 +2058,7 @@ LayoutUnit RenderGrid::columnAxisBaselineOffsetForGridItem(const RenderBox& grid
             return outer->rowAxisBaselineOffsetForGridItem(gridItem);
         return outer->columnAxisBaselineOffsetForGridItem(gridItem);
     }
-    return m_trackSizingAlgorithm.baselineOffsetForGridItem(gridItem, gridAxisForDirection(GridTrackSizingDirection::ForRows));
+    return m_trackSizingAlgorithm.baselineOffsetForGridItem(gridItem, GridTrackSizingDirection::ForRows);
 }
 
 LayoutUnit RenderGrid::rowAxisBaselineOffsetForGridItem(const RenderBox& gridItem) const
@@ -2074,7 +2074,7 @@ LayoutUnit RenderGrid::rowAxisBaselineOffsetForGridItem(const RenderBox& gridIte
             return outer->columnAxisBaselineOffsetForGridItem(gridItem);
         return outer->rowAxisBaselineOffsetForGridItem(gridItem);
     }
-    return m_trackSizingAlgorithm.baselineOffsetForGridItem(gridItem, gridAxisForDirection(GridTrackSizingDirection::ForColumns));
+    return m_trackSizingAlgorithm.baselineOffsetForGridItem(gridItem, GridTrackSizingDirection::ForColumns);
 }
 
 GridAxisPosition RenderGrid::columnAxisPositionForGridItem(const RenderBox& gridItem) const

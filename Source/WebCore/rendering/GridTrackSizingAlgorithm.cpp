@@ -889,13 +889,12 @@ bool GridTrackSizingAlgorithm::isRelativeGridLengthAsAuto(const GridLength& leng
     return length.isPercentage() && !availableSpace(direction);
 }
 
-bool GridTrackSizingAlgorithm::isIntrinsicSizedGridArea(const RenderBox& gridItem, GridAxis axis) const
+bool GridTrackSizingAlgorithm::isIntrinsicSizedGridArea(const RenderBox& gridItem, GridTrackSizingDirection gridAreaDirection) const
 {
     ASSERT(wasSetup());
-    GridTrackSizingDirection direction = GridLayoutFunctions::gridDirectionForAxis(axis);
-    const GridSpan& span = m_renderGrid->gridSpanForGridItem(gridItem, direction);
+    const GridSpan& span = m_renderGrid->gridSpanForGridItem(gridItem, gridAreaDirection);
     for (auto trackPosition : span) {
-        const auto& trackSize = rawGridTrackSize(direction, trackPosition);
+        const auto& trackSize = rawGridTrackSize(gridAreaDirection, trackPosition);
         // We consider fr units as 'auto' for the min sizing function.
         // FIXME(jfernandez): https://github.com/w3c/csswg-drafts/issues/2611
         //
@@ -904,7 +903,7 @@ bool GridTrackSizingAlgorithm::isIntrinsicSizedGridArea(const RenderBox& gridIte
         // constraints depending on the phase we evaluate the item's
         // baseline participation.
         // FIXME(jfernandez): https://github.com/w3c/csswg-drafts/issues/3046
-        if (trackSize.isContentSized() || trackSize.isFitContent() || trackSize.minTrackBreadth().isFlex() || (trackSize.maxTrackBreadth().isFlex() && !availableSpace(direction)))
+        if (trackSize.isContentSized() || trackSize.isFitContent() || trackSize.minTrackBreadth().isFlex() || (trackSize.maxTrackBreadth().isFlex() && !availableSpace(gridAreaDirection)))
             return true;
     }
     return false;
@@ -1077,7 +1076,7 @@ LayoutUnit GridTrackSizingAlgorithmStrategy::logicalHeightForGridItem(RenderBox&
 
     gridItem.layoutIfNeeded();
 
-    auto gridItemLogicalHeight = gridItem.logicalHeight() + GridLayoutFunctions::marginLogicalSizeForGridItem(*renderGrid(), gridItemBlockDirection, gridItem) + m_algorithm.baselineOffsetForGridItem(gridItem, GridLayoutFunctions::gridAxisForDirection(direction()));
+    auto gridItemLogicalHeight = gridItem.logicalHeight() + GridLayoutFunctions::marginLogicalSizeForGridItem(*renderGrid(), gridItemBlockDirection, gridItem) + m_algorithm.baselineOffsetForGridItem(gridItem, direction());
     if (intrinsicLogicalHeightsForRowSizingFirstPass && sizingState() == GridTrackSizingAlgorithm::SizingState::RowSizingFirstIteration)
         intrinsicLogicalHeightsForRowSizingFirstPass->setSizeForGridItem(gridItem, gridItemLogicalHeight);
 
@@ -1122,7 +1121,7 @@ LayoutUnit GridTrackSizingAlgorithmStrategy::minContentContributionForGridItem(R
             return 0_lu;
         }();
 
-        return std::max(minContentLogicalWidth, minLogicalWidth) + GridLayoutFunctions::marginLogicalSizeForGridItem(*renderGrid(), gridItemInlineDirection, gridItem) + m_algorithm.baselineOffsetForGridItem(gridItem, GridLayoutFunctions::gridAxisForDirection(direction()));
+        return std::max(minContentLogicalWidth, minLogicalWidth) + GridLayoutFunctions::marginLogicalSizeForGridItem(*renderGrid(), gridItemInlineDirection, gridItem) + m_algorithm.baselineOffsetForGridItem(gridItem, direction());
     }
 
     if (updateOverridingContainingBlockContentSizeForGridItem(gridItem, gridItemInlineDirection)) {
@@ -1151,7 +1150,7 @@ LayoutUnit GridTrackSizingAlgorithmStrategy::maxContentContributionForGridItem(R
         // See http://lists.w3.org/Archives/Public/www-style/2013Jan/0245.html
         if (gridItem.needsPreferredWidthsRecalculation())
             gridItem.setPreferredLogicalWidthsDirty(true);
-        return gridItem.maxPreferredLogicalWidth() + GridLayoutFunctions::marginLogicalSizeForGridItem(*renderGrid(), gridItemInlineDirection, gridItem) + m_algorithm.baselineOffsetForGridItem(gridItem, GridLayoutFunctions::gridAxisForDirection(direction()));
+        return gridItem.maxPreferredLogicalWidth() + GridLayoutFunctions::marginLogicalSizeForGridItem(*renderGrid(), gridItemInlineDirection, gridItem) + m_algorithm.baselineOffsetForGridItem(gridItem, direction());
     }
 
     if (updateOverridingContainingBlockContentSizeForGridItem(gridItem, gridItemInlineDirection)) {
@@ -1174,7 +1173,7 @@ LayoutUnit GridTrackSizingAlgorithmStrategy::minContributionForGridItem(RenderBo
 
     const Length& gridItemMinSize = isRowAxis ? gridItem.style().logicalMinWidth() : gridItem.style().logicalMinHeight();
     bool overflowIsVisible = isRowAxis ? gridItem.effectiveOverflowInlineDirection() == Overflow::Visible : gridItem.effectiveOverflowBlockDirection() == Overflow::Visible;
-    LayoutUnit baselineShim = m_algorithm.baselineOffsetForGridItem(gridItem, GridLayoutFunctions::gridAxisForDirection(direction()));
+    LayoutUnit baselineShim = m_algorithm.baselineOffsetForGridItem(gridItem, direction());
 
     if (gridItemMinSize.isAuto()) {
         if (!overflowIsVisible)
@@ -1209,15 +1208,15 @@ LayoutUnit GridTrackSizingAlgorithmStrategy::minContributionForGridItem(RenderBo
     return minLogicalSizeForGridItem(gridItem, gridItemMinSize, gridAreaSize) + baselineShim;
 }
 
-bool GridTrackSizingAlgorithm::canParticipateInBaselineAlignment(const RenderBox& gridItem, GridAxis baselineAxis) const
+bool GridTrackSizingAlgorithm::canParticipateInBaselineAlignment(const RenderBox& gridItem, GridTrackSizingDirection alignmentContextType) const
 {
-    ASSERT(baselineAxis == GridAxis::GridColumnAxis ? m_columnBaselineItemsMap.contains(&gridItem) : m_rowBaselineItemsMap.contains(&gridItem));
+    ASSERT(alignmentContextType == GridTrackSizingDirection::ForRows ? m_baselineAlignmentItemsForRows.contains(&gridItem) : m_baselineAlignmentItemsForColumns.contains(&gridItem));
 
     // Baseline cyclic dependencies only happen with synthesized
     // baselines. These cases include orthogonal or empty grid items
     // and replaced elements.
-    bool isParallelToBaselineAxis = baselineAxis == GridAxis::GridColumnAxis ? !GridLayoutFunctions::isOrthogonalGridItem(*m_renderGrid, gridItem) : GridLayoutFunctions::isOrthogonalGridItem(*m_renderGrid, gridItem);
-    if (isParallelToBaselineAxis && gridItem.firstLineBaseline())
+    bool isParallelToAlignmentAxis = alignmentContextType == GridTrackSizingDirection::ForRows ? !GridLayoutFunctions::isOrthogonalGridItem(*m_renderGrid, gridItem) : GridLayoutFunctions::isOrthogonalGridItem(*m_renderGrid, gridItem);
+    if (isParallelToAlignmentAxis && gridItem.firstLineBaseline())
         return true;
 
     // FIXME: We don't currently allow items within subgrids that need to
@@ -1229,62 +1228,62 @@ bool GridTrackSizingAlgorithm::canParticipateInBaselineAlignment(const RenderBox
 
     // Baseline cyclic dependencies only happen in grid areas with
     // intrinsically-sized tracks.
-    if (!isIntrinsicSizedGridArea(gridItem, baselineAxis))
+    if (!isIntrinsicSizedGridArea(gridItem, alignmentContextType))
         return true;
 
-    return isParallelToBaselineAxis ? !gridItem.hasRelativeLogicalHeight() : !gridItem.hasRelativeLogicalWidth() && !gridItem.style().logicalWidth().isAuto();
+    return isParallelToAlignmentAxis ? !gridItem.hasRelativeLogicalHeight() : !gridItem.hasRelativeLogicalWidth() && !gridItem.style().logicalWidth().isAuto();
 }
 
-bool GridTrackSizingAlgorithm::participateInBaselineAlignment(const RenderBox& gridItem, GridAxis baselineAxis) const
+bool GridTrackSizingAlgorithm::participateInBaselineAlignment(const RenderBox& gridItem, GridTrackSizingDirection alignmentContextType) const
 {
-    return baselineAxis == GridAxis::GridColumnAxis ? m_columnBaselineItemsMap.get(&gridItem) : m_rowBaselineItemsMap.get(&gridItem);
+    return alignmentContextType == GridTrackSizingDirection::ForRows ? m_baselineAlignmentItemsForRows.get(&gridItem) : m_baselineAlignmentItemsForColumns.get(&gridItem);
 }
 
-void GridTrackSizingAlgorithm::updateBaselineAlignmentContext(const RenderBox& gridItem, GridAxis baselineAxis)
+void GridTrackSizingAlgorithm::updateBaselineAlignmentContext(const RenderBox& gridItem, GridTrackSizingDirection alignmentContextType)
 {
     ASSERT(wasSetup());
-    ASSERT(canParticipateInBaselineAlignment(gridItem, baselineAxis));
+    ASSERT(canParticipateInBaselineAlignment(gridItem, alignmentContextType));
 
-    auto align = m_renderGrid->selfAlignmentForGridItem(gridDirectionForAxis(baselineAxis), gridItem).position();
-    const auto& span = m_renderGrid->gridSpanForGridItem(gridItem, GridLayoutFunctions::gridDirectionForAxis(baselineAxis));
+    auto align = m_renderGrid->selfAlignmentForGridItem(alignmentContextType, gridItem).position();
+    const auto& span = m_renderGrid->gridSpanForGridItem(gridItem, alignmentContextType);
     auto alignmentContext = GridLayoutFunctions::alignmentContextForBaselineAlignment(span, align);
-    m_baselineAlignment.updateBaselineAlignmentContext(align, alignmentContext, gridItem, baselineAxis);
+    m_baselineAlignment.updateBaselineAlignmentContext(align, alignmentContext, gridItem, GridLayoutFunctions::gridAxisForDirection(alignmentContextType));
 }
 
-LayoutUnit GridTrackSizingAlgorithm::baselineOffsetForGridItem(const RenderBox& gridItem, GridAxis baselineAxis) const
+LayoutUnit GridTrackSizingAlgorithm::baselineOffsetForGridItem(const RenderBox& gridItem, GridTrackSizingDirection alignmentContextType) const
 {
     // If we haven't yet initialized this axis (which can be the case if we're doing
     // prelayout of a subgrid), then we can't know the baseline offset.
-    if (tracks(GridLayoutFunctions::gridDirectionForAxis(baselineAxis)).isEmpty())
+    if (tracks(alignmentContextType).isEmpty())
         return LayoutUnit();
 
-    if (!participateInBaselineAlignment(gridItem, baselineAxis))
+    if (!participateInBaselineAlignment(gridItem, alignmentContextType))
         return LayoutUnit();
 
-    ASSERT_IMPLIES(baselineAxis == GridAxis::GridColumnAxis, !m_renderGrid->isSubgridRows());
-    auto align = m_renderGrid->selfAlignmentForGridItem(gridDirectionForAxis(baselineAxis), gridItem).position();
-    const auto& span = m_renderGrid->gridSpanForGridItem(gridItem, GridLayoutFunctions::gridDirectionForAxis(baselineAxis));
+    ASSERT_IMPLIES(alignmentContextType == GridTrackSizingDirection::ForRows, !m_renderGrid->isSubgridRows());
+    auto align = m_renderGrid->selfAlignmentForGridItem(alignmentContextType, gridItem).position();
+    const auto& span = m_renderGrid->gridSpanForGridItem(gridItem, alignmentContextType);
     auto alignmentContext = GridLayoutFunctions::alignmentContextForBaselineAlignment(span, align);
-    return m_baselineAlignment.baselineOffsetForGridItem(align, alignmentContext, gridItem, baselineAxis);
+    return m_baselineAlignment.baselineOffsetForGridItem(align, alignmentContext, gridItem, GridLayoutFunctions::gridAxisForDirection(alignmentContextType));
 }
 
 void GridTrackSizingAlgorithm::clearBaselineItemsCache()
 {
-    m_columnBaselineItemsMap.clear();
-    m_rowBaselineItemsMap.clear();
+    m_baselineAlignmentItemsForRows.clear();
+    m_baselineAlignmentItemsForColumns.clear();
 }
 
-void GridTrackSizingAlgorithm::cacheBaselineAlignedItem(const RenderBox& item, GridAxis axis, bool cachingRowSubgridsForRootGrid)
+void GridTrackSizingAlgorithm::cacheBaselineAlignedItem(const RenderBox& item, GridTrackSizingDirection alignmentContextType, bool cachingRowSubgridsForRootGrid)
 {
-    ASSERT(downcast<RenderGrid>(item.parent())->isBaselineAlignmentForGridItem(item, gridDirectionForAxis(axis)));
+    ASSERT(downcast<RenderGrid>(item.parent())->isBaselineAlignmentForGridItem(item, alignmentContextType));
 
     if (GridLayoutFunctions::isOrthogonalParent(*m_renderGrid, *item.parent()))
-        axis = axis == GridAxis::GridColumnAxis ? GridAxis::GridRowAxis : GridAxis::GridColumnAxis;
+        alignmentContextType = alignmentContextType == GridTrackSizingDirection::ForRows ? GridTrackSizingDirection::ForColumns : GridTrackSizingDirection::ForRows;
 
-    if (axis == GridAxis::GridColumnAxis)
-        m_columnBaselineItemsMap.add(item, true);
+    if (alignmentContextType == GridTrackSizingDirection::ForRows)
+        m_baselineAlignmentItemsForRows.add(item, true);
     else
-        m_rowBaselineItemsMap.add(item, true);
+        m_baselineAlignmentItemsForColumns.add(item, true);
 
     const auto* gridItemParent = dynamicDowncast<RenderGrid>(item.parent());
     if (gridItemParent) {
@@ -1294,12 +1293,12 @@ void GridTrackSizingAlgorithm::cacheBaselineAlignedItem(const RenderBox& item, G
     }
 }
 
-void GridTrackSizingAlgorithm::copyBaselineItemsCache(const GridTrackSizingAlgorithm& source, GridAxis axis)
+void GridTrackSizingAlgorithm::copyBaselineItemsCache(const GridTrackSizingAlgorithm& source, GridTrackSizingDirection alignmentContextType)
 {
-    if (axis == GridAxis::GridColumnAxis)
-        m_columnBaselineItemsMap = source.m_columnBaselineItemsMap;
+    if (alignmentContextType == GridTrackSizingDirection::ForRows)
+        m_baselineAlignmentItemsForRows = source.m_baselineAlignmentItemsForRows;
     else
-        m_rowBaselineItemsMap = source.m_rowBaselineItemsMap;
+        m_baselineAlignmentItemsForColumns = source.m_baselineAlignmentItemsForColumns;
 }
 
 bool GridTrackSizingAlgorithmStrategy::updateOverridingContainingBlockContentSizeForGridItem(RenderBox& gridItem, GridTrackSizingDirection direction, std::optional<LayoutUnit> overrideSize) const
@@ -1607,7 +1606,7 @@ LayoutUnit DefiniteSizeStrategy::minContentContributionForGridItem(RenderBox& gr
     auto shouldClearOverridingContainingBlockContentSize = [&] {
         auto direction = this->direction();
 
-        if (!GridLayoutFunctions::isOrthogonalGridItem(*renderGrid(), gridItem) && direction == GridTrackSizingDirection::ForColumns && m_algorithm.isIntrinsicSizedGridArea(gridItem, GridAxis::GridRowAxis) && (gridItem.style().logicalWidth().isPercentOrCalculated() || hasRelativeMarginOrPaddingForGridItem(gridItem, direction)))
+        if (!GridLayoutFunctions::isOrthogonalGridItem(*renderGrid(), gridItem) && direction == GridTrackSizingDirection::ForColumns && m_algorithm.isIntrinsicSizedGridArea(gridItem, GridTrackSizingDirection::ForColumns) && (gridItem.style().logicalWidth().isPercentOrCalculated() || hasRelativeMarginOrPaddingForGridItem(gridItem, direction)))
             return true;
         return direction == gridItemInlineDirection && gridItem.needsLayout() && shouldClearOverridingContainingBlockContentSizeForGridItem(gridItem, GridTrackSizingDirection::ForColumns);
     }();
@@ -2055,17 +2054,17 @@ void GridTrackSizingAlgorithm::setup(GridTrackSizingDirection direction, unsigne
 
 void GridTrackSizingAlgorithm::computeBaselineAlignmentContext()
 {
-    GridAxis axis = GridLayoutFunctions::gridAxisForDirection(m_direction);
-    m_baselineAlignment.clear(axis);
+    auto alignmentContextType = m_direction;
+    m_baselineAlignment.clear(GridLayoutFunctions::gridAxisForDirection(alignmentContextType));
     m_baselineAlignment.setWritingMode(m_renderGrid->style().writingMode());
-    BaselineItemsCache& baselineItemsCache = axis == GridAxis::GridColumnAxis ? m_columnBaselineItemsMap : m_rowBaselineItemsMap;
+    BaselineItemsCache& baselineItemsCache = alignmentContextType == GridTrackSizingDirection::ForRows ? m_baselineAlignmentItemsForRows : m_baselineAlignmentItemsForColumns;
     BaselineItemsCache tmpBaselineItemsCache = baselineItemsCache;
     for (auto& gridItem : tmpBaselineItemsCache.keys()) {
         // FIXME (jfernandez): We may have to get rid of the baseline participation
         // flag (hence just using a HashSet) depending on the CSS WG resolution on
         // https://github.com/w3c/csswg-drafts/issues/3046
-        if (canParticipateInBaselineAlignment(gridItem, axis)) {
-            updateBaselineAlignmentContext(gridItem, axis);
+        if (canParticipateInBaselineAlignment(gridItem, alignmentContextType)) {
+            updateBaselineAlignmentContext(gridItem, alignmentContextType);
             baselineItemsCache.set(gridItem, true);
         } else
             baselineItemsCache.set(gridItem, false);
