@@ -304,7 +304,7 @@ DFABytecodeCompiler::JumpTable DFABytecodeCompiler::extractJumpTable(Vector<DFAB
         return range.destination;
     });
 
-    ranges.remove(firstRange, size);
+    ranges.removeAt(firstRange, size);
 
     return jumpTable;
 }

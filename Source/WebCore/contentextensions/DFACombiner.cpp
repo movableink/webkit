@@ -192,7 +192,7 @@ void DFACombiner::combineDFAs(unsigned minimumSize, NOESCAPE const Function<void
     for (unsigned i = m_dfas.size(); i--;) {
         if (m_dfas[i].graphSize() > minimumSize) {
             handler(WTFMove(m_dfas[i]));
-            m_dfas.remove(i);
+            m_dfas.removeAt(i);
         }
     }
 

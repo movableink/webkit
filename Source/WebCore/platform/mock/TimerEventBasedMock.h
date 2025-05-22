@@ -48,8 +48,7 @@ class TimerEventBasedMock {
 public:
     void removeEvent(TimerEvent& event)
     {
-        size_t pos = m_timerEvents.find(&event);
-        m_timerEvents.remove(pos);
+        m_timerEvents.removeFirst(&event);
     }
 
 protected:

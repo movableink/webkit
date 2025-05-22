@@ -570,7 +570,7 @@ void H2::Connection::receive(CompletionHandler<void(Frame&&)>&& completionHandle
             return;
         }
         ASSERT(!memcmp(m_receiveBuffer.data(), "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n", clientConnectionPrefaceLength));
-        m_receiveBuffer.remove(0, clientConnectionPrefaceLength);
+        m_receiveBuffer.removeAt(0, clientConnectionPrefaceLength);
         m_expectClientConnectionPreface = false;
         return receive(WTFMove(completionHandler));
     }
@@ -590,7 +590,7 @@ void H2::Connection::receive(CompletionHandler<void(Frame&&)>&& completionHandle
                 + (static_cast<uint32_t>(m_receiveBuffer[8]) << 0);
             Vector<uint8_t> payload;
             payload.append(m_receiveBuffer.subspan(frameHeaderLength, payloadLength));
-            m_receiveBuffer.remove(0, frameHeaderLength + payloadLength);
+            m_receiveBuffer.removeAt(0, frameHeaderLength + payloadLength);
             return completionHandler(Frame(type, flags, streamID, WTFMove(payload)));
         }
     }

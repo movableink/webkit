@@ -391,7 +391,7 @@ void ScreenCaptureKitSharingSessionManager::contentSharingPickerUpdatedFilterFor
     auto activeSource = m_activeSources[index];
     if (!activeSource->observer()) {
         RELEASE_LOG_ERROR(WebRTC, "ScreenCaptureKitSharingSessionManager::contentFilterWasUpdated - null session observer!");
-        m_activeSources.remove(index);
+        m_activeSources.removeAt(index);
         return;
     }
 
@@ -596,7 +596,7 @@ void ScreenCaptureKitSharingSessionManager::cleanupSessionSource(ScreenCaptureSe
         return;
     }
 
-    m_activeSources.remove(index);
+    m_activeSources.removeAt(index);
 
     if (!promptingInProgress())
         cancelPicking();

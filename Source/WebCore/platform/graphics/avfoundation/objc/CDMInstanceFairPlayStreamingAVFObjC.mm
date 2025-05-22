@@ -1235,7 +1235,7 @@ void CDMInstanceSessionFairPlayStreamingAVFObjC::didProvideRequests(Vector<Retai
     auto initDataType = initTypeForRequest(requests.first().get());
     if (initDataType != InitDataRegistry::cencName()) {
         didProvideRequest(requests.first().get());
-        requests.remove(0);
+        requests.removeAt(0);
 
         for (auto& request : requests)
             m_pendingRequests.append({ initDataType, { WTFMove(request) } });
@@ -1498,7 +1498,7 @@ void CDMInstanceSessionFairPlayStreamingAVFObjC::nextRequest()
         return;
 
     Request nextRequest = WTFMove(m_pendingRequests.first());
-    m_pendingRequests.remove(0);
+    m_pendingRequests.removeAt(0);
 
     if (nextRequest.requests.isEmpty())
         return;

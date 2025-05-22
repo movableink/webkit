@@ -837,7 +837,7 @@ bool InlineItemsBuilder::buildInlineItemListForTextFromBreakingPositionsCache(co
             ASSERT_NOT_REACHED();
             if (inlineItemList.size() > intialSize) {
                 // Revert.
-                !intialSize ? inlineItemList.clear() : inlineItemList.remove(intialSize, inlineItemList.size() - intialSize);
+                !intialSize ? inlineItemList.clear() : inlineItemList.removeAt(intialSize, inlineItemList.size() - intialSize);
             }
             return false;
         }

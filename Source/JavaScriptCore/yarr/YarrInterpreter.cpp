@@ -2480,7 +2480,7 @@ public:
         unsigned frameLocation = m_bodyDisjunction->terms[beginTerm].frameLocation;
 
         if (!m_bodyDisjunction->terms[beginTerm].alternative.next)
-            m_bodyDisjunction->terms.remove(beginTerm);
+            m_bodyDisjunction->terms.removeAt(beginTerm);
         else {
             while (m_bodyDisjunction->terms[beginTerm].alternative.next) {
                 beginTerm += m_bodyDisjunction->terms[beginTerm].alternative.next;

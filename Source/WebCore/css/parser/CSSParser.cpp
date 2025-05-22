@@ -201,7 +201,7 @@ bool CSSParser::parseDeclarationList(MutableStyleProperties& declaration, const 
     filterProperties(IsImportant::Yes, parser.topContext().m_parsedProperties, results, unusedEntries, seenProperties, seenCustomProperties);
     filterProperties(IsImportant::No, parser.topContext().m_parsedProperties, results, unusedEntries, seenProperties, seenCustomProperties);
     if (unusedEntries)
-        results.remove(0, unusedEntries);
+        results.removeAt(0, unusedEntries);
     return declaration.addParsedProperties(results);
 }
 

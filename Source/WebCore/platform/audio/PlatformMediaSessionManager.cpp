@@ -244,7 +244,7 @@ void PlatformMediaSessionManager::removeSession(PlatformMediaSessionInterface& s
     if (index == notFound)
         return;
 
-    m_sessions.remove(index);
+    m_sessions.removeAt(index);
 
     if (hasNoSession() && !activeAudioSessionRequired())
         maybeDeactivateAudioSession();
@@ -338,7 +338,7 @@ void PlatformMediaSessionManager::sessionWillEndPlayback(PlatformMediaSessionInt
     // last playing session, and re-inserting that pausing session at the
     // lastPlayingSessionIndex effectively places the pausing session immediately
     // after the last playing session.
-    m_sessions.remove(pausingSessionIndex);
+    m_sessions.removeAt(pausingSessionIndex);
     m_sessions.insert(lastPlayingSessionIndex, session);
 
     ALWAYS_LOG(LOGIDENTIFIER, "session moved from index ", pausingSessionIndex, " to ", lastPlayingSessionIndex);
@@ -372,7 +372,7 @@ void PlatformMediaSessionManager::setCurrentSession(PlatformMediaSessionInterfac
     if (!index || index == notFound)
         return;
 
-    m_sessions.remove(index);
+    m_sessions.removeAt(index);
     m_sessions.insert(0, session);
     
     ALWAYS_LOG(LOGIDENTIFIER, "session moved from index ", index, " to 0");

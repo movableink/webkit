@@ -400,7 +400,7 @@ void PlatformCALayerRemote::removeSublayer(PlatformCALayerRemote* layer)
 {
     size_t childIndex = m_children.find(layer);
     if (childIndex != notFound)
-        m_children.remove(childIndex);
+        m_children.removeAt(childIndex);
     layer->m_superlayer = nullptr;
     m_properties.notePropertiesChanged(LayerChange::ChildrenChanged);
 }
@@ -471,7 +471,7 @@ void PlatformCALayerRemote::adoptSublayers(PlatformCALayer& source)
         for (const auto& layer : *customLayers) {
             size_t layerIndex = layersToMove.find(layer);
             if (layerIndex != notFound)
-                layersToMove.remove(layerIndex);
+                layersToMove.removeAt(layerIndex);
         }
     }
 

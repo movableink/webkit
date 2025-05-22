@@ -45,7 +45,7 @@ public:
     bool isEmpty() const { return m_animations.isEmpty(); }
     
     void resize(size_t n) { m_animations.resize(n); }
-    void remove(size_t i) { m_animations.remove(i); }
+    void removeAt(size_t i) { m_animations.removeAt(i); }
     void append(Ref<Animation>&& animation) { m_animations.append(WTFMove(animation)); }
 
     Animation& animation(size_t i) LIFETIME_BOUND { return m_animations[i].get(); }

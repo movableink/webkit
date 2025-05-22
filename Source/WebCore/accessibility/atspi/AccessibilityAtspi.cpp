@@ -326,7 +326,7 @@ void AccessibilityAtspi::unregisterRoot(AccessibilityRootAtspi& rootObject)
         auto& pendingRootRegistration = m_pendingRootRegistrations[i];
         if (pendingRootRegistration.root.ptr() == &rootObject) {
             pendingRootRegistration.completionHandler({ });
-            m_pendingRootRegistrations.remove(i);
+            m_pendingRootRegistrations.removeAt(i);
             return;
         }
     }

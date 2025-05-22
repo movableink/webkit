@@ -1225,7 +1225,7 @@ TEST_F(WKContentRuleListStoreTest, Redirect)
     for (size_t i = 0; i < expectedRequestedURLs.size(); i++)
         EXPECT_WK_STREQ(expectedRequestedURLs[i], [[urls objectAtIndex:i] absoluteString]);
 
-    expectedRequestedURLs.remove(0);
+    expectedRequestedURLs.removeAt(0);
     expectedRequestedURLs[1] = "testscheme://testhost:123/2.txt"_s;
     checkURLs(urlsFromCallback, expectedRequestedURLs);
 }

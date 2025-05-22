@@ -961,7 +961,7 @@ void RenderBundleEncoder::endCurrentICB()
         recordedCommands.clear();
         m_icbDescriptor.commandTypes = 0;
     } else
-        recordedCommands.remove(0, lastIndexOfRecordedCommand);
+        recordedCommands.removeAt(0, lastIndexOfRecordedCommand);
 
     m_recordedCommands = std::exchange(recordedCommands, { });
     m_currentCommandIndex = commandCount - completedDraws;

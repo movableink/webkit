@@ -100,7 +100,7 @@ bool MessageParser::parse()
 
         m_listener(WTFMove(dataBuffer));
 
-        m_buffer.remove(0, messageSize);
+        m_buffer.removeAt(0, messageSize);
     }
 
     return true;

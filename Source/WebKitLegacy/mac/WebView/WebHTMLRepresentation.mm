@@ -389,7 +389,7 @@ static RegularExpression* regExpForLabels(NSArray *labels)
         if (cacheHit != NSNotFound) {
             // remove from old spot
             [regExpLabels.get() removeObjectAtIndex:cacheHit];
-            regExps.get().remove(cacheHit);
+            regExps.get().removeAt(cacheHit);
         }
         // add to start
         [regExpLabels.get() insertObject:labels atIndex:0];

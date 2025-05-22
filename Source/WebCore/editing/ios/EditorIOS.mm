@@ -218,7 +218,7 @@ void Editor::setDictationPhrasesAsChildOfElement(const Vector<Vector<String>>& d
         auto dictationPhraseLength = interpretations[0].length();
         if (interpretations.size() > 1) {
             auto alternatives = interpretations;
-            alternatives.remove(0);
+            alternatives.removeAt(0);
             addMarker(*textNode, previousDictationPhraseStart, dictationPhraseLength, DocumentMarkerType::DictationPhraseWithAlternatives, WTFMove(alternatives));
         }
         previousDictationPhraseStart += dictationPhraseLength;

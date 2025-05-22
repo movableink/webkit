@@ -231,7 +231,7 @@ auto StreamingParser::consume(std::span<const uint8_t> bytes, size_t& offsetInBy
 
     if (m_remaining.size() > requiredSize) {
         auto result = m_remaining.subvector(0, requiredSize);
-        m_remaining.remove(0, requiredSize);
+        m_remaining.removeAt(0, requiredSize);
         m_nextOffset += requiredSize;
         return result;
     }
@@ -278,7 +278,7 @@ auto StreamingParser::consumeVarUInt32(std::span<const uint8_t> bytes, size_t& o
     if (!WTF::LEBDecoder::decodeUInt32(m_remaining, offset, result))
         return makeUnexpected(State::FatalError);
     size_t consumedSize = offset;
-    m_remaining.remove(0, consumedSize);
+    m_remaining.removeAt(0, consumedSize);
     m_nextOffset += consumedSize;
     return result;
 }

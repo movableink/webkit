@@ -160,7 +160,7 @@ private:
         if (iter == m_unused.end())
             return TextBreakIterator(string, priorContext, mode, contentAnalysis, locale);
         auto result = WTFMove(*iter);
-        m_unused.remove(iter - m_unused.begin());
+        m_unused.removeAt(iter - m_unused.begin());
         result.setText(string, priorContext);
         return result;
     }
@@ -170,7 +170,7 @@ private:
         ASSERT(isMainThread());
         m_unused.append(WTFMove(iterator));
         if (m_unused.size() > capacity)
-            m_unused.remove(0);
+            m_unused.removeAt(0);
     }
 
     TextBreakIteratorCache() = default;

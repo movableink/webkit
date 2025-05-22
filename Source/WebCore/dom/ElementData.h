@@ -170,7 +170,7 @@ public:
 
     // These functions do no error/duplicate checking.
     void addAttribute(const QualifiedName&, const AtomString&);
-    void removeAttribute(unsigned index);
+    void removeAttributeAt(unsigned index);
 
     Attribute& attributeAt(unsigned index);
     Attribute* findAttributeByName(const QualifiedName&);
@@ -283,9 +283,9 @@ inline void UniqueElementData::addAttribute(const QualifiedName& attributeName, 
     m_attributeVector.append(Attribute(attributeName, value));
 }
 
-inline void UniqueElementData::removeAttribute(unsigned index)
+inline void UniqueElementData::removeAttributeAt(unsigned index)
 {
-    m_attributeVector.remove(index);
+    m_attributeVector.removeAt(index);
 }
 
 inline Attribute& UniqueElementData::attributeAt(unsigned index)

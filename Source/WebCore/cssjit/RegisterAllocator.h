@@ -130,7 +130,7 @@ public:
         ASSERT(m_allocatedRegisters.contains(registerID));
         // Most allocation/deallocation happen in stack-like order. In the common case, this
         // just removes the last item.
-        m_allocatedRegisters.remove(m_allocatedRegisters.reverseFind(registerID));
+        m_allocatedRegisters.removeLast(registerID);
         for (auto unallocatedRegister : m_registers)
             RELEASE_ASSERT(unallocatedRegister != registerID);
         m_registers.append(registerID);

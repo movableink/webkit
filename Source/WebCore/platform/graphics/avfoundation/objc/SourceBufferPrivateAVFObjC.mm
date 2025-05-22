@@ -817,7 +817,7 @@ void SourceBufferPrivateAVFObjC::registerForErrorNotifications(SourceBufferPriva
 void SourceBufferPrivateAVFObjC::unregisterForErrorNotifications(SourceBufferPrivateAVFObjCErrorClient* client)
 {
     ASSERT(m_errorClients.contains(client));
-    m_errorClients.remove(m_errorClients.find(client));
+    m_errorClients.removeFirst(client);
 }
 
 void SourceBufferPrivateAVFObjC::videoRendererDidReceiveError(WebSampleBufferVideoRendering *renderer, NSError *error)

@@ -606,7 +606,7 @@ void HTMLFormElement::unregisterFormListedElement(FormListedElement& element)
     if (index < m_listedElementsAfterIndex)
         --m_listedElementsAfterIndex;
     removeFromPastNamesMap(element);
-    m_listedElements.remove(index);
+    m_listedElements.removeAt(index);
 
     if (auto* nodeLists = this->nodeLists())
         nodeLists->invalidateCaches();

@@ -102,7 +102,7 @@ void CDMSessionMediaSourceAVFObjC::removeSourceBuffer(SourceBufferPrivateAVFObjC
     ASSERT(sourceBuffer);
 
     sourceBuffer->unregisterForErrorNotifications(this);
-    m_sourceBuffers.remove(m_sourceBuffers.find(sourceBuffer));
+    m_sourceBuffers.removeFirst(sourceBuffer);
 }
 
 String CDMSessionMediaSourceAVFObjC::storagePath() const

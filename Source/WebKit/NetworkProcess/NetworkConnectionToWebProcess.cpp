@@ -1408,7 +1408,7 @@ void NetworkConnectionToWebProcess::stopTrackingResourceLoad(WebCore::ResourceLo
         return;
 
     m_networkActivityTrackers[itemIndex].networkActivity.complete(code);
-    m_networkActivityTrackers.remove(itemIndex);
+    m_networkActivityTrackers.removeAt(itemIndex);
 }
 
 void NetworkConnectionToWebProcess::stopAllNetworkActivityTracking()

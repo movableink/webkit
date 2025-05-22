@@ -158,7 +158,7 @@ PasteboardCustomData::Entry& PasteboardCustomData::addOrMoveEntryToEnd(const Str
     });
     auto entry = index == notFound ? Entry(type) : m_data[index];
     if (index != notFound)
-        m_data.remove(index);
+        m_data.removeAt(index);
     m_data.append(WTFMove(entry));
     return m_data.last();
 }

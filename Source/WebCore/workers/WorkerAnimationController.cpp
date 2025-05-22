@@ -103,7 +103,7 @@ void WorkerAnimationController::cancelAnimationFrame(CallbackId callbackId)
         auto& callback = m_animationCallbacks[i];
         if (callback->m_id == callbackId) {
             callback->m_firedOrCancelled = true;
-            m_animationCallbacks.remove(i);
+            m_animationCallbacks.removeAt(i);
             InspectorInstrumentation::didCancelAnimationFrame(m_workerGlobalScope, callbackId);
             return;
         }

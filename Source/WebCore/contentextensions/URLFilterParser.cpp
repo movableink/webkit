@@ -334,7 +334,7 @@ private:
             bool isAfterDotStar = false;
             while (termIndex < m_sunkTerms.size()) {
                 if (isAfterDotStar && m_sunkTerms[termIndex].isKnownToMatchAnyString()) {
-                    m_sunkTerms.remove(termIndex);
+                    m_sunkTerms.removeAt(termIndex);
                     continue;
                 }
                 isAfterDotStar = false;

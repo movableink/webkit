@@ -72,14 +72,14 @@ static void removeNonEmptyDirectory(const char* directoryPath)
 
 static void dbusConnectionClosed(GDBusConnection* connection)
 {
-    auto it = Test::s_dbusConnections.find(connection);
-    g_assert(it != notFound);
+    auto index = Test::s_dbusConnections.find(connection);
+    g_assert(index != notFound);
 
     for (auto it : Test::s_dbusConnectionPageMap) {
         if (it.value == connection)
             it.value = nullptr;
     }
-    Test::s_dbusConnections.remove(it);
+    Test::s_dbusConnections.removeAt(index);
 }
 
 static gboolean dbusServerConnection(GDBusServer* server, GDBusConnection* connection)

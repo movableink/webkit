@@ -3842,7 +3842,7 @@ void Element::removeAttributeInternal(unsigned index, InSynchronizationOfLazyAtt
         detachAttrNodeFromElementWithValue(attrNode.get(), elementData.attributeAt(index).value());
 
     if (inSynchronizationOfLazyAttribute == InSynchronizationOfLazyAttribute::Yes) {
-        elementData.removeAttribute(index);
+        elementData.removeAttributeAt(index);
         return;
     }
 
@@ -3850,7 +3850,7 @@ void Element::removeAttributeInternal(unsigned index, InSynchronizationOfLazyAtt
     willModifyAttribute(name, valueBeingRemoved, nullAtom());
     {
         Style::AttributeChangeInvalidation styleInvalidation(*this, name, valueBeingRemoved, nullAtom());
-        elementData.removeAttribute(index);
+        elementData.removeAttributeAt(index);
     }
 
     didRemoveAttribute(name, valueBeingRemoved);

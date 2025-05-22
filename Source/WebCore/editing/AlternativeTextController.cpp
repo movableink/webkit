@@ -316,7 +316,7 @@ void AlternativeTextController::timerFired()
             break;
         }
         String topSuggestion = suggestions.first();
-        suggestions.remove(0);
+        suggestions.removeAt(0);
         m_isActive = true;
         auto boundingBox = rootViewRectForRange(*m_rangeWithAlternative);
         if (!boundingBox.isEmpty()) {

@@ -339,7 +339,7 @@ void CacheStorageManager::removeCache(WebCore::DOMCacheIdentifier cacheIdentifie
 
     makeDirty();
     m_removedCaches.set(cacheIdentifier, WTFMove(m_caches[index]));
-    m_caches.remove(index);
+    m_caches.removeAt(index);
     return callback(true);
 }
 
@@ -452,7 +452,7 @@ void CacheStorageManager::dereference(IPC::Connection::UniqueID connection, WebC
     if (index == notFound)
         return;
 
-    refConnections.remove(index);
+    refConnections.removeAt(index);
     if (!refConnections.isEmpty())
         return;
 

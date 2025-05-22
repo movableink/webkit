@@ -2211,7 +2211,7 @@ class YarrGenerator final : public YarrJITInfo {
         // This assertion also checks that firstCharTermIndex is correct
         ASSERT(foundFirstCharTerm);
         if (firstCharTermIndex)
-            opList.remove(0, firstCharTermIndex);
+            opList.removeAt(0, firstCharTermIndex);
 
         if (have16BitCharacter && (m_charSize == CharSize::Char8)) {
             // Have a 16 bit pattern character and an 8 bit string - short circuit

@@ -163,7 +163,7 @@ Ref<MediaPromise> MockSourceBufferPrivate::appendInternal(Ref<SharedBuffer>&& da
             m_inputBuffer.clear();
             return MediaPromise::createAndReject(PlatformMediaError::ParsingError);
         }
-        m_inputBuffer.remove(0, boxLength);
+        m_inputBuffer.removeAt(0, boxLength);
     }
 
     return MediaPromise::createAndResolve();

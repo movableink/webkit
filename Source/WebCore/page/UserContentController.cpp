@@ -84,7 +84,7 @@ void UserContentController::removeUserScript(DOMWrapperWorld& world, const URL& 
     auto scripts = it->value.get();
     for (int i = scripts->size() - 1; i >= 0; --i) {
         if (scripts->at(i)->url() == url)
-            scripts->remove(i);
+            scripts->removeAt(i);
     }
 
     if (scripts->isEmpty())
@@ -116,7 +116,7 @@ void UserContentController::removeUserStyleSheet(DOMWrapperWorld& world, const U
     bool sheetsChanged = false;
     for (int i = stylesheets.size() - 1; i >= 0; --i) {
         if (stylesheets[i]->url() == url) {
-            stylesheets.remove(i);
+            stylesheets.removeAt(i);
             sheetsChanged = true;
         }
     }

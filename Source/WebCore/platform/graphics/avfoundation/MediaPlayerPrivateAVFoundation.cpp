@@ -783,7 +783,7 @@ void MediaPlayerPrivateAVFoundation::processNewAndRemovedTextTracks(const Vector
             }
             if (player)
                 player->removeTextTrack(Ref { *m_textTracks[i] });
-            m_textTracks.remove(i);
+            m_textTracks.removeAt(i);
         }
     }
 

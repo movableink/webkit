@@ -118,11 +118,11 @@ public:
 
     void remove(unsigned location, unsigned length)
     {
-        m_fonts.remove(location, length);
-        m_glyphs.remove(location, length);
-        m_advances.remove(location, length);
-        m_origins.remove(location, length);
-        m_offsetsInString.remove(location, length);
+        m_fonts.removeAt(location, length);
+        m_glyphs.removeAt(location, length);
+        m_advances.removeAt(location, length);
+        m_origins.removeAt(location, length);
+        m_offsetsInString.removeAt(location, length);
     }
 
     void deleteGlyphWithoutAffectingSize(unsigned index)

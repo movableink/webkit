@@ -3319,7 +3319,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     for (int index = _pendingPositionInformationHandlers.size() - 1; index >= 0; --index) {
         if (!_pendingPositionInformationHandlers[index])
-            _pendingPositionInformationHandlers.remove(index);
+            _pendingPositionInformationHandlers.removeAt(index);
     }
 }
 
@@ -7687,7 +7687,7 @@ static UITextAutocapitalizationType toUITextAutocapitalize(WebCore::Autocapitali
         return;
     }
 
-    _keyWebEventHandlers.remove(indexOfHandlerToCall);
+    _keyWebEventHandlers.removeAt(indexOfHandlerToCall);
     handler(event, eventWasHandled);
 }
 

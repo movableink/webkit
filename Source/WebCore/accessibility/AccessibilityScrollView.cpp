@@ -182,7 +182,7 @@ void AccessibilityScrollView::removeChildScrollbar(AccessibilityObject* scrollba
     });
     if (position != notFound) {
         m_children[position]->detachFromParent();
-        m_children.remove(position);
+        m_children.removeAt(position);
         resetChildrenIndexInParent();
 
         if (CheckedPtr cache = axObjectCache())

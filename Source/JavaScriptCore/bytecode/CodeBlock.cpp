@@ -2135,7 +2135,7 @@ void CodeBlock::removeExceptionHandlerForCallSite(DisposableCallSiteIndex callSi
     for (size_t i = 0; i < exceptionHandlers.size(); ++i) {
         HandlerInfo& handler = exceptionHandlers[i];
         if (handler.start <= index && handler.end > index) {
-            exceptionHandlers.remove(i);
+            exceptionHandlers.removeAt(i);
             return;
         }
     }

@@ -711,7 +711,7 @@ void HTMLVideoElement::cancelVideoFrameCallback(unsigned identifier)
     index = m_videoFrameRequests.findIf([identifier](auto& request) { return request->identifier == identifier; });
     if (index == notFound)
         return;
-    m_videoFrameRequests.remove(index);
+    m_videoFrameRequests.removeAt(index);
 
     if (m_videoFrameRequests.isEmpty()) {
         if (RefPtr player = this->player())

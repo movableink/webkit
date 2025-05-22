@@ -507,10 +507,10 @@ private:
                 if (val == 1) {
                     char32_t lo = ch;
                     char32_t hi = ch + 1;
-                    matches.remove(pos + index);
+                    matches.removeAt(pos + index);
                     if (pos + index > 0 && matches[pos + index - 1] == ch - 1) {
                         lo = ch - 1;
-                        matches.remove(pos + index - 1);
+                        matches.removeAt(pos + index - 1);
                     }
                     addSortedRange(isASCII(ch) ? m_ranges : m_rangesUnicode, lo, hi);
                     return;
@@ -520,10 +520,10 @@ private:
                 if (val == -1) {
                     char32_t lo = ch - 1;
                     char32_t hi = ch;
-                    matches.remove(pos + index);
+                    matches.removeAt(pos + index);
                     if (pos + index + 1 < matches.size() && matches[pos + index + 1] == ch + 1) {
                         hi = ch + 1;
-                        matches.remove(pos + index + 1);
+                        matches.removeAt(pos + index + 1);
                     }
                     addSortedRange(isASCII(ch) ? m_ranges : m_rangesUnicode, lo, hi);
                     return;
@@ -599,7 +599,7 @@ private:
             if (ranges[next].begin <= (ranges[index].end + 1)) {
                 // the next entry now overlaps / concatenates with this one.
                 ranges[index].end = std::max(ranges[index].end, ranges[next].end);
-                ranges.remove(next);
+                ranges.removeAt(next);
             } else
                 break;
         }
@@ -1002,7 +1002,7 @@ private:
 
                     if (matchesIndex < matches.size() && matches[matchesIndex] == ranges[rangesIndex].begin - 1) {
                         ranges[rangesIndex].begin = matches[matchesIndex];
-                        matches.remove(matchesIndex);
+                        matches.removeAt(matchesIndex);
                     }
                 }
 
@@ -1017,7 +1017,7 @@ private:
 
                     if (matches[matchesIndex] == ranges[rangesIndex].end + 1) {
                         ranges[rangesIndex].end = matches[matchesIndex];
-                        matches.remove(matchesIndex);
+                        matches.removeAt(matchesIndex);
 
                         mergeRangesFrom(ranges, rangesIndex);
                     } else
@@ -1029,7 +1029,7 @@ private:
                 for (auto rangesIndex = ranges.size() - 1; rangesIndex > 0; rangesIndex--) {
                     if (ranges[rangesIndex].begin == ranges[rangesIndex - 1].end + 1) {
                         ranges[rangesIndex - 1].end = ranges[rangesIndex].end;
-                        ranges.remove(rangesIndex);
+                        ranges.removeAt(rangesIndex);
                     }
                 }
             }
@@ -2132,10 +2132,10 @@ public:
 
             if (!containsCapturingTerms(alternative, firstExpressionTerm, endIndex)) {
                 for (termIndex = terms.size() - 1; termIndex >= endIndex; --termIndex)
-                    terms.remove(termIndex);
+                    terms.removeAt(termIndex);
 
                 for (termIndex = firstExpressionTerm; termIndex > 0; --termIndex)
-                    terms.remove(termIndex - 1);
+                    terms.removeAt(termIndex - 1);
 
                 terms.append(PatternTerm(startsWithBOL, endsWithEOL, m_flags));
                 

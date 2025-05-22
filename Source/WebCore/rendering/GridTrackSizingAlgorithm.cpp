@@ -249,7 +249,7 @@ LayoutUnit GridTrackSizingAlgorithm::computeTrackBasedSize() const
         if (m_renderGrid->shouldCheckExplicitIntrinsicInnerLogicalSize(m_direction) && m_renderGrid->autoRepeatType(m_direction) == AutoRepeatType::Fit) {
             auto allTracks = tracks(m_direction);
             auto autoRepeatTracksRange = m_renderGrid->autoRepeatTracksRange(m_direction);
-            allTracks.remove(autoRepeatTracksRange.begin(), autoRepeatTracksRange.distance());
+            allTracks.removeAt(autoRepeatTracksRange.begin(), autoRepeatTracksRange.distance());
             return allTracks;
         }
         return tracks(m_direction);

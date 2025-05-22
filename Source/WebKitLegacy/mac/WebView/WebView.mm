@@ -8898,7 +8898,7 @@ FORWARD(toggleUnderline)
 
     if (!_private->fullscreenControllersExiting.isEmpty()) {
         auto controller = _private->fullscreenControllersExiting.first();
-        _private->fullscreenControllersExiting.remove(0);
+        _private->fullscreenControllersExiting.removeAt(0);
 
         [controller exitFullscreen];
         return;

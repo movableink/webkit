@@ -119,7 +119,7 @@ void MediaSourcePrivate::removeSourceBuffer(SourceBufferPrivate& sourceBuffer)
 
     size_t pos = m_activeSourceBuffers.find(&sourceBuffer);
     if (pos != notFound) {
-        m_activeSourceBuffers.remove(pos);
+        m_activeSourceBuffers.removeAt(pos);
         notifyActiveSourceBuffersChanged();
     }
     m_sourceBuffers.removeFirst(&sourceBuffer);
@@ -139,7 +139,7 @@ void MediaSourcePrivate::sourceBufferPrivateDidChangeActiveState(SourceBufferPri
     if (active || position == notFound)
         return;
 
-    m_activeSourceBuffers.remove(position);
+    m_activeSourceBuffers.removeAt(position);
     notifyActiveSourceBuffersChanged();
 }
 

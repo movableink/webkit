@@ -62,7 +62,7 @@ SpeculatedType WideningNumberPredictionFuzzerAgent::getPrediction(CodeBlock* cod
     for (unsigned i = 0; i < numberOfTypesToAdd; i++) {
         unsigned indexOfNewType = m_random.getUint32(numberTypesNotIncludedInSpeculation.size());
         mergeSpeculation(generated, numberTypesNotIncludedInSpeculation[indexOfNewType]);
-        numberTypesNotIncludedInSpeculation.remove(indexOfNewType);
+        numberTypesNotIncludedInSpeculation.removeAt(indexOfNewType);
     }
 
     if (Options::dumpFuzzerAgentPredictions())

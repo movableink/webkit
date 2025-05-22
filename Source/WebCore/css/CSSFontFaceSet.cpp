@@ -237,7 +237,7 @@ void CSSFontFaceSet::removeFromFacesLookupTable(const CSSFontFace& face, const C
     for (size_t i = 0; i < iterator->value.size(); ++i) {
         if (iterator->value[i].ptr() == &face) {
             found = true;
-            iterator->value.remove(i);
+            iterator->value.removeAt(i);
             break;
         }
     }
@@ -269,7 +269,7 @@ void CSSFontFaceSet::remove(const CSSFontFace& face)
             if (i < m_facesPartitionIndex)
                 --m_facesPartitionIndex;
             Ref { m_faces[i] }->removeClient(*this);
-            m_faces.remove(i);
+            m_faces.removeAt(i);
             if (face.status() == CSSFontFace::Status::Loading || face.status() == CSSFontFace::Status::TimedOut)
                 decrementActiveCount();
             return;

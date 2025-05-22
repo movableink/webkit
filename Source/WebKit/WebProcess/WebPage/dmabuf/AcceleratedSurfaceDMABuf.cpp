@@ -545,7 +545,7 @@ void AcceleratedSurfaceDMABuf::SwapChain::releaseTarget(uint64_t targetID, UnixF
     if (index != notFound) {
         m_lockedTargets[index]->setReleaseFenceFD(WTFMove(releaseFence));
         m_freeTargets.insert(0, WTFMove(m_lockedTargets[index]));
-        m_lockedTargets.remove(index);
+        m_lockedTargets.removeAt(index);
     }
 }
 

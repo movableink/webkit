@@ -669,7 +669,7 @@ void BaseAudioContext::updateTailProcessingNodes()
         // for disableOutputsForFinishedTailProcessingNodes() to process later on the main thread.
         ASSERT(!m_finishedTailProcessingNodes.contains(node));
         m_finishedTailProcessingNodes.append(WTFMove(node));
-        m_tailProcessingNodes.remove(i - 1);
+        m_tailProcessingNodes.removeAt(i - 1);
     }
 
     if (m_finishedTailProcessingNodes.isEmpty() || m_disableOutputsForTailProcessingScheduled)

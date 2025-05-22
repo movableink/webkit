@@ -115,7 +115,7 @@ void wpeApplicationAccessibleAtkToplevelDestroyed(WPEApplicationAccessibleAtk* a
     if (index == notFound)
         return;
 
-    accessible->priv->toplevels.remove(index);
+    accessible->priv->toplevels.removeAt(index);
     g_signal_emit_by_name(accessible, "children-changed::remove", index, toplevelAccessible, nullptr);
     atk_object_set_parent(toplevelAccessible, nullptr);
 }

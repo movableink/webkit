@@ -1315,7 +1315,7 @@ TEST(WTF_WeakPtr, WeakHashMapRemoveIterator)
     }
     while (!objects.isEmpty()) {
         auto it = weakHashMap.find(*objects.last());
-        objects.remove(0);
+        objects.removeAt(0);
         weakHashMap.remove(it);
         weakHashMap.checkConsistency();
     }
@@ -2175,7 +2175,7 @@ TEST(WTF_WeakPtr, WeakListHashSetRemoveIterator)
     }
     for (unsigned i = 0; i < 13; ++i) {
         auto it = weakListHashSet.find(*objects[0]);
-        objects.remove(0);
+        objects.removeAt(0);
         weakListHashSet.remove(it);
         weakListHashSet.checkConsistency();
         unsigned j = 0;

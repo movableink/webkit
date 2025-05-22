@@ -935,8 +935,8 @@ public:
     template<typename U> void insert(size_t position, U&&);
     template<typename U, size_t c, typename OH, size_t m, typename M> void insertVector(size_t position, const Vector<U, c, OH, m, M>&);
 
-    void remove(size_t position);
-    void remove(size_t position, size_t length);
+    void removeAt(size_t position);
+    void removeAt(size_t position, size_t length);
     bool removeFirst(const auto&);
     bool removeFirstMatching(NOESCAPE const Invocable<bool(T&)> auto&, size_t startIndex = 0);
     bool removeLast(const auto&);
@@ -1699,13 +1699,13 @@ inline void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::ins
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
-inline void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::remove(size_t position)
+inline void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::removeAt(size_t position)
 {
-    remove(position, 1);
+    removeAt(position, 1);
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
-inline void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::remove(size_t position, size_t length)
+inline void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::removeAt(size_t position, size_t length)
 {
     auto beginSpot = mutableSpan().subspan(position);
     T* endSpot = beginSpot.subspan(length).data();
@@ -1728,7 +1728,7 @@ inline bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::rem
 {
     for (size_t i = startIndex; i < size(); ++i) {
         if (matches(at(i))) {
-            remove(i);
+            removeAt(i);
             return true;
         }
     }
@@ -1754,7 +1754,7 @@ inline bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::rem
 {
     for (size_t i = std::min(startIndex + 1, size()); i > 0; --i) {
         if (matches(at(i - 1))) {
-            remove(i - 1);
+            removeAt(i - 1);
             return true;
         }
     }

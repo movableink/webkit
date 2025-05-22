@@ -507,7 +507,7 @@ void TestController::closeOtherPage(WKPageRef page, PlatformWebView* view)
     WKPageClose(page);
     auto index = m_auxiliaryWebViews.findIf([view](auto& auxiliaryWebView) { return auxiliaryWebView.ptr() == view; });
     if (index != notFound)
-        m_auxiliaryWebViews.remove(index);
+        m_auxiliaryWebViews.removeAt(index);
 }
 
 WKPageRef TestController::createOtherPage(WKPageRef, WKPageConfigurationRef configuration, WKNavigationActionRef navigationAction, WKWindowFeaturesRef windowFeatures, const void *clientInfo)

@@ -193,7 +193,7 @@ void WebXRInputSourceArray::handleAddedOrUpdatedInputSources(double timestamp, c
             else
                 removedWithInputEvents.append(input);
             inputEvents.appendVector(sourceInputEvents);
-            m_inputSources.remove(index);
+            m_inputSources.removeAt(index);
 
             auto newInputSource = WebXRInputSource::create(*document, m_session, timestamp, inputSource);
             added.append(newInputSource);

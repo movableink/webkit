@@ -113,7 +113,7 @@ void IOSurfacePool::didRemoveSurface(IOSurface& surface, bool inUse)
 
 void IOSurfacePool::didUseSurfaceOfSize(IntSize size)
 {
-    m_sizesInPruneOrder.remove(m_sizesInPruneOrder.reverseFind(size));
+    m_sizesInPruneOrder.removeLast(size);
     m_sizesInPruneOrder.append(size);
 }
 
@@ -210,7 +210,7 @@ void IOSurfacePool::insertSurfaceIntoPool(std::unique_ptr<IOSurface> surface)
     auto insertedTuple = m_cachedSurfaces.add(surfaceSize, CachedSurfaceQueue());
     insertedTuple.iterator->value.prepend(WTFMove(surface));
     if (!insertedTuple.isNewEntry)
-        m_sizesInPruneOrder.remove(m_sizesInPruneOrder.reverseFind(surfaceSize));
+        m_sizesInPruneOrder.removeLast(surfaceSize);
     m_sizesInPruneOrder.append(surfaceSize);
 
     scheduleCollectionTimer();
@@ -247,7 +247,7 @@ void IOSurfacePool::tryEvictOldestCachedSurface()
 
     if (surfaceQueueIter->value.isEmpty()) {
         m_cachedSurfaces.remove(surfaceQueueIter);
-        m_sizesInPruneOrder.remove(0);
+        m_sizesInPruneOrder.removeAt(0);
     }
 }
 

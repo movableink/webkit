@@ -184,7 +184,7 @@ static bool frameTreesMatch(_WKFrameTreeNode *actualRoot, ExpectedFrameTree&& ex
         });
         if (index == WTF::notFound)
             return false;
-        expectedRoot.children.remove(index);
+        expectedRoot.children.removeAt(index);
     }
     return expectedRoot.children.isEmpty();
 }
@@ -200,7 +200,7 @@ static bool frameTreesMatch(NSSet<_WKFrameTreeNode *> *actualFrameTrees, Vector<
         });
         if (index == WTF::notFound)
             return false;
-        expectedFrameTrees.remove(index);
+        expectedFrameTrees.removeAt(index);
     }
     return expectedFrameTrees.isEmpty();
 }

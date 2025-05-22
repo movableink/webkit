@@ -69,7 +69,7 @@ LayerPool::LayerList& LayerPool::listOfLayersWithSize(const IntSize& size, Acces
         it = m_reuseLists.add(size, LayerList()).iterator;
         m_sizesInPruneOrder.append(size);
     } else if (accessType == MarkAsUsed) {
-        m_sizesInPruneOrder.remove(m_sizesInPruneOrder.reverseFind(size));
+        m_sizesInPruneOrder.removeLast(size);
         m_sizesInPruneOrder.append(size);
     }
     return it->value;
@@ -130,7 +130,7 @@ void LayerPool::pruneTimerFired()
         LayerList& oldestReuseList = it->value;
         if (oldestReuseList.isEmpty()) {
             m_reuseLists.remove(sizeToDrop);
-            m_sizesInPruneOrder.remove(0);
+            m_sizesInPruneOrder.removeAt(0);
             continue;
         }
 

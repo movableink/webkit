@@ -174,7 +174,7 @@ void CurlStream::tryToSend()
     m_sendBufferOffset += bytesSent;
 
     if (m_sendBufferOffset >= length) {
-        m_sendBuffers.remove(0);
+        m_sendBuffers.removeAt(0);
         m_sendBufferOffset = 0;
     }
 

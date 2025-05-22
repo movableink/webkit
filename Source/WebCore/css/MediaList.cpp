@@ -113,7 +113,7 @@ ExceptionOr<void> MediaList::deleteMedium(const String& value)
     auto queries = mediaQueries();
     for (unsigned i = 0; i < queries.size(); ++i) {
         if (item(i) == valueToRemove) {
-            queries.remove(i);
+            queries.removeAt(i);
             setMediaQueries(WTFMove(queries));
             return { };
         }

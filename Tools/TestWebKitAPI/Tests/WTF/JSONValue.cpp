@@ -357,7 +357,7 @@ TEST(JSONObject, Basic)
         auto position = keys.find(it->key);
         EXPECT_NE(position, notFound);
         EXPECT_TRUE(it == object->find(keys[position]));
-        keys.remove(position);
+        keys.removeAt(position);
     }
     EXPECT_TRUE(keys.isEmpty());
 

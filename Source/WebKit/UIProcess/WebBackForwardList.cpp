@@ -135,7 +135,7 @@ void WebBackForwardList::addItem(Ref<WebBackForwardListItem>&& newItem)
         if (m_entries.size() >= DefaultCapacity && (*m_currentIndex)) {
             didRemoveItem(m_entries[0]);
             removedItems.append(WTFMove(m_entries[0]));
-            m_entries.remove(0);
+            m_entries.removeAt(0);
 
             if (m_entries.isEmpty())
                 m_currentIndex = std::nullopt;
@@ -241,7 +241,7 @@ void WebBackForwardList::goToItem(WebBackForwardListItem& item)
     Vector<Ref<WebBackForwardListItem>> removedItems;
     if (!shouldKeepCurrentItem) {
         removedItems.append(currentItem.copyRef());
-        m_entries.remove(*m_currentIndex);
+        m_entries.removeAt(*m_currentIndex);
         targetIndex = notFound;
         for (size_t i = 0; i < m_entries.size(); ++i) {
             if (m_entries[i].ptr() == &item) {

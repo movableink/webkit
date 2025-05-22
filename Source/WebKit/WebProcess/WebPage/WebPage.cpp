@@ -9269,7 +9269,7 @@ void WebPage::requestTextRecognition(Element& element, TextRecognitionOptions&& 
         for (auto& completionHandler : protectedPage->m_elementsPendingTextRecognition[matchIndex].second)
             completionHandler(imageOverlayHost.copyRef());
 
-        protectedPage->m_elementsPendingTextRecognition.remove(matchIndex);
+        protectedPage->m_elementsPendingTextRecognition.removeAt(matchIndex);
     });
 }
 

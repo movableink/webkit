@@ -166,7 +166,7 @@ void Line::handleOverflowingNonBreakingSpace(TrailingContentAction trailingConte
         }
 
         removedOrCollapsedContentWidth += run.logicalWidth();
-        m_runs.remove(index);
+        m_runs.removeAt(index);
     }
     m_contentLogicalWidth -= removedOrCollapsedContentWidth;
 }
@@ -187,7 +187,7 @@ const Box* Line::removeOverflowingOutOfFlowContent()
     if (!lastTrailingOutOfFlowItemIndex)
         return { };
     auto* lastTrailingOpaqueBox = &m_runs[*lastTrailingOutOfFlowItemIndex].layoutBox();
-    m_runs.remove(*lastTrailingOutOfFlowItemIndex, m_runs.size() - *lastTrailingOutOfFlowItemIndex);
+    m_runs.removeAt(*lastTrailingOutOfFlowItemIndex, m_runs.size() - *lastTrailingOutOfFlowItemIndex);
     ASSERT(!m_runs.isEmpty());
     return lastTrailingOpaqueBox;
 }
@@ -716,7 +716,7 @@ InlineLayoutUnit Line::TrimmableTrailingContent::remove()
     if (!trimmableRun.textContent()->length) {
         // This trimmable run is fully collapsed now (e.g. <div><img>    <span></span></div>).
         // We don't need to keep it around anymore.
-        m_runs.remove(*m_firstTrimmableRunIndex);
+        m_runs.removeAt(*m_firstTrimmableRunIndex);
     }
     reset();
     return trimmedWidth;

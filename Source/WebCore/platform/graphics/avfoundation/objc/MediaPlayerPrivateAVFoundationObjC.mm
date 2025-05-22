@@ -3150,7 +3150,7 @@ void MediaPlayerPrivateAVFoundationObjC::processMediaSelectionOptions()
             }
 
             if ([currentOption isEqual:option]) {
-                removedTextTracks.remove(i - 1);
+                removedTextTracks.removeAt(i - 1);
                 newTrack = false;
                 break;
             }

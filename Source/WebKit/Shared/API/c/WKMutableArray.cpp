@@ -46,6 +46,6 @@ void WKArrayAppendItem(WKMutableArrayRef arrayRef, WKTypeRef itemRef)
 
 void WKArrayRemoveItemAtIndex(WKMutableArrayRef arrayRef, size_t index)
 {
-    WebKit::toImpl(arrayRef)->elements().remove(index);
+    WebKit::toImpl(arrayRef)->elements().removeAt(index);
 }
 

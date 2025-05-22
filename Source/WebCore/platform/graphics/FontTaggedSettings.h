@@ -134,7 +134,7 @@ void FontTaggedSettings<T>::insert(FontTaggedSetting<T>&& feature)
         if (m_list[i].tag() < feature.tag())
             continue;
         if (m_list[i].tag() == feature.tag())
-            m_list.remove(i);
+            m_list.removeAt(i);
         break;
     }
     m_list.insert(i, WTFMove(feature));

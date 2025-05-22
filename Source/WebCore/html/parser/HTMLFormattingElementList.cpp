@@ -100,7 +100,7 @@ void HTMLFormattingElementList::remove(Element& element)
 {
     size_t index = m_entries.reverseFind(&element);
     if (index != notFound)
-        m_entries.remove(index);
+        m_entries.removeAt(index);
 }
 
 void HTMLFormattingElementList::removeUpdatingBookmark(Element& element, Bookmark& bookmark)
@@ -109,7 +109,7 @@ void HTMLFormattingElementList::removeUpdatingBookmark(Element& element, Bookmar
     if (index != notFound) {
         size_t bookmarkIndex = &bookmark.mark() - &first();
         RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(bookmarkIndex <= size());
-        m_entries.remove(index);
+        m_entries.removeAt(index);
         // Removing an element from the list can change the position of the bookmarked
         // item. Update the address pointed by the bookmark, when needed.
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN

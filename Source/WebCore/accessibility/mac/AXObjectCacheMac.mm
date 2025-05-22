@@ -837,7 +837,7 @@ void AXObjectCache::addSortedObject(AccessibilityObject& object, PreSortedObject
                 // The object we found doesn't match up with what we expected at sortedList[i].
                 // Otherwise, we can repair sortedList outside the loop. Start by removing the element
                 // at [i] and all remaining ones.
-                sortedList.remove(i, sortedList.size() - 1 - i);
+                sortedList.removeAt(i, sortedList.size() - 1 - i);
                 sortedList.appendIfNotContains(result->objectID());
                 start = result;
                 break;
@@ -845,7 +845,7 @@ void AXObjectCache::addSortedObject(AccessibilityObject& object, PreSortedObject
         } else {
             // There are no remaining objects of the expected type, so anything remaining in sortedList
             // must be outdated.
-            sortedList.remove(i, sortedList.size() - 1 - i);
+            sortedList.removeAt(i, sortedList.size() - 1 - i);
             // If we didn't end up with the passed in object in our list, something probably went wrong,
             // or the tree is in an incorrect state.
             ASSERT(sortedList.contains(object.objectID()));

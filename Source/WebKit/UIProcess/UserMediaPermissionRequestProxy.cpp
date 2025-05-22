@@ -81,7 +81,7 @@ static inline void setDeviceAsFirst(Vector<CaptureDevice>& devices, const String
         auto device = devices[index];
         ASSERT(device.enabled());
 
-        devices.remove(index);
+        devices.removeAt(index);
         devices.insert(0, WTFMove(device));
     }
 }

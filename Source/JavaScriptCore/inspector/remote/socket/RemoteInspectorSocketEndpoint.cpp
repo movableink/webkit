@@ -318,7 +318,7 @@ void RemoteInspectorSocketEndpoint::sendIfEnabled(ConnectionID id)
             }
 
             if (size > 0)
-                buffer.remove(0, size);
+                buffer.removeAt(0, size);
         }
 
         Socket::markWaitingWritable(connection->poll);

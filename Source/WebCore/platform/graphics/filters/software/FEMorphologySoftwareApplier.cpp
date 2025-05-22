@@ -98,7 +98,7 @@ void FEMorphologySoftwareApplier::applyPlatformGeneric(const PaintingData& paint
                 extrema.append(columnExtremum(srcPixelBuffer, x + radiusX, yRadiusStart, yRadiusEnd, width, paintingData.type));
 
             if (x > radiusX)
-                extrema.remove(0);
+                extrema.removeAt(0);
 
             unsigned& destPixel = reinterpretCastSpanStartTo<unsigned>(dstPixelBuffer->bytes().subspan(pixelArrayIndex(x, y, width)));
             destPixel = makePixelValueFromColorComponents(kernelExtremum(extrema, paintingData.type)).value;

@@ -349,7 +349,7 @@ void EventSource::parseEventStream()
     if (position == size)
         m_receiveBuffer.clear();
     else if (position)
-        m_receiveBuffer.remove(0, position);
+        m_receiveBuffer.removeAt(0, position);
 }
 
 void EventSource::parseEventStreamLine(unsigned position, std::optional<unsigned> fieldLength, unsigned lineLength)

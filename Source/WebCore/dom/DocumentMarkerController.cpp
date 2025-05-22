@@ -348,8 +348,8 @@ void DocumentMarkerController::addMarker(Node& node, DocumentMarker&& newMarker)
                 break;
             if (canMergeMarkers(marker, toInsert) && marker.endOffset() >= toInsert.startOffset()) {
                 toInsert.setStartOffset(marker.startOffset());
-                list->remove(i);
-                numMarkers--;
+                list->removeAt(i);
+                --numMarkers;
                 break;
             }
         }
@@ -362,7 +362,7 @@ void DocumentMarkerController::addMarker(Node& node, DocumentMarker&& newMarker)
             if (marker.startOffset() > toInsert.endOffset())
                 break;
             if (canMergeMarkers(marker, toInsert)) {
-                list->remove(j);
+                list->removeAt(j);
                 if (toInsert.endOffset() <= marker.endOffset()) {
                     toInsert.setEndOffset(marker.endOffset());
                     break;
@@ -466,7 +466,7 @@ void DocumentMarkerController::removeMarkers(Node& node, OffsetRange range, Opti
         needRepaint = true;
 
         DocumentMarker copiedMarker = marker;
-        list->remove(i);
+        list->removeAt(i);
         if (overlapRule == RemovePartiallyOverlappingMarker::Yes)
             continue;
 
@@ -712,7 +712,7 @@ OptionSet<DocumentMarkerType> DocumentMarkerController::removeMarkersFromList(Ma
             }
 
             // pitch the old marker
-            list->remove(i);
+            list->removeAt(i);
             needsRepainting = true;
             // i now is the index of the next marker
         }
@@ -777,7 +777,7 @@ void DocumentMarkerController::shiftMarkers(Node& node, unsigned startOffset, in
 
 #if PLATFORM(IOS_FAMILY)
             if (targetStartOffset >= node.length() || targetEndOffset <= 0) {
-                list->remove(i);
+                list->removeAt(i);
                 continue;
             }
 #endif
@@ -790,7 +790,7 @@ void DocumentMarkerController::shiftMarkers(Node& node, unsigned startOffset, in
         // FIXME: No obvious reason this should be iOS-specific. Remove the #if at some point.
         else if (marker.endOffset() > startOffset) {
             if (targetEndOffset <= marker.startOffset()) {
-                list->remove(i);
+                list->removeAt(i);
                 continue;
             }
             marker.setEndOffset(std::min(targetEndOffset, node.length()));

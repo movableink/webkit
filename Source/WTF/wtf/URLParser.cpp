@@ -863,7 +863,7 @@ void URLParser::copyURLPartsUntil(const URL& base, URLPart part, const CodePoint
             && m_asciiBuffer[pathStart] == '/'
             && m_asciiBuffer[pathStart + 1] == '.'
             && m_asciiBuffer[pathStart + 2] == '/') {
-            m_asciiBuffer.remove(pathStart + 1, 2);
+            m_asciiBuffer.removeAt(pathStart + 1, 2);
             m_url.m_pathAfterLastSlash = std::max(2u, m_url.m_pathAfterLastSlash) - 2;
             m_url.m_pathEnd = std::max(2u, m_url.m_pathEnd) - 2;
             m_url.m_queryEnd = std::max(2u, m_url.m_queryEnd) - 2;

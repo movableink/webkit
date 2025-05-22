@@ -155,7 +155,7 @@ void VirtualHidConnection::parseRequest()
         auto payload = m_requestMessage->getMessagePayload();
         ASSERT(payload.size());
         auto cmd = static_cast<CtapRequestCommand>(payload[0]);
-        payload.remove(0);
+        payload.removeAt(0);
         auto requestMap = CBORReader::read(payload);
         ASSERT(requestMap || cmd == CtapRequestCommand::kAuthenticatorGetNextAssertion);
         if (cmd == CtapRequestCommand::kAuthenticatorMakeCredential) {

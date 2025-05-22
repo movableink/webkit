@@ -134,7 +134,7 @@ public:
         if (!m_clients.contains(identifier))
             return;
 
-        m_clients.remove(identifier);
+        m_clients.removeFirst(identifier);
         if (m_clients.isEmpty())
             m_logFile = nullptr;
     }

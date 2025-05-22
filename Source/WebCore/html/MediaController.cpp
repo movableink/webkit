@@ -114,7 +114,7 @@ void MediaController::addMediaElement(HTMLMediaElement& element)
 void MediaController::removeMediaElement(HTMLMediaElement& element)
 {
     ASSERT(m_mediaElements.contains(&element));
-    m_mediaElements.remove(m_mediaElements.find(&element));
+    m_mediaElements.removeFirst(&element);
 }
 
 Ref<TimeRanges> MediaController::buffered() const

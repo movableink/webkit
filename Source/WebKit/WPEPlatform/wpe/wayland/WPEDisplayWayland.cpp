@@ -271,7 +271,7 @@ const struct wl_registry_listener registryListener = {
         });
         if (index != notFound) {
             auto screen = priv->screens[index];
-            priv->screens.remove(index);
+            priv->screens.removeAt(index);
             wpe_display_screen_removed(WPE_DISPLAY(display), screen.get());
         }
     },

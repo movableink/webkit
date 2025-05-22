@@ -229,7 +229,7 @@ void WebMediaSessionManager::removePlaybackTargetPickerClient(WebMediaSessionMan
 
     ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, m_clientState[index].get());
 
-    m_clientState.remove(index);
+    m_clientState.removeAt(index);
     scheduleDelayedTask({ ConfigurationTaskFlags::TargetMonitoringConfiguration, ConfigurationTaskFlags::TargetClientsConfiguration });
 }
 
@@ -241,7 +241,7 @@ void WebMediaSessionManager::removeAllPlaybackTargetPickerClients(WebMediaSessio
     for (size_t i = m_clientState.size(); i > 0; --i) {
         if (&m_clientState[i - 1]->client == &client) {
             ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, m_clientState[i - 1].get());
-            m_clientState.remove(i - 1);
+            m_clientState.removeAt(i - 1);
         }
     }
     scheduleDelayedTask({ ConfigurationTaskFlags::TargetMonitoringConfiguration, ConfigurationTaskFlags::TargetClientsConfiguration });

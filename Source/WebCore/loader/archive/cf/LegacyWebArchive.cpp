@@ -660,7 +660,7 @@ static UncheckedKeyHashMap<Ref<CSSStyleSheet>, String> addSubresourcesForCSSStyl
                 auto fileName = FileSystem::lastComponentOfPathIgnoringTrailingSlash(subresources[index]->relativeFilePath());
                 uniqueFileNames.remove(fileName);
                 uniqueSubresources.remove(url.string());
-                subresources.remove(index);
+                subresources.removeAt(index);
             }
 
             auto extension = MIMETypeRegistry::preferredExtensionForMIMEType(cssContentTypeAtom());

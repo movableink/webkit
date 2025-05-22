@@ -117,7 +117,7 @@ bool MutableStyleProperties::removePropertyAtIndex(int index, String* returnText
 
     // A more efficient removal strategy would involve marking entries as empty
     // and sweeping them when the vector grows too big.
-    m_propertyVector.remove(index);
+    m_propertyVector.removeAt(index);
     return true;
 }
 
@@ -226,7 +226,7 @@ bool MutableStyleProperties::setProperty(const CSSProperty& property, CSSPropert
             *toReplace = property;
             return true;
         }
-        m_propertyVector.remove(toReplace - m_propertyVector.begin());
+        m_propertyVector.removeAt(toReplace - m_propertyVector.begin());
     }
     m_propertyVector.append(property);
     return true;

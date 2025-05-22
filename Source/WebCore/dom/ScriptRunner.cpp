@@ -140,7 +140,7 @@ void ScriptRunner::timerFired()
     for (; numInOrderScriptsToExecute < m_scriptsToExecuteInOrder.size() && m_scriptsToExecuteInOrder[numInOrderScriptsToExecute]->isLoaded(); ++numInOrderScriptsToExecute)
         scripts.append(m_scriptsToExecuteInOrder[numInOrderScriptsToExecute].ptr());
     if (numInOrderScriptsToExecute)
-        m_scriptsToExecuteInOrder.remove(0, numInOrderScriptsToExecute);
+        m_scriptsToExecuteInOrder.removeAt(0, numInOrderScriptsToExecute);
 
     for (auto& currentScript : scripts) {
         RefPtr script = WTFMove(currentScript);

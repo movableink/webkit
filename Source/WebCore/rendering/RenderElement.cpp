@@ -2541,7 +2541,7 @@ void RenderElement::adjustComputedFontSizesOnBlocks(float size, float visibleWid
     // which has fixed height but its content overflows intentionally.
     for (CheckedPtr descendant = traverseNext(this, includeNonFixedHeight, currentDepth, newFixedDepth); descendant; descendant = descendant->traverseNext(this, includeNonFixedHeight, currentDepth, newFixedDepth)) {
         while (depthStack.size() > 0 && currentDepth <= depthStack[depthStack.size() - 1])
-            depthStack.remove(depthStack.size() - 1);
+            depthStack.removeAt(depthStack.size() - 1);
         if (newFixedDepth)
             depthStack.append(newFixedDepth);
 
@@ -2571,7 +2571,7 @@ void RenderElement::resetTextAutosizing()
 
     for (CheckedPtr descendant = traverseNext(this, includeNonFixedHeight, currentDepth, newFixedDepth); descendant; descendant = descendant->traverseNext(this, includeNonFixedHeight, currentDepth, newFixedDepth)) {
         while (depthStack.size() > 0 && currentDepth <= depthStack[depthStack.size() - 1])
-            depthStack.remove(depthStack.size() - 1);
+            depthStack.removeAt(depthStack.size() - 1);
         if (newFixedDepth)
             depthStack.append(newFixedDepth);
 

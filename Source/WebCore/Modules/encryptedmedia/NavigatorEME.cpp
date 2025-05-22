@@ -135,7 +135,7 @@ static void tryNextSupportedConfiguration(Document& document, RefPtr<CDM>&& impl
         // 6.3.2. Let supported configuration be the result of executing the Get Supported Configuration
         //        algorithm on implementation, candidate configuration, and origin.
         MediaKeySystemConfiguration candidateConfiguration = WTFMove(supportedConfigurations.first());
-        supportedConfigurations.remove(0);
+        supportedConfigurations.removeAt(0);
 
         CDM::SupportedConfigurationCallback callback = [&document, implementation = implementation, supportedConfigurations = WTFMove(supportedConfigurations), promise, logger = WTFMove(logger), identifier = WTFMove(identifier)] (std::optional<MediaKeySystemConfiguration> supportedConfiguration) mutable {
             // 6.3.3. If supported configuration is not NotSupported, run the following steps:

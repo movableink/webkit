@@ -126,7 +126,7 @@ void JSGlobalObjectConsoleClient::profileEnd(JSC::JSGlobalObject*, const String&
     // Otherwise, match the title of the profile to stop.
     for (ptrdiff_t i = m_profiles.size() - 1; i >= 0; --i) {
         if (title.isEmpty() || m_profiles[i] == title) {
-            m_profiles.remove(i);
+            m_profiles.removeAt(i);
             if (m_profiles.isEmpty())
                 stopConsoleProfile();
             return;

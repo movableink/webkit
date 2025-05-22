@@ -92,7 +92,7 @@ void TrackListBase::remove(TrackBase& track, bool scheduleEvent)
 
     Ref<TrackBase> trackRef = *m_inbandTracks[index];
 
-    m_inbandTracks.remove(index);
+    m_inbandTracks.removeAt(index);
 
     if (scheduleEvent)
         scheduleRemoveTrackEvent(WTFMove(trackRef));

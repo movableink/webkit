@@ -569,7 +569,7 @@ void InbandTextTrackPrivateAVF::processVTTSample(CMSampleBufferRef sampleBuffer,
             });
         }
 
-        m_sampleInputBuffer.remove(0, (size_t)boxLength);
+        m_sampleInputBuffer.removeAt(0, (size_t)boxLength);
     }
 }
 
