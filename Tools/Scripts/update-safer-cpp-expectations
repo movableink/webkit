@@ -24,23 +24,20 @@
 import os
 import argparse
 
-EXPECTATIONS_PATH = '../../Source/{project}/SaferCPPExpectations/{checker_type}Expectations'
-CHECKERS = ['ForwardDeclChecker', 'MemoryUnsafeCastChecker', 'NoUncountedMemberChecker', 'NoUncheckedPtrMemberChecker', 'NoUnretainedMemberChecker', 'RefCntblBaseVirtualDtor', 'RetainPtrCtorAdoptChecker',
-    'UncheckedCallArgsChecker', 'UncheckedLocalVarsChecker', 'UncountedCallArgsChecker', 'UncountedLambdaCapturesChecker', 'UncountedLocalVarsChecker', 'UnretainedCallArgsChecker',
-    'UnretainedLambdaCapturesChecker', 'UnretainedLocalVarsChecker']
-PROJECTS = ['JavaScriptCore', 'WebCore', 'WebDriver', 'WebGPU', 'WebInspectorUI', 'WebKit', 'WebKitLegacy', 'WTF']
+from webkitpy.safer_cpp.checkers import Checker
 
 
 def parser():
     parser = argparse.ArgumentParser(description='Automated tooling for updating safer CPP expectations', epilog='Example: update-safer-cpp-expectations -p WebKit --RefCntblBaseVirtualDtor platform/Scrollbar.h --UncountedCallArgsChecker platform/ScrollAnimator.h')
 
     checkers_group = parser.add_argument_group('checker arguments', 'List files to update for each checker')
-    for checker in CHECKERS:
-        checkers_group.add_argument(f'--{checker}', type=str, nargs='+')
+    for checker in Checker.enumerate():
+        checker_name = checker.name()
+        checkers_group.add_argument(f'--{checker_name}', type=str, nargs='+')
 
     parser.add_argument(
         '--project', '-p',
-        choices=PROJECTS,
+        choices=Checker.projects(),
         help='Specify which project expectations you want to update'
     )
     parser.add_argument(
@@ -65,8 +62,8 @@ def parser():
     return parser.parse_args()
 
 
-def modify_expectations_for_checker_from_file(checker_type, unexpected_contents, project, add=False):
-    path_to_expectations = os.path.join(os.path.dirname(__file__), EXPECTATIONS_PATH.format(project=project, checker_type=checker_type))
+def modify_expectations_for_checker_from_file(checker, unexpected_contents, project, add=False):
+    path_to_expectations = checker.expectations_path(project)
     with open(path_to_expectations) as expectations_file:
         expectations = expectations_file.readlines()
         prev_len = len(expectations)
@@ -79,14 +76,14 @@ def modify_expectations_for_checker_from_file(checker_type, unexpected_contents,
                 try:
                     expectations.remove(line)
                 except ValueError:
-                    print(f'Error: {line.strip()} is not in {checker_type}Expectations!')
+                    print(f'Error: {line.strip()} is not in {os.path.relpath(path_to_expectations)}!')
             elif line not in expectations:
                 expectations.append(line)
             else:
-                print(f'Error: {line.strip()} is already in {checker_type}Expectations!\n')
+                print(f'Error: {line.strip()} is already in {os.path.relpath(path_to_expectations)}!\n')
     with open(path_to_expectations, 'w') as expectations_file:
         expectations_file.writelines(sorted(expectations))
-    print(f'Updated expectations for {checker_type}!')
+    print(f'Updated expectations for {checker.name()}!')
     if not add:
         print(f'Removed {prev_len - len(expectations)} fixed files.\n')
     else:
@@ -94,9 +91,9 @@ def modify_expectations_for_checker_from_file(checker_type, unexpected_contents,
 
 
 def update_expectations_from_file(unexpected_results, project, add=False):
-    filename = unexpected_results.split('/')[-1]
+    filename = os.path.basename(unexpected_results)
     if not project:
-        projects = [p for p in PROJECTS if p in filename]
+        projects = [p for p in Checker.projects() if p in filename]
         if projects:
             project = projects[0]
         else:
@@ -107,12 +104,13 @@ def update_expectations_from_file(unexpected_results, project, add=False):
         for line in unexpected_contents:
             if '=>' in line:
                 checker_type = line.split()[-1]
-                modify_expectations_for_checker_from_file(checker_type, unexpected_contents, project, add)
+                modify_expectations_for_checker_from_file(Checker.find_checker_by_name(checker_type), unexpected_contents, project, add)
     print(f'Please add any changes to your commit using `git add` and `git commit --amend`.')
 
 
-def modify_expectations_for_checker(checker_type, unexpected_contents, project, add=False):
-    path_to_expectations = os.path.join(os.path.dirname(__file__), EXPECTATIONS_PATH.format(project=project, checker_type=checker_type))
+def modify_expectations_for_checker(checker, unexpected_contents, project, add=False):
+    path_to_expectations = checker.expectations_path(project)
+    checker_name = checker.name()
     with open(path_to_expectations) as expectations_file:
         expectations = expectations_file.readlines()
         prev_len = len(expectations)
@@ -121,14 +119,14 @@ def modify_expectations_for_checker(checker_type, unexpected_contents, project, 
             try:
                 expectations.remove(f'{line}\n')
             except ValueError:
-                print(f'Error: {line} is not in {checker_type}Expectations!')
+                print(f'Error: {line} is not in {os.path.relpath(path_to_expectations)}!')
         elif line not in expectations:
             expectations.append(f'{line}\n')
         else:
-            print(f'Error: {line} is already in {checker_type}Expectations!\n')
+            print(f'Error: {line} is already in {os.path.relpath(path_to_expectations)}!\n')
     with open(path_to_expectations, 'w') as expectations_file:
         expectations_file.writelines(sorted(expectations))
-    print(f'Updated expectations for {checker_type}!')
+    print(f'Updated expectations for {checker_name}!')
     if not add:
         print(f'Removed {prev_len - len(expectations)} fixed files.\n')
     else:
@@ -140,10 +138,10 @@ def update_expectations(args, project, add=False):
         print(f'Could not find a project to update. Please pass in the --project argument.')
         return
     print(f"{'Adding' if add else 'Removing'} unexpected failures in {project}...\n")
-    for checker_type in CHECKERS:
-        files_per_checker = args[checker_type]
+    for checker in Checker.enumerate():
+        files_per_checker = args[checker.name()]
         if files_per_checker:
-            modify_expectations_for_checker(checker_type, files_per_checker, project, add)
+            modify_expectations_for_checker(checker, files_per_checker, project, add)
     print(f'Please add any changes to your commit using `git add` and `git commit --amend`.')
 
 
@@ -155,9 +153,9 @@ def is_expected_file(expected_file):
     print('This checks against local expectations. Ensure your checkout is up-to-date.\n')
     line = f'{expected_file}\n'
     issues = False
-    for project in PROJECTS:
-        for checker in CHECKERS:
-            path_to_expectations = os.path.join(os.path.dirname(__file__), EXPECTATIONS_PATH.format(project=project, checker_type=checker))
+    for project in Checker.projects():
+        for checker in Checker.enumerate():
+            path_to_expectations = checker.expectations_path(project)
             with open(path_to_expectations, 'r') as f:
                 expectations = f.read()
                 if line in expectations:
