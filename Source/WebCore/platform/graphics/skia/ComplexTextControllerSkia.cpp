@@ -155,7 +155,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
 {
     if (!font) {
         // Create a run of missing glyphs from the primary font.
-        m_complexTextRuns.append(ComplexTextRun::create(m_fontCascade.primaryFont(), characters, stringLocation, 0, characters.size(), m_run.ltr()));
+        m_complexTextRuns.append(ComplexTextRun::create(m_fontCascade->primaryFont(), characters, stringLocation, 0, characters.size(), m_run->ltr()));
         return;
     }
 
@@ -183,7 +183,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
     const hb_feature_t* featuresData = features.isEmpty() ? nullptr : features.data();
     unsigned featuresSize = features.size();
     Vector<hb_feature_t> featuresWithKerning;
-    if (!m_fontCascade.enableKerning()) {
+    if (!m_fontCascade->enableKerning()) {
         featuresWithKerning.reserveInitialCapacity(featuresSize + 1);
         featuresWithKerning.append({ HB_TAG('k', 'e', 'r', 'n'), 0, 0, static_cast<unsigned>(-1) });
         featuresWithKerning.appendVector(features);
@@ -198,17 +198,17 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
     // According to <https://datatracker.ietf.org/doc/html/rfc5646#section-2.1>
     // "the language tags described in this document are sequences of characters
     // from the US-ASCII [ISO646] repertoire.".
-    auto language = hb_language_from_string(m_fontCascade.fontDescription().computedLocale().string().ascii().data(), -1);
+    auto language = hb_language_from_string(m_fontCascade->fontDescription().computedLocale().string().ascii().data(), -1);
 
     for (unsigned i = 0; i < runCount; ++i) {
         hb_buffer_set_language(buffer.get(), language);
 
-        auto& run = runList[m_run.rtl() ? runCount - i - 1 : i];
+        auto& run = runList[m_run->rtl() ? runCount - i - 1 : i];
 
         hb_buffer_set_script(buffer.get(), hb_icu_script_to_script(run.script));
 
-        if (!m_mayUseNaturalWritingDirection || m_run.directionalOverride())
-            hb_buffer_set_direction(buffer.get(), m_run.rtl() ? HB_DIRECTION_RTL : HB_DIRECTION_LTR);
+        if (!m_mayUseNaturalWritingDirection || m_run->directionalOverride())
+            hb_buffer_set_direction(buffer.get(), m_run->rtl() ? HB_DIRECTION_RTL : HB_DIRECTION_LTR);
         else
             hb_buffer_set_direction(buffer.get(), hb_script_get_horizontal_direction(hb_icu_script_to_script(run.script)));
 

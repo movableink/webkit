@@ -51,7 +51,6 @@ platform/OrientationNotifier.h
 platform/ScrollAnimator.h
 platform/Scrollbar.h
 platform/ScrollbarsController.h
-platform/graphics/ComplexTextController.h
 platform/graphics/TextBoxIterator.h
 platform/graphics/ca/TileCoverageMap.h
 platform/ios/WebAVPlayerController.h
