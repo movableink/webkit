@@ -1395,7 +1395,7 @@ void JIT::emit_op_neq_null(const JSInstruction* currentInstruction)
 void JIT::emitGetScope(VirtualRegister destination)
 {
     emitGetFromCallFrameHeaderPtr(CallFrameSlot::callee, regT0);
-    loadPtr(Address(regT0, JSFunction::offsetOfScopeChain()), regT0);
+    loadPtr(Address(regT0, JSCallee::offsetOfScopeChain()), regT0);
     boxCell(regT0, jsRegT10);
     emitPutVirtualRegister(destination, jsRegT10);
 }

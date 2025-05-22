@@ -6622,7 +6622,12 @@ void ByteCodeParser::parseBlock(unsigned limit)
                 m_currentBlock = m_inlineStackTop->m_entryBlockForRecursiveTailCall;
             }
 
-            handleGetScope(codeBlock->scopeRegister());
+            if (m_inlineStackTop->m_codeBlock->codeType() == EvalCode) {
+                Node* callee = get(VirtualRegister(CallFrameSlot::callee));
+                Node* result = addToGraph(GetEvalScope, callee);
+                set(codeBlock->scopeRegister(), result);
+            } else
+                handleGetScope(codeBlock->scopeRegister());
 
             // Normally we wouldn't be allowed to exit here, but in this case we'd
             // only be re-initializing the locals and resetting the scope register

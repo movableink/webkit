@@ -229,6 +229,7 @@ public:
     WriteBarrier<JSScope> m_globalScopeExtension;
     WriteBarrier<JSCallee> m_globalCallee;
     WriteBarrier<JSCallee> m_partiallyInitializedFrameCallee;
+    WriteBarrier<JSCallee> m_evalCallee;
 
     JS_GLOBAL_OBJECT_ADDITIONS_1;
 
@@ -719,6 +720,7 @@ public:
     void clearGlobalScopeExtension();
 
     JSCallee* globalCallee() { return m_globalCallee.get(); }
+    JSCallee* evalCallee() { return m_evalCallee.get(); }
 
     // The following accessors return pristine values, even if a script 
     // replaces the global object's associated property.

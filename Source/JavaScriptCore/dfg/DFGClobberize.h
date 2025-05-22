@@ -268,6 +268,11 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         def(PureValue(node));
         return;
 
+    // JSCallee for Eval can change the scope field.
+    case GetEvalScope:
+        read(World);
+        return;
+
     case NumberIsFinite:
     case NumberIsNaN:
         def(PureValue(node));

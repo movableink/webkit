@@ -225,6 +225,7 @@ inline CapabilityLevel canCompile(Node* node)
     case SuperSamplerEnd:
     case GetExecutable:
     case GetScope:
+    case GetEvalScope:
     case GetCallee:
     case SetCallee:
     case GetArgumentCountIncludingThis:

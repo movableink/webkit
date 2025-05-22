@@ -4039,7 +4039,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         setTypeForNode(node, SpecObject);
         break;
     }
-        
+
     case GetScope: {
         JSValue value = forNode(node->child1()).value();
         if (value) {
@@ -4061,6 +4061,11 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             setTypeForNode(node, SpecObjectOther);
             break;
         }
+        break;
+    }
+
+    case GetEvalScope: {
+        setTypeForNode(node, SpecObjectOther);
         break;
     }
 

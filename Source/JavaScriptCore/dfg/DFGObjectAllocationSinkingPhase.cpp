@@ -1323,6 +1323,7 @@ private:
                 m_heap.escape(node->child1().node());
             break;
 
+        // FIXME: Consider supporting GetEvalScope too.
         case GetScope:
             target = m_heap.onlyLocalAllocation(node->child1().node());
             if (target && target->isFunctionAllocation())

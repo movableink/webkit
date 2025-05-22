@@ -282,6 +282,7 @@ namespace JSC { namespace DFG {
     macro(GetTypedArrayByteOffsetAsInt52, NodeResultInt52) \
     macro(GetWebAssemblyInstanceExports, NodeResultJS) \
     macro(GetScope, NodeResultJS) \
+    macro(GetEvalScope, NodeResultJS) \
     macro(SkipScope, NodeResultJS) \
     macro(ResolveScope, NodeResultJS | NodeMustGenerate) \
     macro(ResolveScopeForHoistingFuncDeclInEval, NodeResultJS | NodeMustGenerate) \

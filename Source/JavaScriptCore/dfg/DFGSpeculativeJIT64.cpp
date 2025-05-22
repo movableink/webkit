@@ -1018,7 +1018,7 @@ void SpeculativeJIT::emitCall(Node* node)
                     move(CCallHelpers::TrustedImmPtr(calleeScope), GPRInfo::argumentGPR0);
                 else {
                     emitGetFromCallFrameHeaderPtr(CallFrameSlot::callee, GPRInfo::argumentGPR2);
-                    loadPtr(Address(GPRInfo::argumentGPR2, JSFunction::offsetOfScopeChain()), GPRInfo::argumentGPR0);
+                    loadPtr(Address(GPRInfo::argumentGPR2, JSCallee::offsetOfScopeChain()), GPRInfo::argumentGPR0);
                 }
                 move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR1);
                 if (Options::useJITCage()) {
@@ -4675,7 +4675,8 @@ void SpeculativeJIT::compile(Node* node)
     }
         
     case GetScope:
-        compileGetScope(node);
+    case GetEvalScope:
+        compileGetScopeOrGetEvalScope(node);
         break;
             
     case SkipScope:
@@ -8161,7 +8162,7 @@ void SpeculativeJIT::compileNewBoundFunction(Node* node)
 
     auto butterfly = TrustedImmPtr(nullptr);
     emitAllocateJSObjectWithKnownSize<JSBoundFunction>(resultGPR, TrustedImmPtr(structure), butterfly, scratch1GPR, scratch2GPR, slowPath, sizeof(JSBoundFunction), SlowAllocationResult::UndefinedBehavior);
-    storeLinkableConstant(LinkableConstant::globalObject(*this, node), Address(resultGPR, JSBoundFunction::offsetOfScopeChain()));
+    storeLinkableConstant(LinkableConstant::globalObject(*this, node), Address(resultGPR, JSCallee::offsetOfScopeChain()));
     storeLinkableConstant(LinkableConstant(*this, executable), Address(resultGPR, JSBoundFunction::offsetOfExecutableOrRareData()));
     storeValue(JSValueRegs { targetGPR }, Address(resultGPR, JSBoundFunction::offsetOfTargetFunction()));
     storeValue(boundThisRegs, Address(resultGPR, JSBoundFunction::offsetOfBoundThis()));

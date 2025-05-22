@@ -3306,7 +3306,8 @@ void SpeculativeJIT::compile(Node* node)
         break;
         
     case GetScope:
-        compileGetScope(node);
+    case GetEvalScope:
+        compileGetScopeOrGetEvalScope(node);
         break;
             
     case SkipScope:

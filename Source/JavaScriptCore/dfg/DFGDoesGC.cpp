@@ -121,6 +121,7 @@ bool doesGC(Graph& graph, Node* node)
     case CheckArrayOrEmpty:
     case CheckDetached:
     case GetScope:
+    case GetEvalScope:
     case SkipScope:
     case GetGlobalObject:
     case GetGlobalThis:

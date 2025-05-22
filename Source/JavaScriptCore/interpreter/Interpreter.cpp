@@ -1592,11 +1592,7 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
         }
     }
 
-    JSCallee* callee = nullptr;
-    if (scope == globalObject->globalScope())
-        callee = globalObject->globalCallee();
-    else
-        callee = JSCallee::create(vm, globalObject, scope);
+    JSCallee* callee = globalObject->evalCallee();
 
     RefPtr<JSC::JITCode> jitCode;
     ProtoCallFrame protoCallFrame;
@@ -1622,7 +1618,12 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
     // Execute the code:
     throwScope.release();
     ASSERT(jitCode == eval->generatedJITCode().ptr());
-    return JSValue::decode(vmEntryToJavaScript(jitCode->addressForCall(), &vm, &protoCallFrame));
+    // eval code only uses scope at the beginning (op_enter).
+    // We can replace the current scope for the subsequent run.
+    callee->setScope(vm, scope);
+    EncodedJSValue result = vmEntryToJavaScript(jitCode->addressForCall(), &vm, &protoCallFrame);
+    callee->setScope(vm, globalObject->globalScope());
+    return JSValue::decode(result);
 }
 
 JSValue Interpreter::executeModuleProgram(JSModuleRecord* record, ModuleProgramExecutable* executable, JSGlobalObject* lexicalGlobalObject, JSModuleEnvironment* scope, JSValue sentValue, JSValue resumeMode)

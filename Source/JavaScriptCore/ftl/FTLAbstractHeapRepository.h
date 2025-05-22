@@ -105,6 +105,7 @@ namespace JSC { namespace FTL {
     macro(JSBoundFunction_length, JSBoundFunction::offsetOfLength()) \
     macro(JSBoundFunction_boundArgsLength, JSBoundFunction::offsetOfBoundArgsLength()) \
     macro(JSBoundFunction_canConstruct, JSBoundFunction::offsetOfCanConstruct()) \
+    macro(JSCallee_scope, JSCallee::offsetOfScopeChain()) \
     macro(JSCell_cellState, JSCell::cellStateOffset()) \
     macro(JSCell_header, 0) \
     macro(JSCell_indexingTypeAndMisc, JSCell::indexingTypeAndMiscOffset()) \
@@ -113,7 +114,6 @@ namespace JSC { namespace FTL {
     macro(JSCell_typeInfoType, JSCell::typeInfoTypeOffset()) \
     macro(JSCell_usefulBytes, JSCell::indexingTypeAndMiscOffset()) \
     macro(JSFunction_executableOrRareData, JSFunction::offsetOfExecutableOrRareData()) \
-    macro(JSFunction_scope, JSFunction::offsetOfScopeChain()) \
     macro(JSGlobalObject_regExpGlobalData_cachedResult_lastRegExp, JSGlobalObject::regExpGlobalDataOffset() + RegExpGlobalData::offsetOfCachedResult() + RegExpCachedResult::offsetOfLastRegExp()) \
     macro(JSGlobalObject_regExpGlobalData_cachedResult_lastInput, JSGlobalObject::regExpGlobalDataOffset() + RegExpGlobalData::offsetOfCachedResult() + RegExpCachedResult::offsetOfLastInput()) \
     macro(JSGlobalObject_regExpGlobalData_cachedResult_result_start, JSGlobalObject::regExpGlobalDataOffset() + RegExpGlobalData::offsetOfCachedResult() + RegExpCachedResult::offsetOfResult() + OBJECT_OFFSETOF(MatchResult, start)) \

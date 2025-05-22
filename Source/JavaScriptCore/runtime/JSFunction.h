@@ -174,6 +174,16 @@ public:
 
     bool mayHaveNonReifiedPrototype();
 
+    // This method may be called for host functions, in which case it
+    // will return an arbitrary value. This should only be used for
+    // optimized paths in which the return value does not matter for
+    // host functions, and checking whether the function is a host
+    // function is deemed too expensive.
+    JSScope* scopeUnchecked()
+    {
+        return m_scope.get();
+    }
+
 protected:
     JS_EXPORT_PRIVATE JSFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*);
     JSFunction(VM&, FunctionExecutable*, JSScope*, Structure*);

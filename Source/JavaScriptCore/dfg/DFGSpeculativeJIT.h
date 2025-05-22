@@ -1542,7 +1542,7 @@ public:
     void compileGetPrivateNameById(Node*);
     void compileGetPrivateNameByVal(Node*, JSValueRegs base, JSValueRegs property);
 
-    void compileGetScope(Node*);
+    void compileGetScopeOrGetEvalScope(Node*);
     void compileSkipScope(Node*);
     void compileGetGlobalObject(Node*);
     void compileGetGlobalThis(Node*);
