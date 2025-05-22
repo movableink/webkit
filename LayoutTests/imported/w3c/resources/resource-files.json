@@ -8326,8 +8326,6 @@
         "web-platform-tests/dom/xslt/encoding-single-chunk-ref.html",
         "web-platform-tests/dom/xslt/large-cdata-ref.html",
         "web-platform-tests/dom/xslt/sort-ref.html",
-        "web-platform-tests/domxpath/001.html",
-        "web-platform-tests/domxpath/xml_xpath_tests.xml",
         "web-platform-tests/editing/crashtests/support/unloading-editor-in-subdocument-containing-misspelled-word-iframe.html",
         "web-platform-tests/encoding/eof-shift_jis-ref.html",
         "web-platform-tests/encoding/eof-utf-8-one-ref.html",
