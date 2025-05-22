@@ -139,7 +139,7 @@ private:
     CMTime nextDecodedSampleEndTime() const;
     MediaTime lastDecodedSampleTime() const;
     bool hasIncomingOutOfOrderFrame(const MediaTime&) const;
-    MediaTime minimumUpcomingSampleTime(const MediaTime&) const;
+    MediaTime minimumUpcomingSampleTime(const MediaSample&) const;
 
     void assignResourceOwner(CMSampleBufferRef);
     bool areSamplesQueuesReadyForMoreMediaData(size_t waterMark) const;
@@ -168,7 +168,7 @@ private:
     RefPtr<EffectiveRateChangedListener> m_effectiveRateChangedListener;
     std::atomic<FlushId> m_flushId { 0 };
     Deque<std::pair<Ref<const MediaSample>, FlushId>> m_compressedSampleQueue WTF_GUARDED_BY_CAPABILITY(dispatcher().get());
-    std::atomic<uint32_t> m_compressedSampleQueueSize { 0 };
+    std::atomic<uint32_t> m_compressedSamplesCount { 0 };
     static constexpr MediaTime s_decodeAhead { 133, 1000 };
     RetainPtr<CMBufferQueueRef> m_decodedSampleQueue; // created on the main thread, immutable after creation.
     RefPtr<WebCoreDecompressionSession> m_decompressionSession WTF_GUARDED_BY_LOCK(m_lock);
@@ -189,6 +189,7 @@ private:
     // B-Frame tracker.
     MediaTime m_highestPresentationTime WTF_GUARDED_BY_CAPABILITY(mainThread) { MediaTime::invalidTime() };
     bool m_hasOutOfOrderFrames WTF_GUARDED_BY_CAPABILITY(dispatcher().get()) { false };
+    MediaTime m_lastMinimumUpcomingPresentationTime WTF_GUARDED_BY_CAPABILITY(dispatcher().get()) { MediaTime::invalidTime() };
 
     // Playback Statistics
     std::atomic<unsigned> m_totalVideoFrames { 0 };
