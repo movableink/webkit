@@ -2446,7 +2446,7 @@ template <class TreeBuilder> bool Parser<LexerType>::parseFunctionInfo(TreeBuild
     int startColumn = -1;
     FunctionBodyType functionBodyType;
 
-    auto loadCachedFunction = [&] () -> bool {
+    auto tryLoadCachedFunction = [&] () -> bool {
         if (!Options::useSourceProviderCache()) [[unlikely]]
             return false;
 
@@ -2528,6 +2528,7 @@ template <class TreeBuilder> bool Parser<LexerType>::parseFunctionInfo(TreeBuild
 
     SyntaxChecker syntaxChecker(const_cast<VM&>(m_vm), m_lexer.get());
 
+    ParserState oldState;
     if ((SourceParseModeSet(SourceParseMode::ArrowFunctionMode, SourceParseMode::AsyncArrowFunctionMode).contains(mode))) [[unlikely]] {
         startLocation = tokenLocation();
         functionInfo.startLine = tokenLine();
@@ -2537,9 +2538,11 @@ template <class TreeBuilder> bool Parser<LexerType>::parseFunctionInfo(TreeBuild
         functionInfo.startOffset = parametersStart;
         functionInfo.parametersStartColumn = startColumn;
 
-        if (loadCachedFunction())
+        if (tryLoadCachedFunction())
             return true;
 
+        m_parserState.lastFunctionName = lastFunctionName;
+        oldState = internalSaveParserState(context);
         {
             // Parse formal parameters with [+Yield] parameterization, in order to ban YieldExpressions
             // in ArrowFormalParameters, per ES6 #sec-arrow-function-definitions-static-semantics-early-errors.
@@ -2614,8 +2617,11 @@ template <class TreeBuilder> bool Parser<LexerType>::parseFunctionInfo(TreeBuild
         parametersStart = m_token.m_location.startOffset;
         functionInfo.startOffset = parametersStart;
 
-        if (loadCachedFunction())
+        if (tryLoadCachedFunction())
             return true;
+
+        m_parserState.lastFunctionName = lastFunctionName;
+        oldState = internalSaveParserState(context);
         {
             SetForScope overrideAllowAwait(m_parserState.allowAwait, !isAsyncFunctionParseMode(mode));
             parseFunctionParameters(syntaxChecker, functionInfo);
@@ -2633,9 +2639,6 @@ template <class TreeBuilder> bool Parser<LexerType>::parseFunctionInfo(TreeBuild
     
         functionBodyType = StandardFunctionBodyBlock;
     }
-
-    m_parserState.lastFunctionName = lastFunctionName;
-    ParserState oldState = internalSaveParserState(context);
 
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=156962
     // This loop collects the set of capture candidates that aren't
