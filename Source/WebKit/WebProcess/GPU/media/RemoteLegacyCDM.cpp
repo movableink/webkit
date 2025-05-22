@@ -62,15 +62,13 @@ bool RemoteLegacyCDM::supportsMIMEType(const String& mimeType) const
 
 RefPtr<WebCore::LegacyCDMSession> RemoteLegacyCDM::createSession(WebCore::LegacyCDMSessionClient& client)
 {
-    String storageDirectory = client.mediaKeysStorageDirectory();
-
     uint64_t logIdentifier { 0 };
 #if !RELEASE_LOG_DISABLED
     logIdentifier = reinterpret_cast<uint64_t>(client.logIdentifier());
 #endif
 
     Ref factory = m_factory.get();
-    auto sendResult = factory->gpuProcessConnection().protectedConnection()->sendSync(Messages::RemoteLegacyCDMProxy::CreateSession(storageDirectory, logIdentifier), m_identifier);
+    auto sendResult = factory->gpuProcessConnection().protectedConnection()->sendSync(Messages::RemoteLegacyCDMProxy::CreateSession(logIdentifier), m_identifier);
     auto [identifier] = sendResult.takeReplyOr(std::nullopt);
     if (!identifier)
         return nullptr;
