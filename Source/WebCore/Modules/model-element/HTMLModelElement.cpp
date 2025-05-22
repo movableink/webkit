@@ -107,6 +107,13 @@ HTMLModelElement::~HTMLModelElement()
         m_resource = nullptr;
     }
 
+#if ENABLE(MODEL_PROCESS)
+    if (m_environmentMapResource) {
+        m_environmentMapResource->removeClient(*this);
+        m_environmentMapResource = nullptr;
+    }
+#endif
+
     deleteModelPlayer();
 }
 

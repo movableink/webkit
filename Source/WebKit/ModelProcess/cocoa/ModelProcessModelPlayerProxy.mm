@@ -442,7 +442,7 @@ static RESRT modelLocalizedTransformSRT(RESRT originalSRT)
 
 void ModelProcessModelPlayerProxy::computeTransform(bool setDefaultRotation)
 {
-    if (!m_model || !m_layer)
+    if (!m_modelRKEntity || !m_layer)
         return;
 
     // FIXME: Use the value of the 'object-fit' property here to compute an appropriate SRT.
@@ -464,7 +464,7 @@ void ModelProcessModelPlayerProxy::notifyModelPlayerOfEntityTransformChange()
 
 void ModelProcessModelPlayerProxy::updateTransform()
 {
-    if (!m_model || !m_layer)
+    if (!m_modelRKEntity || !m_layer)
         return;
 
     [m_modelRKEntity setTransform:WKEntityTransform({ m_transformSRT.scale, m_transformSRT.rotation, m_transformSRT.translation })];
@@ -472,7 +472,7 @@ void ModelProcessModelPlayerProxy::updateTransform()
 
 void ModelProcessModelPlayerProxy::updateOpacity()
 {
-    if (!m_model || !m_layer)
+    if (!m_modelRKEntity || !m_layer)
         return;
 
     [m_modelRKEntity setOpacity:[m_layer opacity]];
@@ -480,7 +480,7 @@ void ModelProcessModelPlayerProxy::updateOpacity()
 
 void ModelProcessModelPlayerProxy::startAnimating()
 {
-    if (!m_model || !m_layer)
+    if (!m_modelRKEntity || !m_layer)
         return;
 
     [m_modelRKEntity setUpAnimationWithAutoPlay:m_autoplay];
@@ -512,11 +512,10 @@ void ModelProcessModelPlayerProxy::didFinishLoading(WebCore::REModelLoader& load
     bool canLoadWithRealityKit = [getWKSRKEntityClass() isLoadFromDataAvailable];
 
     m_loader = nullptr;
-    m_model = WTFMove(model);
     if (canLoadWithRealityKit)
-        m_modelRKEntity = m_model->rootRKEntity();
-    else if (m_model->rootEntity())
-        m_modelRKEntity = adoptNS([allocWKSRKEntityInstance() initWithCoreEntity:m_model->rootEntity()]);
+        m_modelRKEntity = model->rootRKEntity();
+    else if (model->rootEntity())
+        m_modelRKEntity = adoptNS([allocWKSRKEntityInstance() initWithCoreEntity:model->rootEntity()]);
     [m_modelRKEntity setDelegate:m_objCAdapter.get()];
 
     m_originalBoundingBoxExtents = [m_modelRKEntity boundingBoxExtents];
@@ -537,14 +536,14 @@ void ModelProcessModelPlayerProxy::didFinishLoading(WebCore::REModelLoader& load
     auto clientComponentEntity = REComponentGetEntity(clientComponent);
     REEntitySetName(clientComponentEntity, "WebKit:ClientComponentEntity");
     if (canLoadWithRealityKit)
-        [m_model->rootRKEntity() setName:@"WebKit:ModelRootEntity"];
+        [model->rootRKEntity() setName:@"WebKit:ModelRootEntity"];
     else
-        REEntitySetName(m_model->rootEntity(), "WebKit:ModelRootEntity");
+        REEntitySetName(model->rootEntity(), "WebKit:ModelRootEntity");
 
     if (canLoadWithRealityKit)
-        [m_model->rootRKEntity() setParentCoreEntity:clientComponentEntity preservingWorldTransform:NO];
+        [model->rootRKEntity() setParentCoreEntity:clientComponentEntity preservingWorldTransform:NO];
     else {
-        REEntitySetParent(m_model->rootEntity(), clientComponentEntity);
+        REEntitySetParent(model->rootEntity(), clientComponentEntity);
     }
 
     m_stageModeInteractionDriver = adoptNS([allocWKStageModeInteractionDriverInstance() initWithModel:m_modelRKEntity.get() container:clientComponentEntity delegate:m_objCAdapter.get()]);
@@ -555,7 +554,7 @@ void ModelProcessModelPlayerProxy::didFinishLoading(WebCore::REModelLoader& load
     applyStageModeOperationToDriver();
 
     if (!canLoadWithRealityKit)
-        RENetworkMarkEntityMetadataDirty(m_model->rootEntity());
+        RENetworkMarkEntityMetadataDirty(model->rootEntity());
 
     if (m_entityTransformToRestore) {
         setEntityTransform(*m_entityTransformToRestore);
