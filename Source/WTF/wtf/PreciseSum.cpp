@@ -61,6 +61,7 @@
 #include "config.h"
 #include <wtf/PreciseSum.h>
 
+#include <array>
 #include <cmath>
 
 namespace WTF {
