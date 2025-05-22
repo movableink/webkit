@@ -3576,7 +3576,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
     case ThrowRef: {
         TypedExpression exn;
         WASM_TRY_POP_EXPRESSION_STACK_INTO(exn, "exception reference"_s);
-        WASM_VALIDATOR_FAIL_IF(exn.type() != exnrefType(), "throw_ref expected an exception reference"_s);
+        WASM_VALIDATOR_FAIL_IF(!isSubtype(exn.type(), exnrefType()), "throw_ref expected an exception reference"_s);
 
         WASM_TRY_ADD_TO_CONTEXT(addThrowRef(exn, m_expressionStack));
         m_unreachableBlocks = 1;
