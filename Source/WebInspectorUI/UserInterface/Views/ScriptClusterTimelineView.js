@@ -227,7 +227,7 @@ WI.ScriptClusterTimelineView = class ScriptClusterTimelineView extends WI.Cluste
         this._pathComponentForTarget.set(target, this._createTargetPathComponent(target));
         this._sortTargetPathComponents();
 
-        console.assert(!this._contentViewsForTarget.has(target), target, this);
+        console.assert(target === this._displayedTarget || !this._contentViewsForTarget.has(target), target, this);
 
         if (!this._selectedTarget) {
             console.assert(this._pathComponentForTarget.size >= 1, this._pathComponentForTarget);

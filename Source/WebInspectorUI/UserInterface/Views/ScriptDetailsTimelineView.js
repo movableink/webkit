@@ -80,7 +80,7 @@ WI.ScriptDetailsTimelineView = class ScriptDetailsTimelineView extends WI.Timeli
         this.addSubview(this._dataGrid);
 
         this.representedObject.addEventListener(WI.Timeline.Event.RecordAdded, this._scriptTimelineRecordAdded, this);
-        this.representedObject.addEventListener(WI.Timeline.Event.Refreshed, this._scriptTimelineRecordRefreshed, this);
+        this.representedObject.addEventListener(WI.ScriptTimeline.Event.Refreshed, this._handleScriptTimelineRefreshed, this);
 
         this._pendingRecords = [];
 
@@ -95,7 +95,7 @@ WI.ScriptDetailsTimelineView = class ScriptDetailsTimelineView extends WI.Timeli
     closed()
     {
         this.representedObject.removeEventListener(WI.Timeline.Event.RecordAdded, this._scriptTimelineRecordAdded, this);
-        this.representedObject.removeEventListener(WI.Timeline.Event.Refreshed, this._scriptTimelineRecordRefreshed, this);
+        this.representedObject.removeEventListener(WI.ScriptTimeline.Event.Refreshed, this._handleScriptTimelineRefreshed, this);
 
         this._dataGrid.closed();
 
@@ -229,7 +229,7 @@ WI.ScriptDetailsTimelineView = class ScriptDetailsTimelineView extends WI.Timeli
         this._pendingRecords.push(scriptTimelineRecord);
     }
 
-    _scriptTimelineRecordRefreshed(event)
+    _handleScriptTimelineRefreshed(event)
     {
         this.needsLayout();
     }

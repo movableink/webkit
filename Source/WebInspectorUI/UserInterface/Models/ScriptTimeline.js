@@ -48,12 +48,14 @@ WI.ScriptTimeline = class ScriptTimeline extends WI.Timeline
         super.reset(suppressEvents);
     }
 
+    refresh()
+    {
+        this.dispatchEventToListeners(WI.Timeline.Event.Refresh);
+    }
+
     callingContextTree(target, type)
     {
-        let callingContextTrees = this._callingContextTreesForTarget.get(target);
-        if (!callingContextTrees)
-            return new WI.CallingContextTree(WI.assumingMainTarget(), type);
-        return callingContextTrees[type];
+        return this._callingContextTreesForTarget.get(target)?.[type] || null;
     }
 
     updateCallingContextTrees(target, stackTraces, sampleDurations)
@@ -80,5 +82,6 @@ WI.ScriptTimeline = class ScriptTimeline extends WI.Timeline
 };
 
 WI.ScriptTimeline.Event = {
+    Refreshed: "script-timeline-refreshed",
     TargetAdded: "script-timeline-target-added",
 };

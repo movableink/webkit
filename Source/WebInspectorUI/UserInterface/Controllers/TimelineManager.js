@@ -683,6 +683,7 @@ WI.TimelineManager = class TimelineManager extends WI.Object
                 // Once we eliminate ProfileNodeTreeElements and ProfileNodeDataGridNodes.
                 // <https://webkit.org/b/154973> Web Inspector: Timelines UI redesign: Remove TimelineSidebarPanel
                 let topDownCallingContextTree = scriptTimeline.callingContextTree(target, WI.CallingContextTree.Type.TopDown);
+                console.assert(topDownCallingContextTree, scriptTimeline);
                 for (let i = 0; i < scriptProfilerRecords.length; ++i) {
                     let record = scriptProfilerRecords[i];
                     record.profilePayload = topDownCallingContextTree.toCPUProfilePayload(record.startTime, record.endTime);

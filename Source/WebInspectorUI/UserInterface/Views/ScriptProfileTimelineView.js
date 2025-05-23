@@ -36,6 +36,7 @@ WI.ScriptProfileTimelineView = class ScriptProfileTimelineView extends WI.Timeli
         this.element.classList.add("script");
 
         this._forceNextLayout = false;
+        this._missingCallingContextTree = false;
         this._lastLayoutStartTime = undefined;
         this._lastLayoutEndTime = undefined;
 
@@ -69,7 +70,7 @@ WI.ScriptProfileTimelineView = class ScriptProfileTimelineView extends WI.Timeli
         else
             this._topFunctionsButton.activated = true;
 
-        this.representedObject.addEventListener(WI.Timeline.Event.Refreshed, this._scriptTimelineRecordRefreshed, this);
+        this.representedObject.addEventListener(WI.ScriptTimeline.Event.Refreshed, this._handleScriptTimelineRefreshed, this);
     }
 
     // Public
@@ -79,7 +80,7 @@ WI.ScriptProfileTimelineView = class ScriptProfileTimelineView extends WI.Timeli
 
     closed()
     {
-        this.representedObject.removeEventListener(WI.Timeline.Event.Refreshed, this._scriptTimelineRecordRefreshed, this);
+        this.representedObject.removeEventListener(WI.ScriptTimeline.Event.Refreshed, this._handleScriptTimelineRefreshed, this);
 
         this._profileView.removeEventListener(WI.ContentView.Event.SelectionPathComponentsDidChange, this._profileViewSelectionPathComponentsDidChange, this);
 
@@ -146,7 +147,17 @@ WI.ScriptProfileTimelineView = class ScriptProfileTimelineView extends WI.Timeli
         }
         console.assert(type);
         type ??= WI.CallingContextTree.Type.TopDown;
-        return this.representedObject.callingContextTree(this._target, type);
+        let callingContextTree = this.representedObject.callingContextTree(this._target, type);
+
+        // This will happen when the timeline is reset/cleared, so listen for when the given target
+        // is finally added to the timeline (i.e. a script event is captured for that target) and
+        // then regenerate the data structures used to represent the profiled activity data.
+        if (!callingContextTree) {
+            callingContextTree = new WI.CallingContextTree(this._target, type);
+            this.representedObject.addEventListener(WI.ScriptTimeline.Event.TargetAdded, this._handleScriptTimelineTargetAdded, this);
+        }
+
+        return callingContextTree;
     }
 
     _profileViewSelectionPathComponentsDidChange(event)
@@ -155,10 +166,22 @@ WI.ScriptProfileTimelineView = class ScriptProfileTimelineView extends WI.Timeli
         this.dispatchEventToListeners(WI.ContentView.Event.SelectionPathComponentsDidChange);
     }
 
-    _scriptTimelineRecordRefreshed(event)
+    _handleScriptTimelineRefreshed(event)
     {
         this._forceNextLayout = true;
         this.needsLayout();
+    }
+
+    _handleScriptTimelineTargetAdded(event)
+    {
+        let {target} = event.data;
+
+        if (target !== this._target)
+            return;
+
+        this._showProfileView();
+
+        this.representedObject.removeEventListener(WI.ScriptTimeline.Event.TargetAdded, this._handleScriptTimelineTargetAdded, this);
     }
 
     _profileOrientationButtonClicked()
