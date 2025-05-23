@@ -40,8 +40,8 @@ constexpr size_t fifoSize = 96 * AudioUtilities::renderQuantumSize;
 
 AudioDestinationResampler::AudioDestinationResampler(const CreationOptions& options, float outputSampleRate)
     : AudioDestination(options)
-    , m_outputBus(AudioBus::create(options.numberOfOutputChannels, AudioUtilities::renderQuantumSize, false).releaseNonNull())
-    , m_renderBus(AudioBus::create(options.numberOfOutputChannels, AudioUtilities::renderQuantumSize).releaseNonNull())
+    , m_outputBus { AudioBus::create(options.numberOfOutputChannels, AudioUtilities::renderQuantumSize, false) }
+    , m_renderBus { AudioBus::create(options.numberOfOutputChannels, AudioUtilities::renderQuantumSize) }
     , m_fifo(options.numberOfOutputChannels, fifoSize)
 {
     if (options.sampleRate != outputSampleRate) {

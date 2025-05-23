@@ -459,7 +459,7 @@ RefPtr<AudioBus> AudioFileReader::createBus(float sampleRate, bool mixToMono)
     m_buffers.clear();
 
     if (mixToMono)
-        return AudioBus::createByMixingToMono(audioBus.get());
+        return AudioBus::createByMixingToMono(audioBus.ptr());
     return audioBus;
 }
 

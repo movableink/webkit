@@ -59,7 +59,7 @@ AudioParam::AudioParam(BaseAudioContext& context, const String& name, float defa
     , m_automationRate(automationRate)
     , m_automationRateMode(automationRateMode)
     , m_smoothedValue(defaultValue)
-    , m_summingBus(AudioBus::create(1, AudioUtilities::renderQuantumSize, false).releaseNonNull())
+    , m_summingBus(AudioBus::create(1, AudioUtilities::renderQuantumSize, false))
 #if !RELEASE_LOG_DISABLED
     , m_logger(context.logger())
     , m_logIdentifier(context.nextAudioParameterLogIdentifier())

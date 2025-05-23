@@ -141,7 +141,7 @@ SharedAudioDestinationAdapter::SharedAudioDestinationAdapter(const CreationOptio
         , options.sceneIdentifier.isNull() ? emptyString() : options.sceneIdentifier
 #endif
         }) }
-    , m_workBus { AudioBus::create(options.numberOfOutputChannels, AudioUtilities::renderQuantumSize).releaseNonNull() }
+    , m_workBus { AudioBus::create(options.numberOfOutputChannels, AudioUtilities::renderQuantumSize) }
     , m_ensureFunction { WTFMove(ensureFunction) }
 {
 }

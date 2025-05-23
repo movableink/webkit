@@ -41,14 +41,8 @@
 
 namespace WebCore {
 
-constexpr unsigned MaxBusChannels = 32;
-
-RefPtr<AudioBus> AudioBus::create(unsigned numberOfChannels, size_t length, bool allocate)
+Ref<AudioBus> AudioBus::create(unsigned numberOfChannels, size_t length, bool allocate)
 {
-    RELEASE_ASSERT(numberOfChannels <= MaxBusChannels);
-    if (numberOfChannels > MaxBusChannels)
-        return nullptr;
-
     return adoptRef(*new AudioBus(numberOfChannels, length, allocate));
 }
 
@@ -221,12 +215,6 @@ void AudioBus::copyFromRange(const AudioBus& sourceBus, unsigned startFrame, uns
     }
 
     unsigned numberOfChannels = this->numberOfChannels();
-    ASSERT(numberOfChannels <= MaxBusChannels);
-    if (numberOfChannels > MaxBusChannels) {
-        zero();
-        return;
-    }
-
     for (unsigned i = 0; i < numberOfChannels; ++i)
         channel(i)->copyFromRange(sourceBus.channel(i), startFrame, endFrame);
 }
@@ -438,35 +426,25 @@ void AudioBus::copyWithGainFrom(const AudioBus& sourceBus, float gain)
     }
 
     unsigned numberOfChannels = this->numberOfChannels();
-    ASSERT(numberOfChannels <= MaxBusChannels);
-    if (numberOfChannels > MaxBusChannels)
-        return;
 
     // If it is copying from the same bus and no need to change gain, just return.
     if (this == &sourceBus && gain == 1)
         return;
 
     AudioBus& sourceBusSafe = const_cast<AudioBus&>(sourceBus);
-    std::array<std::span<const float>, MaxBusChannels> sources;
-    std::array<std::span<float>, MaxBusChannels> destinations;
-
-    for (unsigned i = 0; i < numberOfChannels; ++i) {
-        sources[i] = sourceBusSafe.channel(i)->span();
-        destinations[i] = channel(i)->mutableSpan();
-    }
-
     unsigned framesToProcess = length();
 
-    // Handle gains of 0 and 1 (exactly) specially.
-    if (gain == 1) {
-        for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex)
-            memcpySpan(destinations[channelIndex], sources[channelIndex].first(framesToProcess));
-    } else if (!gain) {
-        for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex)
-            zeroSpan(destinations[channelIndex].first(framesToProcess));
-    } else {
-        for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex)
-            VectorMath::multiplyByScalar(sources[channelIndex].first(framesToProcess), gain, destinations[channelIndex]);
+    for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex) {
+        std::span<const float> source = sourceBusSafe.channel(channelIndex)->span();
+        std::span<float> destination = channel(channelIndex)->mutableSpan();
+
+        // Handle gains of 0 and 1 (exactly) specially.
+        if (gain == 1)
+            memcpySpan(destination, source.first(framesToProcess));
+        else if (!gain)
+            zeroSpan(destination.first(framesToProcess));
+        else
+            VectorMath::multiplyByScalar(source.first(framesToProcess), gain, destination);
     }
 }
 

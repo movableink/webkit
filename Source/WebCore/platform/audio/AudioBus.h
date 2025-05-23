@@ -67,7 +67,7 @@ public:
     // allocate indicates whether or not to initially have the AudioChannels created with managed storage.
     // Normal usage is to pass true here, in which case the AudioChannels will memory-manage their own storage.
     // If allocate is false then setChannelMemory() has to be called later on for each channel before the AudioBus is useable...
-    WEBCORE_EXPORT static RefPtr<AudioBus> create(unsigned numberOfChannels, size_t length, bool allocate = true);
+    WEBCORE_EXPORT static Ref<AudioBus> create(unsigned numberOfChannels, size_t length, bool allocate = true);
 
     // Tells the given channel to use an externally allocated buffer.
     WEBCORE_EXPORT void setChannelMemory(unsigned channelIndex, std::span<float> storage);

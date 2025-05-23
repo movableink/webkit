@@ -141,7 +141,7 @@ ExceptionOr<void> ConvolverNode::setBufferForBindings(RefPtr<AudioBuffer>&& buff
 
     // Create the reverb with the given impulse response.
     bool useBackgroundThreads = !context().isOfflineContext();
-    auto reverb = makeUnique<Reverb>(bufferBus.get(), AudioUtilities::renderQuantumSize, MaxFFTSize, useBackgroundThreads, m_normalize);
+    auto reverb = makeUnique<Reverb>(bufferBus.ptr(), AudioUtilities::renderQuantumSize, MaxFFTSize, useBackgroundThreads, m_normalize);
 
     {
         // The context must be locked since changing the buffer can re-configure the number of channels that are output.
