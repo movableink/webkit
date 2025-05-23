@@ -551,7 +551,9 @@ public:
 
     FunctionExecutable* functionDecl(int index) { return m_functionDecls[index].get(); }
     int numberOfFunctionDecls() { return m_functionDecls.size(); }
+    std::span<const WriteBarrier<FunctionExecutable>> functionDecls() { return m_functionDecls.span(); }
     FunctionExecutable* functionExpr(int index) { return m_functionExprs[index].get(); }
+    std::span<const WriteBarrier<FunctionExecutable>> functionExprs() { return m_functionExprs.span(); }
     
     const BitVector& bitVector(size_t i) { return m_unlinkedCode->bitVector(i); }
 

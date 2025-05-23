@@ -1456,65 +1456,63 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
     if (vm.disallowVMEntryCount) [[unlikely]]
         return checkVMEntryPermission();
 
-    unsigned numVariables = eval->numVariables();
-    unsigned numTopLevelFunctionDecls = eval->numTopLevelFunctionDecls();
-    unsigned numFunctionHoistingCandidates = eval->numFunctionHoistingCandidates();
-
-    JSScope* variableObject;
-    if ((numVariables || numTopLevelFunctionDecls) && eval->isInStrictContext()) {
-        scope = StrictEvalActivation::create(vm, globalObject->strictEvalActivationStructure(), scope);
-        variableObject = scope;
-    } else {
-        for (JSScope* node = scope; ; node = node->next()) {
-            RELEASE_ASSERT(node);
-            if (node->isGlobalObject()) {
-                variableObject = node;
-                break;
-            } 
-            if (node->isJSLexicalEnvironment()) {
-                JSLexicalEnvironment* lexicalEnvironment = jsCast<JSLexicalEnvironment*>(node);
-                if (lexicalEnvironment->symbolTable()->scopeType() == SymbolTable::ScopeType::VarScope) {
-                    variableObject = node;
-                    break;
-                }
-            }
-        }
-    }
-
     if (vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents)) [[unlikely]] {
         if (vm.hasExceptionsAfterHandlingTraps())
             return throwScope.exception();
     }
 
-    EvalCodeBlock* codeBlock;
-    {
-        CodeBlock* tempCodeBlock;
-        eval->prepareForExecution<EvalExecutable>(vm, nullptr, scope, CodeForCall, tempCodeBlock);
-        RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(throwScope, throwScope.exception());
-        codeBlock = jsCast<EvalCodeBlock*>(tempCodeBlock);
-        ASSERT(codeBlock && codeBlock->numParameters() == 1); // 1 parameter for 'this'.
-    }
-    UnlinkedEvalCodeBlock* unlinkedCodeBlock = codeBlock->unlinkedEvalCodeBlock();
+    auto topLevelFunctionDecls = eval->topLevelFunctionDecls();
+    auto variables = eval->variables();
+    auto functionHoistingCandidates = eval->functionHoistingCandidates();
 
-    if (variableObject->structure()->isUncacheableDictionary())
-        variableObject->flattenDictionaryObject(vm);
+    if (!variables.empty() || !topLevelFunctionDecls.empty() || !functionHoistingCandidates.empty()) {
+        JSScope* variableObject = nullptr;
+        if ((!variables.empty() || !topLevelFunctionDecls.empty()) && eval->isInStrictContext()) {
+            scope = StrictEvalActivation::create(vm, globalObject->strictEvalActivationStructure(), scope);
+            variableObject = scope;
+        } else {
+            for (JSScope* node = scope; ; node = node->next()) {
+                RELEASE_ASSERT(node);
+                if (node->isGlobalObject()) {
+                    variableObject = node;
+                    break;
+                }
+                if (node->isJSLexicalEnvironment()) {
+                    JSLexicalEnvironment* lexicalEnvironment = jsCast<JSLexicalEnvironment*>(node);
+                    if (lexicalEnvironment->symbolTable()->scopeType() == SymbolTable::ScopeType::VarScope) {
+                        variableObject = node;
+                        break;
+                    }
+                }
+            }
+            if (variableObject->structure()->isUncacheableDictionary())
+                variableObject->flattenDictionaryObject(vm);
+        }
 
-    if (numVariables || numTopLevelFunctionDecls || numFunctionHoistingCandidates) {
+        EvalCodeBlock* codeBlock = nullptr;
+        {
+            CodeBlock* tempCodeBlock;
+            eval->prepareForExecution<EvalExecutable>(vm, nullptr, scope, CodeForCall, tempCodeBlock);
+            RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(throwScope, throwScope.exception());
+            codeBlock = jsCast<EvalCodeBlock*>(tempCodeBlock);
+            ASSERT(codeBlock && codeBlock->numParameters() == 1); // 1 parameter for 'this'.
+        }
+
+        auto functionDecls = codeBlock->functionDecls();
         BatchedTransitionOptimizer optimizer(vm, variableObject);
         if (variableObject->next() && !eval->isInStrictContext())
             variableObject->globalObject()->varInjectionWatchpointSet().fireAll(vm, "Executed eval, fired VarInjection watchpoint");
 
         if (!eval->isInStrictContext()) {
-            for (unsigned i = 0; i < numVariables; ++i) {
-                const Identifier& ident = unlinkedCodeBlock->variable(i);
+            for (auto& ident : variables) {
                 JSValue resolvedScope = JSScope::resolveScopeForHoistingFuncDeclInEval(globalObject, scope, ident);
                 RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
                 if (resolvedScope.isUndefined())
                     return throwSyntaxError(globalObject, throwScope, makeString("Can't create duplicate variable in eval: '"_s, StringView(ident.impl()), '\''));
             }
 
-            for (unsigned i = 0; i < numTopLevelFunctionDecls; ++i) {
-                FunctionExecutable* function = codeBlock->functionDecl(i);
+            for (auto& slot : functionDecls) {
+                FunctionExecutable* function = slot.get();
                 JSValue resolvedScope = JSScope::resolveScopeForHoistingFuncDeclInEval(globalObject, scope, function->name());
                 RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
                 if (resolvedScope.isUndefined())
@@ -1524,8 +1522,8 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
 
         bool isGlobalVariableEnvironment = variableObject->isGlobalObject();
         if (isGlobalVariableEnvironment) {
-            for (unsigned i = 0; i < numTopLevelFunctionDecls; ++i) {
-                FunctionExecutable* function = codeBlock->functionDecl(i);
+            for (auto& slot : functionDecls) {
+                FunctionExecutable* function = slot.get();
                 bool canDeclare = jsCast<JSGlobalObject*>(variableObject)->canDeclareGlobalFunction(function->name());
                 throwScope.assertNoExceptionExceptTermination();
                 if (!canDeclare)
@@ -1533,8 +1531,7 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
             }
 
             if (!variableObject->isStructureExtensible()) {
-                for (unsigned i = 0; i < numVariables; ++i) {
-                    const Identifier& ident = unlinkedCodeBlock->variable(i);
+                for (auto& ident : variables) {
                     bool canDeclare = jsCast<JSGlobalObject*>(variableObject)->canDeclareGlobalVar(ident);
                     throwScope.assertNoExceptionExceptTermination();
                     if (!canDeclare)
@@ -1555,8 +1552,7 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
         };
 
         if (!eval->isInStrictContext()) {
-            for (unsigned i = 0; i < numFunctionHoistingCandidates; ++i) {
-                const Identifier& ident = unlinkedCodeBlock->functionHoistingCandidate(i);
+            for (auto& ident : functionHoistingCandidates) {
                 JSValue resolvedScope = JSScope::resolveScopeForHoistingFuncDeclInEval(globalObject, scope, ident);
                 RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
                 if (!resolvedScope.isUndefined()) {
@@ -1573,8 +1569,8 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
             }
         }
 
-        for (unsigned i = 0; i < numTopLevelFunctionDecls; ++i) {
-            FunctionExecutable* function = codeBlock->functionDecl(i);
+        for (auto& slot : functionDecls) {
+            FunctionExecutable* function = slot.get();
             if (isGlobalVariableEnvironment) {
                 jsCast<JSGlobalObject*>(variableObject)->createGlobalFunctionBinding<BindingCreationContext::Eval>(function->name());
                 throwScope.assertNoExceptionExceptTermination();
@@ -1582,18 +1578,38 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
                 ensureBindingExists(function->name());
         }
 
-        for (unsigned i = 0; i < numVariables; ++i) {
-            const Identifier& ident = unlinkedCodeBlock->variable(i);
+        for (auto& ident : variables) {
             if (isGlobalVariableEnvironment) {
                 jsCast<JSGlobalObject*>(variableObject)->createGlobalVarBinding<BindingCreationContext::Eval>(ident);
                 throwScope.assertNoExceptionExceptTermination();
             } else
                 ensureBindingExists(ident);
         }
+
+        ensureStillAliveHere(codeBlock);
     }
 
+    EvalCodeBlock* codeBlock = nullptr;
     JSCallee* callee = globalObject->evalCallee();
+#if CPU(ARM64) && CPU(ADDRESS64) && !ENABLE(C_LOOP)
+    void* entry = nullptr;
+    {
+        DeferTraps deferTraps(vm); // We can't jettison this code if we're about to run it.
 
+        // Reload CodeBlock. It is possible that we replaced CodeBlock while setting up the environment.
+        {
+            CodeBlock* tempCodeBlock;
+            eval->prepareForExecution<EvalExecutable>(vm, nullptr, scope, CodeForCall, tempCodeBlock);
+            RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(throwScope, throwScope.exception());
+            codeBlock = jsCast<EvalCodeBlock*>(tempCodeBlock);
+            entry = codeBlock->jitCode()->addressForCall();
+            ASSERT(codeBlock && codeBlock->numParameters() == 1); // 1 parameter for 'this'.
+        }
+    }
+    callee->setScope(vm, scope);
+    EncodedJSValue result = vmEntryToJavaScriptWith0Arguments(entry, &vm, codeBlock, callee, thisValue);
+    callee->setScope(vm, globalObject->globalScope());
+#else
     RefPtr<JSC::JITCode> jitCode;
     ProtoCallFrame protoCallFrame;
     {
@@ -1623,6 +1639,9 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
     callee->setScope(vm, scope);
     EncodedJSValue result = vmEntryToJavaScript(jitCode->addressForCall(), &vm, &protoCallFrame);
     callee->setScope(vm, globalObject->globalScope());
+#endif
+    ensureStillAliveHere(eval);
+    ensureStillAliveHere(codeBlock);
     return JSValue::decode(result);
 }
 
