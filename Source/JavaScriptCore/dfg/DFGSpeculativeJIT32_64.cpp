@@ -991,7 +991,10 @@ GPRReg SpeculativeJIT::fillSpeculateInt32Internal(Edge edge, DataFormat& returnF
 
     m_interpreter.filter(value, SpecInt32Only);
     if (value.isClear()) {
-        terminateSpeculativeExecution(Uncountable, JSValueRegs(), 0);
+        if (!type)
+            terminateUnreachableNode();
+        else if (mayHaveTypeCheck(edge.useKind())
+            terminateSpeculativeExecution(Uncountable, JSValueRegs(), nullptr);
         returnFormat = DataFormatInt32;
         return allocate();
     }
@@ -1120,7 +1123,10 @@ GPRReg SpeculativeJIT::fillSpeculateCell(Edge edge)
 
     m_interpreter.filter(value, SpecCell);
     if (value.isClear()) {
-        terminateSpeculativeExecution(Uncountable, JSValueRegs(), 0);
+        if (!type)
+            terminateUnreachableNode();
+        else if (mayHaveTypeCheck(edge.useKind())
+            terminateSpeculativeExecution(Uncountable, JSValueRegs(), nullptr);
         return allocate();
     }
 
@@ -1200,7 +1206,10 @@ GPRReg SpeculativeJIT::fillSpeculateBoolean(Edge edge)
 
     m_interpreter.filter(value, SpecBoolean);
     if (value.isClear()) {
-        terminateSpeculativeExecution(Uncountable, JSValueRegs(), 0);
+        if (!type)
+            terminateUnreachableNode();
+        else if (mayHaveTypeCheck(edge.useKind())
+            terminateSpeculativeExecution(Uncountable, JSValueRegs(), nullptr);
         return allocate();
     }
 
@@ -4234,7 +4243,7 @@ void SpeculativeJIT::compile(Node* node)
     }
 
     case ForceOSRExit: {
-        terminateSpeculativeExecution(InadequateCoverage, JSValueRegs(), 0);
+        terminateSpeculativeExecution(InadequateCoverage, JSValueRegs(), nullptr);
         break;
     }
 

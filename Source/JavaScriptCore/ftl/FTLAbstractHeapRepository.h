@@ -179,6 +179,7 @@ namespace JSC { namespace FTL {
     macro(VM_heap_barrierThreshold, VM::offsetOfHeapBarrierThreshold()) \
     macro(VM_heap_mutatorShouldBeFenced, VM::offsetOfHeapMutatorShouldBeFenced()) \
     macro(VM_exception, VM::exceptionOffset()) \
+    macro(WatchpointSet_state, WatchpointSet::offsetOfState()) \
     macro(WeakMapImpl_capacity, WeakMapImpl<WeakMapBucket<WeakMapBucketDataKey>>::offsetOfCapacity()) \
     macro(WeakMapImpl_buffer,  WeakMapImpl<WeakMapBucket<WeakMapBucketDataKey>>::offsetOfBuffer()) \
     macro(WeakMapBucket_value, WeakMapBucket<WeakMapBucketDataKeyValue>::offsetOfValue()) \

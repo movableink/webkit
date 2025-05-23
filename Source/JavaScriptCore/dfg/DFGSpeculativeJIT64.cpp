@@ -1145,7 +1145,9 @@ GPRReg SpeculativeJIT::fillSpeculateInt32Internal(Edge edge, DataFormat& returnF
 
     m_interpreter.filter(value, SpecInt32Only);
     if (value.isClear()) {
-        if (mayHaveTypeCheck(edge.useKind()))
+        if (!type)
+            terminateUnreachableNode();
+        else if (mayHaveTypeCheck(edge.useKind()))
             terminateSpeculativeExecution(Uncountable, JSValueRegs(), nullptr);
         returnFormat = DataFormatInt32;
         return allocate();
@@ -1287,10 +1289,13 @@ GPRReg SpeculativeJIT::fillSpeculateInt52(Edge edge, DataFormat desiredFormat)
 {
     ASSERT(desiredFormat == DataFormatInt52 || desiredFormat == DataFormatStrictInt52);
     AbstractValue& value = m_state.forNode(edge);
+    SpeculatedType type = value.m_type;
 
     m_interpreter.filter(value, SpecInt52Any);
     if (value.isClear()) {
-        if (mayHaveTypeCheck(edge.useKind()))
+        if (!type)
+            terminateUnreachableNode();
+        else if (mayHaveTypeCheck(edge.useKind()))
             terminateSpeculativeExecution(Uncountable, JSValueRegs(), nullptr);
         return allocate();
     }
@@ -1432,7 +1437,9 @@ GPRReg SpeculativeJIT::fillSpeculateCell(Edge edge)
 
     m_interpreter.filter(value, SpecCellCheck);
     if (value.isClear()) {
-        if (mayHaveTypeCheck(edge.useKind()))
+        if (!type)
+            terminateUnreachableNode();
+        else if (mayHaveTypeCheck(edge.useKind()))
             terminateSpeculativeExecution(Uncountable, JSValueRegs(), nullptr);
         return allocate();
     }
@@ -1512,7 +1519,9 @@ GPRReg SpeculativeJIT::fillSpeculateBoolean(Edge edge)
 
     m_interpreter.filter(value, SpecBoolean);
     if (value.isClear()) {
-        if (mayHaveTypeCheck(edge.useKind()))
+        if (!type)
+            terminateUnreachableNode();
+        else if (mayHaveTypeCheck(edge.useKind()))
             terminateSpeculativeExecution(Uncountable, JSValueRegs(), nullptr);
         return allocate();
     }
@@ -1618,7 +1627,9 @@ GPRReg SpeculativeJIT::fillSpeculateBigInt32(Edge edge)
 
     m_interpreter.filter(value, SpecBigInt32);
     if (value.isClear()) {
-        if (mayHaveTypeCheck(edge.useKind()))
+        if (!type)
+            terminateUnreachableNode();
+        else if (mayHaveTypeCheck(edge.useKind()))
             terminateSpeculativeExecution(Uncountable, JSValueRegs(), nullptr);
         return allocate();
     }

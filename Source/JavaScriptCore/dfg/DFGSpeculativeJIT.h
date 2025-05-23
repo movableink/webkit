@@ -1881,8 +1881,9 @@ public:
     void compileInvalidationPoint(Node*);
     
     void unreachable(Node*);
-    
+
     // Called when we statically determine that a speculation will fail.
+    void terminateUnreachableNode();
     void terminateSpeculativeExecution(ExitKind, JSValueRegs, Node*);
     void terminateSpeculativeExecution(ExitKind, JSValueRegs, Edge);
     
@@ -1984,6 +1985,8 @@ public:
     void checkArray(Node*);
     void arrayify(Node*, GPRReg baseReg, GPRReg propertyReg);
     void arrayify(Node*);
+
+    unsigned appendOSRExit(OSRExit&&);
     
     template<bool strict>
     GPRReg fillSpeculateInt32Internal(Edge, DataFormat& returnFormat);

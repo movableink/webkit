@@ -653,6 +653,7 @@ void Options::setAllJITCodeValidations(bool value)
 {
     Options::validateDFGClobberize() = value;
     Options::validateDFGExceptionHandling() = value;
+    Options::validateDFGMayExit() = value;
     Options::validateDoesGC() = value;
     Options::useJITAsserts() = value;
 }

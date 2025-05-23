@@ -270,14 +270,6 @@ public:
     void noticeOSREntry(BasicBlock&, JITCompiler::Label blockHead, LinkBuffer&);
     void noticeCatchEntrypoint(BasicBlock&, JITCompiler::Label blockHead, LinkBuffer&, Vector<FlushFormat>&& argumentFormats);
 
-    unsigned appendOSRExit(OSRExit&& exit)
-    {
-        unsigned result = m_osrExit.size();
-        m_osrExit.append(WTFMove(exit));
-        return result;
-    }
-
-
     unsigned appendSpeculationRecovery(const SpeculationRecovery& recovery)
     {
         unsigned result = m_speculationRecovery.size();
