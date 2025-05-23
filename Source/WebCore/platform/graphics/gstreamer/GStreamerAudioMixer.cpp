@@ -133,10 +133,8 @@ void GStreamerAudioMixer::unregisterProducer(const GRefPtr<GstPad>& mixerPad)
     auto interaudioSrc = adoptGRef(gst_pad_get_parent_element(srcPad.get()));
     GST_LOG_OBJECT(m_pipeline.get(), "interaudiosrc: %" GST_PTR_FORMAT, interaudioSrc.get());
 
-    gst_element_set_locked_state(interaudioSrc.get(), true);
-    gst_element_set_state(interaudioSrc.get(), GST_STATE_NULL);
-    gst_element_set_state(bin.get(), GST_STATE_NULL);
-
+    gstElementLockAndSetState(interaudioSrc.get(), GST_STATE_NULL);
+    gstElementLockAndSetState(bin.get(), GST_STATE_NULL);
     gst_pad_unlink(peer.get(), mixerPad.get());
     gst_element_unlink(interaudioSrc.get(), bin.get());
 

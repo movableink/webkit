@@ -215,13 +215,9 @@ void RealtimeOutgoingMediaSourceGStreamer::stopOutgoingSource(StoppedCallback&& 
 
 void RealtimeOutgoingMediaSourceGStreamer::removeOutgoingSource()
 {
-    gst_element_set_locked_state(m_outgoingSource.get(), TRUE);
-
+    gstElementLockAndSetState(m_outgoingSource.get(), GST_STATE_NULL);
     gst_element_unlink(m_outgoingSource.get(), m_tee.get());
-
-    gst_element_set_state(m_outgoingSource.get(), GST_STATE_NULL);
     gst_bin_remove(GST_BIN_CAST(m_bin.get()), m_outgoingSource.get());
-    gst_element_set_locked_state(m_outgoingSource.get(), FALSE);
     m_outgoingSource.clear();
 }
 
@@ -683,11 +679,10 @@ void RealtimeOutgoingMediaSourceGStreamer::teardown()
             }
         }
 
-        gst_element_set_locked_state(m_bin.get(), TRUE);
-        gst_element_set_state(m_bin.get(), GST_STATE_NULL);
+        gstElementLockAndSetState(m_bin.get(), GST_STATE_NULL);
+
         if (auto pipeline = adoptGRef(gst_element_get_parent(m_bin.get())))
             gst_bin_remove(GST_BIN_CAST(pipeline.get()), m_bin.get());
-        gst_element_set_locked_state(m_bin.get(), FALSE);
 
         m_packetizers.clear();
 

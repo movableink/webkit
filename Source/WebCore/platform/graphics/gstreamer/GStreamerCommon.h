@@ -356,6 +356,9 @@ WARN_UNUSED_RETURN GRefPtr<GstCaps> buildDMABufCaps();
 #if USE(GSTREAMER_GL)
 bool setGstElementGLContext(GstElement*, ASCIILiteral contextType);
 #endif
+
+GstStateChangeReturn gstElementLockAndSetState(GstElement*, GstState);
+
 } // namespace WebCore
 
 #ifndef GST_BUFFER_DTS_OR_PTS

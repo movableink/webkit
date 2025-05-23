@@ -1959,6 +1959,21 @@ bool setGstElementGLContext(GstElement* element, ASCIILiteral contextType)
 }
 #endif
 
+GstStateChangeReturn gstElementLockAndSetState(GstElement* element, GstState state)
+{
+    auto parent = adoptGRef(gst_element_get_parent(element));
+    if (parent)
+        GST_STATE_LOCK(parent.get());
+
+    gst_element_set_locked_state(element, TRUE);
+    auto result = gst_element_set_state(element, state);
+    gst_element_set_locked_state(element, FALSE);
+
+    if (parent)
+        GST_STATE_UNLOCK(parent.get());
+    return result;
+}
+
 #undef GST_CAT_DEFAULT
 
 } // namespace WebCore

@@ -361,12 +361,11 @@ void GStreamerMediaEndpoint::disposeElementChain(GstElement* element)
     auto pad = adoptGRef(gst_element_get_static_pad(element, "sink"));
     auto peer = adoptGRef(gst_pad_get_peer(pad.get()));
 
-    gst_element_set_locked_state(m_pipeline.get(), TRUE);
+    gstElementLockAndSetState(element, GST_STATE_NULL);
+
     gst_pad_unlink(peer.get(), pad.get());
     gst_bin_remove(GST_BIN_CAST(m_pipeline.get()), element);
     gst_element_release_request_pad(m_webrtcBin.get(), peer.get());
-    gst_element_set_state(element, GST_STATE_NULL);
-    gst_element_set_locked_state(m_pipeline.get(), FALSE);
 }
 
 bool GStreamerMediaEndpoint::setConfiguration(MediaEndpointConfiguration& configuration)

@@ -799,13 +799,8 @@ static void webkitMediaStreamSrcCleanup(WebKitMediaStreamSrc* self, const std::u
     GST_DEBUG_OBJECT(self, "Cleaning-up internal source element %" GST_PTR_FORMAT, appSrc);
     source->cleanUp();
 
-    {
-        auto locker = GstStateLocker(element);
-        gst_element_set_locked_state(appSrc, true);
-        gst_element_set_state(appSrc, GST_STATE_NULL);
-        gst_bin_remove(GST_BIN_CAST(self), appSrc);
-        gst_element_set_locked_state(appSrc, false);
-    }
+    gstElementLockAndSetState(appSrc, GST_STATE_NULL);
+    gst_bin_remove(GST_BIN_CAST(self), appSrc);
 
     auto pad = adoptGRef(gst_element_get_static_pad(element, source->padName().ascii().data()));
     if (auto proxyPad = adoptGRef(GST_PAD_CAST(gst_proxy_pad_get_internal(GST_PROXY_PAD(pad.get())))))

@@ -306,15 +306,12 @@ void AudioSourceProviderGStreamer::setClient(WeakPtr<AudioSourceProviderClient>&
         auto teeSrcPad = adoptGRef(gst_pad_get_peer(queueSinkPad.get()));
 
         GST_DEBUG("Cleaning up audio deinterleave chain");
-        gst_element_set_locked_state(m_audioSinkBin.get(), true);
-
-        gst_element_set_state(audioQueue.get(), GST_STATE_NULL);
-        gst_element_set_state(audioConvert.get(), GST_STATE_NULL);
-        gst_element_set_state(audioResample.get(), GST_STATE_NULL);
-        gst_element_set_state(capsFilter.get(), GST_STATE_NULL);
-        gst_element_set_state(deInterleave.get(), GST_STATE_NULL);
+        gstElementLockAndSetState(audioQueue.get(), GST_STATE_NULL);
+        gstElementLockAndSetState(audioConvert.get(), GST_STATE_NULL);
+        gstElementLockAndSetState(audioResample.get(), GST_STATE_NULL);
+        gstElementLockAndSetState(capsFilter.get(), GST_STATE_NULL);
+        gstElementLockAndSetState(deInterleave.get(), GST_STATE_NULL);
         gst_element_unlink_many(audioTee.get(), audioQueue.get(), audioConvert.get(), audioResample.get(), capsFilter.get(), deInterleave.get(), nullptr);
-        gst_element_set_locked_state(m_audioSinkBin.get(), false);
         gst_bin_remove_many(GST_BIN_CAST(m_audioSinkBin.get()), audioQueue.get(), audioConvert.get(), audioResample.get(), capsFilter.get(), deInterleave.get(), nullptr);
         gst_element_release_request_pad(audioTee.get(), teeSrcPad.get());
     }
