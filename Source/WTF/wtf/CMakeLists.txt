@@ -207,6 +207,7 @@ set(WTF_PUBLIC_HEADERS
     ObjectIdentifier.h
     Observer.h
     OptionSet.h
+    OptionalOrReference.h
     OptionSetHash.h
     OrderMaker.h
     OverflowPolicy.h

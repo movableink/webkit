@@ -199,7 +199,7 @@ void ProcessingInstruction::setCSSStyleSheet(const String& href, const URL& base
     Ref cssSheet = CSSStyleSheet::create(StyleSheetContents::create(href, parserContext), *this, sheet->isCORSSameOrigin());
     cssSheet->setDisabled(m_alternate);
     cssSheet->setTitle(m_title);
-    cssSheet->setMediaQueries(MQ::MediaQueryParser::parse(m_media, MediaQueryParserContext(document)));
+    cssSheet->setMediaQueries(MQ::MediaQueryParser::parse(m_media, document->cssParserContext()));
 
     m_sheet = WTFMove(cssSheet);
 

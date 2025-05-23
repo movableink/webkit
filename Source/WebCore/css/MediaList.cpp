@@ -93,7 +93,7 @@ String MediaList::mediaText() const
 
 void MediaList::setMediaText(const String& value)
 {
-    setMediaQueries(MQ::MediaQueryParser::parse(value, { }));
+    setMediaQueries(MQ::MediaQueryParser::parse(value, strictCSSParserContext()));
 }
 
 String MediaList::item(unsigned index) const
@@ -126,7 +126,7 @@ void MediaList::appendMedium(const String& value)
     if (value.isEmpty())
         return;
 
-    auto newQuery = MQ::MediaQueryParser::parse(value, { });
+    auto newQuery = MQ::MediaQueryParser::parse(value, strictCSSParserContext());
 
     auto queries = mediaQueries();
     queries.appendVector(newQuery);

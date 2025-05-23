@@ -133,7 +133,7 @@ bool SizesAttributeParser::parse(CSSParserTokenRange range, const CSSParserConte
         auto length = calculateLengthInPixels(lengthTokenStart.rangeUntil(lengthTokenEnd));
         if (!length)
             continue;
-        auto mediaCondition = MQ::MediaQueryParser::parseCondition(mediaConditionStart.rangeUntil(lengthTokenStart), MediaQueryParserContext(context));
+        auto mediaCondition = MQ::MediaQueryParser::parseCondition(mediaConditionStart.rangeUntil(lengthTokenStart), context);
         if (!mediaCondition)
             continue;
         bool matches = mediaConditionMatches(*mediaCondition);

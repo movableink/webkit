@@ -30,6 +30,7 @@
 #include "StyleRuleType.h"
 #include "StyledElement.h"
 #include <wtf/HashMap.h>
+#include <wtf/OptionalOrReference.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/WeakPtr.h>
@@ -92,7 +93,7 @@ public:
 protected:
     enum class MutationType : uint8_t { NoChanges, StyleAttributeChanged, PropertyChanged };
 
-    virtual CSSParserContext cssParserContext() const;
+    virtual OptionalOrReference<CSSParserContext> cssParserContext() const;
 
     MutableStyleProperties* m_propertySet;
     UncheckedKeyHashMap<CSSValue*, WeakPtr<DeprecatedCSSOMValue>> m_cssomValueWrappers;
@@ -149,7 +150,7 @@ private:
 
     bool willMutate() final WARN_UNUSED_RETURN;
     void didMutate(MutationType) final;
-    CSSParserContext cssParserContext() const final;
+    OptionalOrReference<CSSParserContext> cssParserContext() const final;
 
     StyleRuleType m_parentRuleType;
     CSSRule* m_parentRule;
@@ -170,7 +171,7 @@ private:
 
     bool willMutate() final WARN_UNUSED_RETURN;
     void didMutate(MutationType) final;
-    CSSParserContext cssParserContext() const final;
+    OptionalOrReference<CSSParserContext> cssParserContext() const final;
 
     WeakPtr<StyledElement, WeakPtrImplWithEventTargetData> m_parentElement;
 };

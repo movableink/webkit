@@ -133,7 +133,7 @@ Ref<CSSStyleSheet> DOMImplementation::createCSSStyleSheet(const String&, const S
     // FIXME: Title should be set.
     // FIXME: Media could have wrong syntax, in which case we should generate an exception.
     auto sheet = CSSStyleSheet::create(StyleSheetContents::create());
-    sheet->setMediaQueries(MQ::MediaQueryParser::parse(media, { }));
+    sheet->setMediaQueries(MQ::MediaQueryParser::parse(media, strictCSSParserContext()));
     return sheet;
 }
 

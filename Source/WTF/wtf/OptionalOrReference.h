@@ -29,40 +29,36 @@
 
 namespace WTF {
 
-// ValueOrReference<T> is just like const T&, except that it can also optionally hold T.
+// OptionalOrReference<T> is just like const T&, except that it can also optionally hold T.
 //
 // When T has an efficient default constructor, use ValueOrReference<T>; otherwise use OptionalOrReference<T>.
 //
-// ValueOrReference<T> is an optimization when you need to return a value that is
+// OptionalOrReference<T> is an optimization when you need to return a value that is
 // usually an existing reference, but sometimes a temporary, e.g.:
 //
-// ValueOrReference<String> append(const String& string LIFETIME_BOUND, std::optional<String&> suffix)
+// OptionalOrReference<CSSParserContext> context()
 // {
-//     if (!suffix) [[likely]]
-//         return string; // existing reference -- ValueOrReference<T> avoids a copy
-//     return makeString(string, suffix.value()); // temporary -- ValueOrReference<T> holds T
+//     if (canUseCachedContext()) [[likely]]
+//         return cachedContext(); // existing reference -- OptionalOrReference<T> avoids a copy
+//     return makeContext(); // temporary -- OptionalOrReference<T> holds T
 // }
-template<typename T> class ValueOrReference {
+
+template<typename T> class OptionalOrReference {
 public:
-    ValueOrReference()
-        : m_reference(m_value)
-    {
-    }
-
-    ValueOrReference(ValueOrReference&& other)
+    OptionalOrReference(OptionalOrReference&& other)
         : m_value(WTFMove(other.m_value))
-        , m_reference(&other.m_reference == &other.m_value ? m_value : other.m_reference)
+        , m_reference(m_value.has_value() ? m_value.value() : other.m_reference)
     {
     }
 
-    ValueOrReference(const T& reference LIFETIME_BOUND)
+    OptionalOrReference(const T& reference LIFETIME_BOUND)
         : m_reference(reference)
     {
     }
 
-    ValueOrReference(T&& temporary)
+    OptionalOrReference(T&& temporary)
         : m_value(WTFMove(temporary))
-        , m_reference(m_value)
+        , m_reference(m_value.value())
     {
     }
 
@@ -71,10 +67,10 @@ public:
     const T* operator->() const LIFETIME_BOUND { return &m_reference; }
 
 private:
-    T m_value;
+    std::optional<T> m_value;
     const T& m_reference;
 };
 
 } // namespace WTF
 
-using WTF::ValueOrReference;
+using WTF::OptionalOrReference;

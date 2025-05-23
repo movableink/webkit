@@ -90,7 +90,7 @@ void HTMLResourcePreloader::preload(std::unique_ptr<PreloadRequest> preload)
     ASSERT(document->frame());
     ASSERT(document->renderView());
 
-    auto queries = MQ::MediaQueryParser::parse(preload->media(), { document.get() });
+    auto queries = MQ::MediaQueryParser::parse(preload->media(), document->cssParserContext());
     if (!MQ::MediaQueryEvaluator { screenAtom(), document, document->renderStyle() }.evaluate(queries))
         return;
 

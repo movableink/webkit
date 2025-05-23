@@ -509,9 +509,9 @@ bool PropertySetCSSStyleProperties::isExposed(CSSPropertyID propertyID) const
         return false;
 
     auto parserContext = cssParserContext();
-    bool parsingDescriptor = parserContext.enclosingRuleType && *parserContext.enclosingRuleType != StyleRuleType::Style;
+    bool parsingDescriptor = parserContext->enclosingRuleType && *parserContext->enclosingRuleType != StyleRuleType::Style;
 
-    return WebCore::isExposed(propertyID, &parserContext.propertySettings)
+    return WebCore::isExposed(propertyID, &parserContext->propertySettings)
         && (!CSSProperty::isDescriptorOnly(propertyID) || parsingDescriptor);
 }
 
@@ -537,7 +537,7 @@ StyleSheetContents* PropertySetCSSStyleProperties::contextStyleSheet() const
     return cssStyleSheet ? &cssStyleSheet->contents() : nullptr;
 }
 
-CSSParserContext PropertySetCSSStyleProperties::cssParserContext() const
+OptionalOrReference<CSSParserContext> PropertySetCSSStyleProperties::cssParserContext() const
 {
     return CSSParserContext(m_propertySet->cssParserMode());
 }
@@ -587,7 +587,7 @@ CSSStyleSheet* StyleRuleCSSStyleProperties::parentStyleSheet() const
     return m_parentRule ? m_parentRule->parentStyleSheet() : nullptr;
 }
 
-CSSParserContext StyleRuleCSSStyleProperties::cssParserContext() const
+OptionalOrReference<CSSParserContext> StyleRuleCSSStyleProperties::cssParserContext() const
 {
     auto* styleSheet = contextStyleSheet();
     if (!styleSheet)
@@ -639,12 +639,16 @@ CSSStyleSheet* InlineCSSStyleProperties::parentStyleSheet() const
     return nullptr;
 }
 
-CSSParserContext InlineCSSStyleProperties::cssParserContext() const
+OptionalOrReference<CSSParserContext> InlineCSSStyleProperties::cssParserContext() const
 {
     if (!m_parentElement)
         return PropertySetCSSStyleProperties::cssParserContext();
 
-    CSSParserContext context(m_parentElement->document());
+    auto& documentContext = m_parentElement->document().cssParserContext();
+    if (documentContext.mode == m_propertySet->cssParserMode())
+        return documentContext;
+
+    CSSParserContext context(documentContext);
     context.mode = m_propertySet->cssParserMode();
     return context;
 }

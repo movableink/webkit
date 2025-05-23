@@ -206,7 +206,7 @@ const MQ::MediaQueryList& HTMLSourceElement::parsedMediaAttribute(Document& docu
 {
     if (!m_cachedParsedMediaAttribute) {
         auto& value = attributeWithoutSynchronization(mediaAttr);
-        m_cachedParsedMediaAttribute = MQ::MediaQueryParser::parse(value, MediaQueryParserContext { document });
+        m_cachedParsedMediaAttribute = MQ::MediaQueryParser::parse(value, document.cssParserContext());
     }
     return m_cachedParsedMediaAttribute.value();
 }

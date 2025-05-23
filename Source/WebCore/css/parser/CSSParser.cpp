@@ -637,7 +637,7 @@ RefPtr<StyleRuleImport> CSSParser::consumeImportRule(CSSParserTokenRange prelude
     auto supports = consumeSupports();
     if (!supports)
         return nullptr; // Discard import rule with incorrect syntax.
-    auto mediaQueries = MQ::MediaQueryParser::parse(prelude, MediaQueryParserContext(m_context));
+    auto mediaQueries = MQ::MediaQueryParser::parse(prelude, m_context);
 
     return StyleRuleImport::create(uri, WTFMove(mediaQueries), WTFMove(cascadeLayerName), WTFMove(*supports));
 }
@@ -719,7 +719,7 @@ RefPtr<StyleRuleMedia> CSSParser::consumeMediaRule(CSSParserTokenRange prelude, 
     if (RefPtr observerWrapper = m_observerWrapper.get())
         observerWrapper->observer().endRuleBody(observerWrapper->endOffset(block));
 
-    return StyleRuleMedia::create(MQ::MediaQueryParser::parse(prelude, { m_context }), WTFMove(rules));
+    return StyleRuleMedia::create(MQ::MediaQueryParser::parse(prelude, m_context), WTFMove(rules));
 }
 
 RefPtr<StyleRuleSupports> CSSParser::consumeSupportsRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
