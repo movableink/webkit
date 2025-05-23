@@ -146,6 +146,8 @@ void HTMLFormElement::removedFromAncestor(RemovalType removalType, ContainerNode
     for (auto& imageElement : imageElements)
         imageElement->formOwnerRemovedFromTree(root);
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
+    if (removalType.disconnectedFromDocument)
+      m_controlsCollection = nullptr; // Avoid leaks since HTMLCollection has a back Ref to this element.
 }
 
 unsigned HTMLFormElement::length() const
@@ -659,7 +661,15 @@ void HTMLFormElement::unregisterImgElement(HTMLImageElement& element)
 
 Ref<HTMLFormControlsCollection> HTMLFormElement::elements()
 {
-    return ensureRareData().ensureNodeLists().addCachedCollection<HTMLFormControlsCollection>(*this, CollectionType::FormControls);
+    // Ordinarily JS wrapper keeps the collection alive but this function is used by HTMLFormElement::namedElements internally without creating one.
+    // This cache is cleared whenever this element is disconnected from a document.
+    if (!m_controlsCollection) {
+        Ref controlsCollection = ensureRareData().ensureNodeLists().addCachedCollection<HTMLFormControlsCollection>(*this, CollectionType::FormControls);
+        if (!isConnected())
+            return controlsCollection;
+        m_controlsCollection = WTFMove(controlsCollection);
+    }
+    return *m_controlsCollection;
 }
 
 Ref<HTMLCollection> HTMLFormElement::elementsForNativeBindings()
