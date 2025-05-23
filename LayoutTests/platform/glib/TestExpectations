@@ -680,6 +680,7 @@ accessibility/opacity-0-bounding-box.html [ Skip ]
 accessibility/clip-path-bounding-box.html [ Skip ]
 
 accessibility/dynamic-content-visibility.html [ Skip ]
+accessibility/password-notifications-timing.html [ Skip ]
 
 # AXObjectCache::announce not implemented.
 accessibility/announcement-notification.html [ Skip ]
