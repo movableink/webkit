@@ -521,7 +521,7 @@ public:
 
     void updateRole();
     bool childrenInitialized() const { return m_childrenInitialized; }
-    const AccessibilityChildrenVector& children(bool updateChildrenIfNeeded = true) override;
+    const AccessibilityChildrenVector& children(bool updateChildrenIfNeeded = true) final;
     virtual void addChildren() { }
     enum class DescendIfIgnored : bool { No, Yes };
     void insertChild(AccessibilityObject&, unsigned, DescendIfIgnored = DescendIfIgnored::Yes);

@@ -345,8 +345,6 @@ public:
     // the last marker on the entire webpage.
     AXTextMarker findLastBefore(std::optional<AXID>) const;
     AXTextMarker findLast() const { return findLastBefore(std::nullopt); }
-    // Determines partial order by traversing forward and backwards to try the other marker.
-    std::partial_ordering partialOrderByTraversal(const AXTextMarker&) const;
     // The index of the line this text marker is on relative to the nearest editable ancestor (or start of the page if there are no editable ancestors).
     // Returns -1 if the line couldn't be computed (i.e. because `this` is invalid).
     int lineIndex() const;

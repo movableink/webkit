@@ -807,6 +807,8 @@ public:
     void detach(AccessibilityDetachmentType);
     virtual bool isDetached() const = 0;
 
+    std::partial_ordering partialOrder(const AXCoreObject&);
+
     typedef Vector<Ref<AXCoreObject>> AccessibilityChildrenVector;
 
     virtual bool isAccessibilityObject() const = 0;

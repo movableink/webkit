@@ -468,6 +468,9 @@ String AXTextMarkerRange::debugDescription() const
 
 std::partial_ordering operator<=>(const AXTextMarker& marker1, const AXTextMarker& marker2)
 {
+    if (!marker1.isValid() || !marker2.isValid())
+        return std::partial_ordering::unordered;
+
     if (marker1.objectID() == marker2.objectID()) {
         if (marker1.treeID() == marker2.treeID()) [[likely]] {
             if (marker1.m_data.characterOffset < marker2.m_data.characterOffset) [[likely]]
@@ -478,9 +481,19 @@ std::partial_ordering operator<=>(const AXTextMarker& marker1, const AXTextMarke
         }
     }
 
+    // If one of the objects is the root web area with an offset of 0, we know
+    // that it is the first possible text marker, so we can fast-path the ordering.
+    RefPtr object = marker1.object();
+    if (object && !marker1.offset() && object->isRootWebArea())
+        return std::partial_ordering::less;
+
+    RefPtr otherObject = marker2.object();
+    if (otherObject && !marker2.offset() && otherObject->isRootWebArea())
+        return std::partial_ordering::greater;
+
 #if ENABLE(AX_THREAD_TEXT_APIS)
     if (AXObjectCache::useAXThreadTextApis())
-        return marker1.partialOrderByTraversal(marker2);
+        return object && otherObject ? object->partialOrder(*otherObject) : std::partial_ordering::unordered;
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
 
     auto result = std::partial_ordering::unordered;
@@ -1577,57 +1590,6 @@ AXTextMarkerRange AXTextMarker::paragraphRange() const
 bool AXTextMarker::equivalentTextPosition(const AXTextMarker& other) const
 {
     return objectID() != other.objectID() && (findMarker(AXDirection::Next, CoalesceObjectBreaks::No, IgnoreBRs::Yes) == other || findMarker(AXDirection::Previous, CoalesceObjectBreaks::No, IgnoreBRs::Yes) == other);
-}
-
-std::partial_ordering AXTextMarker::partialOrderByTraversal(const AXTextMarker& other) const
-{
-    RELEASE_ASSERT(!isMainThread());
-
-    if (hasSameObjectAndOffset(other))
-        return std::partial_ordering::equivalent;
-    if (!isValid() || !other.isValid())
-        return std::partial_ordering::unordered;
-
-    // If one of the objects is the root web area with an offset of 0, we know that it is the first possible text marker, so
-    // can fast-path the ordering.
-    RefPtr current = object();
-    if (current && !offset() && current->isRootWebArea())
-        return std::partial_ordering::less;
-
-    if (!other.offset()) {
-        RefPtr otherObject = other.object();
-        if (otherObject && otherObject->isRootWebArea())
-            return std::partial_ordering::greater;
-    }
-
-    // If we're here, expect that we've already handled the case where we just need to compare
-    // offsets within the same object.
-    TEXT_MARKER_ASSERT(objectID() != other.objectID(), "partialOrderByTraversal (1)");
-    if (objectID() == other.objectID())
-        return std::partial_ordering::equivalent;
-
-    // Search forwards for ther other marker. If we find it, we are before it in tree order,
-    // and thus are std::partial_ordering::less.
-    while (current && current->objectID() != other.objectID())
-        current = current->nextInPreOrder();
-
-    if (current)
-        return std::partial_ordering::less;
-
-    // Reset the object and search backwards.
-    current = object();
-    while (current && current->objectID() != other.objectID())
-        current = current->previousInPreOrder();
-
-    if (current)
-        return std::partial_ordering::greater;
-
-    // It is possible to reach here if the live and isolated trees are not synced, and [next/previous]inPreOrder
-    // is unable to traverse between two nodes. This can happen when an element's parent or subtree is removed and
-    // those updates have not been fully applied.
-    // We don't release assert here, since the callers of partialOrder can now handle unordered ordering.
-    TEXT_MARKER_ASSERT_NOT_REACHED("partialOrderByTraversal (2)");
-    return std::partial_ordering::unordered;
 }
 
 namespace Accessibility {

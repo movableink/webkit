@@ -1552,6 +1552,101 @@ AXCoreObject* AXCoreObject::parentObjectUnignored() const
     });
 }
 
+// This function implements a fast way to determine our ordering relative to |other|: find the
+// ancestor we share, then compare the index-in-parent of the next lowest descendant of each us
+// and |other|. Take this example:
+/*
+     A
+    / \
+   B   C
+  /   / \
+ D   E   F
+          \
+           G
+*/
+// (A has two children, B and C. B has child D. C has children E and F. F has child G.)
+//
+// Imagine we want to determine the ordering of D relative to G. They share ancestor A. D's descends from B
+// who is index 0 in shared ancestor A. G descends from C, who is index 1 in the shared ancestor. This lets
+// us know B (who has ancestor index 0) comes before G (who has ancestor index 1).
+//
+// This is significantly more performant than simply doing a pre-order traversal from |this| to |other|.
+// On html.spec.whatwg.org, 1800 runs of this method took 4.4ms total, while 1800 runs of a pre-order
+// traversal to determine ordering took 48.6 seconds total. This algorithm is also faster on more "average",
+// smaller-accessibility-tree pages:
+//   - YouTube: 0.45ms vs 18.2ms in 237 comparisons
+//   - Wikipedia: 3.8ms vs. 18.7ms in 270 comparisons
+std::partial_ordering AXCoreObject::partialOrder(const AXCoreObject& other)
+{
+    if (objectID() == other.objectID())
+        return std::partial_ordering::equivalent;
+
+    RefPtr current = this;
+    RefPtr otherCurrent = &other;
+
+    auto orderingFromIndices = [&] (unsigned ourAncestorIndex, unsigned otherAncestorIndex) {
+        if (ourAncestorIndex < otherAncestorIndex)
+            return std::partial_ordering::less;
+        if (ourAncestorIndex > otherAncestorIndex)
+            return std::partial_ordering::greater;
+
+        ASSERT_NOT_REACHED();
+        return std::partial_ordering::equivalent;
+    };
+
+    // ListHashSet chosen intentionally because it has O(1) lookup time. This is important
+    // because we need to repeatedly query these lists, once every time we find a new ancestor.
+    ListHashSet<Ref<AXCoreObject>> ourAncestors;
+    ListHashSet<Ref<AXCoreObject>> otherAncestors;
+    while (current || otherCurrent) {
+        if (RefPtr maybeParent = current ? current->parentObject() : nullptr) {
+            if (maybeParent == &other) {
+                // We are a descendant of the other object, so we come after it.
+                return std::partial_ordering::greater;
+            }
+
+            Ref parent = maybeParent.releaseNonNull();
+            if (auto iterator = otherAncestors.find(parent); iterator != otherAncestors.end()) {
+                // If ourAncestors is empty (it has zero size), that means the shared ancestor is |current|'s
+                // parent, and thus the index to use is |current| position in the shared parent's children.
+                unsigned ourAncestorIndex = ourAncestors.size() ? ourAncestors.takeLast()->indexInParent() : current->indexInParent();
+                --iterator;
+                // Similarly, it's possible the shared ancestor was the direct parent of |otherCurrent| —
+                // determine this by checking whether iterator == otherAncestors.end() after moving back one
+                // element.
+                unsigned otherAncestorIndex = iterator != otherAncestors.end() ? (*iterator)->indexInParent() : other.indexInParent();
+
+                return orderingFromIndices(ourAncestorIndex, otherAncestorIndex);
+            }
+            current = parent.ptr();
+            ASSERT(!ourAncestors.contains(parent));
+            ourAncestors.appendOrMoveToLast(WTFMove(parent));
+        }
+
+        if (RefPtr maybeParent = otherCurrent ? otherCurrent->parentObject() : nullptr) {
+            if (maybeParent == this) {
+                // The other object is a descendant of ours, so we come before it in tree-order.
+                return std::partial_ordering::less;
+            }
+
+            Ref parent = maybeParent.releaseNonNull();
+            if (auto iterator = ourAncestors.find(parent); iterator != ourAncestors.end()) {
+                unsigned otherAncestorIndex = otherAncestors.size() ? otherAncestors.takeLast()->indexInParent() : otherCurrent->indexInParent();
+                --iterator;
+                unsigned ourAncestorIndex = iterator != ourAncestors.end() ? (*iterator)->indexInParent() : indexInParent();
+
+                return orderingFromIndices(ourAncestorIndex, otherAncestorIndex);
+            }
+            otherCurrent = parent.ptr();
+            ASSERT(!otherAncestors.contains(parent));
+            otherAncestors.appendOrMoveToLast(WTFMove(parent));
+        }
+    }
+
+    ASSERT_NOT_REACHED();
+    return std::partial_ordering::unordered;
+}
+
 // LineDecorationStyle implementations.
 
 LineDecorationStyle::LineDecorationStyle(RenderObject& renderer)
