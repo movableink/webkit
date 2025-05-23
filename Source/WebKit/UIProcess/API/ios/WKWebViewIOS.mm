@@ -2366,6 +2366,10 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     [self _updateScrollViewBackground];
     [self _scheduleVisibleContentRectUpdateAfterScrollInView:scrollView];
+
+#if ENABLE(MODEL_PROCESS)
+    [self _setWebViewTransform3DForModel:[scrollView zoomScale]];
+#endif
 }
 
 - (void)scrollViewDidEndZooming:(UIScrollView *)scrollView withView:(UIView *)view atScale:(CGFloat)scale
@@ -3963,6 +3967,13 @@ static bool isLockdownModeWarningNeeded()
 - (void)_willInvalidateDraggedModelWithContainerView:(UIView *)containerView
 {
     [_contentView _willInvalidateDraggedModelWithContainerView:containerView];
+}
+
+- (void)_setWebViewTransform3DForModel:(CGFloat)newScale
+{
+    CATransform3D newTransform = self.transform3D;
+    newTransform.m33 = newScale;
+    self.transform3D = newTransform;
 }
 #endif
 
