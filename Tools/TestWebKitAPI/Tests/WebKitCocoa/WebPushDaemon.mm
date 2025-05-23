@@ -2175,40 +2175,40 @@ static constexpr ASCIILiteral json8 = R"JSONRESOURCE(
 static constexpr ASCIILiteral json9 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "",
     "notification": {
         "navigate": "https://example.com/",
-        "title": "Hello world!",
-        "app_badge": ""
+        "title": "Hello world!"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json10 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": -1,
     "notification": {
         "navigate": "https://example.com/",
-        "title": "Hello world!",
-        "app_badge": -1
+        "title": "Hello world!"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json11 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": { },
     "notification": {
         "navigate": "https://example.com/",
-        "title": "Hello world!",
-        "app_badge": { }
+        "title": "Hello world!"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json12 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": 10,
     "notification": {
         "navigate": "https://example.com/",
-        "title": "Hello world!",
-        "app_badge": 10
+        "title": "Hello world!"
     }
 }
 )JSONRESOURCE"_s;
@@ -2405,30 +2405,30 @@ static constexpr ASCIILiteral json31 = R"JSONRESOURCE(
 static constexpr ASCIILiteral json32 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "20",
     "notification": {
         "navigate": "https://example.com/",
-        "title": "Hello world!",
-        "app_badge": "20"
+        "title": "Hello world!"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json33 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "8031",
     "notification": {
         "navigate": "https://example.com/",
-        "title": "Hello world!",
-        "app_badge": "8031"
+        "title": "Hello world!"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json34 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "18446744073709551616",
     "notification": {
         "navigate": "https://example.com/",
-        "title": "Hello world!",
-        "app_badge": "18446744073709551616"
+        "title": "Hello world!"
     }
 }
 )JSONRESOURCE"_s;
@@ -2475,97 +2475,97 @@ static constexpr ASCIILiteral json38 = R"JSONRESOURCE(
 static constexpr ASCIILiteral json39 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "12",
     "notification": {
         "navigate": "https://example.com/",
         "title": "Hello world!",
-        "mutable": true,
-        "app_badge": "12"
+        "mutable": true
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json40 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "12",
     "notification": {
         "navigate": "https://example.com/",
         "title": "Hello world!",
         "mutable": true,
-        "tag": "title Gotcha!",
-        "app_badge": "12"
+        "tag": "title Gotcha!"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json41 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "12",
     "notification": {
         "navigate": "https://example.com/",
         "title": "Hello world!",
         "mutable": true,
-        "tag": "badge 1024",
-        "app_badge": "12"
+        "tag": "badge 1024"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json42 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "12",
     "notification": {
         "navigate": "https://example.com/",
         "title": "Hello world!",
         "mutable": true,
-        "tag": "titleandbadge ThisRules 4096",
-        "app_badge": "12"
+        "tag": "titleandbadge ThisRules 4096"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json43 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "12",
     "notification": {
         "navigate": "https://example.com/",
         "title": "Test the data object",
         "mutable": true,
         "tag": "datatotitle",
-        "data": "Raw string",
-        "app_badge": "12"
+        "data": "Raw string"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json44 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "12",
     "notification": {
         "navigate": "https://example.com/",
         "title": "Test the data object",
         "mutable": true,
         "tag": "datatotitle",
-        "data": { "key": "value" },
-        "app_badge": "12"
+        "data": { "key": "value" }
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json45 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "12",
     "notification": {
         "navigate": "https://example.com/",
         "title": "Test a default action URL override",
         "mutable": true,
-        "tag": "defaultactionurl https://webkit.org/",
-        "app_badge": "12"
+        "tag": "defaultactionurl https://webkit.org/"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json46 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "12",
     "notification": {
         "navigate": "https://example.com/",
         "title": "Test a missing default action URL override",
         "mutable": true,
-        "tag": "emptydefaultactionurl",
-        "app_badge": "12"
+        "tag": "emptydefaultactionurl"
     }
 }
 )JSONRESOURCE"_s;
