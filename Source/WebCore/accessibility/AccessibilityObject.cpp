@@ -3272,6 +3272,7 @@ bool AccessibilityObject::supportsExpanded() const
             case CommandType::Custom:
             case CommandType::ShowModal:
             case CommandType::Close:
+            case CommandType::RequestClose:
                 break;
             default:
                 ASSERT_NOT_REACHED();

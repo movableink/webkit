@@ -127,6 +127,7 @@ enum class CommandType: uint8_t {
 
     ShowModal,
     Close,
+    RequestClose,
 };
 
 struct CheckVisibilityOptions;

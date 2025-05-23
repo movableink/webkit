@@ -164,6 +164,12 @@ static const AtomString& closeAtom()
     return identifier;
 }
 
+static const AtomString& requestCloseAtom()
+{
+    static MainThreadNeverDestroyed<const AtomString> identifier("request-close"_s);
+    return identifier;
+}
+
 static const AtomString& showModalAtom()
 {
     static MainThreadNeverDestroyed<const AtomString> identifier("show-modal"_s);
@@ -190,6 +196,9 @@ CommandType HTMLButtonElement::commandType() const
 
     if (equalIgnoringASCIICase(action, closeAtom()))
         return CommandType::Close;
+
+    if (equalIgnoringASCIICase(action, requestCloseAtom()))
+        return CommandType::RequestClose;
 
     if (action.startsWith("--"_s))
         return CommandType::Custom;
@@ -238,6 +247,8 @@ const AtomString& HTMLButtonElement::command() const
         return hidePopoverAtom();
     case CommandType::Close:
         return closeAtom();
+    case CommandType::RequestClose:
+        return requestCloseAtom();
     case CommandType::ShowModal:
         return showModalAtom();
     case CommandType::Custom:

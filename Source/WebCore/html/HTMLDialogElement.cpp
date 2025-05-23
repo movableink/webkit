@@ -198,7 +198,8 @@ void HTMLDialogElement::requestClose(const String& returnValue)
 
 bool HTMLDialogElement::isValidCommandType(const CommandType command)
 {
-    return HTMLElement::isValidCommandType(command) || command == CommandType::ShowModal || command == CommandType::Close;
+    return HTMLElement::isValidCommandType(command) || command == CommandType::ShowModal || command == CommandType::Close
+        || command == CommandType::RequestClose;
 }
 
 bool HTMLDialogElement::handleCommandInternal(HTMLButtonElement& invoker, const CommandType& command)
@@ -212,6 +213,10 @@ bool HTMLDialogElement::handleCommandInternal(HTMLButtonElement& invoker, const 
     if (isOpen()) {
         if (command == CommandType::Close) {
             close(invoker.value().string());
+            return true;
+        }
+        if (command == CommandType::RequestClose) {
+            requestClose(invoker.value().string());
             return true;
         }
     } else {
