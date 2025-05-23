@@ -47,6 +47,7 @@
 #include "SharedVideoFrame.h"
 #include "WebGPUCommandEncoderDescriptor.h"
 #include "WebGPUConvertToBackingContext.h"
+#include <WebCore/WebGPUBindGroupLayoutDescriptor.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebKit::WebGPU {
@@ -71,6 +72,13 @@ static auto makeInvalidCommandBuffer(auto& commandEncoder)
     return commandEncoder->finish(descriptor).releaseNonNull();
 }
 
+Ref<WebCore::WebGPU::BindGroupLayout> RemoteDeviceProxy::createEmptyBindGroupLayout()
+{
+    WebCore::WebGPU::BindGroupLayoutDescriptor descriptor;
+    return createBindGroupLayout(descriptor).releaseNonNull();
+}
+
+
 RemoteDeviceProxy::RemoteDeviceProxy(Ref<WebCore::WebGPU::SupportedFeatures>&& features, Ref<WebCore::WebGPU::SupportedLimits>&& limits, RemoteAdapterProxy& parent, ConvertToBackingContext& convertToBackingContext, WebGPUIdentifier identifier, WebGPUIdentifier queueIdentifier)
     : Device(WTFMove(features), WTFMove(limits))
     , m_backing(identifier)
@@ -81,6 +89,7 @@ RemoteDeviceProxy::RemoteDeviceProxy(Ref<WebCore::WebGPU::SupportedFeatures>&& f
     , m_invalidRenderPassEncoder(makeInvalidRenderPassEncoder(m_invalidCommandEncoder))
     , m_invalidComputePassEncoder(Ref { m_invalidCommandEncoder }->beginComputePass(std::nullopt).releaseNonNull())
     , m_invalidCommandBuffer(makeInvalidCommandBuffer(m_invalidCommandEncoder))
+    , m_emptyBindGroupLayout(createEmptyBindGroupLayout())
 {
     Ref { m_invalidRenderPassEncoder }->end();
     Ref { m_invalidComputePassEncoder }->end();
@@ -216,7 +225,7 @@ RefPtr<WebCore::WebGPU::BindGroupLayout> RemoteDeviceProxy::createBindGroupLayou
     if (sendResult != IPC::Error::NoError)
         return nullptr;
 
-    auto result = RemoteBindGroupLayoutProxy::create(*this, protectedConvertToBackingContext(), identifier);
+    auto result = RemoteBindGroupLayoutProxy::create(protectedRoot(), protectedConvertToBackingContext(), identifier);
     result->setLabel(WTFMove(convertedDescriptor->label));
     return result;
 }
@@ -483,6 +492,11 @@ Ref<WebCore::WebGPU::RenderPassEncoder> RemoteDeviceProxy::invalidRenderPassEnco
 Ref<WebCore::WebGPU::ComputePassEncoder> RemoteDeviceProxy::invalidComputePassEncoder()
 {
     return m_invalidComputePassEncoder;
+}
+
+Ref<WebCore::WebGPU::BindGroupLayout> RemoteDeviceProxy::emptyBindGroupLayout() const
+{
+    return m_emptyBindGroupLayout;
 }
 
 } // namespace WebKit::WebGPU

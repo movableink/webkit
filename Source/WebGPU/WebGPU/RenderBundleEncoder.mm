@@ -89,6 +89,8 @@ namespace WebGPU {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderBundleEncoder);
 
+static constexpr uint64_t maxCommandCount = 0x4000;
+
 bool RenderBundleEncoder::returnIfEncodingIsFinished(NSString* errorString)
 {
     if (!validToEncodeCommand()) {
@@ -107,25 +109,8 @@ if (returnIfEncodingIsFinished([NSString stringWithFormat:@"%s: failed as encodi
 if (returnIfEncodingIsFinished([NSString stringWithFormat:@"%s: failed as encoding has finished", __PRETTY_FUNCTION__]) || !m_icbDescriptor) \
     return finalizeRenderCommand();
 
-static RenderBundleICBWithResources* makeRenderBundleICBWithResources(id<MTLIndirectCommandBuffer> icb, RenderBundle::ResourcesContainer* resources, id<MTLRenderPipelineState> renderPipelineState, id<MTLDepthStencilState> depthStencilState, MTLCullMode cullMode, MTLWinding frontFace, MTLDepthClipMode depthClipMode, float depthBias, float depthBiasSlopeScale, float depthBiasClamp, id<MTLBuffer> fragmentDynamicOffsetsBuffer, const RenderPipeline* pipeline, Device& device, RenderBundle::MinVertexCountsContainer& vertexCountContainer)
+static RenderBundleICBWithResources* makeRenderBundleICBWithResources(id<MTLIndirectCommandBuffer> icb, id<MTLRenderPipelineState> renderPipelineState, id<MTLDepthStencilState> depthStencilState, MTLCullMode cullMode, MTLWinding frontFace, MTLDepthClipMode depthClipMode, float depthBias, float depthBiasSlopeScale, float depthBiasClamp, id<MTLBuffer> fragmentDynamicOffsetsBuffer, const RenderPipeline* pipeline, Device& device, RenderBundle::MinVertexCountsContainer& vertexCountContainer)
 {
-    constexpr auto maxResourceUsageValue = MTLResourceUsageRead | MTLResourceUsageWrite;
-    constexpr auto maxStageValue = (MTLRenderStageVertex | MTLRenderStageFragment) + 1;
-    static_assert(maxResourceUsageValue == 3 && maxStageValue == 4, "Code path assumes MTLResourceUsageRead | MTLResourceUsageWrite == 3 and MTLRenderStageVertex | MTLRenderStageFragment == 3");
-    std::array<std::array<Vector<id<MTLResource>>, maxResourceUsageValue>, maxStageValue> stageResources { };
-    std::array<std::array<Vector<BindGroupEntryUsageData>, maxResourceUsageValue>, maxStageValue> stageResourceUsages { };
-
-    for (id<MTLResource> r : resources) {
-        if (!r)
-            continue;
-
-        ResourceUsageAndRenderStage *usageAndStage = [resources objectForKey:r];
-        if (!usageAndStage.renderStages || !usageAndStage.usage)
-            continue;
-        stageResources[usageAndStage.renderStages - 1][usageAndStage.usage - 1].append(r);
-        stageResourceUsages[usageAndStage.renderStages - 1][usageAndStage.usage - 1].append(BindGroupEntryUsageData { .usage = usageAndStage.entryUsage, .binding = usageAndStage.binding, .resource = usageAndStage.resource });
-    }
-
     id<MTLArgumentEncoder> argumentEncoder =
         [device.icbCommandClampFunction(MTLIndexTypeUInt32) newArgumentEncoderWithBufferIndex:device.bufferIndexForICBContainer()];
     id<MTLBuffer> container = device.safeCreateBuffer(argumentEncoder.encodedLength);
@@ -137,21 +122,6 @@ static RenderBundleICBWithResources* makeRenderBundleICBWithResources(id<MTLIndi
     [argumentEncoder setIndirectCommandBuffer:icb atIndex:1];
 
     RenderBundleICBWithResources* renderBundle = [[RenderBundleICBWithResources alloc] initWithICB:icb containerBuffer:container pipelineState:renderPipelineState depthStencilState:depthStencilState cullMode:cullMode frontFace:frontFace depthClipMode:depthClipMode depthBias:depthBias depthBiasSlopeScale:depthBiasSlopeScale depthBiasClamp:depthBiasClamp fragmentDynamicOffsetsBuffer:fragmentDynamicOffsetsBuffer pipeline:pipeline minVertexCounts:&vertexCountContainer outOfBoundsReadFlag:outOfBoundsRead];
-
-    for (size_t stage = 0; stage < maxStageValue; ++stage) {
-        for (size_t i = 0; i < maxResourceUsageValue; ++i) {
-            auto &v = stageResources[stage][i];
-            auto &u = stageResourceUsages[stage][i];
-            if (v.size()) {
-                renderBundle.resources->append(BindableResources {
-                    .mtlResources = WTFMove(v),
-                    .resourceUsages = WTFMove(u),
-                    .usage = static_cast<MTLResourceUsage>(i + 1),
-                    .renderStages = static_cast<MTLRenderStages>(stage + 1)
-                });
-            }
-        }
-    }
 
     vertexCountContainer.clear();
 
@@ -245,6 +215,11 @@ void RenderBundleEncoder::makeInvalid(NSString* errorString)
 }
 
 RenderBundleEncoder::~RenderBundleEncoder() = default;
+
+bool RenderBundleEncoder::replayingCommands() const
+{
+    return m_renderPassEncoder || m_currentCommand || m_indirectCommandBuffer;
+}
 
 id<MTLIndirectRenderCommand> RenderBundleEncoder::currentRenderCommand()
 {
@@ -400,6 +375,7 @@ bool RenderBundleEncoder::executePreDrawCommands(bool needsValidationLayerWorkar
         if (protectedGroup && (protectedGroup->makeSubmitInvalid(ShaderStage::Vertex, pipelineOptionalBindGroupLayout) || protectedGroup->makeSubmitInvalid(ShaderStage::Fragment, pipelineOptionalBindGroupLayout)))
             m_makeSubmitInvalid = true;
     }
+    m_requiresCommandReplay = m_requiresCommandReplay || !pipeline->vertexShaderBindingCount();
 
     if (NSString* error = pipeline->protectedPipelineLayout()->errorValidatingBindGroupCompatibility(m_bindGroups)) {
         makeInvalid(error);
@@ -555,9 +531,8 @@ RenderBundleEncoder::FinalizeRenderCommand RenderBundleEncoder::finalizeRenderCo
 {
     m_currentCommand = nil;
 
-    constexpr auto maxCommandCount = 0x4000;
-    if (isValid() && m_currentCommandIndex >= maxCommandCount && !m_requiresCommandReplay && !m_indirectCommandBuffer)
-        endCurrentICB();
+    if (isValid() && m_currentCommandIndex >= maxCommandCount && !m_requiresCommandReplay && m_indirectCommandBuffer)
+        splitICB();
 
     return FinalizeRenderCommand { };
 }
@@ -885,22 +860,44 @@ RenderBundleEncoder::FinalizeRenderCommand RenderBundleEncoder::drawIndirect(Buf
     return finalizeRenderCommand(MTLIndirectCommandTypeDraw);
 }
 
+id<MTLIndirectCommandBuffer> RenderBundleEncoder::makeICB(uint64_t commandCount)
+{
+    Ref device = m_device;
+    commandCount = std::clamp(commandCount, 1ull, maxCommandCount);
+    id<MTLIndirectCommandBuffer> icb = [device->device() newIndirectCommandBufferWithDescriptor:m_icbDescriptor maxCommandCount:commandCount options:0];
+    if (!icb || icb.size != commandCount) {
+        makeInvalid(@"MTLIndirectCommandBuffer allocation failed, likely tried to encode too many commands");
+        return nil;
+    }
+
+    device->setOwnerWithIdentity(icb);
+    return icb;
+}
+
+void RenderBundleEncoder::cleanup(bool resetPipeline)
+{
+    m_currentCommand = nil;
+    m_currentPipelineState = nil;
+    m_minVertexCountForDrawCommand.clear();
+    m_depthStencilState = nil;
+    m_cullMode = MTLCullModeNone;
+    m_frontFace = static_cast<MTLWinding>(0);
+    m_depthClipMode = static_cast<MTLDepthClipMode>(0);
+    m_depthBiasSlopeScale = 0.f;
+    m_depthBias = 0.f;
+    m_depthBiasClamp = 0.f;
+
+    if (RefPtr pipeline = m_pipeline; resetPipeline && m_pipeline && validToEncodeCommand())
+        setPipeline(*pipeline);
+}
+
 void RenderBundleEncoder::endCurrentICB()
 {
     auto commandCount = m_currentCommandIndex;
+    m_previousCommandCount = m_currentCommandIndex;
     m_currentCommandIndex = 0;
+
     RELEASE_ASSERT(!commandCount || !!m_icbDescriptor);
-    auto cleanup = [&] (bool resetPipeline) {
-        m_indirectCommandBuffer = nil;
-        m_currentCommand = nil;
-        m_currentPipelineState = nil;
-        m_dynamicOffsetsFragmentBuffer = nil;
-        m_dynamicOffsetsVertexBuffer = nil;
-        m_minVertexCountForDrawCommand.clear();
-        m_resources = [NSMapTable strongToStrongObjectsMapTable];
-        if (RefPtr pipeline = m_pipeline; resetPipeline && m_pipeline)
-            setPipeline(*pipeline);
-    };
     m_requiresCommandReplay = m_requiresCommandReplay ?: (!commandCount && !m_icbArray.count);
     if (!m_icbDescriptor.commandTypes && !m_requiresCommandReplay) {
         m_recordedCommands.clear();
@@ -933,44 +930,19 @@ void RenderBundleEncoder::endCurrentICB()
     }
     m_fragmentDynamicOffset = 0;
 
-    if (!m_renderPassEncoder && !m_requiresCommandReplay) {
-        m_indirectCommandBuffer = [device->device() newIndirectCommandBufferWithDescriptor:m_icbDescriptor maxCommandCount:std::max(static_cast<decltype(commandCount)>(1), commandCount) options:0];
-        if (!m_indirectCommandBuffer || m_indirectCommandBuffer.size != commandCount) {
-            makeInvalid(@"MTLIndirectCommandBuffer allocation failed, likely tried to encode too many commands");
-            return;
-        }
-        device->setOwnerWithIdentity(m_indirectCommandBuffer);
-    }
+    if (!m_renderPassEncoder && !m_requiresCommandReplay)
+        m_indirectCommandBuffer = makeICB(commandCount);
 
-    uint64_t completedDraws = 0, lastIndexOfRecordedCommand = 0;
-    auto recordedCommands = std::exchange(m_recordedCommands, { });
-    for (auto& command : recordedCommands) {
-        completedDraws += command() ? 1 : 0;
-        ++lastIndexOfRecordedCommand;
+    for (auto& command : m_recordedCommands)
+        command();
 
-        if (completedDraws == commandCount)
-            break;
-    }
+    m_pipeline = nullptr;
+    splitICB();
+    m_currentCommandIndex = 0;
 
-    if (m_renderPassEncoder) {
-        m_recordedCommands = std::exchange(recordedCommands, { });
-        return;
-    }
-
-    if (lastIndexOfRecordedCommand == recordedCommands.size()) {
-        recordedCommands.clear();
-        m_icbDescriptor.commandTypes = 0;
-    } else
-        recordedCommands.removeAt(0, lastIndexOfRecordedCommand);
-
-    m_recordedCommands = std::exchange(recordedCommands, { });
-    m_currentCommandIndex = commandCount - completedDraws;
-
-    if (!m_requiresCommandReplay) {
-        [m_icbArray addObject:makeRenderBundleICBWithResources(m_indirectCommandBuffer, m_resources, m_currentPipelineState, m_depthStencilState, m_cullMode, m_frontFace, m_depthClipMode, m_depthBias, m_depthBiasSlopeScale, m_depthBiasClamp, m_dynamicOffsetsFragmentBuffer, m_pipeline.get(), device.get(), m_minVertexCountForDrawCommand)];
-        cleanup(true);
-    } else
-        m_indirectCommandBuffer = nil;
+    m_indirectCommandBuffer = nil;
+    m_dynamicOffsetsFragmentBuffer = nil;
+    m_dynamicOffsetsVertexBuffer = nil;
 }
 
 bool RenderBundleEncoder::validToEncodeCommand() const
@@ -989,6 +961,44 @@ void RenderBundleEncoder::resetIndexBuffer()
     m_indexBufferSize = 0;
 }
 
+static Vector<WebGPU::BindableResources> makeBindableResources(RenderBundle::ResourcesContainer* resources)
+{
+    Vector<WebGPU::BindableResources> result;
+    constexpr auto maxResourceUsageValue = MTLResourceUsageRead | MTLResourceUsageWrite;
+    constexpr auto maxStageValue = (MTLRenderStageVertex | MTLRenderStageFragment) + 1;
+    static_assert(maxResourceUsageValue == 3 && maxStageValue == 4, "Code path assumes MTLResourceUsageRead | MTLResourceUsageWrite == 3 and MTLRenderStageVertex | MTLRenderStageFragment == 3");
+    std::array<std::array<Vector<id<MTLResource>>, maxResourceUsageValue>, maxStageValue> stageResources { };
+    std::array<std::array<Vector<BindGroupEntryUsageData>, maxResourceUsageValue>, maxStageValue> stageResourceUsages { };
+
+    for (id<MTLResource> r : resources) {
+        if (!r)
+            continue;
+
+        ResourceUsageAndRenderStage *usageAndStage = [resources objectForKey:r];
+        if (!usageAndStage.renderStages || !usageAndStage.usage)
+            continue;
+        stageResources[usageAndStage.renderStages - 1][usageAndStage.usage - 1].append(r);
+        stageResourceUsages[usageAndStage.renderStages - 1][usageAndStage.usage - 1].append(BindGroupEntryUsageData { .usage = usageAndStage.entryUsage, .binding = usageAndStage.binding, .resource = usageAndStage.resource });
+    }
+
+    for (size_t stage = 0; stage < maxStageValue; ++stage) {
+        for (size_t i = 0; i < maxResourceUsageValue; ++i) {
+            auto &v = stageResources[stage][i];
+            auto &u = stageResourceUsages[stage][i];
+            if (v.size()) {
+                result.append(BindableResources {
+                    .mtlResources = WTFMove(v),
+                    .resourceUsages = WTFMove(u),
+                    .usage = static_cast<MTLResourceUsage>(i + 1),
+                    .renderStages = static_cast<MTLRenderStages>(stage + 1)
+                });
+            }
+        }
+    }
+
+    return result;
+}
+
 Ref<RenderBundle> RenderBundleEncoder::finish(const WGPURenderBundleDescriptor& descriptor)
 {
     auto device = m_device;
@@ -1002,18 +1012,22 @@ Ref<RenderBundle> RenderBundleEncoder::finish(const WGPURenderBundleDescriptor& 
 
     auto createRenderBundle = ^{
         if (m_requiresCommandReplay)
-            return RenderBundle::create(m_icbArray, this, m_descriptor, m_currentCommandIndex, m_makeSubmitInvalid, WTFMove(m_allBindGroups), device);
+            return RenderBundle::create(nil, makeBindableResources(m_resources), this, m_descriptor, m_currentCommandIndex, m_makeSubmitInvalid, WTFMove(m_allBindGroups), device);
 
         auto commandCount = m_currentCommandIndex;
         endCurrentICB();
+        if (m_requiresCommandReplay)
+            return RenderBundle::create(nil, makeBindableResources(m_resources), this, m_descriptor, m_currentCommandIndex, m_makeSubmitInvalid, WTFMove(m_allBindGroups), device);
+
         m_vertexBuffers.clear();
         m_fragmentBuffers.clear();
         m_icbDescriptor.maxVertexBufferBindCount = 0;
         m_icbDescriptor.maxFragmentBufferBindCount = 0;
+        m_recordedCommands.clear();
 
         RELEASE_ASSERT(m_icbArray || m_lastErrorString);
         if (m_icbArray)
-            return RenderBundle::create(m_icbArray, nullptr, m_descriptor, commandCount, m_makeSubmitInvalid, WTFMove(m_allBindGroups), device);
+            return RenderBundle::create(m_icbArray, makeBindableResources(m_resources), nullptr, m_descriptor, commandCount, m_makeSubmitInvalid, WTFMove(m_allBindGroups), device);
 
         device->generateAValidationError(m_lastErrorString);
         return RenderBundle::createInvalid(device, m_lastErrorString);
@@ -1093,51 +1107,57 @@ void RenderBundleEncoder::pushDebugGroup(String&&)
     // MTLIndirectCommandBuffers don't support debug commands.
 }
 
-void RenderBundleEncoder::setBindGroup(uint32_t groupIndex, const BindGroup& group, std::optional<Vector<uint32_t>>&& dynamicOffsets)
+void RenderBundleEncoder::setBindGroup(uint32_t groupIndex, const BindGroup* groupPtr, std::optional<Vector<uint32_t>>&& dynamicOffsets)
 {
     RETURN_IF_FINISHED();
-    if (!isValidToUseWith(group, *this)) {
+
+    if (groupPtr && !isValidToUseWith(*groupPtr, *this)) {
         makeInvalid(@"setBindGroup: invalid bind group");
         return;
     }
 
-    id<MTLIndirectRenderCommand> icbCommand = currentRenderCommand();
     m_maxBindGroupSlot = std::max(groupIndex, m_maxBindGroupSlot);
-    if (!icbCommand) {
-        m_allBindGroups.add(RefPtr { &group });
-        if (!isValidToUseWith(group, *this)) {
-            makeInvalid(@"setBindGroup: invalid bind group passed");
-            return;
-        }
+    if (!replayingCommands()) {
+        if (groupPtr)
+            m_allBindGroups.add(RefPtr { groupPtr });
 
         if (groupIndex >= m_device->limits().maxBindGroups) {
             makeInvalid(@"setBindGroup: groupIndex >= limits.maxBindGroups");
             return;
         }
 
-        if (dynamicOffsets) {
-            RefPtr bindGroupLayout = group.bindGroupLayout();
-            if (!bindGroupLayout) {
-                makeInvalid(@"GPURenderBundleEncoder.setBindGroup: bind group is nil");
-                return;
+        if (groupPtr) {
+            auto& group = *groupPtr;
+            if (dynamicOffsets) {
+                RefPtr bindGroupLayout = group.bindGroupLayout();
+                if (!bindGroupLayout) {
+                    makeInvalid(@"GPURenderBundleEncoder.setBindGroup: bind group is nil");
+                    return;
+                }
+                uint32_t maxDynamicOffset = 0;
+                if (NSString* error = bindGroupLayout->errorValidatingDynamicOffsets(dynamicOffsets->span(), group, maxDynamicOffset)) {
+                    makeInvalid([NSString stringWithFormat:@"GPURenderBundleEncoder.setBindGroup: %@", error]);
+                    return;
+                }
             }
-            uint32_t maxDynamicOffset = 0;
-            if (NSString* error = bindGroupLayout->errorValidatingDynamicOffsets(dynamicOffsets->span(), group, maxDynamicOffset)) {
-                makeInvalid([NSString stringWithFormat:@"GPURenderBundleEncoder.setBindGroup: %@", error]);
-                return;
-            }
+
+            if (group.fragmentArgumentBuffer())
+                m_icbDescriptor.maxFragmentBufferBindCount = std::max<NSUInteger>(m_icbDescriptor.maxFragmentBufferBindCount, 2 + groupIndex);
         }
 
-        if (group.fragmentArgumentBuffer())
-            m_icbDescriptor.maxFragmentBufferBindCount = std::max<NSUInteger>(m_icbDescriptor.maxFragmentBufferBindCount, 2 + groupIndex);
-
-        recordCommand([groupIndex, group = Ref { group }, protectedThis = Ref { *this }, dynamicOffsets = WTFMove(dynamicOffsets)]() mutable {
+        recordCommand([groupIndex, group = RefPtr { groupPtr }, protectedThis = Ref { *this }, dynamicOffsets = WTFMove(dynamicOffsets)]() mutable {
             protectedThis->setBindGroup(groupIndex, group.get(), WTFMove(dynamicOffsets));
             return false;
         });
         return;
     }
 
+    if (!groupPtr) {
+        m_bindGroups.remove(groupIndex);
+        return;
+    }
+
+    auto& group = *groupPtr;
     uint32_t dynamicOffsetCount = dynamicOffsets ? dynamicOffsets->size() : 0;
     if (dynamicOffsetCount && m_bindGroupDynamicOffsets)
         m_bindGroupDynamicOffsets->set(groupIndex, WTFMove(*dynamicOffsets));
@@ -1190,7 +1210,7 @@ void RenderBundleEncoder::setIndexBuffer(Buffer& buffer, WGPUIndexFormat format,
 
     id<MTLBuffer> indexBuffer = m_indexBuffer->buffer();
 
-    if (!currentRenderCommand()) {
+    if (!replayingCommands()) {
         if (computedSizeOverflows(buffer, offset, size))  {
             makeInvalid(@"setIndexBuffer: computed size overflows");
             return;
@@ -1237,7 +1257,9 @@ bool RenderBundleEncoder::icbNeedsToBeSplit(const RenderPipeline& a, const Rende
     if (a.depthClipMode() != b.depthClipMode())
         return true;
 
-    if (![a.depthStencilDescriptor() isEqual:b.depthStencilDescriptor()])
+    MTLDepthStencilDescriptor *aDepthStencil = a.depthStencilDescriptor();
+    MTLDepthStencilDescriptor *bDepthStencil = b.depthStencilDescriptor();
+    if ((aDepthStencil || bDepthStencil) && ![aDepthStencil isEqual:bDepthStencil])
         return true;
 
     if (a.depthBias() != b.depthBias())
@@ -1262,6 +1284,27 @@ void RenderBundleEncoder::recordCommand(WTF::Function<bool(void)>&& function)
     m_recordedCommands.append(WTFMove(function));
 }
 
+void RenderBundleEncoder::splitICB(bool needsPipelineReset)
+{
+    Ref device = m_device;
+    if (m_indirectCommandBuffer.size > m_currentCommandIndex) {
+        if (m_currentCommandIndex) {
+            id<MTLIndirectCommandBuffer> newICB = makeICB(m_currentCommandIndex);
+            m_indirectCommandBuffer = m_device->getQueue().trimICB(newICB, m_indirectCommandBuffer, m_currentCommandIndex);
+        } else
+            m_indirectCommandBuffer = nil;
+    }
+    m_previousCommandCount -= m_currentCommandIndex;
+    m_currentCommandIndex = 0;
+
+    if (m_indirectCommandBuffer.size)
+        [m_icbArray addObject:makeRenderBundleICBWithResources(m_indirectCommandBuffer, m_currentPipelineState, m_depthStencilState, m_cullMode, m_frontFace, m_depthClipMode, m_depthBias, m_depthBiasSlopeScale, m_depthBiasClamp, m_dynamicOffsetsFragmentBuffer, m_pipeline.get(), device.get(), m_minVertexCountForDrawCommand)];
+
+    if (m_previousCommandCount)
+        m_indirectCommandBuffer = makeICB(m_previousCommandCount);
+    cleanup(needsPipelineReset);
+}
+
 void RenderBundleEncoder::setPipeline(const RenderPipeline& pipeline)
 {
     RETURN_IF_FINISHED();
@@ -1274,7 +1317,14 @@ void RenderBundleEncoder::setPipeline(const RenderPipeline& pipeline)
     id<MTLRenderPipelineState> previousRenderPipelineState = m_currentPipelineState;
     m_currentPipelineState = pipeline.renderPipelineState();
 
-    if (currentRenderCommand()) {
+    if (replayingCommands()) {
+        auto currentPipeline = m_pipeline;
+        if (m_pipeline && m_currentCommandIndex && icbNeedsToBeSplit(*currentPipeline, pipeline)) {
+            m_currentPipelineState = previousRenderPipelineState;
+            splitICB(false);
+            m_currentPipelineState = pipeline.renderPipelineState();
+        }
+
         id<MTLDepthStencilState> previousDepthStencilState = m_depthStencilState;
         auto previous_cullMode = m_cullMode;
         auto previous_frontFace = m_frontFace;
@@ -1292,6 +1342,8 @@ void RenderBundleEncoder::setPipeline(const RenderPipeline& pipeline)
         m_depthBiasSlopeScale = pipeline.depthBiasSlopeScale();
         m_depthBiasClamp = pipeline.depthBiasClamp();
         m_sampleMask = pipeline.sampleMask();
+        auto fragmentBufferIntSpan = makeSpanFromBuffer<uint32_t>(m_dynamicOffsetsFragmentBuffer);
+        fragmentBufferIntSpan[2] = m_sampleMask;
 
         RefPtr renderPassEncoder = m_renderPassEncoder.get();
         if (renderPassEncoder) {
@@ -1318,11 +1370,6 @@ void RenderBundleEncoder::setPipeline(const RenderPipeline& pipeline)
             [commandEncoder setDepthBias:m_depthBias slopeScale:m_depthBiasSlopeScale clamp:m_depthBiasClamp];
         }
     } else {
-        if (!isValidToUseWith(pipeline, *this)) {
-            makeInvalid(@"setPipeline: invalid pipeline passed");
-            return;
-        }
-
         if (!pipeline.renderPipelineState())
             return;
 
@@ -1334,10 +1381,6 @@ void RenderBundleEncoder::setPipeline(const RenderPipeline& pipeline)
         // FIXME: Remove after https://bugs.webkit.org/show_bug.cgi?id=26499 is implemented
         if (pipeline.sampleMask() != defaultSampleMask)
             m_requiresCommandReplay = true;
-
-        auto currentPipeline = m_pipeline;
-        if (m_pipeline && m_currentCommandIndex && icbNeedsToBeSplit(*currentPipeline, pipeline))
-            endCurrentICB();
 
         recordCommand([pipeline = Ref { pipeline }, protectedThis = Ref { *this }] {
             protectedThis->setPipeline(pipeline);
@@ -1358,7 +1401,7 @@ void RenderBundleEncoder::setVertexBuffer(uint32_t slot, Buffer* optionalBuffer,
         return;
     }
 
-    if (!currentRenderCommand()) {
+    if (!replayingCommands()) {
         if (optionalBuffer) {
             auto& buffer = *optionalBuffer;
             if (!isValidToUseWith(buffer, *this)) {
@@ -1394,6 +1437,7 @@ void RenderBundleEncoder::setVertexBuffer(uint32_t slot, Buffer* optionalBuffer,
     m_utilizedBufferIndices.add(slot, size);
     if (!addResource(m_resources, buffer.buffer(), MTLRenderStageVertex, &buffer))
         return;
+
     m_vertexBuffers[slot] = { .buffer = buffer.buffer(), .offset = offset, .dynamicOffsetCount = 0, .dynamicOffsets = nullptr, .size = size };
     if (m_renderPassEncoder && !setCommandEncoder(buffer, m_renderPassEncoder))
         return;
@@ -1468,7 +1512,7 @@ void wgpuRenderBundleEncoderSetBindGroup(WGPURenderBundleEncoder, uint32_t, WGPU
 
 void wgpuRenderBundleEncoderSetBindGroupWithDynamicOffsets(WGPURenderBundleEncoder renderBundleEncoder, uint32_t groupIndex, WGPUBindGroup group, std::optional<Vector<uint32_t>>&& dynamicOffsets)
 {
-    WebGPU::protectedFromAPI(renderBundleEncoder)->setBindGroup(groupIndex, WebGPU::protectedFromAPI(group), WTFMove(dynamicOffsets));
+    WebGPU::protectedFromAPI(renderBundleEncoder)->setBindGroup(groupIndex, group ? WebGPU::protectedFromAPI(group).ptr() : nullptr, WTFMove(dynamicOffsets));
 }
 
 void wgpuRenderBundleEncoderSetIndexBuffer(WGPURenderBundleEncoder renderBundleEncoder, WGPUBuffer buffer, WGPUIndexFormat format, uint64_t offset, uint64_t size)

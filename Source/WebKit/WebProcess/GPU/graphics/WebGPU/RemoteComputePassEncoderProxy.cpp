@@ -77,21 +77,25 @@ void RemoteComputePassEncoderProxy::end()
     UNUSED_VARIABLE(sendResult);
 }
 
-void RemoteComputePassEncoderProxy::setBindGroup(WebCore::WebGPU::Index32 index, const WebCore::WebGPU::BindGroup& bindGroup,
+void RemoteComputePassEncoderProxy::setBindGroup(WebCore::WebGPU::Index32 index, const WebCore::WebGPU::BindGroup* bindGroup,
     std::optional<Vector<WebCore::WebGPU::BufferDynamicOffset>>&& offsets)
 {
-    auto convertedBindGroup = protectedConvertToBackingContext()->convertToBacking(bindGroup);
+    std::optional<WebGPUIdentifier> convertedBindGroup;
+    if (bindGroup)
+        convertedBindGroup = protectedConvertToBackingContext()->convertToBacking(*bindGroup);
 
     auto sendResult = send(Messages::RemoteComputePassEncoder::SetBindGroup(index, convertedBindGroup, WTFMove(offsets)));
     UNUSED_VARIABLE(sendResult);
 }
 
-void RemoteComputePassEncoderProxy::setBindGroup(WebCore::WebGPU::Index32 index, const WebCore::WebGPU::BindGroup& bindGroup,
+void RemoteComputePassEncoderProxy::setBindGroup(WebCore::WebGPU::Index32 index, const WebCore::WebGPU::BindGroup* bindGroup,
     std::span<const uint32_t> dynamicOffsetsArrayBuffer,
     WebCore::WebGPU::Size64 dynamicOffsetsDataStart,
     WebCore::WebGPU::Size32 dynamicOffsetsDataLength)
 {
-    auto convertedBindGroup = protectedConvertToBackingContext()->convertToBacking(bindGroup);
+    std::optional<WebGPUIdentifier> convertedBindGroup;
+    if (bindGroup)
+        convertedBindGroup = protectedConvertToBackingContext()->convertToBacking(*bindGroup);
 
     auto sendResult = send(Messages::RemoteComputePassEncoder::SetBindGroup(index, convertedBindGroup, Vector<WebCore::WebGPU::BufferDynamicOffset>(dynamicOffsetsArrayBuffer.subspan(dynamicOffsetsDataStart, dynamicOffsetsDataLength))));
     UNUSED_VARIABLE(sendResult);

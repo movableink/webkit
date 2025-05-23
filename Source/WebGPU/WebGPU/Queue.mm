@@ -467,6 +467,14 @@ void Queue::synchronizeResourceAndWait(id<MTLBuffer> buffer)
 #endif
 }
 
+id<MTLIndirectCommandBuffer> Queue::trimICB(id<MTLIndirectCommandBuffer> dest, id<MTLIndirectCommandBuffer> src, NSUInteger newSize)
+{
+    ensureBlitCommandEncoder();
+    [m_blitCommandEncoder copyIndirectCommandBuffer:src sourceRange:NSMakeRange(0, newSize) destination:dest destinationIndex:0];
+
+    return dest;
+}
+
 static std::pair<uint32_t, uint16_t> maxIndexValueSlow(std::span<uint8_t> data)
 {
     auto lengthUint32 = data.size() / 4;

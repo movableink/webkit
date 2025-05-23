@@ -805,6 +805,11 @@ Ref<ComputePassEncoder> DeviceImpl::invalidComputePassEncoder()
     RELEASE_ASSERT_NOT_REACHED();
 }
 
+Ref<BindGroupLayout> DeviceImpl::emptyBindGroupLayout() const
+{
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
 } // namespace WebCore::WebGPU
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

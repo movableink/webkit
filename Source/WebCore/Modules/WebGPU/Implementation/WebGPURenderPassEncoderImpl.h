@@ -73,10 +73,10 @@ private:
     void drawIndirect(const Buffer& indirectBuffer, Size64 indirectOffset) final;
     void drawIndexedIndirect(const Buffer& indirectBuffer, Size64 indirectOffset) final;
 
-    void setBindGroup(Index32, const BindGroup&,
+    void setBindGroup(Index32, const BindGroup*,
         std::optional<Vector<BufferDynamicOffset>>&& dynamicOffsets) final;
 
-    void setBindGroup(Index32, const BindGroup&,
+    void setBindGroup(Index32, const BindGroup*,
         std::span<const uint32_t> dynamicOffsetsArrayBuffer,
         Size64 dynamicOffsetsDataStart,
         Size32 dynamicOffsetsDataLength) final;
