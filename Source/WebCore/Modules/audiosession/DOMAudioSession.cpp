@@ -29,10 +29,12 @@
 #if ENABLE(DOM_AUDIO_SESSION)
 
 #include "AudioSession.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "EventTargetInlines.h"
+#include "EventTargetInterfaces.h"
 #include "ExceptionOr.h"
 #include "Page.h"
 #include "PermissionsPolicy.h"
@@ -142,6 +144,16 @@ DOMAudioSession::State DOMAudioSession::state() const
     if (!m_state)
         m_state = computeAudioSessionState();
     return *m_state;
+}
+
+enum EventTargetInterfaceType DOMAudioSession::eventTargetInterface() const
+{
+    return EventTargetInterfaceType::DOMAudioSession;
+}
+
+ScriptExecutionContext* DOMAudioSession::scriptExecutionContext() const
+{
+    return ContextDestructionObserver::scriptExecutionContext();
 }
 
 void DOMAudioSession::stop()

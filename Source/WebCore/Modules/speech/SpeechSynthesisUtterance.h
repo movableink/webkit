@@ -28,8 +28,8 @@
 #if ENABLE(SPEECH_SYNTHESIS)
 
 #include "ActiveDOMObject.h"
+#include "ContextDestructionObserver.h"
 #include "EventTarget.h"
-#include "EventTargetInterfaces.h"
 #include "PlatformSpeechSynthesisUtterance.h"
 #include "SpeechSynthesisErrorCode.h"
 #include "SpeechSynthesisVoice.h"
@@ -90,8 +90,8 @@ private:
     bool virtualHasPendingActivity() const final;
 
     // EventTarget
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::SpeechSynthesisUtterance; }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    EventTargetInterfaceType eventTargetInterface() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 

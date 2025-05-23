@@ -276,6 +276,11 @@ void Geolocation::resetAllGeolocationPermission()
         startRequest(watcher.get());
 }
 
+Document* Geolocation::document() const
+{
+    return downcast<Document>(scriptExecutionContext());
+}
+
 void Geolocation::stop()
 {
     RefPtr page = this->page();

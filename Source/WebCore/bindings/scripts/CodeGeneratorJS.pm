@@ -5270,6 +5270,7 @@ sub GenerateImplementation
 
     if (NeedsImplementationClass($interface) && !$interface->extendedAttributes->{CustomHeapSnapshot}) {
         AddToImplIncludes("<JavaScriptCore/HeapAnalyzer.h>");
+        AddToImplIncludes("ContextDestructionObserverInlines.h");
         AddToImplIncludes("ScriptExecutionContext.h");
         AddToImplIncludes("<wtf/URL.h>");
         AddToImplIncludes("<wtf/text/MakeString.h>");

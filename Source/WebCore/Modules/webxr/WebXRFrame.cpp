@@ -28,6 +28,7 @@
 
 #if ENABLE(WEBXR)
 
+#include "ContextDestructionObserverInlines.h"
 #include "ExceptionOr.h"
 #include "WebXRBoundedReferenceSpace.h"
 #include "WebXRJointPose.h"

@@ -39,6 +39,7 @@
 #include "WebProcessProxy.h"
 #include "WebsiteDataStore.h"
 #include <WebCore/CaptureDeviceWithCapabilities.h>
+#include <WebCore/ContextDestructionObserverInlines.h>
 #include <WebCore/MediaConstraintType.h>
 #include <WebCore/MediaConstraints.h>
 #include <WebCore/MockRealtimeMediaSourceCenter.h>

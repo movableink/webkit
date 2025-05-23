@@ -27,6 +27,7 @@
 #include "StorageManager.h"
 
 #include "ClientOrigin.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "ExceptionOr.h"
 #include "FileSystemDirectoryHandle.h"

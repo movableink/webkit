@@ -28,6 +28,7 @@
 
 #include "BitmapImage.h"
 #include "CanvasRenderingContext.h"
+#include "ContextDestructionObserverInlines.h"
 #include "ImageBitmap.h"
 #include "PaintRenderingContext2D.h"
 #include "ScriptExecutionContext.h"
@@ -102,6 +103,11 @@ std::unique_ptr<CSSParserContext> CustomPaintCanvas::createCSSParserContext() co
 {
     // FIXME: Rather than using a default CSSParserContext, there should be one exposed via ScriptExecutionContext.
     return makeUnique<CSSParserContext>(HTMLStandardMode);
+}
+
+ScriptExecutionContext* CustomPaintCanvas::canvasBaseScriptExecutionContext() const
+{
+    return ContextDestructionObserver::scriptExecutionContext();
 }
 
 } // namespace WebCore

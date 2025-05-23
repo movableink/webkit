@@ -22,6 +22,7 @@
 
 #if USE(GSTREAMER_WEBRTC)
 
+#include "ContextDestructionObserverInlines.h"
 #include "GStreamerAudioRTPPacketizer.h"
 #include "GStreamerCommon.h"
 #include "GStreamerMediaStreamSource.h"

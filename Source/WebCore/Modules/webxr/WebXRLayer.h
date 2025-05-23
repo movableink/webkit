@@ -53,7 +53,7 @@ protected:
     explicit WebXRLayer(ScriptExecutionContext*);
 
     // EventTarget
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
 private:
     // EventTarget

@@ -98,7 +98,7 @@ public:
     void applicationWillEnterForeground() { m_shouldServiceRequestVideoFrameCallbacks = false; }
 
     // EventTarget.
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
     ExceptionOr<void> end(EndPromise&&);
     bool ended() const { return m_ended; }

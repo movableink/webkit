@@ -62,7 +62,7 @@ protected:
     const WebXRRigidTransform& originOffset() const { return m_originOffset.get(); }
 
     // EventTarget
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
 private:
     // EventTarget

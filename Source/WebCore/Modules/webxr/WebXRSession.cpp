@@ -29,6 +29,7 @@
 
 #if ENABLE(WEBXR)
 
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "EventNames.h"
 #include "JSDOMPromiseDeferred.h"
@@ -428,6 +429,11 @@ void WebXRSession::didCompleteShutdown()
     // 7. Queue a task that fires an XRSessionEvent named end on session.
     auto event = XRSessionEvent::create(eventNames().endEvent, { RefPtr { this } });
     queueTaskToDispatchEvent(*this, TaskSource::WebXR, WTFMove(event));
+}
+
+ScriptExecutionContext* WebXRSession::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
 }
 
 // https://immersive-web.github.io/webxr/#dom-xrsession-end

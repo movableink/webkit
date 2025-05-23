@@ -29,8 +29,8 @@
 
 #include "ActiveDOMObject.h"
 #include "AudioSession.h"
+#include "ContextDestructionObserver.h"
 #include "EventTarget.h"
-#include "EventTargetInterfaces.h"
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -63,8 +63,8 @@ private:
     explicit DOMAudioSession(ScriptExecutionContext*);
 
     // EventTarget
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::DOMAudioSession; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    EventTargetInterfaceType eventTargetInterface() const final;
+    ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 

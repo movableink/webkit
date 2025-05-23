@@ -31,6 +31,7 @@
 #include "ContextDestructionObserverInlines.h"
 #include "EventNames.h"
 #include "EventTargetInlines.h"
+#include "EventTargetInterfaces.h"
 #include "SpeechSynthesisErrorEvent.h"
 #include "SpeechSynthesisEvent.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -132,6 +133,15 @@ bool SpeechSynthesisUtterance::virtualHasPendingActivity() const
     return m_activityCountForEventDispatch && hasEventListeners();
 }
 
+ScriptExecutionContext* SpeechSynthesisUtterance::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
+}
+
+EventTargetInterfaceType SpeechSynthesisUtterance::eventTargetInterface() const
+{
+    return EventTargetInterfaceType::SpeechSynthesisUtterance;
+}
 
 } // namespace WebCore
 

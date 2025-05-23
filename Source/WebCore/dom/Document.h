@@ -30,7 +30,7 @@
 #include "AsyncNodeDeletionQueue.h"
 #include "Color.h"
 #include "ContainerNode.h"
-#include "ContextDestructionObserverInlines.h"
+#include "ContextDestructionObserver.h"
 #include "DocumentClasses.h"
 #include "DocumentEnums.h"
 #include "DocumentEventTiming.h"

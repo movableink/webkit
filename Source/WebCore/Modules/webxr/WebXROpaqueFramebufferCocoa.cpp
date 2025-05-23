@@ -28,6 +28,7 @@
 
 #if ENABLE(WEBXR) && PLATFORM(COCOA)
 
+#include "ContextDestructionObserverInlines.h"
 #include "GraphicsContextGLCocoa.h"
 #include "IntSize.h"
 #include "Logging.h"

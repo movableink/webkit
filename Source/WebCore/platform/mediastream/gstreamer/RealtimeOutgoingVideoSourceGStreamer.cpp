@@ -21,7 +21,7 @@
 #include "RealtimeOutgoingVideoSourceGStreamer.h"
 
 #if USE(GSTREAMER_WEBRTC)
-
+#include "ContextDestructionObserverInlines.h"
 #include "GStreamerCommon.h"
 #include "GStreamerMediaStreamSource.h"
 #include "GStreamerRegistryScanner.h"
