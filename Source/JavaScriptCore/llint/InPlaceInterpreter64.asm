@@ -3167,6 +3167,9 @@ reservedOpcode(0xf8)
 reservedOpcode(0xf9)
 reservedOpcode(0xfa)
 
+# If the following four instructions are given more descriptive names,
+# the changes should be matched in IPINT_INSTRUCTIONS in Tools/lldb/debug_ipint.py
+
 ipintOp(_fb_block, macro()
     decodeLEBVarUInt32(1, t0, t1, t2, t3, t4)
     # Security guarantee: always less than 30 (0x00 -> 0x1e)
