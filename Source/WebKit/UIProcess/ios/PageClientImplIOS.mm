@@ -561,24 +561,9 @@ RefPtr<WebPopupMenuProxy> PageClientImpl::createPopupMenuProxy(WebPageProxy&)
     return nullptr;
 }
 
-void PageClientImpl::setTextIndicator(Ref<TextIndicator> textIndicator, WebCore::TextIndicatorLifetime)
+CALayer* PageClientImpl::textIndicatorInstallationLayer()
 {
-    [contentView() setUpTextIndicator:textIndicator];
-}
-
-void PageClientImpl::updateTextIndicator(Ref<TextIndicator> textIndicator)
-{
-    [contentView() updateTextIndicator:textIndicator];
-}
-
-void PageClientImpl::clearTextIndicator(WebCore::TextIndicatorDismissalAnimation dismissalAnimation)
-{
-    [contentView() clearTextIndicator:dismissalAnimation];
-}
-
-void PageClientImpl::setTextIndicatorAnimationProgress(float animationProgress)
-{
-    [contentView() setTextIndicatorAnimationProgress:animationProgress];
+    return [contentView() textIndicatorInstallationLayer];
 }
 
 void PageClientImpl::enterAcceleratedCompositingMode(const LayerTreeContext& layerTreeContext)

@@ -1333,6 +1333,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (void)_web_dismissContentRelativeChildWindowsWithAnimation:(BOOL)withAnimation
 {
+    _page->clearTextIndicatorWithAnimation(withAnimation ? WebCore::TextIndicatorDismissalAnimation::FadeOut : WebCore::TextIndicatorDismissalAnimation::None);
     _impl->dismissContentRelativeChildWindowsWithAnimationFromViewOnly(withAnimation);
 }
 

@@ -467,11 +467,8 @@ public:
 #endif
 
 #if PLATFORM(COCOA)
-    virtual void setTextIndicator(Ref<WebCore::TextIndicator>, WebCore::TextIndicatorLifetime) = 0;
-    virtual void updateTextIndicator(Ref<WebCore::TextIndicator>) = 0;
-    virtual void clearTextIndicator(WebCore::TextIndicatorDismissalAnimation) = 0;
-    virtual void setTextIndicatorAnimationProgress(float) = 0;
-    
+    virtual CALayer *textIndicatorInstallationLayer() = 0;
+
     virtual void didPerformDictionaryLookup(const WebCore::DictionaryPopupInfo&) = 0;
 #endif
 

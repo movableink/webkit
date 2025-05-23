@@ -559,24 +559,9 @@ void PageClientImpl::clearBrowsingWarningIfForMainFrameNavigation()
     m_impl->clearWarningViewIfForMainFrameNavigation();
 }
 
-void PageClientImpl::setTextIndicator(Ref<TextIndicator> textIndicator, WebCore::TextIndicatorLifetime lifetime)
+CALayer* PageClientImpl::textIndicatorInstallationLayer()
 {
-    m_impl->setTextIndicator(textIndicator.get(), lifetime);
-}
-
-void PageClientImpl::updateTextIndicator(Ref<TextIndicator> textIndicator)
-{
-    m_impl->updateTextIndicator(textIndicator.get());
-}
-
-void PageClientImpl::clearTextIndicator(WebCore::TextIndicatorDismissalAnimation dismissalAnimation)
-{
-    m_impl->clearTextIndicatorWithAnimation(dismissalAnimation);
-}
-
-void PageClientImpl::setTextIndicatorAnimationProgress(float progress)
-{
-    m_impl->setTextIndicatorAnimationProgress(progress);
+    return m_impl->textIndicatorInstallationLayer();
 }
 
 void PageClientImpl::accessibilityWebProcessTokenReceived(std::span<const uint8_t> data, pid_t pid)
@@ -682,12 +667,6 @@ void PageClientImpl::gestureEventWasNotHandledByWebCore(const NativeWebGestureEv
 void PageClientImpl::didPerformDictionaryLookup(const DictionaryPopupInfo& dictionaryPopupInfo)
 {
     m_impl->prepareForDictionaryLookup();
-
-    DictionaryLookup::showPopup(dictionaryPopupInfo, m_view.get().get(), [this](TextIndicator& textIndicator) {
-        m_impl->setTextIndicator(textIndicator, WebCore::TextIndicatorLifetime::Permanent);
-    }, nullptr, [this]() {
-        m_impl->clearTextIndicatorWithAnimation(WebCore::TextIndicatorDismissalAnimation::None);
-    });
 }
 
 void PageClientImpl::showCorrectionPanel(AlternativeTextType type, const FloatRect& boundingBoxOfReplacedString, const String& replacedString, const String& replacementString, const Vector<String>& alternativeReplacementStrings)

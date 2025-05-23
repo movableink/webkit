@@ -166,10 +166,7 @@ private:
 
     Ref<WebCore::ValidationBubble> createValidationBubble(String&& message, const WebCore::ValidationBubble::Settings&) final;
 
-    void setTextIndicator(Ref<WebCore::TextIndicator>, WebCore::TextIndicatorLifetime) override;
-    void updateTextIndicator(Ref<WebCore::TextIndicator>) override;
-    void clearTextIndicator(WebCore::TextIndicatorDismissalAnimation) override;
-    void setTextIndicatorAnimationProgress(float) override;
+    CALayer *textIndicatorInstallationLayer() override;
 
     void enterAcceleratedCompositingMode(const LayerTreeContext&) override;
     void exitAcceleratedCompositingMode() override;

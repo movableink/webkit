@@ -1287,7 +1287,6 @@ WebViewImpl::WebViewImpl(WKWebView *view, WebProcessPool& processPool, Ref<API::
     , m_undoTarget(adoptNS([[WKEditorUndoTarget alloc] init]))
     , m_windowVisibilityObserver(adoptNS([[WKWindowVisibilityObserver alloc] initWithView:view impl:*this]))
     , m_accessibilitySettingsObserver(adoptNS([[WKAccessibilitySettingsObserver alloc] initWithImpl:*this]))
-    , m_textIndicatorTimer(RunLoop::main(), this, &WebViewImpl::startTextIndicatoreFadeOut)
     , m_contentRelativeViewsHysteresis(makeUnique<PAL::HysteresisActivity>([this](auto state) { this->contentRelativeViewsHysteresisTimerFired(state); }, 500_ms))
     , m_mouseTrackingObserver(adoptNS([[WKMouseTrackingObserver alloc] initWithViewImpl:*this]))
     , m_primaryTrackingArea(adoptNS([[NSTrackingArea alloc] initWithRect:view.frame options:trackingAreaOptions() owner:m_mouseTrackingObserver.get() userInfo:nil]))
@@ -3446,74 +3445,9 @@ void WebViewImpl::preferencesDidChange()
         updateWindowAndViewFrames();
 }
 
-void WebViewImpl::setTextIndicator(WebCore::TextIndicator& textIndicator, WebCore::TextIndicatorLifetime lifetime)
+CALayer* WebViewImpl::textIndicatorInstallationLayer()
 {
-    if (m_textIndicator == &textIndicator)
-        return;
-
-    teardownTextIndicatorLayer();
-    m_textIndicatorTimer.stop();
-
-    m_textIndicator = &textIndicator;
-
-    CGRect frame = m_textIndicator->textBoundingRectInRootViewCoordinates();
-    m_textIndicatorLayer = adoptNS([[WebTextIndicatorLayer alloc] initWithFrame:frame
-        textIndicator:m_textIndicator margin:CGSizeZero offset:CGPointZero]);
-
-    [[m_layerHostingView layer] addSublayer:m_textIndicatorLayer.get()];
-
-    if (m_textIndicator->presentationTransition() != WebCore::TextIndicatorPresentationTransition::None)
-        [m_textIndicatorLayer present];
-
-    if (lifetime == TextIndicatorLifetime::Temporary)
-        m_textIndicatorTimer.startOneShot(WebCore::timeBeforeFadeStarts);
-}
-
-void WebViewImpl::updateTextIndicator(WebCore::TextIndicator& textIndicator)
-{
-    if (m_textIndicator && m_textIndicatorLayer)
-        setTextIndicator(textIndicator, TextIndicatorLifetime::Temporary);
-}
-
-void WebViewImpl::clearTextIndicatorWithAnimation(WebCore::TextIndicatorDismissalAnimation animation)
-{
-    RefPtr<WebCore::TextIndicator> textIndicator = WTFMove(m_textIndicator);
-
-    if ([m_textIndicatorLayer isFadingOut])
-        return;
-
-    if (textIndicator && textIndicator->wantsManualAnimation() && [m_textIndicatorLayer hasCompletedAnimation] && animation == WebCore::TextIndicatorDismissalAnimation::FadeOut) {
-        startTextIndicatoreFadeOut();
-        return;
-    }
-
-    teardownTextIndicatorLayer();
-}
-
-void WebViewImpl::setTextIndicatorAnimationProgress(float animationProgress)
-{
-    if (!m_textIndicator)
-        return;
-
-    [m_textIndicatorLayer setAnimationProgress:animationProgress];
-}
-
-void WebViewImpl::teardownTextIndicatorLayer()
-{
-    [m_textIndicatorLayer removeFromSuperlayer];
-    m_textIndicatorLayer = nil;
-}
-
-void WebViewImpl::startTextIndicatoreFadeOut()
-{
-    [m_textIndicatorLayer setFadingOut:YES];
-
-    [m_textIndicatorLayer hideWithCompletionHandler:[weakThis = WeakPtr { *this }] {
-        if (!weakThis)
-            return;
-
-        weakThis->teardownTextIndicatorLayer();
-    }];
+    return [m_layerHostingView layer];
 }
 
 void WebViewImpl::dismissContentRelativeChildWindowsWithAnimation(bool animate)
@@ -3526,7 +3460,6 @@ void WebViewImpl::dismissContentRelativeChildWindowsWithAnimationFromViewOnly(bo
     // Calling _clearTextIndicatorWithAnimation here will win out over the animated clear in dismissContentRelativeChildWindowsFromViewOnly.
     // We can't invert these because clients can override (and have overridden) _dismissContentRelativeChildWindows, so it needs to be called.
     // For this same reason, this can't be moved to WebViewImpl without care.
-    clearTextIndicatorWithAnimation(animate ? WebCore::TextIndicatorDismissalAnimation::FadeOut : WebCore::TextIndicatorDismissalAnimation::None);
     [m_view _web_dismissContentRelativeChildWindows];
 }
 
@@ -3543,7 +3476,7 @@ void WebViewImpl::dismissContentRelativeChildWindowsFromViewOnly()
             [[PAL::getDDActionsManagerClass() sharedManager] requestBubbleClosureUnanchorOnFailure:YES];
     }
 
-    clearTextIndicatorWithAnimation(WebCore::TextIndicatorDismissalAnimation::FadeOut);
+    m_page->clearTextIndicatorWithAnimation(WebCore::TextIndicatorDismissalAnimation::FadeOut);
 
     [m_immediateActionController dismissContentRelativeChildWindows];
 

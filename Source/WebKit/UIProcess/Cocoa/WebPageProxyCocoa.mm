@@ -89,6 +89,7 @@
 #import <WebCore/TextAnimationTypes.h>
 #import <WebCore/ValidationBubble.h>
 #import <WebCore/VideoPresentationInterfaceIOS.h>
+#import <WebCore/WebTextIndicatorLayer.h>
 #import <pal/spi/cocoa/LaunchServicesSPI.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <pal/spi/ios/BrowserEngineKitSPI.h>
@@ -1501,6 +1502,116 @@ void WebPageProxy::createTextIndicatorForElementWithID(const String& elementID, 
     }
 
     protectedLegacyMainFrameProcess()->sendWithAsyncReply(Messages::WebPage::CreateTextIndicatorForElementWithID(elementID), WTFMove(completionHandler), webPageIDInMainFrameProcess());
+}
+
+void WebPageProxy::setTextIndicatorFromFrame(FrameIdentifier frameID, const WebCore::TextIndicatorData& indicatorData, uint64_t lifetime)
+{
+    RefPtr frame = WebFrameProxy::webFrame(frameID);
+    if (!frame)
+        return;
+
+    auto rect = indicatorData.textBoundingRectInRootViewCoordinates;
+    convertRectToMainFrameCoordinates(rect, frame->rootFrame().frameID(), [weakThis = WeakPtr { *this }, indicatorData = WTFMove(indicatorData), lifetime] (std::optional<FloatRect> convertedRect) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis || !convertedRect)
+            return;
+        indicatorData.textBoundingRectInRootViewCoordinates = *convertedRect;
+        protectedThis->setTextIndicator(WTFMove(indicatorData), lifetime);
+    });
+}
+
+void WebPageProxy::setTextIndicator(const WebCore::TextIndicatorData& indicatorData, uint64_t lifetime)
+{
+    RefPtr pageClient = this->pageClient();
+    if (!pageClient)
+        return;
+
+    RetainPtr<CALayer> installationLayer = pageClient->textIndicatorInstallationLayer();
+
+    teardownTextIndicatorLayer();
+    m_textIndicatorFadeTimer.stop();
+
+    m_textIndicator = TextIndicator::create(indicatorData);
+
+    CGRect frame = m_textIndicator->textBoundingRectInRootViewCoordinates();
+    m_textIndicatorLayer = adoptNS([[WebTextIndicatorLayer alloc] initWithFrame:frame
+        textIndicator:m_textIndicator margin:CGSizeZero offset:CGPointZero]);
+
+    [installationLayer addSublayer:m_textIndicatorLayer.get()];
+
+    if (m_textIndicator->presentationTransition() != WebCore::TextIndicatorPresentationTransition::None)
+        [m_textIndicatorLayer present];
+
+    if ((TextIndicatorLifetime)lifetime == TextIndicatorLifetime::Temporary)
+        m_textIndicatorFadeTimer.startOneShot(WebCore::timeBeforeFadeStarts);
+}
+
+void WebPageProxy::updateTextIndicatorFromFrame(FrameIdentifier frameID, const WebCore::TextIndicatorData& indicatorData)
+{
+    RefPtr frame = WebFrameProxy::webFrame(frameID);
+    if (!frame)
+        return;
+
+    auto rect = indicatorData.textBoundingRectInRootViewCoordinates;
+    convertRectToMainFrameCoordinates(rect, frame->rootFrame().frameID(), [weakThis = WeakPtr { *this }, indicatorData = WTFMove(indicatorData)] (std::optional<FloatRect> convertedRect) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis || !convertedRect)
+            return;
+        indicatorData.textBoundingRectInRootViewCoordinates = *convertedRect;
+        protectedThis->updateTextIndicator(WTFMove(indicatorData));
+    });
+}
+
+void WebPageProxy::updateTextIndicator(const WebCore::TextIndicatorData& indicatorData)
+{
+    if (m_textIndicator && m_textIndicatorLayer)
+        setTextIndicator(indicatorData, std::to_underlying(TextIndicatorLifetime::Temporary));
+}
+
+void WebPageProxy::clearTextIndicator()
+{
+    clearTextIndicatorWithAnimation(WebCore::TextIndicatorDismissalAnimation::FadeOut);
+}
+
+void WebPageProxy::clearTextIndicatorWithAnimation(WebCore::TextIndicatorDismissalAnimation animation)
+{
+    if ([m_textIndicatorLayer isFadingOut])
+        return;
+
+    RefPtr textIndicator = m_textIndicator;
+
+    if (textIndicator && textIndicator->wantsManualAnimation() && [m_textIndicatorLayer hasCompletedAnimation] && animation == WebCore::TextIndicatorDismissalAnimation::FadeOut) {
+        startTextIndicatorFadeOut();
+        return;
+    }
+
+    teardownTextIndicatorLayer();
+}
+
+void WebPageProxy::setTextIndicatorAnimationProgress(float animationProgress)
+{
+    if (!m_textIndicator)
+        return;
+
+    [m_textIndicatorLayer setAnimationProgress:animationProgress];
+}
+
+void WebPageProxy::teardownTextIndicatorLayer()
+{
+    [m_textIndicatorLayer removeFromSuperlayer];
+    m_textIndicatorLayer = nil;
+}
+
+void WebPageProxy::startTextIndicatorFadeOut()
+{
+    [m_textIndicatorLayer setFadingOut:YES];
+
+    [m_textIndicatorLayer hideWithCompletionHandler:[weakThis = WeakPtr { *this }] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
+        protectedThis->teardownTextIndicatorLayer();
+    }];
 }
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)

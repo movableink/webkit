@@ -913,6 +913,7 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
 - (void)updateTextIndicator:(Ref<WebCore::TextIndicator>)textIndicator;
 - (void)setTextIndicatorAnimationProgress:(float)NSAnimationProgress;
 - (void)clearTextIndicator:(WebCore::TextIndicatorDismissalAnimation)animation;
+- (CALayer *)textIndicatorInstallationLayer;
 
 #if ENABLE(WRITING_TOOLS)
 - (void)addTextAnimationForAnimationID:(NSUUID *)uuid withData:(const WebCore::TextAnimationData&)data;

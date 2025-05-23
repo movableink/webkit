@@ -295,8 +295,17 @@ void WebPageProxy::setSmartInsertDeleteEnabled(bool isSmartInsertDeleteEnabled)
 
 void WebPageProxy::didPerformDictionaryLookup(const DictionaryPopupInfo& dictionaryPopupInfo)
 {
-    if (RefPtr pageClient = this->pageClient())
+    if (RefPtr pageClient = this->pageClient()) {
         pageClient->didPerformDictionaryLookup(dictionaryPopupInfo);
+
+        DictionaryLookup::showPopup(dictionaryPopupInfo, pageClient->viewForPresentingRevealPopover(), [this](TextIndicator& textIndicator) {
+            setTextIndicator(textIndicator.data(), (uint64_t)WebCore::TextIndicatorLifetime::Permanent);
+        }, nullptr, [weakThis = WeakPtr { *this }] {
+            if (!weakThis)
+                return;
+            weakThis->clearTextIndicatorWithAnimation(WebCore::TextIndicatorDismissalAnimation::None);
+        });
+    }
 }
 
 void WebPageProxy::registerWebProcessAccessibilityToken(std::span<const uint8_t> data)

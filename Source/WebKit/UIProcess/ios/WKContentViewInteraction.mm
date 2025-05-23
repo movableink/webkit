@@ -12442,6 +12442,11 @@ static RetainPtr<NSItemProvider> createItemProvider(const WebKit::WebPageProxy& 
 
 #endif // ENABLE(IMAGE_ANALYSIS)
 
+- (CALayer *)textIndicatorInstallationLayer
+{
+    return [self layer];
+}
+
 - (void)setUpTextIndicator:(Ref<WebCore::TextIndicator>)textIndicator
 {
     if (_textIndicator == textIndicator.ptr())

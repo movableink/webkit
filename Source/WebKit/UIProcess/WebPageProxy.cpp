@@ -814,6 +814,9 @@ WebPageProxy::WebPageProxy(PageClient& pageClient, WebProcessProxy& process, Ref
 #endif
     , m_navigationState(makeUniqueRefWithoutRefCountedCheck<WebNavigationState>(*this))
     , m_generatePageLoadTimingTimer(RunLoop::main(), this, &WebPageProxy::didEndNetworkRequestsForPageLoadTimingTimerFired)
+#if PLATFORM(COCOA)
+    , m_textIndicatorFadeTimer(RunLoop::main(), this, &WebPageProxy::startTextIndicatorFadeOut)
+#endif
     , m_legacyMainFrameProcess(process)
     , m_pageGroup(*configuration->pageGroup())
     , m_preferences(configuration->preferences())
@@ -9969,79 +9972,47 @@ void WebPageProxy::didGetImageForFindMatch(ImageBufferParameters&& parameters, S
     m_findMatchesClient->didGetImageForMatchResult(this, image.ptr(), matchIndex);
 }
 
-void WebPageProxy::setTextIndicatorFromFrame(FrameIdentifier frameID, WebCore::TextIndicatorData&& indicatorData, uint64_t lifetime)
+#if !PLATFORM(COCOA)
+void WebPageProxy::setTextIndicatorFromFrame(FrameIdentifier frameID, const WebCore::TextIndicatorData& indicatorData, uint64_t lifetime)
 {
-    RefPtr frame = WebFrameProxy::webFrame(frameID);
-    if (!frame)
-        return;
-
-    auto rect = indicatorData.textBoundingRectInRootViewCoordinates;
-    convertRectToMainFrameCoordinates(rect, frame->rootFrame().frameID(), [weakThis = WeakPtr { *this }, indicatorData = WTFMove(indicatorData), lifetime] (std::optional<FloatRect> convertedRect) mutable {
-        RefPtr protectedThis = weakThis.get();
-        if (!protectedThis || !convertedRect)
-            return;
-        indicatorData.textBoundingRectInRootViewCoordinates = *convertedRect;
-        protectedThis->setTextIndicator(WTFMove(indicatorData), lifetime);
-    });
+    notImplemented();
 }
 
 void WebPageProxy::setTextIndicator(const TextIndicatorData& indicatorData, uint64_t lifetime)
 {
-    // FIXME: Make TextIndicatorWindow a platform-independent presentational thing ("TextIndicatorPresentation"?).
-#if PLATFORM(COCOA)
-    if (RefPtr pageClient = this->pageClient())
-        pageClient->setTextIndicator(TextIndicator::create(indicatorData), static_cast<WebCore::TextIndicatorLifetime>(lifetime));
-#else
     notImplemented();
-#endif
 }
 
-void WebPageProxy::updateTextIndicatorFromFrame(FrameIdentifier frameID, WebCore::TextIndicatorData&& indicatorData)
+void WebPageProxy::updateTextIndicatorFromFrame(FrameIdentifier frameID, const WebCore::TextIndicatorData& indicatorData)
 {
-    RefPtr frame = WebFrameProxy::webFrame(frameID);
-    if (!frame)
-        return;
-
-    auto rect = indicatorData.textBoundingRectInRootViewCoordinates;
-    convertRectToMainFrameCoordinates(rect, frame->rootFrame().frameID(), [weakThis = WeakPtr { *this }, indicatorData = WTFMove(indicatorData)] (std::optional<FloatRect> convertedRect) mutable {
-        RefPtr protectedThis = weakThis.get();
-        if (!protectedThis || !convertedRect)
-            return;
-        indicatorData.textBoundingRectInRootViewCoordinates = *convertedRect;
-        protectedThis->updateTextIndicator(WTFMove(indicatorData));
-    });
+    notImplemented();
 }
 
 void WebPageProxy::updateTextIndicator(const TextIndicatorData& indicatorData)
 {
-    // FIXME: Make TextIndicatorWindow a platform-independent presentational thing ("TextIndicatorPresentation"?).
-#if PLATFORM(COCOA)
-    if (RefPtr pageClient = this->pageClient())
-        pageClient->updateTextIndicator(TextIndicator::create(indicatorData));
-#else
     notImplemented();
-#endif
 }
 
 void WebPageProxy::clearTextIndicator()
 {
-#if PLATFORM(COCOA)
-    if (RefPtr pageClient = this->pageClient())
-        pageClient->clearTextIndicator(WebCore::TextIndicatorDismissalAnimation::FadeOut);
-#else
     notImplemented();
-#endif
 }
 
-void WebPageProxy::setTextIndicatorAnimationProgress(float progress)
+void WebPageProxy::setTextIndicatorAnimationProgress(float animationProgress)
 {
-#if PLATFORM(COCOA)
-    if (RefPtr pageClient = this->pageClient())
-        pageClient->setTextIndicatorAnimationProgress(progress);
-#else
     notImplemented();
-#endif
 }
+
+void WebPageProxy::teardownTextIndicatorLayer()
+{
+    notImplemented();
+}
+
+void WebPageProxy::startTextIndicatorFadeOut()
+{
+    notImplemented();
+}
+#endif // !PLATFORM(COCOA)
 
 void WebPageProxy::Internals::valueChangedForPopupMenu(WebPopupMenuProxy*, int32_t newSelectedIndex)
 {

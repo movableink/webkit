@@ -465,12 +465,9 @@ public:
 
     void preferencesDidChange();
 
-    void setTextIndicator(WebCore::TextIndicator&, WebCore::TextIndicatorLifetime = WebCore::TextIndicatorLifetime::Permanent);
-    void updateTextIndicator(WebCore::TextIndicator&);
-    void clearTextIndicatorWithAnimation(WebCore::TextIndicatorDismissalAnimation);
-    void setTextIndicatorAnimationProgress(float);
     void teardownTextIndicatorLayer();
-    void startTextIndicatoreFadeOut();
+    void startTextIndicatorFadeOut();
+    CALayer *textIndicatorInstallationLayer();
     void dismissContentRelativeChildWindowsFromViewOnly();
     void dismissContentRelativeChildWindowsWithAnimation(bool);
     void dismissContentRelativeChildWindowsWithAnimationFromViewOnly(bool);
@@ -950,10 +947,6 @@ private:
     RetainPtr<NSWindow> m_targetWindowForMovePreparation;
 
     id m_flagsChangedEventMonitor { nullptr };
-
-    RunLoop::Timer m_textIndicatorTimer;
-    RefPtr<WebCore::TextIndicator> m_textIndicator;
-    RetainPtr<WebTextIndicatorLayer> m_textIndicatorLayer;
 
     std::unique_ptr<PAL::HysteresisActivity> m_contentRelativeViewsHysteresis;
 
