@@ -44,7 +44,7 @@ TEST(PlatformDynamicRangeLimit, Values)
     static_assert(!std::is_default_constructible_v<WebCore::PlatformDynamicRangeLimit>);
     static_assert(!std::is_constructible_v<WebCore::PlatformDynamicRangeLimit, float>);
 
-    static_assert(WebCore::PlatformDynamicRangeLimit::initialValue().value() == WebCore::PlatformDynamicRangeLimit::constrainedHigh().value());
+    static_assert(WebCore::PlatformDynamicRangeLimit::initialValue().value() == WebCore::PlatformDynamicRangeLimit::noLimit().value());
     static_assert(WebCore::PlatformDynamicRangeLimit::initialValueForVideos().value() == WebCore::PlatformDynamicRangeLimit::noLimit().value());
 
     static_assert(WebCore::PlatformDynamicRangeLimit::defaultWhenSuppressingHDR().value() == WebCore::PlatformDynamicRangeLimit::standard().value());

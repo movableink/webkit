@@ -4399,7 +4399,7 @@
             "animation-type": "not animatable",
             "animation-type-comment": "FIXME: Specs say it's animatable, but dynamic-range-limit-mix() cannot be implemented yet; see webkit.org/b/293339",
             "inherited": true,
-            "initial": "constrained-high",
+            "initial": "no-limit",
             "values": [
                 "standard",
                 "constrained-high",

@@ -46,7 +46,7 @@ public:
     static constexpr PlatformDynamicRangeLimit constrainedHigh() { return PlatformDynamicRangeLimit(constrainedHighValue); }
     static constexpr PlatformDynamicRangeLimit noLimit() { return PlatformDynamicRangeLimit(noLimitValue); }
 
-    static constexpr PlatformDynamicRangeLimit initialValue() { return constrainedHigh(); }
+    static constexpr PlatformDynamicRangeLimit initialValue() { return noLimit(); }
     static constexpr PlatformDynamicRangeLimit initialValueForVideos() { return noLimit(); }
 
     static constexpr PlatformDynamicRangeLimit defaultWhenSuppressingHDR() { return standard(); }
@@ -74,7 +74,7 @@ private:
     static constexpr ValueType constrainedHighValue = 0.5;
     static constexpr ValueType noLimitValue = 1;
 
-    ValueType m_value { constrainedHighValue };
+    ValueType m_value { noLimitValue };
 };
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, PlatformDynamicRangeLimit);
