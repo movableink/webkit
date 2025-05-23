@@ -29,7 +29,9 @@
 #if ENABLE(WEBDRIVER_BIDI)
 
 #include "BidiUserContext.h"
+#if ENABLE(2022_GLIB_API)
 #include "WebKitNetworkSession.h"
+#endif
 #include "WebKitWebContextPrivate.h"
 #include "WebKitWebsiteDataManagerPrivate.h"
 

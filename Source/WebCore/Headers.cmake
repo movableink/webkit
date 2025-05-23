@@ -1708,6 +1708,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/FrameSnapshotting.h
     page/FrameTree.h
     page/FrameView.h
+    page/GetComposedRangesOptions.h
     page/GlobalFrameIdentifier.h
     page/GlobalWindowIdentifier.h
     page/HandleUserInputEventResult.h
