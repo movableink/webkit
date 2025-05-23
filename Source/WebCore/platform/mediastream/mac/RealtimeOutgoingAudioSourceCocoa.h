@@ -62,6 +62,7 @@ private:
     bool hasBufferedEnoughData() final;
     void sourceUpdated() final;
 
+    void updateSampleConverter(const AudioStreamDescription&);
     void pullAudioData();
 
     Ref<AudioSampleDataSource> m_sampleConverter;

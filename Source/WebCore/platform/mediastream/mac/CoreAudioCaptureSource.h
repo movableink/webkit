@@ -88,6 +88,7 @@ private:
 #endif
 
     std::optional<Vector<int>> discreteSampleRates() const final { return { { 8000, 16000, 32000, 44100, 48000, 96000 } }; }
+    const AudioStreamDescription* audioStreamDescription() const final;
 
     const RealtimeMediaSourceCapabilities& capabilities() final;
     const RealtimeMediaSourceSettings& settings() final;

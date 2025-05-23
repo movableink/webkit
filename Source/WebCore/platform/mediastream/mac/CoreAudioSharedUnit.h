@@ -129,6 +129,8 @@ public:
     WEBCORE_EXPORT void setMuteStatusChangedCallback(Function<void(bool)>&&);
     void handleMuteStatusChangedNotification(bool);
 
+    const std::optional<CAAudioStreamDescription>& microphoneProcFormat() const { return m_microphoneProcFormat; }
+
 private:
     CoreAudioSharedUnit();
 

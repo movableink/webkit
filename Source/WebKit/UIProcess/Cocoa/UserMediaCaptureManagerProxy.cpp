@@ -69,33 +69,46 @@ public:
     static Ref<UserMediaCaptureManagerProxySourceProxy> create(RealtimeMediaSourceIdentifier id, Ref<IPC::Connection>&& connection, ProcessIdentity&& resourceOwner, Ref<RealtimeMediaSource>&& source, RefPtr<RemoteVideoFrameObjectHeap>&& videoFrameObjectHeap) { return adoptRef(*new UserMediaCaptureManagerProxySourceProxy(id, WTFMove(connection), WTFMove(resourceOwner), WTFMove(source), WTFMove(videoFrameObjectHeap))); }
     ~UserMediaCaptureManagerProxySourceProxy()
     {
-        Ref source = m_source;
-        switch (source->type()) {
+        unobserveMedia();
+        m_source->removeObserver(*this);
+    }
+
+    void unobserveMedia()
+    {
+        if (!m_isObservingMedia)
+            return;
+        m_isObservingMedia = false;
+
+        switch (m_source->type()) {
         case RealtimeMediaSource::Type::Audio:
-            source->removeAudioSampleObserver(*this);
+            m_source->removeAudioSampleObserver(*this);
             break;
         case RealtimeMediaSource::Type::Video:
-            source->removeVideoFrameObserver(*this);
+            m_source->removeVideoFrameObserver(*this);
             break;
         }
-        source->removeObserver(*this);
     }
 
     void observeMedia()
     {
-        Ref source = m_source;
-        switch (source->type()) {
+        if (m_isObservingMedia)
+            return;
+        m_isObservingMedia = true;
+
+        switch (m_source->type()) {
         case RealtimeMediaSource::Type::Audio:
-            source->addAudioSampleObserver(*this);
+            m_source->addAudioSampleObserver(*this);
             break;
         case RealtimeMediaSource::Type::Video:
             if (m_widthConstraint || m_heightConstraint || m_frameRateConstraint)
-                source->addVideoFrameObserver(*this, { m_widthConstraint, m_heightConstraint }, m_frameRateConstraint);
+                m_source->addVideoFrameObserver(*this, { m_widthConstraint, m_heightConstraint }, m_frameRateConstraint);
             else
-                source->addVideoFrameObserver(*this);
+                m_source->addVideoFrameObserver(*this);
             break;
         }
     }
+
+    bool isObservingMedia() const { return m_isObservingMedia; }
 
     void whenReady(UserMediaCaptureManagerProxy::CreateSourceCallback&& createCallback)
     {
@@ -124,12 +137,21 @@ public:
         m_shouldReset = true;
         m_isStopped = false;
         m_source->start();
+
+        if (m_source->type() == RealtimeMediaSource::Type::Audio) {
+            if (auto* description = m_source->audioStreamDescription())
+                prepareAudioDescription(*description);
+        }
+
+        observeMedia();
     }
 
     void stop()
     {
         m_isStopped = true;
         m_source->stop();
+
+        unobserveMedia();
     }
 
     void end()
@@ -203,9 +225,10 @@ public:
                 return GenericPromise::createAndResolve();
             }
 
-            source->removeVideoFrameObserver(*protectedThis);
+            bool isObservingMedia = protectedThis->isObservingMedia();
+            protectedThis->unobserveMedia();
 
-            source->applyConstraints(WTFMove(constraints), [weakThis = WTFMove(weakThis), &constraints, callback = WTFMove(callback)](auto&& error) mutable {
+            source->applyConstraints(WTFMove(constraints), [weakThis = WTFMove(weakThis), &constraints, isObservingMedia, callback = WTFMove(callback)](auto&& error) mutable {
                 RefPtr protectedThis = weakThis.get();
                 if (!protectedThis) {
                     callback(RealtimeMediaSource::ApplyConstraintsError { { }, { } });
@@ -217,7 +240,8 @@ public:
                     protectedThis->m_settings = { };
                 }
 
-                protectedThis->protectedSource()->addVideoFrameObserver(*protectedThis, { protectedThis->m_widthConstraint, protectedThis->m_heightConstraint }, protectedThis->m_frameRateConstraint);
+                if (isObservingMedia)
+                    protectedThis->observeMedia();
 
                 callback(WTFMove(error));
             });
@@ -342,27 +366,38 @@ private:
         m_connection->send(Messages::UserMediaCaptureManager::SourceConfigurationChanged(m_id, source->persistentID(), settings(), source->capabilities()), 0);
     }
 
+    void prepareAudioDescription(const AudioStreamDescription& description)
+    {
+        m_captureSemaphore = makeUnique<IPC::Semaphore>();
+        ASSERT(description.platformDescription().type == PlatformDescription::CAAudioStreamBasicType);
+        m_description = *std::get<const AudioStreamBasicDescription*>(description.platformDescription().description);
+
+        // Allocate a ring buffer large enough to contain 2 seconds of audio.
+        auto result = ProducerSharedCARingBuffer::allocate(*m_description, m_description->sampleRate() * 2);
+        RELEASE_ASSERT(result); // FIXME(https://bugs.webkit.org/show_bug.cgi?id=262690): Handle allocation failure.
+        auto [ringBuffer, audioHandle] = WTFMove(*result);
+        m_ringBuffer = WTFMove(ringBuffer);
+        m_audioHandle = WTFMove(audioHandle);
+    }
+
     // May get called on a background thread.
     void audioSamplesAvailable(const MediaTime& time, const PlatformAudioData& audioData, const AudioStreamDescription& description, size_t numberOfFrames) final {
-        if (m_description != description || m_shouldReset) {
-            DisableMallocRestrictionsForCurrentThreadScope scope;
-
+        bool descriptionChanged = m_description != description;
+        if (descriptionChanged || m_shouldReset) {
             m_shouldReset = false;
             m_writeOffset = 0;
             m_remainingFrameCount = 0;
             m_startTime = time;
-            m_captureSemaphore = makeUnique<IPC::Semaphore>();
-            ASSERT(description.platformDescription().type == PlatformDescription::CAAudioStreamBasicType);
-            m_description = *std::get<const AudioStreamBasicDescription*>(description.platformDescription().description);
-
             m_frameChunkSize = std::max(WebCore::AudioUtilities::renderQuantumSize, AudioSession::protectedSharedSession()->preferredBufferSize());
 
-            // Allocate a ring buffer large enough to contain 2 seconds of audio.
-            auto result = ProducerSharedCARingBuffer::allocate(*m_description, m_description->sampleRate() * 2);
-            RELEASE_ASSERT(result); // FIXME(https://bugs.webkit.org/show_bug.cgi?id=262690): Handle allocation failure.
-            auto [ringBuffer, handle] = WTFMove(*result);
-            m_ringBuffer = WTFMove(ringBuffer);
-            m_connection->send(Messages::RemoteCaptureSampleManager::AudioStorageChanged(m_id, WTFMove(handle), *m_description, *m_captureSemaphore, m_startTime, m_frameChunkSize), 0);
+            ASSERT(descriptionChanged || m_audioHandle);
+
+            DisableMallocRestrictionsForCurrentThreadScope scope;
+            if (descriptionChanged)
+                prepareAudioDescription(description);
+
+            m_connection->send(Messages::RemoteCaptureSampleManager::AudioStorageChanged(m_id, WTFMove(*m_audioHandle), *m_description, *m_captureSemaphore, m_startTime, m_frameChunkSize), 0);
+            m_audioHandle = { };
         }
 
         m_ringBuffer->store(downcast<WebAudioBufferList>(audioData).list(), numberOfFrames, m_writeOffset);
@@ -398,22 +433,25 @@ private:
 
     Ref<IPC::Connection> protectedConnection() const { return m_connection; }
 
+    bool m_isObservingMedia { false };
+    bool m_isStopped { false };
+    bool m_isEnded { false };
+    bool m_shouldApplyRotation { false };
+    std::atomic<bool> m_shouldReset { false };
+
     RealtimeMediaSourceIdentifier m_id;
     const Ref<IPC::Connection> m_connection;
     ProcessIdentity m_resourceOwner;
     const Ref<RealtimeMediaSource> m_source;
     std::unique_ptr<ProducerSharedCARingBuffer> m_ringBuffer;
     std::optional<CAAudioStreamDescription> m_description;
-    bool m_isStopped { false };
-    bool m_isEnded { false };
     std::unique_ptr<ImageRotationSessionVT> m_rotationSession;
-    bool m_shouldApplyRotation { false };
     std::unique_ptr<IPC::Semaphore> m_captureSemaphore;
+    std::optional<ConsumerSharedCARingBufferHandle> m_audioHandle;
     int64_t m_writeOffset { 0 };
     int64_t m_remainingFrameCount { 0 };
     size_t m_frameChunkSize { 0 };
     MediaTime m_startTime;
-    bool m_shouldReset { false };
     RefPtr<RemoteVideoFrameObjectHeap> m_videoFrameObjectHeap;
 
     std::optional<WebCore::RealtimeMediaSourceSettings> m_settings;
@@ -548,7 +586,6 @@ void UserMediaCaptureManagerProxy::createMediaSourceForCaptureDeviceWithConstrai
     Ref connection = m_connectionProxy->connection();
     RefPtr remoteVideoFrameObjectHeap = shouldUseGPUProcessRemoteFrames ? m_connectionProxy->remoteVideoFrameObjectHeap() : nullptr;
     auto proxy = UserMediaCaptureManagerProxySourceProxy::create(id, WTFMove(connection), ProcessIdentity { m_connectionProxy->resourceOwner() }, WTFMove(source), WTFMove(remoteVideoFrameObjectHeap));
-    proxy->observeMedia();
 
     auto completeSetup = [](UserMediaCaptureManagerProxySourceProxy& proxy, CreateSourceCallback&& completionHandler) mutable {
         proxy.whenReady(WTFMove(completionHandler));
@@ -690,7 +727,8 @@ void UserMediaCaptureManagerProxy::clone(RealtimeMediaSourceIdentifier clonedID,
         RefPtr remoteVideoFrameObjectHeap = m_connectionProxy->remoteVideoFrameObjectHeap();
         auto cloneProxy = UserMediaCaptureManagerProxySourceProxy::create(newSourceID, WTFMove(connection), ProcessIdentity { m_connectionProxy->resourceOwner() }, WTFMove(sourceClone), WTFMove(remoteVideoFrameObjectHeap));
         cloneProxy->copySettings(*proxy);
-        cloneProxy->observeMedia();
+        if (proxy->isObservingMedia())
+            cloneProxy->observeMedia();
         m_proxies.add(newSourceID, WTFMove(cloneProxy));
     }
 }

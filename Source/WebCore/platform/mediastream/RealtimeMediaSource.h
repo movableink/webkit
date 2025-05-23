@@ -230,6 +230,8 @@ public:
     bool echoCancellation() const { return m_echoCancellation; }
     void setEchoCancellation(bool);
 
+    virtual const AudioStreamDescription* audioStreamDescription() const;
+
     virtual const RealtimeMediaSourceCapabilities& capabilities() = 0;
     virtual const RealtimeMediaSourceSettings& settings() = 0;
 
@@ -501,6 +503,11 @@ inline void RealtimeMediaSource::setCanUseIOSurface()
     m_canUseIOSurface = true;
 }
 #endif
+
+inline const AudioStreamDescription* RealtimeMediaSource::audioStreamDescription() const
+{
+    return nullptr;
+}
 
 } // namespace WebCore
 

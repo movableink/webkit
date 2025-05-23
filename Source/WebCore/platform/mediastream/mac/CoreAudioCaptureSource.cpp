@@ -379,6 +379,13 @@ void CoreAudioCaptureSource::echoCancellationChanged()
     configurationChanged();
 }
 
+const AudioStreamDescription* CoreAudioCaptureSource::audioStreamDescription() const
+{
+    if (!CoreAudioSharedUnit::singleton().microphoneProcFormat())
+        return nullptr;
+    return &CoreAudioSharedUnit::singleton().microphoneProcFormat().value();
+}
+
 } // namespace WebCore
 
 #endif // ENABLE(MEDIA_STREAM)

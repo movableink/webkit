@@ -244,6 +244,7 @@ void RemoteCaptureSampleManager::RemoteAudio::setStorage(ConsumerSharedCARingBuf
     m_startTime = mediaTime;
     m_frameChunkSize = frameChunkSize;
     m_buffer = makeUnique<WebAudioBufferList>(description, m_frameChunkSize);
+    m_source->setDescription(description);
     startThread();
 }
 
