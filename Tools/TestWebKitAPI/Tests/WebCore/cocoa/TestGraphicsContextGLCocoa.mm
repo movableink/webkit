@@ -38,6 +38,7 @@
 #import <optional>
 #import <wtf/HashSet.h>
 #import <wtf/MemoryFootprint.h>
+#import <wtf/StdLibExtras.h>
 
 namespace TestWebKitAPI {
 
@@ -49,7 +50,6 @@ class MockGraphicsContextGLClient final : public GraphicsContextGL::Client {
 public:
     void forceContextLost() final { ++m_contextLostCalls; }
     void addDebugMessage(GCGLenum, GCGLenum, GCGLenum, const String&) final { }
-
     int contextLostCalls() { return m_contextLostCalls; }
 private:
     int m_contextLostCalls { 0 };
@@ -88,10 +88,11 @@ private:
     std::optional<ScopedSetAuxiliaryProcessTypeForTesting> m_scopedProcessType;
 };
 
-class AnyContextAttributeTest : public testing::TestWithParam<std::tuple<bool, bool>> {
+class AnyContextAttributeTest : public testing::TestWithParam<std::tuple<bool, bool, bool>> {
 protected:
     bool antialias() const { return std::get<0>(GetParam()); }
     bool preserveDrawingBuffer() const { return std::get<1>(GetParam()); }
+    bool isWebGL2() const { return std::get<2>(GetParam()); }
     GraphicsContextGLAttributes attributes();
     RefPtr<TestedGraphicsContextGLCocoa> createTestContext(IntSize contextSize);
 
@@ -111,6 +112,7 @@ private:
 GraphicsContextGLAttributes AnyContextAttributeTest::attributes()
 {
     GraphicsContextGLAttributes attributes;
+    attributes.isWebGL2 = isWebGL2();
     attributes.antialias = antialias();
     attributes.depth = false;
     attributes.stencil = false;
@@ -132,21 +134,26 @@ RefPtr<TestedGraphicsContextGLCocoa> AnyContextAttributeTest::createTestContext(
 
 static const int expectedDisplayBufferPoolSize = 3;
 
-static ::testing::AssertionResult changeContextContents(TestedGraphicsContextGLCocoa& context, int iteration)
+static ::testing::AssertionResult checkReadPixel(GraphicsContextGL& context, IntPoint point, Color expected)
+{
+    uint8_t gotValues[4] = { };
+    context.readPixels({ point, { 1, 1 } }, GraphicsContextGL::RGBA, GraphicsContextGL::UNSIGNED_BYTE, gotValues, 1, 0, false);
+    Color got { SRGBA<uint8_t> { gotValues[0], gotValues[1], gotValues[2], gotValues[3] } };
+    if (got != expected)
+        return ::testing::AssertionFailure() << "Got: " << got << ", expected: " << expected << ".";
+    return ::testing::AssertionSuccess();
+
+}
+static ::testing::AssertionResult changeContextContents(GraphicsContextGL& context, int iteration)
 {
     Color expected { iteration % 2 ? Color::green : Color::yellow };
     auto [r, g, b, a] = expected.toColorTypeLossy<SRGBA<float>>().resolved();
     context.clearColor(r, g, b, a);
     context.clear(GraphicsContextGL::COLOR_BUFFER_BIT);
-    uint8_t gotValues[4] = { };
     auto sampleAt = context.getInternalFramebufferSize();
     sampleAt.contract(2, 3);
     sampleAt.clampNegativeToZero();
-    context.readPixels({ sampleAt.width(), sampleAt.height(), 1, 1 }, GraphicsContextGL::RGBA, GraphicsContextGL::UNSIGNED_BYTE, gotValues, 4, 0, false);
-    Color got { SRGBA<uint8_t> { gotValues[0], gotValues[1], gotValues[2], gotValues[3] } };
-    if (got != expected)
-        return ::testing::AssertionFailure() << "Failed to verify draw to context. Got: " << got << ", expected: " << expected << ".";
-    return ::testing::AssertionSuccess();
+    return checkReadPixel(context, IntPoint { sampleAt }, expected);
 }
 
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
@@ -582,9 +589,9 @@ TEST_P(AnyContextAttributeTest, PrepareFailureWorks)
         EXPECT_TRUE(context->getErrors().isEmpty());
     } else if (attrs.preserveDrawingBuffer || attrs.antialias) {
         ASSERT_FALSE(changeContextContents(*context, 1));
-        GCGLErrorCodeSet expectedErrors = GCGLErrorCode::InvalidFramebufferOperation;
-        expectedErrors.add(GCGLErrorCode::InvalidOperation);
-        EXPECT_EQ(expectedErrors, context->getErrors());
+        auto errors = context->getErrors();
+        EXPECT_TRUE(errors.containsAny({ GCGLErrorCode::InvalidFramebufferOperation, GCGLErrorCode::InvalidOperation }));
+        EXPECT_TRUE(errors.containsOnly({ GCGLErrorCode::InvalidFramebufferOperation, GCGLErrorCode::InvalidOperation }));
     } else {
         ASSERT_FALSE(changeContextContents(*context, 1));
         uint32_t gotValue = 0;
@@ -618,9 +625,114 @@ TEST_P(AnyContextAttributeTest, FinishIsSignaled)
     EXPECT_NE(Thread::currentSingleton().uid(), signalThreadUID);
 }
 
+#if ENABLE(WEBXR)
+
+// Render to RGBA+depth MSAA renderbuffers.
+// Resolve to RGBA+depth renderbuffers.
+// Copy two halves to individual BGRA_EXT+depth renderbuffers.
+// Tests that we can call BlitFramebuffer with (0,0 WxH) -> (0, 0, WxH) as well as (x1,y1 WxH) -> (0,0 WxH) rects.
+// Some BlitFramebuffer variants had limitations for this.
+TEST_P(AnyContextAttributeTest, WebXRBlitTest)
+{
+    using GL = GraphicsContextGL;
+    MockGraphicsContextGLClient client;
+    auto gl = createTestContext({ 2, 2 });
+    ASSERT_NE(gl, nullptr);
+    gl->setClient(&client);
+
+    gl->enableRequiredWebXRExtensions();
+    int maxSamples = 0;
+    gl->getIntegerv(GL::MAX_SAMPLES, singleElementSpan(maxSamples));
+    ASSERT_GT(maxSamples, 0);
+    PlatformGLObject fbo = gl->createFramebuffer();
+    gl->bindFramebuffer(GL::FRAMEBUFFER, fbo);
+    {
+        PlatformGLObject color = gl->createRenderbuffer();
+        ASSERT_NE(color, 0u);
+        gl->bindRenderbuffer(GL::RENDERBUFFER, color);
+        gl->renderbufferStorageMultisampleANGLE(GL::RENDERBUFFER, maxSamples, GL::RGBA8, 4, 4);
+        gl->framebufferRenderbuffer(GL::FRAMEBUFFER, GL::COLOR_ATTACHMENT0, GL::RENDERBUFFER, color);
+    }
+    {
+        PlatformGLObject depth = gl->createRenderbuffer();
+        ASSERT_NE(depth, 0u);
+        gl->bindRenderbuffer(GL::RENDERBUFFER, depth);
+        gl->renderbufferStorageMultisampleANGLE(GL::RENDERBUFFER, maxSamples, GL::DEPTH24_STENCIL8, 4, 4);
+        gl->framebufferRenderbuffer(GL::FRAMEBUFFER, GL::DEPTH_STENCIL_ATTACHMENT, GL::RENDERBUFFER, depth);
+    }
+    // Simulated draw: left blue, right green.
+    {
+        gl->enable(GL::SCISSOR_TEST);
+        gl->scissor(0, 0, 2, 2);
+        gl->clearDepth(.1f);
+        gl->clearColor(.0f, .0f, 1.f, 1.f);
+        gl->clear(GL::COLOR_BUFFER_BIT | GL::DEPTH_BUFFER_BIT);
+        gl->scissor(2, 2, 4, 4);
+        gl->clearDepth(.2f);
+        gl->clearColor(.0f, 1.f, .0f, 1.f);
+        gl->clear(GL::COLOR_BUFFER_BIT | GL::DEPTH_BUFFER_BIT);
+        gl->disable(GL::SCISSOR_TEST);
+    }
+
+    // Resolve MSAA to single sample.
+    PlatformGLObject resolveFBO = gl->createFramebuffer();
+    gl->bindFramebuffer(GL::DRAW_FRAMEBUFFER, resolveFBO);
+    {
+        PlatformGLObject color = gl->createRenderbuffer();
+        ASSERT_NE(color, 0u);
+        gl->bindRenderbuffer(GL::RENDERBUFFER, color);
+        gl->renderbufferStorageMultisampleANGLE(GL::RENDERBUFFER, 0, GL::RGBA8, 4, 4);
+        gl->framebufferRenderbuffer(GL::DRAW_FRAMEBUFFER, GL::COLOR_ATTACHMENT0, GL::RENDERBUFFER, color);
+    }
+    {
+        PlatformGLObject depth = gl->createRenderbuffer();
+        ASSERT_NE(depth, 0u);
+        gl->bindRenderbuffer(GL::RENDERBUFFER, depth);
+        gl->renderbufferStorageMultisampleANGLE(GL::RENDERBUFFER, 0, GL::DEPTH24_STENCIL8, 4, 4);
+        gl->framebufferRenderbuffer(GL::DRAW_FRAMEBUFFER, GL::DEPTH_STENCIL_ATTACHMENT, GL::RENDERBUFFER, depth);
+    }
+
+    gl->blitFramebuffer(0, 0, 4, 4, 0, 0, 4, 4, GL::COLOR_BUFFER_BIT | GL::DEPTH_BUFFER_BIT, GL::NEAREST);
+
+    // Copy single sample to layer, ensure the contents.
+    gl->bindFramebuffer(GL::READ_FRAMEBUFFER, resolveFBO);
+
+    PlatformGLObject layerFBO = gl->createFramebuffer();
+    gl->bindFramebuffer(GL::DRAW_FRAMEBUFFER, layerFBO);
+    {
+        PlatformGLObject color = gl->createRenderbuffer();
+        ASSERT_NE(color, 0u);
+        gl->bindRenderbuffer(GL::RENDERBUFFER, color);
+        gl->renderbufferStorageMultisampleANGLE(GL::RENDERBUFFER, 0, GL::BGRA_EXT, 2, 2);
+        gl->framebufferRenderbuffer(GL::DRAW_FRAMEBUFFER, GL::COLOR_ATTACHMENT0, GL::RENDERBUFFER, color);
+    }
+    {
+        PlatformGLObject depth = gl->createRenderbuffer();
+        ASSERT_NE(depth, 0u);
+        gl->bindRenderbuffer(GL::RENDERBUFFER, depth);
+        gl->renderbufferStorageMultisampleANGLE(GL::RENDERBUFFER, 0, GL::DEPTH24_STENCIL8, 2, 2);
+        gl->framebufferRenderbuffer(GL::DRAW_FRAMEBUFFER, GL::DEPTH_STENCIL_ATTACHMENT, GL::RENDERBUFFER, depth);
+    }
+    gl->blitFramebuffer(0, 0, 2, 2, 0, 0, 2, 2, GL::COLOR_BUFFER_BIT | GL::DEPTH_BUFFER_BIT, GL::NEAREST);
+    gl->bindFramebuffer(GL::READ_FRAMEBUFFER, layerFBO);
+    EXPECT_TRUE(checkReadPixel(*gl, { 0, 0 }, Color::blue));
+    EXPECT_TRUE(checkReadPixel(*gl, { 1, 1 }, Color::blue));
+
+    gl->bindFramebuffer(GL::READ_FRAMEBUFFER, resolveFBO);
+    gl->bindFramebuffer(GL::DRAW_FRAMEBUFFER, layerFBO);
+    gl->blitFramebuffer(2, 2, 4, 4, 0, 0, 2, 2, GL::COLOR_BUFFER_BIT | GL::DEPTH_BUFFER_BIT,  GL::NEAREST);
+    gl->bindFramebuffer(GL::READ_FRAMEBUFFER, layerFBO);
+    EXPECT_TRUE(checkReadPixel(*gl, { 0, 0 }, Color::green));
+    EXPECT_TRUE(checkReadPixel(*gl, { 1, 1 }, Color::green));
+
+    EXPECT_TRUE(gl->getErrors().isEmpty());
+}
+#endif
+
 INSTANTIATE_TEST_SUITE_P(GraphicsContextGLCocoaTest,
     AnyContextAttributeTest,
     testing::Combine(
+        testing::Values(true, false),
         testing::Values(true, false),
         testing::Values(true, false)),
     TestParametersToStringFormatter());
