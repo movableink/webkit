@@ -44,10 +44,6 @@
 #include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/TZoneMallocInlines.h>
 
-#if PLATFORM(IOS_FAMILY)
-#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
-#endif
-
 namespace WebKit {
 using namespace WebCore;
 
@@ -333,11 +329,6 @@ bool RemoteScrollingCoordinatorProxy::hasScrollableOrZoomedMainFrame() const
     auto* rootNode = m_scrollingTree->rootNode();
     if (!rootNode)
         return false;
-
-#if PLATFORM(IOS_FAMILY)
-    if (WTF::IOSApplication::isEventbrite() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::SupportsOverflowHiddenOnMainFrame))
-        return true;
-#endif
 
     return rootNode->canHaveScrollbars() || rootNode->visualViewportIsSmallerThanLayoutViewport();
 }

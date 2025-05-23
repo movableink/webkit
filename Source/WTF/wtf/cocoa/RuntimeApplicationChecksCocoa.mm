@@ -138,7 +138,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::ModernCompabilityModeByDefault);
         disableBehavior(SDKAlignedBehavior::HasUIContextMenuInteraction);
         disableBehavior(SDKAlignedBehavior::WKContentViewDoesNotOverrideKeyCommands);
-        disableBehavior(SDKAlignedBehavior::SupportsOverflowHiddenOnMainFrame);
         disableBehavior(SDKAlignedBehavior::DownloadDelegatesCalledOnTheMainThread);
     }
 
@@ -550,12 +549,6 @@ bool IOSApplication::isEvernote()
 {
     static bool isEvernote = applicationBundleIsEqualTo("com.evernote.iPhone.Evernote"_s);
     return isEvernote;
-}
-
-bool IOSApplication::isEventbrite()
-{
-    static bool isEventbrite = applicationBundleIsEqualTo("com.eventbrite.attendee"_s);
-    return isEventbrite;
 }
 
 bool IOSApplication::isDataActivation()

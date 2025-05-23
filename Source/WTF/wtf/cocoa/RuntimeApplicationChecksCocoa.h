@@ -99,7 +99,6 @@ enum class SDKAlignedBehavior {
     SupportsDeviceOrientationAndMotionPermissionAPI,
     SupportsInitConstructors,
     SupportsiOSAppsOnMacOS,
-    SupportsOverflowHiddenOnMainFrame,
     TimerThreadSafetyChecks,
     UIScrollViewDoesNotApplyKeyboardInsetsUnconditionally,
     UnprefixedPlaysInlineAttribute,
@@ -196,7 +195,6 @@ WTF_EXPORT_PRIVATE bool isDoubleDown();
 WTF_EXPORT_PRIVATE bool isDumpRenderTree();
 WTF_EXPORT_PRIVATE bool isESPNFantasySports();
 WTF_EXPORT_PRIVATE bool isEssentialSkeleton();
-WTF_EXPORT_PRIVATE bool isEventbrite();
 WTF_EXPORT_PRIVATE bool isEvernote();
 WTF_EXPORT_PRIVATE bool isFIFACompanion();
 WTF_EXPORT_PRIVATE bool isFeedly();
