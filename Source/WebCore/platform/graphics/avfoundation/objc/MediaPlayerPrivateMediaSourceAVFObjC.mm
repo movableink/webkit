@@ -41,6 +41,8 @@
 #import "MediaSourcePrivate.h"
 #import "MediaSourcePrivateAVFObjC.h"
 #import "MediaSourcePrivateClient.h"
+#import "MessageClientForTesting.h"
+#import "MessageForTesting.h"
 #import "PixelBufferConformerCV.h"
 #import "PlatformDynamicRangeLimitCocoa.h"
 #import "PlatformScreen.h"
@@ -1821,6 +1823,10 @@ void MediaPlayerPrivateMediaSourceAVFObjC::updateSpatialTrackingLabel()
         });
         ALWAYS_LOG(LOGIDENTIFIER, "Setting spatialAudioExperience: ", spatialAudioExperienceDescription(experience.get()));
         [m_synchronizer setIntendedSpatialAudioExperience:experience.get()];
+
+        if (RefPtr client = player->messageClientForTesting())
+            client->sendInternalMessage({ "media-player-spatial-experience-change"_s, spatialAudioExperienceDescription(experience.get()) });
+
         return;
     }
 #endif

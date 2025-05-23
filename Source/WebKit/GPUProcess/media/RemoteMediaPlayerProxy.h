@@ -43,6 +43,7 @@
 #include <WebCore/MediaPlayer.h>
 #include <WebCore/MediaPlayerIdentifier.h>
 #include <WebCore/MediaPromiseTypes.h>
+#include <WebCore/MessageClientForTesting.h>
 #include <WebCore/PlatformDynamicRangeLimit.h>
 #include <WebCore/PlatformMediaResourceLoader.h>
 #include <optional>
@@ -111,6 +112,7 @@ class RemoteVideoTrackProxy;
 class RemoteMediaPlayerProxy final
     : public RefCounted<RemoteMediaPlayerProxy>
     , public WebCore::MediaPlayerClient
+    , private WebCore::MessageClientForTesting
     , private IPC::MessageReceiver {
     WTF_MAKE_TZONE_ALLOCATED(RemoteMediaPlayerProxy);
 public:
@@ -394,6 +396,9 @@ private:
     using SoundStageSize = WebCore::MediaPlayer::SoundStageSize;
     void setSoundStageSize(SoundStageSize);
         SoundStageSize mediaPlayerSoundStageSize() const final { return m_soundStageSize; }
+
+    void setHasMessageClientForTesting(bool);
+    void sendInternalMessage(const WebCore::MessageForTesting&) final;
 
 #if !RELEASE_LOG_DISABLED
     const Logger& mediaPlayerLogger() final { return m_logger; }

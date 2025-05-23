@@ -85,6 +85,8 @@
 #include "EventListener.h"
 #include "EventLoop.h"
 #include "EventNames.h"
+#include "EventTargetForTesting.h"
+#include "EventTargetInlines.h"
 #include "ExtendableEvent.h"
 #include "ExtensionStyleSheets.h"
 #include "FetchRequest.h"
@@ -7775,6 +7777,11 @@ const String& Internals::defaultSpatialTrackingLabel() const
 bool Internals::isEffectivelyMuted(const HTMLMediaElement& element)
 {
     return element.effectiveMuted();
+}
+
+Ref<EventTarget> Internals::addInternalEventTarget(HTMLMediaElement& element)
+{
+    return EventTargetForTesting::create(element.document(), element);
 }
 #endif
 

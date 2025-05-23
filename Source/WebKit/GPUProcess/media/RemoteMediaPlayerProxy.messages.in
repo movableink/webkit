@@ -162,6 +162,8 @@ messages -> RemoteMediaPlayerProxy {
     AudioOutputDeviceChanged(String deviceId)
     IsInFullscreenOrPictureInPictureChanged(bool value)
     SetSoundStageSize(enum:uint8_t WebCore::MediaPlayerSoundStageSize value)
+
+    SetHasMessageClientForTesting(bool value)
 }
 
 #endif

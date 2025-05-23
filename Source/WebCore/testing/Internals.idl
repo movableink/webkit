@@ -1443,6 +1443,7 @@ enum ContentsFormat {
     readonly attribute DOMString defaultSpatialTrackingLabel;
 
     [Conditional=VIDEO] boolean isEffectivelyMuted(HTMLMediaElement element);
+    [Conditional=VIDEO] EventTarget addInternalEventTarget(HTMLMediaElement element);
 
     RenderingMode? getEffectiveRenderingModeOfNewlyCreatedAcceleratedImageBuffer();
     Promise<ImageBufferResourceLimits> getImageBufferResourceLimits();

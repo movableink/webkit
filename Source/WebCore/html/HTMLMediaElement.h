@@ -43,6 +43,7 @@
 #include "MediaProducer.h"
 #include "MediaResourceSniffer.h"
 #include "MediaUniqueIdentifier.h"
+#include "MessageTargetForTesting.h"
 #include "PlatformDynamicRangeLimit.h"
 #include "ReducedResolutionSeconds.h"
 #include "TextTrackClient.h"
@@ -95,6 +96,7 @@ class Event;
 class HTMLSourceElement;
 class HTMLTrackElement;
 class InbandTextTrackPrivate;
+class AggregateMessageClientForTesting;
 class JSDOMGlobalObject;
 class MediaController;
 class MediaControls;
@@ -108,6 +110,7 @@ class MediaSource;
 class MediaSourceHandle;
 class MediaSourceInterfaceProxy;
 class MediaStream;
+class MessageClientForTesting;
 class PausableIntervalTimer;
 class RenderMedia;
 class ScriptController;
@@ -173,6 +176,7 @@ class HTMLMediaElement
     , public MediaControllerInterface
     , public PlatformMediaSessionClient
     , public Identified<HTMLMediaElementIdentifier>
+    , private MessageTargetForTesting
     , private MediaCanStartListener
     , private MediaPlayerClient
     , private MediaProducer
@@ -726,6 +730,9 @@ public:
 
     void addClient(HTMLMediaElementClient&);
     void removeClient(const HTMLMediaElementClient&);
+
+    void addMessageClientForTesting(MessageClientForTesting&) override;
+    void removeMessageClientForTesting(const MessageClientForTesting&) override;
 
     void audioSessionCategoryChanged(AudioSessionCategory, AudioSessionMode, RouteSharingPolicy);
 
@@ -1486,6 +1493,8 @@ private:
     WeakHashSet<HTMLMediaElementClient> m_clients;
 
     bool m_hasEverPreparedToPlay { false };
+
+    RefPtr<AggregateMessageClientForTesting> m_internalMessageClient;
 };
 
 String convertEnumerationToString(HTMLMediaElement::AutoplayEventPlaybackState);

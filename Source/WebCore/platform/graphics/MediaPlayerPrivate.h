@@ -42,6 +42,7 @@
 
 namespace WebCore {
 
+class MessageClientForTesting;
 class VideoFrame;
 
 // MediaPlayerPrivateInterface subclasses should be ref-counted, but each subclass may choose whether
@@ -376,6 +377,8 @@ public:
 #endif
 
     virtual void soundStageSizeDidChange() { }
+
+    virtual void setMessageClientForTesting(WeakPtr<MessageClientForTesting>) { }
 
 protected:
     mutable PlatformTimeRanges m_seekable;

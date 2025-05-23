@@ -95,6 +95,7 @@
 #include "MediaQueryEvaluator.h"
 #include "MediaResourceLoader.h"
 #include "MediaResourceSniffer.h"
+#include "MessageClientForTesting.h"
 #include "NavigatorMediaDevices.h"
 #include "NetworkingContext.h"
 #include "NodeInlines.h"
@@ -8065,6 +8066,7 @@ void HTMLMediaElement::createMediaPlayer() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
 
     m_player = MediaPlayer::create(*this);
     RefPtr player = m_player;
+    player->setMessageClientForTesting(m_internalMessageClient.get());
     player->setBufferingPolicy(m_bufferingPolicy);
     player->setPreferredDynamicRangeMode(m_overrideDynamicRangeMode.value_or(preferredDynamicRangeMode(document().protectedView().get())));
     player->setShouldDisableHDR(shouldDisableHDR());
@@ -9699,6 +9701,28 @@ void HTMLMediaElement::removeClient(const HTMLMediaElementClient& client)
 {
     ASSERT(m_clients.contains(client));
     m_clients.remove(client);
+}
+
+void HTMLMediaElement::addMessageClientForTesting(MessageClientForTesting& client)
+{
+    if (!m_internalMessageClient) {
+        m_internalMessageClient = AggregateMessageClientForTesting::create();
+        if (RefPtr player = m_player)
+            player->setMessageClientForTesting(m_internalMessageClient.get());
+    }
+    m_internalMessageClient->addClient(client);
+}
+
+void HTMLMediaElement::removeMessageClientForTesting(const MessageClientForTesting& client)
+{
+    if (!m_internalMessageClient)
+        return;
+    m_internalMessageClient->removeClient(client);
+    if (m_internalMessageClient->isEmpty()) {
+        if (RefPtr player = m_player)
+            player->setMessageClientForTesting(nullptr);
+        m_internalMessageClient = nullptr;
+    }
 }
 
 void HTMLMediaElement::audioSessionCategoryChanged(AudioSessionCategory category, AudioSessionMode mode, RouteSharingPolicy policy)

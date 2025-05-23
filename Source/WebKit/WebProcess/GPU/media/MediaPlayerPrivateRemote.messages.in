@@ -106,6 +106,7 @@ messages -> MediaPlayerPrivateRemote {
 
     CommitAllTransactions() -> ()
     ReportGPUMemoryFootprint(uint64_t memoryFootPrint)
+    SendInternalMessage(struct WebCore::MessageForTesting message)
 }
 
 #endif

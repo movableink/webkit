@@ -1233,8 +1233,11 @@
 		CDC8E48D1BC5CB4500594FEC /* AudioSessionCategoryIOS.mm in Sources */ = {isa = PBXBuildFile; fileRef = CDC8E4851BC5B19400594FEC /* AudioSessionCategoryIOS.mm */; };
 		CDC9442E1EF1FC080059C3C4 /* MediaStreamTrackDetached.mm in Sources */ = {isa = PBXBuildFile; fileRef = CDC9442C1EF1FC080059C3C4 /* MediaStreamTrackDetached.mm */; };
 		CDCFA7AA1E45183200C2433D /* SampleMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CDCFA7A91E45122F00C2433D /* SampleMap.cpp */; };
+		CDDFA89E2DBD6BFF00312417 /* spatial-audio-experience-with-audio.html in Copy Resources */ = {isa = PBXBuildFile; fileRef = CDDFA89D2DBD6BFF00312417 /* spatial-audio-experience-with-audio.html */; };
 		CDE4E4E52B7E787900B3AE35 /* InWindowFullscreen.mm in Sources */ = {isa = PBXBuildFile; fileRef = CDE4E4E42B7E787900B3AE35 /* InWindowFullscreen.mm */; };
 		CDE77D2525A6591C00D4115E /* FullscreenPointerLeave.mm in Sources */ = {isa = PBXBuildFile; fileRef = CDE77D2425A6591C00D4115E /* FullscreenPointerLeave.mm */; };
+		CDEEC7CD2DBC662A00F5B8EB /* SpatialAudioExperience.mm in Sources */ = {isa = PBXBuildFile; fileRef = CD5F16612DBC652000CE85D9 /* SpatialAudioExperience.mm */; };
+		CDEEC7D02DBC6B7200F5B8EB /* spatial-audio-experience-with-video.html in Copy Resources */ = {isa = PBXBuildFile; fileRef = CDEEC7CF2DBC6B7200F5B8EB /* spatial-audio-experience-with-video.html */; };
 		CE06DF9B1E1851F200E570C9 /* SecurityOrigin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CE06DF9A1E1851F200E570C9 /* SecurityOrigin.cpp */; };
 		CE1866491F72E8F100A0CAB6 /* MarkedText.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CE1866471F72E8F100A0CAB6 /* MarkedText.cpp */; };
 		CE3524F81B1431F60028A7C5 /* TextFieldDidBeginAndEndEditing_Bundle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CE3524F21B142B8D0028A7C5 /* TextFieldDidBeginAndEndEditing_Bundle.cpp */; };
@@ -2057,6 +2060,8 @@
 				A17C47FB2C98E5C20023F3C7 /* skinny-autoplaying-video-with-audio.html in Copy Resources */,
 				A17C46F22C98E54B0023F3C7 /* spacebar-scrolling.html in Copy Resources */,
 				A17C47FC2C98E5C20023F3C7 /* SpaceOnly.otf in Copy Resources */,
+				CDDFA89E2DBD6BFF00312417 /* spatial-audio-experience-with-audio.html in Copy Resources */,
+				CDEEC7D02DBC6B7200F5B8EB /* spatial-audio-experience-with-video.html in Copy Resources */,
 				A17C47FD2C98E5C20023F3C7 /* speechrecognition-basic.html in Copy Resources */,
 				A17C47FE2C98E5C20023F3C7 /* speechrecognition-user-permission-persistence.html in Copy Resources */,
 				EEA52EAB2D69203B00D578B5 /* stagemode-model-page.html in Copy Resources */,
@@ -3629,6 +3634,7 @@
 		CD57779B211CE6CE001B371E /* video-with-audio-and-web-audio.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "video-with-audio-and-web-audio.html"; sourceTree = "<group>"; };
 		CD59F53219E910AA00CF1835 /* file-with-mse.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = "file-with-mse.html"; sourceTree = "<group>"; };
 		CD59F53319E910BC00CF1835 /* test-mse.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "test-mse.mp4"; sourceTree = "<group>"; };
+		CD5F16612DBC652000CE85D9 /* SpatialAudioExperience.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = SpatialAudioExperience.mm; sourceTree = "<group>"; };
 		CD5FF4962162E27E004BD86F /* ISOBox.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ISOBox.cpp; sourceTree = "<group>"; };
 		CD758A6E20572D540071834A /* video-with-paused-audio-and-playing-muted.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = "video-with-paused-audio-and-playing-muted.html"; sourceTree = "<group>"; };
 		CD780E752BBE176D002A3DEC /* WKWebViewSpatialTrackingLabels.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WKWebViewSpatialTrackingLabels.mm; sourceTree = "<group>"; };
@@ -3667,11 +3673,13 @@
 		CDCFFEC022E268D500DF4223 /* NoPauseWhenSwitchingTabs.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = NoPauseWhenSwitchingTabs.mm; sourceTree = "<group>"; };
 		CDD68F0C22C18317000CF0AE /* WKWebViewCloseAllMediaPresentations.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WKWebViewCloseAllMediaPresentations.mm; sourceTree = "<group>"; };
 		CDDC7C6825FFF6D000224278 /* FullscreenRemoveNodeBeforeEnter.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = FullscreenRemoveNodeBeforeEnter.mm; sourceTree = "<group>"; };
+		CDDFA89D2DBD6BFF00312417 /* spatial-audio-experience-with-audio.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = "spatial-audio-experience-with-audio.html"; sourceTree = "<group>"; };
 		CDE195B21CFE0ADE0053D256 /* FullscreenTopContentInset.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = FullscreenTopContentInset.html; sourceTree = "<group>"; };
 		CDE195B31CFE0ADE0053D256 /* ObscuredContentInsets.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ObscuredContentInsets.mm; sourceTree = "<group>"; };
 		CDE4E4E42B7E787900B3AE35 /* InWindowFullscreen.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = InWindowFullscreen.mm; sourceTree = "<group>"; };
 		CDE77D2425A6591C00D4115E /* FullscreenPointerLeave.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = FullscreenPointerLeave.mm; sourceTree = "<group>"; };
 		CDED342E249DDD9D0002AE7A /* AudioRoutingArbitration.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AudioRoutingArbitration.mm; sourceTree = "<group>"; };
+		CDEEC7CF2DBC6B7200F5B8EB /* spatial-audio-experience-with-video.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "spatial-audio-experience-with-video.html"; sourceTree = "<group>"; };
 		CDF0B789216D484300421ECC /* CloseWebViewDuringEnterFullscreen.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CloseWebViewDuringEnterFullscreen.mm; sourceTree = "<group>"; };
 		CDF92236216D186400647AA7 /* CloseWebViewAfterEnterFullscreen.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CloseWebViewAfterEnterFullscreen.mm; sourceTree = "<group>"; };
 		CE06DF9A1E1851F200E570C9 /* SecurityOrigin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SecurityOrigin.cpp; sourceTree = "<group>"; };
@@ -4650,6 +4658,7 @@
 				5C24A002294A75DD00463E2B /* SkipDecidePolicyForResponsePlugIn.mm */,
 				2DFF7B6C1DA487AF00814614 /* SnapshotStore.mm */,
 				5774AA6721FBBF7800AF2A1B /* SOAuthorizationTests.mm */,
+				CD5F16612DBC652000CE85D9 /* SpatialAudioExperience.mm */,
 				9342589B255B609A0059EEDD /* SpeechRecognition.mm */,
 				CDC0932D21C993440030C4B0 /* StopSuspendResumeAllMedia.mm */,
 				414AD6852285D1B000777F2D /* StorageQuota.mm */,
@@ -5487,6 +5496,8 @@
 				F4D060072734A08C008FA67A /* simple-editor.html */,
 				F4F405BB1D4C0CF8007A9707 /* skinny-autoplaying-video-with-audio.html */,
 				F4CFCDD8249FC9D900527482 /* SpaceOnly.otf */,
+				CDDFA89D2DBD6BFF00312417 /* spatial-audio-experience-with-audio.html */,
+				CDEEC7CF2DBC6B7200F5B8EB /* spatial-audio-experience-with-video.html */,
 				9360270525A3B28E00367670 /* speechrecognition-basic.html */,
 				9342589D255B66A00059EEDD /* speechrecognition-user-permission-persistence.html */,
 				0721D4582838295400A95853 /* start-offset.ts */,
@@ -7498,6 +7509,7 @@
 				510A91F824D3622100BFD89C /* SonyDualShock3.mm in Sources */,
 				51EB126424CA6B66000CB030 /* SonyDualShock4.mm in Sources */,
 				7CCE7F151A411AE600447C4C /* SpacebarScrolling.cpp in Sources */,
+				CDEEC7CD2DBC662A00F5B8EB /* SpatialAudioExperience.mm in Sources */,
 				F4CDF3D227E97C7E00191928 /* SpellCheckerDocumentTag.mm in Sources */,
 				83BC5AC020E6C0DF00F5879F /* StartLoadInDidFailProvisionalLoad.mm in Sources */,
 				51EB126524CA6B66000CB030 /* SteelSeriesNimbus.mm in Sources */,

@@ -1372,6 +1372,16 @@ void RemoteMediaPlayerProxy::setSoundStageSize(SoundStageSize size)
     protectedPlayer()->soundStageSizeDidChange();
 }
 
+void RemoteMediaPlayerProxy::setHasMessageClientForTesting(bool hasClient)
+{
+    protectedPlayer()->setMessageClientForTesting(hasClient ? this : nullptr);
+}
+
+void RemoteMediaPlayerProxy::sendInternalMessage(const WebCore::MessageForTesting& message)
+{
+    protectedConnection()->send(Messages::MediaPlayerPrivateRemote::SendInternalMessage { message }, m_id);
+}
+
 } // namespace WebKit
 
 #endif // ENABLE(GPU_PROCESS) && ENABLE(VIDEO)

@@ -2405,6 +2405,7 @@ set(WebCoreTestSupport_IDL_FILES
 )
 
 list(APPEND WebCoreTestSupport_SOURCES
+    testing/EventTargetForTesting.cpp
     testing/GCObservation.cpp
     testing/InternalSettings.cpp
     testing/Internals.cpp

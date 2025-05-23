@@ -40,6 +40,7 @@
 #include "MIMETypeRegistry.h"
 #include "MediaPlayerPrivate.h"
 #include "MediaStrategy.h"
+#include "MessageClientForTesting.h"
 #include "OriginAccessPatterns.h"
 #include "PlatformMediaResourceLoader.h"
 #include "PlatformMediaSessionManager.h"
@@ -635,6 +636,8 @@ void MediaPlayer::loadWithNextMediaEngine(const MediaPlayerFactory* current)
         m_private = playerPrivate;
         if (playerPrivate) {
             client().mediaPlayerEngineUpdated();
+            playerPrivate->setMessageClientForTesting(m_internalMessageClient);
+
             if (m_pageIsVisible)
                 playerPrivate->setPageIsVisible(m_pageIsVisible);
             if (m_visibleInViewport)
@@ -2063,6 +2066,17 @@ const Logger& MediaPlayer::mediaPlayerLogger()
     return client().mediaPlayerLogger();
 }
 #endif
+
+void MediaPlayer::setMessageClientForTesting(WeakPtr<MessageClientForTesting> internalMessageClient)
+{
+    m_internalMessageClient = WTFMove(internalMessageClient);
+    m_private->setMessageClientForTesting(m_internalMessageClient);
+}
+
+MessageClientForTesting* MediaPlayer::messageClientForTesting() const
+{
+    return m_internalMessageClient.get();
+}
 
 String convertEnumerationToString(MediaPlayer::ReadyState enumerationValue)
 {

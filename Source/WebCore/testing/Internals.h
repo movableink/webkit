@@ -107,8 +107,9 @@ class HTMLSelectElement;
 class HTMLVideoElement;
 class ImageData;
 class InspectorStubFrontend;
-class InternalsMapLike;
+class EventTargetForTesting;
 class InternalSettings;
+class InternalsMapLike;
 class InternalsSetLike;
 class LocalFrame;
 class Location;
@@ -1549,6 +1550,7 @@ public:
 
 #if ENABLE(VIDEO)
     bool isEffectivelyMuted(const HTMLMediaElement&);
+    Ref<EventTarget> addInternalEventTarget(HTMLMediaElement&);
 #endif
 
     using RenderingMode = WebCore::RenderingMode;

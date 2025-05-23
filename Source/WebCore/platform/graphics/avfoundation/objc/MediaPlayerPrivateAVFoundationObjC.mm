@@ -53,6 +53,8 @@
 #import "MediaPlaybackTargetMock.h"
 #import "MediaSelectionGroupAVFObjC.h"
 #import "MediaSessionManagerCocoa.h"
+#import "MessageClientForTesting.h"
+#import "MessageForTesting.h"
 #import "OutOfBandTextTrackPrivateAVF.h"
 #import "PixelBufferConformerCV.h"
 #import "PlatformDynamicRangeLimitCocoa.h"
@@ -4092,6 +4094,10 @@ void MediaPlayerPrivateAVFoundationObjC::updateSpatialTrackingLabel()
         });
         ALWAYS_LOG(LOGIDENTIFIER, "Setting spatialAudioExperience: ", spatialAudioExperienceDescription(experience.get()));
         [m_avPlayer setIntendedSpatialAudioExperience:experience.get()];
+
+        if (RefPtr client = player->messageClientForTesting())
+            client->sendInternalMessage({ "media-player-spatial-experience-change"_s, spatialAudioExperienceDescription(experience.get()) });
+
         return;
     }
 #endif

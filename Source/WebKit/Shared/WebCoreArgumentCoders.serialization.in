@@ -9142,3 +9142,8 @@ enum class WebCore::ProcessSwapDisposition : uint8_t {
     COOP,
     Other
 };
+
+struct WebCore::MessageForTesting {
+    AtomString type;
+    String data;
+};
