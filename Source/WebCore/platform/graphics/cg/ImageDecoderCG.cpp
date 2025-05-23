@@ -135,7 +135,7 @@ static RetainPtr<CFMutableDictionaryRef> appendImageSourceOptions(RetainPtr<CFMu
 
 static RetainPtr<CFMutableDictionaryRef> appendImageSourceOption(RetainPtr<CFMutableDictionaryRef>&& options, ShouldDecodeToHDR shouldDecodeToHDR)
 {
-#if HAVE(FIX_FOR_RADAR_148465380)
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
     if (shouldDecodeToHDR == ShouldDecodeToHDR::Yes)
         CFDictionarySetValue(options.get(), kCGImageSourceDecodeRequest, kCGImageSourceDecodeToHDR);
 #else
