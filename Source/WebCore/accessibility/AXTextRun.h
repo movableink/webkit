@@ -31,6 +31,7 @@
 #include "TextAffinity.h"
 #include "TextFlags.h"
 #include <CoreText/CTFont.h>
+#include <wtf/FixedVector.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 
@@ -75,18 +76,18 @@ struct AXTextRun {
     // "Delta"
     // which we combine into |text|: "Charlie Delta"
     // This Vector would then have values: [[2, 10], [11, 16]]
-    Vector<std::array<uint16_t, 2>> textRunDomOffsets;
+    FixedVector<std::array<uint16_t, 2>> textRunDomOffsets;
 
     // An array the size of the run, where each value is the width/advance of each character in the run (in the direction
     // of the writing mode: horizontal or vertical).
-    Vector<uint16_t> characterAdvances;
+    FixedVector<uint16_t> characterAdvances;
 
     float lineHeight;
 
     // The distance between the RenderText's position and the start of the text run (useful for things that are not left-aligned, like `text-align: center`).
     float distanceFromBoundsInDirection;
 
-    AXTextRun(size_t lineIndex, String&& text, Vector<std::array<uint16_t, 2>>&& domOffsets, Vector<uint16_t> characterAdvances, float lineHeight, float distanceFromBoundsInDirection)
+    AXTextRun(size_t lineIndex, String&& text, Vector<std::array<uint16_t, 2>>&& domOffsets, Vector<uint16_t>&& characterAdvances, float lineHeight, float distanceFromBoundsInDirection)
         : lineIndex(lineIndex)
         , text(WTFMove(text))
         , textRunDomOffsets(WTFMove(domOffsets))
@@ -100,8 +101,8 @@ struct AXTextRun {
         AXTextRunLineID lineID = { containingBlock, lineIndex };
         return makeString(lineID.debugDescription(), ": |"_s, makeStringByReplacingAll(text, '\n', "{newline}"_s), "|(len "_s, text.length(), ")"_s);
     }
-    const Vector<std::array<uint16_t, 2>>& domOffsets() const { return textRunDomOffsets; }
-    const Vector<uint16_t>& advances() const { return characterAdvances; }
+    const FixedVector<std::array<uint16_t, 2>>& domOffsets() const { return textRunDomOffsets; }
+    const FixedVector<uint16_t>& advances() const { return characterAdvances; }
 
     // Convenience methods for TextUnit movement.
     bool startsWithLineBreak() const { return text.startsWith('\n'); }
@@ -114,7 +115,7 @@ struct AXTextRuns {
     // containing blocks, meaning they are rendered on different lines.
     // Do not de-reference. Use for comparison purposes only.
     void* containingBlock { nullptr };
-    Vector<AXTextRun> runs;
+    FixedVector<AXTextRun> runs;
     bool containsOnlyASCII { true };
 
     AXTextRuns() = default;

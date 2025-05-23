@@ -1559,41 +1559,45 @@ AXTextRuns AccessibilityRenderObject::textRuns()
     // FIXME: Use InlineIteratorLogicalOrderTraversal instead. Otherwise we'll do the wrong thing for mixed direction content.
     auto textBox = InlineIterator::lineLeftmostTextBoxFor(*renderText);
     size_t currentLineIndex = textBox ? textBox->lineIndex() : 0;
-    for (; textBox; textBox.traverseNextTextBox()) {
+
+    bool containsOnlyASCII = true;
+    while (textBox) {
         size_t newLineIndex = textBox->lineIndex();
+        uint16_t startDOMOffset = domOffset(textBox->minimumCaretOffset());
+        uint16_t endDOMOffset = domOffset(textBox->maximumCaretOffset());
         if (newLineIndex != currentLineIndex) {
-            // FIXME: Currently, this is only ever called to ship text runs off to the accessibility thread. But maybe we should we make the isolatedCopy()s in this function optional based on a parameter?
-            runs.append({ currentLineIndex, lineString.toString().isolatedCopy(), { std::exchange(textRunDomOffsets, { }) }, std::exchange(characterWidths, { }), lineHeight, distanceFromBoundsInDirection });
+            auto string = lineString.toString().isolatedCopy();
+            if (containsOnlyASCII)
+                containsOnlyASCII = string.containsOnlyASCII();
+
+            if (textRunDomOffsets.size() && startDOMOffset != textRunDomOffsets.last()[1]) {
+                // If a space was trimmed in this text run (i.e., there's a gap between the end
+                // of the current run's DOM offset and the start of the next), add it back.
+                string = makeString(string, ' ');
+                characterWidths.append(0);
+            }
+            runs.append({ currentLineIndex, WTFMove(string), { std::exchange(textRunDomOffsets, { }) }, std::exchange(characterWidths, { }), lineHeight, distanceFromBoundsInDirection });
+
+            currentLineIndex = newLineIndex;
+            // Reset variables used in appendToLineString().
             lineString.clear();
             accumulatedDistanceFromStart = 0.0;
             lineHeight = 0.0;
             distanceFromBoundsInDirection = 0.0;
         }
-        currentLineIndex = newLineIndex;
+        appendToLineString(textBox);
 
         // Within each iteration of this loop, we are looking at the *next* text box to compare to the current.
         // So, we need to set the textRunDomOffsets after the line index comparison, in order to assign the right DOM offsets per text box.
-        textRunDomOffsets.append({ domOffset(textBox->minimumCaretOffset()), domOffset(textBox->maximumCaretOffset()) });
-        appendToLineString(textBox);
+        textBox.traverseNextTextBox();
+        textRunDomOffsets.append({ startDOMOffset, endDOMOffset });
     }
 
-    if (!lineString.isEmpty())
-        runs.append({ currentLineIndex, lineString.toString().isolatedCopy(), WTFMove(textRunDomOffsets), std::exchange(characterWidths, { }), lineHeight, distanceFromBoundsInDirection });
-
-    bool containsOnlyASCII = true;
-    for (size_t i = 0; i < runs.size(); i++) {
-        if (containsOnlyASCII && !runs[i].text.containsOnlyASCII())
-            containsOnlyASCII = false;
-
-        // If a space was trimmed in this text run (i.e., there's a gap between the end of the current run's DOM offset and the start of the next), add it back.
-        if (i != runs.size() - 1 && runs[i + 1].domOffsets().size()) {
-            uint16_t currentDOMEnd = runs[i].domOffsets().last()[1];
-            uint16_t nextDOMStart = runs[i + 1].domOffsets().first()[0];
-            if (currentDOMEnd != nextDOMStart) {
-                runs[i].text = makeString(runs[i].text, ' ');
-                runs[i].characterAdvances.append(0);
-            }
-        }
+    if (!lineString.isEmpty()) {
+        auto string = lineString.toString().isolatedCopy();
+        if (containsOnlyASCII)
+            containsOnlyASCII = string.containsOnlyASCII();
+        runs.append({ currentLineIndex, WTFMove(string), WTFMove(textRunDomOffsets), std::exchange(characterWidths, { }), lineHeight, distanceFromBoundsInDirection });
     }
     return { renderText->containingBlock(), WTFMove(runs), containsOnlyASCII };
 }
