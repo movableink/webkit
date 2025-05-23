@@ -27,6 +27,17 @@ function testI31New() {
     "WebAssembly.Module doesn't validate: ref.i31 value to type F32 expected I32, in function at index 0 (evaluating 'new WebAssembly.Module(binary)')"
   )
 
+  assert.throws(
+    () => instantiate(`
+      (module
+        (func (export "f") (result i32)
+          (ref.i31 (i64.const 42)))
+      )
+    `),
+    WebAssembly.CompileError,
+    "WebAssembly.Module doesn't validate: ref.i31 value to type I64 expected I32, in function at index 0 (evaluating 'new WebAssembly.Module(binary)')"
+  )
+
   // Use i31 in global and also export to JS via global.
   {
     let m = instantiate(`
@@ -36,8 +47,10 @@ function testI31New() {
           (global.set 0 (ref.i31 (i32.const 42))))
       )
     `);
-    m.exports.f();
-    assert.eq(m.exports.g.value, 42);
+    for (let i = 0; i < testLoopCount; i++) {
+      m.exports.f();
+      assert.eq(m.exports.g.value, 42);
+    }
   }
 
   // Test export to JS.
@@ -48,7 +61,8 @@ function testI31New() {
           (ref.i31 (i32.const 42)))
       )
     `);
-    assert.eq(m.exports.f(), 42);
+    for (let i = 0; i < testLoopCount; i++)
+      assert.eq(m.exports.f(), 42);
   }
 
   // Export to JS via import.
@@ -61,7 +75,8 @@ function testI31New() {
       )`,
       { m: { f: (i31) => assert.eq(i31, 42) } }
     );
-    m.exports.g();
+    for (let i = 0; i < testLoopCount; i++)
+      m.exports.g();
   }
 }
 
@@ -83,7 +98,8 @@ function testI31Get() {
           (i31.get_u (ref.i31 (i32.const 42))))
       )
     `);
-    assert.eq(m.exports.f(), 42);
+    for (let i = 0; i < testLoopCount; i++)
+      assert.eq(m.exports.f(), 42);
   }
 
   {
@@ -93,7 +109,8 @@ function testI31Get() {
           (i31.get_s (ref.i31 (i32.const 0x4000_0000))))
       )
     `);
-    assert.eq(m.exports.f(), -0x40000000);
+    for (let i = 0; i < testLoopCount; i++)
+      assert.eq(m.exports.f(), -0x40000000);
   }
 
   {
@@ -103,7 +120,8 @@ function testI31Get() {
            (i31.get_u (ref.i31 (i32.const 0x4000_0000))))
        )
     `);
-    assert.eq(m.exports.f(), 0x40000000);
+    for (let i = 0; i < testLoopCount; i++)
+      assert.eq(m.exports.f(), 0x40000000);
   }
 
   {
@@ -113,7 +131,8 @@ function testI31Get() {
           (i31.get_s (ref.i31 (i32.const 0xaaaa_aaaa))))
       )
     `);
-    assert.eq(m.exports.f(), 0x2aaaaaaa);
+    for (let i = 0; i < testLoopCount; i++)
+      assert.eq(m.exports.f(), 0x2aaaaaaa);
   }
 
   {
@@ -123,7 +142,8 @@ function testI31Get() {
           (i31.get_u (ref.i31 (i32.const 0xaaaa_aaaa))))
       )
     `);
-    assert.eq(m.exports.f(), 0x2aaaaaaa);
+    for (let i = 0; i < testLoopCount; i++)
+      assert.eq(m.exports.f(), 0x2aaaaaaa);
   }
 
   {
@@ -133,7 +153,8 @@ function testI31Get() {
           (i31.get_s (ref.i31 (i32.const -1))))
       )
     `);
-    assert.eq(m.exports.f(), -1);
+    for (let i = 0; i < testLoopCount; i++)
+      assert.eq(m.exports.f(), -1);
   }
 
   {
@@ -143,7 +164,8 @@ function testI31Get() {
           (i31.get_u (ref.i31 (i32.const -1))))
       )
     `);
-    assert.eq(m.exports.f(), 0x7fffffff);
+    for (let i = 0; i < testLoopCount; i++)
+      assert.eq(m.exports.f(), 0x7fffffff);
   }
 
   {
@@ -153,10 +175,12 @@ function testI31Get() {
           (i31.get_u (ref.i31 (local.get $arg))))
       )
     `);
-    assert.eq(m.exports.f(0x7fffffff), 0x7fffffff);
-    assert.eq(m.exports.f(0x2aaaaaaa), 0x2aaaaaaa);
-    assert.eq(m.exports.f(0x40000000), 0x40000000);
-    assert.eq(m.exports.f(42), 42);
+    for (let i = 0; i < testLoopCount; i++) {
+      assert.eq(m.exports.f(0x7fffffff), 0x7fffffff);
+      assert.eq(m.exports.f(0x2aaaaaaa), 0x2aaaaaaa);
+      assert.eq(m.exports.f(0x40000000), 0x40000000);
+      assert.eq(m.exports.f(42), 42);
+    }
   }
 
   {
@@ -166,10 +190,12 @@ function testI31Get() {
           (i31.get_s (ref.i31 (local.get $arg))))
       )
     `);
-    assert.eq(m.exports.f(0x7fffffff), -1);
-    assert.eq(m.exports.f(0x2aaaaaaa), 0x2aaaaaaa);
-    assert.eq(m.exports.f(0x40000000), -0x40000000);
-    assert.eq(m.exports.f(42), 42);
+    for (let i = 0; i < testLoopCount; i++) {
+      assert.eq(m.exports.f(0x7fffffff), -1);
+      assert.eq(m.exports.f(0x2aaaaaaa), 0x2aaaaaaa);
+      assert.eq(m.exports.f(0x40000000), -0x40000000);
+      assert.eq(m.exports.f(42), 42);
+    }
   }
 
   assert.throws(
@@ -246,7 +272,8 @@ function testI31JS() {
         (global (export "g") (mut i31ref) (ref.null i31))
       )
     `);
-    m.exports.g.value = 42;
+    for (let i = 0; i < testLoopCount; i++)
+      m.exports.g.value = 42;
   }
 }
 
@@ -260,8 +287,11 @@ function testI31Table() {
         (func (export "get") (param i32) (result i32)
           (i31.get_s (table.get (local.get 0)))))
     `);
-    m.exports.set(3);
-    assert.eq(m.exports.get(3), 42);
+    for (let i = 0; i < testLoopCount; i++) {
+      m.exports.set(3);
+      assert.eq(m.exports.get(3), 42);
+      m.exports.set(0);
+    }
     assert.throws(() => m.exports.get(2), WebAssembly.RuntimeError, "i31.get_<sx> to a null");
   }
 
@@ -305,10 +335,12 @@ function testI31Table() {
       TypeError,
       "Argument value did not match the reference type"
     );
-    m.exports.t.set(0, 3);
-    assert.eq(m.exports.t.get(0), 3);
-    m.exports.t.set(0, null);
-    assert.eq(m.exports.t.get(0), null);
+    for (let i = 0; i < testLoopCount; i++) {
+      m.exports.t.set(0, 3);
+      assert.eq(m.exports.t.get(0), 3);
+      m.exports.t.set(0, null);
+      assert.eq(m.exports.t.get(0), null);
+    }
   }
 }
 

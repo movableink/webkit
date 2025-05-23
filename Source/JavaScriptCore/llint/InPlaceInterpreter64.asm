@@ -3617,7 +3617,6 @@ end)
 
 ipintOp(_ref_i31, macro()
     popInt32(t0, t1)
-    andq 0x7fffffff, t0
     lshifti 0x1, t0
     rshifti 0x1, t0
     orq TagNumber, t0
