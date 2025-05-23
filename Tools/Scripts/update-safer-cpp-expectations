@@ -162,7 +162,7 @@ def is_expected_file(expected_file):
                     if not issues:
                         print(f'{expected_file} has the following issues:')
                     issues = True
-                    print(f'- {project} {checker}')
+                    print(f'- {project} {checker.name()}')
     if not issues:
         print(f'{expected_file} has no known issues!')
     else:

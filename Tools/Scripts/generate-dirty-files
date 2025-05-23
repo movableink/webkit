@@ -115,7 +115,7 @@ def find_project_results(args, project, file_list, results_data, issue_to_report
         results_data[checker_name] = file_dict
 
         # Add direct mapping from issue hash to report path
-        if not checker in issue_to_report.keys():
+        if not checker_name in issue_to_report.keys():
             issue_to_report[checker_name] = {}
         issue_to_report[checker_name][issue_hash] = result_file
 
