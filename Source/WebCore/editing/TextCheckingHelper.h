@@ -46,7 +46,7 @@ public:
     ExceptionOr<uint64_t> offsetTo(const Position&) const;
     void expandRangeToNextEnd();
 
-    StringView text() const;
+    StringView text() const LIFETIME_BOUND;
 
     bool isEmpty() const;
 

@@ -151,7 +151,7 @@ public:
     void setDirection(TextDirection direction) { m_direction = static_cast<unsigned>(direction); }
     void setDirectionalOverride(bool override) { m_directionalOverride = override; }
     void setCharacterScanForCodePath(bool scan) { m_characterScanForCodePath = scan; }
-    StringView text() const { return m_text; }
+    StringView text() const LIFETIME_BOUND { return m_text; }
 
     TextRun isolatedCopy() const;
 
