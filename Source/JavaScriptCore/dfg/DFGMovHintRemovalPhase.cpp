@@ -50,7 +50,6 @@ public:
     MovHintRemovalPhase(Graph& graph)
         : Phase(graph, "MovHint removal"_s)
         , m_insertionSet(graph)
-        , m_state(OperandsLike, graph.block(0)->variablesAtHead)
         , m_changed(false)
     {
     }
@@ -59,8 +58,56 @@ public:
     {
         dataLogIf(DFGMovHintRemovalPhaseInternal::verbose, "Graph before MovHint removal:\n", m_graph);
 
+        // First figure out where various locals are live. We only need to care when we exit.
+        // So,
+        // 1. When exiting, mark all live variables alive. And we completely clear dead variables at that time.
+        // 2. When performing MovHint, it is def and it kills the previous live variable.
+        BlockMap<Operands<bool>> liveAtHead(m_graph);
+        BlockMap<Operands<bool>> liveAtTail(m_graph);
+
+        for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
+            liveAtHead[block] = Operands<bool>(OperandsLike, block->variablesAtHead, false);
+            liveAtTail[block] = Operands<bool>(OperandsLike, block->variablesAtHead, false);
+        }
+
+        bool changed;
+        do {
+            changed = false;
+            for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
+                BasicBlock* block = m_graph.block(blockIndex);
+                if (!block)
+                    continue;
+
+                Operands<bool> live = liveAtTail[block];
+                for (unsigned nodeIndex = block->size(); nodeIndex--;) {
+                    Node* node = block->at(nodeIndex);
+                    if (node->op() == MovHint)
+                        live.operand(node->unlinkedOperand()) = false;
+
+                    if (mayExit(m_graph, node) != DoesNotExit) {
+                        m_graph.forAllLiveInBytecode(
+                            node->origin.forExit,
+                            [&](Operand reg) {
+                                live.operand(reg) = true;
+                            });
+                    }
+                }
+
+                if (live == liveAtHead[block])
+                    continue;
+
+                liveAtHead[block] = live;
+                changed = true;
+
+                for (BasicBlock* predecessor : block->predecessors) {
+                    for (size_t i = live.size(); i--;)
+                        liveAtTail[predecessor][i] |= live[i];
+                }
+            }
+        } while (changed);
+
         for (BasicBlock* block : m_graph.blocksInNaturalOrder())
-            handleBlock(block);
+            handleBlock(block, liveAtTail[block]);
 
         m_insertionSet.execute(m_graph.block(0));
 
@@ -68,7 +115,7 @@ public:
     }
 
 private:
-    void handleBlock(BasicBlock* block)
+    void handleBlock(BasicBlock* block, const Operands<bool>& liveAtTail)
     {
         dataLogLnIf(DFGMovHintRemovalPhaseInternal::verbose, "Handing block ", pointerDump(block));
 
@@ -78,70 +125,17 @@ private:
         // local, then it means there was no exit between the local's death and the MovHint - i.e.
         // the MovHint is unnecessary.
 
-        Epoch currentEpoch = Epoch::first();
+        Operands<bool> live = liveAtTail;
 
-        m_state.fill(Epoch());
-
-        // This is a heuristic. We found cases that BB ends with Jump, and successor no longer have liveness for locals.
-        // However, at the end of the current BB, it is alive and we failed to kill that MovHint while we do not have exits.
-        // This is a work-around for that case, we chase only one successor and collect a bit more precise liveness information.
-        if (block->terminal()->isJump()) {
-            auto* successor = block->successor(0);
-
-            m_graph.forAllLiveInBytecode(
-                successor->terminal()->origin.forExit,
-                [&] (Operand reg) {
-                    m_state.operand(reg) = currentEpoch;
-                });
-
-            // Assume that blocks after we exit.
-            currentEpoch.bump();
-
-            for (unsigned nodeIndex = successor->size(); nodeIndex--;) {
-                Node* node = successor->at(nodeIndex);
-
-                if (node->op() == MovHint)
-                    m_state.operand(node->unlinkedOperand()) = Epoch();
-
-                if (mayExit(m_graph, node) != DoesNotExit)
-                    currentEpoch.bump();
-
-                Node* before = block->terminal();
-                if (nodeIndex)
-                    before = successor->at(nodeIndex - 1);
-
-                forAllKilledOperands(
-                    m_graph, before, node,
-                    [&] (Operand operand) {
-                        // This function is a bit sloppy - it might claim to kill a local even if
-                        // it's still live after. We need to protect against that.
-                        if (!!m_state.operand(operand))
-                            return;
-
-                        dataLogLnIf(DFGMovHintRemovalPhaseInternal::verbose, "    Killed operand at ", node, ": ", operand);
-                        m_state.operand(operand) = currentEpoch;
-                    });
-            }
-        } else {
-            m_graph.forAllLiveInBytecode(
-                block->terminal()->origin.forExit,
-                [&] (Operand reg) {
-                    m_state.operand(reg) = currentEpoch;
-                });
-
-            // Assume that blocks after we exit.
-            currentEpoch.bump();
-        }
-
-        dataLogLnIf(DFGMovHintRemovalPhaseInternal::verbose, "    Locals at ", block->terminal()->origin.forExit, ": ", m_state);
+        dataLogLnIf(DFGMovHintRemovalPhaseInternal::verbose, "    Locals at ", block->terminal()->origin.forExit, ": ", live);
 
         for (unsigned nodeIndex = block->size(); nodeIndex--;) {
             Node* node = block->at(nodeIndex);
 
             if (node->op() == MovHint) {
-                Epoch localEpoch = m_state.operand(node->unlinkedOperand());
-                dataLogLnIf(DFGMovHintRemovalPhaseInternal::verbose, "    At ", node, " (", node->unlinkedOperand(), "): current = ", currentEpoch, ", local = ", localEpoch);
-                if (!localEpoch || localEpoch == currentEpoch) {
+                bool isAlive = live.operand(node->unlinkedOperand());
+                dataLogLnIf(DFGMovHintRemovalPhaseInternal::verbose, "    At ", node, " (", node->unlinkedOperand(), "): live: ", isAlive);
+                if (!isAlive) {
                     // Now, MovHint will put bottom value to dead locals. This means that if you insert a new DFG node which introduce
                     // a new OSR exit, then it gets confused with the already-determined-dead locals. So this phase runs at very end of
                     // DFG pipeline, and we do not insert a node having a new OSR exit (if it is existing OSR exit, or if it does not exit,
@@ -154,23 +148,14 @@ private:
                     node->child1() = Edge(constant, useKind);
                     m_changed = true;
                 }
-                m_state.operand(node->unlinkedOperand()) = Epoch();
+                live.operand(node->unlinkedOperand()) = false;
             }
 
-            if (mayExit(m_graph, node) != DoesNotExit)
-                currentEpoch.bump();
-
-            if (nodeIndex) {
-                forAllKilledOperands(
-                    m_graph, block->at(nodeIndex - 1), node,
-                    [&] (Operand operand) {
-                        // This function is a bit sloppy - it might claim to kill a local even if
-                        // it's still live after. We need to protect against that.
-                        if (!!m_state.operand(operand))
-                            return;
-
-                        dataLogLnIf(DFGMovHintRemovalPhaseInternal::verbose, "    Killed operand at ", node, ": ", operand);
-                        m_state.operand(operand) = currentEpoch;
+            if (mayExit(m_graph, node) != DoesNotExit) {
+                m_graph.forAllLiveInBytecode(
+                    node->origin.forExit,
+                    [&](Operand reg) {
+                        live.operand(reg) = true;
                     });
             }
         }
@@ -178,7 +163,6 @@ private:
 
     InsertionSet m_insertionSet;
     UncheckedKeyHashMap<std::underlying_type_t<UseKind>, Node*, WTF::IntHash<std::underlying_type_t<UseKind>>, WTF::UnsignedWithZeroKeyHashTraits<std::underlying_type_t<UseKind>>> m_constants;
-    Operands<Epoch> m_state;
     bool m_changed;
 };
 
