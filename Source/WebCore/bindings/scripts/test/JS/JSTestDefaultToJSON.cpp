@@ -22,6 +22,7 @@
 #include "JSTestDefaultToJSON.h"
 
 #include "ActiveDOMObject.h"
+#include "ContextDestructionObserverInlines.h"
 #include "DeprecatedGlobalSettings.h"
 #include "DocumentInlines.h"
 #include "EventNames.h"

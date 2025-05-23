@@ -25,6 +25,7 @@
 #include "JSTestInterface.h"
 
 #include "ActiveDOMObject.h"
+#include "ContextDestructionObserverInlines.h"
 #include "DocumentInlines.h"
 #include "ElementInlines.h"
 #include "ExtendedDOMClientIsoSubspaces.h"

@@ -22,6 +22,7 @@
 #include "JSTestConditionallyReadWrite.h"
 
 #include "ActiveDOMObject.h"
+#include "ContextDestructionObserverInlines.h"
 #include "DOMPromiseProxy.h"
 #include "Document.h"
 #include "ExtendedDOMClientIsoSubspaces.h"

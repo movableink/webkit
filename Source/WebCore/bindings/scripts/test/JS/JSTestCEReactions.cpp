@@ -22,6 +22,7 @@
 #include "JSTestCEReactions.h"
 
 #include "ActiveDOMObject.h"
+#include "ContextDestructionObserverInlines.h"
 #include "CustomElementReactionQueue.h"
 #include "ElementInlines.h"
 #include "ExtendedDOMClientIsoSubspaces.h"

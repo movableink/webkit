@@ -22,6 +22,7 @@
 #include "JSTestNode.h"
 
 #include "ActiveDOMObject.h"
+#include "ContextDestructionObserverInlines.h"
 #include "DOMPromiseProxy.h"
 #include "DeprecatedGlobalSettings.h"
 #include "ExtendedDOMClientIsoSubspaces.h"

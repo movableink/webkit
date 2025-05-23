@@ -22,6 +22,7 @@
 #include "JSTestDefaultToJSONInheritFinal.h"
 
 #include "ActiveDOMObject.h"
+#include "ContextDestructionObserverInlines.h"
 #include "DeprecatedGlobalSettings.h"
 #include "DocumentInlines.h"
 #include "ExtendedDOMClientIsoSubspaces.h"

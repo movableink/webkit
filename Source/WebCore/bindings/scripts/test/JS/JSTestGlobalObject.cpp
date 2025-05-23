@@ -22,6 +22,7 @@
 #include "JSTestGlobalObject.h"
 
 #include "ActiveDOMObject.h"
+#include "ContextDestructionObserverInlines.h"
 #include "DOMPromiseProxy.h"
 #include "DOMWrapperWorld.h"
 #include "DeprecatedGlobalSettings.h"
