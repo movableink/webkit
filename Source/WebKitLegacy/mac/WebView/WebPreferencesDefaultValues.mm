@@ -57,12 +57,6 @@ bool defaultAllowsPictureInPictureMediaPlayback()
     return shouldAllowPictureInPictureMediaPlayback;
 }
 
-bool defaultJavaScriptCanOpenWindowsAutomatically()
-{
-    static bool shouldAllowWindowOpenWithoutUserGesture = WTF::IOSApplication::isTheSecretSocietyHiddenMystery() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoTheSecretSocietyHiddenMysteryWindowOpenQuirk);
-    return shouldAllowWindowOpenWithoutUserGesture;
-}
-
 bool defaultInlineMediaPlaybackRequiresPlaysInlineAttribute()
 {
     return PAL::deviceClassIsSmallScreen();

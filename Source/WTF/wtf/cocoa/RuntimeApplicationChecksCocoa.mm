@@ -94,7 +94,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::RequiresUserGestureToLoadVideo);
         disableBehavior(SDKAlignedBehavior::LinkPreviewEnabledByDefault);
         disableBehavior(SDKAlignedBehavior::ConvertsInvalidURLsToBlank);
-        disableBehavior(SDKAlignedBehavior::NoTheSecretSocietyHiddenMysteryWindowOpenQuirk);
         disableBehavior(SDKAlignedBehavior::UnprefixedPlaysInlineAttribute);
     }
 
@@ -515,12 +514,6 @@ bool IOSApplication::isIBooksStorytime()
 {
     static bool isIBooksStorytime = applicationBundleIsEqualTo("com.apple.TVBooks"_s);
     return isIBooksStorytime;
-}
-
-bool IOSApplication::isTheSecretSocietyHiddenMystery()
-{
-    static bool isTheSecretSocietyHiddenMystery = applicationBundleIsEqualTo("com.g5e.secretsociety"_s);
-    return isTheSecretSocietyHiddenMystery;
 }
 
 bool IOSApplication::isCardiogram()

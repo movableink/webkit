@@ -79,7 +79,6 @@ enum class SDKAlignedBehavior {
     NoMoviStarPlusCORSPreflightQuirk,
     NoPokerBrosBuiltInTagQuirk,
     NoShowModalDialog,
-    NoTheSecretSocietyHiddenMysteryWindowOpenQuirk,
     NoTypedArrayAPIQuirk,
     NoUnconditionalUniversalSandboxExtension,
     NoWeChatScrollingQuirk,
@@ -217,7 +216,6 @@ WTF_EXPORT_PRIVATE bool isPaperIO();
 WTF_EXPORT_PRIVATE bool isPocketCity();
 WTF_EXPORT_PRIVATE bool isSafariViewService();
 WTF_EXPORT_PRIVATE bool isStocks();
-WTF_EXPORT_PRIVATE bool isTheSecretSocietyHiddenMystery();
 WTF_EXPORT_PRIVATE bool isWebBookmarksD();
 WTF_EXPORT_PRIVATE bool isWebProcess();
 WTF_EXPORT_PRIVATE bool isBackboneApp();

@@ -40,7 +40,6 @@ bool defaultAllowsInlineMediaPlayback();
 bool defaultAllowsInlineMediaPlaybackAfterFullscreen();
 bool defaultAllowsPictureInPictureMediaPlayback();
 bool defaultInlineMediaPlaybackRequiresPlaysInlineAttribute();
-bool defaultJavaScriptCanOpenWindowsAutomatically();
 bool defaultPassiveTouchListenersAsDefaultOnDocument();
 bool defaultRequiresUserGestureToLoadVideo();
 bool defaultShowModalDialogEnabled();
