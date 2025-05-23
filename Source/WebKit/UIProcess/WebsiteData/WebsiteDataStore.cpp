@@ -176,7 +176,7 @@ WebsiteDataStore::WebsiteDataStore(Ref<WebsiteDataStoreConfiguration>&& configur
     , m_client(makeUniqueRef<WebsiteDataStoreClient>())
     , m_webLockRegistry(WebCore::LocalWebLockRegistry::create())
 {
-    RELEASE_LOG(Storage, "%p - WebsiteDataStore::WebsiteDataStore sessionID=%" PRIu64, this, m_sessionID.toUInt64());
+    RELEASE_LOG(Storage, "%p - WebsiteDataStore::WebsiteDataStore sessionID=%" PRIu64 " identifier=%" PUBLIC_LOG_STRING, this, m_sessionID.toUInt64(), m_configuration->identifier() ? m_configuration->identifier()->toString().utf8().data() : "null"_s);
 
 #if PLATFORM(COCOA)
     determineTrackingPreventionState();
@@ -607,6 +607,16 @@ void WebsiteDataStore::fetchDataAndApply(OptionSet<WebsiteDataType> dataTypes, O
             return adoptRef(*new CallbackAggregator(fetchOptions, WTFMove(queue), WTFMove(apply), dataStore));
         }
 
+        static String loggingString(OptionSet<WebsiteDataType> types) {
+            StringBuilder sb;
+            for (WebsiteDataType type : types) {
+                if (!sb.isEmpty())
+                    sb.append(", "_s);
+                sb.append(toString(type));
+            }
+            return sb.toString();
+        }
+
         ~CallbackAggregator()
         {
             ASSERT(RunLoop::isMain());
@@ -615,8 +625,11 @@ void WebsiteDataStore::fetchDataAndApply(OptionSet<WebsiteDataType> dataTypes, O
                 return m_queue.ptr() != &WorkQueue::main() ? crossThreadCopy(WTFMove(entry.value)) : WTFMove(entry.value);
             });
             protectedQueue()->dispatch([apply = WTFMove(m_apply), records = WTFMove(records), sessionID = m_protectedDataStore->sessionID()] () mutable {
+                OptionSet<WebsiteDataType> allTypes;
+                for (auto& record : records)
+                    allTypes.add(record.types);
                 apply(WTFMove(records));
-                RELEASE_LOG(Storage, "WebsiteDataStore::fetchDataAndApply finished fetching data for session %" PRIu64, sessionID.toUInt64());
+                RELEASE_LOG(Storage, "WebsiteDataStore::fetchDataAndApply finished fetching data for session %" PRIu64 " ( fetched types: %" PUBLIC_LOG_STRING ")", sessionID.toUInt64(), loggingString(allTypes).utf8().data());
             });
         }
 
