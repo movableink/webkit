@@ -185,9 +185,12 @@ static void prepareContextForQRCode(ContextMenuContext& context)
     if (result.image() || !result.absoluteLinkURL().isEmpty())
         return;
 
-    RefPtr<Element> element;
     RefPtr nodeElement = dynamicDowncast<Element>(*node);
-    for (auto& lineage : lineageOfType<Element>(nodeElement ? *nodeElement : *node->protectedParentElement())) {
+    if (!nodeElement && !(nodeElement = node->parentOrShadowHostElement()))
+        return;
+
+    RefPtr<Element> element;
+    for (auto& lineage : lineageOfType<Element>(*nodeElement)) {
         if (is<HTMLTableElement>(lineage) || is<HTMLCanvasElement>(lineage) || is<HTMLImageElement>(lineage) || is<SVGSVGElement>(lineage)) {
             element = &lineage;
             break;

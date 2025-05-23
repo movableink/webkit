@@ -889,6 +889,25 @@ TEST(ContextMenuTests, ContextMenuElementInfoAllowsFollowingLink)
     EXPECT_FALSE(elementInfo.allowsFollowingLink);
 }
 
+TEST(ContextMenuTests, ContextMenuTopLevelTextNodeInShadowDOMShouldNotCrash)
+{
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [configuration _setContextMenuQRCodeDetectionEnabled:YES];
+
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 400, 400) configuration:configuration.get()]);
+    [webView synchronouslyLoadHTMLString:@(R"(
+    <body style='margin: 0; padding: 0; font-size:50px'>
+    </body>
+    <script>
+        const shadowRoot = document.body.attachShadow({ mode: "open" });
+        const textNode = document.createTextNode("Text Node in Shadow DOM");
+        shadowRoot.appendChild(textNode);
+    </script>
+    )")];
+    RetainPtr elementInfo = [webView rightClickAtPointAndWaitForContextMenu:NSMakePoint(5, 395)];
+    EXPECT_NOT_NULL([elementInfo hitTestResult]);
+}
+
 } // namespace TestWebKitAPI
 
 #endif // PLATFORM(MAC)
