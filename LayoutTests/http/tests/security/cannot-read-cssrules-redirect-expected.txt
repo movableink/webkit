@@ -6,10 +6,8 @@ Test begins.
 exception thrown for cssRules: SecurityError: Not allowed to access cross-origin stylesheet
 exception thrown for rules: SecurityError: Not allowed to access cross-origin stylesheet
 == Cross-Origin to Same-Origin, no-cors mode ==
-cssRules: [object CSSRuleList]
-cssRules length: 1
-rules: [object CSSRuleList]
-rules length: 1
+exception thrown for cssRules: SecurityError: Not allowed to access cross-origin stylesheet
+exception thrown for rules: SecurityError: Not allowed to access cross-origin stylesheet
 == Same-Origin to Same-Origin, cors mode ==
 cssRules: [object CSSRuleList]
 cssRules length: 1
