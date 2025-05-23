@@ -183,6 +183,9 @@ public:
     static String textTrackKindKey();
     static String textTrackModeKey();
 
+    static String mediaPresentationTypeWatchTimeKey();
+    static String presentationTypeKey();
+
     WEBCORE_EXPORT static String memoryUsageToDiagnosticLoggingKey(uint64_t memoryUsage);
     WEBCORE_EXPORT static String foregroundCPUUsageToDiagnosticLoggingKey(double cpuUsage);
     WEBCORE_EXPORT static String backgroundCPUUsageToDiagnosticLoggingKey(double cpuUsage);

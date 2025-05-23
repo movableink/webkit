@@ -816,6 +816,16 @@ String DiagnosticLoggingKeys::textTrackModeKey()
     return "textTrackMode"_s;
 }
 
+String DiagnosticLoggingKeys::mediaPresentationTypeWatchTimeKey()
+{
+    return "watchtimeByPresentationType"_s;
+}
+
+String DiagnosticLoggingKeys::presentationTypeKey()
+{
+    return "presentationType"_s;
+}
+
 #if ENABLE(CONTENT_EXTENSIONS)
 String DiagnosticLoggingKeys::iframeResourceMonitoringKey()
 {
