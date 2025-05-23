@@ -3575,13 +3575,14 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                             break;
                         }
                     }
-                } else {
-                    setForNode(node, m_graph.globalObjectFor(node->origin.semantic)->originalArrayStructureForIndexingType(CopyOnWriteArrayWithContiguous));
-                    break;
                 }
             }
 #endif
-            setForNode(node, m_graph.globalObjectFor(node->origin.semantic)->originalArrayStructureForIndexingType(ArrayWithContiguous));
+            JSGlobalObject* globalObject = m_graph.globalObjectFor(node->origin.semantic);
+            RegisteredStructureSet structureSet;
+            structureSet.add(m_graph.registerStructure(globalObject->originalArrayStructureForIndexingType(ArrayWithContiguous)));
+            structureSet.add(m_graph.registerStructure(globalObject->originalArrayStructureForIndexingType(CopyOnWriteArrayWithContiguous)));
+            setForNode(node, structureSet);
         } else {
             setForNode(node, 
                 m_graph.globalObjectFor(node->origin.semantic)->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous));
