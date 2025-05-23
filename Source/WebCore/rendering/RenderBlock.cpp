@@ -1141,6 +1141,11 @@ bool RenderBlock::paintChild(RenderBox& child, PaintInfo& paintInfo, const Layou
     if (child.isExcludedAndPlacedInBorder())
         return true;
 
+    if (child.isSkippedContent()) {
+        ASSERT(child.isColumnSpanner());
+        return true;
+    }
+
     // Check for page-break-before: always, and if it's set, break and bail.
     bool checkBeforeAlways = !childrenInline() && (usePrintRect && alwaysPageBreak(child.style().breakBefore()));
     LayoutUnit absoluteChildY = paintOffset.y() + child.y();

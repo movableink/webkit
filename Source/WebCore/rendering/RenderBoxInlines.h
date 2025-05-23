@@ -68,6 +68,7 @@ inline void RenderBox::setLogicalLocation(LayoutPoint location) { setLocation(wr
 inline void RenderBox::setLogicalSize(LayoutSize size) { setSize(writingMode().isHorizontal() ? size : size.transposedSize()); }
 inline bool RenderBox::shouldTrimChildMargin(MarginTrimType type, const RenderBox& child) const { return style().marginTrim().contains(type) && isChildEligibleForMarginTrim(type, child); }
 inline bool RenderBox::stretchesToViewport() const { return document().inQuirksMode() && style().logicalHeight().isAuto() && !isFloatingOrOutOfFlowPositioned() && (isDocumentElementRenderer() || isBody()) && !shouldComputeLogicalHeightFromAspectRatio() && !isInline(); }
+inline bool RenderBox::isColumnSpanner() const { return style().columnSpan() == ColumnSpan::All; }
 
 inline LayoutPoint RenderBox::topLeftLocation() const
 {

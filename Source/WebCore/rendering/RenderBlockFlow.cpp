@@ -833,13 +833,19 @@ void RenderBlockFlow::layoutBlockChildren(RelayoutChildren relayoutChildren, Lay
     RenderBox* next = firstChildBox();
 
     while (next) {
-        ASSERT(!layoutContext().isSkippedContentForLayout(*next));
-
         RenderBox& child = *next;
         next = child.nextSiblingBox();
 
         if (child.isExcludedFromNormalLayout())
             continue; // Skip this child, since it will be positioned by the specialized subclass (fieldsets and ruby runs).
+
+        if (layoutContext().isSkippedContentForLayout(child)) {
+            ASSERT(child.isColumnSpanner());
+
+            child.clearNeedsLayout();
+            child.clearNeedsLayoutForSkippedContent();
+            continue;
+        }
 
         updateBlockChildDirtyBitsBeforeLayout(relayoutChildren, child);
 

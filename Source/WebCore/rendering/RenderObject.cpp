@@ -2981,6 +2981,14 @@ String RenderObject::debugDescription() const
 
 bool RenderObject::isSkippedContent() const
 {
+    if (is<RenderText>(*this))
+        return style().isSkippedRootOrSkippedContent();
+
+    if (CheckedPtr renderBox = dynamicDowncast<RenderBox>(*this); renderBox && renderBox->isColumnSpanner()) {
+        // Checking if parent is root or part of a skipped tree does not work in cases when the renderer is
+        // moved out of its original position (e.g. column spanners).
+        return renderBox->style().isSkippedRootOrSkippedContent() && !isSkippedContentRoot(*renderBox);
+    }
     return parent() && parent()->style().isSkippedRootOrSkippedContent();
 }
 

@@ -594,6 +594,8 @@ public:
     bool isGridItem() const { return parent() && parent()->isRenderGrid() && !isExcludedFromNormalLayout(); }
     bool isFlexItem() const { return parent() && parent()->isRenderFlexibleBox() && !isExcludedFromNormalLayout(); }
 
+    inline bool isColumnSpanner() const;
+
     virtual void adjustBorderBoxRectForPainting(LayoutRect&) { };
 
     bool shouldComputeLogicalHeightFromAspectRatio() const;
