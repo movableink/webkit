@@ -1263,7 +1263,6 @@
         host_info
         io_server_version
         (when (defined? 'mach_vm_range_create) mach_vm_range_create) ;; <rdar://105161083>
-        mach_voucher_attr_command
         task_restartable_ranges_register
         task_set_special_port))
 
@@ -1283,6 +1282,7 @@
         mach_vm_copy
         mach_vm_map_external
         mach_vm_remap_external
+        mach_voucher_attr_command
         semaphore_create
         semaphore_destroy
         task_create_identity_token
