@@ -3051,6 +3051,7 @@ static WebCore::CocoaColor *sampledFixedPositionContentColor(const WebCore::Fixe
     RetainPtr oldTopColor = [self _sampledTopFixedPositionContentColor];
     RetainPtr newTopColor = sampledFixedPositionContentColor(edges, WebCore::BoxSide::Top);
     bool isTopColorChanging = oldTopColor != newTopColor || ![oldTopColor isEqual:newTopColor.get()];
+    bool isTopFixedEdgeChanging = isTopColorChanging || _fixedContainerEdges.hasFixedEdge(WebCore::BoxSide::Top) != edges.hasFixedEdge(WebCore::BoxSide::Top);
 
     if (isTopColorChanging)
         [self willChangeValueForKey:NSStringFromSelector(@selector(_sampledTopFixedPositionContentColor))];
@@ -3059,6 +3060,13 @@ static WebCore::CocoaColor *sampledFixedPositionContentColor(const WebCore::Fixe
 
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
     [self _updateFixedColorExtensionViews];
+#endif
+
+#if PLATFORM(MAC) && ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    if (isTopFixedEdgeChanging)
+        _impl->updateContentInsetFillViews();
+#else
+    UNUSED_VARIABLE(isTopFixedEdgeChanging);
 #endif
 
     if (isTopColorChanging)
@@ -3247,12 +3255,16 @@ static WebCore::CocoaColor *sampledFixedPositionContentColor(const WebCore::Fixe
 
 - (void)colorExtensionViewWillFadeOut:(WKColorExtensionView *)view
 {
+#if PLATFORM(IOS_FAMILY)
     [self _updateFixedColorExtensionEdges];
+#endif
 }
 
 - (void)colorExtensionViewDidFadeIn:(WKColorExtensionView *)view
 {
+#if PLATFORM(IOS_FAMILY)
     [self _updateFixedColorExtensionEdges];
+#endif
 }
 
 #endif // ENABLE(CONTENT_INSET_BACKGROUND_FILL)
