@@ -33,6 +33,7 @@
 namespace API {
 
 class FrameInfo;
+class Navigation;
 
 class NavigationResponse final : public ObjectImpl<Object::Type::NavigationResponse> {
 public:
@@ -40,30 +41,29 @@ public:
     {
         return adoptRef(*new NavigationResponse(std::forward<Args>(args)...));
     }
+    ~NavigationResponse();
 
     FrameInfo& frame() { return m_frame.get(); }
     Ref<FrameInfo> protectedFrame() { return m_frame.get(); }
 
     const WebCore::ResourceRequest& request() const { return m_request; }
     const WebCore::ResourceResponse& response() const { return m_response; }
+    FrameInfo* navigationInitiatingFrame();
+    Navigation* navigation() { return m_navigation.get(); }
 
     bool canShowMIMEType() const { return m_canShowMIMEType; }
     const WTF::String& downloadAttribute() const { return m_downloadAttribute; }
 
 private:
-    NavigationResponse(API::FrameInfo& frame, const WebCore::ResourceRequest& request, const WebCore::ResourceResponse& response, bool canShowMIMEType, WTF::String&& downloadAttribute)
-        : m_frame(frame)
-        , m_request(request)
-        , m_response(response)
-        , m_canShowMIMEType(canShowMIMEType)
-        , m_downloadAttribute(WTFMove(downloadAttribute)) { }
+    NavigationResponse(API::FrameInfo&, const WebCore::ResourceRequest&, const WebCore::ResourceResponse&, bool canShowMIMEType, WTF::String&& downloadAttribute, Navigation*);
 
-    Ref<FrameInfo> m_frame;
-
+    const Ref<FrameInfo> m_frame;
     WebCore::ResourceRequest m_request;
     WebCore::ResourceResponse m_response;
     bool m_canShowMIMEType;
     WTF::String m_downloadAttribute;
+    const RefPtr<Navigation> m_navigation;
+    RefPtr<FrameInfo> m_sourceFrame;
 };
 
 } // namespace API

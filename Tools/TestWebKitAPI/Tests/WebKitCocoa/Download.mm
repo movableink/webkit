@@ -34,6 +34,7 @@
 #import "TestLegacyDownloadDelegate.h"
 #import "TestNavigationDelegate.h"
 #import "TestProtocol.h"
+#import "TestUIDelegate.h"
 #import "TestWKWebView.h"
 #import <Foundation/NSURLResponse.h>
 #import <WebKit/WKDownload.h>
@@ -3217,6 +3218,83 @@ TEST(WKDownload, DestinationFileAlreadyExists)
     [webView setNavigationDelegate:navigationDelegate.get()];
     [webView loadRequest:server.request()];
     Util::run(&failed);
+}
+
+TEST(WKDownload, OriginatingFrameWhenConvertingNavigationInNewWindow)
+{
+    HTTPServer server { {
+        { "/example"_s, { "hi"_s } },
+        { "/download"_s, { "hi"_s } }
+    }, HTTPServer::Protocol::HttpsProxy };
+
+    auto configuration = server.httpsProxyConfiguration();
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectZero configuration:configuration]);
+    auto navigationDelegate = adoptNS([TestNavigationDelegate new]);
+    [navigationDelegate allowAnyTLSCertificate];
+    [webView setNavigationDelegate:navigationDelegate.get()];
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    RetainPtr<WKFrameInfo> openerMainFrame = [webView mainFrame].info;
+
+    auto uiDelegate = adoptNS([TestUIDelegate new]);
+    [webView setUIDelegate:uiDelegate.get()];
+    __block RetainPtr<WKWebView> openedWebView;
+    uiDelegate.get().createWebViewWithConfiguration = ^WKWebView *(WKWebViewConfiguration *configuration, WKNavigationAction *, WKWindowFeatures *) {
+        openedWebView = adoptNS([[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration]);
+        [openedWebView setNavigationDelegate:navigationDelegate.get()];
+        return openedWebView.get();
+    };
+
+    auto frameInfoShouldBeEqual = ^(WKFrameInfo *a, WKFrameInfo *b) {
+        EXPECT_EQ(a.isMainFrame, b.isMainFrame);
+        EXPECT_WK_STREQ(a.request.URL.absoluteString, b.request.URL.absoluteString);
+        EXPECT_WK_STREQ(a.securityOrigin.protocol, b.securityOrigin.protocol);
+        EXPECT_WK_STREQ(a.securityOrigin.host, b.securityOrigin.host);
+        EXPECT_EQ(a.securityOrigin.port, b.securityOrigin.port);
+        EXPECT_EQ(a.webView, b.webView);
+    };
+
+    __block bool checkedDownload { false };
+    auto tryOpenerInitiatedDownloads = ^{
+        checkedDownload = false;
+        [webView evaluateJavaScript:@"a = document.createElement('a'); a.href = 'https://webkit.org/download'; a.target = '_blank'; document.body.appendChild(a); a.click()" completionHandler:nil];
+        Util::run(&checkedDownload);
+
+        checkedDownload = false;
+        [webView evaluateJavaScript:@"w = window.open('https://webkit.org/download')" completionHandler:nil];
+        Util::run(&checkedDownload);
+
+        checkedDownload = false;
+        [webView evaluateJavaScript:@"w.location.href = 'https://apple.com/download'" completionHandler:nil];
+        Util::run(&checkedDownload);
+    };
+
+    navigationDelegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *action, void (^completionHandler)(WKNavigationActionPolicy)) {
+        frameInfoShouldBeEqual(action.sourceFrame, openerMainFrame.get());
+        completionHandler(WKNavigationActionPolicyAllow);
+    };
+    navigationDelegate.get().decidePolicyForNavigationResponse = ^(WKNavigationResponse *response, void (^completionHandler)(WKNavigationResponsePolicy)) {
+        frameInfoShouldBeEqual(response._navigationInitiatingFrame, openerMainFrame.get());
+        completionHandler(WKNavigationResponsePolicyDownload);
+    };
+    navigationDelegate.get().navigationResponseDidBecomeDownload = ^(WKNavigationResponse *response, WKDownload *download) {
+        frameInfoShouldBeEqual(response._navigationInitiatingFrame, openerMainFrame.get());
+        frameInfoShouldBeEqual(download.originatingFrame, openerMainFrame.get());
+        checkedDownload = true;
+    };
+    tryOpenerInitiatedDownloads();
+
+    navigationDelegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *action, void (^completionHandler)(WKNavigationActionPolicy)) {
+        frameInfoShouldBeEqual(action.sourceFrame, openerMainFrame.get());
+        completionHandler(WKNavigationActionPolicyDownload);
+    };
+    navigationDelegate.get().navigationActionDidBecomeDownload = ^(WKNavigationAction *action, WKDownload *download) {
+        frameInfoShouldBeEqual(action.sourceFrame, openerMainFrame.get());
+        frameInfoShouldBeEqual(download.originatingFrame, openerMainFrame.get());
+        checkedDownload = true;
+    };
+    tryOpenerInitiatedDownloads();
 }
 
 }

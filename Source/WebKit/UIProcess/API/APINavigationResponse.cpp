@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,18 +23,35 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKit/WKNavigationResponse.h>
+#include "config.h"
+#include "APINavigationResponse.h"
 
-@class WKNavigation;
+#include "APIFrameInfo.h"
+#include "APINavigation.h"
+#include "WebFrameProxy.h"
 
-@interface WKNavigationResponse (WKPrivate)
-@property (nonatomic, readonly) WKFrameInfo *_frame;
-@property (nonatomic, readonly) WKFrameInfo *_navigationInitiatingFrame WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
-@property (nonatomic, readonly) WKNavigation *_navigation WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
-@property (nonatomic, readonly) NSURLRequest *_request;
-@property (nonatomic, readonly) NSString *_downloadAttribute WK_API_AVAILABLE(macos(10.15), ios(13.0));
-@property (nonatomic, readonly) BOOL _wasPrivateRelayed WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
-@property (nonatomic, readonly) NSString *_proxyName WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
-@property (nonatomic, readonly) BOOL _isFromNetwork WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
+namespace API {
 
-@end
+NavigationResponse::NavigationResponse(API::FrameInfo& frame, const WebCore::ResourceRequest& request, const WebCore::ResourceResponse& response, bool canShowMIMEType, WTF::String&& downloadAttribute, Navigation* navigation)
+    : m_frame(frame)
+    , m_request(request)
+    , m_response(response)
+    , m_canShowMIMEType(canShowMIMEType)
+    , m_downloadAttribute(WTFMove(downloadAttribute))
+    , m_navigation(navigation) { }
+
+NavigationResponse::~NavigationResponse() = default;
+
+FrameInfo* NavigationResponse::navigationInitiatingFrame()
+{
+    if (!m_navigation)
+        return nullptr;
+    auto& frameInfo = m_navigation->originatingFrameInfo();
+    if (!frameInfo)
+        return nullptr;
+    RefPtr frame = WebKit::WebFrameProxy::webFrame(frameInfo->frameID);
+    m_sourceFrame = FrameInfo::create(FrameInfoData { *frameInfo }, frame ? frame->page() : nullptr);
+    return m_sourceFrame.get();
+}
+
+}

@@ -8666,6 +8666,7 @@
 		FA9AFA692B2254F600953DC5 /* APIArray.serialization.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = APIArray.serialization.in; sourceTree = "<group>"; };
 		FA9CD6332A01B21700EA5CAC /* NetworkOriginAccessPatterns.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = NetworkOriginAccessPatterns.cpp; sourceTree = "<group>"; };
 		FA9CD6342A01B21700EA5CAC /* NetworkOriginAccessPatterns.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetworkOriginAccessPatterns.h; sourceTree = "<group>"; };
+		FA9D60A32DDFE0E400D94208 /* APINavigationResponse.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = APINavigationResponse.cpp; sourceTree = "<group>"; };
 		FAA4E2FE2A1575A3003F5E50 /* WebFrameLoaderClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebFrameLoaderClient.cpp; sourceTree = "<group>"; };
 		FAA4E2FF2A1575A4003F5E50 /* WebFrameLoaderClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebFrameLoaderClient.h; sourceTree = "<group>"; };
 		FAB751D12BACB65D00AC26DB /* APIPageConfigurationCocoa.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = APIPageConfigurationCocoa.mm; sourceTree = "<group>"; };
@@ -15006,6 +15007,7 @@
 				2DD9EB2C1A6F012500BB1267 /* APINavigationClient.h */,
 				BCF69FA11176D01400471A52 /* APINavigationData.cpp */,
 				BCF69FA01176D01400471A52 /* APINavigationData.h */,
+				FA9D60A32DDFE0E400D94208 /* APINavigationResponse.cpp */,
 				2DF9EEED1A786EAD00B6CFBE /* APINavigationResponse.h */,
 				7A1E2A841EEFE88A0037A0E0 /* APINotificationProvider.h */,
 				BC857FB412B830E600EDEB2E /* APIOpenPanelParameters.cpp */,

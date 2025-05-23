@@ -32,6 +32,7 @@
 #import "PlatformUtilities.h"
 #import "PlatformWebView.h"
 #import "Test.h"
+#import "TestNavigationDelegate.h"
 #import "TestProtocol.h"
 #import "TestWKWebView.h"
 #import <WebKit/WKNavigationActionPrivate.h>
@@ -121,8 +122,8 @@ TEST(WebKit, DecidePolicyForNavigationActionReload)
     TestWebKitAPI::Util::run(&decidedPolicy);
 
     EXPECT_EQ(WKNavigationTypeReload, [action navigationType]);
-    EXPECT_TRUE([action sourceFrame] != [action targetFrame]);
-    EXPECT_EQ(nil, [action sourceFrame]);
+    EXPECT_EQ([action sourceFrame], [action targetFrame]);
+    EXPECT_WK_STREQ([action sourceFrame].request.URL.absoluteString, "data:text/html,First");
     EXPECT_WK_STREQ(firstURL, [[[action request] URL] absoluteString]);
     EXPECT_WK_STREQ(firstURL, [[[[action targetFrame] request] URL] absoluteString]);
     EXPECT_EQ(webView.get(), [[action targetFrame] webView]);
@@ -151,8 +152,8 @@ TEST(WebKit, DecidePolicyForNavigationActionReloadFromOrigin)
     TestWebKitAPI::Util::run(&decidedPolicy);
 
     EXPECT_EQ(WKNavigationTypeReload, [action navigationType]);
-    EXPECT_TRUE([action sourceFrame] != [action targetFrame]);
-    EXPECT_EQ(nil, [action sourceFrame]);
+    EXPECT_EQ([action sourceFrame], [action targetFrame]);
+    EXPECT_WK_STREQ([action sourceFrame].request.URL.absoluteString, "data:text/html,First");
     EXPECT_WK_STREQ(firstURL, [[[action request] URL] absoluteString]);
     EXPECT_WK_STREQ(firstURL, [[[[action targetFrame] request] URL] absoluteString]);
     EXPECT_EQ(webView.get(), [[action targetFrame] webView]);
@@ -185,8 +186,8 @@ TEST(WebKit, DecidePolicyForNavigationActionGoBack)
     TestWebKitAPI::Util::run(&decidedPolicy);
 
     EXPECT_EQ(WKNavigationTypeBackForward, [action navigationType]);
-    EXPECT_TRUE([action sourceFrame] != [action targetFrame]);
-    EXPECT_EQ(nil, [action sourceFrame]);
+    EXPECT_EQ([action sourceFrame], [action targetFrame]);
+    EXPECT_WK_STREQ([action sourceFrame].request.URL.absoluteString, "data:text/html,Second");
     EXPECT_WK_STREQ(firstURL, [[[action request] URL] absoluteString]);
     EXPECT_WK_STREQ(secondURL, [[[[action targetFrame] request] URL] absoluteString]);
     EXPECT_EQ(webView.get(), [[action targetFrame] webView]);
@@ -223,8 +224,8 @@ TEST(WebKit, DecidePolicyForNavigationActionGoForward)
     TestWebKitAPI::Util::run(&decidedPolicy);
 
     EXPECT_EQ(WKNavigationTypeBackForward, [action navigationType]);
-    EXPECT_TRUE([action sourceFrame] != [action targetFrame]);
-    EXPECT_EQ(nil, [action sourceFrame]);
+    EXPECT_EQ([action sourceFrame], [action targetFrame]);
+    EXPECT_WK_STREQ([action sourceFrame].request.URL.absoluteString, "data:text/html,First");
     EXPECT_WK_STREQ(secondURL, [[[action request] URL] absoluteString]);
     EXPECT_WK_STREQ(firstURL, [[[[action targetFrame] request] URL] absoluteString]);
     EXPECT_EQ(webView.get(), [[action targetFrame] webView]);
@@ -369,7 +370,7 @@ TEST(WebKit, DecidePolicyForNavigationActionOpenNewWindowAndDeallocSourceWebView
 
     EXPECT_EQ(WKNavigationTypeOther, [action navigationType]);
     EXPECT_TRUE([action sourceFrame] != [action targetFrame]);
-    EXPECT_EQ(nil, [[action sourceFrame] webView]);
+    EXPECT_EQ(newWebView.get(), [[action sourceFrame] webView]);
     EXPECT_EQ(newWebView.get(), [[action targetFrame] webView]);
 
     newWebView = nullptr;
@@ -818,6 +819,21 @@ TEST(WebKit, DecidePolicyForNavigationActionFragment)
     [webView setNavigationDelegate:delegate.get()];
     [webView loadHTMLString:@"<script>window.location.href='#fragment';</script>" baseURL:[NSURL URLWithString:@"http://webkit.org"]];
     TestWebKitAPI::Util::run(&done);
+}
+
+TEST(WebKit, NavigationActionFrames)
+{
+    TestWebKitAPI::HTTPServer server({ { "/"_s, { "hi"_s } } });
+    auto webView = adoptNS([WKWebView new]);
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    delegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *action, void (^completionHandler)(WKNavigationActionPolicy)) {
+        EXPECT_NOT_NULL(action.sourceFrame.request);
+        EXPECT_NOT_NULL(action.targetFrame.request);
+        completionHandler(WKNavigationActionPolicyAllow);
+    };
+    webView.get().navigationDelegate = delegate.get();
+    [webView loadRequest:server.request()];
+    [delegate waitForDidFinishNavigation];
 }
 
 #endif

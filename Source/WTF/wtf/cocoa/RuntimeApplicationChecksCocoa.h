@@ -73,6 +73,7 @@ enum class SDKAlignedBehavior {
     MinimizesLanguages,
     ModernCompabilityModeByDefault,
     MutationEventsDisabledByDefault,
+    NavigationActionSourceFrameNonNull,
     NoClientCertificateLookup,
     NoExpandoIndexedPropertiesOnWindow,
     NoMoviStarPlusCORSPreflightQuirk,

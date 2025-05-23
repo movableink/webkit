@@ -27,6 +27,7 @@
 #import "WKNavigationResponseInternal.h"
 
 #import "WKFrameInfoInternal.h"
+#import "WKNavigationInternal.h"
 #import <WebCore/WebCoreObjCExtras.h>
 
 @implementation WKNavigationResponse
@@ -78,6 +79,16 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 {
     // FIXME: This RefPtr should not be necessary. Remove it once clang static analyzer is fixed.
     return wrapper(RefPtr { _navigationResponse.get() }->protectedFrame().get());
+}
+
+- (WKFrameInfo *)_navigationInitiatingFrame
+{
+    return wrapper(_navigationResponse->navigationInitiatingFrame());
+}
+
+- (WKNavigation *)_navigation
+{
+    return wrapper(_navigationResponse->navigation());
 }
 
 - (NSURLRequest *)_request

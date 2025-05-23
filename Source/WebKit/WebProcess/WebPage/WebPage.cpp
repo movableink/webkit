@@ -2137,6 +2137,9 @@ void WebPage::loadRequest(LoadParameters&& loadParameters)
 
     platformDidReceiveLoadParameters(loadParameters);
 
+    if (loadParameters.originatingFrame && !loadParameters.frameIdentifier)
+        m_mainFrameNavigationInitiator = makeUnique<FrameInfoData>(*loadParameters.originatingFrame);
+
     // Initate the load in WebCore.
     ASSERT(localFrame->document());
     FrameLoadRequest frameLoadRequest { *localFrame, WTFMove(loadParameters.request) };
@@ -10421,6 +10424,11 @@ bool WebPage::shouldDisableModelLoadDelaysForTesting() const
     return m_page && m_page->shouldDisableModelLoadDelaysForTesting();
 }
 #endif
+
+std::unique_ptr<FrameInfoData> WebPage::takeMainFrameNavigationInitiator()
+{
+    return std::exchange(m_mainFrameNavigationInitiator, nullptr);
+}
 
 } // namespace WebKit
 
