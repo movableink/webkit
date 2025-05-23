@@ -1807,27 +1807,5 @@ FAIL SVGDiscardElement interface object name assert_own_property: self does not 
 FAIL SVGDiscardElement interface: existence and properties of interface prototype object assert_own_property: self does not have own property "SVGDiscardElement" expected property "SVGDiscardElement" missing
 FAIL SVGDiscardElement interface: existence and properties of interface prototype object's "constructor" property assert_own_property: self does not have own property "SVGDiscardElement" expected property "SVGDiscardElement" missing
 FAIL SVGDiscardElement interface: existence and properties of interface prototype object's @@unscopables property assert_own_property: self does not have own property "SVGDiscardElement" expected property "SVGDiscardElement" missing
-FAIL SVGDiscardElement must be primary interface of objects.discard assert_own_property: self does not have own property "SVGDiscardElement" expected property "SVGDiscardElement" missing
-FAIL Stringification of objects.discard assert_class_string: class string of objects.discard expected "[object SVGDiscardElement]" but got "[object SVGElement]"
-FAIL SVGAnimationElement interface: objects.discard must inherit property "targetElement" with the proper type assert_inherits: property "targetElement" not found in prototype chain
-FAIL SVGAnimationElement interface: objects.discard must inherit property "onbegin" with the proper type assert_inherits: property "onbegin" not found in prototype chain
-FAIL SVGAnimationElement interface: objects.discard must inherit property "onend" with the proper type assert_inherits: property "onend" not found in prototype chain
-FAIL SVGAnimationElement interface: objects.discard must inherit property "onrepeat" with the proper type assert_inherits: property "onrepeat" not found in prototype chain
-FAIL SVGAnimationElement interface: objects.discard must inherit property "getStartTime()" with the proper type assert_inherits: property "getStartTime" not found in prototype chain
-FAIL SVGAnimationElement interface: objects.discard must inherit property "getCurrentTime()" with the proper type assert_inherits: property "getCurrentTime" not found in prototype chain
-FAIL SVGAnimationElement interface: objects.discard must inherit property "getSimpleDuration()" with the proper type assert_inherits: property "getSimpleDuration" not found in prototype chain
-FAIL SVGAnimationElement interface: objects.discard must inherit property "beginElement()" with the proper type assert_inherits: property "beginElement" not found in prototype chain
-FAIL SVGAnimationElement interface: objects.discard must inherit property "beginElementAt(float)" with the proper type assert_inherits: property "beginElementAt" not found in prototype chain
-FAIL SVGAnimationElement interface: calling beginElementAt(float) on objects.discard with too few arguments must throw TypeError assert_inherits: property "beginElementAt" not found in prototype chain
-FAIL SVGAnimationElement interface: objects.discard must inherit property "endElement()" with the proper type assert_inherits: property "endElement" not found in prototype chain
-FAIL SVGAnimationElement interface: objects.discard must inherit property "endElementAt(float)" with the proper type assert_inherits: property "endElementAt" not found in prototype chain
-FAIL SVGAnimationElement interface: calling endElementAt(float) on objects.discard with too few arguments must throw TypeError assert_inherits: property "endElementAt" not found in prototype chain
-FAIL SVGAnimationElement interface: objects.discard must inherit property "requiredExtensions" with the proper type assert_inherits: property "requiredExtensions" not found in prototype chain
-FAIL SVGAnimationElement interface: objects.discard must inherit property "systemLanguage" with the proper type assert_inherits: property "systemLanguage" not found in prototype chain
-PASS SVGElement interface: objects.discard must inherit property "className" with the proper type
-PASS SVGElement interface: objects.discard must inherit property "ownerSVGElement" with the proper type
-PASS SVGElement interface: objects.discard must inherit property "viewportElement" with the proper type
-FAIL SVGElement interface: objects.discard must inherit property "correspondingElement" with the proper type assert_inherits: property "correspondingElement" not found in prototype chain
-FAIL SVGElement interface: objects.discard must inherit property "correspondingUseElement" with the proper type assert_inherits: property "correspondingUseElement" not found in prototype chain
 PASS Document interface: attribute rootElement
 

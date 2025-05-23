@@ -10774,7 +10774,6 @@
         "web-platform-tests/shadow-dom/untriaged/shadow-trees/shadow-root-001-ref.html",
         "web-platform-tests/shadow-dom/untriaged/shadow-trees/shadow-root-002-ref.html",
         "web-platform-tests/shadow-dom/untriaged/styles/not-apply-in-shadow-root-001-ref.html",
-        "web-platform-tests/svg/animations/reftests/reference/green-100x100.svg",
         "web-platform-tests/svg/coordinate-systems/support/abspos-ref.html",
         "web-platform-tests/svg/coordinate-systems/support/simple.svg",
         "web-platform-tests/svg/coordinate-systems/support/viewBox-change-repaint-001-ref.html",
