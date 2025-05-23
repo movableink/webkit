@@ -78,7 +78,7 @@ public:
 
     void waitUntilLoadFailed()
     {
-        g_signal_connect(m_webView, "load-failed", G_CALLBACK(MemoryPressureTest::loadFailedCallback), this);
+        g_signal_connect(m_webView.get(), "load-failed", G_CALLBACK(MemoryPressureTest::loadFailedCallback), this);
         g_main_loop_run(m_mainLoop);
     }
 };

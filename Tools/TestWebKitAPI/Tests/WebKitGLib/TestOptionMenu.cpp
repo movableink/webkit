@@ -34,12 +34,12 @@ public:
 
     OptionMenuTest()
     {
-        g_signal_connect(m_webView, "show-option-menu", G_CALLBACK(showOptionMenuCallback), this);
+        g_signal_connect(m_webView.get(), "show-option-menu", G_CALLBACK(showOptionMenuCallback), this);
     }
 
     ~OptionMenuTest()
     {
-        g_signal_handlers_disconnect_matched(m_webView, G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
+        g_signal_handlers_disconnect_matched(m_webView.get(), G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
         if (m_menu)
             close();
     }
@@ -59,7 +59,7 @@ public:
 #endif
         PlatformRectangle* rect, OptionMenuTest* test)
     {
-        g_assert_true(test->m_webView == webView);
+        g_assert_true(test->webView() == webView);
         g_assert_nonnull(rect);
         g_assert_true(WEBKIT_IS_OPTION_MENU(menu));
 #if PLATFORM(GTK) && !USE(GTK4)

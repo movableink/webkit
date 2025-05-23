@@ -571,18 +571,18 @@ public:
     WebViewDownloadTest()
     {
 #if ENABLE(2022_GLIB_API)
-        g_signal_connect_swapped(webkit_web_view_get_network_session(m_webView), "download-started", G_CALLBACK(downloadStartedCallback), this);
+        g_signal_connect_swapped(webkit_web_view_get_network_session(m_webView.get()), "download-started", G_CALLBACK(downloadStartedCallback), this);
 #else
-        g_signal_connect_swapped(webkit_web_view_get_context(m_webView), "download-started", G_CALLBACK(downloadStartedCallback), this);
+        g_signal_connect_swapped(webkit_web_view_get_context(m_webView.get()), "download-started", G_CALLBACK(downloadStartedCallback), this);
 #endif
     }
 
     ~WebViewDownloadTest()
     {
 #if ENABLE(2022_GLIB_API)
-        g_signal_handlers_disconnect_matched(webkit_web_view_get_network_session(m_webView), G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
+        g_signal_handlers_disconnect_matched(webkit_web_view_get_network_session(m_webView.get()), G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
 #else
-        g_signal_handlers_disconnect_matched(webkit_web_view_get_context(m_webView), G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
+        g_signal_handlers_disconnect_matched(webkit_web_view_get_context(m_webView.get()), G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
 #endif
     }
 
@@ -649,12 +649,12 @@ public:
     WebKitContextMenuItem* showContextMenuAndGetDownloadItem(int x, int y)
     {
         m_contextMenuDownloadItem = nullptr;
-        auto id = g_signal_connect(m_webView, "context-menu", G_CALLBACK(contextMenuCallback), this);
+        auto id = g_signal_connect(m_webView.get(), "context-menu", G_CALLBACK(contextMenuCallback), this);
         RunLoop::protectedMain()->dispatch([this, x, y] {
             clickMouseButton(x, y, 3);
         });
         g_main_loop_run(m_mainLoop);
-        g_signal_handler_disconnect(m_webView, id);
+        g_signal_handler_disconnect(m_webView.get(), id);
         return m_contextMenuDownloadItem.get();
     }
 #endif
@@ -670,10 +670,10 @@ public:
 
 static void testWebViewDownloadURI(WebViewDownloadTest* test, gconstpointer)
 {
-    GRefPtr<WebKitDownload> download = adoptGRef(webkit_web_view_download_uri(test->m_webView, kServer->getURIForPath("/test.pdf").data()));
+    GRefPtr<WebKitDownload> download = adoptGRef(webkit_web_view_download_uri(test->webView(), kServer->getURIForPath("/test.pdf").data()));
     test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(download.get()));
     test->waitUntilDownloadStarted();
-    g_assert_true(test->m_webView == webkit_download_get_web_view(download.get()));
+    g_assert_true(test->webView() == webkit_download_get_web_view(download.get()));
 
     WebKitURIRequest* request = webkit_download_get_request(download.get());
     g_assert_nonnull(request);
@@ -723,7 +723,7 @@ static void testDownloadAsyncDecideDestinationCancel(AsyncCancellationTest* test
 {
     test->m_shouldAsynchronouslyDecideDestination = true;
 
-    GRefPtr<WebKitDownload> download = adoptGRef(webkit_web_view_download_uri(test->m_webView, kServer->getURIForPath("/test.pdf").data()));
+    GRefPtr<WebKitDownload> download = adoptGRef(webkit_web_view_download_uri(test->webView(), kServer->getURIForPath("/test.pdf").data()));
     test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(download.get()));
     test->waitUntilDownloadStarted();
     test->waitUntilDownloadFailed();
@@ -746,12 +746,12 @@ public:
 
     PolicyResponseDownloadTest()
     {
-        g_signal_connect(m_webView, "decide-policy", G_CALLBACK(decidePolicyCallback), this);
+        g_signal_connect(m_webView.get(), "decide-policy", G_CALLBACK(decidePolicyCallback), this);
     }
 
     ~PolicyResponseDownloadTest()
     {
-        g_signal_handlers_disconnect_matched(m_webView, G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
+        g_signal_handlers_disconnect_matched(m_webView.get(), G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
     }
 
     void cancelDownloadAndWaitUntilFinished()
@@ -775,7 +775,7 @@ static void testPolicyResponseDownload(PolicyResponseDownloadTest* test, gconstp
     g_assert_nonnull(request);
     ASSERT_CMP_CSTRING(webkit_uri_request_get_uri(request), ==, requestURI);
 
-    g_assert_true(test->m_webView == webkit_download_get_web_view(test->m_download.get()));
+    g_assert_true(test->webView() == webkit_download_get_web_view(test->m_download.get()));
 
     auto headers = webkit_uri_request_get_http_headers(request);
     g_assert_nonnull(soup_message_headers_get_one(headers, "User-Agent"));
@@ -797,7 +797,7 @@ static void testPolicyResponseDownloadCancel(PolicyResponseDownloadTest* test, g
     g_assert_nonnull(request);
     ASSERT_CMP_CSTRING(webkit_uri_request_get_uri(request), ==, requestURI);
 
-    g_assert_true(test->m_webView == webkit_download_get_web_view(test->m_download.get()));
+    g_assert_true(test->webView() == webkit_download_get_web_view(test->m_download.get()));
 
     auto headers = webkit_uri_request_get_http_headers(request);
     g_assert_nonnull(soup_message_headers_get_one(headers, "User-Agent"));
@@ -986,7 +986,7 @@ static void testContextMenuDownloadActions(WebViewDownloadTest* test, gconstpoin
     g_action_activate(webkit_context_menu_item_get_gaction(item), nullptr);
     test->waitUntilDownloadStarted();
 
-    g_assert_true(test->m_webView == webkit_download_get_web_view(test->m_download.get()));
+    g_assert_true(test->webView() == webkit_download_get_web_view(test->m_download.get()));
 
     WebKitURIRequest* request = webkit_download_get_request(test->m_download.get());
     g_assert_true(WEBKIT_IS_URI_REQUEST(request));
@@ -1029,7 +1029,7 @@ static void testBlobDownload(WebViewDownloadTest* test, gconstpointer)
     }, test);
     test->waitUntilDownloadStarted();
 
-    g_assert_true(test->m_webView == webkit_download_get_web_view(test->m_download.get()));
+    g_assert_true(test->webView() == webkit_download_get_web_view(test->m_download.get()));
     test->waitUntilDownloadFinished();
 
     GRefPtr<GFile> downloadFile = adoptGRef(g_file_new_for_path(webkit_download_get_destination(test->m_download.get())));

@@ -45,12 +45,12 @@ public:
 
     AuthenticationTest()
     {
-        g_signal_connect(m_webView, "authenticate", G_CALLBACK(runAuthenticationCallback), this);
+        g_signal_connect(m_webView.get(), "authenticate", G_CALLBACK(runAuthenticationCallback), this);
     }
 
     ~AuthenticationTest()
     {
-        g_signal_handlers_disconnect_matched(m_webView, G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
+        g_signal_handlers_disconnect_matched(m_webView.get(), G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
     }
 
     static int authenticationRetries;
@@ -166,7 +166,7 @@ static void testWebViewAuthenticationLoadCancelled(AuthenticationTest* test, gco
 {
     test->loadURI(kServer->getURIForPath("/auth-test.html").data());
     test->waitForAuthenticationRequest();
-    webkit_web_view_stop_loading(test->m_webView);
+    webkit_web_view_stop_loading(test->webView());
     // Expect empty page.
     test->waitUntilLoadFinished();
 
@@ -203,7 +203,7 @@ static void testWebViewAuthenticationFailure(AuthenticationTest* test, gconstpoi
     g_assert_cmpint(test->m_loadEvents[0], ==, LoadTrackingTest::ProvisionalLoadStarted);
     g_assert_cmpint(test->m_loadEvents[1], ==, LoadTrackingTest::LoadCommitted);
     g_assert_cmpint(test->m_loadEvents[2], ==, LoadTrackingTest::LoadFinished);
-    g_assert_cmpstr(webkit_web_view_get_title(test->m_webView), ==, authExpectedFailureTitle);
+    g_assert_cmpstr(webkit_web_view_get_title(test->webView()), ==, authExpectedFailureTitle);
     g_assert_false(test->m_authenticationCancelledReceived);
     g_assert_false(test->m_authenticationSucceededReceived);
 }
@@ -221,7 +221,7 @@ static void testWebViewAuthenticationNoCredential(AuthenticationTest* test, gcon
     g_assert_cmpint(test->m_loadEvents[0], ==, LoadTrackingTest::ProvisionalLoadStarted);
     g_assert_cmpint(test->m_loadEvents[1], ==, LoadTrackingTest::LoadCommitted);
     g_assert_cmpint(test->m_loadEvents[2], ==, LoadTrackingTest::LoadFinished);
-    g_assert_cmpstr(webkit_web_view_get_title(test->m_webView), ==, authExpectedFailureTitle);
+    g_assert_cmpstr(webkit_web_view_get_title(test->webView()), ==, authExpectedFailureTitle);
     g_assert_false(test->m_authenticationCancelledReceived);
     g_assert_false(test->m_authenticationSucceededReceived);
 }
@@ -255,12 +255,12 @@ static void testWebViewAuthenticationStorage(AuthenticationTest* test, gconstpoi
 #endif
 
 #if ENABLE(2022_GLIB_API)
-    auto* networkSession = webkit_web_view_get_network_session(test->m_webView);
+    auto* networkSession = webkit_web_view_get_network_session(test->webView());
     g_assert_true(webkit_network_session_get_persistent_credential_storage_enabled(networkSession));
     webkit_network_session_set_persistent_credential_storage_enabled(networkSession, FALSE);
     g_assert_false(webkit_network_session_get_persistent_credential_storage_enabled(networkSession));
 #else
-    auto* websiteDataManager = webkit_web_view_get_website_data_manager(test->m_webView);
+    auto* websiteDataManager = webkit_web_view_get_website_data_manager(test->webView());
     g_assert_true(webkit_website_data_manager_get_persistent_credential_storage_enabled(websiteDataManager));
     webkit_website_data_manager_set_persistent_credential_storage_enabled(websiteDataManager, FALSE);
     g_assert_false(webkit_website_data_manager_get_persistent_credential_storage_enabled(websiteDataManager));
@@ -308,7 +308,7 @@ static void testWebViewAuthenticationSuccess(AuthenticationTest* test, gconstpoi
     g_assert_cmpint(test->m_loadEvents[0], ==, LoadTrackingTest::ProvisionalLoadStarted);
     g_assert_cmpint(test->m_loadEvents[1], ==, LoadTrackingTest::LoadCommitted);
     g_assert_cmpint(test->m_loadEvents[2], ==, LoadTrackingTest::LoadFinished);
-    g_assert_cmpstr(webkit_web_view_get_title(test->m_webView), ==, authExpectedSuccessTitle);
+    g_assert_cmpstr(webkit_web_view_get_title(test->webView()), ==, authExpectedSuccessTitle);
     g_assert_false(test->m_authenticationCancelledReceived);
     g_assert_true(test->m_authenticationSucceededReceived);
 
@@ -322,7 +322,7 @@ static void testWebViewAuthenticationSuccess(AuthenticationTest* test, gconstpoi
     g_assert_cmpint(test->m_loadEvents[0], ==, LoadTrackingTest::ProvisionalLoadStarted);
     g_assert_cmpint(test->m_loadEvents[1], ==, LoadTrackingTest::LoadCommitted);
     g_assert_cmpint(test->m_loadEvents[2], ==, LoadTrackingTest::LoadFinished);
-    g_assert_cmpstr(webkit_web_view_get_title(test->m_webView), ==, authExpectedSuccessTitle);
+    g_assert_cmpstr(webkit_web_view_get_title(test->webView()), ==, authExpectedSuccessTitle);
     g_assert_false(test->m_authenticationCancelledReceived);
     g_assert_true(test->m_authenticationSucceededReceived);
 }
@@ -340,7 +340,7 @@ static void testWebViewAuthenticationEmptyRealm(AuthenticationTest* test, gconst
     g_assert_cmpint(test->m_loadEvents[0], ==, LoadTrackingTest::ProvisionalLoadStarted);
     g_assert_cmpint(test->m_loadEvents[1], ==, LoadTrackingTest::LoadCommitted);
     g_assert_cmpint(test->m_loadEvents[2], ==, LoadTrackingTest::LoadFinished);
-    g_assert_cmpstr(webkit_web_view_get_title(test->m_webView), ==, authExpectedSuccessTitle);
+    g_assert_cmpstr(webkit_web_view_get_title(test->webView()), ==, authExpectedSuccessTitle);
     g_assert_false(test->m_authenticationCancelledReceived);
     g_assert_true(test->m_authenticationSucceededReceived);
 }

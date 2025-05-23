@@ -55,7 +55,7 @@ public:
     {
         g_assert_cmpuint(index, <, numViews);
 
-        m_webViews[index] = Test::adoptView(Test::createWebView(m_webContext.get()));
+        m_webViews[index] = createWebView();
         assertObjectIsDeletedWhenTestFinishes(G_OBJECT(m_webViews[index].get()));
 
         webkit_web_view_load_html(m_webViews[index].get(), "<html></html>", nullptr);
@@ -170,19 +170,15 @@ public:
         : m_mainLoop(g_main_loop_new(nullptr, TRUE))
         , m_initializeWebProcessExtensionsSignalCount(0)
     {
-        m_webView = WEBKIT_WEB_VIEW(Test::createWebView(m_webContext.get()));
-#if PLATFORM(GTK)
-        g_object_ref_sink(m_webView);
-#endif
-        webkit_settings_set_javascript_can_open_windows_automatically(webkit_web_view_get_settings(m_webView), TRUE);
+        m_webView = createWebView();
+        webkit_settings_set_javascript_can_open_windows_automatically(webkit_web_view_get_settings(m_webView.get()), TRUE);
 
-        g_signal_connect(m_webView, "create", G_CALLBACK(viewCreateCallback), this);
+        g_signal_connect(m_webView.get(), "create", G_CALLBACK(viewCreateCallback), this);
     }
 
     ~UIClientMultiprocessTest()
     {
-        g_signal_handlers_disconnect_matched(m_webView, G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
-        g_object_unref(m_webView);
+        g_signal_handlers_disconnect_by_data(m_webView.get(), this);
     }
 
     void initializeWebProcessExtensions() override
@@ -195,17 +191,14 @@ public:
     {
         g_assert_true(webView == m_webView);
 
-        auto* newWebView = Test::createWebView(webView);
-#if PLATFORM(GTK)
-        g_object_ref_sink(newWebView);
-#endif
-        assertObjectIsDeletedWhenTestFinishes(G_OBJECT(newWebView));
+        auto newWebView = createWebView("related-view", webView, nullptr);
+        assertObjectIsDeletedWhenTestFinishes(G_OBJECT(newWebView.get()));
         m_webViewEvents.append(Create);
 
-        g_signal_connect(newWebView, "ready-to-show", G_CALLBACK(viewReadyToShowCallback), this);
-        g_signal_connect(newWebView, "close", G_CALLBACK(viewCloseCallback), this);
+        g_signal_connect(newWebView.get(), "ready-to-show", G_CALLBACK(viewReadyToShowCallback), this);
+        g_signal_connect(newWebView.get(), "close", G_CALLBACK(viewCloseCallback), this);
 
-        return WEBKIT_WEB_VIEW(newWebView);
+        return newWebView.leakRef();
     }
 
     void viewReadyToShow(WebKitWebView* webView)
@@ -216,9 +209,10 @@ public:
 
     void viewClose(WebKitWebView* webView)
     {
-        g_assert_true(m_webView != webView);
+        g_assert_true(m_webView.get() != webView);
 
         m_webViewEvents.append(Close);
+        g_signal_handlers_disconnect_by_data(webView, this);
         g_object_unref(webView);
         g_main_loop_quit(m_mainLoop);
     }
@@ -228,7 +222,7 @@ public:
         g_main_loop_run(m_mainLoop);
     }
 
-    WebKitWebView* m_webView;
+    GRefPtr<WebKitWebView> m_webView;
     GMainLoop* m_mainLoop;
     unsigned m_initializeWebProcessExtensionsSignalCount;
     Vector<WebViewEvents> m_webViewEvents;
@@ -236,7 +230,7 @@ public:
 
 static void testMultiprocessWebViewCreateReadyClose(UIClientMultiprocessTest* test, gconstpointer)
 {
-    webkit_web_view_load_html(test->m_webView, "<html><body onLoad=\"window.open().close();\"></html>", nullptr);
+    webkit_web_view_load_html(test->m_webView.get(), "<html><body onLoad=\"window.open().close();\"></html>", nullptr);
     test->waitUntilNewWebViewClose();
 
     Vector<UIClientMultiprocessTest::WebViewEvents>& events = test->m_webViewEvents;

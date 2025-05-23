@@ -31,13 +31,13 @@ public:
 
     static void isPlayingAudioChanged(GObject*, GParamSpec*, IsPlayingAudioWebViewTest* test)
     {
-        g_signal_handlers_disconnect_by_func(test->m_webView, reinterpret_cast<void*>(isPlayingAudioChanged), test);
+        g_signal_handlers_disconnect_by_func(test->webView(), reinterpret_cast<void*>(isPlayingAudioChanged), test);
         g_main_loop_quit(test->m_mainLoop);
     }
 
     void waitUntilIsPlayingAudioChanged()
     {
-        g_signal_connect(m_webView, "notify::is-playing-audio", G_CALLBACK(isPlayingAudioChanged), this);
+        g_signal_connect(m_webView.get(), "notify::is-playing-audio", G_CALLBACK(isPlayingAudioChanged), this);
         g_main_loop_run(m_mainLoop);
     }
 
@@ -46,7 +46,7 @@ public:
         m_tickCount = 0;
         g_timeout_add(50, [](gpointer userData) -> gboolean {
             auto* test = static_cast<IsPlayingAudioWebViewTest*>(userData);
-            g_assert_true(webkit_web_view_is_playing_audio(test->m_webView));
+            g_assert_true(webkit_web_view_is_playing_audio(test->webView()));
             test->m_tickCount++;
             if (test->m_tickCount >= 10) {
                 test->quitMainLoop();
@@ -65,31 +65,15 @@ static WebKitTestServer* gServer;
 
 static void testWebViewWebContext(WebViewTest* test, gconstpointer)
 {
-    g_assert_true(webkit_web_view_get_context(test->m_webView) == test->m_webContext.get());
+    g_assert_true(webkit_web_view_get_context(test->webView()) == test->m_webContext.get());
     g_assert_true(webkit_web_context_get_default() != test->m_webContext.get());
 
     // Check that a web view created with g_object_new has the default context.
-    auto webView = Test::adoptView(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-#if PLATFORM(WPE)
-        "backend", Test::createWebViewBackend(),
-#endif
-        nullptr));
+    auto webView = test->createWebView("web-context", nullptr, nullptr);
     g_assert_true(webkit_web_view_get_context(webView.get()) == webkit_web_context_get_default());
 
     // Check that a web view created with a related view has the related view context.
-    webView = Test::adoptView(Test::createWebView(test->m_webView));
-    g_assert_true(webkit_web_view_get_context(webView.get()) == test->m_webContext.get());
-
-    // Check that a web context given as construct parameter is ignored if a related view is also provided.
-    Test::removeLogFatalFlag(G_LOG_LEVEL_CRITICAL);
-    webView = Test::adoptView(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-#if PLATFORM(WPE)
-        "backend", Test::createWebViewBackend(),
-#endif
-        "web-context", webkit_web_context_get_default(),
-        "related-view", test->m_webView,
-        nullptr));
-    Test::addLogFatalFlag(G_LOG_LEVEL_CRITICAL);
+    webView = test->createWebView("related-view", test->webView(), nullptr);
     g_assert_true(webkit_web_view_get_context(webView.get()) == test->m_webContext.get());
 }
 
@@ -98,29 +82,21 @@ static void testWebViewWebContextLifetime(WebViewTest* test, gconstpointer)
     WebKitWebContext* webContext = webkit_web_context_new();
     test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(webContext));
 
-    auto* webView = Test::createWebView(webContext);
-    test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(webView));
-
-#if PLATFORM(GTK)
-    g_object_ref_sink(webView);
-#endif
+    auto webView = test->createWebView("web-context", webContext, nullptr);
+    test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(webView.get()));
     g_object_unref(webContext);
 
     // Check that the web view still has a valid context.
-    WebKitWebContext* tmpContext = webkit_web_view_get_context(WEBKIT_WEB_VIEW(webView));
+    WebKitWebContext* tmpContext = webkit_web_view_get_context(WEBKIT_WEB_VIEW(webView.get()));
     g_assert_true(WEBKIT_IS_WEB_CONTEXT(tmpContext));
-    g_object_unref(webView);
+    webView = nullptr;
 
     WebKitWebContext* webContext2 = webkit_web_context_new();
     test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(webContext2));
 
-    auto* webView2 = Test::createWebView(webContext2);
-    test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(webView2));
-
-#if PLATFORM(GTK)
-    g_object_ref_sink(webView2);
-#endif
-    g_object_unref(webView2);
+    auto webView2 = test->createWebView("web-context", webContext2, nullptr);
+    test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(webView2.get()));
+    webView2 = nullptr;
 
     // Check that the context is still valid.
     g_assert_true(WEBKIT_IS_WEB_CONTEXT(webContext2));
@@ -129,7 +105,7 @@ static void testWebViewWebContextLifetime(WebViewTest* test, gconstpointer)
 
 static void testWebViewCloseQuickly(WebViewTest* test, gconstpointer)
 {
-    auto webView = Test::adoptView(Test::createWebView());
+    auto webView = test->createWebView();
     test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(webView.get()));
     g_idle_add([](gpointer userData) -> gboolean {
         static_cast<WebViewTest*>(userData)->quitMainLoop();
@@ -218,17 +194,17 @@ static void ephemeralViewloadChanged(WebKitWebView* webView, WebKitLoadEvent loa
 static void testWebViewEphemeral(WebViewTest* test, gconstpointer)
 {
 #if ENABLE(2022_GLIB_API)
-    auto* networkSession = webkit_web_view_get_network_session(test->m_webView);
+    auto* networkSession = webkit_web_view_get_network_session(test->webView());
     g_assert_false(webkit_network_session_is_ephemeral(networkSession));
     auto* manager = webkit_network_session_get_website_data_manager(networkSession);
     g_assert_false(webkit_website_data_manager_is_ephemeral(manager));
     GRefPtr<WebKitNetworkSession> ephemeralSession = adoptGRef(webkit_network_session_new_ephemeral());
 #else
-    g_assert_false(webkit_web_view_is_ephemeral(test->m_webView));
-    g_assert_false(webkit_web_context_is_ephemeral(webkit_web_view_get_context(test->m_webView)));
+    g_assert_false(webkit_web_view_is_ephemeral(test->webView()));
+    g_assert_false(webkit_web_context_is_ephemeral(webkit_web_view_get_context(test->webView())));
     auto* manager = webkit_web_context_get_website_data_manager(test->m_webContext.get());
     g_assert_false(webkit_website_data_manager_is_ephemeral(manager));
-    g_assert_true(webkit_web_view_get_website_data_manager(test->m_webView) == manager);
+    g_assert_true(webkit_web_view_get_website_data_manager(test->webView()) == manager);
 #endif
     webkit_website_data_manager_clear(manager, WEBKIT_WEBSITE_DATA_DISK_CACHE, 0, nullptr, [](GObject* manager, GAsyncResult* result, gpointer userData) {
         webkit_website_data_manager_clear_finish(WEBKIT_WEBSITE_DATA_MANAGER(manager), result, nullptr);
@@ -237,17 +213,13 @@ static void testWebViewEphemeral(WebViewTest* test, gconstpointer)
     g_main_loop_run(test->m_mainLoop);
 
     // A WebView on a non ephemeral context can be ephemeral.
-    auto webView = Test::adoptView(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-#if PLATFORM(WPE)
-        "backend", Test::createWebViewBackend(),
-#endif
-        "web-context", webkit_web_view_get_context(test->m_webView),
+    auto webView = test->createWebView(
 #if ENABLE(2022_GLIB_API)
         "network-session", ephemeralSession.get(),
 #else
         "is-ephemeral", TRUE,
 #endif
-        nullptr));
+        nullptr);
 #if ENABLE(2022_GLIB_API)
     g_assert_true(webkit_network_session_is_ephemeral(webkit_web_view_get_network_session(webView.get())));
     g_assert_true(webkit_web_view_get_network_session(webView.get()) != networkSession);
@@ -278,21 +250,21 @@ static void testWebViewCustomCharset(WebViewTest* test, gconstpointer)
 {
     test->loadURI(gServer->getURIForPath("/").data());
     test->waitUntilLoadFinished();
-    g_assert_null(webkit_web_view_get_custom_charset(test->m_webView));
-    webkit_web_view_set_custom_charset(test->m_webView, "utf8");
+    g_assert_null(webkit_web_view_get_custom_charset(test->webView()));
+    webkit_web_view_set_custom_charset(test->webView(), "utf8");
     // Changing the charset reloads the page, so wait until reloaded.
     test->waitUntilLoadFinished();
-    g_assert_cmpstr(webkit_web_view_get_custom_charset(test->m_webView), ==, "utf8");
+    g_assert_cmpstr(webkit_web_view_get_custom_charset(test->webView()), ==, "utf8");
 
     // Go back to the default charset and wait until reloaded.
-    webkit_web_view_set_custom_charset(test->m_webView, nullptr);
+    webkit_web_view_set_custom_charset(test->webView(), nullptr);
     test->waitUntilLoadFinished();
-    g_assert_null(webkit_web_view_get_custom_charset(test->m_webView));
+    g_assert_null(webkit_web_view_get_custom_charset(test->webView()));
 }
 
 static void testWebViewSettings(WebViewTest* test, gconstpointer)
 {
-    WebKitSettings* defaultSettings = webkit_web_view_get_settings(test->m_webView);
+    WebKitSettings* defaultSettings = webkit_web_view_get_settings(test->webView());
     test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(defaultSettings));
     g_assert_nonnull(defaultSettings);
     g_assert_true(webkit_settings_get_enable_javascript(defaultSettings));
@@ -300,13 +272,13 @@ static void testWebViewSettings(WebViewTest* test, gconstpointer)
     GRefPtr<WebKitSettings> newSettings = adoptGRef(webkit_settings_new());
     test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(newSettings.get()));
     g_object_set(G_OBJECT(newSettings.get()), "enable-javascript", FALSE, NULL);
-    webkit_web_view_set_settings(test->m_webView, newSettings.get());
+    webkit_web_view_set_settings(test->webView(), newSettings.get());
 
-    WebKitSettings* settings = webkit_web_view_get_settings(test->m_webView);
+    WebKitSettings* settings = webkit_web_view_get_settings(test->webView());
     g_assert_true(settings != defaultSettings);
     g_assert_false(webkit_settings_get_enable_javascript(settings));
 
-    auto webView2 = Test::adoptView(Test::createWebView());
+    auto webView2 = test->createWebView();
     test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(webView2.get()));
     webkit_web_view_set_settings(WEBKIT_WEB_VIEW(webView2.get()), settings);
     g_assert_true(webkit_web_view_get_settings(WEBKIT_WEB_VIEW(webView2.get())) == settings);
@@ -318,20 +290,20 @@ static void testWebViewSettings(WebViewTest* test, gconstpointer)
     g_assert_true(settings == newSettings2.get());
     g_assert_true(webkit_settings_get_enable_javascript(settings));
 
-    auto webView3 = Test::adoptView(Test::createWebView(newSettings2.get()));
+    auto webView3 = test->createWebView("settings", newSettings2.get(), nullptr);
     test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(webView3.get()));
     g_assert_true(webkit_web_view_get_settings(WEBKIT_WEB_VIEW(webView3.get())) == newSettings2.get());
 }
 
 static void testWebViewZoomLevel(WebViewTest* test, gconstpointer)
 {
-    g_assert_cmpfloat(webkit_web_view_get_zoom_level(test->m_webView), ==, 1);
-    webkit_web_view_set_zoom_level(test->m_webView, 2.5);
-    g_assert_cmpfloat(webkit_web_view_get_zoom_level(test->m_webView), ==, 2.5);
+    g_assert_cmpfloat(webkit_web_view_get_zoom_level(test->webView()), ==, 1);
+    webkit_web_view_set_zoom_level(test->webView(), 2.5);
+    g_assert_cmpfloat(webkit_web_view_get_zoom_level(test->webView()), ==, 2.5);
 
-    webkit_settings_set_zoom_text_only(webkit_web_view_get_settings(test->m_webView), TRUE);
+    webkit_settings_set_zoom_text_only(webkit_web_view_get_settings(test->webView()), TRUE);
     // The zoom level shouldn't change when zoom-text-only setting changes.
-    g_assert_cmpfloat(webkit_web_view_get_zoom_level(test->m_webView), ==, 2.5);
+    g_assert_cmpfloat(webkit_web_view_get_zoom_level(test->webView()), ==, 2.5);
 }
 
 static void testWebViewRunAsyncFunctions(WebViewTest* test, gconstpointer)
@@ -425,7 +397,7 @@ static void testWebViewRunAsyncFunctions(WebViewTest* test, gconstpointer)
 
     {
         // Disable JS support and expect an error when attempting to evaluate JS code.
-        WebKitSettings* defaultSettings = webkit_web_view_get_settings(test->m_webView);
+        WebKitSettings* defaultSettings = webkit_web_view_get_settings(test->webView());
         test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(defaultSettings));
         g_assert_nonnull(defaultSettings);
         g_assert_true(webkit_settings_get_enable_javascript(defaultSettings));
@@ -433,19 +405,19 @@ static void testWebViewRunAsyncFunctions(WebViewTest* test, gconstpointer)
         GRefPtr<WebKitSettings> newSettings = adoptGRef(webkit_settings_new());
         test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(newSettings.get()));
         g_object_set(G_OBJECT(newSettings.get()), "enable-javascript", FALSE, NULL);
-        webkit_web_view_set_settings(test->m_webView, newSettings.get());
+        webkit_web_view_set_settings(test->webView(), newSettings.get());
 
         JSCValue* value = test->runAsyncJavaScriptFunctionInWorldAndWaitUntilFinished("return new Promise((resolve) => { resolve(42); });", nullptr, nullptr, &error.outPtr());
         g_assert_null(value);
         g_assert_error(error.get(), WEBKIT_JAVASCRIPT_ERROR, WEBKIT_JAVASCRIPT_ERROR_SCRIPT_FAILED);
 
         g_object_set(G_OBJECT(newSettings.get()), "enable-javascript", TRUE, NULL);
-        webkit_web_view_set_settings(test->m_webView, newSettings.get());
+        webkit_web_view_set_settings(test->webView(), newSettings.get());
     }
 
     {
         // Disable JS markup support and expect no error when attempting to evaluate JS code.
-        WebKitSettings* defaultSettings = webkit_web_view_get_settings(test->m_webView);
+        WebKitSettings* defaultSettings = webkit_web_view_get_settings(test->webView());
         test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(defaultSettings));
         g_assert_nonnull(defaultSettings);
         g_assert_true(webkit_settings_get_enable_javascript_markup(defaultSettings));
@@ -453,7 +425,7 @@ static void testWebViewRunAsyncFunctions(WebViewTest* test, gconstpointer)
         GRefPtr<WebKitSettings> newSettings = adoptGRef(webkit_settings_new());
         test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(newSettings.get()));
         g_object_set(G_OBJECT(newSettings.get()), "enable-javascript-markup", FALSE, NULL);
-        webkit_web_view_set_settings(test->m_webView, newSettings.get());
+        webkit_web_view_set_settings(test->webView(), newSettings.get());
 
         JSCValue* value = test->runAsyncJavaScriptFunctionInWorldAndWaitUntilFinished("return new Promise((resolve) => { resolve(42); });", nullptr, nullptr, &error.outPtr());
         g_assert_nonnull(value);
@@ -461,7 +433,7 @@ static void testWebViewRunAsyncFunctions(WebViewTest* test, gconstpointer)
         g_assert_no_error(error.get());
 
         g_object_set(G_OBJECT(newSettings.get()), "enable-javascript-markup", TRUE, NULL);
-        webkit_web_view_set_settings(test->m_webView, newSettings.get());
+        webkit_web_view_set_settings(test->webView(), newSettings.get());
     }
 }
 
@@ -600,7 +572,7 @@ static void testWebViewRunJavaScript(WebViewTest* test, gconstpointer)
 
     {
         // Disable JS support and expect an error when attempting to evaluate JS code.
-        WebKitSettings* defaultSettings = webkit_web_view_get_settings(test->m_webView);
+        WebKitSettings* defaultSettings = webkit_web_view_get_settings(test->webView());
         test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(defaultSettings));
         g_assert_nonnull(defaultSettings);
         g_assert_true(webkit_settings_get_enable_javascript(defaultSettings));
@@ -608,19 +580,19 @@ static void testWebViewRunJavaScript(WebViewTest* test, gconstpointer)
         GRefPtr<WebKitSettings> newSettings = adoptGRef(webkit_settings_new());
         test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(newSettings.get()));
         g_object_set(G_OBJECT(newSettings.get()), "enable-javascript", FALSE, NULL);
-        webkit_web_view_set_settings(test->m_webView, newSettings.get());
+        webkit_web_view_set_settings(test->webView(), newSettings.get());
 
         JSCValue* value = test->runJavaScriptAndWaitUntilFinished("console.log(\"Hi\");", &error.outPtr());
         g_assert_null(value);
         g_assert_error(error.get(), WEBKIT_JAVASCRIPT_ERROR, WEBKIT_JAVASCRIPT_ERROR_SCRIPT_FAILED);
 
         g_object_set(G_OBJECT(newSettings.get()), "enable-javascript", TRUE, NULL);
-        webkit_web_view_set_settings(test->m_webView, newSettings.get());
+        webkit_web_view_set_settings(test->webView(), newSettings.get());
     }
 
     {
         // Disable JS markup support and expect no error when attempting to evaluate JS code.
-        WebKitSettings* defaultSettings = webkit_web_view_get_settings(test->m_webView);
+        WebKitSettings* defaultSettings = webkit_web_view_get_settings(test->webView());
         test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(defaultSettings));
         g_assert_nonnull(defaultSettings);
         g_assert_true(webkit_settings_get_enable_javascript_markup(defaultSettings));
@@ -628,7 +600,7 @@ static void testWebViewRunJavaScript(WebViewTest* test, gconstpointer)
         GRefPtr<WebKitSettings> newSettings = adoptGRef(webkit_settings_new());
         test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(newSettings.get()));
         g_object_set(G_OBJECT(newSettings.get()), "enable-javascript-markup", FALSE, NULL);
-        webkit_web_view_set_settings(test->m_webView, newSettings.get());
+        webkit_web_view_set_settings(test->webView(), newSettings.get());
 
         JSCValue* value = test->runJavaScriptAndWaitUntilFinished("console.log(\"Hi\");", &error.outPtr());
         g_assert_nonnull(value);
@@ -636,7 +608,7 @@ static void testWebViewRunJavaScript(WebViewTest* test, gconstpointer)
         g_assert_no_error(error.get());
 
         g_object_set(G_OBJECT(newSettings.get()), "enable-javascript-markup", TRUE, NULL);
-        webkit_web_view_set_settings(test->m_webView, newSettings.get());
+        webkit_web_view_set_settings(test->webView(), newSettings.get());
     }
 }
 
@@ -667,14 +639,14 @@ public:
     FullScreenClientTest()
         : m_event(None)
     {
-        webkit_settings_set_enable_fullscreen(webkit_web_view_get_settings(m_webView), TRUE);
-        g_signal_connect(m_webView, "enter-fullscreen", G_CALLBACK(viewEnterFullScreenCallback), this);
-        g_signal_connect(m_webView, "leave-fullscreen", G_CALLBACK(viewLeaveFullScreenCallback), this);
+        webkit_settings_set_enable_fullscreen(webkit_web_view_get_settings(m_webView.get()), TRUE);
+        g_signal_connect(m_webView.get(), "enter-fullscreen", G_CALLBACK(viewEnterFullScreenCallback), this);
+        g_signal_connect(m_webView.get(), "leave-fullscreen", G_CALLBACK(viewLeaveFullScreenCallback), this);
     }
 
     ~FullScreenClientTest()
     {
-        g_signal_handlers_disconnect_matched(m_webView, G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
+        g_signal_handlers_disconnect_matched(m_webView.get(), G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
     }
 
     void requestFullScreenAndWaitUntilEnteredFullScreen()
@@ -719,14 +691,14 @@ static void testWebViewFullScreen(FullScreenClientTest* test, gconstpointer)
 static void testWebViewCanShowMIMEType(WebViewTest* test, gconstpointer)
 {
     // Supported MIME types.
-    g_assert_true(webkit_web_view_can_show_mime_type(test->m_webView, "text/html"));
-    g_assert_true(webkit_web_view_can_show_mime_type(test->m_webView, "text/plain"));
-    g_assert_true(webkit_web_view_can_show_mime_type(test->m_webView, "image/jpeg"));
+    g_assert_true(webkit_web_view_can_show_mime_type(test->webView(), "text/html"));
+    g_assert_true(webkit_web_view_can_show_mime_type(test->webView(), "text/plain"));
+    g_assert_true(webkit_web_view_can_show_mime_type(test->webView(), "image/jpeg"));
 
     // Unsupported MIME types.
-    g_assert_false(webkit_web_view_can_show_mime_type(test->m_webView, "text/vcard"));
-    g_assert_false(webkit_web_view_can_show_mime_type(test->m_webView, "application/zip"));
-    g_assert_false(webkit_web_view_can_show_mime_type(test->m_webView, "application/octet-stream"));
+    g_assert_false(webkit_web_view_can_show_mime_type(test->webView(), "text/vcard"));
+    g_assert_false(webkit_web_view_can_show_mime_type(test->webView(), "application/zip"));
+    g_assert_false(webkit_web_view_can_show_mime_type(test->webView(), "application/octet-stream"));
 }
 
 #if PLATFORM(GTK)
@@ -743,12 +715,12 @@ public:
         : m_submitPositionX(0)
         , m_submitPositionY(0)
     {
-        g_signal_connect(m_webView, "submit-form", G_CALLBACK(submitFormCallback), this);
+        g_signal_connect(m_webView.get(), "submit-form", G_CALLBACK(submitFormCallback), this);
     }
 
     ~FormClientTest()
     {
-        g_signal_handlers_disconnect_matched(m_webView, G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
+        g_signal_handlers_disconnect_matched(m_webView.get(), G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
     }
 
     void submitForm(WebKitFormSubmissionRequest* request)
@@ -878,7 +850,7 @@ public:
     static void webViewSavedToStreamCallback(GObject* object, GAsyncResult* result, SaveWebViewTest* test)
     {
         GUniqueOutPtr<GError> error;
-        test->m_inputStream = adoptGRef(webkit_web_view_save_finish(test->m_webView, result, &error.outPtr()));
+        test->m_inputStream = adoptGRef(webkit_web_view_save_finish(test->webView(), result, &error.outPtr()));
         g_assert_true(G_IS_INPUT_STREAM(test->m_inputStream.get()));
         g_assert_no_error(error.get());
 
@@ -888,7 +860,7 @@ public:
     static void webViewSavedToFileCallback(GObject* object, GAsyncResult* result, SaveWebViewTest* test)
     {
         GUniqueOutPtr<GError> error;
-        g_assert_true(webkit_web_view_save_to_file_finish(test->m_webView, result, &error.outPtr()));
+        g_assert_true(webkit_web_view_save_to_file_finish(test->webView(), result, &error.outPtr()));
         g_assert_no_error(error.get());
 
         test->quitMainLoop();
@@ -896,7 +868,7 @@ public:
 
     void saveAndWaitForStream()
     {
-        webkit_web_view_save(m_webView, WEBKIT_SAVE_MODE_MHTML, 0, reinterpret_cast<GAsyncReadyCallback>(webViewSavedToStreamCallback), this);
+        webkit_web_view_save(m_webView.get(), WEBKIT_SAVE_MODE_MHTML, 0, reinterpret_cast<GAsyncReadyCallback>(webViewSavedToStreamCallback), this);
         g_main_loop_run(m_mainLoop);
     }
 
@@ -904,7 +876,7 @@ public:
     {
         m_saveDestinationFilePath.reset(g_build_filename(m_tempDirectory.get(), "testWebViewSaveResult.mht", NULL));
         m_file = adoptGRef(g_file_new_for_path(m_saveDestinationFilePath.get()));
-        webkit_web_view_save_to_file(m_webView, m_file.get(), WEBKIT_SAVE_MODE_MHTML, 0, reinterpret_cast<GAsyncReadyCallback>(webViewSavedToFileCallback), this);
+        webkit_web_view_save_to_file(m_webView.get(), m_file.get(), WEBKIT_SAVE_MODE_MHTML, 0, reinterpret_cast<GAsyncReadyCallback>(webViewSavedToFileCallback), this);
         g_main_loop_run(m_mainLoop);
     }
 
@@ -1085,7 +1057,7 @@ public:
             cairo_surface_destroy(m_snapshot);
 #endif
         m_snapshot = nullptr;
-        webkit_web_view_get_snapshot(m_webView, region, options, nullptr, reinterpret_cast<GAsyncReadyCallback>(onSnapshotReady), this);
+        webkit_web_view_get_snapshot(m_webView.get(), region, options, nullptr, reinterpret_cast<GAsyncReadyCallback>(onSnapshotReady), this);
         g_main_loop_run(m_mainLoop);
 #if USE(GTK4)
         return m_snapshot.get();
@@ -1115,7 +1087,7 @@ public:
 #endif
         m_snapshot = nullptr;
         GRefPtr<GCancellable> cancellable = adoptGRef(g_cancellable_new());
-        webkit_web_view_get_snapshot(m_webView, WEBKIT_SNAPSHOT_REGION_VISIBLE, WEBKIT_SNAPSHOT_OPTIONS_NONE, cancellable.get(), reinterpret_cast<GAsyncReadyCallback>(onSnapshotCancelledReady), this);
+        webkit_web_view_get_snapshot(m_webView.get(), WEBKIT_SNAPSHOT_REGION_VISIBLE, WEBKIT_SNAPSHOT_OPTIONS_NONE, cancellable.get(), reinterpret_cast<GAsyncReadyCallback>(onSnapshotCancelledReady), this);
         g_cancellable_cancel(cancellable.get());
         g_main_loop_run(m_mainLoop);
 
@@ -1317,8 +1289,8 @@ public:
     void initialize()
     {
         initializeWebView();
-        g_signal_connect(m_webView, "permission-request", G_CALLBACK(permissionRequestCallback), this);
-        g_signal_connect(m_webView, "show-notification", G_CALLBACK(showNotificationCallback), this);
+        g_signal_connect(m_webView.get(), "permission-request", G_CALLBACK(permissionRequestCallback), this);
+        g_signal_connect(m_webView.get(), "show-notification", G_CALLBACK(showNotificationCallback), this);
 #if !ENABLE(2022_GLIB_API)
         webkit_user_content_manager_register_script_message_handler(m_userContentManager.get(), "notifications");
 #else
@@ -1329,8 +1301,11 @@ public:
 
     ~NotificationWebViewTest()
     {
-        g_signal_handlers_disconnect_matched(m_webView, G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
-        g_signal_handlers_disconnect_matched(m_userContentManager.get(), G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
+        g_signal_handlers_disconnect_by_data(m_webView.get(), this);
+        g_signal_handlers_disconnect_by_data(m_userContentManager.get(), this);
+
+        if (m_notification)
+            g_signal_handlers_disconnect_by_data(m_notification, this);
 
 #if !ENABLE(2022_GLIB_API)
         webkit_user_content_manager_unregister_script_message_handler(m_userContentManager.get(), "notifications");
@@ -1490,48 +1465,48 @@ static void testWebViewIsPlayingAudio(IsPlayingAudioWebViewTest* test, gconstpoi
     test->showInWindow();
 
     // Initially, web views should always report no audio being played.
-    g_assert_false(webkit_web_view_is_playing_audio(test->m_webView));
-    g_assert_false(webkit_web_view_get_is_muted(test->m_webView));
+    g_assert_false(webkit_web_view_is_playing_audio(test->webView()));
+    g_assert_false(webkit_web_view_get_is_muted(test->webView()));
 
     GUniquePtr<char> resourcePath(g_build_filename(Test::getResourcesDir(Test::WebKit2Resources).data(), "file-with-video.html", nullptr));
     GUniquePtr<char> resourceURL(g_filename_to_uri(resourcePath.get(), nullptr, nullptr));
-    webkit_web_view_load_uri(test->m_webView, resourceURL.get());
+    webkit_web_view_load_uri(test->webView(), resourceURL.get());
     test->waitUntilLoadFinished();
-    g_assert_false(webkit_web_view_is_playing_audio(test->m_webView));
+    g_assert_false(webkit_web_view_is_playing_audio(test->webView()));
 
     test->runJavaScriptAndWaitUntilFinished("playVideo();", nullptr);
-    if (!webkit_web_view_is_playing_audio(test->m_webView))
+    if (!webkit_web_view_is_playing_audio(test->webView()))
         test->waitUntilIsPlayingAudioChanged();
-    g_assert_true(webkit_web_view_is_playing_audio(test->m_webView));
+    g_assert_true(webkit_web_view_is_playing_audio(test->webView()));
 
     // Mute the page, webkit_web_view_is_playing_audio() should still return TRUE.
-    webkit_web_view_set_is_muted(test->m_webView, TRUE);
-    g_assert_true(webkit_web_view_get_is_muted(test->m_webView));
+    webkit_web_view_set_is_muted(test->webView(), TRUE);
+    g_assert_true(webkit_web_view_get_is_muted(test->webView()));
     test->periodicallyCheckIsPlayingForAWhile();
-    g_assert_true(webkit_web_view_is_playing_audio(test->m_webView));
-    webkit_web_view_set_is_muted(test->m_webView, FALSE);
-    g_assert_false(webkit_web_view_get_is_muted(test->m_webView));
-    g_assert_true(webkit_web_view_is_playing_audio(test->m_webView));
+    g_assert_true(webkit_web_view_is_playing_audio(test->webView()));
+    webkit_web_view_set_is_muted(test->webView(), FALSE);
+    g_assert_false(webkit_web_view_get_is_muted(test->webView()));
+    g_assert_true(webkit_web_view_is_playing_audio(test->webView()));
 
     // Pause the video, and check again.
     test->runJavaScriptAndWaitUntilFinished("document.getElementById('test-video').pause();", nullptr);
-    if (webkit_web_view_is_playing_audio(test->m_webView))
+    if (webkit_web_view_is_playing_audio(test->webView()))
         test->waitUntilIsPlayingAudioChanged();
-    g_assert_false(webkit_web_view_is_playing_audio(test->m_webView));
+    g_assert_false(webkit_web_view_is_playing_audio(test->webView()));
 }
 
 static void testWebViewIsAudioMuted(WebViewTest* test, gconstpointer)
 {
-    g_assert_false(webkit_web_view_get_is_muted(test->m_webView));
-    webkit_web_view_set_is_muted(test->m_webView, TRUE);
-    g_assert_true(webkit_web_view_get_is_muted(test->m_webView));
-    webkit_web_view_set_is_muted(test->m_webView, FALSE);
-    g_assert_false(webkit_web_view_get_is_muted(test->m_webView));
+    g_assert_false(webkit_web_view_get_is_muted(test->webView()));
+    webkit_web_view_set_is_muted(test->webView(), TRUE);
+    g_assert_true(webkit_web_view_get_is_muted(test->webView()));
+    webkit_web_view_set_is_muted(test->webView(), FALSE);
+    g_assert_false(webkit_web_view_get_is_muted(test->webView()));
 }
 
 static void testWebViewAutoplayPolicy(WebViewTest* test, gconstpointer)
 {
-    WebKitWebsitePolicies* policies = webkit_web_view_get_website_policies(test->m_webView);
+    WebKitWebsitePolicies* policies = webkit_web_view_get_website_policies(test->webView());
     g_assert_cmpint(webkit_website_policies_get_autoplay_policy(policies), ==, WEBKIT_AUTOPLAY_ALLOW_WITHOUT_SOUND);
 }
 
@@ -1552,7 +1527,7 @@ static void testWebViewIsWebProcessResponsive(WebViewTest* test, gconstpointer)
         " </body>"
         "</html>";
 
-    g_assert_true(webkit_web_view_get_is_web_process_responsive(test->m_webView));
+    g_assert_true(webkit_web_view_get_is_web_process_responsive(test->webView()));
     test->loadHtml(hangHTML, nullptr);
     test->waitUntilLoadFinished();
     // Wait 1 second, so the js while loop kicks in and blocks the web process. Then try to load a new
@@ -1561,11 +1536,11 @@ static void testWebViewIsWebProcessResponsive(WebViewTest* test, gconstpointer)
     test->wait(1);
     test->loadHtml("<html></html>", nullptr);
     test->waitUntilIsWebProcessResponsiveChanged();
-    g_assert_false(webkit_web_view_get_is_web_process_responsive(test->m_webView));
+    g_assert_false(webkit_web_view_get_is_web_process_responsive(test->webView()));
     // 500ms after the web process is marked as unresponsive, the js while loop will finish and the process
     // will be responsive again, finishing the pending load.
     test->waitUntilLoadFinished();
-    g_assert_true(webkit_web_view_get_is_web_process_responsive(test->m_webView));
+    g_assert_true(webkit_web_view_get_is_web_process_responsive(test->webView()));
 }
 
 static void testWebViewBackgroundColor(WebViewTest* test, gconstpointer)
@@ -1578,7 +1553,7 @@ static void testWebViewBackgroundColor(WebViewTest* test, gconstpointer)
 
     // White is the default background.
     ColorType rgba;
-    webkit_web_view_get_background_color(test->m_webView, &rgba);
+    webkit_web_view_get_background_color(test->webView(), &rgba);
     g_assert_cmpfloat(rgba.red, ==, 1);
     g_assert_cmpfloat(rgba.green, ==, 1);
     g_assert_cmpfloat(rgba.blue, ==, 1);
@@ -1589,7 +1564,7 @@ static void testWebViewBackgroundColor(WebViewTest* test, gconstpointer)
     rgba.green = 0;
     rgba.blue = 0;
     rgba.alpha = 0.5;
-    webkit_web_view_set_background_color(test->m_webView, &rgba);
+    webkit_web_view_set_background_color(test->webView(), &rgba);
     g_assert_cmpfloat(rgba.red, ==, 1);
     g_assert_cmpfloat(rgba.green, ==, 0);
     g_assert_cmpfloat(rgba.blue, ==, 0);
@@ -1599,8 +1574,8 @@ static void testWebViewBackgroundColor(WebViewTest* test, gconstpointer)
     ColorType color;
     g_assert(webkit_color_parse(&color, "red"));
     g_assert_cmpfloat(color.red, ==, 1);
-    webkit_web_view_set_background_color(test->m_webView, &color);
-    webkit_web_view_get_background_color(test->m_webView, &rgba);
+    webkit_web_view_set_background_color(test->webView(), &color);
+    webkit_web_view_get_background_color(test->webView(), &rgba);
     g_assert_cmpfloat(rgba.red, ==, 1);
     g_assert_cmpfloat(rgba.green, ==, 0);
     g_assert_cmpfloat(rgba.blue, ==, 0);
@@ -1618,7 +1593,7 @@ static void testWebViewPreferredSize(WebViewTest* test, gconstpointer)
     test->waitUntilLoadFinished();
     test->showInWindow();
     GtkRequisition minimunSize, naturalSize;
-    gtk_widget_get_preferred_size(GTK_WIDGET(test->m_webView), &minimunSize, &naturalSize);
+    gtk_widget_get_preferred_size(GTK_WIDGET(test->webView()), &minimunSize, &naturalSize);
     g_assert_cmpint(minimunSize.width, ==, 0);
     g_assert_cmpint(minimunSize.height, ==, 0);
     g_assert_cmpint(naturalSize.width, ==, 325);
@@ -1637,7 +1612,7 @@ public:
 
     WebViewTitleTest()
     {
-        g_signal_connect(m_webView, "notify::title", G_CALLBACK(titleChangedCallback), this);
+        g_signal_connect(m_webView.get(), "notify::title", G_CALLBACK(titleChangedCallback), this);
     }
 
     Vector<CString> m_webViewTitles;
@@ -1683,7 +1658,7 @@ public:
     }
 
     FrameDisplayedTest()
-        : m_id(webkit_web_view_add_frame_displayed_callback(m_webView, [](WebKitWebView*, gpointer userData) {
+        : m_id(webkit_web_view_add_frame_displayed_callback(m_webView.get(), [](WebKitWebView*, gpointer userData) {
             auto* test = static_cast<FrameDisplayedTest*>(userData);
             if (!test->m_maxFrames)
                 return;
@@ -1697,7 +1672,7 @@ public:
 
     ~FrameDisplayedTest()
     {
-        webkit_web_view_remove_frame_displayed_callback(m_webView, m_id);
+        webkit_web_view_remove_frame_displayed_callback(m_webView.get(), m_id);
     }
 
     void waitUntilFramesDisplayed(unsigned framesCount = 1)
@@ -1723,7 +1698,7 @@ static void testWebViewFrameDisplayed(FrameDisplayedTest* test, gconstpointer)
     test->waitUntilFramesDisplayed(10);
 
     bool secondCallbackCalled = false;
-    auto id = webkit_web_view_add_frame_displayed_callback(test->m_webView, [](WebKitWebView*, gpointer userData) {
+    auto id = webkit_web_view_add_frame_displayed_callback(test->webView(), [](WebKitWebView*, gpointer userData) {
         auto* secondCallbackCalled = static_cast<bool*>(userData);
         *secondCallbackCalled = true;
     }, &secondCallbackCalled, nullptr);
@@ -1731,11 +1706,11 @@ static void testWebViewFrameDisplayed(FrameDisplayedTest* test, gconstpointer)
     g_assert_true(secondCallbackCalled);
 
     secondCallbackCalled = false;
-    webkit_web_view_remove_frame_displayed_callback(test->m_webView, id);
+    webkit_web_view_remove_frame_displayed_callback(test->webView(), id);
     test->waitUntilFramesDisplayed();
     g_assert_false(secondCallbackCalled);
 
-    id = webkit_web_view_add_frame_displayed_callback(test->m_webView, [](WebKitWebView* webView, gpointer userData) {
+    id = webkit_web_view_add_frame_displayed_callback(test->webView(), [](WebKitWebView* webView, gpointer userData) {
         auto* id = static_cast<unsigned*>(userData);
         webkit_web_view_remove_frame_displayed_callback(webView, *id);
     }, &id, [](gpointer userData) {
@@ -1745,7 +1720,7 @@ static void testWebViewFrameDisplayed(FrameDisplayedTest* test, gconstpointer)
     test->waitUntilFramesDisplayed();
     g_assert_cmpuint(id, ==, 0);
 
-    auto id2 = webkit_web_view_add_frame_displayed_callback(test->m_webView, [](WebKitWebView* webView, gpointer userData) {
+    auto id2 = webkit_web_view_add_frame_displayed_callback(test->webView(), [](WebKitWebView* webView, gpointer userData) {
         auto* id = static_cast<unsigned*>(userData);
         if (*id) {
             webkit_web_view_remove_frame_displayed_callback(webView, *id);
@@ -1754,7 +1729,7 @@ static void testWebViewFrameDisplayed(FrameDisplayedTest* test, gconstpointer)
     }, &id, nullptr);
 
     secondCallbackCalled = false;
-    id = webkit_web_view_add_frame_displayed_callback(test->m_webView, [](WebKitWebView* webView, gpointer userData) {
+    id = webkit_web_view_add_frame_displayed_callback(test->webView(), [](WebKitWebView* webView, gpointer userData) {
         auto* secondCallbackCalled = static_cast<bool*>(userData);
         *secondCallbackCalled = true;
     }, &secondCallbackCalled, nullptr);
@@ -1762,7 +1737,7 @@ static void testWebViewFrameDisplayed(FrameDisplayedTest* test, gconstpointer)
     g_assert_cmpuint(id, ==, 0);
     g_assert_false(secondCallbackCalled);
 
-    webkit_web_view_remove_frame_displayed_callback(test->m_webView, id2);
+    webkit_web_view_remove_frame_displayed_callback(test->webView(), id2);
 }
 #endif
 
@@ -1777,12 +1752,12 @@ public:
 
     WebViewTerminateWebProcessTest()
     {
-        g_signal_connect_after(m_webView, "web-process-terminated", G_CALLBACK(WebViewTerminateWebProcessTest::webProcessTerminatedCallback), this);
+        g_signal_connect_after(m_webView.get(), "web-process-terminated", G_CALLBACK(WebViewTerminateWebProcessTest::webProcessTerminatedCallback), this);
     }
 
     ~WebViewTerminateWebProcessTest()
     {
-        g_signal_handlers_disconnect_by_data(m_webView, this);
+        g_signal_handlers_disconnect_by_data(m_webView.get(), this);
     }
 
     WebKitWebProcessTerminationReason m_terminationReason { WEBKIT_WEB_PROCESS_CRASHED };
@@ -1793,9 +1768,9 @@ static void testWebViewTerminateWebProcess(WebViewTerminateWebProcessTest* test,
     test->loadHtml("<html></html>", nullptr);
     test->waitUntilLoadFinished();
     test->m_expectedWebProcessCrash = true;
-    webkit_web_view_terminate_web_process(test->m_webView);
+    webkit_web_view_terminate_web_process(test->webView());
     g_assert_cmpuint(test->m_terminationReason, ==, WEBKIT_WEB_PROCESS_TERMINATED_BY_API);
-    g_assert_true(webkit_web_view_get_is_web_process_responsive(test->m_webView));
+    g_assert_true(webkit_web_view_get_is_web_process_responsive(test->webView()));
 }
 
 static void testWebViewTerminateUnresponsiveWebProcess(WebViewTerminateWebProcessTest* test, gconstpointer)
@@ -1813,21 +1788,21 @@ static void testWebViewTerminateUnresponsiveWebProcess(WebViewTerminateWebProces
 
     test->loadHtml(hangHTML, nullptr);
     test->waitUntilLoadFinished();
-    g_assert_true(webkit_web_view_get_is_web_process_responsive(test->m_webView));
+    g_assert_true(webkit_web_view_get_is_web_process_responsive(test->webView()));
     // Wait 1 second, so the js while loop kicks in and blocks the web process, and try to load a new page.
     // As the web process is busy this won't work, and after 3 seconds the web process will be marked
     // as unresponsive.
     test->wait(1);
     test->loadHtml("<html></html>", nullptr);
     test->waitUntilIsWebProcessResponsiveChanged();
-    g_assert_false(webkit_web_view_get_is_web_process_responsive(test->m_webView));
+    g_assert_false(webkit_web_view_get_is_web_process_responsive(test->webView()));
 
     // Now that the process is unresponsive, terminate it.
     test->m_expectedWebProcessCrash = true;
     test->m_terminationReason = WEBKIT_WEB_PROCESS_CRASHED;
-    webkit_web_view_terminate_web_process(test->m_webView);
+    webkit_web_view_terminate_web_process(test->webView());
     g_assert_cmpuint(test->m_terminationReason, ==, WEBKIT_WEB_PROCESS_TERMINATED_BY_API);
-    g_assert_true(webkit_web_view_get_is_web_process_responsive(test->m_webView));
+    g_assert_true(webkit_web_view_get_is_web_process_responsive(test->webView()));
 }
 
 static void testWebViewCORSAllowlist(WebViewTest* test, gconstpointer)
@@ -1855,7 +1830,7 @@ static void testWebViewCORSAllowlist(WebViewTest* test, gconstpointer)
     };
 
     // Request is not allowed, foo should be 0.
-    webkit_web_view_load_html(test->m_webView, html, "http://example.com");
+    webkit_web_view_load_html(test->webView(), html, "http://example.com");
     test->waitUntilLoadFinished();
     g_assert_cmpint(waitForFooChanged(), ==, -1);
 
@@ -1863,9 +1838,9 @@ static void testWebViewCORSAllowlist(WebViewTest* test, gconstpointer)
     GUniquePtr<char*> allowlist(g_new(char*, 2));
     allowlist.get()[0] = g_strdup("foo://*");
     allowlist.get()[1] = nullptr;
-    webkit_web_view_set_cors_allowlist(test->m_webView, allowlist.get());
+    webkit_web_view_set_cors_allowlist(test->webView(), allowlist.get());
 
-    webkit_web_view_load_html(test->m_webView, html, "http://example.com");
+    webkit_web_view_load_html(test->webView(), html, "http://example.com");
     test->waitUntilLoadFinished();
     g_assert_cmpint(waitForFooChanged(), ==, -1);
 
@@ -1873,9 +1848,9 @@ static void testWebViewCORSAllowlist(WebViewTest* test, gconstpointer)
     allowlist.reset(g_new(char*, 2));
     allowlist.get()[0] = g_strdup("foo://*/*");
     allowlist.get()[1] = nullptr;
-    webkit_web_view_set_cors_allowlist(test->m_webView, allowlist.get());
+    webkit_web_view_set_cors_allowlist(test->webView(), allowlist.get());
 
-    webkit_web_view_load_html(test->m_webView, html, "http://example.com");
+    webkit_web_view_load_html(test->webView(), html, "http://example.com");
     test->waitUntilLoadFinished();
     g_assert_cmpint(waitForFooChanged(), ==, 200);
 }
@@ -1893,12 +1868,7 @@ static void testWebViewDefaultContentSecurityPolicy(WebViewTest* test, gconstpoi
     g_assert_cmpstr(evalValue.get(), ==, "allowed");
 
     // Create a new web view with a policy that blocks eval().
-    auto webView = Test::adoptView(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-        "default-content-security-policy", "script-src 'self'",
-#if PLATFORM(WPE)
-        "backend", Test::createWebViewBackend(),
-#endif
-        nullptr));
+    auto webView = test->createWebView("default-content-security-policy", "script-src 'self'", nullptr);
 
     // Ensure JavaScript still functions.
     value = test->runJavaScriptAndWaitUntilFinished("'allowed'", &error.outPtr(), webView.get());
@@ -1935,12 +1905,7 @@ static void testWebViewWebExtensionMode(WebViewTest* test, gconstpointer)
     g_assert_true(WebViewTest::javascriptResultToBoolean(value));
 
     // Create a new web view with an extension mode that blocks the unsafe-inline keyword.
-    auto webView = Test::adoptView(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-        "web-extension-mode", WEBKIT_WEB_EXTENSION_MODE_MANIFESTV3,
-#if PLATFORM(WPE)
-        "backend", Test::createWebViewBackend(),
-#endif
-        nullptr));
+    auto webView = test->createWebView("web-extension-mode", WEBKIT_WEB_EXTENSION_MODE_MANIFESTV3, nullptr);
     test->loadHtml(html, nullptr, webView.get());
     test->waitUntilLoadFinished(webView.get());
     value = test->runJavaScriptAndWaitUntilFinished("document.title == 'unset';", &error.outPtr(), webView.get());
@@ -1973,15 +1938,15 @@ static void testWebViewDisableWebSecurity(WebViewTest* test, gconstpointer)
     };
 
     // By default web security is enabled, request is not allowed, foo should be -1.
-    webkit_web_view_load_html(test->m_webView, html, "http://example.com");
+    webkit_web_view_load_html(test->webView(), html, "http://example.com");
     test->waitUntilLoadFinished();
     g_assert_cmpint(waitForFooChanged(), ==, -1);
 
-    WebKitSettings* settings = webkit_web_view_get_settings(test->m_webView);
+    WebKitSettings* settings = webkit_web_view_get_settings(test->webView());
     // Disable web security, now we can request forbidden content
     webkit_settings_set_disable_web_security(settings, TRUE);
 
-    webkit_web_view_load_html(test->m_webView, html, "http://example.com");
+    webkit_web_view_load_html(test->webView(), html, "http://example.com");
     test->waitUntilLoadFinished();
     g_assert_cmpint(waitForFooChanged(), ==, 200);
 }
@@ -2002,15 +1967,15 @@ static void testWebViewEnableHTML5Database(WebViewTest* test, gconstpointer)
     };
 
     // By default indexedDB API is enabled, there should not be an exception after calling indexedDB API, foo should be 200.
-    webkit_web_view_load_html(test->m_webView, html, "http://example.com");
+    webkit_web_view_load_html(test->webView(), html, "http://example.com");
     test->waitUntilLoadFinished();
     g_assert_cmpint(waitForFooChanged(), ==, 200);
 
-    WebKitSettings* settings = webkit_web_view_get_settings(test->m_webView);
+    WebKitSettings* settings = webkit_web_view_get_settings(test->webView());
     // Disable indexedDB API, any call with indexedDB API will throw an exception, so foo should be -1.
     webkit_settings_set_enable_html5_database(settings, FALSE);
 
-    webkit_web_view_load_html(test->m_webView, html, "http://example.com");
+    webkit_web_view_load_html(test->webView(), html, "http://example.com");
     test->waitUntilLoadFinished();
     g_assert_cmpint(waitForFooChanged(), ==, -1);
 }
@@ -2021,10 +1986,10 @@ static void testWebViewLoadAlternateHTMLFromPageWithCSP(WebViewTest* test, gcons
     char alternateHTML[] = "<html><head></head><body><script>test=true</script></body></html>";
     GUniqueOutPtr<GError> error;
 
-    webkit_web_view_load_html(test->m_webView, html, "http://example.com");
+    webkit_web_view_load_html(test->webView(), html, "http://example.com");
     test->waitUntilLoadFinished();
 
-    webkit_web_view_load_alternate_html(test->m_webView, alternateHTML, "about:error", nullptr);
+    webkit_web_view_load_alternate_html(test->webView(), alternateHTML, "about:error", nullptr);
     test->waitUntilLoadFinished();
     test->runJavaScriptAndWaitUntilFinished("test === true", &error.outPtr());
     g_assert_no_error(error.get());

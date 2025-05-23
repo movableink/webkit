@@ -32,8 +32,8 @@ public:
     static bool shouldInitializeWebViewInConstructor;
     static bool shouldCreateEphemeralWebView;
     void initializeWebView();
+    WebKitWebView* webView() const { return m_webView.get(); }
 
-    void platformInitializeWebView();
     void platformDestroy();
 
     virtual void loadURI(const char* uri);
@@ -111,7 +111,7 @@ public:
     GRefPtr<GDBusProxy> extensionProxy();
 
     GRefPtr<WebKitUserContentManager> m_userContentManager;
-    WebKitWebView* m_webView { nullptr };
+    GRefPtr<WebKitWebView> m_webView;
     GMainLoop* m_mainLoop;
     CString m_activeURI;
     CString m_expectedTitle;

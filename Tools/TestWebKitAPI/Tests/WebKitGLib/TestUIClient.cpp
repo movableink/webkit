@@ -311,9 +311,9 @@ public:
     void waitUntilDisplayCaptureStateChangedTo(WebKitMediaCaptureState expectedCaptureState)
     {
         m_expectedDisplayCaptureState = expectedCaptureState;
-        g_signal_connect(m_webView, "notify::display-capture-state", G_CALLBACK(displayCaptureChanged), this);
+        g_signal_connect(m_webView.get(), "notify::display-capture-state", G_CALLBACK(displayCaptureChanged), this);
         g_main_loop_run(m_mainLoop);
-        g_assert_cmpuint(webkit_web_view_get_display_capture_state(m_webView), ==, expectedCaptureState);
+        g_assert_cmpuint(webkit_web_view_get_display_capture_state(m_webView.get()), ==, expectedCaptureState);
         m_expectedDisplayCaptureState.reset();
     }
 
@@ -329,9 +329,9 @@ public:
     void waitUntilMicrophoneCaptureStateChangedTo(WebKitMediaCaptureState expectedCaptureState)
     {
         m_expectedMicrophoneCaptureState = expectedCaptureState;
-        g_signal_connect(m_webView, "notify::microphone-capture-state", G_CALLBACK(microphoneCaptureChanged), this);
+        g_signal_connect(m_webView.get(), "notify::microphone-capture-state", G_CALLBACK(microphoneCaptureChanged), this);
         g_main_loop_run(m_mainLoop);
-        g_assert_cmpuint(webkit_web_view_get_microphone_capture_state(m_webView), ==, expectedCaptureState);
+        g_assert_cmpuint(webkit_web_view_get_microphone_capture_state(m_webView.get()), ==, expectedCaptureState);
         m_expectedMicrophoneCaptureState.reset();
     }
 
@@ -347,9 +347,9 @@ public:
     void waitUntilCameraCaptureStateChangedTo(WebKitMediaCaptureState expectedCaptureState)
     {
         m_expectedCameraCaptureState = expectedCaptureState;
-        g_signal_connect(m_webView, "notify::camera-capture-state", G_CALLBACK(cameraCaptureChanged), this);
+        g_signal_connect(m_webView.get(), "notify::camera-capture-state", G_CALLBACK(cameraCaptureChanged), this);
         g_main_loop_run(m_mainLoop);
-        g_assert_cmpuint(webkit_web_view_get_camera_capture_state(m_webView), ==, expectedCaptureState);
+        g_assert_cmpuint(webkit_web_view_get_camera_capture_state(m_webView.get()), ==, expectedCaptureState);
         m_expectedCameraCaptureState.reset();
     }
 
@@ -363,12 +363,12 @@ public:
         , m_expectedDisplayMedia(false)
         , m_mouseTargetModifiers(0)
     {
-        webkit_settings_set_javascript_can_open_windows_automatically(webkit_web_view_get_settings(m_webView), TRUE);
-        g_signal_connect(m_webView, "create", G_CALLBACK(viewCreateCallback), this);
-        g_signal_connect(m_webView, "script-dialog", G_CALLBACK(scriptDialog), this);
-        g_signal_connect(m_webView, "mouse-target-changed", G_CALLBACK(mouseTargetChanged), this);
-        g_signal_connect(m_webView, "permission-request", G_CALLBACK(permissionRequested), this);
-        g_signal_connect(m_webView, "query-permission-state", G_CALLBACK(queryPermissionStateCallback), this);
+        webkit_settings_set_javascript_can_open_windows_automatically(webkit_web_view_get_settings(m_webView.get()), TRUE);
+        g_signal_connect(m_webView.get(), "create", G_CALLBACK(viewCreateCallback), this);
+        g_signal_connect(m_webView.get(), "script-dialog", G_CALLBACK(scriptDialog), this);
+        g_signal_connect(m_webView.get(), "mouse-target-changed", G_CALLBACK(mouseTargetChanged), this);
+        g_signal_connect(m_webView.get(), "permission-request", G_CALLBACK(permissionRequested), this);
+        g_signal_connect(m_webView.get(), "query-permission-state", G_CALLBACK(queryPermissionStateCallback), this);
 #if !ENABLE(2022_GLIB_API)
         webkit_user_content_manager_register_script_message_handler(m_userContentManager.get(), "permission");
         webkit_user_content_manager_register_script_message_handler(m_userContentManager.get(), "queryPermission");
@@ -382,7 +382,7 @@ public:
 
     ~UIClientTest()
     {
-        g_signal_handlers_disconnect_matched(m_webView, G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
+        g_signal_handlers_disconnect_matched(m_webView.get(), G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
         g_signal_handlers_disconnect_matched(m_userContentManager.get(), G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
 
 #if !ENABLE(2022_GLIB_API)
@@ -401,15 +401,15 @@ public:
 
     void tryCloseAndWaitUntilClosed()
     {
-        gulong handler = g_signal_connect_swapped(m_webView, "close", G_CALLBACK(tryWebViewCloseCallback), this);
+        gulong handler = g_signal_connect_swapped(m_webView.get(), "close", G_CALLBACK(tryWebViewCloseCallback), this);
         // Use an idle because webkit_web_view_try_close can emit the close signal in the
         // current run loop iteration.
         g_idle_add([](gpointer data) -> gboolean {
             webkit_web_view_try_close(WEBKIT_WEB_VIEW(data));
             return G_SOURCE_REMOVE;
-        }, m_webView);
+        }, m_webView.get());
         g_main_loop_run(m_mainLoop);
-        g_signal_handler_disconnect(m_webView, handler);
+        g_signal_handler_disconnect(m_webView.get(), handler);
     }
 
     void waitUntilMainLoopFinishes()
@@ -468,46 +468,42 @@ public:
 
     virtual WebKitWebView* viewCreate(WebKitWebView* webView, WebKitNavigationAction* navigation)
     {
-        g_assert_true(webView == m_webView);
+        g_assert_true(webView == m_webView.get());
         g_assert_nonnull(navigation);
 
-        auto* newWebView = Test::createWebView(webView);
-#if PLATFORM(GTK)
-        g_object_ref_sink(newWebView);
-#endif
-
+        auto newWebView = createWebView("related-view", webView, nullptr);
         m_webViewEvents.append(Create);
 
-        WebKitWindowProperties* windowProperties = webkit_web_view_get_window_properties(WEBKIT_WEB_VIEW(newWebView));
+        WebKitWindowProperties* windowProperties = webkit_web_view_get_window_properties(WEBKIT_WEB_VIEW(newWebView.get()));
         g_assert_nonnull(windowProperties);
         assertObjectIsDeletedWhenTestFinishes(G_OBJECT(windowProperties));
         m_windowPropertiesChanged.clear();
 
         g_signal_connect(windowProperties, "notify", G_CALLBACK(windowPropertiesNotifyCallback), this);
-        g_signal_connect(newWebView, "ready-to-show", G_CALLBACK(viewReadyToShowCallback), this);
-        g_signal_connect(newWebView, "close", G_CALLBACK(viewCloseCallback), this);
+        g_signal_connect(newWebView.get(), "ready-to-show", G_CALLBACK(viewReadyToShowCallback), this);
+        g_signal_connect(newWebView.get(), "close", G_CALLBACK(viewCloseCallback), this);
 
 #if PLATFORM(GTK)
         if (m_shouldCreateWebViewsInNewWindowsAutomatically) {
             g_assert_null(m_parentWindow);
 #if USE(GTK4)
             m_parentWindow = gtk_window_new();
-            gtk_window_set_child(GTK_WINDOW(m_parentWindow), GTK_WIDGET(newWebView));
+            gtk_window_set_child(GTK_WINDOW(m_parentWindow), GTK_WIDGET(newWebView.get()));
 #else
             m_parentWindow = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-            gtk_container_add(GTK_CONTAINER(m_parentWindow), GTK_WIDGET(newWebView));
+            gtk_container_add(GTK_CONTAINER(m_parentWindow), GTK_WIDGET(newWebView.get()));
             gtk_widget_show(GTK_WIDGET(newWebView));
 #endif
             gtk_window_set_default_size(GTK_WINDOW(m_parentWindow), m_defaultGeometryNewWindows.width, m_defaultGeometryNewWindows.height);
             gtk_widget_show(m_parentWindow);
         }
 #endif
-        return WEBKIT_WEB_VIEW(newWebView);
+        return newWebView.leakRef();
     }
 
     virtual void viewReadyToShow(WebKitWebView* webView)
     {
-        g_assert_true(webView != m_webView);
+        g_assert_true(webView != m_webView.get());
 
         WebKitWindowProperties* windowProperties = webkit_web_view_get_window_properties(webView);
         g_assert_nonnull(windowProperties);
@@ -519,9 +515,10 @@ public:
 
     virtual void viewClose(WebKitWebView* webView)
     {
-        g_assert_true(webView != m_webView);
+        g_assert_true(webView != m_webView.get());
 
         m_webViewEvents.append(Close);
+        g_signal_handlers_disconnect_by_data(webView, this);
         g_object_unref(webView);
 
         g_main_loop_quit(m_mainLoop);
@@ -675,13 +672,13 @@ public:
 
     static void dialogRunAsModalCallback(WebKitWebView* webView, ModalDialogsTest* test)
     {
-        g_assert_true(webView != test->m_webView);
+        g_assert_true(webView != test->webView());
         test->m_webViewEvents.append(RunAsModal);
     }
 
     WebKitWebView* viewCreate(WebKitWebView* webView, WebKitNavigationAction* navigation)
     {
-        g_assert_true(webView == m_webView);
+        g_assert_true(webView == m_webView.get());
 
         auto* newWebView = UIClientTest::viewCreate(webView, navigation);
         g_signal_connect(newWebView, "run-as-modal", G_CALLBACK(dialogRunAsModalCallback), this);
@@ -690,7 +687,7 @@ public:
 
     void viewReadyToShow(WebKitWebView* webView)
     {
-        g_assert_true(webView != m_webView);
+        g_assert_true(webView != m_webView.get());
         m_webViewEvents.append(ReadyToShow);
     }
 };
@@ -716,7 +713,7 @@ static void testWebViewJavaScriptDialogs(UIClientTest* test, gconstpointer)
         GUniquePtr<char> alertHTML(g_strdup_printf(htmlOnLoadFormat, alertDialogMessage.get()));
         test->loadHtml(alertHTML.get(), nullptr);
         test->waitUntilMainLoopFinishes();
-        webkit_web_view_stop_loading(test->m_webView);
+        webkit_web_view_stop_loading(test->webView());
         test->waitUntilLoadFinished();
 
         test->m_scriptDialogType = WEBKIT_SCRIPT_DIALOG_CONFIRM;
@@ -724,7 +721,7 @@ static void testWebViewJavaScriptDialogs(UIClientTest* test, gconstpointer)
         GUniquePtr<char> confirmHTML(g_strdup_printf(htmlOnLoadFormat, confirmDialogMessage.get()));
         test->loadHtml(confirmHTML.get(), nullptr);
         test->waitUntilMainLoopFinishes();
-        webkit_web_view_stop_loading(test->m_webView);
+        webkit_web_view_stop_loading(test->webView());
         test->waitUntilLoadFinished();
 
         test->m_scriptDialogType = WEBKIT_SCRIPT_DIALOG_PROMPT;
@@ -732,7 +729,7 @@ static void testWebViewJavaScriptDialogs(UIClientTest* test, gconstpointer)
         GUniquePtr<char> promptHTML(g_strdup_printf(htmlOnLoadFormat, promptDialogMessage.get()));
         test->loadHtml(promptHTML.get(), nullptr);
         test->waitUntilMainLoopFinishes();
-        webkit_web_view_stop_loading(test->m_webView);
+        webkit_web_view_stop_loading(test->webView());
         test->waitUntilLoadFinished();
     }
 
@@ -751,7 +748,7 @@ static void testWebViewJavaScriptDialogs(UIClientTest* test, gconstpointer)
     // FIXME: reloading HTML data doesn't emit finished load event.
     // See https://bugs.webkit.org/show_bug.cgi?id=139089.
     test->m_scriptDialogConfirmed = false;
-    webkit_web_view_reload(test->m_webView);
+    webkit_web_view_reload(test->webView());
     test->waitUntilLoadFinished();
     g_assert_true(test->m_scriptDialogConfirmed);
 #endif
@@ -932,7 +929,7 @@ static void testWebViewMouseTarget(UIClientTest* test, gconstpointer)
     g_assert_cmpuint(test->m_mouseTargetModifiers, ==, 0);
 
     // Move over scrollbar.
-    hitTestResult = test->moveMouseAndWaitUntilMouseTargetChanged(gtk_widget_get_allocated_width(GTK_WIDGET(test->m_webView)) - 4, 5);
+    hitTestResult = test->moveMouseAndWaitUntilMouseTargetChanged(gtk_widget_get_allocated_width(GTK_WIDGET(test->webView())) - 4, 5);
     g_assert_false(webkit_hit_test_result_context_is_link(hitTestResult));
     g_assert_false(webkit_hit_test_result_context_is_image(hitTestResult));
     g_assert_false(webkit_hit_test_result_context_is_media(hitTestResult));
@@ -1000,7 +997,7 @@ static void testWebViewGeolocationPermissionRequests(UIClientTest* test, gconstp
 #if ENABLE(ENCRYPTED_MEDIA)
 static void testWebViewMediaKeySystemPermissionRequests(UIClientTest* test, gconstpointer)
 {
-    webkit_settings_set_enable_encrypted_media(webkit_web_view_get_settings(test->m_webView), TRUE);
+    webkit_settings_set_enable_encrypted_media(webkit_web_view_get_settings(test->webView()), TRUE);
     test->showInWindow();
     static const char* mediaKeySystemRequestHTML = "<html>"
         "  <script>"
@@ -1082,7 +1079,7 @@ static void testWebViewQueryPermissionRequests(UIClientTest* test, gconstpointer
 #if ENABLE(MEDIA_STREAM)
 static void testWebViewUserMediaEnumerateDevicesPermissionCheck(UIClientTest* test, gconstpointer)
 {
-    WebKitSettings* settings = webkit_web_view_get_settings(test->m_webView);
+    WebKitSettings* settings = webkit_web_view_get_settings(test->webView());
     gboolean enabled = webkit_settings_get_enable_media_stream(settings);
     webkit_settings_set_enable_media_stream(settings, TRUE);
     webkitSettingsSetMediaCaptureRequiresSecureConnection(settings, FALSE);
@@ -1135,7 +1132,7 @@ static void testWebViewUserMediaEnumerateDevicesPermissionCheck(UIClientTest* te
 
 static void testWebViewUserMediaPermissionRequests(UIClientTest* test, gconstpointer)
 {
-    WebKitSettings* settings = webkit_web_view_get_settings(test->m_webView);
+    WebKitSettings* settings = webkit_web_view_get_settings(test->webView());
     gboolean enabled = webkit_settings_get_enable_media_stream(settings);
     webkit_settings_set_enable_media_stream(settings, TRUE);
     webkit_settings_set_enable_mock_capture_devices(settings, TRUE);
@@ -1164,38 +1161,38 @@ static void testWebViewUserMediaPermissionRequests(UIClientTest* test, gconstpoi
     test->m_allowPermissionRequests = false;
     test->loadHtml(userMediaRequestHTML, "https://foo.com/bar");
     test->waitUntilTitleChangedTo("NotAllowedError");
-    g_assert_cmpuint(webkit_web_view_get_display_capture_state(test->m_webView), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
-    g_assert_cmpuint(webkit_web_view_get_microphone_capture_state(test->m_webView), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
-    g_assert_cmpuint(webkit_web_view_get_camera_capture_state(test->m_webView), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
+    g_assert_cmpuint(webkit_web_view_get_display_capture_state(test->webView()), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
+    g_assert_cmpuint(webkit_web_view_get_microphone_capture_state(test->webView()), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
+    g_assert_cmpuint(webkit_web_view_get_camera_capture_state(test->webView()), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
 
     // Test allowing a permission request.
     test->m_allowPermissionRequests = true;
     test->loadHtml(userMediaRequestHTML, "https://foo.com/bar");
     test->waitUntilTitleChangedTo("OK");
-    g_assert_cmpuint(webkit_web_view_get_display_capture_state(test->m_webView), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
-    g_assert_cmpuint(webkit_web_view_get_microphone_capture_state(test->m_webView), ==, WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
-    g_assert_cmpuint(webkit_web_view_get_camera_capture_state(test->m_webView), ==, WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
+    g_assert_cmpuint(webkit_web_view_get_display_capture_state(test->webView()), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
+    g_assert_cmpuint(webkit_web_view_get_microphone_capture_state(test->webView()), ==, WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
+    g_assert_cmpuint(webkit_web_view_get_camera_capture_state(test->webView()), ==, WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
 
-    webkit_web_view_set_microphone_capture_state(test->m_webView, WEBKIT_MEDIA_CAPTURE_STATE_MUTED);
+    webkit_web_view_set_microphone_capture_state(test->webView(), WEBKIT_MEDIA_CAPTURE_STATE_MUTED);
     test->waitUntilMicrophoneCaptureStateChangedTo(WEBKIT_MEDIA_CAPTURE_STATE_MUTED);
 
-    webkit_web_view_set_microphone_capture_state(test->m_webView, WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
+    webkit_web_view_set_microphone_capture_state(test->webView(), WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
     test->waitUntilMicrophoneCaptureStateChangedTo(WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
 
-    webkit_web_view_set_camera_capture_state(test->m_webView, WEBKIT_MEDIA_CAPTURE_STATE_MUTED);
+    webkit_web_view_set_camera_capture_state(test->webView(), WEBKIT_MEDIA_CAPTURE_STATE_MUTED);
     test->waitUntilCameraCaptureStateChangedTo(WEBKIT_MEDIA_CAPTURE_STATE_MUTED);
 
-    webkit_web_view_set_camera_capture_state(test->m_webView, WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
+    webkit_web_view_set_camera_capture_state(test->webView(), WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
     test->waitUntilCameraCaptureStateChangedTo(WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
 
-    webkit_web_view_set_camera_capture_state(test->m_webView, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
+    webkit_web_view_set_camera_capture_state(test->webView(), WEBKIT_MEDIA_CAPTURE_STATE_NONE);
     test->waitUntilCameraCaptureStateChangedTo(WEBKIT_MEDIA_CAPTURE_STATE_NONE);
 
     // A de-activated capture device cannot be re-activated.
-    webkit_web_view_set_camera_capture_state(test->m_webView, WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
-    g_assert_cmpuint(webkit_web_view_get_camera_capture_state(test->m_webView), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
+    webkit_web_view_set_camera_capture_state(test->webView(), WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
+    g_assert_cmpuint(webkit_web_view_get_camera_capture_state(test->webView()), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
 
-    g_assert_cmpuint(webkit_web_view_get_microphone_capture_state(test->m_webView), ==, WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
+    g_assert_cmpuint(webkit_web_view_get_microphone_capture_state(test->webView()), ==, WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
 
     webkit_settings_set_enable_media_stream(settings, enabled);
     webkit_settings_set_enable_mock_capture_devices(settings, FALSE);
@@ -1205,7 +1202,7 @@ static void testWebViewUserMediaPermissionRequests(UIClientTest* test, gconstpoi
 
 static void testWebViewAudioOnlyUserMediaPermissionRequests(UIClientTest* test, gconstpointer)
 {
-    WebKitSettings* settings = webkit_web_view_get_settings(test->m_webView);
+    WebKitSettings* settings = webkit_web_view_get_settings(test->webView());
     gboolean enabled = webkit_settings_get_enable_media_stream(settings);
     webkit_settings_set_enable_media_stream(settings, TRUE);
     webkit_settings_set_enable_mock_capture_devices(settings, TRUE);
@@ -1234,9 +1231,9 @@ static void testWebViewAudioOnlyUserMediaPermissionRequests(UIClientTest* test, 
     test->m_allowPermissionRequests = false;
     test->loadHtml(userMediaRequestHTML, "https://foo.com/bar");
     test->waitUntilTitleChangedTo("NotAllowedError");
-    g_assert_cmpuint(webkit_web_view_get_display_capture_state(test->m_webView), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
-    g_assert_cmpuint(webkit_web_view_get_microphone_capture_state(test->m_webView), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
-    g_assert_cmpuint(webkit_web_view_get_camera_capture_state(test->m_webView), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
+    g_assert_cmpuint(webkit_web_view_get_display_capture_state(test->webView()), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
+    g_assert_cmpuint(webkit_web_view_get_microphone_capture_state(test->webView()), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
+    g_assert_cmpuint(webkit_web_view_get_camera_capture_state(test->webView()), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
 
     webkit_settings_set_enable_media_stream(settings, enabled);
     webkit_settings_set_enable_mock_capture_devices(settings, FALSE);
@@ -1246,7 +1243,7 @@ static void testWebViewAudioOnlyUserMediaPermissionRequests(UIClientTest* test, 
 
 static void testWebViewDisplayUserMediaPermissionRequests(UIClientTest* test, gconstpointer)
 {
-    WebKitSettings* settings = webkit_web_view_get_settings(test->m_webView);
+    WebKitSettings* settings = webkit_web_view_get_settings(test->webView());
     gboolean enabled = webkit_settings_get_enable_media_stream(settings);
     webkit_settings_set_enable_media_stream(settings, TRUE);
     webkit_settings_set_enable_mock_capture_devices(settings, TRUE);
@@ -1278,9 +1275,9 @@ static void testWebViewDisplayUserMediaPermissionRequests(UIClientTest* test, gc
     test->waitUntilLoadFinished();
     test->clickMouseButton(5, 5);
     test->waitUntilTitleChangedTo("NotAllowedError");
-    g_assert_cmpuint(webkit_web_view_get_display_capture_state(test->m_webView), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
-    g_assert_cmpuint(webkit_web_view_get_microphone_capture_state(test->m_webView), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
-    g_assert_cmpuint(webkit_web_view_get_camera_capture_state(test->m_webView), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
+    g_assert_cmpuint(webkit_web_view_get_display_capture_state(test->webView()), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
+    g_assert_cmpuint(webkit_web_view_get_microphone_capture_state(test->webView()), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
+    g_assert_cmpuint(webkit_web_view_get_camera_capture_state(test->webView()), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
 
     // Test allowing a permission request.
     test->m_allowPermissionRequests = true;
@@ -1288,22 +1285,22 @@ static void testWebViewDisplayUserMediaPermissionRequests(UIClientTest* test, gc
     test->waitUntilLoadFinished();
     test->clickMouseButton(5, 5);
     test->waitUntilTitleChangedTo("OK");
-    g_assert_cmpuint(webkit_web_view_get_display_capture_state(test->m_webView), ==, WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
-    g_assert_cmpuint(webkit_web_view_get_microphone_capture_state(test->m_webView), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
-    g_assert_cmpuint(webkit_web_view_get_camera_capture_state(test->m_webView), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
+    g_assert_cmpuint(webkit_web_view_get_display_capture_state(test->webView()), ==, WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
+    g_assert_cmpuint(webkit_web_view_get_microphone_capture_state(test->webView()), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
+    g_assert_cmpuint(webkit_web_view_get_camera_capture_state(test->webView()), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
 
-    webkit_web_view_set_display_capture_state(test->m_webView, WEBKIT_MEDIA_CAPTURE_STATE_MUTED);
+    webkit_web_view_set_display_capture_state(test->webView(), WEBKIT_MEDIA_CAPTURE_STATE_MUTED);
     test->waitUntilDisplayCaptureStateChangedTo(WEBKIT_MEDIA_CAPTURE_STATE_MUTED);
 
-    webkit_web_view_set_display_capture_state(test->m_webView, WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
+    webkit_web_view_set_display_capture_state(test->webView(), WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
     test->waitUntilDisplayCaptureStateChangedTo(WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
 
-    webkit_web_view_set_display_capture_state(test->m_webView, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
+    webkit_web_view_set_display_capture_state(test->webView(), WEBKIT_MEDIA_CAPTURE_STATE_NONE);
     test->waitUntilDisplayCaptureStateChangedTo(WEBKIT_MEDIA_CAPTURE_STATE_NONE);
 
     // A de-activated capture device cannot be re-activated.
-    webkit_web_view_set_display_capture_state(test->m_webView, WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
-    g_assert_cmpuint(webkit_web_view_get_display_capture_state(test->m_webView), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
+    webkit_web_view_set_display_capture_state(test->webView(), WEBKIT_MEDIA_CAPTURE_STATE_ACTIVE);
+    g_assert_cmpuint(webkit_web_view_get_display_capture_state(test->webView()), ==, WEBKIT_MEDIA_CAPTURE_STATE_NONE);
 
     webkit_settings_set_enable_media_stream(settings, enabled);
     webkit_settings_set_enable_mock_capture_devices(settings, FALSE);
@@ -1353,7 +1350,7 @@ public:
 
     FileChooserTest()
     {
-        g_signal_connect(m_webView, "run-file-chooser", G_CALLBACK(runFileChooserCallback), this);
+        g_signal_connect(m_webView.get(), "run-file-chooser", G_CALLBACK(runFileChooserCallback), this);
     }
 
     static gboolean runFileChooserCallback(WebKitWebView*, WebKitFileChooserRequest* request, FileChooserTest* test)
@@ -1490,7 +1487,7 @@ public:
 
     ColorChooserTest()
     {
-        g_signal_connect(m_webView, "run-color-chooser", G_CALLBACK(runColorChooserCallback), this);
+        g_signal_connect(m_webView.get(), "run-color-chooser", G_CALLBACK(runColorChooserCallback), this);
     }
 
     void runColorChooser(WebKitColorChooserRequest* request)

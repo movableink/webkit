@@ -26,10 +26,6 @@ void WebViewTest::platformDestroy()
 {
 }
 
-void WebViewTest::platformInitializeWebView()
-{
-}
-
 void WebViewTest::quitMainLoopAfterProcessingPendingEvents()
 {
     // FIXME: implement if needed.
@@ -43,13 +39,13 @@ void WebViewTest::resizeView(int width, int height)
 
 void WebViewTest::showInWindow(int, int)
 {
-    auto* backend = webkit_web_view_backend_get_wpe_backend(webkit_web_view_get_backend(m_webView));
+    auto* backend = webkit_web_view_backend_get_wpe_backend(webkit_web_view_get_backend(m_webView.get()));
     wpe_view_backend_add_activity_state(backend, wpe_view_activity_state_visible | wpe_view_activity_state_in_window | wpe_view_activity_state_focused);
 }
 
 void WebViewTest::hideView()
 {
-    auto* backend = webkit_web_view_backend_get_wpe_backend(webkit_web_view_get_backend(m_webView));
+    auto* backend = webkit_web_view_backend_get_wpe_backend(webkit_web_view_get_backend(m_webView.get()));
     wpe_view_backend_remove_activity_state(backend, wpe_view_activity_state_visible | wpe_view_activity_state_focused);
 }
 
@@ -60,7 +56,7 @@ void WebViewTest::mouseMoveTo(int x, int y, unsigned mouseModifiers)
 
 void WebViewTest::clickMouseButton(int x, int y, unsigned button, unsigned mouseModifiers)
 {
-    auto* backend = webkit_web_view_backend_get_wpe_backend(webkit_web_view_get_backend(m_webView));
+    auto* backend = webkit_web_view_backend_get_wpe_backend(webkit_web_view_get_backend(m_webView.get()));
     struct wpe_input_pointer_event event { wpe_input_pointer_event_type_button, 0, x, y, button, 1, mouseModifiers };
     wpe_view_backend_dispatch_pointer_event(backend, &event);
     event.state = 0;
@@ -69,7 +65,7 @@ void WebViewTest::clickMouseButton(int x, int y, unsigned button, unsigned mouse
 
 void WebViewTest::keyStroke(unsigned keyVal, unsigned keyModifiers)
 {
-    auto* backend = webkit_web_view_backend_get_wpe_backend(webkit_web_view_get_backend(m_webView));
+    auto* backend = webkit_web_view_backend_get_wpe_backend(webkit_web_view_get_backend(m_webView.get()));
     struct wpe_input_xkb_keymap_entry* entries;
     uint32_t entriesCount;
     wpe_input_xkb_context_get_entries_for_key_code(wpe_input_xkb_context_get_default(), keyVal, &entries, &entriesCount);

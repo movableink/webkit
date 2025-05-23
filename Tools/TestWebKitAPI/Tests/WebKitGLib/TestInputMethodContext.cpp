@@ -273,15 +273,15 @@ public:
     {
         WebViewTest::showInWindow();
 #if PLATFORM(GTK)
-        auto* defaultContext = webkit_web_view_get_input_method_context(m_webView);
+        auto* defaultContext = webkit_web_view_get_input_method_context(m_webView.get());
         g_assert_true(WEBKIT_IS_INPUT_METHOD_CONTEXT(defaultContext));
         assertObjectIsDeletedWhenTestFinishes(G_OBJECT(defaultContext));
 #elif PLATFORM(WPE)
-        g_assert_null(webkit_web_view_get_input_method_context(m_webView));
+        g_assert_null(webkit_web_view_get_input_method_context(m_webView.get()));
 #endif
         assertObjectIsDeletedWhenTestFinishes(G_OBJECT(m_context.get()));
-        webkit_web_view_set_input_method_context(m_webView, WEBKIT_INPUT_METHOD_CONTEXT(m_context.get()));
-        g_assert_true(webkit_web_view_get_input_method_context(m_webView) == WEBKIT_INPUT_METHOD_CONTEXT(m_context.get()));
+        webkit_web_view_set_input_method_context(m_webView.get(), WEBKIT_INPUT_METHOD_CONTEXT(m_context.get()));
+        g_assert_true(webkit_web_view_get_input_method_context(m_webView.get()) == WEBKIT_INPUT_METHOD_CONTEXT(m_context.get()));
 
 #if !ENABLE(2022_GLIB_API)
         webkit_user_content_manager_register_script_message_handler(m_userContentManager.get(), "imEvent");

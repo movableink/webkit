@@ -582,7 +582,7 @@ static void testWebKitSettingsUserAgent(WebViewTest* test, gconstpointer)
 {
     GRefPtr<WebKitSettings> settings = adoptGRef(webkit_settings_new());
     CString defaultUserAgent = webkit_settings_get_user_agent(settings.get());
-    webkit_web_view_set_settings(test->m_webView, settings.get());
+    webkit_web_view_set_settings(test->webView(), settings.get());
 
     g_assert_nonnull(g_strstr_len(defaultUserAgent.data(), -1, "AppleWebKit"));
     g_assert_nonnull(g_strstr_len(defaultUserAgent.data(), -1, "Safari"));
@@ -619,7 +619,7 @@ static void testWebKitSettingsUserAgent(WebViewTest* test, gconstpointer)
 
 static void testWebKitSettingsJavaScriptMarkup(WebViewTest* test, gconstpointer)
 {
-    webkit_settings_set_enable_javascript_markup(webkit_web_view_get_settings(test->m_webView), FALSE);
+    webkit_settings_set_enable_javascript_markup(webkit_web_view_get_settings(test->webView()), FALSE);
     static const char* html =
         "<html>"
         " <head>"
@@ -634,12 +634,12 @@ static void testWebKitSettingsJavaScriptMarkup(WebViewTest* test, gconstpointer)
     test->loadHtml(html, nullptr);
     test->waitUntilTitleChanged();
 
-    g_assert_cmpstr(webkit_web_view_get_title(test->m_webView), ==, "No JavaScript allowed");
+    g_assert_cmpstr(webkit_web_view_get_title(test->webView()), ==, "No JavaScript allowed");
     auto* jsResult = test->runJavaScriptAndWaitUntilFinished("document.getElementsByTagName('script').length", nullptr);
     g_assert(jsResult);
     g_assert_cmpfloat(WebViewTest::javascriptResultToNumber(jsResult), ==, 0);
 
-    webkit_settings_set_enable_javascript_markup(webkit_web_view_get_settings(test->m_webView), TRUE);
+    webkit_settings_set_enable_javascript_markup(webkit_web_view_get_settings(test->webView()), TRUE);
 }
 
 #if USE(SOUP2)

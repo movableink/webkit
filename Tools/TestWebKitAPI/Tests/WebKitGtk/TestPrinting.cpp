@@ -29,7 +29,7 @@
 
 static void testPrintOperationPrintSettings(WebViewTest* test, gconstpointer)
 {
-    GRefPtr<WebKitPrintOperation> printOperation = adoptGRef(webkit_print_operation_new(test->m_webView));
+    GRefPtr<WebKitPrintOperation> printOperation = adoptGRef(webkit_print_operation_new(test->webView()));
     test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(printOperation.get()));
 
     g_assert_null(webkit_print_operation_get_print_settings(printOperation.get()));
@@ -50,7 +50,7 @@ static void testPrintOperationPrintSettings(WebViewTest* test, gconstpointer)
 
 static gboolean webViewPrintCallback(WebKitWebView* webView, WebKitPrintOperation* printOperation, WebViewTest* test)
 {
-    g_assert_true(webView == test->m_webView);
+    g_assert_true(webView == test->webView());
 
     g_assert_true(WEBKIT_IS_PRINT_OPERATION(printOperation));
     test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(printOperation));
@@ -65,7 +65,7 @@ static gboolean webViewPrintCallback(WebKitWebView* webView, WebKitPrintOperatio
 
 static void testWebViewPrint(WebViewTest* test, gconstpointer)
 {
-    g_signal_connect(test->m_webView, "print", G_CALLBACK(webViewPrintCallback), test);
+    g_signal_connect(test->webView(), "print", G_CALLBACK(webViewPrintCallback), test);
     test->loadHtml("<html><body onLoad=\"print();\">WebKitGTK printing test</body></html>", 0);
     g_main_loop_run(test->m_mainLoop);
 }
@@ -106,7 +106,7 @@ public:
 
     PrintTest()
     {
-        m_printOperation = adoptGRef(webkit_print_operation_new(m_webView));
+        m_printOperation = adoptGRef(webkit_print_operation_new(m_webView.get()));
         assertObjectIsDeletedWhenTestFinishes(G_OBJECT(m_printOperation.get()));
         g_signal_connect(m_printOperation.get(), "finished", G_CALLBACK(printFinishedCallback), this);
         g_signal_connect(m_printOperation.get(), "failed", G_CALLBACK(printFailedCallback), this);
@@ -221,6 +221,7 @@ public:
 
     static void webViewClosed(WebKitWebView* webView, CloseAfterPrintTest* test)
     {
+        g_signal_handlers_disconnect_by_data(webView, test);
         g_object_unref(webView);
         test->m_webViewClosed = true;
         if (test->m_printFinished)
@@ -229,21 +230,18 @@ public:
 
     CloseAfterPrintTest()
     {
-        webkit_settings_set_javascript_can_open_windows_automatically(webkit_web_view_get_settings(m_webView), TRUE);
-        g_signal_connect(m_webView, "create", G_CALLBACK(webViewCreate), this);
+        webkit_settings_set_javascript_can_open_windows_automatically(webkit_web_view_get_settings(m_webView.get()), TRUE);
+        g_signal_connect(m_webView.get(), "create", G_CALLBACK(webViewCreate), this);
     }
 
     GtkWidget* createWebView()
     {
-        GtkWidget* newWebView = GTK_WIDGET(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-            "related-view", m_webView,
-            nullptr));
-        g_object_ref_sink(newWebView);
+        auto newWebView = Test::createWebView("related-view", m_webView.get(), nullptr);
 
-        assertObjectIsDeletedWhenTestFinishes(G_OBJECT(newWebView));
-        g_signal_connect(newWebView, "print", G_CALLBACK(webViewPrint), this);
-        g_signal_connect(newWebView, "close", G_CALLBACK(webViewClosed), this);
-        return newWebView;
+        assertObjectIsDeletedWhenTestFinishes(G_OBJECT(newWebView.get()));
+        g_signal_connect(newWebView.get(), "print", G_CALLBACK(webViewPrint), this);
+        g_signal_connect(newWebView.get(), "close", G_CALLBACK(webViewClosed), this);
+        return GTK_WIDGET(newWebView.leakRef());
     }
 
     void print(WebKitPrintOperation* printOperation)
@@ -366,7 +364,7 @@ public:
     static gboolean openPrintDialog(PrintCustomWidgetTest* test)
     {
         g_idle_add(reinterpret_cast<GSourceFunc>(scheduleMovementThroughDialog), test);
-        test->m_response = webkit_print_operation_run_dialog(test->m_printOperation.get(), GTK_WINDOW(gtk_widget_get_toplevel(GTK_WIDGET(test->m_webView))));
+        test->m_response = webkit_print_operation_run_dialog(test->m_printOperation.get(), GTK_WINDOW(gtk_widget_get_toplevel(GTK_WIDGET(test->webView()))));
 
         return FALSE;
     }
@@ -386,7 +384,7 @@ public:
 
     void createWebKitPrintOperation()
     {
-        m_printOperation = adoptGRef(webkit_print_operation_new(m_webView));
+        m_printOperation = adoptGRef(webkit_print_operation_new(m_webView.get()));
         g_assert_nonnull(m_printOperation);
         assertObjectIsDeletedWhenTestFinishes(G_OBJECT(m_printOperation.get()));
 

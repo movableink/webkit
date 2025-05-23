@@ -2394,7 +2394,7 @@ static void testDocumentLoadEvents(AccessibilityTest* test, gconstpointer)
     events = { };
 
     test->startEventMonitor(std::nullopt, { "document:", "object:state-changed:busy" });
-    webkit_web_view_reload(test->m_webView);
+    webkit_web_view_reload(test->webView());
     test->waitUntilLoadFinished();
     events = test->stopEventMonitor(4);
     g_assert_cmpuint(events.size(), ==, 4);

@@ -49,7 +49,7 @@ public:
     virtual void loadCommitted()
     {
         GTlsCertificate* certificate = 0;
-        webkit_web_view_get_tls_info(m_webView, &certificate, &m_tlsErrors);
+        webkit_web_view_get_tls_info(m_webView.get(), &certificate, &m_tlsErrors);
         m_certificate = certificate;
         LoadTrackingTest::loadCommitted();
     }
@@ -106,12 +106,12 @@ public:
         : m_insecureContentRun(false)
         , m_insecureContentDisplayed(false)
     {
-        g_signal_connect(m_webView, "insecure-content-detected", G_CALLBACK(insecureContentDetectedCallback), this);
+        g_signal_connect(m_webView.get(), "insecure-content-detected", G_CALLBACK(insecureContentDetectedCallback), this);
     }
 
     static void insecureContentDetectedCallback(WebKitWebView* webView, WebKitInsecureContentEvent event, InsecureContentTest* test)
     {
-        g_assert_true(webView == test->m_webView);
+        g_assert_true(webView == test->webView());
 
         if (event == WEBKIT_INSECURE_CONTENT_RUN)
             test->m_insecureContentRun = true;
@@ -187,17 +187,13 @@ static void testTLSErrorsPolicy(SSLTest* test, gconstpointer)
     GRefPtr<WebKitNetworkSession> ephemeralSession = adoptGRef(webkit_network_session_new_ephemeral());
     webkit_network_session_set_tls_errors_policy(ephemeralSession.get(), webkit_network_session_get_tls_errors_policy(test->m_networkSession.get()));
 #endif
-    auto webView = Test::adoptView(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-#if PLATFORM(WPE)
-        "backend", Test::createWebViewBackend(),
-#endif
-        "web-context", test->m_webContext.get(),
+    auto webView = test->createWebView(
 #if ENABLE(2022_GLIB_API)
         "network-session", ephemeralSession.get(),
 #else
         "is-ephemeral", TRUE,
 #endif
-        nullptr));
+        nullptr);
 #if ENABLE(2022_GLIB_API)
     g_assert_true(webkit_web_view_get_network_session(webView.get()) == ephemeralSession.get());
 #else
@@ -262,7 +258,7 @@ static void testTLSErrorsHTTPAuth(SSLTest* test, gconstpointer)
 #endif
 
     assertIfSSLRequestProcessed = true;
-    g_signal_connect(test->m_webView, "authenticate", G_CALLBACK(webViewAuthenticationCallback), NULL);
+    g_signal_connect(test->webView(), "authenticate", G_CALLBACK(webViewAuthenticationCallback), NULL);
     test->loadURI(kHttpsServer->getURIForPath("/auth").data());
     test->waitUntilLoadFinished();
     g_assert_true(test->m_loadFailed);
@@ -343,7 +339,7 @@ static void testLoadFailedWithTLSErrors(TLSErrorsTest* test, gconstpointer)
     g_assert_cmpint(test->m_loadEvents[0], ==, LoadTrackingTest::ProvisionalLoadStarted);
     g_assert_cmpint(test->m_loadEvents[1], ==, LoadTrackingTest::LoadCommitted);
     g_assert_cmpint(test->m_loadEvents[2], ==, LoadTrackingTest::LoadFinished);
-    g_assert_cmpstr(webkit_web_view_get_title(test->m_webView), ==, TLSExpectedSuccessTitle);
+    g_assert_cmpstr(webkit_web_view_get_title(test->webView()), ==, TLSExpectedSuccessTitle);
 
 #if ENABLE(2022_GLIB_API)
     webkit_network_session_set_tls_errors_policy(test->m_networkSession.get(), originalPolicy);
@@ -358,7 +354,7 @@ public:
 
     static void resourceLoadStartedCallback(WebKitWebView* webView, WebKitWebResource* resource, WebKitURIRequest* request, TLSSubresourceTest* test)
     {
-        if (webkit_web_view_get_main_resource(test->m_webView) == resource)
+        if (webkit_web_view_get_main_resource(test->webView()) == resource)
             return;
 
         // Ignore favicons.
@@ -371,7 +367,7 @@ public:
     TLSSubresourceTest()
         : m_tlsErrors(static_cast<GTlsCertificateFlags>(0))
     {
-        g_signal_connect(m_webView, "resource-load-started", G_CALLBACK(resourceLoadStartedCallback), this);
+        g_signal_connect(m_webView.get(), "resource-load-started", G_CALLBACK(resourceLoadStartedCallback), this);
     }
 
     static void subresourceFailedCallback(WebKitWebResource*, GError*)
@@ -578,11 +574,11 @@ public:
 static void testTLSErrorsEphemeral(EphemeralSSLTest* test, gconstpointer)
 {
 #if ENABLE(2022_GLIB_API)
-    auto* networkSession = webkit_web_view_get_network_session(test->m_webView);
+    auto* networkSession = webkit_web_view_get_network_session(test->webView());
     g_assert_true(webkit_network_session_is_ephemeral(networkSession));
     g_assert_cmpint(webkit_network_session_get_tls_errors_policy(networkSession), ==, WEBKIT_TLS_ERRORS_POLICY_FAIL);
 #else
-    auto* websiteDataManager = webkit_web_view_get_website_data_manager(test->m_webView);
+    auto* websiteDataManager = webkit_web_view_get_website_data_manager(test->webView());
     g_assert_true(webkit_website_data_manager_is_ephemeral(websiteDataManager));
     g_assert_cmpint(webkit_website_data_manager_get_tls_errors_policy(websiteDataManager), ==, WEBKIT_TLS_ERRORS_POLICY_FAIL);
 #endif
@@ -657,7 +653,7 @@ public:
 
     ClientSideCertificateTest()
         : LoadTrackingTest()
-        , ClientSideCertificateTestBase(m_webView)
+        , ClientSideCertificateTestBase(m_webView.get())
     {
     }
 
@@ -785,7 +781,7 @@ public:
 
     WebSocketClientSideCertificateTest()
         : WebSocketTest()
-        , ClientSideCertificateTestBase(m_webView)
+        , ClientSideCertificateTestBase(m_webView.get())
     {
     }
 

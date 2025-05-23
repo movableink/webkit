@@ -337,7 +337,7 @@ static void testAutomationSessionRequestSession(AutomationTest* test, gconstpoin
     g_assert_false(test->createTopLevelBrowsingContext(nullptr));
 
     // Will also fail if the web view is not controlled by automation.
-    auto webView = Test::adoptView(Test::createWebView(test->m_webContext.get()));
+    auto webView = test->createWebView();
     g_assert_false(webkit_web_view_is_controlled_by_automation(webView.get()));
     g_assert_false(test->createTopLevelBrowsingContext(webView.get()));
 #if ENABLE(2022_GLIB_API)
@@ -345,13 +345,7 @@ static void testAutomationSessionRequestSession(AutomationTest* test, gconstpoin
 #endif
 
     // And will work with a proper web view.
-    webView = Test::adoptView(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-#if PLATFORM(WPE)
-        "backend", Test::createWebViewBackend(),
-#endif
-        "web-context", test->m_webContext.get(),
-        "is-controlled-by-automation", TRUE,
-        nullptr));
+    webView = test->createWebView("is-controlled-by-automation", TRUE, nullptr);
     g_assert_true(webkit_web_view_is_controlled_by_automation(webView.get()));
     g_assert_cmpuint(webkit_web_view_get_automation_presentation_type(webView.get()), ==, WEBKIT_AUTOMATION_BROWSING_CONTEXT_PRESENTATION_WINDOW);
 #if ENABLE(2022_GLIB_API)
@@ -359,17 +353,13 @@ static void testAutomationSessionRequestSession(AutomationTest* test, gconstpoin
 #endif
     g_assert_true(test->createTopLevelBrowsingContext(webView.get()));
 
-    auto newWebViewInWindow = Test::adoptView(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-#if PLATFORM(WPE)
-        "backend", Test::createWebViewBackend(),
-#endif
-        "web-context", test->m_webContext.get(),
+    auto newWebViewInWindow = test->createWebView(
+        "is-controlled-by-automation", TRUE,
 #if ENABLE(2022_GLIB_API)
         // Check also here that network session property is ignored when is-controlled-by-automation is true.
         "network-session", test->m_networkSession.get(),
 #endif
-        "is-controlled-by-automation", TRUE,
-        nullptr));
+        nullptr);
     g_assert_true(webkit_web_view_is_controlled_by_automation(newWebViewInWindow.get()));
     g_assert_cmpuint(webkit_web_view_get_automation_presentation_type(newWebViewInWindow.get()), ==, WEBKIT_AUTOMATION_BROWSING_CONTEXT_PRESENTATION_WINDOW);
 #if ENABLE(2022_GLIB_API)
@@ -377,14 +367,10 @@ static void testAutomationSessionRequestSession(AutomationTest* test, gconstpoin
 #endif
     g_assert_true(test->createNewWindow(newWebViewInWindow.get()));
 
-    auto newWebViewInTab = Test::adoptView(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-#if PLATFORM(WPE)
-        "backend", Test::createWebViewBackend(),
-#endif
-        "web-context", test->m_webContext.get(),
+    auto newWebViewInTab = test->createWebView(
         "is-controlled-by-automation", TRUE,
         "automation-presentation-type", WEBKIT_AUTOMATION_BROWSING_CONTEXT_PRESENTATION_TAB,
-        nullptr));
+        nullptr);
     g_assert_true(webkit_web_view_is_controlled_by_automation(newWebViewInTab.get()));
     g_assert_cmpuint(webkit_web_view_get_automation_presentation_type(newWebViewInTab.get()), ==, WEBKIT_AUTOMATION_BROWSING_CONTEXT_PRESENTATION_TAB);
     g_assert_true(test->createNewTab(newWebViewInTab.get()));

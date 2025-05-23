@@ -777,17 +777,13 @@ static void testCookieManagerEphemeral(CookieManagerTest* test, gconstpointer)
 #if ENABLE(2022_GLIB_API)
     GRefPtr<WebKitNetworkSession> ephemeralSession = adoptGRef(webkit_network_session_new_ephemeral());
 #endif
-    auto webView = Test::adoptView(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-#if PLATFORM(WPE)
-        "backend", Test::createWebViewBackend(),
-#endif
-        "web-context", webkit_web_view_get_context(test->m_webView),
+    auto webView = test->createWebView(
 #if ENABLE(2022_GLIB_API)
         "network-session", ephemeralSession.get(),
 #else
         "is-ephemeral", TRUE,
 #endif
-        nullptr));
+        nullptr);
 #if ENABLE(2022_GLIB_API)
     g_assert_true(webkit_web_view_get_network_session(webView.get()) == ephemeralSession.get());
 #else
@@ -813,7 +809,7 @@ static void testCookieManagerEphemeral(CookieManagerTest* test, gconstpointer)
 #if ENABLE(2022_GLIB_API)
     auto* cookieManager = webkit_network_session_get_cookie_manager(ephemeralSession.get());
 #else
-    g_assert_true(viewDataManager != webkit_web_context_get_website_data_manager(webkit_web_view_get_context(test->m_webView)));
+    g_assert_true(viewDataManager != webkit_web_context_get_website_data_manager(webkit_web_view_get_context(test->webView())));
     auto* cookieManager = webkit_website_data_manager_get_cookie_manager(viewDataManager);
 #endif
     g_assert_true(WEBKIT_IS_COOKIE_MANAGER(cookieManager));

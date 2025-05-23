@@ -84,13 +84,13 @@ public:
         , m_menuPositionY(0)
         , m_expectedEventType(GDK_BUTTON_PRESS)
     {
-        g_signal_connect(m_webView, "context-menu", G_CALLBACK(contextMenuCallback), this);
-        g_signal_connect(m_webView, "context-menu-dismissed", G_CALLBACK(contextMenuDismissedCallback), this);
+        g_signal_connect(m_webView.get(), "context-menu", G_CALLBACK(contextMenuCallback), this);
+        g_signal_connect(m_webView.get(), "context-menu-dismissed", G_CALLBACK(contextMenuDismissedCallback), this);
     }
 
     ~ContextMenuTest()
     {
-        g_signal_handlers_disconnect_matched(m_webView, G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
+        g_signal_handlers_disconnect_matched(m_webView.get(), G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
     }
 
     virtual bool contextMenu(WebKitContextMenu*, GdkEvent*, WebKitHitTestResult*) = 0;
@@ -114,7 +114,7 @@ public:
             if (!GTK_IS_MENU(child))
                 continue;
 
-            if (gtk_menu_get_attach_widget(GTK_MENU(child)) == GTK_WIDGET(m_webView))
+            if (gtk_menu_get_attach_widget(GTK_MENU(child)) == GTK_WIDGET(m_webView.get()))
                 return child;
 #endif // USE(GTK4)
         }
@@ -471,7 +471,7 @@ public:
             g_assert_not_reached();
         }
 
-        if (webkit_settings_get_enable_developer_extras(webkit_web_view_get_settings(m_webView))) {
+        if (webkit_settings_get_enable_developer_extras(webkit_web_view_get_settings(m_webView.get()))) {
             iter = checkCurrentItemIsSeparatorAndGetNext(iter);
             iter = checkCurrentItemIsStockActionAndGetNext(iter, WEBKIT_CONTEXT_MENU_ACTION_INSPECT_ELEMENT, Visible | Enabled);
         }
@@ -534,7 +534,7 @@ static void testContextMenuDefaultMenu(ContextMenuDefaultTest* test, gconstpoint
 
     // Enable developer extras now, so that inspector element
     // will be shown in the default context menu.
-    webkit_settings_set_enable_developer_extras(webkit_web_view_get_settings(test->m_webView), TRUE);
+    webkit_settings_set_enable_developer_extras(webkit_web_view_get_settings(test->webView()), TRUE);
 
     // Context menu for image link.
     test->m_expectedMenuType = ContextMenuDefaultTest::LinkImage;

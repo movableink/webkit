@@ -130,7 +130,7 @@ public:
     virtual void loadCommitted()
     {
         LoadTrackingTest::loadCommitted();
-        webkit_web_view_stop_loading(m_webView);
+        webkit_web_view_stop_loading(m_webView.get());
     }
     virtual void loadFailed(const gchar* failingURI, GError* error)
     {
@@ -154,10 +154,10 @@ static void testLoadCancelled(LoadStopTrackingTest* test, gconstpointer)
 
 static void testWebViewTitle(LoadTrackingTest* test, gconstpointer)
 {
-    g_assert_null(webkit_web_view_get_title(test->m_webView));
+    g_assert_null(webkit_web_view_get_title(test->webView()));
     test->loadHtml("<html><head><title>Welcome to WebKit-GTK+!</title></head></html>", 0);
     test->waitUntilTitleChanged();
-    g_assert_cmpstr(webkit_web_view_get_title(test->m_webView), ==, "Welcome to WebKit-GTK+!");
+    g_assert_cmpstr(webkit_web_view_get_title(test->webView()), ==, "Welcome to WebKit-GTK+!");
 }
 
 static void testWebViewReload(LoadTrackingTest* test, gconstpointer)
@@ -215,12 +215,12 @@ public:
 
     LoadTwiceAndReloadTest()
     {
-        g_signal_connect(m_webView, "load-changed", G_CALLBACK(reloadOnFinishLoad), this);
+        g_signal_connect(m_webView.get(), "load-changed", G_CALLBACK(reloadOnFinishLoad), this);
     }
 
     ~LoadTwiceAndReloadTest()
     {
-        g_signal_handlers_disconnect_matched(m_webView, G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
+        g_signal_handlers_disconnect_matched(m_webView.get(), G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
     }
 
     void waitUntilFinished()
@@ -251,10 +251,10 @@ static void testUnfinishedSubresourceLoad(LoadTrackingTest* test, gconstpointer)
     // Verify that LoadFinished occurs even if the next load starts before the
     // previous load actually finishes.
     test->loadURI(kServer->getURIForPath("/unfinished-subresource-load").data());
-    auto signalID = g_signal_connect(test->m_webView, "notify::uri", G_CALLBACK(uriChanged), test);
+    auto signalID = g_signal_connect(test->webView(), "notify::uri", G_CALLBACK(uriChanged), test);
     test->waitUntilLoadFinished();
     test->waitUntilLoadFinished();
-    g_signal_handler_disconnect(test->m_webView, signalID);
+    g_signal_handler_disconnect(test->webView(), signalID);
 
     Vector<LoadTrackingTest::LoadEvents>& events = test->m_loadEvents;
     g_assert_cmpint(events.size(), ==, 7);
@@ -273,16 +273,16 @@ public:
 
     static void uriChanged(GObject*, GParamSpec*, ViewURITrackingTest* test)
     {
-        g_assert_cmpstr(test->m_currentURI.data(), !=, webkit_web_view_get_uri(test->m_webView));
-        test->m_currentURI = webkit_web_view_get_uri(test->m_webView);
+        g_assert_cmpstr(test->m_currentURI.data(), !=, webkit_web_view_get_uri(test->webView()));
+        test->m_currentURI = webkit_web_view_get_uri(test->webView());
     }
 
     ViewURITrackingTest()
-        : m_currentURI(webkit_web_view_get_uri(m_webView))
+        : m_currentURI(webkit_web_view_get_uri(m_webView.get()))
     {
         g_assert_true(m_currentURI.isNull());
         m_currentURIList.grow(m_currentURIList.capacity());
-        g_signal_connect(m_webView, "notify::uri", G_CALLBACK(uriChanged), this);
+        g_signal_connect(m_webView.get(), "notify::uri", G_CALLBACK(uriChanged), this);
     }
 
     enum State { Provisional, ProvisionalAfterRedirect, Commited, Finished };
@@ -316,7 +316,7 @@ public:
         if (!m_uriToLoadOnCommitted.isNull()) {
             m_estimatedProgress = 0;
             m_activeURI = m_uriToLoadOnCommitted;
-            webkit_web_view_load_uri(m_webView, m_uriToLoadOnCommitted.data());
+            webkit_web_view_load_uri(m_webView.get(), m_uriToLoadOnCommitted.data());
         }
     }
 
@@ -453,7 +453,7 @@ public:
 
     static void isLoadingChanged(GObject*, GParamSpec*, ViewIsLoadingTest* test)
     {
-        if (webkit_web_view_is_loading(test->m_webView))
+        if (webkit_web_view_is_loading(test->webView()))
             test->beginLoad();
         else
             test->endLoad();
@@ -461,14 +461,14 @@ public:
 
     ViewIsLoadingTest()
     {
-        g_signal_connect(m_webView, "notify::is-loading", G_CALLBACK(isLoadingChanged), this);
+        g_signal_connect(m_webView.get(), "notify::is-loading", G_CALLBACK(isLoadingChanged), this);
     }
 
     void beginLoad()
     {
         // New load, load-started hasn't been emitted yet.
         g_assert_true(m_loadEvents.isEmpty());
-        g_assert_cmpstr(webkit_web_view_get_uri(m_webView), ==, m_activeURI.data());
+        g_assert_cmpstr(webkit_web_view_get_uri(m_webView.get()), ==, m_activeURI.data());
     }
 
     void endLoad()
@@ -484,34 +484,34 @@ static void testWebViewIsLoading(ViewIsLoadingTest* test, gconstpointer)
 {
     test->loadURI(kServer->getURIForPath("/normal").data());
     test->waitUntilLoadFinished();
-    g_assert_false(webkit_web_view_is_loading(test->m_webView));
+    g_assert_false(webkit_web_view_is_loading(test->webView()));
 
     test->reload();
     test->waitUntilLoadFinished();
-    g_assert_false(webkit_web_view_is_loading(test->m_webView));
+    g_assert_false(webkit_web_view_is_loading(test->webView()));
 
     test->loadURI("http://127.0.0.1:1234/error");
     test->waitUntilLoadFinished();
-    g_assert_false(webkit_web_view_is_loading(test->m_webView));
+    g_assert_false(webkit_web_view_is_loading(test->webView()));
 
     test->loadURI(kServer->getURIForPath("/normal").data());
     test->waitUntilLoadFinished();
-    g_assert_false(webkit_web_view_is_loading(test->m_webView));
+    g_assert_false(webkit_web_view_is_loading(test->webView()));
     test->loadURI(kServer->getURIForPath("/normal2").data());
     test->waitUntilLoadFinished();
-    g_assert_false(webkit_web_view_is_loading(test->m_webView));
+    g_assert_false(webkit_web_view_is_loading(test->webView()));
 
     test->goBack();
     test->waitUntilLoadFinished();
-    g_assert_false(webkit_web_view_is_loading(test->m_webView));
+    g_assert_false(webkit_web_view_is_loading(test->webView()));
 
     test->goForward();
     test->waitUntilLoadFinished();
-    g_assert_false(webkit_web_view_is_loading(test->m_webView));
+    g_assert_false(webkit_web_view_is_loading(test->webView()));
 
     test->loadAlternateHTML("<html><head><title>Title</title></head></html>", "file:///foo", nullptr);
     test->waitUntilLoadFinished();
-    g_assert_false(webkit_web_view_is_loading(test->m_webView));
+    g_assert_false(webkit_web_view_is_loading(test->webView()));
 }
 
 class WebPageURITest: public WebViewTest {
@@ -527,7 +527,7 @@ public:
 
     static void webViewURIChanged(GObject*, GParamSpec*, WebPageURITest* test)
     {
-        test->m_webViewURIs.append(webkit_web_view_get_uri(test->m_webView));
+        test->m_webViewURIs.append(webkit_web_view_get_uri(test->webView()));
     }
 
     WebPageURITest()
@@ -546,12 +546,12 @@ public:
             0);
         g_assert_cmpuint(m_uriChangedSignalID, !=, 0);
 
-        g_signal_connect(m_webView, "notify::uri", G_CALLBACK(webViewURIChanged), this);
+        g_signal_connect(m_webView.get(), "notify::uri", G_CALLBACK(webViewURIChanged), this);
     }
 
     ~WebPageURITest()
     {
-        g_signal_handlers_disconnect_matched(m_webView, G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
+        g_signal_handlers_disconnect_matched(m_webView.get(), G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
         g_dbus_connection_signal_unsubscribe(g_dbus_proxy_get_connection(m_proxy.get()), m_uriChangedSignalID);
     }
 
@@ -665,7 +665,7 @@ static void testURIResponseHTTPHeaders(WebViewTest* test, gconstpointer)
 {
     test->loadHtml("<html><body>No HTTP headers</body></html>", "file:///");
     test->waitUntilLoadFinished();
-    WebKitWebResource* resource = webkit_web_view_get_main_resource(test->m_webView);
+    WebKitWebResource* resource = webkit_web_view_get_main_resource(test->webView());
     g_assert_true(WEBKIT_IS_WEB_RESOURCE(resource));
     WebKitURIResponse* response = webkit_web_resource_get_response(resource);
     g_assert_true(WEBKIT_IS_URI_RESPONSE(response));
@@ -673,7 +673,7 @@ static void testURIResponseHTTPHeaders(WebViewTest* test, gconstpointer)
 
     test->loadURI(kServer->getURIForPath("/headers").data());
     test->waitUntilLoadFinished();
-    resource = webkit_web_view_get_main_resource(test->m_webView);
+    resource = webkit_web_view_get_main_resource(test->webView());
     g_assert_true(WEBKIT_IS_WEB_RESOURCE(resource));
     response = webkit_web_resource_get_response(resource);
     g_assert_true(WEBKIT_IS_URI_RESPONSE(response));
@@ -686,7 +686,7 @@ static HashMap<CString, CString> s_userAgentMap;
 
 static void testUserAgent(WebViewTest* test, gconstpointer)
 {
-    const char* userAgent = webkit_settings_get_user_agent(webkit_web_view_get_settings(test->m_webView));
+    const char* userAgent = webkit_settings_get_user_agent(webkit_web_view_get_settings(test->webView()));
 
     s_userAgentMap.clear();
     test->loadURI(kServer->getURIForPath("/ua-main").data());
