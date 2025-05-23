@@ -163,6 +163,8 @@ public:
     const AnchorPositionedToAnchorMap& anchorPositionedToAnchorMap() const { return m_anchorPositionedToAnchorMap; }
     void updateAnchorPositioningStateAfterStyleResolution();
 
+    bool invalidateForAnchorDependencies(LayoutDependencyUpdateContext&);
+
 private:
     Scope& documentScope();
     bool isForUserAgentShadowTree() const;
@@ -216,7 +218,6 @@ private:
     static MediaQueryViewportState mediaQueryViewportStateForDocument(const Document&);
 
     bool invalidateForContainerDependencies(LayoutDependencyUpdateContext&);
-    bool invalidateForAnchorDependencies(LayoutDependencyUpdateContext&);
     bool invalidateForPositionTryFallbacks(LayoutDependencyUpdateContext&);
 
     CheckedRef<Document> m_document;

@@ -1688,10 +1688,10 @@ const Element* RenderElement::defaultAnchor() const
     return nullptr;
 }
 
-const RenderElement* RenderElement::defaultAnchorRenderer() const
+const RenderBoxModelObject* RenderElement::defaultAnchorRenderer() const
 {
     if (auto* defaultAnchor = this->defaultAnchor())
-        return defaultAnchor->renderer();
+        return dynamicDowncast<RenderBoxModelObject>(defaultAnchor->renderer());
     return nullptr;
 }
 

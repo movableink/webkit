@@ -975,6 +975,15 @@ void AnchorPositionEvaluator::updateSnapshottedScrollOffsets(Document& document)
     }
 }
 
+void AnchorPositionEvaluator::updateAfterOverflowScroll(Document& document)
+{
+    updateSnapshottedScrollOffsets(document);
+
+    // Also check if scrolling has caused any anchor boxes to move.
+    Style::Scope::LayoutDependencyUpdateContext context;
+    document.checkedStyleScope()->invalidateForAnchorDependencies(context);
+}
+
 auto AnchorPositionEvaluator::makeAnchorPositionedForAnchorMap(AnchorPositionedToAnchorMap& toAnchorMap) -> AnchorToAnchorPositionedMap
 {
     AnchorToAnchorPositionedMap map;
@@ -1113,6 +1122,44 @@ bool AnchorPositionEvaluator::overflowsInsetModifiedContainingBlock(const Render
 
     return inlineConstraints.insetModifiedContainingSize() < anchorInlineSize
         || blockConstraints.insetModifiedContainingSize() < anchorBlockSize;
+}
+
+bool AnchorPositionEvaluator::isDefaultAnchorInvisibleOrClippedByInterveningBoxes(const RenderBox& anchoredBox)
+{
+    CheckedPtr defaultAnchor = anchoredBox.defaultAnchorRenderer();
+    if (!defaultAnchor)
+        return false;
+
+    auto& anchorBox = *defaultAnchor;
+
+    if (anchorBox.style().usedVisibility() == Visibility::Hidden)
+        return true;
+
+    // https://drafts.csswg.org/css-anchor-position-1/#position-visibility
+    // "An anchor box anchor is clipped by intervening boxes relative to a positioned box abspos relying on it if anchor’s ink overflow
+    // rectangle is fully clipped by a box which is an ancestor of anchor but a descendant of abspos’s containing block."
+
+    auto localAnchorRect = [&] {
+        if (auto* box = dynamicDowncast<RenderBox>(anchorBox))
+            return box->visualOverflowRect();
+        return downcast<RenderInline>(anchorBox).linesVisualOverflowBoundingBox();
+    }();
+    auto* anchoredContainingBlock = anchoredBox.container();
+
+    auto anchorRect = anchorBox.localToAbsoluteQuad(FloatQuad { localAnchorRect }).boundingBox();
+
+    for (auto* anchorAncestor = anchorBox.parent(); anchorAncestor && anchorAncestor != anchoredContainingBlock; anchorAncestor = anchorAncestor->parent()) {
+        if (!anchorAncestor->hasNonVisibleOverflow())
+            continue;
+        auto* clipAncestor = dynamicDowncast<RenderBox>(*anchorAncestor);
+        if (!clipAncestor)
+            continue;
+        auto localClipRect = clipAncestor->overflowClipRect({ });
+        auto clipRect = clipAncestor->localToAbsoluteQuad(FloatQuad { localClipRect }).boundingBox();
+        if (!clipRect.intersects(anchorRect))
+            return true;
+    }
+    return false;
 }
 
 } // namespace WebCore::Style

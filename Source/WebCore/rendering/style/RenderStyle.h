@@ -1168,6 +1168,9 @@ public:
     inline void setIsInVisibilityAdjustmentSubtree();
     inline bool isInVisibilityAdjustmentSubtree() const;
 
+    inline void setIsForceHidden();
+    inline bool isForceHidden() const;
+
     inline void setIsolation(Isolation);
 
     inline BlendMode blendMode() const;

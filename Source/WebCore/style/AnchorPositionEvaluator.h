@@ -102,6 +102,7 @@ public:
 
     static void updateAnchorPositioningStatesAfterInterleavedLayout(Document&, AnchorPositionedStates&);
     static void updateSnapshottedScrollOffsets(Document&);
+    static void updateAfterOverflowScroll(Document&);
     static void updateAnchorPositionedStateForLayoutTimePositioned(Element&, const RenderStyle&, AnchorPositionedStates&);
 
     static LayoutRect computeAnchorRectRelativeToContainingBlock(CheckedRef<const RenderBoxModelObject> anchorBox, const RenderBlock& containingBlock);
@@ -112,6 +113,7 @@ public:
     static CSSPropertyID resolvePositionTryFallbackProperty(CSSPropertyID, WritingMode, const BuilderPositionTryFallback&);
 
     static bool overflowsInsetModifiedContainingBlock(const RenderBox& anchoredBox);
+    static bool isDefaultAnchorInvisibleOrClippedByInterveningBoxes(const RenderBox& anchoredBox);
 
 private:
     static AnchorElements findAnchorsForAnchorPositionedElement(const Element&, const UncheckedKeyHashSet<AtomString>& anchorNames, const AnchorsForAnchorName&);

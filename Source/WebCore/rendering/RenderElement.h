@@ -308,7 +308,7 @@ public:
     bool hasCachedSVGResource() const { return m_hasCachedSVGResource; }
 
     const Element* defaultAnchor() const;
-    const RenderElement* defaultAnchorRenderer() const;
+    const RenderBoxModelObject* defaultAnchorRenderer() const;
 
     bool isAnonymousBlock() const;
     bool isAnonymousForPercentageResolution() const { return isAnonymous() && !isViewTransitionPseudo(); }

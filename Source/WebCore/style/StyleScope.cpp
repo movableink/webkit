@@ -1029,8 +1029,7 @@ bool Scope::invalidateForAnchorDependencies(LayoutDependencyUpdateContext& conte
         CheckedPtr renderer = toInvalidate->renderer();
         if (renderer && AnchorPositionEvaluator::isLayoutTimeAnchorPositioned(renderer->style()))
             renderer->setNeedsLayout();
-        else
-            toInvalidate->invalidateForAnchorRectChange();
+        toInvalidate->invalidateForAnchorRectChange();
     }
 
     return !anchoredElementsToInvalidate.isEmpty();

@@ -854,12 +854,15 @@ constexpr BlendMode RenderStyle::initialBlendMode() { return BlendMode::Normal; 
 constexpr Isolation RenderStyle::initialIsolation() { return Isolation::Auto; }
 inline bool RenderStyle::isInSubtreeWithBlendMode() const { return m_rareInheritedData->isInSubtreeWithBlendMode; }
 inline bool RenderStyle::isInVisibilityAdjustmentSubtree() const { return m_rareInheritedData->isInVisibilityAdjustmentSubtree; }
+inline bool RenderStyle::isForceHidden() const { return m_rareInheritedData->isForceHidden; }
 inline Isolation RenderStyle::isolation() const { return static_cast<Isolation>(m_nonInheritedData->rareData->isolation); }
 inline bool RenderStyle::usesAnchorFunctions() const { return m_nonInheritedData->rareData->usesAnchorFunctions; }
 
 inline Visibility RenderStyle::usedVisibility() const
 {
     if (isInVisibilityAdjustmentSubtree()) [[unlikely]]
+        return Visibility::Hidden;
+    if (isForceHidden())
         return Visibility::Hidden;
     return static_cast<Visibility>(m_inheritedFlags.visibility);
 }

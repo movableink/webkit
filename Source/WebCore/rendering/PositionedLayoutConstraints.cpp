@@ -63,7 +63,7 @@ PositionedLayoutConstraints::PositionedLayoutConstraints(const RenderBox& render
     , m_containingAxis(!isOrthogonal() ? selfAxis : oppositeAxis(selfAxis))
     , m_style(style)
     , m_alignment(m_containingAxis == LogicalBoxAxis::Inline ? style.justifySelf() : style.alignSelf())
-    , m_defaultAnchorBox(needsAnchor() ? dynamicDowncast<const RenderBoxModelObject>(renderer.defaultAnchorRenderer()) : nullptr)
+    , m_defaultAnchorBox(needsAnchor() ? renderer.defaultAnchorRenderer() : nullptr)
 {
 
     // Compute basic containing block info.

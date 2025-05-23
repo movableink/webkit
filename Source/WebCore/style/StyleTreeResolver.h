@@ -173,12 +173,15 @@ private:
     void sortPositionOptionsIfNeeded(PositionOptions&, const Styleable&);
     std::optional<ResolvedStyle> tryChoosePositionOption(const Styleable&, const RenderStyle* existingStyle);
 
+    void updateForPositionVisibility(RenderStyle&, const Styleable&);
+
     // This returns the style that was in effect (applied to the render tree) before we started the style resolution.
     // Layout interleaving may cause different styles to be applied during the style resolution.
     const RenderStyle* beforeResolutionStyle(const Element&, std::optional<PseudoElementIdentifier>);
     void saveBeforeResolutionStyleForInterleaving(const Element&);
 
     bool hasUnresolvedAnchorPosition(const Element&) const;
+    bool hasResolvedAnchorPosition(const Element&) const;
 
     CheckedRef<Document> m_document;
     std::unique_ptr<RenderStyle> m_documentElementStyle;
