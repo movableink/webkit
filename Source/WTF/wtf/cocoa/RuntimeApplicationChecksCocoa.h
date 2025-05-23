@@ -87,7 +87,6 @@ enum class SDKAlignedBehavior {
     NullOriginForNonSpecialSchemedURLs,
     ObservesClassProperty,
     PictureInPictureMediaPlayback,
-    ProcessSwapOnCrossSiteNavigation,
     PushStateFilePathRestriction,
     RequiresUserGestureToLoadVideo,
     RestrictsBaseURLSchemes,
@@ -202,7 +201,6 @@ WTF_EXPORT_PRIVATE bool isEventbrite();
 WTF_EXPORT_PRIVATE bool isEvernote();
 WTF_EXPORT_PRIVATE bool isFIFACompanion();
 WTF_EXPORT_PRIVATE bool isFeedly();
-WTF_EXPORT_PRIVATE bool isFirefox();
 WTF_EXPORT_PRIVATE bool isHimalaya();
 WTF_EXPORT_PRIVATE bool isHoYoLAB();
 WTF_EXPORT_PRIVATE bool isJWLibrary();

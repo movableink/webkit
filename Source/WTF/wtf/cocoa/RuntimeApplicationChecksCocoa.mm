@@ -128,7 +128,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
 
     if (linkedBefore(dyld_spring_2019_os_versions, DYLD_IOS_VERSION_12_2, DYLD_MACOSX_VERSION_10_14_4)) {
         disableBehavior(SDKAlignedBehavior::LazyGestureRecognizerInstallation);
-        disableBehavior(SDKAlignedBehavior::ProcessSwapOnCrossSiteNavigation);
     }
 
     if (linkedBefore(dyld_fall_2019_os_versions, DYLD_IOS_VERSION_13_0, DYLD_MACOSX_VERSION_10_15)) {
@@ -540,12 +539,6 @@ bool IOSApplication::isMoviStarPlus()
 {
     static bool isMoviStarPlus = applicationBundleIsEqualTo("com.prisatv.yomvi"_s);
     return isMoviStarPlus;
-}
-
-bool IOSApplication::isFirefox()
-{
-    static bool isFirefox = applicationBundleIsEqualTo("org.mozilla.ios.Firefox"_s);
-    return isFirefox;
 }
 
 bool IOSApplication::isHoYoLAB()

@@ -1278,11 +1278,6 @@ Ref<WebPageProxy> WebProcessPool::createWebPage(PageClient& pageClient, Ref<API:
     m_userContentControllerForRemoteWorkers = userContentController.ptr();
 
     bool enableProcessSwapOnCrossSiteNavigation = pagePreference->processSwapOnCrossSiteNavigationEnabled();
-#if PLATFORM(IOS_FAMILY)
-    if (WTF::IOSApplication::isFirefox() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ProcessSwapOnCrossSiteNavigation))
-        enableProcessSwapOnCrossSiteNavigation = false;
-#endif
-
     Ref configuration = m_configuration;
     bool wasProcessSwappingOnNavigationEnabled = configuration->processSwapsOnNavigation();
     configuration->setProcessSwapsOnNavigationFromExperimentalFeatures(enableProcessSwapOnCrossSiteNavigation);
