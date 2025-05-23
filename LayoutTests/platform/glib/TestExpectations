@@ -703,6 +703,9 @@ accessibility/dynamic-datetime-attribute.html [ Skip ]
 # AccessibilityUIElement::isAttributeSupported needs to be updated to handle AXSelectedRows.
 accessibility/aria-table-selection-support.html [ Skip ]
 
+# AccessibilityUIElement::isAttributeSupported doesn't handle AXExpanded.
+accessibility/aria-expanded-links.html [ Skip ]
+
 # AccessibilityUIElement::customContent is not implemented.
 accessibility/dynamic-aria-describedby-subtree.html [ Skip ]
 accessibility/dynamic-aria-describedby-text.html [ Skip ]

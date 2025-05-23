@@ -262,7 +262,6 @@ enum class AccessibilityRole : uint8_t {
     Video,
     WebApplication,
     WebArea,
-    WebCoreLink,
 };
 
 using AccessibilityRoleSet = HashSet<AccessibilityRole, IntHash<AccessibilityRole>, WTF::StrongEnumHashTraits<AccessibilityRole>>;
@@ -536,8 +535,6 @@ ALWAYS_INLINE String accessibilityRoleToString(AccessibilityRole role)
         return "WebApplication"_s;
     case AccessibilityRole::WebArea:
         return "WebArea"_s;
-    case AccessibilityRole::WebCoreLink:
-        return "WebCoreLink"_s;
     }
     UNREACHABLE();
     return ""_s;

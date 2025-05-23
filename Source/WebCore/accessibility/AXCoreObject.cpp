@@ -40,7 +40,7 @@ namespace WebCore {
 bool AXCoreObject::isLink() const
 {
     auto role = roleValue();
-    return role == AccessibilityRole::Link || role == AccessibilityRole::WebCoreLink;
+    return role == AccessibilityRole::Link;
 }
 
 bool AXCoreObject::isList() const
@@ -144,7 +144,6 @@ bool AXCoreObject::isImplicitlyInteractive() const
     case AccessibilityRole::TextArea:
     case AccessibilityRole::TextField:
     case AccessibilityRole::ToggleButton:
-    case AccessibilityRole::WebCoreLink:
         return true;
     default:
         return false;

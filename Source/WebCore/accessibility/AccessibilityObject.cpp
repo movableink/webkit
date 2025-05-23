@@ -2296,7 +2296,6 @@ String AccessibilityObject::localizedActionVerb() const
     case AccessibilityRole::Switch:
         return isChecked() ? checkedCheckboxAction : uncheckedCheckboxAction;
     case AccessibilityRole::Link:
-    case AccessibilityRole::WebCoreLink:
         return linkAction;
     case AccessibilityRole::PopUpButton:
         return menuListAction;
@@ -2329,7 +2328,6 @@ String AccessibilityObject::actionVerb() const
     case AccessibilityRole::Switch:
         return isChecked() ? "uncheck"_s : "check"_s;
     case AccessibilityRole::Link:
-    case AccessibilityRole::WebCoreLink:
         return "jump"_s;
     case AccessibilityRole::PopUpButton:
     case AccessibilityRole::MenuListPopup:
@@ -2597,10 +2595,10 @@ static void initializeRoleMap()
         RoleEntry { "doc-acknowledgments"_s, AccessibilityRole::LandmarkDocRegion },
         RoleEntry { "doc-afterword"_s, AccessibilityRole::LandmarkDocRegion },
         RoleEntry { "doc-appendix"_s, AccessibilityRole::LandmarkDocRegion },
-        RoleEntry { "doc-backlink"_s, AccessibilityRole::WebCoreLink },
+        RoleEntry { "doc-backlink"_s, AccessibilityRole::Link },
         RoleEntry { "doc-biblioentry"_s, AccessibilityRole::ListItem },
         RoleEntry { "doc-bibliography"_s, AccessibilityRole::LandmarkDocRegion },
-        RoleEntry { "doc-biblioref"_s, AccessibilityRole::WebCoreLink },
+        RoleEntry { "doc-biblioref"_s, AccessibilityRole::Link },
         RoleEntry { "doc-chapter"_s, AccessibilityRole::LandmarkDocRegion },
         RoleEntry { "doc-colophon"_s, AccessibilityRole::TextGroup },
         RoleEntry { "doc-conclusion"_s, AccessibilityRole::LandmarkDocRegion },
@@ -2617,10 +2615,10 @@ static void initializeRoleMap()
         RoleEntry { "doc-footnote"_s, AccessibilityRole::Footnote },
         RoleEntry { "doc-foreword"_s, AccessibilityRole::LandmarkDocRegion },
         RoleEntry { "doc-glossary"_s, AccessibilityRole::LandmarkDocRegion },
-        RoleEntry { "doc-glossref"_s, AccessibilityRole::WebCoreLink },
+        RoleEntry { "doc-glossref"_s, AccessibilityRole::Link },
         RoleEntry { "doc-index"_s, AccessibilityRole::LandmarkNavigation },
         RoleEntry { "doc-introduction"_s, AccessibilityRole::LandmarkDocRegion },
-        RoleEntry { "doc-noteref"_s, AccessibilityRole::WebCoreLink },
+        RoleEntry { "doc-noteref"_s, AccessibilityRole::Link },
         RoleEntry { "doc-notice"_s, AccessibilityRole::DocumentNote },
         RoleEntry { "doc-pagebreak"_s, AccessibilityRole::Splitter },
         RoleEntry { "doc-pagelist"_s, AccessibilityRole::LandmarkNavigation },
@@ -2656,7 +2654,7 @@ static void initializeRoleMap()
         RoleEntry { "image"_s, AccessibilityRole::Image },
         RoleEntry { "img"_s, AccessibilityRole::Image },
         RoleEntry { "insertion"_s, AccessibilityRole::Insertion },
-        RoleEntry { "link"_s, AccessibilityRole::WebCoreLink },
+        RoleEntry { "link"_s, AccessibilityRole::Link },
         RoleEntry { "list"_s, AccessibilityRole::List },
         RoleEntry { "listitem"_s, AccessibilityRole::ListItem },
         RoleEntry { "listbox"_s, AccessibilityRole::ListBox },

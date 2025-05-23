@@ -66,7 +66,7 @@ AccessibilityRole AccessibilityImageMapLink::determineAccessibilityRole()
     if ((m_ariaRole = determineAriaRoleAttribute()) != AccessibilityRole::Unknown)
         return m_ariaRole;
 
-    return !url().isEmpty() ? AccessibilityRole::WebCoreLink : AccessibilityRole::Generic;
+    return !url().isEmpty() ? AccessibilityRole::Link : AccessibilityRole::Generic;
 }
 
 bool AccessibilityImageMapLink::computeIsIgnored() const

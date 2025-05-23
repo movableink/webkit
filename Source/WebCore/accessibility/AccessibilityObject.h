@@ -980,7 +980,7 @@ inline unsigned AccessibilityObject::getLengthForTextRange() const { return text
 inline bool AccessibilityObject::hasTextContent() const
 {
     return isStaticText()
-        || roleValue() == AccessibilityRole::WebCoreLink
+        || roleValue() == AccessibilityRole::Link
         || isTextControl() || isTabItem();
 }
 
@@ -988,7 +988,7 @@ inline bool AccessibilityObject::hasTextContent() const
 inline bool AccessibilityObject::hasAttributedText() const
 {
     return (isStaticText() && !isARIAStaticText())
-        || roleValue() == AccessibilityRole::WebCoreLink
+        || roleValue() == AccessibilityRole::Link
         || isTextControl() || isTabItem();
 }
 #endif

@@ -726,7 +726,6 @@ static constexpr std::pair<AccessibilityRole, RoleNameEntry> roleNames[] = {
     { AccessibilityRole::UserInterfaceTooltip, { "tool tip", N_("tool tip") } },
     { AccessibilityRole::Video, { "video", N_("video") } },
     { AccessibilityRole::WebArea, { "document web", N_("document web") } },
-    { AccessibilityRole::WebCoreLink, { "link", N_("link") } },
 };
 
 const char* AccessibilityAtspi::localizedRoleName(AccessibilityRole role)

@@ -519,7 +519,6 @@ PlatformRoleMap createPlatformRoleMap()
         { AccessibilityRole::Link, NSAccessibilityLinkRole },
         { AccessibilityRole::Grid, NSAccessibilityTableRole },
         { AccessibilityRole::TreeGrid, NSAccessibilityTableRole },
-        { AccessibilityRole::WebCoreLink, NSAccessibilityLinkRole },
         { AccessibilityRole::ImageMap, NSAccessibilityImageMapRole },
         { AccessibilityRole::ListMarker, NSAccessibilityListMarkerRole },
         { AccessibilityRole::WebArea, NSAccessibilityWebAreaRole },

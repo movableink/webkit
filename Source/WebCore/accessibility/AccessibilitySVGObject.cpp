@@ -316,7 +316,7 @@ AccessibilityRole AccessibilitySVGObject::determineAccessibilityRole()
     if (m_renderer->isRenderSVGTSpan())
         return AccessibilityRole::SVGTSpan;
     if (is<SVGAElement>(element))
-        return AccessibilityRole::WebCoreLink;
+        return AccessibilityRole::Link;
 
     return AccessibilityRenderObject::determineAccessibilityRole();
 }

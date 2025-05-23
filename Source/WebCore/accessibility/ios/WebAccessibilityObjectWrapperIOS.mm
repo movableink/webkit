@@ -670,7 +670,6 @@ static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descenda
 
         switch (parentRole) {
         case AccessibilityRole::Link:
-        case AccessibilityRole::WebCoreLink:
             traits |= [self _axLinkTrait];
             if (parent->isVisitedLink())
                 traits |= [self _axVisitedTrait];
@@ -782,7 +781,6 @@ static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descenda
     uint64_t traits = [self _axWebContentTrait];
     switch (role) {
     case AccessibilityRole::Link:
-    case AccessibilityRole::WebCoreLink:
         traits |= [self _axLinkTrait];
         if (self.axBackingObject->isVisitedLink())
             traits |= [self _axVisitedTrait];
@@ -936,7 +934,6 @@ static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descenda
 
     // Links can sometimes be elements (when they only contain static text or don't contain anything).
     // They should not be elements when containing text and other types.
-    case AccessibilityRole::WebCoreLink:
     case AccessibilityRole::Link:
         // Links can sometimes be elements (when they only contain static text or don't contain anything).
         // They should not be elements when containing text and other types.
@@ -1771,7 +1768,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
         return NO;
     
     AccessibilityRole role = self.axBackingObject->roleValue();
-    if (role != AccessibilityRole::Link && role != AccessibilityRole::WebCoreLink)
+    if (role != AccessibilityRole::Link)
         return NO;
     
     const auto& children = self.axBackingObject->unignoredChildren();
