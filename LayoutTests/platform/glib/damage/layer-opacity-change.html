@@ -36,6 +36,13 @@
               var damage = latestFrameDamage();
               assertRectsEq(damage.rects, [[7, 3, 50, 50]]);
           },
+          () => {
+              layer.style.opacity = 0.0;
+          },
+          () => {
+              var damage = latestFrameDamage();
+              assertRectsEq(damage.rects, [[7, 3, 50, 50]]);
+          },
       ], 0);
     </script>
   </body>

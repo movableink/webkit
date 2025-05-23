@@ -290,6 +290,7 @@ private:
 
 #if ENABLE(DAMAGE_TRACKING)
     bool m_damagePropagation { false };
+    bool m_collectDamageDespiteBeingInvisible { false };
     std::optional<Damage> m_damageInLayerCoordinateSpace;
     std::optional<Damage> m_damageInGlobalCoordinateSpace;
     FloatRect m_accumulatedOverlapRegionDamage;
