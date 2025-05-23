@@ -1120,38 +1120,24 @@ void MediaPlayerPrivateWebM::provideMediaData(TrackBuffer& trackBuffer, TrackID 
         clearMinimumUpcomingPresentationTime(trackId);
     }
 
-    while (!trackBuffer.decodeQueue().empty()) {
+    while (true) {
         if (!isReadyForMoreSamples(trackId)) {
             DEBUG_LOG(LOGIDENTIFIER, "bailing early, track id ", trackId, " is not ready for more data");
             notifyClientWhenReadyForMoreSamples(trackId);
             break;
         }
 
-        Ref sample = trackBuffer.decodeQueue().begin()->second;
-
-        if (sample->decodeTime() > trackBuffer.enqueueDiscontinuityBoundary()) {
-            DEBUG_LOG(LOGIDENTIFIER, "bailing early because of unbuffered gap, new sample: ", sample->decodeTime(), " >= the current discontinuity boundary: ", trackBuffer.enqueueDiscontinuityBoundary());
+        RefPtr sample = trackBuffer.nextSample();
+        if (!sample)
             break;
-        }
-
-        // Remove the sample from the decode queue now.
-        trackBuffer.decodeQueue().erase(trackBuffer.decodeQueue().begin());
-
-        MediaTime samplePresentationEnd = sample->presentationTime() + sample->duration();
-        if (trackBuffer.highestEnqueuedPresentationTime().isInvalid() || samplePresentationEnd > trackBuffer.highestEnqueuedPresentationTime())
-            trackBuffer.setHighestEnqueuedPresentationTime(WTFMove(samplePresentationEnd));
-
-        trackBuffer.setLastEnqueuedDecodeKey({ sample->decodeTime(), sample->presentationTime() });
-        trackBuffer.setEnqueueDiscontinuityBoundary(sample->decodeTime() + sample->duration() + discontinuityTolerance);
-
-        enqueueSample(WTFMove(sample), trackId);
+        enqueueSample(sample.releaseNonNull(), trackId);
         ++enqueuedSamples;
     }
 
     if (isEnabledVideoTrackID(trackId) && trackBuffer.updateMinimumUpcomingPresentationTime())
         setMinimumUpcomingPresentationTime(trackId, trackBuffer.minimumEnqueuedPresentationTime());
 
-    DEBUG_LOG(LOGIDENTIFIER, "enqueued ", enqueuedSamples, " samples, ", static_cast<uint64_t>(trackBuffer.decodeQueue().size()), " remaining");
+    DEBUG_LOG(LOGIDENTIFIER, "enqueued ", enqueuedSamples, " samples, ", trackBuffer.remainingSamples(), " remaining");
 }
 
 void MediaPlayerPrivateWebM::trackDidChangeSelected(VideoTrackPrivate& track, bool selected)
@@ -1282,7 +1268,7 @@ void MediaPlayerPrivateWebM::didParseInitializationData(InitializationSegment&& 
     setReadyState(MediaPlayer::ReadyState::HaveMetadata);
 }
 
-void MediaPlayerPrivateWebM::didProvideMediaDataForTrackId(Ref<MediaSampleAVFObjC>&& originalSample, TrackID trackId, const String& mediaType)
+void MediaPlayerPrivateWebM::didProvideMediaDataForTrackId(Ref<MediaSampleAVFObjC>&& sample, TrackID trackId, const String& mediaType)
 {
     UNUSED_PARAM(mediaType);
 
@@ -1290,37 +1276,8 @@ void MediaPlayerPrivateWebM::didProvideMediaDataForTrackId(Ref<MediaSampleAVFObj
     if (it == m_trackBufferMap.end())
         return;
     TrackBuffer& trackBuffer = it->second;
-    Ref sample = WTFMove(originalSample);
 
-    MediaTime microsecond(1, 1000000);
-    if (!trackBuffer.roundedTimestampOffset().isValid())
-        trackBuffer.setRoundedTimestampOffset(-sample->presentationTime(), sample->presentationTime().timeScale(), microsecond);
-
-    sample->offsetTimestampsBy(trackBuffer.roundedTimestampOffset());
-    trackBuffer.samples().addSample(sample);
-
-    DecodeOrderSampleMap::KeyType decodeKey(sample->decodeTime(), sample->presentationTime());
-    trackBuffer.decodeQueue().insert(DecodeOrderSampleMap::MapType::value_type(decodeKey, sample));
-
-    trackBuffer.setLastDecodeTimestamp(sample->decodeTime());
-    trackBuffer.setLastFrameDuration(sample->duration());
-
-    auto presentationTimestamp = sample->presentationTime();
-    auto presentationEndTime = presentationTimestamp + sample->duration();
-    if (trackBuffer.highestPresentationTimestamp().isInvalid() || presentationEndTime > trackBuffer.highestPresentationTimestamp())
-        trackBuffer.setHighestPresentationTimestamp(presentationEndTime);
-
-    // Eliminate small gaps between buffered ranges by coalescing
-    // disjoint ranges separated by less than a "fudge factor".
-    auto nearestToPresentationStartTime = trackBuffer.buffered().nearest(presentationTimestamp);
-    if (nearestToPresentationStartTime.isValid() && (presentationTimestamp - nearestToPresentationStartTime).isBetween(MediaTime::zeroTime(), timeFudgeFactor()))
-        presentationTimestamp = nearestToPresentationStartTime;
-
-    auto nearestToPresentationEndTime = trackBuffer.buffered().nearest(presentationEndTime);
-    if (nearestToPresentationEndTime.isValid() && (nearestToPresentationEndTime - presentationEndTime).isBetween(MediaTime::zeroTime(), timeFudgeFactor()))
-        presentationEndTime = nearestToPresentationEndTime;
-
-    trackBuffer.addBufferedRange(presentationTimestamp, presentationEndTime);
+    trackBuffer.addSample(sample);
 
     if (m_preload <= MediaPlayer::Preload::MetaData) {
         m_readyForMoreSamplesMap[trackId] = true;

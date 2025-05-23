@@ -79,6 +79,74 @@ void TrackBuffer::addBufferedRange(const MediaTime& start, const MediaTime& end,
 void TrackBuffer::addSample(MediaSample& sample)
 {
     m_samples.addSample(sample);
+
+    // Note: The terminology here is confusing: "enqueuing" means providing a frame to the inner media framework.
+    // First, frames are inserted in the decode queue; later, at the end of the append some of the frames in the
+    // decode may be "enqueued" (sent to the inner media framework) in `provideMediaData()`.
+    //
+    // In order to check whether a frame should be added to the decode queue we check that it does not precede any
+    // frame already enqueued.
+    //
+    // Note that adding a frame to the decode queue is no guarantee that it will be actually enqueued at that point.
+    // If the frame is after the discontinuity boundary, the enqueueing algorithm will hold it there until samples
+    // with earlier timestamps are enqueued. The decode queue is not FIFO, but rather an ordered map.
+    DecodeOrderSampleMap::KeyType decodeKey(sample.decodeTime(), sample.presentationTime());
+    if (lastEnqueuedDecodeKey().first.isInvalid() || decodeKey > lastEnqueuedDecodeKey()) {
+        decodeQueue().insert(DecodeOrderSampleMap::MapType::value_type(decodeKey, sample));
+
+        if (minimumEnqueuedPresentationTime().isValid() && sample.presentationTime() < minimumEnqueuedPresentationTime())
+            setNeedsMinimumUpcomingPresentationTimeUpdating(true);
+    }
+
+    // NOTE: the spec considers the need to check the last frame duration but doesn't specify if that last frame
+    // is the one prior in presentation or decode order.
+    // So instead, as a workaround we use the largest frame duration seen in the current coded frame group (as defined in https://www.w3.org/TR/media-source/#coded-frame-group.
+    if (lastDecodeTimestamp().isValid()) {
+        MediaTime lastDecodeDuration = sample.decodeTime() - lastDecodeTimestamp();
+        if (!greatestFrameDuration().isValid())
+            setGreatestFrameDuration(std::max(lastDecodeDuration, sample.duration()));
+        else
+            setGreatestFrameDuration(std::max({ greatestFrameDuration(), sample.duration(), lastDecodeDuration }));
+    }
+
+    // 1.17 Set last decode timestamp for track buffer to decode timestamp.
+    setLastDecodeTimestamp(sample.decodeTime());
+
+    // 1.18 Set last frame duration for track buffer to frame duration.
+    setLastFrameDuration(sample.duration());
+
+    // 1.19 If highest presentation timestamp for track buffer is unset or frame end timestamp is greater
+    // than highest presentation timestamp, then set highest presentation timestamp for track buffer
+    // to frame end timestamp.
+    if (highestPresentationTimestamp().isInvalid() || sample.presentationEndTime() > highestPresentationTimestamp())
+        setHighestPresentationTimestamp(sample.presentationEndTime());
+
+    addBufferedRange(sample.presentationTime(), sample.presentationEndTime(), AddTimeRangeOption::EliminateSmallGaps);
+}
+
+RefPtr<MediaSample> TrackBuffer::nextSample()
+{
+    if (m_decodeQueue.empty())
+        return { };
+
+    Ref sample = decodeQueue().begin()->second;
+
+    if (sample->decodeTime() > enqueueDiscontinuityBoundary()) {
+        DEBUG_LOG(LOGIDENTIFIER, "bailing early because of unbuffered gap, new sample: ", sample->decodeTime(), " >= the current discontinuity boundary: ", enqueueDiscontinuityBoundary());
+        return { };
+    }
+
+    // Remove the sample from the decode queue now.
+    decodeQueue().erase(decodeQueue().begin());
+
+    MediaTime samplePresentationEnd = sample->presentationEndTime();
+    if (highestEnqueuedPresentationTime().isInvalid() || samplePresentationEnd > highestEnqueuedPresentationTime())
+        setHighestEnqueuedPresentationTime(WTFMove(samplePresentationEnd));
+
+    setLastEnqueuedDecodeKey({ sample->decodeTime(), sample->presentationTime() });
+    setEnqueueDiscontinuityBoundary(sample->decodeTime() + sample->duration() + m_discontinuityTolerance);
+
+    return sample;
 }
 
 bool TrackBuffer::updateMinimumUpcomingPresentationTime()
