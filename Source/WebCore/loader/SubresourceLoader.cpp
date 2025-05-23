@@ -444,7 +444,7 @@ void SubresourceLoader::didReceiveResponse(ResourceResponse&& response, Completi
             // Existing resource is ok, just use it updating the expiration time.
             ResourceResponse revalidationResponse = response;
             revalidationResponse.setSource(ResourceResponse::Source::MemoryCacheAfterValidation);
-            resource->setResponse(WTFMove(revalidationResponse));
+            resource->setResponse(ResourceResponse { revalidationResponse });
             MemoryCache::singleton().revalidationSucceeded(*resource, resource->response());
             if (frame && frame->page())
                 frame->protectedPage()->diagnosticLoggingClient().logDiagnosticMessageWithResult(DiagnosticLoggingKeys::cachedResourceRevalidationKey(), emptyString(), DiagnosticLoggingResultPass, ShouldSample::Yes);
@@ -478,7 +478,7 @@ void SubresourceLoader::didReceiveResponse(ResourceResponse&& response, Completi
             opaqueRedirectedResponse.setType(ResourceResponse::Type::Opaqueredirect);
             opaqueRedirectedResponse.setTainting(ResourceResponse::Tainting::Opaqueredirect);
             if (resource)
-                resource->responseReceived(WTFMove(opaqueRedirectedResponse));
+                resource->responseReceived(ResourceResponse { opaqueRedirectedResponse });
             if (!reachedTerminalState())
                 ResourceLoader::didReceiveResponse(WTFMove(opaqueRedirectedResponse), [completionHandlerCaller = WTFMove(completionHandlerCaller)] { });
             return;
