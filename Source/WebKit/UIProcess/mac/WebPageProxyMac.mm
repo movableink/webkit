@@ -299,7 +299,7 @@ void WebPageProxy::didPerformDictionaryLookup(const DictionaryPopupInfo& diction
         pageClient->didPerformDictionaryLookup(dictionaryPopupInfo);
 
         DictionaryLookup::showPopup(dictionaryPopupInfo, pageClient->viewForPresentingRevealPopover(), [this](TextIndicator& textIndicator) {
-            setTextIndicator(textIndicator.data(), (uint64_t)WebCore::TextIndicatorLifetime::Permanent);
+            setTextIndicator(textIndicator.data(), WebCore::TextIndicatorLifetime::Permanent);
         }, nullptr, [weakThis = WeakPtr { *this }] {
             if (!weakThis)
                 return;

@@ -1504,7 +1504,7 @@ void WebPageProxy::createTextIndicatorForElementWithID(const String& elementID, 
     protectedLegacyMainFrameProcess()->sendWithAsyncReply(Messages::WebPage::CreateTextIndicatorForElementWithID(elementID), WTFMove(completionHandler), webPageIDInMainFrameProcess());
 }
 
-void WebPageProxy::setTextIndicatorFromFrame(FrameIdentifier frameID, const WebCore::TextIndicatorData& indicatorData, uint64_t lifetime)
+void WebPageProxy::setTextIndicatorFromFrame(FrameIdentifier frameID, const WebCore::TextIndicatorData& indicatorData, WebCore::TextIndicatorLifetime lifetime)
 {
     RefPtr frame = WebFrameProxy::webFrame(frameID);
     if (!frame)
@@ -1520,7 +1520,7 @@ void WebPageProxy::setTextIndicatorFromFrame(FrameIdentifier frameID, const WebC
     });
 }
 
-void WebPageProxy::setTextIndicator(const WebCore::TextIndicatorData& indicatorData, uint64_t lifetime)
+void WebPageProxy::setTextIndicator(const WebCore::TextIndicatorData& indicatorData, WebCore::TextIndicatorLifetime lifetime)
 {
     RefPtr pageClient = this->pageClient();
     if (!pageClient)
@@ -1565,7 +1565,7 @@ void WebPageProxy::updateTextIndicatorFromFrame(FrameIdentifier frameID, const W
 void WebPageProxy::updateTextIndicator(const WebCore::TextIndicatorData& indicatorData)
 {
     if (m_textIndicator && m_textIndicatorLayer)
-        setTextIndicator(indicatorData, std::to_underlying(TextIndicatorLifetime::Temporary));
+        setTextIndicator(indicatorData, TextIndicatorLifetime::Temporary);
 }
 
 void WebPageProxy::clearTextIndicator()

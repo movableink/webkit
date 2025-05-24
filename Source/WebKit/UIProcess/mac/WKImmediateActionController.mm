@@ -499,7 +499,7 @@
     CheckedPtr { _viewImpl.get() }->prepareForDictionaryLookup();
 
     return WebCore::DictionaryLookup::animationControllerForPopup(dictionaryPopupInfo, _view, [self](WebCore::TextIndicator& textIndicator) {
-        RefPtr { _page.get() }->setTextIndicator(textIndicator.data(), (uint64_t)WebCore::TextIndicatorLifetime::Permanent);
+        RefPtr { _page.get() }->setTextIndicator(textIndicator.data(), WebCore::TextIndicatorLifetime::Permanent);
     }, nullptr, [strongSelf = retainPtr(self)]() {
         RefPtr { strongSelf->_page.get() }->clearTextIndicatorWithAnimation(WebCore::TextIndicatorDismissalAnimation::None);
     });

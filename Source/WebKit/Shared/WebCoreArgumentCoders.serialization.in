@@ -2654,6 +2654,12 @@ enum class WebCore::ImageBufferPixelFormat : uint8_t {
     WebCore::TextIndicatorData data();
 };
 
+header: <WebCore/TextIndicator.h>
+[CustomHeader] enum class WebCore::TextIndicatorLifetime : uint8_t {
+    Permanent,
+    Temporary,
+};
+
 #if USE(SOUP)
 header: "ArgumentCodersGLib.h"
 #endif

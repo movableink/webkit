@@ -5752,7 +5752,7 @@ void WebPage::setActiveOpenPanelResultListener(Ref<WebOpenPanelResultListener>&&
 
 void WebPage::setTextIndicator(const WebCore::TextIndicatorData& indicatorData)
 {
-    send(Messages::WebPageProxy::SetTextIndicatorFromFrame(m_mainFrame->frameID(), indicatorData, static_cast<uint64_t>(WebCore::TextIndicatorLifetime::Temporary)));
+    send(Messages::WebPageProxy::SetTextIndicatorFromFrame(m_mainFrame->frameID(), indicatorData, WebCore::TextIndicatorLifetime::Temporary));
 }
 
 void WebPage::updateTextIndicator(const WebCore::TextIndicatorData& indicatorData)
