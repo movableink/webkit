@@ -267,6 +267,7 @@ TEST(CopyHTML, WriteRichTextSelectionToPasteboard)
     auto webView = createWebViewWithCustomPasteboardDataEnabled();
     [webView synchronouslyLoadHTMLString:@"<strong style='color: rgb(255, 0, 0);'>This is some text to copy.</strong>"];
     [webView stringByEvaluatingJavaScript:@"getSelection().selectAllChildren(document.body)"];
+    [webView waitForNextPresentationUpdate];
 
     auto pasteboard = [NSPasteboard pasteboardWithUniqueName];
     [webView writeSelectionToPasteboard:pasteboard types:@[ (__bridge NSString *)kUTTypeWebArchive ]];

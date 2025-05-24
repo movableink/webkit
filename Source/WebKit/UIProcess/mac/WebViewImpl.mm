@@ -2761,7 +2761,9 @@ bool WebViewImpl::writeSelectionToPasteboard(NSPasteboard *pasteboard, NSArray *
     size_t numTypes = types.count;
     [pasteboard declareTypes:types owner:nil];
     for (size_t i = 0; i < numTypes; ++i) {
-        if ([[types objectAtIndex:i] isEqualTo:WebCore::legacyStringPasteboardType()])
+        BOOL wantsPlainText = [[types objectAtIndex:i] isEqualTo:WebCore::legacyStringPasteboardType()];
+        RELEASE_LOG(Pasteboard, "Synchronously requesting %{public}s for selected range", wantsPlainText ? "plain text" : "data");
+        if (wantsPlainText)
             [pasteboard setString:m_page->stringSelectionForPasteboard().createNSString().get() forType:WebCore::legacyStringPasteboardType()];
         else {
             RefPtr<WebCore::SharedBuffer> buffer = m_page->dataSelectionForPasteboard([types objectAtIndex:i]);

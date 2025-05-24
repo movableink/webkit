@@ -136,6 +136,7 @@ extern "C" {
     M(PDF) \
     M(PDFAsyncRendering) \
     M(PageLoadObserver) \
+    M(Pasteboard) \
     M(PerformanceLogging) \
     M(Plugins) \
     M(Printing) \

@@ -221,13 +221,17 @@ void WebPageProxy::attributedSubstringForCharacterRangeAsync(const EditingRange&
     protectedLegacyMainFrameProcess()->sendWithAsyncReply(Messages::WebPage::AttributedSubstringForCharacterRangeAsync(range), WTFMove(callbackFunction), webPageIDInMainFrameProcess());
 }
 
+static constexpr auto timeoutForPasteboardSyncIPC = 5_s;
+
 String WebPageProxy::stringSelectionForPasteboard()
 {
     if (!hasRunningProcess())
         return { };
-    
-    const Seconds messageTimeout(20);
-    auto sendResult = protectedLegacyMainFrameProcess()->sendSync(Messages::WebPage::GetStringSelectionForPasteboard(), webPageIDInMainFrameProcess(), messageTimeout);
+
+    if (!editorState().selectionIsRange)
+        return { };
+
+    auto sendResult = protectedLegacyMainFrameProcess()->sendSync(Messages::WebPage::GetStringSelectionForPasteboard(), webPageIDInMainFrameProcess(), timeoutForPasteboardSyncIPC);
     auto [value] = sendResult.takeReplyOr(String { });
     return value;
 }
@@ -237,8 +241,10 @@ RefPtr<WebCore::SharedBuffer> WebPageProxy::dataSelectionForPasteboard(const Str
     if (!hasRunningProcess())
         return nullptr;
 
-    const Seconds messageTimeout(20);
-    auto sendResult = protectedLegacyMainFrameProcess()->sendSync(Messages::WebPage::GetDataSelectionForPasteboard(pasteboardType), webPageIDInMainFrameProcess(), messageTimeout);
+    if (!editorState().selectionIsRange)
+        return nullptr;
+
+    auto sendResult = protectedLegacyMainFrameProcess()->sendSync(Messages::WebPage::GetDataSelectionForPasteboard(pasteboardType), webPageIDInMainFrameProcess(), timeoutForPasteboardSyncIPC);
     auto [buffer] = sendResult.takeReplyOr(nullptr);
     return buffer;
 }
