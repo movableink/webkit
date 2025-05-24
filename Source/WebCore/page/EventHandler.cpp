@@ -881,10 +881,9 @@ bool EventHandler::handleMousePressEvent(const MouseEventWithHitTestResults& eve
 
     frame->protectedDocument()->updateLayoutIgnorePendingStylesheets();
 
-    if (RefPtr scrollView = frame->view()) {
-        if (scrollView->isPointInScrollbarCorner(event.event().position()))
-            return false;
-    }
+    RefPtr view = frame->view();
+    if (view && view->isPointInScrollbarCorner(event.event().position()))
+        return false;
 
     bool singleClick = event.event().clickCount() <= 1;
 
@@ -943,9 +942,22 @@ bool EventHandler::handleMousePressEvent(const MouseEventWithHitTestResults& eve
         swallowEvent = handleMousePressEventTripleClick(event);
     else
         swallowEvent = handleMousePressEventSingleClick(event);
-    
-    m_mouseDownMayStartAutoscroll = mouseDownMayStartSelect()
-        || (m_mousePressNode && m_mousePressNode->renderBox() && m_mousePressNode->renderBox()->canBeProgramaticallyScrolled());
+
+    m_mouseDownMayStartAutoscroll = [&] {
+        if (view) {
+            auto absolutePosition = view->windowToContents(event.event().position());
+            if (!view->visualViewportRect().contains(LayoutPoint { view->absoluteToDocumentPoint(absolutePosition) }))
+                return false;
+        }
+
+        if (mouseDownMayStartSelect())
+            return true;
+
+        if (m_mousePressNode && m_mousePressNode->renderBox() && m_mousePressNode->renderBox()->canBeProgramaticallyScrolled())
+            return true;
+
+        return false;
+    }();
 
     return swallowEvent;
 }
