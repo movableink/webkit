@@ -405,9 +405,9 @@ public:
             // Condition right
             Edge operand = condition->child2();
             if (operand->isInt32Constant() && operand.useKind() == Int32Use)
-                data.operand = operand->asInt32();
+                data.operand.emplace<CheckedInt32>(operand->asInt32());
             else
-                data.operand = operand.node();
+                data.operand.emplace<Node*>(operand.node());
             data.update = condition->child1().node();
             data.updateValue = update->child2()->asInt32();
             data.inductionVariable = condition->child1()->child1().node();
@@ -429,9 +429,9 @@ public:
                 return false;
             Node* initialValue = initialization->child1().node();
             if (initialValue->isInt32Constant())
-                data.initialValue = initialValue->asInt32();
+                data.initialValue.emplace<CheckedInt32>(initialValue->asInt32());
             else
-                data.initialValue = initialValue;
+                data.initialValue.emplace<Node*>(initialValue);
             return true;
         };
         if (!isInitialValueValid()) {
