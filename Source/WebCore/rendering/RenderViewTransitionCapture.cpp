@@ -112,6 +112,14 @@ void RenderViewTransitionCapture::updateFromStyle()
         setHasNonVisibleOverflow();
 }
 
+void RenderViewTransitionCapture::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+{
+    RenderReplaced::styleDidChange(diff, oldStyle);
+
+    if (oldStyle && oldStyle->usedVisibility() != style().usedVisibility() && hasLayer())
+        layer()->setNeedsCompositingLayerConnection();
+}
+
 LayoutPoint RenderViewTransitionCapture::captureContentInset() const
 {
     LayoutPoint location = m_localOverflowRect.location();

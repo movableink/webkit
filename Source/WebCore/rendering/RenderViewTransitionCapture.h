@@ -43,6 +43,8 @@ public:
     void paintReplaced(PaintInfo&, const LayoutPoint& paintOffset) override;
     void intrinsicSizeChanged() override;
 
+    void styleDidChange(StyleDifference, const RenderStyle*) override;
+
     void layout() override;
 
     FloatSize scale() const { return m_scale; }
