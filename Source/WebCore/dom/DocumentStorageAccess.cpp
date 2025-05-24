@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -99,7 +99,7 @@ std::optional<bool> DocumentStorageAccess::hasStorageAccessQuickCheck()
     if (frame && hasFrameSpecificStorageAccess())
         return true;
 
-    if (!frame || document->securityOrigin().isOpaque())
+    if (!frame || document->protectedSecurityOrigin()->isOpaque())
         return false;
 
     if (hasSameOrigin(document))
@@ -139,7 +139,7 @@ void DocumentStorageAccess::hasStorageAccess(Ref<DeferredPromise>&& promise)
         return;
     }
 
-    page->chrome().client().hasStorageAccess(RegistrableDomain::uncheckedCreateFromHost(document->securityOrigin().host()), RegistrableDomain::uncheckedCreateFromHost(document->topOrigin().host()), *frame, [weakThis = WeakPtr { *this }, promise = WTFMove(promise)] (bool hasAccess) {
+    page->chrome().client().hasStorageAccess(RegistrableDomain::uncheckedCreateFromHost(document->protectedSecurityOrigin()->host()), RegistrableDomain::uncheckedCreateFromHost(document->protectedTopOrigin()->host()), *frame, [weakThis = WeakPtr { *this }, promise = WTFMove(promise)] (bool hasAccess) {
         if (!weakThis)
             return;
 
@@ -168,8 +168,8 @@ std::optional<StorageAccessQuickResult> DocumentStorageAccess::requestStorageAcc
     if (frame && hasFrameSpecificStorageAccess())
         return StorageAccessQuickResult::Grant;
 
-    auto& securityOrigin = document->securityOrigin();
-    if (!frame || securityOrigin.isOpaque() || !isAllowedToRequestStorageAccess())
+    Ref securityOrigin = document->securityOrigin();
+    if (!frame || securityOrigin->isOpaque() || !isAllowedToRequestStorageAccess())
         return StorageAccessQuickResult::Reject;
 
     if (hasSameOrigin(document))
@@ -179,7 +179,7 @@ std::optional<StorageAccessQuickResult> DocumentStorageAccess::requestStorageAcc
     if (!document->sandboxFlags().isEmpty() && document->isSandboxed(SandboxFlag::StorageAccessByUserActivation))
         return StorageAccessQuickResult::Reject;
 
-    RegistrableDomain domain { securityOrigin.data() };
+    RegistrableDomain domain { securityOrigin->data() };
     bool userActivationCheckSkipped = frame->requestSkipUserActivationCheckForStorageAccess(domain);
     if (!userActivationCheckSkipped && !UserGestureIndicator::processingUserGesture())
         return StorageAccessQuickResult::Reject;
@@ -218,7 +218,7 @@ void DocumentStorageAccess::requestStorageAccess(Ref<DeferredPromise>&& promise)
     if (!page->settings().storageAccessAPIPerPageScopeEnabled())
         m_storageAccessScope = StorageAccessScope::PerFrame;
 
-    page->chrome().client().requestStorageAccess(RegistrableDomain::uncheckedCreateFromHost(document->securityOrigin().host()), RegistrableDomain::uncheckedCreateFromHost(document->topOrigin().host()), *frame, m_storageAccessScope, [this, weakThis = WeakPtr { *this }, promise = WTFMove(promise)] (RequestStorageAccessResult result) mutable {
+    page->chrome().client().requestStorageAccess(RegistrableDomain::uncheckedCreateFromHost(document->protectedSecurityOrigin()->host()), RegistrableDomain::uncheckedCreateFromHost(document->protectedTopOrigin()->host()), *frame, m_storageAccessScope, [this, weakThis = WeakPtr { *this }, promise = WTFMove(promise)] (RequestStorageAccessResult result) mutable {
         if (!weakThis)
             return;
 
@@ -233,9 +233,9 @@ void DocumentStorageAccess::requestStorageAccess(Ref<DeferredPromise>&& promise)
             shouldPreserveUserGesture = result.promptWasShown == StorageAccessPromptWasShown::No;
         }
 
-        auto document = protectedDocument();
+        Ref document = m_document.get();
         if (shouldPreserveUserGesture) {
-            document->eventLoop().queueMicrotask([this, weakThis] {
+            document->checkedEventLoop()->queueMicrotask([this, weakThis] {
                 if (weakThis)
                     enableTemporaryTimeUserGesture();
             });
@@ -260,7 +260,7 @@ void DocumentStorageAccess::requestStorageAccess(Ref<DeferredPromise>&& promise)
         }
 
         if (shouldPreserveUserGesture) {
-            protectedDocument()->eventLoop().queueMicrotask([this, weakThis] {
+            document->checkedEventLoop()->queueMicrotask([this, weakThis] {
                 if (weakThis)
                     consumeTemporaryTimeUserGesture();
             });
@@ -285,7 +285,7 @@ void DocumentStorageAccess::requestStorageAccessForDocumentQuirk(CompletionHandl
         *quickCheckResult == StorageAccessQuickResult::Grant ? completionHandler(StorageAccessWasGranted::Yes) : completionHandler(StorageAccessWasGranted::No);
         return;
     }
-    requestStorageAccessQuirk(RegistrableDomain::uncheckedCreateFromHost(m_document->securityOrigin().host()), WTFMove(completionHandler));
+    requestStorageAccessQuirk(RegistrableDomain::uncheckedCreateFromHost(protectedDocument()->protectedSecurityOrigin()->host()), WTFMove(completionHandler));
 }
 
 void DocumentStorageAccess::requestStorageAccessForNonDocumentQuirk(Document& hostingDocument, RegistrableDomain&& requestingDomain, CompletionHandler<void(StorageAccessWasGranted)>&& completionHandler)
@@ -319,7 +319,7 @@ void DocumentStorageAccess::requestStorageAccessQuirk(RegistrableDomain&& reques
         bool shouldPreserveUserGesture = result.wasGranted == StorageAccessWasGranted::Yes || result.promptWasShown == StorageAccessPromptWasShown::No;
 
         if (shouldPreserveUserGesture) {
-            protectedDocument()->eventLoop().queueMicrotask([this, weakThis] {
+            protectedDocument()->checkedEventLoop()->queueMicrotask([this, weakThis] {
                 if (weakThis)
                     enableTemporaryTimeUserGesture();
             });
@@ -337,7 +337,7 @@ void DocumentStorageAccess::requestStorageAccessQuirk(RegistrableDomain&& reques
         }
 
         if (shouldPreserveUserGesture) {
-            protectedDocument()->eventLoop().queueMicrotask([this, weakThis] {
+            protectedDocument()->checkedEventLoop()->queueMicrotask([this, weakThis] {
                 if (weakThis)
                     consumeTemporaryTimeUserGesture();
             });

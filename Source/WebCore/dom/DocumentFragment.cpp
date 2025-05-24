@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -120,12 +120,12 @@ Element* DocumentFragment::getElementById(const AtomString& id) const
 
     // Fast path for ShadowRoot, where we are both a DocumentFragment and a TreeScope.
     if (isTreeScope())
-        return treeScope().getElementById(id).get();
+        return protectedTreeScope()->getElementById(id).get();
 
     // Otherwise, fall back to iterating all of the element descendants.
-    for (auto& element : descendantsOfType<Element>(*this)) {
-        if (element.getIdAttribute() == id)
-            return const_cast<Element*>(&element);
+    for (Ref element : descendantsOfType<Element>(*this)) {
+        if (element->getIdAttribute() == id)
+            return const_cast<Element*>(element.ptr());
     }
 
     return nullptr;

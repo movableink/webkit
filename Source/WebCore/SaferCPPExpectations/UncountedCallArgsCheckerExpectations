@@ -1,5 +1,4 @@
 EventNames.h
-StyleExtractorGenerated.cpp
 Modules/ShapeDetection/BarcodeDetector.cpp
 Modules/ShapeDetection/FaceDetector.cpp
 Modules/ShapeDetection/TextDetector.cpp
@@ -236,6 +235,7 @@ Modules/websockets/WebSocketChannelInspector.cpp
 Modules/websockets/WorkerThreadableWebSocketChannel.cpp
 Modules/webtransport/WebTransport.cpp
 StyleBuilderGenerated.cpp
+StyleExtractorGenerated.cpp
 accessibility/AXImage.cpp
 accessibility/AXLogger.cpp
 accessibility/AXObjectCache.cpp
@@ -516,8 +516,6 @@ dom/DOMImplementation.cpp
 dom/DataTransfer.cpp
 dom/DataTransferItemList.cpp
 dom/Document.cpp
-dom/DocumentFragment.cpp
-dom/DocumentStorageAccess.cpp
 dom/Element.cpp
 dom/ElementData.cpp
 dom/ElementInlines.h

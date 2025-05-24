@@ -257,16 +257,12 @@ css/typedom/transform/CSSSkew.cpp
 css/typedom/transform/CSSTransformValue.cpp
 css/typedom/transform/CSSTranslate.cpp
 cssjit/SelectorCompiler.cpp
-dom/BroadcastChannel.cpp
 dom/CollectionIndexCacheInlines.h
-dom/CommandEvent.cpp
 dom/ComposedTreeAncestorIterator.h
 dom/ComposedTreeIterator.cpp
 dom/ComposedTreeIterator.h
 dom/ContainerNodeAlgorithms.cpp
 dom/Document.cpp
-dom/DocumentFragment.cpp
-dom/DocumentStorageAccess.cpp
 dom/Element.cpp
 dom/ElementAndTextDescendantIterator.h
 dom/ElementIteratorInlines.h

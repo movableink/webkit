@@ -117,7 +117,6 @@ dom/CustomElementReactionQueue.cpp
 dom/DeviceMotionController.cpp
 dom/DeviceOrientationController.cpp
 dom/Document.cpp
-dom/DocumentFragment.cpp
 dom/Element.cpp
 dom/ElementAndTextDescendantIterator.h
 dom/ElementInlines.h

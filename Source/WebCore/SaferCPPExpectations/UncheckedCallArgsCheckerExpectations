@@ -1,4 +1,3 @@
-StyleExtractorGenerated.cpp
 Modules/airplay/WebMediaSessionManager.cpp
 Modules/applepay-ams-ui/ApplePayAMSUIPaymentHandler.cpp
 Modules/applicationmanifest/ApplicationManifestParser.cpp
@@ -69,6 +68,7 @@ Modules/webdatabase/SQLTransaction.cpp
 Modules/websockets/WebSocketChannelInspector.cpp
 Modules/websockets/WorkerThreadableWebSocketChannel.cpp
 StyleBuilderGenerated.cpp
+StyleExtractorGenerated.cpp
 accessibility/AXImage.cpp
 accessibility/AXObjectCache.cpp
 accessibility/AXObjectCache.h
@@ -174,7 +174,6 @@ dom/DeviceMotionController.cpp
 dom/DeviceOrientationController.cpp
 dom/Document.cpp
 dom/DocumentFullscreen.cpp
-dom/DocumentStorageAccess.cpp
 dom/Element.cpp
 dom/ElementInternals.cpp
 dom/ElementIteratorInlines.h
