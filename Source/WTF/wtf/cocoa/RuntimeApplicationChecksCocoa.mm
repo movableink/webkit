@@ -113,7 +113,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
     }
 
     if (linkedBefore(dyld_spring_2018_os_versions, DYLD_IOS_VERSION_11_3, DYLD_MACOSX_VERSION_10_13_4)) {
-        disableBehavior(SDKAlignedBehavior::DisallowsSettingAnyXHRHeaderFromFileURLs);
         disableBehavior(SDKAlignedBehavior::DefaultsToPassiveTouchListenersOnDocument);
     }
 
@@ -513,18 +512,6 @@ bool IOSApplication::isIBooksStorytime()
 {
     static bool isIBooksStorytime = applicationBundleIsEqualTo("com.apple.TVBooks"_s);
     return isIBooksStorytime;
-}
-
-bool IOSApplication::isCardiogram()
-{
-    static bool isCardiogram = applicationBundleIsEqualTo("com.cardiogram.ios.heart"_s);
-    return isCardiogram;
-}
-
-bool IOSApplication::isNike()
-{
-    static bool isNike = applicationBundleIsEqualTo("com.nike.omega"_s);
-    return isNike;
 }
 
 bool IOSApplication::isMoviStarPlus()

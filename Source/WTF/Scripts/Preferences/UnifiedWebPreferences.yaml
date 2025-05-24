@@ -295,17 +295,6 @@ AllowRunningOfInsecureContent:
     WebCore:
       default: false
 
-AllowSettingAnyXHRHeaderFromFileURLs:
-  type: bool
-  status: embedder
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
-      default: false
-    WebCore:
-      default: false
-
 AllowTestOnlyIPC:
   type: bool
   status: embedder

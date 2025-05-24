@@ -49,7 +49,6 @@ enum class SDKAlignedBehavior {
     DefaultsToExcludingBackgroundsWhenPrinting,
     DefaultsToPassiveTouchListenersOnDocument,
     DefaultsToPassiveWheelListenersOnDocument,
-    DisallowsSettingAnyXHRHeaderFromFileURLs,
     DoesNotDrainTheMicrotaskQueueWhenCallingObjC,
     DoesNotParseStringEndingWithFullStopAsFloatingPointNumber,
     DoesNotAddIntrinsicMarginsToFormControls,
@@ -188,7 +187,6 @@ namespace IOSApplication {
 
 WTF_EXPORT_PRIVATE bool isAmazon();
 WTF_EXPORT_PRIVATE bool isAppleWebApp();
-WTF_EXPORT_PRIVATE bool isCardiogram();
 WTF_EXPORT_PRIVATE bool isCrunchyroll();
 WTF_EXPORT_PRIVATE bool isDataActivation();
 WTF_EXPORT_PRIVATE bool isDoubleDown();
@@ -207,7 +205,6 @@ WTF_EXPORT_PRIVATE bool isMiniBrowser();
 WTF_EXPORT_PRIVATE bool isMobileMail();
 WTF_EXPORT_PRIVATE bool isMobileSafari();
 WTF_EXPORT_PRIVATE bool isNews();
-WTF_EXPORT_PRIVATE bool isNike();
 WTF_EXPORT_PRIVATE bool isNoggin();
 WTF_EXPORT_PRIVATE bool isOKCupid();
 WTF_EXPORT_PRIVATE bool isPaperIO();

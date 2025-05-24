@@ -803,11 +803,7 @@ ExceptionOr<void> XMLHttpRequest::setRequestHeader(const String& name, const Str
     if (!isValidHTTPToken(name) || !isValidHTTPHeaderValue(normalizedValue))
         return Exception { ExceptionCode::SyntaxError };
 
-    bool allowUnsafeHeaderField = false;
-    // FIXME: The allowSettingAnyXHRHeaderFromFileURLs setting currently only applies to Documents, not workers.
-    if (securityOrigin()->canLoadLocalResources() && scriptExecutionContext()->isDocument() && document()->settings().allowSettingAnyXHRHeaderFromFileURLs())
-        allowUnsafeHeaderField = true;
-    if (!allowUnsafeHeaderField && isForbiddenHeader(name, normalizedValue)) {
+    if (isForbiddenHeader(name, normalizedValue)) {
         logConsoleError(scriptExecutionContext(), makeString("Refused to set unsafe header \""_s, name, '"'));
         return { };
     }

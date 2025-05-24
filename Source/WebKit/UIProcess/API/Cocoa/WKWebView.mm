@@ -360,12 +360,6 @@ static bool shouldAllowPictureInPictureMediaPlayback()
     return shouldAllowPictureInPictureMediaPlayback;
 }
 
-static bool shouldAllowSettingAnyXHRHeaderFromFileURLs()
-{
-    static bool shouldAllowSettingAnyXHRHeaderFromFileURLs = (WTF::IOSApplication::isCardiogram() || WTF::IOSApplication::isNike()) && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::DisallowsSettingAnyXHRHeaderFromFileURLs);
-    return shouldAllowSettingAnyXHRHeaderFromFileURLs;
-}
-
 #endif // PLATFORM(IOS_FAMILY)
 
 static bool shouldRequireUserGestureToLoadVideo()
@@ -771,7 +765,6 @@ static void addBrowsingContextControllerMethodStubIfNeeded()
     preferences->setAllowsPictureInPictureMediaPlayback(!![_configuration allowsPictureInPictureMediaPlayback] && shouldAllowPictureInPictureMediaPlayback());
     preferences->setUserInterfaceDirectionPolicy(static_cast<uint32_t>(WebCore::UserInterfaceDirectionPolicy::Content));
     preferences->setSystemLayoutDirection(static_cast<uint32_t>(WebCore::TextDirection::LTR));
-    preferences->setAllowSettingAnyXHRHeaderFromFileURLs(shouldAllowSettingAnyXHRHeaderFromFileURLs());
     preferences->setShouldDecidePolicyBeforeLoadingQuickLookPreview(!![_configuration _shouldDecidePolicyBeforeLoadingQuickLookPreview]);
 #if USE(SYSTEM_PREVIEW)
     preferences->setSystemPreviewEnabled(!![_configuration _systemPreviewEnabled]);
