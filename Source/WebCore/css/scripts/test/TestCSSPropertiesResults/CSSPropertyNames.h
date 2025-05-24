@@ -37,7 +37,7 @@ enum CSSPropertyID : uint16_t {
     CSSPropertyTestColorAllowsTypesAbsolute = 23,
     CSSPropertyTestColorPropertyWithNoVisitedLinkSupport = 24,
     CSSPropertyTestColorPropertyWithVisitedLinkSupport = 25,
-    CSSPropertyTestCustonmExtractor = 26,
+    CSSPropertyTestCustomExtractor = 26,
     CSSPropertyTestExtractorConverter = 27,
     CSSPropertyTestFunctionBoundedParameters = 28,
     CSSPropertyTestFunctionFixedParameters = 29,

@@ -907,6 +907,7 @@ style/StyleBuilderStateInlines.h
 style/StyleExtractor.cpp
 style/StyleExtractorConverter.h
 style/StyleExtractorCustom.h
+style/StyleExtractorSerializer.h
 style/StyleInterpolation.cpp
 style/StyleInvalidationFunctions.h
 style/StyleInvalidator.cpp

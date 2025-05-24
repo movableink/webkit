@@ -32,13 +32,21 @@ namespace WebCore {
 class CSSValue;
 enum CSSPropertyID : uint16_t;
 
+namespace CSS {
+struct SerializationContext;
+}
+
 namespace Style {
 
 struct ExtractorState;
 
 class ExtractorGenerated {
 public:
+    // Extracts value for `CSSPropertyID` from `ExtractorState` as a `CSSValue`.
     static RefPtr<CSSValue> extractValue(ExtractorState&, CSSPropertyID);
+
+    // Extracts value serialization for `CSSPropertyID` from `ExtractorState`, appending result to `StringBuilder`.
+    static void extractValueSerialization(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, CSSPropertyID);
 };
 
 } // namespace Style

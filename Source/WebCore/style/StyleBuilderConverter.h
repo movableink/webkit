@@ -117,7 +117,6 @@ class BuilderConverter {
 public:
     static WebCore::Length convertLength(BuilderState&, const CSSValue&);
     static WebCore::Length convertLengthOrAuto(BuilderState&, const CSSValue&);
-    static WebCore::Length convertLengthOrAutoOrContent(BuilderState&, const CSSValue&);
     static WebCore::Length convertLengthSizing(BuilderState&, const CSSValue&);
     static WebCore::Length convertLengthMaxSizing(BuilderState&, const CSSValue&);
     static WebCore::Length convertLengthAllowingNumber(BuilderState&, const CSSValue&); // Assumes unit is 'px' if input is a number.

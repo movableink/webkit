@@ -2417,7 +2417,7 @@
                     "border-block-start-color",
                     "border-block-end-color"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-grammar-unused": "<'border-top-color'>{1,2}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -2436,7 +2436,7 @@
                     "border-block-end-style",
                     "border-block-end-color"
                 ],
-                "shorthand-pattern": "Standard",
+                "shorthand-pattern": "StandardSpaceSeparated",
                 "parser-grammar-unused": "<'border-top-width'> || <'border-top-style'> || <color>",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -2533,7 +2533,7 @@
                     "border-block-start-style",
                     "border-block-start-color"
                 ],
-                "shorthand-pattern": "Standard",
+                "shorthand-pattern": "StandardSpaceSeparated",
                 "parser-grammar-unused": "<'border-top-width'> || <'border-top-style'> || <color>",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -2626,7 +2626,7 @@
                     "border-block-start-style",
                     "border-block-end-style"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-grammar-unused": "<'border-top-style'>{1,2}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -2641,7 +2641,7 @@
                     "border-block-start-width",
                     "border-block-end-width"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-grammar-unused": "<'border-top-width'>{1,2}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -2657,7 +2657,7 @@
                     "border-bottom-style",
                     "border-bottom-color"
                 ],
-                "shorthand-pattern": "Standard",
+                "shorthand-pattern": "StandardSpaceSeparated",
                 "parser-grammar-unused": "<'border-top-width'> || <'border-top-style'> || <'border-top-color'>",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -2811,7 +2811,7 @@
                     "border-left-color"
                 ],
                 "accepts-quirky-color": true,
-                "shorthand-pattern": "4Value",
+                "shorthand-pattern": "CoalescingQuad",
                 "parser-grammar-unused": "<'border-top-color'>{1,4}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -2998,7 +2998,7 @@
                     "border-inline-start-color",
                     "border-inline-end-color"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-grammar-unused": "<'border-top-color'>{1,2}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -3017,7 +3017,7 @@
                     "border-inline-end-style",
                     "border-inline-end-color"
                 ],
-                "shorthand-pattern": "Standard",
+                "shorthand-pattern": "StandardSpaceSeparated",
                 "parser-grammar-unused": "<'border-top-width'> || <'border-top-style'> || <color>",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -3114,7 +3114,7 @@
                     "border-inline-start-style",
                     "border-inline-start-color"
                 ],
-                "shorthand-pattern": "Standard",
+                "shorthand-pattern": "StandardSpaceSeparated",
                 "parser-grammar-unused": "<'border-top-width'> || <'border-top-style'> || <color>",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -3207,7 +3207,7 @@
                     "border-inline-start-style",
                     "border-inline-end-style"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-grammar-unused": "<'border-top-style'>{1,2}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -3222,7 +3222,7 @@
                     "border-inline-start-width",
                     "border-inline-end-width"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-grammar-unused": "<'border-top-width'>{1,2}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -3238,7 +3238,7 @@
                     "border-left-style",
                     "border-left-color"
                 ],
-                "shorthand-pattern": "Standard",
+                "shorthand-pattern": "StandardSpaceSeparated",
                 "parser-grammar-unused": "<'border-top-width'> || <'border-top-style'> || <'border-top-color'>",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -3347,7 +3347,7 @@
                     "border-right-style",
                     "border-right-color"
                 ],
-                "shorthand-pattern": "Standard",
+                "shorthand-pattern": "StandardSpaceSeparated",
                 "parser-grammar-unused": "<'border-top-width'> || <'border-top-style'> || <'border-top-color'>",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -3442,6 +3442,7 @@
                     "-webkit-border-vertical-spacing"
                 ],
                 "accepts-quirky-length": true,
+                "shorthand-pattern": "CoalescingPair",
                 "parser-function": "consumeBorderSpacingShorthand",
                 "parser-function-comment": "FIXME: Can probably use shorthand-pattern Values2",
                 "parser-grammar-unused": "<length [0,inf]>{1,2}",
@@ -3494,7 +3495,7 @@
                     "border-bottom-style",
                     "border-left-style"
                 ],
-                "shorthand-pattern": "4Value",
+                "shorthand-pattern": "CoalescingQuad",
                 "parser-grammar-unused": "<'border-top-style'>{1,4}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -3510,7 +3511,7 @@
                     "border-top-style",
                     "border-top-color"
                 ],
-                "shorthand-pattern": "Standard",
+                "shorthand-pattern": "StandardSpaceSeparated",
                 "parser-grammar-unused": "<'border-top-width'> || <'border-top-style'> || <'border-top-color'>",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -3648,7 +3649,7 @@
                     "border-left-width"
                 ],
                 "accepts-quirky-length": true,
-                "shorthand-pattern": "4Value",
+                "shorthand-pattern": "CoalescingQuad",
                 "parser-grammar-unused": "<'border-top-width'>{1,4}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -4014,7 +4015,7 @@
                     "corner-bottom-left-shape"
                 ],
                 "disables-native-appearance": true,
-                "shorthand-pattern": "4Value",
+                "shorthand-pattern": "CoalescingQuad",
                 "parser-grammar-unused": "<'corner-top-left-shape'>{1,4}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -4809,7 +4810,7 @@
                     "bottom",
                     "left"
                 ],
-                "shorthand-pattern": "4Value",
+                "shorthand-pattern": "CoalescingQuad",
                 "parser-grammar-unused": "<'top'>{1,4}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -4824,7 +4825,7 @@
                     "inset-block-start",
                     "inset-block-end"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-grammar-unused": "<'top'>{1,2}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -4869,7 +4870,7 @@
                     "inset-inline-start",
                     "inset-inline-end"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-grammar-unused": "<'top'>{1,2}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -5041,7 +5042,7 @@
                     "list-style-image",
                     "list-style-type"
                 ],
-                "shorthand-pattern": "Standard",
+                "shorthand-pattern": "StandardSpaceSeparated",
                 "parser-function": "consumeListStyleShorthand",
                 "parser-grammar-unused": "<'list-style-position'> || <'list-style-image'> || <'list-style-type'>",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
@@ -5204,7 +5205,7 @@
                     "margin-left"
                 ],
                 "accepts-quirky-length": true,
-                "shorthand-pattern": "4Value",
+                "shorthand-pattern": "CoalescingQuad",
                 "parser-grammar-unused": "<'margin-top'>{1,4}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -5219,7 +5220,7 @@
                     "margin-block-start",
                     "margin-block-end"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-grammar-unused": "<'margin-left'>{1,2}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -5299,7 +5300,7 @@
                     "margin-inline-start",
                     "margin-inline-end"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-grammar-unused": "<'margin-left'>{1,2}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -6625,7 +6626,7 @@
                     "outline-style",
                     "outline-width"
                 ],
-                "shorthand-pattern": "Standard",
+                "shorthand-pattern": "StandardSpaceSeparated",
                 "parser-grammar-unused": "<'outline-color'> || <'outline-style'> || <'outline-width'>",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -6715,7 +6716,7 @@
                     "overflow-x",
                     "overflow-y"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-function": "consumeOverflowShorthand",
                 "parser-grammar-unused": "<'overflow-block'>{1,2}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
@@ -6981,7 +6982,7 @@
                     "padding-left"
                 ],
                 "accepts-quirky-length": true,
-                "shorthand-pattern": "4Value",
+                "shorthand-pattern": "CoalescingQuad",
                 "parser-grammar-unused": "<'padding-top'>{1,4}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -6996,7 +6997,7 @@
                     "padding-block-start",
                     "padding-block-end"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-grammar-unused": "<'padding-left'>{1,2}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -7071,7 +7072,7 @@
                     "padding-inline-start",
                     "padding-inline-end"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-grammar-unused": "<'padding-left'>{1,2}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -8638,7 +8639,7 @@
                     "contain-intrinsic-width",
                     "contain-intrinsic-height"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-function": "consumeContainIntrinsicSizeShorthand",
                 "parser-function-comment": "FIXME: Can probably use 2Value",
                 "parser-grammar-unused": "<'contain-intrinsic-width'>{1,2}",
@@ -9240,7 +9241,7 @@
                     "row-gap",
                     "column-gap"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-function": "consumeAlignShorthand",
                 "parser-grammar-unused": "<'row-gap'> <'column-gap'>?",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
@@ -9275,7 +9276,7 @@
                     "column-rule-style",
                     "column-rule-color"
                 ],
-                "shorthand-pattern": "Standard",
+                "shorthand-pattern": "StandardSpaceSeparated",
                 "parser-grammar-unused": "<'column-rule-width'> || <'column-rule-style'> || <'column-rule-color'>",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -9632,7 +9633,7 @@
                     "flex-shrink",
                     "flex-basis"
                 ],
-                "shorthand-pattern": "Standard",
+                "shorthand-pattern": "StandardSpaceSeparated",
                 "parser-function": "consumeFlexShorthand",
                 "parser-grammar-unused": "none | [ [ <'flex-grow'> <'flex-shrink'>? ] || <'flex-basis'> ]",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
@@ -9729,7 +9730,7 @@
                     "flex-direction",
                     "flex-wrap"
                 ],
-                "shorthand-parser-pattern": "Standard",
+                "shorthand-parser-pattern": "StandardSpaceSeparated",
                 "parser-grammar-unused": "<'flex-direction'> || <'flex-wrap'>",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -9911,7 +9912,7 @@
                     "align-content",
                     "justify-content"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-function": "consumeAlignShorthand",
                 "parser-grammar-unused": "<'align-content'> <'justify-content'>?",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
@@ -9927,7 +9928,7 @@
                     "align-items",
                     "justify-items"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-function": "consumeAlignShorthand",
                 "parser-grammar-unused": "<'align-items'> <'justify-items'>?",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
@@ -9943,7 +9944,7 @@
                     "align-self",
                     "justify-self"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-function": "consumeAlignShorthand",
                 "parser-grammar-unused": "<'align-self'> <'justify-self'>?",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
@@ -9963,6 +9964,7 @@
                     "grid-auto-rows",
                     "grid-auto-columns"
                 ],
+                "shorthand-pattern": "StandardSlashSeparated",
                 "parser-function": "consumeGridShorthand",
                 "parser-grammar-unused": "<grid>",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
@@ -9980,6 +9982,7 @@
                     "grid-row-end",
                     "grid-column-end"
                 ],
+                "shorthand-pattern": "StandardSlashSeparated",
                 "parser-function": "consumeGridAreaShorthand",
                 "parser-grammar-unused": "<grid-line> [ / <grid-line> ]{0,3}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
@@ -10058,6 +10061,7 @@
                     "grid-template-columns",
                     "grid-template-areas"
                 ],
+                "shorthand-pattern": "StandardSlashSeparated",
                 "parser-function": "consumeGridTemplateShorthand",
                 "parser-grammar-unused": "<grid-template>",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
@@ -10137,6 +10141,7 @@
                     "grid-column-start",
                     "grid-column-end"
                 ],
+                "shorthand-pattern": "StandardSlashSeparated",
                 "parser-function": "consumeGridItemPositionShorthand",
                 "parser-grammar-unused": "<grid-line> [ / <grid-line> ]?",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
@@ -10152,6 +10157,7 @@
                     "grid-row-start",
                     "grid-row-end"
                 ],
+                "shorthand-pattern": "StandardSlashSeparated",
                 "parser-function": "consumeGridItemPositionShorthand",
                 "parser-grammar-unused": "<grid-line> [ / <grid-line> ]?",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
@@ -10834,7 +10840,7 @@
                     "text-decoration-style",
                     "text-decoration-color"
                 ],
-                "shorthand-pattern": "Standard",
+                "shorthand-pattern": "StandardSpaceSeparated",
                 "parser-grammar-unused": "<'text-decoration-line'> || <'text-decoration-style'> || <'text-decoration-color'>",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -11036,8 +11042,7 @@
                     "text-emphasis-style",
                     "text-emphasis-color"
                 ],
-                "shorthand-pattern-comment": "FIXME: Can probably use shorthand-pattern Standard for extractor",
-                "shorthand-parser-pattern": "Standard",
+                "shorthand-pattern": "StandardSpaceSeparated",
                 "parser-grammar-unused": "<'text-emphasis-style'> || <'text-emphasis-color'>",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -11142,7 +11147,7 @@
                 ],
                 "skip-style-extractor": true,
                 "skip-style-extractor-comment": "FIXME: Figure out and document why this has no computed value",
-                "shorthand-pattern": "Standard",
+                "shorthand-pattern": "StandardSpaceSeparated",
                 "parser-grammar-unused": "<'-webkit-text-stroke-width'> || <'-webkit-text-stroke-color'>",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -11465,7 +11470,7 @@
                 "aliases": [
                     "scroll-snap-margin"
                 ],
-                "shorthand-pattern": "4Value",
+                "shorthand-pattern": "CoalescingQuad",
                 "parser-grammar-unused": "<'scroll-margin-top'>{1,4}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -11632,7 +11637,7 @@
                     "scroll-margin-block-start",
                     "scroll-margin-block-end"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-grammar-unused": "<'scroll-left'>{1,2}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -11647,7 +11652,7 @@
                     "scroll-margin-inline-start",
                     "scroll-margin-inline-end"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-grammar-unused": "<'scroll-left'>{1,2}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -11664,7 +11669,7 @@
                     "scroll-padding-bottom",
                     "scroll-padding-left"
                 ],
-                "shorthand-pattern": "4Value",
+                "shorthand-pattern": "CoalescingQuad",
                 "parser-grammar-unused": "<'scroll-padding-top'>{1,4}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -11843,7 +11848,7 @@
                     "scroll-padding-block-start",
                     "scroll-padding-block-end"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-grammar-unused": "<'scroll-padding-left'>{1,2}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },
@@ -11858,7 +11863,7 @@
                     "scroll-padding-inline-start",
                     "scroll-padding-inline-end"
                 ],
-                "shorthand-pattern": "2Value",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-grammar-unused": "<'scroll-padding-left'>{1,2}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             },

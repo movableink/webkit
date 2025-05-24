@@ -16,409 +16,818 @@ namespace Style {
 
 class ExtractorFunctions {
 public:
-    static RefPtr<CSSValue> extractValueTestTopPriority(ExtractorState& extractorState)
+    static RefPtr<CSSValue> extractTestTopPriority(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testTopPriority());
     }
-    static RefPtr<CSSValue> extractValueTestHighPriority(ExtractorState& extractorState)
+    static void extractTestTopPrioritySerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testTopPriority());
+    }
+    static RefPtr<CSSValue> extractTestHighPriority(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testHighPriority());
     }
-    static RefPtr<CSSValue> extractValueTestAnimationWrapper(ExtractorState& extractorState)
+    static void extractTestHighPrioritySerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testHighPriority());
+    }
+    static RefPtr<CSSValue> extractTestAnimationWrapper(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testAnimationWrapper());
     }
-    static RefPtr<CSSValue> extractValueTestAnimationWrapperAccelerationAlways(ExtractorState& extractorState)
+    static void extractTestAnimationWrapperSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testAnimationWrapper());
+    }
+    static RefPtr<CSSValue> extractTestAnimationWrapperAccelerationAlways(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testAnimationWrapperAccelerationAlways());
     }
-    static RefPtr<CSSValue> extractValueTestAnimationWrapperAccelerationThreadedOnly(ExtractorState& extractorState)
+    static void extractTestAnimationWrapperAccelerationAlwaysSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testAnimationWrapperAccelerationAlways());
+    }
+    static RefPtr<CSSValue> extractTestAnimationWrapperAccelerationThreadedOnly(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testAnimationWrapperAccelerationThreadedOnly());
     }
-    static RefPtr<CSSValue> extractValueTestAutoFunctions(ExtractorState& extractorState)
+    static void extractTestAnimationWrapperAccelerationThreadedOnlySerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testAnimationWrapperAccelerationThreadedOnly());
+    }
+    static RefPtr<CSSValue> extractTestAutoFunctions(ExtractorState& extractorState)
     {
         if (extractorState.style.hasAutoTestAutoFunctions())
             return CSSPrimitiveValue::create(CSSValueAuto);
         return ExtractorConverter::convert(extractorState, extractorState.style.testAutoFunctions());
     }
-    static RefPtr<CSSValue> extractValueTestBoundedRepetitionWithCommas(ExtractorState& extractorState)
+    static void extractTestAutoFunctionsSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        if (extractorState.style.hasAutoTestAutoFunctions()) {
+            builder.append(nameLiteralForSerialization(CSSValueAuto));
+            return;
+        }
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testAutoFunctions());
+    }
+    static RefPtr<CSSValue> extractTestBoundedRepetitionWithCommas(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testBoundedRepetitionWithCommas());
     }
-    static RefPtr<CSSValue> extractValueTestBoundedRepetitionWithCommasFixed(ExtractorState& extractorState)
+    static void extractTestBoundedRepetitionWithCommasSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testBoundedRepetitionWithCommas());
+    }
+    static RefPtr<CSSValue> extractTestBoundedRepetitionWithCommasFixed(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testBoundedRepetitionWithCommasFixed());
     }
-    static RefPtr<CSSValue> extractValueTestBoundedRepetitionWithCommasNoSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestBoundedRepetitionWithCommasFixedSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testBoundedRepetitionWithCommasFixed());
+    }
+    static RefPtr<CSSValue> extractTestBoundedRepetitionWithCommasNoSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testBoundedRepetitionWithCommasNoSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestBoundedRepetitionWithCommasSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestBoundedRepetitionWithCommasNoSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testBoundedRepetitionWithCommasNoSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestBoundedRepetitionWithCommasSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testBoundedRepetitionWithCommasSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestBoundedRepetitionWithSpaces(ExtractorState& extractorState)
+    static void extractTestBoundedRepetitionWithCommasSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testBoundedRepetitionWithCommasSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestBoundedRepetitionWithSpaces(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testBoundedRepetitionWithSpaces());
     }
-    static RefPtr<CSSValue> extractValueTestBoundedRepetitionWithSpacesFixed(ExtractorState& extractorState)
+    static void extractTestBoundedRepetitionWithSpacesSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testBoundedRepetitionWithSpaces());
+    }
+    static RefPtr<CSSValue> extractTestBoundedRepetitionWithSpacesFixed(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testBoundedRepetitionWithSpacesFixed());
     }
-    static RefPtr<CSSValue> extractValueTestBoundedRepetitionWithSpacesNoSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestBoundedRepetitionWithSpacesFixedSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testBoundedRepetitionWithSpacesFixed());
+    }
+    static RefPtr<CSSValue> extractTestBoundedRepetitionWithSpacesNoSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testBoundedRepetitionWithSpacesNoSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestBoundedRepetitionWithSpacesSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestBoundedRepetitionWithSpacesNoSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testBoundedRepetitionWithSpacesNoSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestBoundedRepetitionWithSpacesSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testBoundedRepetitionWithSpacesSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestBoundedRepetitionWithSpacesWithType(ExtractorState& extractorState)
+    static void extractTestBoundedRepetitionWithSpacesSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testBoundedRepetitionWithSpacesSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestBoundedRepetitionWithSpacesWithType(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testBoundedRepetitionWithSpacesWithType());
     }
-    static RefPtr<CSSValue> extractValueTestBoundedRepetitionWithSpacesWithTypeNoSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestBoundedRepetitionWithSpacesWithTypeSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testBoundedRepetitionWithSpacesWithType());
+    }
+    static RefPtr<CSSValue> extractTestBoundedRepetitionWithSpacesWithTypeNoSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testBoundedRepetitionWithSpacesWithTypeNoSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious(ExtractorState& extractorState)
+    static void extractTestBoundedRepetitionWithSpacesWithTypeNoSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testBoundedRepetitionWithSpacesWithTypeNoSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious());
     }
-    static RefPtr<CSSValue> extractValueTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo(ExtractorState& extractorState)
+    static void extractTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious());
+    }
+    static RefPtr<CSSValue> extractTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo());
     }
-    static RefPtr<CSSValue> extractValueTestColor(ExtractorState& extractorState)
+    static void extractTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwoSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo());
+    }
+    static RefPtr<CSSValue> extractTestColor(ExtractorState& extractorState)
     {
         return ExtractorConverter::convertColor(extractorState, extractorState.style.testColor());
     }
-    static RefPtr<CSSValue> extractValueTestColorAllowsTypesAbsolute(ExtractorState& extractorState)
+    static void extractTestColorSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serializeColor(extractorState, builder, context, extractorState.style.testColor());
+    }
+    static RefPtr<CSSValue> extractTestColorAllowsTypesAbsolute(ExtractorState& extractorState)
     {
         return ExtractorConverter::convertColor(extractorState, extractorState.style.testColorAllowsTypesAbsolute());
     }
-    static RefPtr<CSSValue> extractValueTestColorPropertyWithNoVisitedLinkSupport(ExtractorState& extractorState)
+    static void extractTestColorAllowsTypesAbsoluteSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serializeColor(extractorState, builder, context, extractorState.style.testColorAllowsTypesAbsolute());
+    }
+    static RefPtr<CSSValue> extractTestColorPropertyWithNoVisitedLinkSupport(ExtractorState& extractorState)
     {
         return ExtractorConverter::convertColor(extractorState, extractorState.style.testColorPropertyWithNoVisitedLinkSupport());
     }
-    static RefPtr<CSSValue> extractValueTestColorPropertyWithVisitedLinkSupport(ExtractorState& extractorState)
+    static void extractTestColorPropertyWithNoVisitedLinkSupportSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
     {
-        if (extractorState.allowVisitedStyle)
+        ExtractorSerializer::serializeColor(extractorState, builder, context, extractorState.style.testColorPropertyWithNoVisitedLinkSupport());
+    }
+    static RefPtr<CSSValue> extractTestColorPropertyWithVisitedLinkSupport(ExtractorState& extractorState)
+    {
+        if (extractorState.allowVisitedStyle) {
             return extractorState.pool.createColorValue(extractorState.style.visitedDependentColor(CSSPropertyID::CSSPropertyTestColorPropertyWithVisitedLinkSupport));
+        }
         return ExtractorConverter::convertColor(extractorState, extractorState.style.testColorPropertyWithVisitedLinkSupport());
     }
-    static RefPtr<CSSValue> extractValueTestExtractorConverter(ExtractorState& extractorState)
+    static void extractTestColorPropertyWithVisitedLinkSupportSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        if (extractorState.allowVisitedStyle) {
+            builder.append(serializationForCSS(extractorState.style.visitedDependentColor(CSSPropertyID::CSSPropertyTestColorPropertyWithVisitedLinkSupport)));
+            return;
+        }
+        ExtractorSerializer::serializeColor(extractorState, builder, context, extractorState.style.testColorPropertyWithVisitedLinkSupport());
+    }
+    static RefPtr<CSSValue> extractTestExtractorConverter(ExtractorState& extractorState)
     {
         return ExtractorConverter::convertTestExtractorOnlyConversion(extractorState, extractorState.style.testExtractorConverter());
     }
-    static RefPtr<CSSValue> extractValueTestFunctionBoundedParameters(ExtractorState& extractorState)
+    static void extractTestExtractorConverterSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serializeTestExtractorOnlyConversion(extractorState, builder, context, extractorState.style.testExtractorConverter());
+    }
+    static RefPtr<CSSValue> extractTestFunctionBoundedParameters(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testFunctionBoundedParameters());
     }
-    static RefPtr<CSSValue> extractValueTestFunctionFixedParameters(ExtractorState& extractorState)
+    static void extractTestFunctionBoundedParametersSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testFunctionBoundedParameters());
+    }
+    static RefPtr<CSSValue> extractTestFunctionFixedParameters(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testFunctionFixedParameters());
     }
-    static RefPtr<CSSValue> extractValueTestFunctionNoParameters(ExtractorState& extractorState)
+    static void extractTestFunctionFixedParametersSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testFunctionFixedParameters());
+    }
+    static RefPtr<CSSValue> extractTestFunctionNoParameters(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testFunctionNoParameters());
     }
-    static RefPtr<CSSValue> extractValueTestFunctionParametersMatchAllAnyOrder(ExtractorState& extractorState)
+    static void extractTestFunctionNoParametersSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testFunctionNoParameters());
+    }
+    static RefPtr<CSSValue> extractTestFunctionParametersMatchAllAnyOrder(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testFunctionParametersMatchAllAnyOrder());
     }
-    static RefPtr<CSSValue> extractValueTestFunctionParametersMatchAllAnyOrderWithOptional(ExtractorState& extractorState)
+    static void extractTestFunctionParametersMatchAllAnyOrderSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testFunctionParametersMatchAllAnyOrder());
+    }
+    static RefPtr<CSSValue> extractTestFunctionParametersMatchAllAnyOrderWithOptional(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testFunctionParametersMatchAllAnyOrderWithOptional());
     }
-    static RefPtr<CSSValue> extractValueTestFunctionParametersMatchAllOrdered(ExtractorState& extractorState)
+    static void extractTestFunctionParametersMatchAllAnyOrderWithOptionalSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testFunctionParametersMatchAllAnyOrderWithOptional());
+    }
+    static RefPtr<CSSValue> extractTestFunctionParametersMatchAllOrdered(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testFunctionParametersMatchAllOrdered());
     }
-    static RefPtr<CSSValue> extractValueTestFunctionParametersMatchAllOrderedWithOptional(ExtractorState& extractorState)
+    static void extractTestFunctionParametersMatchAllOrderedSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testFunctionParametersMatchAllOrdered());
+    }
+    static RefPtr<CSSValue> extractTestFunctionParametersMatchAllOrderedWithOptional(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testFunctionParametersMatchAllOrderedWithOptional());
     }
-    static RefPtr<CSSValue> extractValueTestFunctionParametersMatchOneOrMoreAnyOrder(ExtractorState& extractorState)
+    static void extractTestFunctionParametersMatchAllOrderedWithOptionalSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testFunctionParametersMatchAllOrderedWithOptional());
+    }
+    static RefPtr<CSSValue> extractTestFunctionParametersMatchOneOrMoreAnyOrder(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testFunctionParametersMatchOneOrMoreAnyOrder());
     }
-    static RefPtr<CSSValue> extractValueTestFunctionSingleParameter(ExtractorState& extractorState)
+    static void extractTestFunctionParametersMatchOneOrMoreAnyOrderSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testFunctionParametersMatchOneOrMoreAnyOrder());
+    }
+    static RefPtr<CSSValue> extractTestFunctionSingleParameter(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testFunctionSingleParameter());
     }
-    static RefPtr<CSSValue> extractValueTestFunctionSingleParameterMatchOne(ExtractorState& extractorState)
+    static void extractTestFunctionSingleParameterSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testFunctionSingleParameter());
+    }
+    static RefPtr<CSSValue> extractTestFunctionSingleParameterMatchOne(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testFunctionSingleParameterMatchOne());
     }
-    static RefPtr<CSSValue> extractValueTestFunctionSingleParameterOptional(ExtractorState& extractorState)
+    static void extractTestFunctionSingleParameterMatchOneSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testFunctionSingleParameterMatchOne());
+    }
+    static RefPtr<CSSValue> extractTestFunctionSingleParameterOptional(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testFunctionSingleParameterOptional());
     }
-    static RefPtr<CSSValue> extractValueTestFunctionUnboundedParametersNoMin(ExtractorState& extractorState)
+    static void extractTestFunctionSingleParameterOptionalSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testFunctionSingleParameterOptional());
+    }
+    static RefPtr<CSSValue> extractTestFunctionUnboundedParametersNoMin(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testFunctionUnboundedParametersNoMin());
     }
-    static RefPtr<CSSValue> extractValueTestFunctionUnboundedParametersWithMinimum(ExtractorState& extractorState)
+    static void extractTestFunctionUnboundedParametersNoMinSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testFunctionUnboundedParametersNoMin());
+    }
+    static RefPtr<CSSValue> extractTestFunctionUnboundedParametersWithMinimum(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testFunctionUnboundedParametersWithMinimum());
     }
-    static RefPtr<CSSValue> extractValueTestImage(ExtractorState& extractorState)
+    static void extractTestFunctionUnboundedParametersWithMinimumSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testFunctionUnboundedParametersWithMinimum());
+    }
+    static RefPtr<CSSValue> extractTestImage(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testImage());
     }
-    static RefPtr<CSSValue> extractValueTestImageNoImageSet(ExtractorState& extractorState)
+    static void extractTestImageSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testImage());
+    }
+    static RefPtr<CSSValue> extractTestImageNoImageSet(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testImageNoImageSet());
     }
-    static RefPtr<CSSValue> extractValueTestKeyword(ExtractorState& extractorState)
+    static void extractTestImageNoImageSetSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testImageNoImageSet());
+    }
+    static RefPtr<CSSValue> extractTestKeyword(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testKeyword());
     }
-    static RefPtr<CSSValue> extractValueTestKeywordWithAliasedTo(ExtractorState& extractorState)
+    static void extractTestKeywordSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testKeyword());
+    }
+    static RefPtr<CSSValue> extractTestKeywordWithAliasedTo(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testKeywordWithAliasedTo());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllAnyOrder(ExtractorState& extractorState)
+    static void extractTestKeywordWithAliasedToSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testKeywordWithAliasedTo());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllAnyOrder(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllAnyOrder());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllAnyOrderWithCustomType(ExtractorState& extractorState)
+    static void extractTestMatchAllAnyOrderSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllAnyOrder());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllAnyOrderWithCustomType(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllAnyOrderWithCustomType());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllAnyOrderWithOptional(ExtractorState& extractorState)
+    static void extractTestMatchAllAnyOrderWithCustomTypeSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllAnyOrderWithCustomType());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllAnyOrderWithOptional(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllAnyOrderWithOptional());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllAnyOrderWithOptionalAndCustomType(ExtractorState& extractorState)
+    static void extractTestMatchAllAnyOrderWithOptionalSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllAnyOrderWithOptional());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllAnyOrderWithOptionalAndCustomType(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllAnyOrderWithOptionalAndCustomType());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomType(ExtractorState& extractorState)
+    static void extractTestMatchAllAnyOrderWithOptionalAndCustomTypeSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllAnyOrderWithOptionalAndCustomType());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomType(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomType());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomTypeNoSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomTypeSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomType());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomTypeNoSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomTypeNoSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomType(ExtractorState& extractorState)
+    static void extractTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomTypeNoSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomTypeNoSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomType(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomType());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomTypeNoSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomTypeSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomType());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomTypeNoSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomTypeNoSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllAnyOrderWithOptionalAndPreserveOrderAndCustomType(ExtractorState& extractorState)
+    static void extractTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomTypeNoSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomTypeNoSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllAnyOrderWithOptionalAndPreserveOrderAndCustomType(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllAnyOrderWithOptionalAndPreserveOrderAndCustomType());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllAnyOrderWithOptionalNoSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestMatchAllAnyOrderWithOptionalAndPreserveOrderAndCustomTypeSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllAnyOrderWithOptionalAndPreserveOrderAndCustomType());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllAnyOrderWithOptionalNoSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllAnyOrderWithOptionalNoSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllAnyOrderWithOptionalSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestMatchAllAnyOrderWithOptionalNoSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllAnyOrderWithOptionalNoSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllAnyOrderWithOptionalSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllAnyOrderWithOptionalSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllAnyOrderWithOptionalWithPreserveOrder(ExtractorState& extractorState)
+    static void extractTestMatchAllAnyOrderWithOptionalSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllAnyOrderWithOptionalSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllAnyOrderWithOptionalWithPreserveOrder(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllAnyOrderWithOptionalWithPreserveOrder());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllAnyOrderWithOptionalWithPreserveOrderNoSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestMatchAllAnyOrderWithOptionalWithPreserveOrderSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllAnyOrderWithOptionalWithPreserveOrder());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllAnyOrderWithOptionalWithPreserveOrderNoSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllAnyOrderWithOptionalWithPreserveOrderNoSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllAnyOrderWithPreserveOrder(ExtractorState& extractorState)
+    static void extractTestMatchAllAnyOrderWithOptionalWithPreserveOrderNoSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllAnyOrderWithOptionalWithPreserveOrderNoSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllAnyOrderWithPreserveOrder(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllAnyOrderWithPreserveOrder());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllAnyOrderWithPreserveOrderAndCustomType(ExtractorState& extractorState)
+    static void extractTestMatchAllAnyOrderWithPreserveOrderSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllAnyOrderWithPreserveOrder());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllAnyOrderWithPreserveOrderAndCustomType(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllAnyOrderWithPreserveOrderAndCustomType());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllAnyOrderWithPreserveOrderNoSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestMatchAllAnyOrderWithPreserveOrderAndCustomTypeSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllAnyOrderWithPreserveOrderAndCustomType());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllAnyOrderWithPreserveOrderNoSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllAnyOrderWithPreserveOrderNoSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllOrdered(ExtractorState& extractorState)
+    static void extractTestMatchAllAnyOrderWithPreserveOrderNoSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllAnyOrderWithPreserveOrderNoSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllOrdered(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllOrdered());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllOrderedWithCustomType(ExtractorState& extractorState)
+    static void extractTestMatchAllOrderedSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllOrdered());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllOrderedWithCustomType(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllOrderedWithCustomType());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllOrderedWithOptional(ExtractorState& extractorState)
+    static void extractTestMatchAllOrderedWithCustomTypeSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllOrderedWithCustomType());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllOrderedWithOptional(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllOrderedWithOptional());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllOrderedWithOptionalAndCustomType(ExtractorState& extractorState)
+    static void extractTestMatchAllOrderedWithOptionalSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllOrderedWithOptional());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllOrderedWithOptionalAndCustomType(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllOrderedWithOptionalAndCustomType());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestMatchAllOrderedWithOptionalAndCustomTypeSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllOrderedWithOptionalAndCustomType());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllOrderedWithOptionalAndMultipleRequired(ExtractorState& extractorState)
+    static void extractTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllOrderedWithOptionalAndMultipleRequired(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllOrderedWithOptionalAndMultipleRequired());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType(ExtractorState& extractorState)
+    static void extractTestMatchAllOrderedWithOptionalAndMultipleRequiredSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllOrderedWithOptionalAndMultipleRequired());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllOrderedWithOptionalNoSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomTypeSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllOrderedWithOptionalNoSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllOrderedWithOptionalNoSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestMatchAllOrderedWithOptionalSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestMatchAllOrderedWithOptionalNoSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllOrderedWithOptionalNoSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestMatchAllOrderedWithOptionalSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchAllOrderedWithOptionalSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestMatchOne(ExtractorState& extractorState)
+    static void extractTestMatchAllOrderedWithOptionalSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchAllOrderedWithOptionalSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestMatchOne(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchOne());
     }
-    static RefPtr<CSSValue> extractValueTestMatchOneOrMoreAnyOrder(ExtractorState& extractorState)
+    static void extractTestMatchOneSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchOne());
+    }
+    static RefPtr<CSSValue> extractTestMatchOneOrMoreAnyOrder(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchOneOrMoreAnyOrder());
     }
-    static RefPtr<CSSValue> extractValueTestMatchOneOrMoreAnyOrderNoSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestMatchOneOrMoreAnyOrderSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchOneOrMoreAnyOrder());
+    }
+    static RefPtr<CSSValue> extractTestMatchOneOrMoreAnyOrderNoSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchOneOrMoreAnyOrderNoSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestMatchOneOrMoreAnyOrderWithCustomType(ExtractorState& extractorState)
+    static void extractTestMatchOneOrMoreAnyOrderNoSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchOneOrMoreAnyOrderNoSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestMatchOneOrMoreAnyOrderWithCustomType(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchOneOrMoreAnyOrderWithCustomType());
     }
-    static RefPtr<CSSValue> extractValueTestMatchOneOrMoreAnyOrderWithCustomTypeNoSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestMatchOneOrMoreAnyOrderWithCustomTypeSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchOneOrMoreAnyOrderWithCustomType());
+    }
+    static RefPtr<CSSValue> extractTestMatchOneOrMoreAnyOrderWithCustomTypeNoSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchOneOrMoreAnyOrderWithCustomTypeNoSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestMatchOneOrMoreAnyOrderWithPreserveOrder(ExtractorState& extractorState)
+    static void extractTestMatchOneOrMoreAnyOrderWithCustomTypeNoSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchOneOrMoreAnyOrderWithCustomTypeNoSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestMatchOneOrMoreAnyOrderWithPreserveOrder(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchOneOrMoreAnyOrderWithPreserveOrder());
     }
-    static RefPtr<CSSValue> extractValueTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomType(ExtractorState& extractorState)
+    static void extractTestMatchOneOrMoreAnyOrderWithPreserveOrderSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchOneOrMoreAnyOrderWithPreserveOrder());
+    }
+    static RefPtr<CSSValue> extractTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomType(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomType());
     }
-    static RefPtr<CSSValue> extractValueTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomTypeNoSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomTypeSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomType());
+    }
+    static RefPtr<CSSValue> extractTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomTypeNoSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomTypeNoSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomTypeNoSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomTypeNoSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestMatchOneWithGroupWithSettingsFlag(ExtractorState& extractorState)
+    static void extractTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestMatchOneWithGroupWithSettingsFlag(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchOneWithGroupWithSettingsFlag());
     }
-    static RefPtr<CSSValue> extractValueTestMatchOneWithKeywordWithSettingsFlag(ExtractorState& extractorState)
+    static void extractTestMatchOneWithGroupWithSettingsFlagSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchOneWithGroupWithSettingsFlag());
+    }
+    static RefPtr<CSSValue> extractTestMatchOneWithKeywordWithSettingsFlag(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchOneWithKeywordWithSettingsFlag());
     }
-    static RefPtr<CSSValue> extractValueTestMatchOneWithMultipleKeywords(ExtractorState& extractorState)
+    static void extractTestMatchOneWithKeywordWithSettingsFlagSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchOneWithKeywordWithSettingsFlag());
+    }
+    static RefPtr<CSSValue> extractTestMatchOneWithMultipleKeywords(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchOneWithMultipleKeywords());
     }
-    static RefPtr<CSSValue> extractValueTestMatchOneWithReferenceWithSettingsFlag(ExtractorState& extractorState)
+    static void extractTestMatchOneWithMultipleKeywordsSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchOneWithMultipleKeywords());
+    }
+    static RefPtr<CSSValue> extractTestMatchOneWithReferenceWithSettingsFlag(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchOneWithReferenceWithSettingsFlag());
     }
-    static RefPtr<CSSValue> extractValueTestMatchOneWithSettingsFlag(ExtractorState& extractorState)
+    static void extractTestMatchOneWithReferenceWithSettingsFlagSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchOneWithReferenceWithSettingsFlag());
+    }
+    static RefPtr<CSSValue> extractTestMatchOneWithSettingsFlag(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testMatchOneWithSettingsFlag());
     }
-    static RefPtr<CSSValue> extractValueTestNumericValueRange(ExtractorState& extractorState)
+    static void extractTestMatchOneWithSettingsFlagSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testMatchOneWithSettingsFlag());
+    }
+    static RefPtr<CSSValue> extractTestNumericValueRange(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testNumericValueRange());
     }
-    static RefPtr<CSSValue> extractValueTestProperty(ExtractorState& extractorState)
+    static void extractTestNumericValueRangeSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testNumericValueRange());
+    }
+    static RefPtr<CSSValue> extractTestProperty(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testProperty());
     }
-    static RefPtr<CSSValue> extractValueTestSettingsOne(ExtractorState& extractorState)
+    static void extractTestPropertySerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testProperty());
+    }
+    static RefPtr<CSSValue> extractTestSettingsOne(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testSettingsOne());
     }
-    static RefPtr<CSSValue> extractValueTestSharedBuilderExtractorConverter(ExtractorState& extractorState)
+    static void extractTestSettingsOneSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testSettingsOne());
+    }
+    static RefPtr<CSSValue> extractTestSharedBuilderExtractorConverter(ExtractorState& extractorState)
     {
         return ExtractorConverter::convertTestSharedBuilderExtractorConversion(extractorState, extractorState.style.testSharedBuilderExtractorConverter());
     }
-    static RefPtr<CSSValue> extractValueTestUnboundedRepetitionWithCommasWithMin(ExtractorState& extractorState)
+    static void extractTestSharedBuilderExtractorConverterSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serializeTestSharedBuilderExtractorConversion(extractorState, builder, context, extractorState.style.testSharedBuilderExtractorConverter());
+    }
+    static RefPtr<CSSValue> extractTestUnboundedRepetitionWithCommasWithMin(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testUnboundedRepetitionWithCommasWithMin());
     }
-    static RefPtr<CSSValue> extractValueTestUnboundedRepetitionWithCommasWithMinNoSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestUnboundedRepetitionWithCommasWithMinSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testUnboundedRepetitionWithCommasWithMin());
+    }
+    static RefPtr<CSSValue> extractTestUnboundedRepetitionWithCommasWithMinNoSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testUnboundedRepetitionWithCommasWithMinNoSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestUnboundedRepetitionWithCommasWithMinSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestUnboundedRepetitionWithCommasWithMinNoSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testUnboundedRepetitionWithCommasWithMinNoSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestUnboundedRepetitionWithCommasWithMinSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testUnboundedRepetitionWithCommasWithMinSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestUnboundedRepetitionWithSpacesNoMin(ExtractorState& extractorState)
+    static void extractTestUnboundedRepetitionWithCommasWithMinSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testUnboundedRepetitionWithCommasWithMinSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestUnboundedRepetitionWithSpacesNoMin(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testUnboundedRepetitionWithSpacesNoMin());
     }
-    static RefPtr<CSSValue> extractValueTestUnboundedRepetitionWithSpacesNoMinNoSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestUnboundedRepetitionWithSpacesNoMinSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testUnboundedRepetitionWithSpacesNoMin());
+    }
+    static RefPtr<CSSValue> extractTestUnboundedRepetitionWithSpacesNoMinNoSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testUnboundedRepetitionWithSpacesNoMinNoSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestUnboundedRepetitionWithSpacesWithMin(ExtractorState& extractorState)
+    static void extractTestUnboundedRepetitionWithSpacesNoMinNoSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testUnboundedRepetitionWithSpacesNoMinNoSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestUnboundedRepetitionWithSpacesWithMin(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testUnboundedRepetitionWithSpacesWithMin());
     }
-    static RefPtr<CSSValue> extractValueTestUnboundedRepetitionWithSpacesWithMinNoSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestUnboundedRepetitionWithSpacesWithMinSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testUnboundedRepetitionWithSpacesWithMin());
+    }
+    static RefPtr<CSSValue> extractTestUnboundedRepetitionWithSpacesWithMinNoSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testUnboundedRepetitionWithSpacesWithMinNoSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt(ExtractorState& extractorState)
+    static void extractTestUnboundedRepetitionWithSpacesWithMinNoSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testUnboundedRepetitionWithSpacesWithMinNoSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testUnboundedRepetitionWithSpacesWithMinSingleItemOpt());
     }
-    static RefPtr<CSSValue> extractValueTestUrlWithModifiers(ExtractorState& extractorState)
+    static void extractTestUnboundedRepetitionWithSpacesWithMinSingleItemOptSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testUnboundedRepetitionWithSpacesWithMinSingleItemOpt());
+    }
+    static RefPtr<CSSValue> extractTestUrlWithModifiers(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testUrlWithModifiers());
     }
-    static RefPtr<CSSValue> extractValueTestUrlWithNoModifiers(ExtractorState& extractorState)
+    static void extractTestUrlWithModifiersSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testUrlWithModifiers());
+    }
+    static RefPtr<CSSValue> extractTestUrlWithNoModifiers(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testUrlWithNoModifiers());
     }
-    static RefPtr<CSSValue> extractValueTestUsingSharedRule(ExtractorState& extractorState)
+    static void extractTestUrlWithNoModifiersSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testUrlWithNoModifiers());
+    }
+    static RefPtr<CSSValue> extractTestUsingSharedRule(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testUsingSharedRule());
     }
-    static RefPtr<CSSValue> extractValueTestUsingSharedRuleExported(ExtractorState& extractorState)
+    static void extractTestUsingSharedRuleSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testUsingSharedRule());
+    }
+    static RefPtr<CSSValue> extractTestUsingSharedRuleExported(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testUsingSharedRuleExported());
     }
-    static RefPtr<CSSValue> extractValueTestUsingSharedRuleWithOverrideFunction(ExtractorState& extractorState)
+    static void extractTestUsingSharedRuleExportedSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testUsingSharedRuleExported());
+    }
+    static RefPtr<CSSValue> extractTestUsingSharedRuleWithOverrideFunction(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testUsingSharedRuleWithOverrideFunction());
     }
-    static RefPtr<CSSValue> extractValueTestSinkPriority(ExtractorState& extractorState)
+    static void extractTestUsingSharedRuleWithOverrideFunctionSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testUsingSharedRuleWithOverrideFunction());
+    }
+    static RefPtr<CSSValue> extractTestSinkPriority(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testSinkPriority());
     }
-    static RefPtr<CSSValue> extractValueTestLogicalPropertyGroupPhysicalHorizontal(ExtractorState& extractorState)
+    static void extractTestSinkPrioritySerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testSinkPriority());
+    }
+    static RefPtr<CSSValue> extractTestLogicalPropertyGroupPhysicalHorizontal(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testLogicalPropertyGroupPhysicalHorizontal());
     }
-    static RefPtr<CSSValue> extractValueTestLogicalPropertyGroupPhysicalVertical(ExtractorState& extractorState)
+    static void extractTestLogicalPropertyGroupPhysicalHorizontalSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testLogicalPropertyGroupPhysicalHorizontal());
+    }
+    static RefPtr<CSSValue> extractTestLogicalPropertyGroupPhysicalVertical(ExtractorState& extractorState)
     {
         return ExtractorConverter::convert(extractorState, extractorState.style.testLogicalPropertyGroupPhysicalVertical());
     }
-    static RefPtr<CSSValue> extractValueTestShorthandTwoShorthand(ExtractorState& extractorState)
+    static void extractTestLogicalPropertyGroupPhysicalVerticalSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
     {
-        return extractValues2Shorthand(extractorState, testShorthandTwoShorthand());
+        ExtractorSerializer::serialize(extractorState, builder, context, extractorState.style.testLogicalPropertyGroupPhysicalVertical());
+    }
+    static RefPtr<CSSValue> extractTestShorthandTwoShorthand(ExtractorState& extractorState)
+    {
+        return extractCoalescingPairShorthand(extractorState, testShorthandTwoShorthand());
+    }
+    static void extractTestShorthandTwoShorthandSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)
+    {
+        extractCoalescingPairShorthandSerialization(extractorState, builder, context, testShorthandTwoShorthand());
     }
 };
 
@@ -431,9 +840,9 @@ RefPtr<CSSValue> ExtractorGenerated::extractValue(ExtractorState& extractorState
         ASSERT_NOT_REACHED();
         break;
     case CSSPropertyID::CSSPropertyTestTopPriority:
-        return ExtractorFunctions::extractValueTestTopPriority(extractorState);
+        return ExtractorFunctions::extractTestTopPriority(extractorState);
     case CSSPropertyID::CSSPropertyTestHighPriority:
-        return ExtractorFunctions::extractValueTestHighPriority(extractorState);
+        return ExtractorFunctions::extractTestHighPriority(extractorState);
     case CSSPropertyID::CSSPropertyFirstTestDescriptorForFirstDescriptor:
         // Skipped - Descriptor-only property
         return nullptr;
@@ -441,201 +850,201 @@ RefPtr<CSSValue> ExtractorGenerated::extractValue(ExtractorState& extractorState
         // Skipped - Descriptor-only property
         return nullptr;
     case CSSPropertyID::CSSPropertyTestAnimationWrapper:
-        return ExtractorFunctions::extractValueTestAnimationWrapper(extractorState);
+        return ExtractorFunctions::extractTestAnimationWrapper(extractorState);
     case CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationAlways:
-        return ExtractorFunctions::extractValueTestAnimationWrapperAccelerationAlways(extractorState);
+        return ExtractorFunctions::extractTestAnimationWrapperAccelerationAlways(extractorState);
     case CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationThreadedOnly:
-        return ExtractorFunctions::extractValueTestAnimationWrapperAccelerationThreadedOnly(extractorState);
+        return ExtractorFunctions::extractTestAnimationWrapperAccelerationThreadedOnly(extractorState);
     case CSSPropertyID::CSSPropertyTestAutoFunctions:
-        return ExtractorFunctions::extractValueTestAutoFunctions(extractorState);
+        return ExtractorFunctions::extractTestAutoFunctions(extractorState);
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommas:
-        return ExtractorFunctions::extractValueTestBoundedRepetitionWithCommas(extractorState);
+        return ExtractorFunctions::extractTestBoundedRepetitionWithCommas(extractorState);
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommasFixed:
-        return ExtractorFunctions::extractValueTestBoundedRepetitionWithCommasFixed(extractorState);
+        return ExtractorFunctions::extractTestBoundedRepetitionWithCommasFixed(extractorState);
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommasNoSingleItemOpt:
-        return ExtractorFunctions::extractValueTestBoundedRepetitionWithCommasNoSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestBoundedRepetitionWithCommasNoSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommasSingleItemOpt:
-        return ExtractorFunctions::extractValueTestBoundedRepetitionWithCommasSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestBoundedRepetitionWithCommasSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpaces:
-        return ExtractorFunctions::extractValueTestBoundedRepetitionWithSpaces(extractorState);
+        return ExtractorFunctions::extractTestBoundedRepetitionWithSpaces(extractorState);
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesFixed:
-        return ExtractorFunctions::extractValueTestBoundedRepetitionWithSpacesFixed(extractorState);
+        return ExtractorFunctions::extractTestBoundedRepetitionWithSpacesFixed(extractorState);
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesNoSingleItemOpt:
-        return ExtractorFunctions::extractValueTestBoundedRepetitionWithSpacesNoSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestBoundedRepetitionWithSpacesNoSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesSingleItemOpt:
-        return ExtractorFunctions::extractValueTestBoundedRepetitionWithSpacesSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestBoundedRepetitionWithSpacesSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithType:
-        return ExtractorFunctions::extractValueTestBoundedRepetitionWithSpacesWithType(extractorState);
+        return ExtractorFunctions::extractTestBoundedRepetitionWithSpacesWithType(extractorState);
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeNoSingleItemOpt:
-        return ExtractorFunctions::extractValueTestBoundedRepetitionWithSpacesWithTypeNoSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestBoundedRepetitionWithSpacesWithTypeNoSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious:
-        return ExtractorFunctions::extractValueTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious(extractorState);
+        return ExtractorFunctions::extractTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious(extractorState);
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo:
-        return ExtractorFunctions::extractValueTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo(extractorState);
+        return ExtractorFunctions::extractTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo(extractorState);
     case CSSPropertyID::CSSPropertyTestColor:
-        return ExtractorFunctions::extractValueTestColor(extractorState);
+        return ExtractorFunctions::extractTestColor(extractorState);
     case CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolute:
-        return ExtractorFunctions::extractValueTestColorAllowsTypesAbsolute(extractorState);
+        return ExtractorFunctions::extractTestColorAllowsTypesAbsolute(extractorState);
     case CSSPropertyID::CSSPropertyTestColorPropertyWithNoVisitedLinkSupport:
-        return ExtractorFunctions::extractValueTestColorPropertyWithNoVisitedLinkSupport(extractorState);
+        return ExtractorFunctions::extractTestColorPropertyWithNoVisitedLinkSupport(extractorState);
     case CSSPropertyID::CSSPropertyTestColorPropertyWithVisitedLinkSupport:
-        return ExtractorFunctions::extractValueTestColorPropertyWithVisitedLinkSupport(extractorState);
-    case CSSPropertyID::CSSPropertyTestCustonmExtractor:
-        return ExtractorCustom::extractValueTestCustonmExtractor(extractorState);
+        return ExtractorFunctions::extractTestColorPropertyWithVisitedLinkSupport(extractorState);
+    case CSSPropertyID::CSSPropertyTestCustomExtractor:
+        return ExtractorCustom::extractTestCustomExtractor(extractorState);
     case CSSPropertyID::CSSPropertyTestExtractorConverter:
-        return ExtractorFunctions::extractValueTestExtractorConverter(extractorState);
+        return ExtractorFunctions::extractTestExtractorConverter(extractorState);
     case CSSPropertyID::CSSPropertyTestFunctionBoundedParameters:
-        return ExtractorFunctions::extractValueTestFunctionBoundedParameters(extractorState);
+        return ExtractorFunctions::extractTestFunctionBoundedParameters(extractorState);
     case CSSPropertyID::CSSPropertyTestFunctionFixedParameters:
-        return ExtractorFunctions::extractValueTestFunctionFixedParameters(extractorState);
+        return ExtractorFunctions::extractTestFunctionFixedParameters(extractorState);
     case CSSPropertyID::CSSPropertyTestFunctionNoParameters:
-        return ExtractorFunctions::extractValueTestFunctionNoParameters(extractorState);
+        return ExtractorFunctions::extractTestFunctionNoParameters(extractorState);
     case CSSPropertyID::CSSPropertyTestFunctionParametersMatchAllAnyOrder:
-        return ExtractorFunctions::extractValueTestFunctionParametersMatchAllAnyOrder(extractorState);
+        return ExtractorFunctions::extractTestFunctionParametersMatchAllAnyOrder(extractorState);
     case CSSPropertyID::CSSPropertyTestFunctionParametersMatchAllAnyOrderWithOptional:
-        return ExtractorFunctions::extractValueTestFunctionParametersMatchAllAnyOrderWithOptional(extractorState);
+        return ExtractorFunctions::extractTestFunctionParametersMatchAllAnyOrderWithOptional(extractorState);
     case CSSPropertyID::CSSPropertyTestFunctionParametersMatchAllOrdered:
-        return ExtractorFunctions::extractValueTestFunctionParametersMatchAllOrdered(extractorState);
+        return ExtractorFunctions::extractTestFunctionParametersMatchAllOrdered(extractorState);
     case CSSPropertyID::CSSPropertyTestFunctionParametersMatchAllOrderedWithOptional:
-        return ExtractorFunctions::extractValueTestFunctionParametersMatchAllOrderedWithOptional(extractorState);
+        return ExtractorFunctions::extractTestFunctionParametersMatchAllOrderedWithOptional(extractorState);
     case CSSPropertyID::CSSPropertyTestFunctionParametersMatchOneOrMoreAnyOrder:
-        return ExtractorFunctions::extractValueTestFunctionParametersMatchOneOrMoreAnyOrder(extractorState);
+        return ExtractorFunctions::extractTestFunctionParametersMatchOneOrMoreAnyOrder(extractorState);
     case CSSPropertyID::CSSPropertyTestFunctionSingleParameter:
-        return ExtractorFunctions::extractValueTestFunctionSingleParameter(extractorState);
+        return ExtractorFunctions::extractTestFunctionSingleParameter(extractorState);
     case CSSPropertyID::CSSPropertyTestFunctionSingleParameterMatchOne:
-        return ExtractorFunctions::extractValueTestFunctionSingleParameterMatchOne(extractorState);
+        return ExtractorFunctions::extractTestFunctionSingleParameterMatchOne(extractorState);
     case CSSPropertyID::CSSPropertyTestFunctionSingleParameterOptional:
-        return ExtractorFunctions::extractValueTestFunctionSingleParameterOptional(extractorState);
+        return ExtractorFunctions::extractTestFunctionSingleParameterOptional(extractorState);
     case CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersNoMin:
-        return ExtractorFunctions::extractValueTestFunctionUnboundedParametersNoMin(extractorState);
+        return ExtractorFunctions::extractTestFunctionUnboundedParametersNoMin(extractorState);
     case CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersWithMinimum:
-        return ExtractorFunctions::extractValueTestFunctionUnboundedParametersWithMinimum(extractorState);
+        return ExtractorFunctions::extractTestFunctionUnboundedParametersWithMinimum(extractorState);
     case CSSPropertyID::CSSPropertyTestImage:
-        return ExtractorFunctions::extractValueTestImage(extractorState);
+        return ExtractorFunctions::extractTestImage(extractorState);
     case CSSPropertyID::CSSPropertyTestImageNoImageSet:
-        return ExtractorFunctions::extractValueTestImageNoImageSet(extractorState);
+        return ExtractorFunctions::extractTestImageNoImageSet(extractorState);
     case CSSPropertyID::CSSPropertyTestKeyword:
-        return ExtractorFunctions::extractValueTestKeyword(extractorState);
+        return ExtractorFunctions::extractTestKeyword(extractorState);
     case CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo:
-        return ExtractorFunctions::extractValueTestKeywordWithAliasedTo(extractorState);
+        return ExtractorFunctions::extractTestKeywordWithAliasedTo(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrder:
-        return ExtractorFunctions::extractValueTestMatchAllAnyOrder(extractorState);
+        return ExtractorFunctions::extractTestMatchAllAnyOrder(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithCustomType:
-        return ExtractorFunctions::extractValueTestMatchAllAnyOrderWithCustomType(extractorState);
+        return ExtractorFunctions::extractTestMatchAllAnyOrderWithCustomType(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptional:
-        return ExtractorFunctions::extractValueTestMatchAllAnyOrderWithOptional(extractorState);
+        return ExtractorFunctions::extractTestMatchAllAnyOrderWithOptional(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndCustomType:
-        return ExtractorFunctions::extractValueTestMatchAllAnyOrderWithOptionalAndCustomType(extractorState);
+        return ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalAndCustomType(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomType:
-        return ExtractorFunctions::extractValueTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomType(extractorState);
+        return ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomType(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomTypeNoSingleItemOpt:
-        return ExtractorFunctions::extractValueTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomTypeNoSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomTypeNoSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomType:
-        return ExtractorFunctions::extractValueTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomType(extractorState);
+        return ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomType(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomTypeNoSingleItemOpt:
-        return ExtractorFunctions::extractValueTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomTypeNoSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomTypeNoSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndPreserveOrderAndCustomType:
-        return ExtractorFunctions::extractValueTestMatchAllAnyOrderWithOptionalAndPreserveOrderAndCustomType(extractorState);
+        return ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalAndPreserveOrderAndCustomType(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalNoSingleItemOpt:
-        return ExtractorFunctions::extractValueTestMatchAllAnyOrderWithOptionalNoSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalNoSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalSingleItemOpt:
-        return ExtractorFunctions::extractValueTestMatchAllAnyOrderWithOptionalSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalWithPreserveOrder:
-        return ExtractorFunctions::extractValueTestMatchAllAnyOrderWithOptionalWithPreserveOrder(extractorState);
+        return ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalWithPreserveOrder(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalWithPreserveOrderNoSingleItemOpt:
-        return ExtractorFunctions::extractValueTestMatchAllAnyOrderWithOptionalWithPreserveOrderNoSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalWithPreserveOrderNoSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithPreserveOrder:
-        return ExtractorFunctions::extractValueTestMatchAllAnyOrderWithPreserveOrder(extractorState);
+        return ExtractorFunctions::extractTestMatchAllAnyOrderWithPreserveOrder(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithPreserveOrderAndCustomType:
-        return ExtractorFunctions::extractValueTestMatchAllAnyOrderWithPreserveOrderAndCustomType(extractorState);
+        return ExtractorFunctions::extractTestMatchAllAnyOrderWithPreserveOrderAndCustomType(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithPreserveOrderNoSingleItemOpt:
-        return ExtractorFunctions::extractValueTestMatchAllAnyOrderWithPreserveOrderNoSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestMatchAllAnyOrderWithPreserveOrderNoSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllOrdered:
-        return ExtractorFunctions::extractValueTestMatchAllOrdered(extractorState);
+        return ExtractorFunctions::extractTestMatchAllOrdered(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithCustomType:
-        return ExtractorFunctions::extractValueTestMatchAllOrderedWithCustomType(extractorState);
+        return ExtractorFunctions::extractTestMatchAllOrderedWithCustomType(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptional:
-        return ExtractorFunctions::extractValueTestMatchAllOrderedWithOptional(extractorState);
+        return ExtractorFunctions::extractTestMatchAllOrderedWithOptional(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalAndCustomType:
-        return ExtractorFunctions::extractValueTestMatchAllOrderedWithOptionalAndCustomType(extractorState);
+        return ExtractorFunctions::extractTestMatchAllOrderedWithOptionalAndCustomType(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt:
-        return ExtractorFunctions::extractValueTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalAndMultipleRequired:
-        return ExtractorFunctions::extractValueTestMatchAllOrderedWithOptionalAndMultipleRequired(extractorState);
+        return ExtractorFunctions::extractTestMatchAllOrderedWithOptionalAndMultipleRequired(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType:
-        return ExtractorFunctions::extractValueTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType(extractorState);
+        return ExtractorFunctions::extractTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalNoSingleItemOpt:
-        return ExtractorFunctions::extractValueTestMatchAllOrderedWithOptionalNoSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestMatchAllOrderedWithOptionalNoSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalSingleItemOpt:
-        return ExtractorFunctions::extractValueTestMatchAllOrderedWithOptionalSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestMatchAllOrderedWithOptionalSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchOne:
-        return ExtractorFunctions::extractValueTestMatchOne(extractorState);
+        return ExtractorFunctions::extractTestMatchOne(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrder:
-        return ExtractorFunctions::extractValueTestMatchOneOrMoreAnyOrder(extractorState);
+        return ExtractorFunctions::extractTestMatchOneOrMoreAnyOrder(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderNoSingleItemOpt:
-        return ExtractorFunctions::extractValueTestMatchOneOrMoreAnyOrderNoSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestMatchOneOrMoreAnyOrderNoSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithCustomType:
-        return ExtractorFunctions::extractValueTestMatchOneOrMoreAnyOrderWithCustomType(extractorState);
+        return ExtractorFunctions::extractTestMatchOneOrMoreAnyOrderWithCustomType(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithCustomTypeNoSingleItemOpt:
-        return ExtractorFunctions::extractValueTestMatchOneOrMoreAnyOrderWithCustomTypeNoSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestMatchOneOrMoreAnyOrderWithCustomTypeNoSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrder:
-        return ExtractorFunctions::extractValueTestMatchOneOrMoreAnyOrderWithPreserveOrder(extractorState);
+        return ExtractorFunctions::extractTestMatchOneOrMoreAnyOrderWithPreserveOrder(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomType:
-        return ExtractorFunctions::extractValueTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomType(extractorState);
+        return ExtractorFunctions::extractTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomType(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomTypeNoSingleItemOpt:
-        return ExtractorFunctions::extractValueTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomTypeNoSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomTypeNoSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt:
-        return ExtractorFunctions::extractValueTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchOneWithGroupWithSettingsFlag:
-        return ExtractorFunctions::extractValueTestMatchOneWithGroupWithSettingsFlag(extractorState);
+        return ExtractorFunctions::extractTestMatchOneWithGroupWithSettingsFlag(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchOneWithKeywordWithSettingsFlag:
-        return ExtractorFunctions::extractValueTestMatchOneWithKeywordWithSettingsFlag(extractorState);
+        return ExtractorFunctions::extractTestMatchOneWithKeywordWithSettingsFlag(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchOneWithMultipleKeywords:
-        return ExtractorFunctions::extractValueTestMatchOneWithMultipleKeywords(extractorState);
+        return ExtractorFunctions::extractTestMatchOneWithMultipleKeywords(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchOneWithReferenceWithSettingsFlag:
-        return ExtractorFunctions::extractValueTestMatchOneWithReferenceWithSettingsFlag(extractorState);
+        return ExtractorFunctions::extractTestMatchOneWithReferenceWithSettingsFlag(extractorState);
     case CSSPropertyID::CSSPropertyTestMatchOneWithSettingsFlag:
-        return ExtractorFunctions::extractValueTestMatchOneWithSettingsFlag(extractorState);
+        return ExtractorFunctions::extractTestMatchOneWithSettingsFlag(extractorState);
     case CSSPropertyID::CSSPropertyTestNumericValueRange:
-        return ExtractorFunctions::extractValueTestNumericValueRange(extractorState);
+        return ExtractorFunctions::extractTestNumericValueRange(extractorState);
     case CSSPropertyID::CSSPropertyTestProperty:
-        return ExtractorFunctions::extractValueTestProperty(extractorState);
+        return ExtractorFunctions::extractTestProperty(extractorState);
     case CSSPropertyID::CSSPropertyTestSettingsOne:
-        return ExtractorFunctions::extractValueTestSettingsOne(extractorState);
+        return ExtractorFunctions::extractTestSettingsOne(extractorState);
     case CSSPropertyID::CSSPropertyTestSharedBuilderExtractorConverter:
-        return ExtractorFunctions::extractValueTestSharedBuilderExtractorConverter(extractorState);
+        return ExtractorFunctions::extractTestSharedBuilderExtractorConverter(extractorState);
     case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMin:
-        return ExtractorFunctions::extractValueTestUnboundedRepetitionWithCommasWithMin(extractorState);
+        return ExtractorFunctions::extractTestUnboundedRepetitionWithCommasWithMin(extractorState);
     case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMinNoSingleItemOpt:
-        return ExtractorFunctions::extractValueTestUnboundedRepetitionWithCommasWithMinNoSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestUnboundedRepetitionWithCommasWithMinNoSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMinSingleItemOpt:
-        return ExtractorFunctions::extractValueTestUnboundedRepetitionWithCommasWithMinSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestUnboundedRepetitionWithCommasWithMinSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesNoMin:
-        return ExtractorFunctions::extractValueTestUnboundedRepetitionWithSpacesNoMin(extractorState);
+        return ExtractorFunctions::extractTestUnboundedRepetitionWithSpacesNoMin(extractorState);
     case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesNoMinNoSingleItemOpt:
-        return ExtractorFunctions::extractValueTestUnboundedRepetitionWithSpacesNoMinNoSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestUnboundedRepetitionWithSpacesNoMinNoSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesWithMin:
-        return ExtractorFunctions::extractValueTestUnboundedRepetitionWithSpacesWithMin(extractorState);
+        return ExtractorFunctions::extractTestUnboundedRepetitionWithSpacesWithMin(extractorState);
     case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesWithMinNoSingleItemOpt:
-        return ExtractorFunctions::extractValueTestUnboundedRepetitionWithSpacesWithMinNoSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestUnboundedRepetitionWithSpacesWithMinNoSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt:
-        return ExtractorFunctions::extractValueTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt(extractorState);
+        return ExtractorFunctions::extractTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt(extractorState);
     case CSSPropertyID::CSSPropertyTestUrlWithModifiers:
-        return ExtractorFunctions::extractValueTestUrlWithModifiers(extractorState);
+        return ExtractorFunctions::extractTestUrlWithModifiers(extractorState);
     case CSSPropertyID::CSSPropertyTestUrlWithNoModifiers:
-        return ExtractorFunctions::extractValueTestUrlWithNoModifiers(extractorState);
+        return ExtractorFunctions::extractTestUrlWithNoModifiers(extractorState);
     case CSSPropertyID::CSSPropertyTestUsingSharedRule:
-        return ExtractorFunctions::extractValueTestUsingSharedRule(extractorState);
+        return ExtractorFunctions::extractTestUsingSharedRule(extractorState);
     case CSSPropertyID::CSSPropertyTestUsingSharedRuleExported:
-        return ExtractorFunctions::extractValueTestUsingSharedRuleExported(extractorState);
+        return ExtractorFunctions::extractTestUsingSharedRuleExported(extractorState);
     case CSSPropertyID::CSSPropertyTestUsingSharedRuleWithOverrideFunction:
-        return ExtractorFunctions::extractValueTestUsingSharedRuleWithOverrideFunction(extractorState);
+        return ExtractorFunctions::extractTestUsingSharedRuleWithOverrideFunction(extractorState);
     case CSSPropertyID::CSSPropertyTestSinkPriority:
-        return ExtractorFunctions::extractValueTestSinkPriority(extractorState);
+        return ExtractorFunctions::extractTestSinkPriority(extractorState);
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal:
-        return ExtractorFunctions::extractValueTestLogicalPropertyGroupPhysicalHorizontal(extractorState);
+        return ExtractorFunctions::extractTestLogicalPropertyGroupPhysicalHorizontal(extractorState);
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalVertical:
-        return ExtractorFunctions::extractValueTestLogicalPropertyGroupPhysicalVertical(extractorState);
+        return ExtractorFunctions::extractTestLogicalPropertyGroupPhysicalVertical(extractorState);
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock:
         // Logical properties are handled by recursing using the direction resolved property.
         return extractValue(extractorState, CSSProperty::resolveDirectionAwareProperty(id, extractorState.style.writingMode()));
@@ -647,16 +1056,358 @@ RefPtr<CSSValue> ExtractorGenerated::extractValue(ExtractorState& extractorState
         return nullptr;
     case CSSPropertyID::CSSPropertyFont:
         ASSERT(isShorthand(id));
-        return ExtractorCustom::extractValueFontShorthand(extractorState);
+        return ExtractorCustom::extractFontShorthand(extractorState);
     case CSSPropertyID::CSSPropertyTestShorthandOne:
         ASSERT(isShorthand(id));
-        return ExtractorCustom::extractValueTestShorthandOneShorthand(extractorState);
+        return ExtractorCustom::extractTestShorthandOneShorthand(extractorState);
     case CSSPropertyID::CSSPropertyTestShorthandTwo:
         ASSERT(isShorthand(id));
-        return ExtractorFunctions::extractValueTestShorthandTwoShorthand(extractorState);
+        return ExtractorFunctions::extractTestShorthandTwoShorthand(extractorState);
     }
     ASSERT_NOT_REACHED();
     return nullptr;
+}
+
+
+void ExtractorGenerated::extractValueSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context, CSSPropertyID id)
+{
+    switch (id) {
+    case CSSPropertyID::CSSPropertyInvalid:
+        break;
+    case CSSPropertyID::CSSPropertyCustom:
+        ASSERT_NOT_REACHED();
+        break;
+    case CSSPropertyID::CSSPropertyTestTopPriority:
+        ExtractorFunctions::extractTestTopPrioritySerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestHighPriority:
+        ExtractorFunctions::extractTestHighPrioritySerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyFirstTestDescriptorForFirstDescriptor:
+        // Skipped - Descriptor-only property
+        return;
+    case CSSPropertyID::CSSPropertyFirstTestDescriptorForSecondDescriptor:
+        // Skipped - Descriptor-only property
+        return;
+    case CSSPropertyID::CSSPropertyTestAnimationWrapper:
+        ExtractorFunctions::extractTestAnimationWrapperSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationAlways:
+        ExtractorFunctions::extractTestAnimationWrapperAccelerationAlwaysSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationThreadedOnly:
+        ExtractorFunctions::extractTestAnimationWrapperAccelerationThreadedOnlySerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestAutoFunctions:
+        ExtractorFunctions::extractTestAutoFunctionsSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommas:
+        ExtractorFunctions::extractTestBoundedRepetitionWithCommasSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommasFixed:
+        ExtractorFunctions::extractTestBoundedRepetitionWithCommasFixedSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommasNoSingleItemOpt:
+        ExtractorFunctions::extractTestBoundedRepetitionWithCommasNoSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommasSingleItemOpt:
+        ExtractorFunctions::extractTestBoundedRepetitionWithCommasSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpaces:
+        ExtractorFunctions::extractTestBoundedRepetitionWithSpacesSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesFixed:
+        ExtractorFunctions::extractTestBoundedRepetitionWithSpacesFixedSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesNoSingleItemOpt:
+        ExtractorFunctions::extractTestBoundedRepetitionWithSpacesNoSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesSingleItemOpt:
+        ExtractorFunctions::extractTestBoundedRepetitionWithSpacesSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithType:
+        ExtractorFunctions::extractTestBoundedRepetitionWithSpacesWithTypeSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeNoSingleItemOpt:
+        ExtractorFunctions::extractTestBoundedRepetitionWithSpacesWithTypeNoSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious:
+        ExtractorFunctions::extractTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo:
+        ExtractorFunctions::extractTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwoSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestColor:
+        ExtractorFunctions::extractTestColorSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolute:
+        ExtractorFunctions::extractTestColorAllowsTypesAbsoluteSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestColorPropertyWithNoVisitedLinkSupport:
+        ExtractorFunctions::extractTestColorPropertyWithNoVisitedLinkSupportSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestColorPropertyWithVisitedLinkSupport:
+        ExtractorFunctions::extractTestColorPropertyWithVisitedLinkSupportSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestCustomExtractor:
+        ExtractorCustom::extractTestCustomExtractorSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestExtractorConverter:
+        ExtractorFunctions::extractTestExtractorConverterSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestFunctionBoundedParameters:
+        ExtractorFunctions::extractTestFunctionBoundedParametersSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestFunctionFixedParameters:
+        ExtractorFunctions::extractTestFunctionFixedParametersSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestFunctionNoParameters:
+        ExtractorFunctions::extractTestFunctionNoParametersSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestFunctionParametersMatchAllAnyOrder:
+        ExtractorFunctions::extractTestFunctionParametersMatchAllAnyOrderSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestFunctionParametersMatchAllAnyOrderWithOptional:
+        ExtractorFunctions::extractTestFunctionParametersMatchAllAnyOrderWithOptionalSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestFunctionParametersMatchAllOrdered:
+        ExtractorFunctions::extractTestFunctionParametersMatchAllOrderedSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestFunctionParametersMatchAllOrderedWithOptional:
+        ExtractorFunctions::extractTestFunctionParametersMatchAllOrderedWithOptionalSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestFunctionParametersMatchOneOrMoreAnyOrder:
+        ExtractorFunctions::extractTestFunctionParametersMatchOneOrMoreAnyOrderSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestFunctionSingleParameter:
+        ExtractorFunctions::extractTestFunctionSingleParameterSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestFunctionSingleParameterMatchOne:
+        ExtractorFunctions::extractTestFunctionSingleParameterMatchOneSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestFunctionSingleParameterOptional:
+        ExtractorFunctions::extractTestFunctionSingleParameterOptionalSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersNoMin:
+        ExtractorFunctions::extractTestFunctionUnboundedParametersNoMinSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersWithMinimum:
+        ExtractorFunctions::extractTestFunctionUnboundedParametersWithMinimumSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestImage:
+        ExtractorFunctions::extractTestImageSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestImageNoImageSet:
+        ExtractorFunctions::extractTestImageNoImageSetSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestKeyword:
+        ExtractorFunctions::extractTestKeywordSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo:
+        ExtractorFunctions::extractTestKeywordWithAliasedToSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrder:
+        ExtractorFunctions::extractTestMatchAllAnyOrderSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithCustomType:
+        ExtractorFunctions::extractTestMatchAllAnyOrderWithCustomTypeSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptional:
+        ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndCustomType:
+        ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalAndCustomTypeSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomType:
+        ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomTypeSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomTypeNoSingleItemOpt:
+        ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomTypeNoSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomType:
+        ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomTypeSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomTypeNoSingleItemOpt:
+        ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomTypeNoSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndPreserveOrderAndCustomType:
+        ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalAndPreserveOrderAndCustomTypeSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalNoSingleItemOpt:
+        ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalNoSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalSingleItemOpt:
+        ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalWithPreserveOrder:
+        ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalWithPreserveOrderSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalWithPreserveOrderNoSingleItemOpt:
+        ExtractorFunctions::extractTestMatchAllAnyOrderWithOptionalWithPreserveOrderNoSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithPreserveOrder:
+        ExtractorFunctions::extractTestMatchAllAnyOrderWithPreserveOrderSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithPreserveOrderAndCustomType:
+        ExtractorFunctions::extractTestMatchAllAnyOrderWithPreserveOrderAndCustomTypeSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithPreserveOrderNoSingleItemOpt:
+        ExtractorFunctions::extractTestMatchAllAnyOrderWithPreserveOrderNoSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllOrdered:
+        ExtractorFunctions::extractTestMatchAllOrderedSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithCustomType:
+        ExtractorFunctions::extractTestMatchAllOrderedWithCustomTypeSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptional:
+        ExtractorFunctions::extractTestMatchAllOrderedWithOptionalSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalAndCustomType:
+        ExtractorFunctions::extractTestMatchAllOrderedWithOptionalAndCustomTypeSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt:
+        ExtractorFunctions::extractTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalAndMultipleRequired:
+        ExtractorFunctions::extractTestMatchAllOrderedWithOptionalAndMultipleRequiredSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType:
+        ExtractorFunctions::extractTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomTypeSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalNoSingleItemOpt:
+        ExtractorFunctions::extractTestMatchAllOrderedWithOptionalNoSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalSingleItemOpt:
+        ExtractorFunctions::extractTestMatchAllOrderedWithOptionalSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchOne:
+        ExtractorFunctions::extractTestMatchOneSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrder:
+        ExtractorFunctions::extractTestMatchOneOrMoreAnyOrderSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderNoSingleItemOpt:
+        ExtractorFunctions::extractTestMatchOneOrMoreAnyOrderNoSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithCustomType:
+        ExtractorFunctions::extractTestMatchOneOrMoreAnyOrderWithCustomTypeSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithCustomTypeNoSingleItemOpt:
+        ExtractorFunctions::extractTestMatchOneOrMoreAnyOrderWithCustomTypeNoSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrder:
+        ExtractorFunctions::extractTestMatchOneOrMoreAnyOrderWithPreserveOrderSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomType:
+        ExtractorFunctions::extractTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomTypeSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomTypeNoSingleItemOpt:
+        ExtractorFunctions::extractTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomTypeNoSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt:
+        ExtractorFunctions::extractTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchOneWithGroupWithSettingsFlag:
+        ExtractorFunctions::extractTestMatchOneWithGroupWithSettingsFlagSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchOneWithKeywordWithSettingsFlag:
+        ExtractorFunctions::extractTestMatchOneWithKeywordWithSettingsFlagSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchOneWithMultipleKeywords:
+        ExtractorFunctions::extractTestMatchOneWithMultipleKeywordsSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchOneWithReferenceWithSettingsFlag:
+        ExtractorFunctions::extractTestMatchOneWithReferenceWithSettingsFlagSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestMatchOneWithSettingsFlag:
+        ExtractorFunctions::extractTestMatchOneWithSettingsFlagSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestNumericValueRange:
+        ExtractorFunctions::extractTestNumericValueRangeSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestProperty:
+        ExtractorFunctions::extractTestPropertySerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestSettingsOne:
+        ExtractorFunctions::extractTestSettingsOneSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestSharedBuilderExtractorConverter:
+        ExtractorFunctions::extractTestSharedBuilderExtractorConverterSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMin:
+        ExtractorFunctions::extractTestUnboundedRepetitionWithCommasWithMinSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMinNoSingleItemOpt:
+        ExtractorFunctions::extractTestUnboundedRepetitionWithCommasWithMinNoSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMinSingleItemOpt:
+        ExtractorFunctions::extractTestUnboundedRepetitionWithCommasWithMinSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesNoMin:
+        ExtractorFunctions::extractTestUnboundedRepetitionWithSpacesNoMinSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesNoMinNoSingleItemOpt:
+        ExtractorFunctions::extractTestUnboundedRepetitionWithSpacesNoMinNoSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesWithMin:
+        ExtractorFunctions::extractTestUnboundedRepetitionWithSpacesWithMinSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesWithMinNoSingleItemOpt:
+        ExtractorFunctions::extractTestUnboundedRepetitionWithSpacesWithMinNoSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt:
+        ExtractorFunctions::extractTestUnboundedRepetitionWithSpacesWithMinSingleItemOptSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestUrlWithModifiers:
+        ExtractorFunctions::extractTestUrlWithModifiersSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestUrlWithNoModifiers:
+        ExtractorFunctions::extractTestUrlWithNoModifiersSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestUsingSharedRule:
+        ExtractorFunctions::extractTestUsingSharedRuleSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestUsingSharedRuleExported:
+        ExtractorFunctions::extractTestUsingSharedRuleExportedSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestUsingSharedRuleWithOverrideFunction:
+        ExtractorFunctions::extractTestUsingSharedRuleWithOverrideFunctionSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestSinkPriority:
+        ExtractorFunctions::extractTestSinkPrioritySerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal:
+        ExtractorFunctions::extractTestLogicalPropertyGroupPhysicalHorizontalSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalVertical:
+        ExtractorFunctions::extractTestLogicalPropertyGroupPhysicalVerticalSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock:
+        // Logical properties are handled by recursing using the direction resolved property.
+        extractValueSerialization(extractorState, builder, context, CSSProperty::resolveDirectionAwareProperty(id, extractorState.style.writingMode()));
+        return;
+    case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline:
+        // Logical properties are handled by recursing using the direction resolved property.
+        extractValueSerialization(extractorState, builder, context, CSSProperty::resolveDirectionAwareProperty(id, extractorState.style.writingMode()));
+        return;
+    case CSSPropertyID::CSSPropertyAll:
+        // Skipped - Not computable
+        return;
+    case CSSPropertyID::CSSPropertyFont:
+        ASSERT(isShorthand(id));
+        ExtractorCustom::extractFontShorthandSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestShorthandOne:
+        ASSERT(isShorthand(id));
+        ExtractorCustom::extractTestShorthandOneShorthandSerialization(extractorState, builder, context);
+        return;
+    case CSSPropertyID::CSSPropertyTestShorthandTwo:
+        ASSERT(isShorthand(id));
+        ExtractorFunctions::extractTestShorthandTwoShorthandSerialization(extractorState, builder, context);
+        return;
+    }
+    ASSERT_NOT_REACHED();
 }
 
 } // namespace WebCore

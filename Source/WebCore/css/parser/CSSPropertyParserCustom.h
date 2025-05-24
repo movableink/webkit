@@ -123,10 +123,10 @@ class PropertyParserCustom {
 public:
     // MARK: - Shorthand Parsing
 
-    static bool consumeStandardShorthand(CSSParserTokenRange&, PropertyParserState&, const StylePropertyShorthand&, PropertyParserResult&);
+    static bool consumeStandardSpaceSeparatedShorthand(CSSParserTokenRange&, PropertyParserState&, const StylePropertyShorthand&, PropertyParserResult&);
     static bool consumeSingleShorthand(CSSParserTokenRange&, PropertyParserState&, const StylePropertyShorthand&, PropertyParserResult&);
-    static bool consume2ValueShorthand(CSSParserTokenRange&, PropertyParserState&, const StylePropertyShorthand&, PropertyParserResult&);
-    static bool consume4ValueShorthand(CSSParserTokenRange&, PropertyParserState&, const StylePropertyShorthand&, PropertyParserResult&);
+    static bool consumeCoalescingPairShorthand(CSSParserTokenRange&, PropertyParserState&, const StylePropertyShorthand&, PropertyParserResult&);
+    static bool consumeCoalescingQuadShorthand(CSSParserTokenRange&, PropertyParserState&, const StylePropertyShorthand&, PropertyParserResult&);
 
     static bool consumeBorderShorthand(CSSParserTokenRange&, PropertyParserState&, const StylePropertyShorthand&, PropertyParserResult&);
     static bool consumeBorderInlineShorthand(CSSParserTokenRange&, PropertyParserState&, const StylePropertyShorthand&, PropertyParserResult&);
@@ -248,7 +248,7 @@ inline CSSValueID mapFromColumnRegionOrPageBreakInside(CSSValueID value)
     return CSSValueInvalid;
 }
 
-inline bool PropertyParserCustom::consumeStandardShorthand(CSSParserTokenRange& range, PropertyParserState& state, const StylePropertyShorthand& shorthand, PropertyParserResult& result)
+inline bool PropertyParserCustom::consumeStandardSpaceSeparatedShorthand(CSSParserTokenRange& range, PropertyParserState& state, const StylePropertyShorthand& shorthand, PropertyParserResult& result)
 {
     ASSERT(state.currentProperty == shorthand.id());
     ASSERT(shorthand.length() <= 6); // Existing shorthands have at most 6 longhands.
@@ -286,7 +286,7 @@ inline bool PropertyParserCustom::consumeSingleShorthand(CSSParserTokenRange& ra
     return true;
 }
 
-inline bool PropertyParserCustom::consume2ValueShorthand(CSSParserTokenRange& range, PropertyParserState& state, const StylePropertyShorthand& shorthand, PropertyParserResult& result)
+inline bool PropertyParserCustom::consumeCoalescingPairShorthand(CSSParserTokenRange& range, PropertyParserState& state, const StylePropertyShorthand& shorthand, PropertyParserResult& result)
 {
     ASSERT(state.currentProperty == shorthand.id());
     ASSERT(shorthand.length() == 2);
@@ -305,7 +305,7 @@ inline bool PropertyParserCustom::consume2ValueShorthand(CSSParserTokenRange& ra
     return range.atEnd();
 }
 
-inline bool PropertyParserCustom::consume4ValueShorthand(CSSParserTokenRange& range, PropertyParserState& state, const StylePropertyShorthand& shorthand, PropertyParserResult& result)
+inline bool PropertyParserCustom::consumeCoalescingQuadShorthand(CSSParserTokenRange& range, PropertyParserState& state, const StylePropertyShorthand& shorthand, PropertyParserResult& result)
 {
     ASSERT(state.currentProperty == shorthand.id());
     ASSERT(shorthand.length() == 4);

@@ -1234,6 +1234,7 @@ style/StyleBuilderState.cpp
 style/StyleExtractor.cpp
 style/StyleExtractorConverter.h
 style/StyleExtractorCustom.h
+style/StyleExtractorSerializer.h
 style/StyleInterpolation.cpp
 style/StyleInterpolationFunctions.h
 style/StyleInterpolationWrappers.h

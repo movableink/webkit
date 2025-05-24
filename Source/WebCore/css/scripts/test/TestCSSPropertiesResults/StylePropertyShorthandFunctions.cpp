@@ -32,7 +32,7 @@ StylePropertyShorthand allShorthand()
         CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolute,
         CSSPropertyID::CSSPropertyTestColorPropertyWithNoVisitedLinkSupport,
         CSSPropertyID::CSSPropertyTestColorPropertyWithVisitedLinkSupport,
-        CSSPropertyID::CSSPropertyTestCustonmExtractor,
+        CSSPropertyID::CSSPropertyTestCustomExtractor,
         CSSPropertyID::CSSPropertyTestExtractorConverter,
         CSSPropertyID::CSSPropertyTestFunctionBoundedParameters,
         CSSPropertyID::CSSPropertyTestFunctionFixedParameters,
@@ -191,7 +191,7 @@ StylePropertyShorthandVector matchingShorthandsForLonghand(CSSPropertyID id)
     case CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolute:
     case CSSPropertyID::CSSPropertyTestColorPropertyWithNoVisitedLinkSupport:
     case CSSPropertyID::CSSPropertyTestColorPropertyWithVisitedLinkSupport:
-    case CSSPropertyID::CSSPropertyTestCustonmExtractor:
+    case CSSPropertyID::CSSPropertyTestCustomExtractor:
     case CSSPropertyID::CSSPropertyTestExtractorConverter:
     case CSSPropertyID::CSSPropertyTestFunctionBoundedParameters:
     case CSSPropertyID::CSSPropertyTestFunctionFixedParameters:

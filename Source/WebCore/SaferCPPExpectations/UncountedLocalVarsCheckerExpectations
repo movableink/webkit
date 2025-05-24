@@ -687,7 +687,6 @@ style/StyleBuilderConverter.h
 style/StyleBuilderCustom.h
 style/StyleBuilderState.cpp
 style/StyleExtractor.cpp
-style/StyleExtractorConverter.h
 style/StyleExtractorCustom.h
 style/StyleInterpolationFunctions.h
 style/StyleInterpolationWrappers.h

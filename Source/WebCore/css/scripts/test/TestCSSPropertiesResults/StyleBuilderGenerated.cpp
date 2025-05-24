@@ -301,17 +301,17 @@ public:
         if (builderState.applyPropertyToVisitedLinkStyle())
             builderState.style().setVisitedLinkTestColorPropertyWithVisitedLinkSupport(builderState.createStyleColor(fromCSSValueDeducingType(builderState, value), ForVisitedLink::Yes));
     }
-    static void applyInitialTestCustonmExtractor(BuilderState& builderState)
+    static void applyInitialTestCustomExtractor(BuilderState& builderState)
     {
-        builderState.style().setTestCustonmExtractor(RenderStyle::initialTestCustonmExtractor());
+        builderState.style().setTestCustomExtractor(RenderStyle::initialTestCustomExtractor());
     }
-    static void applyInheritTestCustonmExtractor(BuilderState& builderState)
+    static void applyInheritTestCustomExtractor(BuilderState& builderState)
     {
-        builderState.style().setTestCustonmExtractor(forwardInheritedValue(builderState.parentStyle().testCustonmExtractor()));
+        builderState.style().setTestCustomExtractor(forwardInheritedValue(builderState.parentStyle().testCustomExtractor()));
     }
-    static void applyValueTestCustonmExtractor(BuilderState& builderState, CSSValue& value)
+    static void applyValueTestCustomExtractor(BuilderState& builderState, CSSValue& value)
     {
-        builderState.style().setTestCustonmExtractor(fromCSSValueDeducingType(builderState, value));
+        builderState.style().setTestCustomExtractor(fromCSSValueDeducingType(builderState, value));
     }
     static void applyInitialTestExtractorConverter(BuilderState& builderState)
     {
@@ -1541,16 +1541,16 @@ void BuilderGenerated::applyProperty(CSSPropertyID id, BuilderState& builderStat
             break;
         }
         break;
-    case CSSPropertyID::CSSPropertyTestCustonmExtractor:
+    case CSSPropertyID::CSSPropertyTestCustomExtractor:
         switch (valueType) {
         case ApplyValueType::Initial:
-            BuilderFunctions::applyInitialTestCustonmExtractor(builderState);
+            BuilderFunctions::applyInitialTestCustomExtractor(builderState);
             break;
         case ApplyValueType::Inherit:
-            BuilderFunctions::applyInheritTestCustonmExtractor(builderState);
+            BuilderFunctions::applyInheritTestCustomExtractor(builderState);
             break;
         case ApplyValueType::Value:
-            BuilderFunctions::applyValueTestCustonmExtractor(builderState, value);
+            BuilderFunctions::applyValueTestCustomExtractor(builderState, value);
             break;
         }
         break;

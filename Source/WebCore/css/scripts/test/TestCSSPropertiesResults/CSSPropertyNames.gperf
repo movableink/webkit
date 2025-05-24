@@ -45,7 +45,7 @@ const std::array<CSSPropertyID, 102> computedPropertyIDs {
     CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolute,
     CSSPropertyID::CSSPropertyTestColorPropertyWithNoVisitedLinkSupport,
     CSSPropertyID::CSSPropertyTestColorPropertyWithVisitedLinkSupport,
-    CSSPropertyID::CSSPropertyTestCustonmExtractor,
+    CSSPropertyID::CSSPropertyTestCustomExtractor,
     CSSPropertyID::CSSPropertyTestExtractorConverter,
     CSSPropertyID::CSSPropertyTestFunctionBoundedParameters,
     CSSPropertyID::CSSPropertyTestFunctionFixedParameters,
@@ -154,7 +154,7 @@ constexpr ASCIILiteral propertyNameStrings[numCSSProperties] = {
     "test-color-allows-types-absolute"_s,
     "test-color-property-with-no-visited-link-support"_s,
     "test-color-property-with-visited-link-support"_s,
-    "test-custonm-extractor"_s,
+    "test-custom-extractor"_s,
     "test-extractor-converter"_s,
     "test-function-bounded-parameters"_s,
     "test-function-fixed-parameters"_s,
@@ -279,7 +279,7 @@ test-color, CSSPropertyID::CSSPropertyTestColor
 test-color-allows-types-absolute, CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolute
 test-color-property-with-no-visited-link-support, CSSPropertyID::CSSPropertyTestColorPropertyWithNoVisitedLinkSupport
 test-color-property-with-visited-link-support, CSSPropertyID::CSSPropertyTestColorPropertyWithVisitedLinkSupport
-test-custonm-extractor, CSSPropertyID::CSSPropertyTestCustonmExtractor
+test-custom-extractor, CSSPropertyID::CSSPropertyTestCustomExtractor
 test-extractor-converter, CSSPropertyID::CSSPropertyTestExtractorConverter
 test-function-bounded-parameters, CSSPropertyID::CSSPropertyTestFunctionBoundedParameters
 test-function-fixed-parameters, CSSPropertyID::CSSPropertyTestFunctionFixedParameters
@@ -514,7 +514,7 @@ constexpr bool isInheritedPropertyTable[cssPropertyIDEnumValueCount] = {
     false, // CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolute
     false, // CSSPropertyID::CSSPropertyTestColorPropertyWithNoVisitedLinkSupport
     false, // CSSPropertyID::CSSPropertyTestColorPropertyWithVisitedLinkSupport
-    false, // CSSPropertyID::CSSPropertyTestCustonmExtractor
+    false, // CSSPropertyID::CSSPropertyTestCustomExtractor
     false, // CSSPropertyID::CSSPropertyTestExtractorConverter
     false, // CSSPropertyID::CSSPropertyTestFunctionBoundedParameters
     false, // CSSPropertyID::CSSPropertyTestFunctionFixedParameters
@@ -665,7 +665,7 @@ bool CSSProperty::allowsNumberOrIntegerInput(CSSPropertyID id)
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeNoSingleItemOpt:
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious:
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo:
-    case CSSPropertyID::CSSPropertyTestCustonmExtractor:
+    case CSSPropertyID::CSSPropertyTestCustomExtractor:
     case CSSPropertyID::CSSPropertyTestExtractorConverter:
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndCustomType:
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndPreserveOrderAndCustomType:

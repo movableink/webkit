@@ -54,6 +54,9 @@
 namespace WebCore {
 namespace Style {
 
+// Define this to 1 to enable validation of direct serialization against serialization using CSSValue.
+#define VALIDATE_DIRECT_COMPUTED_VALUE_SERIALIZATION 0
+
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Extractor);
 
 enum class AdjustPixelValuesForComputedStyle : bool { No, Yes };
@@ -479,10 +482,38 @@ RefPtr<CSSValue> Extractor::propertyValueInStyle(const RenderStyle& style, CSSPr
 
 String Extractor::propertyValueSerializationInStyle(const RenderStyle& style, CSSPropertyID propertyID, const CSS::SerializationContext& serializationContext, CSSValuePool& cssValuePool, const RenderElement* renderer, ExtractorState::PropertyValueType valueType) const
 {
+    ASSERT(isExposed(propertyID, m_element->document().settings()));
+
+    StringBuilder builder;
+
+    ExtractorState state {
+        .valueType = valueType,
+        .style = style,
+        .element = *m_element,
+        .pseudoElementIdentifier = m_pseudoElementIdentifier,
+        .renderer = renderer,
+        .allowVisitedStyle = m_allowVisitedStyle,
+        .pool = cssValuePool,
+    };
+    ExtractorGenerated::extractValueSerialization(state, builder, serializationContext, propertyID);
+
+#if VALIDATE_DIRECT_COMPUTED_VALUE_SERIALIZATION
+    auto directSerialization = builder.toString();
+
     auto value = propertyValueInStyle(style, propertyID, cssValuePool, renderer, valueType);
-    if (!value)
-        return emptyString();
-    return value->cssText(serializationContext);
+    if (!value) {
+        RELEASE_ASSERT(directSerialization.isEmpty());
+        return directSerialization;
+    }
+
+    auto valueSerialization = value->cssText(serializationContext);
+
+    RELEASE_ASSERT_WITH_MESSAGE(directSerialization == valueSerialization, "Direct serialization, '%s', does not match value serialization, '%s', for property '%s'", directSerialization.utf8().data(), valueSerialization.utf8().data(), nameLiteral(propertyID).characters());
+
+    return directSerialization;
+#else
+    return builder.toString();
+#endif
 }
 
 bool Extractor::propertyMatches(CSSPropertyID propertyID, const CSSValue* value) const

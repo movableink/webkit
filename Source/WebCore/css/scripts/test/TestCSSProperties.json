@@ -162,7 +162,7 @@
                     "test-logical-property-group-logical-inline"
                 ],
                 "settings-flag": "cssSettingsShorthandEnabled",
-                "shorthand-pattern": "Values2",
+                "shorthand-pattern": "CoalescingPair",
                 "parser-grammar-unused": "<'test-logical-property-group-logical-block'> || <'test-logical-property-group-logical-inline'>",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
             }
@@ -771,7 +771,7 @@
                 "parser-grammar": "<number>"
             }
         },
-        "test-custonm-extractor": {
+        "test-custom-extractor": {
             "animation-type": "discrete",
             "initial": "0",
             "codegen-properties": {

@@ -3162,7 +3162,7 @@ RefPtr<CSSValue> CSSPropertyParsing::parseStylePropertyLonghand(CSSParserTokenRa
     case CSSPropertyID::CSSPropertyTestAnimationWrapper:
     case CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationAlways:
     case CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationThreadedOnly:
-    case CSSPropertyID::CSSPropertyTestCustonmExtractor:
+    case CSSPropertyID::CSSPropertyTestCustomExtractor:
     case CSSPropertyID::CSSPropertyTestExtractorConverter:
     case CSSPropertyID::CSSPropertyTestProperty:
     case CSSPropertyID::CSSPropertyTestSettingsOne:
@@ -3364,7 +3364,7 @@ bool CSSPropertyParsing::parseStylePropertyShorthand(CSSParserTokenRange& range,
             ASSERT_NOT_REACHED();
             return false;
         }
-        return CSS::PropertyParserCustom::consumeValues2Shorthand(range, state, testShorthandTwoShorthand(), result);
+        return CSS::PropertyParserCustom::consumeCoalescingPairShorthand(range, state, testShorthandTwoShorthand(), result);
     default:
         return false;
     }

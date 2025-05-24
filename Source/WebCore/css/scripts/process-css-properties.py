@@ -4342,33 +4342,82 @@ class GenerateStyleExtractorGenerated:
         else:
             return f"ExtractorConverter::convert(extractorState, {value})"
 
+    @staticmethod
+    def wrap_in_serializer(property, value):
+        if property.codegen_properties.style_extractor_converter:
+            return f"ExtractorSerializer::serialize{property.codegen_properties.style_extractor_converter}(extractorState, builder, context, {value})"
+        elif property.codegen_properties.animation_property:
+            return f"ExtractorSerializer::serializeAnimation{property.codegen_properties.animation_name_for_methods}(extractorState, builder, context, {value}, animation, animationList)"
+        elif property.codegen_properties.fill_layer_property:
+            return f"ExtractorSerializer::serializeFillLayer{property.codegen_properties.fill_layer_name_for_methods}(extractorState, builder, context, {value})"
+        elif property.codegen_properties.color_property:
+            return f"ExtractorSerializer::serializeColor(extractorState, builder, context, {value})"
+        else:
+            return f"ExtractorSerializer::serialize(extractorState, builder, context, {value})"
+
     # Color property getters.
 
     def _generate_color_property_value_getter(self, to, property):
-        to.write(f"if (extractorState.allowVisitedStyle)")
+        to.write(f"if (extractorState.allowVisitedStyle) {{")
         with to.indent():
             to.write(f"return extractorState.pool.createColorValue(extractorState.style.visitedDependentColor({property.id}));")
+        to.write(f"}}")
         self._generate_property_value_getter(to, property)
+
+    def _generate_color_property_value_serialization_getter(self, to, property):
+        to.write(f"if (extractorState.allowVisitedStyle) {{")
+        with to.indent():
+            to.write(f"builder.append(serializationForCSS(extractorState.style.visitedDependentColor({property.id})));")
+            to.write(f"return;")
+        to.write(f"}}")
+        self._generate_property_value_serialization_getter(to, property)
 
     # Animation property getters.
 
     def _generate_animation_property_value_getter(self, to, property):
         to.write(f"auto mapper = [](auto& extractorState, const Animation* animation, const AnimationList* animationList) -> RefPtr<CSSValue> {{")
         with to.indent():
-            to.write(f"if (!animation)")
+            to.write(f"if (!animation) {{")
             with to.indent():
                 to.write(f"return {GenerateStyleExtractorGenerated.wrap_in_converter(property, f'Animation::{property.codegen_properties.animation_initial}()')};")
-            to.write(f"if (!animation->is{property.codegen_properties.animation_name_for_methods}Filled())")
+            to.write(f"}}")
+            to.write(f"if (!animation->is{property.codegen_properties.animation_name_for_methods}Filled()) {{")
             with to.indent():
                 to.write(f"return {GenerateStyleExtractorGenerated.wrap_in_converter(property, f'animation->{property.codegen_properties.animation_getter}()')};")
+            to.write(f"}}")
             to.write(f"return nullptr;")
         to.write(f"}};")
         to.write(f"return extractAnimationOrTransitionValue(extractorState, extractorState.style.{property.method_name_for_animations_or_transitions}(), mapper);")
+
+    def _generate_animation_property_value_serialization_getter(self, to, property):
+        to.write(f"auto mapper = [](auto& extractorState, StringBuilder& builder, const CSS::SerializationContext& context, bool includeComma, const Animation* animation, const AnimationList* animationList) {{")
+        with to.indent():
+            to.write(f"if (!animation) {{")
+            with to.indent():
+                to.write(f"if (includeComma)")
+                with to.indent():
+                    to.write(f"builder.append(\", \"_s);")
+                to.write(f"{GenerateStyleExtractorGenerated.wrap_in_serializer(property, f'Animation::{property.codegen_properties.animation_initial}()')};")
+                to.write(f"return;")
+            to.write(f"}}")
+            to.write(f"if (!animation->is{property.codegen_properties.animation_name_for_methods}Filled()) {{")
+            with to.indent():
+                to.write(f"if (includeComma)")
+                with to.indent():
+                    to.write(f"builder.append(\", \"_s);")
+                to.write(f"{GenerateStyleExtractorGenerated.wrap_in_serializer(property, f'animation->{property.codegen_properties.animation_getter}()')};")
+                to.write(f"return;")
+            to.write(f"}}")
+        to.write(f"}};")
+        to.write(f"extractAnimationOrTransitionValueSerialization(extractorState, builder, context, extractorState.style.{property.method_name_for_animations_or_transitions}(), mapper);")
 
     # Font property getters.
 
     def _generate_font_property_value_getter(self, to, property):
         to.write(f"return {GenerateStyleExtractorGenerated.wrap_in_converter(property, f'extractorState.style.fontDescription().{property.codegen_properties.font_description_getter}()')};")
+
+    def _generate_font_property_value_serialization_getter(self, to, property):
+        to.write(f"{GenerateStyleExtractorGenerated.wrap_in_serializer(property, f'extractorState.style.fontDescription().{property.codegen_properties.font_description_getter}()')};")
 
     # Fill Layer property getters.
 
@@ -4379,27 +4428,52 @@ class GenerateStyleExtractorGenerated:
         to.write(f"}};")
         to.write(f"return extractFillLayerValue(extractorState, extractorState.style.{property.method_name_for_layers}(), mapper);")
 
-    # SVG property getters.
+    def _generate_fill_layer_property_value_serialization_getter(self, to, property):
+        to.write(f"auto mapper = [](auto& extractorState, StringBuilder& builder, const CSS::SerializationContext& context, bool includeComma, auto& layer) {{")
+        with to.indent():
+            to.write(f"if (includeComma)")
+            with to.indent():
+                to.write(f"builder.append(\", \"_s);")
+            to.write(f"{GenerateStyleExtractorGenerated.wrap_in_serializer(property, f'layer.{property.codegen_properties.fill_layer_getter}()')};")
+        to.write(f"}};")
+        to.write(f"extractFillLayerValueSerialization(extractorState, builder, context, extractorState.style.{property.method_name_for_layers}(), mapper);")
+
+    # SVG property value/serialization getters.
 
     def _generate_svg_property_value_getter(self, to, property):
         to.write(f"return {GenerateStyleExtractorGenerated.wrap_in_converter(property, f'extractorState.style.svgStyle().{property.codegen_properties.render_style_getter}()')};")
 
-    # All other property getters.
+    def _generate_svg_property_value_serialization_getter(self, to, property):
+        to.write(f"{GenerateStyleExtractorGenerated.wrap_in_serializer(property, f'extractorState.style.svgStyle().{property.codegen_properties.render_style_getter}()')};")
+
+    # All other property value getters.
 
     def _generate_property_value_getter(self, to, property):
         to.write(f"return {GenerateStyleExtractorGenerated.wrap_in_converter(property, f'extractorState.style.{property.codegen_properties.render_style_getter}()')};")
 
-    # Property getter dispatch.
+    def _generate_property_value_serialization_getter(self, to, property):
+        to.write(f"{GenerateStyleExtractorGenerated.wrap_in_serializer(property, f'extractorState.style.{property.codegen_properties.render_style_getter}()')};")
+
+    # Shorthand property value getter.
 
     def _generate_style_extractor_generated_cpp_shorthand_value_extractor(self, to, property):
-        to.write(f"static RefPtr<CSSValue> extractValue{property.id_without_prefix}Shorthand(ExtractorState& extractorState)")
+        to.write(f"static RefPtr<CSSValue> extract{property.id_without_prefix}Shorthand(ExtractorState& extractorState)")
         to.write(f"{{")
         with to.indent():
             to.write(f"return extract{property.codegen_properties.shorthand_style_extractor_pattern}Shorthand(extractorState, {property.id_without_prefix_with_lowercase_first_letter}Shorthand());")
         to.write(f"}}")
 
+    def _generate_style_extractor_generated_cpp_shorthand_value_serialization_extractor(self, to, property):
+        to.write(f"static void extract{property.id_without_prefix}ShorthandSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)")
+        to.write(f"{{")
+        with to.indent():
+            to.write(f"extract{property.codegen_properties.shorthand_style_extractor_pattern}ShorthandSerialization(extractorState, builder, context, {property.id_without_prefix_with_lowercase_first_letter}Shorthand());")
+        to.write(f"}}")
+
+    # Longhand property value getter.
+
     def _generate_style_extractor_generated_cpp_value_extractor(self, to, property):
-        to.write(f"static RefPtr<CSSValue> extractValue{property.id_without_prefix}(ExtractorState& extractorState)")
+        to.write(f"static RefPtr<CSSValue> extract{property.id_without_prefix}(ExtractorState& extractorState)")
         to.write(f"{{")
 
         with to.indent():
@@ -4423,6 +4497,33 @@ class GenerateStyleExtractorGenerated:
 
         to.write(f"}}")
 
+    def _generate_style_extractor_generated_cpp_value_serialization_extractor(self, to, property):
+        to.write(f"static void extract{property.id_without_prefix}Serialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context)")
+        to.write(f"{{")
+
+        with to.indent():
+            if property.codegen_properties.auto_functions:
+                to.write(f"if (extractorState.style.hasAuto{property.codegen_properties.render_style_name_for_methods}()) {{")
+                with to.indent():
+                    to.write(f"builder.append(nameLiteralForSerialization(CSSValueAuto));")
+                    to.write(f"return;")
+                to.write(f"}}")
+
+            if property.codegen_properties.visited_link_color_support:
+                self._generate_color_property_value_serialization_getter(to, property)
+            elif property.codegen_properties.animation_property:
+                self._generate_animation_property_value_serialization_getter(to, property)
+            elif property.codegen_properties.font_property:
+                self._generate_font_property_value_serialization_getter(to, property)
+            elif property.codegen_properties.fill_layer_property:
+                self._generate_fill_layer_property_value_serialization_getter(to, property)
+            elif property.codegen_properties.svg:
+                self._generate_svg_property_value_serialization_getter(to, property)
+            else:
+                self._generate_property_value_serialization_getter(to, property)
+
+        to.write(f"}}")
+
     def _generate_style_extractor_generated_cpp_extractor_functions_class(self, *, to):
         to.write(f"class ExtractorFunctions {{")
         to.write(f"public:")
@@ -4443,12 +4544,16 @@ class GenerateStyleExtractorGenerated:
                     if not property.codegen_properties.shorthand_style_extractor_pattern:
                         continue
                     self._generate_style_extractor_generated_cpp_shorthand_value_extractor(to, property)
+                    self._generate_style_extractor_generated_cpp_shorthand_value_serialization_extractor(to, property)
                 else:
                     self._generate_style_extractor_generated_cpp_value_extractor(to, property)
+                    self._generate_style_extractor_generated_cpp_value_serialization_extractor(to, property)
 
         to.write(f"}};")
 
-    def _generate_style_extractor_generated_cpp_extractor_generated_extract(self, *, to):
+    # Property getter dispatch.
+
+    def _generate_style_extractor_generated_cpp_extractor_generated_extract_value(self, *, to):
         to.write_block("""
             RefPtr<CSSValue> ExtractorGenerated::extractValue(ExtractorState& extractorState, CSSPropertyID id)
             {
@@ -4470,8 +4575,6 @@ class GenerateStyleExtractorGenerated:
             for property in self.properties_and_descriptors.all_unique:
                 to.write(f"case {property.id}:")
                 with to.indent():
-                    # FIXME: Unimplemented (page, all, etc.)
-
                     if not isinstance(property, StyleProperty):
                         to.write(f"// Skipped - Descriptor-only property")
                         to.write(f"return nullptr;")
@@ -4486,13 +4589,63 @@ class GenerateStyleExtractorGenerated:
                         to.write(f"return extractValue(extractorState, CSSProperty::resolveDirectionAwareProperty(id, extractorState.style.writingMode()));")
                     elif property.codegen_properties.longhands:
                         to.write(f"ASSERT(isShorthand(id));")
-                        to.write(f"return {scope_for_function(property)}::extractValue{property.id_without_prefix}Shorthand(extractorState);")
+                        to.write(f"return {scope_for_function(property)}::extract{property.id_without_prefix}Shorthand(extractorState);")
                     else:
-                        to.write(f"return {scope_for_function(property)}::extractValue{property.id_without_prefix}(extractorState);")
+                        to.write(f"return {scope_for_function(property)}::extract{property.id_without_prefix}(extractorState);")
 
             to.write(f"}}")
             to.write(f"ASSERT_NOT_REACHED();")
             to.write(f"return nullptr;")
+        to.write(f"}}")
+        to.newline()
+
+    # Property serialization dispatch.
+
+    def _generate_style_extractor_generated_cpp_extractor_generated_extract_serialization(self, *, to):
+        to.write_block("""
+            void ExtractorGenerated::extractValueSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context, CSSPropertyID id)
+            {
+                switch (id) {
+                case CSSPropertyID::CSSPropertyInvalid:
+                    break;
+                case CSSPropertyID::CSSPropertyCustom:
+                    ASSERT_NOT_REACHED();
+                    break;""")
+
+        with to.indent():
+            def scope_for_function(property):
+                if property.codegen_properties.style_extractor_custom:
+                    return "ExtractorCustom"
+                if property.codegen_properties.longhands and not property.codegen_properties.shorthand_style_extractor_pattern:
+                    return "ExtractorCustom"
+                return "ExtractorFunctions"
+
+            for property in self.properties_and_descriptors.all_unique:
+                to.write(f"case {property.id}:")
+                with to.indent():
+                    if not isinstance(property, StyleProperty):
+                        to.write(f"// Skipped - Descriptor-only property")
+                        to.write(f"return;")
+                    elif property.codegen_properties.internal_only:
+                        to.write(f"// Skipped - Internal only")
+                        to.write(f"return;")
+                    elif property.codegen_properties.skip_style_extractor:
+                        to.write(f"// Skipped - Not computable")
+                        to.write(f"return;")
+                    elif property.codegen_properties.is_logical and not property.codegen_properties.style_extractor_custom:
+                        to.write(f"// Logical properties are handled by recursing using the direction resolved property.")
+                        to.write(f"extractValueSerialization(extractorState, builder, context, CSSProperty::resolveDirectionAwareProperty(id, extractorState.style.writingMode()));")
+                        to.write(f"return;")
+                    elif property.codegen_properties.longhands:
+                        to.write(f"ASSERT(isShorthand(id));")
+                        to.write(f"{scope_for_function(property)}::extract{property.id_without_prefix}ShorthandSerialization(extractorState, builder, context);")
+                        to.write(f"return;")
+                    else:
+                        to.write(f"{scope_for_function(property)}::extract{property.id_without_prefix}Serialization(extractorState, builder, context);")
+                        to.write(f"return;")
+
+            to.write(f"}}")
+            to.write(f"ASSERT_NOT_REACHED();")
         to.write(f"}}")
         to.newline()
 
@@ -4527,7 +4680,11 @@ class GenerateStyleExtractorGenerated:
                     to=writer
                 )
 
-                self._generate_style_extractor_generated_cpp_extractor_generated_extract(
+                self._generate_style_extractor_generated_cpp_extractor_generated_extract_value(
+                    to=writer
+                )
+
+                self._generate_style_extractor_generated_cpp_extractor_generated_extract_serialization(
                     to=writer
                 )
 
