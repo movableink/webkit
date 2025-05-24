@@ -977,7 +977,6 @@ platform/graphics/ImageFrame.cpp
 platform/graphics/ImageFrameWorkQueue.cpp
 platform/graphics/MediaPlayer.cpp
 platform/graphics/Path.cpp
-platform/graphics/Path.h
 platform/graphics/SourceBufferPrivate.cpp
 platform/graphics/TransparencyLayerContextSwitcher.cpp
 platform/graphics/WidthIterator.cpp

@@ -116,6 +116,11 @@ PathImpl& Path::ensureImpl()
     return setImpl(PathStream::create());
 }
 
+Ref<PathImpl> Path::ensureProtectedImpl()
+{
+    return ensureImpl();
+}
+
 void Path::ensureImplForTesting()
 {
     if (isEmpty())
@@ -123,14 +128,14 @@ void Path::ensureImplForTesting()
     ensureImpl();
 }
 
-PathImpl* Path::asImpl()
+RefPtr<PathImpl> Path::asImpl()
 {
     if (auto ref = std::get_if<DataRef<PathImpl>>(&m_data))
         return &ref->access();
     return nullptr;
 }
 
-const PathImpl* Path::asImpl() const
+RefPtr<const PathImpl> Path::asImpl() const
 {
     if (auto ref = std::get_if<DataRef<PathImpl>>(&m_data))
         return ref->ptr();
@@ -176,7 +181,7 @@ void Path::addRoundedRect(const FloatRoundedRect& roundedRect, PathRoundedRect::
     if (isEmpty())
         m_data = PathSegment(PathRoundedRect { roundedRect, strategy });
     else
-        ensureImpl().add(PathRoundedRect { roundedRect, strategy });
+        ensureProtectedImpl()->add(PathRoundedRect { roundedRect, strategy });
 }
 
 void Path::addRoundedRect(const FloatRect& rect, const FloatSize& roundingRadii, PathRoundedRect::Strategy strategy)
@@ -187,7 +192,7 @@ void Path::addRoundedRect(const FloatRect& rect, const FloatSize& roundingRadii,
     if (isEmpty())
         m_data = PathSegment(PathRoundedRect { calculateEvenRoundedRect(rect, roundingRadii), strategy });
     else
-        ensureImpl().add(PathRoundedRect { calculateEvenRoundedRect(rect, roundingRadii), strategy });
+        ensureProtectedImpl()->add(PathRoundedRect { calculateEvenRoundedRect(rect, roundingRadii), strategy });
 }
 
 void Path::addRoundedRect(const RoundedRect& rect)
@@ -203,7 +208,7 @@ void Path::addContinuousRoundedRect(const FloatRect& rect, const float cornerWid
     if (isEmpty())
         m_data = PathSegment(PathContinuousRoundedRect { rect, cornerWidth, cornerHeight });
     else
-        ensureImpl().add(PathContinuousRoundedRect { rect, cornerWidth, cornerHeight });
+        ensureProtectedImpl()->add(PathContinuousRoundedRect { rect, cornerWidth, cornerHeight });
 }
 
 void Path::addPath(const Path& path, const AffineTransform& transform)
@@ -301,7 +306,7 @@ PlatformPathPtr Path::platformPath() const
 const Vector<PathSegment>* Path::segmentsIfExists() const
 {
     if (auto impl = asImpl()) {
-        if (auto* stream = dynamicDowncast<PathStream>(*impl))
+        if (auto* stream = dynamicDowncast<PathStream>((*impl)))
             return &stream->segments();
     }
 
@@ -382,7 +387,7 @@ bool Path::hasSubpaths() const
     if (auto* segment = asSingle())
         return PathStream::computeHasSubpaths(singleElementSpan(*segment));
 
-    if (auto* impl = asImpl())
+    if (auto impl = asImpl())
         return impl->hasSubpaths();
 
     return false;
@@ -393,7 +398,7 @@ FloatRect Path::fastBoundingRect() const
     if (auto* segment = asSingle())
         return segment->fastBoundingRect();
 
-    if (auto* impl = asImpl())
+    if (auto impl = asImpl())
         return impl->fastBoundingRect();
 
     return { };
@@ -404,7 +409,7 @@ FloatRect Path::boundingRect() const
     if (auto* segment = asSingle())
         return PathStream::computeBoundingRect(singleElementSpan(*segment));
 
-    if (auto* impl = asImpl())
+    if (auto impl = asImpl())
         return impl->boundingRect();
 
     return { };

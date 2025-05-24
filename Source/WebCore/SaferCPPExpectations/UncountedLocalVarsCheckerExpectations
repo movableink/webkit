@@ -553,8 +553,6 @@ platform/graphics/FontCache.cpp
 platform/graphics/FontRanges.cpp
 platform/graphics/GraphicsLayer.cpp
 platform/graphics/Image.cpp
-platform/graphics/Path.cpp
-platform/graphics/Path.h
 platform/graphics/SourceBrush.cpp
 platform/graphics/avfoundation/AudioSourceProviderAVFObjC.mm
 platform/graphics/avfoundation/objc/CDMInstanceFairPlayStreamingAVFObjC.mm
