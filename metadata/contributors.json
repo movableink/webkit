@@ -1110,6 +1110,14 @@
    },
    {
       "emails" : [
+         "a_kutirakulam@apple.com",
+         "akutira@umich.edu"
+      ],
+      "github" : "akutira-umich",
+      "name" : "Arvind Kutirakulam"
+   },
+   {
+      "emails" : [
          "ayg@aryeh.name"
       ],
       "name" : "Aryeh Gregor",
