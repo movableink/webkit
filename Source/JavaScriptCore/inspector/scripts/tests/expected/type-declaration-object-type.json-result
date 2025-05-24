@@ -1945,7 +1945,7 @@ using namespace Inspector;
 
 - (void)setDirectionality:(TestProtocolDatabaseOptionalParameterBundleDirectionality)directionality
 {
-    [super setString:toProtocolString(directionality) forKey:@"directionality"];
+    [super setString:toProtocolString(directionality).createNSString().get() forKey:@"directionality"];
 }
 
 - (TestProtocolDatabaseOptionalParameterBundleDirectionality)directionality
@@ -2120,7 +2120,7 @@ using namespace Inspector;
 
 - (void)setDirectionality:(TestProtocolDatabaseParameterBundleDirectionality)directionality
 {
-    [super setString:toProtocolString(directionality) forKey:@"directionality"];
+    [super setString:toProtocolString(directionality).createNSString().get() forKey:@"directionality"];
 }
 
 - (TestProtocolDatabaseParameterBundleDirectionality)directionality
@@ -2392,7 +2392,7 @@ using namespace Inspector;
 
 - (void)setDirectionality:(TestProtocolTestParameterBundleDirectionality)directionality
 {
-    [super setString:toProtocolString(directionality) forKey:@"directionality"];
+    [super setString:toProtocolString(directionality).createNSString().get() forKey:@"directionality"];
 }
 
 - (TestProtocolTestParameterBundleDirectionality)directionality

@@ -868,11 +868,11 @@ void ObjCInspectorDatabaseBackendDispatcher::executeAllOptionalParameters(long p
         if (!!out_opt_sqlError)
             protocol_jsonMessage->setObject("sqlError"_s, [*out_opt_sqlError toJSONObject]);
         if (!!out_opt_screenColor)
-            protocol_jsonMessage->setString("screenColor"_s, toProtocolString(*out_opt_screenColor));
+            protocol_jsonMessage->setString("screenColor"_s, toProtocolString(*out_opt_screenColor).createNSString().get());
         if (!!out_opt_alternateColors)
             protocol_jsonMessage->setArray("alternateColors"_s, toJSONStringArray(*out_opt_alternateColors));
         if (!!out_opt_printColor)
-            protocol_jsonMessage->setString("printColor"_s, toProtocolString(*out_opt_printColor));
+            protocol_jsonMessage->setString("printColor"_s, toProtocolString(*out_opt_printColor).createNSString().get());
         backendDispatcher()->sendResponse(protocol_requestId, WTFMove(protocol_jsonMessage), false);
     };
 
@@ -881,7 +881,7 @@ void ObjCInspectorDatabaseBackendDispatcher::executeAllOptionalParameters(long p
         o_in_opt_columnNames = toObjCStringArray(in_opt_columnNames.releaseNonNull());
     NSString *o_in_opt_notes;
     if (!!in_opt_notes)
-        o_in_opt_notes = in_opt_notes;
+        o_in_opt_notes = in_opt_notes.createNSString().autorelease();
     double o_in_opt_timestamp;
     if (!!in_opt_timestamp)
         o_in_opt_timestamp = *in_opt_timestamp;
@@ -937,14 +937,14 @@ void ObjCInspectorDatabaseBackendDispatcher::executeNoOptionalParameters(long pr
         protocol_jsonMessage->setValue("payload"_s, [out_payload toJSONObject]);
         protocol_jsonMessage->setInteger("databaseId"_s, out_databaseId);
         protocol_jsonMessage->setObject("sqlError"_s, [out_sqlError toJSONObject]);
-        protocol_jsonMessage->setString("screenColor"_s, toProtocolString(out_screenColor));
+        protocol_jsonMessage->setString("screenColor"_s, toProtocolString(out_screenColor).createNSString().get());
         protocol_jsonMessage->setArray("alternateColors"_s, toJSONStringArray(out_alternateColors));
-        protocol_jsonMessage->setString("printColor"_s, toProtocolString(out_printColor));
+        protocol_jsonMessage->setString("printColor"_s, toProtocolString(out_printColor).createNSString().get());
         backendDispatcher()->sendResponse(protocol_requestId, WTFMove(protocol_jsonMessage), false);
     };
 
     NSArray/*<NSString>*/ *o_in_columnNames = toObjCStringArray(WTFMove(in_columnNames));
-    NSString *o_in_notes = in_notes;
+    NSString *o_in_notes = in_notes.createNSString().autorelease();
     double o_in_timestamp = in_timestamp;
     RWIProtocolJSONObject *o_in_values = adoptNS([[RWIProtocolJSONObject alloc] initWithJSONObject:WTFMove(in_values)]).autorelease();
     RWIProtocolJSONObject *o_in_payload = adoptNS([[RWIProtocolJSONObject alloc] initWithJSONObject:WTFMove(in_payload)]).autorelease();

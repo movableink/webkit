@@ -956,16 +956,16 @@ void ObjCInspectorDatabaseBackendDispatcher::executeSQLSyncOptionalReturnValues(
         if (!!out_opt_sqlError)
             protocol_jsonMessage->setObject("sqlError"_s, [*out_opt_sqlError toJSONObject]);
         if (!!out_opt_screenColor)
-            protocol_jsonMessage->setString("screenColor"_s, toProtocolString(*out_opt_screenColor));
+            protocol_jsonMessage->setString("screenColor"_s, toProtocolString(*out_opt_screenColor).createNSString().get());
         if (!!out_opt_alternateColors)
             protocol_jsonMessage->setArray("alternateColors"_s, toJSONStringArray(*out_opt_alternateColors));
         if (!!out_opt_printColor)
-            protocol_jsonMessage->setString("printColor"_s, toProtocolString(*out_opt_printColor));
+            protocol_jsonMessage->setString("printColor"_s, toProtocolString(*out_opt_printColor).createNSString().get());
         backendDispatcher()->sendResponse(protocol_requestId, WTFMove(protocol_jsonMessage), false);
     };
 
     int o_in_databaseId = in_databaseId;
-    NSString *o_in_query = in_query;
+    NSString *o_in_query = in_query.createNSString().autorelease();
     [m_delegate executeSQLSyncOptionalReturnValuesWithErrorCallback:errorCallback successCallback:successCallback databaseId:o_in_databaseId query:o_in_query];
 }
 
@@ -1005,16 +1005,16 @@ void ObjCInspectorDatabaseBackendDispatcher::executeSQLAsyncOptionalReturnValues
         if (!!out_opt_sqlError)
             protocol_jsonMessage->setObject("sqlError"_s, [*out_opt_sqlError toJSONObject]);
         if (!!out_opt_screenColor)
-            protocol_jsonMessage->setString("screenColor"_s, toProtocolString(*out_opt_screenColor));
+            protocol_jsonMessage->setString("screenColor"_s, toProtocolString(*out_opt_screenColor).createNSString().get());
         if (!!out_opt_alternateColors)
             protocol_jsonMessage->setArray("alternateColors"_s, toJSONStringArray(*out_opt_alternateColors));
         if (!!out_opt_printColor)
-            protocol_jsonMessage->setString("printColor"_s, toProtocolString(*out_opt_printColor));
+            protocol_jsonMessage->setString("printColor"_s, toProtocolString(*out_opt_printColor).createNSString().get());
         backendDispatcher()->sendResponse(protocol_requestId, WTFMove(protocol_jsonMessage), false);
     };
 
     int o_in_databaseId = in_databaseId;
-    NSString *o_in_query = in_query;
+    NSString *o_in_query = in_query.createNSString().autorelease();
     [m_delegate executeSQLAsyncOptionalReturnValuesWithErrorCallback:errorCallback successCallback:successCallback databaseId:o_in_databaseId query:o_in_query];
 }
 
@@ -1047,13 +1047,13 @@ void ObjCInspectorDatabaseBackendDispatcher::executeSQLSync(long protocol_reques
         protocol_jsonMessage->setInteger("databaseId"_s, out_databaseId);
         protocol_jsonMessage->setObject("sqlError"_s, [out_sqlError toJSONObject]);
         protocol_jsonMessage->setArray("alternateColors"_s, toJSONStringArray(out_alternateColors));
-        protocol_jsonMessage->setString("screenColor"_s, toProtocolString(out_screenColor));
-        protocol_jsonMessage->setString("printColor"_s, toProtocolString(out_printColor));
+        protocol_jsonMessage->setString("screenColor"_s, toProtocolString(out_screenColor).createNSString().get());
+        protocol_jsonMessage->setString("printColor"_s, toProtocolString(out_printColor).createNSString().get());
         backendDispatcher()->sendResponse(protocol_requestId, WTFMove(protocol_jsonMessage), false);
     };
 
     int o_in_databaseId = in_databaseId;
-    NSString *o_in_query = in_query;
+    NSString *o_in_query = in_query.createNSString().autorelease();
     [m_delegate executeSQLSyncWithErrorCallback:errorCallback successCallback:successCallback databaseId:o_in_databaseId query:o_in_query];
 }
 
@@ -1085,14 +1085,14 @@ void ObjCInspectorDatabaseBackendDispatcher::executeSQLAsync(long protocol_reque
         protocol_jsonMessage->setValue("payload"_s, [out_payload toJSONObject]);
         protocol_jsonMessage->setInteger("databaseId"_s, out_databaseId);
         protocol_jsonMessage->setObject("sqlError"_s, [out_sqlError toJSONObject]);
-        protocol_jsonMessage->setString("screenColor"_s, toProtocolString(out_screenColor));
+        protocol_jsonMessage->setString("screenColor"_s, toProtocolString(out_screenColor).createNSString().get());
         protocol_jsonMessage->setArray("alternateColors"_s, toJSONStringArray(out_alternateColors));
-        protocol_jsonMessage->setString("printColor"_s, toProtocolString(out_printColor));
+        protocol_jsonMessage->setString("printColor"_s, toProtocolString(out_printColor).createNSString().get());
         backendDispatcher()->sendResponse(protocol_requestId, WTFMove(protocol_jsonMessage), false);
     };
 
     int o_in_databaseId = in_databaseId;
-    NSString *o_in_query = in_query;
+    NSString *o_in_query = in_query.createNSString().autorelease();
     [m_delegate executeSQLAsyncWithErrorCallback:errorCallback successCallback:successCallback databaseId:o_in_databaseId query:o_in_query];
 }
 

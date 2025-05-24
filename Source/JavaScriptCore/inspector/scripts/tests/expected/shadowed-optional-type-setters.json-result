@@ -1063,7 +1063,7 @@ using namespace Inspector;
 
 - (void)setType:(TestProtocolRuntimeKeyPathType)type
 {
-    [super setString:toProtocolString(type) forKey:@"type"];
+    [super setString:toProtocolString(type).createNSString().get() forKey:@"type"];
 }
 
 - (TestProtocolRuntimeKeyPathType)type
