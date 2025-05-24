@@ -72,7 +72,7 @@ public:
 
     bool isReadyForMoreMediaData() const;
     void requestMediaDataWhenReady(Function<void()>&&);
-    void enqueueSample(const MediaSample&);
+    void enqueueSample(const MediaSample&, const MediaTime&);
     void stopRequestingMediaData();
 
     void notifyWhenHasAvailableVideoFrame(Function<void(const MediaTime&, double)>&&);
@@ -82,7 +82,6 @@ public:
     void flush();
 
     void expectMinimumUpcomingSampleBufferPresentationTime(const MediaTime&);
-    void resetUpcomingSampleBufferPresentationTimeExpectations();
 
     WebSampleBufferVideoRendering *renderer() const;
 
@@ -138,8 +137,6 @@ private:
     RetainPtr<CMSampleBufferRef> nextDecodedSample() const;
     CMTime nextDecodedSampleEndTime() const;
     MediaTime lastDecodedSampleTime() const;
-    bool hasIncomingOutOfOrderFrame(const MediaTime&) const;
-    MediaTime minimumUpcomingSampleTime(const MediaSample&) const;
 
     void assignResourceOwner(CMSampleBufferRef);
     bool areSamplesQueuesReadyForMoreMediaData(size_t waterMark) const;
@@ -167,7 +164,7 @@ private:
     TimebaseAndTimerSource m_timebaseAndTimerSource WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<EffectiveRateChangedListener> m_effectiveRateChangedListener;
     std::atomic<FlushId> m_flushId { 0 };
-    Deque<std::pair<Ref<const MediaSample>, FlushId>> m_compressedSampleQueue WTF_GUARDED_BY_CAPABILITY(dispatcher().get());
+    Deque<std::tuple<Ref<const MediaSample>, MediaTime, FlushId>> m_compressedSampleQueue WTF_GUARDED_BY_CAPABILITY(dispatcher().get());
     std::atomic<uint32_t> m_compressedSamplesCount { 0 };
     static constexpr MediaTime s_decodeAhead { 133, 1000 };
     RetainPtr<CMBufferQueueRef> m_decodedSampleQueue; // created on the main thread, immutable after creation.
@@ -186,9 +183,6 @@ private:
     std::atomic<bool> m_gotDecodingError { false };
     bool m_needsFlushing WTF_GUARDED_BY_CAPABILITY(mainThread) { false };
 
-    // B-Frame tracker.
-    MediaTime m_highestPresentationTime WTF_GUARDED_BY_CAPABILITY(mainThread) { MediaTime::invalidTime() };
-    bool m_hasOutOfOrderFrames WTF_GUARDED_BY_CAPABILITY(dispatcher().get()) { false };
     MediaTime m_lastMinimumUpcomingPresentationTime WTF_GUARDED_BY_CAPABILITY(dispatcher().get()) { MediaTime::invalidTime() };
 
     // Playback Statistics

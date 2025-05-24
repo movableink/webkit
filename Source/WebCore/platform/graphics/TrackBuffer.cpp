@@ -37,6 +37,9 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(TrackBuffer);
 
+// The maximum queue depth possible for out of order frames with either H264 or HEVC is 16, limit looking ahead of 16 frames.
+static constexpr size_t MaximumSlidingWindowLength = 16;
+
 static inline MediaTime roundTowardsTimeScaleWithRoundingMargin(const MediaTime& time, uint32_t timeScale, const MediaTime& roundingMargin)
 {
     while (true) {
@@ -92,10 +95,16 @@ void TrackBuffer::addSample(MediaSample& sample)
     // with earlier timestamps are enqueued. The decode queue is not FIFO, but rather an ordered map.
     DecodeOrderSampleMap::KeyType decodeKey(sample.decodeTime(), sample.presentationTime());
     if (lastEnqueuedDecodeKey().first.isInvalid() || decodeKey > lastEnqueuedDecodeKey()) {
-        decodeQueue().insert(DecodeOrderSampleMap::MapType::value_type(decodeKey, sample));
-
-        if (minimumEnqueuedPresentationTime().isValid() && sample.presentationTime() < minimumEnqueuedPresentationTime())
-            setNeedsMinimumUpcomingPresentationTimeUpdating(true);
+        auto result = decodeQueue().insert(DecodeOrderSampleMap::MapType::value_type(decodeKey, sample));
+        auto it = result.first;
+        if (it == decodeQueue().begin())
+            m_minimumEnqueuedPresentationTime = sample.presentationTime();
+        else {
+            m_minimumEnqueuedPresentationTime = std::min(m_minimumEnqueuedPresentationTime, sample.presentationTime());
+            Ref previousSample = (--it)->second;
+            if (sample.presentationTime() < previousSample->presentationTime())
+                m_hasOutOfOrderFrames = true;
+        }
     }
 
     // NOTE: the spec considers the need to check the last frame duration but doesn't specify if that last frame
@@ -146,35 +155,43 @@ RefPtr<MediaSample> TrackBuffer::nextSample()
     setLastEnqueuedDecodeKey({ sample->decodeTime(), sample->presentationTime() });
     setEnqueueDiscontinuityBoundary(sample->decodeTime() + sample->duration() + m_discontinuityTolerance);
 
+    m_minimumEnqueuedPresentationTime = MediaTime::invalidTime();
+    if (m_hasOutOfOrderFrames)
+        updateMinimumUpcomingPresentationTime();
+    else {
+        // Next upcoming time is the next displayed sample.
+        for (auto it = m_decodeQueue.begin(); it != m_decodeQueue.end(); ++it) {
+            Ref sample = it->second;
+            if (sample->isNonDisplaying())
+                continue;
+            m_minimumEnqueuedPresentationTime = sample->presentationTime();
+            break;
+        }
+    }
+
     return sample;
 }
 
-bool TrackBuffer::updateMinimumUpcomingPresentationTime()
+void TrackBuffer::updateMinimumUpcomingPresentationTime()
 {
     if (m_decodeQueue.empty()) {
         m_minimumEnqueuedPresentationTime = MediaTime::invalidTime();
-        return false;
+        return;
     }
-
-    auto minPts = std::ranges::min_element(m_decodeQueue, [](auto& left, auto& right) -> bool {
-        return left.second->presentationTime() < right.second->presentationTime();
-    });
-
-    if (minPts == m_decodeQueue.end()) {
+    size_t forwardIndex = 0;
+    m_minimumEnqueuedPresentationTime = MediaTime::positiveInfiniteTime();
+    for (auto it = m_decodeQueue.begin(); it != m_decodeQueue.end() && forwardIndex < MaximumSlidingWindowLength; ++forwardIndex, ++it) {
+        Ref sample = it->second;
+        if (!sample->isNonDisplaying())
+            m_minimumEnqueuedPresentationTime = std::min(m_minimumEnqueuedPresentationTime, sample->presentationTime());
+    }
+    if (m_minimumEnqueuedPresentationTime.isPositiveInfinite())
         m_minimumEnqueuedPresentationTime = MediaTime::invalidTime();
-        return false;
-    }
-
-    m_minimumEnqueuedPresentationTime = Ref { minPts->second }->presentationTime();
-    return true;
 }
 
 bool TrackBuffer::reenqueueMediaForTime(const MediaTime& time, const MediaTime& timeFudgeFactor, bool isEnded)
 {
-    m_decodeQueue.clear();
-
-    m_highestEnqueuedPresentationTime = MediaTime::invalidTime();
-    m_lastEnqueuedDecodeKey = { MediaTime::invalidTime(), MediaTime::invalidTime() };
+    clearDecodeQueue();
     m_enqueueDiscontinuityBoundary = time + m_discontinuityTolerance;
 
     if (m_samples.empty())
@@ -218,17 +235,27 @@ bool TrackBuffer::reenqueueMediaForTime(const MediaTime& time, const MediaTime& 
         m_decodeQueue.insert(DecodeOrderSampleMap::MapType::value_type(decodeKey, WTFMove(copy)));
     }
 
+    MediaTime previousSampleTime;
+
     // Fill the decode queue with the remaining samples.
-    if (currentSampleDTSIterator != m_samples.decodeOrder().end())
+    if (currentSampleDTSIterator != m_samples.decodeOrder().end()) {
         m_decodeQueue.insert(*currentSampleDTSIterator);
+        m_minimumEnqueuedPresentationTime = Ref { currentSampleDTSIterator->second }->presentationTime();
+        previousSampleTime = m_minimumEnqueuedPresentationTime;
+    }
     for (auto iter = ++currentSampleDTSIterator; iter != m_samples.decodeOrder().end(); ++iter) {
-        Ref frame = iter->second;
-        if (frame->presentationTime() < time) {
-            Ref copy = frame->createNonDisplayingCopy();
+        Ref sample = iter->second;
+        if (sample->presentationTime() < time) {
+            Ref copy = sample->createNonDisplayingCopy();
             DecodeOrderSampleMap::KeyType decodeKey(copy->decodeTime(), copy->presentationTime());
             m_decodeQueue.insert(DecodeOrderSampleMap::MapType::value_type(decodeKey, WTFMove(copy)));
-        } else
+        } else {
             m_decodeQueue.insert(*iter);
+            if (sample->presentationTime() < m_minimumEnqueuedPresentationTime)
+                m_minimumEnqueuedPresentationTime = sample->presentationTime();
+            if (std::exchange(previousSampleTime, sample->presentationTime()) > sample->presentationTime())
+                m_hasOutOfOrderFrames = true;
+        }
     }
 
     m_needsReenqueueing = false;
@@ -339,6 +366,8 @@ PlatformTimeRanges TrackBuffer::removeSamples(const DecodeOrderSampleMap::MapTyp
     if (bytesRemoved)
         DEBUG_LOG_IF(m_logger, logId, "removed ", bytesRemoved, ", start = ", earliestSample, ", end = ", latestSample);
 #endif
+
+    updateMinimumUpcomingPresentationTime();
 
     return erasedRanges;
 }
@@ -480,8 +509,17 @@ void TrackBuffer::reset()
 void TrackBuffer::clearSamples()
 {
     m_samples.clear();
-    m_decodeQueue.clear();
+    clearDecodeQueue();
     m_buffered = PlatformTimeRanges();
+}
+
+void TrackBuffer::clearDecodeQueue()
+{
+    m_decodeQueue.clear();
+    m_hasOutOfOrderFrames = false;
+    m_minimumEnqueuedPresentationTime = MediaTime::invalidTime();
+    m_highestEnqueuedPresentationTime = MediaTime::invalidTime();
+    m_lastEnqueuedDecodeKey = { MediaTime::invalidTime(), MediaTime::invalidTime() };
 }
 
 void TrackBuffer::setRoundedTimestampOffset(const MediaTime& time, uint32_t timeScale, const MediaTime& roundingMargin)

@@ -1125,7 +1125,7 @@ void SourceBufferPrivateAVFObjC::enqueueSample(Ref<MediaSampleAVFObjC>&& sample,
         if (!m_videoRenderer)
             return;
 
-        enqueueSampleBuffer(sample.get());
+        enqueueSampleBuffer(sample.get(), minimumUpcomingPresentationTimeForTrackID(trackID));
 
     } else {
         // AVSampleBufferAudioRenderer will throw an un-documented exception if passed a sample
@@ -1147,12 +1147,12 @@ void SourceBufferPrivateAVFObjC::enqueueSample(Ref<MediaSampleAVFObjC>&& sample,
     }
 }
 
-void SourceBufferPrivateAVFObjC::enqueueSampleBuffer(MediaSampleAVFObjC& sample)
+void SourceBufferPrivateAVFObjC::enqueueSampleBuffer(MediaSampleAVFObjC& sample, const MediaTime& minimumUpcomingTime)
 {
     attachContentKeyToSampleIfNeeded(sample);
     WebSampleBufferVideoRendering *renderer = nil;
     if (RefPtr videoRenderer = m_videoRenderer) {
-        videoRenderer->enqueueSample(sample);
+        videoRenderer->enqueueSample(sample, minimumUpcomingTime);
 
         // Enqueuing a sample for display my synchronously fire an error, which can cause m_videoRenderer to become null.
         videoRenderer = m_videoRenderer;
@@ -1307,15 +1307,6 @@ void SourceBufferPrivateAVFObjC::setMinimumUpcomingPresentationTime(TrackID trac
     if (canSetMinimumUpcomingPresentationTime(trackID)) {
         if (RefPtr videoRenderer = m_videoRenderer)
             videoRenderer->expectMinimumUpcomingSampleBufferPresentationTime(presentationTime);
-    }
-}
-
-void SourceBufferPrivateAVFObjC::clearMinimumUpcomingPresentationTime(TrackID trackID)
-{
-    ASSERT(canSetMinimumUpcomingPresentationTime(trackID));
-    if (canSetMinimumUpcomingPresentationTime(trackID)) {
-        if (RefPtr videoRenderer = m_videoRenderer)
-            videoRenderer->resetUpcomingSampleBufferPresentationTimeExpectations();
     }
 }
 

@@ -950,7 +950,7 @@ void MediaPlayerPrivateWebM::enqueueSample(Ref<MediaSample>&& sample, TrackID tr
             setNaturalSize(formatSize);
 
         if (RefPtr videoRenderer = m_videoRenderer)
-            videoRenderer->enqueueSample(sample);
+            videoRenderer->enqueueSample(sample, sample->presentationTime());
 
         return;
     }
@@ -1017,14 +1017,6 @@ void MediaPlayerPrivateWebM::setMinimumUpcomingPresentationTime(TrackID trackId,
     if (isEnabledVideoTrackID(trackId)) {
         if (RefPtr videoRenderer = m_videoRenderer)
             videoRenderer->expectMinimumUpcomingSampleBufferPresentationTime(presentationTime);
-    }
-}
-
-void MediaPlayerPrivateWebM::clearMinimumUpcomingPresentationTime(TrackID trackId)
-{
-    if (isEnabledVideoTrackID(trackId)) {
-        if (RefPtr videoRenderer = m_videoRenderer)
-            videoRenderer->resetUpcomingSampleBufferPresentationTimeExpectations();
     }
 }
 
@@ -1115,11 +1107,6 @@ void MediaPlayerPrivateWebM::provideMediaData(TrackBuffer& trackBuffer, TrackID 
 
     unsigned enqueuedSamples = 0;
 
-    if (trackBuffer.needsMinimumUpcomingPresentationTimeUpdating() && isEnabledVideoTrackID(trackId)) {
-        trackBuffer.setMinimumEnqueuedPresentationTime(MediaTime::invalidTime());
-        clearMinimumUpcomingPresentationTime(trackId);
-    }
-
     while (true) {
         if (!isReadyForMoreSamples(trackId)) {
             DEBUG_LOG(LOGIDENTIFIER, "bailing early, track id ", trackId, " is not ready for more data");
@@ -1134,7 +1121,7 @@ void MediaPlayerPrivateWebM::provideMediaData(TrackBuffer& trackBuffer, TrackID 
         ++enqueuedSamples;
     }
 
-    if (isEnabledVideoTrackID(trackId) && trackBuffer.updateMinimumUpcomingPresentationTime())
+    if (isEnabledVideoTrackID(trackId))
         setMinimumUpcomingPresentationTime(trackId, trackBuffer.minimumEnqueuedPresentationTime());
 
     DEBUG_LOG(LOGIDENTIFIER, "enqueued ", enqueuedSamples, " samples, ", trackBuffer.remainingSamples(), " remaining");

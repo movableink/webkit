@@ -53,7 +53,6 @@
 
 @interface AVSampleBufferDisplayLayer (WebCoreAVSampleBufferDisplayLayerQueueManagementPrivate)
 - (void)expectMinimumUpcomingSampleBufferPresentationTime:(CMTime)minimumUpcomingPresentationTime;
-- (void)resetUpcomingSampleBufferPresentationTimeExpectations;
 @end
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
@@ -73,8 +72,6 @@ namespace WebCore {
 
 static constexpr CMItemCount SampleQueueHighWaterMark = 30;
 static constexpr CMItemCount SampleQueueLowWaterMark = 15;
-// The maximum queue depth possible for out of order frames with either H264 or HEVC is 16, limit looking ahead of 16 frames.
-static constexpr size_t MaximumSlidingWindowLength = 16;
 
 static bool isRendererThreadSafe(WebSampleBufferVideoRendering *renderering)
 {
@@ -248,48 +245,6 @@ MediaTime VideoMediaSampleRenderer::lastDecodedSampleTime() const
     return PAL::toMediaTime(PAL::CMBufferQueueGetMaxPresentationTimeStamp(m_decodedSampleQueue.get()));
 }
 
-bool VideoMediaSampleRenderer::hasIncomingOutOfOrderFrame(const MediaTime& time) const
-{
-    assertIsCurrent(dispatcher().get());
-
-    if (!m_hasOutOfOrderFrames)
-        return false;
-
-    size_t forwardIndex = 0;
-    for (auto it = m_compressedSampleQueue.begin(); it != m_compressedSampleQueue.end() && forwardIndex < MaximumSlidingWindowLength; ++forwardIndex, ++it) {
-        const auto& [sample, flushId] = *it;
-        if (flushId != m_flushId)
-            return false;
-        if (!sample->isNonDisplaying() && sample->presentationTime() < time)
-            return true;
-    }
-    return false;
-}
-
-MediaTime VideoMediaSampleRenderer::minimumUpcomingSampleTime(const MediaSample& currentSample) const
-{
-    assertIsCurrent(dispatcher().get());
-
-    if (!m_hasOutOfOrderFrames && !currentSample.isNonDisplaying())
-        return currentSample.presentationTime();
-
-    auto minimumSampleTime = currentSample.presentationTime();
-
-    size_t forwardIndex = 0;
-    for (auto it = m_compressedSampleQueue.begin(); it != m_compressedSampleQueue.end() && forwardIndex < MaximumSlidingWindowLength; ++forwardIndex, ++it) {
-        const auto& [sample, flushId] = *it;
-        if (flushId != m_flushId)
-            break;
-        if (sample->isNonDisplaying())
-            continue;
-        minimumSampleTime = std::min(sample->presentationTime(), minimumSampleTime);
-    }
-
-    if (minimumSampleTime == currentSample.presentationTime() && currentSample.isNonDisplaying())
-        return MediaTime::invalidTime();
-    return minimumSampleTime;
-}
-
 void VideoMediaSampleRenderer::enqueueDecodedSample(RetainPtr<CMSampleBufferRef>&& sample)
 {
     ASSERT(sample);
@@ -431,7 +386,7 @@ MediaTime VideoMediaSampleRenderer::currentTime() const
     return MediaTime::invalidTime();
 }
 
-void VideoMediaSampleRenderer::enqueueSample(const MediaSample& sample)
+void VideoMediaSampleRenderer::enqueueSample(const MediaSample& sample, const MediaTime& minimumUpcomingTime)
 {
     assertIsMainThread();
 
@@ -469,11 +424,8 @@ void VideoMediaSampleRenderer::enqueueSample(const MediaSample& sample)
             m_droppedVideoFramesOffset = m_droppedVideoFrames - numberOfDroppedVideoFrames;
 #endif
     }
-    bool hasOutOfOrderFrames = m_highestPresentationTime.isValid() && sample.presentationTime() < m_highestPresentationTime;
-    if (!hasOutOfOrderFrames)
-        m_highestPresentationTime = sample.presentationTime();
     ++m_compressedSamplesCount;
-    dispatcher()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, sample = Ref { sample }, flushId = m_flushId.load(), hasOutOfOrderFrames]() mutable {
+    dispatcher()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, sample = Ref { sample }, minimumUpcomingTime, flushId = m_flushId.load()]() mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -485,9 +437,7 @@ void VideoMediaSampleRenderer::enqueueSample(const MediaSample& sample)
             protectedThis->maybeBecomeReadyForMoreMediaData();
             return;
         }
-        protectedThis->m_compressedSampleQueue.append({ WTFMove(sample), flushId });
-        if (hasOutOfOrderFrames)
-            protectedThis->m_hasOutOfOrderFrames = true;
+        protectedThis->m_compressedSampleQueue.append({ WTFMove(sample), minimumUpcomingTime, flushId });
         protectedThis->decodeNextSampleIfNeeded();
     });
 }
@@ -504,20 +454,17 @@ void VideoMediaSampleRenderer::decodeNextSampleIfNeeded()
     if (m_compressedSampleQueue.isEmpty())
         return;
 
-    if (m_hasOutOfOrderFrames && m_compressedSampleQueue.size() < MaximumSlidingWindowLength && m_compressedSamplesCount >= MaximumSlidingWindowLength)
-        return; // There are in-flight frames, necessary to calculate the minimum upcoming sample time, wait for them.
-
     if (auto currentTime = this->currentTime(); currentTime.isValid() && !m_wasProtected) {
         auto aheadTime = currentTime + s_decodeAhead;
         auto endTime = lastDecodedSampleTime();
         if (endTime.isValid() && endTime > aheadTime && decodedSamplesCount() >= 3) {
-            if (!hasIncomingOutOfOrderFrame(endTime))
+            if (std::get<MediaTime>(m_compressedSampleQueue.first()) >= endTime)
                 return;
             RELEASE_LOG_DEBUG(Media, "Out of order frames detected, forcing extra decode");
         }
     }
 
-    auto [sample, flushId] = m_compressedSampleQueue.takeFirst();
+    auto [sample, upcomingMinimum, flushId] = m_compressedSampleQueue.takeFirst();
     m_compressedSamplesCount = m_compressedSampleQueue.size();
     maybeBecomeReadyForMoreMediaData();
 
@@ -532,10 +479,15 @@ void VideoMediaSampleRenderer::decodeNextSampleIfNeeded()
         return;
     }
 
-    if (auto minimumIncomingTime = minimumUpcomingSampleTime(sample); minimumIncomingTime.isValid() && minimumIncomingTime > m_lastMinimumUpcomingPresentationTime) {
-        m_lastMinimumUpcomingPresentationTime = minimumIncomingTime;
-        [rendererOrDisplayLayer() expectMinimumUpcomingSampleBufferPresentationTime:PAL::toCMTime(m_lastMinimumUpcomingPresentationTime)];
+    if (!sample->isNonDisplaying() && upcomingMinimum.isValid()) {
+        upcomingMinimum = std::min(sample->presentationTime(), upcomingMinimum);
+        if (upcomingMinimum != m_lastMinimumUpcomingPresentationTime) {
+            ASSERT(m_lastMinimumUpcomingPresentationTime.isInvalid() || upcomingMinimum > m_lastMinimumUpcomingPresentationTime);
+            m_lastMinimumUpcomingPresentationTime = upcomingMinimum;
+            [rendererOrDisplayLayer() expectMinimumUpcomingSampleBufferPresentationTime:PAL::toCMTime(upcomingMinimum)];
+        }
     }
+    ASSERT(m_lastMinimumUpcomingPresentationTime.isInvalid() || sample->isNonDisplaying() || sample->presentationTime() >= std::min(sample->presentationTime(), m_lastMinimumUpcomingPresentationTime));
 
     auto cmSample = sample->platformSample().sample.cmSampleBuffer;
 
@@ -608,12 +560,12 @@ void VideoMediaSampleRenderer::decodeNextSampleIfNeeded()
             m_frameRateMonitor.update();
             OSType format = '----';
             MediaTime presentationTime = MediaTime::invalidTime();
-            if (RetainPtr firstFrame = result->size() ? nullptr : (*result)[0]) {
+            if (RetainPtr firstFrame = result->isEmpty() ? nullptr : (*result)[0]) {
                 RetainPtr imageBuffer = (CVPixelBufferRef)PAL::CMSampleBufferGetImageBuffer(static_cast<CMSampleBufferRef>(firstFrame.get()));
                 format = CVPixelBufferGetPixelFormatType(imageBuffer.get());
                 presentationTime = PAL::toMediaTime(PAL::CMSampleBufferGetOutputPresentationTimeStamp(firstFrame.get()));
             }
-            RELEASE_LOG_DEBUG(MediaPerformance, "VideoMediaSampleRenderer pts:%0.2f minimum upcoming:%0.2f decoding rate:%0.1fHz rolling:%0.1f decoder rate:%0.1fHz compressed queue:%u decoded queue:%zu bframes:%d hw:%d format:%s", presentationTime.toDouble(), m_lastMinimumUpcomingPresentationTime.toDouble(), 1.0f / Seconds { now - std::exchange(m_timeSinceLastDecode, now) }.value(), m_frameRateMonitor.observedFrameRate(), 1.0f / Seconds { now - startTime }.value(), m_compressedSamplesCount.load(), decodedSamplesCount(), m_hasOutOfOrderFrames, protectedThis->decompressionSession()->isHardwareAccelerated(), &FourCC(format).string()[0]);
+            RELEASE_LOG_DEBUG(MediaPerformance, "VideoMediaSampleRenderer pts:%0.2f minimum upcoming:%0.2f decoding rate:%0.1fHz rolling:%0.1f decoder rate:%0.1fHz compressed queue:%u decoded queue:%zu hw:%d format:%s", presentationTime.toDouble(), m_lastMinimumUpcomingPresentationTime.toDouble(), 1.0f / Seconds { now - std::exchange(m_timeSinceLastDecode, now) }.value(), m_frameRateMonitor.observedFrameRate(), 1.0f / Seconds { now - startTime }.value(), m_compressedSamplesCount.load(), decodedSamplesCount(), protectedThis->decompressionSession()->isHardwareAccelerated(), &FourCC(format).string()[0]);
         }
 
         if (displaying) {
@@ -730,7 +682,6 @@ void VideoMediaSampleRenderer::flushCompressedSampleQueue()
     ++m_flushId;
     m_compressedSamplesCount = 0;
     m_gotDecodingError = false;
-    m_highestPresentationTime = MediaTime::invalidTime();
 }
 
 void VideoMediaSampleRenderer::flushDecodedSampleQueue()
@@ -743,7 +694,6 @@ void VideoMediaSampleRenderer::flushDecodedSampleQueue()
     m_lastDisplayedSample.reset();
     m_lastDisplayedTime.reset();
     m_isDisplayingSample = false;
-    m_hasOutOfOrderFrames = false;
     m_lastMinimumUpcomingPresentationTime = MediaTime::invalidTime();
 }
 
@@ -927,15 +877,6 @@ void VideoMediaSampleRenderer::expectMinimumUpcomingSampleBufferPresentationTime
         return;
 
     [renderer() expectMinimumUpcomingSampleBufferPresentationTime:PAL::toCMTime(time)];
-}
-
-void VideoMediaSampleRenderer::resetUpcomingSampleBufferPresentationTimeExpectations()
-{
-    assertIsMainThread();
-    if (isUsingDecompressionSession() || ![PAL::getAVSampleBufferDisplayLayerClass() instancesRespondToSelector:@selector(resetUpcomingSampleBufferPresentationTimeExpectations)])
-        return;
-
-    [renderer() resetUpcomingSampleBufferPresentationTimeExpectations];
 }
 
 WebSampleBufferVideoRendering *VideoMediaSampleRenderer::renderer() const

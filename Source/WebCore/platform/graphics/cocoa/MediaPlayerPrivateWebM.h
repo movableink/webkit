@@ -211,7 +211,6 @@ private:
     void notifyClientWhenReadyForMoreSamples(TrackID);
 
     void setMinimumUpcomingPresentationTime(TrackID, const MediaTime&);
-    void clearMinimumUpcomingPresentationTime(TrackID);
 
     bool isReadyForMoreSamples(TrackID);
     void didBecomeReadyForMoreSamples(TrackID);

@@ -170,7 +170,6 @@ private:
     void notifyClientWhenReadyForMoreSamples(TrackID) final;
     bool canSetMinimumUpcomingPresentationTime(TrackID) const override;
     void setMinimumUpcomingPresentationTime(TrackID, const MediaTime&) override;
-    void clearMinimumUpcomingPresentationTime(TrackID) override;
     bool canSwitchToType(const ContentType&) final;
     bool isSeeking() const final;
 
@@ -189,7 +188,7 @@ private:
 
     void processPendingTrackChangeTasks();
     void enqueueSample(Ref<MediaSampleAVFObjC>&&, TrackID);
-    void enqueueSampleBuffer(MediaSampleAVFObjC&);
+    void enqueueSampleBuffer(MediaSampleAVFObjC&, const MediaTime&);
     void attachContentKeyToSampleIfNeeded(const MediaSampleAVFObjC&);
     void didBecomeReadyForMoreSamples(TrackID);
     void appendCompleted(bool);

@@ -53,8 +53,6 @@ public:
     void addBufferedRange(const MediaTime& start, const MediaTime& end, AddTimeRangeOption = AddTimeRangeOption::None);
     void addSample(MediaSample&);
 
-    bool updateMinimumUpcomingPresentationTime();
-
     bool reenqueueMediaForTime(const MediaTime&, const MediaTime& timeFudgeFactor, bool isEnded = false);
     MediaTime findSeekTimeForTargetTime(const MediaTime& targetTime, const MediaTime& negativeThreshold, const MediaTime& positiveThreshold);
     int64_t removeCodedFrames(const MediaTime& start, const MediaTime& end, const MediaTime& currentTime);
@@ -82,7 +80,6 @@ public:
     const MediaTime& highestEnqueuedPresentationTime() const { return m_highestEnqueuedPresentationTime; }
     void setHighestEnqueuedPresentationTime(MediaTime timestamp) { m_highestEnqueuedPresentationTime = WTFMove(timestamp); }
     const MediaTime& minimumEnqueuedPresentationTime() const { return m_minimumEnqueuedPresentationTime; }
-    void setMinimumEnqueuedPresentationTime(MediaTime timestamp) { m_minimumEnqueuedPresentationTime = WTFMove(timestamp); }
 
     const DecodeOrderSampleMap::KeyType& lastEnqueuedDecodeKey() const { return m_lastEnqueuedDecodeKey; }
     void setLastEnqueuedDecodeKey(DecodeOrderSampleMap::KeyType key) { m_lastEnqueuedDecodeKey = WTFMove(key); }
@@ -102,8 +99,6 @@ public:
     void setEnabled(bool enabled) { m_enabled = enabled; }
     bool needsReenqueueing() const { return m_needsReenqueueing; }
     void setNeedsReenqueueing(bool flag) { m_needsReenqueueing = flag; }
-    bool needsMinimumUpcomingPresentationTimeUpdating() const { return m_needsMinimumUpcomingPresentationTimeUpdating; }
-    void setNeedsMinimumUpcomingPresentationTimeUpdating(bool flag) { m_needsMinimumUpcomingPresentationTimeUpdating = flag; }
 
     const SampleMap& samples() const { return m_samples; }
     SampleMap& samples() { return m_samples; }
@@ -125,6 +120,8 @@ private:
 
     const DecodeOrderSampleMap::MapType& decodeQueue() const { return m_decodeQueue; }
     DecodeOrderSampleMap::MapType& decodeQueue() { return m_decodeQueue; }
+    void updateMinimumUpcomingPresentationTime();
+    void clearDecodeQueue();
 
     SampleMap m_samples;
     DecodeOrderSampleMap::MapType m_decodeQueue;
@@ -157,7 +154,7 @@ private:
     bool m_needRandomAccessFlag { true };
     bool m_enabled { false };
     bool m_needsReenqueueing { false };
-    bool m_needsMinimumUpcomingPresentationTimeUpdating { false };
+    bool m_hasOutOfOrderFrames { false };
 };
 
 } // namespace WebCore
