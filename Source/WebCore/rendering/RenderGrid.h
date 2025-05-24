@@ -321,7 +321,6 @@ private:
     OutOfFlowPositionsMap m_outOfFlowItemRow;
 
     bool m_baselineItemsCached {false};
-    bool m_hasAnyBaselineAlignmentItem { false };
 
     mutable std::optional<GridItemSizeCache> m_intrinsicLogicalHeightsForRowSizingFirstPass;
 };
