@@ -431,9 +431,9 @@
 
 #if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
 #if ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT)
-(with-filter (sandbox-version-2)
+(with-filter (logd-blocking)
     (deny mach-lookup (with no-report) (log-services)))
-(with-filter (require-not (sandbox-version-2))
+(with-filter (require-not (logd-blocking))
     (allow mach-lookup (log-services)))
 #else
 (with-filter (require-not (lockdown-mode))

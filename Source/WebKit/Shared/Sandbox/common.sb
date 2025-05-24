@@ -77,6 +77,8 @@
 
 (define (notify-blocking) (require-entitlement "com.apple.developer.web-browser-engine.restrict.notifyd"))
 
+(define (logd-blocking) (require-entitlement "com.apple.private.disable-log-mach-ports"))
+
 #if ENABLE(GPU_PROCESS_IOKIT_RESTRICTIONS)
 #define GPU_PROCESS_IOKIT_DEFAULT_FILTER_OPERATION deny
 #else

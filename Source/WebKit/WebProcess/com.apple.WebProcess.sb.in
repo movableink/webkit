@@ -1116,7 +1116,7 @@
 #endif
 
 #if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
-(with-filter (require-not (require-entitlement "com.apple.private.disable-log-mach-ports"))
+(with-filter (require-not (logd-blocking))
     (allow mach-lookup (global-name
         "com.apple.logd"
         "com.apple.logd.events")))
