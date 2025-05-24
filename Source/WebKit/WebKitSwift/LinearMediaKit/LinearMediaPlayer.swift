@@ -92,7 +92,7 @@ enum LinearMediaPlayerErrors: Error {
     var thumbnailLayer: CALayer?
     var captionLayer: CALayer?
     var captionContentInsets: UIEdgeInsets = .zero
-    var showsPlaybackControls = true
+    var showsPlaybackControls = false
     var canSeek = false
     var seekableTimeRanges: [WKSLinearMediaTimeRange] = []
     var isSeeking = false

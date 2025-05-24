@@ -28,7 +28,7 @@ const MaximumSizeToShowSmallProminentControl = 88;
 
 let mediaControlsHost;
 
-// This is called from HTMLMediaElement::ensureMediaControlsInjectedScript().
+// This is called from HTMLMediaElement::ensureMediaControls().
 function createControls(shadowRoot, media, host)
 {
     if (host) {
