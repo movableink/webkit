@@ -632,39 +632,39 @@ enum ResultOverflowedTag { ResultOverflowed };
 template <typename T, class OverflowHandler> class Checked : public OverflowHandler {
 public:
     template <typename _T, class _OverflowHandler> friend class Checked;
-    Checked()
+    constexpr Checked()
         : m_value(0)
     {
     }
 
-    Checked(ResultOverflowedTag)
+    constexpr Checked(ResultOverflowedTag)
         : m_value(0)
     {
         this->overflowed();
     }
 
-    Checked(const Checked& value)
+    constexpr Checked(const Checked& value)
     {
         if (value.hasOverflowed())
             this->overflowed();
         m_value = static_cast<T>(value.m_value);
     }
 
-    template <typename U> Checked(U value)
+    template <typename U> constexpr Checked(U value)
     {
         if (!isInBounds<T>(value))
             this->overflowed();
         m_value = static_cast<T>(value);
     }
     
-    template <typename V> Checked(const Checked<T, V>& rhs)
+    template <typename V> constexpr Checked(const Checked<T, V>& rhs)
         : m_value(rhs.m_value)
     {
         if (rhs.hasOverflowed())
             this->overflowed();
     }
     
-    template <typename U> Checked(const Checked<U, OverflowHandler>& rhs)
+    template <typename U> constexpr Checked(const Checked<U, OverflowHandler>& rhs)
         : OverflowHandler(rhs)
     {
         if (!isInBounds<T>(rhs.m_value))
@@ -672,7 +672,7 @@ public:
         m_value = static_cast<T>(rhs.m_value);
     }
     
-    template <typename U, typename V> Checked(const Checked<U, V>& rhs)
+    template <typename U, typename V> constexpr Checked(const Checked<U, V>& rhs)
     {
         if (rhs.hasOverflowed())
             this->overflowed();
