@@ -4414,7 +4414,7 @@ void RenderLayer::paintOverflowControlsForFragments(const LayerFragments& layerF
         RegionContextStateSaver regionContextStateSaver(localPaintingInfo.regionContext);
 
         clipToRect(context, stateSaver, regionContextStateSaver, localPaintingInfo, { }, fragment.backgroundRect);
-        m_scrollableArea->paintOverflowControls(context, roundedIntPoint(paintOffsetForRenderer(fragment, localPaintingInfo)), snappedIntRect(fragment.backgroundRect.rect()), true);
+        m_scrollableArea->paintOverflowControls(context, localPaintingInfo.paintBehavior, roundedIntPoint(paintOffsetForRenderer(fragment, localPaintingInfo)), snappedIntRect(fragment.backgroundRect.rect()), true);
     }
 }
 

@@ -1094,7 +1094,7 @@ void RenderBlock::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
         CheckedPtr layer = this->layer();
         if (hasNonVisibleOverflow() && layer && layer->scrollableArea() && style().usedVisibility() == Visibility::Visible
             && paintInfo.shouldPaintWithinRoot(*this) && !paintInfo.paintRootBackgroundOnly()) {
-            layer->checkedScrollableArea()->paintOverflowControls(paintInfo.context(), roundedIntPoint(adjustedPaintOffset), snappedIntRect(paintInfo.rect));
+            layer->checkedScrollableArea()->paintOverflowControls(paintInfo.context(), paintInfo.paintBehavior, roundedIntPoint(adjustedPaintOffset), snappedIntRect(paintInfo.rect));
         }
     }
 }

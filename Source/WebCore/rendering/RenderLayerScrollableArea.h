@@ -138,7 +138,7 @@ public:
     bool hitTestOverflowControls(HitTestResult&, const IntPoint& localPoint);
     bool hitTestResizerInFragments(const LayerFragments&, const HitTestLocation&, LayoutPoint& pointInFragment) const;
 
-    void paintOverflowControls(GraphicsContext&, const IntPoint&, const IntRect& damageRect, bool paintingOverlayControls = false);
+    void paintOverflowControls(GraphicsContext&, OptionSet<PaintBehavior>, const IntPoint&, const IntRect& damageRect, bool paintingOverlayControls = false);
     void paintScrollCorner(GraphicsContext&, const IntPoint&, const IntRect& damageRect);
     void paintResizer(GraphicsContext&, const LayoutPoint&, const LayoutRect& damageRect);
     void paintOverlayScrollbars(GraphicsContext&, const LayoutRect& damageRect, OptionSet<PaintBehavior>, RenderObject* subtreePaintRoot = nullptr);

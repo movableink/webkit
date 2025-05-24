@@ -1434,7 +1434,7 @@ bool RenderLayerScrollableArea::showsOverflowControls() const
     return true;
 }
 
-void RenderLayerScrollableArea::paintOverflowControls(GraphicsContext& context, const IntPoint& paintOffset, const IntRect& damageRect, bool paintingOverlayControls)
+void RenderLayerScrollableArea::paintOverflowControls(GraphicsContext& context, OptionSet<PaintBehavior> paintBehavior, const IntPoint& paintOffset, const IntRect& damageRect, bool paintingOverlayControls)
 {
     // Don't do anything if we have no overflow.
     auto& renderer = m_layer.renderer();
@@ -1484,12 +1484,12 @@ void RenderLayerScrollableArea::paintOverflowControls(GraphicsContext& context, 
     positionOverflowControls(toIntSize(adjustedPaintOffset));
 
     // Now that we're sure the scrollbars are in the right place, paint them.
-    if (RefPtr hBar = m_hBar; hBar && !layerForHorizontalScrollbar())
+    if (RefPtr hBar = m_hBar; hBar && (!layerForHorizontalScrollbar() || (paintBehavior & PaintBehavior::FlattenCompositingLayers)))
         hBar->paint(context, damageRect);
-    if (RefPtr vBar = m_vBar; vBar && !layerForVerticalScrollbar())
+    if (RefPtr vBar = m_vBar; vBar && (!layerForVerticalScrollbar() || (paintBehavior & PaintBehavior::FlattenCompositingLayers)))
         vBar->paint(context, damageRect);
 
-    if (layerForScrollCorner())
+    if (layerForScrollCorner() && !(paintBehavior & PaintBehavior::FlattenCompositingLayers))
         return;
 
     // We fill our scroll corner with white if we have a scrollbar that doesn't run all the way up to the

@@ -7091,8 +7091,6 @@ imported/w3c/web-platform-tests/css/css-view-transitions/span-with-overflowing-t
 imported/w3c/web-platform-tests/css/css-view-transitions/fractional-box-with-overflow-children-new.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-view-transitions/new-content-captures-different-size.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-view-transitions/fractional-translation-from-position.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-view-transitions/scroller-child.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-view-transitions/scroller.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-view-transitions/paint-holding-in-iframe.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-view-transitions/auto-name-get-animations.html [ Failure ]
 imported/w3c/web-platform-tests/css/css-view-transitions/fractional-translation-from-transform.html [ ImageOnlyFailure ]
