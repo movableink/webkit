@@ -7749,10 +7749,6 @@ webanimations/scroll-timeline-clamped-current-time-while-rubber-banding-ios.html
 
 webkit.org/b/287313 [ Debug ] fast/inline/list-marker-float-crash.html [ Skip ]
 
-# Digital Credentials API, not enabled yet
-http/wpt/identity/ [ Skip ]
-imported/w3c/web-platform-tests/digital-credentials/ [ Skip ]
-
 # macOS-only test.
 media/webkit-media-controls-not-visible-after-exiting-fullscreen.html [ Skip ]
 

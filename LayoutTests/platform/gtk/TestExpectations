@@ -1998,3 +1998,7 @@ webkit.org/b/291636 svg/text/timeout-long-text-content.html [ Skip ]
 webkit.org/b/286580 http/tests/media/clearkey/clear-key-session-id.html [ Skip ]
 
 http/tests/iframe-memory-monitor/media-video-autoplay-in-frames.html [ Skip ]
+
+# The Digital Credentials API is not supported in GTK port
+http/wpt/identity/ [ Skip ]
+imported/w3c/web-platform-tests/digital-credentials/ [ Skip ]

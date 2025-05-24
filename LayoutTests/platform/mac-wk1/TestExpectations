@@ -110,6 +110,10 @@ imported/w3c/web-platform-tests/screen-orientation [ Skip ]
 # webkit.org/b/247981
 imported/w3c/web-platform-tests/fetch [ Skip ]
 
+# The Digital Credentials API is not supported in WebKit1.
+http/wpt/identity/ [ Skip ]
+imported/w3c/web-platform-tests/digital-credentials/ [ Skip ]
+
 # Shared & service workers are only implemented for WebKit2.
 http/tests/navigation/page-cache-shared-worker.html [ Skip ]
 http/tests/workers/shared [ Skip ]

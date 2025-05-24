@@ -1747,3 +1747,7 @@ webkit.org/b/286580 http/tests/media/clearkey/clear-key-session-id.html [ Skip ]
 webkit.org/b/292841 fullscreen/exit-full-screen-video-crash.html [ Timeout ]
 
 http/tests/iframe-memory-monitor/media-video-autoplay-in-frames.html [ Skip ]
+
+# The Digital Credentials API is not supported on WPE port.
+http/wpt/identity/ [ Skip ]
+imported/w3c/web-platform-tests/digital-credentials/ [ Skip ]
