@@ -4457,6 +4457,11 @@ void SpeculativeJIT::compileValueBitRShift(Node* node)
     emitUntypedOrBigIntRightShiftBitOp(node);
 }
 
+void SpeculativeJIT::compileValueBitURShift(Node* node)
+{
+    emitUntypedOrBigIntRightShiftBitOp(node);
+}
+
 void SpeculativeJIT::compileShiftOp(Node* node)
 {
     NodeType op = node->op();
@@ -4464,7 +4469,7 @@ void SpeculativeJIT::compileShiftOp(Node* node)
     Edge& rightChild = node->child2();
 
     if (leftChild.useKind() == UntypedUse || rightChild.useKind() == UntypedUse) {
-        RELEASE_ASSERT(op == BitURShift);
+        RELEASE_ASSERT(op == ValueBitURShift);
         emitUntypedOrBigIntRightShiftBitOp(node);
         return;
     }

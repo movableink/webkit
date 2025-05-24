@@ -120,12 +120,13 @@ private:
         case ValueBitXor:
         case ValueBitLShift:
         case ValueBitRShift:
+        case ValueBitURShift:
         case ArithBitAnd:
         case ArithBitOr:
         case ArithBitXor:
         case ArithBitLShift:
         case ArithBitRShift:
-        case BitURShift: {
+        case ArithBitURShift: {
             return true;
         }
 
@@ -202,7 +203,8 @@ private:
             
         case ArithBitRShift:
         case ValueBitRShift:
-        case BitURShift: {
+        case ArithBitURShift:
+        case ValueBitURShift: {
             if (power > 31)
                 return true;
             
@@ -328,7 +330,8 @@ private:
         case ArithBitLShift:
         case ArithBitRShift:
         case ValueBitRShift:
-        case BitURShift:
+        case ArithBitURShift:
+        case ValueBitURShift:
         case ArithIMul: {
             flags |= NodeBytecodeUsesAsInt;
             flags &= ~(NodeBytecodeUsesAsNumber | NodeBytecodeNeedsNegZero | NodeBytecodeNeedsNaNOrInfinity | NodeBytecodeUsesAsOther);

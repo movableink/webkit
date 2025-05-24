@@ -160,7 +160,7 @@ private:
             
         case ArithBitLShift:
         case ArithBitRShift:
-        case BitURShift:
+        case ArithBitURShift:
             if (m_node->child1().useKind() != UntypedUse && m_node->child2()->isInt32Constant() && !(m_node->child2()->asInt32() & 0x1f)) {
                 convertToIdentityOverChild1();
                 break;
@@ -168,7 +168,7 @@ private:
             break;
             
         case UInt32ToNumber:
-            if (m_node->child1()->op() == BitURShift
+            if (m_node->child1()->op() == ArithBitURShift
                 && m_node->child1()->child2()->isInt32Constant()
                 && (m_node->child1()->child2()->asInt32() & 0x1f)
                 && m_node->arithMode() != Arith::DoOverflow) {

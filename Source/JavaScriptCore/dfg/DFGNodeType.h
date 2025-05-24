@@ -132,7 +132,8 @@ namespace JSC { namespace DFG {
     macro(ValueBitLShift, NodeResultJS | NodeMustGenerate) \
     macro(ArithBitRShift, NodeResultInt32) \
     macro(ValueBitRShift, NodeResultJS | NodeMustGenerate) \
-    macro(BitURShift, NodeResultInt32) \
+    macro(ArithBitURShift, NodeResultInt32) \
+    macro(ValueBitURShift, NodeResultInt32 | NodeMustGenerate) \
     /* Bitwise operators call ToInt32 on their operands. */\
     macro(ValueToInt32, NodeResultInt32) \
     /* Used to box the result of URShift nodes (result has range 0..2^32-1). */\

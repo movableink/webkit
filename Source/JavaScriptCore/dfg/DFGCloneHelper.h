@@ -138,6 +138,7 @@ BasicBlock* CloneHelper::cloneBlock(BasicBlock* const block, const CustomizeSucc
     CLONE_STATUS(ArithBitOr, Common) \
     CLONE_STATUS(ArithBitRShift, Common) \
     CLONE_STATUS(ArithBitXor, Common) \
+    CLONE_STATUS(ArithBitURShift, Common) \
     CLONE_STATUS(ArithCeil, Common) \
     CLONE_STATUS(ArithClz32, Common) \
     CLONE_STATUS(ArithDiv, Common) \
@@ -166,7 +167,6 @@ BasicBlock* CloneHelper::cloneBlock(BasicBlock* const block, const CustomizeSucc
     CLONE_STATUS(Arrayify, Common) \
     CLONE_STATUS(ArrayifyToStructure, Common) \
     CLONE_STATUS(AssertNotEmpty, Common) \
-    CLONE_STATUS(BitURShift, Common) \
     CLONE_STATUS(BooleanToNumber, Common) \
     CLONE_STATUS(BottomValue, Common) \
     CLONE_STATUS(Branch, Special) \
@@ -365,6 +365,7 @@ BasicBlock* CloneHelper::cloneBlock(BasicBlock* const block, const CustomizeSucc
     CLONE_STATUS(ValueBitOr, Common) \
     CLONE_STATUS(ValueBitRShift, Common) \
     CLONE_STATUS(ValueBitXor, Common) \
+    CLONE_STATUS(ValueBitURShift, Common) \
     CLONE_STATUS(ValueNegate, Common) \
     CLONE_STATUS(ValueRep, Common) \
     CLONE_STATUS(ValueSub, Common) \

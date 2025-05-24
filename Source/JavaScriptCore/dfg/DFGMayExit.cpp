@@ -217,7 +217,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
 
     case ArithBitRShift:
     case ArithBitLShift:
-    case BitURShift:
+    case ArithBitURShift:
     case ArithBitAnd:
     case ArithBitOr:
     case ArithBitXor:

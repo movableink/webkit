@@ -1735,6 +1735,7 @@ public:
         case ValueBitNot:
         case ValueBitLShift:
         case ValueBitRShift:
+        case ValueBitURShift:
         case ValueNegate:
             return true;
         default:

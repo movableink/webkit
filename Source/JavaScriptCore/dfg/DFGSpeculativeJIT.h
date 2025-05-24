@@ -659,7 +659,7 @@ public:
         case ArithBitLShift:
             lshift32(op1, Imm32(shiftAmount), result);
             break;
-        case BitURShift:
+        case ArithBitURShift:
             urshift32(op1, Imm32(shiftAmount), result);
             break;
         default:
@@ -675,7 +675,7 @@ public:
         case ArithBitLShift:
             lshift32(op1, shiftAmount, result);
             break;
-        case BitURShift:
+        case ArithBitURShift:
             urshift32(op1, shiftAmount, result);
             break;
         default:
@@ -1581,6 +1581,7 @@ public:
     void emitUntypedOrBigIntRightShiftBitOp(Node*);
     void compileValueLShiftOp(Node*);
     void compileValueBitRShift(Node*);
+    void compileValueBitURShift(Node*);
     void compileShiftOp(Node*);
 
     template <typename Generator, typename RepatchingFunction, typename NonRepatchingFunction>

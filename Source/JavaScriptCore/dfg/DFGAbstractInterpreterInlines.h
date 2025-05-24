@@ -335,7 +335,8 @@ bool AbstractInterpreter<AbstractStateType>::handleConstantBinaryBitwiseOp(Node*
         case ArithBitLShift:
             setConstant(node, JSValue(a << (static_cast<uint32_t>(b) & 0x1f)));
             break;
-        case BitURShift:
+        case ValueBitURShift:
+        case ArithBitURShift:
             setConstant(node, JSValue(static_cast<int32_t>(static_cast<uint32_t>(a) >> (static_cast<uint32_t>(b) & 0x1f))));
             break;
         default:
@@ -601,6 +602,24 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         break;
     }
 
+    case ValueBitURShift: {
+        // URShift >>> does not accept BigInt
+        if (handleConstantBinaryBitwiseOp(node))
+            break;
+
+        auto& value1 = forNode(node->child1());
+        auto& value2 = forNode(node->child2());
+        if (value1.isType(SpecInt32Only) && value2.isType(SpecInt32Only)) {
+            didFoldClobberWorld();
+            setTypeForNode(node, SpecInt32Only);
+            break;
+        }
+
+        clobberWorld();
+        setTypeForNode(node, SpecInt32Only);
+        break;
+    }
+
     case ValueBitXor:
     case ValueBitAnd:
     case ValueBitOr:
@@ -664,7 +683,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
     case ArithBitXor:
     case ArithBitRShift:
     case ArithBitLShift:
-    case BitURShift: {
+    case ArithBitURShift: {
         if (node->child1().useKind() == UntypedUse || node->child2().useKind() == UntypedUse) {
             clobberWorld();
             setNonCellTypeForNode(node, SpecInt32Only);

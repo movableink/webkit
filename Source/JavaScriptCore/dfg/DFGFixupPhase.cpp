@@ -410,18 +410,22 @@ private:
         case ArithBitLShift: 
         case ArithBitXor:
         case ArithBitOr:
-        case ArithBitAnd: {
+        case ArithBitAnd:
+        case ArithBitURShift: {
             fixIntConvertingEdge(node->child1());
             fixIntConvertingEdge(node->child2());
             break;
         }
 
-        case BitURShift: {
+        case ValueBitURShift: {
             if (Node::shouldSpeculateUntypedForBitOps(node->child1().node(), node->child2().node())) {
                 fixEdge<UntypedUse>(node->child1());
                 fixEdge<UntypedUse>(node->child2());
                 break;
             }
+
+            node->setOp(ArithBitURShift);
+            node->clearFlags(NodeMustGenerate);
             fixIntConvertingEdge(node->child1());
             fixIntConvertingEdge(node->child2());
             break;

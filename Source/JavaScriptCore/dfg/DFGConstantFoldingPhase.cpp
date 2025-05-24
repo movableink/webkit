@@ -1479,7 +1479,8 @@ private:
             case ValueBitAnd:
             case ValueBitOr:
             case ValueBitRShift:
-            case ValueBitLShift: {
+            case ValueBitLShift:
+            case ValueBitURShift: {
                 if (node->binaryUseKind() == UntypedUse) {
                     auto& value1 = m_state.forNode(node->child1());
                     auto& value2 = m_state.forNode(node->child2());
@@ -1500,12 +1501,17 @@ private:
                         case ValueBitRShift:
                             node->setOp(ArithBitRShift);
                             break;
+                        case ValueBitURShift:
+                            node->setOp(ArithBitURShift);
+                            break;
                         default:
                             DFG_CRASH(m_graph, node, "Unexpected node");
                             break;
                         }
                         node->child1() = Edge(node->child1().node(), KnownInt32Use);
                         node->child2() = Edge(node->child2().node(), KnownInt32Use);
+                        node->clearFlags(NodeMustGenerate);
+                        node->setResult(NodeResultInt32);
                         changed = true;
                         break;
                     }

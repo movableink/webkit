@@ -1108,6 +1108,24 @@ private:
                 node->mergeFlags(NodeMayHaveHeapBigIntResult);
             break;
         }
+        case ArithBitURShift:
+        case ValueBitURShift: {
+            // URShift >>> does not accept BigInt.
+            ObservedResults observed;
+            if (BinaryArithProfile* arithProfile = m_inlineStackTop->m_profiledBlock->binaryArithProfileForBytecodeIndex(m_currentIndex))
+                observed = arithProfile->observedResults();
+            else if (UnaryArithProfile* arithProfile = m_inlineStackTop->m_profiledBlock->unaryArithProfileForBytecodeIndex(m_currentIndex)) {
+                // Happens for OpInc/OpDec
+                observed = arithProfile->observedResults();
+            } else
+                break;
+
+            if (observed.didObserveDouble())
+                node->mergeFlags(NodeMayHaveDoubleResult);
+            if (observed.didObserveNonNumeric())
+                node->mergeFlags(NodeMayHaveNonNumericResult);
+            break;
+        }
         case ValueMul:
         case ArithMul: {
             BinaryArithProfile* arithProfile = m_inlineStackTop->m_profiledBlock->binaryArithProfileForBytecodeIndex(m_currentIndex);
@@ -7044,7 +7062,10 @@ void ByteCodeParser::parseBlock(unsigned limit)
             auto bytecode = currentInstruction->as<OpUrshift>();
             Node* op1 = get(bytecode.m_lhs);
             Node* op2 = get(bytecode.m_rhs);
-            set(bytecode.m_dst, addToGraph(BitURShift, op1, op2));
+            if (op1->hasNumberOrAnyIntResult() && op2->hasNumberOrAnyIntResult())
+                set(bytecode.m_dst, makeSafe(addToGraph(ArithBitURShift, op1, op2)));
+            else
+                set(bytecode.m_dst, makeSafe(addToGraph(ValueBitURShift, op1, op2)));
             NEXT_OPCODE(op_urshift);
         }
             

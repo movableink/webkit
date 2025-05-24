@@ -926,8 +926,11 @@ private:
         case ValueBitLShift:
             compileValueBitLShift();
             break;
-        case BitURShift:
-            compileBitURShift();
+        case ArithBitURShift:
+            compileArithBitURShift();
+            break;
+        case ValueBitURShift:
+            compileValueBitURShift();
             break;
         case UInt32ToNumber:
             compileUInt32ToNumber();
@@ -3921,15 +3924,16 @@ private:
         emitBinaryBitOpSnippet<JITLeftShiftGenerator>(operationValueBitLShift);
     }
 
-    void compileBitURShift()
+    void compileArithBitURShift()
     {
-        if (m_node->isBinaryUseKind(UntypedUse)) {
-            emitRightShiftSnippet(JITRightShiftGenerator::UnsignedShift);
-            return;
-        }
         setInt32(m_out.lShr(
             lowInt32(m_node->child1()),
             m_out.bitAnd(lowInt32(m_node->child2()), m_out.constInt32(31)))); // FIXME: I don't think that the BitAnd is useful, it is included in the semantics of shift in B3
+    }
+
+    void compileValueBitURShift()
+    {
+        emitRightShiftSnippet(JITRightShiftGenerator::UnsignedShift);
     }
 
     void compileUInt32ToNumber()
