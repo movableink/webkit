@@ -35,11 +35,12 @@ func onNextMainRunLoop(do body: @escaping @MainActor () -> Void) {
 
 extension NSDirectionalRectEdge {
     init(_ edge: Edge) {
-        self = switch edge {
-        case .top: .top
-        case .leading: .leading
-        case .bottom: .bottom
-        case .trailing: .trailing
-        }
+        self =
+            switch edge {
+            case .top: .top
+            case .leading: .leading
+            case .bottom: .bottom
+            case .trailing: .trailing
+            }
     }
 }

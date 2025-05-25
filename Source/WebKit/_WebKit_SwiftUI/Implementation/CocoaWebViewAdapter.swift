@@ -32,8 +32,7 @@ typealias CocoaView = NSView
 
 @MainActor
 class CocoaWebViewAdapter: CocoaView, PlatformTextSearching {
-
-#if os(iOS)
+    #if os(iOS)
     var extrinsicSafeAreaInsets: EdgeInsets? = nil {
         didSet {
             guard oldValue != extrinsicSafeAreaInsets else {
@@ -56,54 +55,59 @@ class CocoaWebViewAdapter: CocoaView, PlatformTextSearching {
             rightSafeArea = extrinsicSafeAreaInsets.leading
         }
 
-        return UIEdgeInsets(top: extrinsicSafeAreaInsets.top, left: leftSafeArea, bottom: extrinsicSafeAreaInsets.bottom, right: rightSafeArea)
+        return UIEdgeInsets(
+            top: extrinsicSafeAreaInsets.top,
+            left: leftSafeArea,
+            bottom: extrinsicSafeAreaInsets.bottom,
+            right: rightSafeArea
+        )
     }
-#endif
+    #endif
 
     // MARK: PlatformTextSearching conformance
 
-#if os(macOS)
+    #if os(macOS)
     typealias FindInteraction = NSTextFinderAdapter
-#else
+    #else
     typealias FindInteraction = UIFindInteractionAdapter
-#endif
+    #endif
 
     var isFindNavigatorVisible: Bool {
-#if os(macOS)
+        #if os(macOS)
         isFindBarVisible
-#else
+        #else
         webView?.findInteraction?.isFindNavigatorVisible ?? false
-#endif
+        #endif
     }
 
     lazy var findInteraction: FindInteraction? = {
-#if os(macOS)
+        #if os(macOS)
         let interaction = NSTextFinder()
         interaction.isIncrementalSearchingEnabled = true
         interaction.incrementalSearchingShouldDimContentView = false
         interaction.client = webView
         interaction.findBarContainer = self
-#else
+        #else
         guard let interaction = webView?.findInteraction else {
             return nil
         }
-#endif
+        #endif
 
         return .init(wrapped: interaction)
     }()
 
-#if os(macOS)
+    #if os(macOS)
     var isFindBarVisible: Bool = false {
         didSet {
             guard oldValue != isFindBarVisible else {
                 return
             }
 
-#if canImport(SwiftUI, _version: "7.0.57")
+            #if canImport(SwiftUI, _version: "7.0.57")
             if let isPresented = findContext?.isPresented {
                 isPresented.wrappedValue = isFindBarVisible
             }
-#endif
+            #endif
 
             if isFindBarVisible {
                 findBarDidBecomeVisible()
@@ -114,17 +118,17 @@ class CocoaWebViewAdapter: CocoaView, PlatformTextSearching {
     }
 
     var findBarView: CocoaView? = nil
-#endif
+    #endif
 
     // MARK: Find-in-Page support
 
-#if canImport(SwiftUI, _version: "7.0.57")
+    #if canImport(SwiftUI, _version: "7.0.57")
     var findContext: FindContext?
-#endif
+    #endif
 
     var scrollPosition: ScrollPositionContext?
 
-#if os(macOS)
+    #if os(macOS)
     // This is called by the Find menu items in the Menu Bar
     @objc(performFindPanelAction:)
     func performFindPanelAction(_ sender: Any!) {
@@ -184,12 +188,17 @@ class CocoaWebViewAdapter: CocoaView, PlatformTextSearching {
             webView.window?.makeFirstResponder(webView)
         }
     }
-#endif
+    #endif
 
     // MARK: Scroll Geometry
 
     var onScrollGeometryChange: OnScrollGeometryChangeContext?
-    private var currentScrollGeometry = ScrollGeometry(contentOffset: .zero, contentSize: .zero, contentInsets: .init(), containerSize: .zero)
+    private var currentScrollGeometry = ScrollGeometry(
+        contentOffset: .zero,
+        contentSize: .zero,
+        contentInsets: .init(),
+        containerSize: .zero
+    )
 
     // MARK: Constraints
 
@@ -248,9 +257,9 @@ class CocoaWebViewAdapter: CocoaView, PlatformTextSearching {
             activateConstraints()
 
             webView.delegate = self
-#if os(macOS)
+            #if os(macOS)
             findInteraction?.wrapped.client = webView
-#endif
+            #endif
         }
     }
 }
@@ -267,31 +276,31 @@ extension CocoaWebViewAdapter: @preconcurrency NSTextFinderBarContainer {
 #endif
 
 extension CocoaWebViewAdapter: WebPageWebView.Delegate {
-#if os(iOS)
+    #if os(iOS)
     func findInteraction(_ interaction: UIFindInteraction, didBegin session: UIFindSession) {
-#if canImport(SwiftUI, _version: "7.0.57")
+        #if canImport(SwiftUI, _version: "7.0.57")
         if let isPresented = findContext?.isPresented {
             isPresented.wrappedValue = true
         }
-#endif
+        #endif
     }
 
     func findInteraction(_ interaction: UIFindInteraction, didEnd session: UIFindSession) {
-#if canImport(SwiftUI, _version: "7.0.57")
+        #if canImport(SwiftUI, _version: "7.0.57")
         if let isPresented = findContext?.isPresented {
             isPresented.wrappedValue = false
         }
-#endif
+        #endif
     }
 
     func supportsTextReplacement() -> Bool {
-#if canImport(SwiftUI, _version: "7.0.57")
+        #if canImport(SwiftUI, _version: "7.0.57")
         findContext?.supportsReplace ?? false
-#else
+        #else
         false
-#endif
+        #endif
     }
-#endif // os(iOS)
+    #endif // os(iOS)
 
     func geometryDidChange(_ geometry: WKScrollGeometryAdapter) {
         let newScrollGeometry = ScrollGeometry(geometry)

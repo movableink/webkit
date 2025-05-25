@@ -25,9 +25,9 @@ internal import SwiftUI
 @_spi(Private) internal import WebKit
 
 struct ContextMenuContext {
-#if os(macOS)
+    #if os(macOS)
     let menu: @MainActor (WebView.ActivatedElementInfo) -> NSMenu
-#endif
+    #endif
 }
 
 struct OnScrollGeometryChangeContext {

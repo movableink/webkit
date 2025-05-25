@@ -25,20 +25,25 @@ public import SwiftUI
 @_spi(CrossImportOverlay) public import WebKit
 
 extension EdgeInsets {
-#if canImport(UIKit)
+    #if canImport(UIKit)
     init(_ edgeInsets: UIEdgeInsets) {
         self = EdgeInsets(top: edgeInsets.top, leading: edgeInsets.left, bottom: edgeInsets.bottom, trailing: edgeInsets.right)
     }
-#else
+    #else
     init(_ edgeInsets: NSEdgeInsets) {
         self = EdgeInsets(top: edgeInsets.top, leading: edgeInsets.left, bottom: edgeInsets.bottom, trailing: edgeInsets.right)
     }
-#endif
+    #endif
 }
 
 extension ScrollGeometry {
     init(_ geometry: WKScrollGeometryAdapter) {
-        self = ScrollGeometry(contentOffset: geometry.contentOffset, contentSize: geometry.contentSize, contentInsets: EdgeInsets(geometry.contentInsets), containerSize: geometry.containerSize)
+        self = ScrollGeometry(
+            contentOffset: geometry.contentOffset,
+            contentSize: geometry.contentSize,
+            contentInsets: EdgeInsets(geometry.contentInsets),
+            containerSize: geometry.containerSize
+        )
     }
 }
 
@@ -49,29 +54,31 @@ extension Transaction {
 }
 
 extension EventModifiers {
-#if canImport(UIKit)
+    #if canImport(UIKit)
     init(_ wrapped: UIKeyModifierFlags) {
-        self = switch wrapped {
-        case .alphaShift: .capsLock
-        case .command: .command
-        case .control: .control
-        case .numericPad: .numericPad
-        case .alternate: .option
-        case .shift: .shift
-        default: []
-        }
+        self =
+            switch wrapped {
+            case .alphaShift: .capsLock
+            case .command: .command
+            case .control: .control
+            case .numericPad: .numericPad
+            case .alternate: .option
+            case .shift: .shift
+            default: []
+            }
     }
-#else
+    #else
     init(_ wrapped: NSEvent.ModifierFlags) {
-        self = switch wrapped {
-        case .capsLock: .capsLock
-        case .command: .command
-        case .control: .control
-        case .numericPad: .numericPad
-        case .option: .option
-        case .shift: .shift
-        default: []
-        }
+        self =
+            switch wrapped {
+            case .capsLock: .capsLock
+            case .command: .command
+            case .control: .control
+            case .numericPad: .numericPad
+            case .option: .option
+            case .shift: .shift
+            default: []
+            }
     }
-#endif
+    #endif
 }

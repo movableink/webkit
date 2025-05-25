@@ -33,11 +33,11 @@ extension WebPage {
     public var themeColor: Color? {
         self.backingProperty(\.themeColor, backedBy: \.themeColor) { backingValue in
             // The themeColor property is a UIColor/NSColor in WKWebView.
-#if canImport(UIKit)
+            #if canImport(UIKit)
             return backingValue.map(Color.init(uiColor:))
-#else
+            #else
             return backingValue.map(Color.init(nsColor:))
-#endif
+            #endif
         }
     }
 
@@ -51,10 +51,10 @@ extension WebPage {
     public func snapshot(_ configuration: WKSnapshotConfiguration = .init()) async throws -> Image? {
         let cocoaImage = try await backingWebView.takeSnapshot(configuration: configuration)
 
-#if canImport(UIKit)
+        #if canImport(UIKit)
         return Image(uiImage: cocoaImage)
-#else
+        #else
         return Image(nsImage: cocoaImage)
-#endif
+        #endif
     }
 }

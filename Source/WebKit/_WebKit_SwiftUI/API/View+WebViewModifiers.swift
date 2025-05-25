@@ -53,7 +53,7 @@ extension View {
     @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
     @available(watchOS, unavailable)
     @available(tvOS, unavailable)
-    public nonisolated func webViewTextSelection<S>(_ selectability: S) -> some View where S : TextSelectability {
+    public nonisolated func webViewTextSelection<S>(_ selectability: S) -> some View where S: TextSelectability {
         environment(\.webViewTextSelection, S.allowsSelection)
     }
 
@@ -75,17 +75,19 @@ extension View {
     @available(visionOS, unavailable)
     @available(watchOS, unavailable)
     @available(tvOS, unavailable)
-    public nonisolated func webViewContextMenu(@ViewBuilder menu: @MainActor @escaping (WebView.ActivatedElementInfo) -> some View) -> some View {
-#if os(macOS)
+    public nonisolated func webViewContextMenu(
+        @ViewBuilder menu: @MainActor @escaping (WebView.ActivatedElementInfo) -> some View
+    ) -> some View {
+        #if os(macOS)
         let context = ContextMenuContext { info in
             let menuView = menu(info)
             return NSHostingMenu(rootView: menuView)
         }
 
         return environment(\.webViewContextMenuContext, context)
-#else
+        #else
         return self
-#endif
+        #endif
     }
 
     /// Specifies the visibility of the webpage's natural background color within this view.
@@ -116,7 +118,7 @@ extension View {
         for type: T.Type,
         of transform: @escaping (ScrollGeometry) -> T,
         action: @escaping (T, T) -> Void
-    ) -> some View where T : Hashable {
+    ) -> some View where T: Hashable {
         let change = OnScrollGeometryChangeContext {
             AnyHashable(transform($0))
         } action: {

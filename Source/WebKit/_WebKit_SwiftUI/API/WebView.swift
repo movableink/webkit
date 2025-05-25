@@ -197,14 +197,14 @@ extension WebView {
 
         var webPage: WebPage {
             switch self {
-            case let .state(state, _): state.wrappedValue
-            case let .webPage(webPage): webPage
+            case .state(let state, _): state.wrappedValue
+            case .webPage(let webPage): webPage
             }
         }
 
         var url: URL? {
             switch self {
-            case let .state(_, url): url
+            case .state(_, let url): url
             case .webPage: nil
             }
         }

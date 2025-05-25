@@ -38,9 +38,9 @@ struct WebViewRepresentable {
 
         let parent = CocoaWebViewAdapter()
         parent.webView = page.backingWebView
-#if os(iOS)
+        #if os(iOS)
         parent.extrinsicSafeAreaInsets = safeAreaInsets
-#endif
+        #endif
         page.isBoundToWebView = true
 
         return parent
@@ -50,9 +50,9 @@ struct WebViewRepresentable {
         let webView = page.backingWebView
         let environment = context.environment
 
-#if os(iOS)
+        #if os(iOS)
         platformView.extrinsicSafeAreaInsets = safeAreaInsets
-#endif
+        #endif
         platformView.webView = webView
 
         webView.allowsBackForwardNavigationGestures = environment.webViewAllowsBackForwardNavigationGestures.value != .disabled
@@ -61,21 +61,23 @@ struct WebViewRepresentable {
 
         let isOpaque = environment.webViewContentBackground != .hidden
 
-#if os(macOS)
+        #if os(macOS)
         if webView._drawsBackground != isOpaque {
             webView._drawsBackground = isOpaque
         }
-#else
+        #else
         if webView.isOpaque != isOpaque {
             webView.isOpaque = isOpaque
         }
-#endif
+        #endif
 
         if let scrollInputBehavior = environment.webViewScrollInputBehaviorContext {
             webView.configureScrollInputBehavior(scrollInputBehavior.behavior, for: scrollInputBehavior.input)
         }
 
-        if EquatableScrollBounceBehavior(environment.verticalScrollBounceBehavior) == .always || EquatableScrollBounceBehavior(environment.verticalScrollBounceBehavior) == .automatic {
+        if EquatableScrollBounceBehavior(environment.verticalScrollBounceBehavior) == .always
+            || EquatableScrollBounceBehavior(environment.verticalScrollBounceBehavior) == .automatic
+        {
             webView.alwaysBounceVertical = true
             webView.bouncesVertically = true
         } else if EquatableScrollBounceBehavior(environment.verticalScrollBounceBehavior) == .basedOnSize {
@@ -83,7 +85,9 @@ struct WebViewRepresentable {
             webView.bouncesVertically = true
         }
 
-        if EquatableScrollBounceBehavior(environment.horizontalScrollBounceBehavior) == .always || EquatableScrollBounceBehavior(environment.horizontalScrollBounceBehavior) == .automatic {
+        if EquatableScrollBounceBehavior(environment.horizontalScrollBounceBehavior) == .always
+            || EquatableScrollBounceBehavior(environment.horizontalScrollBounceBehavior) == .automatic
+        {
             webView.alwaysBounceHorizontal = true
             webView.bouncesHorizontally = true
         } else if EquatableScrollBounceBehavior(environment.horizontalScrollBounceBehavior) == .basedOnSize {
@@ -98,7 +102,7 @@ struct WebViewRepresentable {
 
         context.coordinator.update(platformView, configuration: self, context: context)
 
-#if os(macOS) && !targetEnvironment(macCatalyst)
+        #if os(macOS) && !targetEnvironment(macCatalyst)
         if let menu = environment.webViewContextMenuContext?.menu {
             page.setMenuBuilder {
                 menu(.init(linkURL: $0.linkURL))
@@ -106,7 +110,7 @@ struct WebViewRepresentable {
         } else {
             page.setMenuBuilder(nil)
         }
-#endif
+        #endif
     }
 
     func makeCoordinator() -> WebViewCoordinator {
@@ -123,7 +127,7 @@ struct WebViewRepresentable {
         //
         // Rounding down is needed to ensure that the view is never bigger than the requested size, otherwise miscellaneous UI
         // issues manifest.
-        return CGSize(width: width.rounded(.down), height: height.rounded(.down));
+        return CGSize(width: width.rounded(.down), height: height.rounded(.down))
     }
 
     static func dismantlePlatformView(_ platformView: CocoaWebViewAdapter, coordinator: WebViewCoordinator) {
@@ -142,9 +146,9 @@ final class WebViewCoordinator {
     func update(_ view: CocoaWebViewAdapter, configuration: WebViewRepresentable, context: WebViewRepresentable.Context) {
         self.configuration = configuration
 
-#if canImport(SwiftUI, _version: "7.0.57")
+        #if canImport(SwiftUI, _version: "7.0.57")
         updateFindInteraction(view, context: context)
-#endif
+        #endif
         updateScrollPosition(view, context: context)
     }
 
@@ -178,7 +182,7 @@ final class WebViewCoordinator {
         }
     }
 
-#if canImport(SwiftUI, _version: "7.0.57")
+    #if canImport(SwiftUI, _version: "7.0.57")
     private func updateFindInteraction(_ view: CocoaWebViewAdapter, context: WebViewRepresentable.Context) {
         guard let webView = view.webView else {
             return
@@ -189,9 +193,9 @@ final class WebViewCoordinator {
         let findContext = environment.findContext
         view.findContext = findContext
 
-#if os(iOS)
+        #if os(iOS)
         webView.isFindInteractionEnabled = findContext != nil
-#endif
+        #endif
 
         guard let findInteraction = view.findInteraction else {
             return
@@ -210,7 +214,7 @@ final class WebViewCoordinator {
             }
         }
     }
-#endif // canImport(SwiftUI, _version: "7.0.57")
+    #endif // canImport(SwiftUI, _version: "7.0.57")
 }
 
 #if canImport(UIKit)
