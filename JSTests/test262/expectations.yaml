@@ -1445,8 +1445,6 @@ test/staging/sm/generators/delegating-yield-6.js:
   default: 'Test262Error: Expected SameValue(«"indvndvndvndvndvndv"», «"indndndndndndv"») to be true'
 test/staging/sm/generators/delegating-yield-7.js:
   default: 'Test262Error: Expected [Object {value: 1}, Object {value: 34, done: true}] to be structurally equal to [Object {value: 1, done: false}, Object {value: 34, done: true}]. '
-test/staging/sm/generators/syntax.js:
-  default: "Error: Assertion failed: expected SyntaxError, but no exception thrown - function* yield() { 'use strict'; (yield 3) + (yield 4); }"
 test/staging/sm/lexical-environment/block-scoped-functions-annex-b-label.js:
   default: "TypeError: f1 is not a function. (In 'f1()', 'f1' is undefined)"
 test/staging/sm/lexical-environment/block-scoped-functions-deprecated-redecl.js:
