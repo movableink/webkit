@@ -21,13 +21,21 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-// FIXME: Declare SPI symbols for GroupActivity so that URLActivity is available in the public build
-#if USE_APPLE_INTERNAL_SDK && ENABLE_MEDIA_SESSION_COORDINATOR && HAVE_GROUP_ACTIVITIES
+#if ENABLE_MEDIA_SESSION_COORDINATOR && HAVE_GROUP_ACTIVITIES
 
 import AVFoundation
 import Combine
 import Foundation
+#if USE_APPLE_INTERNAL_SDK
 @_spi(Safari) import GroupActivities
+#else
+import GroupActivities
+#if compiler(>=6.0)
+internal import GroupActivities_SPI
+#else
+@_implementationOnly import GroupActivities_SPI
+#endif
+#endif
 #if compiler(>=6.0)
 internal import WebKit_Internal
 #else
@@ -165,4 +173,4 @@ fileprivate extension WKGroupSessionState {
 #endif
 }
 
-#endif // USE_APPLE_INTERNAL_SDK && ENABLE_MEDIA_SESSION_COORDINATOR && HAVE_GROUP_ACTIVITIES
+#endif // ENABLE_MEDIA_SESSION_COORDINATOR && HAVE_GROUP_ACTIVITIES

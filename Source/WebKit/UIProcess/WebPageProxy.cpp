@@ -933,7 +933,7 @@ WebPageProxy::WebPageProxy(PageClient& pageClient, WebProcessProxy& process, Ref
         process.setIgnoreInvalidMessageForTesting();
 #endif
 
-#if USE(APPLE_INTERNAL_SDK) && ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)
+#if ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)
     if (protectedPreferences()->mediaSessionCoordinatorEnabled())
         GroupActivitiesSessionNotifier::singleton().addWebPage(*this);
 #endif
@@ -999,7 +999,7 @@ WebPageProxy::~WebPageProxy()
     if (RefPtr networkProcess = websiteDataStore().networkProcessIfExists())
         networkProcess->send(Messages::NetworkProcess::RemoveWebPageNetworkParameters(sessionID(), identifier()), 0);
 
-#if USE(APPLE_INTERNAL_SDK) && ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)
+#if ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)
     if (preferences->mediaSessionCoordinatorEnabled())
         GroupActivitiesSessionNotifier::singleton().removeWebPage(*this);
 #endif
@@ -7229,7 +7229,7 @@ void WebPageProxy::didCommitLoadForFrame(IPC::Connection& connection, FrameIdent
 #endif
     }
 
-#if USE(APPLE_INTERNAL_SDK) && ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)
+#if ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)
     if (frame->isMainFrame() && preferences->mediaSessionCoordinatorEnabled())
         GroupActivitiesSessionNotifier::singleton().webPageURLChanged(*this);
 #endif

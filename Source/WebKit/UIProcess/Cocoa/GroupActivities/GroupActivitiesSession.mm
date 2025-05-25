@@ -27,7 +27,7 @@
 #import "GroupActivitiesSession.h"
 #include <wtf/TZoneMallocInlines.h>
 
-#if USE(APPLE_INTERNAL_SDK) && ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)
+#if ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)
 
 #import "WKGroupSession.h"
 
@@ -105,4 +105,4 @@ void GroupActivitiesSession::addFallbackURLObserver(const FallbackURLObserver& o
 
 }
 
-#endif // USE(APPLE_INTERNAL_SDK) && ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)
+#endif // ENABLE(MEDIA_SESSION_COORDINATOR) && HAVE(GROUP_ACTIVITIES)

@@ -103,6 +103,7 @@ UIProcess/API/Cocoa/_WKWebPushMessage.h
 UIProcess/API/Cocoa/_WKWebPushSubscriptionData.h
 UIProcess/API/Cocoa/_WKWebsiteDataStoreConfiguration.h
 UIProcess/API/mac/WKViewInternal.h
+UIProcess/Cocoa/GroupActivities/WKGroupSession.h
 UIProcess/Cocoa/TextExtraction/WKTextExtractionItem.h
 UIProcess/Inspector/mac/WKInspectorViewController.h
 UIProcess/Inspector/mac/WebInspectorUIProxyMac.mm
@@ -116,6 +117,10 @@ UIProcess/mac/WKTextFinderClient.mm
 UIProcess/mac/WebDataListSuggestionsDropdownMac.mm
 UIProcess/mac/WebPageProxyMac.mm
 UIProcess/mac/WebViewImpl.mm
+WebKitSwift/IdentityDocumentServices/WKISO18013Request.h
+WebKitSwift/IdentityDocumentServices/WKIdentityDocumentPresentmentMobileDocumentRequest.h
+WebKitSwift/IdentityDocumentServices/WKIdentityDocumentPresentmentRequest.h
+WebKitSwift/IdentityDocumentServices/WKIdentityDocumentPresentmentResponse.h
 WebProcess/InjectedBundle/API/Cocoa/WKWebProcessPlugInFrame.h
 WebProcess/InjectedBundle/API/Cocoa/WKWebProcessPlugInHitTestResult.h
 WebProcess/InjectedBundle/API/Cocoa/WKWebProcessPlugInNodeHandle.h
@@ -128,7 +133,3 @@ WebProcess/InjectedBundle/API/mac/WKDOMRange.h
 WebProcess/InjectedBundle/API/mac/WKDOMText.h
 WebProcess/InjectedBundle/API/mac/WKDOMTextIterator.h
 WebProcess/InjectedBundle/API/mac/WKWebProcessPlugInBrowserContextController.h
-WebKitSwift/IdentityDocumentServices/WKISO18013Request.h
-WebKitSwift/IdentityDocumentServices/WKIdentityDocumentPresentmentMobileDocumentRequest.h
-WebKitSwift/IdentityDocumentServices/WKIdentityDocumentPresentmentRequest.h
-WebKitSwift/IdentityDocumentServices/WKIdentityDocumentPresentmentResponse.h

@@ -134,6 +134,7 @@ UIProcess/Cocoa/BrowsingWarningCocoa.mm
 UIProcess/Cocoa/DiagnosticLoggingClient.mm
 UIProcess/Cocoa/FindClient.mm
 UIProcess/Cocoa/GlobalFindInPageState.mm
+UIProcess/Cocoa/GroupActivities/GroupActivitiesCoordinator.mm
 UIProcess/Cocoa/IconLoadingDelegate.mm
 UIProcess/Cocoa/LegacyDownloadClient.mm
 UIProcess/Cocoa/MediaPermissionUtilities.mm
