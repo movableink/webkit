@@ -200,7 +200,7 @@ private:
     void removeWebPageNetworkParameters(WebPageProxyIdentifier) final;
     size_t countNonDefaultSessionSets() const final;
 
-    void forEachSessionWrapper(Function<void(SessionWrapper&)>&&);
+    void forEachSessionWrapper(NOESCAPE const Function<void(SessionWrapper&)>&);
 
     bool isNetworkSessionCocoa() const final { return true; }
 

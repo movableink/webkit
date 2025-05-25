@@ -2303,9 +2303,9 @@ void NetworkSessionCocoa::clearAlternativeServices(WallTime modifiedSince)
 #endif
 }
 
-void NetworkSessionCocoa::forEachSessionWrapper(Function<void(SessionWrapper&)>&& function)
+void NetworkSessionCocoa::forEachSessionWrapper(NOESCAPE const Function<void(SessionWrapper&)>& function)
 {
-    auto sessionSetFunction = [function = WTFMove(function)] (SessionSet& sessionSet) {
+    auto sessionSetFunction = [&](SessionSet& sessionSet) {
         function(sessionSet.checkedSessionWithCredentialStorage().get());
         function(sessionSet.checkedEphemeralStatelessSession().get());
         if (sessionSet.appBoundSession)
@@ -2338,7 +2338,7 @@ void NetworkSessionCocoa::clearProxyConfigData()
     m_nwProxyConfigs.clear();
 
     RetainPtr<NSMutableSet> contexts = adoptNS([[NSMutableSet alloc] init]);
-    forEachSessionWrapper([&contexts] (SessionWrapper& sessionWrapper) {
+    forEachSessionWrapper([&contexts](SessionWrapper& sessionWrapper) {
         if (!sessionWrapper.session)
             return;
         [contexts.get() addObject:sessionWrapper.session.get()._networkContext];
@@ -2386,7 +2386,7 @@ void NetworkSessionCocoa::setProxyConfigData(const Vector<std::pair<Vector<uint8
     }
 
     RetainPtr<NSMutableSet> contexts = adoptNS([[NSMutableSet alloc] init]);
-    forEachSessionWrapper([&contexts] (SessionWrapper& sessionWrapper) {
+    forEachSessionWrapper([&contexts](SessionWrapper& sessionWrapper) {
         if (!sessionWrapper.session)
             return;
         [contexts.get() addObject:sessionWrapper.session.get()._networkContext];
