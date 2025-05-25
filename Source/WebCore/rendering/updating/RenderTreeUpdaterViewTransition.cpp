@@ -158,7 +158,7 @@ static RenderPtr<RenderBox> createRendererIfNeeded(RenderElement& documentElemen
         RenderPtr<RenderViewTransitionCapture> rendererViewTransition = WebCore::createRenderer<RenderViewTransitionCapture>(RenderObject::Type::ViewTransitionCapture, document, RenderStyle::clone(*style));
         if (pseudoId == PseudoId::ViewTransitionOld)
             rendererViewTransition->setImage(capturedElement->oldImage.value_or(nullptr));
-        rendererViewTransition->setCapturedSize(capturedElement->oldSize, capturedElement->oldOverflowRect, capturedElement->oldLayerToLayoutOffset);
+        rendererViewTransition->setCapturedSize(capturedElement->oldState.size, capturedElement->oldState.overflowRect, capturedElement->oldState.layerToLayoutOffset);
         renderer = WTFMove(rendererViewTransition);
     } else
         renderer = WebCore::createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, document, RenderStyle::clone(*style));

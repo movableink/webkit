@@ -405,7 +405,8 @@ static LayoutRect captureOverflowRect(RenderLayerModelObject& renderer)
         return { { }, LayoutSize { frameView->frameRect().width(), frameView->frameRect().height() } };
     }
 
-    return renderer.layer()->calculateLayerBounds(renderer.layer(), LayoutSize(), { RenderLayer::IncludeFilterOutsets, RenderLayer::ExcludeHiddenDescendants, RenderLayer::IncludeCompositedDescendants, RenderLayer::PreserveAncestorFlags, RenderLayer::ExcludeViewTransitionCapturedDescendants });
+    auto bounds = renderer.layer()->calculateLayerBounds(renderer.layer(), LayoutSize(), { RenderLayer::IncludeFilterOutsets, RenderLayer::ExcludeHiddenDescendants, RenderLayer::IncludeCompositedDescendants, RenderLayer::PreserveAncestorFlags, RenderLayer::ExcludeViewTransitionCapturedDescendants });
+    return LayoutRect(encloseRectToDevicePixels(bounds, renderer.protectedDocument()->deviceScaleFactor()));
 }
 
 // The computed local-to-absolute transform, and layer bounds don't include the position
@@ -419,12 +420,12 @@ static LayoutPoint layerToLayoutOffset(const RenderLayerModelObject& renderer)
     return { };
 }
 
-static RefPtr<ImageBuffer> snapshotElementVisualOverflowClippedToViewport(LocalFrame& frame, RenderLayerModelObject& renderer, const LayoutRect& snapshotRect)
+static RefPtr<ImageBuffer> snapshotElementVisualOverflowClippedToViewport(LocalFrame& frame, RenderLayerModelObject& renderer, const LayoutRect& snapshotRect, const LayoutSize& subpixelOffset = { })
 {
     ASSERT(renderer.hasLayer());
     CheckedRef layerRenderer = renderer;
 
-    IntRect paintRect = snappedIntRect(snapshotRect);
+    IntRect paintRect = enclosingIntRect(snapshotRect);
 
     if (layerRenderer->isDocumentElementRenderer()) {
         auto& view = layerRenderer->view();
@@ -456,10 +457,9 @@ static RefPtr<ImageBuffer> snapshotElementVisualOverflowClippedToViewport(LocalF
     paintFlags.add(RenderLayer::PaintLayerFlag::TemporaryClipRects);
     paintFlags.add(RenderLayer::PaintLayerFlag::AppliedTransform);
     paintFlags.add(RenderLayer::PaintLayerFlag::PaintingSkipDescendantViewTransition);
-    layerRenderer->layer()->paint(buffer->context(), paintRect, LayoutSize(), frameView->paintBehavior(), nullptr, paintFlags);
+    layerRenderer->layer()->paint(buffer->context(), paintRect, subpixelOffset, frameView->paintBehavior(), nullptr, paintFlags);
 
     frameView->setPaintBehavior(oldPaintBehavior);
-
     return buffer;
 }
 
@@ -534,10 +534,9 @@ ExceptionOr<void> ViewTransition::captureOldState()
     for (auto& renderer : captureRenderers) {
         CapturedElement capture;
 
-        capture.oldProperties = copyElementBaseProperties(renderer.get(), capture.oldSize, capture.oldOverflowRect, capture.initiallyIntersectsViewport);
+        copyElementBaseProperties(renderer.get(), capture.oldState);
         if (RefPtr frame = document()->frame())
-            capture.oldImage = snapshotElementVisualOverflowClippedToViewport(*frame, renderer.get(), capture.oldOverflowRect);
-        capture.oldLayerToLayoutOffset = layerToLayoutOffset(renderer.get());
+            capture.oldImage = snapshotElementVisualOverflowClippedToViewport(*frame, renderer.get(), capture.oldState.overflowRect, capture.oldState.subpixelOffset);
 
         auto styleable = Styleable::fromRenderer(renderer);
         ASSERT(styleable);
@@ -549,7 +548,7 @@ ExceptionOr<void> ViewTransition::captureOldState()
     }
 
     for (auto& [name, capturedElement] : m_namedElements.map()) {
-        if (capturedElement->initiallyIntersectsViewport && capturedElement->oldImage) {
+        if (capturedElement->oldState.intersectsViewport && capturedElement->oldImage) {
             if (RefPtr oldImage = *capturedElement->oldImage)
                 oldImage->flushDrawingContextAsync();
         }
@@ -563,7 +562,7 @@ ExceptionOr<void> ViewTransition::captureOldState()
 
 bool ViewTransition::updatePropertiesForGroupPseudo(CapturedElement& capturedElement, const AtomString& name)
 {
-    RefPtr properties = capturedElement.newProperties ? capturedElement.newProperties : capturedElement.oldProperties;
+    RefPtr properties = capturedElement.newState.properties ? capturedElement.newState.properties : capturedElement.oldState.properties;
     if (properties) {
         // group styles rule
         if (!capturedElement.groupStyleProperties) {
@@ -603,10 +602,8 @@ ExceptionOr<void> ViewTransition::captureNewState()
 
                 // Do the work on updatePseudoElementStylesRead now
                 // to avoid needing an extra iteration later on.
-                if (CheckedPtr box = dynamicDowncast<RenderBoxModelObject>(renderer)) {
-                    bool initiallyIntersectsViewport;
-                    namedElement->newProperties = copyElementBaseProperties(*box, namedElement->newSize, namedElement->newOverflowRect, initiallyIntersectsViewport);
-                }
+                if (CheckedPtr box = dynamicDowncast<RenderBoxModelObject>(renderer))
+                    copyElementBaseProperties(*box, namedElement->newState);
             }
             return { };
         }, *view->layer());
@@ -665,7 +662,7 @@ void ViewTransition::setupDynamicStyleSheet(const AtomString& name, const Captur
         resolver->setViewTransitionStyles(CSSSelector::PseudoElement::ViewTransitionImagePair, name, props);
     }
 
-    if (!capturedElement.oldProperties)
+    if (!capturedElement.oldState.properties)
         return;
 
     // group keyframes
@@ -675,7 +672,7 @@ void ViewTransition::setupDynamicStyleSheet(const AtomString& name, const Captur
         CSSPropertyTransform,
         CSSPropertyBackdropFilter,
     };
-    Ref keyframe = StyleRuleKeyframe::create(RefPtr { capturedElement.oldProperties }->copyProperties(keyframeProperties));
+    Ref keyframe = StyleRuleKeyframe::create(RefPtr { capturedElement.oldState.properties }->copyProperties(keyframeProperties));
     keyframe->setKeyText("from"_s);
 
     Ref keyframes = StyleRuleKeyframes::create(AtomString(makeString("-ua-view-transition-group-anim-"_s, name)));
@@ -825,7 +822,21 @@ void ViewTransition::clearViewTransition()
         documentElement->invalidateStyleInternal();
 }
 
-Ref<MutableStyleProperties> ViewTransition::copyElementBaseProperties(RenderLayerModelObject& renderer, LayoutSize& size, LayoutRect& overflowRect, bool& intersectsViewport)
+// Rounds the x/y translation components to the nearest pixel (for non-perspective)
+// transforms, and returns the subpixel offset that was removed.
+static LayoutSize snapTransformationTranslationToDevicePixels(TransformationMatrix& matrix, float deviceScaleFactor)
+{
+    if (matrix.hasPerspective())
+        return { };
+
+    LayoutSize oldTranslation(matrix.m41(), matrix.m42());
+    matrix.setM41(std::round(matrix.m41() * deviceScaleFactor) / deviceScaleFactor);
+    matrix.setM42(std::round(matrix.m42() * deviceScaleFactor) / deviceScaleFactor);
+    return oldTranslation - LayoutSize(matrix.m41(), matrix.m42());
+}
+
+
+void ViewTransition::copyElementBaseProperties(RenderLayerModelObject& renderer, CapturedElement::State& output)
 {
     std::optional<const Styleable> styleable = Styleable::fromRenderer(renderer);
     ASSERT(styleable);
@@ -842,41 +853,44 @@ Ref<MutableStyleProperties> ViewTransition::copyElementBaseProperties(RenderLaye
 #endif
     };
 
-    overflowRect = captureOverflowRect(renderer);
+    output.overflowRect = captureOverflowRect(renderer);
+    output.properties = styleExtractor.copyProperties(transitionProperties);
 
-    Ref<MutableStyleProperties> props = styleExtractor.copyProperties(transitionProperties);
     CheckedRef frameView = renderer.view().frameView();
 
     if (renderer.isDocumentElementRenderer()) {
-        size.setWidth(frameView->frameRect().width());
-        size.setHeight(frameView->frameRect().height());
+        output.size.setWidth(frameView->frameRect().width());
+        output.size.setHeight(frameView->frameRect().height());
     } else if (CheckedPtr renderBox = dynamicDowncast<RenderBoxModelObject>(&renderer)) {
-        size = renderBox->borderBoundingBox().size();
+        output.size = renderBox->borderBoundingBox().size();
 
         if (auto transform = renderer.viewTransitionTransform()) {
-            auto layoutOffset = layerToLayoutOffset(renderer);
-            transform->translate(layoutOffset.x(), layoutOffset.y());
+            // FIXME: This transform is the concatenation of layout offsets and transforms up
+            // to the root. Normal drawing would snap the subset up to the nearest composited
+            // ancestor transform, not on the combination.
+            output.subpixelOffset = snapTransformationTranslationToDevicePixels(*transform, renderer.protectedDocument()->deviceScaleFactor());
+            output.layerToLayoutOffset = layerToLayoutOffset(renderer);
+            transform->translate(output.layerToLayoutOffset.x(), output.layerToLayoutOffset.y());
 
             auto offset = -toFloatSize(frameView->visibleContentRect().location());
             transform->translateRight(offset.width(), offset.height());
 
-            auto mapped = transform->mapRect(overflowRect);
-            intersectsViewport = mapped.intersects(frameView->boundsRect());
+            auto mapped = transform->mapRect(output.overflowRect);
+            output.intersectsViewport = mapped.intersects(frameView->boundsRect());
 
             // Apply the inverse of what will be added by the default value of 'transform-origin',
             // since the computed transform has already included it.
-            transform->translate(size.width() / 2, size.height() / 2);
-            transform->translateRight(-size.width() / 2, -size.height() / 2);
+            transform->translate(output.size.width() / 2, output.size.height() / 2);
+            transform->translateRight(-output.size.width() / 2, -output.size.height() / 2);
 
             Ref transformListValue = CSSTransformListValue::create(Style::ExtractorConverter::convertTransformationMatrix(renderer.style(), *transform));
-            props->setProperty(CSSPropertyTransform, WTFMove(transformListValue));
+            RefPtr { output.properties }->setProperty(CSSPropertyTransform, WTFMove(transformListValue));
         }
     }
 
-    LayoutSize cssSize = adjustLayoutSizeForAbsoluteZoom(size, renderer.style());
-    props->setProperty(CSSPropertyWidth, CSSPrimitiveValue::create(cssSize.width(), CSSUnitType::CSS_PX));
-    props->setProperty(CSSPropertyHeight, CSSPrimitiveValue::create(cssSize.height(), CSSUnitType::CSS_PX));
-    return props;
+    LayoutSize cssSize = adjustLayoutSizeForAbsoluteZoom(output.size, renderer.style());
+    RefPtr { output.properties }->setProperty(CSSPropertyWidth, CSSPrimitiveValue::create(cssSize.width(), CSSUnitType::CSS_PX));
+    RefPtr { output.properties }->setProperty(CSSPropertyHeight, CSSPrimitiveValue::create(cssSize.height(), CSSUnitType::CSS_PX));
 }
 
 // https://drafts.csswg.org/css-view-transitions-1/#update-pseudo-element-styles
@@ -890,11 +904,10 @@ void ViewTransition::updatePseudoElementStylesRead()
     for (auto& [name, capturedElement] : m_namedElements.map()) {
         if (auto newStyleable = capturedElement->newElement.styleable()) {
             if (CheckedPtr renderer = dynamicDowncast<RenderBoxModelObject>(newStyleable->renderer())) {
-                bool initiallyIntersectsViewport;
-                capturedElement->newProperties = copyElementBaseProperties(*renderer, capturedElement->newSize, capturedElement->newOverflowRect, initiallyIntersectsViewport);
+                copyElementBaseProperties(*renderer, capturedElement->newState);
                 continue;
             }
-            capturedElement->newProperties = nullptr;
+            capturedElement->newState.properties = nullptr;
         }
     }
 }
@@ -938,13 +951,13 @@ ExceptionOr<void> ViewTransition::updatePseudoElementRenderers()
 
             Styleable styleable(*documentElement, Style::PseudoElementIdentifier { PseudoId::ViewTransitionNew, name });
             if (CheckedPtr viewTransitionCapture = dynamicDowncast<RenderViewTransitionCapture>(styleable.renderer())) {
-                if (viewTransitionCapture->setCapturedSize(capturedElement->newSize, capturedElement->newOverflowRect, layerToLayoutOffset(*renderer)))
+                if (viewTransitionCapture->setCapturedSize(capturedElement->newState.size, capturedElement->newState.overflowRect, capturedElement->newState.layerToLayoutOffset))
                     viewTransitionCapture->setNeedsLayout();
 
                 RefPtr<ImageBuffer> image;
                 if (RefPtr frame = document->frame(); !viewTransitionCapture->canUseExistingLayers()) {
                     document->updateLayout();
-                    image = snapshotElementVisualOverflowClippedToViewport(*frame, *renderer, capturedElement->newOverflowRect);
+                    image = snapshotElementVisualOverflowClippedToViewport(*frame, *renderer, capturedElement->newState.overflowRect);
                 } else if (CheckedPtr layer = renderer->isDocumentElementRenderer() ? renderer->view().layer() : renderer->layer())
                     layer->setNeedsCompositingGeometryUpdate();
                 viewTransitionCapture->setImage(image);

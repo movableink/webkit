@@ -6840,6 +6840,9 @@ static void outputPaintOrderTreeRecursive(TextStream& stream, const WebCore::Ren
 
             stream << "}"_s;
         }
+
+        if (backing.subpixelOffsetFromRenderer() != WebCore::LayoutSize())
+            stream << " (subpixel offset "_s << backing.subpixelOffsetFromRenderer() << ")"_s;
     }
     stream << " "_s << layer.name();
     stream.nextLine();

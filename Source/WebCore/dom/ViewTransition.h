@@ -68,19 +68,22 @@ enum class ViewTransitionPhase : uint8_t {
 struct CapturedElement {
     WTF_MAKE_TZONE_ALLOCATED(CapturedElement);
 public:
+    struct State {
+        LayoutRect overflowRect;
+        LayoutPoint layerToLayoutOffset;
+        LayoutSize size;
+        LayoutSize subpixelOffset;
+        RefPtr<MutableStyleProperties> properties;
+        bool intersectsViewport { false };
+    };
+
     // std::nullopt represents an non-capturable element.
     // nullptr represents an absent snapshot on an capturable element.
     std::optional<RefPtr<ImageBuffer>> oldImage;
-    LayoutRect oldOverflowRect;
-    LayoutPoint oldLayerToLayoutOffset;
-    LayoutSize oldSize;
-    RefPtr<MutableStyleProperties> oldProperties;
-    bool initiallyIntersectsViewport { false };
+    State oldState;
 
     WeakStyleable newElement;
-    LayoutRect newOverflowRect;
-    LayoutSize newSize;
-    RefPtr<MutableStyleProperties> newProperties;
+    State newState;
 
     Vector<AtomString> classList;
     RefPtr<MutableStyleProperties> groupStyleProperties;
@@ -209,7 +212,7 @@ private:
     ViewTransition(Document&, RefPtr<ViewTransitionUpdateCallback>&&, Vector<AtomString>&&);
     ViewTransition(Document&, Vector<AtomString>&&);
 
-    Ref<MutableStyleProperties> copyElementBaseProperties(RenderLayerModelObject&, LayoutSize&, LayoutRect& overflowRect, bool& intersectsViewport);
+    void copyElementBaseProperties(RenderLayerModelObject&, CapturedElement::State&);
     bool updatePropertiesForGroupPseudo(CapturedElement&, const AtomString&);
 
     // Setup view transition sub-algorithms.
