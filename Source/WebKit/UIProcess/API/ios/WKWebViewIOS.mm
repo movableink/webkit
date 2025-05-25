@@ -2515,21 +2515,29 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 #if HAVE(UI_WINDOW_SCENE_LIVE_RESIZE)
 
-- (void)_beginAutomaticLiveResizeIfNeeded
+- (BOOL)_canBeginAutomaticLiveResize
 {
     if (!_page)
-        return;
+        return false;
 
     if (!_page->preferences().automaticLiveResizeEnabled())
-        return;
+        return false;
 
     if (![self usesStandardContentView])
-        return;
+        return false;
 
     if (!self.window)
-        return;
+        return false;
 
     if (CGRectIsEmpty(self.bounds))
+        return false;
+
+    return true;
+}
+
+- (void)_beginAutomaticLiveResizeIfNeeded
+{
+    if (![self _canBeginAutomaticLiveResize])
         return;
 
     if (_perProcessState.dynamicViewportUpdateMode != WebKit::DynamicViewportUpdateMode::NotResizing)
@@ -3497,7 +3505,12 @@ static WebCore::UserInterfaceLayoutDirection toUserInterfaceLayoutDirection(UISe
 
     WKWEBVIEW_RELEASE_LOG("%p (pageProxyID=%llu) -[WKWebView _beginLiveResize]", self, _page->identifier().toUInt64());
 
-    _perProcessState.liveResizeParameters = { { self.bounds.size.width, self.scrollView.contentOffset } };
+    CGPoint contentOffsetWithoutObscuredInset = self.scrollView.contentOffset;
+    UIEdgeInsets contentInset = [self _computedObscuredInset];
+    contentOffsetWithoutObscuredInset.x += contentInset.left;
+    contentOffsetWithoutObscuredInset.y += contentInset.top;
+
+    _perProcessState.liveResizeParameters = { { self.bounds.size.width, contentOffsetWithoutObscuredInset } };
 
     [self _ensureResizeAnimationView];
 }
@@ -4389,6 +4402,16 @@ static bool isLockdownModeWarningNeeded()
 
         if (_perProcessState.liveResizeParameters)
             return false;
+
+#if HAVE(UI_WINDOW_SCENE_LIVE_RESIZE)
+        if ([self _canBeginAutomaticLiveResize]) {
+            auto sceneGeometry = self.window.windowScene.effectiveGeometry;
+            if ([sceneGeometry respondsToSelector:@selector(isInteractivelyResizing)]) {
+                if (sceneGeometry.isInteractivelyResizing)
+                    return false;
+            }
+        }
+#endif
 
         if (_page->isTakingSnapshotsForApplicationSuspension() && self._isDisplayingPDF)
             return false;

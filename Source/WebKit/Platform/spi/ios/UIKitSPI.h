@@ -1267,6 +1267,10 @@ typedef NS_ENUM(NSUInteger, _UIScrollDeviceCategory) {
 - (void)_registerInternalBSActionHandler:(id<_UIApplicationBSActionHandler>)handler;
 @end
 
+@interface UIWindowSceneGeometry (Staging_143004359)
+@property (nonatomic, readonly, getter=isInteractivelyResizing) BOOL interactivelyResizing;
+@end
+
 WTF_EXTERN_C_BEGIN
 
 BOOL UIKeyboardEnabledInputModesAllowOneToManyShortcuts(void);
