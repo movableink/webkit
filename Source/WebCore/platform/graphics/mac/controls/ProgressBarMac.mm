@@ -128,6 +128,8 @@ void ProgressBarMac::draw(GraphicsContext& context, const FloatRoundedRect& bord
         case NSControlSizeRegular:
         case NSControlSizeLarge:
             return kCUISizeRegular;
+        default:
+            return kCUISizeRegular;
         }
         ASSERT_NOT_REACHED();
         return nullptr;
