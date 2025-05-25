@@ -417,7 +417,7 @@ WebProcessProxy::~WebProcessProxy()
     platformDestroy();
 }
 
-#if !PLATFORM(IOS_FAMILY)
+#if !PLATFORM(COCOA)
 void WebProcessProxy::platformDestroy()
 {
 }

@@ -38,20 +38,39 @@ struct StreamServerConnectionHandle;
 
 namespace WebKit {
 
-class LogStream : public IPC::StreamMessageReceiver {
+class LogStream
+#if ENABLE(STREAMING_IPC_IN_LOG_FORWARDING)
+: public IPC::StreamMessageReceiver {
+#else
+: public RefCounted<LogStream>
+, public IPC::MessageReceiver {
+#endif
 public:
-    static Ref<LogStream> create(int32_t pid) { return adoptRef(*new LogStream(pid)); }
+    static Ref<LogStream> create(int32_t pid, LogStreamIdentifier identifier) { return adoptRef(*new LogStream(pid, identifier)); }
     ~LogStream();
 
-    void setup(IPC::StreamServerConnectionHandle&&, LogStreamIdentifier, CompletionHandler<void(IPC::Semaphore& streamWakeUpSemaphore, IPC::Semaphore& streamClientWaitSemaphore)>&&);
     void stopListeningForIPC();
+
+#if ENABLE(STREAMING_IPC_IN_LOG_FORWARDING)
+    void setup(IPC::StreamServerConnectionHandle&&, CompletionHandler<void(IPC::Semaphore& streamWakeUpSemaphore, IPC::Semaphore& streamClientWaitSemaphore)>&&);
+#else
+    void setup(IPC::Connection&);
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+#endif
+
+    LogStreamIdentifier identifier() const { return m_logStreamIdentifier; }
 
     static unsigned logCountForTesting();
 
 private:
-    LogStream(int32_t pid);
+    LogStream(int32_t pid, LogStreamIdentifier);
 
+#if ENABLE(STREAMING_IPC_IN_LOG_FORWARDING)
     void didReceiveStreamMessage(IPC::StreamServerConnection&, IPC::Decoder&) final;
+#else
+    void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
+#endif
 
     void logOnBehalfOfWebContent(std::span<const uint8_t> logChannel, std::span<const uint8_t> logCategory, std::span<const uint8_t> logString, uint8_t logType);
 
@@ -59,9 +78,13 @@ private:
 #include "LogMessagesDeclarations.h"
 #endif
 
+#if ENABLE(STREAMING_IPC_IN_LOG_FORWARDING)
     RefPtr<IPC::StreamServerConnection> m_logStreamConnection;
+#else
+    ThreadSafeWeakPtr<IPC::Connection> m_logConnection;
+#endif
+    LogStreamIdentifier m_logStreamIdentifier;
     int32_t m_pid { 0 };
-    Markable<LogStreamIdentifier> m_logStreamIdentifier;
 };
 
 } // namespace WebKit

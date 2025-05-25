@@ -264,12 +264,23 @@ bool WebProcessProxy::shouldDisableJITCage() const
 #endif
 
 #if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
+#if ENABLE(STREAMING_IPC_IN_LOG_FORWARDING)
 void WebProcessProxy::setupLogStream(uint32_t pid, IPC::StreamServerConnectionHandle&& serverConnection, LogStreamIdentifier logStreamIdentifier, CompletionHandler<void(IPC::Semaphore& streamWakeUpSemaphore, IPC::Semaphore& streamClientWaitSemaphore)>&& completionHandler)
 {
-    Ref logStream = LogStream::create(processID());
-    logStream->setup(WTFMove(serverConnection), logStreamIdentifier, WTFMove(completionHandler));
+    Ref logStream = LogStream::create(processID(), logStreamIdentifier);
+    logStream->setup(WTFMove(serverConnection), WTFMove(completionHandler));
     m_logStream = WTFMove(logStream);
 }
+#else
+void WebProcessProxy::setupLogStream(uint32_t pid, LogStreamIdentifier logStreamIdentifier, CompletionHandler<void()>&& completionHandler)
+{
+    Ref logStream = LogStream::create(processID(), logStreamIdentifier);
+    logStream->setup(protectedConnection());
+    addMessageReceiver(Messages::LogStream::messageReceiverName(), logStreamIdentifier, logStream);
+    m_logStream = WTFMove(logStream);
+    completionHandler();
+}
+#endif
 #endif // ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
 
 #if ENABLE(REMOTE_INSPECTOR)
@@ -316,6 +327,23 @@ void WebProcessProxy::sendMessageToInspector(WebCore::ServiceWorkerIdentifier id
     }
 }
 #endif
+
+void WebProcessProxy::platformDestroy()
+{
+#if PLATFORM(IOS_FAMILY)
+#if HAVE(MOUSE_DEVICE_OBSERVATION)
+    [[WKMouseDeviceObserver sharedInstance] stop];
+#endif
+#if HAVE(STYLUS_DEVICE_OBSERVATION)
+    [[WKStylusDeviceObserver sharedInstance] stop];
+#endif
+#endif // PLATFORM(IOS_FAMILY)
+
+#if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT) && !ENABLE(STREAMING_IPC_IN_LOG_FORWARDING)
+    if (m_logStream.get())
+        removeMessageReceiver(Messages::LogStream::messageReceiverName(), m_logStream->identifier());
+#endif
+}
 
 }
 

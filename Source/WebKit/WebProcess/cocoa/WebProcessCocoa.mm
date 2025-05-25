@@ -874,13 +874,14 @@ void WebProcess::setupLogStream()
     if (os_trace_get_mode() != OS_TRACE_MODE_OFF)
         return;
 
+    LogStreamIdentifier logStreamIdentifier { LogStreamIdentifier::generate() };
+
+#if ENABLE(STREAMING_IPC_IN_LOG_FORWARDING)
     static constexpr auto connectionBufferSizeLog2 = 21;
     auto connectionPair = IPC::StreamClientConnection::create(connectionBufferSizeLog2, 1_s);
     if (!connectionPair)
         CRASH();
     auto [streamConnection, serverHandle] = WTFMove(*connectionPair);
-
-    LogStreamIdentifier logStreamIdentifier { LogStreamIdentifier::generate() };
 
     RefPtr logStreamConnection = WTFMove(streamConnection);
     if (!logStreamConnection)
@@ -898,6 +899,18 @@ void WebProcess::setupLogStream()
 
         WebProcess::singleton().registerLogHook();
     });
+#else
+    auto connection = protectedParentProcessConnection();
+    parentProcessConnection()->sendWithAsyncReply(Messages::WebProcessProxy::SetupLogStream(getpid(), logStreamIdentifier), [connection, logStreamIdentifier] () {
+        if (connection) {
+#if PLATFORM(IOS_FAMILY)
+            prewarmLogs();
+#endif
+            logClient() = makeUnique<LogClient>(*connection, logStreamIdentifier);
+            WebProcess::singleton().registerLogHook();
+        }
+    });
+#endif
 }
 
 void WebProcess::sendLogOnStream(std::span<const uint8_t> logChannel, std::span<const uint8_t> logCategory, std::span<const uint8_t> logString, os_log_type_t type)
