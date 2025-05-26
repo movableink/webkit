@@ -880,6 +880,20 @@ bool ValidateGetQueryObjectui64vRobustANGLE(const Context *context,
                                             GLsizei bufSize,
                                             const GLsizei *length,
                                             const GLuint64 *params);
+bool ValidateGetFramebufferPixelLocalStorageParameterfvRobustANGLE(const Context *context,
+                                                                   angle::EntryPoint entryPoint,
+                                                                   GLint plane,
+                                                                   GLenum pname,
+                                                                   GLsizei bufSize,
+                                                                   const GLsizei *length,
+                                                                   const GLfloat *params);
+bool ValidateGetFramebufferPixelLocalStorageParameterivRobustANGLE(const Context *context,
+                                                                   angle::EntryPoint entryPoint,
+                                                                   GLint plane,
+                                                                   GLenum pname,
+                                                                   GLsizei bufSize,
+                                                                   const GLsizei *length,
+                                                                   const GLint *params);
 
 // GL_ANGLE_robust_fragment_shader_output
 
@@ -940,20 +954,6 @@ bool ValidateGetFramebufferPixelLocalStorageParameterivANGLE(const Context *cont
                                                              GLint plane,
                                                              GLenum pname,
                                                              const GLint *params);
-bool ValidateGetFramebufferPixelLocalStorageParameterfvRobustANGLE(const Context *context,
-                                                                   angle::EntryPoint entryPoint,
-                                                                   GLint plane,
-                                                                   GLenum pname,
-                                                                   GLsizei bufSize,
-                                                                   const GLsizei *length,
-                                                                   const GLfloat *params);
-bool ValidateGetFramebufferPixelLocalStorageParameterivRobustANGLE(const Context *context,
-                                                                   angle::EntryPoint entryPoint,
-                                                                   GLint plane,
-                                                                   GLenum pname,
-                                                                   GLsizei bufSize,
-                                                                   const GLsizei *length,
-                                                                   const GLint *params);
 
 // GL_ANGLE_stencil_texturing
 
@@ -1391,6 +1391,21 @@ bool ValidateMultiDrawElementsBaseVertexEXT(const Context *context,
                                             GLsizei drawcount,
                                             const GLint *basevertex);
 
+// GL_EXT_draw_instanced
+bool ValidateDrawArraysInstancedEXT(const Context *context,
+                                    angle::EntryPoint entryPoint,
+                                    PrimitiveMode modePacked,
+                                    GLint start,
+                                    GLsizei count,
+                                    GLsizei primcount);
+bool ValidateDrawElementsInstancedEXT(const Context *context,
+                                      angle::EntryPoint entryPoint,
+                                      PrimitiveMode modePacked,
+                                      GLsizei count,
+                                      DrawElementsType typePacked,
+                                      const void *indices,
+                                      GLsizei primcount);
+
 // GL_EXT_external_buffer
 bool ValidateBufferStorageExternalEXT(const Context *context,
                                       angle::EntryPoint entryPoint,
@@ -1399,13 +1414,6 @@ bool ValidateBufferStorageExternalEXT(const Context *context,
                                       GLsizeiptr size,
                                       GLeglClientBufferEXT clientBuffer,
                                       GLbitfield flags);
-bool ValidateNamedBufferStorageExternalEXT(const Context *context,
-                                           angle::EntryPoint entryPoint,
-                                           GLuint buffer,
-                                           GLintptr offset,
-                                           GLsizeiptr size,
-                                           GLeglClientBufferEXT clientBuffer,
-                                           GLbitfield flags);
 
 // GL_EXT_float_blend
 
@@ -1420,19 +1428,6 @@ bool ValidateFramebufferTextureEXT(const Context *context,
 // GL_EXT_gpu_shader5
 
 // GL_EXT_instanced_arrays
-bool ValidateDrawArraysInstancedEXT(const Context *context,
-                                    angle::EntryPoint entryPoint,
-                                    PrimitiveMode modePacked,
-                                    GLint start,
-                                    GLsizei count,
-                                    GLsizei primcount);
-bool ValidateDrawElementsInstancedEXT(const Context *context,
-                                      angle::EntryPoint entryPoint,
-                                      PrimitiveMode modePacked,
-                                      GLsizei count,
-                                      DrawElementsType typePacked,
-                                      const void *indices,
-                                      GLsizei primcount);
 bool ValidateVertexAttribDivisorEXT(const Context *context,
                                     angle::EntryPoint entryPoint,
                                     GLuint index,
@@ -1536,6 +1531,21 @@ bool ValidateImportMemoryFdEXT(const Context *context,
                                GLuint64 size,
                                HandleType handleTypePacked,
                                GLint fd);
+
+// GL_EXT_multi_draw_arrays
+bool ValidateMultiDrawArraysEXT(const Context *context,
+                                angle::EntryPoint entryPoint,
+                                PrimitiveMode modePacked,
+                                const GLint *first,
+                                const GLsizei *count,
+                                GLsizei primcount);
+bool ValidateMultiDrawElementsEXT(const Context *context,
+                                  angle::EntryPoint entryPoint,
+                                  PrimitiveMode modePacked,
+                                  const GLsizei *count,
+                                  DrawElementsType typePacked,
+                                  const void *const *indices,
+                                  GLsizei primcount);
 
 // GL_EXT_multi_draw_indirect
 bool ValidateMultiDrawArraysIndirectEXT(const Context *context,

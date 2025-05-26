@@ -1071,6 +1071,9 @@ void DisplayMtl::initializeExtensions() const
     mNativeExtensions.baseVertexBaseInstanceShaderBuiltinANGLE =
         mFeatures.hasBaseVertexInstancedDraw.enabled;
 
+    mNativeExtensions.drawElementsBaseVertexEXT = mFeatures.hasBaseVertexInstancedDraw.enabled;
+    mNativeExtensions.drawElementsBaseVertexOES = mFeatures.hasBaseVertexInstancedDraw.enabled;
+
     // Metal uses the opposite provoking vertex as GLES so emulation is required to use the GLES
     // behaviour. Allow users to change the provoking vertex for improved performance.
     mNativeExtensions.provokingVertexANGLE = true;

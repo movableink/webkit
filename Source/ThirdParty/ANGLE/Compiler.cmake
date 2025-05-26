@@ -167,6 +167,8 @@ set(angle_translator_sources
     "src/compiler/translator/tree_ops/PruneNoOps.h"
     "src/compiler/translator/tree_ops/RecordConstantPrecision.cpp"
     "src/compiler/translator/tree_ops/RecordConstantPrecision.h"
+    "src/compiler/translator/tree_ops/ReduceInterfaceBlocks.cpp"
+    "src/compiler/translator/tree_ops/ReduceInterfaceBlocks.h"
     "src/compiler/translator/tree_ops/RemoveArrayLengthMethod.cpp"
     "src/compiler/translator/tree_ops/RemoveArrayLengthMethod.h"
     "src/compiler/translator/tree_ops/RemoveAtomicCounterBuiltins.cpp"
@@ -380,6 +382,8 @@ set(angle_translator_lib_spirv_sources
     "src/compiler/translator/tree_ops/spirv/RewriteInterpolateAtOffset.h"
     "src/compiler/translator/tree_ops/spirv/RewriteR32fImages.cpp"
     "src/compiler/translator/tree_ops/spirv/RewriteR32fImages.h"
+    "src/compiler/translator/tree_ops/spirv/RewriteSamplerExternalTexelFetch.cpp"
+    "src/compiler/translator/tree_ops/spirv/RewriteSamplerExternalTexelFetch.h"
 )
 
 set(angle_translator_essl_symbol_table_sources
@@ -436,8 +440,6 @@ set(angle_translator_lib_msl_sources
     "src/compiler/translator/tree_ops/msl/HoistConstants.h"
     "src/compiler/translator/tree_ops/msl/IntroduceVertexIndexID.cpp"
     "src/compiler/translator/tree_ops/msl/IntroduceVertexIndexID.h"
-    "src/compiler/translator/tree_ops/msl/ReduceInterfaceBlocks.cpp"
-    "src/compiler/translator/tree_ops/msl/ReduceInterfaceBlocks.h"
     "src/compiler/translator/tree_ops/msl/RewriteCaseDeclarations.cpp"
     "src/compiler/translator/tree_ops/msl/RewriteCaseDeclarations.h"
     "src/compiler/translator/tree_ops/msl/RewriteInterpolants.cpp"

@@ -575,6 +575,8 @@ EXPORTS
     glGetFloatvRobustANGLE
     glGetFramebufferAttachmentParameterivRobustANGLE
     glGetFramebufferParameterivRobustANGLE
+    glGetFramebufferPixelLocalStorageParameterfvRobustANGLE
+    glGetFramebufferPixelLocalStorageParameterivRobustANGLE
     glGetInteger64i_vRobustANGLE
     glGetInteger64vRobustANGLE
     glGetIntegeri_vRobustANGLE
@@ -647,9 +649,7 @@ EXPORTS
     glFramebufferPixelLocalStorageRestoreANGLE
     glFramebufferTexturePixelLocalStorageANGLE
     glGetFramebufferPixelLocalStorageParameterfvANGLE
-    glGetFramebufferPixelLocalStorageParameterfvRobustANGLE
     glGetFramebufferPixelLocalStorageParameterivANGLE
-    glGetFramebufferPixelLocalStorageParameterivRobustANGLE
     glPixelLocalStorageBarrierANGLE
 
     ; GL_ANGLE_stencil_texturing
@@ -795,9 +795,12 @@ EXPORTS
     glDrawRangeElementsBaseVertexEXT
     glMultiDrawElementsBaseVertexEXT
 
+    ; GL_EXT_draw_instanced
+    glDrawArraysInstancedEXT
+    glDrawElementsInstancedEXT
+
     ; GL_EXT_external_buffer
     glBufferStorageExternalEXT
-    glNamedBufferStorageExternalEXT
 
     ; GL_EXT_float_blend
 
@@ -807,8 +810,6 @@ EXPORTS
     ; GL_EXT_gpu_shader5
 
     ; GL_EXT_instanced_arrays
-    glDrawArraysInstancedEXT
-    glDrawElementsInstancedEXT
     glVertexAttribDivisorEXT
 
     ; GL_EXT_map_buffer_range
@@ -831,6 +832,10 @@ EXPORTS
 
     ; GL_EXT_memory_object_fd
     glImportMemoryFdEXT
+
+    ; GL_EXT_multi_draw_arrays
+    glMultiDrawArraysEXT
+    glMultiDrawElementsEXT
 
     ; GL_EXT_multi_draw_indirect
     glMultiDrawArraysIndirectEXT

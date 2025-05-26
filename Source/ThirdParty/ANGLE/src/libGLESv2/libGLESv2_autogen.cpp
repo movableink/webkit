@@ -3788,6 +3788,26 @@ void GL_APIENTRY glGetQueryObjectui64vRobustANGLE(GLuint id,
     return GL_GetQueryObjectui64vRobustANGLE(id, pname, bufSize, length, params);
 }
 
+void GL_APIENTRY glGetFramebufferPixelLocalStorageParameterfvRobustANGLE(GLint plane,
+                                                                         GLenum pname,
+                                                                         GLsizei bufSize,
+                                                                         GLsizei *length,
+                                                                         GLfloat *params)
+{
+    return GL_GetFramebufferPixelLocalStorageParameterfvRobustANGLE(plane, pname, bufSize, length,
+                                                                    params);
+}
+
+void GL_APIENTRY glGetFramebufferPixelLocalStorageParameterivRobustANGLE(GLint plane,
+                                                                         GLenum pname,
+                                                                         GLsizei bufSize,
+                                                                         GLsizei *length,
+                                                                         GLint *params)
+{
+    return GL_GetFramebufferPixelLocalStorageParameterivRobustANGLE(plane, pname, bufSize, length,
+                                                                    params);
+}
+
 // GL_ANGLE_robust_fragment_shader_output
 
 // GL_ANGLE_robust_resource_initialization
@@ -3870,25 +3890,6 @@ void GL_APIENTRY glGetFramebufferPixelLocalStorageParameterivANGLE(GLint plane,
     return GL_GetFramebufferPixelLocalStorageParameterivANGLE(plane, pname, params);
 }
 
-void GL_APIENTRY glGetFramebufferPixelLocalStorageParameterfvRobustANGLE(GLint plane,
-                                                                         GLenum pname,
-                                                                         GLsizei bufSize,
-                                                                         GLsizei *length,
-                                                                         GLfloat *params)
-{
-    return GL_GetFramebufferPixelLocalStorageParameterfvRobustANGLE(plane, pname, bufSize, length,
-                                                                    params);
-}
-
-void GL_APIENTRY glGetFramebufferPixelLocalStorageParameterivRobustANGLE(GLint plane,
-                                                                         GLenum pname,
-                                                                         GLsizei bufSize,
-                                                                         GLsizei *length,
-                                                                         GLint *params)
-{
-    return GL_GetFramebufferPixelLocalStorageParameterivRobustANGLE(plane, pname, bufSize, length,
-                                                                    params);
-}
 
 // GL_ANGLE_stencil_texturing
 
@@ -4371,39 +4372,7 @@ void GL_APIENTRY glMultiDrawElementsBaseVertexEXT(GLenum mode,
     return GL_MultiDrawElementsBaseVertexEXT(mode, count, type, indices, drawcount, basevertex);
 }
 
-// GL_EXT_external_buffer
-void GL_APIENTRY glBufferStorageExternalEXT(GLenum target,
-                                            GLintptr offset,
-                                            GLsizeiptr size,
-                                            GLeglClientBufferEXT clientBuffer,
-                                            GLbitfield flags)
-{
-    return GL_BufferStorageExternalEXT(target, offset, size, clientBuffer, flags);
-}
-
-void GL_APIENTRY glNamedBufferStorageExternalEXT(GLuint buffer,
-                                                 GLintptr offset,
-                                                 GLsizeiptr size,
-                                                 GLeglClientBufferEXT clientBuffer,
-                                                 GLbitfield flags)
-{
-    return GL_NamedBufferStorageExternalEXT(buffer, offset, size, clientBuffer, flags);
-}
-
-// GL_EXT_float_blend
-
-// GL_EXT_geometry_shader
-void GL_APIENTRY glFramebufferTextureEXT(GLenum target,
-                                         GLenum attachment,
-                                         GLuint texture,
-                                         GLint level)
-{
-    return GL_FramebufferTextureEXT(target, attachment, texture, level);
-}
-
-// GL_EXT_gpu_shader5
-
-// GL_EXT_instanced_arrays
+// GL_EXT_draw_instanced
 void GL_APIENTRY glDrawArraysInstancedEXT(GLenum mode,
                                           GLint start,
                                           GLsizei count,
@@ -4421,6 +4390,31 @@ void GL_APIENTRY glDrawElementsInstancedEXT(GLenum mode,
     return GL_DrawElementsInstancedEXT(mode, count, type, indices, primcount);
 }
 
+// GL_EXT_external_buffer
+void GL_APIENTRY glBufferStorageExternalEXT(GLenum target,
+                                            GLintptr offset,
+                                            GLsizeiptr size,
+                                            GLeglClientBufferEXT clientBuffer,
+                                            GLbitfield flags)
+{
+    return GL_BufferStorageExternalEXT(target, offset, size, clientBuffer, flags);
+}
+
+
+// GL_EXT_float_blend
+
+// GL_EXT_geometry_shader
+void GL_APIENTRY glFramebufferTextureEXT(GLenum target,
+                                         GLenum attachment,
+                                         GLuint texture,
+                                         GLint level)
+{
+    return GL_FramebufferTextureEXT(target, attachment, texture, level);
+}
+
+// GL_EXT_gpu_shader5
+
+// GL_EXT_instanced_arrays
 void GL_APIENTRY glVertexAttribDivisorEXT(GLuint index, GLuint divisor)
 {
     return GL_VertexAttribDivisorEXT(index, divisor);
@@ -4541,6 +4535,24 @@ void GL_APIENTRY glTexStorageMem3DMultisampleEXT(GLenum target,
 void GL_APIENTRY glImportMemoryFdEXT(GLuint memory, GLuint64 size, GLenum handleType, GLint fd)
 {
     return GL_ImportMemoryFdEXT(memory, size, handleType, fd);
+}
+
+// GL_EXT_multi_draw_arrays
+void GL_APIENTRY glMultiDrawArraysEXT(GLenum mode,
+                                      const GLint *first,
+                                      const GLsizei *count,
+                                      GLsizei primcount)
+{
+    return GL_MultiDrawArraysEXT(mode, first, count, primcount);
+}
+
+void GL_APIENTRY glMultiDrawElementsEXT(GLenum mode,
+                                        const GLsizei *count,
+                                        GLenum type,
+                                        const void *const *indices,
+                                        GLsizei primcount)
+{
+    return GL_MultiDrawElementsEXT(mode, count, type, indices, primcount);
 }
 
 // GL_EXT_multi_draw_indirect

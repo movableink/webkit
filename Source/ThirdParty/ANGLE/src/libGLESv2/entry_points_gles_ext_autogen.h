@@ -660,6 +660,18 @@ ANGLE_EXPORT void GL_APIENTRY GL_GetQueryObjectui64vRobustANGLE(GLuint id,
                                                                 GLsizei bufSize,
                                                                 GLsizei *length,
                                                                 GLuint64 *params);
+ANGLE_EXPORT void GL_APIENTRY
+GL_GetFramebufferPixelLocalStorageParameterfvRobustANGLE(GLint plane,
+                                                         GLenum pname,
+                                                         GLsizei bufSize,
+                                                         GLsizei *length,
+                                                         GLfloat *params);
+ANGLE_EXPORT void GL_APIENTRY
+GL_GetFramebufferPixelLocalStorageParameterivRobustANGLE(GLint plane,
+                                                         GLenum pname,
+                                                         GLsizei bufSize,
+                                                         GLsizei *length,
+                                                         GLint *params);
 
 // GL_ANGLE_robust_fragment_shader_output
 
@@ -696,18 +708,6 @@ ANGLE_EXPORT void GL_APIENTRY GL_GetFramebufferPixelLocalStorageParameterfvANGLE
 ANGLE_EXPORT void GL_APIENTRY GL_GetFramebufferPixelLocalStorageParameterivANGLE(GLint plane,
                                                                                  GLenum pname,
                                                                                  GLint *params);
-ANGLE_EXPORT void GL_APIENTRY
-GL_GetFramebufferPixelLocalStorageParameterfvRobustANGLE(GLint plane,
-                                                         GLenum pname,
-                                                         GLsizei bufSize,
-                                                         GLsizei *length,
-                                                         GLfloat *params);
-ANGLE_EXPORT void GL_APIENTRY
-GL_GetFramebufferPixelLocalStorageParameterivRobustANGLE(GLint plane,
-                                                         GLenum pname,
-                                                         GLsizei bufSize,
-                                                         GLsizei *length,
-                                                         GLint *params);
 
 // GL_ANGLE_stencil_texturing
 
@@ -982,17 +982,23 @@ ANGLE_EXPORT void GL_APIENTRY GL_MultiDrawElementsBaseVertexEXT(GLenum mode,
                                                                 GLsizei drawcount,
                                                                 const GLint *basevertex);
 
+// GL_EXT_draw_instanced
+ANGLE_EXPORT void GL_APIENTRY GL_DrawArraysInstancedEXT(GLenum mode,
+                                                        GLint start,
+                                                        GLsizei count,
+                                                        GLsizei primcount);
+ANGLE_EXPORT void GL_APIENTRY GL_DrawElementsInstancedEXT(GLenum mode,
+                                                          GLsizei count,
+                                                          GLenum type,
+                                                          const void *indices,
+                                                          GLsizei primcount);
+
 // GL_EXT_external_buffer
 ANGLE_EXPORT void GL_APIENTRY GL_BufferStorageExternalEXT(GLenum target,
                                                           GLintptr offset,
                                                           GLsizeiptr size,
                                                           GLeglClientBufferEXT clientBuffer,
                                                           GLbitfield flags);
-ANGLE_EXPORT void GL_APIENTRY GL_NamedBufferStorageExternalEXT(GLuint buffer,
-                                                               GLintptr offset,
-                                                               GLsizeiptr size,
-                                                               GLeglClientBufferEXT clientBuffer,
-                                                               GLbitfield flags);
 
 // GL_EXT_float_blend
 
@@ -1005,15 +1011,6 @@ ANGLE_EXPORT void GL_APIENTRY GL_FramebufferTextureEXT(GLenum target,
 // GL_EXT_gpu_shader5
 
 // GL_EXT_instanced_arrays
-ANGLE_EXPORT void GL_APIENTRY GL_DrawArraysInstancedEXT(GLenum mode,
-                                                        GLint start,
-                                                        GLsizei count,
-                                                        GLsizei primcount);
-ANGLE_EXPORT void GL_APIENTRY GL_DrawElementsInstancedEXT(GLenum mode,
-                                                          GLsizei count,
-                                                          GLenum type,
-                                                          const void *indices,
-                                                          GLsizei primcount);
 ANGLE_EXPORT void GL_APIENTRY GL_VertexAttribDivisorEXT(GLuint index, GLuint divisor);
 
 // GL_EXT_map_buffer_range
@@ -1079,6 +1076,17 @@ ANGLE_EXPORT void GL_APIENTRY GL_ImportMemoryFdEXT(GLuint memory,
                                                    GLuint64 size,
                                                    GLenum handleType,
                                                    GLint fd);
+
+// GL_EXT_multi_draw_arrays
+ANGLE_EXPORT void GL_APIENTRY GL_MultiDrawArraysEXT(GLenum mode,
+                                                    const GLint *first,
+                                                    const GLsizei *count,
+                                                    GLsizei primcount);
+ANGLE_EXPORT void GL_APIENTRY GL_MultiDrawElementsEXT(GLenum mode,
+                                                      const GLsizei *count,
+                                                      GLenum type,
+                                                      const void *const *indices,
+                                                      GLsizei primcount);
 
 // GL_EXT_multi_draw_indirect
 ANGLE_EXPORT void GL_APIENTRY GL_MultiDrawArraysIndirectEXT(GLenum mode,

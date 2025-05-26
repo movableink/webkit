@@ -1012,6 +1012,33 @@ class TextureCubeTest : public TexCoordDrawTest
     GLint mTextureCubeFaceUniformLocation;
 };
 
+class TextureDefaultTextureTest : public TextureCubeTest
+{
+  protected:
+    TextureDefaultTextureTest() : TextureCubeTest() {}
+
+    const char *getFragmentShaderSource() override
+    {
+        return
+            R"(precision highp float;
+            uniform samplerCube texCube;
+            uniform sampler2D tex2D;
+            uniform sampler2D white;
+
+            void main()
+            {
+                vec4 whiteSamplerValue = texture2D(white, vec2(0));
+                vec4 noValue = textureCube(texCube, vec3(0));
+                vec4 noValue2 = texture2D(tex2D, vec2(0));
+                gl_FragColor = whiteSamplerValue + noValue*0.000001 + noValue2*0.000001;
+            })";
+    }
+
+    void testSetUp() override { setUpProgram(); }
+
+    void testTearDown() override { glDeleteProgram(mProgram); }
+};
+
 class TextureCubeTestES3 : public TextureCubeTest
 {
   protected:
@@ -2392,8 +2419,12 @@ TEST_P(TextureCubeTest, CubeMapBug2)
     EXPECT_GL_ERROR(GL_NO_ERROR);
 
     glUseProgram(cubeMapBug2Program);
-    glUniform1i(mTexture2DUniformLocation, 3);
-    glUniform1i(mTextureCubeUniformLocation, 0);
+    GLint tex2DUniformLocation = glGetUniformLocation(cubeMapBug2Program, "tex2D");
+    ASSERT_NE(tex2DUniformLocation, -1);
+    GLint texCubeUniformLocation = glGetUniformLocation(cubeMapBug2Program, "texCube");
+    ASSERT_NE(texCubeUniformLocation, -1);
+    glUniform1i(tex2DUniformLocation, 3);
+    glUniform1i(texCubeUniformLocation, 0);
     drawQuad(cubeMapBug2Program, "position", 0.5f);
     EXPECT_GL_NO_ERROR();
 }
@@ -5861,7 +5892,9 @@ TEST_P(Texture2DBaseMaxTestES3, Fuzz545ImmutableTexRenderFeedback)
                  _level_prime_max++)
             {  // `q` in GLES
                 if (_level_prime_max < 0)
+                {
                     continue;
+                }
                 if (_level_prime_max == (MIPS + 1))
                 {
                     _level_prime_max = 10000;  // This is the default, after all!
@@ -12532,6 +12565,47 @@ TEST_P(TextureCubeTestES3, IncompatibleLayerABThenCompatibleLayerAB)
     }
 }
 
+// Test two samplers (one of type sampler2d and one of type samplerCube),
+// link program successfully, don't set the samplers to anything (ie, keep
+// default values as 0) and call function glValidateProgram on program id.
+TEST_P(TextureDefaultTextureTest, SampleFromDefaultTexture)
+{
+    constexpr uint32_t whiteTextureData[] = {0xFFFFFFFF};
+    GLTexture whiteTex;
+
+    glUseProgram(mProgram);
+    EXPECT_GL_NO_ERROR();
+
+    glActiveTexture(GL_TEXTURE7);
+    glBindTexture(GL_TEXTURE_2D, whiteTex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, whiteTextureData);
+    GLint loc = glGetUniformLocation(mProgram, "white");
+    ASSERT_NE(-1, loc);
+    glUniform1i(loc, 7);
+    EXPECT_GL_NO_ERROR();
+
+    glActiveTexture(GL_TEXTURE0);
+    EXPECT_GL_NO_ERROR();
+
+    glValidateProgram(mProgram);
+    EXPECT_GL_NO_ERROR();
+
+    // Verify that the validate status is false
+    GLint validateStatus = 0;
+    glGetProgramiv(mProgram, GL_VALIDATE_STATUS, &validateStatus);
+    EXPECT_GL_FALSE(validateStatus);
+    EXPECT_GL_NO_ERROR();
+
+    // Check that the info log is non-empty
+    GLint programInfoLength = 0;
+    GLubyte errMessage[1000];
+    glGetProgramInfoLog(mProgram, 1000, &programInfoLength, (char *)errMessage);
+    EXPECT_GT(programInfoLength, 0);
+    EXPECT_GL_NO_ERROR();
+
+    drawQuad(mProgram, "position", 0.5f);
+}
+
 // Similar to IncompatibleLayerABThenCompatibleLayerAB, but with a single-level texture
 TEST_P(TextureCubeTestES3, IncompatibleLayerABThenCompatibleLayerABSingleLevel)
 {
@@ -15975,6 +16049,56 @@ class CopyImageTestES31 : public ANGLETest<>
     }
 };
 
+// Test validation of target
+TEST_P(CopyImageTestES31, InvalidTarget)
+{
+    ANGLE_SKIP_TEST_IF(!IsGLExtensionEnabled("GL_EXT_copy_image"));
+
+    // INVALID_ENUM is generated
+    // if either srcTarget or dstTarget
+    //   - is not RENDERBUFFER or a valid non-proxy texture target
+    //   - is TEXTURE_BUFFER, or
+    //   - is one of the cubemap face selectors described in table 3.17,
+    // if the target does not match the type of the object.
+    GLenum invalidTargets[] = {
+        GL_TEXTURE_CUBE_MAP_POSITIVE_X, GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
+        GL_TEXTURE_CUBE_MAP_POSITIVE_Y, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
+        GL_TEXTURE_CUBE_MAP_POSITIVE_Z, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,
+        GL_TEXTURE_BUFFER_EXT,          GL_ARRAY_BUFFER,
+    };
+    GLTexture texSrc;
+    GLTexture texDest;
+    const uint32_t invalidTargetsSize = sizeof(invalidTargets) / sizeof((invalidTargets)[0]);
+    for (uint32_t i = 0; i < invalidTargetsSize; ++i)
+    {
+        for (uint32_t j = 0; j < invalidTargetsSize; ++j)
+        {
+            glCopyImageSubDataEXT(texSrc, invalidTargets[i], 0, 0, 0, 0, texDest, invalidTargets[j],
+                                  0, 0, 0, 0, 1, 1, 1);
+            EXPECT_GL_ERROR(GL_INVALID_ENUM);
+        }
+    }
+
+    // Target does not match the type of the object
+    glBindTexture(GL_TEXTURE_2D, texSrc);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 32, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+    glBindTexture(GL_TEXTURE_3D, texDest);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA8, 32, 32, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+    glCopyImageSubDataEXT(texSrc, GL_TEXTURE_2D, 0, 0, 0, 0, texDest, GL_TEXTURE_2D, 0, 0, 0, 0, 0,
+                          0, 1);
+    EXPECT_GL_ERROR(GL_INVALID_ENUM);
+
+    glCopyImageSubDataEXT(texSrc, GL_TEXTURE_3D, 0, 0, 0, 0, texDest, GL_TEXTURE_3D, 0, 0, 0, 0, 0,
+                          0, 1);
+    EXPECT_GL_ERROR(GL_INVALID_ENUM);
+}
+
 // Test that copies between RGB formats doesn't affect the emulated alpha channel, if any.
 TEST_P(CopyImageTestES31, PreserveEmulatedAlpha)
 {
@@ -16459,6 +16583,146 @@ TEST_P(CopyImageTestES31, MultisampleRenderbufferCopyImageSubData)
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     EXPECT_PIXEL_RECT_EQ(0, 0, kWidth, kHeight, GLColor::red);
+}
+
+// Test glCopyImageSubDataEXT with GL_EXT_texture_norm16
+void CopyImageCompressedWithNorm16(bool isCompressedToNorm16)
+{
+    struct CompressedFormatDesc
+    {
+        GLenum format;
+        GLsizei blockX;
+        GLsizei blockY;
+        GLsizei size;
+        std::string extension;
+    };
+
+    const CompressedFormatDesc possibleCompressedFormats[] = {
+        {GL_COMPRESSED_RGB_S3TC_DXT1_EXT, 4, 4, 8, "GL_EXT_texture_compression_dxt1"},
+        {GL_COMPRESSED_SRGB_S3TC_DXT1_EXT, 4, 4, 8, "GL_EXT_texture_compression_s3tc_srgb"},
+        {GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, 4, 4, 8, "GL_EXT_texture_compression_dxt1"},
+        {GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT, 4, 4, 8, "GL_EXT_texture_compression_s3tc_srgb"},
+        {GL_COMPRESSED_RED_RGTC1_EXT, 4, 4, 8, "GL_EXT_texture_compression_rgtc"},
+        {GL_COMPRESSED_SIGNED_RED_RGTC1_EXT, 4, 4, 8, "GL_EXT_texture_compression_rgtc"},
+        {GL_COMPRESSED_RGB8_ETC2, 4, 4, 8, ""},
+        {GL_COMPRESSED_SRGB8_ETC2, 4, 4, 8, ""},
+        {GL_COMPRESSED_R11_EAC, 4, 4, 8, ""},
+        {GL_COMPRESSED_SIGNED_R11_EAC, 4, 4, 8, ""},
+        {GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2, 4, 4, 8, ""},
+        {GL_COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2, 4, 4, 8, ""}};
+    struct Norm16FormatDesc
+    {
+        GLint internalformat;
+        GLenum format;
+        GLenum type;
+    };
+    constexpr Norm16FormatDesc possibleNorm16Formats[] = {
+        {GL_RGBA16_EXT, GL_RGBA, GL_UNSIGNED_SHORT}, {GL_RGBA16_SNORM_EXT, GL_RGBA, GL_SHORT}};
+
+    for (CompressedFormatDesc compressedFormat : possibleCompressedFormats)
+    {
+        if (!compressedFormat.extension.empty() &&
+            !IsGLExtensionEnabled(compressedFormat.extension))
+        {
+            std::cout << "subtest skipped due to missing " << compressedFormat.extension << "."
+                      << std::endl;
+            continue;
+        }
+        for (Norm16FormatDesc norm16Format : possibleNorm16Formats)
+        {
+            // Compressed: each 4x4 block = 8 bytes
+            // 4x4 image => (4/4)*(4/4) = 1 blocks => 1 * 8 = 8 bytes
+            // Assume uncompressed target is just a raw memory buffer with same size
+            // To match the compressed size exactly, we simulate the destination as a 1x1 texture
+            // with RGBA16
+            const int norm16Width  = compressedFormat.blockX / 4;
+            const int norm16Height = compressedFormat.blockY / 4;
+            // RGBA16 = 4 channels * 2 bytes = 8 bytes per pixel
+            // 1x1 pixels = 8 bytes
+            const int norm16Size = norm16Width * norm16Height * 4 * sizeof(uint16_t);
+            // Expect exact match
+            ASSERT_EQ(compressedFormat.size, norm16Size);
+
+            // Create compressed texture with 0x0 (1 block = 4x4 pixels, 8 bytes)
+            std::vector<uint8_t> compressedInitColor(compressedFormat.size, 0x0);
+
+            // Create Compressed Texture
+            GLTexture compressedTex;
+            glBindTexture(GL_TEXTURE_2D, compressedTex);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glCompressedTexImage2D(GL_TEXTURE_2D, 0, compressedFormat.format,
+                                   compressedFormat.blockX, compressedFormat.blockY, 0,
+                                   compressedFormat.size, compressedInitColor.data());
+            ASSERT_GL_NO_ERROR();
+
+            // Create a texture with 0x33
+            std::vector<uint8_t> norm16InitColor(norm16Size, 0x33);
+
+            // Create Uncompressed Texture
+            GLTexture norm16Tex;
+            glBindTexture(GL_TEXTURE_2D, norm16Tex);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexImage2D(GL_TEXTURE_2D, 0, norm16Format.internalformat, norm16Width, norm16Height,
+                         0, norm16Format.format, norm16Format.type, norm16InitColor.data());
+            ASSERT_GL_NO_ERROR();
+
+            if (isCompressedToNorm16)
+            {
+                // Copy from compressed to uncompressed
+                glCopyImageSubDataEXT(compressedTex, GL_TEXTURE_2D, 0, 0, 0, 0, norm16Tex,
+                                      GL_TEXTURE_2D, 0, 0, 0, 0, compressedFormat.blockX,
+                                      compressedFormat.blockY, 1);
+                ASSERT_GL_NO_ERROR();
+
+                // Read back destination texture memory
+                std::vector<uint8_t> readback(norm16Size);
+                glBindTexture(GL_TEXTURE_2D, norm16Tex);
+                glGetTexImageANGLE(GL_TEXTURE_2D, 0, norm16Format.format, norm16Format.type,
+                                   readback.data());
+                ASSERT_GL_NO_ERROR();
+
+                // Raw memory comparison
+                EXPECT_EQ(memcmp(readback.data(), compressedInitColor.data(), norm16Size), 0);
+            }
+            else
+            {
+                // Copy from uncompressed to compressed
+                glCopyImageSubDataEXT(norm16Tex, GL_TEXTURE_2D, 0, 0, 0, 0, compressedTex,
+                                      GL_TEXTURE_2D, 0, 0, 0, 0, norm16Width, norm16Height, 1);
+                ASSERT_GL_NO_ERROR();
+
+                // Read back destination texture memory
+                std::vector<uint8_t> readback(compressedFormat.size);
+                glBindTexture(GL_TEXTURE_2D, compressedTex);
+                glGetCompressedTexImageANGLE(GL_TEXTURE_2D, 0, readback.data());
+                ASSERT_GL_NO_ERROR();
+
+                // Raw memory comparison
+                EXPECT_EQ(memcmp(readback.data(), norm16InitColor.data(), compressedFormat.size),
+                          0);
+            }
+        }
+    }
+}
+
+// Test glCopyImageSubDataEXT from a compressed 2D texture to RGBA16_EXT/RGBA16_SNORM_EXT
+TEST_P(CopyImageTestES31, CompressedToNorm16)
+{
+    ANGLE_SKIP_TEST_IF(!IsGLExtensionEnabled("GL_EXT_copy_image") ||
+                       !IsGLExtensionEnabled("GL_EXT_texture_norm16") ||
+                       !IsGLExtensionEnabled("GL_ANGLE_get_image"));
+    CopyImageCompressedWithNorm16(true);
+}
+
+// Test glCopyImageSubDataEXT from RGBA16_EXT/RGBA16_SNORM_EXT to compressed 2D texture
+TEST_P(CopyImageTestES31, Norm16ToCompressed)
+{
+    ANGLE_SKIP_TEST_IF(!IsGLExtensionEnabled("GL_EXT_copy_image") ||
+                       !IsGLExtensionEnabled("GL_EXT_texture_norm16") ||
+                       !IsGLExtensionEnabled("GL_ANGLE_get_image"));
+    CopyImageCompressedWithNorm16(false);
 }
 
 class TextureChangeStorageUploadTest : public ANGLETest<>
@@ -17233,6 +17497,9 @@ ANGLE_INSTANTIATE_TEST_ES2(Texture2DFloatTestES2);
 
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(TextureCubeTestES3);
 ANGLE_INSTANTIATE_TEST_ES3(TextureCubeTestES3);
+
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(TextureDefaultTextureTest);
+ANGLE_INSTANTIATE_TEST_ES3(TextureDefaultTextureTest);
 
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(TextureCubeTestES32);
 ANGLE_INSTANTIATE_TEST_ES32(TextureCubeTestES32);

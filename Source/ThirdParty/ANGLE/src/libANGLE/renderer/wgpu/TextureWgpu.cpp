@@ -22,6 +22,8 @@ namespace rx
 namespace
 {
 
+constexpr angle::SubjectIndex kTextureImageSubjectIndex = 0;
+
 void GetRenderTargetLayerCountAndIndex(webgpu::ImageHelper *image,
                                        const gl::ImageIndex &index,
                                        GLuint *layerIndex,
@@ -77,7 +79,7 @@ bool IsTextureLevelDefinitionCompatibleWithImage(webgpu::ImageHelper *image,
                                                  const gl::Extents &size,
                                                  const webgpu::Format &format)
 {
-    return size == wgpu_gl::getExtents(image->getSize()) &&
+    return size == wgpu_gl::GetExtents(image->getSize()) &&
            image->getIntendedFormatID() == format.getIntendedFormatID() &&
            image->getActualFormatID() == format.getActualImageFormatID();
 }
@@ -88,8 +90,11 @@ TextureWgpu::TextureWgpu(const gl::TextureState &state)
     : TextureImpl(state),
       mImage(new webgpu::ImageHelper()),
       mCurrentBaseLevel(state.getBaseLevel()),
-      mCurrentMaxLevel(state.getMaxLevel())
-{}
+      mCurrentMaxLevel(state.getMaxLevel()),
+      mImageObserverBinding(this, kTextureImageSubjectIndex)
+{
+    mImageObserverBinding.bind(mImage);
+}
 
 TextureWgpu::~TextureWgpu() {}
 
@@ -363,6 +368,16 @@ angle::Result TextureWgpu::getAttachmentRenderTarget(const gl::Context *context,
     return angle::Result::Continue;
 }
 
+void TextureWgpu::onSubjectStateChange(angle::SubjectIndex index, angle::SubjectMessage message)
+{
+    ASSERT(index == kTextureImageSubjectIndex &&
+           (message == angle::SubjectMessage::SubjectChanged ||
+            message == angle::SubjectMessage::InitializationComplete));
+
+    // Forward the notification to the parent that the staging buffer changed.
+    onStateChange(message);
+}
+
 angle::Result TextureWgpu::setImageImpl(const gl::Context *context,
                                         GLenum internalFormat,
                                         GLenum type,
@@ -433,15 +448,15 @@ angle::Result TextureWgpu::initializeImage(ContextWgpu *contextWgpu, ImageMipLev
     uint32_t levelCount                     = getMipLevelCount(mipLevels);
     gl::LevelIndex firstLevel               = gl::LevelIndex(mState.getEffectiveBaseLevel());
     const gl::Extents &firstLevelExtents    = firstLevelDesc->size;
-    wgpu::TextureDimension textureDimension = gl_wgpu::GetWgpuTextureDimension(mState.getType());
-    wgpu::TextureUsage textureUsage = wgpu::TextureUsage::CopySrc | wgpu::TextureUsage::CopyDst |
-                                      wgpu::TextureUsage::RenderAttachment |
-                                      wgpu::TextureUsage::TextureBinding;
+    WGPUTextureDimension textureDimension   = gl_wgpu::GetWgpuTextureDimension(mState.getType());
+    WGPUTextureUsage textureUsage           = WGPUTextureUsage_CopySrc | WGPUTextureUsage_CopyDst |
+                                    WGPUTextureUsage_RenderAttachment |
+                                    WGPUTextureUsage_TextureBinding;
     return mImage->initImage(
         webgpuFormat.getIntendedFormatID(), webgpuFormat.getActualImageFormatID(),
         displayWgpu->getDevice(), firstLevel,
         mImage->createTextureDescriptor(
-            textureUsage, textureDimension, gl_wgpu::getExtent3D(firstLevelExtents),
+            textureUsage, textureDimension, gl_wgpu::GetExtent3D(firstLevelExtents),
             webgpu::GetWgpuTextureFormatFromFormatID(webgpuFormat.getActualImageFormatID()),
             levelCount, 1));
 }
@@ -481,6 +496,7 @@ angle::Result TextureWgpu::redefineLevel(const gl::Context *context,
     else
     {
         mImage = new webgpu::ImageHelper;
+        mImageObserverBinding.bind(mImage);
     }
 
     return angle::Result::Continue;
@@ -661,7 +677,7 @@ angle::Result TextureWgpu::initSingleLayerRenderTargets(
 
     for (uint32_t layerIndex = 0; layerIndex < layerCount; ++layerIndex)
     {
-        wgpu::TextureView textureView;
+        webgpu::TextureViewHandle textureView;
         ANGLE_TRY(mImage->createTextureViewSingleLevel(levelIndex, layerIndex, textureView));
 
         renderTargets[layerIndex].set(mImage, textureView, mImage->toWgpuLevel(levelIndex),

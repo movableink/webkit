@@ -10,6 +10,7 @@
 #include "libANGLE/renderer/wgpu/DisplayWgpu.h"
 
 #include <dawn/dawn_proc.h>
+#include <dawn/native/DawnNative.h>
 
 #include "common/debug.h"
 #include "common/platform.h"
@@ -32,10 +33,12 @@ egl::Error DisplayWgpu::initialize(egl::Display *display)
 {
     ANGLE_TRY(createWgpuDevice());
 
-    mQueue = mDevice.GetQueue();
+    mQueue = webgpu::QueueHandle::Acquire(wgpuDeviceGetQueue(mDevice.get()));
+
     mFormatTable.initialize();
 
-    mDevice.GetLimits(&mLimitsWgpu);
+    mLimitsWgpu = WGPU_LIMITS_INIT;
+    wgpuDeviceGetLimits(mDevice.get(), &mLimitsWgpu);
 
     webgpu::GenerateCaps(mLimitsWgpu, &mGLCaps, &mGLTextureCaps, &mGLExtensions, &mGLLimitations,
                          &mEGLCaps, &mEGLExtensions, &mMaxSupportedClientVersion);
@@ -43,7 +46,13 @@ egl::Error DisplayWgpu::initialize(egl::Display *display)
     return egl::NoError();
 }
 
-void DisplayWgpu::terminate() {}
+void DisplayWgpu::terminate()
+{
+    mAdapter  = nullptr;
+    mInstance = nullptr;
+    mDevice   = nullptr;
+    mQueue    = nullptr;
+}
 
 egl::Error DisplayWgpu::makeCurrent(egl::Display *display,
                                     egl::Surface *drawSurface,
@@ -242,36 +251,39 @@ egl::Error DisplayWgpu::createWgpuDevice()
 {
     dawnProcSetProcs(&dawn::native::GetProcs());
 
-    dawn::native::DawnInstanceDescriptor dawnInstanceDescriptor;
-
-    wgpu::InstanceDescriptor instanceDescriptor;
+    WGPUInstanceDescriptor instanceDescriptor          = WGPU_INSTANCE_DESCRIPTOR_INIT;
     instanceDescriptor.capabilities.timedWaitAnyEnable = true;
-    instanceDescriptor.nextInChain                 = &dawnInstanceDescriptor;
-    mInstance                                      = wgpu::CreateInstance(&instanceDescriptor);
+    mInstance = webgpu::InstanceHandle::Acquire(wgpuCreateInstance(&instanceDescriptor));
 
     struct RequestAdapterResult
     {
-        wgpu::RequestAdapterStatus status;
-        wgpu::Adapter adapter;
+        WGPURequestAdapterStatus status;
+        webgpu::AdapterHandle adapter;
         std::string message;
     };
     RequestAdapterResult adapterResult;
 
-    wgpu::RequestAdapterOptions requestAdapterOptions;
+    WGPURequestAdapterOptions requestAdapterOptions = WGPU_REQUEST_ADAPTER_OPTIONS_INIT;
 
-    wgpu::RequestAdapterCallback<RequestAdapterResult *> *requestAdapterCallback =
-        [](wgpu::RequestAdapterStatus status, wgpu::Adapter adapter, wgpu::StringView message,
-           RequestAdapterResult *result) {
-            result->status  = status;
-            result->adapter = adapter;
-            result->message = message;
-        };
-    wgpu::FutureWaitInfo futureWaitInfo;
+    WGPURequestAdapterCallbackInfo requestAdapterCallback = WGPU_REQUEST_ADAPTER_CALLBACK_INFO_INIT;
+    requestAdapterCallback.mode                           = WGPUCallbackMode_WaitAnyOnly;
+    requestAdapterCallback.callback = [](WGPURequestAdapterStatus status, WGPUAdapter adapter,
+                                         struct WGPUStringView message, void *userdata1,
+                                         void *userdata2) {
+        RequestAdapterResult *result = reinterpret_cast<RequestAdapterResult *>(userdata1);
+        ASSERT(userdata2 == nullptr);
+
+        result->status  = status;
+        result->adapter = webgpu::AdapterHandle::Acquire(adapter);
+        result->message = std::string(message.data, message.length);
+    };
+    requestAdapterCallback.userdata1 = &adapterResult;
+
+    WGPUFutureWaitInfo futureWaitInfo;
     futureWaitInfo.future =
-        mInstance.RequestAdapter(&requestAdapterOptions, wgpu::CallbackMode::WaitAnyOnly,
-                                 requestAdapterCallback, &adapterResult);
+        wgpuInstanceRequestAdapter(mInstance.get(), &requestAdapterOptions, requestAdapterCallback);
 
-    wgpu::WaitStatus status = mInstance.WaitAny(1, &futureWaitInfo, -1);
+    WGPUWaitStatus status = wgpuInstanceWaitAny(mInstance.get(), 1, &futureWaitInfo, -1);
     if (webgpu::IsWgpuError(status))
     {
         std::ostringstream err;
@@ -281,18 +293,21 @@ egl::Error DisplayWgpu::createWgpuDevice()
 
     mAdapter = adapterResult.adapter;
 
-    std::vector<wgpu::FeatureName> requiredFeatures;  // empty for now
+    std::vector<WGPUFeatureName> requiredFeatures;  // empty for now
 
-    wgpu::DeviceDescriptor deviceDesc;
+    WGPUDeviceDescriptor deviceDesc = WGPU_DEVICE_DESCRIPTOR_INIT;
     deviceDesc.requiredFeatureCount = requiredFeatures.size();
     deviceDesc.requiredFeatures     = requiredFeatures.data();
-    deviceDesc.SetUncapturedErrorCallback(
-        [](const wgpu::Device &device, wgpu::ErrorType type, wgpu::StringView message) {
-            ERR() << "Error: " << static_cast<std::underlying_type<wgpu::ErrorType>::type>(type)
-                  << " - message: " << std::string(message);
-        });
+    deviceDesc.uncapturedErrorCallbackInfo.callback =
+        [](WGPUDevice const *device, WGPUErrorType type, struct WGPUStringView message,
+           void *userdata1, void *userdata2) {
+            ASSERT(userdata1 == nullptr);
+            ASSERT(userdata2 == nullptr);
+            ERR() << "Error: " << static_cast<std::underlying_type<WGPUErrorType>::type>(type)
+                  << " - message: " << std::string(message.data, message.length);
+        };
 
-    mDevice = mAdapter.CreateDevice(&deviceDesc);
+    mDevice = webgpu::DeviceHandle::Acquire(wgpuAdapterCreateDevice(mAdapter.get(), &deviceDesc));
     return egl::NoError();
 }
 

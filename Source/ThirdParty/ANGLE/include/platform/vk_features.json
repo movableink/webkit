@@ -193,6 +193,14 @@
             ]
         },
         {
+            "name": "prefer_global_pipeline_cache",
+            "category": "Features",
+            "description": [
+                "The renderer's pipeline cache will be used instead of the separate caches per program."
+            ],
+            "issue": "http://anglebug.com/411442610"
+        },
+        {
             "name": "supports_YUV_sampler_conversion",
             "category": "Features",
             "description": [
@@ -1640,6 +1648,14 @@
             "issue": "https://issues.angleproject.org/360274928"
         },
         {
+            "name": "recycle_vkEvent",
+            "category": "Features",
+            "description": [
+                "Keep and recycle VkEvent instead of destroying when the last reference goes away"
+            ],
+            "issue": "https://issues.angleproject.org/409441956"
+        },
+        {
             "name": "supports_synchronization2",
             "category": "Features",
             "description": [
@@ -1872,6 +1888,14 @@
                 "VkDevice supports VK_EXT_texture_compression_astc_hdr extension"
             ],
             "issue": "https://anglebug.com/379186304"
+        },
+        {
+            "name": "supports_astc_hdr_3d_textures",
+            "category": "Features",
+            "description": [
+                "Whether the device supports 3D textures with ASTC HDR compression"
+            ],
+            "issue": "https://anglebug.com/416095435"
         },
         {
             "name": "supports_image_compression_control_swapchain",

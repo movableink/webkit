@@ -176,13 +176,29 @@ TEST_P(EGLDisplayTest, ContextLeakAfterTerminate)
     EXPECT_EQ(eglGetError(), EGL_NOT_INITIALIZED);
 }
 
+// Tests eglGetPlatformDisplayEXT() when EGL_EXT_platform_base is enabled.
+TEST_P(EGLDisplayTest, GetPlatformDisplayEXT)
+{
+    // eglGetPlatformDisplayEXT() requires EGL_EXT_platform_base.
+    ANGLE_SKIP_TEST_IF(!IsEGLClientExtensionEnabled("EGL_EXT_platform_base"));
+
+    ASSERT_TRUE(eglGetPlatformDisplayEXT != nullptr);
+
+    EGLint dispattrs[] = {EGL_PLATFORM_ANGLE_TYPE_ANGLE, GetParam().getRenderer(), EGL_NONE};
+    EGLDisplay display = eglGetPlatformDisplayEXT(
+        EGL_PLATFORM_ANGLE_ANGLE, reinterpret_cast<void *>(EGL_DEFAULT_DISPLAY), dispattrs);
+
+    ASSERT_NE(EGL_NO_DISPLAY, display);
+    ASSERT_EGL_SUCCESS();
+}
+
 // Tests current Context leaking when call eglTerminate() while it is current.
 TEST_P(EGLDisplayTestES3, GetPlatformDisplayAndroidValidation)
 {
     ANGLE_SKIP_TEST_IF(!IsAndroid());
 
     // Get an EGLDisplay on GBM platform, expect EGL_BAD_PARAMETER
-    EGLDisplay display1 = eglGetPlatformDisplayEXT(
+    EGLDisplay display1 = eglGetPlatformDisplay(
         EGL_PLATFORM_GBM_KHR, reinterpret_cast<void *>(EGL_DEFAULT_DISPLAY), nullptr);
     ASSERT_EQ(EGL_NO_DISPLAY, display1);
     ASSERT_EGL_ERROR(EGL_BAD_PARAMETER);

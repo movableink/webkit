@@ -378,7 +378,6 @@
 		7B359D6E2A7CED3C0016DC59 /* UseInterfaceBlockFields.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B359D662A7CED3C0016DC59 /* UseInterfaceBlockFields.h */; };
 		7B359D6F2A7CED3C0016DC59 /* RewriteRepeatedAssignToSwizzled.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B359D672A7CED3C0016DC59 /* RewriteRepeatedAssignToSwizzled.h */; };
 		7B359D9C2A7CEDAA0016DC59 /* ConvertUnsupportedConstructorsToFunctionCalls.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B359D7C2A7CEDA90016DC59 /* ConvertUnsupportedConstructorsToFunctionCalls.h */; };
-		7B359D9D2A7CEDAA0016DC59 /* ReduceInterfaceBlocks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B359D7D2A7CEDA90016DC59 /* ReduceInterfaceBlocks.cpp */; };
 		7B359D9E2A7CEDAA0016DC59 /* FixTypeConstructors.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B359D7E2A7CEDA90016DC59 /* FixTypeConstructors.cpp */; };
 		7B359D9F2A7CEDAA0016DC59 /* RewriteOutArgs.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B359D7F2A7CEDA90016DC59 /* RewriteOutArgs.h */; };
 		7B359DA02A7CEDAA0016DC59 /* RewriteCaseDeclarations.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B359D802A7CEDA90016DC59 /* RewriteCaseDeclarations.cpp */; };
@@ -402,7 +401,6 @@
 		7B359DB62A7CEDAA0016DC59 /* ConvertUnsupportedConstructorsToFunctionCalls.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B359D962A7CEDAA0016DC59 /* ConvertUnsupportedConstructorsToFunctionCalls.cpp */; };
 		7B359DB72A7CEDAA0016DC59 /* GuardFragDepthWrite.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B359D972A7CEDAA0016DC59 /* GuardFragDepthWrite.h */; };
 		7B359DB82A7CEDAA0016DC59 /* RewriteUnaddressableReferences.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B359D982A7CEDAA0016DC59 /* RewriteUnaddressableReferences.h */; };
-		7B359DB92A7CEDAA0016DC59 /* ReduceInterfaceBlocks.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B359D992A7CEDAA0016DC59 /* ReduceInterfaceBlocks.h */; };
 		7B359DBA2A7CEDAA0016DC59 /* AddExplicitTypeCasts.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B359D9A2A7CEDAA0016DC59 /* AddExplicitTypeCasts.h */; };
 		7B359DBB2A7CEDAA0016DC59 /* WrapMain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B359D9B2A7CEDAA0016DC59 /* WrapMain.cpp */; };
 		7B359DBE2A7CEDE10016DC59 /* ClampFragDepth.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B359DBC2A7CEDE10016DC59 /* ClampFragDepth.cpp */; };
@@ -464,6 +462,10 @@
 		7B77FE1B2D31003B0040D6D6 /* RemoveUnusedFramebufferFetch.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B77FE162D31003B0040D6D6 /* RemoveUnusedFramebufferFetch.h */; };
 		7B81955B28CF63D800C7ABCD /* MemoryShaderCache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B81955928CF63D800C7ABCD /* MemoryShaderCache.cpp */; };
 		7B81955C28CF63D800C7ABCD /* MemoryShaderCache.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B81955A28CF63D800C7ABCD /* MemoryShaderCache.h */; };
+		7B9A99BA2DDC685100160B6E /* ReduceInterfaceBlocks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B9A99B92DDC685100160B6E /* ReduceInterfaceBlocks.cpp */; };
+		7B9A99BB2DDC685100160B6E /* ReduceInterfaceBlocks.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B9A99B82DDC685100160B6E /* ReduceInterfaceBlocks.h */; };
+		7B9A99BC2DDC685100160B6E /* ReduceInterfaceBlocks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B9A99B92DDC685100160B6E /* ReduceInterfaceBlocks.cpp */; };
+		7B9A99BD2DDC685100160B6E /* ReduceInterfaceBlocks.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B9A99B82DDC685100160B6E /* ReduceInterfaceBlocks.h */; };
 		7B9BB4482D563C4A00E39E4C /* ObjCPtr.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B9BB4472D563C4A00E39E4C /* ObjCPtr.h */; };
 		7B9BB4492D563C4A00E39E4C /* ObjCPtr.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B9BB4472D563C4A00E39E4C /* ObjCPtr.h */; };
 		7B9BB44B2D563C9300E39E4C /* egl_stubs_getprocaddress_autogen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B9BB44A2D563C9300E39E4C /* egl_stubs_getprocaddress_autogen.cpp */; };
@@ -524,7 +526,6 @@
 		7BF554FF2C81F198002B101E /* ValidateMaxParameters.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C315CFC1CC5B6DA00776697 /* ValidateMaxParameters.cpp */; };
 		7BF555002C81F198002B101E /* Operator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C1DBC0C1B04375F00235552 /* Operator.cpp */; };
 		7BF555012C81F198002B101E /* FunctionLookup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C55D6DA22826C7800B5BA2C /* FunctionLookup.cpp */; };
-		7BF555022C81F198002B101E /* ReduceInterfaceBlocks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B359D7D2A7CEDA90016DC59 /* ReduceInterfaceBlocks.cpp */; };
 		7BF555032C81F198002B101E /* InfoSink.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 31012DC418B97B9B0039062F /* InfoSink.cpp */; };
 		7BF555042C81F198002B101E /* ClampIndirectIndices.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FF194FDE27432CC3006A97A3 /* ClampIndirectIndices.cpp */; };
 		7BF555052C81F198002B101E /* PreTransformTextureCubeGradDerivatives.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7BB2CF212B1A554B00848B36 /* PreTransformTextureCubeGradDerivatives.cpp */; };
@@ -1579,7 +1580,6 @@
 		7B359D792A7CED690016DC59 /* UnfoldShortCircuitAST.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = UnfoldShortCircuitAST.h; sourceTree = "<group>"; };
 		7B359D7A2A7CED690016DC59 /* AddAndTrueToLoopCondition.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AddAndTrueToLoopCondition.h; sourceTree = "<group>"; };
 		7B359D7C2A7CEDA90016DC59 /* ConvertUnsupportedConstructorsToFunctionCalls.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ConvertUnsupportedConstructorsToFunctionCalls.h; sourceTree = "<group>"; };
-		7B359D7D2A7CEDA90016DC59 /* ReduceInterfaceBlocks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReduceInterfaceBlocks.cpp; sourceTree = "<group>"; };
 		7B359D7E2A7CEDA90016DC59 /* FixTypeConstructors.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FixTypeConstructors.cpp; sourceTree = "<group>"; };
 		7B359D7F2A7CEDA90016DC59 /* RewriteOutArgs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RewriteOutArgs.h; sourceTree = "<group>"; };
 		7B359D802A7CEDA90016DC59 /* RewriteCaseDeclarations.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RewriteCaseDeclarations.cpp; sourceTree = "<group>"; };
@@ -1603,7 +1603,6 @@
 		7B359D962A7CEDAA0016DC59 /* ConvertUnsupportedConstructorsToFunctionCalls.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ConvertUnsupportedConstructorsToFunctionCalls.cpp; sourceTree = "<group>"; };
 		7B359D972A7CEDAA0016DC59 /* GuardFragDepthWrite.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GuardFragDepthWrite.h; sourceTree = "<group>"; };
 		7B359D982A7CEDAA0016DC59 /* RewriteUnaddressableReferences.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RewriteUnaddressableReferences.h; sourceTree = "<group>"; };
-		7B359D992A7CEDAA0016DC59 /* ReduceInterfaceBlocks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ReduceInterfaceBlocks.h; sourceTree = "<group>"; };
 		7B359D9A2A7CEDAA0016DC59 /* AddExplicitTypeCasts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AddExplicitTypeCasts.h; sourceTree = "<group>"; };
 		7B359D9B2A7CEDAA0016DC59 /* WrapMain.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WrapMain.cpp; sourceTree = "<group>"; };
 		7B359DBC2A7CEDE10016DC59 /* ClampFragDepth.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ClampFragDepth.cpp; sourceTree = "<group>"; };
@@ -1665,6 +1664,8 @@
 		7B77FE172D31003B0040D6D6 /* RemoveUnusedFramebufferFetch.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RemoveUnusedFramebufferFetch.cpp; sourceTree = "<group>"; };
 		7B81955928CF63D800C7ABCD /* MemoryShaderCache.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MemoryShaderCache.cpp; sourceTree = "<group>"; };
 		7B81955A28CF63D800C7ABCD /* MemoryShaderCache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MemoryShaderCache.h; sourceTree = "<group>"; };
+		7B9A99B82DDC685100160B6E /* ReduceInterfaceBlocks.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ReduceInterfaceBlocks.h; sourceTree = "<group>"; };
+		7B9A99B92DDC685100160B6E /* ReduceInterfaceBlocks.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ReduceInterfaceBlocks.cpp; sourceTree = "<group>"; };
 		7B9BB4472D563C4A00E39E4C /* ObjCPtr.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ObjCPtr.h; sourceTree = "<group>"; };
 		7B9BB44A2D563C9300E39E4C /* egl_stubs_getprocaddress_autogen.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = egl_stubs_getprocaddress_autogen.cpp; sourceTree = "<group>"; };
 		7BA890542CB522400020C411 /* ImmutableString_autogen.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ImmutableString_autogen.cpp; sourceTree = "<group>"; };
@@ -2648,6 +2649,8 @@
 				5C55D64922826B9E00B5BA2C /* PruneNoOps.h */,
 				5C55D64622826B9D00B5BA2C /* RecordConstantPrecision.cpp */,
 				5C55D62022826B9400B5BA2C /* RecordConstantPrecision.h */,
+				7B9A99B92DDC685100160B6E /* ReduceInterfaceBlocks.cpp */,
+				7B9A99B82DDC685100160B6E /* ReduceInterfaceBlocks.h */,
 				5C55D5FA22826B8F00B5BA2C /* RemoveArrayLengthMethod.cpp */,
 				5C55D63E22826B9C00B5BA2C /* RemoveArrayLengthMethod.h */,
 				6ED7BDEE2432CCC300E01503 /* RemoveAtomicCounterBuiltins.cpp */,
@@ -2917,8 +2920,6 @@
 				7B359D912A7CEDAA0016DC59 /* HoistConstants.h */,
 				7B359D8E2A7CEDAA0016DC59 /* IntroduceVertexIndexID.cpp */,
 				7B359D932A7CEDAA0016DC59 /* IntroduceVertexIndexID.h */,
-				7B359D7D2A7CEDA90016DC59 /* ReduceInterfaceBlocks.cpp */,
-				7B359D992A7CEDAA0016DC59 /* ReduceInterfaceBlocks.h */,
 				7B359D802A7CEDA90016DC59 /* RewriteCaseDeclarations.cpp */,
 				7B359D832A7CEDA90016DC59 /* RewriteCaseDeclarations.h */,
 				7B359D902A7CEDAA0016DC59 /* RewriteInterpolants.cpp */,
@@ -3529,7 +3530,7 @@
 				31CD005F249184FC00486F27 /* queryutils.h in Headers */,
 				3A0EBFA62980B545002C72BC /* ranges.h in Headers */,
 				31CDFF9F2491849800486F27 /* RecordConstantPrecision.h in Headers */,
-				7B359DB92A7CEDAA0016DC59 /* ReduceInterfaceBlocks.h in Headers */,
+				7B9A99BB2DDC685100160B6E /* ReduceInterfaceBlocks.h in Headers */,
 				31CD0064249184FC00486F27 /* RefCountObject.h in Headers */,
 				31CDFF8D2491849800486F27 /* RemoveArrayLengthMethod.h in Headers */,
 				31CDFF7E2491849800486F27 /* RemoveAtomicCounterBuiltins.h in Headers */,
@@ -3681,6 +3682,7 @@
 			files = (
 				7BA890652CB5234E0020C411 /* BuiltIn_autogen.h in Headers */,
 				7B9BB4482D563C4A00E39E4C /* ObjCPtr.h in Headers */,
+				7B9A99BD2DDC685100160B6E /* ReduceInterfaceBlocks.h in Headers */,
 				7B62E9DF2DA91F0900793212 /* ScalarizeVecAndMatConstructorArgs.h in Headers */,
 				7BFD81842D50CF7C0010ED68 /* span.h in Headers */,
 			);
@@ -4171,7 +4173,7 @@
 				DF83E3862639FEB8000825EF /* QueryMtl.mm in Sources */,
 				DF83E3192639FE17000825EF /* queryutils.cpp in Sources */,
 				DF83E27A2639FD33000825EF /* RecordConstantPrecision.cpp in Sources */,
-				7B359D9D2A7CEDAA0016DC59 /* ReduceInterfaceBlocks.cpp in Sources */,
+				7B9A99BA2DDC685100160B6E /* ReduceInterfaceBlocks.cpp in Sources */,
 				DF83E26F2639FD33000825EF /* RemoveArrayLengthMethod.cpp in Sources */,
 				DF83E2622639FD33000825EF /* RemoveAtomicCounterBuiltins.cpp in Sources */,
 				DF83E27B2639FD33000825EF /* RemoveDynamicIndexing.cpp in Sources */,
@@ -4406,7 +4408,7 @@
 				7BF554EE2C81F198002B101E /* PruneNoOps.cpp in Sources */,
 				7BF555252C81F198002B101E /* QualifierTypes.cpp in Sources */,
 				7BF555202C81F198002B101E /* RecordConstantPrecision.cpp in Sources */,
-				7BF555022C81F198002B101E /* ReduceInterfaceBlocks.cpp in Sources */,
+				7B9A99BC2DDC685100160B6E /* ReduceInterfaceBlocks.cpp in Sources */,
 				7BF554F22C81F198002B101E /* RemoveArrayLengthMethod.cpp in Sources */,
 				7BF555862C81F198002B101E /* RemoveAtomicCounterBuiltins.cpp in Sources */,
 				7BF555472C81F198002B101E /* RemoveDynamicIndexing.cpp in Sources */,

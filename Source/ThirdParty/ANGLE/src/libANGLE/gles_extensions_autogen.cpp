@@ -22,7 +22,7 @@ const ExtensionInfoMap &GetExtensionInfoMap()
             return info;
         };
 
-        auto enableableDisablableExtension = [&](ExtensionBool member) {
+        [[maybe_unused]] auto enableableDisablableExtension = [&](ExtensionBool member) {
             ExtensionInfo info = enableableExtension(member);
             info.Disablable    = true;
             return info;
@@ -84,6 +84,7 @@ const ExtensionInfoMap &GetExtensionInfoMap()
         map["GL_OES_draw_buffers_indexed"] = enableableExtension(&Extensions::drawBuffersIndexedOES);
         map["GL_EXT_draw_elements_base_vertex"] = enableableExtension(&Extensions::drawElementsBaseVertexEXT);
         map["GL_OES_draw_elements_base_vertex"] = enableableExtension(&Extensions::drawElementsBaseVertexOES);
+        map["GL_EXT_draw_instanced"] = enableableExtension(&Extensions::drawInstancedEXT);
         map["GL_OES_EGL_image"] = enableableExtension(&Extensions::EGLImageOES);
         map["GL_EXT_EGL_image_array"] = enableableExtension(&Extensions::EGLImageArrayEXT);
         map["GL_OES_EGL_image_external"] = enableableExtension(&Extensions::EGLImageExternalOES);
@@ -115,6 +116,7 @@ const ExtensionInfoMap &GetExtensionInfoMap()
         map["GL_EXT_map_buffer_range"] = enableableExtension(&Extensions::mapBufferRangeEXT);
         map["GL_EXT_memory_object"] = enableableExtension(&Extensions::memoryObjectEXT);
         map["GL_EXT_memory_object_fd"] = enableableExtension(&Extensions::memoryObjectFdEXT);
+        map["GL_EXT_multi_draw_arrays"] = enableableExtension(&Extensions::multiDrawArraysEXT);
         map["GL_EXT_multi_draw_indirect"] = enableableExtension(&Extensions::multiDrawIndirectEXT);
         map["GL_EXT_multisample_compatibility"] = esOnlyExtension(&Extensions::multisampleCompatibilityEXT);
         map["GL_EXT_multisampled_render_to_texture"] = enableableExtension(&Extensions::multisampledRenderToTextureEXT);
@@ -131,8 +133,8 @@ const ExtensionInfoMap &GetExtensionInfoMap()
         map["GL_NV_pixel_buffer_object"] = enableableExtension(&Extensions::pixelBufferObjectNV);
         map["GL_NV_polygon_mode"] = enableableExtension(&Extensions::polygonModeNV);
         map["GL_EXT_polygon_offset_clamp"] = enableableExtension(&Extensions::polygonOffsetClampEXT);
-        map["GL_EXT_primitive_bounding_box"] = esOnlyExtension(&Extensions::primitiveBoundingBoxEXT);
-        map["GL_OES_primitive_bounding_box"] = esOnlyExtension(&Extensions::primitiveBoundingBoxOES);
+        map["GL_EXT_primitive_bounding_box"] = enableableExtension(&Extensions::primitiveBoundingBoxEXT);
+        map["GL_OES_primitive_bounding_box"] = enableableExtension(&Extensions::primitiveBoundingBoxOES);
         map["GL_EXT_protected_textures"] = enableableExtension(&Extensions::protectedTexturesEXT);
         map["GL_EXT_pvrtc_sRGB"] = enableableExtension(&Extensions::pvrtcSRGBEXT);
         map["GL_NV_read_depth"] = enableableExtension(&Extensions::readDepthNV);
@@ -278,7 +280,6 @@ const ExtensionInfoMap &GetExtensionInfoMap()
         map["GL_ANGLE_texture_compression_dxt5"] = enableableExtension(&Extensions::textureCompressionDxt5ANGLE);
         map["GL_ANGLE_texture_external_update"] = enableableExtension(&Extensions::textureExternalUpdateANGLE);
         map["GL_ANGLE_texture_multisample"] = enableableExtension(&Extensions::textureMultisampleANGLE);
-        map["GL_ANGLE_texture_rectangle"] = enableableDisablableExtension(&Extensions::textureRectangleANGLE);
         map["GL_ANGLE_variable_rasterization_rate_metal"] = enableableExtension(&Extensions::variableRasterizationRateMetalANGLE);
         map["GL_ANGLE_vulkan_image"] = enableableExtension(&Extensions::vulkanImageANGLE);
         map["GL_ANGLE_webgl_compatibility"] = esOnlyExtension(&Extensions::webglCompatibilityANGLE);

@@ -634,7 +634,7 @@ if(angle_enable_cl)
     )
 endif()
 
-set(libglesv2_sources
+set(libglesv2_entry_point_sources
     "src/libGLESv2/egl_context_lock_autogen.h"
     "src/libGLESv2/egl_context_lock_impl.h"
     "src/libGLESv2/egl_ext_stubs.cpp"
@@ -660,9 +660,10 @@ set(libglesv2_sources
     "src/libGLESv2/entry_points_gles_ext_autogen.h"
     "src/libGLESv2/global_state.cpp"
     "src/libGLESv2/global_state.h"
-    "src/libGLESv2/libGLESv2_autogen.cpp"
     "src/libGLESv2/resource.h"
 )
+
+set(libglesv2_sources "src/libGLESv2/libGLESv2_autogen.cpp")
 
 set(libglesv2_cl_sources
     "src/libGLESv2/cl_dispatch_table.cpp"

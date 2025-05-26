@@ -1667,10 +1667,25 @@ def get_validation_expression(api, cmd_name, entry_point_name, internal_params, 
     expr = "Validate{name}({params})".format(
         name=name, params=", ".join(extra_params + [entry_point_name] + internal_params))
 
-    # Validation expression for ES 2.0 and extension entry points
-    if "2_0" in sources or sources[0].startswith("GL_"):
+    # Extensions temporarily skipped from autogen
+    skipped_exts = [
+        'GL_ANGLE_base_vertex_base_instance',
+        'GL_CHROMIUM_sync_query',
+        'GL_EXT_disjoint_timer_query',
+        'GL_EXT_occlusion_query_boolean',
+        'GL_OES_EGL_image',
+        'GL_OES_EGL_image_external',
+    ]
+
+    # Validation expression for always present entry points
+    if sorted(sources) == ["1_0", "2_0"] or sources[0] in skipped_exts:
         return "bool isCallValid = (context->skipValidation() || {validation_expression});".format(
             validation_expression=expr)
+
+    def get_camel_case(name_with_underscores):
+        words = name_with_underscores.split('_')
+        words = [words[2]] + [(word[0].upper() + word[1:]) for word in words[3:]] + [words[1]]
+        return ''.join(words)
 
     condition = ""
     error_suffix = sources[0].replace("_", "")
@@ -1680,17 +1695,21 @@ def get_validation_expression(api, cmd_name, entry_point_name, internal_params, 
         error_suffix = "1Or32"
     elif sources == ["1_0"]:
         condition = "context->getClientVersion() < ES_2_0"
-    else:
-        assert len(sources) == 1 and sources[0] in ["2_0", "3_0", "3_1", "3_2"]
+    elif len(sources) == 1 and sources[0] in ["2_0", "3_0", "3_1", "3_2"]:
         condition = "context->getClientVersion() >= ES_{}".format(sources[0])
+    else:
+        assert (sources[0].startswith("GL_"))
+        exts = map(lambda x: "context->getExtensions().{}".format(get_camel_case(x)), sources)
+        condition = " || ".join(list(exts))
+        error_suffix = "EXT"
 
     record_error = "RecordVersionErrorES{}(context, {});".format(error_suffix, entry_point_name)
 
-    # Validation logic with version check generated for ES 1.0 and ES 3.x entry points
+    # Validation logic for entry points with conditional support
     return """bool isCallValid = context->skipValidation();
 if (!isCallValid)
 {{
-    if (ANGLE_LIKELY({version_condition}))
+    if (ANGLE_LIKELY({support_condition}))
     {{
         isCallValid = {validation_expression};
     }}
@@ -1699,7 +1718,7 @@ if (!isCallValid)
         {record_error}
     }}
 }}""".format(
-        version_condition=condition, validation_expression=expr, record_error=record_error)
+        support_condition=condition, validation_expression=expr, record_error=record_error)
 
 
 def entry_point_export(api):
@@ -2531,6 +2550,8 @@ def get_decls(api,
         # directly access the context-private state.
         if is_context_private_state_command(api, cmd_name):
             continue
+
+        already_included.append(name_no_suffix)
 
         param_text = ["".join(param.itertext()) for param in command.findall('param')]
         proto_text = "".join(proto.itertext())
@@ -3674,7 +3695,6 @@ def main():
 
     for name in extension_commands:
         all_commands_with_suffix.append(name)
-        all_commands_no_suffix.append(strip_suffix(apis.GLES, name))
 
     # OpenCL
     clxml = registry_xml.RegistryXML('cl.xml')
