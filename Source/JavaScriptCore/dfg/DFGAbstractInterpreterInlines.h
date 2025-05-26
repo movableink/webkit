@@ -2181,7 +2181,8 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         if (isClobbering)
             didFoldClobberWorld();
         
-        JSValue leftConst = forNode(node->child1()).value();
+        AbstractValue& abstractLeftValue = forNode(node->child1());
+        JSValue leftConst = abstractLeftValue.value();
         JSValue rightConst = forNode(node->child2()).value();
         if (leftConst && rightConst) {
             if (leftConst.isNumber() && rightConst.isNumber()) {
@@ -2316,6 +2317,14 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                     if (didFold)
                         break;
                 }
+            }
+        }
+
+        if (abstractLeftValue.isType(SpecFullNumber) && rightConst && rightConst.isNumber()) {
+            double rightValue = rightConst.asNumber();
+            if (std::isnan(rightValue)) {
+                setConstant(node, jsBoolean(false));
+                break;
             }
         }
 
@@ -2481,6 +2490,14 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                     if (didFold)
                         break;
                 }
+            }
+        }
+
+        if (node->op() == CompareStrictEq && right && right.isNumber()) {
+            double rightValue = right.asNumber();
+            if (std::isnan(rightValue)) {
+                setConstant(node, jsBoolean(false));
+                break;
             }
         }
 
