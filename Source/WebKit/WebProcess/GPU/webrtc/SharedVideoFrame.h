@@ -30,6 +30,7 @@
 #include "IPCSemaphore.h"
 #include "RemoteVideoFrameIdentifier.h"
 #include <WebCore/IntSize.h>
+#include <WebCore/PixelBufferConformerCV.h>
 #include <WebCore/ProcessIdentity.h>
 #include <WebCore/SharedMemory.h>
 #include <wtf/MediaTime.h>
@@ -93,6 +94,7 @@ private:
 
     UniqueRef<IPC::Semaphore> m_semaphore;
     RefPtr<WebCore::SharedMemory> m_storage;
+    std::unique_ptr<WebCore::PixelBufferConformerCV> m_compressedPixelBufferConformer;
     bool m_isSemaphoreInUse { false };
     bool m_isDisabled { false };
     bool m_shouldSignalInCaseOfError { false };

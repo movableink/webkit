@@ -167,7 +167,7 @@ void RemoteVideoFrameObjectHeap::convertFrameBuffer(SharedVideoFrame&& sharedVid
     if (CVPixelBufferGetPixelFormatType(buffer.get()) != kCVPixelFormatType_32BGRA) {
         Locker locker { m_pixelBufferConformerLock };
         if (!m_pixelBufferConformer)
-            m_pixelBufferConformer = createPixelConformer().moveToUniquePtr();
+            m_pixelBufferConformer = makeUnique<WebCore::PixelBufferConformerCV>(kCVPixelFormatType_32BGRA);
 
         auto convertedBuffer = m_pixelBufferConformer->convert(buffer.get());
         if (!convertedBuffer) {
@@ -194,6 +194,11 @@ void RemoteVideoFrameObjectHeap::setSharedVideoFrameSemaphore(IPC::Semaphore&& s
 void RemoteVideoFrameObjectHeap::setSharedVideoFrameMemory(SharedMemory::Handle&& handle)
 {
     m_sharedVideoFrameReader.setSharedMemory(WTFMove(handle));
+}
+
+RefPtr<WebCore::VideoFrame> RemoteVideoFrameObjectHeap::get(RemoteVideoFrameReadReference&& read)
+{
+    return m_heap.read(WTFMove(read), 0_s);
 }
 
 #endif

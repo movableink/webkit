@@ -5327,7 +5327,6 @@
 		410482CB1DDD2FB500F006D0 /* RTCNetwork.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RTCNetwork.cpp; sourceTree = "<group>"; };
 		410482CC1DDD2FB500F006D0 /* RTCNetwork.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RTCNetwork.h; sourceTree = "<group>"; };
 		4105A0652D537C2B00EA2D19 /* FileSystemStorageManagerLock.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FileSystemStorageManagerLock.h; sourceTree = "<group>"; };
-		410AD2E12823BD9F009C93C8 /* RemoteVideoFrameObjectHeap.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = RemoteVideoFrameObjectHeap.mm; sourceTree = "<group>"; };
 		410BA139257135F2002E2F8A /* NetworkRTCTCPSocketCocoa.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = NetworkRTCTCPSocketCocoa.mm; sourceTree = "<group>"; };
 		410BA13A257135F2002E2F8A /* NetworkRTCTCPSocketCocoa.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetworkRTCTCPSocketCocoa.h; sourceTree = "<group>"; };
 		4111436320F677B10026F912 /* InjectUserScriptImmediately.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InjectUserScriptImmediately.h; sourceTree = "<group>"; };
@@ -7998,7 +7997,7 @@
 		CD8252DA25D4915400862FD8 /* RemoteRemoteCommandListenerProxyMessageReceiver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RemoteRemoteCommandListenerProxyMessageReceiver.cpp; sourceTree = "<group>"; };
 		CD8252E025D4918400862FD8 /* RemoteRemoteCommandListenerMessageReceiver.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RemoteRemoteCommandListenerMessageReceiver.cpp; sourceTree = "<group>"; };
 		CD8252E125D4918500862FD8 /* RemoteRemoteCommandListenerMessages.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RemoteRemoteCommandListenerMessages.h; sourceTree = "<group>"; };
-		CD95493526159004008372D9 /* libWebKitSwift.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libWebKitSwift.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		CD95493526159004008372D9 /* .dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = .dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		CD9A649F27C8972C003827C0 /* UIProcessLogInitialization.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = UIProcessLogInitialization.h; sourceTree = "<group>"; };
 		CD9A64A027C8972C003827C0 /* UIProcessLogInitialization.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UIProcessLogInitialization.cpp; sourceTree = "<group>"; };
 		CD9A64A127C89742003827C0 /* UIProcessLogInitializationCocoa.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = UIProcessLogInitializationCocoa.mm; sourceTree = "<group>"; };
@@ -8877,7 +8876,7 @@
 				BC3DE46615A91763008D26FC /* com.apple.WebKit.WebContent.xpc */,
 				5CE4B62029CF877F0038F565 /* GPUExtension.appex */,
 				7B9FC59D28A28F88007570E7 /* libWebKitPlatform.a */,
-				CD95493526159004008372D9 /* libWebKitSwift.dylib */,
+				CD95493526159004008372D9 /* .dylib */,
 				5CE4B61329CF87680038F565 /* NetworkingExtension.appex */,
 				5C139DAC29DB82E500D5117B /* WebContentCaptivePortalExtension.appex */,
 				5CA5A2CA29CBBA1B000F1046 /* WebContentExtension.appex */,
@@ -9201,7 +9200,6 @@
 				7B5A3DA827A7DCBC006C6F97 /* RemoteVideoFrameObjectHeap.cpp */,
 				7B5A3DA727A7DCBC006C6F97 /* RemoteVideoFrameObjectHeap.h */,
 				413C542227C90F4C002FCDA8 /* RemoteVideoFrameObjectHeap.messages.in */,
-				410AD2E12823BD9F009C93C8 /* RemoteVideoFrameObjectHeap.mm */,
 				071BC58423CC2C0900680D7C /* RemoteVideoTrackProxy.cpp */,
 				071BC58523CC2C0900680D7C /* RemoteVideoTrackProxy.h */,
 				07E19F0523D4DC880094FFB4 /* TextTrackPrivateRemoteConfiguration.h */,
@@ -19003,7 +19001,7 @@
 			);
 			name = WebKitSwift;
 			productName = WebKitSwift;
-			productReference = CD95493526159004008372D9 /* libWebKitSwift.dylib */;
+			productReference = CD95493526159004008372D9 /* .dylib */;
 			productType = "com.apple.product-type.library.dynamic";
 		};
 /* End PBXNativeTarget section */
