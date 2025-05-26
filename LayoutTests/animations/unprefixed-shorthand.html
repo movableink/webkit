@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<script src="../resources/js-test-pre.js"></script>
+<script src="../resources/js-test.js"></script>
 </head>
 <body>
 <p id="description"></p>
@@ -22,33 +22,15 @@ function testAnimationShorthand(value, expectedName, expectedDuration, expectedD
     debug("Setting animation: " + value);
     stylesheet.insertRule("body { animation: " + value + "; }", 0);
 
-    debug("Check animation-name");
-    animationStyle = window.getComputedStyle(document.body).getPropertyCSSValue("animation-name");
-    shouldBe("animationStyle.cssText", "'" + expectedName + "'");
+    animationStyle = getComputedStyle(document.body)
 
-    debug("Check animation-duration");
-    animationStyle = window.getComputedStyle(document.body).getPropertyCSSValue("animation-duration");
-    shouldBe("animationStyle.cssText", "'" + expectedDuration + "'");
-
-    debug("Check animation-delay");
-    animationStyle = window.getComputedStyle(document.body).getPropertyCSSValue("animation-delay");
-    shouldBe("animationStyle.cssText", "'" + expectedDelay + "'");
-
-    debug("Check animation-timing-function");
-    animationStyle = window.getComputedStyle(document.body).getPropertyCSSValue("animation-timing-function");
-    shouldBe("animationStyle.cssText", "'" + expectedTimingFunction + "'");
-
-    debug("Check animation-iteration-count");
-    animationStyle = window.getComputedStyle(document.body).getPropertyCSSValue("animation-iteration-count");
-    shouldBe("animationStyle.cssText", "'" + expectedIterationCount + "'");
-
-    debug("Check animation-direction");
-    animationStyle = window.getComputedStyle(document.body).getPropertyCSSValue("animation-direction");
-    shouldBe("animationStyle.cssText", "'" + expectedDirection + "'");
-
-    debug("Check animation-fill-mode");
-    animationStyle = window.getComputedStyle(document.body).getPropertyCSSValue("animation-fill-mode");
-    shouldBe("animationStyle.cssText", "'" + expectedFillMode + "'");
+    shouldBeEqualToString("animationStyle.getPropertyValue('animation-name')", expectedName)
+    shouldBeEqualToString("animationStyle.getPropertyValue('animation-duration')", expectedDuration)
+    shouldBeEqualToString("animationStyle.getPropertyValue('animation-delay')", expectedDelay)
+    shouldBeEqualToString("animationStyle.getPropertyValue('animation-timing-function')", expectedTimingFunction)
+    shouldBeEqualToString("animationStyle.getPropertyValue('animation-iteration-count')", expectedIterationCount)
+    shouldBeEqualToString("animationStyle.getPropertyValue('animation-direction')", expectedDirection)
+    shouldBeEqualToString("animationStyle.getPropertyValue('animation-fill-mode')", expectedFillMode)
 
     stylesheet.deleteRule(0);
 }
@@ -128,6 +110,5 @@ testAnimationShorthand("completely invalid",
 successfullyParsed = true;
 
 </script>
-<script src="../resources/js-test-post.js"></script>
 </body>
 </html>

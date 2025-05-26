@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<script src="../resources/js-test-pre.js"></script>
+<script src="../resources/js-test.js"></script>
 <p id="description"></p>
 <div id="console"></div>
 <script>
@@ -24,9 +24,9 @@ function testComputedSpring(description, spring, expectedValue)
 
     stylesheet.insertRule("#target { transition-timing-function: " + spring + "; }", 0);
 
-    springStyle = window.getComputedStyle(div).getPropertyCSSValue("transition-timing-function");
-    shouldBe("springStyle.cssText", "'" + expectedValue + "'");
-    
+    springStyle = getComputedStyle(div).getPropertyValue("transition-timing-function");
+    shouldBeEqualToString("springStyle", expectedValue);
+
     stylesheet.deleteRule(0);
 }
 
@@ -57,4 +57,3 @@ testComputedSpring("Illegal Damping (< 0)", "spring(1 100 -1 0)", "ease");
 
 successfullyParsed = true;
 </script>
-<script src="../resources/js-test-post.js"></script>
