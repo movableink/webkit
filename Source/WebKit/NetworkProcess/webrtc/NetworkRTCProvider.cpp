@@ -284,22 +284,19 @@ void NetworkRTCProvider::getInterfaceName(URL&& url, WebPageProxyIdentifier page
         return;
     }
 
-    NetworkRTCTCPSocketCocoa::getInterfaceName(*this, url, attributedBundleIdentifierFromPageIdentifier(pageIdentifier), isFirstParty, isRelayDisabled, domain, WTFMove(completionHandler));
+    NetworkRTCTCPSocketCocoa::getInterfaceName(*this, url, attributedBundleIdentifierFromPageIdentifier(pageIdentifier), isFirstParty, isRelayDisabled, domain)->whenSettled(m_rtcNetworkThreadQueue, [completionHandler = WTFMove(completionHandler)](auto&& result) mutable {
+        completionHandler(result ? WTFMove(result.value()) : String { });
+    });
 }
 
 void NetworkRTCProvider::callOnRTCNetworkThread(Function<void()>&& callback)
 {
-    protectedRTCNetworkThreadQueue()->dispatch(WTFMove(callback));
+    m_rtcNetworkThreadQueue->dispatch(WTFMove(callback));
 }
 
 void NetworkRTCProvider::assertIsRTCNetworkThread()
 {
-    ASSERT(protectedRTCNetworkThreadQueue()->isCurrent());
-}
-
-Ref<WorkQueue> NetworkRTCProvider::protectedRTCNetworkThreadQueue()
-{
-    return m_rtcNetworkThreadQueue;
+    assertIsCurrent(m_rtcNetworkThreadQueue);
 }
 
 #else // PLATFORM(COCOA)

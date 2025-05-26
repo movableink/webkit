@@ -223,7 +223,7 @@ void NetworkRTCTCPSocketCocoa::sendTo(std::span<const uint8_t> data, const rtc::
     }).get());
 }
 
-void NetworkRTCTCPSocketCocoa::getInterfaceName(NetworkRTCProvider& rtcProvider, const URL& url, const String& attributedBundleIdentifier, bool isFirstParty, bool isRelayDisabled, const WebCore::RegistrableDomain& domain, CompletionHandler<void(String&&)>&& completionHandler)
+auto NetworkRTCTCPSocketCocoa::getInterfaceName(NetworkRTCProvider& rtcProvider, const URL& url, const String& attributedBundleIdentifier, bool isFirstParty, bool isRelayDisabled, const WebCore::RegistrableDomain& domain) -> Ref<NamePromise>
 {
     ASSERT(!isMainRunLoop());
 
@@ -231,16 +231,11 @@ void NetworkRTCTCPSocketCocoa::getInterfaceName(NetworkRTCProvider& rtcProvider,
     auto port = url.port().value_or(isHTTPS ? 443 : 80);
     auto nwConnection = createNWConnection(rtcProvider, url.host().toString().utf8().data(), String::number(port).utf8().data(), isHTTPS, attributedBundleIdentifier, isFirstParty, isRelayDisabled, domain);
 
-    Function<void(String&&)> callback = [completionHandler = WTFMove(completionHandler), rtcProvider = Ref { rtcProvider }] (auto&& name) mutable {
-        rtcProvider->callOnRTCNetworkThread([completionHandler = WTFMove(completionHandler), name = WTFMove(name).isolatedCopy()] () mutable {
-            ASSERT(completionHandler);
-            if (completionHandler)
-                completionHandler(WTFMove(name));
-        });
-    };
+    NamePromise::AutoRejectProducer promiseProducer;
+    Ref promise = promiseProducer.promise();
 
     nw_connection_set_queue(nwConnection.get(), tcpSocketQueue());
-    nw_connection_set_state_changed_handler(nwConnection.get(), makeBlockPtr([callback = WTFMove(callback), nwConnection](nw_connection_state_t state, _Nullable nw_error_t error) mutable {
+    nw_connection_set_state_changed_handler(nwConnection.get(), makeBlockPtr([promiseProducer = WTFMove(promiseProducer), nwConnection](nw_connection_state_t state, _Nullable nw_error_t error) mutable {
         auto checkInterface = [&] {
             if (!nwConnection)
                 return;
@@ -249,7 +244,7 @@ void NetworkRTCTCPSocketCocoa::getInterfaceName(NetworkRTCProvider& rtcProvider,
             auto interface = adoptNS(nw_path_copy_interface(path.get()));
 
             auto* name = nw_interface_get_name(interface.get());
-            callback(name ? String::fromUTF8(name) : String { });
+            promiseProducer.resolve(name ? String::fromUTF8(name) : String { });
             nw_connection_cancel(std::exchange(nwConnection, { }).get());
         };
 
@@ -264,20 +259,21 @@ void NetworkRTCTCPSocketCocoa::getInterfaceName(NetworkRTCProvider& rtcProvider,
             if (!nwConnection)
                 return;
 
-            callback({ });
+            promiseProducer.reject();
             nw_connection_cancel(std::exchange(nwConnection, { }).get());
             return;
         case nw_connection_state_cancelled:
             if (!nwConnection)
                 return;
 
-            callback({ });
+            promiseProducer.reject();
             nwConnection = { };
             return;
         }
     }).get());
 
     nw_connection_start(nwConnection.get());
+    return promise;
 }
 
 } // namespace WebKit
