@@ -94,6 +94,9 @@ static bool isValidColumnSpanner(const RenderMultiColumnFlow& fragmentedFlow, co
     if (descendantBox->style().columnSpan() != ColumnSpan::All)
         return false;
 
+    if (descendantBox->isLegend())
+        return false;
+
     auto* parent = descendantBox->parent();
     if (!is<RenderBlockFlow>(*parent) || parent->childrenInline()) {
         // Needs to be block-level.
