@@ -118,6 +118,13 @@ void RemoteRealtimeMediaSource::applyConstraintsSucceeded(WebCore::RealtimeMedia
     m_proxy.applyConstraintsSucceeded();
 }
 
+void RemoteRealtimeMediaSource::stopProducingData()
+{
+    if (isAudio())
+        m_manager->remoteCaptureSampleManager().audioSourceWillBeStopped(identifier());
+    m_proxy.stopProducingData();
+}
+
 void RemoteRealtimeMediaSource::didEnd()
 {
     if (m_proxy.isEnded())

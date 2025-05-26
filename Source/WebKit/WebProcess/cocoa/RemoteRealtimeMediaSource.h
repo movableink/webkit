@@ -83,10 +83,10 @@ protected:
 private:
     // RealtimeMediaSource
     void startProducingData() final { m_proxy.startProducingData(*pageIdentifier()); }
-    void stopProducingData() final { m_proxy.stopProducingData(); }
     void endProducingData() final { m_proxy.endProducingData(); }
     bool isCaptureSource() const final { return true; }
     void applyConstraints(const WebCore::MediaConstraints&, ApplyConstraintsHandler&&) final;
+    void stopProducingData() final;
     void didEnd() final;
     void whenReady(CompletionHandler<void(WebCore::CaptureSourceError&&)>&& callback) final { m_proxy.whenReady(WTFMove(callback)); }
     WebCore::CaptureDevice::DeviceType deviceType() const final { return m_proxy.deviceType(); }

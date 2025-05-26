@@ -69,6 +69,7 @@ public:
     void addSource(Ref<RemoteRealtimeAudioSource>&&);
     void addSource(Ref<RemoteRealtimeVideoSource>&&);
     void removeSource(WebCore::RealtimeMediaSourceIdentifier);
+    void audioSourceWillBeStopped(WebCore::RealtimeMediaSourceIdentifier);
 
     void didUpdateSourceConnection(IPC::Connection&);
     void setVideoFrameObjectHeapProxy(RefPtr<RemoteVideoFrameObjectHeapProxy>&&);
@@ -93,6 +94,7 @@ private:
         ~RemoteAudio();
 
         void setStorage(ConsumerSharedCARingBuffer::Handle&&, const WebCore::CAAudioStreamDescription&, IPC::Semaphore&&, const MediaTime&, size_t frameChunkSize);
+        void willBeStopped() { stopThread(); }
 
     private:
         void stopThread();

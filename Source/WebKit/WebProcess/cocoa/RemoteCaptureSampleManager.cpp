@@ -132,6 +132,17 @@ void RemoteCaptureSampleManager::removeSource(WebCore::RealtimeMediaSourceIdenti
     });
 }
 
+void RemoteCaptureSampleManager::audioSourceWillBeStopped(WebCore::RealtimeMediaSourceIdentifier identifier)
+{
+    ASSERT(WTF::isMainRunLoop());
+    m_queue->dispatch([this, protectedThis = Ref { *this }, identifier] {
+        auto iterator = m_audioSources.find(identifier);
+        if (iterator == m_audioSources.end())
+            return;
+        iterator->value->willBeStopped();
+    });
+}
+
 void RemoteCaptureSampleManager::didUpdateSourceConnection(IPC::Connection& connection)
 {
     ASSERT(WTF::isMainRunLoop());
