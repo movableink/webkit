@@ -283,11 +283,9 @@ static LayoutSize scrollOffsetFromAncestorContainer(const RenderElement& descend
     ASSERT(descendant.isDescendantOf(&ancestorContainer));
 
     auto offset = LayoutSize { };
-    for (auto* ancestor = descendant.container(); ancestor; ancestor = ancestor->container()) {
+    for (auto* ancestor = descendant.container(); ancestor && ancestor != &ancestorContainer; ancestor = ancestor->container()) {
         if (auto* box = dynamicDowncast<RenderBox>(ancestor))
             offset -= toLayoutSize(box->scrollPosition());
-        if (ancestor == &ancestorContainer)
-            break;
     }
     return offset;
 }
