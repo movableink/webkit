@@ -1,12 +1,12 @@
 
 PASS SecurityPolicyViolationEvent constructor should throw with no parameters
 PASS SecurityPolicyViolationEvent constructor works with an init dict
-FAIL SecurityPolicyViolationEvent constructor does not require documentURI Member SecurityPolicyViolationEventInit.documentURI is required and must be an instance of USVString
-FAIL SecurityPolicyViolationEvent constructor does not require violatedDirective Member SecurityPolicyViolationEventInit.violatedDirective is required and must be an instance of DOMString
-FAIL SecurityPolicyViolationEvent constructor does not require effectiveDirective Member SecurityPolicyViolationEventInit.effectiveDirective is required and must be an instance of DOMString
-FAIL SecurityPolicyViolationEvent constructor does not require originalPolicy Member SecurityPolicyViolationEventInit.originalPolicy is required and must be an instance of DOMString
-FAIL SecurityPolicyViolationEvent constructor does not require disposition Member SecurityPolicyViolationEventInit.disposition is required and must be an instance of SecurityPolicyViolationEventDisposition
-FAIL SecurityPolicyViolationEvent constructor does not require statusCode Member SecurityPolicyViolationEventInit.statusCode is required and must be an instance of unsigned short
+PASS SecurityPolicyViolationEvent constructor does not require documentURI
+PASS SecurityPolicyViolationEvent constructor does not require violatedDirective
+PASS SecurityPolicyViolationEvent constructor does not require effectiveDirective
+PASS SecurityPolicyViolationEvent constructor does not require originalPolicy
+PASS SecurityPolicyViolationEvent constructor does not require disposition
+PASS SecurityPolicyViolationEvent constructor does not require statusCode
 PASS SecurityPolicyViolationEvent constructor does not require referrer
 PASS SecurityPolicyViolationEvent constructor does not require blockedURI
 PASS SecurityPolicyViolationEvent constructor does not require sourceFile
