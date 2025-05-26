@@ -27,6 +27,8 @@
         testRunner.dumpAsText(true);
         testRunner.waitUntilDone();
     }
+    if (window.internals)
+        internals.disableTileSizeUpdateDelay();
     
     async function doTest()
     {
