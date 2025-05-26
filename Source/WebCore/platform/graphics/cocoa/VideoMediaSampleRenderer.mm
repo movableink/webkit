@@ -72,6 +72,8 @@ namespace WebCore {
 
 static constexpr CMItemCount SampleQueueHighWaterMark = 30;
 static constexpr CMItemCount SampleQueueLowWaterMark = 15;
+// The AVSampleBufferVideoRenderer requires a minimum of 3 frames in its queue to enable reduce polling
+static constexpr size_t MinimumDecodedFramesThreshold = 3;
 
 static bool isRendererThreadSafe(WebSampleBufferVideoRendering *renderering)
 {
@@ -457,9 +459,19 @@ void VideoMediaSampleRenderer::decodeNextSampleIfNeeded()
     if (auto currentTime = this->currentTime(); currentTime.isValid() && !m_wasProtected) {
         auto aheadTime = currentTime + s_decodeAhead;
         auto endTime = lastDecodedSampleTime();
-        if (endTime.isValid() && endTime > aheadTime && decodedSamplesCount() >= 3) {
-            if (std::get<MediaTime>(m_compressedSampleQueue.first()) >= endTime)
+        if (endTime.isValid() && endTime > aheadTime && decodedSamplesCount() >= MinimumDecodedFramesThreshold) {
+            auto [sample, upcomingMinimum, flushId] = m_compressedSampleQueue.first();
+            upcomingMinimum = std::min(sample->presentationTime(), upcomingMinimum.isValid() ? upcomingMinimum : MediaTime::positiveInfiniteTime());
+
+            if (endTime < upcomingMinimum) {
+                if (m_lastMinimumUpcomingPresentationTime.isInvalid() || upcomingMinimum != m_lastMinimumUpcomingPresentationTime) {
+                    ASSERT(m_lastMinimumUpcomingPresentationTime.isInvalid() || m_lastMinimumUpcomingPresentationTime < upcomingMinimum);
+                    m_lastMinimumUpcomingPresentationTime = upcomingMinimum;
+                    RELEASE_LOG_DEBUG(MediaPerformance, "VideoMediaSampleRenderer::decodeNextSampleIfNeeded expectMinimumUpcomingSampleBufferPresentationTime:%0.2f decoded queued:%zu upcoming:%zu", m_lastMinimumUpcomingPresentationTime.toDouble(), decodedSamplesCount(), m_compressedSampleQueue.size());
+                    [rendererOrDisplayLayer() expectMinimumUpcomingSampleBufferPresentationTime:PAL::toCMTime(m_lastMinimumUpcomingPresentationTime)];
+                }
                 return;
+            }
             RELEASE_LOG_DEBUG(Media, "Out of order frames detected, forcing extra decode");
         }
     }
@@ -479,14 +491,6 @@ void VideoMediaSampleRenderer::decodeNextSampleIfNeeded()
         return;
     }
 
-    if (!sample->isNonDisplaying() && upcomingMinimum.isValid()) {
-        upcomingMinimum = std::min(sample->presentationTime(), upcomingMinimum);
-        if (upcomingMinimum != m_lastMinimumUpcomingPresentationTime) {
-            ASSERT(m_lastMinimumUpcomingPresentationTime.isInvalid() || upcomingMinimum > m_lastMinimumUpcomingPresentationTime);
-            m_lastMinimumUpcomingPresentationTime = upcomingMinimum;
-            [rendererOrDisplayLayer() expectMinimumUpcomingSampleBufferPresentationTime:PAL::toCMTime(upcomingMinimum)];
-        }
-    }
     ASSERT(m_lastMinimumUpcomingPresentationTime.isInvalid() || sample->isNonDisplaying() || sample->presentationTime() >= std::min(sample->presentationTime(), m_lastMinimumUpcomingPresentationTime));
 
     auto cmSample = sample->platformSample().sample.cmSampleBuffer;
