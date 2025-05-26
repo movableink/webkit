@@ -185,6 +185,11 @@ void RealtimeOutgoingMediaSourceGStreamer::stopOutgoingSource(StoppedCallback&& 
             data->callback();
             return GST_PAD_PROBE_REMOVE;
         }
+
+        auto callData = createProbeData();
+        callData->source = self;
+        callData->callback = std::exchange(data->callback, nullptr);
+
         gst_element_call_async(self->m_bin.get(), reinterpret_cast<GstElementCallAsyncFunc>(+[](GstElement*, gpointer userData) {
             auto data = reinterpret_cast<ProbeData*>(userData);
             auto self = data->source.get();
@@ -196,13 +201,13 @@ void RealtimeOutgoingMediaSourceGStreamer::stopOutgoingSource(StoppedCallback&& 
             if (self->m_track)
                 self->m_track->removeObserver(*self);
             data->callback();
-        }), data, reinterpret_cast<GDestroyNotify>(destroyProbeData));
+        }), callData, reinterpret_cast<GDestroyNotify>(destroyProbeData));
         return GST_PAD_PROBE_OK;
     }), data, reinterpret_cast<GDestroyNotify>(destroyProbeData));
 
     if (WEBKIT_IS_MEDIA_STREAM_SRC(m_outgoingSource.get())) {
         if (!webkitMediaStreamSrcSignalEndOfStream(WEBKIT_MEDIA_STREAM_SRC_CAST(m_outgoingSource.get()))) {
-            auto callback = WTFMove(data->callback);
+            auto callback = std::exchange(data->callback, nullptr);
             gst_pad_remove_probe(pad.get(), probeId);
             removeOutgoingSource();
             if (m_track)

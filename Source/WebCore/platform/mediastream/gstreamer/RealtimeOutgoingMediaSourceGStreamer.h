@@ -38,7 +38,7 @@ public:
     ~RealtimeOutgoingMediaSourceGStreamer();
     void start();
 
-    using StoppedCallback = CompletionHandler<void()>;
+    using StoppedCallback = Function<void()>;
     void stop(StoppedCallback&&);
 
     const RefPtr<MediaStreamTrackPrivate>& track() const { return m_track; }
