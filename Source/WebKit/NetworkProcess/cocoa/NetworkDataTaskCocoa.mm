@@ -678,10 +678,12 @@ void NetworkDataTaskCocoa::setH2PingCallback(const URL& url, CompletionHandler<v
 {
 #if HAVE(PRECONNECT_PING)
     ASSERT(m_task.get()._preconnect);
-    auto handler = CompletionHandlerWithFinalizer<void(Expected<WTF::Seconds, WebCore::ResourceError>&&)>(WTFMove(completionHandler), [url] (Function<void(Expected<WTF::Seconds, WebCore::ResourceError>&&)>& completionHandler) {
-        completionHandler(makeUnexpected(WebCore::internalError(url)));
-    });
-    [m_task getUnderlyingHTTPConnectionInfoWithCompletionHandler:makeBlockPtr([completionHandler = WTFMove(handler), url] (_NSHTTPConnectionInfo *connectionInfo) mutable {
+    auto handler = CompletionHandlerWithFinalizer<void(Expected<WTF::Seconds, WebCore::ResourceError>&&)>(WTFMove(completionHandler), [url = url.isolatedCopy()] (Function<void(Expected<WTF::Seconds, WebCore::ResourceError>&&)>& completionHandler) {
+        ensureOnMainRunLoop([completionHandler = WTFMove(completionHandler), url = WTFMove(url).isolatedCopy()]() mutable {
+            completionHandler(makeUnexpected(WebCore::internalError(url)));
+        });
+    }, CompletionHandlerCallThread::AnyThread);
+    [m_task getUnderlyingHTTPConnectionInfoWithCompletionHandler:makeBlockPtr([completionHandler = WTFMove(handler), url = url.isolatedCopy()] (_NSHTTPConnectionInfo *connectionInfo) mutable {
         if (!connectionInfo.isValid)
             return completionHandler(makeUnexpected(WebCore::internalError(url)));
         [connectionInfo sendPingWithReceiveHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)](NSError *error, NSTimeInterval interval) mutable {
