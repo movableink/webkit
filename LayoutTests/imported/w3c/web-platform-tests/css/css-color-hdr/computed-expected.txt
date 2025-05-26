@@ -1,6 +1,6 @@
 
 PASS Property dynamic-range-limit value 'no-limit'
-PASS Property dynamic-range-limit value 'constrained-high'
+FAIL Property dynamic-range-limit value 'constrained' assert_true: 'constrained' is a supported value for dynamic-range-limit. expected true got false
 PASS Property dynamic-range-limit value 'standard'
 PASS Property dynamic-range-limit value 'dynamic-range-limit-mix(standard 75%, no-limit 25%)'
 PASS Property dynamic-range-limit value 'dynamic-range-limit-mix(standard 25%, no-limit 75%)'
@@ -9,14 +9,15 @@ PASS Property dynamic-range-limit value 'dynamic-range-limit-mix(no-limit 100%, 
 PASS Property dynamic-range-limit value 'dynamic-range-limit-mix(no-limit 25%, standard 25%, standard 25%, standard 25%)'
 PASS Property dynamic-range-limit value 'dynamic-range-limit-mix(no-limit 25%, standard 75%)'
 PASS Property dynamic-range-limit value 'dynamic-range-limit-mix(no-limit 100%, standard 100%)'
-PASS Property dynamic-range-limit value 'dynamic-range-limit-mix(no-limit 80%, standard 60%, constrained-high 60%)'
-PASS Property dynamic-range-limit value 'dynamic-range-limit-mix(standard 25%, constrained-high 75%)'
-PASS Property dynamic-range-limit value 'dynamic-range-limit-mix(constrained-high 75%, standard 25%)'
-PASS Property dynamic-range-limit value 'dynamic-range-limit-mix(constrained-high 25%, no-limit 25%)'
-PASS Property dynamic-range-limit value 'dynamic-range-limit-mix(standard 25%, constrained-high 50%, no-limit 25%)'
-PASS Property dynamic-range-limit value 'dynamic-range-limit-mix(standard 10%, constrained-high 20%, no-limit 20%)'
+FAIL Property dynamic-range-limit value 'dynamic-range-limit-mix(no-limit 80%, standard 60%, constrained 60%)' assert_true: 'dynamic-range-limit-mix(no-limit 80%, standard 60%, constrained 60%)' is a supported value for dynamic-range-limit. expected true got false
+FAIL Property dynamic-range-limit value 'dynamic-range-limit-mix(standard 25%, constrained 75%)' assert_true: 'dynamic-range-limit-mix(standard 25%, constrained 75%)' is a supported value for dynamic-range-limit. expected true got false
+FAIL Property dynamic-range-limit value 'dynamic-range-limit-mix(constrained 75%, standard 25%)' assert_true: 'dynamic-range-limit-mix(constrained 75%, standard 25%)' is a supported value for dynamic-range-limit. expected true got false
+FAIL Property dynamic-range-limit value 'dynamic-range-limit-mix(constrained 25%, no-limit 25%)' assert_true: 'dynamic-range-limit-mix(constrained 25%, no-limit 25%)' is a supported value for dynamic-range-limit. expected true got false
+FAIL Property dynamic-range-limit value 'dynamic-range-limit-mix(standard 25%, constrained 50%, no-limit 25%)' assert_true: 'dynamic-range-limit-mix(standard 25%, constrained 50%, no-limit 25%)' is a supported value for dynamic-range-limit. expected true got false
+FAIL Property dynamic-range-limit value 'dynamic-range-limit-mix(standard 10%, constrained 20%, no-limit 20%)' assert_true: 'dynamic-range-limit-mix(standard 10%, constrained 20%, no-limit 20%)' is a supported value for dynamic-range-limit. expected true got false
 PASS Property dynamic-range-limit value 'dynamic-range-limit-mix(no-limit 10%, standard 30%)'
 PASS Property dynamic-range-limit value 'dynamic-range-limit-mix(dynamic-range-limit-mix(standard 10%, no-limit 30%) 20%, standard 80%)'
-PASS Property dynamic-range-limit value 'dynamic-range-limit-mix(dynamic-range-limit-mix(standard 25%, no-limit 75%) 20%, dynamic-range-limit-mix(standard 25%, constrained-high 75%) 40%, dynamic-range-limit-mix(constrained-high 25%, no-limit 75%) 40%)'
-PASS Property dynamic-range-limit value 'dynamic-range-limit-mix(no-limit 10%, dynamic-range-limit-mix(standard 25%, constrained-high 75%) 20%, dynamic-range-limit-mix(constrained-high 10%, no-limit 30%) 20%)'
+FAIL Property dynamic-range-limit value 'dynamic-range-limit-mix(dynamic-range-limit-mix(standard 25%, no-limit 75%) 20%, dynamic-range-limit-mix(standard 25%, constrained 75%) 40%, dynamic-range-limit-mix(constrained 25%, no-limit 75%) 40%)' assert_true: 'dynamic-range-limit-mix(dynamic-range-limit-mix(standard 25%, no-limit 75%) 20%, dynamic-range-limit-mix(standard 25%, constrained 75%) 40%, dynamic-range-limit-mix(constrained 25%, no-limit 75%) 40%)' is a supported value for dynamic-range-limit. expected true got false
+FAIL Property dynamic-range-limit value 'dynamic-range-limit-mix(no-limit 10%, dynamic-range-limit-mix(standard 25%, constrained 75%) 20%, dynamic-range-limit-mix(constrained 10%, no-limit 30%) 20%)' assert_true: 'dynamic-range-limit-mix(no-limit 10%, dynamic-range-limit-mix(standard 25%, constrained 75%) 20%, dynamic-range-limit-mix(constrained 10%, no-limit 30%) 20%)' is a supported value for dynamic-range-limit. expected true got false
+FAIL Property dynamic-range-limit value 'dynamic-range-limit-mix(standard calc(50% * sign(10em - 1px)), constrained 50%)' assert_true: 'dynamic-range-limit-mix(standard calc(50% * sign(10em - 1px)), constrained 50%)' is a supported value for dynamic-range-limit. expected true got false
 
