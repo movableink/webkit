@@ -3444,6 +3444,9 @@ void MediaPlayerPrivateGStreamer::setupCodecProbe(GstElement* element)
 void MediaPlayerPrivateGStreamer::configureAudioDecoder(GstElement* decoder)
 {
     setupCodecProbe(decoder);
+
+    if (isMediaStreamPlayer())
+        configureMediaStreamAudioDecoder(decoder);
 }
 
 void MediaPlayerPrivateGStreamer::configureVideoDecoder(GstElement* decoder)

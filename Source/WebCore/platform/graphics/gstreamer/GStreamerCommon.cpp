@@ -1683,6 +1683,20 @@ void configureVideoDecoderForHarnessing(const GRefPtr<GstElement>& element)
         g_object_set(element.get(), "n-threads", 1, nullptr);
 }
 
+void configureMediaStreamAudioDecoder(GstElement* element)
+{
+    // Currently implemented only in opusdec.
+    if (gstObjectHasProperty(element, "plc"_s))
+        g_object_set(element, "plc", TRUE, nullptr);
+
+    // Currently implemented only in opusdec.
+    if (gstObjectHasProperty(element, "use-inband-fec"_s))
+        g_object_set(element, "use-inband-fec", TRUE, nullptr);
+
+    if (gstObjectHasProperty(element, "max-errors"_s))
+        g_object_set(element, "max-errors", -1, nullptr);
+}
+
 void configureMediaStreamVideoDecoder(GstElement* element)
 {
     if (gstObjectHasProperty(element, "automatic-request-sync-points"_s))
