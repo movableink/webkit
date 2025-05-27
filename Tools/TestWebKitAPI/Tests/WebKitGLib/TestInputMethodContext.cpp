@@ -31,14 +31,8 @@ using PlatformEventKey = GdkEvent;
 #else
 using PlatformEventKey = GdkEventKey;
 #endif
-#define KEY(x) GDK_KEY_##x
-#define CONTROL_MASK GDK_CONTROL_MASK
-#define SHIFT_MASK GDK_SHIFT_MASK
 #elif PLATFORM(WPE)
 using PlatformEventKey = void;
-#define KEY(x) WPE_KEY_##x
-#define CONTROL_MASK wpe_input_keyboard_modifier_control
-#define SHIFT_MASK wpe_input_keyboard_modifier_shift
 #endif
 
 typedef struct _WebKitInputMethodContextMock {
@@ -111,15 +105,16 @@ static gboolean webkitInputMethodContextMockFilterKeyEvent(WebKitInputMethodCont
     bool isKeyPress = gdk_event_get_event_type(reinterpret_cast<GdkEvent*>(keyEvent)) == GDK_KEY_PRESS;
 #endif
     gunichar character = gdk_keyval_to_unicode(keyval);
+    bool isControl = state & GDK_CONTROL_MASK;
+    bool isShift = state & GDK_SHIFT_MASK;
 #elif PLATFORM(WPE)
     struct wpe_input_keyboard_event* wpeKeyEvent = static_cast<struct wpe_input_keyboard_event*>(keyEvent);
-    uint32_t state = wpeKeyEvent->modifiers;
     uint32_t keyval = wpeKeyEvent->key_code;
     bool isKeyPress = wpeKeyEvent->pressed;
     gunichar character = wpe_key_code_to_unicode(keyval);
+    bool isControl = wpeKeyEvent->modifiers & wpe_input_keyboard_modifier_control;
+    bool isShift = wpeKeyEvent->modifiers & wpe_input_keyboard_modifier_shift;
 #endif
-    bool isControl = state & CONTROL_MASK;
-    bool isShift = state & SHIFT_MASK;
     bool isComposeEnd = (keyval == KEY(space) || keyval == KEY(Return) || keyval == KEY(ISO_Enter));
 
     if (isKeyPress && mock->commitNextCharacter) {
@@ -419,7 +414,7 @@ public:
         return GUniquePtr<char>(WebViewTest::javascriptResultToCString(jsResult));
     }
 
-    void keyStrokeAndWaitForEvents(unsigned keyval, unsigned eventsCount, unsigned modifiers = 0)
+    void keyStrokeAndWaitForEvents(unsigned keyval, unsigned eventsCount, OptionSet<Modifiers> modifiers = OptionSet<Modifiers>())
     {
         m_eventsExpected = eventsCount;
         keyStroke(keyval, modifiers);
@@ -437,7 +432,7 @@ public:
     void clickAndWaitForEvents(unsigned eventsCount)
     {
         m_eventsExpected = eventsCount;
-        clickMouseButton(0, 0, 1);
+        clickMouseButton(0, 0);
         g_main_loop_run(m_mainLoop);
         m_eventsExpected = 0;
     }
@@ -543,7 +538,7 @@ static void testWebKitInputMethodContextSequence(InputMethodTest* test, gconstpo
     test->focusEditableAndWaitUntilInputMethodEnabled();
 
     // Compose w + gtk + Enter.
-    test->keyStrokeAndWaitForEvents(KEY(w), 4, CONTROL_MASK | SHIFT_MASK);
+    test->keyStrokeAndWaitForEvents(KEY(w), 4, { WebViewTest::Modifiers::Control, WebViewTest::Modifiers::Shift });
     g_assert_true(test->m_events[0].type == InputMethodTest::Event::Type::KeyDown);
     g_assert_cmpuint(test->m_events[0].keyCode, ==, 229);
     g_assert_cmpstr(test->m_events[0].key.data(), ==, "Unidentified");
@@ -611,7 +606,7 @@ static void testWebKitInputMethodContextSequence(InputMethodTest* test, gconstpo
     test->resetEditable();
 
     // Compose w + wpe + Space.
-    test->keyStrokeAndWaitForEvents(KEY(w), 4, CONTROL_MASK | SHIFT_MASK);
+    test->keyStrokeAndWaitForEvents(KEY(w), 4, { WebViewTest::Modifiers::Control, WebViewTest::Modifiers::Shift });
     g_assert_true(test->m_events[0].type == InputMethodTest::Event::Type::KeyDown);
     g_assert_cmpuint(test->m_events[0].keyCode, ==, 229);
     g_assert_cmpstr(test->m_events[0].key.data(), ==, "Unidentified");
@@ -687,7 +682,7 @@ static void testWebKitInputMethodContextInvalidSequence(InputMethodTest* test, g
     test->focusEditableAndWaitUntilInputMethodEnabled();
 
     // Compose w + w + Space -> invalid sequence.
-    test->keyStrokeAndWaitForEvents(KEY(w), 4, CONTROL_MASK | SHIFT_MASK);
+    test->keyStrokeAndWaitForEvents(KEY(w), 4, { WebViewTest::Modifiers::Control, WebViewTest::Modifiers::Shift });
     g_assert_true(test->m_events[0].type == InputMethodTest::Event::Type::KeyDown);
     g_assert_cmpuint(test->m_events[0].keyCode, ==, 229);
     g_assert_cmpstr(test->m_events[0].key.data(), ==, "Unidentified");
@@ -739,7 +734,7 @@ static void testWebKitInputMethodContextCancelSequence(InputMethodTest* test, gc
     test->focusEditableAndWaitUntilInputMethodEnabled();
 
     // Compose w + w + Escape -> cancel sequence.
-    test->keyStrokeAndWaitForEvents(KEY(w), 4, CONTROL_MASK | SHIFT_MASK);
+    test->keyStrokeAndWaitForEvents(KEY(w), 4, { WebViewTest::Modifiers::Control, WebViewTest::Modifiers::Shift });
     g_assert_true(test->m_events[0].type == InputMethodTest::Event::Type::KeyDown);
     g_assert_cmpuint(test->m_events[0].keyCode, ==, 229);
     g_assert_cmpstr(test->m_events[0].key.data(), ==, "Unidentified");
@@ -799,7 +794,7 @@ static void testWebKitInputMethodContextSurrounding(InputMethodTest* test, gcons
     g_assert_cmpuint(test->surroundingCursorIndex(), ==, 0);
     g_assert_cmpuint(test->surroundingSelectionIndex(), ==, test->surroundingCursorIndex());
     test->m_events.clear();
-    test->keyStrokeAndWaitForEvents(KEY(w), 4, CONTROL_MASK | SHIFT_MASK);
+    test->keyStrokeAndWaitForEvents(KEY(w), 4, { WebViewTest::Modifiers::Control, WebViewTest::Modifiers::Shift });
     g_assert_cmpstr(test->surroundingText(), ==, "abc");
     g_assert_cmpuint(test->surroundingCursorIndex(), ==, 0);
     g_assert_cmpuint(test->surroundingSelectionIndex(), ==, test->surroundingCursorIndex());
@@ -815,7 +810,7 @@ static void testWebKitInputMethodContextSurrounding(InputMethodTest* test, gcons
     g_assert_cmpuint(test->surroundingSelectionIndex(), ==, test->surroundingCursorIndex());
     test->m_events.clear();
     // 2. Preedit string in the middle of context.
-    test->keyStrokeAndWaitForEvents(KEY(w), 4, CONTROL_MASK | SHIFT_MASK);
+    test->keyStrokeAndWaitForEvents(KEY(w), 4, { WebViewTest::Modifiers::Control, WebViewTest::Modifiers::Shift });
     g_assert_cmpstr(test->surroundingText(), ==, "WebKitGTKabc");
     g_assert_cmpuint(test->surroundingCursorIndex(), ==, 9);
     g_assert_cmpuint(test->surroundingSelectionIndex(), ==, test->surroundingCursorIndex());
@@ -838,7 +833,7 @@ static void testWebKitInputMethodContextSurrounding(InputMethodTest* test, gcons
     g_assert_cmpuint(test->surroundingCursorIndex(), ==, 21);
     g_assert_cmpuint(test->surroundingSelectionIndex(), ==, test->surroundingCursorIndex());
     test->m_events.clear();
-    test->keyStrokeAndWaitForEvents(KEY(w), 4, CONTROL_MASK | SHIFT_MASK);
+    test->keyStrokeAndWaitForEvents(KEY(w), 4, { WebViewTest::Modifiers::Control, WebViewTest::Modifiers::Shift });
     g_assert_cmpstr(test->surroundingText(), ==, "WebKitGTKWPEWebKitabc");
     g_assert_cmpuint(test->surroundingCursorIndex(), ==, 21);
     g_assert_cmpuint(test->surroundingSelectionIndex(), ==, test->surroundingCursorIndex());
@@ -855,22 +850,22 @@ static void testWebKitInputMethodContextSurrounding(InputMethodTest* test, gcons
     test->m_events.clear();
 
     // Check selection cursor.
-    test->keyStrokeAndWaitForEvents(KEY(Left), 2, SHIFT_MASK);
+    test->keyStrokeAndWaitForEvents(KEY(Left), 2, { WebViewTest::Modifiers::Shift });
     g_assert_cmpstr(test->surroundingText(), ==, "WebKitGTKWPEWebKitabcWebKitGTK");
     g_assert_cmpuint(test->surroundingCursorIndex(), ==, 29);
     g_assert_cmpuint(test->surroundingSelectionIndex(), ==, 30);
-    test->keyStrokeAndWaitForEvents(KEY(Home), 4, SHIFT_MASK);
+    test->keyStrokeAndWaitForEvents(KEY(Home), 4, { WebViewTest::Modifiers::Shift });
     g_assert_cmpuint(test->surroundingCursorIndex(), ==, 0);
     g_assert_cmpuint(test->surroundingSelectionIndex(), ==, 30);
     test->keyStrokeAndWaitForEvents(KEY(Left), 6);
     g_assert_cmpuint(test->surroundingCursorIndex(), ==, 0);
     g_assert_cmpuint(test->surroundingSelectionIndex(), ==, test->surroundingCursorIndex());
     test->m_events.clear();
-    test->keyStrokeAndWaitForEvents(KEY(Right), 2, SHIFT_MASK);
+    test->keyStrokeAndWaitForEvents(KEY(Right), 2, { WebViewTest::Modifiers::Shift });
     g_assert_cmpstr(test->surroundingText(), ==, "WebKitGTKWPEWebKitabcWebKitGTK");
     g_assert_cmpuint(test->surroundingCursorIndex(), ==, 0);
     g_assert_cmpuint(test->surroundingSelectionIndex(), ==, 1);
-    test->keyStrokeAndWaitForEvents(KEY(End), 4, SHIFT_MASK);
+    test->keyStrokeAndWaitForEvents(KEY(End), 4, { WebViewTest::Modifiers::Shift });
     g_assert_cmpuint(test->surroundingCursorIndex(), ==, 0);
     g_assert_cmpuint(test->surroundingSelectionIndex(), ==, 30);
     test->keyStrokeAndWaitForEvents(KEY(Right), 6);
@@ -907,7 +902,7 @@ static void testWebKitInputMethodContextReset(InputMethodTest* test, gconstpoint
     test->focusEditableAndWaitUntilInputMethodEnabled();
 
     // Compose w + w + click -> reset sequence.
-    test->keyStrokeAndWaitForEvents(KEY(w), 4, CONTROL_MASK | SHIFT_MASK);
+    test->keyStrokeAndWaitForEvents(KEY(w), 4, { WebViewTest::Modifiers::Control, WebViewTest::Modifiers::Shift });
     g_assert_true(test->m_events[0].type == InputMethodTest::Event::Type::KeyDown);
     g_assert_cmpuint(test->m_events[0].keyCode, ==, 229);
     g_assert_cmpstr(test->m_events[0].key.data(), ==, "Unidentified");

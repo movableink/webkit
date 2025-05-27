@@ -416,7 +416,7 @@ public:
     void jumpToCustomWidget()
     {
         // Jump back to the GtkNotebook
-        keyStroke(GDK_KEY_Tab, GDK_SHIFT_MASK);
+        keyStroke(GDK_KEY_Tab, { WebViewTest::Modifiers::Shift });
         // Custom widget is on the third tab
         keyStroke(GDK_KEY_Right);
         keyStroke(GDK_KEY_Right);

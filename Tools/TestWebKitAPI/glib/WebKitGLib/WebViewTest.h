@@ -21,6 +21,8 @@
 #pragma once
 
 #include "TestMain.h"
+#include <optional>
+#include <wtf/OptionSet.h>
 #include <wtf/text/CString.h>
 
 class WebViewTest: public Test {
@@ -64,9 +66,22 @@ public:
     bool isEditable();
     void setEditable(bool);
 
-    void mouseMoveTo(int x, int y, unsigned mouseModifiers = 0);
-    void clickMouseButton(int x, int y, unsigned button = 1, unsigned mouseModifiers = 0);
-    void keyStroke(unsigned keyVal, unsigned keyModifiers = 0);
+    enum class MouseButton : uint8_t {
+        Primary,
+        Middle,
+        Secondary
+    };
+
+    enum class Modifiers : uint8_t {
+        Shift   = 1 << 0,
+        Control = 1 << 1,
+        Alt     = 1 << 2,
+        Meta    = 1 << 3
+    };
+
+    void mouseMoveTo(int x, int y, OptionSet<Modifiers> = OptionSet<Modifiers>());
+    void clickMouseButton(int x, int y, MouseButton = MouseButton::Primary, OptionSet<Modifiers> = OptionSet<Modifiers>());
+    void keyStroke(unsigned keyVal, OptionSet<Modifiers> = OptionSet<Modifiers>());
 
     void showInWindow(int width = 0, int height = 0);
 

@@ -100,6 +100,12 @@
     } while(0)
 #endif
 
+#if PLATFORM(GTK)
+#define KEY(x) GDK_KEY_##x
+#elif PLATFORM(WPE)
+#define KEY(x) WPE_KEY_##x
+#endif
+
 class Test {
 public:
     MAKE_GLIB_TEST_FIXTURE(Test);

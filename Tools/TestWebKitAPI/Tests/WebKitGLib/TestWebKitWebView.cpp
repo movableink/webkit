@@ -757,7 +757,7 @@ public:
 
     static gboolean doClickIdleCallback(FormClientTest* test)
     {
-        test->clickMouseButton(test->m_submitPositionX, test->m_submitPositionY, 1);
+        test->clickMouseButton(test->m_submitPositionX, test->m_submitPositionY);
         return FALSE;
     }
 

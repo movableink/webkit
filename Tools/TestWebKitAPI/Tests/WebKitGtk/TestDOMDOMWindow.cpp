@@ -55,7 +55,7 @@ static void signalsNotifyCallback(const gchar *key, const gchar *value, gconstpo
         status.test->showInWindow();
 
         // Click in a known location where the text is
-        status.test->clickMouseButton(20, 18, 1, 0);
+        status.test->clickMouseButton(20, 18);
     }
 
     if (g_str_equal(key, "clicked"))

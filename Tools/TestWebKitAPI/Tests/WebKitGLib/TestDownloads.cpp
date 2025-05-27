@@ -651,7 +651,7 @@ public:
         m_contextMenuDownloadItem = nullptr;
         auto id = g_signal_connect(m_webView.get(), "context-menu", G_CALLBACK(contextMenuCallback), this);
         RunLoop::protectedMain()->dispatch([this, x, y] {
-            clickMouseButton(x, y, 3);
+            clickMouseButton(x, y, WebViewTest::MouseButton::Secondary);
         });
         g_main_loop_run(m_mainLoop);
         g_signal_handler_disconnect(m_webView.get(), id);
@@ -1024,7 +1024,7 @@ static void testBlobDownload(WebViewDownloadTest* test, gconstpointer)
 
     g_idle_add([](gpointer userData) -> gboolean {
         auto* test = static_cast<WebViewDownloadTest*>(userData);
-        test->clickMouseButton(1, 1, 1);
+        test->clickMouseButton(1, 1);
         return FALSE;
     }, test);
     test->waitUntilDownloadStarted();

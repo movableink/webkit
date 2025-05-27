@@ -49,27 +49,54 @@ void WebViewTest::hideView()
     wpe_view_backend_remove_activity_state(backend, wpe_view_activity_state_visible | wpe_view_activity_state_focused);
 }
 
-void WebViewTest::mouseMoveTo(int x, int y, unsigned mouseModifiers)
+static unsigned testModifiersToWPELegacy(const OptionSet<WebViewTest::Modifiers>& modifiers)
+{
+    unsigned wpeModifiers = 0;
+    if (modifiers.contains(WebViewTest::Modifiers::Control))
+        wpeModifiers |= wpe_input_keyboard_modifier_control;
+    if (modifiers.contains(WebViewTest::Modifiers::Shift))
+        wpeModifiers |= wpe_input_keyboard_modifier_shift;
+    if (modifiers.contains(WebViewTest::Modifiers::Alt))
+        wpeModifiers |= wpe_input_keyboard_modifier_alt;
+    if (modifiers.contains(WebViewTest::Modifiers::Meta))
+        wpeModifiers |= wpe_input_keyboard_modifier_meta;
+    return wpeModifiers;
+}
+
+static unsigned testMouseButtonToWPELegacy(WebViewTest::MouseButton button)
+{
+    switch (button) {
+    case WebViewTest::MouseButton::Primary:
+        return 1;
+    case WebViewTest::MouseButton::Middle:
+        return 3;
+    case WebViewTest::MouseButton::Secondary:
+        return 2;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+void WebViewTest::mouseMoveTo(int x, int y, OptionSet<Modifiers> mouseModifiers)
 {
     // FIXME: implement.
 }
 
-void WebViewTest::clickMouseButton(int x, int y, unsigned button, unsigned mouseModifiers)
+void WebViewTest::clickMouseButton(int x, int y, MouseButton button, OptionSet<Modifiers> mouseModifiers)
 {
     auto* backend = webkit_web_view_backend_get_wpe_backend(webkit_web_view_get_backend(m_webView.get()));
-    struct wpe_input_pointer_event event { wpe_input_pointer_event_type_button, 0, x, y, button, 1, mouseModifiers };
+    struct wpe_input_pointer_event event { wpe_input_pointer_event_type_button, 0, x, y, testMouseButtonToWPELegacy(button), 1, testModifiersToWPELegacy(mouseModifiers) };
     wpe_view_backend_dispatch_pointer_event(backend, &event);
     event.state = 0;
     wpe_view_backend_dispatch_pointer_event(backend, &event);
 }
 
-void WebViewTest::keyStroke(unsigned keyVal, unsigned keyModifiers)
+void WebViewTest::keyStroke(unsigned keyVal, OptionSet<Modifiers> keyModifiers)
 {
     auto* backend = webkit_web_view_backend_get_wpe_backend(webkit_web_view_get_backend(m_webView.get()));
     struct wpe_input_xkb_keymap_entry* entries;
     uint32_t entriesCount;
     wpe_input_xkb_context_get_entries_for_key_code(wpe_input_xkb_context_get_default(), keyVal, &entries, &entriesCount);
-    struct wpe_input_keyboard_event event { 0, keyVal, entriesCount ? entries[0].hardware_key_code : 0, true, keyModifiers };
+    struct wpe_input_keyboard_event event { 0, keyVal, entriesCount ? entries[0].hardware_key_code : 0, true, testModifiersToWPELegacy(keyModifiers) };
     wpe_view_backend_dispatch_keyboard_event(backend, &event);
     event.pressed = false;
     wpe_view_backend_dispatch_keyboard_event(backend, &event);

@@ -242,7 +242,7 @@ public:
 
     static gboolean doRightClickIdleCallback(ContextMenuTest* test)
     {
-        test->clickMouseButton(test->m_menuPositionX, test->m_menuPositionY, 3);
+        test->clickMouseButton(test->m_menuPositionX, test->m_menuPositionY, WebViewTest::MouseButton::Secondary);
         return FALSE;
     }
 

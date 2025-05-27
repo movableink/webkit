@@ -445,7 +445,7 @@ public:
     }
 #endif
 
-    WebKitHitTestResult* moveMouseAndWaitUntilMouseTargetChanged(int x, int y, unsigned mouseModifiers = 0)
+    WebKitHitTestResult* moveMouseAndWaitUntilMouseTargetChanged(int x, int y, OptionSet<Modifiers> mouseModifiers = OptionSet<Modifiers>())
     {
         m_waitingForMouseTargetChange = true;
         mouseMoveTo(x, y, mouseModifiers);
@@ -604,7 +604,7 @@ public:
     void clickAndWaitUntilMainLoopFinishes(int x, int y)
     {
         clearNavigation();
-        clickMouseButton(x, y, 1);
+        clickMouseButton(x, y);
         g_main_loop_run(m_mainLoop);
     }
 
@@ -883,7 +883,7 @@ static void testWebViewMouseTarget(UIClientTest* test, gconstpointer)
     g_assert_cmpuint(test->m_mouseTargetModifiers, ==, 0);
 
     // Move over image with GDK_CONTROL_MASK.
-    hitTestResult = test->moveMouseAndWaitUntilMouseTargetChanged(1, 10, GDK_CONTROL_MASK);
+    hitTestResult = test->moveMouseAndWaitUntilMouseTargetChanged(1, 10, { WebViewTest::Modifiers::Control });
     g_assert_false(webkit_hit_test_result_context_is_link(hitTestResult));
     g_assert_true(webkit_hit_test_result_context_is_image(hitTestResult));
     g_assert_false(webkit_hit_test_result_context_is_media(hitTestResult));
@@ -1333,12 +1333,12 @@ static void testWebViewPointerLockPermissionRequest(UIClientTest* test, gconstpo
 
     // Test denying a permission request.
     test->m_allowPermissionRequests = false;
-    test->clickMouseButton(5, 5, 1);
+    test->clickMouseButton(5, 5);
     test->waitUntilTitleChangedTo("Error");
 
     // Test allowing a permission request.
     test->m_allowPermissionRequests = true;
-    test->clickMouseButton(5, 5, 1);
+    test->clickMouseButton(5, 5);
     test->waitUntilTitleChangedTo("Locked");
 }
 #endif
