@@ -1327,9 +1327,11 @@ String RenderThemeMac::fileListNameForWidth(const FileList* fileList, const Font
     String strToTruncate;
     if (fileList->isEmpty())
         strToTruncate = fileListDefaultLabel(multipleFilesAllowed);
-    else if (fileList->length() == 1)
-        strToTruncate = [[NSFileManager defaultManager] displayNameAtPath:fileList->item(0)->path().createNSString().get()];
-    else
+    else if (fileList->length() == 1) {
+        RefPtr file = fileList->item(0);
+        auto path = file->path();
+        strToTruncate = path.isEmpty() ? file->name() : [[NSFileManager defaultManager] displayNameAtPath:path.createNSString().get()];
+    } else
         return StringTruncator::rightTruncate(multipleFileUploadText(fileList->length()), width, font);
 
     return StringTruncator::centerTruncate(strToTruncate, width, font);
