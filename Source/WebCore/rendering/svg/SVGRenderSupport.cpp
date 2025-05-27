@@ -142,25 +142,33 @@ LayoutRepainter::CheckForRepaint SVGRenderSupport::checkForSVGRepaintDuringLayou
     return LayoutRepainter::CheckForRepaint::Yes;
 }
 
+// https://svgwg.org/svg2-draft/coords.html#BoundingBoxes
+static bool hasValidBoundingBoxForContainer(const RenderObject& object)
+{
+    if (auto* shape = dynamicDowncast<LegacyRenderSVGShape>(object))
+        return !shape->isRenderingDisabled();
+
+    if (auto* text = dynamicDowncast<RenderSVGText>(object))
+        return text->isObjectBoundingBoxValid();
+
+    if (auto* container = dynamicDowncast<LegacyRenderSVGContainer>(object))
+        return !container->isLegacyRenderSVGHiddenContainer();
+
+    if (auto* foreignObject = dynamicDowncast<LegacyRenderSVGForeignObject>(object))
+        return foreignObject->isObjectBoundingBoxValid();
+
+    if (auto* image = dynamicDowncast<LegacyRenderSVGImage>(object))
+        return image->isObjectBoundingBoxValid();
+
+    return false;
+}
+
 auto SVGRenderSupport::computeContainerBoundingBoxes(const RenderElement& container, RepaintRectCalculation repaintRectCalculation) -> ContainerBoundingBoxes
 {
     ContainerBoundingBoxes result;
 
     for (CheckedRef current : childrenOfType<RenderObject>(container)) {
-        if (current->isLegacyRenderSVGHiddenContainer())
-            continue;
-
-        // Don't include elements in the union that do not render.
-        if (auto* shape = dynamicDowncast<LegacyRenderSVGShape>(current.ptr()); shape && shape->isRenderingDisabled())
-            continue;
-
-        if (auto* text = dynamicDowncast<RenderSVGText>(current.ptr()); (text && !text->isObjectBoundingBoxValid()))
-            continue;
-
-        if (auto* image = dynamicDowncast<LegacyRenderSVGImage>(current.ptr()); (image && !image->isObjectBoundingBoxValid()))
-            continue;
-
-        if (auto* foreignObject = dynamicDowncast<LegacyRenderSVGForeignObject>(current.ptr()); (foreignObject && !foreignObject->isObjectBoundingBoxValid()))
+        if (!hasValidBoundingBoxForContainer(current))
             continue;
 
         auto& transform = current->localToParentTransform();
