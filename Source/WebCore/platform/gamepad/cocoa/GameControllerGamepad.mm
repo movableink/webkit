@@ -22,23 +22,18 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 #import "config.h"
 #import "GameControllerGamepad.h"
 
 #if ENABLE(GAMEPAD)
 #import "GameControllerGamepadProvider.h"
 #import "GameControllerHapticEngines.h"
+#import "GameControllerSoftLink.h"
 #import "GamepadConstants.h"
 #import <GameController/GCControllerElement.h>
 #import <GameController/GameController.h>
-#import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/text/MakeString.h>
-
-#if PLATFORM(IOS_FAMILY)
-#import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
-#endif
-
-#import "GameControllerSoftLink.h"
 
 namespace WebCore {
 
@@ -60,12 +55,6 @@ static void disableDefaultSystemAction(GCControllerButtonInput *button)
 
 void GameControllerGamepad::setupElements()
 {
-#if PLATFORM(IOS_FAMILY)
-    // rdar://103093747 - Backbone controller not recognized by Backbone app
-    if (WTF::IOSApplication::isBackboneApp() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::UsesGameControllerPhysicalInputProfile))
-        m_gcController.get().extendedGamepad.valueChangedHandler = ^(GCExtendedGamepad *, GCControllerElement *) { };
-#endif
-
     auto *profile = m_gcController.get().physicalInputProfile;
 
     // The user can expose an already-connected game controller to a web page by expressing explicit intent.

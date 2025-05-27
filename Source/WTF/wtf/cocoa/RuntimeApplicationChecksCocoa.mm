@@ -198,7 +198,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::InspectableDefaultsToDisabled);
         disableBehavior(SDKAlignedBehavior::PushStateFilePathRestriction);
         disableBehavior(SDKAlignedBehavior::NoUNIQLOLazyIframeLoadingQuirk);
-        disableBehavior(SDKAlignedBehavior::UsesGameControllerPhysicalInputProfile);
         disableBehavior(SDKAlignedBehavior::ScreenOrientationAPIEnabled);
     }
 
@@ -500,12 +499,6 @@ bool IOSApplication::isMobileStore()
 bool IOSApplication::isWebProcess()
 {
     return isInWebProcess();
-}
-
-bool IOSApplication::isBackboneApp()
-{
-    static bool isBackboneApp = applicationBundleIsEqualTo("com.backbonelabs.backboneapp"_s);
-    return isBackboneApp;
 }
 
 bool IOSApplication::isIBooksStorytime()
