@@ -91,7 +91,7 @@ private:
     void didRenderFrame() override;
 
 #if ENABLE(DAMAGE_TRACKING)
-    const std::optional<WebCore::Damage>& addDamage(WebCore::Damage&&) override;
+    const std::optional<WebCore::Damage>& frameDamageSinceLastUse() override;
 #endif
 
     void didCreateCompositingRunLoop(WTF::RunLoop&) override;

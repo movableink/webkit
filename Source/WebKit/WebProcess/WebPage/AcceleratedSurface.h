@@ -63,8 +63,15 @@ public:
     virtual void didRenderFrame() { }
 
 #if ENABLE(DAMAGE_TRACKING)
-    virtual const std::optional<WebCore::Damage>& addDamage(WebCore::Damage&&) { return m_frameDamage; }
+    void setFrameDamage(WebCore::Damage&& damage)
+    {
+        if (!damage.isEmpty())
+            m_frameDamage = WTFMove(damage);
+        else
+            m_frameDamage = std::nullopt;
+    }
     const std::optional<WebCore::Damage>& frameDamage() const { return m_frameDamage; }
+    virtual const std::optional<WebCore::Damage>& frameDamageSinceLastUse() { return m_frameDamage; }
 #endif
 
     virtual void didCreateCompositingRunLoop(WTF::RunLoop&) { }

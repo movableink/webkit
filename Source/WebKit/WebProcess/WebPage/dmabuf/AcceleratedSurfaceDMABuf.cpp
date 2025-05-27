@@ -690,13 +690,8 @@ void AcceleratedSurfaceDMABuf::didRenderFrame()
 }
 
 #if ENABLE(DAMAGE_TRACKING)
-const std::optional<WebCore::Damage>& AcceleratedSurfaceDMABuf::addDamage(WebCore::Damage&& damage)
+const std::optional<WebCore::Damage>& AcceleratedSurfaceDMABuf::frameDamageSinceLastUse()
 {
-    if (!damage.isEmpty())
-        m_frameDamage = WTFMove(damage);
-    else
-        m_frameDamage = std::nullopt;
-
     m_swapChain.addDamage(m_frameDamage);
     ASSERT(m_target);
     return m_target->damage();

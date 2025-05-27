@@ -71,12 +71,6 @@ class Damage {
 public:
     using Rects = Vector<IntRect, 1>;
 
-    enum class Propagation : uint8_t {
-        None,
-        Region,
-        Unified,
-    };
-
     enum class Mode : uint8_t {
         Rectangles, // Tracks dirty regions as rectangles, only unifying when maximum is reached.
         BoundingBox, // Dirty region is always the minimum bounding box of all added rectangles.

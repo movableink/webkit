@@ -102,7 +102,7 @@ TextureMapperLayer& CoordinatedPlatformLayer::ensureTarget()
     if (!m_target) {
         m_target = makeUnique<TextureMapperLayer>();
 #if ENABLE(DAMAGE_TRACKING)
-        m_target->setDamagePropagation(m_damagePropagation);
+        m_target->setDamagePropagationEnabled(m_damagePropagationEnabled);
 #endif
     }
     return *m_target;

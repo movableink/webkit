@@ -231,9 +231,14 @@ void ThreadedCompositor::setSize(const IntSize& size, float deviceScaleFactor)
 }
 
 #if ENABLE(DAMAGE_TRACKING)
-void ThreadedCompositor::setDamagePropagation(Damage::Propagation damagePropagation)
+void ThreadedCompositor::setDamagePropagationFlags(std::optional<OptionSet<DamagePropagationFlags>> flags)
 {
-    m_damage.propagation = damagePropagation;
+    m_damage.flags = flags;
+    if (m_damage.visualizer && m_damage.flags) {
+        // We don't use damage when rendering layers if the visualizer is enabled, because we need to make sure the whole
+        // frame is invalidated in the next paint so that previous damage rects are cleared.
+        m_damage.flags->remove(DamagePropagationFlags::UseForCompositing);
+    }
 }
 
 void ThreadedCompositor::enableFrameDamageNotificationForTesting()
@@ -269,8 +274,8 @@ void ThreadedCompositor::paintToCurrentGLContext(const TransformationMatrix& mat
 #if ENABLE(DAMAGE_TRACKING)
     std::optional<FloatRoundedRect> rectContainingRegionThatActuallyChanged;
     currentRootLayer.prepareForPainting(*m_textureMapper);
-    if (m_damage.propagation != Damage::Propagation::None) {
-        Damage frameDamage(size, m_damage.propagation == Damage::Propagation::Unified ? Damage::Mode::BoundingBox : Damage::Mode::Rectangles);
+    if (m_damage.flags) {
+        Damage frameDamage(size, m_damage.flags->contains(DamagePropagationFlags::Unified) ? Damage::Mode::BoundingBox : Damage::Mode::Rectangles);
 
         WTFBeginSignpost(this, CollectDamage);
         currentRootLayer.collectDamage(*m_textureMapper, frameDamage);
@@ -279,10 +284,10 @@ void ThreadedCompositor::paintToCurrentGLContext(const TransformationMatrix& mat
         if (m_damage.shouldNotifyFrameDamageForTesting && m_layerTreeHost)
             m_layerTreeHost->notifyFrameDamageForTesting(frameDamage.regionForTesting());
 
-        const auto& damageSinceLastSurfaceUse = m_surface->addDamage(WTFMove(frameDamage));
-        if (!m_damage.visualizer) {
-            // We don't use damage when rendering layers if the visualizer is enabled, because we need to make sure the whole
-            // frame is invalidated in the next paint so that previous damage rects are cleared.
+        m_surface->setFrameDamage(WTFMove(frameDamage));
+
+        if (m_damage.flags->contains(DamagePropagationFlags::UseForCompositing)) {
+            const auto& damageSinceLastSurfaceUse = m_surface->frameDamageSinceLastUse();
             if (damageSinceLastSurfaceUse && !FloatRect(damageSinceLastSurfaceUse->bounds()).contains(clipRect))
                 rectContainingRegionThatActuallyChanged = FloatRoundedRect(damageSinceLastSurfaceUse->bounds());
 

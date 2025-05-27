@@ -304,7 +304,7 @@ void TextureMapperLayer::computeTransformsRecursive(ComputeTransformData& data)
 #endif
 
 #if ENABLE(DAMAGE_TRACKING)
-        if (canInferDamage() && oldCombined != m_layerTransforms.combined)
+        if (m_damagePropagationEnabled && oldCombined != m_layerTransforms.combined)
             damageWholeLayerIncludingItsRectFromPreviousFrame();
 #endif
     }
@@ -469,7 +469,7 @@ static FloatRect transformRectFromLayerToGlobalCoordinateSpace(const FloatRect& 
 
 void TextureMapperLayer::collectDamageSelf(TextureMapperPaintOptions& options, Damage& damage)
 {
-    ASSERT(m_damagePropagation);
+    ASSERT(m_damagePropagationEnabled);
 
     m_previousLayerRectInGlobalCoordinateSpace = std::nullopt;
     auto cleanup = WTF::makeScopeExit([&]() {
@@ -1292,7 +1292,7 @@ void TextureMapperLayer::removeFromParent()
         ASSERT(index != notFound);
         m_parent->m_children.removeAt(index);
 #if ENABLE(DAMAGE_TRACKING)
-        if (m_parent->canInferDamage()) {
+        if (m_parent->m_damagePropagationEnabled) {
             collectDamageFromLayerAboutToBeRemoved(*this);
             if (m_damageInGlobalCoordinateSpace)
                 m_parent->ensureDamageInGlobalCoordinateSpace().add(*m_damageInGlobalCoordinateSpace);
@@ -1357,7 +1357,7 @@ void TextureMapperLayer::setBoundsOrigin(const FloatPoint& boundsOrigin)
 void TextureMapperLayer::setSize(const FloatSize& size)
 {
 #if ENABLE(DAMAGE_TRACKING)
-    if (canInferDamage() && m_state.size != size) {
+    if (m_damagePropagationEnabled && m_state.size != size) {
         m_state.size = size;
         damageWholeLayerIncludingItsRectFromPreviousFrame();
         return;
@@ -1439,7 +1439,7 @@ void TextureMapperLayer::setBackfaceVisibility(bool backfaceVisibility)
 void TextureMapperLayer::setOpacity(float opacity)
 {
 #if ENABLE(DAMAGE_TRACKING)
-    if (canInferDamage() && m_state.opacity != opacity)
+    if (m_damagePropagationEnabled && m_state.opacity != opacity)
         damageWholeLayer();
 #endif
     m_state.opacity = opacity;
@@ -1448,7 +1448,7 @@ void TextureMapperLayer::setOpacity(float opacity)
 void TextureMapperLayer::setSolidColor(const Color& color)
 {
 #if ENABLE(DAMAGE_TRACKING)
-    if (canInferDamage() && m_state.solidColor != color)
+    if (m_damagePropagationEnabled && m_state.solidColor != color)
         damageWholeLayer();
 #endif
     m_state.solidColor = color;
@@ -1516,7 +1516,7 @@ bool TextureMapperLayer::syncAnimations(MonotonicTime time)
 
     m_layerTransforms.localTransform = applicationResults.transform.value_or(m_state.transform);
 #if ENABLE(DAMAGE_TRACKING)
-    if (canInferDamage() && m_currentOpacity != applicationResults.opacity.value_or(m_state.opacity)) {
+    if (m_damagePropagationEnabled && m_currentOpacity != applicationResults.opacity.value_or(m_state.opacity)) {
         damageWholeLayer();
         if (m_currentOpacity >= s_opacityVisibilityThreshold && applicationResults.opacity.value_or(m_state.opacity) < s_opacityVisibilityThreshold)
             m_collectDamageDespiteBeingInvisible = true;

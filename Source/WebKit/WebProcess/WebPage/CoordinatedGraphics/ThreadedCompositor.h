@@ -33,9 +33,11 @@
 #include <WebCore/IntSize.h>
 #include <WebCore/TextureMapperDamageVisualizer.h>
 #include <atomic>
+#include <optional>
 #include <wtf/Atomics.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/OptionSet.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
@@ -58,12 +60,6 @@ class ThreadedCompositor : public ThreadSafeRefCounted<ThreadedCompositor>, publ
     WTF_MAKE_NONCOPYABLE(ThreadedCompositor);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ThreadedCompositor);
 public:
-    enum class DamagePropagation : uint8_t {
-        None,
-        Region,
-        Unified,
-    };
-
 #if HAVE(DISPLAY_LINK)
     static Ref<ThreadedCompositor> create(LayerTreeHost&);
 #else
@@ -97,7 +93,11 @@ public:
     std::optional<float> fps() const { return m_fpsCounter.fps.load(); };
 
 #if ENABLE(DAMAGE_TRACKING)
-    void setDamagePropagation(WebCore::Damage::Propagation);
+    enum class DamagePropagationFlags : uint8_t {
+        Unified = 1 << 0,
+        UseForCompositing = 1 << 1
+    };
+    void setDamagePropagationFlags(std::optional<OptionSet<DamagePropagationFlags>>);
     void enableFrameDamageNotificationForTesting();
 #endif
 
@@ -157,7 +157,7 @@ private:
 
 #if ENABLE(DAMAGE_TRACKING)
     struct {
-        WebCore::Damage::Propagation propagation { WebCore::Damage::Propagation::None };
+        std::optional<OptionSet<DamagePropagationFlags>> flags;
         std::unique_ptr<WebCore::TextureMapperDamageVisualizer> visualizer;
         std::atomic<bool> shouldNotifyFrameDamageForTesting { false };
     } m_damage;

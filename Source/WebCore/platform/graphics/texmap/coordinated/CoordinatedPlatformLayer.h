@@ -97,8 +97,7 @@ public:
     void invalidateTarget();
 
 #if ENABLE(DAMAGE_TRACKING)
-    void setDamagePropagation(bool enabled) { m_damagePropagation = enabled; }
-    bool damagePropagation() const { return m_damagePropagation; }
+    void setDamagePropagationEnabled(bool enabled) { m_damagePropagationEnabled = enabled; }
 #endif
 
     void setPosition(FloatPoint&&);
@@ -246,7 +245,7 @@ private:
     bool m_needsTilesUpdate { false };
 
 #if ENABLE(DAMAGE_TRACKING)
-    bool m_damagePropagation { false };
+    bool m_damagePropagationEnabled { false };
 #endif
 
     Lock m_lock;

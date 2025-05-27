@@ -470,12 +470,6 @@ enum ContentsFormat {
 #endif
 };
 
-[Conditional=DAMAGE_TRACKING] enum DamagePropagation {
-    "None",
-    "Region",
-    "Unified"
-};
-
 [
     Conditional=DAMAGE_TRACKING,
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
@@ -758,7 +752,6 @@ enum ContentsFormat {
     undefined setResourceCachingDisabledByWebInspector(boolean disabled);
     undefined lowerAllFrameMemoryMonitorLimits();
 
-    [Conditional=DAMAGE_TRACKING] DamagePropagation? getCurrentDamagePropagation();
     [Conditional=DAMAGE_TRACKING] sequence<FrameDamage> getFrameDamageHistory();
 
     // Flags for layerTreeAsText.

@@ -24,8 +24,6 @@ function setupTestCase(options = {}) {
 
         if (!window.internals) {
             failTest("FAIL: this test case requires internals");
-        } else if (window.internals.getCurrentDamagePropagation() != "Region") {
-            failTest("FAIL: this test case requires proper damage propagation");
         } else {
             try {
                 window.internals.getFrameDamageHistory();
