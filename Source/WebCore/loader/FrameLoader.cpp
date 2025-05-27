@@ -3155,6 +3155,15 @@ void FrameLoader::checkLoadComplete(LoadWillContinueInAnotherProcess loadWillCon
             frames.append(localFrame.releaseNonNull());
     }
 
+    // Provisional frames that are not in the frame tree need to be included to report provisional load failures.
+    if (m_frame->settings().siteIsolationEnabled()) {
+        bool containsThisFrame = std::ranges::any_of(frames, [thisFrame = Ref { m_frame.get() }] (auto& frame) {
+            return frame.ptr() == thisFrame.ptr();
+        });
+        if (!containsThisFrame)
+            frames.append(m_frame);
+    }
+
     // To process children before their parents, iterate the vector backwards.
     for (Ref frame : makeReversedRange(frames)) {
         if (frame->page())
@@ -3279,6 +3288,8 @@ void FrameLoader::detachFromParent()
         parentLoader->scheduleCheckCompleted();
         parentLoader->scheduleCheckLoadComplete();
     } else {
+        if (RefPtr parent = frame->tree().parent())
+            parent->tree().removeChild(frame);
         frame->setView(nullptr);
         frame->willDetachPage();
         frame->detachFromPage();

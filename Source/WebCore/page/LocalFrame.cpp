@@ -168,17 +168,17 @@ static inline float parentTextZoomFactor(LocalFrame* frame)
     return parent->textZoomFactor();
 }
 
-static const LocalFrame& rootFrame(const LocalFrame& frame)
+static const LocalFrame& rootFrame(const LocalFrame& frame, Frame* parent)
 {
-    SUPPRESS_UNCOUNTED_LOCAL auto* parent = dynamicDowncast<LocalFrame>(frame.tree().parent());
-    if (parent)
-        return parent->rootFrame();
-    ASSERT(is<RemoteFrame>(frame.tree().parent()) || frame.isMainFrame());
+    SUPPRESS_UNCOUNTED_LOCAL auto* localParent = dynamicDowncast<LocalFrame>(parent);
+    if (localParent)
+        return localParent->rootFrame();
+    ASSERT(is<RemoteFrame>(parent) || frame.isMainFrame());
     return frame;
 }
 
-LocalFrame::LocalFrame(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, SandboxFlags sandboxFlags, std::optional<ScrollbarMode> scrollingMode, HTMLFrameOwnerElement* ownerElement, Frame* parent, Frame* opener, Ref<FrameTreeSyncData>&& frameTreeSyncData)
-    : Frame(page, identifier, FrameType::Local, ownerElement, parent, opener, WTFMove(frameTreeSyncData))
+LocalFrame::LocalFrame(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, SandboxFlags sandboxFlags, std::optional<ScrollbarMode> scrollingMode, HTMLFrameOwnerElement* ownerElement, Frame* parent, Frame* opener, Ref<FrameTreeSyncData>&& frameTreeSyncData, AddToFrameTree addToFrameTree)
+    : Frame(page, identifier, FrameType::Local, ownerElement, parent, opener, WTFMove(frameTreeSyncData), addToFrameTree)
     , m_loader(makeUniqueRefWithoutRefCountedCheck<FrameLoader>(*this, WTFMove(clientCreator)))
     , m_script(makeUniqueRef<ScriptController>(*this))
 #if PLATFORM(IOS_FAMILY)
@@ -188,7 +188,7 @@ LocalFrame::LocalFrame(Page& page, ClientCreator&& clientCreator, FrameIdentifie
 #endif
     , m_pageZoomFactor(parentPageZoomFactor(this))
     , m_textZoomFactor(parentTextZoomFactor(this))
-    , m_rootFrame(WebCore::rootFrame(*this))
+    , m_rootFrame(WebCore::rootFrame(*this, parent))
     , m_sandboxFlags(sandboxFlags)
     , m_eventHandler(makeUniqueRef<EventHandler>(*this))
 {
@@ -232,7 +232,7 @@ Ref<LocalFrame> LocalFrame::createSubframe(Page& page, ClientCreator&& clientCre
 
 Ref<LocalFrame> LocalFrame::createProvisionalSubframe(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, SandboxFlags effectiveSandboxFlags, ScrollbarMode scrollingMode, Frame& parent, Ref<FrameTreeSyncData>&& frameTreeSyncData)
 {
-    return adoptRef(*new LocalFrame(page, WTFMove(clientCreator), identifier, effectiveSandboxFlags, scrollingMode, nullptr, &parent, nullptr, WTFMove(frameTreeSyncData)));
+    return adoptRef(*new LocalFrame(page, WTFMove(clientCreator), identifier, effectiveSandboxFlags, scrollingMode, nullptr, &parent, nullptr, WTFMove(frameTreeSyncData), AddToFrameTree::No));
 }
 
 LocalFrame::~LocalFrame()

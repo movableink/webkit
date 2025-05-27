@@ -4920,4 +4920,31 @@ TEST(SiteIsolation, DragAndDrop)
 }
 #endif
 
+TEST(SiteIsolation, FramesDuringProvisionalNavigation)
+{
+    HTTPServer server({
+        { "/example"_s, { "<iframe src='https://webkit.org/iframe'></iframe>"_s } },
+        { "/iframe"_s, { "hi"_s } },
+        { "/second_iframe"_s, { TestWebKitAPI::HTTPResponse::Behavior::NeverSendResponse } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server, CGRectMake(0, 0, 800, 600));
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+    EXPECT_EQ(server.totalRequests(), 2u);
+
+    [webView evaluateJavaScript:@"var iframe = document.createElement('iframe');document.body.appendChild(iframe);iframe.src = 'https://webkit.org/second_iframe'" completionHandler:nil];
+    while (server.totalRequests() < 3)
+        Util::spinRunLoop();
+    EXPECT_EQ([[webView objectByEvaluatingJavaScript:@"window.parent.length" inFrame:[webView firstChildFrame]] intValue], 2);
+
+    checkFrameTreesInProcesses(webView.get(), {
+        { "https://example.com"_s,
+            { { RemoteFrame }, { "https://example.com"_s } }
+        }, { RemoteFrame,
+            { { "https://webkit.org"_s }, { RemoteFrame } }
+        },
+    });
+}
+
 }

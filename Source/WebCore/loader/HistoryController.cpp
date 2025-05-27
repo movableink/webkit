@@ -588,7 +588,7 @@ void HistoryController::updateForRedirectWithLockedBackForwardList()
     auto historyURL = documentLoader ? documentLoader->urlForHistory() : URL { };
 
     if (documentLoader && documentLoader->isClientRedirect()) {
-        if (!m_currentItem && !m_frame->tree().parent()) {
+        if (!m_currentItem && m_frame->isMainFrame()) {
             if (!historyURL.isEmpty()) {
                 updateBackForwardListClippedAtTarget(true);
                 if (canRecordHistory) {

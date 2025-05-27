@@ -92,6 +92,45 @@ void FrameTree::removeChild(Frame& child)
     m_scopedChildCount = invalidCount;
 }
 
+void FrameTree::replaceChild(Frame& oldChild, Frame& newChild)
+{
+    auto& oldTree = oldChild.tree();
+    auto& newTree = newChild.tree();
+    ASSERT(oldTree.parent() == m_thisFrame.ptr());
+    ASSERT(!newTree.parent());
+    ASSERT(!newTree.nextSibling());
+    ASSERT(!newTree.previousSibling());
+    ASSERT(!newTree.firstChild());
+    ASSERT(!newTree.lastChild());
+    ASSERT(newTree.m_scopedChildCount == invalidCount);
+    ASSERT(newTree.m_thisFrame.ptr() == &newChild);
+    ASSERT(is<LocalFrame>(oldChild) != is<LocalFrame>(newChild));
+
+    RefPtr oldNextSibling = oldTree.nextSibling();
+    RefPtr oldPreviousSibling = oldTree.previousSibling();
+    bool oldChildWasFirst = m_firstChild.get() == &oldChild;
+    bool oldChildWasLast = m_lastChild.get() == &oldChild;
+    // Children are intentionally not carried to the new tree because this happens during navigation, when all child frames are removed.
+
+    if (RefPtr oldLocalFrame = dynamicDowncast<LocalFrame>(oldChild))
+        oldLocalFrame->loader().detachFromParent();
+    else
+        removeChild(oldChild);
+
+    newTree.m_parent = m_thisFrame.ptr();
+    newTree.m_nextSibling = oldNextSibling.get();
+    newTree.m_previousSibling = oldPreviousSibling.get();
+
+    if (oldChildWasFirst)
+        m_firstChild = &newChild;
+    if (oldChildWasLast)
+        m_lastChild = &newChild;
+    if (oldNextSibling)
+        oldNextSibling->tree().m_previousSibling = &newChild;
+    if (oldPreviousSibling)
+        oldPreviousSibling->tree().m_nextSibling = &newChild;
+}
+
 Ref<Frame> FrameTree::protectedThisFrame() const
 {
     return m_thisFrame.get();
@@ -520,7 +559,6 @@ Frame* FrameTree::deepLastChild() const
 
 Frame& FrameTree::top() const
 {
-    ASSERT(m_thisFrame->isMainFrame() || m_thisFrame->tree().parent());
     return m_thisFrame->mainFrame();
 }
 

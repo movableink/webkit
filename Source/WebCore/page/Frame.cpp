@@ -106,10 +106,10 @@ private:
 };
 #endif
 
-Frame::Frame(Page& page, FrameIdentifier frameID, FrameType frameType, HTMLFrameOwnerElement* ownerElement, Frame* parent, Frame* opener, Ref<FrameTreeSyncData>&& frameTreeSyncData)
+Frame::Frame(Page& page, FrameIdentifier frameID, FrameType frameType, HTMLFrameOwnerElement* ownerElement, Frame* parent, Frame* opener, Ref<FrameTreeSyncData>&& frameTreeSyncData, AddToFrameTree addToFrameTree)
     : m_page(page)
     , m_frameID(frameID)
-    , m_treeNode(*this, parent)
+    , m_treeNode(*this, addToFrameTree == AddToFrameTree::Yes ? parent : nullptr)
     , m_windowProxy(WindowProxy::create(*this))
     , m_ownerElement(ownerElement)
     , m_mainFrame(parent ? page.mainFrame() : *this)
@@ -120,7 +120,7 @@ Frame::Frame(Page& page, FrameIdentifier frameID, FrameType frameType, HTMLFrame
     , m_frameTreeSyncData(WTFMove(frameTreeSyncData))
 {
     relaxAdoptionRequirement();
-    if (parent)
+    if (parent && addToFrameTree == AddToFrameTree::Yes)
         parent->tree().appendChild(*this);
 
     if (ownerElement)
