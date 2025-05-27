@@ -4128,6 +4128,7 @@ imported/w3c/web-platform-tests/css/css-view-transitions/input-targets-root-whil
 imported/w3c/web-platform-tests/css/css-view-transitions/no-css-animation-while-render-blocked.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-view-transitions/no-raf-while-render-blocked.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-view-transitions/column-span-during-transition-doesnt-skip.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-view-transitions/inline-with-offset-from-containing-block.html [ ImageOnlyFailure ]
 
 imported/w3c/web-platform-tests/css/css-view-transitions/navigation/at-rule-opt-in-auto.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-view-transitions/navigation/hide-before-reveal.html [ Failure ]

@@ -7069,20 +7069,14 @@ imported/w3c/web-platform-tests/navigation-api/ordering-and-transition/navigate-
 # -- View Transitions -- #
 # Reftest failures:
 imported/w3c/web-platform-tests/css/css-view-transitions/content-with-clip-root.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-view-transitions/inline-with-offset-from-containing-block.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-view-transitions/span-with-overflowing-text.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-view-transitions/new-content-captures-different-size.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-view-transitions/paint-holding-in-iframe.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-view-transitions/auto-name-get-animations.html [ Failure ]
 imported/w3c/web-platform-tests/css/css-view-transitions/fractional-translation-from-transform.html [ ImageOnlyFailure ]
 
 # Timeouts
-imported/w3c/web-platform-tests/css/css-view-transitions/iframe-transition.sub.html [ Skip ]
 
-# Flakes
-imported/w3c/web-platform-tests/css/css-view-transitions/synchronous-callback-skipped-before-run.html [ Failure Pass ]
-# webkit.org/b/278352
-[ Debug ] imported/w3c/web-platform-tests/css/css-view-transitions/capture-with-opacity-zero-child.html [ Pass ImageOnlyFailure ]
+# {{domains[www]}} substitued incorrectly by WKTR
+imported/w3c/web-platform-tests/css/css-view-transitions/iframe-transition.sub.html [ Skip ]
 
 # Reftests with variants are not supported
 imported/w3c/web-platform-tests/css/css-view-transitions/web-animations-api-parse-pseudo-argument.html?first-pseudo=::view-transition-group(%20%20%20%20%20%20first%20) [ Skip ]
@@ -7091,6 +7085,9 @@ imported/w3c/web-platform-tests/css/css-view-transitions/web-animations-api-pars
 imported/w3c/web-platform-tests/css/css-view-transitions/web-animations-api-parse-pseudo-argument.html?first-pseudo=::view-transition-group(first [ Skip ]
 imported/w3c/web-platform-tests/css/css-view-transitions/web-animations-api-parse-pseudo-argument.html?first-pseudo=::view-transition-group(first%20) [ Skip ]
 imported/w3c/web-platform-tests/css/css-view-transitions/web-animations-api-parse-pseudo-argument.html?first-pseudo=::view-transition-group(first) [ Skip ]
+
+# Spec still in flux.
+imported/w3c/web-platform-tests/css/css-view-transitions/auto-name-get-animations.html [ Failure ]
 
 # View transitions Level 2 - types.
 # Test doesn't seem to pass on Chrome Canary.

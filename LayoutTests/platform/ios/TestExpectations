@@ -1391,6 +1391,7 @@ imported/w3c/web-platform-tests/css/css-view-transitions/fractional-box-old.html
 imported/w3c/web-platform-tests/css/css-view-transitions/fractional-box-with-shadow-old.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-view-transitions/inline-child-with-filter.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-view-transitions/inline-child-with-composited-filter.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-view-transitions/inline-with-offset-from-containing-block.html [ ImageOnlyFailure ]
 
 # Needs special fuzziness on iOS.
 imported/w3c/web-platform-tests/css/css-view-transitions/rotated-cat-off-top-edge.html [ ImageOnlyFailure ]
