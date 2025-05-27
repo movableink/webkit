@@ -33,6 +33,7 @@
 #import "PixelBufferConformerCV.h"
 #import "VideoDecoder.h"
 #import "VideoFrame.h"
+#import <CoreFoundation/CoreFoundation.h>
 #import <CoreMedia/CMBufferQueue.h>
 #import <CoreMedia/CMFormatDescription.h>
 #import <pal/avfoundation/MediaTimeAVFoundation.h>
@@ -53,10 +54,25 @@
 
 namespace WebCore {
 
+static bool s_canCopyFormatDescriptionExtension = false;
+
 WebCoreDecompressionSession::WebCoreDecompressionSession(Mode mode)
     : m_mode(mode)
     , m_decompressionQueue(WorkQueue::create("WebCoreDecompressionSession Decompression Queue"_s))
 {
+#if PLATFORM(VISION)
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        s_canCopyFormatDescriptionExtension = PAL::canLoad_CoreMedia_kCMFormatDescriptionExtension_HasLeftStereoEyeView()
+        && PAL::canLoad_CoreMedia_kCMFormatDescriptionExtension_HasRightStereoEyeView()
+        && PAL::canLoad_CoreMedia_kCMFormatDescriptionExtension_HeroEye()
+        && PAL::canLoad_CoreMedia_kCMFormatDescriptionExtension_HorizontalDisparityAdjustment()
+        && PAL::canLoad_CoreMedia_kCMFormatDescriptionExtension_StereoCameraBaseline()
+        && PAL::canLoad_CoreMedia_kCMFormatDescriptionExtension_ProjectionKind()
+        && PAL::canLoad_CoreMedia_kCMFormatDescriptionExtension_ViewPackingKind()
+        && PAL::canLoad_CoreMedia_kCMFormatDescriptionExtension_CameraCalibrationDataLensCollection();
+    });
+#endif
 }
 
 WebCoreDecompressionSession::~WebCoreDecompressionSession() = default;
@@ -136,21 +152,70 @@ static bool isNonRecoverableError(OSStatus status)
     return status != noErr && status != kVTVideoDecoderReferenceMissingErr;
 }
 
-static Expected<RetainPtr<CMSampleBufferRef>, OSStatus> handleDecompressionOutput(bool displaying, OSStatus status, VTDecodeInfoFlags, CVImageBufferRef rawImageBuffer, CMTime presentationTimeStamp, CMTime presentationDuration)
+static RetainPtr<CMVideoFormatDescriptionRef> copyDescriptionExtensionValuesIfNeeded(CMVideoFormatDescriptionRef imageDescription, const CMVideoFormatDescriptionRef originalDescription)
+{
+    if (!s_canCopyFormatDescriptionExtension)
+        return imageDescription;
+
+    static CFStringRef keys[] = {
+        PAL::kCMFormatDescriptionExtension_CameraCalibrationDataLensCollection,
+        PAL::kCMFormatDescriptionExtension_HasLeftStereoEyeView,
+        PAL::kCMFormatDescriptionExtension_HasRightStereoEyeView,
+        PAL::kCMFormatDescriptionExtension_HeroEye,
+        PAL::kCMFormatDescriptionExtension_HorizontalFieldOfView,
+        PAL::kCMFormatDescriptionExtension_HorizontalDisparityAdjustment,
+        PAL::kCMFormatDescriptionExtension_StereoCameraBaseline,
+        PAL::kCMFormatDescriptionExtension_ProjectionKind,
+        PAL::kCMFormatDescriptionExtension_ViewPackingKind
+    };
+    static constexpr size_t numberOfKeys = sizeof(keys) / sizeof(keys[0]);
+    auto keysSpan = unsafeMakeSpan(keys, numberOfKeys);
+    size_t keysSet = 0;
+    Vector<RetainPtr<CFPropertyListRef>, numberOfKeys> values(numberOfKeys, [&](size_t index) -> RetainPtr<CFPropertyListRef> {
+        RetainPtr value = PAL::CMFormatDescriptionGetExtension(originalDescription, keysSpan[index]);
+        if (!value)
+            return nullptr;
+        keysSet++;
+        return value;
+    });
+
+    if (!keysSet)
+        return imageDescription;
+
+    RetainPtr<CFMutableDictionaryRef> copyExtensions;
+    if (RetainPtr extensions = PAL::CMFormatDescriptionGetExtensions(imageDescription))
+        copyExtensions = adoptCF(CFDictionaryCreateMutableCopy(kCFAllocatorDefault, CFDictionaryGetCount(extensions.get()) + keysSet, extensions.get()));
+    else
+        copyExtensions = adoptCF(CFDictionaryCreateMutable(kCFAllocatorDefault, keysSet, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+
+    for (size_t index = 0; index < numberOfKeys; index++) {
+        if (values[index])
+            CFDictionarySetValue(copyExtensions.get(), keysSpan[index], values[index].get());
+    }
+
+    auto codecType = PAL::CMFormatDescriptionGetMediaSubType(imageDescription);
+    auto dimensions = PAL::CMVideoFormatDescriptionGetDimensions(imageDescription);
+
+    CMVideoFormatDescriptionRef newImageDescription;
+    if (auto status = PAL::CMVideoFormatDescriptionCreate(kCFAllocatorDefault, codecType, dimensions.width, dimensions.height, copyExtensions.get(), &newImageDescription); status != noErr)
+        return imageDescription;
+    return adoptCF(newImageDescription);
+}
+
+static Expected<RetainPtr<CMSampleBufferRef>, OSStatus> handleDecompressionOutput(bool displaying, OSStatus status, VTDecodeInfoFlags, CVImageBufferRef imageBuffer, CMTime presentationTimeStamp, CMTime presentationDuration, CMVideoFormatDescriptionRef description = nullptr)
 {
     if (isNonRecoverableError(status)) {
         RELEASE_LOG_ERROR(Media, "Video sample decompression failed with error:%d", int(status));
         return makeUnexpected(status);
     }
 
-    if (!displaying || !rawImageBuffer)
+    if (!displaying || !imageBuffer)
         return { };
 
     CMVideoFormatDescriptionRef rawImageBufferDescription = nullptr;
-    if (auto status = PAL::CMVideoFormatDescriptionCreateForImageBuffer(kCFAllocatorDefault, rawImageBuffer, &rawImageBufferDescription); status != noErr)
+    if (auto status = PAL::CMVideoFormatDescriptionCreateForImageBuffer(kCFAllocatorDefault, imageBuffer, &rawImageBufferDescription); status != noErr)
         return makeUnexpected(status);
-
-    RetainPtr<CMVideoFormatDescriptionRef> imageBufferDescription = adoptCF(rawImageBufferDescription);
+    RetainPtr<CMVideoFormatDescriptionRef> imageBufferDescription = copyDescriptionExtensionValuesIfNeeded(rawImageBufferDescription, description);
 
     CMSampleTimingInfo imageBufferTiming {
         presentationDuration,
@@ -159,7 +224,7 @@ static Expected<RetainPtr<CMSampleBufferRef>, OSStatus> handleDecompressionOutpu
     };
 
     CMSampleBufferRef rawImageSampleBuffer = nullptr;
-    if (auto status = PAL::CMSampleBufferCreateReadyWithImageBuffer(kCFAllocatorDefault, rawImageBuffer, imageBufferDescription.get(), &imageBufferTiming, &rawImageSampleBuffer); status != noErr)
+    if (auto status = PAL::CMSampleBufferCreateReadyWithImageBuffer(kCFAllocatorDefault, imageBuffer, imageBufferDescription.get(), &imageBufferTiming, &rawImageSampleBuffer); status != noErr)
         return makeUnexpected(status);
 
     return adoptCF(rawImageSampleBuffer);
@@ -286,10 +351,10 @@ Ref<WebCoreDecompressionSession::DecodingPromise> WebCoreDecompressionSession::d
     DecodingPromise::Producer producer;
     auto promise = producer.promise();
 
-    auto handler = makeBlockPtr([displaying, producer = WTFMove(producer), numberOfTimesCalled = 0u, numberOfSamples, decodedSamples = std::exchange(m_lastDecodedSamples, { })](OSStatus status, VTDecodeInfoFlags infoFlags, CVImageBufferRef imageBuffer, CMTime presentationTimeStamp, CMTime presentationDuration) mutable {
+    auto handler = makeBlockPtr([displaying, producer = WTFMove(producer), numberOfTimesCalled = 0u, numberOfSamples, decodedSamples = std::exchange(m_lastDecodedSamples, { }), description = RetainPtr { PAL::CMSampleBufferGetFormatDescription(sample) }](OSStatus status, VTDecodeInfoFlags infoFlags, CVImageBufferRef imageBuffer, CMTime presentationTimeStamp, CMTime presentationDuration) mutable {
         if (producer.isSettled())
             return;
-        auto result = handleDecompressionOutput(displaying, status, infoFlags, imageBuffer, presentationTimeStamp, presentationDuration);
+        auto result = handleDecompressionOutput(displaying, status, infoFlags, imageBuffer, presentationTimeStamp, presentationDuration, description.get());
         if (!result) {
             producer.reject(result.error());
             return;
