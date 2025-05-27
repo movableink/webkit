@@ -48,6 +48,7 @@
 #include "StyleProperties.h"
 #include "TransformState.h"
 #include <ranges>
+#include <wtf/CheckedPtr.h>
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -174,7 +175,7 @@ void RenderTableCell::colSpanOrRowSpanChanged()
 Length RenderTableCell::logicalWidthFromColumns(RenderTableCol* firstColForThisCell, Length widthFromStyle) const
 {
     ASSERT(firstColForThisCell && firstColForThisCell == table()->colElement(col()));
-    RenderTableCol* tableCol = firstColForThisCell;
+    CheckedPtr tableCol = firstColForThisCell;
 
     unsigned colSpanCount = colSpan();
     LayoutUnit colWidthSum;
@@ -669,7 +670,7 @@ CollapsedBorderValue RenderTableCell::computeCollapsedStartBorder(IncludeBorderC
             if (!result.exists())
                 return result;
             // Next, apply the start border of the enclosing colgroup but only if it is adjacent to the cell's edge.
-            if (RenderTableCol* enclosingColumnGroup = colElt->enclosingColumnGroupIfAdjacentBefore()) {
+            if (CheckedPtr enclosingColumnGroup = colElt->enclosingColumnGroupIfAdjacentBefore()) {
                 result = chooseBorder(result, CollapsedBorderValue(enclosingColumnGroup->borderAdjoiningCellStartBorder(), includeColor ? enclosingColumnGroup->style().visitedDependentColorWithColorFilter(startColorProperty) : Color(), BorderPrecedence::ColumnGroup));
                 if (!result.exists())
                     return result;
@@ -692,7 +693,7 @@ CollapsedBorderValue RenderTableCell::computeCollapsedStartBorder(IncludeBorderC
                     return result;
                 // Next, if the previous col has a parent colgroup then its end border should be applied
                 // but only if it is adjacent to the cell's edge.
-                if (RenderTableCol* enclosingColumnGroup = colElt->enclosingColumnGroupIfAdjacentAfter()) {
+                if (CheckedPtr enclosingColumnGroup = colElt->enclosingColumnGroupIfAdjacentAfter()) {
                     result = chooseBorder(CollapsedBorderValue(enclosingColumnGroup->borderAdjoiningCellEndBorder(), includeColor ? enclosingColumnGroup->style().visitedDependentColorWithColorFilter(endColorProperty) : Color(), BorderPrecedence::ColumnGroup), result);
                     if (!result.exists())
                         return result;
@@ -784,7 +785,7 @@ CollapsedBorderValue RenderTableCell::computeCollapsedEndBorder(IncludeBorderCol
             if (!result.exists())
                 return result;
             // Next, if it has a parent colgroup then we apply its end border but only if it is adjacent to the cell.
-            if (RenderTableCol* enclosingColumnGroup = colElt->enclosingColumnGroupIfAdjacentAfter()) {
+            if (CheckedPtr enclosingColumnGroup = colElt->enclosingColumnGroupIfAdjacentAfter()) {
                 result = chooseBorder(result, CollapsedBorderValue(enclosingColumnGroup->borderAdjoiningCellEndBorder(), includeColor ? enclosingColumnGroup->style().visitedDependentColorWithColorFilter(endColorProperty) : Color(), BorderPrecedence::ColumnGroup));
                 if (!result.exists())
                     return result;
@@ -806,7 +807,7 @@ CollapsedBorderValue RenderTableCell::computeCollapsedEndBorder(IncludeBorderCol
                 if (!result.exists())
                     return result;
                 // If we have a parent colgroup, resolve the border only if it is adjacent to the cell.
-                if (RenderTableCol* enclosingColumnGroup = colElt->enclosingColumnGroupIfAdjacentBefore()) {
+                if (CheckedPtr enclosingColumnGroup = colElt->enclosingColumnGroupIfAdjacentBefore()) {
                     result = chooseBorder(result, CollapsedBorderValue(enclosingColumnGroup->borderAdjoiningCellStartBorder(), includeColor ? enclosingColumnGroup->style().visitedDependentColorWithColorFilter(startColorProperty) : Color(), BorderPrecedence::ColumnGroup));
                     if (!result.exists())
                         return result;
@@ -906,7 +907,7 @@ CollapsedBorderValue RenderTableCell::computeCollapsedBeforeBorder(IncludeBorder
             result = chooseBorder(result, CollapsedBorderValue(colElt->style().borderBefore(tableWritingMode()), includeColor ? colElt->style().visitedDependentColorWithColorFilter(beforeColorProperty) : Color(), BorderPrecedence::Column));
             if (!result.exists())
                 return result;
-            if (RenderTableCol* enclosingColumnGroup = colElt->enclosingColumnGroup()) {
+            if (CheckedPtr enclosingColumnGroup = colElt->enclosingColumnGroup()) {
                 result = chooseBorder(result, CollapsedBorderValue(enclosingColumnGroup->style().borderBefore(tableWritingMode()), includeColor ? enclosingColumnGroup->style().visitedDependentColorWithColorFilter(beforeColorProperty) : Color(), BorderPrecedence::ColumnGroup));
                 if (!result.exists())
                     return result;
@@ -994,7 +995,7 @@ CollapsedBorderValue RenderTableCell::computeCollapsedAfterBorder(IncludeBorderC
         if (colElt) {
             result = chooseBorder(result, CollapsedBorderValue(colElt->style().borderAfter(tableWritingMode()), includeColor ? colElt->style().visitedDependentColorWithColorFilter(afterColorProperty) : Color(), BorderPrecedence::Column));
             if (!result.exists()) return result;
-            if (RenderTableCol* enclosingColumnGroup = colElt->enclosingColumnGroup()) {
+            if (CheckedPtr enclosingColumnGroup = colElt->enclosingColumnGroup()) {
                 result = chooseBorder(result, CollapsedBorderValue(enclosingColumnGroup->style().borderAfter(tableWritingMode()), includeColor ? enclosingColumnGroup->style().visitedDependentColorWithColorFilter(afterColorProperty) : Color(), BorderPrecedence::ColumnGroup));
                 if (!result.exists())
                     return result;

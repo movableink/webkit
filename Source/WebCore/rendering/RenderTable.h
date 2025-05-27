@@ -29,6 +29,7 @@
 #include "CollapsedBorderValue.h"
 #include "RenderBlock.h"
 #include <memory>
+#include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/Vector.h>
 
