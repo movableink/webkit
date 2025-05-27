@@ -34,6 +34,7 @@
 #import <wtf/SoftLinking.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
+#import <wtf/text/MakeString.h>
 #import <wtf/text/StringCommon.h>
 
 #if HAVE(APFS_CACHEDELETE_PURGEABLE)
@@ -189,7 +190,7 @@ NSString *createTemporaryDirectory(NSString *directoryPrefix)
 std::pair<FileHandle, CString> createTemporaryFileInDirectory(const String& directory, const String& suffix)
 {
     auto fsSuffix = fileSystemRepresentation(suffix);
-    auto templatePath = pathByAppendingComponents(directory, std::initializer_list<StringView>({ "XXXXXX"_s, suffix }));
+    auto templatePath = pathByAppendingComponents(directory, { { makeString("XXXXXX"_s, suffix) } });
     auto fsTemplatePath = fileSystemRepresentation(templatePath);
     auto fileHandle = FileHandle::adopt(mkstemps(fsTemplatePath.mutableSpanIncludingNullTerminator().data(), fsSuffix.length()));
     return { WTFMove(fileHandle), WTFMove(fsTemplatePath) };
