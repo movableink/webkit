@@ -65,12 +65,7 @@
 #include "ThreadableLoaderClient.h"
 #include <wtf/Assertions.h>
 #include <wtf/Ref.h>
-#include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/text/MakeString.h>
-
-#if PLATFORM(IOS_FAMILY)
-#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
-#endif
 
 namespace WebCore {
 
@@ -204,13 +199,7 @@ void DocumentThreadableLoader::makeCrossOriginAccessRequest(ResourceRequest&& re
 {
     ASSERT(m_options.mode == FetchOptions::Mode::Cors);
 
-#if PLATFORM(IOS_FAMILY)
-    bool needsPreflightQuirk = WTF::IOSApplication::isMoviStarPlus() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoMoviStarPlusCORSPreflightQuirk) && (m_options.preflightPolicy == PreflightPolicy::Consider || m_options.preflightPolicy == PreflightPolicy::Force);
-#else
-    bool needsPreflightQuirk = false;
-#endif
-
-    if ((m_options.preflightPolicy == PreflightPolicy::Consider && isSimpleCrossOriginAccessRequest(request.httpMethod(), request.httpHeaderFields())) || m_options.preflightPolicy == PreflightPolicy::Prevent || (shouldPerformSecurityChecks() && !needsPreflightQuirk)) {
+    if ((m_options.preflightPolicy == PreflightPolicy::Consider && isSimpleCrossOriginAccessRequest(request.httpMethod(), request.httpHeaderFields())) || m_options.preflightPolicy == PreflightPolicy::Prevent || shouldPerformSecurityChecks()) {
         if (checkURLSchemeAsCORSEnabled(request.url()))
             makeSimpleCrossOriginAccessRequest(WTFMove(request));
     } else {
@@ -223,7 +212,7 @@ void DocumentThreadableLoader::makeCrossOriginAccessRequest(ResourceRequest&& re
                 return;
             }
         }
-        if (!needsPreflightQuirk && !checkURLSchemeAsCORSEnabled(request.url()))
+        if (!checkURLSchemeAsCORSEnabled(request.url()))
             return;
 
         m_simpleRequest = false;

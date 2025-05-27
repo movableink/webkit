@@ -120,7 +120,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::ScrollViewContentInsetsAreNotObscuringInsets);
         disableBehavior(SDKAlignedBehavior::UIScrollViewDoesNotApplyKeyboardInsetsUnconditionally);
         disableBehavior(SDKAlignedBehavior::MainThreadReleaseAssertionInWebPageProxy);
-        disableBehavior(SDKAlignedBehavior::NoMoviStarPlusCORSPreflightQuirk);
         disableBehavior(SDKAlignedBehavior::TimerThreadSafetyChecks);
     }
 
@@ -505,12 +504,6 @@ bool IOSApplication::isIBooksStorytime()
 {
     static bool isIBooksStorytime = applicationBundleIsEqualTo("com.apple.TVBooks"_s);
     return isIBooksStorytime;
-}
-
-bool IOSApplication::isMoviStarPlus()
-{
-    static bool isMoviStarPlus = applicationBundleIsEqualTo("com.prisatv.yomvi"_s);
-    return isMoviStarPlus;
 }
 
 bool IOSApplication::isHoYoLAB()

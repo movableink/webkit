@@ -75,7 +75,6 @@ enum class SDKAlignedBehavior {
     NavigationActionSourceFrameNonNull,
     NoClientCertificateLookup,
     NoExpandoIndexedPropertiesOnWindow,
-    NoMoviStarPlusCORSPreflightQuirk,
     NoPokerBrosBuiltInTagQuirk,
     NoShowModalDialog,
     NoTypedArrayAPIQuirk,
@@ -214,7 +213,6 @@ WTF_EXPORT_PRIVATE bool isWebBookmarksD();
 WTF_EXPORT_PRIVATE bool isWebProcess();
 WTF_EXPORT_PRIVATE bool isIBooksStorytime();
 WTF_EXPORT_PRIVATE bool isMobileStore();
-WTF_EXPORT_PRIVATE bool isMoviStarPlus();
 WTF_EXPORT_PRIVATE bool isUNIQLOApp();
 WTF_EXPORT_PRIVATE bool isWechat();
 WTF_EXPORT_PRIVATE bool isDOFUSTouch();
