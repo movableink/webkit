@@ -30,6 +30,7 @@
 #include <wtf/IndexedRange.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
