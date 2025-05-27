@@ -5613,9 +5613,8 @@ Lock& WebGLRenderingContextBase::objectGraphLock()
 
 void WebGLRenderingContextBase::prepareForDisplay()
 {
-    if (!m_context)
+    if (!m_context || !m_compositingResultsNeedUpdating)
         return;
-    ASSERT(m_compositingResultsNeedUpdating);
 
     clearIfComposited(CallerTypeOther);
     m_context->prepareForDisplay();
