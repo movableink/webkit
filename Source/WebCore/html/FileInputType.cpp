@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2010-2014 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -338,7 +338,7 @@ void FileInputType::setFiles(RefPtr<FileList>&& files, RequestIcon shouldRequest
         return;
 
     ASSERT(element());
-    Ref<HTMLInputElement> protectedInputElement(*element());
+    Ref element = *this->element();
 
     unsigned length = files->length();
 
@@ -357,14 +357,14 @@ void FileInputType::setFiles(RefPtr<FileList>&& files, RequestIcon shouldRequest
 
     m_fileList = files.releaseNonNull();
 
-    protectedInputElement->setFormControlValueMatchesRenderer(true);
-    protectedInputElement->updateValidity();
+    element->setFormControlValueMatchesRenderer(true);
+    element->updateValidity();
 
     if (shouldRequestIcon == RequestIcon::Yes)
         requestIcon(protectedFiles()->paths());
 
-    if (protectedInputElement->renderer())
-        protectedInputElement->renderer()->repaint();
+    if (CheckedPtr renderer = element->renderer())
+        renderer->repaint();
 
     if (wasSetByJavaScript == WasSetByJavaScript::Yes)
         return;
@@ -372,13 +372,13 @@ void FileInputType::setFiles(RefPtr<FileList>&& files, RequestIcon shouldRequest
     if (pathsChanged) {
         // This call may cause destruction of this instance.
         // input instance is safe since it is ref-counted.
-        protectedInputElement->dispatchInputEvent();
-        protectedInputElement->dispatchChangeEvent();
+        element->dispatchInputEvent();
+        element->dispatchChangeEvent();
     } else
-        protectedInputElement->dispatchCancelEvent();
+        element->dispatchCancelEvent();
 
-    protectedInputElement->setChangedSinceLastFormControlChangeEvent(false);
-    protectedInputElement->setInteractedWithSinceLastFormSubmitEvent(true);
+    element->setChangedSinceLastFormControlChangeEvent(false);
+    element->setInteractedWithSinceLastFormSubmitEvent(true);
 }
 
 void FileInputType::filesChosen(const Vector<FileChooserFileInfo>& paths, const String& displayString, Icon* icon)
@@ -429,9 +429,7 @@ void FileInputType::filesChosen(const Vector<String>& paths, const Vector<String
 void FileInputType::fileChoosingCancelled()
 {
     ASSERT(element());
-    Ref<HTMLInputElement> protectedInputElement(*element());
-
-    protectedInputElement->dispatchCancelEvent();
+    protectedElement()->dispatchCancelEvent();
 }
 
 void FileInputType::didCreateFileList(Ref<FileList>&& fileList, RefPtr<Icon>&& icon)
@@ -458,7 +456,7 @@ void FileInputType::iconLoaded(RefPtr<Icon>&& icon)
 
     m_icon = WTFMove(icon);
     ASSERT(element());
-    if (auto* renderer = element()->renderer())
+    if (CheckedPtr renderer = element()->renderer())
         renderer->repaint();
 }
 

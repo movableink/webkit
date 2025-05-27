@@ -334,7 +334,6 @@ history/CachedFrame.cpp
 history/CachedPage.cpp
 history/HistoryItem.cpp
 html/Autofill.cpp
-html/BaseCheckableInputType.cpp
 html/CachedHTMLCollectionInlines.h
 html/CanvasBase.cpp
 html/CollectionTraversalInlines.h
@@ -369,12 +368,10 @@ html/LazyLoadFrameObserver.cpp
 html/LazyLoadImageObserver.cpp
 html/MediaElementSession.cpp
 html/ModelDocument.cpp
-html/NumberInputType.cpp
 html/OffscreenCanvas.cpp
 html/PermissionsPolicy.cpp
 html/PluginDocument.cpp
 html/RangeInputType.cpp
-html/TextFieldInputType.cpp
 html/ValidatedFormListedElement.cpp
 html/ValidationMessage.cpp
 html/canvas/CanvasRenderingContext2D.cpp

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010-2014 Google Inc. All rights reserved.
- * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -100,13 +100,13 @@ const AtomString& RangeInputType::formControlType() const
 double RangeInputType::valueAsDouble() const
 {
     ASSERT(element());
-    return parseToDoubleForNumberType(element()->value().get());
+    return parseToDoubleForNumberType(protectedElement()->value().get());
 }
 
 ExceptionOr<void> RangeInputType::setValueAsDecimal(const Decimal& newValue, TextFieldEventBehavior eventBehavior) const
 {
     ASSERT(element());
-    element()->setValue(serialize(newValue), eventBehavior);
+    protectedElement()->setValue(serialize(newValue), eventBehavior);
     return { };
 }
 
@@ -139,15 +139,16 @@ void RangeInputType::handleMouseDownEvent(MouseEvent& event)
     if (!hasCreatedShadowSubtree())
         return;
 
-    if (element()->isDisabledFormControl())
+    Ref element = *this->element();
+    if (element->isDisabledFormControl())
         return;
 
     RefPtr targetNode = dynamicDowncast<Node>(event.target());
     if (!targetNode)
         return;
 
-    ASSERT(element()->shadowRoot());
-    if (targetNode != element() && !targetNode->isDescendantOf(element()->protectedUserAgentShadowRoot().get()))
+    ASSERT(element->shadowRoot());
+    if (targetNode != element.ptr() && !targetNode->isDescendantOf(element->protectedUserAgentShadowRoot().get()))
         return;
     Ref thumb = typedSliderThumbElement();
     if (targetNode == thumb.ptr())
@@ -164,7 +165,7 @@ void RangeInputType::handleTouchEvent(TouchEvent& event)
         return;
 
 #if ENABLE(IOS_TOUCH_EVENTS)
-    typedSliderThumbElement().handleTouchEvent(event);
+    protectedTypedSliderThumbElement()->handleTouchEvent(event);
 #else
 
     if (element()->isDisabledFormControl())
@@ -177,7 +178,7 @@ void RangeInputType::handleTouchEvent(TouchEvent& event)
 
     RefPtr<TouchList> touches = event.targetTouches();
     if (touches->length() == 1) {
-        typedSliderThumbElement().setPositionFromPoint(touches->item(0)->absoluteLocation());
+        protectedTypedSliderThumbElement()->setPositionFromPoint(touches->item(0)->absoluteLocation());
         event.setDefaultHandled();
     }
 #endif // ENABLE(IOS_TOUCH_EVENTS)
@@ -195,23 +196,24 @@ auto RangeInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBaseE
 {
     ASSERT(element());
 
-    if (element()->isDisabledFormControl())
+    Ref element = *this->element();
+    if (element->isDisabledFormControl())
         return ShouldCallBaseEventHandler::Yes;
 
     const String& key = event.keyIdentifier();
 
-    const Decimal current = parseToNumberOrNaN(element()->value());
+    const Decimal current = parseToNumberOrNaN(element->value());
     ASSERT(current.isFinite());
 
     auto stepRange = createStepRange(AnyStepHandling::Reject);
 
     // FIXME: We can't use stepUp() for the step value "any". So, we increase
     // or decrease the value by 1/100 of the value range. Is it reasonable?
-    const Decimal step = equalLettersIgnoringASCIICase(element()->attributeWithoutSynchronization(stepAttr), "any"_s) ? (stepRange.maximum() - stepRange.minimum()) / 100 : stepRange.step();
+    const Decimal step = equalLettersIgnoringASCIICase(element->attributeWithoutSynchronization(stepAttr), "any"_s) ? (stepRange.maximum() - stepRange.minimum()) / 100 : stepRange.step();
     const Decimal bigStep = std::max((stepRange.maximum() - stepRange.minimum()) / 10, step);
 
     bool isVertical = false;
-    if (auto* renderer = element()->renderer())
+    if (CheckedPtr renderer = element->renderer())
         isVertical = renderer->style().usedAppearance() == StyleAppearance::SliderVertical;
 
     Decimal newValue;
@@ -251,9 +253,10 @@ void RangeInputType::createShadowSubtree()
     ASSERT(element());
     ASSERT(element()->userAgentShadowRoot());
 
-    Ref document = element()->document();
+    Ref element = *this->element();
+    Ref document = element->document();
 
-    Ref shadowRoot = *element()->userAgentShadowRoot();
+    Ref shadowRoot = *element->userAgentShadowRoot();
     ScriptDisallowedScope::EventAllowedScope eventAllowedScope { shadowRoot };
 
     Ref track = HTMLDivElement::create(document);
@@ -272,7 +275,7 @@ HTMLElement* RangeInputType::sliderTrackElement() const
     if (!hasCreatedShadowSubtree())
         return nullptr;
 
-    RefPtr root = element()->userAgentShadowRoot();
+    RefPtr root = protectedElement()->userAgentShadowRoot();
     ASSERT(root);
     ASSERT(is<SliderContainerElement>(root->firstChild())); // container
     ASSERT(root->firstChild()->firstChild()); // track
@@ -292,6 +295,11 @@ SliderThumbElement& RangeInputType::typedSliderThumbElement() const
     return downcast<SliderThumbElement>(*sliderTrackElement()->firstChild());
 }
 
+Ref<SliderThumbElement> RangeInputType::protectedTypedSliderThumbElement() const
+{
+    return typedSliderThumbElement();
+}
+
 HTMLElement* RangeInputType::sliderThumbElement() const
 {
     return &typedSliderThumbElement();
@@ -300,7 +308,7 @@ HTMLElement* RangeInputType::sliderThumbElement() const
 RenderPtr<RenderElement> RangeInputType::createInputRenderer(RenderStyle&& style)
 {
     ASSERT(element());
-    return createRenderer<RenderSlider>(*element(), WTFMove(style));
+    return createRenderer<RenderSlider>(*protectedElement(), WTFMove(style));
 }
 
 Decimal RangeInputType::parseToNumber(const String& src, const Decimal& defaultValue) const
@@ -334,7 +342,7 @@ void RangeInputType::attributeChanged(const QualifiedName& name)
                 element->setValue(element->value());
         }
         if (hasCreatedShadowSubtree())
-            typedSliderThumbElement().setPositionFromValue();
+            protectedTypedSliderThumbElement()->setPositionFromValue();
         break;
     default:
         break;
@@ -355,7 +363,7 @@ void RangeInputType::setValue(const String& value, bool valueChanged, TextFieldE
     }
 
     if (hasCreatedShadowSubtree())
-        typedSliderThumbElement().setPositionFromValue();
+        protectedTypedSliderThumbElement()->setPositionFromValue();
 }
 
 ValueOrReference<String> RangeInputType::fallbackValue() const
@@ -390,16 +398,16 @@ void RangeInputType::updateTickMarkValues()
     m_tickMarkValues.clear();
     m_tickMarkValuesDirty = false;
     ASSERT(element());
-    auto dataList = element()->dataList();
+    Ref element = *this->element();
+    RefPtr dataList = element->dataList();
     if (!dataList)
         return;
-    Ref<HTMLCollection> options = dataList->options();
+    Ref options = dataList->options();
     m_tickMarkValues.reserveCapacity(options->length());
     for (unsigned i = 0; i < options->length(); ++i) {
-        RefPtr<Node> node = options->item(i);
-        HTMLOptionElement& optionElement = downcast<HTMLOptionElement>(*node);
-        String optionValue = optionElement.value();
-        if (!element()->isValidValue(optionValue))
+        Ref optionElement = downcast<HTMLOptionElement>(*options->item(i));
+        auto optionValue = optionElement->value();
+        if (!element->isValidValue(optionValue))
             continue;
         m_tickMarkValues.append(parseToNumber(optionValue, Decimal::nan()));
     }

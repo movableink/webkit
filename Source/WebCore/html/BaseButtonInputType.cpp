@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -57,7 +57,7 @@ bool BaseButtonInputType::appendFormData(DOMFormData&) const
 RenderPtr<RenderElement> BaseButtonInputType::createInputRenderer(RenderStyle&& style)
 {
     ASSERT(element());
-    return createRenderer<RenderButton>(*element(), WTFMove(style));
+    return createRenderer<RenderButton>(*protectedElement(), WTFMove(style));
 }
 
 bool BaseButtonInputType::storesValueSeparateFromAttribute()
@@ -68,7 +68,7 @@ bool BaseButtonInputType::storesValueSeparateFromAttribute()
 void BaseButtonInputType::setValue(const String& sanitizedValue, bool, TextFieldEventBehavior, TextControlSetValueSelection)
 {
     ASSERT(element());
-    element()->setAttributeWithoutSynchronization(valueAttr, AtomString { sanitizedValue });
+    protectedElement()->setAttributeWithoutSynchronization(valueAttr, AtomString { sanitizedValue });
 }
 
 bool BaseButtonInputType::dirAutoUsesValue() const

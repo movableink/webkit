@@ -631,10 +631,6 @@ history/CachedFrame.cpp
 history/CachedPage.cpp
 history/HistoryItem.cpp
 html/AttachmentAssociatedElement.cpp
-html/BaseButtonInputType.cpp
-html/BaseCheckableInputType.cpp
-html/BaseClickableWithKeyInputType.cpp
-html/BaseTextInputType.cpp
 html/CachedHTMLCollection.h
 html/CachedHTMLCollectionInlines.h
 html/CheckboxInputType.cpp
@@ -700,15 +696,12 @@ html/MediaController.cpp
 html/MediaDocument.cpp
 html/MediaElementSession.cpp
 html/ModelDocument.cpp
-html/NumberInputType.cpp
 html/OffscreenCanvas.cpp
 html/PermissionsPolicy.cpp
 html/PluginDocument.cpp
 html/PublicURLManager.cpp
 html/RadioNodeList.cpp
 html/RangeInputType.cpp
-html/ResetInputType.cpp
-html/SubmitInputType.cpp
 html/TextFieldInputType.cpp
 html/ValidatedFormListedElement.cpp
 html/ValidatedFormListedElement.h
