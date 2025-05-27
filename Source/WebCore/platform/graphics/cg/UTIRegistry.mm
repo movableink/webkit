@@ -180,21 +180,7 @@ String MIMETypeForImageType(const String& uti)
 
 String preferredExtensionForImageType(const String& uti)
 {
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    String oldExtension = adoptCF(UTTypeCopyPreferredTagWithClass(uti.createCFString().get(), kUTTagClassFilenameExtension)).get();
-    ALLOW_DEPRECATED_DECLARATIONS_END
-
-    RetainPtr type = [UTType typeWithIdentifier:uti.createNSString().get()];
-    String extension = type.get().preferredFilenameExtension;
-    if (oldExtension != extension) [[unlikely]] {
-        std::array<uint64_t, 6> values { 0, 0, 0, 0, 0, 0 };
-        auto utiInfo = makeString(uti, '~', oldExtension, '~', extension);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        strncpy(reinterpret_cast<char*>(values.data()), utiInfo.utf8().data(), sizeof(values));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-        CRASH_WITH_INFO(values[0], values[1], values[2], values[3], values[4], values[5]);
-    }
-    return extension;
+    return [[UTType typeWithIdentifier:uti.createNSString().get()] preferredFilenameExtension];
 }
 
 static Vector<String> allowableDefaultSupportedImageTypes()
