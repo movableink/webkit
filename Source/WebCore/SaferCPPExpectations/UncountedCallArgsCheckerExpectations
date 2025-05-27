@@ -720,7 +720,6 @@ html/canvas/CanvasRenderingContext2D.cpp
 html/canvas/CanvasRenderingContext2DBase.cpp
 html/canvas/CanvasStyle.cpp
 html/canvas/EXTDisjointTimerQuery.cpp
-html/canvas/EXTDisjointTimerQueryWebGL2.cpp
 html/canvas/GPUCanvasContextCocoa.mm
 html/canvas/ImageBitmapRenderingContext.cpp
 html/canvas/OffscreenCanvasRenderingContext2D.cpp

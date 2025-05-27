@@ -367,7 +367,6 @@ html/canvas/CanvasRenderingContext2D.cpp
 html/canvas/CanvasRenderingContext2DBase.cpp
 html/canvas/CanvasRenderingContext2DBase.h
 html/canvas/EXTDisjointTimerQuery.cpp
-html/canvas/EXTDisjointTimerQueryWebGL2.cpp
 html/canvas/OffscreenCanvasRenderingContext2D.cpp
 html/canvas/PlaceholderRenderingContext.cpp
 html/canvas/WebGL2RenderingContext.cpp
