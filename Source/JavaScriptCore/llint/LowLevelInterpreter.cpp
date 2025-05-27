@@ -639,11 +639,12 @@ DEBUGGER_ANNOTATION_MARKER(before_llint_asm)
 
 // We do not set them on Darwin since Mach-O does not support nested cfi_startproc & global symbols.
 // https://github.com/llvm/llvm-project/issues/72802
+// Similarly, GCC complains about implicit endproc instructions.
 //
 // This may seem strange; We duplicate these table entries because
 // different lldb versions seem to sometimes have off-by-one errors otherwise.
 // See GdbJIT.cpp for a detailed explanation of how these DWARF directives work.
-#if !OS(DARWIN)
+#if !OS(DARWIN) && COMPILER(CLANG)
 #if CPU(ARM64)
 asm (
     ".cfi_startproc\n"
@@ -660,6 +661,19 @@ asm (
     ".cfi_offset fp, -16\n"
     OFFLINE_ASM_BEGIN_SPACER
 );
+#elif CPU(ARM_THUMB2)
+asm (
+    ".cfi_startproc\n"
+    OFFLINE_ASM_BEGIN_SPACER
+    ".cfi_def_cfa r7, 8\n"
+    ".cfi_offset lr, -4\n"
+    ".cfi_offset fp, -8\n"
+    OFFLINE_ASM_BEGIN_SPACER
+    ".cfi_def_cfa r7, 8\n"
+    ".cfi_offset lr, -4\n"
+    ".cfi_offset fp, -8\n"
+    OFFLINE_ASM_BEGIN_SPACER
+);
 #endif
 #endif
 
@@ -668,8 +682,8 @@ asm (
 #include "LLIntAssembly.h"
 
 // See GdbJIT.cpp for a detailed explanation.
-#if !OS(DARWIN)
-#if CPU(ARM64)
+#if !OS(DARWIN) && COMPILER(CLANG)
+#if CPU(ARM64) || CPU(ARM_THUMB2)
 asm (
     ".cfi_endproc\n"
 );
