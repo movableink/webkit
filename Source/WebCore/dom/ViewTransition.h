@@ -223,7 +223,7 @@ private:
 
     void callUpdateCallback();
 
-    void updatePseudoElementStylesRead();
+    ExceptionOr<void> updatePseudoElementStylesRead();
     void updatePseudoElementStylesWrite();
     ExceptionOr<void> updatePseudoElementRenderers();
     ExceptionOr<void> checkForViewportSizeChange();

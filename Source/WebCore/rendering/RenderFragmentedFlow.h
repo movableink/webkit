@@ -166,6 +166,8 @@ public:
 
     bool absoluteQuadsForBox(Vector<FloatQuad>&, bool*, const RenderBox&) const;
 
+    bool boxIsFragmented(const RenderBox&) const;
+
     void layout() override;
 
     void setCurrentFragmentMaintainer(CurrentRenderFragmentContainerMaintainer* currentFragmentMaintainer) { m_currentFragmentMaintainer = currentFragmentMaintainer; }

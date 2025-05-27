@@ -119,6 +119,7 @@ public:
     VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
 
     virtual Vector<LayoutRect> fragmentRectsForFlowContentRect(const LayoutRect&) const;
+    virtual bool contentRectSpansFragments(const LayoutRect&) const { return false; }
 
 protected:
     RenderFragmentContainer(Type, Element&, RenderStyle&&, RenderFragmentedFlow*);

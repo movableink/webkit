@@ -45,6 +45,7 @@
 #include "RenderElementInlines.h"
 #include "PseudoElementRequest.h"
 #include "RenderBox.h"
+#include "RenderFragmentedFlow.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"
 #include "RenderLayerModelObject.h"
@@ -492,6 +493,22 @@ static ExceptionOr<void> forEachRendererInPaintOrder(NOESCAPE const std::functio
     return { };
 };
 
+static bool rendererIsFragmented(const RenderLayerModelObject& renderer)
+{
+    // https://drafts.csswg.org/css-view-transitions-1/#capture-old-state-algorithm
+    // View transitions explicitly excludes splitting of inline boxes across lines.
+
+    CheckedPtr box = dynamicDowncast<RenderBox>(renderer);
+    if (!box)
+        return false;
+
+    CheckedPtr enclosingFragmentedFlow = renderer.enclosingFragmentedFlow();
+    if (!enclosingFragmentedFlow)
+        return false;
+
+    return enclosingFragmentedFlow->boxIsFragmented(*box);
+}
+
 // https://drafts.csswg.org/css-view-transitions/#capture-old-state-algorithm
 ExceptionOr<void> ViewTransition::captureOldState()
 {
@@ -513,11 +530,12 @@ ExceptionOr<void> ViewTransition::captureOldState()
             if (!styleable)
                 return { };
 
+            if (rendererIsFragmented(renderer))
+                return { };
+
             if (auto name = effectiveViewTransitionName(renderer, Ref { styleable->element }, document()->styleScope(), isCrossDocument()); !name.isNull()) {
                 if (auto check = checkDuplicateViewTransitionName(name, usedTransitionNames); check.hasException())
                     return check.releaseException();
-
-                // FIXME: Skip fragmented content.
 
                 renderer.setCapturedInViewTransition(true);
                 captureRenderers.append(renderer);
@@ -585,6 +603,9 @@ ExceptionOr<void> ViewTransition::captureNewState()
         auto result = forEachRendererInPaintOrder([&](RenderLayerModelObject& renderer) -> ExceptionOr<void> {
             auto styleable = Styleable::fromRenderer(renderer);
             if (!styleable)
+                return { };
+
+            if (rendererIsFragmented(renderer))
                 return { };
 
             Ref element = styleable->element;
@@ -795,7 +816,12 @@ void ViewTransition::handleTransitionFrame()
         return;
     }
 
-    updatePseudoElementStylesRead();
+    auto checkPseudoStyles = updatePseudoElementStylesRead();
+    if (checkPseudoStyles.hasException()) {
+        skipViewTransition(checkPseudoStyles.releaseException());
+        return;
+    }
+
     updatePseudoElementStylesWrite();
     updatePseudoElementRenderers();
 }
@@ -905,21 +931,22 @@ void ViewTransition::copyElementBaseProperties(RenderLayerModelObject& renderer,
 
 // https://drafts.csswg.org/css-view-transitions-1/#update-pseudo-element-styles
 // Perform all reads required without making any mutations
-void ViewTransition::updatePseudoElementStylesRead()
+ExceptionOr<void> ViewTransition::updatePseudoElementStylesRead()
 {
     RefPtr document = this->document();
     if (!document)
-        return;
+        return { };
 
     for (auto& [name, capturedElement] : m_namedElements.map()) {
         if (auto newStyleable = capturedElement->newElement.styleable()) {
-            if (CheckedPtr renderer = dynamicDowncast<RenderBoxModelObject>(newStyleable->renderer())) {
-                copyElementBaseProperties(*renderer, capturedElement->newState);
-                continue;
-            }
-            capturedElement->newState.properties = nullptr;
+            CheckedPtr renderer = dynamicDowncast<RenderBoxModelObject>(newStyleable->renderer());
+            if (!renderer || rendererIsFragmented(*renderer))
+                return Exception { ExceptionCode::InvalidStateError, "One of the transitioned elements is longer renderer or is fragmented."_s };
+
+            copyElementBaseProperties(*renderer, capturedElement->newState);
         }
     }
+    return { };
 }
 
 // https://drafts.csswg.org/css-view-transitions-1/#update-pseudo-element-styles

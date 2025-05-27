@@ -775,6 +775,18 @@ Vector<LayoutRect> RenderMultiColumnSet::fragmentRectsForFlowContentRect(const L
     return perColumnRects;
 }
 
+bool RenderMultiColumnSet::contentRectSpansFragments(const LayoutRect& rect) const
+{
+    auto fragmentedFlowRect = rect;
+    fragmentedFlow()->flipForWritingMode(fragmentedFlowRect);
+
+    auto logicalTop = isHorizontalWritingMode() ? fragmentedFlowRect.y() : fragmentedFlowRect.x();
+    auto logicalBottom = isHorizontalWritingMode() ? fragmentedFlowRect.maxY() : fragmentedFlowRect.maxX();
+
+    auto startAndEndColumns = firstAndLastColumnsFromOffsets(logicalTop, logicalBottom);
+    return startAndEndColumns.first != startAndEndColumns.second;
+}
+
 LayoutUnit RenderMultiColumnSet::initialBlockOffsetForPainting() const
 {
     bool progressionReversed = multiColumnFlow()->progressionIsReversed();

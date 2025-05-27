@@ -249,6 +249,25 @@ bool RenderFragmentedFlow::absoluteQuadsForBox(Vector<FloatQuad>& quads, bool* w
     return true;
 }
 
+bool RenderFragmentedFlow::boxIsFragmented(const RenderBox& box) const
+{
+    ASSERT(hasValidFragmentInfo());
+
+    auto boxRect = FloatRect { { }, box.size() };
+    auto boxRectInFlowCoordinates = LayoutRect { box.localToContainerQuad(boxRect, this).boundingBox() };
+
+    RenderFragmentContainer* startFragment = nullptr;
+    RenderFragmentContainer* endFragment = nullptr;
+    computedFragmentRangeForBox(box, startFragment, endFragment);
+    if (startFragment != endFragment)
+        return true;
+
+    if (startFragment->contentRectSpansFragments(boxRectInFlowCoordinates))
+        return true;
+
+    return false;
+}
+
 class RenderFragmentedFlow::FragmentSearchAdapter {
 public:
     explicit FragmentSearchAdapter(LayoutUnit offset)
