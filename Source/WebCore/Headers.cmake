@@ -2658,6 +2658,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/style/GridLength.h
     rendering/style/GridPosition.h
     rendering/style/GridPositionsResolver.h
+    rendering/style/GridSpan.h
     rendering/style/GridTrackSize.h
     rendering/style/LineClampValue.h
     rendering/style/ListStyleType.h

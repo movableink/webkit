@@ -2944,6 +2944,7 @@ rendering/style/FillLayer.cpp
 rendering/style/GapLength.cpp
 rendering/style/GridPosition.cpp
 rendering/style/GridPositionsResolver.cpp
+rendering/style/GridSpan.cpp
 rendering/style/GridTrackSize.cpp
 rendering/style/ListStyleType.cpp
 rendering/style/NinePieceImage.cpp
