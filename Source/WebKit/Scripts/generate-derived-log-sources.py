@@ -15,7 +15,7 @@ def generate_messages_file(log_messages, log_messages_receiver_input_file, strea
         file.write("[ExceptionForEnabledBy]\n")
         file.write("messages -> LogStream ")
         if streaming_ipc:
-            file.write("NotRefCounted Stream ")
+            file.write("Stream ")
         file.write("{\n")
         file.write("    LogOnBehalfOfWebContent(std::span<const uint8_t> logChannel, std::span<const uint8_t> logCategory, std::span<const uint8_t> logString, uint8_t logType)\n")
         for log_message in log_messages:
