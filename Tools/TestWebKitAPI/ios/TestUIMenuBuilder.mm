@@ -136,6 +136,58 @@
     [_menusByIdentifier setObject:menu forKey:menu.identifier];
 }
 
+- (void)replaceMenuForIdentifier:(UIMenuIdentifier)replacedIdentifier withElements:(NSArray<UIMenuElement *> *)replacementElements
+{
+}
+
+- (void)replaceActionForIdentifier:(UIActionIdentifier)replacedIdentifier withElements:(NSArray<UIMenuElement *> *)replacementElements
+{
+}
+
+- (void)replaceCommandForAction:(SEL)replacedAction propertyList:(id)replacedPropertyList withElements:(NSArray<UIMenuElement *> *)replacementElements
+{
+}
+
+- (void)insertElements:(NSArray<UIMenuElement *> *)insertedElements beforeMenuForIdentifier:(UIMenuIdentifier)siblingIdentifier
+{
+}
+
+- (void)insertElements:(NSArray<UIMenuElement *> *)insertedElements afterMenuForIdentifier:(UIMenuIdentifier)siblingIdentifier
+{
+}
+
+- (void)insertElements:(NSArray<UIMenuElement *> *)insertedElements beforeActionForIdentifier:(UIActionIdentifier)siblingIdentifier
+{
+}
+
+- (void)insertElements:(NSArray<UIMenuElement *> *)insertedElements afterActionForIdentifier:(UIActionIdentifier)siblingIdentifier
+{
+}
+
+- (void)insertElements:(NSArray<UIMenuElement *> *)insertedElements beforeCommandForAction:(SEL)siblingAction propertyList:(id)siblingPropertyList
+{
+}
+
+- (void)insertElements:(NSArray<UIMenuElement *> *)insertedElements afterCommandForAction:(SEL)siblingAction propertyList:(id)siblingPropertyList
+{
+}
+
+- (void)insertElements:(NSArray<UIMenuElement *> *)childElements atStartOfMenuForIdentifier:(UIMenuIdentifier)parentIdentifier
+{
+}
+
+- (void)insertElements:(NSArray<UIMenuElement *> *)childElements atEndOfMenuForIdentifier:(UIMenuIdentifier)parentIdentifier
+{
+}
+
+- (void)removeActionForIdentifier:(UIActionIdentifier)removedIdentifier
+{
+}
+
+- (void)removeCommandForAction:(SEL)removedAction propertyList:(id)removedPropertyList
+{
+}
+
 @end
 
 #endif // PLATFORM(IOS_FAMILY)
