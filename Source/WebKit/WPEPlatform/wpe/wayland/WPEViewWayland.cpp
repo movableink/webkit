@@ -38,6 +38,7 @@
 #include <wtf/Vector.h>
 #include <wtf/glib/GRefPtr.h>
 #include <wtf/glib/GUniquePtr.h>
+#include <wtf/glib/GWeakPtr.h>
 #include <wtf/glib/WTFGType.h>
 
 // These includes need to be in this order because wayland-egl.h defines WL_EGL_PLATFORM
@@ -133,8 +134,9 @@ static void wpeViewWaylandDispose(GObject* object)
 struct DMABufBuffer {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
-    explicit DMABufBuffer(wl_buffer* buffer)
-        : wlBuffer(buffer)
+    DMABufBuffer(WPEView* view, wl_buffer* buffer)
+        : view(view)
+        , wlBuffer(buffer)
     {
     }
 
@@ -146,6 +148,7 @@ struct DMABufBuffer {
             zwp_linux_buffer_release_v1_destroy(release);
     }
 
+    GWeakPtr<WPEView> view;
     struct wl_buffer* wlBuffer { nullptr };
     struct zwp_linux_buffer_release_v1* release { nullptr };
 };
@@ -160,7 +163,8 @@ static const struct wl_buffer_listener bufferListener = {
     [](void* userData, struct wl_buffer*)
     {
         auto* buffer = WPE_BUFFER(userData);
-        wpe_view_buffer_released(wpe_buffer_get_view(buffer), buffer);
+        if (auto* dmaBufBuffer = static_cast<DMABufBuffer*>(wpe_buffer_get_user_data(buffer)); dmaBufBuffer && dmaBufBuffer->view)
+            wpe_view_buffer_released(dmaBufBuffer->view.get(), buffer);
     }
 };
 
@@ -190,7 +194,7 @@ static DMABufBuffer* createWaylandBufferFromEGLImage(WPEView* view, WPEBuffer* b
     }
 
     if (auto* wlBuffer = s_eglCreateWaylandBufferFromImageWL(eglDisplay, eglImage))
-        return new DMABufBuffer(wlBuffer);
+        return new DMABufBuffer(view, wlBuffer);
 
     g_set_error(error, WPE_VIEW_ERROR, WPE_VIEW_ERROR_RENDER_FAILED, "Failed to render buffer: eglCreateWaylandBufferFromImageWL failed with error %#04x", eglGetError());
     return nullptr;
@@ -220,7 +224,7 @@ static struct wl_buffer* createWaylandBufferFromDMABuf(WPEView* view, WPEBuffer*
             return nullptr;
         }
 
-        dmaBufBuffer = new DMABufBuffer(wlBuffer);
+        dmaBufBuffer = new DMABufBuffer(view, wlBuffer);
     } else {
         dmaBufBuffer = createWaylandBufferFromEGLImage(view, buffer, error);
         if (!dmaBufBuffer)
@@ -332,9 +336,13 @@ const struct wl_callback_listener frameListener = {
 
 static void dmaBufBufferReleased(WPEBuffer* buffer)
 {
-    wpe_view_buffer_released(wpe_buffer_get_view(buffer), buffer);
-    if (auto* dmaBufBuffer = static_cast<DMABufBuffer*>(wpe_buffer_get_user_data(buffer)))
-        g_clear_pointer(&dmaBufBuffer->release, zwp_linux_buffer_release_v1_destroy);
+    auto* dmaBufBuffer = static_cast<DMABufBuffer*>(wpe_buffer_get_user_data(buffer));
+    if (!dmaBufBuffer)
+        return;
+
+    if (dmaBufBuffer->view)
+        wpe_view_buffer_released(dmaBufBuffer->view.get(), buffer);
+    g_clear_pointer(&dmaBufBuffer->release, zwp_linux_buffer_release_v1_destroy);
 }
 
 const struct zwp_linux_buffer_release_v1_listener bufferReleaseListener = {
