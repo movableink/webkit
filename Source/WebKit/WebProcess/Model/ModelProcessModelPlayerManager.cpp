@@ -32,6 +32,7 @@
 #include "ModelProcessModelPlayerManagerProxyMessages.h"
 #include "WebPage.h"
 #include "WebProcess.h"
+#include "WebProcessPoolMessages.h"
 #include <WebCore/ModelPlayer.h>
 #include <WebCore/ModelPlayerClient.h>
 #include <WebCore/ModelPlayerIdentifier.h>
@@ -71,7 +72,11 @@ Ref<ModelProcessModelPlayer> ModelProcessModelPlayerManager::createModelProcessM
     auto player = ModelProcessModelPlayer::create(identifier, page, client);
     if (page.shouldDisableModelLoadDelaysForTesting())
         player->disableUnloadDelayForTesting();
+
+    auto previousPlayerCount = m_players.size();
     m_players.add(identifier, player);
+    if (!previousPlayerCount && m_players.size())
+        WebProcess::singleton().send(Messages::WebProcessPool::StartedPlayingModels(), 0);
 
     return player;
 }
@@ -79,7 +84,10 @@ Ref<ModelProcessModelPlayer> ModelProcessModelPlayerManager::createModelProcessM
 void ModelProcessModelPlayerManager::deleteModelProcessModelPlayer(WebCore::ModelPlayer& modelPlayer)
 {
     WebCore::ModelPlayerIdentifier identifier = modelPlayer.identifier();
+    auto previousPlayerCount = m_players.size();
     m_players.take(identifier);
+    if (previousPlayerCount && !m_players.size())
+        WebProcess::singleton().send(Messages::WebProcessPool::StoppedPlayingModels(), 0);
     modelProcessConnection().connection().send(Messages::ModelProcessModelPlayerManagerProxy::DeleteModelPlayer(identifier), 0);
 }
 
@@ -91,8 +99,11 @@ void ModelProcessModelPlayerManager::didReceivePlayerMessage(IPC::Connection& co
 
 void ModelProcessModelPlayerManager::didUnloadModelProcessModelPlayer(WebCore::ModelPlayerIdentifier modelPlayerIdentifier)
 {
+    auto previousPlayerCount = m_players.size();
     if (const auto& player = m_players.take(modelPlayerIdentifier))
         player->didUnload();
+    if (previousPlayerCount && !m_players.size())
+        WebProcess::singleton().send(Messages::WebProcessPool::StoppedPlayingModels(), 0);
 }
 
 void ModelProcessModelPlayerManager::modelProcessConnectionDidClose(ModelProcessConnection&)

@@ -626,13 +626,15 @@ void WebProcessPool::modelProcessExited(ProcessID identifier, ProcessTermination
 
     if (reason == ProcessTerminationReason::Crash || reason == ProcessTerminationReason::Unresponsive) {
         if (++m_recentModelProcessCrashCount > maximumModelProcessRelaunchAttemptsBeforeKillingWebProcesses) {
-            WEBPROCESSPOOL_RELEASE_LOG_ERROR(Process, "modelProcessDidExit: Model Process has crashed more than %u times in the last %g seconds, terminating all WebProcesses", maximumModelProcessRelaunchAttemptsBeforeKillingWebProcesses, resetModelProcessCrashCountDelay.seconds());
+            WEBPROCESSPOOL_RELEASE_LOG_ERROR(Process, "modelProcessDidExit: Model Process has crashed more than %u times in the last %g seconds, terminating related WebProcesses", maximumModelProcessRelaunchAttemptsBeforeKillingWebProcesses, resetModelProcessCrashCountDelay.seconds());
             m_resetModelProcessCrashCountTimer.stop();
             m_recentModelProcessCrashCount = 0;
-            terminateAllWebContentProcesses(ProcessTerminationReason::ModelProcessCrashedTooManyTimes);
+            terminateAllWebContentProcessesWithModelPlayers();
         } else if (!m_resetModelProcessCrashCountTimer.isActive())
             m_resetModelProcessCrashCountTimer.startOneShot(resetModelProcessCrashCountDelay);
     }
+
+    m_processesWithModelPlayers.clear();
 }
 
 void WebProcessPool::createModelProcessConnection(WebProcessProxy& webProcessProxy, IPC::Connection::Handle&& connectionIdentifier, WebKit::ModelProcessConnectionParameters&& parameters)
@@ -646,6 +648,40 @@ void WebProcessPool::createModelProcessConnection(WebProcessProxy& webProcessPro
 #endif
 
     ensureProtectedModelProcess(webProcessProxy)->createModelProcessConnection(webProcessProxy, WTFMove(connectionIdentifier), WTFMove(parameters));
+}
+
+void WebProcessPool::startedPlayingModels(IPC::Connection& connection)
+{
+    RefPtr proxy = webProcessProxyFromConnection(connection);
+    if (!proxy)
+        return;
+
+    ASSERT(!m_processesWithModelPlayers.contains(*proxy));
+    WEBPROCESSPOOL_RELEASE_LOG(Process, "startedPlayingModels (process=%p, PID=%i)", proxy.get(), proxy->processID());
+    m_processesWithModelPlayers.add(*proxy);
+}
+
+void WebProcessPool::stoppedPlayingModels(IPC::Connection& connection)
+{
+    RefPtr proxy = webProcessProxyFromConnection(connection);
+    if (!proxy)
+        return;
+
+    if (m_processesWithModelPlayers.contains(*proxy)) {
+        WEBPROCESSPOOL_RELEASE_LOG(Process, "stoppedPlayingModels (process=%p, PID=%i)", proxy.get(), proxy->processID());
+        m_processesWithModelPlayers.remove(*proxy);
+    }
+}
+
+void WebProcessPool::terminateAllWebContentProcessesWithModelPlayers()
+{
+    WEBPROCESSPOOL_RELEASE_LOG_ERROR(Process, "terminateAllWebContentProcessesWithModelPlayers");
+    for (auto& weakProcess : copyToVector(m_processesWithModelPlayers)) {
+        if (RefPtr process = weakProcess.get()) {
+            WEBPROCESSPOOL_RELEASE_LOG(Process, "terminateAllWebContentProcessesWithModelPlayers request termination of WebProcess: (process=%p, PID=%i)", process.get(), process->processID());
+            process->requestTermination(ProcessTerminationReason::ModelProcessCrashedTooManyTimes);
+        }
+    }
 }
 #endif // ENABLE(MODEL_PROCESS)
 
@@ -1168,6 +1204,13 @@ void WebProcessPool::disconnectProcess(WebProcessProxy& process)
 #if ENABLE(GAMEPAD)
     if (m_processesUsingGamepads.contains(process))
         processStoppedUsingGamepads(process);
+#endif
+
+#if ENABLE(MODEL_PROCESS)
+    if (m_processesWithModelPlayers.contains(process)) {
+        WEBPROCESSPOOL_RELEASE_LOG(Process, "disconnectProcess stop tracking WebProcess (process=%p, PID=%i) with connection to Model Process", &process, process.processID());
+        m_processesWithModelPlayers.remove(process);
+    }
 #endif
 
     removeProcessFromOriginCacheSet(process);

@@ -654,6 +654,11 @@ private:
     void processStoppedUsingGamepads(WebProcessProxy&);
 #endif
 
+#if ENABLE(MODEL_PROCESS)
+    void startedPlayingModels(IPC::Connection&);
+    void stoppedPlayingModels(IPC::Connection&);
+#endif
+
     void updateProcessAssertions();
     static constexpr Seconds audibleActivityClearDelay = 5_s;
     void updateAudibleMediaAssertions();
@@ -743,6 +748,7 @@ private:
 
 #if ENABLE(MODEL_PROCESS)
     ModelProcessProxy& ensureModelProcess();
+    void terminateAllWebContentProcessesWithModelPlayers();
 #endif
 
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -773,6 +779,7 @@ private:
 #endif
 #if ENABLE(MODEL_PROCESS)
     RefPtr<ModelProcessProxy> m_modelProcess;
+    WeakHashSet<WebProcessProxy> m_processesWithModelPlayers;
 #endif
 
     Ref<WebPageGroup> m_defaultPageGroup;
