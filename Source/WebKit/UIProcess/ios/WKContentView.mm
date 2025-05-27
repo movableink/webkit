@@ -69,12 +69,10 @@
 #import <WebCore/Quirks.h>
 #import <WebCore/Site.h>
 #import <WebCore/VelocityData.h>
-#import <objc/message.h>
 #import <pal/spi/cocoa/NSAccessibilitySPI.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <wtf/Condition.h>
 #import <wtf/RetainPtr.h>
-#import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/UUID.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #import <wtf/cocoa/SpanCocoa.h>
@@ -248,15 +246,6 @@ typedef NS_ENUM(NSInteger, _WKPrintRenderingCallbackType) {
     Vector<RetainPtr<NSURL>> _temporaryURLsToDeleteWhenDeallocated;
 }
 
-// Evernote expects to swizzle -keyCommands on WKContentView or they crash. Remove this hack
-// as soon as reasonably possible. See <rdar://problem/51759247>.
-static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
-{
-    struct objc_super super = { self, class_getSuperclass(object_getClass(self)) };
-    using SuperKeyCommandsFunction = NSArray *(*)(struct objc_super*, SEL);
-    return reinterpret_cast<SuperKeyCommandsFunction>(&objc_msgSendSuper)(&super, @selector(keyCommands));
-}
-
 - (instancetype)_commonInitializationWithProcessPool:(WebKit::WebProcessPool&)processPool configuration:(Ref<API::PageConfiguration>&&)configuration
 {
     ASSERT(_pageClient);
@@ -335,9 +324,6 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     // FIXME: <rdar://131638772> UIScreen.mainScreen is deprecated.
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_screenCapturedDidChange:) name:UIScreenCapturedDidChangeNotification object:[UIScreen mainScreen]];
 ALLOW_DEPRECATED_DECLARATIONS_END
-
-    if (WTF::IOSApplication::isEvernote() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::WKContentViewDoesNotOverrideKeyCommands))
-        class_addMethod(self.class, @selector(keyCommands), reinterpret_cast<IMP>(&keyCommandsPlaceholderHackForEvernote), method_getTypeEncoding(class_getInstanceMethod(self.class, @selector(keyCommands))));
 
     return self;
 }

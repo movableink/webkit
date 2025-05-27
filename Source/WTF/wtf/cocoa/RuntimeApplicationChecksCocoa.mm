@@ -135,7 +135,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::ExceptionsForRelatedWebViewsUsingDifferentDataStores);
         disableBehavior(SDKAlignedBehavior::ModernCompabilityModeByDefault);
         disableBehavior(SDKAlignedBehavior::HasUIContextMenuInteraction);
-        disableBehavior(SDKAlignedBehavior::WKContentViewDoesNotOverrideKeyCommands);
         disableBehavior(SDKAlignedBehavior::DownloadDelegatesCalledOnTheMainThread);
     }
 
@@ -516,12 +515,6 @@ bool IOSApplication::isAmazon()
 {
     static bool isAmazon = applicationBundleIsEqualTo("com.amazon.Amazon"_s);
     return isAmazon;
-}
-
-bool IOSApplication::isEvernote()
-{
-    static bool isEvernote = applicationBundleIsEqualTo("com.evernote.iPhone.Evernote"_s);
-    return isEvernote;
 }
 
 bool IOSApplication::isDataActivation()
