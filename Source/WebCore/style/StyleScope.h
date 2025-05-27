@@ -29,12 +29,14 @@
 
 #include "AnchorPositionEvaluator.h"
 #include "LayoutSize.h"
+#include "StyleScopeIdentifier.h"
 #include "StyleScopeOrdinal.h"
 #include "Timer.h"
 #include <memory>
 #include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/Identified.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
@@ -71,7 +73,7 @@ class Resolver;
 class RuleSet;
 struct MatchResult;
 
-class Scope final : public CanMakeWeakPtr<Scope>, public CanMakeCheckedPtr<Scope> {
+class Scope final : public CanMakeWeakPtr<Scope>, public CanMakeCheckedPtr<Scope>, public Identified<ScopeIdentifier> {
     WTF_MAKE_TZONE_ALLOCATED(Scope);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Scope);
 public:
@@ -147,6 +149,7 @@ public:
     static Scope& forNode(Node&);
     static const Scope& forNode(const Node&);
     static Scope* forOrdinal(Element&, ScopeOrdinal);
+    static const Scope* forOrdinal(const Element&, ScopeOrdinal);
 
     struct LayoutDependencyUpdateContext {
         UncheckedKeyHashSet<CheckedRef<const Element>> invalidatedContainers;

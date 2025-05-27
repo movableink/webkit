@@ -28,6 +28,7 @@
 #include "EventTarget.h"
 #include "LayoutUnit.h"
 #include "PositionTryOrder.h"
+#include "ResolvedScopedName.h"
 #include "ScopedName.h"
 #include "WritingMode.h"
 #include <wtf/HashMap.h>
@@ -60,17 +61,17 @@ enum class AnchorPositionResolutionStage : uint8_t {
     Positioned,
 };
 
-using AnchorElements = HashMap<AtomString, WeakPtr<Element, WeakPtrImplWithEventTargetData>>;
+using AnchorElements = HashMap<ResolvedScopedName, WeakPtr<Element, WeakPtrImplWithEventTargetData>>;
 
 struct AnchorPositionedState {
     WTF_MAKE_TZONE_ALLOCATED(AnchorPositionedState);
 public:
     AnchorElements anchorElements;
-    UncheckedKeyHashSet<AtomString> anchorNames;
+    UncheckedKeyHashSet<ResolvedScopedName> anchorNames;
     AnchorPositionResolutionStage stage;
 };
 
-using AnchorsForAnchorName = HashMap<AtomString, Vector<SingleThreadWeakRef<const RenderBoxModelObject>>>;
+using AnchorsForAnchorName = HashMap<ResolvedScopedName, Vector<SingleThreadWeakRef<const RenderBoxModelObject>>>;
 
 // https://drafts.csswg.org/css-anchor-position-1/#typedef-anchor-size
 enum class AnchorSizeDimension : uint8_t {
@@ -116,7 +117,7 @@ public:
     static bool isDefaultAnchorInvisibleOrClippedByInterveningBoxes(const RenderBox& anchoredBox);
 
 private:
-    static AnchorElements findAnchorsForAnchorPositionedElement(const Element&, const UncheckedKeyHashSet<AtomString>& anchorNames, const AnchorsForAnchorName&);
+    static AnchorElements findAnchorsForAnchorPositionedElement(const Element&, const UncheckedKeyHashSet<ResolvedScopedName>& anchorNames, const AnchorsForAnchorName&);
 };
 
 } // namespace Style

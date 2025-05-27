@@ -458,7 +458,7 @@ static LayoutUnit computeInsetValue(CSSPropertyID insetPropertyID, CheckedRef<co
     return removeBorderForInsetValue(insetValue, insetPropertySide, *containingBlock);
 }
 
-RefPtr<Element> AnchorPositionEvaluator::findAnchorForAnchorFunctionAndAttemptResolution(BuilderState& builderState, std::optional<ScopedName> elementName)
+RefPtr<Element> AnchorPositionEvaluator::findAnchorForAnchorFunctionAndAttemptResolution(BuilderState& builderState, std::optional<ScopedName> anchorName)
 {
     if (!builderState.anchorPositionedStates())
         return { };
@@ -488,12 +488,16 @@ RefPtr<Element> AnchorPositionEvaluator::findAnchorForAnchorFunctionAndAttemptRe
 
     style.setUsesAnchorFunctions();
 
-    if (!elementName)
-        elementName = style.positionAnchor();
+    if (!anchorName)
+        anchorName = style.positionAnchor();
 
-    if (elementName) {
+    std::optional<ResolvedScopedName> resolvedAnchorName;
+
+    if (anchorName) {
+        resolvedAnchorName = ResolvedScopedName::createFromScopedName(anchorPositionedElement, *anchorName);
+
         // Collect anchor names that this element refers to in anchor() or anchor-size()
-        bool isNewAnchorName = anchorPositionedState.anchorNames.add(elementName->name).isNewEntry;
+        bool isNewAnchorName = anchorPositionedState.anchorNames.add(*resolvedAnchorName).isNewEntry;
 
         // If anchor resolution has progressed past FindAnchors, and we pick up a new anchor name, set the
         // stage back to Initial. This restarts the resolution process to resolve newly added names.
@@ -518,7 +522,7 @@ RefPtr<Element> AnchorPositionEvaluator::findAnchorForAnchorFunctionAndAttemptRe
 
     // Anchor value may now be resolved using layout information
 
-    RefPtr anchorElement = elementName ? anchorPositionedState.anchorElements.get(elementName->name).get() : nullptr;
+    RefPtr anchorElement = resolvedAnchorName ? anchorPositionedState.anchorElements.get(*resolvedAnchorName).get() : nullptr;
     if (!anchorElement) {
         // See: https://drafts.csswg.org/css-anchor-position-1/#valid-anchor-function
         anchorPositionedState.stage = AnchorPositionResolutionStage::Resolved;
@@ -831,7 +835,7 @@ static bool isAcceptableAnchorElement(const RenderBoxModelObject& anchorRenderer
 }
 
 
-static std::optional<Ref<Element>> findLastAcceptableAnchorWithName(AtomString anchorName, Ref<const Element> anchorPositionedElement, const AnchorsForAnchorName& anchorsForAnchorName)
+static std::optional<Ref<Element>> findLastAcceptableAnchorWithName(ResolvedScopedName anchorName, Ref<const Element> anchorPositionedElement, const AnchorsForAnchorName& anchorsForAnchorName)
 {
     const auto& anchors = anchorsForAnchorName.get(anchorName);
 
@@ -852,8 +856,13 @@ static AnchorsForAnchorName collectAnchorsForAnchorName(const Document& document
 
     auto& anchors = document.renderView()->anchors();
     for (auto& anchorRenderer : anchors) {
+        CheckedPtr anchorElement = anchorRenderer.element();
+        ASSERT(anchorElement);
+
         for (auto& scopedName : anchorRenderer.style().anchorNames()) {
-            anchorsForAnchorName.ensure(scopedName.name, [&] {
+            auto resolvedScopedName = ResolvedScopedName::createFromScopedName(*anchorElement, scopedName);
+
+            anchorsForAnchorName.ensure(resolvedScopedName, [&] {
                 return AnchorsForAnchorName::MappedType { };
             }).iterator->value.append(anchorRenderer);
         }
@@ -872,7 +881,7 @@ static AnchorsForAnchorName collectAnchorsForAnchorName(const Document& document
     return anchorsForAnchorName;
 }
 
-AnchorElements AnchorPositionEvaluator::findAnchorsForAnchorPositionedElement(const Element& anchorPositionedElement, const UncheckedKeyHashSet<AtomString>& anchorNames, const AnchorsForAnchorName& anchorsForAnchorName)
+AnchorElements AnchorPositionEvaluator::findAnchorsForAnchorPositionedElement(const Element& anchorPositionedElement, const UncheckedKeyHashSet<ResolvedScopedName>& anchorNames, const AnchorsForAnchorName& anchorsForAnchorName)
 {
     AnchorElements anchorElements;
 
@@ -926,7 +935,8 @@ void AnchorPositionEvaluator::updateAnchorPositionedStateForLayoutTimePositioned
         return makeUnique<AnchorPositionedState>();
     }).iterator->value.get();
 
-    state->anchorNames.add(style.positionAnchor()->name);
+    auto resolvedDefaultAnchor = ResolvedScopedName::createFromScopedName(element, *style.positionAnchor());
+    state->anchorNames.add(resolvedDefaultAnchor);
 }
 
 void AnchorPositionEvaluator::updateSnapshottedScrollOffsets(Document& document)

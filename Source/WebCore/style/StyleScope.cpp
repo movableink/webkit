@@ -252,6 +252,11 @@ Scope* Scope::forOrdinal(Element& element, ScopeOrdinal ordinal)
     return slot ? &forNode(*slot) : nullptr;
 }
 
+const Scope* Scope::forOrdinal(const Element& element, ScopeOrdinal ordinal)
+{
+    return forOrdinal(const_cast<Element&>(element), ordinal);
+}
+
 void Scope::setPreferredStylesheetSetName(const String& name)
 {
     if (m_preferredStylesheetSetName == name)
