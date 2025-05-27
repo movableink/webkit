@@ -478,7 +478,6 @@
 		DD3DC93A27A4BF8E007E5B61 /* ClockType.h in Headers */ = {isa = PBXBuildFile; fileRef = 0F66B2811DC97BAB004A1D3F /* ClockType.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC93B27A4BF8E007E5B61 /* Dominators.h in Headers */ = {isa = PBXBuildFile; fileRef = 0F4570421BE5B58F0062A629 /* Dominators.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC93C27A4BF8E007E5B61 /* Nonmovable.h in Headers */ = {isa = PBXBuildFile; fileRef = E3E64F0B22813428001E55B4 /* Nonmovable.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		DD3DC93D27A4BF8E007E5B61 /* CheckedBoolean.h in Headers */ = {isa = PBXBuildFile; fileRef = A8A4726B151A825A004123FF /* CheckedBoolean.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC93E27A4BF8E007E5B61 /* IndexKeyType.h in Headers */ = {isa = PBXBuildFile; fileRef = 0F2AC5621E8A01490001EE3F /* IndexKeyType.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC93F27A4BF8E007E5B61 /* IndexSet.h in Headers */ = {isa = PBXBuildFile; fileRef = 3137E1D7DBD84AC38FAE4D34 /* IndexSet.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC94027A4BF8E007E5B61 /* FailureAction.h in Headers */ = {isa = PBXBuildFile; fileRef = FE996B5224A845AF001D2E63 /* FailureAction.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -1486,7 +1485,6 @@
 		A8A47265151A825A004123FF /* BloomFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BloomFilter.h; sourceTree = "<group>"; };
 		A8A47267151A825A004123FF /* BumpPointerAllocator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BumpPointerAllocator.h; sourceTree = "<group>"; };
 		A8A4726A151A825A004123FF /* CheckedArithmetic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CheckedArithmetic.h; sourceTree = "<group>"; };
-		A8A4726B151A825A004123FF /* CheckedBoolean.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CheckedBoolean.h; sourceTree = "<group>"; };
 		A8A47270151A825A004123FF /* Compiler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Compiler.h; sourceTree = "<group>"; };
 		A8A47273151A825A004123FF /* CryptographicallyRandomNumber.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CryptographicallyRandomNumber.cpp; sourceTree = "<group>"; };
 		A8A47274151A825A004123FF /* CryptographicallyRandomNumber.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CryptographicallyRandomNumber.h; sourceTree = "<group>"; };
@@ -2251,7 +2249,6 @@
 				46209A27266D543A007F8F4A /* CancellableTask.h */,
 				1470EAF62BD6FB3F00E26254 /* CanMakeWeakPtr.h */,
 				A8A4726A151A825A004123FF /* CheckedArithmetic.h */,
-				A8A4726B151A825A004123FF /* CheckedBoolean.h */,
 				9BB91F512648EA4D00A56217 /* CheckedPtr.h */,
 				9BF00134267C4CCF00DCFB3F /* CheckedRef.h */,
 				0F66B2801DC97BAB004A1D3F /* ClockType.cpp */,
@@ -3374,7 +3371,6 @@
 				DDF307F027C086EA006A526F /* CharacterNames.h in Headers */,
 				E336BD2F2BAB8A0400E8471C /* CharacterProperties.h in Headers */,
 				DD3DC86627A4BF8E007E5B61 /* CheckedArithmetic.h in Headers */,
-				DD3DC93D27A4BF8E007E5B61 /* CheckedBoolean.h in Headers */,
 				DD3DC88227A4BF8E007E5B61 /* CheckedPtr.h in Headers */,
 				DD3DC99127A4BF8E007E5B61 /* CheckedRef.h in Headers */,
 				DD3DC93A27A4BF8E007E5B61 /* ClockType.h in Headers */,
