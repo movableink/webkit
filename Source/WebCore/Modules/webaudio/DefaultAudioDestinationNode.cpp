@@ -35,6 +35,8 @@
 #include "AudioWorklet.h"
 #include "AudioWorkletMessagingProxy.h"
 #include "Document.h"
+#include "Exception.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
 #include "MediaStrategy.h"
 #include "PlatformStrategies.h"

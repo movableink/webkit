@@ -36,6 +36,7 @@
 #include "FrameLoader.h"
 #include "LoaderStrategy.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameLoaderClient.h"
 #include "Page.h"
 #include "PlatformStrategies.h"

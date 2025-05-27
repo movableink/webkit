@@ -31,6 +31,7 @@
 #include "AudioNodeOutput.h"
 #include "AudioParam.h"
 #include "AudioUtilities.h"
+#include "ExceptionOr.h"
 #include "PeriodicWave.h"
 #include "VectorMath.h"
 #include <wtf/StdLibExtras.h>
