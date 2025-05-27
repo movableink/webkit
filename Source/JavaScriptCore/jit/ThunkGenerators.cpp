@@ -194,6 +194,22 @@ MacroAssemblerCodeRef<JITThunkPtrTag> throwStackOverflowAtPrologueGenerator(VM& 
     return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "throwStackOverflow"_s, "throwStackOverflow");
 }
 
+MacroAssemblerCodeRef<JITThunkPtrTag> throwOutOfMemoryErrorGenerator(VM& vm)
+{
+    CCallHelpers jit;
+
+    if (maxFrameExtentForSlowPathCall)
+        jit.addPtr(CCallHelpers::TrustedImm32(-static_cast<int32_t>(maxFrameExtentForSlowPathCall)), CCallHelpers::stackPointerRegister);
+
+    jit.move(CCallHelpers::TrustedImmPtr(&vm), GPRInfo::argumentGPR0);
+    jit.prepareCallOperation(vm);
+    jit.callOperation<OperationPtrTag>(operationThrowOutOfMemoryError);
+    jit.jumpThunk(CodeLocationLabel(vm.getCTIStub(CommonJITThunkID::HandleException).retaggedCode<NoPtrTag>()));
+
+    LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::Thunk);
+    return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "throwOutOfMemoryError"_s, "throwOutOfMemoryError");
+}
+
 // FIXME: We should distinguish between a megamorphic virtual call vs. a slow
 // path virtual call so that we can enable fast tail calls for megamorphic
 // virtual calls by using the shuffler.

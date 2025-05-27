@@ -373,8 +373,6 @@ public:
     std::tuple<CompileTimeCallLinkInfo, LinkableConstant> addCallLinkInfo(CodeOrigin);
     LinkerIR::Constant addToConstantPool(LinkerIR::Type, void*);
 
-    void appendExceptionHandlingOSRExit(SpeculativeJIT*, ExitKind, unsigned eventStreamIndex, CodeOrigin, HandlerInfo* exceptionHandler, CallSiteIndex, MacroAssembler::JumpList jumpsToFail = MacroAssembler::JumpList());
-
 protected:
     friend class OSRExitJumpPlaceholder;
     

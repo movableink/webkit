@@ -169,6 +169,7 @@ JSC_DECLARE_JIT_OPERATION(operationMaterializeBoundFunctionTargetCode, UGPRPair,
 JSC_DECLARE_JIT_OPERATION(operationThrowRemoteFunctionException, EncodedJSValue, (JSRemoteFunction*));
 
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationThrowStackOverflowError, void, (CodeBlock*));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationThrowOutOfMemoryError, void, (VM*));
 
 // IC related functions and generic helpers.
 //

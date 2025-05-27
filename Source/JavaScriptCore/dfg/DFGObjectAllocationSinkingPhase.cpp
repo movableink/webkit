@@ -862,7 +862,7 @@ private:
 
         promoteLocalHeap();
         removeICStatusFilters();
-        fixUpsilonEdge();
+        fixEdge();
 
         if (Options::validateGraphAtEachPhase()) [[unlikely]]
             DFG::validate(m_graph, DumpGraph, graphBeforeSinking);
@@ -2828,17 +2828,17 @@ escapeChildren:
         }
     }
 
-    // The added phis have NodeResultJS because their corresponding Upsilon edges, when coming from nodes in
-    // NamedPropertyPLoc, always have use kinds associated with NodeResultJS. However, this assumption breaks
-    // with the introduction of array allocation sinking, since nodes in ArrayIndexedPropertyPLoc may have
-    // use kinds that produce double results.
-    void fixUpsilonEdge()
+    void fixEdge()
     {
         for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
             for (unsigned indexInBlock = 0; indexInBlock < block->size(); ++indexInBlock) {
                 Node* node = block->at(indexInBlock);
                 switch (node->op()) {
                 case Upsilon: {
+                    // The added phis have NodeResultJS because their corresponding Upsilon edges, when coming from nodes in
+                    // NamedPropertyPLoc, always have use kinds associated with NodeResultJS. However, this assumption breaks
+                    // with the introduction of array allocation sinking, since nodes in ArrayIndexedPropertyPLoc may have
+                    // use kinds that produce double results.
                     Edge& edge = node->child1();
                     if (node->phi()->hasJSResult()) {
                         Node* result = nullptr;
@@ -2854,6 +2854,26 @@ escapeChildren:
                     }
                     break;
                 }
+
+                case MaterializeNewArrayWithConstantSize: {
+                    for (unsigned i = 0; i < node->numChildren(); ++i) {
+                        switch (node->indexingType()) {
+                        case ALL_DOUBLE_INDEXING_TYPES:
+                            m_graph.child(node, i).setUseKind(DoubleRepRealUse);
+                            break;
+                        case ALL_INT32_INDEXING_TYPES:
+                            m_graph.child(node, i).setUseKind(Int32Use);
+                            break;
+                        case ALL_CONTIGUOUS_INDEXING_TYPES:
+                            m_graph.child(node, i).setUseKind(UntypedUse);
+                            break;
+                        default:
+                            break;
+                        }
+                    }
+                    break;
+                }
+
                 default:
                     break;
                 }

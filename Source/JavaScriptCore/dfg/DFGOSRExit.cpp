@@ -168,7 +168,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationCompileOSRExit, void, (CallFrame* cal
     OSRExit& exit = codeBlock->jitCode()->dfg()->m_osrExit[exitIndex];
 
     ASSERT(!vm.callFrameForCatch || exit.m_kind == GenericUnwind);
-    EXCEPTION_ASSERT_UNUSED(scope, !!scope.exception() || !exit.isExceptionHandler());
+    EXCEPTION_ASSERT_UNUSED(scope, !!scope.exception() || !exit.isOSRExitDueToException());
     
     // Compute the value recoveries.
     Operands<ValueRecovery> operands;
@@ -732,6 +732,14 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
 
     // The tag registers are needed to materialize recoveries below.
     jit.emitMaterializeTagCheckRegisters();
+
+    if (exit.m_kind == WillThrowOutOfMemoryError) {
+        jit.store32(CCallHelpers::TrustedImm32(exit.m_exitCallSiteIndex.bits()), CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
+        jit.setupArguments<decltype(operationThrowOutOfMemoryError)>(CCallHelpers::TrustedImmPtr(&vm));
+        jit.prepareCallOperation(vm);
+        jit.move(AssemblyHelpers::TrustedImmPtr(tagCFunction<OperationPtrTag>(operationThrowOutOfMemoryError)), GPRInfo::nonArgGPR0);
+        jit.call(GPRInfo::nonArgGPR0, OperationPtrTag);
+    }
 
     if (inlineStackContainsActiveCheckpoint) {
         EncodedJSValue* tmpScratch = scratch + operands.tmpIndex(0);

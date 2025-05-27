@@ -448,16 +448,6 @@ void JITCompiler::noticeOSREntry(BasicBlock& basicBlock, JITCompiler::Label bloc
     m_osrEntry.append(WTFMove(entry));
 }
 
-void JITCompiler::appendExceptionHandlingOSRExit(SpeculativeJIT* speculative, ExitKind kind, unsigned eventStreamIndex, CodeOrigin opCatchOrigin, HandlerInfo* exceptionHandler, CallSiteIndex callSite, MacroAssembler::JumpList jumpsToFail)
-{
-    OSRExit exit(kind, JSValueRegs(), MethodOfGettingAValueProfile(), speculative, eventStreamIndex);
-    exit.m_codeOrigin = opCatchOrigin;
-    exit.m_exceptionHandlerCallSiteIndex = callSite;
-    OSRExitCompilationInfo& exitInfo = appendExitInfo(jumpsToFail);
-    m_osrExit.append(WTFMove(exit));
-    m_exceptionHandlerOSRExitCallSites.append(ExceptionHandlingOSRExitInfo { exitInfo, *exceptionHandler, callSite });
-}
-
 void JITCompiler::setEndOfMainPath(CodeOrigin semanticOrigin)
 {
     m_pcToCodeOriginMapBuilder.appendItem(labelIgnoringWatchpoints(), semanticOrigin);

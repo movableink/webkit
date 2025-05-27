@@ -64,6 +64,7 @@ class NativeExecutable;
     macro(ThrowExceptionFromCall, throwExceptionFromCallGenerator) \
     macro(ThrowExceptionFromCallSlowPath, throwExceptionFromCallSlowPathGenerator) \
     macro(ThrowStackOverflowAtPrologue, throwStackOverflowAtPrologueGenerator) \
+    macro(ThrowOutOfMemoryError, throwOutOfMemoryErrorGenerator) \
     macro(VirtualThunkForRegularCall, virtualThunkForRegularCall) \
     macro(VirtualThunkForTailCall, virtualThunkForTailCall) \
     macro(VirtualThunkForConstruct, virtualThunkForConstruct) \

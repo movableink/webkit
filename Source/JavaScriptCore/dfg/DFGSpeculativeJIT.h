@@ -1878,6 +1878,8 @@ public:
     // Add a speculation check with additional recovery.
     void speculationCheck(ExitKind, JSValueSource, Node*, Jump jumpToFail, const SpeculationRecovery&);
     void speculationCheck(ExitKind, JSValueSource, Edge, Jump jumpToFail, const SpeculationRecovery&);
+
+    void speculationCheckOutOfMemory(JSValueSource, Node*, const JumpList&);
     
     void compileInvalidationPoint(Node*);
     
@@ -1987,8 +1989,9 @@ public:
     void arrayify(Node*, GPRReg baseReg, GPRReg propertyReg);
     void arrayify(Node*);
 
-    unsigned appendOSRExit(OSRExit&&);
-    
+    unsigned appendOSRExit(OSRExit&&, bool isExceptionHandler = false);
+    unsigned appendExceptionHandlingOSRExit(ExitKind, unsigned eventStreamIndex, CodeOrigin, HandlerInfo* exceptionHandler, CallSiteIndex, MacroAssembler::JumpList jumpsToFail = MacroAssembler::JumpList());
+
     template<bool strict>
     GPRReg fillSpeculateInt32Internal(Edge, DataFormat& returnFormat);
     

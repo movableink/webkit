@@ -139,6 +139,21 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationThrowStackOverflowErrorFromThunk, voi
     ASSERT(vm.targetMachinePCForThrow);
 }
 
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationThrowOutOfMemoryError, void, (VM* vmPointer))
+{
+    VM& vm = *vmPointer;
+    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    CodeBlock* codeBlock = callFrame->codeBlock();
+    if (JSC::JITCode::isOptimizingJIT(codeBlock->jitType()))
+        codeBlock = baselineCodeBlockForOriginAndBaselineCodeBlock(callFrame->codeOrigin(), codeBlock->baselineAlternative());
+
+    JSGlobalObject* globalObject = codeBlock->globalObject();
+    scope.throwException(globalObject, createOutOfMemoryError(globalObject));
+}
+
 static JSValue getWrappedValue(JSGlobalObject* globalObject, JSGlobalObject* targetGlobalObject, JSValue value)
 {
     VM& vm = globalObject->vm();
