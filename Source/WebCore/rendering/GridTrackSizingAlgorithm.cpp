@@ -133,17 +133,6 @@ void GridTrack::ensureGrowthLimitIsBiggerThanBaseSize()
         m_growthLimit = std::max(m_baseSize, 0_lu);
 }
 
-
-GridAxis gridAxisForDirection(GridTrackSizingDirection direction)
-{
-    return direction == GridTrackSizingDirection::ForColumns ? GridAxis::GridRowAxis : GridAxis::GridColumnAxis;
-}
-
-GridTrackSizingDirection gridDirectionForAxis(GridAxis axis)
-{
-    return axis == GridAxis::GridRowAxis ? GridTrackSizingDirection::ForColumns : GridTrackSizingDirection::ForRows;
-}
-
 static bool hasRelativeMarginOrPaddingForGridItem(const RenderBox& gridItem, GridTrackSizingDirection direction)
 {
     if (direction == GridTrackSizingDirection::ForColumns)
@@ -1247,7 +1236,7 @@ void GridTrackSizingAlgorithm::updateBaselineAlignmentContext(const RenderBox& g
     auto align = m_renderGrid->selfAlignmentForGridItem(alignmentContextType, gridItem).position();
     const auto& span = m_renderGrid->gridSpanForGridItem(gridItem, alignmentContextType);
     auto alignmentContext = GridLayoutFunctions::alignmentContextForBaselineAlignment(span, align);
-    m_baselineAlignment.updateBaselineAlignmentContext(align, alignmentContext, gridItem, GridLayoutFunctions::gridAxisForDirection(alignmentContextType));
+    m_baselineAlignment.updateBaselineAlignmentContext(align, alignmentContext, gridItem, alignmentContextType);
 }
 
 LayoutUnit GridTrackSizingAlgorithm::baselineOffsetForGridItem(const RenderBox& gridItem, GridTrackSizingDirection alignmentContextType) const
@@ -1264,7 +1253,7 @@ LayoutUnit GridTrackSizingAlgorithm::baselineOffsetForGridItem(const RenderBox& 
     auto align = m_renderGrid->selfAlignmentForGridItem(alignmentContextType, gridItem).position();
     const auto& span = m_renderGrid->gridSpanForGridItem(gridItem, alignmentContextType);
     auto alignmentContext = GridLayoutFunctions::alignmentContextForBaselineAlignment(span, align);
-    return m_baselineAlignment.baselineOffsetForGridItem(align, alignmentContext, gridItem, GridLayoutFunctions::gridAxisForDirection(alignmentContextType));
+    return m_baselineAlignment.baselineOffsetForGridItem(align, alignmentContext, gridItem, alignmentContextType);
 }
 
 void GridTrackSizingAlgorithm::clearBaselineItemsCache()
@@ -2055,7 +2044,7 @@ void GridTrackSizingAlgorithm::setup(GridTrackSizingDirection direction, unsigne
 void GridTrackSizingAlgorithm::computeBaselineAlignmentContext()
 {
     auto alignmentContextType = m_direction;
-    m_baselineAlignment.clear(GridLayoutFunctions::gridAxisForDirection(alignmentContextType));
+    m_baselineAlignment.clear(alignmentContextType);
     m_baselineAlignment.setWritingMode(m_renderGrid->style().writingMode());
     BaselineItemsCache& baselineItemsCache = alignmentContextType == GridTrackSizingDirection::ForRows ? m_baselineAlignmentItemsForRows : m_baselineAlignmentItemsForColumns;
     BaselineItemsCache tmpBaselineItemsCache = baselineItemsCache;

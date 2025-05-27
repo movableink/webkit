@@ -396,7 +396,4 @@ protected:
     GridTrackSizingAlgorithm& m_algorithm;
 };
 
-GridAxis gridAxisForDirection(GridTrackSizingDirection);
-GridTrackSizingDirection gridDirectionForAxis(GridAxis);
-
 } // namespace WebCore
