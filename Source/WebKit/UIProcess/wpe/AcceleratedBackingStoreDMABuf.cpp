@@ -67,6 +67,10 @@ AcceleratedBackingStoreDMABuf::AcceleratedBackingStoreDMABuf(WebPageProxy& webPa
 
 AcceleratedBackingStoreDMABuf::~AcceleratedBackingStoreDMABuf()
 {
+    if (m_surfaceID) {
+        if (RefPtr legacyMainFrameProcess = m_legacyMainFrameProcess.get())
+            legacyMainFrameProcess->removeMessageReceiver(Messages::AcceleratedBackingStoreDMABuf::messageReceiverName(), m_surfaceID);
+    }
     g_signal_handlers_disconnect_by_data(m_wpeView.get(), this);
 }
 
