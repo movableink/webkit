@@ -5002,6 +5002,9 @@ RenderLayer::HitLayer RenderLayer::hitTestList(LayerList layerIterator, RenderLa
     if (!hasSelfPaintingLayerDescendant())
         return { };
 
+    if (CheckedPtr renderBox = this->renderBox(); renderBox && isSkippedContentRoot(*renderBox))
+        return { };
+
     auto resultLayer = HitLayer { nullptr, -std::numeric_limits<double>::infinity() };
 
     RefPtr<HitTestingTransformState> flattenedTransformState;
