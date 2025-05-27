@@ -53,7 +53,7 @@ Ref<IDBConnectionToServer> IDBConnectionToServer::create(IDBConnectionToServerDe
 
 IDBConnectionToServer::IDBConnectionToServer(IDBConnectionToServerDelegate& delegate, PAL::SessionID sessionID)
     : m_delegate(delegate)
-    , m_proxy(makeUniqueWithoutRefCountedCheck<IDBConnectionProxy>(*this, sessionID))
+    , m_proxy(makeUniqueRefWithoutRefCountedCheck<IDBConnectionProxy>(*this, sessionID))
 {
 }
 
@@ -66,8 +66,7 @@ IDBConnectionIdentifier IDBConnectionToServer::identifier() const
 
 IDBConnectionProxy& IDBConnectionToServer::proxy()
 {
-    ASSERT(m_proxy);
-    return *m_proxy;
+    return m_proxy.get();
 }
 
 void IDBConnectionToServer::callResultFunctionWithErrorLater(ResultFunction function, const IDBResourceIdentifier& requestIdentifier)

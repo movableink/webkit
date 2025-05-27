@@ -9115,7 +9115,7 @@ void WebPage::textAutosizingUsesIdempotentModeChanged()
 PlatformXRSystemProxy& WebPage::xrSystemProxy()
 {
     if (!m_xrSystemProxy)
-        m_xrSystemProxy = makeUniqueWithoutRefCountedCheck<PlatformXRSystemProxy>(*this);
+        lazyInitialize(m_xrSystemProxy, makeUniqueWithoutRefCountedCheck<PlatformXRSystemProxy>(*this));
     return *m_xrSystemProxy;
 }
 #endif

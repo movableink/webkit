@@ -321,7 +321,7 @@ void DataTransfer::didAddFileToItemList()
 DataTransferItemList& DataTransfer::items(Document& document)
 {
     if (!m_itemList)
-        m_itemList = makeUniqueWithoutRefCountedCheck<DataTransferItemList>(document, *this);
+        lazyInitialize(m_itemList, makeUniqueWithoutRefCountedCheck<DataTransferItemList>(document, *this));
     return *m_itemList;
 }
 

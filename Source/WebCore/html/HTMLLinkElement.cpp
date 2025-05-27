@@ -662,7 +662,7 @@ bool HTMLLinkElement::styleSheetIsLoading() const
 DOMTokenList& HTMLLinkElement::sizes()
 {
     if (!m_sizes)
-        m_sizes = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, sizesAttr);
+        lazyInitialize(m_sizes, makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, sizesAttr));
     return *m_sizes;
 }
 
@@ -717,9 +717,9 @@ void HTMLLinkElement::dispatchPendingEvent(LinkEventSender* eventSender, const A
 DOMTokenList& HTMLLinkElement::relList()
 {
     if (!m_relList) 
-        m_relList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::relAttr, [](Document& document, StringView token) {
+        lazyInitialize(m_relList, makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::relAttr, [](Document& document, StringView token) {
             return LinkRelAttribute::isSupported(document, token);
-        });
+        }));
     return *m_relList;
 }
 
@@ -727,11 +727,11 @@ DOMTokenList& HTMLLinkElement::relList()
 DOMTokenList& HTMLLinkElement::blocking()
 {
     if (!m_blockingList) {
-        m_blockingList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::blockingAttr, [](Document&, StringView token) {
+        lazyInitialize(m_blockingList, makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::blockingAttr, [](Document&, StringView token) {
             if (equalLettersIgnoringASCIICase(token, "render"_s))
                 return true;
             return false;
-        });
+        }));
     }
     return *m_blockingList;
 }

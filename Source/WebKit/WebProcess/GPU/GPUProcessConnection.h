@@ -171,7 +171,7 @@ private:
     std::optional<audit_token_t> m_auditToken;
 #endif
 #if PLATFORM(COCOA) && ENABLE(MEDIA_STREAM)
-    std::unique_ptr<SampleBufferDisplayLayerManager> m_sampleBufferDisplayLayerManager;
+    const std::unique_ptr<SampleBufferDisplayLayerManager> m_sampleBufferDisplayLayerManager;
 #endif
 #if ENABLE(VIDEO)
     RefPtr<RemoteVideoFrameObjectHeapProxy> m_videoFrameObjectHeapProxy;

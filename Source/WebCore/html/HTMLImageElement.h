@@ -262,7 +262,7 @@ private:
     IntersectionObserverData& ensureIntersectionObserverData() final;
     IntersectionObserverData* intersectionObserverDataIfExists() final;
 
-    std::unique_ptr<HTMLImageLoader> m_imageLoader;
+    const std::unique_ptr<HTMLImageLoader> m_imageLoader;
     std::unique_ptr<IntersectionObserverData> m_intersectionObserverData;
 
     AtomString m_bestFitImageURL;

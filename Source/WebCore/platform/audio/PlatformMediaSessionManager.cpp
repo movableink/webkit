@@ -54,9 +54,9 @@ bool PlatformMediaSessionManager::m_vp9DecoderEnabled;
 bool PlatformMediaSessionManager::m_swVPDecodersAlwaysEnabled;
 #endif
 
-static std::unique_ptr<PlatformMediaSessionManager>& sharedPlatformMediaSessionManager()
+static const std::unique_ptr<PlatformMediaSessionManager>& sharedPlatformMediaSessionManager()
 {
-    static NeverDestroyed<std::unique_ptr<PlatformMediaSessionManager>> platformMediaSessionManager;
+    static NeverDestroyed<const std::unique_ptr<PlatformMediaSessionManager>> platformMediaSessionManager;
     return platformMediaSessionManager.get();
 }
 
@@ -64,7 +64,7 @@ PlatformMediaSessionManager& PlatformMediaSessionManager::singleton()
 {
     auto& manager = sharedPlatformMediaSessionManager();
     if (!manager) {
-        manager = PlatformMediaSessionManager::create();
+        lazyInitialize(manager, PlatformMediaSessionManager::create());
         manager->resetRestrictions();
     }
     return *manager;
@@ -76,7 +76,7 @@ PlatformMediaSessionManager* PlatformMediaSessionManager::singletonIfExists()
 }
 
 #if !PLATFORM(COCOA) && (!USE(GLIB) || !ENABLE(MEDIA_SESSION))
-std::unique_ptr<PlatformMediaSessionManager> PlatformMediaSessionManager::create()
+const std::unique_ptr<PlatformMediaSessionManager> PlatformMediaSessionManager::create()
 {
     return std::unique_ptr<PlatformMediaSessionManager>(new PlatformMediaSessionManager);
 }

@@ -379,7 +379,7 @@ private:
     const WebCore::ProcessIdentifier m_webProcessIdentifier;
     const WebCore::ProcessIdentity m_webProcessIdentity;
 #if ENABLE(WEB_AUDIO)
-    std::unique_ptr<RemoteAudioDestinationManager> m_remoteAudioDestinationManager;
+    const std::unique_ptr<RemoteAudioDestinationManager> m_remoteAudioDestinationManager;
 #endif
     RefPtr<RemoteSharedResourceCache> m_sharedResourceCache;
 #if ENABLE(VIDEO)
@@ -392,7 +392,7 @@ private:
     PAL::SessionID m_sessionID;
 #if PLATFORM(COCOA) && ENABLE(MEDIA_STREAM)
     RefPtr<UserMediaCaptureManagerProxy> m_userMediaCaptureManagerProxy;
-    std::unique_ptr<RemoteAudioMediaStreamTrackRendererInternalUnitManager> m_audioMediaStreamTrackRendererInternalUnitManager;
+    const std::unique_ptr<RemoteAudioMediaStreamTrackRendererInternalUnitManager> m_audioMediaStreamTrackRendererInternalUnitManager;
     bool m_isLastToCaptureAudio { false };
 
     Ref<RemoteSampleBufferDisplayLayerManager> m_sampleBufferDisplayLayerManager;
@@ -431,7 +431,7 @@ private:
     RefPtr<RemoteAudioSessionProxy> m_audioSessionProxy;
 #endif
 #if PLATFORM(IOS_FAMILY)
-    std::unique_ptr<RemoteMediaSessionHelperProxy> m_mediaSessionHelperProxy;
+    const std::unique_ptr<RemoteMediaSessionHelperProxy> m_mediaSessionHelperProxy;
 #endif
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     RefPtr<RemoteLegacyCDMFactoryProxy> m_legacyCdmFactoryProxy;
@@ -440,7 +440,7 @@ private:
     const std::unique_ptr<RemoteImageDecoderAVFProxy> m_imageDecoderAVFProxy;
 #endif
 
-    std::unique_ptr<RemoteMediaEngineConfigurationFactoryProxy> m_mediaEngineConfigurationFactoryProxy;
+    const std::unique_ptr<RemoteMediaEngineConfigurationFactoryProxy> m_mediaEngineConfigurationFactoryProxy;
 
 #if HAVE(VISIBILITY_PROPAGATION_VIEW)
     HashMap<std::pair<WebPageProxyIdentifier, WebCore::PageIdentifier>, std::unique_ptr<LayerHostingContext>> m_visibilityPropagationContexts;

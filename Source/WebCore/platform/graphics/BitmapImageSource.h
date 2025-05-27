@@ -207,7 +207,7 @@ private:
 
     BitmapImageDescriptor m_descriptor;
     mutable RefPtr<ImageDecoder> m_decoder;
-    mutable std::unique_ptr<ImageFrameAnimator> m_frameAnimator;
+    const std::unique_ptr<ImageFrameAnimator> m_frameAnimator;
     mutable RefPtr<ImageFrameWorkQueue> m_workQueue;
     Vector<Function<void(DecodingStatus)>> m_decodeCallbacks;
 

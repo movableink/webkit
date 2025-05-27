@@ -608,7 +608,7 @@ void GPUConnectionToWebProcess::lowMemoryHandler(Critical critical, Synchronous 
 RemoteAudioDestinationManager& GPUConnectionToWebProcess::remoteAudioDestinationManager()
 {
     if (!m_remoteAudioDestinationManager)
-        m_remoteAudioDestinationManager = makeUniqueWithoutRefCountedCheck<RemoteAudioDestinationManager>(*this);
+        lazyInitialize(m_remoteAudioDestinationManager, makeUniqueWithoutRefCountedCheck<RemoteAudioDestinationManager>(*this));
 
     return *m_remoteAudioDestinationManager;
 }
@@ -675,7 +675,7 @@ Ref<UserMediaCaptureManagerProxy> GPUConnectionToWebProcess::protectedUserMediaC
 RemoteAudioMediaStreamTrackRendererInternalUnitManager& GPUConnectionToWebProcess::audioMediaStreamTrackRendererInternalUnitManager()
 {
     if (!m_audioMediaStreamTrackRendererInternalUnitManager)
-        m_audioMediaStreamTrackRendererInternalUnitManager = makeUniqueWithoutRefCountedCheck<RemoteAudioMediaStreamTrackRendererInternalUnitManager>(*this);
+        lazyInitialize(m_audioMediaStreamTrackRendererInternalUnitManager, makeUniqueWithoutRefCountedCheck<RemoteAudioMediaStreamTrackRendererInternalUnitManager>(*this));
 
     return *m_audioMediaStreamTrackRendererInternalUnitManager;
 }
@@ -898,7 +898,7 @@ void GPUConnectionToWebProcess::ensureAudioSession(EnsureAudioSessionCompletion&
 RemoteMediaSessionHelperProxy& GPUConnectionToWebProcess::mediaSessionHelperProxy()
 {
     if (!m_mediaSessionHelperProxy)
-        m_mediaSessionHelperProxy = makeUniqueWithoutRefCountedCheck<RemoteMediaSessionHelperProxy>(*this);
+        lazyInitialize(m_mediaSessionHelperProxy, makeUniqueWithoutRefCountedCheck<RemoteMediaSessionHelperProxy>(*this));
     return *m_mediaSessionHelperProxy;
 }
 
@@ -932,7 +932,7 @@ Ref<RemoteLegacyCDMFactoryProxy> GPUConnectionToWebProcess::protectedLegacyCdmFa
 RemoteMediaEngineConfigurationFactoryProxy& GPUConnectionToWebProcess::mediaEngineConfigurationFactoryProxy()
 {
     if (!m_mediaEngineConfigurationFactoryProxy)
-        m_mediaEngineConfigurationFactoryProxy = makeUniqueWithoutRefCountedCheck<RemoteMediaEngineConfigurationFactoryProxy>(*this);
+        lazyInitialize(m_mediaEngineConfigurationFactoryProxy, makeUniqueWithoutRefCountedCheck<RemoteMediaEngineConfigurationFactoryProxy>(*this));
     return *m_mediaEngineConfigurationFactoryProxy;
 }
 

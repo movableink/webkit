@@ -42,7 +42,7 @@
 
 @interface WKObservablePageState : NSObject <_WKObservablePageState> {
     RefPtr<WebKit::WebPageProxy> _page;
-    std::unique_ptr<WebKit::PageLoadStateObserver> _observer;
+    RefPtr<WebKit::PageLoadStateObserver> _observer;
 }
 
 @end
@@ -55,7 +55,7 @@
         return nil;
 
     _page = WTFMove(page);
-    _observer = makeUniqueWithoutRefCountedCheck<WebKit::PageLoadStateObserver>(self, @"URL");
+    _observer = WebKit::PageLoadStateObserver::create(self, @"URL");
     _page->pageLoadState().addObserver(*_observer);
 
     return self;
@@ -65,7 +65,7 @@
 {
     _observer->clearObject();
 
-    ensureOnMainRunLoop([page = WTFMove(_page), observer = WTFMove(_observer)] {
+    ensureOnMainRunLoop([page = WTFMove(_page), observer = std::exchange(_observer, nullptr)] {
         page->pageLoadState().removeObserver(*observer);
     });
 

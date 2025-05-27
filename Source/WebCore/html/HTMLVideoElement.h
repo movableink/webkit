@@ -174,7 +174,7 @@ private:
     bool canShowWhileLocked() const final;
 #endif
 
-    std::unique_ptr<HTMLImageLoader> m_imageLoader;
+    const std::unique_ptr<HTMLImageLoader> m_imageLoader;
 
     AtomString m_defaultPosterURL;
 

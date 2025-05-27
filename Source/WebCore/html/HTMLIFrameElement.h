@@ -86,7 +86,7 @@ private:
     bool shouldLoadFrameLazily() final;
     bool isLazyLoadObserverActive() const final;
 
-    std::unique_ptr<DOMTokenList> m_sandbox;
+    const std::unique_ptr<DOMTokenList> m_sandbox;
     std::unique_ptr<LazyLoadFrameObserver> m_lazyLoadFrameObserver;
 #if ENABLE(CONTENT_EXTENSIONS)
     URL m_initiatorSourceURL;

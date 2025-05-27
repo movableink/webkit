@@ -820,12 +820,12 @@ private:
     using SpeechRecognitionServerMap = HashMap<SpeechRecognitionServerIdentifier, Ref<SpeechRecognitionServer>>;
     SpeechRecognitionServerMap m_speechRecognitionServerMap;
 #if ENABLE(MEDIA_STREAM)
-    std::unique_ptr<SpeechRecognitionRemoteRealtimeMediaSourceManager> m_speechRecognitionRemoteRealtimeMediaSourceManager;
+    const std::unique_ptr<SpeechRecognitionRemoteRealtimeMediaSourceManager> m_speechRecognitionRemoteRealtimeMediaSourceManager;
 #endif
-    std::unique_ptr<WebLockRegistryProxy> m_webLockRegistry;
+    const std::unique_ptr<WebLockRegistryProxy> m_webLockRegistry;
     UniqueRef<WebPermissionControllerProxy> m_webPermissionController;
 #if ENABLE(ROUTING_ARBITRATION)
-    std::unique_ptr<AudioSessionRoutingArbitratorProxy> m_routingArbitrator;
+    const std::unique_ptr<AudioSessionRoutingArbitratorProxy> m_routingArbitrator;
 #endif
     bool m_isConnectedToHardwareConsole { true };
 #if PLATFORM(MAC)

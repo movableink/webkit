@@ -3540,7 +3540,7 @@ private:
 #endif
 
 #if ENABLE(ENCRYPTED_MEDIA)
-    std::unique_ptr<MediaKeySystemPermissionRequestManagerProxy> m_mediaKeySystemPermissionRequestManager;
+    const std::unique_ptr<MediaKeySystemPermissionRequestManagerProxy> m_mediaKeySystemPermissionRequestManager;
 #endif
 
     bool m_viewWasEverInWindow { false };

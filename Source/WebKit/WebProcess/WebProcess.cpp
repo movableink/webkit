@@ -341,7 +341,7 @@ WebProcess::WebProcess()
     addSupplementWithoutRefCountedCheck<WebGeolocationManager>();
 
 #if ENABLE(NOTIFICATIONS)
-    addSupplement<WebNotificationManager>();
+    addSupplementWithoutRefCountedCheck<WebNotificationManager>();
 #endif
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
@@ -349,7 +349,7 @@ WebProcess::WebProcess()
 #endif
 
 #if PLATFORM(COCOA) && ENABLE(MEDIA_STREAM)
-    addSupplement<UserMediaCaptureManager>();
+    addSupplementWithoutRefCountedCheck<UserMediaCaptureManager>();
 #endif
 
 #if ENABLE(GPU_PROCESS) && ENABLE(ENCRYPTED_MEDIA)
@@ -361,7 +361,7 @@ WebProcess::WebProcess()
 #endif
 
 #if ENABLE(GPU_PROCESS)
-    addSupplement<RemoteMediaEngineConfigurationFactory>();
+    addSupplementWithoutRefCountedCheck<RemoteMediaEngineConfigurationFactory>();
 #endif
 
     Gigacage::forbidDisablingPrimitiveGigacage();
@@ -2480,7 +2480,7 @@ bool WebProcess::shouldUseRemoteRenderingForWebGL() const
 SpeechRecognitionRealtimeMediaSourceManager& WebProcess::ensureSpeechRecognitionRealtimeMediaSourceManager()
 {
     if (!m_speechRecognitionRealtimeMediaSourceManager)
-        m_speechRecognitionRealtimeMediaSourceManager = makeUniqueWithoutRefCountedCheck<SpeechRecognitionRealtimeMediaSourceManager>(*this);
+        lazyInitialize(m_speechRecognitionRealtimeMediaSourceManager, makeUniqueWithoutRefCountedCheck<SpeechRecognitionRealtimeMediaSourceManager>(*this));
 
     return *m_speechRecognitionRealtimeMediaSourceManager;
 }

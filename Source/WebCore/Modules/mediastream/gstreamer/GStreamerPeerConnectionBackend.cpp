@@ -73,7 +73,7 @@ WebRTCLogObserver& webrtcLogObserverSingleton()
 }
 #endif // GST_DISABLE_GST_DEBUG
 
-static std::unique_ptr<PeerConnectionBackend> createGStreamerPeerConnectionBackend(RTCPeerConnection& peerConnection)
+static const std::unique_ptr<PeerConnectionBackend> createGStreamerPeerConnectionBackend(RTCPeerConnection& peerConnection)
 {
     ensureGStreamerInitialized();
     static std::once_flag debugRegisteredFlag;
@@ -84,7 +84,7 @@ static std::unique_ptr<PeerConnectionBackend> createGStreamerPeerConnectionBacke
         WTFLogAlways("GstWebRTC plugin not found. Make sure to install gst-plugins-bad >= 1.20 with the webrtc plugin enabled.");
         return nullptr;
     }
-    return WTF::makeUniqueWithoutRefCountedCheck<GStreamerPeerConnectionBackend>(peerConnection);
+    return WTF::makeUniqueWithoutRefCountedCheck<GStreamerPeerConnectionBackend, PeerConnectionBackend>(peerConnection);
 }
 
 CreatePeerConnectionBackend PeerConnectionBackend::create = createGStreamerPeerConnectionBackend;

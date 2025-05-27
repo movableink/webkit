@@ -310,7 +310,7 @@ CSSRule* CSSStyleRule::item(unsigned index) const
 CSSRuleList& CSSStyleRule::cssRules() const
 {
     if (!m_ruleListCSSOMWrapper)
-        m_ruleListCSSOMWrapper = makeUniqueWithoutRefCountedCheck<LiveCSSRuleList<CSSStyleRule>>(const_cast<CSSStyleRule&>(*this));
+        lazyInitialize(m_ruleListCSSOMWrapper, makeUniqueWithoutRefCountedCheck<LiveCSSRuleList<CSSStyleRule>>(const_cast<CSSStyleRule&>(*this)));
 
     return *m_ruleListCSSOMWrapper;
 }

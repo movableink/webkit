@@ -87,7 +87,7 @@ ImageFrameAnimator* BitmapImageSource::frameAnimator() const
     if (!isAnimated())
         return nullptr;
 
-    m_frameAnimator = makeUniqueWithoutRefCountedCheck<ImageFrameAnimator>(const_cast<BitmapImageSource&>(*this));
+    lazyInitialize(m_frameAnimator, makeUniqueWithoutRefCountedCheck<ImageFrameAnimator>(const_cast<BitmapImageSource&>(*this)));
     return m_frameAnimator.get();
 }
 

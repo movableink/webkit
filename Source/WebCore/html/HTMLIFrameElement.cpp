@@ -77,9 +77,9 @@ int HTMLIFrameElement::defaultTabIndex() const
 DOMTokenList& HTMLIFrameElement::sandbox()
 {
     if (!m_sandbox) {
-        m_sandbox = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, sandboxAttr, [](Document&, StringView token) {
+        lazyInitialize(m_sandbox, makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, sandboxAttr, [](Document&, StringView token) {
             return SecurityContext::isSupportedSandboxPolicy(token);
-        });
+        }));
     }
     return *m_sandbox;
 }

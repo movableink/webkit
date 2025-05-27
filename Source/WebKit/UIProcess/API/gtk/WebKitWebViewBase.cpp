@@ -295,7 +295,7 @@ struct _WebKitWebViewBasePrivate {
 #if !USE(GTK4)
     WebKitWebViewChildrenMap children;
 #endif
-    std::unique_ptr<PageClientImpl> pageClient;
+    const std::unique_ptr<PageClientImpl> pageClient;
     RefPtr<WebPageProxy> pageProxy;
     IntSize viewSize { };
 #if USE(GTK4)
@@ -2311,7 +2311,7 @@ static void webkitWebViewBaseConstructed(GObject* object)
     gtk_widget_set_can_focus(viewWidget, TRUE);
 
     WebKitWebViewBasePrivate* priv = WEBKIT_WEB_VIEW_BASE(object)->priv;
-    priv->pageClient = makeUniqueWithoutRefCountedCheck<PageClientImpl>(viewWidget);
+    lazyInitialize(priv->pageClient, makeUniqueWithoutRefCountedCheck<PageClientImpl>(viewWidget));
     gtk_widget_set_parent(priv->keyBindingTranslator.widget(), viewWidget);
 
 #if ENABLE(DRAG_SUPPORT)

@@ -216,7 +216,7 @@ private:
 
     unsigned m_timeoutMilliseconds { 0 };
 
-    std::unique_ptr<XMLHttpRequestUpload> m_upload;
+    const std::unique_ptr<XMLHttpRequestUpload> m_upload;
 
     URLKeepingBlobAlive m_url;
     String m_method;

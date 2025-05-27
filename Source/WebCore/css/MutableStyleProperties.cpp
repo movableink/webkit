@@ -345,7 +345,7 @@ CSSProperty* MutableStyleProperties::findCustomCSSPropertyWithName(const String&
 CSSStyleProperties& MutableStyleProperties::ensureInlineCSSStyleProperties(StyledElement& parentElement)
 {
     if (!m_cssomWrapper)
-        m_cssomWrapper = makeUniqueWithoutRefCountedCheck<InlineCSSStyleProperties>(*this, parentElement);
+        lazyInitialize(m_cssomWrapper, makeUniqueWithoutRefCountedCheck<InlineCSSStyleProperties>(*this, parentElement));
     ASSERT(m_cssomWrapper->parentElement() == &parentElement);
     return *m_cssomWrapper;
 }

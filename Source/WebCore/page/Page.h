@@ -1637,7 +1637,7 @@ private:
     std::optional<EventThrottlingBehavior> m_eventThrottlingBehaviorOverride;
     std::optional<CompositingPolicy> m_compositingPolicyOverride;
 
-    std::unique_ptr<PerformanceMonitor> m_performanceMonitor;
+    const std::unique_ptr<PerformanceMonitor> m_performanceMonitor;
     std::unique_ptr<LowPowerModeNotifier> m_lowPowerModeNotifier;
     std::unique_ptr<ThermalMitigationNotifier> m_thermalMitigationNotifier;
     OptionSet<ThrottlingReason> m_throttlingReasons;
@@ -1647,7 +1647,7 @@ private:
 
     std::unique_ptr<PerformanceLogging> m_performanceLogging;
 #if ENABLE(WHEEL_EVENT_LATCHING)
-    std::unique_ptr<ScrollLatchingController> m_scrollLatchingController;
+    const std::unique_ptr<ScrollLatchingController> m_scrollLatchingController;
 #endif
 #if PLATFORM(MAC) && (ENABLE(SERVICE_CONTROLS) || ENABLE(TELEPHONE_NUMBER_DETECTION))
     const UniqueRef<ServicesOverlayController> m_servicesOverlayController;

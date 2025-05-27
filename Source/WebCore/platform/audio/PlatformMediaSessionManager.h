@@ -139,7 +139,7 @@ public:
     bool hasActiveNowPlayingSessionInGroup(std::optional<MediaSessionGroupIdentifier>) final;
 
 protected:
-    static std::unique_ptr<PlatformMediaSessionManager> create();
+    static const std::unique_ptr<PlatformMediaSessionManager> create();
     PlatformMediaSessionManager();
 
     void forEachSession(NOESCAPE const Function<void(PlatformMediaSessionInterface&)>&);

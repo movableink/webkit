@@ -103,7 +103,7 @@ private:
 
     friend class StyleProperties;
 
-    std::unique_ptr<CSSStyleProperties> m_cssomWrapper;
+    const std::unique_ptr<CSSStyleProperties> m_cssomWrapper;
     Vector<CSSProperty, 4> m_propertyVector;
 };
 

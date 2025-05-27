@@ -129,7 +129,7 @@ RTCPeerConnection::RTCPeerConnection(Document& document)
 {
     ALWAYS_LOG(LOGIDENTIFIER);
     relaxAdoptionRequirement();
-    m_backend = PeerConnectionBackend::create(*this);
+    lazyInitialize(m_backend, PeerConnectionBackend::create(*this));
 
 #if !RELEASE_LOG_DISABLED
     auto* page = document.page();

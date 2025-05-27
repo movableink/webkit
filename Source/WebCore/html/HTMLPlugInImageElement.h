@@ -87,7 +87,7 @@ private:
 
     bool m_needsWidgetUpdate { false };
     bool m_needsDocumentActivationCallbacks { false };
-    std::unique_ptr<HTMLImageLoader> m_imageLoader;
+    const std::unique_ptr<HTMLImageLoader> m_imageLoader;
     bool m_needsImageReload { false };
     bool m_hasUpdateScheduledForAfterStyleResolution { false };
 };

@@ -115,7 +115,7 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaSessionManagerGLib);
 
-std::unique_ptr<PlatformMediaSessionManager> PlatformMediaSessionManager::create()
+const std::unique_ptr<PlatformMediaSessionManager> PlatformMediaSessionManager::create()
 {
     GUniqueOutPtr<GError> error;
     auto mprisInterface = adoptGRef(g_dbus_node_info_new_for_xml(s_mprisInterface, &error.outPtr()));
@@ -123,7 +123,7 @@ std::unique_ptr<PlatformMediaSessionManager> PlatformMediaSessionManager::create
         g_warning("Failed at parsing XML Interface definition: %s", error->message);
         return nullptr;
     }
-    return makeUniqueWithoutRefCountedCheck<MediaSessionManagerGLib>(WTFMove(mprisInterface));
+    return makeUniqueWithoutRefCountedCheck<MediaSessionManagerGLib, PlatformMediaSessionManager>(WTFMove(mprisInterface));
 }
 
 MediaSessionManagerGLib::MediaSessionManagerGLib(GRefPtr<GDBusNodeInfo>&& mprisInterface)

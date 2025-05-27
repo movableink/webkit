@@ -4530,7 +4530,7 @@ void Page::applicationDidBecomeActive()
 ScrollLatchingController& Page::scrollLatchingController()
 {
     if (!m_scrollLatchingController)
-        m_scrollLatchingController = makeUniqueWithoutRefCountedCheck<ScrollLatchingController>(*this);
+        lazyInitialize(m_scrollLatchingController, makeUniqueWithoutRefCountedCheck<ScrollLatchingController>(*this));
         
     return *m_scrollLatchingController;
 }

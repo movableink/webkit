@@ -2222,7 +2222,7 @@ private:
     // MIME type of the document in case it was cloned or created by XHR.
     String m_overriddenMIMEType;
 
-    std::unique_ptr<DOMImplementation> m_implementation;
+    const std::unique_ptr<DOMImplementation> m_implementation;
 
     RefPtr<Node> m_focusNavigationStartingNode;
     Deque<WeakPtr<Element, WeakPtrImplWithEventTargetData>> m_autofocusCandidates;
@@ -2489,7 +2489,7 @@ private:
     UncheckedKeyHashMap<String, Ref<PaintWorkletGlobalScope>> m_paintWorkletGlobalScopes;
 
 #if ENABLE(CONTENT_CHANGE_OBSERVER)
-    std::unique_ptr<ContentChangeObserver> m_contentChangeObserver;
+    const std::unique_ptr<ContentChangeObserver> m_contentChangeObserver;
     std::unique_ptr<DOMTimerHoldingTank> m_domTimerHoldingTank;
 #endif
 
@@ -2524,7 +2524,7 @@ private:
 
     const RefPtr<ReportingScope> m_reportingScope;
 
-    std::unique_ptr<WakeLockManager> m_wakeLockManager;
+    const std::unique_ptr<WakeLockManager> m_wakeLockManager;
     std::unique_ptr<SleepDisabler> m_sleepDisabler;
 
 #if ENABLE(MEDIA_STREAM)

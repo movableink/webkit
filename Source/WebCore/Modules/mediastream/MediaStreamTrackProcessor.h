@@ -76,6 +76,8 @@ public:
         void ref() const final { m_processor->ref(); };
         void deref() const final { m_processor->deref(); };
 
+        void setAsCancelled() { m_isCancelled = true; }
+
     private:
 
         // MediaStreamTrackPrivateObserver
@@ -148,7 +150,7 @@ private:
     };
 
     RefPtr<ReadableStream> m_readable;
-    std::unique_ptr<Source> m_readableStreamSource;
+    const std::unique_ptr<Source> m_readableStreamSource;
     RefPtr<VideoFrameObserverWrapper> m_videoFrameObserverWrapper;
     const Ref<MediaStreamTrack> m_track;
 };

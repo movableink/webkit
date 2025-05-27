@@ -407,7 +407,7 @@ CSSStyleProperties& MutableStyleProperties::ensureCSSStyleProperties()
         ASSERT(!m_cssomWrapper->parentElement());
         return *m_cssomWrapper;
     }
-    m_cssomWrapper = makeUniqueWithoutRefCountedCheck<PropertySetCSSStyleProperties>(*this);
+    lazyInitialize(m_cssomWrapper, makeUniqueWithoutRefCountedCheck<PropertySetCSSStyleProperties>(*this));
     return *m_cssomWrapper;
 }
 

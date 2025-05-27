@@ -273,7 +273,7 @@ private:
 
     RtpTransceiverSet m_transceiverSet;
 
-    std::unique_ptr<PeerConnectionBackend> m_backend;
+    const std::unique_ptr<PeerConnectionBackend> m_backend;
 
     RTCConfiguration m_configuration;
     RTCController* m_controller { nullptr };

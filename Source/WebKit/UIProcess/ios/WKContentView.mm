@@ -203,7 +203,7 @@ typedef NS_ENUM(NSInteger, _WKPrintRenderingCallbackType) {
 @end
 
 @implementation WKContentView {
-    std::unique_ptr<WebKit::PageClientImpl> _pageClient;
+    const std::unique_ptr<WebKit::PageClientImpl> _pageClient;
 
     RetainPtr<UIView> _rootContentView;
     RetainPtr<UIView> _fixedClippingView;
@@ -493,7 +493,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     WebKit::InitializeWebKit2();
 
-    _pageClient = makeUniqueWithoutRefCountedCheck<WebKit::PageClientImpl>(self, webView);
+    lazyInitialize(_pageClient, makeUniqueWithoutRefCountedCheck<WebKit::PageClientImpl>(self, webView));
     _webView = webView;
 
     return [self _commonInitializationWithProcessPool:processPool configuration:WTFMove(configuration)];

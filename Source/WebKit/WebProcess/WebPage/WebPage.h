@@ -3063,7 +3063,7 @@ private:
 #endif
 
 #if ENABLE(WEBXR) && !USE(OPENXR)
-    std::unique_ptr<PlatformXRSystemProxy> m_xrSystemProxy;
+    const std::unique_ptr<PlatformXRSystemProxy> m_xrSystemProxy;
 #endif
 
 #if ENABLE(APP_HIGHLIGHTS)

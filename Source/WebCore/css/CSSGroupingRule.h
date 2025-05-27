@@ -60,7 +60,7 @@ private:
 
     Ref<StyleRuleGroup> m_groupRule;
     mutable Vector<RefPtr<CSSRule>> m_childRuleCSSOMWrappers;
-    mutable std::unique_ptr<CSSRuleList> m_ruleListCSSOMWrapper;
+    const std::unique_ptr<CSSRuleList> m_ruleListCSSOMWrapper;
 };
 
 } // namespace WebCore

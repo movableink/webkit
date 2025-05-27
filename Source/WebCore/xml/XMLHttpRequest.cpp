@@ -273,7 +273,7 @@ String XMLHttpRequest::responseURL() const
 XMLHttpRequestUpload& XMLHttpRequest::upload()
 {
     if (!m_upload)
-        m_upload = makeUniqueWithoutRefCountedCheck<XMLHttpRequestUpload>(*this);
+        lazyInitialize(m_upload, makeUniqueWithoutRefCountedCheck<XMLHttpRequestUpload>(*this));
     return *m_upload;
 }
 

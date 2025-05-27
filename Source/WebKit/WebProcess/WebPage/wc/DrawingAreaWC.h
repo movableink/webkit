@@ -92,7 +92,7 @@ private:
     RootLayerInfo* rootLayerInfoWithFrameIdentifier(WebCore::FrameIdentifier);
 
     WebCore::GraphicsLayerClient m_rootLayerClient;
-    std::unique_ptr<RemoteWCLayerTreeHostProxy> m_remoteWCLayerTreeHostProxy;
+    const std::unique_ptr<RemoteWCLayerTreeHostProxy> m_remoteWCLayerTreeHostProxy;
     WCLayerFactory m_layerFactory;
     DoublyLinkedList<GraphicsLayerWC> m_liveGraphicsLayers;
     WebCore::Timer m_updateRenderingTimer;

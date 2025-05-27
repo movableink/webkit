@@ -511,7 +511,7 @@ private:
     // The ImageLoader must be owned by this element because the loader code assumes
     // that it lives as long as its owning element lives. If we move the loader into
     // the ImageInput object we may delete the loader while this element lives on.
-    std::unique_ptr<HTMLImageLoader> m_imageLoader;
+    const std::unique_ptr<HTMLImageLoader> m_imageLoader;
     std::unique_ptr<ListAttributeTargetObserver> m_listAttributeTargetObserver;
 };
 

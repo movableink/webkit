@@ -718,9 +718,9 @@ void HTMLFormElement::setMethod(const AtomString& value)
 DOMTokenList& HTMLFormElement::relList()
 {
     if (!m_relList) {
-        m_relList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::relAttr, [](Document&, StringView token) {
+        lazyInitialize(m_relList, makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::relAttr, [](Document&, StringView token) {
             return equalLettersIgnoringASCIICase(token, "noreferrer"_s) || equalLettersIgnoringASCIICase(token, "noopener"_s) || equalLettersIgnoringASCIICase(token, "opener"_s);
-        });
+        }));
     }
     return *m_relList;
 }

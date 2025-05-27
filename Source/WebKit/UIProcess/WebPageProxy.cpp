@@ -527,24 +527,16 @@ StorageRequests& StorageRequests::singleton()
 }
 
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
-WebPageProxyFrameLoadStateObserver::WebPageProxyFrameLoadStateObserver(const WebPageProxy& page)
-    : m_page(page)
+Ref<WebPageProxyFrameLoadStateObserver> WebPageProxyFrameLoadStateObserver::create()
 {
+    return adoptRef(*new WebPageProxyFrameLoadStateObserver);
 }
+
+WebPageProxyFrameLoadStateObserver::WebPageProxyFrameLoadStateObserver() = default;
 
 WebPageProxyFrameLoadStateObserver::~WebPageProxyFrameLoadStateObserver() = default;
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WebPageProxyFrameLoadStateObserver);
-
-void WebPageProxyFrameLoadStateObserver::ref() const
-{
-    m_page->ref();
-}
-
-void WebPageProxyFrameLoadStateObserver::deref() const
-{
-    m_page->deref();
-}
 
 #endif // #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
 
@@ -1744,7 +1736,7 @@ void WebPageProxy::initializeWebPage(const Site& site, WebCore::SandboxFlags eff
     process->send(Messages::WebProcess::CreateWebPage(m_webPageID, creationParameters(process, *m_drawingArea, m_mainFrame->frameID(), std::nullopt)), 0);
 
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
-    internals().frameLoadStateObserver = makeUniqueWithoutRefCountedCheck<WebPageProxyFrameLoadStateObserver>(*this);
+    internals().frameLoadStateObserver = WebPageProxyFrameLoadStateObserver::create();
     m_mainFrame->frameLoadState().addObserver(*internals().protectedFrameLoadStateObserver());
 #endif
     m_mainFrame->frameLoadState().addObserver(internals().protectedPageLoadTimingFrameLoadStateObserver());
@@ -12685,7 +12677,7 @@ MediaKeySystemPermissionRequestManagerProxy& WebPageProxy::mediaKeySystemPermiss
     if (m_mediaKeySystemPermissionRequestManager)
         return *m_mediaKeySystemPermissionRequestManager;
 
-    m_mediaKeySystemPermissionRequestManager = makeUniqueWithoutRefCountedCheck<MediaKeySystemPermissionRequestManagerProxy>(*this);
+    lazyInitialize(m_mediaKeySystemPermissionRequestManager, makeUniqueWithoutRefCountedCheck<MediaKeySystemPermissionRequestManagerProxy>(*this));
     return *m_mediaKeySystemPermissionRequestManager;
 }
 

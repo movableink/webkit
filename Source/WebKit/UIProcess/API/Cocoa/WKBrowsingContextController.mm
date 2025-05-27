@@ -60,17 +60,3 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 }
 
 @end
-
-namespace WebKit {
-
-void PageLoadStateObserver::ref() const
-{
-    [m_object.get() retain];
-}
-
-void PageLoadStateObserver::deref() const
-{
-    [m_object.get() release];
-}
-
-}

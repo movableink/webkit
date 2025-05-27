@@ -110,9 +110,12 @@ private:
 
 inline bool operator==(ASCIILiteral a, ASCIILiteral b)
 {
-    if (!a || !b)
-        return a.characters() == b.characters();
-    return equalSpans(a.span(), b.span());
+    return equalSpans(a.spanIncludingNullTerminator(), b.spanIncludingNullTerminator());
+}
+
+inline auto operator<=>(ASCIILiteral a, ASCIILiteral b)
+{
+    return compareSpans(a.spanIncludingNullTerminator(), b.spanIncludingNullTerminator());
 }
 
 inline unsigned ASCIILiteral::hash() const

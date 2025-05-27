@@ -157,7 +157,7 @@ private:
     RefPtr<WebKit::WebUserContentControllerProxy> m_userContentController;
     std::optional<bool> m_lockdownModeEnabled;
 #if PLATFORM(COCOA)
-    std::unique_ptr<WebKit::LockdownModeObserver> m_lockdownModeObserver;
+    const std::unique_ptr<WebKit::LockdownModeObserver> m_lockdownModeObserver;
 #endif
 };
 

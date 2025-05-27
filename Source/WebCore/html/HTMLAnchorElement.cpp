@@ -276,7 +276,7 @@ bool HTMLAnchorElement::hasRel(Relation relation) const
 DOMTokenList& HTMLAnchorElement::relList()
 {
     if (!m_relList) {
-        m_relList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::relAttr, [](Document& document, StringView token) {
+        lazyInitialize(m_relList, makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::relAttr, [](Document& document, StringView token) {
 #if USE(SYSTEM_PREVIEW)
             if (equalLettersIgnoringASCIICase(token, "ar"_s))
                 return document.settings().systemPreviewEnabled();
@@ -284,7 +284,7 @@ DOMTokenList& HTMLAnchorElement::relList()
             UNUSED_PARAM(document);
 #endif
             return equalLettersIgnoringASCIICase(token, "noreferrer"_s) || equalLettersIgnoringASCIICase(token, "noopener"_s) || equalLettersIgnoringASCIICase(token, "opener"_s);
-        });
+        }));
     }
     return *m_relList;
 }

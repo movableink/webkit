@@ -62,9 +62,9 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaSessionManagerCocoa);
 
 #if PLATFORM(MAC)
-std::unique_ptr<PlatformMediaSessionManager> PlatformMediaSessionManager::create()
+const std::unique_ptr<PlatformMediaSessionManager> PlatformMediaSessionManager::create()
 {
-    return makeUniqueWithoutRefCountedCheck<MediaSessionManagerCocoa>();
+    return makeUniqueWithoutRefCountedCheck<MediaSessionManagerCocoa, PlatformMediaSessionManager>();
 }
 #endif // !PLATFORM(MAC)
 

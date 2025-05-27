@@ -201,13 +201,17 @@ public:
     template <typename T>
     void addSupplement()
     {
-        m_supplements.add(T::supplementName(), makeUniqueWithoutRefCountedCheck<T>(*this));
+        m_supplements.add(T::supplementName(), makeUnique<T>(*this));
     }
 
     template <typename T>
     void addSupplementWithoutRefCountedCheck()
     {
-        m_supplements.add(T::supplementName(), makeUniqueWithoutRefCountedCheck<T>(*this));
+        // WebProcessSupplement objects forward their ref-counting to the WebProcess. The WebProcess
+        // stores this in a HashMap. It is currently safe because we only ever add to the HashMap, never remove.
+        // However, the current design is fragile and the need to const_cast here is annoying so it would be good
+        // to find a better pattern.
+        m_supplements.add(T::supplementName(), const_cast<std::unique_ptr<WebProcessSupplement>&&>(makeUniqueWithoutRefCountedCheck<T, WebProcessSupplement>(*this)));
     }
 
     // ref() & deref() do nothing since WebProcess is a singleton object.
@@ -889,7 +893,7 @@ private:
 #endif
 
 #if ENABLE(MEDIA_STREAM)
-    std::unique_ptr<SpeechRecognitionRealtimeMediaSourceManager> m_speechRecognitionRealtimeMediaSourceManager;
+    const std::unique_ptr<SpeechRecognitionRealtimeMediaSourceManager> m_speechRecognitionRealtimeMediaSourceManager;
 #endif
 #if ENABLE(ROUTING_ARBITRATION)
     std::unique_ptr<AudioSessionRoutingArbitrator> m_routingArbitrator;

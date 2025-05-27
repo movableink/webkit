@@ -188,7 +188,7 @@ void GPUProcessConnection::didReceiveInvalidMessage(IPC::Connection&, IPC::Messa
 SampleBufferDisplayLayerManager& GPUProcessConnection::sampleBufferDisplayLayerManager()
 {
     if (!m_sampleBufferDisplayLayerManager)
-        m_sampleBufferDisplayLayerManager = makeUniqueWithoutRefCountedCheck<SampleBufferDisplayLayerManager>(*this);
+        lazyInitialize(m_sampleBufferDisplayLayerManager, makeUniqueWithoutRefCountedCheck<SampleBufferDisplayLayerManager>(*this));
     return *m_sampleBufferDisplayLayerManager;
 }
 

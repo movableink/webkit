@@ -137,7 +137,7 @@ private:
     // This is computed only once and must not be affected by subsequent URL changes.
     mutable Markable<SharedStringHash, SharedStringHashMarkableTraits> m_storedVisitedLinkHash;
 
-    std::unique_ptr<DOMTokenList> m_relList;
+    const std::unique_ptr<DOMTokenList> m_relList;
 };
 
 // Functions shared with the other anchor elements (i.e., SVG).

@@ -207,6 +207,7 @@
 		4657323A28BDB18F00972575 /* ProvisionalURLAfterWillSendRequestCallback.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4657323828BDB18F00972575 /* ProvisionalURLAfterWillSendRequestCallback.cpp */; };
 		4657323C28BDB2E500972575 /* ProvisionalURLAfterWillSendRequestCallback_Bundle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4657323928BDB18F00972575 /* ProvisionalURLAfterWillSendRequestCallback_Bundle.cpp */; };
 		466AF38A26FE393600CE2EB8 /* ServiceWorkerPagePlugIn.mm in Sources */ = {isa = PBXBuildFile; fileRef = 466AF38826FE393200CE2EB8 /* ServiceWorkerPagePlugIn.mm */; };
+		468724082DE1205F00D5A9DF /* ASCIILiteral.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 468724072DE1205F00D5A9DF /* ASCIILiteral.cpp */; };
 		46BBEA1B25F9835700D4987A /* WorkQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7AA6A1511AAC0B31002B2ED3 /* WorkQueue.cpp */; };
 		46E45EE62863D3E200441B14 /* WKBackForwardListTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1F83571A1D3FFB0E00E3967B /* WKBackForwardListTests.mm */; };
 		46E816F81E79E29C00375ADC /* RestoreStateAfterTermination.mm in Sources */ = {isa = PBXBuildFile; fileRef = 46E816F71E79E29100375ADC /* RestoreStateAfterTermination.mm */; };
@@ -2677,6 +2678,7 @@
 		466CBA072DADC50A00B32457 /* libWTF.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libWTF.a; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS19.0.Internal.sdk/usr/local/lib/libWTF.a; sourceTree = DEVELOPER_DIR; };
 		467C565121B5ECDF0057516D /* GetSessionCookie.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = GetSessionCookie.html; sourceTree = "<group>"; };
 		467C565221B5ECDF0057516D /* SetSessionCookie.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = SetSessionCookie.html; sourceTree = "<group>"; };
+		468724072DE1205F00D5A9DF /* ASCIILiteral.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ASCIILiteral.cpp; sourceTree = "<group>"; };
 		468BC454226539C800A36C96 /* open-window-then-write-to-it.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = "open-window-then-write-to-it.html"; sourceTree = "<group>"; };
 		468F2F932368DAA700F4B864 /* window-open-then-document-open.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = "window-open-then-document-open.html"; sourceTree = "<group>"; };
 		46918EFB2237283500468DFE /* DeviceOrientation.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = DeviceOrientation.mm; sourceTree = "<group>"; };
@@ -5850,6 +5852,7 @@
 				7CBBA07519BB8A0900BBF025 /* darwin */,
 				BC029B1A1486B23800817DA9 /* ns */,
 				FF25942A2834B7A7006892D6 /* AlignedRefLogger.h */,
+				468724072DE1205F00D5A9DF /* ASCIILiteral.cpp */,
 				26F1B44215CA434F00D1E4BF /* AtomString.cpp */,
 				919B506E2C177055009FE7B0 /* Base64.cpp */,
 				FE2D9473245EB2DF00E48135 /* BitSet.cpp */,
@@ -7018,6 +7021,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				468724082DE1205F00D5A9DF /* ASCIILiteral.cpp in Sources */,
 				7C83DE991D0A590C00FEBCF3 /* AtomString.cpp in Sources */,
 				919B50762C177055009FE7B0 /* Base64.cpp in Sources */,
 				FE2D9474245EB2F400E48135 /* BitSet.cpp in Sources */,

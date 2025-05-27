@@ -118,11 +118,11 @@ void HTMLStyleElement::attributeChanged(const QualifiedName& name, const AtomStr
 DOMTokenList& HTMLStyleElement::blocking()
 {
     if (!m_blockingList) {
-        m_blockingList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::blockingAttr, [](Document&, StringView token) {
+        lazyInitialize(m_blockingList, makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::blockingAttr, [](Document&, StringView token) {
             if (equalLettersIgnoringASCIICase(token, "render"_s))
                 return true;
             return false;
-        });
+        }));
     }
     return *m_blockingList;
 }

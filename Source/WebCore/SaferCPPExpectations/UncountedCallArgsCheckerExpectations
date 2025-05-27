@@ -1045,7 +1045,6 @@ platform/mediastream/RealtimeOutgoingVideoSource.cpp
 platform/mediastream/cocoa/AudioMediaStreamTrackRendererCocoa.cpp
 platform/mediastream/cocoa/AudioMediaStreamTrackRendererUnit.cpp
 platform/mediastream/cocoa/IncomingAudioMediaStreamTrackRendererUnit.cpp
-platform/mediastream/libwebrtc/LibWebRTCAudioModule.cpp
 platform/mediastream/mac/AVCaptureDeviceManager.mm
 platform/mediastream/mac/MediaStreamTrackAudioSourceProviderCocoa.cpp
 platform/mediastream/mac/MockAudioSharedUnit.mm

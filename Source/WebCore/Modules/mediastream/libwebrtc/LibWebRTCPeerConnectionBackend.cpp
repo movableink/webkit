@@ -53,7 +53,7 @@
 
 namespace WebCore {
 
-static std::unique_ptr<PeerConnectionBackend> createLibWebRTCPeerConnectionBackend(RTCPeerConnection& peerConnection)
+static const std::unique_ptr<PeerConnectionBackend> createLibWebRTCPeerConnectionBackend(RTCPeerConnection& peerConnection)
 {
     if (!LibWebRTCProvider::webRTCAvailable()) {
         RELEASE_LOG_ERROR(WebRTC, "LibWebRTC is not available to create a backend");
@@ -67,7 +67,7 @@ static std::unique_ptr<PeerConnectionBackend> createLibWebRTCPeerConnectionBacke
     auto& webRTCProvider = static_cast<LibWebRTCProvider&>(page->webRTCProvider());
     webRTCProvider.setEnableWebRTCEncryption(page->settings().webRTCEncryptionEnabled());
 
-    return makeUniqueWithoutRefCountedCheck<LibWebRTCPeerConnectionBackend>(peerConnection, webRTCProvider);
+    return makeUniqueWithoutRefCountedCheck<LibWebRTCPeerConnectionBackend, PeerConnectionBackend>(peerConnection, webRTCProvider);
 }
 
 CreatePeerConnectionBackend PeerConnectionBackend::create = createLibWebRTCPeerConnectionBackend;

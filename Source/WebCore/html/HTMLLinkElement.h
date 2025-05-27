@@ -170,9 +170,9 @@ private:
 #if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
     URL m_environmentMapURL;
 #endif
-    std::unique_ptr<DOMTokenList> m_sizes;
-    std::unique_ptr<DOMTokenList> m_relList;
-    std::unique_ptr<DOMTokenList> m_blockingList;
+    const std::unique_ptr<DOMTokenList> m_sizes;
+    const std::unique_ptr<DOMTokenList> m_relList;
+    const std::unique_ptr<DOMTokenList> m_blockingList;
     std::unique_ptr<ExpectIdTargetObserver> m_expectIdTargetObserver;
     DisabledState m_disabledState;
     LinkRelAttribute m_relAttribute;

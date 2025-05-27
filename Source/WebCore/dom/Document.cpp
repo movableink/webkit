@@ -1447,7 +1447,7 @@ void Document::resetActiveLinkColor()
 DOMImplementation& Document::implementation()
 {
     if (!m_implementation)
-        m_implementation = makeUniqueWithoutRefCountedCheck<DOMImplementation>(*this);
+        lazyInitialize(m_implementation, makeUniqueWithoutRefCountedCheck<DOMImplementation>(*this));
     return *m_implementation;
 }
 
@@ -2648,7 +2648,7 @@ String Document::nodeName() const
 WakeLockManager& Document::wakeLockManager()
 {
     if (!m_wakeLockManager)
-        m_wakeLockManager = makeUniqueWithoutRefCountedCheck<WakeLockManager>(*this);
+        lazyInitialize(m_wakeLockManager, makeUniqueWithoutRefCountedCheck<WakeLockManager>(*this));
     return *m_wakeLockManager;
 }
 
@@ -11004,7 +11004,7 @@ void Document::setPaintWorkletGlobalScopeForName(const String& name, Ref<PaintWo
 ContentChangeObserver& Document::contentChangeObserver()
 {
     if (!m_contentChangeObserver)
-        m_contentChangeObserver = makeUniqueWithoutRefCountedCheck<ContentChangeObserver>(*this);
+        lazyInitialize(m_contentChangeObserver, makeUniqueWithoutRefCountedCheck<ContentChangeObserver>(*this));
     return *m_contentChangeObserver;
 }
 

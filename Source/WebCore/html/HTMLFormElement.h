@@ -178,7 +178,7 @@ private:
     Vector<WeakPtr<HTMLImageElement, WeakPtrImplWithEventTargetData>> m_imageElements;
     WeakHashSet<HTMLElement, WeakPtrImplWithEventTargetData> m_invalidFormControls;
     WeakPtr<FormSubmission> m_plannedFormSubmission;
-    std::unique_ptr<DOMTokenList> m_relList;
+    const std::unique_ptr<DOMTokenList> m_relList;
     RefPtr<HTMLFormControlsCollection> m_controlsCollection;
 
     unsigned m_listedElementsBeforeIndex { 0 };

@@ -434,7 +434,7 @@ private:
     Ref<LegacyCustomProtocolManagerProxy> protectedCustomProtocolManagerProxy() { return m_customProtocolManagerProxy; }
 #endif
 
-    std::unique_ptr<DownloadProxyMap> m_downloadProxyMap;
+    const std::unique_ptr<DownloadProxyMap> m_downloadProxyMap;
 
     UniqueRef<API::CustomProtocolManagerClient> m_customProtocolManagerClient;
 #if ENABLE(LEGACY_CUSTOM_PROTOCOL_MANAGER)

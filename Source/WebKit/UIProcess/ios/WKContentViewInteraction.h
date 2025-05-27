@@ -346,7 +346,7 @@ struct ImageAnalysisContextMenuActionData {
 #if ENABLE(IMAGE_ANALYSIS)
     RetainPtr<WKDeferringGestureRecognizer> _imageAnalysisDeferringGestureRecognizer;
 #endif
-    std::unique_ptr<WebKit::GestureRecognizerConsistencyEnforcer> _gestureRecognizerConsistencyEnforcer;
+    const std::unique_ptr<WebKit::GestureRecognizerConsistencyEnforcer> _gestureRecognizerConsistencyEnforcer;
     RetainPtr<WKTouchEventsGestureRecognizer> _touchEventGestureRecognizer;
 
     BOOL _touchEventsCanPreventNativeGestures;

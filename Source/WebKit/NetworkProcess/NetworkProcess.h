@@ -182,7 +182,11 @@ public:
     template<typename T>
     void addSupplementWithoutRefCountedCheck()
     {
-        m_supplements.add(T::supplementName(), makeUniqueWithoutRefCountedCheck<T>(*this));
+        // NetworkProcessSupplement objects forward their ref-counting to the NetworkProcess. The NetworkProcess
+        // stores this in a HashMap. It is currently safe because we only ever add to the HashMap, never remove.
+        // However, the current design is fragile and the need to const_cast here is annoying so it would be good
+        // to find a better pattern.
+        m_supplements.add(T::supplementName(), const_cast<std::unique_ptr<NetworkProcessSupplement>&&>(makeUniqueWithoutRefCountedCheck<T, NetworkProcessSupplement>(*this)));
     }
 
     void removeNetworkConnectionToWebProcess(NetworkConnectionToWebProcess&);

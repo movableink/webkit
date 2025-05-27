@@ -155,7 +155,7 @@ private:
     bool m_isBeingDestroyed { false };
     bool m_usesOffscreenRendering { false };
 
-    std::unique_ptr<WebKit::PageClientImpl> m_pageClient;
+    const std::unique_ptr<WebKit::PageClientImpl> m_pageClient;
     RefPtr<WebPageProxy> m_page;
     WebCore::IntSize m_viewSize;
 };

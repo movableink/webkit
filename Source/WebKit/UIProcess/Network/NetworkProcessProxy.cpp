@@ -368,7 +368,7 @@ void NetworkProcessProxy::synthesizeAppIsBackground(bool background)
 Ref<DownloadProxy> NetworkProcessProxy::createDownloadProxy(WebsiteDataStore& dataStore, Ref<API::DownloadClient>&& client, const ResourceRequest& resourceRequest, const std::optional<FrameInfoData>& frameInfo, WebPageProxy* originatingPage)
 {
     if (!m_downloadProxyMap)
-        m_downloadProxyMap = makeUniqueWithoutRefCountedCheck<DownloadProxyMap>(*this);
+        lazyInitialize(m_downloadProxyMap, makeUniqueWithoutRefCountedCheck<DownloadProxyMap>(*this));
 
     return Ref { *m_downloadProxyMap }->createDownloadProxy(dataStore, WTFMove(client), resourceRequest, frameInfo, originatingPage);
 }
