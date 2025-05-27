@@ -155,10 +155,6 @@ void OfflineAudioDestinationNode::startRendering(CompletionHandler<void(std::opt
 auto OfflineAudioDestinationNode::renderOnAudioThread() -> RenderResult
 {
     ASSERT(!isMainThread());
-    ASSERT(m_renderBus.get());
-
-    if (!m_renderBus.get())
-        return RenderResult::Failure;
 
     RELEASE_ASSERT(context().isInitialized());
 
@@ -181,7 +177,7 @@ auto OfflineAudioDestinationNode::renderOnAudioThread() -> RenderResult
             return RenderResult::Suspended;
 
         // Render one render quantum.
-        renderQuantum(m_renderBus.get(), AudioUtilities::renderQuantumSize, { });
+        renderQuantum(m_renderBus, AudioUtilities::renderQuantumSize, { });
         
         size_t framesAvailableToCopy = std::min(m_framesToProcess, AudioUtilities::renderQuantumSize);
         

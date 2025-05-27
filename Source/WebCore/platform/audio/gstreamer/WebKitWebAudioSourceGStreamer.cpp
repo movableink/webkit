@@ -340,7 +340,7 @@ static void webKitWebAudioSrcRenderAndPushFrames(const GRefPtr<GstElement>& elem
 
     // FIXME: Add support for local/live audio input.
     if (priv->bus)
-        priv->destination->callRenderCallback(nullptr, priv->bus.get(), priv->framesToPull, outputTimestamp);
+        priv->destination->callRenderCallback(*priv->bus, priv->framesToPull, outputTimestamp);
 
     if (!priv->hasRenderedAudibleFrame && !priv->bus->isSilent()) {
         priv->destination->notifyIsPlaying(true);

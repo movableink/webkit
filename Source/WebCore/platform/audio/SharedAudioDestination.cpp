@@ -75,7 +75,7 @@ private:
 
     SharedAudioDestinationAdapter(const CreationOptions&, AudioDestinationCreationFunction&&);
 
-    void render(AudioBus* sourceBus, AudioBus* destinationBus, size_t framesToProcess, const AudioIOPosition& outputPosition) final;
+    void render(AudioBus& destinationBus, size_t framesToProcess, const AudioIOPosition& outputPosition) final;
     void isPlayingDidChange() final { }
 
     void configureRenderThread(CompletionHandler<void(bool)>&&);
@@ -220,7 +220,7 @@ void SharedAudioDestinationAdapter::configureRenderThread(CompletionHandler<void
 }
 
 
-void SharedAudioDestinationAdapter::render(AudioBus* sourceBus, AudioBus* destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
+void SharedAudioDestinationAdapter::render(AudioBus& destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
 {
     if (m_renderLock.tryLock()) {
         Locker locker { AdoptLock, m_renderLock };
@@ -239,15 +239,15 @@ void SharedAudioDestinationAdapter::render(AudioBus* sourceBus, AudioBus* destin
     for (RefPtr renderer : m_configuredRenderers) {
         if (isFirstRenderer) {
             // The first renderer should render directly to destinationBus.
-            renderer->sharedRender(sourceBus, destinationBus, numberOfFrames, outputPosition);
+            renderer->sharedRender(destinationBus, numberOfFrames, outputPosition);
             isFirstRenderer = false;
             continue;
         }
         // Subsequent renderers should render to the m_workBus, which will
         // then be summed to the destinationBus.
         Ref protectedWorkBus = this->protectedWorkBus();
-        renderer->sharedRender(sourceBus, protectedWorkBus.ptr(), numberOfFrames, outputPosition);
-        destinationBus->sumFrom(protectedWorkBus);
+        renderer->sharedRender(protectedWorkBus, numberOfFrames, outputPosition);
+        destinationBus.sumFrom(protectedWorkBus);
     }
 }
 Ref<SharedAudioDestination> SharedAudioDestination::create(const CreationOptions& options, AudioDestinationCreationFunction&& ensureFunction)
@@ -315,20 +315,20 @@ void SharedAudioDestination::setIsPlaying(bool isPlaying)
     }
 }
 
-void SharedAudioDestination::sharedRender(AudioBus* sourceBus, AudioBus* destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
+void SharedAudioDestination::sharedRender(AudioBus& destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
 {
     if (!m_dispatchToRenderThreadLock.tryLock()) {
-        destinationBus->zero();
+        destinationBus.zero();
         return;
     }
 
     Locker locker { AdoptLock, m_dispatchToRenderThreadLock };
     if (!m_dispatchToRenderThread)
-        callRenderCallback(sourceBus, destinationBus, numberOfFrames, outputPosition);
+        callRenderCallback(destinationBus, numberOfFrames, outputPosition);
     else {
         BinarySemaphore semaphore;
-        m_dispatchToRenderThread([protectedThis = Ref { *this }, sourceBus = RefPtr { sourceBus }, destinationBus = RefPtr { destinationBus }, numberOfFrames, outputPosition, &semaphore]() mutable {
-            protectedThis->callRenderCallback(sourceBus.get(), destinationBus.get(), numberOfFrames, outputPosition);
+        m_dispatchToRenderThread([protectedThis = Ref { *this }, destinationBus = Ref { destinationBus }, numberOfFrames, outputPosition, &semaphore]() mutable {
+            protectedThis->callRenderCallback(destinationBus, numberOfFrames, outputPosition);
             semaphore.signal();
         });
         semaphore.wait();
@@ -344,7 +344,7 @@ public:
         return callback.get();
     }
 private:
-    void render(AudioBus*, AudioBus*, size_t, const AudioIOPosition&) final { }
+    void render(AudioBus&, size_t, const AudioIOPosition&) final { }
     void isPlayingDidChange() final { }
 };
 

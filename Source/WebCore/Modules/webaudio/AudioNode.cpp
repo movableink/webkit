@@ -514,7 +514,7 @@ void AudioNode::pullInputs(size_t framesToProcess)
 bool AudioNode::inputsAreSilent()
 {
     for (auto& input : m_inputs) {
-        if (!input->bus()->isSilent())
+        if (!input->bus().isSilent())
             return false;
     }
     return true;
@@ -523,7 +523,7 @@ bool AudioNode::inputsAreSilent()
 void AudioNode::silenceOutputs()
 {
     for (auto& output : m_outputs)
-        output->bus()->zero();
+        output->bus().zero();
 }
 
 void AudioNode::enableOutputsIfNecessary()

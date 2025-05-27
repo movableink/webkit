@@ -46,7 +46,7 @@ public:
     MultiChannelResampler(double scaleFactor, unsigned numberOfChannels, unsigned requestFrames, Function<void(AudioBus&, size_t framesToProcess)>&& provideInput);
     ~MultiChannelResampler();
 
-    void process(AudioBus* destination, size_t framesToProcess);
+    void process(AudioBus& destination, size_t framesToProcess);
 
 private:
     void provideInputForChannel(std::span<float> buffer, size_t framesToProcess, unsigned channelIndex);
@@ -61,7 +61,7 @@ private:
     unsigned m_numberOfChannels;
     size_t m_outputFramesReady { 0 };
     Function<void(AudioBus&, size_t framesToProcess)> m_provideInput;
-    const RefPtr<AudioBus> m_multiChannelBus;
+    const Ref<AudioBus> m_multiChannelBus;
 };
 
 } // namespace WebCore

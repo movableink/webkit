@@ -94,10 +94,10 @@ private:
     void adjustGrainParameters() WTF_REQUIRES_LOCK(m_processLock);
 
     // Returns true on success.
-    bool renderFromBuffer(AudioBus*, unsigned destinationFrameOffset, size_t numberOfFrames, double startFrameOffset) WTF_REQUIRES_LOCK(m_processLock);
+    bool renderFromBuffer(AudioBus&, unsigned destinationFrameOffset, size_t numberOfFrames, double startFrameOffset) WTF_REQUIRES_LOCK(m_processLock);
 
     // Render silence starting from "index" frame in AudioBus.
-    inline bool renderSilenceAndFinishIfNotLooping(AudioBus*, unsigned index, size_t framesToProcess) WTF_REQUIRES_LOCK(m_processLock);
+    inline bool renderSilenceAndFinishIfNotLooping(AudioBus&, unsigned index, size_t framesToProcess) WTF_REQUIRES_LOCK(m_processLock);
 
     // m_buffer holds the sample data which this node outputs.
     RefPtr<AudioBuffer> m_buffer WTF_GUARDED_BY_LOCK(m_processLock); // Only modified on the main thread but used on the audio thread.

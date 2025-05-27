@@ -62,7 +62,7 @@ public:
     // AudioProcessor methods
     void initialize() override;
     void uninitialize() override;
-    void process(const AudioBus* source, AudioBus* destination, size_t framesToProcess) override;
+    void process(const AudioBus& source, AudioBus& destination, size_t framesToProcess) override;
     void processOnlyAudioParams(size_t framesToProcess) override;
     void reset() override;
     void setNumberOfChannels(unsigned) override;

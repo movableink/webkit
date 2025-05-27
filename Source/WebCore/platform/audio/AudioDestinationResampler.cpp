@@ -48,7 +48,7 @@ AudioDestinationResampler::AudioDestinationResampler(const CreationOptions& opti
         double scaleFactor = static_cast<double>(options.sampleRate) / outputSampleRate;
         m_resampler = makeUnique<MultiChannelResampler>(scaleFactor, options.numberOfOutputChannels, AudioUtilities::renderQuantumSize, [this](AudioBus& bus, size_t framesToProcess) {
             ASSERT_UNUSED(framesToProcess, framesToProcess == AudioUtilities::renderQuantumSize);
-            callRenderCallback(nullptr, &bus, AudioUtilities::renderQuantumSize, m_outputTimestamp);
+            callRenderCallback(bus, AudioUtilities::renderQuantumSize, m_outputTimestamp);
         });
     }
 }
@@ -103,7 +103,7 @@ size_t AudioDestinationResampler::pullRendered(size_t numberOfFrames)
     ASSERT(!isMainThread());
     numberOfFrames = std::min(numberOfFrames, fifoSize);
     Locker locker { m_fifoLock };
-    return m_fifo.pull(m_outputBus.ptr(), numberOfFrames);
+    return m_fifo.pull(m_outputBus, numberOfFrames);
 }
 
 bool AudioDestinationResampler::render(double sampleTime, MonotonicTime hostTime,  size_t framesToRender)
@@ -134,12 +134,12 @@ void AudioDestinationResampler::renderOnRenderingThreadIfPlaying(size_t framesTo
         return;
     for (size_t pushedFrames = 0; pushedFrames < framesToRender; pushedFrames += AudioUtilities::renderQuantumSize) {
         if (m_resampler)
-            m_resampler->process(m_renderBus.ptr(), AudioUtilities::renderQuantumSize);
+            m_resampler->process(m_renderBus, AudioUtilities::renderQuantumSize);
         else
-            callRenderCallback(nullptr, m_renderBus.ptr(), AudioUtilities::renderQuantumSize, m_outputTimestamp);
+            callRenderCallback(m_renderBus, AudioUtilities::renderQuantumSize, m_outputTimestamp);
 
         Locker locker { m_fifoLock };
-        m_fifo.push(m_renderBus.ptr());
+        m_fifo.push(m_renderBus);
     }
 }
 

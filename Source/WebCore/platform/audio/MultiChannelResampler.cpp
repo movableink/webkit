@@ -54,12 +54,12 @@ MultiChannelResampler::MultiChannelResampler(double scaleFactor, unsigned number
 
 MultiChannelResampler::~MultiChannelResampler() = default;
 
-void MultiChannelResampler::process(AudioBus* destination, size_t framesToProcess)
+void MultiChannelResampler::process(AudioBus& destination, size_t framesToProcess)
 {
-    ASSERT(m_numberOfChannels == destination->numberOfChannels());
-    if (destination->numberOfChannels() == 1) {
+    ASSERT(m_numberOfChannels == destination.numberOfChannels());
+    if (destination.numberOfChannels() == 1) {
         // Fast path when the bus is mono to avoid the chunking below.
-        m_kernels[0]->process(destination->channel(0)->mutableSpan(), framesToProcess);
+        m_kernels[0]->process(destination.channel(0)->mutableSpan(), framesToProcess);
         return;
     }
 
@@ -73,7 +73,7 @@ void MultiChannelResampler::process(AudioBus* destination, size_t framesToProces
 
         for (unsigned channelIndex = 0; channelIndex < m_numberOfChannels; ++channelIndex) {
             ASSERT(chunkSize == m_kernels[channelIndex]->chunkSize());
-            auto* channel = destination->channel(channelIndex);
+            auto* channel = destination.channel(channelIndex);
             m_kernels[channelIndex]->process(channel->mutableSpan().subspan(m_outputFramesReady), framesThisTime);
         }
 
@@ -83,14 +83,11 @@ void MultiChannelResampler::process(AudioBus* destination, size_t framesToProces
 
 void MultiChannelResampler::provideInputForChannel(std::span<float> buffer, size_t framesToProcess, unsigned channelIndex)
 {
-    if (!m_multiChannelBus)
-        return;
-
     ASSERT(channelIndex < m_multiChannelBus->numberOfChannels());
     ASSERT(framesToProcess <= m_multiChannelBus->length());
 
     if (!channelIndex)
-        m_provideInput(*m_multiChannelBus, framesToProcess);
+        m_provideInput(m_multiChannelBus, framesToProcess);
 
     // Copy the channel data from what we received from m_multiChannelProvider.
     memcpySpan(buffer, m_multiChannelBus->channel(channelIndex)->span().first(framesToProcess));

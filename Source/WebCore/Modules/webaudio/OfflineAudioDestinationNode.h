@@ -69,7 +69,7 @@ private:
     RefPtr<AudioBuffer> m_renderTarget;
     
     // Temporary AudioBus for each render quantum.
-    RefPtr<AudioBus> m_renderBus;
+    const Ref<AudioBus> m_renderBus;
     
     // Rendering thread.
     RefPtr<Thread> m_renderThread;

@@ -104,7 +104,7 @@ private:
     unsigned m_numberOfInputChannels;
     unsigned m_numberOfOutputChannels;
 
-    RefPtr<AudioBus> m_internalInputBus;
+    const Ref<AudioBus> m_internalInputBus;
     bool m_hasAudioProcessEventListener { false };
 };
 

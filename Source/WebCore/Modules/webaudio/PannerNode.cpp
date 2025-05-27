@@ -109,29 +109,25 @@ PannerNode::~PannerNode()
 
 void PannerNode::process(size_t framesToProcess)
 {
-    AudioBus* destination = output(0)->bus();
+    AudioBus& destination = output(0)->bus();
 
     if (!isInitialized() || !input(0)->isConnected()) {
-        destination->zero();
+        destination.zero();
         return;
     }
 
-    AudioBus* source = input(0)->bus();
-    if (!source) {
-        destination->zero();
-        return;
-    }
+    AudioBus& source = input(0)->bus();
 
     // The audio thread can't block on this lock, so we use tryLock() instead.
     if (!m_processLock.tryLock()) {
         // Too bad - tryLock() failed. We must be in the middle of changing the panner.
-        destination->zero();
+        destination.zero();
         return;
     }
     Locker locker { AdoptLock, m_processLock };
 
     if (!m_panner) {
-        destination->zero();
+        destination.zero();
         return;
     }
 
@@ -140,7 +136,7 @@ void PannerNode::process(size_t framesToProcess)
         if (context().isOfflineContext())
             m_hrtfDatabaseLoader->waitForLoaderThreadCompletion();
         else {
-            destination->zero();
+            destination.zero();
             return;
         }
     }
@@ -160,7 +156,7 @@ void PannerNode::process(size_t framesToProcess)
     double totalGain = distanceConeGain();
 
     // Apply gain in-place.
-    destination->copyWithGainFrom(*destination, totalGain);
+    destination.copyWithGainFrom(destination, totalGain);
 }
 
 void PannerNode::processOnlyAudioParams(size_t framesToProcess)
@@ -185,7 +181,7 @@ void PannerNode::processOnlyAudioParams(size_t framesToProcess)
     listener().updateValuesIfNeeded(framesToProcess);
 }
 
-void PannerNode::processSampleAccurateValues(AudioBus* destination, const AudioBus* source, size_t framesToProcess)
+void PannerNode::processSampleAccurateValues(AudioBus& destination, const AudioBus& source, size_t framesToProcess)
 {
     // Get the sample accurate values from all of the AudioParams, including the
     // values from the AudioListener.
@@ -238,7 +234,7 @@ void PannerNode::processSampleAccurateValues(AudioBus* destination, const AudioB
     }
 
     m_panner->panWithSampleAccurateValues(std::span { azimuth }, std::span { elevation }, source, destination, framesToProcess);
-    destination->copyWithSampleAccurateGainValuesFrom(*destination, std::span { totalGain }.first(framesToProcess));
+    destination.copyWithSampleAccurateGainValuesFrom(destination, std::span { totalGain }.first(framesToProcess));
 }
 
 bool PannerNode::hasSampleAccurateValues() const

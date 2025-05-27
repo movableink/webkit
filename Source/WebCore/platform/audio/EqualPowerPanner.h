@@ -35,8 +35,8 @@ class EqualPowerPanner final : public Panner {
 public:
     EqualPowerPanner();
 
-    void pan(double azimuth, double elevation, const AudioBus* inputBus, AudioBus* outputBuf, size_t framesToProcess) final;
-    void panWithSampleAccurateValues(std::span<double> azimuth, std::span<double> elevation, const AudioBus* inputBus, AudioBus* outputBus, size_t framesToProcess) final;
+    void pan(double azimuth, double elevation, const AudioBus& inputBus, AudioBus& outputBuf, size_t framesToProcess) final;
+    void panWithSampleAccurateValues(std::span<double> azimuth, std::span<double> elevation, const AudioBus& inputBus, AudioBus& outputBus, size_t framesToProcess) final;
 
     void reset() override { }
 

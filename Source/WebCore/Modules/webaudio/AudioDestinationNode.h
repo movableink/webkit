@@ -69,7 +69,7 @@ protected:
     double tailTime() const final { return 0; }
     double latencyTime() const final { return 0; }
 
-    void renderQuantum(AudioBus* destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition);
+    void renderQuantum(AudioBus& destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition);
 
 private:
     // Counts the number of sample-frames processed by the destination.

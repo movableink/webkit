@@ -75,8 +75,7 @@ DynamicsCompressorNode::~DynamicsCompressorNode()
 
 void DynamicsCompressorNode::process(size_t framesToProcess)
 {
-    AudioBus* outputBus = output(0)->bus();
-    ASSERT(outputBus);
+    AudioBus& outputBus = output(0)->bus();
 
     float threshold = m_threshold->finalValue();
     float knee = m_knee->finalValue();

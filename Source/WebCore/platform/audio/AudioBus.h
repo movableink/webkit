@@ -100,21 +100,22 @@ public:
     bool isSilent() const;
 
     // Returns true if the channel count and frame-size match.
-    bool topologyMatches(const AudioBus &sourceBus) const;
+    bool topologyMatches(const AudioBus& sourceBus) const;
+
+    static Ref<AudioBus> createCopy(const AudioBus& sourceBus);
 
     // Creates a new buffer from a range in the source buffer.
     // 0 may be returned if the range does not fit in the sourceBuffer
-    static RefPtr<AudioBus> createBufferFromRange(const AudioBus* sourceBuffer, unsigned startFrame, unsigned endFrame);
-
+    static RefPtr<AudioBus> createBufferFromRange(const AudioBus& sourceBuffer, unsigned startFrame, unsigned endFrame);
 
     // Creates a new AudioBus by sample-rate converting sourceBus to the newSampleRate.
     // setSampleRate() must have been previously called on sourceBus.
     // Note: sample-rate conversion is already handled in the file-reading code for the mac port, so we don't need this.
-    static RefPtr<AudioBus> createBySampleRateConverting(const AudioBus* sourceBus, bool mixToMono, double newSampleRate);
+    static RefPtr<AudioBus> createBySampleRateConverting(const AudioBus& sourceBus, bool mixToMono, double newSampleRate);
 
     // Creates a new AudioBus by mixing all the channels down to mono.
     // If sourceBus is already mono, then the returned AudioBus will simply be a copy.
-    static RefPtr<AudioBus> createByMixingToMono(const AudioBus* sourceBus);
+    static Ref<AudioBus> createByMixingToMono(const AudioBus& sourceBus);
 
     // Scales all samples by the same amount.
     void scale(float scale);

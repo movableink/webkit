@@ -43,7 +43,7 @@ public:
     void ref() const final { return ThreadSafeRefCounted::ref(); }
     void deref() const final { return ThreadSafeRefCounted::deref(); }
 
-    void sharedRender(AudioBus* sourceBus, AudioBus* destinationBus, size_t framesToProcess, const AudioIOPosition&);
+    void sharedRender(AudioBus& destinationBus, size_t framesToProcess, const AudioIOPosition&);
 
 private:
     SharedAudioDestination(const CreationOptions&, AudioDestinationCreationFunction&&);

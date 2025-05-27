@@ -69,7 +69,7 @@ MediaStreamAudioDestinationNode::~MediaStreamAudioDestinationNode()
 
 void MediaStreamAudioDestinationNode::process(size_t numberOfFrames)
 {
-    m_source->consumeAudio(*input(0)->bus(), numberOfFrames);
+    m_source->consumeAudio(input(0)->bus(), numberOfFrames);
 }
 
 } // namespace WebCore

@@ -128,7 +128,7 @@ private:
     void invalidateCachedPropertiesIfNecessary() WTF_REQUIRES_LOCK(m_processLock);
 
     const AzimuthElevation& azimuthElevation() WTF_REQUIRES_LOCK(m_processLock);
-    void processSampleAccurateValues(AudioBus* destination, const AudioBus* source, size_t framesToProcess) WTF_REQUIRES_LOCK(m_processLock);
+    void processSampleAccurateValues(AudioBus& destination, const AudioBus& source, size_t framesToProcess) WTF_REQUIRES_LOCK(m_processLock);
     bool hasSampleAccurateValues() const WTF_REQUIRES_LOCK(m_processLock);
     bool shouldUseARate() const WTF_REQUIRES_LOCK(m_processLock);
 

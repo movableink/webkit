@@ -340,7 +340,7 @@ double OscillatorNode::processKRate(int n, std::span<float> destination, double 
 
 void OscillatorNode::process(size_t framesToProcess)
 {
-    auto& outputBus = *output(0)->bus();
+    auto& outputBus = output(0)->bus();
 
     if (!isInitialized() || !outputBus.numberOfChannels()) {
         outputBus.zero();

@@ -58,7 +58,7 @@ AudioDestinationNode::~AudioDestinationNode()
     uninitialize();
 }
 
-void AudioDestinationNode::renderQuantum(AudioBus* destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
+void AudioDestinationNode::renderQuantum(AudioBus& destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
 {
     // We don't want denormals slowing down any of the audio processing
     // since they can very seriously hurt performance.
@@ -73,13 +73,13 @@ void AudioDestinationNode::renderQuantum(AudioBus* destinationBus, size_t number
     ForbidMallocUseForCurrentThreadScope forbidMallocUse;
     
     if (!context().isInitialized()) {
-        destinationBus->zero();
+        destinationBus.zero();
         return;
     }
 
     ASSERT(numberOfFrames);
     if (!numberOfFrames) {
-        destinationBus->zero();
+        destinationBus.zero();
         return;
     }
 
@@ -96,13 +96,11 @@ void AudioDestinationNode::renderQuantum(AudioBus* destinationBus, size_t number
 
     // This will cause the node(s) connected to us to process, which in turn will pull on their input(s),
     // all the way backwards through the rendering graph.
-    AudioBus* renderedBus = input(0)->pull(destinationBus, numberOfFrames);
+    AudioBus& renderedBus = input(0)->pull(&destinationBus, numberOfFrames);
 
-    if (!renderedBus)
-        destinationBus->zero();
-    else if (renderedBus != destinationBus) {
+    if (&renderedBus != &destinationBus) {
         // in-place processing was not possible - so copy
-        destinationBus->copyFrom(*renderedBus);
+        destinationBus.copyFrom(renderedBus);
     }
 
     // Process nodes which need a little extra help because they are not connected to anything, but still need to process.

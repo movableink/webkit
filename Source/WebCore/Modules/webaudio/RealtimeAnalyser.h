@@ -64,7 +64,7 @@ public:
     void getByteTimeDomainData(JSC::Uint8Array&);
 
     // The audio thread writes input data here.
-    void writeInput(AudioBus*, size_t framesToProcess);
+    void writeInput(AudioBus&, size_t framesToProcess);
 
     static constexpr double DefaultSmoothingTimeConstant { 0.8 };
     static constexpr double DefaultMinDecibels { -100 };
@@ -82,7 +82,7 @@ private:
     unsigned m_writeIndex { 0 };
 
     // AudioBus used for downmixing input audio before copying it to m_inputBuffer.
-    RefPtr<AudioBus> m_downmixBus;
+    const Ref<AudioBus> m_downmixBus;
     
     size_t m_fftSize { DefaultFFTSize };
     std::unique_ptr<FFTFrame> m_analysisFrame;

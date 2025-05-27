@@ -68,7 +68,7 @@ void AudioResampler::configureChannels(unsigned numberOfChannels)
     m_sourceBus = AudioBus::create(numberOfChannels, 0, false);
 }
 
-void AudioResampler::process(AudioSourceProvider* provider, AudioBus* destinationBus, size_t framesToProcess)
+void AudioResampler::process(AudioSourceProvider* provider, AudioBus& destinationBus, size_t framesToProcess)
 {
     ASSERT(provider);
     if (!provider)
@@ -77,14 +77,12 @@ void AudioResampler::process(AudioSourceProvider* provider, AudioBus* destinatio
     unsigned numberOfChannels = m_kernels.size();
 
     // Make sure our configuration matches the bus we're rendering to.
-    bool channelsMatch = (destinationBus && destinationBus->numberOfChannels() == numberOfChannels);
+    bool channelsMatch = (destinationBus.numberOfChannels() == numberOfChannels);
     ASSERT(channelsMatch);
     if (!channelsMatch)
         return;
 
-    RefPtr sourceBus = m_sourceBus;
-    if (!sourceBus)
-        return;
+    Ref sourceBus = m_sourceBus;
 
     // Setup the source bus.
     for (unsigned i = 0; i < numberOfChannels; ++i) {
@@ -99,12 +97,12 @@ void AudioResampler::process(AudioSourceProvider* provider, AudioBus* destinatio
     }
 
     // Ask the provider to supply the desired number of source frames.
-    provider->provideInput(*sourceBus, sourceBus->length());
+    provider->provideInput(sourceBus, sourceBus->length());
 
     // Now that we have the source data, resample each channel into the destination bus.
     // FIXME: optimize for the common stereo case where it's faster to process both left/right channels in the same inner loop.
     for (unsigned i = 0; i < numberOfChannels; ++i) {
-        auto destination = destinationBus->channel(i)->mutableSpan();
+        auto destination = destinationBus.channel(i)->mutableSpan();
         m_kernels[i]->process(destination, framesToProcess);
     }
 }

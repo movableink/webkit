@@ -151,8 +151,13 @@ bool HRTFElevation::calculateKernelsForAzimuthElevation(int azimuth, int elevati
     // (hardware) sample-rate.
     unsigned startFrame = index * ResponseFrameSize;
     unsigned stopFrame = startFrame + ResponseFrameSize;
-    auto preSampleRateConvertedResponse = AudioBus::createBufferFromRange(bus.get(), startFrame, stopFrame);
-    auto response = AudioBus::createBySampleRateConverting(preSampleRateConvertedResponse.get(), false, sampleRate);
+    auto preSampleRateConvertedResponse = AudioBus::createBufferFromRange(*bus, startFrame, stopFrame);
+    ASSERT(preSampleRateConvertedResponse);
+    if (!preSampleRateConvertedResponse)
+        return false;
+    auto response = AudioBus::createBySampleRateConverting(*preSampleRateConvertedResponse, false, sampleRate);
+    if (!response)
+        return false;
     AudioChannel* leftEarImpulseResponse = response->channel(AudioBus::ChannelLeft);
     AudioChannel* rightEarImpulseResponse = response->channel(AudioBus::ChannelRight);
 #else

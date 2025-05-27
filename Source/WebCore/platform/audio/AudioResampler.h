@@ -46,7 +46,7 @@ public:
     ~AudioResampler() = default;
     
     // Given an AudioSourceProvider, process() resamples the source stream into destinationBus.
-    void process(AudioSourceProvider*, AudioBus* destinationBus, size_t framesToProcess);
+    void process(AudioSourceProvider*, AudioBus& destinationBus, size_t framesToProcess);
 
     // Resets the processing state.
     void reset();
@@ -62,7 +62,7 @@ public:
 private:
     double m_rate { 1 };
     Vector<std::unique_ptr<AudioResamplerKernel>> m_kernels;
-    RefPtr<AudioBus> m_sourceBus;
+    Ref<AudioBus> m_sourceBus;
 };
 
 } // namespace WebCore

@@ -53,7 +53,7 @@ public:
 
     std::unique_ptr<AudioDSPKernel> createKernel() final;
 
-    void process(const AudioBus* source, AudioBus* destination, size_t framesToProcess) final;
+    void process(const AudioBus& source, AudioBus& destination, size_t framesToProcess) final;
 
     void setCurveForBindings(Float32Array*);
     Float32Array* curveForBindings() WTF_IGNORES_THREAD_SAFETY_ANALYSIS { ASSERT(isMainThread()); return m_curve.get(); } // Doesn't grab the lock, only safe to call on the main thread.

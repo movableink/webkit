@@ -262,16 +262,16 @@ MediaTime DefaultAudioDestinationNode::outputLatency() const
     return m_destination ? m_destination->outputLatency() : MediaTime::zeroTime();
 }
 
-void DefaultAudioDestinationNode::render(AudioBus*, AudioBus* destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
+void DefaultAudioDestinationNode::render(AudioBus& destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
 {
     renderQuantum(destinationBus, numberOfFrames, outputPosition);
 
-    setIsSilent(destinationBus->isSilent());
+    setIsSilent(destinationBus.isSilent());
 
     // The reason we are handling mute after the call to setIsSilent() is because the muted state does
     // not affect the audio destination node's effective playing state.
     if (m_muted)
-        destinationBus->zero();
+        destinationBus.zero();
 }
 
 void DefaultAudioDestinationNode::setIsSilent(bool isSilent)

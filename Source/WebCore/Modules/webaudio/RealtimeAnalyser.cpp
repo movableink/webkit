@@ -77,9 +77,9 @@ bool RealtimeAnalyser::setFftSize(size_t size)
     return true;
 }
 
-void RealtimeAnalyser::writeInput(AudioBus* bus, size_t framesToProcess)
+void RealtimeAnalyser::writeInput(AudioBus& bus, size_t framesToProcess)
 {
-    bool isBusGood = bus && bus->numberOfChannels() > 0 && bus->channel(0)->length() >= framesToProcess;
+    bool isBusGood = bus.numberOfChannels() > 0 && bus.channel(0)->length() >= framesToProcess;
     ASSERT(isBusGood);
     if (!isBusGood)
         return;
@@ -96,7 +96,7 @@ void RealtimeAnalyser::writeInput(AudioBus* bus, size_t framesToProcess)
     // Clear the bus and downmix the input according to the down mixing rules.
     // Then save the result in the m_inputBuffer at the appropriate place.
     m_downmixBus->zero();
-    m_downmixBus->sumFrom(*bus);
+    m_downmixBus->sumFrom(bus);
     memcpySpan(destination, m_downmixBus->channel(0)->span().first(framesToProcess));
 
     m_writeIndex += framesToProcess;

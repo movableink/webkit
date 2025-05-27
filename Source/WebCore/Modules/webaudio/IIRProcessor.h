@@ -41,7 +41,7 @@ public:
     ~IIRProcessor();
 
     // AudioDSPKernelProcessor.
-    void process(const AudioBus* source, AudioBus* destination, size_t framesToProcess) final;
+    void process(const AudioBus& source, AudioBus& destination, size_t framesToProcess) final;
     std::unique_ptr<AudioDSPKernel> createKernel() final;
 
     // Get the magnitude and phase response of the filter at the given set of frequencies (in Hz). The phase response is in radians.
