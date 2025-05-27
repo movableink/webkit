@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All Rights Reserved.
  * Copyright (C) 2009, 2011 Google Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -325,6 +325,11 @@ WorkerNavigator& WorkerGlobalScope::navigator()
     if (!m_navigator)
         m_navigator = WorkerNavigator::create(*this, m_userAgent, m_isOnline);
     return *m_navigator;
+}
+
+Ref<WorkerNavigator> WorkerGlobalScope::protectedNavigator()
+{
+    return navigator();
 }
 
 void WorkerGlobalScope::setIsOnline(bool isOnline)

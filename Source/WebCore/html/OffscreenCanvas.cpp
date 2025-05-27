@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -231,11 +231,11 @@ ExceptionOr<std::optional<OffscreenRenderingContext>> OffscreenCanvas::getContex
             RETURN_IF_EXCEPTION(scope, Exception { ExceptionCode::ExistingExceptionError });
             Ref scriptExecutionContext = *this->scriptExecutionContext();
             if (RefPtr globalScope = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext)) {
-                if (auto* gpu = globalScope->navigator().gpu())
+                if (auto* gpu = globalScope->protectedNavigator()->gpu())
                     m_context = GPUCanvasContext::create(*this, *gpu);
             } else if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext)) {
                 if (RefPtr domWindow = document->domWindow()) {
-                    if (auto* gpu = domWindow->navigator().gpu())
+                    if (auto* gpu = domWindow->protectedNavigator()->gpu())
                         m_context = GPUCanvasContext::create(*this, *gpu);
                 }
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -124,6 +124,7 @@ public:
 
     virtual ExceptionOr<void> importScripts(const FixedVector<Variant<RefPtr<TrustedScriptURL>, String>>& urls);
     WorkerNavigator& navigator();
+    Ref<WorkerNavigator> protectedNavigator();
 
     void setIsOnline(bool);
     bool isOnline() const { return m_isOnline; }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2010 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
  * Copyright (C) 2008 Eric Seidel <eric@webkit.org>
@@ -1526,12 +1526,12 @@ static LayoutSize size(CachedImage* cachedImage, RenderElement* renderer, ImageS
 
 static LayoutSize size(HTMLImageElement& element, ImageSizeType sizeType = ImageSizeType::BeforeDevicePixelRatio)
 {
-    return size(element.cachedImage(), element.renderer(), sizeType);
+    return size(element.cachedImage(), element.checkedRenderer().get(), sizeType);
 }
 
 static LayoutSize size(SVGImageElement& element, ImageSizeType sizeType = ImageSizeType::BeforeDevicePixelRatio)
 {
-    return size(element.cachedImage(), element.renderer(), sizeType);
+    return size(element.cachedImage(), element.checkedRenderer().get(), sizeType);
 }
 
 static inline FloatSize size(CanvasBase& canvas)
@@ -1632,13 +1632,13 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(HTMLImageElement& imag
 
     auto orientation = ImageOrientation::Orientation::FromImage;
     if (imageElement.allowsOrientationOverride()) {
-        if (auto* renderer = imageElement.renderer())
+        if (CheckedPtr renderer = imageElement.renderer())
             orientation = renderer->style().imageOrientation().orientation();
         else if (auto* computedStyle = imageElement.computedStyle())
             orientation = computedStyle->imageOrientation().orientation();
     }
 
-    auto result = drawImage(imageElement.document(), *cachedImage, imageElement.renderer(), imageRect, srcRect, dstRect, op, blendMode, orientation);
+    auto result = drawImage(imageElement.protectedDocument().get(), *cachedImage, imageElement.checkedRenderer().get(), imageRect, srcRect, dstRect, op, blendMode, orientation);
 
     if (!result.hasException())
         checkOrigin(&imageElement);
@@ -1661,7 +1661,7 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(SVGImageElement& image
 
     auto imageRect = FloatRect(FloatPoint(), size(imageElement, ImageSizeType::BeforeDevicePixelRatio));
 
-    auto result = drawImage(imageElement.document(), *cachedImage, imageElement.renderer(), imageRect, srcRect, dstRect, op, blendMode);
+    auto result = drawImage(imageElement.protectedDocument().get(), *cachedImage, imageElement.checkedRenderer().get(), imageRect, srcRect, dstRect, op, blendMode);
 
     if (!result.hasException())
         checkOrigin(&imageElement);
@@ -1671,11 +1671,14 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(SVGImageElement& image
 ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(CSSStyleImageValue& image, const FloatRect& srcRect, const FloatRect& dstRect)
 {
     auto* cachedImage = image.image();
-    if (!cachedImage || !image.document())
+    if (!cachedImage)
         return { };
-    FloatRect imageRect = FloatRect(FloatPoint(), size(image));
+    RefPtr imageDocument = image.document();
+    if (!imageDocument)
+        return { };
+    auto imageRect = FloatRect(FloatPoint(), size(image));
 
-    auto result = drawImage(*image.document(), *cachedImage, nullptr, imageRect, srcRect, dstRect, state().globalComposite, state().globalBlend);
+    auto result = drawImage(*imageDocument, *cachedImage, nullptr, imageRect, srcRect, dstRect, state().globalComposite, state().globalBlend);
 
     if (!result.hasException())
         checkOrigin(image);
@@ -2251,7 +2254,7 @@ ExceptionOr<RefPtr<CanvasPattern>> CanvasRenderingContext2DBase::createPattern(H
     if (intrinsicWidth.isZero() || intrinsicHeight.isZero())
         return nullptr;
 
-    return createPattern(*cachedImage, imageElement.renderer(), repeatX, repeatY);
+    return createPattern(*cachedImage, imageElement.checkedRenderer().get(), repeatX, repeatY);
 }
 
 ExceptionOr<RefPtr<CanvasPattern>> CanvasRenderingContext2DBase::createPattern(SVGImageElement& imageElement, bool repeatX, bool repeatY)
@@ -2277,7 +2280,7 @@ ExceptionOr<RefPtr<CanvasPattern>> CanvasRenderingContext2DBase::createPattern(S
     if (intrinsicWidth.isZero() || intrinsicHeight.isZero())
         return nullptr;
 
-    return createPattern(*cachedImage, imageElement.renderer(), repeatX, repeatY);
+    return createPattern(*cachedImage, imageElement.checkedRenderer().get(), repeatX, repeatY);
 }
 
 ExceptionOr<RefPtr<CanvasPattern>> CanvasRenderingContext2DBase::createPattern(CanvasBase& canvas, bool repeatX, bool repeatY)
