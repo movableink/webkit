@@ -1084,7 +1084,8 @@ select {
 
 #if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
 select:is([size], [multiple]), select[size][multiple] {
-    align-items: flex-start;
+    align-items: normal;
+    cursor: auto;
     border: 1px inset gray;
     border-radius: initial;
     white-space: initial;
