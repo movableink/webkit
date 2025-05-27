@@ -550,8 +550,10 @@ void RenderLayerBacking::updateDebugIndicators(bool showBorder, bool showRepaint
     if (m_contentsContainmentLayer)
         m_contentsContainmentLayer->setShowDebugBorder(showBorder);
 
-    if (m_childContainmentLayer)
+    if (m_childContainmentLayer) {
         m_childContainmentLayer->setShowDebugBorder(showBorder);
+        m_childContainmentLayer->setShowFrameProcessBorders(renderer().settings().showFrameProcessBorders() && m_owningLayer.isRenderViewLayer());
+    }
 
     if (m_backgroundLayer) {
         m_backgroundLayer->setShowDebugBorder(showBorder);

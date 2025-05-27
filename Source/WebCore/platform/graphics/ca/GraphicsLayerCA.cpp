@@ -3025,7 +3025,7 @@ void GraphicsLayerCA::updateDebugIndicators()
     Color borderColor;
     float width = 0;
 
-    bool showDebugBorders = isShowingDebugBorder();
+    bool showDebugBorders = isShowingDebugBorder() || isShowingFrameProcessBorders();
     if (showDebugBorders)
         getDebugBorderInfo(borderColor, width);
 
@@ -4379,6 +4379,15 @@ void GraphicsLayerCA::setShowRepaintCounter(bool showCounter)
         return;
 
     GraphicsLayer::setShowRepaintCounter(showCounter);
+    noteLayerPropertyChanged(DebugIndicatorsChanged);
+}
+
+void GraphicsLayerCA::setShowFrameProcessBorders(bool showBorders)
+{
+    if (showBorders == m_showFrameProcessBorders)
+        return;
+
+    GraphicsLayer::setShowFrameProcessBorders(showBorders);
     noteLayerPropertyChanged(DebugIndicatorsChanged);
 }
 

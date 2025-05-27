@@ -618,6 +618,9 @@ public:
     virtual void setShowRepaintCounter(bool show) { m_showRepaintCounter = show; }
     bool isShowingRepaintCounter() const { return m_showRepaintCounter; }
 
+    virtual void setShowFrameProcessBorders(bool show) { m_showFrameProcessBorders = show; }
+    bool isShowingFrameProcessBorders() const { return m_showFrameProcessBorders; }
+
     // FIXME: this is really a paint count.
     int repaintCount() const { return m_repaintCount; }
     int incrementRepaintCount() { return ++m_repaintCount; }
@@ -834,6 +837,7 @@ protected:
     bool m_appliesDeviceScale : 1;
     bool m_showDebugBorder : 1;
     bool m_showRepaintCounter : 1;
+    bool m_showFrameProcessBorders : 1;
     bool m_isMaskLayer : 1;
     bool m_isBackdropRoot : 1;
     bool m_isTrackingDisplayListReplay : 1;

@@ -6987,6 +6987,22 @@ ShouldUseServiceWorkerShortTimeout:
     WebCore:
       default: false
 
+ShowFrameProcessBordersEnabled:
+  type: bool
+  status: internal
+  defaultsOverridable: true
+  humanReadableName: "Show frame process borders"
+  webcoreName: showFrameProcessBorders
+  webcoreOnChange: setNeedsRecalcStyleInAllFrames
+  inspectorOverride: true
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 ShowMediaStatsContextMenuItemEnabled:
   type: bool
   status: developer
