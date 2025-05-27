@@ -858,6 +858,13 @@ void ViewTransition::copyElementBaseProperties(RenderLayerModelObject& renderer,
 
     CheckedRef frameView = renderer.view().frameView();
 
+    RefPtr documentElement = renderer.document().documentElement();
+    if (!documentElement)
+        return;
+    CheckedPtr documentElementRenderer = documentElement->renderer();
+    if (!documentElementRenderer)
+        return;
+
     if (renderer.isDocumentElementRenderer()) {
         output.size.setWidth(frameView->frameRect().width());
         output.size.setHeight(frameView->frameRect().height());
@@ -883,12 +890,15 @@ void ViewTransition::copyElementBaseProperties(RenderLayerModelObject& renderer,
             transform->translate(output.size.width() / 2, output.size.height() / 2);
             transform->translateRight(-output.size.width() / 2, -output.size.height() / 2);
 
-            Ref transformListValue = CSSTransformListValue::create(Style::ExtractorConverter::convertTransformationMatrix(renderer.style(), *transform));
+            Ref transformListValue = CSSTransformListValue::create(Style::ExtractorConverter::convertTransformationMatrix(documentElementRenderer->style(), *transform));
             RefPtr { output.properties }->setProperty(CSSPropertyTransform, WTFMove(transformListValue));
         }
     }
 
-    LayoutSize cssSize = adjustLayoutSizeForAbsoluteZoom(output.size, renderer.style());
+    // Factor out the zoom from the nearest common ancestor of the captured element and the view transition
+    // pseudo tree (the document element), so that it doesn't get applied a second time when rendering the
+    // snapshots.
+    LayoutSize cssSize = adjustLayoutSizeForAbsoluteZoom(output.size, documentElementRenderer->style());
     RefPtr { output.properties }->setProperty(CSSPropertyWidth, CSSPrimitiveValue::create(cssSize.width(), CSSUnitType::CSS_PX));
     RefPtr { output.properties }->setProperty(CSSPropertyHeight, CSSPrimitiveValue::create(cssSize.height(), CSSUnitType::CSS_PX));
 }
