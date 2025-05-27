@@ -72,9 +72,10 @@ bool AccessibilityTableCell::computeIsIgnored() const
         return true;
 
     // Ignore anonymous table cells as long as they're not in a table (ie. when display:table is used).
-    WeakPtr parentTable = this->parentTable();
-    bool inTable = parentTable && parentTable->element() && (parentTable->element()->elementName() == ElementName::HTML_table || hasTableRole(*parentTable->element()));
-    if (!element() && !inTable)
+    RefPtr parentTable = this->parentTable();
+    RefPtr parentElement = parentTable ? parentTable->element() : nullptr;
+    bool inTable = parentElement && (parentElement->elementName() == ElementName::HTML_table || hasTableRole(*parentElement));
+    if (!inTable && !element())
         return true;
 
     return !isExposedTableCell() && AccessibilityRenderObject::computeIsIgnored();
@@ -156,7 +157,7 @@ bool AccessibilityTableCell::isTableHeaderCell() const
     if (!node)
         return false;
 
-    auto elementName = WebCore::elementName(node);
+    auto elementName = WebCore::elementName(*node);
     if (elementName == ElementName::HTML_th)
         return true;
 
@@ -324,8 +325,7 @@ AccessibilityObject* AccessibilityTableCell::titleUIElement() const
 
     // Table cells that are th cannot have title ui elements, since by definition
     // they are title ui elements
-    Node* node = m_renderer->node();
-    if (WebCore::elementName(node) == ElementName::HTML_th)
+    if (WebCore::elementName(node()) == ElementName::HTML_th)
         return nullptr;
     
     RenderTableCell& renderCell = downcast<RenderTableCell>(*m_renderer);
@@ -345,7 +345,8 @@ AccessibilityObject* AccessibilityTableCell::titleUIElement() const
     if (!headerCell || headerCell == &renderCell)
         return nullptr;
 
-    if (!headerCell->element() || headerCell->element()->elementName() != ElementName::HTML_th)
+    auto* element = headerCell->element();
+    if (!element || element->elementName() != ElementName::HTML_th)
         return nullptr;
 
     return axObjectCache()->getOrCreate(*headerCell);

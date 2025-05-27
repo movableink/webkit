@@ -326,10 +326,11 @@ AXCoreObject* AccessibilityMathMLElement::mathOverObject()
         return nullptr;
 
     const auto& children = unignoredChildren();
-    if (children.size() >= 2 && elementName() == ElementName::MathML_mover)
+    auto elementName = this->elementName();
+    if (children.size() >= 2 && elementName == ElementName::MathML_mover)
         return children[1].ptr();
 
-    if (children.size() >= 3 && elementName() == ElementName::MathML_munderover)
+    if (children.size() >= 3 && elementName == ElementName::MathML_munderover)
         return children[2].ptr();
 
     return nullptr;
