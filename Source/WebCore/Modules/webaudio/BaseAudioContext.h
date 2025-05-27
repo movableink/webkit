@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -103,11 +103,14 @@ public:
     uint64_t contextID() const { return m_contextID; }
 
     Document* document() const;
+    RefPtr<Document> protectedDocument() const;
     bool isInitialized() const { return m_isInitialized; }
     
     virtual bool isOfflineContext() const = 0;
     virtual AudioDestinationNode& destination() = 0;
+    Ref<AudioDestinationNode> protectedDestination() { return destination(); }
     virtual const AudioDestinationNode& destination() const = 0;
+    Ref<const AudioDestinationNode> protectedDestination() const { return destination(); }
 #if PLATFORM(IOS_FAMILY)
     virtual const String& sceneIdentifier() const { return nullString(); }
 #endif

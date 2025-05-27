@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -188,7 +188,7 @@ double AudioContext::baseLatency()
 {
     lazyInitialize();
 
-    return static_cast<double>(destination().framesPerBuffer()) / sampleRate();
+    return static_cast<double>(protectedDestination()->framesPerBuffer()) / sampleRate();
 }
 
 double AudioContext::outputLatency()
@@ -200,7 +200,7 @@ double AudioContext::outputLatency()
     if (noiseInjectionPolicies())
         return 512 / sampleRate(); // A fixed, but reasonable value for most platforms.
 
-    return destination().outputLatency().toDouble();
+    return protectedDestination()->outputLatency().toDouble();
 }
 
 AudioTimestamp AudioContext::getOutputTimestamp()
@@ -212,8 +212,9 @@ AudioTimestamp AudioContext::getOutputTimestamp()
     position.position = Seconds { std::min(position.position.seconds(), currentTime()) };
 
     DOMHighResTimeStamp performanceTime = 0.0;
-    if (document() && document()->domWindow())
-        performanceTime = std::max(document()->domWindow()->performance().relativeTimeFromTimeOriginInReducedResolution(position.timestamp), 0.0);
+    RefPtr document = this->document();
+    if (document && document->domWindow())
+        performanceTime = std::max(document->domWindow()->protectedPerformance()->relativeTimeFromTimeOriginInReducedResolution(position.timestamp), 0.0);
 
     return { position.position.seconds(), performanceTime };
 }
@@ -234,10 +235,10 @@ void AudioContext::close(DOMPromiseDeferred<void>&& promise)
 
     lazyInitialize();
 
-    destination().close([this, activity = makePendingActivity(*this)] {
-        setState(State::Closed);
-        uninitialize();
-        m_mediaSession->setActive(false);
+    protectedDestination()->close([activity = makePendingActivity(*this)] {
+        activity->object().setState(State::Closed);
+        activity->object().uninitialize();
+        activity->object().m_mediaSession->setActive(false);
     });
 }
 
@@ -257,12 +258,12 @@ void AudioContext::suspendRendering(DOMPromiseDeferred<void>&& promise)
 
     lazyInitialize();
 
-    destination().suspend([this, activity = makePendingActivity(*this), promise = WTFMove(promise)](std::optional<Exception>&& exception) mutable {
+    protectedDestination()->suspend([activity = makePendingActivity(*this), promise = WTFMove(promise)](std::optional<Exception>&& exception) mutable {
         if (exception) {
             promise.reject(WTFMove(*exception));
             return;
         }
-        setState(State::Suspended);
+        activity->object().setState(State::Suspended);
         promise.resolve();
     });
 }
@@ -283,7 +284,7 @@ void AudioContext::resumeRendering(DOMPromiseDeferred<void>&& promise)
 
     lazyInitialize();
 
-    destination().resume([this, activity = makePendingActivity(*this), promise = WTFMove(promise)](std::optional<Exception>&& exception) mutable {
+    protectedDestination()->resume([activity = makePendingActivity(*this), promise = WTFMove(promise)](std::optional<Exception>&& exception) mutable {
         if (exception) {
             promise.reject(WTFMove(*exception));
             return;
@@ -292,10 +293,10 @@ void AudioContext::resumeRendering(DOMPromiseDeferred<void>&& promise)
         // Since we update the state asynchronously, we may have been interrupted after the
         // call to resume() and before this lambda runs. In this case, we don't want to
         // reset the state to running.
-        bool interrupted = m_mediaSession->state() == PlatformMediaSession::State::Interrupted;
-        setState(interrupted ? State::Interrupted : State::Running);
+        bool interrupted = activity->object().m_mediaSession->state() == PlatformMediaSession::State::Interrupted;
+        activity->object().setState(interrupted ? State::Interrupted : State::Running);
         if (interrupted)
-            addReaction(State::Running, WTFMove(promise));
+            activity->object().addReaction(State::Running, WTFMove(promise));
         else
             promise.resolve();
     });
@@ -323,7 +324,7 @@ void AudioContext::startRendering()
         return;
 
     lazyInitialize();
-    destination().startRendering([protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
+    protectedDestination()->startRendering([protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
         if (!exception)
             protectedThis->setState(State::Running);
     });
@@ -362,7 +363,7 @@ bool AudioContext::willPausePlayback()
     }
 
     if (pageConsentRequiredForAudioStart()) {
-        auto* page = document->page();
+        RefPtr page = document->page();
         if (page && !page->canStartMedia()) {
             document->addMediaCanStartListener(*this);
             return false;
@@ -401,7 +402,7 @@ void AudioContext::mayResumePlayback(bool shouldResume)
 
     lazyInitialize();
 
-    destination().resume([protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
+    protectedDestination()->resume([protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
         protectedThis->setState(exception ? State::Suspended : State::Running);
     });
 }
@@ -421,7 +422,7 @@ bool AudioContext::willBeginPlayback()
     }
 
     if (pageConsentRequiredForAudioStart()) {
-        auto* page = document->page();
+        RefPtr page = document->page();
         if (page && !page->canStartMedia()) {
             document->addMediaCanStartListener(*this);
             ALWAYS_LOG(LOGIDENTIFIER, "returning false, page doesn't allow media to start");
@@ -444,7 +445,7 @@ void AudioContext::suspend(ReasonForSuspension)
         return;
 
     m_mediaSession->beginInterruption(PlatformMediaSession::InterruptionType::PlaybackSuspended);
-    document()->updateIsPlayingMedia();
+    protectedDocument()->updateIsPlayingMedia();
 }
 
 void AudioContext::resume()
@@ -453,7 +454,7 @@ void AudioContext::resume()
         return;
 
     m_mediaSession->endInterruption(PlatformMediaSession::EndInterruptionFlags::MayResumePlaying);
-    document()->updateIsPlayingMedia();
+    protectedDocument()->updateIsPlayingMedia();
 }
 
 void AudioContext::suspendPlayback()
@@ -463,7 +464,7 @@ void AudioContext::suspendPlayback()
 
     lazyInitialize();
 
-    destination().suspend([protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
+    protectedDestination()->suspend([protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
         if (exception)
             return;
 
@@ -513,8 +514,8 @@ void AudioContext::didReceiveRemoteControlCommand(PlatformMediaSession::RemoteCo
 
 std::optional<MediaSessionGroupIdentifier> AudioContext::mediaSessionGroupIdentifier() const
 {
-    RefPtr document = downcast<Document>(scriptExecutionContext());
-    return document && document->page() ? document->page()->mediaSessionGroupIdentifier() : std::nullopt;
+    RefPtr document = this->document();
+    return document && document->page() ? document->protectedPage()->mediaSessionGroupIdentifier() : std::nullopt;
 }
 
 static bool hasPlayBackAudioSession(Document* document)
@@ -535,7 +536,7 @@ static bool hasPlayBackAudioSession(Document* document)
 
 bool AudioContext::isNowPlayingEligible() const
 {
-    if (!destination().isConnected() || m_wasSuspendedByScript)
+    if (!protectedDestination()->isConnected() || m_wasSuspendedByScript)
         return false;
 
     RefPtr document = this->document();
@@ -617,7 +618,8 @@ WeakPtr<PlatformMediaSessionInterface> AudioContext::selectBestMediaSession(cons
 
 bool AudioContext::isSuspended() const
 {
-    return !document() || document()->activeDOMObjectsAreSuspended() || document()->activeDOMObjectsAreStopped();
+    RefPtr document = this->document();
+    return !document || document->activeDOMObjectsAreSuspended() || document->activeDOMObjectsAreStopped();
 }
 
 bool AudioContext::isPlaying() const
@@ -627,8 +629,8 @@ bool AudioContext::isPlaying() const
 
 void AudioContext::pageMutedStateDidChange()
 {
-    if (document() && document()->page())
-        destination().setMuted(document()->page()->isAudioMuted());
+    if (RefPtr document = this->document(); document && document->page())
+        destination().setMuted(document->page()->isAudioMuted());
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -646,8 +648,8 @@ void AudioContext::sceneIdentifierDidChange()
 
 const String& AudioContext::sceneIdentifier() const
 {
-    if (document() && document()->page())
-        return document()->page()->sceneIdentifier();
+    if (RefPtr document = this->document(); document && document->page())
+        return document->page()->sceneIdentifier();
     return nullString();
 }
 #endif
@@ -678,7 +680,7 @@ bool AudioContext::shouldOverrideBackgroundPlaybackRestriction(PlatformMediaSess
     if (interruption != PlatformMediaSession::InterruptionType::EnteringBackground)
         return false;
 
-    if (m_canOverrideBackgroundPlaybackRestriction && !destination().isConnected())
+    if (m_canOverrideBackgroundPlaybackRestriction && !protectedDestination()->isConnected())
         return true;
 
     RefPtr document = this->document();

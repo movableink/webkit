@@ -20,9 +20,7 @@ Modules/notifications/Notification.cpp
 Modules/paymentrequest/PaymentRequest.cpp
 Modules/push-api/PushDatabase.cpp
 Modules/speech/SpeechRecognitionCaptureSourceImpl.cpp
-Modules/webaudio/AudioContext.cpp
 Modules/webaudio/AudioWorkletThread.cpp
-Modules/webaudio/BaseAudioContext.cpp
 Modules/webaudio/OfflineAudioContext.cpp
 Modules/webaudio/OfflineAudioDestinationNode.cpp
 Modules/webcodecs/WebCodecsAudioDecoder.cpp

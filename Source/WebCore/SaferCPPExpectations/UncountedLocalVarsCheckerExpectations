@@ -54,7 +54,6 @@ Modules/webaudio/AnalyserNode.cpp
 Modules/webaudio/AudioBasicProcessorNode.cpp
 Modules/webaudio/AudioBuffer.cpp
 Modules/webaudio/AudioBufferSourceNode.cpp
-Modules/webaudio/AudioContext.cpp
 Modules/webaudio/AudioDestinationNode.cpp
 Modules/webaudio/AudioNode.cpp
 Modules/webaudio/AudioNodeInput.cpp
