@@ -7868,3 +7868,5 @@ imported/w3c/web-platform-tests/navigation-api/navigate-event/navigate-form-with
 imported/w3c/web-platform-tests/navigation-api/navigate-event/navigate-form.html [ Failure ]
 
 webkit.org/b/292650 http/tests/iframe-monitor/throttler.html [ Timeout ]
+
+webkit.org/b/293642 imported/w3c/web-platform-tests/css/cssom/stylesheet-same-origin.sub.html [ Failure ]
