@@ -306,7 +306,7 @@ function tag_post_image_luminance($post_id) {
 
     if ( $luminance < $threshold )
         $tags[] = 'dark';
-    elseif ( false !== ( $key = array_search('dark', $messages) ) )
+    elseif ( false !== ( $key = array_search('dark', $tags) ) )
         unset($tags[ $key ]);
 
     // Set a tag class
