@@ -273,6 +273,10 @@ public:
 
     void scrollbarWidthChanged(ScrollbarWidth) override;
 
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    bool vectorBasedControlsEnabled() const override;
+#endif
+
 private:
     bool hasHorizontalOverflow() const;
     bool hasVerticalOverflow() const;

@@ -2037,4 +2037,12 @@ void RenderLayerScrollableArea::scrollbarWidthChanged(ScrollbarWidth width)
     availableContentSizeChanged(AvailableSizeChangeReason::ScrollbarsChanged);
 }
 
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+bool RenderLayerScrollableArea::vectorBasedControlsEnabled() const
+{
+    return m_layer.page().settings().vectorBasedControlsOnMacEnabled();
+}
+#endif
+
+
 } // namespace WebCore

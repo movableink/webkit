@@ -50,6 +50,10 @@
 #import <wtf/SetForScope.h>
 #import <wtf/StdLibExtras.h>
 
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/ScrollbarThemeMacAdditions.mm>)
+#import <WebKitAdditions/ScrollbarThemeMacAdditions.mm>
+#endif
+
 // FIXME: There are repainting problems due to Aqua scroll bar buttons' visual overflow.
 
 namespace WebCore {
@@ -571,6 +575,10 @@ void ScrollbarThemeMac::paintScrollCorner(ScrollableArea& area, GraphicsContext&
     // Keep this in sync with ScrollAnimatorMac's effectiveAppearanceForScrollerImp:.
     LocalDefaultSystemAppearance localAppearance(area.useDarkAppearanceForScrollbars());
 
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintScrollCornerForVectorBasedControls(area, context, cornerRect))
+        return;
+#endif
     context.drawSystemImage(ScrollbarTrackCornerSystemImageMac::create(), cornerRect);
 }
 

@@ -181,6 +181,16 @@ bool FrameView::scrollAnimatorEnabled() const
     return false;
 }
 
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+bool FrameView::vectorBasedControlsEnabled() const
+{
+    if (RefPtr page = frame().page())
+        return page->settings().vectorBasedControlsOnMacEnabled();
+
+    return false;
+}
+#endif
+
 IntRect FrameView::convertFromRendererToContainingView(const RenderElement* renderer, const IntRect& rendererRect) const
 {
     IntRect rect = snappedIntRect(enclosingLayoutRect(renderer->localToAbsoluteQuad(FloatRect(rendererRect)).boundingBox()));

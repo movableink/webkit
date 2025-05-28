@@ -788,6 +788,16 @@ ScrollableArea* PDFPluginBase::enclosingScrollableArea() const
     return enclosingScrollableLayer->scrollableArea();
 }
 
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+bool PDFPluginBase::vectorBasedControlsEnabled() const
+{
+    if (RefPtr page = this->page())
+        return page->settings().vectorBasedControlsOnMacEnabled();
+
+    return false;
+}
+#endif
+
 IntRect PDFPluginBase::scrollableAreaBoundingBox(bool*) const
 {
     return m_view->frameRect();

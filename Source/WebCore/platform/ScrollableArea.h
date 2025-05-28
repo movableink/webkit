@@ -436,6 +436,10 @@ public:
     virtual IntSize totalScrollbarSpace() const { return { }; }
     virtual int insetForLeftScrollbarSpace() const { return 0; }
 
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    virtual bool vectorBasedControlsEnabled() const { return false; }
+#endif
+
 protected:
     WEBCORE_EXPORT ScrollableArea();
     WEBCORE_EXPORT virtual ~ScrollableArea();
