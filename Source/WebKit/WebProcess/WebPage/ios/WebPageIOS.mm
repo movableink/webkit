@@ -4214,7 +4214,7 @@ std::optional<FocusedElementInformation> WebPage::focusedElementInformation()
                     information.selectOptions.append(OptionItem(emptyString(), true, false, false, parentGroupID));
                 }
 
-                information.selectOptions.append(OptionItem(optionElement->displayLabel(), false, optionElement->selected(), optionElement->hasAttributeWithoutSynchronization(WebCore::HTMLNames::disabledAttr), parentGroupID));
+                information.selectOptions.append(OptionItem(optionElement->label(), false, optionElement->selected(), optionElement->hasAttributeWithoutSynchronization(WebCore::HTMLNames::disabledAttr), parentGroupID));
             } else if (auto* optGroupElement = dynamicDowncast<HTMLOptGroupElement>(item.get())) {
                 if (selectPickerUsesMenu)
                     parentGroup = optGroupElement;
