@@ -238,7 +238,7 @@ void ViewGestureController::didCollectGeometryForSmartMagnificationGesture(Float
     m_initialMagnificationOrigin = { };
 
     auto pageScaleFactor = page->pageScaleFactor();
-    page->drawingArea()->adjustTransientZoom(pageScaleFactor, scaledMagnificationOrigin(FloatPoint(), pageScaleFactor));
+    page->drawingArea()->adjustTransientZoom(pageScaleFactor, scaledMagnificationOrigin(FloatPoint(), pageScaleFactor), m_magnificationOrigin);
     page->drawingArea()->commitTransientZoom(targetMagnification, targetOrigin);
 
     m_lastSmartMagnificationUnscaledTargetRect = unscaledTargetRect;

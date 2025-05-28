@@ -385,4 +385,9 @@ float normalizeAngleInRadians(float radians)
     return radiansPerTurnFloat * (circles - floor(circles));
 }
 
+FloatRect scaledRectAtOrigin(const FloatRect& rect, float scale, const FloatPoint& origin)
+{
+    return { origin + (rect.location() - origin) * scale, rect.size() * scale };
+}
+
 }

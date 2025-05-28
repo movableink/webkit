@@ -142,6 +142,7 @@ header: "RemoteLayerBackingStore.h"
 #if PLATFORM(MAC)
     Markable<WebCore::PlatformLayerIdentifier> m_pageScalingLayerID;
     Markable<WebCore::PlatformLayerIdentifier> m_scrolledContentsLayerID;
+    Markable<WebCore::PlatformLayerIdentifier> m_mainFrameClipLayerID;
 #endif
 
     double m_pageScaleFactor;

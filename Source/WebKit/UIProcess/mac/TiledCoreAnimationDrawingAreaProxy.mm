@@ -221,9 +221,9 @@ void TiledCoreAnimationDrawingAreaProxy::sendUpdateGeometry()
     });
 }
 
-void TiledCoreAnimationDrawingAreaProxy::adjustTransientZoom(double scale, FloatPoint origin)
+void TiledCoreAnimationDrawingAreaProxy::adjustTransientZoom(double scale, FloatPoint originInLayerForPageScale, WebCore::FloatPoint)
 {
-    send(Messages::DrawingArea::AdjustTransientZoom(scale, origin));
+    send(Messages::DrawingArea::AdjustTransientZoom(scale, originInLayerForPageScale));
 }
 
 void TiledCoreAnimationDrawingAreaProxy::commitTransientZoom(double scale, FloatPoint origin)

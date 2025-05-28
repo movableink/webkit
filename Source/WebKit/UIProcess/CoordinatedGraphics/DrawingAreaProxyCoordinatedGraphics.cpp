@@ -197,9 +197,9 @@ void DrawingAreaProxyCoordinatedGraphics::setBackingStoreIsDiscardable(bool isBa
 }
 
 #if PLATFORM(GTK)
-void DrawingAreaProxyCoordinatedGraphics::adjustTransientZoom(double scale, FloatPoint origin)
+void DrawingAreaProxyCoordinatedGraphics::adjustTransientZoom(double scale, FloatPoint originInLayerForPageScale, FloatPoint)
 {
-    send(Messages::DrawingArea::AdjustTransientZoom(scale, origin));
+    send(Messages::DrawingArea::AdjustTransientZoom(scale, originInLayerForPageScale));
 }
 
 void DrawingAreaProxyCoordinatedGraphics::commitTransientZoom(double scale, FloatPoint origin)

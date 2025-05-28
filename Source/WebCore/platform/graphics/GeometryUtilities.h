@@ -103,6 +103,8 @@ float toRelatedAcuteAngle(float angle);
 
 float normalizeAngleInRadians(float radians);
 
+WEBCORE_EXPORT FloatRect scaledRectAtOrigin(const FloatRect& sourceRect, float scale, const FloatPoint& origin);
+
 struct RotatedRect {
     FloatPoint center;
     FloatSize size;

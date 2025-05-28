@@ -996,6 +996,13 @@ GraphicsLayer* LocalFrameView::graphicsLayerForScrolledContents()
     return nullptr;
 }
 
+GraphicsLayer* LocalFrameView::clipLayer() const
+{
+    if (CheckedPtr renderView = m_frame->contentRenderer())
+        return renderView->compositor().clipLayer();
+    return nullptr;
+}
+
 #if HAVE(RUBBER_BANDING)
 GraphicsLayer* LocalFrameView::graphicsLayerForTransientZoomShadow()
 {

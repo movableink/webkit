@@ -289,6 +289,7 @@ String RemoteLayerTreeTransaction::description() const
 #if PLATFORM(MAC)
     ts.dumpProperty("pageScalingLayer"_s, m_pageScalingLayerID);
     ts.dumpProperty("scrolledContentsLayerID"_s, m_scrolledContentsLayerID);
+    ts.dumpProperty("mainFrameClipLayerID"_s, m_mainFrameClipLayerID);
 #endif
 
     ts.dumpProperty("minimumScaleFactor"_s, m_minimumScaleFactor);
