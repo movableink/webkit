@@ -72,6 +72,16 @@ public:
             dataLogLn("Tail: ", availabilityAtTail(block));
         };
 
+        auto dumpBytecodeLivenessAtHead = [&] (BasicBlock* block) {
+            dataLog("Live: ");
+            m_graph.forAllLiveInBytecode(
+                block->at(0)->origin.forExit,
+                [&] (Operand operand) {
+                    dataLog(operand, " ");
+                });
+            dataLogLn("");
+        };
+
         LocalOSRAvailabilityCalculator calculator(m_graph);
         bool changed;
         do {
@@ -103,6 +113,17 @@ public:
                     BasicBlock* successor = block->successor(successorIndex);
                     availabilityAtHead(successor).merge(calculator.m_availability);
                 }
+
+                for (unsigned successorIndex = block->numSuccessors(); successorIndex--;) {
+                    BasicBlock* successor = block->successor(successorIndex);
+                    availabilityAtHead(successor).pruneByLiveness(
+                        m_graph, successor->at(0)->origin.forExit);
+                    if (verbose) {
+                        dataLogLn("After pruning Block #", successor->index);
+                        dumpAvailability(successor);
+                        dumpBytecodeLivenessAtHead(successor);
+                    }
+                }
             }
         } while (changed);
 
@@ -113,7 +134,7 @@ public:
                 
                 for (unsigned nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
                     Node* node = block->at(nodeIndex);
-                    if (mayExit(m_graph, node) != DoesNotExit) {
+                    if (node->origin.exitOK) {
                         // If we're allowed to exit here, the heap must be in a state
                         // where exiting wouldn't crash. These particular fields are
                         // required for correctness because we use them during OSR exit
