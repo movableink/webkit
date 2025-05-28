@@ -39,7 +39,6 @@
 #import "WebViewImpl.h"
 #import <WebCore/DictionaryLookup.h>
 #import <WebCore/GeometryUtilities.h>
-#import <WebCore/TextIndicatorWindow.h>
 #import <pal/spi/mac/LookupSPI.h>
 #import <pal/spi/mac/NSMenuSPI.h>
 #import <pal/spi/mac/NSPopoverSPI.h>

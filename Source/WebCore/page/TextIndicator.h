@@ -58,7 +58,7 @@ enum class TextIndicatorDismissalAnimation : uint8_t {
     FadeOut
 };
 
-// FIXME: Move PresentationTransition to TextIndicatorWindow, because it's about presentation.
+// FIXME: Perhaps move TextIndicatorPresentationTransition to TextIndicatorLayer, because it's about presentation.
 enum class TextIndicatorPresentationTransition : uint8_t {
     None,
 
@@ -66,7 +66,7 @@ enum class TextIndicatorPresentationTransition : uint8_t {
     Bounce,
     BounceAndCrossfade,
 
-    // This animation needs to be driven manually via TextIndicatorWindow::setAnimationProgress.
+    // This animation needs to be driven manually via TextIndicatorLayer::setAnimationProgress.
     FadeIn,
 };
 
@@ -145,7 +145,7 @@ struct TextIndicatorData {
 class TextIndicator : public RefCounted<TextIndicator> {
 public:
     // FIXME: These are fairly Mac-specific, and they don't really belong here.
-    // But they're needed at TextIndicator creation time, so they can't go in TextIndicatorWindow.
+    // But they're needed at TextIndicator creation time, so they can't go in TextIndicatorLayer.
     // Maybe they can live in some Theme code somewhere?
     constexpr static float defaultHorizontalMargin { 2 };
     constexpr static float defaultVerticalMargin { 1 };

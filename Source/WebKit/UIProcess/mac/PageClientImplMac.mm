@@ -76,7 +76,6 @@
 #import <WebCore/PromisedAttachmentInfo.h>
 #import <WebCore/SharedBuffer.h>
 #import <WebCore/TextIndicator.h>
-#import <WebCore/TextIndicatorWindow.h>
 #import <WebCore/TextUndoInsertionMarkupMac.h>
 #import <WebCore/ValidationBubble.h>
 #import <WebCore/WebCoreCALayerExtras.h>

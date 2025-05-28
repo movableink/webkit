@@ -57,10 +57,6 @@
 #include <WebCore/SimpleRange.h>
 #include <wtf/TZoneMallocInlines.h>
 
-#if PLATFORM(COCOA)
-#include <WebCore/TextIndicatorWindow.h>
-#endif
-
 namespace WebKit {
 using namespace WebCore;
 

@@ -140,7 +140,6 @@
 #import <WebCore/TextAlternativeWithRange.h>
 #import <WebCore/TextAnimationTypes.h>
 #import <WebCore/TextIndicator.h>
-#import <WebCore/TextIndicatorWindow.h>
 #import <WebCore/TextRecognitionResult.h>
 #import <WebCore/TouchAction.h>
 #import <WebCore/UTIRegistry.h>
