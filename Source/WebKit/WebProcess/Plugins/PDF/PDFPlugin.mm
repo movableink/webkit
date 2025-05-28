@@ -85,7 +85,6 @@
 #import <WebCore/ScrollAnimator.h>
 #import <WebCore/ScrollbarTheme.h>
 #import <WebCore/Settings.h>
-#import <WebCore/SharedBuffer.h>
 #import <WebCore/TextIndicator.h>
 #import <WebCore/VoidCallback.h>
 #import <WebCore/WebAccessibilityObjectWrapperMac.h>
@@ -1249,16 +1248,6 @@ void PDFPlugin::notifyDisplayModeChanged(int)
     updateScrollbars();
 }
 
-RefPtr<FragmentedSharedBuffer> PDFPlugin::liveResourceData() const
-{
-    NSData *pdfData = liveData();
-
-    if (!pdfData)
-        return nullptr;
-
-    return SharedBuffer::create(pdfData);
-}
-
 void PDFPlugin::zoomIn()
 {
     [m_pdfLayerController zoomIn:nil];
@@ -1632,19 +1621,6 @@ bool PDFPlugin::handleWheelEvent(const WebWheelEvent& event)
     }
 
     return ScrollableArea::handleWheelEventForScrolling(platform(event), { });
-}
-
-NSData *PDFPlugin::liveData() const
-{
-    if (m_activeAnnotation)
-        m_activeAnnotation->commit();
-
-    // Save data straight from the resource instead of PDFKit if the document is
-    // untouched by the user, so that PDFs which PDFKit can't display will still be downloadable.
-    if (m_pdfDocumentWasMutated)
-        return [m_pdfDocument dataRepresentation];
-
-    return originalData();
 }
 
 id PDFPlugin::accessibilityHitTest(const WebCore::IntPoint& point) const

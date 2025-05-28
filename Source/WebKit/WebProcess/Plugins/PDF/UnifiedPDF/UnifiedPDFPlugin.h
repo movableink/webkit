@@ -324,10 +324,6 @@ private:
     bool geometryDidChange(const WebCore::IntSize&, const WebCore::AffineTransform&) override;
     void visibilityDidChange(bool) override;
 
-    RefPtr<WebCore::FragmentedSharedBuffer> liveResourceData() const override;
-
-    NSData *liveData() const override;
-
     void releaseMemory() override;
 
     bool wantsWheelEvents() const override;
