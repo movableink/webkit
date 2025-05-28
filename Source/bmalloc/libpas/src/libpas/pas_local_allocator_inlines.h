@@ -292,7 +292,7 @@ static PAS_ALWAYS_INLINE void pas_local_allocator_scan_bits_to_set_up_free_bits(
             break;
 
         default:
-            PAS_ASSERT(!"Should not be reached");
+            PAS_ASSERT_NOT_REACHED();
             break;
         }
         
@@ -337,7 +337,7 @@ static PAS_ALWAYS_INLINE void pas_local_allocator_scan_bits_to_set_up_free_bits(
         break;
         
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         break;
     }
 }
@@ -607,7 +607,7 @@ pas_local_allocator_set_up_primordial_bump(
         return pas_allocation_result_create_failure();
     }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return pas_allocation_result_create_failure();
 }
 
@@ -1378,7 +1378,7 @@ pas_local_allocator_return_memory_to_page(pas_local_allocator* allocator,
             pas_segregated_page_exclusive_role);
         return;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
 }
 
 /* This returns either:

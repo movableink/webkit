@@ -202,11 +202,11 @@ void pas_heap_reset_heap_ref(pas_heap* heap)
         ((pas_primitive_heap_ref*)heap->heap_ref)->cached_index = UINT_MAX;
         return;
     case pas_fake_heap_ref_kind:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return;
     }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
 }
 
 pas_segregated_size_directory*

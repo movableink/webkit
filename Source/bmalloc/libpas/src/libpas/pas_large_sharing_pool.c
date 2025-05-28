@@ -574,7 +574,7 @@ static const char* splat_command_get_string(splat_command command)
     case splat_boot_free:
         return "boot_free";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
@@ -590,7 +590,7 @@ static pas_free_mode splat_command_get_free_mode(splat_command command)
     case splat_boot_free:
         return pas_free;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return pas_free;
 }
 

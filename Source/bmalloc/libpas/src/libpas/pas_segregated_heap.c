@@ -428,7 +428,7 @@ medium_directory_tuple_for_index_impl(
         return result;
     }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     result.tuple = NULL;
     return result;
 }
@@ -635,7 +635,7 @@ static inline int size_directory_min_heap_compare(pas_segregated_size_directory*
 static inline size_t size_directory_min_heap_get_index(pas_segregated_size_directory** entry_ptr)
 {
     PAS_UNUSED_PARAM(entry_ptr);
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return 0;
 }
 

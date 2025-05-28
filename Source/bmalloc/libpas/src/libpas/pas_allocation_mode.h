@@ -63,7 +63,7 @@ static inline const char* pas_allocation_mode_get_string(pas_allocation_mode all
     case pas_always_compact_allocation_mode:
         return "always compact";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

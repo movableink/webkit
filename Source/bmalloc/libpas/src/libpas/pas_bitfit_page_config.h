@@ -159,7 +159,7 @@ static inline bool pas_bitfit_page_config_is_enabled(pas_bitfit_page_config conf
     case pas_marge_bitfit_page_config_variant:
         return pas_marge_bitfit_page_config_variant_is_enabled_override;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 

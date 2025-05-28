@@ -681,7 +681,7 @@ process_deallocation_log_with_config(pas_thread_local_cache* cache,
             break;
 
         case pas_segregated_page_config_kind_pas_utility_small:
-            PAS_ASSERT(!"Should not be reached");
+            PAS_ASSERT_NOT_REACHED();
             break;
 
         default:

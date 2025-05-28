@@ -258,7 +258,7 @@ pas_try_reallocate(void* old_ptr,
                 page_and_kind.page_base, begin, heap, new_size, allocation_mode, config.small_bitfit_config,
                 teleport_rule, free_mode, allocate_callback, allocate_callback_arg);
         default:
-            PAS_ASSERT(!"Should not be reached");
+            PAS_ASSERT_NOT_REACHED();
             return pas_allocation_result_create_failure();
         }
     }

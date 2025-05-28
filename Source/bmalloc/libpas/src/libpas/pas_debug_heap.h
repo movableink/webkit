@@ -64,7 +64,7 @@ static inline bool pas_debug_heap_is_enabled(pas_heap_config_kind kind)
 static inline void* pas_debug_heap_malloc(size_t size)
 {
     PAS_UNUSED_PARAM(size);
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
@@ -72,7 +72,7 @@ static inline void* pas_debug_heap_memalign(size_t alignment, size_t size)
 {
     PAS_UNUSED_PARAM(alignment);
     PAS_UNUSED_PARAM(size);
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
@@ -80,14 +80,14 @@ static inline void* pas_debug_heap_realloc(void* ptr, size_t size)
 {
     PAS_UNUSED_PARAM(ptr);
     PAS_UNUSED_PARAM(size);
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
 static inline void* pas_debug_heap_malloc_compact(size_t size)
 {
     PAS_UNUSED_PARAM(size);
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
@@ -95,7 +95,7 @@ static inline void* pas_debug_heap_memalign_compact(size_t alignment, size_t siz
 {
     PAS_UNUSED_PARAM(alignment);
     PAS_UNUSED_PARAM(size);
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
@@ -103,14 +103,14 @@ static inline void* pas_debug_heap_realloc_compact(void* ptr, size_t size)
 {
     PAS_UNUSED_PARAM(ptr);
     PAS_UNUSED_PARAM(size);
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
 static inline void pas_debug_heap_free(void* ptr)
 {
     PAS_UNUSED_PARAM(ptr);
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
 }
 
 #endif /* PAS_BMALLOC -> so end of !PAS_BMALLOC */

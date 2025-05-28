@@ -82,7 +82,7 @@ typedef struct {
             return (pas_page_base*)page_base; \
         } } \
         \
-        PAS_ASSERT(!"Should not be reached"); \
+        PAS_ASSERT_NOT_REACHED(); \
         return NULL; \
     } \
     \
@@ -109,7 +109,7 @@ typedef struct {
             return boundary; \
         } } \
         \
-        PAS_ASSERT(!"Should not be reached"); \
+        PAS_ASSERT_NOT_REACHED(); \
         return NULL; \
     } \
     \

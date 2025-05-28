@@ -349,7 +349,7 @@ void jit_heap_config_dump_shared_page_directory_arg(
 {
     PAS_UNUSED_PARAM(stream);
     PAS_UNUSED_PARAM(directory);
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
 }
 
 void jit_heap_config_add_fresh_memory(pas_range range)

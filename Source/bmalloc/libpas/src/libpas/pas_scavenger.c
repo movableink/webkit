@@ -417,7 +417,7 @@ static void* scavenger_thread_main(void* arg)
         }
     }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return R_NULL;
 }
 
@@ -619,7 +619,7 @@ void pas_scavenger_perform_synchronous_operation(
 {
     switch (kind) {
     case pas_scavenger_invalid_synchronous_operation_kind:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return;
     case pas_scavenger_clear_all_non_tlc_caches_kind:
         pas_scavenger_clear_all_non_tlc_caches();
@@ -640,7 +640,7 @@ void pas_scavenger_perform_synchronous_operation(
         pas_scavenger_run_synchronously_now();
         return;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
 }
 
 void pas_scavenger_disable_shut_down(void)

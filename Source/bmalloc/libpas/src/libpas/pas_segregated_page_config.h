@@ -246,7 +246,7 @@ static inline bool pas_segregated_page_config_is_enabled(pas_segregated_page_con
     case pas_medium_segregated_page_config_variant:
         return pas_medium_segregated_page_config_variant_is_enabled_override;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 
@@ -266,7 +266,7 @@ pas_segregated_page_config_payload_offset_for_role(pas_segregated_page_config co
     case pas_segregated_page_exclusive_role:
         return config.exclusive_payload_offset;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return 0;
 }
 
@@ -280,7 +280,7 @@ pas_segregated_page_config_payload_size_for_role(pas_segregated_page_config conf
     case pas_segregated_page_exclusive_role:
         return config.exclusive_payload_size;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return 0;
 }
 
@@ -320,7 +320,7 @@ pas_segregated_page_config_enable_empty_word_eligibility_optimization_for_role(
     case pas_segregated_page_exclusive_role:
         return config.enable_empty_word_eligibility_optimization_for_exclusive;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return pas_segregated_deallocation_no_logging_mode;
 }
 
@@ -334,7 +334,7 @@ pas_segregated_page_config_logging_mode_for_role(pas_segregated_page_config conf
     case pas_segregated_page_exclusive_role:
         return config.exclusive_logging_mode;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return pas_segregated_deallocation_no_logging_mode;
 }
 

@@ -273,7 +273,7 @@ static PAS_ALWAYS_INLINE bool pas_segregated_page_switch_lock_with_mode(
         pas_segregated_page_switch_lock_impl(page, held_lock);
         return true;
     } }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return true;
 }
 
@@ -538,7 +538,7 @@ pas_segregated_page_get_directory_for_address_in_page(pas_segregated_page* page,
                 pas_segregated_view_get_shared_handle(owning_view), begin, page_config)->directory);
     }
     
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
@@ -578,7 +578,7 @@ pas_segregated_page_get_object_size_for_address_in_page(pas_segregated_page* pag
                 begin, page_config)->directory)->object_size;
     } }
     
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return 0;
 }
 

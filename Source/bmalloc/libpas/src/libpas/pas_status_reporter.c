@@ -1177,7 +1177,7 @@ static void* status_reporter_thread_main(void* arg)
         pas_heap_lock_unlock();
     }
     
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return R_NULL;
 }
 
