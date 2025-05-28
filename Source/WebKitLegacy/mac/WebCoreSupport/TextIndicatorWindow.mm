@@ -23,17 +23,16 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "config.h"
 #import "TextIndicatorWindow.h"
 
 #if PLATFORM(MAC)
 
-#import "GeometryUtilities.h"
-#import "GraphicsContext.h"
-#import "PathUtilities.h"
-#import "TextIndicator.h"
-#import "WebActionDisablingCALayerDelegate.h"
-#import "WebTextIndicatorLayer.h"
+#import <WebCore/GeometryUtilities.h>
+#import <WebCore/GraphicsContext.h>
+#import <WebCore/PathUtilities.h>
+#import <WebCore/TextIndicator.h>
+#import <WebCore/WebActionDisablingCALayerDelegate.h>
+#import <WebCore/WebTextIndicatorLayer.h>
 #import <pal/spi/cg/CoreGraphicsSPI.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <pal/spi/mac/NSColorSPI.h>
@@ -51,11 +50,6 @@
 }
 
 @end
-
-
-using namespace WebCore;
-
-namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(TextIndicatorWindow);
 
@@ -80,7 +74,7 @@ void TextIndicatorWindow::setAnimationProgress(float progress)
 
 void TextIndicatorWindow::clearTextIndicator(WebCore::TextIndicatorDismissalAnimation animation)
 {
-    RefPtr<TextIndicator> textIndicator = WTFMove(m_textIndicator);
+    RefPtr<WebCore::TextIndicator> textIndicator = WTFMove(m_textIndicator);
 
     if ([m_textIndicatorLayer isFadingOut])
         return;
@@ -93,7 +87,7 @@ void TextIndicatorWindow::clearTextIndicator(WebCore::TextIndicatorDismissalAnim
     closeWindow();
 }
 
-void TextIndicatorWindow::setTextIndicator(Ref<TextIndicator> textIndicator, CGRect textBoundingRectInScreenCoordinates, TextIndicatorLifetime lifetime)
+void TextIndicatorWindow::setTextIndicator(Ref<WebCore::TextIndicator> textIndicator, CGRect textBoundingRectInScreenCoordinates, WebCore::TextIndicatorLifetime lifetime)
 {
     if (m_textIndicator == textIndicator.ptr())
         return;
@@ -102,10 +96,10 @@ void TextIndicatorWindow::setTextIndicator(Ref<TextIndicator> textIndicator, CGR
 
     m_textIndicator = textIndicator.ptr();
 
-    CGFloat horizontalMargin = dropShadowBlurRadius * 2 + TextIndicator::defaultHorizontalMargin;
-    CGFloat verticalMargin = dropShadowBlurRadius * 2 + TextIndicator::defaultVerticalMargin;
+    CGFloat horizontalMargin = WebCore::dropShadowBlurRadius * 2 + WebCore::TextIndicator::defaultHorizontalMargin;
+    CGFloat verticalMargin = WebCore::dropShadowBlurRadius * 2 + WebCore::TextIndicator::defaultVerticalMargin;
 
-    RefPtr<TextIndicator> local_textIndicator = m_textIndicator;
+    RefPtr<WebCore::TextIndicator> local_textIndicator = m_textIndicator;
     if (local_textIndicator->wantsBounce()) {
         horizontalMargin = std::max(horizontalMargin, textBoundingRectInScreenCoordinates.size.width * (WebCore::midBounceScale - 1) + horizontalMargin);
         verticalMargin = std::max(verticalMargin, textBoundingRectInScreenCoordinates.size.height * (WebCore::midBounceScale - 1) + verticalMargin);
@@ -136,21 +130,21 @@ void TextIndicatorWindow::setTextIndicator(Ref<TextIndicator> textIndicator, CGR
     [[m_targetView window] addChildWindow:m_textIndicatorWindow.get() ordered:NSWindowAbove];
     [m_textIndicatorWindow setReleasedWhenClosed:NO];
 
-    if (m_textIndicator->presentationTransition() != TextIndicatorPresentationTransition::None)
+    if (m_textIndicator->presentationTransition() != WebCore::TextIndicatorPresentationTransition::None)
         [m_textIndicatorLayer present];
 
-    if (lifetime == TextIndicatorLifetime::Temporary)
+    if (lifetime == WebCore::TextIndicatorLifetime::Temporary)
         m_temporaryTextIndicatorTimer.startOneShot(WebCore::timeBeforeFadeStarts);
 }
 
-void TextIndicatorWindow::updateTextIndicator(Ref<TextIndicator>&& textIndicator, CGRect textBoundingRectInScreenCoordinates)
+void TextIndicatorWindow::updateTextIndicator(Ref<WebCore::TextIndicator>&& textIndicator, CGRect textBoundingRectInScreenCoordinates)
 {
     bool wantsBounce = textIndicator->wantsBounce();
     if (m_textIndicator != textIndicator.ptr())
         m_textIndicator = WTFMove(textIndicator);
 
-    CGFloat horizontalMargin = dropShadowBlurRadius * 2 + TextIndicator::defaultHorizontalMargin;
-    CGFloat verticalMargin = dropShadowBlurRadius * 2 + TextIndicator::defaultVerticalMargin;
+    CGFloat horizontalMargin = WebCore::dropShadowBlurRadius * 2 + WebCore::TextIndicator::defaultHorizontalMargin;
+    CGFloat verticalMargin = WebCore::dropShadowBlurRadius * 2 + WebCore::TextIndicator::defaultVerticalMargin;
 
     if (wantsBounce) {
         horizontalMargin = std::max(horizontalMargin, textBoundingRectInScreenCoordinates.size.width * (WebCore::midBounceScale - 1) + horizontalMargin);
@@ -196,7 +190,5 @@ void TextIndicatorWindow::startFadeOut()
         [indicatorWindow close];
     }];
 }
-
-} // namespace WebCore
 
 #endif // PLATFORM(MAC)

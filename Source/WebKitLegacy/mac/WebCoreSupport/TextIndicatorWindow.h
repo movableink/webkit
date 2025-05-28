@@ -25,7 +25,7 @@
 
 #pragma once
 
-#import "TextIndicator.h"
+#import <WebCore/TextIndicator.h>
 #import <wtf/CheckedPtr.h>
 #import <wtf/Noncopyable.h>
 #import <wtf/RefPtr.h>
@@ -37,8 +37,6 @@
 OBJC_CLASS NSView;
 OBJC_CLASS WebTextIndicatorLayer;
 
-namespace WebCore {
-
 #if PLATFORM(MAC)
 
 class TextIndicatorWindow final : public CanMakeCheckedPtr<TextIndicatorWindow> {
@@ -46,14 +44,14 @@ class TextIndicatorWindow final : public CanMakeCheckedPtr<TextIndicatorWindow> 
     WTF_MAKE_NONCOPYABLE(TextIndicatorWindow);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TextIndicatorWindow);
 public:
-    WEBCORE_EXPORT explicit TextIndicatorWindow(NSView *);
-    WEBCORE_EXPORT ~TextIndicatorWindow();
+    explicit TextIndicatorWindow(NSView *);
+    ~TextIndicatorWindow();
 
-    WEBCORE_EXPORT void setTextIndicator(Ref<TextIndicator>, CGRect contentRect, TextIndicatorLifetime);
-    WEBCORE_EXPORT void updateTextIndicator(Ref<TextIndicator>&&, CGRect contentRect);
-    WEBCORE_EXPORT void clearTextIndicator(TextIndicatorDismissalAnimation);
+    void setTextIndicator(Ref<WebCore::TextIndicator>, CGRect contentRect, WebCore::TextIndicatorLifetime);
+    void updateTextIndicator(Ref<WebCore::TextIndicator>&&, CGRect contentRect);
+    void clearTextIndicator(WebCore::TextIndicatorDismissalAnimation);
 
-    WEBCORE_EXPORT void setAnimationProgress(float);
+    void setAnimationProgress(float);
 
 private:
     void closeWindow();
@@ -61,7 +59,7 @@ private:
     void startFadeOut();
 
     WeakObjCPtr<NSView> m_targetView;
-    RefPtr<TextIndicator> m_textIndicator;
+    RefPtr<WebCore::TextIndicator> m_textIndicator;
     RetainPtr<NSWindow> m_textIndicatorWindow;
     RetainPtr<NSView> m_textIndicatorView;
     RetainPtr<WebTextIndicatorLayer> m_textIndicatorLayer;
@@ -70,7 +68,5 @@ private:
 };
 
 #endif // PLATFORM(MAC)
-
-} // namespace WebCore
 
 

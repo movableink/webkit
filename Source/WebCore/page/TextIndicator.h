@@ -167,7 +167,7 @@ public:
     TextIndicatorPresentationTransition presentationTransition() const { return m_data.presentationTransition; }
     void setPresentationTransition(TextIndicatorPresentationTransition transition) { m_data.presentationTransition = transition; }
 
-    bool wantsBounce() const;
+    WEBCORE_EXPORT bool wantsBounce() const;
     WEBCORE_EXPORT bool wantsManualAnimation() const;
 
     TextIndicatorData data() const { return m_data; }
