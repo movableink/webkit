@@ -85,6 +85,7 @@
 #if ENABLE(ENCRYPTED_MEDIA) && ENABLE(THUNDER)
 #include "CDMThunder.h"
 #include "WebKitThunderDecryptorGStreamer.h"
+#include "WebKitThunderParser.h"
 #endif
 
 #if ENABLE(VIDEO)
@@ -442,8 +443,10 @@ void registerWebKitGStreamerElements()
         // - Use GST_RANK_NONE for elements explicitely created by WebKit (no auto-plugging).
 
 #if ENABLE(ENCRYPTED_MEDIA) && ENABLE(THUNDER)
-        if (!CDMFactoryThunder::singleton().supportedKeySystems().isEmpty())
-            gst_element_register(nullptr, "webkitthunder", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_MEDIA_THUNDER_DECRYPT);
+        if (!CDMFactoryThunder::singleton().supportedKeySystems().isEmpty()) {
+            gst_element_register(nullptr, "webkitthunder", GST_RANK_NONE, WEBKIT_TYPE_MEDIA_THUNDER_DECRYPT);
+            gst_element_register(nullptr, "webkitthunderparser", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_MEDIA_THUNDER_PARSER);
+        }
 #endif
 
 #if ENABLE(MEDIA_STREAM)

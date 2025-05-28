@@ -70,6 +70,9 @@
 #include "GStreamerEMEUtilities.h"
 #include "SharedBuffer.h"
 #include "WebKitCommonEncryptionDecryptorGStreamer.h"
+#if ENABLE(THUNDER)
+#include "CDMThunder.h"
+#endif
 #endif
 
 #if ENABLE(WEB_AUDIO)
@@ -2542,7 +2545,12 @@ void MediaPlayerPrivateGStreamer::configureParsebin(GstElement* parsebin)
     g_signal_connect(parsebin, "autoplug-select",
         G_CALLBACK(+[](GstElement*, GstPad*, GstCaps* caps, GstElementFactory* factory, MediaPlayerPrivateGStreamer* player) -> unsigned {
             static auto tryAutoPlug = *gstGetAutoplugSelectResult("try"_s);
+            static auto skipAutoPlug = *gstGetAutoplugSelectResult("skip"_s);
             static auto exposeAutoPlug = *gstGetAutoplugSelectResult("expose"_s);
+
+            auto name = StringView::fromLatin1(gst_plugin_feature_get_name(GST_PLUGIN_FEATURE_CAST(factory)));
+            if (name == "webkitthunderparser"_s && player->m_url.protocolIsBlob())
+                return skipAutoPlug;
 
             auto* structure = gst_caps_get_structure(caps, 0);
             if (!structure)
@@ -2572,6 +2580,24 @@ void MediaPlayerPrivateGStreamer::configureParsebin(GstElement* parsebin)
         }), this);
 }
 
+void MediaPlayerPrivateGStreamer::configureUriDecodebin2(GstElement* element)
+{
+    ASSERT(m_isLegacyPlaybin);
+#if ENABLE(ENCRYPTED_MEDIA) && ENABLE(THUNDER)
+    if (CDMFactoryThunder::singleton().supportedKeySystems().isEmpty())
+        return;
+
+    g_signal_connect(element, "autoplug-select", G_CALLBACK(+[](GstElement*, GstPad*, GstCaps*, GstElementFactory* factory, gpointer) -> unsigned {
+        static auto tryAutoPlug = *gstGetAutoplugSelectResult("try"_s);
+        static auto skipAutoPlug = *gstGetAutoplugSelectResult("skip"_s);
+        auto name = StringView::fromLatin1(gst_plugin_feature_get_name(GST_PLUGIN_FEATURE_CAST(factory)));
+        if (name == "webkitthunderparser"_s)
+            return skipAutoPlug;
+        return tryAutoPlug;
+    }), nullptr);
+#endif
+}
+
 void MediaPlayerPrivateGStreamer::configureElement(GstElement* element)
 {
     configureElementPlatformQuirks(element);
@@ -2591,6 +2617,11 @@ void MediaPlayerPrivateGStreamer::configureElement(GstElement* element)
 
     if (nameView.startsWith("parsebin"_s))
         configureParsebin(element);
+
+    // The legacy decodebin2 stack doesn't integrate well with parsebin, so prevent auto-plugging of
+    // the webkitthunderparser.
+    if (nameView.startsWith("uridecodebin"_s) && m_isLegacyPlaybin)
+        configureUriDecodebin2(element);
 
     // In case of playbin3 with <video ... preload="auto">, instantiate downloadbuffer element,
     // otherwise the playbin3 would instantiate a queue element instead. When playing blob URIs,

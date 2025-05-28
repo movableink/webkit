@@ -41,6 +41,7 @@
 #include <gst/pbutils/pbutils.h>
 #include <gst/video/video.h>
 #include <wtf/Condition.h>
+#include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/glib/RunLoopSourcePriority.h>
 #include <wtf/text/ASCIILiteral.h>
@@ -346,8 +347,43 @@ GstPadProbeReturn AppendPipeline::appsrcEndOfAppendCheckerProbe(GstPadProbeInfo*
 
 void AppendPipeline::handleNeedContextSyncMessage(GstMessage* message)
 {
-    // MediaPlayerPrivateGStreamerBase will take care of setting up encryption.
-    m_playerPrivate->handleNeedContextMessage(message);
+    auto scopeExit = makeScopeExit([&] {
+        // MediaPlayerPrivateGStreamerBase will take care of setting up encryption.
+        m_playerPrivate->handleNeedContextMessage(message);
+    });
+
+    if (!m_demux->numsrcpads)
+        return;
+
+    auto pad = GST_PAD_CAST(m_demux->srcpads->data);
+    auto peer = adoptGRef(gst_pad_get_peer(pad));
+    if (!peer)
+        return;
+
+    auto caps = adoptGRef(gst_pad_get_current_caps(peer.get()));
+    if (!caps) [[unlikely]]
+        return;
+
+    if (gst_caps_is_any(caps.get()) || gst_caps_is_empty(caps.get())) [[unlikely]]
+        return;
+
+    if (areEncryptedCaps(caps.get()))
+        return;
+
+    auto parser = adoptGRef(gst_pad_get_parent_element(peer.get()));
+    if (!parser) [[unlikely]]
+        return;
+
+    auto srcPad = adoptGRef(gst_element_get_static_pad(parser.get(), "src"));
+    auto parserPeerPad = adoptGRef(gst_pad_get_peer(srcPad.get()));
+    if (!parserPeerPad) [[unlikely]]
+        return;
+
+    gstElementLockAndSetState(parser.get(), GST_STATE_NULL);
+    gst_pad_unlink(pad, peer.get());
+    gst_pad_unlink(srcPad.get(), parserPeerPad.get());
+    gst_bin_remove(GST_BIN_CAST(m_pipeline.get()), parser.get());
+    gst_pad_link(pad, parserPeerPad.get());
 }
 
 std::tuple<GRefPtr<GstCaps>, StreamType, FloatSize> AppendPipeline::parseDemuxerSrcPadCaps(GstCaps* demuxerSrcPadCaps)
