@@ -107,6 +107,7 @@
 #endif
 
 #if PLATFORM(WPE)
+#include "WPEUtilities.h"
 #include "WPEWebViewLegacy.h"
 #include "WPEWebViewPlatform.h"
 #include "WebKitOptionMenuPrivate.h"
@@ -904,7 +905,7 @@ static void webkitWebViewConstructed(GObject* object)
         if (priv->display) {
             g_critical("WebKitWebView backend can't be set when display is set too, passed backend is ignored.");
             priv->backend = nullptr;
-        } else if (g_type_class_peek(WPE_TYPE_DISPLAY)) {
+        } else if (WKWPE::isUsingWPEPlatformAPI()) {
             g_critical("WebKitWebView backend can't be set when WPE platform API is already in use, passed backend is ignored.");
             priv->backend = nullptr;
             priv->display = wpe_display_get_default();

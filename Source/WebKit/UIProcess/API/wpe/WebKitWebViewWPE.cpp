@@ -21,6 +21,7 @@
 #include "WebKitWebView.h"
 
 #include "PageClientImpl.h"
+#include "WPEUtilities.h"
 #include "WebInspectorUIProxy.h"
 #include "WebKitColorPrivate.h"
 #include "WebKitScriptDialogPrivate.h"
@@ -84,7 +85,7 @@ void webkitWebViewRestoreWindow(WebKitWebView*, CompletionHandler<void()>&& comp
 WebKitWebView* webkit_web_view_new(WebKitWebViewBackend* backend)
 {
 #if ENABLE(WPE_PLATFORM)
-    g_return_val_if_fail(!backend || !g_type_class_peek(WPE_TYPE_DISPLAY), nullptr);
+    g_return_val_if_fail(!backend || !WKWPE::isUsingWPEPlatformAPI(), nullptr);
 #else
     g_return_val_if_fail(backend, nullptr);
 #endif

@@ -35,6 +35,7 @@
 
 #if ENABLE(WPE_PLATFORM)
 #include "GamepadProviderWPE.h"
+#include "WPEUtilities.h"
 #include "WPEWebViewPlatform.h"
 #include <wpe/wpe-platform.h>
 #endif
@@ -43,20 +44,13 @@
 namespace WebKit {
 using namespace WebCore;
 
-#if ENABLE(WPE_PLATFORM)
-static inline bool usingWPEPlatformAPI()
-{
-    return !!g_type_class_peek(WPE_TYPE_DISPLAY);
-}
-#endif
-
 void UIGamepadProvider::platformSetDefaultGamepadProvider()
 {
     if (GamepadProvider::singleton().isMockGamepadProvider())
         return;
 
 #if ENABLE(WPE_PLATFORM)
-    if (usingWPEPlatformAPI()) {
+    if (WKWPE::isUsingWPEPlatformAPI()) {
         GamepadProvider::setSharedProvider(GamepadProviderWPE::singleton());
         return;
     }
@@ -71,7 +65,7 @@ WebPageProxy* UIGamepadProvider::platformWebPageProxyForGamepadInput()
 {
 #if PLATFORM(WPE)
 #if ENABLE(WPE_PLATFORM)
-    if (usingWPEPlatformAPI())
+    if (WKWPE::isUsingWPEPlatformAPI())
         return WKWPE::ViewPlatform::platformWebPageProxyForGamepadInput();
 #endif
     return WKWPE::ViewLegacy::platformWebPageProxyForGamepadInput();
@@ -83,7 +77,7 @@ WebPageProxy* UIGamepadProvider::platformWebPageProxyForGamepadInput()
 void UIGamepadProvider::platformStopMonitoringInput()
 {
 #if ENABLE(WPE_PLATFORM)
-    if (usingWPEPlatformAPI())
+    if (WKWPE::isUsingWPEPlatformAPI())
         GamepadProviderWPE::singleton().stopMonitoringInput();
 #endif
 }
@@ -91,7 +85,7 @@ void UIGamepadProvider::platformStopMonitoringInput()
 void UIGamepadProvider::platformStartMonitoringInput()
 {
 #if ENABLE(WPE_PLATFORM)
-    if (usingWPEPlatformAPI())
+    if (WKWPE::isUsingWPEPlatformAPI())
         GamepadProviderWPE::singleton().startMonitoringInput();
 #endif
 }
