@@ -34,6 +34,7 @@
 #include <gst/transcoder/gsttranscoder.h>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/glib/GUniquePtr.h>
 
 namespace WebCore {
 
@@ -161,6 +162,7 @@ MediaRecorderPrivateBackend::~MediaRecorderPrivateBackend()
         webkitMediaStreamSrcSignalEndOfStream(WEBKIT_MEDIA_STREAM_SRC(m_src.get()));
     if (m_transcoder) {
         unregisterPipeline(m_pipeline);
+        disconnectSimpleBusMessageCallback(m_pipeline.get());
         m_pipeline.clear();
         m_transcoder.clear();
     }
@@ -469,7 +471,8 @@ void MediaRecorderPrivateBackend::configureAudioEncoder(GstElement* element)
 
 void MediaRecorderPrivateBackend::configureVideoEncoder(GstElement* element)
 {
-    videoEncoderSetCodec(WEBKIT_VIDEO_ENCODER(element), m_videoCodec, { });
+    auto encoder = WEBKIT_VIDEO_ENCODER(element);
+    videoEncoderSetCodec(encoder, m_videoCodec, { }, { }, true);
 
     auto bitrate = [options = m_options]() -> unsigned {
         if (options.videoBitsPerSecond)
@@ -499,6 +502,7 @@ bool MediaRecorderPrivateBackend::preparePipeline()
     gst_element_set_start_time(m_pipeline.get(), GST_CLOCK_TIME_NONE);
 
     registerActivePipeline(m_pipeline);
+    connectSimpleBusMessageCallback(m_pipeline.get());
 
     g_signal_connect_swapped(m_pipeline.get(), "source-setup", G_CALLBACK(+[](MediaRecorderPrivateBackend* recorder, GstElement* sourceElement) {
         recorder->setSource(sourceElement);
@@ -522,9 +526,15 @@ bool MediaRecorderPrivateBackend::preparePipeline()
     }), this);
 
     m_signalAdapter = adoptGRef(gst_transcoder_get_sync_signal_adapter(m_transcoder.get()));
-    g_signal_connect(m_signalAdapter.get(), "warning", G_CALLBACK(+[](GstTranscoder*, [[maybe_unused]] GError* error, [[maybe_unused]] GstStructure* details) {
-        GST_WARNING("%s details: %" GST_PTR_FORMAT, error->message, details);
-    }), nullptr);
+#ifndef GST_DISABLE_GST_DEBUG
+    g_signal_connect(m_signalAdapter.get(), "warning", G_CALLBACK(+[](GstTranscoder*, GError* error, GstStructure* details, MediaRecorderPrivateBackend* recorder) {
+        GST_WARNING_OBJECT(recorder->m_pipeline.get(), "%s details: %" GST_PTR_FORMAT, error->message, details);
+    }), this);
+
+    g_signal_connect(m_signalAdapter.get(), "error", G_CALLBACK(+[](GstTranscoder*, GError* error, GstStructure* details, MediaRecorderPrivateBackend* recorder) {
+        GST_ERROR_OBJECT(recorder->m_pipeline.get(), "%s details: %" GST_PTR_FORMAT, error->message, details);
+    }), this);
+#endif
 
     g_signal_connect_swapped(m_signalAdapter.get(), "done", G_CALLBACK(+[](MediaRecorderPrivateBackend* recorder) {
         recorder->notifyEOS();
