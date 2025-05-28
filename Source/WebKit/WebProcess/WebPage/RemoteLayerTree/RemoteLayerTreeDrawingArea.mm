@@ -411,10 +411,11 @@ void RemoteLayerTreeDrawingArea::updateRendering()
     Vector<std::unique_ptr<ThreadSafeImageBufferSetFlusher>> flushers;
     for (auto& transaction : transactions)
         flushers.appendVector(backingStoreCollection->didFlushLayers(transaction.first));
-    bool haveFlushers = flushers.size();
 
-    if (haveFlushers)
-        webPage->didPaintLayers();
+    OptionSet<WebPage::DidUpdateRenderingFlags> didUpdateRenderingFlags;
+    if (flushers.size())
+        didUpdateRenderingFlags.add(WebPage::DidUpdateRenderingFlags::PaintedLayers);
+    webPage->didUpdateRendering(didUpdateRenderingFlags);
 
     m_backingStoreFlusher->markHasPendingFlush();
 

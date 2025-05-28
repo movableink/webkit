@@ -8799,8 +8799,10 @@ FORWARD(toggleUnderline)
 
 - (void)_didCompleteRenderingUpdateDisplay
 {
-    if (_private->page)
+    if (_private->page) {
+        _private->page->didUpdateRendering();
         _private->page->didCompleteRenderingUpdateDisplay();
+    }
 
     if (_private->renderingUpdateScheduler)
         _private->renderingUpdateScheduler->didCompleteRenderingUpdateDisplay();
