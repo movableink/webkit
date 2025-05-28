@@ -335,6 +335,10 @@ public:
     WebCore::ScrollPinningBehavior scrollPinningBehavior { WebCore::ScrollPinningBehavior::DoNotPin };
     WebCore::IntSize sizeToContentAutoSizeMaximumSize;
     WebCore::Color themeColor;
+    WebCore::FloatBoxExtent obscuredContentInsets;
+#if PLATFORM(MAC)
+    std::optional<WebCore::FloatBoxExtent> pendingObscuredContentInsets;
+#endif
 #if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
     std::optional<WebCore::SpatialBackdropSource> spatialBackdropSource;
 #endif

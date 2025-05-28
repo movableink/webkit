@@ -25,24 +25,15 @@
 
 #pragma once
 
+// Including more headers here slows down build times a lot.
+// Use forward declarations and WebPageProxyInternals.h instead.
 #include "APIObject.h"
 #include "MessageReceiver.h"
-#include <WebCore/BoxExtents.h>
-#include <WebCore/CryptoKeyData.h>
-#include <WebCore/FrameIdentifier.h>
-#include <WebCore/HistoryItem.h>
-#include <WebCore/LayerTreeAsTextOptions.h>
-#include <WebCore/NavigationIdentifier.h>
-#include <WebCore/NowPlayingMetadataObserver.h>
-#include <WebCore/ProcessSwapDisposition.h>
-#include <WebCore/ProcessSyncData.h>
-#include <WebCore/SnapshotIdentifier.h>
-#include <WebCore/SpatialBackdropSource.h>
-#include <WebCore/TextIndicator.h>
 #include <pal/HysteresisActivity.h>
 #include <wtf/ApproximateTime.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/CompletionHandler.h>
+#include <wtf/ObjectIdentifier.h>
 #include <wtf/OptionSet.h>
 #include <wtf/ProcessID.h>
 #include <wtf/UniqueRef.h>
@@ -165,6 +156,7 @@ class SleepDisabler;
 class SpeechRecognitionRequest;
 class SubstituteData;
 class TextCheckingRequestData;
+class TextIndicator;
 class ValidationBubble;
 
 enum class LayoutMilestone : uint16_t;
@@ -202,6 +194,7 @@ enum class HighlightRequestOriginatedInApp : bool;
 enum class HighlightVisibility : bool;
 enum class InputMode : uint8_t;
 enum class IsPerformingHTTPFallback : bool;
+enum class LayerTreeAsTextOptions : uint16_t;
 enum class LayoutViewportConstraint : bool;
 enum class LockBackForwardList : bool;
 enum class MediaPlaybackTargetContextMockState : uint8_t;
@@ -216,6 +209,7 @@ enum class PermissionState : uint8_t;
 enum class PlatformEventModifier : uint8_t;
 enum class PlatformMediaSessionRemoteControlCommandType : uint8_t;
 enum class PolicyAction : uint8_t;
+enum class ProcessSwapDisposition : uint8_t;
 enum class ReasonForDismissingAlternativeText : uint8_t;
 enum class ReloadOption : uint8_t;
 enum class RenderAsTextFlag : uint16_t;
@@ -237,6 +231,8 @@ enum class ShouldTreatAsContinuingLoad : uint8_t;
 enum class TextAnimationRunMode : uint8_t;
 enum class TextCheckingType : uint8_t;
 enum class TextGranularity : uint8_t;
+enum class TextIndicatorDismissalAnimation : uint8_t;
+enum class TextIndicatorLifetime : uint8_t;
 enum class TrackingType : uint8_t;
 enum class UserInterfaceLayoutDirection : bool;
 enum class VideoFrameRotation : uint16_t;
@@ -266,6 +262,7 @@ struct CompositionUnderline;
 struct ContactInfo;
 struct ContactsRequestData;
 struct ContentRuleListResults;
+struct CryptoKeyData;
 struct DataDetectorElementInfo;
 struct DataListSuggestionInformation;
 struct DateTimeChooserParameters;
@@ -277,6 +274,7 @@ struct ElementContext;
 struct ExceptionDetails;
 struct FileChooserSettings;
 struct FontAttributes;
+struct FrameIdentifierType;
 struct GrammarDetail;
 struct HTMLModelElementCamera;
 struct ImageBufferParameters;
@@ -293,13 +291,16 @@ struct MediaSessionIdentifierType;
 struct MediaStreamRequest;
 struct MediaUsageInfo;
 struct MessageWithMessagePorts;
+struct NavigationIdentifierType;
 struct NotificationData;
 struct NowPlayingInfo;
+struct NowPlayingMetadata;
 struct OrganizationStorageAccessPromptQuirk;
 struct PageIdentifierType;
 struct PermissionDescriptor;
 struct PlatformLayerIdentifierType;
 struct PlaybackTargetClientContextIdentifierType;
+struct ProcessSyncData;
 struct PromisedAttachmentInfo;
 struct RecentSearch;
 struct ResourceLoaderIdentifierType;
@@ -308,7 +309,11 @@ struct ScrollingNodeIDType;
 struct SerializedAttachmentData;
 struct ShareDataWithParsedURL;
 struct SleepDisablerIdentifierType;
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+struct SpatialBackdropSource;
+#endif
 struct SpeechRecognitionError;
+struct SnapshotIdentifierType;
 struct SystemPreviewInfo;
 struct TargetedElementRequest;
 struct TextAlternativeWithRange;
@@ -362,6 +367,8 @@ using BackForwardItemIdentifier = ProcessQualified<ObjectIdentifier<BackForwardI
 using BackForwardFrameItemIdentifier = ProcessQualified<ObjectIdentifier<BackForwardFrameItemIdentifierType>>;
 using DictationContext = ObjectIdentifier<DictationContextType>;
 using FramesPerSecond = unsigned;
+using FloatBoxExtent = RectEdges<float>;
+using FrameIdentifier = ObjectIdentifier<FrameIdentifierType>;
 using IntDegrees = int32_t;
 using HTMLMediaElementIdentifier = ObjectIdentifier<MediaPlayerClientIdentifierType>;
 using MediaControlsContextMenuItemID = uint64_t;
@@ -370,6 +377,8 @@ using MediaPlayerIdentifier = ObjectIdentifier<MediaPlayerIdentifierType>;
 using MediaProducerMediaStateFlags = OptionSet<MediaProducerMediaState>;
 using MediaProducerMutedStateFlags = OptionSet<MediaProducerMutedState>;
 using MediaSessionIdentifier = ObjectIdentifier<MediaSessionIdentifierType>;
+using NavigationIdentifier = ObjectIdentifier<NavigationIdentifierType, uint64_t>;
+using NowPlayingMetadataObserver = Observer<void(const NowPlayingMetadata&)>;
 using PageIdentifier = ObjectIdentifier<PageIdentifierType>;
 using PlatformDisplayID = uint32_t;
 using PlatformLayerIdentifier = ProcessQualified<ObjectIdentifier<PlatformLayerIdentifierType>>;
@@ -380,6 +389,7 @@ using SandboxFlags = OptionSet<SandboxFlag>;
 using ScrollingNodeID = ProcessQualified<ObjectIdentifier<ScrollingNodeIDType>>;
 using ScrollPosition = IntPoint;
 using SleepDisablerIdentifier = ObjectIdentifier<SleepDisablerIdentifierType>;
+using SnapshotIdentifier = AtomicObjectIdentifier<SnapshotIdentifierType>;
 using UserMediaRequestIdentifier = ObjectIdentifier<UserMediaRequestIdentifierType>;
 
 } // namespace WebCore
@@ -930,7 +940,7 @@ public:
 
     String currentURL() const;
 
-    const WebCore::FloatBoxExtent& obscuredContentInsets() const { return m_obscuredContentInsets; }
+    const WebCore::FloatBoxExtent& obscuredContentInsets() const;
     void setObscuredContentInsets(const WebCore::FloatBoxExtent&);
 
 #if PLATFORM(MAC)
@@ -1550,7 +1560,7 @@ public:
     void hideFindUI();
     void countStringMatches(const String&, OptionSet<FindOptions>, unsigned maxMatchCount);
     void replaceMatches(Vector<uint32_t>&& matchIndices, const String& replacementText, bool selectionOnly, CompletionHandler<void(uint64_t)>&&);
-    void setTextIndicator(const WebCore::TextIndicatorData&, WebCore::TextIndicatorLifetime = WebCore::TextIndicatorLifetime::Permanent);
+    void setTextIndicator(const WebCore::TextIndicatorData&, WebCore::TextIndicatorLifetime);
     void updateTextIndicator(const WebCore::TextIndicatorData&);
     void setTextIndicatorAnimationProgress(float);
     void clearTextIndicator();
@@ -3239,7 +3249,7 @@ private:
 
     void reportPageLoadResult(const WebCore::ResourceError&);
 
-    void continueNavigationInNewProcess(API::Navigation&, WebFrameProxy&, RefPtr<SuspendedPageProxy>&&, Ref<WebProcessProxy>&&, ProcessSwapRequestedByClient, WebCore::ShouldTreatAsContinuingLoad, std::optional<NetworkResourceLoadIdentifier> existingNetworkResourceLoadIdentifierToResume, LoadedWebArchive, WebCore::IsPerformingHTTPFallback, WebsiteDataStore* replacedDataStoreForWebArchiveLoad = nullptr, WebCore::ProcessSwapDisposition processSwapDisposition = WebCore::ProcessSwapDisposition::None);
+    void continueNavigationInNewProcess(API::Navigation&, WebFrameProxy&, RefPtr<SuspendedPageProxy>&&, Ref<WebProcessProxy>&&, ProcessSwapRequestedByClient, WebCore::ShouldTreatAsContinuingLoad, std::optional<NetworkResourceLoadIdentifier> existingNetworkResourceLoadIdentifierToResume, LoadedWebArchive, WebCore::IsPerformingHTTPFallback, WebCore::ProcessSwapDisposition, WebsiteDataStore* replacedDataStoreForWebArchiveLoad = nullptr);
 
     void setNeedsFontAttributes(bool);
     void updateFontAttributesAfterEditorStateChange();
@@ -3579,9 +3589,7 @@ private:
     float m_intrinsicDeviceScaleFactor { 1 };
     std::optional<float> m_customDeviceScaleFactor;
 
-    WebCore::FloatBoxExtent m_obscuredContentInsets;
 #if PLATFORM(MAC)
-    std::optional<WebCore::FloatBoxExtent> m_pendingObscuredContentInsets;
     bool m_didScheduleSetObscuredContentInsetsDispatch { false };
     bool m_automaticallyAdjustsContentInsets { false };
 #endif
