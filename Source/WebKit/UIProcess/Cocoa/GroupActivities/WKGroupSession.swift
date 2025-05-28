@@ -27,7 +27,7 @@ import AVFoundation
 import Combine
 import Foundation
 #if USE_APPLE_INTERNAL_SDK
-@_spi(Safari) import GroupActivities
+@_spi(Safari) @_weakLinked import GroupActivities
 #else
 import GroupActivities
 #if compiler(>=6.0)
