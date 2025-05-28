@@ -26,7 +26,7 @@
 import BrowserEngineKit
 
 @main
-class GPUProcessExtension : WKProcessExtension {
+class GPUProcessExtension: WKProcessExtension {
     override required init() {
         super.init()
         setSharedInstance(self)
@@ -39,16 +39,14 @@ extension GPUProcessExtension: RenderingExtension {
     }
 
     override func lockdownSandbox(_ version: String) {
-        if (version == "1.0") {
+        if version == "1.0" {
             self.applyRestrictedSandbox(revision: RestrictedSandboxRevision.revision1)
             return
         }
-#if ENABLE_BROWSERENGINEKIT_SANDBOX_REVISION_2
-        if (version == "2.0") {
+        #if ENABLE_BROWSERENGINEKIT_SANDBOX_REVISION_2
+        if version == "2.0" {
             self.applyRestrictedSandbox(revision: RestrictedSandboxRevision.revision2)
         }
-#endif
-
+        #endif
     }
-
 }

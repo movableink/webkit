@@ -57,7 +57,7 @@ extension WebPage {
         public var defaultNavigationPreferences: WebPage.NavigationPreferences = WebPage.NavigationPreferences()
 
         /// Allows registering an object to load resources associated with a specified URL scheme.
-        public var urlSchemeHandlers: [URLScheme : any URLSchemeHandler] = [:]
+        public var urlSchemeHandlers: [URLScheme: any URLSchemeHandler] = [:]
 
         /// Allows specifying how web resources may access device sensors.
         ///
@@ -90,7 +90,7 @@ extension WebPage {
         /// Indicates whether the webpage loads all of its subresources in addition to the main resource.
         ///
         /// The default value of this property is `true`.
-        public var loadsSubresources: Bool  = true
+        public var loadsSubresources: Bool = true
 
         /// Indicates whether inline predictions are allowed.
         ///
@@ -116,7 +116,7 @@ extension WebPage {
 
         private var _showsSystemScreenTimeBlockingView = true
 
-#if os(iOS)
+        #if os(iOS)
         /// The types of data detectors to apply to the webpage's content.
         ///
         /// Data detectors add interactivity to web content by creating links for specially formatted text.
@@ -136,14 +136,14 @@ extension WebPage {
 
         /// Indicates whether HTML5 videos play inline or use the native full-screen controller.
         public var mediaPlaybackBehavior: MediaPlaybackBehavior = .automatic
-#endif
+        #endif
 
-#if os(macOS)
+        #if os(macOS)
         /// The directionality of user interface elements.
         ///
         /// The default value of this property is `.content`.
         public var userInterfaceDirectionPolicy: WKUserInterfaceDirectionPolicy = .content
-#endif
+        #endif
     }
 }
 

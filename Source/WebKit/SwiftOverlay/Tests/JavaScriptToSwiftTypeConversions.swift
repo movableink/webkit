@@ -23,10 +23,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import XCTest
 import WebKit
+import XCTest
 
-final class JavaScriptToSwiftConversions : XCTestCase {
+final class JavaScriptToSwiftConversions: XCTestCase {
     #if os(macOS)
     let window = NSWindow()
     #elseif os(iOS)
@@ -54,7 +54,7 @@ final class JavaScriptToSwiftConversions : XCTestCase {
         #endif
     }
 
-    func evaluateJavaScript<T : Equatable>(_ javaScript: String, andExpect expectedValue: T) {
+    func evaluateJavaScript<T: Equatable>(_ javaScript: String, andExpect expectedValue: T) {
         let evaluationExpectation = self.expectation(description: "Evaluation of \(javaScript.debugDescription)")
         webView.evaluateJavaScript(javaScript, in: nil, in: .defaultClient) { result in
             do {
@@ -99,7 +99,7 @@ final class JavaScriptToSwiftConversions : XCTestCase {
         // This uses [AnyHashable:AnyHashable], instead of [AnyHashable:Any], so we can perform an
         // equality check for testing. An object’s keys are always converted to strings, so even
         // though we input `1:` we expect `"1":` back.
-        let result: [AnyHashable:AnyHashable] = ["1": 2, "cat": "dog"]
+        let result: [AnyHashable: AnyHashable] = ["1": 2, "cat": "dog"]
         evaluateJavaScript(#"const value = { 1: 2, "cat": "dog" }; value"#, andExpect: result)
     }
 

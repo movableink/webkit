@@ -44,8 +44,10 @@ enum ObjCBlockConversion {
     /// The result block must be called with exactly one non-null argument. If both arguments are
     /// non-null then `handler` will be called with `.success(T)`. If both arguments are `nil`
     /// the conversion will trap.
-    static nonisolated func exclusive<Value>(_ handler: @MainActor @escaping (Result<Value, Error>) -> Void) -> @MainActor (Value?, Error?) -> Void {
-        return { value, error in
+    static nonisolated func exclusive<Value>(
+        _ handler: @MainActor @escaping (Result<Value, Error>) -> Void
+    ) -> @MainActor (Value?, Error?) -> Void {
+        { value, error in
             if let value = value {
                 handler(.success(value))
             } else if let error = error {
@@ -60,8 +62,10 @@ enum ObjCBlockConversion {
     ///
     /// This performs the same conversion as `Self.exclusive(_:)`, but if the result block is called
     /// with `(nil, nil)` then `handler` is called with `.success(nil)`.
-    static nonisolated func treatNilAsSuccess<Value>(_ handler: @MainActor @escaping (Result<Value?, Error>) -> Void) -> @MainActor (Value?, Error?) -> Void {
-        return { value, error in
+    static nonisolated func treatNilAsSuccess<Value>(
+        _ handler: @MainActor @escaping (Result<Value?, Error>) -> Void
+    ) -> @MainActor (Value?, Error?) -> Void {
+        { value, error in
             if let error = error {
                 handler(.failure(error))
             } else {
@@ -76,8 +80,10 @@ enum ObjCBlockConversion {
     /// with `(nil, nil)` then `handler` is called with `.success(Optional<Any>.none as Any)`. This
     /// is a compatibility behavior for http://webkit.org/b/216198, and should not be adopted by
     /// new code.
-    static nonisolated func boxingNilAsAnyForCompatibility(_ handler: @MainActor @escaping (Result<Any, Error>) -> Void) -> @MainActor (Any?, Error?) -> Void {
-        return { value, error in
+    static nonisolated func boxingNilAsAnyForCompatibility(
+        _ handler: @MainActor @escaping (Result<Any, Error>) -> Void
+    ) -> @MainActor (Any?, Error?) -> Void {
+        { value, error in
             if let error = error {
                 handler(.failure(error))
             } else if let success = value {

@@ -26,22 +26,21 @@
 import BrowserEngineKit
 
 @main
-class NetworkingProcessExtension : WKProcessExtension {
+class NetworkingProcessExtension: WKProcessExtension {
     override required init() {
         super.init()
         setSharedInstance(self)
     }
 }
 
-extension NetworkingProcessExtension : NetworkingExtension {
+extension NetworkingProcessExtension: NetworkingExtension {
     func handle(xpcConnection: xpc_connection_t) {
         handleNewConnection(xpcConnection)
     }
 
     override func lockdownSandbox(_ version: String) {
-        if (version == "1.0") {
+        if version == "1.0" {
             self.applyRestrictedSandbox(revision: RestrictedSandboxRevision.revision1)
         }
     }
-
 }

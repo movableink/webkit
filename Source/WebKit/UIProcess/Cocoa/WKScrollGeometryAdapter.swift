@@ -30,11 +30,11 @@ internal import WebKit_Internal
 public struct WKScrollGeometryAdapter {
     public let containerSize: CGSize
 
-#if canImport(UIKit)
+    #if canImport(UIKit)
     public let contentInsets: UIEdgeInsets
-#else
+    #else
     public let contentInsets: NSEdgeInsets
-#endif
+    #endif
 
     public let contentOffset: CGPoint
 

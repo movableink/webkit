@@ -103,26 +103,28 @@ extension WebPage {
 
 extension WebPage.NavigationPreferences.ContentMode {
     init(_ wrapped: WKWebpagePreferences.ContentMode) {
-        self = switch wrapped {
-        case .recommended: .recommended
-        case .mobile: .mobile
-        case .desktop: .desktop
-        @unknown default:
-            fatalError()
-        }
+        self =
+            switch wrapped {
+            case .recommended: .recommended
+            case .mobile: .mobile
+            case .desktop: .desktop
+            @unknown default:
+                fatalError()
+            }
     }
 }
 
 extension WebPage.NavigationPreferences.UpgradeToHTTPSPolicy {
     init(_ wrapped: WKWebpagePreferences.UpgradeToHTTPSPolicy) {
-        self = switch wrapped {
-        case .keepAsRequested: .keepAsRequested
-        case .automaticFallbackToHTTP: .automaticFallbackToHTTP
-        case .userMediatedFallbackToHTTP: .userMediatedFallbackToHTTP
-        case .errorOnFailure: .errorOnFailure
-        @unknown default:
-            fatalError()
-        }
+        self =
+            switch wrapped {
+            case .keepAsRequested: .keepAsRequested
+            case .automaticFallbackToHTTP: .automaticFallbackToHTTP
+            case .userMediatedFallbackToHTTP: .userMediatedFallbackToHTTP
+            case .errorOnFailure: .errorOnFailure
+            @unknown default:
+                fatalError()
+            }
     }
 }
 

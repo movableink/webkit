@@ -96,7 +96,12 @@ private struct MaterialHostingView<P: MaterialHostingProvider>: View {
         }
     }
 
-    init(content: P.Source, materialEffectType: WKHostedMaterialEffectType = .none, colorScheme: WKHostedMaterialColorScheme = .light, cornerRadius: CGFloat = 0) {
+    init(
+        content: P.Source,
+        materialEffectType: WKHostedMaterialEffectType = .none,
+        colorScheme: WKHostedMaterialColorScheme = .light,
+        cornerRadius: CGFloat = 0
+    ) {
         self.content = content
         self.materialEffectType = materialEffectType
         self.colorScheme = colorScheme
@@ -115,10 +120,10 @@ private struct MaterialHostingView<P: MaterialHostingProvider>: View {
     }
 }
 
-private extension CALayer {
+extension CALayer {
     private static let materialHostingContentLayerKey = "_materialHostingContentLayerKey"
 
-    var materialHostingContentLayer: CALayer? {
+    fileprivate var materialHostingContentLayer: CALayer? {
         get {
             value(forKeyPath: Self.materialHostingContentLayerKey) as? CALayer
         }
@@ -128,13 +133,15 @@ private extension CALayer {
     }
 }
 
-@objc @implementation extension WKMaterialHostingSupport {
+@objc
+@implementation
+extension WKMaterialHostingSupport {
     class func isMaterialHostingAvailable() -> Bool {
         guard #_hasSymbol(Material.self) else {
             return false
         }
 
-        return true;
+        return true
     }
 
     class func hostingLayer() -> CALayer {
@@ -147,7 +154,12 @@ private extension CALayer {
         return hostingLayer
     }
 
-    class func updateHostingLayer(_ layer: CALayer, materialEffectType: WKHostedMaterialEffectType, colorScheme: WKHostedMaterialColorScheme, cornerRadius: CGFloat) {
+    class func updateHostingLayer(
+        _ layer: CALayer,
+        materialEffectType: WKHostedMaterialEffectType,
+        colorScheme: WKHostedMaterialColorScheme,
+        cornerRadius: CGFloat
+    ) {
         guard let hostingLayer = layer as? CAHostingLayer<MaterialHostingView<LayerBackedMaterialHostingProvider>> else {
             assertionFailure("updateHostingLayer should only be called with a hosting layer.")
             return
@@ -158,29 +170,44 @@ private extension CALayer {
             return
         }
 
-        hostingLayer.rootView = MaterialHostingView<LayerBackedMaterialHostingProvider>(content: contentLayer, materialEffectType: materialEffectType, colorScheme: colorScheme, cornerRadius: cornerRadius)
+        hostingLayer.rootView = MaterialHostingView<LayerBackedMaterialHostingProvider>(
+            content: contentLayer,
+            materialEffectType: materialEffectType,
+            colorScheme: colorScheme,
+            cornerRadius: cornerRadius
+        )
     }
 
     class func contentLayer(forMaterialHostingLayer layer: CALayer) -> CALayer? {
         layer.materialHostingContentLayer
     }
 
-#if canImport(UIKit)
+    #if canImport(UIKit)
 
     class func hostingView(_ contentView: UIView) -> UIView {
         _UIHostingView(rootView: MaterialHostingView<ViewBackedMaterialHostingProvider>(content: contentView))
     }
 
-    class func updateHostingView(_ view: UIView, contentView: UIView, materialEffectType: WKHostedMaterialEffectType, colorScheme: WKHostedMaterialColorScheme, cornerRadius: CGFloat) {
+    class func updateHostingView(
+        _ view: UIView,
+        contentView: UIView,
+        materialEffectType: WKHostedMaterialEffectType,
+        colorScheme: WKHostedMaterialColorScheme,
+        cornerRadius: CGFloat
+    ) {
         guard let hostingView = view as? _UIHostingView<MaterialHostingView<ViewBackedMaterialHostingProvider>> else {
-            return;
+            return
         }
 
-        hostingView.rootView = MaterialHostingView<ViewBackedMaterialHostingProvider>(content: contentView, materialEffectType: materialEffectType, colorScheme: colorScheme, cornerRadius: cornerRadius)
+        hostingView.rootView = MaterialHostingView<ViewBackedMaterialHostingProvider>(
+            content: contentView,
+            materialEffectType: materialEffectType,
+            colorScheme: colorScheme,
+            cornerRadius: cornerRadius
+        )
     }
 
-#endif
-
+    #endif
 }
 
 #endif

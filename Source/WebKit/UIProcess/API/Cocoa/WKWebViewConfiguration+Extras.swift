@@ -44,22 +44,22 @@ extension WKWebViewConfiguration {
         self.supportsAdaptiveImageGlyph = wrapped.supportsAdaptiveImageGlyph
         self._loadsSubresources = wrapped.loadsSubresources
 
-#if !os(visionOS)
+        #if !os(visionOS)
         self.showsSystemScreenTimeBlockingView = wrapped.showsSystemScreenTimeBlockingView
-#endif
+        #endif
 
-#if os(iOS)
+        #if os(iOS)
         self.dataDetectorTypes = wrapped.dataDetectorTypes
         self.ignoresViewportScaleLimits = wrapped.ignoresViewportScaleLimits
 
         if wrapped.mediaPlaybackBehavior != .automatic {
             self.allowsInlineMediaPlayback = wrapped.mediaPlaybackBehavior == .allowsInlinePlayback
         }
-#endif
+        #endif
 
-#if os(macOS)
+        #if os(macOS)
         self.userInterfaceDirectionPolicy = wrapped.userInterfaceDirectionPolicy
-#endif
+        #endif
 
         for (scheme, handler) in wrapped.urlSchemeHandlers {
             let handlerAdapter = WKURLSchemeHandlerAdapter(handler)

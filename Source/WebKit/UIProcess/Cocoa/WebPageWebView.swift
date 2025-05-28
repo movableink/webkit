@@ -31,7 +31,7 @@ internal import WebKit_Internal
 public final class WebPageWebView: WKWebView {
     public weak var delegate: (any Delegate)? = nil
 
-#if os(iOS)
+    #if os(iOS)
     override func findInteraction(_ interaction: UIFindInteraction, didBegin session: UIFindSession) {
         super.findInteraction(interaction, didBegin: session)
         delegate?.findInteraction(interaction, didBegin: session)
@@ -49,7 +49,7 @@ public final class WebPageWebView: WKWebView {
 
         return super.supportsTextReplacement() && delegate.supportsTextReplacement()
     }
-#endif
+    #endif
 
     func geometryDidChange(_ geometry: WKScrollGeometryAdapter) {
         delegate?.geometryDidChange(geometry)
@@ -59,13 +59,13 @@ public final class WebPageWebView: WKWebView {
 extension WebPageWebView {
     @MainActor
     public protocol Delegate: AnyObject {
-#if os(iOS)
+        #if os(iOS)
         func findInteraction(_ interaction: UIFindInteraction, didBegin session: UIFindSession)
 
         func findInteraction(_ interaction: UIFindInteraction, didEnd session: UIFindSession)
 
         func supportsTextReplacement() -> Bool
-#endif
+        #endif
 
         func geometryDidChange(_ geometry: WKScrollGeometryAdapter)
     }
@@ -74,7 +74,7 @@ extension WebPageWebView {
 extension WebPageWebView {
     // MARK: Platform-agnostic scrolling capabilities
 
-#if canImport(UIKit)
+    #if canImport(UIKit)
     public var alwaysBounceVertical: Bool {
         get { scrollView.alwaysBounceVertical }
         set { scrollView.alwaysBounceVertical = newValue }
@@ -110,7 +110,7 @@ extension WebPageWebView {
     public func scrollTo(edge: NSDirectionalRectEdge, animated: Bool) {
         self._scroll(to: _WKRectEdge(edge), animated: animated)
     }
-#else
+    #else
     public var alwaysBounceVertical: Bool {
         get { self._alwaysBounceVertical }
         set { self._alwaysBounceVertical = newValue }
@@ -138,7 +138,7 @@ extension WebPageWebView {
     public func scrollTo(edge: NSDirectionalRectEdge, animated: Bool) {
         self._scroll(to: _WKRectEdge(edge), animated: animated)
     }
-#endif
+    #endif
 }
 
 #endif

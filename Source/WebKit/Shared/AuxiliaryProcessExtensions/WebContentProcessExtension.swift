@@ -26,13 +26,12 @@
 import BrowserEngineKit
 
 @main
-class WebContentProcessExtension : WKProcessExtension {
+class WebContentProcessExtension: WKProcessExtension {
     override required init() {
         super.init()
         setSharedInstance(self)
     }
 }
-
 
 extension WebContentProcessExtension: WebContentExtension {
     func handle(xpcConnection: xpc_connection_t) {
@@ -40,14 +39,14 @@ extension WebContentProcessExtension: WebContentExtension {
     }
 
     override func lockdownSandbox(_ version: String) {
-        if (version == "1.0") {
+        if version == "1.0" {
             self.applyRestrictedSandbox(revision: RestrictedSandboxRevision.revision1)
             return
         }
-#if ENABLE_BROWSERENGINEKIT_SANDBOX_REVISION_2
-        if (version == "2.0") {
+        #if ENABLE_BROWSERENGINEKIT_SANDBOX_REVISION_2
+        if version == "2.0" {
             self.applyRestrictedSandbox(revision: RestrictedSandboxRevision.revision2)
         }
-#endif
+        #endif
     }
 }

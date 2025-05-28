@@ -42,8 +42,8 @@ internal import WebKit_Internal
 @_implementationOnly import WebKit_Internal
 #endif
 
-fileprivate extension WKGroupSessionState {
-    init(_ state: GroupSession<URLActivity>.State) {
+extension WKGroupSessionState {
+    fileprivate init(_ state: GroupSession<URLActivity>.State) {
         switch state {
         case .waiting:
             self = .waiting
@@ -59,33 +59,43 @@ fileprivate extension WKGroupSessionState {
     }
 }
 
-@_objcImplementation extension WKURLActivity {
+@_objcImplementation
+extension WKURLActivity {
     // Used to workaround the fact that `@_objcImplementation` does not support stored properties whose size can change
     // due to Library Evolution. Do not use this property directly.
-    @nonobjc private var _urlActivity: Any
+    @nonobjc
+    private var _urlActivity: Any
 
-    @nonobjc final private var urlActivity: URLActivity {
+    @nonobjc
+    final private var urlActivity: URLActivity {
         _urlActivity as! URLActivity
     }
 
     var fallbackURL: URL? { urlActivity.webpageURL }
 
-    @nonobjc fileprivate convenience init(activity: URLActivity) {
+    @nonobjc
+    fileprivate convenience init(activity: URLActivity) {
         self.init()
         self._urlActivity = activity as Any
     }
 
-#if compiler(<6.0)
-    @objc deinit { }
-#endif
+    #if compiler(<6.0)
+    @objc
+    deinit {}
+    #endif
 }
 
-@_objcImplementation extension WKGroupSession {
-    @nonobjc private var groupSession: GroupSession<URLActivity>
-    @nonobjc private var _activity: WKURLActivity
-    @nonobjc private var cancellables: Set<AnyCancellable> = []
+@_objcImplementation
+extension WKGroupSession {
+    @nonobjc
+    private var groupSession: GroupSession<URLActivity>
+    @nonobjc
+    private var _activity: WKURLActivity
+    @nonobjc
+    private var cancellables: Set<AnyCancellable> = []
 
-    @nonobjc fileprivate convenience init(groupSession: GroupSession<URLActivity>) {
+    @nonobjc
+    fileprivate convenience init(groupSession: GroupSession<URLActivity>) {
         self.init()
 
         self.groupSession = groupSession
@@ -122,7 +132,8 @@ fileprivate extension WKGroupSessionState {
         coordinator.coordinateWithSession(groupSession)
     }
 
-    @nonobjc private final func activityChanged(activity: URLActivity) {
+    @nonobjc
+    private final func activityChanged(activity: URLActivity) {
         _activity = .init(activity: groupSession.activity)
 
         guard let callback = newActivityCallback else {
@@ -132,7 +143,8 @@ fileprivate extension WKGroupSessionState {
         callback(_activity)
     }
 
-    @nonobjc private final func stateChanged(state: GroupSession<URLActivity>.State) {
+    @nonobjc
+    private final func stateChanged(state: GroupSession<URLActivity>.State) {
         guard let callback = stateChangedCallback else {
             return
         }
@@ -140,13 +152,16 @@ fileprivate extension WKGroupSessionState {
         callback(.init(state))
     }
 
-#if compiler(<6.0)
-    @objc deinit { }
-#endif
+    #if compiler(<6.0)
+    @objc
+    deinit {}
+    #endif
 }
 
-@_objcImplementation extension WKGroupSessionObserver {
-    @nonobjc private var incomingSessionsTask: Task<Void, Never>?
+@_objcImplementation
+extension WKGroupSessionObserver {
+    @nonobjc
+    private var incomingSessionsTask: Task<Void, Never>?
 
     var newSessionCallback: ((WKGroupSession) -> Void)?
 
@@ -160,7 +175,8 @@ fileprivate extension WKGroupSessionState {
         }
     }
 
-    @nonobjc final private func receivedSession(_ session: GroupSession<URLActivity>) {
+    @nonobjc
+    final private func receivedSession(_ session: GroupSession<URLActivity>) {
         guard let callback = newSessionCallback else {
             return
         }
@@ -168,9 +184,10 @@ fileprivate extension WKGroupSessionState {
         callback(.init(groupSession: session))
     }
 
-#if compiler(<6.0)
-    @objc deinit { }
-#endif
+    #if compiler(<6.0)
+    @objc
+    deinit {}
+    #endif
 }
 
 #endif // ENABLE_MEDIA_SESSION_COORDINATOR && HAVE_GROUP_ACTIVITIES

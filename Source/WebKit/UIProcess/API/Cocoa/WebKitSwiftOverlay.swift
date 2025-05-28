@@ -45,33 +45,61 @@ extension WKPDFConfiguration {
 
 @available(iOS 14.0, macOS 10.16, *)
 extension WKWebView {
-    @preconcurrency public func callAsyncJavaScript(_ functionBody: String, arguments: [String:Any] = [:], in frame: WKFrameInfo? = nil, in contentWorld: WKContentWorld, completionHandler: (@MainActor (Result<Any, Error>) -> Void)? = nil) {
+    @preconcurrency
+    public func callAsyncJavaScript(
+        _ functionBody: String,
+        arguments: [String: Any] = [:],
+        in frame: WKFrameInfo? = nil,
+        in contentWorld: WKContentWorld,
+        completionHandler: (@MainActor (Result<Any, Error>) -> Void)? = nil
+    ) {
         let thunk = completionHandler.map { ObjCBlockConversion.boxingNilAsAnyForCompatibility($0) }
         __callAsyncJavaScript(functionBody, arguments: arguments, inFrame: frame, in: contentWorld, completionHandler: thunk)
     }
 
-    @preconcurrency public func createPDF(configuration: WKPDFConfiguration = .init(), completionHandler: @MainActor @escaping (Result<Data, Error>) -> Void) {
+    @preconcurrency
+    public func createPDF(
+        configuration: WKPDFConfiguration = .init(),
+        completionHandler: @MainActor @escaping (Result<Data, Error>) -> Void
+    ) {
         __createPDF(with: configuration, completionHandler: ObjCBlockConversion.exclusive(completionHandler))
     }
 
-    @preconcurrency public func createWebArchiveData(completionHandler: @MainActor @escaping (Result<Data, Error>) -> Void) {
+    @preconcurrency
+    public func createWebArchiveData(completionHandler: @MainActor @escaping (Result<Data, Error>) -> Void) {
         __createWebArchiveData(completionHandler: ObjCBlockConversion.exclusive(completionHandler))
     }
 
-    @preconcurrency public func evaluateJavaScript(_ javaScript: String, in frame: WKFrameInfo? = nil, in contentWorld: WKContentWorld, completionHandler: (@MainActor (Result<Any, Error>) -> Void)? = nil) {
+    @preconcurrency
+    public func evaluateJavaScript(
+        _ javaScript: String,
+        in frame: WKFrameInfo? = nil,
+        in contentWorld: WKContentWorld,
+        completionHandler: (@MainActor (Result<Any, Error>) -> Void)? = nil
+    ) {
         let thunk = completionHandler.map { ObjCBlockConversion.boxingNilAsAnyForCompatibility($0) }
         __evaluateJavaScript(javaScript, inFrame: frame, in: contentWorld, completionHandler: thunk)
     }
 
-    @preconcurrency public func find(_ string: String, configuration: WKFindConfiguration = .init(), completionHandler: @MainActor @escaping (WKFindResult) -> Void) {
+    @preconcurrency
+    public func find(
+        _ string: String,
+        configuration: WKFindConfiguration = .init(),
+        completionHandler: @MainActor @escaping (WKFindResult) -> Void
+    ) {
         __find(string, with: configuration, completionHandler: completionHandler)
     }
 }
 
 @available(iOS 15.0, macOS 12.0, *)
 extension WKWebView {
-    public func callAsyncJavaScript(_ functionBody: String, arguments: [String:Any] = [:], in frame: WKFrameInfo? = nil, contentWorld: WKContentWorld) async throws -> Any? {
-        return try await __callAsyncJavaScript(functionBody, arguments: arguments, inFrame: frame, in: contentWorld)
+    public func callAsyncJavaScript(
+        _ functionBody: String,
+        arguments: [String: Any] = [:],
+        in frame: WKFrameInfo? = nil,
+        contentWorld: WKContentWorld
+    ) async throws -> Any? {
+        try await __callAsyncJavaScript(functionBody, arguments: arguments, inFrame: frame, in: contentWorld)
     }
 
     public func pdf(configuration: WKPDFConfiguration = .init()) async throws -> Data {

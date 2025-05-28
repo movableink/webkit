@@ -43,9 +43,9 @@ final class WKUIDelegateAdapter: NSObject, WKUIDelegatePrivate {
 
     weak var owner: WebPage? = nil
 
-#if os(macOS) && !targetEnvironment(macCatalyst)
+    #if os(macOS) && !targetEnvironment(macCatalyst)
     var menuBuilder: ((WKContextMenuElementInfoAdapter) -> NSMenu)? = nil
-#endif
+    #endif
 
     private let dialogPresenter: any WebPage.DialogPresenting
 
@@ -55,7 +55,11 @@ final class WKUIDelegateAdapter: NSObject, WKUIDelegatePrivate {
         await dialogPresenter.handleJavaScriptAlert(message: message, initiatedBy: .init(frame))
     }
 
-    func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo) async -> Bool {
+    func webView(
+        _ webView: WKWebView,
+        runJavaScriptConfirmPanelWithMessage message: String,
+        initiatedByFrame frame: WKFrameInfo
+    ) async -> Bool {
         let result = await dialogPresenter.handleJavaScriptConfirm(message: message, initiatedBy: .init(frame))
 
         return switch result {
@@ -64,27 +68,40 @@ final class WKUIDelegateAdapter: NSObject, WKUIDelegatePrivate {
         }
     }
 
-    func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo) async -> String? {
+    func webView(
+        _ webView: WKWebView,
+        runJavaScriptTextInputPanelWithPrompt prompt: String,
+        defaultText: String?,
+        initiatedByFrame frame: WKFrameInfo
+    ) async -> String? {
         let result = await dialogPresenter.handleJavaScriptPrompt(message: prompt, defaultText: defaultText, initiatedBy: .init(frame))
 
         return switch result {
-        case let .ok(value): value
+        case .ok(let value): value
         case .cancel: nil
         }
     }
 
-    func webView(_ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters, initiatedByFrame frame: WKFrameInfo) async -> [URL]? {
+    func webView(
+        _ webView: WKWebView,
+        runOpenPanelWith parameters: WKOpenPanelParameters,
+        initiatedByFrame frame: WKFrameInfo
+    ) async -> [URL]? {
         let result = await dialogPresenter.handleFileInputPrompt(parameters: parameters, initiatedBy: .init(frame))
 
         return switch result {
-        case let .selected(value): value
+        case .selected(let value): value
         case .cancel: nil
         }
     }
 
     // MARK: Permissions
 
-    func webView(_ webView: WKWebView, requestDeviceOrientationAndMotionPermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo) async -> WKPermissionDecision {
+    func webView(
+        _ webView: WKWebView,
+        requestDeviceOrientationAndMotionPermissionFor origin: WKSecurityOrigin,
+        initiatedByFrame frame: WKFrameInfo
+    ) async -> WKPermissionDecision {
         guard let owner else {
             return .prompt
         }
@@ -92,7 +109,12 @@ final class WKUIDelegateAdapter: NSObject, WKUIDelegatePrivate {
         return await owner.configuration.deviceSensorAuthorization.decisionHandler(.deviceOrientationAndMotion, .init(frame), origin)
     }
 
-    func webView(_ webView: WKWebView, decideMediaCapturePermissionsFor origin: WKSecurityOrigin, initiatedBy frame: WKFrameInfo, type: WKMediaCaptureType) async -> WKPermissionDecision {
+    func webView(
+        _ webView: WKWebView,
+        decideMediaCapturePermissionsFor origin: WKSecurityOrigin,
+        initiatedBy frame: WKFrameInfo,
+        type: WKMediaCaptureType
+    ) async -> WKPermissionDecision {
         guard let owner else {
             return .prompt
         }
@@ -102,9 +124,14 @@ final class WKUIDelegateAdapter: NSObject, WKUIDelegatePrivate {
 
     // MARK: Context menu support
 
-#if os(macOS)
+    #if os(macOS)
     @objc(_webView:getContextMenuFromProposedMenu:forElement:userInfo:completionHandler:)
-    func _webView(_ webView: WKWebView!, getContextMenuFromProposedMenu menu: NSMenu!, forElement element: _WKContextMenuElementInfo!, userInfo: (any NSSecureCoding)!) async -> NSMenu? {
+    func _webView(
+        _ webView: WKWebView!,
+        getContextMenuFromProposedMenu menu: NSMenu!,
+        forElement element: _WKContextMenuElementInfo!,
+        userInfo: (any NSSecureCoding)!
+    ) async -> NSMenu? {
         guard let menuBuilder else {
             return menu
         }
@@ -112,7 +139,7 @@ final class WKUIDelegateAdapter: NSObject, WKUIDelegatePrivate {
         let info = WKContextMenuElementInfoAdapter(linkURL: element.hitTestResult.absoluteLinkURL)
         return menuBuilder(info)
     }
-#endif
+    #endif
 
     @objc(_webView:geometryDidChange:)
     func _webView(_ webView: WKWebView!, geometryDidChange geometry: WKScrollGeometry) {

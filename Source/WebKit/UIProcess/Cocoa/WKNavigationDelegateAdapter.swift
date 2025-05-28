@@ -26,7 +26,7 @@
 import Foundation
 internal import WebKit_Private
 
-fileprivate struct DefaultNavigationDecider: WebPage.NavigationDeciding {
+private struct DefaultNavigationDecider: WebPage.NavigationDeciding {
 }
 
 @MainActor
@@ -44,9 +44,10 @@ final class WKNavigationDelegateAdapter: NSObject, WKNavigationDelegate {
     private func yieldNavigationProgress(kind: WebPage.NavigationEvent.Kind, cocoaNavigation: WKNavigation!) {
         let navigation = WebPage.NavigationEvent(kind: kind, navigationID: .init(cocoaNavigation))
 
-        owner?.backingWebView._do(afterNextPresentationUpdate: { [weak owner] in
-            owner?.currentNavigationEvent = navigation
-        })
+        owner?.backingWebView
+            ._do(afterNextPresentationUpdate: { [weak owner] in
+                owner?.currentNavigationEvent = navigation
+            })
     }
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -76,13 +77,21 @@ final class WKNavigationDelegateAdapter: NSObject, WKNavigationDelegate {
     // MARK: Back-forward list support
 
     @objc(_webView:backForwardListItemAdded:removed:)
-    func _webView(_ webView: WKWebView!, backForwardListItemAdded itemAdded: WKBackForwardListItem!, removed itemsRemoved: [WKBackForwardListItem]!) {
+    func _webView(
+        _ webView: WKWebView!,
+        backForwardListItemAdded itemAdded: WKBackForwardListItem!,
+        removed itemsRemoved: [WKBackForwardListItem]!
+    ) {
         owner?.backForwardList = .init(webView.backForwardList)
     }
 
     // MARK: Navigation decisions
 
-    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, preferences: WKWebpagePreferences) async -> (WKNavigationActionPolicy, WKWebpagePreferences) {
+    func webView(
+        _ webView: WKWebView,
+        decidePolicyFor navigationAction: WKNavigationAction,
+        preferences: WKWebpagePreferences
+    ) async -> (WKNavigationActionPolicy, WKWebpagePreferences) {
         let convertedAction = WebPage.NavigationAction(navigationAction)
         var convertedPreferences = WebPage.NavigationPreferences(preferences)
 
@@ -97,7 +106,10 @@ final class WKNavigationDelegateAdapter: NSObject, WKNavigationDelegate {
         return await navigationDecider.decidePolicy(for: convertedResponse)
     }
 
-    func webView(_ webView: WKWebView, respondTo challenge: URLAuthenticationChallenge) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
+    func webView(
+        _ webView: WKWebView,
+        respondTo challenge: URLAuthenticationChallenge
+    ) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
         await navigationDecider.decideAuthenticationChallengeDisposition(for: challenge)
     }
 }

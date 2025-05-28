@@ -56,13 +56,13 @@ extension WebPage {
         /// Indicates whether the web content provided an attribute that indicates a download.
         public var shouldPerformDownload: Bool { wrapped.shouldPerformDownload }
 
-#if canImport(UIKit)
+        #if canImport(UIKit)
         /// The number of the mouse button that caused the navigation request.
         public var buttonNumber: UIEvent.ButtonMask { wrapped.buttonNumber }
-#else
+        #else
         /// The number of the mouse button that caused the navigation request.
         public var buttonNumber: Int { wrapped.buttonNumber }
-#endif
+        #endif
 
         @_spi(CrossImportOverlay)
         public var wrapped: WKNavigationAction
@@ -113,7 +113,10 @@ extension WebPage {
         ///   - preferences: The preferences to use when displaying the new webpage.
         /// - Returns: The navigation policy for the action.
         @MainActor
-        mutating func decidePolicy(for action: WebPage.NavigationAction, preferences: inout WebPage.NavigationPreferences) async -> WKNavigationActionPolicy
+        mutating func decidePolicy(
+            for action: WebPage.NavigationAction,
+            preferences: inout WebPage.NavigationPreferences
+        ) async -> WKNavigationActionPolicy
 
         /// Determines permission to navigate to new content after the response to the navigation request is known.
         ///
@@ -127,7 +130,9 @@ extension WebPage {
         /// - Parameter challenge: The authentication challenge.
         /// - Returns: The option to use to handle the challenge, and the credential to use for authentication when the disposition is ``URLSession/AuthChallengeDisposition/useCredential``.
         @MainActor
-        mutating func decideAuthenticationChallengeDisposition(for challenge: URLAuthenticationChallenge) async -> (URLSession.AuthChallengeDisposition, URLCredential?)
+        mutating func decideAuthenticationChallengeDisposition(
+            for challenge: URLAuthenticationChallenge
+        ) async -> (URLSession.AuthChallengeDisposition, URLCredential?)
     }
 }
 
@@ -136,24 +141,29 @@ extension WebPage {
 @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
 @available(watchOS, unavailable)
 @available(tvOS, unavailable)
-public extension WebPage.NavigationDeciding {
+extension WebPage.NavigationDeciding {
     /// By default, this method immediately returns with a policy of `.allow`.
     @MainActor
-    func decidePolicy(for action: WebPage.NavigationAction, preferences: inout WebPage.NavigationPreferences) async -> WKNavigationActionPolicy {
+    public func decidePolicy(
+        for action: WebPage.NavigationAction,
+        preferences: inout WebPage.NavigationPreferences
+    ) async -> WKNavigationActionPolicy {
         .allow
     }
 
     /// By default, this method immediately returns with a policy of `.allow`.
     @MainActor
-    func decidePolicy(for response: WebPage.NavigationResponse) async -> WKNavigationResponsePolicy {
+    public func decidePolicy(for response: WebPage.NavigationResponse) async -> WKNavigationResponsePolicy {
         .allow
     }
 
     /// By default, this method immediately returns with a disposition of `performDefaultHandling` and a `nil` credential.
     @MainActor
-    func decideAuthenticationChallengeDisposition(for challenge: URLAuthenticationChallenge) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
+    public func decideAuthenticationChallengeDisposition(
+        for challenge: URLAuthenticationChallenge
+    ) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
         (.performDefaultHandling, nil)
     }
 }
 
- #endif
+#endif

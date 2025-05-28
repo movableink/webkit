@@ -23,8 +23,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import XCTest
 import WebKit
+import XCTest
 
 class WebKitTests: XCTestCase {
     /// This is a compile-time test that ensures the function names are what we expect.

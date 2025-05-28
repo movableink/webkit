@@ -33,7 +33,8 @@ internal import WebKit_Internal
 // FIXME: Adopt `@objc @implementation` when support for macOS Sonoma is no longer needed.
 // FIXME: (rdar://110719676) Remove all `@objc deinit`s when support for macOS Sonoma is no longer needed.
 
-@_objcImplementation extension WKTextExtractionItem {
+@_objcImplementation
+extension WKTextExtractionItem {
     let rectInWebView: CGRect
     let children: [WKTextExtractionItem]
 
@@ -43,12 +44,14 @@ internal import WebKit_Internal
         self.children = children
     }
 
-#if compiler(<6.0)
-    @objc deinit { }
-#endif
+    #if compiler(<6.0)
+    @objc
+    deinit {}
+    #endif
 }
 
-@_objcImplementation extension WKTextExtractionContainerItem {
+@_objcImplementation
+extension WKTextExtractionContainerItem {
     let container: WKTextExtractionContainer
 
     init(container: WKTextExtractionContainer, rectInWebView: CGRect, children: [WKTextExtractionItem]) {
@@ -56,17 +59,20 @@ internal import WebKit_Internal
         super.init(with: rectInWebView, children: children)
     }
 
-#if compiler(<6.0)
-    @objc deinit { }
-#endif
+    #if compiler(<6.0)
+    @objc
+    deinit {}
+    #endif
 }
 
-@_objcImplementation extension WKTextExtractionEditable {
+@_objcImplementation
+extension WKTextExtractionEditable {
     let label: String
     let placeholder: String
 
     // Properties with a customized getter are incorrectly mapped when using ObjCImplementation.
-    @nonobjc private let backingIsSecure: Bool
+    @nonobjc
+    private let backingIsSecure: Bool
     @objc(secure)
     var isSecure: Bool {
         @objc(isSecure)
@@ -74,7 +80,8 @@ internal import WebKit_Internal
     }
 
     // Properties with a customized getter are incorrectly mapped when using ObjCImplementation.
-    @nonobjc private let backingIsFocused: Bool
+    @nonobjc
+    private let backingIsFocused: Bool
     @objc(focused)
     var isFocused: Bool {
         @objc(isFocused)
@@ -88,15 +95,18 @@ internal import WebKit_Internal
         self.backingIsFocused = isFocused
     }
 
-#if compiler(<6.0)
-    @objc deinit { }
-#endif
+    #if compiler(<6.0)
+    @objc
+    deinit {}
+    #endif
 }
 
-@_objcImplementation extension WKTextExtractionLink {
+@_objcImplementation
+extension WKTextExtractionLink {
     // Used to workaround the fact that `@_objcImplementation` does not support stored properties whose size can change
     // due to Library Evolution. Do not use this property directly.
-    @nonobjc private let _url: NSURL
+    @nonobjc
+    private let _url: NSURL
 
     var url: URL { _url as URL }
 
@@ -108,18 +118,27 @@ internal import WebKit_Internal
         self.range = range
     }
 
-#if compiler(<6.0)
-    @objc deinit { }
-#endif
+    #if compiler(<6.0)
+    @objc
+    deinit {}
+    #endif
 }
 
-@_objcImplementation extension WKTextExtractionTextItem {
+@_objcImplementation
+extension WKTextExtractionTextItem {
     let content: String
     let selectedRange: NSRange
     let links: [WKTextExtractionLink]
     let editable: WKTextExtractionEditable?
 
-    init(content: String, selectedRange: NSRange, links: [WKTextExtractionLink], editable: WKTextExtractionEditable?, rectInWebView: CGRect, children: [WKTextExtractionItem]) {
+    init(
+        content: String,
+        selectedRange: NSRange,
+        links: [WKTextExtractionLink],
+        editable: WKTextExtractionEditable?,
+        rectInWebView: CGRect,
+        children: [WKTextExtractionItem]
+    ) {
         self.content = content
         self.selectedRange = selectedRange
         self.links = links
@@ -127,12 +146,14 @@ internal import WebKit_Internal
         super.init(with: rectInWebView, children: children)
     }
 
-#if compiler(<6.0)
-    @objc deinit { }
-#endif
+    #if compiler(<6.0)
+    @objc
+    deinit {}
+    #endif
 }
 
-@_objcImplementation extension WKTextExtractionScrollableItem {
+@_objcImplementation
+extension WKTextExtractionScrollableItem {
     let contentSize: CGSize
 
     init(contentSize: CGSize, rectInWebView: CGRect, children: [WKTextExtractionItem]) {
@@ -140,12 +161,14 @@ internal import WebKit_Internal
         super.init(with: rectInWebView, children: children)
     }
 
-#if compiler(<6.0)
-    @objc deinit { }
-#endif
+    #if compiler(<6.0)
+    @objc
+    deinit {}
+    #endif
 }
 
-@_objcImplementation extension WKTextExtractionImageItem {
+@_objcImplementation
+extension WKTextExtractionImageItem {
     let name: String
     let altText: String
 
@@ -155,9 +178,10 @@ internal import WebKit_Internal
         super.init(with: rectInWebView, children: children)
     }
 
-#if compiler(<6.0)
-    @objc deinit { }
-#endif
+    #if compiler(<6.0)
+    @objc
+    deinit {}
+    #endif
 }
 
 #endif // USE_APPLE_INTERNAL_SDK || (!os(tvOS) && !os(watchOS))

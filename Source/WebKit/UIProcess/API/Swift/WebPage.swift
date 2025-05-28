@@ -253,12 +253,12 @@ final public class WebPage {
     let backingUIDelegate: WKUIDelegateAdapter
     private let backingNavigationDelegate: WKNavigationDelegateAdapter
 
-#if os(macOS)
+    #if os(macOS)
     @_spi(CrossImportOverlay)
     public func setMenuBuilder(_ menuBuilder: ((WKContextMenuElementInfoAdapter) -> NSMenu)?) {
         backingUIDelegate.menuBuilder = menuBuilder
     }
-#endif
+    #endif
 
     @ObservationIgnored
     private var observations = KeyValueObservations()
@@ -273,9 +273,9 @@ final public class WebPage {
         let webView = WebPageWebView(frame: .zero, configuration: WKWebViewConfiguration(configuration))
         webView.navigationDelegate = backingNavigationDelegate
         webView.uiDelegate = backingUIDelegate
-#if os(macOS)
+        #if os(macOS)
         webView._usePlatformFindUI = false
-#endif
+        #endif
         return webView
     }()
 
@@ -317,7 +317,8 @@ final public class WebPage {
             preconditionFailure("\(characterEncoding) is not a valid character encoding")
         }
 
-        return backingWebView.load(data, mimeType: mimeType, characterEncodingName: convertedEncoding, baseURL: baseURL).map(NavigationID.init(_:))
+        return backingWebView.load(data, mimeType: mimeType, characterEncodingName: convertedEncoding, baseURL: baseURL)
+            .map(NavigationID.init(_:))
     }
 
     /// Loads the contents of the specified HTML string and navigates to it.
@@ -438,8 +439,18 @@ final public class WebPage {
     /// - Returns: The result of the script evaluation. If your function body doesn't return an explicit value, `nil` is returned.
     ///  If your function body explicitly returns `null`, then `NSNull` is returned.
     @discardableResult
-    public func callJavaScript(_ functionBody: String, arguments: [String : Any] = [:], in frame: FrameInfo? = nil, contentWorld: WKContentWorld? = nil) async throws -> sending Any? {
-        let result = try await backingWebView.callAsyncJavaScript(functionBody, arguments: arguments, in: frame?.wrapped, contentWorld: contentWorld ?? .page)
+    public func callJavaScript(
+        _ functionBody: String,
+        arguments: [String: Any] = [:],
+        in frame: FrameInfo? = nil,
+        contentWorld: WKContentWorld? = nil
+    ) async throws -> sending Any? {
+        let result = try await backingWebView.callAsyncJavaScript(
+            functionBody,
+            arguments: arguments,
+            in: frame?.wrapped,
+            contentWorld: contentWorld ?? .page
+        )
 
         guard let result else {
             return nil
@@ -502,7 +513,10 @@ final public class WebPage {
 
     // MARK: Private helper functions
 
-    private func createObservation<Value, BackingValue>(for keyPath: KeyPath<WebPage, Value>, backedBy backingKeyPath: KeyPath<WebPageWebView, BackingValue>) -> NSKeyValueObservation {
+    private func createObservation<Value, BackingValue>(
+        for keyPath: KeyPath<WebPage, Value>,
+        backedBy backingKeyPath: KeyPath<WebPageWebView, BackingValue>
+    ) -> NSKeyValueObservation {
         // The key path used within `createObservation` must be Sendable.
         // This is safe as long as it is not used for object subscripting and isn't created with captured subscript key paths.
         let boxed = UncheckedSendableKeyPathBox(keyPath: keyPath)
@@ -517,7 +531,11 @@ final public class WebPage {
     }
 
     @_spi(CrossImportOverlay)
-    public func backingProperty<Value, BackingValue>(_ keyPath: KeyPath<WebPage, Value>, backedBy backingKeyPath: KeyPath<WebPageWebView, BackingValue>, _ transform: (BackingValue) -> Value) -> Value {
+    public func backingProperty<Value, BackingValue>(
+        _ keyPath: KeyPath<WebPage, Value>,
+        backedBy backingKeyPath: KeyPath<WebPageWebView, BackingValue>,
+        _ transform: (BackingValue) -> Value
+    ) -> Value {
         if observations.contents[keyPath] == nil {
             observations.contents[keyPath] = createObservation(for: keyPath, backedBy: backingKeyPath)
         }
@@ -529,27 +547,29 @@ final public class WebPage {
     }
 
     @_spi(CrossImportOverlay)
-    public func backingProperty<Value>(_ keyPath: KeyPath<WebPage, Value>, backedBy backingKeyPath: KeyPath<WebPageWebView, Value>) -> Value {
+    public func backingProperty<Value>(_ keyPath: KeyPath<WebPage, Value>, backedBy backingKeyPath: KeyPath<WebPageWebView, Value>) -> Value
+    {
         backingProperty(keyPath, backedBy: backingKeyPath) { $0 }
     }
 }
 
 extension WebPage.FullscreenState {
     init(_ wrapped: WKWebView.FullscreenState) {
-        self = switch wrapped {
-        case .enteringFullscreen: .enteringFullscreen
-        case .exitingFullscreen: .exitingFullscreen
-        case .inFullscreen: .inFullscreen
-        case .notInFullscreen: .notInFullscreen
-        @unknown default:
-            fatalError()
-        }
+        self =
+            switch wrapped {
+            case .enteringFullscreen: .enteringFullscreen
+            case .exitingFullscreen: .exitingFullscreen
+            case .inFullscreen: .inFullscreen
+            case .notInFullscreen: .notInFullscreen
+            @unknown default:
+                fatalError()
+            }
     }
 }
 
 extension WebPage {
     private struct KeyValueObservations: ~Copyable {
-        var contents: [PartialKeyPath<WebPage> : NSKeyValueObservation] = [:]
+        var contents: [PartialKeyPath<WebPage>: NSKeyValueObservation] = [:]
 
         deinit {
             for (_, observation) in contents {
