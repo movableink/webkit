@@ -7871,3 +7871,5 @@ imported/w3c/web-platform-tests/navigation-api/navigate-event/navigate-form.html
 webkit.org/b/292650 http/tests/iframe-monitor/throttler.html [ Timeout ]
 
 webkit.org/b/293642 imported/w3c/web-platform-tests/css/cssom/stylesheet-same-origin.sub.html [ Failure ]
+
+webkit.org/b/288957 imported/w3c/web-platform-tests/css/CSS2/tables/border-collapse-dynamic-column-001.xht [ ImageOnlyFailure ]

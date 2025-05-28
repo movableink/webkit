@@ -139,6 +139,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/colspan-003.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/colspan-004-expected.xht
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/colspan-004.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-tables/colspan-zero-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/column-track-merging.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/dynamic-rowspan-change.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/dynamic-table-cell-height-expected.xht
