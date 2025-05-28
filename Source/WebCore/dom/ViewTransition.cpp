@@ -396,15 +396,13 @@ static Vector<AtomString> effectiveViewTransitionClassList(RenderLayerModelObjec
     });
 }
 
-static LayoutRect captureOverflowRect(RenderLayerModelObject& renderer)
+LayoutRect ViewTransition::captureOverflowRect(RenderLayerModelObject& renderer)
 {
     if (!renderer.hasLayer())
         return { };
 
-    if (renderer.isDocumentElementRenderer()) {
-        CheckedRef frameView = renderer.view().frameView();
-        return { { }, LayoutSize { frameView->frameRect().width(), frameView->frameRect().height() } };
-    }
+    if (renderer.isDocumentElementRenderer())
+        return containingBlockRect();
 
     auto bounds = renderer.layer()->calculateLayerBounds(renderer.layer(), LayoutSize(), { RenderLayer::IncludeFilterOutsets, RenderLayer::ExcludeHiddenDescendants, RenderLayer::IncludeCompositedDescendants, RenderLayer::PreserveAncestorFlags, RenderLayer::ExcludeViewTransitionCapturedDescendants });
     return LayoutRect(encloseRectToDevicePixels(bounds, renderer.protectedDocument()->deviceScaleFactor()));
@@ -848,6 +846,20 @@ void ViewTransition::clearViewTransition()
         documentElement->invalidateStyleInternal();
 }
 
+// https://drafts.csswg.org/css-view-transitions-1/#snapshot-containing-block
+LayoutRect ViewTransition::containingBlockRect()
+{
+    RefPtr document = this->document();
+    if (!document)
+        return { };
+    RefPtr frameView = document->view();
+    if (!frameView)
+        return { };
+    // FIXME: Bug 285400 - Correctly account for insets.
+    return { LayoutPoint { }, frameView->visibleContentRectIncludingScrollbars().size() };
+}
+
+
 // Rounds the x/y translation components to the nearest pixel (for non-perspective)
 // transforms, and returns the subpixel offset that was removed.
 static LayoutSize snapTransformationTranslationToDevicePixels(TransformationMatrix& matrix, float deviceScaleFactor)
@@ -892,9 +904,11 @@ void ViewTransition::copyElementBaseProperties(RenderLayerModelObject& renderer,
         return;
 
     if (renderer.isDocumentElementRenderer()) {
-        output.size.setWidth(frameView->frameRect().width());
-        output.size.setHeight(frameView->frameRect().height());
+        output.size.setWidth(containingBlockRect().width());
+        output.size.setHeight(containingBlockRect().height());
+        output.isRootElement = true;
     } else if (CheckedPtr renderBox = dynamicDowncast<RenderBoxModelObject>(&renderer)) {
+        output.isRootElement = false;
         output.size = renderBox->borderBoundingBox().size();
 
         if (auto transform = renderer.viewTransitionTransform()) {

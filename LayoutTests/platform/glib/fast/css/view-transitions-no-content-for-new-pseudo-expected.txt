@@ -8,17 +8,22 @@
       (children 1
         (GraphicsLayer
           (bounds 800.00 600.00)
-          (children 2
+          (children 1
             (GraphicsLayer
               (bounds 800.00 600.00)
-              (opacity 0.00)
-            )
-            (GraphicsLayer
-              (bounds 800.00 600.00)
-              (drawsContent 1)
-              (children 1
+              (children 2
                 (GraphicsLayer
                   (bounds 800.00 600.00)
+                  (opacity 0.00)
+                )
+                (GraphicsLayer
+                  (bounds 800.00 600.00)
+                  (drawsContent 1)
+                  (children 1
+                    (GraphicsLayer
+                      (bounds 800.00 600.00)
+                    )
+                  )
                 )
               )
             )

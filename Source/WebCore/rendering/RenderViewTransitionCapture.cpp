@@ -38,8 +38,9 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderViewTransitionCapture);
 
-RenderViewTransitionCapture::RenderViewTransitionCapture(Type type, Document& document, RenderStyle&& style)
+RenderViewTransitionCapture::RenderViewTransitionCapture(Type type, Document& document, RenderStyle&& style, bool isRootElement)
     : RenderReplaced(type, document, WTFMove(style), { }, ReplacedFlag::IsViewTransitionCapture)
+    , m_isRootElementCapture(isRootElement)
 {
 }
 
@@ -108,7 +109,10 @@ void RenderViewTransitionCapture::updateFromStyle()
 {
     RenderReplaced::updateFromStyle();
 
-    if (effectiveOverflowX() != Overflow::Visible || effectiveOverflowY() != Overflow::Visible)
+    // The ::view-transition-new(root) capture should hold exactly the snapshot containing
+    // block without overflow, but can host layers that extend outside this area. Force overflow
+    // clipping.
+    if (effectiveOverflowX() != Overflow::Visible || effectiveOverflowY() != Overflow::Visible || (m_isRootElementCapture && style().pseudoElementType() == PseudoId::ViewTransitionNew))
         setHasNonVisibleOverflow();
 }
 

@@ -75,6 +75,7 @@ public:
         LayoutSize subpixelOffset;
         RefPtr<MutableStyleProperties> properties;
         bool intersectsViewport { false };
+        bool isRootElement { false };
     };
 
     // std::nullopt represents an non-capturable element.
@@ -187,6 +188,8 @@ public:
 
     void activateViewTransition();
 
+    LayoutRect containingBlockRect();
+
     UniqueRef<ViewTransitionParams> takeViewTransitionParams();
 
     DOMPromise& ready();
@@ -214,6 +217,7 @@ private:
 
     void copyElementBaseProperties(RenderLayerModelObject&, CapturedElement::State&);
     bool updatePropertiesForGroupPseudo(CapturedElement&, const AtomString&);
+    LayoutRect captureOverflowRect(RenderLayerModelObject& renderer);
 
     // Setup view transition sub-algorithms.
     ExceptionOr<void> captureOldState();

@@ -87,11 +87,11 @@ void RenderTreeUpdater::ViewTransition::updatePseudoElementTree(RenderElement* d
         containingBlockStyle.setPosition(PositionType::Fixed);
         containingBlockStyle.setPointerEvents(PointerEvents::None);
 
-        // FIXME: Bug 285400 - Correctly account for scrollbars and insets.
-        containingBlockStyle.setLeft(Length(0, LengthType::Fixed));
-        containingBlockStyle.setRight(Length(0, LengthType::Fixed));
-        containingBlockStyle.setTop(Length(0, LengthType::Fixed));
-        containingBlockStyle.setBottom(Length(0, LengthType::Fixed));
+        auto containingBlockRect = activeViewTransition->containingBlockRect();
+        containingBlockStyle.setLeft(Length(containingBlockRect.x(), LengthType::Fixed));
+        containingBlockStyle.setTop(Length(containingBlockRect.y(), LengthType::Fixed));
+        containingBlockStyle.setWidth(Length(containingBlockRect.width(), LengthType::Fixed));
+        containingBlockStyle.setHeight(Length(containingBlockRect.height(), LengthType::Fixed));
 
         auto newViewTransitionContainingBlock = WebCore::createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, document, WTFMove(containingBlockStyle), RenderObject::BlockFlowFlag::IsViewTransitionContainingBlock);
         newViewTransitionContainingBlock->initializeStyle();
@@ -155,10 +155,12 @@ static RenderPtr<RenderBox> createRendererIfNeeded(RenderElement& documentElemen
         if (pseudoId == PseudoId::ViewTransitionNew && !capturedElement->newElement)
             return nullptr;
 
-        RenderPtr<RenderViewTransitionCapture> rendererViewTransition = WebCore::createRenderer<RenderViewTransitionCapture>(RenderObject::Type::ViewTransitionCapture, document, RenderStyle::clone(*style));
+        auto& state = pseudoId == PseudoId::ViewTransitionOld ? capturedElement->oldState : capturedElement->newState;
+
+        RenderPtr<RenderViewTransitionCapture> rendererViewTransition = WebCore::createRenderer<RenderViewTransitionCapture>(RenderObject::Type::ViewTransitionCapture, document, RenderStyle::clone(*style), state.isRootElement);
         if (pseudoId == PseudoId::ViewTransitionOld)
             rendererViewTransition->setImage(capturedElement->oldImage.value_or(nullptr));
-        rendererViewTransition->setCapturedSize(capturedElement->oldState.size, capturedElement->oldState.overflowRect, capturedElement->oldState.layerToLayoutOffset);
+        rendererViewTransition->setCapturedSize(state.size, state.overflowRect, state.layerToLayoutOffset);
         renderer = WTFMove(rendererViewTransition);
     } else
         renderer = WebCore::createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, document, RenderStyle::clone(*style));
