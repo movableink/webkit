@@ -1165,27 +1165,12 @@ test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:
 test/intl402/NumberFormat/prototype/formatToParts/unit-zh-TW.js:
   default: 'Test262Error: undefined: length Expected SameValue(«3», «4») to be true'
   strict mode: 'Test262Error: undefined: length Expected SameValue(«3», «4») to be true'
-test/intl402/PluralRules/constructor-option-read-order.js:
-  default: 'Test262Error: Actual [localeMatcher, type, minimumIntegerDigits, minimumFractionDigits, maximumFractionDigits, minimumSignificantDigits, maximumSignificantDigits, roundingIncrement, roundingMode, roundingPriority, trailingZeroDisplay] and expected [localeMatcher, type, notation, minimumIntegerDigits, minimumFractionDigits, maximumFractionDigits, minimumSignificantDigits, maximumSignificantDigits, roundingIncrement, roundingMode, roundingPriority, trailingZeroDisplay] should have the same contents. Intl.PluralRules options read order'
-  strict mode: 'Test262Error: Actual [localeMatcher, type, minimumIntegerDigits, minimumFractionDigits, maximumFractionDigits, minimumSignificantDigits, maximumSignificantDigits, roundingIncrement, roundingMode, roundingPriority, trailingZeroDisplay] and expected [localeMatcher, type, notation, minimumIntegerDigits, minimumFractionDigits, maximumFractionDigits, minimumSignificantDigits, maximumSignificantDigits, roundingIncrement, roundingMode, roundingPriority, trailingZeroDisplay] should have the same contents. Intl.PluralRules options read order'
-test/intl402/PluralRules/constructor-options-throwing-getters.js:
-  default: 'Test262Error: Exception from notation getter should be propagated Expected a CustomError to be thrown but no exception was thrown at all'
-  strict mode: 'Test262Error: Exception from notation getter should be propagated Expected a CustomError to be thrown but no exception was thrown at all'
-test/intl402/PluralRules/default-options-object-prototype.js:
-  default: 'Test262Error: Expected SameValue(«"compact"», «"standard"») to be true'
-  strict mode: 'Test262Error: Expected SameValue(«"compact"», «"standard"») to be true'
 test/intl402/PluralRules/prototype/constructor/notation.js:
   default: 'Test262Error: Resolved options should have notation standard'
   strict mode: 'Test262Error: Resolved options should have notation standard'
-test/intl402/PluralRules/prototype/resolvedOptions/order.js:
-  default: 'Test262Error: "type" precedes "notation"'
-  strict mode: 'Test262Error: "type" precedes "notation"'
-test/intl402/PluralRules/prototype/resolvedOptions/properties.js:
-  default: 'Test262Error: Expected SameValue(«undefined», «"standard"») to be true'
-  strict mode: 'Test262Error: Expected SameValue(«undefined», «"standard"») to be true'
 test/intl402/PluralRules/prototype/select/notation.js:
-  default: 'Test262Error: compact notation Expected SameValue(«"few"», «"one"») to be true'
-  strict mode: 'Test262Error: compact notation Expected SameValue(«"few"», «"one"») to be true'
+  default: 'Test262Error: compact notation Expected SameValue(«"other"», «"one"») to be true'
+  strict mode: 'Test262Error: compact notation Expected SameValue(«"other"», «"one"») to be true'
 test/intl402/Temporal/Duration/compare/relativeto-sub-minute-offset.js:
   default: 'RangeError: Cannot compare a duration of years, months, or weeks without a relativeTo option'
   strict mode: 'RangeError: Cannot compare a duration of years, months, or weeks without a relativeTo option'

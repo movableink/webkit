@@ -112,7 +112,10 @@ void IntlPluralRules::initializePluralRules(JSGlobalObject* globalObject, JSValu
     m_type = intlOption<Type>(globalObject, options, vm.propertyNames->type, { { "cardinal"_s, Type::Cardinal }, { "ordinal"_s, Type::Ordinal } }, "type must be \"cardinal\" or \"ordinal\""_s, Type::Cardinal);
     RETURN_IF_EXCEPTION(scope, void());
 
-    setNumberFormatDigitOptions(globalObject, this, options, 0, 3, IntlNotation::Standard);
+    m_notation = intlOption<IntlNotation>(globalObject, options, Identifier::fromString(vm, "notation"_s), { { "standard"_s, IntlNotation::Standard }, { "scientific"_s, IntlNotation::Scientific }, { "engineering"_s, IntlNotation::Engineering }, { "compact"_s, IntlNotation::Compact } }, "notation must be either \"standard\", \"scientific\", \"engineering\", or \"compact\""_s, IntlNotation::Standard);
+    RETURN_IF_EXCEPTION(scope, void());
+
+    setNumberFormatDigitOptions(globalObject, this, options, 0, 3, m_notation);
     RETURN_IF_EXCEPTION(scope, void());
 
     auto locale = m_locale.utf8();
@@ -121,6 +124,23 @@ void IntlPluralRules::initializePluralRules(JSGlobalObject* globalObject, JSValu
     StringBuilder skeletonBuilder;
 
     appendNumberFormatDigitOptionsToSkeleton(this, skeletonBuilder);
+
+    // https://github.com/unicode-org/icu/blob/master/docs/userguide/format_parse/numbers/skeletons.md#notation
+    switch (m_notation) {
+    case IntlNotation::Standard:
+        break;
+    case IntlNotation::Scientific:
+        skeletonBuilder.append(" scientific"_s);
+        break;
+    case IntlNotation::Engineering:
+        skeletonBuilder.append(" engineering"_s);
+        break;
+    case IntlNotation::Compact:
+        // Intl.PluralRules does not support `compactDisplay` option
+        // https://github.com/tc39/ecma402/pull/989#issuecomment-2906752480
+        skeletonBuilder.append(" compact-short"_s);
+        break;
+    }
 
     StringView skeletonView { skeletonBuilder.toString() };
     auto upconverted = skeletonView.upconvertedCharacters();
@@ -155,6 +175,7 @@ JSObject* IntlPluralRules::resolvedOptions(JSGlobalObject* globalObject) const
     JSObject* options = constructEmptyObject(globalObject);
     options->putDirect(vm, vm.propertyNames->locale, jsNontrivialString(vm, m_locale));
     options->putDirect(vm, vm.propertyNames->type, jsNontrivialString(vm, m_type == Type::Ordinal ? "ordinal"_s : "cardinal"_s));
+    options->putDirect(vm, Identifier::fromString(vm, "notation"_s), jsNontrivialString(vm, IntlNumberFormat::notationString(m_notation)));
     options->putDirect(vm, vm.propertyNames->minimumIntegerDigits, jsNumber(m_minimumIntegerDigits));
     switch (m_roundingType) {
     case IntlRoundingType::FractionDigits:
