@@ -2123,8 +2123,6 @@ imported/w3c/web-platform-tests/media-source/mediasource-redundant-seek.html [ P
 imported/w3c/web-platform-tests/media-source/mediasource-remove-preserves-currentTime.html [ Pass Failure ]
 imported/w3c/web-platform-tests/media-source/mediasource-remove.html [ Pass Failure ]
 
-webkit.org/b/266683 imported/w3c/web-platform-tests/html/semantics/popovers/popover-light-dismiss.html [ Failure ]
-
 # Failing word-break: auto-phrase tests.
 webkit.org/b/257698 [ Sonoma+ ] imported/w3c/web-platform-tests/css/css-text/word-break/auto-phrase/word-break-auto-phrase-004.html [ ImageOnlyFailure ]
 webkit.org/b/257698 [ Sonoma+ ] imported/w3c/web-platform-tests/css/css-text/word-break/auto-phrase/word-break-auto-phrase-005.html [ ImageOnlyFailure ]
