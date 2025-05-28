@@ -1303,6 +1303,8 @@ private:
 
         bool hasReflection { false };
         bool hasOutlineAutoAncestor { false };
+        // Dirty bit was set with MarkingBehavior::MarkOnlyThis
+        bool preferredLogicalWidthsDirtyIsMarkOnlyThis { false };
         OptionSet<MarginTrimType> trimmedMargins;
 
         // From RenderElement

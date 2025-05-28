@@ -670,17 +670,25 @@ void RenderObject::setPreferredLogicalWidthsDirty(bool shouldBeDirty, MarkingBeh
     if (!shouldBeDirty)
         return m_stateBitfields.setFlag(StateFlag::PreferredLogicalWidthsDirty, { });
 
-    if (preferredLogicalWidthsDirty()) {
+    if (preferredLogicalWidthsDirty() && (!hasRareData() || !rareData().preferredLogicalWidthsDirtyIsMarkOnlyThis)) {
         // Both this and our ancestor chain are already marked dirty.
         return;
     }
 
     m_stateBitfields.setFlag(StateFlag::PreferredLogicalWidthsDirty, true);
-    if (isOutOfFlowPositioned() || markParents == MarkOnlyThis) {
+    if (isOutOfFlowPositioned()) {
         // A positioned object has no effect on the min/max width of its containing block ever. No need to mark ancestor chain.
         return;
     }
+
+    if (markParents == MarkOnlyThis) {
+        ensureRareData().preferredLogicalWidthsDirtyIsMarkOnlyThis = true;
+        return;
+    }
+
     invalidateContainerPreferredLogicalWidths();
+    if (hasRareData())
+        ensureRareData().preferredLogicalWidthsDirtyIsMarkOnlyThis = false;
 }
 
 void RenderObject::invalidateContainerPreferredLogicalWidths()
@@ -688,7 +696,9 @@ void RenderObject::invalidateContainerPreferredLogicalWidths()
     // In order to avoid pathological behavior when inlines are deeply nested, we do include them
     // in the chain that we mark dirty (even though they're kind of irrelevant).
     CheckedPtr ancestor = isRenderTableCell() ? containingBlock() : container();
-    while (ancestor && !ancestor->preferredLogicalWidthsDirty()) {
+    while (ancestor) {
+        if (ancestor->preferredLogicalWidthsDirty() && (!ancestor->hasRareData() || !ancestor->rareData().preferredLogicalWidthsDirtyIsMarkOnlyThis))
+            break;
         // Don't invalidate the outermost object of an unrooted subtree. That object will be
         // invalidated when the subtree is added to the document.
         CheckedPtr container = ancestor->isRenderTableCell() ? ancestor->containingBlock() : ancestor->container();
