@@ -3553,7 +3553,11 @@ WebCore::DictionaryPopupInfo UnifiedPDFPlugin::dictionaryPopupInfoForSelection(P
     }();
 
     dictionaryPopupInfo.origin = rectForSelectionInRootView(selection).location();
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
     dictionaryPopupInfo.platformData.attributedString = WebCore::AttributedString::fromNSAttributedString(nsAttributedString.get());
+#else
+    dictionaryPopupInfo.text = [nsAttributedString string];
+#endif
 
     if (auto textIndicator = textIndicatorForSelection(selection, { }, presentationTransition))
         dictionaryPopupInfo.textIndicator = textIndicator->data();

@@ -1262,8 +1262,12 @@ void PDFPlugin::showDefinitionForAttributedString(NSAttributedString *string, CG
 {
     DictionaryPopupInfo dictionaryPopupInfo;
     dictionaryPopupInfo.origin = convertFromPDFViewToRootView(IntPoint(point));
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
     dictionaryPopupInfo.platformData.attributedString = WebCore::AttributedString::fromNSAttributedString(string);
-    
+#else
+    dictionaryPopupInfo.text = string.string;
+#endif
+
     NSRect rangeRect;
     rangeRect.origin = NSMakePoint(point.x, point.y);
     auto scaleFactor = PDFPlugin::scaleFactor();
@@ -1407,7 +1411,11 @@ WebCore::DictionaryPopupInfo PDFPlugin::dictionaryPopupInfoForSelection(PDFSelec
 
     dictionaryPopupInfo.origin = rangeRect.origin;
     dictionaryPopupInfo.textIndicator = dataForSelection;
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
     dictionaryPopupInfo.platformData.attributedString = WebCore::AttributedString::fromNSAttributedString(scaledNSAttributedString);
+#else
+    dictionaryPopupInfo.text = [scaledNSAttributedString string];
+#endif
 
     return dictionaryPopupInfo;
 }

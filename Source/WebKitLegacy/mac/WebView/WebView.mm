@@ -9032,8 +9032,13 @@ FORWARD(toggleUnderline)
 
 - (id)_animationControllerForDictionaryLookupPopupInfo:(const WebCore::DictionaryPopupInfo&)dictionaryPopupInfo
 {
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
     if (!dictionaryPopupInfo.platformData.attributedString.nsAttributedString())
         return nil;
+#else
+    if (!dictionaryPopupInfo.text)
+        return nil;
+#endif
 
     [self _prepareForDictionaryLookup];
 
@@ -9100,8 +9105,13 @@ FORWARD(toggleUnderline)
 
 - (void)_showDictionaryLookupPopup:(const WebCore::DictionaryPopupInfo&)dictionaryPopupInfo
 {
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
     if (!dictionaryPopupInfo.platformData.attributedString.nsAttributedString())
         return;
+#else
+    if (!dictionaryPopupInfo.text)
+        return;
+#endif
 
     [self _prepareForDictionaryLookup];
 

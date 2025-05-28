@@ -534,6 +534,7 @@ static WebCore::IntRect elementBoundingBoxInWindowCoordinatesFromNode(WebCore::N
     popupInfo.origin = NSMakePoint(rangeRect.x(), rangeRect.y() + scaledDescent);
 
     auto attributedString = editingAttributedString(range, { }).nsAttributedString();
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
     auto scaledAttributedString = adoptNS([[NSMutableAttributedString alloc] initWithString:[attributedString string]]);
     NSFontManager *fontManager = [NSFontManager sharedFontManager];
 
@@ -548,6 +549,9 @@ static WebCore::IntRect elementBoundingBoxInWindowCoordinatesFromNode(WebCore::N
     }];
 
     popupInfo.platformData.attributedString = WebCore::AttributedString::fromNSAttributedString(scaledAttributedString.get());
+#else
+    popupInfo.text = [attributedString string];
+#endif
 
     if (auto textIndicator = WebCore::TextIndicator::createWithRange(range, indicatorOptions, presentationTransition))
         popupInfo.textIndicator = textIndicator->data();
@@ -575,8 +579,13 @@ static WebCore::IntRect elementBoundingBoxInWindowCoordinatesFromNode(WebCore::N
 
     auto dictionaryRange = WTFMove(*range);
     auto dictionaryPopupInfo = [WebImmediateActionController _dictionaryPopupInfoForRange:dictionaryRange inFrame:frame indicatorOptions: { } transition: WebCore::TextIndicatorPresentationTransition::FadeIn];
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
     if (!dictionaryPopupInfo.platformData.attributedString.nsAttributedString())
         return nil;
+#else
+    if (!dictionaryPopupInfo.text)
+        return nil;
+#endif
 
     return [_webView _animationControllerForDictionaryLookupPopupInfo:dictionaryPopupInfo];
 }

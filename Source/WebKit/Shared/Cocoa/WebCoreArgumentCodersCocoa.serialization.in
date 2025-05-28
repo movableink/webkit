@@ -98,10 +98,12 @@ class WebCore::ContentFilterUnblockHandler {
 }
 #endif
 
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
 header: <WebCore/DictionaryPopupInfo.h>
 [CustomHeader] struct WebCore::DictionaryPopupInfoCocoa {
     WebCore::AttributedString attributedString;
 };
+#endif
 
 header: <WebCore/ResourceRequest.h>
 [CustomHeader] struct WebCore::ResourceRequestPlatformData {

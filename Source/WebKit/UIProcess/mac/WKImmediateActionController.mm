@@ -492,8 +492,14 @@
         return nil;
 
     WebCore::DictionaryPopupInfo dictionaryPopupInfo = _hitTestResultData.dictionaryPopupInfo;
+
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
     if (!dictionaryPopupInfo.platformData.attributedString.nsAttributedString())
         return nil;
+#else
+    if (!dictionaryPopupInfo.text)
+        return nil;
+#endif
 
     CheckedPtr { _viewImpl.get() }->prepareForDictionaryLookup();
 

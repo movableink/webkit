@@ -314,9 +314,19 @@ DictionaryPopupInfo WebPage::dictionaryPopupInfoForRange(LocalFrame& frame, cons
 
     dictionaryPopupInfo.textIndicator = textIndicator->data();
 #if PLATFORM(MAC)
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
     dictionaryPopupInfo.platformData.attributedString = WebCore::AttributedString::fromNSAttributedString(scaledAttributedString);
+#else
+    dictionaryPopupInfo.text = [scaledAttributedString string];
+#endif
+
 #elif PLATFORM(MACCATALYST)
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
     dictionaryPopupInfo.platformData.attributedString = WebCore::AttributedString::fromNSAttributedString(adoptNS([[NSMutableAttributedString alloc] initWithString:plainText(range).createNSString().get()]));
+#else
+    dictionaryPopupInfo.text = plainText(range);
+#endif
+
 #endif
 
     editor->setIsGettingDictionaryPopupInfo(false);
