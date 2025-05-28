@@ -48,11 +48,17 @@ skip:
     - test/staging/sm/Temporal
     # Explicit Resource Management
     - test/staging/explicit-resource-management
-    - test/built-ins/DisposableStack/prototype
     - test/built-ins/AsyncDisposableStack
     - test/language/statements/using
     - test/language/statements/await-using
   files:
+    # Depends on AsyncDisposableStack
+    - test/built-ins/DisposableStack/prototype/use/this-does-not-have-internal-disposablestate-throws.js
+    - test/built-ins/DisposableStack/prototype/dispose/this-does-not-have-internal-disposablestate-throws.js
+    - test/built-ins/DisposableStack/prototype/adopt/this-does-not-have-internal-disposablestate-throws.js
+    - test/built-ins/DisposableStack/prototype/move/this-does-not-have-internal-disposablestate-throws.js
+    - test/built-ins/DisposableStack/prototype/defer/this-does-not-have-internal-disposablestate-throws.js
+
     # https://github.com/claudepache/es-legacy-function-reflection
     - test/built-ins/ThrowTypeError/unique-per-realm-function-proto.js
     - test/built-ins/Function/prototype/restricted-property-arguments.js

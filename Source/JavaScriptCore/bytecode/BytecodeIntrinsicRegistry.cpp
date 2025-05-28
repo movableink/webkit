@@ -36,6 +36,7 @@
 #include "JSArrayIterator.h"
 #include "JSAsyncFromSyncIterator.h"
 #include "JSAsyncGenerator.h"
+#include "JSDisposableStack.h"
 #include "JSGenerator.h"
 #include "JSGlobalObject.h"
 #include "JSIteratorHelper.h"
@@ -139,6 +140,10 @@ BytecodeIntrinsicRegistry::BytecodeIntrinsicRegistry(VM& vm)
     m_regExpStringIteratorFieldDone.set(m_vm, jsNumber(static_cast<int32_t>(JSRegExpStringIterator::Field::Done)));
     m_iteratorHelperFieldGenerator.set(m_vm, jsNumber(static_cast<int32_t>(JSIteratorHelper::Field::Generator)));
     m_iteratorHelperFieldUnderlyingIterator.set(m_vm, jsNumber(static_cast<int32_t>(JSIteratorHelper::Field::UnderlyingIterator)));
+    m_disposableStackFieldState.set(m_vm, jsNumber(static_cast<int32_t>(JSDisposableStack::Field::State)));
+    m_disposableStackFieldCapability.set(m_vm, jsNumber(static_cast<int32_t>(JSDisposableStack::Field::Capability)));
+    m_DisposableStackStatePending.set(m_vm, jsNumber(static_cast<int32_t>(JSDisposableStack::State::Pending)));
+    m_DisposableStackStateDisposed.set(m_vm, jsNumber(static_cast<int32_t>(JSDisposableStack::State::Disposed)));
 }
 
 std::optional<BytecodeIntrinsicRegistry::Entry> BytecodeIntrinsicRegistry::lookup(const Identifier& ident) const

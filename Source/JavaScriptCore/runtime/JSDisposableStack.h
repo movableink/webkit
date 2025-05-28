@@ -71,6 +71,8 @@ public:
     static JSDisposableStack* createWithInitialValues(VM&);
     static JSDisposableStack* create(VM&, Structure*);
 
+    bool disposed();
+
 private:
     JSDisposableStack(VM& vm, Structure* structure)
         : Base(vm, structure)

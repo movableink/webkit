@@ -220,6 +220,9 @@ namespace JSC {
     macro(iteratorHelperCreate) \
     macro(syncIterator) \
     macro(includes) \
+    macro(ReferenceError) \
+    macro(SuppressedError) \
+    macro(DisposableStack) \
 
 
 namespace Symbols {

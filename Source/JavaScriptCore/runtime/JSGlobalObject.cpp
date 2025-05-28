@@ -1688,6 +1688,19 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
             JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(init.owner);
             init.set(globalObject->m_aggregateErrorStructure.constructor(globalObject));
         });
+    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::ReferenceError)].initLater([] (const Initializer<JSCell>& init) {
+        JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(init.owner);
+        init.set(globalObject->m_referenceErrorStructure.constructor(globalObject));
+    });
+    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::SuppressedError)].initLater([] (const Initializer<JSCell>& init) {
+        JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(init.owner);
+        init.set(globalObject->m_suppressedErrorStructure.constructor(globalObject));
+    });
+    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::DisposableStack)].initLater([] (const Initializer<JSCell>& init) {
+        JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(init.owner);
+        init.set(globalObject->m_disposableStackStructure.constructor(globalObject));
+    });
+
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::typedArrayLength)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, "typedArrayViewLength"_s, typedArrayViewPrivateFuncLength, ImplementationVisibility::Private));
         });

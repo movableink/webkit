@@ -30,16 +30,40 @@
 #include "InterpreterInlines.h"
 #include "JSCBuiltins.h"
 #include "JSCInlines.h"
+#include "JSDisposableStack.h"
 #include "VMEntryScopeInlines.h"
 
 namespace JSC {
 
 const ClassInfo DisposableStackPrototype::s_info = { "DisposableStack"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DisposableStackPrototype) };
 
-void DisposableStackPrototype::finishCreation(VM& vm, JSGlobalObject*)
+static JSC_DECLARE_HOST_FUNCTION(disposableStackProtoDisposedGetter);
+
+void DisposableStackPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(info()));
+    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->adopt, disposableStackPrototypeAdoptCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->deferKeyword, disposableStackPrototypeDeferMethodCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSFunction* disposeFunction = JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->dispose, disposableStackPrototypeDisposeCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSC_NATIVE_GETTER_WITHOUT_TRANSITION(vm.propertyNames->disposed, disposableStackProtoDisposedGetter, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
+    putDirectWithoutTransition(vm, vm.propertyNames->disposeSymbol, disposeFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->use, disposableStackPrototypeUseCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->move, disposableStackPrototypeMoveCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
+}
+
+JSC_DEFINE_HOST_FUNCTION(disposableStackProtoDisposedGetter, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue thisValue = callFrame->thisValue();
+    auto* disposableStack = jsDynamicCast<JSDisposableStack*>(thisValue);
+    if (!disposableStack) [[unlikely]]
+        return throwVMTypeError(globalObject, scope, "DisposableStack.prototype.disposed getter requires that |this| be a DisposableStack object"_s);
+
+    return JSValue::encode(jsBoolean(disposableStack->disposed()));
 }
 
 } // namespace JSC

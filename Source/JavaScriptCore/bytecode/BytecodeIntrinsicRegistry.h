@@ -61,6 +61,7 @@ enum class LinkTimeConstant : int32_t;
     macro(getRegExpStringIteratorInternalField) \
     macro(getProxyInternalField) \
     macro(getWrapForValidIteratorInternalField) \
+    macro(getDisposableStackInternalField) \
     macro(idWithProfile) \
     macro(isAsyncFromSyncIterator) \
     macro(isObject) \
@@ -84,6 +85,7 @@ enum class LinkTimeConstant : int32_t;
     macro(isUndefinedOrNull) \
     macro(isWrapForValidIterator) \
     macro(isRegExpStringIterator) \
+    macro(isDisposableStack) \
     macro(tailCallForwardArguments) \
     macro(throwTypeError) \
     macro(throwRangeError) \
@@ -103,6 +105,7 @@ enum class LinkTimeConstant : int32_t;
     macro(putMapIteratorInternalField) \
     macro(putSetIteratorInternalField) \
     macro(putRegExpStringIteratorInternalField) \
+    macro(putDisposableStackInternalField) \
     macro(superSamplerBegin) \
     macro(superSamplerEnd) \
     macro(toNumber) \
@@ -198,6 +201,10 @@ enum class LinkTimeConstant : int32_t;
     macro(regExpStringIteratorFieldGlobal) \
     macro(regExpStringIteratorFieldFullUnicode) \
     macro(regExpStringIteratorFieldDone) \
+    macro(disposableStackFieldState) \
+    macro(disposableStackFieldCapability) \
+    macro(DisposableStackStatePending) \
+    macro(DisposableStackStateDisposed) \
 
 
 #define JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_CUSTOM_EACH_NAME(macro) \
