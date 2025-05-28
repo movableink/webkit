@@ -67,19 +67,28 @@ public struct WebView: View {
 
     private let storage: Storage
 
-    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
-    public var body: some View {
+    @ViewBuilder
+    private var representable: some View {
+        #if os(iOS)
         GeometryReader { proxy in
             WebViewRepresentable(page: storage.webPage, safeAreaInsets: proxy.safeAreaInsets)
-                .onChange(of: storage.url, initial: true) {
-                    guard let url = storage.url else {
-                        return
-                    }
-
-                    storage.webPage.load(URLRequest(url: url))
-                }
                 .ignoresSafeArea()
         }
+        #else
+        WebViewRepresentable(page: storage.webPage, safeAreaInsets: .init())
+        #endif
+    }
+
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
+    public var body: some View {
+        representable
+            .onChange(of: storage.url, initial: true) {
+                guard let url = storage.url else {
+                    return
+                }
+
+                storage.webPage.load(URLRequest(url: url))
+            }
     }
 }
 
