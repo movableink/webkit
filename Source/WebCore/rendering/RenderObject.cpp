@@ -667,17 +667,20 @@ void RenderObject::checkBlockPositionedObjectsNeedLayout()
 
 void RenderObject::setPreferredLogicalWidthsDirty(bool shouldBeDirty, MarkingBehavior markParents)
 {
-    bool alreadyDirty = preferredLogicalWidthsDirty();
-    m_stateBitfields.setFlag(StateFlag::PreferredLogicalWidthsDirty, shouldBeDirty);
-    auto shouldMarkContainer = [&] {
-        if (markParents == MarkOnlyThis)
-            return false;
-        if (!shouldBeDirty || alreadyDirty)
-            return false;
-        return is<RenderText>(*this) || !downcast<RenderElement>(*this).style().hasOutOfFlowPosition();
-    };
-    if (shouldMarkContainer())
-        invalidateContainerPreferredLogicalWidths();
+    if (!shouldBeDirty)
+        return m_stateBitfields.setFlag(StateFlag::PreferredLogicalWidthsDirty, { });
+
+    if (preferredLogicalWidthsDirty()) {
+        // Both this and our ancestor chain are already marked dirty.
+        return;
+    }
+
+    m_stateBitfields.setFlag(StateFlag::PreferredLogicalWidthsDirty, true);
+    if (isOutOfFlowPositioned() || markParents == MarkOnlyThis) {
+        // A positioned object has no effect on the min/max width of its containing block ever. No need to mark ancestor chain.
+        return;
+    }
+    invalidateContainerPreferredLogicalWidths();
 }
 
 void RenderObject::invalidateContainerPreferredLogicalWidths()
