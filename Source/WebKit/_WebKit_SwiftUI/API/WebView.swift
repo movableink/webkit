@@ -67,6 +67,7 @@ public struct WebView: View {
 
     private let storage: Storage
 
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public var body: some View {
         GeometryReader { proxy in
             WebViewRepresentable(page: storage.webPage, safeAreaInsets: proxy.safeAreaInsets)
@@ -83,6 +84,7 @@ public struct WebView: View {
 }
 
 extension WebView {
+    /// A type that defines the behavior of how horizontal swipe gestures trigger backward and forward page navigation.
     @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
     @available(watchOS, unavailable)
     @available(tvOS, unavailable)
@@ -93,10 +95,20 @@ extension WebView {
             case disabled
         }
 
+        /// The automatic behavior.
+        ///
+        /// The web view automatically chooses whether horizontal swipe gestures trigger backward and forward page navigation.
+        /// By default, web views use the ``WebView/BackForwardNavigationGesturesBehavior/enabled`` behavior.
         public static let automatic: BackForwardNavigationGesturesBehavior = .init(.automatic)
 
+        /// Backward and forward navigation gestures are enabled.
+        ///
+        /// The web view allows horizontal swipe gestures to trigger backward and forward page navigation.
         public static let enabled: BackForwardNavigationGesturesBehavior = .init(.enabled)
 
+        /// Backward and forward navigation gestures are disabled.
+        ///
+        /// The web view prevents horizontal swipe gestures from triggering backward and forward page navigation.
         public static let disabled: BackForwardNavigationGesturesBehavior = .init(.disabled)
 
         init(_ value: Value) {
@@ -106,6 +118,7 @@ extension WebView {
         let value: Value
     }
 
+    /// The options for controlling the behavior for how magnification gestures interact with web views.
     @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
     @available(watchOS, unavailable)
     @available(tvOS, unavailable)
@@ -116,11 +129,21 @@ extension WebView {
             case disabled
         }
 
-        public static let automatic: Self = .init(.automatic)
+        /// The automatic behavior.
+        ///
+        /// The web view automatically chooses whether magnify gestures change the web view’s magnification.
+        /// By default, web views use the ``WebView/MagnificationGesturesBehavior/enabled`` behavior.
+        public static let automatic: MagnificationGesturesBehavior = .init(.automatic)
 
-        public static let enabled: Self = .init(.enabled)
+        /// Magnify gestures are enabled.
+        ///
+        /// The web view allows magnify gestures to change its magnification.
+        public static let enabled: MagnificationGesturesBehavior = .init(.enabled)
 
-        public static let disabled: Self = .init(.disabled)
+        /// Magnify gestures are disabled.
+        ///
+        /// The web view prevents magnify gestures from changing its magnification.
+        public static let disabled: MagnificationGesturesBehavior = .init(.disabled)
 
         init(_ value: Value) {
             self.value = value
@@ -129,6 +152,7 @@ extension WebView {
         let value: Value
     }
 
+    /// A type specifying the behavior for the presentation of link previews when pressing a link.
     @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
     @available(watchOS, unavailable)
     @available(tvOS, unavailable)
@@ -139,10 +163,20 @@ extension WebView {
             case disabled
         }
 
+        /// The automatic behavior.
+        ///
+        /// The web view automatically chooses whether pressing a link displays a preview of the destination for the link.
+        /// By default, web views use the ``WebView/LinkPreviewBehavior/enabled`` behavior.
         public static let automatic: LinkPreviewBehavior = .init(.automatic)
 
+        /// Link previews are enabled.
+        ///
+        /// The web view allows pressing a link to display a preview of the destination for the link.
         public static let enabled: LinkPreviewBehavior = .init(.enabled)
 
+        /// Link previews are disabled.
+        ///
+        /// The web view prevents pressing a link from displaying a preview of the destination for the link.
         public static let disabled: LinkPreviewBehavior = .init(.disabled)
 
         init(_ value: Value) {
@@ -152,6 +186,7 @@ extension WebView {
         let value: Value
     }
 
+    /// The behavior that determines whether a web view can display content full screen.
     @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
     @available(watchOS, unavailable)
     @available(tvOS, unavailable)
@@ -162,10 +197,20 @@ extension WebView {
             case disabled
         }
 
+        /// The automatic behavior.
+        ///
+        /// The web view automatically chooses whether content can be displayed in full screen.
+        /// By default, web views use the ``WebView/ElementFullscreenBehavior/disabled`` behavior.
         public static let automatic: ElementFullscreenBehavior = .init(.automatic)
 
+        /// Element full screen is enabled.
+        ///
+        /// The web view allows content to be displayed in full screen.
         public static let enabled: ElementFullscreenBehavior = .init(.enabled)
 
+        /// Element full screen is disabled.
+        ///
+        /// The web view prevents content from being displayed in full screen.
         public static let disabled: ElementFullscreenBehavior = .init(.disabled)
 
         init(_ value: Value) {
@@ -176,15 +221,12 @@ extension WebView {
     }
 
     /// Contains information about an element the user activated in a webpage, which may be used to configure a context menu for that element.
+    ///
     /// For links, the information contains the URL that is linked to.
     @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
     @available(watchOS, unavailable)
     @available(tvOS, unavailable)
     public struct ActivatedElementInfo: Hashable, Sendable {
-        init(linkURL: URL?) {
-            self.linkURL = linkURL
-        }
-
         /// The URL of the link that the user clicked.
         public let linkURL: URL?
     }

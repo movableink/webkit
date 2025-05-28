@@ -229,9 +229,10 @@ class CocoaWebViewAdapter: CocoaView, PlatformTextSearching {
             webView.bottomAnchor.constraint(equalTo: bottomAnchor),
         ]
 
-        webViewHeightConstraint = webView.heightAnchor.constraint(equalTo: heightAnchor)
+        let heightConstraint = webView.heightAnchor.constraint(equalTo: heightAnchor)
+        self.webViewHeightConstraint = heightConstraint
 
-        NSLayoutConstraint.activate(webViewConstraints + [webViewHeightConstraint!])
+        NSLayoutConstraint.activate(webViewConstraints + [heightConstraint])
     }
 
     // MARK: Main content view

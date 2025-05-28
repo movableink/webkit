@@ -22,7 +22,7 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 
 internal import SwiftUI
-@_spi(Private) @_spi(CrossImportOverlay) import WebKit
+@_spi(CrossImportOverlay) import WebKit
 
 @MainActor
 struct WebViewRepresentable {
@@ -96,7 +96,7 @@ struct WebViewRepresentable {
         }
 
         webView.configuration.preferences.isTextInteractionEnabled = environment.webViewTextSelection
-        webView.configuration.preferences.isElementFullscreenEnabled = environment.webViewElementFullscreenBehavior.value == .enabled // automatic -> false
+        webView.configuration.preferences.isElementFullscreenEnabled = environment.webViewElementFullscreenBehavior.value == .enabled
 
         platformView.onScrollGeometryChange = environment.webViewOnScrollGeometryChange
 
