@@ -556,7 +556,7 @@ TileRenderInfo AsyncPDFRenderer::renderInfoForTile(const TiledBacking& tiledBack
     return TileRenderInfo { tileRect, renderRect, WTFMove(background), pageCoverage, m_showDebugBorders };
 }
 
-static void renderPDFTile(PDFDocument* pdfDocument, const TileRenderInfo& renderInfo, GraphicsContext& context)
+static void renderPDFTile(PDFDocument *pdfDocument, const TileRenderInfo& renderInfo, GraphicsContext& context)
 {
     context.translate(-renderInfo.tileRect.location());
     if (renderInfo.tileRect != renderInfo.renderRect)
@@ -587,7 +587,7 @@ static void renderPDFTile(PDFDocument* pdfDocument, const TileRenderInfo& render
     }
 }
 
-static RefPtr<NativeImage> renderPDFTileToImage(PDFDocument* pdfDocument, const TileRenderInfo& renderInfo)
+static RefPtr<NativeImage> renderPDFTileToImage(PDFDocument *pdfDocument, const TileRenderInfo& renderInfo)
 {
     ASSERT(!isMainRunLoop());
     RefPtr tileBuffer = ImageBuffer::create(renderInfo.tileRect.size(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, renderInfo.pageCoverage.deviceScaleFactor, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
@@ -603,7 +603,7 @@ static RefPtr<NativeImage> renderPDFTileToImage(PDFDocument* pdfDocument, const 
 }
 
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-static std::optional<DynamicContentScalingDisplayList> renderPDFTileToDynamicContentScalingDisplayList(WebCore::DynamicContentScalingResourceCache& dynamicContentScalingResourceCache, PDFDocument* pdfDocument, const TileRenderInfo& renderInfo)
+static std::optional<DynamicContentScalingDisplayList> renderPDFTileToDynamicContentScalingDisplayList(WebCore::DynamicContentScalingResourceCache& dynamicContentScalingResourceCache, PDFDocument *pdfDocument, const TileRenderInfo& renderInfo)
 {
     ASSERT(!isMainRunLoop());
     WebCore::ImageBufferCreationContext creationContext;
@@ -653,7 +653,7 @@ void AsyncPDFRenderer::serviceRequestQueues()
         m_workQueueSlots--;
         m_workQueue->dispatch([weakThis = ThreadSafeWeakPtr { *this }, pdfDocument = RetainPtr { presentationController->pluginPDFDocument() }, renderKey, renderData = WTFMove(*renderData)
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-            , dynamicContentScalingResourceCache = dynamicContentScalingResourceCache()
+            , dynamicContentScalingResourceCache = ensureDynamicContentScalingResourceCache()
 #endif
         ] mutable {
             RenderedPDFTile tile { renderData.renderInfo };
@@ -866,7 +866,7 @@ void AsyncPDFRenderer::invalidatePreviewsForPageCoverage(const PDFPageCoverage& 
 }
 
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-DynamicContentScalingResourceCache AsyncPDFRenderer::dynamicContentScalingResourceCache()
+DynamicContentScalingResourceCache AsyncPDFRenderer::ensureDynamicContentScalingResourceCache()
 {
     if (!m_dynamicContentScalingResourceCache)
         m_dynamicContentScalingResourceCache = WebCore::DynamicContentScalingResourceCache::create();

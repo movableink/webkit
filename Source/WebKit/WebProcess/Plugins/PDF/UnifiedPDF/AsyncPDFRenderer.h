@@ -259,7 +259,7 @@ private:
     static WebCore::AffineTransform tileToPaintingTransform(float tilingScaleFactor);
     static WebCore::AffineTransform paintingToTileTransform(float tilingScaleFactor);
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-    WebCore::DynamicContentScalingResourceCache dynamicContentScalingResourceCache();
+    WebCore::DynamicContentScalingResourceCache ensureDynamicContentScalingResourceCache();
 #endif
 
     ThreadSafeWeakPtr<PDFPresentationController> m_presentationController;
