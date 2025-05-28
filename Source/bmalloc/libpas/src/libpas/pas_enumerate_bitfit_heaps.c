@@ -108,7 +108,7 @@ static bool view_callback(pas_enumerator* enumerator,
             uintptr_t second_offset;
 
             if (verbose)
-                pas_log("offset = %lu\n", offset);
+                pas_log("offset = %zu\n", offset);
             
             if (pas_bitvector_get(pas_bitfit_page_free_bits(page),
                                   offset >> page_config->base.min_align_shift))

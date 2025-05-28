@@ -29,7 +29,7 @@
 #include "pas_config.h"
 
 /* These need to be included first. */
-#include <pthread.h>
+#include "pas_thread.h"
 #if defined(__has_include)
 #if __has_include(<System/pthread_machdep.h>)
 #include <System/pthread_machdep.h>
@@ -45,6 +45,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+
+#if PAS_OS(WINDOWS)
+#include <intrin.h>
+#endif
 
 PAS_IGNORE_CLANG_WARNINGS_BEGIN("qualifier-requires-header")
 
@@ -947,6 +951,9 @@ static inline bool pas_compare_and_swap_pair_weak(void* raw_ptr,
     return cond;
 #elif PAS_COMPILER(CLANG)
 PAS_IGNORE_WARNINGS_BEGIN("atomic-alignment")
+#if PAS_CPU(ADDRESS64)
+    PAS_TESTING_ASSERT(!((uintptr_t)raw_ptr % 16)); // CMPXCHG16B requires destination be 16-byte aligned
+#endif
     return __c11_atomic_compare_exchange_weak((_Atomic pas_pair*)raw_ptr, &old_value, new_value, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 PAS_IGNORE_WARNINGS_END
 #else
@@ -987,6 +994,9 @@ static inline pas_pair pas_compare_and_swap_pair_strong(void* raw_ptr,
     return pas_pair_create(low, high);
 #elif PAS_COMPILER(CLANG)
 PAS_IGNORE_WARNINGS_BEGIN("atomic-alignment")
+#if PAS_CPU(ADDRESS64)
+    PAS_TESTING_ASSERT(!((uintptr_t)raw_ptr % 16)); // CMPXCHG16B requires destination be 16-byte aligned
+#endif
     __c11_atomic_compare_exchange_strong((_Atomic pas_pair*)raw_ptr, &old_value, new_value, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 PAS_IGNORE_WARNINGS_END
     return old_value;
@@ -1112,13 +1122,15 @@ static inline unsigned pas_hash_ptr(const void* ptr)
 /* Undefined for value == 0. */
 static inline unsigned pas_log2(uintptr_t value)
 {
-    return (sizeof(uintptr_t) * 8 - 1) - (unsigned)__builtin_clzl(value);
+    PAS_TESTING_ASSERT(sizeof(uintptr_t) == sizeof(unsigned long long));
+    return (sizeof(uintptr_t) * 8 - 1) - (unsigned)__builtin_clzll(value);
 }
 
 /* Undefined for value <= 1. */
 static inline unsigned pas_log2_rounded_up(uintptr_t value)
 {
-    return (sizeof(uintptr_t) * 8 - 1) - ((unsigned)__builtin_clzl(value - 1) - 1);
+    PAS_TESTING_ASSERT(sizeof(uintptr_t) == sizeof(unsigned long long));
+    return (sizeof(uintptr_t) * 8 - 1) - ((unsigned)__builtin_clzll(value - 1) - 1);
 }
 
 static inline unsigned pas_log2_rounded_up_safe(uintptr_t value)

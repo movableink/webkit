@@ -33,7 +33,10 @@
 #include "PerProcess.h"
 #include <algorithm>
 #include <cstdlib>
+
+#if !BOS(WINDOWS)
 #include <sys/mman.h>
+#endif
 
 #if !BUSE(LIBPAS)
 

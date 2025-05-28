@@ -1800,7 +1800,7 @@ pas_segregated_heap_ensure_size_directory_for_size(
             double bytes_dirtied_per_object_by_candidate;
         
             if (verbose) {
-                pas_log("object_size = %lu\n", object_size);
+                pas_log("object_size = %zu\n", object_size);
                 pas_log("candidate->object_size = %u\n", candidate->object_size);
             }
 

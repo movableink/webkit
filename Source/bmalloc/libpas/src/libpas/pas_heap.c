@@ -52,7 +52,7 @@ pas_heap* pas_heap_create(pas_heap_ref* heap_ref,
     uintptr_t begin;
 
     if (verbose) {
-        pas_log("Creating heap for size = %lu, alignment = %lu.\n",
+        pas_log("Creating heap for size = %zu, alignment = %zu.\n",
                 config->get_type_size(heap_ref->type),
                 config->get_type_alignment(heap_ref->type));
     }

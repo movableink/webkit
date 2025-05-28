@@ -106,6 +106,57 @@ void DebugHeap::dump()
     malloc_zone_print(m_zone, verbose);
 }
 
+#elif BOS(WINDOWS)
+
+// DebugHeap unimplemented on Windows
+// This might be possible with _aligned_malloc, _aligned_realloc and _aligned_free, however there may be an impedence mismatch compared to Linux's APIs.
+// For example, it might attempt to free larger contiguous regions with a single free which might fail.
+
+DebugHeap::DebugHeap(const LockHolder&)
+    : m_pageSize(vmPageSize())
+{
+}
+
+void* DebugHeap::malloc(size_t size, FailureAction action)
+{
+    BUNUSED_PARAM(size);
+    BUNUSED_PARAM(action);
+    RELEASE_BASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+void* DebugHeap::memalign(size_t alignment, size_t size, FailureAction action)
+{
+    BUNUSED_PARAM(alignment);
+    BUNUSED_PARAM(size);
+    BUNUSED_PARAM(action);
+    RELEASE_BASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+void* DebugHeap::realloc(void* object, size_t size, FailureAction action)
+{
+    BUNUSED_PARAM(object);
+    BUNUSED_PARAM(size);
+    BUNUSED_PARAM(action);
+    RELEASE_BASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+void DebugHeap::free(void* object)
+{
+    BUNUSED_PARAM(object);
+    RELEASE_BASSERT_NOT_REACHED();
+}
+
+void DebugHeap::scavenge()
+{
+}
+
+void DebugHeap::dump()
+{
+}
+
 #else
 
 DebugHeap::DebugHeap(const LockHolder&)

@@ -106,8 +106,11 @@
 #define BALLOW_DEPRECATED_DECLARATIONS_END \
     _Pragma("GCC diagnostic pop")
 #else
-#define BALLOW_DEPRECATED_DECLARATIONS_BEGIN
-#define BALLOW_DEPRECATED_DECLARATIONS_END
+#define BALLOW_DEPRECATED_DECLARATIONS_BEGIN \
+    _Pragma("clang diagnostic push") \
+    _Pragma("clang diagnostic ignored \"-Wdeprecated-declarations\"")
+#define BALLOW_DEPRECATED_DECLARATIONS_END \
+    _Pragma("clang diagnostic pop")
 #endif
 
 /* BALLOW_UNSAFE_BUFFER_USAGE_BEGIN */

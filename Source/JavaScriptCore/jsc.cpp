@@ -4037,7 +4037,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 static NEVER_INLINE void crashPGMUAF()
 {
     WTF::forceEnablePGM(1);
-    size_t allocSize = getpagesize() * 10000;
+    size_t allocSize = WTF::pageSize() * 10000;
     char* result = static_cast<char*>(fastMalloc(allocSize));
     fastFree(result);
     *result = 'a';
@@ -4046,7 +4046,7 @@ static NEVER_INLINE void crashPGMUAF()
 static NEVER_INLINE void crashPGMUpperGuardPage()
 {
     WTF::forceEnablePGM(1);
-    size_t allocSize = getpagesize() * 10000;
+    size_t allocSize = WTF::pageSize() * 10000;
     char* result = static_cast<char*>(fastMalloc(allocSize));
     result = result + allocSize;
     *result = 'a';
@@ -4055,7 +4055,7 @@ static NEVER_INLINE void crashPGMUpperGuardPage()
 static NEVER_INLINE void crashPGMLowerGuardPage()
 {
     WTF::forceEnablePGM(1);
-    size_t allocSize = getpagesize() * 10000;
+    size_t allocSize = WTF::pageSize() * 10000;
     char* result = static_cast<char*>(fastMalloc(allocSize));
     result = result - 1;
     *result = 'a';

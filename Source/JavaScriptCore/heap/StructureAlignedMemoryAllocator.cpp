@@ -109,6 +109,11 @@ public:
 #if !USE(SYSTEM_MALLOC)
         m_useDebugHeap = !bmalloc::api::isEnabled();
         if (!m_useDebugHeap) [[likely]] {
+#if OS(WINDOWS)
+            // libpas isn't calling pas_page_malloc commit, so we've got to commit the region ourselves
+            // https://bugs.webkit.org/show_bug.cgi?id=292771
+            OSAllocator::commit((void *) g_jscConfig.startOfStructureHeap, MarkedBlock::blockSize, true, false);
+#endif
             bmalloc_force_auxiliary_heap_into_reserved_memory(&structureHeap, reinterpret_cast<uintptr_t>(g_jscConfig.startOfStructureHeap) + MarkedBlock::blockSize, reinterpret_cast<uintptr_t>(g_jscConfig.startOfStructureHeap) + g_jscConfig.sizeOfStructureHeap);
             return;
         }
@@ -119,8 +124,19 @@ public:
     void* tryMallocStructureBlock()
     {
 #if !USE(SYSTEM_MALLOC)
+#if OS(WINDOWS)
+        if (!m_useDebugHeap) [[likely]] {
+            void* result = bmalloc_try_allocate_auxiliary_with_alignment_inline(&structureHeap, MarkedBlock::blockSize, MarkedBlock::blockSize, pas_maybe_compact_allocation_mode);
+
+            // libpas isn't calling pas_page_malloc commit, so we've got to commit the region ourselves
+            // https://bugs.webkit.org/show_bug.cgi?id=292771
+            OSAllocator::commit(result, MarkedBlock::blockSize, true, false);
+            return result;
+        }
+#else
         if (!m_useDebugHeap) [[likely]]
             return bmalloc_try_allocate_auxiliary_with_alignment_inline(&structureHeap, MarkedBlock::blockSize, MarkedBlock::blockSize, pas_always_compact_allocation_mode);
+#endif
 #endif
 
         size_t freeIndex;

@@ -33,7 +33,7 @@
 #include "pas_heap_config.h"
 #include "pas_page_base_inlines.h"
 #include "pas_page_sharing_pool.h"
-#include <pthread.h>
+#include "pas_thread.h"
 
 PAS_BEGIN_EXTERN_C;
 

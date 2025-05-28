@@ -687,7 +687,7 @@ void pas_physical_page_sharing_pool_take(
         balance = pas_physical_page_sharing_pool_balance;
 
         if (verbose)
-            pas_log("Balance = %ld\n", balance);
+            pas_log("Balance = %zd\n", balance);
         
         if (balance < 0) {
             size_remaining = bytes - (size_t)balance;
@@ -738,7 +738,7 @@ void pas_physical_page_sharing_pool_take(
     pas_deferred_decommit_log_destruct(&decommit_log, heap_lock_hold_mode);
 
     if (verbose) {
-        pas_log("Balance addend: %ld.\n",
+        pas_log("Balance addend: %zd.\n",
                 balance_addend);
     }
 

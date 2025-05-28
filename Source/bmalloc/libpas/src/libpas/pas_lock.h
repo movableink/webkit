@@ -29,7 +29,7 @@
 #include "pas_log.h"
 #include "pas_race_test_hooks.h"
 #include "pas_utils.h"
-#include <pthread.h>
+#include "pas_thread.h"
 
 PAS_BEGIN_EXTERN_C;
 
