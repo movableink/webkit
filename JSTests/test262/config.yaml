@@ -48,7 +48,7 @@ skip:
     - test/staging/sm/Temporal
     # Explicit Resource Management
     - test/staging/explicit-resource-management
-    - test/built-ins/AsyncDisposableStack
+    - test/built-ins/AsyncDisposableStack/prototype
     - test/language/statements/using
     - test/language/statements/await-using
   files:

@@ -325,6 +325,7 @@
     macro(dispose) \
     macro(use) \
     macro(move) \
+    macro(AsyncDisposableStack)
 
 #define JSC_COMMON_IDENTIFIERS_EACH_PRIVATE_FIELD(macro) \
     macro(constructor)

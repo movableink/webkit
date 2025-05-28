@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "CommonIdentifiers.h"
 #include "InternalFunction.h"
 #include "RegExp.h"
 #include "RegExpCachedResult.h"

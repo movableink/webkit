@@ -933,6 +933,9 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/ArrayStorage.h
     runtime/ArrayStorageInlines.h
     runtime/AssertInvariants.h
+    runtime/AsyncDisposableStackConstructor.h
+    runtime/AsyncDisposableStackPrototype.h
+    runtime/AsyncDisposableStackPrototypeInlines.h
     runtime/AsyncIteratorPrototype.h
     runtime/AuxiliaryBarrier.h
     runtime/AuxiliaryBarrierInlines.h
@@ -1056,6 +1059,8 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/JSArrayBufferView.h
     runtime/JSArrayBufferViewInlines.h
     runtime/JSArrayIterator.h
+    runtime/JSAsyncDisposableStack.h
+    runtime/JSAsyncDisposableStackInlines.h
     runtime/JSAsyncFromSyncIterator.h
     runtime/JSBigInt.h
     runtime/JSBoundFunction.h

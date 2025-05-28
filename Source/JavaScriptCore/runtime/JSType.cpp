@@ -126,6 +126,7 @@ void printInternal(PrintStream& out, JSC::JSType type)
     CASE(JSRegExpStringIteratorType)
     CASE(JSAsyncFromSyncIteratorType)
     CASE(DisposableStackType)
+    CASE(AsyncDisposableStackType)
     }
 }
 

@@ -28,6 +28,7 @@
 #include "ExceptionHelpers.h"
 #include "JSCJSValue.h"
 #include "JSGlobalObject.h"
+#include "JSString.h"
 
 namespace JSC {
 

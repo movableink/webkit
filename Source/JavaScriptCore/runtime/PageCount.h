@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <limits.h>
+#include <wtf/MathExtras.h>
 
 namespace WTF {
 class PrintStream;

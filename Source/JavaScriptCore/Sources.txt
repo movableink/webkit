@@ -738,6 +738,8 @@ runtime/ArrayConventions.cpp
 runtime/ArrayIteratorPrototype.cpp
 runtime/ArrayPrototype.cpp
 runtime/AssertInvariants.cpp
+runtime/AsyncDisposableStackConstructor.cpp
+runtime/AsyncDisposableStackPrototype.cpp
 runtime/AsyncFromSyncIteratorPrototype.cpp
 runtime/AsyncGeneratorFunctionConstructor.cpp
 runtime/AsyncGeneratorFunctionPrototype.cpp
@@ -877,6 +879,7 @@ runtime/JSArrayBuffer.cpp
 runtime/JSArrayBufferConstructor.cpp
 runtime/JSArrayBufferPrototype.cpp
 runtime/JSArrayBufferView.cpp
+runtime/JSAsyncDisposableStack.cpp
 runtime/JSAsyncFunction.cpp
 runtime/JSAsyncFromSyncIterator.cpp
 runtime/JSAsyncGenerator.cpp

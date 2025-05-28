@@ -1446,6 +1446,11 @@
 		8CCBF05F2C804E8500EEC20B /* WrapForValidIteratorPrototypeInlines.h in Headers */ = {isa = PBXBuildFile; fileRef = 8CCBF05E2C804E8500EEC20B /* WrapForValidIteratorPrototypeInlines.h */; };
 		8CCBF0622C804EAF00EEC20B /* JSWrapForValidIterator.h in Headers */ = {isa = PBXBuildFile; fileRef = 8CCBF0612C804EAF00EEC20B /* JSWrapForValidIterator.h */; };
 		8CCBF0642C804EB600EEC20B /* JSWrapForValidIteratorInlines.h in Headers */ = {isa = PBXBuildFile; fileRef = 8CCBF0632C804EB600EEC20B /* JSWrapForValidIteratorInlines.h */; };
+		8CF21B8B2DD9D64F00355A6C /* AsyncDisposableStackConstructor.h in Headers */ = {isa = PBXBuildFile; fileRef = 8CF21B8A2DD9D64F00355A6C /* AsyncDisposableStackConstructor.h */; };
+		8CF21B8E2DD9D65A00355A6C /* AsyncDisposableStackPrototype.h in Headers */ = {isa = PBXBuildFile; fileRef = 8CF21B8D2DD9D65A00355A6C /* AsyncDisposableStackPrototype.h */; };
+		8CF21B902DD9D66000355A6C /* AsyncDisposableStackPrototypeInlines.h in Headers */ = {isa = PBXBuildFile; fileRef = 8CF21B8F2DD9D66000355A6C /* AsyncDisposableStackPrototypeInlines.h */; };
+		8CF21B932DD9D68A00355A6C /* JSAsyncDisposableStack.h in Headers */ = {isa = PBXBuildFile; fileRef = 8CF21B922DD9D68A00355A6C /* JSAsyncDisposableStack.h */; };
+		8CF21B952DD9D69000355A6C /* JSAsyncDisposableStackInlines.h in Headers */ = {isa = PBXBuildFile; fileRef = 8CF21B942DD9D69000355A6C /* JSAsyncDisposableStackInlines.h */; };
 		90213E3E123A40C200D422F3 /* MemoryStatistics.h in Headers */ = {isa = PBXBuildFile; fileRef = 90213E3C123A40C200D422F3 /* MemoryStatistics.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		9064337DD4B0402BAF34A592 /* JSScriptFetcher.h in Headers */ = {isa = PBXBuildFile; fileRef = 6BA93C9590484C5BAD9316EA /* JSScriptFetcher.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		91278D5521DEB82600B57184 /* InspectorAuditAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = 91278D5321DEB82500B57184 /* InspectorAuditAgent.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -4830,6 +4835,14 @@
 		8CCBF0632C804EB600EEC20B /* JSWrapForValidIteratorInlines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSWrapForValidIteratorInlines.h; sourceTree = "<group>"; };
 		8CCBF0652C804ED800EEC20B /* WrapForValidIteratorPrototype.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = WrapForValidIteratorPrototype.js; sourceTree = "<group>"; };
 		8CCBF0662C804EE900EEC20B /* JSIteratorConstructor.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = JSIteratorConstructor.js; sourceTree = "<group>"; };
+		8CF21B892DD9D64800355A6C /* AsyncDisposableStackConstructor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AsyncDisposableStackConstructor.cpp; sourceTree = "<group>"; };
+		8CF21B8A2DD9D64F00355A6C /* AsyncDisposableStackConstructor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AsyncDisposableStackConstructor.h; sourceTree = "<group>"; };
+		8CF21B8C2DD9D65500355A6C /* AsyncDisposableStackPrototype.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AsyncDisposableStackPrototype.cpp; sourceTree = "<group>"; };
+		8CF21B8D2DD9D65A00355A6C /* AsyncDisposableStackPrototype.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AsyncDisposableStackPrototype.h; sourceTree = "<group>"; };
+		8CF21B8F2DD9D66000355A6C /* AsyncDisposableStackPrototypeInlines.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AsyncDisposableStackPrototypeInlines.h; sourceTree = "<group>"; };
+		8CF21B912DD9D68300355A6C /* JSAsyncDisposableStack.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JSAsyncDisposableStack.cpp; sourceTree = "<group>"; };
+		8CF21B922DD9D68A00355A6C /* JSAsyncDisposableStack.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JSAsyncDisposableStack.h; sourceTree = "<group>"; };
+		8CF21B942DD9D69000355A6C /* JSAsyncDisposableStackInlines.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JSAsyncDisposableStackInlines.h; sourceTree = "<group>"; };
 		90213E3B123A40C200D422F3 /* MemoryStatistics.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MemoryStatistics.cpp; sourceTree = "<group>"; };
 		90213E3C123A40C200D422F3 /* MemoryStatistics.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MemoryStatistics.h; sourceTree = "<group>"; };
 		91278D5221DEB82400B57184 /* InspectorAuditAgent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InspectorAuditAgent.cpp; sourceTree = "<group>"; };
@@ -7999,6 +8012,11 @@
 				FE1D6D7023625AB0007A5C26 /* ArrayStorageInlines.h */,
 				FE265F1F2C02D39100997B07 /* AssertInvariants.cpp */,
 				FE265F1E2C02D39100997B07 /* AssertInvariants.h */,
+				8CF21B892DD9D64800355A6C /* AsyncDisposableStackConstructor.cpp */,
+				8CF21B8A2DD9D64F00355A6C /* AsyncDisposableStackConstructor.h */,
+				8CF21B8C2DD9D65500355A6C /* AsyncDisposableStackPrototype.cpp */,
+				8CF21B8D2DD9D65A00355A6C /* AsyncDisposableStackPrototype.h */,
+				8CF21B8F2DD9D66000355A6C /* AsyncDisposableStackPrototypeInlines.h */,
 				8B6016F31F3E3CC000F9DE6A /* AsyncFromSyncIteratorPrototype.cpp */,
 				8B6016F41F3E3CC000F9DE6A /* AsyncFromSyncIteratorPrototype.h */,
 				276B385A2A71D0B500252F4E /* AsyncFromSyncIteratorPrototypeInlines.h */,
@@ -8373,6 +8391,9 @@
 				539FB8B91C99DA7C00940FA1 /* JSArrayInlines.h */,
 				539DD7F323C1BBA900905F13 /* JSArrayIterator.cpp */,
 				539DD7F423C1BBA900905F13 /* JSArrayIterator.h */,
+				8CF21B912DD9D68300355A6C /* JSAsyncDisposableStack.cpp */,
+				8CF21B922DD9D68A00355A6C /* JSAsyncDisposableStack.h */,
+				8CF21B942DD9D69000355A6C /* JSAsyncDisposableStackInlines.h */,
 				8CB955C92C8AF8D000282DA2 /* JSAsyncFromSyncIterator.cpp */,
 				8CB955CA2C8AF8E100282DA2 /* JSAsyncFromSyncIterator.h */,
 				8CB955CC2C8AF8F500282DA2 /* JSAsyncFromSyncIteratorInlines.h */,
@@ -10353,6 +10374,9 @@
 				6B767E7B26791F270017F8D1 /* AssemblyHelpersSpoolers.h in Headers */,
 				FE265F202C02D39100997B07 /* AssertInvariants.h in Headers */,
 				A784A26111D16622005776AC /* ASTBuilder.h in Headers */,
+				8CF21B8B2DD9D64F00355A6C /* AsyncDisposableStackConstructor.h in Headers */,
+				8CF21B8E2DD9D65A00355A6C /* AsyncDisposableStackPrototype.h in Headers */,
+				8CF21B902DD9D66000355A6C /* AsyncDisposableStackPrototypeInlines.h in Headers */,
 				8B6016F61F3E3CC000F9DE6A /* AsyncFromSyncIteratorPrototype.h in Headers */,
 				276B38692A71D0B600252F4E /* AsyncFromSyncIteratorPrototypeInlines.h in Headers */,
 				5B70CFE21DB69E6600EC23F9 /* AsyncFunctionConstructor.h in Headers */,
@@ -11240,6 +11264,8 @@
 				0F2B66EA17B6B5AB00A7AE3F /* JSArrayBufferViewInlines.h in Headers */,
 				539FB8BA1C99DA7C00940FA1 /* JSArrayInlines.h in Headers */,
 				539DD7F523C1BBB500905F13 /* JSArrayIterator.h in Headers */,
+				8CF21B932DD9D68A00355A6C /* JSAsyncDisposableStack.h in Headers */,
+				8CF21B952DD9D69000355A6C /* JSAsyncDisposableStackInlines.h in Headers */,
 				8CB955CB2C8AF8E100282DA2 /* JSAsyncFromSyncIterator.h in Headers */,
 				8CB955CD2C8AF8F500282DA2 /* JSAsyncFromSyncIteratorInlines.h in Headers */,
 				5B70CFDE1DB69E6600EC23F9 /* JSAsyncFunction.h in Headers */,
