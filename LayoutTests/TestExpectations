@@ -7085,9 +7085,6 @@ imported/w3c/web-platform-tests/css/css-view-transitions/web-animations-api-pars
 imported/w3c/web-platform-tests/css/css-view-transitions/web-animations-api-parse-pseudo-argument.html?first-pseudo=::view-transition-group(first%20) [ Skip ]
 imported/w3c/web-platform-tests/css/css-view-transitions/web-animations-api-parse-pseudo-argument.html?first-pseudo=::view-transition-group(first) [ Skip ]
 
-# Spec still in flux.
-imported/w3c/web-platform-tests/css/css-view-transitions/auto-name-get-animations.html [ Failure ]
-
 # View transitions Level 2 - types.
 # Test doesn't seem to pass on Chrome Canary.
 imported/w3c/web-platform-tests/css/css-view-transitions/view-transition-types-mutable-no-document-element-crashtest.html [ Skip ]
