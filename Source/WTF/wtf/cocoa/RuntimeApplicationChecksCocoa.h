@@ -79,7 +79,6 @@ enum class SDKAlignedBehavior {
     NoShowModalDialog,
     NoTypedArrayAPIQuirk,
     NoUnconditionalUniversalSandboxExtension,
-    NoWeChatScrollingQuirk,
     NoUNIQLOLazyIframeLoadingQuirk,
     NullOriginForNonSpecialSchemedURLs,
     ObservesClassProperty,
@@ -212,7 +211,6 @@ WTF_EXPORT_PRIVATE bool isWebProcess();
 WTF_EXPORT_PRIVATE bool isIBooksStorytime();
 WTF_EXPORT_PRIVATE bool isMobileStore();
 WTF_EXPORT_PRIVATE bool isUNIQLOApp();
-WTF_EXPORT_PRIVATE bool isWechat();
 WTF_EXPORT_PRIVATE bool isDOFUSTouch();
 WTF_EXPORT_PRIVATE bool isMyRideK12();
 

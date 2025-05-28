@@ -162,7 +162,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::DataURLFragmentRemoval);
         disableBehavior(SDKAlignedBehavior::HTMLDocumentSupportedPropertyNames);
         disableBehavior(SDKAlignedBehavior::ObservesClassProperty);
-        disableBehavior(SDKAlignedBehavior::NoWeChatScrollingQuirk);
         disableBehavior(SDKAlignedBehavior::SharedNetworkProcess);
         disableBehavior(SDKAlignedBehavior::BlanksViewOnJSPrompt);
         disableBehavior(SDKAlignedBehavior::NoClientCertificateLookup);
@@ -605,12 +604,6 @@ bool IOSApplication::isCrunchyroll()
 {
     static bool isCrunchyroll = applicationBundleIsEqualTo("com.crunchyroll.iphone"_s);
     return isCrunchyroll;
-}
-
-bool IOSApplication::isWechat()
-{
-    static bool isWechat = applicationBundleIsEqualTo("com.tencent.xin"_s);
-    return isWechat;
 }
 
 bool IOSApplication::isUNIQLOApp()

@@ -32,7 +32,6 @@
 
 #include "CSSFontSelector.h"
 #include "ContainerNodeInlines.h"
-#include "DOMTokenList.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "ElementAncestorIterator.h"
@@ -998,20 +997,6 @@ void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
         static MainThreadNeverDestroyed<const AtomString> idValue("guide-inner-content"_s);
         if (style.overflowY() == Overflow::Hidden && m_element->idForStyleResolution() == idValue)
             style.setOverflowY(Overflow::Auto);
-    }
-    if (m_document->quirks().needsWeChatScrollingQuirk()) {
-        static MainThreadNeverDestroyed<const AtomString> class1("tree-select"_s);
-        static MainThreadNeverDestroyed<const AtomString> class2("v-tree-select"_s);
-        auto& flexBasis = style.flexBasis();
-        if (style.minHeight().isAuto()
-            && style.display() == DisplayType::Flex
-            && style.flexGrow() == 1
-            && style.flexShrink() == 1
-            && (flexBasis.isPercent() || flexBasis.isFixed())
-            && flexBasis.value() == 0
-            && m_element->hasClassName(class1)
-            && m_element->hasClassName(class2))
-            style.setMinHeight(WebCore::Length(0, LengthType::Fixed));
     }
     if (m_document->quirks().needsPrimeVideoUserSelectNoneQuirk()) {
         static MainThreadNeverDestroyed<const AtomString> className("webPlayerSDKUiContainer"_s);

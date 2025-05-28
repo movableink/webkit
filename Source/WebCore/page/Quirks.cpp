@@ -593,17 +593,6 @@ bool Quirks::needsFullscreenObjectFitQuirk() const
 #endif
 }
 
-// FIXME: weChat <rdar://problem/74377902>
-bool Quirks::needsWeChatScrollingQuirk() const
-{
-#if PLATFORM(IOS) || PLATFORM(VISION)
-    static bool shouldUseWeChatScrollingQuirk = !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoWeChatScrollingQuirk) && WTF::IOSApplication::isWechat();
-    return needsQuirks() && shouldUseWeChatScrollingQuirk;
-#else
-    return false;
-#endif
-}
-
 // zomato.com <rdar://problem/128962778>
 bool Quirks::needsZomatoEmailLoginLabelQuirk() const
 {
