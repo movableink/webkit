@@ -1,6 +1,6 @@
 
 FAIL Test transfering ArrayBuffer to VideoFrame assert_equals: data.length after detach expected 0 but got 16
-FAIL Test transfering buffers to VideoFrame with uneven samples promise_test: Unhandled rejection with value: object "TypeError: layout width bytes is zero"
+FAIL Test transfering buffers to VideoFrame with uneven samples assert_equals: data.length after detach expected 0 but got 3
 PASS Test transfering detached buffer to VideoFrame
 FAIL Test transfering view of an ArrayBuffer to VideoFrame assert_equals: data.length after detach expected 0 but got 16
 PASS Test transfering same array buffer twice

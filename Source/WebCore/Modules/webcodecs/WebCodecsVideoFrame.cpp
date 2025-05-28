@@ -276,8 +276,6 @@ ExceptionOr<Ref<WebCodecsVideoFrame>> WebCodecsVideoFrame::create(ScriptExecutio
 
 static std::optional<Exception> validateI420Sizes(const WebCodecsVideoFrame::BufferInit& init)
 {
-    if (init.codedWidth % 2 || init.codedHeight % 2)
-        return Exception { ExceptionCode::TypeError, "coded width or height is odd"_s };
     if (init.visibleRect && (static_cast<size_t>(init.visibleRect->x) % 2 || static_cast<size_t>(init.visibleRect->x) % 2))
         return Exception { ExceptionCode::TypeError, "visible x or y is odd"_s };
     return { };
@@ -309,10 +307,8 @@ ExceptionOr<Ref<WebCodecsVideoFrame>> WebCodecsVideoFrame::create(ScriptExecutio
     auto colorSpace = videoFramePickColorSpace(init.colorSpace, pixelFormat);
     RefPtr<VideoFrame> videoFrame;
     if (pixelFormat == VideoPixelFormat::NV12) {
-        if (init.codedWidth % 2 || init.codedHeight % 2)
-            return Exception { ExceptionCode::TypeError, "coded width or height is odd"_s };
-        if (init.visibleRect && (static_cast<size_t>(init.visibleRect->x) % 2 || static_cast<size_t>(init.visibleRect->x) % 2))
-            return Exception { ExceptionCode::TypeError, "visible x or y is odd"_s };
+        if (auto exception = validateI420Sizes(init))
+            return WTFMove(*exception);
         videoFrame = VideoFrame::createNV12(data.span(), parsedRect.width, parsedRect.height, layout.computedLayouts[0], layout.computedLayouts[1], WTFMove(colorSpace));
     } else if (pixelFormat == VideoPixelFormat::RGBA || init.format == VideoPixelFormat::RGBX)
         videoFrame = VideoFrame::createRGBA(data.span(), parsedRect.width, parsedRect.height, layout.computedLayouts[0], WTFMove(colorSpace));
