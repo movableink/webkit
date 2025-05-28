@@ -95,6 +95,7 @@
 #import <wtf/cf/VectorCF.h>
 #import <wtf/cocoa/SpanCocoa.h>
 #import <wtf/spi/darwin/SandboxSPI.h>
+#import <wtf/text/StringToIntegerConversion.h>
 
 #if ENABLE(GPU_PROCESS) && PLATFORM(COCOA)
 #include "LibWebRTCCodecs.h"
@@ -888,26 +889,30 @@ std::pair<URL, DidFilterLinkDecoration> WebPage::applyLinkDecorationFilteringWit
         if (!loader)
             return false;
         auto effectivePolicies = trigger == LinkDecorationFilteringTrigger::Navigation ? loader->navigationalAdvancedPrivacyProtections() : loader->advancedPrivacyProtections();
-        return effectivePolicies.contains(AdvancedPrivacyProtections::LinkDecorationFiltering) || m_page->settings().filterLinkDecorationByDefaultEnabled();
+        return effectivePolicies.contains(AdvancedPrivacyProtections::LinkDecorationFiltering);
     };
 
-    bool shouldApplyLinkDecorationFiltering = [&] {
+    bool hasOptedInToLinkDecorationFiltering = [&] {
         if (isLinkDecorationFilteringEnabled(RefPtr { mainFrame->loader().activeDocumentLoader() }.get()))
             return true;
 
         return isLinkDecorationFilteringEnabled(RefPtr { mainFrame->loader().policyDocumentLoader() }.get());
     }();
 
-    if (!shouldApplyLinkDecorationFiltering)
+    if (!hasOptedInToLinkDecorationFiltering && !m_page->settings().filterLinkDecorationByDefaultEnabled())
         return { url, DidFilterLinkDecoration::No };
 
     if (!url.hasQuery())
         return { url, DidFilterLinkDecoration::No };
 
     auto sanitizedURL = url;
-    auto removedParameters = WTF::removeQueryParameters(sanitizedURL, [&](auto& parameter) {
-        auto it = m_internals->linkDecorationFilteringData.find(parameter);
+    auto removedParameters = WTF::removeQueryParameters(sanitizedURL, [&](auto& key, auto& value) {
+        auto it = m_internals->linkDecorationFilteringData.find(key);
         if (it == m_internals->linkDecorationFilteringData.end())
+            return false;
+
+        constexpr auto base = 10;
+        if (value.length() == 3 && !hasOptedInToLinkDecorationFiltering && WTF::parseInteger<uint8_t>(value, base, WTF::ParseIntegerWhitespacePolicy::Disallow))
             return false;
 
         const auto& conditionals = it->value;
@@ -951,8 +956,8 @@ URL WebPage::allowedQueryParametersForAdvancedPrivacyProtections(const URL& url)
     if (!allowedParameters.contains("#"_s))
         sanitizedURL.removeFragmentIdentifier();
 
-    WTF::removeQueryParameters(sanitizedURL, [&](auto& parameter) {
-        return !allowedParameters.contains(parameter);
+    WTF::removeQueryParameters(sanitizedURL, [&](auto& key, auto&) {
+        return !allowedParameters.contains(key);
     });
 
     return sanitizedURL;

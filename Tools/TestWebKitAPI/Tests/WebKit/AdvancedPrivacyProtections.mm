@@ -468,6 +468,29 @@ TEST(AdvancedPrivacyProtections, RemoveTrackingQueryParametersForMainResourcesOn
     }
 }
 
+TEST(AdvancedPrivacyProtections, DoNotRemoveTrackingQueryParametersWith8BitValues)
+{
+    [TestProtocol registerWithScheme:@"https"];
+    QueryParameterRequestSwizzler swizzler { @[ @"foo" ], @[ @"" ], @[ @"" ] };
+    RetainPtr webView = createWebViewWithAdvancedPrivacyProtections(NO);
+
+    auto testURL = [&](NSString *urlString, NSString *expectedResult) {
+        [webView synchronouslyLoadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:urlString]]];
+        EXPECT_WK_STREQ(expectedResult, [webView URL].absoluteString);
+    };
+
+    testURL(@"https://bundle-file/simple.html?foo=0", @"https://bundle-file/simple.html");
+    testURL(@"https://bundle-file/simple.html?foo=256", @"https://bundle-file/simple.html");
+    testURL(@"https://bundle-file/simple.html?foo=aaa", @"https://bundle-file/simple.html");
+    testURL(@"https://bundle-file/simple.html?foo=-01", @"https://bundle-file/simple.html");
+    testURL(@"https://bundle-file/simple.html?foo=0000", @"https://bundle-file/simple.html");
+    testURL(@"https://bundle-file/simple.html?foo=1+&bar=2", @"https://bundle-file/simple.html?bar=2");
+    testURL(@"https://bundle-file/simple.html?foo=1%20&bar=2", @"https://bundle-file/simple.html?bar=2");
+    testURL(@"https://bundle-file/simple.html?foo=000", @"https://bundle-file/simple.html?foo=000");
+    testURL(@"https://bundle-file/simple.html?foo=010", @"https://bundle-file/simple.html?foo=010");
+    testURL(@"https://bundle-file/simple.html?foo=255", @"https://bundle-file/simple.html?foo=255");
+}
+
 TEST(AdvancedPrivacyProtections, ApplyNavigationalProtectionsAfterMultiplePSON)
 {
     QueryParameterRequestSwizzler swizzler { @[ @"foo", @"bar", @"baz" ], @[ @"", @"", @"" ], @[ @"", @"", @"" ] };
