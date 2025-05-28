@@ -28,6 +28,7 @@
 #if PLATFORM(MAC)
 
 #include "ScrollTypes.h"
+#include "UserInterfaceLayoutDirection.h"
 #include <wtf/RetainPtr.h>
 
 OBJC_CLASS CALayer;
