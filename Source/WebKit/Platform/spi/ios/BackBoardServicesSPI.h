@@ -31,6 +31,8 @@ DECLARE_SYSTEM_HEADER
 
 #import <BackBoardServices/BKSAnimationFence.h>
 #import <BackBoardServices/BKSAnimationFence_Private.h>
+#import <BackBoardServices/BKSHIDEventAttributes.h>
+#import <BackBoardServices/BKSHIDEventKeyCommand.h>
 #import <BackBoardServices/BKSMousePointerService.h>
 
 #else
@@ -54,13 +56,6 @@ DECLARE_SYSTEM_HEADER
 - (id<BSInvalidatable>)addPointerDeviceObserver:(id<BKSMousePointerDeviceObserver>)observer;
 @end
 
-#endif // USE(APPLE_INTERNAL_SDK)
-
-// Unfortunately, the following declarations need to be forward declared even when using the internal SDK,
-// since the headers that define these symbols (BKSHIDEventKeyCommand.h and BKSHIDEventAttributes.h) include
-// additional private headers that attempt to define macros, which conflict with other macros within WebKit
-// (in particular, `kB` being defined in BrightnessSystemKeys.h, and Sizes.h in bmalloc).
-
 typedef NS_OPTIONS(NSInteger, BKSKeyModifierFlags) {
     BKSKeyModifierShift = 1 << 17,
     BKSKeyModifierControl = 1 << 18,
@@ -74,3 +69,5 @@ typedef NS_OPTIONS(NSInteger, BKSKeyModifierFlags) {
 @interface BKSHIDEventDigitizerAttributes : BKSHIDEventBaseAttributes
 @property (nonatomic) BKSKeyModifierFlags activeModifiers;
 @end
+
+#endif // USE(APPLE_INTERNAL_SDK)
