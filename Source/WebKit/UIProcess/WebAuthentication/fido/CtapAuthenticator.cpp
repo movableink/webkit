@@ -307,6 +307,9 @@ void CtapAuthenticator::continueGetAssertionAfterResponseReceived(Vector<uint8_t
             return;
         }
 
+        if (!isPinError(error) && tryDowngrade())
+            return;
+
         if (isPinError(error)) {
             if (!m_pinAuth.isEmpty()) { // Skip the very first command that acts like wink.
                 if (RefPtr observer = this->observer())
@@ -314,8 +317,7 @@ void CtapAuthenticator::continueGetAssertionAfterResponseReceived(Vector<uint8_t
             }
             if (tryRestartPin(error))
                 return;
-        } else if (error != CtapDeviceResponseCode::kCtap2ErrNoCredentials && tryDowngrade())
-            return;
+        }
 
         if (error == CtapDeviceResponseCode::kCtap2ErrNoCredentials) {
             if (RefPtr observer = this->observer())
