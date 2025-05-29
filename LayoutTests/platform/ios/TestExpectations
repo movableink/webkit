@@ -7879,3 +7879,6 @@ fast/canvas/webgl/gl-teximage.html [ Pass ]
 fast/text/international/hindi-spacing.html [ Failure ]
 
 webkit.org/b/288518 fast/text/emoji-num-glyphs.html [ Failure ]
+
+# rdar://148254605 (REGRESSION (iOS 18.4): media/sources-fallback-codecs.html is constantly failing.)
+media/sources-fallback-codecs.html [ Failure ]
