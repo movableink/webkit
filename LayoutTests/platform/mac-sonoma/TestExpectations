@@ -10,3 +10,6 @@ http/tests/download/anchor-download-redirect-cross-origin.html
 http/tests/download/anchor-download-redirect-cross-origin-top-level.html
 
 accessibility/text-marker/text-marker-debug-description.html [ Skip ]
+
+# rdar://146986685 (REGRESSION(Sequoia 15.4): fast/canvas/webgl/gl-teximage.html is a constant text failure)
+fast/canvas/webgl/gl-teximage.html [ Pass ]
