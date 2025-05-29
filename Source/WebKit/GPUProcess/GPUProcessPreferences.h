@@ -40,10 +40,6 @@ struct GPUProcessPreferences {
     std::optional<bool> shouldUseModernAVContentKeySession;
 #endif
 
-#if ENABLE(ALTERNATE_WEBM_PLAYER)
-    std::optional<bool> alternateWebMPlayerEnabled;
-#endif
-
 #if ENABLE(VP9)
     std::optional<bool> vp9DecoderEnabled;
     bool swVPDecodersAlwaysEnabled { false };

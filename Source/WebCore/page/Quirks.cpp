@@ -1829,7 +1829,7 @@ bool Quirks::needsHotelsAnimationQuirk(Element& element, const RenderStyle& styl
 
 bool Quirks::needsLimitedMatroskaSupport() const
 {
-#if ENABLE(MEDIA_RECORDER) && ENABLE(ALTERNATE_WEBM_PLAYER)
+#if ENABLE(MEDIA_RECORDER) && ENABLE(COCOA_WEBM_PLAYER)
     return isDomain("zencastr.com"_s);
 #else
     return false;

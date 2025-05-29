@@ -58,9 +58,6 @@ public:
     WEBCORE_EXPORT static void setShouldDeactivateAudioSession(bool);
     WEBCORE_EXPORT static bool shouldDeactivateAudioSession();
 
-    WEBCORE_EXPORT static void setAlternateWebMPlayerEnabled(bool);
-    WEBCORE_EXPORT static bool alternateWebMPlayerEnabled();
-
     virtual ~PlatformMediaSessionManager();
 
     void addSession(PlatformMediaSessionInterface&) override;
@@ -203,9 +200,6 @@ private:
     WeakHashSet<NowPlayingMetadataObserver> m_nowPlayingMetadataObservers;
     TaskCancellationGroup m_taskGroup;
 
-#if ENABLE(ALTERNATE_WEBM_PLAYER)
-    static bool m_alternateWebMPlayerEnabled;
-#endif
 #if HAVE(SC_CONTENT_SHARING_PICKER)
     static bool s_useSCContentSharingPicker;
 #endif

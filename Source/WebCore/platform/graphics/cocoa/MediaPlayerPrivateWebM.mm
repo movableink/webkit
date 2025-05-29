@@ -26,7 +26,7 @@
 #import "config.h"
 #import "MediaPlayerPrivateWebM.h"
 
-#if ENABLE(ALTERNATE_WEBM_PLAYER)
+#if ENABLE(COCOA_WEBM_PLAYER)
 
 #import "AudioTrackPrivateWebM.h"
 #import "FloatSize.h"
@@ -2027,4 +2027,4 @@ std::optional<VideoPlaybackQualityMetrics> MediaPlayerPrivateWebM::videoPlayback
 
 } // namespace WebCore
 
-#endif // ENABLE(ALTERNATE_WEBM_PLAYER)
+#endif // ENABLE(COCOA_WEBM_PLAYER)

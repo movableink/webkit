@@ -45,10 +45,6 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(PlatformMediaSessionManager);
 
-#if ENABLE(ALTERNATE_WEBM_PLAYER)
-bool PlatformMediaSessionManager::m_alternateWebMPlayerEnabled;
-#endif
-
 #if ENABLE(VP9)
 bool PlatformMediaSessionManager::m_vp9DecoderEnabled;
 bool PlatformMediaSessionManager::m_swVPDecodersAlwaysEnabled;
@@ -767,24 +763,6 @@ bool PlatformMediaSessionManager::shouldDeactivateAudioSession()
 void PlatformMediaSessionManager::setShouldDeactivateAudioSession(bool deactivate)
 {
     deactivateAudioSession() = deactivate;
-}
-
-void PlatformMediaSessionManager::setAlternateWebMPlayerEnabled(bool enabled)
-{
-#if ENABLE(ALTERNATE_WEBM_PLAYER)
-    m_alternateWebMPlayerEnabled = enabled;
-#else
-    UNUSED_PARAM(enabled);
-#endif
-}
-
-bool PlatformMediaSessionManager::alternateWebMPlayerEnabled()
-{
-#if ENABLE(ALTERNATE_WEBM_PLAYER)
-    return m_alternateWebMPlayerEnabled;
-#else
-    return false;
-#endif
 }
 
 WeakPtr<PlatformMediaSessionInterface> PlatformMediaSessionManager::bestEligibleSessionForRemoteControls(NOESCAPE const Function<bool(const PlatformMediaSessionInterface&)>& filterFunction, PlatformMediaSession::PlaybackControlsPurpose purpose)
