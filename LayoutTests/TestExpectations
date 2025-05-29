@@ -437,7 +437,9 @@ imported/w3c/web-platform-tests/selection/caret/move-around-contenteditable-fals
 [ Debug ] imported/w3c/web-platform-tests/selection/caret/move-around-generated-content.html [ Skip ]
 
 # This crash test is a timeout.
+# These crash tests time out.
 imported/w3c/web-platform-tests/selection/crashtests/selectall-and-find-svg-text-on-selectstart.html [ Timeout ]
+webanimations/asan-crash-under-web-animation-remove.html [ Timeout ]
 
 imported/w3c/web-platform-tests/selection/shadow-dom/cross-shadow-boundary-1.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/selection/shadow-dom/cross-shadow-boundary-select-document.html [ ImageOnlyFailure ]
