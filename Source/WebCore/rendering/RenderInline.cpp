@@ -171,7 +171,7 @@ void RenderInline::styleWillChange(StyleDifference diff, const RenderStyle& newS
     if (canContainAbsolutelyPositionedObjects() && newStyle.position() == PositionType::Static) {
         auto* container = RenderObject::containingBlockForPositionType(PositionType::Absolute, *this);
         if (container && !container->canContainAbsolutelyPositionedObjects())
-            container->removePositionedObjects({ }, RenderBlock::ContainingBlockState::NewContainingBlock);
+            container->removeOutOfFlowBoxes({ }, RenderBlock::ContainingBlockState::NewContainingBlock);
     }
 }
 

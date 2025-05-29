@@ -76,25 +76,24 @@ public:
 
     virtual void layoutBlock(RelayoutChildren, LayoutUnit pageLogicalHeight = 0_lu);
 
-    void insertPositionedObject(RenderBox&);
-    static void removePositionedObject(const RenderBox&);
+    void addOutOfFlowBox(RenderBox&);
+    static void removeOutOfFlowBox(const RenderBox&);
     enum class ContainingBlockState : bool { NewContainingBlock, SameContainingBlock };
-    void removePositionedObjects(const RenderBlock*, ContainingBlockState = ContainingBlockState::SameContainingBlock);
+    void removeOutOfFlowBoxes(const RenderBlock*, ContainingBlockState = ContainingBlockState::SameContainingBlock);
 
-    TrackedRendererListHashSet* positionedObjects() const;
-    bool hasPositionedObjects() const
+    TrackedRendererListHashSet* outOfFlowBoxes() const;
+    bool hasOutOfFlowBoxes() const
     {
-        auto* objects = positionedObjects();
-        return objects && !objects->isEmptyIgnoringNullReferences();
+        auto* renderers = outOfFlowBoxes();
+        return renderers && !renderers->isEmptyIgnoringNullReferences();
     }
-
     void addPercentHeightDescendant(RenderBox&);
     static void removePercentHeightDescendant(RenderBox&);
     TrackedRendererListHashSet* percentHeightDescendants() const;
     bool hasPercentHeightDescendants() const
     {
-        auto* objects = percentHeightDescendants();
-        return objects && !objects->isEmptyIgnoringNullReferences();
+        auto* renderers = percentHeightDescendants();
+        return renderers && !renderers->isEmptyIgnoringNullReferences();
     }
     static bool hasPercentHeightContainerMap();
     static void clearPercentHeightDescendantsFrom(RenderBox&);
@@ -114,7 +113,7 @@ public:
 
     virtual bool shouldChildInlineMarginContributeToContainerIntrinsicSize(MarginTrimType /* marginSide */, const RenderElement&) const { return true; }
 
-    void markPositionedObjectsForLayout();
+    void markOutOfFlowBoxesForLayout();
     void markForPaginationRelayoutIfNeeded() override;
     
     // FIXME-BLOCKFLOW: Remove virtualizaion when all of the line layout code has been moved out of RenderBlock
@@ -230,7 +229,7 @@ public:
     LayoutUnit logicalRightSelectionOffset(RenderBlock& rootBlock, LayoutUnit position, const LogicalSelectionOffsetCaches&);
 
 #if ASSERT_ENABLED
-    void checkPositionedObjectsNeedLayout();
+    void checkOutOfFlowBoxesNeedLayout();
 #endif
 
     void updateHitTestResult(HitTestResult&, const LayoutPoint&) const override;
@@ -262,10 +261,10 @@ protected:
 
     void layout() override;
 
-    void layoutPositionedObjects(RelayoutChildren, bool fixedPositionObjectsOnly = false);
-    virtual void layoutPositionedObject(RenderBox&, RelayoutChildren, bool fixedPositionObjectsOnly);
+    void layoutOutOfFlowBoxes(RelayoutChildren, bool fixedPositionObjectsOnly = false);
+    virtual void layoutOutOfFlowBox(RenderBox&, RelayoutChildren, bool fixedPositionObjectsOnly);
     
-    void markFixedPositionObjectForLayoutIfNeeded(RenderBox& child);
+    void markFixedPositionBoxForLayoutIfNeeded(RenderBox& child);
 
     LayoutUnit marginIntrinsicLogicalWidthForChild(RenderBox&) const;
 
@@ -332,7 +331,7 @@ protected:
     // FIXME-BLOCKFLOW: Remove virtualization when all callers have moved to RenderBlockFlow
     virtual void addOverflowFromInlineChildren() { }
     void addOverflowFromBlockChildren();
-    void addOverflowFromPositionedObjects();
+    void addOverflowFromOutOfFlowBoxes();
     void addVisualOverflowFromTheme();
 
     void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) const override;
@@ -416,7 +415,7 @@ private:
 
     RenderFragmentedFlow* updateCachedEnclosingFragmentedFlow(RenderFragmentedFlow*) const;
 
-    void removePositionedObjectsIfNeededOnStyleChange(const RenderStyle& oldStyle, const RenderStyle& newStyle);
+    void removeOutOfFlowBoxesIfNeededOnStyleChange(const RenderStyle& oldStyle, const RenderStyle& newStyle);
 
     void absoluteQuadsIgnoringContinuation(const FloatRect&, Vector<FloatQuad>&, bool* wasFixed) const override;
 

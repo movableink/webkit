@@ -744,7 +744,7 @@ static const RenderElement* penultimateContainingBlockChainElement(const RenderE
 
 static bool firstChildPrecedesSecondChild(const RenderObject* firstChild, const RenderObject* secondChild, const RenderBlock* containingBlock)
 {
-    auto positionedObjects = containingBlock->positionedObjects();
+    auto positionedObjects = containingBlock->outOfFlowBoxes();
     ASSERT(positionedObjects);
     for (auto it = positionedObjects->begin(); it != positionedObjects->end(); ++it) {
         auto child = it.get();

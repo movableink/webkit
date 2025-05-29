@@ -1768,11 +1768,11 @@ static bool layoutOverflowRectContainsAllDescendants(const RenderBox& renderBox)
         return false;
 
     // If there are any position:fixed inside of us, game over.
-    if (auto* viewPositionedObjects = renderBox.view().positionedObjects()) {
-        for (CheckedRef positionedBox : *viewPositionedObjects) {
-            if (positionedBox.ptr() == &renderBox)
+    if (auto* viewPositionedOutOfFlowBoxes = renderBox.view().outOfFlowBoxes()) {
+        for (CheckedRef viewPositionedOutOfFlowBox : *viewPositionedOutOfFlowBoxes) {
+            if (viewPositionedOutOfFlowBox.ptr() == &renderBox)
                 continue;
-            if (positionedBox->isFixedPositioned() && renderBox.element()->contains(positionedBox->protectedElement().get()))
+            if (viewPositionedOutOfFlowBox->isFixedPositioned() && renderBox.element()->contains(viewPositionedOutOfFlowBox->protectedElement().get()))
                 return false;
         }
     }
@@ -1784,11 +1784,11 @@ static bool layoutOverflowRectContainsAllDescendants(const RenderBox& renderBox)
 
     // This renderer may have positioned descendants whose containing block is some ancestor.
     if (CheckedPtr containingBlock = RenderObject::containingBlockForPositionType(PositionType::Absolute, renderBox)) {
-        if (auto* positionedObjects = containingBlock->positionedObjects()) {
-            for (CheckedRef positionedBox : *positionedObjects) {
-                if (positionedBox.ptr() == &renderBox)
+        if (auto* outOfFlowBoxes = containingBlock->outOfFlowBoxes()) {
+            for (CheckedRef outOfFlowBox : *outOfFlowBoxes) {
+                if (outOfFlowBox.ptr() == &renderBox)
                     continue;
-                if (renderBox.protectedElement()->contains(positionedBox->protectedElement().get()))
+                if (renderBox.protectedElement()->contains(outOfFlowBox->protectedElement().get()))
                     return false;
             }
         }

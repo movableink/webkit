@@ -542,7 +542,7 @@ void RenderTreeBuilder::move(RenderBoxModelObject& from, RenderBoxModelObject& t
 {
     // We assume that callers have cleared their positioned objects list for child moves so the
     // positioned renderer maps don't become stale. It would be too slow to do the map lookup on each call.
-    ASSERT(normalizeAfterInsertion == NormalizeAfterInsertion::No || !is<RenderBlock>(from) || !downcast<RenderBlock>(from).hasPositionedObjects());
+    ASSERT(normalizeAfterInsertion == NormalizeAfterInsertion::No || !is<RenderBlock>(from) || !downcast<RenderBlock>(from).hasOutOfFlowBoxes());
 
     ASSERT(&from == child.parent());
     ASSERT(!beforeChild || &to == beforeChild->parent());
@@ -603,7 +603,7 @@ void RenderTreeBuilder::moveChildren(RenderBoxModelObject& from, RenderBoxModelO
     // or when fullRemoveInsert is false.
     if (normalizeAfterInsertion == NormalizeAfterInsertion::Yes) {
         if (CheckedPtr blockFlow = dynamicDowncast<RenderBlock>(from)) {
-            blockFlow->removePositionedObjects(nullptr);
+            blockFlow->removeOutOfFlowBoxes(nullptr);
             RenderBlock::removePercentHeightDescendant(*blockFlow);
             removeFloatingObjects(*blockFlow);
         }
@@ -941,10 +941,10 @@ void RenderTreeBuilder::destroyAndCleanUpAnonymousWrappers(RenderObject& rendere
             return;
         for (auto& descendant : descendantsOfType<RenderBox>(*destroyRootElement)) {
             if (descendant.isFloatingOrOutOfFlowPositioned())
-                descendant.removeFloatingOrPositionedChildFromBlockLists();
+                descendant.removeFloatingOrOutOfFlowChildFromBlockLists();
         }
         if (CheckedPtr box = dynamicDowncast<RenderBox>(destroyRoot.get()); box && box->isFloatingOrOutOfFlowPositioned())
-            box->removeFloatingOrPositionedChildFromBlockLists();
+            box->removeFloatingOrOutOfFlowChildFromBlockLists();
     };
     clearFloatsAndOutOfFlowPositionedObjects();
 
@@ -1021,7 +1021,7 @@ RenderPtr<RenderObject> RenderTreeBuilder::detachFromRenderGrid(RenderGrid& pare
 static void resetRendererStateOnDetach(RenderElement& parent, RenderObject& child, RenderTreeBuilder::WillBeDestroyed willBeDestroyed, RenderTreeBuilder::IsInternalMove isInternalMove)
 {
     if (child.isFloatingOrOutOfFlowPositioned())
-        downcast<RenderBox>(child).removeFloatingOrPositionedChildFromBlockLists();
+        downcast<RenderBox>(child).removeFloatingOrOutOfFlowChildFromBlockLists();
     else if (CheckedPtr parentFlexibleBox = dynamicDowncast<RenderFlexibleBox>(parent)) {
         if (CheckedPtr childBox = dynamicDowncast<RenderBox>(child)) {
             parentFlexibleBox->clearCachedFlexItemIntrinsicContentLogicalHeight(*childBox);
@@ -1155,7 +1155,7 @@ void RenderTreeBuilder::removeFloatingObjects(RenderBlock& renderer)
         return floatingObject.get();
     });
     for (auto* floatingObject : copyOfFloatingObjects)
-        floatingObject->renderer().removeFloatingOrPositionedChildFromBlockLists();
+        floatingObject->renderer().removeFloatingOrOutOfFlowChildFromBlockLists();
 }
 
 }

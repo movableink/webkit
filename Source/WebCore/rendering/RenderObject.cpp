@@ -661,7 +661,7 @@ void RenderObject::checkBlockPositionedObjectsNeedLayout()
     ASSERT(!needsLayout());
 
     if (auto* renderBlock = dynamicDowncast<RenderBlock>(*this))
-        renderBlock->checkPositionedObjectsNeedLayout();
+        renderBlock->checkOutOfFlowBoxesNeedLayout();
 }
 #endif // ASSERT_ENABLED
 

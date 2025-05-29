@@ -236,7 +236,7 @@ void RenderTreeBuilder::Inline::splitFlow(RenderInline& parent, RenderObject* be
     if (canReuseContainingBlockAsPreBlock()) {
         // We can reuse this block and make it the preBlock of the next continuation.
         pre = block;
-        pre->removePositionedObjects({ });
+        pre->removeOutOfFlowBoxes({ });
         // FIXME-BLOCKFLOW: The enclosing method should likely be switched over
         // to only work on RenderBlockFlow, in which case this conversion can be
         // removed.

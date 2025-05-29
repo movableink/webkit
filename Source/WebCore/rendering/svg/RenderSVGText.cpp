@@ -387,7 +387,7 @@ void RenderSVGText::layout()
     ASSERT(!scrollsOverflow());
     ASSERT(!hasControlClip());
     ASSERT(!multiColumnFlow());
-    ASSERT(!positionedObjects());
+    ASSERT(!outOfFlowBoxes());
     ASSERT(!isAnonymousBlock());
     if (!isLayerBasedSVGEngineEnabled()) {
         ASSERT(!simplifiedLayout());

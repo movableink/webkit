@@ -152,15 +152,15 @@ static void removeFromTrackedRendererMaps(RenderBox& descendant)
     }
 }
 
-class PositionedDescendantsMap {
+class OutOfFlowDescendantsMap {
 public:
-    void addDescendant(const RenderBlock& containingBlock, RenderBox& positionedDescendant)
+    void addDescendant(const RenderBlock& containingBlock, RenderBox& outOfFlowDescendant)
     {
         // Protect against double insert where a descendant would end up with multiple containing blocks.
-        auto previousContainingBlock = m_containerMap.get(positionedDescendant);
+        auto previousContainingBlock = m_containerMap.get(outOfFlowDescendant);
         if (previousContainingBlock && previousContainingBlock != &containingBlock) {
             if (auto* descendants = m_descendantsMap.get(*previousContainingBlock.get()))
-                descendants->remove(positionedDescendant);
+                descendants->remove(outOfFlowDescendant);
         }
 
         auto& descendants = m_descendantsMap.ensure(containingBlock, [] {
@@ -169,9 +169,9 @@ public:
 
         auto isNewEntry = false;
         if (!is<RenderView>(containingBlock) || descendants->isEmptyIgnoringNullReferences())
-            isNewEntry = descendants->add(positionedDescendant).isNewEntry;
-        else if (positionedDescendant.isFixedPositioned() || isInTopLayerOrBackdrop(positionedDescendant.style(), positionedDescendant.element()))
-            isNewEntry = descendants->appendOrMoveToLast(positionedDescendant).isNewEntry;
+            isNewEntry = descendants->add(outOfFlowDescendant).isNewEntry;
+        else if (outOfFlowDescendant.isFixedPositioned() || isInTopLayerOrBackdrop(outOfFlowDescendant.style(), outOfFlowDescendant.element()))
+            isNewEntry = descendants->appendOrMoveToLast(outOfFlowDescendant).isNewEntry;
         else {
             auto ensureLayoutDepentBoxPosition = [&] {
                 // RenderView is a special containing block as it may hold both absolute and fixed positioned containing blocks.
@@ -180,25 +180,25 @@ public:
                 // block layout dependency.
                 for (auto it = descendants->begin(); it != descendants->end(); ++it) {
                     if (it->isFixedPositioned()) {
-                        isNewEntry = descendants->insertBefore(it, positionedDescendant).isNewEntry;
+                        isNewEntry = descendants->insertBefore(it, outOfFlowDescendant).isNewEntry;
                         return;
                     }
                 }
-                isNewEntry = descendants->appendOrMoveToLast(positionedDescendant).isNewEntry;
+                isNewEntry = descendants->appendOrMoveToLast(outOfFlowDescendant).isNewEntry;
             };
             ensureLayoutDepentBoxPosition();
         }
 
         if (!isNewEntry) {
-            ASSERT(m_containerMap.contains(positionedDescendant));
+            ASSERT(m_containerMap.contains(outOfFlowDescendant));
             return;
         }
-        m_containerMap.set(positionedDescendant, containingBlock);
+        m_containerMap.set(outOfFlowDescendant, containingBlock);
     }
 
-    void removeDescendant(const RenderBox& positionedDescendant)
+    void removeDescendant(const RenderBox& outOfFlowDescendant)
     {
-        auto containingBlock = m_containerMap.take(positionedDescendant);
+        auto containingBlock = m_containerMap.take(outOfFlowDescendant);
         if (!containingBlock)
             return;
 
@@ -208,9 +208,9 @@ public:
             return;
 
         auto& descendants = descendantsIterator->value;
-        ASSERT(descendants->contains(const_cast<RenderBox&>(positionedDescendant)));
+        ASSERT(descendants->contains(const_cast<RenderBox&>(outOfFlowDescendant)));
 
-        descendants->remove(const_cast<RenderBox&>(positionedDescendant));
+        descendants->remove(const_cast<RenderBox&>(outOfFlowDescendant));
         if (descendants->isEmptyIgnoringNullReferences())
             m_descendantsMap.remove(descendantsIterator);
     }
@@ -238,10 +238,10 @@ private:
     ContainerMap m_containerMap;
 };
 
-static PositionedDescendantsMap& positionedDescendantsMap()
+static OutOfFlowDescendantsMap& outOfFlowDescendantsMap()
 {
-    static NeverDestroyed<PositionedDescendantsMap> mapForPositionedDescendants;
-    return mapForPositionedDescendants;
+    static NeverDestroyed<OutOfFlowDescendantsMap> mapForOutOfFlowDescendants;
+    return mapForOutOfFlowDescendants;
 }
 
 using ContinuationOutlineTableMap = SingleThreadWeakHashMap<RenderBlock, std::unique_ptr<SingleThreadWeakListHashSet<RenderInline>>>;
@@ -329,7 +329,7 @@ RenderBlock::~RenderBlock()
     // Do not add any more code here. Add it to willBeDestroyed() instead.
 }
 
-void RenderBlock::removePositionedObjectsIfNeededOnStyleChange(const RenderStyle& oldStyle, const RenderStyle& newStyle)
+void RenderBlock::removeOutOfFlowBoxesIfNeededOnStyleChange(const RenderStyle& oldStyle, const RenderStyle& newStyle)
 {
     auto wasContainingBlockForFixedContent = canContainFixedPositionObjects(&oldStyle);
     auto wasContainingBlockForAbsoluteContent = canContainAbsolutelyPositionedObjects(&oldStyle);
@@ -338,7 +338,7 @@ void RenderBlock::removePositionedObjectsIfNeededOnStyleChange(const RenderStyle
 
     if ((wasContainingBlockForFixedContent && !isContainingBlockForFixedContent) || (wasContainingBlockForAbsoluteContent && !isContainingBlockForAbsoluteContent)) {
         // We are no longer the containing block for out-of-flow descendants.
-        removePositionedObjects({ }, ContainingBlockState::NewContainingBlock);
+        removeOutOfFlowBoxes({ }, ContainingBlockState::NewContainingBlock);
     }
 
     if ((!wasContainingBlockForFixedContent && isContainingBlockForFixedContent) || (!wasContainingBlockForAbsoluteContent && isContainingBlockForAbsoluteContent)) {
@@ -355,7 +355,7 @@ void RenderBlock::removePositionedObjectsIfNeededOnStyleChange(const RenderStyle
             containingBlock = containingBlock->parent();
         }
         if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(containingBlock))
-            renderBlock->removePositionedObjects(this, ContainingBlockState::NewContainingBlock);
+            renderBlock->removeOutOfFlowBoxes(this, ContainingBlockState::NewContainingBlock);
     }
 }
 
@@ -364,7 +364,7 @@ void RenderBlock::styleWillChange(StyleDifference diff, const RenderStyle& newSt
     const RenderStyle* oldStyle = hasInitializedStyle() ? &style() : nullptr;
     setReplacedOrAtomicInline(newStyle.isDisplayInlineType());
     if (oldStyle) {
-        removePositionedObjectsIfNeededOnStyleChange(*oldStyle, newStyle);
+        removeOutOfFlowBoxesIfNeededOnStyleChange(*oldStyle, newStyle);
         if (isLegend() && !oldStyle->isFloating() && newStyle.isFloating())
             setIsExcludedFromNormalLayout(false);
     }
@@ -417,7 +417,7 @@ void RenderBlock::styleDidChange(StyleDifference diff, const RenderStyle* oldSty
     auto shouldForceRelayoutChildren = false;
     if (oldStyle && diff == StyleDifference::Layout && needsLayout()) {
         // Out-of-flow boxes anchored to the padding box.
-        shouldForceRelayoutChildren = contentBoxLogicalWidthChanged(*oldStyle, style()) || (positionedObjects() && paddingBoxLogicaHeightChanged(*oldStyle, style()));
+        shouldForceRelayoutChildren = contentBoxLogicalWidthChanged(*oldStyle, style()) || (outOfFlowBoxes() && paddingBoxLogicaHeightChanged(*oldStyle, style()));
     }
     setShouldForceRelayoutChildren(shouldForceRelayoutChildren);
 }
@@ -635,7 +635,7 @@ void RenderBlock::computeOverflow(LayoutUnit oldClientAfterEdge, bool)
     clearOverflow();
     addOverflowFromChildren();
 
-    addOverflowFromPositionedObjects();
+    addOverflowFromOutOfFlowBoxes();
 
     if (hasNonVisibleOverflow()) {
         auto includePaddingEnd = [&] {
@@ -720,17 +720,17 @@ void RenderBlock::addOverflowFromBlockChildren()
     }
 }
 
-void RenderBlock::addOverflowFromPositionedObjects()
+void RenderBlock::addOverflowFromOutOfFlowBoxes()
 {
-    TrackedRendererListHashSet* positionedDescendants = positionedObjects();
-    if (!positionedDescendants)
+    TrackedRendererListHashSet* outOfFlowDescendants = outOfFlowBoxes();
+    if (!outOfFlowDescendants)
         return;
 
     auto clientBoxRect = this->flippedClientBoxRect();
-    for (auto& positionedObject : *positionedDescendants) {
+    for (auto& outOfFlowBox : *outOfFlowDescendants) {
         // Fixed positioned elements don't contribute to layout overflow, since they don't scroll with the content.
-        if (positionedObject.style().position() != PositionType::Fixed)
-            addOverflowFromChild(positionedObject, { positionedObject.x(), positionedObject.y() }, clientBoxRect);
+        if (!outOfFlowBox.isFixedPositioned())
+            addOverflowFromChild(outOfFlowBox, { outOfFlowBox.x(), outOfFlowBox.y() }, clientBoxRect);
     }
 }
 
@@ -878,10 +878,10 @@ bool RenderBlock::simplifiedLayout()
     // are statically positioned and thus need to move with their absolute ancestors.
     bool canContainFixedPosObjects = canContainFixedPositionObjects();
     if (posChildNeedsLayout() || canContainFixedPosObjects)
-        layoutPositionedObjects(RelayoutChildren::No, !posChildNeedsLayout() && canContainFixedPosObjects);
+        layoutOutOfFlowBoxes(RelayoutChildren::No, !posChildNeedsLayout() && canContainFixedPosObjects);
 
     // Recompute our overflow information.
-    // FIXME: We could do better here by computing a temporary overflow object from layoutPositionedObjects and only
+    // FIXME: We could do better here by computing a temporary overflow object from layoutOutOfFlowBoxes and only
     // updating our overflow if we either used to have overflow or if the new temporary object has overflow.
     // For now just always recompute overflow.  This is no worse performance-wise than the old code that called rightmostPosition and
     // lowestPosition on every relayout so it's not a regression.
@@ -898,7 +898,7 @@ bool RenderBlock::simplifiedLayout()
     return true;
 }
 
-void RenderBlock::markFixedPositionObjectForLayoutIfNeeded(RenderBox& positionedChild)
+void RenderBlock::markFixedPositionBoxForLayoutIfNeeded(RenderBox& positionedChild)
 {
     if (positionedChild.style().position() != PositionType::Fixed)
         return;
@@ -942,21 +942,23 @@ LayoutUnit RenderBlock::marginIntrinsicLogicalWidthForChild(RenderBox& child) co
     return margin;
 }
 
-void RenderBlock::layoutPositionedObject(RenderBox& r, RelayoutChildren relayoutChildren, bool fixedPositionObjectsOnly)
+void RenderBlock::layoutOutOfFlowBox(RenderBox& outOfFlowBox, RelayoutChildren relayoutChildren, bool fixedPositionObjectsOnly)
 {
+    ASSERT(outOfFlowBox.isOutOfFlowPositioned());
+
     if (layoutContext().isSkippedContentRootForLayout(*this)) {
-        r.clearNeedsLayoutForSkippedContent();
+        outOfFlowBox.clearNeedsLayoutForSkippedContent();
         return;
     }
 
-    estimateFragmentRangeForBoxChild(r);
+    estimateFragmentRangeForBoxChild(outOfFlowBox);
 
     // A fixed position element with an absolute positioned ancestor has no way of knowing if the latter has changed position. So
     // if this is a fixed position element, mark it for layout if it has an abspos ancestor and needs to move with that ancestor, i.e. 
     // it has static position.
-    markFixedPositionObjectForLayoutIfNeeded(r);
+    markFixedPositionBoxForLayoutIfNeeded(outOfFlowBox);
     if (fixedPositionObjectsOnly) {
-        r.layoutIfNeeded();
+        outOfFlowBox.layoutIfNeeded();
         return;
     }
 
@@ -964,38 +966,38 @@ void RenderBlock::layoutPositionedObject(RenderBox& r, RelayoutChildren relayout
     // non-positioned block.  Rather than trying to detect all of these movement cases, we just always lay out positioned
     // objects that are positioned implicitly like this.  Such objects are rare, and so in typical DHTML menu usage (where everything is
     // positioned explicitly) this should not incur a performance penalty.
-    if (relayoutChildren == RelayoutChildren::Yes || (r.style().hasStaticBlockPosition(isHorizontalWritingMode()) && r.parent() != this))
-        r.setChildNeedsLayout(MarkOnlyThis);
+    if (relayoutChildren == RelayoutChildren::Yes || (outOfFlowBox.style().hasStaticBlockPosition(isHorizontalWritingMode()) && outOfFlowBox.parent() != this))
+        outOfFlowBox.setChildNeedsLayout(MarkOnlyThis);
 
     // If relayoutChildren is set and the child has percentage padding or an embedded content box, we also need to invalidate the childs pref widths.
-    if (relayoutChildren == RelayoutChildren::Yes && r.shouldInvalidatePreferredWidths())
-        r.setNeedsPreferredWidthsUpdate(MarkOnlyThis);
+    if (relayoutChildren == RelayoutChildren::Yes && outOfFlowBox.shouldInvalidatePreferredWidths())
+        outOfFlowBox.setNeedsPreferredWidthsUpdate(MarkOnlyThis);
     
-    r.markForPaginationRelayoutIfNeeded();
+    outOfFlowBox.markForPaginationRelayoutIfNeeded();
     
     // We don't have to do a full layout.  We just have to update our position. Try that first. If we have shrink-to-fit width
     // and we hit the available width constraint, the layoutIfNeeded() will catch it and do a full layout.
-    if (r.needsPositionedMovementLayoutOnly() && r.tryLayoutDoingPositionedMovementOnly())
-        r.clearNeedsLayout();
-        
+    if (outOfFlowBox.needsPositionedMovementLayoutOnly() && outOfFlowBox.tryLayoutDoingPositionedMovementOnly())
+        outOfFlowBox.clearNeedsLayout();
+
     // If we are paginated or in a line grid, compute a vertical position for our object now.
     // If it's wrong we'll lay out again.
     LayoutUnit oldLogicalTop;
     auto* layoutState = view().frameView().layoutContext().layoutState();
-    bool needsBlockDirectionLocationSetBeforeLayout = r.needsLayout() && layoutState && layoutState->needsBlockDirectionLocationSetBeforeLayout();
+    bool needsBlockDirectionLocationSetBeforeLayout = outOfFlowBox.needsLayout() && layoutState && layoutState->needsBlockDirectionLocationSetBeforeLayout();
     if (needsBlockDirectionLocationSetBeforeLayout) {
-        if (isHorizontalWritingMode() == r.isHorizontalWritingMode())
-            r.updateLogicalHeight();
+        if (isHorizontalWritingMode() == outOfFlowBox.isHorizontalWritingMode())
+            outOfFlowBox.updateLogicalHeight();
         else
-            r.updateLogicalWidth();
-        oldLogicalTop = logicalTopForChild(r);
+            outOfFlowBox.updateLogicalWidth();
+        oldLogicalTop = logicalTopForChild(outOfFlowBox);
     }
 
-    r.layoutIfNeeded();
+    outOfFlowBox.layoutIfNeeded();
     
-    auto* parent = r.parent();
+    auto* parent = outOfFlowBox.parent();
     bool layoutChanged = false;
-    if (auto* flexibleBox = dynamicDowncast<RenderFlexibleBox>(*parent); flexibleBox && flexibleBox->setStaticPositionForPositionedLayout(r)) {
+    if (auto* flexibleBox = dynamicDowncast<RenderFlexibleBox>(*parent); flexibleBox && flexibleBox->setStaticPositionForPositionedLayout(outOfFlowBox)) {
         // The static position of an abspos child of a flexbox depends on its size
         // (for example, they can be centered). So we may have to reposition the
         // item after layout.
@@ -1004,41 +1006,41 @@ void RenderBlock::layoutPositionedObject(RenderBox& r, RelayoutChildren relayout
     }
 
     // Lay out again if our estimate was wrong.
-    if (layoutChanged || (needsBlockDirectionLocationSetBeforeLayout && logicalTopForChild(r) != oldLogicalTop)) {
-        r.setChildNeedsLayout(MarkOnlyThis);
-        r.layoutIfNeeded();
+    if (layoutChanged || (needsBlockDirectionLocationSetBeforeLayout && logicalTopForChild(outOfFlowBox) != oldLogicalTop)) {
+        outOfFlowBox.setChildNeedsLayout(MarkOnlyThis);
+        outOfFlowBox.layoutIfNeeded();
     }
 
-    if (updateFragmentRangeForBoxChild(r)) {
-        r.setNeedsLayout(MarkOnlyThis);
-        r.layoutIfNeeded();
+    if (updateFragmentRangeForBoxChild(outOfFlowBox)) {
+        outOfFlowBox.setNeedsLayout(MarkOnlyThis);
+        outOfFlowBox.layoutIfNeeded();
     }
     
     if (layoutState && layoutState->isPaginated()) {
         if (CheckedPtr blockFlow = dynamicDowncast<RenderBlockFlow>(*this))
-            blockFlow->adjustSizeContainmentChildForPagination(r, r.logicalTop());
+            blockFlow->adjustSizeContainmentChildForPagination(outOfFlowBox, outOfFlowBox.logicalTop());
     }
 }
 
-void RenderBlock::layoutPositionedObjects(RelayoutChildren relayoutChildren, bool fixedPositionObjectsOnly)
+void RenderBlock::layoutOutOfFlowBoxes(RelayoutChildren relayoutChildren, bool fixedPositionObjectsOnly)
 {
-    auto* positionedDescendants = positionedObjects();
-    if (!positionedDescendants)
+    auto* outOfFlowDescendants = outOfFlowBoxes();
+    if (!outOfFlowDescendants)
         return;
     
-    // Do not cache positionedDescendants->end() in a local variable, since |positionedDescendants| can be mutated
+    // Do not cache outOfFlowDescendants->end() in a local variable, since |outOfFlowDescendants| can be mutated
     // as it is walked. We always need to fetch the new end() value dynamically.
-    for (auto& descendant : *positionedDescendants)
-        layoutPositionedObject(descendant, relayoutChildren, fixedPositionObjectsOnly);
+    for (auto& descendant : *outOfFlowDescendants)
+        layoutOutOfFlowBox(descendant, relayoutChildren, fixedPositionObjectsOnly);
 }
 
-void RenderBlock::markPositionedObjectsForLayout()
+void RenderBlock::markOutOfFlowBoxesForLayout()
 {
-    auto* positionedDescendants = positionedObjects();
-    if (!positionedDescendants)
+    auto* outOfFlowDescendants = outOfFlowBoxes();
+    if (!outOfFlowDescendants)
         return;
 
-    for (auto& descendant : *positionedDescendants)
+    for (auto& descendant : *outOfFlowDescendants)
         descendant.setChildNeedsLayout();
 }
 
@@ -1599,12 +1601,12 @@ void RenderBlock::paintSelection(PaintInfo& paintInfo, const LayoutPoint& paintO
 #endif
 }
 
-static void clipOutPositionedObjects(const PaintInfo* paintInfo, const LayoutPoint& offset, TrackedRendererListHashSet* positionedObjects)
+static void clipOutOutOfFlowBoxes(const PaintInfo* paintInfo, const LayoutPoint& offset, TrackedRendererListHashSet* outOfFlowBoxes)
 {
-    if (!positionedObjects)
+    if (!outOfFlowBoxes)
         return;
     
-    for (auto& renderer : *positionedObjects)
+    for (auto& renderer : *outOfFlowBoxes)
         paintInfo->context().clipOut(IntRect(offset.x() + renderer.x(), offset.y() + renderer.y(), renderer.width(), renderer.height()));
 }
 
@@ -1640,10 +1642,10 @@ GapRects RenderBlock::selectionGaps(RenderBlock& rootBlock, const LayoutPoint& r
         LayoutRect flippedBlockRect(offsetFromRootBlock.width(), offsetFromRootBlock.height(), width(), height());
         rootBlock.flipForWritingMode(flippedBlockRect);
         flippedBlockRect.moveBy(rootBlockPhysicalPosition);
-        clipOutPositionedObjects(paintInfo, flippedBlockRect.location(), positionedObjects());
+        clipOutOutOfFlowBoxes(paintInfo, flippedBlockRect.location(), outOfFlowBoxes());
         if (isBody() || isDocumentElementRenderer()) { // The <body> must make sure to examine its containingBlock's positioned objects.
             for (RenderBlock* cb = containingBlock(); cb && !is<RenderView>(*cb); cb = cb->containingBlock())
-                clipOutPositionedObjects(paintInfo, LayoutPoint(cb->x(), cb->y()), cb->positionedObjects()); // FIXME: Not right for flipped writing modes.
+                clipOutOutOfFlowBoxes(paintInfo, LayoutPoint(cb->x(), cb->y()), cb->outOfFlowBoxes()); // FIXME: Not right for flipped writing modes.
         }
         clipOutFloatingBoxes(rootBlock, paintInfo, rootBlockPhysicalPosition, offsetFromRootBlock);
     }
@@ -1875,31 +1877,32 @@ LayoutUnit RenderBlock::logicalRightSelectionOffset(RenderBlock& rootBlock, Layo
     return logicalRight;
 }
 
-TrackedRendererListHashSet* RenderBlock::positionedObjects() const
+TrackedRendererListHashSet* RenderBlock::outOfFlowBoxes() const
 {
-    return positionedDescendantsMap().positionedRenderers(*this);
+    return outOfFlowDescendantsMap().positionedRenderers(*this);
 }
 
-void RenderBlock::insertPositionedObject(RenderBox& positioned)
+void RenderBlock::addOutOfFlowBox(RenderBox& outOfFlowBox)
 {
+    ASSERT(outOfFlowBox.isOutOfFlowPositioned());
     ASSERT(!isAnonymousBlock());
 
-    positioned.clearGridAreaContentSize();
+    outOfFlowBox.clearGridAreaContentSize();
 
-    if (positioned.isRenderFragmentedFlow())
+    if (outOfFlowBox.isRenderFragmentedFlow())
         return;
-    // FIXME: Find out if we can do this as part of positioned.setChildNeedsLayout(MarkOnlyThis)
-    if (positioned.needsLayout()) {
+    // FIXME: Find out if we can do this as part of outOfFlowBox.setChildNeedsLayout(MarkOnlyThis)
+    if (outOfFlowBox.needsLayout()) {
         // We should turn this bit on only while in layout.
         ASSERT(posChildNeedsLayout() || view().frameView().layoutContext().isInLayout());
         setPosChildNeedsLayoutBit(true);
     }
-    positionedDescendantsMap().addDescendant(*this, positioned);
+    outOfFlowDescendantsMap().addDescendant(*this, outOfFlowBox);
 }
 
-void RenderBlock::removePositionedObject(const RenderBox& rendererToRemove)
+void RenderBlock::removeOutOfFlowBox(const RenderBox& rendererToRemove)
 {
-    positionedDescendantsMap().removeDescendant(rendererToRemove);
+    outOfFlowDescendantsMap().removeDescendant(rendererToRemove);
 }
 
 static inline void markRendererAndParentForLayout(RenderBox& renderer)
@@ -1916,16 +1919,16 @@ static inline void markRendererAndParentForLayout(RenderBox& renderer)
     parentBlock->setChildNeedsLayout();
 }
 
-void RenderBlock::removePositionedObjects(const RenderBlock* newContainingBlockCandidate, ContainingBlockState containingBlockState)
+void RenderBlock::removeOutOfFlowBoxes(const RenderBlock* newContainingBlockCandidate, ContainingBlockState containingBlockState)
 {
-    auto* positionedDescendants = positionedObjects();
-    if (!positionedDescendants)
+    auto* outOfFlowDescendants = outOfFlowBoxes();
+    if (!outOfFlowDescendants)
         return;
 
     Vector<CheckedRef<RenderBox>, 16> renderersToRemove;
     if (!newContainingBlockCandidate) {
         // We don't form containing block for these boxes anymore (either through style change or internal render tree shuffle)
-        for (auto& renderer : *positionedDescendants) {
+        for (auto& renderer : *outOfFlowDescendants) {
             renderersToRemove.append(renderer);
 
             markRendererAndParentForLayout(renderer);
@@ -1941,7 +1944,7 @@ void RenderBlock::removePositionedObjects(const RenderBlock* newContainingBlockC
         }
     } else if (containingBlockState == ContainingBlockState::NewContainingBlock) {
         // Some of the positioned boxes are getting transferred over to newContainingBlockCandidate.
-        for (auto& renderer : *positionedDescendants) {
+        for (auto& renderer : *outOfFlowDescendants) {
             if (!renderer.isDescendantOf(newContainingBlockCandidate))
                 continue;
             renderersToRemove.append(renderer);
@@ -1951,7 +1954,7 @@ void RenderBlock::removePositionedObjects(const RenderBlock* newContainingBlockC
         ASSERT_NOT_REACHED();
 
     for (auto& renderer : renderersToRemove)
-        removePositionedObject(renderer);
+        removeOutOfFlowBox(renderer);
 }
 
 void RenderBlock::addPercentHeightDescendant(RenderBox& descendant)
@@ -3309,13 +3312,13 @@ TextRun RenderBlock::constructTextRun(std::span<const UChar> characters, const R
 }
 
 #if ASSERT_ENABLED
-void RenderBlock::checkPositionedObjectsNeedLayout()
+void RenderBlock::checkOutOfFlowBoxesNeedLayout()
 {
-    auto* positionedDescendants = positionedObjects();
-    if (!positionedDescendants)
+    auto* outOfFlowDescendants = outOfFlowBoxes();
+    if (!outOfFlowDescendants)
         return;
 
-    for (auto& renderer : *positionedDescendants)
+    for (auto& renderer : *outOfFlowDescendants)
         ASSERT(!renderer.needsLayout());
 }
 #endif // ASSERT_ENABLED

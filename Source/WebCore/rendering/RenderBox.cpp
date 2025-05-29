@@ -231,7 +231,7 @@ void RenderBox::removeFloatingAndInvalidateForLayout()
     }
 }
 
-void RenderBox::removeFloatingOrPositionedChildFromBlockLists()
+void RenderBox::removeFloatingOrOutOfFlowChildFromBlockLists()
 {
     ASSERT(!renderTreeBeingDestroyed());
 
@@ -239,7 +239,7 @@ void RenderBox::removeFloatingOrPositionedChildFromBlockLists()
         return removeFloatingAndInvalidateForLayout();
 
     if (isOutOfFlowPositioned())
-        return RenderBlock::removePositionedObject(*this);
+        return RenderBlock::removeOutOfFlowBox(*this);
 
     ASSERT_NOT_REACHED();
 }
@@ -280,7 +280,7 @@ void RenderBox::styleWillChange(StyleDifference diff, const RenderStyle& newStyl
             if (oldStyle->position() != PositionType::Static && newStyle.hasOutOfFlowPosition())
                 parent()->setChildNeedsLayout();
             if (isFloating() && !isOutOfFlowPositioned() && newStyle.hasOutOfFlowPosition())
-                removeFloatingOrPositionedChildFromBlockLists();
+                removeFloatingOrOutOfFlowChildFromBlockLists();
         }
     } else if (isBody())
         view().repaintRootContents();

@@ -498,7 +498,7 @@ public:
     VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
 
     void removeFloatingAndInvalidateForLayout();
-    void removeFloatingOrPositionedChildFromBlockLists();
+    void removeFloatingOrOutOfFlowChildFromBlockLists();
     
     RenderLayer* enclosingFloatPaintingLayer() const;
     
@@ -584,7 +584,7 @@ public:
     void markShapeOutsideDependentsForLayout()
     {
         if (isFloating())
-            removeFloatingOrPositionedChildFromBlockLists();
+            removeFloatingOrOutOfFlowChildFromBlockLists();
     }
 
     // True if this box can have a range in an outside fragmentation context.

@@ -4688,22 +4688,22 @@ void LocalFrameView::scrollTo(const ScrollPosition& newPosition)
 
 float LocalFrameView::adjustVerticalPageScrollStepForFixedContent(float step)
 {
-    TrackedRendererListHashSet* positionedObjects = nullptr;
+    TrackedRendererListHashSet* viewPositionedOutOfFlowBoxes = { };
     if (RenderView* root = m_frame->contentRenderer()) {
-        if (!root->hasPositionedObjects())
+        if (!root->hasOutOfFlowBoxes())
             return step;
-        positionedObjects = root->positionedObjects();
+        viewPositionedOutOfFlowBoxes = root->outOfFlowBoxes();
     }
 
     FloatRect unobscuredContentRect = this->unobscuredContentRect();
     float topObscuredArea = 0;
     float bottomObscuredArea = 0;
-    for (const auto& positionedObject : *positionedObjects) {
-        const RenderStyle& style = positionedObject.style();
+    for (const auto& viewPositionedOutOfFlowBox : *viewPositionedOutOfFlowBoxes) {
+        const RenderStyle& style = viewPositionedOutOfFlowBox.style();
         if (style.position() != PositionType::Fixed || style.usedVisibility() == Visibility::Hidden || !style.opacity())
             continue;
 
-        FloatQuad contentQuad = positionedObject.absoluteContentQuad();
+        FloatQuad contentQuad = viewPositionedOutOfFlowBox.absoluteContentQuad();
         if (!contentQuad.isRectilinear())
             continue;
 

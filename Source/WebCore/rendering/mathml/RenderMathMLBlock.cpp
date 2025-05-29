@@ -218,7 +218,7 @@ void RenderMathMLBlock::layoutBlock(RelayoutChildren relayoutChildren, LayoutUni
 
     updateLogicalHeight();
 
-    layoutPositionedObjects(relayoutChildren);
+    layoutOutOfFlowBoxes(relayoutChildren);
 
     repainter.repaintAfterLayout();
 
@@ -246,7 +246,7 @@ void RenderMathMLBlock::insertPositionedChildrenIntoContainingBlock()
 {
     for (auto& child : childrenOfType<RenderBox>(*this)) {
         if (child.isOutOfFlowPositioned())
-            child.containingBlock()->insertPositionedObject(child);
+            child.containingBlock()->addOutOfFlowBox(child);
     }
 }
 
