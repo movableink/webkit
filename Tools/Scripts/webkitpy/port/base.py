@@ -1215,6 +1215,12 @@ class Port(object):
         args.append("--%s" % self.get_option('platform'))
         return self._executive.run_command([miniBrowser] + args, stdout=None, cwd=self.webkit_base(), return_stderr=False, decode_output=False, ignore_errors=True)
 
+    def run_swiftbrowser(self, args):
+        swiftBrowser = self.path_to_script("run-swiftbrowser-perl-wrapper")
+        args.append(self._config.flag_for_configuration(self.get_option('configuration')))
+        args.append("--%s" % self.get_option('platform'))
+        return self._executive.run_command([swiftBrowser] + args, stdout=None, cwd=self.webkit_base(), return_stderr=False, decode_output=False, ignore_errors=True)
+
     def run_webdriver(self, args):
         raise NotImplementedError('Port.run_webdriver')
 
