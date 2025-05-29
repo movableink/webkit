@@ -7062,7 +7062,6 @@ imported/w3c/web-platform-tests/navigation-api/ordering-and-transition/navigate-
 
 # -- View Transitions -- #
 # Reftest failures:
-imported/w3c/web-platform-tests/css/css-view-transitions/span-with-overflowing-text.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-view-transitions/fractional-translation-from-transform.html [ ImageOnlyFailure ]
 
 # Timeouts

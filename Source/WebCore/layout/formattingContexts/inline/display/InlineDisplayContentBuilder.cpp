@@ -214,7 +214,9 @@ void InlineDisplayContentBuilder::appendTextDisplayBox(const Line::Run& lineRun,
         addGlyphOverflow();
 
         return inkOverflow;
-    };
+    }();
+
+    m_contentHasInkOverflow = m_contentHasInkOverflow || (&inlineTextBox.parent() != &root() && textRunRect != inkOverflow);
 
     if (inlineTextBox.isCombined()) {
         static auto objectReplacementCharacterString = NeverDestroyed<String> { span(objectReplacementCharacter) };
@@ -224,7 +226,7 @@ void InlineDisplayContentBuilder::appendTextDisplayBox(const Line::Run& lineRun,
             , inlineTextBox
             , lineRun.bidiLevel()
             , textRunRect
-            , inkOverflow()
+            , inkOverflow
             , lineRun.expansion()
             , InlineDisplay::Box::Text { text->start, 1, objectReplacementCharacterString, content }
             , isContentful
@@ -241,7 +243,7 @@ void InlineDisplayContentBuilder::appendTextDisplayBox(const Line::Run& lineRun,
         , inlineTextBox
         , lineRun.bidiLevel()
         , textRunRect
-        , inkOverflow()
+        , inkOverflow
         , lineRun.expansion()
         , InlineDisplay::Box::Text { text->start, text->length, content, adjustedContentToRender(), text->needsHyphen }
         , isContentful
