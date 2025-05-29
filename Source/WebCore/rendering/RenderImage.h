@@ -89,7 +89,7 @@ protected:
     RenderImage(Type, Element&, RenderStyle&&, OptionSet<ReplacedFlag>, StyleImage* = nullptr, const float imageDevicePixelRatio = 1.0f);
     void willBeDestroyed() override;
 
-    bool needsPreferredWidthsRecalculation() const final;
+    bool shouldInvalidatePreferredWidths() const final;
     RenderBox* embeddedContentBox() const final;
     void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const final;
     bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const override;

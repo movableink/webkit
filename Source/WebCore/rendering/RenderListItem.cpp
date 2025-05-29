@@ -271,7 +271,7 @@ void RenderListItem::styleDidChange(StyleDifference diff, const RenderStyle* old
 void RenderListItem::computePreferredLogicalWidths()
 {
     // FIXME: RenderListMarker::updateInlineMargins() mutates margin style which affects preferred widths.
-    if (m_marker && m_marker->preferredLogicalWidthsDirty())
+    if (m_marker && m_marker->needsPreferredLogicalWidthsUpdate())
         m_marker->updateInlineMarginsAndContent();
 
     RenderBlockFlow::computePreferredLogicalWidths();

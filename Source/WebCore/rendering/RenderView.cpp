@@ -95,7 +95,7 @@ RenderView::RenderView(Document& document, RenderStyle&& style)
     m_minPreferredLogicalWidth = 0;
     m_maxPreferredLogicalWidth = 0;
 
-    setPreferredLogicalWidthsDirty(true, MarkOnlyThis);
+    setNeedsPreferredWidthsUpdate(MarkOnlyThis);
     
     setPositionState(PositionType::Absolute); // to 0,0 :)
 

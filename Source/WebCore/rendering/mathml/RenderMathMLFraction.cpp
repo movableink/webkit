@@ -179,7 +179,7 @@ RenderMathMLOperator* RenderMathMLFraction::unembellishedOperator() const
 
 void RenderMathMLFraction::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
 
     if (!isValid()) {
         RenderMathMLRow::computePreferredLogicalWidths();
@@ -195,7 +195,7 @@ void RenderMathMLFraction::computePreferredLogicalWidths()
 
     adjustPreferredLogicalWidthsForBorderAndPadding();
 
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 }
 
 LayoutUnit RenderMathMLFraction::horizontalOffset(RenderBox& child, MathMLFractionElement::FractionAlignment align) const

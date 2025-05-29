@@ -100,7 +100,7 @@ void RenderSlider::computePreferredLogicalWidths()
 
     RenderBox::computePreferredLogicalWidths(style().logicalMinWidth(), style().logicalMaxWidth(), writingMode().isHorizontal() ? horizontalBorderAndPaddingExtent() : verticalBorderAndPaddingExtent());
 
-    setPreferredLogicalWidthsDirty(false); 
+    clearNeedsPreferredWidthsUpdate();
 }
 
 bool RenderSlider::inDragMode() const

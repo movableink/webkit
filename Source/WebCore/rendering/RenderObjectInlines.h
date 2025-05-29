@@ -146,7 +146,7 @@ inline void RenderObject::setNeedsLayout(MarkingBehavior markParents)
 inline void RenderObject::setNeedsLayoutAndPrefWidthsRecalc()
 {
     setNeedsLayout();
-    setPreferredLogicalWidthsDirty(true);
+    setNeedsPreferredWidthsUpdate();
 }
 
 } // namespace WebCore

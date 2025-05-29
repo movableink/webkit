@@ -1084,8 +1084,8 @@ LayoutUnit GridTrackSizingAlgorithmStrategy::minContentContributionForGridItem(R
 
         // FIXME: It's unclear if we should return the intrinsic width or the preferred width.
         // See http://lists.w3.org/Archives/Public/www-style/2013Jan/0245.html
-        if (gridItem.needsPreferredWidthsRecalculation() ||  needsGridItemMinContentContributionForSecondColumnPass)
-            gridItem.setPreferredLogicalWidthsDirty(true);
+        if (gridItem.shouldInvalidatePreferredWidths() ||  needsGridItemMinContentContributionForSecondColumnPass)
+            gridItem.setNeedsPreferredWidthsUpdate();
 
         if (needsGridItemMinContentContributionForSecondColumnPass) {
             auto rowSize = renderGrid()->gridAreaBreadthForGridItemIncludingAlignmentOffsets(gridItem, GridTrackSizingDirection::ForRows);
@@ -1124,7 +1124,7 @@ LayoutUnit GridTrackSizingAlgorithmStrategy::minContentContributionForGridItem(R
         // be able to do it during the RenderGrid::layoutGridItems() function as the grid area does't change there any more. Also, as we are doing a layout inside GridTrackSizingAlgorithmStrategy::logicalHeightForGridItem()
         // function, let's take the advantage and set it here.
         if (shouldClearOverridingContainingBlockContentSizeForGridItem(gridItem, gridItemInlineDirection))
-            gridItem.setPreferredLogicalWidthsDirty(true);
+            gridItem.setNeedsPreferredWidthsUpdate();
     }
     return logicalHeightForGridItem(gridItem, gridLayoutState);
 }
@@ -1137,8 +1137,8 @@ LayoutUnit GridTrackSizingAlgorithmStrategy::maxContentContributionForGridItem(R
             return { };
         // FIXME: It's unclear if we should return the intrinsic width or the preferred width.
         // See http://lists.w3.org/Archives/Public/www-style/2013Jan/0245.html
-        if (gridItem.needsPreferredWidthsRecalculation())
-            gridItem.setPreferredLogicalWidthsDirty(true);
+        if (gridItem.shouldInvalidatePreferredWidths())
+            gridItem.setNeedsPreferredWidthsUpdate();
         return gridItem.maxPreferredLogicalWidth() + GridLayoutFunctions::marginLogicalSizeForGridItem(*renderGrid(), gridItemInlineDirection, gridItem) + m_algorithm.baselineOffsetForGridItem(gridItem, direction());
     }
 

@@ -147,7 +147,7 @@ void RenderReplaced::layout()
     clearNeedsLayout();
 
     if (replacedContentRect() != oldContentRect) {
-        setPreferredLogicalWidthsDirty(true);
+        setNeedsPreferredWidthsUpdate();
         if (shouldRepaintOnSizeChange(*this))
             repaint();
     }
@@ -415,7 +415,7 @@ bool RenderReplaced::hasReplacedLogicalHeight() const
 
 bool RenderReplaced::setNeedsLayoutIfNeededAfterIntrinsicSizeChange()
 {
-    setPreferredLogicalWidthsDirty(true);
+    setNeedsPreferredWidthsUpdate();
 
     // If the actual area occupied by the image has changed and it is not constrained by style then a layout is required.
     bool imageSizeIsConstrained = style().logicalWidth().isSpecified() && style().logicalHeight().isSpecified()
@@ -763,7 +763,7 @@ void RenderReplaced::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, 
 
 void RenderReplaced::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
 
     // We cannot resolve any percent logical width here as the available logical
     // width may not be set on our containing block.
@@ -791,7 +791,7 @@ void RenderReplaced::computePreferredLogicalWidths()
     m_minPreferredLogicalWidth += borderAndPadding;
     m_maxPreferredLogicalWidth += borderAndPadding;
 
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 }
 
 VisiblePosition RenderReplaced::positionForPoint(const LayoutPoint& point, HitTestSource source, const RenderFragmentContainer* fragment)
@@ -906,7 +906,7 @@ bool RenderReplaced::isContentLikelyVisibleInViewport()
     return visibleRect.intersects(contentRect);
 }
 
-bool RenderReplaced::needsPreferredWidthsRecalculation() const
+bool RenderReplaced::shouldInvalidatePreferredWidths() const
 {
     // If the height is a percentage and the width is auto, then the containingBlocks's height changing can cause this node to change it's preferred width because it maintains aspect ratio.
     return (hasRelativeLogicalHeight() || (isGridItem() && hasStretchedLogicalHeight())) && style().logicalWidth().isAuto();

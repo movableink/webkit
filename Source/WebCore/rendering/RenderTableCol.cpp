@@ -88,7 +88,7 @@ void RenderTableCol::styleDidChange(StyleDifference diff, const RenderStyle* old
                     CheckedPtr cell = section->primaryCellAt(i, j);
                     if (!cell)
                         continue;
-                    cell->setPreferredLogicalWidthsDirty(true);
+                    cell->setNeedsPreferredWidthsUpdate();
                 }
             }
         }
@@ -168,12 +168,12 @@ void RenderTableCol::imageChanged(WrappedImagePtr, const IntRect*)
     repaint();
 }
 
-void RenderTableCol::clearPreferredLogicalWidthsDirtyBits()
+void RenderTableCol::clearNeedsPreferredLogicalWidthsUpdate()
 {
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 
     for (CheckedRef<RenderObject> child : childrenOfType<RenderObject>(*this))
-        child->setPreferredLogicalWidthsDirty(false);
+        child->clearNeedsPreferredWidthsUpdate();
 }
 
 CheckedPtr<RenderTable> RenderTableCol::table() const

@@ -2371,7 +2371,7 @@ void RenderBlockFlow::styleDidChange(StyleDifference diff, const RenderStyle* ol
 
     if (diff == StyleDifference::Layout && selfNeedsLayout() && childrenInline()) {
         for (auto walker = InlineWalker(*this); !walker.atEnd(); walker.advance())
-            walker.current()->setPreferredLogicalWidthsDirty(true);
+            walker.current()->setNeedsPreferredWidthsUpdate();
     }
 
     if (multiColumnFlow())
@@ -3858,7 +3858,7 @@ void RenderBlockFlow::invalidateLineLayoutPath(InvalidationReason invalidationRe
                             continue;
                         if (!renderer.isInFlow() && inlineLayout()->contains(downcast<RenderElement>(renderer)))
                             renderer.repaint();
-                        renderer.setPreferredLogicalWidthsDirty(true);
+                        renderer.setNeedsPreferredWidthsUpdate();
                     }
                 };
                 repaintAndSetNeedsLayoutIncludingOutOfFlowBoxes();
@@ -3941,11 +3941,11 @@ void RenderBlockFlow::layoutInlineContent(RelayoutChildren relayoutChildren, Lay
         auto& renderer = *walker.current();
         auto* box = dynamicDowncast<RenderBox>(renderer);
         auto childNeedsLayout = relayoutChildren == RelayoutChildren::Yes || (box && box->hasRelativeDimensions());
-        auto childNeedsPreferredWidthComputation = relayoutChildren == RelayoutChildren::Yes && box && box->needsPreferredWidthsRecalculation();
+        auto childNeedsPreferredWidthComputation = relayoutChildren == RelayoutChildren::Yes && box && box->shouldInvalidatePreferredWidths();
         if (childNeedsLayout)
             renderer.setNeedsLayout(MarkOnlyThis);
         if (childNeedsPreferredWidthComputation)
-            renderer.setPreferredLogicalWidthsDirty(true, MarkOnlyThis);
+            renderer.setNeedsPreferredWidthsUpdate(MarkOnlyThis);
 
         if (renderer.isOutOfFlowPositioned()) {
             renderer.containingBlock()->insertPositionedObject(*box);
@@ -3966,7 +3966,7 @@ void RenderBlockFlow::layoutInlineContent(RelayoutChildren relayoutChildren, Lay
         } else
             hasSimpleOutOfFlowContentOnly = false;
 
-        if (!renderer.needsLayout() && !renderer.preferredLogicalWidthsDirty())
+        if (!renderer.needsLayout() && !renderer.needsPreferredLogicalWidthsUpdate())
             continue;
 
         if (auto* renderText = dynamicDowncast<RenderText>(renderer))
@@ -4757,7 +4757,7 @@ void RenderBlockFlow::computeInlinePreferredLogicalWidths(LayoutUnit& minLogical
                             ASSERT_NOT_REACHED();
                     }
 
-                    child->setPreferredLogicalWidthsDirty(false);
+                    child->clearNeedsPreferredWidthsUpdate();
                 } else {
                     // Inline replaced boxes add in their margins to their min/max values.
                     if (!child->isFloating())
@@ -5025,7 +5025,7 @@ bool RenderBlockFlow::tryComputePreferredWidthsUsingInlinePath(LayoutUnit& minLo
     std::tie(minLogicalWidth, maxLogicalWidth) = inlineLayout()->computeIntrinsicWidthConstraints();
     for (auto walker = InlineWalker(*this); !walker.atEnd(); walker.advance()) {
         auto* renderer = walker.current();
-        renderer->setPreferredLogicalWidthsDirty(false);
+        renderer->clearNeedsPreferredWidthsUpdate();
         if (auto* renderText = dynamicDowncast<RenderText>(renderer))
             renderText->resetMinMaxWidth();
     }

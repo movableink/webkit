@@ -158,7 +158,7 @@ RenderMathMLRoot::VerticalParameters RenderMathMLRoot::verticalParameters()
 
 void RenderMathMLRoot::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
 
     if (!isValid()) {
         RenderMathMLRow::computePreferredLogicalWidths();
@@ -186,7 +186,7 @@ void RenderMathMLRoot::computePreferredLogicalWidths()
 
     adjustPreferredLogicalWidthsForBorderAndPadding();
 
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 }
 
 void RenderMathMLRoot::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit)

@@ -469,9 +469,9 @@ RemoteFrame* RenderWidget::remoteFrame() const
     return dynamicDowncast<RemoteFrame>(frameOwnerElement().contentFrame());
 }
 
-bool RenderWidget::needsPreferredWidthsRecalculation() const
+bool RenderWidget::shouldInvalidatePreferredWidths() const
 {
-    if (RenderReplaced::needsPreferredWidthsRecalculation())
+    if (RenderReplaced::shouldInvalidatePreferredWidths())
         return true;
     return embeddedContentBox();
 }

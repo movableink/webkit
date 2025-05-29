@@ -665,30 +665,27 @@ void RenderObject::checkBlockPositionedObjectsNeedLayout()
 }
 #endif // ASSERT_ENABLED
 
-void RenderObject::setPreferredLogicalWidthsDirty(bool shouldBeDirty, MarkingBehavior markParents)
+void RenderObject::setNeedsPreferredWidthsUpdate(MarkingBehavior markParents)
 {
-    if (!shouldBeDirty)
-        return m_stateBitfields.setFlag(StateFlag::PreferredLogicalWidthsDirty, { });
-
-    if (preferredLogicalWidthsDirty() && (!hasRareData() || !rareData().preferredLogicalWidthsDirtyIsMarkOnlyThis)) {
+    if (needsPreferredLogicalWidthsUpdate() && (!hasRareData() || !rareData().preferredLogicalWidthsNeedUpdateIsMarkOnlyThis)) {
         // Both this and our ancestor chain are already marked dirty.
         return;
     }
 
-    m_stateBitfields.setFlag(StateFlag::PreferredLogicalWidthsDirty, true);
+    m_stateBitfields.setFlag(StateFlag::PreferredLogicalWidthsNeedUpdate, true);
     if (isOutOfFlowPositioned()) {
         // A positioned object has no effect on the min/max width of its containing block ever. No need to mark ancestor chain.
         return;
     }
 
     if (markParents == MarkOnlyThis) {
-        ensureRareData().preferredLogicalWidthsDirtyIsMarkOnlyThis = true;
+        ensureRareData().preferredLogicalWidthsNeedUpdateIsMarkOnlyThis = true;
         return;
     }
 
     invalidateContainerPreferredLogicalWidths();
     if (hasRareData())
-        ensureRareData().preferredLogicalWidthsDirtyIsMarkOnlyThis = false;
+        ensureRareData().preferredLogicalWidthsNeedUpdateIsMarkOnlyThis = false;
 }
 
 void RenderObject::invalidateContainerPreferredLogicalWidths()
@@ -697,7 +694,7 @@ void RenderObject::invalidateContainerPreferredLogicalWidths()
     // in the chain that we mark dirty (even though they're kind of irrelevant).
     CheckedPtr ancestor = isRenderTableCell() ? containingBlock() : container();
     while (ancestor) {
-        if (ancestor->preferredLogicalWidthsDirty() && (!ancestor->hasRareData() || !ancestor->rareData().preferredLogicalWidthsDirtyIsMarkOnlyThis))
+        if (ancestor->needsPreferredLogicalWidthsUpdate() && (!ancestor->hasRareData() || !ancestor->rareData().preferredLogicalWidthsNeedUpdateIsMarkOnlyThis))
             break;
         // Don't invalidate the outermost object of an unrooted subtree. That object will be
         // invalidated when the subtree is added to the document.
@@ -705,7 +702,7 @@ void RenderObject::invalidateContainerPreferredLogicalWidths()
         if (!container && !ancestor->isRenderView())
             break;
 
-        ancestor->m_stateBitfields.setFlag(StateFlag::PreferredLogicalWidthsDirty, true);
+        ancestor->m_stateBitfields.setFlag(StateFlag::PreferredLogicalWidthsNeedUpdate, true);
         if (ancestor->style().hasOutOfFlowPosition()) {
             // A positioned object has no effect on the min/max width of its containing block ever.
             // We can optimize this case and not go up any further.

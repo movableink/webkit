@@ -191,7 +191,7 @@ void RenderMathMLOperator::resetStretchSize()
 
 void RenderMathMLOperator::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
 
     LayoutUnit preferredWidth;
 
@@ -214,7 +214,7 @@ void RenderMathMLOperator::computePreferredLogicalWidths()
 
     m_maxPreferredLogicalWidth = m_minPreferredLogicalWidth = preferredWidth;
 
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 }
 
 void RenderMathMLOperator::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit pageLogicalHeight)

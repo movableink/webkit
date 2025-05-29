@@ -541,7 +541,7 @@ public:
     bool hasRenderOverflow() const { return !!m_overflow; }
     bool hasVisualOverflow() const { return m_overflow && !borderBoxRect().contains(m_overflow->visualOverflowRect()); }
 
-    virtual bool needsPreferredWidthsRecalculation() const;
+    virtual bool shouldInvalidatePreferredWidths() const;
     virtual void computeIntrinsicRatioInformation(FloatSize& /* intrinsicSize */, FloatSize& /* intrinsicRatio */) const { }
 
     ScrollPosition scrollPosition() const;

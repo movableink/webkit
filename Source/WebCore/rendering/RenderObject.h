@@ -696,6 +696,8 @@ public:
     bool hasVisibleBoxDecorations() const { return boxDecorationState() != BoxDecorationState::None; }
 
     bool needsLayout() const;
+    bool needsPreferredLogicalWidthsUpdate() const { return m_stateBitfields.hasFlag(StateFlag::PreferredLogicalWidthsNeedUpdate); }
+
     bool selfNeedsLayout() const { return m_stateBitfields.hasFlag(StateFlag::NeedsLayout); }
     bool needsPositionedMovementLayout() const { return m_stateBitfields.hasFlag(StateFlag::NeedsPositionedMovementLayout); }
     bool needsPositionedMovementLayoutOnly() const;
@@ -705,8 +707,6 @@ public:
     bool needsSimplifiedNormalFlowLayoutOnly() const;
     bool normalChildNeedsLayout() const { return m_stateBitfields.hasFlag(StateFlag::NormalChildNeedsLayout); }
     bool outOfFlowChildNeedsStaticPositionLayout() const { return m_stateBitfields.hasFlag(StateFlag::OutOfFlowChildNeedsStaticPositionLayout); }
-    
-    bool preferredLogicalWidthsDirty() const { return m_stateBitfields.hasFlag(StateFlag::PreferredLogicalWidthsDirty); }
 
     bool isSelectionBorder() const;
 
@@ -765,7 +765,8 @@ public:
     inline void setNeedsLayout(MarkingBehavior = MarkContainingBlockChain);
     enum class HadSkippedLayout { No, Yes };
     void clearNeedsLayout(HadSkippedLayout = HadSkippedLayout::No);
-    void setPreferredLogicalWidthsDirty(bool, MarkingBehavior = MarkContainingBlockChain);
+    void setNeedsPreferredWidthsUpdate(MarkingBehavior = MarkContainingBlockChain);
+    void clearNeedsPreferredWidthsUpdate() { m_stateBitfields.setFlag(StateFlag::PreferredLogicalWidthsNeedUpdate, { }); }
     void invalidateContainerPreferredLogicalWidths();
     
     inline void setNeedsLayoutAndPrefWidthsRecalc();
@@ -1219,7 +1220,7 @@ private:
         IsExcludedFromNormalLayout                          = 1 << 10,
         Floating                                            = 1 << 11,
         VerticalWritingMode                                 = 1 << 12,
-        PreferredLogicalWidthsDirty                         = 1 << 13,
+        PreferredLogicalWidthsNeedUpdate                    = 1 << 13,
         HasRareData                                         = 1 << 14,
         HasLayer                                            = 1 << 15,
         HasNonVisibleOverflow                               = 1 << 16,
@@ -1304,7 +1305,7 @@ private:
         bool hasReflection { false };
         bool hasOutlineAutoAncestor { false };
         // Dirty bit was set with MarkingBehavior::MarkOnlyThis
-        bool preferredLogicalWidthsDirtyIsMarkOnlyThis { false };
+        bool preferredLogicalWidthsNeedUpdateIsMarkOnlyThis { false };
         OptionSet<MarginTrimType> trimmedMargins;
 
         // From RenderElement

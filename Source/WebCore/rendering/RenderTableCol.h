@@ -42,7 +42,7 @@ public:
     RenderTableCol(Document&, RenderStyle&&);
     virtual ~RenderTableCol();
 
-    void clearPreferredLogicalWidthsDirtyBits();
+    void clearNeedsPreferredLogicalWidthsUpdate();
 
     unsigned span() const { return m_span; }
     void setSpan(unsigned span) { m_span = span; }

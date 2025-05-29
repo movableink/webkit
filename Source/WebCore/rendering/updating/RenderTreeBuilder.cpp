@@ -500,7 +500,7 @@ void RenderTreeBuilder::attachToRenderElementInternal(RenderElement& parent, Ren
     newChild->setNeedsLayoutAndPrefWidthsRecalc();
     auto isOutOfFlowBox = newChild->style().hasOutOfFlowPosition();
     if (!isOutOfFlowBox)
-        parent.setPreferredLogicalWidthsDirty(true);
+        parent.setNeedsPreferredWidthsUpdate();
 
     if (!parent.normalChildNeedsLayout()) {
         if (isOutOfFlowBox) {

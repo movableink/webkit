@@ -1195,7 +1195,7 @@ bool RenderBox::hasAlwaysPresentScrollbar(ScrollbarOrientation orientation) cons
     return false;
 }
 
-bool RenderBox::needsPreferredWidthsRecalculation() const
+bool RenderBox::shouldInvalidatePreferredWidths() const
 {
     return style().paddingStart().isPercentOrCalculated() || style().paddingEnd().isPercentOrCalculated() || (style().hasAspectRatio() && (hasRelativeLogicalHeight() || (isFlexItem() && hasStretchedLogicalHeight())));
 }
@@ -1271,7 +1271,7 @@ bool RenderBox::applyCachedClipAndScrollPosition(RepaintRects& rects, const Rend
 
 LayoutUnit RenderBox::minPreferredLogicalWidth() const
 {
-    if (preferredLogicalWidthsDirty()) {
+    if (needsPreferredLogicalWidthsUpdate()) {
         SetLayoutNeededForbiddenScope layoutForbiddenScope(*this);
         const_cast<RenderBox&>(*this).computePreferredLogicalWidths();
     }
@@ -1280,7 +1280,7 @@ LayoutUnit RenderBox::minPreferredLogicalWidth() const
 
 LayoutUnit RenderBox::maxPreferredLogicalWidth() const
 {
-    if (preferredLogicalWidthsDirty()) {
+    if (needsPreferredLogicalWidthsUpdate()) {
         SetLayoutNeededForbiddenScope layoutForbiddenScope(*this);
         const_cast<RenderBox&>(*this).computePreferredLogicalWidths();
     }
@@ -3613,10 +3613,10 @@ bool RenderBox::shouldComputePreferredLogicalWidthsFromStyle() const
 
 void RenderBox::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
 
     computePreferredLogicalWidths(style().logicalMinWidth(), style().logicalMaxWidth(), borderAndPaddingLogicalWidth());
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 }
 
 void RenderBox::computePreferredLogicalWidths(const Length& minLogicalWidth, const Length& maxLogicalWidth, LayoutUnit borderAndPaddingLogicalWidth)

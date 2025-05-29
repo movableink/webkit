@@ -246,7 +246,7 @@ void RenderDeprecatedFlexibleBox::computeIntrinsicLogicalWidths(LayoutUnit& minL
 
 void RenderDeprecatedFlexibleBox::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
 
     m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = 0;
     if (style().width().isFixed() && style().width().value() > 0)
@@ -256,7 +256,7 @@ void RenderDeprecatedFlexibleBox::computePreferredLogicalWidths()
 
     RenderBox::computePreferredLogicalWidths(style().minWidth(), style().maxWidth(), borderAndPaddingLogicalWidth());
 
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 }
 
 // Use an inline capacity of 8, since flexbox containers usually have less than 8 children.

@@ -110,7 +110,7 @@ bool RenderVideo::updateIntrinsicSize()
         return false;
 
     setIntrinsicSize(size);
-    setPreferredLogicalWidthsDirty(true);
+    setNeedsPreferredWidthsUpdate();
     setNeedsLayout();
     return true;
 }

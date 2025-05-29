@@ -71,7 +71,7 @@ void RenderViewTransitionCapture::intrinsicSizeChanged()
     if (intrinsicSize() == m_imageIntrinsicSize)
         return;
     setIntrinsicSize(m_imageIntrinsicSize);
-    setPreferredLogicalWidthsDirty(true);
+    setNeedsPreferredWidthsUpdate();
     setNeedsLayout();
 }
 

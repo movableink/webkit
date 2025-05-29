@@ -741,7 +741,7 @@ static std::optional<DidRepaintAndMarkContainingBlock> repaintAndMarkContainingB
         }
         if (!renderer.isOutOfFlowPositioned()) {
             container->setChildNeedsLayout();
-            container->setPreferredLogicalWidthsDirty(true);
+            container->setNeedsPreferredWidthsUpdate();
             return;
         }
         container->setNeedsLayoutForOverflowChange();
@@ -904,7 +904,7 @@ void RenderTreeUpdater::tearDownTextRenderer(Text& text, const ContainerNode* ro
         renderer->repaint();
         if (auto* parent = renderer->parent()) {
             parent->setChildNeedsLayout();
-            parent->setPreferredLogicalWidthsDirty(true);
+            parent->setNeedsPreferredWidthsUpdate();
         }
     }
     builder.destroyAndCleanUpAnonymousWrappers(*renderer, root ? root->renderer() : nullptr);

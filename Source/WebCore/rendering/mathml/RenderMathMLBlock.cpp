@@ -273,7 +273,7 @@ void RenderMathMLBlock::shiftInFlowChildren(LayoutUnit left, LayoutUnit top)
 
 void RenderMathMLBlock::adjustPreferredLogicalWidthsForBorderAndPadding()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
     m_minPreferredLogicalWidth += borderAndPaddingLogicalWidth();
     m_maxPreferredLogicalWidth += borderAndPaddingLogicalWidth();
 }
@@ -304,7 +304,7 @@ RenderMathMLBlock::SizeAppliedToMathContent RenderMathMLBlock::sizeAppliedToMath
 LayoutUnit RenderMathMLBlock::applySizeToMathContent(LayoutPhase phase, const SizeAppliedToMathContent& sizes)
 {
     if (phase == LayoutPhase::CalculatePreferredLogicalWidth) {
-        ASSERT(preferredLogicalWidthsDirty());
+        ASSERT(needsPreferredLogicalWidthsUpdate());
         if (sizes.logicalWidth) {
             m_minPreferredLogicalWidth = *sizes.logicalWidth;
             m_maxPreferredLogicalWidth = *sizes.logicalWidth;

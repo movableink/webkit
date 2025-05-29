@@ -788,8 +788,8 @@ void RenderBlock::updateBlockChildDirtyBitsBeforeLayout(RelayoutChildren relayou
         child.setChildNeedsLayout(MarkOnlyThis);
 
     // If relayoutChildren is set and the child has percentage padding or an embedded content box, we also need to invalidate the childs pref widths.
-    if (relayoutChildren == RelayoutChildren::Yes && child.needsPreferredWidthsRecalculation())
-        child.setPreferredLogicalWidthsDirty(true, MarkOnlyThis);
+    if (relayoutChildren == RelayoutChildren::Yes && child.shouldInvalidatePreferredWidths())
+        child.setNeedsPreferredWidthsUpdate(MarkOnlyThis);
 }
 
 void RenderBlock::dirtyForLayoutFromPercentageHeightDescendants()
@@ -823,7 +823,7 @@ void RenderBlock::dirtyForLayoutFromPercentageHeightDescendants()
             // then we have to dirty preferred widths, since even enclosing blocks can become dirty as a result.
             // (A horizontal flexbox that contains an inline image wrapped in an anonymous block for example.)
             if (renderer->hasIntrinsicAspectRatio() || renderer->style().hasAspectRatio())
-                renderer->setPreferredLogicalWidthsDirty(true);
+                renderer->setNeedsPreferredWidthsUpdate();
             renderer = renderer->container();
             ASSERT(renderer);
             if (!renderer)
@@ -968,8 +968,8 @@ void RenderBlock::layoutPositionedObject(RenderBox& r, RelayoutChildren relayout
         r.setChildNeedsLayout(MarkOnlyThis);
 
     // If relayoutChildren is set and the child has percentage padding or an embedded content box, we also need to invalidate the childs pref widths.
-    if (relayoutChildren == RelayoutChildren::Yes && r.needsPreferredWidthsRecalculation())
-        r.setPreferredLogicalWidthsDirty(true, MarkOnlyThis);
+    if (relayoutChildren == RelayoutChildren::Yes && r.shouldInvalidatePreferredWidths())
+        r.setNeedsPreferredWidthsUpdate(MarkOnlyThis);
     
     r.markForPaginationRelayoutIfNeeded();
     
@@ -1905,8 +1905,8 @@ void RenderBlock::removePositionedObject(const RenderBox& rendererToRemove)
 static inline void markRendererAndParentForLayout(RenderBox& renderer)
 {
     renderer.setChildNeedsLayout(MarkOnlyThis);
-    if (renderer.needsPreferredWidthsRecalculation())
-        renderer.setPreferredLogicalWidthsDirty(true, MarkOnlyThis);
+    if (renderer.shouldInvalidatePreferredWidths())
+        renderer.setNeedsPreferredWidthsUpdate(MarkOnlyThis);
     auto* parentBlock = RenderObject::containingBlockForPositionType(PositionType::Static, renderer);
     if (!parentBlock) {
         ASSERT_NOT_REACHED();
@@ -2378,7 +2378,7 @@ void RenderBlock::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, Lay
 
 void RenderBlock::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
 
     m_minPreferredLogicalWidth = 0;
     m_maxPreferredLogicalWidth = 0;
@@ -2400,7 +2400,7 @@ void RenderBlock::computePreferredLogicalWidths()
 
     RenderBox::computePreferredLogicalWidths(styleToUse.logicalMinWidth(), styleToUse.logicalMaxWidth(), borderAndPaddingLogicalWidth());
 
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 }
 
 void RenderBlock::computeBlockPreferredLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
@@ -3347,7 +3347,7 @@ std::optional<LayoutUnit> RenderBlock::availableLogicalHeightForPercentageComput
 
         if (shouldComputeLogicalHeightFromAspectRatio()) {
             // Only grid is expected to be in a state where it is calculating pref width and having unknown logical width.
-            if (isRenderGrid() && preferredLogicalWidthsDirty() && !style.logicalWidth().isSpecified())
+            if (isRenderGrid() && needsPreferredLogicalWidthsUpdate() && !style.logicalWidth().isSpecified())
                 return { };
             return blockSizeFromAspectRatio(horizontalBorderAndPaddingExtent(), verticalBorderAndPaddingExtent(), LayoutUnit { style.logicalAspectRatio() }, style.boxSizingForAspectRatio(), logicalWidth(), style.aspectRatioType(), isRenderReplaced());
         }

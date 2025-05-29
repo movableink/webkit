@@ -43,7 +43,7 @@ public:
     FloatSize intrinsicRatio() const;
     
     bool isContentLikelyVisibleInViewport();
-    bool needsPreferredWidthsRecalculation() const override;
+    bool shouldInvalidatePreferredWidths() const override;
 
     double computeIntrinsicAspectRatio() const;
 

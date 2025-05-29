@@ -92,7 +92,7 @@ protected:
 private:
     void element() const = delete;
 
-    bool needsPreferredWidthsRecalculation() const final;
+    bool shouldInvalidatePreferredWidths() const final;
     RenderBox* embeddedContentBox() const final;
 
     void setSelectionState(HighlightState) final;
