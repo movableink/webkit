@@ -159,7 +159,7 @@ public:
 
     String debugDescription() const final;
     String cssText(const CSS::SerializationContext&);
-    void getChildStyleSheets(UncheckedKeyHashSet<RefPtr<CSSStyleSheet>>&);
+    void getChildStyleSheets(HashSet<RefPtr<CSSStyleSheet>>&);
 
     bool isDetached() const;
 

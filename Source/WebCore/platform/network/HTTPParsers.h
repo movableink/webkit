@@ -36,7 +36,7 @@
 
 namespace WebCore {
 
-typedef UncheckedKeyHashSet<String, ASCIICaseInsensitiveHash> HTTPHeaderSet;
+using HTTPHeaderSet = HashSet<String, ASCIICaseInsensitiveHash>;
 
 class ResourceResponse;
 enum class HTTPHeaderName : uint16_t;
@@ -126,7 +126,7 @@ bool isSafeMethod(const String&);
 WEBCORE_EXPORT CrossOriginResourcePolicy parseCrossOriginResourcePolicyHeader(StringView);
 
 template<class HashType>
-bool addToAccessControlAllowList(const String& string, unsigned start, unsigned end, UncheckedKeyHashSet<String, HashType>& set)
+bool addToAccessControlAllowList(const String& string, unsigned start, unsigned end, HashSet<String, HashType>& set)
 {
     StringImpl* stringImpl = string.impl();
     if (!stringImpl)
@@ -153,9 +153,9 @@ bool addToAccessControlAllowList(const String& string, unsigned start, unsigned 
 }
 
 template<class HashType = DefaultHash<String>>
-std::optional<UncheckedKeyHashSet<String, HashType>> parseAccessControlAllowList(const String& string)
+std::optional<HashSet<String, HashType>> parseAccessControlAllowList(const String& string)
 {
-    UncheckedKeyHashSet<String, HashType> set;
+    HashSet<String, HashType> set;
     unsigned start = 0;
     size_t end;
     while ((end = string.find(',', start)) != notFound) {

@@ -583,7 +583,7 @@ void MemoryCache::removeResourcesWithOrigins(PAL::SessionID sessionID, const Has
     if (!resourceMap)
         return;
 
-    UncheckedKeyHashSet<String> originPartitions;
+    HashSet<String> originPartitions;
 
     for (auto& origin : origins)
         originPartitions.add(ResourceRequest::partitionName(origin->host()));
@@ -621,11 +621,11 @@ void MemoryCache::getOriginsWithCache(SecurityOriginSet& origins)
     }
 }
 
-UncheckedKeyHashSet<RefPtr<SecurityOrigin>> MemoryCache::originsWithCache(PAL::SessionID sessionID) const
+HashSet<RefPtr<SecurityOrigin>> MemoryCache::originsWithCache(PAL::SessionID sessionID) const
 {
     RELEASE_ASSERT(isMainThread());
 
-    UncheckedKeyHashSet<RefPtr<SecurityOrigin>> origins;
+    HashSet<RefPtr<SecurityOrigin>> origins;
 
     auto it = m_sessionResources.find(sessionID);
     if (it != m_sessionResources.end()) {

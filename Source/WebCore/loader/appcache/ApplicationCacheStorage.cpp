@@ -1459,7 +1459,7 @@ long long ApplicationCacheStorage::flatFileAreaSize()
     return totalSize;
 }
 
-UncheckedKeyHashSet<SecurityOriginData> ApplicationCacheStorage::originsWithCache()
+HashSet<SecurityOriginData> ApplicationCacheStorage::originsWithCache()
 {
     auto urls = manifestURLs();
     if (!urls)
@@ -1467,7 +1467,7 @@ UncheckedKeyHashSet<SecurityOriginData> ApplicationCacheStorage::originsWithCach
 
     // Multiple manifest URLs might share the same SecurityOrigin, so we might be creating extra, wasted origins here.
     // The current schema doesn't allow for a more efficient way of building this list.
-    UncheckedKeyHashSet<SecurityOriginData> origins;
+    HashSet<SecurityOriginData> origins;
     for (auto& url : *urls)
         origins.add(SecurityOriginData::fromURL(url));
     return origins;

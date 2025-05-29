@@ -116,7 +116,7 @@ static String getFileNameFromURIComponent(StringView input)
     return result.toString();
 }
 
-static String generateValidFileName(const URL& url, const UncheckedKeyHashSet<String>& existingFileNames, const String& extension = { })
+static String generateValidFileName(const URL& url, const HashSet<String>& existingFileNames, const String& extension = { })
 {
     String suffix = extension.isEmpty() ? emptyString() : makeString('.', extension);
     auto extractedFileName = getFileNameFromURIComponent(url.lastPathComponent());
@@ -615,7 +615,7 @@ static void addSubresourcesForAttachmentElementsIfNecessary(LocalFrame& frame, c
 
 #endif
 
-static UncheckedKeyHashMap<Ref<CSSStyleSheet>, String> addSubresourcesForCSSStyleSheetsIfNecessary(LocalFrame& frame, const String& subresourcesDirectoryName, UncheckedKeyHashSet<String>& uniqueFileNames, UncheckedKeyHashMap<String, String>& uniqueSubresources, Vector<Ref<ArchiveResource>>& subresources)
+static HashMap<Ref<CSSStyleSheet>, String> addSubresourcesForCSSStyleSheetsIfNecessary(LocalFrame& frame, const String& subresourcesDirectoryName, HashSet<String>& uniqueFileNames, HashMap<String, String>& uniqueSubresources, Vector<Ref<ArchiveResource>>& subresources)
 {
     if (subresourcesDirectoryName.isEmpty())
         return { };
@@ -626,7 +626,7 @@ static UncheckedKeyHashMap<Ref<CSSStyleSheet>, String> addSubresourcesForCSSStyl
 
     CSS::SerializationContext serializationContext;
 
-    UncheckedKeyHashMap<Ref<CSSStyleSheet>, String> uniqueCSSStyleSheets;
+    HashMap<Ref<CSSStyleSheet>, String> uniqueCSSStyleSheets;
     Ref documentStyleSheets = document->styleSheets();
     for (unsigned index = 0; index < documentStyleSheets->length(); ++index) {
         RefPtr cssStyleSheet = dynamicDowncast<CSSStyleSheet>(documentStyleSheets->item(index));
@@ -636,7 +636,7 @@ static UncheckedKeyHashMap<Ref<CSSStyleSheet>, String> addSubresourcesForCSSStyl
         if (uniqueCSSStyleSheets.contains(*cssStyleSheet))
             continue;
 
-        UncheckedKeyHashSet<RefPtr<CSSStyleSheet>> cssStyleSheets;
+        HashSet<RefPtr<CSSStyleSheet>> cssStyleSheets;
         cssStyleSheets.add(cssStyleSheet.get());
         cssStyleSheet->getChildStyleSheets(cssStyleSheets);
         for (auto& currentCSSStyleSheet : cssStyleSheets) {
@@ -703,8 +703,8 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString, bo
     Vector<Ref<LegacyWebArchive>> subframeArchives;
     Vector<FrameIdentifier> subframeIdentifiers;
     Vector<Ref<ArchiveResource>> subresources;
-    UncheckedKeyHashMap<String, String> uniqueSubresources;
-    UncheckedKeyHashSet<String> uniqueFileNames;
+    HashMap<String, String> uniqueSubresources;
+    HashSet<String> uniqueFileNames;
     String subresourcesDirectoryName = mainFrameFilePath.isNull() ? String { } : makeString(mainFrameFilePath, "_files"_s);
 
     for (auto& node : nodes) {
