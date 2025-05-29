@@ -3589,8 +3589,6 @@ webkit.org/b/237987 imported/w3c/web-platform-tests/html/semantics/forms/textfie
 imported/w3c/web-platform-tests/content-security-policy/connect-src/shared-worker-connect-src-allowed.sub.html [ Pass Failure ]
 imported/w3c/web-platform-tests/content-security-policy/connect-src/shared-worker-connect-src-blocked.sub.html [ Pass Failure ]
 
-webkit.org/b/159755 fast/text/emoji-num-glyphs.html [ Pass ]
-
 # WPT css/css-pseudo import (webkit.org/b/235197)
 imported/w3c/web-platform-tests/css/css-pseudo/selection-background-painting-order.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-pseudo/selection-originating-decoration-color.html [ ImageOnlyFailure ]
@@ -7879,3 +7877,5 @@ fast/canvas/webgl/gl-teximage.html [ Pass ]
 
 #rdar://145604998 (REGRESSION(iOS 18.4, macOS Sequoia 15.4 ): fast/text/international/hindi-spacing.html is a constant text failure)
 fast/text/international/hindi-spacing.html [ Failure ]
+
+webkit.org/b/288518 fast/text/emoji-num-glyphs.html [ Failure ]
