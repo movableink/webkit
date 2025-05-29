@@ -317,7 +317,6 @@ bindings/js/JSElementCustom.cpp
 bindings/js/JSElementInternalsCustom.cpp
 bindings/js/JSEventListener.cpp
 bindings/js/JSEventTargetCustom.cpp
-bindings/js/JSFetchEventCustom.cpp
 bindings/js/JSHTMLCanvasElementCustom.cpp
 bindings/js/JSHTMLElementCustom.cpp
 bindings/js/JSHTMLTemplateElementCustom.cpp
@@ -1368,7 +1367,6 @@ workers/WorkerOrWorkletGlobalScope.cpp
 workers/WorkerOrWorkletThread.cpp
 workers/WorkerRunLoop.cpp
 workers/WorkerScriptLoader.cpp
-workers/service/FetchEvent.cpp
 workers/service/ServiceWorker.cpp
 workers/service/ServiceWorkerContainer.cpp
 workers/service/ServiceWorkerGlobalScope.cpp

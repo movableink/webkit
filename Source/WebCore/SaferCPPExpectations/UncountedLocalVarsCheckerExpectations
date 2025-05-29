@@ -720,7 +720,6 @@ workers/WorkerOrWorkletGlobalScope.cpp
 workers/WorkerOrWorkletThread.cpp
 workers/WorkerScriptLoader.cpp
 workers/service/ExtendableEvent.cpp
-workers/service/FetchEvent.cpp
 workers/service/ServiceWorker.cpp
 workers/service/ServiceWorkerClient.cpp
 workers/service/ServiceWorkerClientData.cpp
