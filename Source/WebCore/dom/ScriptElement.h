@@ -124,7 +124,7 @@ private:
     void dispatchLoadEventRespectingUserGestureIndicator();
 
     bool requestClassicScript(const String& sourceURL);
-    bool requestModuleScript(const TextPosition& scriptStartPosition);
+    bool requestModuleScript(const String& sourceText, const TextPosition& scriptStartPosition);
 
     void updateTaintedOriginFromSourceURL();
 

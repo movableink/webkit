@@ -253,7 +253,7 @@ bool ScriptElement::prepareScript(const TextPosition& scriptStartPosition)
         break;
     }
     case ScriptType::Module: {
-        if (!requestModuleScript(scriptStartPosition))
+        if (!requestModuleScript(sourceText, scriptStartPosition))
             return false;
         potentiallyBlockRendering();
         break;
@@ -355,7 +355,7 @@ bool ScriptElement::requestClassicScript(const String& sourceURL)
     return false;
 }
 
-bool ScriptElement::requestModuleScript(const TextPosition& scriptStartPosition)
+bool ScriptElement::requestModuleScript(const String& sourceText, const TextPosition& scriptStartPosition)
 {
     // https://html.spec.whatwg.org/multipage/urls-and-fetching.html#cors-settings-attributes
     // Module is always CORS request. If attribute is not given, it should be same-origin credential.
@@ -396,7 +396,7 @@ bool ScriptElement::requestModuleScript(const TextPosition& scriptStartPosition)
     Ref script = LoadableModuleScript::create(nonce, emptyAtom(), referrerPolicy(), fetchPriority(), crossOriginMode, scriptCharset(), element->localName(), element->isInUserAgentShadowTree());
 
     TextPosition position = document->isInDocumentWrite() ? TextPosition() : scriptStartPosition;
-    ScriptSourceCode sourceCode(scriptContent(), m_taintedOrigin, URL(document->url()), position, JSC::SourceProviderSourceType::Module, script.copyRef());
+    ScriptSourceCode sourceCode(sourceText, m_taintedOrigin, URL(document->url()), position, JSC::SourceProviderSourceType::Module, script.copyRef());
 
     ASSERT(document->contentSecurityPolicy());
     {

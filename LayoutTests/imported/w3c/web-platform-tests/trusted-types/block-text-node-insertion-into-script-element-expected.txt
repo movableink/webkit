@@ -12,6 +12,7 @@ CONSOLE MESSAGE: Refused to connect to ws://common/blank.html because it does no
 CONSOLE MESSAGE: This requires a TrustedScript value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
 CONSOLE MESSAGE: Refused to connect to ws://common/blank.html because it does not appear in the connect-src directive of the Content Security Policy.
 CONSOLE MESSAGE: Refused to connect to ws://common/blank.html because it does not appear in the connect-src directive of the Content Security Policy.
+CONSOLE MESSAGE: Refused to connect to ws://common/blank.html because it does not appear in the connect-src directive of the Content Security Policy.
 CONSOLE MESSAGE: This requires a TrustedScript value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
 CONSOLE MESSAGE: Refused to connect to ws://common/blank.html because it does not appear in the connect-src directive of the Content Security Policy.
 CONSOLE MESSAGE: Refused to connect to ws://common/blank.html because it does not appear in the connect-src directive of the Content Security Policy.
@@ -26,6 +27,7 @@ PASS Regression test: Bypass via appendChild into live script element.
 PASS Spot tests around script + innerHTML interaction.
 PASS Prep for subsequent tests: Create default policy.
 PASS Test that default policy applies.
+PASS Test that default policy applies to module script.
 PASS Test a failing default policy.
 PASS Spot tests around script + innerHTML interaction with default policy.
 
