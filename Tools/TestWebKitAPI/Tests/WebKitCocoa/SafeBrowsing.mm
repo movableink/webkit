@@ -380,6 +380,12 @@ TEST(SafeBrowsing, DISABLED_URLObservation)
 
     auto webViewWithWarning = [&] () -> RetainPtr<WKWebView> {
         auto webView = adoptNS([WKWebView new]);
+        auto navigationDelegate = adoptNS([[TestNavigationDelegate alloc] init]);
+        navigationDelegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *action, void (^decisionHandler)(WKNavigationActionPolicy)) {
+            TestWebKitAPI::Util::runFor(0.01_s);
+            decisionHandler(WKNavigationActionPolicyAllow);
+        };
+        [webView setNavigationDelegate:navigationDelegate.get()];
         [webView configuration].preferences.fraudulentWebsiteWarningEnabled = YES;
         [webView addObserver:observer.get() forKeyPath:@"URL" options:NSKeyValueObservingOptionNew context:nil];
 

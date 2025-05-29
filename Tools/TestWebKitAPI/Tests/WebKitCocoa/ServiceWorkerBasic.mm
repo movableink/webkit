@@ -3871,6 +3871,7 @@ static bool shouldServiceWorkerPSONNavigationDelegateAllowNavigationResponse = t
 
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler
 {
+    TestWebKitAPI::Util::runFor(0.01_s);
     decisionHandler(shouldServiceWorkerPSONNavigationDelegateAllowNavigation ? WKNavigationActionPolicyAllow : WKNavigationActionPolicyCancel);
 }
 
@@ -3881,8 +3882,7 @@ static bool shouldServiceWorkerPSONNavigationDelegateAllowNavigationResponse = t
 
 @end
 
-// FIXME: Re-enable this test once webkit.org/b/292932 is resolved.
-TEST(ServiceWorker, DISABLED_WindowClientNavigate)
+TEST(ServiceWorker, WindowClientNavigate)
 {
     [WKWebsiteDataStore _allowWebsiteDataRecordsForAllOrigins];
 
@@ -3952,8 +3952,7 @@ TEST(ServiceWorker, DISABLED_WindowClientNavigate)
     shouldServiceWorkerPSONNavigationDelegateAllowNavigationResponse = true;
 }
 
-// FIXME: Re-enable this test once webkit.org/b/292932 is resolved.
-TEST(ServiceWorker, DISABLED_WindowClientNavigateCrossOrigin)
+TEST(ServiceWorker, WindowClientNavigateCrossOrigin)
 {
     [WKWebsiteDataStore _allowWebsiteDataRecordsForAllOrigins];
 
