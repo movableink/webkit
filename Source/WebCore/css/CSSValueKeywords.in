@@ -1720,7 +1720,7 @@ high
 
 // dynamic-range-limit
 // standard
-constrained-high
+constrained
 // no-limit
 dynamic-range-limit-mix
 

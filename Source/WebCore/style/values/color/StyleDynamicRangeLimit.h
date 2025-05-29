@@ -42,7 +42,7 @@ namespace Style {
 
 struct DynamicRangeLimit {
     DynamicRangeLimit(CSS::Keyword::Standard);
-    DynamicRangeLimit(CSS::Keyword::ConstrainedHigh);
+    DynamicRangeLimit(CSS::Keyword::Constrained);
     DynamicRangeLimit(CSS::Keyword::NoLimit);
     DynamicRangeLimit(DynamicRangeLimitMixFunction&&);
 
@@ -61,7 +61,7 @@ struct DynamicRangeLimit {
 private:
     using Kind = CompactVariant<
        CSS::Keyword::Standard,
-       CSS::Keyword::ConstrainedHigh,
+       CSS::Keyword::Constrained,
        CSS::Keyword::NoLimit,
        UniqueRef<DynamicRangeLimitMixFunction>
     >;
@@ -76,7 +76,7 @@ inline DynamicRangeLimit::DynamicRangeLimit(CSS::Keyword::Standard keyword)
 {
 }
 
-inline DynamicRangeLimit::DynamicRangeLimit(CSS::Keyword::ConstrainedHigh keyword)
+inline DynamicRangeLimit::DynamicRangeLimit(CSS::Keyword::Constrained keyword)
     : value { keyword }
 {
 }

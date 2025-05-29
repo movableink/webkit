@@ -47,8 +47,8 @@ static DynamicRangeLimit resolve(DynamicRangeLimitMixFunction&& mix)
 
     if (mix->standard == 100_css_percentage)
         return DynamicRangeLimit(CSS::Keyword::Standard { });
-    if (mix->constrainedHigh == 100_css_percentage)
-        return DynamicRangeLimit(CSS::Keyword::ConstrainedHigh { });
+    if (mix->constrained == 100_css_percentage)
+        return DynamicRangeLimit(CSS::Keyword::Constrained { });
     if (mix->noLimit == 100_css_percentage)
         return DynamicRangeLimit(CSS::Keyword::NoLimit { });
     return DynamicRangeLimit(WTFMove(mix));
@@ -107,12 +107,12 @@ PlatformDynamicRangeLimit DynamicRangeLimit::toPlatformDynamicRangeLimit() const
     return WTF::switchOn(*this, [&]<typename Kind>(const Kind& kind) -> PlatformDynamicRangeLimit {
         if constexpr (std::is_same_v<Kind, CSS::Keyword::Standard>)
             return PlatformDynamicRangeLimit::standard();
-        else if constexpr (std::is_same_v<Kind, CSS::Keyword::ConstrainedHigh>)
-            return PlatformDynamicRangeLimit::constrainedHigh();
+        else if constexpr (std::is_same_v<Kind, CSS::Keyword::Constrained>)
+            return PlatformDynamicRangeLimit::constrained();
         else if constexpr (std::is_same_v<Kind, CSS::Keyword::NoLimit>)
             return PlatformDynamicRangeLimit::noLimit();
         else if constexpr (std::is_same_v<Kind, Style::DynamicRangeLimitMixFunction>)
-            return PlatformDynamicRangeLimit(float(kind->standard.value), float(kind->constrainedHigh.value), float(kind->noLimit.value));
+            return PlatformDynamicRangeLimit(float(kind->standard.value), float(kind->constrained.value), float(kind->noLimit.value));
     });
 }
 

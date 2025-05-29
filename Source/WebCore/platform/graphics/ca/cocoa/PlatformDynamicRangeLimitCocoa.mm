@@ -39,12 +39,12 @@ LayerDynamicRangeLimitSetter layerDynamicRangeLimitSetter(PlatformDynamicRangeLi
         static CADynamicRange const WebKitCADynamicRangeConstrainedHigh = @"constrainedHigh";
         static CADynamicRange const WebKitCADynamicRangeHigh = @"high";
 
-        constexpr auto betweenStandardAndConstrainedHigh = (PlatformDynamicRangeLimit::standard().value() + PlatformDynamicRangeLimit::constrainedHigh().value()) / 2;
-        if (platformDynamicRangeLimit.value() < betweenStandardAndConstrainedHigh)
+        constexpr auto betweenStandardAndConstrained = (PlatformDynamicRangeLimit::standard().value() + PlatformDynamicRangeLimit::constrained().value()) / 2;
+        if (platformDynamicRangeLimit.value() < betweenStandardAndConstrained)
             return [](CALayer *layer) { [layer setPreferredDynamicRange:WebKitCADynamicRangeStandard]; };
 
-        constexpr auto betweenConstrainedHighAndHigh = (PlatformDynamicRangeLimit::constrainedHigh().value() + PlatformDynamicRangeLimit::noLimit().value()) / 2;
-        if (platformDynamicRangeLimit.value() < betweenConstrainedHighAndHigh)
+        constexpr auto betweenConstrainedAndHigh = (PlatformDynamicRangeLimit::constrained().value() + PlatformDynamicRangeLimit::noLimit().value()) / 2;
+        if (platformDynamicRangeLimit.value() < betweenConstrainedAndHigh)
             return [](CALayer *layer) { [layer setPreferredDynamicRange:WebKitCADynamicRangeConstrainedHigh]; };
 
         return [](CALayer *layer) { [layer setPreferredDynamicRange:WebKitCADynamicRangeHigh]; };

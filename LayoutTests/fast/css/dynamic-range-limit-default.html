@@ -7,9 +7,10 @@
 <div id="div-standard" style="dynamic-range-limit: standard">
     <div id="div-under-standard"></div>
     <video id="video-under-standard"></video>
-    <video id="video-constrained-high" style="dynamic-range-limit: constrained-high"></video>
+    <video id="video-constrained" style="dynamic-range-limit: constrained"></video>
 </div>
 <script>
+debug("Start of test, successful results are silent.");
 var defaultLimit = "no-limit";
 if (CSS.supports("dynamic-range-limit", "standard") && CSS.supports("dynamic-range-limit", "no-limit")) {
     const quiet = true; // So that the non-failure output is the same if dynamic-range-limit is not supported.
@@ -28,14 +29,15 @@ if (CSS.supports("dynamic-range-limit", "standard") && CSS.supports("dynamic-ran
     shouldBe('document.getElementById("video-under-standard").style["dynamic-range-limit"]', '""', quiet);
     shouldBe('getComputedStyle(document.getElementById("video-under-standard"))["dynamic-range-limit"]', '"no-limit"', quiet);
 
-    if (CSS.supports("dynamic-range-limit", "constrained-high")) {
-        shouldBe('document.getElementById("video-constrained-high").style["dynamic-range-limit"]', '"constrained-high"', quiet);
-        shouldBe('getComputedStyle(document.getElementById("video-constrained-high"))["dynamic-range-limit"]', '"constrained-high"', quiet);
+    if (CSS.supports("dynamic-range-limit", "constrained")) {
+        shouldBe('document.getElementById("video-constrained").style["dynamic-range-limit"]', '"constrained"', quiet);
+        shouldBe('getComputedStyle(document.getElementById("video-constrained"))["dynamic-range-limit"]', '"constrained"', quiet);
     } else {
-        shouldBe('document.getElementById("video-constrained-high").style["dynamic-range-limit"]', '""', quiet);
-        shouldBe('getComputedStyle(document.getElementById("video-constrained-high"))["dynamic-range-limit"]', 'defaultLimit', quiet);
+        shouldBe('document.getElementById("video-constrained").style["dynamic-range-limit"]', '""', quiet);
+        shouldBe('getComputedStyle(document.getElementById("video-constrained"))["dynamic-range-limit"]', 'defaultLimit', quiet);
     }
 }
+testPassed("End of test, successful results are silent.");
 </script>
 <script src='../../resources/js-test-post.js'></script>
 </body>

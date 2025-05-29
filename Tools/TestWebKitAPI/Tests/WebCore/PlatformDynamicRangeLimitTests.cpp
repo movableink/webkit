@@ -36,7 +36,7 @@ namespace TestWebKitAPI {
 static_assert(std::is_same_v<WebCore::PlatformDynamicRangeLimit::ValueType, float>);
 static_assert(std::is_same_v<decltype(WebCore::PlatformDynamicRangeLimit::standard().value()), float>);
 static_assert(WebCore::PlatformDynamicRangeLimit::standard().value() == 0.0f);
-static_assert(WebCore::PlatformDynamicRangeLimit::constrainedHigh().value() == 0.5f);
+static_assert(WebCore::PlatformDynamicRangeLimit::constrained().value() == 0.5f);
 static_assert(WebCore::PlatformDynamicRangeLimit::noLimit().value() == 1.0f);
 
 TEST(PlatformDynamicRangeLimit, Values)
@@ -48,12 +48,12 @@ TEST(PlatformDynamicRangeLimit, Values)
     static_assert(WebCore::PlatformDynamicRangeLimit::initialValueForVideos().value() == WebCore::PlatformDynamicRangeLimit::noLimit().value());
 
     static_assert(WebCore::PlatformDynamicRangeLimit::defaultWhenSuppressingHDR().value() == WebCore::PlatformDynamicRangeLimit::standard().value());
-    static_assert(WebCore::PlatformDynamicRangeLimit::defaultWhenSuppressingHDRInVideos().value() == WebCore::PlatformDynamicRangeLimit::constrainedHigh().value());
+    static_assert(WebCore::PlatformDynamicRangeLimit::defaultWhenSuppressingHDRInVideos().value() == WebCore::PlatformDynamicRangeLimit::constrained().value());
 }
 
-static WebCore::PlatformDynamicRangeLimit mix(float standard, float constrainedHigh, float noLimit)
+static WebCore::PlatformDynamicRangeLimit mix(float standard, float constrained, float noLimit)
 {
-    return WebCore::Style::DynamicRangeLimit { WebCore::Style::DynamicRangeLimitMixFunction { WebCore::Style::DynamicRangeLimitMixParameters { .standard = standard, .constrainedHigh = constrainedHigh, .noLimit = noLimit } } }.toPlatformDynamicRangeLimit();
+    return WebCore::Style::DynamicRangeLimit { WebCore::Style::DynamicRangeLimitMixFunction { WebCore::Style::DynamicRangeLimitMixParameters { .standard = standard, .constrained = constrained, .noLimit = noLimit } } }.toPlatformDynamicRangeLimit();
 }
 
 TEST(PlatformDynamicRangeLimit, FromStyleDynamicRangeLimit)
@@ -65,7 +65,7 @@ TEST(PlatformDynamicRangeLimit, FromStyleDynamicRangeLimit)
     Test tests[] = {
         // Keywords.
         { WebCore::Style::DynamicRangeLimit(WebCore::CSS::Keyword::Standard()).toPlatformDynamicRangeLimit(), 0 },
-        { WebCore::Style::DynamicRangeLimit(WebCore::CSS::Keyword::ConstrainedHigh()).toPlatformDynamicRangeLimit(), 0.5 },
+        { WebCore::Style::DynamicRangeLimit(WebCore::CSS::Keyword::Constrained()).toPlatformDynamicRangeLimit(), 0.5 },
         { WebCore::Style::DynamicRangeLimit(WebCore::CSS::Keyword::NoLimit()).toPlatformDynamicRangeLimit(), 1 },
 
         // Mixes equivalent to keywords.
@@ -90,14 +90,14 @@ TEST(PlatformDynamicRangeLimit, FromStyleDynamicRangeLimit)
 TEST(PlatformDynamicRangeLimit, StaticValues)
 {
     EXPECT_EQ(WebCore::PlatformDynamicRangeLimit::standard(), WebCore::Style::DynamicRangeLimit(WebCore::CSS::Keyword::Standard()).toPlatformDynamicRangeLimit());
-    EXPECT_EQ(WebCore::PlatformDynamicRangeLimit::constrainedHigh(), WebCore::Style::DynamicRangeLimit(WebCore::CSS::Keyword::ConstrainedHigh()).toPlatformDynamicRangeLimit());
+    EXPECT_EQ(WebCore::PlatformDynamicRangeLimit::constrained(), WebCore::Style::DynamicRangeLimit(WebCore::CSS::Keyword::Constrained()).toPlatformDynamicRangeLimit());
     EXPECT_EQ(WebCore::PlatformDynamicRangeLimit::noLimit(), WebCore::Style::DynamicRangeLimit(WebCore::CSS::Keyword::NoLimit()).toPlatformDynamicRangeLimit());
 
     EXPECT_EQ(WebCore::PlatformDynamicRangeLimit::initialValue(), WebCore::Style::DynamicRangeLimit(WebCore::RenderStyle::initialDynamicRangeLimit()).toPlatformDynamicRangeLimit());
     EXPECT_GE(WebCore::PlatformDynamicRangeLimit::initialValueForVideos(), WebCore::Style::DynamicRangeLimit(WebCore::RenderStyle::initialDynamicRangeLimit()).toPlatformDynamicRangeLimit());
 
     EXPECT_EQ(WebCore::PlatformDynamicRangeLimit::defaultWhenSuppressingHDR(), WebCore::Style::DynamicRangeLimit(WebCore::CSS::Keyword::Standard()).toPlatformDynamicRangeLimit());
-    EXPECT_EQ(WebCore::PlatformDynamicRangeLimit::defaultWhenSuppressingHDRInVideos(), WebCore::Style::DynamicRangeLimit(WebCore::CSS::Keyword::ConstrainedHigh()).toPlatformDynamicRangeLimit());
+    EXPECT_EQ(WebCore::PlatformDynamicRangeLimit::defaultWhenSuppressingHDRInVideos(), WebCore::Style::DynamicRangeLimit(WebCore::CSS::Keyword::Constrained()).toPlatformDynamicRangeLimit());
 }
 
 #if ASSERT_ENABLED
@@ -142,8 +142,8 @@ TEST(PlatformDynamicRangeLimit, Comparisons)
 
         mix(1, 99, 0),
 
-        WebCore::PlatformDynamicRangeLimit::constrainedHigh(),
-        WebCore::Style::DynamicRangeLimit(WebCore::CSS::Keyword::ConstrainedHigh()).toPlatformDynamicRangeLimit(),
+        WebCore::PlatformDynamicRangeLimit::constrained(),
+        WebCore::Style::DynamicRangeLimit(WebCore::CSS::Keyword::Constrained()).toPlatformDynamicRangeLimit(),
         mix(0, 1, 0),
         mix(50, 0, 50),
 

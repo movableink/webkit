@@ -4403,7 +4403,7 @@
             "initial": "no-limit",
             "values": [
                 "standard",
-                "constrained-high",
+                "constrained",
                 "no-limit"
             ],
             "codegen-properties": {

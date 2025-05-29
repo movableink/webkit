@@ -2926,8 +2926,8 @@ inline Style::DynamicRangeLimit BuilderConverter::convertDynamicRangeLimit(Build
         switch (primitiveValue->valueID()) {
         case CSSValueStandard:
             return Style::DynamicRangeLimit { CSS::Keyword::Standard { } };
-        case CSSValueConstrainedHigh:
-            return Style::DynamicRangeLimit { CSS::Keyword::ConstrainedHigh { } };
+        case CSSValueConstrained:
+            return Style::DynamicRangeLimit { CSS::Keyword::Constrained { } };
         case CSSValueNoLimit:
             return Style::DynamicRangeLimit { CSS::Keyword::NoLimit { } };
         default:

@@ -996,18 +996,18 @@ static std::optional<CSS::DynamicRangeLimit> consumeUnresolvedDynamicRangeLimitM
 
 std::optional<CSS::DynamicRangeLimit> consumeUnresolvedDynamicRangeLimit(CSSParserTokenRange& range, CSS::PropertyParserState& propertyParserState)
 {
-    // <'dynamic-range-limit'> = standard | high | constrained-high | <dynamic-range-limit-mix()>
+    // <'dynamic-range-limit'> = standard | high | constrained | <dynamic-range-limit-mix()>
     // https://drafts.csswg.org/css-color-hdr/#propdef-dynamic-range-limit
 
     switch (range.peek().id()) {
     case CSSValueStandard:
         range.consumeIncludingWhitespace();
         return CSS::DynamicRangeLimit { CSS::Keyword::Standard { } };
-    case CSSValueConstrainedHigh:
+    case CSSValueConstrained:
         if (!propertyParserState.context.cssConstrainedDynamicRangeLimitEnabled)
             return { };
         range.consumeIncludingWhitespace();
-        return CSS::DynamicRangeLimit { CSS::Keyword::ConstrainedHigh { } };
+        return CSS::DynamicRangeLimit { CSS::Keyword::Constrained { } };
     case CSSValueNoLimit:
         range.consumeIncludingWhitespace();
         return CSS::DynamicRangeLimit { CSS::Keyword::NoLimit { } };

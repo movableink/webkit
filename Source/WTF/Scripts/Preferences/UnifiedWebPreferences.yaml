@@ -1111,8 +1111,8 @@ CSSConstrainedDynamicRangeLimitEnabled:
   type: bool
   category: css
   status: testable
-  humanReadableName: "CSS dynamic-range-limit: constrained-high"
-  humanReadableDescription: "Enable support for CSS dynamic-range-limit value constrained-high"
+  humanReadableName: "CSS dynamic-range-limit: constrained"
+  humanReadableDescription: "Enable support for CSS dynamic-range-limit value constrained"
   defaultValue:
     WebKitLegacy:
       default: false

@@ -1,16 +1,16 @@
 
 PASS e.style['dynamic-range-limit'] = "standard" should set the property value
 PASS e.style['dynamic-range-limit'] = "no-limit" should set the property value
-FAIL e.style['dynamic-range-limit'] = "constrained" should set the property value assert_not_equals: property should be set got disallowed value ""
+PASS e.style['dynamic-range-limit'] = "constrained" should set the property value
 PASS e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(no-limit 80%, standard 20%)" should set the property value
 PASS e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(no-limit 8%, standard 2%)" should set the property value
 PASS e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(no-limit 99%, standard 99%)" should set the property value
-FAIL e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(no-limit 99%, standard 99%, constrained 10%)" should set the property value assert_not_equals: property should be set got disallowed value ""
-FAIL e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(constrained 20%, no-limit 80%)" should set the property value assert_not_equals: property should be set got disallowed value ""
-FAIL e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(dynamic-range-limit-mix(constrained 90%, no-limit 10%) 1%, no-limit 80%)" should set the property value assert_not_equals: property should be set got disallowed value ""
-FAIL e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(no-limit 1%, dynamic-range-limit-mix(constrained 2%, no-limit 10%) 80%)" should set the property value assert_not_equals: property should be set got disallowed value ""
-FAIL e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(dynamic-range-limit-mix(no-limit 1%, standard 2%) 3%, dynamic-range-limit-mix(constrained 5%, no-limit 5%) 6%)" should set the property value assert_not_equals: property should be set got disallowed value ""
-FAIL e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(standard calc(50% * sign(10em - 1px)), constrained 50%)" should set the property value assert_not_equals: property should be set got disallowed value ""
+PASS e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(no-limit 99%, standard 99%, constrained 10%)" should set the property value
+PASS e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(constrained 20%, no-limit 80%)" should set the property value
+PASS e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(dynamic-range-limit-mix(constrained 90%, no-limit 10%) 1%, no-limit 80%)" should set the property value
+PASS e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(no-limit 1%, dynamic-range-limit-mix(constrained 2%, no-limit 10%) 80%)" should set the property value
+PASS e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(dynamic-range-limit-mix(no-limit 1%, standard 2%) 3%, dynamic-range-limit-mix(constrained 5%, no-limit 5%) 6%)" should set the property value
+PASS e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(standard calc(50% * sign(10em - 1px)), constrained 50%)" should set the property value
 PASS e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(no-limit 80%, standard 20%, )" should not set the property value
 PASS e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(no-limit, standard 20%)" should not set the property value
 PASS e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(constrained, no-limit, 80%)" should not set the property value
@@ -27,5 +27,5 @@ PASS e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(no-limit 101%, st
 PASS e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(no-limit -1%, standard 1%)" should not set the property value
 PASS e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(standard, no-limit, 0.1)" should not set the property value
 FAIL e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(no-limit 0%, standard 0%)" should not set the property value assert_equals: expected "" but got "dynamic-range-limit-mix(no-limit 0%, standard 0%)"
-PASS e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(dynamic-range-limit-mix(no-limit 1%, standard 2%) 3%, dynamic-range-limit-mix(constrained 0%, no-limit 0%) 6%)" should not set the property value
+FAIL e.style['dynamic-range-limit'] = "dynamic-range-limit-mix(dynamic-range-limit-mix(no-limit 1%, standard 2%) 3%, dynamic-range-limit-mix(constrained 0%, no-limit 0%) 6%)" should not set the property value assert_equals: expected "" but got "dynamic-range-limit-mix(dynamic-range-limit-mix(no-limit 1%, standard 2%) 3%, dynamic-range-limit-mix(constrained 0%, no-limit 0%) 6%)"
 
