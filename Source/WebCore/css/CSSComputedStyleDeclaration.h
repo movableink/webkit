@@ -76,7 +76,6 @@ private:
     Ref<Element> protectedElement() const { return m_element; }
 
     const Settings* settings() const final;
-    RefPtr<const Settings> protectedSettings() const;
     const FixedVector<CSSPropertyID>& exposedComputedCSSPropertyIDs() const;
 
     Style::Extractor extractor() const;

@@ -930,7 +930,7 @@ void FrameSelection::adjustSelectionExtentIfNeeded(VisiblePosition& extent, bool
     if (userTriggered == UserTriggered::Yes) {
 #if PLATFORM(IOS_FAMILY)
         if (RefPtr document = this->document()) {
-            if (document->protectedSettings()->visuallyContiguousBidiTextSelectionEnabled())
+            if (document->settings().visuallyContiguousBidiTextSelectionEnabled())
                 adjustVisibleExtentPreservingVisualContiguity(m_selection.base(), extent, isForward ? SelectionExtentMovement::Right : SelectionExtentMovement::Left);
         }
 #endif

@@ -2864,7 +2864,7 @@ void FrameLoader::checkLoadCompleteForThisFrame(LoadWillContinueInAnotherProcess
                     item = localMainFrame->loader().history().currentItem();
             }
 
-            isHTTPSByDefaultEnabled = page->protectedSettings()->httpsByDefault();
+            isHTTPSByDefaultEnabled = page->settings().httpsByDefault();
         }
 
         bool isHTTPSFirstApplicable = (isHTTPSByDefaultEnabled || provisionalDocumentLoader->httpsByDefaultMode() == HTTPSByDefaultMode::UpgradeWithAutomaticFallback)

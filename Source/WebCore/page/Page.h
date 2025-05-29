@@ -529,7 +529,6 @@ public:
     WEBCORE_EXPORT void settingsDidChange();
 
     Settings& settings() const { return *m_settings; }
-    Ref<Settings> protectedSettings() const;
 
     ProgressTracker& progress() { return m_progress.get(); }
     const ProgressTracker& progress() const { return m_progress.get(); }

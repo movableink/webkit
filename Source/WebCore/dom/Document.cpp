@@ -1187,7 +1187,7 @@ ExceptionOr<Ref<Document>> Document::parseHTMLUnsafe(Document& context, Variant<
     if (stringValueHolder.hasException())
         return stringValueHolder.releaseException();
 
-    Ref document = HTMLDocument::create(nullptr, context.protectedSettings(), URL { });
+    Ref document = HTMLDocument::create(nullptr, context.settings(), URL { });
     document->setMarkupUnsafe(stringValueHolder.releaseReturnValue(), { ParserContentPolicy::AllowDeclarativeShadowRoots });
     return { document };
 }
@@ -9589,11 +9589,6 @@ Ref<FontFaceSet> Document::fonts()
 EditingBehavior Document::editingBehavior() const
 {
     return EditingBehavior { settings().editingBehaviorType() };
-}
-
-Ref<Settings> Document::protectedSettings() const
-{
-    return const_cast<Settings&>(m_settings.get());
 }
 
 float Document::deviceScaleFactor() const

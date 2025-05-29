@@ -106,7 +106,7 @@ static inline Ref<XMLDocument> createXMLDocument(const String& namespaceURI, con
 ExceptionOr<Ref<XMLDocument>> DOMImplementation::createDocument(const AtomString& namespaceURI, const AtomString& qualifiedName, DocumentType* documentType)
 {
     Ref thisDocument = m_document.get();
-    Ref document = createXMLDocument(namespaceURI, thisDocument->protectedSettings());
+    Ref document = createXMLDocument(namespaceURI, thisDocument->settings());
     document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent });
     document->setContextDocument(thisDocument->contextDocument());
     document->setSecurityOriginPolicy(thisDocument->securityOriginPolicy());
@@ -140,7 +140,7 @@ Ref<CSSStyleSheet> DOMImplementation::createCSSStyleSheet(const String&, const S
 Ref<HTMLDocument> DOMImplementation::createHTMLDocument(String&& title)
 {
     Ref thisDocument = m_document.get();
-    Ref document = HTMLDocument::create(nullptr, thisDocument->protectedSettings(), URL(), { });
+    Ref document = HTMLDocument::create(nullptr, thisDocument->settings(), URL(), { });
     document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent });
     document->open();
     document->write(nullptr, FixedVector<String> { "<!doctype html><html><head></head><body></body></html>"_s });

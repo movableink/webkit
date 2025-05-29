@@ -832,7 +832,7 @@ bool CachedResourceLoader::updateRequestAfterRedirection(CachedResource::Type ty
     RefPtr frame = m_documentLoader->frame();
     if (frame) {
         RefPtr page = frame->page();
-        bool isHTTPSByDefaultEnabled = page ? page->protectedSettings()->httpsByDefault() : false;
+        bool isHTTPSByDefaultEnabled = page ? page->settings().httpsByDefault() : false;
         if (shouldPerformHTTPSUpgrade(preRedirectURL, request.url(), *frame, type, isHTTPSByDefaultEnabled, m_documentLoader->advancedPrivacyProtections(), m_documentLoader->httpsByDefaultMode())) {
             auto portsForUpgradingInsecureScheme = page ? std::optional { page->portsForUpgradingInsecureSchemeForTesting() } : std::nullopt;
             auto upgradePort = (portsForUpgradingInsecureScheme && request.url().port() == portsForUpgradingInsecureScheme->first) ? std::optional { portsForUpgradingInsecureScheme->second } : std::nullopt;
@@ -1144,7 +1144,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
     Ref page = *frame->page();
     URL committedDocumentURL { frame->document() ? frame->document()->url() : URL { } };
     if (RefPtr documentLoader = m_documentLoader.get()) {
-        if (shouldPerformHTTPSUpgrade(committedDocumentURL, request.resourceRequest().url(), frame, type, page->protectedSettings()->httpsByDefault(), documentLoader->advancedPrivacyProtections(), documentLoader->httpsByDefaultMode())) {
+        if (shouldPerformHTTPSUpgrade(committedDocumentURL, request.resourceRequest().url(), frame, type, page->settings().httpsByDefault(), documentLoader->advancedPrivacyProtections(), documentLoader->httpsByDefaultMode())) {
             auto portsForUpgradingInsecureScheme = page->portsForUpgradingInsecureSchemeForTesting();
             auto upgradePort = (portsForUpgradingInsecureScheme && request.resourceRequest().url().port() == portsForUpgradingInsecureScheme->first) ? std::optional { portsForUpgradingInsecureScheme->second } : std::nullopt;
             request.resourceRequest().upgradeInsecureRequestIfNeeded(ShouldUpgradeLocalhostAndIPAddress::No, upgradePort);
@@ -1189,7 +1189,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
             if (blockedLoad) {
                 CACHEDRESOURCELOADER_RELEASE_LOG_WITH_FRAME("requestResource: Resource blocked by content blocker", frame.get());
                 if (type == CachedResource::Type::MainResource) {
-                    auto resource = createResource(type, WTFMove(request), page->sessionID(), page->protectedCookieJar().ptr(), page->protectedSettings(), document.get());
+                    auto resource = createResource(type, WTFMove(request), page->sessionID(), page->protectedCookieJar().ptr(), page->settings(), document.get());
                     ASSERT(resource);
                     resource->error(CachedResource::Status::LoadError);
                     resource->setResourceError(ResourceError(ContentExtensions::WebKitContentBlockerDomain, 0, resourceRequest.url(), WEB_UI_STRING("The URL was blocked by a content blocker", "WebKitErrorBlockedByContentBlocker description")));
@@ -1288,7 +1288,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
     case Load:
         if (resource && mayAddToMemoryCache == MayAddToMemoryCache::Yes)
             memoryCache->remove(*resource);
-        resource = loadResource(type, page->sessionID(), WTFMove(request), cookieJar, page->protectedSettings(), mayAddToMemoryCache);
+        resource = loadResource(type, page->sessionID(), WTFMove(request), cookieJar, page->settings(), mayAddToMemoryCache);
         break;
     case Revalidate:
         resource = revalidateResource(WTFMove(request), *resource);
@@ -1316,7 +1316,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
                 return makeUnexpected(WTFMove(*error));
         }
         if (shouldUpdateCachedResourceWithCurrentRequest(*resource, request)) {
-            resource = updateCachedResourceWithCurrentRequest(*resource, WTFMove(request), page->sessionID(), cookieJar, page->protectedSettings());
+            resource = updateCachedResourceWithCurrentRequest(*resource, WTFMove(request), page->sessionID(), cookieJar, page->settings());
             if (resource->status() != CachedResource::Status::Cached)
                 policy = Load;
         } else {

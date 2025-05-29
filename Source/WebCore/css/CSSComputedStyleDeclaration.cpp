@@ -109,11 +109,6 @@ const Settings* CSSComputedStyleDeclaration::settings() const
     return &m_element->document().settings();
 }
 
-RefPtr<const Settings> CSSComputedStyleDeclaration::protectedSettings() const
-{
-    return settings();
-}
-
 const FixedVector<CSSPropertyID>& CSSComputedStyleDeclaration::exposedComputedCSSPropertyIDs() const
 {
     return protectedElement()->protectedDocument()->exposedComputedCSSPropertyIDs();
