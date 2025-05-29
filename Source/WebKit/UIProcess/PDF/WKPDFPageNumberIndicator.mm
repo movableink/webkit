@@ -93,7 +93,8 @@ static constexpr Seconds indicatorMoveDuration { 0.3_s };
     [_label setBackgroundColor:nil];
     [_label setTextAlignment:NSTextAlignmentCenter];
     [_label setFont:[UIFont boldSystemFontOfSize:indicatorFontSize]];
-    [_label setTextColor:[UIColor blackColor]];
+    if (shouldUseVisualEffectViewForBackdrop)
+        [_label setTextColor:[UIColor blackColor]];
     [_label setAlpha:indicatorLabelOpacity];
     [_label setAdjustsFontSizeToFitWidth:YES];
     [_label setAutoresizingMask:UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight];
