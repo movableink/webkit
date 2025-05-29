@@ -1346,18 +1346,19 @@ static RetainPtr<NSString> displayStringForDocumentsAtURLs(NSArray<NSURL *> *url
 + (WebKit::TemporaryFileMoveResults)_moveToNewTemporaryDirectory:(NSURL *)originalURL fileCoordinator:(NSFileCoordinator *)fileCoordinator fileManager:(NSFileManager *)fileManager asCopy:(BOOL)asCopy
 {
     NSError *error = nil;
-    NSString *temporaryDirectory = FileSystem::createTemporaryDirectory(@"WKFileUploadPanel");
+    RetainPtr temporaryDirectory = FileSystem::createTemporaryDirectory(@"WKFileUploadPanel");
     if (!temporaryDirectory) {
         LOG_ERROR("WKFileUploadPanel: Failed to make temporary directory");
         return { WebKit::MovedSuccessfully::No, originalURL, nil };
     }
-    NSString *filePath = [temporaryDirectory stringByAppendingPathComponent:originalURL.lastPathComponent];
-    auto destinationFileURL = adoptNS([[NSURL alloc] initFileURLWithPath:filePath isDirectory:NO]);
 
     __block WebKit::TemporaryFileMoveResults results;
     [fileCoordinator coordinateWritingItemAtURL:originalURL options:NSFileCoordinatorWritingForMoving error:&error byAccessor:^(NSURL *coordinatedOriginalURL) {
         NSError *error = nil;
         BOOL didMoveOrCopy;
+
+        RetainPtr filePath = [temporaryDirectory stringByAppendingPathComponent:coordinatedOriginalURL.lastPathComponent];
+        RetainPtr destinationFileURL = adoptNS([[NSURL alloc] initFileURLWithPath:filePath.get() isDirectory:NO]);
 
         if (asCopy)
             didMoveOrCopy = [fileManager copyItemAtURL:coordinatedOriginalURL toURL:destinationFileURL.get() error:&error];
@@ -1366,14 +1367,14 @@ static RetainPtr<NSString> displayStringForDocumentsAtURLs(NSArray<NSURL *> *url
 
         if (!didMoveOrCopy || error) {
             // If moving/copying fails, keep the original URL and our 60 second time limit for file URLs from UIKit before it is deleted. We tried our best to extend it.
-            results = { WebKit::MovedSuccessfully::No, coordinatedOriginalURL, adoptNS([[NSURL alloc] initFileURLWithPath:temporaryDirectory isDirectory:YES]) };
+            results = { WebKit::MovedSuccessfully::No, coordinatedOriginalURL, adoptNS([[NSURL alloc] initFileURLWithPath:temporaryDirectory.get() isDirectory:YES]) };
         } else
-            results = { WebKit::MovedSuccessfully::Yes, destinationFileURL, adoptNS([[NSURL alloc] initFileURLWithPath:temporaryDirectory isDirectory:YES]) };
+            results = { WebKit::MovedSuccessfully::Yes, destinationFileURL, adoptNS([[NSURL alloc] initFileURLWithPath:temporaryDirectory.get() isDirectory:YES]) };
     }];
     if (error) {
         LOG_ERROR("WKFileUploadPanel: Failed to coordinate moving file with error %@", error);
         // If moving fails, keep the original URL and our 60 second time limit before it is deleted. We tried our best to extend it.
-        return { WebKit::MovedSuccessfully::No, originalURL, adoptNS([[NSURL alloc] initFileURLWithPath:temporaryDirectory isDirectory:YES]) };
+        return { WebKit::MovedSuccessfully::No, originalURL, adoptNS([[NSURL alloc] initFileURLWithPath:temporaryDirectory.get() isDirectory:YES]) };
     }
 
     return results;
