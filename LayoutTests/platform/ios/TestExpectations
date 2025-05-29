@@ -7882,3 +7882,5 @@ webkit.org/b/288518 fast/text/emoji-num-glyphs.html [ Failure ]
 
 # rdar://148254605 (REGRESSION (iOS 18.4): media/sources-fallback-codecs.html is constantly failing.)
 media/sources-fallback-codecs.html [ Failure ]
+
+webkit.org/b/293764 imported/w3c/web-platform-tests/trusted-types/SharedWorker-block-eval-function-constructor.html [ Pass Failure ]
