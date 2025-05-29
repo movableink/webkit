@@ -45,7 +45,7 @@ from webkitpy.test.runner import Runner
 from webkitpy.results.upload import Upload
 from webkitpy.results.options import upload_options
 
-from webkitcorepy import StringIO
+from webkitcorepy import AutoInstall, Package, StringIO, Version
 
 _log = logging.getLogger(__name__)
 
@@ -59,6 +59,10 @@ def main():
 
     up = os.path.dirname
     _webkit_root = up(up(up(up(up(os.path.abspath(__file__))))))
+
+    # Register local packages that webkitpy only cares about here.
+    AutoInstall.register(Package('reporelaypy', Version(0, 4, 1)), local=True)
+    AutoInstall.register(Package('webkitflaskpy', Version(0, 3, 0)), local=True)
 
     tester = Tester()
     tester.add_tree(os.path.join(_webkit_root, 'Tools', 'Scripts'), 'webkitpy')
@@ -196,14 +200,6 @@ class Tester(object):
     def _run_tests(self, names):
         # Make sure PYTHONPATH is set up properly.
         sys.path = self.finder.additional_paths(sys.path) + sys.path
-
-        from webkitcorepy import AutoInstall
-
-        # Force registration of all autoinstalled packages.
-        if any([n.startswith('reporelaypy') for n in names]):
-            import reporelaypy
-        if any([n.startswith('webkitflaskpy') for n in names]):
-            import webkitflaskpy
 
         AutoInstall.install_everything()
 
