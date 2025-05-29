@@ -1,4 +1,0 @@
-
-PASS Test I420 VideoFrame construction with odd coded size
-FAIL Test I420 copyTo with odd coded size. assert_equals: buffer contents at index 11 expected 12 but got 0
-
