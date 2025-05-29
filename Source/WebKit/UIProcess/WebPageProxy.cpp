@@ -754,6 +754,13 @@ WebPageProxy::Internals::Internals(WebPageProxy& page)
     , resetRecentCrashCountTimer(RunLoop::main(), &page, &WebPageProxy::resetRecentCrashCount)
     , tryCloseTimeoutTimer(RunLoop::main(), &page, &WebPageProxy::tryCloseTimedOut)
     , updateReportedMediaCaptureStateTimer(RunLoop::main(), &page, &WebPageProxy::updateReportedMediaCaptureState)
+#if ENABLE(GAMEPAD)
+    , recentGamepadAccessHysteresis([weakPage = WeakPtr { page }](PAL::HysteresisState state) {
+        if (RefPtr page = weakPage.get())
+            page->recentGamepadAccessStateChanged(state);
+    }, gamepadsRecentlyAccessedThreshold)
+#endif
+
 #if HAVE(DISPLAY_LINK)
     , wheelEventActivityHysteresis([weakPage = WeakPtr { page }](PAL::HysteresisState state) {
         if (RefPtr page = weakPage.get())
@@ -846,9 +853,6 @@ WebPageProxy::WebPageProxy(PageClient& pageClient, WebProcessProxy& process, Ref
 #endif
     , m_browsingContextGroup(configuration->openerInfo() ? configuration->openerInfo()->browsingContextGroup : BrowsingContextGroup::create())
     , m_openerFrameIdentifier(configuration->openerInfo() ? std::optional(configuration->openerInfo()->frameID) : std::nullopt)
-#if ENABLE(GAMEPAD)
-    , m_recentGamepadAccessHysteresis([this](PAL::HysteresisState state) { recentGamepadAccessStateChanged(state); }, gamepadsRecentlyAccessedThreshold)
-#endif
 #if HAVE(AUDIT_TOKEN)
     , m_presentingApplicationAuditToken(process.processPool().configuration().presentingApplicationProcessToken())
 #endif
@@ -1858,7 +1862,7 @@ void WebPageProxy::close()
     stopAllURLSchemeTasks();
 
 #if ENABLE(GAMEPAD)
-    m_recentGamepadAccessHysteresis.cancel();
+    m_internals->recentGamepadAccessHysteresis.cancel();
 #endif
 
     if (protectedPreferences()->siteIsolationEnabled())
@@ -12043,15 +12047,15 @@ void WebPageProxy::gamepadsRecentlyAccessed()
     // by web process messages, therefore a compromised WebProcess can add itself.
     // Is there something meaningful we can do here?
 
-    m_recentGamepadAccessHysteresis.impulse();
+    m_internals->recentGamepadAccessHysteresis.impulse();
 }
 
 void WebPageProxy::resetRecentGamepadAccessState()
 {
-    if (m_recentGamepadAccessHysteresis.state() == PAL::HysteresisState::Started)
+    if (m_internals->recentGamepadAccessHysteresis.state() == PAL::HysteresisState::Started)
         recentGamepadAccessStateChanged(PAL::HysteresisState::Stopped);
 
-    m_recentGamepadAccessHysteresis.cancel();
+    m_internals->recentGamepadAccessHysteresis.cancel();
 }
 
 #if PLATFORM(VISION)

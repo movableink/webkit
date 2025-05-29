@@ -373,6 +373,10 @@ public:
     ContextMenuContextData activeContextMenuContextData;
 #endif
 
+#if ENABLE(GAMEPAD)
+    PAL::HysteresisActivity recentGamepadAccessHysteresis;
+#endif
+
 #if HAVE(DISPLAY_LINK)
     PAL::HysteresisActivity wheelEventActivityHysteresis;
 #endif

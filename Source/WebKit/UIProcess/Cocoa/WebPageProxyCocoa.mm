@@ -491,15 +491,6 @@ void WebPageProxy::clearDictationAlternatives(Vector<DictationContext>&& alterna
     protectedLegacyMainFrameProcess()->send(Messages::WebPage::ClearDictationAlternatives(WTFMove(alternativesToClear)), webPageIDInMainFrameProcess());
 }
 
-#if USE(DICTATION_ALTERNATIVES)
-
-PlatformTextAlternatives *WebPageProxy::platformDictationAlternatives(WebCore::DictationContext dictationContext)
-{
-    return protectedPageClient()->platformDictationAlternatives(dictationContext);
-}
-
-#endif
-
 ResourceError WebPageProxy::errorForUnpermittedAppBoundDomainNavigation(const URL& url)
 {
     return { WKErrorDomain, WKErrorNavigationAppBoundDomain, url, localizedDescriptionForErrorCode(WKErrorNavigationAppBoundDomain).get() };

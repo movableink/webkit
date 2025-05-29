@@ -29,23 +29,15 @@
 // Use forward declarations and WebPageProxyInternals.h instead.
 #include "APIObject.h"
 #include "MessageReceiver.h"
-#include <pal/HysteresisActivity.h>
 #include <wtf/ApproximateTime.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/ObjectIdentifier.h>
 #include <wtf/OptionSet.h>
 #include <wtf/ProcessID.h>
+#include <wtf/RunLoop.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakHashSet.h>
-
-#if USE(DICTATION_ALTERNATIVES)
-#include <WebCore/PlatformTextAlternatives.h>
-#endif
-
-#if PLATFORM(IOS_FAMILY)
-#include "HardwareKeyboardState.h"
-#endif
 
 namespace API {
 class Attachment;
@@ -103,6 +95,7 @@ enum class MessageLevel : uint8_t;
 };
 
 namespace PAL {
+class HysteresisActivity;
 class SessionID;
 enum class HysteresisState : bool;
 }
@@ -552,6 +545,9 @@ struct FrameInfoData;
 struct FrameTreeCreationParameters;
 struct FrameTreeNodeData;
 struct GeolocationIdentifierType;
+#if PLATFORM(IOS_FAMILY)
+struct HardwareKeyboardState;
+#endif
 struct InputMethodState;
 struct InsertTextOptions;
 struct InteractionInformationAtPosition;
@@ -1253,10 +1249,6 @@ public:
     void addDictationAlternative(WebCore::TextAlternativeWithRange&&);
     void dictationAlternativesAtSelection(CompletionHandler<void(Vector<WebCore::DictationContext>&&)>&&);
     void clearDictationAlternatives(Vector<WebCore::DictationContext>&&);
-
-#if USE(DICTATION_ALTERNATIVES)
-    PlatformTextAlternatives *platformDictationAlternatives(WebCore::DictationContext);
-#endif
 
     void hasMarkedText(CompletionHandler<void(bool)>&&);
     void getMarkedRangeAsync(CompletionHandler<void(const EditingRange&)>&&);
@@ -3912,7 +3904,6 @@ private:
 #endif
 
 #if ENABLE(GAMEPAD)
-    PAL::HysteresisActivity m_recentGamepadAccessHysteresis;
 #if PLATFORM(VISION)
     bool m_gamepadsConnected { false };
 #endif
