@@ -90,7 +90,6 @@ enum class SDKAlignedBehavior {
     ScrollViewContentInsetsAreNotObscuringInsets,
     SendsNativeMouseEvents,
     SessionCleanupByDefault,
-    SharedNetworkProcess,
     SiteSpecificQuirksAreEnabledByDefault,
     SnapshotAfterScreenUpdates,
     SupportsDeviceOrientationAndMotionPermissionAPI,
@@ -194,7 +193,6 @@ WTF_EXPORT_PRIVATE bool isFeedly();
 WTF_EXPORT_PRIVATE bool isHimalaya();
 WTF_EXPORT_PRIVATE bool isHoYoLAB();
 WTF_EXPORT_PRIVATE bool isJWLibrary();
-WTF_EXPORT_PRIVATE bool isLutron();
 WTF_EXPORT_PRIVATE bool isMailCompositionService();
 WTF_EXPORT_PRIVATE bool isMiniBrowser();
 WTF_EXPORT_PRIVATE bool isMobileMail();

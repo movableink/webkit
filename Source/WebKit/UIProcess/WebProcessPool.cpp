@@ -325,15 +325,6 @@ WebProcessPool::WebProcessPool(API::ProcessPoolConfiguration& configuration)
 
     updateBackForwardCacheCapacity();
 
-#if PLATFORM(IOS) || PLATFORM(VISION)
-    if (WTF::IOSApplication::isLutron() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::SharedNetworkProcess)) {
-        callOnMainRunLoop([] {
-            if (WebsiteDataStore::defaultDataStoreExists())
-                WebsiteDataStore::defaultDataStore()->terminateNetworkProcess();
-        });
-    }
-#endif
-
 #if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
     Ref storageAccessUserAgentStringQuirkController = StorageAccessUserAgentStringQuirkController::sharedSingleton();
     Ref storageAccessPromptQuirkController = StorageAccessPromptQuirkController::sharedSingleton();
