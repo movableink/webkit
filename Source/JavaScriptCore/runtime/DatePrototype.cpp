@@ -194,7 +194,11 @@ static bool fillStructuresUsingDateArgs(JSGlobalObject* globalObject, CallFrame*
     if (maxArgs >= 3 && idx < numArgs) {
         double years = callFrame->uncheckedArgument(idx++).toIntegerPreserveNaN(globalObject);
         RETURN_IF_EXCEPTION(scope, false);
-        ok = ok && std::isfinite(years);
+
+        // The GregorianDateTime class represents `years` as `int`.
+        // Therefore, if the `years` exceeds the maximum representable `int`, date calculations may produce incorrect results.
+        // The condidtion, `std::abs(years) <= msToYear(WTF::maxECMAScriptTime)`, is used as a safeguard before `timeClip(double)`.
+        ok = ok && std::isfinite(years) && std::abs(years) <= msToYear(WTF::maxECMAScriptTime);
         t->setYear(toInt32(years));
     }
     // months
