@@ -275,14 +275,20 @@ void pas_probabilistic_guard_malloc_deallocate(void* mem)
     MEMORY_BASIC_INFORMATION memInfo;
     VirtualQuery((void *) value->start_of_data_pages, &memInfo, sizeof(memInfo));
 
+    void* virtualalloc_res = NULL;
+    bool virtualfree_res = false;
     size_t totalSeen = 0;
     void *currentPtr = (void*) value->start_of_data_pages;
     while (totalSeen < value->size_of_data_pages) {
         MEMORY_BASIC_INFORMATION memInfo;
         VirtualQuery(currentPtr, &memInfo, sizeof(memInfo));
-        PAS_ASSERT(VirtualAlloc(currentPtr, memInfo.RegionSize, MEM_COMMIT, PAGE_NOACCESS));
+        virtualalloc_res = VirtualAlloc(currentPtr, memInfo.RegionSize, MEM_COMMIT, PAGE_NOACCESS);
+        PAS_ASSERT(virtualalloc_res);
+
         /* ensure physical addresses are released */
-        PAS_ASSERT(VirtualFree(currentPtr, memInfo.RegionSize, MEM_DECOMMIT));
+        virtualfree_res = VirtualFree(currentPtr, memInfo.RegionSize, MEM_DECOMMIT);
+        PAS_ASSERT(virtualfree_res);
+
         PAS_ASSERT(memInfo.RegionSize > 0);
         currentPtr = (void*) ((uintptr_t) currentPtr + memInfo.RegionSize);
         totalSeen += memInfo.RegionSize;
