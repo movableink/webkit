@@ -2215,7 +2215,7 @@ static bool didInvokeUpdateState = false;
 @end
 
 // FIXME: Re-enable this test once webkit.org/b/292940 is resolved.
-#if PLATFORM(MAC) || defined(NDEBUG)
+#if PLATFORM(MAC)
 TEST(WritingTools, RevealOffScreenSuggestionWhenActive)
 #else
 TEST(WritingTools, DISABLED_RevealOffScreenSuggestionWhenActive)
