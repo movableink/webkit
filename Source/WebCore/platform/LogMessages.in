@@ -94,24 +94,23 @@ PLATFORMMEDIASESSIONMANAGER_SESSIONCANPRODUCEAUDIOCHANGED, "PlatformMediaSession
 PLATFORMMEDIASESSIONMANAGER_ADDSESSION, "PlatformMediaSessionManager::addSession, session ID = %" PRIu64 "", (uint64_t), DEFAULT, Media
 PLATFORMMEDIASESSIONMANAGER_MAYBEACTIVATEAUDIOSESSION_ACTIVE_SESSION_NOT_REQUIRED, "PlatformMediaSessionManager::maybeActivateAudioSession:  active audio session not required", (), DEFAULT, Media
 
-HTMLMEDIAELEMENT_CONSTRUCTOR, "HTMLMediaElement::HTMLMediaElement(%" PRIu64 ")", (uint64_t), DEFAULT, Media
-HTMLMEDIAELEMENT_DESTRUCTOR, "HTMLMediaElement::~HTMLMediaElement(%" PRIu64 ")", (uint64_t), DEFAULT, Media
-HTMLMEDIAELEMENT_SETBUFFERINGPOLICY, "HTMLMediaElement::setBufferingPolicy(%" PRIu64 "): %" PRIu8, (uint64_t, uint8_t), DEFAULT, Media
-HTMLMEDIAELEMENT_INSERTEDINTOANCESTOR, "HTMLMediaElement::insertedIntoAncestor(%" PRIu64 ")", (uint64_t), DEFAULT, Media
-HTMLMEDIAELEMENT_REMOVEDFROMANCESTOR, "HTMLMediaElement::removedFromAncestor(%" PRIu64 ")", (uint64_t), DEFAULT, Media
-HTMLMEDIAELEMENT_DIDFINISHINSERTINGNODE, "HTMLMediaElement::didFinishInsertingNode(%" PRIu64 ")", (uint64_t), DEFAULT, Media
-HTMLMEDIAELEMENT_MEDIAPLAYERRATECHANGED, "HTMLMediaElement::mediaPlayerRateChanged(%" PRIu64 ") rate: %f", (uint64_t, double), DEFAULT, Media
-HTMLMEDIAELEMENT_MEDIAPLAYERTIMECHANGED, "HTMLMediaElement::mediaPlayerTimeChanged(%" PRIu64 ")", (uint64_t), DEFAULT, Media
-HTMLMEDIAELEMENT_SETSHOULDDELAYLOADEVENT, "HTMLMediaElement::setShouldDelayLoadEvent(%" PRIu64 ") %" PRIu8, (uint64_t, uint8_t), DEFAULT, Media
-HTMLMEDIAELEMENT_MEDIAPLAYERENGINEUPDATED, "HTMLMediaElement::mediaPlayerEngineUpdated(%" PRIu64 ") %s", (uint64_t, CString), DEFAULT, Media
-HTMLMEDIAELEMENT_CURRENTMEDIATIME_SEEKING, "HTMLMediaElement::currentMediaTime(%" PRIu64 ") seeking, returning %f", (uint64_t, float), DEFAULT, Media
-HTMLMEDIAELEMENT_UPDATEPLAYSTATE, "HTMLMediaElement::updatePlayState(%" PRIu64 ") shouldBePlaying = %d, playerPaused = %d", (uint64_t, int, int), DEFAULT, Media
-HTMLMEDIAELEMENT_VISIBILITYSTATECHANGED, "HTMLMediaElement::visibilityStateChanged(%" PRIu64 ") visible = %d", (uint64_t, int), DEFAULT, Media
-HTMLMEDIAELEMENT_CREATEMEDIAPLAYER, "HTMLMediaElement::createMediaPlayer(%" PRIu64 ")", (uint64_t), DEFAULT, Media
-HTMLMEDIAELEMENT_PLAY, "HTMLMediaElement::play(%llu)", (uint64_t), DEFAULT, Media
-HTMLMEDIAELEMENT_PLAYINTERNAL, "HTMLMediaElement::playInternal(%llu)", (uint64_t), DEFAULT, Media
-
-HTMLVIDEOELEMENT_MEDIAPLAYERRENDERINGMODECHANGED, "HTMLVideoElement::mediaPlayerRenderingModeChanged(%" PRIu64 ")", (uint64_t), DEFAULT, Media
+HTMLMEDIAELEMENT_CONSTRUCTOR, "HTMLMediaElement::HTMLMediaElement(%" PRIX64 ")", (uint64_t), DEFAULT, Media
+HTMLMEDIAELEMENT_DESTRUCTOR, "HTMLMediaElement::~HTMLMediaElement(%" PRIX64 ")", (uint64_t), DEFAULT, Media
+HTMLMEDIAELEMENT_SETBUFFERINGPOLICY, "HTMLMediaElement::setBufferingPolicy(%" PRIX64 "): %" PRIu8, (uint64_t, uint8_t), DEFAULT, Media
+HTMLMEDIAELEMENT_INSERTEDINTOANCESTOR, "HTMLMediaElement::insertedIntoAncestor(%" PRIX64 ")", (uint64_t), DEFAULT, Media
+HTMLMEDIAELEMENT_REMOVEDFROMANCESTOR, "HTMLMediaElement::removedFromAncestor(%" PRIX64 ")", (uint64_t), DEFAULT, Media
+HTMLMEDIAELEMENT_DIDFINISHINSERTINGNODE, "HTMLMediaElement::didFinishInsertingNode(%" PRIX64 ")", (uint64_t), DEFAULT, Media
+HTMLMEDIAELEMENT_MEDIAPLAYERRATECHANGED, "HTMLMediaElement::mediaPlayerRateChanged(%" PRIX64 ") rate: %f", (uint64_t, double), DEFAULT, Media
+HTMLMEDIAELEMENT_MEDIAPLAYERTIMECHANGED, "HTMLMediaElement::mediaPlayerTimeChanged(%" PRIX64 ")", (uint64_t), DEFAULT, Media
+HTMLMEDIAELEMENT_SETSHOULDDELAYLOADEVENT, "HTMLMediaElement::setShouldDelayLoadEvent(%" PRIX64 ") %" PRIu8, (uint64_t, uint8_t), DEFAULT, Media
+HTMLMEDIAELEMENT_MEDIAPLAYERENGINEUPDATED, "HTMLMediaElement::mediaPlayerEngineUpdated(%" PRIX64 ") %s", (uint64_t, CString), DEFAULT, Media
+HTMLMEDIAELEMENT_CURRENTMEDIATIME_SEEKING, "HTMLMediaElement::currentMediaTime(%" PRIX64 ") seeking, returning %f", (uint64_t, float), DEFAULT, Media
+HTMLMEDIAELEMENT_UPDATEPLAYSTATE, "HTMLMediaElement::updatePlayState(%" PRIX64 ") shouldBePlaying = %d, playerPaused = %d", (uint64_t, int, int), DEFAULT, Media
+HTMLMEDIAELEMENT_VISIBILITYSTATECHANGED, "HTMLMediaElement::visibilityStateChanged(%" PRIX64 ") visible = %d", (uint64_t, int), DEFAULT, Media
+HTMLMEDIAELEMENT_CREATEMEDIAPLAYER, "HTMLMediaElement::createMediaPlayer(%" PRIX64 ")", (uint64_t), DEFAULT, Media
+HTMLMEDIAELEMENT_PLAY, "HTMLMediaElement::play(%" PRIX64 ")", (uint64_t), DEFAULT, Media
+HTMLMEDIAELEMENT_PLAYINTERNAL, "HTMLMediaElement::playInternal(%" PRIX64 ")", (uint64_t), DEFAULT, Media
+HTMLVIDEOELEMENT_MEDIAPLAYERRENDERINGMODECHANGED, "HTMLVideoElement::mediaPlayerRenderingModeChanged(%" PRIX64 ")", (uint64_t), DEFAULT, Media
 
 PERFORMANCELOGGING_MEMORY_USAGE_INFO, "Memory usage info dump at %s:", (CString), DEFAULT, PerformanceLogging
 PERFORMANCELOGGING_MEMORY_USAGE_FOR_KEY, "  %s: %zu", (CString, size_t), DEFAULT, PerformanceLogging
