@@ -89,14 +89,14 @@ public:
     ContentExtensionsBackend isolatedCopy() && { return ContentExtensionsBackend { crossThreadCopy(WTFMove(m_contentExtensions)) }; }
 
 private:
-    explicit ContentExtensionsBackend(UncheckedKeyHashMap<String, Ref<ContentExtension>>&& contentExtensions)
+    explicit ContentExtensionsBackend(HashMap<String, Ref<ContentExtension>>&& contentExtensions)
         : m_contentExtensions(WTFMove(contentExtensions))
     {
     }
 
     ActionsFromContentRuleList actionsFromContentRuleList(const ContentExtension&, const String& urlString, const ResourceLoadInfo&, ResourceFlags) const;
 
-    UncheckedKeyHashMap<String, Ref<ContentExtension>> m_contentExtensions;
+    HashMap<String, Ref<ContentExtension>> m_contentExtensions;
 };
 
 WEBCORE_EXPORT void applyResultsToRequest(ContentRuleListResults&&, Page*, ResourceRequest&);

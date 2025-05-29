@@ -160,13 +160,13 @@ size_t ModifyHeadersAction::serializedLength(std::span<const uint8_t> span)
     return deserializeLength(span, 0);
 }
 
-void ModifyHeadersAction::applyToRequest(ResourceRequest& request, UncheckedKeyHashMap<String, ModifyHeadersAction::ModifyHeadersOperationType>& headerNameToFirstOperationApplied)
+void ModifyHeadersAction::applyToRequest(ResourceRequest& request, HashMap<String, ModifyHeadersAction::ModifyHeadersOperationType>& headerNameToFirstOperationApplied)
 {
     for (auto& info : requestHeaders)
         info.applyToRequest(request, headerNameToFirstOperationApplied);
 }
 
-void ModifyHeadersAction::ModifyHeaderInfo::applyToRequest(ResourceRequest& request, UncheckedKeyHashMap<String, ModifyHeadersAction::ModifyHeadersOperationType>& headerNameToFirstOperationApplied)
+void ModifyHeadersAction::ModifyHeaderInfo::applyToRequest(ResourceRequest& request, HashMap<String, ModifyHeadersAction::ModifyHeadersOperationType>& headerNameToFirstOperationApplied)
 {
     WTF::visit(WTF::makeVisitor([&] (const AppendOperation& operation) {
         ModifyHeadersOperationType previouslyAppliedHeaderOperation = headerNameToFirstOperationApplied.get(operation.header);
@@ -740,12 +740,12 @@ void RedirectAction::URLTransformAction::QueryTransform::applyToURL(URL& url) co
     if (!url.hasQuery())
         return;
 
-    UncheckedKeyHashSet<String> keysToRemove;
+    HashSet<String> keysToRemove;
     for (auto& key : removeParams)
         keysToRemove.add(key);
 
     Vector<KeyValuePair<String, String>> keysToAdd;
-    UncheckedKeyHashMap<String, String> keysToReplace;
+    HashMap<String, String> keysToReplace;
     for (auto& [key, replaceOnly, value] : addOrReplaceParams) {
         if (replaceOnly)
             keysToReplace.add(key, value);
