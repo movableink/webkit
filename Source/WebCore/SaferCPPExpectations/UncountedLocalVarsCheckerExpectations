@@ -735,7 +735,6 @@ workers/service/server/SWServer.cpp
 workers/shared/SharedWorkerObjectConnection.cpp
 workers/shared/SharedWorkerScriptLoader.cpp
 worklets/Worklet.cpp
-xml/XMLHttpRequest.cpp
 xml/XPathFunctions.cpp
 xml/XPathNodeSet.cpp
 xml/XPathPath.cpp
@@ -743,5 +742,3 @@ xml/XPathStep.cpp
 xml/XSLStyleSheetLibxslt.cpp
 xml/XSLTProcessor.cpp
 xml/XSLTProcessorLibxslt.cpp
-xml/parser/XMLDocumentParser.cpp
-xml/parser/XMLDocumentParserLibxml2.cpp

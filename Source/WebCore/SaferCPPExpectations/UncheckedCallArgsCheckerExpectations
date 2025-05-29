@@ -976,7 +976,6 @@ workers/service/server/SWRegistrationDatabase.cpp
 workers/shared/context/SharedWorkerThreadProxy.cpp
 worklets/PaintWorkletGlobalScope.cpp
 worklets/WorkletGlobalScope.cpp
-xml/NativeXPathNSResolver.cpp
 xml/XMLHttpRequestProgressEventThrottle.cpp
 xml/XMLHttpRequestUpload.cpp
 xml/XPathExpression.cpp

@@ -94,7 +94,7 @@ static inline bool shouldRenderInXMLTreeViewerMode(Document& document)
     if (document.transformSourceDocument())
         return false;
 
-    auto* frame = document.frame();
+    RefPtr frame = document.frame();
     if (!frame)
         return false;
 
@@ -511,12 +511,12 @@ static void* openFunc(const char* uri)
             cachedResourceLoader->frame()->loader().loadResourceSynchronously(URL { url }, ClientCredentialPolicy::MayAskClientForCredentials, options, { }, error, response, data);
 
             if (response.url().isEmpty()) {
-                if (Page* page = document ? document->page() : nullptr)
+                if (RefPtr page = document ? document->page() : nullptr)
                     page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse external entity resource at '"_s, url.stringCenterEllipsizedToLength(), "' because cross-origin loads are not allowed."_s));
                 return &globalDescriptor;
             }
             if (!externalEntityMimeTypeAllowed(response)) {
-                if (Page* page = document ? document->page() : nullptr)
+                if (RefPtr page = document ? document->page() : nullptr)
                     page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse external entity resource at '"_s, url.stringCenterEllipsizedToLength(), "' because only XML MIME types are allowed."_s));
                 return &globalDescriptor;
             }
@@ -815,9 +815,8 @@ void XMLDocumentParser::startElementNs(const xmlChar* xmlLocalName, const xmlCha
 
     bool willConstructCustomElement = false;
     if (!m_parsingFragment) {
-        if (auto* window = m_currentNode->document().domWindow()) {
-            auto* registry = window->customElementRegistry();
-            if (registry) [[unlikely]]
+        if (RefPtr window = m_currentNode->document().domWindow()) {
+            if (RefPtr registry = window->customElementRegistry(); registry) [[unlikely]]
                 willConstructCustomElement = registry->findInterface(qName);
         }
     }
@@ -887,8 +886,8 @@ void XMLDocumentParser::endElementNs()
     if (!updateLeafTextNode())
         return;
 
-    RefPtr node = m_currentNode.get();
-    auto* element = dynamicDowncast<Element>(*node);
+    Ref node = *m_currentNode;
+    RefPtr element = dynamicDowncast<Element>(node);
 
     if (element)
         element->finishParsingChildren();

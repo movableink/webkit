@@ -33,6 +33,7 @@
 #include "EventTarget.h"
 #include "EventTargetInlines.h"
 #include "ScriptExecutionContext.h"
+#include "ScriptExecutionContextInlines.h"
 #include "XMLHttpRequest.h"
 #include "XMLHttpRequestProgressEvent.h"
 
@@ -63,7 +64,7 @@ void XMLHttpRequestProgressEventThrottle::updateProgress(bool isAsync, bool leng
         ASSERT(!m_hasPendingThrottledProgressEvent);
 
         dispatchEventWhenPossible(XMLHttpRequestProgressEvent::create(eventNames().progressEvent, lengthComputable, loaded, total));
-        m_dispatchThrottledProgressEventTimer = m_target.scriptExecutionContext()->eventLoop().scheduleRepeatingTask(
+        m_dispatchThrottledProgressEventTimer = m_target.protectedScriptExecutionContext()->checkedEventLoop()->scheduleRepeatingTask(
             minimumProgressEventDispatchingInterval, minimumProgressEventDispatchingInterval, TaskSource::Networking, [weakThis = WeakPtr { *this }] {
                 if (weakThis)
                     weakThis->dispatchThrottledProgressEventTimerFired();
