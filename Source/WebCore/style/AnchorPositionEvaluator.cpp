@@ -763,13 +763,17 @@ static bool firstChildPrecedesSecondChild(const RenderObject* firstChild, const 
 // returns nullptr.
 // (*): an anchor element can also establish an anchor scope containing itself. In this
 // case, the return value is itself.
-static CheckedPtr<const Element> anchorScopeForAnchorElement(const Element& anchorElement, const Vector<ScopedName>& anchorNames)
+static CheckedPtr<const Element> anchorScopeForAnchorName(const RenderBoxModelObject& anchorRenderer, const AtomString anchorName)
 {
-    // Precondition: anchorElement is an anchor, which has at least one anchor name.
-    ASSERT(!anchorNames.isEmpty());
+    // Precondition: anchorElement is an anchor, which has the specified name.
+    ASSERT(anchorRenderer.style().anchorNames().containsIf(
+        [anchorName](auto& scopedName) { return scopedName.name == anchorName; }
+    ));
 
     // Traverse up the composed tree through itself and each ancestor.
-    for (CheckedPtr<const Element> currentAncestor = &anchorElement; currentAncestor; currentAncestor = currentAncestor->parentElementInComposedTree()) {
+    CheckedPtr<const Element> anchorElement = anchorRenderer.element();
+    ASSERT(anchorElement);
+    for (CheckedPtr<const Element> currentAncestor = anchorElement; currentAncestor; currentAncestor = currentAncestor->parentElementInComposedTree()) {
         CheckedPtr currentAncestorStyle = currentAncestor->renderStyle();
         if (!currentAncestorStyle)
             continue;
@@ -787,11 +791,8 @@ static CheckedPtr<const Element> anchorScopeForAnchorElement(const Element& anch
         // Scopes anchors that are (1) descendants of the current ancestor and
         // (2) its name is specified in the scope.
         case NameScope::Type::Ident:
-            for (const auto& anchorName : anchorNames) {
-                if (currentAncestorAnchorScope.names.contains(anchorName.name))
-                    return currentAncestor;
-            }
-
+            if (currentAncestorAnchorScope.names.contains(anchorName))
+                return currentAncestor;
             continue;
         }
     }
@@ -800,18 +801,17 @@ static CheckedPtr<const Element> anchorScopeForAnchorElement(const Element& anch
 }
 
 // See: https://drafts.csswg.org/css-anchor-position-1/#acceptable-anchor-element
-static bool isAcceptableAnchorElement(const RenderBoxModelObject& anchorRenderer, Ref<const Element> anchorPositionedElement)
+static bool isAcceptableAnchorElement(const RenderBoxModelObject& anchorRenderer, Ref<const Element> anchorPositionedElement, const std::optional<AtomString> anchorName = { })
 {
-    CheckedPtr anchorElement = anchorRenderer.element();
-
     // "Possible anchor is either an element or a fully styleable tree-abiding pseudo-element."
     // This always have an associated Element (for ::before/::after it is PseudoElement).
-    if (!anchorElement)
+    if (!anchorRenderer.element())
         return false;
 
-    if (auto anchorScopeElement = anchorScopeForAnchorElement(*anchorElement, anchorRenderer.style().anchorNames())) {
+    if (anchorName) {
+        auto anchorScopeElement = anchorScopeForAnchorName(anchorRenderer, *anchorName);
         // If the anchor is scoped, the anchor-positioned element must also be in the same scope.
-        if (!anchorPositionedElement->isComposedTreeDescendantOf(*anchorScopeElement))
+        if (anchorScopeElement && !anchorPositionedElement->isComposedTreeDescendantOf(*anchorScopeElement))
             return false;
     }
 
@@ -840,7 +840,7 @@ static std::optional<Ref<Element>> findLastAcceptableAnchorWithName(ResolvedScop
     const auto& anchors = anchorsForAnchorName.get(anchorName);
 
     for (auto& anchor : makeReversedRange(anchors)) {
-        if (isAcceptableAnchorElement(anchor.get(), anchorPositionedElement))
+        if (isAcceptableAnchorElement(anchor.get(), anchorPositionedElement, anchorName.name()))
             return *anchor->element();
     }
 
