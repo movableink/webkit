@@ -315,6 +315,7 @@ void JITWorklist::removeDeadPlans(VM& vm)
 
     // No locking needed for this part, see comment in visitWeakReferences().
     for (auto& thread : m_threads) {
+        thread->m_rightToRun.assertIsOwner();
         Safepoint* safepoint = thread->m_safepoint;
         if (!safepoint)
             continue;
@@ -344,6 +345,8 @@ template<typename Visitor>
 void JITWorklist::visitWeakReferences(Visitor& visitor)
 {
     VM* vm = &visitor.heap()->vm();
+    if (!vm->numberOfActiveJITPlans())
+        return;
     {
         Locker locker { *m_lock };
         for (auto& entry : m_plans) {
@@ -357,6 +360,7 @@ void JITWorklist::visitWeakReferences(Visitor& visitor)
     // (2) JITWorklistThread::m_safepoint is protected by that thread's m_rightToRun which we must be
     //     holding here because of a prior call to suspendAllThreads().
     for (auto& thread : m_threads) {
+        thread->m_rightToRun.assertIsOwner();
         Safepoint* safepoint = thread->m_safepoint;
         if (safepoint && safepoint->vm() == vm)
             safepoint->checkLivenessAndVisitChildren(visitor);
