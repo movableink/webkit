@@ -215,7 +215,7 @@ bool AccessibilityTable::isDataTable() const
     unsigned cellsWithLeftBorder = 0;
     unsigned cellsWithRightBorder = 0;
 
-    UncheckedKeyHashMap<Node*, unsigned> cellCountForEachRow;
+    HashMap<Node*, unsigned> cellCountForEachRow;
     std::array<Color, 5> alternatingRowColors;
     int alternatingRowColorCount = 0;
     unsigned rowCount = 0;

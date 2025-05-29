@@ -842,9 +842,9 @@ String AccessibilityObjectAtspi::id() const
     return { };
 }
 
-UncheckedKeyHashMap<String, String> AccessibilityObjectAtspi::attributes() const
+HashMap<String, String> AccessibilityObjectAtspi::attributes() const
 {
-    UncheckedKeyHashMap<String, String> map;
+    HashMap<String, String> map;
 #if PLATFORM(GTK)
     map.add("toolkit"_s, "WebKitGTK"_s);
 #elif PLATFORM(WPE)

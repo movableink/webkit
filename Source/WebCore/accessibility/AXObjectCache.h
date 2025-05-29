@@ -120,7 +120,7 @@ private:
         AccessibilityObjectInclusion ignored;
     };
 
-    UncheckedKeyHashMap<AXID, CachedAXObjectAttributes> m_idMapping;
+    HashMap<AXID, CachedAXObjectAttributes> m_idMapping;
 };
 
 struct VisiblePositionIndex {
@@ -445,7 +445,7 @@ public:
         AtomString oldValue;
         AtomString newValue;
     };
-    using DeferredCollection = Variant<UncheckedKeyHashMap<Element*, String>
+    using DeferredCollection = Variant<HashMap<Element*, String>
         , HashSet<AXID>
         , ListHashSet<Node*>
         , ListHashSet<Ref<AccessibilityObject>>
@@ -820,7 +820,7 @@ private:
     void updateRelationsForTree(ContainerNode&);
     void relationsNeedUpdate(bool);
     void dirtyIsolatedTreeRelations();
-    UncheckedKeyHashMap<AXID, AXRelations> relations();
+    HashMap<AXID, AXRelations> relations();
     const HashSet<AXID>& relationTargetIDs();
     bool isDescendantOfRelatedNode(Node&);
 
@@ -835,13 +835,13 @@ private:
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     const std::optional<PageIdentifier> m_pageID; // constant for object's lifetime.
     OptionSet<ActivityState> m_pageActivityState;
-    UncheckedKeyHashMap<AXID, Ref<AccessibilityObject>> m_objects;
+    HashMap<AXID, Ref<AccessibilityObject>> m_objects;
 
     WeakHashMap<RenderObject, AXID, SingleThreadWeakPtrImpl> m_renderObjectMapping;
     WeakHashMap<Widget, AXID, SingleThreadWeakPtrImpl> m_widgetObjectMapping;
 
     // FIXME: The type for m_nodeObjectMapping really should be:
-    // UncheckedKeyHashMap<WeakRef<Node, WeakPtrImplWithEventTargetData>, AXID>
+    // HashMap<WeakRef<Node, WeakPtrImplWithEventTargetData>, AXID>
     // As this guarantees that we've called AXObjectCache::remove(Node&) for every node we store.
     // However, in rare circumstances, we can add a node to this map, then later the document associated
     // with the node loses its m_frame via detachFromFrame(). Then the node gets destroyed, but we can't
@@ -933,10 +933,10 @@ private:
     unsigned m_cacheUpdateDeferredCount { 0 };
 
     // Relationships between objects.
-    UncheckedKeyHashMap<AXID, AXRelations> m_relations;
+    HashMap<AXID, AXRelations> m_relations;
     bool m_relationsNeedUpdate { true };
     HashSet<AXID> m_relationTargets;
-    UncheckedKeyHashMap<AXID, AXRelations> m_recentlyRemovedRelations;
+    HashMap<AXID, AXRelations> m_recentlyRemovedRelations;
 
 #if USE(ATSPI)
     ListHashSet<RefPtr<AccessibilityObject>> m_deferredParentChangedList;
