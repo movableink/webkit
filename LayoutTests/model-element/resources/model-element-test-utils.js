@@ -24,3 +24,11 @@ const createModelWithAttributesAndSource= (test, attributes, src) => {
 
     return [model, source];
 };
+
+const makeSource = (src, type) => {
+    const source = document.createElement("source");
+    source.src = src;
+    if (type)
+        source.type = type;
+    return source;
+}

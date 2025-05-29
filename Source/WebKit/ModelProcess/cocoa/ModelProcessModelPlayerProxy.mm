@@ -353,7 +353,7 @@ static inline simd_float2 makeMeterSizeFromPointSize(CGSize pointSize, CGFloat p
 
 static void computeScaledExtentsAndCenter(simd_float2 boundsOfLayerInMeters, simd_float3& boundingBoxExtents, simd_float3& boundingBoxCenter)
 {
-    if (simd_reduce_min(boundingBoxExtents) - FLT_EPSILON > 0) {
+    if (fmin(boundingBoxExtents.x, boundingBoxExtents.y) - FLT_EPSILON > 0) {
         auto boundsScaleRatios = simd_make_float2(
             boundsOfLayerInMeters.x / boundingBoxExtents.x,
             boundsOfLayerInMeters.y / boundingBoxExtents.y

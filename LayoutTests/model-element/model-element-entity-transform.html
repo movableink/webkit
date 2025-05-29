@@ -103,5 +103,27 @@ promise_test(async t => {
     }
 }, `<model> gets the updated entityTransform after rotation`);
 
+promise_test(async t => {
+    const model1 = document.createElement("model");
+    model1.setAttribute("width", "40cm");
+    model1.setAttribute("height", "20cm");
+    document.body.appendChild(model1);
+    model1.appendChild(makeSource("resources/flat-rectangle.usdz"));
+    
+    const model2 = document.createElement("model");
+    model2.setAttribute("width", "80cm");
+    model2.setAttribute("height", "20cm");
+    document.body.appendChild(model2);
+    model2.appendChild(makeSource("resources/flat-rectangle.usdz"));
+
+    await model1.ready;
+    await model2.ready;
+
+    // Since the model should fit within the width of the portal,
+    // the scale ratio between entity transforms of the two models should
+    // match the scale ratio of their widths.
+    assert_3d_matrix_approx_equals(model1.entityTransform.scale3d(2), model2.entityTransform);
+}, `<model> with source that has zero depth should still scale to fit the portal`);
+
 </script>
 </body>
