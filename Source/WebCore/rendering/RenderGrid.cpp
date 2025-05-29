@@ -1951,14 +1951,13 @@ bool RenderGrid::isBaselineAlignmentForGridItem(const RenderBox& gridItem) const
     return isBaselineAlignmentForGridItem(gridItem, GridTrackSizingDirection::ForColumns) || isBaselineAlignmentForGridItem(gridItem, GridTrackSizingDirection::ForRows);
 }
 
-bool RenderGrid::isBaselineAlignmentForGridItem(const RenderBox& gridItem, GridTrackSizingDirection alignmentContextType, AllowedBaseLine allowed) const
+bool RenderGrid::isBaselineAlignmentForGridItem(const RenderBox& gridItem, GridTrackSizingDirection alignmentContextType) const
 {
     if (gridItem.isOutOfFlowPositioned())
         return false;
     auto align = selfAlignmentForGridItem(alignmentContextType, gridItem).position();
     bool hasAutoMargins = alignmentContextType == GridTrackSizingDirection::ForRows ? hasAutoMarginsInColumnAxis(gridItem) : hasAutoMarginsInRowAxis(gridItem);
-    bool isBaseline = allowed == AllowedBaseLine::FirstLine ? isFirstBaselinePosition(align) : isBaselinePosition(align);
-    return isBaseline && !hasAutoMargins;
+    return isBaselinePosition(align) && !hasAutoMargins;
 }
 
 // FIXME: This logic is shared by RenderFlexibleBox, so it might be refactored somehow.
@@ -2025,7 +2024,7 @@ SingleThreadWeakPtr<RenderBox> RenderGrid::getBaselineGridItem(ItemPosition alig
         for (auto& gridItem : cell) {
             ASSERT(gridItem.get());
             // If an item participates in baseline alignment, we select such item.
-            if (isBaselineAlignmentForGridItem(*gridItem, GridTrackSizingDirection::ForRows, AllowedBaseLine::BothLines)) {
+            if (isBaselineAlignmentForGridItem(*gridItem, GridTrackSizingDirection::ForRows)) {
                 auto gridItemAlignment = selfAlignmentForGridItem(GridTrackSizingDirection::ForRows, *gridItem).position();
                 if (rowIndexDeterminingBaseline == GridLayoutFunctions::alignmentContextForBaselineAlignment(gridSpanForGridItem(*gridItem, GridTrackSizingDirection::ForRows), gridItemAlignment)) {
                     // FIXME: self-baseline and content-baseline alignment not implemented yet.
