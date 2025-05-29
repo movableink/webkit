@@ -98,6 +98,8 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(Quirks);
 
+static constexpr auto chromeUserAgentScript = "(function() { let userAgent = navigator.userAgent; Object.defineProperty(navigator, 'userAgent', { get: () => { return userAgent + ' Chrome/130.0.0.0 Android/15.0'; }, configurable: true }); })();"_s;
+
 static inline OptionSet<AutoplayQuirk> allowedAutoplayQuirks(Document& document)
 {
     auto* loader = document.loader();
@@ -608,6 +610,16 @@ bool Quirks::needsGoogleMapsScrollingQuirk() const
 {
 #if PLATFORM(IOS_FAMILY)
     return needsQuirks() && m_quirksData.needsGoogleMapsScrollingQuirk;
+#else
+    return false;
+#endif
+}
+
+// translate.google.com rdar://106539018
+bool Quirks::needsGoogleTranslateScrollingQuirk() const
+{
+#if PLATFORM(IOS_FAMILY)
+    return needsQuirks() && m_quirksData.needsGoogleTranslateScrollingQuirk;
 #else
     return false;
 #endif
@@ -1559,8 +1571,11 @@ String Quirks::scriptToEvaluateBeforeRunningScriptFromURL(const URL& scriptURL)
     // player.anyclip.com rdar://138789765
     if (m_quirksData.isThesaurus && scriptURL.lastPathComponent().endsWith("lre.js"_s)) [[unlikely]] {
         if (scriptURL.host() == "player.anyclip.com"_s)
-            return "(function() { let userAgent = navigator.userAgent; Object.defineProperty(navigator, 'userAgent', { get: () => { return userAgent + ' Chrome/130.0.0.0 Android/15.0'; }, configurable: true }); })();"_s;
+            return chromeUserAgentScript;
     }
+
+    if (m_quirksData.needsGoogleTranslateScrollingQuirk && !scriptURL.isEmpty()) [[unlikely]]
+        return chromeUserAgentScript;
 
 #if ENABLE(DESKTOP_CONTENT_MODE_QUIRKS)
     if (m_quirksData.isWebEx && scriptURL.lastPathComponent().startsWith("pushdownload."_s)) [[unlikely]]
@@ -2377,6 +2392,10 @@ static void handleGoogleQuirks(QuirksData& quirksData, const URL& quirksURL, con
     } else if (topDocumentHost == "mail.google.com"_s) {
         // mail.google.com rdar://49403416
         quirksData.needsGMailOverflowScrollQuirk =true;
+    } else if (topDocumentHost == "translate.google.com"_s) {
+        // translate.google.com rdar://106539018
+        quirksData.needsGoogleTranslateScrollingQuirk = true;
+        quirksData.needsScriptToEvaluateBeforeRunningScriptFromURLQuirk = true;
     }
 #endif
     // docs.google.com rdar://59893415

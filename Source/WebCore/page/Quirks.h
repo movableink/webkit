@@ -121,6 +121,7 @@ public:
     bool needsFullscreenObjectFitQuirk() const;
     bool needsZomatoEmailLoginLabelQuirk() const;
     bool needsGoogleMapsScrollingQuirk() const;
+    bool needsGoogleTranslateScrollingQuirk() const;
 
     bool needsPrimeVideoUserSelectNoneQuirk() const;
 
