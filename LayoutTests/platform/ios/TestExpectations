@@ -7876,3 +7876,6 @@ webkit.org/b/288957 imported/w3c/web-platform-tests/css/CSS2/tables/border-colla
 
 # rdar://146986685 (REGRESSION(Sequoia 15.4): fast/canvas/webgl/gl-teximage.html is a constant text failure)
 fast/canvas/webgl/gl-teximage.html [ Pass ]
+
+#rdar://145604998 (REGRESSION(iOS 18.4, macOS Sequoia 15.4 ): fast/text/international/hindi-spacing.html is a constant text failure)
+fast/text/international/hindi-spacing.html [ Failure ]
