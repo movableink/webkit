@@ -175,27 +175,29 @@ pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* la
         }
     }
 
+    /* protect guard pages from being accessed */
+    uintptr_t lower_guard = result.begin;
+    size_t lower_guard_size = pas_round_down(key - lower_guard, page_size);
+    uintptr_t upper_guard = pas_round_up(key + size, page_size);
+    size_t upper_guard_size = (result.begin + mem_to_alloc) - upper_guard;
+
 #if PAS_OS(WINDOWS)
-    /* protect guard pages from being accessed */
-    uintptr_t lower_guard = result.begin;
-    size_t lower_guard_size = pas_round_down(key - lower_guard, page_size);
-    uintptr_t upper_guard = pas_round_up(key + size, page_size);
-    size_t upper_guard_size = (result.begin + mem_to_alloc) - upper_guard;
+    void* virtualalloc_res = VirtualAlloc((void*) lower_guard, lower_guard_size, MEM_COMMIT, PAGE_NOACCESS);
+    PAS_ASSERT(virtualalloc_res);
 
-    PAS_ASSERT(VirtualAlloc((void *) lower_guard, lower_guard_size, MEM_COMMIT, PAGE_NOACCESS));
-    PAS_ASSERT(VirtualAlloc((void *) upper_guard, upper_guard_size, MEM_COMMIT, PAGE_NOACCESS));
+    virtualalloc_res = VirtualAlloc((void*) upper_guard, upper_guard_size, MEM_COMMIT, PAGE_NOACCESS);
+    PAS_ASSERT(virtualalloc_res);
 
-    /* ensure physical addresses are released
-       loop using meminfo here if the upper guard free is failing */
-    PAS_ASSERT(VirtualFree((void *) lower_guard, lower_guard_size, MEM_DECOMMIT));
-    PAS_ASSERT(VirtualFree((void *) upper_guard, upper_guard_size, MEM_DECOMMIT));
+    /* 
+     * ensure physical addresses are released
+     * loop using meminfo here if the upper guard free is failing 
+     */
+    bool virtualfree_res = VirtualFree((void*) lower_guard, lower_guard_size, MEM_DECOMMIT);
+    PAS_ASSERT(virtualfree_res);
+
+    virtualfree_res = VirtualFree((void*) upper_guard, upper_guard_size, MEM_DECOMMIT);
+    PAS_ASSERT(virtualfree_res);
 #else
-    /* protect guard pages from being accessed */
-    uintptr_t lower_guard = result.begin;
-    size_t lower_guard_size = pas_round_down(key - lower_guard, page_size);
-    uintptr_t upper_guard = pas_round_up(key + size, page_size);
-    size_t upper_guard_size = (result.begin + mem_to_alloc) - upper_guard;
-
     int mprotect_res = mprotect((void*)lower_guard, lower_guard_size, PROT_NONE);
     PAS_ASSERT(!mprotect_res);
 
