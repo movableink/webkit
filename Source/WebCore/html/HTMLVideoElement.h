@@ -106,8 +106,6 @@ public:
     WEBCORE_EXPORT void setPresentationMode(VideoPresentationMode);
     WEBCORE_EXPORT void didEnterFullscreenOrPictureInPicture(const FloatSize&);
     WEBCORE_EXPORT void didExitFullscreenOrPictureInPicture();
-    WEBCORE_EXPORT void didEnterExternalPlayback();
-    WEBCORE_EXPORT void didExitExternalPlayback();
     WEBCORE_EXPORT bool isChangingPresentationMode() const;
     WEBCORE_EXPORT void setPresentationModeIgnoringPermissionsPolicy(VideoPresentationMode);
 
@@ -137,6 +135,12 @@ public:
 #if USE(GSTREAMER)
     void enableGStreamerHolePunching() { m_enableGStreamerHolePunching = true; }
     bool isGStreamerHolePunchingEnabled() const final { return m_enableGStreamerHolePunching; }
+#endif
+
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    WEBCORE_EXPORT void didEnterExternalPlayback();
+    WEBCORE_EXPORT void didExitExternalPlayback();
+    bool isInExternalPlayback() const { return m_isInExternalPlayback; };
 #endif
 
     // ActiveDOMObject
@@ -208,6 +212,10 @@ private:
 
 #if USE(GSTREAMER)
     bool m_enableGStreamerHolePunching { false };
+#endif
+
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    bool m_isInExternalPlayback { false };
 #endif
 };
 

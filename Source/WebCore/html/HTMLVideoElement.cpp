@@ -635,17 +635,23 @@ void HTMLVideoElement::didExitFullscreenOrPictureInPicture()
     HTMLMediaElement::didStopBeingFullscreenElement();
 }
 
+#if ENABLE(LINEAR_MEDIA_PLAYER)
 void HTMLVideoElement::didEnterExternalPlayback()
 {
+    m_isInExternalPlayback = true;
+
     if (RefPtr player = this->player())
         player->setInFullscreenOrPictureInPicture(true);
 }
 
 void HTMLVideoElement::didExitExternalPlayback()
 {
+    m_isInExternalPlayback = false;
+
     if (RefPtr player = this->player())
         player->setInFullscreenOrPictureInPicture(false);
 }
+#endif
 
 bool HTMLVideoElement::isChangingPresentationMode() const
 {

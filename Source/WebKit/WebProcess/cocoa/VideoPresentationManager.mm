@@ -735,7 +735,7 @@ void VideoPresentationManager::didEnterFullscreen(PlaybackSessionContextIdentifi
     });
 }
 
-#if PLATFORM(VISION)
+#if ENABLE(LINEAR_MEDIA_PLAYER)
 void VideoPresentationManager::didEnterExternalPlayback(PlaybackSessionContextIdentifier contextId)
 {
     auto [model, interface] = ensureModelAndInterface(contextId);

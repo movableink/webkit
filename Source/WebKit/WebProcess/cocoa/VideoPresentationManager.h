@@ -207,7 +207,7 @@ protected:
     void didEnterFullscreen(PlaybackSessionContextIdentifier, std::optional<WebCore::FloatSize>);
     void failedToEnterFullscreen(PlaybackSessionContextIdentifier);
     void didCleanupFullscreen(PlaybackSessionContextIdentifier);
-#if PLATFORM(VISION)
+#if ENABLE(LINEAR_MEDIA_PLAYER)
     void didEnterExternalPlayback(PlaybackSessionContextIdentifier);
     void didExitExternalPlayback(PlaybackSessionContextIdentifier);
 #endif

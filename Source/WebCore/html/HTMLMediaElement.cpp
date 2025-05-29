@@ -7332,6 +7332,17 @@ bool HTMLMediaElement::taintsOrigin(const SecurityOrigin& origin) const
     return m_player && m_player->isCrossOrigin(origin);
 }
 
+bool HTMLMediaElement::isInFullscreenOrPictureInPicture() const
+{
+    bool inFullscreenOrPictureInPicture = isFullscreen();
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    if (RefPtr asVideo = dynamicDowncast<HTMLVideoElement>(*this))
+        inFullscreenOrPictureInPicture |= asVideo->isInExternalPlayback();
+#endif
+
+    return inFullscreenOrPictureInPicture;
+}
+
 bool HTMLMediaElement::isFullscreen() const
 {
 #if ENABLE(FULLSCREEN_API)
@@ -8076,7 +8087,7 @@ void HTMLMediaElement::createMediaPlayer() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     RefPtr page = document().page();
     player->setPageIsVisible(!m_elementIsHidden);
     player->setVisibleInViewport(isVisibleInViewport());
-    player->setInFullscreenOrPictureInPicture(isFullscreen());
+    player->setInFullscreenOrPictureInPicture(isInFullscreenOrPictureInPicture());
 
     schedulePlaybackControlsManagerUpdate();
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA) && ENABLE(ENCRYPTED_MEDIA)

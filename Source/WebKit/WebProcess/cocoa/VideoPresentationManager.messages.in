@@ -38,7 +38,7 @@ messages -> VideoPresentationManager {
     DidEnterFullscreen(WebCore::MediaPlayerClientIdentifier contextId, std::optional<WebCore::FloatSize> size)
     FailedToEnterFullscreen(WebCore::MediaPlayerClientIdentifier contextId)
     DidCleanupFullscreen(WebCore::MediaPlayerClientIdentifier contextId)
-#if PLATFORM(VISION)
+#if ENABLE(LINEAR_MEDIA_PLAYER)
     DidEnterExternalPlayback(WebCore::MediaPlayerClientIdentifier contextId)
     DidExitExternalPlayback(WebCore::MediaPlayerClientIdentifier contextId)
 #endif
