@@ -1529,8 +1529,7 @@ FloatPoint GraphicsLayerCA::computePositionRelativeToBase(float& pageScale) cons
 
 void GraphicsLayerCA::flushCompositingState(const FloatRect& visibleRect)
 {
-    TransformState state(TransformState::UnapplyInverseTransformDirection, FloatQuad(visibleRect));
-    state.setSecondaryQuad(FloatQuad { visibleRect });
+    TransformState state(TransformState::UnapplyInverseTransformDirection, FloatQuad(visibleRect), FloatQuad { visibleRect });
 
     CommitState commitState;
     commitState.ancestorHadChanges = visibleRect != m_previousCommittedVisibleRect;
@@ -1745,10 +1744,10 @@ GraphicsLayerCA::VisibleAndCoverageRects GraphicsLayerCA::computeVisibleAndCover
     if (masksToBounds()) {
         ASSERT(accumulation == TransformState::FlattenTransform);
         // Flatten, and replace the quad in the TransformState with one that is clipped to this layer's bounds.
-        state.flatten();
-        state.setQuad(clipRectForSelf);
         if (state.isMappingSecondaryQuad())
-            state.setSecondaryQuad(FloatQuad { clipRectForSelf });
+            state.reset(clipRectForSelf, clipRectForSelf);
+        else
+            state.reset(clipRectForSelf);
     }
 
     auto boundsOrigin = m_boundsOrigin;
@@ -1884,7 +1883,7 @@ void GraphicsLayerCA::recursiveCommitChanges(CommitState& commitState, const Tra
     VisibleAndCoverageRects rects = computeVisibleAndCoverageRect(localState, accumulateTransform);
     if (adjustCoverageRect(rects, m_visibleRect)) {
         if (state.isMappingSecondaryQuad())
-            localState.setLastPlanarSecondaryQuad(FloatQuad { rects.coverageRect });
+            localState.setSecondaryQuadInMappedSpace(FloatQuad { rects.coverageRect });
     }
     setVisibleAndCoverageRects(rects);
 
