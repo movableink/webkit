@@ -49,9 +49,7 @@ Modules/encryptedmedia/MediaKeys.cpp
 Modules/encryptedmedia/legacy/LegacyCDMSessionClearKey.cpp
 Modules/encryptedmedia/legacy/WebKitMediaKeySession.cpp
 Modules/encryptedmedia/legacy/WebKitMediaKeys.cpp
-Modules/entriesapi/DOMFileSystem.cpp
 Modules/entriesapi/FileSystemDirectoryEntry.cpp
-Modules/entriesapi/FileSystemDirectoryReader.cpp
 Modules/entriesapi/FileSystemEntry.cpp
 Modules/entriesapi/FileSystemFileEntry.cpp
 Modules/fetch/FetchBody.cpp
@@ -59,11 +57,7 @@ Modules/fetch/FetchBodyConsumer.cpp
 Modules/fetch/FetchBodySource.cpp
 Modules/fetch/FetchLoader.cpp
 Modules/fetch/FetchRequest.cpp
-Modules/filesystemaccess/FileSystemDirectoryHandle.cpp
 Modules/filesystemaccess/FileSystemFileHandle.cpp
-Modules/filesystemaccess/FileSystemHandle.cpp
-Modules/filesystemaccess/FileSystemHandleCloseScope.h
-Modules/filesystemaccess/FileSystemSyncAccessHandle.cpp
 Modules/filesystemaccess/WorkerFileSystemStorageConnection.cpp
 Modules/gamepad/GamepadManager.cpp
 Modules/gamepad/NavigatorGamepad.cpp
@@ -635,7 +629,6 @@ html/CachedHTMLCollectionInlines.h
 html/CheckboxInputType.cpp
 html/CollectionTraversalInlines.h
 html/CustomPaintCanvas.cpp
-html/DOMFormData.cpp
 html/DOMTokenList.cpp
 html/DOMURL.cpp
 html/DirectoryFileListCreator.cpp

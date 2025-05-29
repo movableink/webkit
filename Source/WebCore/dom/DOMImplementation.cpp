@@ -202,7 +202,7 @@ Ref<Document> DOMImplementation::createDocument(const String& contentType, Local
 
     // The following is the relatively costly lookup that requires initializing the plug-in database.
     if (frame && frame->page()) {
-        if (frame->page()->pluginData().supportsWebVisibleMimeType(contentType, PluginData::OnlyApplicationPlugins))
+        if (frame->page()->protectedPluginData()->supportsWebVisibleMimeType(contentType, PluginData::OnlyApplicationPlugins))
             return PluginDocument::create(*frame, url);
     }
 

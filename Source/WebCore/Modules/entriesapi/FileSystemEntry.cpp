@@ -29,6 +29,7 @@
 #include "DOMException.h"
 #include "DOMFileSystem.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "ErrorCallback.h"
 #include "FileSystemDirectoryEntry.h"
 #include "FileSystemEntryCallback.h"
@@ -71,7 +72,7 @@ void FileSystemEntry::getParent(ScriptExecutionContext& context, RefPtr<FileSyst
         if (!document)
             return;
 
-        document->eventLoop().queueTask(TaskSource::Networking, [successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback), result = std::forward<Result>(result), pendingActivity = WTFMove(pendingActivity)] () mutable {
+        document->checkedEventLoop()->queueTask(TaskSource::Networking, [successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback), result = std::forward<Result>(result), pendingActivity = WTFMove(pendingActivity)] () mutable {
             if (result.hasException()) {
                 if (errorCallback)
                     errorCallback->invoke(DOMException::create(result.releaseException()));

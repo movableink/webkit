@@ -72,7 +72,7 @@ private:
     // ActiveDOMObject.
     void stop() final;
 
-    Ref<FileSystemFileHandle> m_source;
+    const Ref<FileSystemFileHandle> m_source;
     FileSystemSyncAccessHandleIdentifier m_identifier;
     FileSystem::FileHandle m_file;
     bool m_isClosed { false };

@@ -29,6 +29,7 @@
 #include "DOMException.h"
 #include "DOMFileSystem.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "ErrorCallback.h"
 #include "ExceptionOr.h"
 #include "FileSystemDirectoryEntry.h"
@@ -90,7 +91,7 @@ void FileSystemDirectoryReader::readEntries(ScriptExecutionContext& context, Ref
             if (result.hasException()) {
                 pendingActivity->object().m_error = result.releaseException();
                 if (errorCallback && document) {
-                    document->eventLoop().queueTask(TaskSource::Networking, [errorCallback = WTFMove(errorCallback), pendingActivity = WTFMove(pendingActivity)]() mutable {
+                    document->checkedEventLoop()->queueTask(TaskSource::Networking, [errorCallback = WTFMove(errorCallback), pendingActivity = WTFMove(pendingActivity)]() mutable {
                         errorCallback->invoke(DOMException::create(*pendingActivity->object().m_error));
                     });
                 }
@@ -98,7 +99,7 @@ void FileSystemDirectoryReader::readEntries(ScriptExecutionContext& context, Ref
             }
             pendingActivity->object().m_isDone = true;
             if (document) {
-                document->eventLoop().queueTask(TaskSource::Networking, [successCallback = WTFMove(successCallback), pendingActivity = WTFMove(pendingActivity), result = result.releaseReturnValue()]() mutable {
+                document->checkedEventLoop()->queueTask(TaskSource::Networking, [successCallback = WTFMove(successCallback), pendingActivity = WTFMove(pendingActivity), result = result.releaseReturnValue()]() mutable {
                     successCallback->invoke(WTFMove(result));
                 });
             }
