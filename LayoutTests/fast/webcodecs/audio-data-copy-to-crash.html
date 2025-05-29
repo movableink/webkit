@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<script>
+  window.addEventListener("load", () => {
+    window.testRunner?.dumpAsText();
+
+    // Bug 288440: assertion/crash in audioElementSpan() because copyDestination
+    // is not castable to a buffer of 16bits elements.
+    let rawData = new Uint8ClampedArray(4);
+    let audioData = new AudioData({
+      format: "s16-planar",
+      sampleRate: 1,
+      numberOfFrames: 1,
+      numberOfChannels: 2,
+      timestamp: 0,
+      data: rawData
+    });
+    let copyDestination = new Uint8ClampedArray(3);
+    audioData.copyTo(copyDestination, {planeIndex: 0});
+
+    document.body.innerHTML = "PASS if no crash.";
+  });
+</script>
+<video></video>
