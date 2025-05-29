@@ -70,7 +70,7 @@ def modify_expectations_for_checker_from_file(checker, unexpected_contents, proj
     for line in unexpected_contents:
         if '=>' in line:
             new_checker_type = line.split()[-1]
-            modify_expectations_for_checker_from_file(new_checker_type, unexpected_contents, project, add)
+            modify_expectations_for_checker_from_file(Checker.find_checker_by_name(new_checker_type), unexpected_contents, project, add)
         elif line.strip():
             if not add:
                 try:
