@@ -408,10 +408,8 @@ void RealtimeOutgoingMediaSourceGStreamer::setInitialParameters(GUniquePtr<GstSt
 void RealtimeOutgoingMediaSourceGStreamer::configure(GRefPtr<GstCaps>&& allowedCaps)
 {
     if (m_parameters) {
-        const auto encodingsValue = gst_structure_get_value(m_parameters.get(), "encodings");
-        RELEASE_ASSERT(GST_VALUE_HOLDS_LIST(encodingsValue));
-        unsigned encodingsSize = gst_value_list_get_size(encodingsValue);
-        if (!encodingsSize) [[unlikely]] {
+        auto encodings = gstStructureGetList<const GstStructure*>(m_parameters.get(), "encodings"_s);
+        if (encodings.isEmpty()) [[unlikely]] {
             GST_WARNING_OBJECT(m_bin.get(), "Encodings list is empty, cancelling configuration");
             return;
         }
@@ -423,18 +421,14 @@ void RealtimeOutgoingMediaSourceGStreamer::configure(GRefPtr<GstCaps>&& allowedC
 void RealtimeOutgoingMediaSourceGStreamer::setParameters(GUniquePtr<GstStructure>&& parameters)
 {
     GST_DEBUG_OBJECT(m_bin.get(), "New encoding parameters: %" GST_PTR_FORMAT, parameters.get());
-    const auto encodingsValue = gst_structure_get_value(parameters.get(), "encodings");
-    RELEASE_ASSERT(GST_VALUE_HOLDS_LIST(encodingsValue));
-    unsigned encodingsSize = gst_value_list_get_size(encodingsValue);
-    if (!encodingsSize) [[unlikely]] {
+    auto encodings = gstStructureGetList<const GstStructure*>(parameters.get(), "encodings"_s);
+    if (encodings.isEmpty()) [[unlikely]] {
         GST_WARNING_OBJECT(m_bin.get(), "Encodings list is empty, cancelling re-configuration");
         return;
     }
 
-    for (unsigned j = 0; j < encodingsSize; j++) {
-        auto encoding = gst_value_list_get_value(encodingsValue, j);
-        RELEASE_ASSERT(GST_VALUE_HOLDS_STRUCTURE(encoding));
-        GUniquePtr<GstStructure> encodingParameters(gst_structure_copy(gst_value_get_structure(encoding)));
+    for (const auto& encoding : encodings) {
+        GUniquePtr<GstStructure> encodingParameters(gst_structure_copy(encoding));
         auto rid = gstStructureGetString(encodingParameters.get(), "rid"_s);
         if (!rid)
             continue;
@@ -490,10 +484,8 @@ bool RealtimeOutgoingMediaSourceGStreamer::configurePacketizers(GRefPtr<GstCaps>
         const auto codecParameters = gst_caps_get_structure(codecPreferences.get(), i);
 
         if (m_parameters) {
-            const auto encodingsValue = gst_structure_get_value(m_parameters.get(), "encodings");
-            RELEASE_ASSERT(GST_VALUE_HOLDS_LIST(encodingsValue));
-            auto totalEncodings = gst_value_list_get_size(encodingsValue);
-            if (!totalEncodings) [[unlikely]] {
+            auto encodings = gstStructureGetList<const GstStructure*>(m_parameters.get(), "encodings"_s);
+            if (encodings.isEmpty()) [[unlikely]] {
                 auto packetizer = createPacketizer(m_ssrcGenerator, codecParameters, nullptr);
                 if (!packetizer)
                     continue;
@@ -505,10 +497,8 @@ bool RealtimeOutgoingMediaSourceGStreamer::configurePacketizers(GRefPtr<GstCaps>
             }
 
             bool codecIsValid = false;
-            for (unsigned j = 0; j < totalEncodings; j++) {
-                auto encoding = gst_value_list_get_value(encodingsValue, j);
-                RELEASE_ASSERT(GST_VALUE_HOLDS_STRUCTURE(encoding));
-                GUniquePtr<GstStructure> encodingParameters(gst_structure_copy(gst_value_get_structure(encoding)));
+            for (const auto& encoding : encodings) {
+                GUniquePtr<GstStructure> encodingParameters(gst_structure_copy(encoding));
                 auto packetizer = createPacketizer(m_ssrcGenerator, codecParameters, WTFMove(encodingParameters));
                 if (!packetizer)
                     continue;

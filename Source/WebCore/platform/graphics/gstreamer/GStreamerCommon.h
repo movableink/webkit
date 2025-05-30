@@ -292,6 +292,9 @@ StringView gstStructureGetName(const GstStructure*);
 template<typename T>
 Vector<T> gstStructureGetArray(const GstStructure*, ASCIILiteral key);
 
+template<typename T>
+Vector<T> gstStructureGetList(const GstStructure*, ASCIILiteral key);
+
 String gstStructureToJSONString(const GstStructure*);
 
 GstClockTime webkitGstInitTime();

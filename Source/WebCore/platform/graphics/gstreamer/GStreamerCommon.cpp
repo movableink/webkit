@@ -1277,6 +1277,51 @@ Vector<T> gstStructureGetArray(const GstStructure* structure, ASCIILiteral key)
 
 template Vector<const GstStructure*> gstStructureGetArray(const GstStructure*, ASCIILiteral key);
 
+template<typename T>
+Vector<T> gstStructureGetList(const GstStructure* structure, ASCIILiteral key)
+{
+    static_assert(std::is_same_v<T, int> || std::is_same_v<T, int64_t> || std::is_same_v<T, unsigned>
+        || std::is_same_v<T, uint64_t> || std::is_same_v<T, double> || std::is_same_v<T, const GstStructure*>);
+    Vector<T> result;
+    if (!structure)
+        return result;
+    const GValue* list = gst_structure_get_value(structure, key.characters());
+    RELEASE_ASSERT(GST_VALUE_HOLDS_LIST(list));
+    if (!GST_VALUE_HOLDS_LIST(list)) {
+        GST_WARNING("Structure field %s does not hold a list", key.characters());
+        return result;
+    }
+    unsigned size = gst_value_list_get_size(list);
+    for (unsigned i = 0; i < size; i++) {
+        const GValue* item = gst_value_list_get_value(list, i);
+        if constexpr(std::is_same_v<T, int>)
+            result.append(g_value_get_int(item));
+        else if constexpr(std::is_same_v<T, int64_t>)
+            result.append(g_value_get_int64(item));
+        else if constexpr(std::is_same_v<T, unsigned>)
+            result.append(g_value_get_uint(item));
+        else if constexpr(std::is_same_v<T, uint64_t>)
+            result.append(g_value_get_uint64(item));
+        else if constexpr(std::is_same_v<T, double>) {
+            if (G_VALUE_TYPE(item) == GST_TYPE_FRACTION) {
+                double doubleValue;
+                gst_util_fraction_to_double(gst_value_get_fraction_numerator(item), gst_value_get_fraction_denominator(item), &doubleValue);
+                result.append(doubleValue);
+            } else
+                result.append(g_value_get_double(item));
+        } else if constexpr(std::is_same_v<T, const GstStructure*>)
+            result.append(gst_value_get_structure(item));
+    }
+    return result;
+}
+
+template Vector<int> gstStructureGetList(const GstStructure*, ASCIILiteral key);
+template Vector<int64_t> gstStructureGetList(const GstStructure*, ASCIILiteral key);
+template Vector<unsigned> gstStructureGetList(const GstStructure*, ASCIILiteral key);
+template Vector<uint64_t> gstStructureGetList(const GstStructure*, ASCIILiteral key);
+template Vector<double> gstStructureGetList(const GstStructure*, ASCIILiteral key);
+template Vector<const GstStructure*> gstStructureGetList(const GstStructure*, ASCIILiteral key);
+
 static RefPtr<JSON::Value> gstStructureToJSON(const GstStructure*);
 
 static std::optional<RefPtr<JSON::Value>> gstStructureValueToJSON(const GValue* value)

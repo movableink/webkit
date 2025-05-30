@@ -85,6 +85,14 @@ TEST_F(GStreamerTest, gstStructureGetters)
     ASSERT_TRUE(gst_structure_is_equal(structArray.at(0), s1.get()));
     ASSERT_TRUE(gst_structure_is_equal(structArray.at(1), s2.get()));
     ASSERT_EQ(structArray.size(), 2);
+
+    GUniquePtr<GstStructure> lists(gst_structure_new_from_string("bar, empty-list=(GstStructure) {}, struct-list=(GstStructure) {[s1, a=2], [s2, b=3]}"_s));
+    ASSERT_TRUE(gstStructureGetList<const GstStructure*>(lists.get(), "empty-list"_s).isEmpty());
+
+    Vector<const GstStructure*> structList(gstStructureGetList<const GstStructure*>(lists.get(), "struct-list"_s));
+    ASSERT_TRUE(gst_structure_is_equal(structList.at(0), s1.get()));
+    ASSERT_TRUE(gst_structure_is_equal(structList.at(1), s2.get()));
+    ASSERT_EQ(structList.size(), 2);
 }
 
 TEST_F(GStreamerTest, gstStructureJSONSerializing)

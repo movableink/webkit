@@ -211,25 +211,15 @@ RTCRtpSendParameters toRTCRtpSendParameters(const GstStructure* rtcParameters)
     if (auto transactionId = gstStructureGetString(rtcParameters, "transaction-id"_s))
         parameters.transactionId = makeString(transactionId);
 
-    if (auto encodings = gst_structure_get_value(rtcParameters, "encodings")) {
-        unsigned size = gst_value_list_get_size(encodings);
-        parameters.encodings.reserveInitialCapacity(size);
-        for (unsigned i = 0; i < size; i++) {
-            const auto value = gst_value_list_get_value(encodings, i);
-            RELEASE_ASSERT(GST_VALUE_HOLDS_STRUCTURE(value));
-            parameters.encodings.append(toRTCEncodingParameters(gst_value_get_structure(value)));
-        }
-    }
+    auto encodings = gstStructureGetList<const GstStructure*>(rtcParameters, "encodings"_s);
+    parameters.encodings.reserveInitialCapacity(encodings.size());
+    for (const auto& encoding : encodings)
+        parameters.encodings.append(toRTCEncodingParameters(encoding));
 
-    if (auto codecs = gst_structure_get_value(rtcParameters, "codecs")) {
-        unsigned size = gst_value_list_get_size(codecs);
-        parameters.codecs.reserveInitialCapacity(size);
-        for (unsigned i = 0; i < size; i++) {
-            const auto value = gst_value_list_get_value(codecs, i);
-            RELEASE_ASSERT(GST_VALUE_HOLDS_STRUCTURE(value));
-            parameters.codecs.append(toRTCCodecParameters(gst_value_get_structure(value)));
-        }
-    }
+    auto codecs = gstStructureGetList<const GstStructure*>(rtcParameters, "codecs"_s);
+    parameters.codecs.reserveInitialCapacity(codecs.size());
+    for (const auto& codec : codecs)
+        parameters.codecs.append(toRTCCodecParameters(codec));
 
     // FIXME: The rtcp parameters should not be hardcoded.
     parameters.rtcp.cname = "unused"_s;

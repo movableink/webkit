@@ -27,6 +27,7 @@
 
 #include "DisplayCaptureManager.h"
 #include "GStreamerCaptureDeviceManager.h"
+#include "GStreamerCommon.h"
 #include "PipeWireCaptureDevice.h"
 #include "PipeWireCaptureDeviceManager.h"
 #include <wtf/text/MakeString.h>
@@ -321,18 +322,8 @@ void GStreamerVideoCaptureSource::generatePresets()
             gst_util_fraction_to_double(framerateNumerator, framerateDenominator, &framerate);
             frameRates.append({ framerate, framerate});
         } else {
-            const GValue* frameRateValues(gst_structure_get_value(str, "framerate"));
-            unsigned frameRatesLength = static_cast<unsigned>(gst_value_list_get_size(frameRateValues));
-
-            for (unsigned j = 0; j < frameRatesLength; j++) {
-                const GValue* val = gst_value_list_get_value(frameRateValues, j);
-
-                ASSERT(val && G_VALUE_TYPE(val) == GST_TYPE_FRACTION);
-                gst_util_fraction_to_double(gst_value_get_fraction_numerator(val),
-                    gst_value_get_fraction_denominator(val), &framerate);
-
-                frameRates.append({ framerate, framerate});
-            }
+            for (const auto& framerate : gstStructureGetList<double>(str, "framerate"_s))
+                frameRates.append({ framerate, framerate });
         }
 
         presets.append(VideoPreset { { size, WTFMove(frameRates) } });
