@@ -862,6 +862,9 @@ RenderBundleEncoder::FinalizeRenderCommand RenderBundleEncoder::drawIndirect(Buf
 
 id<MTLIndirectCommandBuffer> RenderBundleEncoder::makeICB(uint64_t commandCount)
 {
+    if (!m_icbDescriptor.commandTypes)
+        return nil;
+
     Ref device = m_device;
     commandCount = std::clamp(commandCount, 1ull, maxCommandCount);
     id<MTLIndirectCommandBuffer> icb = [device->device() newIndirectCommandBufferWithDescriptor:m_icbDescriptor maxCommandCount:commandCount options:0];
