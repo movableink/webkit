@@ -31,6 +31,7 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "CommonAtomStrings.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
@@ -643,6 +644,11 @@ Ref<MediaStreamTrack> MediaStreamTrack::create(ScriptExecutionContext& context, 
     }
 
     return track;
+}
+
+ScriptExecutionContext* MediaStreamTrack::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
 }
 
 #if !RELEASE_LOG_DISABLED

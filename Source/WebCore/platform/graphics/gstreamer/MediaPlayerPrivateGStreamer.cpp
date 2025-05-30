@@ -2595,6 +2595,8 @@ void MediaPlayerPrivateGStreamer::configureUriDecodebin2(GstElement* element)
             return skipAutoPlug;
         return tryAutoPlug;
     }), nullptr);
+#else
+    UNUSED_PARAM(element);
 #endif
 }
 

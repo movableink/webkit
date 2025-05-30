@@ -492,7 +492,7 @@ public:
 #else
             m_parentWindow = gtk_window_new(GTK_WINDOW_TOPLEVEL);
             gtk_container_add(GTK_CONTAINER(m_parentWindow), GTK_WIDGET(newWebView.get()));
-            gtk_widget_show(GTK_WIDGET(newWebView));
+            gtk_widget_show(GTK_WIDGET(newWebView.get()));
 #endif
             gtk_window_set_default_size(GTK_WINDOW(m_parentWindow), m_defaultGeometryNewWindows.width, m_defaultGeometryNewWindows.height);
             gtk_widget_show(m_parentWindow);

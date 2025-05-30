@@ -189,9 +189,9 @@ void PageClientImpl::setCursor(const WebCore::Cursor& cursor)
 #else
     GdkWindow* window = gtk_widget_get_window(m_viewWidget);
     GdkCursor* currentCursor = gdk_window_get_cursor(window);
-    GdkCursor* newCursor = cursor.platformCursor().get();
-    if (currentCursor != newCursor)
-        gdk_window_set_cursor(window, newCursor);
+    GRefPtr<GdkCursor> newCursor = cursor.platformCursor();
+    if (currentCursor != newCursor.get())
+        gdk_window_set_cursor(window, newCursor.get());
 #endif
 }
 

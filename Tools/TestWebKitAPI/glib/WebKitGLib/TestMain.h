@@ -220,6 +220,7 @@ public:
             g_value_set_object(value, G_OBJECT(m_webContext.get()));
         }
 
+#if ENABLE(2022_GLIB_API)
         if (setNetworkSession && !hasRelatedView) {
             g_ptr_array_add(propertyNames, g_strdup("network-session"));
             g_array_set_size(propertyValues, propertyNames->len);
@@ -227,6 +228,7 @@ public:
             g_value_init(value, G_TYPE_OBJECT);
             g_value_set_object(value, G_OBJECT(m_networkSession.get()));
         }
+#endif
 
 #if PLATFORM(WPE)
 #if ENABLE(WPE_PLATFORM)
