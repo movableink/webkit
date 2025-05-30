@@ -363,8 +363,8 @@ public:
     }
 
     int32_t size() const { return m_stringPointers.size(); }
-    const UChar* const* stringPointers() const { return m_stringPointers.data(); }
-    const int32_t* stringLengths() const { return m_stringLengths.data(); }
+    const UChar* const* stringPointers() const { return m_stringPointers.span().data(); }
+    const int32_t* stringLengths() const { return m_stringLengths.span().data(); }
 
 private:
     Vector<String, 4> m_strings;

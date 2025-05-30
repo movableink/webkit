@@ -1876,7 +1876,7 @@ bool operator==(const Vector<T, inlineCapacityA, OverflowHandlerA, minCapacityA,
     if (a.size() != b.size())
         return false;
 
-    return VectorTypeOperations<T>::compare(a.data(), b.data(), a.size());
+    return VectorTypeOperations<T>::compare(a.span().data(), b.span().data(), a.size());
 }
 
 #if ENABLE(SECURITY_ASSERTIONS)

@@ -113,7 +113,7 @@ auto StreamingParser::parseModuleHeader(Vector<uint8_t>&& data) -> State
     ASSERT(data.size() == moduleHeaderSize);
     dataLogLnIf(WasmStreamingParserInternal::verbose, "header validation");
     WASM_PARSER_FAIL_IF(data[0] != '\0' || data[1] != 'a' || data[2] != 's' || data[3] != 'm', "module doesn't start with '\\0asm'"_s);
-    uint32_t versionNumber = WTF::unalignedLoad<uint32_t>(data.data() + 4);
+    uint32_t versionNumber = WTF::unalignedLoad<uint32_t>(data.span().data() + 4);
     WASM_PARSER_FAIL_IF(versionNumber != expectedVersionNumber, "unexpected version number "_s, versionNumber, " expected "_s, expectedVersionNumber);
     return State::SectionID;
 }
@@ -122,7 +122,7 @@ auto StreamingParser::parseSectionID(Vector<uint8_t>&& data) -> State
 {
     ASSERT(data.size() == sectionIDSize);
     size_t offset = 0;
-    auto result = parseUInt7(data.data(), offset, data.size());
+    auto result = parseUInt7(data.span().data(), offset, data.size());
     WASM_PARSER_FAIL_IF(!result, "can't get section byte"_s);
 
     Section section = Section::Custom;

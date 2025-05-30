@@ -890,7 +890,7 @@ template<typename Adaptor> inline auto JSGenericTypedArrayView<Adaptor>::sort() 
         if (!forShared.tryGrow(length)) [[unlikely]]
             return SortResult::OutOfMemory;
         WTF::copyElements(forShared.mutableSpan(), spanConstCast<const typename Adaptor::Type>(originalSpan.first(length)));
-        array = forShared.data();
+        array = forShared.mutableSpan().data();
     }
 
     switch (Adaptor::typeValue) {

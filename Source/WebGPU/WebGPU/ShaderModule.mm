@@ -763,7 +763,7 @@ void ShaderModule::getCompilationInfo(CompletionHandler<void(WGPUCompilationInfo
         WGPUCompilationInfo compilationInfo {
             nullptr,
             static_cast<uint32_t>(compilationMessageData.compilationMessages.size()),
-            compilationMessageData.compilationMessages.data(),
+            compilationMessageData.compilationMessages.span().data(),
         };
         callback(WGPUCompilationInfoRequestStatus_Success, compilationInfo);
     }, [&](const WGSL::FailedCheck& failedCheck) {
@@ -773,7 +773,7 @@ void ShaderModule::getCompilationInfo(CompletionHandler<void(WGPUCompilationInfo
         WGPUCompilationInfo compilationInfo {
             nullptr,
             static_cast<uint32_t>(compilationMessageData.compilationMessages.size()),
-            compilationMessageData.compilationMessages.data(),
+            compilationMessageData.compilationMessages.span().data(),
         };
         callback(WGPUCompilationInfoRequestStatus_Error, compilationInfo);
     }, [&](std::monostate) {

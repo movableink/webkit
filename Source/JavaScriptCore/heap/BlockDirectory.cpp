@@ -85,7 +85,7 @@ void BlockDirectory::updatePercentageOfPagedOutPages(SimpleStats& stats)
         auto markedBlockSizeInBytes = handle->backingStorageSize();
         RELEASE_ASSERT(markedBlockSizeInBytes / pageSize <= numberOfPagesInMarkedBlock);
         // We could cache this in bulk (e.g. 25 MB chunks) but we haven't seen any data that it actually matters.
-        auto result = mincore(pageStart, markedBlockSizeInBytes, pagedBits.data());
+        auto result = mincore(pageStart, markedBlockSizeInBytes, pagedBits.mutableSpan().data());
         RELEASE_ASSERT(!result);
         constexpr unsigned pageIsResidentAndNotCompressed = 1;
         for (unsigned i = 0; i < numberOfPagesInMarkedBlock; ++i)

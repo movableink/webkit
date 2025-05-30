@@ -1799,7 +1799,7 @@ void testInterpreter()
     if (shouldBeVerbose(proc))
         dataLog("code = ", listDump(code), "\n");
 
-    CHECK(!invoke<intptr_t>(*interpreter, data.data(), code.data(), &stream));
+    CHECK(!invoke<intptr_t>(*interpreter, data.span().data(), code.span().data(), &stream));
 
     CHECK_EQ(stream.size(), 100u);
     for (unsigned i = 0; i < 100; ++i)

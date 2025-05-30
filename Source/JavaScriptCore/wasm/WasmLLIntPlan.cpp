@@ -184,7 +184,7 @@ void LLIntPlan::didCompleteCompilation()
 
     unsigned functionCount = m_wasmInternalFunctions.size();
     if (!m_callees && functionCount) {
-        m_callees = m_calleesVector.data();
+        m_callees = m_calleesVector.span().data();
         if (!m_moduleInformation->clobberingTailCalls().isEmpty())
             computeTransitiveTailCalls();
     }

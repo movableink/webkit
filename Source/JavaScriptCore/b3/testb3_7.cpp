@@ -1274,7 +1274,7 @@ void testWasmAddress()
 
 
     auto code = compileProc(proc);
-    invoke<void>(*code, loopCount, numToStore, values.data());
+    invoke<void>(*code, loopCount, numToStore, values.span().data());
     for (unsigned value : values)
         CHECK_EQ(numToStore, value);
 }
@@ -1303,7 +1303,7 @@ void testWasmAddressWithOffset()
     root->appendNewControlValue(proc, Return, Origin());
 
     auto code = compileProc(proc);
-    invoke<void>(*code, 1, numToStore, values.data());
+    invoke<void>(*code, 1, numToStore, values.span().data());
     CHECK_EQ(20U, values[0]);
     CHECK_EQ(21U, values[1]);
     CHECK_EQ(42U, values[2]);

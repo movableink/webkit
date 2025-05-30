@@ -930,7 +930,7 @@ String userVisibleURL(const CString& url)
     }
     
     // Check string to see if it can be converted to display using UTF-8  
-    String result = String::fromUTF8(after.data());
+    String result = String::fromUTF8(after.span().data());
     if (!result) {
         // Could not convert to UTF-8.
         // Convert characters greater than 0x7f to escape sequences.
@@ -953,7 +953,7 @@ String userVisibleURL(const CString& url)
         }
         after[afterIndex] = '\0';
         // Note: after.data() points to a null-terminated, pure ASCII string.
-        result = String::fromUTF8(after.data());
+        result = String::fromUTF8(after.span().data());
         ASSERT(!!result);
     }
 

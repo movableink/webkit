@@ -314,12 +314,12 @@ Vector<char, 32> localeIDBufferForLanguageTagWithNullTerminator(const CString& t
     UErrorCode status = U_ZERO_ERROR;
     Vector<char, 32> buffer(32);
     int32_t parsedLength;
-    auto bufferLength = uloc_forLanguageTag(tag.data(), buffer.data(), buffer.size(), &parsedLength, &status);
+    auto bufferLength = uloc_forLanguageTag(tag.data(), buffer.mutableSpan().data(), buffer.size(), &parsedLength, &status);
     if (needsToGrowToProduceCString(status)) {
         // Before ICU 64, there's a chance uloc_forLanguageTag will "buffer overflow" while requesting a *smaller* size.
         buffer.resize(bufferLength + 1);
         status = U_ZERO_ERROR;
-        uloc_forLanguageTag(tag.data(), buffer.data(), bufferLength + 1, &parsedLength, &status);
+        uloc_forLanguageTag(tag.data(), buffer.mutableSpan().data(), bufferLength + 1, &parsedLength, &status);
     }
     if (U_FAILURE(status) || parsedLength != static_cast<int32_t>(tag.length()))
         return { };
@@ -723,12 +723,12 @@ String canonicalizeUnicodeLocaleID(const CString& tag)
     auto buffer = localeIDBufferForLanguageTagWithNullTerminator(tag);
     if (buffer.isEmpty())
         return String();
-    auto canonicalized = canonicalizeLocaleIDWithoutNullTerminator(buffer.data());
+    auto canonicalized = canonicalizeLocaleIDWithoutNullTerminator(buffer.span().data());
     if (!canonicalized)
         return String();
     canonicalized->append('\0');
     ASSERT(canonicalized->contains('\0'));
-    return languageTagForLocaleID(canonicalized->data());
+    return languageTagForLocaleID(canonicalized->span().data());
 }
 
 Vector<String> canonicalizeLocaleList(JSGlobalObject* globalObject, JSValue locales)

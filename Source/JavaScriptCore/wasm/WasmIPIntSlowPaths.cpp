@@ -610,7 +610,7 @@ WASM_IPINT_EXTERN_CPP_DECL(struct_new, Wasm::TypeIndex typeIndex, IPIntStackEntr
     for (unsigned i = 0; i < structTypeDefinition.fieldCount(); ++i)
         arguments[i] = sp[i].i64;
 
-    EncodedJSValue result = Wasm::structNew(instance, typeIndex, false, arguments.data());
+    EncodedJSValue result = Wasm::structNew(instance, typeIndex, false, arguments.mutableSpan().data());
     if (JSValue::decode(result).isNull())
         IPINT_THROW(Wasm::ExceptionType::BadStructNew);
     IPINT_RETURN(result);
@@ -699,7 +699,7 @@ WASM_IPINT_EXTERN_CPP_DECL(array_new_fixed, Wasm::TypeIndex type, uint32_t size,
     for (unsigned i = 0; i < size; ++i)
         arguments[i] = sp[i].i64;
 
-    JSValue result = Wasm::arrayNewFixed(instance, type, size, arguments.data());
+    JSValue result = Wasm::arrayNewFixed(instance, type, size, arguments.mutableSpan().data());
     if (result.isNull()) [[unlikely]]
         IPINT_THROW(Wasm::ExceptionType::BadArrayNew);
 

@@ -66,14 +66,14 @@ Vector<uint8_t, URLBytesVectorInlineCapacity> bytesAsVector(CFURLRef url)
         return { };
 
     Vector<uint8_t, URLBytesVectorInlineCapacity> result(URLBytesVectorInlineCapacity);
-    auto bytesLength = CFURLGetBytes(url, result.data(), URLBytesVectorInlineCapacity);
+    auto bytesLength = CFURLGetBytes(url, result.mutableSpan().data(), URLBytesVectorInlineCapacity);
     if (bytesLength != -1)
         result.shrink(bytesLength);
     else {
         bytesLength = CFURLGetBytes(url, nullptr, 0);
         RELEASE_ASSERT(bytesLength != -1);
         result.grow(bytesLength);
-        CFURLGetBytes(url, result.data(), bytesLength);
+        CFURLGetBytes(url, result.mutableSpan().data(), bytesLength);
     }
 
     // This may look like it copies the bytes in the vector, but due to the return value optimization it does not.

@@ -58,7 +58,7 @@ ALWAYS_INLINE MatchResult RegExpGlobalData::performMatch(JSGlobalObject* owner, 
     RETURN_IF_EXCEPTION(scope, MatchResult::failed());
 
     if (ovector)
-        *ovector = m_ovector.data();
+        *ovector = m_ovector.mutableSpan().data();
 
     if (position == -1)
         return MatchResult::failed();

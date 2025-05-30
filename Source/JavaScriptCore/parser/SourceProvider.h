@@ -184,7 +184,7 @@ public:
 
     const uint8_t* data() final
     {
-        return m_data.data();
+        return m_data.span().data();
     }
 
     size_t size() const final

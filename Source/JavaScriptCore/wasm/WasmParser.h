@@ -189,7 +189,8 @@ ALWAYS_INLINE bool ParserBase::consumeUTF8String(Name& result, size_t stringLeng
         return false;
 
     result.grow(stringLength);
-    memcpy(result.data(), string.data(), stringLength);
+    // FIXME: Adopt memcpySpan().
+    memcpy(result.mutableSpan().data(), string.data(), stringLength);
     m_offset += stringLength;
     return true;
 }

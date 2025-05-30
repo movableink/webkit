@@ -337,7 +337,7 @@ ALWAYS_INLINE bool objectAssignFast(JSGlobalObject* globalObject, JSFinalObject*
 
     // Actually, assigning with empty object (option for example) is common. (`Object.assign(defaultOptions, passedOptions)` where `passedOptions` is empty object.)
     if (properties.size())
-        target->putOwnDataPropertyBatching(vm, properties.data(), values.data(), properties.size());
+        target->putOwnDataPropertyBatching(vm, properties.mutableSpan().data(), values.data(), properties.size());
 
     return true;
 }

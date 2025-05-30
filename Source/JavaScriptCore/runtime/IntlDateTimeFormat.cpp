@@ -884,7 +884,7 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
             HourCycle extractedHourCycle = hourCycleFromPattern(patternBuffer);
             if (extractedHourCycle != HourCycle::None && isHour12(extractedHourCycle) != specifiedHour12) {
                 Vector<UChar, 32> skeleton;
-                auto status = callBufferProducingFunction(udatpg_getSkeleton, nullptr, patternBuffer.data(), patternBuffer.size(), skeleton);
+                auto status = callBufferProducingFunction(udatpg_getSkeleton, nullptr, patternBuffer.span().data(), patternBuffer.size(), skeleton);
                 if (U_FAILURE(status)) {
                     throwTypeError(globalObject, scope, "failed to initialize DateTimeFormat"_s);
                     return;
@@ -1419,7 +1419,7 @@ UDateIntervalFormat* IntlDateTimeFormat::createDateIntervalFormatIfNecessary(JSG
 
     Vector<UChar, 32> skeleton;
     {
-        auto status = callBufferProducingFunction(udatpg_getSkeleton, nullptr, pattern.data(), pattern.size(), skeleton);
+        auto status = callBufferProducingFunction(udatpg_getSkeleton, nullptr, pattern.span().data(), pattern.size(), skeleton);
         if (U_FAILURE(status)) {
             throwTypeError(globalObject, scope, "failed to initialize DateIntervalFormat"_s);
             return nullptr;
@@ -1438,7 +1438,7 @@ UDateIntervalFormat* IntlDateTimeFormat::createDateIntervalFormatIfNecessary(JSG
 
     UErrorCode status = U_ZERO_ERROR;
     StringView timeZoneView(m_timeZoneForICU);
-    m_dateIntervalFormat = std::unique_ptr<UDateIntervalFormat, UDateIntervalFormatDeleter>(udtitvfmt_open(dataLocaleWithExtensions.data(), skeleton.data(), skeleton.size(), timeZoneView.upconvertedCharacters(), timeZoneView.length(), &status));
+    m_dateIntervalFormat = std::unique_ptr<UDateIntervalFormat, UDateIntervalFormatDeleter>(udtitvfmt_open(dataLocaleWithExtensions.data(), skeleton.span().data(), skeleton.size(), timeZoneView.upconvertedCharacters(), timeZoneView.length(), &status));
     if (U_FAILURE(status)) {
         throwTypeError(globalObject, scope, "failed to initialize DateIntervalFormat"_s);
         return nullptr;

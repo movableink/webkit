@@ -497,7 +497,7 @@ static std::tuple<String, Vector<UChar, 32>> retrieveTimeZoneInformation()
         }
         if (U_SUCCESS(status)) {
             Vector<UChar, 32> canonicalBuffer;
-            auto status = callBufferProducingFunction(ucal_getCanonicalTimeZoneID, timeZoneID.data(), timeZoneID.size(), canonicalBuffer, nullptr);
+            auto status = callBufferProducingFunction(ucal_getCanonicalTimeZoneID, timeZoneID.mutableSpan().data(), timeZoneID.size(), canonicalBuffer, nullptr);
             if (U_SUCCESS(status))
                 canonical = String(canonicalBuffer);
         }
@@ -523,7 +523,7 @@ void DateCache::timeZoneCacheSlow()
     auto* cache = new OpaqueICUTimeZone;
     cache->m_canonicalTimeZoneID = WTFMove(canonical);
     UErrorCode status = U_ZERO_ERROR;
-    cache->m_calendar = std::unique_ptr<UCalendar, ICUDeleter<ucal_close>>(ucal_open(timeZoneID.data(), timeZoneID.size(), "", UCAL_DEFAULT, &status));
+    cache->m_calendar = std::unique_ptr<UCalendar, ICUDeleter<ucal_close>>(ucal_open(timeZoneID.span().data(), timeZoneID.size(), "", UCAL_DEFAULT, &status));
     ASSERT_UNUSED(status, U_SUCCESS(status));
     ucal_setGregorianChange(cache->m_calendar.get(), minECMAScriptTime, &status); // Ignore "unsupported" error.
     m_timeZoneCache = std::unique_ptr<OpaqueICUTimeZone, OpaqueICUTimeZoneDeleter>(cache);

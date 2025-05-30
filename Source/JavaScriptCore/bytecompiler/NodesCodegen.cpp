@@ -5092,7 +5092,7 @@ void CaseBlockNode::emitBytecodeForBlock(BytecodeGenerator& generator, RegisterI
     ASSERT(i == labelVector.size());
     if (switchType != SwitchInfo::SwitchNone) {
         ASSERT(labelVector.size() == literalVector.size());
-        generator.endSwitch(labelVector.size(), labelVector, literalVector.data(), defaultLabel.get(), min_num, max_num);
+        generator.endSwitch(labelVector.size(), labelVector, literalVector.mutableSpan().data(), defaultLabel.get(), min_num, max_num);
     }
 }
 

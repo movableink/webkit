@@ -882,7 +882,7 @@ inline void Lexer<T>::append8(std::span<const T> span)
 {
     size_t currentSize = m_buffer8.size();
     m_buffer8.grow(currentSize + span.size());
-    LChar* rawBuffer = m_buffer8.data() + currentSize;
+    LChar* rawBuffer = m_buffer8.mutableSpan().data() + currentSize;
 
     for (size_t i = 0; i < span.size(); i++) {
         T c = span[i];
@@ -896,7 +896,7 @@ inline void Lexer<T>::append16(std::span<const LChar> span)
 {
     size_t currentSize = m_buffer16.size();
     m_buffer16.grow(currentSize + span.size());
-    UChar* rawBuffer = m_buffer16.data() + currentSize;
+    UChar* rawBuffer = m_buffer16.mutableSpan().data() + currentSize;
 
     for (size_t i = 0; i < span.size(); i++)
         rawBuffer[i] = span[i];

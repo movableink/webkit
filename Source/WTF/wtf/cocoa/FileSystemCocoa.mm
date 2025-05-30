@@ -136,7 +136,7 @@ String extractTemporaryZipArchive(const String& path)
 std::pair<String, FileHandle> openTemporaryFile(StringView prefix, StringView suffix)
 {
     Vector<char> temporaryFilePath(PATH_MAX);
-    if (!confstr(_CS_DARWIN_USER_TEMP_DIR, temporaryFilePath.data(), temporaryFilePath.size()))
+    if (!confstr(_CS_DARWIN_USER_TEMP_DIR, temporaryFilePath.mutableSpan().data(), temporaryFilePath.size()))
         return { String(), FileHandle() };
 
     // Shrink the vector.
@@ -152,11 +152,11 @@ std::pair<String, FileHandle> openTemporaryFile(StringView prefix, StringView su
     CString suffixUTF8 = suffix.utf8();
     temporaryFilePath.append(suffixUTF8.spanIncludingNullTerminator());
 
-    auto fileHandle = FileHandle::adopt(mkostemps(temporaryFilePath.data(), suffixUTF8.length(), O_CLOEXEC));
+    auto fileHandle = FileHandle::adopt(mkostemps(temporaryFilePath.mutableSpan().data(), suffixUTF8.length(), O_CLOEXEC));
     if (!fileHandle)
         return { nullString(), FileHandle() };
 
-    return { String::fromUTF8(temporaryFilePath.data()), WTFMove(fileHandle) };
+    return { String::fromUTF8(temporaryFilePath.span().data()), WTFMove(fileHandle) };
 }
 
 NSString *createTemporaryDirectory(NSString *directoryPrefix)
@@ -181,10 +181,10 @@ NSString *createTemporaryDirectory(NSString *directoryPrefix)
     Vector<char, MAXPATHLEN + 1> path(tempDirectorySpanIncludingNullTerminator.size());
     memcpySpan(path.mutableSpan(), tempDirectorySpanIncludingNullTerminator);
 
-    if (!mkdtemp(path.data()))
+    if (!mkdtemp(path.mutableSpan().data()))
         return nil;
 
-    return [[NSFileManager defaultManager] stringWithFileSystemRepresentation:path.data() length:length];
+    return [[NSFileManager defaultManager] stringWithFileSystemRepresentation:path.span().data() length:length];
 }
 
 std::pair<FileHandle, CString> createTemporaryFileInDirectory(const String& directory, const String& suffix)

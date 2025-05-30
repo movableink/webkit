@@ -466,7 +466,7 @@ inline JSString* replaceUsingStringSearch(VM& vm, JSGlobalObject* globalObject, 
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
-    RELEASE_AND_RETURN(scope, jsSpliceSubstringsWithSeparators(globalObject, jsString, string, sourceRanges.data(), sourceRanges.size(), replacements.data(), replacements.size()));
+    RELEASE_AND_RETURN(scope, jsSpliceSubstringsWithSeparators(globalObject, jsString, string, sourceRanges.span().data(), sourceRanges.size(), replacements.span().data(), replacements.size()));
 }
 
 enum class DollarCheck : uint8_t { Yes, No };
@@ -1070,7 +1070,7 @@ static ALWAYS_INLINE JSString* replaceAllWithCacheUsingRegExpSearch(VM& vm, JSGl
 
     if (static_cast<unsigned>(lastIndex) < sourceLen)
         sourceRanges.constructAndAppend(lastIndex, sourceLen);
-    RELEASE_AND_RETURN(scope, jsSpliceSubstringsWithSeparators(globalObject, string, source, sourceRanges.data(), sourceRanges.size(), replacements.data(), replacements.size()));
+    RELEASE_AND_RETURN(scope, jsSpliceSubstringsWithSeparators(globalObject, string, source, sourceRanges.span().data(), sourceRanges.size(), replacements.span().data(), replacements.size()));
 }
 
 static ALWAYS_INLINE JSString* tryTrimSpaces(VM& vm, JSGlobalObject* globalObject, const String& source, JSString* string, RegExp* regExp)
@@ -1168,7 +1168,7 @@ ALWAYS_INLINE JSString* replaceAllWithStringUsingRegExpSearchNoBackreferences(VM
         if (!sourceRanges.tryConstructAndAppend(lastIndex, sourceLen)) [[unlikely]]
             OUT_OF_MEMORY(globalObject, scope);
     }
-    RELEASE_AND_RETURN(scope, jsSpliceSubstringsWithSeparator(globalObject, string, source, sourceRanges.data(), sourceRanges.size(), replacementString, replacementCount));
+    RELEASE_AND_RETURN(scope, jsSpliceSubstringsWithSeparator(globalObject, string, source, sourceRanges.span().data(), sourceRanges.size(), replacementString, replacementCount));
 }
 
 ALWAYS_INLINE JSString* replaceAllWithStringUsingRegExpSearch(VM& vm, JSGlobalObject* globalObject, JSString* string, const String& source, RegExp* regExp, const String& replacementString)
@@ -1225,7 +1225,7 @@ ALWAYS_INLINE JSString* replaceAllWithStringUsingRegExpSearch(VM& vm, JSGlobalOb
         if (!sourceRanges.tryConstructAndAppend(lastIndex, sourceLen)) [[unlikely]]
             OUT_OF_MEMORY(globalObject, scope);
     }
-    RELEASE_AND_RETURN(scope, jsSpliceSubstringsWithSeparators(globalObject, string, source, sourceRanges.data(), sourceRanges.size(), replacements.data(), replacements.size()));
+    RELEASE_AND_RETURN(scope, jsSpliceSubstringsWithSeparators(globalObject, string, source, sourceRanges.span().data(), sourceRanges.size(), replacements.span().data(), replacements.size()));
 }
 
 ALWAYS_INLINE JSString* replaceOneWithStringUsingRegExpSearch(VM& vm, JSGlobalObject* globalObject, JSString* string, const String& source, RegExp* regExp, const String& replacementString)
@@ -1493,7 +1493,7 @@ ALWAYS_INLINE JSString* replaceUsingRegExpSearch(VM& vm, JSGlobalObject* globalO
         if (!sourceRanges.tryConstructAndAppend(lastIndex, sourceLen)) [[unlikely]]
             OUT_OF_MEMORY(globalObject, scope);
     }
-    RELEASE_AND_RETURN(scope, jsSpliceSubstringsWithSeparators(globalObject, string, source, sourceRanges.data(), sourceRanges.size(), replacements.data(), replacements.size()));
+    RELEASE_AND_RETURN(scope, jsSpliceSubstringsWithSeparators(globalObject, string, source, sourceRanges.span().data(), sourceRanges.size(), replacements.span().data(), replacements.size()));
 }
 
 ALWAYS_INLINE JSString* replaceUsingRegExpSearch(VM& vm, JSGlobalObject* globalObject, JSString* string, JSValue searchValue, JSValue replaceValue)

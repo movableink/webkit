@@ -800,7 +800,7 @@ ALWAYS_INLINE CharType* FastStringifier<CharType, bufferMode>::buffer()
     if constexpr (bufferMode == BufferMode::StaticBuffer)
         return m_buffer;
     else
-        return m_dynamicBuffer.data();
+        return m_dynamicBuffer.mutableSpan().data();
 }
 
 template<typename CharType, BufferMode bufferMode>
@@ -809,7 +809,7 @@ ALWAYS_INLINE const CharType* FastStringifier<CharType, bufferMode>::buffer() co
     if constexpr (bufferMode == BufferMode::StaticBuffer)
         return m_buffer;
     else
-        return m_dynamicBuffer.data();
+        return m_dynamicBuffer.span().data();
 }
 
 template<typename CharType, BufferMode bufferMode>

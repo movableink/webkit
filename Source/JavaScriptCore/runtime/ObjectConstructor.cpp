@@ -370,7 +370,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorAssign, (JSGlobalObject* globalObject,
 
             // Actually, assigning with empty object (option for example) is common. (`Object.assign(defaultOptions, passedOptions)` where `passedOptions` is empty object.)
             if (!properties.isEmpty())
-                target->putOwnDataPropertyBatching(vm, properties.data(), values.data(), properties.size());
+                target->putOwnDataPropertyBatching(vm, properties.mutableSpan().data(), values.data(), properties.size());
 
             return JSValue::encode(target);
         }

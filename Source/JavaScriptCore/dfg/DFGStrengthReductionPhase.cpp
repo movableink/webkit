@@ -1142,7 +1142,7 @@ private:
                     builder.appendSubstring(string, lastIndex, result.start - lastIndex);
                     if (replLen) {
                         StringBuilder replacement;
-                        substituteBackreferences(replacement, replace, string, ovector.data(), regExp);
+                        substituteBackreferences(replacement, replace, string, ovector.span().data(), regExp);
                         builder.append(replacement);
                     }
                 }

@@ -969,7 +969,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
         ensureStillAliveHere(unlinkedCodeBlock);
 
         if (target->inherits<JSFinalObject>() && target->canPerformFastPutInlineExcludingProto() && target->isStructureExtensible()) [[likely]]
-            target->putOwnDataPropertyBatching(vm, properties.data(), values.data(), properties.size());
+            target->putOwnDataPropertyBatching(vm, properties.mutableSpan().data(), values.data(), properties.size());
         else {
             for (size_t i = 0; i < properties.size(); ++i)
                 target->putDirect(vm, properties[i], values.at(i));
@@ -1060,7 +1060,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCloneObject, (JSGlobalObject* globalObject, C
         });
         RETURN_IF_EXCEPTION(scope, { });
 
-        target->putOwnDataPropertyBatching(vm, properties.data(), values.data(), properties.size());
+        target->putOwnDataPropertyBatching(vm, properties.mutableSpan().data(), values.data(), properties.size());
 
         return JSValue::encode(target);
     }

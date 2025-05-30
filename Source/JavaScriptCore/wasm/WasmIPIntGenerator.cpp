@@ -1998,7 +1998,7 @@ void IPIntGenerator::coalesceControlFlow(bool force)
 
     for (auto& src : m_exitHandlersAwaitingCoalescing) {
         IPInt::BlockMetadata md = { here.pc - src.pc, here.mc - src.mc };
-        WRITE_TO_METADATA(m_metadata->m_metadata.data() + src.mc, md, IPInt::BlockMetadata);
+        WRITE_TO_METADATA(m_metadata->m_metadata.mutableSpan().data() + src.mc, md, IPInt::BlockMetadata);
     }
     m_exitHandlersAwaitingCoalescing.shrink(0);
 }
@@ -2010,12 +2010,12 @@ void IPIntGenerator::resolveEntryTarget(unsigned index, IPIntLocation loc)
     for (auto& src : control.m_awaitingEntryTarget) {
         // write delta PC and delta MC
         IPInt::BlockMetadata md = { loc.pc - src.pc, loc.mc - src.mc };
-        WRITE_TO_METADATA(m_metadata->m_metadata.data() + src.mc, md, IPInt::BlockMetadata);
+        WRITE_TO_METADATA(m_metadata->m_metadata.mutableSpan().data() + src.mc, md, IPInt::BlockMetadata);
     }
     if (control.isLoop) {
         for (auto& src : control.m_awaitingBranchTarget) {
             IPInt::BlockMetadata md = { loc.pc - src.pc, loc.mc - src.mc };
-            WRITE_TO_METADATA(m_metadata->m_metadata.data() + src.mc, md, IPInt::BlockMetadata);
+            WRITE_TO_METADATA(m_metadata->m_metadata.mutableSpan().data() + src.mc, md, IPInt::BlockMetadata);
         }
         control.m_awaitingBranchTarget.clear();
     }
@@ -2031,12 +2031,12 @@ void IPIntGenerator::resolveExitTarget(unsigned index, IPIntLocation loc)
     for (auto& src : control.m_awaitingExitTarget) {
         // write delta PC and delta MC
         IPInt::BlockMetadata md = { loc.pc - src.pc, loc.mc - src.mc };
-        WRITE_TO_METADATA(m_metadata->m_metadata.data() + src.mc, md, IPInt::BlockMetadata);
+        WRITE_TO_METADATA(m_metadata->m_metadata.mutableSpan().data() + src.mc, md, IPInt::BlockMetadata);
     }
     if (!control.isLoop) {
         for (auto& src : control.m_awaitingBranchTarget) {
             IPInt::BlockMetadata md = { loc.pc - src.pc, loc.mc - src.mc };
-            WRITE_TO_METADATA(m_metadata->m_metadata.data() + src.mc, md, IPInt::BlockMetadata);
+            WRITE_TO_METADATA(m_metadata->m_metadata.mutableSpan().data() + src.mc, md, IPInt::BlockMetadata);
         }
         control.m_awaitingBranchTarget.clear();
     }
@@ -2077,7 +2077,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addBlock(BlockSignature signatu
 
     IPIntLocation here = { curPC(), curMC() };
     m_metadata->addBlankSpace<IPInt::BlockMetadata>();
-    tryToResolveEntryTarget(block.m_index, here, m_metadata->m_metadata.data());
+    tryToResolveEntryTarget(block.m_index, here, m_metadata->m_metadata.mutableSpan().data());
 
     coalesceControlFlow();
 
@@ -2153,7 +2153,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addElseToUnreachable(ControlTyp
     changeStackSize(signature.argumentCount());
     auto ifIndex = block.m_index;
 
-    auto mdIf = reinterpret_cast<IPInt::IfMetadata*>(m_metadata->m_metadata.data() + block.m_pendingOffset);
+    auto mdIf = reinterpret_cast<IPInt::IfMetadata*>(m_metadata->m_metadata.mutableSpan().data() + block.m_pendingOffset);
 
     // delta PC
     mdIf->elseDeltaPC = nextPC() - block.m_pc;
@@ -2233,7 +2233,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addTryTable(BlockSignature sign
 
     IPIntLocation here = { curPC(), curMC() };
     m_metadata->addBlankSpace<IPInt::BlockMetadata>();
-    tryToResolveEntryTarget(result.m_index, here, m_metadata->m_metadata.data());
+    tryToResolveEntryTarget(result.m_index, here, m_metadata->m_metadata.mutableSpan().data());
 
     result.m_tryTableTargets.appendUsingFunctor(targets.size(),
         [&](unsigned i) -> ControlType::TryTableTarget {
@@ -2260,7 +2260,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addTryTable(BlockSignature sign
             .deltaPC = 0xbeef, .deltaMC = 0xbeef
         });
 
-        tryToResolveBranchTarget(entry, here, m_metadata->m_metadata.data());
+        tryToResolveBranchTarget(entry, here, m_metadata->m_metadata.mutableSpan().data());
     }
 
     coalesceControlFlow();
@@ -2413,7 +2413,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addRethrow(unsigned, ControlTyp
     };
     auto size = m_metadata->m_metadata.size();
     m_metadata->addBlankSpace(sizeof(mdRethrow));
-    WRITE_TO_METADATA(m_metadata->m_metadata.data() + size, mdRethrow, IPInt::RethrowMetadata);
+    WRITE_TO_METADATA(m_metadata->m_metadata.mutableSpan().data() + size, mdRethrow, IPInt::RethrowMetadata);
 
     return { };
 }
@@ -2448,7 +2448,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addBranch(ControlType& block, E
     };
     m_metadata->appendMetadata(branch);
 
-    tryToResolveBranchTarget(block, here, m_metadata->m_metadata.data());
+    tryToResolveBranchTarget(block, here, m_metadata->m_metadata.mutableSpan().data());
 
     return { };
 }
@@ -2474,7 +2474,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addBranchNull(ControlType& bloc
     };
     m_metadata->appendMetadata(branch);
 
-    tryToResolveBranchTarget(block, here, m_metadata->m_metadata.data());
+    tryToResolveBranchTarget(block, here, m_metadata->m_metadata.mutableSpan().data());
 
     return { };
 }
@@ -2497,7 +2497,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addBranchCast(ControlType& bloc
         .instructionLength = { .length = safeCast<uint8_t>(getCurrentInstructionLength()) }
     });
 
-    tryToResolveBranchTarget(block, here, m_metadata->m_metadata.data());
+    tryToResolveBranchTarget(block, here, m_metadata->m_metadata.mutableSpan().data());
     return { };
 }
 
@@ -2518,7 +2518,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addSwitch(ExpressionType, const
         };
         IPIntLocation here = { curPC(), curMC() };
         m_metadata->appendMetadata(target);
-        tryToResolveBranchTarget(*block, here, m_metadata->m_metadata.data());
+        tryToResolveBranchTarget(*block, here, m_metadata->m_metadata.mutableSpan().data());
     }
     IPInt::BranchTargetMetadata defaultTarget {
         .block = { .deltaPC = 0xbeef, .deltaMC = 0xbeef },
@@ -2527,7 +2527,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addSwitch(ExpressionType, const
     };
     IPIntLocation here = { curPC(), curMC() };
     m_metadata->appendMetadata(defaultTarget);
-    tryToResolveBranchTarget(defaultJump, here, m_metadata->m_metadata.data());
+    tryToResolveBranchTarget(defaultJump, here, m_metadata->m_metadata.mutableSpan().data());
 
     return { };
 }
@@ -2655,7 +2655,7 @@ void IPIntGenerator::addCallCommonData(const FunctionSignature&, const CallInfor
     if (!m_cachedCallBytecode.isEmpty()) {
         size_t size = m_metadata->m_metadata.size();
         m_metadata->addBlankSpace(m_cachedCallBytecode.size());
-        memcpy(m_metadata->m_metadata.data() + size, m_cachedCallBytecode.data(), m_cachedCallBytecode.size());
+        memcpy(m_metadata->m_metadata.mutableSpan().data() + size, m_cachedCallBytecode.span().data(), m_cachedCallBytecode.size());
         return;
     }
 
@@ -2761,7 +2761,7 @@ void IPIntGenerator::addCallCommonData(const FunctionSignature&, const CallInfor
 
     size_t size = m_metadata->m_metadata.size();
     m_metadata->addBlankSpace(m_cachedCallBytecode.size());
-    memcpy(m_metadata->m_metadata.data() + size, m_cachedCallBytecode.data(), m_cachedCallBytecode.size());
+    memcpy(m_metadata->m_metadata.mutableSpan().data() + size, m_cachedCallBytecode.mutableSpan().data(), m_cachedCallBytecode.size());
 }
 
 void IPIntGenerator::addTailCallCommonData(const FunctionSignature& signature)
@@ -2814,7 +2814,7 @@ void IPIntGenerator::addTailCallCommonData(const FunctionSignature& signature)
 
     auto size = m_metadata->m_metadata.size();
     m_metadata->addBlankSpace(mINTBytecode.size());
-    std::ranges::reverse_copy(mINTBytecode, m_metadata->m_metadata.data() + size);
+    std::ranges::reverse_copy(mINTBytecode, m_metadata->m_metadata.mutableSpan().data() + size);
 
     uint32_t numStackValues = WTF::roundUpToMultipleOf(stackAlignmentRegisters(), callConvention.numberOfStackValues);
 
@@ -2993,7 +2993,7 @@ std::unique_ptr<FunctionIPIntMetadataGenerator> IPIntGenerator::finalize()
     if (m_usesRethrow) {
         m_metadata->m_numAlignedRethrowSlots = roundUpToMultipleOf<2>(m_maxTryDepth);
         for (uint32_t catchSPOffset : m_catchSPMetadataOffsets)
-            *reinterpret_cast_ptr<uint32_t*>(m_metadata->m_metadata.data() + catchSPOffset) += m_metadata->m_numAlignedRethrowSlots;
+            *reinterpret_cast_ptr<uint32_t*>(m_metadata->m_metadata.mutableSpan().data() + catchSPOffset) += m_metadata->m_numAlignedRethrowSlots;
     }
 
     // Pad the metadata to an even number since we will allocate the rounded up size

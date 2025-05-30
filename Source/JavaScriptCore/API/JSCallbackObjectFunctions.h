@@ -486,7 +486,7 @@ EncodedJSValue JSCallbackObject<Parent>::constructImpl(JSGlobalObject* globalObj
             JSObject* result;
             {
                 JSLock::DropAllLocks dropAllLocks(globalObject);
-                result = toJS(callAsConstructor(execRef, constructorRef, argumentCount, arguments.data(), &exception));
+                result = toJS(callAsConstructor(execRef, constructorRef, argumentCount, arguments.span().data(), &exception));
             }
             if (exception) {
                 throwException(globalObject, scope, toJS(globalObject, exception));
@@ -565,7 +565,7 @@ EncodedJSValue JSCallbackObject<Parent>::callImpl(JSGlobalObject* globalObject, 
             JSValue result;
             {
                 JSLock::DropAllLocks dropAllLocks(globalObject);
-                result = toJS(globalObject, callAsFunction(execRef, functionRef, thisObjRef, argumentCount, arguments.data(), &exception));
+                result = toJS(globalObject, callAsFunction(execRef, functionRef, thisObjRef, argumentCount, arguments.span().data(), &exception));
             }
             if (exception) {
                 throwException(globalObject, scope, toJS(globalObject, exception));

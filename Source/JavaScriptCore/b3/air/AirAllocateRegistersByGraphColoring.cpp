@@ -133,7 +133,7 @@ protected:
         for (unsigned i = 0; i < firstNonRegIndex; ++i)
             m_degrees[i] = std::numeric_limits<IndexType>::max();
 
-        memset(m_degrees.data() + firstNonRegIndex, 0, (tmpArraySize - firstNonRegIndex) * sizeof(IndexType));
+        memset(m_degrees.mutableSpan().data() + firstNonRegIndex, 0, (tmpArraySize - firstNonRegIndex) * sizeof(IndexType));
     }
 
     void addEdgeDistinct(IndexType a, IndexType b)

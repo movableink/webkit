@@ -138,9 +138,9 @@ NSURL *URLByTruncatingOneCharacterBeforeComponent(NSURL *URL, CFURLComponentType
 
     auto bytes = bytesAsVector(bridge_cast(URL));
 
-    auto result = adoptCF(CFURLCreateWithBytes(nullptr, bytes.data(), range.location - 1, kCFStringEncodingUTF8, nullptr));
+    auto result = adoptCF(CFURLCreateWithBytes(nullptr, bytes.span().data(), range.location - 1, kCFStringEncodingUTF8, nullptr));
     if (!result)
-        result = adoptCF(CFURLCreateWithBytes(nullptr, bytes.data(), range.location - 1, kCFStringEncodingISOLatin1, nullptr));
+        result = adoptCF(CFURLCreateWithBytes(nullptr, bytes.span().data(), range.location - 1, kCFStringEncodingISOLatin1, nullptr));
 
     return result ? result.bridgingAutorelease() : URL;
 }

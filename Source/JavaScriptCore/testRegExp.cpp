@@ -406,7 +406,7 @@ static bool runFromFiles(GlobalObject* globalObject, const Vector<String>& files
         unsigned int lineNumber = 0;
         const char* regexpError = nullptr;
 
-        while ((linePtr = fgets(lineBuffer.data(), MaxLineLength, testCasesFile))) {
+        while ((linePtr = fgets(lineBuffer.mutableSpan().data(), MaxLineLength, testCasesFile))) {
             lineLength = strlen(linePtr);
             if (linePtr[lineLength - 1] == '\n') {
                 linePtr[lineLength - 1] = '\0';
