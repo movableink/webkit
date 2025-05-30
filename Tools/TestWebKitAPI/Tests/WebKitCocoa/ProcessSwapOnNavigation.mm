@@ -64,6 +64,7 @@
 #import <wtf/RetainPtr.h>
 #import <wtf/RunLoop.h>
 #import <wtf/Vector.h>
+#import <wtf/cocoa/SpanCocoa.h>
 #import <wtf/text/MakeString.h>
 #import <wtf/text/StringHash.h>
 #import <wtf/text/WTFString.h>
@@ -330,7 +331,7 @@ static RetainPtr<WKWebView> createdWebView;
 
 - (void)addMappingFromURLString:(NSString *)urlString toData:(const char*)data
 {
-    _dataMappings.set(urlString, [NSData dataWithBytesNoCopy:(void*)data length:strlen(data) freeWhenDone:NO]);
+    _dataMappings.set(urlString, toNSDataNoCopy(unsafeSpan8(data), FreeWhenDone::No));
 }
 
 - (void)setShouldRespondAsynchronously:(BOOL)value
@@ -380,7 +381,7 @@ static RetainPtr<WKWebView> createdWebView;
         if (auto data = _dataMappings.get([finalURL absoluteString]))
             [task didReceiveData:data.get()];
         else if (_bytes) {
-            RetainPtr<NSData> data = adoptNS([[NSData alloc] initWithBytesNoCopy:(void *)_bytes length:strlen(_bytes) freeWhenDone:NO]);
+            RetainPtr data = toNSDataNoCopy(unsafeSpan8(_bytes), FreeWhenDone::No);
             [task didReceiveData:data.get()];
         } else
             [task didReceiveData:[@"Hello" dataUsingEncoding:NSUTF8StringEncoding]];

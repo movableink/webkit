@@ -35,6 +35,7 @@
 #include <ImageIO/ImageIO.h>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/ScopedLambda.h>
+#include <wtf/cf/VectorCF.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/MakeString.h>
 
@@ -194,7 +195,7 @@ static bool encode(std::span<const uint8_t> data, const String& mimeType, std::o
     if (!destinationUTI)
         return false;
 
-    auto cfData = adoptCF(CFDataCreateWithBytesNoCopy(nullptr, data.data(), data.size(), kCFAllocatorNull));
+    RetainPtr cfData = toCFDataNoCopy(data, kCFAllocatorNull);
     if (!cfData)
         return false;
 

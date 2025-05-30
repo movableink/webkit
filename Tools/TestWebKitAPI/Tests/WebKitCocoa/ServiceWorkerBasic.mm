@@ -67,6 +67,7 @@
 #import <wtf/Scope.h>
 #import <wtf/URL.h>
 #import <wtf/Vector.h>
+#import <wtf/cocoa/SpanCocoa.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/text/MakeString.h>
 #import <wtf/text/StringHash.h>
@@ -3011,7 +3012,7 @@ static bool didStartURLSchemeTaskForImportedScript = false;
     if (auto data = _dataMappings.get([finalURL absoluteString]))
         [task didReceiveData:data.get()];
     else if (_bytes) {
-        RetainPtr<NSData> data = adoptNS([[NSData alloc] initWithBytesNoCopy:(void *)_bytes length:strlen(_bytes) freeWhenDone:NO]);
+        RetainPtr data = toNSDataNoCopy(unsafeSpan8(_bytes), FreeWhenDone::No);
         [task didReceiveData:data.get()];
     } else
         [task didReceiveData:[@"Hello" dataUsingEncoding:NSUTF8StringEncoding]];

@@ -27,6 +27,7 @@
 
 #import "WebHistoryItemInternal.h"
 #import <WebCore/HistoryItem.h>
+#import <wtf/cf/VectorCF.h>
 
 using namespace WebCore;
 
@@ -61,7 +62,7 @@ RetainPtr<CFDataRef> HistoryPropertyListWriter::releaseData()
     if (!m_buffer)
         return nullptr;
     auto span = m_buffer.leakSpan();
-    RetainPtr data = adoptCF(CFDataCreateWithBytesNoCopy(0, span.data(), span.size(), 0));
+    RetainPtr data = toCFDataNoCopy(span, kCFAllocatorNull);
     if (!data)
         adoptMallocSpan<UInt8, CFMalloc>(span); // We need to make sure we free the data if creating the CFData failed.
     return data;

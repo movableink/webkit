@@ -26,7 +26,10 @@
 #include "config.h"
 #include <wtf/cf/CFURLExtras.h>
 
+#include <wtf/MallocSpan.h>
+#include <wtf/SystemMalloc.h>
 #include <wtf/URL.h>
+#include <wtf/cf/VectorCF.h>
 
 namespace WTF {
 
@@ -41,10 +44,10 @@ RetainPtr<CFDataRef> bytesAsCFData(CFURLRef url)
         return nullptr;
     auto bytesLength = CFURLGetBytes(url, nullptr, 0);
     RELEASE_ASSERT(bytesLength != -1);
-    auto buffer = static_cast<uint8_t*>(malloc(bytesLength));
+    auto buffer = MallocSpan<uint8_t, SystemMalloc>::malloc(bytesLength);
     RELEASE_ASSERT(buffer);
-    CFURLGetBytes(url, buffer, bytesLength);
-    return adoptCF(CFDataCreateWithBytesNoCopy(nullptr, buffer, bytesLength, kCFAllocatorMalloc));
+    CFURLGetBytes(url, buffer.mutableSpan().data(), bytesLength);
+    return toCFDataNoCopy(buffer.leakSpan(), kCFAllocatorMalloc);
 }
 
 String bytesAsString(CFURLRef url)

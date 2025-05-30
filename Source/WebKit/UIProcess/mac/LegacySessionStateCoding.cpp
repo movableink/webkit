@@ -403,7 +403,7 @@ static RetainPtr<CFDataRef> encodeSessionHistoryEntryData(const FrameState& fram
     size_t bufferSize;
     auto buffer = encodeSessionHistoryEntryData(frameState, bufferSize);
 
-    return adoptCF(CFDataCreateWithBytesNoCopy(kCFAllocatorDefault, buffer.leakSpan().data(), bufferSize, fastMallocDeallocator.get().get()));
+    return toCFDataNoCopy(buffer.leakSpan().first(bufferSize), fastMallocDeallocator.get().get());
 }
 
 static RetainPtr<CFDictionaryRef> createDictionary(std::initializer_list<std::pair<CFStringRef, CFTypeRef>> keyValuePairs)

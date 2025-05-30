@@ -179,6 +179,11 @@ inline RetainPtr<CFDataRef> toCFData(std::span<const uint8_t> span)
     return adoptCF(CFDataCreate(kCFAllocatorDefault, span.data(), span.size()));
 }
 
+inline RetainPtr<CFDataRef> toCFDataNoCopy(std::span<const uint8_t> span, CFAllocatorRef bytesDeallocator)
+{
+    return adoptCF(CFDataCreateWithBytesNoCopy(kCFAllocatorDefault, span.data(), span.size(), bytesDeallocator));
+}
+
 inline Vector<uint8_t> makeVector(CFDataRef data)
 {
     return span(data);
@@ -207,5 +212,6 @@ using WTF::makeVector;
 using WTF::mutableSpan;
 using WTF::span;
 using WTF::toCFData;
+using WTF::toCFDataNoCopy;
 
 #endif // USE(CF)

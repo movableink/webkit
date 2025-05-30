@@ -3915,7 +3915,7 @@ private:
         if (!read(dataLength) || static_cast<uint32_t>(m_data.size()) < dataLength)
             return false;
 
-        data = adoptCF(CFDataCreateWithBytesNoCopy(nullptr, m_data.data(), dataLength, kCFAllocatorNull));
+        data = toCFDataNoCopy(m_data.first(dataLength), kCFAllocatorNull);
         if (!data)
             return false;
 
