@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "PlatformLayerIdentifier.h"
 #include "Position.h"
 #include "TextIteratorBehavior.h"
 #include <wtf/Forward.h>
@@ -39,6 +40,7 @@ class HTMLImageElement;
 class HTMLSpanElement;
 class HTMLTextFormControlElement;
 class RenderBlock;
+class RenderLayer;
 class VisiblePosition;
 class VisibleSelection;
 
@@ -114,6 +116,15 @@ bool positionBeforeOrAfterNodeIsCandidate(Node&);
 PositionRange positionsForRange(const SimpleRange&);
 WEBCORE_EXPORT HashSet<RefPtr<HTMLImageElement>> visibleImageElementsInRangeWithNonLoadedImages(const SimpleRange&);
 WEBCORE_EXPORT SimpleRange adjustToVisuallyContiguousRange(const SimpleRange&);
+
+struct EnclosingLayerInfomation {
+    CheckedPtr<RenderLayer> startLayer;
+    CheckedPtr<RenderLayer> endLayer;
+    CheckedPtr<RenderLayer> enclosingLayer;
+    std::optional<WebCore::PlatformLayerIdentifier> enclosingGraphicsLayerID;
+};
+
+WEBCORE_EXPORT EnclosingLayerInfomation computeEnclosingLayer(const SimpleRange&);
 
 // -------------------------------------------------------------------------
 // Position

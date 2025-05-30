@@ -50,12 +50,15 @@
 #include "HTMLTextFormControlElement.h"
 #include "HTMLUListElement.h"
 #include "HitTestSource.h"
+#include "ImageOverlay.h"
 #include "LocalFrame.h"
 #include "NodeTraversal.h"
 #include "PositionIterator.h"
 #include "Range.h"
 #include "RenderBlock.h"
 #include "RenderElement.h"
+#include "RenderLayer.h"
+#include "RenderLayerBacking.h"
 #include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderTableCell.h"
@@ -1497,6 +1500,83 @@ SimpleRange adjustToVisuallyContiguousRange(const SimpleRange& range)
         RangeEndpointsToAdjust::Start,
         RangeEndpointsToAdjust::End
     }, SelectionExtentMovement::Closest).value_or(range);
+}
+
+EnclosingLayerInfomation computeEnclosingLayer(const SimpleRange& range)
+{
+    auto [start, end] = positionsForRange(range);
+
+    if (start.isOrphan() || end.isOrphan())
+        return { };
+
+    if (!isEditablePosition(start) && range.collapsed())
+        return { };
+
+    auto findEnclosingLayer = [](const Position& position) -> RenderLayer* {
+        RefPtr container = position.containerNode();
+        if (!container)
+            return nullptr;
+
+        CheckedPtr renderer = container->renderer();
+        if (!renderer)
+            return nullptr;
+
+        return renderer->enclosingLayer();
+    };
+
+    auto [startLayer, endLayer] = [&] -> std::pair<CheckedPtr<RenderLayer>, CheckedPtr<RenderLayer>> {
+        if (RefPtr container = start.containerNode(); container && ImageOverlay::isInsideOverlay(*container)) {
+            RefPtr host = container->shadowHost();
+            if (!host) {
+                ASSERT_NOT_REACHED();
+                return { };
+            }
+
+            CheckedPtr renderer = host->renderer();
+            if (!renderer)
+                return { };
+
+            CheckedPtr enclosingLayer = renderer->enclosingLayer();
+            return { enclosingLayer, enclosingLayer };
+        }
+
+        return { findEnclosingLayer(start), findEnclosingLayer(end) };
+    }();
+
+    if (!startLayer)
+        return { };
+
+    if (!endLayer)
+        return { };
+
+    for (CheckedPtr layer = startLayer->commonAncestorWithLayer(*endLayer); layer; layer = layer->enclosingContainingBlockLayer(CrossFrameBoundaries::Yes)) {
+        if (!layer->isComposited())
+            continue;
+
+        RefPtr graphicsLayer = [layer] -> RefPtr<GraphicsLayer> {
+            auto* backing = layer->backing();
+            if (RefPtr scrolledContentsLayer = backing->scrolledContentsLayer())
+                return scrolledContentsLayer;
+
+            if (RefPtr foregroundLayer = backing->foregroundLayer())
+                return foregroundLayer;
+
+            if (backing->isFrameLayerWithTiledBacking())
+                return backing->parentForSublayers();
+
+            return backing->graphicsLayer();
+        }();
+
+        if (!graphicsLayer)
+            continue;
+
+        auto identifier = graphicsLayer->primaryLayerID();
+        if (!identifier)
+            continue;
+
+        return { startLayer, endLayer, layer, identifier };
+    }
+    return { };
 }
 
 void adjustVisibleExtentPreservingVisualContiguity(const VisiblePosition& base, VisiblePosition& extent, SelectionExtentMovement movement)

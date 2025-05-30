@@ -6126,79 +6126,14 @@ void WebPage::shouldDismissKeyboardAfterTapAtPoint(FloatPoint point, CompletionH
 
 void WebPage::computeEnclosingLayerID(EditorState& state, const VisibleSelection& selection) const
 {
-    if (selection.isNoneOrOrphaned())
+    auto selectionRange = selection.range();
+
+    if (!selectionRange)
         return;
 
-    if (!state.isContentEditable && selection.isCaret())
-        return;
+    auto [startLayer, endLayer, enclosingLayer, enclosingGraphicsLayerID] = computeEnclosingLayer(*selectionRange);
 
-    auto findEnclosingLayer = [](const Position& position) -> RenderLayer* {
-        RefPtr container = position.containerNode();
-        if (!container)
-            return nullptr;
-
-        CheckedPtr renderer = container->renderer();
-        if (!renderer)
-            return nullptr;
-
-        return renderer->enclosingLayer();
-    };
-
-    auto [startLayer, endLayer] = [&] -> std::pair<CheckedPtr<RenderLayer>, CheckedPtr<RenderLayer>> {
-        if (RefPtr container = selection.start().containerNode(); container && ImageOverlay::isInsideOverlay(*container)) {
-            RefPtr host = container->shadowHost();
-            if (!host) {
-                ASSERT_NOT_REACHED();
-                return { };
-            }
-
-            CheckedPtr renderer = host->renderer();
-            if (!renderer)
-                return { };
-
-            CheckedPtr enclosingLayer = renderer->enclosingLayer();
-            return { enclosingLayer, enclosingLayer };
-        }
-
-        return { findEnclosingLayer(selection.start()), findEnclosingLayer(selection.end()) };
-    }();
-
-    if (!startLayer)
-        return;
-
-    if (!endLayer)
-        return;
-
-    CheckedPtr<RenderLayer> enclosingLayer;
-    for (CheckedPtr layer = startLayer->commonAncestorWithLayer(*endLayer); layer; layer = layer->enclosingContainingBlockLayer(CrossFrameBoundaries::Yes)) {
-        if (!layer->isComposited())
-            continue;
-
-        RefPtr graphicsLayer = [layer] -> RefPtr<GraphicsLayer> {
-            auto* backing = layer->backing();
-            if (RefPtr scrolledContentsLayer = backing->scrolledContentsLayer())
-                return scrolledContentsLayer;
-
-            if (RefPtr foregroundLayer = backing->foregroundLayer())
-                return foregroundLayer;
-
-            if (backing->isFrameLayerWithTiledBacking())
-                return backing->parentForSublayers();
-
-            return backing->graphicsLayer();
-        }();
-
-        if (!graphicsLayer)
-            continue;
-
-        auto identifier = graphicsLayer->primaryLayerID();
-        if (!identifier)
-            continue;
-
-        enclosingLayer = layer;
-        state.visualData->enclosingLayerID = WTFMove(identifier);
-        break;
-    }
+    state.visualData->enclosingLayerID = WTFMove(enclosingGraphicsLayerID);
 
     if (!state.visualData->enclosingLayerID)
         return;
