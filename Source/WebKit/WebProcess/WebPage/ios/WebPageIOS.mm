@@ -952,12 +952,21 @@ void WebPage::didHandleTapAsHover()
     send(Messages::WebPageProxy::DidHandleTapAsHover());
 }
 
-void WebPage::didFinishContentChangeObserving(WKContentChange observedContentChange)
+void WebPage::didFinishContentChangeObserving(WebCore::FrameIdentifier frameID, WKContentChange observedContentChange)
 {
     LOG_WITH_STREAM(ContentObservation, stream << "didFinishContentChangeObserving: pending target node(" << m_pendingSyntheticClickNode << ")");
     if (!m_pendingSyntheticClickNode)
         return;
-    callOnMainRunLoop([protectedThis = Ref { *this }, targetNode = Ref<Node>(*m_pendingSyntheticClickNode), originalDocument = WeakPtr<Document, WeakPtrImplWithEventTargetData> { m_pendingSyntheticClickNode->document() }, observedContentChange, location = m_pendingSyntheticClickLocation, modifiers = m_pendingSyntheticClickModifiers, pointerId = m_pendingSyntheticClickPointerId] {
+    callOnMainRunLoop([
+        protectedThis = Ref { *this },
+        targetNode = Ref<Node>(*m_pendingSyntheticClickNode),
+        originalDocument = WeakPtr<Document, WeakPtrImplWithEventTargetData> { m_pendingSyntheticClickNode->document() },
+        observedContentChange,
+        location = m_pendingSyntheticClickLocation,
+        modifiers = m_pendingSyntheticClickModifiers,
+        pointerId = m_pendingSyntheticClickPointerId,
+        frameID
+    ] {
         if (protectedThis->m_isClosed || !protectedThis->corePage())
             return;
         if (!originalDocument || &targetNode->document() != originalDocument)
@@ -966,13 +975,13 @@ void WebPage::didFinishContentChangeObserving(WKContentChange observedContentCha
         // Only dispatch the click if the document didn't get changed by any timers started by the move event.
         if (observedContentChange == WKContentNoChange) {
             LOG(ContentObservation, "No change was observed -> click.");
-            protectedThis->completeSyntheticClick(std::nullopt, targetNode, location, modifiers, WebCore::SyntheticClickType::OneFingerTap, pointerId);
+            protectedThis->completeSyntheticClick(frameID, targetNode, location, modifiers, WebCore::SyntheticClickType::OneFingerTap, pointerId);
             return;
         }
         // Ensure that the mouse is on the most recent content.
         LOG(ContentObservation, "Observed meaningful visible change -> hover.");
-        if (auto* localMainFrame = dynamicDowncast<WebCore::LocalFrame>(protectedThis->corePage()->mainFrame()))
-            dispatchSyntheticMouseMove(*localMainFrame, location, modifiers, pointerId);
+        if (RefPtr localRootFrame = protectedThis->localRootFrame(frameID))
+            dispatchSyntheticMouseMove(*localRootFrame, location, modifiers, pointerId);
 
         protectedThis->didHandleTapAsHover();
     });
@@ -1457,7 +1466,9 @@ Awaitable<std::optional<WebCore::FrameIdentifier>> WebPage::commitPotentialTap(s
     }
 
     auto firstTransactionID = WebFrame::fromCoreFrame(*frameRespondingToClick)->firstLayerTreeTransactionIDAfterDidCommitLoad();
-    if (firstTransactionID && lastLayerTreeTransactionId.lessThanSameProcess(*firstTransactionID)) {
+    if (firstTransactionID
+        && lastLayerTreeTransactionId.processIdentifier() == firstTransactionID->processIdentifier()
+        && lastLayerTreeTransactionId.lessThanSameProcess(*firstTransactionID)) {
         commitPotentialTapFailed();
         co_return std::nullopt;
     }

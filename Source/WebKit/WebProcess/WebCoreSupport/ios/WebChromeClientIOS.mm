@@ -40,6 +40,7 @@
 #import <WebCore/AudioSession.h>
 #import <WebCore/ContentChangeObserver.h>
 #import <WebCore/Icon.h>
+#import <WebCore/LocalFrame.h>
 #import <WebCore/MouseEvent.h>
 #import <WebCore/NotImplemented.h>
 #import <WebCore/PlatformMouseEvent.h>
@@ -74,10 +75,10 @@ void WebChromeClient::setNeedsScrollNotifications(WebCore::LocalFrame&, bool)
     notImplemented();
 }
 
-void WebChromeClient::didFinishContentChangeObserving(WebCore::LocalFrame&, WKContentChange observedContentChange)
+void WebChromeClient::didFinishContentChangeObserving(WebCore::LocalFrame& frame, WKContentChange observedContentChange)
 {
     if (RefPtr page = m_page.get())
-        page->didFinishContentChangeObserving(observedContentChange);
+        page->didFinishContentChangeObserving(frame.frameID(), observedContentChange);
 }
 
 void WebChromeClient::notifyRevealedSelectionByScrollingFrame(WebCore::LocalFrame&)
