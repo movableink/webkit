@@ -148,14 +148,15 @@ Variant<PrepareResult, Error> prepare(ShaderModule& ast, const String& entryPoin
 
 std::optional<ConstantValue> evaluate(const AST::Expression& expression, const HashMap<String, ConstantValue>& constants)
 {
+    std::optional<ConstantValue> result;
     if (auto constantValue = expression.constantValue())
-        return *constantValue;
+        result = *constantValue;
     auto* maybeIdentifierExpression = dynamicDowncast<const AST::IdentifierExpression>(expression);
     if (!maybeIdentifierExpression)
-        return std::nullopt;
+        return result;
     auto it = constants.find(maybeIdentifierExpression->identifier());
     if (it == constants.end())
-        return std::nullopt;
+        return result;
     const_cast<AST::Expression&>(expression).setConstantValue(it->value);
     return it->value;
 }
