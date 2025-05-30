@@ -5,12 +5,13 @@ import re
 import subprocess
 import sys
 
-TOPLEVEL = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], encoding='utf-8').strip()
+TOPLEVEL = subprocess.run(['git', 'rev-parse', '--show-toplevel'], encoding='utf-8', capture_output=True, check=True).stdout.strip()
 
 LOCATION = os.path.join(TOPLEVEL, r'{{ location }}')
 SPACING = 8
 IDENT = 4
 SCRIPTS = os.path.dirname(os.path.dirname(LOCATION))
+PREPARE_CHANGELOG_CMD = [{{ perl }}, os.path.join(SCRIPTS, 'prepare-ChangeLog'), '--no-write', '--only-files', '--delimiters', '--git-index']
 CHERRY_PICKING_RE = re.compile(r'^# You are currently cherry-picking commit (?P<hash>[a-f0-9A-F]+)\.$')
 CHERRY_PICK_COMMIT_RE = re.compile(r'^(?P<a>\S+)( \((?P<b>\S+)\))?$')
 REFNAME_RE = re.compile(r'^refs/remotes/(?P<remote>[^/ ]+)/(?P<branch>\S+)$')
@@ -35,8 +36,9 @@ sys.path.append(SCRIPTS)
 from webkitpy.common.checkout.diff_parser import DiffParser
 from webkitbugspy import radar
 
+
 def set_env_variables_from_branch_config():
-    BRANCH = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], encoding='utf-8').strip()
+    BRANCH = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], encoding='utf-8', capture_output=True, check=True).stdout.strip()
     for name, data in dict(
         title=('COMMIT_MESSAGE_TITLE', 1),
         bug=('COMMIT_MESSAGE_BUG', re.compile(r'^(\D+)\d+$')),
@@ -48,11 +50,12 @@ def set_env_variables_from_branch_config():
         try:
             value = ''
             count = 0
-            for line in reversed(subprocess.check_output(
+            for line in reversed(subprocess.run(
                 ['git', 'config', '--get-all', 'branch.{}.{}'.format(BRANCH, name)],
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 encoding='utf-8',
-            ).strip().splitlines()):
+                check=True
+            ).stdout.strip().splitlines()):
                 if isinstance(mode, int) and count >= mode:
                     break
                 elif isinstance(mode, re.Pattern):
@@ -93,12 +96,15 @@ def get_bugs_string():
 
 def parseChanges(command, commit_message):
     dirname = None
+    changes = []
 
     try:
-        for line in subprocess.check_output(
+        for line in subprocess.run(
             command,
             encoding='utf-8',
-        ).splitlines():
+            capture_output=True,
+            check=True
+        ).stdout.splitlines():
             if line == '~':
                 dirname = None
                 continue
@@ -106,6 +112,7 @@ def parseChanges(command, commit_message):
                 if dirname:
                     line = line.replace('* ', '* {}/'.format(dirname))
                 commit_message.append(line[SPACING:])
+                changes.append(line[SPACING:])
                 continue
             if line.endswith(':'):
                 dirname = line.split(':')[0]
@@ -113,21 +120,22 @@ def parseChanges(command, commit_message):
     except subprocess.CalledProcessError:
         commit_message.append('')
         return
+    return changes
 
 def message(source=None, sha=None):
     commit_message = []
-    command = [{{ perl }}, os.path.join(SCRIPTS, 'prepare-ChangeLog'), '--no-write', '--only-files', '--delimiters', '--git-index']
+    amend_changes = None
+    command = PREPARE_CHANGELOG_CMD
 
     if sha:
         commit_message.append('Amend changes:')
-        parseChanges(command, commit_message)
+        amend_changes = parseChanges(command, commit_message)
         commit_message.append('')
 
         commit_message.append('Combined changes:')
-        command.append('--git-commit')
-        command.append('HEAD')
+        command += ['--git-commit', 'HEAD']
 
-    parseChanges(command, commit_message)
+    combined_changes = parseChanges(command, commit_message)
 
     revert_msg = os.environ.get('COMMIT_MESSAGE_REVERT', '')
     if revert_msg:
@@ -149,7 +157,7 @@ Explanation of why this fixes the bug (OOPS!).
         title=os.environ.get('COMMIT_MESSAGE_TITLE', '') or 'Need a short description (OOPS!).',
         bugs=bugs_string,
         content='\n'.join(commit_message) + os.environ.get('COMMIT_MESSAGE_CONTENT', ''),
-    )
+    ), combined_changes, amend_changes
 
 def source_branches():
     proc = None
@@ -163,10 +171,12 @@ def source_branches():
         outer_line = proc.stdout.readline()
         while outer_line:
             branches = set()
-            for inner_line in subprocess.check_output(
+            for inner_line in subprocess.run(
                 ['git', 'branch', '--contains', outer_line.strip(), '-a', '--format', '%(refname)'],
                 encoding='utf-8',
-            ).splitlines():
+                capture_output=True,
+                check=True
+            ).stdout.splitlines():
                 if not inner_line.startswith('refs/remotes'):
                     continue
                 _, _, remote, branch = inner_line.split('/', 3)
@@ -244,16 +254,18 @@ def cherry_pick(content):
 
     if production_hash:
         try:
-            subprocess.check_output(
+            subprocess.run(
                 ['git', 'merge-base', '--is-ancestor', production_hash, DEFAULT_BRANCH],
-                encoding='utf-8',
+                encoding='utf-8', check=True
             )
         except subprocess.CalledProcessError:
             remotes = set()
-            for line in subprocess.check_output(
+            for line in subprocess.run(
                 ['git', 'branch', '--contains', production_hash, '-a', '--format', '%(refname)'],
                 encoding='utf-8',
-            ).splitlines():
+                capture_output=True,
+                check=True
+            ).stdout.splitlines():
                 match = REFNAME_RE.match(line.strip())
                 if not match:
                     continue
@@ -304,6 +316,52 @@ def cherry_pick(content):
             result.append(line)
     return '\n'.join(result)
 
+def annotate_deleted_lines(amend_changes, combined_changes):
+    annotated_lines = []
+    for line in amend_changes:
+        if line not in combined_changes:
+            if line.startswith('*'):
+                if not line.endswith('Removed.'):
+                    line += ' Removed.'
+            elif not line.endswith('Deleted.'):
+                line += ' Deleted.'
+        annotated_lines.append(line)
+    return annotated_lines
+
+def amended_message(full_message, combined_changes, amend_changes, update_changelog):
+    if amend_changes and update_changelog:
+        try:
+            from webkitscmpy.commit_parser import CommitMessageParser
+        except ImportError as e:
+            sys.stderr.write(f'{e}: Could not update changelog automatically. Falling back to the default template.\n')
+        else:
+            commit_message_parser = CommitMessageParser()
+        commit_message_parser.parse_message(full_message)
+        updated_changelog_lines = commit_message_parser.apply_comments_to_modified_files_lines(combined_changes)
+        reviewed_by_lines = (commit_message_parser.reviewed_by_lines or ['Reviewed by NOBODY (OOPS!).'])
+        description_lines = (commit_message_parser.description_lines or ['Explanation of why this fixes the bug (OOPS!).'])
+        tests_lines = [commit_message_parser.tests_lines, ''] if commit_message_parser.tests_lines else []
+        amended_message = commit_message_parser.title_lines + [''] + reviewed_by_lines + [''] + description_lines + [''] + tests_lines + updated_changelog_lines
+        removed_changelog_lines = commit_message_parser.apply_comments_to_modified_files_lines(annotate_deleted_lines(amend_changes, combined_changes), return_deleted=True)
+        return '''{message_body}
+
+# Your changelog has been updated with the following files/functions:
+{changed_lines}
+# The following lines have been removed from the changelog:
+{removed_lines}
+# To temporarily disable this feature, run `git-webkit commit --amend --no-update`.
+'''.format(message_body='\n'.join(amended_message),
+        changed_lines='\n'.join([f'#    {file}' for file in amend_changes]),
+        removed_lines='\n'.join([f'#    {file}' for file in removed_changelog_lines]))
+
+    commit_message = full_message
+    if not update_changelog:
+        commit_message += '''
+# To automatically update your changelog when amending, run `git-webkit setup`
+# or `git-webkit commit --amend --update` for one-time use.
+'''
+    return commit_message
+
 def main(file_name=None, source=None, sha=None):
     with open(file_name, 'r') as commit_message_file:
         content = commit_message_file.read()
@@ -332,14 +390,36 @@ def main(file_name=None, source=None, sha=None):
         # When there's no editor being launched, do nothing.
         return 0
 
+    update_changelog = False
+    # Allow for overrides with git-webkit commit --amend [--update/--no-update]
+    if os.environ.get('WKSCMPY_UPDATE_CHANGELOG', '') == 'True':
+        update_changelog = True
+    elif os.environ.get('WKSCMPY_UPDATE_CHANGELOG', '') == 'False':
+        update_changelog = False
+    else:
+        try:
+            update_changelog = subprocess.run(
+                ['git', 'config', '--get', '--type', 'bool', 'webkitscmpy.auto-update-changelog'],
+                encoding='utf-8',
+                capture_output=True,
+                check=True
+            ).stdout.strip()
+        except subprocess.CalledProcessError as error:
+            if error.returncode != 1:
+                sys.stderr.write(error.stderr)
+
     with open(file_name, 'w') as commit_message_file:
+        generated_msg, combined_changes, amend_changes = message(source=source, sha=sha)
         if sha:
-            commit_message_file.write(subprocess.check_output(
+            git_log_msg = subprocess.run(
                 ['git', 'log', sha, '-1', '--pretty=format:%B'],
                 encoding='utf-8',
-            ))
+                capture_output=True,
+                check=True
+            ).stdout
+            commit_message_file.write(amended_message(git_log_msg, combined_changes, amend_changes, update_changelog))
         else:
-            commit_message_file.write(message(source=source, sha=sha))
+            commit_message_file.write(generated_msg)
 
         commit_message_file.write('''
 # Please populate the above commit message. Lines starting with '#'
@@ -348,13 +428,15 @@ def main(file_name=None, source=None, sha=None):
 
 ''')
         if sha:
-            for line in message(source=source, sha=sha).splitlines():
+            for line in generated_msg.splitlines():
                 commit_message_file.write('# {}\n'.format(line))
             commit_message_file.write('\n')
-        for line in subprocess.check_output(
+        for line in subprocess.run(
             ['git', 'status'],
             encoding='utf-8',
-        ).splitlines():
+            capture_output=True,
+            check=True
+        ).stdout.splitlines():
             commit_message_file.write('# {}\n'.format(line))
 
     return 0

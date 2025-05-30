@@ -116,6 +116,7 @@ No project git config found, continuing
 Setting better Objective-C diffing behavior for this repository...
 Set better Objective-C diffing behavior for this repository!
 Using a rebase merge strategy for this repository
+Setting auto-updates for commit message changelogs when amending...
 Setting git editor for {repository}...
 Setting contents of 'SVN_LOG_EDITOR' as editor
 Set git editor to 'SVN_LOG_EDITOR' for this repository
@@ -128,7 +129,7 @@ Fetched 1 remote!
     def test_github_checkout(self):
         self.maxDiff = None
         with OutputCapture(level=logging.INFO) as captured, mocks.remote.GitHub() as remote, \
-            MockTerminal.input('n', 'n', 'committer@webkit.org', 'n', 'Committer', 's', 'overwrite', 'y', 'disabled', '1', 'y'), \
+            MockTerminal.input('n', 'n', 'committer@webkit.org', 'n', 'Committer', 's', 'overwrite', 'n', 'y', 'disabled', '1', 'y'), \
             mocks.local.Git(self.path, remote='https://{}.git'.format(remote.remote)) as repo, \
             wkmocks.Environment(EMAIL_ADDRESS='', SVN_LOG_EDITOR=''):
 
@@ -186,6 +187,7 @@ No project git config found, continuing
 Setting better Objective-C diffing behavior for this repository...
 Set better Objective-C diffing behavior for this repository!
 Using a rebase merge strategy for this repository
+Setting auto-updates for commit message changelogs when amending...
 Setting auto update on PR creation...
 Disabled auto update on PR creation
 Setting git editor for {repository}...
@@ -206,7 +208,7 @@ Fetched 2 remotes!
         )
 
     def test_commit_message(self):
-        with OutputCapture(level=logging.INFO), mocks.local.Git(self.path) as git, mocks.local.Svn():
+        with OutputCapture(level=logging.INFO), MockTerminal.input('n'), mocks.local.Git(self.path) as git, mocks.local.Svn():
             self.assertEqual(0, program.main(
                 args=('setup', '--defaults', '-v'),
                 path=self.path,
