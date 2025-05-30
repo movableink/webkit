@@ -156,7 +156,7 @@
 		0735F3222D38B09E0003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0735F3212D38B09E0003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.swift */; };
 		0735F3242D38C7790003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.h in Headers */ = {isa = PBXBuildFile; fileRef = 0735F3232D38C7790003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.h */; };
 		073A63CB2DC33D710057A3F5 /* LinearMediaKitSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = A1C9FBFE2BB78C4A00CC6B40 /* LinearMediaKitSPI.h */; };
-		073A63CC2DC33D8B0057A3F5 /* WKSPreviewWindowController.h in Headers */ = {isa = PBXBuildFile; fileRef = B66F88C12B6D202600FB1734 /* WKSPreviewWindowController.h */; };
+		073A63CC2DC33D8B0057A3F5 /* WKPreviewWindowController.h in Headers */ = {isa = PBXBuildFile; fileRef = B66F88C12B6D202600FB1734 /* WKPreviewWindowController.h */; };
 		073A63CD2DC33DA00057A3F5 /* WKStageMode.h in Headers */ = {isa = PBXBuildFile; fileRef = EE0D3CDD2D3709BE00072978 /* WKStageMode.h */; };
 		073A63CE2DC33DE30057A3F5 /* WKIntelligenceTextEffectCoordinator.h in Headers */ = {isa = PBXBuildFile; fileRef = 074F34802CC5F7D500CA5301 /* WKIntelligenceTextEffectCoordinator.h */; };
 		073A63CF2DC33DEC0057A3F5 /* WKIntelligenceSmartReplyTextEffectCoordinator.h in Headers */ = {isa = PBXBuildFile; fileRef = 0735F3232D38C7790003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.h */; };
@@ -2036,8 +2036,8 @@
 		B65DA1DD294BDE4700DB503A /* WebExtensionContextAPIPermissionsCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = B65DA1DC294BDE4700DB503A /* WebExtensionContextAPIPermissionsCocoa.mm */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		B66047412CED45F600ADE38E /* WKSeparatedImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6CDC0622CECED85008A91FE /* WKSeparatedImageView.swift */; };
 		B66F88BD2B6C3EF900FB1734 /* FullScreenMediaDetails.h in Headers */ = {isa = PBXBuildFile; fileRef = B66F88B92B6C312400FB1734 /* FullScreenMediaDetails.h */; };
-		B66F88C02B6D1F2300FB1734 /* PreviewWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B66F88BF2B6D1F1200FB1734 /* PreviewWindowController.swift */; };
-		B66F88C22B6D202600FB1734 /* WKSPreviewWindowController.h in Headers */ = {isa = PBXBuildFile; fileRef = B66F88C12B6D202600FB1734 /* WKSPreviewWindowController.h */; };
+		B66F88C02B6D1F2300FB1734 /* WKPreviewWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B66F88BF2B6D1F1200FB1734 /* WKPreviewWindowController.swift */; };
+		B66F88C22B6D202600FB1734 /* WKPreviewWindowController.h in Headers */ = {isa = PBXBuildFile; fileRef = B66F88C12B6D202600FB1734 /* WKPreviewWindowController.h */; };
 		B67DA51B2BBC89D20056A855 /* WebExtensionDataRecordCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = B67DA51A2BBC89D10056A855 /* WebExtensionDataRecordCocoa.mm */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		B69E1A682AFF5F0C000FB98E /* WebExtensionRegisteredScriptParameters.h in Headers */ = {isa = PBXBuildFile; fileRef = B69E1A672AFF5F0B000FB98E /* WebExtensionRegisteredScriptParameters.h */; };
 		B6A292352B18FCF30061930E /* _WKWebExtensionSQLiteStore.mm in Sources */ = {isa = PBXBuildFile; fileRef = B6A292332B18FCF20061930E /* _WKWebExtensionSQLiteStore.mm */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
@@ -7336,7 +7336,7 @@
 		A188D2E32B6B0F4E00E65A08 /* WKVisibilityPropagationView.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = WKVisibilityPropagationView.mm; path = ios/WKVisibilityPropagationView.mm; sourceTree = "<group>"; };
 		A19DD3BF1D07D16800AC823B /* _WKWebViewPrintFormatterInternal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _WKWebViewPrintFormatterInternal.h; sourceTree = "<group>"; };
 		A1A207432D8A7A92003B1A13 /* LinearMediaKit.swiftinterface */ = {isa = PBXFileReference; lastKnownFileType = text; path = LinearMediaKit.swiftinterface; sourceTree = "<group>"; };
-		A1A207442D8A7A92003B1A13 /* QuickLook_SPI.swiftinterface */ = {isa = PBXFileReference; lastKnownFileType = text; path = QuickLook_SPI.swiftinterface; sourceTree = "<group>"; };
+		A1A207442D8A7A92003B1A13 /* QuickLook_SPI_Temp.swiftinterface */ = {isa = PBXFileReference; lastKnownFileType = text; path = QuickLook_SPI_Temp.swiftinterface; sourceTree = "<group>"; };
 		A1A4FE5718DCE9FA00B5EA8A /* _WKDownload.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _WKDownload.h; sourceTree = "<group>"; };
 		A1A4FE5818DCE9FA00B5EA8A /* _WKDownload.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = _WKDownload.mm; sourceTree = "<group>"; };
 		A1A4FE5918DCE9FA00B5EA8A /* _WKDownloadInternal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _WKDownloadInternal.h; sourceTree = "<group>"; };
@@ -7488,8 +7488,8 @@
 		B665516A2B7D2AEE00FBE51E /* WebExtensionAPIWebPageRuntime.idl */ = {isa = PBXFileReference; lastKnownFileType = text; path = WebExtensionAPIWebPageRuntime.idl; sourceTree = "<group>"; };
 		B66F88B92B6C312400FB1734 /* FullScreenMediaDetails.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FullScreenMediaDetails.h; sourceTree = "<group>"; };
 		B66F88BB2B6C3EDE00FB1734 /* FullScreenMediaDetails.serialization.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = FullScreenMediaDetails.serialization.in; sourceTree = "<group>"; };
-		B66F88BF2B6D1F1200FB1734 /* PreviewWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewWindowController.swift; sourceTree = "<group>"; };
-		B66F88C12B6D202600FB1734 /* WKSPreviewWindowController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WKSPreviewWindowController.h; sourceTree = "<group>"; };
+		B66F88BF2B6D1F1200FB1734 /* WKPreviewWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WKPreviewWindowController.swift; sourceTree = "<group>"; };
+		B66F88C12B6D202600FB1734 /* WKPreviewWindowController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WKPreviewWindowController.h; sourceTree = "<group>"; };
 		B6746A9C2AA8CC79002B244A /* WebExtensionAPIScripting.idl */ = {isa = PBXFileReference; lastKnownFileType = text; path = WebExtensionAPIScripting.idl; sourceTree = "<group>"; };
 		B67DA51A2BBC89D10056A855 /* WebExtensionDataRecordCocoa.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebExtensionDataRecordCocoa.mm; sourceTree = "<group>"; };
 		B69E1A672AFF5F0B000FB98E /* WebExtensionRegisteredScriptParameters.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebExtensionRegisteredScriptParameters.h; sourceTree = "<group>"; };
@@ -14455,8 +14455,8 @@
 		B66F88BE2B6D1D6000FB1734 /* Preview */ = {
 			isa = PBXGroup;
 			children = (
-				B66F88BF2B6D1F1200FB1734 /* PreviewWindowController.swift */,
-				B66F88C12B6D202600FB1734 /* WKSPreviewWindowController.h */,
+				B66F88C12B6D202600FB1734 /* WKPreviewWindowController.h */,
+				B66F88BF2B6D1F1200FB1734 /* WKPreviewWindowController.swift */,
 			);
 			path = Preview;
 			sourceTree = "<group>";
@@ -16590,7 +16590,7 @@
 			children = (
 				A1A207432D8A7A92003B1A13 /* LinearMediaKit.swiftinterface */,
 				E539DFEA2A44A69100769F09 /* MRUIKitSPI.h */,
-				A1A207442D8A7A92003B1A13 /* QuickLook_SPI.swiftinterface */,
+				A1A207442D8A7A92003B1A13 /* QuickLook_SPI_Temp.swiftinterface */,
 				E539DFEC2A44A78600769F09 /* RealitySimulationServicesSPI.h */,
 				DD6E58C42BE004DE0000C264 /* RealitySystemSupportSPI.h */,
 			);
@@ -18376,6 +18376,7 @@
 				93735EBB1C92986300336FA7 /* WKPreviewActionItemInternal.h in Headers */,
 				9395E68A1BF2C33200F49BCE /* WKPreviewElementInfo.h in Headers */,
 				9391074F1BF6BC65008C17AD /* WKPreviewElementInfoInternal.h in Headers */,
+				073A63CC2DC33D8B0057A3F5 /* WKPreviewWindowController.h in Headers */,
 				0FCB4E6618BBE3D9000FCFC9 /* WKPrintingView.h in Headers */,
 				E31869C52B1A7C2400571519 /* WKProcessExtension.h in Headers */,
 				1A15841A189044F50017616C /* WKProcessPool.h in Headers */,
@@ -18419,7 +18420,6 @@
 				DF7A231C291B088D00B98DF3 /* WKSnapshotConfigurationPrivate.h in Headers */,
 				57FD318722B35170008D0E8B /* WKSOAuthorizationDelegate.h in Headers */,
 				93D6B7B925534A170058DD3A /* WKSpeechRecognitionPermissionCallback.h in Headers */,
-				073A63CC2DC33D8B0057A3F5 /* WKSPreviewWindowController.h in Headers */,
 				073A63CD2DC33DA00057A3F5 /* WKStageMode.h in Headers */,
 				445979392BBB8E9A00087EBC /* WKSTextAnimationManager.h in Headers */,
 				44DBDA502BB23DE9004E3712 /* WKSTextAnimationSourceDelegate.h in Headers */,
@@ -18607,9 +18607,9 @@
 				074F34812CC5F7D500CA5301 /* WKIntelligenceTextEffectCoordinator.h in Headers */,
 				F4D59BFD2DCBDC9F004492FB /* WKISO18013Request.h in Headers */,
 				07A7EAD32DC7FBEB007E7680 /* WKMarketplaceKit.h in Headers */,
+				B66F88C22B6D202600FB1734 /* WKPreviewWindowController.h in Headers */,
 				A14F9B762B68CA6C00AD9C56 /* WKSLinearMediaPlayer.h in Headers */,
 				A14F9B632B686DD300AD9C56 /* WKSLinearMediaTypes.h in Headers */,
-				B66F88C22B6D202600FB1734 /* WKSPreviewWindowController.h in Headers */,
 				EEA52F482D70545300D578B5 /* WKStageMode.h in Headers */,
 				44DBDA4E2BAE451F004E3712 /* WKSTextAnimationSourceDelegate.h in Headers */,
 			);
@@ -21105,7 +21105,6 @@
 				A14F9B772B68CA6C00AD9C56 /* LinearMediaPlayer.swift in Sources */,
 				A14F9B642B686DD300AD9C56 /* LinearMediaTypes.swift in Sources */,
 				0785E8002CBCDFFD00F68126 /* PlatformIntelligenceTextEffectView.swift in Sources */,
-				B66F88C02B6D1F2300FB1734 /* PreviewWindowController.swift in Sources */,
 				DD5697CD2DC06F7700050321 /* rdar150228472.swift in Sources */,
 				528952812C70797900D0357E /* RKEntity.swift in Sources */,
 				440DB5B72C1914DC0021639B /* TextAnimationManager.swift in Sources */,
@@ -21120,6 +21119,7 @@
 				077FD1A02CC7569200C5D9E0 /* WKIntelligenceReplacementTextEffectCoordinator.swift in Sources */,
 				0735F3222D38B09E0003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.swift in Sources */,
 				EB0FBFA72B66C61E00269CC1 /* WKMarketplaceKit.swift in Sources */,
+				B66F88C02B6D1F2300FB1734 /* WKPreviewWindowController.swift in Sources */,
 				EEA52F492D7055A700D578B5 /* WKStageMode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -25,25 +25,25 @@
 
 #import <Foundation/Foundation.h>
 
-#if defined(TARGET_OS_VISION) && TARGET_OS_VISION
+#if ENABLE(QUICKLOOK_FULLSCREEN)
 
 NS_ASSUME_NONNULL_BEGIN
 
-@class WKSPreviewWindowController;
+@class WKPreviewWindowController;
 
-@protocol WKSPreviewWindowControllerDelegate <NSObject>
-- (void)previewWindowControllerDidClose:(id)previewWindowController;
+@protocol WKPreviewWindowControllerDelegate <NSObject>
+- (void)previewWindowControllerDidClose:(WKPreviewWindowController *)previewWindowController;
 @end
 
-@interface WKSPreviewWindowController : NSObject
-@property (nonatomic, weak, nullable) id <WKSPreviewWindowControllerDelegate> delegate;
+@interface WKPreviewWindowController : NSObject
+@property (nonatomic, weak, nullable) id <WKPreviewWindowControllerDelegate> delegate;
 
 - (instancetype)initWithURL:(NSURL *)url sceneID:(NSString *)sceneID NS_DESIGNATED_INITIALIZER;
 - (void)presentWindow;
-- (void)updateImage:(NSURL *)url NS_SWIFT_NAME(updateImage(url:));
+- (void)updateImage:(NSURL *)url;
 - (void)dismissWindow;
 @end
 
 NS_ASSUME_NONNULL_END
 
-#endif
+#endif // ENABLE(QUICKLOOK_FULLSCREEN)

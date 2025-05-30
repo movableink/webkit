@@ -33,6 +33,7 @@
 #import "VideoPresentationManagerProxy.h"
 #import "WKFullScreenViewController.h"
 #import "WKFullscreenStackView.h"
+#import "WKPreviewWindowController.h"
 #import "WKScrollView.h"
 #import "WKUIDelegatePrivate.h"
 #import "WKWebView.h"
@@ -65,11 +66,9 @@
 
 #if PLATFORM(VISION)
 #import "MRUIKitSPI.h"
-#if ENABLE(QUICKLOOK_FULLSCREEN)
-#import "WKSPreviewWindowController.h"
-#import "WebKitSwiftSoftLink.h"
-#endif // QUICKLOOK_FULLSCREEN
 #endif
+
+#import "WebKitSwiftSoftLink.h"
 
 #if !HAVE(URL_FORMATTING)
 SOFT_LINK_PRIVATE_FRAMEWORK_OPTIONAL(LinkPresentation)
@@ -713,7 +712,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 @end
 
 #if ENABLE(QUICKLOOK_FULLSCREEN)
-@interface WKFullScreenWindowController (WKSPreviewWindowControllerDelegate) <WKSPreviewWindowControllerDelegate>
+@interface WKFullScreenWindowController (WKPreviewWindowControllerDelegate) <WKPreviewWindowControllerDelegate>
 - (void)previewWindowControllerDidClose:(id)previewWindowController;
 @end
 #endif
@@ -769,7 +768,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     RetainPtr<UIWindow> _lastKnownParentWindow;
     RetainPtr<WKFullScreenParentWindowState> _parentWindowState;
 #if ENABLE(QUICKLOOK_FULLSCREEN)
-    RetainPtr<WKSPreviewWindowController> _previewWindowController;
+    RetainPtr<WKPreviewWindowController> _previewWindowController;
     bool _isUsingQuickLook;
     CGSize _imageDimensions;
 #endif // QUICKLOOK_FULLSCREEN
@@ -945,7 +944,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
         manager->prepareQuickLookImageURL([strongSelf = retainPtr(self), self, window = retainPtr([webView window]), completionHandler = WTFMove(completionHandler), logIdentifier = OBJC_LOGIDENTIFIER] (URL&& url) mutable {
             UIWindowScene *scene = [window windowScene];
-            _previewWindowController = adoptNS([WebKit::allocWKSPreviewWindowControllerInstance() initWithURL:url.createNSURL().get() sceneID:scene._sceneIdentifier]);
+            _previewWindowController = adoptNS([WebKit::allocWKPreviewWindowControllerInstance() initWithURL:url.createNSURL().get() sceneID:scene._sceneIdentifier]);
             [_previewWindowController setDelegate:self];
             [_previewWindowController presentWindow];
             _fullScreenState = WebKit::InFullScreen;
@@ -2068,9 +2067,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 @end
 
-#if PLATFORM(VISION) && ENABLE(QUICKLOOK_FULLSCREEN)
+#if ENABLE(QUICKLOOK_FULLSCREEN)
 
-@implementation WKFullScreenWindowController (WKSPreviewWindowControllerDelegate)
+@implementation WKFullScreenWindowController (WKPreviewWindowControllerDelegate)
 - (void)previewWindowControllerDidClose:(id)previewWindowController
 {
     if (previewWindowController != _previewWindowController)
@@ -2080,7 +2079,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 }
 @end
 
-#endif
+#endif // ENABLE(QUICKLOOK_FULLSCREEN)
 
 #if !RELEASE_LOG_DISABLED
 @implementation WKFullScreenWindowController (Logging)

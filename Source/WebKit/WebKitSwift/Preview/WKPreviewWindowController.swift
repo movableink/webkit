@@ -21,48 +21,82 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if os(visionOS)
+#if ENABLE_QUICKLOOK_FULLSCREEN
 
-#if canImport(QuickLook, _version: 957)
 import OSLog
 import WebKitSwift
 
 #if USE_APPLE_INTERNAL_SDK
-@_spi(PreviewApplication) import QuickLook
+@_spi(PreviewApplication) internal import QuickLook
 #else
-import QuickLook_SPI
+// FIXME: rdar://152166678 Rename this back to `QuickLook_SPI`.
+internal import QuickLook_SPI_Temp
 #endif
 
-@objc(WKSPreviewWindowController)
-public final class PreviewWindowController: NSObject {
-    private static let logger = Logger(subsystem: "com.apple.WebKit", category: "Fullscreen")
+@objc @implementation extension WKPreviewWindowController {
     enum UpdateError: Error {
         case newUpdateQueued
     }
 
-    private var item: PreviewItem
-    private let previewConfiguration: PreviewApplication.PreviewConfiguration
-    private var previewSession: PreviewSession?
-    private var isClosing = false
-    private var isOpen = false
-    private var windowOpenedContinuation: CheckedContinuation<Void, Error>?
+    // Used to workaround the fact that `@objc @implementation` does not support stored properties whose size can change
+    // due to Library Evolution. Do not use this property directly.
+    private final class Base {
+        var previewSession: PreviewSession?
+        var item: PreviewItem
+        var previewConfiguration: PreviewApplication.PreviewConfiguration
+        var windowOpenedContinuation: CheckedContinuation<Void, Error>?
 
-    @objc public weak var delegate: WKSPreviewWindowControllerDelegate?
+        init(item: PreviewItem, configuration: PreviewApplication.PreviewConfiguration) {
+            self.item = item
+            self.previewConfiguration = configuration
+        }
+    }
 
-    @objc(initWithURL:sceneID:) public init(url: URL, sceneID: String) {
-        self.item = PreviewItem(url: url, displayName: nil, editingMode: .disabled);
+    @nonobjc private static let logger = Logger(subsystem: "com.apple.WebKit", category: "Fullscreen")
+
+    @nonobjc private let base: Base
+
+    @nonobjc private var isClosing = false
+    @nonobjc private var isOpen = false
+
+    @nonobjc private final var previewSession: PreviewSession? {
+        get { base.previewSession }
+        set { base.previewSession = newValue }
+    }
+
+    @nonobjc private final var item: PreviewItem {
+        get { base.item }
+        set { base.item = newValue }
+    }
+
+    @nonobjc private final var previewConfiguration: PreviewApplication.PreviewConfiguration {
+        get { base.previewConfiguration }
+        set { base.previewConfiguration = newValue }
+    }
+
+    @nonobjc private final var windowOpenedContinuation: CheckedContinuation<Void, Error>? {
+        get { base.windowOpenedContinuation }
+        set { base.windowOpenedContinuation = newValue }
+    }
+
+    weak var delegate: WKPreviewWindowControllerDelegate?
+
+    @objc(initWithURL:sceneID:)
+    init(url: URL, sceneID: String) {
+        let item = PreviewItem(url: url, displayName: nil, editingMode: .disabled)
 
         var configuration = PreviewApplication.PreviewConfiguration()
         configuration.hideDocumentMenu = true
         configuration.showCloseButton = true
         configuration.matchScenePlacementID = sceneID
-        self.previewConfiguration = configuration
+
+        self.base = Base(item: item, configuration: configuration)
 
         super.init()
     }
 
-    @objc public func presentWindow() {
-        previewSession = PreviewApplication.open(items: [self.item], selectedItem: nil, configuration: previewConfiguration)
+    func presentWindow() {
+        previewSession = PreviewApplication.open(items: [item], selectedItem: nil, configuration: previewConfiguration)
 
         Task.detached { [weak self] in
             guard let session = self?.previewSession else { return }
@@ -77,7 +111,7 @@ public final class PreviewWindowController: NSObject {
                         self.isClosing = true
                         self.delegate?.previewWindowControllerDidClose(self)
                         windowOpenedContinuation?.resume(throwing: error)
-                        PreviewWindowController.logger.error("Preview open failed with error \(error)")
+                        Self.logger.error("Preview open failed with error \(error)")
                     case .didClose:
                         self.isClosing = true
                         self.delegate?.previewWindowControllerDidClose(self)
@@ -89,49 +123,41 @@ public final class PreviewWindowController: NSObject {
         }
     }
     
-    @objc(updateImage:) public func updateImage(url: URL) {
-        self.item = PreviewItem(url: url, displayName: nil, editingMode: .disabled);
+    func updateImage(_ url: URL) {
+        item = PreviewItem(url: url, displayName: nil, editingMode: .disabled);
         
         Task {
             do {
-                if !self.isOpen {
-                    if let continuation = self.windowOpenedContinuation {
+                if !isOpen {
+                    if let continuation = windowOpenedContinuation {
                         // The Quick Look window isn't ready yet, but there's already been an earlier update queued
                         // Throw that update and queue this one instead
                         continuation.resume(throwing: UpdateError.newUpdateQueued)
                     }
                     try await withCheckedThrowingContinuation { continuation in
-                        self.windowOpenedContinuation = continuation
+                        windowOpenedContinuation = continuation
                     }
                 }
-#if USE_APPLE_INTERNAL_SDK
-                try await previewSession?.update(items: [self.item])
-#endif
+                try await previewSession?.update(items: [item])
             } catch UpdateError.newUpdateQueued {
-                PreviewWindowController.logger.debug("WKSPreviewWindowController.updateImage skipped: newer image update queued");
+                Self.logger.debug("WKPreviewWindowController.updateImage skipped: newer image update queued");
             } catch {
-                PreviewWindowController.logger.error("WKSPreviewWindowController.updateImage failed: \(error, privacy: .public)")
+                Self.logger.error("WKPreviewWindowController.updateImage failed: \(error, privacy: .public)")
             }
         }
     }
 
-    @objc public func dismissWindow() {
+    func dismissWindow() {
         guard !isClosing else { return }
 
         Task {
             do {
                 try await previewSession?.close();
             } catch {
-                PreviewWindowController.logger.error("WKSPreviewWindowController.dismissWindow failed: \(error, privacy: .public)")
+                Self.logger.error("WKPreviewWindowController.dismissWindow failed: \(error, privacy: .public)")
             }
         }
     }
 }
 
-#else
-import Foundation
-@objc(WKSPreviewWindowController)
-public final class PreviewWindowController: NSObject { }
-#endif
-
-#endif
+#endif // ENABLE_QUICKLOOK_FULLSCREEN

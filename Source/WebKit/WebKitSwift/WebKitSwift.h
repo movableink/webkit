@@ -29,9 +29,9 @@
 #import "WKIntelligenceSmartReplyTextEffectCoordinator.h"
 #import "WKIntelligenceTextEffectCoordinator.h"
 #import "WKMarketplaceKit.h"
+#import "WKPreviewWindowController.h"
 #import "WKSLinearMediaPlayer.h"
 #import "WKSLinearMediaTypes.h"
-#import "WKSPreviewWindowController.h"
 #import "WKSTextAnimationSourceDelegate.h"
 #import "WKStageMode.h"
 
