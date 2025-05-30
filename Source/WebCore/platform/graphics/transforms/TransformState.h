@@ -68,7 +68,7 @@ public:
 
     WEBCORE_EXPORT TransformState& operator=(const TransformState&);
 
-    void reset(const FloatQuad&, const std::optional<FloatQuad>& secondaryQuad = std::nullopt);
+    WEBCORE_EXPORT void reset(const FloatQuad&, const std::optional<FloatQuad>& secondaryQuad = std::nullopt);
 
     void setSecondaryQuadInMappedSpace(const std::optional<FloatQuad>&);
 
