@@ -211,9 +211,9 @@ Frame* FrameTree::scopedChildByUniqueName(const AtomString& uniqueName) const
 
 Frame* FrameTree::scopedChildBySpecifiedName(const AtomString& specifiedName) const
 {
-    auto* localFrame = dynamicDowncast<LocalFrame>(m_thisFrame.get());
+    RefPtr localFrame = dynamicDowncast<LocalFrame>(m_thisFrame.get());
     if (!localFrame)
-        return nullptr;
+        return childBySpecifiedName(specifiedName);
     return scopedChild([&](auto& frameTree) {
         return frameTree.specifiedName() == specifiedName;
     }, localFrame->protectedDocument().get());

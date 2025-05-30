@@ -45,9 +45,9 @@ const ClassInfo JSDOMWindowProperties::s_info = { "WindowProperties"_s, &Base::s
 // https://html.spec.whatwg.org/multipage/window-object.html#dom-window-nameditem
 static bool jsDOMWindowPropertiesGetOwnPropertySlotNamedItemGetter(JSDOMWindowProperties* thisObject, LocalDOMWindow& window, JSGlobalObject* lexicalGlobalObject, PropertyName propertyName, PropertySlot& slot)
 {
-    if (auto* frame = window.frame()) {
-        if (auto* scopedChild = dynamicDowncast<LocalFrame>(frame->tree().scopedChildBySpecifiedName(propertyNameToAtomString(propertyName)))) {
-            slot.setValue(thisObject, enumToUnderlyingType(PropertyAttribute::DontEnum), toJS(lexicalGlobalObject, scopedChild->document()->domWindow()));
+    if (RefPtr frame = window.frame()) {
+        if (RefPtr scopedChild = frame->tree().scopedChildBySpecifiedName(propertyNameToAtomString(propertyName))) {
+            slot.setValue(thisObject, enumToUnderlyingType(PropertyAttribute::DontEnum), toJS(lexicalGlobalObject, scopedChild->window()));
             return true;
         }
     }

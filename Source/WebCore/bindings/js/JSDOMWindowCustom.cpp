@@ -156,10 +156,9 @@ bool jsDOMWindowGetOwnPropertySlotRestrictedAccess(JSDOMGlobalObject* thisObject
     // not match IE, but some sites end up naming frames things that conflict with window
     // properties that are in Moz but not IE. Since we have some of these, we have to do it
     // the Moz way.
-    // FIXME: Add support to named attributes on RemoteFrames.
     if (RefPtr frame = window.frame()) {
-        if (auto* scopedChild = dynamicDowncast<LocalFrame>(frame->tree().scopedChildBySpecifiedName(propertyNameToAtomString(propertyName)))) {
-            slot.setValue(thisObject, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum, toJS(&lexicalGlobalObject, scopedChild->document()->domWindow()));
+        if (RefPtr scopedChild = frame->tree().scopedChildBySpecifiedName(propertyNameToAtomString(propertyName))) {
+            slot.setValue(thisObject, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum, toJS(&lexicalGlobalObject, scopedChild->window()));
             return true;
         }
     }
