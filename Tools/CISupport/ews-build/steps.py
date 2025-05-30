@@ -6885,6 +6885,7 @@ class PushPullRequestBranch(shell.ShellCommandNewStyle):
         if self.results == SUCCESS:
             return {'step': 'Pushed to pull request branch'}
         if self.results == FAILURE:
+            self.setProperty('build_summary', '')
             return {'step': 'Failed to push to pull request branch'}
         return super().getResultSummary()
 

@@ -8773,6 +8773,7 @@ class TestPushPullRequestBranch(BuildStepMixinAdditions, unittest.TestCase):
         self.setProperty('github.number', '1234')
         self.setProperty('github.head.repo.full_name', 'Contributor/WebKit')
         self.setProperty('github.head.ref', 'eng/pull-request-branch')
+        self.setProperty('build_summary', 'Test summary.')
         self.expectRemoteCommands(
             ExpectShell(workdir='wkdir',
                         logEnviron=False,
@@ -8785,6 +8786,7 @@ class TestPushPullRequestBranch(BuildStepMixinAdditions, unittest.TestCase):
         self.expectOutcome(result=FAILURE, state_string='Failed to push to pull request branch')
         with current_hostname(EWS_BUILD_HOSTNAMES[0]):
             return self.runStep()
+        self.assertEqual(self.getProperty('build_summary'), '')
 
 
 class TestUpdatePullRequest(BuildStepMixinAdditions, unittest.TestCase):
