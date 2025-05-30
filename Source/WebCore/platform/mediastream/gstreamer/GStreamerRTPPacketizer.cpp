@@ -23,6 +23,7 @@
 #if USE(GSTREAMER_WEBRTC)
 
 #include "GStreamerCommon.h"
+#include "GStreamerWebRTCCommon.h"
 #include <gst/rtp/rtp.h>
 #include <wtf/PrintStream.h>
 #include <wtf/glib/WTFGType.h>
@@ -62,7 +63,7 @@ GStreamerRTPPacketizer::GStreamerRTPPacketizer(GRefPtr<GstElement>&& encoder, GR
     m_stats.reset(gst_structure_new_empty("stats"));
 
     if (m_payloadType)
-        setPayloadType(*m_payloadType);
+        gstPayloaderSetPayloadType(m_payloader, *m_payloadType);
 
     if (m_encodingParameters)
         applyEncodingParameters(m_encodingParameters.get());
@@ -179,39 +180,6 @@ String GStreamerRTPPacketizer::rtpStreamId() const
         return rid.toString();
 
     return emptyString();
-}
-
-void GStreamerRTPPacketizer::setPayloadType(int pt)
-{
-    auto ptSpec = g_object_class_find_property(G_OBJECT_GET_CLASS(G_OBJECT(m_payloader.get())), "pt");
-
-    GValue value = G_VALUE_INIT;
-    g_object_get_property(G_OBJECT(m_payloader.get()), "pt", &value);
-
-    if (G_VALUE_TYPE(&value) != G_TYPE_INT && G_VALUE_TYPE(&value) != G_TYPE_UINT) {
-        GST_ERROR_OBJECT(m_payloader.get(), "pt property is not integer or unsigned");
-        return;
-    }
-
-    if (G_VALUE_TYPE(&value) == G_TYPE_INT) {
-        auto intSpec = G_PARAM_SPEC_INT(ptSpec);
-        if (pt > intSpec->maximum || pt < intSpec->minimum) {
-            GST_ERROR_OBJECT(m_payloader.get(), "pt %d outside of valid range [%d, %d]", pt, intSpec->minimum, intSpec->maximum);
-            return;
-        }
-        g_object_set(m_payloader.get(), "pt", pt, nullptr);
-        return;
-    }
-
-    if (G_VALUE_TYPE(&value) == G_TYPE_UINT) {
-        auto uintSpec = G_PARAM_SPEC_UINT(ptSpec);
-        unsigned ptValue = static_cast<unsigned>(pt);
-        if (ptValue > uintSpec->maximum || ptValue < uintSpec->minimum) {
-            GST_ERROR_OBJECT(m_payloader.get(), "pt %u outside of valid range [%u, %u]", ptValue, uintSpec->minimum, uintSpec->maximum);
-            return;
-        }
-        g_object_set(m_payloader.get(), "pt", ptValue, nullptr);
-    }
 }
 
 std::optional<int> GStreamerRTPPacketizer::payloadType() const
