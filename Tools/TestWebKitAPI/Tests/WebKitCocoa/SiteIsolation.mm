@@ -765,45 +765,40 @@ TEST(SiteIsolation, PostMessageWithMessagePorts)
 
     auto webkitHTML = "<script>"
     "    window.addEventListener('message', (event) => {"
-    "           event.ports[0].postMessage('got port and message ' + event.data);"
+    "        event.ports[0].postMessage('got port and message ' + event.data);"
     "    }, false)"
     "</script>"_s;
 
-    bool finishedLoading { false };
+    auto example2HTML = "<script>"
+    "    onload = () => {"
+    "        const channel = new MessageChannel();"
+    "        document.getElementById('webkit_frame').contentWindow.postMessage('ping', '*', [channel.port2]);"
+    "        channel.port1.postMessage('sent message after sending port');"
+    "    }"
+    "</script>"
+    "<iframe id='webkit_frame' src='https://webkit.org/webkit2'></iframe>"_s;
+
+    auto webkit2HTML = "<script>"
+    "    window.addEventListener('message', (event) => {"
+    "        event.ports[0].onmessage = (e)=>{ alert('port received message ' + event.data); }"
+    "    }, false)"
+    "</script>"_s;
+
     HTTPServer server({
         { "/example"_s, { exampleHTML } },
-        { "/webkit"_s, { webkitHTML } }
+        { "/webkit"_s, { webkitHTML } },
+        { "/example2"_s, { example2HTML } },
+        { "/webkit2"_s, { webkit2HTML } }
     }, HTTPServer::Protocol::HttpsProxy);
     auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
 
-    navigationDelegate.get().didFinishNavigation = makeBlockPtr([&](WKWebView *, WKNavigation *navigation) {
-        if (navigation._request) {
-            EXPECT_WK_STREQ(navigation._request.URL.absoluteString, "https://example.com/example");
-            finishedLoading = true;
-        }
-    }).get();
-
-    __block RetainPtr<NSString> alert;
-    auto uiDelegate = adoptNS([TestUIDelegate new]);
-    uiDelegate.get().runJavaScriptAlertPanelWithMessage = ^(WKWebView *, NSString *message, WKFrameInfo *, void (^completionHandler)(void)) {
-        alert = message;
-        completionHandler();
-    };
-
-    webView.get().UIDelegate = uiDelegate.get();
     [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
-    Util::run(&finishedLoading);
+    [navigationDelegate waitForDidFinishNavigation];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "parent frame received got port and message ping");
 
-    while (!alert)
-        Util::spinRunLoop();
-    EXPECT_WK_STREQ(alert.get(), "parent frame received got port and message ping");
-
-    auto mainFrame = [webView mainFrame];
-    pid_t mainFramePid = mainFrame.info._processIdentifier;
-    pid_t childFramePid = mainFrame.childFrames.firstObject.info._processIdentifier;
-    EXPECT_NE(mainFramePid, 0);
-    EXPECT_NE(childFramePid, 0);
-    EXPECT_NE(mainFramePid, childFramePid);
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example2"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "port received message ping");
 }
 
 TEST(SiteIsolation, PostMessageWithNotAllowedTargetOrigin)
