@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- webkit-test-runner [ SupportHDRDisplayEnabled=true CSSConstrainedDynamicRangeLimitEnabled=true ] -->
+<!DOCTYPE html><!-- webkit-test-runner [ SupportHDRDisplayEnabled=true CSSConstrainedDynamicRangeLimitEnabled=false ] -->
 <html id="html">
 <body>
 <script src='../resources/js-test-pre.js'></script>
@@ -23,7 +23,7 @@ function verifyVideo(expectations)
 if (!window.internals) {
     failTest('This test requires window.internals.');
 } else if (CSS.supports("dynamic-range-limit", "standard") && CSS.supports("dynamic-range-limit", "no-limit")) {
-    shouldBe('CSS.supports("dynamic-range-limit", "constrained")', 'true');
+    shouldBe('CSS.supports("dynamic-range-limit", "constrained")', 'false');
 
     videon = document.getElementById("videon");
     videoc = document.getElementById("videoc");
@@ -31,12 +31,12 @@ if (!window.internals) {
 
     internals.setPageShouldSuppressHDR(false);
     verifyVideo({video: 'videon', limit: '""', computed: '"no-limit"', value: '1.0'});
-    verifyVideo({video: 'videoc', limit: '"constrained"', computed: '"constrained"', value: '0.5'});
+    verifyVideo({video: 'videoc', limit: '""', computed: '"no-limit"', value: '1.0'});
     verifyVideo({video: 'videos', limit: '"standard"', computed: '"standard"', value: '0.0'});
 
     internals.setPageShouldSuppressHDR(true);
     verifyVideo({video: 'videon', limit: '""', computed: '"no-limit"', value: '0.5'});
-    verifyVideo({video: 'videoc', limit: '"constrained"', computed: '"constrained"', value: '0.5'});
+    verifyVideo({video: 'videoc', limit: '""', computed: '"no-limit"', value: '0.5'});
     verifyVideo({video: 'videos', limit: '"standard"', computed: '"standard"', value: '0.0'});
 
     video2 = document.createElement("video");
@@ -45,7 +45,7 @@ if (!window.internals) {
 
     internals.setPageShouldSuppressHDR(false);
     verifyVideo({video: 'videon', limit: '""', computed: '"no-limit"', value: '1.0'});
-    verifyVideo({video: 'videoc', limit: '"constrained"', computed: '"constrained"', value: '0.5'});
+    verifyVideo({video: 'videoc', limit: '""', computed: '"no-limit"', value: '1.0'});
     verifyVideo({video: 'videos', limit: '"standard"', computed: '"standard"', value: '0.0'});
     verifyVideo({video: 'video2', limit: '""', computed: '"no-limit"', value: '1.0'});
 
