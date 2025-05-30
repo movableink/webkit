@@ -1337,7 +1337,7 @@ void WebPageProxy::updateTextVisibilityForActiveWritingToolsSession(const WebCor
     protectedLegacyMainFrameProcess()->sendWithAsyncReply(Messages::WebPage::UpdateTextVisibilityForActiveWritingToolsSession(rangeRelativeToSessionRange, visible, identifier), WTFMove(completionHandler), webPageIDInMainFrameProcess());
 }
 
-void WebPageProxy::textPreviewDataForActiveWritingToolsSession(const WebCore::CharacterRange& rangeRelativeToSessionRange, CompletionHandler<void(std::optional<WebCore::TextIndicatorData>&&)>&& completionHandler)
+void WebPageProxy::textPreviewDataForActiveWritingToolsSession(const WebCore::CharacterRange& rangeRelativeToSessionRange, CompletionHandler<void(RefPtr<WebCore::TextIndicator>&&)>&& completionHandler)
 {
     protectedLegacyMainFrameProcess()->sendWithAsyncReply(Messages::WebPage::TextPreviewDataForActiveWritingToolsSession(rangeRelativeToSessionRange), WTFMove(completionHandler), webPageIDInMainFrameProcess());
 }

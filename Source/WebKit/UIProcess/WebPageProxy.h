@@ -2604,7 +2604,7 @@ public:
 
     void proofreadingSessionSuggestionTextRectsInRootViewCoordinates(const WebCore::CharacterRange&, CompletionHandler<void(Vector<WebCore::FloatRect>&&)>&&) const;
     void updateTextVisibilityForActiveWritingToolsSession(const WebCore::CharacterRange&, bool, const WTF::UUID&, CompletionHandler<void()>&&);
-    void textPreviewDataForActiveWritingToolsSession(const WebCore::CharacterRange&, CompletionHandler<void(std::optional<WebCore::TextIndicatorData>&&)>&&);
+    void textPreviewDataForActiveWritingToolsSession(const WebCore::CharacterRange&, CompletionHandler<void(RefPtr<WebCore::TextIndicator>&&)>&&);
     void decorateTextReplacementsForActiveWritingToolsSession(const WebCore::CharacterRange&, CompletionHandler<void()>&&);
     void setSelectionForActiveWritingToolsSession(const WebCore::CharacterRange&, CompletionHandler<void()>&&);
 

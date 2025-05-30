@@ -1104,10 +1104,10 @@ void WebPage::updateTextVisibilityForActiveWritingToolsSession(const WebCore::Ch
     completionHandler();
 }
 
-void WebPage::textPreviewDataForActiveWritingToolsSession(const WebCore::CharacterRange& rangeRelativeToSessionRange, CompletionHandler<void(std::optional<WebCore::TextIndicatorData>&&)>&& completionHandler)
+void WebPage::textPreviewDataForActiveWritingToolsSession(const WebCore::CharacterRange& rangeRelativeToSessionRange, CompletionHandler<void(RefPtr<WebCore::TextIndicator>&&)>&& completionHandler)
 {
-    auto data = corePage()->textPreviewDataForActiveWritingToolsSession(rangeRelativeToSessionRange);
-    completionHandler(WTFMove(data));
+    RefPtr textIndicator = corePage()->textPreviewDataForActiveWritingToolsSession(rangeRelativeToSessionRange);
+    completionHandler(WTFMove(textIndicator));
 }
 
 void WebPage::decorateTextReplacementsForActiveWritingToolsSession(const WebCore::CharacterRange& rangeRelativeToSessionRange, CompletionHandler<void(void)>&& completionHandler)

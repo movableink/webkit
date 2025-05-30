@@ -5459,26 +5459,21 @@ void Page::updateTextVisibilityForActiveWritingToolsSession(const CharacterRange
     IntelligenceTextEffectsSupport::updateTextVisibility(*localTopDocument, *scope, rangeRelativeToSessionRange, visible, identifier);
 }
 
-std::optional<TextIndicatorData> Page::textPreviewDataForActiveWritingToolsSession(const CharacterRange& rangeRelativeToSessionRange)
+RefPtr<TextIndicator> Page::textPreviewDataForActiveWritingToolsSession(const CharacterRange& rangeRelativeToSessionRange)
 {
     RefPtr localTopDocument = this->localTopDocument();
     if (!localTopDocument) {
         ASSERT_NOT_REACHED();
-        return std::nullopt;
+        return nullptr;
     }
 
     auto scope = m_writingToolsController->activeSessionRange();
     if (!scope) {
         ASSERT_NOT_REACHED();
-        return std::nullopt;
+        return nullptr;
     }
 
-    RefPtr textIndicator = IntelligenceTextEffectsSupport::textPreviewDataForRange(*localTopDocument, *scope, rangeRelativeToSessionRange);
-
-    if (textIndicator)
-        return textIndicator->data();
-
-    return std::nullopt;
+    return IntelligenceTextEffectsSupport::textPreviewDataForRange(*localTopDocument, *scope, rangeRelativeToSessionRange);
 }
 
 void Page::decorateTextReplacementsForActiveWritingToolsSession(const CharacterRange& rangeRelativeToSessionRange)

@@ -2680,19 +2680,19 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
 #if PLATFORM(IOS_FAMILY)
 - (void)intelligenceTextEffectCoordinator:(id<WKIntelligenceTextEffectCoordinating>)coordinator textPreviewsForRange:(NSRange)range completion:(void (^)(UITargetedPreview *))completion
 {
-    _page->textPreviewDataForActiveWritingToolsSession(range, [completion = makeBlockPtr(completion), weakSelf = WeakObjCPtr<WKWebView>(self)](auto&& textIndicatorData) {
+    _page->textPreviewDataForActiveWritingToolsSession(range, [completion = makeBlockPtr(completion), weakSelf = WeakObjCPtr<WKWebView>(self)](RefPtr<WebCore::TextIndicator>&& textIndicator) {
         auto strongSelf = weakSelf.get();
         if (!strongSelf) {
             completion(nil);
             return;
         }
 
-        if (!textIndicatorData) {
+        if (!textIndicator) {
             completion(nil);
             return;
         }
 
-        RetainPtr preview = [strongSelf->_contentView _createTargetedPreviewFromTextIndicator:*textIndicatorData previewContainer:strongSelf.get()];
+        RetainPtr preview = [strongSelf->_contentView _createTargetedPreviewFromTextIndicator:textIndicator->data() previewContainer:strongSelf.get()];
         completion(preview.get());
     });
 }
@@ -2700,13 +2700,13 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
 - (void)intelligenceTextEffectCoordinator:(id<WKIntelligenceTextEffectCoordinating>)coordinator textPreviewsForRange:(NSRange)range completion:(void (^)(NSArray<_WKTextPreview *> *))completion
 {
     // FIXME: This logic is currently duplicated in a bunch of places; it should be unified.
-    _page->textPreviewDataForActiveWritingToolsSession(range, [completion = makeBlockPtr(completion)](auto&& textIndicatorData) {
-        if (!textIndicatorData) {
+    _page->textPreviewDataForActiveWritingToolsSession(range, [completion = makeBlockPtr(completion)](RefPtr<WebCore::TextIndicator>&& textIndicator) {
+        if (!textIndicator) {
             completion(@[ ]);
             return;
         }
 
-        RefPtr contentImage = textIndicatorData->contentImage;
+        RefPtr contentImage = textIndicator->contentImage();
         if (!contentImage) {
             ASSERT_NOT_REACHED();
             completion(@[ ]);
@@ -2722,9 +2722,9 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
 
         RetainPtr platformImage = nativeImage->platformImage();
 
-        auto textBoundingRectInRootViewCoordinates = textIndicatorData->textBoundingRectInRootViewCoordinates;
-        auto textRectsInBoundingRectCoordinates = textIndicatorData->textRectsInBoundingRectCoordinates;
-        auto contentImageScaleFactor = textIndicatorData->contentImageScaleFactor;
+        auto textBoundingRectInRootViewCoordinates = textIndicator->textBoundingRectInRootViewCoordinates();
+        auto textRectsInBoundingRectCoordinates = textIndicator->textRectsInBoundingRectCoordinates();
+        auto contentImageScaleFactor = textIndicator->contentImageScaleFactor();
 
         RetainPtr previews = createNSArray(textRectsInBoundingRectCoordinates, [platformImage, textBoundingRectInRootViewCoordinates, contentImageScaleFactor](auto& textRectInBoundingRectCoordinates) -> _WKTextPreview * {
 
@@ -2747,13 +2747,13 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
 - (void)intelligenceTextEffectCoordinator:(id<WKIntelligenceTextEffectCoordinating>)coordinator contentPreviewForRange:(NSRange)range completion:(void (^)(_WKTextPreview *))completion
 {
     // FIXME: This logic is currently duplicated in a bunch of places; it should be unified.
-    _page->textPreviewDataForActiveWritingToolsSession(range, [completion = makeBlockPtr(completion)](auto&& textIndicatorData) {
-        if (!textIndicatorData) {
+    _page->textPreviewDataForActiveWritingToolsSession(range, [completion = makeBlockPtr(completion)](RefPtr<WebCore::TextIndicator>&& textIndicator) {
+        if (!textIndicator) {
             completion(nil);
             return;
         }
 
-        RefPtr contentImage = textIndicatorData->contentImage;
+        RefPtr contentImage = textIndicator->contentImage();
         if (!contentImage) {
             ASSERT_NOT_REACHED();
             completion(nil);
@@ -2774,8 +2774,8 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
             return;
         }
 
-        auto textBoundingRectInRootViewCoordinates = textIndicatorData->textBoundingRectInRootViewCoordinates;
-        auto textRectsInBoundingRectCoordinates = textIndicatorData->textRectsInBoundingRectCoordinates;
+        auto textBoundingRectInRootViewCoordinates = textIndicator->textBoundingRectInRootViewCoordinates();
+        auto textRectsInBoundingRectCoordinates = textIndicator->textRectsInBoundingRectCoordinates();
 
         RetainPtr textPreview = adoptNS([[_WKTextPreview alloc] initWithSnapshotImage:platformImage.get() presentationFrame:textBoundingRectInRootViewCoordinates]);
 

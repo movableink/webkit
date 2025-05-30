@@ -829,7 +829,7 @@ messages -> WebPage WantsAsyncDispatchMessage {
 
     UpdateTextVisibilityForActiveWritingToolsSession(struct WebCore::CharacterRange rangeRelativeToSessionRange, bool visible, WTF::UUID identifier) -> ()
 
-    TextPreviewDataForActiveWritingToolsSession(struct WebCore::CharacterRange rangeRelativeToSessionRange) -> (struct std::optional<WebCore::TextIndicatorData> data)
+    TextPreviewDataForActiveWritingToolsSession(struct WebCore::CharacterRange rangeRelativeToSessionRange) -> (RefPtr<WebCore::TextIndicator> textIndicator)
 
     SetSelectionForActiveWritingToolsSession(struct WebCore::CharacterRange rangeRelativeToSessionRange) -> ()
 

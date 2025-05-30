@@ -182,6 +182,7 @@ class StorageConnection;
 class StorageNamespace;
 class StorageNamespaceProvider;
 class StorageProvider;
+class TextIndicator;
 class ThermalMitigationNotifier;
 class UserContentProvider;
 class UserContentURLPattern;
@@ -228,7 +229,6 @@ struct ProcessSyncData;
 struct SimpleRange;
 struct SpatialBackdropSource;
 struct SystemPreviewInfo;
-struct TextIndicatorData;
 struct TextRecognitionResult;
 struct ViewportArguments;
 struct WindowFeatures;
@@ -1287,7 +1287,7 @@ public:
 
     WEBCORE_EXPORT Vector<FloatRect> proofreadingSessionSuggestionTextRectsInRootViewCoordinates(const CharacterRange&) const;
     WEBCORE_EXPORT void updateTextVisibilityForActiveWritingToolsSession(const CharacterRange&, bool, const WTF::UUID&);
-    WEBCORE_EXPORT std::optional<TextIndicatorData> textPreviewDataForActiveWritingToolsSession(const CharacterRange&);
+    WEBCORE_EXPORT RefPtr<TextIndicator> textPreviewDataForActiveWritingToolsSession(const CharacterRange&);
     WEBCORE_EXPORT void decorateTextReplacementsForActiveWritingToolsSession(const CharacterRange&);
     WEBCORE_EXPORT void setSelectionForActiveWritingToolsSession(const CharacterRange&);
 
