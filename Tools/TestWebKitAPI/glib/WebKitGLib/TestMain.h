@@ -39,6 +39,9 @@
 #elif PLATFORM(WPE)
 #include <WPEToolingBackends/HeadlessViewBackend.h>
 #include <wpe/webkit.h>
+#if ENABLE(WPE_PLATFORM)
+#include <wpe/headless/wpe-headless.h>
+#endif
 #endif
 
 #define TEST_PATH_FORMAT "/webkit/%s/%s"
@@ -121,6 +124,12 @@ public:
 
     Test()
     {
+#if ENABLE(WPE_PLATFORM)
+        if (!s_useWPELegacyAPI) {
+            m_display = adoptGRef(wpe_display_headless_new());
+            assertObjectIsDeletedWhenTestFinishes(G_OBJECT(m_display.get()));
+        }
+#endif
 #if ENABLE(2022_GLIB_API)
         m_networkSession = adoptGRef(webkit_network_session_new(dataDirectory(), dataDirectory()));
         assertObjectIsDeletedWhenTestFinishes(G_OBJECT(m_networkSession.get()));
@@ -157,6 +166,9 @@ public:
         m_webContext = nullptr;
 #if ENABLE(2022_GLIB_API)
         m_networkSession = nullptr;
+#endif
+#if ENABLE(WPE_PLATFORM)
+        m_display = nullptr;
 #endif
         if (m_watchedObjects.isEmpty())
             return;
@@ -217,6 +229,18 @@ public:
         }
 
 #if PLATFORM(WPE)
+#if ENABLE(WPE_PLATFORM)
+        if (m_display) {
+            if (!hasRelatedView) {
+                g_ptr_array_add(propertyNames, g_strdup("display"));
+                g_array_set_size(propertyValues, propertyNames->len);
+                GValue* value = &g_array_index(propertyValues, GValue, propertyValues->len - 1);
+                g_value_init(value, G_TYPE_OBJECT);
+                g_value_set_object(value, G_OBJECT(m_display.get()));
+            }
+            return;
+        }
+#endif
         g_ptr_array_add(propertyNames, g_strdup("backend"));
         g_array_set_size(propertyValues, propertyNames->len);
         GValue* value = &g_array_index(propertyValues, GValue, propertyValues->len - 1);
@@ -295,6 +319,13 @@ public:
         g_assert_true(g_object_is_floating(webView));
         return webView;
 #elif PLATFORM(WPE)
+#if ENABLE(WPE_PLATFORM)
+        if (m_display) {
+            // Make the view initially hidden for consistency with GTK tests.
+            auto* view = webkit_web_view_get_wpe_view(webView);
+            wpe_view_set_visible(view, FALSE);
+        }
+#endif
         return adoptGRef(webView);
 #endif
     }
@@ -368,6 +399,10 @@ public:
     GRefPtr<WebKitWebContext> m_webContext;
 #if ENABLE(2022_GLIB_API)
     GRefPtr<WebKitNetworkSession> m_networkSession;
+#endif
+#if ENABLE(WPE_PLATFORM)
+    GRefPtr<WPEDisplay> m_display;
+    static bool s_useWPELegacyAPI;
 #endif
     static GRefPtr<GDBusServer> s_dbusServer;
     static Vector<GRefPtr<GDBusConnection>> s_dbusConnections;

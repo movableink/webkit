@@ -172,13 +172,17 @@ class TestRunner(object):
                     return 0
                 raise
 
+    def _use_wpe_legacy_api(self):
+        return hasattr(self._options, 'wpe_legacy_api') and self._options.wpe_legacy_api
+
     def _run_test_glib(self, test_program, subtests, skipped_test_cases):
         timeout = self._options.timeout
+        wpe_legacy_api = self._use_wpe_legacy_api()
 
         def is_slow_test(test, subtest):
             return self._expectations.is_slow(test, subtest)
 
-        runner = GLibTestRunner(test_program, timeout, is_slow_test, timeout * 10)
+        runner = GLibTestRunner(test_program, timeout, wpe_legacy_api, is_slow_test, timeout * 10)
         return runner.run(subtests=subtests, skipped=skipped_test_cases, env=self._test_env)
 
     def _run_test_qt(self, test_program):
@@ -230,6 +234,9 @@ class TestRunner(object):
 
     def _run_google_test(self, test_program, subtest):
         command = [test_program, '--gtest_filter=%s' % (subtest)]
+        if self._use_wpe_legacy_api() and os.path.basename(test_program) == 'TestWebKit':
+            command.append('--wpe-legacy-api')
+
         timeout = self._options.timeout
         if self._expectations.is_slow(os.path.basename(test_program), subtest):
             timeout *= 10

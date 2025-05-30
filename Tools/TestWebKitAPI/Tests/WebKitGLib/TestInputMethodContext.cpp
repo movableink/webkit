@@ -44,6 +44,9 @@ typedef struct _WebKitInputMethodContextMock {
     char* surroundingText;
     unsigned surroundingCursorIndex;
     unsigned surroundingSelectionIndex;
+#if ENABLE(WPE_PLATFORM)
+    bool usingWPEPlatformAPI;
+#endif
 } WebKitInputMethodContextMock;
 
 typedef struct _WebKitInputMethodContextMockClass {
@@ -108,12 +111,30 @@ static gboolean webkitInputMethodContextMockFilterKeyEvent(WebKitInputMethodCont
     bool isControl = state & GDK_CONTROL_MASK;
     bool isShift = state & GDK_SHIFT_MASK;
 #elif PLATFORM(WPE)
-    struct wpe_input_keyboard_event* wpeKeyEvent = static_cast<struct wpe_input_keyboard_event*>(keyEvent);
-    uint32_t keyval = wpeKeyEvent->key_code;
-    bool isKeyPress = wpeKeyEvent->pressed;
-    gunichar character = wpe_key_code_to_unicode(keyval);
-    bool isControl = wpeKeyEvent->modifiers & wpe_input_keyboard_modifier_control;
-    bool isShift = wpeKeyEvent->modifiers & wpe_input_keyboard_modifier_shift;
+    uint32_t keyval;
+    bool isKeyPress;
+    gunichar character;
+    bool isControl;
+    bool isShift;
+#if ENABLE(WPE_PLATFORM)
+    if (mock->usingWPEPlatformAPI) {
+        auto* wpeKeyEvent = static_cast<WPEEvent*>(keyEvent);
+        keyval = wpe_event_keyboard_get_keyval(wpeKeyEvent);
+        isKeyPress = wpe_event_get_event_type(wpeKeyEvent) == WPE_EVENT_KEYBOARD_KEY_DOWN;
+        character = wpe_keyval_to_unicode(keyval);
+        auto state = wpe_event_get_modifiers(wpeKeyEvent);
+        isControl = state & WPE_MODIFIER_KEYBOARD_CONTROL;
+        isShift = state & WPE_MODIFIER_KEYBOARD_SHIFT;
+    } else
+#endif
+    {
+        struct wpe_input_keyboard_event* wpeKeyEvent = static_cast<struct wpe_input_keyboard_event*>(keyEvent);
+        keyval = wpeKeyEvent->key_code;
+        isKeyPress = wpeKeyEvent->pressed;
+        character = wpe_key_code_to_unicode(keyval);
+        isControl = wpeKeyEvent->modifiers & wpe_input_keyboard_modifier_control;
+        isShift = wpeKeyEvent->modifiers & wpe_input_keyboard_modifier_shift;
+    }
 #endif
     bool isComposeEnd = (keyval == KEY(space) || keyval == KEY(Return) || keyval == KEY(ISO_Enter));
 
@@ -214,6 +235,13 @@ static void webkitInputMethodContextMockReset(WebKitInputMethodContext* context)
     g_signal_emit_by_name(context, "preedit-finished", nullptr);
 }
 
+#if ENABLE(WPE_PLATFORM)
+static void webkitInputMethodContextMockSetInUsingWPEPlatformAPI(WebKitInputMethodContextMock* mock)
+{
+    mock->usingWPEPlatformAPI = true;
+}
+#endif
+
 static void webkit_input_method_context_mock_class_init(WebKitInputMethodContextMockClass* klass)
 {
     GObjectClass* objectClass = G_OBJECT_CLASS(klass);
@@ -266,13 +294,26 @@ public:
     InputMethodTest()
         : m_context(adoptGRef(static_cast<WebKitInputMethodContextMock*>(g_object_new(webkit_input_method_context_mock_get_type(), nullptr))))
     {
+#if ENABLE(WPE_PLATFORM)
+        if (m_display)
+            webkitInputMethodContextMockSetInUsingWPEPlatformAPI(m_context.get());
+#endif
         WebViewTest::showInWindow();
 #if PLATFORM(GTK)
         auto* defaultContext = webkit_web_view_get_input_method_context(m_webView.get());
         g_assert_true(WEBKIT_IS_INPUT_METHOD_CONTEXT(defaultContext));
         assertObjectIsDeletedWhenTestFinishes(G_OBJECT(defaultContext));
 #elif PLATFORM(WPE)
+#if ENABLE(WPE_PLATFORM)
+        if (m_display) {
+            auto* defaultContext = webkit_web_view_get_input_method_context(m_webView.get());
+            g_assert_true(WEBKIT_IS_INPUT_METHOD_CONTEXT(defaultContext));
+            assertObjectIsDeletedWhenTestFinishes(G_OBJECT(defaultContext));
+        } else
+            g_assert_null(webkit_web_view_get_input_method_context(m_webView.get()));
+#else
         g_assert_null(webkit_web_view_get_input_method_context(m_webView.get()));
+#endif
 #endif
         assertObjectIsDeletedWhenTestFinishes(G_OBJECT(m_context.get()));
         webkit_web_view_set_input_method_context(m_webView.get(), WEBKIT_INPUT_METHOD_CONTEXT(m_context.get()));

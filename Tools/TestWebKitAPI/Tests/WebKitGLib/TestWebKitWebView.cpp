@@ -118,6 +118,12 @@ static void testWebViewCloseQuickly(WebViewTest* test, gconstpointer)
 #if PLATFORM(WPE)
 static void testWebViewWebBackend(Test* test, gconstpointer)
 {
+#if ENABLE(WPE_PLATFORM)
+    if (test->m_display) {
+        g_test_skip(nullptr);
+        return;
+    }
+#endif
     static struct wpe_view_backend_interface s_testingInterface = {
         // create
         [](void*, struct wpe_view_backend*) -> void* { return nullptr; },
@@ -1689,6 +1695,12 @@ public:
 
 static void testWebViewFrameDisplayed(FrameDisplayedTest* test, gconstpointer)
 {
+#if ENABLE(WPE_PLATFORM)
+    if (test->m_display) {
+        g_test_skip(nullptr);
+        return;
+    }
+#endif
     test->showInWindow();
 
     test->loadHtml("<html></html>", nullptr);

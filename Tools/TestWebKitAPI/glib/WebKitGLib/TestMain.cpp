@@ -33,6 +33,9 @@ GRefPtr<GDBusServer> Test::s_dbusServer;
 Vector<GRefPtr<GDBusConnection>> Test::s_dbusConnections;
 HashMap<uint64_t, GDBusConnection*> Test::s_dbusConnectionPageMap;
 WebKitMemoryPressureSettings* Test::s_memoryPressureSettings = nullptr;
+#if ENABLE(WPE_PLATFORM)
+bool Test::s_useWPELegacyAPI = false;
+#endif
 
 void beforeAll();
 void afterAll();
@@ -118,6 +121,16 @@ static void stopDBusServer()
     Test::s_dbusServer = nullptr;
 }
 
+#if ENABLE(WPE_PLATFORM)
+static void parseWPEArgs(int argc, char** argv)
+{
+    for (int i = 1; i < argc; ++i) {
+        if (!g_strcmp0(argv[i], "--wpe-legacy-api"))
+            Test::s_useWPELegacyAPI = true;
+    }
+}
+#endif
+
 int main(int argc, char** argv)
 {
     g_unsetenv("DBUS_SESSION_BUS_ADDRESS");
@@ -126,6 +139,10 @@ int main(int argc, char** argv)
 #else
     g_test_init(&argc, &argv, nullptr);
 #endif
+#if ENABLE(WPE_PLATFORM)
+    parseWPEArgs(argc, argv);
+#endif
+
     g_set_prgname(FileSystem::currentExecutableName().data());
     g_setenv("WEBKIT_EXEC_PATH", WEBKIT_EXEC_PATH, FALSE);
     g_setenv("WEBKIT_INJECTED_BUNDLE_PATH", WEBKIT_INJECTED_BUNDLE_PATH, FALSE);

@@ -25,3 +25,12 @@ list(APPEND WebKitGLibAPITestsCore_LIBRARIES
 list(APPEND WebKitGLibAPITest_LIBRARIES
     WebKit::WPEToolingBackends
 )
+
+if (ENABLE_WPE_PLATFORM)
+    list(APPEND WebKitGLibAPITestsCore_LIBRARIES
+        WPEPlatform-${WPE_API_VERSION}
+    )
+    list(APPEND WebKitGLibAPITest_LIBRARIES
+        WPEPlatform-${WPE_API_VERSION}
+    )
+endif ()

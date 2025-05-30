@@ -63,6 +63,11 @@ void WebViewTest::initializeWebView()
 
     assertObjectIsDeletedWhenTestFinishes(G_OBJECT(m_webView.get()));
 
+#if ENABLE(WPE_PLATFORM)
+    if (auto* view = webkit_web_view_get_wpe_view(m_webView.get()))
+        assertObjectIsDeletedWhenTestFinishes(G_OBJECT(view));
+#endif
+
     g_signal_connect(m_webView.get(), "web-process-terminated", G_CALLBACK(WebViewTest::webProcessTerminated), this);
 }
 
