@@ -45,6 +45,8 @@ public final class WKSRKEntity: NSObject {
     private var _duration: TimeInterval? = nil
     private var _playbackRate: Float = 1.0
 
+    private static var _defaultEnvironmentResource: EnvironmentResource?
+
     @objc(isLoadFromDataAvailable) public static func isLoadFromDataAvailable() -> Bool {
 #if canImport(RealityKit, _version: 377)
         return true
@@ -313,6 +315,12 @@ public final class WKSRKEntity: NSObject {
         return context.makeImage()
     }
 
+    private func applyIBL(_ environment: EnvironmentResource) {
+        entity.components[VirtualEnvironmentProbeComponent.self] = .init(source: .single(.init(environment: environment)))
+        entity.components[ImageBasedLightComponent.self] = .init(source: .none)
+        entity.components[ImageBasedLightReceiverComponent.self] = .init(imageBasedLight: entity)
+    }
+
     @objc(applyIBLData:attributionHandler:withCompletion:) public func applyIBL(data: Data, attributionHandler: @escaping (REAssetRef) -> Void, completion: @escaping (Bool) -> Void) {
         guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil) else {
             Logger.realityKitEntity.error("Cannot get CGImageSource from IBL image data.")
@@ -336,9 +344,7 @@ public final class WKSRKEntity: NSObject {
                         attributionHandler(coreEnvironmentResourceAsset)
                     }
 
-                    entity.components[VirtualEnvironmentProbeComponent.self] = .init(source: .single(.init(environment: environment)))
-                    entity.components[ImageBasedLightComponent.self] = .init(source: .none)
-                    entity.components[ImageBasedLightReceiverComponent.self] = .init(imageBasedLight: entity)
+                    applyIBL(environment)
                     Logger.realityKitEntity.info("Successfully applied IBL to entity")
                     completion(true)
                 }
@@ -350,30 +356,35 @@ public final class WKSRKEntity: NSObject {
             }
         }
     }
-    
-    @objc(applyDefaultIBLWithAttributionHandler:) func applyDefaultIBL(attributionHandler: @escaping (REAssetRef) -> Void)
+
+    @objc(applyDefaultIBL) @MainActor func applyDefaultIBL()
     {
+#if canImport(RealityFoundation, _version: 380)
+        if let environment = WKSRKEntity._defaultEnvironmentResource {
+            applyIBL(environment)
+            return
+        }
+
         Task {
             do {
-#if canImport(RealityFoundation, _version: 380)
-                let environment = await EnvironmentResource.defaultObject()
+                let defaultEnvironmentResource = EnvironmentResource.defaultObject()
+                
                 await MainActor.run {
-                    if let coreEnvironmentResourceAsset = environment.coreIBLAsset?.__as(REAssetRef.self) {
-                        attributionHandler(coreEnvironmentResourceAsset)
+                    if WKSRKEntity._defaultEnvironmentResource == nil {
+                        WKSRKEntity._defaultEnvironmentResource = defaultEnvironmentResource
                     }
-
-                    entity.components[VirtualEnvironmentProbeComponent.self] = .init(source: .single(.init(environment: environment)))
-                    entity.components[ImageBasedLightComponent.self] = .init(source: .none)
-                    entity.components[ImageBasedLightReceiverComponent.self] = .init(imageBasedLight: entity)
+                    guard let environment = WKSRKEntity._defaultEnvironmentResource else {
+                        Logger.realityKitEntity.error("Cannot load default environment resource")
+                        return
+                    }
+                    applyIBL(environment)
                 }
-#else
-                await MainActor.run {
-                    entity.components[ImageBasedLightComponent.self] = .init(source: .none)
-                    entity.components[ImageBasedLightReceiverComponent.self] = nil
-                }
-#endif
             }
         }
+#else
+        entity.components[ImageBasedLightComponent.self] = .init(source: .none)
+        entity.components[ImageBasedLightReceiverComponent.self] = nil
+#endif
     }
 
     private func animationPlaybackStateDidUpdate() {

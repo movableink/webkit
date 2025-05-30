@@ -70,7 +70,7 @@ typedef struct {
 - (void)applyIBLData:(NSData *)data attributionHandler:(void (^)(REAssetRef coreEnvironmentResourceAsset))attributionHandler withCompletion:(void (^)(BOOL success))completion;
 - (void)interactionContainerDidRecenterFromTransform:(simd_float4x4)transform NS_SWIFT_NAME(interactionContainerDidRecenter(_:));
 - (void)recenterEntityAtTransform:(WKEntityTransform)transform NS_SWIFT_NAME(recenterEntity(at:));
-- (void)applyDefaultIBLWithAttributionHandler:(void (^)(REAssetRef coreEnvironmentResourceAsset))attributionHandler NS_SWIFT_NAME(applyDefaultIBL(attributionHandler:));
+- (void)applyDefaultIBL;
 @end
 
 NS_ASSUME_NONNULL_END

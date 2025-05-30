@@ -924,15 +924,7 @@ void ModelProcessModelPlayerProxy::applyStageModeOperationToDriver()
 
 void ModelProcessModelPlayerProxy::applyDefaultIBL()
 {
-    [m_modelRKEntity applyDefaultIBLWithAttributionHandler:makeBlockPtr([weakThis = WeakPtr { *this }] (REAssetRef coreEnvironmentResourceAsset) {
-        RefPtr protectedThis = weakThis.get();
-        if (!protectedThis || !protectedThis->m_attributionTaskID || !coreEnvironmentResourceAsset)
-            return;
-
-#if HAVE(MODEL_MEMORY_ATTRIBUTION)
-        setIBLAssetOwnership(*(protectedThis->m_attributionTaskID), coreEnvironmentResourceAsset);
-#endif
-    }).get()];
+    [m_modelRKEntity applyDefaultIBL];
 }
 
 } // namespace WebKit
