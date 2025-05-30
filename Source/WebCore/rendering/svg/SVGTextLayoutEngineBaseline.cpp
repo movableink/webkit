@@ -23,6 +23,7 @@
 #include "SVGTextLayoutEngineBaseline.h"
 
 #include "FontCascade.h"
+#include "LengthFunctions.h"
 #include "RenderElement.h"
 #include "RenderSVGInlineText.h"
 #include "SVGLengthContext.h"
@@ -36,17 +37,8 @@ SVGTextLayoutEngineBaseline::SVGTextLayoutEngineBaseline(const FontCascade& font
 {
 }
 
-float SVGTextLayoutEngineBaseline::calculateBaselineShift(const SVGRenderStyle& style, SVGElement* context) const
+float SVGTextLayoutEngineBaseline::calculateBaselineShift(const SVGRenderStyle& style) const
 {
-    if (style.baselineShift() == BaselineShift::Length) {
-        auto baselineShiftValueLength = style.baselineShiftValue();
-        if (baselineShiftValueLength.lengthType() == SVGLengthType::Percentage)
-            return baselineShiftValueLength.valueAsPercentage() * m_font.size();
-
-        SVGLengthContext lengthContext(context);
-        return baselineShiftValueLength.value(lengthContext);
-    }
-
     switch (style.baselineShift()) {
     case BaselineShift::Baseline:
         return 0;
@@ -55,7 +47,7 @@ float SVGTextLayoutEngineBaseline::calculateBaselineShift(const SVGRenderStyle& 
     case BaselineShift::Super:
         return m_font.metricsOfPrimaryFont().height() / 2;
     case BaselineShift::Length:
-        break;
+        return floatValueForLength(style.baselineShiftValue(), m_font.size());
     }
     ASSERT_NOT_REACHED();
     return 0;

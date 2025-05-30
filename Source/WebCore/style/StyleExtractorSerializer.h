@@ -71,8 +71,6 @@ public:
 
     static void serializeSVGURIReference(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const URL&);
     static void serializeSVGPaint(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, SVGPaintType, const URL&, const Color&);
-    static void serializeSVGLengthUsingElement(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const SVGLengthValue&);
-    static void serializeSVGLengthNotUsingElement(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const SVGLengthValue&);
 
     // MARK: Transform serializations
 
@@ -95,7 +93,7 @@ public:
     static void serializePathOperation(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const PathOperation*, PathConversion = PathConversion::None);
     static void serializePathOperationForceAbsolute(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const PathOperation*);
     static void serializeDPath(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const StylePathData*);
-    static void serializeStrokeDashArray(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const Vector<SVGLengthValue>&);
+    static void serializeStrokeDashArray(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const Vector<WebCore::Length>&);
     static void serializeTextStrokeWidth(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, float);
     static void serializeFilterOperations(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const FilterOperations&);
     static void serializeAppleColorFilterOperations(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const FilterOperations&);
@@ -504,32 +502,6 @@ inline void ExtractorSerializer::serializeSVGPaint(ExtractorState& state, String
     }
 
     RELEASE_ASSERT_NOT_REACHED();
-}
-
-inline void ExtractorSerializer::serializeSVGLengthUsingElement(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const SVGLengthValue& length)
-{
-    // FIXME: Why do some callers want to pass the element and some don't?
-    // FIXME: Why does this use deprecated "resolveAsLengthDeprecated"?
-
-    auto computedValue = length.toCSSPrimitiveValue(state.element.ptr());
-    if (computedValue->isLength() && computedValue->primitiveType() != CSSUnitType::CSS_PX) {
-        CSS::serializationForCSS(builder, context, CSS::LengthRaw<> { CSS::LengthUnit::Px, computedValue->resolveAsLengthDeprecated() });
-        return;
-    }
-    builder.append(computedValue->customCSSText(context));
-}
-
-inline void ExtractorSerializer::serializeSVGLengthNotUsingElement(ExtractorState&, StringBuilder& builder, const CSS::SerializationContext& context, const SVGLengthValue& length)
-{
-    // FIXME: Why do some callers want to pass the element and some don't?
-    // FIXME: Why does this use deprecated "resolveAsLengthDeprecated"?
-
-    auto computedValue = length.toCSSPrimitiveValue();
-    if (computedValue->isLength() && computedValue->primitiveType() != CSSUnitType::CSS_PX) {
-        CSS::serializationForCSS(builder, context, CSS::LengthRaw<> { CSS::LengthUnit::Px, computedValue->resolveAsLengthDeprecated() });
-        return;
-    }
-    builder.append(computedValue->customCSSText(context));
 }
 
 // MARK: - Transform serializations
@@ -980,7 +952,7 @@ inline void ExtractorSerializer::serializeDPath(ExtractorState& state, StringBui
     CSS::serializationForCSS(builder, context, overrideToCSS(Ref { *path }->path(), state.style, PathConversion::ForceAbsolute));
 }
 
-inline void ExtractorSerializer::serializeStrokeDashArray(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const Vector<SVGLengthValue>& dashes)
+inline void ExtractorSerializer::serializeStrokeDashArray(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const Vector<WebCore::Length>& dashes)
 {
     if (dashes.isEmpty()) {
         CSS::serializationForCSS(builder, context, CSS::Keyword::None { });
@@ -988,7 +960,7 @@ inline void ExtractorSerializer::serializeStrokeDashArray(ExtractorState& state,
     }
 
     builder.append(interleave(dashes, [&](auto& builder, auto& dash) {
-        serializeSVGLengthNotUsingElement(state, builder, context, dash);
+        serializeLength(state, builder, context, dash);
     }, ", "_s));
 }
 

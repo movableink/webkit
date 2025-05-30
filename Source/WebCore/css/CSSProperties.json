@@ -7570,7 +7570,8 @@
                 "none"
             ],
             "codegen-properties": {
-                "animation-wrapper": "Wrapper<Vector<SVGLengthValue>>",
+                "animation-wrapper": "StrokeDashArrayWrapper",
+                "animation-wrapper-requires-override-parameters": [],
                 "animation-wrapper-requires-render-style": true,
                 "animation-wrapper-requires-non-additive-or-cumulative-interpolation": true,
                 "render-style-name-for-methods": "StrokeDashArray",

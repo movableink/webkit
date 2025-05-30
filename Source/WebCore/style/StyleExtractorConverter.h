@@ -154,8 +154,6 @@ public:
 
     static Ref<CSSValue> convertSVGURIReference(ExtractorState&, const URL&);
     static Ref<CSSValue> convertSVGPaint(ExtractorState&, SVGPaintType, const URL&, const Color&);
-    static Ref<CSSValue> convertSVGLengthUsingElement(ExtractorState&, const SVGLengthValue&);
-    static Ref<CSSValue> convertSVGLengthNotUsingElement(ExtractorState&, const SVGLengthValue&);
 
     // MARK: Transform conversions
 
@@ -178,7 +176,7 @@ public:
     static Ref<CSSValue> convertPathOperation(ExtractorState&, const PathOperation*, PathConversion = PathConversion::None);
     static Ref<CSSValue> convertPathOperationForceAbsolute(ExtractorState&, const PathOperation*);
     static Ref<CSSValue> convertDPath(ExtractorState&, const StylePathData*);
-    static Ref<CSSValue> convertStrokeDashArray(ExtractorState&, const Vector<SVGLengthValue>&);
+    static Ref<CSSValue> convertStrokeDashArray(ExtractorState&, const Vector<WebCore::Length>&);
     static Ref<CSSValue> convertTextStrokeWidth(ExtractorState&, float);
     static Ref<CSSValue> convertFilterOperations(ExtractorState&, const FilterOperations&);
     static Ref<CSSValue> convertAppleColorFilterOperations(ExtractorState&, const FilterOperations&);
@@ -480,28 +478,6 @@ inline Ref<CSSValue> ExtractorConverter::convertSVGPaint(ExtractorState& state, 
     return convertColor(state, color);
 }
 
-inline Ref<CSSValue> ExtractorConverter::convertSVGLengthUsingElement(ExtractorState& state, const SVGLengthValue& length)
-{
-    // FIXME: Why do some callers want to pass the element and some don't?
-    // FIXME: Why does this use deprecated "resolveAsLengthDeprecated"?
-
-    auto computedValue = length.toCSSPrimitiveValue(state.element.ptr());
-    if (computedValue->isLength() && computedValue->primitiveType() != CSSUnitType::CSS_PX)
-        return CSSPrimitiveValue::create(computedValue->resolveAsLengthDeprecated(), CSSUnitType::CSS_PX);
-    return computedValue;
-}
-
-inline Ref<CSSValue> ExtractorConverter::convertSVGLengthNotUsingElement(ExtractorState&, const SVGLengthValue& length)
-{
-    // FIXME: Why do some callers want to pass the element and some don't?
-    // FIXME: Why does this use deprecated "resolveAsLengthDeprecated"?
-
-    auto computedValue = length.toCSSPrimitiveValue();
-    if (computedValue->isLength() && computedValue->primitiveType() != CSSUnitType::CSS_PX)
-        return CSSPrimitiveValue::create(computedValue->resolveAsLengthDeprecated(), CSSUnitType::CSS_PX);
-    return computedValue;
-}
-
 // MARK: - Transform conversions
 
 inline Ref<CSSValue> ExtractorConverter::convertTransformationMatrix(ExtractorState& state, const TransformationMatrix& transform)
@@ -799,13 +775,13 @@ inline Ref<CSSValue> ExtractorConverter::convertDPath(ExtractorState& state, con
     return CSSPathValue::create(overrideToCSS(Ref { *path }->path(), state.style, PathConversion::ForceAbsolute));
 }
 
-inline Ref<CSSValue> ExtractorConverter::convertStrokeDashArray(ExtractorState& state, const Vector<SVGLengthValue>& dashes)
+inline Ref<CSSValue> ExtractorConverter::convertStrokeDashArray(ExtractorState& state, const Vector<WebCore::Length>& dashes)
 {
     if (dashes.isEmpty())
         return CSSPrimitiveValue::create(CSSValueNone);
     CSSValueListBuilder list;
-    for (auto& length : dashes)
-        list.append(convertSVGLengthNotUsingElement(state, length));
+    for (auto& dash : dashes)
+        list.append(convertLength(state, dash));
     return CSSValueList::createCommaSeparated(WTFMove(list));
 }
 

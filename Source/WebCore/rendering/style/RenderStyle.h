@@ -1777,8 +1777,8 @@ public:
     inline void setVisitedStrokePaintColor(const Style::Color&);
     inline float strokeOpacity() const;
     inline void setStrokeOpacity(float);
-    inline Vector<SVGLengthValue> strokeDashArray() const;
-    inline void setStrokeDashArray(Vector<SVGLengthValue>);
+    inline const Vector<Length>& strokeDashArray() const;
+    inline void setStrokeDashArray(Vector<Length>&&);
     inline const Length& strokeDashOffset() const;
     inline void setStrokeDashOffset(Length&&);
 
@@ -1811,8 +1811,8 @@ public:
     inline void setFloodColor(const Style::Color&);
     inline void setLightingColor(const Style::Color&);
 
-    inline SVGLengthValue baselineShiftValue() const;
-    inline void setBaselineShiftValue(SVGLengthValue);
+    inline const Length& baselineShiftValue() const;
+    inline void setBaselineShiftValue(Length&&);
     inline SVGLengthValue kerning() const;
     inline void setKerning(SVGLengthValue);
 

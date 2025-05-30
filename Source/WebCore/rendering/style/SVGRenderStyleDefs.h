@@ -191,7 +191,7 @@ public:
     Style::URL visitedLinkPaintUri;
 
     Length dashOffset;
-    Vector<SVGLengthValue> dashArray;
+    Vector<Length> dashArray;
 
     SVGPaintType paintType;
     SVGPaintType visitedLinkPaintType;
@@ -240,7 +240,7 @@ public:
     Style::Color floodColor;
     Style::Color lightingColor;
 
-    SVGLengthValue baselineShiftValue;
+    Length baselineShiftValue;
 
 private:
     StyleMiscData();

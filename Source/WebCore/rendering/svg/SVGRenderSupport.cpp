@@ -485,7 +485,7 @@ void SVGRenderSupport::applyStrokeStyleToContext(GraphicsContext& context, const
     if (style.joinStyle() == LineJoin::Miter)
         context.setMiterLimit(style.strokeMiterLimit());
 
-    const Vector<SVGLengthValue>& dashes = svgStyle.strokeDashArray();
+    auto& dashes = svgStyle.strokeDashArray();
     if (dashes.isEmpty())
         context.setStrokeStyle(StrokeStyle::SolidStroke);
     else {
@@ -504,7 +504,7 @@ void SVGRenderSupport::applyStrokeStyleToContext(GraphicsContext& context, const
         
         bool canSetLineDash = false;
         auto dashArray = WTF::map(dashes, [&](auto& dash) -> DashArrayElement {
-            auto value = dash.value(lengthContext) * scaleFactor;
+            auto value = lengthContext.valueForLength(dash) * scaleFactor;
             if (value > 0)
                 canSetLineDash = true;
             return value;

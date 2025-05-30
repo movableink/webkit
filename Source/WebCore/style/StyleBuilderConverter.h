@@ -2,7 +2,7 @@
  * Copyright (C) 2013 Google Inc. All rights reserved.
  * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2023 ChangSeok Oh <changseok@webkit.org>
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -203,9 +203,7 @@ public:
     static FontSelectionValue convertFontStyle(BuilderState&, const CSSValue&);
     static FontFeatureSettings convertFontFeatureSettings(BuilderState&, const CSSValue&);
     static FontVariationSettings convertFontVariationSettings(BuilderState&, const CSSValue&);
-    static SVGLengthValue convertSVGLengthValue(BuilderState&, const CSSValue&, ShouldConvertNumberToPxLength = ShouldConvertNumberToPxLength::No);
-    static Vector<SVGLengthValue> convertSVGLengthVector(BuilderState&, const CSSValue&, ShouldConvertNumberToPxLength = ShouldConvertNumberToPxLength::No);
-    static Vector<SVGLengthValue> convertStrokeDashArray(BuilderState&, const CSSValue&);
+    static Vector<WebCore::Length> convertStrokeDashArray(BuilderState&, const CSSValue&);
     static PaintOrder convertPaintOrder(BuilderState&, const CSSValue&);
     static float convertOpacity(BuilderState&, const CSSValue&);
     static Style::URL convertSVGURIReference(BuilderState&, const CSSValue&);
@@ -1793,36 +1791,23 @@ inline bool BuilderConverter::convertSmoothScrolling(BuilderState&, const CSSVal
     return value.valueID() == CSSValueSmooth;
 }
 
-inline SVGLengthValue BuilderConverter::convertSVGLengthValue(BuilderState& builderState, const CSSValue& value, ShouldConvertNumberToPxLength shouldConvertNumberToPxLength)
-{
-    auto* primitiveValue = requiredDowncast<CSSPrimitiveValue>(builderState, value);
-    if (!primitiveValue)
-        return { };
-    return SVGLengthValue::fromCSSPrimitiveValue(*primitiveValue, builderState.cssToLengthConversionData(), shouldConvertNumberToPxLength);
-}
-
-inline Vector<SVGLengthValue> BuilderConverter::convertSVGLengthVector(BuilderState& builderState, const CSSValue& value, ShouldConvertNumberToPxLength shouldConvertNumberToPxLength)
-{
-    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
-    if (!list)
-        return { };
-
-    return WTF::map(*list, [&](auto& item) {
-        return convertSVGLengthValue(builderState, item, shouldConvertNumberToPxLength);
-    });
-}
-
-inline Vector<SVGLengthValue> BuilderConverter::convertStrokeDashArray(BuilderState& builderState, const CSSValue& value)
+inline Vector<WebCore::Length> BuilderConverter::convertStrokeDashArray(BuilderState& builderState, const CSSValue& value)
 {
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
         if (primitiveValue->valueID() == CSSValueNone)
             return SVGRenderStyle::initialStrokeDashArray();
 
         // Values coming from CSS-Typed-OM may not have been converted to a CSSValueList yet.
-        return Vector { convertSVGLengthValue(builderState, value, ShouldConvertNumberToPxLength::Yes) };
+        return Vector { convertLengthAllowingNumber(builderState, *primitiveValue) };
     }
 
-    return convertSVGLengthVector(builderState, value, ShouldConvertNumberToPxLength::Yes);
+    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
+    if (!list)
+        return { };
+
+    return WTF::map(*list, [&](auto& item) {
+        return convertLengthAllowingNumber(builderState, item);
+    });
 }
 
 inline PaintOrder BuilderConverter::convertPaintOrder(BuilderState& builderState, const CSSValue& value)

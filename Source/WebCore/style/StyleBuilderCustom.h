@@ -935,7 +935,7 @@ inline void BuilderCustom::applyInheritBaselineShift(BuilderState& builderState)
 
 inline void BuilderCustom::applyValueBaselineShift(BuilderState& builderState, CSSValue& value)
 {
-    SVGRenderStyle& svgStyle = builderState.style().accessSVGStyle();
+    auto& svgStyle = builderState.style().accessSVGStyle();
     auto primitiveValue = BuilderConverter::requiredDowncast<CSSPrimitiveValue>(builderState, value);
     if (!primitiveValue)
         return;
@@ -956,7 +956,7 @@ inline void BuilderCustom::applyValueBaselineShift(BuilderState& builderState, C
         }
     } else {
         svgStyle.setBaselineShift(BaselineShift::Length);
-        svgStyle.setBaselineShiftValue(SVGLengthValue::fromCSSPrimitiveValue(*primitiveValue, builderState.cssToLengthConversionData()));
+        svgStyle.setBaselineShiftValue(BuilderConverter::convertLength(builderState, *primitiveValue));
     }
 }
 

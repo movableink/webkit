@@ -1382,7 +1382,7 @@ inline Ref<CSSValue> ExtractorCustom::extractBaselineShift(ExtractorState& state
     case BaselineShift::Sub:
         return CSSPrimitiveValue::create(CSSValueSub);
     case BaselineShift::Length:
-        return ExtractorConverter::convertSVGLengthUsingElement(state, state.style.svgStyle().baselineShiftValue());
+        return ExtractorConverter::convertLength(state, state.style.svgStyle().baselineShiftValue());
     }
     RELEASE_ASSERT_NOT_REACHED();
 }
@@ -1400,7 +1400,7 @@ inline void ExtractorCustom::extractBaselineShiftSerialization(ExtractorState& s
         CSS::serializationForCSS(builder, context, CSS::Keyword::Sub { });
         return;
     case BaselineShift::Length:
-        ExtractorSerializer::serializeSVGLengthUsingElement(state, builder, context, state.style.svgStyle().baselineShiftValue());
+        ExtractorSerializer::serializeLength(state, builder, context, state.style.svgStyle().baselineShiftValue());
         return;
     }
     RELEASE_ASSERT_NOT_REACHED();

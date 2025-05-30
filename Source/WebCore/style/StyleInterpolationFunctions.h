@@ -425,7 +425,7 @@ inline SVGLengthValue blendFunc(const SVGLengthValue& from, const SVGLengthValue
     return SVGLengthValue::blend(from, to, narrowPrecisionToFloat(context.progress));
 }
 
-inline Vector<SVGLengthValue> blendFunc(const Vector<SVGLengthValue>& from, const Vector<SVGLengthValue>& to, const Context& context)
+inline Vector<WebCore::Length> blendFunc(const Vector<WebCore::Length>& from, const Vector<WebCore::Length>& to, const Context& context)
 {
     size_t fromLength = from.size();
     size_t toLength = to.size();
@@ -438,9 +438,9 @@ inline Vector<SVGLengthValue> blendFunc(const Vector<SVGLengthValue>& from, cons
         else
             resultLength = fromLength * toLength;
     }
-    Vector<SVGLengthValue> result(resultLength);
+    Vector<WebCore::Length> result(resultLength);
     for (size_t i = 0; i < resultLength; ++i)
-        result[i] = SVGLengthValue::blend(from[i % fromLength], to[i % toLength], narrowPrecisionToFloat(context.progress));
+        result[i] = blendFunc(from[i % fromLength], to[i % toLength], context);
     return result;
 }
 
