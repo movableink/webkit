@@ -138,17 +138,20 @@ class Tracker(GenericTracker):
             self.client = None
 
     def authentication(self):
+        identity = Environment.instance().get('RADAR_IDENTITY')
         username = Environment.instance().get('RADAR_USERNAME')
         password = Environment.instance().get('RADAR_PASSWORD')
         totp_secret = Environment.instance().get('RADAR_TOTP_SECRET')
         totp_id = Environment.instance().get('RADAR_TOTP_ID') or 1
 
         try:
+            if identity and os.path.isdir(identity):
+                return AuthenticationStrategyNarrative(identity)
             if username and password and totp_secret and totp_id:
-                return self.library.AuthenticationStrategySystemAccount(
+                return self.library.AuthenticationStrategySystemAccountOAuth(
                     username, password, totp_secret, totp_id,
                 )
-            return self.library.AuthenticationStrategySPNego()
+            return self.library.AuthenticationStrategyAppleConnect()
         except Exception:
             sys.stderr.write('No valid authentication session for Radar\n')
             return None
@@ -194,8 +197,15 @@ class Tracker(GenericTracker):
 
     @decorators.Memoize()
     def me(self):
-        username = self.authentication().username()
-        return self.user(username=username)
+        if self.client:
+            user = self.client.current_user()
+            if user:
+                return self.users.create(
+                    name='{} {}'.format(user.firstName, user.lastName),
+                    username=user.dsid,
+                    emails=[user.email],
+                )
+        return None
 
     def issue(self, id):
         return Issue(id=int(id), tracker=self)

@@ -24,7 +24,7 @@ import sys
 
 from .tracker import Tracker
 from .user import User
-from datetime import datetime
+from datetime import datetime, timezone
 from webkitcorepy import string_utils
 
 
