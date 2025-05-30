@@ -387,8 +387,12 @@ void LocalFrameView::recalculateScrollbarOverlayStyle()
         }
         return ScrollbarOverlayStyle::Default;
     }();
-    if (scrollbarOverlayStyle() != style)
+    if (scrollbarOverlayStyle() != style) {
         setScrollbarOverlayStyle(style);
+        setNeedsCompositingGeometryUpdate();
+        // The scroll corner must be repainted to match the new scrollbar appearance.
+        invalidateScrollCorner(scrollCornerRect());
+    }
 }
 
 void LocalFrameView::clear()

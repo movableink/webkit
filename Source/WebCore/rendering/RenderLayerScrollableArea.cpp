@@ -1282,6 +1282,14 @@ void RenderLayerScrollableArea::updateScrollbarsAfterStyleChange(const RenderSty
 
     if (!m_scrollDimensionsDirty)
         updateScrollableAreaSet(hasScrollableHorizontalOverflow() || hasScrollableVerticalOverflow());
+
+    const auto scrollbarsHaveDarkAppearance = useDarkAppearanceForScrollbars();
+    if (scrollbarsHaveDarkAppearance != m_useDarkAppearanceForScrollbars) {
+        m_useDarkAppearanceForScrollbars = scrollbarsHaveDarkAppearance;
+        m_layer.setNeedsCompositingGeometryUpdate();
+        // The scroll corner must be repainted to match the new scrollbar appearance.
+        invalidateScrollCorner(scrollCornerRect());
+    }
 }
 
 void RenderLayerScrollableArea::updateScrollbarsAfterLayout()

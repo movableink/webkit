@@ -319,6 +319,8 @@ private:
     
     bool m_isRegisteredForAnimatedScroll { false };
 
+    bool m_useDarkAppearanceForScrollbars { false };
+
     // The width/height of our scrolled area.
     int m_scrollWidth { 0 };
     int m_scrollHeight { 0 };
