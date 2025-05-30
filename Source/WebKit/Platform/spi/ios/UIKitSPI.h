@@ -735,6 +735,7 @@ typedef NS_ENUM(NSInteger, UIWKGestureType) {
 - (void)showTextServiceFor:(NSString *)selectedTerm fromRect:(CGRect)presentationRect;
 - (void)scheduleReplacementsForText:(NSString *)text;
 - (void)scheduleChineseTransliterationForText:(NSString *)text;
+- (void)translate:(NSString *)text fromRect:(CGRect)presentationRect;
 @end
 
 @class UIWKDocumentRequest;
@@ -1111,10 +1112,6 @@ typedef NS_ENUM(NSUInteger, _UIScrollDeviceCategory) {
 @property (nonatomic, readonly) UIKeyboardInputFlags _inputFlags;
 @property (nonatomic, readonly) CFIndex _keyCode;
 @property (nonatomic, readonly) NSInteger _gsModifierFlags;
-@end
-
-@interface UIWKTextInteractionAssistant (Staging_74209560)
-- (void)translate:(NSString *)text fromRect:(CGRect)presentationRect;
 @end
 
 @interface UIColor (IPI)
