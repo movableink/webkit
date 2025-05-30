@@ -100,7 +100,7 @@ typedef enum __DDTextFragmentType {
 
 #if HAVE(DDSCANNER_QOS_CONFIGURATION)
 typedef enum __DDQOS {
-    DDQOSRegular = 0
+    DDQOSRegular = 0,
     DDQOSEnhanced = 2,
     DDQOSHighest = 4,
 } DDQOS;
