@@ -1,4 +1,20 @@
 ================
+WebKitGTK 2.49.2
+================
+
+What's new in WebKitGTK 2.49.2?
+
+  - Enable damage propagation to the UI process by default.
+  - Pass available input devices from UI process to web process for Interaction Media Features.
+  - Always have a fallback when domain does not have known base.
+  - Fix URL after HSTS upgrade in case of redirection.
+  - Fix rendering when device scale factor change comes before the web view geometry update.
+  - Ensure web view is focused on tap gesture.
+  - Fix a crash when setting WEBKIT_SKIA_GPU_PAINTING_THREADS=0.
+  - Fix several crashes and rendering issues.
+  - Translation updates: Brazilian Portuguese, Swedish.
+
+================
 WebKitGTK 2.49.1
 ================
 
