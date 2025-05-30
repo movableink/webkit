@@ -56,18 +56,6 @@ static RefPtr<WebFrame> webFrameFromHitTestResult(const HitTestResult& hitTestRe
     return WebFrame::fromCoreFrame(*coreFrame);
 }
 
-static String linkLocalDataMIMETypeFromHitTestResult(const HitTestResult& hitTestResult)
-{
-    if (!hitTestResult.hasLocalDataForLinkURL())
-        return nullString();
-
-    RefPtr webFrame = webFrameFromHitTestResult(hitTestResult);
-    if (!webFrame)
-        return nullString();
-
-    return webFrame->mimeTypeForResourceWithURL(hitTestResult.absoluteLinkURL());
-}
-
 static std::optional<ResourceResponse> linkLocalResourceFromHitTestResult(const HitTestResult& hitTestResult)
 {
     if (!hitTestResult.hasLocalDataForLinkURL())
@@ -117,8 +105,6 @@ WebHitTestResultData::WebHitTestResultData(const HitTestResult& hitTestResult, c
     , elementType(elementTypeFromHitTestResult(hitTestResult))
     , frameInfo(frameInfoDataFromHitTestResult(hitTestResult))
     , toolTipText(tooltipText)
-    , linkLocalDataMIMEType(linkLocalDataMIMETypeFromHitTestResult(hitTestResult))
-    , hasLocalDataForLinkURL(hitTestResult.hasLocalDataForLinkURL())
     , hasEntireImage(hitTestResult.hasEntireImage())
     , allowsFollowingLink(hitTestResult.allowsFollowingLink())
     , allowsFollowingImageURL(hitTestResult.allowsFollowingImageURL())
@@ -163,7 +149,7 @@ WebHitTestResultData::WebHitTestResultData(const HitTestResult& hitTestResult, c
 WebHitTestResultData::WebHitTestResultData(const HitTestResult& hitTestResult, bool includeImage)
     : WebHitTestResultData(hitTestResult, String(), includeImage) { }
 
-WebHitTestResultData::WebHitTestResultData(const String& absoluteImageURL, const String& absolutePDFURL, const String& absoluteLinkURL, const String& absoluteMediaURL, const String& linkLabel, const String& linkTitle, const String& linkSuggestedFilename, const String& imageSuggestedFilename, bool isContentEditable, const WebCore::IntRect& elementBoundingBox, const WebKit::WebHitTestResultData::IsScrollbar& isScrollbar, bool isSelected, bool isTextNode, bool isOverTextInsideFormControlElement, bool isDownloadableMedia, bool mediaIsInFullscreen, bool isActivePDFAnnotation, const WebHitTestResultData::ElementType& elementType, std::optional<FrameInfoData>&& frameInfo, std::optional<WebCore::RemoteUserInputEventData> remoteUserInputEventData, const String& lookupText, const String& toolTipText, const String& imageText, std::optional<WebCore::SharedMemory::Handle>&& imageHandle, const RefPtr<WebCore::ShareableBitmap>& imageBitmap, const String& sourceImageMIMEType, const String& linkLocalDataMIMEType, bool hasLocalDataForLinkURL, bool hasEntireImage, bool allowsFollowingLink, bool allowsFollowingImageURL, std::optional<WebCore::ResourceResponse>&& linkLocalResourceResponse,
+WebHitTestResultData::WebHitTestResultData(const String& absoluteImageURL, const String& absolutePDFURL, const String& absoluteLinkURL, const String& absoluteMediaURL, const String& linkLabel, const String& linkTitle, const String& linkSuggestedFilename, const String& imageSuggestedFilename, bool isContentEditable, const WebCore::IntRect& elementBoundingBox, const WebKit::WebHitTestResultData::IsScrollbar& isScrollbar, bool isSelected, bool isTextNode, bool isOverTextInsideFormControlElement, bool isDownloadableMedia, bool mediaIsInFullscreen, bool isActivePDFAnnotation, const WebHitTestResultData::ElementType& elementType, std::optional<FrameInfoData>&& frameInfo, std::optional<WebCore::RemoteUserInputEventData> remoteUserInputEventData, const String& lookupText, const String& toolTipText, const String& imageText, std::optional<WebCore::SharedMemory::Handle>&& imageHandle, const RefPtr<WebCore::ShareableBitmap>& imageBitmap, const String& sourceImageMIMEType, bool hasEntireImage, bool allowsFollowingLink, bool allowsFollowingImageURL, std::optional<WebCore::ResourceResponse>&& linkLocalResourceResponse,
 #if PLATFORM(MAC)
     const WebHitTestResultPlatformData& platformData,
 #endif
@@ -193,8 +179,6 @@ WebHitTestResultData::WebHitTestResultData(const String& absoluteImageURL, const
         , imageText(imageText)
         , imageBitmap(imageBitmap)
         , sourceImageMIMEType(sourceImageMIMEType)
-        , linkLocalDataMIMEType(linkLocalDataMIMEType)
-        , hasLocalDataForLinkURL(hasLocalDataForLinkURL)
         , hasEntireImage(hasEntireImage)
         , allowsFollowingLink(allowsFollowingLink)
         , allowsFollowingImageURL(allowsFollowingImageURL)
