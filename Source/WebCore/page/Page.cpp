@@ -5473,7 +5473,12 @@ std::optional<TextIndicatorData> Page::textPreviewDataForActiveWritingToolsSessi
         return std::nullopt;
     }
 
-    return IntelligenceTextEffectsSupport::textPreviewDataForRange(*localTopDocument, *scope, rangeRelativeToSessionRange);
+    RefPtr textIndicator = IntelligenceTextEffectsSupport::textPreviewDataForRange(*localTopDocument, *scope, rangeRelativeToSessionRange);
+
+    if (textIndicator)
+        return textIndicator->data();
+
+    return std::nullopt;
 }
 
 void Page::decorateTextReplacementsForActiveWritingToolsSession(const CharacterRange& rangeRelativeToSessionRange)
