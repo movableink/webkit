@@ -56,6 +56,7 @@ public:
 
     WTF::String linkLabel() const { return m_data.linkLabel; }
     WTF::String linkTitle() const { return m_data.linkTitle; }
+    WTF::String linkLocalDataMIMEType() const { return m_data.linkLocalDataMIMEType; }
     WTF::String linkSuggestedFilename() const { return m_data.linkSuggestedFilename; }
     WTF::String imageSuggestedFilename() const { return m_data.imageSuggestedFilename; }
     WTF::String lookupText() const { return m_data.lookupText; }
@@ -82,6 +83,8 @@ public:
     WebKit::WebPageProxy* page() { return m_page.get(); }
 
     const std::optional<WebKit::FrameInfoData>& frameInfo() const { return m_data.frameInfo; }
+
+    bool hasLocalDataForLinkURL() const { return m_data.hasLocalDataForLinkURL; }
 
     bool allowsFollowingLink() const { return m_data.allowsFollowingLink; }
 
