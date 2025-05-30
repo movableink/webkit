@@ -1745,7 +1745,7 @@ void WebPageProxy::initializeWebPage(const Site& site, WebCore::SandboxFlags eff
 #endif
     m_mainFrame->frameLoadState().addObserver(internals().protectedPageLoadTimingFrameLoadStateObserver());
 
-    process->addVisitedLinkStoreUser(protectedVisitedLinkStore(), identifier());
+    process->addVisitedLinkStoreUser(m_visitedLinkStore, identifier());
 
 #if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
     m_needsInitialLinkDecorationFilteringData = LinkDecorationFilteringController::sharedSingleton().cachedListData().isEmpty();
@@ -15981,11 +15981,6 @@ void WebPageProxy::dispatchLoadEventToFrameOwnerElement(WebCore::FrameIdentifier
         return;
 
     sendToProcessContainingFrame(parentFrame->frameID(), Messages::WebPage::DispatchLoadEventToFrameOwnerElement(frameID));
-}
-
-Ref<VisitedLinkStore> WebPageProxy::protectedVisitedLinkStore()
-{
-    return m_visitedLinkStore;
 }
 
 void WebPageProxy::broadcastFocusedFrameToOtherProcesses(IPC::Connection& connection, const WebCore::FrameIdentifier& frameID)

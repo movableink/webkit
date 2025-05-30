@@ -170,7 +170,7 @@ ProvisionalPageProxy::~ProvisionalPageProxy()
 
         if (process->hasConnection() && m_shouldClosePage)
             send(Messages::WebPage::Close());
-        process->removeVisitedLinkStoreUser(page->protectedVisitedLinkStore(), page->identifier());
+        process->removeVisitedLinkStoreUser(page->visitedLinkStore(), page->identifier());
     }
 
     process->removeProvisionalPageProxy(*this);
@@ -300,7 +300,7 @@ void ProvisionalPageProxy::initializeWebPage(RefPtr<API::WebsitePolicies>&& webs
     }
     process->send(Messages::WebProcess::CreateWebPage(m_webPageID, WTFMove(creationParameters)), 0);
     if (!preferences->siteIsolationEnabled())
-        process->addVisitedLinkStoreUser(page->protectedVisitedLinkStore(), page->identifier());
+        process->addVisitedLinkStoreUser(page->visitedLinkStore(), page->identifier());
 
     if (page->isLayerTreeFrozenDueToSwipeAnimation())
         send(Messages::WebPage::SwipeAnimationDidStart());

@@ -917,7 +917,7 @@ void WebProcessProxy::removeWebPage(WebPageProxy& webPage, EndsUsingDataStore en
     if (endsUsingDataStore == EndsUsingDataStore::Yes)
         protectedProcessPool()->pageEndUsingWebsiteDataStore(webPage, webPage.protectedWebsiteDataStore());
 
-    removeVisitedLinkStoreUser(webPage.protectedVisitedLinkStore(), webPage.identifier());
+    removeVisitedLinkStoreUser(webPage.visitedLinkStore(), webPage.identifier());
     updateRegistrationWithDataStore();
     updateAudibleMediaAssertions();
     updateMediaStreamingActivity();

@@ -714,7 +714,6 @@ public:
     bool addsVisitedLinks() const { return m_addsVisitedLinks; }
     void setAddsVisitedLinks(bool addsVisitedLinks) { m_addsVisitedLinks = addsVisitedLinks; }
     VisitedLinkStore& visitedLinkStore() { return m_visitedLinkStore; }
-    Ref<VisitedLinkStore> protectedVisitedLinkStore();
 
     void exitFullscreenImmediately();
     void fullscreenMayReturnToInline();
@@ -3447,7 +3446,7 @@ private:
     WeakPtr<WebExtensionController> m_weakWebExtensionController;
 #endif
 
-    Ref<VisitedLinkStore> m_visitedLinkStore;
+    const Ref<VisitedLinkStore> m_visitedLinkStore;
     Ref<WebsiteDataStore> m_websiteDataStore;
 #if ENABLE(WEB_ARCHIVE)
     RefPtr<WebsiteDataStore> m_replacedDataStoreForWebArchiveLoad;
