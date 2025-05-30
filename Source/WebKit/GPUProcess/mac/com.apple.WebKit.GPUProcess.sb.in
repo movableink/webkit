@@ -212,7 +212,7 @@
                     iokit-external-method
                     iokit-external-trap)
                 (allow iokit-external-method
-                    (iokit-method-number 2 114 115 120 132 133 144))))
+                    (iokit-method-number 1 2 114 115 120 132 133 144))))
         ;; else
         (allow IOKIT_OPEN_USER_CLIENT
             (iokit-user-client-class "AppleIntelMEUserClient")))
