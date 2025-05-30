@@ -1097,7 +1097,7 @@ bool DragController::startDrag(LocalFrame& src, const DragState& state, OptionSe
             TextIndicatorData textIndicator;
             dragImage = DragImage { dissolveDragImageToFraction(createDragImageForSelection(src, textIndicator), DragImageAlpha) };
             if (textIndicator.contentImage)
-                dragImage.setIndicatorData(textIndicator);
+                dragImage.setTextIndicator(TextIndicator::create(textIndicator));
             dragLoc = dragLocForSelectionDrag(src);
             m_dragOffset = IntPoint(dragOrigin.x() - dragLoc.x(), dragOrigin.y() - dragLoc.y());
         }
@@ -1197,7 +1197,7 @@ bool DragController::startDrag(LocalFrame& src, const DragState& state, OptionSe
                 dragLoc = IntPoint(dragOrigin.x() + m_dragOffset.x(), dragOrigin.y() + m_dragOffset.y());
                 dragImage = DragImage { platformAdjustDragImageForDeviceScaleFactor(dragImage.get(), m_page->deviceScaleFactor()) };
                 if (textIndicator.contentImage)
-                    dragImage.setIndicatorData(textIndicator);
+                    dragImage.setTextIndicator(TextIndicator::create(textIndicator));
             }
         }
 
@@ -1248,7 +1248,7 @@ bool DragController::startDrag(LocalFrame& src, const DragState& state, OptionSe
             if (attachmentRenderer)
                 attachmentRenderer->setShouldDrawBorder(true);
             if (textIndicator.contentImage)
-                dragImage.setIndicatorData(textIndicator);
+                dragImage.setTextIndicator(TextIndicator::create(textIndicator));
             dragLoc = dragLocForSelectionDrag(src);
             m_dragOffset = IntPoint(dragOrigin.x() - dragLoc.x(), dragOrigin.y() - dragLoc.y());
         }

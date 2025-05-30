@@ -257,7 +257,7 @@ DragImage::DragImage(DragImageRef dragImageRef)
 
 DragImage::DragImage(DragImage&& other)
     : m_dragImageRef { std::exchange(other.m_dragImageRef, nullptr) }
-    , m_indicatorData { WTFMove(other.m_indicatorData) }
+    , m_textIndicator { WTFMove(other.m_textIndicator) }
     , m_visiblePath { WTFMove(other.m_visiblePath) }
 {
 }
@@ -268,7 +268,7 @@ DragImage& DragImage::operator=(DragImage&& other)
         deleteDragImage(m_dragImageRef);
 
     m_dragImageRef = std::exchange(other.m_dragImageRef, nullptr);
-    m_indicatorData = WTFMove(other.m_indicatorData);
+    m_textIndicator = WTFMove(other.m_textIndicator);
     m_visiblePath = WTFMove(other.m_visiblePath);
 
     return *this;

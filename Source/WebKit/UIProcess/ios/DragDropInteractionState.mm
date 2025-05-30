@@ -348,7 +348,7 @@ void DragDropInteractionState::stageDragItem(const DragItem& item, DragSourceSta
         item.sourceAction,
         item.dragPreviewFrameInRootViewCoordinates,
         dragPreviewContent,
-        item.image.indicatorData(),
+        item.image.textIndicator() ? std::optional { item.image.textIndicator()->data() } : std::nullopt,
         item.image.visiblePath(),
         item.title.isEmpty() ? nil : item.title.createNSString().get(),
         item.url.isEmpty() ? nil : item.url.createNSURL().get(),

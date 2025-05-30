@@ -1913,10 +1913,10 @@ static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
 {
     auto& dragImage = dragItem.image;
     auto image = dragImage.get().get();
-    auto indicatorData = dragImage.indicatorData();
+    RefPtr<WebCore::TextIndicator> textIndicator = dragImage.textIndicator();
 
-    if (indicatorData)
-        _private->textIndicatorData = adoptNS([[WebUITextIndicatorData alloc] initWithImage:image textIndicatorData:indicatorData.value() scale:_private->page->deviceScaleFactor()]);
+    if (textIndicator)
+        _private->textIndicatorData = adoptNS([[WebUITextIndicatorData alloc] initWithImage:image textIndicatorData:textIndicator->data() scale:_private->page->deviceScaleFactor()]);
     else
         _private->textIndicatorData = adoptNS([[WebUITextIndicatorData alloc] initWithImage:image scale:_private->page->deviceScaleFactor()]);
     _private->draggedLinkURL = dragItem.url.isEmpty() ? RetainPtr<NSURL>() : dragItem.url.createNSURL();

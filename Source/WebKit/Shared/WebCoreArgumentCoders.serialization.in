@@ -7680,7 +7680,7 @@ class WebCore::ContentSecurityPolicyResponseHeaders {
 };
 
 class WebCore::DragImage {
-    std::optional<WebCore::TextIndicatorData> indicatorData();
+    RefPtr<WebCore::TextIndicator> textIndicator();
     std::optional<WebCore::Path> visiblePath();
 };
 
