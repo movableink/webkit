@@ -38,6 +38,7 @@ enum class BoxSide : uint8_t;
 @interface UIScrollView (WebKitInternal)
 @property (readonly, nonatomic) BOOL _wk_isInterruptingDeceleration;
 @property (readonly, nonatomic) BOOL _wk_isScrolledBeyondExtents;
+@property (readonly, nonatomic) BOOL _wk_isScrolledBeyondTopExtent;
 @property (readonly, nonatomic) BOOL _wk_canScrollHorizontallyWithoutBouncing;
 @property (readonly, nonatomic) BOOL _wk_canScrollVerticallyWithoutBouncing;
 @property (readonly, nonatomic) CGFloat _wk_contentWidthIncludingInsets;

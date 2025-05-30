@@ -45,6 +45,7 @@
 #import "ViewGestureController.h"
 #import "VisibleContentRectUpdateInfo.h"
 #import "WKBackForwardListItemInternal.h"
+#import "WKColorExtensionView.h"
 #import "WKContentViewInteraction.h"
 #import "WKDataDetectorTypesInternal.h"
 #import "WKErrorInternal.h"
@@ -66,6 +67,7 @@
 #import "WebProcessPool.h"
 #import "_WKActivatedElementInfoInternal.h"
 #import "_WKWarningView.h"
+#import <WebCore/BoxSides.h>
 #import <WebCore/ColorCocoa.h>
 #import <WebCore/ContentsFormatCocoa.h>
 #import <WebCore/FloatConversion.h>
@@ -2331,12 +2333,55 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 #endif // HAVE(UISCROLLVIEW_ASYNCHRONOUS_SCROLL_EVENT_HANDLING)
 
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+
+- (void)_reinsertTopFixedColorExtensionViewIfNeeded
+{
+    RetainPtr topColorExtensionView = _fixedColorExtensionViews.at(WebCore::BoxSide::Top);
+    if (!topColorExtensionView || [topColorExtensionView isHidden])
+        return;
+
+    auto refreshControlIndex = NSNotFound;
+    auto topColorExtensionViewIndex = NSNotFound;
+
+    NSInteger index = 0;
+    RetainPtr refreshControl = [_scrollView refreshControl];
+    for (UIView *subview in [_scrollView subviews]) {
+        if (subview == refreshControl)
+            refreshControlIndex = index;
+        else if (subview == topColorExtensionView)
+            topColorExtensionViewIndex = index;
+
+        if (refreshControlIndex != NSNotFound && topColorExtensionViewIndex != NSNotFound)
+            break;
+
+        index++;
+    }
+
+    if (refreshControlIndex == NSNotFound || topColorExtensionViewIndex == NSNotFound)
+        return;
+
+    BOOL scrolledBeyondTopExtent = [_scrollView _wk_isScrolledBeyondTopExtent];
+    if (scrolledBeyondTopExtent == (refreshControlIndex > topColorExtensionViewIndex))
+        return;
+
+    if (scrolledBeyondTopExtent) {
+        [_scrollView insertSubview:topColorExtensionView.get() belowSubview:refreshControl.get()];
+        return;
+    }
+
+    [_scrollView insertSubview:topColorExtensionView.get() aboveSubview:_contentView.get()];
+}
+
+#endif // ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView
 {
     if (scrollView == _scrollView) {
         [_scrollView updateInteractiveScrollVelocity];
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
         [self _updateFixedColorExtensionViewFrames];
+        [self _reinsertTopFixedColorExtensionViewIfNeeded];
 #endif
     }
 

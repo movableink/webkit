@@ -77,6 +77,11 @@
     return self.contentSize.height + inset.top + inset.bottom;
 }
 
+- (BOOL)_wk_isScrolledBeyondTopExtent
+{
+    return self.contentOffset.y < -self.adjustedContentInset.top;
+}
+
 - (BOOL)_wk_isScrolledBeyondExtents
 {
     auto contentOffset = self.contentOffset;

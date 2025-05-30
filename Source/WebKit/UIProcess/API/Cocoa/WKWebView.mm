@@ -3144,12 +3144,13 @@ static WebCore::CocoaColor *sampledFixedPositionContentColor(const WebCore::Fixe
     RetainPtr parentView = [self _containerForFixedColorExtension];
     auto addColorExtensionView = [&](CocoaView *extensionView) {
 #if PLATFORM(MAC)
-        if (RetainPtr contentInsetFillView = _impl->topContentInsetFillView()) {
+        if (RetainPtr contentInsetFillView = _impl->topContentInsetFillView())
             [parentView addSubview:extensionView positioned:NSWindowBelow relativeTo:contentInsetFillView.get()];
-            return;
-        }
+        else
+            [parentView addSubview:extensionView];
+#else
+        [parentView insertSubview:extensionView aboveSubview:_contentView.get()];
 #endif
-        [parentView addSubview:extensionView];
     };
 
     auto insets = [self _obscuredInsetsForFixedColorExtension];
