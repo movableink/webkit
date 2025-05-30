@@ -1601,8 +1601,8 @@ fast/webgpu/nocrash/fuzz-286820.html [ Skip ]
 # skipped due to failing when run in stress test mode
 [ Sonoma ] fast/webgpu/nocrash/RenderBundle_WRITE.html [ Skip ]
 
-webkit.org/b/293808 [ Sequoia+ arm64 ] http/tests/webgpu/webgpu/api [ Slow ]
-webkit.org/b/293808 [ Sequoia+ arm64 ] http/tests/webgpu/webgpu/shader [ Slow ]
+webkit.org/b/293808 [ Sequoia+ Release arm64 ] http/tests/webgpu/webgpu/api [ Pass ]
+webkit.org/b/293808 [ Sequoia+ Release arm64 ] http/tests/webgpu/webgpu/shader [ Pass ]
 [ Release arm64 Sequoia+ ] http/tests/webgpu/webgpu/web_platform [ Pass Failure Timeout ]
 
 [ arm64 ] http/tests/webgpu/webgpu/api/validation/capability_checks/features/texture_formats.html [ Pass ]
