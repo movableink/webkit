@@ -278,11 +278,8 @@ html/AttachmentAssociatedElement.cpp
 html/BaseButtonInputType.cpp
 html/CachedHTMLCollection.h
 html/CachedHTMLCollectionInlines.h
-html/CheckboxInputType.cpp
 html/CollectionTraversalInlines.h
-html/ColorInputType.cpp
 html/DOMTokenList.cpp
-html/EmailInputType.cpp
 html/FTPDirectoryDocument.cpp
 html/FileInputType.cpp
 html/FormAssociatedCustomElement.cpp
@@ -334,7 +331,6 @@ html/HTMLTextFormControlElement.cpp
 html/HTMLTitleElement.cpp
 html/HTMLVideoElement.cpp
 html/HTMLWBRElement.cpp
-html/HiddenInputType.cpp
 html/ImageBitmap.cpp
 html/ImageDocument.cpp
 html/ImageInputType.cpp

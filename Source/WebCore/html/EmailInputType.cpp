@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2009 Michelangelo De Simone <micdesim@gmail.com>
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -68,7 +68,7 @@ bool EmailInputType::typeMismatchFor(const String& value) const
     ASSERT(element());
     if (value.isEmpty())
         return false;
-    if (!element()->multiple())
+    if (!protectedElement()->multiple())
         return !isValidEmailAddress(value);
     for (auto& address : value.splitAllowingEmptyEntries(',')) {
         if (!isValidEmailAddress(StringView(address).trim(isASCIIWhitespace<UChar>)))
@@ -80,13 +80,13 @@ bool EmailInputType::typeMismatchFor(const String& value) const
 bool EmailInputType::typeMismatch() const
 {
     ASSERT(element());
-    return typeMismatchFor(element()->value());
+    return typeMismatchFor(protectedElement()->value());
 }
 
 String EmailInputType::typeMismatchText() const
 {
     ASSERT(element());
-    return element()->multiple() ? validationMessageTypeMismatchForMultipleEmailText() : validationMessageTypeMismatchForEmailText();
+    return protectedElement()->multiple() ? validationMessageTypeMismatchForMultipleEmailText() : validationMessageTypeMismatchForEmailText();
 }
 
 bool EmailInputType::supportsSelectionAPI() const
@@ -96,8 +96,10 @@ bool EmailInputType::supportsSelectionAPI() const
 
 void EmailInputType::attributeChanged(const QualifiedName& name)
 {
-    if (name == multipleAttr)
-        element()->setValueInternal(sanitizeValue(element()->value()), TextFieldEventBehavior::DispatchNoEvent);
+    if (name == multipleAttr) {
+        Ref element = *this->element();
+        element->setValueInternal(sanitizeValue(element->value()), TextFieldEventBehavior::DispatchNoEvent);
+    }
 
     BaseTextInputType::attributeChanged(name);
 }
@@ -113,7 +115,7 @@ ValueOrReference<String> EmailInputType::sanitizeValue(const String& proposedVal
     }
 
     ASSERT(element());
-    if (!element()->multiple())
+    if (!protectedElement()->multiple())
         return noLineBreakValue.trim(isASCIIWhitespace);
     Vector<String> addresses = noLineBreakValue.splitAllowingEmptyEntries(',');
     StringBuilder strippedValue;

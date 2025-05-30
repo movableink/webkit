@@ -625,13 +625,11 @@ history/HistoryItem.cpp
 html/AttachmentAssociatedElement.cpp
 html/CachedHTMLCollection.h
 html/CachedHTMLCollectionInlines.h
-html/CheckboxInputType.cpp
 html/CollectionTraversalInlines.h
 html/CustomPaintCanvas.cpp
 html/DOMTokenList.cpp
 html/DOMURL.cpp
 html/DirectoryFileListCreator.cpp
-html/EmailInputType.cpp
 html/FTPDirectoryDocument.cpp
 html/FormAssociatedCustomElement.cpp
 html/FormAssociatedElement.cpp
@@ -675,10 +673,8 @@ html/HTMLTextFormControlElement.cpp
 html/HTMLTitleElement.cpp
 html/HTMLTrackElement.cpp
 html/HTMLVideoElement.cpp
-html/HiddenInputType.cpp
 html/ImageBitmap.cpp
 html/ImageDocument.cpp
-html/ImageInputType.cpp
 html/LabelsNodeList.cpp
 html/LazyLoadFrameObserver.cpp
 html/LazyLoadImageObserver.cpp
@@ -692,8 +688,6 @@ html/PermissionsPolicy.cpp
 html/PluginDocument.cpp
 html/PublicURLManager.cpp
 html/RadioNodeList.cpp
-html/RangeInputType.cpp
-html/TextFieldInputType.cpp
 html/ValidatedFormListedElement.cpp
 html/ValidatedFormListedElement.h
 html/ValidationMessage.cpp

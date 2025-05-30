@@ -123,11 +123,12 @@ bool RangeInputType::supportsRequired() const
 StepRange RangeInputType::createStepRange(AnyStepHandling anyStepHandling) const
 {
     ASSERT(element());
+    Ref element = *this->element();
     const Decimal stepBase = findStepBase(rangeDefaultStepBase);
-    const Decimal minimum = parseToNumber(element()->attributeWithoutSynchronization(minAttr), rangeDefaultMinimum);
-    const Decimal maximum = ensureMaximum(parseToNumber(element()->attributeWithoutSynchronization(maxAttr), rangeDefaultMaximum), minimum);
+    const Decimal minimum = parseToNumber(element->attributeWithoutSynchronization(minAttr), rangeDefaultMinimum);
+    const Decimal maximum = ensureMaximum(parseToNumber(element->attributeWithoutSynchronization(maxAttr), rangeDefaultMaximum), minimum);
 
-    const Decimal step = StepRange::parseStep(anyStepHandling, rangeStepDescription, element()->attributeWithoutSynchronization(stepAttr));
+    const Decimal step = StepRange::parseStep(anyStepHandling, rangeStepDescription, element->attributeWithoutSynchronization(stepAttr));
     return StepRange(stepBase, RangeLimitations::Valid, minimum, maximum, step, rangeStepDescription);
 }
 
@@ -189,7 +190,7 @@ void RangeInputType::disabledStateChanged()
 {
     if (!hasCreatedShadowSubtree())
         return;
-    typedSliderThumbElement().hostDisabledStateChanged();
+    protectedTypedSliderThumbElement()->hostDisabledStateChanged();
 }
 
 auto RangeInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBaseEventHandler
@@ -386,9 +387,11 @@ bool RangeInputType::shouldRespectListAttribute()
 void RangeInputType::dataListMayHaveChanged()
 {
     m_tickMarkValuesDirty = true;
-    RefPtr<HTMLElement> sliderTrackElement = this->sliderTrackElement();
-    if (sliderTrackElement && sliderTrackElement->renderer())
-        sliderTrackElement->renderer()->setNeedsLayout();
+    RefPtr sliderTrackElement = this->sliderTrackElement();
+    if (!sliderTrackElement)
+        return;
+    if (CheckedPtr renderer = sliderTrackElement->renderer())
+        renderer->setNeedsLayout();
 }
 
 void RangeInputType::updateTickMarkValues()

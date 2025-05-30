@@ -821,7 +821,7 @@ void TextFieldInputType::createContainer(PreserveSelectionRange preserveSelectio
     Ref innerBlock = TextControlInnerElement::create(document);
     m_innerBlock = innerBlock.copyRef();
     RefPtr { m_container }->appendChild(innerBlock);
-    innerBlock->appendChild(*m_innerText.copyRef());
+    innerBlock->appendChild(Ref { *m_innerText });
 
     if (selectionState) {
         document->checkedEventLoop()->queueTask(TaskSource::DOMManipulation, [selectionState = *selectionState, element = WeakPtr { element }] {
@@ -981,8 +981,8 @@ void TextFieldInputType::didCloseSuggestions()
     m_cachedSuggestions = { };
     if (RefPtr suggestionPicker = std::exchange(m_suggestionPicker, nullptr))
         suggestionPicker->detach();
-    if (element()->renderer())
-        element()->renderer()->repaint();
+    if (CheckedPtr renderer = element()->renderer())
+        renderer->repaint();
 }
 
 void TextFieldInputType::displaySuggestions(DataListSuggestionActivationType type)

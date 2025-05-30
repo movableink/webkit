@@ -316,8 +316,8 @@ void ColorInputType::didChooseColor(const Color& color)
 void ColorInputType::didEndChooser()
 {
     m_chooser = nullptr;
-    if (element()->renderer())
-        element()->renderer()->repaint();
+    if (CheckedPtr renderer = protectedElement()->renderer())
+        renderer->repaint();
 }
 
 void ColorInputType::endColorChooser()
@@ -349,9 +349,11 @@ HTMLElement* ColorInputType::shadowColorSwatch() const
 IntRect ColorInputType::elementRectRelativeToRootView() const
 {
     ASSERT(element());
-    if (!element()->renderer())
+    Ref element = *this->element();
+    CheckedPtr renderer = element->renderer();
+    if (!renderer)
         return IntRect();
-    return element()->protectedDocument()->protectedView()->contentsToRootView(element()->renderer()->absoluteBoundingBoxRect());
+    return element->protectedDocument()->protectedView()->contentsToRootView(renderer->absoluteBoundingBoxRect());
 }
 
 bool ColorInputType::supportsAlpha() const
