@@ -67,12 +67,12 @@ static NSURL *URLFromString(const WTF::String& urlString)
 
 - (BOOL)hasLocalDataForLinkURL
 {
-    return _hitTestResult->hasLocalDataForLinkURL();
+    return NO;
 }
 
 - (NSString *)linkLocalDataMIMEType
 {
-    return _hitTestResult->linkLocalDataMIMEType().createNSString().autorelease();
+    return nil;
 }
 
 - (NSURL *)absoluteMediaURL
