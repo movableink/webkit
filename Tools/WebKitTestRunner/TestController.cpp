@@ -827,8 +827,8 @@ void TestController::initialize(int argc, const char* argv[])
     m_allowAnyHTTPSCertificateForAllowedHosts = options.allowAnyHTTPSCertificateForAllowedHosts;
     m_enableAllExperimentalFeatures = options.enableAllExperimentalFeatures;
     m_globalFeatures = std::move(options.features);
-#if PLATFORM(WPE)
-    m_useWPEPlatformAPI = options.useWPEPlatformAPI;
+#if ENABLE(WPE_PLATFORM)
+    m_useWPELegacyAPI = options.useWPELegacyAPI;
 #endif
 
     /* localhost is implicitly allowed and so should aliases to it. */

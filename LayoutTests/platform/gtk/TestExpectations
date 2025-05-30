@@ -1510,9 +1510,6 @@ webkit.org/b/73766 css3/unicode-bidi-isolate-aharon-failing.html [ ImageOnlyFail
 
 webkit.org/b/183328 fast/events/blur-focus-window-should-blur-focus-element.html [ Failure ]
 
-# Looks like a bug in the testRunner global history support due to missing API.
-webkit.org/b/100238 fast/history/window-open.html [ Failure ]
-
 # These failures appear to be bugs in the EventSender
 webkit.org/b/53964 fast/forms/listbox-onchange.html [ Failure ]
 fast/html/transient-activation.html [ Skip ]

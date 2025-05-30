@@ -805,7 +805,18 @@ webkit.org/b/257624 webrtc/canvas-to-peer-connection-2d.html [ Failure Pass Time
 # Fails on WPE EWS, likely when checking the video pixels. Unable to reproduce this failure locally.
 webrtc/video-h264.html [ Failure ]
 
+# Sometimes times out, it's easier to reproduce with WPE Platform API.
+fullscreen/full-screen-enter-while-exiting-multiple-elements.html [ Pass Timeout ]
+
 webkit.org/b/285752 imported/w3c/web-platform-tests/mediacapture-record/MediaRecorder-mimetype.html [ Pass Crash ]
+
+# These touch events test behave differently with WPE Platform API.
+# FIXME: split the expectations once we have a separate baseline.
+fast/events/touch/touch-inside-iframe-scrolled.html [ Pass Timeout ]
+
+# testRunner.dontForceRepaint makes these tests flaky with WPE Platform API.
+compositing/repaint/copy-forward-dirty-region-purged.html [ Pass ImageOnlyFailure ]
+compositing/repaint/copy-forward-dirty-region.html [ Pass ImageOnlyFailure ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # 6. SLOW TESTS
@@ -820,7 +831,6 @@ imported/w3c/web-platform-tests/content-security-policy/reporting/report-only-in
 webkit.org/b/183902 fast/dom/frame-loading-via-document-write.html [ Timeout ]
 
 webkit.org/b/188962 fast/history/history_reload.html [ Timeout ]
-webkit.org/b/188962 fast/history/window-open.html [ Timeout ]
 
 webkit.org/b/168164 fast/picture/viewport-resize.html [ Timeout ]
 

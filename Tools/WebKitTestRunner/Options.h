@@ -52,7 +52,7 @@ struct Options {
     bool enableAllExperimentalFeatures { true };
     bool lockdownModeEnabled { false };
 #if PLATFORM(WPE)
-    bool useWPEPlatformAPI { false };
+    bool useWPELegacyAPI { false };
 #endif
     std::vector<std::string> paths;
     std::set<std::string> allowedHosts;

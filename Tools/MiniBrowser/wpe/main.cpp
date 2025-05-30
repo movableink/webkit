@@ -69,7 +69,7 @@ static GHashTable* openViews;
 #if ENABLE_WPE_PLATFORM
 static gboolean windowMaximized;
 static gboolean windowFullscreen;
-static gboolean useWPEPlatformAPI;
+static gboolean useLegacyAPI;
 static const char* defaultWindowTitle = "WPEWebKit MiniBrowser";
 static const char* configFile;
 #endif
@@ -123,7 +123,7 @@ static const GOptionEntry commandLineOptions[] =
     { "time-zone", 't', 0, G_OPTION_ARG_STRING, &timeZone, "Set time zone", "TIMEZONE" },
     { "features", 'F', 0, G_OPTION_ARG_STRING, &featureList, "Enable or disable WebKit features (hint: pass 'help' for a list)", "FEATURE-LIST" },
 #if ENABLE_WPE_PLATFORM
-    { "use-wpe-platform-api", 0, 0, G_OPTION_ARG_NONE, &useWPEPlatformAPI, "Use the WPE platform API", nullptr },
+    { "use-legacy-api", 0, 0, G_OPTION_ARG_NONE, &useLegacyAPI, "Use the WPE legacy API (libwpe)", nullptr },
     { "maximized", 'm', 0, G_OPTION_ARG_NONE, &windowMaximized, "Start with maximized window", nullptr },
     { "fullscreen", 'f', 0, G_OPTION_ARG_NONE, &windowFullscreen, "Start with fullscreen window", nullptr },
     { "config-file", 0, 0, G_OPTION_ARG_FILENAME, &configFile, "Config file to load for settings", "FILE" },
@@ -267,7 +267,7 @@ static gboolean decidePermissionRequest(WebKitWebView *, WebKitPermissionRequest
 static std::unique_ptr<WPEToolingBackends::ViewBackend> createViewBackend(uint32_t width, uint32_t height)
 {
 #if ENABLE_WPE_PLATFORM
-    if (useWPEPlatformAPI)
+    if (!useLegacyAPI)
         return nullptr;
 #endif
 
@@ -350,7 +350,7 @@ static WebKitWebView* createWebViewForAutomationCallback(WebKitAutomationSession
 
     // Creating new views in the old API through automation is not supported by WPE's MiniBrowser,
     // so we just return the same view as before
-    if (!useWPEPlatformAPI)
+    if (useLegacyAPI)
         return view;
 
     if (g_hash_table_size(openViews) == 1 && !webkit_web_view_get_uri(view)) {
@@ -554,7 +554,7 @@ static void activate(GApplication* application, WPEToolingBackends::ViewBackend*
     }, backend) : nullptr;
 
 #if ENABLE_WPE_PLATFORM_HEADLESS
-    WPEDisplay* wpeDisplay = headlessMode && useWPEPlatformAPI ? wpe_display_headless_new() : nullptr;
+    WPEDisplay* wpeDisplay = headlessMode && !useLegacyAPI ? wpe_display_headless_new() : nullptr;
 #endif
 
     webkit_web_context_set_automation_allowed(webContext, automationMode);
@@ -698,7 +698,7 @@ int main(int argc, char *argv[])
     bool setDefaultWindowSize = true;
 
 #if ENABLE_WPE_PLATFORM
-    if (useWPEPlatformAPI)
+    if (!useLegacyAPI)
         setDefaultWindowSize = false;
 
     if (windowMaximized && windowFullscreen) {
@@ -706,8 +706,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if ((windowMaximized || windowFullscreen) && !useWPEPlatformAPI) {
-        g_printerr("You cannot specify either --maximized or --fullscreen, without enabling the new WPE API (--use-wpe-platform-api).");
+    if ((windowMaximized || windowFullscreen) && useLegacyAPI) {
+        g_printerr("You cannot specify either --maximized or --fullscreen, with legacy WPE API enabled.");
         return 1;
     }
 

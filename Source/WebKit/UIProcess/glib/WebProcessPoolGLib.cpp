@@ -114,8 +114,10 @@ static OptionSet<AvailableInputDevices> availableInputDevices()
 {
 #if ENABLE(WPE_PLATFORM)
     if (WKWPE::isUsingWPEPlatformAPI()) {
-        const auto inputDevices = wpe_display_get_available_input_devices(wpe_display_get_primary());
-        return toAvailableInputDevices(inputDevices);
+        if (auto* display = wpe_display_get_primary()) {
+            const auto inputDevices = wpe_display_get_available_input_devices(display);
+            return toAvailableInputDevices(inputDevices);
+        }
     }
 #endif
 #if PLATFORM(GTK)
@@ -167,11 +169,12 @@ void WebProcessPool::platformInitialize(NeedsGlobalStaticInitialization)
 
 #if ENABLE(WPE_PLATFORM)
     if (WKWPE::isUsingWPEPlatformAPI()) {
-        auto* display = wpe_display_get_primary();
-        g_signal_connect(display, "notify::available-input-devices", G_CALLBACK(+[](WPEDisplay* display, GParamSpec*, WebProcessPool* pool) {
-            auto availableInputDevices = toAvailableInputDevices(wpe_display_get_available_input_devices(display));
-            pool->sendToAllProcesses(Messages::WebProcess::SetAvailableInputDevices(availableInputDevices));
-        }), this);
+        if (auto* display = wpe_display_get_primary()) {
+            g_signal_connect(display, "notify::available-input-devices", G_CALLBACK(+[](WPEDisplay* display, GParamSpec*, WebProcessPool* pool) {
+                auto availableInputDevices = toAvailableInputDevices(wpe_display_get_available_input_devices(display));
+                pool->sendToAllProcesses(Messages::WebProcess::SetAvailableInputDevices(availableInputDevices));
+            }), this);
+        }
     }
 #endif
 
@@ -269,8 +272,8 @@ void WebProcessPool::platformInvalidateContext()
 {
 #if ENABLE(WPE_PLATFORM)
     if (WKWPE::isUsingWPEPlatformAPI()) {
-        auto* display = wpe_display_get_primary();
-        g_signal_handlers_disconnect_by_data(display, this);
+        if (auto* display = wpe_display_get_primary())
+            g_signal_handlers_disconnect_by_data(display, this);
     }
 #endif
 #if PLATFORM(GTK)

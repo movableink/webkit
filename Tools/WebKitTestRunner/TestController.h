@@ -457,8 +457,8 @@ public:
     bool shouldUseFakeMachineReadableCodeResultsForImageAnalysis() const;
 #endif
 
-#if PLATFORM(WPE)
-    bool useWPEPlatformAPI() const { return m_useWPEPlatformAPI; }
+#if ENABLE(WPE_PLATFORM)
+    bool useWPELegacyAPI() const { return m_useWPELegacyAPI; }
 #endif
 
     void setUseWorkQueue(bool useWorkQueue) { m_useWorkQueue = useWorkQueue; }
@@ -819,8 +819,8 @@ private:
     bool m_scrollDuringEnterFullscreen { false };
     bool m_useWorkQueue { false };
 
-#if PLATFORM(WPE)
-    bool m_useWPEPlatformAPI { false };
+#if ENABLE(WPE_PLATFORM)
+    bool m_useWPELegacyAPI { false };
 #endif
 };
 
