@@ -1311,7 +1311,7 @@ bool LineLayout::removedFromTree(const RenderElement& parent, RenderObject& chil
     return boxIsInvalidated;
 }
 
-bool LineLayout::updateTextContent(const RenderText& textRenderer, size_t offset, int delta)
+bool LineLayout::updateTextContent(const RenderText& textRenderer, std::optional<size_t> offset, size_t oldLength)
 {
     if (flow().style().isSkippedRootOrSkippedContent())
         return false;
@@ -1327,6 +1327,17 @@ bool LineLayout::updateTextContent(const RenderText& textRenderer, size_t offset
 
     auto invalidation = Layout::InlineInvalidation { ensureLineDamage(), m_inlineContentCache.inlineItems().content(), m_inlineContent->displayContent() };
     auto& inlineTextBox = *textRenderer.layoutBox();
+    if (!offset) {
+        // Text content is entirely replaced.
+        return invalidation.textInserted(inlineTextBox, { 0 });
+    }
+
+    if (*offset == oldLength) {
+        // This is essentially just an append.
+        return invalidation.textInserted(inlineTextBox);
+    }
+
+    int delta = inlineTextBox.content().length() - oldLength;
     return delta >= 0 ? invalidation.textInserted(inlineTextBox, offset) : invalidation.textWillBeRemoved(inlineTextBox, offset);
 }
 

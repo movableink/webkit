@@ -85,7 +85,7 @@ public:
     // Partial invalidation.
     bool insertedIntoTree(const RenderElement& parent, RenderObject& child);
     bool removedFromTree(const RenderElement& parent, RenderObject& child);
-    bool updateTextContent(const RenderText&, size_t offset, int delta);
+    bool updateTextContent(const RenderText&, std::optional<size_t> offset, size_t oldLength);
     bool rootStyleWillChange(const RenderBlockFlow&, const RenderStyle& newStyle);
     bool styleWillChange(const RenderElement&, const RenderStyle& newStyle, StyleDifference);
     bool boxContentWillChange(const RenderBox&);
