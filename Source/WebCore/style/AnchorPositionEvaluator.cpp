@@ -460,10 +460,11 @@ static LayoutUnit computeInsetValue(CSSPropertyID insetPropertyID, CheckedRef<co
 
 RefPtr<Element> AnchorPositionEvaluator::findAnchorForAnchorFunctionAndAttemptResolution(BuilderState& builderState, std::optional<ScopedName> anchorName)
 {
+    auto& style = builderState.style();
+    style.setUsesAnchorFunctions();
+
     if (!builderState.anchorPositionedStates())
         return { };
-
-    auto& style = builderState.style();
 
     auto isValid = [&] {
         if (!builderState.element())
@@ -485,8 +486,6 @@ RefPtr<Element> AnchorPositionEvaluator::findAnchorForAnchorFunctionAndAttemptRe
     auto& anchorPositionedState = *anchorPositionedStates.ensure(anchorPositionedElement, [&] {
         return WTF::makeUnique<AnchorPositionedState>();
     }).iterator->value.get();
-
-    style.setUsesAnchorFunctions();
 
     if (!anchorName)
         anchorName = style.positionAnchor();
@@ -744,16 +743,24 @@ static const RenderElement* penultimateContainingBlockChainElement(const RenderE
 
 static bool firstChildPrecedesSecondChild(const RenderObject* firstChild, const RenderObject* secondChild, const RenderBlock* containingBlock)
 {
-    auto positionedObjects = containingBlock->outOfFlowBoxes();
-    ASSERT(positionedObjects);
-    for (auto it = positionedObjects->begin(); it != positionedObjects->end(); ++it) {
-        auto child = it.get();
-        if (child == firstChild)
-            return true;
-        if (child == secondChild)
-            return false;
+    HashSet<CheckedRef<const RenderObject>> firstAncestorChain;
+
+    for (auto* first = firstChild; first; first = first->parent()) {
+        firstAncestorChain.add(*first);
+        if (first == containingBlock)
+            break;
     }
-    ASSERT_NOT_REACHED();
+
+    auto* second = secondChild;
+    for (; second != containingBlock; second = second->parent()) {
+        if (firstAncestorChain.contains(second->parent())) {
+            for (auto* sibling = second->previousSibling(); sibling; sibling = sibling->previousSibling()) {
+                if (firstAncestorChain.contains(sibling))
+                    return true;
+            }
+            return false;
+        }
+    }
     return false;
 }
 
