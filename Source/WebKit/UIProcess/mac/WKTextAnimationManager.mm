@@ -228,13 +228,13 @@
         return;
     }
 
-    _webView->page().getTextIndicatorForID(*uuid, [protectedSelf = retainPtr(self), completionHandler = makeBlockPtr(completionHandler)] (std::optional<WebCore::TextIndicatorData> indicatorData) {
-        if (!indicatorData) {
+    _webView->page().getTextIndicatorForID(*uuid, [protectedSelf = retainPtr(self), completionHandler = makeBlockPtr(completionHandler)] (RefPtr<WebCore::TextIndicator> textIndicator) {
+        if (!textIndicator) {
             completionHandler(nil);
             return;
         }
 
-        auto snapshot = indicatorData->contentImage;
+        auto snapshot = textIndicator->contentImage();
         if (!snapshot) {
             completionHandler(nil);
             return;
@@ -246,13 +246,13 @@
             return;
         }
 
-        RetainPtr textPreviews = adoptNS([[NSMutableArray alloc] initWithCapacity:indicatorData->textRectsInBoundingRectCoordinates.size()]);
+        RetainPtr textPreviews = adoptNS([[NSMutableArray alloc] initWithCapacity:textIndicator->textRectsInBoundingRectCoordinates().size()]);
         CGImageRef snapshotPlatformImage = snapshotImage->platformImage().get();
-        CGRect snapshotRectInBoundingRectCoordinates = indicatorData->textBoundingRectInRootViewCoordinates;
+        CGRect snapshotRectInBoundingRectCoordinates = textIndicator->textBoundingRectInRootViewCoordinates();
 
-        for (auto textRectInSnapshotCoordinates : indicatorData->textRectsInBoundingRectCoordinates) {
+        for (auto textRectInSnapshotCoordinates : textIndicator->textRectsInBoundingRectCoordinates()) {
             CGRect textLineFrameInBoundingRectCoordinates = CGRectOffset(textRectInSnapshotCoordinates, snapshotRectInBoundingRectCoordinates.origin.x, snapshotRectInBoundingRectCoordinates.origin.y);
-            textRectInSnapshotCoordinates.scale(indicatorData->contentImageScaleFactor);
+            textRectInSnapshotCoordinates.scale(textIndicator->contentImageScaleFactor());
             [textPreviews addObject:adoptNS([PAL::alloc_WTTextPreviewInstance() initWithSnapshotImage:adoptCF(CGImageCreateWithImageInRect(snapshotPlatformImage, textRectInSnapshotCoordinates)).get() presentationFrame:textLineFrameInBoundingRectCoordinates]).get()];
         }
 

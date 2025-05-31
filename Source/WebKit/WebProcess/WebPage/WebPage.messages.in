@@ -835,7 +835,7 @@ messages -> WebPage WantsAsyncDispatchMessage {
 
     DecorateTextReplacementsForActiveWritingToolsSession(struct WebCore::CharacterRange rangeRelativeToSessionRange) -> ()
 
-    CreateTextIndicatorForTextAnimationID(WTF::UUID uuid) -> (struct std::optional<WebCore::TextIndicatorData> textIndicator)
+    CreateTextIndicatorForTextAnimationID(WTF::UUID uuid) -> (RefPtr<WebCore::TextIndicator> textIndicator)
     UpdateUnderlyingTextVisibilityForTextAnimationID(WTF::UUID uuid, bool visible) -> ()
 
     IntelligenceTextAnimationsDidComplete();
