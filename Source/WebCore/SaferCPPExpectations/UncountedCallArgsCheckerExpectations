@@ -951,7 +951,6 @@ platform/graphics/MediaPlayer.cpp
 platform/graphics/Path.cpp
 platform/graphics/SourceBufferPrivate.cpp
 platform/graphics/TransparencyLayerContextSwitcher.cpp
-platform/graphics/WidthIterator.cpp
 platform/graphics/avfoundation/AudioSourceProviderAVFObjC.mm
 platform/graphics/avfoundation/InbandMetadataTextTrackPrivateAVF.cpp
 platform/graphics/avfoundation/objc/CDMInstanceFairPlayStreamingAVFObjC.h
