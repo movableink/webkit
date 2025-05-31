@@ -21,6 +21,7 @@
 		07A58C0E2D04DD4700CAB4ED /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 07A58C0D2D04DD4700CAB4ED /* WebKit.framework */; };
 		07A58C482D05651C00CAB4ED /* AppStorageKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07A58C472D05651C00CAB4ED /* AppStorageKeys.swift */; };
 		07A58C4A2D0567A100CAB4ED /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07A58C492D0567A100CAB4ED /* SettingsView.swift */; };
+		330FBEE22DEAD07600C266CA /* CommandLine+Extras.swift in Sources */ = {isa = PBXBuildFile; fileRef = 330FBEE12DEAD05F00C266CA /* CommandLine+Extras.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -58,6 +59,7 @@
 		07A58C0D2D04DD4700CAB4ED /* WebKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WebKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		07A58C472D05651C00CAB4ED /* AppStorageKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStorageKeys.swift; sourceTree = "<group>"; };
 		07A58C492D0567A100CAB4ED /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		330FBEE12DEAD05F00C266CA /* CommandLine+Extras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CommandLine+Extras.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -97,6 +99,7 @@
 		07259B372D1F978200B45C4E /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				330FBEE12DEAD05F00C266CA /* CommandLine+Extras.swift */,
 				078F11842D288FAC00B3582D /* URLRequest+Codable.swift */,
 				07259B382D1F97A500B45C4E /* URLResponse+Extras.swift */,
 			);
@@ -256,6 +259,7 @@
 				07A58C482D05651C00CAB4ED /* AppStorageKeys.swift in Sources */,
 				07A58C022D04111900CAB4ED /* BrowserView.swift in Sources */,
 				07A58C002D040E3400CAB4ED /* BrowserViewModel.swift in Sources */,
+				330FBEE22DEAD07600C266CA /* CommandLine+Extras.swift in Sources */,
 				07A58BEE2D04013100CAB4ED /* ContentView.swift in Sources */,
 				07259B2E2D1F308500B45C4E /* DialogPresenter.swift in Sources */,
 				07A4CE9F2D08C06400764F5E /* Empty.swift in Sources */,

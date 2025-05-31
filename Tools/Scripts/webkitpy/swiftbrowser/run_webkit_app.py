@@ -34,7 +34,7 @@ from webkitcorepy.string_utils import decode
 
 
 def main(argv):
-    option_parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, usage="%(prog)s")
+    option_parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, usage="%(prog)s [options] [url]")
     groups = [("Platform options", platform_options()), ("Configuration options", configuration_options())]
 
     # Convert options to argparse, so that we can use parse_known_args() which is not supported in optparse.
@@ -51,17 +51,15 @@ def main(argv):
                 option_group.add_argument(option.get_opt_string(), action=option.action, dest=option.dest,
                                           help=option.help, const=option.const, default=default)
 
-    options, args = option_parser.parse_known_args(argv)
+    option_parser.add_argument('url', metavar='url', type=lambda s: decode(s, 'utf8'), nargs='?', help='Website URL to load')
+    options, _ = option_parser.parse_known_args(argv)
 
     if not options.platform:
         options.platform = "mac"
 
-    # Make this a well-formed arg list if SwiftBrowser ever supports command line arguments.
-    browser_args = []
-
     try:
         port = factory.PortFactory(Host()).get(options.platform, options=options)
-        return port.run_swiftbrowser(browser_args)
+        return port.run_swiftbrowser(["--url", options.url] if options.url else [])
     except BaseException as e:
         if isinstance(e, Exception):
             print('\n%s raised: %s' % (e.__class__.__name__, str(e)), file=sys.stderr)
