@@ -136,19 +136,19 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(CTRunRef ctRun, const Font
 }
 
 struct ProviderInfo {
-    std::span<const UChar> cp;
+    std::span<const UChar> characters;
     RetainPtr<CFDictionaryRef> attributes;
 };
 
 static const UniChar* provideStringAndAttributes(CFIndex stringIndex, CFIndex* charCount, CFDictionaryRef* attributes, void* refCon)
 {
     ProviderInfo* info = static_cast<struct ProviderInfo*>(refCon);
-    if (stringIndex < 0 || static_cast<size_t>(stringIndex) >= info->cp.size())
+    if (stringIndex < 0 || static_cast<size_t>(stringIndex) >= info->characters.size())
         return 0;
 
-    *charCount = info->cp.size() - stringIndex;
+    *charCount = info->characters.size() - stringIndex;
     *attributes = info->attributes.get();
-    return reinterpret_cast<const UniChar*>(info->cp.subspan(stringIndex).data());
+    return reinterpret_cast<const UniChar*>(info->characters.subspan(stringIndex).data());
 }
 
 enum class CoreTextTypesetterEmbeddingLevel : short { LTR = 0, RTL = 1 };
@@ -173,11 +173,11 @@ static CFDictionaryRef typesetterOptions()
     return options.get().get();
 }
 
-void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const UChar> cp, unsigned stringLocation, const Font* font)
+void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const UChar> characters, unsigned stringLocation, const Font* font)
 {
     if (!font) {
         // Create a run of missing glyphs from the primary font.
-        m_complexTextRuns.append(ComplexTextRun::create(m_fontCascade->primaryFont(), cp, stringLocation, 0, cp.size(), m_run->ltr()));
+        m_complexTextRuns.append(ComplexTextRun::create(m_fontCascade->primaryFont(), characters, stringLocation, 0, characters.size(), m_run->ltr()));
         return;
     }
 
@@ -189,7 +189,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
         // FIXME: This code path does not support small caps.
         isSystemFallback = true;
 
-        U16_GET(cp, 0, 0, cp.size(), baseCharacter);
+        U16_GET(characters, 0, 0, characters.size(), baseCharacter);
         font = m_fontCascade->fallbackRangesAt(0).fontForCharacter(baseCharacter);
         if (!font)
             font = &m_fontCascade->fallbackRangesAt(0).fontForFirstRange();
@@ -202,16 +202,16 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
     RetainPtr<CTLineRef> line;
 
     LOG_WITH_STREAM(TextShaping,
-        stream << "Complex shaping " << cp.size() << " code units with info " << String(adoptCF(CFCopyDescription(stringAttributes.get())).get()) << ".\n";
+        stream << "Complex shaping " << characters.size() << " code units with info " << String(adoptCF(CFCopyDescription(stringAttributes.get())).get()) << ".\n";
         stream << "Font attributes: " << String(adoptCF(CFCopyDescription(adoptCF(CTFontDescriptorCopyAttributes(adoptCF(CTFontCopyFontDescriptor(font->platformData().ctFont())).get())).get())).get()) << "\n";
         stream << "Code Units:";
-        for (auto codePoint : cp)
+        for (auto codePoint : characters)
             stream << " " << codePoint;
         stream << "\n";
     );
 
     if (!m_mayUseNaturalWritingDirection || m_run->directionalOverride()) {
-        ProviderInfo info { cp, stringAttributes.get() };
+        ProviderInfo info { characters, stringAttributes.get() };
         // FIXME: Some SDKs complain that the second parameter below cannot be null.
         IGNORE_NULL_CHECK_WARNINGS_BEGIN
         auto typesetter = adoptCF(CTTypesetterCreateWithUniCharProviderAndOptions(&provideStringAndAttributes, 0, &info, m_run->ltr() ? typesetterOptions<CoreTextTypesetterEmbeddingLevel::LTR>() : typesetterOptions<CoreTextTypesetterEmbeddingLevel::RTL>()));
@@ -226,7 +226,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
     } else {
         LOG_WITH_STREAM(TextShaping, stream << "Not forcing direction");
 
-        ProviderInfo info { cp, stringAttributes.get() };
+        ProviderInfo info { characters, stringAttributes.get() };
 
         line = adoptCF(CTLineCreateWithUniCharProvider(&provideStringAndAttributes, nullptr, &info));
     }
@@ -270,7 +270,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
                 if (!runFont) {
                     RetainPtr<CFStringRef> fontName = adoptCF(CTFontCopyPostScriptName(runCTFont));
                     if (CFEqual(fontName.get(), CFSTR("LastResort"))) {
-                        m_complexTextRuns.append(ComplexTextRun::create(m_fontCascade->primaryFont(), cp, stringLocation, runRange.location, runRange.location + runRange.length, m_run->ltr()));
+                        m_complexTextRuns.append(ComplexTextRun::create(m_fontCascade->primaryFont(), characters, stringLocation, runRange.location, runRange.location + runRange.length, m_run->ltr()));
                         continue;
                     }
                     FontPlatformData runFontPlatformData(runCTFont, CTFontGetSize(runCTFont));
@@ -285,7 +285,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
 
         LOG_WITH_STREAM(TextShaping, stream << "Run " << r << ":");
 
-        m_complexTextRuns.append(ComplexTextRun::create(ctRun, *runFont, cp, stringLocation, runRange.location, runRange.location + runRange.length));
+        m_complexTextRuns.append(ComplexTextRun::create(ctRun, *runFont, characters, stringLocation, runRange.location, runRange.location + runRange.length));
     }
 }
 
