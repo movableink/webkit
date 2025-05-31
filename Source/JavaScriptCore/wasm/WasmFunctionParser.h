@@ -4099,8 +4099,13 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
         WASM_PARSER_FAIL_IF(!parseVarUInt32(tableIndex), "can't parse table index"_s);
         [[fallthrough]];
     }
-    case RefIsNull:
+    case RefIsNull: {
+        return { };
+    }
+
     case RefNull: {
+        int32_t unused;
+        WASM_PARSER_FAIL_IF(!parseHeapType(m_info, unused), "can't get heap type for "_s, m_currentOpcode, " in unreachable context"_s);
         return { };
     }
 
