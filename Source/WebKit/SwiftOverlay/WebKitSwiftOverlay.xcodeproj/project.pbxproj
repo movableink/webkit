@@ -9,10 +9,6 @@
 /* Begin PBXBuildFile section */
 		7D20070C22F4EB72008DF640 /* libswiftWebKit.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7D20067522F2652E008DF640 /* libswiftWebKit.dylib */; };
 		7D20071B22F4ECCA008DF640 /* libswiftWebKit.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7D20068722F26721008DF640 /* libswiftWebKit.dylib */; };
-		B3A5D38F23F78F5400B17727 /* WebKitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3A5D38823F78F5400B17727 /* WebKitTests.swift */; };
-		B3A5D39023F78F5400B17727 /* WebKitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3A5D38823F78F5400B17727 /* WebKitTests.swift */; };
-		B3B8FECC250090B1006172CA /* JavaScriptToSwiftTypeConversions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3B8FECB250090B1006172CA /* JavaScriptToSwiftTypeConversions.swift */; };
-		B3B8FECD250090B1006172CA /* JavaScriptToSwiftTypeConversions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3B8FECB250090B1006172CA /* JavaScriptToSwiftTypeConversions.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -37,15 +33,12 @@
 		7D20068722F26721008DF640 /* libswiftWebKit.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libswiftWebKit.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		7D20070722F4EB72008DF640 /* WebKitSwiftOverlayTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WebKitSwiftOverlayTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7D20071622F4ECCA008DF640 /* WebKitSwiftOverlayTests-maccatalyst.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "WebKitSwiftOverlayTests-maccatalyst.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		B3A5D38823F78F5400B17727 /* WebKitTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WebKitTests.swift; sourceTree = "<group>"; };
 		B3A5D39423F790E100B17727 /* WebKitSwiftOverlay.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = WebKitSwiftOverlay.xcconfig; sourceTree = "<group>"; };
 		B3A5D39523F790E100B17727 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		B3A5D39623F790E100B17727 /* WebKitSwiftOverlay-maccatalyst.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "WebKitSwiftOverlay-maccatalyst.xcconfig"; sourceTree = "<group>"; };
 		B3A5D39723F790E100B17727 /* WebKitSwiftOverlayTests-maccatalyst.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "WebKitSwiftOverlayTests-maccatalyst.xcconfig"; sourceTree = "<group>"; };
 		B3A5D39823F790E100B17727 /* WebKitSwiftOverlayTests.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = WebKitSwiftOverlayTests.xcconfig; sourceTree = "<group>"; };
 		B3A5D39923F790E100B17727 /* install-swiftmodules.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "install-swiftmodules.sh"; sourceTree = "<group>"; };
-		B3A5D39A23F790E700B17727 /* WebKitSwiftOverlayTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "WebKitSwiftOverlayTests-Info.plist"; sourceTree = "<group>"; };
-		B3B8FECB250090B1006172CA /* JavaScriptToSwiftTypeConversions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JavaScriptToSwiftTypeConversions.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -98,22 +91,11 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		7D20070822F4EB72008DF640 /* Tests */ = {
-			isa = PBXGroup;
-			children = (
-				B3B8FECB250090B1006172CA /* JavaScriptToSwiftTypeConversions.swift */,
-				B3A5D39A23F790E700B17727 /* WebKitSwiftOverlayTests-Info.plist */,
-				B3A5D38823F78F5400B17727 /* WebKitTests.swift */,
-			);
-			path = Tests;
-			sourceTree = "<group>";
-		};
 		7D81A8D422E936E700739BB9 = {
 			isa = PBXGroup;
 			children = (
 				7DF02CBE22F4DF1A00C66A76 /* Configurations */,
 				7D20067622F2652E008DF640 /* Swift Overlay */,
-				7D20070822F4EB72008DF640 /* Tests */,
 				7D81A8DE22E936E700739BB9 /* Products */,
 				7D2006D622F3D3DA008DF640 /* Frameworks */,
 			);
@@ -400,8 +382,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B3B8FECC250090B1006172CA /* JavaScriptToSwiftTypeConversions.swift in Sources */,
-				B3A5D38F23F78F5400B17727 /* WebKitTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -409,8 +389,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B3B8FECD250090B1006172CA /* JavaScriptToSwiftTypeConversions.swift in Sources */,
-				B3A5D39023F78F5400B17727 /* WebKitTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
