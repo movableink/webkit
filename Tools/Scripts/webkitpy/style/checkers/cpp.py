@@ -3627,6 +3627,24 @@ def check_safer_cpp(clean_lines, line_number, error):
     if uses_xpc_string_get_string_ptr:
         error(line_number, 'safercpp/xpc_string_get_string_ptr', 4, "Use xpcStringGetString() instead of xpc_string_get_string_ptr().")
 
+    if search(r'sqlite3_bind_blob\(', line) or search(r'sqlite3_bind_blob64\(', line):
+        error(line_number, 'safercpp/sqlite3_bind_blob', 4, "Use sqliteBindBlob() instead of sqlite3_bind_blob() or sqlite3_bind_blob64().")
+
+    if search(r'sqlite3_bind_text\(', line):
+        error(line_number, 'safercpp/sqlite3_bind_text', 4, "Use sqliteBindText() instead of sqlite3_bind_text().")
+
+    if search(r'sqlite3_column_name\(', line):
+        error(line_number, 'safercpp/sqlite3_column_name', 4, "Use sqliteColumnName() instead of sqlite3_column_name().")
+
+    if search(r'sqlite3_value_text\(', line):
+        error(line_number, 'safercpp/sqlite3_value_text', 4, "Use sqliteValueText() instead of sqlite3_value_text().")
+
+    if search(r'sqlite3_column_text\(', line):
+        error(line_number, 'safercpp/sqlite3_column_text', 4, "Use sqliteColumnText() instead of sqlite3_column_text().")
+
+    if search(r'sqlite3_column_blob\(', line):
+        error(line_number, 'safercpp/sqlite3_column_blob', 4, "Use sqliteColumnBlob() instead of sqlite3_column_blob().")
+
 
 def check_style(clean_lines, line_number, file_extension, class_state, file_state, enum_state, error):
     """Checks rules from the 'C++ style rules' section of cppguide.html.

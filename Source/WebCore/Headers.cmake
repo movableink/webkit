@@ -2542,6 +2542,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/sql/SQLiteDatabase.h
     platform/sql/SQLiteDatabaseTracker.h
     platform/sql/SQLiteDatabaseTrackerClient.h
+    platform/sql/SQLiteExtras.h
     platform/sql/SQLiteFileSystem.h
     platform/sql/SQLiteStatement.h
     platform/sql/SQLiteStatementAutoResetScope.h
