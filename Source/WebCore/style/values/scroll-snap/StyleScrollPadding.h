@@ -75,6 +75,8 @@ struct ScrollPaddingEdge {
     bool operator==(const ScrollPaddingEdge&) const = default;
 
 private:
+    friend WTF::TextStream& operator<<(WTF::TextStream&, const ScrollPaddingEdge&);
+
     WebCore::Length m_value;
 };
 
@@ -109,6 +111,10 @@ template<> struct Evaluation<ScrollPaddingEdge> {
 // MARK: - Extent
 
 LayoutBoxExtent extentForRect(const ScrollPadding&, const LayoutRect&);
+
+// MARK: - Logging
+
+WTF::TextStream& operator<<(WTF::TextStream&, const ScrollPaddingEdge&);
 
 } // namespace Style
 } // namespace WebCore

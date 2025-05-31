@@ -35,12 +35,11 @@ class FilterOperations;
 class FontCascade;
 class RenderObject;
 class RenderStyle;
-class ShadowData;
 class TextRun;
     
 class TextDecorationPainter {
 public:
-    TextDecorationPainter(GraphicsContext&, const FontCascade&, const ShadowData*, const FilterOperations*, bool isPrinting, WritingMode);
+    TextDecorationPainter(GraphicsContext&, const FontCascade&, const FixedVector<Style::TextShadow>&, const FilterOperations*, bool isPrinting, WritingMode);
 
     struct Styles {
         bool operator==(const Styles&) const;
@@ -85,7 +84,7 @@ private:
     GraphicsContext& m_context;
     bool m_isPrinting { false };
     WritingMode m_writingMode;
-    const ShadowData* m_shadow { nullptr };
+    const FixedVector<Style::TextShadow>& m_shadow;
     const FilterOperations* m_shadowColorFilter { nullptr };
     const FontCascade& m_font;
 };

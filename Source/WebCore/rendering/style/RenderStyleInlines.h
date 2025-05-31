@@ -37,7 +37,6 @@
 #include "RenderStyle.h"
 #include "ScrollTypes.h"
 #include "ScrollbarColor.h"
-#include "ShadowData.h"
 #include "StyleAppearance.h"
 #include "StyleBackgroundData.h"
 #include "StyleBoxData.h"
@@ -162,9 +161,10 @@ inline unsigned RenderStyle::boxOrdinalGroup() const { return m_nonInheritedData
 inline BoxOrient RenderStyle::boxOrient() const { return static_cast<BoxOrient>(m_nonInheritedData->miscData->deprecatedFlexibleBox->orient); }
 inline BoxPack RenderStyle::boxPack() const { return static_cast<BoxPack>(m_nonInheritedData->miscData->deprecatedFlexibleBox->pack); }
 inline StyleReflection* RenderStyle::boxReflect() const { return m_nonInheritedData->rareData->boxReflect.get(); }
-inline const ShadowData* RenderStyle::boxShadow() const { return m_nonInheritedData->miscData->boxShadow.get(); }
-inline LayoutBoxExtent RenderStyle::boxShadowExtent() const { return ShadowData::shadowOutsetExtent(boxShadow()); }
-inline LayoutBoxExtent RenderStyle::boxShadowInsetExtent() const { return ShadowData::shadowInsetExtent(boxShadow()); }
+inline const FixedVector<Style::BoxShadow>& RenderStyle::boxShadow() const { return m_nonInheritedData->miscData->boxShadow; }
+inline bool RenderStyle::hasBoxShadow() const { return !boxShadow().isEmpty(); }
+inline LayoutBoxExtent RenderStyle::boxShadowExtent() const { return Style::shadowOutsetExtent(boxShadow()); }
+inline LayoutBoxExtent RenderStyle::boxShadowInsetExtent() const { return Style::shadowInsetExtent(boxShadow()); }
 inline BoxSizing RenderStyle::boxSizing() const { return m_nonInheritedData->boxData->boxSizing(); }
 inline BoxSizing RenderStyle::boxSizingForAspectRatio() const { return aspectRatioType() == AspectRatioType::AutoAndRatio ? BoxSizing::ContentBox : boxSizing(); }
 inline BreakBetween RenderStyle::breakAfter() const { return static_cast<BreakBetween>(m_nonInheritedData->rareData->breakAfter); }
@@ -249,7 +249,9 @@ inline void RenderStyle::getBoxShadowHorizontalExtent(LayoutUnit& left, LayoutUn
 inline void RenderStyle::getBoxShadowInlineDirectionExtent(LayoutUnit& logicalLeft, LayoutUnit& logicalRight) const { getShadowInlineDirectionExtent(boxShadow(), logicalLeft, logicalRight); }
 inline void RenderStyle::getBoxShadowVerticalExtent(LayoutUnit& top, LayoutUnit& bottom) const { getShadowVerticalExtent(boxShadow(), top, bottom); }
 inline void RenderStyle::getTextShadowBlockDirectionExtent(LayoutUnit& logicalTop, LayoutUnit& logicalBottom) const { getShadowBlockDirectionExtent(textShadow(), logicalTop, logicalBottom); }
+inline void RenderStyle::getTextShadowHorizontalExtent(LayoutUnit& left, LayoutUnit& right) const { getShadowHorizontalExtent(textShadow(), left, right); }
 inline void RenderStyle::getTextShadowInlineDirectionExtent(LayoutUnit& logicalLeft, LayoutUnit& logicalRight) const { getShadowInlineDirectionExtent(textShadow(), logicalLeft, logicalRight); }
+inline void RenderStyle::getTextShadowVerticalExtent(LayoutUnit& top, LayoutUnit& bottom) const { getShadowVerticalExtent(textShadow(), top, bottom); }
 inline const Vector<GridTrackSize>& RenderStyle::gridAutoColumns() const { return m_nonInheritedData->rareData->grid->gridAutoColumns; }
 inline GridAutoFlow RenderStyle::gridAutoFlow() const { return static_cast<GridAutoFlow>(m_nonInheritedData->rareData->grid->gridAutoFlow); }
 inline const Vector<GridTrackSize>& RenderStyle::gridAutoRepeatColumns() const { return m_nonInheritedData->rareData->grid->gridAutoRepeatColumns(); }
@@ -776,8 +778,9 @@ inline TextIndentType RenderStyle::textIndentType() const { return static_cast<T
 inline TextJustify RenderStyle::textJustify() const { return static_cast<TextJustify>(m_rareInheritedData->textJustify); }
 inline TextOverflow RenderStyle::textOverflow() const { return static_cast<TextOverflow>(m_nonInheritedData->miscData->textOverflow); }
 inline TextSecurity RenderStyle::textSecurity() const { return static_cast<TextSecurity>(m_rareInheritedData->textSecurity); }
-inline const ShadowData* RenderStyle::textShadow() const { return m_rareInheritedData->textShadow.get(); }
-inline LayoutBoxExtent RenderStyle::textShadowExtent() const { return ShadowData::shadowOutsetExtent(textShadow()); }
+inline const FixedVector<Style::TextShadow>& RenderStyle::textShadow() const { return m_rareInheritedData->textShadow; }
+inline bool RenderStyle::hasTextShadow() const { return !textShadow().isEmpty(); }
+inline LayoutBoxExtent RenderStyle::textShadowExtent() const { return Style::shadowOutsetExtent(textShadow()); }
 inline const Style::Color& RenderStyle::textStrokeColor() const { return m_rareInheritedData->textStrokeColor; }
 inline float RenderStyle::textStrokeWidth() const { return m_rareInheritedData->textStrokeWidth; }
 inline OptionSet<TextTransform> RenderStyle::textTransform() const { return OptionSet<TextTransform>::fromRaw(m_inheritedFlags.textTransform); }
@@ -934,14 +937,24 @@ constexpr bool RenderStyle::collapseWhiteSpace(WhiteSpaceCollapse mode)
     return mode == WhiteSpaceCollapse::Collapse || mode == WhiteSpaceCollapse::PreserveBreaks;
 }
 
-inline void RenderStyle::getShadowInlineDirectionExtent(const ShadowData* shadow, LayoutUnit& logicalLeft, LayoutUnit& logicalRight) const
+template<typename ShadowType> void RenderStyle::getShadowHorizontalExtent(const FixedVector<ShadowType>& shadows, LayoutUnit& left, LayoutUnit& right)
 {
-    return writingMode().isHorizontal() ? getShadowHorizontalExtent(shadow, logicalLeft, logicalRight) : getShadowVerticalExtent(shadow, logicalLeft, logicalRight);
+    Style::getShadowHorizontalExtent(shadows, left, right);
 }
 
-inline void RenderStyle::getShadowBlockDirectionExtent(const ShadowData* shadow, LayoutUnit& logicalTop, LayoutUnit& logicalBottom) const
+template<typename ShadowType> void RenderStyle::getShadowVerticalExtent(const FixedVector<ShadowType>& shadows, LayoutUnit& top, LayoutUnit& bottom)
 {
-    return writingMode().isHorizontal() ? getShadowVerticalExtent(shadow, logicalTop, logicalBottom) : getShadowHorizontalExtent(shadow, logicalTop, logicalBottom);
+    Style::getShadowVerticalExtent(shadows, top, bottom);
+}
+
+template<typename ShadowType> void RenderStyle::getShadowInlineDirectionExtent(const FixedVector<ShadowType>& shadows, LayoutUnit& logicalLeft, LayoutUnit& logicalRight) const
+{
+    return writingMode().isHorizontal() ? Style::getShadowHorizontalExtent(shadows, logicalLeft, logicalRight) : Style::getShadowVerticalExtent(shadows, logicalLeft, logicalRight);
+}
+
+template<typename ShadowType> void RenderStyle::getShadowBlockDirectionExtent(const FixedVector<ShadowType>& shadows, LayoutUnit& logicalTop, LayoutUnit& logicalBottom) const
+{
+    return writingMode().isHorizontal() ? Style::getShadowVerticalExtent(shadows, logicalTop, logicalBottom) : Style::getShadowHorizontalExtent(shadows, logicalTop, logicalBottom);
 }
 
 inline bool RenderStyle::hasInlineColumnAxis() const

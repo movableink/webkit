@@ -33,10 +33,12 @@
 #include "StyleCustomPropertyData.h"
 #include "StyleDynamicRangeLimit.h"
 #include "StyleTextEdge.h"
+#include "StyleTextShadow.h"
 #include "TabSize.h"
 #include "TextUnderlineOffset.h"
 #include "TouchAction.h"
 #include <wtf/DataRef.h>
+#include <wtf/FixedVector.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/AtomString.h>
@@ -57,7 +59,6 @@ namespace WebCore {
 
 class CursorList;
 class QuotesData;
-class ShadowData;
 class StyleFilterData;
 class StyleImage;
 
@@ -99,8 +100,8 @@ public:
 
     Style::DynamicRangeLimit dynamicRangeLimit;
 
-    std::unique_ptr<ShadowData> textShadow;
-    
+    FixedVector<Style::TextShadow> textShadow;
+
     RefPtr<CursorList> cursorData;
     Length indent;
     float usedZoom;

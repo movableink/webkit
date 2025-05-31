@@ -49,7 +49,6 @@
 #include "ScaleTransformOperation.h"
 #include "ScrollAxis.h"
 #include "ScrollbarGutter.h"
-#include "ShadowData.h"
 #include "StyleBuilderConverter.h"
 #include "StyleExtractor.h"
 #include "StyleImage.h"
@@ -711,7 +710,7 @@ inline bool RenderStyle::changeAffectsVisualOverflow(const RenderStyle& other) c
             return false;
 
         if (m_nonInheritedData->miscData.ptr() != other.m_nonInheritedData->miscData.ptr()
-            && !arePointingToEqualData(m_nonInheritedData->miscData->boxShadow, other.m_nonInheritedData->miscData->boxShadow))
+            && m_nonInheritedData->miscData->boxShadow != other.m_nonInheritedData->miscData->boxShadow)
             return true;
 
         if (m_nonInheritedData->backgroundData.ptr() != other.m_nonInheritedData->backgroundData.ptr()) {
@@ -748,7 +747,7 @@ inline bool RenderStyle::changeAffectsVisualOverflow(const RenderStyle& other) c
         return true;
 
     if (m_rareInheritedData.ptr() != other.m_rareInheritedData.ptr()
-        && !arePointingToEqualData(m_rareInheritedData->textShadow, other.m_rareInheritedData->textShadow))
+        && m_rareInheritedData->textShadow != other.m_rareInheritedData->textShadow)
         return true;
 
     if (textDecorationsDiffer()) {
@@ -2109,7 +2108,7 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
             changingProperties.m_properties.set(CSSPropertyCaretColor);
         if (first.accentColor != second.accentColor || first.hasAutoAccentColor != second.hasAutoAccentColor)
             changingProperties.m_properties.set(CSSPropertyAccentColor);
-        if (!arePointingToEqualData(first.textShadow, second.textShadow))
+        if (first.textShadow != second.textShadow)
             changingProperties.m_properties.set(CSSPropertyTextShadow);
         if (first.indent != second.indent || first.textIndentLine != second.textIndentLine || first.textIndentType != second.textIndentType)
             changingProperties.m_properties.set(CSSPropertyTextIndent);
@@ -2522,32 +2521,6 @@ void RenderStyle::setPageScaleTransform(float scale)
     setTransform(TransformOperations { ScaleTransformOperation::create(scale, scale, TransformOperation::Type::Scale) });
     setTransformOriginX(Length(0, LengthType::Fixed));
     setTransformOriginY(Length(0, LengthType::Fixed));
-}
-
-void RenderStyle::setTextShadow(std::unique_ptr<ShadowData> shadowData, bool add)
-{
-    ASSERT(!shadowData || (shadowData->spread().isZero() && shadowData->style() == ShadowStyle::Normal));
-
-    auto& rareData = m_rareInheritedData.access();
-    if (!add) {
-        rareData.textShadow = WTFMove(shadowData);
-        return;
-    }
-
-    shadowData->setNext(WTFMove(rareData.textShadow));
-    rareData.textShadow = WTFMove(shadowData);
-}
-
-void RenderStyle::setBoxShadow(std::unique_ptr<ShadowData> shadowData, bool add)
-{
-    auto& rareData = m_nonInheritedData.access().miscData.access();
-    if (!add) {
-        rareData.boxShadow = WTFMove(shadowData);
-        return;
-    }
-
-    shadowData->setNext(WTFMove(rareData.boxShadow));
-    rareData.boxShadow = WTFMove(shadowData);
 }
 
 StyleImage* RenderStyle::listStyleImage() const
@@ -2977,36 +2950,6 @@ void RenderStyle::setFontPalette(const FontPalette& value)
     auto description = fontDescription();
     description.setFontPalette(value);
     setFontDescription(WTFMove(description));
-}
-
-void RenderStyle::getShadowHorizontalExtent(const ShadowData* shadow, LayoutUnit& left, LayoutUnit& right)
-{
-    left = 0;
-    right = 0;
-
-    for ( ; shadow; shadow = shadow->next()) {
-        if (shadow->style() == ShadowStyle::Inset)
-            continue;
-
-        auto extentAndSpread = shadow->paintingExtent() + LayoutUnit(shadow->spread().value);
-        left = std::min<LayoutUnit>(left, LayoutUnit(shadow->x().value) - extentAndSpread);
-        right = std::max<LayoutUnit>(right, LayoutUnit(shadow->x().value) + extentAndSpread);
-    }
-}
-
-void RenderStyle::getShadowVerticalExtent(const ShadowData* shadow, LayoutUnit& top, LayoutUnit& bottom)
-{
-    top = 0;
-    bottom = 0;
-
-    for ( ; shadow; shadow = shadow->next()) {
-        if (shadow->style() == ShadowStyle::Inset)
-            continue;
-
-        auto extentAndSpread = shadow->paintingExtent() + LayoutUnit(shadow->spread().value);
-        top = std::min<LayoutUnit>(top, LayoutUnit(static_cast<int>(shadow->y().value)) - extentAndSpread);
-        bottom = std::max<LayoutUnit>(bottom, LayoutUnit(static_cast<int>(shadow->y().value)) + extentAndSpread);
-    }
 }
 
 const Style::Color& RenderStyle::unresolvedColorForProperty(CSSPropertyID colorProperty, bool visitedLink) const

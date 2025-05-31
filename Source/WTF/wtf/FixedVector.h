@@ -137,6 +137,12 @@ public:
         return Self { Storage::createWithSizeFromGenerator(size, std::forward<Generator>(generator)) };
     }
 
+    template<std::invocable<size_t> FailableGenerator>
+    static FixedVector createWithSizeFromFailableGenerator(size_t size, NOESCAPE FailableGenerator&& generator)
+    {
+        return Self { Storage::createWithSizeFromFailableGenerator(size, std::forward<FailableGenerator>(generator)) };
+    }
+
     size_t size() const { return m_storage ? m_storage->size() : 0; }
     bool isEmpty() const { return m_storage ? m_storage->isEmpty() : true; }
     size_t byteSize() const { return m_storage ? m_storage->byteSize() : 0; }

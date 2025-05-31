@@ -130,12 +130,12 @@ void RenderSVGBlock::computeOverflow(LayoutUnit oldClientAfterEdge, bool recompu
     if (document().settings().layerBasedSVGEngineEnabled())
         return;
 
-    const auto* textShadow = style().textShadow();
-    if (!textShadow)
+    const auto& textShadow = style().textShadow();
+    if (textShadow.isEmpty())
         return;
 
-    LayoutRect borderRect = borderBoxRect();
-    textShadow->adjustRectForShadow(borderRect);
+    auto borderRect = borderBoxRect();
+    Style::adjustRectForShadow(borderRect, textShadow);
     addVisualOverflow(snappedIntRect(borderRect));
 }
 

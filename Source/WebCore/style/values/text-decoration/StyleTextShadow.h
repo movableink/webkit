@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "CSSTextShadow.h"
 #include "StyleColor.h"
 #include "StylePrimitiveNumericTypes.h"
+#include "StyleShadow.h"
 
 namespace WebCore {
 namespace Style {
@@ -56,6 +57,21 @@ template<> struct Blending<TextShadow> {
     auto canBlend(const TextShadow&, const TextShadow&, const RenderStyle&, const RenderStyle&) -> bool;
     auto blend(const TextShadow&, const TextShadow&, const RenderStyle&, const RenderStyle&, const BlendingContext&) -> TextShadow;
 };
+
+constexpr ShadowStyle shadowStyle(const TextShadow&)
+{
+    return ShadowStyle::Normal;
+}
+
+constexpr bool isInset(const TextShadow&)
+{
+    return false;
+}
+
+constexpr LayoutUnit paintingSpread(const TextShadow&)
+{
+    return LayoutUnit();
+}
 
 } // namespace Style
 } // namespace WebCore

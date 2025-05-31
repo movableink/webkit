@@ -85,7 +85,6 @@ class SVGLengthValue;
 class SVGRenderStyle;
 class ScaleTransformOperation;
 class ScrollTimeline;
-class ShadowData;
 class ShapeValue;
 class StyleContentAlignmentData;
 class StyleCustomPropertyData;
@@ -287,6 +286,7 @@ using IntOutsets = RectEdges<int>;
 namespace Style {
 class CustomPropertyRegistry;
 class ViewTransitionName;
+struct BoxShadow;
 struct Color;
 struct ColorScheme;
 struct CornerShapeValue;
@@ -297,6 +297,7 @@ struct ScrollMargin;
 struct ScrollMarginEdge;
 struct ScrollPadding;
 struct ScrollPaddingEdge;
+struct TextShadow;
 
 enum class Change : uint8_t;
 enum class LineBoxContain : uint8_t;
@@ -768,10 +769,6 @@ public:
     OptionSet<HangingPunctuation> hangingPunctuation() const;
 
     float outlineOffset() const;
-    const ShadowData* textShadow() const;
-    LayoutBoxExtent textShadowExtent() const;
-    inline void getTextShadowInlineDirectionExtent(LayoutUnit& logicalLeft, LayoutUnit& logicalRight) const;
-    inline void getTextShadowBlockDirectionExtent(LayoutUnit& logicalTop, LayoutUnit& logicalBottom) const;
 
     inline float textStrokeWidth() const;
     inline float opacity() const;
@@ -890,7 +887,16 @@ public:
     inline const GridPosition& gridItemRowStart() const;
     inline const GridPosition& gridItemRowEnd() const;
 
-    inline const ShadowData* boxShadow() const;
+    inline const FixedVector<Style::TextShadow>& textShadow() const;
+    inline bool hasTextShadow() const;
+    inline LayoutBoxExtent textShadowExtent() const;
+    inline void getTextShadowHorizontalExtent(LayoutUnit& left, LayoutUnit& right) const;
+    inline void getTextShadowVerticalExtent(LayoutUnit& top, LayoutUnit& bottom) const;
+    inline void getTextShadowInlineDirectionExtent(LayoutUnit& logicalLeft, LayoutUnit& logicalRight) const;
+    inline void getTextShadowBlockDirectionExtent(LayoutUnit& logicalTop, LayoutUnit& logicalBottom) const;
+
+    inline const FixedVector<Style::BoxShadow>& boxShadow() const;
+    inline bool hasBoxShadow() const;
     inline LayoutBoxExtent boxShadowExtent() const;
     inline LayoutBoxExtent boxShadowInsetExtent() const;
     inline void getBoxShadowHorizontalExtent(LayoutUnit& left, LayoutUnit& right) const;
@@ -1484,7 +1490,7 @@ public:
     inline void setOrphans(unsigned short);
 
     inline void setOutlineOffset(float);
-    void setTextShadow(std::unique_ptr<ShadowData>, bool add = false);
+    inline void setTextShadow(FixedVector<Style::TextShadow>&&);
     inline void setTextStrokeColor(const Style::Color&);
     inline void setTextStrokeWidth(float);
     inline void setTextFillColor(const Style::Color&);
@@ -1503,7 +1509,7 @@ public:
     inline void setBoxOrdinalGroup(unsigned);
     inline void setBoxOrient(BoxOrient);
     inline void setBoxPack(BoxPack);
-    void setBoxShadow(std::unique_ptr<ShadowData>, bool add = false);
+    inline void setBoxShadow(FixedVector<Style::BoxShadow>&&);
     inline void setBoxReflect(RefPtr<StyleReflection>&&);
     inline void setBoxSizing(BoxSizing);
     inline void setFlexGrow(float);
@@ -2251,8 +2257,10 @@ public:
 
     void inheritUnicodeBidiFrom(const RenderStyle* parent) { m_nonInheritedFlags.unicodeBidi = parent->m_nonInheritedFlags.unicodeBidi; }
 
-    inline void getShadowInlineDirectionExtent(const ShadowData*, LayoutUnit& logicalLeft, LayoutUnit& logicalRight) const;
-    inline void getShadowBlockDirectionExtent(const ShadowData*, LayoutUnit& logicalTop, LayoutUnit& logicalBottom) const;
+    template<typename ShadowType> static void getShadowHorizontalExtent(const FixedVector<ShadowType>&, LayoutUnit& left, LayoutUnit& right);
+    template<typename ShadowType> static void getShadowVerticalExtent(const FixedVector<ShadowType>&, LayoutUnit& top, LayoutUnit& bottom);
+    template<typename ShadowType> void getShadowInlineDirectionExtent(const FixedVector<ShadowType>&, LayoutUnit& logicalLeft, LayoutUnit& logicalRight) const;
+    template<typename ShadowType> void getShadowBlockDirectionExtent(const FixedVector<ShadowType>&, LayoutUnit& logicalTop, LayoutUnit& logicalBottom) const;
 
     inline const Style::Color& borderLeftColor() const;
     inline const Style::Color& borderRightColor() const;
@@ -2478,9 +2486,6 @@ private:
     static constexpr bool isDisplayTableOrTablePart(DisplayType);
     static constexpr bool isInternalTableBox(DisplayType);
     static constexpr bool isRubyContainerOrInternalRubyBox(DisplayType);
-
-    static void getShadowHorizontalExtent(const ShadowData*, LayoutUnit& left, LayoutUnit& right);
-    static void getShadowVerticalExtent(const ShadowData*, LayoutUnit& top, LayoutUnit& bottom);
 
     bool changeAffectsVisualOverflow(const RenderStyle&) const;
     bool changeRequiresLayout(const RenderStyle&, OptionSet<StyleDifferenceContextSensitiveProperty>& changedContextSensitiveProperties) const;

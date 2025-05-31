@@ -232,7 +232,7 @@ bool AccessibilityObject::isSuperscript() const
 bool AccessibilityObject::hasTextShadow() const
 {
     const auto* style = this->style();
-    return style && style->textShadow();
+    return style && style->hasTextShadow();
 }
 
 LineDecorationStyle AccessibilityObject::lineDecorationStyle() const
@@ -254,7 +254,7 @@ AttributedStringStyle AccessibilityObject::stylesForAttributedString() const
         backgroundColorFrom(*style),
         alignment == VerticalAlign::Sub,
         alignment == VerticalAlign::Super,
-        !!style->textShadow(),
+        style->hasTextShadow(),
         lineDecorationStyle()
     };
 }

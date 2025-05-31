@@ -27,7 +27,6 @@
 #include "RenderStyleInlines.h"
 #include "RotateTransformOperation.h"
 #include "ScaleTransformOperation.h"
-#include "ShadowData.h"
 #include "StyleImage.h"
 #include "StyleReflection.h"
 #include "StyleResolver.h"

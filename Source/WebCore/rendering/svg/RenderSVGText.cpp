@@ -63,6 +63,7 @@
 #include "SVGTextLayoutEngine.h"
 #include "SVGURIReference.h"
 #include "SVGVisitedRendererTracking.h"
+#include "StyleTextShadow.h"
 #include "TransformState.h"
 #include "VisiblePosition.h"
 #include <wtf/StackStats.h>
@@ -940,17 +941,17 @@ FloatRect RenderSVGText::repaintRectInLocalCoordinates(RepaintRectCalculation re
     if (document().settings().layerBasedSVGEngineEnabled()) {
         auto repaintRect = SVGBoundingBoxComputation::computeRepaintBoundingBox(*this);
 
-        if (const auto* textShadow = style().textShadow())
-            textShadow->adjustRectForShadow(repaintRect);
+        if (auto& textShadow = style().textShadow(); !textShadow.isEmpty())
+            Style::adjustRectForShadow(repaintRect, textShadow);
 
         return repaintRect;
     }
 
-    FloatRect repaintRect = strokeBoundingBox();
+    auto repaintRect = strokeBoundingBox();
     SVGRenderSupport::intersectRepaintRectWithResources(*this, repaintRect, repaintRectCalculation);
 
-    if (const ShadowData* textShadow = style().textShadow())
-        textShadow->adjustRectForShadow(repaintRect);
+    if (auto& textShadow = style().textShadow(); !textShadow.isEmpty())
+        Style::adjustRectForShadow(repaintRect, textShadow);
 
     return repaintRect;
 }
@@ -967,8 +968,8 @@ void RenderSVGText::updatePositionAndOverflow(const FloatRect& boundaries)
         setSize(boundingRect.size());
 
         auto overflowRect = visualOverflowRectEquivalent();
-        if (const auto* textShadow = style().textShadow())
-            textShadow->adjustRectForShadow(overflowRect);
+        if (auto& textShadow = style().textShadow(); !textShadow.isEmpty())
+            Style::adjustRectForShadow(overflowRect, textShadow);
 
         addVisualOverflow(overflowRect);
         return;

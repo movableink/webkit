@@ -118,8 +118,8 @@ public:
     static void serializeContainerNames(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const Vector<ScopedName>&);
     static void serializeViewTransitionClasses(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const Vector<ScopedName>&);
     static void serializeViewTransitionName(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const ViewTransitionName&);
-    static void serializeBoxShadow(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const ShadowData*);
-    static void serializeTextShadow(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const ShadowData*);
+    static void serializeBoxShadow(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const FixedVector<BoxShadow>&);
+    static void serializeTextShadow(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const FixedVector<TextShadow>&);
     static void serializePositionTryFallbacks(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const Vector<PositionTryFallback>&);
     static void serializeWillChange(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const WillChangeData*);
     static void serializeBlockEllipsis(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const BlockEllipsis&);
@@ -1298,36 +1298,32 @@ inline void ExtractorSerializer::serializeViewTransitionName(ExtractorState&, St
     CSS::serializationForCSS(builder, context, CustomIdentifier { viewTransitionName.customIdent() });
 }
 
-inline void ExtractorSerializer::serializeBoxShadow(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const ShadowData* shadow)
+inline void ExtractorSerializer::serializeBoxShadow(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const FixedVector<BoxShadow>& shadows)
 {
-    if (!shadow) {
+    if (shadows.isEmpty()) {
         CSS::serializationForCSS(builder, context, CSS::Keyword::None { });
         return;
     }
 
     CSS::BoxShadowProperty::List list;
 
-    for (const auto* currentShadowData = shadow; currentShadowData; currentShadowData = currentShadowData->next())
-        list.value.append(toCSS(currentShadowData->asBoxShadow(), state.style));
-
-    list.value.reverse();
+    for (const auto& shadow : makeReversedRange(shadows))
+        list.value.append(toCSS(shadow, state.style));
 
     CSS::serializationForCSS(builder, context, CSS::BoxShadowProperty { WTFMove(list) });
 }
 
-inline void ExtractorSerializer::serializeTextShadow(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const ShadowData* shadow)
+inline void ExtractorSerializer::serializeTextShadow(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const FixedVector<TextShadow>& shadows)
 {
-    if (!shadow) {
+    if (shadows.isEmpty()) {
         CSS::serializationForCSS(builder, context, CSS::Keyword::None { });
         return;
     }
 
     CSS::TextShadowProperty::List list;
 
-    for (const auto* currentShadowData = shadow; currentShadowData; currentShadowData = currentShadowData->next())
-        list.value.append(toCSS(currentShadowData->asTextShadow(), state.style));
-
-    list.value.reverse();
+    for (const auto& shadow : makeReversedRange(shadows))
+        list.value.append(toCSS(shadow, state.style));
 
     CSS::serializationForCSS(builder, context, CSS::TextShadowProperty { WTFMove(list) });
 }

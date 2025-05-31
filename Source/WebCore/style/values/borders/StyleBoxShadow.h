@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "CSSBoxShadow.h"
 #include "StyleColor.h"
 #include "StylePrimitiveNumericTypes.h"
+#include "StyleShadow.h"
 
 namespace WebCore {
 namespace Style {
@@ -63,6 +64,21 @@ template<> struct Blending<BoxShadow> {
     auto canBlend(const BoxShadow&, const BoxShadow&, const RenderStyle&, const RenderStyle&) -> bool;
     auto blend(const BoxShadow&, const BoxShadow&, const RenderStyle&, const RenderStyle&, const BlendingContext&) -> BoxShadow;
 };
+
+inline ShadowStyle shadowStyle(const BoxShadow& shadow)
+{
+    return shadow.inset.has_value() ? ShadowStyle::Inset : ShadowStyle::Normal;
+}
+
+inline bool isInset(const BoxShadow& shadow)
+{
+    return shadow.inset.has_value();
+}
+
+inline LayoutUnit paintingSpread(const BoxShadow& shadow)
+{
+    return LayoutUnit { shadow.spread.value };
+}
 
 } // namespace Style
 } // namespace WebCore

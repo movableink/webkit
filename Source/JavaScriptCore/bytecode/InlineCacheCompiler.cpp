@@ -7588,7 +7588,7 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
 
     auto keys = FixedVector<Ref<AccessCase>>::createWithSizeFromGenerator(1,
         [&](unsigned) {
-            return std::optional { Ref { accessCase } };
+            return Ref { accessCase };
         });
     dataLogLnIf(InlineCacheCompilerInternal::verbose, FullCodeOrigin(codeBlock, m_stubInfo.codeOrigin), ": Generating polymorphic access stub for ", listDump(keys));
 

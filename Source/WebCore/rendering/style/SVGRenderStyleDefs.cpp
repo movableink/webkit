@@ -32,6 +32,7 @@
 #include "RenderStyleDifference.h"
 #include "RenderStyleInlines.h"
 #include "SVGRenderStyle.h"
+#include "StylePrimitiveNumericTypes+Logging.h"
 #include <wtf/PointerComparison.h>
 #include <wtf/text/TextStream.h>
 
@@ -240,7 +241,7 @@ StyleShadowSVGData::StyleShadowSVGData()
 
 inline StyleShadowSVGData::StyleShadowSVGData(const StyleShadowSVGData& other)
     : RefCounted<StyleShadowSVGData>()
-    , shadow(other.shadow ? makeUnique<ShadowData>(*other.shadow) : nullptr)
+    , shadow(other.shadow)
 {
 }
 
@@ -251,7 +252,7 @@ Ref<StyleShadowSVGData> StyleShadowSVGData::copy() const
 
 bool StyleShadowSVGData::operator==(const StyleShadowSVGData& other) const
 {
-    return arePointingToEqualData(shadow, other.shadow);
+    return shadow == other.shadow;
 }
 
 #if !LOG_DISABLED
@@ -544,8 +545,7 @@ TextStream& operator<<(TextStream& ts, const StyleMiscData& data)
 
 TextStream& operator<<(TextStream& ts, const StyleShadowSVGData& data)
 {
-    if (data.shadow)
-        ts.dumpProperty("shadow"_s, *data.shadow);
+    ts.dumpProperty("shadow"_s, data.shadow);
     return ts;
 }
 

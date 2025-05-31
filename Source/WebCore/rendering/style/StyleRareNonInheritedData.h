@@ -72,7 +72,6 @@ class ContentData;
 class PathOperation;
 class RotateTransformOperation;
 class ScaleTransformOperation;
-class ShadowData;
 class StyleCustomPropertyData;
 class StyleDeprecatedFlexibleBoxData;
 class StyleFilterData;

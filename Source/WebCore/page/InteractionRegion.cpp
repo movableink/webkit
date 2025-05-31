@@ -249,7 +249,7 @@ static bool hasTransparentContainerStyle(const RenderStyle& style)
 {
     return !style.hasBackground()
         && !style.hasOutline()
-        && !style.boxShadow()
+        && !style.hasBoxShadow()
         && !style.clipPath()
         && !style.hasExplicitlySetBorderRadius()
         // No visible borders or borders that do not create a complete box.

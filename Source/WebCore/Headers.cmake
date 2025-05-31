@@ -1012,6 +1012,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/values/CSSValueTypes.h
 
     css/values/borders/CSSBorderRadius.h
+    css/values/borders/CSSBoxShadow.h
 
     css/values/color/CSSColor.h
     css/values/color/CSSColorDescriptors.h
@@ -1053,6 +1054,8 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/values/shapes/CSSRectFunction.h
     css/values/shapes/CSSShapeFunction.h
     css/values/shapes/CSSXywhFunction.h
+
+    css/values/text-decoration/CSSTextShadow.h
 
     cssjit/CompiledSelector.h
 
@@ -2677,7 +2680,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/style/ScrollbarGutter.h
     rendering/style/SVGRenderStyle.h
     rendering/style/SVGRenderStyleDefs.h
-    rendering/style/ShadowData.h
     rendering/style/ShapeValue.h
     rendering/style/StyleBackgroundData.h
     rendering/style/StyleBoxData.h
@@ -2742,7 +2744,9 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     style/Styleable.h
 
     style/values/borders/StyleBorderRadius.h
+    style/values/borders/StyleBoxShadow.h
     style/values/borders/StyleCornerShapeValue.h
+    style/values/borders/StyleShadow.h
 
     style/values/color/StyleColor.h
     style/values/color/StyleColorOptions.h
@@ -2782,6 +2786,8 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     style/values/shapes/StyleShapeFunction.h
     style/values/shapes/StyleWindRuleComputation.h
     style/values/shapes/StyleXywhFunction.h
+
+    style/values/text-decoration/StyleTextShadow.h
 
     style/values/StyleValueTypes.h
 

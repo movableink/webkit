@@ -115,6 +115,7 @@
 #include "TranslateTransformOperation.h"
 #include "ViewTimeline.h"
 #include "WebAnimationUtilities.h"
+#include <wtf/IteratorRange.h>
 
 namespace WebCore {
 namespace Style {
@@ -201,8 +202,8 @@ public:
     static Ref<CSSValue> convertContainerNames(ExtractorState&, const Vector<ScopedName>&);
     static Ref<CSSValue> convertViewTransitionClasses(ExtractorState&, const Vector<ScopedName>&);
     static Ref<CSSValue> convertViewTransitionName(ExtractorState&, const ViewTransitionName&);
-    static Ref<CSSValue> convertBoxShadow(ExtractorState&, const ShadowData*);
-    static Ref<CSSValue> convertTextShadow(ExtractorState&, const ShadowData*);
+    static Ref<CSSValue> convertBoxShadow(ExtractorState&, const FixedVector<BoxShadow>&);
+    static Ref<CSSValue> convertTextShadow(ExtractorState&, const FixedVector<TextShadow>&);
     static Ref<CSSValue> convertPositionTryFallbacks(ExtractorState&, const Vector<PositionTryFallback>&);
     static Ref<CSSValue> convertWillChange(ExtractorState&, const WillChangeData*);
     static Ref<CSSValue> convertBlockEllipsis(ExtractorState&, const BlockEllipsis&);
@@ -1043,30 +1044,28 @@ inline Ref<CSSValue> ExtractorConverter::convertViewTransitionName(ExtractorStat
     return CSSPrimitiveValue::createCustomIdent(viewTransitionName.customIdent());
 }
 
-inline Ref<CSSValue> ExtractorConverter::convertBoxShadow(ExtractorState& state, const ShadowData* shadow)
+inline Ref<CSSValue> ExtractorConverter::convertBoxShadow(ExtractorState& state, const FixedVector<BoxShadow>& shadows)
 {
-    if (!shadow)
+    if (shadows.isEmpty())
         return CSSPrimitiveValue::create(CSSValueNone);
 
     CSS::BoxShadowProperty::List list;
 
-    for (const auto* currentShadowData = shadow; currentShadowData; currentShadowData = currentShadowData->next())
-        list.value.append(toCSS(currentShadowData->asBoxShadow(), state.style));
-
-    list.value.reverse();
+    for (const auto& shadow : makeReversedRange(shadows))
+        list.value.append(toCSS(shadow, state.style));
 
     return CSSBoxShadowPropertyValue::create(CSS::BoxShadowProperty { WTFMove(list) });
 }
 
-inline Ref<CSSValue> ExtractorConverter::convertTextShadow(ExtractorState& state, const ShadowData* shadow)
+inline Ref<CSSValue> ExtractorConverter::convertTextShadow(ExtractorState& state, const FixedVector<TextShadow>& shadows)
 {
-    if (!shadow)
+    if (shadows.isEmpty())
         return CSSPrimitiveValue::create(CSSValueNone);
 
     CSS::TextShadowProperty::List list;
 
-    for (const auto* currentShadowData = shadow; currentShadowData; currentShadowData = currentShadowData->next())
-        list.value.append(toCSS(currentShadowData->asTextShadow(), state.style));
+    for (const auto& shadow : makeReversedRange(shadows))
+        list.value.append(toCSS(shadow, state.style));
 
     list.value.reverse();
 

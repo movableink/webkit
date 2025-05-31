@@ -29,6 +29,7 @@
 #include "StyleBuilderConverter.h"
 #include "StyleBuilderState.h"
 #include "StyleExtractorConverter.h"
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 namespace Style {
@@ -109,6 +110,11 @@ LayoutBoxExtent extentForRect(const ScrollMargin& margin, const LayoutRect& rect
         Style::evaluate(margin.bottom(), rect.height()),
         Style::evaluate(margin.left(), rect.width()),
     };
+}
+
+WTF::TextStream& operator<<(WTF::TextStream& ts, const ScrollMarginEdge& value)
+{
+    return ts << value.m_value;
 }
 
 } // namespace Style

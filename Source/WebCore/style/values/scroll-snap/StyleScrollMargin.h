@@ -70,6 +70,8 @@ struct ScrollMarginEdge {
     bool operator==(const ScrollMarginEdge&) const = default;
 
 private:
+    friend WTF::TextStream& operator<<(WTF::TextStream&, const ScrollMarginEdge&);
+
     WebCore::Length m_value;
 };
 
@@ -104,6 +106,10 @@ template<> struct Evaluation<ScrollMarginEdge> {
 // MARK: - Extent
 
 LayoutBoxExtent extentForRect(const ScrollMargin&, const LayoutRect&);
+
+// MARK: - Logging
+
+WTF::TextStream& operator<<(WTF::TextStream&, const ScrollMarginEdge&);
 
 } // namespace Style
 } // namespace WebCore

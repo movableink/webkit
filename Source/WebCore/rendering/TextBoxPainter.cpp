@@ -47,7 +47,6 @@
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "RenderedDocumentMarker.h"
-#include "ShadowData.h"
 #include "StyledMarkedText.h"
 #include "TextDecorationThickness.h"
 #include "TextPaintStyle.h"
@@ -501,7 +500,7 @@ void TextBoxPainter::paintForeground(const StyledMarkedText& markedText)
     if (markedText.startOffset >= markedText.endOffset)
         return;
 
-    GraphicsContext& context = m_paintInfo.context();
+    auto& context = m_paintInfo.context();
     const FontCascade& font = fontCascade();
 
     float emphasisMarkOffset = 0;
@@ -509,14 +508,17 @@ void TextBoxPainter::paintForeground(const StyledMarkedText& markedText)
     if (!emphasisMark.isEmpty())
         emphasisMarkOffset = *m_emphasisMarkExistsAndIsAbove ? -font.metricsOfPrimaryFont().intAscent() - font.emphasisMarkDescent(emphasisMark) : font.metricsOfPrimaryFont().intDescent() + font.emphasisMarkAscent(emphasisMark);
 
-    TextPainter textPainter { context, font, m_style };
-    textPainter.setStyle(markedText.style.textStyles);
-    if (markedText.style.textShadow) {
-        textPainter.setShadow(&markedText.style.textShadow.value());
-        if (m_style.hasAppleColorFilter())
-            textPainter.setShadowColorFilter(&m_style.appleColorFilter());
-    }
-    textPainter.setEmphasisMark(emphasisMark, emphasisMarkOffset, m_isCombinedText ? &downcast<RenderCombineText>(m_renderer) : nullptr);
+    TextPainter textPainter {
+        context,
+        font,
+        m_style,
+        markedText.style.textStyles,
+        markedText.style.textShadow,
+        !markedText.style.textShadow.isEmpty() && m_style.hasAppleColorFilter() ? &m_style.appleColorFilter() : nullptr,
+        emphasisMark,
+        emphasisMarkOffset,
+        m_isCombinedText ? &downcast<RenderCombineText>(m_renderer) : nullptr
+    };
 
     bool isTransparentMarkedText = markedText.type == MarkedText::Type::DraggedContent || markedText.type == MarkedText::Type::TransparentContent;
     GraphicsContextStateSaver stateSaver(context, markedText.style.textStyles.strokeWidth > 0 || isTransparentMarkedText);
@@ -532,7 +534,7 @@ void TextBoxPainter::paintForeground(const StyledMarkedText& markedText)
 
 TextDecorationPainter TextBoxPainter::createDecorationPainter(const StyledMarkedText& markedText, const FloatRect& clipOutRect)
 {
-    GraphicsContext& context = m_paintInfo.context();
+    auto& context = m_paintInfo.context();
 
     updateGraphicsContext(context, markedText.style.textStyles);
 
@@ -549,9 +551,14 @@ TextDecorationPainter TextBoxPainter::createDecorationPainter(const StyledMarked
     }
 
     // Create painter
-    auto* shadow = markedText.style.textShadow ? &markedText.style.textShadow.value() : nullptr;
-    auto* colorFilter = markedText.style.textShadow && m_style.hasAppleColorFilter() ? &m_style.appleColorFilter() : nullptr;
-    return { context, fontCascade(), shadow, colorFilter, m_document.printing(), writingMode() };
+    return {
+        context,
+        fontCascade(),
+        markedText.style.textShadow,
+        !markedText.style.textShadow.isEmpty() && m_style.hasAppleColorFilter() ? &m_style.appleColorFilter() : nullptr,
+        m_document.printing(),
+        writingMode()
+    };
 }
 
 static inline float computedTextDecorationThickness(const RenderStyle& styleToUse, float deviceScaleFactor)

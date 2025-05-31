@@ -31,9 +31,9 @@ namespace WebCore {
 class GraphicsContext;
 class FloatRoundedRect;
 
+namespace Style {
 enum class ShadowStyle : bool;
-
-class FloatRoundedRect;
+}
 
 enum BaseBackgroundColorUsage {
     BaseBackgroundColorUse,
@@ -74,7 +74,7 @@ public:
     void paintFillLayers(const Color&, const FillLayer&, const LayoutRect&, BleedAvoidance, CompositeOperator, RenderElement* backgroundObject = nullptr) const;
     void paintFillLayer(const Color&, const FillLayer&, const LayoutRect&, BleedAvoidance, const InlineIterator::InlineBoxIterator&, const LayoutRect& backgroundImageStrip = { }, CompositeOperator = CompositeOperator::SourceOver, RenderElement* backgroundObject = nullptr, BaseBackgroundColorUsage = BaseBackgroundColorUse) const;
 
-    void paintBoxShadow(const LayoutRect&, const RenderStyle&, ShadowStyle, RectEdges<bool> closedEdges = { true, true, true, true }) const;
+    void paintBoxShadow(const LayoutRect&, const RenderStyle&, Style::ShadowStyle, RectEdges<bool> closedEdges = { true, true, true, true }) const;
 
     static bool paintsOwnBackground(const RenderBoxModelObject&);
     static BackgroundImageGeometry calculateBackgroundImageGeometry(const RenderBoxModelObject&, const RenderLayerModelObject* paintContainer, const FillLayer&, const LayoutPoint& paintOffset, const LayoutRect& borderBoxRect, std::optional<FillBox> overrideOrigin = std::nullopt);

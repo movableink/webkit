@@ -64,9 +64,8 @@ void EllipsisBoxPainter::paint()
         context.setFillColor(textColor);
 
     auto setShadow = false;
-    if (style.textShadow()) {
-        auto shadowColor = style.colorWithColorFilter(style.textShadow()->color());
-        context.setDropShadow({ LayoutSize(style.textShadow()->x().value, style.textShadow()->y().value), style.textShadow()->radius().value, shadowColor, ShadowRadiusMode::Default });
+    if (auto& shadow = style.textShadow(); !shadow.isEmpty()) {
+        context.setDropShadow({ LayoutSize(shadow[0].location.x().value, shadow[0].location.y().value), shadow[0].blur.value, style.colorWithColorFilter(shadow[0].color), ShadowRadiusMode::Default });
         setShadow = true;
     }
     

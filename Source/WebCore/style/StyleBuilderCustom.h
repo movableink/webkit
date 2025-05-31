@@ -49,7 +49,6 @@
 #include "HTMLElement.h"
 #include "LocalFrame.h"
 #include "SVGElement.h"
-#include "ShadowData.h"
 #include "StyleBoxShadow.h"
 #include "StyleBuilderConverter.h"
 #include "StyleBuilderStateInlines.h"
@@ -84,6 +83,8 @@ inline ScrollMarginEdge forwardInheritedValue(const ScrollMarginEdge& value) { a
 inline ScrollPaddingEdge forwardInheritedValue(const ScrollPaddingEdge& value) { auto copy = value; return copy; }
 inline DynamicRangeLimit forwardInheritedValue(const DynamicRangeLimit& value) { auto copy = value; return copy; }
 inline CornerShapeValue forwardInheritedValue(const CornerShapeValue& value) { auto copy = value; return copy; }
+inline FixedVector<BoxShadow> forwardInheritedValue(const FixedVector<BoxShadow>& value) { auto copy = value; return copy; }
+inline FixedVector<TextShadow> forwardInheritedValue(const FixedVector<TextShadow>& value) { auto copy = value; return copy; }
 
 // Note that we assume the CSS parser only allows valid CSSValue types.
 class BuilderCustom {
@@ -705,19 +706,19 @@ inline void BuilderCustom::applyValueColorScheme(BuilderState& builderState, CSS
 
 inline void BuilderCustom::applyInitialTextShadow(BuilderState& builderState)
 {
-    builderState.style().setTextShadow(nullptr);
+    builderState.style().setTextShadow({ });
 }
 
 inline void BuilderCustom::applyInheritTextShadow(BuilderState& builderState)
 {
-    builderState.style().setTextShadow(builderState.parentStyle().textShadow() ? makeUnique<ShadowData>(*builderState.parentStyle().textShadow()) : nullptr);
+    builderState.style().setTextShadow(forwardInheritedValue(builderState.parentStyle().textShadow()));
 }
 
 inline void BuilderCustom::applyValueTextShadow(BuilderState& builderState, CSSValue& value)
 {
     if (RefPtr primitive = dynamicDowncast<CSSPrimitiveValue>(value)) {
         ASSERT(primitive->valueID() == CSSValueNone);
-        builderState.style().setTextShadow(nullptr);
+        builderState.style().setTextShadow({ });
         return;
     }
 
@@ -727,33 +728,33 @@ inline void BuilderCustom::applyValueTextShadow(BuilderState& builderState, CSSV
 
     WTF::switchOn(shadow->shadow(),
         [&](CSS::Keyword::None) {
-            builderState.style().setTextShadow(nullptr);
+            builderState.style().setTextShadow({ });
         },
         [&](const auto& list) {
-            bool isFirstEntry = true;
-            for (const auto& shadow : list) {
-                builderState.style().setTextShadow(makeUnique<ShadowData>(Style::toStyle(shadow, builderState)), !isFirstEntry); // add to the list if this is not the first entry
-                isFirstEntry = false;
-            }
+            builderState.style().setTextShadow(
+                FixedVector<TextShadow>::createWithSizeFromGenerator(list.size(), [&](auto index) {
+                    return Style::toStyle(list[list.size() - index - 1], builderState);
+                })
+            );
         }
     );
 }
 
 inline void BuilderCustom::applyInitialBoxShadow(BuilderState& builderState)
 {
-    builderState.style().setBoxShadow(nullptr);
+    builderState.style().setBoxShadow({ });
 }
 
 inline void BuilderCustom::applyInheritBoxShadow(BuilderState& builderState)
 {
-    builderState.style().setBoxShadow(builderState.parentStyle().boxShadow() ? makeUnique<ShadowData>(*builderState.parentStyle().boxShadow()) : nullptr);
+    builderState.style().setBoxShadow(forwardInheritedValue(builderState.parentStyle().boxShadow()));
 }
 
 inline void BuilderCustom::applyValueBoxShadow(BuilderState& builderState, CSSValue& value)
 {
     if (RefPtr primitive = dynamicDowncast<CSSPrimitiveValue>(value)) {
         ASSERT(primitive->valueID() == CSSValueNone);
-        builderState.style().setBoxShadow(nullptr);
+        builderState.style().setBoxShadow({ });
         return;
     }
 
@@ -763,14 +764,14 @@ inline void BuilderCustom::applyValueBoxShadow(BuilderState& builderState, CSSVa
 
     WTF::switchOn(shadow->shadow(),
         [&](CSS::Keyword::None) {
-            builderState.style().setBoxShadow(nullptr);
+            builderState.style().setBoxShadow({ });
         },
         [&](const auto& list) {
-            bool isFirstEntry = true;
-            for (const auto& shadow : list) {
-                builderState.style().setBoxShadow(makeUnique<ShadowData>(Style::toStyle(shadow, builderState)), !isFirstEntry); // add to the list if this is not the first entry
-                isFirstEntry = false;
-            }
+            builderState.style().setBoxShadow(
+                FixedVector<BoxShadow>::createWithSizeFromGenerator(list.size(), [&](auto index) {
+                    return Style::toStyle(list[list.size() - index - 1], builderState);
+                })
+            );
         }
     );
 }

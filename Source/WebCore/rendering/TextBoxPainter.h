@@ -41,7 +41,6 @@ class Document;
 class RenderCombineText;
 class RenderStyle;
 class RenderText;
-class ShadowData;
 struct CompositionUnderline;
 struct MarkedText;
 struct StyledMarkedText;

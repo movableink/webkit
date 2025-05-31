@@ -1100,9 +1100,9 @@ public:
     void (RenderStyle::*m_setter)(FilterOperations&&);
 };
 
-inline const ShadowData* shadowForInterpolation(const ShadowData* srcShadow, const ShadowData* otherShadow)
+inline const BoxShadow& shadowForInterpolation(const BoxShadow& shadowToMatch)
 {
-    static NeverDestroyed<ShadowData> defaultShadowData {
+    static NeverDestroyed<BoxShadow> defaultShadowData {
         BoxShadow {
             .color = { WebCore::Color::transparentBlack },
             .location = { { 0 }, { 0 } },
@@ -1112,7 +1112,7 @@ inline const ShadowData* shadowForInterpolation(const ShadowData* srcShadow, con
             .isWebkitBoxShadow = false
         }
     };
-    static NeverDestroyed<ShadowData> defaultInsetShadowData {
+    static NeverDestroyed<BoxShadow> defaultInsetShadowData {
         BoxShadow {
             .color = { WebCore::Color::transparentBlack },
             .location = { { 0 }, { 0 } },
@@ -1122,7 +1122,7 @@ inline const ShadowData* shadowForInterpolation(const ShadowData* srcShadow, con
             .isWebkitBoxShadow = false
         }
     };
-    static NeverDestroyed<ShadowData> defaultWebKitBoxShadowData {
+    static NeverDestroyed<BoxShadow> defaultWebKitBoxShadowData {
         BoxShadow {
             .color = { WebCore::Color::transparentBlack },
             .location = { { 0 }, { 0 } },
@@ -1132,7 +1132,7 @@ inline const ShadowData* shadowForInterpolation(const ShadowData* srcShadow, con
             .isWebkitBoxShadow = true
         }
     };
-    static NeverDestroyed<ShadowData> defaultInsetWebKitBoxShadowData {
+    static NeverDestroyed<BoxShadow> defaultInsetWebKitBoxShadowData {
         BoxShadow {
             .color = { WebCore::Color::transparentBlack },
             .location = { { 0 }, { 0 } },
@@ -1143,63 +1143,62 @@ inline const ShadowData* shadowForInterpolation(const ShadowData* srcShadow, con
         }
     };
 
-    if (srcShadow)
-        return srcShadow;
-
-    if (otherShadow->style() == ShadowStyle::Inset)
-        return otherShadow->isWebkitBoxShadow() ? &defaultInsetWebKitBoxShadowData.get() : &defaultInsetShadowData.get();
-
-    return otherShadow->isWebkitBoxShadow() ? &defaultWebKitBoxShadowData.get() : &defaultShadowData.get();
+    if (isInset(shadowToMatch))
+        return shadowToMatch.isWebkitBoxShadow ? defaultInsetWebKitBoxShadowData.get() : defaultInsetShadowData.get();
+    else
+        return shadowToMatch.isWebkitBoxShadow ? defaultWebKitBoxShadowData.get() : defaultShadowData.get();
 }
 
-class ShadowWrapper final : public WrapperBase {
+inline const TextShadow& shadowForInterpolation(const TextShadow&)
+{
+    static NeverDestroyed<TextShadow> defaultShadowData {
+        TextShadow {
+            .color = { WebCore::Color::transparentBlack },
+            .location = { { 0 }, { 0 } },
+            .blur = { 0 },
+        }
+    };
+    return defaultShadowData.get();
+}
+
+template<typename ShadowType> class ShadowWrapper final : public WrapperWithGetter<const FixedVector<ShadowType>&> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    ShadowWrapper(CSSPropertyID property, const ShadowData* (RenderStyle::*getter)() const, void (RenderStyle::*setter)(std::unique_ptr<ShadowData>, bool))
-        : WrapperBase(property)
-        , m_getter(getter)
+    ShadowWrapper(CSSPropertyID property, const FixedVector<ShadowType>& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(FixedVector<ShadowType>&&))
+        : WrapperWithGetter<const FixedVector<ShadowType>&>(property, getter)
         , m_setter(setter)
     {
     }
 
-    bool equals(const RenderStyle& a, const RenderStyle& b) const final
-    {
-        if (&a == &b)
-            return true;
-
-        auto* shadowA = (a.*m_getter)();
-        auto* shadowB = (b.*m_getter)();
-
-        while (true) {
-            if (!shadowA || !shadowB)
-                return shadowA == shadowB;
-
-            if (*shadowA != *shadowB)
-                return false;
-
-            shadowA = shadowA->next();
-            shadowB = shadowB->next();
-        }
-
-        return true;
-    }
-
-    bool canInterpolate(const RenderStyle& from, const RenderStyle& to, CompositeOperation compositeOperation) const final
+    bool canInterpolate(const RenderStyle& fromStyle, const RenderStyle& toStyle, CompositeOperation compositeOperation) const final
     {
         if (compositeOperation != CompositeOperation::Replace)
             return true;
 
-        auto* fromShadow = (from.*m_getter)();
-        auto* toShadow = (to.*m_getter)();
-
         // The only scenario where we can't interpolate is if specified items don't have the same shadow style.
-        while (fromShadow && toShadow) {
-            if (fromShadow->style() != toShadow->style())
-                return false;
-            fromShadow = fromShadow->next();
-            toShadow = toShadow->next();
-        }
 
+        auto& fromShadowList = this->value(fromStyle);
+        auto& toShadowList = this->value(toStyle);
+
+        auto fromLength = fromShadowList.size();
+        auto toLength = toShadowList.size();
+
+        // FIXME: Something like LLVM ADT's zip_shortest (https://llvm.org/doxygen/structllvm_1_1detail_1_1zip__shortest.html) would allow this to be done without indexing:
+        //
+        // return std::ranges::all_of(
+        //     zip_shortest(makeReversedRange(fromShadowList), makeReversedRange(toShadowList)),
+        //     [](const auto& pair) {
+        //         return shadowStyle(std::get<0>(pair)) == shadowStyle(std::get<1>(pair));
+        //     }
+        // );
+
+        size_t minLength = std::min(fromLength, toLength);
+        for (size_t i = 0; i < minLength; ++i) {
+            auto fromIndex = fromLength - i - 1;
+            auto toIndex = toLength - i - 1;
+            if (shadowStyle(fromShadowList[fromIndex]) != shadowStyle(toShadowList[toIndex]))
+                return false;
+        }
         return true;
     }
 
@@ -1208,138 +1207,87 @@ public:
         return true;
     }
 
-    void interpolate(RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, const Context& context) const final
+    void interpolate(RenderStyle& destination, const RenderStyle& fromStyle, const RenderStyle& toStyle, const Context& context) const final
     {
-        auto* fromShadow = (from.*m_getter)();
-        auto* toShadow = (to.*m_getter)();
+        auto& fromShadowList = this->value(fromStyle);
+        auto& toShadowList = this->value(toStyle);
 
         if (context.isDiscrete) {
             ASSERT(!context.progress || context.progress == 1.0);
-            auto* shadow = context.progress ? toShadow : fromShadow;
-            (destination.*m_setter)(shadow ? makeUnique<ShadowData>(*shadow) : nullptr, false);
+            (destination.*m_setter)(FixedVector<ShadowType> { context.progress ? toShadowList : fromShadowList });
             return;
         }
 
-        size_t fromLength = shadowListLength(fromShadow);
-        size_t toLength = shadowListLength(toShadow);
+        auto fromLength = fromShadowList.size();
+        auto toLength = toShadowList.size();
 
-        if (fromLength == toLength || (fromLength <= 1 && toLength <= 1)) {
-            (destination.*m_setter)(blendSimpleOrMatchedShadowLists(fromShadow, toShadow, from, to, context), false);
-            return;
-        }
-
-        (destination.*m_setter)(blendMismatchedShadowLists(fromShadow, toShadow, fromLength, toLength, from, to, context), false);
+        if (!fromLength && !toLength)
+            (destination.*m_setter)({ });
+        else if (fromLength == toLength)
+            (destination.*m_setter)(blendMatchedShadowLists(fromShadowList, toShadowList, fromLength, fromStyle, toStyle, context));
+        else
+            (destination.*m_setter)(blendMismatchedShadowLists(fromShadowList, toShadowList, fromLength, toLength, fromStyle, toStyle, context));
     }
 
-#if !LOG_DISABLED
-    void log(const RenderStyle&, const RenderStyle&, const RenderStyle&, double progress) const final
+    FixedVector<ShadowType> addShadowLists(const FixedVector<ShadowType>& fromShadowList, const FixedVector<ShadowType>& toShadowList, size_t fromLength, size_t toLength) const
     {
-        // FIXME: better logging.
-        LOG_WITH_STREAM(Animations, stream << "  blending ShadowData at " << TextStream::FormatNumberRespectingIntegers(progress));
+        auto combinedSize = fromLength + toLength;
+        return FixedVector<ShadowType>::createWithSizeFromGenerator(combinedSize, [&](auto index) -> ShadowType {
+            if (index < toLength)
+                return toShadowList[index];
+            return fromShadowList[index - toLength];
+        });
     }
-#endif
 
-    std::unique_ptr<ShadowData> addShadowLists(const ShadowData* shadowA, const ShadowData* shadowB) const
+    FixedVector<ShadowType> blendMatchedShadowLists(const FixedVector<ShadowType>& fromShadowList, const FixedVector<ShadowType>& toShadowList, size_t length, const RenderStyle& fromStyle, const RenderStyle& toStyle, const Context& context) const
     {
-        std::unique_ptr<ShadowData> newShadowData;
-        ShadowData* lastShadow = nullptr;
-        auto addShadows = [&](const ShadowData* shadow) {
-            while (shadow) {
-                auto blendedShadow = makeUnique<ShadowData>(*shadow);
-                auto* blendedShadowPtr = blendedShadow.get();
-                if (!lastShadow)
-                    newShadowData = WTFMove(blendedShadow);
-                else
-                    lastShadow->setNext(WTFMove(blendedShadow));
+        // from or to might be empty in which case we don't want to do additivity, but do replace instead.
+        if (!fromShadowList.isEmpty() && !toShadowList.isEmpty() && context.compositeOperation == CompositeOperation::Add)
+            return addShadowLists(fromShadowList, toShadowList, length, length);
 
-                lastShadow = blendedShadowPtr;
-                shadow = shadow ? shadow->next() : nullptr;
+        return FixedVector<ShadowType>::createWithSizeFromGenerator(length, [&](auto index) -> ShadowType {
+            return Style::blend(fromShadowList[index], toShadowList[index], fromStyle, toStyle, context);
+        });
+    }
+
+    FixedVector<ShadowType> blendMismatchedShadowLists(const FixedVector<ShadowType>& fromShadowList, const FixedVector<ShadowType>& toShadowList, size_t fromLength, size_t toLength, const RenderStyle& fromStyle, const RenderStyle& toStyle, const Context& context) const
+    {
+        if (!fromShadowList.isEmpty() && !toShadowList.isEmpty() && context.compositeOperation != CompositeOperation::Replace)
+            return addShadowLists(fromShadowList, toShadowList, fromLength, toLength);
+
+        auto maxLength = std::max(fromLength, toLength);
+        return FixedVector<ShadowType>::createWithSizeFromGenerator(maxLength, [&](auto index) -> ShadowType {
+            auto indexFromEnd = maxLength - index - 1;
+            bool hasFrom = indexFromEnd < fromLength;
+            bool hasTo = indexFromEnd < toLength;
+
+            if (hasFrom && hasTo) {
+                const auto& fromShadow = fromShadowList[index - (maxLength - fromLength)];
+                const auto& toShadow = toShadowList[index - (maxLength - toLength)];
+                return Style::blend(fromShadow, toShadow, fromStyle, toStyle, context);
+            } else if (hasFrom) {
+                const auto& fromShadow = fromShadowList[index - (maxLength - fromLength)];
+                const auto& toShadow = shadowForInterpolation(fromShadow);
+                return Style::blend(fromShadow, toShadow, fromStyle, toStyle, context);
+            } else if (hasTo) {
+                const auto& toShadow = toShadowList[index - (maxLength - toLength)];
+                const auto& fromShadow = shadowForInterpolation(toShadow);
+                return Style::blend(fromShadow, toShadow, fromStyle, toStyle, context);
             }
-        };
-        addShadows(shadowB);
-        addShadows(shadowA);
-        return newShadowData;
-    }
 
-    std::unique_ptr<ShadowData> blendSimpleOrMatchedShadowLists(const ShadowData* shadowA, const ShadowData* shadowB, const RenderStyle& styleA, const RenderStyle& styleB, const Context& context) const
-    {
-        // from or to might be null in which case we don't want to do additivity, but do replace instead.
-        if (shadowA && shadowB && context.compositeOperation == CompositeOperation::Add)
-            return addShadowLists(shadowA, shadowB);
-
-        std::unique_ptr<ShadowData> newShadowData;
-        ShadowData* lastShadow = nullptr;
-
-        while (shadowA || shadowB) {
-            auto* srcShadow = shadowForInterpolation(shadowA, shadowB);
-            auto* dstShadow = shadowForInterpolation(shadowB, shadowA);
-
-            auto blendedShadow = blendFunc(srcShadow, dstShadow, styleA, styleB, context);
-            auto* blendedShadowPtr = blendedShadow.get();
-
-            if (!lastShadow)
-                newShadowData = WTFMove(blendedShadow);
-            else
-                lastShadow->setNext(WTFMove(blendedShadow));
-
-            lastShadow = blendedShadowPtr;
-
-            shadowA = shadowA ? shadowA->next() : 0;
-            shadowB = shadowB ? shadowB->next() : 0;
-        }
-
-        return newShadowData;
-    }
-
-    std::unique_ptr<ShadowData> blendMismatchedShadowLists(const ShadowData* shadowA, const ShadowData* shadowB, int fromLength, int toLength, const RenderStyle& styleA, const RenderStyle& styleB, const Context& context) const
-    {
-        if (shadowA && shadowB && context.compositeOperation != CompositeOperation::Replace)
-            return addShadowLists(shadowA, shadowB);
-
-        // The shadows in ShadowData are stored in reverse order, so when animating mismatched lists,
-        // reverse them and match from the end.
-        Vector<const ShadowData*, 4> fromShadows(fromLength);
-        for (int i = fromLength - 1; i >= 0; --i) {
-            fromShadows[i] = shadowA;
-            shadowA = shadowA->next();
-        }
-
-        Vector<const ShadowData*, 4> toShadows(toLength);
-        for (int i = toLength - 1; i >= 0; --i) {
-            toShadows[i] = shadowB;
-            shadowB = shadowB->next();
-        }
-
-        std::unique_ptr<ShadowData> newShadowData;
-
-        int maxLength = std::max(fromLength, toLength);
-        for (int i = 0; i < maxLength; ++i) {
-            auto* fromShadow = i < fromLength ? fromShadows[i] : nullptr;
-            auto* toShadow = i < toLength ? toShadows[i] : nullptr;
-
-            auto* srcShadow = shadowForInterpolation(fromShadow, toShadow);
-            auto* dstShadow = shadowForInterpolation(toShadow, fromShadow);
-
-            auto blendedShadow = blendFunc(srcShadow, dstShadow, styleA, styleB, context);
-            // Insert at the start of the list to preserve the order.
-            blendedShadow->setNext(WTFMove(newShadowData));
-            newShadowData = WTFMove(blendedShadow);
-        }
-
-        return newShadowData;
+            RELEASE_ASSERT_NOT_REACHED();
+        });
     }
 
 private:
-    const ShadowData* (RenderStyle::*m_getter)() const;
-    void (RenderStyle::*m_setter)(std::unique_ptr<ShadowData>, bool);
+    void (RenderStyle::*m_setter)(FixedVector<ShadowType>&&);
 };
 
-class StyleColorWrapper : public WrapperBase {
+class StyleColorWrapper : public WrapperWithGetter<const Style::Color&> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
     StyleColorWrapper(CSSPropertyID property, const Style::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const Style::Color&))
-        : WrapperBase(property)
-        , m_getter(getter)
+        : WrapperWithGetter(property, getter)
         , m_setter(setter)
     {
     }
@@ -1378,21 +1326,7 @@ public:
         (destination.*m_setter)(WTFMove(result));
     }
 
-#if !LOG_DISABLED
-    void log(const RenderStyle& from, const RenderStyle& to, const RenderStyle& destination, double progress) const final
-    {
-        // FIXME: better logging.
-        LOG_WITH_STREAM(Animations, stream << "  blending " << property() << " from " << value(from) << " to " << value(to) << " at " << TextStream::FormatNumberRespectingIntegers(progress) << " -> " << value(destination));
-    }
-#endif
-
 private:
-    const Style::Color& value(const RenderStyle& style) const
-    {
-        return (style.*m_getter)();
-    }
-
-    const Style::Color& (RenderStyle::*m_getter)() const;
     void (RenderStyle::*m_setter)(const Style::Color&);
 };
 

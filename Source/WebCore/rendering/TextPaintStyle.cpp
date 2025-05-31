@@ -135,7 +135,7 @@ TextPaintStyle computeTextPaintStyle(const RenderText& renderer, const RenderSty
     return paintStyle;
 }
 
-TextPaintStyle computeTextSelectionPaintStyle(const TextPaintStyle& textPaintStyle, const RenderText& renderer, const RenderStyle& lineStyle, const PaintInfo& paintInfo, std::optional<ShadowData>& selectionShadow)
+TextPaintStyle computeTextSelectionPaintStyle(const TextPaintStyle& textPaintStyle, const RenderText& renderer, const RenderStyle& lineStyle, const PaintInfo& paintInfo, FixedVector<Style::TextShadow>& selectionShadow)
 {
     TextPaintStyle selectionPaintStyle = textPaintStyle;
 
@@ -150,7 +150,7 @@ TextPaintStyle computeTextSelectionPaintStyle(const TextPaintStyle& textPaintSty
 
     if (auto pseudoStyle = renderer.selectionPseudoStyle()) {
         selectionPaintStyle.hasExplicitlySetFillColor = pseudoStyle->hasExplicitlySetColor();
-        selectionShadow = ShadowData::clone(paintInfo.forceTextColor() ? nullptr : pseudoStyle->textShadow());
+        selectionShadow = paintInfo.forceTextColor() ? FixedVector<Style::TextShadow> { } : pseudoStyle->textShadow();
         auto viewportSize = renderer.frame().view() ? renderer.frame().view()->size() : IntSize();
         float strokeWidth = pseudoStyle->computedStrokeWidth(viewportSize);
         if (strokeWidth != selectionPaintStyle.strokeWidth)
@@ -160,12 +160,12 @@ TextPaintStyle computeTextSelectionPaintStyle(const TextPaintStyle& textPaintSty
         if (stroke != selectionPaintStyle.strokeColor)
             selectionPaintStyle.strokeColor = stroke;
     } else
-        selectionShadow = ShadowData::clone(paintInfo.forceTextColor() ? nullptr : lineStyle.textShadow());
+        selectionShadow = paintInfo.forceTextColor() ? FixedVector<Style::TextShadow> { } : lineStyle.textShadow();
 #else
     UNUSED_PARAM(renderer);
     UNUSED_PARAM(lineStyle);
     UNUSED_PARAM(paintInfo);
-    selectionShadow = ShadowData::clone(paintInfo.forceTextColor() ? nullptr : lineStyle.textShadow());
+    selectionShadow = paintInfo.forceTextColor() ? FixedVector<Style::TextShadow> { } : lineStyle.textShadow();
 #endif
     return selectionPaintStyle;
 }

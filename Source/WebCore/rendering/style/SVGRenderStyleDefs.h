@@ -30,10 +30,11 @@
 
 #include "Length.h"
 #include "SVGLengthValue.h"
-#include "ShadowData.h"
+#include "StyleBoxShadow.h"
 #include "StyleColor.h"
 #include "StylePathData.h"
 #include "StyleURL.h"
+#include <wtf/FixedVector.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
@@ -260,7 +261,7 @@ public:
     void dumpDifferences(TextStream&, const StyleShadowSVGData&) const;
 #endif
 
-    std::unique_ptr<ShadowData> shadow;
+    FixedVector<Style::BoxShadow> shadow;
 
 private:
     StyleShadowSVGData();

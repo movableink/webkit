@@ -45,6 +45,7 @@
 #include "RenderObjectInlines.h"
 #include "RenderTableCell.h"
 #include "RenderView.h"
+#include "StyleBoxShadow.h"
 #include "TextBoxPainter.h"
 
 namespace WebCore {
@@ -162,12 +163,14 @@ void BackgroundPainter::paintFillLayers(const Color& color, const FillLayer& fil
 
 static void applyBoxShadowForBackground(GraphicsContext& context, const RenderStyle& style)
 {
-    const ShadowData* boxShadow = style.boxShadow();
-    while (boxShadow->style() != ShadowStyle::Normal)
-        boxShadow = boxShadow->next();
+    for (const auto& shadow : style.boxShadow()) {
+        if (shadow.inset)
+            continue;
 
-    FloatSize shadowOffset(boxShadow->x().value, boxShadow->y().value);
-    context.setDropShadow({ shadowOffset, boxShadow->radius().value, style.colorWithColorFilter(boxShadow->color()), boxShadow->isWebkitBoxShadow() ? ShadowRadiusMode::Legacy : ShadowRadiusMode::Default });
+        FloatSize shadowOffset(shadow.location.x().value, shadow.location.y().value);
+        context.setDropShadow({ shadowOffset, shadow.blur.value, style.colorWithColorFilter(shadow.color), shadow.isWebkitBoxShadow ? ShadowRadiusMode::Legacy : ShadowRadiusMode::Default });
+        break;
+    }
 }
 
 void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLayer, const LayoutRect& rect,
@@ -806,11 +809,11 @@ LayoutSize BackgroundPainter::calculateFillTileSize(const RenderBoxModelObject& 
     return { };
 }
 
-void BackgroundPainter::paintBoxShadow(const LayoutRect& paintRect, const RenderStyle& style, ShadowStyle shadowStyle, RectEdges<bool> closedEdges) const
+void BackgroundPainter::paintBoxShadow(const LayoutRect& paintRect, const RenderStyle& style, Style::ShadowStyle shadowStyle, RectEdges<bool> closedEdges) const
 {
     // FIXME: Deal with border-image. Would be great to use border-image as a mask.
     GraphicsContext& context = m_paintInfo.context();
-    if (context.paintingDisabled() || !style.boxShadow())
+    if (context.paintingDisabled() || !style.hasBoxShadow())
         return;
 
     const auto borderShape = BorderShape::shapeForBorderRect(style, paintRect, closedEdges);
@@ -819,19 +822,19 @@ void BackgroundPainter::paintBoxShadow(const LayoutRect& paintRect, const Render
     float deviceScaleFactor = document().deviceScaleFactor();
 
     bool hasOpaqueBackground = style.visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor).isOpaque();
-    for (const ShadowData* shadow = style.boxShadow(); shadow; shadow = shadow->next()) {
-        if (shadow->style() != shadowStyle)
+    for (const auto& shadow : style.boxShadow()) {
+        if (Style::shadowStyle(shadow) != shadowStyle)
             continue;
 
-        LayoutSize shadowOffset(shadow->x().value, shadow->y().value);
-        LayoutUnit shadowPaintingExtent = shadow->paintingExtent();
-        LayoutUnit shadowSpread = LayoutUnit(shadow->spread().value);
-        auto shadowRadius = shadow->radius().value;
+        LayoutSize shadowOffset(shadow.location.x().value, shadow.location.y().value);
+        LayoutUnit shadowPaintingExtent = Style::paintingExtent(shadow);
+        LayoutUnit shadowSpread = LayoutUnit(shadow.spread.value);
+        auto shadowRadius = shadow.blur.value;
 
         if (shadowOffset.isZero() && !shadowRadius && !shadowSpread)
             continue;
 
-        auto shadowColor = style.colorWithColorFilter(shadow->color());
+        auto shadowColor = style.colorWithColorFilter(shadow.color);
 
         auto shouldInflateBorderRect = [&]() {
             if (!hasOpaqueBackground)
@@ -846,7 +849,7 @@ void BackgroundPainter::paintBoxShadow(const LayoutRect& paintRect, const Render
             return false;
         };
 
-        if (shadow->style() == ShadowStyle::Normal) {
+        if (!Style::isInset(shadow)) {
             auto shadowShape = borderShape;
             shadowShape.inflate(shadowSpread);
             if (shadowShape.isEmpty())
@@ -893,7 +896,7 @@ void BackgroundPainter::paintBoxShadow(const LayoutRect& paintRect, const Render
             FloatPoint snappedShadowOrigin = FloatPoint(roundToDevicePixel(shadowRectOrigin.x(), deviceScaleFactor), roundToDevicePixel(shadowRectOrigin.y(), deviceScaleFactor));
             FloatSize snappedShadowOffset = snappedShadowOrigin - pixelSnappedFillRect.location();
 
-            context.setDropShadow({ snappedShadowOffset, shadowRadius, shadowColor, shadow->isWebkitBoxShadow() ? ShadowRadiusMode::Legacy : ShadowRadiusMode::Default });
+            context.setDropShadow({ snappedShadowOffset, shadowRadius, shadowColor, shadow.isWebkitBoxShadow ? ShadowRadiusMode::Legacy : ShadowRadiusMode::Default });
 
             adjustedBorderShape.clipOutOuterShape(context, deviceScaleFactor);
 
@@ -957,7 +960,7 @@ void BackgroundPainter::paintBoxShadow(const LayoutRect& paintRect, const Render
             shadowOffset -= extraOffset;
 
             auto snappedShadowOffset = roundSizeToDevicePixels(shadowOffset, deviceScaleFactor);
-            context.setDropShadow({ snappedShadowOffset, shadowRadius, shadowColor, shadow->isWebkitBoxShadow() ? ShadowRadiusMode::Legacy : ShadowRadiusMode::Default });
+            context.setDropShadow({ snappedShadowOffset, shadowRadius, shadowColor, shadow.isWebkitBoxShadow ? ShadowRadiusMode::Legacy : ShadowRadiusMode::Default });
 
             shapeForInnerHole.fillRectWithInnerHoleShape(context, shadowCastingRect, fillColor, deviceScaleFactor);
         }
@@ -975,15 +978,15 @@ bool BackgroundPainter::boxShadowShouldBeAppliedToBackground(const RenderBoxMode
         return false;
 
     bool hasOneNormalBoxShadow = false;
-    for (const ShadowData* currentShadow = style.boxShadow(); currentShadow; currentShadow = currentShadow->next()) {
-        if (currentShadow->style() != ShadowStyle::Normal)
+    for (const auto& currentShadow : style.boxShadow()) {
+        if (Style::isInset(currentShadow))
             continue;
 
         if (hasOneNormalBoxShadow)
             return false;
         hasOneNormalBoxShadow = true;
 
-        if (!currentShadow->spread().isZero())
+        if (!Style::isZero(currentShadow.spread))
             return false;
     }
 

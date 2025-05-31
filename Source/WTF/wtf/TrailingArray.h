@@ -82,6 +82,16 @@ protected:
         VectorTypeOperations<T>::initializeWithArgs(begin(), end(), std::forward<Args>(args)...);
     }
 
+    template<std::invocable<size_t> Generator>
+    explicit TrailingArray(unsigned size, NOESCAPE Generator&& generator)
+        : m_size(size)
+    {
+        static_assert(std::is_final_v<Derived>);
+
+        for (size_t i = 0; i < m_size; ++i)
+            new (NotNull, std::addressof(begin()[i])) T(generator(i));
+    }
+
     // This constructor, which is used via the `Failable` token, will attempt
     // to initialize the array from the generator. The generator returns
     // `std::optional` values, and if one is `nullopt`, that indicates a failure.
@@ -93,8 +103,8 @@ protected:
     // to the `size` the caller passed in. If it is not, that is failure, and
     // should be used as appropriate.
     struct Failable { };
-    template<std::invocable<size_t> Generator>
-    explicit TrailingArray(Failable, unsigned size, NOESCAPE Generator&& generator)
+    template<std::invocable<size_t> FailableGenerator>
+    explicit TrailingArray(Failable, unsigned size, NOESCAPE FailableGenerator&& generator)
         : m_size(size)
     {
         static_assert(std::is_final_v<Derived>);

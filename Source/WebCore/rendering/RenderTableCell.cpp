@@ -45,6 +45,7 @@
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "Settings.h"
+#include "StyleBoxShadow.h"
 #include "StyleProperties.h"
 #include "TransformState.h"
 #include <ranges>
@@ -1446,12 +1447,12 @@ void RenderTableCell::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoin
     adjustBorderBoxRectForPainting(paintRect);
 
     BackgroundPainter backgroundPainter { *this, paintInfo };
-    backgroundPainter.paintBoxShadow(paintRect, style(), ShadowStyle::Normal);
-    
+    backgroundPainter.paintBoxShadow(paintRect, style(), Style::ShadowStyle::Normal);
+
     // Paint our cell background.
     paintBackgroundsBehindCell(paintInfo, paintOffset, this, paintOffset);
 
-    backgroundPainter.paintBoxShadow(paintRect, style(), ShadowStyle::Inset);
+    backgroundPainter.paintBoxShadow(paintRect, style(), Style::ShadowStyle::Inset);
 
     if (!style().hasBorder() || table->collapseBorders())
         return;

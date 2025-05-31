@@ -81,8 +81,16 @@ public:
     template<std::invocable<size_t> Generator>
     static std::unique_ptr<EmbeddedFixedVector> createWithSizeFromGenerator(unsigned size, NOESCAPE Generator&& generator)
     {
+        auto result = std::unique_ptr<EmbeddedFixedVector> { new (NotNull, Malloc::malloc(Base::allocationSize(size))) EmbeddedFixedVector(size, std::forward<Generator>(generator)) };
+        if (result->size() != size)
+            return nullptr;
+        return result;
+    }
 
-        auto result = std::unique_ptr<EmbeddedFixedVector> { new (NotNull, Malloc::malloc(Base::allocationSize(size))) EmbeddedFixedVector(typename Base::Failable { }, size, std::forward<Generator>(generator)) };
+    template<std::invocable<size_t> FailableGenerator>
+    static std::unique_ptr<EmbeddedFixedVector> createWithSizeFromFailableGenerator(unsigned size, NOESCAPE FailableGenerator&& generator)
+    {
+        auto result = std::unique_ptr<EmbeddedFixedVector> { new (NotNull, Malloc::malloc(Base::allocationSize(size))) EmbeddedFixedVector(typename Base::Failable { }, size, std::forward<FailableGenerator>(generator)) };
         if (result->size() != size)
             return nullptr;
         return result;
@@ -120,6 +128,12 @@ private:
     template<typename... Args>
     explicit EmbeddedFixedVector(unsigned size, Args&&... args) // create with given size and constructor arguments for all elements
         : Base(size, std::forward<Args>(args)...)
+    {
+    }
+
+    template<std::invocable<size_t> Generator>
+    EmbeddedFixedVector(unsigned size, Generator&& generator)
+        : Base(size, std::forward<Generator>(generator))
     {
     }
 

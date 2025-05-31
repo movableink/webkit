@@ -178,17 +178,6 @@ inline LengthPoint blendFunc(const LengthPoint& from, const LengthPoint& to, con
     return blend(from, to, context);
 }
 
-inline std::unique_ptr<ShadowData> blendFunc(const ShadowData* from, const ShadowData* to, const RenderStyle& fromStyle, const RenderStyle& toStyle, const Context& context)
-{
-    ASSERT(from);
-    ASSERT(to);
-    ASSERT(from->style() == to->style());
-
-    return makeUnique<ShadowData>(
-        Style::blend(from->asBoxShadow(), to->asBoxShadow(), fromStyle, toStyle, context)
-    );
-}
-
 inline TransformOperations blendFunc(const TransformOperations& from, const TransformOperations& to, const Context& context)
 {
     if (context.compositeOperation == CompositeOperation::Add) {
