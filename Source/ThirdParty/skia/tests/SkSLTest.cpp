@@ -943,8 +943,8 @@ static void test_raster_pipeline(skiatest::Reporter* r,
     rasterProg->appendStages(&pipeline, &alloc, &callbacks, SkSpan(uniformValues));
 
     // Move the float values from RGBA into an 8888 memory buffer.
-    uint32_t out[SkRasterPipeline_kMaxStride_highp] = {};
-    SkRasterPipeline_MemoryCtx outCtx{/*pixels=*/out, /*stride=*/SkRasterPipeline_kMaxStride_highp};
+    uint32_t out[SkRasterPipelineContexts::kMaxStride_highp] = {};
+    SkRasterPipelineContexts::MemoryCtx outCtx{/*pixels=*/out, /*stride=*/SkRasterPipelineContexts::kMaxStride_highp};
     pipeline.append(SkRasterPipelineOp::store_8888, &outCtx);
     pipeline.run(0, 0, 1, 1);
 
@@ -1156,6 +1156,7 @@ SKSL_TEST(CPU | GPU,     kApiLevel_202404, IfElseBinding,                   "run
 SKSL_TEST(CPU | GPU,     kApiLevel_202404, IncrementDisambiguation,         "runtime/IncrementDisambiguation.rts")
 SKSL_TEST(CPU | GPU,     kApiLevel_T,      LoopFloat,                       "runtime/LoopFloat.rts")
 SKSL_TEST(CPU | GPU,     kApiLevel_T,      LoopInt,                         "runtime/LoopInt.rts")
+SKSL_TEST(CPU | GPU,     kNextRelease,     Ossfuzz418486361,                "runtime/Ossfuzz418486361.rts")
 SKSL_TEST(CPU | GPU,     kApiLevel_U,      Ossfuzz52603,                    "runtime/Ossfuzz52603.rts")
 SKSL_TEST(CPU | GPU,     kApiLevel_T,      QualifierOrder,                  "runtime/QualifierOrder.rts")
 SKSL_TEST(CPU | GPU,     kApiLevel_T,      PrecisionQualifiers,             "runtime/PrecisionQualifiers.rts")

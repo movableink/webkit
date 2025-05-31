@@ -567,9 +567,7 @@ if (skia_compile_modules || skia_compile_sksl_tests) {
       "src/sksl/sksl_frag.sksl",
       "src/sksl/sksl_gpu.sksl",
       "src/sksl/sksl_graphite_frag.sksl",
-      "src/sksl/sksl_graphite_frag_es2.sksl",
       "src/sksl/sksl_graphite_vert.sksl",
-      "src/sksl/sksl_graphite_vert_es2.sksl",
       "src/sksl/sksl_public.sksl",
       "src/sksl/sksl_rt_shader.sksl",
       "src/sksl/sksl_shared.sksl",
@@ -1245,6 +1243,10 @@ optional("graphite") {
     public += skia_graphite_vk_public
     sources += skia_graphite_vk_sources
     configs += [ ":use_skia_vulkan_headers" ]
+    if (skia_enable_precompile) {
+      public += skia_graphite_vk_precompile_public
+      sources += skia_graphite_vk_precompile_sources
+    }
   }
   if (skia_enable_precompile) {
     public += skia_graphite_precompile_public
@@ -1311,7 +1313,7 @@ optional("png_encode") {
 
   public = skia_encode_png_public
   deps = [ "//third_party/libpng" ]
-  sources = skia_encode_png_srcs
+  sources = skia_encode_png_base + skia_encode_libpng_srcs
 }
 
 optional("raw") {
@@ -1341,11 +1343,12 @@ optional("typeface_freetype") {
 }
 
 bazel_args = []
-if (is_mac && target_cpu == "arm64") {
-  # TODO: Normally the target toolchain would be specified with `--platforms` but that doesn't
-  # work. When building and running on an arm64 mac, setting `--host_platform` seems to do the
-  # right thing but may not be the right build configuration in the long run.
-  bazel_args += [ "--host_platform=//bazel/platform:mac_arm64_hermetic" ]
+if (is_mac) {
+  if (target_cpu == "arm64") {
+    bazel_args += [ "--platforms=//bazel/platform:mac_arm64_hermetic" ]
+  } else {
+    bazel_args += [ "--platforms=//bazel/platform:mac_x64_hermetic" ]
+  }
 }
 if (is_debug) {
   bazel_args += [ "--compilation_mode=dbg" ]
@@ -1356,10 +1359,8 @@ if (is_debug) {
 if (skia_use_fontations) {
   action("fontations_rust_side_bazel_build") {
     script = "gn/bazel_build.py"
-    sources = [
-      "src/ports/fontations/BUILD.bazel",
-      "src/ports/fontations/src/ffi.rs",
-    ]
+    sources = [ "src/ports/fontations/BUILD.bazel" ]
+    sources += skia_ports_fontations_bridge_rust_side_sources
     outputs = [ "$root_out_dir/libbridge_rust_side.a" ]
     args =
         [
@@ -1375,10 +1376,8 @@ if (skia_use_fontations) {
   # Bazel may end up using different ones).
   action("fontations_ffi_bazel_build") {
     script = "gn/bazel_build.py"
-    sources = [
-      "src/ports/fontations/BUILD.bazel",
-      "src/ports/fontations/src/ffi.rs",
-    ]
+    sources = [ "src/ports/fontations/BUILD.bazel" ]
+    sources += skia_ports_fontations_bridge_rust_side_sources
     outputs = [
       "$root_out_dir/src/ports/fontations/src/ffi.rs.h",
       "$root_out_dir/src/ports/fontations/src/ffi.rs.cc",
@@ -1415,7 +1414,10 @@ if (skia_use_fontations) {
     ]
     public = [ "${root_out_dir}/src/ports/fontations/src/ffi.rs.h" ]
     sources = [ "${root_out_dir}/src/ports/fontations/src/ffi.rs.cc" ]
-    libs = [ "$root_out_dir/libbridge_rust_side.a" ]
+    libs = [
+      "$root_out_dir/libbridge_rust_side.a",
+      "c++",
+    ]
     public_configs = [ ":fontations_ffi_public_config" ]
     configs = [ ":fontations_ffi_private_config" ]
   }
@@ -1425,6 +1427,14 @@ optional("typeface_fontations") {
   public_defines = [ "SK_TYPEFACE_FACTORY_FONTATIONS" ]
   enabled = skia_use_fontations
   public_deps = [ ":fontations_ffi" ]
+  deps = []
+  if (skia_use_rust_png_decode) {
+    deps += [ ":png_decode_rust" ]
+  } else if (skia_use_libpng_decode) {
+    deps += [ ":png_decode_libpng" ]
+  } else {
+    assert(!enabled, "Fontations requires a PNG decoder")
+  }
   sources = skia_ports_typeface_fontations_sources
   sources_for_tests = [
     "tests/FontationsTest.cpp",
@@ -1469,24 +1479,26 @@ if (skia_use_rust_png_decode || skia_use_rust_png_encode) {
   action("rust_png_cxx_core_bazel_build") {
     script = "gn/bazel_build.py"
     sources = [
-      "WORKSPACE.bazel",
+      "MODULE.bazel",
+      "MODULE.bazel.lock",
       "bazel/external/cxx/BUILD.bazel",
       "bazel/external/cxx/BUILD.bazel.skia",
     ]
     outputs = [
-      "$root_out_dir/librust_png_cxx_core_lib.a",
+      "$root_out_dir/libcxx_cc.a",
       "$root_out_dir/third_party/rust/cxx/v1/cxx.h",
     ]
     args = [
-             "@cxx//:core-lib",
+             "@crates//:cxx_cc",
 
-             rebase_path("//bazel-bin/external/cxx/libcore-lib.a",
-                         root_build_dir) + "=librust_png_cxx_core_lib.a",
+             rebase_path(
+                     "//bazel-bin/external/rules_rust++crate+crates__cxx-1.0.158/libcxx_cc.a",
+                     root_build_dir) + "=libcxx_cc.a",
 
              # we want the `cxx.h` header to not simply be copied into the
              # output directory, but in the same path as the Bazel build uses.
              rebase_path(
-                     "//bazel-bin/external/cxx/_virtual_includes/core-lib/third_party/rust/cxx/v1/cxx.h",
+                     "//bazel-bin/external/rules_rust++crate+crates__cxx-1.0.158/_virtual_includes/cxx_cc/third_party/rust/cxx/v1/cxx.h",
                      root_build_dir) + "=third_party/rust/cxx/v1/cxx.h",
            ] + bazel_args
   }
@@ -1525,7 +1537,10 @@ optional("png_decode_rust") {
     ":rust_png_cxx_bridge",
     ":rust_png_cxx_core_bazel_build",
   ]
-  libs = [ "$root_out_dir/librust_png_cxx_core_lib.a" ]
+  libs = [
+    "$root_out_dir/libcxx_cc.a",
+    "c++",
+  ]
 }
 
 optional("png_encode_rust") {
@@ -1539,7 +1554,10 @@ optional("png_encode_rust") {
     ":rust_png_cxx_bridge",
     ":rust_png_cxx_core_bazel_build",
   ]
-  libs = [ "$root_out_dir/librust_png_cxx_core_lib.a" ]
+  libs = [
+    "$root_out_dir/libcxx_cc.a",
+    "c++",
+  ]
 }
 
 optional("webp_decode") {
@@ -3121,6 +3139,7 @@ if (skia_enable_tools) {
         "tools/viewer/CowboySlide.cpp",
         "tools/viewer/DegenerateQuadsSlide.cpp",
         "tools/viewer/DegenerateTwoPtRadialsSlide.cpp",
+        "tools/viewer/EdgeBuilderVizSlide.cpp",
         "tools/viewer/FatBitsSlide.cpp",
         "tools/viewer/FilterBoundsSlide.cpp",
         "tools/viewer/FitCubicToCircleSlide.cpp",
@@ -3153,6 +3172,7 @@ if (skia_enable_tools) {
         "tools/viewer/PathTextSlide.cpp",
         "tools/viewer/ProtectedSlide.cpp",
         "tools/viewer/QuadStrokerSlide.cpp",
+        "tools/viewer/RasterPipelineVizSlide.cpp",
         "tools/viewer/RectanizerSlide.cpp",
         "tools/viewer/RepeatTileSlide.cpp",
         "tools/viewer/SBIXSlide.cpp",

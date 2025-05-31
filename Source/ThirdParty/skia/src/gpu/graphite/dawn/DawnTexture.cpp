@@ -21,7 +21,7 @@ namespace skgpu::graphite {
 wgpu::Texture DawnTexture::MakeDawnTexture(const DawnSharedContext* sharedContext,
                                            SkISize dimensions,
                                            const TextureInfo& info) {
-    const Caps* caps = sharedContext->caps();
+    const auto* caps = sharedContext->dawnCaps();
     if (dimensions.width() > caps->maxTextureSize() ||
         dimensions.height() > caps->maxTextureSize()) {
         SKGPU_LOG_E("Texture creation failure: dimensions %d x %d too large.",
@@ -31,12 +31,12 @@ wgpu::Texture DawnTexture::MakeDawnTexture(const DawnSharedContext* sharedContex
 
     const auto& dawnInfo = TextureInfoPriv::Get<DawnTextureInfo>(info);
 
-    if (dawnInfo.fUsage & wgpu::TextureUsage::TextureBinding && !caps->isTexturable(info)) {
+    if (dawnInfo.fUsage & wgpu::TextureUsage::TextureBinding &&
+        !caps->isTexturableIgnoreSampleCount(info)) {
         return {};
     }
 
-    if (dawnInfo.fUsage & wgpu::TextureUsage::RenderAttachment &&
-        !(caps->isRenderable(info) || DawnFormatIsDepthOrStencil(dawnInfo.fFormat))) {
+    if (dawnInfo.fUsage & wgpu::TextureUsage::RenderAttachment && !caps->isRenderable(info)) {
         return {};
     }
 
@@ -98,7 +98,7 @@ DawnTexture::DawnTexture(const DawnSharedContext* sharedContext,
         : Texture(sharedContext,
                   dimensions,
                   info,
-                  has_transient_usage(info),
+                  /*isTransient=*/has_transient_usage(info),
                   /*mutableState=*/nullptr,
                   ownership)
         , fTexture(std::move(texture))

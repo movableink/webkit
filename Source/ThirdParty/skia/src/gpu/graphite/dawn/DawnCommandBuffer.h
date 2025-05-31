@@ -61,26 +61,32 @@ private:
                          const Texture* colorTexture,
                          const Texture* resolveTexture,
                          const Texture* depthStencilTexture,
+                         SkIPoint resolveOffset,
                          SkIRect viewport,
                          const DrawPassList&) override;
     bool onAddComputePass(DispatchGroupSpan) override;
 
     // Methods for populating a Dawn RenderPassEncoder:
     bool beginRenderPass(const RenderPassDesc&,
+                         const SkIPoint& resolveOffset,
                          SkIRect renderPassBounds,
                          const Texture* colorTexture,
                          const Texture* resolveTexture,
                          const Texture* depthStencilTexture);
-    bool loadMSAAFromResolveAndBeginRenderPassEncoder(
-            const RenderPassDesc& frontendRenderPassDesc,
-            const wgpu::RenderPassDescriptor& wgpuRenderPassDesc,
-            const DawnTexture* msaaTexture);
+    bool emulateLoadMSAAFromResolveAndBeginRenderPassEncoder(
+            const RenderPassDesc& intendedRenderPassDesc,
+            const wgpu::RenderPassDescriptor& intendedDawnRenderPassDesc,
+            const SkIPoint& resolveOffset,
+            const SkIRect& renderPassBounds,
+            const DawnTexture* msaaTexture,
+            const DawnTexture* resolveTexture);
     bool doBlitWithDraw(const wgpu::RenderPassEncoder& renderEncoder,
-                        const RenderPassDesc& frontendRenderPassDesc,
-                        const wgpu::TextureView& sourceTextureView,
-                        int width,
-                        int height);
-    void endRenderPass();
+                        const RenderPassDesc& frontendRenderPassDescKey,
+                        const wgpu::TextureView& srcTextureView,
+                        int srcSampleCount,
+                        const SkIPoint& srcOffset,
+                        const SkIRect& dstBounds);
+    bool endRenderPass();
 
     bool addDrawPass(const DrawPass*);
 
@@ -88,10 +94,9 @@ private:
     void setBlendConstants(float* blendConstants);
 
     void bindUniformBuffer(const BindBufferInfo& info, UniformSlot);
-    void bindDrawBuffers(const BindBufferInfo& vertices,
-                         const BindBufferInfo& instances,
-                         const BindBufferInfo& indices,
-                         const BindBufferInfo& indirect);
+    void bindInputBuffer(const Buffer* buffer, size_t offset, uint32_t bindingIndex);
+    void bindIndexBuffer(const Buffer* indexBuffer, size_t offset);
+    void bindIndirectBuffer(const Buffer* indirectBuffer, size_t offset);
 
     void bindTextureAndSamplers(const DrawPass& drawPass,
                                 const DrawPassCommands::BindTexturesAndSamplers& command);
@@ -160,6 +165,14 @@ private:
     wgpu::CommandEncoder fCommandEncoder;
     wgpu::RenderPassEncoder fActiveRenderPassEncoder;
     wgpu::ComputePassEncoder fActiveComputePassEncoder;
+
+    struct ResolveStepEmulationInfo {
+        const DawnTexture* fMSAATexture;
+        const DawnTexture* fResolveTexture;
+        SkIPoint fMSAAAOffset;
+        SkIRect fResolveArea;
+    };
+    std::optional<ResolveStepEmulationInfo> fResolveStepEmulationInfo;
 
     wgpu::Buffer fCurrentIndirectBuffer;
     size_t fCurrentIndirectBufferOffset = 0;

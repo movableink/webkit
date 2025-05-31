@@ -30,10 +30,10 @@
 #include "src/gpu/graphite/RecorderPriv.h"
 #include "src/gpu/graphite/Renderer.h"
 #include "src/gpu/graphite/RendererProvider.h"
-#include "src/gpu/graphite/ResourceTypes.h"
 #include "src/gpu/graphite/SharedContext.h"
 #include "src/gpu/graphite/SpecialImage_Graphite.h"
 #include "src/gpu/graphite/Surface_Graphite.h"
+#include "src/gpu/graphite/TextureInfoPriv.h"
 #include "src/gpu/graphite/TextureProxy.h"
 #include "src/gpu/graphite/TextureUtils.h"
 #include "src/gpu/graphite/geom/BoundsManager.h"
@@ -294,6 +294,15 @@ SkIRect rect_to_pixelbounds(const Rect& r) {
     return r.makeRoundOut().asSkIRect();
 }
 
+bool is_pixel_aligned(const Rect& r, const Transform& t) {
+    if (t.type() <= Transform::Type::kRectStaysRect) {
+        Rect devRect = t.mapRect(r);
+        return devRect.nearlyEquals(devRect.makeRound());
+    }
+
+    return false;
+}
+
 bool is_simple_shape(const Shape& shape, SkStrokeRec::Style type) {
     // We send regular filled and hairline [round] rectangles, stroked/hairline lines, and stroked
     // [r]rects with circular corners to a single Renderer that does not trigger MSAA.
@@ -461,14 +470,18 @@ Device::Device(Recorder* recorder, sk_sp<DrawContext> dc)
         , fSubRunControl(recorder->priv().caps()->getSubRunControl(
                 fDC->surfaceProps().isUseDeviceIndependentFonts())) {
     SkASSERT(SkToBool(fDC) && SkToBool(fRecorder));
-    if (fRecorder->priv().caps()->defaultMSAASamplesCount() > 1) {
+    if (fDC->target()->textureInfo().numSamples() > 1) {
+        // Target is inherently multisampled
+        fMSAASupported = true;
+    } else if (fRecorder->priv().caps()->defaultMSAASamplesCount() > 1) {
         if (fRecorder->priv().caps()->msaaRenderToSingleSampledSupport()) {
+            // Backend-managed MSAA is supported
             fMSAASupported = true;
         } else {
-            TextureInfo msaaTexInfo =
-                   fRecorder->priv().caps()->getDefaultMSAATextureInfo(fDC->target()->textureInfo(),
-                                                                       Discardable::kYes);
-            fMSAASupported = msaaTexInfo.isValid();
+            // Graphite-managed MSAA is supported
+            fMSAASupported = fRecorder->priv().caps()->isSampleCountSupported(
+                    TextureInfoPriv::ViewFormat(fDC->target()->textureInfo()),
+                    fRecorder->priv().caps()->defaultMSAASamplesCount());
         }
     }
 }
@@ -940,6 +953,14 @@ void Device::drawPath(const SkPath& path, const SkPaint& paint, bool pathIsMutab
     // Alternatively, we could move this analysis to SkCanvas. Also, we could consider applying the
     // path effect, being careful about starting point and direction.
     if (!paint.getPathEffect() && !path.isInverseFillType()) {
+        SkPoint linePts[2];
+        if (path.isLine(linePts)) {
+            // A line has zero area, so stroke and stroke-and-fill are equivalent
+            if (paint.getStyle() != SkPaint::kFill_Style) {
+                this->drawPoints(SkCanvas::kLines_PointMode, 2, linePts, paint);
+            } // and if it's fill, nothing is drawn
+            return;
+        }
         if (SkRect oval; path.isOval(&oval)) {
             this->drawOval(oval, paint);
             return;
@@ -1289,7 +1310,8 @@ void Device::drawGeometry(const Transform& localToDevice,
         // but preserve LCD coverage if the Renderer uses that.
         rendererCoverage = Coverage::kSingleChannel;
     }
-    bool dstReadRequired = IsDstReadRequired(fRecorder->priv().caps(), blendMode, rendererCoverage);
+    bool dstReadRequired =
+            !CanUseHardwareBlending(fRecorder->priv().caps(), blendMode, rendererCoverage);
 
     // A primitive blender should be ignored if there is no primitive color to blend against.
     // Additionally, if a renderer emits a primitive color, then a null primitive blender should
@@ -1332,9 +1354,12 @@ void Device::drawGeometry(const Transform& localToDevice,
     // Decide if we have any reason to flush pending work. We want to flush before updating the clip
     // state or making any permanent changes to a path atlas, since otherwise clip operations and/or
     // atlas entries for the current draw will be flushed.
-    DstReadStrategy dstReadStrategy = dstReadRequired ? fDC->dstReadStrategy()
+    const bool requiresMSAA = (renderer && renderer->requiresMSAA()) ||
+                              (secondaryRenderer && secondaryRenderer->requiresMSAA());
+    DstReadStrategy dstReadStrategy = dstReadRequired ? fDC->dstReadStrategy(requiresMSAA)
                                                       : DstReadStrategy::kNoneRequired;
-    const bool needsFlush = this->needsFlushBeforeDraw(numNewRenderSteps, dstReadStrategy);
+    const bool needsFlush =
+            this->needsFlushBeforeDraw(numNewRenderSteps, dstReadStrategy, requiresMSAA);
     if (needsFlush) {
         if (pathAtlas != nullptr) {
             // We need to flush work for all devices associated with the current Recorder.
@@ -1556,10 +1581,15 @@ std::pair<const Renderer*, PathAtlas*> Device::chooseRenderer(const Transform& l
         SkASSERT(!requireMSAA && style.isFillStyle());
         // handled by specialized system, simplified from rects and round rects
         const EdgeAAQuad& quad = geometry.edgeAAQuad();
-        if (quad.isRect() && quad.edgeFlags() == EdgeAAQuad::Flags::kNone) {
+        if (quad.isRect() && (quad.edgeFlags() == EdgeAAQuad::Flags::kNone
+#if !defined(SK_SKIP_PIXELALIGNED_QUAD_CHECK_GRAPHITE)
+                              || is_pixel_aligned(quad.bounds(), localToDevice)
+#endif
+                             )) {
             // For non-AA rectangular quads, it can always use a coverage-less renderer; there's no
             // need to check for pixel alignment to avoid popping if MSAA is turned on because quad
-            // tile edges will seam with each in either mode.
+            // tile edges will seam with each in either mode. We also switch to use the cover bounds
+            // when the quad is pixel aligned to be consistent with drawRect Renderer handling.
             return {renderers->nonAABounds(), nullptr};
         } else {
             return {renderers->perEdgeAAQuad(), nullptr};
@@ -1577,10 +1607,8 @@ std::pair<const Renderer*, PathAtlas*> Device::chooseRenderer(const Transform& l
         // For pixel-aligned rects, use the the non-AA bounds renderer to avoid triggering any
         // dst-read requirement due to src blending.
         bool pixelAlignedRect = false;
-        if (shape.isRect() && style.isFillStyle() &&
-            localToDevice.type() <= Transform::Type::kRectStaysRect) {
-            Rect devRect = localToDevice.mapRect(shape.rect());
-            pixelAlignedRect = devRect.nearlyEquals(devRect.makeRound());
+        if (shape.isRect() && style.isFillStyle()) {
+            pixelAlignedRect = is_pixel_aligned(shape.rect(), localToDevice);
         }
 
         if (shape.isEmpty() || pixelAlignedRect) {
@@ -1788,6 +1816,10 @@ void Device::flushPendingWorkToRecorder() {
         }
     }
 
+    // Upon flushing, reset the last recorded dst read strategy. We do not want a dst read
+    // performed in a prior draw pass to impact draws in a fresh pass.
+    fPriorDrawDstReadStrategy = DstReadStrategy::kNoneRequired;
+
     fIsFlushing = false;
 }
 
@@ -1813,13 +1845,34 @@ void Device::internalFlush() {
     fRecorder->priv().atlasProvider()->compact();
 }
 
-bool Device::needsFlushBeforeDraw(int numNewRenderSteps, DstReadStrategy dstReadStrategy) const {
+bool Device::needsFlushBeforeDraw(int numNewRenderSteps,
+                                  DstReadStrategy dstReadStrategy,
+                                  bool requiresMSAA) {
     // Must also account for the elements in the clip stack that might need to be recorded.
     numNewRenderSteps += fClip.maxDeferredClipDraws() * Renderer::kMaxRenderSteps;
-    return // Need flush if we don't have room to record into the current list.
+    bool needsFlush =
+           // Need flush if we don't have room to record into the current list.
            (DrawList::kMaxRenderSteps - fDC->pendingRenderSteps()) < numNewRenderSteps ||
            // Need flush if this draw needs to copy the dst surface for reading.
-           dstReadStrategy == DstReadStrategy::kTextureCopy;
+           dstReadStrategy == DstReadStrategy::kTextureCopy ||
+           // Need flush if we were performing a dst copy but now can read as an input
+           // attachment (we must perform the copy operation prior to reading).
+           (fPriorDrawDstReadStrategy == DstReadStrategy::kTextureCopy &&
+            dstReadStrategy == DstReadStrategy::kReadFromInput) ||
+           // Need flush if going from reading the dst as an input attachment to a draw that
+           // requires MSAA (we must ensure the loading of the MSAA attachment from resolve
+           // occurs after any prior draw operations).
+           (fPriorDrawDstReadStrategy == DstReadStrategy::kReadFromInput && requiresMSAA);
+
+    // After making this determination, update the last recorded DstReadStrategy. Only update if
+    // a dst read is actually performed (i.e. the strategy used for this draw is not kNoneRequired).
+    // This is because we must maintain a record of the last strategy used to actually perform a dst
+    // read (even if this draw does not perform one) as that informs whether a flush is needed.
+    if (dstReadStrategy != DstReadStrategy::kNoneRequired) {
+        fPriorDrawDstReadStrategy = dstReadStrategy;
+    }
+
+    return needsFlush;
 }
 
 void Device::drawSpecial(SkSpecialImage* special,
@@ -1881,21 +1934,11 @@ void Device::drawCoverageMask(const SkSpecialImage* mask,
     // the texture is consumed by the RenderStep and not part of the PaintParams.
     static_cast<Image_Base*>(mask->asImage().get())->notifyInUse(fRecorder, fDC.get());
 
-    // 'mask' logically has 0 coverage outside of its pixels, which is equivalent to kDecal tiling.
-    // However, since we draw geometry tightly fitting 'mask', we can use the better-supported
-    // kClamp tiling and behave effectively the same way.
-    TextureDataBlock::SampledTexture sampledMask{maskProxyView.refProxy(),
-                                                 {SkFilterMode::kLinear, SkTileMode::kClamp}};
-    // Ensure this is kept alive; normally textures are kept alive by the PipelineDataGatherer for
-    // image shaders, or by the PathAtlas. This is a unique circumstance.
-    // NOTE: CoverageMaskRenderStep controls the final sampling options; this texture data block
-    // serves only to keep the mask alive so the sampling passed to add() doesn't matter.
-    fRecorder->priv().textureDataCache()->insert(TextureDataBlock(sampledMask));
-
     // CoverageMaskShape() wraps a Shape when it's used as a PathAtlas, but in this case the
     // original shape has been long lost, so just use a Rect that bounds the image.
     CoverageMaskShape maskShape{Shape{Rect::WH((float)mask->width(), (float)mask->height())},
-                                maskProxyView.proxy(),
+                                // We store a ref to the textureProxy to keep it alive.
+                                maskProxyView.refProxy(),
                                 // Use the active local-to-device transform for this since it
                                 // determines the local coords for evaluating the skpaint, whereas
                                 // the provided 'localToDevice' just places the coverage mask.
@@ -1907,14 +1950,6 @@ void Device::drawCoverageMask(const SkSpecialImage* mask,
                        paint,
                        DefaultFillStyle(),
                        DrawFlags::kIgnorePathEffect);
-}
-
-sk_sp<SkSpecialImage> Device::makeSpecial(const SkBitmap&) {
-    return nullptr;
-}
-
-sk_sp<SkSpecialImage> Device::makeSpecial(const SkImage*) {
-    return nullptr;
 }
 
 sk_sp<SkSpecialImage> Device::snapSpecial(const SkIRect& subset, bool forceCopy) {

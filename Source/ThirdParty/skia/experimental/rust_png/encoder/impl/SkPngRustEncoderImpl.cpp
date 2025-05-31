@@ -19,6 +19,7 @@
 #include "include/private/SkEncodedInfo.h"
 #include "include/private/base/SkAssert.h"
 #include "src/base/SkSafeMath.h"
+#include "src/encode/SkImageEncoderFns.h"
 #include "src/encode/SkImageEncoderPriv.h"
 #include "third_party/rust/cxx/v1/cxx.h"
 
@@ -46,19 +47,11 @@ rust_png::ColorType ToColorType(SkEncodedInfo::Color color) {
 rust_png::Compression ToCompression(SkPngRustEncoder::CompressionLevel level) {
     switch (level) {
         case SkPngRustEncoder::CompressionLevel::kLow:
-#ifdef SK_RUST_PNG_USE_FDEFLATE_COMPRESSION_LEVELS
             return rust_png::Compression::Fastest;
-#else
-            return rust_png::Compression::Fast;
-#endif
         case SkPngRustEncoder::CompressionLevel::kMedium:
-#ifdef SK_RUST_PNG_USE_FDEFLATE_COMPRESSION_LEVELS
-            // Using `Fast` instead of `Balanced` because we expect that
-            // `fdeflate` will performs better than 1) `flate2` used by Rust for
-            // `Balanced` and 2) `libpng`/`zlib`-based default in Chromium.  We
-            // expect this based on the documentation linked below.  We plan to
-            // verify this using field trials.  Doc link:
-            // https://github.com/image-rs/image-png/blob/eb9b5d7f371b88f15aaca6a8d21c58b86c400d76/src/common.rs#L331-L336
+#ifdef SK_RUST_PNG_MAP_MEDIUM_COMPRESSION_LEVEL_TO_FDEFLATE_FAST
+            // TODO(https://crbug.com/406072770): Consider using `Fast` instead
+            // of `Balanced` compression here.  See the bug for details.
             return rust_png::Compression::Fast;
 #else
             return rust_png::Compression::Balanced;

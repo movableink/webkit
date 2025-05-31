@@ -52,12 +52,14 @@ enum class BuiltInCodeSnippetID : int32_t {
     kCubicYUVImageShader,
     kHWYUVImageShader,
     kHWYUVNoSwizzleImageShader,
+    kCoordNormalizeShader,
     kCoordClampShader,
     kDitherShader,
     kPerlinNoiseShader,
 
     // SkColorFilter code snippets
     kMatrixColorFilter,
+    kHSLMatrixColorFilter,
     kTableColorFilter,
     kGaussianColorFilter,
 

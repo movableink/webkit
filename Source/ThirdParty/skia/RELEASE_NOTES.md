@@ -2,6 +2,31 @@ Skia Graphics Release Notes
 
 This file includes a list of high level updates for each milestone release.
 
+Milestone 138
+-------------
+  * The Precompile API has been extended to support Vulkan YCbCr Images.
+    To use the new API one should use the PrecompileShaders::VulkanYCbCrImage factory function.
+    An example usage can be found in PrecompileTestUtils.cpp.
+
+* * *
+
+Milestone 137
+-------------
+  * `RecorderOptions.fRequireOrderedRecordings` can now be used to specify a per-`Recorder` ordering
+    policy for how its `Recordings` must be inserted into a `Context`. If not provided, the `Recorder`
+    will default to the value in `ContextOptions`.
+
+* * *
+
+Milestone 136
+-------------
+  * The Fontations SkTypeface backend has a new factory method to create a typeface from `SkData`,
+    not only from `SkStreamAsset`. The new signature is
+    `sk_sp<SkTypeface> SkTypeface_Make_Fontations(sk_sp<SkData> fontData, const SkFontArguments& args)`.
+  * `SkColorPriv.h` has been removed from the public API
+
+* * *
+
 Milestone 135
 -------------
   * The `SkCodec` class has a new `isAnimated` method which helps to disambiguate

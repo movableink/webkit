@@ -45,20 +45,20 @@ public:
 
     bool init(SkISize pixmapSize, SkIVector transformedMaskOffset);
 
-    void clear(uint8_t alpha, const SkIRect& resultBounds);
+    void clear(uint8_t alpha, const SkIRect& drawBounds);
 
     // Draw a single shape into the bitmap (as a path) at location resultBounds.
     void drawShape(const Shape& shape,
                    const Transform& localToDevice,
                    const SkStrokeRec& strokeRec,
-                   const SkIRect& resultBounds);
+                   const SkIRect& drawBounds);
 
     // Draw a single shape into the bitmap (as a path) at location resultBounds.
     // Variant used for clipping.
     void drawClip(const Shape& shape,
                   const Transform& localToDevice,
                   uint8_t alpha,
-                  const SkIRect& resultBounds);
+                  const SkIRect& drawBounds);
 
 private:
     SkAutoPixmapStorage* fPixels;
@@ -74,7 +74,11 @@ skgpu::UniqueKey GeneratePathMaskKey(const Shape& shape,
                                      skvx::half2 maskSize);
 
 skgpu::UniqueKey GenerateClipMaskKey(uint32_t stackRecordID,
-                                     const ClipStack::ElementList* elementsForMask);
+                                     const ClipStack::ElementList* elementsForMask,
+                                     SkIRect maskDeviceBounds,
+                                     bool includeBounds,
+                                     SkIRect* keyBounds,
+                                     bool* usesPathKey);
 
 }  // namespace skgpu::graphite
 

@@ -163,6 +163,7 @@ struct Metadata {
     enum class Outline : int {
         None = 0,
         StructureElementHeaders = 1,
+        StructureElements = 2,
     } fOutline = Outline::None;
 
     /** Executor to handle threaded work within PDF Backend. If this is nullptr,
@@ -218,12 +219,24 @@ struct Metadata {
     bool allowNoJpegs = false;
 };
 
+namespace NodeID {
+static const constexpr int Nothing = 0;
+static const constexpr int OtherArtifact = -1;
+static const constexpr int PaginationArtifact = -2;
+static const constexpr int PaginationHeaderArtifact = -3;
+static const constexpr int PaginationFooterArtifact = -4;
+static const constexpr int PaginationWatermarkArtifact = -5;
+static const constexpr int LayoutArtifact = -6;
+static const constexpr int PageArtifact = -7;
+static const constexpr int BackgroundArtifact = -8;
+}  // namespace NodeID
+
 /** Associate a node ID with subsequent drawing commands in an
     SkCanvas.  The same node ID can appear in a StructureElementNode
     in order to associate a document's structure element tree with
     its content.
 
-    A node ID of zero indicates no node ID.
+    A node ID of zero indicates no node ID. Negative node IDs are reserved.
 
     @param canvas  The canvas used to draw to the PDF.
     @param nodeId  The node ID for subsequent drawing commands.

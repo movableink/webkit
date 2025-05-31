@@ -9,6 +9,7 @@
 
 #include "include/core/SkBitmap.h"
 #include "include/core/SkColorType.h"
+#include "include/core/SkImageInfo.h"
 #include "include/core/SkMatrix.h"
 #include "include/core/SkPaint.h"
 #include "include/core/SkPixmap.h"
@@ -21,6 +22,7 @@
 #include "include/private/base/SkDebug.h"
 #include "include/private/base/SkFixed.h"
 #include "include/private/base/SkFloatingPoint.h"
+#include "include/private/base/SkSpan_impl.h"
 #include "include/private/base/SkTemplates.h"
 #include "include/private/base/SkTo.h"
 #include "src/base/SkArenaAlloc.h"
@@ -34,6 +36,7 @@
 #include "src/core/SkRasterClip.h"
 #include "src/core/SkRectPriv.h"
 #include "src/core/SkScan.h"
+#include <optional>
 
 #if defined(SK_SUPPORT_LEGACY_ALPHA_BITMAP_AS_COVERAGE)
 #include "src/core/SkMaskFilterBase.h"
@@ -65,8 +68,7 @@ struct PtProcRec {
     SkRect   fClipBounds;
     SkScalar fRadius;
 
-    typedef void (*Proc)(const PtProcRec&, const SkPoint devPts[], int count,
-                         SkBlitter*);
+    typedef void (*Proc)(const PtProcRec&, SkSpan<const SkPoint> devPts, SkBlitter*);
 
     bool init(SkCanvas::PointMode, const SkPaint&, const SkMatrix* matrix,
               const SkRasterClip*);
@@ -76,41 +78,67 @@ private:
     SkAAClipBlitterWrapper fWrapper;
 };
 
-static void bw_pt_hair_proc(const PtProcRec& rec, const SkPoint devPts[],
-                            int count, SkBlitter* blitter) {
-    for (int i = 0; i < count; i++) {
-        int x = SkScalarFloorToInt(devPts[i].fX);
-        int y = SkScalarFloorToInt(devPts[i].fY);
-        if (rec.fClip->contains(x, y)) {
-            blitter->blitH(x, y, 1);
+#define DIRECT_BLIT_LOOP(writable_method, value)    \
+    do {                                            \
+        for (auto p : devPts) {                     \
+            int x = SkScalarFloorToInt(p.fX);       \
+            int y = SkScalarFloorToInt(p.fY);       \
+            if (cr.contains(x, y)) {                \
+                *pm.writable_method(x, y) = value;  \
+            }                                       \
+        }                                           \
+    } while (0)
+
+
+static void bw_pt_hair_proc(const PtProcRec& rec, SkSpan<const SkPoint> devPts,
+                            SkBlitter* blitter) {
+    const auto direct = blitter->canDirectBlit();
+    if (direct && rec.fClip->isRect()) {
+        const SkIRect cr = rec.fClip->getBounds();
+        auto pm = direct->pm;
+        const auto v = direct->value;
+        switch (pm.info().bytesPerPixel()) {
+            case 1: DIRECT_BLIT_LOOP(writable_addr8,  v); break;
+            case 2: DIRECT_BLIT_LOOP(writable_addr16, v); break;
+            case 4: DIRECT_BLIT_LOOP(writable_addr32, v); break;
+            case 8: DIRECT_BLIT_LOOP(writable_addr64, v); break;
+            default: SkASSERT(false);
+        }
+    } else {
+        for (auto p : devPts) {
+            int x = SkScalarFloorToInt(p.fX);
+            int y = SkScalarFloorToInt(p.fY);
+            if (rec.fClip->contains(x, y)) {
+                blitter->blitH(x, y, 1);
+            }
         }
     }
 }
 
-static void bw_line_hair_proc(const PtProcRec& rec, const SkPoint devPts[],
-                              int count, SkBlitter* blitter) {
-    for (int i = 0; i < count; i += 2) {
+static void bw_line_hair_proc(const PtProcRec& rec, SkSpan<const SkPoint> devPts,
+                              SkBlitter* blitter) {
+    for (size_t i = 0; i < devPts.size(); i += 2) {
         SkScan::HairLine(&devPts[i], 2, *rec.fRC, blitter);
     }
 }
 
-static void bw_poly_hair_proc(const PtProcRec& rec, const SkPoint devPts[],
-                              int count, SkBlitter* blitter) {
-    SkScan::HairLine(devPts, count, *rec.fRC, blitter);
+static void bw_poly_hair_proc(const PtProcRec& rec, SkSpan<const SkPoint> devPts,
+                              SkBlitter* blitter) {
+    SkScan::HairLine(devPts.data(), SkToInt(devPts.size()), *rec.fRC, blitter);
 }
 
 // aa versions
 
-static void aa_line_hair_proc(const PtProcRec& rec, const SkPoint devPts[],
-                              int count, SkBlitter* blitter) {
-    for (int i = 0; i < count; i += 2) {
+static void aa_line_hair_proc(const PtProcRec& rec, SkSpan<const SkPoint> devPts,
+                              SkBlitter* blitter) {
+    for (size_t i = 0; i < devPts.size(); i += 2) {
         SkScan::AntiHairLine(&devPts[i], 2, *rec.fRC, blitter);
     }
 }
 
-static void aa_poly_hair_proc(const PtProcRec& rec, const SkPoint devPts[],
-                              int count, SkBlitter* blitter) {
-    SkScan::AntiHairLine(devPts, count, *rec.fRC, blitter);
+static void aa_poly_hair_proc(const PtProcRec& rec, SkSpan<const SkPoint> devPts,
+                              SkBlitter* blitter) {
+    SkScan::AntiHairLine(devPts.data(), SkToInt(devPts.size()), *rec.fRC, blitter);
 }
 
 // square procs (strokeWidth > 0 but matrix is square-scale (sx == sy)
@@ -130,20 +158,20 @@ static SkXRect make_xrect(const SkRect& r) {
     };
 }
 
-static void bw_square_proc(const PtProcRec& rec, const SkPoint devPts[],
-                           int count, SkBlitter* blitter) {
-    for (int i = 0; i < count; i++) {
-        SkRect r = make_square_rad(devPts[i], rec.fRadius);
+static void bw_square_proc(const PtProcRec& rec, SkSpan<const SkPoint> devPts,
+                           SkBlitter* blitter) {
+    for (auto p : devPts) {
+        SkRect r = make_square_rad(p, rec.fRadius);
         if (r.intersect(rec.fClipBounds)) {
             SkScan::FillXRect(make_xrect(r), *rec.fRC, blitter);
         }
     }
 }
 
-static void aa_square_proc(const PtProcRec& rec, const SkPoint devPts[],
-                           int count, SkBlitter* blitter) {
-    for (int i = 0; i < count; i++) {
-        SkRect r = make_square_rad(devPts[i], rec.fRadius);
+static void aa_square_proc(const PtProcRec& rec, SkSpan<const SkPoint> devPts,
+                           SkBlitter* blitter) {
+    for (auto p : devPts) {
+        SkRect r = make_square_rad(p, rec.fRadius);
         if (r.intersect(rec.fClipBounds)) {
             SkScan::AntiFillXRect(make_xrect(r), *rec.fRC, blitter);
         }
@@ -271,7 +299,7 @@ void SkDraw::drawPoints(SkCanvas::PointMode mode, size_t count,
             if (!SkIsFinite(&devPts[0].fX, n * 2)) {
                 return;
             }
-            proc(rec, devPts, n, bltr);
+            proc(rec, {devPts, n}, bltr);
             pts += n - backup;
             SkASSERT(SkToInt(count) >= n);
             count -= n;

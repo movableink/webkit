@@ -218,6 +218,7 @@ static DEFINE_string2(backend, b, "sw", "Backend to use. Allowed values are " BA
 
 static DEFINE_int(msaa, 1, "Number of subpixel samples. 0 for no HW antialiasing.");
 static DEFINE_bool(dmsaa, false, "Use internal MSAA to render to non-MSAA surfaces?");
+static DEFINE_int(msaa_tile_size, 0, "Tile size of MSAA rendering.");
 
 static DEFINE_string(bisect, "", "Path to a .skp or .svg file to bisect.");
 
@@ -610,6 +611,13 @@ Viewer::Viewer(int argc, char** argv, void* platformData)
     skwindow::GraphiteTestOptions gto;
     CommonFlags::SetTestOptions(&gto.fTestOptions);
     gto.fPriv.fPathRendererStrategy = get_path_renderer_strategy_type(FLAGS_pathstrategy[0]);
+    if (FLAGS_msaa <= 0) {
+        gto.fTestOptions.fContextOptions.fInternalMultisampleCount = 1;
+    }
+    if (FLAGS_msaa_tile_size > 0) {
+        gto.fTestOptions.fContextOptions.fInternalMSAATileSize = {FLAGS_msaa_tile_size,
+                                                                  FLAGS_msaa_tile_size};
+    }
     paramsBuilder.graphiteTestOptions(gto);
 #endif
     fWindow->setRequestedDisplayParams(paramsBuilder.build());
@@ -758,7 +766,7 @@ Viewer::Viewer(int argc, char** argv, void* platformData)
         fSaveToSKP = true;
         fWindow->inval();
     });
-    fCommands.addCommand('&', "Overlays", "Show slide dimensios", [this]() {
+    fCommands.addCommand('&', "Overlays", "Show slide dimensions", [this]() {
         fShowSlideDimensions = !fShowSlideDimensions;
         fWindow->inval();
     });
@@ -1870,8 +1878,27 @@ void Viewer::drawSlide(SkSurface* surface) {
         for (int y = 0; y < fWindow->height(); y += tileH) {
             for (int x = 0; x < fWindow->width(); x += tileW) {
                 SkAutoCanvasRestore acr(slideCanvas, true);
-                slideCanvas->clipRect(SkRect::MakeXYWH(x, y, tileW, tileH));
-                fSlides[fCurrentSlide]->draw(slideCanvas);
+
+                SkSurfaceProps props;
+                if (!slideCanvas->getProps(&props)) {
+                    props = fWindow->getRequestedDisplayParams()->surfaceProps();
+                }
+
+                SkImageInfo info = SkImageInfo::Make(
+                        tileW, tileH, colorType, kPremul_SkAlphaType, colorSpace);
+                sk_sp<SkSurface> tileSurface = Window::kRaster_BackendType == this->fBackendType
+                                           ? SkSurfaces::Raster(info, &props)
+                                           : slideCanvas->makeSurface(info, &props);
+                SkCanvas* tileCanvas = tileSurface->getCanvas();
+                tileCanvas->setMatrix(slideCanvas->getLocalToDevice());
+                tileCanvas->translate(-x, -y);
+                fSlides[fCurrentSlide]->draw(tileCanvas);
+
+                sk_sp<SkImage> tileImage = tileSurface->makeImageSnapshot();
+                SkPaint paint;
+                paint.setBlendMode(SkBlendMode::kSrc);
+                SkSamplingOptions sampling;
+                slideCanvas->drawImage(tileImage, x, y, sampling, &paint);
             }
         }
 

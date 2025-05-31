@@ -9,6 +9,7 @@
 #define skgpu_graphite_ContextOptions_DEFINED
 
 #include "include/core/SkRefCnt.h"
+#include "include/core/SkSize.h"
 #include "include/core/SkSpan.h"
 #include "include/private/base/SkAPI.h"
 #include "include/private/base/SkMath.h"
@@ -45,7 +46,16 @@ struct SK_API ContextOptions {
      *
      * If <= 1, Graphite will disable internal code paths that use multisampling.
      */
-    int fInternalMultisampleCount = 4;
+    uint8_t fInternalMultisampleCount = 4;
+
+    /**
+     * If set, this specifies the max width/height of MSAA textures that Graphite should use for
+     * internal draws. Graphite might have to break the drawing region into multiple tiles to
+     * satisfy the size constraint.
+     * Note: this option will be ignored if the backend doesn't support it, or if a more optimal HW
+     * feature is available.
+     */
+    std::optional<SkISize> fInternalMSAATileSize = std::nullopt;
 
     /**
      * Will the client make sure to only ever be executing one thread that uses the Context and all
@@ -89,10 +99,18 @@ struct SK_API ContextOptions {
     bool fSupportBilerpFromGlyphAtlas = false;
 
     /**
-     * For the moment, if Recordings are replayed in the order they are recorded, then
-     * Graphite can make certain assumptions that allow for better performance. Otherwise
-     * we have to flush some caches at the start of each Recording to ensure that they can
+     * For the moment, if Recordings from the same Recorder are replayed in the order they are
+     * recorded, then Graphite can make certain assumptions that allow for better performance.
+     * Otherwise we have to flush some caches at the start of each Recording to ensure that they can
      * be played back properly.
+     *
+     * This is the default ordering requirement for a Recorder. It can be overridden by
+     * setting the same field on the RecorderOptions passed to makeRecorder.
+     *
+     * Regardless of this value or a per-Recorder's setting, Recordings from separate Recorders can
+     * always be inserted in any order but it is the application's responsible to ensure that any
+     * implicit dependencies between the Recorders are respected (e.g. rendering to an SkSurface
+     * in one Recorder and sampling from that SkSurface's SkImage view on another Recorder).
      */
     bool fRequireOrderedRecordings = false;
 
