@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <limits>
 #include <wtf/Assertions.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/HashFunctions.h>
