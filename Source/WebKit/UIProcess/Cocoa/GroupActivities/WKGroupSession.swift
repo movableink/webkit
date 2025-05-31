@@ -64,11 +64,13 @@ extension WKURLActivity {
     // Used to workaround the fact that `@_objcImplementation` does not support stored properties whose size can change
     // due to Library Evolution. Do not use this property directly.
     @nonobjc
-    private var _urlActivity: Any
+    private var backingURLActivity: Any
 
     @nonobjc
     final private var urlActivity: URLActivity {
-        _urlActivity as! URLActivity
+        // Safe force-unwrap because `backingURLActivity` is only set once from the initializer with a known type.
+        // swift-format-ignore: NeverForceUnwrap
+        backingURLActivity as! URLActivity
     }
 
     var fallbackURL: URL? { urlActivity.webpageURL }
@@ -76,7 +78,7 @@ extension WKURLActivity {
     @nonobjc
     fileprivate convenience init(activity: URLActivity) {
         self.init()
-        self._urlActivity = activity as Any
+        self.backingURLActivity = activity as Any
     }
 
     #if compiler(<6.0)
@@ -90,7 +92,7 @@ extension WKGroupSession {
     @nonobjc
     private var groupSession: GroupSession<URLActivity>
     @nonobjc
-    private var _activity: WKURLActivity
+    private var backingActivity: WKURLActivity
     @nonobjc
     private var cancellables: Set<AnyCancellable> = []
 
@@ -99,7 +101,7 @@ extension WKGroupSession {
         self.init()
 
         self.groupSession = groupSession
-        self._activity = .init(activity: groupSession.activity)
+        self.backingActivity = .init(activity: groupSession.activity)
 
         self.groupSession.$activity
             .sink { [unowned self] in self.activityChanged(activity: $0) }
@@ -109,7 +111,7 @@ extension WKGroupSession {
             .store(in: &cancellables)
     }
 
-    var activity: WKURLActivity { _activity }
+    var activity: WKURLActivity { backingActivity }
     var uuid: UUID { groupSession.id }
 
     var state: WKGroupSessionState {
@@ -134,13 +136,13 @@ extension WKGroupSession {
 
     @nonobjc
     private final func activityChanged(activity: URLActivity) {
-        _activity = .init(activity: groupSession.activity)
+        backingActivity = .init(activity: groupSession.activity)
 
         guard let callback = newActivityCallback else {
             return
         }
 
-        callback(_activity)
+        callback(backingActivity)
     }
 
     @nonobjc

@@ -106,15 +106,15 @@ extension WKTextExtractionLink {
     // Used to workaround the fact that `@_objcImplementation` does not support stored properties whose size can change
     // due to Library Evolution. Do not use this property directly.
     @nonobjc
-    private let _url: NSURL
+    private let backingURL: NSURL
 
-    var url: URL { _url as URL }
+    var url: URL { backingURL as URL }
 
     let range: NSRange
 
     @objc(initWithURL:range:)
     init(url: URL, range: NSRange) {
-        self._url = url as NSURL
+        self.backingURL = url as NSURL
         self.range = range
     }
 

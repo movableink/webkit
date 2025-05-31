@@ -66,6 +66,7 @@ public final class RunLoopQueue {
     private var pendingChanges: [Change] = []
     private var processingTask: Task<Void, Never>?
 
+    /// Creates an empty queue.
     public init() {
     }
 

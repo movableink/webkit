@@ -76,6 +76,7 @@ final class WKNavigationDelegateAdapter: NSObject, WKNavigationDelegate {
 
     // MARK: Back-forward list support
 
+    // swift-format-ignore: NoLeadingUnderscores
     @objc(_webView:backForwardListItemAdded:removed:)
     func _webView(
         _ webView: WKWebView!,

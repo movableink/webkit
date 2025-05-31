@@ -80,10 +80,12 @@ private func createIntelligenceElement(item: WKTextExtractionItem) -> Intelligen
 
 @_spi(WKIntelligenceSupport)
 extension WKWebView {
+    // swift-format-ignore: NoLeadingUnderscores
     open override var _intelligenceBaseClass: AnyClass {
         WKWebView.self
     }
 
+    // swift-format-ignore: NoLeadingUnderscores
     open override func _intelligenceCollectContent(in visibleRect: CGRect, collector: UIIntelligenceElementCollector) {
         #if canImport(UIIntelligenceSupport, _version: 9007)
         let context = collector.context.createRemoteContext(description: "WKWebView")
@@ -93,6 +95,7 @@ extension WKWebView {
         collector.collect(.remote(context))
     }
 
+    // swift-format-ignore: NoLeadingUnderscores
     open override func _intelligenceCollectRemoteContent(
         in visibleRect: CGRect,
         remoteContextWrapper: UIIntelligenceCollectionRemoteContextWrapper

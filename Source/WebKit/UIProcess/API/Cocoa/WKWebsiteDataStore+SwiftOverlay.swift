@@ -36,4 +36,3 @@ extension WKWebsiteDataStore {
         set { __proxyConfigurations = newValue.map(\._nw) }
     }
 }
-

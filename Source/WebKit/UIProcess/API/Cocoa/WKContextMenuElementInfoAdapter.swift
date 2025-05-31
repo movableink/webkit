@@ -26,8 +26,12 @@
 public import Foundation
 internal import WebKit_Internal
 
+// SPI for the cross-import overlay.
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 @_spi(CrossImportOverlay)
 public struct WKContextMenuElementInfoAdapter {
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public let linkURL: URL?
 }
 

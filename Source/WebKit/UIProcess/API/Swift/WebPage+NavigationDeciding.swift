@@ -64,6 +64,8 @@ extension WebPage {
         public var buttonNumber: Int { wrapped.buttonNumber }
         #endif
 
+        // SPI for the cross-import overlay.
+        // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
         @_spi(CrossImportOverlay)
         public var wrapped: WKNavigationAction
     }
@@ -81,6 +83,8 @@ extension WebPage {
             self.wrapped = wrapped
         }
 
+        // FIXME: This needs to be made API.
+        // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
         @_spi(Private)
         public var isForMainFrame: Bool { wrapped.isForMainFrame }
 

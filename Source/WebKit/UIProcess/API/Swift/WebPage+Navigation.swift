@@ -66,6 +66,8 @@ extension WebPage {
             case failed(underlyingError: any Error)
         }
 
+        // SPI for testing.
+        // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
         @_spi(Testing)
         public init(kind: Kind, navigationID: NavigationID) {
             self.kind = kind
@@ -75,7 +77,9 @@ extension WebPage {
         /// The type of this navigation event.
         public let kind: Kind
 
-        /// The ID of the navigation that triggered this event. Multiple sequential events will have the same navigation identifier.
+        /// The ID of the navigation that triggered this event.
+        ///
+        /// Multiple sequential events will have the same navigation identifier.
         public let navigationID: NavigationID
     }
 }

@@ -49,7 +49,10 @@ final public class WebPage {
         /// Corresponds to the "print" media type.
         public static let print = CSSMediaType(rawValue: "print")
 
-        /// Create a media type with an arbitrary value. Use the static type properties for the defined canonical CSS media type options.
+        /// Create a media type with an arbitrary value.
+        ///
+        /// Use the static type properties for the defined canonical CSS media type options.
+        ///
         /// - Parameter rawValue: The raw value of the media type.
         public init(rawValue: String) {
             self.rawValue = rawValue
@@ -80,11 +83,11 @@ final public class WebPage {
     // MARK: Initializers
 
     private init(
-        _configuration: Configuration,
-        _navigationDecider navigationDecider: (any NavigationDeciding)?,
-        _dialogPresenter dialogPresenter: (any DialogPresenting)?,
+        internalHelperWithConfiguration configuration: Configuration,
+        navigationDecider: (any NavigationDeciding)?,
+        dialogPresenter: (any DialogPresenting)?,
     ) {
-        self.configuration = _configuration
+        self.configuration = configuration
 
         backingUIDelegate = WKUIDelegateAdapter(
             dialogPresenter: dialogPresenter
@@ -97,32 +100,51 @@ final public class WebPage {
         backingNavigationDelegate.owner = self
     }
 
+    /// Create a new WebPage.
+    ///
+    /// - Parameters:
+    ///   - configuration: A ``WebPage/Configuration`` value to use when initializing the page.
+    ///   - navigationDecider: A navigation decider used to customize navigations that happen within the page.
+    ///   - dialogPresenter: A dialog presenter which controls how JS dialogs are handled.
     public convenience init(
         configuration: Configuration = Configuration(),
         navigationDecider: some NavigationDeciding,
         dialogPresenter: some DialogPresenting
     ) {
-        self.init(_configuration: configuration, _navigationDecider: navigationDecider, _dialogPresenter: dialogPresenter)
+        self.init(internalHelperWithConfiguration: configuration, navigationDecider: navigationDecider, dialogPresenter: dialogPresenter)
     }
 
+    /// Create a new WebPage.
+    ///
+    /// - Parameters:
+    ///   - configuration: A ``WebPage/Configuration`` value to use when initializing the page.
+    ///   - dialogPresenter: A dialog presenter which controls how JS dialogs are handled.
     public convenience init(
         configuration: Configuration = Configuration(),
         dialogPresenter: some DialogPresenting
     ) {
-        self.init(_configuration: configuration, _navigationDecider: nil, _dialogPresenter: dialogPresenter)
+        self.init(internalHelperWithConfiguration: configuration, navigationDecider: nil, dialogPresenter: dialogPresenter)
     }
 
+    /// Create a new WebPage.
+    ///
+    /// - Parameters:
+    ///   - configuration: A ``WebPage/Configuration`` value to use when initializing the page.
+    ///   - navigationDecider: A navigation decider used to customize navigations that happen within the page.
     public convenience init(
         configuration: Configuration = Configuration(),
         navigationDecider: some NavigationDeciding
     ) {
-        self.init(_configuration: configuration, _navigationDecider: navigationDecider, _dialogPresenter: nil)
+        self.init(internalHelperWithConfiguration: configuration, navigationDecider: navigationDecider, dialogPresenter: nil)
     }
 
+    /// Create a new WebPage.
+    ///
+    /// - Parameter configuration: A ``WebPage/Configuration`` value to use when initializing the page.
     public convenience init(
         configuration: Configuration = Configuration(),
     ) {
-        self.init(_configuration: configuration, _navigationDecider: nil, _dialogPresenter: nil)
+        self.init(internalHelperWithConfiguration: configuration, navigationDecider: nil, dialogPresenter: nil)
     }
 
     // MARK: Properties
@@ -153,6 +175,7 @@ final public class WebPage {
     public var title: String {
         backingProperty(\.title, backedBy: \.title) { backingValue in
             // The title property is annotated as optional in WKWebView, but is never actually `nil`.
+            // swift-format-ignore: NeverForceUnwrap
             backingValue!
         }
     }
@@ -254,6 +277,8 @@ final public class WebPage {
     private let backingNavigationDelegate: WKNavigationDelegateAdapter
 
     #if os(macOS)
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     @_spi(CrossImportOverlay)
     public func setMenuBuilder(_ menuBuilder: ((WKContextMenuElementInfoAdapter) -> NSMenu)?) {
         backingUIDelegate.menuBuilder = menuBuilder
@@ -263,10 +288,14 @@ final public class WebPage {
     @ObservationIgnored
     private var observations = KeyValueObservations()
 
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     @ObservationIgnored
     @_spi(CrossImportOverlay)
     public var isBoundToWebView = false
 
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     @ObservationIgnored
     @_spi(CrossImportOverlay)
     public lazy var backingWebView: WebPageWebView = {
@@ -303,7 +332,7 @@ final public class WebPage {
     /// - Parameters:
     ///   - data: The data to use as the contents of the webpage.
     ///   - mimeType: The MIME type of the information in the data parameter. This parameter must not contain an empty string.
-    ///   - encoding: The data's character encoding.
+    ///   - characterEncoding: The data's character encoding.
     ///   - baseURL: A URL that you use to resolve relative URLs within the document.
     /// - Returns: A navigation identifier you use to track the loading progress of the request.
     @discardableResult
@@ -368,8 +397,7 @@ final public class WebPage {
 
     /// Navigates to an item from the back-forward list and sets it as the current item.
     ///
-    /// - Parameters:
-    ///   - item: The item to navigate to. The item must be in the webpage's back-forward list.
+    /// - Parameter item: The item to navigate to. The item must be in the webpage's back-forward list.
     /// - Returns: A navigation identifier you use to track the loading progress of the request.
     @discardableResult
     public func load(_ item: BackForwardList.Item) -> NavigationID? {
@@ -436,8 +464,8 @@ final public class WebPage {
     ///   you make in the underlying web content, such as the document's DOM structure. Those changes remain visible to
     ///   all scripts, regardless of which content world you specify. For more information about content worlds, see `WKContentWorld`.
     ///
-    /// - Returns: The result of the script evaluation. If your function body doesn't return an explicit value, `nil` is returned.
-    ///  If your function body explicitly returns `null`, then `NSNull` is returned.
+    /// - Returns: The result of the script evaluation. If your function body doesn't return an explicit value, `nil` is returned. If your function body explicitly returns `null`, then `NSNull` is returned.
+    /// - Throws: An error if a problem occurred while evaluating the JabaScript.
     @discardableResult
     public func callJavaScript(
         _ functionBody: String,
@@ -456,12 +484,16 @@ final public class WebPage {
             return nil
         }
 
+        // Safe force-unwrap because all plist types are Sendable.
+        // swift-format-ignore: NeverForceUnwrap
         return result as! any Sendable
     }
 
-    /// Generates PDF data from the webpage's contents
+    /// Generates PDF data from the webpage's contents.
+    ///
     /// - Parameter configuration: The object that specifies the portion of the web view to capture as PDF data.
     /// - Returns: A data object that contains the PDF data to use for rendering the contents of the webpage.
+    /// - Throws: An error if a problem occurred.
     public func pdf(configuration: WKPDFConfiguration = .init()) async throws -> Data {
         try await backingWebView.pdf(configuration: configuration)
     }
@@ -530,6 +562,8 @@ final public class WebPage {
         }
     }
 
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     @_spi(CrossImportOverlay)
     public func backingProperty<Value, BackingValue>(
         _ keyPath: KeyPath<WebPage, Value>,
@@ -546,6 +580,8 @@ final public class WebPage {
         return transform(backingValue)
     }
 
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     @_spi(CrossImportOverlay)
     public func backingProperty<Value>(_ keyPath: KeyPath<WebPage, Value>, backedBy backingKeyPath: KeyPath<WebPageWebView, Value>) -> Value
     {

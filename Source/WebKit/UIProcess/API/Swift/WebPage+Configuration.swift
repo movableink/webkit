@@ -27,6 +27,7 @@ import Foundation
 internal import WebKit_Internal
 
 extension WebPage {
+    /// A configuration type that specifies the preferences and behaviors of a webpage.
     @MainActor
     @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
     @available(watchOS, unavailable)
@@ -104,17 +105,17 @@ extension WebPage {
         /// If `true`, they are inserted with the full adaptive sizing behavior.
         public var supportsAdaptiveImageGlyph: Bool = false
 
+        private var backingShowsSystemScreenTimeBlockingView = true
+
         /// Indicates whether the webpage should use the system Screen Time blocking view.
         ///
         /// The default value is `true`. If `true`, the system Screen Time blocking view is shown when blocked by Screen Time.
         /// If `false`, a blurred view of the web content is shown instead.
         @available(visionOS, unavailable)
         public var showsSystemScreenTimeBlockingView: Bool {
-            get { _showsSystemScreenTimeBlockingView }
-            set { _showsSystemScreenTimeBlockingView = newValue }
+            get { backingShowsSystemScreenTimeBlockingView }
+            set { backingShowsSystemScreenTimeBlockingView = newValue }
         }
-
-        private var _showsSystemScreenTimeBlockingView = true
 
         #if os(iOS)
         /// The types of data detectors to apply to the webpage's content.

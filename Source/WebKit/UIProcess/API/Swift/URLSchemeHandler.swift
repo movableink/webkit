@@ -53,6 +53,7 @@ public struct URLScheme: Hashable, Sendable {
     public let rawValue: String
 }
 
+/// A value used as part of a sequence of results from a ``URLSchemeHandler``, which can either be a `Data` or a `URLResponse`.
 @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
 @available(watchOS, unavailable)
 @available(tvOS, unavailable)
