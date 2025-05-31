@@ -792,6 +792,7 @@ public:
     WKNSContentInsetFillView *topContentInsetFillView() const { return m_topContentInsetFillView.get(); }
     void registerViewAboveTopContentInsetArea(NSView *);
     void unregisterViewAboveTopContentInsetArea(NSView *);
+    void updateTopContentInsetFillDueToScrolling();
 #endif
 
 private:

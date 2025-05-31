@@ -138,6 +138,10 @@ class WebViewImpl;
 #if PLATFORM(IOS_FAMILY)
 class ViewGestureController;
 #endif
+enum class HideContentInsetFillReason : uint8_t {
+    FullScreen      = 1 << 0,
+    ScrolledToTop   = 1 << 1,
+};
 }
 
 @class WKColorExtensionView;
@@ -458,6 +462,7 @@ struct PerWebProcessState {
 
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
     WebCore::RectEdges<RetainPtr<WKColorExtensionView>> _fixedColorExtensionViews;
+    OptionSet<WebKit::HideContentInsetFillReason> _reasonsToHideTopContentInsetFill;
 #endif
 }
 
@@ -530,6 +535,8 @@ struct PerWebProcessState {
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
 - (void)_updateFixedColorExtensionViewFrames;
 - (BOOL)_hasVisibleColorExtensionView:(WebCore::BoxSide)side;
+- (void)_addReasonToHideTopContentInsetFill:(WebKit::HideContentInsetFillReason)reason;
+- (void)_removeReasonToHideTopContentInsetFill:(WebKit::HideContentInsetFillReason)reason;
 #endif
 
 #if ENABLE(GAMEPAD)

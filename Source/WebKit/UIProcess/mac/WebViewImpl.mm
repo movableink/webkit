@@ -2364,11 +2364,24 @@ void WebViewImpl::pageDidScroll(const IntPoint& scrollPosition)
     m_pageIsScrolledToTop = pageIsScrolledToTop;
 
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
-    updateContentInsetFillViews();
+    updateTopContentInsetFillDueToScrolling();
 #endif
 
     [m_view didChangeValueForKey:@"hasScrolledContentsUnderTitlebar"];
 }
+
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+
+void WebViewImpl::updateTopContentInsetFillDueToScrolling()
+{
+    RetainPtr view = m_view.get();
+    if ([view _usesAutomaticContentInsetBackgroundFill] && m_pageIsScrolledToTop)
+        [view _addReasonToHideTopContentInsetFill:HideContentInsetFillReason::ScrolledToTop];
+    else
+        [view _removeReasonToHideTopContentInsetFill:HideContentInsetFillReason::ScrolledToTop];
+}
+
+#endif // ENABLE(CONTENT_INSET_BACKGROUND_FILL)
 
 NSRect WebViewImpl::scrollViewFrame()
 {

@@ -44,7 +44,7 @@
 - (void)_setDecelerationRateInternal:(UIScrollViewDecelerationRate)rate;
 
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
-- (void)_setFixedColorExtensionEdges:(UIRectEdge)edges;
+@property (nonatomic, setter=_setHiddenContentInsetFillEdges:) UIRectEdge _hiddenContentInsetFillEdges;
 #endif
 
 - (void)_resetContentInset;

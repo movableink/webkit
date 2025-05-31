@@ -77,6 +77,10 @@ void FullscreenClient::willEnterFullscreen(WebPageProxy*)
     if (m_delegateMethods.webViewWillEnterElementFullscreen)
         [m_delegate.get() _webViewWillEnterElementFullscreen:webView.get()];
 #endif
+
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    [webView _addReasonToHideTopContentInsetFill:HideContentInsetFillReason::FullScreen];
+#endif
 }
 
 void FullscreenClient::didEnterFullscreen(WebPageProxy*)
@@ -112,6 +116,10 @@ void FullscreenClient::willExitFullscreen(WebPageProxy*)
 #else
     if (m_delegateMethods.webViewWillExitElementFullscreen)
         [m_delegate.get() _webViewWillExitElementFullscreen:webView.get()];
+#endif
+
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    [webView _removeReasonToHideTopContentInsetFill:HideContentInsetFillReason::FullScreen];
 #endif
 }
 

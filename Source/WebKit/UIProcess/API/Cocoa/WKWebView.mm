@@ -3222,9 +3222,9 @@ static WebCore::CocoaColor *sampledFixedPositionContentColor(const WebCore::Fixe
 - (void)_updateFixedColorExtensionEdges
 {
 #if PLATFORM(IOS_FAMILY)
-    [_scrollView _setFixedColorExtensionEdges:[&] {
+    [_scrollView _setHiddenContentInsetFillEdges:[&] {
         UIRectEdge edges = UIRectEdgeNone;
-        if ([self _hasVisibleColorExtensionView:WebCore::BoxSide::Top])
+        if (_reasonsToHideTopContentInsetFill || [self _hasVisibleColorExtensionView:WebCore::BoxSide::Top])
             edges |= UIRectEdgeTop;
         if ([self _hasVisibleColorExtensionView:WebCore::BoxSide::Right])
             edges |= UIRectEdgeRight;
@@ -3243,6 +3243,43 @@ static WebCore::CocoaColor *sampledFixedPositionContentColor(const WebCore::Fixe
 {
     RetainPtr view = _fixedColorExtensionViews.at(side);
     return view && ![view isHiddenOrFadingOut];
+}
+
+- (void)_addReasonToHideTopContentInsetFill:(WebKit::HideContentInsetFillReason)reason
+{
+    if (_reasonsToHideTopContentInsetFill.contains(reason))
+        return;
+
+    if (!_reasonsToHideTopContentInsetFill)
+        [self _setTopContentInsetFillHidden:YES];
+
+    _reasonsToHideTopContentInsetFill.add(reason);
+}
+
+- (void)_removeReasonToHideTopContentInsetFill:(WebKit::HideContentInsetFillReason)reason
+{
+    if (!_reasonsToHideTopContentInsetFill.contains(reason))
+        return;
+
+    _reasonsToHideTopContentInsetFill.remove(reason);
+
+    if (!_reasonsToHideTopContentInsetFill)
+        [self _setTopContentInsetFillHidden:NO];
+}
+
+- (void)_setTopContentInsetFillHidden:(BOOL)hidden
+{
+#if PLATFORM(IOS_FAMILY)
+    [_scrollView _setHiddenContentInsetFillEdges:[&] {
+        UIRectEdge hiddenEdges = [_scrollView _hiddenContentInsetFillEdges];
+        return hidden ? (hiddenEdges | UIRectEdgeTop) : (hiddenEdges & ~UIRectEdgeTop);
+    }()];
+#else
+    RetainPtr topContentInsetFillView = _impl->topContentInsetFillView();
+    RetainPtr captureView = [topContentInsetFillView captureView];
+    [topContentInsetFillView setHidden:hidden];
+    [captureView setHidden:hidden];
+#endif
 }
 
 #pragma mark - WKColorExtensionViewDelegate

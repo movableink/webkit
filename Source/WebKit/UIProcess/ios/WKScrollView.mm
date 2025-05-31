@@ -137,7 +137,7 @@ static BOOL shouldForwardScrollViewDelegateMethodToExternalDelegate(SEL selector
     BOOL _indicatorStyleSetByClient;
     BOOL _decelerationRateSetByClient;
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
-    BOOL _fixedColorExtensionEdgesSetByClient;
+    BOOL _hiddenContentInsetFillEdgesSetByClient;
 #endif
 // FIXME: Likely we can remove this special case for watchOS.
 #if !PLATFORM(WATCHOS)
