@@ -31,10 +31,6 @@
 internal import WebKit_Private.WKWebExtensionPrivate
 #endif
 
-#if USE_APPLE_INTERNAL_SDK
-@_spi(CTypeConversion) import Network
-#endif
-
 @available(iOS 14.0, macOS 10.16, *)
 extension WKPDFConfiguration {
     public var rect: CGRect? {
@@ -164,20 +160,6 @@ extension WKWebExtensionContext {
         __didMove(movedTab, from: index, in: oldWindow)
     }
 }
-#endif
-
-// FIXME: Need to declare ProxyConfiguration SPI in order to build and test
-// this with public SDKs (https://bugs.webkit.org/show_bug.cgi?id=280911).
-#if USE_APPLE_INTERNAL_SDK
-#if canImport(Network, _version: "3623.0.0.0")
-@available(iOS 17.0, macOS 14.0, *)
-extension WKWebsiteDataStore {
-    public var proxyConfigurations: [ProxyConfiguration] {
-        get { __proxyConfigurations?.map(ProxyConfiguration.init(_:)) ?? [] }
-        set { __proxyConfigurations = newValue.map(\.nw) }
-    }
-}
-#endif
 #endif
 
 #endif // !os(tvOS) && !os(watchOS)
