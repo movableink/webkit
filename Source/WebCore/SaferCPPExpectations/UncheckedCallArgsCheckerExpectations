@@ -12,7 +12,6 @@ Modules/fetch/FetchBodyOwner.cpp
 Modules/fetch/FetchLoader.cpp
 Modules/fetch/FetchResponse.cpp
 Modules/gamepad/GamepadManager.cpp
-Modules/gamepad/NavigatorGamepad.cpp
 Modules/geolocation/Geolocation.cpp
 Modules/geolocation/GeolocationController.cpp
 Modules/highlight/AppHighlightStorage.cpp

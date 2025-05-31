@@ -54,12 +54,7 @@ NavigatorGamepad::NavigatorGamepad(Navigator& navigator)
 
 NavigatorGamepad::~NavigatorGamepad()
 {
-    GamepadManager::singleton().unregisterNavigator(protectedNavigator());
-}
-
-Ref<Navigator> NavigatorGamepad::protectedNavigator() const
-{
-    return m_navigator.get();
+    GamepadManager::singleton().unregisterNavigator(m_navigator.get());
 }
 
 ASCIILiteral NavigatorGamepad::supplementName()
