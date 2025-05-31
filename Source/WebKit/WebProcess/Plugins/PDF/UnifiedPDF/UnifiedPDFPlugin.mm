@@ -3560,7 +3560,7 @@ WebCore::DictionaryPopupInfo UnifiedPDFPlugin::dictionaryPopupInfoForSelection(P
 #endif
 
     if (auto textIndicator = textIndicatorForSelection(selection, { }, presentationTransition))
-        dictionaryPopupInfo.textIndicator = textIndicator->data();
+        dictionaryPopupInfo.textIndicator = textIndicator;
 
     return dictionaryPopupInfo;
 }

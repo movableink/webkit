@@ -44,7 +44,7 @@ struct DictionaryPopupInfoCocoa {
 
 struct DictionaryPopupInfo {
     FloatPoint origin;
-    TextIndicatorData textIndicator;
+    RefPtr<TextIndicator> textIndicator;
 
 #if ENABLE(LEGACY_PDFKIT_PLUGIN)
     DictionaryPopupInfoCocoa platformData;

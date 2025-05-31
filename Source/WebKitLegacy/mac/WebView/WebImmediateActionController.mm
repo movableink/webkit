@@ -554,7 +554,7 @@ static WebCore::IntRect elementBoundingBoxInWindowCoordinatesFromNode(WebCore::N
 #endif
 
     if (auto textIndicator = WebCore::TextIndicator::createWithRange(range, indicatorOptions, presentationTransition))
-        popupInfo.textIndicator = textIndicator->data();
+        popupInfo.textIndicator = textIndicator;
 
     editor.setIsGettingDictionaryPopupInfo(false);
     return popupInfo;

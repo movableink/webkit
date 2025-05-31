@@ -1282,7 +1282,8 @@ void PDFPlugin::showDefinitionForAttributedString(NSAttributedString *string, CG
     dataForSelection.textBoundingRectInRootViewCoordinates = rangeRect;
     dataForSelection.contentImageScaleFactor = scaleFactor;
     dataForSelection.presentationTransition = TextIndicatorPresentationTransition::FadeIn;
-    dictionaryPopupInfo.textIndicator = dataForSelection;
+
+    dictionaryPopupInfo.textIndicator = TextIndicator::create(dataForSelection);
     
     if (RefPtr frame = m_frame.get()) {
         if (RefPtr page = frame->page())
@@ -1410,7 +1411,7 @@ WebCore::DictionaryPopupInfo PDFPlugin::dictionaryPopupInfoForSelection(PDFSelec
     dataForSelection.presentationTransition = presentationTransition;
 
     dictionaryPopupInfo.origin = rangeRect.origin;
-    dictionaryPopupInfo.textIndicator = dataForSelection;
+    dictionaryPopupInfo.textIndicator = TextIndicator::create(dataForSelection);
 #if ENABLE(LEGACY_PDFKIT_PLUGIN)
     dictionaryPopupInfo.platformData.attributedString = WebCore::AttributedString::fromNSAttributedString(scaledNSAttributedString);
 #else

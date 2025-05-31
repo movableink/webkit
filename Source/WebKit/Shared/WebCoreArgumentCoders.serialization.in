@@ -1005,7 +1005,7 @@ header: <WebCore/RenderStyleConstants.h>
 
 struct WebCore::DictionaryPopupInfo {
     WebCore::FloatPoint origin;
-    WebCore::TextIndicatorData textIndicator;
+    RefPtr<WebCore::TextIndicator> textIndicator;
 #if ENABLE(LEGACY_PDFKIT_PLUGIN)
     WebCore::DictionaryPopupInfoCocoa platformData;
 #else

@@ -10019,13 +10019,15 @@ void WebPage::contentsToRootViewPoint(FrameIdentifier frameID, FloatPoint point,
 
 void WebPage::remoteDictionaryPopupInfoToRootView(WebCore::FrameIdentifier frameID, WebCore::DictionaryPopupInfo popupInfo, CompletionHandler<void(WebCore::DictionaryPopupInfo)>&& completionHandler)
 {
+    RefPtr textIndicator = popupInfo.textIndicator;
     popupInfo.origin = contentsToRootView<FloatPoint>(frameID, popupInfo.origin);
 #if PLATFORM(COCOA)
-    popupInfo.textIndicator.selectionRectInRootViewCoordinates = contentsToRootView<FloatRect>(frameID, popupInfo.textIndicator.selectionRectInRootViewCoordinates);
-    popupInfo.textIndicator.textBoundingRectInRootViewCoordinates = contentsToRootView<FloatRect>(frameID, popupInfo.textIndicator.textBoundingRectInRootViewCoordinates);
-    popupInfo.textIndicator.contentImageWithoutSelectionRectInRootViewCoordinates = contentsToRootView<FloatRect>(frameID, popupInfo.textIndicator.contentImageWithoutSelectionRectInRootViewCoordinates);
+    auto textIndicatorData = textIndicator->data();
+    textIndicatorData.selectionRectInRootViewCoordinates = contentsToRootView<FloatRect>(frameID, popupInfo.textIndicator->selectionRectInRootViewCoordinates());
+    textIndicatorData.textBoundingRectInRootViewCoordinates = contentsToRootView<FloatRect>(frameID, popupInfo.textIndicator->textBoundingRectInRootViewCoordinates());
+    textIndicatorData.contentImageWithoutSelectionRectInRootViewCoordinates = contentsToRootView<FloatRect>(frameID, popupInfo.textIndicator->contentImageWithoutSelectionRectInRootViewCoordinates());
 
-    for (auto& textRect : popupInfo.textIndicator.textRectsInBoundingRectCoordinates)
+    for (auto& textRect : textIndicatorData.textRectsInBoundingRectCoordinates)
         textRect = contentsToRootView<FloatRect>(frameID, textRect);
 #endif
     completionHandler(popupInfo);

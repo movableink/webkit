@@ -312,7 +312,7 @@ DictionaryPopupInfo WebPage::dictionaryPopupInfoForRange(LocalFrame& frame, cons
         return dictionaryPopupInfo;
     }
 
-    dictionaryPopupInfo.textIndicator = textIndicator->data();
+    dictionaryPopupInfo.textIndicator = textIndicator;
 #if PLATFORM(MAC)
 #if ENABLE(LEGACY_PDFKIT_PLUGIN)
     dictionaryPopupInfo.platformData.attributedString = WebCore::AttributedString::fromNSAttributedString(scaledAttributedString);
