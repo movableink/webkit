@@ -1,7 +1,4 @@
 Modules/encryptedmedia/legacy/WebKitMediaKeySession.h
-Modules/permissions/NavigatorPermissions.h
-Modules/permissions/WorkerNavigatorPermissions.h
-Modules/screen-wake-lock/NavigatorScreenWakeLock.h
 Modules/websockets/WorkerThreadableWebSocketChannel.h
 accessibility/AXObjectCache.h
 bindings/js/JSLazyEventListener.cpp
@@ -43,7 +40,6 @@ layout/layouttree/LayoutIterator.h
 loader/DocumentThreadableLoader.h
 loader/WorkerThreadableLoader.h
 page/FrameSnapshotting.cpp
-page/NavigatorLoginStatus.h
 page/UndoManager.h
 page/csp/ContentSecurityPolicyDirectiveList.h
 page/csp/ContentSecurityPolicySource.h
