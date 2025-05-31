@@ -108,7 +108,7 @@ protected:
     const unsigned m_invalidationType : 4; // NodeListInvalidationType
     const unsigned m_rootType : 1; // RootType
 
-    Ref<ContainerNode> m_ownerNode;
+    const Ref<ContainerNode> m_ownerNode;
 
     mutable std::unique_ptr<CollectionNamedElementCache> m_namedElementCache;
 };

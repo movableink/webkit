@@ -341,7 +341,6 @@ html/FormAssociatedCustomElement.cpp
 html/FormListedElement.cpp
 html/HTMLAnchorElement.cpp
 html/HTMLAttachmentElement.cpp
-html/HTMLCanvasElement.cpp
 html/HTMLCollection.cpp
 html/HTMLDocument.cpp
 html/HTMLEmbedElement.cpp

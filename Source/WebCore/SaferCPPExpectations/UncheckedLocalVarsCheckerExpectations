@@ -195,7 +195,6 @@ html/CustomPaintImage.cpp
 html/FormAssociatedCustomElement.cpp
 html/FormListedElement.cpp
 html/HTMLAttachmentElement.cpp
-html/HTMLCanvasElement.cpp
 html/HTMLCollection.cpp
 html/HTMLDialogElement.cpp
 html/HTMLDocument.cpp

@@ -284,7 +284,6 @@ html/FTPDirectoryDocument.cpp
 html/FileInputType.cpp
 html/FormAssociatedCustomElement.cpp
 html/FormAssociatedElement.cpp
-html/HTMLAllCollection.cpp
 html/HTMLAnchorElement.cpp
 html/HTMLAttachmentElement.cpp
 html/HTMLBRElement.cpp

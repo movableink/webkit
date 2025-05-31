@@ -181,16 +181,16 @@ void HTMLCanvasElement::attributeChanged(const QualifiedName& name, const AtomSt
 
 RenderPtr<RenderElement> HTMLCanvasElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition& insertionPosition)
 {
-    RefPtr frame { document().frame() };
-    if (frame && frame->script().canExecuteScripts(ReasonForCallingCanExecuteScripts::NotAboutToExecuteScript))
+    RefPtr frame = document().frame();
+    if (frame && frame->checkedScript()->canExecuteScripts(ReasonForCallingCanExecuteScripts::NotAboutToExecuteScript))
         return createRenderer<RenderHTMLCanvas>(*this, WTFMove(style));
     return HTMLElement::createElementRenderer(WTFMove(style), insertionPosition);
 }
 
 bool HTMLCanvasElement::isReplaced(const RenderStyle&) const
 {
-    RefPtr frame { document().frame() };
-    return frame && frame->script().canExecuteScripts(ReasonForCallingCanExecuteScripts::NotAboutToExecuteScript);
+    RefPtr frame = document().frame();
+    return frame && frame->checkedScript()->canExecuteScripts(ReasonForCallingCanExecuteScripts::NotAboutToExecuteScript);
 }
 
 bool HTMLCanvasElement::canContainRangeEndPoint() const
@@ -313,20 +313,20 @@ ExceptionOr<std::optional<RenderingContext>> HTMLCanvasElement::getContext(JSC::
         if (!context)
             return std::optional<RenderingContext> { std::nullopt };
 
-        if (auto* webGLContext = dynamicDowncast<WebGLRenderingContext>(*context))
-            return std::optional<RenderingContext> { RefPtr { webGLContext } };
+        if (RefPtr webGLContext = dynamicDowncast<WebGLRenderingContext>(*context))
+            return { WTFMove(webGLContext) };
 
         return std::optional<RenderingContext> { downcast<WebGL2RenderingContext>(WTFMove(context)) };
     }
 #endif
 
     if (isWebGPUType(contextId)) {
-        GPU* gpu = nullptr;
+        RefPtr<GPU> gpu;
         if (RefPtr window = document().domWindow()) {
             // FIXME: Should we be instead getting this through jsDynamicCast<JSDOMWindow*>(state)->wrapped().navigator().gpu()?
-            gpu = window->navigator().gpu();
+            gpu = window->protectedNavigator()->gpu();
         }
-        auto context = createContextWebGPU(contextId, gpu);
+        RefPtr context = createContextWebGPU(contextId, gpu.get());
         if (!context)
             return { std::nullopt };
         return { context };
@@ -479,14 +479,14 @@ WebGLRenderingContextBase* HTMLCanvasElement::getContextWebGL(WebGLVersion type,
     if (!m_context)
         return createContextWebGL(type, WTFMove(attrs));
 
-    auto* glContext = dynamicDowncast<WebGLRenderingContextBase>(*m_context);
+    RefPtr glContext = dynamicDowncast<WebGLRenderingContextBase>(*m_context);
     if (!glContext)
         return nullptr;
 
     if ((type == WebGLVersion::WebGL1) != glContext->isWebGL1())
         return nullptr;
 
-    return glContext;
+    return glContext.get();
 }
 
 #endif // ENABLE(WEBGL)
@@ -629,7 +629,7 @@ void HTMLCanvasElement::reset()
 
 bool HTMLCanvasElement::usesContentsAsLayerContents() const
 {
-    auto* renderBox = this->renderBox();
+    CheckedPtr renderBox = this->renderBox();
     if (!renderBox)
         return false;
     if (!m_context)
@@ -786,7 +786,7 @@ ExceptionOr<Ref<OffscreenCanvas>> HTMLCanvasElement::transferControlToOffscreen(
         return Exception { ExceptionCode::InvalidStateError };
 
     std::unique_ptr placeholderContext = PlaceholderRenderingContext::create(*this);
-    Ref offscreen = OffscreenCanvas::create(document(), *placeholderContext);
+    Ref offscreen = OffscreenCanvas::create(protectedDocument().get(), *placeholderContext);
     m_context = WTFMove(placeholderContext);
     if (m_context->delegatesDisplay())
         invalidateStyleAndLayerComposition();
@@ -801,8 +801,9 @@ RefPtr<ImageData> HTMLCanvasElement::getImageData()
     if (!context)
         return nullptr;
 
-    if (document().settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logCanvasRead(document());
+    Ref document = this->document();
+    if (document->settings().webAPIStatisticsEnabled())
+        ResourceLoadObserver::shared().logCanvasRead(document.get());
 
     RefPtr pixelBuffer = context->drawingBufferToPixelBuffer();
     if (!pixelBuffer)
@@ -820,16 +821,17 @@ RefPtr<ImageData> HTMLCanvasElement::getImageData()
 RefPtr<VideoFrame> HTMLCanvasElement::toVideoFrame()
 {
 #if PLATFORM(COCOA) || USE(GSTREAMER)
+    Ref document = this->document();
 #if ENABLE(WEBGL)
     if (RefPtr context = dynamicDowncast<WebGLRenderingContextBase>(m_context.get())) {
-        if (document().settings().webAPIStatisticsEnabled())
-            ResourceLoadObserver::shared().logCanvasRead(document());
+        if (document->settings().webAPIStatisticsEnabled())
+            ResourceLoadObserver::shared().logCanvasRead(document.get());
         return context->surfaceBufferToVideoFrame(CanvasRenderingContext::SurfaceBuffer::DrawingBuffer);
     }
 #endif
 
-    if (document().settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logCanvasRead(document());
+    if (document->settings().webAPIStatisticsEnabled())
+        ResourceLoadObserver::shared().logCanvasRead(document.get());
 
     RefPtr imageBuffer = makeRenderingResultsAvailable();
     if (!imageBuffer)
@@ -857,14 +859,15 @@ ExceptionOr<Ref<MediaStream>> HTMLCanvasElement::captureStream(std::optional<dou
 {
     if (!originClean())
         return Exception(ExceptionCode::SecurityError, "Canvas is tainted"_s);
-    if (document().settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logCanvasRead(this->document());
+    Ref document = this->document();
+    if (document->settings().webAPIStatisticsEnabled())
+        ResourceLoadObserver::shared().logCanvasRead(document.get());
 
     if (frameRequestRate && frameRequestRate.value() < 0)
         return Exception(ExceptionCode::NotSupportedError, "frameRequestRate is negative"_s);
 
-    auto track = CanvasCaptureMediaStreamTrack::create(document(), *this, WTFMove(frameRequestRate));
-    auto stream = MediaStream::create(document());
+    auto track = CanvasCaptureMediaStreamTrack::create(document.get(), *this, WTFMove(frameRequestRate));
+    auto stream = MediaStream::create(document.get());
     stream->addTrack(track);
     return stream;
 }
@@ -872,7 +875,7 @@ ExceptionOr<Ref<MediaStream>> HTMLCanvasElement::captureStream(std::optional<dou
 
 SecurityOrigin* HTMLCanvasElement::securityOrigin() const
 {
-    return &document().securityOrigin();
+    return &protectedDocument()->securityOrigin();
 }
 
 void HTMLCanvasElement::createImageBuffer() const
@@ -952,7 +955,8 @@ bool HTMLCanvasElement::virtualHasPendingActivity() const
 {
 #if ENABLE(WEBGL)
     if (m_hasRelevantWebGLEventListener) {
-        auto* context = dynamicDowncast<WebGLRenderingContextBase>(m_context.get());
+        // This runs on the GC thread.
+        SUPPRESS_UNCOUNTED_LOCAL auto* context = dynamicDowncast<WebGLRenderingContextBase>(m_context.get());
         // WebGL rendering context may fire contextlost / contextrestored events at any point.
         return context && !context->isContextUnrecoverablyLost();
     }
@@ -1027,7 +1031,7 @@ void HTMLCanvasElement::dispatchEvent(Event& event)
 
 std::unique_ptr<CSSParserContext> HTMLCanvasElement::createCSSParserContext() const
 {
-    return makeUnique<CSSParserContext>(document());
+    return makeUnique<CSSParserContext>(protectedDocument().get());
 }
 
 WebCoreOpaqueRoot root(HTMLCanvasElement* canvas)

@@ -233,7 +233,7 @@ void HTMLAnchorElement::attributeChanged(const QualifiedName& name, const AtomSt
         if (m_relList)
             m_relList->associatedAttributeValueChanged();
     } else if (name == nameAttr)
-        document().processInternalResourceLinks(this);
+        protectedDocument()->processInternalResourceLinks(this);
 }
 
 bool HTMLAnchorElement::isURLAttribute(const Attribute& attribute) const
@@ -260,7 +260,7 @@ bool HTMLAnchorElement::draggable() const
 
 URL HTMLAnchorElement::href() const
 {
-    return document().completeURL(attributeWithoutSynchronization(hrefAttr));
+    return protectedDocument()->completeURL(attributeWithoutSynchronization(hrefAttr));
 }
 
 void HTMLAnchorElement::setHref(const AtomString& value)
