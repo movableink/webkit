@@ -680,7 +680,6 @@ html/MediaDocument.cpp
 html/MediaElementSession.cpp
 html/ModelDocument.cpp
 html/OffscreenCanvas.cpp
-html/PermissionsPolicy.cpp
 html/PluginDocument.cpp
 html/PublicURLManager.cpp
 html/RadioNodeList.cpp

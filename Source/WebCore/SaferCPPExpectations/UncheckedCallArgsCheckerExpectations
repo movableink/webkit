@@ -336,7 +336,6 @@ html/LazyLoadImageObserver.cpp
 html/MediaDocument.cpp
 html/MediaElementSession.cpp
 html/ModelDocument.cpp
-html/PermissionsPolicy.cpp
 html/PluginDocument.cpp
 html/RadioNodeList.cpp
 html/RangeInputType.cpp

@@ -223,7 +223,6 @@ html/HTMLTitleElement.cpp
 html/HTMLVideoElement.cpp
 html/MediaElementSession.cpp
 html/ModelDocument.cpp
-html/PermissionsPolicy.cpp
 html/PluginDocument.cpp
 html/RangeInputType.cpp
 html/TextFieldInputType.cpp

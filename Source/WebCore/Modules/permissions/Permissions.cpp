@@ -187,8 +187,8 @@ void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, DO
         return;
     }
 
-    auto& workerGlobalScope = downcast<WorkerGlobalScope>(*context);
-    auto completionHandler = [originData = WTFMove(originData).isolatedCopy(), permissionDescriptor, contextIdentifier = workerGlobalScope.identifier(), source = *source, promise = WTFMove(promise)] (auto& context) mutable {
+    Ref workerGlobalScope = downcast<WorkerGlobalScope>(*context);
+    auto completionHandler = [originData = WTFMove(originData).isolatedCopy(), permissionDescriptor, contextIdentifier = workerGlobalScope->identifier(), source = *source, promise = WTFMove(promise)] (auto& context) mutable {
         ASSERT(isMainThread());
 
         Ref document = downcast<Document>(context);
@@ -229,7 +229,7 @@ void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, DO
         });
     };
 
-    if (auto* workerLoaderProxy = workerGlobalScope.thread().workerLoaderProxy())
+    if (auto* workerLoaderProxy = workerGlobalScope->thread().workerLoaderProxy())
         workerLoaderProxy->postTaskToLoader(WTFMove(completionHandler));
 }
 
