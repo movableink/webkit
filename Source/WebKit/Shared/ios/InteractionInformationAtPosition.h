@@ -109,7 +109,7 @@ struct InteractionInformationAtPosition {
 
     CursorContext cursorContext;
 
-    WebCore::TextIndicatorData linkIndicator;
+    RefPtr<WebCore::TextIndicator> textIndicator;
 #if ENABLE(DATA_DETECTION)
     String dataDetectorIdentifier;
     RetainPtr<NSArray> dataDetectorResults;

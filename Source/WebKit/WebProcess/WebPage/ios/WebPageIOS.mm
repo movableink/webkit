@@ -3449,7 +3449,7 @@ static void linkIndicatorPositionInformation(WebPage& page, Element& linkElement
     auto textIndicator = TextIndicator::createWithRange(linkRange, textIndicatorOptions, TextIndicatorPresentationTransition::None, FloatSize(marginInPoints * deviceScaleFactor, marginInPoints * deviceScaleFactor));
 
     if (textIndicator)
-        info.linkIndicator = textIndicator->data();
+        info.textIndicator = textIndicator;
 }
     
 #if ENABLE(DATA_DETECTION)
@@ -3984,7 +3984,7 @@ InteractionInformationAtPosition WebPage::positionInformation(const InteractionI
             info.isLink = true;
             info.url = WTFMove(url);
             info.bounds = enclosingIntRect(bounds);
-            info.linkIndicator = textIndicator->data();
+            info.textIndicator = textIndicator;
         }
         info.isInPlugin = true;
     }

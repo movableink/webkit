@@ -10024,7 +10024,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     CGRect sourceRect;
     if (positionInformation.isLink)
-        sourceRect = positionInformation.linkIndicator.textBoundingRectInRootViewCoordinates;
+        sourceRect = positionInformation.textIndicator->textBoundingRectInRootViewCoordinates();
     else if (!positionInformation.dataDetectorBounds.isEmpty())
         sourceRect = positionInformation.dataDetectorBounds;
     else
@@ -11656,11 +11656,11 @@ static RetainPtr<UITargetedPreview> createFallbackTargetedPreview(UIView *rootVi
 {
     RetainPtr<UITargetedPreview> targetedPreview;
 
-    if (_positionInformation.isLink && _positionInformation.linkIndicator.contentImage) {
-        auto indicator = _positionInformation.linkIndicator;
-        _positionInformationLinkIndicator = indicator;
+    if (_positionInformation.isLink && _positionInformation.textIndicator->contentImage()) {
+        RefPtr indicator = _positionInformation.textIndicator;
+        _positionInformationLinkIndicator = indicator ? std::optional { indicator->data() } : std::nullopt;
 
-        targetedPreview = [self _createTargetedPreviewFromTextIndicator:indicator previewContainer:self.containerForContextMenuHintPreviews];
+        targetedPreview = [self _createTargetedPreviewFromTextIndicator:indicator->data() previewContainer:self.containerForContextMenuHintPreviews];
     } else if ((_positionInformation.isAttachment || _positionInformation.isImage) && _positionInformation.image) {
         auto cgImage = _positionInformation.image->makeCGImageCopy();
         auto image = adoptNS([[UIImage alloc] initWithCGImage:cgImage.get()]);
@@ -15621,10 +15621,10 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (UIImage *)_presentationSnapshotForPreviewItemController:(UIPreviewItemController *)controller
 {
-    if (!_positionInformation.linkIndicator.contentImage)
+    if (!_positionInformation.textIndicator->contentImage())
         return nullptr;
 
-    auto nativeImage = _positionInformation.linkIndicator.contentImage->nativeImage();
+    auto nativeImage = _positionInformation.textIndicator->contentImage()->nativeImage();
     if (!nativeImage)
         return nullptr;
 
@@ -15633,9 +15633,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (NSArray *)_presentationRectsForPreviewItemController:(UIPreviewItemController *)controller
 {
-    if (_positionInformation.linkIndicator.contentImage) {
-        auto origin = _positionInformation.linkIndicator.textBoundingRectInRootViewCoordinates.location();
-        return createNSArray(_positionInformation.linkIndicator.textRectsInBoundingRectCoordinates, [&] (CGRect rect) {
+    if (_positionInformation.textIndicator->contentImage()) {
+        auto origin = _positionInformation.textIndicator->textBoundingRectInRootViewCoordinates().location();
+        return createNSArray(_positionInformation.textIndicator->textRectsInBoundingRectCoordinates(), [&] (CGRect rect) {
             return [NSValue valueWithCGRect:CGRectOffset(rect, origin.x(), origin.y())];
         }).autorelease();
     } else {

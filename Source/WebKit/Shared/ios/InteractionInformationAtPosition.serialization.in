@@ -82,7 +82,7 @@ struct WebKit::InteractionInformationAtPosition {
 
     WebKit::CursorContext cursorContext;
 
-    WebCore::TextIndicatorData linkIndicator;
+    RefPtr<WebCore::TextIndicator> textIndicator;
 #if ENABLE(DATA_DETECTION)
     String dataDetectorIdentifier;
     [SecureCodingAllowed=[NSArray.class, PAL::getDDScannerResultClass()]] RetainPtr<NSArray> dataDetectorResults;

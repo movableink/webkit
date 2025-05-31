@@ -203,13 +203,13 @@ static const CGFloat presentationElementRectPadding = 15;
     if (!view || !delegate || !_positionInformation)
         return CGRectZero;
 
-    auto indicator = _positionInformation->linkIndicator;
-    if (indicator.textRectsInBoundingRectCoordinates.isEmpty())
+    RefPtr textIndicator = _positionInformation->textIndicator;
+    if (textIndicator->textRectsInBoundingRectCoordinates().isEmpty())
         return CGRectZero;
 
     WebCore::FloatPoint touchLocation = _positionInformation->request.point;
-    WebCore::FloatPoint linkElementLocation = indicator.textBoundingRectInRootViewCoordinates.location();
-    auto indicatedRects = indicator.textRectsInBoundingRectCoordinates.map([&](auto rect) {
+    WebCore::FloatPoint linkElementLocation = textIndicator->textBoundingRectInRootViewCoordinates().location();
+    auto indicatedRects = textIndicator->textRectsInBoundingRectCoordinates().map([&](auto rect) {
         rect.inflate(2);
         rect.moveBy(linkElementLocation);
         return rect;
@@ -466,7 +466,7 @@ static bool isJavaScriptURL(NSURL *url)
     if (std::max(leftInset, rightInset) <= minimumAvailableWidthOrHeightRatio * CGRectGetWidth(visibleRect) && std::max(topInset, bottomInset) <= minimumAvailableWidthOrHeightRatio * CGRectGetHeight(visibleRect))
         return WKActionSheetPresentAtTouchLocation;
 
-    if (elementInfo.type == _WKActivatedElementTypeLink && positionInfo.linkIndicator.textRectsInBoundingRectCoordinates.size())
+    if (elementInfo.type == _WKActivatedElementTypeLink && positionInfo.textIndicator->textRectsInBoundingRectCoordinates().size())
         return WKActionSheetPresentAtClosestIndicatorRect;
 
     return WKActionSheetPresentAtElementRect;
@@ -927,7 +927,7 @@ static NSMutableArray<UIMenuElement *> *menuElementsFromDefaultActions(RetainPtr
 
         CGRect sourceRect;
         if (_positionInformation->isLink)
-            sourceRect = _positionInformation->linkIndicator.textBoundingRectInRootViewCoordinates;
+            sourceRect = _positionInformation->textIndicator->textBoundingRectInRootViewCoordinates();
         else
             sourceRect = _positionInformation->bounds;
 
