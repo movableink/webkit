@@ -2163,7 +2163,6 @@ imported/w3c/web-platform-tests/svg/animations/conditional-processing-01.html [ 
 imported/w3c/web-platform-tests/svg/animations/stop-animation-01.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/animations/switch-animation-01.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/animations/switch-animation-02.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/svg/animations/animate-display-to-none-001.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/embedded/image-crossorigin.sub.html [ Skip ]
 imported/w3c/web-platform-tests/svg/embedded/image-embedding-svg-with-near-integral-width.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/embedded/image-fractional-width-vertical-fidelity.svg [ ImageOnlyFailure ]
