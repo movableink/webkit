@@ -54,19 +54,23 @@ struct ImagePaintingOptions {
     // This is a single-argument initializer to support pattern of
     // ImageDrawResult drawImage(..., ImagePaintingOptions = { ImageOrientation::Orientation::FromImage });
     // Should be removed once the pattern is not so prevalent.
-    template<typename T, typename = std::enable_if_t<isOptionType<std::decay_t<T>>>>
+    template<typename T>
+        requires isOptionType<std::decay_t<T>>
     ImagePaintingOptions(std::initializer_list<T> options)
     {
         for (auto& option : options)
             setOption(option);
     }
-    template<typename T, typename = std::enable_if_t<isOptionType<std::decay_t<T>>>>
+
+    template<typename T>
+        requires isOptionType<std::decay_t<T>>
     explicit ImagePaintingOptions(T option)
     {
         setOption(option);
     }
 
-    template<typename T, typename U, typename... Rest, typename = std::enable_if_t<isOptionType<std::decay_t<T>>>>
+    template<typename T, typename U, typename... Rest>
+        requires isOptionType<std::decay_t<T>>
     ImagePaintingOptions(T first, U second, Rest... rest)
     {
         setOption(first);

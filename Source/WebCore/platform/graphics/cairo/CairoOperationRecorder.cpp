@@ -62,14 +62,18 @@ struct OperationData {
 template<> struct OperationData<> { };
 
 template<typename T, typename... Args>
-auto createCommand(Args&&... arguments) -> std::enable_if_t<std::is_base_of<OperationData<std::decay_t<Args>...>, T>::value, std::unique_ptr<PaintingOperation>> {
+    requires std::derived_from<T, OperationData<std::decay_t<Args>...>>
+auto createCommand(Args&&... arguments) -> std::unique_ptr<PaintingOperation>
+{
     auto* command = new T();
     command->arguments = std::make_tuple(std::forward<Args>(arguments)...);
     return std::unique_ptr<PaintingOperation>(command);
 }
 
 template<typename T>
-auto createCommand() -> std::enable_if_t<std::is_base_of<OperationData<>, T>::value, std::unique_ptr<PaintingOperation>> {
+    requires std::derived_from<T, OperationData<>>
+auto createCommand() -> std::unique_ptr<PaintingOperation>
+{
     return makeUnique<T>();
 }
 
