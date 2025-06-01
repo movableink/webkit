@@ -579,10 +579,8 @@ Ref<RenderPassEncoder> CommandEncoder::beginRenderPass(const WGPURenderPassDescr
         if (!attachment.view)
             continue;
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         // MTLRenderPassColorAttachmentDescriptorArray is bounds-checked internally.
         const auto& mtlAttachment = mtlDescriptor.colorAttachments[i];
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         mtlAttachment.clearColor = MTLClearColorMake(attachment.clearValue.r,
             attachment.clearValue.g,

@@ -185,9 +185,7 @@ RenderBundleEncoder::RenderBundleEncoder(MTLIndirectCommandBufferDescriptor *ind
     , m_vertexBuffers(m_device->maxBuffersPlusVertexBuffersForVertexStage() + 1)
     , m_fragmentBuffers(m_device->maxBuffersForFragmentStage() + 1)
     , m_descriptor(descriptor)
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    , m_descriptorColorFormats(descriptor.colorFormats ? Vector<WGPUTextureFormat>(std::span { descriptor.colorFormats, descriptor.colorFormatCount }) : Vector<WGPUTextureFormat>())
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    , m_descriptorColorFormats(descriptor.colorFormats ? Vector<WGPUTextureFormat>(unsafeMakeSpan(descriptor.colorFormats, descriptor.colorFormatCount)) : Vector<WGPUTextureFormat>())
 {
     m_descriptor.colorFormats = m_descriptorColorFormats.size() ? &m_descriptorColorFormats[0] : nullptr;
     m_icbArray = [NSMutableArray array];

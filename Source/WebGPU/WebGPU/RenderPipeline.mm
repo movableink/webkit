@@ -1641,9 +1641,7 @@ RenderPipeline::RenderPipeline(id<MTLRenderPipelineState> renderPipelineState, M
     , m_descriptor(descriptor)
     , m_descriptorDepthStencil(descriptor.depthStencil ? *descriptor.depthStencil : WGPUDepthStencilState())
     , m_descriptorFragment(descriptor.fragment ? *descriptor.fragment : WGPUFragmentState())
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    , m_descriptorTargets(descriptor.fragment && descriptor.fragment->targetCount ? Vector<WGPUColorTargetState>(std::span { descriptor.fragment->targets, descriptor.fragment->targetCount }) : Vector<WGPUColorTargetState>())
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    , m_descriptorTargets(descriptor.fragment && descriptor.fragment->targetCount ? Vector<WGPUColorTargetState>(unsafeMakeSpan(descriptor.fragment->targets, descriptor.fragment->targetCount)) : Vector<WGPUColorTargetState>())
     , m_minimumBufferSizes(minimumBufferSizes)
     , m_uniqueId(uniqueId)
     , m_vertexShaderBindingCount(vertexShaderBindingCount)
