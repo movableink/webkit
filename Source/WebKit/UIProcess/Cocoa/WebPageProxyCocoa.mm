@@ -414,13 +414,13 @@ static RefPtr<WebCore::ShareableBitmap> convertPlatformImageToBitmap(CocoaImage 
 RefPtr<WebCore::ShareableBitmap> WebPageProxy::iconForAttachment(const String& fileName, const String& contentType, const String& title, FloatSize& size)
 {
 #if PLATFORM(IOS_FAMILY)
-    auto imageAndSize = RenderThemeIOS::iconForAttachment(fileName, contentType, title);
-    auto image = imageAndSize.icon;
-    size = imageAndSize.size;
+    auto iconAndSize = RenderThemeIOS::iconForAttachment(fileName, contentType, title);
+    auto icon = iconAndSize.icon;
+    size = iconAndSize.size;
 #else
-    auto image = RenderThemeMac::iconForAttachment(fileName, contentType, title);
+    auto icon = RenderThemeMac::iconForAttachment(fileName, contentType, title);
 #endif
-    return convertPlatformImageToBitmap(image.get(), iconSize);
+    return convertPlatformImageToBitmap(icon.get(), iconSize);
 }
 
 #endif // ENABLE(ATTACHMENT_ELEMENT)
