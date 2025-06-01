@@ -2544,14 +2544,14 @@ const Color& RenderStyle::visitedLinkColor() const
     return m_inheritedData->visitedLinkColor;
 }
 
-void RenderStyle::setColor(const Color& v)
+void RenderStyle::setColor(Color&& v)
 {
-    SET_VAR(m_inheritedData, color, v);
+    SET_VAR(m_inheritedData, color, WTFMove(v));
 }
 
-void RenderStyle::setVisitedLinkColor(const Color& v)
+void RenderStyle::setVisitedLinkColor(Color&& v)
 {
-    SET_VAR(m_inheritedData, visitedLinkColor, v);
+    SET_VAR(m_inheritedData, visitedLinkColor, WTFMove(v));
 }
 
 float RenderStyle::horizontalBorderSpacing() const
@@ -3927,14 +3927,14 @@ UserSelect RenderStyle::usedUserSelect() const
     return value;
 }
 
-const Vector<Style::PositionTryFallback>& RenderStyle::positionTryFallbacks() const
+const FixedVector<Style::PositionTryFallback>& RenderStyle::positionTryFallbacks() const
 {
     return m_nonInheritedData->rareData->positionTryFallbacks;
 }
 
-void RenderStyle::setPositionTryFallbacks(const Vector<Style::PositionTryFallback>& fallbacks)
+void RenderStyle::setPositionTryFallbacks(FixedVector<Style::PositionTryFallback>&& fallbacks)
 {
-    SET_NESTED_VAR(m_nonInheritedData, rareData, positionTryFallbacks, fallbacks);
+    SET_NESTED_VAR(m_nonInheritedData, rareData, positionTryFallbacks, WTFMove(fallbacks));
 }
 
 void RenderStyle::adjustScrollTimelines()
@@ -3943,16 +3943,13 @@ void RenderStyle::adjustScrollTimelines()
     if (!names.size() && !scrollTimelines().size())
         return;
 
-    auto& timelines = m_nonInheritedData.access().rareData.access().scrollTimelines;
-    timelines.clear();
-
     auto& axes = scrollTimelineAxes();
     auto numberOfAxes = axes.size();
 
-    for (size_t i = 0; i < names.size(); ++i) {
+    m_nonInheritedData.access().rareData.access().scrollTimelines = FixedVector<Ref<ScrollTimeline>>::createWithSizeFromGenerator(names.size(), [&](auto i) {
         auto axis = numberOfAxes ? axes[i % numberOfAxes] : ScrollAxis::Block;
-        timelines.append(ScrollTimeline::create(names[i], axis));
-    }
+        return ScrollTimeline::create(names[i], axis);
+    });
 }
 
 void RenderStyle::adjustViewTimelines()
@@ -3961,20 +3958,17 @@ void RenderStyle::adjustViewTimelines()
     if (!names.size() && !viewTimelines().size())
         return;
 
-    auto& timelines = m_nonInheritedData.access().rareData.access().viewTimelines;
-    timelines.clear();
-
     auto& axes = viewTimelineAxes();
     auto numberOfAxes = axes.size();
 
     auto& insets = viewTimelineInsets();
     auto numberOfInsets = insets.size();
 
-    for (size_t i = 0; i < names.size(); ++i) {
+    m_nonInheritedData.access().rareData.access().viewTimelines = FixedVector<Ref<ViewTimeline>>::createWithSizeFromGenerator(names.size(), [&](auto i) {
         auto axis = numberOfAxes ? axes[i % numberOfAxes] : ScrollAxis::Block;
         auto inset = numberOfInsets ? insets[i % numberOfInsets] : ViewTimelineInsets();
-        timelines.append(ViewTimeline::create(names[i], axis, WTFMove(inset)));
-    }
+        return ViewTimeline::create(names[i], axis, WTFMove(inset));
+    });
 }
 
 #if !LOG_DISABLED

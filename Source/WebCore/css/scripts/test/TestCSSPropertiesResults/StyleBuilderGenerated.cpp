@@ -290,9 +290,9 @@ public:
     static void applyInheritTestColorPropertyWithVisitedLinkSupport(BuilderState& builderState)
     {
         if (builderState.applyPropertyToRegularStyle())
-            builderState.style().setTestColorPropertyWithVisitedLinkSupport(builderState.parentStyle().testColorPropertyWithVisitedLinkSupport());
+            builderState.style().setTestColorPropertyWithVisitedLinkSupport(forwardInheritedValue(builderState.parentStyle().testColorPropertyWithVisitedLinkSupport()));
         if (builderState.applyPropertyToVisitedLinkStyle())
-            builderState.style().setVisitedLinkTestColorPropertyWithVisitedLinkSupport(builderState.parentStyle().testColorPropertyWithVisitedLinkSupport());
+            builderState.style().setVisitedLinkTestColorPropertyWithVisitedLinkSupport(forwardInheritedValue(builderState.parentStyle().testColorPropertyWithVisitedLinkSupport()));
     }
     static void applyValueTestColorPropertyWithVisitedLinkSupport(BuilderState& builderState, CSSValue& value)
     {

@@ -50,6 +50,18 @@ public:
         return UniqueRef { *new (NotNull, Malloc::malloc(Base::allocationSize(size))) EmbeddedFixedVector(size) };
     }
 
+    static UniqueRef<EmbeddedFixedVector> create(std::initializer_list<T> initializerList)
+    {
+        return UniqueRef { *new (NotNull, Malloc::malloc(Base::allocationSize(initializerList.size()))) EmbeddedFixedVector(initializerList) };
+    }
+
+    template<typename U, size_t Extent>
+    static UniqueRef<EmbeddedFixedVector> create(std::span<U, Extent> span)
+    {
+        unsigned size = Checked<uint32_t> { span.size() };
+        return UniqueRef { *new (NotNull, Malloc::malloc(Base::allocationSize(size))) EmbeddedFixedVector(span) };
+    }
+
     template<typename InputIterator>
     static UniqueRef<EmbeddedFixedVector> create(InputIterator first, InputIterator last)
     {
@@ -79,12 +91,9 @@ public:
     }
 
     template<std::invocable<size_t> Generator>
-    static std::unique_ptr<EmbeddedFixedVector> createWithSizeFromGenerator(unsigned size, NOESCAPE Generator&& generator)
+    static UniqueRef<EmbeddedFixedVector> createWithSizeFromGenerator(unsigned size, NOESCAPE Generator&& generator)
     {
-        auto result = std::unique_ptr<EmbeddedFixedVector> { new (NotNull, Malloc::malloc(Base::allocationSize(size))) EmbeddedFixedVector(size, std::forward<Generator>(generator)) };
-        if (result->size() != size)
-            return nullptr;
-        return result;
+        return UniqueRef { *new (NotNull, Malloc::malloc(Base::allocationSize(size))) EmbeddedFixedVector(size, std::forward<Generator>(generator)) };
     }
 
     template<std::invocable<size_t> FailableGenerator>
@@ -94,6 +103,12 @@ public:
         if (result->size() != size)
             return nullptr;
         return result;
+    }
+
+    template<typename SizedRange, typename Mapper>
+    static UniqueRef<EmbeddedFixedVector> map(unsigned size, SizedRange&& range, NOESCAPE Mapper&& mapper)
+    {
+        return UniqueRef { *new (NotNull, Malloc::malloc(Base::allocationSize(size))) EmbeddedFixedVector(size, std::forward<SizedRange>(range), std::forward<Mapper>(mapper)) };
     }
 
     UniqueRef<EmbeddedFixedVector> clone() const
@@ -118,6 +133,16 @@ private:
     {
     }
 
+    EmbeddedFixedVector(std::initializer_list<T> initializerList)
+        : Base(initializerList)
+    {
+    }
+
+    template<typename U, size_t Extent>
+    EmbeddedFixedVector(std::span<U, Extent> span)
+        : Base(span)
+    {
+    }
 
     template<typename InputIterator>
     EmbeddedFixedVector(unsigned size, InputIterator first, InputIterator last)
@@ -132,14 +157,20 @@ private:
     }
 
     template<std::invocable<size_t> Generator>
-    EmbeddedFixedVector(unsigned size, Generator&& generator)
+    EmbeddedFixedVector(unsigned size, NOESCAPE Generator&& generator)
         : Base(size, std::forward<Generator>(generator))
     {
     }
 
     template<std::invocable<size_t> FailableGenerator>
-    EmbeddedFixedVector(typename Base::Failable failable, unsigned size, FailableGenerator&& generator)
+    EmbeddedFixedVector(typename Base::Failable failable, unsigned size, NOESCAPE FailableGenerator&& generator)
         : Base(failable, size, std::forward<FailableGenerator>(generator))
+    {
+    }
+
+    template<typename SizedRange, typename Mapper>
+    EmbeddedFixedVector(unsigned size, SizedRange&& range, NOESCAPE Mapper&& mapper)
+        : Base(size, std::forward<SizedRange>(range), std::forward<Mapper>(mapper))
     {
     }
 };

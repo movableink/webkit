@@ -409,17 +409,13 @@ inline LengthBox blendFunc(const LengthBox& from, const LengthBox& to, const Con
     };
 }
 
-inline SVGLengthValue blendFunc(const SVGLengthValue& from, const SVGLengthValue& to, const Context& context)
-{
-    return SVGLengthValue::blend(from, to, narrowPrecisionToFloat(context.progress));
-}
-
-inline Vector<WebCore::Length> blendFunc(const Vector<WebCore::Length>& from, const Vector<WebCore::Length>& to, const Context& context)
+inline FixedVector<WebCore::Length> blendFunc(const FixedVector<WebCore::Length>& from, const FixedVector<WebCore::Length>& to, const Context& context)
 {
     size_t fromLength = from.size();
     size_t toLength = to.size();
     if (!fromLength || !toLength)
         return context.progress < 0.5 ? from : to;
+
     size_t resultLength = fromLength;
     if (fromLength != toLength) {
         if (!remainder(std::max(fromLength, toLength), std::min(fromLength, toLength)))
@@ -427,10 +423,9 @@ inline Vector<WebCore::Length> blendFunc(const Vector<WebCore::Length>& from, co
         else
             resultLength = fromLength * toLength;
     }
-    Vector<WebCore::Length> result(resultLength);
-    for (size_t i = 0; i < resultLength; ++i)
-        result[i] = blendFunc(from[i % fromLength], to[i % toLength], context);
-    return result;
+    return FixedVector<WebCore::Length>::createWithSizeFromGenerator(resultLength, [&](auto i) {
+        return blendFunc(from[i % fromLength], to[i % toLength], context);
+    });
 }
 
 inline RefPtr<StyleImage> crossfadeBlend(StyleCachedImage& fromStyleImage, StyleCachedImage& toStyleImage, const Context& context)

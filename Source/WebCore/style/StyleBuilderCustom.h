@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2013-2014 Google Inc. All rights reserved.
  * Copyright (C) 2014-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -73,6 +74,8 @@ namespace Style {
     static void applyValue##property(BuilderState&, CSSValue&)
 
 template<typename T> inline T forwardInheritedValue(T&& value) { return std::forward<T>(value); }
+inline WebCore::Color forwardInheritedValue(const WebCore::Color& value) { auto copy = value; return copy; }
+inline Color forwardInheritedValue(const Color& value) { auto copy = value; return copy; }
 inline WebCore::Length forwardInheritedValue(const WebCore::Length& value) { auto copy = value; return copy; }
 inline LengthSize forwardInheritedValue(const LengthSize& value) { auto copy = value; return copy; }
 inline LengthBox forwardInheritedValue(const LengthBox& value) { auto copy = value; return copy; }
@@ -83,8 +86,19 @@ inline ScrollMarginEdge forwardInheritedValue(const ScrollMarginEdge& value) { a
 inline ScrollPaddingEdge forwardInheritedValue(const ScrollPaddingEdge& value) { auto copy = value; return copy; }
 inline DynamicRangeLimit forwardInheritedValue(const DynamicRangeLimit& value) { auto copy = value; return copy; }
 inline CornerShapeValue forwardInheritedValue(const CornerShapeValue& value) { auto copy = value; return copy; }
+inline URL forwardInheritedValue(const URL& value) { auto copy = value; return copy; }
+inline ViewTransitionName forwardInheritedValue(const ViewTransitionName& value) { auto copy = value; return copy; }
+inline FixedVector<WebCore::Length> forwardInheritedValue(const FixedVector<WebCore::Length>& value) { auto copy = value; return copy; }
 inline FixedVector<BoxShadow> forwardInheritedValue(const FixedVector<BoxShadow>& value) { auto copy = value; return copy; }
 inline FixedVector<TextShadow> forwardInheritedValue(const FixedVector<TextShadow>& value) { auto copy = value; return copy; }
+inline FixedVector<ScopedName> forwardInheritedValue(const FixedVector<ScopedName>& value) { auto copy = value; return copy; }
+inline FixedVector<PositionTryFallback> forwardInheritedValue(const FixedVector<PositionTryFallback>& value) { auto copy = value; return copy; }
+inline FixedVector<Ref<ScrollTimeline>> forwardInheritedValue(const FixedVector<Ref<ScrollTimeline>>& value) { auto copy = value; return copy; }
+inline FixedVector<Ref<ViewTimeline>> forwardInheritedValue(const FixedVector<Ref<ViewTimeline>>& value) { auto copy = value; return copy; }
+inline FixedVector<AtomString> forwardInheritedValue(const FixedVector<AtomString>& value) { auto copy = value; return copy; }
+inline FixedVector<ScrollAxis> forwardInheritedValue(const FixedVector<ScrollAxis>& value) { auto copy = value; return copy; }
+inline FixedVector<ViewTimelineInsets> forwardInheritedValue(const FixedVector<ViewTimelineInsets>& value) { auto copy = value; return copy; }
+inline Vector<GridTrackSize> forwardInheritedValue(const Vector<GridTrackSize>& value) { auto copy = value; return copy; }
 
 // Note that we assume the CSS parser only allows valid CSSValue types.
 class BuilderCustom {
@@ -202,7 +216,7 @@ inline void BuilderCustom::applyInitialZoom(BuilderState& builderState)
 inline void BuilderCustom::applyInheritZoom(BuilderState& builderState)
 {
     resetUsedZoom(builderState);
-    builderState.setZoom(builderState.parentStyle().zoom());
+    builderState.setZoom(forwardInheritedValue(builderState.parentStyle().zoom()));
 }
 
 inline void BuilderCustom::applyValueZoom(BuilderState& builderState, CSSValue& value)
@@ -245,9 +259,9 @@ inline void BuilderCustom::applyValueVerticalAlign(BuilderState& builderState, C
 
 inline void BuilderCustom::applyInheritTextIndent(BuilderState& builderState)
 {
-    builderState.style().setTextIndent(WebCore::Length { builderState.parentStyle().textIndent() });
-    builderState.style().setTextIndentLine(builderState.parentStyle().textIndentLine());
-    builderState.style().setTextIndentType(builderState.parentStyle().textIndentType());
+    builderState.style().setTextIndent(forwardInheritedValue(builderState.parentStyle().textIndent()));
+    builderState.style().setTextIndentLine(forwardInheritedValue(builderState.parentStyle().textIndentLine()));
+    builderState.style().setTextIndentType(forwardInheritedValue(builderState.parentStyle().textIndentType()));
 }
 
 inline void BuilderCustom::applyInitialTextIndent(BuilderState& builderState)
@@ -400,12 +414,12 @@ DEFINE_BORDER_IMAGE_MODIFIER_HANDLER(MaskBorder, Width)
 
 inline void BuilderCustom::applyInheritWordSpacing(BuilderState& builderState)
 {
-    builderState.style().setWordSpacing(WebCore::Length { builderState.parentStyle().computedWordSpacing() });
+    builderState.style().setWordSpacing(forwardInheritedValue(builderState.parentStyle().computedWordSpacing()));
 }
 
 inline void BuilderCustom::applyInheritLetterSpacing(BuilderState& builderState)
 {
-    builderState.style().setLetterSpacing(WebCore::Length { builderState.parentStyle().computedLetterSpacing() });
+    builderState.style().setLetterSpacing(forwardInheritedValue(builderState.parentStyle().computedLetterSpacing()));
 }
 
 inline void BuilderCustom::applyInitialLetterSpacing(BuilderState& builderState)
@@ -450,8 +464,8 @@ inline void BuilderCustom::applyValueLetterSpacing(BuilderState& builderState, C
 
 inline void BuilderCustom::applyInheritLineHeight(BuilderState& builderState)
 {
-    builderState.style().setLineHeight(WebCore::Length { builderState.parentStyle().lineHeight() });
-    builderState.style().setSpecifiedLineHeight(WebCore::Length { builderState.parentStyle().specifiedLineHeight() });
+    builderState.style().setLineHeight(forwardInheritedValue(builderState.parentStyle().lineHeight()));
+    builderState.style().setSpecifiedLineHeight(forwardInheritedValue(builderState.parentStyle().specifiedLineHeight()));
 }
 
 inline void BuilderCustom::applyInitialLineHeight(BuilderState& builderState)
@@ -539,7 +553,7 @@ inline void BuilderCustom::applyInheritOutlineStyle(BuilderState& builderState)
     if (builderState.parentStyle().hasAutoOutlineStyle())
         builderState.style().setHasAutoOutlineStyle();
     else
-        builderState.style().setOutlineStyle(builderState.parentStyle().outlineStyle());
+        builderState.style().setOutlineStyle(forwardInheritedValue(builderState.parentStyle().outlineStyle()));
 }
 
 inline void BuilderCustom::applyInitialOutlineStyle(BuilderState& builderState)
@@ -565,18 +579,18 @@ inline void BuilderCustom::applyInitialCaretColor(BuilderState& builderState)
 
 inline void BuilderCustom::applyInheritCaretColor(BuilderState& builderState)
 {
-    auto color = builderState.parentStyle().caretColor();
+    auto& color = builderState.parentStyle().caretColor();
     if (builderState.applyPropertyToRegularStyle()) {
         if (builderState.parentStyle().hasAutoCaretColor())
             builderState.style().setHasAutoCaretColor();
         else
-            builderState.style().setCaretColor(color);
+            builderState.style().setCaretColor(forwardInheritedValue(color));
     }
     if (builderState.applyPropertyToVisitedLinkStyle()) {
         if (builderState.parentStyle().hasVisitedLinkAutoCaretColor())
             builderState.style().setHasVisitedLinkAutoCaretColor();
         else
-            builderState.style().setVisitedLinkCaretColor(color);
+            builderState.style().setVisitedLinkCaretColor(forwardInheritedValue(color));
     }
 }
 
@@ -970,9 +984,9 @@ inline void BuilderCustom::applyInitialTextEmphasisStyle(BuilderState& builderSt
 
 inline void BuilderCustom::applyInheritTextEmphasisStyle(BuilderState& builderState)
 {
-    builderState.style().setTextEmphasisFill(builderState.parentStyle().textEmphasisFill());
-    builderState.style().setTextEmphasisMark(builderState.parentStyle().textEmphasisMark());
-    builderState.style().setTextEmphasisCustomMark(builderState.parentStyle().textEmphasisCustomMark());
+    builderState.style().setTextEmphasisFill(forwardInheritedValue(builderState.parentStyle().textEmphasisFill()));
+    builderState.style().setTextEmphasisMark(forwardInheritedValue(builderState.parentStyle().textEmphasisMark()));
+    builderState.style().setTextEmphasisCustomMark(forwardInheritedValue(builderState.parentStyle().textEmphasisCustomMark()));
 }
 
 inline void BuilderCustom::applyInitialAspectRatio(BuilderState& builderState)
@@ -1164,8 +1178,8 @@ inline void BuilderCustom::applyInitialCursor(BuilderState& builderState)
 
 inline void BuilderCustom::applyInheritCursor(BuilderState& builderState)
 {
-    builderState.style().setCursor(builderState.parentStyle().cursor());
-    builderState.style().setCursorList(builderState.parentStyle().cursors());
+    builderState.style().setCursor(forwardInheritedValue(builderState.parentStyle().cursor()));
+    builderState.style().setCursorList(forwardInheritedValue(builderState.parentStyle().cursors()));
 }
 
 inline void BuilderCustom::applyValueCursor(BuilderState& builderState, CSSValue& value)
@@ -1227,7 +1241,7 @@ inline void BuilderCustom::applyInheritFill(BuilderState& builderState)
 {
     auto& svgStyle = builderState.style().accessSVGStyle();
     auto& svgParentStyle = builderState.parentStyle().svgStyle();
-    svgStyle.setFillPaint(svgParentStyle.fillPaintType(), svgParentStyle.fillPaintColor(), svgParentStyle.fillPaintUri(), builderState.applyPropertyToRegularStyle(), builderState.applyPropertyToVisitedLinkStyle());
+    svgStyle.setFillPaint(forwardInheritedValue(svgParentStyle.fillPaintType()), forwardInheritedValue(svgParentStyle.fillPaintColor()), forwardInheritedValue(svgParentStyle.fillPaintUri()), builderState.applyPropertyToRegularStyle(), builderState.applyPropertyToVisitedLinkStyle());
 }
 
 inline void BuilderCustom::applyValueFill(BuilderState& builderState, CSSValue& value)
@@ -1246,7 +1260,7 @@ inline void BuilderCustom::applyValueFill(BuilderState& builderState, CSSValue& 
             return;
     }
     auto [color, paintType] = colorAndSVGPaintType(builderState, localValue ? *localValue : value, url);
-    svgStyle.setFillPaint(paintType, color, url, builderState.applyPropertyToRegularStyle(), builderState.applyPropertyToVisitedLinkStyle());
+    svgStyle.setFillPaint(paintType, WTFMove(color), WTFMove(url), builderState.applyPropertyToRegularStyle(), builderState.applyPropertyToVisitedLinkStyle());
 }
 
 inline void BuilderCustom::applyInitialStroke(BuilderState& builderState)
@@ -1259,7 +1273,7 @@ inline void BuilderCustom::applyInheritStroke(BuilderState& builderState)
 {
     auto& svgStyle = builderState.style().accessSVGStyle();
     auto& svgParentStyle = builderState.parentStyle().svgStyle();
-    svgStyle.setStrokePaint(svgParentStyle.strokePaintType(), svgParentStyle.strokePaintColor(), svgParentStyle.strokePaintUri(), builderState.applyPropertyToRegularStyle(), builderState.applyPropertyToVisitedLinkStyle());
+    svgStyle.setStrokePaint(forwardInheritedValue(svgParentStyle.strokePaintType()), forwardInheritedValue(svgParentStyle.strokePaintColor()), forwardInheritedValue(svgParentStyle.strokePaintUri()), builderState.applyPropertyToRegularStyle(), builderState.applyPropertyToVisitedLinkStyle());
 }
 
 inline void BuilderCustom::applyValueStroke(BuilderState& builderState, CSSValue& value)
@@ -1279,7 +1293,7 @@ inline void BuilderCustom::applyValueStroke(BuilderState& builderState, CSSValue
     }
 
     auto [color, paintType] = colorAndSVGPaintType(builderState, localValue ? *localValue : value, url);
-    svgStyle.setStrokePaint(paintType, color, url, builderState.applyPropertyToRegularStyle(), builderState.applyPropertyToVisitedLinkStyle());
+    svgStyle.setStrokePaint(paintType, WTFMove(color), WTFMove(url), builderState.applyPropertyToRegularStyle(), builderState.applyPropertyToVisitedLinkStyle());
 }
 
 inline void BuilderCustom::applyInitialContent(BuilderState& builderState)
@@ -1759,9 +1773,9 @@ inline void BuilderCustom::applyInitialColor(BuilderState& builderState)
 inline void BuilderCustom::applyInheritColor(BuilderState& builderState)
 {
     if (builderState.applyPropertyToRegularStyle())
-        builderState.style().setColor(builderState.parentStyle().color());
+        builderState.style().setColor(forwardInheritedValue(builderState.parentStyle().color()));
     if (builderState.applyPropertyToVisitedLinkStyle())
-        builderState.style().setVisitedLinkColor(builderState.parentStyle().color());
+        builderState.style().setVisitedLinkColor(forwardInheritedValue(builderState.parentStyle().color()));
 
     builderState.style().setDisallowsFastPathInheritance();
     builderState.style().setHasExplicitlySetColor(builderState.isAuthorOrigin());
@@ -1775,8 +1789,8 @@ inline void BuilderCustom::applyInitialContainIntrinsicWidth(BuilderState& build
 
 inline void BuilderCustom::applyInheritContainIntrinsicWidth(BuilderState& builderState)
 {
-    builderState.style().setContainIntrinsicWidthType(builderState.parentStyle().containIntrinsicWidthType());
-    builderState.style().setContainIntrinsicWidth(builderState.parentStyle().containIntrinsicWidth());
+    builderState.style().setContainIntrinsicWidthType(forwardInheritedValue(builderState.parentStyle().containIntrinsicWidthType()));
+    builderState.style().setContainIntrinsicWidth(forwardInheritedValue(builderState.parentStyle().containIntrinsicWidth()));
 }
 
 inline void BuilderCustom::applyValueContainIntrinsicWidth(BuilderState& builderState, CSSValue& value)
@@ -1819,8 +1833,8 @@ inline void BuilderCustom::applyInitialContainIntrinsicHeight(BuilderState& buil
 
 inline void BuilderCustom::applyInheritContainIntrinsicHeight(BuilderState& builderState)
 {
-    builderState.style().setContainIntrinsicHeightType(builderState.parentStyle().containIntrinsicHeightType());
-    builderState.style().setContainIntrinsicHeight(builderState.parentStyle().containIntrinsicHeight());
+    builderState.style().setContainIntrinsicHeightType(forwardInheritedValue(builderState.parentStyle().containIntrinsicHeightType()));
+    builderState.style().setContainIntrinsicHeight(forwardInheritedValue(builderState.parentStyle().containIntrinsicHeight()));
 }
 
 inline void BuilderCustom::applyValueContainIntrinsicHeight(BuilderState& builderState, CSSValue& value)

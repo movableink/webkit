@@ -178,7 +178,7 @@ public:
     static std::optional<GridTrackList> convertGridTrackList(BuilderState&, const CSSValue&);
     static GridPosition convertGridPosition(BuilderState&, const CSSValue&);
     static GridAutoFlow convertGridAutoFlow(BuilderState&, const CSSValue&);
-    static Vector<StyleContentAlignmentData> convertContentAlignmentDataList(BuilderState&, const CSSValue&);
+    static FixedVector<StyleContentAlignmentData> convertContentAlignmentDataList(BuilderState&, const CSSValue&);
     static std::optional<float> convertPerspective(BuilderState&, const CSSValue&);
     static std::optional<WebCore::Length> convertMarqueeIncrement(BuilderState&, const CSSValue&);
     static FilterOperations convertFilterOperations(BuilderState&, const CSSValue&);
@@ -203,7 +203,7 @@ public:
     static FontSelectionValue convertFontStyle(BuilderState&, const CSSValue&);
     static FontFeatureSettings convertFontFeatureSettings(BuilderState&, const CSSValue&);
     static FontVariationSettings convertFontVariationSettings(BuilderState&, const CSSValue&);
-    static Vector<WebCore::Length> convertStrokeDashArray(BuilderState&, const CSSValue&);
+    static FixedVector<WebCore::Length> convertStrokeDashArray(BuilderState&, const CSSValue&);
     static PaintOrder convertPaintOrder(BuilderState&, const CSSValue&);
     static float convertOpacity(BuilderState&, const CSSValue&);
     static Style::URL convertSVGURIReference(BuilderState&, const CSSValue&);
@@ -228,7 +228,7 @@ public:
     static OffsetRotation convertOffsetRotate(BuilderState&, const CSSValue&);
 
     static OptionSet<Containment> convertContain(BuilderState&, const CSSValue&);
-    static Vector<ScopedName> convertContainerNames(BuilderState&, const CSSValue&);
+    static FixedVector<ScopedName> convertContainerNames(BuilderState&, const CSSValue&);
 
     static OptionSet<MarginTrimType> convertMarginTrim(BuilderState&, const CSSValue&);
 
@@ -237,15 +237,15 @@ public:
 
     static std::optional<WebCore::Length> convertBlockStepSize(BuilderState&, const CSSValue&);
 
-    static Vector<ScopedName> convertViewTransitionClasses(BuilderState&, const CSSValue&);
+    static FixedVector<ScopedName> convertViewTransitionClasses(BuilderState&, const CSSValue&);
     static ViewTransitionName convertViewTransitionName(BuilderState&, const CSSValue&);
     static RefPtr<WillChangeData> convertWillChange(BuilderState&, const CSSValue&);
     
-    static Vector<AtomString> convertScrollTimelineNames(BuilderState&, const CSSValue&);
-    static Vector<ScrollAxis> convertScrollTimelineAxes(BuilderState&, const CSSValue&);
-    static Vector<ViewTimelineInsets> convertViewTimelineInsets(BuilderState&, const CSSValue&);
+    static FixedVector<AtomString> convertScrollTimelineNames(BuilderState&, const CSSValue&);
+    static FixedVector<ScrollAxis> convertScrollTimelineAxes(BuilderState&, const CSSValue&);
+    static FixedVector<ViewTimelineInsets> convertViewTimelineInsets(BuilderState&, const CSSValue&);
 
-    static Vector<ScopedName> convertAnchorNames(BuilderState&, const CSSValue&);
+    static FixedVector<ScopedName> convertAnchorNames(BuilderState&, const CSSValue&);
     static std::optional<ScopedName> convertPositionAnchor(BuilderState&, const CSSValue&);
     static std::optional<PositionArea> convertPositionArea(BuilderState&, const CSSValue&);
     static OptionSet<PositionVisibility> convertPositionVisibility(BuilderState&, const CSSValue&);
@@ -267,7 +267,7 @@ public:
     static Style::DynamicRangeLimit convertDynamicRangeLimit(BuilderState&, const CSSValue&);
     static Style::CornerShapeValue convertCornerShapeValue(BuilderState&, const CSSValue&);
 
-    static Vector<PositionTryFallback> convertPositionTryFallbacks(BuilderState&, const CSSValue&);
+    static FixedVector<PositionTryFallback> convertPositionTryFallbacks(BuilderState&, const CSSValue&);
 
     template<class ValueType> static const ValueType* requiredDowncast(BuilderState&, const CSSValue&);
     template<class ValueType> static std::optional<std::pair<const ValueType&, const ValueType&>> requiredPairDowncast(BuilderState&, const CSSValue&);
@@ -1616,13 +1616,13 @@ inline GridAutoFlow BuilderConverter::convertGridAutoFlow(BuilderState& builderS
     return autoFlow;
 }
 
-inline Vector<StyleContentAlignmentData> BuilderConverter::convertContentAlignmentDataList(BuilderState& builderState, const CSSValue& value)
+inline FixedVector<StyleContentAlignmentData> BuilderConverter::convertContentAlignmentDataList(BuilderState& builderState, const CSSValue& value)
 {
     auto list = requiredListDowncast<CSSValueList, CSSContentDistributionValue>(builderState, value);
     if (!list)
         return { };
 
-    return WTF::map(*list, [&](auto& value) {
+    return FixedVector<StyleContentAlignmentData>::map(*list, [&](auto& value) {
         return convertContentAlignmentData(builderState, value);
     });
 }
@@ -1791,21 +1791,21 @@ inline bool BuilderConverter::convertSmoothScrolling(BuilderState&, const CSSVal
     return value.valueID() == CSSValueSmooth;
 }
 
-inline Vector<WebCore::Length> BuilderConverter::convertStrokeDashArray(BuilderState& builderState, const CSSValue& value)
+inline FixedVector<WebCore::Length> BuilderConverter::convertStrokeDashArray(BuilderState& builderState, const CSSValue& value)
 {
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
         if (primitiveValue->valueID() == CSSValueNone)
             return SVGRenderStyle::initialStrokeDashArray();
 
         // Values coming from CSS-Typed-OM may not have been converted to a CSSValueList yet.
-        return Vector { convertLengthAllowingNumber(builderState, *primitiveValue) };
+        return FixedVector<WebCore::Length> { convertLengthAllowingNumber(builderState, *primitiveValue) };
     }
 
     auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
     if (!list)
         return { };
 
-    return WTF::map(*list, [&](auto& item) {
+    return FixedVector<WebCore::Length>::map(*list, [&](auto& item) {
         return convertLengthAllowingNumber(builderState, item);
     });
 }
@@ -2126,7 +2126,7 @@ inline OffsetRotation BuilderConverter::convertOffsetRotate(BuilderState& builde
     return OffsetRotation(hasAuto, angleInDegrees);
 }
 
-inline Vector<Style::ScopedName> BuilderConverter::convertContainerNames(BuilderState& builderState, const CSSValue& value)
+inline FixedVector<ScopedName> BuilderConverter::convertContainerNames(BuilderState& builderState, const CSSValue& value)
 {
     if (is<CSSPrimitiveValue>(value)) {
         ASSERT(value.valueID() == CSSValueNone);
@@ -2136,8 +2136,11 @@ inline Vector<Style::ScopedName> BuilderConverter::convertContainerNames(Builder
     if (!list)
         return { };
 
-    return WTF::map(*list, [&](auto& item) {
-        return Style::ScopedName { AtomString { item.stringValue() }, builderState.styleScopeOrdinal() };
+    return FixedVector<ScopedName>::map(*list, [&](auto& item) {
+        return ScopedName {
+            .name = AtomString { item.stringValue() },
+            .scopeOrdinal = builderState.styleScopeOrdinal()
+        };
     });
 }
 
@@ -2275,20 +2278,29 @@ inline OptionSet<Containment> BuilderConverter::convertContain(BuilderState& bui
     return containment;
 }
 
-inline Vector<Style::ScopedName> BuilderConverter::convertViewTransitionClasses(BuilderState& builderState, const CSSValue& value)
+inline FixedVector<ScopedName> BuilderConverter::convertViewTransitionClasses(BuilderState& builderState, const CSSValue& value)
 {
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
         if (value.valueID() == CSSValueNone)
             return { };
-        return { Style::ScopedName { AtomString { primitiveValue->stringValue() }, builderState.styleScopeOrdinal() } };
+
+        return {
+            ScopedName {
+                .name = AtomString { primitiveValue->stringValue() },
+                .scopeOrdinal = builderState.styleScopeOrdinal()
+            }
+        };
     }
 
     auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
     if (!list)
         return { };
 
-    return WTF::map(*list, [&](auto& item) {
-        return Style::ScopedName { AtomString { item.stringValue() }, builderState.styleScopeOrdinal() };
+    return FixedVector<ScopedName>::map(*list, [&](auto& item) {
+        return ScopedName {
+            .name = AtomString { item.stringValue() },
+            .scopeOrdinal = builderState.styleScopeOrdinal()
+        };
     });
 }
 
@@ -2344,7 +2356,7 @@ inline RefPtr<WillChangeData> BuilderConverter::convertWillChange(BuilderState& 
     return willChange;
 }
 
-inline Vector<AtomString> BuilderConverter::convertScrollTimelineNames(BuilderState& builderState, const CSSValue& value)
+inline FixedVector<AtomString> BuilderConverter::convertScrollTimelineNames(BuilderState& builderState, const CSSValue& value)
 {
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
         if (value.valueID() == CSSValueNone)
@@ -2356,12 +2368,12 @@ inline Vector<AtomString> BuilderConverter::convertScrollTimelineNames(BuilderSt
     if (!list)
         return { };
 
-    return WTF::map(*list, [&](auto& item) {
+    return FixedVector<AtomString>::map(*list, [&](auto& item) {
         return AtomString { item.stringValue() };
     });
 }
 
-inline Vector<ScrollAxis> BuilderConverter::convertScrollTimelineAxes(BuilderState& builderState, const CSSValue& value)
+inline FixedVector<ScrollAxis> BuilderConverter::convertScrollTimelineAxes(BuilderState& builderState, const CSSValue& value)
 {
     if (is<CSSPrimitiveValue>(value))
         return { fromCSSValueID<ScrollAxis>(value.valueID()) };
@@ -2370,19 +2382,19 @@ inline Vector<ScrollAxis> BuilderConverter::convertScrollTimelineAxes(BuilderSta
     if (!list)
         return { };
 
-    return WTF::map(*list, [&](auto& item) {
+    return FixedVector<ScrollAxis>::map(*list, [&](auto& item) {
         return fromCSSValueID<ScrollAxis>(item.valueID());
     });
 }
 
-inline Vector<ViewTimelineInsets> BuilderConverter::convertViewTimelineInsets(BuilderState& builderState, const CSSValue& value)
+inline FixedVector<ViewTimelineInsets> BuilderConverter::convertViewTimelineInsets(BuilderState& builderState, const CSSValue& value)
 {
     // While parsing, consumeViewTimelineInset() and consumeViewTimelineShorthand() yield a CSSValueList exclusively.
     auto list = requiredListDowncast<CSSValueList, CSSValue>(builderState, value);
     if (!list)
         return { };
 
-    return WTF::map(*list, [&](auto& item) -> ViewTimelineInsets {
+    return FixedVector<ViewTimelineInsets>::map(*list, [&](auto& item) -> ViewTimelineInsets {
         // Each item is either a single value or a CSSValuePair.
         if (auto* pair = dynamicDowncast<CSSValuePair>(item))
             return { convertLengthOrAuto(builderState, pair->first()), convertLengthOrAuto(builderState, pair->second()) };
@@ -2392,25 +2404,25 @@ inline Vector<ViewTimelineInsets> BuilderConverter::convertViewTimelineInsets(Bu
     });
 }
 
-inline Vector<ScopedName> BuilderConverter::convertAnchorNames(BuilderState& builderState, const CSSValue& value)
+inline FixedVector<ScopedName> BuilderConverter::convertAnchorNames(BuilderState& builderState, const CSSValue& value)
 {
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
         if (value.valueID() == CSSValueNone)
             return { };
 
-        ScopedName scopedName {
-            .name = AtomString { primitiveValue->stringValue() },
-            .scopeOrdinal = builderState.styleScopeOrdinal()
+        return {
+            ScopedName {
+                .name = AtomString { primitiveValue->stringValue() },
+                .scopeOrdinal = builderState.styleScopeOrdinal()
+            }
         };
-
-        return { scopedName };
     }
 
     auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
     if (!list)
         return { };
 
-    return WTF::map(*list, [&](auto& item) {
+    return FixedVector<ScopedName>::map(*list, [&](auto& item) {
         return ScopedName {
             .name = AtomString { item.stringValue() },
             .scopeOrdinal = builderState.styleScopeOrdinal()
@@ -2846,7 +2858,7 @@ inline NameScope BuilderConverter::convertNameScope(BuilderState& builderState, 
     return { NameScope::Type::Ident, WTFMove(nameHashSet) };
 }
 
-inline Vector<PositionTryFallback> BuilderConverter::convertPositionTryFallbacks(BuilderState& builderState, const CSSValue& value)
+inline FixedVector<PositionTryFallback> BuilderConverter::convertPositionTryFallbacks(BuilderState& builderState, const CSSValue& value)
 {
     auto convertFallback = [&](const CSSValue& fallbackValue) -> std::optional<PositionTryFallback> {
         auto* valueList = dynamicDowncast<CSSValueList>(fallbackValue);
@@ -2889,7 +2901,7 @@ inline Vector<PositionTryFallback> BuilderConverter::convertPositionTryFallbacks
     if (!list)
         return { };
 
-    return WTF::map(*list, [&](auto& item) {
+    return FixedVector<PositionTryFallback>::map(*list, [&](auto& item) {
         auto fallback = convertFallback(item);
         return fallback ? *fallback : PositionTryFallback { };
     });

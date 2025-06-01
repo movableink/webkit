@@ -857,8 +857,7 @@ void BorderPainter::drawBoxSideFromPath(const BorderShape& borderShape, const Pa
                 gapLength += (dashLength  / numberOfGaps);
             }
 
-            auto lineDash = DashArray::from(dashLength, gapLength);
-            graphicsContext.setLineDash(WTFMove(lineDash), dashLength);
+            graphicsContext.setLineDash(DashArray { dashLength, gapLength }, dashLength);
         }
 
         // FIXME: stroking the border path causes issues with tight corners:

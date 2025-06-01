@@ -374,6 +374,9 @@ struct supports_text_stream_insertion<T, std::void_t<decltype(std::declval<TextS
 template<typename ItemType, size_t inlineCapacity>
 struct supports_text_stream_insertion<Vector<ItemType, inlineCapacity>> : supports_text_stream_insertion<ItemType> { };
 
+template<typename ItemType>
+struct supports_text_stream_insertion<FixedVector<ItemType>> : supports_text_stream_insertion<ItemType> { };
+
 template<typename ValueArg, typename HashArg, typename TraitsArg>
 struct supports_text_stream_insertion<HashSet<ValueArg, HashArg, TraitsArg>> : supports_text_stream_insertion<ValueArg> { };
 

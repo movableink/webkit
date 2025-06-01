@@ -45,17 +45,17 @@ namespace WebCore::Style::Interpolation {
 
 // MARK: - Base Wrappers
 
-template<typename T>
+template<typename T, typename GetterType = T>
 class WrapperWithGetter : public WrapperBase {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    WrapperWithGetter(CSSPropertyID property, T (RenderStyle::*getter)() const)
+    WrapperWithGetter(CSSPropertyID property, GetterType (RenderStyle::*getter)() const)
         : WrapperBase(property)
         , m_getter(getter)
     {
     }
 
-    T value(const RenderStyle& style) const
+    GetterType value(const RenderStyle& style) const
     {
         return (style.*m_getter)();
     }
@@ -75,15 +75,15 @@ public:
 #endif
 
 private:
-    T (RenderStyle::*m_getter)() const;
+    GetterType (RenderStyle::*m_getter)() const;
 };
 
-template<typename T>
-class Wrapper : public WrapperWithGetter<T> {
+template<typename T, typename GetterType = T, typename SetterType = T>
+class Wrapper : public WrapperWithGetter<T, GetterType> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    Wrapper(CSSPropertyID property, T (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T))
-        : WrapperWithGetter<T>(property, getter)
+    Wrapper(CSSPropertyID property, GetterType (RenderStyle::*getter)() const, void (RenderStyle::*setter)(SetterType))
+        : WrapperWithGetter<T, GetterType>(property, getter)
         , m_setter(setter)
     {
     }
@@ -94,8 +94,16 @@ public:
     }
 
 protected:
-    void (RenderStyle::*m_setter)(T);
+    void (RenderStyle::*m_setter)(SetterType);
 };
+
+// Deduction guide for getter/setters that return and take values.
+template<typename T>
+Wrapper(CSSPropertyID, T (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T)) -> Wrapper<T, T, T>;
+
+// Deduction guide for getter/setters that return const references and take r-value references.
+template<typename T>
+Wrapper(CSSPropertyID, const T& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T&&)) -> Wrapper<T, const T&, T&&>;
 
 template<typename T>
 class RefCountedWrapper : public WrapperWithGetter<T*> {
@@ -402,12 +410,11 @@ private:
 
 // MARK: - Discrete Wrappers
 
-template<typename T>
-class DiscreteWrapper : public WrapperWithGetter<T> {
+template<typename T, typename GetterType = T, typename SetterType = T> class DiscreteWrapper : public WrapperWithGetter<T, GetterType> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    DiscreteWrapper(CSSPropertyID property, T (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T))
-        : WrapperWithGetter<T>(property, getter)
+    DiscreteWrapper(CSSPropertyID property, GetterType (RenderStyle::*getter)() const, void (RenderStyle::*setter)(SetterType))
+        : WrapperWithGetter<T, GetterType>(property, getter)
         , m_setter(setter)
     {
     }
@@ -420,12 +427,20 @@ public:
     void interpolate(RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, const Context& context) const override
     {
         ASSERT(!context.progress || context.progress == 1.0);
-        (destination.*this->m_setter)(this->value(context.progress ? to : from));
+        (destination.*this->m_setter)(T { this->value(context.progress ? to : from) });
     }
 
 private:
-    void (RenderStyle::*m_setter)(T);
+    void (RenderStyle::*m_setter)(SetterType);
 };
+
+// Deduction guide for getter/setters that return and take values.
+template<typename T>
+DiscreteWrapper(CSSPropertyID, T (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T)) -> DiscreteWrapper<T, T, T>;
+
+// Deduction guide for getter/setters that return const references and take r-value references.
+template<typename T>
+DiscreteWrapper(CSSPropertyID, const T& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T&&)) -> DiscreteWrapper<T, const T&, T&&>;
 
 class FontSizeWrapper final : public Wrapper<float> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
@@ -1286,7 +1301,7 @@ private:
 class StyleColorWrapper : public WrapperWithGetter<const Style::Color&> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    StyleColorWrapper(CSSPropertyID property, const Style::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const Style::Color&))
+    StyleColorWrapper(CSSPropertyID property, const Style::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(Style::Color&&))
         : WrapperWithGetter(property, getter)
         , m_setter(setter)
     {
@@ -1322,54 +1337,29 @@ public:
         auto fromColor = from.colorResolvingCurrentColor(fromStyleColor);
         auto toColor = to.colorResolvingCurrentColor(toStyleColor);
 
-        auto result = blendFunc(fromColor, toColor, context);
-        (destination.*m_setter)(WTFMove(result));
+        (destination.*m_setter)(blendFunc(fromColor, toColor, context));
     }
 
 private:
-    void (RenderStyle::*m_setter)(const Style::Color&);
+    void (RenderStyle::*m_setter)(Style::Color&&);
 };
 
-class ColorWrapper final : public WrapperBase {
+class ColorWrapper final : public WrapperWithGetter<const WebCore::Color&> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    ColorWrapper(CSSPropertyID property, const WebCore::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const WebCore::Color&))
-        : WrapperBase(property)
-        , m_getter(getter)
+    ColorWrapper(CSSPropertyID property, const WebCore::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(WebCore::Color&&))
+        : WrapperWithGetter<const WebCore::Color&>(property, getter)
         , m_setter(setter)
     {
     }
 
-    bool equals(const RenderStyle& a, const RenderStyle& b) const override
-    {
-        if (&a == &b)
-            return true;
-
-        return value(a) == value(b);
-    }
-
     void interpolate(RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, const Context& context) const override
     {
-        auto result = blendFunc(value(from), value(to), context);
-        (destination.*m_setter)(WTFMove(result));
+        (destination.*m_setter)(blendFunc(value(from), value(to), context));
     }
-
-#if !LOG_DISABLED
-    void log(const RenderStyle& from, const RenderStyle& to, const RenderStyle& destination, double progress) const final
-    {
-        // FIXME: better logging.
-        LOG_WITH_STREAM(Animations, stream << "  blending " << property() << " from " << value(from) << " to " << value(to) << " at " << TextStream::FormatNumberRespectingIntegers(progress) << " -> " << value(destination));
-    }
-#endif
 
 private:
-    const WebCore::Color& value(const RenderStyle& style) const
-    {
-        return (style.*m_getter)();
-    }
-
-    const WebCore::Color& (RenderStyle::*m_getter)() const;
-    void (RenderStyle::*m_setter)(const WebCore::Color&);
+    void (RenderStyle::*m_setter)(WebCore::Color&&);
 };
 
 class ScrollbarColorWrapper final : public WrapperBase {
@@ -1428,7 +1418,7 @@ private:
 class VisitedAffectedStyleColorWrapper : public WrapperBase {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    VisitedAffectedStyleColorWrapper(CSSPropertyID property, const Style::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const Style::Color&), const Style::Color& (RenderStyle::*visitedGetter)() const, void (RenderStyle::*visitedSetter)(const Style::Color&))
+    VisitedAffectedStyleColorWrapper(CSSPropertyID property, const Style::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(Style::Color&&), const Style::Color& (RenderStyle::*visitedGetter)() const, void (RenderStyle::*visitedSetter)(Style::Color&&))
         : WrapperBase(property)
         , m_wrapper(StyleColorWrapper(property, getter, setter))
         , m_visitedWrapper(StyleColorWrapper(property, visitedGetter, visitedSetter))
@@ -1466,7 +1456,7 @@ public:
 class VisitedAffectedColorWrapper final : public WrapperBase {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    VisitedAffectedColorWrapper(CSSPropertyID property, const WebCore::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const WebCore::Color&), const WebCore::Color& (RenderStyle::*visitedGetter)() const, void (RenderStyle::*visitedSetter)(const WebCore::Color&))
+    VisitedAffectedColorWrapper(CSSPropertyID property, const WebCore::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(WebCore::Color&&), const WebCore::Color& (RenderStyle::*visitedGetter)() const, void (RenderStyle::*visitedSetter)(WebCore::Color&&))
         : WrapperBase(property)
         , m_wrapper(ColorWrapper(property, getter, setter))
         , m_visitedWrapper(ColorWrapper(property, visitedGetter, visitedSetter))
@@ -1532,7 +1522,7 @@ public:
         if (blendingRenderStyle.hasAutoAccentColor())
             destination.setHasAutoAccentColor();
         else
-            destination.setAccentColor(blendingRenderStyle.accentColor());
+            destination.setAccentColor(Color { blendingRenderStyle.accentColor() });
     }
 };
 
@@ -1565,7 +1555,7 @@ public:
             if (blendingRenderStyle.hasAutoCaretColor())
                 destination.setHasAutoCaretColor();
             else
-                destination.setCaretColor(blendingRenderStyle.caretColor());
+                destination.setCaretColor(Color { blendingRenderStyle.caretColor() });
         }
 
         if (canInterpolateCaretColor(from, to, true))
@@ -1575,7 +1565,7 @@ public:
             if (blendingRenderStyle.hasVisitedLinkAutoCaretColor())
                 destination.setHasVisitedLinkAutoCaretColor();
             else
-                destination.setVisitedLinkCaretColor(blendingRenderStyle.visitedLinkCaretColor());
+                destination.setVisitedLinkCaretColor(Color { blendingRenderStyle.visitedLinkCaretColor() });
         }
     }
 
@@ -1591,7 +1581,7 @@ private:
 class SVGPaintWrapper final : public WrapperBase {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    SVGPaintWrapper(CSSPropertyID property, SVGPaintType (RenderStyle::*paintTypeGetter)() const, const Style::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const Style::Color&))
+    SVGPaintWrapper(CSSPropertyID property, SVGPaintType (RenderStyle::*paintTypeGetter)() const, const Style::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(Style::Color&&))
         : WrapperBase(property)
         , m_paintTypeGetter(paintTypeGetter)
         , m_getter(getter)
@@ -1656,13 +1646,13 @@ public:
 private:
     SVGPaintType (RenderStyle::*m_paintTypeGetter)() const;
     const Style::Color& (RenderStyle::*m_getter)() const;
-    void (RenderStyle::*m_setter)(const Style::Color&);
+    void (RenderStyle::*m_setter)(Style::Color&&);
 };
 
 class VisitedAffectedSVGPaintWrapper final : public WrapperBase {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    VisitedAffectedSVGPaintWrapper(CSSPropertyID property, SVGPaintType (RenderStyle::*paintTypeGetter)() const, const Style::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const Style::Color&), SVGPaintType (RenderStyle::*visitedPaintTypeGetter)() const, const Style::Color& (RenderStyle::*visitedGetter)() const, void (RenderStyle::*visitedSetter)(const Style::Color&))
+    VisitedAffectedSVGPaintWrapper(CSSPropertyID property, SVGPaintType (RenderStyle::*paintTypeGetter)() const, const Style::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(Style::Color&&), SVGPaintType (RenderStyle::*visitedPaintTypeGetter)() const, const Style::Color& (RenderStyle::*visitedGetter)() const, void (RenderStyle::*visitedSetter)(Style::Color&&))
         : WrapperBase(property)
         , m_wrapper(SVGPaintWrapper(property, paintTypeGetter, getter, setter))
         , m_visitedWrapper(SVGPaintWrapper(property, visitedPaintTypeGetter, visitedGetter, visitedSetter))
@@ -2238,11 +2228,11 @@ public:
     }
 };
 
-template<typename T>
+template<typename T, typename GetterType = T, typename SetterType = T>
 class DiscreteSVGWrapper final : public WrapperBase {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    DiscreteSVGWrapper(CSSPropertyID property, T (SVGRenderStyle::*getter)() const, void (SVGRenderStyle::*setter)(T))
+    DiscreteSVGWrapper(CSSPropertyID property, GetterType (SVGRenderStyle::*getter)() const, void (SVGRenderStyle::*setter)(SetterType))
         : WrapperBase(property)
         , m_getter(getter)
         , m_setter(setter)
@@ -2262,7 +2252,7 @@ public:
     void interpolate(RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, const Context& context) const final
     {
         ASSERT(!context.progress || context.progress == 1.0);
-        (destination.accessSVGStyle().*this->m_setter)(this->value(context.progress ? to : from));
+        (destination.accessSVGStyle().*this->m_setter)(T { this->value(context.progress ? to : from) });
     }
 
 #if !LOG_DISABLED
@@ -2277,9 +2267,17 @@ private:
         return (style.svgStyle().*this->m_getter)();
     }
 
-    T (SVGRenderStyle::*m_getter)() const;
-    void (SVGRenderStyle::*m_setter)(T);
+    GetterType (SVGRenderStyle::*m_getter)() const;
+    void (SVGRenderStyle::*m_setter)(SetterType);
 };
+
+// Deduction guide for getter/setters that return and take values.
+template<typename T>
+DiscreteSVGWrapper(CSSPropertyID, T (SVGRenderStyle::*getter)() const, void (SVGRenderStyle::*setter)(T)) -> DiscreteSVGWrapper<T, T, T>;
+
+// Deduction guide for getter/setters that return const references and take r-value references.
+template<typename T>
+DiscreteSVGWrapper(CSSPropertyID, const T& (SVGRenderStyle::*getter)() const, void (SVGRenderStyle::*setter)(T&&)) -> DiscreteSVGWrapper<T, const T&, T&&>;
 
 class DWrapper final : public RefCountedWrapper<StylePathData> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
@@ -2294,20 +2292,6 @@ public:
         auto* fromValue = value(from);
         auto* toValue = value(to);
         return fromValue && toValue && fromValue->canBlend(*toValue);
-    }
-};
-
-class StrokeDashArrayWrapper final : public WrapperWithGetter<const Vector<WebCore::Length>&> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
-public:
-    StrokeDashArrayWrapper()
-        : WrapperWithGetter(CSSPropertyStrokeDasharray, &RenderStyle::strokeDashArray)
-    {
-    }
-
-    void interpolate(RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, const Context& context) const final
-    {
-        destination.setStrokeDashArray(blendFunc(this->value(from), this->value(to), context));
     }
 };
 

@@ -347,7 +347,7 @@ static AtomString effectiveViewTransitionName(RenderLayerModelObject& renderer, 
     if (renderer.isSkippedContent())
         return nullAtom();
 
-    auto transitionName = renderer.style().viewTransitionName();
+    auto& transitionName = renderer.style().viewTransitionName();
     if (transitionName.isNone())
         return nullAtom();
 

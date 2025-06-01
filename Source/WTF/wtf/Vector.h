@@ -887,11 +887,11 @@ public:
     }
     
     bool contains(const auto&) const;
+    bool containsIf(NOESCAPE const Invocable<bool(const T&)> auto&) const;
     size_t find(const auto&) const;
-    size_t findIf(NOESCAPE const Invocable<bool(const T&)> auto& matches) const;
+    size_t findIf(NOESCAPE const Invocable<bool(const T&)> auto&) const;
     size_t reverseFind(const auto&) const;
-    size_t reverseFindIf(NOESCAPE const Invocable<bool(const T&)> auto& matches) const;
-    bool containsIf(NOESCAPE const Invocable<bool(const T&)> auto& matches) const { return findIf(matches) != notFound; }
+    size_t reverseFindIf(NOESCAPE const Invocable<bool(const T&)> auto&) const;
 
     bool appendIfNotContains(const auto&);
 
@@ -1157,6 +1157,12 @@ inline Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>& Vector<T
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
+bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::containsIf(NOESCAPE const Invocable<bool(const T&)> auto& matches) const
+{
+    return findIf(matches) != notFound;
+}
+
+template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
 bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::contains(const auto& value) const
 {
     return find(value) != notFound;
@@ -1181,17 +1187,6 @@ size_t Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::find(con
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
-size_t Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::reverseFind(const auto& value) const
-{
-    for (size_t i = 1; i <= size(); ++i) {
-        const size_t index = size() - i;
-        if (at(index) == value)
-            return index;
-    }
-    return notFound;
-}
-
-template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
 size_t Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::reverseFindIf(NOESCAPE const Invocable<bool(const T&)> auto& matches) const
 {
     for (size_t i = 1; i <= size(); ++i) {
@@ -1200,6 +1195,14 @@ size_t Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::reverseF
             return index;
     }
     return notFound;
+}
+
+template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
+size_t Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::reverseFind(const auto& value) const
+{
+    return reverseFindIf([&](auto& item) {
+        return item == value;
+    });
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>

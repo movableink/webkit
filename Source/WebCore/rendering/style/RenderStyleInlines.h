@@ -82,7 +82,7 @@ inline const StyleSelfAlignmentData& RenderStyle::alignSelf() const { return m_n
 constexpr auto RenderStyle::allTransformOperations() -> OptionSet<TransformOperationOption> { return { TransformOperationOption::TransformOrigin, TransformOperationOption::Translate, TransformOperationOption::Rotate, TransformOperationOption::Scale, TransformOperationOption::Offset }; }
 inline const AnimationList* RenderStyle::animations() const { return m_nonInheritedData->miscData->animations.get(); }
 inline AnimationList* RenderStyle::animations() { return m_nonInheritedData->miscData->animations.get(); }
-inline const Vector<Style::ScopedName>& RenderStyle::anchorNames() const { return m_nonInheritedData->rareData->anchorNames; }
+inline const FixedVector<Style::ScopedName>& RenderStyle::anchorNames() const { return m_nonInheritedData->rareData->anchorNames; }
 inline const NameScope& RenderStyle::anchorScope() const { return m_nonInheritedData->rareData->anchorScope; }
 inline StyleAppearance RenderStyle::appearance() const { return static_cast<StyleAppearance>(m_nonInheritedData->miscData->appearance); }
 inline const FilterOperations& RenderStyle::appleColorFilter() const { return m_rareInheritedData->appleColorFilter->operations; }
@@ -204,7 +204,7 @@ inline bool RenderStyle::containIntrinsicWidthHasLength() const { return contain
 inline bool RenderStyle::containIntrinsicLogicalWidthHasAuto() const { return writingMode().isHorizontal() ? containIntrinsicWidthHasAuto() : containIntrinsicHeightHasAuto(); }
 inline std::optional<Length> RenderStyle::containIntrinsicWidth() const { return m_nonInheritedData->rareData->containIntrinsicWidth; }
 inline ContainIntrinsicSizeType RenderStyle::containIntrinsicWidthType() const { return static_cast<ContainIntrinsicSizeType>(m_nonInheritedData->rareData->containIntrinsicWidthType); }
-inline const Vector<Style::ScopedName>& RenderStyle::containerNames() const { return m_nonInheritedData->rareData->containerNames; }
+inline const FixedVector<Style::ScopedName>& RenderStyle::containerNames() const { return m_nonInheritedData->rareData->containerNames; }
 inline ContainerType RenderStyle::containerType() const { return static_cast<ContainerType>(m_nonInheritedData->rareData->containerType); }
 inline bool RenderStyle::containsInlineSize() const { return usedContain().contains(Containment::InlineSize); }
 inline bool RenderStyle::containsLayout() const { return usedContain().contains(Containment::Layout); }
@@ -361,7 +361,7 @@ inline const NamedGridLinesMap& RenderStyle::implicitNamedGridColumnLines() cons
 inline const NamedGridLinesMap& RenderStyle::implicitNamedGridRowLines() const { return m_nonInheritedData->rareData->grid->implicitNamedGridRowLines; }
 constexpr auto RenderStyle::individualTransformOperations() -> OptionSet<TransformOperationOption> { return { TransformOperationOption::Translate, TransformOperationOption::Rotate, TransformOperationOption::Scale, TransformOperationOption::Offset }; }
 inline const StyleCustomPropertyData& RenderStyle::inheritedCustomProperties() const { return m_rareInheritedData->customProperties.get(); }
-inline Vector<Style::ScopedName> RenderStyle::initialAnchorNames() { return { }; }
+inline FixedVector<Style::ScopedName> RenderStyle::initialAnchorNames() { return { }; }
 inline NameScope RenderStyle::initialAnchorScope() { return { }; }
 constexpr StyleAppearance RenderStyle::initialAppearance() { return StyleAppearance::None; }
 #if HAVE(CORE_MATERIAL)
@@ -401,7 +401,7 @@ inline std::optional<Length> RenderStyle::initialContainIntrinsicHeight() { retu
 constexpr ContainIntrinsicSizeType RenderStyle::initialContainIntrinsicHeightType() { return ContainIntrinsicSizeType::None; }
 inline std::optional<Length> RenderStyle::initialContainIntrinsicWidth() { return std::nullopt; }
 constexpr ContainIntrinsicSizeType RenderStyle::initialContainIntrinsicWidthType() { return ContainIntrinsicSizeType::None; }
-inline Vector<Style::ScopedName> RenderStyle::initialContainerNames() { return { }; }
+inline FixedVector<Style::ScopedName> RenderStyle::initialContainerNames() { return { }; }
 constexpr ContainerType RenderStyle::initialContainerType() { return ContainerType::Normal; }
 constexpr OptionSet<Containment> RenderStyle::initialContainment() { return { }; }
 constexpr StyleContentAlignmentData RenderStyle::initialContentAlignment() { return { }; }
@@ -487,7 +487,7 @@ constexpr PointerEvents RenderStyle::initialPointerEvents() { return PointerEven
 constexpr PositionType RenderStyle::initialPosition() { return PositionType::Static; }
 inline std::optional<Style::ScopedName> RenderStyle::initialPositionAnchor() { return { }; }
 inline std::optional<PositionArea> RenderStyle::initialPositionArea() { return { }; }
-inline Vector<Style::PositionTryFallback> RenderStyle::initialPositionTryFallbacks() { return { }; }
+inline FixedVector<Style::PositionTryFallback> RenderStyle::initialPositionTryFallbacks() { return { }; }
 constexpr Style::PositionTryOrder RenderStyle::initialPositionTryOrder() { return Style::PositionTryOrder::Normal; }
 constexpr OptionSet<PositionVisibility> RenderStyle::initialPositionVisibility() { return PositionVisibility::AnchorsVisible; }
 constexpr PrintColorAdjust RenderStyle::initialPrintColorAdjust() { return PrintColorAdjust::Economy; }
@@ -553,8 +553,8 @@ constexpr UserDrag RenderStyle::initialUserDrag() { return UserDrag::Auto; }
 constexpr UserModify RenderStyle::initialUserModify() { return UserModify::ReadOnly; }
 constexpr UserSelect RenderStyle::initialUserSelect() { return UserSelect::Text; }
 constexpr VerticalAlign RenderStyle::initialVerticalAlign() { return VerticalAlign::Baseline; }
-inline Vector<ViewTimelineInsets> RenderStyle::initialViewTimelineInsets() { return { }; }
-inline Vector<Style::ScopedName> RenderStyle::initialViewTransitionClasses() { return { }; }
+inline FixedVector<ViewTimelineInsets> RenderStyle::initialViewTimelineInsets() { return { }; }
+inline FixedVector<Style::ScopedName> RenderStyle::initialViewTransitionClasses() { return { }; }
 inline Style::ViewTransitionName RenderStyle::initialViewTransitionName() { return Style::ViewTransitionName::createWithNone(); }
 constexpr Visibility RenderStyle::initialVisibility() { return Visibility::Visible; }
 inline const NameScope RenderStyle::initialTimelineScope() { return { }; }
@@ -727,14 +727,14 @@ inline RubyPosition RenderStyle::rubyPosition() const { return static_cast<RubyP
 inline RubyAlign RenderStyle::rubyAlign() const { return static_cast<RubyAlign>(m_rareInheritedData->rubyAlign); }
 inline RubyOverhang RenderStyle::rubyOverhang() const { return static_cast<RubyOverhang>(m_rareInheritedData->rubyOverhang); }
 inline ScaleTransformOperation* RenderStyle::scale() const { return m_nonInheritedData->rareData->scale.get(); }
-inline const Vector<Ref<ScrollTimeline>>& RenderStyle::scrollTimelines() const { return m_nonInheritedData->rareData->scrollTimelines; }
-inline const Vector<ScrollAxis>& RenderStyle::scrollTimelineAxes() const { return m_nonInheritedData->rareData->scrollTimelineAxes; }
-inline const Vector<AtomString>& RenderStyle::scrollTimelineNames() const { return m_nonInheritedData->rareData->scrollTimelineNames; }
+inline const FixedVector<Ref<ScrollTimeline>>& RenderStyle::scrollTimelines() const { return m_nonInheritedData->rareData->scrollTimelines; }
+inline const FixedVector<ScrollAxis>& RenderStyle::scrollTimelineAxes() const { return m_nonInheritedData->rareData->scrollTimelineAxes; }
+inline const FixedVector<AtomString>& RenderStyle::scrollTimelineNames() const { return m_nonInheritedData->rareData->scrollTimelineNames; }
 inline bool RenderStyle::hasScrollTimelines() const { return m_nonInheritedData->rareData->hasScrollTimelines(); }
-inline const Vector<Ref<ViewTimeline>>& RenderStyle::viewTimelines() const { return m_nonInheritedData->rareData->viewTimelines; }
-inline const Vector<ScrollAxis>& RenderStyle::viewTimelineAxes() const { return m_nonInheritedData->rareData->viewTimelineAxes; }
-inline const Vector<ViewTimelineInsets>& RenderStyle::viewTimelineInsets() const { return m_nonInheritedData->rareData->viewTimelineInsets; }
-inline const Vector<AtomString>& RenderStyle::viewTimelineNames() const { return m_nonInheritedData->rareData->viewTimelineNames; }
+inline const FixedVector<Ref<ViewTimeline>>& RenderStyle::viewTimelines() const { return m_nonInheritedData->rareData->viewTimelines; }
+inline const FixedVector<ScrollAxis>& RenderStyle::viewTimelineAxes() const { return m_nonInheritedData->rareData->viewTimelineAxes; }
+inline const FixedVector<ViewTimelineInsets>& RenderStyle::viewTimelineInsets() const { return m_nonInheritedData->rareData->viewTimelineInsets; }
+inline const FixedVector<AtomString>& RenderStyle::viewTimelineNames() const { return m_nonInheritedData->rareData->viewTimelineNames; }
 inline bool RenderStyle::hasViewTimelines() const { return m_nonInheritedData->rareData->hasViewTimelines(); }
 inline const NameScope& RenderStyle::timelineScope() const { return m_nonInheritedData->rareData->timelineScope; }
 inline std::optional<ScrollbarColor> RenderStyle::scrollbarColor() const { return m_rareInheritedData->scrollbarColor.asOptional(); }
@@ -808,8 +808,8 @@ inline UserModify RenderStyle::userModify() const { return static_cast<UserModif
 inline UserSelect RenderStyle::userSelect() const { return static_cast<UserSelect>(m_rareInheritedData->userSelect); }
 inline VerticalAlign RenderStyle::verticalAlign() const { return m_nonInheritedData->boxData->verticalAlign(); }
 inline const Length& RenderStyle::verticalAlignLength() const { return m_nonInheritedData->boxData->verticalAlignLength(); }
-inline const Vector<Style::ScopedName>& RenderStyle::viewTransitionClasses() const { return m_nonInheritedData->rareData->viewTransitionClasses; }
-inline Style::ViewTransitionName RenderStyle::viewTransitionName() const { return m_nonInheritedData->rareData->viewTransitionName; }
+inline const FixedVector<Style::ScopedName>& RenderStyle::viewTransitionClasses() const { return m_nonInheritedData->rareData->viewTransitionClasses; }
+inline const Style::ViewTransitionName& RenderStyle::viewTransitionName() const { return m_nonInheritedData->rareData->viewTransitionName; }
 inline const Style::Color& RenderStyle::visitedLinkBackgroundColor() const { return m_nonInheritedData->miscData->visitedLinkColor->background; }
 inline const Style::Color& RenderStyle::visitedLinkBorderBottomColor() const { return m_nonInheritedData->miscData->visitedLinkColor->borderBottom; }
 inline const Style::Color& RenderStyle::visitedLinkBorderLeftColor() const { return m_nonInheritedData->miscData->visitedLinkColor->borderLeft; }

@@ -510,6 +510,67 @@ template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t min
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity> struct ArgumentCoder<Vector<T, inlineCapacity, OverflowHandler, minCapacity>> : VectorArgumentCoder<std::is_arithmetic<T>::value, T, inlineCapacity, OverflowHandler, minCapacity> { };
 
+
+template<bool fixedSizeElements, typename T> struct FixedVectorArgumentCoder;
+
+template<typename T> struct FixedVectorArgumentCoder<false, T> {
+    template<typename Encoder, typename U>
+    static void encode(Encoder& encoder, U&& vector)
+    {
+        static_assert(std::is_same_v<std::remove_cvref_t<U>, FixedVector<T>>);
+
+        encoder << static_cast<size_t>(vector.size());
+        for (auto&& item : vector)
+            encoder << WTF::forward_like<U>(item);
+    }
+
+    template<typename Decoder>
+    static std::optional<FixedVector<T>> decode(Decoder& decoder)
+    {
+        auto size = decoder.template decode<size_t>();
+        if (!size)
+            return std::nullopt;
+
+        // Limit direct allocations from untrusted sources to 1MB.
+        if (*size < 1024 * 1024 / sizeof(T)) [[likely]] {
+            auto vector = FixedVector<T>::createWithSizeFromFailableGenerator(*size, [&](auto i) {
+                return decoder.template decode<T>();
+            });
+            if (vector.size() != *size)
+                return std::nullopt;
+            return vector;
+        }
+
+        Vector<T> mutableVector;
+        for (size_t i = 0; i < *size; ++i) {
+            auto element = decoder.template decode<T>();
+            if (!element)
+                return std::nullopt;
+            mutableVector.append(WTFMove(*element));
+        }
+        return std::make_optional<FixedVector<T>>(WTFMove(mutableVector));
+    }
+};
+
+template<typename T> struct FixedVectorArgumentCoder<true, T> {
+    template<typename Encoder>
+    static void encode(Encoder& encoder, const FixedVector<T>& vector)
+    {
+        encoder << vector.span();
+    }
+
+    template<typename Decoder>
+    static std::optional<FixedVector<T>> decode(Decoder& decoder)
+    {
+        auto data = decoder.template decode<std::span<const T>>();
+        if (!data)
+            return std::nullopt;
+        return std::make_optional<FixedVector<T>>(*data);
+    }
+};
+
+template<typename T> struct ArgumentCoder<FixedVector<T>> : FixedVectorArgumentCoder<std::is_arithmetic<T>::value, T> { };
+
 template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename HashTableTraits> struct ArgumentCoder<HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, HashTableTraits>> {
     typedef HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, HashTableTraits> HashMapType;
 

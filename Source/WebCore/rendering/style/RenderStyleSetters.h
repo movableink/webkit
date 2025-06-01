@@ -72,13 +72,13 @@ inline void RenderStyle::resetColumnRule() { SET_DOUBLY_NESTED(m_nonInheritedDat
 inline void RenderStyle::resetMargin() { SET_NESTED(m_nonInheritedData, surroundData, margin, LengthBox(LengthType::Fixed)); }
 inline void RenderStyle::resetPadding() { SET_NESTED(m_nonInheritedData, surroundData, padding, LengthBox { 0 }); }
 inline void RenderStyle::resetPageSizeType() { SET_NESTED(m_nonInheritedData, rareData, pageSizeType, static_cast<unsigned>(PageSizeType::Auto)); }
-inline void RenderStyle::setAccentColor(const Style::Color& color) { SET_PAIR(m_rareInheritedData, accentColor, color, hasAutoAccentColor, false); }
+inline void RenderStyle::setAccentColor(Style::Color&& color) { SET_PAIR(m_rareInheritedData, accentColor, WTFMove(color), hasAutoAccentColor, false); }
 inline void RenderStyle::setAlignContent(const StyleContentAlignmentData& data) { SET_NESTED(m_nonInheritedData, miscData, alignContent, data); }
 inline void RenderStyle::setAlignItems(const StyleSelfAlignmentData& data) { SET_NESTED(m_nonInheritedData, miscData, alignItems, data); }
 inline void RenderStyle::setAlignItemsPosition(ItemPosition position) { m_nonInheritedData.access().miscData.access().alignItems.setPosition(position); }
 inline void RenderStyle::setAlignSelf(const StyleSelfAlignmentData& data) { SET_NESTED(m_nonInheritedData, miscData, alignSelf, data); }
 inline void RenderStyle::setAlignSelfPosition(ItemPosition position) { m_nonInheritedData.access().miscData.access().alignSelf.setPosition(position); }
-inline void RenderStyle::setAnchorNames(const Vector<Style::ScopedName>& names) { SET_NESTED(m_nonInheritedData, rareData, anchorNames, names); }
+inline void RenderStyle::setAnchorNames(FixedVector<Style::ScopedName>&& names) { SET_NESTED(m_nonInheritedData, rareData, anchorNames, WTFMove(names)); }
 inline void RenderStyle::setAnchorScope(const NameScope& scope) { SET_NESTED(m_nonInheritedData, rareData, anchorScope, scope); }
 inline void RenderStyle::setAppearance(StyleAppearance appearance) { SET_NESTED_PAIR(m_nonInheritedData, miscData, appearance, static_cast<unsigned>(appearance), usedAppearance, static_cast<unsigned>(appearance)); }
 inline void RenderStyle::setAppleColorFilter(FilterOperations&& ops) { SET_NESTED(m_rareInheritedData, appleColorFilter, operations, WTFMove(ops)); }
@@ -92,7 +92,7 @@ inline void RenderStyle::setBackfaceVisibility(BackfaceVisibility b) { SET_NESTE
 inline void RenderStyle::setBackgroundAttachment(FillAttachment attachment) { SET_DOUBLY_NESTED_PAIR(m_nonInheritedData, backgroundData, background, m_attachment, static_cast<unsigned>(attachment), m_attachmentSet, true); }
 inline void RenderStyle::setBackgroundBlendMode(BlendMode blendMode) { SET_DOUBLY_NESTED_PAIR(m_nonInheritedData, backgroundData, background, m_blendMode, static_cast<unsigned>(blendMode), m_blendModeSet, true); }
 inline void RenderStyle::setBackgroundClip(FillBox fillBox) { SET_DOUBLY_NESTED_PAIR(m_nonInheritedData, backgroundData, background, m_clip, static_cast<unsigned>(fillBox), m_clipSet, true); }
-inline void RenderStyle::setBackgroundColor(const Style::Color& value) { SET_NESTED(m_nonInheritedData, backgroundData, color, value); }
+inline void RenderStyle::setBackgroundColor(Style::Color&& value) { SET_NESTED(m_nonInheritedData, backgroundData, color, WTFMove(value)); }
 inline void RenderStyle::setBackgroundOrigin(FillBox fillBox) { SET_DOUBLY_NESTED_PAIR(m_nonInheritedData, backgroundData, background, m_origin, static_cast<unsigned>(fillBox), m_originSet, true); }
 inline void RenderStyle::setBackgroundRepeat(FillRepeatXY fillRepeat) { SET_DOUBLY_NESTED_PAIR(m_nonInheritedData, backgroundData, background, m_repeat, fillRepeat, m_repeatSet, true); }
 inline void RenderStyle::setBlockEllipsis(const BlockEllipsis& value) { SET(m_rareInheritedData, blockEllipsis, value); }
@@ -100,20 +100,20 @@ inline void RenderStyle::setBlockStepAlign(BlockStepAlign value) { SET_NESTED(m_
 inline void RenderStyle::setBlockStepInsert(BlockStepInsert value) { SET_NESTED(m_nonInheritedData, rareData, blockStepInsert, static_cast<unsigned>(value)); }
 inline void RenderStyle::setBlockStepRound(BlockStepRound value) { SET_NESTED(m_nonInheritedData, rareData, blockStepRound, static_cast<unsigned>(value)); }
 inline void RenderStyle::setBlockStepSize(std::optional<Length> length) { SET_NESTED(m_nonInheritedData, rareData, blockStepSize, WTFMove(length)); }
-inline void RenderStyle::setBorderBottomColor(const Style::Color& value) { SET_NESTED_BORDER_COLOR(m_nonInheritedData, surroundData, border.m_edges.bottom(), value); }
+inline void RenderStyle::setBorderBottomColor(Style::Color&& value) { SET_NESTED_BORDER_COLOR(m_nonInheritedData, surroundData, border.m_edges.bottom(), WTFMove(value)); }
 inline void RenderStyle::setBorderBottomLeftRadius(LengthSize&& size) { SET_NESTED(m_nonInheritedData, surroundData, border.m_radii.bottomLeft(), WTFMove(size)); }
 inline void RenderStyle::setBorderBottomRightRadius(LengthSize&& size) { SET_NESTED(m_nonInheritedData, surroundData, border.m_radii.bottomRight(), WTFMove(size)); }
 inline void RenderStyle::setBorderBottomStyle(BorderStyle value) { SET_NESTED(m_nonInheritedData, surroundData, border.m_edges.bottom().m_style, static_cast<unsigned>(value)); }
 inline void RenderStyle::setBorderBottomWidth(float value) { SET_NESTED(m_nonInheritedData, surroundData, border.m_edges.bottom().m_width, value); }
 inline void RenderStyle::setBorderImage(const NinePieceImage& image) { SET_NESTED(m_nonInheritedData, surroundData, border.m_image, image); }
-inline void RenderStyle::setBorderLeftColor(const Style::Color& value) { SET_NESTED_BORDER_COLOR(m_nonInheritedData, surroundData, border.m_edges.left(), value); }
+inline void RenderStyle::setBorderLeftColor(Style::Color&& value) { SET_NESTED_BORDER_COLOR(m_nonInheritedData, surroundData, border.m_edges.left(), WTFMove(value)); }
 inline void RenderStyle::setBorderLeftStyle(BorderStyle value) { SET_NESTED(m_nonInheritedData, surroundData, border.m_edges.left().m_style, static_cast<unsigned>(value)); }
 inline void RenderStyle::setBorderLeftWidth(float value) { SET_NESTED(m_nonInheritedData, surroundData, border.m_edges.left().m_width, value); }
 inline void RenderStyle::setBorderRadius(const IntSize& size) { setBorderRadius({ { size.width(), LengthType::Fixed }, { size.height(), LengthType::Fixed } }); }
-inline void RenderStyle::setBorderRightColor(const Style::Color& value) { SET_NESTED_BORDER_COLOR(m_nonInheritedData, surroundData, border.m_edges.right(), value); }
+inline void RenderStyle::setBorderRightColor(Style::Color&& value) { SET_NESTED_BORDER_COLOR(m_nonInheritedData, surroundData, border.m_edges.right(), WTFMove(value)); }
 inline void RenderStyle::setBorderRightStyle(BorderStyle value) { SET_NESTED(m_nonInheritedData, surroundData, border.m_edges.right().m_style, static_cast<unsigned>(value)); }
 inline void RenderStyle::setBorderRightWidth(float value) { SET_NESTED(m_nonInheritedData, surroundData, border.m_edges.right().m_width, value); }
-inline void RenderStyle::setBorderTopColor(const Style::Color& value) { SET_NESTED_BORDER_COLOR(m_nonInheritedData, surroundData, border.m_edges.top(), value); }
+inline void RenderStyle::setBorderTopColor(Style::Color&& value) { SET_NESTED_BORDER_COLOR(m_nonInheritedData, surroundData, border.m_edges.top(), WTFMove(value)); }
 inline void RenderStyle::setBorderTopLeftRadius(LengthSize&& size) { SET_NESTED(m_nonInheritedData, surroundData, border.m_radii.topLeft(), WTFMove(size)); }
 inline void RenderStyle::setBorderTopRightRadius(LengthSize&& size) { SET_NESTED(m_nonInheritedData, surroundData, border.m_radii.topRight(), WTFMove(size)); }
 inline void RenderStyle::setBorderTopStyle(BorderStyle value) { SET_NESTED(m_nonInheritedData, surroundData, border.m_edges.top().m_style, static_cast<unsigned>(value)); }
@@ -133,7 +133,7 @@ inline void RenderStyle::setBreakAfter(BreakBetween behavior) { SET_NESTED(m_non
 inline void RenderStyle::setBreakBefore(BreakBetween behavior) { SET_NESTED(m_nonInheritedData, rareData, breakBefore, static_cast<unsigned>(behavior)); }
 inline void RenderStyle::setBreakInside(BreakInside behavior) { SET_NESTED(m_nonInheritedData, rareData, breakInside, static_cast<unsigned>(behavior)); }
 inline void RenderStyle::setCapStyle(LineCap style) { SET(m_rareInheritedData, capStyle, static_cast<unsigned>(style)); }
-inline void RenderStyle::setCaretColor(const Style::Color& color) { SET_PAIR(m_rareInheritedData, caretColor, color, hasAutoCaretColor, false); }
+inline void RenderStyle::setCaretColor(Style::Color&& color) { SET_PAIR(m_rareInheritedData, caretColor, WTFMove(color), hasAutoCaretColor, false); }
 inline void RenderStyle::setClip(LengthBox&& box) { SET_NESTED(m_nonInheritedData, rareData, clip, WTFMove(box)); }
 inline void RenderStyle::setClipBottom(Length&& length) { SET_NESTED(m_nonInheritedData, rareData, clip.bottom(), WTFMove(length)); }
 inline void RenderStyle::setClipLeft(Length&& length) { SET_NESTED(m_nonInheritedData, rareData, clip.left(), WTFMove(length)); }
@@ -143,7 +143,7 @@ inline void RenderStyle::setColumnAxis(ColumnAxis axis) { SET_DOUBLY_NESTED(m_no
 inline void RenderStyle::setColumnFill(ColumnFill fill) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, multiCol, fill, static_cast<unsigned>(fill)); }
 inline void RenderStyle::setColumnGap(GapLength&& length) { SET_NESTED(m_nonInheritedData, rareData, columnGap, WTFMove(length)); }
 inline void RenderStyle::setColumnProgression(ColumnProgression progression) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, multiCol, progression, static_cast<unsigned>(progression)); }
-inline void RenderStyle::setColumnRuleColor(const Style::Color& c) { SET_BORDER_COLOR(m_nonInheritedData.access().miscData.access().multiCol, rule, c); }
+inline void RenderStyle::setColumnRuleColor(Style::Color&& c) { SET_BORDER_COLOR(m_nonInheritedData.access().miscData.access().multiCol, rule, WTFMove(c)); }
 inline void RenderStyle::setColumnRuleStyle(BorderStyle b) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, multiCol, rule.m_style, static_cast<unsigned>(b)); }
 inline void RenderStyle::setColumnRuleWidth(unsigned short w) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, multiCol, rule.m_width, w); }
 inline void RenderStyle::setColumnSpan(ColumnSpan span) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, multiCol, columnSpan, static_cast<unsigned>(span)); }
@@ -153,7 +153,7 @@ inline void RenderStyle::setContainIntrinsicHeight(std::optional<Length> height)
 inline void RenderStyle::setContainIntrinsicHeightType(ContainIntrinsicSizeType containIntrinsicHeightType) { SET_NESTED(m_nonInheritedData, rareData, containIntrinsicHeightType, static_cast<unsigned>(containIntrinsicHeightType)); }
 inline void RenderStyle::setContainIntrinsicWidth(std::optional<Length> width) { SET_NESTED(m_nonInheritedData, rareData, containIntrinsicWidth, width); }
 inline void RenderStyle::setContainIntrinsicWidthType(ContainIntrinsicSizeType containIntrinsicWidthType) { SET_NESTED(m_nonInheritedData, rareData, containIntrinsicWidthType, static_cast<unsigned>(containIntrinsicWidthType)); }
-inline void RenderStyle::setContainerNames(const Vector<Style::ScopedName>& names) { SET_NESTED(m_nonInheritedData, rareData, containerNames, names); }
+inline void RenderStyle::setContainerNames(FixedVector<Style::ScopedName>&& names) { SET_NESTED(m_nonInheritedData, rareData, containerNames, WTFMove(names)); }
 inline void RenderStyle::setContainerType(ContainerType type) { SET_NESTED(m_nonInheritedData, rareData, containerType, static_cast<unsigned>(type)); }
 inline void RenderStyle::setContentVisibility(ContentVisibility value) { SET_NESTED(m_nonInheritedData, rareData, contentVisibility, static_cast<unsigned>(value)); }
 inline void RenderStyle::setUsedAppearance(StyleAppearance a) { SET_NESTED(m_nonInheritedData, miscData, usedAppearance, static_cast<unsigned>(a)); }
@@ -165,9 +165,9 @@ inline void RenderStyle::setFilter(FilterOperations&& ops) { SET_DOUBLY_NESTED(m
 inline void RenderStyle::setFlexBasis(Length&& length) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, flexibleBox, flexBasis, WTFMove(length)); }
 inline void RenderStyle::setFlexDirection(FlexDirection direction) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, flexibleBox, flexDirection, static_cast<unsigned>(direction)); }
 inline void RenderStyle::setFlexWrap(FlexWrap wrap) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, flexibleBox, flexWrap, static_cast<unsigned>(wrap)); }
-inline void RenderStyle::setGridAutoColumns(const Vector<GridTrackSize>& trackSizeList) { SET_DOUBLY_NESTED(m_nonInheritedData, rareData, grid, gridAutoColumns, trackSizeList); }
+inline void RenderStyle::setGridAutoColumns(Vector<GridTrackSize>&& trackSizeList) { SET_DOUBLY_NESTED(m_nonInheritedData, rareData, grid, gridAutoColumns, WTFMove(trackSizeList)); }
 inline void RenderStyle::setGridAutoFlow(GridAutoFlow flow) { SET_DOUBLY_NESTED(m_nonInheritedData, rareData, grid, gridAutoFlow, flow); }
-inline void RenderStyle::setGridAutoRows(const Vector<GridTrackSize>& trackSizeList) { SET_DOUBLY_NESTED(m_nonInheritedData, rareData, grid, gridAutoRows, trackSizeList); }
+inline void RenderStyle::setGridAutoRows(Vector<GridTrackSize>&& trackSizeList) { SET_DOUBLY_NESTED(m_nonInheritedData, rareData, grid, gridAutoRows, WTFMove(trackSizeList)); }
 inline void RenderStyle::setGridItemColumnEnd(const GridPosition& columnEndPosition) { SET_DOUBLY_NESTED(m_nonInheritedData, rareData, gridItem, gridColumnEnd, columnEndPosition); }
 inline void RenderStyle::setGridItemColumnStart(const GridPosition& columnStartPosition) { SET_DOUBLY_NESTED(m_nonInheritedData, rareData, gridItem, gridColumnStart, columnStartPosition); }
 inline void RenderStyle::setGridItemRowEnd(const GridPosition& rowEndPosition) { SET_DOUBLY_NESTED(m_nonInheritedData, rareData, gridItem, gridRowEnd, rowEndPosition); }
@@ -256,7 +256,7 @@ inline void RenderStyle::setOffsetPath(RefPtr<PathOperation>&& path) { SET_NESTE
 inline void RenderStyle::setOffsetPosition(LengthPoint position) { SET_NESTED(m_nonInheritedData, rareData, offsetPosition, WTFMove(position)); }
 inline void RenderStyle::setOffsetRotate(OffsetRotation&& rotation) { SET_NESTED(m_nonInheritedData, rareData, offsetRotate, WTFMove(rotation)); }
 inline void RenderStyle::setOrder(int o) { SET_NESTED(m_nonInheritedData, miscData, order, o); }
-inline void RenderStyle::setOutlineColor(const Style::Color& color) { SET_NESTED_BORDER_COLOR(m_nonInheritedData, backgroundData, outline, color); }
+inline void RenderStyle::setOutlineColor(Style::Color&& color) { SET_NESTED_BORDER_COLOR(m_nonInheritedData, backgroundData, outline, WTFMove(color)); }
 inline void RenderStyle::setOutlineOffset(float offset) { SET_NESTED(m_nonInheritedData, backgroundData, outline.m_offset, offset); }
 inline void RenderStyle::setOutlineStyle(BorderStyle style) { SET_NESTED_PAIR(m_nonInheritedData, backgroundData, outline.m_isAuto, static_cast<unsigned>(false), outline.m_style, static_cast<unsigned>(style)); }
 inline void RenderStyle::setHasAutoOutlineStyle() { SET_NESTED_PAIR(m_nonInheritedData, backgroundData, outline.m_isAuto, static_cast<unsigned>(true), outline.m_style, static_cast<unsigned>(BorderStyle::Dotted)); }
@@ -287,39 +287,39 @@ inline void RenderStyle::setRowGap(GapLength&& gapLength) { SET_NESTED(m_nonInhe
 inline void RenderStyle::setRubyPosition(RubyPosition position) { SET(m_rareInheritedData, rubyPosition, static_cast<unsigned>(position)); }
 inline void RenderStyle::setRubyAlign(RubyAlign alignment) { SET(m_rareInheritedData, rubyAlign, static_cast<unsigned>(alignment)); }
 inline void RenderStyle::setRubyOverhang(RubyOverhang overhang) { SET(m_rareInheritedData, rubyOverhang, static_cast<unsigned>(overhang)); }
-inline void RenderStyle::setScrollTimelineAxes(const Vector<ScrollAxis>& axes) { SET_NESTED(m_nonInheritedData, rareData, scrollTimelineAxes, axes); }
-inline void RenderStyle::setScrollTimelineNames(const Vector<AtomString>& names) { SET_NESTED(m_nonInheritedData, rareData, scrollTimelineNames, names); }
-inline void RenderStyle::setViewTimelineAxes(const Vector<ScrollAxis>& axes) { SET_NESTED(m_nonInheritedData, rareData, viewTimelineAxes, axes); }
-inline void RenderStyle::setViewTimelineInsets(const Vector<ViewTimelineInsets>& insets) { SET_NESTED(m_nonInheritedData, rareData, viewTimelineInsets, insets); }
-inline void RenderStyle::setViewTimelineNames(const Vector<AtomString>& names) { SET_NESTED(m_nonInheritedData, rareData, viewTimelineNames, names); }
+inline void RenderStyle::setScrollTimelineAxes(FixedVector<ScrollAxis>&& axes) { SET_NESTED(m_nonInheritedData, rareData, scrollTimelineAxes, WTFMove(axes)); }
+inline void RenderStyle::setScrollTimelineNames(FixedVector<AtomString>&& names) { SET_NESTED(m_nonInheritedData, rareData, scrollTimelineNames, WTFMove(names)); }
+inline void RenderStyle::setViewTimelineAxes(FixedVector<ScrollAxis>&& axes) { SET_NESTED(m_nonInheritedData, rareData, viewTimelineAxes, WTFMove(axes)); }
+inline void RenderStyle::setViewTimelineInsets(FixedVector<ViewTimelineInsets>&& insets) { SET_NESTED(m_nonInheritedData, rareData, viewTimelineInsets, WTFMove(insets)); }
+inline void RenderStyle::setViewTimelineNames(FixedVector<AtomString>&& names) { SET_NESTED(m_nonInheritedData, rareData, viewTimelineNames, WTFMove(names)); }
 inline void RenderStyle::setTimelineScope(const NameScope& scope) { SET_NESTED(m_nonInheritedData, rareData, timelineScope, scope); }
 inline void RenderStyle::setScrollbarColor(const std::optional<ScrollbarColor>& color) { SET(m_rareInheritedData, scrollbarColor, color); }
-inline void RenderStyle::setScrollbarThumbColor(const Style::Color& color) { m_rareInheritedData.access().scrollbarColor->thumbColor = color; }
-inline void RenderStyle::setScrollbarTrackColor(const Style::Color& color) { m_rareInheritedData.access().scrollbarColor->trackColor = color; }
+inline void RenderStyle::setScrollbarThumbColor(Style::Color&& color) { m_rareInheritedData.access().scrollbarColor->thumbColor = WTFMove(color); }
+inline void RenderStyle::setScrollbarTrackColor(Style::Color&& color) { m_rareInheritedData.access().scrollbarColor->trackColor = WTFMove(color); }
 inline void RenderStyle::setScrollbarWidth(ScrollbarWidth width) { SET_NESTED(m_nonInheritedData, rareData, scrollbarWidth, static_cast<unsigned>(width)); }
 inline void RenderStyle::setShapeMargin(Length&& margin) { SET_NESTED(m_nonInheritedData, rareData, shapeMargin, WTFMove(margin)); }
 inline void RenderStyle::setUsedContentVisibility(ContentVisibility usedContentVisibility) { SET(m_rareInheritedData, usedContentVisibility, static_cast<unsigned>(usedContentVisibility)); }
 inline void RenderStyle::setSpeakAs(OptionSet<SpeakAs> style) { SET(m_rareInheritedData, speakAs, style.toRaw()); }
 inline void RenderStyle::setSpecifiedZIndex(int value) { SET_NESTED_PAIR(m_nonInheritedData, boxData, m_hasAutoSpecifiedZIndex, false, m_specifiedZIndex, value); }
-inline void RenderStyle::setStrokeColor(const Style::Color& color) { SET(m_rareInheritedData, strokeColor, color); }
+inline void RenderStyle::setStrokeColor(Style::Color&& color) { SET(m_rareInheritedData, strokeColor, WTFMove(color)); }
 inline void RenderStyle::setStrokeMiterLimit(float value) { SET(m_rareInheritedData, miterLimit, value); }
 inline void RenderStyle::setStrokeWidth(Length&& width) { SET(m_rareInheritedData, strokeWidth, WTFMove(width)); }
 inline void RenderStyle::setTabSize(const TabSize& size) { SET(m_rareInheritedData, tabSize, size); }
 inline void RenderStyle::setTextAlignLast(TextAlignLast value) { SET(m_rareInheritedData, textAlignLast, static_cast<unsigned>(value)); }
 inline void RenderStyle::setTextBoxTrim(TextBoxTrim value) { SET_NESTED(m_nonInheritedData, rareData, textBoxTrim, static_cast<unsigned>(value)); }
 inline void RenderStyle::setTextCombine(TextCombine value) { SET(m_rareInheritedData, textCombine, static_cast<unsigned>(value)); }
-inline void RenderStyle::setTextDecorationColor(const Style::Color& color) { SET_NESTED(m_nonInheritedData, rareData, textDecorationColor, color); }
+inline void RenderStyle::setTextDecorationColor(Style::Color&& color) { SET_NESTED(m_nonInheritedData, rareData, textDecorationColor, WTFMove(color)); }
 inline void RenderStyle::setTextDecorationLine(OptionSet<TextDecorationLine> value) { m_nonInheritedFlags.textDecorationLine = value.toRaw(); }
 inline void RenderStyle::setTextDecorationSkipInk(TextDecorationSkipInk skipInk) { SET(m_rareInheritedData, textDecorationSkipInk, static_cast<unsigned>(skipInk)); }
 inline void RenderStyle::setTextDecorationStyle(TextDecorationStyle value) { SET_NESTED(m_nonInheritedData, rareData, textDecorationStyle, static_cast<unsigned>(value)); }
 inline void RenderStyle::setTextDecorationThickness(TextDecorationThickness textDecorationThickness) { SET_NESTED(m_nonInheritedData, rareData, textDecorationThickness, textDecorationThickness); }
 inline void RenderStyle::setTextDecorationLineInEffect(OptionSet<TextDecorationLine> value) { m_inheritedFlags.textDecorationLineInEffect = value.toRaw(); }
-inline void RenderStyle::setTextEmphasisColor(const Style::Color& c) { SET(m_rareInheritedData, textEmphasisColor, c); }
+inline void RenderStyle::setTextEmphasisColor(Style::Color&& c) { SET(m_rareInheritedData, textEmphasisColor, WTFMove(c)); }
 inline void RenderStyle::setTextEmphasisCustomMark(const AtomString& mark) { SET(m_rareInheritedData, textEmphasisCustomMark, mark); }
 inline void RenderStyle::setTextEmphasisFill(TextEmphasisFill fill) { SET(m_rareInheritedData, textEmphasisFill, static_cast<unsigned>(fill)); }
 inline void RenderStyle::setTextEmphasisMark(TextEmphasisMark mark) { SET(m_rareInheritedData, textEmphasisMark, static_cast<unsigned>(mark)); }
 inline void RenderStyle::setTextEmphasisPosition(OptionSet<TextEmphasisPosition> position) { SET(m_rareInheritedData, textEmphasisPosition, static_cast<unsigned>(position.toRaw())); }
-inline void RenderStyle::setTextFillColor(const Style::Color& color) { SET(m_rareInheritedData, textFillColor, color); }
+inline void RenderStyle::setTextFillColor(Style::Color&& color) { SET(m_rareInheritedData, textFillColor, WTFMove(color)); }
 inline void RenderStyle::setHasExplicitlySetColor(bool value) { m_inheritedFlags.hasExplicitlySetColor = value; }
 inline void RenderStyle::setTableLayout(TableLayoutType value) { SET_NESTED(m_nonInheritedData, miscData, tableLayout, static_cast<unsigned>(value)); }
 inline void RenderStyle::setTextGroupAlign(TextGroupAlign value) { SET_NESTED(m_nonInheritedData, rareData, textGroupAlign, static_cast<unsigned>(value)); }
@@ -330,7 +330,7 @@ inline void RenderStyle::setTextJustify(TextJustify value) { SET(m_rareInherited
 inline void RenderStyle::setTextOverflow(TextOverflow overflow) { SET_NESTED(m_nonInheritedData, miscData, textOverflow, static_cast<unsigned>(overflow)); }
 inline void RenderStyle::setTextSecurity(TextSecurity security) { SET(m_rareInheritedData, textSecurity, static_cast<unsigned>(security)); }
 inline void RenderStyle::setTextShadow(FixedVector<Style::TextShadow>&& textShadow) { SET(m_rareInheritedData, textShadow, WTFMove(textShadow)); }
-inline void RenderStyle::setTextStrokeColor(const Style::Color& c) { SET(m_rareInheritedData, textStrokeColor, c); }
+inline void RenderStyle::setTextStrokeColor(Style::Color&& c) { SET(m_rareInheritedData, textStrokeColor, WTFMove(c)); }
 inline void RenderStyle::setTextStrokeWidth(float value) { SET(m_rareInheritedData, textStrokeWidth, value); }
 inline void RenderStyle::setTextTransform(OptionSet<TextTransform> value) { m_inheritedFlags.textTransform = value.toRaw(); }
 inline void RenderStyle::setTextUnderlineOffset(TextUnderlineOffset textUnderlineOffset) { SET(m_rareInheritedData, textUnderlineOffset, textUnderlineOffset); }
@@ -351,21 +351,21 @@ inline void RenderStyle::setUsedZIndex(int index) { SET_NESTED_PAIR(m_nonInherit
 inline void RenderStyle::setUserDrag(UserDrag value) { SET_NESTED(m_nonInheritedData, miscData, userDrag, static_cast<unsigned>(value)); }
 inline void RenderStyle::setUserModify(UserModify value) { SET(m_rareInheritedData, userModify, static_cast<unsigned>(value)); }
 inline void RenderStyle::setUserSelect(UserSelect value) { SET(m_rareInheritedData, userSelect, static_cast<unsigned>(value)); }
-inline void RenderStyle::setViewTransitionClasses(const Vector<Style::ScopedName>& value) { SET_NESTED(m_nonInheritedData, rareData, viewTransitionClasses, value); }
-inline void RenderStyle::setViewTransitionName(Style::ViewTransitionName value) { SET_NESTED(m_nonInheritedData, rareData, viewTransitionName, value); }
-inline void RenderStyle::setVisitedLinkBackgroundColor(const Style::Color& value) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, visitedLinkColor, background, value); }
-inline void RenderStyle::setVisitedLinkBorderBottomColor(const Style::Color& value) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, visitedLinkColor, borderBottom, value); }
-inline void RenderStyle::setVisitedLinkBorderLeftColor(const Style::Color& value) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, visitedLinkColor, borderLeft, value); }
-inline void RenderStyle::setVisitedLinkBorderRightColor(const Style::Color& value) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, visitedLinkColor, borderRight, value); }
-inline void RenderStyle::setVisitedLinkBorderTopColor(const Style::Color& value) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, visitedLinkColor, borderTop, value); }
-inline void RenderStyle::setVisitedLinkCaretColor(const Style::Color& value) { SET_PAIR(m_rareInheritedData, visitedLinkCaretColor, value, hasVisitedLinkAutoCaretColor, false); }
-inline void RenderStyle::setVisitedLinkColumnRuleColor(const Style::Color& value) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, multiCol, visitedLinkColumnRuleColor, value); }
-inline void RenderStyle::setVisitedLinkOutlineColor(const Style::Color& value) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, visitedLinkColor, outline, value); }
-inline void RenderStyle::setVisitedLinkStrokeColor(const Style::Color& value) { SET(m_rareInheritedData, visitedLinkStrokeColor, value); }
-inline void RenderStyle::setVisitedLinkTextDecorationColor(const Style::Color& value) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, visitedLinkColor, textDecoration, value); }
-inline void RenderStyle::setVisitedLinkTextEmphasisColor(const Style::Color& value) { SET(m_rareInheritedData, visitedLinkTextEmphasisColor, value); }
-inline void RenderStyle::setVisitedLinkTextFillColor(const Style::Color& value) { SET(m_rareInheritedData, visitedLinkTextFillColor, value); }
-inline void RenderStyle::setVisitedLinkTextStrokeColor(const Style::Color& value) { SET(m_rareInheritedData, visitedLinkTextStrokeColor, value); }
+inline void RenderStyle::setViewTransitionClasses(FixedVector<Style::ScopedName>&& value) { SET_NESTED(m_nonInheritedData, rareData, viewTransitionClasses, WTFMove(value)); }
+inline void RenderStyle::setViewTransitionName(Style::ViewTransitionName&& value) { SET_NESTED(m_nonInheritedData, rareData, viewTransitionName, value); }
+inline void RenderStyle::setVisitedLinkBackgroundColor(Style::Color&& value) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, visitedLinkColor, background, WTFMove(value)); }
+inline void RenderStyle::setVisitedLinkBorderBottomColor(Style::Color&& value) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, visitedLinkColor, borderBottom, WTFMove(value)); }
+inline void RenderStyle::setVisitedLinkBorderLeftColor(Style::Color&& value) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, visitedLinkColor, borderLeft, WTFMove(value)); }
+inline void RenderStyle::setVisitedLinkBorderRightColor(Style::Color&& value) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, visitedLinkColor, borderRight, WTFMove(value)); }
+inline void RenderStyle::setVisitedLinkBorderTopColor(Style::Color&& value) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, visitedLinkColor, borderTop, WTFMove(value)); }
+inline void RenderStyle::setVisitedLinkCaretColor(Style::Color&& value) { SET_PAIR(m_rareInheritedData, visitedLinkCaretColor, WTFMove(value), hasVisitedLinkAutoCaretColor, false); }
+inline void RenderStyle::setVisitedLinkColumnRuleColor(Style::Color&& value) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, multiCol, visitedLinkColumnRuleColor, WTFMove(value)); }
+inline void RenderStyle::setVisitedLinkOutlineColor(Style::Color&& value) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, visitedLinkColor, outline, WTFMove(value)); }
+inline void RenderStyle::setVisitedLinkStrokeColor(Style::Color&& value) { SET(m_rareInheritedData, visitedLinkStrokeColor, WTFMove(value)); }
+inline void RenderStyle::setVisitedLinkTextDecorationColor(Style::Color&& value) { SET_DOUBLY_NESTED(m_nonInheritedData, miscData, visitedLinkColor, textDecoration, WTFMove(value)); }
+inline void RenderStyle::setVisitedLinkTextEmphasisColor(Style::Color&& value) { SET(m_rareInheritedData, visitedLinkTextEmphasisColor, WTFMove(value)); }
+inline void RenderStyle::setVisitedLinkTextFillColor(Style::Color&& value) { SET(m_rareInheritedData, visitedLinkTextFillColor, WTFMove(value)); }
+inline void RenderStyle::setVisitedLinkTextStrokeColor(Style::Color&& value) { SET(m_rareInheritedData, visitedLinkTextStrokeColor, WTFMove(value)); }
 inline void RenderStyle::setWidth(Length&& length) { SET_NESTED(m_nonInheritedData, boxData, m_width, WTFMove(length)); }
 inline void RenderStyle::setWordBreak(WordBreak rule) { SET(m_rareInheritedData, wordBreak, static_cast<unsigned>(rule)); }
 
@@ -405,7 +405,7 @@ inline void RenderStyle::setTextSizeAdjust(TextSizeAdjustment adjustment) { SET(
 #endif
 
 #if ENABLE(TOUCH_EVENTS)
-inline void RenderStyle::setTapHighlightColor(const Style::Color& color) { SET(m_rareInheritedData, tapHighlightColor, color); }
+inline void RenderStyle::setTapHighlightColor(Style::Color&& color) { SET(m_rareInheritedData, tapHighlightColor, WTFMove(color)); }
 #endif
 
 inline void RenderStyle::setInsideDefaultButton(bool value) { SET(m_rareInheritedData, insideDefaultButton, value); }

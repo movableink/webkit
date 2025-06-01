@@ -55,9 +55,9 @@
 #include "ViewTransitionName.h"
 #include <memory>
 #include <wtf/DataRef.h>
+#include <wtf/FixedVector.h>
 #include <wtf/Markable.h>
 #include <wtf/OptionSet.h>
-#include <wtf/Vector.h>
 
 namespace WTF {
 class TextStream;
@@ -191,9 +191,9 @@ public:
     RefPtr<TranslateTransformOperation> translate;
     RefPtr<PathOperation> offsetPath;
 
-    Vector<Style::ScopedName> containerNames;
+    FixedVector<Style::ScopedName> containerNames;
 
-    Vector<Style::ScopedName> viewTransitionClasses;
+    FixedVector<Style::ScopedName> viewTransitionClasses;
     Style::ViewTransitionName viewTransitionName;
 
     GapLength columnGap;
@@ -206,14 +206,14 @@ public:
 
     TextDecorationThickness textDecorationThickness;
 
-    Vector<Ref<ScrollTimeline>> scrollTimelines;
-    Vector<ScrollAxis> scrollTimelineAxes;
-    Vector<AtomString> scrollTimelineNames;
+    FixedVector<Ref<ScrollTimeline>> scrollTimelines;
+    FixedVector<ScrollAxis> scrollTimelineAxes;
+    FixedVector<AtomString> scrollTimelineNames;
 
-    Vector<Ref<ViewTimeline>> viewTimelines;
-    Vector<ScrollAxis> viewTimelineAxes;
-    Vector<ViewTimelineInsets> viewTimelineInsets;
-    Vector<AtomString> viewTimelineNames;
+    FixedVector<Ref<ViewTimeline>> viewTimelines;
+    FixedVector<ScrollAxis> viewTimelineAxes;
+    FixedVector<ViewTimelineInsets> viewTimelineInsets;
+    FixedVector<AtomString> viewTimelineNames;
 
     NameScope timelineScope;
 
@@ -225,11 +225,11 @@ public:
 
     AtomString pseudoElementNameArgument;
 
-    Vector<Style::ScopedName> anchorNames;
+    FixedVector<Style::ScopedName> anchorNames;
     NameScope anchorScope;
     std::optional<Style::ScopedName> positionAnchor;
     std::optional<PositionArea> positionArea;
-    Vector<Style::PositionTryFallback> positionTryFallbacks;
+    FixedVector<Style::PositionTryFallback> positionTryFallbacks;
 
     std::optional<Length> blockStepSize;
     unsigned blockStepAlign : 2; // BlockStepAlign

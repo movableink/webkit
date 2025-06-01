@@ -907,9 +907,9 @@ void RenderThemeIOS::adjustButtonLikeControlStyle(RenderStyle& style, const Elem
     if (!style.hasAutoAccentColor()) {
         auto tintColor = style.usedAccentColor(element.document().styleColorOptions(&style));
         if (isSubmitStyleButton(element))
-            style.setBackgroundColor(tintColor);
+            style.setBackgroundColor(WTFMove(tintColor));
         else
-            style.setColor(tintColor);
+            style.setColor(WTFMove(tintColor));
     }
 
     if (!element.active())

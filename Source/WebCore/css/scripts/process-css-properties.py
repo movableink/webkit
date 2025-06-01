@@ -3933,9 +3933,9 @@ class GenerateStyleBuilderGenerated:
 
     def _generate_color_property_inherit_value_setter(self, to, property):
         to.write(f"if (builderState.applyPropertyToRegularStyle())")
-        to.write(f"    builderState.style().{property.codegen_properties.render_style_setter}(builderState.parentStyle().{property.codegen_properties.render_style_getter}());")
+        to.write(f"    builderState.style().{property.codegen_properties.render_style_setter}(forwardInheritedValue(builderState.parentStyle().{property.codegen_properties.render_style_getter}()));")
         to.write(f"if (builderState.applyPropertyToVisitedLinkStyle())")
-        to.write(f"    builderState.style().setVisitedLink{property.codegen_properties.render_style_name_for_methods}(builderState.parentStyle().{property.codegen_properties.render_style_getter}());")
+        to.write(f"    builderState.style().setVisitedLink{property.codegen_properties.render_style_name_for_methods}(forwardInheritedValue(builderState.parentStyle().{property.codegen_properties.render_style_getter}()));")
 
     def _generate_color_property_value_setter(self, to, property, value):
         to.write(f"if (builderState.applyPropertyToRegularStyle())")

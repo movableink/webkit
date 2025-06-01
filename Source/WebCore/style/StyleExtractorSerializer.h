@@ -93,7 +93,7 @@ public:
     static void serializePathOperation(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const PathOperation*, PathConversion = PathConversion::None);
     static void serializePathOperationForceAbsolute(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const PathOperation*);
     static void serializeDPath(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const StylePathData*);
-    static void serializeStrokeDashArray(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const Vector<WebCore::Length>&);
+    static void serializeStrokeDashArray(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const FixedVector<WebCore::Length>&);
     static void serializeTextStrokeWidth(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, float);
     static void serializeFilterOperations(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const FilterOperations&);
     static void serializeAppleColorFilterOperations(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const FilterOperations&);
@@ -115,12 +115,12 @@ public:
     static void serializeTextBoxEdge(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const TextEdge&);
     static void serializeQuotes(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const QuotesData*);
     static void serializeBorderRadiusCorner(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const LengthSize&);
-    static void serializeContainerNames(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const Vector<ScopedName>&);
-    static void serializeViewTransitionClasses(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const Vector<ScopedName>&);
+    static void serializeContainerNames(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const FixedVector<ScopedName>&);
+    static void serializeViewTransitionClasses(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const FixedVector<ScopedName>&);
     static void serializeViewTransitionName(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const ViewTransitionName&);
     static void serializeBoxShadow(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const FixedVector<BoxShadow>&);
     static void serializeTextShadow(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const FixedVector<TextShadow>&);
-    static void serializePositionTryFallbacks(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const Vector<PositionTryFallback>&);
+    static void serializePositionTryFallbacks(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const FixedVector<PositionTryFallback>&);
     static void serializeWillChange(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const WillChangeData*);
     static void serializeBlockEllipsis(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const BlockEllipsis&);
     static void serializeBlockStepSize(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, std::optional<WebCore::Length>);
@@ -153,14 +153,14 @@ public:
     static void serializeContentAlignmentData(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const StyleContentAlignmentData&);
     static void serializeOffsetRotate(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const OffsetRotation&);
     static void serializePaintOrder(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, PaintOrder);
-    static void serializeScrollTimelineAxes(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const Vector<ScrollAxis>&);
-    static void serializeScrollTimelineNames(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const Vector<AtomString>&);
-    static void serializeAnchorNames(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const Vector<ScopedName>&);
+    static void serializeScrollTimelineAxes(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const FixedVector<ScrollAxis>&);
+    static void serializeScrollTimelineNames(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const FixedVector<AtomString>&);
+    static void serializeAnchorNames(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const FixedVector<ScopedName>&);
     static void serializePositionAnchor(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const std::optional<ScopedName>&);
     static void serializePositionArea(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const std::optional<PositionArea>&);
     static void serializeNameScope(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const NameScope&);
     static void serializeSingleViewTimelineInsets(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const ViewTimelineInsets&);
-    static void serializeViewTimelineInsets(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const Vector<ViewTimelineInsets>&);
+    static void serializeViewTimelineInsets(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const FixedVector<ViewTimelineInsets>&);
     static void serializePositionVisibility(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, OptionSet<PositionVisibility>);
 #if ENABLE(DARK_MODE_CSS)
     static void serializeColorScheme(ExtractorState&, StringBuilder&, const CSS::SerializationContext&, const ColorScheme&);
@@ -952,7 +952,7 @@ inline void ExtractorSerializer::serializeDPath(ExtractorState& state, StringBui
     CSS::serializationForCSS(builder, context, overrideToCSS(Ref { *path }->path(), state.style, PathConversion::ForceAbsolute));
 }
 
-inline void ExtractorSerializer::serializeStrokeDashArray(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const Vector<WebCore::Length>& dashes)
+inline void ExtractorSerializer::serializeStrokeDashArray(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const FixedVector<WebCore::Length>& dashes)
 {
     if (dashes.isEmpty()) {
         CSS::serializationForCSS(builder, context, CSS::Keyword::None { });
@@ -1259,7 +1259,7 @@ inline void ExtractorSerializer::serializeBorderRadiusCorner(ExtractorState& sta
     serializeLength(state, builder, context, radius.height);
 }
 
-inline void ExtractorSerializer::serializeContainerNames(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const Vector<ScopedName>& containerNames)
+inline void ExtractorSerializer::serializeContainerNames(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const FixedVector<ScopedName>& containerNames)
 {
     if (containerNames.isEmpty()) {
         CSS::serializationForCSS(builder, context, CSS::Keyword::None { });
@@ -1271,7 +1271,7 @@ inline void ExtractorSerializer::serializeContainerNames(ExtractorState& state, 
     }, ' '));
 }
 
-inline void ExtractorSerializer::serializeViewTransitionClasses(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const Vector<ScopedName>& classList)
+inline void ExtractorSerializer::serializeViewTransitionClasses(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const FixedVector<ScopedName>& classList)
 {
     if (classList.isEmpty()) {
         CSS::serializationForCSS(builder, context, CSS::Keyword::None { });
@@ -1328,7 +1328,7 @@ inline void ExtractorSerializer::serializeTextShadow(ExtractorState& state, Stri
     CSS::serializationForCSS(builder, context, CSS::TextShadowProperty { WTFMove(list) });
 }
 
-inline void ExtractorSerializer::serializePositionTryFallbacks(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const Vector<PositionTryFallback>& fallbacks)
+inline void ExtractorSerializer::serializePositionTryFallbacks(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const FixedVector<PositionTryFallback>& fallbacks)
 {
     if (fallbacks.isEmpty()) {
         CSS::serializationForCSS(builder, context, CSS::Keyword::None { });
@@ -1941,7 +1941,7 @@ inline void ExtractorSerializer::serializePaintOrder(ExtractorState&, StringBuil
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-inline void ExtractorSerializer::serializeScrollTimelineAxes(ExtractorState&, StringBuilder& builder, const CSS::SerializationContext& context, const Vector<ScrollAxis>& axes)
+inline void ExtractorSerializer::serializeScrollTimelineAxes(ExtractorState&, StringBuilder& builder, const CSS::SerializationContext& context, const FixedVector<ScrollAxis>& axes)
 {
     if (axes.isEmpty()) {
         CSS::serializationForCSS(builder, context, CSS::Keyword::Block { });
@@ -1953,7 +1953,7 @@ inline void ExtractorSerializer::serializeScrollTimelineAxes(ExtractorState&, St
     }, ", "_s));
 }
 
-inline void ExtractorSerializer::serializeScrollTimelineNames(ExtractorState&, StringBuilder& builder, const CSS::SerializationContext& context, const Vector<AtomString>& names)
+inline void ExtractorSerializer::serializeScrollTimelineNames(ExtractorState&, StringBuilder& builder, const CSS::SerializationContext& context, const FixedVector<AtomString>& names)
 {
     if (names.isEmpty()) {
         CSS::serializationForCSS(builder, context, CSS::Keyword::None { });
@@ -1968,7 +1968,7 @@ inline void ExtractorSerializer::serializeScrollTimelineNames(ExtractorState&, S
     }, ", "_s));
 }
 
-inline void ExtractorSerializer::serializeAnchorNames(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const Vector<ScopedName>& anchorNames)
+inline void ExtractorSerializer::serializeAnchorNames(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const FixedVector<ScopedName>& anchorNames)
 {
     if (anchorNames.isEmpty()) {
         CSS::serializationForCSS(builder, context, CSS::Keyword::None { });
@@ -2039,7 +2039,7 @@ inline void ExtractorSerializer::serializeSingleViewTimelineInsets(ExtractorStat
     serializeLength(state, builder, context, *insets.end);
 }
 
-inline void ExtractorSerializer::serializeViewTimelineInsets(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const Vector<ViewTimelineInsets>& insets)
+inline void ExtractorSerializer::serializeViewTimelineInsets(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context, const FixedVector<ViewTimelineInsets>& insets)
 {
     if (insets.isEmpty()) {
         CSS::serializationForCSS(builder, context, CSS::Keyword::Auto { });

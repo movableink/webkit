@@ -192,7 +192,7 @@ public:
     Style::URL visitedLinkPaintUri;
 
     Length dashOffset;
-    Vector<Length> dashArray;
+    FixedVector<Length> dashArray;
 
     SVGPaintType paintType;
     SVGPaintType visitedLinkPaintType;

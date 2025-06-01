@@ -65,6 +65,21 @@ protected:
         VectorTypeOperations<T>::initializeIfNonPOD(begin(), end());
     }
 
+    explicit TrailingArray(std::initializer_list<T> initializerList)
+        : m_size(initializerList.size())
+    {
+        static_assert(std::is_final_v<Derived>);
+        std::uninitialized_copy(initializerList.begin(), initializerList.end(), begin());
+    }
+
+    template<typename U, size_t Extent>
+    TrailingArray(std::span<U, Extent> span)
+        : m_size(span.size())
+    {
+        static_assert(std::is_final_v<Derived>);
+        std::uninitialized_copy(span.data(), span.data() + span.size(), begin());
+    }
+
     template<typename InputIterator>
     TrailingArray(unsigned size, InputIterator first, InputIterator last)
         : m_size(size)
@@ -116,6 +131,19 @@ protected:
                 m_size = i;
                 return;
             }
+        }
+    }
+
+    template<typename SizedRange, typename Mapper>
+    explicit TrailingArray(unsigned size, SizedRange&& range, NOESCAPE Mapper&& mapper)
+        : m_size(size)
+    {
+        static_assert(std::is_final_v<Derived>);
+
+        size_t index = 0;
+        for (const auto& element : range) {
+            new (NotNull, std::addressof(begin()[index])) T(mapper(element));
+            index++;
         }
     }
 

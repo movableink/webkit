@@ -761,7 +761,7 @@
                 {
                     "enable-if": "ENABLE_VARIATION_FONTS",
                     "aliases": ["font-stretch"],
-                    "animation-wrapper": "Wrapper<FontSelectionValue>",
+                    "animation-wrapper": "Wrapper",
                     "animation-wrapper-requires-render-style": true,
                     "font-description-name-for-methods": "Width",
                     "font-property": true,
@@ -772,7 +772,7 @@
                 {
                     "enable-if": "!ENABLE_VARIATION_FONTS",
                     "aliases": ["font-stretch"],
-                    "animation-wrapper": "Wrapper<FontSelectionValue>",
+                    "animation-wrapper": "Wrapper",
                     "animation-wrapper-requires-render-style": true,
                     "font-description-name-for-methods": "Width",
                     "font-property": true,
@@ -4471,7 +4471,7 @@
             "inherited": true,
             "initial": "1",
             "codegen-properties": {
-                "animation-wrapper": "Wrapper<float>",
+                "animation-wrapper": "Wrapper",
                 "animation-wrapper-requires-render-style": true,
                 "style-converter": "Opacity",
                 "svg": true,
@@ -4545,7 +4545,7 @@
             "animation-type": "by computed value",
             "initial": "1",
             "codegen-properties": {
-                "animation-wrapper": "Wrapper<float>",
+                "animation-wrapper": "Wrapper",
                 "animation-wrapper-requires-render-style": true,
                 "style-converter": "Opacity",
                 "svg": true,
@@ -6592,7 +6592,7 @@
                 "aliases": [
                     "-webkit-opacity"
                 ],
-                "animation-wrapper": "Wrapper<float>",
+                "animation-wrapper": "Wrapper",
                 "animation-wrapper-acceleration": "always",
                 "style-converter": "Opacity",
                 "parser-grammar": "<alpha-value>"
@@ -6656,7 +6656,7 @@
             "animation-type": "by computed value",
             "initial": "0",
             "codegen-properties": {
-                "animation-wrapper": "Wrapper<float>",
+                "animation-wrapper": "Wrapper",
                 "style-converter": "ComputedLength<float>",
                 "parser-grammar": "<length>"
             },
@@ -7520,7 +7520,7 @@
             "animation-type": "by computed value",
             "initial": "1",
             "codegen-properties": {
-                "animation-wrapper": "Wrapper<float>",
+                "animation-wrapper": "Wrapper",
                 "animation-wrapper-requires-render-style": true,
                 "style-converter": "Opacity",
                 "svg": true,
@@ -7570,8 +7570,7 @@
                 "none"
             ],
             "codegen-properties": {
-                "animation-wrapper": "StrokeDashArrayWrapper",
-                "animation-wrapper-requires-override-parameters": [],
+                "animation-wrapper": "Wrapper",
                 "animation-wrapper-requires-render-style": true,
                 "animation-wrapper-requires-non-additive-or-cumulative-interpolation": true,
                 "render-style-name-for-methods": "StrokeDashArray",
@@ -7653,7 +7652,7 @@
             "inherited": true,
             "initial": "4",
             "codegen-properties": {
-                "animation-wrapper": "Wrapper<float>",
+                "animation-wrapper": "Wrapper",
                 "render-style-name-for-methods": "StrokeMiterLimit",
                 "style-converter": "Number<float>",
                 "parser-grammar": "<number [0,inf]>"
@@ -7671,7 +7670,7 @@
             "inherited": true,
             "initial": "1",
             "codegen-properties": {
-                "animation-wrapper": "Wrapper<float>",
+                "animation-wrapper": "Wrapper",
                 "animation-wrapper-requires-render-style": true,
                 "style-converter": "Opacity",
                 "svg": true,
@@ -9343,7 +9342,7 @@
                 "aliases": [
                     "-webkit-column-rule-width"
                 ],
-                "animation-wrapper": "Wrapper<unsigned short>",
+                "animation-wrapper": "Wrapper",
                 "style-converter": "LineWidth<unsigned short>",
                 "parser-grammar": "<line-width>"
             },
@@ -10662,7 +10661,7 @@
                 "aliases": [
                     "-webkit-order"
                 ],
-                "animation-wrapper": "Wrapper<int>",
+                "animation-wrapper": "Wrapper",
                 "parser-grammar": "<integer>"
             },
             "specification": {
@@ -11289,7 +11288,7 @@
                 "aliases": [
                     "-webkit-transform-origin-z"
                 ],
-                "animation-wrapper": "Wrapper<float>",
+                "animation-wrapper": "Wrapper",
                 "skip-style-extractor": true,
                 "style-converter": "ComputedLength<float>",
                 "parser-grammar": "<length>"
@@ -12096,7 +12095,7 @@
                 "aliases": [
                     "-webkit-shape-image-threshold"
                 ],
-                "animation-wrapper": "Wrapper<float>",
+                "animation-wrapper": "Wrapper",
                 "style-converter": "Number<float>",
                 "parser-grammar": "<number>"
             },

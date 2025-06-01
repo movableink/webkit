@@ -8811,13 +8811,13 @@ enum class WebCore::PlatformMediaError : uint8_t {
 #endif
 
 #if USE(CG)
-using WebCore::DashArray = Vector<CGFloat>;
+using WebCore::DashArray = FixedVector<CGFloat>;
 #endif
 #if USE(CAIRO)
-using WebCore::DashArray = Vector<double>;
+using WebCore::DashArray = FixedVector<double>;
 #endif
 #if !USE(CG) && !USE(CAIRO)
-using WebCore::DashArray = Vector<float>;
+using WebCore::DashArray = FixedVector<float>;
 #endif
 
 [WebKitPlatform] enum class WebCore::NotificationDirection : uint8_t {

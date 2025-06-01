@@ -615,8 +615,10 @@ void setLineDash(GraphicsContextCairo& platformContext, const DashArray& dashes,
 {
     if (std::all_of(dashes.begin(), dashes.end(), [](auto& dash) { return !dash; }))
         cairo_set_dash(platformContext.cr(), 0, 0, 0);
-    else
-        cairo_set_dash(platformContext.cr(), dashes.data(), dashes.size(), dashOffset);
+    else {
+        auto dashesSpan = dashes.span();
+        cairo_set_dash(platformContext.cr(), dashesSpan.data(), dashesSpan.size(), dashOffset);
+    }
 }
 
 void setLineJoin(GraphicsContextCairo& platformContext, LineJoin lineJoin)

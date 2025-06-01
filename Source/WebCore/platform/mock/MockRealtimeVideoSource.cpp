@@ -153,7 +153,7 @@ MockRealtimeVideoSource::MockRealtimeVideoSource(String&& deviceID, AtomString&&
     ASSERT(device);
     m_device = *device;
 
-    m_dashWidths.appendList({ 6, 6 });
+    m_dashWidths = { 6, 6 };
 
     if (mockDisplay()) {
         auto& properties = std::get<MockDisplayProperties>(m_device.properties);
