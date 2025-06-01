@@ -42,7 +42,7 @@ ExceptionOr<Ref<WaveShaperNode>> WaveShaperNode::create(BaseAudioContext& contex
 {
     RefPtr<Float32Array> curve;
     if (options.curve) {
-        curve = Float32Array::tryCreate(options.curve->data(), options.curve->size());
+        curve = Float32Array::tryCreate(options.curve->span());
         if (!curve)
             return Exception { ExceptionCode::InvalidStateError, "Invalid curve parameter"_s };
     }

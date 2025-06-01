@@ -267,7 +267,7 @@ static inline Vector<CoreAudioCaptureDevice> computeAudioDeviceList(bool filterT
 
     size_t deviceCount = dataSize / sizeof(AudioObjectID);
     Vector<AudioObjectID> deviceIDs(deviceCount);
-    err = AudioObjectGetPropertyData(kAudioObjectSystemObject, &address, 0, nullptr, &dataSize, deviceIDs.data());
+    err = AudioObjectGetPropertyData(kAudioObjectSystemObject, &address, 0, nullptr, &dataSize, deviceIDs.mutableSpan().data());
     if (err) {
         RELEASE_LOG(WebRTC, "computeAudioDeviceList failed to get device list %d (%.4s)", (int)err, (char*)&err);
         return { };

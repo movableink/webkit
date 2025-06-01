@@ -1398,7 +1398,7 @@ void GraphicsContextCG::drawLinesForText(const FloatPoint& origin, float thickne
     bool changeFillColor = fillColor() != color;
     if (changeFillColor)
         setCGFillColor(platformContext(), color);
-    CGContextFillRects(platformContext(), rects.data(), rects.size());
+    CGContextFillRects(platformContext(), rects.span().data(), rects.size());
     if (changeFillColor)
         setCGFillColor(platformContext(), fillColor());
 }

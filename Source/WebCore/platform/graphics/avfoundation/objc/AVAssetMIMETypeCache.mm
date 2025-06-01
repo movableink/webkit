@@ -76,7 +76,7 @@ static bool isMultichannelOpusAvailable()
         size_t count = propertySize / sizeof(AudioChannelLayoutTag);
         Vector<AudioChannelLayoutTag> channelLayoutTags(count, { });
 
-        error = PAL::AudioFormatGetProperty(kAudioFormatProperty_AvailableDecodeChannelLayoutTags, sizeof(asbd), &asbd, &propertySize, channelLayoutTags.data());
+        error = PAL::AudioFormatGetProperty(kAudioFormatProperty_AvailableDecodeChannelLayoutTags, sizeof(asbd), &asbd, &propertySize, channelLayoutTags.mutableSpan().data());
         if (error != noErr)
             return false;
 

@@ -113,7 +113,7 @@ public:
         if (info.codecName == kAudioFormatOpus) {
             auto description = audioStreamDescriptionFromAudioInfo(info);
             auto opusHeader = createOpusPrivateData(description.streamDescription());
-            audioTrack->SetCodecPrivate(opusHeader.data(), opusHeader.size());
+            audioTrack->SetCodecPrivate(opusHeader.span().data(), opusHeader.size());
         }
         return trackIndex;
     }

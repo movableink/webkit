@@ -81,7 +81,7 @@ protected:
 
     bool isSilenced() const { return m_muted || !m_enabled; }
 
-    void sendAudioFrames(const void* audioData, int bitsPerSample, int sampleRate, size_t numberOfChannels, size_t numberOfFrames);
+    void sendAudioFrames(std::span<const uint8_t> audioData, int bitsPerSample, int sampleRate, size_t numberOfChannels, size_t numberOfFrames);
 
 #if !RELEASE_LOG_DISABLED
     // LoggerHelper API

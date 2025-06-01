@@ -437,7 +437,7 @@ inline const HTMLToken::Attribute* findAttribute(const HTMLToken::AttributeList&
 {
     for (auto& attribute : attributes) {
         // FIXME: The one caller that uses this probably wants to ignore letter case.
-        if (attribute.name.size() == name.size() && equal(attribute.name.data(), name))
+        if (attribute.name.size() == name.size() && equal(attribute.name.span().data(), name))
             return &attribute;
     }
     return nullptr;

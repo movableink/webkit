@@ -354,7 +354,7 @@ public:
         {
             return WTF::switchOn(m_variant,
                 [] (const RefPtr<TypedArray>& typedArray) -> const DataType* { return typedArray->data(); },
-                [] (const Vector<DataType>& vector) -> const DataType* { return vector.data(); }
+                [] (const Vector<DataType>& vector) -> const DataType* { return vector.span().data(); }
             );
         }
 

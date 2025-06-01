@@ -56,7 +56,7 @@ static Ref<SupportedFeatures> supportedFeatures(WGPUAdapter adapter)
 {
     auto featureCount = wgpuAdapterEnumerateFeatures(adapter, nullptr);
     Vector<WGPUFeatureName> features(featureCount);
-    wgpuAdapterEnumerateFeatures(adapter, features.data());
+    wgpuAdapterEnumerateFeatures(adapter, features.mutableSpan().data());
 
     return supportedFeatures(features);
 }
@@ -248,7 +248,7 @@ void AdapterImpl::requestDevice(const DeviceDescriptor& descriptor, CompletionHa
         .nextInChain = nullptr,
         .label = label.data(),
         .requiredFeatureCount = features.size(),
-        .requiredFeatures = features.size() ? features.data() : nullptr,
+        .requiredFeatures = features.size() ? features.span().data() : nullptr,
         .requiredLimits = &requiredLimits,
         .defaultQueue = {
             { },

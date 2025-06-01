@@ -345,7 +345,7 @@ std::optional<FontPlatformSerializedAttributes> FontPlatformSerializedAttributes
         CFIndex count = CFDictionaryGetCount(dictionary);
         Vector<void*> keys(count);
         Vector<void*> values(count);
-        CFDictionaryGetKeysAndValues(dictionary, const_cast<const void**>(keys.data()), const_cast<const void**>(values.data()));
+        CFDictionaryGetKeysAndValues(dictionary, const_cast<const void**>(keys.span().data()), const_cast<const void**>(values.span().data()));
 
         for (CFIndex i = 0; i < count; ++i) {
             auto key = static_cast<CFNumberRef>(keys[i]);

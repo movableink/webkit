@@ -174,7 +174,7 @@ void RTCRtpSFrameTransform::initializeTransformer(RTCRtpTransformBackend& backen
         if (!result)
             return;
 
-        frame->setData({ result.value().data(), result.value().size() });
+        frame->setData(result.value().span());
 
         backend->processTransformedFrame(frame.get());
     });

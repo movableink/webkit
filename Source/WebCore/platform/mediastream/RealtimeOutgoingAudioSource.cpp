@@ -104,7 +104,7 @@ void RealtimeOutgoingAudioSource::RemoveSink(webrtc::AudioTrackSinkInterface* si
     m_sinks.remove(sink);
 }
 
-void RealtimeOutgoingAudioSource::sendAudioFrames(const void* audioData, int bitsPerSample, int sampleRate, size_t numberOfChannels, size_t numberOfFrames)
+void RealtimeOutgoingAudioSource::sendAudioFrames(std::span<const uint8_t> audioData, int bitsPerSample, int sampleRate, size_t numberOfChannels, size_t numberOfFrames)
 {
 #if !RELEASE_LOG_DISABLED
     if (!(++m_chunksSent % 200))
@@ -113,7 +113,7 @@ void RealtimeOutgoingAudioSource::sendAudioFrames(const void* audioData, int bit
 
     Locker locker { m_sinksLock };
     for (auto sink : m_sinks)
-        sink->OnData(audioData, bitsPerSample, sampleRate, numberOfChannels, numberOfFrames);
+        sink->OnData(audioData.data(), bitsPerSample, sampleRate, numberOfChannels, numberOfFrames);
 }
 
 #if !RELEASE_LOG_DISABLED

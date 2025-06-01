@@ -142,7 +142,7 @@ RefPtr<Texture> DeviceImpl::createTexture(const TextureDescriptor& descriptor)
         descriptor.mipLevelCount,
         descriptor.sampleCount,
         backingTextureFormats.size(),
-        backingTextureFormats.size() ? backingTextureFormats.data() : nullptr,
+        backingTextureFormats.size() ? backingTextureFormats.span().data() : nullptr,
     };
 
     return TextureImpl::create(adoptWebGPU(wgpuDeviceCreateTexture(m_backing.get(), &backingDescriptor)), descriptor.format, descriptor.dimension, convertToBackingContext);
@@ -239,7 +239,7 @@ RefPtr<BindGroupLayout> DeviceImpl::createBindGroupLayout(const BindGroupLayoutD
         nullptr,
         label.data(),
         backingEntries.size(),
-        backingEntries.size() ? backingEntries.data() : nullptr,
+        backingEntries.size() ? backingEntries.span().data() : nullptr,
     };
 
     return BindGroupLayoutImpl::create(adoptWebGPU(wgpuDeviceCreateBindGroupLayout(m_backing.get(), &backingDescriptor)), m_convertToBackingContext);
@@ -260,7 +260,7 @@ RefPtr<PipelineLayout> DeviceImpl::createPipelineLayout(const PipelineLayoutDesc
         nullptr,
         label.data(),
         descriptor.bindGroupLayouts ? backingBindGroupLayouts.size() : 0,
-        descriptor.bindGroupLayouts ? backingBindGroupLayouts.data() : nullptr,
+        descriptor.bindGroupLayouts ? backingBindGroupLayouts.span().data() : nullptr,
     };
 
     return PipelineLayoutImpl::create(adoptWebGPU(wgpuDeviceCreatePipelineLayout(m_backing.get(), &backingDescriptor)), m_convertToBackingContext);
@@ -297,7 +297,7 @@ RefPtr<BindGroup> DeviceImpl::createBindGroup(const BindGroupDescriptor& descrip
         label.data(),
         convertToBackingContext->convertToBacking(descriptor.protectedLayout().get()),
         backingEntries.size(),
-        backingEntries.size() ? backingEntries.data() : nullptr,
+        backingEntries.size() ? backingEntries.span().data() : nullptr,
     };
 
     return BindGroupImpl::create(adoptWebGPU(wgpuDeviceCreateBindGroup(m_backing.get(), &backingDescriptor)), convertToBackingContext);
@@ -378,7 +378,7 @@ static auto convertToBacking(const ComputePipelineDescriptor& descriptor, Conver
             convertToBackingContext.convertToBacking(descriptor.compute.protectedModule().get()),
             entryPoint ? entryPoint->data() : nullptr,
             backingConstantEntries.size(),
-            backingConstantEntries.size() ? backingConstantEntries.data() : nullptr,
+            backingConstantEntries.size() ? backingConstantEntries.span().data() : nullptr,
         }
     };
 
@@ -437,7 +437,7 @@ static auto convertToBacking(const RenderPipelineDescriptor& descriptor, Convert
             buffer ? buffer->arrayStride : WGPU_COPY_STRIDE_UNDEFINED,
             buffer ? convertToBackingContext.convertToBacking(buffer->stepMode) : WGPUVertexStepMode_Vertex,
             backingAttributes[i].size(),
-            backingAttributes[i].size() ? backingAttributes[i].data() : nullptr,
+            backingAttributes[i].size() ? backingAttributes[i].span().data() : nullptr,
         };
     });
 
@@ -537,9 +537,9 @@ static auto convertToBacking(const RenderPipelineDescriptor& descriptor, Convert
         descriptor.fragment ? convertToBackingContext.convertToBacking(descriptor.fragment->protectedModule().get()) : nullptr,
         fragmentEntryPoint ? fragmentEntryPoint->data() : nullptr,
         fragmentConstantEntries.size(),
-        fragmentConstantEntries.size() ? fragmentConstantEntries.data() : nullptr,
+        fragmentConstantEntries.size() ? fragmentConstantEntries.span().data() : nullptr,
         colorTargets.size(),
-        colorTargets.size() ? colorTargets.data() : nullptr,
+        colorTargets.size() ? colorTargets.span().data() : nullptr,
     };
 
     WGPUPrimitiveDepthClipControl depthClipControl = {
@@ -559,9 +559,9 @@ static auto convertToBacking(const RenderPipelineDescriptor& descriptor, Convert
             convertToBackingContext.convertToBacking(descriptor.vertex.protectedModule().get()),
             vertexEntryPoint ? vertexEntryPoint->data() : nullptr,
             vertexConstantEntries.size(),
-            vertexConstantEntries.size() ? vertexConstantEntries.data() : nullptr,
+            vertexConstantEntries.size() ? vertexConstantEntries.span().data() : nullptr,
             backingBuffers.size(),
-            backingBuffers.size() ? backingBuffers.data() : nullptr,
+            backingBuffers.size() ? backingBuffers.span().data() : nullptr,
         },
         .primitive = {
             descriptor.primitive && descriptor.primitive->unclippedDepth ? &depthClipControl.chain : nullptr,
@@ -655,7 +655,7 @@ RefPtr<RenderBundleEncoder> DeviceImpl::createRenderBundleEncoder(const RenderBu
         nullptr,
         label.data(),
         backingColorFormats.size(),
-        backingColorFormats.size() ? backingColorFormats.data() : nullptr,
+        backingColorFormats.size() ? backingColorFormats.span().data() : nullptr,
         descriptor.depthStencilFormat ? convertToBackingContext->convertToBacking(*descriptor.depthStencilFormat) : WGPUTextureFormat_Undefined,
         descriptor.sampleCount,
         descriptor.depthReadOnly,

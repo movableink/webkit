@@ -175,7 +175,7 @@ RefPtr<JSC::ArrayBuffer> CDMSessionClearKey::cachedKeyForKeyID(const String& key
         return nullptr;
 
     auto keyData = m_cachedKeys.get(keyId);
-    auto keyDataArray = JSC::Uint8Array::create(keyData.data(), keyData.size());
+    auto keyDataArray = JSC::Uint8Array::create(keyData.span());
     return keyDataArray->unsharedBuffer();
 }
 

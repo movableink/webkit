@@ -445,8 +445,8 @@ void RedirectAction::RegexSubstitutionAction::applyToURL(URL& url) const
         auto string = adopt(JSValueToStringCopy(context, value, nullptr));
         size_t bufferSize = JSStringGetMaximumUTF8CStringSize(string.get());
         Vector<char> buffer(bufferSize);
-        JSStringGetUTF8CString(string.get(), buffer.data(), buffer.size());
-        return String::fromUTF8(buffer.data());
+        JSStringGetUTF8CString(string.get(), buffer.mutableSpan().data(), buffer.size());
+        return String::fromUTF8(buffer.span().data());
     };
 
     // Effectively execute this JavaScript:

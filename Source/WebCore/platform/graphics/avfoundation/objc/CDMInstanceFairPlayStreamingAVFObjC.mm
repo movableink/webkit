@@ -1359,7 +1359,7 @@ RetainPtr<NSDictionary> CDMInstanceSessionFairPlayStreamingAVFObjC::optionsForKe
         seedData.insertFill(seedData.size(), 0, kMaximumDeviceIdentifierSeedSize - seedData.size());
 
     [options setValue:@YES forKey:AVContentKeyRequestShouldRandomizeDeviceIdentifierKey];
-    [options setValue:[NSData dataWithBytes:seedData.data() length:seedData.sizeInBytes()] forKey:AVContentKeyRequestRandomDeviceIdentifierSeedKey];
+    [options setValue:WTF::toNSData(seedData.span()).get() forKey:AVContentKeyRequestRandomDeviceIdentifierSeedKey];
 
     return options;
 }

@@ -74,7 +74,7 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(CTRunRef ctRun, const Font
     Vector<CFIndex> coreTextIndices;
     if (!coreTextIndicesSpan.data()) {
         coreTextIndices.grow(m_glyphCount);
-        CTRunGetStringIndices(ctRun, CFRangeMake(0, 0), coreTextIndices.data());
+        CTRunGetStringIndices(ctRun, CFRangeMake(0, 0), coreTextIndices.mutableSpan().data());
         coreTextIndicesSpan = coreTextIndices.span();
     }
     m_coreTextIndices = coreTextIndicesSpan;
@@ -83,13 +83,13 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(CTRunRef ctRun, const Font
         m_glyphs = glyphsSpan;
     else {
         m_glyphs.grow(m_glyphCount);
-        CTRunGetGlyphs(ctRun, CFRangeMake(0, 0), m_glyphs.data());
+        CTRunGetGlyphs(ctRun, CFRangeMake(0, 0), m_glyphs.mutableSpan().data());
     }
 
     if (CTRunGetStatus(ctRun) & kCTRunStatusHasOrigins) {
         Vector<CGSize> baseAdvances(m_glyphCount);
         Vector<CGPoint> glyphOrigins(m_glyphCount);
-        CTRunGetBaseAdvancesAndOrigins(ctRun, CFRangeMake(0, 0), baseAdvances.data(), glyphOrigins.data());
+        CTRunGetBaseAdvancesAndOrigins(ctRun, CFRangeMake(0, 0), baseAdvances.mutableSpan().data(), glyphOrigins.mutableSpan().data());
         m_baseAdvances.reserveInitialCapacity(m_glyphCount);
         m_glyphOrigins.reserveInitialCapacity(m_glyphCount);
         for (unsigned i = 0; i < m_glyphCount; ++i) {
@@ -102,7 +102,7 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(CTRunRef ctRun, const Font
         else {
             Vector<CGSize, 64> baseAdvancesVector;
             baseAdvancesVector.grow(m_glyphCount);
-            CTRunGetAdvances(ctRun, CFRangeMake(0, 0), baseAdvancesVector.data());
+            CTRunGetAdvances(ctRun, CFRangeMake(0, 0), baseAdvancesVector.mutableSpan().data());
             m_baseAdvances = BaseAdvancesVector(m_glyphCount, [&](size_t i) {
                 return baseAdvancesVector[i];
             });

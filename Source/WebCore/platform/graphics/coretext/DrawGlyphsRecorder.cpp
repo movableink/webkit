@@ -346,7 +346,7 @@ void DrawGlyphsRecorder::recordDrawGlyphs(CGRenderingStateRef, CGGStateRef gstat
     AdvancesAndInitialPosition advances;
     if (font->platformData().orientation() == FontOrientation::Vertical) {
         Vector<CGSize, 256> translations(glyphs.size());
-        CTFontGetVerticalTranslationsForGlyphs(font->platformData().ctFont(), glyphs.data(), translations.data(), glyphs.size());
+        CTFontGetVerticalTranslationsForGlyphs(font->platformData().ctFont(), glyphs.data(), translations.mutableSpan().data(), glyphs.size());
         auto ascentDelta = font->fontMetrics().ascent(IdeographicBaseline) - font->fontMetrics().ascent();
         advances = computeVerticalAdvancesFromPositions(translations.span(), positions, ascentDelta, textMatrix);
     } else

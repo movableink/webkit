@@ -155,7 +155,7 @@ void RenderPassEncoderImpl::executeBundles(Vector<Ref<RenderBundle>>&& renderBun
         return protectedConvertToBackingContext()->convertToBacking(renderBundle.get());
     });
 
-    wgpuRenderPassEncoderExecuteBundles(m_backing.get(), backingBundles.size(), backingBundles.data());
+    wgpuRenderPassEncoderExecuteBundles(m_backing.get(), backingBundles.size(), backingBundles.span().data());
 }
 
 void RenderPassEncoderImpl::end()

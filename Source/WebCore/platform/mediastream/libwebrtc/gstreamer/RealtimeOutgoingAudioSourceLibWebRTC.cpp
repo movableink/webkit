@@ -125,7 +125,7 @@ void RealtimeOutgoingAudioSourceLibWebRTC::pullAudioData()
             }
         }
 
-        sendAudioFrames(m_audioBuffer.data(), LibWebRTCAudioFormat::sampleSize, GST_AUDIO_INFO_RATE(&m_outputStreamDescription),
+        sendAudioFrames(m_audioBuffer.span(), LibWebRTCAudioFormat::sampleSize, GST_AUDIO_INFO_RATE(&m_outputStreamDescription),
             GST_AUDIO_INFO_CHANNELS(&m_outputStreamDescription), outChunkSampleCount);
     }
 }

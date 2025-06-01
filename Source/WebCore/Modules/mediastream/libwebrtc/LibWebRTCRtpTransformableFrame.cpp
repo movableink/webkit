@@ -154,7 +154,7 @@ void LibWebRTCRtpTransformableFrame::setOptions(const RTCEncodedVideoFrameMetada
     if (newMetadata.frameId)
         rtcMetadata.SetFrameId(*newMetadata.frameId);
     if (newMetadata.dependencies)
-        rtcMetadata.SetFrameDependencies({ newMetadata.dependencies->data(), newMetadata.dependencies->size() });
+        rtcMetadata.SetFrameDependencies({ newMetadata.dependencies->span().data(), newMetadata.dependencies->size() });
     if (newMetadata.width)
         rtcMetadata.SetWidth(*newMetadata.width);
     if (newMetadata.height)

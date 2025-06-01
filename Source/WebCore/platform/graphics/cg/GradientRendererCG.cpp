@@ -544,9 +544,9 @@ GradientRendererCG::Strategy GradientRendererCG::makeGradient(ColorInterpolation
     apply139572277Workaround();
 
 #if HAVE(CORE_GRAPHICS_GRADIENT_CREATE_WITH_OPTIONS)
-    return Gradient { adoptCF(CGGradientCreateWithColorComponentsAndOptions(cgColorSpace, colorComponents.data(), locations.data(), numberOfStops, gradientOptionsDictionary(colorInterpolationMethod))), destinationColorSpace };
+    return Gradient { adoptCF(CGGradientCreateWithColorComponentsAndOptions(cgColorSpace, colorComponents.span().data(), locations.span().data(), numberOfStops, gradientOptionsDictionary(colorInterpolationMethod))), destinationColorSpace };
 #else
-    return Gradient { adoptCF(CGGradientCreateWithColorComponents(cgColorSpace, colorComponents.data(), locations.data(), numberOfStops)), destinationColorSpace };
+    return Gradient { adoptCF(CGGradientCreateWithColorComponents(cgColorSpace, colorComponents.span().data(), locations.span().data(), numberOfStops)), destinationColorSpace };
 #endif
 }
 
