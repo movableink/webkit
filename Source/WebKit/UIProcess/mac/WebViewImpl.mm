@@ -2365,6 +2365,7 @@ void WebViewImpl::pageDidScroll(const IntPoint& scrollPosition)
 
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
     updateTopContentInsetFillDueToScrolling();
+    updateTopContentInsetFillCaptureColor();
 #endif
 
     [m_view didChangeValueForKey:@"hasScrolledContentsUnderTitlebar"];
@@ -2379,6 +2380,15 @@ void WebViewImpl::updateTopContentInsetFillDueToScrolling()
         [view _addReasonToHideTopContentInsetFill:HideContentInsetFillReason::ScrolledToTop];
     else
         [view _removeReasonToHideTopContentInsetFill:HideContentInsetFillReason::ScrolledToTop];
+}
+
+void WebViewImpl::updateTopContentInsetFillCaptureColor()
+{
+    RetainPtr view = m_view.get();
+    RetainPtr captureColor = [view _sampledTopFixedPositionContentColor];
+    if (!captureColor && (m_pageIsScrolledToTop || [view _hasVisibleColorExtensionView:BoxSide::Top]))
+        captureColor = cocoaColor(m_page->underPageBackgroundColor());
+    [m_topContentInsetFillView setCaptureColor:captureColor.get()];
 }
 
 #endif // ENABLE(CONTENT_INSET_BACKGROUND_FILL)

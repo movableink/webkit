@@ -537,6 +537,7 @@ struct PerWebProcessState {
 - (BOOL)_hasVisibleColorExtensionView:(WebCore::BoxSide)side;
 - (void)_addReasonToHideTopContentInsetFill:(WebKit::HideContentInsetFillReason)reason;
 - (void)_removeReasonToHideTopContentInsetFill:(WebKit::HideContentInsetFillReason)reason;
+- (void)_updateTopContentInsetFillCaptureColor;
 #endif
 
 #if ENABLE(GAMEPAD)

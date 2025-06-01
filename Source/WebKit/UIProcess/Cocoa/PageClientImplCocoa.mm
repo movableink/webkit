@@ -79,7 +79,12 @@ void PageClientImplCocoa::underPageBackgroundColorWillChange()
 
 void PageClientImplCocoa::underPageBackgroundColorDidChange()
 {
-    [m_webView didChangeValueForKey:@"underPageBackgroundColor"];
+    RetainPtr webView = this->webView();
+
+    [webView didChangeValueForKey:@"underPageBackgroundColor"];
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    [webView _updateTopContentInsetFillCaptureColor];
+#endif
 }
 
 void PageClientImplCocoa::sampledPageTopColorWillChange()

@@ -33,11 +33,17 @@
 #import "TestCocoa.h"
 #import "TestNavigationDelegate.h"
 #import "TestWKWebView.h"
+#import <WebCore/ColorCocoa.h>
+#import <WebCore/ColorSerialization.h>
 #import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/WKWebViewPrivateForTesting.h>
 #import <wtf/RetainPtr.h>
+
+@interface NSView (ContentInsetFillSPI)
+@property (nonatomic, readonly) NSColor *captureColor;
+@end
 
 @interface WKWebView (ObscuredContentInsets) <NSScrollViewSeparatorTrackingAdapter>
 @end
@@ -176,6 +182,25 @@ TEST(ObscuredContentInsets, ResizeContentInsetFillView)
     [webView waitForNextVisibleContentRectUpdate];
     [webView waitForNextPresentationUpdate];
     EXPECT_EQ(NSMakeRect(0, 0, 800, 100), [webView _contentInsetFillViewForTesting].frame);
+}
+
+TEST(ObscuredContentInsets, ContentInsetFillCaptureColor)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 600, 400)]);
+    [webView _setAutomaticallyAdjustsContentInsets:NO];
+    [webView _setObscuredContentInsets:NSEdgeInsetsMake(100, 0, 0, 0) immediate:NO];
+    [webView synchronouslyLoadTestPageNamed:@"simple"];
+    [webView waitForNextPresentationUpdate];
+
+    auto initialColor = WebCore::colorFromCocoaColor([[webView _contentInsetFillViewForTesting] captureColor]);
+
+    [webView stringByEvaluatingJavaScript:@"document.body.style.backgroundColor = '#222'"];
+    [webView waitForNextPresentationUpdate];
+
+    auto finalColor = WebCore::colorFromCocoaColor([[webView _contentInsetFillViewForTesting] captureColor]);
+
+    EXPECT_EQ(WebCore::serializationForCSS(initialColor), "rgb(255, 255, 255)"_s);
+    EXPECT_EQ(WebCore::serializationForCSS(finalColor), "rgb(34, 34, 34)"_s);
 }
 
 #endif // ENABLE(CONTENT_INSET_BACKGROUND_FILL)

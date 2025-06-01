@@ -3112,6 +3112,13 @@ static WebCore::CocoaColor *sampledFixedPositionContentColor(const WebCore::Fixe
 
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
 
+- (void)_updateTopContentInsetFillCaptureColor
+{
+#if PLATFORM(MAC)
+    _impl->updateTopContentInsetFillCaptureColor();
+#endif
+}
+
 - (WebCore::FloatBoxExtent)_obscuredInsetsForFixedColorExtension
 {
 #if PLATFORM(MAC)
