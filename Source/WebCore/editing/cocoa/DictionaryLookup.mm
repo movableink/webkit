@@ -434,6 +434,8 @@ static WKRevealController showPopupOrCreateAnimationController(bool createAnimat
         return nil;
 
     auto textIndicator = dictionaryPopupInfo.textIndicator;
+    if (!textIndicator)
+        return nil;
 
     auto presenter = adoptNS([PAL::allocRVPresenterInstance() init]);
 
