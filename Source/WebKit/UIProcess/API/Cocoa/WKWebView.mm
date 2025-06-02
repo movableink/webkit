@@ -669,7 +669,7 @@ static void addBrowsingContextControllerMethodStubIfNeeded()
 
     _page->setCocoaView(self);
 
-    [WebViewVisualIdentificationOverlay installForWebViewIfNeeded:self kind:@"WKWebView" deprecated:NO];
+    [WebViewVisualIdentificationOverlay installForWebViewIfNeeded:self kind:self._nameForVisualIdentificationOverlay deprecated:NO];
 
 #if PLATFORM(IOS_FAMILY)
     auto timeNow = MonotonicTime::now();
@@ -1868,6 +1868,11 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
 #endif // PLATFORM(MAC)
 
 #pragma mark - macOS/iOS internal
+
+- (NSString *)_nameForVisualIdentificationOverlay
+{
+    return @"WKWebView";
+}
 
 - (void)_showWarningView:(const WebKit::BrowsingWarning&)warning completionHandler:(CompletionHandler<void(Variant<WebKit::ContinueUnsafeLoad, URL>&&)>&&)completionHandler
 {

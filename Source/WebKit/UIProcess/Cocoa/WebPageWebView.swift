@@ -177,4 +177,11 @@ extension WebPageWebView {
     #endif
 }
 
+extension WebPageWebView {
+    // swift-format-ignore: NoLeadingUnderscores
+    override var _nameForVisualIdentificationOverlay: String {
+        "WebView (SwiftUI)"
+    }
+}
+
 #endif
