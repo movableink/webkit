@@ -251,7 +251,7 @@ void RenderTreeBuilder::Inline::splitFlow(RenderInline& parent, RenderObject* be
         madeNewBeforeBlock = true;
     }
 
-    auto createdPost = pre->createAnonymousBoxWithSameTypeAs(*block);
+    auto createdPost = createAnonymousBoxWithSameTypeAndWithStyle(*pre, block->style());
     auto& post = downcast<RenderBlock>(*createdPost);
 
     RenderObject* boxFirst = madeNewBeforeBlock ? block->firstChild() : pre->nextSibling();

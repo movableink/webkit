@@ -113,9 +113,6 @@ public:
     bool cellWidthChanged() const { return m_cellWidthChanged; }
     void setCellWidthChanged(bool b = true) { m_cellWidthChanged = b; }
 
-    static RenderPtr<RenderTableCell> createAnonymousWithParentRenderer(const RenderTableRow&);
-    inline RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override; // Defined in RenderTableCellInlines.h
-
     // Table layout always uses the table's writing mode.
     const WritingMode tableWritingMode() const { return table()->writingMode(); }
 

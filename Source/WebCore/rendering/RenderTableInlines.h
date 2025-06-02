@@ -97,9 +97,4 @@ inline LayoutUnit RenderTable::outerBorderTop() const
     return writingMode().isInlineTopToBottom() ? outerBorderStart() : borderEnd();
 }
 
-inline RenderPtr<RenderBox> RenderTable::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const
-{
-    return RenderTable::createTableWithStyle(renderer.protectedDocument(), renderer.checkedStyle().get());
-}
-
 } // namespace WebCore

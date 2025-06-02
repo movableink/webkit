@@ -142,8 +142,6 @@ public:
     bool paintsContinuationOutline(const RenderInline&);
 #endif
 
-    RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
-
     bool establishesIndependentFormattingContext() const;
     bool createsNewFormattingContext() const;
 
@@ -354,8 +352,6 @@ protected:
     bool recomputeLogicalWidth();
 
 private:
-    static RenderPtr<RenderBlock> createAnonymousBlockWithStyle(Document&, const RenderStyle&);
-
     // FIXME-BLOCKFLOW: Remove virtualizaion when all callers have moved to RenderBlockFlow
     virtual LayoutUnit logicalRightFloatOffsetForLine(LayoutUnit, LayoutUnit fixedOffset, LayoutUnit) const { return fixedOffset; };
     // FIXME-BLOCKFLOW: Remove virtualizaion when all callers have moved to RenderBlockFlow

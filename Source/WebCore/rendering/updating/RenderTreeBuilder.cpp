@@ -447,7 +447,7 @@ void RenderTreeBuilder::attachToRenderElement(RenderElement& parent, RenderPtr<R
         if (afterChild && afterChild->isAnonymous() && !afterChild->isBeforeContent())
             table = afterChild;
         else {
-            auto newTable = RenderTable::createAnonymousWithParentRenderer(parent);
+            auto newTable = Table::createAnonymousTableWithStyle(parent.protectedDocument(), parent.style());
             table = newTable.get();
             attach(parent, WTFMove(newTable), beforeChild);
         }
@@ -798,7 +798,7 @@ RenderObject* RenderTreeBuilder::splitAnonymousBoxesAroundChild(RenderBox& paren
 
             // We have to split the parent box into two boxes and move children
             // from |beforeChild| to end into the new post box.
-            auto newPostBox = boxToSplit.createAnonymousBoxWithSameTypeAs(parent);
+            auto newPostBox = createAnonymousBoxWithSameTypeAndWithStyle(boxToSplit, parent.style());
             auto& postBox = *newPostBox;
             postBox.setChildrenInline(boxToSplit.childrenInline());
             RenderBox* parentBox = downcast<RenderBox>(boxToSplit.parent());
@@ -1154,6 +1154,27 @@ void RenderTreeBuilder::removeFloatingObjects(RenderBlock& renderer)
     });
     for (auto* floatingObject : copyOfFloatingObjects)
         floatingObject->renderer().removeFloatingOrOutOfFlowChildFromBlockLists();
+}
+
+RenderPtr<RenderBox> RenderTreeBuilder::createAnonymousBoxWithSameTypeAndWithStyle(const RenderBox& renderer, const RenderStyle& style)
+{
+    if (is<RenderTableCell>(renderer))
+        return Table::createAnonymousTableCellWithStyle(renderer.protectedDocument(), style);
+
+    if (is<RenderTableRow>(renderer))
+        return Table::createAnonymousTableRowWithStyle(renderer.protectedDocument(), style);
+
+    if (is<RenderTableSection>(renderer))
+        return Table::createAnonymousTableSectionWithStyle(renderer.protectedDocument(), style);
+
+    if (is<RenderTable>(renderer))
+        return Table::createAnonymousTableWithStyle(renderer.protectedDocument(), style);
+
+    if (is<RenderBlock>(renderer))
+        return Block::createAnonymousBlockWithStyle(renderer.protectedDocument(), style);
+
+    ASSERT_NOT_REACHED();
+    return { };
 }
 
 }

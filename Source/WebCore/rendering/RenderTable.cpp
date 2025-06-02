@@ -1696,18 +1696,6 @@ bool RenderTable::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
     return false;
 }
 
-RenderPtr<RenderTable> RenderTable::createTableWithStyle(Document& document, const RenderStyle& style)
-{
-    auto table = createRenderer<RenderTable>(Type::Table, document, RenderStyle::createAnonymousStyleWithDisplay(style, style.display() == DisplayType::Inline ? DisplayType::InlineTable : DisplayType::Table));
-    table->initializeStyle();
-    return table;
-}
-
-RenderPtr<RenderTable> RenderTable::createAnonymousWithParentRenderer(const RenderElement& parent)
-{
-    return RenderTable::createTableWithStyle(parent.document(), parent.style());
-}
-
 void RenderTable::markForPaginationRelayoutIfNeeded()
 {
     auto* layoutState = view().frameView().layoutContext().layoutState();

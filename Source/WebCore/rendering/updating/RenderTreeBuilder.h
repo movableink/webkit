@@ -102,6 +102,8 @@ private:
 
     void setHasBrokenContinuation() { m_hasBrokenContinuation = true; }
 
+    static RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAndWithStyle(const RenderBox&, const RenderStyle&);
+
     class FirstLetter;
     class List;
     class MultiColumn;

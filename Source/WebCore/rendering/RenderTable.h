@@ -194,9 +194,6 @@ public:
             recalcSections();
     }
 
-    static RenderPtr<RenderTable> createAnonymousWithParentRenderer(const RenderElement&);
-    inline RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const override; // Defined in RenderTableInlines.h
-
     void addCaption(RenderTableCaption&);
     void removeCaption(RenderTableCaption&);
     void addColumn(const RenderTableCol*);
@@ -221,9 +218,6 @@ public:
 protected:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
     void simplifiedNormalFlowLayout() final;
-
-private:
-    static RenderPtr<RenderTable> createTableWithStyle(Document&, const RenderStyle&);
 
     ASCIILiteral renderName() const override { return "RenderTable"_s; }
 

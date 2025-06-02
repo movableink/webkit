@@ -83,9 +83,4 @@ inline bool RenderTableCell::isBaselineAligned() const
     return va == VerticalAlign::Baseline || va == VerticalAlign::TextBottom || va == VerticalAlign::TextTop || va == VerticalAlign::Super || va == VerticalAlign::Sub || va == VerticalAlign::Length;
 }
 
-inline RenderPtr<RenderBox> RenderTableCell::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const
-{
-    return RenderTableCell::createTableCellWithStyle(renderer.protectedDocument(), renderer.checkedStyle().get());
-}
-
 } // namespace WebCore

@@ -575,12 +575,6 @@ public:
         return layoutOverflowRect.y() < paddingBoxRect.y() || layoutOverflowRect.maxY() > paddingBoxRect.maxY();
     }
 
-    virtual RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const
-    {
-        ASSERT_NOT_REACHED();
-        return nullptr;
-    }
-
     void markShapeOutsideDependentsForLayout()
     {
         if (isFloating())

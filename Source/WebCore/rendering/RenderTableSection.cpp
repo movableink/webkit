@@ -1604,18 +1604,6 @@ CollapsedBorderValue RenderTableSection::cachedCollapsedBorder(const RenderTable
     return it->value;
 }
 
-RenderPtr<RenderTableSection> RenderTableSection::createTableSectionWithStyle(Document& document, const RenderStyle& style)
-{
-    auto section = createRenderer<RenderTableSection>(document, RenderStyle::createAnonymousStyleWithDisplay(style, DisplayType::TableRowGroup));
-    section->initializeStyle();
-    return section;
-}
-
-RenderPtr<RenderTableSection> RenderTableSection::createAnonymousWithParentRenderer(const RenderTable& parent)
-{
-    return RenderTableSection::createTableSectionWithStyle(parent.document(), parent.style());
-}
-
 void RenderTableSection::setLogicalPositionForCell(RenderTableCell* cell, unsigned effectiveColumn) const
 {
     LayoutPoint oldCellLocation = cell->location();

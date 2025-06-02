@@ -1501,18 +1501,6 @@ void RenderTableCell::scrollbarsChanged(bool horizontalScrollbarChanged, bool ve
         setIntrinsicPaddingAfter(intrinsicPaddingAfter() - scrollbarHeight);
 }
 
-RenderPtr<RenderTableCell> RenderTableCell::createTableCellWithStyle(Document& document, const RenderStyle& style)
-{
-    auto cell = createRenderer<RenderTableCell>(document, RenderStyle::createAnonymousStyleWithDisplay(style, DisplayType::TableCell));
-    cell->initializeStyle();
-    return cell;
-}
-
-RenderPtr<RenderTableCell> RenderTableCell::createAnonymousWithParentRenderer(const RenderTableRow& parent)
-{
-    return RenderTableCell::createTableCellWithStyle(parent.document(), parent.style());
-}
-
 bool RenderTableCell::hasLineIfEmpty() const
 {
     if (element() && element()->hasEditableStyle())

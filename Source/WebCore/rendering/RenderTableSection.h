@@ -143,9 +143,6 @@ public:
     // FIXME: We may want to introduce a structure holding the in-flux layout information.
     LayoutUnit distributeExtraLogicalHeightToRows(LayoutUnit extraLogicalHeight);
 
-    static RenderPtr<RenderTableSection> createAnonymousWithParentRenderer(const RenderTable&);
-    inline RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override; // Defined in RenderTableSectionInlines.h
-
     void paint(PaintInfo&, const LayoutPoint&) override;
 
     void willInsertTableRow(RenderTableRow& child, RenderObject* beforeChild);
