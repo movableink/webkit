@@ -177,11 +177,6 @@ BroadcastChannel::~BroadcastChannel()
     }
 }
 
-auto BroadcastChannel::protectedMainThreadBridge() const -> Ref<MainThreadBridge>
-{
-    return m_mainThreadBridge;
-}
-
 BroadcastChannelIdentifier BroadcastChannel::identifier() const
 {
     return m_mainThreadBridge->identifier();
@@ -206,7 +201,7 @@ ExceptionOr<void> BroadcastChannel::postMessage(JSC::JSGlobalObject& globalObjec
         return messageData.releaseException();
     ASSERT(ports.isEmpty());
 
-    protectedMainThreadBridge()->postMessage(messageData.releaseReturnValue());
+    m_mainThreadBridge->postMessage(messageData.releaseReturnValue());
     return { };
 }
 
@@ -216,7 +211,7 @@ void BroadcastChannel::close()
         return;
 
     m_isClosed = true;
-    protectedMainThreadBridge()->unregisterChannel();
+    m_mainThreadBridge->unregisterChannel();
 }
 
 void BroadcastChannel::dispatchMessageTo(BroadcastChannelIdentifier channelIdentifier, Ref<SerializedScriptValue>&& message, CompletionHandler<void()>&& completionHandler)

@@ -132,10 +132,10 @@ private:
         MicrotaskQueue m_queue;
     };
 
-    Ref<JSC::VM> m_vm;
-    Ref<SecurityOrigin> m_origin;
+    const Ref<JSC::VM> m_vm;
+    const Ref<SecurityOrigin> m_origin;
     URL m_url;
-    Ref<EmptyEventLoop> m_eventLoop;
+    const Ref<EmptyEventLoop> m_eventLoop;
     std::unique_ptr<EventLoopTaskGroup> m_eventLoopTaskGroup;
     SettingsValues m_settingsValues;
 };

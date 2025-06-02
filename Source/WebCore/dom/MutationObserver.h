@@ -107,7 +107,6 @@ public:
     bool isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor&) const;
 
     MutationCallback& callback() const { return m_callback.get(); }
-    Ref<MutationCallback> protectedCallback() const;
 
     static void enqueueSlotChangeEvent(HTMLSlotElement&);
 
@@ -124,7 +123,7 @@ private:
 
     static bool validateOptions(MutationObserverOptions);
 
-    Ref<MutationCallback> m_callback;
+    const Ref<MutationCallback> m_callback;
     Vector<Ref<MutationRecord>> m_records;
     UncheckedKeyHashSet<GCReachableRef<Node>> m_pendingTargets;
     WeakHashSet<MutationObserverRegistration> m_registrations;

@@ -489,7 +489,6 @@ css/typedom/transform/CSSSkewY.cpp
 css/typedom/transform/CSSTranslate.cpp
 dom/Attr.cpp
 dom/BoundaryPoint.cpp
-dom/BroadcastChannel.cpp
 dom/ChildListMutationScope.h
 dom/CollectionIndexCacheInlines.h
 dom/ComposedTreeIterator.h
@@ -511,7 +510,6 @@ dom/ElementInlines.h
 dom/ElementInternals.cpp
 dom/ElementIteratorInlines.h
 dom/ElementTraversal.h
-dom/EmptyScriptExecutionContext.h
 dom/EventListenerMap.h
 dom/EventPath.cpp
 dom/ExtensionStyleSheets.cpp
@@ -531,7 +529,6 @@ dom/MutationRecord.cpp
 dom/NamedNodeMap.cpp
 dom/Node.cpp
 dom/NodeIterator.cpp
-dom/NodeList.h
 dom/NodeRareData.h
 dom/NodeWithIndex.h
 dom/Observable.cpp
@@ -682,7 +679,6 @@ html/PluginDocument.cpp
 html/PublicURLManager.cpp
 html/RadioNodeList.cpp
 html/ValidatedFormListedElement.cpp
-html/ValidatedFormListedElement.h
 html/ValidationMessage.cpp
 html/canvas/CanvasFilterContextSwitcher.cpp
 html/canvas/CanvasGradient.cpp
@@ -967,7 +963,6 @@ platform/graphics/ca/cocoa/GraphicsLayerAsyncContentsDisplayDelegateCocoa.mm
 platform/graphics/ca/cocoa/PlatformCAAnimationCocoa.mm
 platform/graphics/ca/cocoa/PlatformCALayerCocoa.mm
 platform/graphics/cg/GraphicsContextGLCG.cpp
-platform/graphics/cg/PDFDocumentImage.cpp
 platform/graphics/cocoa/ImageAdapterCocoa.mm
 platform/graphics/cocoa/MediaPlayerCocoa.mm
 platform/graphics/cocoa/SourceBufferParser.cpp

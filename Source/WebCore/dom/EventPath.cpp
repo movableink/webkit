@@ -65,7 +65,7 @@ private:
 
     void checkConsistency(Node& currentTarget);
 
-    Ref<Node> m_relatedNode;
+    const Ref<Node> m_relatedNode;
     RefPtr<Node> m_retargetedRelatedNode;
     Vector<RefPtr<TreeScope>, 8> m_ancestorTreeScopes;
     unsigned m_lowestCommonAncestorIndex { 0 };

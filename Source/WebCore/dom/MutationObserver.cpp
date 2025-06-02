@@ -219,14 +219,9 @@ void MutationObserver::deliver()
             return;
 
         InspectorInstrumentation::willFireObserverCallback(*context, "MutationObserver"_s);
-        protectedCallback()->invoke(*this, records, *this);
+        m_callback->invoke(*this, records, *this);
         InspectorInstrumentation::didFireObserverCallback(*context);
     }
-}
-
-Ref<MutationCallback> MutationObserver::protectedCallback() const
-{
-    return m_callback;
 }
 
 // https://dom.spec.whatwg.org/#notify-mutation-observers
