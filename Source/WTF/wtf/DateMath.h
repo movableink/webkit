@@ -52,7 +52,7 @@
 
 namespace WTF {
 
-enum TimeType {
+enum class TimeType : uint8_t {
     UTCTime = 0,
     LocalTime
 };
@@ -499,7 +499,7 @@ WTF_EXPORT_PRIVATE bool setTimeZoneOverride(StringView);
 WTF_EXPORT_PRIVATE void getTimeZoneOverride(Vector<UChar, 32>& timeZoneID);
 
 // Returns combined offset in millisecond (UTC + DST).
-WTF_EXPORT_PRIVATE LocalTimeOffset calculateLocalTimeOffset(double utcInMilliseconds, TimeType = UTCTime);
+WTF_EXPORT_PRIVATE LocalTimeOffset calculateLocalTimeOffset(double utcInMilliseconds, TimeType = TimeType::UTCTime);
 
 } // namespace WTF
 
@@ -531,3 +531,4 @@ using WTF::secondsPerMinute;
 using WTF::setTimeZoneOverride;
 using WTF::timeClip;
 using WTF::timeToMS;
+using WTF::TimeType;

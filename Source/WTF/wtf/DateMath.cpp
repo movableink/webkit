@@ -302,11 +302,11 @@ static double calculateDSTOffset(time_t localTime, double utcOffset)
 LocalTimeOffset calculateLocalTimeOffset(double ms, TimeType inputTimeType)
 {
 #if HAVE(TM_GMTOFF)
-    double localToUTCTimeOffset = inputTimeType == LocalTime ? calculateUTCOffset() : 0;
+    double localToUTCTimeOffset = inputTimeType == TimeType::LocalTime ? calculateUTCOffset() : 0;
 #else
     double localToUTCTimeOffset = calculateUTCOffset();
 #endif
-    if (inputTimeType == LocalTime)
+    if (inputTimeType == TimeType::LocalTime)
         ms -= localToUTCTimeOffset;
 
     // On Mac OS X, the call to localtime (see calculateDSTOffset) will return historically accurate
@@ -966,7 +966,7 @@ double parseDate(std::span<const LChar> dateString)
     double value = parseDate(dateString, isLocalTime);
 
     if (isLocalTime)
-        value -= calculateLocalTimeOffset(value, LocalTime).offset;
+        value -= calculateLocalTimeOffset(value, TimeType::LocalTime).offset;
 
     return value;
 }
