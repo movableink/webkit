@@ -27,7 +27,6 @@
 
 #import <wtf/Platform.h>
 
-#import "WKGroupSession.h"
 #import "WKMaterialHostingSupport.h"
 #import "WKPDFPageNumberIndicator.h"
 #import "WKPreferencesInternal.h"

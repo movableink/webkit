@@ -36,11 +36,7 @@ internal import GroupActivities_SPI
 @_implementationOnly import GroupActivities_SPI
 #endif
 #endif
-#if compiler(>=6.0)
-internal import WebKit_Internal
-#else
-@_implementationOnly import WebKit_Internal
-#endif
+import WebKitSwift
 
 extension WKGroupSessionState {
     fileprivate init(_ state: GroupSession<URLActivity>.State) {

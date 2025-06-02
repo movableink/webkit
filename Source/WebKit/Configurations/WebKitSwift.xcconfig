@@ -62,7 +62,7 @@ FRAMEWORK_LDFLAGS_xrsimulator[sdk=xr*2.*] = -framework LinearMediaKit;
 
 // Use handwritten SPI modules on public SDKs.
 SWIFT_INCLUDE_PATHS = $(SWIFT_INCLUDE_PATHS_$(USE_INTERNAL_SDK));
-SWIFT_INCLUDE_PATHS_ = $(SRCROOT)/Platform/spi/visionos $(SRCROOT)/Platform/spi/ios $(SRCROOT)/Platform/spi/Cocoa/Modules $(inherited);
+SWIFT_INCLUDE_PATHS_ = $(SRCROOT)/Platform/spi/visionos $(SRCROOT)/Platform/spi/ios $(SRCROOT)/Platform/spi/Cocoa $(SRCROOT)/Platform/spi/Cocoa/Modules $(inherited);
 
 USER_HEADER_SEARCH_PATHS = $(inherited) $(SRCROOT)/Platform/spi/Cocoa/Modules;
 
