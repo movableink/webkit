@@ -59,11 +59,6 @@ public:
 
     WEBCORE_EXPORT static Color systemFocusRingColor();
 
-    struct IconAndSize {
-        RetainPtr<UIImage> icon;
-        FloatSize size;
-    };
-
     WEBCORE_EXPORT static IconAndSize iconForAttachment(const String& fileName, const String& attachmentType, const String& title);
 
 private:

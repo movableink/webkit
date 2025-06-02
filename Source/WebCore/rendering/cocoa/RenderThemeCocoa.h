@@ -38,6 +38,15 @@ class RenderThemeCocoa : public RenderTheme {
 public:
     WEBCORE_EXPORT static RenderThemeCocoa& singleton();
 
+    struct IconAndSize {
+#if PLATFORM(IOS_FAMILY)
+        RetainPtr<UIImage> icon;
+#else
+        RetainPtr<NSImage> icon;
+#endif
+        FloatSize size;
+    };
+
 protected:
     virtual Color pictureFrameColor(const RenderObject&);
 #if ENABLE(ATTACHMENT_ELEMENT)

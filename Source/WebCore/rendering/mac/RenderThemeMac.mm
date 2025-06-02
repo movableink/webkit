@@ -1409,15 +1409,18 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #undef LOG_ATTACHMENT
 }
 
-RetainPtr<NSImage> RenderThemeMac::iconForAttachment(const String& fileName, const String& attachmentType, const String& title)
+RenderThemeCocoa::IconAndSize RenderThemeMac::iconForAttachment(const String& fileName, const String& attachmentType, const String& title)
 {
     if (fileName.isNull() && attachmentType.isNull() && title.isNull())
-        return nil;
+        return IconAndSize { nil, FloatSize() };
 
-    if (auto icon = WebCore::iconForAttachment(fileName, attachmentType, title))
-        return icon->image();
+    if (auto icon = WebCore::iconForAttachment(fileName, attachmentType, title)) {
+        auto image = icon->image();
+        auto size = [image size];
+        return IconAndSize { image, FloatSize(size) };
+    }
 
-    return nil;
+    return IconAndSize { nil, FloatSize() };
 }
 
 static void paintAttachmentIconBackground(const RenderAttachment& attachment, GraphicsContext& context, AttachmentLayout& layout)

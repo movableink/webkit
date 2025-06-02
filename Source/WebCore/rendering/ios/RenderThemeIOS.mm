@@ -1251,7 +1251,7 @@ Color RenderThemeIOS::pictureFrameColor(const RenderObject& buttonRenderer)
 
 #if ENABLE(ATTACHMENT_ELEMENT)
 
-RenderThemeIOS::IconAndSize RenderThemeIOS::iconForAttachment(const String& fileName, const String& attachmentType, const String& title)
+RenderThemeCocoa::IconAndSize RenderThemeIOS::iconForAttachment(const String& fileName, const String& attachmentType, const String& title)
 {
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     auto documentInteractionController = adoptNS([PAL::allocUIDocumentInteractionControllerInstance() init]);

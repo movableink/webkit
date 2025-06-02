@@ -415,11 +415,11 @@ RefPtr<WebCore::ShareableBitmap> WebPageProxy::iconForAttachment(const String& f
 {
 #if PLATFORM(IOS_FAMILY)
     auto iconAndSize = RenderThemeIOS::iconForAttachment(fileName, contentType, title);
+#else
+    auto iconAndSize = RenderThemeMac::iconForAttachment(fileName, contentType, title);
+#endif
     auto icon = iconAndSize.icon;
     size = iconAndSize.size;
-#else
-    auto icon = RenderThemeMac::iconForAttachment(fileName, contentType, title);
-#endif
     return convertPlatformImageToBitmap(icon.get(), iconSize);
 }
 
