@@ -2881,8 +2881,15 @@ Element* AccessibilityObject::element() const
 
 const RenderStyle* AccessibilityObject::style() const
 {
-    if (auto* renderer = this->renderer())
+    if (auto* renderer = this->renderer()) {
+        if (auto* renderText = dynamicDowncast<RenderText>(*renderer)) {
+            // Trying to get the style from a RenderText that has no parent (e.g. because it hasn't been
+            // set yet, or it was destroyed as part of an in-progress render-tree update) will cause a
+            // crash because RenderTexts get their style from their parent.
+            return renderText->parent() ? &renderText->style() : nullptr;
+        }
         return &renderer->style();
+    }
 
     RefPtr element = this->element();
     if (!element)
