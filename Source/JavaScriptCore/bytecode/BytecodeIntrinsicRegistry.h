@@ -51,6 +51,7 @@ enum class LinkTimeConstant : int32_t;
     macro(getPromiseInternalField) \
     macro(getGeneratorInternalField) \
     macro(getIteratorHelperInternalField) \
+    macro(getAsyncDisposableStackInternalField) \
     macro(getAsyncFromSyncIteratorInternalField) \
     macro(getAsyncGeneratorInternalField) \
     macro(getAbstractModuleRecordInternalField) \
@@ -63,6 +64,7 @@ enum class LinkTimeConstant : int32_t;
     macro(getWrapForValidIteratorInternalField) \
     macro(getDisposableStackInternalField) \
     macro(idWithProfile) \
+    macro(isAsyncDisposableStack) \
     macro(isAsyncFromSyncIterator) \
     macro(isObject) \
     macro(isCallable) \
@@ -99,6 +101,7 @@ enum class LinkTimeConstant : int32_t;
     macro(putByValWithThisStrict) \
     macro(putPromiseInternalField) \
     macro(putGeneratorInternalField) \
+    macro(putAsyncDisposableStackInternalField) \
     macro(putAsyncGeneratorInternalField) \
     macro(putArrayIteratorInternalField) \
     macro(putStringIteratorInternalField) \
@@ -205,6 +208,10 @@ enum class LinkTimeConstant : int32_t;
     macro(disposableStackFieldCapability) \
     macro(DisposableStackStatePending) \
     macro(DisposableStackStateDisposed) \
+    macro(asyncDisposableStackFieldState) \
+    macro(asyncDisposableStackFieldCapability) \
+    macro(AsyncDisposableStackStatePending) \
+    macro(AsyncDisposableStackStateDisposed) \
 
 
 #define JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_CUSTOM_EACH_NAME(macro) \

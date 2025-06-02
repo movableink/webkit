@@ -223,6 +223,7 @@ namespace JSC {
     macro(ReferenceError) \
     macro(SuppressedError) \
     macro(DisposableStack) \
+    macro(AsyncDisposableStack) \
 
 
 namespace Symbols {

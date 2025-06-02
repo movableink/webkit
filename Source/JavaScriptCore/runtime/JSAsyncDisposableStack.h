@@ -71,6 +71,8 @@ public:
     static JSAsyncDisposableStack* createWithInitialValues(VM&);
     static JSAsyncDisposableStack* create(VM&, Structure*);
 
+    bool disposed();
+
 private:
     JSAsyncDisposableStack(VM& vm, Structure* structure)
         : Base(vm, structure)

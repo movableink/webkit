@@ -39,6 +39,7 @@ $(PROJECT_DIR)/b3/air/opcode_generator.rb
 $(PROJECT_DIR)/builtins/ArrayConstructor.js
 $(PROJECT_DIR)/builtins/ArrayIteratorPrototype.js
 $(PROJECT_DIR)/builtins/ArrayPrototype.js
+$(PROJECT_DIR)/builtins/AsyncDisposableStackPrototype.js
 $(PROJECT_DIR)/builtins/AsyncFromSyncIteratorPrototype.js
 $(PROJECT_DIR)/builtins/AsyncFunctionPrototype.js
 $(PROJECT_DIR)/builtins/AsyncGeneratorPrototype.js

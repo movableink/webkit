@@ -1712,6 +1712,10 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
         JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(init.owner);
         init.set(globalObject->m_disposableStackStructure.constructor(globalObject));
     });
+    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::AsyncDisposableStack)].initLater([] (const Initializer<JSCell>& init) {
+        JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(init.owner);
+        init.set(globalObject->m_asyncDisposableStackStructure.constructor(globalObject));
+    });
 
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::typedArrayLength)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, "typedArrayViewLength"_s, typedArrayViewPrivateFuncLength, ImplementationVisibility::Private));

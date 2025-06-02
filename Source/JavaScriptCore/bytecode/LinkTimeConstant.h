@@ -154,6 +154,7 @@ class JSGlobalObject;
     v(ReferenceError, nullptr) \
     v(SuppressedError, nullptr) \
     v(DisposableStack, nullptr) \
+    v(AsyncDisposableStack, nullptr) \
 
 
 #define DECLARE_LINK_TIME_CONSTANT(name, code) name,

@@ -33,6 +33,7 @@
 #include "BytecodeGenerator.h"
 #include "BytecodeGeneratorBaseInlines.h"
 #include "JSArrayIterator.h"
+#include "JSAsyncDisposableStack.h"
 #include "JSAsyncFromSyncIterator.h"
 #include "JSAsyncGenerator.h"
 #include "JSCInlines.h"
@@ -1707,6 +1708,17 @@ static JSDisposableStack::Field disposableStackInternalFieldIndex(BytecodeIntrin
     return JSDisposableStack::Field::State;
 }
 
+static JSAsyncDisposableStack::Field asyncDisposableStackInternalFieldIndex(BytecodeIntrinsicNode* node)
+{
+    ASSERT(node->entry().type() == BytecodeIntrinsicRegistry::Type::Emitter);
+    if (node->entry().emitter() == &BytecodeIntrinsicNode::emit_intrinsic_asyncDisposableStackFieldState)
+        return JSAsyncDisposableStack::Field::State;
+    if (node->entry().emitter() == &BytecodeIntrinsicNode::emit_intrinsic_asyncDisposableStackFieldCapability)
+        return JSAsyncDisposableStack::Field::Capability;
+    RELEASE_ASSERT_NOT_REACHED();
+    return JSAsyncDisposableStack::Field::State;
+}
+
 static JSRegExpStringIterator::Field regExpStringIteratorInternalFieldIndex(BytecodeIntrinsicNode* node)
 {
     ASSERT(node->entry().type() == BytecodeIntrinsicRegistry::Type::Emitter);
@@ -1888,6 +1900,19 @@ RegisterID* BytecodeIntrinsicNode::emit_intrinsic_getDisposableStackInternalFiel
     RELEASE_ASSERT(node->m_expr->isBytecodeIntrinsicNode());
     unsigned index = static_cast<unsigned>(disposableStackInternalFieldIndex(static_cast<BytecodeIntrinsicNode*>(node->m_expr)));
     ASSERT(index < JSDisposableStack::numberOfInternalFields);
+    ASSERT(!node->m_next);
+
+    return generator.emitGetInternalField(generator.finalDestination(dst), base.get(), index);
+}
+
+RegisterID* BytecodeIntrinsicNode::emit_intrinsic_getAsyncDisposableStackInternalField(BytecodeGenerator& generator, RegisterID* dst)
+{
+    ArgumentListNode* node = m_args->m_listNode;
+    RefPtr<RegisterID> base = generator.emitNode(node);
+    node = node->m_next;
+    RELEASE_ASSERT(node->m_expr->isBytecodeIntrinsicNode());
+    unsigned index = static_cast<unsigned>(asyncDisposableStackInternalFieldIndex(static_cast<BytecodeIntrinsicNode*>(node->m_expr)));
+    ASSERT(index < JSAsyncDisposableStack::numberOfInternalFields);
     ASSERT(!node->m_next);
 
     return generator.emitGetInternalField(generator.finalDestination(dst), base.get(), index);
@@ -2132,6 +2157,22 @@ RegisterID* BytecodeIntrinsicNode::emit_intrinsic_putDisposableStackInternalFiel
     return generator.move(dst, generator.emitPutInternalField(base.get(), index, value.get()));
 }
 
+RegisterID* BytecodeIntrinsicNode::emit_intrinsic_putAsyncDisposableStackInternalField(BytecodeGenerator& generator, RegisterID* dst)
+{
+    ArgumentListNode* node = m_args->m_listNode;
+    RefPtr<RegisterID> base = generator.emitNode(node);
+    node = node->m_next;
+    RELEASE_ASSERT(node->m_expr->isBytecodeIntrinsicNode());
+    unsigned index = static_cast<unsigned>(asyncDisposableStackInternalFieldIndex(static_cast<BytecodeIntrinsicNode*>(node->m_expr)));
+    ASSERT(index < JSAsyncDisposableStack::numberOfInternalFields);
+    node = node->m_next;
+    RefPtr<RegisterID> value = generator.emitNode(node);
+
+    ASSERT(!node->m_next);
+
+    return generator.move(dst, generator.emitPutInternalField(base.get(), index, value.get()));
+}
+
 RegisterID* BytecodeIntrinsicNode::emit_intrinsic_superSamplerBegin(BytecodeGenerator& generator, RegisterID* dst)
 {
     ASSERT(!m_args->m_listNode);
@@ -2328,6 +2369,7 @@ CREATE_INTRINSIC_FOR_BRAND_CHECK(isWrapForValidIterator, IsWrapForValidIterator)
 CREATE_INTRINSIC_FOR_BRAND_CHECK(isRegExpStringIterator, IsRegExpStringIterator)
 CREATE_INTRINSIC_FOR_BRAND_CHECK(isAsyncFromSyncIterator, IsAsyncFromSyncIterator)
 CREATE_INTRINSIC_FOR_BRAND_CHECK(isDisposableStack, IsDisposableStack)
+CREATE_INTRINSIC_FOR_BRAND_CHECK(isAsyncDisposableStack, IsAsyncDisposableStack)
 
 #undef CREATE_INTRINSIC_FOR_BRAND_CHECK
 

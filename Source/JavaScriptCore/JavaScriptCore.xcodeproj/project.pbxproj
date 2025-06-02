@@ -4811,6 +4811,7 @@
 		8BC064931E1D828B00B2B8CA /* AsyncIteratorPrototype.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AsyncIteratorPrototype.cpp; sourceTree = "<group>"; };
 		8BC064941E1D828B00B2B8CA /* AsyncIteratorPrototype.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AsyncIteratorPrototype.h; sourceTree = "<group>"; };
 		8C469C292D8EBC8A008C6403 /* StringReplaceCache.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = StringReplaceCache.cpp; sourceTree = "<group>"; };
+		8C7B16342DEAD8FC00BF0920 /* AsyncDisposableStackPrototype.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = AsyncDisposableStackPrototype.js; sourceTree = "<group>"; };
 		8C9F78BF2DC8836D00868239 /* AsyncIteratorPrototype.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = AsyncIteratorPrototype.js; sourceTree = "<group>"; };
 		8C9F78D82DCF65EB00868239 /* DisposableStackConstructor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = DisposableStackConstructor.cpp; sourceTree = "<group>"; };
 		8C9F78D92DCF65F400868239 /* DisposableStackConstructor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DisposableStackConstructor.h; sourceTree = "<group>"; };
@@ -9981,6 +9982,7 @@
 				7CF9BC581B65D9A3009DB1EF /* ArrayConstructor.js */,
 				7CF9BC591B65D9A3009DB1EF /* ArrayIteratorPrototype.js */,
 				A7D801A01880D66E0026C39B /* ArrayPrototype.js */,
+				8C7B16342DEAD8FC00BF0920 /* AsyncDisposableStackPrototype.js */,
 				8B1735EF1E92E52900369054 /* AsyncFromSyncIteratorPrototype.js */,
 				5B8243041DB7AA4900EA6384 /* AsyncFunctionPrototype.js */,
 				8BC064821E180B4A00B2B8CA /* AsyncGeneratorPrototype.js */,
