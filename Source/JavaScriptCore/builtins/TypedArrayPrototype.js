@@ -52,58 +52,6 @@ function typedArraySpeciesConstructor(value)
     return constructor;
 }
 
-function reduce(callback /* [, initialValue] */)
-{
-    // 22.2.3.19
-    "use strict";
-
-    var length = @typedArrayLength(this);
-
-    if (!@isCallable(callback))
-        @throwTypeError("TypedArray.prototype.reduce callback must be a function");
-
-    var argumentCount = @argumentCount();
-    if (length === 0 && argumentCount < 2)
-        @throwTypeError("TypedArray.prototype.reduce of empty array with no initial value");
-
-    var accumulator, k = 0;
-    if (argumentCount > 1)
-        accumulator = @argument(1);
-    else
-        accumulator = this[k++];
-
-    for (; k < length; k++)
-        accumulator = callback.@call(@undefined, accumulator, this[k], k, this);
-
-    return accumulator;
-}
-
-function reduceRight(callback /* [, initialValue] */)
-{
-    // 22.2.3.20
-    "use strict";
-
-    var length = @typedArrayLength(this);
-
-    if (!@isCallable(callback))
-        @throwTypeError("TypedArray.prototype.reduceRight callback must be a function");
-
-    var argumentCount = @argumentCount();
-    if (length === 0 && argumentCount < 2)
-        @throwTypeError("TypedArray.prototype.reduceRight of empty array with no initial value");
-
-    var accumulator, k = length - 1;
-    if (argumentCount > 1)
-        accumulator = @argument(1);
-    else
-        accumulator = this[k--];
-
-    for (; k >= 0; k--)
-        accumulator = callback.@call(@undefined, accumulator, this[k], k, this);
-
-    return accumulator;
-}
-
 function map(callback /*, thisArg */)
 {
     // 22.2.3.18

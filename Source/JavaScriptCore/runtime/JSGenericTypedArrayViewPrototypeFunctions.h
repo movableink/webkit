@@ -1252,6 +1252,157 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncSome(VM& vm, JSGlobal
 }
 
 template<typename ViewClass>
+ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncReduce(VM& vm, JSGlobalObject* globalObject, CallFrame* callFrame)
+{
+    // https://tc39.es/ecma262/#sec-%typedarray%.prototype.reduce
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    auto* thisObject = jsCast<ViewClass*>(callFrame->thisValue());
+    validateTypedArray(globalObject, thisObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    const size_t length = thisObject->length();
+
+    JSValue callback = callFrame->argument(0);
+    auto callData = JSC::getCallData(callback);
+    if (callData.type == CallData::Type::None) [[unlikely]]
+        return throwVMTypeError(globalObject, scope, "TypedArray.prototype.reduce callback must be a function"_s);
+
+    const bool hasInitialValue = callFrame->argumentCount() > 1;
+
+    if (!hasInitialValue && !length) [[unlikely]]
+        return throwVMTypeError(globalObject, scope, "TypedArray.prototype.reduce of empty array with no initial value"_s);
+
+    JSValue accumulator = hasInitialValue ? callFrame->uncheckedArgument(1) : jsUndefined();
+
+    bool initialized = hasInitialValue;
+    if (callData.type == CallData::Type::JS) [[likely]] {
+        CachedCall cachedCall(globalObject, jsCast<JSFunction*>(callback), 4);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        scope.release();
+        typedArrayViewForEachImpl<ForEachDirection::Forward>(globalObject, vm, thisObject, length, [&](JSValue element, size_t index) -> IterationStatus {
+            if (!initialized) {
+                accumulator = element;
+                initialized  = true;
+                return IterationStatus::Continue;
+            }
+
+            accumulator = cachedCall.callWithArguments(globalObject, jsUndefined(), accumulator, element, jsNumber(index), thisObject);
+            return IterationStatus::Continue;
+        });
+        return JSValue::encode(accumulator);
+    }
+
+    MarkedArgumentBuffer args;
+
+    scope.release();
+
+    typedArrayViewForEachImpl<ForEachDirection::Forward>(globalObject, vm, thisObject, length, [&](JSValue element, size_t index) -> IterationStatus {
+        auto scope = DECLARE_THROW_SCOPE(vm);
+
+        if (!initialized) {
+            accumulator = element;
+            initialized  = true;
+            return IterationStatus::Continue;
+        }
+
+        args.clear();
+
+        args.append(accumulator);
+        args.append(element);
+        args.append(jsNumber(index));
+        args.append(thisObject);
+        if (args.hasOverflowed()) [[unlikely]] {
+            throwOutOfMemoryError(globalObject, scope);
+            return IterationStatus::Continue;
+        }
+
+        scope.release();
+        accumulator = call(globalObject, callback, callData, jsUndefined(), args);
+        return IterationStatus::Continue;
+    });
+
+    return JSValue::encode(accumulator);
+}
+
+template<typename ViewClass>
+ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncReduceRight(VM& vm, JSGlobalObject* globalObject, CallFrame* callFrame)
+{
+    // https://tc39.es/ecma262/#sec-%typedarray%.prototype.reduceright
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    auto* thisObject = jsCast<ViewClass*>(callFrame->thisValue());
+    validateTypedArray(globalObject, thisObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    const size_t length = thisObject->length();
+
+    JSValue callback = callFrame->argument(0);
+    auto callData = JSC::getCallData(callback);
+    if (callData.type == CallData::Type::None) [[unlikely]]
+        return throwVMTypeError(globalObject, scope, "TypedArray.prototype.reduceRight callback must be a function"_s);
+
+    const bool hasInitialValue = callFrame->argumentCount() > 1;
+
+    if (!hasInitialValue && !length) [[unlikely]]
+        return throwVMTypeError(globalObject, scope, "TypedArray.prototype.reduceRight of empty array with no initial value"_s);
+
+    JSValue accumulator = hasInitialValue ? callFrame->uncheckedArgument(1) : jsUndefined();
+
+    bool initialized = hasInitialValue;
+    if (callData.type == CallData::Type::JS) [[likely]] {
+        CachedCall cachedCall(globalObject, jsCast<JSFunction*>(callback), 4);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        scope.release();
+        typedArrayViewForEachImpl<ForEachDirection::Backward>(globalObject, vm, thisObject, length, [&](JSValue element, size_t index) -> IterationStatus {
+            if (!initialized) {
+                accumulator = element;
+                initialized  = true;
+                return IterationStatus::Continue;
+            }
+
+            accumulator = cachedCall.callWithArguments(globalObject, jsUndefined(), accumulator, element, jsNumber(index), thisObject);
+            return IterationStatus::Continue;
+        });
+
+        return JSValue::encode(accumulator);
+    }
+
+    MarkedArgumentBuffer args;
+
+    scope.release();
+
+    typedArrayViewForEachImpl<ForEachDirection::Backward>(globalObject, vm, thisObject, length, [&](JSValue element, size_t index) -> IterationStatus {
+        auto scope = DECLARE_THROW_SCOPE(vm);
+
+        if (!initialized) {
+            accumulator = element;
+            initialized  = true;
+            return IterationStatus::Continue;
+        }
+
+        args.clear();
+
+        args.append(accumulator);
+        args.append(element);
+        args.append(jsNumber(index));
+        args.append(thisObject);
+        if (args.hasOverflowed()) [[unlikely]] {
+            throwOutOfMemoryError(globalObject, scope);
+            return IterationStatus::Continue;
+        }
+
+        scope.release();
+        accumulator = call(globalObject, callback, callData, jsUndefined(), args);
+        return IterationStatus::Continue;
+    });
+
+    return JSValue::encode(accumulator);
+}
+
+template<typename ViewClass>
 ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncReverse(VM& vm, JSGlobalObject* globalObject, CallFrame* callFrame)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
