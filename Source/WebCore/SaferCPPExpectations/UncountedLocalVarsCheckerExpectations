@@ -356,14 +356,12 @@ html/HTMLTableElement.cpp
 html/HTMLTableRowElement.cpp
 html/HTMLTextFormControlElement.cpp
 html/ImageBitmap.cpp
-html/ImageInputType.cpp
 html/LazyLoadFrameObserver.cpp
 html/LazyLoadImageObserver.cpp
 html/MediaElementSession.cpp
 html/ModelDocument.cpp
 html/OffscreenCanvas.cpp
 html/PluginDocument.cpp
-html/RangeInputType.cpp
 html/ValidatedFormListedElement.cpp
 html/ValidationMessage.cpp
 html/canvas/CanvasRenderingContext2D.cpp

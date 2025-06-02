@@ -49,6 +49,7 @@
 #include "HTMLParserIdioms.h"
 #include "KeyboardEvent.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalizedStrings.h"
 #include "NodeRenderStyle.h"
 #include "Page.h"
@@ -252,15 +253,15 @@ void TextFieldInputType::elementDidBlur()
     if (!renderer)
         return;
 
-    auto* innerTextRenderer = innerTextElement()->renderer();
+    CheckedPtr innerTextRenderer = innerTextElement()->renderer();
     if (!innerTextRenderer)
         return;
 
-    auto* innerLayer = innerTextRenderer->layer();
+    CheckedPtr innerLayer = innerTextRenderer->layer();
     if (!innerLayer)
         return;
 
-    auto* innerLayerScrollable = innerLayer->ensureLayerScrollableArea();
+    CheckedPtr innerLayerScrollable = innerLayer->ensureLayerScrollableArea();
 
     bool isLeftToRightDirection = downcast<RenderTextControlSingleLine>(*renderer).style().isLeftToRightDirection();
     ScrollOffset scrollOffset(isLeftToRightDirection ? 0 : innerLayerScrollable->scrollWidth(), 0);
@@ -295,7 +296,8 @@ bool TextFieldInputType::shouldSubmitImplicitly(Event& event)
 RenderPtr<RenderElement> TextFieldInputType::createInputRenderer(RenderStyle&& style)
 {
     ASSERT(element());
-    return createRenderer<RenderTextControlSingleLine>(RenderObject::Type::TextControlSingleLine, *protectedElement(), WTFMove(style));
+    // FIXME: https://github.com/llvm/llvm-project/pull/142471 Moving style is not unsafe.
+    SUPPRESS_UNCOUNTED_ARG return createRenderer<RenderTextControlSingleLine>(RenderObject::Type::TextControlSingleLine, *protectedElement(), WTFMove(style));
 }
 
 bool TextFieldInputType::needsContainer() const
@@ -756,11 +758,11 @@ bool TextFieldInputType::shouldDrawCapsLockIndicator() const
     if (element->hasAutofillStrongPasswordButton())
         return false;
 
-    RefPtr frame { element->document().frame() };
+    RefPtr frame = element->document().frame();
     if (!frame)
         return false;
 
-    if (!frame->selection().isFocusedAndActive())
+    if (!frame->checkedSelection()->isFocusedAndActive())
         return false;
 
     return PlatformKeyboardEvent::currentCapsLockState();

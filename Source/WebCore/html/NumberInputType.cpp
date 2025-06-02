@@ -173,15 +173,16 @@ bool NumberInputType::sizeShouldIncludeDecoration(int defaultSize, int& preferre
     preferredSize = defaultSize;
 
     ASSERT(element());
-    auto& stepString = element()->attributeWithoutSynchronization(stepAttr);
+    Ref element = *this->element();
+    auto& stepString = element->attributeWithoutSynchronization(stepAttr);
     if (equalLettersIgnoringASCIICase(stepString, "any"_s))
         return false;
 
-    const Decimal minimum = parseToDecimalForNumberType(element()->attributeWithoutSynchronization(minAttr));
+    const Decimal minimum = parseToDecimalForNumberType(element->attributeWithoutSynchronization(minAttr));
     if (!minimum.isFinite())
         return false;
 
-    const Decimal maximum = parseToDecimalForNumberType(element()->attributeWithoutSynchronization(maxAttr));
+    const Decimal maximum = parseToDecimalForNumberType(element->attributeWithoutSynchronization(maxAttr));
     if (!maximum.isFinite())
         return false;
 

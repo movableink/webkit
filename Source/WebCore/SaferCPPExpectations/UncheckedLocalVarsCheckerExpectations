@@ -186,7 +186,6 @@ editing/mac/FrameSelectionMac.mm
 editing/markup.cpp
 history/CachedFrame.cpp
 html/Autofill.cpp
-html/BaseDateAndTimeInputType.cpp
 html/CachedHTMLCollectionInlines.h
 html/CanvasBase.cpp
 html/CollectionTraversalInlines.h
@@ -223,8 +222,6 @@ html/HTMLVideoElement.cpp
 html/MediaElementSession.cpp
 html/ModelDocument.cpp
 html/PluginDocument.cpp
-html/RangeInputType.cpp
-html/TextFieldInputType.cpp
 html/ValidatedFormListedElement.cpp
 html/ValidationMessage.cpp
 html/canvas/CanvasRenderingContext2D.cpp

@@ -309,7 +309,8 @@ HTMLElement* RangeInputType::sliderThumbElement() const
 RenderPtr<RenderElement> RangeInputType::createInputRenderer(RenderStyle&& style)
 {
     ASSERT(element());
-    return createRenderer<RenderSlider>(*protectedElement(), WTFMove(style));
+    // FIXME: https://github.com/llvm/llvm-project/pull/142471 Moving style is not unsafe.
+    SUPPRESS_UNCOUNTED_ARG return createRenderer<RenderSlider>(*protectedElement(), WTFMove(style));
 }
 
 Decimal RangeInputType::parseToNumber(const String& src, const Decimal& defaultValue) const
@@ -338,7 +339,7 @@ void RangeInputType::attributeChanged(const QualifiedName& name)
     case AttributeNames::minAttr:
     case AttributeNames::valueAttr:
         // Sanitize the value.
-        if (auto* element = this->element()) {
+        if (RefPtr element = this->element()) {
             if (element->hasDirtyValue())
                 element->setValue(element->value());
         }

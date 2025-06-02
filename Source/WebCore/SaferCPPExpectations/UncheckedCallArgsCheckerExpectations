@@ -269,13 +269,11 @@ fileapi/FileReader.cpp
 history/BackForwardCache.cpp
 history/CachedFrame.cpp
 html/AttachmentAssociatedElement.cpp
-html/BaseButtonInputType.cpp
 html/CachedHTMLCollection.h
 html/CachedHTMLCollectionInlines.h
 html/CollectionTraversalInlines.h
 html/DOMTokenList.cpp
 html/FTPDirectoryDocument.cpp
-html/FileInputType.cpp
 html/FormAssociatedCustomElement.cpp
 html/FormAssociatedElement.cpp
 html/HTMLAnchorElement.cpp
@@ -326,8 +324,6 @@ html/HTMLVideoElement.cpp
 html/HTMLWBRElement.cpp
 html/ImageBitmap.cpp
 html/ImageDocument.cpp
-html/ImageInputType.cpp
-html/InputType.cpp
 html/LabelsNodeList.cpp
 html/LazyLoadFrameObserver.cpp
 html/LazyLoadImageObserver.cpp
@@ -336,9 +332,6 @@ html/MediaElementSession.cpp
 html/ModelDocument.cpp
 html/PluginDocument.cpp
 html/RadioNodeList.cpp
-html/RangeInputType.cpp
-html/SearchInputType.cpp
-html/TextFieldInputType.cpp
 html/ValidatedFormListedElement.cpp
 html/ValidationMessage.cpp
 html/canvas/CanvasRenderingContext2D.cpp

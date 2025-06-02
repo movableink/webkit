@@ -620,9 +620,9 @@ bool BaseDateAndTimeInputType::setupDateTimeChooserParameters(DateTimeChooserPar
         parameters.anchorRectInRootView = IntRect();
     parameters.currentValue = element->value();
 
-    auto* computedStyle = element->computedStyle();
+    CheckedRef computedStyle = *element->computedStyle();
     parameters.isAnchorElementRTL = computedStyle->writingMode().computedTextDirection() == TextDirection::RTL;
-    parameters.useDarkAppearance = document->useDarkAppearance(computedStyle);
+    parameters.useDarkAppearance = document->useDarkAppearance(computedStyle.ptr());
     auto date = valueOrDefault(parseToDateComponents(element->value().get()));
     parameters.hasSecondField = shouldHaveSecondField(date);
     parameters.hasMillisecondField = shouldHaveMillisecondField(date);

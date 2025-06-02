@@ -91,12 +91,9 @@ void ImageInputType::handleDOMActivateEvent(Event& event)
     Ref protectedForm = *element->form();
 
     m_clickLocation = IntPoint();
-    if (event.underlyingEvent()) {
-        Event& underlyingEvent = *event.underlyingEvent();
-        if (auto* mouseEvent = dynamicDowncast<MouseEvent>(underlyingEvent)) {
-            if (!mouseEvent->isSimulated())
-                m_clickLocation = IntPoint(mouseEvent->offsetX(), mouseEvent->offsetY());
-        }
+    if (RefPtr mouseEvent = dynamicDowncast<MouseEvent>(event.underlyingEvent())) {
+        if (!mouseEvent->isSimulated())
+            m_clickLocation = IntPoint(mouseEvent->offsetX(), mouseEvent->offsetY());
     }
 
     // Update layout before processing form actions in case the style changes
@@ -112,7 +109,8 @@ void ImageInputType::handleDOMActivateEvent(Event& event)
 RenderPtr<RenderElement> ImageInputType::createInputRenderer(RenderStyle&& style)
 {
     ASSERT(element());
-    return createRenderer<RenderImage>(RenderObject::Type::Image, *protectedElement(), WTFMove(style));
+    // FIXME: https://github.com/llvm/llvm-project/pull/142471 Moving style is not unsafe.
+    SUPPRESS_UNCOUNTED_ARG return createRenderer<RenderImage>(RenderObject::Type::Image, *protectedElement(), WTFMove(style));
 }
 
 void ImageInputType::attributeChanged(const QualifiedName& name)
