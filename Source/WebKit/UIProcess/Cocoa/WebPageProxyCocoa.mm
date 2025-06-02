@@ -1556,7 +1556,7 @@ void WebPageProxy::updateTextIndicatorFromFrame(FrameIdentifier frameID, const W
 void WebPageProxy::updateTextIndicator(const WebCore::TextIndicatorData& indicatorData)
 {
     if (m_textIndicator && m_textIndicatorLayer)
-        setTextIndicator(indicatorData, TextIndicatorLifetime::Temporary);
+        [m_textIndicatorLayer updateWithFrame:m_textIndicator->textBoundingRectInRootViewCoordinates() textIndicator:TextIndicator::create(indicatorData) margin:CGSizeZero offset:CGPointZero updatingIndicator:YES];
 }
 
 void WebPageProxy::clearTextIndicator()
