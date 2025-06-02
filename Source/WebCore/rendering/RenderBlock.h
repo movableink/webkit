@@ -31,12 +31,10 @@
 
 namespace WebCore {
 
-class LineLayoutState;
 class LogicalSelectionOffsetCaches;
 class RenderInline;
 class RenderText;
 
-struct BidiRun;
 struct PaintInfo;
 struct RenderBlockRareData;
 
@@ -57,12 +55,9 @@ class RenderBlock : public RenderBox {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderBlock);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderBlock);
 public:
-    friend class LineLayoutState;
     // FIXME: This is temporary to allow us to move code from RenderBlock into RenderBlockFlow that accesses member variables that we haven't moved out of
     // RenderBlock yet.
     friend class RenderBlockFlow;
-    // FIXME-BLOCKFLOW: Remove this when the line layout stuff has all moved out of RenderBlock
-    friend class LineBreaker;
     virtual ~RenderBlock();
 
 protected:
@@ -415,7 +410,6 @@ private:
 
     // FIXME-BLOCKFLOW: Remove virtualizaion when all callers have moved to RenderBlockFlow
     virtual void clipOutFloatingBoxes(RenderBlock&, const PaintInfo*, const LayoutPoint&, const LayoutSize&) { };
-    friend class LogicalSelectionOffsetCaches;
 
     void paintContinuationOutlines(PaintInfo&, const LayoutPoint&);
 
