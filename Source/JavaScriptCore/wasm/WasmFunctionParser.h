@@ -3900,6 +3900,8 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
     }
 
     case TryTable: {
+        m_unreachableBlocks++;
+
         BlockSignature unused;
         uint32_t numberOfCatches;
         WASM_PARSER_FAIL_IF(!parseBlockSignatureAndNotifySIMDUseIfNeeded(unused), "can't get try_table's signature in unreachable context"_s);
