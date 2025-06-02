@@ -582,6 +582,11 @@ PublicURLManager& ScriptExecutionContext::publicURLManager()
     return *m_publicURLManager;
 }
 
+Ref<PublicURLManager> ScriptExecutionContext::protectedPublicURLManager()
+{
+    return publicURLManager();
+}
+
 void ScriptExecutionContext::adjustMinimumDOMTimerInterval(Seconds oldMinimumTimerInterval)
 {
     if (minimumDOMTimerInterval() != oldMinimumTimerInterval) {

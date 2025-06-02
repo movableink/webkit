@@ -62,7 +62,7 @@ void NetworkSendQueue::enqueue(const JSC::ArrayBuffer& binaryData, unsigned byte
 
 void NetworkSendQueue::enqueue(WebCore::Blob& blob)
 {
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     if (!context)
         return;
 
@@ -78,7 +78,7 @@ void NetworkSendQueue::enqueue(WebCore::Blob& blob)
     });
     auto* blobLoaderPtr = &blobLoader.get();
     m_queue.append(WTFMove(blobLoader));
-    blobLoaderPtr->start(blob, context, FileReaderLoader::ReadAsArrayBuffer);
+    blobLoaderPtr->start(blob, context.get(), FileReaderLoader::ReadAsArrayBuffer);
 }
 
 void NetworkSendQueue::clear()

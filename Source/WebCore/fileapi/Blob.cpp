@@ -436,7 +436,7 @@ ExceptionOr<Ref<ReadableStream>> Blob::stream()
         LoaderState m_loaderState { LoaderState::Started };
     };
 
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     auto* globalObject = context ? context->globalObject() : nullptr;
     if (!globalObject)
         return Exception { ExceptionCode::InvalidStateError };

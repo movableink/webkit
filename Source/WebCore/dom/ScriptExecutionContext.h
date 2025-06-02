@@ -192,6 +192,7 @@ public:
     virtual bool shouldBypassMainWorldContentSecurityPolicy() const { return false; }
 
     PublicURLManager& publicURLManager();
+    Ref<PublicURLManager> protectedPublicURLManager();
 
     virtual void suspendActiveDOMObjects(ReasonForSuspension);
     virtual void resumeActiveDOMObjects(ReasonForSuspension);

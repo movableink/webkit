@@ -184,7 +184,6 @@ editing/cocoa/WebContentReaderCocoa.mm
 editing/mac/EditorMac.mm
 editing/mac/FrameSelectionMac.mm
 editing/markup.cpp
-fileapi/BlobURL.cpp
 history/CachedFrame.cpp
 html/Autofill.cpp
 html/BaseDateAndTimeInputType.cpp

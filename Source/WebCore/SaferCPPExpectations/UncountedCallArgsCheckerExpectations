@@ -614,7 +614,6 @@ editing/cocoa/WebContentReaderCocoa.mm
 editing/mac/EditorMac.mm
 editing/mac/FrameSelectionMac.mm
 editing/markup.cpp
-fileapi/FileReaderLoader.cpp
 history/BackForwardCache.cpp
 history/CachedFrame.cpp
 history/CachedPage.cpp
@@ -625,7 +624,6 @@ html/CachedHTMLCollectionInlines.h
 html/CollectionTraversalInlines.h
 html/CustomPaintCanvas.cpp
 html/DOMTokenList.cpp
-html/DOMURL.cpp
 html/DirectoryFileListCreator.cpp
 html/FTPDirectoryDocument.cpp
 html/FormAssociatedCustomElement.cpp
