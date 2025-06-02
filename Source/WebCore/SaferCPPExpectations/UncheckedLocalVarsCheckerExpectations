@@ -361,7 +361,6 @@ page/PageOverlay.cpp
 page/PageSerializer.cpp
 page/PerformanceTiming.cpp
 page/PrintContext.cpp
-page/Quirks.cpp
 page/RemoteFrame.cpp
 page/ResizeObservation.cpp
 page/ResizeObserver.cpp

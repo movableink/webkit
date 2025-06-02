@@ -29,7 +29,6 @@
 #include "AccessibilityObject.h"
 #include "Attr.h"
 #include "ContainerNodeInlines.h"
-#include "DOMTokenList.h"
 #include "DeprecatedGlobalSettings.h"
 #include "Document.h"
 #include "DocumentInlines.h"
@@ -55,7 +54,6 @@
 #include "LocalDOMWindow.h"
 #include "LocalFrameView.h"
 #include "MouseEvent.h"
-#include "NamedNodeMap.h"
 #include "NetworkStorageSession.h"
 #include "NodeRenderStyle.h"
 #include "OrganizationStorageAccessPromptQuirk.h"
@@ -195,7 +193,7 @@ bool Quirks::needsAutoplayPlayPauseEvents() const
     if (allowedAutoplayQuirks(document).contains(AutoplayQuirk::SynthesizedPauseEvents))
         return true;
 
-    return allowedAutoplayQuirks(document->mainFrameDocument()).contains(AutoplayQuirk::SynthesizedPauseEvents);
+    return allowedAutoplayQuirks(document->protectedMainFrameDocument().get()).contains(AutoplayQuirk::SynthesizedPauseEvents);
 }
 
 // netflix.com https://bugs.webkit.org/show_bug.cgi?id=173030
@@ -835,11 +833,9 @@ bool Quirks::shouldBypassBackForwardCache() const
         // to remove it when coming back from the back/forward cache (e.g. in 'pageshow' event handler). See <rdar://problem/57670064>.
         // Note that this does not check for docs.google.com host because of hosted G Suite apps.
         static MainThreadNeverDestroyed<const AtomString> googleDocsOverlayDivClass("docs-homescreen-freeze-el-full"_s);
-        auto* firstChildInBody = document->body() ? document->body()->firstChild() : nullptr;
-        if (RefPtr div = dynamicDowncast<HTMLDivElement>(firstChildInBody)) {
-            if (div->hasClassName(googleDocsOverlayDivClass))
-                return true;
-        }
+        RefPtr firstChildInBody = document->body() ? document->body()->firstChild() : nullptr;
+        if (RefPtr div = dynamicDowncast<HTMLDivElement>(firstChildInBody))
+            return div->hasClassName(googleDocsOverlayDivClass);
     }
 
     return false;
@@ -862,7 +858,10 @@ bool Quirks::shouldMakeEventListenerPassive(const EventTarget& eventTarget, cons
             return true;
 
         if (RefPtr node = dynamicDowncast<Node>(eventTarget)) {
-            return is<Document>(*node) || node->document().documentElement() == node || node->document().body() == node;
+            if (is<Document>(*node))
+                return true;
+            Ref document = node->document();
+            return document->documentElement() == node || document->body() == node;
         }
         return false;
     };
@@ -873,7 +872,7 @@ bool Quirks::shouldMakeEventListenerPassive(const EventTarget& eventTarget, cons
 
     if (eventType.isInCategory(EventCategory::TouchScrollBlocking)) {
         if (eventTargetIsRoot(eventTarget)) {
-            if (auto* document = documentFromEventTarget(eventTarget))
+            if (RefPtr document = documentFromEventTarget(eventTarget))
                 return document->settings().passiveTouchListenersAsDefaultOnDocument();
         }
         return false;
@@ -881,7 +880,7 @@ bool Quirks::shouldMakeEventListenerPassive(const EventTarget& eventTarget, cons
 
     if (eventType.isInCategory(EventCategory::Wheel)) {
         if (eventTargetIsRoot(eventTarget)) {
-            if (auto* document = documentFromEventTarget(eventTarget))
+            if (RefPtr document = documentFromEventTarget(eventTarget))
                 return document->settings().passiveWheelListenersAsDefaultOnDocument();
         }
         return false;
@@ -954,28 +953,20 @@ static bool isKinjaLoginAvatarElement(const Element& element)
 {
     // The click event handler has been found to trigger on a div or
     // span with these class names, or the svg, or the svg's path.
-    if (element.hasClass()) {
-        auto& classNames = element.classNames();
-        if (classNames.contains("js_switch-to-burner-login"_s)
-            || classNames.contains("js_header-userbutton"_s)
-            || classNames.contains("sc-1il3uru-3"_s) || classNames.contains("cIhKfd"_s)
-            || classNames.contains("iyvn34-0"_s) || classNames.contains("bYIjtl"_s))
-            return true;
+    if (element.hasClass() && (element.hasClassName("js_switch-to-burner-login"_s)
+        || element.hasClassName("js_header-userbutton"_s)
+        || element.hasClassName("sc-1il3uru-3"_s) || element.hasClassName("cIhKfd"_s)
+        || element.hasClassName("iyvn34-0"_s) || element.hasClassName("bYIjtl"_s))) {
+        return true;
     }
 
-    const Element* svgElement = nullptr;
+    RefPtr<const Element> svgElement;
     if (is<SVGSVGElement>(element))
         svgElement = &element;
     else if (is<SVGPathElement>(element) && is<SVGSVGElement>(element.parentElement()))
         svgElement = element.parentElement();
 
-    if (svgElement && svgElement->hasAttributes()) {
-        auto ariaLabelAttr = svgElement->attributesMap().getNamedItem("aria-label"_s);
-        if (ariaLabelAttr && ariaLabelAttr->value() == "UserFilled icon"_s)
-            return true;
-    }
-
-    return false;
+    return svgElement && svgElement->attributeWithoutSynchronization(HTMLNames::aria_labelAttr) == "UserFilled icon"_s;
 }
 
 // teams.microsoft.com https://bugs.webkit.org/show_bug.cgi?id=219505
@@ -990,17 +981,17 @@ static bool isStorageAccessQuirkDomainAndElement(const URL& url, const Element& 
     // FIXME(218779): Remove this quirk once microsoft.com completes their login flow redesign.
     if (url.host() == "www.microsoft.com"_s) {
         return element.hasClass()
-        && (element.classNames().contains("glyph_signIn_circle"_s)
-        || element.classNames().contains("mectrl_headertext"_s)
-        || element.classNames().contains("mectrl_header"_s));
+        && (element.hasClassName("glyph_signIn_circle"_s)
+        || element.hasClassName("mectrl_headertext"_s)
+        || element.hasClassName("mectrl_header"_s));
     }
     // Sony Network Entertainment login case.
     // FIXME(218760): Remove this quirk once playstation.com completes their login flow redesign.
     if (url.host() == "www.playstation.com"_s || url.host() == "my.playstation.com"_s) {
         return element.hasClass()
-        && (element.classNames().contains("web-toolbar__signin-button"_s)
-        || element.classNames().contains("web-toolbar__signin-button-label"_s)
-        || element.classNames().contains("sb-signin-button"_s));
+        && (element.hasClassName("web-toolbar__signin-button"_s)
+        || element.hasClassName("web-toolbar__signin-button-label"_s)
+        || element.hasClassName("sb-signin-button"_s));
     }
 
     return false;
@@ -1112,8 +1103,7 @@ Quirks::StorageAccessResult Quirks::triggerOptionalStorageAccessQuirk(Element& e
 
         // Embedded YouTube case.
         if (element.hasClass() && domain == youTubeDomain && !document->isTopDocument() && ResourceLoadObserver::shared().hasHadUserInteraction(youTubeDomain)) {
-            auto& classNames = element.classNames();
-            if (classNames.contains("ytp-watch-later-icon"_s) || classNames.contains("ytp-watch-later-icon"_s)) {
+            if (element.hasClassName("ytp-watch-later-icon"_s) || element.hasClassName("ytp-watch-later-icon"_s)) {
                 if (ResourceLoadObserver::shared().hasHadUserInteraction(youTubeDomain)) {
                     DocumentStorageAccess::requestStorageAccessForDocumentQuirk(*document, [](StorageAccessWasGranted) { });
                     return Quirks::StorageAccessResult::ShouldNotCancelEvent;
@@ -1149,12 +1139,12 @@ Quirks::StorageAccessResult Quirks::triggerOptionalStorageAccessQuirk(Element& e
         // If the click is synthetic, the user has already gone through the storage access flow and we should not request again.
         if (isStorageAccessQuirkDomainAndElement(document->url(), element) && isSyntheticClick == IsSyntheticClick::No) {
             return requestStorageAccessAndHandleClick([element = WeakPtr { element }, platformEvent, eventType, detail, relatedTarget = WeakPtr { relatedTarget }] (ShouldDispatchClick shouldDispatchClick) mutable {
-                RefPtr protectedElement { element.get() };
+                RefPtr protectedElement = element.get();
                 if (!protectedElement)
                     return;
 
                 if (shouldDispatchClick == ShouldDispatchClick::Yes)
-                    protectedElement->dispatchMouseEvent(platformEvent, eventType, detail, relatedTarget.get(), IsSyntheticClick::Yes);
+                    protectedElement->dispatchMouseEvent(platformEvent, eventType, detail, RefPtr { relatedTarget.get() }.get(), IsSyntheticClick::Yes);
             });
         }
     }
@@ -1332,22 +1322,26 @@ bool Quirks::needsConfigurableIndexedPropertiesQuirk() const
 // Canvas fingerprinting (rdar://107564162)
 String Quirks::advancedPrivacyProtectionSubstituteDataURLForScriptWithFeatures(const String& lastDrawnText, int canvasWidth, int canvasHeight) const
 {
-    if (!needsQuirks() || !m_document->settings().canvasFingerprintingQuirkEnabled() || !m_document->noiseInjectionHashSalt())
+    if (!needsQuirks())
+        return { };
+
+    Ref document = *m_document;
+    if (!document->settings().canvasFingerprintingQuirkEnabled() || !document->noiseInjectionHashSalt())
         return { };
 
     if ("<@nv45. F1n63r,Pr1n71n6!"_s != lastDrawnText || canvasWidth != 280 || canvasHeight != 60)
         return { };
 
-    if (!m_document->globalObject())
+    if (!document->globalObject())
         return { };
 
-    auto& vm = m_document->globalObject()->vm();
-    auto* callFrame = vm.topCallFrame;
+    Ref vm = document->globalObject()->vm();
+    auto* callFrame = vm->topCallFrame;
     if (!callFrame)
         return { };
 
     bool sourceMatchesExpectedLength = false;
-    JSC::StackVisitor::visit(callFrame, vm, [&](auto& visitor) {
+    JSC::StackVisitor::visit(callFrame, vm.get(), [&](auto& visitor) {
         if (visitor->isImplementationVisibilityPrivate())
             return IterationStatus::Continue;
 
@@ -1399,9 +1393,10 @@ bool Quirks::needsDisableDOMPasteAccessQuirk() const
         return *m_quirksData.needsDisableDOMPasteAccessQuirk;
 
     m_quirksData.needsDisableDOMPasteAccessQuirk = [&] {
-        if (!m_document)
+        RefPtr document = m_document.get();
+        if (!document)
             return false;
-        auto* globalObject = m_document->globalObject();
+        auto* globalObject = document->globalObject();
         if (!globalObject)
             return false;
 
@@ -1519,7 +1514,7 @@ bool Quirks::shouldUseEphemeralPartitionedStorageForDOMCookies(const URL& url) c
     if (!needsQuirks())
         return false;
 
-    auto firstPartyDomain = RegistrableDomain(m_document->firstPartyForCookies()).string();
+    auto firstPartyDomain = RegistrableDomain(protectedDocument()->firstPartyForCookies()).string();
     auto domain = RegistrableDomain(url).string();
 
     // rdar://113830141
@@ -1535,7 +1530,7 @@ bool Quirks::needsLaxSameSiteCookieQuirk(const URL& requestURL) const
     if (!needsQuirks())
         return false;
 
-    auto url = m_document->url();
+    auto url = protectedDocument()->url();
     return url.protocolIs("https"_s) && url.host() == "login.microsoftonline.com"_s && requestURL.protocolIs("https"_s) && requestURL.host() == "www.bing.com"_s;
 }
 
@@ -1884,7 +1879,7 @@ URL Quirks::topDocumentURL() const
     if (!m_topDocumentURLForTesting.isEmpty()) [[unlikely]]
         return m_topDocumentURLForTesting;
 
-    return m_document->topURL();
+    return protectedDocument()->topURL();
 }
 
 void Quirks::setTopDocumentURLForTesting(URL&& url)
