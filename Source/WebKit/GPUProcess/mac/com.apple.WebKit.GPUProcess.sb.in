@@ -769,6 +769,10 @@
                 iokit-async-external-method
                 iokit-external-method
                 iokit-external-trap)
+            ;; Intel
+            (when (not (equal? (param "CPU") "arm64"))
+                (allow iokit-external-method
+                    (iokit-method-number 3)))
             (allow iokit-external-method
                 (iokit-method-number 0 1))))
     ;; else
