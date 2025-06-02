@@ -2870,8 +2870,8 @@ static NSRect computeTextBoundsForRange(NSRange range, const AXCoreObject& backi
 {
 #if ENABLE(AX_THREAD_TEXT_APIS)
     if (AXObjectCache::useAXThreadTextApis()) {
-        auto markerToLocation = AXTextMarker { backingObject, 0 }.nextMarkerFromOffset(range.location);
-        auto markerToRangeEnd = markerToLocation.nextMarkerFromOffset(range.length);
+        auto markerToLocation = AXTextMarker { backingObject, 0 }.nextMarkerFromOffset(range.location, ForceSingleOffsetMovement::Yes);
+        auto markerToRangeEnd = markerToLocation.nextMarkerFromOffset(range.length, ForceSingleOffsetMovement::Yes);
         if (!markerToRangeEnd.isValid())
             return CGRectZero;
 

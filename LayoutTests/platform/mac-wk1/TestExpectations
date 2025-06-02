@@ -959,6 +959,8 @@ accessibility/text-marker/text-marker-range-with-unordered-markers.html
 accessibility/mac/line-boundary-at-br.html [ Skip ]
 accessibility/mac/text-marker-ordering.html [ Skip ]
 
+accessibility/mac/bounds-for-range-multibyte-glyphs.html [ Skip ]
+
 accessibility/aria-controlled-table-row-visibility.html [ Skip ]
 
 # AccessibilityController::setForceInitialFrameCaching not supported on WK1.

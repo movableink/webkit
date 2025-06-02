@@ -896,18 +896,18 @@ unsigned AXTextMarker::offsetFromRoot() const
     return 0;
 }
 
-AXTextMarker AXTextMarker::nextMarkerFromOffset(unsigned offset) const
+AXTextMarker AXTextMarker::nextMarkerFromOffset(unsigned offset, ForceSingleOffsetMovement forceSingleOffsetMovement) const
 {
     RELEASE_ASSERT(!isMainThread());
 
     if (!isValid())
         return { };
     if (!isInTextRun())
-        return toTextRunMarker().nextMarkerFromOffset(offset);
+        return toTextRunMarker().nextMarkerFromOffset(offset, forceSingleOffsetMovement);
 
     auto marker = *this;
     while (offset) {
-        if (auto newMarker = marker.findMarker(AXDirection::Next, CoalesceObjectBreaks::No))
+        if (auto newMarker = marker.findMarker(AXDirection::Next, CoalesceObjectBreaks::No, IgnoreBRs::No, /* stopAtID */ std::nullopt, forceSingleOffsetMovement))
             marker = WTFMove(newMarker);
         else
             break;
@@ -1067,7 +1067,7 @@ static int nextSentenceEndFromOffset(StringView text, unsigned offset)
     return endIndex;
 }
 
-AXTextMarker AXTextMarker::findMarker(AXDirection direction, CoalesceObjectBreaks coalesceObjectBreaks, IgnoreBRs ignoreBRs, std::optional<AXID> stopAtID) const
+AXTextMarker AXTextMarker::findMarker(AXDirection direction, CoalesceObjectBreaks coalesceObjectBreaks, IgnoreBRs ignoreBRs, std::optional<AXID> stopAtID, ForceSingleOffsetMovement forceSingleOffsetMovement) const
 {
     // This method has two boolean options:
     // - coalesceObjectBreaks: Mimics behavior from textMarkerDataForNextCharacterOffset, where we skip nodes
@@ -1091,7 +1091,7 @@ AXTextMarker AXTextMarker::findMarker(AXDirection direction, CoalesceObjectBreak
     bool shouldSkipBR = ignoreBRs == IgnoreBRs::Yes && object && object->roleValue() == AccessibilityRole::LineBreak && !object->editableAncestor();
     bool isWithinRunBounds = ((direction == AXDirection::Next && offset() < runs->totalLength()) || (direction == AXDirection::Previous && offset()));
     if (!shouldSkipBR && isWithinRunBounds) {
-        if (runs->containsOnlyASCII) {
+        if (runs->containsOnlyASCII || forceSingleOffsetMovement == ForceSingleOffsetMovement::Yes) {
             // In the common case where the text-runs only contain ASCII, all we need to do is the move the offset by 1,
             // which is more efficient than turning the runs into a string and creating a CachedTextBreakIterator.
             return AXTextMarker { treeID(), objectID(), direction == AXDirection::Next ? offset() + 1 : offset() - 1 };

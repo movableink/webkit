@@ -258,10 +258,18 @@ FloatRect AXTextRuns::localRect(unsigned start, unsigned end, FontOrientation or
         }
     }
 
-    if (orientation == FontOrientation::Horizontal)
-        return { static_cast<float>(offsetFromOriginInDirection), heightBeforeRuns, static_cast<float>(maxWidthInDirection), measuredHeightInDirection };
+    // Compared to the main-thread implementation, we regularly produce rects that are 1-3px smaller due to the various
+    // levels of float rounding that happen to get here. It's better to be a bit wider to ensure AT cursors capture the
+    // entire range of text than it is to be too small. Concretely, too-wide is better than too-small for low-vision
+    // VoiceOver users who magnify the VoiceOver cursor's contents. Subjectively, the main-thread implementation feels
+    // a bit too large, even favoring too-wide sizes, so only bump by 1px. This is especially impactful when navigating
+    // character-by-character in small text.
+    static constexpr unsigned sizeBump = 1;
 
-    return { heightBeforeRuns, static_cast<float>(offsetFromOriginInDirection), measuredHeightInDirection, static_cast<float>(maxWidthInDirection) };
+    if (orientation == FontOrientation::Horizontal)
+        return { static_cast<float>(offsetFromOriginInDirection), heightBeforeRuns, static_cast<float>(maxWidthInDirection) + sizeBump, measuredHeightInDirection };
+
+    return { heightBeforeRuns, static_cast<float>(offsetFromOriginInDirection), measuredHeightInDirection + sizeBump, static_cast<float>(maxWidthInDirection) };
 }
 
 } // namespace WebCore

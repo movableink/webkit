@@ -158,7 +158,9 @@ inline String originToString(TextMarkerOrigin origin)
 // Options for findMarker
 enum class CoalesceObjectBreaks : bool { No, Yes };
 enum class IgnoreBRs : bool { No, Yes };
-
+// This enum represents whether to force movement by singular offsets, vs. moving multiple offsets
+// when encountering multi-byte glyphs like emojis.
+enum class ForceSingleOffsetMovement : bool { No, Yes };
 enum class IncludeTrailingLineBreak : bool { No, Yes };
 
 struct TextMarkerData {
@@ -288,7 +290,7 @@ public:
     void clampOffsetToLengthIfNeeded(unsigned) const;
 
     // Find the next or previous marker, optionally stopping at the given ID and returning an invalid marker.
-    AXTextMarker findMarker(AXDirection, CoalesceObjectBreaks = CoalesceObjectBreaks::Yes, IgnoreBRs = IgnoreBRs::No, std::optional<AXID> = std::nullopt) const;
+    AXTextMarker findMarker(AXDirection, CoalesceObjectBreaks = CoalesceObjectBreaks::Yes, IgnoreBRs = IgnoreBRs::No, std::optional<AXID> = std::nullopt, ForceSingleOffsetMovement = ForceSingleOffsetMovement::No) const;
 
     // Starting from this text marker, these functions find a position representing the given boundary (start / end) and text unit type (e.g. line, word, paragraph).
     AXTextMarker findWord(AXDirection direction, AXTextUnitBoundary boundary) const
@@ -337,7 +339,7 @@ public:
     // Returns a range pointing to the start and end positions that have the same text styles as `this`.
     AXTextMarkerRange rangeWithSameStyle() const;
     // Starting from this marker, return a text marker that is `offset` characters away.
-    AXTextMarker nextMarkerFromOffset(unsigned) const;
+    AXTextMarker nextMarkerFromOffset(unsigned, ForceSingleOffsetMovement = ForceSingleOffsetMovement::No) const;
     // Returns the number of intermediate text markers between this and the root.
     unsigned offsetFromRoot() const;
     // Starting from this marker, navigate to the last marker before the given AXID. Assumes `this`
