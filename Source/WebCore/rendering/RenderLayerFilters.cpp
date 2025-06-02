@@ -169,10 +169,10 @@ GraphicsContext* RenderLayerFilters::beginFilterEffect(RenderElement& renderer, 
     if (!m_filter)
         return nullptr;
 
-    auto& filter = *m_filter;
+    Ref filter = *m_filter;
     auto filterRegion = m_targetBoundingBox;
 
-    if (filter.hasFilterThatMovesPixels()) {
+    if (filter->hasFilterThatMovesPixels()) {
         // For CSSFilter, filterRegion = targetBoundingBox + filter->outsets()
         filterRegion.expand(toLayoutBoxExtent(outsets));
     } else if (auto* shape = dynamicDowncast<RenderSVGShape>(renderer))
@@ -188,9 +188,9 @@ GraphicsContext* RenderLayerFilters::beginFilterEffect(RenderElement& renderer, 
         hasUpdatedBackingStore = true;
     }
 
-    filter.setFilterRegion(m_filterRegion);
+    filter->setFilterRegion(m_filterRegion);
 
-    if (!filter.hasFilterThatMovesPixels())
+    if (!filter->hasFilterThatMovesPixels())
         m_repaintRect = dirtyRect;
     else if (hasUpdatedBackingStore || !hasSourceImage())
         m_repaintRect = filterRegion;
@@ -208,7 +208,7 @@ GraphicsContext* RenderLayerFilters::beginFilterEffect(RenderElement& renderer, 
             sourceImageRect = renderer.strokeBoundingBox();
         else
             sourceImageRect = m_targetBoundingBox;
-        m_targetSwitcher = GraphicsContextSwitcher::create(context, sourceImageRect, DestinationColorSpace::SRGB(), { &filter });
+        m_targetSwitcher = GraphicsContextSwitcher::create(context, sourceImageRect, DestinationColorSpace::SRGB(), { WTFMove(filter) });
     }
 
     if (!m_targetSwitcher)
