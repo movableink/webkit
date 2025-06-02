@@ -279,7 +279,7 @@ void RenderTreeBuilder::Block::attachIgnoringContinuation(RenderBlock& parent, R
     }
 
     // No suitable existing anonymous box - create a new one.
-    auto newBox = parent.createAnonymousBlock();
+    auto newBox = Block::createAnonymousBlockWithStyle(parent.protectedDocument(), parent.style());
     auto& box = *newBox;
     m_builder.attachToRenderElement(parent, WTFMove(newBox), beforeChild);
     m_builder.attach(box, WTFMove(child));
@@ -430,6 +430,13 @@ RenderPtr<RenderObject> RenderTreeBuilder::Block::detach(RenderBlockFlow& parent
             m_builder.multiColumnBuilder().multiColumnRelativeWillBeRemoved(*fragmentedFlow, child, canCollapseAnonymousBlock);
     }
     return detach(static_cast<RenderBlock&>(parent), child, willBeDestroyed, canCollapseAnonymousBlock);
+}
+
+RenderPtr<RenderBlock> RenderTreeBuilder::Block::createAnonymousBlockWithStyle(Document& document, const RenderStyle& style)
+{
+    RenderPtr<RenderBlock> newBox = createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, document, RenderStyle::createAnonymousStyleWithDisplay(style, DisplayType::Block));
+    newBox->initializeStyle();
+    return newBox;
 }
 
 }

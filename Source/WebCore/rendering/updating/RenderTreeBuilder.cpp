@@ -773,7 +773,7 @@ void RenderTreeBuilder::createAnonymousWrappersForInlineContent(RenderBlock& par
 
         child = inlineRunEnd->nextSibling();
 
-        auto newBlock = parent.createAnonymousBlock();
+        auto newBlock = Block::createAnonymousBlockWithStyle(parent.protectedDocument(), parent.style());
         auto& block = *newBlock;
         attachToRenderElementInternal(parent, WTFMove(newBlock), inlineRunStart);
         moveChildren(parent, block, inlineRunStart, child, RenderTreeBuilder::NormalizeAfterInsertion::No);
@@ -843,7 +843,7 @@ void RenderTreeBuilder::childFlowStateChangesAndAffectsParentBlock(RenderElement
     }
     // An anonymous block must be made to wrap this inline.
     auto* parent = child.parent();
-    auto newBlock = downcast<RenderBlock>(*parent).createAnonymousBlock();
+    auto newBlock = Block::createAnonymousBlockWithStyle(parent->protectedDocument(), parent->style());
     auto& block = *newBlock;
     attachToRenderElementInternal(*parent, WTFMove(newBlock), &child);
     auto thisToMove = detachFromRenderElement(*parent, child, WillBeDestroyed::No);

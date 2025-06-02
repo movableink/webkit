@@ -33,6 +33,7 @@
 #include "RenderInline.h"
 #include "RenderObjectInlines.h"
 #include "RenderTable.h"
+#include "RenderTreeBuilderBlock.h"
 #include "RenderTreeBuilderMultiColumn.h"
 #include "RenderTreeBuilderTable.h"
 #include <wtf/SetForScope.h>
@@ -245,7 +246,7 @@ void RenderTreeBuilder::Inline::splitFlow(RenderInline& parent, RenderObject* be
         block = block->containingBlock();
     } else {
         // No anonymous block available for use. Make one.
-        createdPre = block->createAnonymousBlock();
+        createdPre = Block::createAnonymousBlockWithStyle(block->protectedDocument(), block->style());
         pre = createdPre.get();
         madeNewBeforeBlock = true;
     }
@@ -409,7 +410,7 @@ bool RenderTreeBuilder::Inline::newChildIsInline(const RenderInline& parent, con
 void RenderTreeBuilder::Inline::childBecameNonInline(RenderInline& parent, RenderElement& child)
 {
     // We have to split the parent flow.
-    auto newBox = parent.containingBlock()->createAnonymousBlock();
+    auto newBox = Block::createAnonymousBlockWithStyle(parent.containingBlock()->protectedDocument(), parent.containingBlock()->style());
     newBox->setIsContinuation();
     auto* oldContinuation = parent.continuation();
     if (oldContinuation)

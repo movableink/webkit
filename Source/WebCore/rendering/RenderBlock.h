@@ -142,8 +142,6 @@ public:
     bool paintsContinuationOutline(const RenderInline&);
 #endif
 
-    RenderPtr<RenderBlock> createAnonymousBlock() const;
-
     RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
 
     bool establishesIndependentFormattingContext() const;
@@ -414,8 +412,6 @@ private:
     void paintContinuationOutlines(PaintInfo&, const LayoutPoint&);
 
     virtual VisiblePosition positionForPointWithInlineChildren(const LayoutPoint&, HitTestSource);
-
-    RenderPtr<RenderBlock> clone() const;
 
     RenderFragmentedFlow* updateCachedEnclosingFragmentedFlow(RenderFragmentedFlow*) const;
 

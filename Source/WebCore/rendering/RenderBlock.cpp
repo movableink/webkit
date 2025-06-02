@@ -422,26 +422,6 @@ void RenderBlock::styleDidChange(StyleDifference diff, const RenderStyle* oldSty
     setShouldForceRelayoutChildren(shouldForceRelayoutChildren);
 }
 
-RenderPtr<RenderBlock> RenderBlock::clone() const
-{
-    RenderPtr<RenderBlock> cloneBlock;
-    if (isAnonymousBlock()) {
-        cloneBlock = RenderPtr<RenderBlock>(createAnonymousBlock());
-        cloneBlock->setChildrenInline(childrenInline());
-    } else {
-        RenderTreePosition insertionPosition(*parent());
-        cloneBlock = static_pointer_cast<RenderBlock>(protectedElement()->createElementRenderer(RenderStyle::clone(style()), insertionPosition));
-        cloneBlock->initializeStyle();
-
-        // This takes care of setting the right value of childrenInline in case
-        // generated content is added to cloneBlock and 'this' does not have
-        // generated content added yet.
-        cloneBlock->setChildrenInline(cloneBlock->firstChild() ? cloneBlock->firstChild()->isInline() : childrenInline());
-    }
-    cloneBlock->setFragmentedFlowState(fragmentedFlowState());
-    return cloneBlock;
-}
-
 void RenderBlock::deleteLines()
 {
     if (AXObjectCache* cache = protectedDocument()->existingAXObjectCache())

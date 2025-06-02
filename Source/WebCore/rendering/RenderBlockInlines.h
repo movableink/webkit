@@ -48,11 +48,6 @@ inline RenderPtr<RenderBox> RenderBlock::createAnonymousBoxWithSameTypeAs(const 
     return createAnonymousBlockWithStyle(protectedDocument(), renderer.style());
 }
 
-inline RenderPtr<RenderBlock> RenderBlock::createAnonymousBlock() const
-{
-    return createAnonymousBlockWithStyle(protectedDocument(), style());
-}
-
 // Versions that can compute line offsets with the fragment and page offset passed in. Used for speed to avoid having to
 // compute the fragment all over again when you already know it.
 inline LayoutUnit RenderBlock::availableLogicalWidthForLine(LayoutUnit position, LayoutUnit logicalHeight) const
