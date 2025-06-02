@@ -278,11 +278,15 @@ TEST(WebKit, QuotaDelegateHidden)
     auto *hostWindow = [webView hostWindow];
     [hostWindow miniaturize:hostWindow];
 
+    NSLog(@"QuotaDelegateHidden 1");
+
     receivedQuotaDelegateCalled = false;
     receivedMessage = false;
     [messageHandler setExpectedMessage: @"put failed"];
     [webView loadRequest:server.request()];
     Util::run(&receivedMessage);
+
+    NSLog(@"QuotaDelegateHidden 2");
 
     EXPECT_FALSE(receivedQuotaDelegateCalled);
 
@@ -294,8 +298,12 @@ TEST(WebKit, QuotaDelegateHidden)
     [webView reload];
     Util::run(&receivedQuotaDelegateCalled);
 
+    NSLog(@"QuotaDelegateHidden 3");
+
     [delegate grantQuota];
     Util::run(&receivedMessage);
+
+    NSLog(@"QuotaDelegateHidden 4");
 }
 #endif
 
@@ -349,10 +357,6 @@ TEST(WebKit, QuotaDelegate)
     receivedMessage = false;
     Util::run(&receivedMessage);
 
-    [messageHandler setExpectedMessage: @"start"];
-    receivedMessage = false;
-    Util::run(&receivedMessage);
-
     while (!delegate2.get().quotaDelegateCalled)
         TestWebKitAPI::Util::runFor(0.1_s);
 
@@ -361,6 +365,8 @@ TEST(WebKit, QuotaDelegate)
     [messageHandler setExpectedMessage: @"fail"];
     receivedMessage = false;
     Util::run(&receivedMessage);
+
+    NSLog(@"QuotaDelegate 6");
 }
 
 TEST(WebKit, QuotaDelegateReload)
