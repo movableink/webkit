@@ -469,7 +469,7 @@ RenderStyle* RenderStyle::addCachedPseudoStyle(std::unique_ptr<RenderStyle> pseu
     if (!m_cachedPseudoStyles)
         m_cachedPseudoStyles = makeUnique<PseudoStyleCache>();
 
-    m_cachedPseudoStyles->styles.add(Style::PseudoElementIdentifier { result->pseudoElementType(), result->pseudoElementNameArgument() }, WTFMove(pseudo));
+    m_cachedPseudoStyles->styles.add(*result->pseudoElementIdentifier(), WTFMove(pseudo));
 
     return result;
 }
@@ -3935,6 +3935,13 @@ const FixedVector<Style::PositionTryFallback>& RenderStyle::positionTryFallbacks
 void RenderStyle::setPositionTryFallbacks(FixedVector<Style::PositionTryFallback>&& fallbacks)
 {
     SET_NESTED_VAR(m_nonInheritedData, rareData, positionTryFallbacks, WTFMove(fallbacks));
+}
+
+std::optional<Style::PseudoElementIdentifier> RenderStyle::pseudoElementIdentifier() const
+{
+    if (pseudoElementType() == PseudoId::None)
+        return { };
+    return Style::PseudoElementIdentifier { pseudoElementType(), pseudoElementNameArgument() };
 }
 
 void RenderStyle::adjustScrollTimelines()

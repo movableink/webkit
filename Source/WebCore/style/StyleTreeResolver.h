@@ -181,8 +181,8 @@ private:
     const RenderStyle* beforeResolutionStyle(const Element&, std::optional<PseudoElementIdentifier>);
     void saveBeforeResolutionStyleForInterleaving(const Element&);
 
-    bool hasUnresolvedAnchorPosition(const Element&) const;
-    bool hasResolvedAnchorPosition(const Element&) const;
+    bool hasUnresolvedAnchorPosition(const Styleable&) const;
+    bool hasResolvedAnchorPosition(const Styleable&) const;
 
     CheckedRef<Document> m_document;
     std::unique_ptr<RenderStyle> m_computedDocumentElementStyle;

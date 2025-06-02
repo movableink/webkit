@@ -470,8 +470,9 @@ RefPtr<Element> AnchorPositionEvaluator::findAnchorForAnchorFunctionAndAttemptRe
         if (!builderState.element())
             return false;
 
-        // FIXME: Support pseudo-elements.
-        if (style.pseudoElementType() != PseudoId::None)
+        // FIXME: Support remaining box generating pseudo-elements (like ::marker).
+        auto pseudoElement = style.pseudoElementType();
+        if (pseudoElement != PseudoId::None && pseudoElement != PseudoId::Before && pseudoElement != PseudoId::After)
             return false;
 
         return true;
@@ -480,10 +481,11 @@ RefPtr<Element> AnchorPositionEvaluator::findAnchorForAnchorFunctionAndAttemptRe
     if (!isValid())
         return { };
 
-    Ref anchorPositionedElement = *builderState.element();
+    Ref elementOrHost = *builderState.element();
 
+    // PseudoElement nodes are created on-demand by render tree builder so dont' work as keys here.
     auto& anchorPositionedStates = *builderState.anchorPositionedStates();
-    auto& anchorPositionedState = *anchorPositionedStates.ensure(anchorPositionedElement, [&] {
+    auto& anchorPositionedState = *anchorPositionedStates.ensure({ elementOrHost.ptr(), style.pseudoElementIdentifier() }, [&] {
         return WTF::makeUnique<AnchorPositionedState>();
     }).iterator->value.get();
 
@@ -493,7 +495,7 @@ RefPtr<Element> AnchorPositionEvaluator::findAnchorForAnchorFunctionAndAttemptRe
     std::optional<ResolvedScopedName> resolvedAnchorName;
 
     if (anchorName) {
-        resolvedAnchorName = ResolvedScopedName::createFromScopedName(anchorPositionedElement, *anchorName);
+        resolvedAnchorName = ResolvedScopedName::createFromScopedName(elementOrHost, *anchorName);
 
         // Collect anchor names that this element refers to in anchor() or anchor-size()
         bool isNewAnchorName = anchorPositionedState.anchorNames.add(*resolvedAnchorName).isNewEntry;
@@ -512,7 +514,9 @@ RefPtr<Element> AnchorPositionEvaluator::findAnchorForAnchorFunctionAndAttemptRe
     if (anchorPositionedState.stage <= AnchorPositionResolutionStage::FindAnchors)
         return { };
 
-    CheckedPtr anchorPositionedRenderer = anchorPositionedElement->renderer();
+    auto anchorPositionedElement = anchorPositionedElementOrPseudoElement(builderState);
+
+    CheckedPtr anchorPositionedRenderer = anchorPositionedElement ? anchorPositionedElement->renderer() : nullptr;
     if (!anchorPositionedRenderer) {
         // If no render tree information is present, the procedure is finished.
         anchorPositionedState.stage = AnchorPositionResolutionStage::Resolved;
@@ -529,7 +533,7 @@ RefPtr<Element> AnchorPositionEvaluator::findAnchorForAnchorFunctionAndAttemptRe
         return { };
     }
 
-    if (auto* state = anchorPositionedStates.get(*anchorElement)) {
+    if (auto* state = anchorPositionedStates.get(keyForElementOrPseudoElement(*anchorElement))) {
         // Check if the anchor is itself anchor-positioned but hasn't been positioned yet.
         if (state->stage < AnchorPositionResolutionStage::Positioned)
             return { };
@@ -578,10 +582,13 @@ std::optional<double> AnchorPositionEvaluator::evaluate(BuilderState& builderSta
     CheckedPtr anchorRenderer = anchorElement->renderer();
     ASSERT(anchorRenderer);
 
-    CheckedPtr anchorPositionedElement = builderState.element();
-    ASSERT(anchorPositionedElement);
+    RefPtr anchorPositionedElement = anchorPositionedElementOrPseudoElement(builderState);
+    if (!anchorPositionedElement)
+        return { };
+
     CheckedPtr anchorPositionedRenderer = anchorPositionedElement->renderer();
-    ASSERT(anchorPositionedRenderer);
+    if (!anchorPositionedRenderer)
+        return { };
 
     // Proceed with computing the inset value for the specified inset property.
     CheckedRef anchorBox = downcast<RenderBoxModelObject>(*anchorRenderer);
@@ -690,8 +697,10 @@ std::optional<double> AnchorPositionEvaluator::evaluateSize(BuilderState& builde
         return { };
 
     // Resolve the dimension (width or height) to return from the anchor positioned element.
-    CheckedPtr anchorPositionedElement = builderState.element();
-    ASSERT(anchorPositionedElement);
+    RefPtr anchorPositionedElement = anchorPositionedElementOrPseudoElement(builderState);
+    if (!anchorPositionedElement)
+        return { };
+
     CheckedPtr anchorPositionedRenderer = anchorPositionedElement->renderer();
     ASSERT(anchorPositionedRenderer);
 
@@ -903,19 +912,23 @@ AnchorElements AnchorPositionEvaluator::findAnchorsForAnchorPositionedElement(co
 
 void AnchorPositionEvaluator::updateAnchorPositioningStatesAfterInterleavedLayout(Document& document, AnchorPositionedStates& anchorPositionedStates)
 {
-    if (anchorPositionedStates.isEmptyIgnoringNullReferences())
+    if (anchorPositionedStates.isEmpty())
         return;
 
+    // FIXME: Make the code below oeprate on renderers (boxes) rather than elements.
     auto anchorsForAnchorName = collectAnchorsForAnchorName(document);
 
-    for (auto elementAndState : anchorPositionedStates) {
+    for (auto& elementAndState : anchorPositionedStates) {
         auto& state = *elementAndState.value;
         if (state.stage == AnchorPositionResolutionStage::FindAnchors) {
-            Ref element { elementAndState.key };
-            CheckedPtr renderer = element->renderer();
+            RefPtr element = elementAndState.key.first;
+            if (elementAndState.key.second)
+                element = element->pseudoElementIfExists(*elementAndState.key.second);
+
+            CheckedPtr renderer = element ? element->renderer() : nullptr;
             if (renderer) {
                 // FIXME: Remove the redundant anchorElements member. The mappings are available in anchorPositionedToAnchorMap.
-                state.anchorElements = findAnchorsForAnchorPositionedElement(element, state.anchorNames, anchorsForAnchorName);
+                state.anchorElements = findAnchorsForAnchorPositionedElement(*element, state.anchorNames, anchorsForAnchorName);
                 if (isLayoutTimeAnchorPositioned(renderer->style()))
                     renderer->setNeedsLayout();
 
@@ -923,7 +936,7 @@ void AnchorPositionEvaluator::updateAnchorPositioningStatesAfterInterleavedLayou
                 for (auto& anchorElement : state.anchorElements.values())
                     anchors.append(dynamicDowncast<RenderBoxModelObject>(anchorElement->renderer()));
 
-                document.styleScope().anchorPositionedToAnchorMap().set(element.get(), WTFMove(anchors));
+                document.styleScope().anchorPositionedToAnchorMap().set(*element, WTFMove(anchors));
             }
             state.stage = renderer && renderer->style().usesAnchorFunctions() ? AnchorPositionResolutionStage::ResolveAnchorFunctions : AnchorPositionResolutionStage::Resolved;
             continue;
@@ -938,7 +951,7 @@ void AnchorPositionEvaluator::updateAnchorPositionedStateForLayoutTimePositioned
     if (!style.positionAnchor())
         return;
 
-    auto* state = states.ensure(element, [&] {
+    auto* state = states.ensure({ &element, style.pseudoElementIdentifier() }, [&] {
         return makeUnique<AnchorPositionedState>();
     }).iterator->value.get();
 
@@ -1175,6 +1188,23 @@ bool AnchorPositionEvaluator::isDefaultAnchorInvisibleOrClippedByInterveningBoxe
             return true;
     }
     return false;
+}
+
+// FIXME: The code should operate fully on host/pseudoElementIdentifier pairs and not use PseudoElements to
+// support pseudo-elements other than ::before/::after.
+RefPtr<const Element> AnchorPositionEvaluator::anchorPositionedElementOrPseudoElement(BuilderState& builderState)
+{
+    RefPtr element = builderState.element();
+    if (auto identifier = builderState.style().pseudoElementIdentifier())
+        return element->pseudoElementIfExists(*identifier);
+    return element;
+}
+
+AnchorPositionedKey AnchorPositionEvaluator::keyForElementOrPseudoElement(const Element& element)
+{
+    if (auto* pseudoElement = dynamicDowncast<PseudoElement>(element))
+        return { pseudoElement->hostElement(), PseudoElementIdentifier { pseudoElement->pseudoId() } };
+    return { &element, { } };
 }
 
 } // namespace WebCore::Style

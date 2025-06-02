@@ -28,6 +28,7 @@
 #include "EventTarget.h"
 #include "LayoutUnit.h"
 #include "PositionTryOrder.h"
+#include "PseudoElementIdentifier.h"
 #include "ResolvedScopedName.h"
 #include "ScopedName.h"
 #include "WritingMode.h"
@@ -64,12 +65,15 @@ enum class AnchorPositionResolutionStage : uint8_t {
 using AnchorElements = HashMap<ResolvedScopedName, WeakPtr<Element, WeakPtrImplWithEventTargetData>>;
 
 struct AnchorPositionedState {
-    WTF_MAKE_TZONE_ALLOCATED(AnchorPositionedState);
-public:
     AnchorElements anchorElements;
     UncheckedKeyHashSet<ResolvedScopedName> anchorNames;
     AnchorPositionResolutionStage stage;
+
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(AnchorPositionedState);
 };
+
+using AnchorPositionedKey = std::pair<RefPtr<const Element>, std::optional<PseudoElementIdentifier>>;
+using AnchorPositionedStates = HashMap<AnchorPositionedKey, std::unique_ptr<AnchorPositionedState>>;
 
 using AnchorsForAnchorName = HashMap<ResolvedScopedName, Vector<SingleThreadWeakRef<const RenderBoxModelObject>>>;
 
@@ -82,8 +86,6 @@ enum class AnchorSizeDimension : uint8_t {
     SelfBlock,
     SelfInline
 };
-
-using AnchorPositionedStates = WeakHashMap<Element, std::unique_ptr<AnchorPositionedState>, WeakPtrImplWithEventTargetData>;
 
 using AnchorPositionedToAnchorMap = WeakHashMap<Element, Vector<SingleThreadWeakPtr<RenderBoxModelObject>>, WeakPtrImplWithEventTargetData>;
 using AnchorToAnchorPositionedMap = SingleThreadWeakHashMap<const RenderBoxModelObject, Vector<Ref<Element>>>;
@@ -118,6 +120,8 @@ public:
 
 private:
     static AnchorElements findAnchorsForAnchorPositionedElement(const Element&, const UncheckedKeyHashSet<ResolvedScopedName>& anchorNames, const AnchorsForAnchorName&);
+    static RefPtr<const Element> anchorPositionedElementOrPseudoElement(BuilderState&);
+    static AnchorPositionedKey keyForElementOrPseudoElement(const Element&);
 };
 
 } // namespace Style

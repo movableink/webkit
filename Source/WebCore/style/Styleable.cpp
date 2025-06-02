@@ -89,7 +89,7 @@ const std::optional<const Styleable> Styleable::fromRenderer(const RenderElement
     case PseudoId::ViewTransitionNew:
     case PseudoId::ViewTransitionOld:
         if (auto* documentElement = renderer.document().documentElement())
-            return Styleable(*documentElement, Style::PseudoElementIdentifier { renderer.style().pseudoElementType(), renderer.style().pseudoElementNameArgument() });
+            return Styleable(*documentElement, renderer.style().pseudoElementIdentifier());
         break;
     case PseudoId::ViewTransition:
         if (auto* documentElement = renderer.document().documentElement())

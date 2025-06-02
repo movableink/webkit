@@ -390,8 +390,7 @@ static bool pseudoStyleCacheIsInvalid(RenderElement* renderer, RenderStyle* newS
         return false;
 
     for (auto& [key, value] : pseudoStyleCache->styles) {
-        Style::PseudoElementIdentifier pseudoElementIdentifier { value->pseudoElementType(), value->pseudoElementNameArgument() };
-        auto newPseudoStyle = renderer->getUncachedPseudoStyle(pseudoElementIdentifier, newStyle, newStyle);
+        auto newPseudoStyle = renderer->getUncachedPseudoStyle(*value->pseudoElementIdentifier(), newStyle, newStyle);
         if (!newPseudoStyle)
             return true;
         if (*newPseudoStyle != *value) {

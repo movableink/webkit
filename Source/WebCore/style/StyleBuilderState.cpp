@@ -317,15 +317,9 @@ void BuilderState::setUsesContainerUnits()
 
 double BuilderState::lookupCSSRandomBaseValue(const CSSCalc::RandomCachingKey& key, std::optional<CSS::Keyword::ElementShared> elementShared) const
 {
-    if (!elementShared) {
-        ASSERT(element());
+    if (!elementShared)
+        return element()->lookupCSSRandomBaseValue(style().pseudoElementIdentifier(), key);
 
-        std::optional<Style::PseudoElementIdentifier> pseudoElementIdentifier;
-        if (style().pseudoElementType() != PseudoId::None)
-            pseudoElementIdentifier = Style::PseudoElementIdentifier { style().pseudoElementType(), style().pseudoElementNameArgument() };
-
-        return element()->lookupCSSRandomBaseValue(pseudoElementIdentifier, key);
-    }
     return document().lookupCSSRandomBaseValue(key);
 }
 

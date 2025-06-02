@@ -591,6 +591,9 @@ public:
     PseudoElement& ensurePseudoElement(PseudoId);
     WEBCORE_EXPORT PseudoElement* beforePseudoElement() const;
     WEBCORE_EXPORT PseudoElement* afterPseudoElement() const;
+    RefPtr<PseudoElement> pseudoElementIfExists(Style::PseudoElementIdentifier);
+    RefPtr<const PseudoElement> pseudoElementIfExists(Style::PseudoElementIdentifier) const;
+
     bool childNeedsShadowWalker() const;
     void didShadowTreeAwareChildrenChange();
 

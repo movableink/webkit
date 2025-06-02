@@ -377,6 +377,8 @@ public:
     const AtomString& pseudoElementNameArgument() const;
     void setPseudoElementNameArgument(const AtomString&);
 
+    std::optional<Style::PseudoElementIdentifier> pseudoElementIdentifier() const;
+
     RenderStyle* getCachedPseudoStyle(const Style::PseudoElementIdentifier&) const;
     RenderStyle* addCachedPseudoStyle(std::unique_ptr<RenderStyle>);
 

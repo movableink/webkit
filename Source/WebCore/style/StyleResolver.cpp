@@ -412,7 +412,7 @@ std::unique_ptr<RenderStyle> Resolver::styleForKeyframe(Element& element, const 
     ElementRuleCollector collector(element, m_ruleSets, context.selectorMatchingState);
 
     if (elementStyle.pseudoElementType() != PseudoId::None)
-        collector.setPseudoElementRequest(Style::PseudoElementIdentifier { elementStyle.pseudoElementType(), elementStyle.pseudoElementNameArgument() });
+        collector.setPseudoElementRequest(elementStyle.pseudoElementIdentifier());
 
     if (hasRevert) {
         // In the animation origin, 'revert' rolls back the cascaded value to the user level.
@@ -560,7 +560,7 @@ void Resolver::keyframeStylesForAnimation(Element& element, const RenderStyle& e
 
 std::optional<ResolvedStyle> Resolver::styleForPseudoElement(Element& element, const PseudoElementRequest& pseudoElementRequest, const ResolutionContext& context)
 {
-    auto state = State(element, context.parentStyle, context.documentElementStyle, nullptr);
+    auto state = State(element, context.parentStyle, context.documentElementStyle, context.treeResolutionState.get());
 
     if (state.parentStyle()) {
         state.setStyle(RenderStyle::createPtrWithRegisteredInitialValues(document().customPropertyRegistry()));

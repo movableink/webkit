@@ -696,7 +696,7 @@ ElementUpdate TreeResolver::createAnimatedElementUpdate(ResolvedStyle&& resolved
     }();
 
     auto unanimatedDisplay = resolvedStyle.style->display();
-    auto hasUnresolvedAnchorPosition = this->hasUnresolvedAnchorPosition(element);
+    auto hasUnresolvedAnchorPosition = this->hasUnresolvedAnchorPosition(styleable);
 
     WeakStyleOriginatedAnimations newStyleOriginatedAnimations;
 
@@ -1349,12 +1349,12 @@ std::unique_ptr<Update> TreeResolver::resolve()
         }
     }
 
-    for (auto elementAndState : m_treeResolutionState.anchorPositionedStates) {
+    for (auto& elementAndState : m_treeResolutionState.anchorPositionedStates) {
         // Ensure that style resolution visits any unresolved anchor-positioned elements.
         if (elementAndState.value->stage < AnchorPositionResolutionStage::Resolved) {
-            elementAndState.key.invalidateForResumingAnchorPositionedElementResolution();
+            const_cast<Element&>(*elementAndState.key.first).invalidateForResumingAnchorPositionedElementResolution();
             m_needsInterleavedLayout = true;
-            saveBeforeResolutionStyleForInterleaving(elementAndState.key);
+            saveBeforeResolutionStyleForInterleaving(*elementAndState.key.first);
         }
     }
 
@@ -1386,7 +1386,7 @@ auto TreeResolver::updateAnchorPositioningState(Element& element, const RenderSt
         m_needsInterleavedLayout = true;
     }
 
-    auto needsInterleavedLayout = hasUnresolvedAnchorPosition(element);
+    auto needsInterleavedLayout = hasUnresolvedAnchorPosition({ element, { } });
     if (needsInterleavedLayout)
         return LayoutInterleavingAction::SkipDescendants;
 
@@ -1421,7 +1421,7 @@ void TreeResolver::generatePositionOptionsIfNeeded(const ResolvedStyle& resolved
     auto options = generatePositionOptions();
 
     // If the fallbacks contain anchor references we need to resolve the anchors first and regenerate the options.
-    if (hasUnresolvedAnchorPosition(styleable.element))
+    if (hasUnresolvedAnchorPosition(styleable))
         return;
 
     m_positionOptions.add(styleable.element, WTFMove(options));
@@ -1522,7 +1522,7 @@ std::optional<ResolvedStyle> TreeResolver::tryChoosePositionOption(const Styleab
     }
 
     // We can't test for overflow before the box has been positioned.
-    auto* anchorPositionedState = m_treeResolutionState.anchorPositionedStates.get(styleable.element);
+    auto* anchorPositionedState = m_treeResolutionState.anchorPositionedStates.get({ &styleable.element, styleable.pseudoElementIdentifier });
     if (anchorPositionedState && anchorPositionedState->stage < AnchorPositionResolutionStage::Positioned)
         return ResolvedStyle { RenderStyle::clonePtr(*existingStyle) };
 
@@ -1553,7 +1553,7 @@ std::optional<ResolvedStyle> TreeResolver::tryChoosePositionOption(const Styleab
 
 void TreeResolver::updateForPositionVisibility(RenderStyle& style, const Styleable& styleable)
 {
-    if (!hasResolvedAnchorPosition(styleable.element))
+    if (!hasResolvedAnchorPosition(styleable))
         return;
 
     auto shouldHideAnchorPositioned = [&] {
@@ -1601,18 +1601,18 @@ void TreeResolver::saveBeforeResolutionStyleForInterleaving(const Element& eleme
     });
 }
 
-bool TreeResolver::hasUnresolvedAnchorPosition(const Element& element) const
+bool TreeResolver::hasUnresolvedAnchorPosition(const Styleable& styleable) const
 {
-    auto* anchorPositionedState = m_treeResolutionState.anchorPositionedStates.get(element);
+    auto* anchorPositionedState = m_treeResolutionState.anchorPositionedStates.get({ &styleable.element, styleable.pseudoElementIdentifier });
     if (anchorPositionedState && anchorPositionedState->stage < AnchorPositionResolutionStage::Resolved)
         return true;
 
     return false;
 }
 
-bool TreeResolver::hasResolvedAnchorPosition(const Element& element) const
+bool TreeResolver::hasResolvedAnchorPosition(const Styleable& styleable) const
 {
-    auto* anchorPositionedState = m_treeResolutionState.anchorPositionedStates.get(element);
+    auto* anchorPositionedState = m_treeResolutionState.anchorPositionedStates.get({ &styleable.element, styleable.pseudoElementIdentifier });
     if (anchorPositionedState && anchorPositionedState->stage >= AnchorPositionResolutionStage::Resolved)
         return true;
 

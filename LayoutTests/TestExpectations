@@ -7614,7 +7614,6 @@ imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-chained-00
 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-chained-fallback.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-fixedpos.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-position-try-012.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-to-sticky-002.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-to-sticky-003.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-to-sticky-004.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-update-003.html [ ImageOnlyFailure ]

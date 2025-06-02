@@ -4784,6 +4784,20 @@ PseudoElement* Element::afterPseudoElement() const
     return hasRareData() ? elementRareData()->afterPseudoElement() : nullptr;
 }
 
+RefPtr<PseudoElement> Element::pseudoElementIfExists(Style::PseudoElementIdentifier pseudoElementIdentifier)
+{
+    if (pseudoElementIdentifier.pseudoId == PseudoId::Before)
+        return beforePseudoElement();
+    if (pseudoElementIdentifier.pseudoId == PseudoId::After)
+        return afterPseudoElement();
+    return nullptr;
+}
+
+RefPtr<const PseudoElement> Element::pseudoElementIfExists(Style::PseudoElementIdentifier pseudoElementIdentifier) const
+{
+    return const_cast<Element&>(*this).pseudoElementIfExists(pseudoElementIdentifier);
+}
+
 static void disconnectPseudoElement(PseudoElement* pseudoElement)
 {
     if (!pseudoElement)
