@@ -87,6 +87,12 @@ if (USE_OPENXR)
     list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES ${OPENXR_INCLUDE_DIRS})
 endif ()
 
+if (USE_SKIA AND ENABLE_DRAG_SUPPORT)
+    list(APPEND WebCore_SOURCES
+        platform/skia/DragImageSkia.cpp
+    )
+endif ()
+
 if (USE_ATSPI)
     set(WebCore_AtspiInterfaceFiles
         ${WEBCORE_DIR}/accessibility/atspi/xml/Accessible.xml

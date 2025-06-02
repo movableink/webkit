@@ -39,9 +39,10 @@ typedef struct CGImage *CGImageRef;
 #elif PLATFORM(MAC)
 #include <wtf/RetainPtr.h>
 OBJC_CLASS NSImage;
-#elif PLATFORM(WIN)
-typedef struct HBITMAP__* HBITMAP;
 #elif USE(CAIRO)
+#if PLATFORM(WIN)
+typedef struct HBITMAP__* HBITMAP;
+#endif
 #include "RefPtrCairo.h"
 #elif USE(SKIA)
 #include <skia/core/SkImage.h>
@@ -60,7 +61,7 @@ class Node;
 typedef RetainPtr<CGImageRef> DragImageRef;
 #elif PLATFORM(MAC)
 typedef RetainPtr<NSImage> DragImageRef;
-#elif PLATFORM(WIN)
+#elif USE(CAIRO) && PLATFORM(WIN)
 typedef HBITMAP DragImageRef;
 #elif USE(CAIRO)
 typedef RefPtr<cairo_surface_t> DragImageRef;

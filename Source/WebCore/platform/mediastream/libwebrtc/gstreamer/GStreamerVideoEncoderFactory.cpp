@@ -23,6 +23,7 @@
 #if ENABLE(VIDEO) && ENABLE(MEDIA_STREAM) && USE(LIBWEBRTC) && USE(GSTREAMER)
 #include "GStreamerVideoEncoderFactory.h"
 
+#include "FloatSize.h"
 #include "GStreamerVideoCommon.h"
 #include "GStreamerVideoFrameLibWebRTC.h"
 #include "LibWebRTCWebKitMacros.h"

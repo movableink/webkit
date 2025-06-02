@@ -119,13 +119,19 @@ if (ENABLE_BUBBLEWRAP_SANDBOX)
     list(APPEND WebCore_LIBRARIES Libseccomp::Libseccomp)
 endif ()
 
-if (USE_SKIA)
+if (USE_CAIRO)
+    list(APPEND WebCore_SOURCES
+        platform/cairo/DragImageCairo.cpp
+    )
+elseif (USE_SKIA)
     # When building with Skia we don't build Cairo sources, but since
     # Cairo is still needed in the UI process API we need to include
     # here the Cairo sources required.
     list(APPEND WebCore_SOURCES
         platform/graphics/cairo/IntRectCairo.cpp
         platform/graphics/cairo/RefPtrCairo.cpp
+
+        platform/skia/DragImageSkia.cpp
     )
 
     list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
