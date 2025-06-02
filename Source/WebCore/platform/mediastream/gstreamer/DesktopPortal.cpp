@@ -128,6 +128,12 @@ bool DesktopPortalCamera::isCameraPresent()
 
 bool DesktopPortalCamera::accessCamera()
 {
+    // Temporary workaround for https://bugs.webkit.org/show_bug.cgi?id=293786.
+    if (m_currentResponseCallback) {
+        gst_printerrln("accessCamera call already in progress");
+        return false;
+    }
+
     auto token = makeString("WebKit"_s, weakRandomNumber<uint32_t>());
     GVariantBuilder options;
     g_variant_builder_init(&options, G_VARIANT_TYPE_VARDICT);
