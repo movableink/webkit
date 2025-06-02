@@ -384,6 +384,8 @@ void AudioFileReader::plugDeinterleave(GstPad* pad)
 void AudioFileReader::decodeAudioForBusCreation()
 {
     assertIsCurrent(m_runLoop);
+    if (m_data.empty())
+        return;
 
     // Build the pipeline giostreamsrc ! decodebin
     // A deinterleave element is added once a src pad becomes available in decodebin.
@@ -409,7 +411,6 @@ void AudioFileReader::decodeAudioForBusCreation()
         return GST_BUS_DROP;
     }, this, nullptr);
 
-    ASSERT(!m_data.empty());
     auto* source = makeGStreamerElement("giostreamsrc"_s);
     auto memoryStream = adoptGRef(g_memory_input_stream_new_from_data(m_data.data(), m_data.size(), nullptr));
     g_object_set(source, "stream", memoryStream.get(), nullptr);
