@@ -232,7 +232,6 @@ editing/IndentOutdentCommand.cpp
 editing/InsertIntoTextNodeCommand.cpp
 editing/InsertLineBreakCommand.cpp
 editing/InsertListCommand.cpp
-editing/InsertNestedListCommand.cpp
 editing/InsertParagraphSeparatorCommand.cpp
 editing/InsertTextCommand.cpp
 editing/MarkupAccumulator.cpp
@@ -253,7 +252,6 @@ editing/TextInsertionBaseCommand.cpp
 editing/TextIterator.cpp
 editing/TextManipulationController.cpp
 editing/TypingCommand.cpp
-editing/UnlinkCommand.cpp
 editing/VisiblePosition.cpp
 editing/VisiblePosition.h
 editing/VisibleSelection.cpp

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -102,9 +102,8 @@ private:
     String label() const final;
     void didRemoveFromUndoManager() final { }
     bool areRootEditabledElementsConnected();
-    RefPtr<Document> protectedDocument() const { return m_document; }
 
-    RefPtr<Document> m_document;
+    const Ref<Document> m_document;
     VisibleSelection m_startingSelection;
     VisibleSelection m_endingSelection;
     Vector<RefPtr<SimpleEditCommand>> m_commands;

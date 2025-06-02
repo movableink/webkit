@@ -885,7 +885,7 @@ Navigation::DispatchResult Navigation::innerDispatchNavigateEvent(NavigationNavi
 
     promoteUpcomingAPIMethodTracker(destination->key());
 
-    RefPtr document = protectedWindow()->protectedDocument();
+    RefPtr document = protectedWindow()->document();
 
     RefPtr apiMethodTracker = m_ongoingAPIMethodTracker;
     // FIXME: this should not be needed, we should pass it into FrameLoader.

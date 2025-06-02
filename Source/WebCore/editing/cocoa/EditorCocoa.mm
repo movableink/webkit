@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -175,7 +175,7 @@ void populateRichTextDataIfNeeded(PasteboardContent& content, const Document& do
 
 void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
 {
-    Ref document = protectedDocument();
+    Ref document = this->document();
     PasteboardWebContent content;
     content.contentOrigin = document->originIdentifierForPasteboard();
     content.canSmartCopyOrDelete = canSmartCopyOrDelete();
@@ -197,7 +197,7 @@ void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
 
 void Editor::writeSelection(PasteboardWriterData& pasteboardWriterData)
 {
-    Ref document = protectedDocument();
+    Ref document = this->document();
 
     PasteboardWriterData::WebContent webContent;
     webContent.contentOrigin = document->originIdentifierForPasteboard();
@@ -241,7 +241,7 @@ String Editor::stringSelectionForPasteboardWithImageAltText()
 
 void Editor::replaceSelectionWithAttributedString(NSAttributedString *attributedString, MailBlockquoteHandling mailBlockquoteHandling)
 {
-    Ref document = protectedDocument();
+    Ref document = this->document();
     if (document->selection().isNone())
         return;
 
@@ -373,7 +373,7 @@ void Editor::replaceNodeFromPasteboard(Node& node, const String& pasteboardName,
     if (!range)
         return;
 
-    Ref document = protectedDocument();
+    Ref document = this->document();
     document->selection().setSelection({ *range }, FrameSelection::SetSelectionOption::DoNotSetFocus);
 
     Pasteboard pasteboard(PagePasteboardContext::create(document->pageID()), pasteboardName);
@@ -441,7 +441,7 @@ static RetainPtr<CGImageRef> fallbackImageForMultiRepresentationHEIC(std::span<c
 
 void Editor::insertMultiRepresentationHEIC(const std::span<const uint8_t>& data, const String& altText)
 {
-    auto document = protectedDocument();
+    Ref document = this->document();
 
     String primaryType = "image/x-apple-adaptive-glyph"_s;
     auto primaryBuffer = FragmentedSharedBuffer::create(data);

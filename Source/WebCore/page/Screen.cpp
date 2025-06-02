@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc.  All rights reserved.
  * Copyright (C) 2015 Google Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -70,7 +70,7 @@ static bool shouldApplyScreenFingerprintingProtections(const LocalFrame& frame)
 
 static bool shouldFlipScreenDimensions(const LocalFrame& frame)
 {
-    RefPtr document = frame.protectedDocument();
+    RefPtr document = frame.document();
     return document && document->quirks().shouldFlipScreenDimensions();
 }
 

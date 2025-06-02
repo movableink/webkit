@@ -360,7 +360,7 @@ bool FrameSelection::setSelectionWithoutUpdatingAppearance(const VisibleSelectio
     bool closeTyping = options.contains(SetSelectionOption::CloseTyping);
     bool shouldClearTypingStyle = options.contains(SetSelectionOption::ClearTypingStyle);
 
-    auto document = protectedDocument();
+    RefPtr document = m_document.get();
     VisibleSelection newSelection = newSelectionPossiblyWithoutDirection;
     if (shouldAlwaysUseDirectionalSelection(document.get()))
         newSelection.setDirectionality(Directionality::Strong);
@@ -474,7 +474,7 @@ void FrameSelection::setSelection(const VisibleSelection& selection, OptionSet<S
 {
     LOG_WITH_STREAM(Selection, stream << "FrameSelection::setSelection " << selection);
 
-    RefPtr document = protectedDocument();
+    RefPtr document = m_document.get();
     if (!setSelectionWithoutUpdatingAppearance(selection, options, align, granularity))
         return;
 
@@ -515,7 +515,7 @@ void FrameSelection::setSelection(const VisibleSelection& selection, OptionSet<S
 
 void FrameSelection::updateSelectionAppearanceNow()
 {
-    RefPtr document = protectedDocument();
+    RefPtr document = m_document.get();
     if (!document || !document->hasLivingRenderTree())
         return;
 
@@ -1882,7 +1882,7 @@ bool FrameSelection::recomputeCaretRect()
     if (!shouldUpdateCaretRect())
         return false;
 
-    auto document = protectedDocument();
+    RefPtr document = m_document.get();
     if (!document)
         return false;
 
@@ -2107,7 +2107,7 @@ bool FrameSelection::contains(const LayoutPoint& point) const
     if (!range)
         return false;
 
-    auto document = protectedDocument();
+    RefPtr document = m_document.get();
     if (!document)
         return false;
 
@@ -2136,7 +2136,7 @@ bool FrameSelection::contains(const LayoutPoint& point) const
 void FrameSelection::selectFrameElementInParentIfFullySelected()
 {
     // Find the parent frame; if there is none, then we have nothing to do.
-    RefPtr document = protectedDocument();
+    RefPtr document = m_document.get();
     if (!document)
         return;
     RefPtr frame { document->frame() };
@@ -2277,7 +2277,7 @@ void FrameSelection::focusedOrActiveStateChanged()
 {
     bool activeAndFocused = isFocusedAndActive();
 
-    auto document = protectedDocument();
+    RefPtr document = m_document.get();
     document->updateStyleIfNeeded();
 
 #if USE(UIKIT_EDITING)
@@ -2365,7 +2365,7 @@ void FrameSelection::updateAppearance()
     // the FrameSelection will paint a blinking caret as usual).
     VisibleSelection oldSelection = selection();
 
-    auto document = protectedDocument();
+    RefPtr document = m_document.get();
 #if ENABLE(TEXT_CARET)
     bool paintBlockCursor = m_shouldShowBlockCursor && m_selection.isCaret() && !isLogicalEndOfLine(m_selection.visibleEnd());
     bool caretRectChangedOrCleared = recomputeCaretRect();
@@ -2478,7 +2478,7 @@ void FrameSelection::setFocusedElementIfNeeded(OptionSet<SetSelectionOption> opt
     if (isNone() || !isFocused())
         return;
 
-    auto document = protectedDocument();
+    RefPtr document = m_document.get();
     bool caretBrowsing = document->settings().caretBrowsingEnabled();
     if (caretBrowsing) {
         if (RefPtr anchor = enclosingAnchorElement(m_selection.base())) {

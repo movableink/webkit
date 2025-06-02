@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -3783,7 +3783,7 @@ bool AccessibilityObject::ignoredFromPresentationalRole() const
 bool AccessibilityObject::includeIgnoredInCoreTree() const
 {
 #if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
-    RefPtr document = protectedDocument();
+    RefPtr document = this->document();
     return document ? document->settings().includeIgnoredInCoreAXTree() : false;
 #else
     return false;

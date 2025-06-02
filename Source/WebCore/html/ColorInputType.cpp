@@ -88,7 +88,7 @@ static std::optional<Color> parseColorValue(StringView string, HTMLInputElement&
     if (context.colorSpace().isNull())
         return parseSimpleColorValue(string);
     using namespace CSSPropertyParserHelpers;
-    auto document = context.protectedDocument();
+    Ref document = context.document();
     auto parserContext = document->cssParserContext();
     parserContext.mode = HTMLStandardMode;
     auto colorString = string.toString();

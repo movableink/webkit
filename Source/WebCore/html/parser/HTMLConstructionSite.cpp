@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google, Inc. All Rights Reserved.
- * Copyright (C) 2011-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -479,7 +479,7 @@ void HTMLConstructionSite::insertDoctype(AtomHTMLToken&& token)
     String publicId = token.publicIdentifier();
     String systemId = token.systemIdentifier();
 
-    auto document = protectedDocument();
+    Ref document = m_document.get();
     attachLater(protectedAttachmentRoot(), DocumentType::create(document, token.name(), publicId, systemId));
 
     // DOCTYPE nodes are only processed when parsing fragments w/o contextElements, which

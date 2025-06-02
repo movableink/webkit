@@ -1,5 +1,5 @@
 // Copyright 2014 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2025 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -106,8 +106,8 @@ std::optional<float> SizesAttributeParser::calculateLengthInPixels(CSSParserToke
 bool SizesAttributeParser::mediaConditionMatches(const MQ::MediaQuery& mediaCondition)
 {
     // A Media Condition cannot have a media type other than screen.
-    auto document = protectedDocument();
-    auto* renderer = document->renderView();
+    Ref document = m_document.get();
+    CheckedPtr renderer = document->renderView();
     if (!renderer)
         return false;
     auto& style = renderer->style();

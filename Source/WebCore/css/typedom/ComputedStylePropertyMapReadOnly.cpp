@@ -98,7 +98,7 @@ Vector<StylePropertyMapReadOnly::StylePropertyMapEntry> ComputedStylePropertyMap
     if (!style)
         return values;
 
-    Ref document = element->protectedDocument();
+    Ref document = element->document();
     const auto& inheritedCustomProperties = style->inheritedCustomProperties();
     const auto& nonInheritedCustomProperties = style->nonInheritedCustomProperties();
     const auto& exposedComputedCSSPropertyIDs = document->exposedComputedCSSPropertyIDs();

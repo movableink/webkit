@@ -99,8 +99,6 @@ public:
     void preload(std::unique_ptr<PreloadRequest>);
 
 private:
-    Ref<Document> protectedDocument() const { return m_document.get(); }
-
     WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
 };
 

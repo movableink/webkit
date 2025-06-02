@@ -1268,7 +1268,7 @@ void LocalFrame::documentURLOrOriginDidChange()
         return;
 
     RefPtr page = this->protectedPage();
-    RefPtr document = this->protectedDocument();
+    RefPtr document = this->document();
     if (page && document)
         page->setMainFrameURLAndOrigin(document->url(), document->protectedSecurityOrigin());
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2024 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All Rights Reserved.
  * Copyright (C) 2009 Torch Mobile, Inc. http://www.torchmobile.com/
  * Copyright (C) 2010-2023 Google Inc. All Rights Reserved.
  *
@@ -124,7 +124,7 @@ public:
         if (m_tagId >= TagId::Unknown)
             return;
 
-        Ref document = protectedDocument();
+        Ref document = m_document.get();
         for (auto& attribute : attributes) {
             auto knownAttributeName = AtomString::lookUp(attribute.name.span());
             processAttribute(knownAttributeName, attribute.value.span(), pictureState);
@@ -219,7 +219,7 @@ private:
     {
         bool inPicture = !pictureState.isEmpty();
         bool alreadyMatchedSource = inPicture && pictureState.last();
-        Ref document = protectedDocument();
+        Ref document = m_document.get();
 
         switch (m_tagId) {
         case TagId::Img:

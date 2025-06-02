@@ -86,7 +86,7 @@ void HTMLResourcePreloader::preload(PreloadRequestStream requests)
 
 void HTMLResourcePreloader::preload(std::unique_ptr<PreloadRequest> preload)
 {
-    Ref document = protectedDocument();
+    Ref document = m_document.get();
     ASSERT(document->frame());
     ASSERT(document->renderView());
 

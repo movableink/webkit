@@ -620,7 +620,7 @@ static HashMap<Ref<CSSStyleSheet>, String> addSubresourcesForCSSStyleSheetsIfNec
     if (subresourcesDirectoryName.isEmpty())
         return { };
 
-    RefPtr document = frame.protectedDocument();
+    RefPtr document = frame.document();
     if (!document)
         return { };
 

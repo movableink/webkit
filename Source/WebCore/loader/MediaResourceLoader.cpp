@@ -97,7 +97,7 @@ RefPtr<PlatformMediaResource> MediaResourceLoader::requestResource(ResourceReque
 {
     assertIsMainThread();
 
-    RefPtr document = protectedDocument();
+    RefPtr document = this->document();
     if (!document)
         return nullptr;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -125,7 +125,7 @@ Element* ScrollTimeline::source() const
         if (CheckedPtr subjectRenderer = source->renderer()) {
             if (CheckedPtr nearestScrollableContainer = subjectRenderer->enclosingScrollableContainer()) {
                 if (RefPtr nearestSource = nearestScrollableContainer->element()) {
-                    auto document = nearestSource->protectedDocument();
+                    Ref document = nearestSource->document();
                     RefPtr documentElement = document->documentElement();
                     if (nearestSource != documentElement)
                         return nearestSource.get();

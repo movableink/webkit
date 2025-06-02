@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2014 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -218,7 +218,7 @@ void ApplyStyleCommand::applyBlockStyle(EditingStyle& style)
 {
     // Update document layout once before removing styles so that we avoid the expense of
     // updating before each and every call to check a computed style.
-    protectedDocument()->updateLayoutIgnorePendingStylesheets();
+    document().updateLayoutIgnorePendingStylesheets();
 
     auto start = startPosition();
     auto end = endPosition();
@@ -566,8 +566,7 @@ void ApplyStyleCommand::applyInlineStyle(EditingStyle& style)
     // update document layout once before removing styles
     // so that we avoid the expense of updating before each and every call
     // to check a computed style
-    Ref document = protectedDocument();
-    document->updateLayoutIgnorePendingStylesheets();
+    document().updateLayoutIgnorePendingStylesheets();
 
     // adjust to the positions we want to use for applying style
     auto start = startPosition();
@@ -666,7 +665,7 @@ void ApplyStyleCommand::applyInlineStyle(EditingStyle& style)
     // update document layout once before running the rest of the function
     // so that we avoid the expense of updating before each and every call
     // to check a computed style
-    document->updateLayoutIgnorePendingStylesheets();
+    document().updateLayoutIgnorePendingStylesheets();
 
     RefPtr<EditingStyle> styleToApply = &style;
     if (textDirection) {
@@ -773,8 +772,7 @@ void ApplyStyleCommand::applyInlineStyleToNodeRange(EditingStyle& style, Node& s
     if (m_removeOnly)
         return;
 
-    Ref document = protectedDocument();
-    document->updateLayoutIgnorePendingStylesheets();
+    document().updateLayoutIgnorePendingStylesheets();
 
     Vector<InlineRunToApplyStyle> runs;
     RefPtr<Node> node = &startNode;
@@ -835,7 +833,7 @@ void ApplyStyleCommand::applyInlineStyleToNodeRange(EditingStyle& style, Node& s
             run.positionForStyleComputation = positionToComputeInlineStyleChange(*run.start, run.dummyElement);
     }
 
-    document->updateLayoutIgnorePendingStylesheets();
+    document().updateLayoutIgnorePendingStylesheets();
 
     for (auto& run : runs)
         run.change = StyleChange(&style, run.positionForStyleComputation);
@@ -1075,7 +1073,7 @@ void ApplyStyleCommand::pushDownInlineStyleAroundNode(EditingStyle& style, Node*
                 continue;
             if (!child->contains(targetNode) && elementsToPushDown.size()) {
                 for (auto& element : elementsToPushDown) {
-                    auto wrapper = element->cloneElementWithoutChildren(protectedDocument(), nullptr);
+                    Ref wrapper = element->cloneElementWithoutChildren(document(), nullptr);
                     wrapper->removeAttribute(styleAttr);
                     surroundNodeRangeWithElement(child, child, WTFMove(wrapper));
                 }
@@ -1433,7 +1431,6 @@ void ApplyStyleCommand::applyInlineStyleChange(Node& passedStart, Node& passedEn
     RefPtr<Node> endNode = &passedEnd;
     ASSERT(startNode->isConnected());
     ASSERT(endNode->isConnected());
-    auto document = protectedDocument();
 
     // Find appropriate font and span elements top-down.
     RefPtr<HTMLFontElement> fontContainer;
@@ -1464,7 +1461,7 @@ void ApplyStyleCommand::applyInlineStyleChange(Node& passedStart, Node& passedEn
             if (styleChange.applyFontSize())
                 setNodeAttribute(*fontContainer, sizeAttr, styleChange.fontSize());
         } else {
-            auto fontElement = createFontElement(document);
+            auto fontElement = createFontElement(document());
             if (styleChange.applyFontColor())
                 fontElement->setAttributeWithoutSynchronization(colorAttr, styleChange.fontColor());
             if (styleChange.applyFontFace())
@@ -1484,31 +1481,31 @@ void ApplyStyleCommand::applyInlineStyleChange(Node& passedStart, Node& passedEn
             } else
                 setNodeAttribute(*styleContainer, styleAttr, styleToMerge->asTextAtom(CSS::defaultSerializationContext()));
         } else {
-            auto styleElement = createStyleSpanElement(document);
+            auto styleElement = createStyleSpanElement(document());
             styleElement->setAttribute(styleAttr, styleToMerge->asTextAtom(CSS::defaultSerializationContext()));
             surroundNodeRangeWithElement(*startNode, *endNode, WTFMove(styleElement));
         }
     }
 
     if (styleChange.applyBold())
-        surroundNodeRangeWithElement(*startNode, *endNode, createHTMLElement(document, bTag));
+        surroundNodeRangeWithElement(*startNode, *endNode, createHTMLElement(document(), bTag));
 
     if (styleChange.applyItalic())
-        surroundNodeRangeWithElement(*startNode, *endNode, createHTMLElement(document, iTag));
+        surroundNodeRangeWithElement(*startNode, *endNode, createHTMLElement(document(), iTag));
 
     if (styleChange.applyUnderline())
-        surroundNodeRangeWithElement(*startNode, *endNode, createHTMLElement(document, uTag));
+        surroundNodeRangeWithElement(*startNode, *endNode, createHTMLElement(document(), uTag));
 
     if (styleChange.applyLineThrough())
-        surroundNodeRangeWithElement(*startNode, *endNode, createHTMLElement(document, strikeTag));
+        surroundNodeRangeWithElement(*startNode, *endNode, createHTMLElement(document(), strikeTag));
 
     if (styleChange.applySubscript())
-        surroundNodeRangeWithElement(*startNode, *endNode, createHTMLElement(document, subTag));
+        surroundNodeRangeWithElement(*startNode, *endNode, createHTMLElement(document(), subTag));
     else if (styleChange.applySuperscript())
-        surroundNodeRangeWithElement(*startNode, *endNode, createHTMLElement(document, supTag));
+        surroundNodeRangeWithElement(*startNode, *endNode, createHTMLElement(document(), supTag));
 
     if (m_styledInlineElement && addStyledElement == AddStyledElement::Yes)
-        surroundNodeRangeWithElement(*startNode, *endNode, m_styledInlineElement->cloneElementWithoutChildren(document, nullptr));
+        surroundNodeRangeWithElement(*startNode, *endNode, m_styledInlineElement->cloneElementWithoutChildren(document(), nullptr));
 }
 
 float ApplyStyleCommand::computedFontSize(Node* node)

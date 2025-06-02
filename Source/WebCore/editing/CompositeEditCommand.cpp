@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2013-2014 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -207,7 +207,7 @@ Ref<EditCommandComposition> EditCommandComposition::create(Document& document,
 }
 
 EditCommandComposition::EditCommandComposition(Document& document, const VisibleSelection& startingSelection, const VisibleSelection& endingSelection, EditAction editAction)
-    : m_document(&document)
+    : m_document(document)
     , m_startingSelection(startingSelection)
     , m_endingSelection(endingSelection)
     , m_startingRootEditableElement(startingSelection.rootEditableElement())
@@ -230,9 +230,7 @@ bool EditCommandComposition::areRootEditabledElementsConnected()
 
 void EditCommandComposition::unapply(AddToUndoStack addToUndoStack)
 {
-    RefPtr document = protectedDocument();
-    ASSERT(document);
-    RefPtr frame { document->frame() };
+    RefPtr frame = m_document->frame();
     if (!frame)
         return;
 
@@ -244,18 +242,18 @@ void EditCommandComposition::unapply(AddToUndoStack addToUndoStack)
     // Changes to the document may have been made since the last editing operation that require a layout, as in <rdar://problem/5658603>.
     // Low level operations, like RemoveNodeCommand, don't require a layout because the high level operations that use them perform one
     // if one is necessary (like for the creation of VisiblePositions).
-    document->updateLayoutIgnorePendingStylesheets();
+    m_document->updateLayoutIgnorePendingStylesheets();
 #if PLATFORM(IOS_FAMILY)
     // FIXME: Where should iPhone code deal with the composition?
     // Since editing commands don't save/restore the composition, undoing without fixing
     // up the composition will leave a stale, invalid composition, as in <rdar://problem/6831637>.
     // Desktop handles this in -[WebHTMLView _updateSelectionForInputManager], but the phone
     // goes another route.
-    document->editor().cancelComposition();
+    m_document->editor().cancelComposition();
 #endif
 
-    auto prohibitScrollingForScope = document->view() ? document->view()->prohibitScrollingWhenChangingContentSizeForScope() : nullptr;
-    if (addToUndoStack == AddToUndoStack::Yes && !document->editor().willUnapplyEditing(*this))
+    auto prohibitScrollingForScope = m_document->view() ? m_document->view()->prohibitScrollingWhenChangingContentSizeForScope() : nullptr;
+    if (addToUndoStack == AddToUndoStack::Yes && !m_document->editor().willUnapplyEditing(*this))
         return;
 
     size_t size = m_commands.size();
@@ -265,12 +263,12 @@ void EditCommandComposition::unapply(AddToUndoStack addToUndoStack)
     if (addToUndoStack == AddToUndoStack::No)
         return;
 
-    document->editor().unappliedEditing(*this);
+    m_document->editor().unappliedEditing(*this);
 
     if (AXObjectCache::accessibilityEnabled())
-        m_replacedText.postTextStateChangeNotificationForUnapply(document->existingAXObjectCache());
+        m_replacedText.postTextStateChangeNotificationForUnapply(m_document->existingAXObjectCache());
 
-    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(document->selection().isNone() || document->selection().isConnectedToDocument());
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(m_document->selection().isNone() || m_document->selection().isConnectedToDocument());
 }
 
 void EditCommandComposition::unapply()
@@ -280,9 +278,7 @@ void EditCommandComposition::unapply()
 
 void EditCommandComposition::reapply()
 {
-    RefPtr document = protectedDocument();
-    ASSERT(document);
-    RefPtr frame { document->frame() };
+    RefPtr frame = m_document->frame();
     if (!frame)
         return;
 
@@ -294,10 +290,10 @@ void EditCommandComposition::reapply()
     // Changes to the document may have been made since the last editing operation that require a layout, as in <rdar://problem/5658603>.
     // Low level operations, like RemoveNodeCommand, don't require a layout because the high level operations that use them perform one
     // if one is necessary (like for the creation of VisiblePositions).
-    document->updateLayoutIgnorePendingStylesheets();
+    m_document->updateLayoutIgnorePendingStylesheets();
 
-    auto prohibitScrollingForScope = document->view() ? document->view()->prohibitScrollingWhenChangingContentSizeForScope() : nullptr;
-    if (!document->editor().willReapplyEditing(*this))
+    auto prohibitScrollingForScope = m_document->view() ? m_document->view()->prohibitScrollingWhenChangingContentSizeForScope() : nullptr;
+    if (!m_document->editor().willReapplyEditing(*this))
         return;
 
     for (size_t i = 0; i < m_commands.size(); ++i) {
@@ -305,12 +301,12 @@ void EditCommandComposition::reapply()
         command->doReapply();
     }
 
-    document->editor().reappliedEditing(*this);
+    m_document->editor().reappliedEditing(*this);
 
     if (AXObjectCache::accessibilityEnabled())
-        m_replacedText.postTextStateChangeNotificationForReapply(document->existingAXObjectCache());
+        m_replacedText.postTextStateChangeNotificationForReapply(m_document->existingAXObjectCache());
 
-    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(document->selection().isNone() || document->selection().isConnectedToDocument());
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(m_document->selection().isNone() || m_document->selection().isConnectedToDocument());
 }
 
 void EditCommandComposition::append(SimpleEditCommand* command)
@@ -364,7 +360,7 @@ CompositeEditCommand::~CompositeEditCommand()
 
 bool CompositeEditCommand::willApplyCommand()
 {
-    return protectedDocument()->editor().willApplyEditing(*this, targetRangesForBindings());
+    return document().editor().willApplyEditing(*this, targetRangesForBindings());
 }
 
 void CompositeEditCommand::apply()
@@ -407,7 +403,7 @@ void CompositeEditCommand::apply()
     // Changes to the document may have been made since the last editing operation that require a layout, as in <rdar://problem/5658603>.
     // Low level operations, like RemoveNodeCommand, don't require a layout because the high level operations that use them perform one
     // if one is necessary (like for the creation of VisiblePositions).
-    RefPtr document = protectedDocument();
+    Ref document = this->document();
     document->updateLayoutIgnorePendingStylesheets();
 
     auto prohibitScrollingForScope = document->view() ? document->view()->prohibitScrollingWhenChangingContentSizeForScope() : nullptr;
@@ -425,7 +421,7 @@ void CompositeEditCommand::apply()
 
 void CompositeEditCommand::didApplyCommand()
 {
-    protectedDocument()->editor().appliedEditing(*this);
+    document().editor().appliedEditing(*this);
 }
 
 Vector<RefPtr<StaticRange>> CompositeEditCommand::targetRanges() const
@@ -468,7 +464,7 @@ EditCommandComposition& CompositeEditCommand::ensureComposition()
     while (RefPtr parent = command->parent())
         command = WTFMove(parent);
     if (!command->m_composition)
-        command->m_composition = EditCommandComposition::create(protectedDocument(), startingSelection(), endingSelection(), editingAction());
+        command->m_composition = EditCommandComposition::create(document(), startingSelection(), endingSelection(), editingAction());
     return *command->m_composition;
 }
 
@@ -528,12 +524,12 @@ void CompositeEditCommand::applyCommandToComposite(Ref<CompositeEditCommand>&& c
 
 void CompositeEditCommand::applyStyle(const EditingStyle* style, EditAction editingAction)
 {
-    applyCommandToComposite(ApplyStyleCommand::create(protectedDocument(), style, editingAction));
+    applyCommandToComposite(ApplyStyleCommand::create(document(), style, editingAction));
 }
 
 void CompositeEditCommand::applyStyle(const EditingStyle* style, const Position& start, const Position& end, EditAction editingAction, ApplyStylePropertyLevel level)
 {
-    applyCommandToComposite(ApplyStyleCommand::create(protectedDocument(), style, start, end, editingAction, level));
+    applyCommandToComposite(ApplyStyleCommand::create(document(), style, start, end, editingAction, level));
 }
 
 void CompositeEditCommand::applyStyledElement(Ref<Element>&& element)
@@ -548,12 +544,12 @@ void CompositeEditCommand::removeStyledElement(Ref<Element>&& element)
 
 void CompositeEditCommand::insertParagraphSeparator(bool useDefaultParagraphElement, bool pasteBlockqutoeIntoUnquotedArea)
 {
-    applyCommandToComposite(InsertParagraphSeparatorCommand::create(protectedDocument(), useDefaultParagraphElement, pasteBlockqutoeIntoUnquotedArea, editingAction()));
+    applyCommandToComposite(InsertParagraphSeparatorCommand::create(document(), useDefaultParagraphElement, pasteBlockqutoeIntoUnquotedArea, editingAction()));
 }
 
 void CompositeEditCommand::insertLineBreak()
 {
-    applyCommandToComposite(InsertLineBreakCommand::create(protectedDocument()));
+    applyCommandToComposite(InsertLineBreakCommand::create(document()));
 }
 
 bool CompositeEditCommand::isRemovableBlock(const Node* node)
@@ -750,7 +746,7 @@ void CompositeEditCommand::inputText(const String& text, bool selectInsertedText
         newline = text.find('\n', offset);
         if (newline != offset) {
             int substringLength = newline == notFound ? length - offset : newline - offset;
-            applyCommandToComposite(InsertTextCommand::create(protectedDocument(), text.substring(offset, substringLength), false));
+            applyCommandToComposite(InsertTextCommand::create(document(), text.substring(offset, substringLength), false));
         }
         if (newline != notFound) {
             VisiblePosition caret(endingSelection().visibleStart());
@@ -765,7 +761,7 @@ void CompositeEditCommand::inputText(const String& text, bool selectInsertedText
                     else if (!length)
                         length--;
                 }
-                applyCommandToComposite(BreakBlockquoteCommand::create(protectedDocument()));
+                applyCommandToComposite(BreakBlockquoteCommand::create(document()));
             } else
                 insertLineBreak();
         }
@@ -876,7 +872,7 @@ static EditAction deleteSelectionEditingActionForEditingAction(EditAction editin
 void CompositeEditCommand::deleteSelection(bool smartDelete, bool mergeBlocksAfterDelete, bool replace, bool expandForSpecialElements, bool sanitizeMarkup)
 {
     if (endingSelection().isRange())
-        applyCommandToComposite(DeleteSelectionCommand::create(protectedDocument(), smartDelete, mergeBlocksAfterDelete, replace, expandForSpecialElements, sanitizeMarkup, deleteSelectionEditingActionForEditingAction(editingAction())));
+        applyCommandToComposite(DeleteSelectionCommand::create(document(), smartDelete, mergeBlocksAfterDelete, replace, expandForSpecialElements, sanitizeMarkup, deleteSelectionEditingActionForEditingAction(editingAction())));
 }
 
 void CompositeEditCommand::deleteSelection(const VisibleSelection &selection, bool smartDelete, bool mergeBlocksAfterDelete, bool replace, bool expandForSpecialElements, bool sanitizeMarkup)
@@ -1042,7 +1038,7 @@ void CompositeEditCommand::deleteInsignificantText(Text& textNode, unsigned star
     if (start >= end)
         return;
 
-    protectedDocument()->updateLayout();
+    document().updateLayout();
 
     bool wholeTextNodeIsEmpty = false;
     String string;
@@ -1131,7 +1127,7 @@ void CompositeEditCommand::deleteInsignificantText(const Position& start, const 
     }
     if (!nodes.isEmpty()) {
         // Callers expect render tree to be in sync.
-        protectedDocument()->updateLayoutIgnorePendingStylesheets();
+        document().updateLayoutIgnorePendingStylesheets();
     }
 }
 
@@ -1142,7 +1138,7 @@ void CompositeEditCommand::deleteInsignificantTextDownstream(const Position& pos
 
 RefPtr<Element> CompositeEditCommand::appendBlockPlaceholder(Ref<Element>&& container)
 {
-    auto document = protectedDocument();
+    Ref document = this->document();
     document->updateLayoutIgnorePendingStylesheets();
     
     // Should check isBlockFlow || isInlineFlow when deletion improves. See 4244964.
@@ -1162,7 +1158,7 @@ RefPtr<Node> CompositeEditCommand::insertBlockPlaceholder(const Position& pos)
     // Should assert isBlockFlow || isInlineFlow when deletion improves.  See 4244964.
     ASSERT(pos.deprecatedNode()->renderer());
 
-    auto placeholder = createBlockPlaceholderElement(protectedDocument());
+    auto placeholder = createBlockPlaceholderElement(document());
     insertNodeAt(placeholder.copyRef(), pos);
     return placeholder;
 }
@@ -1172,7 +1168,7 @@ RefPtr<Node> CompositeEditCommand::addBlockPlaceholderIfNeeded(Element* containe
     if (!container)
         return nullptr;
 
-    protectedDocument()->updateLayoutIgnorePendingStylesheets();
+    document().updateLayoutIgnorePendingStylesheets();
 
     {
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
@@ -1206,7 +1202,7 @@ void CompositeEditCommand::removePlaceholderAt(const Position& p)
 
 Ref<HTMLElement> CompositeEditCommand::insertNewDefaultParagraphElementAt(const Position& position)
 {
-    Ref document = protectedDocument();
+    Ref document = this->document();
     auto paragraphElement = createDefaultParagraphElement(document);
     paragraphElement->appendChild(HTMLBRElement::create(document));
     insertNodeAt(paragraphElement.copyRef(), position);
@@ -1220,7 +1216,7 @@ RefPtr<Node> CompositeEditCommand::moveParagraphContentsToNewBlockIfNecessary(co
     if (pos.isNull())
         return nullptr;
     
-    protectedDocument()->updateLayoutIgnorePendingStylesheets();
+    document().updateLayoutIgnorePendingStylesheets();
     
     // It's strange that this function is responsible for verifying that pos has not been invalidated
     // by an earlier call to this function.  The caller, applyBlockStyle, should do this.
@@ -1450,7 +1446,7 @@ void CompositeEditCommand::moveParagraphWithClones(const VisiblePosition& startO
         && ((!isEndOfParagraph(beforeParagraph) && !isStartOfParagraph(beforeParagraph)) || beforeParagraph == afterParagraph)
         && isEditablePosition(beforeParagraph.deepEquivalent())) {
         // FIXME: Trim text between beforeParagraph and afterParagraph if they aren't equal.
-        insertNodeAt(HTMLBRElement::create(protectedDocument()), beforeParagraph.deepEquivalent());
+        insertNodeAt(HTMLBRElement::create(document()), beforeParagraph.deepEquivalent());
     }
 }
     
@@ -1503,7 +1499,7 @@ void CompositeEditCommand::moveParagraphs(const VisiblePosition& startOfParagrap
     if (start.isNull() || end.isNull())
         return;
 
-    Ref document = protectedDocument();
+    Ref document = this->document();
     // FIXME: Serializing and re-parsing is an inefficient way to preserve style.
     RefPtr<DocumentFragment> fragment;
     if (startOfParagraphToMove != endOfParagraphToMove)
@@ -1617,7 +1613,7 @@ bool CompositeEditCommand::breakOutOfEmptyListItem()
     RefPtr emptyListItem = enclosingEmptyListItem(endingSelection().visibleStart());
     RefPtr listNode = emptyListItem->parentNode();
     auto style = EditingStyle::create(endingSelection().start());
-    Ref document = protectedDocument();
+    Ref document = this->document();
     style->mergeTypingStyle(document);
 
     RefPtr<Element> newBlock;
@@ -1688,7 +1684,7 @@ bool CompositeEditCommand::breakOutOfEmptyMailBlockquotedParagraph()
     if (enclosingNodeOfType(previous.deepEquivalent(), &isMailBlockquote))
         return false;
     
-    Ref document = protectedDocument();
+    Ref document = this->document();
     auto br = HTMLBRElement::create(document);
     // We want to replace this quoted paragraph with an unquoted one, so insert a br
     // to hold the caret before the highest blockquote.

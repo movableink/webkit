@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -85,7 +85,7 @@ void InsertLineBreakCommand::doApply()
     if (!isEditablePosition(position))
         return;
 
-    Ref document = protectedDocument();
+    Ref document = this->document();
     RefPtr<Node> nodeToInsert;
     if (shouldUseBreakElement(position))
         nodeToInsert = HTMLBRElement::create(document);
