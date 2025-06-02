@@ -162,8 +162,11 @@ bool RangeBasedLineBuilder::isEligibleForRangeInlineLayout(const InlineFormattin
         if (!inlineItems.hasTextAndLineBreakOnlyContent() || inlineItems.requiresVisualReordering() || !placedFloats.isEmpty() || inlineItems.hasTextAutospace())
             return false;
 
-        auto& inlineBox = inlineItemList.first().layoutBox();
-        if (!TextOnlySimpleLineBuilder::isEligibleForSimplifiedInlineLayoutByStyle(inlineFormattingContext.root().style()) || !TextOnlySimpleLineBuilder::isEligibleForSimplifiedInlineLayoutByStyle(inlineBox.style()))
+        auto& rootStyle = inlineFormattingContext.root().style();
+        auto& inlineBoxStyle = inlineItemList.first().layoutBox().style();
+        if (inlineBoxStyle.textAlign() != rootStyle.textAlign())
+            return false;
+        if (!TextOnlySimpleLineBuilder::isEligibleForSimplifiedInlineLayoutByStyle(rootStyle) || !TextOnlySimpleLineBuilder::isEligibleForSimplifiedInlineLayoutByStyle(inlineBoxStyle))
             return false;
     }
 
