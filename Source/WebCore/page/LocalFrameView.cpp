@@ -1922,7 +1922,7 @@ static bool isHiddenOrNearlyTransparent(const RenderBox& box)
     if (box.opacity() < PageColorSampler::nearlyTransparentAlphaThreshold)
         return true;
 
-    if (!box.hasBackground() && !box.firstChild())
+    if (!box.hasBackground() && !box.firstChild() && !is<RenderReplaced>(box))
         return true;
 
     return false;
