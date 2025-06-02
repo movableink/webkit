@@ -714,9 +714,12 @@ inline LegacyInlineIterator BreakingContext::handleEndOfLine()
     if (m_lineBreak == m_resolver.position()) {
         if (!m_lineBreak.renderer() || !m_lineBreak.renderer()->isBR()) {
             // we just add as much as possible
+            size_t objectLength = 0;
+            if (auto* renderText = dynamicDowncast<RenderText>(m_lastObject))
+                objectLength = renderText->length();
             if (m_blockStyle.whiteSpaceCollapse() == WhiteSpaceCollapse::Preserve && m_blockStyle.textWrapMode() == TextWrapMode::NoWrap && !m_current.offset()) {
                 if (m_lastObject)
-                    commitLineBreakAtCurrentWidth(*m_lastObject, m_lastObject->isRenderText() ? m_lastObject->length() : 0);
+                    commitLineBreakAtCurrentWidth(*m_lastObject, objectLength);
                 else
                     commitLineBreakClear();
             } else if (m_lineBreak.renderer()) {
@@ -726,7 +729,7 @@ inline LegacyInlineIterator BreakingContext::handleEndOfLine()
                 if (m_current.renderer())
                     commitLineBreakAtCurrentWidth(*m_current.renderer(), m_current.offset());
                 else if (m_lastObject)
-                    commitLineBreakAtCurrentWidth(*m_lastObject, m_lastObject->isRenderText() ? m_lastObject->length() : 0);
+                    commitLineBreakAtCurrentWidth(*m_lastObject, objectLength);
             }
         }
         // make sure we consume at least one char/object.

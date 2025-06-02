@@ -1050,8 +1050,6 @@ public:
 
     WEBCORE_EXPORT bool hasEmptyVisibleRectRespectingParentFrames() const;
 
-    virtual unsigned length() const { return 1; }
-
     bool isFloatingOrOutOfFlowPositioned() const { return (isFloating() || isOutOfFlowPositioned()); }
     bool isInFlow() const { return !isFloatingOrOutOfFlowPositioned(); }
 

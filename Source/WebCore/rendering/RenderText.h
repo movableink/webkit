@@ -97,7 +97,7 @@ public:
     bool hasEmptyText() const { return m_text.isEmpty(); }
 
     UChar characterAt(unsigned) const;
-    unsigned length() const final { return text().length(); }
+    size_t length() const { return text().length(); }
 
     float width(unsigned from, unsigned length, const FontCascade&, float xPos, SingleThreadWeakHashSet<const Font>* fallbackFonts = nullptr, GlyphOverflow* = nullptr) const;
     float width(unsigned from, unsigned length, float xPos, bool firstLine = false, SingleThreadWeakHashSet<const Font>* fallbackFonts = nullptr, GlyphOverflow* = nullptr) const;
