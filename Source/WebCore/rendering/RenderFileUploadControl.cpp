@@ -289,7 +289,7 @@ void RenderFileUploadControl::computeIntrinsicLogicalWidths(LayoutUnit& minLogic
     const String label = theme().fileListDefaultLabel(inputElement().multiple());
     float defaultLabelWidth = font.width(constructTextRun(label, style(), ExpansionBehavior::allowRightOnly()));
     if (HTMLInputElement* button = uploadButton())
-        if (RenderObject* buttonRenderer = button->renderer())
+        if (CheckedPtr buttonRenderer = dynamicDowncast<RenderBox>(button->renderer()))
             defaultLabelWidth += buttonRenderer->maxPreferredLogicalWidth() + afterButtonSpacing;
     maxLogicalWidth = static_cast<int>(ceilf(std::max(minDefaultLabelWidth, defaultLabelWidth)));
 

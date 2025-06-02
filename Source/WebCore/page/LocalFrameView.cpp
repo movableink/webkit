@@ -4452,7 +4452,7 @@ void LocalFrameView::performSizeToContentAutoSize()
 
     RefPtr document = m_frame->document();
     auto& renderView = *document->renderView();
-    auto* documentRenderer = downcast<RenderElement>(renderView.firstChild());
+    CheckedPtr documentRenderer = dynamicDowncast<RenderBox>(renderView.firstChild());
     if (!documentRenderer) {
         ASSERT_NOT_REACHED();
         return;

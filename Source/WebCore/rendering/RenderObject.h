@@ -766,7 +766,6 @@ public:
     void clearNeedsLayout(HadSkippedLayout = HadSkippedLayout::No);
     void setNeedsPreferredWidthsUpdate(MarkingBehavior = MarkContainingBlockChain);
     void clearNeedsPreferredWidthsUpdate() { m_stateBitfields.setFlag(StateFlag::PreferredLogicalWidthsNeedUpdate, { }); }
-    void invalidateContainerPreferredLogicalWidths();
     
     inline void setNeedsLayoutAndPrefWidthsRecalc();
 
@@ -872,9 +871,6 @@ public:
 
     // the rect that will be painted if this object is passed as the paintingRoot
     WEBCORE_EXPORT LayoutRect paintingRootRect(LayoutRect& topLevelRect);
-
-    virtual LayoutUnit minPreferredLogicalWidth() const { return 0; }
-    virtual LayoutUnit maxPreferredLogicalWidth() const { return 0; }
 
     const RenderStyle& style() const; // Defined in RenderObjectInlines.h.
     inline CheckedRef<const RenderStyle> checkedStyle() const; // Defined in RenderObjectInlines.h.
@@ -1173,6 +1169,8 @@ private:
     void addAbsoluteRectForLayer(LayoutRect& result);
     void setLayerNeedsFullRepaint();
     void setLayerNeedsFullRepaintForPositionedMovementLayout();
+
+    void invalidateContainerPreferredLogicalWidths();
 
 #if PLATFORM(IOS_FAMILY)
     struct SelectionGeometriesInternal {
