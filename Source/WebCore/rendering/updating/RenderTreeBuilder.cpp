@@ -560,14 +560,12 @@ void RenderTreeBuilder::move(RenderBoxModelObject& from, RenderBoxModelObject& t
     }
 
     auto findBFCRootAndDestroyInlineTree = [&] {
-        auto* containingBlock = &from;
-        while (containingBlock) {
+        for (CheckedPtr containingBlock = &from; containingBlock; containingBlock = containingBlock->containingBlock()) {
             containingBlock->setNeedsLayout();
-            if (CheckedPtr blockFlow = dynamicDowncast<RenderBlockFlow>(*containingBlock)) {
+            if (auto* blockFlow = dynamicDowncast<RenderBlockFlow>(*containingBlock)) {
                 blockFlow->deleteLines();
                 break;
             }
-            containingBlock = containingBlock->containingBlock();
         }
     };
     // When moving a subtree out of a BFC we need to make sure that the line boxes generated for the inline tree are not accessible anymore from the renderers.

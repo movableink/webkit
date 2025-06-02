@@ -2334,19 +2334,18 @@ void RenderBlockFlow::adjustSizeContainmentChildForPagination(RenderBox& child, 
         fragmentedFlow->updateSpaceShortageForSizeContainment(this, offsetFromLogicalTopOfFirstPage() + offset, spaceShortage);
 }
 
-bool RenderBlockFlow::containsFloat(RenderBox& renderer) const
+bool RenderBlockFlow::containsFloat(const RenderBox& renderer) const
 {
     return m_floatingObjects && m_floatingObjects->set().contains<FloatingObjectHashTranslator>(renderer);
 }
 
-bool RenderBlockFlow::subtreeContainsFloat(RenderBox& renderer) const
+bool RenderBlockFlow::subtreeContainsFloat(const RenderBox& renderer) const
 {
     if (containsFloat(renderer))
         return true;
 
-    for (auto& block : descendantsOfType<RenderBlock>(const_cast<RenderBlockFlow&>(*this))) {
-        auto* blockFlow = dynamicDowncast<RenderBlockFlow>(block);
-        if (blockFlow && blockFlow->containsFloat(renderer))
+    for (auto& blockFlow : childrenOfType<RenderBlockFlow>(*this)) {
+        if (blockFlow.containsFloat(renderer))
             return true;
     }
 
@@ -2358,9 +2357,8 @@ bool RenderBlockFlow::subtreeContainsFloats() const
     if (containsFloats())
         return true;
 
-    for (auto& block : descendantsOfType<RenderBlock>(const_cast<RenderBlockFlow&>(*this))) {
-        auto* blockFlow = dynamicDowncast<RenderBlockFlow>(block);
-        if (blockFlow && blockFlow->containsFloats())
+    for (auto& blockFlow : descendantsOfType<RenderBlockFlow>(*this)) {
+        if (blockFlow.containsFloats())
             return true;
     }
 

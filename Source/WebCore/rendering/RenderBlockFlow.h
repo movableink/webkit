@@ -278,9 +278,9 @@ public:
     virtual bool requiresColumns(int) const;
 
     bool containsFloats() const override { return m_floatingObjects && !m_floatingObjects->set().isEmpty(); }
-    bool containsFloat(RenderBox&) const;
+    bool containsFloat(const RenderBox&) const;
     bool subtreeContainsFloats() const;
-    bool subtreeContainsFloat(RenderBox&) const;
+    bool subtreeContainsFloat(const RenderBox&) const;
 
     void deleteLines() override;
     void computeOverflow(LayoutUnit oldClientAfterEdge, bool recomputeFloats = false) override;
