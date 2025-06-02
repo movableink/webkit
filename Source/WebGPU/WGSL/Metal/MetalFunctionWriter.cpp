@@ -66,6 +66,22 @@ namespace Metal {
 #define DEFINE_BOUND_HELPER(__name, __capitalizedName, __lowerBound, __upperBound, ...) \
     DEFINE_BOUND_HELPER_RENAMED(__name, __capitalizedName, __name, __lowerBound, __upperBound, __VA_ARGS__)
 
+#define DEFINE_VOLATILE_BOUND_HELPER_RENAMED(__name, __capitalizedName, __metalFunction, __lowerBound, __upperBound, ...) \
+    DEFINE_HELPER(__capitalizedName,  \
+    template <typename T> \
+    T __wgsl##__capitalizedName(T value) \
+    { \
+    if constexpr(__wgslMetalAppleGPUFamily < 9) { \n\
+        volatile auto result = __metalFunction(select(value, T(0), value < T(__lowerBound) || value > T(__upperBound))); \
+        return result; \
+    } else { \n\
+        return __metalFunction(select(value, T(0), value < T(__lowerBound) || value > T(__upperBound))); \
+    }\n \
+    })
+
+#define DEFINE_VOLATILE_BOUND_HELPER(__name, __capitalizedName, __lowerBound, __upperBound, ...) \
+    DEFINE_VOLATILE_BOUND_HELPER_RENAMED(__name, __capitalizedName, __name, __lowerBound, __upperBound, __VA_ARGS__)
+
 #define DEFINE_VOLATILE_HELPER_RENAMED(__name, __capitalizedName) \
     DEFINE_HELPER(__capitalizedName, \
     template <typename T>\n \
@@ -96,7 +112,7 @@ DEFINE_BOUND_HELPER(asin, Asin, -1, 1)
 DEFINE_BOUND_HELPER(acosh, Acosh, 1, numeric_limits<T>::max())
 DEFINE_BOUND_HELPER(atanh, Atanh, -1, 1)
 DEFINE_BOUND_HELPER_RENAMED(inverseSqrt, InverseSqrt, rsqrt, 0, numeric_limits<T>::infinity())
-DEFINE_BOUND_HELPER(log, Log, 0, numeric_limits<T>::infinity())
+DEFINE_VOLATILE_BOUND_HELPER(log, Log, 0, numeric_limits<T>::infinity())
 DEFINE_BOUND_HELPER(log2, Log2, 0, numeric_limits<T>::infinity())
 DEFINE_BOUND_HELPER(sqrt, Sqrt, 0, numeric_limits<T>::infinity())
 DEFINE_VOLATILE_HELPER(pack_float_to_snorm2x16, PackFloatToSnorm2x16)
