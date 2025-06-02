@@ -220,6 +220,8 @@ static Ref<REModelLoader> loadREModelUsingRKUSDLoader(Model& model, const std::o
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ModelProcessModelPlayerProxy);
 
+uint64_t ModelProcessModelPlayerProxy::gObjectCountForTesting = 0;
+
 Ref<ModelProcessModelPlayerProxy> ModelProcessModelPlayerProxy::create(ModelProcessModelPlayerManagerProxy& manager, WebCore::ModelPlayerIdentifier identifier, Ref<IPC::Connection>&& connection, const std::optional<String>& attributionTaskID)
 {
     return adoptRef(*new ModelProcessModelPlayerProxy(manager, identifier, WTFMove(connection), attributionTaskID));
@@ -234,6 +236,7 @@ ModelProcessModelPlayerProxy::ModelProcessModelPlayerProxy(ModelProcessModelPlay
 {
     RELEASE_LOG(ModelElement, "%p - ModelProcessModelPlayerProxy initialized id=%" PRIu64, this, identifier.toUInt64());
     m_objCAdapter = adoptNS([[WKModelProcessModelPlayerProxyObjCAdapter alloc] initWithModelProcessModelPlayerProxy:*this]);
+    ++gObjectCountForTesting;
 }
 
 ModelProcessModelPlayerProxy::~ModelProcessModelPlayerProxy()
@@ -250,6 +253,9 @@ ModelProcessModelPlayerProxy::~ModelProcessModelPlayerProxy()
     [m_stageModeInteractionDriver removeInteractionContainerFromSceneOrParent];
 
     RELEASE_LOG(ModelElement, "%p - ModelProcessModelPlayerProxy deallocated id=%" PRIu64, this, m_id.toUInt64());
+
+    ASSERT(gObjectCountForTesting > 0);
+    --gObjectCountForTesting;
 }
 
 std::optional<SharedPreferencesForWebProcess> ModelProcessModelPlayerProxy::sharedPreferencesForWebProcess() const

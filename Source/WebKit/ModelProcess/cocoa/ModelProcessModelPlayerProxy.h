@@ -145,6 +145,7 @@ public:
     USING_CAN_MAKE_WEAKPTR(WebCore::REModelLoaderClient);
 
     void disableUnloadDelayForTesting() { m_unloadDelayDisabledForTesting = true; }
+    static uint64_t objectCountForTesting() { return gObjectCountForTesting; }
 
 private:
     ModelProcessModelPlayerProxy(ModelProcessModelPlayerManagerProxy&, WebCore::ModelPlayerIdentifier, Ref<IPC::Connection>&&, const std::optional<String>&);
@@ -196,6 +197,7 @@ private:
 
     // For testing
     bool m_unloadDelayDisabledForTesting { false };
+    static uint64_t gObjectCountForTesting;
 };
 
 } // namespace WebKit

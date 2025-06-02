@@ -72,6 +72,10 @@
 #import "WKWebViewIOS.h"
 #endif
 
+#if ENABLE(MODEL_PROCESS)
+#import "ModelProcessProxy.h"
+#endif
+
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
 @interface WKMediaSessionCoordinatorHelper : NSObject <_WKMediaSessionCoordinatorDelegate>
 - (id)initWithCoordinator:(WebCore::MediaSessionCoordinatorClient*)coordinator;
@@ -1031,6 +1035,23 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
     return WebKit::LogStream::logCountForTesting();
 #else
     return 0;
+#endif
+}
+
+- (void)_modelProcessModelPlayerCountForTesting:(void(^)(NSUInteger))completionHandler
+{
+#if ENABLE(MODEL_PROCESS)
+    RefPtr modelProcess = _page->configuration().processPool().modelProcess();
+    if (!modelProcess) {
+        completionHandler(0);
+        return;
+    }
+
+    modelProcess->modelPlayerCountForTesting([completionHandler = makeBlockPtr(completionHandler)](uint64_t count) {
+        completionHandler(count);
+    });
+#else
+    completionHandler(0);
 #endif
 }
 

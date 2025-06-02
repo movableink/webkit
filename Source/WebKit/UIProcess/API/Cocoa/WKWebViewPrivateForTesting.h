@@ -172,6 +172,8 @@ struct WKAppPrivacyReportTestingData {
 
 - (unsigned)_forwardedLogsCountForTesting;
 
+- (void)_modelProcessModelPlayerCountForTesting:(void(^)(NSUInteger))completionHandler;
+
 @end
 
 typedef NS_ENUM(NSInteger, _WKMediaSessionReadyState) {

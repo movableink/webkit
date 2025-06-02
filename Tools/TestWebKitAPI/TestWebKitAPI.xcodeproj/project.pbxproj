@@ -2834,6 +2834,9 @@
 		524BBC9B19DF3714002F1AF1 /* file-with-video.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = "file-with-video.html"; sourceTree = "<group>"; };
 		524BBC9C19DF377A002F1AF1 /* WKPageIsPlayingAudio.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WKPageIsPlayingAudio.cpp; sourceTree = "<group>"; };
 		524BBCA019E30C63002F1AF1 /* test.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = test.mp4; sourceTree = "<group>"; };
+		5261EAF92DE9768900A721AE /* ModelProcess.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ModelProcess.mm; sourceTree = "<group>"; };
+		5261EB052DE97BC200A721AE /* ModelLoadingMessageHandler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ModelLoadingMessageHandler.h; path = cocoa/ModelLoadingMessageHandler.h; sourceTree = "<group>"; };
+		5261EB062DE97BC200A721AE /* ModelLoadingMessageHandler.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = ModelLoadingMessageHandler.mm; path = cocoa/ModelLoadingMessageHandler.mm; sourceTree = "<group>"; };
 		52B8CF9415868CF000281053 /* SetDocumentURI.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = SetDocumentURI.html; sourceTree = "<group>"; };
 		52B8CF9515868CF000281053 /* SetDocumentURI.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = SetDocumentURI.mm; sourceTree = "<group>"; };
 		52C8C1372706437C00BDF3B7 /* web-authentication-make-credential-hid-internal-uv.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "web-authentication-make-credential-hid-internal-uv.html"; sourceTree = "<group>"; };
@@ -4278,6 +4281,8 @@
 				F42F081627449FFD007E0D90 /* ImageAnalysisTestingUtilities.mm */,
 				F44A530D21B8976900DBB99C /* InstanceMethodSwizzler.h */,
 				F44A531021B8976900DBB99C /* InstanceMethodSwizzler.mm */,
+				5261EB052DE97BC200A721AE /* ModelLoadingMessageHandler.h */,
+				5261EB062DE97BC200A721AE /* ModelLoadingMessageHandler.mm */,
 				FA65F0042C87F4CF00A0A123 /* NetworkConnection.h */,
 				FA65F0052C87F4CF00A0A123 /* NetworkConnection.mm */,
 				0F139E721A423A2B00F590F5 /* PlatformUtilitiesCocoa.mm */,
@@ -4567,6 +4572,7 @@
 				EBCD30F72B7C075F00268DA5 /* MemoryFootprintThreshold.mm */,
 				5165FE03201EE617009F7EC3 /* MessagePortProviders.mm */,
 				51CD1C6A1B38CE3600142CA5 /* ModalAlerts.mm */,
+				5261EAF92DE9768900A721AE /* ModelProcess.mm */,
 				331987702CEF456200BC283C /* MouseSupportUIDelegate.h */,
 				331987782CEF457300BC283C /* MouseSupportUIDelegate.mm */,
 				1ABC3DED1899BE6D004F0626 /* Navigation.mm */,

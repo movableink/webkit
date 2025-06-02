@@ -35,6 +35,7 @@
 #include "ModelConnectionToWebProcess.h"
 #include "ModelProcessConnectionParameters.h"
 #include "ModelProcessCreationParameters.h"
+#include "ModelProcessModelPlayerProxy.h"
 #include "ModelProcessProxyMessages.h"
 #include "WebPageProxyMessages.h"
 #include "WebProcessPoolMessages.h"
@@ -256,6 +257,11 @@ void ModelProcess::requestSharedSimulationConnection(WebCore::ProcessIdentifier 
 void ModelProcess::webProcessConnectionCountForTesting(CompletionHandler<void(uint64_t)>&& completionHandler)
 {
     completionHandler(ModelConnectionToWebProcess::objectCountForTesting());
+}
+
+void ModelProcess::modelPlayerCountForTesting(CompletionHandler<void(uint64_t)>&& completionHandler)
+{
+    completionHandler(ModelProcessModelPlayerProxy::objectCountForTesting());
 }
 
 void ModelProcess::addSession(PAL::SessionID sessionID)

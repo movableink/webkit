@@ -82,8 +82,6 @@ public:
     // ActiveDOMObject.
     void ref() const final { HTMLElement::ref(); }
     void deref() const final { HTMLElement::deref(); }
-    void suspend(ReasonForSuspension) final;
-    void resume() final;
 
     // VisibilityChangeClient.
     void visibilityStateChanged() final;
@@ -207,6 +205,9 @@ private:
 
     // ActiveDOMObject.
     bool virtualHasPendingActivity() const final;
+    void resume() final;
+    void suspend(ReasonForSuspension) final;
+    void stop() final;
 
     // DOM overrides.
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;

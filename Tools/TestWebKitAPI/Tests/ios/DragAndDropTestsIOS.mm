@@ -29,6 +29,7 @@
 
 #import "ClassMethodSwizzler.h"
 #import "DragAndDropSimulator.h"
+#import "ModelLoadingMessageHandler.h"
 #import "NSItemProviderAdditions.h"
 #import "PlatformUtilities.h"
 #import "TestURLSchemeHandler.h"
@@ -98,28 +99,6 @@ static NSData *testZIPArchive()
 }
 
 @end
-
-@interface ModelLoadingMessageHandler : NSObject <WKScriptMessageHandler>
-
-@property (nonatomic) BOOL didLoadModel;
-@property (nonatomic) BOOL modelIsReady;
-
-@end
-
-@implementation ModelLoadingMessageHandler
-- (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message
-{
-    if ([[message body] isEqualToString:@"LOADED"])
-        _didLoadModel = YES;
-    else if ([[message body] isEqualToString:@"READY"])
-        _modelIsReady = YES;
-    else {
-        EXPECT_TRUE(false);
-        NSLog(@"Unexpected message received: %@", [message body]);
-    }
-}
-@end
-
 
 static void loadTestPageAndEnsureInputSession(DragAndDropSimulator *simulator, NSString *testPageName)
 {

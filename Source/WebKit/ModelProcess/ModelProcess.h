@@ -82,6 +82,7 @@ public:
 #endif
 
     void webProcessConnectionCountForTesting(CompletionHandler<void(uint64_t)>&&);
+    void modelPlayerCountForTesting(CompletionHandler<void(uint64_t)>&&);
 
 private:
     void lowMemoryHandler(Critical, Synchronous);

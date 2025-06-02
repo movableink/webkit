@@ -23,31 +23,22 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "config.h"
+#include "config.h"
+#include "ModelLoadingMessageHandler.h"
 
-#if PLATFORM(MAC)
+#include "Utilities.h"
+#include <wtf/Deque.h>
 
-#import "TestWKWebView.h"
-#import <WebKit/WKWebViewPrivate.h>
-#import <WebKit/WKWebViewPrivateForTesting.h>
-
-namespace TestWebKitAPI {
-
-TEST(CustomSwipeViewTests, WindowRelativeBoundsForCustomSwipeViews)
+@implementation ModelLoadingMessageHandler
+- (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message
 {
-    RetainPtr customSwipeView = adoptNS([[NSView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
-    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
-    [webView addSubview:customSwipeView.get()];
-    [webView _setCustomSwipeViews:@[ customSwipeView.get() ]];
-    [webView _setCustomSwipeViewsObscuredContentInsets:NSEdgeInsetsMake(100, 200, 50, 50)];
-
-    __auto_type boundsForCustomSwipeView = [webView _windowRelativeBoundsForCustomSwipeViewsForTesting];
-    EXPECT_EQ(boundsForCustomSwipeView.origin.x, 200.0);
-    EXPECT_EQ(boundsForCustomSwipeView.origin.y, 50.0);
-    EXPECT_EQ(boundsForCustomSwipeView.size.width, 550.0);
-    EXPECT_EQ(boundsForCustomSwipeView.size.height, 450.0);
+    if ([[message body] isEqualToString:@"LOADED"])
+        _didLoadModel = YES;
+    else if ([[message body] isEqualToString:@"READY"])
+        _modelIsReady = YES;
+    else {
+        EXPECT_TRUE(false);
+        NSLog(@"Unexpected message received: %@", [message body]);
+    }
 }
-
-} // namespace TestWebKitAPI
-
-#endif // PLATFORM(MAC)
+@end

@@ -523,6 +523,18 @@ static WebEvent *unwrap(BEKeyEntry *event)
     return count;
 }
 
+- (NSUInteger)modelProcessModelPlayerCount
+{
+    __block bool done = false;
+    __block NSUInteger count = 0;
+    [self _modelProcessModelPlayerCountForTesting:^(NSUInteger result) {
+        done = true;
+        count = result;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    return count;
+}
+
 - (NSString *)contentsAsString
 {
     __block bool done = false;

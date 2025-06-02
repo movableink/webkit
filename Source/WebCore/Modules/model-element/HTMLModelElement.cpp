@@ -1299,6 +1299,15 @@ bool HTMLModelElement::virtualHasPendingActivity() const
     return m_resource;
 }
 
+void HTMLModelElement::stop()
+{
+    RELEASE_LOG(ModelElement, "%p - HTMLModelElement::stop()", this);
+
+    // Once an active DOM object has been stopped it cannot be restarted,
+    // so we can delete the model player now.
+    deleteModelPlayer();
+}
+
 #if PLATFORM(COCOA)
 Vector<RetainPtr<id>> HTMLModelElement::accessibilityChildren()
 {

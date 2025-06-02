@@ -242,6 +242,11 @@ void ModelProcessProxy::webProcessConnectionCountForTesting(CompletionHandler<vo
     sendWithAsyncReply(Messages::ModelProcess::WebProcessConnectionCountForTesting(), WTFMove(completionHandler));
 }
 
+void ModelProcessProxy::modelPlayerCountForTesting(CompletionHandler<void(uint64_t)>&& completionHandler)
+{
+    sendWithAsyncReply(Messages::ModelProcess::ModelPlayerCountForTesting(), WTFMove(completionHandler));
+}
+
 void ModelProcessProxy::didClose(IPC::Connection&)
 {
     RELEASE_LOG_ERROR(Process, "%p - ModelProcessProxy::didClose:", this);
