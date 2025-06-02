@@ -286,7 +286,7 @@ String HTMLOptionElement::label() const
 {
     String label = attributeWithoutSynchronization(labelAttr);
     if (!label.isNull())
-        return label.trim(isASCIIWhitespace);
+        return label;
     return collectOptionInnerText().trim(isASCIIWhitespace).simplifyWhiteSpace(isASCIIWhitespace);
 }
 

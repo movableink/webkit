@@ -867,7 +867,6 @@ imported/w3c/web-platform-tests/workers/interfaces/WorkerGlobalScope/onerror/mes
 [ Debug ] imported/w3c/web-platform-tests/css/css-properties-values-api/registered-property-revert.html [ Skip ]
 [ Debug ] imported/w3c/web-platform-tests/css/css-scoping/slotted-matches.html [ Skip ]
 imported/w3c/web-platform-tests/html/rendering/replaced-elements/the-option-element/option-label-whitespace.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/html/rendering/replaced-elements/the-option-element/option-label-whitespace-2.html [ ImageOnlyFailure ]
 
 # Cookie tests that are flaky since their import because they fail and and out some kind of unique id.
 imported/w3c/web-platform-tests/cookies/prefix/__host.document-cookie.html [ Pass Failure ]
