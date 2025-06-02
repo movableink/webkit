@@ -4535,7 +4535,7 @@ private:
 
         NodeFlags flags = NodeResultJS;
         if (!node->arrayMode().isOutOfBounds()) {
-            if ((arrayModes & preferDoubleResult) == arrayModes)
+            if (!(arrayModes & ~preferDoubleResult))
                 flags = NodeResultDouble;
         }
 
