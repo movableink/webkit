@@ -298,6 +298,7 @@ bool RenderBundleEncoder::executePreDrawCommands(bool needsValidationLayerWorkar
         makeInvalid(@"Pipeline was not set prior to draw command");
         return false;
     }
+    m_requiresCommandReplay = m_requiresCommandReplay || !pipeline->vertexShaderBindingCount();
 
     auto pipelineLayout = pipeline->protectedPipelineLayout();
     auto vertexDynamicOffsetSum = checkedSum<uint64_t>(m_vertexDynamicOffset, sizeof(uint32_t) * pipelineLayout->sizeOfVertexDynamicOffsets());
@@ -373,7 +374,6 @@ bool RenderBundleEncoder::executePreDrawCommands(bool needsValidationLayerWorkar
         if (protectedGroup && (protectedGroup->makeSubmitInvalid(ShaderStage::Vertex, pipelineOptionalBindGroupLayout) || protectedGroup->makeSubmitInvalid(ShaderStage::Fragment, pipelineOptionalBindGroupLayout)))
             m_makeSubmitInvalid = true;
     }
-    m_requiresCommandReplay = m_requiresCommandReplay || !pipeline->vertexShaderBindingCount();
 
     if (NSString* error = pipeline->protectedPipelineLayout()->errorValidatingBindGroupCompatibility(m_bindGroups)) {
         makeInvalid(error);
