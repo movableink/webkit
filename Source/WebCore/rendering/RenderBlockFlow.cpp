@@ -692,7 +692,38 @@ void RenderBlockFlow::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit 
     clearNeedsLayout();
 }
 
-inline LayoutUnit RenderBlockFlow::shiftForAlignContent(LayoutUnit intrinsicLogicalHeight, LayoutUnit& repaintLogicalTop, LayoutUnit& repaintLogicalBottom)
+void RenderBlockFlow::dirtyForLayoutFromPercentageHeightDescendants()
+{
+    auto* descendants = percentHeightDescendants();
+    if (!descendants)
+        return;
+
+    for (auto& descendant : *descendants) {
+        // Let's not dirty the height perecentage descendant when it has an absolutely positioned containing block ancestor. We should be able to dirty such boxes through the regular invalidation logic.
+        bool descendantNeedsLayout = true;
+        for (auto* ancestor = descendant.containingBlock(); ancestor && ancestor != this; ancestor = ancestor->containingBlock()) {
+            if (ancestor->isOutOfFlowPositioned()) {
+                descendantNeedsLayout = false;
+                break;
+            }
+        }
+        if (!descendantNeedsLayout)
+            continue;
+
+        for (CheckedPtr<RenderElement> renderer = &descendant; renderer && renderer != this && !renderer->normalChildNeedsLayout(); renderer = renderer->container()) {
+            renderer->setChildNeedsLayout(MarkOnlyThis);
+            if (CheckedPtr renderBox = dynamicDowncast<RenderBox>(renderer)) {
+                // If the width of an image is affected by the height of a child (e.g., an image with an aspect ratio),
+                // then we have to dirty preferred widths, since even enclosing blocks can become dirty as a result.
+                // (A horizontal flexbox that contains an inline image wrapped in an anonymous block for example.)
+                if (renderBox->hasIntrinsicAspectRatio() || renderBox->style().hasAspectRatio())
+                    renderBox->setNeedsPreferredWidthsUpdate();
+            }
+        }
+    }
+}
+
+LayoutUnit RenderBlockFlow::shiftForAlignContent(LayoutUnit intrinsicLogicalHeight, LayoutUnit& repaintLogicalTop, LayoutUnit& repaintLogicalBottom)
 {
     auto& alignment = style().alignContent();
 

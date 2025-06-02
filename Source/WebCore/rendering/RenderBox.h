@@ -624,6 +624,8 @@ public:
 
     inline bool backgroundIsKnownToBeObscured(const LayoutPoint& paintOffset);
 
+    virtual bool hasIntrinsicAspectRatio() const { return isReplacedOrAtomicInline() && (isImage() || isRenderVideo() || isRenderHTMLCanvas() || isRenderViewTransitionCapture()); }
+
 protected:
     RenderBox(Type, Element&, RenderStyle&&, OptionSet<TypeFlag> = { }, TypeSpecificFlags = { });
     RenderBox(Type, Document&, RenderStyle&&, OptionSet<TypeFlag> = { }, TypeSpecificFlags = { });

@@ -58,6 +58,11 @@ class RenderBlock : public RenderBox {
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderBlock);
 public:
     friend class LineLayoutState;
+    // FIXME: This is temporary to allow us to move code from RenderBlock into RenderBlockFlow that accesses member variables that we haven't moved out of
+    // RenderBlock yet.
+    friend class RenderBlockFlow;
+    // FIXME-BLOCKFLOW: Remove this when the line layout stuff has all moved out of RenderBlock
+    friend class LineBreaker;
     virtual ~RenderBlock();
 
 protected:
@@ -255,6 +260,27 @@ public:
 
     virtual bool canPerformSimplifiedLayout() const;
 
+    LayoutUnit offsetFromLogicalTopOfFirstPage() const override;
+    RenderFragmentContainer* fragmentAtBlockOffset(LayoutUnit) const;
+
+    virtual void computeOverflow(LayoutUnit oldClientAfterEdge, bool recomputeFloats = false);
+    void clearLayoutOverflow();
+
+    // Adjust from painting offsets to the local coords of this renderer
+    void offsetForContents(LayoutPoint&) const;
+
+    enum FieldsetFindLegendOption { FieldsetIgnoreFloatingOrOutOfFlow, FieldsetIncludeFloatingOrOutOfFlow };
+    RenderBox* findFieldsetLegend(FieldsetFindLegendOption = FieldsetIgnoreFloatingOrOutOfFlow) const;
+    virtual void layoutExcludedChildren(RelayoutChildren);
+    virtual bool computePreferredWidthsForExcludedChildren(LayoutUnit&, LayoutUnit&) const;
+
+    void adjustBorderBoxRectForPainting(LayoutRect&) override;
+    LayoutRect paintRectToClipOutFromBorder(const LayoutRect&) override;
+    bool isNonReplacedAtomicInline() const final { return isInline() && isReplacedOrAtomicInline(); }
+
+    void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const override;
+    void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
+
 protected:
     RenderFragmentedFlow* locateEnclosingFragmentedFlow() const override;
     bool establishesIndependentFormattingContextIgnoringDisplayType(const RenderStyle&) const;
@@ -305,26 +331,6 @@ protected:
 
     String debugDescription() const override;
 
-public:
-    virtual void computeOverflow(LayoutUnit oldClientAfterEdge, bool recomputeFloats = false);
-    void clearLayoutOverflow();
-    
-    // Adjust from painting offsets to the local coords of this renderer
-    void offsetForContents(LayoutPoint&) const;
-
-    enum FieldsetFindLegendOption { FieldsetIgnoreFloatingOrOutOfFlow, FieldsetIncludeFloatingOrOutOfFlow };
-    RenderBox* findFieldsetLegend(FieldsetFindLegendOption = FieldsetIgnoreFloatingOrOutOfFlow) const;
-    virtual void layoutExcludedChildren(RelayoutChildren);
-    virtual bool computePreferredWidthsForExcludedChildren(LayoutUnit&, LayoutUnit&) const;
-    
-    void adjustBorderBoxRectForPainting(LayoutRect&) override;
-    LayoutRect paintRectToClipOutFromBorder(const LayoutRect&) override;
-    bool isNonReplacedAtomicInline() const final { return isInline() && isReplacedOrAtomicInline(); }
-    
-    void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const override;
-    void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
-
-protected:
     virtual bool isPointInOverflowControl(HitTestResult&, const LayoutPoint& locationInContainer, const LayoutPoint& accumulatedOffset);
 
     virtual void addOverflowFromChildren();
@@ -349,6 +355,10 @@ protected:
     void computeChildPreferredLogicalWidths(RenderBox&, LayoutUnit& minPreferredLogicalWidth, LayoutUnit& maxPreferredLogicalWidth) const;
 
     virtual void computeChildIntrinsicLogicalWidths(RenderBox&, LayoutUnit& minPreferredLogicalWidth, LayoutUnit& maxPreferredLogicalWidth) const;
+
+    RenderBlockRareData& ensureBlockRareData();
+    RenderBlockRareData* getBlockRareData() const;
+    bool recomputeLogicalWidth();
 
 private:
     static RenderPtr<RenderBlock> createAnonymousBlockWithStyle(Document&, const RenderStyle&);
@@ -424,25 +434,6 @@ private:
     bool contentBoxLogicalWidthChanged(const RenderStyle&, const RenderStyle&);
     bool paddingBoxLogicaHeightChanged(const RenderStyle& oldStyle, const RenderStyle& newStyle);
     bool scrollbarWidthDidChange(const RenderStyle&, const RenderStyle&, ScrollbarOrientation);
-
-protected:
-    void dirtyForLayoutFromPercentageHeightDescendants();
-
-    RenderBlockRareData& ensureBlockRareData();
-    RenderBlockRareData* getBlockRareData() const;
-
-protected:
-    bool recomputeLogicalWidth();
-    
-public:
-    LayoutUnit offsetFromLogicalTopOfFirstPage() const override;
-    RenderFragmentContainer* fragmentAtBlockOffset(LayoutUnit) const;
-
-    // FIXME: This is temporary to allow us to move code from RenderBlock into RenderBlockFlow that accesses member variables that we haven't moved out of
-    // RenderBlock yet.
-    friend class RenderBlockFlow;
-    // FIXME-BLOCKFLOW: Remove this when the line layout stuff has all moved out of RenderBlock
-    friend class LineBreaker;
 
 private:
     // Used to store state between styleWillChange and styleDidChange

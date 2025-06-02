@@ -193,7 +193,7 @@ static OptionSet<AvoidanceReason> canUseForFlexLayoutWithReason(const RenderFlex
         if (mayHaveScrollbarOrScrollableOverflow(flexItemStyle))
             ADD_REASON_AND_RETURN_IF_NEEDED(FlexItemHasUnsupportedOverflow, reasons, includeReasons);
 
-        if (flexItem.hasIntrinsicAspectRatio() || flexItemStyle.hasAspectRatio())
+        if ((is<RenderBox>(flexItem) && downcast<RenderBox>(flexItem).hasIntrinsicAspectRatio()) || flexItemStyle.hasAspectRatio())
             ADD_REASON_AND_RETURN_IF_NEEDED(FlexItemHasAspectRatio, reasons, includeReasons);
 
         auto alignValue = flexItemStyle.alignSelf().position() != ItemPosition::Auto ? flexItemStyle.alignSelf().position() : flexBoxStyle.alignItems().position();

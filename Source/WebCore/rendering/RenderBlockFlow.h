@@ -533,6 +533,8 @@ private:
     void adjustTextBoxTrimAfterLayout();
     std::pair<float, float> inlineContentTopAndBottomIncludingInkOverflow() const;
 
+    void dirtyForLayoutFromPercentageHeightDescendants();
+
 #if ENABLE(TEXT_AUTOSIZING)
     int m_widthForTextAutosizing;
     unsigned m_lineCountForTextAutosizing : 2;

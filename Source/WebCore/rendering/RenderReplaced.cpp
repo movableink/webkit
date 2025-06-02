@@ -568,7 +568,7 @@ void RenderReplaced::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, 
             return;
     }
     // Figure out if we need to compute an intrinsic ratio.
-    if (!RenderObject::hasIntrinsicAspectRatio() && !isRenderOrLegacyRenderSVGRoot())
+    if (!RenderBox::hasIntrinsicAspectRatio() && !isRenderOrLegacyRenderSVGRoot())
         return;
 
     // After supporting contain-intrinsic-size, the intrinsicSize of size containment is not always empty.

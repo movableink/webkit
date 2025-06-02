@@ -651,7 +651,6 @@ public:
     // rest of the rendering tree will move to a similar model.
     virtual bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction);
 
-    virtual bool hasIntrinsicAspectRatio() const { return isReplacedOrAtomicInline() && (isImage() || isRenderVideo() || isRenderHTMLCanvas() || isRenderViewTransitionCapture()); }
     bool isAnonymous() const { return m_typeFlags.contains(TypeFlag::IsAnonymous); }
 
     bool isFloating() const { return m_stateBitfields.hasFlag(StateFlag::Floating); }
