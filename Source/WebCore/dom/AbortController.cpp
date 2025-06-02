@@ -27,6 +27,7 @@
 #include "AbortController.h"
 
 #include "AbortSignal.h"
+#include "JSAbortController.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -64,5 +65,13 @@ Ref<AbortSignal> AbortController::protectedSignal() const
 {
     return m_signal;
 }
+
+template<typename Visitor>
+void JSAbortController::visitAdditionalChildren(Visitor& visitor)
+{
+    wrapped().signal().reason().visit(visitor);
+}
+
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSAbortController);
 
 }
