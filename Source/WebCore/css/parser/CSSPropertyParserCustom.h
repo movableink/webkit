@@ -726,10 +726,10 @@ inline bool PropertyParserCustom::consumeBorderRadiusShorthand(CSSParserTokenRan
     if (!borderRadius)
         return false;
 
-    result.addPropertyForCurrentShorthand(state, CSSPropertyBorderTopLeftRadius, WebCore::CSS::createCSSValue(borderRadius->topLeft()));
-    result.addPropertyForCurrentShorthand(state, CSSPropertyBorderTopRightRadius, WebCore::CSS::createCSSValue(borderRadius->topRight()));
-    result.addPropertyForCurrentShorthand(state, CSSPropertyBorderBottomRightRadius, WebCore::CSS::createCSSValue(borderRadius->bottomRight()));
-    result.addPropertyForCurrentShorthand(state, CSSPropertyBorderBottomLeftRadius, WebCore::CSS::createCSSValue(borderRadius->bottomLeft()));
+    result.addPropertyForCurrentShorthand(state, CSSPropertyBorderTopLeftRadius, WebCore::CSS::createCSSValue(state.pool, borderRadius->topLeft()));
+    result.addPropertyForCurrentShorthand(state, CSSPropertyBorderTopRightRadius, WebCore::CSS::createCSSValue(state.pool, borderRadius->topRight()));
+    result.addPropertyForCurrentShorthand(state, CSSPropertyBorderBottomRightRadius, WebCore::CSS::createCSSValue(state.pool, borderRadius->bottomRight()));
+    result.addPropertyForCurrentShorthand(state, CSSPropertyBorderBottomLeftRadius, WebCore::CSS::createCSSValue(state.pool, borderRadius->bottomLeft()));
     return true;
 }
 
@@ -739,10 +739,10 @@ inline bool PropertyParserCustom::consumeWebkitBorderRadiusShorthand(CSSParserTo
     if (!borderRadius)
         return false;
 
-    result.addPropertyForCurrentShorthand(state, CSSPropertyBorderTopLeftRadius, WebCore::CSS::createCSSValue(borderRadius->topLeft()));
-    result.addPropertyForCurrentShorthand(state, CSSPropertyBorderTopRightRadius, WebCore::CSS::createCSSValue(borderRadius->topRight()));
-    result.addPropertyForCurrentShorthand(state, CSSPropertyBorderBottomRightRadius, WebCore::CSS::createCSSValue(borderRadius->bottomRight()));
-    result.addPropertyForCurrentShorthand(state, CSSPropertyBorderBottomLeftRadius, WebCore::CSS::createCSSValue(borderRadius->bottomLeft()));
+    result.addPropertyForCurrentShorthand(state, CSSPropertyBorderTopLeftRadius, WebCore::CSS::createCSSValue(state.pool, borderRadius->topLeft()));
+    result.addPropertyForCurrentShorthand(state, CSSPropertyBorderTopRightRadius, WebCore::CSS::createCSSValue(state.pool, borderRadius->topRight()));
+    result.addPropertyForCurrentShorthand(state, CSSPropertyBorderBottomRightRadius, WebCore::CSS::createCSSValue(state.pool, borderRadius->bottomRight()));
+    result.addPropertyForCurrentShorthand(state, CSSPropertyBorderBottomLeftRadius, WebCore::CSS::createCSSValue(state.pool, borderRadius->bottomLeft()));
     return true;
 }
 

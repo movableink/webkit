@@ -29,6 +29,7 @@
 #include "AnimationUtilities.h"
 #include "CSSDynamicRangeLimit.h"
 #include "CSSDynamicRangeLimitMix.h"
+#include "CSSDynamicRangeLimitValue.h"
 #include "PlatformDynamicRangeLimit.h"
 #include "StyleDynamicRangeLimitMix.h"
 
@@ -75,6 +76,16 @@ auto ToStyle<CSS::DynamicRangeLimit>::operator()(const CSS::DynamicRangeLimit& l
             return resolve(toStyle(mix, state));
         }
     );
+}
+
+Ref<CSSValue> CSSValueCreation<DynamicRangeLimit>::operator()(CSSValuePool&, const RenderStyle& style, const DynamicRangeLimit& value)
+{
+    return CSSDynamicRangeLimitValue::create(toCSS(value, style));
+}
+
+void Serialize<DynamicRangeLimit>::operator()(StringBuilder& builder, const CSS::SerializationContext& context, const RenderStyle& style, const DynamicRangeLimit& value)
+{
+    CSS::serializationForCSS(builder, context, toCSS(value, style));
 }
 
 // MARK: - Blending

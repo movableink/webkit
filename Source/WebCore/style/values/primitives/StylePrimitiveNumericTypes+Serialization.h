@@ -24,53 +24,30 @@
 
 #pragma once
 
-#include "CSSURL.h"
+#include "CSSPrimitiveNumericTypes+Serialization.h"
+#include "CSSSerializationContext.h"
+#include "StylePrimitiveNumericTypes+Conversions.h"
+#include "StylePrimitiveNumericTypes.h"
 #include "StyleValueTypes.h"
 
 namespace WebCore {
-
-class ScriptExecutionContext;
-
 namespace Style {
 
-struct URL {
-    WTF::URL resolved;
-    CSS::URLModifiers modifiers;
-
-    static URL none() { return { .resolved = { }, .modifiers = { } }; }
-    bool isNone() const { return resolved.isNull(); }
-
-    bool operator==(const URL&) const = default;
+template<Numeric StyleType> struct Serialize<StyleType> {
+    void operator()(StringBuilder& builder, const CSS::SerializationContext& context, const RenderStyle& style, const StyleType& value)
+    {
+        // FIXME: Do this more efficiently without creating and destroying a CSS::Numeric object.
+        CSS::serializationForCSS(builder, context, toCSS(value, style));
+    }
 };
 
-template<size_t I> const auto& get(const URL& value)
-{
-    if constexpr (!I)
-        return value.resolved;
-    if constexpr (I == 1)
-        return value.modifiers;
-}
-
-// MARK: Conversion
-
-// Special conversion function for use by filters and font-face code.
-URL toStyleWithScriptExecutionContext(const CSS::URL&, const ScriptExecutionContext&);
-
-template<> struct ToCSS<URL> { auto operator()(const URL&, const RenderStyle&) -> CSS::URL; };
-template<> struct ToStyle<CSS::URL> { auto operator()(const CSS::URL&, const BuilderState&) -> URL; };
-
-// `URL` is special-cased to return a `CSSURLValue`.
-template<> struct CSSValueCreation<URL> { Ref<CSSValue> operator()(CSSValuePool&, const RenderStyle&, const URL&); };
-
-// MARK: Serialization
-
-template<> struct Serialize<URL> { void operator()(StringBuilder&, const CSS::SerializationContext&, const RenderStyle&, const URL&); };
-
-// MARK: Logging
-
-TextStream& operator<<(TextStream&, const URL&);
+template<Calc StyleType> struct Serialize<StyleType> {
+    void operator()(StringBuilder& builder, const CSS::SerializationContext& context, const RenderStyle& style, const StyleType& value)
+    {
+        // FIXME: Do this more efficiently without creating and destroying a CSS::UnevaluatedCalc object.
+        CSS::serializationForCSS(builder, context, toCSS(value, style));
+    }
+};
 
 } // namespace Style
 } // namespace WebCore
-
-DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::URL, 2)
