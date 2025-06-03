@@ -506,34 +506,38 @@ RetainPtr<CFDataRef> LegacyWebArchive::createPropertyListRepresentation(const Re
 
 #endif
 
-RefPtr<LegacyWebArchive> LegacyWebArchive::create(Node& node, NOESCAPE const Function<bool(LocalFrame&)>& frameFilter, const Vector<MarkupExclusionRule>& customMarkupExclusionRules, const String& mainResourceFilePath, bool saveScriptsFromMemoryCache, ShouldArchiveSubframes shouldArchiveSubframes)
+RefPtr<LegacyWebArchive> LegacyWebArchive::create(Node& node)
+{
+    return create(node, { });
+}
+
+RefPtr<LegacyWebArchive> LegacyWebArchive::create(Node& node, ArchiveOptions&& options, NOESCAPE const Function<bool(LocalFrame&)>& frameFilter)
 {
     auto* frame = node.document().frame();
     if (!frame)
         return create();
 
+    auto currentOptions = WTFMove(options);
     // If the page was loaded with JavaScript enabled, we don't want to archive <noscript> tags
     // In practice we don't actually know whether scripting was enabled when the page was originally loaded
     // but we can approximate that by checking if scripting is enabled right now.
-    auto markupExclusionRules = customMarkupExclusionRules;
     if (frame->page() && frame->page()->settings().isScriptEnabled())
-        markupExclusionRules.append(MarkupExclusionRule { AtomString { "noscript"_s }, { } });
+        currentOptions.markupExclusionRules.append(MarkupExclusionRule { AtomString { "noscript"_s }, { } });
 
     // This archive is created for saving, and all subresources URLs will be rewritten to relative file paths
     // based on the main resource file.
-    if (!mainResourceFilePath.isEmpty())
-        markupExclusionRules.append(MarkupExclusionRule { AtomString { "base"_s }, { } });
+    if (!currentOptions.mainResourceFileName.isEmpty())
+        currentOptions.markupExclusionRules.append(MarkupExclusionRule { AtomString { "base"_s }, { } });
 
-    Vector<Ref<Node>> nodeList;
-    String markupString = serializeFragment(node, SerializedNodes::SubtreeIncludingNode, &nodeList, ResolveURLs::No, std::nullopt, SerializeShadowRoots::AllForInterchange, { }, markupExclusionRules);
-    auto nodeType = node.nodeType();
-    if (nodeType != Node::DOCUMENT_NODE && nodeType != Node::DOCUMENT_TYPE_NODE)
-        markupString = makeString(documentTypeString(node.document()), markupString);
-
-    return create(markupString, saveScriptsFromMemoryCache, shouldArchiveSubframes, *frame, WTFMove(nodeList), frameFilter, markupExclusionRules, mainResourceFilePath);
+    return createInternal(node, currentOptions, frameFilter);
 }
 
-RefPtr<LegacyWebArchive> LegacyWebArchive::create(LocalFrame& frame, ShouldArchiveSubframes shouldArchiveSubframes)
+RefPtr<LegacyWebArchive> LegacyWebArchive::create(LocalFrame& frame)
+{
+    return create(frame, { });
+}
+
+RefPtr<LegacyWebArchive> LegacyWebArchive::create(LocalFrame& frame, ArchiveOptions&& options)
 {
     RefPtr documentLoader = frame.loader().documentLoader();
     if (!documentLoader)
@@ -546,13 +550,13 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::create(LocalFrame& frame, ShouldArchi
     Vector<Ref<LegacyWebArchive>> subframeArchives;
     Vector<FrameIdentifier> subframeIdentifiers;
     for (RefPtr child = frame.tree().firstChild(); child; child = child->tree().nextSibling()) {
-        if (shouldArchiveSubframes == ShouldArchiveSubframes::No) {
+        if (options.shouldArchiveSubframes == ShouldArchiveSubframes::No) {
             subframeIdentifiers.append(child->frameID());
             continue;
         }
 
         if (auto localChild = dynamicDowncast<LocalFrame>(child.get())) {
-            if (auto childFrameArchive = create(*localChild))
+            if (auto childFrameArchive = create(*localChild, { }))
                 subframeArchives.append(childFrameArchive.releaseNonNull());
         }
     }
@@ -565,7 +569,12 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::create(LocalFrame& frame, ShouldArchi
     return create(mainResource.releaseNonNull(), documentLoader->subresources(), WTFMove(subframeArchives));
 }
 
-RefPtr<LegacyWebArchive> LegacyWebArchive::create(const SimpleRange& range, bool saveScriptsFromMemoryCache, ShouldArchiveSubframes shouldArchiveSubframes)
+RefPtr<LegacyWebArchive> LegacyWebArchive::create(const SimpleRange& range)
+{
+    return LegacyWebArchive::create(range, { });
+}
+
+RefPtr<LegacyWebArchive> LegacyWebArchive::create(const SimpleRange& range, ArchiveOptions&& options)
 {
     auto& document = range.start.document();
     auto* frame = document.frame();
@@ -575,7 +584,7 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::create(const SimpleRange& range, bool
     // FIXME: This is always "for interchange". Is that right?
     Vector<Ref<Node>> nodeList;
     auto markupString = makeString(documentTypeString(document), serializePreservingVisualAppearance(range, &nodeList, AnnotateForInterchange::Yes));
-    return create(markupString, saveScriptsFromMemoryCache, shouldArchiveSubframes, *frame, WTFMove(nodeList), nullptr);
+    return createInternal(markupString, WTFMove(options), *frame, WTFMove(nodeList), nullptr);
 }
 
 #if ENABLE(ATTACHMENT_ELEMENT)
@@ -686,7 +695,22 @@ static HashMap<Ref<CSSStyleSheet>, String> addSubresourcesForCSSStyleSheetsIfNec
     return frame.isMainFrame() ? uniqueCSSStyleSheets : serializationContext.replacementURLStringsForCSSStyleSheet;
 }
 
-RefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString, bool saveScriptsFromMemoryCache, ShouldArchiveSubframes shouldArchiveSubframes, LocalFrame& frame, Vector<Ref<Node>>&& nodes, NOESCAPE const Function<bool(LocalFrame&)>& frameFilter, const Vector<MarkupExclusionRule>& markupExclusionRules, const String& mainFrameFilePath)
+RefPtr<LegacyWebArchive> LegacyWebArchive::createInternal(Node& node, const ArchiveOptions& options, NOESCAPE const Function<bool(LocalFrame&)>& frameFilter)
+{
+    RefPtr frame = node.document().frame();
+    if (!frame)
+        return create();
+
+    Vector<Ref<Node>> nodeList;
+    String markupString = serializeFragment(node, SerializedNodes::SubtreeIncludingNode, &nodeList, ResolveURLs::No, std::nullopt, SerializeShadowRoots::AllForInterchange, { }, options.markupExclusionRules);
+    auto nodeType = node.nodeType();
+    if (nodeType != Node::DOCUMENT_NODE && nodeType != Node::DOCUMENT_TYPE_NODE)
+        markupString = makeString(documentTypeString(node.document()), markupString);
+
+    return createInternal(markupString, options, *frame, WTFMove(nodeList), frameFilter);
+}
+
+RefPtr<LegacyWebArchive> LegacyWebArchive::createInternal(const String& markupString, const ArchiveOptions& options, LocalFrame& frame, Vector<Ref<Node>>&& nodes, NOESCAPE const Function<bool(LocalFrame&)>& frameFilter)
 {
     auto& response = frame.loader().documentLoader()->response();
     URL responseURL = response.url();
@@ -705,7 +729,7 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString, bo
     Vector<Ref<ArchiveResource>> subresources;
     HashMap<String, String> uniqueSubresources;
     HashSet<String> uniqueFileNames;
-    String subresourcesDirectoryName = mainFrameFilePath.isNull() ? String { } : makeString(mainFrameFilePath, "_files"_s);
+    String subresourcesDirectoryName = options.mainResourceFileName.isNull() ? String { } : makeString(options.mainResourceFileName, "_files"_s);
 
     for (auto& node : nodes) {
         RefPtr frameOwnerElement = dynamicDowncast<HTMLFrameOwnerElement>(node);
@@ -715,7 +739,7 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString, bo
             if (frameFilter && localChildFrame && !frameFilter(*localChildFrame))
                 continue;
 
-            if (shouldArchiveSubframes == ShouldArchiveSubframes::No) {
+            if (options.shouldArchiveSubframes == ShouldArchiveSubframes::No) {
                 subframeIdentifiers.append(childFrame->frameID());
                 continue;
             }
@@ -723,7 +747,7 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString, bo
             if (!localChildFrame)
                 continue;
 
-            if (auto subframeArchive = create(*localChildFrame->document(), frameFilter, markupExclusionRules, mainFrameFilePath)) {
+            if (auto subframeArchive = createInternal(*localChildFrame->document(), options, frameFilter)) {
                 auto subframeMainResource = subframeArchive->mainResource();
                 auto subframeMainResourceURL = subframeMainResource ? subframeMainResource->url() : URL { };
                 if (!subframeMainResourceURL.isEmpty()) {
@@ -739,7 +763,7 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString, bo
             node->getSubresourceURLs(subresourceURLs);
             node->getCandidateSubresourceURLs(subresourceURLs);
 
-            if (saveScriptsFromMemoryCache && responseURL.protocolIsInHTTPFamily()) {
+            if (options.shouldSaveScriptsFromMemoryCache == ShouldSaveScriptsFromMemoryCache::Yes && responseURL.protocolIsInHTTPFamily()) {
                 RegistrableDomain domain { responseURL };
                 MemoryCache::singleton().forEachSessionResource(frame.page()->sessionID(), [&](auto& resource) {
                     if (domain.matches(resource.url()) && resource.hasClients() && resource.type() == CachedResource::Type::Script)
@@ -802,7 +826,7 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString, bo
         }
     }
 
-    if (!mainFrameFilePath.isNull()) {
+    if (!options.mainResourceFileName.isNull()) {
         auto* document = frame.document();
         if (!document)
             return nullptr;
@@ -813,19 +837,19 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString, bo
         auto extension = MIMETypeRegistry::preferredExtensionForMIMEType(textHTMLContentTypeAtom());
         if (!extension.isEmpty())
             extension = makeString('.', extension);
-        auto mainFrameFilePathWithExtension = mainFrameFilePath.endsWith(extension) ? mainFrameFilePath : makeString(mainFrameFilePath, extension);
-        auto filePathWithExtension = frame.isMainFrame() ? mainFrameFilePathWithExtension : makeString(subresourcesDirectoryName, "/frame_"_s, frame.frameID().toUInt64(), extension);
+        auto mainFrameFileNameWithExtension = options.mainResourceFileName.endsWith(extension) ? options.mainResourceFileName : makeString(options.mainResourceFileName, extension);
+        auto fileNameWithExtension = frame.isMainFrame() ? mainFrameFileNameWithExtension : makeString(subresourcesDirectoryName, "/frame_"_s, frame.frameID().toUInt64(), extension);
 
         ResolveURLs resolveURLs = ResolveURLs::No;
         // Base element is excluded, so all URLs should be replaced with absolute URL.
-        bool baseElementExcluded = std::ranges::any_of(markupExclusionRules, [&](auto& rule) {
+        bool baseElementExcluded = std::ranges::any_of(options.markupExclusionRules, [&](auto& rule) {
             return rule.elementLocalName == "base"_s;
         });
         if (!document->baseElementURL().isEmpty() && baseElementExcluded)
             resolveURLs = ResolveURLs::Yes;
 
-        String updatedMarkupString = serializeFragmentWithURLReplacement(*document, SerializedNodes::SubtreeIncludingNode, nullptr, resolveURLs, std::nullopt, WTFMove(uniqueSubresources), WTFMove(uniqueCSSStyleSheets), SerializeShadowRoots::AllForInterchange, { }, markupExclusionRules);
-        mainResource = ArchiveResource::create(utf8Buffer(updatedMarkupString), responseURL, response.mimeType(), "UTF-8"_s, frame.tree().uniqueName(), ResourceResponse(), filePathWithExtension);
+        String updatedMarkupString = serializeFragmentWithURLReplacement(*document, SerializedNodes::SubtreeIncludingNode, nullptr, resolveURLs, std::nullopt, WTFMove(uniqueSubresources), WTFMove(uniqueCSSStyleSheets), SerializeShadowRoots::AllForInterchange, { }, options.markupExclusionRules);
+        mainResource = ArchiveResource::create(utf8Buffer(updatedMarkupString), responseURL, response.mimeType(), "UTF-8"_s, frame.tree().uniqueName(), ResourceResponse(), fileNameWithExtension);
     }
 
     if (!subframeIdentifiers.isEmpty()) {
@@ -836,7 +860,12 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString, bo
     return create(mainResource.releaseNonNull(), WTFMove(subresources), WTFMove(subframeArchives));
 }
 
-RefPtr<LegacyWebArchive> LegacyWebArchive::createFromSelection(LocalFrame* frame, bool saveScriptsFromMemoryCache, ShouldArchiveSubframes shouldArchiveSubframes)
+RefPtr<LegacyWebArchive> LegacyWebArchive::createFromSelection(LocalFrame* frame)
+{
+    return createFromSelection(frame, { });
+}
+
+RefPtr<LegacyWebArchive> LegacyWebArchive::createFromSelection(LocalFrame* frame, ArchiveOptions&& options)
 {
     if (!frame)
         return nullptr;
@@ -851,7 +880,7 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::createFromSelection(LocalFrame* frame
     Vector<Ref<Node>> nodeList;
     builder.append(serializePreservingVisualAppearance(frame->selection().selection(), ResolveURLs::No, SerializeComposedTree::Yes, IgnoreUserSelectNone::Yes, PreserveBaseElement::Yes, PreserveDirectionForInlineText::Yes, &nodeList));
 
-    auto archive = create(builder.toString(), saveScriptsFromMemoryCache, shouldArchiveSubframes, *frame, WTFMove(nodeList), nullptr);
+    RefPtr archive = createInternal(builder.toString(), WTFMove(options), *frame, WTFMove(nodeList), { });
     if (!archive)
         return nullptr;
 

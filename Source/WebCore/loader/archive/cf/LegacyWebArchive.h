@@ -43,16 +43,29 @@ struct SimpleRange;
 
 class LegacyWebArchive final : public Archive {
 public:
+    // Archive is created directly from data or members so ArchiveOptions is not needed.
     WEBCORE_EXPORT static Ref<LegacyWebArchive> create();
     WEBCORE_EXPORT static Ref<LegacyWebArchive> create(Ref<ArchiveResource>&& mainResource, Vector<Ref<ArchiveResource>>&& subresources, Vector<FrameIdentifier>&& subframeIdentifiers);
     WEBCORE_EXPORT static RefPtr<LegacyWebArchive> create(FragmentedSharedBuffer&);
     WEBCORE_EXPORT static RefPtr<LegacyWebArchive> create(const URL&, FragmentedSharedBuffer&);
     WEBCORE_EXPORT static Ref<LegacyWebArchive> create(Ref<ArchiveResource>&& mainResource, Vector<Ref<ArchiveResource>>&& subresources, Vector<Ref<LegacyWebArchive>>&& subframeArchives);
+
+    enum class ShouldSaveScriptsFromMemoryCache : bool { No, Yes };
     enum class ShouldArchiveSubframes : bool { No, Yes };
-    WEBCORE_EXPORT static RefPtr<LegacyWebArchive> create(Node&, NOESCAPE const Function<bool(LocalFrame&)>& frameFilter = { }, const Vector<MarkupExclusionRule>& markupExclusionRules = { }, const String& mainFrameFileName = { }, bool saveScriptsFromMemoryCache = true, ShouldArchiveSubframes = ShouldArchiveSubframes::Yes);
-    WEBCORE_EXPORT static RefPtr<LegacyWebArchive> create(LocalFrame&, ShouldArchiveSubframes = ShouldArchiveSubframes::Yes);
-    WEBCORE_EXPORT static RefPtr<LegacyWebArchive> createFromSelection(LocalFrame*, bool saveScriptsFromMemoryCache = true, ShouldArchiveSubframes = ShouldArchiveSubframes::Yes);
-    WEBCORE_EXPORT static RefPtr<LegacyWebArchive> create(const SimpleRange&, bool saveScriptsFromMemoryCache = true, ShouldArchiveSubframes = ShouldArchiveSubframes::Yes);
+    struct ArchiveOptions {
+        ShouldSaveScriptsFromMemoryCache shouldSaveScriptsFromMemoryCache { ShouldSaveScriptsFromMemoryCache::Yes };
+        ShouldArchiveSubframes shouldArchiveSubframes { ShouldArchiveSubframes::Yes };
+        Vector<MarkupExclusionRule> markupExclusionRules { };
+        String mainResourceFileName { };
+    };
+    WEBCORE_EXPORT static RefPtr<LegacyWebArchive> create(Node&);
+    WEBCORE_EXPORT static RefPtr<LegacyWebArchive> create(Node&, ArchiveOptions&&, NOESCAPE const Function<bool(LocalFrame&)>& frameFilter = { });
+    WEBCORE_EXPORT static RefPtr<LegacyWebArchive> create(LocalFrame&);
+    WEBCORE_EXPORT static RefPtr<LegacyWebArchive> create(LocalFrame&, ArchiveOptions&&);
+    WEBCORE_EXPORT static RefPtr<LegacyWebArchive> createFromSelection(LocalFrame*);
+    WEBCORE_EXPORT static RefPtr<LegacyWebArchive> createFromSelection(LocalFrame*, ArchiveOptions&&);
+    WEBCORE_EXPORT static RefPtr<LegacyWebArchive> create(const SimpleRange&);
+    WEBCORE_EXPORT static RefPtr<LegacyWebArchive> create(const SimpleRange&, ArchiveOptions&&);
 
     WEBCORE_EXPORT RetainPtr<CFDataRef> rawDataRepresentation();
 
@@ -72,7 +85,8 @@ private:
 
     enum MainResourceStatus { Subresource, MainResource };
 
-    static RefPtr<LegacyWebArchive> create(const String& markupString, bool saveScriptsFromMemoryCache, ShouldArchiveSubframes, LocalFrame&, Vector<Ref<Node>>&& nodes, NOESCAPE const Function<bool(LocalFrame&)>& frameFilter, const Vector<MarkupExclusionRule>& markupExclusionRules = { }, const String& mainResourceFileName = { });
+    static RefPtr<LegacyWebArchive> createInternal(Node&, const ArchiveOptions&, NOESCAPE const Function<bool(LocalFrame&)>& frameFilter);
+    static RefPtr<LegacyWebArchive> createInternal(const String& markupString, const ArchiveOptions&, LocalFrame&, Vector<Ref<Node>>&& nodes, NOESCAPE const Function<bool(LocalFrame&)>& frameFilter);
     static RefPtr<ArchiveResource> createResource(CFDictionaryRef);
     static ResourceResponse createResourceResponseFromMacArchivedData(CFDataRef);
     static ResourceResponse createResourceResponseFromPropertyListData(CFDataRef, CFStringRef responseDataType);

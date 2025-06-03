@@ -1395,7 +1395,11 @@ void WebPage::getWebArchives(CompletionHandler<void(HashMap<WebCore::FrameIdenti
         if (!document)
             continue;
 
-        if (RefPtr archive = WebCore::LegacyWebArchive::create(*document, { }, { }, { }, true, WebCore::LegacyWebArchive::ShouldArchiveSubframes::No))
+        WebCore::LegacyWebArchive::ArchiveOptions options {
+            LegacyWebArchive::ShouldSaveScriptsFromMemoryCache::Yes,
+            LegacyWebArchive::ShouldArchiveSubframes::No
+        };
+        if (RefPtr archive = WebCore::LegacyWebArchive::create(*document, WTFMove(options)))
             result.add(localFrame->frameID(), archive.releaseNonNull());
     }
     completionHandler(WTFMove(result));
