@@ -58,7 +58,7 @@ public:
     bool configurePacketizers(GRefPtr<GstCaps>&&);
 
     GUniquePtr<GstStructure> parameters();
-    void setInitialParameters(GUniquePtr<GstStructure>&&);
+    virtual void setInitialParameters(GUniquePtr<GstStructure>&&);
     void setParameters(GUniquePtr<GstStructure>&&);
 
     void configure(GRefPtr<GstCaps>&&);

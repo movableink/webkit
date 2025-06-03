@@ -603,7 +603,7 @@ GRefPtr<GstCaps> capsFromRtpCapabilities(const RTCRtpCapabilities& capabilities,
     for (unsigned index = 0; auto& codec : capabilities.codecs) {
         auto components = codec.mimeType.split('/');
         auto* codecStructure = gst_structure_new("application/x-rtp", "media", G_TYPE_STRING, components[0].ascii().data(),
-            "encoding-name", G_TYPE_STRING, components[1].convertToASCIIUppercase().ascii().data() , "clock-rate", G_TYPE_INT, codec.clockRate, nullptr);
+            "encoding-name", G_TYPE_STRING, components[1].convertToASCIIUppercase().ascii().data(), "clock-rate", G_TYPE_INT, codec.clockRate, nullptr);
 
         if (!codec.sdpFmtpLine.isEmpty()) {
             for (auto& fmtp : codec.sdpFmtpLine.split(';')) {

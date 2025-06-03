@@ -1077,6 +1077,18 @@ void GStreamerRegistryScanner::fillAudioRtpCapabilities(Configuration configurat
 
     if (factories.hasElementForMediaType(codecElement, "audio/x-alaw"_s) && factories.hasElementForMediaType(rtpElement, "audio/x-alaw"_s))
         capabilities.codecs.append({ .mimeType = "audio/PCMA"_s, .clockRate = 8000, .channels = 1, .sdpFmtpLine = emptyString() });
+
+    bool hasDtmfSupport = false;
+    if (configuration == Configuration::Encoding) {
+        if (auto factory = adoptGRef(gst_element_factory_find("rtpdtmfsrc")))
+            hasDtmfSupport = true;
+    } else
+        hasDtmfSupport = factories.hasElementForMediaType(rtpElement, "audio/x-raw, format=(string)S16LE"_s);
+
+    if (hasDtmfSupport) {
+        for (unsigned long clockRate : { 48000, 8000 })
+            capabilities.codecs.append({ .mimeType = "audio/telephone-event"_s, .clockRate = clockRate, .channels = 1, .sdpFmtpLine = emptyString() });
+    }
 }
 
 void GStreamerRegistryScanner::fillVideoRtpCapabilities(Configuration configuration, RTCRtpCapabilities& capabilities)

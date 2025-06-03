@@ -59,6 +59,13 @@ public:
         );
     }
 
+    ThreadSafeWeakPtr<RealtimeOutgoingAudioSourceGStreamer> audioSourceWeak()
+    {
+        return WTF::switchOn(m_source,
+            [](Ref<RealtimeOutgoingAudioSourceGStreamer>& source) -> ThreadSafeWeakPtr<RealtimeOutgoingAudioSourceGStreamer> { return source.get(); },
+            [](const auto&) -> ThreadSafeWeakPtr<RealtimeOutgoingAudioSourceGStreamer> { return nullptr; });
+    }
+
     RealtimeOutgoingVideoSourceGStreamer* videoSource()
     {
         return WTF::switchOn(m_source,

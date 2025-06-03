@@ -2448,11 +2448,9 @@ webkit.org/b/235885 imported/w3c/web-platform-tests/webrtc-extensions/RTCRtpSync
 # We don't support spatial encoding yet.
 webkit.org/b/235885 webrtc/vp9-svc.html [ Skip ]
 
-# DTMF not supported.
-webkit.org/b/235885 imported/w3c/web-platform-tests/webrtc/RTCDTMFSender-insertDTMF.https.html [ Skip ]
-webkit.org/b/235885 imported/w3c/web-platform-tests/webrtc/RTCDTMFSender-ontonechange-long.https.html [ Skip ]
-webkit.org/b/235885 imported/w3c/web-platform-tests/webrtc/RTCDTMFSender-ontonechange.https.html [ Skip ]
-webkit.org/b/235885 webrtc/dtmf-gc.html [ Skip ]
+imported/w3c/web-platform-tests/webrtc/RTCDTMFSender-insertDTMF.https.html [ Pass ]
+imported/w3c/web-platform-tests/webrtc/RTCDTMFSender-ontonechange.https.html [ Pass ]
+imported/w3c/web-platform-tests/webrtc/RTCDTMFSender-ontonechange-long.https.html [ Pass ]
 
 # This test is buggy, has duplicate (copy/paste?) addTransceiver calls. That issue was fixed in upstream WPT.
 imported/w3c/web-platform-tests/webrtc-extensions/RTCRtpReceiver-jitterBufferTarget-stats.html [ Skip ]

@@ -1401,6 +1401,18 @@ void GStreamerMediaEndpoint::connectIncomingTrack(WebRTCTrackData& data)
 {
     ASSERT(isMainThread());
 
+    const auto& caps = data.caps;
+    if (!gst_caps_is_empty(caps.get()) && !gst_caps_is_any(caps.get())) [[likely]] {
+        const auto structure = gst_caps_get_structure(caps.get(), 0);
+        if (auto encodingName = gstStructureGetString(structure, "encoding-name")) {
+            if (encodingName == "TELEPHONE-EVENT"_s) {
+                GST_DEBUG_OBJECT(pipeline(), "Starting incoming DTMF stream");
+                gst_element_set_state(m_pipeline.get(), GST_STATE_PLAYING);
+                return;
+            }
+        }
+    }
+
     // NOTE: Here ideally we should match WebKit-side transceivers with data.transceiver but we
     // cannot because in some situations (simulcast, mostly), we can end-up with multiple webrtcbin
     // src pads associated to the same transceiver.
@@ -2535,6 +2547,14 @@ void GStreamerMediaEndpoint::updatePtDemuxSrcPadCaps(GstElement* ptDemux, GstPad
     auto buffer = m_inputBuffers.take(*ssrc);
     if (!buffer)
         return;
+
+    const auto currentStructure = gst_caps_get_structure(currentCaps.get(), 0);
+    if (auto encodingName = gstStructureGetString(currentStructure, "encoding-name"_s)) {
+        if (encodingName == "TELEPHONE-EVENT"_s) {
+            GST_DEBUG_OBJECT(pipeline(), "Incoming DTMF stream detected, no need to look for MID/RID.");
+            return;
+        }
+    }
 
     GstMappedRtpBuffer rtpBuffer(buffer, GST_MAP_READ);
     if (!rtpBuffer) [[unlikely]]
