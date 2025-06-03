@@ -2908,7 +2908,7 @@ void Editor::markMisspellingsAndBadGrammar(const VisibleSelection &movingSelecti
     markMisspellingsAndBadGrammar(movingSelection, isContinuousSpellCheckingEnabled() && isGrammarCheckingEnabled(), movingSelection);
 }
 
-void Editor::markMisspellingsAfterTypingToWord(const VisiblePosition& wordStart, const VisibleSelection& selectionAfterTyping, bool doReplacement)
+void Editor::markMisspellingsAfterTypingToWord(const VisiblePosition& wordStart, const VisibleSelection& selectionAfterTyping, AllowTextReplacement allowTextReplacement)
 {
     Ref document = this->document();
 
@@ -2917,7 +2917,7 @@ void Editor::markMisspellingsAfterTypingToWord(const VisiblePosition& wordStart,
 
 #if PLATFORM(IOS_FAMILY)
     UNUSED_PARAM(selectionAfterTyping);
-    UNUSED_PARAM(doReplacement);
+    UNUSED_PARAM(allowTextReplacement);
     OptionSet<TextCheckingType> textCheckingOptions;
     if (isContinuousSpellCheckingEnabled())
         textCheckingOptions.add(TextCheckingType::Spelling);
@@ -2946,7 +2946,7 @@ void Editor::markMisspellingsAfterTypingToWord(const VisiblePosition& wordStart,
     }
 #else
 #if !USE(AUTOMATIC_TEXT_REPLACEMENT)
-    UNUSED_PARAM(doReplacement);
+    UNUSED_PARAM(allowTextReplacement);
 #endif
 
     if (unifiedTextCheckerEnabled()) {
@@ -2958,7 +2958,7 @@ void Editor::markMisspellingsAfterTypingToWord(const VisiblePosition& wordStart,
             textCheckingOptions.add(TextCheckingType::Spelling);
 
 #if USE(AUTOMATIC_TEXT_REPLACEMENT)
-        if (doReplacement
+        if (allowTextReplacement == AllowTextReplacement::Yes
             && (isAutomaticQuoteSubstitutionEnabled()
                 || isAutomaticLinkDetectionEnabled()
                 || isAutomaticDashSubstitutionEnabled()

@@ -475,7 +475,8 @@ void TypingCommand::markMisspellingsAfterTyping(Type commandType)
             String trimmedPreviousWord;
             if (range && (commandType == TypingCommand::Type::InsertText || commandType == TypingCommand::Type::InsertLineBreak || commandType == TypingCommand::Type::InsertParagraphSeparator || commandType == TypingCommand::Type::InsertParagraphSeparatorInQuotedContent))
                 trimmedPreviousWord = plainText(*range).trim(deprecatedIsSpaceOrNewline);
-            document().editor().markMisspellingsAfterTypingToWord(p1, endingSelection(), !trimmedPreviousWord.isEmpty());
+            auto allowTextReplacement = !trimmedPreviousWord.isEmpty() && !triggeringEventIsUntrusted() ? AllowTextReplacement::Yes : AllowTextReplacement::No;
+            document().editor().markMisspellingsAfterTypingToWord(p1, endingSelection(), allowTextReplacement);
         } else if (commandType == TypingCommand::Type::InsertText)
             document().editor().startAlternativeTextUITimer();
 #else
@@ -492,7 +493,7 @@ void TypingCommand::markMisspellingsAfterTyping(Type commandType)
         VisiblePosition p1 = startOfWord(previous, startWordSide);
         VisiblePosition p2 = startOfWord(start, startWordSide);
         if (p1 != p2)
-            document().editor().markMisspellingsAfterTypingToWord(p1, endingSelection(), false);
+            document().editor().markMisspellingsAfterTypingToWord(p1, endingSelection(), AllowTextReplacement::No);
 #endif // !PLATFORM(IOS_FAMILY)
     }
 }
