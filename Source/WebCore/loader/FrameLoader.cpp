@@ -2416,12 +2416,14 @@ void FrameLoader::commitProvisionalLoad()
             page->chrome().dispatchDisabledAdaptationsDidChange(framePage->disabledAdaptations());
         }
 
-        auto& title = m_documentLoader->title();
-        if (!title.string.isNull())
-            m_client->dispatchDidReceiveTitle(title);
+        if (RefPtr documentLoader = m_documentLoader) {
+            auto& title = documentLoader->title();
+            if (!title.string.isNull())
+                m_client->dispatchDidReceiveTitle(title);
 
-        // Send remaining notifications for the main resource.
-        notifier().sendRemainingDelegateMessages(protectedDocumentLoader().get(), IsMainResourceLoad::Yes, mainResourceIdentifier, mainResourceRequest, ResourceResponse(), nullptr, static_cast<int>(m_documentLoader->response().expectedContentLength()), 0, mainResouceError);
+            // Send remaining notifications for the main resource.
+            notifier().sendRemainingDelegateMessages(documentLoader.get(), IsMainResourceLoad::Yes, mainResourceIdentifier, mainResourceRequest, ResourceResponse(), nullptr, static_cast<int>(documentLoader->response().expectedContentLength()), 0, mainResouceError);
+        }
 
         Vector<Ref<LocalFrame>> targetFrames;
         targetFrames.append(frame);
@@ -2462,7 +2464,8 @@ IGNORE_GCC_WARNINGS_END
 
         // Main resource delegates were already sent, so we skip the first response here.
         RefPtr documentLoader = m_documentLoader;
-        for (unsigned i = 1; i < documentLoader->responses().size(); ++i) {
+        unsigned responsesSize = documentLoader ? documentLoader->responses().size() : 0;
+        for (unsigned i = 1; i < responsesSize; ++i) {
             const auto& response = documentLoader->responses()[i];
             // FIXME: If the WebKit client changes or cancels the request, this is not respected.
             ResourceError error;
