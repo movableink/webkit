@@ -85,9 +85,7 @@ void BidiBrowsingContextAgent::close(const BrowsingContext& browsingContext, std
     // FIXME: implement `promptUnload` option.
     // FIXME: raise `invalid argument` if `browsingContext` is not a top-level traversable.
 
-    session->closeBrowsingContext(browsingContext);
-
-    callback({ });
+    session->closeBrowsingContext(browsingContext, WTFMove(callback));
 }
 
 static constexpr Inspector::Protocol::Automation::BrowsingContextPresentation defaultBrowsingContextPresentation = Inspector::Protocol::Automation::BrowsingContextPresentation::Tab;

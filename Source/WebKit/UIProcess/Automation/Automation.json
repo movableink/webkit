@@ -439,7 +439,8 @@
             "description": "Try to close the specified browsing context. This can trigger an unload prompt and thereafter succeed or fail.",
             "parameters": [
                 { "name": "handle", "$ref": "BrowsingContextHandle", "description": "The handle for the browsing context that should be closed." }
-            ]
+            ],
+            "async": true
         },
         {
             "name": "deleteSession",
