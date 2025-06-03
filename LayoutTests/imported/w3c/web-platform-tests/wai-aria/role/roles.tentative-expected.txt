@@ -1,0 +1,8 @@
+Tests new ARIA role definitions. See comments for more info.
+
+x
+x
+
+FAIL role: sectionheader assert_equals: <div role="sectionheader">x</div> expected "sectionheader" but got "generic"
+FAIL role: sectionfooter assert_equals: <div role="sectionfooter">x</div> expected "sectionfooter" but got "generic"
+
