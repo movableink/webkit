@@ -260,6 +260,27 @@ class TestMVTFactory(Factory):
         self.addStep(ExtractBuiltProduct())
         self.addStep(RunMVTTests())
 
+
+class TestLayoutAndAPIOnlyFactory(Factory):
+    def __init__(self, platform, configuration, architectures, additionalArguments=None, device_model=None):
+        Factory.__init__(self, platform, configuration, architectures, False, additionalArguments, device_model)
+        self.addStep(DownloadBuiltProduct())
+        self.addStep(ExtractBuiltProduct())
+        self.addStep(RunWebKitTests())
+        if not platform.startswith('win'):
+            self.addStep(RunDashboardTests())
+        self.addStep(ArchiveTestResults())
+        self.addStep(UploadTestResults())
+        self.addStep(ExtractTestResults())
+        self.addStep(SetPermissions())
+        if platform.startswith("gtk"):
+            self.addStep(RunGtkAPITests())
+        elif platform == "wpe":
+            self.addStep(RunWPEAPITests())
+        else:
+            self.addStep(RunAPITests())
+
+
 class TestWebKit1Factory(TestFactory):
     LayoutTestClass = RunWebKit1Tests
 
