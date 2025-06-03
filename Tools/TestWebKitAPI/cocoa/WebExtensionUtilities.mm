@@ -809,6 +809,8 @@ static WKUserContentController *userContentController(BOOL usingPrivateBrowsing)
     if (!_activeTab)
         _activeTab = newTab;
 
+    index = std::min(index, _tabs.count);
+
     [_tabs insertObject:newTab atIndex:index];
     [_extensionController didOpenTab:newTab];
 

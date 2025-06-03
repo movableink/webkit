@@ -257,6 +257,68 @@ TEST(WKWebExtensionAPITabs, Create)
     [manager run];
 }
 
+TEST(WKWebExtensionAPITabs, CreateTabsOverflowIndex)
+{
+    auto *backgroundScript = Util::constructScript(@[
+        @"var allWindows = await browser.windows.getAll({ populate: true })",
+        @"var initialTabsCount = allWindows[0].tabs.length",
+        @"var largeIndex = 13000000000000000000000000000000000",
+        @"var newTab = await browser.tabs.create({ index: largeIndex })",
+
+        @"var updatedWindows = await browser.windows.getAll({ populate: true })",
+        @"var updatedTabs = updatedWindows[0].tabs",
+        @"browser.test.assertEq(updatedTabs.length, initialTabsCount + 1, 'One new tab should have been added')",
+        @"browser.test.assertEq(newTab.index, initialTabsCount, 'The new tab should be posted at the end')",
+
+        @"browser.test.notifyPass()"
+    ]);
+
+    auto manager = Util::loadExtension(tabsManifest, @{ @"background.js": backgroundScript });
+
+    auto *window = manager.get().defaultWindow;
+    auto originalOpenNewTab = manager.get().internalDelegate.openNewTab;
+
+    manager.get().internalDelegate.openNewTab = ^(WKWebExtensionTabConfiguration *configuration, WKWebExtensionContext *context, void (^completionHandler)(id<WKWebExtensionTab>, NSError *)) {
+        EXPECT_NS_EQUAL(configuration.window, window);
+        EXPECT_EQ(configuration.index, NSUIntegerMax);
+
+        originalOpenNewTab(configuration, context, completionHandler);
+    };
+
+    [manager run];
+}
+
+TEST(WKWebExtensionAPITabs, CreateTabsZeroIndex)
+{
+    auto *backgroundScript = Util::constructScript(@[
+        @"var allWindows = await browser.windows.getAll({ populate: true })",
+        @"var initialTabsCount = allWindows[0].tabs.length",
+
+        @"var newTab = await browser.tabs.create({ index: 0 })",
+
+        @"var updatedWindows = await browser.windows.getAll({ populate: true })",
+        @"var updatedTabs = updatedWindows[0].tabs",
+        @"browser.test.assertEq(updatedTabs.length, initialTabsCount + 1, 'One new tab should have been added')",
+        @"browser.test.assertEq(newTab.index, initialTabsCount - 1, 'The new tab should be posted at the start')",
+
+        @"browser.test.notifyPass()"
+    ]);
+
+    auto manager = Util::loadExtension(tabsManifest, @{ @"background.js": backgroundScript });
+
+    auto *window = manager.get().defaultWindow;
+    auto originalOpenNewTab = manager.get().internalDelegate.openNewTab;
+
+    manager.get().internalDelegate.openNewTab = ^(WKWebExtensionTabConfiguration *configuration, WKWebExtensionContext *context, void (^completionHandler)(id<WKWebExtensionTab>, NSError *)) {
+        EXPECT_NS_EQUAL(configuration.window, window);
+        EXPECT_EQ(configuration.index, (NSUInteger)0);
+
+        originalOpenNewTab(configuration, context, completionHandler);
+    };
+
+    [manager run];
+}
+
 TEST(WKWebExtensionAPITabs, CreateWithSpecifiedOptions)
 {
     auto *backgroundScript = Util::constructScript(@[
