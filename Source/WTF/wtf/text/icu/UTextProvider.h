@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <limits>
 #include <unicode/utext.h>
 
 namespace WTF {

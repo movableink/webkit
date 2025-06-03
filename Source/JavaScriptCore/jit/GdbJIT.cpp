@@ -28,7 +28,8 @@
 
 #include <wtf/TZoneMallocInlines.h>
 
-#if ENABLE(ASSEMBLER) && (OS(DARWIN) || OS(LINUX))
+#if ENABLE(ASSEMBLER)
+#if OS(DARWIN) || OS(LINUX)
 
 #include "CallFrame.h"
 #include "CallFrameInlines.h"
@@ -1492,4 +1493,5 @@ void GdbJIT::log(const CString&, MacroAssemblerCodeRef<LinkBufferPtrTag>) { }
 
 } // namespace JSC
 
-#endif // ENABLE(ASSEMBLER) && (OS(DARWIN) || OS(LINUX))
+#endif // OS(DARWIN) || OS(LINUX)
+#endif // ENABLE(ASSEMBLER)
