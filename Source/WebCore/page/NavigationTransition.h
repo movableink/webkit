@@ -51,8 +51,8 @@ private:
     explicit NavigationTransition(NavigationNavigationType, Ref<NavigationHistoryEntry>&& fromEntry, Ref<DeferredPromise>&& finished);
 
     NavigationNavigationType m_navigationType;
-    Ref<NavigationHistoryEntry> m_from;
-    Ref<DeferredPromise> m_finished;
+    const Ref<NavigationHistoryEntry> m_from;
+    const Ref<DeferredPromise> m_finished;
     RefPtr<DOMPromise> m_finishedDOMPromise;
 };
 

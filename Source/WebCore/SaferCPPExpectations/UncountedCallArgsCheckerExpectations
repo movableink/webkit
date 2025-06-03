@@ -348,7 +348,6 @@ bindings/js/JSRangeCustom.cpp
 bindings/js/JSReadableStreamSourceCustom.cpp
 bindings/js/JSReportingObserverCustom.cpp
 bindings/js/JSResizeObserverCustom.cpp
-bindings/js/JSResizeObserverEntryCustom.cpp
 bindings/js/JSSVGViewSpecCustom.cpp
 bindings/js/JSShadowRootCustom.cpp
 bindings/js/JSStaticRangeCustom.cpp
@@ -841,7 +840,6 @@ page/Location.cpp
 page/NavigateEvent.cpp
 page/NavigationDestination.cpp
 page/NavigationDestination.h
-page/NavigationTransition.cpp
 page/Navigator.cpp
 page/NavigatorLoginStatus.cpp
 page/Page.cpp
@@ -853,9 +851,7 @@ page/PageSerializer.cpp
 page/PartitionedSecurityOrigin.h
 page/Performance.cpp
 page/PerformanceMark.cpp
-page/PerformanceMeasure.cpp
 page/PerformanceMonitor.cpp
-page/PerformanceObserver.cpp
 page/PerformanceUserTiming.cpp
 page/PointerCaptureController.cpp
 page/PointerLockController.cpp
@@ -873,7 +869,6 @@ page/SettingsBase.cpp
 page/SpatialNavigation.cpp
 page/UndoItem.cpp
 page/UserMessageHandler.cpp
-page/UserMessageHandlersNamespace.cpp
 page/VisualViewport.cpp
 page/WheelEventTestMonitor.cpp
 page/WheelEventTestMonitor.h
@@ -894,9 +889,7 @@ page/scrolling/AsyncScrollingCoordinator.h
 page/scrolling/ScrollAnchoringController.cpp
 page/scrolling/ScrollSnapOffsetsInfo.cpp
 page/scrolling/ScrollingCoordinator.cpp
-page/scrolling/ScrollingThread.cpp
 page/scrolling/ScrollingTree.cpp
-page/scrolling/ScrollingTree.h
 page/scrolling/ScrollingTreeGestureState.cpp
 page/scrolling/ThreadedScrollingCoordinator.cpp
 page/scrolling/mac/ScrollingCoordinatorMac.mm

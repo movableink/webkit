@@ -115,7 +115,7 @@ private:
     bool m_withCredentials;
     State m_state { CONNECTING };
 
-    Ref<TextResourceDecoder> m_decoder;
+    const Ref<TextResourceDecoder> m_decoder;
     RefPtr<ThreadableLoader> m_loader;
     EventLoopTimerHandle m_connectTimer;
     Vector<UChar> m_receiveBuffer;

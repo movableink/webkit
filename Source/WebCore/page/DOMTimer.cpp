@@ -97,7 +97,7 @@ public:
     static DOMTimerFireState* current;
 
 private:
-    Ref<ScriptExecutionContext> m_context;
+    const Ref<ScriptExecutionContext> m_context;
     bool m_contextIsDocument;
     bool m_scriptMadeNonUserObservableChanges { false };
     bool m_scriptMadeUserObservableChanges { false };
