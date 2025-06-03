@@ -116,7 +116,6 @@ mac/DOM/DOMTimeRanges.mm
 mac/DOM/DOMTokenList.mm
 mac/DOM/DOMTreeWalker.mm
 mac/DOM/DOMUIEvent.mm
-mac/DOM/DOMWheelEvent.mm
 mac/DOM/DOMXPath.mm
 mac/DOM/DOMXPathExpression.mm
 mac/DOM/DOMXPathResult.mm

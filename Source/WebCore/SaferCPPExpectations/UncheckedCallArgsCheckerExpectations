@@ -459,7 +459,6 @@ layout/layouttree/LayoutBox.cpp
 layout/layouttree/LayoutContainingBlockChainIterator.h
 layout/layouttree/LayoutTreeBuilder.cpp
 loader/ApplicationManifestLoader.cpp
-loader/ContentFilter.cpp
 loader/CrossOriginPreflightChecker.cpp
 loader/DocumentLoader.cpp
 loader/DocumentThreadableLoader.cpp
@@ -640,7 +639,6 @@ rendering/RegionContext.h
 rendering/RenderAttachment.cpp
 rendering/RenderBlock.cpp
 rendering/RenderBlockFlow.cpp
-rendering/RenderBlockInlines.h
 rendering/RenderBox.cpp
 rendering/RenderBoxInlines.h
 rendering/RenderBoxModelObject.cpp
@@ -883,7 +881,6 @@ style/Styleable.cpp
 style/Styleable.h
 style/values/color/StyleColor.cpp
 style/values/color/StyleKeywordColor.cpp
-style/values/color/StyleLightDarkColor.cpp
 style/values/primitives/StyleLengthResolution.cpp
 svg/SVGAElement.cpp
 svg/SVGAltGlyphElement.cpp

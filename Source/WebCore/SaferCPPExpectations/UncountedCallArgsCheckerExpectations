@@ -192,7 +192,6 @@ Modules/webaudio/MediaStreamAudioSourceNode.cpp
 Modules/webaudio/OfflineAudioDestinationNode.cpp
 Modules/webaudio/OscillatorNode.cpp
 Modules/webaudio/PannerNode.cpp
-Modules/webaudio/RealtimeAnalyser.cpp
 Modules/webaudio/ScriptProcessorNode.cpp
 Modules/webaudio/StereoPannerNode.cpp
 Modules/webauthn/AuthenticationExtensionsClientOutputs.cpp
@@ -1064,7 +1063,6 @@ rendering/RenderSearchField.cpp
 rendering/RenderSlider.cpp
 rendering/RenderTable.cpp
 rendering/RenderTableCell.cpp
-rendering/RenderTableRow.cpp
 rendering/RenderTableSection.cpp
 rendering/RenderText.cpp
 rendering/RenderTextControl.cpp

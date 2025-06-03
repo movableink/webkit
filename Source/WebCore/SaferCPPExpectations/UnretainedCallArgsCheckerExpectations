@@ -64,7 +64,6 @@ page/cocoa/WebTextIndicatorLayer.mm
 page/mac/EventHandlerMac.mm
 page/mac/ImageOverlayControllerMac.mm
 page/mac/ServicesOverlayController.mm
-page/mac/TextIndicatorWindow.mm
 page/scrolling/mac/ScrollerPairMac.mm
 page/scrolling/mac/ScrollingTreeOverflowScrollingNodeMac.mm
 page/scrolling/mac/ScrollingTreePluginScrollingNodeMac.mm
