@@ -7885,3 +7885,7 @@ webkit.org/b/288518 fast/text/emoji-num-glyphs.html [ Failure ]
 media/sources-fallback-codecs.html [ Failure ]
 
 webkit.org/b/293764 imported/w3c/web-platform-tests/trusted-types/SharedWorker-block-eval-function-constructor.html [ Pass Failure ]
+
+# webkit.org/b/293838 ([macOS] 2x tests in imported/w3c/web-platform-tests/url/ are constant failures (flaky in EWS)
+imported/w3c/web-platform-tests/url/IdnaTestV2.window.html [ Failure ]
+imported/w3c/web-platform-tests/url/toascii.window.html [ Failure ]
