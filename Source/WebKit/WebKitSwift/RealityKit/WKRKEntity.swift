@@ -36,18 +36,21 @@ private extension Logger {
     static let realityKitEntity = Logger(subsystem: "com.apple.WebKit", category: "RealityKitEntity")
 }
 
-@objc(WKSRKEntity)
-public final class WKSRKEntity: NSObject {
-    let entity: Entity
-    @objc(delegate) weak var delegate: WKSRKEntityDelegate?
-    private var animationPlaybackController: AnimationPlaybackController? = nil
-    private var animationFinishedSubscription: Cancellable?
-    private var _duration: TimeInterval? = nil
-    private var _playbackRate: Float = 1.0
+@objc
+@implementation
+extension WKRKEntity {
+    @nonobjc private let entity: Entity
+
+    weak var delegate: WKRKEntityDelegate?
+
+    @nonobjc private var animationPlaybackController: AnimationPlaybackController? = nil
+    @nonobjc private var animationFinishedSubscription: Cancellable?
+    @nonobjc private var _duration: TimeInterval? = nil
+    @nonobjc private var _playbackRate: Float = 1.0
 
     private static var _defaultEnvironmentResource: EnvironmentResource?
 
-    @objc(isLoadFromDataAvailable) public static func isLoadFromDataAvailable() -> Bool {
+    class func isLoadFromDataAvailable() -> Bool {
 #if canImport(RealityKit, _version: 377)
         return true
 #else
@@ -55,7 +58,8 @@ public final class WKSRKEntity: NSObject {
 #endif
     }
 
-    @objc(loadFromData:withAttributionTaskID:completionHandler:) public static func load(from data: Data, attributionTaskId: String?, completionHandler: @MainActor @escaping (WKSRKEntity?) -> Void) {
+    @objc(loadFromData:withAttributionTaskID:completionHandler:)
+    class func load(from data: Data, withAttributionTaskID attributionTaskId: String?, completionHandler: @MainActor @Sendable @escaping (WKRKEntity?) -> Void) {
 #if canImport(RealityKit, _version: 377)
         Task {
             do {
@@ -66,7 +70,7 @@ public final class WKSRKEntity: NSObject {
                 }
 #endif
                 let loadedEntity = try await Entity(fromData: data, options: loadOptions)
-                let result: WKSRKEntity = .init(with: loadedEntity)
+                let result = WKRKEntity(loadedEntity)
                 await completionHandler(result)
             } catch {
                 Logger.realityKitEntity.error("Failed to load entity from data")
@@ -80,15 +84,15 @@ public final class WKSRKEntity: NSObject {
 #endif
     }
 
-    private init(with rkEntity: Entity) {
-        self.entity = rkEntity
+    @nonobjc convenience init(_ rkEntity: Entity) {
+        self.init(coreEntity: rkEntity.coreEntity)
     }
 
-    @objc(initWithCoreEntity:) init(with coreEntity: REEntityRef) {
+    init(coreEntity: REEntityRef) {
         entity = Entity.fromCore(coreEntity)
     }
 
-    @objc(name) public var name: String {
+    var name: String {
         get {
             entity.name
         }
@@ -97,30 +101,30 @@ public final class WKSRKEntity: NSObject {
         }
     }
     
-    @objc(interactionPivotPoint) public var interactionPivotPoint: simd_float3 {
+    var interactionPivotPoint: simd_float3 {
         entity.visualBounds(relativeTo: nil).center
     }
 
-    @objc(boundingBoxExtents) public var boundingBoxExtents: simd_float3 {
+    var boundingBoxExtents: simd_float3 {
         guard let boundingBox = self.boundingBox else { return SIMD3<Float>(0, 0, 0) }
         return boundingBox.extents
     }
 
-    @objc(boundingBoxCenter) public var boundingBoxCenter: simd_float3 {
+    var boundingBoxCenter: simd_float3 {
         guard let boundingBox = self.boundingBox else { return SIMD3<Float>(0, 0, 0) }
         return boundingBox.center
     }
     
-    @objc(boundingRadius) public var boundingRadius: Float {
+    var boundingRadius: Float {
         guard let boundingBox = self.boundingBox else { return 0.0 }
         return boundingBox.boundingRadius
     }
 
-    private var boundingBox: BoundingBox? {
+    @nonobjc private final var boundingBox: BoundingBox? {
         entity.visualBounds(relativeTo: entity)
     }
 
-    @objc(transform) public var transform: WKEntityTransform {
+    var transform: WKEntityTransform {
         get {
             let transform = Transform(matrix: entity.transformMatrix(relativeTo: nil))
             return WKEntityTransform(scale: transform.scale, rotation: transform.rotation, translation: transform.translation)
@@ -136,7 +140,7 @@ public final class WKSRKEntity: NSObject {
         }
     }
 
-    @objc(opacity) public var opacity: Float {
+    var opacity: Float {
         get {
             guard let opacityComponent = entity.components[OpacityComponent.self] else {
                 return 1.0
@@ -156,14 +160,14 @@ public final class WKSRKEntity: NSObject {
         }
     }
 
-    @objc(duration) public var duration: TimeInterval {
+    var duration: TimeInterval {
         guard let _duration else { return 0 }
         return _duration
     }
 
-    @objc(loop) public var loop: Bool = false
+    var loop: Bool = false
 
-    @objc(playbackRate) public var playbackRate: Float {
+    var playbackRate: Float {
         get {
             guard let animationPlaybackController else { return _playbackRate }
             return animationPlaybackController.speed
@@ -178,7 +182,7 @@ public final class WKSRKEntity: NSObject {
         }
     }
 
-    @objc(paused) public var paused: Bool {
+    var paused: Bool {
         get {
             guard let animationPlaybackController else { return true }
             return animationPlaybackController.isPaused
@@ -195,7 +199,7 @@ public final class WKSRKEntity: NSObject {
         }
     }
 
-    @objc(currentTime) public var currentTime: TimeInterval {
+    var currentTime: TimeInterval {
         get {
             guard let animationPlaybackController else { return 0 }
             return animationPlaybackController.time
@@ -209,7 +213,7 @@ public final class WKSRKEntity: NSObject {
         }
     }
 
-    @objc(setUpAnimationWithAutoPlay:) public func setUpAnimation(with autoplay: Bool) {
+    func setUpAnimationWithAutoPlay(_ autoplay: Bool) {
         assert(animationPlaybackController == nil)
 
         guard let animation = entity.availableAnimations.first else {
@@ -247,7 +251,7 @@ public final class WKSRKEntity: NSObject {
         }
     }
 
-    private func resizedImage(_ imageSource: CGImageSource) -> CGImage? {
+    private static func resizedImage(_ imageSource: CGImageSource) -> CGImage? {
         guard let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [CFString: Any] else {
             Logger.realityKitEntity.error("Resizing IBL image: image source properties are not valid")
             return nil
@@ -315,20 +319,21 @@ public final class WKSRKEntity: NSObject {
         return context.makeImage()
     }
 
-    private func applyIBL(_ environment: EnvironmentResource) {
+    @nonobjc private final func applyIBL(_ environment: EnvironmentResource) {
         entity.components[VirtualEnvironmentProbeComponent.self] = .init(source: .single(.init(environment: environment)))
         entity.components[ImageBasedLightComponent.self] = .init(source: .none)
         entity.components[ImageBasedLightReceiverComponent.self] = .init(imageBasedLight: entity)
     }
 
-    @objc(applyIBLData:attributionHandler:withCompletion:) public func applyIBL(data: Data, attributionHandler: @escaping (REAssetRef) -> Void, completion: @escaping (Bool) -> Void) {
+    @MainActor
+    func applyIBLData(_ data: Data, attributionHandler: @escaping (REAssetRef) -> Void, withCompletion completion: @MainActor @Sendable @escaping (Bool) -> Void) {
         guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil) else {
             Logger.realityKitEntity.error("Cannot get CGImageSource from IBL image data.")
             completion(false)
             return
         }
 
-        guard let cgImage = resizedImage(imageSource) else {
+        guard let cgImage = Self.resizedImage(imageSource) else {
             Logger.realityKitEntity.error("Cannot get CGImage from CGImageSource.")
             completion(false)
             return
@@ -357,10 +362,10 @@ public final class WKSRKEntity: NSObject {
         }
     }
 
-    @objc(applyDefaultIBL) @MainActor func applyDefaultIBL()
-    {
+    @MainActor
+    func applyDefaultIBL() {
 #if canImport(RealityFoundation, _version: 380)
-        if let environment = WKSRKEntity._defaultEnvironmentResource {
+        if let environment = WKRKEntity._defaultEnvironmentResource {
             applyIBL(environment)
             return
         }
@@ -370,10 +375,10 @@ public final class WKSRKEntity: NSObject {
                 let defaultEnvironmentResource = EnvironmentResource.defaultObject()
                 
                 await MainActor.run {
-                    if WKSRKEntity._defaultEnvironmentResource == nil {
-                        WKSRKEntity._defaultEnvironmentResource = defaultEnvironmentResource
+                    if WKRKEntity._defaultEnvironmentResource == nil {
+                        WKRKEntity._defaultEnvironmentResource = defaultEnvironmentResource
                     }
-                    guard let environment = WKSRKEntity._defaultEnvironmentResource else {
+                    guard let environment = WKRKEntity._defaultEnvironmentResource else {
                         Logger.realityKitEntity.error("Cannot load default environment resource")
                         return
                     }
@@ -391,26 +396,29 @@ public final class WKSRKEntity: NSObject {
         delegate?.entityAnimationPlaybackStateDidUpdate?(self)
     }
 
-    @objc(setParentCoreEntity:preservingWorldTransform:) public func setParent(_ coreEntity: REEntityRef, preservingWorldTransform: Bool) {
+    @objc(setParentCoreEntity:preservingWorldTransform:)
+    func setParentCore(_ coreEntity: REEntityRef, preservingWorldTransform: Bool) {
         let parentEntity = Entity.fromCore(coreEntity)
         entity.setParent(parentEntity, preservingWorldTransform: preservingWorldTransform)
     }
     
-    @objc(interactionContainerDidRecenterFromTransform:) public func interactionContainerDidRecenter(_ transform: simd_float4x4) {
+    @objc(interactionContainerDidRecenterFromTransform:)
+    func interactionContainerDidRecenter(fromTransform transform: simd_float4x4) {
         entity.setTransformMatrix(transform, relativeTo: nil)
     }
     
-    @objc(recenterEntityAtTransform:) public func recenterEntity(at newTransform: WKEntityTransform) {
+    @objc(recenterEntityAtTransform:)
+    func recenter(at transform: WKEntityTransform) {
         // Apply the scale and translation of the entity separately from the rotation
-        transform = WKEntityTransform(scale: newTransform.scale, rotation: .init(ix: 0, iy: 0, iz: 0, r: 1), translation: newTransform.translation)
-        
+        self.transform = WKEntityTransform(scale: transform.scale, rotation: .init(ix: 0, iy: 0, iz: 0, r: 1), translation: transform.translation)
+
         // The pivot for the orientation may be different from the center of the model's bounding box
         // As a result, we offset the translation after the rotation has been applied to recenter it
         let pivotPoint = interactionPivotPoint
-        transform = newTransform
+        self.transform = transform
         let offset = pivotPoint - interactionPivotPoint
-        transform = WKEntityTransform(scale: newTransform.scale, rotation: newTransform.rotation, translation: newTransform.translation + offset)
+        self.transform = WKEntityTransform(scale: transform.scale, rotation: transform.rotation, translation: transform.translation + offset)
     }
 }
 
-#endif // os(visionOS)
+#endif // ENABLE_MODEL_PROCESS

@@ -41,14 +41,16 @@ typedef struct {
     simd_float3 translation;
 } WKEntityTransform;
 
-@protocol WKSRKEntityDelegate <NSObject>
+@class WKRKEntity;
+
+@protocol WKRKEntityDelegate <NSObject>
 @optional
-- (void)entityAnimationPlaybackStateDidUpdate:(id)entity;
+- (void)entityAnimationPlaybackStateDidUpdate:(WKRKEntity *)entity;
 @end
 
-@interface WKSRKEntity : NSObject
-@property (nonatomic, weak) id <WKSRKEntityDelegate> delegate;
-@property (nonatomic, copy, nullable) NSString *name;
+@interface WKRKEntity : NSObject
+@property (nonatomic, weak) id <WKRKEntityDelegate> delegate;
+@property (nonatomic, copy) NSString *name;
 
 @property (nonatomic, readonly) simd_float3 boundingBoxExtents;
 @property (nonatomic, readonly) simd_float3 boundingBoxCenter;
@@ -57,22 +59,22 @@ typedef struct {
 @property (nonatomic) WKEntityTransform transform;
 @property (nonatomic) float opacity;
 @property (nonatomic, readonly) NSTimeInterval duration;
-@property (nonatomic) bool loop;
+@property (nonatomic) BOOL loop;
 @property (nonatomic) float playbackRate;
-@property (nonatomic) bool paused;
+@property (nonatomic) BOOL paused;
 @property (nonatomic) NSTimeInterval currentTime;
 
-+ (bool)isLoadFromDataAvailable;
-+ (void)loadFromData:(NSData *)data withAttributionTaskID:(nullable NSString *)attributionTaskId completionHandler:(void (^)(WKSRKEntity * _Nullable entity))completionHandler;
++ (BOOL)isLoadFromDataAvailable;
++ (void)loadFromData:(NSData *)data withAttributionTaskID:(nullable NSString *)attributionTaskId completionHandler:(NS_SWIFT_UI_ACTOR void (^)(WKRKEntity * _Nullable entity))completionHandler;
 - (instancetype)initWithCoreEntity:(REEntityRef)coreEntity;
-- (void)setParentCoreEntity:(REEntityRef)parentCoreEntity preservingWorldTransform:(BOOL)preservingWorldTransform NS_SWIFT_NAME(setParent(_:preservingWorldTransform:));
+- (void)setParentCoreEntity:(REEntityRef)parentCoreEntity preservingWorldTransform:(BOOL)preservingWorldTransform;
 - (void)setUpAnimationWithAutoPlay:(BOOL)autoPlay;
-- (void)applyIBLData:(NSData *)data attributionHandler:(void (^)(REAssetRef coreEnvironmentResourceAsset))attributionHandler withCompletion:(void (^)(BOOL success))completion;
-- (void)interactionContainerDidRecenterFromTransform:(simd_float4x4)transform NS_SWIFT_NAME(interactionContainerDidRecenter(_:));
-- (void)recenterEntityAtTransform:(WKEntityTransform)transform NS_SWIFT_NAME(recenterEntity(at:));
+- (void)applyIBLData:(NSData *)data attributionHandler:(void (^)(REAssetRef coreEnvironmentResourceAsset))attributionHandler withCompletion:(NS_SWIFT_UI_ACTOR void (^)(BOOL success))completion;
+- (void)interactionContainerDidRecenterFromTransform:(simd_float4x4)transform;
+- (void)recenterEntityAtTransform:(WKEntityTransform)transform;
 - (void)applyDefaultIBL;
 @end
 
 NS_ASSUME_NONNULL_END
 
-#endif // defined(TARGET_OS_VISION) && TARGET_OS_VISION
+#endif // ENABLE(MODEL_PROCESS)

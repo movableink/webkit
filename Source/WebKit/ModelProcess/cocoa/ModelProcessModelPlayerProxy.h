@@ -50,7 +50,7 @@
 
 OBJC_CLASS WKModelProcessModelLayer;
 OBJC_CLASS WKModelProcessModelPlayerProxyObjCAdapter;
-OBJC_CLASS WKSRKEntity;
+OBJC_CLASS WKRKEntity;
 OBJC_CLASS WKStageModeInteractionDriver;
 
 namespace WebCore {
@@ -166,7 +166,7 @@ private:
     std::unique_ptr<LayerHostingContext> m_layerHostingContext;
     RetainPtr<WKModelProcessModelLayer> m_layer;
     RefPtr<WebCore::REModelLoader> m_loader;
-    RetainPtr<WKSRKEntity> m_modelRKEntity;
+    RetainPtr<WKRKEntity> m_modelRKEntity;
     REPtr<RESceneRef> m_scene;
     REPtr<REEntityRef> m_hostingEntity;
     REPtr<REEntityRef> m_containerEntity;

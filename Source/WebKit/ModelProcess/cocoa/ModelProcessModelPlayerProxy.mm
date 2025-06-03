@@ -33,8 +33,8 @@
 #import "ModelConnectionToWebProcess.h"
 #import "ModelProcessModelPlayerManagerProxy.h"
 #import "ModelProcessModelPlayerMessages.h"
-#import "RealityKitBridging.h"
 #import "WKModelProcessModelLayer.h"
+#import "WKRKEntity.h"
 #import "WKStageMode.h"
 #import <RealitySystemSupport/RealitySystemSupport.h>
 #import <SurfBoardServices/SurfBoardServices.h>
@@ -58,7 +58,7 @@
 
 #import "WebKitSwiftSoftLink.h"
 
-@interface WKModelProcessModelPlayerProxyObjCAdapter : NSObject<WKSRKEntityDelegate, WKStageModeInteractionAware>
+@interface WKModelProcessModelPlayerProxyObjCAdapter : NSObject<WKRKEntityDelegate, WKStageModeInteractionAware>
 - (instancetype)initWithModelProcessModelPlayerProxy:(std::reference_wrapper<WebKit::ModelProcessModelPlayerProxy>)modelProcessModelPlayerProxy;
 @end
 
@@ -93,7 +93,7 @@ static const Seconds unloadModelDelay { 4_s };
 
 class RKModelUSD final : public WebCore::REModel {
 public:
-    static Ref<RKModelUSD> create(Ref<Model> model, RetainPtr<WKSRKEntity> entity)
+    static Ref<RKModelUSD> create(Ref<Model> model, RetainPtr<WKRKEntity> entity)
     {
         return adoptRef(*new RKModelUSD(WTFMove(model), WTFMove(entity)));
     }
@@ -101,7 +101,7 @@ public:
     virtual ~RKModelUSD() = default;
 
 private:
-    RKModelUSD(Ref<Model> model, RetainPtr<WKSRKEntity> entity)
+    RKModelUSD(Ref<Model> model, RetainPtr<WKRKEntity> entity)
         : m_model { WTFMove(model) }
         , m_entity { WTFMove(entity) }
     {
@@ -118,13 +118,13 @@ private:
         return nullptr;
     }
 
-    RetainPtr<WKSRKEntity> rootRKEntity() const final
+    RetainPtr<WKRKEntity> rootRKEntity() const final
     {
         return m_entity;
     }
 
     Ref<Model> m_model;
-    RetainPtr<WKSRKEntity> m_entity;
+    RetainPtr<WKRKEntity> m_entity;
 };
 
 class RKModelLoaderUSD final : public WebCore::REModelLoader, public CanMakeWeakPtr<RKModelLoaderUSD> {
@@ -155,7 +155,7 @@ private:
         m_canceled = true;
     }
 
-    void didFinish(RetainPtr<WKSRKEntity> entity)
+    void didFinish(RetainPtr<WKRKEntity> entity)
     {
         if (m_canceled)
             return;
@@ -193,7 +193,7 @@ void RKModelLoaderUSD::load()
     RetainPtr<NSString> attributionID;
     if (m_attributionTaskID.has_value())
         attributionID = m_attributionTaskID.value().createNSString();
-    [getWKSRKEntityClass() loadFromData:m_model->data()->createNSData().get() withAttributionTaskID:attributionID.get() completionHandler:makeBlockPtr([weakThis = WeakPtr { *this }] (WKSRKEntity *entity) mutable {
+    [getWKRKEntityClass() loadFromData:m_model->data()->createNSData().get() withAttributionTaskID:attributionID.get() completionHandler:makeBlockPtr([weakThis = WeakPtr { *this }] (WKRKEntity *entity) mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -515,13 +515,13 @@ void ModelProcessModelPlayerProxy::didFinishLoading(WebCore::REModelLoader& load
     dispatch_assert_queue(dispatch_get_main_queue());
     ASSERT(&loader == m_loader.get());
 
-    bool canLoadWithRealityKit = [getWKSRKEntityClass() isLoadFromDataAvailable];
+    bool canLoadWithRealityKit = [getWKRKEntityClass() isLoadFromDataAvailable];
 
     m_loader = nullptr;
     if (canLoadWithRealityKit)
         m_modelRKEntity = model->rootRKEntity();
     else if (model->rootEntity())
-        m_modelRKEntity = adoptNS([allocWKSRKEntityInstance() initWithCoreEntity:model->rootEntity()]);
+        m_modelRKEntity = adoptNS([allocWKRKEntityInstance() initWithCoreEntity:model->rootEntity()]);
     [m_modelRKEntity setDelegate:m_objCAdapter.get()];
 
     m_originalBoundingBoxExtents = [m_modelRKEntity boundingBoxExtents];
@@ -607,7 +607,7 @@ void ModelProcessModelPlayerProxy::load(WebCore::Model& model, WebCore::LayoutSi
 
     WKREEngine::shared().runWithSharedScene([this, protectedThis = Ref { *this }, model = Ref { model }] (RESceneRef scene) {
         m_scene = scene;
-        if ([getWKSRKEntityClass() isLoadFromDataAvailable])
+        if ([getWKRKEntityClass() isLoadFromDataAvailable])
             m_loader = loadREModelUsingRKUSDLoader(model.get(), m_attributionTaskID, *this);
         else
             m_loader = WebCore::loadREModel(model.get(), *this);

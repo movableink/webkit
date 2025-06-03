@@ -56,7 +56,7 @@ final public class WKStageModeInteractionDriver: NSObject {
     /// Because the turntable animation depends on the velocity of the pinch, we have to apply a separate animation for each animation tick.
     let turntableAnimationProxyEntity = Entity()
     
-    let modelEntity: WKSRKEntity
+    let modelEntity: WKRKEntity
     
     weak var delegate: WKStageModeInteractionAware?
     
@@ -95,7 +95,7 @@ final public class WKStageModeInteractionDriver: NSObject {
     }
     
     @objc(initWithModel:container:delegate:)
-    init(with model: WKSRKEntity, container: REEntityRef, delegate: WKStageModeInteractionAware?) {
+    init(with model: WKRKEntity, container: REEntityRef, delegate: WKStageModeInteractionAware?) {
         self.modelEntity = model
         self.interactionContainer = Entity()
         self.turntableInteractionContainer = Entity()
@@ -114,7 +114,7 @@ final public class WKStageModeInteractionDriver: NSObject {
     func setContainerTransformInPortal() {
         // Configure entity hierarchy after we have correctly positioned the model
         self.interactionContainer.setPosition(modelEntity.interactionPivotPoint, relativeTo: nil)
-        modelEntity.setParent(self.turntableInteractionContainer.__coreEntity.__as(REEntityRef.self), preservingWorldTransform: true)
+        modelEntity.setParentCore(self.turntableInteractionContainer.__coreEntity.__as(REEntityRef.self), preservingWorldTransform: true)
     }
     
     @objc(removeInteractionContainerFromSceneOrParent)
@@ -214,7 +214,7 @@ final public class WKStageModeInteractionDriver: NSObject {
             let initialTransform = modelEntity.transform
             let transformMatrix = Transform(scale: initialTransform.scale, rotation: initialTransform.rotation, translation: initialTransform.translation)
             self.interactionContainer.setPosition(initialCenter, relativeTo: nil)
-            self.modelEntity.interactionContainerDidRecenter(transformMatrix.matrix)
+            self.modelEntity.interactionContainerDidRecenter(fromTransform: transformMatrix.matrix)
         }
     }
     

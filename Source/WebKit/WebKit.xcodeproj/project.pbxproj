@@ -1375,10 +1375,10 @@
 		526C5722284ADCBC00E08955 /* CtapCcidDriver.h in Headers */ = {isa = PBXBuildFile; fileRef = 526C5720284ADCBC00E08955 /* CtapCcidDriver.h */; };
 		526C5723284ADCBC00E08955 /* CtapCcidDriver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 526C5721284ADCBC00E08955 /* CtapCcidDriver.cpp */; };
 		5272D4C91E735F0900EB4290 /* WKProtectionSpaceNS.h in Headers */ = {isa = PBXBuildFile; fileRef = 5272D4C71E735F0900EB4290 /* WKProtectionSpaceNS.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		5274A4BB2C7082AC00B1A742 /* RealityKitBridging.h in Headers */ = {isa = PBXBuildFile; fileRef = 5289527E2C7077B000D0357E /* RealityKitBridging.h */; };
+		5274A4BB2C7082AC00B1A742 /* WKRKEntity.h in Headers */ = {isa = PBXBuildFile; fileRef = 5289527E2C7077B000D0357E /* WKRKEntity.h */; };
 		527DA5E32B698159004E6A68 /* CoreIPCCVPixelBufferRef.h in Headers */ = {isa = PBXBuildFile; fileRef = 527DA5E22B697DC0004E6A68 /* CoreIPCCVPixelBufferRef.h */; };
-		5289527F2C7077B000D0357E /* RealityKitBridging.h in Headers */ = {isa = PBXBuildFile; fileRef = 5289527E2C7077B000D0357E /* RealityKitBridging.h */; };
-		528952812C70797900D0357E /* RKEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528952802C70797900D0357E /* RKEntity.swift */; };
+		5289527F2C7077B000D0357E /* WKRKEntity.h in Headers */ = {isa = PBXBuildFile; fileRef = 5289527E2C7077B000D0357E /* WKRKEntity.h */; };
+		528952812C70797900D0357E /* WKRKEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528952802C70797900D0357E /* WKRKEntity.swift */; };
 		528C37C1195CBB1A00D8B9CC /* WKBackForwardListPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1A9F28101958F478008CAC72 /* WKBackForwardListPrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		52A69BEA286CFFAC00893E8F /* CryptoTokenKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52A69BE9286CFFAC00893E8F /* CryptoTokenKit.framework */; };
 		52B060F92B745E4D009B1666 /* CoreIPCCVPixelBufferRef.mm in Sources */ = {isa = PBXBuildFile; fileRef = 52B060F82B745E00009B1666 /* CoreIPCCVPixelBufferRef.mm */; };
@@ -6040,8 +6040,8 @@
 		527D1AEC2AD0A5BB00D145E5 /* WebUserContentControllerDataTypes.serialization.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = WebUserContentControllerDataTypes.serialization.in; sourceTree = "<group>"; };
 		527DA5E22B697DC0004E6A68 /* CoreIPCCVPixelBufferRef.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CoreIPCCVPixelBufferRef.h; sourceTree = "<group>"; };
 		527DA5E42B69815F004E6A68 /* CoreIPCCVPixelBufferRef.serialization.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = CoreIPCCVPixelBufferRef.serialization.in; sourceTree = "<group>"; };
-		5289527E2C7077B000D0357E /* RealityKitBridging.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RealityKitBridging.h; sourceTree = "<group>"; };
-		528952802C70797900D0357E /* RKEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RKEntity.swift; sourceTree = "<group>"; };
+		5289527E2C7077B000D0357E /* WKRKEntity.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WKRKEntity.h; sourceTree = "<group>"; };
+		528952802C70797900D0357E /* WKRKEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WKRKEntity.swift; sourceTree = "<group>"; };
 		52A69BE9286CFFAC00893E8F /* CryptoTokenKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CryptoTokenKit.framework; path = System/Library/Frameworks/CryptoTokenKit.framework; sourceTree = SDKROOT; };
 		52B060F82B745E00009B1666 /* CoreIPCCVPixelBufferRef.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CoreIPCCVPixelBufferRef.mm; sourceTree = "<group>"; };
 		52B5C0372D40232500110DF0 /* GPUProcessExtension-visionOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "GPUProcessExtension-visionOS.entitlements"; sourceTree = "<group>"; };
@@ -13277,8 +13277,8 @@
 		5260053F2C707686005D813A /* RealityKit */ = {
 			isa = PBXGroup;
 			children = (
-				5289527E2C7077B000D0357E /* RealityKitBridging.h */,
-				528952802C70797900D0357E /* RKEntity.swift */,
+				5289527E2C7077B000D0357E /* WKRKEntity.h */,
+				528952802C70797900D0357E /* WKRKEntity.swift */,
 			);
 			path = RealityKit;
 			sourceTree = "<group>";
@@ -17522,7 +17522,6 @@
 				EBA8D3B527A5E33F00CB7900 /* PushServiceConnection.h in Headers */,
 				411B89CC27B2B89800F9EBD3 /* QueryPermissionResultCallback.h in Headers */,
 				93B631F327ABAD8000443A44 /* QuotaIncreaseRequestIdentifier.h in Headers */,
-				5274A4BB2C7082AC00B1A742 /* RealityKitBridging.h in Headers */,
 				E539DFED2A44A78600769F09 /* RealitySimulationServicesSPI.h in Headers */,
 				7BE9326327F5C75A00D5FEFB /* ReceiverMatcher.h in Headers */,
 				950FECF4285027200002DE4E /* RecurringPaymentRequest.h in Headers */,
@@ -18409,6 +18408,7 @@
 				3336763B130C99DC006C9DE2 /* WKResourceCacheManager.h in Headers */,
 				BC8A501511765F5600757573 /* WKRetainPtr.h in Headers */,
 				F4974E76265ECBBC00B49B8C /* WKRevealItemPresenter.h in Headers */,
+				5274A4BB2C7082AC00B1A742 /* WKRKEntity.h in Headers */,
 				1A7E377918E4A4FE003D0FFF /* WKScriptMessage.h in Headers */,
 				1A7E377518E4A33A003D0FFF /* WKScriptMessageHandler.h in Headers */,
 				5109099723DACBF2003B1E4C /* WKScriptMessageHandlerWithReply.h in Headers */,
@@ -18604,7 +18604,6 @@
 			files = (
 				A1098E682BB6410800449EE0 /* LinearMediaKitExtras.h in Headers */,
 				073A63CB2DC33D710057A3F5 /* LinearMediaKitSPI.h in Headers */,
-				5289527F2C7077B000D0357E /* RealityKitBridging.h in Headers */,
 				A14F9B672B686E0200AD9C56 /* WebKitSwift.h in Headers */,
 				0765D1C42DEBFF7E0029CDD0 /* WKGroupSession.h in Headers */,
 				F4D59C002DCBDC9F004492FB /* WKIdentityDocumentPresentmentController.h in Headers */,
@@ -18621,6 +18620,7 @@
 				F4D59BFD2DCBDC9F004492FB /* WKISO18013Request.h in Headers */,
 				07A7EAD32DC7FBEB007E7680 /* WKMarketplaceKit.h in Headers */,
 				B66F88C22B6D202600FB1734 /* WKPreviewWindowController.h in Headers */,
+				5289527F2C7077B000D0357E /* WKRKEntity.h in Headers */,
 				A14F9B762B68CA6C00AD9C56 /* WKSLinearMediaPlayer.h in Headers */,
 				A14F9B632B686DD300AD9C56 /* WKSLinearMediaTypes.h in Headers */,
 				EEA52F482D70545300D578B5 /* WKStageMode.h in Headers */,
@@ -21119,7 +21119,6 @@
 				A14F9B642B686DD300AD9C56 /* LinearMediaTypes.swift in Sources */,
 				0785E8002CBCDFFD00F68126 /* PlatformIntelligenceTextEffectView.swift in Sources */,
 				DD5697CD2DC06F7700050321 /* rdar150228472.swift in Sources */,
-				528952812C70797900D0357E /* RKEntity.swift in Sources */,
 				440DB5B72C1914DC0021639B /* TextAnimationManager.swift in Sources */,
 				0765D1C52DEBFF840029CDD0 /* WKGroupSession.swift in Sources */,
 				F46C34352DCD369B00B476F8 /* WKIdentityDocumentPresentmentController.swift in Sources */,
@@ -21134,6 +21133,7 @@
 				0735F3222D38B09E0003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.swift in Sources */,
 				EB0FBFA72B66C61E00269CC1 /* WKMarketplaceKit.swift in Sources */,
 				B66F88C02B6D1F2300FB1734 /* WKPreviewWindowController.swift in Sources */,
+				528952812C70797900D0357E /* WKRKEntity.swift in Sources */,
 				EEA52F492D7055A700D578B5 /* WKStageMode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

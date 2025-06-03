@@ -24,13 +24,13 @@
  */
 
 #import "LinearMediaKitExtras.h"
-#import "RealityKitBridging.h"
 #import "WKGroupSession.h"
 #import "WKIntelligenceReplacementTextEffectCoordinator.h"
 #import "WKIntelligenceSmartReplyTextEffectCoordinator.h"
 #import "WKIntelligenceTextEffectCoordinator.h"
 #import "WKMarketplaceKit.h"
 #import "WKPreviewWindowController.h"
+#import "WKRKEntity.h"
 #import "WKSLinearMediaPlayer.h"
 #import "WKSLinearMediaTypes.h"
 #import "WKSTextAnimationSourceDelegate.h"
