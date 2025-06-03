@@ -336,11 +336,9 @@ html/FormAssociatedCustomElement.cpp
 html/FormListedElement.cpp
 html/HTMLAnchorElement.cpp
 html/HTMLAttachmentElement.cpp
-html/HTMLCollection.cpp
 html/HTMLDocument.cpp
 html/HTMLEmbedElement.cpp
 html/HTMLFieldSetElement.cpp
-html/HTMLFormControlsCollection.cpp
 html/HTMLFormElement.cpp
 html/HTMLFrameElement.cpp
 html/HTMLFrameElementBase.cpp

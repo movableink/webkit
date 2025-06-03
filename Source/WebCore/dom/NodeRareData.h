@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008 David Smith <catfish.man@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
@@ -165,7 +165,7 @@ public:
     void removeCacheWithAtomName(NodeListType& list, const AtomString& name)
     {
         ASSERT(&list == m_atomNameCaches.get(namedNodeListKey<NodeListType>(name)));
-        if (deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(list.protectedOwnerNode()))
+        if (deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(list.ownerNode()))
             return;
         m_atomNameCaches.remove(namedNodeListKey<NodeListType>(name));
     }
@@ -174,7 +174,7 @@ public:
     {
         QualifiedName name(nullAtom(), localName, namespaceURI);
         ASSERT(&collection == m_tagCollectionNSCache.get(name));
-        if (deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(collection.protectedOwnerNode()))
+        if (deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(collection.ownerNode()))
             return;
         m_tagCollectionNSCache.remove(name);
     }

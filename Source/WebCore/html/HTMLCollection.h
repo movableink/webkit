@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -78,7 +78,6 @@ public:
     inline NodeListInvalidationType invalidationType() const;
     inline CollectionType type() const;
     inline ContainerNode& ownerNode() const;
-    inline Ref<ContainerNode> protectedOwnerNode() const;
     inline ContainerNode& rootNode() const;
     inline void invalidateCacheForAttribute(const QualifiedName& attributeName);
     WEBCORE_EXPORT virtual void invalidateCacheForDocument(Document&);
@@ -96,6 +95,7 @@ protected:
     inline const CollectionNamedElementCache& namedItemCaches() const;
 
     inline Document& document() const;
+    inline Ref<Document> protectedDocument() const;
 
     void invalidateNamedElementCache(Document&) const;
 
@@ -121,11 +121,6 @@ inline size_t CollectionNamedElementCache::memoryCost() const
 }
 
 inline ContainerNode& HTMLCollection::ownerNode() const
-{
-    return m_ownerNode;
-}
-
-inline Ref<ContainerNode> HTMLCollection::protectedOwnerNode() const
 {
     return m_ownerNode;
 }

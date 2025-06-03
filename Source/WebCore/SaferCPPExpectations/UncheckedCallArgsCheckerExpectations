@@ -120,7 +120,6 @@ bindings/js/JSIntersectionObserverEntryCustom.cpp
 bindings/js/JSLazyEventListener.cpp
 bindings/js/JSNavigatorCustom.cpp
 bindings/js/JSNodeCustom.cpp
-bindings/js/JSNodeListCustom.cpp
 bindings/js/JSPluginElementFunctions.cpp
 bindings/js/JSSVGViewSpecCustom.cpp
 bindings/js/JSStylePropertyMapReadOnlyCustom.cpp
@@ -179,7 +178,6 @@ dom/IdleCallbackController.cpp
 dom/ImageOverlay.cpp
 dom/InlineStyleSheetOwner.cpp
 dom/KeyboardEvent.cpp
-dom/LiveNodeList.h
 dom/LiveNodeListInlines.h
 dom/MouseRelatedEvent.cpp
 dom/MutationObserver.cpp
@@ -282,8 +280,6 @@ html/HTMLBaseElement.cpp
 html/HTMLBodyElement.cpp
 html/HTMLButtonElement.cpp
 html/HTMLCanvasElement.cpp
-html/HTMLCollection.cpp
-html/HTMLCollectionInlines.h
 html/HTMLDialogElement.cpp
 html/HTMLFieldSetElement.cpp
 html/HTMLFormControlElement.cpp
@@ -323,7 +319,6 @@ html/HTMLVideoElement.cpp
 html/HTMLWBRElement.cpp
 html/ImageBitmap.cpp
 html/ImageDocument.cpp
-html/LabelsNodeList.cpp
 html/LazyLoadFrameObserver.cpp
 html/LazyLoadImageObserver.cpp
 html/MediaDocument.cpp
