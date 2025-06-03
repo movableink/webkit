@@ -1221,6 +1221,14 @@ bool AccessibilityRenderObject::computeIsIgnored() const
         if (canSetFocusAttribute())
             return false;
 
+        // https://github.com/w3c/aria/pull/2224
+        // If the image is a descendant of a <figure>, don't ignore it due to <figure> potentially participating in its accname.
+        auto* node = m_renderer->node();
+        for (RefPtr ancestor = node ? node->parentNode() : nullptr; ancestor; ancestor = ancestor->parentNode()) {
+            if (auto* element = dynamicDowncast<HTMLElement>(ancestor.get()); element && element->hasTagName(figureTag))
+                return false;
+        }
+
         // First check the RenderImage's altText (which can be set through a style sheet, or come from the Element).
         // However, if this is not a native image, fallback to the attribute on the Element.
         // If the image is decorative (i.e. alt=""), it should be ignored even if a title, aria-label, etc. is supplied.

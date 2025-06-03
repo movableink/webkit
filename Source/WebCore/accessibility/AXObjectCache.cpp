@@ -5661,14 +5661,10 @@ void AXObjectCache::addLabelForRelation(Element& origin)
 {
     bool addedRelation = false;
 
-    // LabelFor relations are established for <label for=...> and for <figcaption> elements.
+    // LabelFor relations are established for <label for=...>.
     if (RefPtr label = dynamicDowncast<HTMLLabelElement>(origin)) {
         if (RefPtr control = Accessibility::controlForLabelElement(*label))
             addedRelation = addRelation(origin, *control, AXRelation::LabelFor);
-    } else if (origin.elementName() == ElementName::HTML_figcaption) {
-        RefPtr parent = dynamicDowncast<Element>(origin.parentNode());
-        if (parent && parent->elementName() == ElementName::HTML_figure)
-            addedRelation = addRelation(RefPtr { getOrCreate(origin) }.get(), RefPtr { getOrCreate(*parent) }.get(), AXRelation::LabelFor);
     }
 
     if (addedRelation)

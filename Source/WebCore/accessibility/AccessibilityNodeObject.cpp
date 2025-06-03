@@ -735,6 +735,29 @@ bool AccessibilityNodeObject::hasElementDescendant() const
     return element && childrenOfType<Element>(*element).first();
 }
 
+static bool isFlowContent(Node& node)
+{
+    if (auto* element = dynamicDowncast<HTMLElement>(node)) {
+        // https://html.spec.whatwg.org/#flow-content
+        // Below represents a non-comprehensive list of common flow content elements.
+        const AtomString& tag = element->localName();
+        if (tag == blockquoteTag
+        || tag == canvasTag
+        || tag == codeTag
+        || tag == divTag
+        || tag == olTag
+        || tag == pictureTag
+        || tag == preTag
+        || tag == pTag
+        || tag == spanTag
+        || tag == ulTag)
+            return true;
+    }
+
+    auto* text = dynamicDowncast<Text>(node);
+    return text && !text->data().containsOnly<isASCIIWhitespace>();
+}
+
 bool AccessibilityNodeObject::isNativeTextControl() const
 {
     if (is<HTMLTextAreaElement>(node()))
@@ -1798,11 +1821,38 @@ void AccessibilityNodeObject::alternativeText(Vector<AccessibilityText>& textOrd
             textOrder.append(AccessibilityText(accessibleNameForNode(*object->node()), AccessibilityTextSource::Alternative));
     }
 
-    // The figure element derives its alternative text from the first associated figcaption element if one is available.
-    if (isFigureElement()) {
-        AccessibilityObject* captionForFigure = this->captionForFigure();
-        if (captionForFigure && !captionForFigure->isHidden())
-            textOrder.append(AccessibilityText(accessibleNameForNode(*captionForFigure->node()), AccessibilityTextSource::Alternative));
+    if (auto* image = dynamicDowncast<HTMLImageElement>(*node)) {
+        // https://github.com/w3c/aria/pull/2224
+        // Per html-aam, <img> elements that are unlabeled (e.g., alt attribute, ARIA, title) derive accname
+        // from an ancestor figure's <figcaption> if and only if the <figure> does not contain other flow content (besides the <figcaption>).
+        const AtomString& alt = image->attributeWithoutSynchronization(altAttr);
+
+        if (alt.isEmpty() && image->attributeWithoutSynchronization(titleAttr).isEmpty()) {
+            for (RefPtr ancestor = node->parentNode(); ancestor; ancestor = ancestor->parentNode()) {
+                if (auto* figure = dynamicDowncast<HTMLElement>(ancestor.get()); figure && figure->hasTagName(figureTag)) {
+                    bool figureHasFlowContent = false;
+                    // Iterate over the direct children of the <img>'s ancestor <figure> for any common
+                    // flow content, including non-whitespace text nodes.
+                    for (RefPtr figureNodeChild = figure->firstChild(); figureNodeChild; figureNodeChild = figureNodeChild->nextSibling()) {
+                        if (isFlowContent(*figureNodeChild)) {
+                            figureHasFlowContent = true;
+                            break;
+                        }
+                    }
+                    // If no flow content is present in the <figure>, the <img> derives accname from its <figcaption>.
+                    if (!figureHasFlowContent) {
+                        RefPtr figureObject = objectCache ? objectCache->getOrCreate(*figure) : nullptr;
+                        RefPtr caption = figureObject && figureObject->isFigureElement() ? downcast<AccessibilityNodeObject>(figureObject)->captionForFigure() : nullptr;
+                        if (caption && !caption->isHidden()) {
+                            RefPtr captionNode = caption->node();
+                            if (String captionAccname = captionNode ? accessibleNameForNode(*captionNode) : emptyString(); !captionAccname.isEmpty())
+                                textOrder.append(AccessibilityText(WTFMove(captionAccname), AccessibilityTextSource::Alternative));
+                        }
+                    }
+                    break;
+                }
+            }
+        }
     }
 
     // Tree items missing a label are labeled by all child elements.
