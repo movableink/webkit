@@ -1310,11 +1310,16 @@ CharacterRange AXIsolatedObject::doAXRangeForLine(unsigned lineIndex) const
     });
 }
 
-String AXIsolatedObject::doAXStringForRange(const CharacterRange& axRange) const
+String AXIsolatedObject::doAXStringForRange(const CharacterRange& range) const
 {
-    return Accessibility::retrieveValueFromMainThread<String>([&axRange, this] () -> String {
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    if (AXObjectCache::useAXThreadTextApis())
+        return textMarkerRange().toString().substring(range.location, range.length);
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+
+    return Accessibility::retrieveValueFromMainThread<String>([&range, this] () -> String {
         if (auto* object = associatedAXObject())
-            return object->doAXStringForRange(axRange).isolatedCopy();
+            return object->doAXStringForRange(range).isolatedCopy();
         return { };
     });
 }
