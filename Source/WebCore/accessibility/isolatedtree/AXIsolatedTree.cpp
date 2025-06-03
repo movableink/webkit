@@ -1044,7 +1044,7 @@ void AXIsolatedTree::updateChildren(AccessibilityObject& axObject, ResolveNodeCh
     };
 
     // Also queue updates to the target node itself and any properties that depend on children().
-    if (childrenChanged || unconditionallyUpdate(axAncestor->roleValue())) {
+    if (childrenChanged || unconditionallyUpdate(axAncestor->role())) {
         queueNodeUpdate(axAncestor->objectID(), NodeUpdateOptions::nodeUpdate());
         updateDependentProperties(*axAncestor);
     }
@@ -1717,7 +1717,7 @@ IsolatedObjectData createIsolatedObjectData(const Ref<AccessibilityObject>& axOb
 #if ENABLE(AX_THREAD_TEXT_APIS)
         setProperty(AXProperty::TextRuns, std::make_shared<AXTextRuns>(object.textRuns()));
         setProperty(AXProperty::TextEmissionBehavior, object.textEmissionBehavior());
-        if (object.roleValue() == AccessibilityRole::ListMarker) {
+        if (object.role() == AccessibilityRole::ListMarker) {
             setProperty(AXProperty::ListMarkerText, object.listMarkerText().isolatedCopy());
             setProperty(AXProperty::ListMarkerLineID, object.listMarkerLineID());
         }
@@ -2074,7 +2074,7 @@ IsolatedObjectData createIsolatedObjectData(const Ref<AccessibilityObject>& axOb
         WTFMove(tree),
         parentID,
         object.objectID(),
-        object.roleValue(),
+        object.role(),
         propertyFlags,
         getsGeometryFromChildren
     };

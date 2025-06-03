@@ -123,7 +123,7 @@ bool AccessibilityObject::accessibilityIgnoreAttachment() const
     
 AccessibilityObjectInclusion AccessibilityObject::accessibilityPlatformIncludesObject() const
 {
-    if (roleValue() == AccessibilityRole::Unknown)
+    if (role() == AccessibilityRole::Unknown)
         return AccessibilityObjectInclusion::IgnoreObject;
     return AccessibilityObjectInclusion::DefaultBehavior;
 }

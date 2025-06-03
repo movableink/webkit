@@ -276,7 +276,7 @@ String AccessibilityObjectAtspi::text() const
 
     m_hasListMarkerAtStart = false;
 
-    if (m_coreObject->roleValue() == AccessibilityRole::ColorWell) {
+    if (m_coreObject->role() == AccessibilityRole::ColorWell) {
         auto color = convertColor<SRGBA<float>>(m_coreObject->colorValue()).resolved();
         GUniquePtr<char> colorString(g_strdup_printf("rgb %7.5f %7.5f %7.5f 1", color.red, color.green, color.blue));
         return String::fromUTF8(colorString.get());

@@ -444,7 +444,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         || backingObject->isRadioGroup()
         || backingObject->isSplitter()
         || backingObject->isToolbar()
-        || backingObject->roleValue() == AccessibilityRole::HorizontalRule)
+        || backingObject->role() == AccessibilityRole::HorizontalRule)
         [additional addObject:NSAccessibilityOrientationAttribute];
 
     if (backingObject->supportsDragging())
@@ -931,7 +931,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     else if (backingObject->isControl())
         objectAttributes = controlAttrs.get().get();
 
-    else if (backingObject->isGroup() || backingObject->isListItem() || backingObject->roleValue() == AccessibilityRole::Figure)
+    else if (backingObject->isGroup() || backingObject->isListItem() || backingObject->role() == AccessibilityRole::Figure)
         objectAttributes = groupAttrs.get().get();
     else if (backingObject->isTabList())
         objectAttributes = tabListAttrs.get().get();
@@ -2354,7 +2354,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return;
     }
 
-    if (backingObject->roleValue() == AccessibilityRole::ComboBox) {
+    if (backingObject->role() == AccessibilityRole::ComboBox) {
         backingObject->setIsExpanded(true);
         return;
     }

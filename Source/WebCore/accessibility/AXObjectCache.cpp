@@ -367,7 +367,7 @@ bool AXObjectCache::modalElementHasAccessibleContent(Element& element)
                 // Its content is exposed by its parent.
                 // Treat such elements as having accessible content.
                 // FIXME: This may not be sufficient for visibility:hidden or inert (https://bugs.webkit.org/show_bug.cgi?id=280914).
-                if (axObject->roleValue() == AccessibilityRole::StaticText && !axObject->isAXHidden())
+                if (axObject->role() == AccessibilityRole::StaticText && !axObject->isAXHidden())
                     return true;
 #endif
             }
@@ -1249,7 +1249,7 @@ void AXObjectCache::handleTextChanged(AccessibilityObject* object)
 
         if (isText) {
             bool dependsOnTextUnderElement = ancestor->dependsOnTextUnderElement();
-            auto role = ancestor->roleValue();
+            auto role = ancestor->role();
             dependsOnTextUnderElement |= role == AccessibilityRole::Label || role == AccessibilityRole::TextField;
 
             // If the starting object is a static text, its underlying text has changed.
@@ -1694,7 +1694,7 @@ void AXObjectCache::notificationPostTimerFired()
         if (note.second == AXNotification::MenuOpened) {
             // Only notify if the object is in fact a menu.
             note.first->updateChildrenIfNecessary();
-            if (note.first->roleValue() != AccessibilityRole::Menu)
+            if (note.first->role() != AccessibilityRole::Menu)
                 continue;
         }
 
@@ -1838,7 +1838,7 @@ void AXObjectCache::handleTabPanelSelected(Element* oldElement, Element* newElem
     RefPtr<AccessibilityObject> oldFocusedControlledPanel;
     if (oldObject) {
         oldFocusedControlledPanel = Accessibility::findAncestor<AccessibilityObject>(*oldObject, false, [] (auto& ancestor) {
-            return ancestor.roleValue() == AccessibilityRole::TabPanel;
+            return ancestor.role() == AccessibilityRole::TabPanel;
         });
 
         updateTab(oldFocusedControlledPanel.get(), *oldElement);
@@ -1849,7 +1849,7 @@ void AXObjectCache::handleTabPanelSelected(Element* oldElement, Element* newElem
         return;
 
     RefPtr newFocusedControlledPanel = Accessibility::findAncestor<AccessibilityObject>(*newObject, false, [] (auto& ancestor) {
-        return ancestor.roleValue() == AccessibilityRole::TabPanel;
+        return ancestor.role() == AccessibilityRole::TabPanel;
     });
 
     if (oldFocusedControlledPanel != newFocusedControlledPanel)
@@ -2727,7 +2727,7 @@ void AXObjectCache::handleAriaExpandedChange(Element& element)
             handleRowCountChanged(ancestor, protectedDocument().get());
 
         // Post that the specific row either collapsed or expanded.
-        auto role = object->roleValue();
+        auto role = object->role();
         if (role == AccessibilityRole::Row || role == AccessibilityRole::TreeItem)
             postNotification(object.get(), protectedDocument().get(), object->isExpanded() ? AXNotification::RowExpanded : AXNotification::RowCollapsed);
         else
@@ -3114,7 +3114,7 @@ void AXObjectCache::handleAttributeChange(Element* element, const QualifiedName&
     else if (attrName == aria_multilineAttr) {
         if (auto* axObject = get(*element)) {
             // The role of textarea and textfield objects is dependent on whether they can span multiple lines, so recompute it here.
-            if (axObject->roleValue() == AccessibilityRole::TextArea || axObject->roleValue() == AccessibilityRole::TextField)
+            if (axObject->role() == AccessibilityRole::TextArea || axObject->role() == AccessibilityRole::TextField)
                 axObject->updateRole();
         }
     }
@@ -5034,7 +5034,7 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
             break;
         case AXNotification::TextUnderElementChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { { AXProperty::AccessibilityText, AXProperty::Title } });
-            if (notification.first->isAccessibilityLabelInstance() || notification.first->roleValue() == AccessibilityRole::TextField)
+            if (notification.first->isAccessibilityLabelInstance() || notification.first->role() == AccessibilityRole::TextField)
                 tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::StringValue });
             break;
 #if ENABLE(AX_THREAD_TEXT_APIS)

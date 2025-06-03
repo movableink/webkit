@@ -143,15 +143,15 @@ AccessibilityObjectInclusion AccessibilityObject::accessibilityPlatformIncludesO
     if (isMenuListPopup() || isMenuListOption())
         return AccessibilityObjectInclusion::IgnoreObject;
 
-    if (roleValue() == AccessibilityRole::Mark)
+    if (role() == AccessibilityRole::Mark)
         return AccessibilityObjectInclusion::IncludeObject;
 
     // Never expose an unknown object on the Mac. Clients of the AX API will not know what to do with it.
     // Special case is when the unknown object is actually an attachment.
-    if (roleValue() == AccessibilityRole::Unknown && !isAttachment())
+    if (role() == AccessibilityRole::Unknown && !isAttachment())
         return AccessibilityObjectInclusion::IgnoreObject;
     
-    if (roleValue() == AccessibilityRole::Inline && !isStyleFormatGroup())
+    if (role() == AccessibilityRole::Inline && !isStyleFormatGroup())
         return AccessibilityObjectInclusion::IgnoreObject;
 
     if (RenderObject* renderer = this->renderer()) {
@@ -219,7 +219,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return "AXModel"_s;
 #endif
 
-    AccessibilityRole role = roleValue();
+    auto role = this->role();
     if (role == AccessibilityRole::HorizontalRule)
         return "AXContentSeparator"_s;
     if (role == AccessibilityRole::ToggleButton)

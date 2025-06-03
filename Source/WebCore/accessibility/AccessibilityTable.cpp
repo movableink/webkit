@@ -194,7 +194,7 @@ bool AccessibilityTable::isDataTable() const
 
         // If the top section has any non-group role, then don't make this a data table. The author probably wants to use the role on the section.
         if (auto* axTableSection = cache->getOrCreate(*tableSectionElement)) {
-            auto role = axTableSection->roleValue();
+            auto role = axTableSection->role();
             if (!axTableSection->isGroup() && role != AccessibilityRole::Unknown && role != AccessibilityRole::Ignored)
                 return true;
         }
@@ -553,7 +553,7 @@ unsigned AccessibilityTable::computeCellSlots()
             return;
         processedRows.add(row);
 
-        if (row->roleValue() != AccessibilityRole::Unknown && row->isIgnored()) {
+        if (row->role() != AccessibilityRole::Unknown && row->isIgnored()) {
             // Skip ignored rows (except for those ignored because they have an unknown role, which will happen after a table has become un-exposed but is potentially becoming re-exposed).
             // This is an addition on top of the HTML algorithm because the computed AX table has extra restrictions (e.g. cannot contain aria-hidden or role="presentation" rows).
             return;

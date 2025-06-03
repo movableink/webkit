@@ -37,15 +37,9 @@
 
 namespace WebCore {
 
-bool AXCoreObject::isLink() const
-{
-    auto role = roleValue();
-    return role == AccessibilityRole::Link;
-}
-
 bool AXCoreObject::isList() const
 {
-    auto role = roleValue();
+    auto role = this->role();
     return role == AccessibilityRole::List || role == AccessibilityRole::DescriptionList;
 }
 
@@ -57,7 +51,7 @@ bool AXCoreObject::isFileUploadButton() const
 
 bool AXCoreObject::isMenuRelated() const
 {
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Menu:
     case AccessibilityRole::MenuBar:
     case AccessibilityRole::MenuItem:
@@ -71,7 +65,7 @@ bool AXCoreObject::isMenuRelated() const
 
 bool AXCoreObject::isMenuItem() const
 {
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::MenuItem:
     case AccessibilityRole::MenuItemRadio:
     case AccessibilityRole::MenuItemCheckbox:
@@ -83,7 +77,7 @@ bool AXCoreObject::isMenuItem() const
 
 bool AXCoreObject::isInputImage() const
 {
-    if (roleValue() != AccessibilityRole::Button)
+    if (role() != AccessibilityRole::Button)
         return false;
 
     std::optional type = inputType();
@@ -92,7 +86,7 @@ bool AXCoreObject::isInputImage() const
 
 bool AXCoreObject::isControl() const
 {
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Button:
     case AccessibilityRole::Checkbox:
     case AccessibilityRole::ColorWell:
@@ -117,7 +111,7 @@ bool AXCoreObject::isControl() const
 
 bool AXCoreObject::isImplicitlyInteractive() const
 {
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Button:
     case AccessibilityRole::Checkbox:
     case AccessibilityRole::ColorWell:
@@ -152,7 +146,7 @@ bool AXCoreObject::isImplicitlyInteractive() const
 
 bool AXCoreObject::isLandmark() const
 {
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Form:
     case AccessibilityRole::LandmarkBanner:
     case AccessibilityRole::LandmarkComplementary:
@@ -170,7 +164,7 @@ bool AXCoreObject::isLandmark() const
 
 bool AXCoreObject::isGroup() const
 {
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Group:
     case AccessibilityRole::TextGroup:
         return true;
@@ -190,19 +184,19 @@ bool AXCoreObject::hasHighlighting() const
 
 bool AXCoreObject::hasGridRole() const
 {
-    auto role = roleValue();
+    auto role = this->role();
     return role == AccessibilityRole::Grid || role == AccessibilityRole::TreeGrid;
 }
 
 bool AXCoreObject::hasCellRole() const
 {
-    auto role = roleValue();
+    auto role = this->role();
     return role == AccessibilityRole::Cell || role == AccessibilityRole::GridCell || role == AccessibilityRole::ColumnHeader || role == AccessibilityRole::RowHeader;
 }
 
 bool AXCoreObject::isButton() const
 {
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Button:
     case AccessibilityRole::PopUpButton:
     case AccessibilityRole::ToggleButton:
@@ -214,7 +208,7 @@ bool AXCoreObject::isButton() const
 
 bool AXCoreObject::isTextControl() const
 {
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::ComboBox:
     case AccessibilityRole::SearchField:
     case AccessibilityRole::TextArea:
@@ -227,7 +221,7 @@ bool AXCoreObject::isTextControl() const
 
 bool AXCoreObject::isValidListBox() const
 {
-    if (roleValue() != AccessibilityRole::ListBox)
+    if (role() != AccessibilityRole::ListBox)
         return false;
 
     Deque<Ref<AXCoreObject>, /* inlineCapacity */ 100> queue;
@@ -258,7 +252,7 @@ bool AXCoreObject::isValidListBox() const
 
 AXCoreObject::AccessibilityChildrenVector AXCoreObject::tabChildren()
 {
-    if (roleValue() != AccessibilityRole::TabList)
+    if (role() != AccessibilityRole::TabList)
         return { };
 
     AXCoreObject::AccessibilityChildrenVector result;
@@ -272,7 +266,7 @@ AXCoreObject::AccessibilityChildrenVector AXCoreObject::tabChildren()
 #if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
 static bool isValidChildForTable(AXCoreObject& object)
 {
-    auto role = object.roleValue();
+    auto role = object.role();
     // Tables can only have these roles as exposed-to-AT children.
     return role == AccessibilityRole::Row || role == AccessibilityRole::Column || role == AccessibilityRole::TableHeaderContainer || role == AccessibilityRole::Caption;
 }
@@ -344,7 +338,7 @@ AXCoreObject* AXCoreObject::nextInPreOrder(bool updateChildrenIfNeeded, AXCoreOb
 {
     const auto& children = childrenIncludingIgnored(updateChildrenIfNeeded);
     if (!children.isEmpty()) {
-        auto role = roleValue();
+        auto role = this->role();
         if (role != AccessibilityRole::Column && role != AccessibilityRole::TableHeaderContainer) {
             // Table columns and header containers add cells despite not being their "true" parent (which are the rows).
             // Don't allow a pre-order traversal of these object types to return cells to avoid an infinite loop.
@@ -499,7 +493,7 @@ AXCoreObject::AccessibilityChildrenVector AXCoreObject::ariaTreeItemContent()
     AccessibilityChildrenVector result;
     // The content of a treeitem excludes other treeitems or their containing groups.
     for (const auto& child : unignoredChildren()) {
-        if (!child->isGroup() && child->roleValue() != AccessibilityRole::TreeItem)
+        if (!child->isGroup() && child->role() != AccessibilityRole::TreeItem)
             result.append(child);
     }
     return result;
@@ -531,7 +525,7 @@ AXCoreObject::AXValue AXCoreObject::value()
     if (supportsRangeValue())
         return valueForRange();
 
-    if (roleValue() == AccessibilityRole::SliderThumb) {
+    if (role() == AccessibilityRole::SliderThumb) {
         RefPtr parent = parentObject();
         return parent ? parent->valueForRange() : 0.0f;
     }
@@ -542,7 +536,7 @@ AXCoreObject::AXValue AXCoreObject::value()
     if (supportsCheckedState())
         return checkboxOrRadioValue();
 
-    if (roleValue() == AccessibilityRole::Summary)
+    if (role() == AccessibilityRole::Summary)
         return isExpanded();
 
     // Radio groups return the selected radio button as the AXValue.
@@ -578,7 +572,7 @@ AXCoreObject* AXCoreObject::selectedRadioButton()
 
     // Find the child radio button that is selected (ie. the intValue == 1).
     for (const auto& child : unignoredChildren()) {
-        if (child->roleValue() == AccessibilityRole::RadioButton && child->checkboxOrRadioValue() == AccessibilityButtonState::On)
+        if (child->role() == AccessibilityRole::RadioButton && child->checkboxOrRadioValue() == AccessibilityButtonState::On)
             return child.ptr();
     }
     return nullptr;
@@ -600,7 +594,7 @@ AXCoreObject* AXCoreObject::selectedTabItem()
 
 bool AXCoreObject::canHaveSelectedChildren() const
 {
-    switch (roleValue()) {
+    switch (role()) {
     // These roles are containers whose children support aria-selected:
     case AccessibilityRole::Grid:
     case AccessibilityRole::ListBox:
@@ -628,7 +622,7 @@ AXCoreObject::AccessibilityChildrenVector AXCoreObject::selectedChildren()
     if (!canHaveSelectedChildren())
         return { };
 
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::ComboBox:
         if (auto* descendant = activeDescendant())
             return { { *descendant } };
@@ -669,7 +663,7 @@ AXCoreObject::AccessibilityChildrenVector AXCoreObject::selectedChildren()
 
 AXCoreObject::AccessibilityChildrenVector AXCoreObject::listboxSelectedChildren()
 {
-    ASSERT(roleValue() == AccessibilityRole::ListBox);
+    ASSERT(role() == AccessibilityRole::ListBox);
 
     AccessibilityChildrenVector result;
     bool isMulti = isMultiSelectable();
@@ -686,7 +680,7 @@ AXCoreObject::AccessibilityChildrenVector AXCoreObject::listboxSelectedChildren(
 
 AXCoreObject::AccessibilityChildrenVector AXCoreObject::selectedRows()
 {
-    ASSERT(roleValue() == AccessibilityRole::Grid || roleValue() == AccessibilityRole::Tree || roleValue() == AccessibilityRole::TreeGrid);
+    ASSERT(role() == AccessibilityRole::Grid || role() == AccessibilityRole::Tree || role() == AccessibilityRole::TreeGrid);
 
     bool isMulti = isMultiSelectable();
 
@@ -718,7 +712,7 @@ AXCoreObject::AccessibilityChildrenVector AXCoreObject::selectedRows()
 
 AXCoreObject::AccessibilityChildrenVector AXCoreObject::selectedListItems()
 {
-    ASSERT(roleValue() == AccessibilityRole::List);
+    ASSERT(role() == AccessibilityRole::List);
 
     AccessibilityChildrenVector selectedListItems;
     for (const auto& child : unignoredChildren()) {
@@ -737,7 +731,7 @@ void AXCoreObject::ariaTreeRows(AccessibilityChildrenVector& rows, Accessibility
     // in aria-owns.
     for (const auto& child : unignoredChildren()) {
         // Add tree items as the rows.
-        if (child->roleValue() == AccessibilityRole::TreeItem) {
+        if (child->role() == AccessibilityRole::TreeItem) {
             // Child appears both as a direct child and aria-owns, we should use the ordering as
             // described in aria-owns for this child.
             if (ownedObjects.contains(child))
@@ -764,7 +758,7 @@ void AXCoreObject::ariaTreeRows(AccessibilityChildrenVector& rows, Accessibility
             continue;
 
         // Add tree items as the rows.
-        if (child->roleValue() == AccessibilityRole::TreeItem) {
+        if (child->role() == AccessibilityRole::TreeItem) {
             // Hopefully a flow that does not occur often in practice, but if someone were to include
             // the owned child ealier in the top level of the tree, then reference via aria-owns later,
             // move it to the right place.
@@ -803,7 +797,7 @@ bool AXCoreObject::isActiveDescendantOfFocusedContainer() const
 // ARIA spec: User agents must not expose the aria-roledescription property if the element to which aria-roledescription is applied does not have a valid WAI-ARIA role or does not have an implicit WAI-ARIA role semantic.
 bool AXCoreObject::supportsARIARoleDescription() const
 {
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Generic:
     case AccessibilityRole::Unknown:
         return false;
@@ -824,7 +818,7 @@ bool AXCoreObject::supportsRangeValue() const
 
 bool AXCoreObject::supportsRequiredAttribute() const
 {
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Button:
         return isFileUploadButton();
     case AccessibilityRole::Cell:
@@ -850,12 +844,12 @@ bool AXCoreObject::supportsRequiredAttribute() const
 
 bool AXCoreObject::isRootWebArea() const
 {
-    if (roleValue() != AccessibilityRole::WebArea)
+    if (role() != AccessibilityRole::WebArea)
         return false;
 
     RefPtr parent = parentObject();
     // If the parent is a scroll area, and the scroll area has no parent, we are at the root web area.
-    return parent && parent->roleValue() == AccessibilityRole::ScrollArea && !parent->parentObject();
+    return parent && parent->role() == AccessibilityRole::ScrollArea && !parent->parentObject();
 }
 
 bool AXCoreObject::isRadioInput() const
@@ -1063,7 +1057,7 @@ bool AXCoreObject::isTableCellInSameColGroup(AXCoreObject* tableCell)
 bool AXCoreObject::isReplacedElement() const
 {
     // FIXME: Should this include <legend> and form control elements like TextIterator::isRendererReplacedElement does?
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Audio:
     case AccessibilityRole::Image:
     case AccessibilityRole::Meter:
@@ -1109,10 +1103,10 @@ String AXCoreObject::roleDescription()
     if (!roleDescription.isEmpty())
         return roleDescription;
 
-    if (roleValue() == AccessibilityRole::Figure)
+    if (role() == AccessibilityRole::Figure)
         return AXFigureText();
 
-    if (roleValue() == AccessibilityRole::Suggestion)
+    if (role() == AccessibilityRole::Suggestion)
         return AXSuggestionRoleDescriptionText();
 
     return { };
@@ -1120,7 +1114,7 @@ String AXCoreObject::roleDescription()
 
 String AXCoreObject::ariaLandmarkRoleDescription() const
 {
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Form:
         return AXARIAContentGroupText("ARIALandmarkForm"_s);
     case AccessibilityRole::LandmarkBanner:
@@ -1175,7 +1169,7 @@ unsigned AXCoreObject::blockquoteLevel() const
 {
     unsigned level = 0;
     for (RefPtr ancestor = parentObject(); ancestor; ancestor = ancestor->parentObject()) {
-        if (ancestor->roleValue() == AccessibilityRole::Blockquote)
+        if (ancestor->role() == AccessibilityRole::Blockquote)
             ++level;
     }
     return level;
@@ -1212,14 +1206,14 @@ unsigned AXCoreObject::hierarchicalLevel() const
         return level;
 
     // Only tree item will calculate its level through the DOM currently.
-    if (roleValue() != AccessibilityRole::TreeItem)
+    if (role() != AccessibilityRole::TreeItem)
         return 0;
 
     // Hierarchy leveling starts at 1, to match the aria-level spec.
     // We measure tree hierarchy by the number of groups that the item is within.
     level = 1;
     for (RefPtr ancestor = parentObject(); ancestor; ancestor = ancestor->parentObject()) {
-        auto ancestorRole = ancestor->roleValue();
+        auto ancestorRole = ancestor->role();
         if (ancestorRole == AccessibilityRole::Group)
             level++;
         else if (ancestorRole == AccessibilityRole::Tree)
@@ -1231,7 +1225,7 @@ unsigned AXCoreObject::hierarchicalLevel() const
 
 bool AXCoreObject::supportsPressAction() const
 {
-    if (roleValue() == AccessibilityRole::Presentational)
+    if (role() == AccessibilityRole::Presentational)
         return false;
 
     if (isImplicitlyInteractive() || hasClickHandler())
@@ -1246,7 +1240,7 @@ bool AXCoreObject::supportsPressAction() const
             // Stop iterating if we walk over an implicitly interactive element on our way to the click handler, as
             // we can rely on the semantics of that element to imply pressability. Also stop when encountering the body
             // or main to avoid exposing pressability for everything in web apps that implement an event-delegation mechanism.
-            return ancestor.isImplicitlyInteractive() || ancestor.roleValue() == AccessibilityRole::LandmarkMain || ancestor.hasBodyTag();
+            return ancestor.isImplicitlyInteractive() || ancestor.role() == AccessibilityRole::LandmarkMain || ancestor.hasBodyTag();
         })) {
             unsigned matches = 0;
             unsigned candidatesChecked = 0;
@@ -1272,7 +1266,7 @@ bool AXCoreObject::supportsPressAction() const
 
 bool AXCoreObject::supportsActiveDescendant() const
 {
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::ComboBox:
     case AccessibilityRole::Grid:
     case AccessibilityRole::List:
@@ -1531,7 +1525,7 @@ void AXCoreObject::appendRadioButtonGroupMembers(AccessibilityChildrenVector& li
     } else {
         // If we didn't find any radio button siblings with the traditional naming, lets search for a radio group role and find its children.
         for (RefPtr parent = parentObject(); parent; parent = parent->parentObject()) {
-            if (parent->roleValue() == AccessibilityRole::RadioGroup) {
+            if (parent->role() == AccessibilityRole::RadioGroup) {
                 appendRadioButtonDescendants(*parent, linkedUIElements);
                 break;
             }
@@ -1541,7 +1535,7 @@ void AXCoreObject::appendRadioButtonGroupMembers(AccessibilityChildrenVector& li
 
 AXCoreObject* AXCoreObject::parentObjectUnignored() const
 {
-    if (roleValue() == AccessibilityRole::Row) {
+    if (role() == AccessibilityRole::Row) {
         if (auto* table = exposedTableAncestor())
             return table;
     }

@@ -654,7 +654,7 @@ String AccessibilityRenderObject::helpText() const
         // Only take help text from an ancestor element if its a group or an unknown role. If help was 
         // added to those kinds of elements, it is likely it was meant for a child element.
         if (auto* axAncestor = axObjectCache()->getOrCreate(*ancestor)) {
-            if (!axAncestor->isGroup() && axAncestor->roleValue() != AccessibilityRole::Unknown)
+            if (!axAncestor->isGroup() && axAncestor->role() != AccessibilityRole::Unknown)
                 break;
         }
     }
@@ -1048,7 +1048,7 @@ bool AccessibilityRenderObject::isAllowedChildOfTree() const
     bool isInTree = false;
     bool isTreeItemDescendant = false;
     while (axObj) {
-        if (axObj->roleValue() == AccessibilityRole::TreeItem)
+        if (axObj->role() == AccessibilityRole::TreeItem)
             isTreeItemDescendant = true;
         if (axObj->isTree()) {
             isInTree = true;
@@ -1059,7 +1059,7 @@ bool AccessibilityRenderObject::isAllowedChildOfTree() const
     
     // If the object is in a tree, only tree items should be exposed (and the children of tree items).
     if (isInTree) {
-        AccessibilityRole role = roleValue();
+        auto role = this->role();
         if (role != AccessibilityRole::TreeItem && role != AccessibilityRole::StaticText && !isTreeItemDescendant)
             return false;
     }
@@ -1107,7 +1107,7 @@ bool AccessibilityRenderObject::computeIsIgnored() const
     if (decision == AccessibilityObjectInclusion::IgnoreObject)
         return true;
 
-    if (roleValue() == AccessibilityRole::Ignored)
+    if (role() == AccessibilityRole::Ignored)
         return true;
 
     if (ignoredFromPresentationalRole())
@@ -1169,7 +1169,7 @@ bool AccessibilityRenderObject::computeIsIgnored() const
         for (RefPtr ancestor = parentObject(); ancestor; ancestor = ancestor->parentObject()) {
             // Static text beneath TextControls is reported along with the text control text so it's ignored.
             // FIXME: Why does this not check for the other text-control roles (e.g. textarea)?
-            if (ancestor->roleValue() == AccessibilityRole::TextField)
+            if (ancestor->role() == AccessibilityRole::TextField)
                 return true;
 
             if (checkForIgnored && !ancestor->isIgnored()) {
@@ -1200,7 +1200,7 @@ bool AccessibilityRenderObject::computeIsIgnored() const
     if (isFigureElement() || isSummary())
         return false;
 
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Audio:
     case AccessibilityRole::DescriptionListTerm:
     case AccessibilityRole::DescriptionListDetail:
@@ -1275,7 +1275,7 @@ bool AccessibilityRenderObject::computeIsIgnored() const
     if (ariaRoleAttribute() != AccessibilityRole::Unknown)
         return false;
 
-    if (roleValue() == AccessibilityRole::HorizontalRule)
+    if (role() == AccessibilityRole::HorizontalRule)
         return false;
     
     // don't ignore labels, because they serve as TitleUIElements
@@ -1612,7 +1612,7 @@ AXTextRuns AccessibilityRenderObject::textRuns()
 
 AXTextRunLineID AccessibilityRenderObject::listMarkerLineID() const
 {
-    ASSERT(roleValue() == AccessibilityRole::ListMarker);
+    ASSERT(role() == AccessibilityRole::ListMarker);
     return { renderer() ? renderer()->containingBlock() : nullptr, 0 };
 }
 
@@ -2212,7 +2212,7 @@ String AccessibilityRenderObject::expandedTextValue() const
 
 bool AccessibilityRenderObject::supportsExpandedTextValue() const
 {
-    if (roleValue() == AccessibilityRole::StaticText) {
+    if (role() == AccessibilityRole::StaticText) {
         if (AccessibilityObject* parent = parentObject()) {
             auto parentName = parent->elementName();
             return parentName == ElementName::HTML_abbr || parentName == ElementName::HTML_acronym;
@@ -2348,7 +2348,7 @@ bool AccessibilityRenderObject::inheritsPresentationalRole() const
     // http://www.w3.org/WAI/PF/aria/complete#presentation
 
     std::span<decltype(aTag)* const> parentTags;
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::ListItem:
     case AccessibilityRole::ListMarker: {
         static constexpr std::array listItemParents { &dlTag, &menuTag, &olTag, &ulTag };
@@ -2379,7 +2379,7 @@ bool AccessibilityRenderObject::inheritsPresentationalRole() const
         // based on its presentational status.
         auto& name = node->tagQName();
         if (std::ranges::any_of(parentTags, [&name](auto* possibleName) { return possibleName->get() == name; }))
-            return parent->roleValue() == AccessibilityRole::Presentational;
+            return parent->role() == AccessibilityRole::Presentational;
     }
 
     return false;
@@ -2484,7 +2484,7 @@ void AccessibilityRenderObject::addRemoteSVGChildren()
     // in this case, as it will create an invalid parent-child relationship in the accessibility tree.
     // If it's parent is a WebArea, that is just the default value given when the object was created, so still add the child in that case.
     RefPtr parent = root->parentObject();
-    if (parent && parent->roleValue() != AccessibilityRole::WebArea)
+    if (parent && parent->role() != AccessibilityRole::WebArea)
         return;
 
     // In order to connect the AX hierarchy from the SVG root element from the loaded resource
@@ -2622,7 +2622,7 @@ RenderObject* AccessibilityRenderObject::markerRenderer() const
 void AccessibilityRenderObject::updateRoleAfterChildrenCreation()
 {
     // If a menu does not have valid menuitem children, it should not be exposed as a menu.
-    auto role = roleValue();
+    auto role = this->role();
     if (role == AccessibilityRole::Menu) {
         // Elements marked as menus must have at least one menu item child.
         bool hasMenuItemDescendant = false;

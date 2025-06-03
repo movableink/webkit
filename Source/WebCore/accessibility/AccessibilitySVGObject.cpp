@@ -263,13 +263,13 @@ bool AccessibilitySVGObject::inheritsPresentationalRole() const
     if (canSetFocusAttribute())
         return false;
 
-    AccessibilityRole role = roleValue();
+    auto role = this->role();
     if (role != AccessibilityRole::SVGTextPath && role != AccessibilityRole::SVGTSpan)
         return false;
 
     for (AccessibilityObject* parent = parentObject(); parent; parent = parent->parentObject()) {
         if (is<AccessibilityRenderObject>(*parent) && parent->hasElementName(ElementName::SVG_text))
-            return parent->roleValue() == AccessibilityRole::Presentational;
+            return parent->role() == AccessibilityRole::Presentational;
     }
 
     return false;

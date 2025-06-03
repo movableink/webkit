@@ -237,7 +237,7 @@ String AXTextMarker::debugDescription() const
 
     return makeString("{"_s
         , id
-        , object ? makeString(separator, "role "_s, accessibilityRoleToString(object->roleValue())) : ""_s
+        , object ? makeString(separator, "role "_s, accessibilityRoleToString(object->role())) : ""_s
         , isIgnored() ? makeString(separator, "ignored"_s) : ""_s
         // Anchor type and other fields below are not used for text markers processed off the main-thread.
         , isMainThread() ? makeString(separator, "anchor "_s, m_data.anchorType) : ""_s
@@ -535,7 +535,7 @@ String listMarkerTextOnSameLine(const AXTextMarker& marker)
 
     if (listItemAncestor) {
         if (RefPtr listMarker = findUnignoredDescendant(*listItemAncestor, /* includeSelf */ false, [] (const auto& descendant) {
-            return descendant.roleValue() == AccessibilityRole::ListMarker;
+            return descendant.role() == AccessibilityRole::ListMarker;
         })) {
             auto lineID = listMarker->listMarkerLineID();
             if (lineID && lineID == marker.lineID())
@@ -1088,7 +1088,7 @@ AXTextMarker AXTextMarker::findMarker(AXDirection direction, CoalesceObjectBreak
     }
 
     // If the BR isn't in an editable ancestor, we shouldn't be including it (in most cases of findMarker).
-    bool shouldSkipBR = ignoreBRs == IgnoreBRs::Yes && object && object->roleValue() == AccessibilityRole::LineBreak && !object->editableAncestor();
+    bool shouldSkipBR = ignoreBRs == IgnoreBRs::Yes && object && object->role() == AccessibilityRole::LineBreak && !object->editableAncestor();
     bool isWithinRunBounds = ((direction == AXDirection::Next && offset() < runs->totalLength()) || (direction == AXDirection::Previous && offset()));
     if (!shouldSkipBR && isWithinRunBounds) {
         if (runs->containsOnlyASCII || forceSingleOffsetMovement == ForceSingleOffsetMovement::Yes) {
@@ -1211,7 +1211,7 @@ AXTextMarker AXTextMarker::findLine(AXDirection direction, AXTextUnitBoundary bo
         }
         currentObject = findObjectWithRuns(*currentObject, direction, stopAtID);
         if (currentObject) {
-            if (includeTrailingLineBreak == IncludeTrailingLineBreak::No && currentObject->roleValue() == AccessibilityRole::LineBreak)
+            if (includeTrailingLineBreak == IncludeTrailingLineBreak::No && currentObject->role() == AccessibilityRole::LineBreak)
                 break;
             currentRuns = currentObject->textRuns();
             // Reset the runIndex to 0 or the maximum, since we should start iterating from the very beginning/end of the next object's runs, depending on the direction.
@@ -1272,7 +1272,7 @@ AXTextMarker AXTextMarker::findParagraph(AXDirection direction, AXTextUnitBounda
         bool isContainingBlockBoundary = currentRuns && previousRuns && currentRuns->containingBlock != previousRuns->containingBlock;
         // Don't bother computing isEditBoundary if isContainingBlockBoundary since we only need one or the other below.
         bool isEditBoundary = !isContainingBlockBoundary && previousObject && currentObject && !!previousObject->editableAncestor() != !!currentObject->editableAncestor();
-        if (!currentObject || !currentRuns || currentObject->roleValue() == AccessibilityRole::LineBreak || isContainingBlockBoundary || isEditBoundary)
+        if (!currentObject || !currentRuns || currentObject->role() == AccessibilityRole::LineBreak || isContainingBlockBoundary || isEditBoundary)
             return { *previousObject, direction == AXDirection::Next ? previousRuns->totalLength() : 0, origin };
     }
     return { };
@@ -1368,7 +1368,7 @@ AXTextMarker AXTextMarker::findWordOrSentence(AXDirection direction, bool findWo
                 return resultMarker;
 
             // We only stop at line breaks when finding words, as for sentences, the text break iterator needs to find the next sentence boundary, which isn't necessarily at a break.
-            bool shouldStopAtLineBreaks = findWord && currentObject->roleValue() == AccessibilityRole::LineBreak && !currentObject->editableAncestor();
+            bool shouldStopAtLineBreaks = findWord && currentObject->role() == AccessibilityRole::LineBreak && !currentObject->editableAncestor();
 
             // Also stop when we hit the border of an editable object.
             if (shouldStopAtLineBreaks || lastObjectIsEditable != !!currentObject->editableAncestor())
@@ -1397,7 +1397,7 @@ AXTextMarker AXTextMarker::previousParagraphStart() const
     // Like previousParagraphStartCharacterOffset, advance one if the object is a line break.
     RefPtr currentObject = isolatedObject();
     if (RefPtr adjacentObject = adjacentMarker.isolatedObject(); currentObject && adjacentObject) {
-        if (currentObject->roleValue() != AccessibilityRole::LineBreak && adjacentObject->roleValue() == AccessibilityRole::LineBreak)
+        if (currentObject->role() != AccessibilityRole::LineBreak && adjacentObject->role() == AccessibilityRole::LineBreak)
             adjacentMarker = adjacentMarker.findMarker(AXDirection::Previous, CoalesceObjectBreaks::No, IgnoreBRs::No);
     }
 
@@ -1411,7 +1411,7 @@ AXTextMarker AXTextMarker::nextParagraphEnd() const
     // Like nextParagraphEndCharacterOffset, advance one if the object is a line break.
     RefPtr currentObject = isolatedObject();
     if (RefPtr adjacentObject = adjacentMarker.isolatedObject(); currentObject && adjacentObject) {
-        if (currentObject->roleValue() != AccessibilityRole::LineBreak && adjacentObject->roleValue() == AccessibilityRole::LineBreak)
+        if (currentObject->role() != AccessibilityRole::LineBreak && adjacentObject->role() == AccessibilityRole::LineBreak)
             adjacentMarker = adjacentMarker.findMarker(AXDirection::Next, CoalesceObjectBreaks::No, IgnoreBRs::No);
     }
 
@@ -1606,7 +1606,7 @@ AXIsolatedObject* findObjectWithRuns(AXIsolatedObject& start, AXDirection direct
         auto nextInPreOrder = [&] (AXIsolatedObject& object) -> AXIsolatedObject* {
             const auto& children = object.childrenIncludingIgnored();
             if (!children.isEmpty()) {
-                auto role = object.roleValue();
+                auto role = object.role();
                 if (role != AccessibilityRole::Column && role != AccessibilityRole::TableHeaderContainer && (object.isImage() || !object.isReplacedElement())) {
                     // Table columns and header containers add cells despite not being their "true" parent (which are the rows).
                     // Don't allow a pre-order traversal of these object types to return cells to avoid an infinite loop.

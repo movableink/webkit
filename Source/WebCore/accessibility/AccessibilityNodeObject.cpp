@@ -522,7 +522,7 @@ AccessibilityRole AccessibilityNodeObject::roleFromInputElement(const HTMLInputE
                 foundCombobox = true;
                 break;
             }
-            if (!ancestor->isGroup() && ancestor->roleValue() != AccessibilityRole::Generic)
+            if (!ancestor->isGroup() && ancestor->role() != AccessibilityRole::Generic)
                 break;
         }
         if (foundCombobox)
@@ -646,7 +646,7 @@ bool AccessibilityNodeObject::canHaveChildren() const
     // nodes, like scroll areas and css-generated text.
 
     // Elements that should not have children.
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Button:
 #if !USE(ATSPI)
     // GTK/ATSPI layout tests expect popup buttons to have children.
@@ -718,7 +718,7 @@ bool AccessibilityNodeObject::computeIsIgnored() const
     if (decision == AccessibilityObjectInclusion::IgnoreObject)
         return true;
 
-    auto role = roleValue();
+    auto role = this->role();
     if (role == AccessibilityRole::Ignored || role == AccessibilityRole::Unknown)
         return true;
 
@@ -773,7 +773,7 @@ bool AccessibilityNodeObject::isSearchField() const
     if (!node)
         return false;
 
-    if (roleValue() == AccessibilityRole::SearchField)
+    if (role() == AccessibilityRole::SearchField)
         return true;
 
     RefPtr inputElement = dynamicDowncast<HTMLInputElement>(*node);
@@ -835,7 +835,7 @@ bool AccessibilityNodeObject::isEnabled() const
             break;
     }
 
-    if (roleValue() == AccessibilityRole::HorizontalRule)
+    if (role() == AccessibilityRole::HorizontalRule)
         return false;
 
     RefPtr element = dynamicDowncast<Element>(node());
@@ -1256,7 +1256,7 @@ Element* AccessibilityNodeObject::actionElement() const
     if (AccessibilityObject::isARIAInput(ariaRoleAttribute()))
         return downcast<Element>(node);
 
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Button:
     case AccessibilityRole::PopUpButton:
     case AccessibilityRole::ToggleButton:
@@ -1303,7 +1303,7 @@ bool AccessibilityNodeObject::isDescendantOfBarrenParent() const
 
 void AccessibilityNodeObject::alterRangeValue(StepAction stepAction)
 {
-    if (roleValue() != AccessibilityRole::Slider && roleValue() != AccessibilityRole::SpinButton)
+    if (role() != AccessibilityRole::Slider && role() != AccessibilityRole::SpinButton)
         return;
 
     auto element = this->element();
@@ -1380,7 +1380,7 @@ bool AccessibilityNodeObject::postKeyboardKeysForValueChange(StepAction stepActi
     // `spinbutton` elements don't have an implicit orientation, but the spec does say:
     //     > Authors SHOULD also ensure the up and down arrows on a keyboard perform the increment and decrement functions
     // So let's force a vertical orientation for `spinbutton`s so we simulate the correct keypress (either up or down).
-    bool vertical = orientation() == AccessibilityOrientation::Vertical || roleValue() == AccessibilityRole::SpinButton;
+    bool vertical = orientation() == AccessibilityOrientation::Vertical || role() == AccessibilityRole::SpinButton;
 
     // The goal is to mimic existing keyboard dispatch completely, so that this is indistinguishable from a real key press.
     typedef enum { left = 37, up = 38, right = 39, down = 40 } keyCode;
@@ -1444,7 +1444,7 @@ bool AccessibilityNodeObject::liveRegionAtomic() const
         return false;
 
     // WAI-ARIA "alert" and "status" roles have an implicit aria-atomic value of true.
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::ApplicationAlert:
     case AccessibilityRole::ApplicationStatus:
         return true;
@@ -1552,7 +1552,7 @@ bool AccessibilityNodeObject::isGenericFocusableElement() const
     if (isControl())
         return false;
 
-    AccessibilityRole role = roleValue();
+    auto role = this->role();
     if (role == AccessibilityRole::Video || role == AccessibilityRole::Audio)
         return false;
 
@@ -2015,7 +2015,7 @@ String AccessibilityNodeObject::alternativeTextForWebArea() const
 String AccessibilityNodeObject::description() const
 {
     // Static text should not have a description, it should only have a stringValue.
-    if (roleValue() == AccessibilityRole::StaticText)
+    if (role() == AccessibilityRole::StaticText)
         return { };
 
     String ariaDescription = ariaAccessibilityDescription();
@@ -2057,7 +2057,7 @@ bool AccessibilityNodeObject::roleIgnoresTitle() const
     if (ariaRoleAttribute() != AccessibilityRole::Unknown)
         return false;
 
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Generic:
     case AccessibilityRole::Unknown:
         return true;
@@ -2100,7 +2100,7 @@ String AccessibilityNodeObject::helpText() const
         // Only take help text from an ancestor element if its a group or an unknown role. If help was
         // added to those kinds of elements, it is likely it was meant for a child element.
         if (auto* axAncestor = cache->getOrCreate(*ancestor)) {
-            if (!axAncestor->isGroup() && axAncestor->roleValue() != AccessibilityRole::Unknown)
+            if (!axAncestor->isGroup() && axAncestor->role() != AccessibilityRole::Unknown)
                 break;
         }
     }
@@ -2356,10 +2356,10 @@ String AccessibilityNodeObject::title() const
 
     // For <select> elements, title should be empty if they are not rendered or have role PopUpButton.
     if (WebCore::elementName(*node) == ElementName::HTML_select
-        && (!isAccessibilityRenderObject() || roleValue() == AccessibilityRole::PopUpButton))
+        && (!isAccessibilityRenderObject() || role() == AccessibilityRole::PopUpButton))
         return { };
 
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Button:
     case AccessibilityRole::Checkbox:
     case AccessibilityRole::ListBoxOption:
@@ -2403,7 +2403,7 @@ String AccessibilityNodeObject::text() const
             return textOrder[0].text;
     }
 
-    if (roleValue() == AccessibilityRole::StaticText)
+    if (role() == AccessibilityRole::StaticText)
         return textUnderElement();
 
     if (!isTextControl())
@@ -2684,7 +2684,7 @@ bool AccessibilityNodeObject::isFocused() const
 
     // A web area is represented by the Document node in the DOM tree which isn't focusable.
     // Instead, check if the frame's selection is focused.
-    if (roleValue() != AccessibilityRole::WebArea)
+    if (role() != AccessibilityRole::WebArea)
         return false;
 
     auto* frame = document.frame();
@@ -2881,7 +2881,7 @@ bool AccessibilityNodeObject::canSetSelectedAttribute() const
         return true;
 
     // Elements that can be selected
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Cell:
     case AccessibilityRole::GridCell:
     case AccessibilityRole::Row:

@@ -1289,7 +1289,7 @@ void streamAXCoreObject(TextStream& stream, const AXCoreObject& object, const Op
         stream << "objectID " << object.objectID();
 
     if (options & AXStreamOptions::Role)
-        stream.dumpProperty("role"_s, object.roleValue());
+        stream.dumpProperty("role"_s, object.role());
 
     auto* axObject = dynamicDowncast<AccessibilityObject>(object);
     if (axObject) {
@@ -1309,7 +1309,7 @@ void streamAXCoreObject(TextStream& stream, const AXCoreObject& object, const Op
         stream.dumpProperty("identifier"_s, WTFMove(id));
 
     if (options & AXStreamOptions::OuterHTML) {
-        auto role = object.roleValue();
+        auto role = object.role();
         auto* objectWithInterestingHTML = role == AccessibilityRole::Button ? // Add here other roles of interest.
             &object : nullptr;
 

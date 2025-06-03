@@ -815,31 +815,31 @@ public:
     virtual bool isAXIsolatedObjectInstance() const = 0;
     virtual bool isAXRemoteFrame() const = 0;
 
-    bool isHeading() const { return roleValue() == AccessibilityRole::Heading; }
-    bool isLink() const;
-    bool isCode() const { return roleValue() == AccessibilityRole::Code; }
-    bool isImage() const { return roleValue() == AccessibilityRole::Image; }
-    bool isImageMap() const { return roleValue() == AccessibilityRole::ImageMap; }
-    bool isVideo() const { return roleValue() == AccessibilityRole::Video; }
+    bool isHeading() const { return role() == AccessibilityRole::Heading; }
+    bool isLink() const { return role() == AccessibilityRole::Link; };
+    bool isCode() const { return role() == AccessibilityRole::Code; }
+    bool isImage() const { return role() == AccessibilityRole::Image; }
+    bool isImageMap() const { return role() == AccessibilityRole::ImageMap; }
+    bool isVideo() const { return role() == AccessibilityRole::Video; }
     virtual bool isSecureField() const = 0;
     virtual bool isNativeTextControl() const = 0;
-    bool isWebArea() const { return roleValue() == AccessibilityRole::WebArea; }
+    bool isWebArea() const { return role() == AccessibilityRole::WebArea; }
     bool isRootWebArea() const;
-    bool isCheckbox() const { return roleValue() == AccessibilityRole::Checkbox; }
-    bool isRadioButton() const { return roleValue() == AccessibilityRole::RadioButton; }
-    bool isListBox() const { return roleValue() == AccessibilityRole::ListBox; }
+    bool isCheckbox() const { return role() == AccessibilityRole::Checkbox; }
+    bool isRadioButton() const { return role() == AccessibilityRole::RadioButton; }
+    bool isListBox() const { return role() == AccessibilityRole::ListBox; }
     // The children of listboxes must be of specific roles. Returns true if at least one of those is present.
     bool isValidListBox() const;
     bool isInvalidListBox() const { return isListBox() && !isValidListBox(); }
-    bool isListBoxOption() const { return roleValue() == AccessibilityRole::ListBoxOption; }
+    bool isListBoxOption() const { return role() == AccessibilityRole::ListBoxOption; }
     virtual bool isAttachment() const = 0;
     bool isMenuRelated() const;
-    bool isMenu() const { return roleValue() == AccessibilityRole::Menu; }
-    bool isMenuBar() const { return roleValue() == AccessibilityRole::MenuBar; }
+    bool isMenu() const { return role() == AccessibilityRole::Menu; }
+    bool isMenuBar() const { return role() == AccessibilityRole::MenuBar; }
     bool isMenuItem() const;
     bool isInputImage() const;
-    bool isProgressIndicator() const { return roleValue() == AccessibilityRole::ProgressIndicator || roleValue() == AccessibilityRole::Meter; }
-    bool isSlider() const { return roleValue() == AccessibilityRole::Slider; }
+    bool isProgressIndicator() const { return role() == AccessibilityRole::ProgressIndicator || role() == AccessibilityRole::Meter; }
+    bool isSlider() const { return role() == AccessibilityRole::Slider; }
     bool isControl() const;
     bool isRadioInput() const;
     // lists support (l, ul, ol, dl)
@@ -894,7 +894,7 @@ public:
     virtual std::optional<unsigned> axRowIndex() const = 0;
 
     // Table column support.
-    bool isTableColumn() const { return roleValue() == AccessibilityRole::Column; }
+    bool isTableColumn() const { return role() == AccessibilityRole::Column; }
     virtual unsigned columnIndex() const = 0;
     AXCoreObject* columnHeader();
 
@@ -916,49 +916,49 @@ public:
 #endif
 
     // Native spin buttons.
-    bool isSpinButton() const { return roleValue() == AccessibilityRole::SpinButton; }
+    bool isSpinButton() const { return role() == AccessibilityRole::SpinButton; }
     SpinButtonType spinButtonType();
     virtual AXCoreObject* incrementButton() = 0;
     virtual AXCoreObject* decrementButton() = 0;
 
     virtual bool isMockObject() const = 0;
-    bool isSwitch() const { return roleValue() == AccessibilityRole::Switch; }
-    bool isToggleButton() const { return roleValue() == AccessibilityRole::ToggleButton; }
+    bool isSwitch() const { return role() == AccessibilityRole::Switch; }
+    bool isToggleButton() const { return role() == AccessibilityRole::ToggleButton; }
     bool isTextControl() const;
     virtual bool isNonNativeTextControl() const = 0;
-    bool isTabList() const { return roleValue() == AccessibilityRole::TabList; }
-    bool isTabItem() const { return roleValue() == AccessibilityRole::Tab; }
-    bool isRadioGroup() const { return roleValue() == AccessibilityRole::RadioGroup; }
-    bool isComboBox() const { return roleValue() == AccessibilityRole::ComboBox; }
-    bool isDateTime() const { return roleValue() == AccessibilityRole::DateTime; }
-    bool isGrid() const { return roleValue() == AccessibilityRole::Grid; }
-    bool isTree() const { return roleValue() == AccessibilityRole::Tree; }
-    bool isTreeGrid() const { return roleValue() == AccessibilityRole::TreeGrid; }
-    bool isTreeItem() const { return roleValue() == AccessibilityRole::TreeItem; }
-    bool isScrollbar() const { return roleValue() == AccessibilityRole::ScrollBar; }
-    bool isRemoteFrame() const { return roleValue() == AccessibilityRole::RemoteFrame; }
+    bool isTabList() const { return role() == AccessibilityRole::TabList; }
+    bool isTabItem() const { return role() == AccessibilityRole::Tab; }
+    bool isRadioGroup() const { return role() == AccessibilityRole::RadioGroup; }
+    bool isComboBox() const { return role() == AccessibilityRole::ComboBox; }
+    bool isDateTime() const { return role() == AccessibilityRole::DateTime; }
+    bool isGrid() const { return role() == AccessibilityRole::Grid; }
+    bool isTree() const { return role() == AccessibilityRole::Tree; }
+    bool isTreeGrid() const { return role() == AccessibilityRole::TreeGrid; }
+    bool isTreeItem() const { return role() == AccessibilityRole::TreeItem; }
+    bool isScrollbar() const { return role() == AccessibilityRole::ScrollBar; }
+    bool isRemoteFrame() const { return role() == AccessibilityRole::RemoteFrame; }
 #if PLATFORM(COCOA)
     virtual RetainPtr<id> remoteFramePlatformElement() const = 0;
 #endif
     virtual bool hasRemoteFrameChild() const = 0;
 
     bool isButton() const;
-    bool isMeter() const { return roleValue() == AccessibilityRole::Meter; }
+    bool isMeter() const { return role() == AccessibilityRole::Meter; }
 
-    bool isListItem() const { return roleValue() == AccessibilityRole::ListItem; }
+    bool isListItem() const { return role() == AccessibilityRole::ListItem; }
     bool isCheckboxOrRadio() const { return isCheckbox() || isRadioButton(); }
-    bool isScrollView() const { return roleValue() == AccessibilityRole::ScrollArea; }
-    bool isCanvas() const { return roleValue() == AccessibilityRole::Canvas; }
-    bool isPopUpButton() const { return roleValue() == AccessibilityRole::PopUpButton; }
-    bool isColorWell() const { return roleValue() == AccessibilityRole::ColorWell; }
-    bool isSplitter() const { return roleValue() == AccessibilityRole::Splitter; }
-    bool isToolbar() const { return roleValue() == AccessibilityRole::Toolbar; }
-    bool isSummary() const { return roleValue() == AccessibilityRole::Summary; }
-    bool isBlockquote() const { return roleValue() == AccessibilityRole::Blockquote; }
+    bool isScrollView() const { return role() == AccessibilityRole::ScrollArea; }
+    bool isCanvas() const { return role() == AccessibilityRole::Canvas; }
+    bool isPopUpButton() const { return role() == AccessibilityRole::PopUpButton; }
+    bool isColorWell() const { return role() == AccessibilityRole::ColorWell; }
+    bool isSplitter() const { return role() == AccessibilityRole::Splitter; }
+    bool isToolbar() const { return role() == AccessibilityRole::Toolbar; }
+    bool isSummary() const { return role() == AccessibilityRole::Summary; }
+    bool isBlockquote() const { return role() == AccessibilityRole::Blockquote; }
 #if ENABLE(MODEL_ELEMENT)
-    bool isModel() const { return roleValue() == AccessibilityRole::Model; }
+    bool isModel() const { return role() == AccessibilityRole::Model; }
 #endif
-    bool isLineBreak() const { return roleValue() == AccessibilityRole::LineBreak; }
+    bool isLineBreak() const { return role() == AccessibilityRole::LineBreak; }
 
     bool isLandmark() const;
     virtual bool isKeyboardFocusable() const = 0;
@@ -999,7 +999,7 @@ public:
     virtual bool hasSameFont(AXCoreObject&) = 0;
     virtual bool hasSameFontColor(AXCoreObject&) = 0;
     virtual bool hasSameStyle(AXCoreObject&) = 0;
-    bool isStaticText() const { return roleValue() == AccessibilityRole::StaticText; }
+    bool isStaticText() const { return role() == AccessibilityRole::StaticText; }
     virtual bool hasUnderline() const = 0;
     bool hasHighlighting() const;
     virtual AXTextMarkerRange textInputMarkedTextMarkerRange() const = 0;
@@ -1012,7 +1012,7 @@ public:
     virtual bool canSetFocusAttribute() const = 0;
     bool canSetTextRangeAttributes() const;
     virtual bool canSetValueAttribute() const = 0;
-    bool canSetNumericValue() const { return roleValue() == AccessibilityRole::ScrollBar; }
+    bool canSetNumericValue() const { return role() == AccessibilityRole::ScrollBar; }
     virtual bool canSetSelectedAttribute() const = 0;
     bool canSetSelectedChildren() const;
     bool canSetExpandedAttribute() const;
@@ -1182,7 +1182,7 @@ public:
     // Only if isColorWell()
     virtual SRGBA<uint8_t> colorValue() const = 0;
 
-    AccessibilityRole roleValue() const { return m_role; }
+    AccessibilityRole role() const { return m_role; }
 #if PLATFORM(MAC)
     // Non-localized string associated with the object role.
     String rolePlatformString();
@@ -1304,7 +1304,7 @@ public:
         return children(updateChildrenIfNeeded);
     };
 #if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
-    bool onlyAddsUnignoredChildren() const { return isTableColumn() || roleValue() == AccessibilityRole::TableHeaderContainer; }
+    bool onlyAddsUnignoredChildren() const { return isTableColumn() || role() == AccessibilityRole::TableHeaderContainer; }
     AccessibilityChildrenVector unignoredChildren(bool updateChildrenIfNeeded = true);
     AXCoreObject* firstUnignoredChild();
 #else
@@ -1336,7 +1336,7 @@ public:
     }
     bool shouldSetChildIndexInParent() const
     {
-        auto role = roleValue();
+        auto role = this->role();
         // Columns and table header containers add cells as children, but are not their "true" parent
         // (the rows are), so these two roles should not update their children's index-in-parent.
         return role != AccessibilityRole::Column && role != AccessibilityRole::TableHeaderContainer;
@@ -1617,13 +1617,13 @@ void attributedStringSetElement(NSMutableAttributedString *, NSString *attribute
 inline bool AXCoreObject::shouldComputeDescriptionAttributeValue() const
 {
     // Static text objects shouldn't return a description. Their content is communicated via AXValue.
-    return roleValue() != AccessibilityRole::StaticText;
+    return role() != AccessibilityRole::StaticText;
 }
 
 inline bool AXCoreObject::shouldComputeTitleAttributeValue() const
 {
     // Static text objects shouldn't return a title. Their content is communicated via AXValue.
-    return roleValue() != AccessibilityRole::StaticText;
+    return role() != AccessibilityRole::StaticText;
 }
 #endif // PLATFORM(COCOA)
 
@@ -1659,7 +1659,7 @@ inline const String AXCoreObject::liveRegionRelevant() const
 inline const String AXCoreObject::liveRegionStatus() const
 {
     auto explicitStatus = explicitLiveRegionStatus();
-    return explicitStatus.isEmpty() ? defaultLiveRegionStatusForRole(roleValue()) : explicitStatus;
+    return explicitStatus.isEmpty() ? defaultLiveRegionStatusForRole(role()) : explicitStatus;
 }
 
 inline bool AXCoreObject::supportsLiveRegion(bool excludeIfOff) const
@@ -1775,7 +1775,7 @@ T* clickableSelfOrAncestor(const T& startObject, const F& shouldStop)
     }, shouldStop);
 
     // Presentational objects should not be allowed to be clicked.
-    if (ancestor && ancestor->roleValue() == AccessibilityRole::Presentational)
+    if (ancestor && ancestor->role() == AccessibilityRole::Presentational)
         return nullptr;
     return ancestor;
 }

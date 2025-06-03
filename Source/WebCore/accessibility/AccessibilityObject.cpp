@@ -141,7 +141,7 @@ String AccessibilityObject::dbgInternal(bool verbose, OptionSet<AXDebugStringOpt
 {
     StringBuilder result;
     result.append("{"_s);
-    result.append("role: "_s, accessibilityRoleToString(roleValue()));
+    result.append("role: "_s, accessibilityRoleToString(role()));
     result.append(", ID "_s, objectID().loggingString());
 
     if (verbose || debugOptions & AXDebugStringOption::Ignored)
@@ -170,7 +170,7 @@ String AccessibilityObject::dbgInternal(bool verbose, OptionSet<AXDebugStringOpt
 void AccessibilityObject::detachRemoteParts(AccessibilityDetachmentType detachmentType)
 {
     // Menu close events need to notify the platform. No element is used in the notification because it's a destruction event.
-    if (detachmentType == AccessibilityDetachmentType::ElementDestroyed && roleValue() == AccessibilityRole::Menu) {
+    if (detachmentType == AccessibilityDetachmentType::ElementDestroyed && role() == AccessibilityRole::Menu) {
         if (auto* cache = axObjectCache())
             cache->postNotification(nullptr, cache->document(), AXNotification::MenuClosed);
     }
@@ -225,7 +225,7 @@ void AccessibilityObject::initializeAncestorFlags(const OptionSet<AXAncestorFlag
 
 bool AccessibilityObject::matchesAncestorFlag(AXAncestorFlag flag) const
 {
-    auto role = roleValue();
+    auto role = this->role();
     switch (flag) {
     case AXAncestorFlag::IsInDescriptionListDetail:
         return role == AccessibilityRole::DescriptionListDetail;
@@ -339,7 +339,7 @@ bool AccessibilityObject::accessibleNameDerivesFromContent() const
     }
     
     // Now check for generically derived elements now that we know the element does not match a specific ARIA role.
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Slider:
     case AccessibilityRole::ListBox:
         return false;
@@ -355,7 +355,7 @@ bool AccessibilityObject::accessibleNameDerivesFromContent() const
 // from the first descendant element node with a heading role.
 bool AccessibilityObject::accessibleNameDerivesFromHeading() const
 {
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::ApplicationAlertDialog:
     case AccessibilityRole::ApplicationDialog:
     case AccessibilityRole::DocumentArticle:
@@ -604,7 +604,7 @@ AccessibilityObject* firstAccessibleObjectFromNode(const Node* node, NOESCAPE co
 bool AccessibilityObject::isDescendantOfRole(AccessibilityRole role) const
 {
     return Accessibility::findAncestor<AccessibilityObject>(*this, false, [&role] (const AccessibilityObject& object) {
-        return object.roleValue() == role;
+        return object.role() == role;
     }) != nullptr;
 }
 
@@ -661,7 +661,7 @@ void AccessibilityObject::insertChild(AccessibilityObject& child, unsigned index
         displayContentsParent->setNeedsToUpdateChildren();
 
         // Don't exit early for certain table components, as they rely on inserting children for which they are not the rightful parent to behave correctly.
-        bool allowInsert = isTableColumn() || roleValue() == AccessibilityRole::TableHeaderContainer;
+        bool allowInsert = isTableColumn() || role() == AccessibilityRole::TableHeaderContainer;
 
         // AccessibilityTable::addChildren never actually calls `insertChild` for table section elements
         // (e.g. tbody, thead), so don't block this `insertChild` for display:contents section elements,
@@ -1223,7 +1223,7 @@ bool AccessibilityObject::isARIAControl(AccessibilityRole ariaRole)
 
 bool AccessibilityObject::isRangeControl() const
 {
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Meter:
     case AccessibilityRole::ProgressIndicator:
     case AccessibilityRole::Slider:
@@ -1944,7 +1944,7 @@ bool AccessibilityObject::hasContentEditableAttributeSet() const
 
 bool AccessibilityObject::dependsOnTextUnderElement() const
 {
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::PopUpButton:
         // Native popup buttons should not use their descendant's text as a title. That value is retrieved through stringValue().
         if (hasElementName(ElementName::HTML_select))
@@ -1980,8 +1980,7 @@ bool AccessibilityObject::dependsOnTextUnderElement() const
 
 bool AccessibilityObject::supportsReadOnly() const
 {
-    AccessibilityRole role = roleValue();
-
+    auto role = this->role();
     return role == AccessibilityRole::Checkbox
         || role == AccessibilityRole::ComboBox
         || role == AccessibilityRole::Grid
@@ -2011,7 +2010,7 @@ String AccessibilityObject::readOnlyValue() const
 
 bool AccessibilityObject::supportsCheckedState() const
 {
-    auto role = roleValue();
+    auto role = this->role();
     return isCheckboxOrRadio()
     || role == AccessibilityRole::MenuItemCheckbox
     || role == AccessibilityRole::MenuItemRadio
@@ -2249,7 +2248,7 @@ AccessibilityObject* AccessibilityObject::headingElementForNode(Node* node)
     AccessibilityObject* axObject = renderObject->document().axObjectCache()->getOrCreate(*renderObject);
 
     return Accessibility::findAncestor<AccessibilityObject>(*axObject, true, [] (const AccessibilityObject& object) {
-        return object.roleValue() == AccessibilityRole::Heading;
+        return object.role() == AccessibilityRole::Heading;
     });
 }
 
@@ -2259,7 +2258,7 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityObject::disclosedRows()
 
     for (const auto& obj : unignoredChildren()) {
         // Add tree items as the rows.
-        if (obj->roleValue() == AccessibilityRole::TreeItem)
+        if (obj->role() == AccessibilityRole::TreeItem)
             result.append(obj);
         // If it's not a tree item, then descend into the group to find more tree items.
         else 
@@ -2283,7 +2282,7 @@ String AccessibilityObject::localizedActionVerb() const
     static NeverDestroyed<const String> menuListPopupAction(AXMenuListPopupActionVerb());
     static NeverDestroyed<const String> listItemAction(AXListItemActionVerb());
 
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Button:
     case AccessibilityRole::ToggleButton:
         return buttonAction;
@@ -2315,7 +2314,7 @@ String AccessibilityObject::actionVerb() const
 {
 #if !PLATFORM(IOS_FAMILY)
     // FIXME: Need to add verbs for select elements.
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Button:
     case AccessibilityRole::ToggleButton:
         return "press"_s;
@@ -2767,7 +2766,7 @@ AccessibilityRole AccessibilityObject::ariaRoleToWebCoreRole(const String& value
 String AccessibilityObject::computedRoleString() const
 {
     // FIXME: Need a few special cases that aren't in the RoleMap: option, etc. http://webkit.org/b/128296
-    AccessibilityRole role = roleValue();
+    auto role = this->role();
 
     if (role == AccessibilityRole::Image && isIgnored())
         return reverseAriaRoleMap().get(enumToUnderlyingType(AccessibilityRole::Presentational));
@@ -2963,7 +2962,7 @@ bool AccessibilityObject::isTabItemSelected() const
         auto* tabPanel = cache->getOrCreate(element.ptr());
 
         // A tab item should only control tab panels.
-        if (!tabPanel || tabPanel->roleValue() != AccessibilityRole::TabPanel)
+        if (!tabPanel || tabPanel->role() != AccessibilityRole::TabPanel)
             continue;
 
         auto* checkFocusElement = focusedElement;
@@ -3086,7 +3085,7 @@ AccessibilityObject* AccessibilityObject::focusedUIElement() const
 void AccessibilityObject::setSelectedRows(AccessibilityChildrenVector&& selectedRows)
 {
     // Setting selected only makes sense in trees and tables (and tree-tables).
-    AccessibilityRole role = roleValue();
+    auto role = this->role();
     if (role != AccessibilityRole::Tree && role != AccessibilityRole::TreeGrid && role != AccessibilityRole::Table && role != AccessibilityRole::Grid)
         return;
 
@@ -3299,7 +3298,7 @@ bool AccessibilityObject::supportsExpanded() const
     if (isColumnHeader() || isRowHeader())
         return hasValidAriaExpandedValue();
 
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Details:
         return true;
     case AccessibilityRole::Button:
@@ -3359,7 +3358,7 @@ bool AccessibilityObject::isExpanded() const
 
 bool AccessibilityObject::supportsChecked() const
 {
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Checkbox:
     case AccessibilityRole::MenuItemCheckbox:
     case AccessibilityRole::MenuItemRadio:
@@ -3373,7 +3372,7 @@ bool AccessibilityObject::supportsChecked() const
 
 bool AccessibilityObject::supportsRowCountChange() const
 {
-    switch (roleValue()) {
+    switch (role()) {
     case AccessibilityRole::Tree:
     case AccessibilityRole::TreeGrid:
     case AccessibilityRole::Grid:
@@ -3784,7 +3783,7 @@ void AccessibilityObject::setLastKnownIsIgnoredValue(bool isIgnored)
 
 bool AccessibilityObject::ignoredFromPresentationalRole() const
 {
-    return roleValue() == AccessibilityRole::Presentational || inheritsPresentationalRole();
+    return role() == AccessibilityRole::Presentational || inheritsPresentationalRole();
 }
 
 bool AccessibilityObject::includeIgnoredInCoreTree() const
@@ -3934,7 +3933,7 @@ AccessibilityObjectInclusion AccessibilityObject::defaultObjectInclusion() const
         return AccessibilityObjectInclusion::IgnoreObject;
 
     // Include <dialog> elements and elements with role="dialog".
-    if (roleValue() == AccessibilityRole::ApplicationDialog)
+    if (role() == AccessibilityRole::ApplicationDialog)
         return AccessibilityObjectInclusion::IncludeObject;
 
     return accessibilityPlatformIncludesObject();

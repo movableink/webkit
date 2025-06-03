@@ -302,7 +302,7 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
     if (![self _prepareAccessibilityCall])
         return false;
     
-    AccessibilityRole role = self.axBackingObject->roleValue();
+    AccessibilityRole role = self.axBackingObject->role();
     // Elements that can be returned when performing fuzzy hit testing.
     switch (role) {
     case AccessibilityRole::Button:
@@ -497,7 +497,7 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
     if (![self _prepareAccessibilityCall])
         return nil;
 
-    return accessibilityRoleToString(self.axBackingObject->roleValue()).createNSString().autorelease();
+    return accessibilityRoleToString(self.axBackingObject->role()).createNSString().autorelease();
 }
 
 - (BOOL)accessibilityHasPopup
@@ -572,14 +572,14 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
     if (![self _prepareAccessibilityCall])
         return NO;
 
-    AccessibilityRole roleValue = self.axBackingObject->roleValue();
+    AccessibilityRole roleValue = self.axBackingObject->role();
     return roleValue == AccessibilityRole::ApplicationDialog || roleValue == AccessibilityRole::ApplicationAlertDialog;
 }
 
 static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descendant, const AccessibilityRoleSet& roles)
 {
     auto* ancestor = Accessibility::findAncestor(descendant, false, [&roles] (const auto& object) {
-        return roles.contains(object.roleValue());
+        return roles.contains(object.role());
     });
     return ancestor ? ancestor->wrapper() : nil;
 }
@@ -664,7 +664,7 @@ static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descenda
     // Trait information also needs to be gathered from the parents above the object.
     // The parentObject is needed instead of the unignoredParentObject, because a table might be ignored, but information still needs to be gathered from it.
     for (auto* parent = backingObject->parentObject(); parent; parent = parent->parentObject()) {
-        auto parentRole = parent->roleValue();
+        auto parentRole = parent->role();
         if (parentRole == AccessibilityRole::WebArea)
             break;
 
@@ -698,7 +698,7 @@ static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descenda
     if (![self _prepareAccessibilityCall])
         return NO;
 
-    if (self.axBackingObject->roleValue() != AccessibilityRole::Video)
+    if (self.axBackingObject->role() != AccessibilityRole::Video)
         return NO;
 
     // Convey the video object as interactive if auto-play is not enabled.
@@ -758,7 +758,7 @@ static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descenda
     if (backingObject->isSecureField())
         traits |= [self _axSecureTextFieldTrait];
 
-    switch (backingObject->roleValue()) {
+    switch (backingObject->role()) {
     case AccessibilityRole::SearchField:
         traits |= [self _axSearchFieldTrait];
         break;
@@ -777,7 +777,7 @@ static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descenda
     if (![self _prepareAccessibilityCall])
         return 0;
 
-    AccessibilityRole role = self.axBackingObject->roleValue();
+    AccessibilityRole role = self.axBackingObject->role();
     uint64_t traits = [self _axWebContentTrait];
     switch (role) {
     case AccessibilityRole::Link:
@@ -886,7 +886,7 @@ static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descenda
 
     backingObject->updateBackingStore();
 
-    switch (backingObject->roleValue()) {
+    switch (backingObject->role()) {
     case AccessibilityRole::TextField:
     case AccessibilityRole::TextArea:
     case AccessibilityRole::Button:
@@ -1163,10 +1163,10 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     // text, in which case, that alternative text is returned here.
     // The reason is that the string value for static text inside a heading is
     // used to convey the heading level instead.
-    if (backingObject->roleValue() == AccessibilityRole::StaticText
+    if (backingObject->role() == AccessibilityRole::StaticText
         && self.accessibilityTraits & self._axHeaderTrait) {
         auto* heading = Accessibility::findAncestor(*backingObject, false, [] (const auto& ancestor) {
-            return ancestor.roleValue() == AccessibilityRole::Heading;
+            return ancestor.role() == AccessibilityRole::Heading;
         });
 
         if (heading) {
@@ -1189,11 +1189,11 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
         title = ""_s;
 
     // Footer is not considered a landmark, but we want the role description.
-    if (backingObject->roleValue() == AccessibilityRole::Footer)
+    if (backingObject->role() == AccessibilityRole::Footer)
         landmarkDescription = AXFooterRoleDescriptionText().createNSString();
 
     NSMutableString *result = [NSMutableString string];
-    if (backingObject->roleValue() == AccessibilityRole::HorizontalRule)
+    if (backingObject->role() == AccessibilityRole::HorizontalRule)
         appendStringToResult(result, AXHorizontalRuleDescriptionText().createNSString().get());
 
     appendStringToResult(result, title.createNSString().get());
@@ -1410,7 +1410,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
 
         // Only expose positional information for the first non-list-marker child in a list item.
         for (const auto& child : listItemChildren) {
-            if (child->roleValue() != AccessibilityRole::ListMarker) {
+            if (child->role() != AccessibilityRole::ListMarker) {
                 if (child.ptr() == self.axBackingObject)
                     break;
                 return NSMakeRange(NSNotFound, 0);
@@ -1521,7 +1521,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     // If self has the header trait, value should be the heading level.
     if (self.accessibilityTraits & self._axHeaderTrait) {
         auto* heading = Accessibility::findAncestor(backingObject.get(), true, [] (const auto& ancestor) {
-            return ancestor.roleValue() == AccessibilityRole::Heading;
+            return ancestor.role() == AccessibilityRole::Heading;
         });
         ASSERT(heading);
 
@@ -1608,7 +1608,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     if (![self _prepareAccessibilityCall])
         return NO;
 
-    return self.axBackingObject->roleValue() == AccessibilityRole::ComboBox;
+    return self.axBackingObject->role() == AccessibilityRole::ComboBox;
 }
 
 - (NSString *)accessibilityHint
@@ -1767,7 +1767,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     if (!self.axBackingObject)
         return NO;
     
-    AccessibilityRole role = self.axBackingObject->roleValue();
+    AccessibilityRole role = self.axBackingObject->role();
     if (role != AccessibilityRole::Link)
         return NO;
     
@@ -1779,7 +1779,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
         return NO;
     
     for (unsigned i = 0; i < childrenSize; ++i) {
-        AccessibilityRole role = children[i]->roleValue();
+        AccessibilityRole role = children[i]->role();
         if (role != AccessibilityRole::StaticText && role != AccessibilityRole::Image && !children[i]->isGroup())
             return NO;
     }
@@ -1974,7 +1974,7 @@ static NSArray *accessibleElementsForObjects(const AXCoreObject::AccessibilityCh
 
     // If this static text inside of a link, it should use its parent's linked element.
     auto* backingObject = self.axBackingObject;
-    if (backingObject->roleValue() == AccessibilityRole::StaticText && backingObject->parentObjectUnignored()->isLink())
+    if (backingObject->role() == AccessibilityRole::StaticText && backingObject->parentObjectUnignored()->isLink())
         backingObject = backingObject->parentObjectUnignored();
 
     auto linkedObjects = backingObject->linkedObjects();
@@ -2126,7 +2126,7 @@ static RenderObject* rendererForView(WAKView* view)
 {
     // Use this to check if an object is inside a treeitem object.
     if (AXCoreObject* parent = Accessibility::findAncestor<AXCoreObject>(*object, true, [] (const AXCoreObject& object) {
-        return object.roleValue() == AccessibilityRole::TreeItem;
+        return object.role() == AccessibilityRole::TreeItem;
     }))
         return parent;
     return nil;
@@ -2817,7 +2817,7 @@ static RenderObject* rendererForView(WAKView* view)
         return NO;
     
     return Accessibility::findAncestor(*self.axBackingObject, false, [] (const auto& object) {
-        return object.roleValue() == AccessibilityRole::Insertion;
+        return object.role() == AccessibilityRole::Insertion;
     }) != nullptr;
 }
 
@@ -2827,7 +2827,7 @@ static RenderObject* rendererForView(WAKView* view)
         return NO;
     
     return Accessibility::findAncestor(*self.axBackingObject, false, [] (const auto& object) {
-        return object.roleValue() == AccessibilityRole::Deletion;
+        return object.role() == AccessibilityRole::Deletion;
     }) != nullptr;
 }
 
@@ -2843,7 +2843,7 @@ static RenderObject* rendererForView(WAKView* view)
         const auto& children = parent->unignoredChildren();
         if (children.isEmpty() || children[0].ptr() != object)
             return NO;
-        if (parent->roleValue() == AccessibilityRole::Suggestion)
+        if (parent->role() == AccessibilityRole::Suggestion)
             return YES;
         object = parent;
         parent = object->parentObjectUnignored();
@@ -2863,7 +2863,7 @@ static RenderObject* rendererForView(WAKView* view)
         const auto& children = parent->unignoredChildren();
         if (children.isEmpty() || children.last().ptr() != object)
             return NO;
-        if (parent->roleValue() == AccessibilityRole::Suggestion)
+        if (parent->role() == AccessibilityRole::Suggestion)
             return YES;
         object = parent;
         parent = object->parentObjectUnignored();
@@ -3134,7 +3134,7 @@ static RenderObject* rendererForView(WAKView* view)
     if (![self _prepareAccessibilityCall])
         return NO;
 
-    return self.axBackingObject->roleValue() == AccessibilityRole::DocumentMath;
+    return self.axBackingObject->role() == AccessibilityRole::DocumentMath;
 }
 
 - (NSInteger)accessibilityMathLineThickness
@@ -3150,7 +3150,7 @@ static RenderObject* rendererForView(WAKView* view)
     if (![self _prepareAccessibilityCall])
         return nil;
 
-    if (self.axBackingObject->roleValue() == AccessibilityRole::MathElement) {
+    if (self.axBackingObject->role() == AccessibilityRole::MathElement) {
         if (self.axBackingObject->isMathFraction())
             return @"AXMathFraction";
         if (self.axBackingObject->isMathFenced())

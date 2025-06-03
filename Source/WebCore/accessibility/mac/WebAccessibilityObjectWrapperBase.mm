@@ -632,7 +632,7 @@ std::optional<SimpleRange> makeDOMRange(Document* document, NSRange range)
                     continue;
 
                 RetainPtr<NSString> label;
-                switch (object->roleValue()) {
+                switch (object->role()) {
                 case AccessibilityRole::StaticText:
                     label = object->stringValue().createNSString();
                     break;

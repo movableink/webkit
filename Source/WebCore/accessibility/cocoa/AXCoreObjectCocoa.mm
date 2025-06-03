@@ -230,7 +230,7 @@ RetainPtr<NSMutableAttributedString> AXCoreObject::createAttributedString(String
         if (ancestor->hasMarkTag())
             attributedStringSetNumber(string.get(), NSAccessibilityHighlightAttribute, @YES, range);
 
-        switch (ancestor->roleValue()) {
+        switch (ancestor->role()) {
         case AccessibilityRole::Insertion:
             attributedStringSetNumber(string.get(), NSAccessibilityIsSuggestedInsertionAttribute, @YES, range);
             break;
@@ -257,7 +257,7 @@ RetainPtr<NSMutableAttributedString> AXCoreObject::createAttributedString(String
             }
         }
 
-        if (ancestor->roleValue() == AccessibilityRole::Blockquote)
+        if (ancestor->role() == AccessibilityRole::Blockquote)
             ++blockquoteLevel;
     }
     if (blockquoteLevel)
@@ -323,7 +323,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         if (!ariaLandmarkRoleDescription.isEmpty())
             return ariaLandmarkRoleDescription;
 
-        switch (roleValue()) {
+        switch (role()) {
         case AccessibilityRole::Audio:
             return localizedMediaControlElementString("AudioElement"_s);
         case AccessibilityRole::Definition:
@@ -400,7 +400,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (isDescriptionList())
         return AXDescriptionListText();
 
-    if (roleValue() == AccessibilityRole::HorizontalRule)
+    if (role() == AccessibilityRole::HorizontalRule)
         return AXHorizontalRuleDescriptionText();
 
     // AppKit also returns AXTab for the role description for a tab item.
@@ -423,7 +423,7 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         return [remoteFramePlatformElement().get() accessibilityAttributeValue:NSAccessibilityRoleAttribute];
 ALLOW_DEPRECATED_DECLARATIONS_END
 
-    auto role = roleValue();
+    auto role = this->role();
     if (role == AccessibilityRole::Label) {
         // Labels that only contain static text should just be mapped to static text.
         if (containsOnlyStaticText())

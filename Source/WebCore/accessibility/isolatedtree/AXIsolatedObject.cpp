@@ -77,7 +77,7 @@ String AXIsolatedObject::dbgInternal(bool verbose, OptionSet<AXDebugStringOption
 {
     StringBuilder result;
     result.append("{"_s);
-    result.append("role: "_s, accessibilityRoleToString(roleValue()));
+    result.append("role: "_s, accessibilityRoleToString(role()));
     result.append(", ID "_s, objectID().loggingString());
 
     if (verbose || debugOptions & AXDebugStringOption::Ignored)
@@ -302,7 +302,7 @@ void AXIsolatedObject::setSelectedChildren(const AccessibilityChildrenVector& se
 bool AXIsolatedObject::isInDescriptionListTerm() const
 {
     return Accessibility::findAncestor<AXIsolatedObject>(*this, false, [&] (const auto& ancestor) {
-        return ancestor.roleValue() == AccessibilityRole::DescriptionListTerm;
+        return ancestor.role() == AccessibilityRole::DescriptionListTerm;
     });
 }
 
@@ -1097,7 +1097,7 @@ FloatRect AXIsolatedObject::relativeFrame() const
         // a rect at the position of the nearest render tree ancestor with some made-up size (AccessibilityNodeObject::boundingBoxRect does this).
         // However, we don't have access to the render tree in this context (only the AX isolated tree, which is too sparse for this purpose), so
         // until we cache the necessary information let's go to the main-thread.
-    } else if (roleValue() == AccessibilityRole::Column || roleValue() == AccessibilityRole::TableHeaderContainer)
+    } else if (role() == AccessibilityRole::Column || role() == AccessibilityRole::TableHeaderContainer)
         relativeFrame = exposedTableAncestor() ? relativeFrameFromChildren() : FloatRect();
 
     // Mock objects and SVG objects need use the main thread since they do not have render nodes and are not painted with layers, respectively.
@@ -1854,7 +1854,7 @@ AXCoreObject::AccessibilityChildrenVector AXIsolatedObject::rowHeaders()
 AXIsolatedObject* AXIsolatedObject::headerContainer()
 {
     for (const auto& child : unignoredChildren()) {
-        if (child->roleValue() == AccessibilityRole::TableHeaderContainer)
+        if (child->role() == AccessibilityRole::TableHeaderContainer)
             return downcast<AXIsolatedObject>(child.ptr());
     }
     return nullptr;

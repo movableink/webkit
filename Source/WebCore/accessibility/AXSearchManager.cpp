@@ -56,7 +56,7 @@ bool AXSearchManager::matchForSearchKeyAtIndex(Ref<AXCoreObject> axObject, const
         // The AccessibilitySearchKey::AnyType matches any non-null AccessibilityObject.
         return true;
     case AccessibilitySearchKey::Article:
-        return axObject->roleValue() == AccessibilityRole::DocumentArticle;
+        return axObject->role() == AccessibilityRole::DocumentArticle;
     case AccessibilitySearchKey::BlockquoteSameLevel:
         return criteria.startObject
             && axObject->isBlockquote()
@@ -73,7 +73,7 @@ bool AXSearchManager::matchForSearchKeyAtIndex(Ref<AXCoreObject> axObject, const
         return axObject->isControl() || axObject->isSummary();
     case AccessibilitySearchKey::DifferentType:
         return criteria.startObject
-            && axObject->roleValue() != criteria.startObject->roleValue();
+            && axObject->role() != criteria.startObject->role();
     case AccessibilitySearchKey::FontChange:
         return criteria.startObject
             && !axObject->hasSameFont(*criteria.startObject);
@@ -137,7 +137,7 @@ bool AXSearchManager::matchForSearchKeyAtIndex(Ref<AXCoreObject> axObject, const
         return axObject->isRadioGroup() || isRadioButtonInDifferentAdhocGroup(axObject, criteria.startObject);
     case AccessibilitySearchKey::SameType:
         return criteria.startObject
-            && axObject->roleValue() == criteria.startObject->roleValue();
+            && axObject->role() == criteria.startObject->role();
     case AccessibilitySearchKey::StaticText:
         return axObject->isStaticText();
     case AccessibilitySearchKey::StyleChange:

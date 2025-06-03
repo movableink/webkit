@@ -170,7 +170,7 @@ AccessibilityRole AccessibilityList::determineAccessibilityRoleWithCleanChildren
         auto* axChild = dynamicDowncast<AccessibilityObject>(child.get());
         if (axChild && axChild->ariaRoleAttribute() == AccessibilityRole::ListItem)
             listItemCount++;
-        else if (child->roleValue() == AccessibilityRole::ListItem) {
+        else if (child->role() == AccessibilityRole::ListItem) {
             // Rendered list items always count.
             if (CheckedPtr renderListItem = dynamicDowncast<RenderListItem>(child->renderer())) {
                 if (!hasVisibleMarkers && (renderListItem->style().listStyleType().type != ListStyleType::Type::None || renderListItem->style().listStyleImage() || childHasPseudoVisibleListItemMarkers(renderListItem->element())))
@@ -196,7 +196,7 @@ AccessibilityRole AccessibilityList::determineAccessibilityRoleWithCleanChildren
             role = AccessibilityRole::Group;
     } else if (!hasVisibleMarkers) {
         // http://webkit.org/b/193382 lists inside of navigation hierarchies should still be considered lists.
-        if (Accessibility::findAncestor<AccessibilityObject>(*this, false, [] (auto& object) { return object.roleValue() == AccessibilityRole::LandmarkNavigation; }))
+        if (Accessibility::findAncestor<AccessibilityObject>(*this, false, [] (auto& object) { return object.role() == AccessibilityRole::LandmarkNavigation; }))
             role = AccessibilityRole::List;
         else
             role = AccessibilityRole::Group;

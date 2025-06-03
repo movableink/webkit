@@ -240,7 +240,7 @@ void AXObjectCache::frameLoadingEventPlatformNotification(AccessibilityObject* c
     if (!coreObject)
         return;
 
-    if (coreObject->roleValue() != AccessibilityRole::WebArea)
+    if (coreObject->role() != AccessibilityRole::WebArea)
         return;
 
     auto* wrapper = coreObject->wrapper();

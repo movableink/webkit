@@ -175,7 +175,7 @@ bool AccessibilityTableCell::isTableHeaderCell() const
 
 bool AccessibilityTableCell::isColumnHeader() const
 {
-    if (roleValue() == AccessibilityRole::ColumnHeader)
+    if (role() == AccessibilityRole::ColumnHeader)
         return true;
     const AtomString& scope = getAttribute(scopeAttr);
     if (scope == "col"_s || scope == "colgroup"_s)
@@ -206,7 +206,7 @@ bool AccessibilityTableCell::isColumnHeader() const
 
 bool AccessibilityTableCell::isRowHeader() const
 {
-    if (roleValue() == AccessibilityRole::RowHeader)
+    if (role() == AccessibilityRole::RowHeader)
         return true;
     const AtomString& scope = getAttribute(scopeAttr);
     if (scope == "row"_s || scope == "rowgroup"_s)

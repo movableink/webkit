@@ -352,7 +352,7 @@ public:
 
     virtual AccessibilityRole ariaRoleAttribute() const { return AccessibilityRole::Unknown; }
     bool hasExplicitGenericRole() const { return ariaRoleAttribute() == AccessibilityRole::Generic; }
-    bool hasImplicitGenericRole() const { return roleValue() == AccessibilityRole::Generic && !hasExplicitGenericRole(); }
+    bool hasImplicitGenericRole() const { return role() == AccessibilityRole::Generic && !hasExplicitGenericRole(); }
     bool ariaRoleHasPresentationalChildren() const;
     bool inheritsPresentationalRole() const override { return false; }
 
@@ -980,7 +980,7 @@ inline unsigned AccessibilityObject::getLengthForTextRange() const { return text
 inline bool AccessibilityObject::hasTextContent() const
 {
     return isStaticText()
-        || roleValue() == AccessibilityRole::Link
+        || role() == AccessibilityRole::Link
         || isTextControl() || isTabItem();
 }
 
@@ -988,7 +988,7 @@ inline bool AccessibilityObject::hasTextContent() const
 inline bool AccessibilityObject::hasAttributedText() const
 {
     return (isStaticText() && !isARIAStaticText())
-        || roleValue() == AccessibilityRole::Link
+        || role() == AccessibilityRole::Link
         || isTextControl() || isTabItem();
 }
 #endif
