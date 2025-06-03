@@ -82,7 +82,6 @@ rendering/RenderLayerBacking.cpp
 rendering/RenderLayerBacking.h
 rendering/RenderLayerCompositor.cpp
 rendering/RenderLayerCompositor.h
-rendering/RenderLayerFilters.h
 rendering/RenderLayerScrollableArea.h
 rendering/RenderLayoutState.h
 rendering/RenderMarquee.h
