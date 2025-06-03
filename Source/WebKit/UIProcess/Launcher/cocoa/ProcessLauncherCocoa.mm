@@ -413,10 +413,10 @@ void ProcessLauncher::finishLaunchingProcess(ASCIILiteral name)
     xpc_dictionary_set_string(bootstrapMessage.get(), "service-name", name);
 
     if (m_launchOptions.processType == ProcessLauncher::ProcessType::Web) {
-#if ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT)
+#if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
         bool disableLogging = true;
 #else
-        bool disableLogging = !client || client->shouldEnableLockdownMode();
+        bool disableLogging = false;
 #endif
         xpc_dictionary_set_bool(bootstrapMessage.get(), "disable-logging", disableLogging);
     }

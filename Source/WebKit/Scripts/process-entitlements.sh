@@ -343,6 +343,11 @@ function maccatalyst_process_webcontent_entitlements()
         plistbuddy Add :com.apple.private.verified-jit bool YES
         plistbuddy Add :com.apple.security.cs.single-jit bool YES
     fi
+
+    if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" > 150000 ))
+    then
+        plistbuddy Add :com.apple.private.disable-log-mach-ports bool YES
+    fi
 }
 
 function maccatalyst_process_webcontent_captiveportal_entitlements()
