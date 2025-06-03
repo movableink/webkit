@@ -65,10 +65,15 @@ public:
 
     void copyBufferToBuffer(
         const GPUBuffer& source,
+        const GPUBuffer& destination,
+        std::optional<GPUSize64>);
+
+    void copyBufferToBuffer(
+        const GPUBuffer& source,
         GPUSize64 sourceOffset,
         const GPUBuffer& destination,
         GPUSize64 destinationOffset,
-        GPUSize64);
+        std::optional<GPUSize64>);
 
     void copyBufferToTexture(
         const GPUImageCopyBuffer& source,
