@@ -329,7 +329,7 @@ void CommandEncoder::discardCommandBuffer()
     }
 
     id<MTLCommandEncoder> existingEncoder = m_device->protectedQueue()->encoderForBuffer(m_commandBuffer);
-    auto queue = m_device->protectedQueue();
+    Ref queue = m_device->getQueue();
     queue->endEncoding(existingEncoder, m_commandBuffer);
     queue->removeMTLCommandBuffer(m_commandBuffer);
     retainTimestampsForOneUpdateLoop();
@@ -338,7 +338,7 @@ void CommandEncoder::discardCommandBuffer()
 
 void CommandEncoder::endEncoding(id<MTLCommandEncoder> encoder)
 {
-    auto queue = m_device->protectedQueue();
+    Ref queue = m_device->getQueue();
     id<MTLCommandEncoder> existingEncoder = queue->encoderForBuffer(m_commandBuffer);
     if (existingEncoder != encoder) {
         queue->endEncoding(existingEncoder, m_commandBuffer);

@@ -900,8 +900,8 @@ void WebProcess::setupLogStream()
         WebProcess::singleton().registerLogHook();
     });
 #else
-    auto connection = protectedParentProcessConnection();
-    parentProcessConnection()->sendWithAsyncReply(Messages::WebProcessProxy::SetupLogStream(getpid(), logStreamIdentifier), [connection, logStreamIdentifier] () {
+    RefPtr connection = parentProcessConnection();
+    connection->sendWithAsyncReply(Messages::WebProcessProxy::SetupLogStream(getpid(), logStreamIdentifier), [connection, logStreamIdentifier] () {
         if (connection) {
 #if PLATFORM(IOS_FAMILY)
             prewarmLogs();

@@ -91,7 +91,7 @@ std::unique_ptr<ThreadSafeImageBufferSetFlusher> RemoteLayerWithRemoteRenderingB
 
 void RemoteLayerWithRemoteRenderingBackingStore::createContextAndPaintContents()
 {
-    auto bufferSet = protectedBufferSet();
+    RefPtr bufferSet = m_bufferSet;
     if (!bufferSet)
         return;
 

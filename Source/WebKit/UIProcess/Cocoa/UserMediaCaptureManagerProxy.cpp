@@ -118,12 +118,12 @@ public:
                 createCallback(CaptureSourceError { "Source is no longer needed"_s, MediaAccessDenialReason::InvalidAccess }, { }, { });
                 return;
             }
-            createCallback(sourceError, protectedThis->settings(), protectedThis->protectedSource()->capabilities());
+            createCallback(sourceError, protectedThis->settings(), protectedThis->source().capabilities());
         });
     }
 
     bool isUsingSource(const RealtimeMediaSource& source) const { return m_source.ptr() == &source; }
-    Ref<RealtimeMediaSource> protectedSource() { return m_source; }
+    RealtimeMediaSource& source() { return m_source; }
 
     void audioUnitWillStart() final
     {
@@ -297,7 +297,7 @@ public:
                 return GenericPromise::createAndResolve();
             }
 
-            return protectedThis->protectedSource()->takePhoto(WTFMove(photoSettings))->whenSettled(RunLoop::protectedMain(), [takePhotoProducer = WTFMove(takePhotoProducer)] (auto&& result) mutable {
+            return protectedThis->source().takePhoto(WTFMove(photoSettings))->whenSettled(RunLoop::protectedMain(), [takePhotoProducer = WTFMove(takePhotoProducer)] (auto&& result) mutable {
                 ASSERT(isMainRunLoop());
 
                 takePhotoProducer.settle(WTFMove(result));
@@ -591,7 +591,7 @@ void UserMediaCaptureManagerProxy::createMediaSourceForCaptureDeviceWithConstrai
         proxy.whenReady(WTFMove(completionHandler));
     };
 
-    if (!constraints || proxy->protectedSource()->type() != RealtimeMediaSource::Type::Video) {
+    if (!constraints || proxy->source().type() != RealtimeMediaSource::Type::Video) {
         completeSetup(proxy, WTFMove(completionHandler));
         m_proxies.add(id, WTFMove(proxy));
         return;
@@ -625,7 +625,7 @@ void UserMediaCaptureManagerProxy::startProducingData(RealtimeMediaSourceIdentif
         return;
     }
 
-    Ref source = proxy->protectedSource();
+    Ref source = proxy->source();
 
 #if ENABLE(APP_PRIVACY_REPORT)
     m_connectionProxy->setTCCIdentity();
@@ -655,7 +655,7 @@ void UserMediaCaptureManagerProxy::removeSource(RealtimeMediaSourceIdentifier id
     if (iterator == m_proxies.end())
         return;
 
-    Ref source = iterator->value->protectedSource();
+    Ref source = iterator->value->source();
     m_proxies.remove(iterator);
 
     for (Ref proxy : m_proxies.values()) {
@@ -688,7 +688,7 @@ void UserMediaCaptureManagerProxy::capabilities(RealtimeMediaSourceIdentifier id
 {
     RealtimeMediaSourceCapabilities capabilities;
     if (RefPtr proxy = m_proxies.get(id))
-        capabilities = proxy->protectedSource()->capabilities();
+        capabilities = proxy->source().capabilities();
     completionHandler(WTFMove(capabilities));
 }
 
@@ -719,7 +719,7 @@ void UserMediaCaptureManagerProxy::clone(RealtimeMediaSourceIdentifier clonedID,
     MESSAGE_CHECK(m_proxies.contains(clonedID));
     MESSAGE_CHECK(!m_proxies.contains(newSourceID));
     if (RefPtr proxy = m_proxies.get(clonedID)) {
-        auto sourceClone = proxy->protectedSource()->clone();
+        auto sourceClone = proxy->source().clone();
         if (sourceClone->deviceType() == WebCore::CaptureDevice::DeviceType::Camera)
             m_pageSources.ensure(pageIdentifier, [] { return PageSources { }; }).iterator->value.cameraSources.add(sourceClone.get());
 

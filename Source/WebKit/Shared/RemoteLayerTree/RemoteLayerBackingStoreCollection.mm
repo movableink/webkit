@@ -85,7 +85,7 @@ void RemoteLayerBackingStoreCollection::prepareBackingStoresForDisplay(RemoteLay
             if (remoteBackingStore->performDelegatedLayerDisplay())
                 continue;
 
-            auto bufferSet = remoteBackingStore->protectedBufferSet();
+            RefPtr bufferSet = remoteBackingStore->bufferSet();
             if (!bufferSet)
                 continue;
 
@@ -439,7 +439,7 @@ void RemoteLayerBackingStoreCollection::gpuProcessConnectionWasDestroyed()
 bool RemoteLayerBackingStoreCollection::collectRemoteRenderingBackingStoreBufferIdentifiersToMarkVolatile(RemoteLayerWithRemoteRenderingBackingStore& backingStore, OptionSet<VolatilityMarkingBehavior> markingBehavior, MonotonicTime now, Vector<std::pair<Ref<RemoteImageBufferSetProxy>, OptionSet<BufferInSetType>>>& identifiers)
 {
     ASSERT(!m_inLayerFlush);
-    auto bufferSet = backingStore.protectedBufferSet();
+    RefPtr bufferSet = backingStore.bufferSet();
     if (!bufferSet)
         return true;
 

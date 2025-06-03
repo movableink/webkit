@@ -312,7 +312,7 @@ void WebFrameProxy::didCommitLoad(const String& contentType, const WebCore::Cert
     m_certificateInfo = certificateInfo;
     m_containsPluginDocument = containsPluginDocument;
 
-    auto webPage = protectedPage();
+    RefPtr webPage = page();
     if (webPage && webPage->protectedPreferences()->siteIsolationEnabled())
         broadcastFrameTreeSyncData(calculateFrameTreeSyncData());
 }

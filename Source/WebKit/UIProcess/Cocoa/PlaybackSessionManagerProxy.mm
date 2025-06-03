@@ -1050,11 +1050,11 @@ void PlaybackSessionManagerProxy::setVideoReceiverEndpoint(PlaybackSessionContex
         return;
     }
 
-    Ref process = page->protectedLegacyMainFrameProcess();
+    Ref process = page->legacyMainFrameProcess();
     WebCore::ProcessIdentifier processIdentifier = process->coreProcessIdentifier();
 
     Ref gpuProcess = process->processPool().ensureProtectedGPUProcess();
-    RefPtr connection = gpuProcess->protectedConnection();
+    RefPtr connection = gpuProcess->connection();
     if (!connection)
         return;
 
@@ -1089,11 +1089,11 @@ void PlaybackSessionManagerProxy::swapVideoReceiverEndpoints(PlaybackSessionCont
         return;
     }
 
-    Ref process = page->protectedLegacyMainFrameProcess();
+    Ref process = page->legacyMainFrameProcess();
     WebCore::ProcessIdentifier processIdentifier = process->coreProcessIdentifier();
 
     Ref gpuProcess = process->processPool().ensureProtectedGPUProcess();
-    RefPtr connection = gpuProcess->protectedConnection();
+    RefPtr connection = gpuProcess->connection();
     if (!connection)
         return;
 

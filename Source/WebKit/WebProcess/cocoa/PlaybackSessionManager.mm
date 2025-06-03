@@ -339,7 +339,7 @@ void PlaybackSessionManager::clearPlaybackControlsManager()
 void PlaybackSessionManager::mediaEngineChanged(HTMLMediaElement& mediaElement)
 {
 #if ENABLE(LINEAR_MEDIA_PLAYER)
-    RefPtr player = mediaElement.protectedPlayer();
+    RefPtr player = mediaElement.player();
     bool supportsLinearMediaPlayer = player && player->supportsLinearMediaPlayer();
     Ref { *m_page }->send(Messages::PlaybackSessionManagerProxy::SupportsLinearMediaPlayerChanged(mediaElement.identifier(), supportsLinearMediaPlayer));
 #else

@@ -117,7 +117,7 @@ WebExtensionAPIEvent& WebExtensionAPITest::onMessage()
 
 JSValue *WebExtensionAPITest::runWithUserGesture(WebFrame& frame, JSValue *function)
 {
-    RefPtr coreFrame = frame.protectedCoreLocalFrame();
+    RefPtr coreFrame = frame.coreLocalFrame();
     WebCore::UserGestureIndicator gestureIndicator(WebCore::IsProcessingUserGesture::Yes, coreFrame ? coreFrame->document() : nullptr);
 
     return [function callWithArguments:@[ ]];

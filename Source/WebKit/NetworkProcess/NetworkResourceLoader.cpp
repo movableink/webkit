@@ -1739,7 +1739,7 @@ void NetworkResourceLoader::sendResultForCacheEntry(std::unique_ptr<NetworkCache
         logCookieInformation();
 #endif
 
-    RefPtr buffer = entry->protectedBuffer();
+    RefPtr buffer = entry->buffer();
     sendBuffer(*buffer);
 #if ENABLE(CONTENT_FILTERING)
     if (m_contentFilter) {

@@ -16019,7 +16019,7 @@ Ref<WebNavigationState> WebPageProxy::protectedNavigationState()
 Ref<WebProcessProxy> WebPageProxy::processContainingFrame(std::optional<WebCore::FrameIdentifier> frameID)
 {
     if (RefPtr frame = WebFrameProxy::webFrame(frameID))
-        return frame->protectedProcess();
+        return frame->process();
     return siteIsolatedProcess();
 }
 

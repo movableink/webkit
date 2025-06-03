@@ -141,7 +141,7 @@ RefPtr<IPC::Connection> ServiceWorkerFetchTask::serviceWorkerConnection()
     if (!serviceWorkerConnection)
         return { };
 
-    return serviceWorkerConnection->protectedIPCConnection();
+    return serviceWorkerConnection->ipcConnection();
 }
 
 template<typename Message> bool ServiceWorkerFetchTask::sendToClient(Message&& message)

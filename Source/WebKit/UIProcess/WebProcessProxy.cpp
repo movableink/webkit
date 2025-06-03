@@ -2164,7 +2164,7 @@ void WebProcessProxy::didExceedMemoryFootprintThreshold(size_t footprint)
 {
     WEBPROCESSPROXY_RELEASE_LOG(PerformanceLogging, "didExceedMemoryFootprintThreshold: WebProcess exceeded notification threshold (current footprint: %zu MB)", footprint >> 20);
 
-    RefPtr dataStore = protectedWebsiteDataStore();
+    RefPtr dataStore = websiteDataStore();
     if (!dataStore)
         return;
 

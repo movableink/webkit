@@ -49,7 +49,7 @@
     if (!(self = [super _initWithRequest:request presenter:presenter]))
         return nil;
 
-    RefPtr client = presenter.protectedClient();
+    RefPtr client = presenter.client();
     if (!client)
         return nil;
 
