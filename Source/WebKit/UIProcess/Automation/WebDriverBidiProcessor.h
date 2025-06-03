@@ -39,6 +39,7 @@ namespace WebKit {
 class BidiBrowserAgent;
 class BidiBrowsingContextAgent;
 class BidiScriptAgent;
+class BidiStorageAgent;
 class WebAutomationSession;
 class WebPageProxy;
 
@@ -74,6 +75,7 @@ private:
     std::unique_ptr<BidiBrowserAgent> m_browserAgent;
     std::unique_ptr<BidiBrowsingContextAgent> m_browsingContextAgent;
     std::unique_ptr<BidiScriptAgent> m_scriptAgent;
+    std::unique_ptr<BidiStorageAgent> m_storageAgent;
     std::unique_ptr<Inspector::BidiBrowsingContextFrontendDispatcher> m_browsingContextDomainNotifier;
     std::unique_ptr<Inspector::BidiLogFrontendDispatcher> m_logDomainNotifier;
 };

@@ -34,6 +34,7 @@
 #include "BidiBrowserAgent.h"
 #include "BidiBrowsingContextAgent.h"
 #include "BidiScriptAgent.h"
+#include "BidiStorageAgent.h"
 #include "Logging.h"
 #include "WebAutomationSession.h"
 #include <JavaScriptCore/InspectorBackendDispatcher.h>
@@ -54,6 +55,7 @@ WebDriverBidiProcessor::WebDriverBidiProcessor(WebAutomationSession& session)
     , m_browserAgent(makeUnique<BidiBrowserAgent>(session, m_backendDispatcher))
     , m_browsingContextAgent(makeUnique<BidiBrowsingContextAgent>(session, m_backendDispatcher))
     , m_scriptAgent(makeUnique<BidiScriptAgent>(session, m_backendDispatcher))
+    , m_storageAgent(makeUnique<BidiStorageAgent>(session, m_backendDispatcher))
     , m_browsingContextDomainNotifier(makeUnique<BidiBrowsingContextFrontendDispatcher>(m_frontendRouter))
     , m_logDomainNotifier(makeUnique<BidiLogFrontendDispatcher>(m_frontendRouter))
 {
