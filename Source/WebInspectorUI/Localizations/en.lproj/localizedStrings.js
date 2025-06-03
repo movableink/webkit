@@ -1255,6 +1255,7 @@ localizedStrings["PDF"] = "PDF";
 localizedStrings["PNG"] = "PNG";
 localizedStrings["Page"] = "Page";
 localizedStrings["Page Issue"] = "Page Issue";
+localizedStrings["Page navigated to %s at %s"] = "Page navigated to %s at %s";
 /* Heading for list of flex overlay options */
 localizedStrings["Page Overlay Options @ Layout Panel Flex Section Header"] = "Page Overlay Options";
 /* Heading for list of grid overlay options */
@@ -1263,7 +1264,6 @@ localizedStrings["Page Overlay Options @ Layout Panel Grid Section Header"] = "P
 localizedStrings["Page Overlays @ Layout Sidebar Section Header"] = "Grid Overlays";
 /* Heading for list of flex container nodes */
 localizedStrings["Page Overlays for Flex containers @ Layout Sidebar Section Header"] = "Flexbox Overlays";
-localizedStrings["Page navigated at %s"] = "Page navigated at %s";
 localizedStrings["Page reloaded at %s"] = "Page reloaded at %s";
 /* Paint (render) phase timeline records */
 localizedStrings["Paint @ Timeline record"] = "Paint";

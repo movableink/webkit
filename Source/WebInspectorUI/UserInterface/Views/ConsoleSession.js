@@ -40,26 +40,24 @@ WI.ConsoleSession = class ConsoleSession extends WI.Object
         let header = document.createElement("div");
         header.classList.add("console-session-header");
 
-        let headerText = "";
+        let timestampText = (new Date(data.timestamp || Date.now())).toLocaleTimeString();
+
         switch (data.newSessionReason) {
         case WI.ConsoleSession.NewSessionReason.PageReloaded:
-            headerText = WI.UIString("Page reloaded at %s");
+            header.textContent = WI.UIString("Page reloaded at %s").format(timestampText);
             break;
         case WI.ConsoleSession.NewSessionReason.PageNavigated:
-            headerText = WI.UIString("Page navigated at %s");
+            header.textContent = WI.UIString("Page navigated to %s at %s").format(WI.networkManager.mainFrame.url.truncateMiddle(100), timestampText);
             break;
         case WI.ConsoleSession.NewSessionReason.ConsoleCleared:
-            headerText = WI.UIString("Console cleared at %s");
+            header.textContent = WI.UIString("Console cleared at %s").format(timestampText);
             break;
         default:
-            headerText = WI.UIString("Console opened at %s");
+            header.textContent = WI.UIString("Console opened at %s").format(timestampText);
             break;
         }
-
-        let timestamp = data.timestamp || Date.now();
-        header.textContent = headerText.format(new Date(timestamp).toLocaleTimeString());
+        
         element.append(header);
-
         this.element = element;
         this._messagesElement = element;
     }
