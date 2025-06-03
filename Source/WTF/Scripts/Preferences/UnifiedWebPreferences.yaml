@@ -764,6 +764,7 @@ BackgroundFetchAPIEnabled:
       default: false
     WebKit:
       default: false
+  sharedPreferenceForWebProcess: true
 
 BackgroundWebContentRunningBoardThrottlingEnabled:
   type: bool
@@ -5937,6 +5938,7 @@ PushAPIEnabled:
     WebKit:
       default: false
   disableInLockdownMode: true
+  sharedPreferenceForWebProcess: true
 
 ReadableByteStreamAPIEnabled:
   type: bool
@@ -6650,6 +6652,7 @@ ServiceWorkerNavigationPreloadEnabled:
       default: false
     WebKit:
       default: true
+  sharedPreferenceForWebProcess: true
 
 ServiceWorkersEnabled:
   type: bool
