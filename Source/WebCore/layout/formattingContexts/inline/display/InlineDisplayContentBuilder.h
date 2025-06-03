@@ -98,6 +98,7 @@ private:
     bool m_contentHasInkOverflow { false };
     bool m_hasSeenRubyBase { false };
     bool m_hasSeenTextDecoration { false };
+    bool m_hasSeenNestedInlineBoxesWithDifferentFontCascade { false };
 };
 
 inline InlineRect InlineDisplayContentBuilder::mapInlineRectLogicalToVisual(const InlineRect& logicalRect, const InlineRect& containerLogicalRect, WritingMode writingMode)

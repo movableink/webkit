@@ -331,6 +331,15 @@ void InlineDisplayContentBuilder::appendRootInlineBoxDisplayBox(const InlineRect
     });
 }
 
+static inline bool isNestedInlineBoxWithDifferentFontCascadeFromParent(const Box& layoutBox, bool isFirstLine)
+{
+    if (!layoutBox.parent().isInlineBox())
+        return false;
+    auto& style = isFirstLine ? layoutBox.firstLineStyle() : layoutBox.style();
+    auto& parentStyle = isFirstLine ? layoutBox.parent().firstLineStyle() : layoutBox.parent().style();
+    return style.fontCascade() != parentStyle.fontCascade();
+}
+
 void InlineDisplayContentBuilder::appendInlineBoxDisplayBox(const Line::Run& lineRun, const InlineLevelBox& inlineBox, const InlineRect& inlineBoxBorderBox, InlineDisplay::Boxes& boxes)
 {
     ASSERT(lineRun.layoutBox().isInlineBox());
@@ -339,6 +348,7 @@ void InlineDisplayContentBuilder::appendInlineBoxDisplayBox(const Line::Run& lin
 
     auto& layoutBox = lineRun.layoutBox();
     m_hasSeenRubyBase = m_hasSeenRubyBase || layoutBox.isRubyBase();
+    m_hasSeenNestedInlineBoxesWithDifferentFontCascade = m_hasSeenNestedInlineBoxesWithDifferentFontCascade || isNestedInlineBoxWithDifferentFontCascadeFromParent(layoutBox, !lineIndex());
 
     auto inkOverflow = [&] {
         auto& style = !lineIndex() ? layoutBox.firstLineStyle() : layoutBox.style();
@@ -910,7 +920,7 @@ void InlineDisplayContentBuilder::processBidiContent(const LineLayoutResult& lin
 
 void InlineDisplayContentBuilder::collectInkOverflowForInlineBoxes(InlineDisplay::Boxes& boxes)
 {
-    if (!m_contentHasInkOverflow)
+    if (!m_contentHasInkOverflow && !m_hasSeenNestedInlineBoxesWithDifferentFontCascade)
         return;
     // Visit the inline boxes and propagate ink overflow to their parents -except to the root inline box.
     // (e.g. <span style="font-size: 10px;">Small font size<span style="font-size: 300px;">Larger font size. This overflows the top most span.</span></span>).
