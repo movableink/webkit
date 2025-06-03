@@ -4465,6 +4465,13 @@
       "emails" : [
          "jonbutler@apple.com"
       ],
+      "github" : "jon-b-apple",
+      "name" : "Jon Butler"
+   },
+   {
+      "emails" : [
+         "jonbutler@apple.com"
+      ],
       "name" : "Jon Butler"
    },
    {
@@ -4706,6 +4713,13 @@
       "nicks" : [
          "jchaffraix"
       ]
+   },
+   {
+      "emails" : [
+         "lokihardt@apple.com"
+      ],
+      "github" : "junghoon4a",
+      "name" : "Junghoon Lee"
    },
    {
       "emails" : [
@@ -7039,6 +7053,13 @@
    },
    {
       "emails" : [
+         "rphillips@apple.com"
+      ],
+      "github" : "robert-apple",
+      "name" : "Robert Phillips"
+   },
+   {
+      "emails" : [
          "roberto_rodriguez2@apple.com"
       ],
       "github" : "roberto-apple",
@@ -8102,6 +8123,13 @@
       "github" : "Technose",
       "name" : "Truitt Savell",
       "status" : "committer"
+   },
+   {
+      "emails" : [
+         "tkarkkainen@apple.com"
+      ],
+      "github" : "TuomasWebKit",
+      "name" : "Tuomas Karkkainen"
    },
    {
       "emails" : [
