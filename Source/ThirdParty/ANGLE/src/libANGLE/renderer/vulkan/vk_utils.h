@@ -1481,6 +1481,8 @@ vk::LevelIndex GetLevelIndex(gl::LevelIndex levelGL, gl::LevelIndex baseLevel);
 
 VkImageTiling GetTilingMode(gl::TilingMode tilingMode);
 
+VkFormat GetAstcDecodeMode(const GLenum astcDecodePrecision);
+
 VkImageCompressionFixedRateFlagsEXT ConvertEGLFixedRateToVkFixedRate(
     const EGLenum eglCompressionRate,
     const angle::FormatID actualFormatID);
@@ -1559,7 +1561,7 @@ enum class RenderPassClosureReason
     BufferUseThenOutOfRPWrite,
     ImageUseThenOutOfRPRead,
     ImageUseThenOutOfRPWrite,
-    XfbWriteThenComputeRead,
+    XfbWriteThenUniformBufferRead,
     XfbWriteThenIndirectDispatchBuffer,
     ImageAttachmentThenComputeRead,
     GraphicsTextureImageAccessThenComputeAccess,

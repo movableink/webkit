@@ -1687,7 +1687,6 @@ void Context::getQueryiv(QueryType target, GLenum pname, GLint *params)
             {
                 case QueryType::AnySamples:
                 case QueryType::AnySamplesConservative:
-                case QueryType::CommandsCompleted:
                     params[0] = 1;
                     break;
                 case QueryType::PrimitivesGenerated:
@@ -3988,12 +3987,6 @@ Extensions Context::generateSupportedExtensions() const
         supportedExtensions.baseVertexBaseInstanceANGLE = false;
     }
 
-    if (limitations.baseInstanceEmulated &&
-        !frontendFeatures.alwaysEnableEmulatedMultidrawExtensions.enabled)
-    {
-        supportedExtensions.baseInstanceEXT = false;
-    }
-
     // Enable the no error extension if the context was created with the flag.
     supportedExtensions.noErrorKHR = skipValidation();
 
@@ -4052,6 +4045,17 @@ Extensions Context::generateSupportedExtensions() const
         // GL_KHR_texture_compression_astc_ldr and GL_KHR_texture_compression_astc_hdr
         ASSERT(supportedExtensions.textureCompressionAstcLdrKHR);
         ASSERT(supportedExtensions.textureCompressionAstcHdrKHR);
+    }
+
+    if (supportedExtensions.textureCompressionAstcDecodeModeEXT ||
+        supportedExtensions.textureCompressionAstcDecodeModeRgb9e5EXT)
+    {
+        // GL_KHR_texture_compression_astc_hdr,
+        // GL_KHR_texture_compression_astc_ldr,
+        // or GL_OES_texture_compression_astc is required.
+        ASSERT(supportedExtensions.textureCompressionAstcOES ||
+               supportedExtensions.textureCompressionAstcLdrKHR ||
+               supportedExtensions.textureCompressionAstcHdrKHR);
     }
 
     // GL_KHR_protected_textures
@@ -4923,8 +4927,11 @@ void Context::clearBufferfv(GLenum buffer, GLint drawbuffer, const GLfloat *valu
 
     Framebuffer *framebufferObject          = mState.getDrawFramebuffer();
     const FramebufferAttachment *attachment = nullptr;
+    GLfloat clampedDepth;
     if (buffer == GL_DEPTH)
     {
+        clampedDepth = clamp01(values[0]);
+        values       = &clampedDepth;
         attachment = framebufferObject->getDepthAttachment();
     }
     else if (buffer == GL_COLOR &&
@@ -5012,7 +5019,8 @@ void Context::clearBufferfi(GLenum buffer, GLint drawbuffer, GLfloat depth, GLin
     }
 
     ANGLE_CONTEXT_TRY(prepareForClearBuffer(buffer, drawbuffer));
-    ANGLE_CONTEXT_TRY(framebufferObject->clearBufferfi(this, buffer, drawbuffer, depth, stencil));
+    ANGLE_CONTEXT_TRY(
+        framebufferObject->clearBufferfi(this, buffer, drawbuffer, clamp01(depth), stencil));
 }
 
 void Context::readPixels(GLint x,
@@ -7060,6 +7068,11 @@ void Context::getAttachedShaders(ShaderProgramID program,
 
 GLint Context::getAttribLocation(ShaderProgramID program, const GLchar *name)
 {
+    if (ANGLE_UNLIKELY(nameStartsWithReservedPrefix(name)))
+    {
+        return -1;
+    }
+
     Program *programObject = getProgramResolveLink(program);
     ASSERT(programObject);
     return programObject->getExecutable().getAttributeLocation(name);
@@ -7348,6 +7361,11 @@ void Context::getUniformivRobust(ShaderProgramID program,
 
 GLint Context::getUniformLocation(ShaderProgramID program, const GLchar *name)
 {
+    if (ANGLE_UNLIKELY(nameStartsWithReservedPrefix(name)))
+    {
+        return -1;
+    }
+
     Program *programObject = getProgramResolveLink(program);
     ASSERT(programObject);
     return programObject->getExecutable().getUniformLocation(name).value;
@@ -9897,7 +9915,8 @@ ErrorSet::ErrorSet(Debug *debug,
       mResetStatus(GraphicsResetStatus::NoError),
       mSkipValidation(GetNoError(attribs)),
       mContextLost(0),
-      mHasAnyErrors(0)
+      mHasAnyErrors(0),
+      mPushedErrors(0)
 {}
 
 ErrorSet::~ErrorSet() = default;
@@ -9976,6 +9995,7 @@ void ErrorSet::pushError(GLenum errorCode)
         std::lock_guard<std::mutex> lock(mMutex);
         mErrors.insert(errorCode);
         mHasAnyErrors = 1;
+        mPushedErrors++;
     }
 }
 

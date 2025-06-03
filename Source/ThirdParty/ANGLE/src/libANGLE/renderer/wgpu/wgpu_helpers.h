@@ -87,12 +87,14 @@ class ImageHelper : public angle::Subject
     ImageHelper();
     ~ImageHelper() override;
 
-    angle::Result initImage(angle::FormatID intendedFormatID,
+    angle::Result initImage(const DawnProcTable *wgpu,
+                            angle::FormatID intendedFormatID,
                             angle::FormatID actualFormatID,
                             DeviceHandle device,
                             gl::LevelIndex firstAllocatedLevel,
                             WGPUTextureDescriptor textureDescriptor);
-    angle::Result initExternal(angle::FormatID intendedFormatID,
+    angle::Result initExternal(const DawnProcTable *wgpu,
+                               angle::FormatID intendedFormatID,
                                angle::FormatID actualFormatID,
                                webgpu::TextureHandle externalTexture);
 
@@ -158,23 +160,26 @@ class ImageHelper : public angle::Subject
                                     WGPUTextureViewDimension desiredViewDimension);
     LevelIndex toWgpuLevel(gl::LevelIndex levelIndexGl) const;
     gl::LevelIndex toGlLevel(LevelIndex levelIndexWgpu) const;
-    bool isTextureLevelInAllocatedImage(gl::LevelIndex textureLevel);
+    bool isTextureLevelInAllocatedImage(gl::LevelIndex textureLevel) const;
     TextureHandle &getTexture() { return mTexture; }
     WGPUTextureFormat toWgpuTextureFormat() const { return mTextureDescriptor.format; }
-    angle::FormatID getIntendedFormatID() { return mIntendedFormatID; }
-    angle::FormatID getActualFormatID() { return mActualFormatID; }
+    angle::FormatID getIntendedFormatID() const { return mIntendedFormatID; }
+    angle::FormatID getActualFormatID() const { return mActualFormatID; }
     const WGPUTextureDescriptor &getTextureDescriptor() const { return mTextureDescriptor; }
-    gl::LevelIndex getFirstAllocatedLevel() { return mFirstAllocatedLevel; }
-    gl::LevelIndex getLastAllocatedLevel();
-    uint32_t getLevelCount() { return mTextureDescriptor.mipLevelCount; }
-    WGPUExtent3D getSize() { return mTextureDescriptor.size; }
-    WGPUExtent3D getLevelSize(LevelIndex wgpuLevel);
-    bool isInitialized() { return mInitialized; }
+    gl::LevelIndex getFirstAllocatedLevel() const { return mFirstAllocatedLevel; }
+    gl::LevelIndex getLastAllocatedLevel() const;
+    uint32_t getLevelCount() const { return mTextureDescriptor.mipLevelCount; }
+    WGPUExtent3D getSize() const { return mTextureDescriptor.size; }
+    WGPUExtent3D getLevelSize(LevelIndex wgpuLevel) const;
+    uint32_t getSamples() const { return mTextureDescriptor.sampleCount; }
+    WGPUTextureUsage getUsage() const { return mTextureDescriptor.usage; }
+    bool isInitialized() const { return mInitialized; }
 
   private:
     void appendSubresourceUpdate(gl::LevelIndex level, SubresourceUpdate &&update);
     std::vector<SubresourceUpdate> *getLevelUpdates(gl::LevelIndex level);
 
+    const DawnProcTable *mProcTable = nullptr;
     TextureHandle mTexture;
     WGPUTextureDescriptor mTextureDescriptor   = {};
     bool mInitialized                          = false;
@@ -209,7 +214,8 @@ class BufferHelper : public angle::NonCopyable
     bool valid() const { return mBuffer.operator bool(); }
     void reset();
 
-    angle::Result initBuffer(webgpu::DeviceHandle device,
+    angle::Result initBuffer(const DawnProcTable *wgpu,
+                             webgpu::DeviceHandle device,
                              size_t size,
                              WGPUBufferUsage usage,
                              MapAtCreation mappedAtCreation);
@@ -241,6 +247,7 @@ class BufferHelper : public angle::NonCopyable
                                     BufferReadback *result);
 
   private:
+    const DawnProcTable *mProcTable = nullptr;
     webgpu::BufferHandle mBuffer;
     size_t mRequestedSize = 0;
 

@@ -1634,6 +1634,11 @@ b/292285899 PIXEL4ORXL GLES : EGLSurfaceTest.DestroyAndRecreateWhileCurrent/* = 
 389145696 WGPU MAC NVIDIA : BasicSamplersTest* = SKIP
 389145696 WGPU MAC NVIDIA : SampleFromRenderedTextureTest* = SKIP
 389145696 WGPU MAC NVIDIA : Texture2DTest.*Multiple* = SKIP
+389145696 WGPU MAC NVIDIA : ImageTest* = SKIP
+// Unimplemented cube map and non-zero mipmap EGLImages
+418022112 WGPU : ImageTest.MipLevels/* = SKIP
+418022112 WGPU : ImageTest.RespecificationOfOtherLevel/* = SKIP
+418022112 WGPU : ImageTest.SourceCubeAndSameTargetTextureWithEachCubeFace/* = SKIP
 
 // SPIR-V compilation error
 384593678 VULKAN : SimpleUniformUsageTestES3.CopyOfUniformsWithArrays/* = SKIP
@@ -1695,7 +1700,6 @@ b/292285899 PIXEL4ORXL GLES : EGLSurfaceTest.DestroyAndRecreateWhileCurrent/* = 
 404958320 WIN NVIDIA VULKAN : BlitFramebufferTest.BlitSmallColorLargeDepthAttachments/* = SKIP
 
 // EGLImage colorspace renderbuffer failures on NVIDIA, INTEL and ANDROID
-40644776 D3D11                : ImageTest.SourceRenderbufferTargetTexture* = SKIP
 40644776 D3D11                : ImageTestES3.SourceRenderbufferTargetTextureExternalESSL3* = SKIP
 40644776 WIN INTEL VULKAN     : ImageTest.SourceRenderbufferTargetTexture* = SKIP
 40644776 WIN INTEL VULKAN     : ImageTestES3.SourceRenderbufferTargetTextureExternalESSL3* = SKIP
@@ -1757,6 +1761,9 @@ b/292285899 PIXEL4ORXL GLES : EGLSurfaceTest.DestroyAndRecreateWhileCurrent/* = 
 
 351867710 NVIDIA VULKAN : CopyImageTestES31.CompressedToNorm16/* = SKIP
 351867710 NVIDIA VULKAN : CopyImageTestES31.Norm16ToCompressed/* = SKIP
+
+// Pixel4's GLES driver fails new test: TransformFeedbackTest.CaptureThenUseAsUBO.
+419403192 PIXEL4ORXL GLES : TransformFeedbackTest.CaptureThenUseAsUBO/* = SKIP
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // Slow tests, should appear last in this file

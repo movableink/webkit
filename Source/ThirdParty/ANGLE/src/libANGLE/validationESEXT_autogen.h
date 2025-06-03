@@ -1701,7 +1701,7 @@ bool ValidateCreateShaderProgramvEXT(const Context *context,
                                      angle::EntryPoint entryPoint,
                                      ShaderType typePacked,
                                      GLsizei count,
-                                     const GLchar **strings);
+                                     const GLchar *const *strings);
 bool ValidateDeleteProgramPipelinesEXT(const Context *context,
                                        angle::EntryPoint entryPoint,
                                        GLsizei n,
@@ -2278,6 +2278,8 @@ bool ValidateBlitFramebufferNV(const Context *context,
                                GLint dstY1,
                                GLbitfield mask,
                                GLenum filter);
+
+// GL_NV_pack_subimage
 
 // GL_NV_pixel_buffer_object
 

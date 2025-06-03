@@ -1587,7 +1587,7 @@ bool TParseContext::declareVariable(const TSourceLoc &line,
             error(line, "gl_FragDepth can only be redeclared as float", identifier);
             return false;
         }
-        needsReservedCheck = false;
+        needsReservedCheck = (symbolType == SymbolType::UserDefined);
     }
     else if (isExtensionEnabled(TExtension::EXT_separate_shader_objects) &&
              mShaderType == GL_VERTEX_SHADER)
@@ -5186,12 +5186,35 @@ TIntermDeclaration *TParseContext::addInterfaceBlock(
             // is legal. See bug https://github.com/KhronosGroup/OpenGL-API/issues/7
             fieldType->setMemoryQualifier(fieldMemoryQualifier);
         }
+
+        // For per-vertex members, apply the appropriate built-in qualifiers to the members.
+        if (isGLPerVertex)
+        {
+            if (field->name() == "gl_Position")
+            {
+                fieldType->setQualifier(EvqPosition);
+            }
+            if (field->name() == "gl_PointSize")
+            {
+                fieldType->setQualifier(EvqPointSize);
+            }
+            if (field->name() == "gl_ClipDistance")
+            {
+                fieldType->setQualifier(EvqClipDistance);
+            }
+            if (field->name() == "gl_CullDistance")
+            {
+                fieldType->setQualifier(EvqCullDistance);
+            }
+        }
     }
 
     SymbolType instanceSymbolType = SymbolType::UserDefined;
     if (isGLPerVertex)
     {
         instanceSymbolType = SymbolType::BuiltIn;
+        typeQualifier.qualifier =
+            IsVaryingOut(typeQualifier.qualifier) ? EvqPerVertexOut : EvqPerVertexIn;
     }
     TInterfaceBlock *interfaceBlock = new TInterfaceBlock(&symbolTable, blockName, fieldList,
                                                           blockLayoutQualifier, instanceSymbolType);

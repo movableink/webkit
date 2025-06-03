@@ -246,6 +246,7 @@ set(libangle_includes
     "include/platform/autogen/FeaturesGL_autogen.h"
     "include/platform/autogen/FeaturesMtl_autogen.h"
     "include/platform/autogen/FeaturesVk_autogen.h"
+    "include/platform/autogen/FeaturesWgpu_autogen.h"
     "include/platform/autogen/FrontendFeatures_autogen.h"
     "include/platform/PlatformMethods.h"
     "include/vulkan/vulkan_fuchsia_ext.h"

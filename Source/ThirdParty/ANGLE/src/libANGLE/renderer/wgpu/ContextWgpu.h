@@ -297,7 +297,9 @@ class ContextWgpu : public ContextImpl
 
     const angle::ImageLoadContext &getImageLoadContext() const { return mImageLoadContext; }
 
-    DisplayWgpu *getDisplay() { return mDisplay; }
+    DisplayWgpu *getDisplay() const { return mDisplay; }
+    const angle::FeaturesWgpu &getFeatures() const { return mDisplay->getFeatures(); }
+    const DawnProcTable *getProcs() const { return mDisplay->getProcs(); }
     webgpu::DeviceHandle getDevice() const { return mDisplay->getDevice(); }
     webgpu::QueueHandle getQueue() const { return mDisplay->getQueue(); }
     webgpu::InstanceHandle getInstance() const { return mDisplay->getInstance(); }

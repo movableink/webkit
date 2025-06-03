@@ -321,12 +321,20 @@ static const char *GetOperatorString(TOperator op,
             return "=";
         case TOperator::EOpInitialize:
             return "=";
+        case TOperator::EOpAddAssign:
+            return resultType.isSignedInt() ? "ANGLE_addAssignInt" : "+=";
+        case TOperator::EOpSubAssign:
+            return resultType.isSignedInt() ? "ANGLE_subAssignInt" : "-=";
         case TOperator::EOpBitwiseAndAssign:
             return "&=";
         case TOperator::EOpBitwiseXorAssign:
             return "^=";
         case TOperator::EOpBitwiseOrAssign:
             return "|=";
+        case TOperator::EOpAdd:
+            return resultType.isSignedInt() ? "ANGLE_addInt" : "+";
+        case TOperator::EOpSub:
+            return resultType.isSignedInt() ? "ANGLE_subInt" : "-";
         case TOperator::EOpBitwiseAnd:
             return "&";
         case TOperator::EOpBitwiseXor:
@@ -371,13 +379,13 @@ static const char *GetOperatorString(TOperator op,
         case TOperator::EOpBitwiseNot:
             return "~";
         case TOperator::EOpPostIncrement:
-            return "++";
+            return resultType.isSignedInt() ? "ANGLE_postIncrementInt" : "++";
         case TOperator::EOpPostDecrement:
-            return "--";
+            return resultType.isSignedInt() ? "ANGLE_postDecrementInt" : "--";
         case TOperator::EOpPreIncrement:
-            return "++";
+            return resultType.isSignedInt() ? "ANGLE_preIncrementInt" : "++";
         case TOperator::EOpPreDecrement:
-            return "--";
+            return resultType.isSignedInt() ? "ANGLE_preDecrementInt" : "--";
         case TOperator::EOpVectorTimesMatrixAssign:
             return "*=";
         case TOperator::EOpMatrixTimesScalarAssign:
@@ -406,14 +414,6 @@ static const char *GetOperatorString(TOperator op,
         case TOperator::EOpBitShiftLeftAssign:
             // TODO: Check logical vs arithmetic shifting.
             return resultType.isSignedInt() ? "ANGLE_ilshift" : "ANGLE_ulshift";
-
-        case TOperator::EOpAddAssign:
-        case TOperator::EOpAdd:
-            return resultType.isSignedInt() ? "ANGLE_iadd" : "+";
-
-        case TOperator::EOpSubAssign:
-        case TOperator::EOpSub:
-            return resultType.isSignedInt() ? "ANGLE_isub" : "-";
 
         case TOperator::EOpMulAssign:
         case TOperator::EOpMul:
