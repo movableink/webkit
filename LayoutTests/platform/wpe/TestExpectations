@@ -808,7 +808,7 @@ webrtc/video-h264.html [ Failure ]
 # Sometimes times out, it's easier to reproduce with WPE Platform API.
 fullscreen/full-screen-enter-while-exiting-multiple-elements.html [ Pass Timeout ]
 
-webkit.org/b/285752 imported/w3c/web-platform-tests/mediacapture-record/MediaRecorder-mimetype.html [ Pass Crash ]
+#webkit.org/b/285752 imported/w3c/web-platform-tests/mediacapture-record/MediaRecorder-mimetype.html [ Pass Crash ]
 
 # These touch events test behave differently with WPE Platform API.
 # FIXME: split the expectations once we have a separate baseline.
@@ -1761,3 +1761,7 @@ http/tests/iframe-memory-monitor/media-video-autoplay-in-frames.html [ Skip ]
 # The Digital Credentials API is not supported on WPE port.
 http/wpt/identity/ [ Skip ]
 imported/w3c/web-platform-tests/digital-credentials/ [ Skip ]
+
+webkit.org/b/293954 imported/w3c/web-platform-tests/mediacapture-record/ [ Skip ]
+webkit.org/b/293954 http/wpt/mediarecorder/ [ Skip ]
+webkit.org/b/293954 fast/mediastream/mediaStream-with-rotation.html [ Skip ]
