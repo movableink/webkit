@@ -825,6 +825,13 @@ static std::span<const int, 4> popupButtonPadding(NSControlSize size, bool isRTL
 
 void RenderThemeMac::inflateRectForControlRenderer(const RenderObject& renderer, FloatRect& rect)
 {
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (renderer.settings().vectorBasedControlsOnMacEnabled()) {
+        RenderThemeCocoa::inflateRectForControlRenderer(renderer, rect);
+        return;
+    }
+#endif
+
     auto appearance = renderer.style().usedAppearance();
 
     switch (appearance) {

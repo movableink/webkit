@@ -139,6 +139,16 @@ RenderThemeCocoa& RenderThemeCocoa::singleton()
     return static_cast<RenderThemeCocoa&>(RenderTheme::singleton());
 }
 
+void RenderThemeCocoa::inflateRectForControlRenderer(const RenderObject& renderer, FloatRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (inflateRectForControlRendererForVectorBasedControls(renderer, rect))
+        return;
+#endif
+
+    RenderTheme::inflateRectForControlRenderer(renderer, rect);
+}
+
 void RenderThemeCocoa::purgeCaches()
 {
 #if ENABLE(VIDEO)

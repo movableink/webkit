@@ -54,6 +54,8 @@ protected:
     void paintAttachmentText(GraphicsContext&, AttachmentLayout*) final;
 #endif
 
+    void inflateRectForControlRenderer(const RenderObject&, FloatRect&) override;
+
     Color platformSpellingMarkerColor(OptionSet<StyleColorOptions>) const override;
     Color platformDictationAlternativesMarkerColor(OptionSet<StyleColorOptions>) const override;
     Color platformGrammarMarkerColor(OptionSet<StyleColorOptions>) const override;
