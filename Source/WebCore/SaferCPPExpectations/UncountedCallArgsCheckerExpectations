@@ -921,7 +921,6 @@ platform/audio/cocoa/AudioFileReaderCocoa.cpp
 platform/cocoa/DragImageCocoa.mm
 platform/cocoa/PlaybackSessionModelMediaElement.mm
 platform/cocoa/VideoPresentationModelVideoElement.mm
-platform/cocoa/WebAVPlayerLayer.mm
 platform/encryptedmedia/CDMProxy.cpp
 platform/encryptedmedia/CDMProxy.h
 platform/graphics/BitmapImage.cpp
@@ -951,7 +950,6 @@ platform/graphics/avfoundation/objc/CDMSessionAVContentKeySession.mm
 platform/graphics/avfoundation/objc/MediaPlayerPrivateMediaStreamAVFObjC.mm
 platform/graphics/avfoundation/objc/MediaSourcePrivateAVFObjC.mm
 platform/graphics/avfoundation/objc/SourceBufferPrivateAVFObjC.mm
-platform/graphics/avfoundation/objc/WebAVContentKeyGroup.mm
 platform/graphics/avfoundation/objc/WebCoreAVFResourceLoader.mm
 platform/graphics/ca/GraphicsLayerCA.cpp
 platform/graphics/ca/TileController.cpp

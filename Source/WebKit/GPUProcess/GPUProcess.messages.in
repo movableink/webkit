@@ -106,6 +106,10 @@ messages -> GPUProcess : AuxiliaryProcess {
     UnregisterMemoryAttributionID(String attributionID) -> ()
 #endif
 #endif
+
+#if PLATFORM(COCOA)
+    PostWillTakeSnapshotNotification() -> ()
+#endif
 }
 
 #endif // ENABLE(GPU_PROCESS)

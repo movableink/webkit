@@ -209,6 +209,17 @@ void GPUProcess::unregisterMemoryAttributionID(const String& attributionID, Comp
 #endif
 #endif
 
+void GPUProcess::postWillTakeSnapshotNotification(CompletionHandler<void()>&& completionHandler)
+{
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+
+    [NSNotificationCenter.defaultCenter postNotificationName:@"CoreMediaPleaseHideTheDRMFallbackForAWhile" object:nil];
+
+    [CATransaction commit];
+    completionHandler();
+}
+
 } // namespace WebKit
 
 #endif // ENABLE(GPU_PROCESS) && PLATFORM(COCOA)

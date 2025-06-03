@@ -88,11 +88,11 @@ public:
 
 #if defined(__OBJC__)
 #define OBJC_LOGIDENTIFIER WTF::Logger::LogSiteIdentifier(__PRETTY_FUNCTION__, self.logIdentifier)
-#define OBJC_ALWAYS_LOG(...)     if (self.loggerPtr && self.logChannel) self.loggerPtr->logAlways(*self.logChannel, __VA_ARGS__)
-#define OBJC_ERROR_LOG(...)      if (self.loggerPtr && self.logChannel) self.loggerPtr->error(*self.logChannel, __VA_ARGS__)
-#define OBJC_WARNING_LOG(...)    if (self.loggerPtr && self.logChannel) self.loggerPtr->warning(*self.logChannel, __VA_ARGS__)
-#define OBJC_INFO_LOG(...)       if (self.loggerPtr && self.logChannel) self.loggerPtr->info(*self.logChannel, __VA_ARGS__)
-#define OBJC_DEBUG_LOG(...)      if (self.loggerPtr && self.logChannel) self.loggerPtr->debug(*self.logChannel, __VA_ARGS__)
+#define OBJC_ALWAYS_LOG(...)     if (RefPtr<const Logger> logger = self.loggerPtr; logger && self.logChannel) logger->logAlways(*self.logChannel, __VA_ARGS__)
+#define OBJC_ERROR_LOG(...)      if (RefPtr<const Logger> logger = self.loggerPtr; logger && self.logChannel) logger->error(*self.logChannel, __VA_ARGS__)
+#define OBJC_WARNING_LOG(...)    if (RefPtr<const Logger> logger = self.loggerPtr; logger && self.logChannel) logger->warning(*self.logChannel, __VA_ARGS__)
+#define OBJC_INFO_LOG(...)       if (RefPtr<const Logger> logger = self.loggerPtr; logger && self.logChannel) logger->info(*self.logChannel, __VA_ARGS__)
+#define OBJC_DEBUG_LOG(...)      if (RefPtr<const Logger> logger = self.loggerPtr; logger && self.logChannel) logger->debug(*self.logChannel, __VA_ARGS__)
 #endif
 
     static uint64_t childLogIdentifier(uint64_t parentIdentifier, uint64_t childIdentifier)

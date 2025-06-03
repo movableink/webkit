@@ -175,6 +175,10 @@ public:
     void unregisterMemoryAttributionID(const String&, CompletionHandler<void()>&&);
 #endif
 
+#if PLATFORM(COCOA)
+    void postWillTakeSnapshotNotification(CompletionHandler<void()>&&);
+#endif
+
 private:
     explicit GPUProcessProxy();
 

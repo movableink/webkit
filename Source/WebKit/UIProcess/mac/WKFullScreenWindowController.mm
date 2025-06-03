@@ -52,6 +52,7 @@
 #import <pal/spi/mac/NSWindowSPI.h>
 #import <pal/system/SleepDisabler.h>
 #import <wtf/BlockObjCExceptions.h>
+#import <wtf/LoggerHelper.h>
 
 static const NSTimeInterval DefaultWatchdogTimerInterval = 1;
 
@@ -77,6 +78,14 @@ enum FullScreenState : NSInteger {
 - (void)_startExitFullScreenAnimationWithDuration:(NSTimeInterval)duration;
 @end
 
+#if !RELEASE_LOG_DISABLED
+@interface WKFullScreenWindowController (Logging)
+@property (readonly, nonatomic) uint64_t logIdentifier;
+@property (readonly, nonatomic) const Logger* loggerPtr;
+@property (readonly, nonatomic) WTFLogChannel* logChannel;
+@end
+#endif
+
 static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
 {
     return [window convertRectToScreen:rect];
@@ -90,15 +99,21 @@ static void makeResponderFirstResponderIfDescendantOfView(NSWindow *window, NSRe
 
 @implementation WKFullScreenWindowController {
     std::unique_ptr<WebKit::VideoPresentationManagerProxy::VideoInPictureInPictureDidChangeObserver> _pipObserver;
+
+#if !RELEASE_LOG_DISABLED
+    RefPtr<Logger> _logger;
+    uint64_t _logIdentifier;
+#endif
 }
 
 #pragma mark -
 #pragma mark Initialization
-- (id)initWithWindow:(NSWindow *)window webView:(NSView *)webView page:(std::reference_wrapper<WebKit::WebPageProxy>)page
+- (id)initWithWindow:(NSWindow *)window webView:(NSView *)webView page:(std::reference_wrapper<WebKit::WebPageProxy>)pageWrapper
 {
     self = [super initWithWindow:window];
     if (!self)
         return nil;
+    Ref page = pageWrapper.get();
     [window setDelegate:self];
     [window setCollectionBehavior:([window collectionBehavior] | NSWindowCollectionBehaviorFullScreenPrimary | NSWindowCollectionBehaviorStationary)];
 
@@ -125,6 +140,11 @@ static void makeResponderFirstResponderIfDescendantOfView(NSWindow *window, NSRe
     [window displayIfNeeded];
     _webView = webView;
     _page = page.get();
+
+#if !RELEASE_LOG_DISABLED
+    _logger = &page.get().logger();
+    _logIdentifier = page.get().logIdentifier();
+#endif
 
     [self videoControlsManagerDidChange];
 
@@ -228,7 +248,7 @@ static RetainPtr<CGImageRef> createImageWithCopiedData(CGImageRef sourceImage)
     return adoptCF(CGImageCreate(width, height, bitsPerComponent, bitsPerPixel, bytesPerRow, colorSpace.get(), bitmapInfo, provider.get(), 0, shouldInterpolate, intent));
 }
 
-- (void)enterFullScreen:(CompletionHandler<void(bool)>&&)completionHandler
+- (void)_continueEnteringFullscreenAfterPostingNotification:(CompletionHandler<void(bool)>&&)completionHandler
 {
     if ([self isFullScreen])
         return completionHandler(false);
@@ -287,10 +307,32 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     completionHandler(true);
 }
 
+- (void)enterFullScreen:(CompletionHandler<void(bool)>&&)completionHandler
+{
+#if ENABLE(GPU_PROCESS)
+    RefPtr gpuProcess = WebKit::GPUProcessProxy::singletonIfCreated();
+    if (!gpuProcess)
+        return completionHandler(false);
+
+    OBJC_ALWAYS_LOG(OBJC_LOGIDENTIFIER);
+
+    gpuProcess->postWillTakeSnapshotNotification([self, protectedSelf = RetainPtr { self }, completionHandler = WTFMove(completionHandler), logIdentifier = OBJC_LOGIDENTIFIER] () mutable {
+        OBJC_ALWAYS_LOG(logIdentifier, " - finished posting snapshot notification");
+
+        [protectedSelf _continueEnteringFullscreenAfterPostingNotification:WTFMove(completionHandler)];
+    });
+#else
+    [self _continueEnteringFullscreenAfterPostingNotification:WTFMove(completionHandler)];
+#endif
+}
+
 - (void)beganEnterFullScreenWithInitialFrame:(NSRect)initialFrame finalFrame:(NSRect)finalFrame completionHandler:(CompletionHandler<void(bool)>&&)completionHandler
 {
-    if (_fullScreenState != WaitingToEnterFullScreen)
+    if (_fullScreenState != WaitingToEnterFullScreen) {
+        OBJC_ERROR_LOG(OBJC_LOGIDENTIFIER, "fullScreenState is not WaitingToEnterFullScreen! Bailing");
         return completionHandler(false);
+    }
+    OBJC_ALWAYS_LOG(OBJC_LOGIDENTIFIER);
     _enterFullScreenCompletionHandler = WTFMove(completionHandler);
     _fullScreenState = EnteringFullScreen;
 
@@ -492,7 +534,7 @@ static RetainPtr<CGImageRef> takeWindowSnapshot(CGSWindowID windowID, bool captu
     return WebCore::cgWindowListCreateImage(CGRectNull, kCGWindowListOptionIncludingWindow, windowID, imageOptions);
 }
 
-- (void)finishedExitFullScreenAnimationAndExitImmediately:(bool)immediately
+- (void)_continueExitingFullscreenAfterPostingNotificationAndExitImmediately:(bool)immediately
 {
     RefPtr manager = [self _manager];
     if (_fullScreenState == InFullScreen) {
@@ -569,6 +611,25 @@ static RetainPtr<CGImageRef> takeWindowSnapshot(CGSWindowID windowID, bool captu
     page->updateRenderingWithForcedRepaint([weakSelf = WeakObjCPtr<WKFullScreenWindowController>(self)] {
         [weakSelf completeFinishExitFullScreenAnimation];
     });
+}
+
+- (void)finishedExitFullScreenAnimationAndExitImmediately:(bool)immediately
+{
+#if ENABLE(GPU_PROCESS)
+    RefPtr gpuProcess = WebKit::GPUProcessProxy::singletonIfCreated();
+    if (!gpuProcess)
+        return;
+
+    OBJC_ALWAYS_LOG(OBJC_LOGIDENTIFIER);
+
+    gpuProcess->postWillTakeSnapshotNotification([self, protectedSelf = RetainPtr { self }, immediately, logIdentifier = OBJC_LOGIDENTIFIER] () mutable {
+        OBJC_ALWAYS_LOG(logIdentifier, " - finished posting snapshot notification");
+
+        [protectedSelf _continueExitingFullscreenAfterPostingNotificationAndExitImmediately:immediately];
+    });
+#else
+    [self _continueExitingFullscreenAfterPostingNotificationAndExitImmediately:immediately];
+#endif
 }
 
 - (void)completeFinishExitFullScreenAnimation
@@ -877,5 +938,24 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 @end
+
+#if !RELEASE_LOG_DISABLED
+@implementation WKFullScreenWindowController (Logging)
+- (uint64_t)logIdentifier
+{
+    return _logIdentifier;
+}
+
+- (const Logger*)loggerPtr
+{
+    return _logger.get();
+}
+
+- (WTFLogChannel*)logChannel
+{
+    return &WebKit2LogFullscreen;
+}
+@end
+#endif
 
 #endif // ENABLE(FULLSCREEN_API) && !PLATFORM(IOS_FAMILY)

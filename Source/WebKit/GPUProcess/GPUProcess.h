@@ -169,6 +169,10 @@ public:
 #endif
 #endif
 
+#if PLATFORM(COCOA)
+    void postWillTakeSnapshotNotification(CompletionHandler<void()>&&);
+#endif
+
 private:
     void lowMemoryHandler(Critical, Synchronous);
 

@@ -122,6 +122,11 @@ void GPUProcessProxy::sendBookmarkDataForCacheDirectory()
 }
 #endif
 
+void GPUProcessProxy::postWillTakeSnapshotNotification(CompletionHandler<void()>&& completionHandler)
+{
+    sendWithAsyncReply(Messages::GPUProcess::PostWillTakeSnapshotNotification { }, WTFMove(completionHandler));
+}
+
 }
 
 #endif
