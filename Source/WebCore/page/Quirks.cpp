@@ -713,6 +713,10 @@ bool Quirks::shouldTranscodeHeicImagesForURL(const URL& url)
     if (quirksDomain.string() == "zillow.com"_s)
         return true;
 
+    // canva.com https://webkit.org/b/293886
+    if (quirksDomain.string() == "canva.com"_s)
+        return true;
+
     return false;
 }
 
