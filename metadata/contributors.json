@@ -5405,6 +5405,14 @@
    },
    {
       "emails" : [
+         "lhernandez28@apple.com",
+         "lizette4662@gmail.com"
+      ],
+      "github" : "liz4662",
+      "name" : "Lizette Hernandez"
+   },
+   {
+      "emails" : [
          "ltilve@igalia.com"
       ],
       "name" : "Lorenzo Tilve",
