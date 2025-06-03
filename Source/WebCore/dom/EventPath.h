@@ -55,6 +55,7 @@ public:
     void adjustForDisabledFormControl();
 
     Vector<Ref<EventTarget>> computePathUnclosedToTarget(const EventTarget&) const;
+    Vector<Ref<EventTarget>> computePathTreatingAllShadowRootsAsOpen() const;
 
     static Node* eventTargetRespectingTargetRules(Node&);
 

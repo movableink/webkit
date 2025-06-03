@@ -281,6 +281,17 @@ Vector<Ref<EventTarget>> EventPath::computePathUnclosedToTarget(const EventTarge
     return path;
 }
 
+Vector<Ref<EventTarget>> EventPath::computePathTreatingAllShadowRootsAsOpen() const
+{
+    Vector<Ref<EventTarget>> path;
+    auto pathSize = m_path.size();
+    RELEASE_ASSERT(pathSize);
+    path.reserveInitialCapacity(pathSize);
+    for (auto& currentContext : m_path)
+        path.append(*currentContext.currentTarget());
+    return path;
+}
+
 EventPath::EventPath(std::span<EventTarget* const> targets)
 {
     m_path = WTF::map(targets, [&](auto* target) {

@@ -38,6 +38,10 @@ namespace WTF {
 class TextStream;
 }
 
+namespace JSC {
+class JSGlobalObject;
+}
+
 namespace WebCore {
 
 class EventPath;
@@ -94,7 +98,7 @@ public:
     MonotonicTime timeStamp() const { return m_createTime; }
 
     void setEventPath(const EventPath&);
-    Vector<Ref<EventTarget>> composedPath() const;
+    Vector<Ref<EventTarget>> composedPath(JSC::JSGlobalObject&) const;
 
     void stopPropagation() { m_propagationStopped = true; }
     void stopImmediatePropagation() { m_immediatePropagationStopped = true; }

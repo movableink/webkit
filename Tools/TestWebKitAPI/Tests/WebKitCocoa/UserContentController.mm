@@ -1409,7 +1409,10 @@ TEST(WKUserContentController, AllowAccessToClosedShadowRoots)
 
     __block bool isDoneEvaluatingScript = false;
     __block RetainPtr resultValue = @"";
-    [webView evaluateJavaScript:@"document.body.appendChild(document.createElement('div')).attachShadow({mode: 'closed'}).textContent = 'PASS';" completionHandler:^(id value, NSError *error) {
+    [webView evaluateJavaScript:@"host = document.createElement('div');"
+        "document.body.appendChild(host);"
+        "host.innerHTML = '<span id=target></span>';"
+        "host.attachShadow({mode: 'closed'}).innerHTML = 'PASS<slot></slot>';" completionHandler:^(id value, NSError *error) {
         resultValue = value;
         isDoneEvaluatingScript = true;
     }];
@@ -1424,6 +1427,18 @@ TEST(WKUserContentController, AllowAccessToClosedShadowRoots)
     TestWebKitAPI::Util::run(&isDoneEvaluatingScript);
     isDoneEvaluatingScript = false;
     EXPECT_WK_STREQ(@"PASS", resultValue.get());
+
+    [webView evaluateJavaScript:@"let path = '';"
+        "target.addEventListener('custom-event', (event) => { path = Array.from(event.composedPath()).map((target) => target.localName || target.__proto__.constructor.name).join(','); });"
+        "target.dispatchEvent(new CustomEvent('custom-event'));"
+        "path" inFrame:nil inContentWorld:world.get() completionHandler:^(id value, NSError *error) {
+        resultValue = value;
+        isDoneEvaluatingScript = true;
+    }];
+
+    TestWebKitAPI::Util::run(&isDoneEvaluatingScript);
+    isDoneEvaluatingScript = false;
+    EXPECT_WK_STREQ(@"span,slot,ShadowRoot,div,body,html,HTMLDocument,Window", resultValue.get());
 }
 
 TEST(WKUserContentController, DisableLegacyBuiltinOverrides)
