@@ -7253,7 +7253,8 @@
    },
    {
       "emails" : [
-         "rniwa@webkit.org"
+         "rniwa@webkit.org",
+         "rniwa@apple.com"
       ],
       "expertise" : "HTML Editing, Core DOM, HTML DOM, Event Handling",
       "github" : "rniwa",
