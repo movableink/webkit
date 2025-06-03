@@ -26,6 +26,7 @@
 #pragma once
 
 #include <initializer_list>
+#include <limits>
 #include <optional>
 
 namespace WTF {
