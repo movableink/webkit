@@ -210,6 +210,7 @@ public:
     WTF_EXPORT_PRIVATE static void setCurrentThreadIsUserInitiated(int relativePriority = 0);
     WTF_EXPORT_PRIVATE static QOS currentThreadQOS();
     WTF_EXPORT_PRIVATE static bool currentThreadIsRealtime();
+    bool isRealtime() const { return m_isRealtime; }
 
 #if HAVE(QOS_CLASSES)
     WTF_EXPORT_PRIVATE static void setGlobalMaxQOSClass(qos_class_t);

@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "FilterRenderingMode.h"
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 

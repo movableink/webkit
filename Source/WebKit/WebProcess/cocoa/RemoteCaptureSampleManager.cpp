@@ -35,6 +35,7 @@
 #include "WebProcess.h"
 #include <WebCore/CVUtilities.h>
 #include <WebCore/NativeImage.h>
+#include <WebCore/RealtimeAudioThread.h>
 #include <WebCore/VideoFrameCV.h>
 #include <WebCore/WebAudioBufferList.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -240,7 +241,8 @@ void RemoteCaptureSampleManager::RemoteAudio::startThread()
             m_source->remoteAudioSamplesAvailable(currentTime, *m_buffer, *m_description, m_frameChunkSize);
         } while (!m_shouldStopThread);
     };
-    m_thread = Thread::create("RemoteCaptureSampleManager::RemoteAudio thread"_s, WTFMove(threadLoop), ThreadType::Audio, Thread::QOS::UserInteractive);
+
+    m_thread = WebCore::createMaybeRealtimeAudioThread("RemoteCaptureSampleManager::RemoteAudio thread"_s, WTFMove(threadLoop), Seconds { m_frameChunkSize / m_description->sampleRate() });
 }
 
 void RemoteCaptureSampleManager::RemoteAudio::setStorage(ConsumerSharedCARingBuffer::Handle&& handle, const WebCore::CAAudioStreamDescription& description, IPC::Semaphore&& semaphore, const MediaTime& mediaTime, size_t frameChunkSize)

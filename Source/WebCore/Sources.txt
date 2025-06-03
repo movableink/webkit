@@ -2400,6 +2400,7 @@ platform/audio/PlatformMediaSessionInterface.cpp
 platform/audio/PlatformMediaSessionManager.cpp
 platform/audio/PlatformRawAudioData.cpp
 platform/audio/PushPullFIFO.cpp
+platform/audio/RealtimeAudioThread.cpp
 platform/audio/Reverb.cpp
 platform/audio/ReverbAccumulationBuffer.cpp
 platform/audio/ReverbConvolver.cpp

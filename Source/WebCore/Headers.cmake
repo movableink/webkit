@@ -2057,6 +2057,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/audio/PlatformMediaSessionManager.h
     platform/audio/PlatformRawAudioData.h
     platform/audio/PushPullFIFO.h
+    platform/audio/RealtimeAudioThread.h
     platform/audio/SharedAudioDestination.h
 
     platform/calc/CalculationCategory.h

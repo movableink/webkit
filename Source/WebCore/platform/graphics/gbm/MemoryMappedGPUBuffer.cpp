@@ -34,6 +34,7 @@
 #include "Logging.h"
 #include "PlatformDisplay.h"
 #include <epoxy/egl.h>
+#include <fcntl.h>
 #include <linux/dma-buf.h>
 #include <sys/ioctl.h>
 #include <wtf/SafeStrerror.h>

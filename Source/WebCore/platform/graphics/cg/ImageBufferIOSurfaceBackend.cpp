@@ -33,6 +33,7 @@
 #include "IOSurface.h"
 #include "IOSurfacePool.h"
 #include "IntRect.h"
+#include "NativeImage.h"
 #include "PixelBuffer.h"
 #include <CoreGraphics/CoreGraphics.h>
 #include <pal/cg/CoreGraphicsSoftLink.h>

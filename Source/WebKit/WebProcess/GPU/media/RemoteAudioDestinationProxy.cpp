@@ -34,6 +34,7 @@
 #include "WebProcess.h"
 #include <WebCore/AudioBus.h>
 #include <WebCore/AudioUtilities.h>
+#include <WebCore/RealtimeAudioThread.h>
 #include <WebCore/SharedMemory.h>
 #include <algorithm>
 #include <wtf/StdLibExtras.h>
@@ -53,8 +54,6 @@ namespace WebKit {
 constexpr size_t ringBufferSizeInSecond = 2;
 constexpr unsigned maxAudioBufferListSampleCount = 4096;
 #endif
-
-uint8_t RemoteAudioDestinationProxy::s_realtimeThreadCount { 0 };
 
 using AudioIOCallback = WebCore::AudioIOCallback;
 
@@ -107,30 +106,7 @@ void RemoteAudioDestinationProxy::startRenderingThread()
 
     // FIXME(263073): Coalesce compatible realtime threads together to render sequentially
     // rather than have separate realtime threads for each RemoteAudioDestinationProxy.
-    bool shouldCreateRealtimeThread = s_realtimeThreadCount < s_maximumConcurrentRealtimeThreads;
-    if (shouldCreateRealtimeThread) {
-        m_isRealtimeThread = true;
-        ++s_realtimeThreadCount;
-    }
-    auto schedulingPolicy = shouldCreateRealtimeThread ? Thread::SchedulingPolicy::Realtime : Thread::SchedulingPolicy::Other;
-
-    Ref renderThread = Thread::create("RemoteAudioDestinationProxy render thread"_s, WTFMove(offThreadRendering), ThreadType::Audio, Thread::QOS::UserInteractive, schedulingPolicy);
-    m_renderThread = renderThread.copyRef();
-
-#if HAVE(THREAD_TIME_CONSTRAINTS)
-    if (shouldCreateRealtimeThread) {
-        ASSERT(m_remoteSampleRate > 0);
-        auto rawRenderingQuantumDuration = 128 / m_remoteSampleRate;
-        auto renderingQuantumDuration = MonotonicTime::fromRawSeconds(rawRenderingQuantumDuration);
-        auto renderingTimeConstraint = MonotonicTime::fromRawSeconds(rawRenderingQuantumDuration * 2);
-        renderThread->setThreadTimeConstraints(renderingQuantumDuration, renderingQuantumDuration, renderingTimeConstraint, true);
-    }
-#endif
-
-#if PLATFORM(COCOA)
-    // Roughly match the priority of the Audio IO thread in the GPU process
-    renderThread->changePriority(60);
-#endif
+    m_renderThread = WebCore::createMaybeRealtimeAudioThread("RemoteAudioDestinationProxy render thread"_s, WTFMove(offThreadRendering), Seconds { 128 / m_remoteSampleRate });
 }
 
 void RemoteAudioDestinationProxy::stopRenderingThread()
@@ -144,12 +120,6 @@ void RemoteAudioDestinationProxy::stopRenderingThread()
     renderThread->waitForCompletion();
     m_renderThread = nullptr;
     m_shouldStopThread = false;
-
-    if (m_isRealtimeThread) {
-        ASSERT(s_realtimeThreadCount);
-        s_realtimeThreadCount--;
-        m_isRealtimeThread = false;
-    }
 }
 
 IPC::Connection* RemoteAudioDestinationProxy::connection()

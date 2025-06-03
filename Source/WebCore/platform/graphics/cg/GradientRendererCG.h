@@ -27,6 +27,7 @@
 
 #include "ColorComponents.h"
 #include "ColorInterpolationMethod.h"
+#include "DestinationColorSpace.h"
 #include <CoreGraphics/CoreGraphics.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
