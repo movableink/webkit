@@ -882,7 +882,7 @@ JSC_DEFINE_HOST_FUNCTION(dateProtoFuncSetYear, (JSGlobalObject* globalObject, Ca
 
     double year = callFrame->argument(0).toIntegerPreserveNaN(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    if (!std::isfinite(year)) {
+    if (!std::isfinite(year) || std::abs(year) > msToYear(WTF::maxECMAScriptTime)) {
         thisDateObj->setInternalNumber(PNaN);
         return JSValue::encode(jsNaN());
     }
