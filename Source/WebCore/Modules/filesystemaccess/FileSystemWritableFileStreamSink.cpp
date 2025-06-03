@@ -43,7 +43,7 @@ static ExceptionOr<FileSystemWritableFileStream::WriteParams> writeParamsFromChu
         switch (params.type) {
         case FileSystemWriteCommandType::Write:
             if (!params.data)
-                return Exception { ExceptionCode::TypeError, "Data is missing"_s };
+                return Exception { ExceptionCode::SyntaxError, "Data is missing"_s };
             return params;
         case FileSystemWriteCommandType::Seek:
             // FIXME: Reconsider exception type when https://github.com/whatwg/fs/issues/168 is closed.
