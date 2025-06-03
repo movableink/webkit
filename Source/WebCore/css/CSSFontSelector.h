@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -131,7 +131,7 @@ private:
 
     WeakPtr<ScriptExecutionContext> m_context;
     RefPtr<FontFaceSet> m_fontFaceSet;
-    Ref<CSSFontFaceSet> m_cssFontFaceSet;
+    const Ref<CSSFontFaceSet> m_cssFontFaceSet;
     UncheckedKeyHashSet<FontSelectorClient*> m_clients;
 
     struct PaletteMapHash : DefaultHash<std::pair<AtomString, AtomString>> {

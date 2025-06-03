@@ -173,7 +173,7 @@ public:
     }
 
 private:
-    Ref<ActiveDOMObject> m_object;
+    const Ref<ActiveDOMObject> m_object;
     Function<void()> m_dispatchEvent;
 };
 

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Rob Buis <buis@kde.org>
- * Copyright (C) 2008-2021 Apple Inc. All right reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All right reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -57,8 +57,8 @@ private:
     CSSCursorImageValue(Ref<CSSValue>&& imageValue, RefPtr<CSSValue>&& hotSpot, CSS::URL&&);
 
     CSS::URL m_originalURL;
-    Ref<CSSValue> m_imageValue;
-    RefPtr<CSSValue> m_hotSpot;
+    const Ref<CSSValue> m_imageValue;
+    const RefPtr<CSSValue> m_hotSpot;
 };
 
 } // namespace WebCore

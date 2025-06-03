@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -92,7 +92,7 @@ private:
 
     StyleRuleType styleRuleType() const final { return StyleRuleType::Keyframe; }
 
-    Ref<StyleRuleKeyframe> m_keyframe;
+    const Ref<StyleRuleKeyframe> m_keyframe;
     mutable RefPtr<StyleRuleCSSStyleProperties> m_propertiesCSSOMWrapper;
     
     friend class CSSKeyframesRule;

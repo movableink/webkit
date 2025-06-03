@@ -80,7 +80,7 @@ private:
     void cacheSimpleReference();
     RefPtr<CSSVariableData> tryResolveSimpleReference(Style::BuilderState&) const;
 
-    Ref<CSSVariableData> m_data;
+    const Ref<CSSVariableData> m_data;
     mutable String m_stringValue;
 
     // For quicky resolving simple var(--foo) values.
