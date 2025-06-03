@@ -577,8 +577,7 @@ private:
 
     void handleResolvedDirectoriesAsynchronously(const WebsiteDataStoreConfiguration::Directories&, bool);
 
-    enum class ServiceWorkerProcessCanBeActive : bool { No, Yes };
-    HashSet<WebCore::ProcessIdentifier> activeWebProcesses(ServiceWorkerProcessCanBeActive) const;
+    HashSet<WebCore::ProcessIdentifier> activeWebProcesses() const;
     void removeDataInNetworkProcess(WebsiteDataStore::ProcessAccessType, OptionSet<WebsiteDataType>, WallTime, CompletionHandler<void()>&&);
 
     const PAL::SessionID m_sessionID;
