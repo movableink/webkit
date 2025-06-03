@@ -8685,7 +8685,7 @@ void HTMLMediaElement::removeBehaviorRestrictionsAfterFirstUserGesture(MediaElem
 
     mediaSession().removeBehaviorRestriction(restrictionsToRemove);
 
-    if (RefPtr mainFrameDocument = document().protectedMainFrameDocument())
+    if (RefPtr mainFrameDocument = document().mainFrameDocument())
         mainFrameDocument->noteUserInteractionWithMediaElement();
     else
         LOG_ONCE(SiteIsolation, "Unable to fully perform HTMLMediaElement::removeBehaviorRestrictionsAfterFirstUserGesture() without access to the main frame document ");

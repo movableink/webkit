@@ -3378,7 +3378,7 @@ static inline bool isAssistableElement(Element& element)
 
 static inline bool isObscuredElement(Element& element)
 {
-    RefPtr mainFrameDocument = element.document().protectedMainFrameDocument();
+    RefPtr mainFrameDocument = element.document().mainFrameDocument();
     if (!mainFrameDocument) {
         LOG_ONCE(SiteIsolation, "Unable to properly perform isObscuredElement() without access to the main frame document ");
         return false;

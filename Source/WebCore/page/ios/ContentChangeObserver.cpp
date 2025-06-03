@@ -58,7 +58,7 @@ static bool isHiddenBehindFullscreenElement(const Node& descendantCandidate)
 {
     // Fullscreen status is propagated on the ancestor document chain all the way to the top document.
     auto& document = descendantCandidate.document();
-    RefPtr mainFrameDocument = document.protectedMainFrameDocument();
+    RefPtr mainFrameDocument = document.mainFrameDocument();
     if (!mainFrameDocument) {
         LOG_ONCE(SiteIsolation, "Unable to properly calculate isHiddenBehindFullscreenElement() without access to the main frame document ");
         return false;

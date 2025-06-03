@@ -1,5 +1,5 @@
 // Copyright 2014 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016-2024 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2025 Apple Inc. All rights reserved.
 // Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
 //
 // Redistribution and use in source and binary forms, with or without
@@ -944,8 +944,8 @@ RefPtr<StyleRuleFontPaletteValues> CSSParser::consumeFontPaletteValuesRule(CSSPa
     if (auto overrideColorsValue = properties->getPropertyCSSValue(CSSPropertyOverrideColors)) {
         overrideColors = WTF::compactMap(downcast<CSSValueList>(*overrideColorsValue), [](const auto& item) -> std::optional<FontPaletteValues::OverriddenColor> {
             Ref pair = downcast<CSSValuePair>(item);
-            Ref first = pair->protectedFirst();
-            Ref second = pair->protectedSecond();
+            Ref first = pair->first();
+            Ref second = pair->second();
 
             auto key = downcast<CSSPrimitiveValue>(first)->template resolveAsIntegerDeprecated<unsigned>();
             auto color = CSSColorValue::absoluteColor(second);

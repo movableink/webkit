@@ -1241,7 +1241,7 @@ void WebPage::updateFrameTreeSyncData(WebCore::FrameIdentifier frameID, Ref<WebC
 
     ASSERT(frame->page() == this);
 
-    RefPtr coreFrame = frame->protectedCoreFrame();
+    RefPtr coreFrame = frame->coreFrame();
     if (coreFrame)
         coreFrame->updateFrameTreeSyncData(WTFMove(data));
 }
@@ -10399,7 +10399,7 @@ void WebPage::callAfterPendingSyntheticClick(CompletionHandler<void(SyntheticCli
 #if HAVE(AUDIT_TOKEN)
 void WebPage::setPresentingApplicationAuditTokenAndBundleIdentifier(CoreIPCAuditToken&& auditToken, String&& bundleIdentifier)
 {
-    RefPtr page = protectedCorePage();
+    RefPtr page = corePage();
     if (!page)
         return;
 

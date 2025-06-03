@@ -759,7 +759,7 @@ void WebChromeClient::invalidateContentsAndRootView(const IntRect& rect)
     if (!page)
         return;
 
-    RefPtr corePage = page->protectedCorePage();
+    RefPtr corePage = page->corePage();
     if (!corePage)
         return;
 
@@ -777,7 +777,7 @@ void WebChromeClient::invalidateContentsForSlowScroll(const IntRect& rect)
     if (!page)
         return;
 
-    RefPtr corePage = page->protectedCorePage();
+    RefPtr corePage = page->corePage();
     if (!corePage)
         return;
 

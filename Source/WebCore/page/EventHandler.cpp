@@ -3879,8 +3879,8 @@ bool EventHandler::isKeyEventAllowedInFullScreen(const PlatformKeyboardEvent& ke
 bool EventHandler::keyEvent(const PlatformKeyboardEvent& keyEvent)
 {
     Ref frame = m_frame.get();
-    RefPtr page = frame->protectedPage();
-    RefPtr mainFrameDocument = frame->document() ? frame->document()->protectedMainFrameDocument() : nullptr;
+    RefPtr page = frame->page();
+    RefPtr mainFrameDocument = frame->document() ? frame->document()->mainFrameDocument() : nullptr;
     MonotonicTime savedLastHandledUserGestureTimestamp;
     bool savedUserDidInteractWithPage = page ? page->userDidInteractWithPage() : false;
 

@@ -603,7 +603,7 @@ bool FocusController::advanceFocusInDocumentOrder(FocusDirection direction, Keyb
     bool caretBrowsing = frame->settings().caretBrowsingEnabled();
 
     if (caretBrowsing && !currentNode)
-        currentNode = frame->selection().selection().start().protectedDeprecatedNode();
+        currentNode = frame->selection().selection().start().deprecatedNode();
 
     document->updateLayoutIgnorePendingStylesheets();
 

@@ -108,7 +108,7 @@ void StorageAreaMap::setItem(LocalFrame& sourceFrame, StorageAreaImpl* sourceAre
         if (weakThis)
             weakThis->didSetItem(seed, key, hasError, WTFMove(allItems));
     };
-    auto connection = WebProcess::singleton().ensureNetworkProcessConnection().protectedConnection();
+    Ref connection = WebProcess::singleton().ensureNetworkProcessConnection().connection();
     connection->sendWithAsyncReply(Messages::NetworkStorageManager::SetItem(*m_remoteAreaIdentifier, sourceArea->identifier(), key, value, sourceFrame.document()->url().string()), WTFMove(callback));
 }
 

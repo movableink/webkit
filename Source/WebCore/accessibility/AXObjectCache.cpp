@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -2389,7 +2389,7 @@ void AXObjectCache::postTextStateChangeNotification(Node* node, const AXTextStat
 
 void AXObjectCache::postTextStateChangeNotification(const Position& position, const AXTextStateChangeIntent& intent, const VisibleSelection& selection)
 {
-    auto node = position.protectedDeprecatedNode();
+    RefPtr node = position.deprecatedNode();
     if (!node)
         return;
 

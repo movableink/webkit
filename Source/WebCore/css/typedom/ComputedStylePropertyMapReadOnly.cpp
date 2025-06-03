@@ -69,7 +69,7 @@ RefPtr<CSSValue> ComputedStylePropertyMapReadOnly::customPropertyValue(const Ato
 unsigned ComputedStylePropertyMapReadOnly::size() const
 {
     // https://drafts.css-houdini.org/css-typed-om-1/#dom-stylepropertymapreadonly-size
-    RefPtr element = protectedElement();
+    RefPtr element = m_element.get();
     if (!element)
         return 0;
 
@@ -84,7 +84,7 @@ unsigned ComputedStylePropertyMapReadOnly::size() const
 
 Vector<StylePropertyMapReadOnly::StylePropertyMapEntry> ComputedStylePropertyMapReadOnly::entries(ScriptExecutionContext*) const
 {
-    RefPtr element = protectedElement();
+    RefPtr element = m_element.get();
     if (!element)
         return { };
 

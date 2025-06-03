@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -1311,7 +1311,7 @@ inline DocumentLoader* WebFrame::policySourceDocumentLoader() const
     if (!document)
         return nullptr;
 
-    RefPtr mainFrameDocument = document->protectedMainFrameDocument();
+    RefPtr mainFrameDocument = document->mainFrameDocument();
     if (!mainFrameDocument) {
         LOG_ONCE(SiteIsolation, "Unable to properly calculate WebFrame::policySourceDocumentLoader() without access to the main frame document ");
         return nullptr;

@@ -124,7 +124,7 @@ UserGestureIndicator::UserGestureIndicator(std::optional<IsProcessingUserGesture
     if (isProcessingUserGesture && document && currentToken()->processingUserGesture()) {
         document->updateLastHandledUserGestureTimestamp(currentToken()->startTime());
         if (processInteractionStyle == ProcessInteractionStyle::Immediate) {
-            RefPtr mainFrameDocument = document->protectedMainFrameDocument();
+            RefPtr mainFrameDocument = document->mainFrameDocument();
             if (mainFrameDocument)
                 ResourceLoadObserver::shared().logUserInteractionWithReducedTimeResolution(*mainFrameDocument);
             else

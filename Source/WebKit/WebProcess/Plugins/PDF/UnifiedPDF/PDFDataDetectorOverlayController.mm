@@ -87,7 +87,7 @@ void PDFDataDetectorOverlayController::uninstallOverlay()
     if (!m_overlay)
         return;
 
-    RefPtr plugin = protectedPlugin();
+    RefPtr plugin = m_plugin.get();
     if (!plugin)
         return;
 
@@ -117,7 +117,7 @@ static RetainPtr<DDHighlightRef> createPlatformDataDetectorHighlight(Vector<Floa
 
 RetainPtr<DDHighlightRef> PDFDataDetectorOverlayController::createPlatformDataDetectorHighlight(PDFDataDetectorItem& dataDetectorItem) const
 {
-    RefPtr plugin = protectedPlugin();
+    RefPtr plugin = m_plugin.get();
     if (!plugin)
         return { };
 
@@ -132,7 +132,7 @@ RetainPtr<DDHighlightRef> PDFDataDetectorOverlayController::createPlatformDataDe
 
 bool PDFDataDetectorOverlayController::handleMouseEvent(const WebMouseEvent& event, PDFDocumentLayout::PageIndex pageIndex)
 {
-    RefPtr plugin = protectedPlugin();
+    RefPtr plugin = m_plugin.get();
     if (!plugin)
         return false;
 
@@ -190,7 +190,7 @@ bool PDFDataDetectorOverlayController::handleMouseEvent(const WebMouseEvent& eve
 
 bool PDFDataDetectorOverlayController::handleDataDetectorAction(const IntPoint& mousePositionInWindowSpace, PDFDataDetectorItem& dataDetectorItem)
 {
-    RefPtr plugin = protectedPlugin();
+    RefPtr plugin = m_plugin.get();
     if (!plugin)
         return false;
 
@@ -206,7 +206,7 @@ bool PDFDataDetectorOverlayController::handleDataDetectorAction(const IntPoint& 
 
 void PDFDataDetectorOverlayController::updateDataDetectorHighlightsIfNeeded(PDFDocumentLayout::PageIndex pageIndex)
 {
-    RefPtr plugin = protectedPlugin();
+    RefPtr plugin = m_plugin.get();
     if (!plugin)
         return;
 
@@ -263,7 +263,7 @@ void PDFDataDetectorOverlayController::didInvalidateHighlightOverlayRects(std::o
         m_staleDataDetectorItemWithHighlight = { { }, { } };
     });
 
-    RefPtr plugin = protectedPlugin();
+    RefPtr plugin = m_plugin.get();
     if (!plugin)
         return;
 
@@ -302,7 +302,7 @@ void PDFDataDetectorOverlayController::willMoveToPage(PageOverlay&, Page* page)
 
 void PDFDataDetectorOverlayController::scheduleRenderingUpdate(OptionSet<RenderingUpdateStep> requestedSteps)
 {
-    RefPtr plugin = protectedPlugin();
+    RefPtr plugin = m_plugin.get();
     if (!plugin)
         return;
 
@@ -311,7 +311,7 @@ void PDFDataDetectorOverlayController::scheduleRenderingUpdate(OptionSet<Renderi
 
 float PDFDataDetectorOverlayController::deviceScaleFactor() const
 {
-    RefPtr plugin = protectedPlugin();
+    RefPtr plugin = m_plugin.get();
     if (!plugin)
         return 1;
 
@@ -320,7 +320,7 @@ float PDFDataDetectorOverlayController::deviceScaleFactor() const
 
 RefPtr<GraphicsLayer> PDFDataDetectorOverlayController::createGraphicsLayer(GraphicsLayerClient& client)
 {
-    RefPtr plugin = protectedPlugin();
+    RefPtr plugin = m_plugin.get();
     if (!plugin)
         return nullptr;
 

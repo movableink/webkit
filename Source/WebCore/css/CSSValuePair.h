@@ -64,8 +64,8 @@ private:
 
     // FIXME: Store coalesce bit in CSSValue to cut down on object size.
     bool m_coalesceIdenticalValues { true };
-    Ref<CSSValue> m_first;
-    Ref<CSSValue> m_second;
+    const Ref<CSSValue> m_first;
+    const Ref<CSSValue> m_second;
 };
 
 inline const CSSValue& CSSValue::first() const
@@ -73,19 +73,9 @@ inline const CSSValue& CSSValue::first() const
     return downcast<CSSValuePair>(*this).first();
 }
 
-inline Ref<CSSValue> CSSValue::protectedFirst() const
-{
-    return downcast<CSSValuePair>(*this).protectedFirst();
-}
-
 inline const CSSValue& CSSValue::second() const
 {
     return downcast<CSSValuePair>(*this).second();
-}
-
-inline Ref<CSSValue> CSSValue::protectedSecond() const
-{
-    return downcast<CSSValuePair>(*this).protectedSecond();
 }
 
 } // namespace WebCore

@@ -4486,15 +4486,15 @@ const URL& Document::urlForBindings()
             return false;
 
         Ref protectedThis { *this };
-        RefPtr protectedDocumentLoader = protectedLoader();
-        if (!protectedDocumentLoader)
+        RefPtr documentLoader = loader();
+        if (!documentLoader)
             return false;
 
-        auto navigationalProtections = protectedDocumentLoader->navigationalAdvancedPrivacyProtections();
+        auto navigationalProtections = documentLoader->navigationalAdvancedPrivacyProtections();
         if (navigationalProtections.isEmpty())
             return false;
 
-        auto preNavigationURL = URL { protectedDocumentLoader->originalRequest().httpReferrer() };
+        auto preNavigationURL = URL { documentLoader->originalRequest().httpReferrer() };
         if (preNavigationURL.isEmpty() || RegistrableDomain { preNavigationURL }.matches(securityOrigin().data())) {
             // Only apply the protections below following a cross-origin navigation.
             return false;
@@ -5660,7 +5660,7 @@ void Document::noteUserInteractionWithMediaElement()
     if (m_userHasInteractedWithMediaElement)
         return;
 
-    RefPtr page = protectedPage();
+    RefPtr page = this->page();
     if (!page || !page->userDidInteractWithPage())
         return;
 
@@ -5963,7 +5963,7 @@ void Document::appendAutofocusCandidate(Element& candidate)
 {
     ASSERT(isTopDocument());
 
-    RefPtr page = protectedPage();
+    RefPtr page = this->page();
     if (!page)
         return;
     ASSERT(!page->autofocusProcessed());
@@ -5985,7 +5985,7 @@ void Document::clearAutofocusCandidates()
 void Document::flushAutofocusCandidates()
 {
     ASSERT(isTopDocument());
-    RefPtr page = protectedPage();
+    RefPtr page = this->page();
     if (!page || page->autofocusProcessed())
         return;
 
@@ -6975,7 +6975,7 @@ String Document::referrer()
 
 String Document::referrerForBindings()
 {
-    RefPtr mainFrameDocument = protectedMainFrameDocument();
+    RefPtr mainFrameDocument = this->mainFrameDocument();
     if (!mainFrameDocument) {
         LOG_ONCE(SiteIsolation, "Unable to fully calculate Document::referrerForBindings() without access to the main frame document ");
         return referrer();
@@ -8209,7 +8209,7 @@ bool Document::shouldForceNoOpenerBasedOnCOOP() const
         return false;
 
     auto coopValue = CrossOriginOpenerPolicyValue::UnsafeNone;
-    if (RefPtr mainFrameDocument = protectedMainFrameDocument())
+    if (RefPtr mainFrameDocument = this->mainFrameDocument())
         coopValue = mainFrameDocument->crossOriginOpenerPolicy().value;
 
     return (coopValue == CrossOriginOpenerPolicyValue::SameOrigin || coopValue == CrossOriginOpenerPolicyValue::SameOriginPlusCOEP) && !isSameOriginAsTopDocument();
@@ -9205,7 +9205,7 @@ void Document::updateLastHandledUserGestureTimestamp(MonotonicTime time)
 
 bool Document::mainFrameDocumentHasHadUserInteraction() const
 {
-    RefPtr mainFrameDocument = protectedMainFrameDocument();
+    RefPtr mainFrameDocument = this->mainFrameDocument();
     return mainFrameDocument ? mainFrameDocument->hasHadUserInteraction() : false;
 }
 
@@ -10963,7 +10963,7 @@ bool Document::hitTest(const HitTestRequest& request, const HitTestLocation& loc
 DeviceOrientationAndMotionAccessController& Document::deviceOrientationAndMotionAccessController()
 {
     if (!isTopDocument()) {
-        if (RefPtr mainFrameDocument = protectedMainFrameDocument())
+        if (RefPtr mainFrameDocument = this->mainFrameDocument())
             return mainFrameDocument->deviceOrientationAndMotionAccessController();
 
         LOG_ONCE(SiteIsolation, "Unable to properly access Document::deviceOrientationAndMotionAccessController() without access to the main frame document ");
@@ -11104,7 +11104,7 @@ LazyLoadImageObserver& Document::lazyLoadImageObserver()
 
 const CrossOriginOpenerPolicy& Document::crossOriginOpenerPolicy() const
 {
-    if (RefPtr mainFrameDocument = protectedMainFrameDocument()) {
+    if (RefPtr mainFrameDocument = this->mainFrameDocument()) {
         if (mainFrameDocument.get() == this)
             return SecurityContext::crossOriginOpenerPolicy();
         return mainFrameDocument->crossOriginOpenerPolicy();
@@ -11343,7 +11343,7 @@ OptionSet<NoiseInjectionPolicy> Document::noiseInjectionPolicies() const
 
 OptionSet<AdvancedPrivacyProtections> Document::advancedPrivacyProtections() const
 {
-    RefPtr mainFrameDocument = protectedMainFrameDocument();
+    RefPtr mainFrameDocument = this->mainFrameDocument();
     if (!mainFrameDocument)
         return { };
 

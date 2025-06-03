@@ -204,7 +204,7 @@ CachedResourceRequest HTMLModelElement::createResourceRequest(const URL& resourc
     auto crossOriginAttribute = parseCORSSettingsAttribute(attributeWithoutSynchronization(HTMLNames::crossoriginAttr));
     // Make sure CORS is always enabled by passing a non-null cross origin attribute
     if (crossOriginAttribute.isNull()) {
-        auto documentOrigin = protectedDocument()->protectedSecurityOrigin();
+        Ref documentOrigin = protectedDocument()->securityOrigin();
         if (LegacySchemeRegistry::shouldTreatURLSchemeAsCORSEnabled(documentOrigin->protocol()) || documentOrigin->protocol() != resourceURL.protocol())
             crossOriginAttribute = "anonymous"_s;
     }

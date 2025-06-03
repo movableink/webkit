@@ -1216,7 +1216,7 @@ ExceptionOr<void> ContainerNode::prepend(FixedVector<NodeOrString>&& vector)
     if (result.hasException())
         return result.releaseException();
 
-    RefPtr nextChild = protectedFirstChild();
+    RefPtr nextChild = firstChild();
     auto newChildren = result.releaseReturnValue();
     if (auto checkResult = ensurePreInsertionValidityForPhantomDocumentFragment(newChildren, nextChild.get()); checkResult.hasException())
         return checkResult;

@@ -116,7 +116,6 @@ private:
 #endif
 
     Document* mainFrameDocument() { return protectedDocument()->mainFrameDocument(); }
-    RefPtr<Document> protectedMainFrameDocument() { return mainFrameDocument(); }
 
     bool didEnterFullscreen();
 

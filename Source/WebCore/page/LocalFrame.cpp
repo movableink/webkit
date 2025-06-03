@@ -773,7 +773,7 @@ void LocalFrame::injectUserScriptImmediately(DOMWrapperWorld& world, const UserS
     if (!document)
         return;
 
-    RefPtr page = document->protectedPage();
+    RefPtr page = document->page();
     if (!page)
         return;
 
@@ -1267,7 +1267,7 @@ void LocalFrame::documentURLOrOriginDidChange()
     if (!isMainFrame())
         return;
 
-    RefPtr page = this->protectedPage();
+    RefPtr page = this->page();
     RefPtr document = this->document();
     if (page && document)
         page->setMainFrameURLAndOrigin(document->url(), document->protectedSecurityOrigin());

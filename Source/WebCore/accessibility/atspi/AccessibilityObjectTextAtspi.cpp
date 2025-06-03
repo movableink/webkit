@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2021 Igalia S.L.
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -851,7 +851,7 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
     }
 
     VisiblePosition offsetPosition = m_coreObject->visiblePositionForIndex(adjustInputOffset(*utf16Offset, m_hasListMarkerAtStart));
-    auto childNode = offsetPosition.deepEquivalent().protectedDeprecatedNode();
+    RefPtr childNode = offsetPosition.deepEquivalent().deprecatedNode();
     if (!childNode)
         return { WTFMove(defaultAttributes), -1, -1 };
 

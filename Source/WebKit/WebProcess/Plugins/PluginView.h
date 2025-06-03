@@ -90,7 +90,6 @@ public:
     void layerHostingStrategyDidChange() final;
 
     WebCore::HTMLPlugInElement& pluginElement() const { return m_pluginElement; }
-    Ref<WebCore::HTMLPlugInElement> protectedPluginElement() const;
     const URL& mainResourceURL() const { return m_mainResourceURL; }
 
     void didBeginMagnificationGesture();
@@ -175,8 +174,6 @@ private:
 
     void initializePlugin();
 
-    Ref<PDFPluginBase> protectedPlugin() const;
-
     void viewGeometryDidChange();
     void viewVisibilityDidChange();
 
@@ -230,8 +227,8 @@ private:
 
     RefPtr<WebPage> protectedWebPage() const;
 
-    Ref<WebCore::HTMLPlugInElement> m_pluginElement;
-    Ref<PDFPluginBase> m_plugin;
+    const Ref<WebCore::HTMLPlugInElement> m_pluginElement;
+    const Ref<PDFPluginBase> m_plugin;
     WeakPtr<WebPage> m_webPage;
     URL m_mainResourceURL;
     String m_mainResourceContentType;

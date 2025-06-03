@@ -122,7 +122,6 @@ WebProcess/Plugins/PDF/UnifiedPDF/PDFPresentationController.mm
 WebProcess/Plugins/PDF/UnifiedPDF/PDFScrollingPresentationController.mm
 WebProcess/Plugins/PDF/UnifiedPDF/UnifiedPDFPlugin.mm
 WebProcess/Plugins/PDF/WKAccessibilityPDFDocumentObject.mm
-WebProcess/Plugins/PluginView.cpp
 WebProcess/Speech/SpeechRecognitionRealtimeMediaSourceManager.cpp
 WebProcess/Storage/WebServiceWorkerFetchTaskClient.cpp
 WebProcess/Storage/WebServiceWorkerProvider.cpp

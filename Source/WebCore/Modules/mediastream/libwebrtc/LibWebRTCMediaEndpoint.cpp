@@ -851,7 +851,7 @@ void LibWebRTCMediaEndpoint::OnStatsDelivered(const rtc::scoped_refptr<const web
 
         for (auto iterator = report->begin(); iterator != report->end(); ++iterator) {
             RTCStatsLogger statsLogger { *iterator };
-            auto backend = protectedPeerConnectionBackend();
+            Ref backend = m_peerConnectionBackend.get();
             if (m_isGatheringRTCLogs) {
                 auto event = backend->generateJSONLogEvent(String::fromLatin1(iterator->ToJson().c_str()), true);
                 backend->provideStatLogs(WTFMove(event));

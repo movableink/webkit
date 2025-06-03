@@ -2055,7 +2055,7 @@ inline bool PropertyParserCustom::consumeAnimationRangeShorthand(CSSParserTokenR
                 end = rangeEndValueForStartValue(*startPrimitiveValue);
             else {
                 RefPtr startPair = downcast<CSSValuePair>(start);
-                end = rangeEndValueForStartValue(startPair->protectedFirst());
+                end = rangeEndValueForStartValue(startPair->first());
             }
         } else {
             end = consumeSingleAnimationRangeEnd(range, state);

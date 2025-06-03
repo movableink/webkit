@@ -167,12 +167,12 @@ void PluginView::Stream::willSendRequest(NetscapePlugInStreamLoader*, ResourceRe
 
 void PluginView::Stream::didReceiveResponse(NetscapePlugInStreamLoader*, const ResourceResponse& response)
 {
-    m_pluginView->protectedPlugin()->streamDidReceiveResponse(response);
+    m_pluginView->m_plugin->streamDidReceiveResponse(response);
 }
 
 void PluginView::Stream::didReceiveData(NetscapePlugInStreamLoader*, const SharedBuffer& buffer)
 {
-    m_pluginView->protectedPlugin()->streamDidReceiveData(buffer);
+    m_pluginView->m_plugin->streamDidReceiveData(buffer);
 }
 
 void PluginView::Stream::didFail(NetscapePlugInStreamLoader*, const ResourceError&)
@@ -182,7 +182,7 @@ void PluginView::Stream::didFail(NetscapePlugInStreamLoader*, const ResourceErro
 
     // We only want to call streamDidFail if the stream was not explicitly cancelled by the plug-in.
     if (!m_streamWasCancelled)
-        m_pluginView->protectedPlugin()->streamDidFail();
+        m_pluginView->m_plugin->streamDidFail();
 
     ASSERT(m_pluginView->m_stream == this);
     m_pluginView->m_stream = nullptr;
@@ -194,7 +194,7 @@ void PluginView::Stream::didFinishLoading(NetscapePlugInStreamLoader*)
     // Calling streamDidFinishLoading could cause us to be deleted, so we hold on to a reference here.
     Ref protectedThis { *this };
 
-    m_pluginView->protectedPlugin()->streamDidFinishLoading();
+    m_pluginView->m_plugin->streamDidFinishLoading();
 
     ASSERT(m_pluginView->m_stream == this);
     m_pluginView->m_stream = nullptr;
@@ -241,7 +241,7 @@ PluginView::PluginView(HTMLPlugInElement& element, const URL& mainResourceURL, c
     , m_shouldUseManualLoader(shouldUseManualLoader)
     , m_pendingResourceRequestTimer(RunLoop::main(), this, &PluginView::pendingResourceRequestTimerFired)
 {
-    protectedPlugin()->startLoading();
+    m_plugin->startLoading();
     m_webPage->addPluginView(*this);
     updateDocumentForPluginSizingBehavior();
 }
@@ -252,7 +252,7 @@ PluginView::~PluginView()
         webPage->removePluginView(*this);
     if (RefPtr stream = m_stream)
         stream->cancel();
-    protectedPlugin()->destroy();
+    m_plugin->destroy();
 }
 
 RefPtr<WebPage> PluginView::protectedWebPage() const
@@ -274,7 +274,7 @@ void PluginView::manualLoadDidReceiveResponse(const ResourceResponse& response)
         return;
     }
 
-    protectedPlugin()->streamDidReceiveResponse(response);
+    m_plugin->streamDidReceiveResponse(response);
 }
 
 void PluginView::manualLoadDidReceiveData(const SharedBuffer& buffer)
@@ -285,7 +285,7 @@ void PluginView::manualLoadDidReceiveData(const SharedBuffer& buffer)
         return;
     }
 
-    protectedPlugin()->streamDidReceiveData(buffer);
+    m_plugin->streamDidReceiveData(buffer);
 }
 
 void PluginView::manualLoadDidFinishLoading()
@@ -296,12 +296,7 @@ void PluginView::manualLoadDidFinishLoading()
         return;
     }
 
-    protectedPlugin()->streamDidFinishLoading();
-}
-
-Ref<WebCore::HTMLPlugInElement> PluginView::protectedPluginElement() const
-{
-    return m_pluginElement;
+    m_plugin->streamDidFinishLoading();
 }
 
 void PluginView::layerHostingStrategyDidChange()
@@ -310,7 +305,7 @@ void PluginView::layerHostingStrategyDidChange()
         return;
 
     // This ensures that we update RenderLayers and compositing when the result of RenderEmbeddedObject::requiresLayer() changes.
-    protectedPluginElement()->invalidateStyleAndLayerComposition();
+    m_pluginElement->invalidateStyleAndLayerComposition();
 }
 
 void PluginView::manualLoadDidFail()
@@ -321,7 +316,7 @@ void PluginView::manualLoadDidFail()
         return;
     }
 
-    protectedPlugin()->streamDidFail();
+    m_plugin->streamDidFail();
 }
 
 void PluginView::obscuredContentInsetsDidChange()
@@ -334,7 +329,7 @@ void PluginView::didBeginMagnificationGesture()
     if (!m_isInitialized)
         return;
 
-    protectedPlugin()->didBeginMagnificationGesture();
+    m_plugin->didBeginMagnificationGesture();
 }
 
 void PluginView::didEndMagnificationGesture()
@@ -342,7 +337,7 @@ void PluginView::didEndMagnificationGesture()
     if (!m_isInitialized)
         return;
 
-    protectedPlugin()->didEndMagnificationGesture();
+    m_plugin->didEndMagnificationGesture();
 }
 
 void PluginView::setPageScaleFactor(double scaleFactor, std::optional<IntPoint> origin)
@@ -351,7 +346,7 @@ void PluginView::setPageScaleFactor(double scaleFactor, std::optional<IntPoint> 
         return;
 
     pluginScaleFactorDidChange();
-    protectedPlugin()->setPageScaleFactor(scaleFactor, origin);
+    m_plugin->setPageScaleFactor(scaleFactor, origin);
 }
 
 void PluginView::mainFramePageScaleFactorDidChange()
@@ -359,17 +354,17 @@ void PluginView::mainFramePageScaleFactorDidChange()
     if (!m_isInitialized)
         return;
 
-    protectedPlugin()->mainFramePageScaleFactorDidChange();
+    m_plugin->mainFramePageScaleFactorDidChange();
 }
 
 double PluginView::pageScaleFactor() const
 {
-    return protectedPlugin()->scaleFactor();
+    return m_plugin->scaleFactor();
 }
 
 void PluginView::pluginScaleFactorDidChange()
 {
-    if (!protectedPlugin()->handlesPageScaleFactor())
+    if (!m_plugin->handlesPageScaleFactor())
         return;
     auto scaleFactor = pageScaleFactor();
     RefPtr webPage = m_webPage.get();
@@ -389,12 +384,12 @@ void PluginView::setDeviceScaleFactor(float scaleFactor)
     if (!m_isInitialized)
         return;
 
-    protectedPlugin()->deviceScaleFactorChanged(scaleFactor);
+    m_plugin->deviceScaleFactorChanged(scaleFactor);
 }
 
 id PluginView::accessibilityAssociatedPluginParentForElement(Element* element) const
 {
-    return protectedPlugin()->accessibilityAssociatedPluginParentForElement(element);
+    return m_plugin->accessibilityAssociatedPluginParentForElement(element);
 }
 
 id PluginView::accessibilityObject() const
@@ -402,7 +397,7 @@ id PluginView::accessibilityObject() const
     if (!m_isInitialized)
         return nil;
 
-    return protectedPlugin()->accessibilityObject();
+    return m_plugin->accessibilityObject();
 }
 
 #endif
@@ -428,7 +423,7 @@ void PluginView::initializePlugin()
 #if PLATFORM(COCOA)
     if (plugin->isComposited() && frame()) {
         frame()->protectedView()->enterCompositingMode();
-        protectedPluginElement()->invalidateStyleAndLayerComposition();
+        m_pluginElement->invalidateStyleAndLayerComposition();
     }
     plugin->visibilityDidChange(isVisible());
 #endif
@@ -441,17 +436,12 @@ void PluginView::initializePlugin()
     }
 }
 
-Ref<PDFPluginBase> PluginView::protectedPlugin() const
-{
-    return m_plugin;
-}
-
 PluginLayerHostingStrategy PluginView::layerHostingStrategy() const
 {
     if (!m_isInitialized)
         return PluginLayerHostingStrategy::None;
 
-    return protectedPlugin()->layerHostingStrategy();
+    return m_plugin->layerHostingStrategy();
 }
 
 #if PLATFORM(COCOA)
@@ -513,7 +503,7 @@ Scrollbar* PluginView::horizontalScrollbar()
     if (!m_isInitialized)
         return nullptr;
 
-    return protectedPlugin()->horizontalScrollbar();
+    return m_plugin->horizontalScrollbar();
 }
 
 Scrollbar* PluginView::verticalScrollbar()
@@ -521,7 +511,7 @@ Scrollbar* PluginView::verticalScrollbar()
     if (!m_isInitialized)
         return nullptr;
 
-    return protectedPlugin()->verticalScrollbar();
+    return m_plugin->verticalScrollbar();
 }
 
 bool PluginView::wantsWheelEvents()
@@ -529,7 +519,7 @@ bool PluginView::wantsWheelEvents()
     if (!m_isInitialized)
         return false;
 
-    return protectedPlugin()->wantsWheelEvents();
+    return m_plugin->wantsWheelEvents();
 }
 
 void PluginView::setFrameRect(const WebCore::IntRect& rect)
@@ -545,7 +535,7 @@ void PluginView::paint(GraphicsContext& context, const IntRect& dirtyRect, Widge
 
     if (context.paintingDisabled()) {
         if (context.invalidatingControlTints())
-            protectedPlugin()->updateControlTints(context);
+            m_plugin->updateControlTints(context);
         return;
     }
 
@@ -576,7 +566,7 @@ void PluginView::paint(GraphicsContext& context, const IntRect& dirtyRect, Widge
         return frameView->paintBehavior().contains(PaintBehavior::FlattenCompositingLayers);
     }();
 
-    if (!isSnapshotting && protectedPlugin()->layerHostingStrategy() == PluginLayerHostingStrategy::GraphicsLayer)
+    if (!isSnapshotting && m_plugin->layerHostingStrategy() == PluginLayerHostingStrategy::GraphicsLayer)
         return;
 
     // RenderWidget::paintContents() translated the context so the origin is aligned with frameRect().location().
@@ -589,7 +579,7 @@ void PluginView::paint(GraphicsContext& context, const IntRect& dirtyRect, Widge
     auto paintRect = dirtyRect;
     paintRect.moveBy(-widgetOrigin);
 
-    protectedPlugin()->paint(context, paintRect);
+    m_plugin->paint(context, paintRect);
 }
 
 void PluginView::frameRectsChanged()
@@ -616,7 +606,7 @@ unsigned PluginView::countFindMatches(const String& target, WebCore::FindOptions
     if (!m_isInitialized)
         return 0;
 
-    return protectedPlugin()->countFindMatches(target, options, maxMatchCount);
+    return m_plugin->countFindMatches(target, options, maxMatchCount);
 }
 
 bool PluginView::findString(const String& target, WebCore::FindOptions options, unsigned maxMatchCount)
@@ -624,7 +614,7 @@ bool PluginView::findString(const String& target, WebCore::FindOptions options, 
     if (!m_isInitialized)
         return false;
 
-    return protectedPlugin()->findString(target, options, maxMatchCount);
+    return m_plugin->findString(target, options, maxMatchCount);
 }
 
 Vector<FloatRect> PluginView::rectsForTextMatchesInRect(const IntRect& clipRect) const
@@ -632,7 +622,7 @@ Vector<FloatRect> PluginView::rectsForTextMatchesInRect(const IntRect& clipRect)
     if (!m_isInitialized)
         return { };
 
-    return protectedPlugin()->rectsForTextMatchesInRect(clipRect);
+    return m_plugin->rectsForTextMatchesInRect(clipRect);
 }
 
 bool PluginView::drawsFindOverlay() const
@@ -640,7 +630,7 @@ bool PluginView::drawsFindOverlay() const
     if (!m_isInitialized)
         return false;
 
-    return protectedPlugin()->drawsFindOverlay();
+    return m_plugin->drawsFindOverlay();
 }
 
 RefPtr<TextIndicator> PluginView::textIndicatorForCurrentSelection(OptionSet<WebCore::TextIndicatorOption> options, WebCore::TextIndicatorPresentationTransition transition)
@@ -648,7 +638,7 @@ RefPtr<TextIndicator> PluginView::textIndicatorForCurrentSelection(OptionSet<Web
     if (!m_isInitialized)
         return { };
 
-    return protectedPlugin()->textIndicatorForCurrentSelection(options, transition);
+    return m_plugin->textIndicatorForCurrentSelection(options, transition);
 }
 
 Vector<WebFoundTextRange::PDFData> PluginView::findTextMatches(const String& target, WebCore::FindOptions options)
@@ -656,7 +646,7 @@ Vector<WebFoundTextRange::PDFData> PluginView::findTextMatches(const String& tar
     if (!m_isInitialized)
         return { };
 
-    return protectedPlugin()->findTextMatches(target, options);
+    return m_plugin->findTextMatches(target, options);
 }
 
 Vector<FloatRect> PluginView::rectsForTextMatch(const WebFoundTextRange::PDFData& match)
@@ -664,7 +654,7 @@ Vector<FloatRect> PluginView::rectsForTextMatch(const WebFoundTextRange::PDFData
     if (!m_isInitialized)
         return { };
 
-    return protectedPlugin()->rectsForTextMatch(match);
+    return m_plugin->rectsForTextMatch(match);
 }
 
 RefPtr<WebCore::TextIndicator> PluginView::textIndicatorForTextMatch(const WebFoundTextRange::PDFData& match, WebCore::TextIndicatorPresentationTransition transition)
@@ -672,7 +662,7 @@ RefPtr<WebCore::TextIndicator> PluginView::textIndicatorForTextMatch(const WebFo
     if (!m_isInitialized)
         return { };
 
-    return protectedPlugin()->textIndicatorForTextMatch(match, transition);
+    return m_plugin->textIndicatorForTextMatch(match, transition);
 }
 
 void PluginView::scrollToRevealTextMatch(const WebFoundTextRange::PDFData& match)
@@ -680,7 +670,7 @@ void PluginView::scrollToRevealTextMatch(const WebFoundTextRange::PDFData& match
     if (!m_isInitialized)
         return;
 
-    return protectedPlugin()->scrollToRevealTextMatch(match);
+    return m_plugin->scrollToRevealTextMatch(match);
 }
 
 String PluginView::fullDocumentString() const
@@ -688,7 +678,7 @@ String PluginView::fullDocumentString() const
     if (!m_isInitialized)
         return { };
 
-    return protectedPlugin()->fullDocumentString();
+    return m_plugin->fullDocumentString();
 }
 
 String PluginView::selectionString() const
@@ -696,7 +686,7 @@ String PluginView::selectionString() const
     if (!m_isInitialized)
         return String();
 
-    return protectedPlugin()->selectionString();
+    return m_plugin->selectionString();
 }
 
 std::pair<String, String> PluginView::stringsBeforeAndAfterSelection(int characterCount) const
@@ -704,7 +694,7 @@ std::pair<String, String> PluginView::stringsBeforeAndAfterSelection(int charact
     if (!m_isInitialized)
         return { };
 
-    return protectedPlugin()->stringsBeforeAndAfterSelection(characterCount);
+    return m_plugin->stringsBeforeAndAfterSelection(characterCount);
 }
 
 void PluginView::handleEvent(Event& event)
@@ -728,18 +718,18 @@ void PluginView::handleEvent(Event& event)
         } else if (currentEvent->type() == WebEventType::MouseUp)
             frame->checkedEventHandler()->setCapturingMouseEventsElement(nullptr);
 
-        didHandleEvent = protectedPlugin()->handleMouseEvent(downcast<WebMouseEvent>(*currentEvent));
+        didHandleEvent = m_plugin->handleMouseEvent(downcast<WebMouseEvent>(*currentEvent));
     } else if ((event.type() == eventNames().wheelEvent || event.type() == eventNames().mousewheelEvent) && currentEvent->type() == WebEventType::Wheel)
-        didHandleEvent = protectedPlugin()->handleWheelEvent(downcast<WebWheelEvent>(*currentEvent));
+        didHandleEvent = m_plugin->handleWheelEvent(downcast<WebWheelEvent>(*currentEvent));
     else if (event.type() == eventNames().mouseoverEvent && currentEvent->type() == WebEventType::MouseMove)
-        didHandleEvent = protectedPlugin()->handleMouseEnterEvent(downcast<WebMouseEvent>(*currentEvent));
+        didHandleEvent = m_plugin->handleMouseEnterEvent(downcast<WebMouseEvent>(*currentEvent));
     else if (event.type() == eventNames().mouseoutEvent && currentEvent->type() == WebEventType::MouseMove)
-        didHandleEvent = protectedPlugin()->handleMouseLeaveEvent(downcast<WebMouseEvent>(*currentEvent));
+        didHandleEvent = m_plugin->handleMouseLeaveEvent(downcast<WebMouseEvent>(*currentEvent));
     else if (event.type() == eventNames().contextmenuEvent && currentEvent->type() == WebEventType::MouseDown)
-        didHandleEvent = protectedPlugin()->handleContextMenuEvent(downcast<WebMouseEvent>(*currentEvent));
+        didHandleEvent = m_plugin->handleContextMenuEvent(downcast<WebMouseEvent>(*currentEvent));
     else if ((event.type() == eventNames().keydownEvent && currentEvent->type() == WebEventType::KeyDown)
         || (event.type() == eventNames().keyupEvent && currentEvent->type() == WebEventType::KeyUp))
-        didHandleEvent = protectedPlugin()->handleKeyboardEvent(downcast<WebKeyboardEvent>(*currentEvent));
+        didHandleEvent = m_plugin->handleKeyboardEvent(downcast<WebKeyboardEvent>(*currentEvent));
 
     if (didHandleEvent)
         event.setDefaultHandled();
@@ -750,7 +740,7 @@ bool PluginView::handleEditingCommand(const String& commandName, const String& a
     if (!m_isInitialized)
         return false;
 
-    return protectedPlugin()->handleEditingCommand(commandName, argument);
+    return m_plugin->handleEditingCommand(commandName, argument);
 }
 
 bool PluginView::isEditingCommandEnabled(const String& commandName)
@@ -758,7 +748,7 @@ bool PluginView::isEditingCommandEnabled(const String& commandName)
     if (!m_isInitialized)
         return false;
 
-    return protectedPlugin()->isEditingCommandEnabled(commandName);
+    return m_plugin->isEditingCommandEnabled(commandName);
 }
 
 bool PluginView::shouldAllowNavigationFromDrags() const
@@ -771,7 +761,7 @@ void PluginView::willDetachRenderer()
     if (!m_isInitialized)
         return;
 
-    protectedPlugin()->willDetachRenderer();
+    m_plugin->willDetachRenderer();
 }
 
 ScrollableArea* PluginView::scrollableArea() const
@@ -787,7 +777,7 @@ bool PluginView::usesAsyncScrolling() const
     if (!m_isInitialized)
         return false;
 
-    return protectedPlugin()->usesAsyncScrolling();
+    return m_plugin->usesAsyncScrolling();
 }
 
 std::optional<ScrollingNodeID> PluginView::scrollingNodeID() const
@@ -795,7 +785,7 @@ std::optional<ScrollingNodeID> PluginView::scrollingNodeID() const
     if (!m_isInitialized)
         return std::nullopt;
 
-    return protectedPlugin()->scrollingNodeID();
+    return m_plugin->scrollingNodeID();
 }
 
 void PluginView::willAttachScrollingNode()
@@ -803,7 +793,7 @@ void PluginView::willAttachScrollingNode()
     if (!m_isInitialized)
         return;
 
-    return protectedPlugin()->willAttachScrollingNode();
+    return m_plugin->willAttachScrollingNode();
 }
 
 void PluginView::didAttachScrollingNode()
@@ -811,7 +801,7 @@ void PluginView::didAttachScrollingNode()
     if (!m_isInitialized)
         return;
 
-    return protectedPlugin()->didAttachScrollingNode();
+    return m_plugin->didAttachScrollingNode();
 }
 
 RefPtr<FragmentedSharedBuffer> PluginView::liveResourceData() const
@@ -823,7 +813,7 @@ RefPtr<FragmentedSharedBuffer> PluginView::liveResourceData() const
         return nullptr;
     }
 
-    return protectedPlugin()->liveResourceData();
+    return m_plugin->liveResourceData();
 }
 
 bool PluginView::performDictionaryLookupAtLocation(const WebCore::FloatPoint& point)
@@ -831,7 +821,7 @@ bool PluginView::performDictionaryLookupAtLocation(const WebCore::FloatPoint& po
     if (!m_isInitialized)
         return false;
 
-    return protectedPlugin()->performDictionaryLookupAtLocation(point);
+    return m_plugin->performDictionaryLookupAtLocation(point);
 }
 
 void PluginView::notifyWidget(WidgetNotification notification)
@@ -839,7 +829,7 @@ void PluginView::notifyWidget(WidgetNotification notification)
     switch (notification) {
     case WidgetNotification::WillPaintFlattened:
         if (shouldCreateTransientPaintingSnapshot())
-            m_transientPaintingSnapshot = protectedPlugin()->snapshot();
+            m_transientPaintingSnapshot = m_plugin->snapshot();
         break;
     case WidgetNotification::DidPaintFlattened:
         m_transientPaintingSnapshot = nullptr;
@@ -896,9 +886,8 @@ void PluginView::viewGeometryDidChange()
     auto pluginToRootViewTransform = [this, protectedThis = Ref { *this }] {
         AffineTransform transform;
 
-        RefPtr plugin = protectedPlugin();
         RefPtr frame = this->frame();
-        if (frame->isMainFrame() && plugin->isFullFramePlugin() && !plugin->handlesPageScaleFactor())
+        if (frame->isMainFrame() && m_plugin->isFullFramePlugin() && !m_plugin->handlesPageScaleFactor())
             return transform;
 
         float pageScaleFactor = frame->page() ? frame->page()->pageScaleFactor() : 1;
@@ -911,7 +900,7 @@ void PluginView::viewGeometryDidChange()
         return transform;
     }();
 
-    protectedPlugin()->geometryDidChange(size(), pluginToRootViewTransform);
+    m_plugin->geometryDidChange(size(), pluginToRootViewTransform);
 }
 
 void PluginView::frameViewLayoutOrVisualViewportChanged(const IntRect& unobscuredContentRect)
@@ -919,7 +908,7 @@ void PluginView::frameViewLayoutOrVisualViewportChanged(const IntRect& unobscure
     if (!m_isInitialized || !parent())
         return;
 
-    protectedPlugin()->frameViewLayoutOrVisualViewportChanged(unobscuredContentRect);
+    m_plugin->frameViewLayoutOrVisualViewportChanged(unobscuredContentRect);
 }
 
 void PluginView::viewVisibilityDidChange()
@@ -927,7 +916,7 @@ void PluginView::viewVisibilityDidChange()
     if (!m_isInitialized || !parent())
         return;
 
-    protectedPlugin()->visibilityDidChange(isVisible());
+    m_plugin->visibilityDidChange(isVisible());
 }
 
 IntRect PluginView::clipRectInWindowCoordinates() const
@@ -938,7 +927,7 @@ IntRect PluginView::clipRectInWindowCoordinates() const
     RefPtr frame = this->frame();
 
     // Get the window clip rect for the plugin element (in window coordinates).
-    IntRect windowClipRect = frame->protectedView()->windowClipRectForFrameOwner(protectedPluginElement().ptr(), true);
+    IntRect windowClipRect = frame->protectedView()->windowClipRectForFrameOwner(m_pluginElement.ptr(), true);
 
     // Intersect the two rects to get the view clip rect in window coordinates.
     frameRectInWindowCoordinates.intersect(windowClipRect);
@@ -1049,42 +1038,42 @@ bool PluginView::shouldCreateTransientPaintingSnapshot() const
         }
     }
 
-    return protectedPlugin()->shouldCreateTransientPaintingSnapshot();
+    return m_plugin->shouldCreateTransientPaintingSnapshot();
 }
 
 bool PluginView::isBeingDestroyed() const
 {
-    return protectedPlugin()->isBeingDestroyed();
+    return m_plugin->isBeingDestroyed();
 }
 
 void PluginView::releaseMemory()
 {
-    protectedPlugin()->releaseMemory();
+    m_plugin->releaseMemory();
 }
 
 RetainPtr<PDFDocument> PluginView::pdfDocumentForPrinting() const
 {
-    return protectedPlugin()->pdfDocument();
+    return m_plugin->pdfDocument();
 }
 
 WebCore::FloatSize PluginView::pdfDocumentSizeForPrinting() const
 {
-    return protectedPlugin()->pdfDocumentSizeForPrinting();
+    return m_plugin->pdfDocumentSizeForPrinting();
 }
 
 id PluginView::accessibilityHitTest(const WebCore::IntPoint& point) const
 {
-    return protectedPlugin()->accessibilityHitTest(point);
+    return m_plugin->accessibilityHitTest(point);
 }
 
 bool PluginView::performImmediateActionHitTestAtLocation(const WebCore::FloatPoint& point, WebHitTestResultData& data) const
 {
-    return protectedPlugin()->performImmediateActionHitTestAtLocation(point, data);
+    return m_plugin->performImmediateActionHitTestAtLocation(point, data);
 }
 
 WebCore::FloatRect PluginView::rectForSelectionInRootView(PDFSelection *selection) const
 {
-    return protectedPlugin()->rectForSelectionInRootView(selection);
+    return m_plugin->rectForSelectionInRootView(selection);
 }
 
 bool PluginView::isUsingUISideCompositing() const
@@ -1094,17 +1083,17 @@ bool PluginView::isUsingUISideCompositing() const
 
 void PluginView::didChangeSettings()
 {
-    protectedPlugin()->didChangeSettings();
+    m_plugin->didChangeSettings();
 }
 
 void PluginView::windowActivityDidChange()
 {
-    protectedPlugin()->windowActivityDidChange();
+    m_plugin->windowActivityDidChange();
 }
 
 void PluginView::didChangeIsInWindow()
 {
-    protectedPlugin()->didChangeIsInWindow();
+    m_plugin->didChangeIsInWindow();
 }
 
 void PluginView::didSameDocumentNavigationForFrame(WebFrame& frame)
@@ -1112,106 +1101,106 @@ void PluginView::didSameDocumentNavigationForFrame(WebFrame& frame)
     if (!m_isInitialized)
         return;
 
-    return protectedPlugin()->didSameDocumentNavigationForFrame(frame);
+    return m_plugin->didSameDocumentNavigationForFrame(frame);
 }
 
 bool PluginView::sendEditingCommandToPDFForTesting(const String& commandName, const String& argument)
 {
-    return protectedPlugin()->handleEditingCommand(commandName, argument);
+    return m_plugin->handleEditingCommand(commandName, argument);
 }
 
 void PluginView::setPDFDisplayModeForTesting(const String& mode)
 {
-    protectedPlugin()->setPDFDisplayModeForTesting(mode);
+    m_plugin->setPDFDisplayModeForTesting(mode);
 }
 
 void PluginView::unlockPDFDocumentForTesting(const String& password)
 {
-    protectedPlugin()->attemptToUnlockPDF(password);
+    m_plugin->attemptToUnlockPDF(password);
 }
 
 Vector<WebCore::FloatRect> PluginView::pdfAnnotationRectsForTesting() const
 {
-    return protectedPlugin()->annotationRectsForTesting();
+    return m_plugin->annotationRectsForTesting();
 }
 
 void PluginView::setPDFTextAnnotationValueForTesting(unsigned pageIndex, unsigned annotationIndex, const String& value)
 {
-    return protectedPlugin()->setTextAnnotationValueForTesting(pageIndex, annotationIndex, value);
+    return m_plugin->setTextAnnotationValueForTesting(pageIndex, annotationIndex, value);
 }
 
 void PluginView::registerPDFTestCallback(RefPtr<VoidCallback>&& callback)
 {
-    protectedPlugin()->registerPDFTest(WTFMove(callback));
+    m_plugin->registerPDFTest(WTFMove(callback));
 }
 
 PDFPluginIdentifier PluginView::pdfPluginIdentifier() const
 {
-    return protectedPlugin()->identifier();
+    return m_plugin->identifier();
 }
 
 void PluginView::openWithPreview(CompletionHandler<void(const String&, std::optional<FrameInfoData>&&, std::span<const uint8_t>)>&& completionHandler)
 {
-    protectedPlugin()->openWithPreview(WTFMove(completionHandler));
+    m_plugin->openWithPreview(WTFMove(completionHandler));
 }
 
 #if PLATFORM(IOS_FAMILY)
 
 void PluginView::setSelectionRange(FloatPoint pointInRootView, TextGranularity granularity)
 {
-    protectedPlugin()->setSelectionRange(pointInRootView, granularity);
+    m_plugin->setSelectionRange(pointInRootView, granularity);
 }
 
 SelectionWasFlipped PluginView::moveSelectionEndpoint(FloatPoint pointInRootView, SelectionEndpoint endpoint)
 {
-    return protectedPlugin()->moveSelectionEndpoint(pointInRootView, endpoint);
+    return m_plugin->moveSelectionEndpoint(pointInRootView, endpoint);
 }
 
 SelectionEndpoint PluginView::extendInitialSelection(FloatPoint pointInRootView, TextGranularity granularity)
 {
-    return protectedPlugin()->extendInitialSelection(pointInRootView, granularity);
+    return m_plugin->extendInitialSelection(pointInRootView, granularity);
 }
 
 DocumentEditingContext PluginView::documentEditingContext(DocumentEditingContextRequest&& request) const
 {
-    return protectedPlugin()->documentEditingContext(WTFMove(request));
+    return m_plugin->documentEditingContext(WTFMove(request));
 }
 
 void PluginView::clearSelection()
 {
-    protectedPlugin()->clearSelection();
+    m_plugin->clearSelection();
 }
 
 std::pair<URL, FloatRect> PluginView::linkURLAndBoundsAtPoint(FloatPoint pointInRootView) const
 {
-    return protectedPlugin()->linkURLAndBoundsAtPoint(pointInRootView);
+    return m_plugin->linkURLAndBoundsAtPoint(pointInRootView);
 }
 
 std::tuple<URL, FloatRect, RefPtr<TextIndicator>> PluginView::linkDataAtPoint(FloatPoint pointInRootView)
 {
-    return protectedPlugin()->linkDataAtPoint(pointInRootView);
+    return m_plugin->linkDataAtPoint(pointInRootView);
 }
 
 std::optional<FloatRect> PluginView::highlightRectForTapAtPoint(FloatPoint pointInRootView) const
 {
-    return protectedPlugin()->highlightRectForTapAtPoint(pointInRootView);
+    return m_plugin->highlightRectForTapAtPoint(pointInRootView);
 }
 
 void PluginView::handleSyntheticClick(PlatformMouseEvent&& event)
 {
-    protectedPlugin()->handleSyntheticClick(WTFMove(event));
+    m_plugin->handleSyntheticClick(WTFMove(event));
 }
 
 CursorContext PluginView::cursorContext(FloatPoint pointInRootView) const
 {
-    return protectedPlugin()->cursorContext(pointInRootView);
+    return m_plugin->cursorContext(pointInRootView);
 }
 
 #endif // PLATFORM(IOS_FAMILY)
 
 bool PluginView::populateEditorStateIfNeeded(EditorState& state) const
 {
-    return protectedPlugin()->populateEditorStateIfNeeded(state);
+    return m_plugin->populateEditorStateIfNeeded(state);
 }
 
 WebCore::FloatRect PluginView::absoluteBoundingRectForSmartMagnificationAtPoint(WebCore::FloatPoint point) const
@@ -1219,15 +1208,15 @@ WebCore::FloatRect PluginView::absoluteBoundingRectForSmartMagnificationAtPoint(
     if (!m_isInitialized)
         return { };
 
-    return protectedPlugin()->absoluteBoundingRectForSmartMagnificationAtPoint(point);
+    return m_plugin->absoluteBoundingRectForSmartMagnificationAtPoint(point);
 }
 
 void PluginView::updateDocumentForPluginSizingBehavior()
 {
-    if (!protectedPlugin()->shouldSizeToFitContent())
+    if (!m_plugin->shouldSizeToFitContent())
         return;
     // The styles in PluginDocumentParser are constructed to respond to this class.
-    if (RefPtr documentElement = protectedPluginElement()->protectedDocument()->protectedDocumentElement())
+    if (RefPtr documentElement = m_pluginElement->protectedDocument()->protectedDocumentElement())
         documentElement->setAttributeWithoutSynchronization(HTMLNames::classAttr, "plugin-fits-content"_s);
 }
 
@@ -1236,7 +1225,7 @@ bool PluginView::pluginHandlesPageScaleFactor() const
     if (!m_isInitialized)
         return false;
 
-    return protectedPlugin()->handlesPageScaleFactor();
+    return m_plugin->handlesPageScaleFactor();
 }
 
 } // namespace WebKit

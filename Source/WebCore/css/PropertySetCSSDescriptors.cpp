@@ -59,7 +59,7 @@ Ref<MutableStyleProperties> PropertySetCSSDescriptors::protectedPropertySet() co
 
 unsigned PropertySetCSSDescriptors::length() const
 {
-    auto propertySet = protectedPropertySet();
+    Ref propertySet = m_propertySet;
 
     unsigned exposed = 0;
     for (auto property : propertySet.get()) {
@@ -71,7 +71,7 @@ unsigned PropertySetCSSDescriptors::length() const
 
 String PropertySetCSSDescriptors::item(unsigned i) const
 {
-    auto propertySet = protectedPropertySet();
+    Ref propertySet = m_propertySet;
 
     for (unsigned j = 0; j <= i && j < propertySet->propertyCount(); j++) {
         if (!isExposed(propertySet->propertyAt(j).id()))
