@@ -926,7 +926,7 @@ static NSMutableArray<UIMenuElement *> *menuElementsFromDefaultActions(RetainPtr
         DDResultRef ddResult = [controller resultForURL:_positionInformation->url.createNSURL().get() identifier:_positionInformation->dataDetectorIdentifier.createNSString().get() selectedText:textAtSelection results:_positionInformation->dataDetectorResults.get() context:context extendedContext:&newContext];
 
         CGRect sourceRect;
-        if (_positionInformation->isLink)
+        if (_positionInformation->isLink && _positionInformation->textIndicator)
             sourceRect = _positionInformation->textIndicator->textBoundingRectInRootViewCoordinates();
         else
             sourceRect = _positionInformation->bounds;

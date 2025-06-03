@@ -10023,7 +10023,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         context.get()[PAL::get_DataDetectorsUI_kDDContextMenuWantsPreviewKey()] = @NO;
 
     CGRect sourceRect;
-    if (positionInformation.isLink)
+    if (positionInformation.isLink && positionInformation.textIndicator)
         sourceRect = positionInformation.textIndicator->textBoundingRectInRootViewCoordinates();
     else if (!positionInformation.dataDetectorBounds.isEmpty())
         sourceRect = positionInformation.dataDetectorBounds;
@@ -11656,7 +11656,7 @@ static RetainPtr<UITargetedPreview> createFallbackTargetedPreview(UIView *rootVi
 {
     RetainPtr<UITargetedPreview> targetedPreview;
 
-    if (_positionInformation.isLink && _positionInformation.textIndicator->contentImage()) {
+    if (_positionInformation.isLink && _positionInformation.textIndicator && _positionInformation.textIndicator->contentImage()) {
         RefPtr indicator = _positionInformation.textIndicator;
         _positionInformationLinkIndicator = indicator ? std::optional { indicator->data() } : std::nullopt;
 

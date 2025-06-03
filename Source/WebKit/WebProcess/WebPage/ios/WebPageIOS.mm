@@ -3448,8 +3448,7 @@ static void linkIndicatorPositionInformation(WebPage& page, Element& linkElement
     };
     auto textIndicator = TextIndicator::createWithRange(linkRange, textIndicatorOptions, TextIndicatorPresentationTransition::None, FloatSize(marginInPoints * deviceScaleFactor, marginInPoints * deviceScaleFactor));
 
-    if (textIndicator)
-        info.textIndicator = textIndicator;
+    info.textIndicator = WTFMove(textIndicator);
 }
     
 #if ENABLE(DATA_DETECTION)
@@ -3980,11 +3979,11 @@ InteractionInformationAtPosition WebPage::positionInformation(const InteractionI
 
 #if ENABLE(PDF_PLUGIN)
     if (pluginView) {
-        if (auto [url, bounds, textIndicator] = pluginView->linkDataAtPoint(request.point); !url.isEmpty()) {
+        if (auto&& [url, bounds, textIndicator] = pluginView->linkDataAtPoint(request.point); !url.isEmpty()) {
             info.isLink = true;
             info.url = WTFMove(url);
             info.bounds = enclosingIntRect(bounds);
-            info.textIndicator = textIndicator;
+            info.textIndicator = WTFMove(textIndicator);
         }
         info.isInPlugin = true;
     }
