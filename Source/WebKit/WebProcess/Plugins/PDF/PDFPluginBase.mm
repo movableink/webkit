@@ -82,6 +82,7 @@
 #import <WebCore/ScrollAnimator.h>
 #import <WebCore/SharedBuffer.h>
 #import <WebCore/VoidCallback.h>
+#import <wtf/CheckedArithmetic.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/cf/VectorCF.h>
@@ -369,7 +370,7 @@ void PDFPluginBase::dataSpanForRange(uint64_t sourcePosition, size_t count, Chec
             return true;
 
         uint64_t dataLength = CFDataGetLength(m_data.get());
-        if (sourcePosition + count > dataLength)
+        if (!isSumSmallerThanOrEqual(sourcePosition, static_cast<uint64_t>(count), dataLength))
             return false;
 
         if (checkValidRanges == CheckValidRanges::No)
