@@ -1546,7 +1546,7 @@ CSSTransformStyleSeparatedEnabled:
 CSSTreeCountingFunctionsEnabled:
   type: bool
   category: css
-  status: testable
+  status: preview
   humanReadableName: "CSS Tree Counting Functions"
   humanReadableDescription: "Enable support for CSS Values and Units Module Level 5 tree counting functions sibling-count() and sibling-index()"
   defaultValue:
