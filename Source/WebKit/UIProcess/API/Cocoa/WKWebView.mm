@@ -2540,7 +2540,7 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
     // It's possible that the selection has already been restored by this point if the entire animation has already
     // finished, but this is not guaranteed.
 
-    [_intelligenceTextEffectCoordinator flushReplacementsWithCompletion:makeBlockPtr([webSession, accepted, weakSelf = WeakObjCPtr<WKWebView>(self)] {
+    [_intelligenceTextEffectCoordinator flushReplacementsWithCompletionHandler:makeBlockPtr([webSession, accepted, weakSelf = WeakObjCPtr<WKWebView>(self)] {
         auto strongSelf = weakSelf.get();
         if (!strongSelf)
             return;
@@ -2558,7 +2558,7 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
             if (accepted)
                 weakSelf.get()->_page->didEndWritingToolsSession(*webSession, accepted);
             else {
-                [weakSelf.get()->_intelligenceTextEffectCoordinator restoreSelectionAcceptedReplacements:accepted completion:makeBlockPtr([webSession, accepted, weakSelf] {
+                [weakSelf.get()->_intelligenceTextEffectCoordinator restoreSelectionAcceptedReplacements:accepted completionHandler:makeBlockPtr([webSession, accepted, weakSelf] {
                     weakSelf.get()->_page->didEndWritingToolsSession(*webSession, accepted);
                 }).get()];
             }

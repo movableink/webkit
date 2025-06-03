@@ -1292,14 +1292,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 - (void)_web_suppressContentRelativeChildViews
 {
 #if ENABLE(WRITING_TOOLS)
-    [_intelligenceTextEffectCoordinator hideEffectsWithCompletion:^{ }];
+    [_intelligenceTextEffectCoordinator hideEffectsWithCompletionHandler:^{ }];
 #endif
 }
 
 - (void)_web_restoreContentRelativeChildViews
 {
 #if ENABLE(WRITING_TOOLS)
-    [_intelligenceTextEffectCoordinator showEffectsWithCompletion:^{ }];
+    [_intelligenceTextEffectCoordinator showEffectsWithCompletionHandler:^{ }];
 #endif
 }
 
