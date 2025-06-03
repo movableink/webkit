@@ -177,4 +177,13 @@ angle::SimpleMutex &GetDebugMutex();
 #    define ANGLE_REENABLE_UNUSED_FUNCTION_WARNING
 #endif
 
+#if defined(__clang__)
+#    define ANGLE_DISABLE_NONLITERAL_FORMAT_WARNING \
+        _Pragma("clang diagnostic push") _Pragma("clang diagnostic ignored \"-Wformat-nonliteral\"")
+#    define ANGLE_REENABLE_NONLITERAL_FORMAT_WARNING _Pragma("clang diagnostic pop")
+#else
+#    define ANGLE_DISABLE_SHADOWING_WARNING
+#    define ANGLE_REENABLE_SHADOWING_WARNING
+#endif
+
 #endif  // COMMON_DEBUG_H_

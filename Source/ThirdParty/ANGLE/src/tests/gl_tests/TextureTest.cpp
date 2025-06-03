@@ -2001,6 +2001,7 @@ void Texture2DDepthStencilTestES3::TestSampleWithDepthStencilMode(GLenum format,
             break;
         default:
             UNREACHABLE();
+            return;
     }
 
     // Set up a color texture.
@@ -10417,7 +10418,7 @@ class TextureLimitsTest : public ANGLETest<>
         initTextures(vertexTextureCount + fragmentTextureCount, 0);
 
         glUseProgram(mProgram);
-        RGBA8 expectedSum = {0};
+        RGBA8 expectedSum {};
         for (GLint texIndex = 0; texIndex < vertexTextureCount; ++texIndex)
         {
             std::stringstream uniformNameStr;

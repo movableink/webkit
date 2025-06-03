@@ -182,7 +182,9 @@ TEST_P(EGLDisplayTest, GetPlatformDisplayEXT)
     // eglGetPlatformDisplayEXT() requires EGL_EXT_platform_base.
     ANGLE_SKIP_TEST_IF(!IsEGLClientExtensionEnabled("EGL_EXT_platform_base"));
 
+#if !defined(EGL_EGLEXT_PROTOTYPES) || !EGL_EGLEXT_PROTOTYPES
     ASSERT_TRUE(eglGetPlatformDisplayEXT != nullptr);
+#endif
 
     EGLint dispattrs[] = {EGL_PLATFORM_ANGLE_TYPE_ANGLE, GetParam().getRenderer(), EGL_NONE};
     EGLDisplay display = eglGetPlatformDisplayEXT(

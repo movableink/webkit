@@ -173,8 +173,9 @@ class EGLContextCompatibilityTest : public ANGLETestBase, public testing::Test
     void SetUp() final
     {
         ANGLETestBase::ANGLETestSetUp();
+#if !defined(EGL_EGL_PROTOTYPES) || !EGL_EGL_PROTOTYPES
         ASSERT_TRUE(eglGetPlatformDisplay != nullptr);
-
+#endif
         EGLAttrib dispattrs[] = {EGL_PLATFORM_ANGLE_TYPE_ANGLE, mRenderer, EGL_NONE};
         mDisplay              = eglGetPlatformDisplay(EGL_PLATFORM_ANGLE_ANGLE,
                                                       reinterpret_cast<void *>(EGL_DEFAULT_DISPLAY), dispattrs);
@@ -490,11 +491,13 @@ void RegisterContextCompatibilityTests()
 
     LoadEntryPointsWithUtilLoader(angle::GLESDriverType::AngleEGL);
 
+#if !defined(EGL_EGL_PROTOTYPES) || !EGL_EGL_PROTOTYPES
     if (eglGetPlatformDisplay == nullptr)
     {
         std::cerr << "EGLContextCompatibilityTest: missing eglGetPlatformDisplay\n";
         return;
     }
+#endif
 
     for (EGLint renderer : renderers)
     {
