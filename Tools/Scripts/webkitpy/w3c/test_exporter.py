@@ -63,10 +63,12 @@ class WebPlatformTestExporter(object):
 
         self._WPTGitHubClass = WPTGitHubClass
         self._gitClass = gitClass  # FIXME: Move git operations to webkitscmpy
-        self._repository = repository or local.Git(os.path.abspath(os.getcwd()))
         self._bugzilla = bugzillaClass()
         self._bug_id = options.bug_id
         self._bug = None
+
+        repo_path = WebKitFinder(self._filesystem).webkit_base()
+        self._repository = repository or local.Git(repo_path)
 
         issue = None
         if not self._bug_id:
