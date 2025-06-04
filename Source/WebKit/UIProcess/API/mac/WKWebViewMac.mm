@@ -1930,6 +1930,12 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #endif
 }
 
+- (void)_registerAdditionalFonts:(NSArray<NSURL *> *)fonts
+{
+    if (_page)
+        _page->registerAdditionalFonts(fonts);
+}
+
 @end // WKWebView (WKPrivateMac)
 
 @implementation WKWebView (WKWindowSnapshot)

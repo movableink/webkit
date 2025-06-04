@@ -99,6 +99,7 @@
 #import <wtf/cf/TypeCastsCF.h>
 #import <wtf/cf/VectorCF.h>
 #import <wtf/cocoa/SpanCocoa.h>
+#import <wtf/cocoa/VectorCocoa.h>
 
 #if ENABLE(MEDIA_USAGE)
 #import "MediaUsageManagerCocoa.h"

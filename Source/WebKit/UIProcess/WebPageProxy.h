@@ -2740,6 +2740,10 @@ public:
 
     Ref<AboutSchemeHandler> protectedAboutSchemeHandler();
 
+#if PLATFORM(MAC)
+    void registerAdditionalFonts(NSArray *fonts);
+#endif
+
 private:
     WebPageProxy(PageClient&, WebProcessProxy&, Ref<API::PageConfiguration>&&);
     void platformInitialize();
@@ -3914,6 +3918,11 @@ private:
 
     const Ref<AboutSchemeHandler> m_aboutSchemeHandler;
     RefPtr<WebPageProxyTesting> m_pageForTesting;
+
+#if PLATFORM(MAC)
+    std::optional<Vector<URL>> m_additionalFonts;
+#endif
+
 };
 
 } // namespace WebKit

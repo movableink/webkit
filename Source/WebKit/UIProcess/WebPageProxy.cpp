@@ -11811,7 +11811,10 @@ WebPageCreationParameters WebPageProxy::creationParameters(WebProcessProxy& proc
 #if HAVE(STATIC_FONT_REGISTRY)
     if (preferences->shouldAllowUserInstalledFonts()) {
 #if ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT)
-        process.protectedProcessPool()->registerUserInstalledFonts(process);
+        if (m_additionalFonts)
+            process.send(Messages::WebProcess::RegisterAdditionalFonts(AdditionalFonts::additionalFonts(*m_additionalFonts, process.auditToken())), 0);
+        else
+            process.protectedProcessPool()->registerUserInstalledFonts(process);
 #else
         if (auto handles = process.fontdMachExtensionHandles())
             parameters.fontMachExtensionHandles = WTFMove(*handles);

@@ -1051,6 +1051,11 @@ WebContentMode WebPageProxy::effectiveContentModeAfterAdjustingPolicies(API::Web
     return WebContentMode::Recommended;
 }
 
+void WebPageProxy::registerAdditionalFonts(NSArray *fonts)
+{
+    m_additionalFonts = makeVector<URL>(fonts);
+}
+
 } // namespace WebKit
 
 #endif // PLATFORM(MAC)
