@@ -58,7 +58,7 @@ protected:
     explicit ReadableStream(Ref<InternalReadableStream>&&);
 
 private:
-    Ref<InternalReadableStream> m_internalReadableStream;
+    const Ref<InternalReadableStream> m_internalReadableStream;
 };
 
 } // namespace WebCore

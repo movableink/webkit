@@ -151,8 +151,6 @@ Modules/speech/SpeechSynthesisUtterance.cpp
 Modules/speech/SpeechSynthesisUtterance.h
 Modules/storage/StorageManager.cpp
 Modules/storage/WorkerStorageConnection.cpp
-Modules/streams/ReadableStream.cpp
-Modules/streams/ReadableStream.h
 Modules/web-locks/WebLockManager.cpp
 Modules/webaudio/AnalyserNode.cpp
 Modules/webaudio/AudioBasicInspectorNode.cpp
