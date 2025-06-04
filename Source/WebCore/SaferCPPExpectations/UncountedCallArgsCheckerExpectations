@@ -1019,7 +1019,6 @@ rendering/RenderElement.cpp
 rendering/RenderElementInlines.h
 rendering/RenderEmbeddedObject.cpp
 rendering/RenderFileUploadControl.cpp
-rendering/RenderFrame.cpp
 rendering/RenderFrameSet.cpp
 rendering/RenderHTMLCanvas.cpp
 rendering/RenderImage.cpp

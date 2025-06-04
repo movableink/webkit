@@ -340,7 +340,6 @@ html/HTMLDocument.cpp
 html/HTMLEmbedElement.cpp
 html/HTMLFieldSetElement.cpp
 html/HTMLFormElement.cpp
-html/HTMLFrameElement.cpp
 html/HTMLFrameElementBase.cpp
 html/HTMLImageElement.cpp
 html/HTMLInputElement.cpp

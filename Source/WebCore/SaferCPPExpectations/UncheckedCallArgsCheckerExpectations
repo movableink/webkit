@@ -285,7 +285,6 @@ html/HTMLFieldSetElement.cpp
 html/HTMLFormControlElement.cpp
 html/HTMLFormControlsCollection.cpp
 html/HTMLFormElement.cpp
-html/HTMLFrameElement.cpp
 html/HTMLFrameElementBase.cpp
 html/HTMLFrameSetElement.cpp
 html/HTMLIFrameElement.cpp
@@ -657,7 +656,6 @@ rendering/RenderFlexibleBox.cpp
 rendering/RenderFragmentContainer.cpp
 rendering/RenderFragmentContainerSet.cpp
 rendering/RenderFragmentedFlow.cpp
-rendering/RenderFrame.cpp
 rendering/RenderFrameSet.cpp
 rendering/RenderGeometryMap.cpp
 rendering/RenderGrid.cpp
