@@ -1036,7 +1036,6 @@ rendering/RenderReplaced.cpp
 rendering/RenderScrollbar.cpp
 rendering/RenderScrollbarPart.cpp
 rendering/RenderSearchField.cpp
-rendering/RenderSlider.cpp
 rendering/RenderTable.cpp
 rendering/RenderTableCell.cpp
 rendering/RenderTableSection.cpp

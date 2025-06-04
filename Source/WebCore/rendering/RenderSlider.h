@@ -37,6 +37,7 @@ public:
     virtual ~RenderSlider();
 
     HTMLInputElement& element() const;
+    Ref<HTMLInputElement> protectedElement() const;
 
     bool inDragMode() const;
 

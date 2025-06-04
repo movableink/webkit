@@ -696,7 +696,6 @@ rendering/RenderScrollbarPart.cpp
 rendering/RenderSearchField.cpp
 rendering/RenderSelection.cpp
 rendering/RenderSelectionGeometry.cpp
-rendering/RenderSlider.cpp
 rendering/RenderTable.cpp
 rendering/RenderTable.h
 rendering/RenderTableCaption.cpp

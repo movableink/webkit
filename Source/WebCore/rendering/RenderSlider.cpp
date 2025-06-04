@@ -41,6 +41,8 @@
 #include "StepRange.h"
 #include "StyleResolver.h"
 #include <wtf/MathExtras.h>
+#include <wtf/Ref.h>
+#include <wtf/RefPtr.h>
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -61,6 +63,11 @@ RenderSlider::RenderSlider(HTMLInputElement& element, RenderStyle&& style)
 RenderSlider::~RenderSlider() = default;
 
 HTMLInputElement& RenderSlider::element() const
+{
+    return downcast<HTMLInputElement>(nodeForNonAnonymous());
+}
+
+Ref<HTMLInputElement> RenderSlider::protectedElement() const
 {
     return downcast<HTMLInputElement>(nodeForNonAnonymous());
 }
@@ -105,16 +112,16 @@ void RenderSlider::computePreferredLogicalWidths()
 
 bool RenderSlider::inDragMode() const
 {
-    return element().sliderThumbElement()->active();
+    return protectedElement()->protectedSliderThumbElement()->active();
 }
 
 double RenderSlider::valueRatio() const
 {
-    auto& element = this->element();
+    Ref element = this->element();
 
-    auto min = element.minimum();
-    auto max = element.maximum();
-    auto value = element.valueAsNumber();
+    auto min = element->minimum();
+    auto max = element->maximum();
+    auto value = element->valueAsNumber();
 
     if (max <= min)
         return 0;
