@@ -87,6 +87,20 @@ imported/w3c/web-platform-tests/css/css-pseudo/highlight-custom-properties-dynam
 # Tests that require wheel events
 compositing/repaint/sticky-repaint-on-scroll.html [ Pass ]
 
+# Some of these have failing results: webkit.org/b/293983
+imported/w3c/web-platform-tests/dom/events/scrolling/iframe-chains.html [ Pass ]
+imported/w3c/web-platform-tests/dom/events/scrolling/scroll-cross-origin-iframes.html [ Pass ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-basic.html?include=scroll-over-scrollable-child [ Pass ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-basic.html?include=target-basic [ Pass ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-multiple-action-chains.html [ Pass ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-target-display-change.html?include=contents [ Pass ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-target-display-change.html?include=none [ Pass ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-target-elements.html [ Pass ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-target-move.html [ Pass ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-target-removal.html [ Pass ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-target-resize.html?include=passive-false [ Pass ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-target-resize.html?include=passive-true [ Pass ]
+
 # These tests are checking that WebContent is terminated when performing an invalid IPC operation for WK2.
 # They crash in debug (as expected) so we skip them there. <rdar://problem/117742950>
 [ Debug ] ipc/restrictedendpoints/mac/deny-access-modelElement.html [ Skip ]
@@ -2164,8 +2178,6 @@ webkit.org/b/292794 [ Debug ] http/tests/media/media-play-stream-chunked-icy.htm
 webkit.org/b/292883 http/wpt/service-workers/basic-fetch-with-contentfilter.https.html [ Pass Failure ]
 
 webkit.org/b/283410 media/media-vp8-webm-with-poster.html [ Pass ImageOnlyFailure ]
-
-webkit.org/b/293145 [ Debug arm64 ] imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-for-user-scroll.html [ Pass Failure ]
 
 webkit.org/b/293761 http/wpt/service-workers/navigate-iframes-window-client.https.html [ Failure ]
 webkit.org/b/293761 http/tests/navigation/keyboard-events-during-provisional-navigation.html [ Failure ]

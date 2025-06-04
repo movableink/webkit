@@ -6625,8 +6625,53 @@ imported/w3c/web-platform-tests/html/browsers/browsing-the-web/navigating-across
 
 webkit.org/b/242658 http/tests/media/user-gesture-preserved-across-xmlhttprequest.html [ Slow Pass Failure ]
 
-# Test has been timing out since its import.
-imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-handler-content-attributes.html [ Skip ]
+# `overscroll` events are not supported
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/overscroll-deltas.tentative.html [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/overscroll-event-fired-to-document.tentative.html [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/overscroll-event-fired-to-element-with-overscroll-behavior.tentative.html [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/overscroll-event-fired-to-scrolled-element.tentative.html [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/overscroll-event-fired-to-window.tentative.html [ Skip ]
+
+# `scrollend` events are not supported
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-after-sequence-of-scrolls.tentative.html [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-after-snap.html [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-mandatory-snap-point-after-load.html [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-to-document.html [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-to-element-with-overscroll-behavior.html [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-to-window.html [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fires-on-visual-viewport.html [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fires-to-iframe-window.html [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-handler-content-attributes.html [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-not-fired-after-removing-scroller.tentative.html [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-not-fired-on-no-scroll.html [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-fires-to-text-input.html [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-with-snap-on-fractional-offset.html [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-programmatic-scroll.html?include=root-scrollBy-auto [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-programmatic-scroll.html?include=root-scrollBy-smooth [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-programmatic-scroll.html?include=root-scrollTo-auto [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-programmatic-scroll.html?include=root-scrollTo-smooth [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-programmatic-scroll.html?include=subframe-scrollBy-auto [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-programmatic-scroll.html?include=subframe-scrollBy-smooth [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-programmatic-scroll.html?include=subframe-scrollTo-auto [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-programmatic-scroll.html?include=subframe-scrollTo-smooth [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-scroll-attr-change.html?include=root-scrollLeft-auto [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-scroll-attr-change.html?include=root-scrollLeft-smooth [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-scroll-attr-change.html?include=root-scrollTop-auto [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-scroll-attr-change.html?include=root-scrollTop-smooth [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-scroll-attr-change.html?include=subframe-scrollLeft-auto [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-scroll-attr-change.html?include=subframe-scrollLeft-smooth [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-scroll-attr-change.html?include=subframe-scrollTop-auto [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-scroll-attr-change.html?include=subframe-scrollTop-smooth [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-scrollIntoView.html?include=nested-scrollIntoView [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-scrollIntoView.html?include=root-inline-end-block-end-behavior-auto [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-scrollIntoView.html?include=root-inline-start-block-start-behavior-smooth [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-scrollIntoView.html?include=subframe-inline-end-block-end-behavior-auto [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-for-scrollIntoView.html?include=subframe-inline-start-block-start-behavior-smooth [ Skip ]
+webkit.org/b/201556 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-for-user-scroll.html [ Skip ]
+
+# Three dom/events/scrolling WPTs are constantly timing out
+webkit.org/b/263438 imported/w3c/web-platform-tests/dom/events/scrolling/input-text-scroll-event-when-using-arrow-keys.html [ Skip ]
+webkit.org/b/293821 imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-basic.html?include=transaction-not-bound-to-scroll-frame [ Skip ]
 
 # New faliure after re-importing mediacapture-streams.
 webkit.org/b/274091 imported/w3c/web-platform-tests/mediacapture-streams/idlharness.https.window.html
@@ -6997,12 +7042,6 @@ webkit.org/b/263434 imported/w3c/web-platform-tests/uievents/order-of-events/mou
 webkit.org/b/261810 imported/w3c/web-platform-tests/css/css-scroll-snap/input/mouse-wheel.html [ Skip ]
 
 webkit.org/b/237552 imported/w3c/web-platform-tests/html/browsers/history/the-location-interface/same-hash.html [ Pass Failure ]
-
-# webkit.org/b/263438 Three dom/events/scrolling WPTs are constantly timing out
-imported/w3c/web-platform-tests/dom/events/scrolling/overscroll-deltas.html [ Skip ]
-imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-to-document.html [ Skip ]
-imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-not-fired-on-no-scroll.html [ Skip ]
-imported/w3c/web-platform-tests/dom/events/scrolling/input-text-scroll-event-when-using-arrow-keys.html [ Skip ]
 
 # scroll-animations timeouts
 webkit.org/b/283701 imported/w3c/web-platform-tests/scroll-animations/css/deferred-timeline-composited.html [ Skip ]
@@ -7504,6 +7543,20 @@ imported/w3c/web-platform-tests/css/css-break/chrome-bug-1289999-crash.https.htm
 # webkit.org/b/266168 Two wheel/mousewheel passive event listeners WPT test pass on macOS Sonoma and up
 imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/passive-mousewheel-event-listener-on-div.html [ Failure ]
 imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/passive-wheel-event-listener-on-div.html [ Failure ]
+
+# tests that require wheel event synthesis:
+imported/w3c/web-platform-tests/dom/events/scrolling/iframe-chains.html [ Skip ]
+imported/w3c/web-platform-tests/dom/events/scrolling/scroll-cross-origin-iframes.html [ Skip ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-basic.html?include=scroll-over-scrollable-child [ Skip ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-basic.html?include=target-basic [ Skip ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-multiple-action-chains.html [ Skip ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-target-display-change.html?include=contents [ Skip ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-target-display-change.html?include=none [ Skip ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-target-elements.html [ Skip ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-target-move.html [ Skip ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-target-removal.html [ Skip ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-target-resize.html?include=passive-false [ Skip ]
+imported/w3c/web-platform-tests/dom/events/scrolling/wheel-event-transactions-target-resize.html?include=passive-true [ Skip ]
 
 imported/w3c/web-platform-tests/css/css-color/deprecated-sameas-002.html [ ImageOnlyFailure ]
 

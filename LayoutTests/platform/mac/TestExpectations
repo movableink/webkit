@@ -2387,8 +2387,6 @@ webkit.org/b/288507 [ Debug x86_64 ] media/media-source/remoteplayback-availabil
 
 webkit.org/b/288546 imported/w3c/web-platform-tests/fullscreen/api/element-ready-allowed.html [ Pass Failure ]
 
-webkit.org/b/288631 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-after-snap.html [ Failure ]
-
 webkit.org/b/260320 imported/w3c/web-platform-tests/css/selectors/invalidation/nth-child-in-shadow-root.html [ ImageOnlyFailure ]
 
 webkit.org/b/289275 [ Release ] media/media-garbage-collection.html [ Pass Failure Timeout ]

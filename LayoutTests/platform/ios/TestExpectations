@@ -2645,8 +2645,6 @@ media/W3C/audio/canPlayType/canPlayType_supported_but_no_codecs_parameter_1.html
 
 media/video-seek-to-current-time.html [ Failure Pass ]
 
-imported/w3c/web-platform-tests/dom/events/scrolling [ Pass ]
-
 fast/attachment/attachment-truncated-action.html [ Pass ]
 # fast/attachment/attachment-wrapping-action.html [ Pass ] # TODO: ImageOnlyFailure expectation set below. Uncomment this line when that issue is resolved.
 fast/attachment/attachment-borderless.html [ Pass ]
@@ -4597,7 +4595,6 @@ imported/w3c/web-platform-tests/css/css-tables/visibility-collapse-rowspan-002.h
 imported/w3c/web-platform-tests/css/css-tables/visibility-collapse-rowspan-003-border-separate.html [ Failure ]
 imported/w3c/web-platform-tests/css/css-tables/visibility-collapse-rowspan-003.html [ Failure ]
 imported/w3c/web-platform-tests/css/css-tables/visibility-collapse-rowspan-004-dynamic.html [ Failure ]
-imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-after-sequence-of-scrolls.tentative.html [ Failure ]
 imported/w3c/web-platform-tests/editing/run/caret-navigation-around-line-break.html [ Failure ]
 imported/w3c/web-platform-tests/html/semantics/popovers/popover-anchor-nesting.tentative.html [ Failure ]
 imported/w3c/web-platform-tests/service-workers/service-worker/fetch-request-redirect.https.html [ Failure ]
@@ -4676,6 +4673,7 @@ webkit.org/b/263396 css3/color/text.html [ Skip ]
 imported/w3c/web-platform-tests/css/css-overscroll-behavior/overscroll-behavior.html [ Skip ]
 imported/w3c/web-platform-tests/css/css-scroll-snap/snap-at-user-scroll-end.html [ Skip ]
 imported/w3c/web-platform-tests/css/css-transforms/scroll-preserve-3d.html [ Skip ]
+
 imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/non-passive-mousewheel-event-listener-on-body.html [ Skip ]
 imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/non-passive-mousewheel-event-listener-on-div.html [ Skip ]
 imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/non-passive-mousewheel-event-listener-on-document.html [ Skip ]
@@ -4696,9 +4694,7 @@ imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/passive-w
 imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/passive-wheel-event-listener-on-document.html [ Skip ]
 imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/passive-wheel-event-listener-on-root.html [ Skip ]
 imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/passive-wheel-event-listener-on-window.html [ Skip ]
-imported/w3c/web-platform-tests/dom/events/scrolling/iframe-chains.html [ Skip ]
-imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-for-user-scroll.html [ Skip ]
-imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-not-fired-on-no-scroll.html [ Skip ]
+
 imported/w3c/web-platform-tests/html/semantics/popovers/popover-light-dismiss-scroll-within.html [ Skip ]
 imported/w3c/web-platform-tests/uievents/order-of-events/mouse-events/wheel-scrolling.html [ Skip ]
 
