@@ -676,7 +676,6 @@ inline void RenderStyle::setBlendMode(BlendMode mode)
     SET(m_rareInheritedData, isInSubtreeWithBlendMode, mode != BlendMode::Normal);
 }
 
-inline void RenderStyle::setIsInVisibilityAdjustmentSubtree() { SET(m_rareInheritedData, isInVisibilityAdjustmentSubtree, true); }
 inline void RenderStyle::setIsForceHidden() { SET(m_rareInheritedData, isForceHidden, true); }
 inline void RenderStyle::setIsolation(Isolation isolation) { SET_NESTED(m_nonInheritedData, rareData, isolation, static_cast<unsigned>(isolation)); }
 

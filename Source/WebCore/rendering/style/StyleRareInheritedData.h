@@ -179,7 +179,6 @@ public:
 
     unsigned isInSubtreeWithBlendMode : 1;
 
-    unsigned isInVisibilityAdjustmentSubtree : 1;
     unsigned isForceHidden : 1;
 
     unsigned usedContentVisibility : 2; // ContentVisibility

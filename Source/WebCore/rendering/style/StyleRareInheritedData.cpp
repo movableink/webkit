@@ -143,7 +143,6 @@ StyleRareInheritedData::StyleRareInheritedData()
     , hasAutoAccentColor(true)
     , effectiveInert(false)
     , isInSubtreeWithBlendMode(false)
-    , isInVisibilityAdjustmentSubtree(false)
     , isForceHidden(false)
     , usedContentVisibility(static_cast<unsigned>(ContentVisibility::Visible))
     , insideDefaultButton(false)
@@ -245,7 +244,6 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , hasAutoAccentColor(o.hasAutoAccentColor)
     , effectiveInert(o.effectiveInert)
     , isInSubtreeWithBlendMode(o.isInSubtreeWithBlendMode)
-    , isInVisibilityAdjustmentSubtree(o.isInVisibilityAdjustmentSubtree)
     , isForceHidden(o.isForceHidden)
     , usedContentVisibility(o.usedContentVisibility)
     , insideDefaultButton(o.insideDefaultButton)
@@ -378,7 +376,6 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && hasVisitedLinkAutoCaretColor == o.hasVisitedLinkAutoCaretColor
         && hasAutoAccentColor == o.hasAutoAccentColor
         && isInSubtreeWithBlendMode == o.isInSubtreeWithBlendMode
-        && isInVisibilityAdjustmentSubtree == o.isInVisibilityAdjustmentSubtree
         && isForceHidden == o.isForceHidden
         && usedTouchActions == o.usedTouchActions
         && eventListenerRegionTypes == o.eventListenerRegionTypes
@@ -506,7 +503,6 @@ void StyleRareInheritedData::dumpDifferences(TextStream& ts, const StyleRareInhe
     LOG_IF_DIFFERENT_WITH_CAST(bool, hasAutoAccentColor);
     LOG_IF_DIFFERENT_WITH_CAST(bool, effectiveInert);
     LOG_IF_DIFFERENT_WITH_CAST(bool, isInSubtreeWithBlendMode);
-    LOG_IF_DIFFERENT_WITH_CAST(bool, isInVisibilityAdjustmentSubtree);
     LOG_IF_DIFFERENT_WITH_CAST(bool, isForceHidden);
 
     LOG_IF_DIFFERENT_WITH_CAST(ContentVisibility, usedContentVisibility);

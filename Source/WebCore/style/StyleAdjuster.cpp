@@ -643,8 +643,8 @@ void Adjuster::adjust(RenderStyle& style) const
                 style.setHeight(WebCore::Length(200, LengthType::Fixed));
         }
 
-        if (m_element->visibilityAdjustment().contains(VisibilityAdjustment::Subtree) || m_parentStyle.isInVisibilityAdjustmentSubtree()) [[unlikely]]
-            style.setIsInVisibilityAdjustmentSubtree();
+        if (m_element->visibilityAdjustment().contains(VisibilityAdjustment::Subtree)) [[unlikely]]
+            style.setIsForceHidden();
     }
 
     if (shouldInheritTextDecorationsInEffect(style, m_element.get()))
@@ -1236,7 +1236,7 @@ void Adjuster::adjustVisibilityForPseudoElement(RenderStyle& style, const Elemen
 {
     if ((style.pseudoElementType() == PseudoId::After && host.visibilityAdjustment().contains(VisibilityAdjustment::AfterPseudo))
         || (style.pseudoElementType() == PseudoId::Before && host.visibilityAdjustment().contains(VisibilityAdjustment::BeforePseudo)))
-        style.setIsInVisibilityAdjustmentSubtree();
+        style.setIsForceHidden();
 }
 
 }

@@ -1174,9 +1174,6 @@ public:
     inline void setBlendMode(BlendMode);
     inline bool isInSubtreeWithBlendMode() const;
 
-    inline void setIsInVisibilityAdjustmentSubtree();
-    inline bool isInVisibilityAdjustmentSubtree() const;
-
     inline void setIsForceHidden();
     inline bool isForceHidden() const;
 

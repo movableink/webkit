@@ -1041,7 +1041,7 @@ static Element* searchForElementContainingText(ContainerNode& container, const S
         }
 
         CheckedPtr renderer = target->renderer();
-        if (!renderer || renderer->style().isInVisibilityAdjustmentSubtree()) {
+        if (!renderer || renderer->style().isForceHidden()) {
             remainingRange.start = foundRange.end;
             continue;
         }
