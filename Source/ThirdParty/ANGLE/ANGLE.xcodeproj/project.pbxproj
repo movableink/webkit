@@ -15,7 +15,6 @@
 			dependencies = (
 				314C6E9F2CD33603001EA6B3 /* PBXTargetDependency */,
 				314C6E8C2CD2FA12001EA6B3 /* PBXTargetDependency */,
-				314C6E8A2CD2F9F8001EA6B3 /* PBXTargetDependency */,
 				31DB79572491C35400982878 /* PBXTargetDependency */,
 			);
 			name = ANGLE;
@@ -28,7 +27,6 @@
 			);
 			dependencies = (
 				7BF554BF2C81EEF5002B101E /* PBXTargetDependency */,
-				7BF554C12C81EEF5002B101E /* PBXTargetDependency */,
 			);
 			name = "Fuzzers (ANGLE)";
 			productName = "Fuzzers (ANGLE)";
@@ -51,7 +49,6 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
-		310403082CD5A5DB00766464 /* libtranslator.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7BF5549B2C81EDE0002B101E /* libtranslator.a */; };
 		3154A847266C4AFF00BF33B7 /* ImageMtl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 3154A845266C4AFE00BF33B7 /* ImageMtl.mm */; };
 		31CD002D249184F400486F27 /* TransformFeedbackImpl.h in Headers */ = {isa = PBXBuildFile; fileRef = 5CB304D81DE4164800D2C405 /* TransformFeedbackImpl.h */; };
 		31CD002E249184F400486F27 /* renderer_utils.h in Headers */ = {isa = PBXBuildFile; fileRef = 5CB304CE1DE4164800D2C405 /* renderer_utils.h */; };
@@ -361,7 +358,6 @@
 		3A7AA54E28E1319D009E09C2 /* PixelLocalStorage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3A7AA54C28E1319D009E09C2 /* PixelLocalStorage.cpp */; };
 		3AD0D2242988C96D0080D728 /* renderermtl_utils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3AD0D2222988C96D0080D728 /* renderermtl_utils.cpp */; };
 		3AD0D2252988C96D0080D728 /* renderermtl_utils.h in Headers */ = {isa = PBXBuildFile; fileRef = 3AD0D2232988C96D0080D728 /* renderermtl_utils.h */; };
-		4458D1272B635E1000B64F47 /* translator_fuzzer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4458D1172B63500B00B64F47 /* translator_fuzzer.cpp */; };
 		6E27925927EA43F500B1BA86 /* BaseTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6E27925827EA43F500B1BA86 /* BaseTypes.cpp */; };
 		7B1538852BBC2C7A00B50C74 /* IntermRebuild.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B1538812BBC2C7A00B50C74 /* IntermRebuild.cpp */; };
 		7B1538862BBC2C7A00B50C74 /* NodeType.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B1538822BBC2C7A00B50C74 /* NodeType.h */; };
@@ -1424,13 +1420,6 @@
 /* End PBXBuildRule section */
 
 /* Begin PBXContainerItemProxy section */
-		314C6E892CD2F9F8001EA6B3 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = FB39D0701200ED9200088E69 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 4458D11B2B635DCC00B64F47;
-			remoteInfo = metal_translator_fuzzer;
-		};
 		314C6E8B2CD2FA12001EA6B3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = FB39D0701200ED9200088E69 /* Project object */;
@@ -1493,13 +1482,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = 7BF554B52C81EEDB002B101E;
 			remoteInfo = ANGLETranslatorFuzzer;
-		};
-		7BF554C02C81EEF5002B101E /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = FB39D0701200ED9200088E69 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 4458D11B2B635DCC00B64F47;
-			remoteInfo = metal_translator_fuzzer;
 		};
 		7BF554C22C81EF03002B101E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -1732,10 +1714,8 @@
 		3A7AA54C28E1319D009E09C2 /* PixelLocalStorage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PixelLocalStorage.cpp; path = src/libANGLE/PixelLocalStorage.cpp; sourceTree = SOURCE_ROOT; };
 		3AD0D2222988C96D0080D728 /* renderermtl_utils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = renderermtl_utils.cpp; sourceTree = "<group>"; };
 		3AD0D2232988C96D0080D728 /* renderermtl_utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = renderermtl_utils.h; sourceTree = "<group>"; };
-		4458D1142B634F4200B64F47 /* metal_translator_fuzzer.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = metal_translator_fuzzer.xcconfig; sourceTree = "<group>"; };
 		4458D1152B634F4200B64F47 /* BaseTarget.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = BaseTarget.xcconfig; sourceTree = "<group>"; };
 		4458D1172B63500B00B64F47 /* translator_fuzzer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = translator_fuzzer.cpp; sourceTree = "<group>"; };
-		4458D11C2B635DCC00B64F47 /* metal_translator_fuzzer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = metal_translator_fuzzer; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C1BAA961DFB60FF002906BB /* gl3.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gl3.h; path = include/GLES3/gl3.h; sourceTree = "<group>"; };
 		5C1BAA971DFB60FF002906BB /* gl3platform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gl3platform.h; path = include/GLES3/gl3platform.h; sourceTree = "<group>"; };
 		5C1BAA981DFB60FF002906BB /* gl31.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gl31.h; path = include/GLES3/gl31.h; sourceTree = "<group>"; };
@@ -2772,14 +2752,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		4458D1192B635DCC00B64F47 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				310403082CD5A5DB00766464 /* libtranslator.a in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		7BB971FE2DE47B8A00455D13 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -3702,7 +3674,6 @@
 				5D7C59C61208C68B001C873E /* Base.xcconfig */,
 				4458D1152B634F4200B64F47 /* BaseTarget.xcconfig */,
 				5D7C59C71208C68B001C873E /* DebugRelease.xcconfig */,
-				4458D1142B634F4200B64F47 /* metal_translator_fuzzer.xcconfig */,
 				7BF554CA2C81EFF9002B101E /* translator.xcconfig */,
 				7BFAF8FB2DE6F43700327F7F /* utils.xcconfig */,
 			);
@@ -4295,7 +4266,6 @@
 			isa = PBXGroup;
 			children = (
 				31CDFDF42491819E00486F27 /* libANGLE-shared.dylib */,
-				4458D11C2B635DCC00B64F47 /* metal_translator_fuzzer */,
 				7BF5549B2C81EDE0002B101E /* libtranslator.a */,
 				7BF554AA2C81EEB1002B101E /* ANGLETranslatorFuzzerCoverage.xctest */,
 				7BF554B62C81EEDB002B101E /* ANGLETranslatorFuzzer */,
@@ -4965,22 +4935,6 @@
 			productReference = 31CDFDF42491819E00486F27 /* libANGLE-shared.dylib */;
 			productType = "com.apple.product-type.library.dynamic";
 		};
-		4458D11B2B635DCC00B64F47 /* metal_translator_fuzzer */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 4458D1202B635DCC00B64F47 /* Build configuration list for PBXNativeTarget "metal_translator_fuzzer" */;
-			buildPhases = (
-				4458D1182B635DCC00B64F47 /* Sources */,
-				4458D1192B635DCC00B64F47 /* Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = metal_translator_fuzzer;
-			productName = metal_translator_fuzzer;
-			productReference = 4458D11C2B635DCC00B64F47 /* metal_translator_fuzzer */;
-			productType = "com.apple.product-type.tool";
-		};
 		7BB971FF2DE47B8A00455D13 /* ANGLE (static) */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 7BB972012DE47B8B00455D13 /* Build configuration list for PBXNativeTarget "ANGLE (static)" */;
@@ -5178,9 +5132,6 @@
 						CreatedOnToolsVersion = 12.0;
 						ProvisioningStyle = Automatic;
 					};
-					4458D11B2B635DCC00B64F47 = {
-						CreatedOnToolsVersion = 15.2;
-					};
 					7BB971FF2DE47B8A00455D13 = {
 						CreatedOnToolsVersion = 17.0;
 					};
@@ -5226,7 +5177,6 @@
 				7BF5549A2C81EDE0002B101E /* translator */,
 				7BFAF76C2DE6EADC00327F7F /* utils */,
 				FFDA50C4269F845100AE11E2 /* ANGLEMetalLib */,
-				4458D11B2B635DCC00B64F47 /* metal_translator_fuzzer */,
 				7BF5548D2C81ED90002B101E /* Fuzzers (ANGLE) */,
 				7BF554B52C81EEDB002B101E /* ANGLETranslatorFuzzer */,
 				7BF554922C81ED9B002B101E /* Tools (ANGLE) */,
@@ -5679,14 +5629,6 @@
 				3A2C66F5292371B200FEDF46 /* WorkerThread.cpp in Sources */,
 				7B359DBB2A7CEDAA0016DC59 /* WrapMain.cpp in Sources */,
 				7B19599526C3C64E00C09322 /* xxhash.c in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		4458D1182B635DCC00B64F47 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				4458D1272B635E1000B64F47 /* translator_fuzzer.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -6347,11 +6289,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		314C6E8A2CD2F9F8001EA6B3 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 4458D11B2B635DCC00B64F47 /* metal_translator_fuzzer */;
-			targetProxy = 314C6E892CD2F9F8001EA6B3 /* PBXContainerItemProxy */;
-		};
 		314C6E8C2CD2FA12001EA6B3 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 7BF554B52C81EEDB002B101E /* ANGLETranslatorFuzzer */;
@@ -6396,11 +6333,6 @@
 			isa = PBXTargetDependency;
 			target = 7BF554B52C81EEDB002B101E /* ANGLETranslatorFuzzer */;
 			targetProxy = 7BF554BE2C81EEF5002B101E /* PBXContainerItemProxy */;
-		};
-		7BF554C12C81EEF5002B101E /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 4458D11B2B635DCC00B64F47 /* metal_translator_fuzzer */;
-			targetProxy = 7BF554C02C81EEF5002B101E /* PBXContainerItemProxy */;
 		};
 		7BF554C32C81EF03002B101E /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -6480,27 +6412,6 @@
 		};
 		31DB79522491C33300982878 /* Production */ = {
 			isa = XCBuildConfiguration;
-			buildSettings = {
-			};
-			name = Production;
-		};
-		4458D1212B635DCC00B64F47 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 4458D1142B634F4200B64F47 /* metal_translator_fuzzer.xcconfig */;
-			buildSettings = {
-			};
-			name = Debug;
-		};
-		4458D1222B635DCC00B64F47 /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 4458D1142B634F4200B64F47 /* metal_translator_fuzzer.xcconfig */;
-			buildSettings = {
-			};
-			name = Release;
-		};
-		4458D1232B635DCC00B64F47 /* Production */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 4458D1142B634F4200B64F47 /* metal_translator_fuzzer.xcconfig */;
 			buildSettings = {
 			};
 			name = Production;
@@ -6799,16 +6710,6 @@
 				31DB79502491C33300982878 /* Debug */,
 				31DB79512491C33300982878 /* Release */,
 				31DB79522491C33300982878 /* Production */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Production;
-		};
-		4458D1202B635DCC00B64F47 /* Build configuration list for PBXNativeTarget "metal_translator_fuzzer" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				4458D1212B635DCC00B64F47 /* Debug */,
-				4458D1222B635DCC00B64F47 /* Release */,
-				4458D1232B635DCC00B64F47 /* Production */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Production;
