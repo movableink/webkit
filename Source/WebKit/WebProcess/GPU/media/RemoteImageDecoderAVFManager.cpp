@@ -89,9 +89,9 @@ void RemoteImageDecoderAVFManager::gpuProcessConnectionDidClose(GPUProcessConnec
 
 GPUProcessConnection& RemoteImageDecoderAVFManager::ensureGPUProcessConnection()
 {
-    auto gpuProcessConnection = m_gpuProcessConnection.get();
+    RefPtr gpuProcessConnection = m_gpuProcessConnection.get();
     if (!gpuProcessConnection) {
-        gpuProcessConnection = &WebProcess::singleton().ensureGPUProcessConnection();
+        gpuProcessConnection = WebProcess::singleton().ensureGPUProcessConnection();
         m_gpuProcessConnection = gpuProcessConnection;
         gpuProcessConnection->addClient(*this);
         gpuProcessConnection->messageReceiverMap().addMessageReceiver(Messages::RemoteImageDecoderAVFManager::messageReceiverName(), *this);

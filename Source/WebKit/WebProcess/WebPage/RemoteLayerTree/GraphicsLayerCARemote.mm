@@ -127,7 +127,7 @@ void GraphicsLayerCARemote::moveToContext(RemoteLayerTreeContext& context)
     if (RefPtr protectedContext = m_context.get())
         protectedContext->graphicsLayerWillLeaveContext(*this);
 
-    m_context = &context;
+    m_context = context;
 
     context.graphicsLayerDidEnterContext(*this);
 }

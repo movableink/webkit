@@ -306,7 +306,7 @@ bool WebLoaderStrategy::tryLoadingUsingURLSchemeHandler(ResourceLoader& resource
         return false;
 
     if (auto* webFrameLoaderClient = dynamicDowncast<WebLocalFrameLoaderClient>(resourceLoader.frameLoader()->client())) {
-        webFrame = &webFrameLoaderClient->webFrame();
+        webFrame = webFrameLoaderClient->webFrame();
         webPage = webFrame->page();
     } else if (auto* workerFrameLoaderClient = dynamicDowncast<RemoteWorkerFrameLoaderClient>(resourceLoader.frameLoader()->client())) {
         if (auto serviceWorkerPageIdentifier = workerFrameLoaderClient->serviceWorkerPageIdentifier()) {
@@ -512,7 +512,7 @@ void WebLoaderStrategy::scheduleLoadFromNetworkProcess(ResourceLoader& resourceL
     }
 
     if (!loadParameters.sourceOrigin && document)
-        loadParameters.sourceOrigin = &document->securityOrigin();
+        loadParameters.sourceOrigin = document->securityOrigin();
     if (!loadParameters.sourceOrigin) {
         auto origin = request.httpOrigin();
         if (!origin.isNull())
@@ -524,7 +524,7 @@ void WebLoaderStrategy::scheduleLoadFromNetworkProcess(ResourceLoader& resourceL
         else
             loadParameters.topOrigin = SecurityOrigin::create(request.url());
     } else if (document)
-        loadParameters.topOrigin = &document->topOrigin();
+        loadParameters.topOrigin = document->topOrigin();
 
     if (document)
         loadParameters.documentURL = document->url();
@@ -579,7 +579,7 @@ void WebLoaderStrategy::scheduleLoadFromNetworkProcess(ResourceLoader& resourceL
             RefPtr<WebCore::SecurityOrigin> frameOrigin = frame->frameDocumentSecurityOrigin();
             if (!frameOrigin) {
                 WEBLOADERSTRATEGY_RELEASE_LOG_ERROR("scheduleLoad: Unable to get document origin of frame (frameID=%" PRIu64 ")", frame->frameID().toUInt64());
-                frameOrigin = &SecurityOrigin::opaqueOrigin();
+                frameOrigin = SecurityOrigin::opaqueOrigin();
             }
             frameAncestorOrigins.append(*frameOrigin);
         }
@@ -833,8 +833,8 @@ void WebLoaderStrategy::loadResourceSynchronously(FrameLoader& frameLoader, WebC
     loadParameters.shouldRestrictHTTPResponseAccess = shouldPerformSecurityChecks();
 
     loadParameters.options = options;
-    loadParameters.sourceOrigin = &document->securityOrigin();
-    loadParameters.topOrigin = &document->topOrigin();
+    loadParameters.sourceOrigin = document->securityOrigin();
+    loadParameters.topOrigin = document->topOrigin();
     if (!document->shouldBypassMainWorldContentSecurityPolicy()) {
         if (auto* contentSecurityPolicy = document->contentSecurityPolicy())
             loadParameters.cspResponseHeaders = contentSecurityPolicy->responseHeaders();
@@ -905,8 +905,8 @@ void WebLoaderStrategy::startPingLoad(LocalFrame& frame, ResourceRequest& reques
     loadParameters.createSandboxExtensionHandlesIfNecessary();
 
     loadParameters.identifier = WebCore::ResourceLoaderIdentifier::generate();
-    loadParameters.sourceOrigin = &document->securityOrigin();
-    loadParameters.topOrigin = &document->topOrigin();
+    loadParameters.sourceOrigin = document->securityOrigin();
+    loadParameters.topOrigin = document->topOrigin();
     loadParameters.parentPID = legacyPresentingApplicationPID();
     loadParameters.storedCredentialsPolicy = options.credentials == FetchOptions::Credentials::Omit ? StoredCredentialsPolicy::DoNotUse : StoredCredentialsPolicy::Use;
     loadParameters.options = options;

@@ -1659,7 +1659,7 @@ RefPtr<Widget> WebLocalFrameLoaderClient::createPlugin(HTMLPlugInElement& plugin
 void WebLocalFrameLoaderClient::redirectDataToPlugin(Widget& pluginWidget)
 {
 #if ENABLE(PDF_PLUGIN)
-    m_pluginView = &downcast<PluginView>(pluginWidget);
+    m_pluginView = downcast<PluginView>(pluginWidget);
 #else
     UNUSED_PARAM(pluginWidget);
 #endif

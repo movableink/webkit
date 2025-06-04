@@ -96,7 +96,7 @@ void WebFoundTextRangeController::findTextRangesForStringMatches(const String& s
     }
 
 #if ENABLE(PDF_PLUGIN)
-    for (RefPtr frame = &m_webPage->corePage()->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = m_webPage->corePage()->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame.get());
         if (!localFrame)
             continue;

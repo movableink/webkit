@@ -921,7 +921,7 @@ void WebPage::handleSyntheticClick(std::optional<WebCore::FrameIdentifier> frame
         const Seconds observationDuration = 32_ms;
         contentChangeObserver.startContentObservationForDuration(observationDuration);
         LOG(ContentObservation, "handleSyntheticClick: Can't decide it yet -> wait.");
-        m_pendingSyntheticClickNode = &nodeRespondingToClick;
+        m_pendingSyntheticClickNode = nodeRespondingToClick;
         m_pendingSyntheticClickLocation = location;
         m_pendingSyntheticClickModifiers = modifiers;
         m_pendingSyntheticClickPointerId = pointerId;

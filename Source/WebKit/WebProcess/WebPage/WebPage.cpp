@@ -820,7 +820,7 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
 #endif
 
     pageConfiguration.databaseProvider = WebDatabaseProvider::getOrCreate(m_pageGroup->pageGroupID());
-    pageConfiguration.pluginInfoProvider = &WebPluginInfoProvider::singleton();
+    pageConfiguration.pluginInfoProvider = WebPluginInfoProvider::singleton();
     pageConfiguration.storageNamespaceProvider = WebStorageNamespaceProvider::getOrCreate();
     pageConfiguration.visitedLinkStore = VisitedLinkTableController::getOrCreate(parameters.visitedLinkTableID);
 
@@ -3890,7 +3890,7 @@ void WebPage::updatePotentialTapSecurityOrigin(const WebTouchEvent& touchEvent, 
     ASSERT(touches.size() == 1);
 
     if (auto targetDocument = touchEventTargetFrame->document())
-        m_potentialTapSecurityOrigin = &targetDocument->securityOrigin();
+        m_potentialTapSecurityOrigin = targetDocument->securityOrigin();
 }
 #elif ENABLE(TOUCH_EVENTS)
 void WebPage::touchEvent(const WebTouchEvent& touchEvent, CompletionHandler<void(std::optional<WebEventType>, bool)>&& completionHandler)
@@ -4509,7 +4509,7 @@ void WebPage::getRenderTreeExternalRepresentation(CompletionHandler<void(const S
 
 static RefPtr<LocalFrame> frameWithSelection(Page* page)
 {
-    for (RefPtr frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(*frame);
         if (!localFrame)
             continue;
@@ -4889,7 +4889,7 @@ void WebPage::setDataDetectionResults(NSArray *detectionResults)
 
 void WebPage::removeDataDetectedLinks(CompletionHandler<void(DataDetectionResult&&)>&& completionHandler)
 {
-    for (RefPtr frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame.get());
         if (!localFrame)
             continue;
@@ -6028,7 +6028,7 @@ void WebPage::changeSpellingToWord(const String& word)
 
 void WebPage::unmarkAllMisspellings()
 {
-    for (RefPtr frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(*frame);
         if (!localFrame)
             continue;
@@ -6039,7 +6039,7 @@ void WebPage::unmarkAllMisspellings()
 
 void WebPage::unmarkAllBadGrammar()
 {
-    for (RefPtr frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(*frame);
         if (!localFrame)
             continue;
@@ -7452,7 +7452,7 @@ void WebPage::elementDidFocus(Element& element, const FocusOptions& options)
 
     if (!shouldDispatchUpdateAfterFocusingElement(element)) {
         updateInputContextAfterBlurringAndRefocusingElementIfNeeded(element);
-        m_focusedElement = &element;
+        m_focusedElement = element;
         m_recentlyBlurredElement = nullptr;
         return;
     }
@@ -7461,7 +7461,7 @@ void WebPage::elementDidFocus(Element& element, const FocusOptions& options)
 #if PLATFORM(IOS_FAMILY)
         bool isChangingFocusedElement = m_focusedElement != &element;
 #endif
-        m_focusedElement = &element;
+        m_focusedElement = element;
         m_hasPendingInputContextUpdateAfterBlurringAndRefocusingElement = false;
 
 #if PLATFORM(IOS_FAMILY)
@@ -9189,7 +9189,7 @@ void WebPage::requestTextRecognition(Element& element, TextRecognitionOptions&& 
         if (completion) {
             RefPtr<Element> imageOverlayHost;
             if (ImageOverlay::hasOverlay(*htmlElement))
-                imageOverlayHost = &element;
+                imageOverlayHost = element;
             completion(WTFMove(imageOverlayHost));
         }
         return;

@@ -352,7 +352,7 @@ void ScrollingCoordinator::updateSynchronousScrollingReasons(LocalFrameView& fra
 
 void ScrollingCoordinator::updateSynchronousScrollingReasonsForAllFrames()
 {
-    for (RefPtr frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;

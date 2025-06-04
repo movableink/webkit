@@ -148,7 +148,7 @@ void PlatformCALayerRemote::moveToContext(RemoteLayerTreeContext& context)
     if (RefPtr protectedContext = m_context.get())
         protectedContext->layerWillLeaveContext(*this);
 
-    m_context = &context;
+    m_context = context;
 
     context.layerDidEnterContext(*this, layerType());
 

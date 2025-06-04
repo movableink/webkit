@@ -127,7 +127,7 @@ uint32_t FindController::replaceMatches(const Vector<uint32_t>& matchIndices, co
 
 RefPtr<LocalFrame> FindController::frameWithSelection(Page* page)
 {
-    for (RefPtr<Frame> frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr<Frame> frame = page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         auto* localFrame = dynamicDowncast<LocalFrame>(frame.get());
         if (!localFrame)
             continue;
@@ -555,7 +555,7 @@ Vector<FloatRect> FindController::rectsForTextMatchesInRect(IntRect clipRect)
 
     Vector<FloatRect> rects;
     RefPtr mainFrameView = protectedWebPage()->protectedCorePage()->protectedMainFrame()->virtualView();
-    for (RefPtr frame = &m_webPage->corePage()->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = m_webPage->corePage()->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         auto* localFrame = dynamicDowncast<LocalFrame>(frame.get());
         if (!localFrame)
             continue;

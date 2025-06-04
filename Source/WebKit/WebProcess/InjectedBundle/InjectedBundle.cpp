@@ -314,7 +314,7 @@ InjectedBundle::DocumentIDToURLMap InjectedBundle::liveDocumentURLs(bool exclude
 
     if (excludeDocumentsInPageGroupPages) {
         Page::forEachPage([&](Page& page) {
-            for (RefPtr frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
+            for (RefPtr frame = page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
                 RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
                 if (!localFrame)
                     continue;

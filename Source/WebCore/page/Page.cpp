@@ -303,7 +303,7 @@ static void networkStateChanged(bool isOnLine)
 
     // Get all the frames of all the pages in all the page groups
     for (auto& page : allPages()) {
-        for (RefPtr frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        for (RefPtr frame = page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
             if (RefPtr localFrame = dynamicDowncast<LocalFrame>(*frame))
                 frames.append(*localFrame);
         }
@@ -1350,7 +1350,7 @@ static void replaceRanges(Page& page, const Vector<FindReplacementRange>& ranges
 
     HashMap<RefPtr<LocalFrame>, unsigned> frameToTraversalIndexMap;
     unsigned currentFrameTraversalIndex = 0;
-    for (RefPtr frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
         if (RefPtr localFrame = dynamicDowncast<LocalFrame>(*frame))
             frameToTraversalIndexMap.set(WTFMove(localFrame), currentFrameTraversalIndex++);
     }

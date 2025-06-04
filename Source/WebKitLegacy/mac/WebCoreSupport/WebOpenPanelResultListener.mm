@@ -42,7 +42,7 @@ using namespace WebCore;
     self = [super init];
     if (!self)
         return nil;
-    _chooser = &chooser;
+    _chooser = chooser;
     return self;
 }
 

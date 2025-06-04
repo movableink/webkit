@@ -1535,11 +1535,11 @@ static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
 #endif
 
     pageConfiguration.alternativeTextClient = makeUnique<WebAlternativeTextClient>(self);
-    pageConfiguration.applicationCacheStorage = &webApplicationCacheStorage();
-    pageConfiguration.databaseProvider = &WebDatabaseProvider::singleton();
-    pageConfiguration.pluginInfoProvider = &WebPluginInfoProvider::singleton();
-    pageConfiguration.storageNamespaceProvider = &_private->group->storageNamespaceProvider();
-    pageConfiguration.visitedLinkStore = &_private->group->visitedLinkStore();
+    pageConfiguration.applicationCacheStorage = webApplicationCacheStorage();
+    pageConfiguration.databaseProvider = WebDatabaseProvider::singleton();
+    pageConfiguration.pluginInfoProvider = WebPluginInfoProvider::singleton();
+    pageConfiguration.storageNamespaceProvider = _private->group->storageNamespaceProvider();
+    pageConfiguration.visitedLinkStore = _private->group->visitedLinkStore();
     _private->page = WebCore::Page::create(WTFMove(pageConfiguration));
     storageProvider->setPage(*_private->page);
 
@@ -1787,11 +1787,11 @@ static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
 #endif
 
     pageConfiguration.inspectorClient = makeUnique<WebInspectorClient>(self);
-    pageConfiguration.applicationCacheStorage = &webApplicationCacheStorage();
-    pageConfiguration.databaseProvider = &WebDatabaseProvider::singleton();
-    pageConfiguration.storageNamespaceProvider = &_private->group->storageNamespaceProvider();
-    pageConfiguration.visitedLinkStore = &_private->group->visitedLinkStore();
-    pageConfiguration.pluginInfoProvider = &WebPluginInfoProvider::singleton();
+    pageConfiguration.applicationCacheStorage = webApplicationCacheStorage();
+    pageConfiguration.databaseProvider = WebDatabaseProvider::singleton();
+    pageConfiguration.storageNamespaceProvider = _private->group->storageNamespaceProvider();
+    pageConfiguration.visitedLinkStore = _private->group->visitedLinkStore();
+    pageConfiguration.pluginInfoProvider = WebPluginInfoProvider::singleton();
 
     _private->page = WebCore::Page::create(WTFMove(pageConfiguration));
     storageProvider->setPage(*_private->page);

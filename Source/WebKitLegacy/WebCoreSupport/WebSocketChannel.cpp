@@ -737,7 +737,7 @@ void WebSocketChannel::enqueueBlobFrame(WebSocketFrame::OpCode opCode, Blob& blo
     auto frame = makeUnique<QueuedFrame>();
     frame->opCode = opCode;
     frame->frameType = QueuedFrameTypeBlob;
-    frame->blobData = &blob;
+    frame->blobData = blob;
     m_outgoingFrameQueue.append(WTFMove(frame));
 }
 

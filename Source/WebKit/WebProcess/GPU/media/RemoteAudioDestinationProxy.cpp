@@ -124,9 +124,9 @@ void RemoteAudioDestinationProxy::stopRenderingThread()
 
 IPC::Connection* RemoteAudioDestinationProxy::connection()
 {
-    auto gpuProcessConnection = m_gpuProcessConnection.get();
+    RefPtr gpuProcessConnection = m_gpuProcessConnection.get();
     if (!gpuProcessConnection) {
-        gpuProcessConnection = &WebProcess::singleton().ensureGPUProcessConnection();
+        gpuProcessConnection = WebProcess::singleton().ensureGPUProcessConnection();
         m_gpuProcessConnection = gpuProcessConnection;
         gpuProcessConnection->addClient(*this);
         m_destinationID = RemoteAudioDestinationIdentifier::generate();

@@ -217,7 +217,7 @@ void UnifiedPDFPlugin::installAnnotationContainer()
     if (RefPtr existingShadowRoot = m_element->userAgentShadowRoot())
         existingShadowRoot->removeChildren();
 
-    m_shadowRoot = &m_element->ensureUserAgentShadowRoot();
+    m_shadowRoot = m_element->ensureUserAgentShadowRoot();
     m_shadowRoot->appendChild(*m_annotationContainer);
     if (CheckedPtr renderer = dynamicDowncast<RenderEmbeddedObject>(m_element->renderer()))
         renderer->setHasShadowContent();

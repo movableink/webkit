@@ -153,7 +153,7 @@ std::optional<GeolocationPositionData> WebGeolocationClient::lastPosition()
 {
     if (!(self = [super init]))
         return nil;
-    _geolocation = &geolocation.get();
+    _geolocation = geolocation.get();
     return self;
 }
 
@@ -219,7 +219,7 @@ std::optional<GeolocationPositionData> WebGeolocationClient::lastPosition()
 {
     self = [super init];
     if (self)
-        m_geolocation = &geolocation.get();
+        m_geolocation = geolocation.get();
     return self;
 }
 
