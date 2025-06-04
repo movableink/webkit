@@ -97,7 +97,7 @@ void InsertParagraphSeparatorCommand::applyStyleAfterInsertion(Node* originalEnc
         originalEnclosingBlock->hasTagName(h5Tag))
         return;
 
-    auto style = protectedStyle();
+    RefPtr style = m_style;
     if (!style)
         return;
 

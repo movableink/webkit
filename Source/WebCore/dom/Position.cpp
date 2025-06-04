@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2015-2018 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -351,7 +351,7 @@ RefPtr<Element> Position::anchorElementAncestor() const
 
 Position Position::previous(PositionMoveType moveType) const
 {
-    auto node = protectedDeprecatedNode();
+    RefPtr node = deprecatedNode();
     if (!node)
         return *this;
 
@@ -408,7 +408,7 @@ Position Position::next(PositionMoveType moveType) const
 {
     ASSERT(moveType != BackwardDeletion);
 
-    auto node = protectedDeprecatedNode();
+    RefPtr node = deprecatedNode();
     if (!node)
         return *this;
 
@@ -1203,7 +1203,7 @@ InlineBoxAndOffset Position::inlineBoxAndOffset(Affinity affinity, TextDirection
 {
     auto caretOffset = static_cast<unsigned>(deprecatedEditingOffset());
 
-    auto node = protectedDeprecatedNode();
+    RefPtr node = deprecatedNode();
     if (!node)
         return { { }, caretOffset };
     auto renderer = node->renderer();

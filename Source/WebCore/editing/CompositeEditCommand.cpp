@@ -600,7 +600,7 @@ void CompositeEditCommand::insertNodeAt(Ref<Node>&& insertChild, const Position&
     // For editing positions like [table, 0], insert before the table,
     // likewise for replaced elements, brs, etc.
     Position p = editingPosition.parentAnchoredEquivalent();
-    auto refChild = p.protectedDeprecatedNode();
+    RefPtr refChild = p.deprecatedNode();
     int offset = p.deprecatedEditingOffset();
     
     if (canHaveChildrenForEditing(*refChild)) {
@@ -1113,7 +1113,7 @@ void CompositeEditCommand::deleteInsignificantText(const Position& start, const 
         return;
 
     Vector<Ref<Text>> nodes;
-    for (RefPtr node = start.protectedDeprecatedNode(); node; node = NodeTraversal::next(*node)) {
+    for (RefPtr node = start.deprecatedNode(); node; node = NodeTraversal::next(*node)) {
         if (RefPtr textNode = dynamicDowncast<Text>(*node))
             nodes.append(*textNode);
         if (node == end.deprecatedNode())
@@ -1311,7 +1311,7 @@ void CompositeEditCommand::cloneParagraphUnderNewElement(const Position& start, 
         Vector<RefPtr<Node>> ancestors;
         
         // Insert each node from innerNode to outerNode (excluded) in a list.
-        for (RefPtr n = start.protectedDeprecatedNode(); n && n != outerNode; n = n->parentNode())
+        for (RefPtr n = start.deprecatedNode(); n && n != outerNode; n = n->parentNode())
             ancestors.append(n);
 
         // Clone every node between start.deprecatedNode() and outerBlock.
@@ -1337,7 +1337,7 @@ void CompositeEditCommand::cloneParagraphUnderNewElement(const Position& start, 
         while (!end.deprecatedNode()->isDescendantOf(outerNode.get()) && outerNode->parentNode())
             outerNode = outerNode->parentNode();
 
-        auto startNode = start.protectedDeprecatedNode();
+        RefPtr startNode = start.deprecatedNode();
         for (RefPtr<Node> node = NodeTraversal::nextSkippingChildren(*startNode, outerNode.get()); node; node = NodeTraversal::nextSkippingChildren(*node, outerNode.get())) {
             // Move lastNode up in the tree as much as node was moved up in the
             // tree by NodeTraversal::nextSkippingChildren, so that the relative depth between
@@ -1369,7 +1369,7 @@ void CompositeEditCommand::cleanupAfterDeletion(VisiblePosition destination)
     if (!caretAfterDelete.equals(destination) && isStartOfParagraph(caretAfterDelete) && isEndOfParagraph(caretAfterDelete)) {
         // Note: We want the rightmost candidate.
         Position position = caretAfterDelete.deepEquivalent().downstream();
-        auto node = position.protectedDeprecatedNode();
+        RefPtr node = position.deprecatedNode();
         ASSERT(node);
         // Normally deletion will leave a br as a placeholder.
         if (is<HTMLBRElement>(*node))

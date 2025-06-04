@@ -58,42 +58,38 @@ void InsertIntoTextNodeCommand::doApply()
     if (passwordEchoEnabled)
         document().updateLayoutIgnorePendingStylesheets();
 
-    auto node = protectedNode();
-    if (!node->hasEditableStyle())
+    if (!m_node->hasEditableStyle())
         return;
 
     if (passwordEchoEnabled) {
-        if (CheckedPtr renderText = node->renderer())
+        if (CheckedPtr renderText = m_node->renderer())
             renderText->momentarilyRevealLastTypedCharacter(m_offset + m_text.length());
     }
     
-    node->insertData(m_offset, m_text);
+    m_node->insertData(m_offset, m_text);
 }
 
 void InsertIntoTextNodeCommand::doReapply()
 {
-    auto node = protectedNode();
-    if (!node->hasEditableStyle())
+    if (!m_node->hasEditableStyle())
         return;
 
-    node->insertData(m_offset, m_text);
+    m_node->insertData(m_offset, m_text);
 }
 
 void InsertIntoTextNodeCommand::doUnapply()
 {
-    auto node = protectedNode();
-    if (!node->hasEditableStyle())
+    if (!m_node->hasEditableStyle())
         return;
 
-    node->deleteData(m_offset, m_text.length());
+    m_node->deleteData(m_offset, m_text.length());
 }
 
 #ifndef NDEBUG
 
 void InsertIntoTextNodeCommand::getNodesInCommand(NodeSet& nodes)
 {
-    auto node = protectedNode();
-    addNodeAndDescendants(node.ptr(), nodes);
+    addNodeAndDescendants(m_node.ptr(), nodes);
 }
 
 #endif

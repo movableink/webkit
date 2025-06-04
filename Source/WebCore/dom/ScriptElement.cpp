@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nikolas Zimmermann <zimmermann@kde.org>
  *
  * This library is free software; you can redistribute it and/or
@@ -326,7 +326,7 @@ void ScriptElement::updateTaintedOriginFromSourceURL()
 
 bool ScriptElement::requestClassicScript(const String& sourceURL)
 {
-    auto element = protectedElement();
+    Ref element = this->element();
     ASSERT(element->isConnected());
     ASSERT(!m_loadableScript);
     Ref document = element->document();

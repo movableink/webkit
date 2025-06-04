@@ -349,7 +349,7 @@ void ApplyStyleCommand::applyRelativeFontStyleChange(EditingStyle* style)
         beyondEnd = NodeTraversal::next(*end.deprecatedNode());
     
     start = start.upstream(); // Move upstream to ensure we do not add redundant spans.
-    auto startNode = start.protectedDeprecatedNode();
+    RefPtr startNode = start.deprecatedNode();
 
     if (!startNode)
         return;
@@ -700,7 +700,7 @@ void ApplyStyleCommand::applyInlineStyle(EditingStyle& style)
 
 void ApplyStyleCommand::fixRangeAndApplyInlineStyle(EditingStyle& style, const Position& start, const Position& end)
 {
-    auto startNode = start.protectedDeprecatedNode();
+    RefPtr startNode = start.deprecatedNode();
 
     if (start.deprecatedEditingOffset() >= caretMaxOffset(*startNode)) {
         startNode = NodeTraversal::next(*startNode);
@@ -708,7 +708,7 @@ void ApplyStyleCommand::fixRangeAndApplyInlineStyle(EditingStyle& style, const P
             return;
     }
 
-    auto pastEndNode = end.protectedDeprecatedNode();
+    RefPtr pastEndNode = end.deprecatedNode();
     if (end.deprecatedEditingOffset() >= caretMaxOffset(*pastEndNode))
         pastEndNode = NodeTraversal::nextSkippingChildren(*pastEndNode);
 
@@ -1126,7 +1126,7 @@ void ApplyStyleCommand::removeInlineStyle(EditingStyle& style, const Position& s
     Position s = start.isNull() || start.isOrphan() ? pushDownStart : start;
     Position e = end.isNull() || end.isOrphan() ? pushDownEnd : end;
 
-    auto node = start.protectedDeprecatedNode();
+    RefPtr node = start.deprecatedNode();
     while (node) {
         RefPtr<Node> next;
         if (editingIgnoresContent(*node)) {

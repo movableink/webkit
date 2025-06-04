@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All Rights Reserved.
- * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2007 Rob Buis <buis@kde.org>
  *
@@ -408,7 +408,7 @@ static std::optional<LayoutPoint> absolutePointIfNotClipped(Document& document, 
 
 RefPtr<Node> TreeScope::nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoint* localPoint, HitTestSource source)
 {
-    Ref document = protectedDocumentScope();
+    Ref document = documentScope();
     auto absolutePoint = absolutePointIfNotClipped(document, clientPoint);
     if (!absolutePoint)
         return nullptr;
@@ -444,7 +444,7 @@ Vector<RefPtr<Element>> TreeScope::elementsFromPoint(double clientX, double clie
 {
     Vector<RefPtr<Element>> elements;
 
-    Ref document = protectedDocumentScope();
+    Ref document = documentScope();
     if (!document->hasLivingRenderTree())
         return elements;
 
@@ -543,7 +543,7 @@ static Element* focusedFrameOwnerElement(Frame* focusedFrame, LocalFrame* curren
 
 Element* TreeScope::focusedElementInScope()
 {
-    Ref document = protectedDocumentScope();
+    Ref document = documentScope();
     RefPtr element = document->focusedElement();
 
     if (!element && document->page())

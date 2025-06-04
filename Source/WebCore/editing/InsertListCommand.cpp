@@ -224,7 +224,7 @@ void InsertListCommand::doApplyForSingleParagraph(bool forceCreateList, const HT
     // FIXME: This will produce unexpected results for a selection that starts just before a
     // table and ends inside the first cell, selectionForParagraphIteration should probably
     // be renamed and deployed inside setEndingSelection().
-    auto selectionNode = endingSelection().start().protectedDeprecatedNode();
+    RefPtr selectionNode = endingSelection().start().deprecatedNode();
     RefPtr listChildNode = enclosingListChild(selectionNode.get());
     bool switchListType = false;
     if (listChildNode) {

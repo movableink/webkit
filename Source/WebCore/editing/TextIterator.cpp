@@ -384,7 +384,7 @@ TextIterator::TextIterator(const SimpleRange& range, TextIteratorBehaviors behav
 
 void TextIterator::init()
 {
-    auto currentNode = protectedCurrentNode();
+    RefPtr currentNode = m_currentNode;
     if (isClippedByFrameAncestor(currentNode->protectedDocument(), m_behaviors))
         return;
 
@@ -486,7 +486,7 @@ void TextIterator::advance()
         // break begins.
         // FIXME: It would be cleaner if we emitted two newlines during the last 
         // iteration, instead of using m_needsAnotherNewline.
-        auto parentNode = nodeForAdditionalNewline->protectedParentNode();
+        RefPtr parentNode = nodeForAdditionalNewline->parentNode();
         emitCharacter('\n', WTFMove(parentNode), WTFMove(nodeForAdditionalNewline), 1, 1);
         return;
     }
@@ -537,7 +537,7 @@ void TextIterator::advance()
         RefPtr next = m_handledChildren ? nullptr : firstChild(m_behaviors, *protectedCurrentNode());
         m_offset = 0;
         if (!next) {
-            auto currentNode = protectedCurrentNode();
+            RefPtr currentNode = m_currentNode;
             next = nextSibling(m_behaviors, *currentNode);
             if (!next) {
                 bool pastEnd = nextNode(m_behaviors, *currentNode) == m_pastEndNode;
@@ -568,7 +568,7 @@ void TextIterator::advance()
 
         // set the new current node
         m_currentNode = WTFMove(next);
-        if (auto currentNode = protectedCurrentNode())
+        if (RefPtr currentNode = m_currentNode)
             pushFullyClippedState(m_fullyClippedStack, *currentNode, m_behaviors);
         m_handledNode = false;
         m_handledChildren = false;
@@ -1092,25 +1092,25 @@ void TextIterator::representNodeOffsetZero()
     // create VisiblePositions, which is expensive. So, we perform the inexpensive checks
     // on m_currentNode to see if it necessitates emitting a character first and will early return
     // before encountering shouldRepresentNodeOffsetZero()s worse case behavior.
-    auto currentNode = protectedCurrentNode();
+    RefPtr currentNode = m_currentNode;
     if (shouldEmitTabBeforeNode(*currentNode)) {
         if (shouldRepresentNodeOffsetZero()) {
-            auto parentNode = currentNode->protectedParentNode();
+            RefPtr parentNode = currentNode->parentNode();
             emitCharacter('\t', WTFMove(parentNode), WTFMove(currentNode), 0, 0);
         }
     } else if (shouldEmitNewlineBeforeNode(*currentNode)) {
         if (shouldRepresentNodeOffsetZero()) {
-            auto parentNode = currentNode->protectedParentNode();
+            RefPtr parentNode = currentNode->parentNode();
             emitCharacter('\n', WTFMove(parentNode), WTFMove(currentNode), 0, 0);
         }
     } else if (shouldEmitSpaceBeforeAndAfterNode(*currentNode)) {
         if (shouldRepresentNodeOffsetZero()) {
-            auto parentNode = currentNode->protectedParentNode();
+            RefPtr parentNode = currentNode->parentNode();
             emitCharacter(' ', WTFMove(parentNode), WTFMove(currentNode), 0, 0);
         }
     } else if (shouldEmitReplacementInsteadOfNode(*currentNode)) {
         if (shouldRepresentNodeOffsetZero()) {
-            auto parentNode = currentNode->protectedParentNode();
+            RefPtr parentNode = currentNode->parentNode();
             emitCharacter(objectReplacementCharacter, WTFMove(parentNode), WTFMove(currentNode), 0, 0);
         }
     }
@@ -1118,12 +1118,12 @@ void TextIterator::representNodeOffsetZero()
 
 bool TextIterator::handleNonTextNode()
 {
-    auto currentNode = protectedCurrentNode();
+    RefPtr currentNode = m_currentNode;
     if (shouldEmitNewlineForNode(currentNode.get(), m_behaviors.contains(TextIteratorBehavior::EmitsOriginalText))) {
-        auto parentNode = currentNode->protectedParentNode();
+        RefPtr parentNode = currentNode->parentNode();
         emitCharacter('\n', WTFMove(parentNode), WTFMove(currentNode), 0, 1);
     } else if (m_behaviors.contains(TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions) && currentNode->renderer() && currentNode->renderer()->isHR()) {
-        auto parentNode = currentNode->protectedParentNode();
+        RefPtr parentNode = currentNode->parentNode();
         emitCharacter(' ', WTFMove(parentNode), WTFMove(currentNode), 0, 1);
     } else
         representNodeOffsetZero();
@@ -1168,7 +1168,7 @@ void TextIterator::exitNode(Node* exitedNode)
     
     // If nothing was emitted, see if we need to emit a space.
     if (!m_positionNode && shouldEmitSpaceBeforeAndAfterNode(*protectedCurrentNode())) {
-        auto parentNode = baseNode->protectedParentNode();
+        RefPtr parentNode = baseNode->parentNode();
         emitCharacter(' ', WTFMove(parentNode), WTFMove(baseNode), 1, 1);
     }
 }
@@ -1452,7 +1452,7 @@ bool SimplifiedBackwardsTextIterator::handleReplacedElement()
 
 bool SimplifiedBackwardsTextIterator::handleNonTextNode()
 {
-    auto currentNode = protectedNode();
+    RefPtr currentNode = m_node;
     if (shouldEmitTabBeforeNode(*currentNode)) {
         unsigned index = currentNode->computeNodeIndex();
         emitCharacter('\t', currentNode->protectedParentNode(), index + 1, index + 1);
@@ -1470,7 +1470,7 @@ bool SimplifiedBackwardsTextIterator::handleNonTextNode()
 
 void SimplifiedBackwardsTextIterator::exitNode()
 {
-    auto node = protectedNode();
+    RefPtr node = m_node;
     if (shouldEmitTabBeforeNode(*node))
         emitCharacter('\t', WTFMove(node), 0, 0);
     else if (shouldEmitNewlineForNode(node.get(), m_behaviors.contains(TextIteratorBehavior::EmitsOriginalText)) || shouldEmitNewlineBeforeNode(*m_node)) {

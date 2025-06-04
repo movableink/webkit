@@ -425,7 +425,7 @@ void DeleteSelectionCommand::saveTypingStyleState()
         return;
     }
 
-    auto startNode = m_selectionToDelete.start().protectedDeprecatedNode();
+    RefPtr startNode = m_selectionToDelete.start().deprecatedNode();
     if (!startNode->isTextNode() && !startNode->hasTagName(imgTag) && !startNode->hasTagName(brTag))
         return;
 
@@ -628,7 +628,7 @@ void DeleteSelectionCommand::handleGeneralDelete()
         return;
 
     int startOffset = m_upstreamStart.deprecatedEditingOffset();
-    auto startNode = m_upstreamStart.protectedDeprecatedNode();
+    RefPtr startNode = m_upstreamStart.deprecatedNode();
 
     makeStylingElementsDirectChildrenOfEditableRootToPreventStyleLoss();
 
@@ -739,7 +739,7 @@ void DeleteSelectionCommand::handleGeneralDelete()
                 } else if (!(startNodeWasDescendantOfEndNode && !m_upstreamStart.anchorNode()->isConnected())) {
                     unsigned offset = 0;
                     if (m_upstreamStart.deprecatedNode()->isDescendantOf(m_downstreamEnd.deprecatedNode())) {
-                        auto n = m_upstreamStart.protectedDeprecatedNode();
+                        RefPtr n = m_upstreamStart.deprecatedNode();
                         while (n && n->parentNode() != m_downstreamEnd.deprecatedNode())
                             n = n->parentNode();
                         if (n)
@@ -829,7 +829,7 @@ void DeleteSelectionCommand::mergeParagraphs()
     // FIXME: Consider RTL.
     if (!m_startsAtEmptyLine && isStartOfParagraph(mergeDestination) && startOfParagraphToMove.absoluteCaretBounds().x() > mergeDestination.absoluteCaretBounds().x()) {
         if (mergeDestination.deepEquivalent().downstream().deprecatedNode()->hasTagName(brTag)) {
-            auto nodeToRemove = mergeDestination.deepEquivalent().downstream().protectedDeprecatedNode();
+            RefPtr nodeToRemove = mergeDestination.deepEquivalent().downstream().deprecatedNode();
             removeNodeAndPruneAncestors(*nodeToRemove);
             m_endingPosition = startOfParagraphToMove.deepEquivalent();
             return;
@@ -891,7 +891,7 @@ void DeleteSelectionCommand::removePreviouslySelectedEmptyTableRows()
         }
     }
 
-    auto endTableRow = protectedEndTableRow();
+    RefPtr endTableRow = m_startTableRow;
     if (endTableRow && endTableRow->isConnected() && endTableRow != m_startTableRow) {
         if (isTableRowEmpty(*endTableRow)) {
             // Don't remove m_endTableRow if it's where we're putting the ending selection.

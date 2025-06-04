@@ -175,7 +175,7 @@ ReplacementFragment::ReplacementFragment(RefPtr<DocumentFragment>&& inputFragmen
     , m_hasInterchangeNewlineAtStart(false)
     , m_hasInterchangeNewlineAtEnd(false)
 {
-    auto fragment = protectedFragment();
+    RefPtr fragment = m_fragment;
     if (!fragment)
         return;
     if (!fragment->firstChild())
@@ -1446,7 +1446,7 @@ void ReplaceSelectionCommand::doApply()
         // We need to handle the case where we need to merge the end
         // but our destination node is inside an inline that is the last in the block.
         // We insert a placeholder before the newly inserted content to avoid being merged into the inline.
-        auto destinationNode = destination.deepEquivalent().protectedDeprecatedNode();
+        RefPtr destinationNode = destination.deepEquivalent().deprecatedNode();
         if (m_shouldMergeEnd && destinationNode != enclosingInline(destinationNode.get()) && enclosingInline(destinationNode.get())->nextSibling())
             insertNodeBefore(HTMLBRElement::create(document()), *refNode);
         
@@ -1528,7 +1528,7 @@ void ReplaceSelectionCommand::doApply()
 String ReplaceSelectionCommand::inputEventData() const
 {
     if (isEditingTextAreaOrTextInput())
-        return protectedDocumentFragment()->textContent();
+        return m_documentFragment->textContent();
 
     return CompositeEditCommand::inputEventData();
 }

@@ -830,7 +830,7 @@ bool Editor::shouldInsertText(const String& text, const std::optional<SimpleRang
 void Editor::respondToChangedContents(const VisibleSelection& endingSelection)
 {
     if (AXObjectCache::accessibilityEnabled()) {
-        auto node = endingSelection.start().protectedDeprecatedNode();
+        RefPtr node = endingSelection.start().deprecatedNode();
         if (AXObjectCache* cache = document().existingAXObjectCache())
             cache->postNotification(node.get(), AXNotification::ValueChanged, PostTarget::ObservableParent);
     }
@@ -849,12 +849,12 @@ bool Editor::hasBidiSelection() const
 
     RefPtr<Node> startNode;
     if (document->selection().isRange()) {
-        startNode = document->selection().selection().start().downstream().protectedDeprecatedNode();
-        auto endNode = document->selection().selection().end().upstream().protectedDeprecatedNode();
+        startNode = document->selection().selection().start().downstream().deprecatedNode();
+        RefPtr endNode = document->selection().selection().end().upstream().deprecatedNode();
         if (enclosingBlock(startNode.get()) != enclosingBlock(endNode.get()))
             return false;
     } else
-        startNode = document->selection().selection().visibleStart().deepEquivalent().protectedDeprecatedNode();
+        startNode = document->selection().selection().visibleStart().deepEquivalent().deprecatedNode();
 
     if (!startNode || !startNode->renderer())
         return false;
@@ -2183,7 +2183,7 @@ WritingDirection Editor::baseWritingDirectionForSelectionStart() const
     auto result = WritingDirection::LeftToRight;
 
     Position pos = document().selection().selection().visibleStart().deepEquivalent();
-    auto node = pos.protectedDeprecatedNode();
+    RefPtr node = pos.deprecatedNode();
     if (!node)
         return result;
 
@@ -2550,9 +2550,9 @@ void Editor::setComposition(const String& text, const Vector<CompositionUnderlin
         // Find out what node has the composition now.
         Position base = document->selection().selection().base().downstream();
         Position extent = document->selection().selection().extent();
-        auto baseNode = base.protectedDeprecatedNode();
+        RefPtr baseNode = base.deprecatedNode();
         unsigned baseOffset = base.deprecatedEditingOffset();
-        auto extentNode = extent.protectedDeprecatedNode();
+        RefPtr extentNode = extent.deprecatedNode();
         unsigned extentOffset = extent.deprecatedEditingOffset();
 
         if (is<Text>(baseNode) && baseNode == extentNode && baseOffset + text.length() == extentOffset) {
@@ -4890,7 +4890,7 @@ const RenderStyle* Editor::styleForSelectionStart(RefPtr<Node>& nodeToRemove)
 
     styleElement->appendChild(document->createEditingTextNode(String { emptyString() }));
 
-    auto positionNode = position.protectedDeprecatedNode();
+    RefPtr positionNode = position.deprecatedNode();
     ASSERT(positionNode);
     RefPtr parent { positionNode->parentNode() };
     if (!parent || parent->appendChild(styleElement.get()).hasException())

@@ -330,7 +330,7 @@ GCGLint WebGLRenderingContext::maxDrawBuffers()
 {
     if (!supportsDrawBuffers())
         return 0;
-    RefPtr graphicsContext = protectedGraphicsContextGL();
+    RefPtr graphicsContext = graphicsContextGL();
     if (!m_maxDrawBuffers)
         m_maxDrawBuffers = graphicsContext->getInteger(GraphicsContextGL::MAX_DRAW_BUFFERS_EXT);
     if (!m_maxColorAttachments)

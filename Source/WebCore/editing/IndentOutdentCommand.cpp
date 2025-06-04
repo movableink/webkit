@@ -61,7 +61,7 @@ IndentOutdentCommand::IndentOutdentCommand(Ref<Document>&& document, EIndentType
 bool IndentOutdentCommand::tryIndentingAsListItem(const Position& start, const Position& end)
 {
     // If our selection is not inside a list, bail out.
-    auto lastNodeInSelectedParagraph = start.protectedDeprecatedNode();
+    RefPtr lastNodeInSelectedParagraph = start.deprecatedNode();
     RefPtr<Element> listNode = enclosingList(lastNodeInSelectedParagraph.get());
     if (!listNode)
         return false;
@@ -187,7 +187,7 @@ void IndentOutdentCommand::outdentParagraph()
         return;
     }
 
-    auto startOfParagraphNode = visibleStartOfParagraph.deepEquivalent().protectedDeprecatedNode();
+    RefPtr startOfParagraphNode = visibleStartOfParagraph.deepEquivalent().deprecatedNode();
     RefPtr enclosingBlockFlow = enclosingBlock(startOfParagraphNode.get());
     RefPtr<Node> splitBlockquoteNode = enclosingNode;
     if (enclosingBlockFlow != enclosingNode)

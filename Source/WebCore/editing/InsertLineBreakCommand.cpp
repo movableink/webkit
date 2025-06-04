@@ -60,7 +60,7 @@ bool InsertLineBreakCommand::shouldUseBreakElement(const Position& position)
     // An editing position like [input, 0] actually refers to the position before
     // the input element, and in that case we need to check the input element's
     // parent's renderer.
-    auto node = position.parentAnchoredEquivalent().protectedDeprecatedNode();
+    RefPtr node = position.parentAnchoredEquivalent().deprecatedNode();
     return node && node->renderer() && !node->renderer()->style().preserveNewline();
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -425,7 +425,7 @@ const String& nonBreakingSpaceString()
 RefPtr<Element> isFirstPositionAfterTable(const VisiblePosition& position)
 {
     Position upstream(position.deepEquivalent().upstream());
-    auto node = upstream.protectedDeprecatedNode();
+    RefPtr node = upstream.deprecatedNode();
     if (!node)
         return nullptr;
     auto* renderer = node->renderer();
@@ -437,7 +437,7 @@ RefPtr<Element> isFirstPositionAfterTable(const VisiblePosition& position)
 RefPtr<Element> isLastPositionBeforeTable(const VisiblePosition& position)
 {
     Position downstream(position.deepEquivalent().downstream());
-    auto node = downstream.protectedDeprecatedNode();
+    RefPtr node = downstream.deprecatedNode();
     if (!node)
         return nullptr;
     auto* renderer = node->renderer();
@@ -504,7 +504,7 @@ bool isListItem(const Node& node)
 Element* enclosingElementWithTag(const Position& position, const QualifiedName& tagName)
 {
     auto root = highestEditableRoot(position);
-    for (RefPtr node = position.protectedDeprecatedNode(); node; node = node->parentNode()) {
+    for (RefPtr node = position.deprecatedNode(); node; node = node->parentNode()) {
         if (root && !node->hasEditableStyle())
             continue;
         auto* element = dynamicDowncast<Element>(*node);
@@ -523,7 +523,7 @@ RefPtr<Node> enclosingNodeOfType(const Position& position, bool (*nodeIsOfType)(
     // FIXME: support CanSkipCrossEditingBoundary
     ASSERT(rule == CanCrossEditingBoundary || rule == CannotCrossEditingBoundary);
     auto root = rule == CannotCrossEditingBoundary ? highestEditableRoot(position) : nullptr;
-    for (auto n = position.protectedDeprecatedNode(); n; n = n->parentNode()) {
+    for (RefPtr n = position.deprecatedNode(); n; n = n->parentNode()) {
         // Don't return a non-editable node if the input position was editable, since
         // the callers from editing will no doubt want to perform editing inside the returned node.
         if (root && !n->hasEditableStyle())
@@ -586,7 +586,7 @@ RefPtr<Element> enclosingTableCell(const Position& position)
 
 RefPtr<Element> enclosingAnchorElement(const Position& p)
 {
-    for (auto node = p.protectedDeprecatedNode(); node; node = node->parentNode()) {
+    for (RefPtr node = p.deprecatedNode(); node; node = node->parentNode()) {
         if (RefPtr element = dynamicDowncast<Element>(*node); element && element->isLink())
             return element;
     }
@@ -831,7 +831,7 @@ Ref<Element> createTabSpanElement(Document& document)
 unsigned numEnclosingMailBlockquotes(const Position& position)
 {
     unsigned count = 0;
-    for (auto node = position.protectedDeprecatedNode(); node; node = node->parentNode()) {
+    for (RefPtr node = position.deprecatedNode(); node; node = node->parentNode()) {
         if (isMailBlockquote(*node))
             ++count;
     }
