@@ -744,10 +744,6 @@ static RefPtr<CSSValue> parseKeywordValue(CSSPropertyID property, StringView str
 {
     ASSERT(!string.isEmpty());
 
-    // Fast path keyword parsing is currently only supported for style properties.
-    if (state.currentRule != StyleRuleType::Style)
-        return nullptr;
-
     if (!CSSPropertyParsing::isKeywordFastPathEligibleStyleProperty(property)) {
         // All properties, including non-keyword properties, accept the CSS-wide keywords.
         if (!isUniversalKeyword(string))
@@ -1044,6 +1040,12 @@ static RefPtr<CSSValue> parseColorWithAuto(StringView string, const CSSParserCon
 
 RefPtr<CSSValue> CSSParserFastPaths::maybeParseValue(CSSPropertyID property, StringView string, CSS::PropertyParserState& state)
 {
+    // Some at-rules like @keyframes, @position-try restrict which properties
+    // are allowed inside the rule. Fallback to slow path for at-rules since
+    // the restriction logic is in the slow-path parser (CSSPropertyParser).
+    if (state.currentRule != StyleRuleType::Style)
+        return nullptr;
+
     switch (property) {
     case CSSPropertyDisplay:
         return parseDisplay(string);
