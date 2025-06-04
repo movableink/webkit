@@ -1482,7 +1482,7 @@ void LocalFrame::showResourceMonitoringError()
     URL mainFrameURL;
     if (document)
         url = document->url();
-    if (RefPtr page = protectedPage()) {
+    if (RefPtr page = this->page()) {
         mainFrameURL = page->mainFrameURL();
         page->diagnosticLoggingClient().logDiagnosticMessageWithValueDictionary(DiagnosticLoggingKeys::iframeResourceMonitoringKey(), "IFrame ResourceMonitoring Unloaded"_s, valueDictionaryForResult(true), ShouldSample::No);
     }
@@ -1512,9 +1512,9 @@ void LocalFrame::reportResourceMonitoringWarning()
 {
     URL url;
     URL mainFrameURL;
-    if (RefPtr document = protectedDocument())
+    if (RefPtr document = this->document())
         url = document->url();
-    if (RefPtr page = protectedPage()) {
+    if (RefPtr page = this->page()) {
         mainFrameURL = page->mainFrameURL();
         page->diagnosticLoggingClient().logDiagnosticMessageWithValueDictionary(DiagnosticLoggingKeys::iframeResourceMonitoringKey(), "IFrame ResourceMonitoring Throttled"_s, valueDictionaryForResult(false), ShouldSample::No);
     }

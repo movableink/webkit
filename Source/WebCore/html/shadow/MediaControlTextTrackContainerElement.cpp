@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -83,11 +83,6 @@ MediaControlTextTrackContainerElement::MediaControlTextTrackContainerElement(Doc
 {
 }
 
-RefPtr<HTMLMediaElement> MediaControlTextTrackContainerElement::protectedMediaElement() const
-{
-    return m_mediaElement.get();
-}
-
 RenderPtr<RenderElement> MediaControlTextTrackContainerElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     return createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, *this, WTFMove(style));
@@ -100,7 +95,7 @@ static bool compareCueIntervalForDisplay(const CueInterval& one, const CueInterv
 
 void MediaControlTextTrackContainerElement::updateDisplay()
 {
-    RefPtr mediaElement = protectedMediaElement();
+    RefPtr mediaElement = m_mediaElement.get();
     if (mediaElement && !mediaElement->closedCaptionsVisible())
         removeChildren();
 
@@ -254,7 +249,7 @@ void MediaControlTextTrackContainerElement::updateActiveCuesFontSize()
     if (!document().page())
         return;
 
-    RefPtr mediaElement = protectedMediaElement();
+    RefPtr mediaElement = m_mediaElement.get();
     if (!mediaElement)
         return;
 
@@ -277,7 +272,7 @@ void MediaControlTextTrackContainerElement::updateTextStrokeStyle()
     if (!document().page())
         return;
 
-    RefPtr mediaElement = protectedMediaElement();
+    RefPtr mediaElement = m_mediaElement.get();
     if (!mediaElement)
         return;
     
@@ -306,7 +301,7 @@ void MediaControlTextTrackContainerElement::updateTextStrokeStyle()
 
 void MediaControlTextTrackContainerElement::updateTextTrackRepresentationIfNeeded()
 {
-    RefPtr mediaElement = protectedMediaElement();
+    RefPtr mediaElement = m_mediaElement.get();
     if (!mediaElement)
         return;
 
@@ -341,7 +336,7 @@ void MediaControlTextTrackContainerElement::clearTextTrackRepresentation()
     ALWAYS_LOG(LOGIDENTIFIER);
 
     m_textTrackRepresentation = nullptr;
-    if (RefPtr mediaElement = protectedMediaElement())
+    if (RefPtr mediaElement = m_mediaElement.get())
         mediaElement->setTextTrackRepresentation(nullptr);
 }
 
@@ -386,7 +381,7 @@ bool MediaControlTextTrackContainerElement::updateVideoDisplaySize()
     if (!document().page())
         return false;
 
-    RefPtr mediaElement = protectedMediaElement();
+    RefPtr mediaElement = m_mediaElement.get();
     if (!mediaElement)
         return false;
 
@@ -412,7 +407,7 @@ void MediaControlTextTrackContainerElement::updateSizes(ForceUpdate force)
     if (!updateVideoDisplaySize() && force != ForceUpdate::Yes)
         return;
 
-    RefPtr mediaElement = protectedMediaElement();
+    RefPtr mediaElement = m_mediaElement.get();
     if (!document().page() || !mediaElement)
         return;
 
@@ -507,7 +502,7 @@ uint64_t MediaControlTextTrackContainerElement::logIdentifier() const
     if (m_logIdentifier)
         return m_logIdentifier;
 
-    if (RefPtr mediaElement = protectedMediaElement())
+    if (RefPtr mediaElement = m_mediaElement.get())
         m_logIdentifier = mediaElement->logIdentifier();
 
     return m_logIdentifier;

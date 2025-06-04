@@ -6141,7 +6141,7 @@ void Internals::setQuickLookPassword(const String& password)
 
 void Internals::setAsRunningUserScripts(Document& document)
 {
-    if (RefPtr page = document.protectedPage())
+    if (RefPtr page = document.page())
         page->setHasInjectedUserScript();
 }
 

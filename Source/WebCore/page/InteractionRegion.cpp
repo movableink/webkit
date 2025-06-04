@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -366,7 +366,7 @@ static RefPtr<Image> findIconImage(const RenderObject& renderer)
 static std::optional<std::pair<Ref<SVGSVGElement>, Ref<SVGGraphicsElement>>> findSVGClipElements(const RenderObject& renderer)
 {
     if (const auto& renderShape = dynamicDowncast<LegacyRenderSVGShape>(renderer)) {
-        Ref shapeElement = renderShape->protectedGraphicsElement();
+        Ref shapeElement = renderShape->graphicsElement();
         if (auto* owner = shapeElement->ownerSVGElement()) {
             Ref svgSVGElement = *owner;
             return std::make_pair(svgSVGElement, shapeElement);

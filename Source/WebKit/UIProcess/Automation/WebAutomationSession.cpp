@@ -177,12 +177,12 @@ void WebAutomationSession::setClient(std::unique_ptr<API::AutomationSessionClien
 
 void WebAutomationSession::setProcessPool(WebKit::WebProcessPool* processPool)
 {
-    if (auto pool = protectedProcessPool())
+    if (RefPtr pool = m_processPool.get())
         pool->removeMessageReceiver(Messages::WebAutomationSession::messageReceiverName());
 
     m_processPool = processPool;
 
-    if (auto pool = protectedProcessPool())
+    if (RefPtr pool = m_processPool.get())
         pool->addMessageReceiver(Messages::WebAutomationSession::messageReceiverName(), *this);
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -223,7 +223,7 @@ static inline void merge(Item& destinationItem, Item&& sourceItem)
 
 static inline FloatRect rootViewBounds(Node& node)
 {
-    auto view = node.document().protectedView();
+    RefPtr view = node.document().view();
     if (!view) [[unlikely]]
         return { };
 
@@ -534,12 +534,12 @@ static void extractRenderedTokens(Vector<TokenAndBlockOffset>& tokensAndOffsets,
     };
 
     if (CheckedPtr frameRenderer = dynamicDowncast<RenderIFrame>(*renderer)) {
-        if (auto contentDocument = frameRenderer->iframeElement().protectedContentDocument())
+        if (RefPtr contentDocument = frameRenderer->iframeElement().contentDocument())
             extractRenderedTokens(tokensAndOffsets, *contentDocument, direction);
         return;
     }
 
-    auto frameView = renderer->view().protectedFrameView();
+    RefPtr frameView = renderer->view().frameView();
     auto appendReplacedContentOrBackgroundImage = [&](auto& renderer) {
         if (!renderer.style().hasBackgroundImage() && !is<RenderReplaced>(renderer))
             return;
@@ -577,7 +577,7 @@ static void extractRenderedTokens(Vector<TokenAndBlockOffset>& tokensAndOffsets,
         }
 
         if (CheckedPtr frameRenderer = dynamicDowncast<RenderIFrame>(descendant)) {
-            if (auto contentDocument = frameRenderer->iframeElement().protectedContentDocument())
+            if (RefPtr contentDocument = frameRenderer->iframeElement().contentDocument())
                 extractRenderedTokens(tokensAndOffsets, *contentDocument, direction);
             continue;
         }
@@ -592,7 +592,7 @@ RenderedText extractRenderedText(Element& element)
     if (!renderer)
         return { };
 
-    RefPtr frameView = renderer->view().protectedFrameView();
+    RefPtr frameView = renderer->view().frameView();
     auto direction = renderer->writingMode().blockDirection();
     auto elementRectInDocument = frameView->absoluteToDocumentRect(renderer->absoluteBoundingBoxRect());
 

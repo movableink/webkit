@@ -100,7 +100,7 @@ ExceptionOr<Ref<RTCPeerConnection>> RTCPeerConnection::create(Document& document
         return exception.releaseException();
 
     if (!peerConnection->isClosed()) {
-        if (RefPtr page = document.protectedPage()) {
+        if (RefPtr page = document.page()) {
             peerConnection->registerToController(page->rtcController());
 #if USE(LIBWEBRTC) && (!LOG_DISABLED || !RELEASE_LOG_DISABLED)
             if (page->isAlwaysOnLoggingAllowed()) {

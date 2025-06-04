@@ -130,13 +130,13 @@ UserGestureIndicator::UserGestureIndicator(std::optional<IsProcessingUserGesture
             else
                 LOG_ONCE(SiteIsolation, "Unable to properly construct UserGestureIndicator::UserGestureIndicator() without access to the main frame document ");
         }
-        if (RefPtr page = document->protectedPage())
+        if (RefPtr page = document->page())
             page->setUserDidInteractWithPage(true);
         if (RefPtr frame = document->frame(); frame && !frame->hasHadUserInteraction()) {
             for (RefPtr<Frame> ancestor = WTFMove(frame); ancestor; ancestor = ancestor->tree().parent()) {
                 if (RefPtr localAncestor = dynamicDowncast<LocalFrame>(ancestor)) {
                     localAncestor->setHasHadUserInteraction();
-                    if (RefPtr ancestorDocument = localAncestor->protectedDocument())
+                    if (RefPtr ancestorDocument = localAncestor->document())
                         ancestorDocument->updateLastHandledUserGestureTimestamp(currentToken()->startTime());
                 }
             }

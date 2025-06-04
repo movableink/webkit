@@ -2811,7 +2811,7 @@ inline void ExtractorSerializer::serializeSingleAnimation(ExtractorState& state,
     auto showsDuration = showsDelay || animation.duration() != Animation::initialDuration();
 
     auto showsTimingFunction = [&] {
-        auto timingFunction = animation.protectedTimingFunction();
+        RefPtr timingFunction = animation.timingFunction();
         if (timingFunction && *timingFunction != initialTimingFunction.get())
             return true;
         auto& name = animation.name().name;
@@ -2931,7 +2931,7 @@ inline void ExtractorSerializer::serializeSingleTransition(ExtractorState& state
         serializeAnimationDuration(state, builder, context, transition.duration(), nullptr, nullptr);
         listEmpty = false;
     }
-    if (auto timingFunction = transition.protectedTimingFunction(); *timingFunction != initialTimingFunction.get()) {
+    if (RefPtr timingFunction = transition.timingFunction(); *timingFunction != initialTimingFunction.get()) {
         if (!listEmpty)
             builder.append(' ');
         serializeAnimationTimingFunction(state, builder, context, *timingFunction, nullptr, nullptr);

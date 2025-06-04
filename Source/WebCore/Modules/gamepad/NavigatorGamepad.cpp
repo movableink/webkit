@@ -132,7 +132,7 @@ Seconds NavigatorGamepad::gamepadsRecentlyAccessedThreshold()
 const Vector<RefPtr<Gamepad>>& NavigatorGamepad::gamepads()
 {
     if (RefPtr frame = m_navigator->frame()) {
-        if (RefPtr page = frame->protectedPage())
+        if (RefPtr page = frame->page())
             page->gamepadsRecentlyAccessed();
     }
 

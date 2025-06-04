@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -72,6 +72,7 @@ public:
 
     void addFragment(Ref<DocumentFragment>&&);
     RefPtr<DocumentFragment> takeFragment() { return std::exchange(m_fragment, nullptr); }
+    DocumentFragment* fragment() const { return m_fragment.get(); }
     RefPtr<DocumentFragment> protectedFragment() const { return m_fragment; }
 
     bool madeFragmentFromPlainText() const { return m_madeFragmentFromPlainText; }

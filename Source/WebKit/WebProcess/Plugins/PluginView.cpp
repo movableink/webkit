@@ -1216,7 +1216,7 @@ void PluginView::updateDocumentForPluginSizingBehavior()
     if (!m_plugin->shouldSizeToFitContent())
         return;
     // The styles in PluginDocumentParser are constructed to respond to this class.
-    if (RefPtr documentElement = m_pluginElement->protectedDocument()->protectedDocumentElement())
+    if (RefPtr documentElement = m_pluginElement->protectedDocument()->documentElement())
         documentElement->setAttributeWithoutSynchronization(HTMLNames::classAttr, "plugin-fits-content"_s);
 }
 

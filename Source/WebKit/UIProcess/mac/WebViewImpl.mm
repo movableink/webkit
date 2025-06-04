@@ -6408,17 +6408,17 @@ void WebViewImpl::togglePictureInPicture()
 }
 
 
-RefPtr<PlatformPlaybackSessionInterface> WebViewImpl::protectedPlaybackSessionInterface() const
+PlatformPlaybackSessionInterface* WebViewImpl::playbackSessionInterface() const
 {
     if (RefPtr manager = m_page->playbackSessionManager())
-        return manager->controlsManagerInterface();
+        return manager->controlsManagerInterface().get();
 
     return nullptr;
 }
 
 bool WebViewImpl::isInWindowFullscreenActive() const
 {
-    if (RefPtr interface = protectedPlaybackSessionInterface())
+    if (RefPtr interface = playbackSessionInterface())
         return interface->isInWindowFullscreenActive();
 
     return false;
@@ -6426,13 +6426,13 @@ bool WebViewImpl::isInWindowFullscreenActive() const
 
 void WebViewImpl::enterInWindowFullscreen()
 {
-    if (RefPtr interface = protectedPlaybackSessionInterface())
+    if (RefPtr interface = playbackSessionInterface())
         return interface->enterInWindowFullscreen();
 }
 
 void WebViewImpl::exitInWindowFullscreen()
 {
-    if (RefPtr interface = protectedPlaybackSessionInterface())
+    if (RefPtr interface = playbackSessionInterface())
         return interface->exitInWindowFullscreen();
 }
 
@@ -6447,7 +6447,7 @@ void WebViewImpl::updateMediaPlaybackControlsManager()
         [m_playbackControlsManager setCanTogglePictureInPicture:NO];
     }
 
-    if (RefPtr interface = protectedPlaybackSessionInterface()) {
+    if (RefPtr interface = playbackSessionInterface()) {
         [m_playbackControlsManager setPlaybackSessionInterfaceMac:interface.get()];
         interface->updatePlaybackControlsManagerCanTogglePictureInPicture();
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,7 +48,7 @@ RemoteQueueProxy::RemoteQueueProxy(RemoteAdapterProxy& parent, ConvertToBackingC
 #if ENABLE(VIDEO) && PLATFORM(COCOA) && ENABLE(WEB_CODECS)
     RefPtr<RemoteVideoFrameObjectHeapProxy> videoFrameObjectHeapProxy;
     callOnMainRunLoopAndWait([&videoFrameObjectHeapProxy] {
-        videoFrameObjectHeapProxy = WebProcess::singleton().ensureProtectedGPUProcessConnection()->protectedVideoFrameObjectHeapProxy();
+        videoFrameObjectHeapProxy = &WebProcess::singleton().ensureProtectedGPUProcessConnection()->videoFrameObjectHeapProxy();
     });
 
     m_videoFrameObjectHeapProxy = videoFrameObjectHeapProxy;

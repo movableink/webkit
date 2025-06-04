@@ -616,7 +616,7 @@ void ContainerNode::appendChildCommon(Node& child)
 
     child.setParentNode(this);
 
-    if (auto lastChild = protectedLastChild()) {
+    if (RefPtr lastChild = this->lastChild()) {
         child.setPreviousSibling(lastChild.get());
         lastChild->setNextSibling(&child);
     } else

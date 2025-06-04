@@ -72,7 +72,7 @@ String CSSPositionTryRule::cssText() const
     StringBuilder builder;
     builder.append("@position-try "_s, name(), " {"_s);
 
-    Ref properties = m_positionTryRule->protectedProperties();
+    Ref properties = m_positionTryRule->properties();
 
     if (auto declarations = properties->asText(CSS::defaultSerializationContext()); !declarations.isEmpty())
         builder.append(' ', declarations, ' ');

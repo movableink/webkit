@@ -1448,8 +1448,8 @@ bool Editor::insertTextWithoutSendingTextEvent(const String& text, bool selectIn
     // that is contained in the event target.
     selection = selectionForCommand(triggeringEvent);
     if (selection.isContentEditable()) {
-        if (auto selectionStart = selection.start().protectedDeprecatedNode()) {
-            Ref<Document> document(selectionStart->document());
+        if (RefPtr selectionStart = selection.start().deprecatedNode()) {
+            Ref document = selectionStart->document();
 
             // Insert the text
             if (triggeringEvent && triggeringEvent->isDictation())
@@ -2591,7 +2591,7 @@ void Editor::setComposition(const String& text, const Vector<CompositionUnderlin
             auto state = m_compositionNode ? CompositionState::InProgress : CompositionState::Ended;
             cache->onTextCompositionChange(*previousCompositionNode, state, true, text, m_compositionStart, m_isHandlingAcceptedCandidate);
         }
-        if (auto compositionNode = protectedCompositionNode()) {
+        if (RefPtr compositionNode = this->compositionNode()) {
             auto state = previousCompositionNode ? CompositionState::InProgress : CompositionState::Started;
             cache->onTextCompositionChange(*compositionNode, state, true, text, m_compositionStart, m_isHandlingAcceptedCandidate);
         }

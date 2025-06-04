@@ -499,7 +499,7 @@ void ImageLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetr
         loadEventSender().dispatchEventSoon(*this, eventNames().loadEvent);
 
 #if ENABLE(QUICKLOOK_FULLSCREEN)
-        if (RefPtr page = element().document().protectedPage())
+        if (RefPtr page = element().document().page())
             page->chrome().client().updateImageSource(protectedElement().get());
 #endif
 
@@ -752,7 +752,7 @@ bool ImageLoader::shouldIgnoreCandidateWhenLoadingFromArchive(const ImageCandida
     if (loader->archiveResourceForURL(candidateURL))
         return false;
 
-    RefPtr page = document->protectedPage();
+    RefPtr page = document->page();
     return !page || !page->allowsLoadFromURL(candidateURL, MainFrameMainResource::No);
 #else
     UNUSED_PARAM(candidate);

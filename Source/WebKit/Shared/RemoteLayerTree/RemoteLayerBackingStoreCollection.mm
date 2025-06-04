@@ -239,7 +239,7 @@ bool RemoteLayerBackingStoreCollection::backingStoreWillBeDisplayedWithRendering
 void RemoteLayerBackingStoreCollection::purgeFrontBufferForTesting(RemoteLayerBackingStore& backingStore)
 {
     if (CheckedPtr remoteBackingStore = dynamicDowncast<RemoteLayerWithRemoteRenderingBackingStore>(&backingStore)) {
-        if (RefPtr bufferSet = remoteBackingStore->protectedBufferSet()) {
+        if (RefPtr bufferSet = remoteBackingStore->bufferSet()) {
             Vector<std::pair<Ref<RemoteImageBufferSetProxy>, OptionSet<BufferInSetType>>> identifiers;
             OptionSet<BufferInSetType> bufferTypes { BufferInSetType::Front };
             identifiers.append(std::make_pair(Ref { *bufferSet }, bufferTypes));
@@ -254,7 +254,7 @@ void RemoteLayerBackingStoreCollection::purgeFrontBufferForTesting(RemoteLayerBa
 void RemoteLayerBackingStoreCollection::purgeBackBufferForTesting(RemoteLayerBackingStore& backingStore)
 {
     if (CheckedPtr remoteBackingStore = dynamicDowncast<RemoteLayerWithRemoteRenderingBackingStore>(&backingStore)) {
-        if (RefPtr bufferSet = remoteBackingStore->protectedBufferSet()) {
+        if (RefPtr bufferSet = remoteBackingStore->bufferSet()) {
             Vector<std::pair<Ref<RemoteImageBufferSetProxy>, OptionSet<BufferInSetType>>> identifiers;
             OptionSet<BufferInSetType> bufferTypes { BufferInSetType::Back, BufferInSetType::SecondaryBack };
             identifiers.append(std::make_pair(Ref { *bufferSet }, bufferTypes));
@@ -270,7 +270,7 @@ void RemoteLayerBackingStoreCollection::purgeBackBufferForTesting(RemoteLayerBac
 void RemoteLayerBackingStoreCollection::markFrontBufferVolatileForTesting(RemoteLayerBackingStore& backingStore)
 {
     if (CheckedPtr remoteBackingStore = dynamicDowncast<RemoteLayerWithRemoteRenderingBackingStore>(&backingStore)) {
-        if (RefPtr bufferSet = remoteBackingStore->protectedBufferSet()) {
+        if (RefPtr bufferSet = remoteBackingStore->bufferSet()) {
             Vector<std::pair<Ref<RemoteImageBufferSetProxy>, OptionSet<BufferInSetType>>> identifiers;
             OptionSet<BufferInSetType> bufferTypes { BufferInSetType::Front };
             identifiers.append(std::make_pair(Ref { *bufferSet }, bufferTypes));

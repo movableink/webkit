@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2013 Google Inc. All rights reserved.
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -363,7 +363,7 @@ MediaTime MediaSource::duration() const
     // 1. If the readyState attribute is "closed" then return NaN and abort these steps.
     // 2. Return the current value of the attribute.
 
-    if (RefPtr msp = protectedPrivate())
+    if (RefPtr msp = m_private)
         return msp->duration();
     return MediaTime::invalidTime();
 }
@@ -373,7 +373,7 @@ MediaTime MediaSource::currentTime() const
     if (m_pendingSeekTarget)
         return m_pendingSeekTarget->time;
 
-    if (RefPtr msp = protectedPrivate())
+    if (RefPtr msp = m_private)
         return msp->currentTime();
     return MediaTime::zeroTime();
 }
@@ -390,7 +390,7 @@ Ref<MediaTimePromise> MediaSource::waitForTarget(const SeekTarget& target)
     // 2.4.3 Seeking
     // https://rawgit.com/w3c/media-source/45627646344eea0170dd1cbc5a3d508ca751abb8/media-source-respec.html#mediasource-seeking
 
-    RefPtr msp = protectedPrivate();
+    RefPtr msp = m_private;
     if (!msp)
         return MediaTimePromise::createAndReject(PlatformMediaError::SourceRemoved);
 
@@ -480,7 +480,7 @@ Ref<MediaPromise> MediaSource::seekToTime(const MediaTime& time)
 
 PlatformTimeRanges MediaSource::seekable()
 {
-    if (RefPtr mediaSourcePrivate = protectedPrivate())
+    if (RefPtr mediaSourcePrivate = m_private)
         return mediaSourcePrivate->seekable();
     return { };
 }
@@ -766,7 +766,7 @@ void MediaSource::setReadyState(ReadyState state)
     if (oldState == state)
         return;
 
-    if (RefPtr msp = protectedPrivate())
+    if (RefPtr msp = m_private)
         msp->setReadyState(state);
 
     onReadyStateChange(oldState, readyState());
@@ -1313,7 +1313,7 @@ void MediaSource::detachFromElement()
     m_mediaElement = nullptr;
     m_isAttached = false;
 
-    if (RefPtr msp = protectedPrivate()) {
+    if (RefPtr msp = m_private) {
         msp->shutdown();
         setPrivate(nullptr);
     }
@@ -1617,7 +1617,7 @@ void MediaSource::failedToCreateRenderer(RendererType type)
 
 void MediaSource::sourceBufferReceivedFirstInitializationSegmentChanged()
 {
-    RefPtr msp = protectedPrivate();
+    RefPtr msp = m_private;
 
     if (msp && msp->mediaPlayerReadyState() == MediaPlayer::ReadyState::HaveNothing) {
         // 6.1 If one or more objects in sourceBuffers have first initialization segment flag set to false, then abort these steps.
@@ -1633,7 +1633,7 @@ void MediaSource::sourceBufferReceivedFirstInitializationSegmentChanged()
 
 void MediaSource::sourceBufferActiveTrackFlagChanged(bool activeTrackFlag)
 {
-    if (RefPtr msp = protectedPrivate()) {
+    if (RefPtr msp = m_private) {
         if (activeTrackFlag && msp->mediaPlayerReadyState() > MediaPlayer::ReadyState::HaveCurrentData)
             setMediaPlayerReadyState(MediaPlayer::ReadyState::HaveMetadata);
     }
@@ -1641,7 +1641,7 @@ void MediaSource::sourceBufferActiveTrackFlagChanged(bool activeTrackFlag)
 
 void MediaSource::setMediaPlayerReadyState(MediaPlayer::ReadyState readyState)
 {
-    if (RefPtr msp = protectedPrivate())
+    if (RefPtr msp = m_private)
         msp->setMediaPlayerReadyState(readyState);
 }
 

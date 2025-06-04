@@ -95,7 +95,7 @@ void PositionIterator::decrement()
 
     if (m_nodeAfterPositionInAnchor) {
         m_anchorNode = m_nodeAfterPositionInAnchor->previousSibling();
-        if (auto anchorNode = protectedNode()) {
+        if (RefPtr anchorNode = node()) {
             m_nodeAfterPositionInAnchor = nullptr;
             m_offsetInAnchor = anchorNode->hasChildNodes() ? 0 : lastOffsetForEditing(*anchorNode);
         } else {

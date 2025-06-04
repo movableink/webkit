@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -197,7 +197,7 @@ void VideoPresentationModelVideoElement::documentFullscreenChanged()
         auto* fullscreen = videoElement->document().fullscreenIfExists();
         if (!fullscreen)
             return false;
-        RefPtr fullscreenElement = fullscreen->protectedFullscreenElement();
+        RefPtr fullscreenElement = fullscreen->fullscreenElement();
         if (!fullscreenElement)
             return false;
         ContainerNode* ancestor = videoElement->parentNode();

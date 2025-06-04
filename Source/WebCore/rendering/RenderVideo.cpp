@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2009, 2010 Apple Inc.  All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -126,7 +126,7 @@ LayoutSize RenderVideo::calculateIntrinsicSizeInternal()
     // The intrinsic height of a video element's playback area is the intrinsic height 
     // of the video resource, if that is available; otherwise it is the intrinsic 
     // height of the poster frame, if that is available; otherwise it is 150 CSS pixels.
-    Ref videoElement = protectedVideoElement();
+    Ref videoElement = this->videoElement();
     RefPtr player = videoElement->player();
     if (player && videoElement->readyState() >= HTMLVideoElement::HAVE_METADATA) {
         LayoutSize size(player->naturalSize());
@@ -182,7 +182,7 @@ void RenderVideo::imageChanged(WrappedImagePtr newImage, const IntRect* rect)
 
 IntRect RenderVideo::videoBox() const
 {
-    Ref videoElement = protectedVideoElement();
+    Ref videoElement = this->videoElement();
     RefPtr mediaPlayer = videoElement->player();
     if (mediaPlayer && mediaPlayer->shouldIgnoreIntrinsicSize())
         return snappedIntRect(contentBoxRect());
@@ -220,7 +220,7 @@ void RenderVideo::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
 {
     ASSERT(!isSkippedContentRoot(*this));
 
-    Ref videoElement = protectedVideoElement();
+    Ref videoElement = this->videoElement();
     RefPtr mediaPlayer = videoElement->player();
     bool displayingPoster = videoElement->shouldDisplayPosterImage();
 
@@ -320,7 +320,7 @@ bool RenderVideo::updatePlayer()
     auto intrinsicSizeChanged = updateIntrinsicSize();
     ASSERT(!intrinsicSizeChanged || !view().frameView().layoutContext().isInRenderTreeLayout());
 
-    Ref videoElement = protectedVideoElement();
+    Ref videoElement = this->videoElement();
     RefPtr mediaPlayer = videoElement->player();
     if (!mediaPlayer)
         return intrinsicSizeChanged;
@@ -360,7 +360,7 @@ bool RenderVideo::requiresImmediateCompositing() const
 
 bool RenderVideo::foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const
 {
-    Ref videoElement = protectedVideoElement();
+    Ref videoElement = this->videoElement();
     if (videoElement->shouldDisplayPosterImage())
         return RenderImage::foregroundIsKnownToBeOpaqueInRect(localRect, maxDepthToTest);
 

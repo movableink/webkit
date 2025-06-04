@@ -504,7 +504,7 @@ void WebExtensionController::removeWebsiteDataStore(WebsiteDataStore& dataStore)
 
     m_websiteDataStores.remove(dataStore);
 
-    if (RefPtr observer = protectedCookieStoreObserver())
+    if (RefPtr observer = m_cookieStoreObserver)
         dataStore.protectedCookieStore()->unregisterObserver(*observer);
 
     if (m_websiteDataStores.isEmptyIgnoringNullReferences())

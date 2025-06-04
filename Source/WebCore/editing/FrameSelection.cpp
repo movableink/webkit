@@ -266,12 +266,12 @@ void FrameSelection::moveWithoutValidationTo(const Position& base, const Positio
 
 void DragCaretController::setCaretPosition(const VisiblePosition& position)
 {
-    if (auto node = m_position.deepEquivalent().protectedDeprecatedNode())
+    if (RefPtr node = m_position.deepEquivalent().deprecatedNode())
         invalidateCaretRect(node.get());
     m_position = position;
     setCaretRectNeedsUpdate();
     RefPtr<Document> document;
-    if (auto node = m_position.deepEquivalent().protectedDeprecatedNode()) {
+    if (RefPtr node = m_position.deepEquivalent().deprecatedNode()) {
         invalidateCaretRect(node.get());
         document = &node->document();
     }

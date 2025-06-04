@@ -702,7 +702,7 @@ public:
     NSTouchBar *currentTouchBar() const { return m_currentTouchBar.get(); }
     NSCandidateListTouchBarItem *candidateListTouchBarItem() const;
 #if ENABLE(WEB_PLAYBACK_CONTROLS_MANAGER)
-    RefPtr<WebCore::PlatformPlaybackSessionInterface> protectedPlaybackSessionInterface() const;
+    WebCore::PlatformPlaybackSessionInterface* playbackSessionInterface() const;
     bool isPictureInPictureActive();
     void togglePictureInPicture();
     bool isInWindowFullscreenActive() const;

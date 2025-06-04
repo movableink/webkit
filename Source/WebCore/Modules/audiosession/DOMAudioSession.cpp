@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -91,7 +91,7 @@ ExceptionOr<void> DOMAudioSession::setType(Type type)
     if (!document)
         return Exception { ExceptionCode::InvalidStateError };
 
-    RefPtr page = document->protectedPage();
+    RefPtr page = document->page();
     if (!page)
         return Exception { ExceptionCode::InvalidStateError };
 
@@ -118,7 +118,7 @@ DOMAudioSession::Type DOMAudioSession::type() const
     if (!document)
         return DOMAudioSession::Type::Auto;
 
-    if (RefPtr page = document->protectedPage())
+    if (RefPtr page = document->page())
         return page->audioSessionType();
 
     return DOMAudioSession::Type::Auto;

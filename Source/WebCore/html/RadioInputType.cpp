@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -103,7 +103,7 @@ void RadioInputType::willUpdateCheckedness(bool nowChecked, WasSetByJavaScript)
 {
     if (!nowChecked)
         return;
-    RefPtr element = protectedElement();
+    Ref element = *this->element();
     if (element->radioButtonGroups()) {
         // Buttons in RadioButtonGroups are handled in HTMLInputElement::setChecked().
         return;

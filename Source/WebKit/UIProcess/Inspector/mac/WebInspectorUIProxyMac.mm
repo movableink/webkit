@@ -478,7 +478,7 @@ void WebInspectorUIProxy::platformCreateFrontendWindow()
     ASSERT(!m_inspectorWindow);
 
     NSRect savedWindowFrame = NSZeroRect;
-    if (RefPtr inspectedPage = protectedInspectedPage()) {
+    if (RefPtr inspectedPage = this->inspectedPage()) {
         RetainPtr savedWindowFrameString = inspectedPage->protectedPageGroup()->protectedPreferences()->inspectorWindowFrame().createNSString();
         savedWindowFrame = NSRectFromString(savedWindowFrameString.get());
     }

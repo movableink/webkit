@@ -152,7 +152,7 @@ void TextTrack::didMoveToNewDocument(Document& newDocument)
 {
     TrackBase::didMoveToNewDocument(newDocument);
     ActiveDOMObject::didMoveToNewDocument(newDocument);
-    if (RefPtr cues = protectedCues())
+    if (RefPtr cues = this->cues())
         cues->didMoveToNewDocument(newDocument);
 }
 

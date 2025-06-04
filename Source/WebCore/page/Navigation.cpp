@@ -125,7 +125,7 @@ void Navigation::initializeForNewWindow(std::optional<NavigationNavigationType> 
         return;
     // For main frames we can still rely on the page b/f list. However for subframes we need below logic to not lose the bookkeeping done in the previous window.
     if (previousWindow && !frame()->isMainFrame()) {
-        Ref previousNavigation = previousWindow->protectedNavigation();
+        Ref previousNavigation = previousWindow->navigation();
         bool shouldProcessPreviousNavigationEntries = [&]() {
             if (!previousNavigation->m_entries.size())
                 return false;

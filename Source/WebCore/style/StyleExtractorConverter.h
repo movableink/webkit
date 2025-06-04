@@ -2463,7 +2463,7 @@ inline Ref<CSSValue> ExtractorConverter::convertSingleAnimation(ExtractorState& 
     auto showsDuration = showsDelay || animation.duration() != Animation::initialDuration();
 
     auto showsTimingFunction = [&] {
-        auto timingFunction = animation.protectedTimingFunction();
+        RefPtr timingFunction = animation.timingFunction();
         if (timingFunction && *timingFunction != initialTimingFunction.get())
             return true;
         auto& name = animation.name().name;
@@ -2538,7 +2538,7 @@ inline Ref<CSSValue> ExtractorConverter::convertSingleTransition(ExtractorState&
         list.append(convertAnimationProperty(state, transition.property(), nullptr, nullptr));
     if (showsDuration)
         list.append(convertAnimationDuration(state, transition.duration(), nullptr, nullptr));
-    if (auto timingFunction = transition.protectedTimingFunction(); *timingFunction != initialTimingFunction.get())
+    if (RefPtr timingFunction = transition.timingFunction(); *timingFunction != initialTimingFunction.get())
         list.append(convertAnimationTimingFunction(state, *timingFunction, nullptr, nullptr));
     if (showsDelay)
         list.append(convertAnimationDelay(state, transition.delay(), nullptr, nullptr));

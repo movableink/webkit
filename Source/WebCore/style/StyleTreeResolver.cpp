@@ -4,7 +4,7 @@
  *           (C) 2001 Peter Kelly (pmk@post.com)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
  *           (C) 2007 David Smith (catfish.man@gmail.com)
- * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *           (C) 2007 Eric Seidel (eric@webkit.org)
  *
  * This library is free software; you can redistribute it and/or
@@ -1449,7 +1449,7 @@ std::unique_ptr<RenderStyle> TreeResolver::generatePositionOption(const Position
         auto rule = ruleSet.positionTryRuleForName(fallback.positionTryRuleName->name);
         if (!rule)
             return nullptr;
-        return rule->protectedProperties();
+        return rule->properties();
     };
 
     auto builderFallback = BuilderPositionTryFallback {

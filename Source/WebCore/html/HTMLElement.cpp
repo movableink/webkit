@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2004-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2021-2024 Google Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2011 Motorola Mobility. All rights reserved.
@@ -1106,7 +1106,7 @@ static void runPopoverFocusingSteps(HTMLElement& popover)
         return;
 
     Ref controlDocument = control->document();
-    RefPtr page = controlDocument->protectedPage();
+    RefPtr page = controlDocument->page();
     if (!page)
         return;
 

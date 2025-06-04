@@ -413,7 +413,7 @@ struct MediaElementSessionInfo {
 
 static MediaElementSessionInfo mediaElementSessionInfoForSession(const MediaElementSession& session, MediaElementSession::PlaybackControlsPurpose purpose)
 {
-    if (RefPtr element = session.protectedElement()) {
+    if (RefPtr element = session.element().get()) {
         return {
             &session,
             purpose,
@@ -805,7 +805,7 @@ RefPtr<HTMLMediaElement> HTMLMediaElement::bestMediaElementForRemoteControls(Med
         if (!mediaElementSession)
             return false;
 
-        RefPtr element = mediaElementSession->protectedElement();
+        RefPtr element = mediaElementSession->element().get();
         if (!element)
             return false;
 
@@ -9987,7 +9987,7 @@ void HTMLMediaElement::updateSpatialTrackingLabel()
 
     m_player->setSpatialTrackingLabel(m_spatialTrackingLabel);
 
-    auto page = document().protectedPage();
+    RefPtr page = document().page();
     if (!page)
         return;
 
@@ -10084,7 +10084,7 @@ void HTMLMediaElement::watchtimeTimerFired()
     if (!shouldLogWatchtimeEvent())
         return;
 
-    auto page = document().protectedPage();
+    RefPtr page = document().page();
     if (!page)
         return;
 
@@ -10213,7 +10213,7 @@ void HTMLMediaElement::invalidateBufferingStopwatch()
     if (!m_bufferingStopwatch || !m_bufferingStopwatch->isActive())
         return;
 
-    auto page = document().protectedPage();
+    RefPtr page = document().page();
     if (!page)
         return;
 

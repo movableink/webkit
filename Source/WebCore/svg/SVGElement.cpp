@@ -826,7 +826,7 @@ bool SVGElement::filterOutAnimatableAttribute(const QualifiedName&) const
 
 String SVGElement::title() const
 {
-    RefPtr page = document().protectedPage();
+    RefPtr page = document().page();
     if (!page)
         return String();
 

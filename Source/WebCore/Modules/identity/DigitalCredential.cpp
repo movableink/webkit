@@ -118,15 +118,15 @@ void DigitalCredential::discoverFromExternalSource(const Document& document, Cre
         return;
     }
 
-    RefPtr frame = document.protectedFrame();
-    RefPtr window = document.protectedWindow();
+    RefPtr frame = document.frame();
+    RefPtr window = document.domWindow();
     if (!frame || !window) {
         LOG(DigitalCredentials, "Preconditions for DigitalCredential.get() are not met");
         promise.reject(ExceptionCode::InvalidStateError, "Preconditions for calling .get() are not met."_s);
         return;
     }
 
-    RefPtr page = frame->protectedPage();
+    RefPtr page = frame->page();
     if (!page) {
         LOG(DigitalCredentials, "Preconditions for DigitalCredential.get() are not met");
         promise.reject(ExceptionCode::InvalidStateError, "Preconditions for calling .get() are not met."_s);

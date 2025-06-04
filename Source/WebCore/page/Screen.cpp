@@ -57,7 +57,7 @@ Screen::~Screen() = default;
 
 static bool shouldApplyScreenFingerprintingProtections(const LocalFrame& frame)
 {
-    RefPtr page = frame.protectedPage();
+    RefPtr page = frame.page();
     if (!page)
         return false;
 

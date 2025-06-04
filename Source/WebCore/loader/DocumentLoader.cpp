@@ -2189,7 +2189,7 @@ void DocumentLoader::startLoadingMainResource()
     m_request.setURL(WTFMove(url), m_request.didFilterLinkDecoration());
     frame = m_frame.get();
     if (frame) {
-        RefPtr page = frame->protectedPage();
+        RefPtr page = frame->page();
         if (page)
             page->setMainFrameURLFragment(WTFMove(fragmentDirective));
     }

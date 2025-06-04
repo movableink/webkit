@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -567,7 +567,7 @@ static inline Vector<FrameIdentifier> collectChildFrameIdentifiers(const Element
 {
     Vector<FrameIdentifier> identifiers;
     for (auto& owner : descendantsOfType<HTMLFrameOwnerElement>(element)) {
-        if (RefPtr frame = owner.protectedContentFrame())
+        if (RefPtr frame = owner.contentFrame())
             identifiers.append(frame->frameID());
     }
     return identifiers;
@@ -1358,7 +1358,7 @@ Vector<TargetedElementInfo> ElementTargetingController::extractTargets(Vector<Re
             if (!renderer.isOutOfFlowPositioned())
                 continue;
 
-            RefPtr element = renderer.protectedElement();
+            RefPtr element = renderer.element();
             if (!element)
                 continue;
 

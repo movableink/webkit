@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -343,7 +343,7 @@ void ScrollingCoordinator::updateSynchronousScrollingReasons(LocalFrameView& fra
     if (hasVisibleSlowRepaintViewportConstrainedObjects(frameView))
         newSynchronousScrollingReasons.add(SynchronousScrollingReason::HasNonLayerViewportConstrainedObjects);
 
-    RefPtr page = frameView.frame().protectedPage();
+    RefPtr page = frameView.frame().page();
     if (page && page->topDocumentHasDocumentClass(DocumentClass::Image))
         newSynchronousScrollingReasons.add(SynchronousScrollingReason::IsImageDocument);
 

@@ -314,7 +314,7 @@ ExceptionOr<void> WebCodecsAudioEncoder::encode(Ref<WebCodecsAudioData>&& frame)
                 return;
 
             if (!result) {
-                if (auto context = protectedThis->protectedScriptExecutionContext())
+                if (RefPtr context = protectedThis->scriptExecutionContext())
                     context->addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("AudioEncoder encode failed: "_s, result.error()));
                 protectedThis->closeEncoder(Exception { ExceptionCode::EncodingError, WTFMove(result.error()) });
                 return;
