@@ -3459,11 +3459,11 @@ bool ValidateCreatePixmapSurface(const ValidationContext *val,
 
     if (!(config->surfaceType & EGL_PIXMAP_BIT))
     {
-        val->setError(EGL_BAD_MATCH, "Congfig does not suport pixmaps.");
+        val->setError(EGL_BAD_MATCH, "Config does not support pixmaps.");
         return false;
     }
 
-    ANGLE_EGL_TRY_RETURN(val->eglThread, display->valdiatePixmap(config, pixmap, attributes),
+    ANGLE_EGL_TRY_RETURN(val->eglThread, display->validatePixmap(config, pixmap, attributes),
                          val->entryPoint, val->labeledObject, false);
 
     return true;

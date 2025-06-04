@@ -341,7 +341,7 @@ angle::FormatID ExternalFormatTable::getOrAllocExternalFormatID(uint64_t externa
 
     if (mExternalYuvFormats.size() >= kMaxExternalFormatCountSupported)
     {
-        ERR() << "ANGLE only suports maximum " << kMaxExternalFormatCountSupported
+        ERR() << "ANGLE only supports maximum " << kMaxExternalFormatCountSupported
               << " external renderable formats";
         return angle::FormatID::NONE;
     }
