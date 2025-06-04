@@ -392,8 +392,11 @@ webkit.org/b/98942 fast/workers/worker-storagequota-query-usage.html [ Failure ]
 webkit.org/b/61661 editing/pasteboard/drag-drop-list.html [ Failure ]
 
 # CSS filters related failures
-webkit.org/b/99026 css3/filters/effect-drop-shadow-hw.html [ ImageOnlyFailure ]
+webkit.org/b/99026 css3/filters/effect-blur.html [ ImageOnlyFailure ]
+webkit.org/b/99026 css3/filters/effect-combined.html [ ImageOnlyFailure ]
+webkit.org/b/99026 css3/filters/effect-drop-shadow-clip-abspos.html [ ImageOnlyFailure ]
 webkit.org/b/99026 css3/filters/effect-drop-shadow.html [ ImageOnlyFailure ]
+webkit.org/b/99026 css3/filters/effect-drop-shadow-hw.html [ ImageOnlyFailure ]
 
 # Needs testRunner.enableAutoResizeMode()
 webkit.org/b/99028 fast/autoresize [ Failure ]
@@ -736,6 +739,7 @@ webkit.org/b/131347 fast/repaint/hidpi-content-inside-iframe-leaves-trails.html 
 webkit.org/b/131347 fast/repaint/hidpi-device-pixel-based-repaint-rect-tracking.html [ Failure ]
 webkit.org/b/131347 fast/repaint/hidpi-transform-on-subpixel-repaintrect.html [ Failure ]
 webkit.org/b/131347 fast/repaint/hidpi-wrong-repaint-rect-when-parent-has-noncompositing-transform.html [ Failure ]
+webkit.org/b/131347 svg/custom/hidpi-masking-clipping.svg [ Failure ImageOnlyFailure Timeout ]
 
 webkit.org/b/141467 fast/multicol/pagination/LeftToRight-tb-hittest.html [ Failure ]
 webkit.org/b/141467 fast/multicol/pagination/RightToLeft-rl-hittest.html [ Failure ]
@@ -1230,7 +1234,6 @@ webkit.org/b/257624 fast/mediastream/MediaStream-video-element-track-stop.html [
 webkit.org/b/257624 http/tests/frame-throttling/raf-throttle-in-cross-origin-subframe.html [ Failure ]
 webkit.org/b/257624 http/tests/security/video-cross-origin-caching.html [ Pass Timeout Crash ]
 
-[ Debug ] fast/mediastream/resize-trim.html [ Pass Crash ]
 
 # Uncomment when webkit.org/b/267992 is fixed
 #webkit.org/b/257624 http/wpt/cross-origin-opener-policy/header-parsing-with-report-to.https.html [ Failure Pass ]
@@ -1627,6 +1630,8 @@ webkit.org/b/144763 fast/events/scroll-in-scaled-page-with-overflow-hidden.html
 imported/w3c/web-platform-tests/xhr/event-readystatechange-loaded.any.js [ Slow ]
 
 webkit.org/b/151267 imported/blink/fast/transforms/transform-update-frame-overflow.html [ ImageOnlyFailure Pass ]
+webkit.org/b/151267 imported/blink/fast/gradients/large-horizontal-gradient.html [ ImageOnlyFailure ]
+webkit.org/b/151267 imported/blink/fast/gradients/large-vertical-gradient.html [ ImageOnlyFailure ]
 
 webkit.org/b/94952 platform/gtk/scrollbars/overflow-scrollbar-horizontal-wheel-scroll.html [ Failure ]
 
@@ -1701,6 +1706,9 @@ webkit.org/b/188436 svg/custom/href-svg-namespace-static.svg [ ImageOnlyFailure 
 
 webkit.org/b/189564 http/tests/xmlhttprequest/url-with-credentials.html [ Failure ]
 
+webkit.org/b/189739 imported/mozilla/svg/linearGradient-basic-03.svg [ ImageOnlyFailure ]
+webkit.org/b/189739 imported/mozilla/svg/marker-viewBox-01.svg [ ImageOnlyFailure ]
+
 webkit.org/b/189994 fast/files/xhr-response-blob.html [ Failure ]
 
 webkit.org/b/190709 editing/pasteboard/emacs-ctrl-a-k-y.html [ Failure ]
@@ -1766,6 +1774,26 @@ imported/w3c/web-platform-tests/css/css-pseudo/selection-background-painting-ord
 imported/w3c/web-platform-tests/preload/preload-time-to-fetch.https.html [ Failure ]
 
 # Failing with skia only with swrast
+webkit.org/b/273396 css3/masking/clip-path-border-radius-border-box-000.html [ ImageOnlyFailure ]
+webkit.org/b/273396 css3/masking/clip-path-border-radius-stroke-box-000.html [ ImageOnlyFailure ]
+webkit.org/b/273396 css3/masking/clip-path-border-radius-view-box-000.html [ ImageOnlyFailure ]
+webkit.org/b/273396 css3/masking/clip-path-inset-corners.html [ ImageOnlyFailure ]
+webkit.org/b/273396 fast/borders/border-painting-correctness-dashed.html [ ImageOnlyFailure ]
+webkit.org/b/273396 fast/borders/border-painting-correctness-dotted.html [ ImageOnlyFailure ]
+webkit.org/b/273396 fast/canvas/canvas-filter-drawing.html [ ImageOnlyFailure ]
+webkit.org/b/273396 fast/filter-image/filter-image-blur.html [ ImageOnlyFailure ]
+webkit.org/b/273396 imported/w3c/web-platform-tests/css/css-backgrounds/css-border-radius-001.html [ ImageOnlyFailure ]
+webkit.org/b/273396 imported/w3c/web-platform-tests/css/css-fonts/font-size-adjust-012.html [ ImageOnlyFailure ]
+webkit.org/b/273396 imported/w3c/web-platform-tests/css/css-fonts/font-size-adjust-013.html [ ImageOnlyFailure ]
+webkit.org/b/273396 imported/w3c/web-platform-tests/css/css-masking/clip-path/animations/clip-path-animation-custom-timing-function.html [ ImageOnlyFailure ]
+webkit.org/b/273396 imported/w3c/web-platform-tests/css/css-masking/clip-path/clip-path-borderBox-1a.html [ ImageOnlyFailure ]
+webkit.org/b/273396 imported/w3c/web-platform-tests/css/css-masking/clip-path/clip-path-contentBox-1e.html [ ImageOnlyFailure ]
+webkit.org/b/273396 imported/w3c/web-platform-tests/css/css-masking/clip-path/clip-path-paddingBox-1e.html [ ImageOnlyFailure ]
+webkit.org/b/273396 imported/w3c/web-platform-tests/css/css-masking/mask-image/mask-image-3h.html [ ImageOnlyFailure ]
+webkit.org/b/273396 imported/w3c/web-platform-tests/css/css-transforms/transform-box/view-box-mutation-002.html [ ImageOnlyFailure ]
+webkit.org/b/273396 imported/w3c/web-platform-tests/css/css-transforms/transform-input-018.html [ ImageOnlyFailure ]
+webkit.org/b/273396 imported/w3c/web-platform-tests/css/motion/offset-path-shape-inset-002.html [ ImageOnlyFailure ]
+webkit.org/b/273396 imported/w3c/web-platform-tests/css/motion/offset-path-shape-polygon-002.html [ ImageOnlyFailure ]
 webkit.org/b/273396 platform/gtk/fonts/webkit-font-smoothing.html [ ImageOnlyFailure ]
 
 # Bidi content-aware paste not yet supported
@@ -1994,6 +2022,12 @@ webkit.org/b/291636 svg/text/timeout-long-text-content.html [ Skip ]
 
 webkit.org/b/286580 http/tests/media/clearkey/clear-key-session-id.html [ Skip ]
 
+webkit.org/b/287572 imported/w3c/web-platform-tests/css/css-masking/clip-path/clip-path-borderBox-1e.html [ ImageOnlyFailure ]
+
+webkit.org/b/255101 imported/w3c/web-platform-tests/css/css-backgrounds/background-clip-content-box-002.html [ ImageOnlyFailure ]
+
+webkit.org/b/264579 imported/w3c/web-platform-tests/css/css-transforms/group/svg-transform-nested-009.html [ ImageOnlyFailure ]
+
 http/tests/iframe-memory-monitor/media-video-autoplay-in-frames.html [ Skip ]
 
 # The Digital Credentials API is not supported in GTK port
@@ -2003,3 +2037,14 @@ imported/w3c/web-platform-tests/digital-credentials/ [ Skip ]
 webkit.org/b/293954 imported/w3c/web-platform-tests/mediacapture-record/ [ Skip ]
 webkit.org/b/293954 http/wpt/mediarecorder/ [ Skip ]
 webkit.org/b/293954 fast/mediastream/mediaStream-with-rotation.html [ Skip ]
+
+http/tests/css/css-masking/mask-external-svg-fragment.html [ ImageOnlyFailure ]
+http/tests/css/css-masking/mask-external-svg-image.html [ ImageOnlyFailure ]
+http/tests/css/css-masking/mask-external-svg-mask.html [ ImageOnlyFailure ]
+http/tests/css/css-masking/mask-inline-svg-image.html [ ImageOnlyFailure ]
+http/tests/css/css-masking/mask-inline-svg-mask.html [ ImageOnlyFailure ]
+
+imported/w3c/web-platform-tests/css/css-view-transitions/inline-with-offset-from-containing-block.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/geometry/reftests/circle-003.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/painting/reftests/marker-path-001.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/painting/reftests/marker-path-011.svg [ ImageOnlyFailure ]
