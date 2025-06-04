@@ -215,15 +215,8 @@ std::unique_ptr<Box> TreeBuilder::createLayoutBox(const ElementBox& parentContai
             tableWrapperBoxStyle.setPosition(renderer.style().position());
             tableWrapperBoxStyle.setFloating(renderer.style().floating());
 
-            tableWrapperBoxStyle.setTop(Length { renderer.style().top() });
-            tableWrapperBoxStyle.setLeft(Length { renderer.style().left() });
-            tableWrapperBoxStyle.setBottom(Length { renderer.style().bottom() });
-            tableWrapperBoxStyle.setRight(Length { renderer.style().right() });
-
-            tableWrapperBoxStyle.setMarginTop(Length { renderer.style().marginTop() });
-            tableWrapperBoxStyle.setMarginLeft(Length { renderer.style().marginLeft() });
-            tableWrapperBoxStyle.setMarginBottom(Length { renderer.style().marginBottom() });
-            tableWrapperBoxStyle.setMarginRight(Length { renderer.style().marginRight() });
+            tableWrapperBoxStyle.setInsetBox(Style::InsetBox { renderer.style().insetBox() });
+            tableWrapperBoxStyle.setMarginBox(Style::MarginBox { renderer.style().marginBox() });
 
             childLayoutBox = createContainer(Box::ElementAttributes { Box::NodeType::TableWrapperBox, Box::IsAnonymous::Yes }, WTFMove(tableWrapperBoxStyle));
         } else if (auto* replacedRenderer = dynamicDowncast<RenderReplaced>(renderer)) {
@@ -240,8 +233,8 @@ std::unique_ptr<Box> TreeBuilder::createLayoutBox(const ElementBox& parentContai
         } else {
             if (displayType == DisplayType::Block) {
                 if (auto offset = accumulatedOffsetForInFlowPositionedContinuation(downcast<RenderBox>(renderer))) {
-                    clonedStyle.setTop({ offset->height(), LengthType::Fixed });
-                    clonedStyle.setLeft({ offset->width(), LengthType::Fixed });
+                    clonedStyle.setTop(Style::Length<> { offset->height() });
+                    clonedStyle.setLeft(Style::Length<> { offset->width() });
                     childLayoutBox = createContainer(elementAttributes(renderer), WTFMove(clonedStyle));
                 } else
                     childLayoutBox = createContainer(elementAttributes(renderer), WTFMove(clonedStyle));

@@ -64,6 +64,7 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextControlPlaceholderElement);
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SearchFieldResultsButtonElement);
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SearchFieldCancelButtonElement);
 
+using namespace CSS::Literals;
 using namespace HTMLNames;
 
 TextControlInnerContainer::TextControlInnerContainer(Document& document)
@@ -242,8 +243,8 @@ std::optional<Style::UnadjustedStyle> TextControlPlaceholderElement::resolveCust
 
     if (RefPtr inputElement = dynamicDowncast<HTMLInputElement>(controlElement)) {
         style.style->setTextOverflow(inputElement->shouldTruncateText(*shadowHostStyle) ? TextOverflow::Ellipsis : TextOverflow::Clip);
-        style.style->setPaddingTop(Length { 0, LengthType::Fixed });
-        style.style->setPaddingBottom(Length { 0, LengthType::Fixed });
+        style.style->setPaddingTop(0_css_px);
+        style.style->setPaddingBottom(0_css_px);
     }
 
     if (shadowHostStyle)

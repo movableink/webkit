@@ -872,13 +872,13 @@ LayoutUnit RenderBlock::marginIntrinsicLogicalWidthForChild(RenderBox& child) co
     // A margin has three types: fixed, percentage, and auto (variable).
     // Auto and percentage margins become 0 when computing min/max width.
     // Fixed margins can be added in as is.
-    Length marginLeft = child.style().marginStart(writingMode());
-    Length marginRight = child.style().marginEnd(writingMode());
+    auto& marginLeft = child.style().marginStart(writingMode());
+    auto& marginRight = child.style().marginEnd(writingMode());
     LayoutUnit margin;
-    if (marginLeft.isFixed() && !shouldTrimChildMargin(MarginTrimType::InlineStart, child))
-        margin += marginLeft.value();
-    if (marginRight.isFixed() && !shouldTrimChildMargin(MarginTrimType::InlineEnd, child))
-        margin += marginRight.value();
+    if (auto fixedMarginLeft = marginLeft.tryFixed(); fixedMarginLeft && !shouldTrimChildMargin(MarginTrimType::InlineStart, child))
+        margin += fixedMarginLeft->value;
+    if (auto fixedMarginRight = marginRight.tryFixed(); fixedMarginRight && !shouldTrimChildMargin(MarginTrimType::InlineEnd, child))
+        margin += fixedMarginRight->value;
     return margin;
 }
 
@@ -2391,16 +2391,13 @@ void RenderBlock::computeBlockPreferredLogicalWidths(LayoutUnit& minLogicalWidth
         // A margin basically has three types: fixed, percentage, and auto (variable).
         // Auto and percentage margins simply become 0 when computing min/max width.
         // Fixed margins can be added in as is.
-        Length startMarginLength = childStyle.marginStart(writingMode());
-        Length endMarginLength = childStyle.marginEnd(writingMode());
-        LayoutUnit margin;
         LayoutUnit marginStart;
         LayoutUnit marginEnd;
-        if (startMarginLength.isFixed())
-            marginStart += startMarginLength.value();
-        if (endMarginLength.isFixed())
-            marginEnd += endMarginLength.value();
-        margin = marginStart + marginEnd;
+        if (auto fixedMarginStart = childStyle.marginStart(writingMode()).tryFixed())
+            marginStart += fixedMarginStart->value;
+        if (auto fixedMarginEnd = childStyle.marginEnd(writingMode()).tryFixed())
+            marginEnd += fixedMarginEnd->value;
+        auto margin = marginStart + marginEnd;
 
         LayoutUnit childMinPreferredLogicalWidth;
         LayoutUnit childMaxPreferredLogicalWidth;
@@ -3538,17 +3535,16 @@ bool RenderBlock::computePreferredWidthsForExcludedChildren(LayoutUnit& minWidth
     maxWidth -= scrollbarWidth;
     
     const auto& childStyle = legend->style();
-    auto startMarginLength = childStyle.marginStart(writingMode());
-    auto endMarginLength = childStyle.marginEnd(writingMode());
-    LayoutUnit margin;
+
     LayoutUnit marginStart;
     LayoutUnit marginEnd;
-    if (startMarginLength.isFixed())
-        marginStart += startMarginLength.value();
-    if (endMarginLength.isFixed())
-        marginEnd += endMarginLength.value();
-    margin = marginStart + marginEnd;
-    
+    if (auto fixedMarginStart = childStyle.marginStart(writingMode()).tryFixed())
+        marginStart += fixedMarginStart->value;
+    if (auto fixedMarginEnd = childStyle.marginEnd(writingMode()).tryFixed())
+        marginEnd += fixedMarginEnd->value;
+
+    auto margin = marginStart + marginEnd;
+
     minWidth += margin;
     maxWidth += margin;
 

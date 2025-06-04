@@ -536,37 +536,25 @@ template<typename T> inline constexpr auto TreatAsTupleLike<MinimallySerializing
 template<typename T> inline constexpr auto SerializationSeparator<MinimallySerializingSpaceSeparatedSize<T>> = SerializationSeparatorType::Space;
 
 // Wraps a quad of elements of a single type representing the edges of a rect, semantically marking them as serializing as "space separated".
-template<typename T> struct SpaceSeparatedRectEdges {
+template<typename T> struct SpaceSeparatedRectEdges : RectEdges<T> {
     using value_type = T;
 
     constexpr SpaceSeparatedRectEdges(T repeat)
-        : value { repeat, repeat, repeat, repeat }
+        : RectEdges<T> { repeat, repeat, repeat, repeat }
     {
     }
 
     constexpr SpaceSeparatedRectEdges(T top, T right, T bottom, T left)
-        : value { WTFMove(top), WTFMove(right), WTFMove(bottom), WTFMove(left) }
+        : RectEdges<T> { WTFMove(top), WTFMove(right), WTFMove(bottom), WTFMove(left) }
     {
     }
 
     constexpr SpaceSeparatedRectEdges(RectEdges<T>&& rectEdges)
-        : value { WTFMove(rectEdges) }
+        : RectEdges<T> { WTFMove(rectEdges) }
     {
     }
 
     constexpr bool operator==(const SpaceSeparatedRectEdges<T>&) const = default;
-
-    const T& top() const    { return value.top(); }
-    const T& right() const  { return value.right(); }
-    const T& bottom() const { return value.bottom(); }
-    const T& left() const   { return value.left(); }
-
-    T& top()                { return value.top(); }
-    T& right()              { return value.right(); }
-    T& bottom()             { return value.bottom(); }
-    T& left()               { return value.left(); }
-
-    RectEdges<T> value;
 };
 
 template<size_t I, typename T> const auto& get(const SpaceSeparatedRectEdges<T>& rectEdges)
@@ -596,37 +584,25 @@ template<typename T> inline constexpr auto SerializationSeparator<SpaceSeparated
 // As the name implies, the benefit of using this over `SpaceSeparatedRectEdges` directly
 // is that this will serialize in its minimal form, checking for element equality and only
 // serializing what is necessary.
-template<typename T> struct MinimallySerializingSpaceSeparatedRectEdges {
+template<typename T> struct MinimallySerializingSpaceSeparatedRectEdges : RectEdges<T> {
     using value_type = T;
 
     constexpr MinimallySerializingSpaceSeparatedRectEdges(T value)
-        : value { value, value, value, value }
+        : RectEdges<T> { value, value, value, value }
     {
     }
 
     constexpr MinimallySerializingSpaceSeparatedRectEdges(T top, T right, T bottom, T left)
-        : value { WTFMove(top), WTFMove(right), WTFMove(bottom), WTFMove(left) }
+        : RectEdges<T> { WTFMove(top), WTFMove(right), WTFMove(bottom), WTFMove(left) }
     {
     }
 
     constexpr MinimallySerializingSpaceSeparatedRectEdges(RectEdges<T>&& rectEdges)
-        : value { WTFMove(rectEdges) }
+        : RectEdges<T> { WTFMove(rectEdges) }
     {
     }
 
     constexpr bool operator==(const MinimallySerializingSpaceSeparatedRectEdges<T>&) const = default;
-
-    const T& top() const    { return value.top(); }
-    const T& right() const  { return value.right(); }
-    const T& bottom() const { return value.bottom(); }
-    const T& left() const   { return value.left(); }
-
-    T& top()                { return value.top(); }
-    T& right()              { return value.right(); }
-    T& bottom()             { return value.bottom(); }
-    T& left()               { return value.left(); }
-
-    RectEdges<T> value;
 };
 
 template<size_t I, typename T> decltype(auto) get(const MinimallySerializingSpaceSeparatedRectEdges<T>& value)

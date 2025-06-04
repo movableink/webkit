@@ -106,29 +106,6 @@ inline WebCore::Length blendFunc(const WebCore::Length& from, const WebCore::Len
     return blend(from, to, context, valueRange);
 }
 
-inline bool canInterpolateLengths(const WebCore::Length& from, const WebCore::Length& to, bool isLengthPercentage)
-{
-    if (from.type() == to.type())
-        return true;
-
-    // Some properties allow for <length-percentage> and <number> values. We must allow animating
-    // between a <length> and a <percentage>, but exclude animating between a <number> and either
-    // a <length> or <percentage>. We can use Length::isRelative() to determine whether we are
-    // dealing with a <number> as opposed to a <length> or <percentage>.
-    if (isLengthPercentage) {
-        return (from.isFixed() || from.isPercentOrCalculated() || from.isRelative())
-            && (to.isFixed() || to.isPercentOrCalculated() || to.isRelative())
-            && from.isRelative() == to.isRelative();
-    }
-
-    if (from.isCalculated())
-        return to.isFixed() || to.isPercentOrCalculated();
-    if (to.isCalculated())
-        return from.isFixed() || from.isPercentOrCalculated();
-
-    return false;
-}
-
 inline GapLength blendFunc(const GapLength& from, const GapLength& to, const Context& context)
 {
     if (from.isNormal() || to.isNormal())

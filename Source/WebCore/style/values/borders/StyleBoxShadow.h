@@ -61,7 +61,6 @@ template<> struct ToCSS<BoxShadow> { auto operator()(const BoxShadow&, const Ren
 template<> struct ToStyle<CSS::BoxShadow> { auto operator()(const CSS::BoxShadow&, const BuilderState&) -> BoxShadow; };
 
 template<> struct Blending<BoxShadow> {
-    auto canBlend(const BoxShadow&, const BoxShadow&, const RenderStyle&, const RenderStyle&) -> bool;
     auto blend(const BoxShadow&, const BoxShadow&, const RenderStyle&, const RenderStyle&, const BlendingContext&) -> BoxShadow;
 };
 

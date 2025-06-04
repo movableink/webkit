@@ -34,17 +34,17 @@
 namespace WebCore {
 namespace Style {
 
-LayoutUnit ScrollPaddingEdge::evaluate(LayoutUnit referenceLength) const
+LayoutUnit Evaluation<ScrollPaddingEdge>::operator()(const ScrollPaddingEdge& edge, LayoutUnit referenceLength)
 {
-    switch (m_value.type()) {
+    switch (edge.m_value.type()) {
     case LengthType::Fixed:
-        return LayoutUnit(m_value.value());
+        return LayoutUnit(edge.m_value.value());
 
     case LengthType::Percent:
-        return LayoutUnit(static_cast<float>(referenceLength * m_value.percent() / 100.0f));
+        return LayoutUnit(static_cast<float>(referenceLength * edge.m_value.percent() / 100.0f));
 
     case LengthType::Calculated:
-        return LayoutUnit(m_value.nonNanCalculatedValue(referenceLength));
+        return LayoutUnit(edge.m_value.nonNanCalculatedValue(referenceLength));
 
     case LengthType::Auto:
             return 0_lu;
@@ -65,17 +65,17 @@ LayoutUnit ScrollPaddingEdge::evaluate(LayoutUnit referenceLength) const
     return 0_lu;
 }
 
-float ScrollPaddingEdge::evaluate(float referenceLength) const
+float Evaluation<ScrollPaddingEdge>::operator()(const ScrollPaddingEdge& edge, float referenceLength)
 {
-    switch (m_value.type()) {
+    switch (edge.m_value.type()) {
     case LengthType::Fixed:
-        return m_value.value();
+        return edge.m_value.value();
 
     case LengthType::Percent:
-        return referenceLength * m_value.percent() / 100.0f;
+        return referenceLength * edge.m_value.percent() / 100.0f;
 
     case LengthType::Calculated:
-        return m_value.nonNanCalculatedValue(referenceLength);
+        return edge.m_value.nonNanCalculatedValue(referenceLength);
 
     case LengthType::Auto:
             return 0;
@@ -96,19 +96,12 @@ float ScrollPaddingEdge::evaluate(float referenceLength) const
     return 0;
 }
 
-Ref<CSSValue> ScrollPaddingEdge::toCSS(ExtractorState& state) const
-{
-    return ExtractorConverter::convertLength(state, m_value);
-}
-
 ScrollPaddingEdge scrollPaddingEdgeFromCSSValue(const CSSValue& value, BuilderState& state)
 {
-    if (value.valueID() == CSSValueAuto)
-        return ScrollPaddingEdge { CSS::Keyword::Auto { } };
-    return ScrollPaddingEdge { BuilderConverter::convertLength(state, value) };
+    return ScrollPaddingEdge { BuilderConverter::convertLengthOrAuto(state, value) };
 }
 
-LayoutBoxExtent extentForRect(const ScrollPadding& padding, const LayoutRect& rect)
+LayoutBoxExtent extentForRect(const ScrollPaddingBox& padding, const LayoutRect& rect)
 {
     return LayoutBoxExtent {
         Style::evaluate(padding.top(), rect.height()),

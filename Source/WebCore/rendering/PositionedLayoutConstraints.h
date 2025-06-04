@@ -28,6 +28,8 @@
 #include "BoxSides.h"
 #include "LayoutRange.h"
 #include "RenderBox.h"
+#include "StyleInset.h"
+#include "StyleMargin.h"
 #include "StyleSelfAlignmentData.h"
 
 namespace WebCore {
@@ -38,11 +40,11 @@ public:
     PositionedLayoutConstraints(const RenderBox&, const RenderStyle& selfStyleOverride, LogicalBoxAxis selfAxis);
 
     // Logical top or left wrt containing block.
-    Length marginBefore() const { return m_marginBefore; }
+    Style::MarginEdge marginBefore() const { return m_marginBefore; }
     // Logical bottom or right wrt containing block.
-    Length marginAfter() const { return m_marginAfter; }
-    Length insetBefore() const { return m_insetBefore; }
-    Length insetAfter() const { return m_insetAfter; }
+    Style::MarginEdge marginAfter() const { return m_marginAfter; }
+    Style::InsetEdge insetBefore() const { return m_insetBefore; }
+    Style::InsetEdge insetAfter() const { return m_insetAfter; }
     const RenderBoxModelObject& container() const { return *m_container; }
     const RenderBoxModelObject* defaultAnchorBox() const { return m_defaultAnchorBox.get(); }
     LayoutUnit bordersPlusPadding() const { return m_bordersPlusPadding; }
@@ -59,10 +61,10 @@ public:
     bool containingCoordsAreFlipped() const;
 
     LayoutUnit containingSize() const { return m_containingRange.size(); }
-    LayoutUnit marginBeforeValue() const { return minimumValueForLength(m_marginBefore, m_marginPercentageBasis); }
-    LayoutUnit marginAfterValue() const { return minimumValueForLength(m_marginAfter, m_marginPercentageBasis); }
-    LayoutUnit insetBeforeValue() const { return minimumValueForLength(m_insetBefore, containingSize()); }
-    LayoutUnit insetAfterValue() const { return minimumValueForLength(m_insetAfter, containingSize()); }
+    LayoutUnit marginBeforeValue() const { return Style::evaluateMinimum(m_marginBefore, m_marginPercentageBasis); }
+    LayoutUnit marginAfterValue() const { return Style::evaluateMinimum(m_marginAfter, m_marginPercentageBasis); }
+    LayoutUnit insetBeforeValue() const { return Style::evaluateMinimum(m_insetBefore, containingSize()); }
+    LayoutUnit insetAfterValue() const { return Style::evaluateMinimum(m_insetAfter, containingSize()); }
     LayoutUnit insetModifiedContainingSize() const { return m_insetModifiedContainingRange.size(); }
     LayoutUnit availableContentSpace() const { return insetModifiedContainingSize() - marginBeforeValue() - bordersPlusPadding() - marginAfterValue(); } // This may be negative.
 
@@ -100,10 +102,10 @@ private:
     LayoutUnit m_marginPercentageBasis;
 
     LayoutUnit m_bordersPlusPadding;
-    Length m_marginBefore;
-    Length m_marginAfter;
-    Length m_insetBefore;
-    Length m_insetAfter;
+    Style::MarginEdge m_marginBefore;
+    Style::MarginEdge m_marginAfter;
+    Style::InsetEdge m_insetBefore;
+    Style::InsetEdge m_insetAfter;
     bool m_useStaticPosition { false };
 };
 

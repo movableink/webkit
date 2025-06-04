@@ -101,8 +101,8 @@ void RenderScrollbarPart::computeScrollbarWidth()
     setWidth(std::max(minWidth, std::min(maxWidth, width)));
     
     // Buttons and track pieces can all have margins along the axis of the scrollbar. 
-    m_marginBox.setLeft(minimumValueForLength(style().marginLeft(), { }));
-    m_marginBox.setRight(minimumValueForLength(style().marginRight(), { }));
+    m_marginBox.setLeft(Style::evaluateMinimum(style().marginLeft(), { }));
+    m_marginBox.setRight(Style::evaluateMinimum(style().marginRight(), { }));
 }
 
 void RenderScrollbarPart::computeScrollbarHeight()
@@ -115,8 +115,8 @@ void RenderScrollbarPart::computeScrollbarHeight()
     setHeight(std::max(minHeight, std::min(maxHeight, height)));
 
     // Buttons and track pieces can all have margins along the axis of the scrollbar. 
-    m_marginBox.setTop(minimumValueForLength(style().marginTop(), { }));
-    m_marginBox.setBottom(minimumValueForLength(style().marginBottom(), { }));
+    m_marginBox.setTop(Style::evaluateMinimum(style().marginTop(), { }));
+    m_marginBox.setBottom(Style::evaluateMinimum(style().marginBottom(), { }));
 }
 
 void RenderScrollbarPart::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)

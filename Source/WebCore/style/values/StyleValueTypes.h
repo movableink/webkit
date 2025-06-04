@@ -619,28 +619,72 @@ template<TupleLike StyleType> requires (std::tuple_size_v<StyleType> == 1) struc
 // All non-tuple-like leaf types must specialize `Blending` with the following member functions:
 //
 //    template<> struct WebCore::Style::Blending<StyleType> {
-//        bool canBlend(const StyleType&, const StyleType&);
+//        [optional default=true]  bool canBlend(const StyleType&, const StyleType&);
+//        [optional default=false] bool requiresInterpolationForAccumulativeIteration(const StyleType&, const StyleType&);
 //        StyleType blend(const StyleType&, const StyleType&, const BlendingContext&);
 //    };
 //
 // or, if a RenderStyle is needed for blending:
 //
 //    template<> struct WebCore::Style::Blending<StyleType> {
-//        bool canBlend(const StyleType&, const StyleType&, const RenderStyle&, const RenderStyle&);
+//        [optional default=true]  bool canBlend(const StyleType&, const StyleType&, const RenderStyle&, const RenderStyle&);
+//        [optional default=false] bool requiresInterpolationForAccumulativeIteration(const StyleType&, const StyleType&, const RenderStyle&, const RenderStyle&);
 //        StyleType blend(const StyleType&, const StyleType&, const RenderStyle&, const RenderStyle&, const BlendingContext&);
 //    };
 
 template<typename> struct Blending;
 
+template<typename StyleType> concept HasCanBlendWithoutRenderStyle = requires {
+    { Blending<StyleType>{}.canBlend(std::declval<const StyleType&>(), std::declval<const StyleType&>()) } -> std::same_as<bool>;
+};
+template<typename StyleType> concept HasCanBlendWithRenderStyle = requires {
+    { Blending<StyleType>{}.canBlend(std::declval<const StyleType&>(), std::declval<const StyleType&>(), std::declval<const RenderStyle&>(), std::declval<const RenderStyle&>()) } -> std::same_as<bool>;
+};
+template<typename StyleType> concept HasRequiresInterpolationForAccumulativeIterationWithoutRenderStyle = requires {
+    { Blending<StyleType>{}.requiresInterpolationForAccumulativeIteration(std::declval<const StyleType&>(), std::declval<const StyleType&>()) } -> std::same_as<bool>;
+};
+template<typename StyleType> concept HasRequiresInterpolationForAccumulativeIterationWithRenderStyle = requires {
+    { Blending<StyleType>{}.requiresInterpolationForAccumulativeIteration(std::declval<const StyleType&>(), std::declval<const StyleType&>(), std::declval<const RenderStyle&>(), std::declval<const RenderStyle&>()) } -> std::same_as<bool>;
+};
+template<typename StyleType> concept HasBlendWithoutRenderStyle = requires {
+    { Blending<StyleType>{}.blend(std::declval<const StyleType&>(), std::declval<const StyleType&>(), std::declval<const BlendingContext&>()) } -> std::same_as<StyleType>;
+};
+template<typename StyleType> concept HasBlendWithRenderStyle = requires {
+    { Blending<StyleType>{}.blend(std::declval<const StyleType&>(), std::declval<const StyleType&>(), std::declval<const RenderStyle&>(), std::declval<const RenderStyle&>(), std::declval<const BlendingContext&>()) } -> std::same_as<StyleType>;
+};
+
 // `CanBlend` Invoker
 template<typename StyleType> auto canBlend(const StyleType& a, const StyleType& b) -> bool
 {
-    return Blending<StyleType>{}.canBlend(a, b);
+    if constexpr (HasCanBlendWithoutRenderStyle<StyleType>)
+        return Blending<StyleType>{}.canBlend(a, b);
+    else
+        return true;
 }
 
 template<typename StyleType> auto canBlend(const StyleType& a, const StyleType& b, const RenderStyle& aStyle, const RenderStyle& bStyle) -> bool
 {
-    return Blending<StyleType>{}.canBlend(a, b, aStyle, bStyle);
+    if constexpr (HasCanBlendWithRenderStyle<StyleType>)
+        return Blending<StyleType>{}.canBlend(a, b, aStyle, bStyle);
+    else
+        return WebCore::Style::canBlend(a, b);
+}
+
+// `RequiresInterpolationForAccumulativeIteration` Invoker
+template<typename StyleType> auto requiresInterpolationForAccumulativeIteration(const StyleType& a, const StyleType& b) -> bool
+{
+    if constexpr (HasRequiresInterpolationForAccumulativeIterationWithoutRenderStyle<StyleType>)
+        return Blending<StyleType>{}.requiresInterpolationForAccumulativeIteration(a, b);
+    else
+        return false;
+}
+
+template<typename StyleType> auto requiresInterpolationForAccumulativeIteration(const StyleType& a, const StyleType& b, const RenderStyle& aStyle, const RenderStyle& bStyle) -> bool
+{
+    if constexpr (HasRequiresInterpolationForAccumulativeIterationWithRenderStyle<StyleType>)
+        return Blending<StyleType>{}.requiresInterpolationForAccumulativeIteration(a, b, aStyle, bStyle);
+    else
+        return WebCore::Style::requiresInterpolationForAccumulativeIteration(a, b);
 }
 
 // `Blend` Invoker
@@ -651,7 +695,10 @@ template<typename StyleType> auto blend(const StyleType& a, const StyleType& b, 
 
 template<typename StyleType> auto blend(const StyleType& a, const StyleType& b, const RenderStyle& aStyle, const RenderStyle& bStyle, const BlendingContext& context) -> StyleType
 {
-    return Blending<StyleType>{}.blend(a, b, aStyle, bStyle, context);
+    if constexpr (HasBlendWithRenderStyle<StyleType>)
+        return Blending<StyleType>{}.blend(a, b, aStyle, bStyle, context);
+    else
+        return WebCore::Style::blend(a, b, context);
 }
 
 // Utilities for blending
@@ -668,6 +715,20 @@ template<typename StyleType> auto canBlendOnOptionalLike(const StyleType& a, con
     if (a && b)
         return WebCore::Style::canBlend(*a, *b, aStyle, bStyle);
     return !a && !b;
+}
+
+template<typename StyleType> auto requiresInterpolationForAccumulativeIterationOnOptionalLike(const StyleType& a, const StyleType& b) -> bool
+{
+    if (a && b)
+        return WebCore::Style::requiresInterpolationForAccumulativeIteration(*a, *b);
+    return false;
+}
+
+template<typename StyleType> auto requiresInterpolationForAccumulativeIterationOnOptionalLike(const StyleType& a, const StyleType& b, const RenderStyle& aStyle, const RenderStyle& bStyle) -> bool
+{
+    if (a && b)
+        return WebCore::Style::requiresInterpolationForAccumulativeIteration(*a, *b, aStyle, bStyle);
+    return false;
 }
 
 template<typename StyleType> auto blendOnOptionalLike(const StyleType& a, const StyleType& b, const BlendingContext& context) -> StyleType
@@ -698,6 +759,20 @@ template<typename StyleType> auto canBlendOnTupleLike(const StyleType& a, const 
     }, WTF::tuple_zip(a, b));
 }
 
+template<typename StyleType> auto requiresInterpolationForAccumulativeIterationOnTupleLike(const StyleType& a, const StyleType& b) -> bool
+{
+    return WTF::apply([&](const auto& ...pair) {
+        return (WebCore::Style::requiresInterpolationForAccumulativeIteration(std::get<0>(pair), std::get<1>(pair)) || ...);
+    }, WTF::tuple_zip(a, b));
+}
+
+template<typename StyleType> auto requiresInterpolationForAccumulativeIterationOnTupleLike(const StyleType& a, const StyleType& b, const RenderStyle& aStyle, const RenderStyle& bStyle) -> bool
+{
+    return WTF::apply([&](const auto& ...pair) {
+        return (WebCore::Style::requiresInterpolationForAccumulativeIteration(std::get<0>(pair), std::get<1>(pair), aStyle, bStyle) || ...);
+    }, WTF::tuple_zip(a, b));
+}
+
 template<typename StyleType> auto blendOnTupleLike(const StyleType& a, const StyleType& b, const BlendingContext& context) -> StyleType
 {
     return WTF::apply([&](const auto& ...pair) {
@@ -722,6 +797,14 @@ template<OptionalLike StyleType> struct Blending<StyleType> {
     {
         return canBlendOnOptionalLike(a, b, aStyle, bStyle);
     }
+    constexpr auto requiresInterpolationForAccumulativeIteration(const StyleType& a, const StyleType& b) -> bool
+    {
+        return requiresInterpolationForAccumulativeIterationOnOptionalLike(a, b);
+    }
+    constexpr auto requiresInterpolationForAccumulativeIteration(const StyleType& a, const StyleType& b, const RenderStyle& aStyle, const RenderStyle& bStyle) -> bool
+    {
+        return requiresInterpolationForAccumulativeIterationOnOptionalLike(a, b, aStyle, bStyle);
+    }
     auto blend(const StyleType& a, const StyleType& b, const BlendingContext& context) -> StyleType
     {
         return blendOnOptionalLike(a, b, context);
@@ -742,6 +825,14 @@ template<TupleLike StyleType> struct Blending<StyleType> {
     {
         return canBlendOnTupleLike(a, b, aStyle, bStyle);
     }
+    constexpr auto requiresInterpolationForAccumulativeIteration(const StyleType& a, const StyleType& b) -> bool
+    {
+        return requiresInterpolationForAccumulativeIterationOnTupleLike(a, b);
+    }
+    constexpr auto requiresInterpolationForAccumulativeIteration(const StyleType& a, const StyleType& b, const RenderStyle& aStyle, const RenderStyle& bStyle) -> bool
+    {
+        return requiresInterpolationForAccumulativeIterationOnTupleLike(a, b, aStyle, bStyle);
+    }
     auto blend(const StyleType& a, const StyleType& b, const BlendingContext& context) -> StyleType
     {
         return blendOnTupleLike(a, b, context);
@@ -754,14 +845,6 @@ template<TupleLike StyleType> struct Blending<StyleType> {
 
 // Specialization for `Constant`.
 template<CSSValueID C> struct Blending<Constant<C>> {
-    constexpr auto canBlend(const Constant<C>&, const Constant<C>&) -> bool
-    {
-        return true;
-    }
-    constexpr auto canBlend(const Constant<C>&, const Constant<C>&, const RenderStyle&, const RenderStyle&) -> bool
-    {
-        return true;
-    }
     auto blend(const Constant<C>&, const Constant<C>&, const BlendingContext&) -> Constant<C>
     {
         return { };
@@ -790,6 +873,28 @@ template<typename... StyleTypes> struct Blending<Variant<StyleTypes...>> {
         return WTF::visit(WTF::makeVisitor(
             [&]<typename T>(const T& a, const T& b) -> bool {
                 return WebCore::Style::canBlend(a, b, aStyle, bStyle);
+            },
+            [](const auto&, const auto&) -> bool {
+                return false;
+            }
+        ), a, b);
+    }
+    auto requiresInterpolationForAccumulativeIteration(const Variant<StyleTypes...>& a, const Variant<StyleTypes...>& b) -> bool
+    {
+        return WTF::visit(WTF::makeVisitor(
+            []<typename T>(const T& a, const T& b) -> bool {
+                return WebCore::Style::requiresInterpolationForAccumulativeIteration(a, b);
+            },
+            [](const auto&, const auto&) -> bool {
+                return false;
+            }
+        ), a, b);
+    }
+    auto requiresInterpolationForAccumulativeIteration(const Variant<StyleTypes...>& a, const Variant<StyleTypes...>& b, const RenderStyle& aStyle, const RenderStyle& bStyle) -> bool
+    {
+        return WTF::visit(WTF::makeVisitor(
+            [&]<typename T>(const T& a, const T& b) -> bool {
+                return WebCore::Style::requiresInterpolationForAccumulativeIteration(a, b, aStyle, bStyle);
             },
             [](const auto&, const auto&) -> bool {
                 return false;
@@ -842,6 +947,26 @@ template<typename StyleType, size_t inlineCapacity> struct Blending<SpaceSeparat
         }
         return true;
     }
+    auto requiresInterpolationForAccumulativeIteration(const SpaceSeparatedVector<StyleType, inlineCapacity>& a, const SpaceSeparatedVector<StyleType, inlineCapacity>& b) -> bool
+    {
+        if (a.size() != b.size())
+            return false;
+        for (size_t i = 0; i < a.size(); ++i) {
+            if (WebCore::Style::requiresInterpolationForAccumulativeIteration(a[i], b[i]))
+                return true;
+        }
+        return false;
+    }
+    auto requiresInterpolationForAccumulativeIteration(const SpaceSeparatedVector<StyleType, inlineCapacity>& a, const SpaceSeparatedVector<StyleType, inlineCapacity>& b, const RenderStyle& aStyle, const RenderStyle& bStyle) -> bool
+    {
+        if (a.size() != b.size())
+            return false;
+        for (size_t i = 0; i < a.size(); ++i) {
+            if (WebCore::Style::requiresInterpolationForAccumulativeIteration(a[i], b[i], aStyle, bStyle))
+                return true;
+        }
+        return false;
+    }
     auto blend(const SpaceSeparatedVector<StyleType, inlineCapacity>& a, const SpaceSeparatedVector<StyleType, inlineCapacity>& b, const BlendingContext& context) -> SpaceSeparatedVector<StyleType, inlineCapacity>
     {
         auto size = a.size();
@@ -883,6 +1008,26 @@ template<typename StyleType, size_t inlineCapacity> struct Blending<CommaSeparat
                 return false;
         }
         return true;
+    }
+    auto requiresInterpolationForAccumulativeIteration(const CommaSeparatedVector<StyleType, inlineCapacity>& a, const CommaSeparatedVector<StyleType, inlineCapacity>& b) -> bool
+    {
+        if (a.size() != b.size())
+            return false;
+        for (size_t i = 0; i < a.size(); ++i) {
+            if (WebCore::Style::requiresInterpolationForAccumulativeIteration(a[i], b[i]))
+                return true;
+        }
+        return false;
+    }
+    auto requiresInterpolationForAccumulativeIteration(const CommaSeparatedVector<StyleType, inlineCapacity>& a, const CommaSeparatedVector<StyleType, inlineCapacity>& b, const RenderStyle& aStyle, const RenderStyle& bStyle) -> bool
+    {
+        if (a.size() != b.size())
+            return false;
+        for (size_t i = 0; i < a.size(); ++i) {
+            if (WebCore::Style::requiresInterpolationForAccumulativeIteration(a[i], b[i], aStyle, bStyle))
+                return true;
+        }
+        return false;
     }
     auto blend(const CommaSeparatedVector<StyleType, inlineCapacity>& a, const CommaSeparatedVector<StyleType, inlineCapacity>& b, const BlendingContext& context) -> CommaSeparatedVector<StyleType, inlineCapacity>
     {

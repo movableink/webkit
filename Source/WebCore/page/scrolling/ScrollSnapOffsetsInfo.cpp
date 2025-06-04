@@ -249,14 +249,14 @@ static std::pair<LayoutType, std::optional<unsigned>> closestSnapOffsetWithInfoA
     return velocity < 0 ? *previous : *next;
 }
 
-static LayoutRect computeScrollSnapPortRect(const Style::ScrollPadding& padding, const LayoutRect& rect)
+static LayoutRect computeScrollSnapPortRect(const Style::ScrollPaddingBox& padding, const LayoutRect& rect)
 {
     auto result = rect;
     result.contract(Style::extentForRect(padding, rect));
     return result;
 }
 
-static LayoutRect computeScrollSnapAreaRect(const Style::ScrollMargin& margin, const LayoutRect& rect)
+static LayoutRect computeScrollSnapAreaRect(const Style::ScrollMarginBox& margin, const LayoutRect& rect)
 {
     auto result = rect;
     result.expand(Style::extentForRect(margin, rect));
@@ -328,7 +328,7 @@ void updateSnapOffsetsForScrollableArea(ScrollableArea& scrollableArea, const Re
     }
 
     // The bounds of the scrolling container's snap port, where the top left of the scrolling container's border box is the origin.
-    auto scrollSnapPort = computeScrollSnapPortRect(scrollingElementStyle.scrollPadding(), viewportRectInBorderBoxCoordinates);
+    auto scrollSnapPort = computeScrollSnapPortRect(scrollingElementStyle.scrollPaddingBox(), viewportRectInBorderBoxCoordinates);
     LOG_WITH_STREAM(ScrollSnap, stream << "Computing scroll snap offsets for " << scrollableArea << " in snap port " << scrollSnapPort);
     for (auto& child : boxesWithScrollSnapPositions) {
         if (child.enclosingScrollableContainer() != &scrollingElementBox || !child.element())
@@ -344,7 +344,7 @@ void updateSnapOffsetsForScrollableArea(ScrollableArea& scrollableArea, const Re
         if (!scrollableArea.isScrollView())
             scrollSnapArea.moveBy(scrollPosition);
 
-        scrollSnapArea = computeScrollSnapAreaRect(child.style().scrollMargin(), scrollSnapArea);
+        scrollSnapArea = computeScrollSnapAreaRect(child.style().scrollMarginBox(), scrollSnapArea);
         LOG_WITH_STREAM(ScrollSnap, stream << "    Considering scroll snap target area " << scrollSnapArea << " scroll snap id: " << child.element()->identifier() << " element: " << *child.element());
         auto alignment = child.style().scrollSnapAlign();
         auto stop = child.style().scrollSnapStop();

@@ -346,23 +346,6 @@ LengthBox ThemeMac::controlBorder(StyleAppearance appearance, const FontCascade&
     }
 }
 
-LengthBox ThemeMac::controlPadding(StyleAppearance appearance, const FontCascade& font, const LengthBox& zoomedBox, float zoomFactor) const
-{
-    switch (appearance) {
-    case StyleAppearance::PushButton: {
-        // Just use 8px. AppKit wants to use 11px for mini buttons, but that padding is just too large
-        // for real-world Web sites (creating a huge necessary minimum width for buttons whose space is
-        // by definition constrained, since we select mini only for small cramped environments).
-        // This also guarantees the HTML <button> will match our rendering by default, since we're using
-        // a consistent padding.
-        int padding = 8 * zoomFactor;
-        return LengthBox(2, padding, 3, padding);
-    }
-    default:
-        return Theme::controlPadding(appearance, font, zoomedBox, zoomFactor);
-    }
-}
-
 void ThemeMac::inflateControlPaintRect(StyleAppearance appearance, FloatRect& zoomedRect, float zoomFactor, bool isVertical)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS

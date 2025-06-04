@@ -63,6 +63,7 @@
 #import "RenderView.h"
 #import "SliderThumbElement.h"
 #import "StringTruncator.h"
+#import "StylePadding.h"
 #import "ThemeMac.h"
 #import "UTIUtilities.h"
 #import <Carbon/Carbon.h>
@@ -117,6 +118,7 @@
 
 namespace WebCore {
 
+using namespace CSS::Literals;
 using namespace HTMLNames;
 
 enum {
@@ -963,7 +965,7 @@ void RenderThemeMac::adjustListButtonStyle(RenderStyle& style, const Element* el
 #endif
 
     // Add a margin to place the button at end of the input field.
-    style.setMarginEnd(Length(-4, LengthType::Fixed));
+    style.setMarginEnd(-4_css_px);
 }
 
 #if ENABLE(SERVICE_CONTROLS)
@@ -1071,14 +1073,21 @@ void RenderThemeMac::adjustMenuListStyle(RenderStyle& style, const Element* elem
     style.setBoxShadow({ });
 }
 
-LengthBox RenderThemeMac::popupInternalPaddingBox(const RenderStyle& style) const
+static Style::PaddingEdge toTruncatedPaddingEdge(auto value)
+{
+    return Style::Length<CSS::Nonnegative> { static_cast<float>(std::trunc(value)) };
+}
+
+Style::PaddingBox RenderThemeMac::popupInternalPaddingBox(const RenderStyle& style) const
 {
     if (style.usedAppearance() == StyleAppearance::Menulist) {
         auto padding = popupButtonPadding(controlSizeForFont(style), style.writingMode().isBidiRTL());
-        return { static_cast<int>(padding[topPadding] * style.usedZoom()),
-            static_cast<int>(padding[rightPadding] * style.usedZoom()),
-            static_cast<int>(padding[bottomPadding] * style.usedZoom()),
-            static_cast<int>(padding[leftPadding] * style.usedZoom()) };
+        return {
+            toTruncatedPaddingEdge(padding[topPadding] * style.usedZoom()),
+            toTruncatedPaddingEdge(padding[rightPadding] * style.usedZoom()),
+            toTruncatedPaddingEdge(padding[bottomPadding] * style.usedZoom()),
+            toTruncatedPaddingEdge(padding[leftPadding] * style.usedZoom()),
+        };
     }
 
     if (style.usedAppearance() == StyleAppearance::MenulistButton) {
@@ -1087,13 +1096,16 @@ LengthBox RenderThemeMac::popupInternalPaddingBox(const RenderStyle& style) cons
         float leftPadding = styledPopupPaddingLeft * style.usedZoom();
         if (style.writingMode().isBidiRTL())
             std::swap(rightPadding, leftPadding);
-        return { static_cast<int>(styledPopupPaddingTop * style.usedZoom()),
-            static_cast<int>(rightPadding),
-            static_cast<int>(styledPopupPaddingBottom * style.usedZoom()),
-            static_cast<int>(leftPadding) };
+
+        return {
+            toTruncatedPaddingEdge(styledPopupPaddingTop * style.usedZoom()),
+            toTruncatedPaddingEdge(rightPadding),
+            toTruncatedPaddingEdge(styledPopupPaddingBottom * style.usedZoom()),
+            toTruncatedPaddingEdge(leftPadding),
+        };
     }
 
-    return { 0, 0, 0, 0 };
+    return { 0_css_px };
 }
 
 PopupMenuStyle::Size RenderThemeMac::popupMenuSize(const RenderStyle& style, IntRect& rect) const
@@ -1197,11 +1209,7 @@ void RenderThemeMac::adjustSearchFieldStyle(RenderStyle& style, const Element* e
     setSearchFieldSize(style);
 
     // Override padding size to match AppKit text positioning.
-    const int padding = 1 * style.usedZoom();
-    style.setPaddingLeft(Length(padding, LengthType::Fixed));
-    style.setPaddingRight(Length(padding, LengthType::Fixed));
-    style.setPaddingTop(Length(padding, LengthType::Fixed));
-    style.setPaddingBottom(Length(padding, LengthType::Fixed));
+    style.setPaddingBox({ toTruncatedPaddingEdge(1 * style.usedZoom()) });
 
     style.setBoxShadow({ });
 }
@@ -1323,6 +1331,23 @@ void RenderThemeMac::adjustSliderThumbSize(RenderStyle& style, const Element* el
     if (style.usedAppearance() == StyleAppearance::SliderThumbHorizontal || style.usedAppearance() == StyleAppearance::SliderThumbVertical) {
         style.setWidth(Length(static_cast<int>(sliderThumbThickness * zoomLevel), LengthType::Fixed));
         style.setHeight(Length(static_cast<int>(sliderThumbThickness * zoomLevel), LengthType::Fixed));
+    }
+}
+
+Style::PaddingBox RenderThemeMac::controlPadding(StyleAppearance appearance, const Style::PaddingBox& padding, float zoomFactor) const
+{
+    switch (appearance) {
+    case StyleAppearance::PushButton: {
+        // Just use 8px. AppKit wants to use 11px for mini buttons, but that padding is just too large
+        // for real-world Web sites (creating a huge necessary minimum width for buttons whose space is
+        // by definition constrained, since we select mini only for small cramped environments).
+        // This also guarantees the HTML <button> will match our rendering by default, since we're using
+        // a consistent padding.
+        auto edge = toTruncatedPaddingEdge(8 * zoomFactor);
+        return Style::PaddingBox { 2_css_px, edge, 3_css_px, edge };
+    }
+    default:
+        return RenderTheme::controlPadding(appearance, padding, zoomFactor);
     }
 }
 

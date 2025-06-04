@@ -38,6 +38,8 @@
 
 namespace WebCore {
 
+using namespace CSS::Literals;
+
 static bool shouldFlipStaticPositionInParent(const RenderBox& outOfFlowBox, const RenderBoxModelObject& containerBlock)
 {
     ASSERT(outOfFlowBox.isOutOfFlowPositioned());
@@ -64,6 +66,10 @@ PositionedLayoutConstraints::PositionedLayoutConstraints(const RenderBox& render
     , m_style(style)
     , m_alignment(m_containingAxis == LogicalBoxAxis::Inline ? style.justifySelf() : style.alignSelf())
     , m_defaultAnchorBox(needsAnchor() ? renderer.defaultAnchorRenderer() : nullptr)
+    , m_marginBefore { 0_css_px }
+    , m_marginAfter { 0_css_px }
+    , m_insetBefore { 0_css_px }
+    , m_insetAfter { 0_css_px }
 {
 
     // Compute basic containing block info.
@@ -144,9 +150,9 @@ void PositionedLayoutConstraints::captureInsets(const RenderBox& renderer, const
         // If the box uses anchor-center and does have a default anchor box,
         // any auto insets are set to zero.
         if (m_insetBefore.isAuto())
-            m_insetBefore = Length(0, LengthType::Fixed);
+            m_insetBefore = 0_css_px;
         if (m_insetAfter.isAuto())
-            m_insetAfter = Length(0, LengthType::Fixed);
+            m_insetAfter = 0_css_px;
         m_useStaticPosition = false;
     }
 }
@@ -395,8 +401,8 @@ void PositionedLayoutConstraints::computeStaticPosition(const RenderBox& rendere
         if (m_container.get() == renderer.parent()) {
             // Fake the static layout right here so it integrates with grid-area properly.
             m_useStaticPosition = false; // Avoid the static position code path.
-            m_insetBefore = Length(0, LengthType::Fixed);
-            m_insetAfter = Length(0, LengthType::Fixed);
+            m_insetBefore = 0_css_px;
+            m_insetAfter = 0_css_px;
 
             if (ItemPosition::Auto == m_alignment.position()) {
                 if (LogicalBoxAxis::Inline == m_containingAxis) {
@@ -413,9 +419,9 @@ void PositionedLayoutConstraints::computeStaticPosition(const RenderBox& rendere
 
             // Unclear if this is spec-compliant, but it is the current interop behavior.
             if (m_marginBefore.isAuto())
-                m_marginBefore = Length(0, LengthType::Fixed);
+                m_marginBefore = 0_css_px;
             if (m_marginAfter.isAuto())
-                m_marginAfter = Length(0, LengthType::Fixed);
+                m_marginAfter = 0_css_px;
             return;
         }
         // Rewind grid-area adjustments and fall through to the existing static position code.
@@ -447,13 +453,13 @@ void PositionedLayoutConstraints::computeInlineStaticDistance(const RenderBox& r
             if (renderBox->isInFlowPositioned())
                 staticPosition += renderBox->isHorizontalWritingMode() ? renderBox->offsetForInFlowPosition().width() : renderBox->offsetForInFlowPosition().height();
         }
-        m_insetBefore.setValue(LengthType::Fixed, staticPosition);
+        m_insetBefore = Style::Length<> { staticPosition };
     } else {
         ASSERT(!haveOrthogonalWritingModes);
         LayoutUnit staticPosition = renderer.layer()->staticInlinePosition() + containingSize() + m_container->borderLogicalLeft();
         auto& enclosingBox = parent->enclosingBox();
         if (&enclosingBox != m_container.get() && m_container->isDescendantOf(&enclosingBox)) {
-            m_insetAfter.setValue(LengthType::Fixed, staticPosition);
+            m_insetAfter = Style::Length<> { staticPosition };
             return;
         }
         staticPosition -= enclosingBox.logicalWidth();
@@ -470,7 +476,7 @@ void PositionedLayoutConstraints::computeInlineStaticDistance(const RenderBox& r
             if (current == m_container.get())
                 break;
         }
-        m_insetAfter.setValue(LengthType::Fixed, staticPosition);
+        m_insetAfter = Style::Length<> { staticPosition };
     }
 }
 
@@ -501,9 +507,9 @@ void PositionedLayoutConstraints::computeBlockStaticDistance(const RenderBox& re
     // If the parent is RTL then we need to flip the coordinate by setting the logical bottom instead of the logical top. That only needs
     // to be done in case of orthogonal writing modes, for horizontal ones the text direction of the parent does not affect the block position.
     if (haveOrthogonalWritingModes && parent->writingMode().isInlineFlipped())
-        m_insetAfter.setValue(LengthType::Fixed, staticLogicalTop);
+        m_insetAfter = Style::Length<> { staticLogicalTop };
     else
-        m_insetBefore.setValue(LengthType::Fixed, staticLogicalTop);
+        m_insetBefore = Style::Length<> { staticLogicalTop };
 }
 
 void PositionedLayoutConstraints::fixupLogicalLeftPosition(RenderBox::LogicalExtentComputedValues& computedValues) const

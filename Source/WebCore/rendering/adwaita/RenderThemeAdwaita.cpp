@@ -41,6 +41,7 @@
 #include "RenderObject.h"
 #include "RenderProgress.h"
 #include "RenderStyleSetters.h"
+#include "StylePadding.h"
 #include "ThemeAdwaita.h"
 #include "TimeRanges.h"
 #include "UserAgentScripts.h"
@@ -61,6 +62,7 @@
 #endif
 
 namespace WebCore {
+using namespace CSS::Literals;
 using namespace WebCore::Adwaita;
 
 RenderTheme& RenderTheme::singleton()
@@ -323,16 +325,21 @@ void RenderThemeAdwaita::adjustMenuListButtonStyle(RenderStyle& style, const Ele
     adjustMenuListStyle(style, element);
 }
 
-LengthBox RenderThemeAdwaita::popupInternalPaddingBox(const RenderStyle& style) const
+Style::PaddingBox RenderThemeAdwaita::popupInternalPaddingBox(const RenderStyle& style) const
 {
     if (style.usedAppearance() == StyleAppearance::None)
-        return { };
+        return { 0_css_px };
 
     auto zoomedArrowSize = menuListButtonArrowSize * style.usedZoom();
     int leftPadding = menuListButtonPadding + (style.writingMode().isBidiRTL() ? zoomedArrowSize : 0);
     int rightPadding = menuListButtonPadding + (style.writingMode().isBidiLTR() ? zoomedArrowSize : 0);
 
-    return { menuListButtonPadding, rightPadding, menuListButtonPadding, leftPadding };
+    return {
+        Style::Length<CSS::Nonnegative> { static_cast<float>(menuListButtonPadding) },
+        Style::Length<CSS::Nonnegative> { static_cast<float>(rightPadding) },
+        Style::Length<CSS::Nonnegative> { static_cast<float>(menuListButtonPadding) },
+        Style::Length<CSS::Nonnegative> { static_cast<float>(leftPadding) },
+    };
 }
 
 Seconds RenderThemeAdwaita::animationRepeatIntervalForProgressBar(const RenderProgress& renderer) const
@@ -370,9 +377,9 @@ void RenderThemeAdwaita::adjustListButtonStyle(RenderStyle& style, const Element
 {
     // Add a margin to place the button at end of the input field.
     if (style.isLeftToRightDirection())
-        style.setMarginRight(Length(-2, LengthType::Fixed));
+        style.setMarginRight(-2_css_px);
     else
-        style.setMarginLeft(Length(-2, LengthType::Fixed));
+        style.setMarginLeft(-2_css_px);
 }
 
 #if PLATFORM(GTK) || PLATFORM(WPE)

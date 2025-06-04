@@ -88,8 +88,8 @@ void RenderTreeUpdater::ViewTransition::updatePseudoElementTree(RenderElement* d
         containingBlockStyle.setPointerEvents(PointerEvents::None);
 
         auto containingBlockRect = activeViewTransition->containingBlockRect();
-        containingBlockStyle.setLeft(Length(containingBlockRect.x(), LengthType::Fixed));
-        containingBlockStyle.setTop(Length(containingBlockRect.y(), LengthType::Fixed));
+        containingBlockStyle.setLeft(Style::Length<> { containingBlockRect.x() });
+        containingBlockStyle.setTop(Style::Length<> { containingBlockRect.y() });
         containingBlockStyle.setWidth(Length(containingBlockRect.width(), LengthType::Fixed));
         containingBlockStyle.setHeight(Length(containingBlockRect.height(), LengthType::Fixed));
 

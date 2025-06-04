@@ -110,13 +110,13 @@ bool ContentChangeObserver::isVisuallyHidden(const Node& node)
     auto top = style.logicalTop();
     auto left = style.logicalLeft();
     // FIXME: This is trying to check if the element is outside of the viewport. This is incorrect for many reasons.
-    if (left.isFixed() && width.isFixed() && -left.value() >= width.value())
+    if (auto fixedLeft = left.tryFixed(); fixedLeft && width.isFixed() && -fixedLeft->value >= width.value())
         return true;
-    if (top.isFixed() && height.isFixed() && -top.value() >= height.value())
+    if (auto fixedTop = top.tryFixed(); fixedTop && height.isFixed() && -fixedTop->value >= height.value())
         return true;
 
     // It's a common technique used to position content offscreen.
-    if (style.hasOutOfFlowPosition() && left.isFixed() && left.value() <= -999)
+    if (auto fixedLeft = left.tryFixed(); style.hasOutOfFlowPosition() && fixedLeft && fixedLeft->value <= -999)
         return true;
 
     // FIXME: Check for other cases like zero height with overflow hidden.

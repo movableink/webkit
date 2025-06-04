@@ -54,7 +54,6 @@ template<> struct ToCSS<TextShadow> { auto operator()(const TextShadow&, const R
 template<> struct ToStyle<CSS::TextShadow> { auto operator()(const CSS::TextShadow&, const BuilderState&) -> TextShadow; };
 
 template<> struct Blending<TextShadow> {
-    auto canBlend(const TextShadow&, const TextShadow&, const RenderStyle&, const RenderStyle&) -> bool;
     auto blend(const TextShadow&, const TextShadow&, const RenderStyle&, const RenderStyle&, const BlendingContext&) -> TextShadow;
 };
 

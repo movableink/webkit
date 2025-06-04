@@ -676,7 +676,7 @@ void RenderStyle::setAutosizeStatus(AutosizeStatus autosizeStatus)
 
 #endif // ENABLE(TEXT_AUTOSIZING)
 
-static bool positionChangeIsMovementOnly(const LengthBox& a, const LengthBox& b, const Length& width)
+static bool positionChangeIsMovementOnly(const Style::InsetBox& a, const Style::InsetBox& b, const Length& width)
 {
     // If any unit types are different, then we can't guarantee
     // that this was just a movement.
@@ -689,13 +689,13 @@ static bool positionChangeIsMovementOnly(const LengthBox& a, const LengthBox& b,
     // Only one unit can be non-auto in the horizontal direction and
     // in the vertical direction.  Otherwise the adjustment of values
     // is changing the size of the box.
-    if (!a.left().isIntrinsicOrAuto() && !a.right().isIntrinsicOrAuto())
+    if (!a.left().isAuto() && !a.right().isAuto())
         return false;
-    if (!a.top().isIntrinsicOrAuto() && !a.bottom().isIntrinsicOrAuto())
+    if (!a.top().isAuto() && !a.bottom().isAuto())
         return false;
     // If our width is auto and left or right is specified then this 
     // is not just a movement - we need to resize to our container.
-    if ((!a.left().isIntrinsicOrAuto() || !a.right().isIntrinsicOrAuto()) && width.isIntrinsicOrAuto())
+    if ((!a.left().isAuto() || !a.right().isAuto()) && width.isIntrinsicOrAuto())
         return false;
 
     // One of the units is fixed or percent in both directions and stayed
@@ -1031,7 +1031,7 @@ bool RenderStyle::changeRequiresLayout(const RenderStyle& other, OptionSet<Style
                 return true;
 
             if (position() != PositionType::Static) {
-                if (m_nonInheritedData->surroundData->offset != other.m_nonInheritedData->surroundData->offset) {
+                if (m_nonInheritedData->surroundData->inset != other.m_nonInheritedData->surroundData->inset) {
                     // FIXME: We would like to use SimplifiedLayout for relative positioning, but we can't quite do that yet.
                     // We need to make sure SimplifiedLayout can operate correctly on RenderInlines (we will need
                     // to add a selfNeedsSimplifiedLayout bit in order to not get confused and taint every line).
@@ -1039,7 +1039,7 @@ bool RenderStyle::changeRequiresLayout(const RenderStyle& other, OptionSet<Style
                         return true;
 
                     // Optimize for the case where a positioned layer is moving but not changing size.
-                    if (!positionChangeIsMovementOnly(m_nonInheritedData->surroundData->offset, other.m_nonInheritedData->surroundData->offset, m_nonInheritedData->boxData->width()))
+                    if (!positionChangeIsMovementOnly(m_nonInheritedData->surroundData->inset, other.m_nonInheritedData->surroundData->inset, m_nonInheritedData->boxData->width()))
                         return true;
                 }
             }
@@ -1154,9 +1154,9 @@ bool RenderStyle::changeRequiresPositionedLayoutOnly(const RenderStyle& other, O
     if (position() == PositionType::Static)
         return false;
 
-    if (m_nonInheritedData->surroundData->offset != other.m_nonInheritedData->surroundData->offset) {
+    if (m_nonInheritedData->surroundData->inset != other.m_nonInheritedData->surroundData->inset) {
         // Optimize for the case where a positioned layer is moving but not changing size.
-        if (position() == PositionType::Absolute && positionChangeIsMovementOnly(m_nonInheritedData->surroundData->offset, other.m_nonInheritedData->surroundData->offset, m_nonInheritedData->boxData->width()))
+        if (position() == PositionType::Absolute && positionChangeIsMovementOnly(m_nonInheritedData->surroundData->inset, other.m_nonInheritedData->surroundData->inset, m_nonInheritedData->boxData->width()))
             return true;
     }
     
@@ -1471,7 +1471,7 @@ bool RenderStyle::scrollAnchoringSuppressionStyleDidChange(const RenderStyle* ot
     }
 
     if (position() != PositionType::Static) {
-        if (m_nonInheritedData->surroundData->offset != other->m_nonInheritedData->surroundData->offset)
+        if (m_nonInheritedData->surroundData->inset != other->m_nonInheritedData->surroundData->inset)
             return true;
     }
 
@@ -1689,13 +1689,13 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
     };
 
     auto conservativelyCollectChangedAnimatablePropertiesViaNonInheritedSurroundData = [&](auto& first, auto& second) {
-        if (first.offset.top() != second.offset.top())
+        if (first.inset.top() != second.inset.top())
             changingProperties.m_properties.set(CSSPropertyTop);
-        if (first.offset.left() != second.offset.left())
+        if (first.inset.left() != second.inset.left())
             changingProperties.m_properties.set(CSSPropertyLeft);
-        if (first.offset.bottom() != second.offset.bottom())
+        if (first.inset.bottom() != second.inset.bottom())
             changingProperties.m_properties.set(CSSPropertyBottom);
-        if (first.offset.right() != second.offset.right())
+        if (first.inset.right() != second.inset.right())
             changingProperties.m_properties.set(CSSPropertyRight);
 
         if (first.margin.top() != second.margin.top())
@@ -3214,7 +3214,7 @@ float RenderStyle::borderEndWidth(const WritingMode writingMode) const
     return writingMode.isInlineTopToBottom() ? borderBottomWidth() : borderTopWidth();
 }
 
-void RenderStyle::setMarginStart(Length&& margin)
+void RenderStyle::setMarginStart(Style::MarginEdge&& margin)
 {
     if (writingMode().isHorizontal()) {
         if (writingMode().isInlineLeftToRight())
@@ -3229,7 +3229,7 @@ void RenderStyle::setMarginStart(Length&& margin)
     }
 }
 
-void RenderStyle::setMarginEnd(Length&& margin)
+void RenderStyle::setMarginEnd(Style::MarginEdge&& margin)
 {
     if (writingMode().isHorizontal()) {
         if (writingMode().isInlineLeftToRight())
@@ -3244,7 +3244,7 @@ void RenderStyle::setMarginEnd(Length&& margin)
     }
 }
 
-void RenderStyle::setMarginBefore(Length&& margin)
+void RenderStyle::setMarginBefore(Style::MarginEdge&& margin)
 {
     switch (writingMode().blockDirection()) {
     case FlowDirection::TopToBottom:
@@ -3258,7 +3258,7 @@ void RenderStyle::setMarginBefore(Length&& margin)
     }
 }
 
-void RenderStyle::setMarginAfter(Length&& margin)
+void RenderStyle::setMarginAfter(Style::MarginEdge&& margin)
 {
     switch (writingMode().blockDirection()) {
     case FlowDirection::TopToBottom:
@@ -3272,61 +3272,61 @@ void RenderStyle::setMarginAfter(Length&& margin)
     }
 }
 
-void RenderStyle::setPaddingStart(Length&& margin)
+void RenderStyle::setPaddingStart(Style::PaddingEdge&& padding)
 {
     if (writingMode().isHorizontal()) {
         if (writingMode().isInlineLeftToRight())
-            setPaddingLeft(WTFMove(margin));
+            setPaddingLeft(WTFMove(padding));
         else
-            setPaddingRight(WTFMove(margin));
+            setPaddingRight(WTFMove(padding));
     } else {
         if (writingMode().isInlineTopToBottom())
-            setPaddingTop(WTFMove(margin));
+            setPaddingTop(WTFMove(padding));
         else
-            setPaddingBottom(WTFMove(margin));
+            setPaddingBottom(WTFMove(padding));
     }
 }
 
-void RenderStyle::setPaddingEnd(Length&& margin)
+void RenderStyle::setPaddingEnd(Style::PaddingEdge&& padding)
 {
     if (writingMode().isHorizontal()) {
         if (writingMode().isInlineLeftToRight())
-            setPaddingRight(WTFMove(margin));
+            setPaddingRight(WTFMove(padding));
         else
-            setPaddingLeft(WTFMove(margin));
+            setPaddingLeft(WTFMove(padding));
     } else {
         if (writingMode().isInlineTopToBottom())
-            setPaddingBottom(WTFMove(margin));
+            setPaddingBottom(WTFMove(padding));
         else
-            setPaddingTop(WTFMove(margin));
+            setPaddingTop(WTFMove(padding));
     }
 }
 
-void RenderStyle::setPaddingBefore(Length&& margin)
+void RenderStyle::setPaddingBefore(Style::PaddingEdge&& padding)
 {
     switch (writingMode().blockDirection()) {
     case FlowDirection::TopToBottom:
-        return setPaddingTop(WTFMove(margin));
+        return setPaddingTop(WTFMove(padding));
     case FlowDirection::BottomToTop:
-        return setPaddingBottom(WTFMove(margin));
+        return setPaddingBottom(WTFMove(padding));
     case FlowDirection::LeftToRight:
-        return setPaddingLeft(WTFMove(margin));
+        return setPaddingLeft(WTFMove(padding));
     case FlowDirection::RightToLeft:
-        return setPaddingRight(WTFMove(margin));
+        return setPaddingRight(WTFMove(padding));
     }
 }
 
-void RenderStyle::setPaddingAfter(Length&& margin)
+void RenderStyle::setPaddingAfter(Style::PaddingEdge&& padding)
 {
     switch (writingMode().blockDirection()) {
     case FlowDirection::TopToBottom:
-        return setPaddingBottom(WTFMove(margin));
+        return setPaddingBottom(WTFMove(padding));
     case FlowDirection::BottomToTop:
-        return setPaddingTop(WTFMove(margin));
+        return setPaddingTop(WTFMove(padding));
     case FlowDirection::LeftToRight:
-        return setPaddingRight(WTFMove(margin));
+        return setPaddingRight(WTFMove(padding));
     case FlowDirection::RightToLeft:
-        return setPaddingLeft(WTFMove(margin));
+        return setPaddingLeft(WTFMove(padding));
     }
 }
 
@@ -3579,29 +3579,29 @@ bool RenderStyle::customPropertiesEqual(const RenderStyle& other) const
         && m_rareInheritedData->customProperties == other.m_rareInheritedData->customProperties;
 }
 
-const Style::ScrollMargin& RenderStyle::scrollMargin() const
+const Style::ScrollMarginBox& RenderStyle::scrollMarginBox() const
 {
     return m_nonInheritedData->rareData->scrollMargin;
 }
 
 const Style::ScrollMarginEdge& RenderStyle::scrollMarginTop() const
 {
-    return scrollMargin().top();
+    return scrollMarginBox().top();
 }
 
 const Style::ScrollMarginEdge& RenderStyle::scrollMarginBottom() const
 {
-    return scrollMargin().bottom();
+    return scrollMarginBox().bottom();
 }
 
 const Style::ScrollMarginEdge& RenderStyle::scrollMarginLeft() const
 {
-    return scrollMargin().left();
+    return scrollMarginBox().left();
 }
 
 const Style::ScrollMarginEdge& RenderStyle::scrollMarginRight() const
 {
-    return scrollMargin().right();
+    return scrollMarginBox().right();
 }
 
 void RenderStyle::setScrollMarginTop(Style::ScrollMarginEdge&& edge)
@@ -3624,29 +3624,29 @@ void RenderStyle::setScrollMarginRight(Style::ScrollMarginEdge&& edge)
     SET_NESTED_VAR(m_nonInheritedData, rareData, scrollMargin.right(), WTFMove(edge));
 }
 
-const Style::ScrollPadding& RenderStyle::scrollPadding() const
+const Style::ScrollPaddingBox& RenderStyle::scrollPaddingBox() const
 {
     return m_nonInheritedData->rareData->scrollPadding;
 }
 
 const Style::ScrollPaddingEdge& RenderStyle::scrollPaddingTop() const
 {
-    return scrollPadding().top();
+    return scrollPaddingBox().top();
 }
 
 const Style::ScrollPaddingEdge& RenderStyle::scrollPaddingBottom() const
 {
-    return scrollPadding().bottom();
+    return scrollPaddingBox().bottom();
 }
 
 const Style::ScrollPaddingEdge& RenderStyle::scrollPaddingLeft() const
 {
-    return scrollPadding().left();
+    return scrollPaddingBox().left();
 }
 
 const Style::ScrollPaddingEdge& RenderStyle::scrollPaddingRight() const
 {
-    return scrollPadding().right();
+    return scrollPaddingBox().right();
 }
 
 void RenderStyle::setScrollPaddingTop(Style::ScrollPaddingEdge&& edge)

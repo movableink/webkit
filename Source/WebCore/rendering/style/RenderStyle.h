@@ -280,6 +280,7 @@ struct TransformOperationData;
 template<typename> class FontTaggedSettings;
 template<typename> class RectEdges;
 template<typename> class RectCorners;
+template<typename> struct MinimallySerializingSpaceSeparatedRectEdges;
 
 using FontVariationSettings = FontTaggedSettings<float>;
 using IntOutsets = RectEdges<int>;
@@ -293,16 +294,24 @@ struct ColorScheme;
 struct CornerShapeValue;
 struct DynamicRangeLimit;
 struct PositionTryFallback;
+struct InsetEdge;
+struct MarginEdge;
+struct PaddingEdge;
+struct PositionTryFallback;
 struct ScopedName;
-struct ScrollMargin;
 struct ScrollMarginEdge;
-struct ScrollPadding;
 struct ScrollPaddingEdge;
 struct TextShadow;
 
 enum class Change : uint8_t;
 enum class LineBoxContain : uint8_t;
 enum class PositionTryOrder : uint8_t;
+
+using InsetBox = MinimallySerializingSpaceSeparatedRectEdges<InsetEdge>;
+using MarginBox = MinimallySerializingSpaceSeparatedRectEdges<MarginEdge>;
+using PaddingBox = MinimallySerializingSpaceSeparatedRectEdges<PaddingEdge>;
+using ScrollMarginBox = MinimallySerializingSpaceSeparatedRectEdges<ScrollMarginEdge>;
+using ScrollPaddingBox = MinimallySerializingSpaceSeparatedRectEdges<ScrollPaddingEdge>;
 }
 
 constexpr auto PublicPseudoIDBits = 17;
@@ -412,7 +421,7 @@ public:
     inline bool hasVisibleBorderDecoration() const;
     inline bool hasVisibleBorder() const;
     inline bool hasPadding() const;
-    inline bool hasOffset() const;
+    inline bool hasInset() const;
 
     inline bool hasBackgroundImage() const;
     inline bool hasAnyFixedBackground() const;
@@ -452,16 +461,17 @@ public:
     constexpr WritingMode writingMode() const { return m_inheritedFlags.writingMode; }
     bool isLeftToRightDirection() const { return writingMode().isBidiLTR(); } // deprecated, because of confusion between physical inline directions and bidi / line-relative directions
 
-    inline const Length& left() const;
-    inline const Length& right() const;
-    inline const Length& top() const;
-    inline const Length& bottom() const;
+    inline const Style::InsetBox& insetBox() const;
+    inline const Style::InsetEdge& left() const;
+    inline const Style::InsetEdge& right() const;
+    inline const Style::InsetEdge& top() const;
+    inline const Style::InsetEdge& bottom() const;
 
     // Accessors for positioned object edges that take into account writing mode.
-    inline const Length& logicalLeft() const;
-    inline const Length& logicalRight() const;
-    inline const Length& logicalTop() const;
-    inline const Length& logicalBottom() const;
+    inline const Style::InsetEdge& logicalLeft() const;
+    inline const Style::InsetEdge& logicalRight() const;
+    inline const Style::InsetEdge& logicalTop() const;
+    inline const Style::InsetEdge& logicalBottom() const;
 
     // Whether or not a positioned element requires normal flow x/y to be computed to determine its position.
     inline bool hasStaticInlinePosition(bool horizontal) const;
@@ -715,33 +725,33 @@ public:
     ListStylePosition listStylePosition() const { return static_cast<ListStylePosition>(m_inheritedFlags.listStylePosition); }
     inline bool isFixedTableLayout() const;
 
-    inline const LengthBox& marginBox() const;
-    inline const Length& marginTop() const;
-    inline const Length& marginBottom() const;
-    inline const Length& marginLeft() const;
-    inline const Length& marginRight() const;
-    inline const Length& marginStart(const WritingMode) const;
-    inline const Length& marginEnd(const WritingMode) const;
-    inline const Length& marginBefore(const WritingMode) const;
-    inline const Length& marginAfter(const WritingMode) const;
-    inline const Length& marginBefore() const;
-    inline const Length& marginAfter() const;
-    inline const Length& marginStart() const;
-    inline const Length& marginEnd() const;
+    inline const Style::MarginBox& marginBox() const;
+    inline const Style::MarginEdge& marginTop() const;
+    inline const Style::MarginEdge& marginBottom() const;
+    inline const Style::MarginEdge& marginLeft() const;
+    inline const Style::MarginEdge& marginRight() const;
+    inline const Style::MarginEdge& marginStart(const WritingMode) const;
+    inline const Style::MarginEdge& marginEnd(const WritingMode) const;
+    inline const Style::MarginEdge& marginBefore(const WritingMode) const;
+    inline const Style::MarginEdge& marginAfter(const WritingMode) const;
+    inline const Style::MarginEdge& marginBefore() const;
+    inline const Style::MarginEdge& marginAfter() const;
+    inline const Style::MarginEdge& marginStart() const;
+    inline const Style::MarginEdge& marginEnd() const;
 
-    inline const LengthBox& paddingBox() const;
-    inline const Length& paddingTop() const;
-    inline const Length& paddingBottom() const;
-    inline const Length& paddingLeft() const;
-    inline const Length& paddingRight() const;
-    inline const Length& paddingBefore(const WritingMode) const;
-    inline const Length& paddingAfter(const WritingMode) const;
-    inline const Length& paddingStart(const WritingMode) const;
-    inline const Length& paddingEnd(const WritingMode) const;
-    inline const Length& paddingBefore() const;
-    inline const Length& paddingAfter() const;
-    inline const Length& paddingStart() const;
-    inline const Length& paddingEnd() const;
+    inline const Style::PaddingBox& paddingBox() const;
+    inline const Style::PaddingEdge& paddingTop() const;
+    inline const Style::PaddingEdge& paddingBottom() const;
+    inline const Style::PaddingEdge& paddingLeft() const;
+    inline const Style::PaddingEdge& paddingRight() const;
+    inline const Style::PaddingEdge& paddingBefore(const WritingMode) const;
+    inline const Style::PaddingEdge& paddingAfter(const WritingMode) const;
+    inline const Style::PaddingEdge& paddingStart(const WritingMode) const;
+    inline const Style::PaddingEdge& paddingEnd(const WritingMode) const;
+    inline const Style::PaddingEdge& paddingBefore() const;
+    inline const Style::PaddingEdge& paddingAfter() const;
+    inline const Style::PaddingEdge& paddingStart() const;
+    inline const Style::PaddingEdge& paddingEnd() const;
 
     inline bool hasExplicitlySetPadding() const;
     inline bool hasExplicitlySetPaddingBottom() const;
@@ -1104,13 +1114,13 @@ public:
 
     inline bool effectiveInert() const;
 
-    const Style::ScrollMargin& scrollMargin() const;
+    const Style::ScrollMarginBox& scrollMarginBox() const;
     const Style::ScrollMarginEdge& scrollMarginTop() const;
     const Style::ScrollMarginEdge& scrollMarginBottom() const;
     const Style::ScrollMarginEdge& scrollMarginLeft() const;
     const Style::ScrollMarginEdge& scrollMarginRight() const;
 
-    const Style::ScrollPadding& scrollPadding() const;
+    const Style::ScrollPaddingBox& scrollPaddingBox() const;
     const Style::ScrollPaddingEdge& scrollPaddingTop() const;
     const Style::ScrollPaddingEdge& scrollPaddingBottom() const;
     const Style::ScrollPaddingEdge& scrollPaddingLeft() const;
@@ -1217,10 +1227,11 @@ public:
     void setPosition(PositionType v) { m_nonInheritedFlags.position = static_cast<unsigned>(v); }
     void setFloating(Float v) { m_nonInheritedFlags.floating = static_cast<unsigned>(v); }
 
-    inline void setLeft(Length&&);
-    inline void setRight(Length&&);
-    inline void setTop(Length&&);
-    inline void setBottom(Length&&);
+    inline void setInsetBox(Style::InsetBox&&);
+    inline void setLeft(Style::InsetEdge&&);
+    inline void setRight(Style::InsetEdge&&);
+    inline void setTop(Style::InsetEdge&&);
+    inline void setBottom(Style::InsetEdge&&);
 
     inline void setWidth(Length&&);
     inline void setHeight(Length&&);
@@ -1432,26 +1443,28 @@ public:
     inline void setListStyleType(ListStyleType);
     void setListStyleImage(RefPtr<StyleImage>&&);
     void setListStylePosition(ListStylePosition v) { m_inheritedFlags.listStylePosition = static_cast<unsigned>(v); }
+
     inline void resetMargin();
-    inline void setMarginTop(Length&&);
-    inline void setMarginBottom(Length&&);
-    inline void setMarginLeft(Length&&);
-    inline void setMarginRight(Length&&);
-    void setMarginStart(Length&&);
-    void setMarginEnd(Length&&);
-    void setMarginBefore(Length&&);
-    void setMarginAfter(Length&&);
+    inline void setMarginBox(Style::MarginBox&&);
+    inline void setMarginTop(Style::MarginEdge&&);
+    inline void setMarginBottom(Style::MarginEdge&&);
+    inline void setMarginLeft(Style::MarginEdge&&);
+    inline void setMarginRight(Style::MarginEdge&&);
+    void setMarginStart(Style::MarginEdge&&);
+    void setMarginEnd(Style::MarginEdge&&);
+    void setMarginBefore(Style::MarginEdge&&);
+    void setMarginAfter(Style::MarginEdge&&);
 
     inline void resetPadding();
-    inline void setPaddingBox(LengthBox&&);
-    inline void setPaddingTop(Length&&);
-    inline void setPaddingBottom(Length&&);
-    inline void setPaddingLeft(Length&&);
-    inline void setPaddingRight(Length&&);
-    void setPaddingStart(Length&&);
-    void setPaddingEnd(Length&&);
-    void setPaddingBefore(Length&&);
-    void setPaddingAfter(Length&&);
+    inline void setPaddingBox(Style::PaddingBox&&);
+    inline void setPaddingTop(Style::PaddingEdge&&);
+    inline void setPaddingBottom(Style::PaddingEdge&&);
+    inline void setPaddingLeft(Style::PaddingEdge&&);
+    inline void setPaddingRight(Style::PaddingEdge&&);
+    void setPaddingStart(Style::PaddingEdge&&);
+    void setPaddingEnd(Style::PaddingEdge&&);
+    void setPaddingBefore(Style::PaddingEdge&&);
+    void setPaddingAfter(Style::PaddingEdge&&);
 
     inline void setHasExplicitlySetPaddingBottom(bool);
     inline void setHasExplicitlySetPaddingLeft(bool);
@@ -1994,11 +2007,11 @@ public:
     static inline Length initialSize();
     static inline Length initialMinSize();
     static inline Length initialMaxSize();
-    static inline Length initialOffset();
+    static inline Style::InsetEdge initialInset();
     static inline Length initialRadius();
-    static inline Length initialMargin();
+    static inline Style::MarginEdge initialMargin();
     static constexpr OptionSet<MarginTrimType> initialMarginTrim();
-    static inline Length initialPadding();
+    static inline Style::PaddingEdge initialPadding();
     static inline Length initialTextIndent();
     static constexpr TextBoxTrim initialTextBoxTrim();
     static TextEdge initialTextBoxEdge();

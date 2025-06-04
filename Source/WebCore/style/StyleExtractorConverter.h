@@ -102,7 +102,10 @@
 #include "StyleEasingFunction.h"
 #include "StyleExtractorState.h"
 #include "StyleFilterProperty.h"
+#include "StyleInset.h"
 #include "StyleLineBoxContain.h"
+#include "StyleMargin.h"
+#include "StylePadding.h"
 #include "StylePathData.h"
 #include "StylePrimitiveNumericTypes+CSSValueCreation.h"
 #include "StylePrimitiveNumericTypes+Conversions.h"
@@ -173,6 +176,9 @@ public:
     // MARK: Strong value conversions
 
     static Ref<CSSValue> convertColor(ExtractorState&, const Color&);
+    static Ref<CSSValue> convertInsetEdge(ExtractorState&, const InsetEdge&);
+    static Ref<CSSValue> convertMarginEdge(ExtractorState&, const MarginEdge&);
+    static Ref<CSSValue> convertPaddingEdge(ExtractorState&, const PaddingEdge&);
     static Ref<CSSValue> convertScrollMarginEdge(ExtractorState&, const ScrollMarginEdge&);
     static Ref<CSSValue> convertScrollPaddingEdge(ExtractorState&, const ScrollPaddingEdge&);
     static Ref<CSSValue> convertCornerShapeValue(ExtractorState&, const CornerShapeValue&);
@@ -623,6 +629,21 @@ inline RefPtr<CSSValue> ExtractorConverter::convertTransformOperation(const Rend
 // MARK: - Strong value conversions
 
 inline Ref<CSSValue> ExtractorConverter::convertColor(ExtractorState& state, const Color& value)
+{
+    return createCSSValue(state.pool, state.style, value);
+}
+
+inline Ref<CSSValue> ExtractorConverter::convertInsetEdge(ExtractorState& state, const InsetEdge& value)
+{
+    return createCSSValue(state.pool, state.style, value);
+}
+
+inline Ref<CSSValue> ExtractorConverter::convertMarginEdge(ExtractorState& state, const MarginEdge& value)
+{
+    return createCSSValue(state.pool, state.style, value);
+}
+
+inline Ref<CSSValue> ExtractorConverter::convertPaddingEdge(ExtractorState& state, const PaddingEdge& value)
 {
     return createCSSValue(state.pool, state.style, value);
 }

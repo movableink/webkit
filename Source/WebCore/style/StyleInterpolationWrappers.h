@@ -146,12 +146,17 @@ public:
 
     bool canInterpolate(const RenderStyle& from, const RenderStyle& to, CompositeOperation) const final
     {
-        return Style::canBlend(this->value(from), this->value(to));
+        return Style::canBlend(this->value(from), this->value(to), from, to);
+    }
+
+    bool requiresInterpolationForAccumulativeIteration(const RenderStyle& from, const RenderStyle& to) const final
+    {
+        return Style::requiresInterpolationForAccumulativeIteration(this->value(from), this->value(to), from, to);
     }
 
     void interpolate(RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, const Context& context) const final
     {
-        (destination.*m_setter)(Style::blend(this->value(from), this->value(to), context));
+        (destination.*m_setter)(Style::blend(this->value(from), this->value(to), from, to, context));
     }
 
 #if !LOG_DISABLED
@@ -161,6 +166,7 @@ public:
     }
 #endif
 
+private:
     const StyleType& value(const RenderStyle& style) const
     {
         return (style.*m_getter)();
@@ -2179,7 +2185,6 @@ public:
     }
 #endif
 };
-
 
 class QuotesWrapper final : public WrapperBase {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);

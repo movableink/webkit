@@ -54,8 +54,7 @@ public:
     // Returns the minimum size for a control in zoomed coordinates.
     LengthSize minimumControlSize(StyleAppearance, const FontCascade&, const LengthSize& zoomedSize, const LengthSize& nonShrinkableZoomedSize, float zoomFactor) const;
     
-    // Allows the theme to modify the existing padding/border.
-    virtual LengthBox controlPadding(StyleAppearance, const FontCascade&, const LengthBox& zoomedBox, float zoomFactor) const;
+    // Allows the theme to modify the existing border.
     virtual LengthBox controlBorder(StyleAppearance, const FontCascade&, const LengthBox& zoomedBox, float zoomFactor) const;
 
     // Whether or not whitespace: pre should be forced on always.

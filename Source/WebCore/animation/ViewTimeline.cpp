@@ -373,7 +373,7 @@ void ViewTimeline::cacheCurrentTime()
                 insetEnd = insetStart; 
             }
         } else if (hasInsetsEnd) {
-            insetStart = Style::evaluate(scrollPadding(PaddingEdge::Start), scrollContainerSize);\
+            insetStart = Style::evaluate(scrollPadding(PaddingEdge::Start), scrollContainerSize);
 
             if (m_insets.end->isAuto())
                 insetEnd = Style::evaluate(scrollPadding(PaddingEdge::End), scrollContainerSize);

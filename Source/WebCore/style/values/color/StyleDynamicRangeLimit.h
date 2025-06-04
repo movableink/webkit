@@ -146,7 +146,6 @@ template<> struct Serialize<DynamicRangeLimit> { void operator()(StringBuilder&,
 // MARK: Blending
 
 template<> struct Blending<DynamicRangeLimit> {
-    constexpr auto canBlend(const DynamicRangeLimit&, const DynamicRangeLimit&) -> bool { return true; }
     auto blend(const DynamicRangeLimit&, const DynamicRangeLimit&, const BlendingContext&) -> DynamicRangeLimit;
 };
 

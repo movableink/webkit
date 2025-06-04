@@ -73,8 +73,10 @@ public:
     IntSize sliderTickSize() const final;
     int sliderTickOffsetFromTrackCenter() const final;
 
-    LengthBox popupInternalPaddingBox(const RenderStyle&) const final;
+    Style::PaddingBox popupInternalPaddingBox(const RenderStyle&) const final;
     PopupMenuStyle::Size popupMenuSize(const RenderStyle&, IntRect&) const final;
+
+    Style::PaddingBox controlPadding(StyleAppearance, const Style::PaddingBox&, float zoomFactor) const final;
 
     bool popsMenuByArrowKeys() const final { return true; }
 

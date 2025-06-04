@@ -55,6 +55,18 @@ struct ValueLiteral {
 
     auto operator<=>(const ValueLiteral&) const = default;
 
+    // Support unary operators.
+
+    constexpr ValueLiteral operator+()
+    {
+        return ValueLiteral { value };
+    }
+
+    constexpr ValueLiteral operator-()
+    {
+        return ValueLiteral { -value };
+    }
+
     // Support binary arithmetic between `ValueLiteral` and machine numeric types.
 
     constexpr ValueLiteral& operator+=(const ValueLiteral& rhs)

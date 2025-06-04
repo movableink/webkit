@@ -70,7 +70,6 @@ struct CornerShapeValue {
 // MARK: - Blending
 
 template<> struct Blending<CornerShapeValue> {
-    constexpr auto canBlend(const CornerShapeValue&, const CornerShapeValue&) -> bool { return true; }
     auto blend(const CornerShapeValue&, const CornerShapeValue&, const BlendingContext&) -> CornerShapeValue;
 };
 

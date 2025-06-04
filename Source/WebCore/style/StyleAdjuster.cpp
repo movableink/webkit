@@ -104,22 +104,22 @@ Adjuster::Adjuster(const Document& document, const RenderStyle& parentStyle, con
 static void addIntrinsicMargins(RenderStyle& style)
 {
     // Intrinsic margin value.
-    const int intrinsicMargin = clampToInteger(2 * style.usedZoom());
+    const auto intrinsicMargin = Style::Length<> { static_cast<float>(clampToInteger(2 * style.usedZoom())) };
 
     // FIXME: Using width/height alone and not also dealing with min-width/max-width is flawed.
     // FIXME: Using "hasQuirk" to decide the margin wasn't set is kind of lame.
     if (style.width().isIntrinsicOrAuto()) {
         if (style.marginLeft().hasQuirk())
-            style.setMarginLeft(WebCore::Length(intrinsicMargin, LengthType::Fixed));
+            style.setMarginLeft(intrinsicMargin);
         if (style.marginRight().hasQuirk())
-            style.setMarginRight(WebCore::Length(intrinsicMargin, LengthType::Fixed));
+            style.setMarginRight(intrinsicMargin);
     }
 
     if (style.height().isAuto()) {
         if (style.marginTop().hasQuirk())
-            style.setMarginTop(WebCore::Length(intrinsicMargin, LengthType::Fixed));
+            style.setMarginTop(intrinsicMargin);
         if (style.marginBottom().hasQuirk())
-            style.setMarginBottom(WebCore::Length(intrinsicMargin, LengthType::Fixed));
+            style.setMarginBottom(intrinsicMargin);
     }
 }
 #endif

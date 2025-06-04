@@ -367,8 +367,10 @@ LayoutSize RenderBoxModelObject::relativePositionOffset() const
     auto& bottom = style.bottom();
 
     auto offset = accumulateInFlowPositionOffsets(*this);
-    if (top.isFixed() && bottom.isAuto() && left.isFixed() && right.isAuto() && containingBlock->writingMode().isAnyLeftToRight()) {
-        offset.expand(left.value(), top.value());
+    auto topFixed = top.tryFixed();
+    auto leftFixed = left.tryFixed();
+    if (topFixed && leftFixed && bottom.isAuto() && right.isAuto() && containingBlock->writingMode().isAnyLeftToRight()) {
+        offset.expand(leftFixed->value, topFixed->value);
         return offset;
     }
 
@@ -391,11 +393,11 @@ LayoutSize RenderBoxModelObject::relativePositionOffset() const
         };
         if (!left.isAuto()) {
             if (!right.isAuto() && !containingBlock->writingMode().isAnyLeftToRight())
-                offset.setWidth(-valueForLength(right, !right.isFixed() ? availableWidth() : 0_lu));
+                offset.setWidth(-Style::evaluate(right, !right.isFixed() ? availableWidth() : 0_lu));
             else
-                offset.expand(valueForLength(left, !left.isFixed() ? availableWidth() : 0_lu), 0_lu);
+                offset.expand(Style::evaluate(left, !left.isFixed() ? availableWidth() : 0_lu), 0_lu);
         } else if (!right.isAuto())
-            offset.expand(-valueForLength(right, !right.isFixed() ? availableWidth() : 0_lu), 0_lu);
+            offset.expand(-Style::evaluate(right, !right.isFixed() ? availableWidth() : 0_lu), 0_lu);
     }
 
     // If the containing block of a relatively positioned element does not
@@ -426,10 +428,10 @@ LayoutSize RenderBoxModelObject::relativePositionOffset() const
         // FIXME: The computation of the available height is repeated later for "bottom".
         // We could refactor this and move it to some common code for both ifs, however moving it outside of the ifs
         // is not possible as it'd cause performance regressions.
-        offset.expand(0_lu, valueForLength(top, !top.isFixed() ? availableHeight() : 0_lu));
+        offset.expand(0_lu, Style::evaluate(top, !top.isFixed() ? availableHeight() : 0_lu));
     } else if (!bottom.isAuto() && (!bottom.isPercentOrCalculated() || containingBlockHasDefiniteHeight)) {
         // FIXME: Check comment above for "top", it applies here too.
-        offset.expand(0_lu, -valueForLength(bottom, !bottom.isFixed() ? availableHeight() : 0_lu));
+        offset.expand(0_lu, -Style::evaluate(bottom, !bottom.isFixed() ? availableHeight() : 0_lu));
     }
     return offset;
 }
@@ -537,10 +539,12 @@ void RenderBoxModelObject::computeStickyPositionConstraints(StickyPositionViewpo
 
     // Sticky positioned element ignore any override logical width on the containing block (as they don't call
     // containingBlockLogicalWidthForContent). It's unclear whether this is totally fine.
-    LayoutBoxExtent minMargin(minimumValueForLength(style().marginTop(), maxWidth),
-        minimumValueForLength(style().marginRight(), maxWidth),
-        minimumValueForLength(style().marginBottom(), maxWidth),
-        minimumValueForLength(style().marginLeft(), maxWidth));
+    LayoutBoxExtent minMargin(
+        Style::evaluateMinimum(style().marginTop(), maxWidth),
+        Style::evaluateMinimum(style().marginRight(), maxWidth),
+        Style::evaluateMinimum(style().marginBottom(), maxWidth),
+        Style::evaluateMinimum(style().marginLeft(), maxWidth)
+    );
 
     // Compute the container-relative area within which the sticky element is allowed to move.
     containerContentRect.contract(minMargin);
@@ -589,22 +593,22 @@ void RenderBoxModelObject::computeStickyPositionConstraints(StickyPositionViewpo
     constraints.setStickyBoxRect(stickyBoxRelativeToScrollingAncestor);
 
     if (!style().left().isAuto()) {
-        constraints.setLeftOffset(valueForLength(style().left(), constrainingRect.width()));
+        constraints.setLeftOffset(Style::evaluate(style().left(), constrainingRect.width()));
         constraints.addAnchorEdge(ViewportConstraints::AnchorEdgeLeft);
     }
 
     if (!style().right().isAuto()) {
-        constraints.setRightOffset(valueForLength(style().right(), constrainingRect.width()));
+        constraints.setRightOffset(Style::evaluate(style().right(), constrainingRect.width()));
         constraints.addAnchorEdge(ViewportConstraints::AnchorEdgeRight);
     }
 
     if (!style().top().isAuto()) {
-        constraints.setTopOffset(valueForLength(style().top(), constrainingRect.height()));
+        constraints.setTopOffset(Style::evaluate(style().top(), constrainingRect.height()));
         constraints.addAnchorEdge(ViewportConstraints::AnchorEdgeTop);
     }
 
     if (!style().bottom().isAuto()) {
-        constraints.setBottomOffset(valueForLength(style().bottom(), constrainingRect.height()));
+        constraints.setBottomOffset(Style::evaluate(style().bottom(), constrainingRect.height()));
         constraints.addAnchorEdge(ViewportConstraints::AnchorEdgeBottom);
     }
 }

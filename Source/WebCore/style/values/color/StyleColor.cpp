@@ -33,6 +33,7 @@
 #include "StyleColor.h"
 
 #include "CSSKeywordColor.h"
+#include "CSSValuePool.h"
 #include "Document.h"
 #include "RenderStyle.h"
 #include "RenderTheme.h"

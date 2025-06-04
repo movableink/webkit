@@ -34,17 +34,17 @@
 namespace WebCore {
 namespace Style {
 
-LayoutUnit ScrollMarginEdge::evaluate(LayoutUnit referenceLength) const
+LayoutUnit Evaluation<ScrollMarginEdge>::operator()(const ScrollMarginEdge& edge, LayoutUnit referenceLength)
 {
-    switch (m_value.type()) {
+    switch (edge.m_value.type()) {
     case LengthType::Fixed:
-        return LayoutUnit(m_value.value());
+        return LayoutUnit(edge.m_value.value());
 
     case LengthType::Percent:
-        return LayoutUnit(static_cast<float>(referenceLength * m_value.percent() / 100.0f));
+        return LayoutUnit(static_cast<float>(referenceLength * edge.m_value.percent() / 100.0f));
 
     case LengthType::Calculated:
-        return LayoutUnit(m_value.nonNanCalculatedValue(referenceLength));
+        return LayoutUnit(edge.m_value.nonNanCalculatedValue(referenceLength));
 
     case LengthType::FillAvailable:
     case LengthType::Auto:
@@ -63,17 +63,17 @@ LayoutUnit ScrollMarginEdge::evaluate(LayoutUnit referenceLength) const
     return 0_lu;
 }
 
-float ScrollMarginEdge::evaluate(float referenceLength) const
+float Evaluation<ScrollMarginEdge>::operator()(const ScrollMarginEdge& edge, float referenceLength)
 {
-    switch (m_value.type()) {
+    switch (edge.m_value.type()) {
     case LengthType::Fixed:
-        return m_value.value();
+        return edge.m_value.value();
 
     case LengthType::Percent:
-        return referenceLength * m_value.percent() / 100.0f;
+        return referenceLength * edge.m_value.percent() / 100.0f;
 
     case LengthType::Calculated:
-        return m_value.nonNanCalculatedValue(referenceLength);
+        return edge.m_value.nonNanCalculatedValue(referenceLength);
 
     case LengthType::FillAvailable:
     case LengthType::Auto:
@@ -92,17 +92,12 @@ float ScrollMarginEdge::evaluate(float referenceLength) const
     return 0.0f;
 }
 
-Ref<CSSValue> ScrollMarginEdge::toCSS(ExtractorState& state) const
-{
-    return ExtractorConverter::convertLength(state, m_value);
-}
-
 ScrollMarginEdge scrollMarginEdgeFromCSSValue(const CSSValue& value, BuilderState& state)
 {
     return ScrollMarginEdge { BuilderConverter::convertLength(state, value) };
 }
 
-LayoutBoxExtent extentForRect(const ScrollMargin& margin, const LayoutRect& rect)
+LayoutBoxExtent extentForRect(const ScrollMarginBox& margin, const LayoutRect& rect)
 {
     return LayoutBoxExtent {
         Style::evaluate(margin.top(), rect.height()),

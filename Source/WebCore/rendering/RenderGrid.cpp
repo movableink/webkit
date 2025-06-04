@@ -1872,8 +1872,8 @@ void RenderGrid::updateAutoMarginsInRowAxisIfNeeded(RenderBox& gridItem)
 {
     ASSERT(!gridItem.isOutOfFlowPositioned());
 
-    Length marginStart = gridItem.style().marginStart(writingMode());
-    Length marginEnd = gridItem.style().marginEnd(writingMode());
+    auto& marginStart = gridItem.style().marginStart(writingMode());
+    auto& marginEnd = gridItem.style().marginEnd(writingMode());
     LayoutUnit marginLogicalWidth;
     // We should only consider computed margins if their specified value isn't
     // 'auto', since such computed value may come from a previous layout and may
@@ -1902,8 +1902,8 @@ void RenderGrid::updateAutoMarginsInColumnAxisIfNeeded(RenderBox& gridItem)
 {
     ASSERT(!gridItem.isOutOfFlowPositioned());
 
-    Length marginBefore = gridItem.style().marginBefore(writingMode());
-    Length marginAfter = gridItem.style().marginAfter(writingMode());
+    auto& marginBefore = gridItem.style().marginBefore(writingMode());
+    auto& marginAfter = gridItem.style().marginAfter(writingMode());
     LayoutUnit marginLogicalHeight;
     // We should only consider computed margins if their specified value isn't
     // 'auto', since such computed value may come from a previous layout and may

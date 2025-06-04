@@ -74,11 +74,6 @@ static inline std::optional<CSS::Keyword::Inset> blendInset(std::optional<CSS::K
     return result > 0 ? std::nullopt : std::make_optional(CSS::Keyword::Inset { });
 }
 
-auto Blending<BoxShadow>::canBlend(const BoxShadow&, const BoxShadow&, const RenderStyle&, const RenderStyle&) -> bool
-{
-    return true;
-}
-
 auto Blending<BoxShadow>::blend(const BoxShadow& a, const BoxShadow& b, const RenderStyle& aStyle, const RenderStyle& bStyle, const BlendingContext& context) -> BoxShadow
 {
     return {

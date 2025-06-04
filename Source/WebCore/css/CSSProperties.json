@@ -3670,10 +3670,9 @@
                     "resolver": "bottom"
                 },
                 "accepts-quirky-length": true,
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
-                "render-style-initial": "initialOffset",
-                "style-builder-converter": "LengthOrAuto",
+                "animation-wrapper": "StyleTypeWrapper",
+                "render-style-initial": "initialInset",
+                "style-builder-converter": "InsetEdge",
                 "style-extractor-custom": true,
                 "parser-grammar": "auto | <length-percentage anchor=allowed anchor-size=allowed>"
             },
@@ -4921,10 +4920,9 @@
                     "resolver": "left"
                 },
                 "accepts-quirky-length": true,
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
-                "render-style-initial": "initialOffset",
-                "style-builder-converter": "LengthOrAuto",
+                "animation-wrapper": "StyleTypeWrapper",
+                "render-style-initial": "initialInset",
+                "style-builder-converter": "InsetEdge",
                 "style-extractor-custom": true,
                 "parser-grammar": "auto | <length-percentage anchor=allowed anchor-size=allowed>"
             },
@@ -5282,10 +5280,9 @@
                     "resolver": "bottom"
                 },
                 "accepts-quirky-length": true,
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
+                "animation-wrapper": "StyleTypeWrapper",
                 "render-style-initial": "initialMargin",
-                "style-builder-converter": "LengthOrAuto",
+                "style-builder-converter": "MarginEdge",
                 "style-extractor-custom": true,
                 "parser-grammar": "<length-percentage anchor-size=allowed> | auto"
             },
@@ -5365,10 +5362,9 @@
                     "resolver": "left"
                 },
                 "accepts-quirky-length": true,
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
+                "animation-wrapper": "StyleTypeWrapper",
                 "render-style-initial": "initialMargin",
-                "style-builder-converter": "LengthOrAuto",
+                "style-builder-converter": "MarginEdge",
                 "style-extractor-custom": true,
                 "parser-grammar": "<length-percentage anchor-size=allowed> | auto"
             },
@@ -5389,10 +5385,9 @@
                     "resolver": "right"
                 },
                 "accepts-quirky-length": true,
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
+                "animation-wrapper": "StyleTypeWrapper",
                 "render-style-initial": "initialMargin",
-                "style-builder-converter": "LengthOrAuto",
+                "style-builder-converter": "MarginEdge",
                 "style-extractor-custom": true,
                 "parser-grammar": "<length-percentage anchor-size=allowed> | auto"
             },
@@ -5413,10 +5408,9 @@
                     "resolver": "top"
                 },
                 "accepts-quirky-length": true,
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
+                "animation-wrapper": "StyleTypeWrapper",
                 "render-style-initial": "initialMargin",
-                "style-builder-converter": "LengthOrAuto",
+                "style-builder-converter": "MarginEdge",
                 "style-extractor-custom": true,
                 "parser-grammar": "<length-percentage anchor-size=allowed> | auto"
             },
@@ -7053,10 +7047,9 @@
                     "resolver": "bottom"
                 },
                 "accepts-quirky-length": true,
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
+                "animation-wrapper": "StyleTypeWrapper",
                 "render-style-initial": "initialPadding",
-                "style-builder-converter": "Length",
+                "style-builder-converter": "PaddingEdge",
                 "style-builder-custom": "All",
                 "style-extractor-custom": true,
                 "parser-grammar": "<length-percentage [0,inf]>"
@@ -7128,10 +7121,9 @@
                     "resolver": "left"
                 },
                 "accepts-quirky-length": true,
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
+                "animation-wrapper": "StyleTypeWrapper",
                 "render-style-initial": "initialPadding",
-                "style-builder-converter": "Length",
+                "style-builder-converter": "PaddingEdge",
                 "style-builder-custom": "All",
                 "style-extractor-custom": true,
                 "parser-grammar": "<length-percentage [0,inf]>"
@@ -7150,10 +7142,9 @@
                     "resolver": "right"
                 },
                 "accepts-quirky-length": true,
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
+                "animation-wrapper": "StyleTypeWrapper",
                 "render-style-initial": "initialPadding",
-                "style-builder-converter": "Length",
+                "style-builder-converter": "PaddingEdge",
                 "style-builder-custom": "All",
                 "style-extractor-custom": true,
                 "parser-grammar": "<length-percentage [0,inf]>"
@@ -7172,10 +7163,9 @@
                     "resolver": "top"
                 },
                 "accepts-quirky-length": true,
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
+                "animation-wrapper": "StyleTypeWrapper",
                 "render-style-initial": "initialPadding",
-                "style-builder-converter": "Length",
+                "style-builder-converter": "PaddingEdge",
                 "style-builder-custom": "All",
                 "style-extractor-custom": true,
                 "parser-grammar": "<length-percentage [0,inf]>"
@@ -7394,10 +7384,9 @@
                     "resolver": "right"
                 },
                 "accepts-quirky-length": true,
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
-                "render-style-initial": "initialOffset",
-                "style-builder-converter": "LengthOrAuto",
+                "animation-wrapper": "StyleTypeWrapper",
+                "render-style-initial": "initialInset",
+                "style-builder-converter": "InsetEdge",
                 "style-extractor-custom": true,
                 "parser-grammar": "auto | <length-percentage anchor=allowed anchor-size=allowed>"
             },
@@ -8082,10 +8071,9 @@
                     "resolver": "top"
                 },
                 "accepts-quirky-length": true,
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
-                "render-style-initial": "initialOffset",
-                "style-builder-converter": "LengthOrAuto",
+                "animation-wrapper": "StyleTypeWrapper",
+                "render-style-initial": "initialInset",
+                "style-builder-converter": "InsetEdge",
                 "style-extractor-custom": true,
                 "parser-grammar": "auto | <length-percentage anchor=allowed anchor-size=allowed>"
             },

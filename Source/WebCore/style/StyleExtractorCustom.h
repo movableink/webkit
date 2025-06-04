@@ -319,9 +319,9 @@ template<typename MappingFunctor> void extractAnimationOrTransitionValueSerializ
         mapper(state, builder, context, includeComma, nullptr, nullptr);
 }
 
-template<CSSPropertyID propertyID, typename LengthApplier, typename NumberAsPixelsApplier, typename ValueIDApplier> decltype(auto) extractZoomAdjustedInset(ExtractorState& state, LengthApplier&& lengthApplier, NumberAsPixelsApplier&& numberAsPixelsApplier, ValueIDApplier&& valueIDApplier)
+template<CSSPropertyID propertyID, typename InsetEdgeApplier, typename NumberAsPixelsApplier, typename ValueIDApplier> decltype(auto) extractZoomAdjustedInset(ExtractorState& state, InsetEdgeApplier&& insetEdgeApplier, NumberAsPixelsApplier&& numberAsPixelsApplier, ValueIDApplier&& valueIDApplier)
 {
-    auto offsetComputedLength = [&] {
+    auto valueFromStyle = [&](const RenderStyle& style) -> const Style::InsetEdge& {
         // If specified as a length, the corresponding absolute length; if specified as
         // a percentage, the specified value; otherwise, 'auto'. Hence, we can just
         // return the value in the style.
@@ -329,26 +329,26 @@ template<CSSPropertyID propertyID, typename LengthApplier, typename NumberAsPixe
         // See http://www.w3.org/TR/CSS21/cascade.html#computed-value
 
         if constexpr (propertyID == CSSPropertyTop)
-            return state.style.top();
+            return style.top();
         else if constexpr (propertyID == CSSPropertyRight)
-            return state.style.right();
+            return style.right();
         else if constexpr (propertyID == CSSPropertyBottom)
-            return state.style.bottom();
+            return style.bottom();
         else if constexpr (propertyID == CSSPropertyLeft)
-            return state.style.left();
+            return style.left();
     };
 
-    auto offset = offsetComputedLength();
+    auto& inset = valueFromStyle(state.style);
 
     // If the element is not displayed; return the "computed value".
     CheckedPtr box = dynamicDowncast<RenderBox>(state.renderer);
     if (!box)
-        return lengthApplier(offset);
+        return insetEdgeApplier(inset);
 
     auto* containingBlock = box->containingBlock();
 
     // Resolve a "computed value" percentage if the element is positioned.
-    if (containingBlock && offset.isPercentOrCalculated() && box->isPositioned()) {
+    if (containingBlock && inset.isPercentOrCalculated() && box->isPositioned()) {
         constexpr bool isVerticalProperty = (propertyID == CSSPropertyTop || propertyID == CSSPropertyBottom);
 
         LayoutUnit containingBlockSize;
@@ -369,15 +369,15 @@ template<CSSPropertyID propertyID, typename LengthApplier, typename NumberAsPixe
                     : box->containingBlockLogicalWidthForContent();
             }
         }
-        return numberAsPixelsApplier(floatValueForLength(offset, containingBlockSize));
+        return numberAsPixelsApplier(Style::evaluate(inset, containingBlockSize));
     }
 
     // Return a "computed value" length.
-    if (!offset.isAuto())
-        return lengthApplier(offset);
+    if (!inset.isAuto())
+        return insetEdgeApplier(inset);
 
-    auto offsetUsedStyleRelative = [&](const RenderBox& box) -> LayoutUnit {
-        // For relatively positioned boxes, the offset is with respect to the top edges
+    auto insetUsedStyleRelative = [&](const RenderBox& box) -> LayoutUnit {
+        // For relatively positioned boxes, the inset is with respect to the top edges
         // of the box itself. This ties together top/bottom and left/right to be
         // opposites of each other.
         //
@@ -402,11 +402,11 @@ template<CSSPropertyID propertyID, typename LengthApplier, typename NumberAsPixe
 
     // The property won't be over-constrained if its computed value is "auto", so the "used value" can be returned.
     if (box->isRelativelyPositioned())
-        return numberAsPixelsApplier(offsetUsedStyleRelative(*box));
+        return numberAsPixelsApplier(insetUsedStyleRelative(*box));
 
-    auto offsetUsedStyleOutOfFlowPositioned = [&](const RenderBlock& container, const RenderBox& box) {
-        // For out-of-flow positioned boxes, the offset is how far an box's margin
-        // edge is offset below the edge of the box's containing block.
+    auto insetUsedStyleOutOfFlowPositioned = [&](const RenderBlock& container, const RenderBox& box) {
+        // For out-of-flow positioned boxes, the inset is how far an box's margin
+        // edge is inset below the edge of the box's containing block.
         // See http://www.w3.org/TR/CSS2/visuren.html#position-props
         //
         // Margins are included in offsetTop/offsetLeft so we need to remove them here.
@@ -422,7 +422,7 @@ template<CSSPropertyID propertyID, typename LengthApplier, typename NumberAsPixe
     };
 
     if (containingBlock && box->isOutOfFlowPositioned())
-        return numberAsPixelsApplier(offsetUsedStyleOutOfFlowPositioned(*containingBlock, *box));
+        return numberAsPixelsApplier(insetUsedStyleOutOfFlowPositioned(*containingBlock, *box));
 
     return valueIDApplier(CSSValueAuto);
 }
@@ -430,7 +430,7 @@ template<CSSPropertyID propertyID, typename LengthApplier, typename NumberAsPixe
 template<CSSPropertyID propertyID> Ref<CSSValue> extractZoomAdjustedInsetValue(ExtractorState& state)
 {
     return extractZoomAdjustedInset<propertyID>(state,
-        [&](const auto& length) -> Ref<CSSValue> { return ExtractorConverter::convertLength(state, length); },
+        [&](const auto& edge)   -> Ref<CSSValue> { return ExtractorConverter::convertInsetEdge(state, edge); },
         [&](const auto& number) -> Ref<CSSValue> { return ExtractorConverter::convertNumberAsPixels(state, number); },
         [&](const auto& value)  -> Ref<CSSValue> { return CSSPrimitiveValue::create(value); }
     );
@@ -439,7 +439,7 @@ template<CSSPropertyID propertyID> Ref<CSSValue> extractZoomAdjustedInsetValue(E
 template<CSSPropertyID propertyID> void extractZoomAdjustedInsetSerialization(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context)
 {
     extractZoomAdjustedInset<propertyID>(state,
-        [&](const auto& length) { ExtractorSerializer::serializeLength(state, builder, context, length); },
+        [&](const auto& edge)   { ExtractorSerializer::serializeInsetEdge(state, builder, context, edge); },
         [&](const auto& number) { ExtractorSerializer::serializeNumberAsPixels(state, builder, context, number); },
         [&](const auto& value)  { builder.append(nameLiteralForSerialization(value)); }
     );
@@ -496,46 +496,46 @@ inline bool rendererCanHaveTrimmedMargin(const RenderBox& renderer, MarginTrimTy
     return false;
 }
 
-template<auto lengthGetter, auto computedCSSValueGetter> Ref<CSSValue> extractZoomAdjustedMarginValue(ExtractorState& state)
+template<auto styleGetter, auto computedCSSValueGetter> Ref<CSSValue> extractZoomAdjustedMarginValue(ExtractorState& state)
 {
     auto* renderBox = dynamicDowncast<RenderBox>(state.renderer);
     if (!renderBox)
-        return ExtractorConverter::convertLength(state, (state.style.*lengthGetter)());
+        return ExtractorConverter::convertMarginEdge(state, (state.style.*styleGetter)());
     return ExtractorConverter::convertNumberAsPixels(state, (renderBox->*computedCSSValueGetter)());
 }
 
-template<auto lengthGetter, auto computedCSSValueGetter> void extractZoomAdjustedMarginSerialization(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context)
+template<auto styleGetter, auto computedCSSValueGetter> void extractZoomAdjustedMarginSerialization(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context)
 {
     auto* renderBox = dynamicDowncast<RenderBox>(state.renderer);
     if (!renderBox) {
-        ExtractorSerializer::serializeLength(state, builder, context, (state.style.*lengthGetter)());
+        ExtractorSerializer::serializeMarginEdge(state, builder, context, (state.style.*styleGetter)());
         return;
     }
 
     ExtractorSerializer::serializeNumberAsPixels(state, builder, context, (renderBox->*computedCSSValueGetter)());
 }
 
-template<auto lengthGetter, auto computedCSSValueGetter> Ref<CSSValue> extractZoomAdjustedPaddingValue(ExtractorState& state)
+template<auto styleGetter, auto computedCSSValueGetter> Ref<CSSValue> extractZoomAdjustedPaddingValue(ExtractorState& state)
 {
-    auto unzoomedLength = (state.style.*lengthGetter)();
+    auto& paddingEdge  = (state.style.*styleGetter)();
     auto* renderBox = dynamicDowncast<RenderBox>(state.renderer);
-    if (!renderBox || unzoomedLength.isFixed())
-        return ExtractorConverter::convertLength(state, unzoomedLength);
+    if (!renderBox || paddingEdge.isFixed())
+        return ExtractorConverter::convertPaddingEdge(state, paddingEdge);
     return ExtractorConverter::convertNumberAsPixels(state, (renderBox->*computedCSSValueGetter)());
 }
 
-template<auto lengthGetter, auto computedCSSValueGetter> void extractZoomAdjustedPaddingSerialization(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context)
+template<auto styleGetter, auto computedCSSValueGetter> void extractZoomAdjustedPaddingSerialization(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context)
 {
-    auto unzoomedLength = (state.style.*lengthGetter)();
+    auto paddingEdge = (state.style.*styleGetter)();
     auto* renderBox = dynamicDowncast<RenderBox>(state.renderer);
-    if (!renderBox || unzoomedLength.isFixed()) {
-        ExtractorSerializer::serializeLength(state, builder, context, unzoomedLength);
+    if (!renderBox || paddingEdge.isFixed()) {
+        ExtractorSerializer::serializePaddingEdge(state, builder, context, paddingEdge);
         return;
     }
     ExtractorSerializer::serializeNumberAsPixels(state, builder, context, (renderBox->*computedCSSValueGetter)());
 }
 
-template<auto lengthGetter, auto boxGetter> Ref<CSSValue> extractZoomAdjustedPreferredSizeValue(ExtractorState& state)
+template<auto styleGetter, auto boxGetter> Ref<CSSValue> extractZoomAdjustedPreferredSizeValue(ExtractorState& state)
 {
     auto sizingBox = [](auto& renderer) -> LayoutRect {
         auto* box = dynamicDowncast<RenderBox>(renderer);
@@ -554,10 +554,10 @@ template<auto lengthGetter, auto boxGetter> Ref<CSSValue> extractZoomAdjustedPre
         if (!isNonReplacedInline(*state.renderer))
             return ExtractorConverter::convertNumberAsPixels(state, (sizingBox(*state.renderer).*boxGetter)());
     }
-    return ExtractorConverter::convertLength(state, (state.style.*lengthGetter)());
+    return ExtractorConverter::convertLength(state, (state.style.*styleGetter)());
 }
 
-template<auto lengthGetter, auto boxGetter> void extractZoomAdjustedPreferredSizeSerialization(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context)
+template<auto styleGetter, auto boxGetter> void extractZoomAdjustedPreferredSizeSerialization(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context)
 {
     auto sizingBox = [](auto& renderer) -> LayoutRect {
         auto* box = dynamicDowncast<RenderBox>(renderer);
@@ -579,20 +579,20 @@ template<auto lengthGetter, auto boxGetter> void extractZoomAdjustedPreferredSiz
         }
     }
 
-    ExtractorSerializer::serializeLength(state, builder, context, (state.style.*lengthGetter)());
+    ExtractorSerializer::serializeLength(state, builder, context, (state.style.*styleGetter)());
 }
 
-template<auto lengthGetter> Ref<CSSValue> extractZoomAdjustedMaxSizeValue(ExtractorState& state)
+template<auto styleGetter> Ref<CSSValue> extractZoomAdjustedMaxSizeValue(ExtractorState& state)
 {
-    auto unzoomedLength = (state.style.*lengthGetter)();
+    auto unzoomedLength = (state.style.*styleGetter)();
     if (unzoomedLength.isUndefined())
         return CSSPrimitiveValue::create(CSSValueNone);
     return ExtractorConverter::convertLength(state, unzoomedLength);
 }
 
-template<auto lengthGetter> void extractZoomAdjustedMaxSizeSerialization(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context)
+template<auto styleGetter> void extractZoomAdjustedMaxSizeSerialization(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context)
 {
-    auto unzoomedLength = (state.style.*lengthGetter)();
+    auto unzoomedLength = (state.style.*styleGetter)();
     if (unzoomedLength.isUndefined()) {
         CSS::serializationForCSS(builder, context, CSS::Keyword::None { });
         return;
@@ -601,14 +601,14 @@ template<auto lengthGetter> void extractZoomAdjustedMaxSizeSerialization(Extract
     ExtractorSerializer::serializeLength(state, builder, context, unzoomedLength);
 }
 
-template<auto lengthGetter> Ref<CSSValue> extractZoomAdjustedMinSizeValue(ExtractorState& state)
+template<auto styleGetter> Ref<CSSValue> extractZoomAdjustedMinSizeValue(ExtractorState& state)
 {
     auto isFlexOrGridItem = [](auto renderer) {
         auto* box = dynamicDowncast<RenderBox>(renderer);
         return box && (box->isFlexItem() || box->isGridItem());
     };
 
-    auto unzoomedLength = (state.style.*lengthGetter)();
+    auto unzoomedLength = (state.style.*styleGetter)();
     if (unzoomedLength.isAuto()) {
         if (isFlexOrGridItem(state.renderer))
             return CSSPrimitiveValue::create(CSSValueAuto);
@@ -617,14 +617,14 @@ template<auto lengthGetter> Ref<CSSValue> extractZoomAdjustedMinSizeValue(Extrac
     return ExtractorConverter::convertLength(state, unzoomedLength);
 }
 
-template<auto lengthGetter> void extractZoomAdjustedMinSizeSerialization(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context)
+template<auto styleGetter> void extractZoomAdjustedMinSizeSerialization(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context)
 {
     auto isFlexOrGridItem = [](auto renderer) {
         auto* box = dynamicDowncast<RenderBox>(renderer);
         return box && (box->isFlexItem() || box->isGridItem());
     };
 
-    auto unzoomedLength = (state.style.*lengthGetter)();
+    auto unzoomedLength = (state.style.*styleGetter)();
     if (unzoomedLength.isAuto()) {
         if (isFlexOrGridItem(state.renderer)) {
             CSS::serializationForCSS(builder, context, CSS::Keyword::Auto { });
@@ -1962,14 +1962,14 @@ inline Ref<CSSValue> ExtractorCustom::extractMarginRight(ExtractorState& state)
 
     auto& marginRight = state.style.marginRight();
     if (marginRight.isFixed() || !box)
-        return ExtractorConverter::convertLength(state, marginRight);
+        return ExtractorConverter::convertMarginEdge(state, marginRight);
 
     float value;
     if (marginRight.isPercentOrCalculated()) {
         // RenderBox gives a marginRight() that is the distance between the right-edge of the child box
         // and the right-edge of the containing box, when display == DisplayType::Block. Let's calculate the absolute
         // value of the specified margin-right % instead of relying on RenderBox's marginRight() value.
-        value = minimumValueForLength(marginRight, box->containingBlockLogicalWidthForContent());
+        value = Style::evaluateMinimum(marginRight, box->containingBlockLogicalWidthForContent());
     } else
         value = box->marginRight();
     return ExtractorConverter::convertNumberAsPixels(state, value);
@@ -1985,7 +1985,7 @@ inline void ExtractorCustom::extractMarginRightSerialization(ExtractorState& sta
 
     auto& marginRight = state.style.marginRight();
     if (marginRight.isFixed() || !box) {
-        ExtractorSerializer::serializeLength(state, builder, context, marginRight);
+        ExtractorSerializer::serializeMarginEdge(state, builder, context, marginRight);
         return;
     }
 
@@ -1994,7 +1994,7 @@ inline void ExtractorCustom::extractMarginRightSerialization(ExtractorState& sta
         // RenderBox gives a marginRight() that is the distance between the right-edge of the child box
         // and the right-edge of the containing box, when display == DisplayType::Block. Let's calculate the absolute
         // value of the specified margin-right % instead of relying on RenderBox's marginRight() value.
-        value = minimumValueForLength(marginRight, box->containingBlockLogicalWidthForContent());
+        value = Style::evaluateMinimum(marginRight, box->containingBlockLogicalWidthForContent());
     } else
         value = box->marginRight();
 

@@ -145,6 +145,7 @@ public:
     }
 
     bool isZero() const
+        requires (requires { { !std::declval<T>() } -> std::same_as<bool>; })
     {
         return allOf([](auto& edge) { return !edge; });
     }

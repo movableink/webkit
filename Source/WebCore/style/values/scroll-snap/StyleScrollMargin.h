@@ -25,8 +25,8 @@
 #pragma once
 
 #include "BoxExtents.h"
-#include "CSSPrimitiveNumericUnits.h"
 #include "Length.h"
+#include "StylePrimitiveNumericTypes.h"
 #include "StyleValueTypes.h"
 
 namespace WebCore {
@@ -44,7 +44,7 @@ struct ExtractorState;
 // <'scroll-margin-*'> = <length>
 // https://drafts.csswg.org/css-scroll-snap-1/#margin-longhands-physical
 struct ScrollMarginEdge {
-    ScrollMarginEdge(WebCore::Length&& value)
+    explicit ScrollMarginEdge(WebCore::Length&& value)
         : m_value { WTFMove(value) }
     {
         RELEASE_ASSERT(m_value.isFixed());
@@ -55,10 +55,10 @@ struct ScrollMarginEdge {
     {
     }
 
-    LayoutUnit evaluate(LayoutUnit referenceLength) const;
-    float evaluate(float referenceLength) const;
-
-    Ref<CSSValue> toCSS(ExtractorState&) const;
+    ScrollMarginEdge(Style::Length<> pixels)
+        : m_value { pixels.value, WebCore::LengthType::Fixed }
+    {
+    }
 
     bool isZero() const { return m_value.isZero(); }
 
@@ -70,6 +70,7 @@ struct ScrollMarginEdge {
     bool operator==(const ScrollMarginEdge&) const = default;
 
 private:
+    friend struct Evaluation<ScrollMarginEdge>;
     friend WTF::TextStream& operator<<(WTF::TextStream&, const ScrollMarginEdge&);
 
     WebCore::Length m_value;
@@ -77,18 +78,7 @@ private:
 
 // <'scroll-margin'> = <length>{1,4}
 // https://drafts.csswg.org/css-scroll-snap-1/#propdef-scroll-margin
-struct ScrollMargin : SpaceSeparatedRectEdges<ScrollMarginEdge> {
-    using Wrapped = SpaceSeparatedRectEdges<ScrollMarginEdge>;
-    using Wrapped::Wrapped;
-    using Wrapped::operator=;
-
-    template<size_t I> friend const auto& get(const ScrollMargin& self)
-    {
-        return get<I>(static_cast<const Wrapped&>(self));
-    }
-
-    bool operator==(const ScrollMargin&) const = default;
-};
+using ScrollMarginBox = MinimallySerializingSpaceSeparatedRectEdges<ScrollMarginEdge>;
 
 // MARK: - Conversion
 
@@ -97,15 +87,13 @@ ScrollMarginEdge scrollMarginEdgeFromCSSValue(const CSSValue&, BuilderState&);
 // MARK: - Evaluation
 
 template<> struct Evaluation<ScrollMarginEdge> {
-    template<typename T> auto operator()(const ScrollMarginEdge& edge, T referenceLength) -> T
-    {
-        return edge.evaluate(referenceLength);
-    }
+    auto operator()(const ScrollMarginEdge&, LayoutUnit referenceLength) -> LayoutUnit;
+    auto operator()(const ScrollMarginEdge&, float referenceLength) -> float;
 };
 
 // MARK: - Extent
 
-LayoutBoxExtent extentForRect(const ScrollMargin&, const LayoutRect&);
+LayoutBoxExtent extentForRect(const ScrollMarginBox&, const LayoutRect&);
 
 // MARK: - Logging
 
@@ -115,5 +103,3 @@ WTF::TextStream& operator<<(WTF::TextStream&, const ScrollMarginEdge&);
 } // namespace WebCore
 
 template<> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::Style::ScrollMarginEdge> = true;
-
-DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::ScrollMargin, 4)

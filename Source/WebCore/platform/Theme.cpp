@@ -75,19 +75,6 @@ LengthBox Theme::controlBorder(StyleAppearance appearance, const FontCascade&, c
     }
 }
 
-LengthBox Theme::controlPadding(StyleAppearance appearance, const FontCascade&, const LengthBox& zoomedBox, float) const
-{
-    switch (appearance) {
-    case StyleAppearance::Menulist:
-    case StyleAppearance::MenulistButton:
-    case StyleAppearance::Checkbox:
-    case StyleAppearance::Radio:
-        return LengthBox(0);
-    default:
-        return zoomedBox;
-    }
-}
-
 void Theme::drawNamedImage(const String& name, GraphicsContext& context, const FloatSize& size) const
 {
     // We only handle one icon at the moment.

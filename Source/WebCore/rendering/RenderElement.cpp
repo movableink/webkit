@@ -2086,8 +2086,8 @@ MarginRect RenderElement::absoluteAnchorRectWithScrollMargin(bool* insideFixed) 
 {
     auto anchorRect = absoluteAnchorRect(insideFixed);
 
-    const auto& scrollMargin = style().scrollMargin();
-    if (Style::isZero(scrollMargin))
+    auto& scrollMarginBox = style().scrollMarginBox();
+    if (Style::isZero(scrollMarginBox))
         return { anchorRect, anchorRect };
 
     // The scroll snap specification says that the scroll-margin should be applied in the
@@ -2095,7 +2095,7 @@ MarginRect RenderElement::absoluteAnchorRectWithScrollMargin(bool* insideFixed) 
     // box of the transformed border box of the target element.
     // See https://www.w3.org/TR/css-scroll-snap-1/#scroll-margin.
     auto marginRect = anchorRect;
-    marginRect.expand(Style::extentForRect(scrollMargin, anchorRect));
+    marginRect.expand(Style::extentForRect(scrollMarginBox, anchorRect));
     return { marginRect, anchorRect };
 }
 

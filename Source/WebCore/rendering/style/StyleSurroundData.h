@@ -25,7 +25,9 @@
 #pragma once
 
 #include "BorderData.h"
-#include "LengthBox.h"
+#include "StyleInset.h"
+#include "StyleMargin.h"
+#include "StylePadding.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
@@ -59,11 +61,11 @@ public:
     bool hasExplicitlySetPaddingRight : 1;
     bool hasExplicitlySetPaddingTop : 1;
 
-    LengthBox offset;
-    LengthBox margin;
-    LengthBox padding;
+    Style::InsetBox inset;
+    Style::MarginBox margin;
+    Style::PaddingBox padding;
     BorderData border;
-    
+
 private:
     StyleSurroundData();
     StyleSurroundData(const StyleSurroundData&);    

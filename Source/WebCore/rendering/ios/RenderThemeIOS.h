@@ -64,7 +64,7 @@ public:
 private:
     bool canCreateControlPartForRenderer(const RenderObject&) const final;
 
-    LengthBox popupInternalPaddingBox(const RenderStyle&) const override;
+    Style::PaddingBox popupInternalPaddingBox(const RenderStyle&) const override;
 
     LayoutRect adjustedPaintRect(const RenderBox&, const LayoutRect&) const override;
 

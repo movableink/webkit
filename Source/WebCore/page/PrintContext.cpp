@@ -98,10 +98,18 @@ FloatBoxExtent PrintContext::computedPageMargin(FloatBoxExtent printMargin)
     auto style = frame()->document()->styleScope().resolver().styleForPage(0);
 
     float pixelToPointScaleFactor = 1.0f / CSS::pixelsPerPt;
-    return { style->marginTop().isAuto() ? printMargin.top() : style->marginTop().value() * pixelToPointScaleFactor,
-        style->marginRight().isAuto() ? printMargin.right() : style->marginRight().value() * pixelToPointScaleFactor,
-        style->marginBottom().isAuto() ? printMargin.bottom() : style->marginBottom().value() * pixelToPointScaleFactor,
-        style->marginLeft().isAuto() ? printMargin.left() : style->marginLeft().value() * pixelToPointScaleFactor };
+
+    auto marginTop = style->marginTop().tryFixed();
+    auto marginRight = style->marginRight().tryFixed();
+    auto marginBottom = style->marginBottom().tryFixed();
+    auto marginLeft = style->marginLeft().tryFixed();
+
+    return {
+        marginTop ? marginTop->value * pixelToPointScaleFactor : printMargin.top(),
+        marginRight ? marginRight->value * pixelToPointScaleFactor : printMargin.right(),
+        marginBottom ? marginBottom->value * pixelToPointScaleFactor : printMargin.bottom(),
+        marginLeft ? marginLeft->value * pixelToPointScaleFactor : printMargin.left(),
+    };
 }
 
 FloatSize PrintContext::computedPageSize(FloatSize pageSize, FloatBoxExtent printMargin)
@@ -376,9 +384,9 @@ String PrintContext::pageProperty(LocalFrame* frame, const String& propertyName,
 
     // Implement formatters for properties we care about.
     if (propertyName == "margin-left"_s) {
-        if (style->marginLeft().isAuto())
-            return autoAtom();
-        return String::number(style->marginLeft().value());
+        if (auto marginLeft = style->marginLeft().tryFixed())
+            return String::number(marginLeft->value);
+        return autoAtom();
     }
     if (propertyName == "line-height"_s)
         return String::number(style->lineHeight().value());

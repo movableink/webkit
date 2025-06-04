@@ -192,11 +192,41 @@ LayoutUnit FormattingGeometry::contentHeightForFormattingContextRoot(const Eleme
     return usedContentHeight;
 }
 
+std::optional<LayoutUnit> FormattingGeometry::computedValue(const Style::InsetEdge& geometryProperty, LayoutUnit containingBlockWidth) const
+{
+    //  In general, the computed value resolves the specified value as far as possible without laying out the content.
+    if (!geometryProperty.isAuto())
+        return Style::evaluate(geometryProperty, containingBlockWidth);
+    return { };
+}
+
+std::optional<LayoutUnit> FormattingGeometry::computedValue(const Style::MarginEdge& geometryProperty, LayoutUnit containingBlockWidth) const
+{
+    //  In general, the computed value resolves the specified value as far as possible without laying out the content.
+    if (!geometryProperty.isAuto())
+        return Style::evaluate(geometryProperty, containingBlockWidth);
+    return { };
+}
+
 std::optional<LayoutUnit> FormattingGeometry::computedValue(const Length& geometryProperty, LayoutUnit containingBlockWidth) const
 {
     //  In general, the computed value resolves the specified value as far as possible without laying out the content.
     if (geometryProperty.isFixed() || geometryProperty.isPercent() || geometryProperty.isCalculated())
         return valueForLength(geometryProperty, containingBlockWidth);
+    return { };
+}
+
+std::optional<LayoutUnit> FormattingGeometry::fixedValue(const Style::MarginEdge& geometryProperty) const
+{
+    if (auto fixed = geometryProperty.tryFixed())
+        return LayoutUnit { fixed->value };
+    return { };
+}
+
+std::optional<LayoutUnit> FormattingGeometry::fixedValue(const Style::PaddingEdge& geometryProperty) const
+{
+    if (auto fixed = geometryProperty.tryFixed())
+        return LayoutUnit { fixed->value };
     return { };
 }
 
@@ -1106,8 +1136,8 @@ BoxGeometry::Edges FormattingGeometry::computedPadding(const Box& layoutBox, con
     auto& style = layoutBox.style();
     LOG_WITH_STREAM(FormattingContextLayout, stream << "[Padding] -> layoutBox: " << &layoutBox);
     return {
-        { valueForLength(style.paddingStart(), containingBlockWidth), valueForLength(style.paddingEnd(), containingBlockWidth) },
-        { valueForLength(style.paddingBefore(), containingBlockWidth), valueForLength(style.paddingAfter(), containingBlockWidth) }
+        { Style::evaluate(style.paddingStart(), containingBlockWidth), Style::evaluate(style.paddingEnd(), containingBlockWidth) },
+        { Style::evaluate(style.paddingBefore(), containingBlockWidth), Style::evaluate(style.paddingAfter(), containingBlockWidth) }
     };
 }
 
