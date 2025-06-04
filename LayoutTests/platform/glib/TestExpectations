@@ -959,8 +959,6 @@ webkit.org/b/189483 imported/w3c/web-platform-tests/css/css-fonts/variations/sln
 # Pass instead of removing this line.
 webkit.org/b/234606 fast/gradients/conic-gradient-alpha.html [ ImageOnlyFailure ]
 
-webkit.org/b/214682 imported/w3c/web-platform-tests/css/cssom/stylesheet-same-origin.sub.html [ Failure ]
-
 webkit.org/b/216767 css3/font-feature-settings-stylistic-set.html [ ImageOnlyFailure ]
 
 webkit.org/b/216853 css3/font-synthesis-small-caps.html [ ImageOnlyFailure ]
