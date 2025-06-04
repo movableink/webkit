@@ -3217,12 +3217,18 @@ bool AccessibilityObject::supportsPosInSet() const
 
 int AccessibilityObject::setSize() const
 {
-    return getIntegralAttribute(aria_setsizeAttr);
+    // https://github.com/w3c/aria/pull/2341
+    // When aria-setsize isn't a positive integer (greater than or equal to 1), its value should be indeterminate, i.e., -1.
+    int setSize = getIntegralAttribute(aria_setsizeAttr);
+    return (setSize >= 1) ? setSize : -1;
 }
 
 int AccessibilityObject::posInSet() const
 {
-    return getIntegralAttribute(aria_posinsetAttr);
+    // https://github.com/w3c/aria/pull/2341
+    // When aria-posinset isn't a positive integer (greater than or equal to 1), its value should be 1.
+    int posInSet = getIntegralAttribute(aria_posinsetAttr);
+    return (posInSet >= 1) ? posInSet : 1;
 }
 
 String AccessibilityObject::identifierAttribute() const
