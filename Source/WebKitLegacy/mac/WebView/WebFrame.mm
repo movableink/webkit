@@ -464,9 +464,7 @@ static NSURL *createUniqueWebDataURL();
         if (auto* view = frame->view()) {
             view->setTransparent(!drawsBackground);
 #if !PLATFORM(IOS_FAMILY)
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-            auto color = WebCore::colorFromCocoaColor([backgroundColor colorUsingColorSpaceName:NSDeviceRGBColorSpace]);
-ALLOW_DEPRECATED_DECLARATIONS_END
+            auto color = WebCore::colorFromCocoaColor([backgroundColor colorUsingColorSpace:NSColorSpace.deviceRGBColorSpace]);
 #else
             WebCore::Color color(WebCore::roundAndClampToSRGBALossy(backgroundColor));
 #endif

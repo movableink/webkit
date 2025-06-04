@@ -1503,9 +1503,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 {
     NSEvent *fakeEvent = [NSEvent mouseEventWithType:NSEventTypeMouseMoved
         location:[[self window]
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        convertScreenToBase:[NSEvent mouseLocation]]
-ALLOW_DEPRECATED_DECLARATIONS_END
+        convertPointFromScreen:[NSEvent mouseLocation]]
         modifierFlags:[[NSApp currentEvent] modifierFlags]
         timestamp:[NSDate timeIntervalSinceReferenceDate]
         windowNumber:[[self window] windowNumber]
@@ -2084,9 +2082,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
     NSEvent *fakeEvent = [NSEvent mouseEventWithType:NSEventTypeLeftMouseDragged
         location:[[self window]
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        convertScreenToBase:[NSEvent mouseLocation]]
-ALLOW_DEPRECATED_DECLARATIONS_END
+        convertPointFromScreen:[NSEvent mouseLocation]]
         modifierFlags:[[NSApp currentEvent] modifierFlags]
         timestamp:[NSDate timeIntervalSinceReferenceDate]
         windowNumber:[[self window] windowNumber]
@@ -5044,9 +5040,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 #if PLATFORM(IOS_FAMILY)
         return [accTree accessibilityHitTest:point];
 #else
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        NSPoint windowCoord = [[self window] convertScreenToBase:point];
-ALLOW_DEPRECATED_DECLARATIONS_END
+        NSPoint windowCoord = [[self window] convertPointFromScreen:point];
         return [accTree accessibilityHitTest:[self convertPoint:windowCoord fromView:nil]];
 #endif
     }
@@ -5108,9 +5102,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (NSString *)_colorAsString:(NSColor *)color
 {
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    NSColor *rgbColor = [color colorUsingColorSpaceName:NSDeviceRGBColorSpace];
-ALLOW_DEPRECATED_DECLARATIONS_END
+    NSColor *rgbColor = [color colorUsingColorSpace:NSColorSpace.deviceRGBColorSpace];
     // FIXME: If color is non-nil and rgbColor is nil, that means we got some kind
     // of fancy color that can't be converted to RGB. Changing that to "transparent"
     // might not be great, but it's probably OK.
