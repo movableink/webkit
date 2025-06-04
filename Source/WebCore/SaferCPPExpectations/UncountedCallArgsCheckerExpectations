@@ -153,7 +153,6 @@ Modules/storage/StorageManager.cpp
 Modules/storage/WorkerStorageConnection.cpp
 Modules/streams/ReadableStream.cpp
 Modules/streams/ReadableStream.h
-Modules/streams/WritableStream.cpp
 Modules/web-locks/WebLockManager.cpp
 Modules/webaudio/AnalyserNode.cpp
 Modules/webaudio/AudioBasicInspectorNode.cpp

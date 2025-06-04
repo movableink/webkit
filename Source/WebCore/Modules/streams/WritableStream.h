@@ -63,7 +63,7 @@ protected:
     static ExceptionOr<Ref<InternalWritableStream>> createInternalWritableStream(JSDOMGlobalObject&, Ref<WritableStreamSink>&&);
     explicit WritableStream(Ref<InternalWritableStream>&&);
 private:
-    Ref<InternalWritableStream> m_internalWritableStream;
+    const Ref<InternalWritableStream> m_internalWritableStream;
 };
 
 } // namespace WebCore
