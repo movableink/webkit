@@ -443,7 +443,7 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
 
     if (m_shaderModule.usesWorkgroupUniformLoad()) {
         m_body.append(m_indent, "template<typename T>\n"_s,
-            m_indent, ((shaderValidationEnabled() && metalAppleGPUFamily() >= 9) ? "[[clang::optnone]] "_s : ""_s), "static T __workgroup_uniform_load(threadgroup T* const ptr)\n"_s,
+            m_indent, (shaderValidationEnabled() ? "[[clang::optnone]] "_s : ""_s), "static T __workgroup_uniform_load(threadgroup T* const ptr)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
