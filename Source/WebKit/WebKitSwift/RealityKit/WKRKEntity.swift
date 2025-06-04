@@ -60,16 +60,14 @@ extension WKRKEntity {
 
     @objc(loadFromData:withAttributionTaskID:completionHandler:)
     class func load(from data: Data, withAttributionTaskID attributionTaskId: String?, completionHandler: @MainActor @Sendable @escaping (WKRKEntity?) -> Void) {
-#if canImport(RealityKit, _version: 377)
+#if canImport(RealityKit, _version: "403.0.3")
         Task {
             do {
                 var loadOptions = Entity.__LoadOptions()
-#if canImport(RealityKit, _version: 400)
                 if let attributionTaskId {
                     loadOptions.memoryAttributionID = attributionTaskId
                 }
-#endif
-                let loadedEntity = try await Entity(fromData: data, options: loadOptions)
+                let loadedEntity = try await Entity(from: data, options: loadOptions)
                 let result = WKRKEntity(loadedEntity)
                 await completionHandler(result)
             } catch {
@@ -370,22 +368,9 @@ extension WKRKEntity {
             return
         }
 
-        Task {
-            do {
-                let defaultEnvironmentResource = EnvironmentResource.defaultObject()
-                
-                await MainActor.run {
-                    if WKRKEntity._defaultEnvironmentResource == nil {
-                        WKRKEntity._defaultEnvironmentResource = defaultEnvironmentResource
-                    }
-                    guard let environment = WKRKEntity._defaultEnvironmentResource else {
-                        Logger.realityKitEntity.error("Cannot load default environment resource")
-                        return
-                    }
-                    applyIBL(environment)
-                }
-            }
-        }
+        let defaultEnvironmentResource = EnvironmentResource.defaultObject()
+        WKRKEntity._defaultEnvironmentResource = defaultEnvironmentResource
+        applyIBL(defaultEnvironmentResource)
 #else
         entity.components[ImageBasedLightComponent.self] = .init(source: .none)
         entity.components[ImageBasedLightReceiverComponent.self] = nil
