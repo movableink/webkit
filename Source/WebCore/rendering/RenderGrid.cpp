@@ -2752,15 +2752,20 @@ bool RenderGrid::canCreateIntrinsicLogicalHeightsForRowSizingFirstPassCache() co
     if (isMasonry())
         return false;
 
-    if (isSubgrid())
+    if (isSubgridRows())
         return false;
 
     if (enclosingFragmentedFlow())
         return false;
 
     for (auto& gridItem : childrenOfType<RenderBox>(*this)) {
-        if (auto* renderGrid = dynamicDowncast<RenderGrid>(gridItem); renderGrid && renderGrid->isSubgrid())
-            return false;
+        if (auto* renderGrid = dynamicDowncast<RenderGrid>(gridItem)) {
+            if (renderGrid->isSubgridRows())
+                return false;
+
+            if (renderGrid->isSubgridColumns() && GridLayoutFunctions::isOrthogonalGridItem(*this, *renderGrid))
+                return false;
+        }
 
         if (isBaselineAlignmentForGridItem(gridItem))
             return false;
