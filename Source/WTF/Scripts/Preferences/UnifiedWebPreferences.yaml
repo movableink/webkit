@@ -2625,6 +2625,20 @@ EnableAccessibilityOnDemand:
       "ENABLE(INITIALIZE_ACCESSIBILITY_ON_DEMAND)": true
       default: false
 
+EnableDebuggingFeaturesInSandbox:
+  type: bool
+  status: internal
+  category: security
+  humanReadableName: "Enable debugging features in sandbox"
+  humanReadableDescription: "Enable debugging features in sandbox"
+  condition: HAVE(SANDBOX_STATE_FLAGS)
+  defaultsOverridable: true
+  webcoreBinding: none
+  exposed: [ WebKit ]
+  defaultValue:
+    WebKit:
+      default: false
+
 EnableInheritURIQueryComponent:
   type: bool
   status: embedder
