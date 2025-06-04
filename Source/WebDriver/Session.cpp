@@ -2889,6 +2889,8 @@ void Session::performActions(Vector<Vector<Action>>&& actionsByTick, Function<vo
                         currentState.pressedButton = action.button.value();
                         break;
                     case Action::Subtype::PointerMove: {
+                        if (!action.x || !action.y)
+                            return completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidArgument, "Pointer move action must have x and y coordinates."_s));
                         state->setString("origin"_s, automationOriginType(action.origin->type));
                         auto location = JSON::Object::create();
                         location->setInteger("x"_s, action.x.value());
@@ -2958,6 +2960,10 @@ void Session::performActions(Vector<Vector<Action>>&& actionsByTick, Function<vo
                 case Action::Type::Wheel:
                     switch (action.subtype) {
                     case Action::Subtype::Scroll: {
+                        if (!action.x || !action.y)
+                            return completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidArgument, "Scroll action must have x and y coordinates."_s));
+                        if (!action.deltaX || !action.deltaY)
+                            return completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidArgument, "Scroll action must have deltaX and deltaY values."_s));
                         state->setString("origin"_s, automationOriginType(action.origin->type));
                         auto location = JSON::Object::create();
                         location->setInteger("x"_s, action.x.value());

@@ -30,6 +30,7 @@
 #include "CommandResult.h"
 #include "Logging.h"
 #include "SessionHost.h"
+#include <cmath>
 #include <ranges>
 #include <wtf/Compiler.h>
 #include <wtf/LoggerHelper.h>
@@ -2188,7 +2189,7 @@ static bool processPauseAction(JSON::Object& actionItem, Action& action, std::op
 
     auto duration = unsignedValue(*durationValue);
     if (!duration) {
-        errorMessage = String("The parameter 'duration' is invalid in pause action"_s);
+        errorMessage = String("The 'duration' parameter for the pause action is invalid"_s);
         return false;
     }
 
@@ -2200,7 +2201,7 @@ static std::optional<Action> processNullAction(const String& id, JSON::Object& a
 {
     auto subtype = actionItem.getString("type"_s);
     if (subtype != "pause"_s) {
-        errorMessage = String("The parameter 'type' in null action is invalid or missing"_s);
+        errorMessage = String("The 'type' parameter for the null action is invalid or missing"_s);
         return std::nullopt;
     }
 
@@ -2222,7 +2223,7 @@ static std::optional<Action> processKeyAction(const String& id, JSON::Object& ac
     else if (subtype == "keyDown"_s)
         actionSubtype = Action::Subtype::KeyDown;
     else {
-        errorMessage = String("The parameter 'type' of key action is invalid"_s);
+        errorMessage = String("The 'type' parameter for the key action is invalid"_s);
         return std::nullopt;
     }
 
@@ -2237,12 +2238,12 @@ static std::optional<Action> processKeyAction(const String& id, JSON::Object& ac
     case Action::Subtype::KeyDown: {
         auto keyValue = actionItem.getValue("value"_s);
         if (!keyValue) {
-            errorMessage = String("The paramater 'value' is missing for key up/down action"_s);
+            errorMessage = String("The 'value' parameter for the key up/down action is missing "_s);
             return std::nullopt;
         }
         auto key = keyValue->asString();
         if (key.isEmpty()) {
-            errorMessage = String("The paramater 'value' is invalid for key up/down action"_s);
+            errorMessage = String("The 'value' parameter for the key up/down action is invalid"_s);
             return std::nullopt;
         }
         // FIXME: check single unicode code point.
@@ -2276,12 +2277,14 @@ static MouseButton actionMouseButton(unsigned button)
     return MouseButton::None;
 }
 
-static bool processPointerMoveAction(JSON::Object& actionItem, Action& action, std::optional<String>& errorMessage)
+enum class CoordinateType { Fractional, Integral };
+
+static bool processPointerMoveAction(JSON::Object& actionItem, Action& action, std::optional<String>& errorMessage, CoordinateType coordinateType = CoordinateType::Fractional)
 {
     if (auto durationValue = actionItem.getValue("duration"_s)) {
         auto duration = unsignedValue(*durationValue);
         if (!duration) {
-            errorMessage = String("The parameter 'duration' is invalid in action"_s);
+            errorMessage = String("The 'duration' parameter for the action is invalid"_s);
             return false;
         }
         action.duration = duration.value();
@@ -2291,7 +2294,7 @@ static bool processPointerMoveAction(JSON::Object& actionItem, Action& action, s
         if (auto originObject = originValue->asObject()) {
             auto elementID = originObject->getString(Session::webElementIdentifier());
             if (!elementID) {
-                errorMessage = String("The parameter 'origin' is not a valid web element object in action"_s);
+                errorMessage = String("The 'origin' parameter for the action is not a valid web element object"_s);
                 return false;
             }
             action.origin = PointerOrigin { PointerOrigin::Type::Element, elementID };
@@ -2302,7 +2305,7 @@ static bool processPointerMoveAction(JSON::Object& actionItem, Action& action, s
             else if (origin == "pointer"_s)
                 action.origin = PointerOrigin { PointerOrigin::Type::Pointer, std::nullopt };
             else {
-                errorMessage = String("The parameter 'origin' is invalid in action"_s);
+                errorMessage = String("The 'origin' parameter for the action is invalid"_s);
                 return false;
             }
         }
@@ -2311,20 +2314,26 @@ static bool processPointerMoveAction(JSON::Object& actionItem, Action& action, s
 
     if (auto xValue = actionItem.getValue("x"_s)) {
         auto x = valueAsNumberInRange(*xValue, INT_MIN);
-        if (!x) {
-            errorMessage = String("The paramater 'x' is invalid for action"_s);
+        if (!x || (coordinateType == CoordinateType::Integral && x.value() != std::floor(x.value()))) {
+            errorMessage = String("The 'x' parameter for the action is invalid"_s);
             return false;
         }
         action.x = x.value();
+    } else {
+        errorMessage = String("The 'x' parameter for the action is missing"_s);
+        return false;
     }
 
     if (auto yValue = actionItem.getValue("y"_s)) {
         auto y = valueAsNumberInRange(*yValue, INT_MIN);
-        if (!y) {
-            errorMessage = String("The paramater 'y' is invalid for action"_s);
+        if (!y || (coordinateType == CoordinateType::Integral && y.value() != std::floor(y.value()))) {
+            errorMessage = String("The 'y' parameter for the action is invalid"_s);
             return false;
         }
         action.y = y.value();
+    } else {
+        errorMessage = String("The 'y' parameter for the action is missing"_s);
+        return false;
     }
 
     return true;
@@ -2345,7 +2354,7 @@ static std::optional<Action> processPointerAction(const String& id, PointerParam
     else if (subtype == "pointerCancel"_s)
         actionSubtype = Action::Subtype::PointerCancel;
     else {
-        errorMessage = String("The parameter 'type' of pointer action is invalid"_s);
+        errorMessage = String("The 'type' parameter for the pointer action is invalid"_s);
         return std::nullopt;
     }
 
@@ -2361,12 +2370,12 @@ static std::optional<Action> processPointerAction(const String& id, PointerParam
     case Action::Subtype::PointerDown: {
         auto buttonValue = actionItem.getValue("button"_s);
         if (!buttonValue) {
-            errorMessage = String("The paramater 'button' is missing for pointer up/down action"_s);
+            errorMessage = String("The 'button' parameter for the pointer up/down action is missing"_s);
             return std::nullopt;
         }
         auto button = unsignedValue(*buttonValue);
         if (!button) {
-            errorMessage = String("The paramater 'button' is invalid for pointer up/down action"_s);
+            errorMessage = String("The 'button' parameter for the pointer up/down action is invalid"_s);
             return std::nullopt;
         }
         action.button = actionMouseButton(button.value());
@@ -2396,7 +2405,7 @@ static std::optional<Action> processWheelAction(const String& id, JSON::Object& 
     else if (subtype == "scroll"_s)
         actionSubtype = Action::Subtype::Scroll;
     else {
-        errorMessage = String("The parameter 'type' of wheel action is invalid"_s);
+        errorMessage = String("The 'type' parameter for the wheel action is invalid"_s);
         return std::nullopt;
     }
 
@@ -2408,25 +2417,31 @@ static std::optional<Action> processWheelAction(const String& id, JSON::Object& 
             return std::nullopt;
         break;
     case Action::Subtype::Scroll:
-        if (!processPointerMoveAction(actionItem, action, errorMessage))
+        if (!processPointerMoveAction(actionItem, action, errorMessage, CoordinateType::Integral))
             return std::nullopt;
 
         if (auto deltaXValue = actionItem.getValue("deltaX"_s)) {
             auto deltaX = valueAsNumberInRange(*deltaXValue, INT_MIN);
-            if (!deltaX) {
-                errorMessage = String("The paramater 'deltaX' is invalid for action"_s);
+            if (!deltaX || deltaX.value() != std::floor(deltaX.value())) {
+                errorMessage = String("The 'deltaX' parameter for the action is invalid"_s);
                 return std::nullopt;
             }
             action.deltaX = deltaX.value();
+        } else {
+            errorMessage = String("The 'deltaX' parameter for the action is missing"_s);
+            return std::nullopt;
         }
 
         if (auto deltaYValue = actionItem.getValue("deltaY"_s)) {
             auto deltaY = valueAsNumberInRange(*deltaYValue, INT_MIN);
-            if (!deltaY) {
-                errorMessage = String("The paramater 'deltaY' is invalid for action"_s);
+            if (!deltaY || deltaY.value() != std::floor(deltaY.value())) {
+                errorMessage = String("The 'deltaY' parameter for the action is invalid"_s);
                 return std::nullopt;
             }
             action.deltaY = deltaY.value();
+        } else {
+            errorMessage = String("The 'deltaY' parameter for the action is missing"_s);
+            return std::nullopt;
         }
         break;
     case Action::Subtype::KeyUp:
@@ -2466,7 +2481,7 @@ static std::optional<PointerParameters> processPointerParameters(JSON::Object& a
     else if (pointerType == "touch"_s)
         parameters.pointerType = PointerType::Touch;
     else {
-        errorMessage = String("The parameter 'pointerType' in action sequence pointer parameters is invalid"_s);
+        errorMessage = String("The 'pointerType' parameter in the pointer parameters of the action sequence is invalid"_s);
         return std::nullopt;
     }
 
@@ -2492,13 +2507,13 @@ static std::optional<Vector<Action>> processInputActionSequence(Session& session
     else if (type == "none"_s)
         inputSourceType = InputSource::Type::None;
     else {
-        errorMessage = String("The parameter 'type' is invalid or missing in action sequence"_s);
+        errorMessage = String("The 'type' parameter in the action sequence is invalid or missing"_s);
         return std::nullopt;
     }
 
     auto id = actionSequence->getString("id"_s);
     if (!id) {
-        errorMessage = String("The parameter 'id' is invalid or missing in action sequence"_s);
+        errorMessage = String("The 'id' parameter in the action sequence is invalid or missing"_s);
         return std::nullopt;
     }
 
@@ -2525,7 +2540,7 @@ static std::optional<Vector<Action>> processInputActionSequence(Session& session
 
     auto actionItems = actionSequence->getArray("actions"_s);
     if (!actionItems) {
-        errorMessage = String("The parameter 'actions' is invalid or not present in action sequence"_s);
+        errorMessage = String("The 'actions' parameter in the action sequence is invalid or not present"_s);
         return std::nullopt;
     }
 
@@ -2534,7 +2549,7 @@ static std::optional<Vector<Action>> processInputActionSequence(Session& session
     for (unsigned i = 0; i < actionItemsLength; ++i) {
         auto actionItem = actionItems->get(i)->asObject();
         if (!actionItem) {
-            errorMessage = String("An action in action sequence is not an object"_s);
+            errorMessage = String("An action in the action sequence is not an object"_s);
             return std::nullopt;
         }
 
@@ -2565,7 +2580,7 @@ void WebDriverService::performActions(RefPtr<JSON::Object>&& parameters, Functio
 
     auto actionsArray = parameters->getArray("actions"_s);
     if (!actionsArray) {
-        completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidArgument, String("The paramater 'actions' is invalid or not present"_s)));
+        completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidArgument, String("The 'actions' parameter is invalid or not present"_s)));
         return;
     }
 
