@@ -125,7 +125,7 @@ static RetainPtr<NSSet> toPKContactFields(const WebCore::ApplePaySessionPaymentR
     if (contactFields.phoneticName)
         result.append(PKContactFieldPhoneticName);
 
-    return adoptNS([[NSSet alloc] initWithObjects:result.data() count:result.size()]);
+    return adoptNS([[NSSet alloc] initWithObjects:result.span().data() count:result.size()]);
 }
 
 PKMerchantCapability toPKMerchantCapabilities(const WebCore::ApplePaySessionPaymentRequest::MerchantCapabilities& merchantCapabilities)

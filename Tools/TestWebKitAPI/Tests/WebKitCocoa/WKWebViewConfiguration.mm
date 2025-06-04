@@ -184,7 +184,7 @@ TEST(WebKit, ConfigurationHTTPSUpgrade)
         if (requestBytes.size() <= strlen(string))
             return;
         requestBytes[strlen(string)] = 0;
-        EXPECT_WK_STREQ(requestBytes.data(), string);
+        EXPECT_WK_STREQ(requestBytes.span().data(), string);
     };
 
     runTest(true);

@@ -49,6 +49,7 @@
 #import <wtf/HashMap.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/RunLoop.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/Threading.h>
 #import <wtf/Vector.h>
 #import <wtf/WeakObjCPtr.h>
@@ -1206,7 +1207,7 @@ TEST(WebKit, OriginHeaderWithCORSDisablingPatternsInUnrelatedWebView)
                 auto html = "<head><link rel='modulepreload' href='https://webkit.org/module'></head>"_s;
                 connection.send(HTTPResponse(html).serialize());
             } else if (path == "/module"_s) {
-                EXPECT_TRUE(strnstr(requestBytes.data(), "Origin: https://example.com\r\n", requestBytes.size()));
+                EXPECT_TRUE(contains(requestBytes.span(), "Origin: https://example.com\r\n"_span));
                 done = true;
             }
         });

@@ -45,26 +45,26 @@ TEST(WTF_StringCommon, Find8NonASCII)
     EXPECT_FALSE(WTF::find8NonASCII(vector.subspan(0, 4096)));
 
     vector[4095] = 0x80;
-    EXPECT_EQ(WTF::find8NonASCII(vector.subspan(0, 4096)) - vector.data(), 4095);
+    EXPECT_EQ(WTF::find8NonASCII(vector.subspan(0, 4096)) - vector.span().data(), 4095);
     for (unsigned i = 0; i < 16; ++i)
         EXPECT_FALSE(WTF::find8NonASCII(vector.subspan(0, 4095 - i)));
 
     vector[1024] = 0x80;
-    EXPECT_EQ(WTF::find8NonASCII(vector.subspan(0, 4096)) - vector.data(), 1024);
+    EXPECT_EQ(WTF::find8NonASCII(vector.subspan(0, 4096)) - vector.span().data(), 1024);
     EXPECT_FALSE(WTF::find8NonASCII(vector.subspan(0, 1023)));
 
     vector[1024] = 0xff;
-    EXPECT_EQ(WTF::find8NonASCII(vector.subspan(0, 4096)) - vector.data(), 1024);
+    EXPECT_EQ(WTF::find8NonASCII(vector.subspan(0, 4096)) - vector.span().data(), 1024);
     EXPECT_FALSE(WTF::find8NonASCII(vector.subspan(0, 1023)));
 
     vector[1024] = 0x7f;
-    EXPECT_EQ(WTF::find8NonASCII(vector.subspan(0, 4096)) - vector.data(), 4095);
+    EXPECT_EQ(WTF::find8NonASCII(vector.subspan(0, 4096)) - vector.span().data(), 4095);
 
     vector[0] = 0xff;
-    EXPECT_EQ(WTF::find8NonASCII(vector.subspan(0, 4096)) - vector.data(), 0);
+    EXPECT_EQ(WTF::find8NonASCII(vector.subspan(0, 4096)) - vector.span().data(), 0);
     for (int i = 0; i < 16; ++i) {
         vector[i] = 0xff;
-        EXPECT_EQ(WTF::find8NonASCII(vector.subspan(i, 4096 - i)) - vector.data(), i);
+        EXPECT_EQ(WTF::find8NonASCII(vector.subspan(i, 4096 - i)) - vector.span().data(), i);
     }
 }
 
@@ -76,26 +76,26 @@ TEST(WTF_StringCommon, Find16NonASCII)
     EXPECT_FALSE(WTF::find16NonASCII(vector.subspan(0, 4096)));
 
     vector[4095] = 0x80;
-    EXPECT_EQ(WTF::find16NonASCII(vector.subspan(0, 4096)) - vector.data(), 4095);
+    EXPECT_EQ(WTF::find16NonASCII(vector.subspan(0, 4096)) - vector.span().data(), 4095);
     for (unsigned i = 0; i < 16; ++i)
         EXPECT_FALSE(WTF::find16NonASCII(vector.subspan(0, 4095 - i)));
 
     vector[1024] = 0x80;
-    EXPECT_EQ(WTF::find16NonASCII(vector.subspan(0, 4096)) - vector.data(), 1024);
+    EXPECT_EQ(WTF::find16NonASCII(vector.subspan(0, 4096)) - vector.span().data(), 1024);
     EXPECT_FALSE(WTF::find16NonASCII(vector.subspan(0, 1023)));
 
     vector[1024] = 0xff;
-    EXPECT_EQ(WTF::find16NonASCII(vector.subspan(0, 4096)) - vector.data(), 1024);
+    EXPECT_EQ(WTF::find16NonASCII(vector.subspan(0, 4096)) - vector.span().data(), 1024);
     EXPECT_FALSE(WTF::find16NonASCII(vector.subspan(0, 1023)));
 
     vector[1024] = 0x7f;
-    EXPECT_EQ(WTF::find16NonASCII(vector.subspan(0, 4096)) - vector.data(), 4095);
+    EXPECT_EQ(WTF::find16NonASCII(vector.subspan(0, 4096)) - vector.span().data(), 4095);
 
     vector[0] = 0xff;
-    EXPECT_EQ(WTF::find16NonASCII(vector.subspan(0, 4096)) - vector.data(), 0);
+    EXPECT_EQ(WTF::find16NonASCII(vector.subspan(0, 4096)) - vector.span().data(), 0);
     for (int i = 0; i < 16; ++i) {
         vector[i] = 0xff;
-        EXPECT_EQ(WTF::find16NonASCII(vector.subspan(i, 4096 - i)) - vector.data(), i);
+        EXPECT_EQ(WTF::find16NonASCII(vector.subspan(i, 4096 - i)) - vector.span().data(), i);
     }
 }
 #endif

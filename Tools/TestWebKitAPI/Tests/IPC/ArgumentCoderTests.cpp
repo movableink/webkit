@@ -97,7 +97,7 @@ public:
 
     std::unique_ptr<IPC::Decoder> createDecoder() const
     {
-        auto decoder = makeUnique<IPC::Decoder>(std::span { m_impl->buffer.data(), m_impl->buffer.size() }, 0);
+        auto decoder = makeUnique<IPC::Decoder>(m_impl->buffer.span(), 0);
         return decoder;
     }
 

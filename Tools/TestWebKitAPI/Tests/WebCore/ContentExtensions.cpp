@@ -154,10 +154,10 @@ public:
     const CompiledContentExtensionData& data() { return m_data; };
 
 private:
-    std::span<const uint8_t> serializedActions() const final { return { m_data.actions.data(), m_data.actions.size() }; }
-    std::span<const uint8_t> urlFiltersBytecode() const final { return { m_data.urlFilters.data(), m_data.urlFilters.size() }; }
-    std::span<const uint8_t> topURLFiltersBytecode() const final { return { m_data.topURLFilters.data(), m_data.topURLFilters.size() }; }
-    std::span<const uint8_t> frameURLFiltersBytecode() const final { return { m_data.frameURLFilters.data(), m_data.frameURLFilters.size() }; }
+    std::span<const uint8_t> serializedActions() const final { return m_data.actions.span(); }
+    std::span<const uint8_t> urlFiltersBytecode() const final { return m_data.urlFilters.span(); }
+    std::span<const uint8_t> topURLFiltersBytecode() const final { return m_data.topURLFilters.span(); }
+    std::span<const uint8_t> frameURLFiltersBytecode() const final { return m_data.frameURLFilters.span(); }
 
     InMemoryCompiledContentExtension(CompiledContentExtensionData&& data)
         : m_data(WTFMove(data))
@@ -579,7 +579,7 @@ TEST_F(ContentExtensionTest, SearchSuffixesWithIdenticalActionAreMerged)
     Vector<ContentExtensions::DFABytecode> bytecode;
     ContentExtensions::DFABytecodeCompiler compiler(dfa, bytecode);
     compiler.compile();
-    DFABytecodeInterpreter interpreter({ bytecode.data(), bytecode.size() });
+    DFABytecodeInterpreter interpreter(bytecode.span());
     compareContents(interpreter.interpret("foo.org"_s, 0), { 0 });
     compareContents(interpreter.interpret("ba.org"_s, 0), { 0 });
     compareContents(interpreter.interpret("bar.org"_s, 0), { });
@@ -605,7 +605,7 @@ TEST_F(ContentExtensionTest, SearchSuffixesWithDistinguishableActionAreNotMerged
     Vector<ContentExtensions::DFABytecode> bytecode;
     ContentExtensions::DFABytecodeCompiler compiler(dfa, bytecode);
     compiler.compile();
-    DFABytecodeInterpreter interpreter({ bytecode.data(), bytecode.size() });
+    DFABytecodeInterpreter interpreter(bytecode.span());
     compareContents(interpreter.interpret("foo.org"_s, 0), { 0 });
     compareContents(interpreter.interpret("ba.org"_s, 0), { 1 });
     compareContents(interpreter.interpret("bar.org"_s, 0), { });
@@ -1125,7 +1125,7 @@ TEST_F(ContentExtensionTest, UselessTermsMatchingEverythingAreEliminated)
     Vector<ContentExtensions::DFABytecode> bytecode;
     ContentExtensions::DFABytecodeCompiler compiler(dfa, bytecode);
     compiler.compile();
-    DFABytecodeInterpreter interpreter({ bytecode.data(), bytecode.size() });
+    DFABytecodeInterpreter interpreter(bytecode.span());
     compareContents(interpreter.interpret("eb"_s, 0), { });
     compareContents(interpreter.interpret("we"_s, 0), { });
     compareContents(interpreter.interpret("weeb"_s, 0), { });
@@ -1752,7 +1752,7 @@ TEST_F(ContentExtensionTest, SplittingLargeNFAs)
             combinedBytecode.appendVector(bytecode);
         }
         
-        DFABytecodeInterpreter interpreter({ combinedBytecode.data(), combinedBytecode.size() });
+        DFABytecodeInterpreter interpreter(combinedBytecode.span());
         
         EXPECT_EQ(interpreter.interpret("ABBBX"_s, 0).size(), 1ull);
         EXPECT_EQ(interpreter.interpret("ACCCX"_s, 0).size(), 1ull);
@@ -3065,7 +3065,7 @@ TEST_F(ContentExtensionTest, Serialization)
         Vector<uint8_t> buffer;
         action.serialize(buffer);
         EXPECT_EQ(expectedSerializedBufferLength, buffer.size());
-        auto deserialized = RedirectAction::deserialize({ buffer.data(), buffer.size() });
+        auto deserialized = RedirectAction::deserialize(buffer.span());
         EXPECT_EQ(deserialized, action);
     };
     checkRedirectActionSerialization({ { RedirectAction::ExtensionPathAction { "extensionPath"_s } } }, 18);
@@ -3095,7 +3095,7 @@ TEST_F(ContentExtensionTest, Serialization)
     Vector<uint8_t> modifyHeadersBuffer;
     modifyHeaders.serialize(modifyHeadersBuffer);
     EXPECT_EQ(modifyHeadersBuffer.size(), 59u);
-    auto deserializedModifyHeaders = ModifyHeadersAction::deserialize({ modifyHeadersBuffer.data(), modifyHeadersBuffer.size() });
+    auto deserializedModifyHeaders = ModifyHeadersAction::deserialize(modifyHeadersBuffer.span());
     EXPECT_EQ(modifyHeaders, deserializedModifyHeaders);
 }
 

@@ -42,7 +42,7 @@ TEST(WTF_Vector, Basic)
 {
     Vector<int> intVector;
     EXPECT_TRUE(intVector.isEmpty());
-    EXPECT_EQ(nullptr, intVector.data());
+    EXPECT_EQ(nullptr, intVector.span().data());
     EXPECT_EQ(0U, intVector.size());
     EXPECT_EQ(0U, intVector.capacity());
 
@@ -56,7 +56,7 @@ TEST(WTF_Vector, ZeroSize)
 {
     Vector<int> intVector(0);
     EXPECT_TRUE(intVector.isEmpty());
-    EXPECT_EQ(nullptr, intVector.data());
+    EXPECT_EQ(nullptr, intVector.span().data());
     EXPECT_EQ(0U, intVector.size());
     EXPECT_EQ(0U, intVector.capacity());
 
@@ -68,7 +68,7 @@ TEST(WTF_Vector, ZeroSize)
     intVector.append(0);
     intVector.removeLast();
     EXPECT_TRUE(intVector.isEmpty());
-    EXPECT_NE(nullptr, intVector.data());
+    EXPECT_NE(nullptr, intVector.span().data());
     EXPECT_EQ(0U, intVector.size());
     EXPECT_NE(0U, intVector.capacity());
 

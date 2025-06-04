@@ -42,6 +42,7 @@
 #import <WebKit/_WKContentRuleListAction.h>
 #import <WebKit/_WKWebsiteDataStoreConfiguration.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/Vector.h>
 #import <wtf/text/WTFString.h>
 
@@ -372,8 +373,7 @@ TEST_F(WKContentRuleListStoreTest, CrossOriginCookieBlocking)
                     if (path == "/org"_s)
                         return HTTPResponse("<script>fetch('https://example.com/cookie-check', {credentials: 'include'})</script>"_s);
                     if (path == "/cookie-check"_s) {
-                        auto cookieHeader = "Cookie: testCookie=42";
-                        requestHadCookieResult = memmem(request.data(), request.size(), cookieHeader, strlen(cookieHeader));
+                        requestHadCookieResult = contains(request.span(), "Cookie: testCookie=42"_span);
                         return HTTPResponse("hi"_s);
                     }
                     RELEASE_ASSERT_NOT_REACHED();

@@ -41,6 +41,7 @@
 #import <wtf/ProcessPrivilege.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/Seconds.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/text/MakeString.h>
 #import <wtf/text/WTFString.h>
 
@@ -847,8 +848,8 @@ TEST(WKHTTPCookieStore, WebSocketCookies)
                 "Set-Cookie: SameSite_Strict=1; SameSite=Strict\r\n"
                 "\r\n"_s);
         } else if (path == "/websocket"_s) {
-            EXPECT_TRUE(strnstr(request.data(), "Host: 127.0.0.1:", request.size()));
-            EXPECT_FALSE(strnstr(request.data(), "Cookie:", request.size()));
+            EXPECT_TRUE(contains(request.span(), "Host: 127.0.0.1:"_span));
+            EXPECT_FALSE(contains(request.span(), "Cookie:"_span));
             receivedThirdRequest = true;
         } else if (path == "/ninja"_s) {
             auto html = [NSString stringWithFormat:@"<script>new WebSocket('ws://127.0.0.1:%d/websocket')</script>", serverPort];
@@ -896,16 +897,16 @@ TEST(WKHTTPCookieStore, WebSocketCookiesFromRedirect)
                     "Content-Length: 0\r\n"
                     "\r\n"_s));
         } else if (path == "/destination"_s) {
-            EXPECT_TRUE(strnstr(request.data(), "Host: 127.0.0.1:", request.size()));
-            EXPECT_FALSE(strnstr(request.data(), "Cookie:", request.size()));
+            EXPECT_TRUE(contains(request.span(), "Host: 127.0.0.1:"_span));
+            EXPECT_FALSE(contains(request.span(), "Cookie:"_span));
             co_await connection.awaitableSend(
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Length: 0\r\n"
                 "\r\n"_s);
         } else if (path == "/websocket"_s) {
-            EXPECT_TRUE(strnstr(request.data(), "Host: localhost:", request.size()));
-            EXPECT_FALSE(strnstr(request.data(), "Cookie:", request.size()));
-            EXPECT_TRUE(strnstr(request.data(), "Origin: http://127.0.0.1:", request.size()));
+            EXPECT_TRUE(contains(request.span(), "Host: localhost:"_span));
+            EXPECT_FALSE(contains(request.span(), "Cookie:"_span));
+            EXPECT_TRUE(contains(request.span(), "Origin: http://127.0.0.1:"_span));
             receivedWebSocket = true;
         } else if (path == "/ninja"_s) {
             auto html = [NSString stringWithFormat:@"<script>new WebSocket('ws://localhost:%d/websocket')</script>", serverPort];
@@ -953,13 +954,13 @@ TEST(WKHTTPCookieStore, WebSocketCookiesThroughRedirect)
                     "Content-Length: 0\r\n"
                     "\r\n"_s));
         } else if (path == "/websocket"_s) {
-            EXPECT_TRUE(strnstr(request.data(), "Host: localhost:", request.size()));
-            EXPECT_FALSE(strnstr(request.data(), "Cookie:", request.size()));
-            EXPECT_TRUE(strnstr(request.data(), "Origin: http://127.0.0.1:", request.size()));
+            EXPECT_TRUE(contains(request.span(), "Host: localhost:"_span));
+            EXPECT_FALSE(contains(request.span(), "Cookie:"_span));
+            EXPECT_TRUE(contains(request.span(), "Origin: http://127.0.0.1:"_span));
             receivedWebSocket = true;
         } else if (path == "/ninja"_s) {
-            EXPECT_TRUE(strnstr(request.data(), "Host: 127.0.0.1:", request.size()));
-            EXPECT_FALSE(strnstr(request.data(), "Cookie:", request.size()));
+            EXPECT_TRUE(contains(request.span(), "Host: 127.0.0.1:"_span));
+            EXPECT_FALSE(contains(request.span(), "Cookie:"_span));
             auto html = [NSString stringWithFormat:@"<script>new WebSocket('ws://localhost:%d/websocket')</script>", serverPort];
             co_await connection.awaitableSend(HTTPResponse(html).serialize());
         } else
@@ -995,13 +996,13 @@ TEST(WKHTTPCookieStore, WebSocketSetCookiesThroughFirstPartyRedirect)
                     "Content-Length: 0\r\n"
                     "\r\n"_s));
         } else if (path == "/websocket"_s) {
-            EXPECT_TRUE(strnstr(request.data(), "Host: localhost:", request.size()));
-            EXPECT_FALSE(strnstr(request.data(), "Cookie:", request.size()));
-            EXPECT_FALSE(strnstr(request.data(), "Origin: http://127.0.0.1:", request.size()));
+            EXPECT_TRUE(contains(request.span(), "Host: localhost:"_span));
+            EXPECT_FALSE(contains(request.span(), "Cookie:"_span));
+            EXPECT_FALSE(contains(request.span(), "Origin: http://127.0.0.1:"_span));
             receivedWebSocket = true;
         } else if (path == "/ninja"_s) {
-            EXPECT_TRUE(strnstr(request.data(), "Host: 127.0.0.1:", request.size()));
-            EXPECT_FALSE(strnstr(request.data(), "Cookie:", request.size()));
+            EXPECT_TRUE(contains(request.span(), "Host: 127.0.0.1:"_span));
+            EXPECT_FALSE(contains(request.span(), "Cookie:"_span));
             auto html = [NSString stringWithFormat:@"<script>new WebSocket('ws://127.0.0.1:%d/redirect')</script>", serverPort];
             co_await connection.awaitableSend(HTTPResponse(html).serialize());
         } else
@@ -1051,12 +1052,12 @@ TEST(WKHTTPCookieStore, WebSocketSetCookiesThroughRedirectToThirdParty)
                     "Content-Length: 0\r\n"
                     "\r\n"_s));
         } else if (path == "/websocket"_s) {
-            EXPECT_TRUE(strnstr(request.data(), "Host: localhost:", request.size()));
-            EXPECT_FALSE(strnstr(request.data(), "Cookie:", request.size()));
+            EXPECT_TRUE(contains(request.span(), "Host: localhost:"_span));
+            EXPECT_FALSE(contains(request.span(), "Cookie:"_span));
             receivedWebSocket = true;
         } else if (path == "/ninja"_s) {
-            EXPECT_TRUE(strnstr(request.data(), "Host: 127.0.0.1:", request.size()));
-            EXPECT_FALSE(strnstr(request.data(), "Cookie:", request.size()));
+            EXPECT_TRUE(contains(request.span(), "Host: 127.0.0.1:"_span));
+            EXPECT_FALSE(contains(request.span(), "Cookie:"_span));
             auto html = [NSString stringWithFormat:@"<script>new WebSocket('ws://127.0.0.1:%d/redirect')</script>", serverPort];
             co_await connection.awaitableSend(HTTPResponse(html).serialize());
         } else

@@ -117,7 +117,7 @@ static WKRetainPtr<WKDictionaryRef> createWKDictionary(std::initializer_list<std
         values.append(pair.second.get());
         strings.append(WTFMove(key));
     }
-    return adoptWK(WKDictionaryCreate(keys.data(), values.data(), keys.size()));
+    return adoptWK(WKDictionaryCreate(keys.span().data(), values.span().data(), keys.size()));
 }
 
 template<typename T> static WKRetainPtr<WKTypeRef> postSynchronousMessageWithReturnValue(const char* name, const WKRetainPtr<T>& value)
@@ -1609,7 +1609,7 @@ static WKRetainPtr<WKDictionaryRef> captureDeviceProperties(JSContextRef context
         JSPropertyNameArrayRelease(propertyNameArray);
     }
 
-    return adoptWK(WKDictionaryCreate(keys.data(), values.data(), keys.size()));
+    return adoptWK(WKDictionaryCreate(keys.span().data(), values.span().data(), keys.size()));
 }
 
 void TestRunner::addMockCameraDevice(JSContextRef context, JSStringRef persistentId, JSStringRef label, JSValueRef properties)

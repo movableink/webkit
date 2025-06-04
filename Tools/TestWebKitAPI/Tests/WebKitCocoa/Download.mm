@@ -59,6 +59,7 @@
 #import <wtf/MainThread.h>
 #import <wtf/MonotonicTime.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/WeakObjCPtr.h>
 #import <wtf/text/MakeString.h>
 #import <wtf/text/WTFString.h>
@@ -1262,7 +1263,7 @@ static TestWebKitAPI::HTTPServer downloadTestServer(IncludeETag includeETag = In
             break;
         case 2:
             connection.receiveHTTPRequest([=](Vector<char>&& request) {
-                EXPECT_TRUE(strnstr(request.data(), "Range: bytes=5000-\r\n", request.size()));
+                EXPECT_TRUE(contains(request.span(), "Range: bytes=5000-\r\n"_span));
                 connection.send(makeString(
                     "HTTP/1.1 206 Partial Content\r\n"
                     "ETag: test\r\n"
@@ -1945,7 +1946,7 @@ TEST(WKDownload, ResumeWithoutInitialDataOnDisk)
             break;
         case 2:
             connection.receiveHTTPRequest([=](Vector<char>&& request) {
-                EXPECT_FALSE(strnstr(request.data(), "Range", request.size()));
+                EXPECT_FALSE(contains(request.span(), "Range"_span));
                 connection.send(makeString(
                     "HTTP/1.1 200 OK\r\n"
                     "ETag: test\r\n"
@@ -1988,7 +1989,7 @@ TEST(WKDownload, ResumeWithExtraInitialDataOnDisk)
             break;
         case 2:
             connection.receiveHTTPRequest([=](Vector<char>&& request) {
-                EXPECT_TRUE(strnstr(request.data(), "Range: bytes=5000-\r\n", request.size()));
+                EXPECT_TRUE(contains(request.span(), "Range: bytes=5000-\r\n"_span));
                 connection.send(makeString(
                     "HTTP/1.1 206 Partial Content\r\n"
                     "ETag: test\r\n"

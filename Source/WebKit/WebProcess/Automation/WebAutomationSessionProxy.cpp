@@ -92,7 +92,7 @@ static JSObjectRef toJSArray(JSContextRef context, const Vector<T>& data, JSValu
         return convertedValue;
     });
 
-    JSObjectRef array = JSObjectMakeArray(context, convertedData.size(), convertedData.data(), exception);
+    JSObjectRef array = JSObjectMakeArray(context, convertedData.size(), convertedData.span().data(), exception);
 
     for (auto& convertedValue : convertedData)
         JSValueUnprotect(context, convertedValue);

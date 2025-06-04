@@ -88,9 +88,9 @@ std::pair<Vector<uint8_t>, Vector<uint8_t>> credentialIdAndCosePubKeyForPrivateK
     {
         // COSE Encoding
         Vector<uint8_t> x(ES256FieldElementLength);
-        [nsPublicKeyData getBytes: x.data() range:NSMakeRange(1, ES256FieldElementLength)];
+        [nsPublicKeyData getBytes:x.mutableSpan().data() range:NSMakeRange(1, ES256FieldElementLength)];
         Vector<uint8_t> y(ES256FieldElementLength);
-        [nsPublicKeyData getBytes: y.data() range:NSMakeRange(1 + ES256FieldElementLength, ES256FieldElementLength)];
+        [nsPublicKeyData getBytes:y.mutableSpan().data() range:NSMakeRange(1 + ES256FieldElementLength, ES256FieldElementLength)];
         cosePublicKey = encodeES256PublicKeyAsCBOR(WTFMove(x), WTFMove(y));
     }
     return std::pair { credentialId, cosePublicKey };
@@ -128,8 +128,8 @@ RetainPtr<SecKeyRef> privateKeyFromBase64(const String& base64PrivateKey)
 
 Vector<uint8_t> signatureForPrivateKey(RetainPtr<SecKeyRef> privateKey, const Vector<uint8_t>& authData, const Vector<uint8_t>& clientDataHash)
 {
-    RetainPtr dataToSign = adoptNS([[NSMutableData alloc] initWithBytes:authData.data() length:authData.size()]);
-    [dataToSign appendBytes:clientDataHash.data() length:clientDataHash.size()];
+    RetainPtr dataToSign = adoptNS([[NSMutableData alloc] initWithBytes:authData.span().data() length:authData.size()]);
+    [dataToSign appendBytes:clientDataHash.span().data() length:clientDataHash.size()];
     RetainPtr<CFDataRef> signature;
     {
         CFErrorRef errorRef = nullptr;

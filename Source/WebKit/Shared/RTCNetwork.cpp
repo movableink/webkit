@@ -49,7 +49,7 @@ RTCNetwork::RTCNetwork(Vector<char>&& name, Vector<char>&& description, IPAddres
 
 rtc::Network RTCNetwork::value() const
 {
-    rtc::Network network({ name.data(), name.size() }, { description.data(), description.size() }, prefix.rtcAddress(), prefixLength, rtc::AdapterType(type));
+    rtc::Network network({ name.span().data(), name.size() }, { description.span().data(), description.size() }, prefix.rtcAddress(), prefixLength, rtc::AdapterType(type));
     network.set_id(id);
     network.set_preference(preference);
     network.set_active(active);
@@ -89,7 +89,7 @@ rtc::SocketAddress SocketAddress::rtcAddress() const
     rtc::SocketAddress result;
     result.SetPort(port);
     result.SetScopeID(scopeID);
-    result.SetIP({ hostname.data(), hostname.size() });
+    result.SetIP({ hostname.span().data(), hostname.size() });
     if (ipAddress)
         result.SetResolvedIP(ipAddress->rtcAddress());
     return result;

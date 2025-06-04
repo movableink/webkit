@@ -539,8 +539,8 @@ bool WebSocketChannel::processFrame()
         return false;
     }
 
-    ASSERT(m_buffer.data() < frameEnd);
-    ASSERT(frameEnd <= m_buffer.data() + m_buffer.size());
+    ASSERT(m_buffer.begin() < frameEnd);
+    ASSERT(frameEnd <= m_buffer.end());
 
     auto inflateResult = m_deflateFramer.inflate(frame);
     if (!inflateResult->succeeded()) {
@@ -594,7 +594,7 @@ bool WebSocketChannel::processFrame()
             return false;
         }
         m_continuousFrameData.append(frame.payload);
-        skipBuffer(frameEnd - m_buffer.data());
+        skipBuffer(frameEnd - m_buffer.begin());
         if (frame.final) {
             // onmessage handler may eventually call the other methods of this channel,
             // so we should pretend that we have finished to read this frame and
@@ -624,7 +624,7 @@ bool WebSocketChannel::processFrame()
                 message = String::fromUTF8(frame.payload);
             else
                 message = emptyString();
-            skipBuffer(frameEnd - m_buffer.data());
+            skipBuffer(frameEnd - m_buffer.begin());
             if (message.isNull())
                 fail("Could not decode a text frame as UTF-8."_s);
             else
@@ -634,21 +634,21 @@ bool WebSocketChannel::processFrame()
             m_continuousFrameOpCode = WebSocketFrame::OpCodeText;
             ASSERT(m_continuousFrameData.isEmpty());
             m_continuousFrameData.append(frame.payload);
-            skipBuffer(frameEnd - m_buffer.data());
+            skipBuffer(frameEnd - m_buffer.begin());
         }
         break;
 
     case WebSocketFrame::OpCodeBinary:
         if (frame.final) {
             Vector<uint8_t> binaryData(frame.payload);
-            skipBuffer(frameEnd - m_buffer.data());
+            skipBuffer(frameEnd - m_buffer.begin());
             protectedClient()->didReceiveBinaryData(WTFMove(binaryData));
         } else {
             m_hasContinuousFrame = true;
             m_continuousFrameOpCode = WebSocketFrame::OpCodeBinary;
             ASSERT(m_continuousFrameData.isEmpty());
             m_continuousFrameData.append(frame.payload);
-            skipBuffer(frameEnd - m_buffer.data());
+            skipBuffer(frameEnd - m_buffer.begin());
         }
         break;
 
@@ -671,7 +671,7 @@ bool WebSocketChannel::processFrame()
             m_closeEventReason = String::fromUTF8({ &frame.payload[2], frame.payload.size() - 2 });
         else
             m_closeEventReason = emptyString();
-        skipBuffer(frameEnd - m_buffer.data());
+        skipBuffer(frameEnd - m_buffer.begin());
         m_receivedClosingHandshake = true;
         startClosingHandshake(m_closeEventCode, m_closeEventReason);
         if (m_closing) {
@@ -683,19 +683,19 @@ bool WebSocketChannel::processFrame()
 
     case WebSocketFrame::OpCodePing:
         enqueueRawFrame(WebSocketFrame::OpCodePong, frame.payload);
-        skipBuffer(frameEnd - m_buffer.data());
+        skipBuffer(frameEnd - m_buffer.begin());
         processOutgoingFrameQueue();
         break;
 
     case WebSocketFrame::OpCodePong:
         // A server may send a pong in response to our ping, or an unsolicited pong which is not associated with
         // any specific ping. Either way, there's nothing to do on receipt of pong.
-        skipBuffer(frameEnd - m_buffer.data());
+        skipBuffer(frameEnd - m_buffer.begin());
         break;
 
     default:
         ASSERT_NOT_REACHED();
-        skipBuffer(frameEnd - m_buffer.data());
+        skipBuffer(frameEnd - m_buffer.begin());
         break;
     }
 

@@ -548,9 +548,9 @@ void LocalAuthenticator::continueMakeCredentialAfterUserVerification(SecAccessCo
     {
         // COSE Encoding
         Vector<uint8_t> x(ES256FieldElementLength);
-        [nsPublicKeyData getBytes: x.data() range:NSMakeRange(1, ES256FieldElementLength)];
+        [nsPublicKeyData getBytes:x.mutableSpan().data() range:NSMakeRange(1, ES256FieldElementLength)];
         Vector<uint8_t> y(ES256FieldElementLength);
-        [nsPublicKeyData getBytes: y.data() range:NSMakeRange(1 + ES256FieldElementLength, ES256FieldElementLength)];
+        [nsPublicKeyData getBytes:y.mutableSpan().data() range:NSMakeRange(1 + ES256FieldElementLength, ES256FieldElementLength)];
         cosePublicKey = encodeES256PublicKeyAsCBOR(WTFMove(x), WTFMove(y));
     }
 
@@ -712,8 +712,8 @@ void LocalAuthenticator::continueGetAssertionAfterUserVerification(Ref<WebCore::
         }
         auto privateKey = adoptCF(privateKeyRef);
 
-        RetainPtr dataToSign = adoptNS([[NSMutableData alloc] initWithBytes:authData.data() length:authData.size()]);
-        [dataToSign appendBytes:requestData().hash.data() length:requestData().hash.size()];
+        RetainPtr dataToSign = adoptNS([[NSMutableData alloc] initWithBytes:authData.span().data() length:authData.size()]);
+        [dataToSign appendBytes:requestData().hash.span().data() length:requestData().hash.size()];
 
         CFErrorRef errorRef = nullptr;
         // FIXME: Converting CFTypeRef to SecKeyRef is quite subtle here.

@@ -41,6 +41,7 @@
 #import <pal/spi/cocoa/AuthKitSPI.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/StringPrintStream.h>
 #import <wtf/URL.h>
 #import <wtf/text/MakeString.h>
@@ -887,9 +888,9 @@ TEST(SOAuthorizationRedirect, InterceptionSucceedWith307Simple)
             auto path = HTTPServer::parsePath(request);
             if (path == "/simple2.html"_s) {
                 request.append(0);
-                EXPECT_TRUE(strnstr(request.data(), "POST /simple2.html HTTP/1.1\r\n", request.size()));
-                EXPECT_TRUE(strnstr(request.data(), "\r\nContent-Type: application/x-www-form-urlencoded\r\n", request.size()));
-                EXPECT_TRUE(strnstr(request.data(), "\r\n\r\nname=test", request.size()));
+                EXPECT_TRUE(contains(request.span(), "POST /simple2.html HTTP/1.1\r\n"_span));
+                EXPECT_TRUE(contains(request.span(), "\r\nContent-Type: application/x-www-form-urlencoded\r\n"_span));
+                EXPECT_TRUE(contains(request.span(), "\r\n\r\nname=test"_span));
             }
             co_await connection.awaitableSend(HTTPResponse(SimpleHtml).serialize());
         }
@@ -944,9 +945,9 @@ TEST(SOAuthorizationRedirect, InterceptionSucceedWith307CrossOrigin)
             auto path = HTTPServer::parsePath(request);
             if (path == "/simple2.html"_s) {
                 request.append(0);
-                EXPECT_TRUE(strnstr(request.data(), "POST /simple2.html HTTP/1.1\r\n", request.size()));
-                EXPECT_TRUE(strnstr(request.data(), "\r\nContent-Type: application/x-www-form-urlencoded\r\n", request.size()));
-                EXPECT_TRUE(strnstr(request.data(), "\r\n\r\nname=test", request.size()));
+                EXPECT_TRUE(contains(request.span(), "POST /simple2.html HTTP/1.1\r\n"_span));
+                EXPECT_TRUE(contains(request.span(), "\r\nContent-Type: application/x-www-form-urlencoded\r\n"_span));
+                EXPECT_TRUE(contains(request.span(), "\r\n\r\nname=test"_span));
             }
             co_await connection.awaitableSend(HTTPResponse(SimpleHtml).serialize());
         }
@@ -1002,9 +1003,9 @@ TEST(SOAuthorizationRedirect, InterceptionFailedWith307PUT)
             auto path = HTTPServer::parsePath(request);
             if (path == "/simple2.html"_s) {
                 request.append(0);
-                EXPECT_TRUE(strnstr(request.data(), "POST /simple2.html HTTP/1.1\r\n", request.size()));
-                EXPECT_TRUE(strnstr(request.data(), "\r\nContent-Type: application/x-www-form-urlencoded\r\n", request.size()));
-                EXPECT_TRUE(strnstr(request.data(), "\r\n\r\nname=test", request.size()));
+                EXPECT_TRUE(contains(request.span(), "POST /simple2.html HTTP/1.1\r\n"_span));
+                EXPECT_TRUE(contains(request.span(), "\r\nContent-Type: application/x-www-form-urlencoded\r\n"_span));
+                EXPECT_TRUE(contains(request.span(), "\r\n\r\nname=test"_span));
             }
             co_await connection.awaitableSend(HTTPResponse(SimpleHtml).serialize());
         }

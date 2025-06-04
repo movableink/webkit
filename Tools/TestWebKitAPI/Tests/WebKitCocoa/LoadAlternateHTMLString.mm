@@ -34,6 +34,7 @@
 #import <WebKit/WKFoundation.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/cocoa/NSURLExtras.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
@@ -175,7 +176,7 @@ TEST(WKWebView, LoadHTMLStringOrigin)
     bool done = false;
     HTTPServer server([&](Connection connection) {
         connection.receiveHTTPRequest([&](Vector<char>&& request) {
-            EXPECT_TRUE(strnstr(request.data(), "Origin: custom-scheme://\r\n", request.size()));
+            EXPECT_TRUE(contains(request.span(), "Origin: custom-scheme://\r\n"_span));
             done = true;
         });
     });

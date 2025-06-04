@@ -74,47 +74,45 @@ TEST(WTF, StringHasher_SuperFastHash_VS_WYHash)
     size_t sum = 0;
     dataLogLn("UChar");
     for (size_t size = 2; size < (1 << 16); size *= 2) {
-        Vector<UChar> vector;
-        vector.resize(size);
-        for (unsigned i = 0; i < size; ++i)
-            vector[i] = i & 0x7f;
-        sum += SuperFastHash::computeHashAndMaskTop8Bits(std::span<const UChar> { vector.data(), size });
-        sum += WYHash::computeHashAndMaskTop8Bits(std::span<const UChar> { vector.data(), size });
-        sum += StringHasher::computeHashAndMaskTop8Bits(std::span<const UChar> { vector.data(), size });
+        Vector<UChar> vector(size, [](size_t index) {
+            return index & 0x7f;
+        });
+        sum += SuperFastHash::computeHashAndMaskTop8Bits(vector.span());
+        sum += WYHash::computeHashAndMaskTop8Bits(vector.span());
+        sum += StringHasher::computeHashAndMaskTop8Bits(vector.span());
         auto start = MonotonicTime::now();
         for (unsigned i = 0; i < 1e5; ++i)
-            sum += SuperFastHash::computeHashAndMaskTop8Bits(std::span<const UChar> { vector.data(), size });
+            sum += SuperFastHash::computeHashAndMaskTop8Bits(vector.span());
         dataLogLn("SFH ", size, " -> ", MonotonicTime::now() - start);
         start = MonotonicTime::now();
         for (unsigned i = 0; i < 1e5; ++i)
-            sum += WYHash::computeHashAndMaskTop8Bits(std::span<const UChar> { vector.data(), size });
+            sum += WYHash::computeHashAndMaskTop8Bits(vector.span());
         dataLogLn("WYH ", size, " -> ", MonotonicTime::now() - start);
         start = MonotonicTime::now();
         for (unsigned i = 0; i < 1e5; ++i)
-            sum += StringHasher::computeHashAndMaskTop8Bits(std::span<const UChar> { vector.data(), size });
+            sum += StringHasher::computeHashAndMaskTop8Bits(vector.span());
         dataLogLn("STH ", size, " -> ", MonotonicTime::now() - start);
     }
 
     dataLogLn("LChar");
     for (size_t size = 2; size < (1 << 16); size *= 2) {
-        Vector<LChar> vector;
-        vector.resize(size);
-        for (unsigned i = 0; i < size; ++i)
-            vector[i] = i & 0x7f;
-        sum += SuperFastHash::computeHashAndMaskTop8Bits(std::span<const LChar> { vector.data(), size });
-        sum += WYHash::computeHashAndMaskTop8Bits(std::span<const LChar> { vector.data(), size });
-        sum += StringHasher::computeHashAndMaskTop8Bits(std::span<const LChar> { vector.data(), size });
+        Vector<LChar> vector(size, [](size_t index) {
+            return index & 0x7f;
+        });
+        sum += SuperFastHash::computeHashAndMaskTop8Bits(vector.span());
+        sum += WYHash::computeHashAndMaskTop8Bits(vector.span());
+        sum += StringHasher::computeHashAndMaskTop8Bits(vector.span());
         auto start = MonotonicTime::now();
         for (unsigned i = 0; i < 1e5; ++i)
-            sum += SuperFastHash::computeHashAndMaskTop8Bits(std::span<const LChar> { vector.data(), size });
+            sum += SuperFastHash::computeHashAndMaskTop8Bits(vector.span());
         dataLogLn("SFH ", size, " -> ", MonotonicTime::now() - start);
         start = MonotonicTime::now();
         for (unsigned i = 0; i < 1e5; ++i)
-            sum += WYHash::computeHashAndMaskTop8Bits(std::span<const LChar> { vector.data(), size });
+            sum += WYHash::computeHashAndMaskTop8Bits(vector.span());
         dataLogLn("WYH ", size, " -> ", MonotonicTime::now() - start);
         start = MonotonicTime::now();
         for (unsigned i = 0; i < 1e5; ++i)
-            sum += StringHasher::computeHashAndMaskTop8Bits(std::span<const LChar> { vector.data(), size });
+            sum += StringHasher::computeHashAndMaskTop8Bits(vector.span());
         dataLogLn("STH ", size, " -> ", MonotonicTime::now() - start);
     }
     dataLogLn(sum);

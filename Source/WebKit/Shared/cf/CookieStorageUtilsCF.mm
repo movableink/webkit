@@ -37,8 +37,8 @@ RetainPtr<CFHTTPCookieStorageRef> cookieStorageFromIdentifyingData(const Vector<
     ASSERT(!data.isEmpty());
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanAccessRawCookies));
 
-    auto cookieStorageData = adoptCF(CFDataCreate(kCFAllocatorDefault, data.data(), data.size()));
-    auto cookieStorage = adoptCF(CFHTTPCookieStorageCreateFromIdentifyingData(kCFAllocatorDefault, cookieStorageData.get()));
+    RetainPtr cookieStorageData = toCFData(data.span());
+    RetainPtr cookieStorage = adoptCF(CFHTTPCookieStorageCreateFromIdentifyingData(kCFAllocatorDefault, cookieStorageData.get()));
     ASSERT(cookieStorage);
 
     CFHTTPCookieStorageScheduleWithRunLoop(cookieStorage.get(), [NSURLConnection resourceLoaderRunLoop], kCFRunLoopCommonModes);

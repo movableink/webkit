@@ -508,7 +508,7 @@ TEST(WKWebsiteDataStore, ClearCustomDataStoreNoWebViews)
                     "Hello"_s);
                 break;
             case 2:
-                EXPECT_FALSE(strnstr(request.data(), "Cookie: a=b\r\n", request.size()));
+                EXPECT_FALSE(contains(request.span(), "Cookie: a=b\r\n"_span));
                 connection.send(
                     "HTTP/1.1 200 OK\r\n"
                     "Content-Length: 5\r\n"

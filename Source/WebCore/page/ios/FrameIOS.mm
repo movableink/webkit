@@ -789,7 +789,7 @@ NSArray *LocalFrame::interpretationsForCurrentRoot() const
     }
 
     return createNSArray(interpretations, [] (auto& interpretation) {
-        return adoptNS([[NSString alloc] initWithCharacters:reinterpret_cast<const unichar*>(interpretation.data()) length:interpretation.size()]);
+        return adoptNS([[NSString alloc] initWithCharacters:reinterpret_cast<const unichar*>(interpretation.span().data()) length:interpretation.size()]);
     }).autorelease();
 }
 

@@ -1043,9 +1043,9 @@ static URL currentWorkingDirectory()
 
 #else
     Vector<char> buffer(PATH_MAX);
-    if (!getcwd(buffer.data(), PATH_MAX))
+    if (!getcwd(buffer.mutableSpan().data(), PATH_MAX))
         return { };
-    String directoryString = String::fromUTF8(buffer.data());
+    String directoryString = String::fromUTF8(buffer.span().data());
 #endif
     if (directoryString.isEmpty())
         return { };
@@ -1243,8 +1243,9 @@ static bool fillBufferWithContentsOfFile(FILE* file, Vector& buffer)
         return false;
     if (fseek(file, 0, SEEK_SET) == -1)
         return false;
-    buffer.resize(bufferCapacity + initialSize);
-    size_t readSize = fread(buffer.data() + initialSize, 1, buffer.size(), file);
+    buffer.grow(bufferCapacity + initialSize);
+    auto span = buffer.mutableSpan().subspan(initialSize);
+    size_t readSize = fread(span.data(), 1, span.size(), file);
     return readSize == buffer.size() - initialSize;
 }
 
@@ -1681,7 +1682,7 @@ JSC_DEFINE_HOST_FUNCTION(functionDisassembleBase64, (JSGlobalObject* globalObjec
     if (!decodedVector)
         return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "Invalid character in base64 string argument."_s)));
 
-    auto code = CodePtr<DisassemblyPtrTag>::fromUntaggedPtr(decodedVector->data());
+    auto code = CodePtr<DisassemblyPtrTag>::fromUntaggedPtr(decodedVector->mutableSpan().data());
     StringPrintStream out;
     // prefix with "\n" so the first line has the same whitespace as the rest when displayed from jsc.
     out.print("\n");
@@ -2272,8 +2273,7 @@ JSC_DEFINE_HOST_FUNCTION(functionReadline, (JSGlobalObject* globalObject, CallFr
             break;
         line.append(c);
     }
-    line.append('\0');
-    return JSValue::encode(jsString(globalObject->vm(), String::fromLatin1(line.data())));
+    return JSValue::encode(jsString(globalObject->vm(), String(line.span())));
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionPreciseTime, (JSGlobalObject*, CallFrame*))

@@ -230,7 +230,7 @@ auto SandboxExtension::createHandleForTemporaryFile(StringView prefix, Type type
     ASSERT(!handle.m_sandboxExtension);
     
     Vector<char> path(PATH_MAX);
-    if (!confstr(_CS_DARWIN_USER_TEMP_DIR, path.data(), path.size()))
+    if (!confstr(_CS_DARWIN_USER_TEMP_DIR, path.mutableSpan().data(), path.size()))
         return std::nullopt;
     
     // Shrink the vector.   
@@ -240,19 +240,18 @@ auto SandboxExtension::createHandleForTemporaryFile(StringView prefix, Type type
 
     // Append the file name.
     path.append(prefix.utf8().span());
-    path.append('\0');
 
-    auto pathString = String::fromUTF8(path.data());
+    auto pathString = String::fromUTF8(path.span());
     if (pathString.isNull())
         return std::nullopt;
     
     handle.m_sandboxExtension = SandboxExtensionImpl::create(FileSystem::fileSystemRepresentation(pathString).data(), type);
 
     if (!handle.m_sandboxExtension) {
-        WTFLogAlways("Could not create a sandbox extension for temporary file '%s'", path.data());
+        WTFLogAlways("Could not create a sandbox extension for temporary file '%s'", pathString.utf8().data());
         return std::nullopt;
     }
-    return { { WTFMove(handle), String::fromUTF8(path.data()) } };
+    return { { WTFMove(handle), WTFMove(pathString) } };
 }
 
 auto SandboxExtension::createHandleForGenericExtension(ASCIILiteral extensionClass) -> std::optional<Handle>
