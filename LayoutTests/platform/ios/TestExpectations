@@ -7828,6 +7828,19 @@ imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register-fr
 imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register-from-ServiceWorker.https.html [ Skip ]
 imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register-from-SharedWorker.https.html [ Skip ]
 imported/w3c/web-platform-tests/trusted-types/DedicatedWorker-constructor-from-SharedWorker.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/DedicatedWorker-constructor-from-DedicatedWorker.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/DedicatedWorker-constructor.https.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/DedicatedWorker-eval.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/DedicatedWorker-importScripts.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/DedicatedWorker-setTimeout-setInterval.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/DedicatedWorker-block-eval-function-constructor.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/SharedWorker-block-eval-function-constructor.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/SharedWorker-constructor.https.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/SharedWorker-eval.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/SharedWorker-importScripts.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/SharedWorker-setTimeout-setInterval.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/block-string-assignment-to-DedicatedWorker-setTimeout-setInterval.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/block-string-assignment-to-SharedWorker-setTimeout-setInterval.html [ Skip ]
 
 webkit.org/b/291436 http/tests/security/contentSecurityPolicy/extensions/manifest-v3/default-src/manifest-v3-default-src-block-wildcard.html [ Failure ]
 
@@ -7877,8 +7890,6 @@ webkit.org/b/288518 fast/text/emoji-num-glyphs.html [ Failure ]
 
 # rdar://148254605 (REGRESSION (iOS 18.4): media/sources-fallback-codecs.html is constantly failing.)
 media/sources-fallback-codecs.html [ Failure ]
-
-webkit.org/b/293764 imported/w3c/web-platform-tests/trusted-types/SharedWorker-block-eval-function-constructor.html [ Pass Failure ]
 
 # webkit.org/b/293838 ([macOS] 2x tests in imported/w3c/web-platform-tests/url/ are constant failures (flaky in EWS)
 imported/w3c/web-platform-tests/url/IdnaTestV2.window.html [ Failure ]
