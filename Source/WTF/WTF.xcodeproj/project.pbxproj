@@ -171,6 +171,7 @@
 		93E4A13728F6B75A006AD994 /* UUIDCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = 93E4A13628F6B75A006AD994 /* UUIDCocoa.mm */; };
 		93F1993E19D7958D00C2390B /* StringView.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 93F1993D19D7958D00C2390B /* StringView.cpp */; };
 		941C64A72CA5A2A000A63214 /* RetainReleaseSwift.h in Headers */ = {isa = PBXBuildFile; fileRef = 941C64A62CA5A29400A63214 /* RetainReleaseSwift.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		9758E8F02DDCA639004434FD /* SwiftBridging.h in Headers */ = {isa = PBXBuildFile; fileRef = 9758E8EF2DDCA639004434FD /* SwiftBridging.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		9785729929FAC2BB00350CBA /* ReferenceWrapperVector.h in Headers */ = {isa = PBXBuildFile; fileRef = 9785729829FAC2BB00350CBA /* ReferenceWrapperVector.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		9B5605902D9691ED00FCE33E /* NoVirtualDestructorBase.h in Headers */ = {isa = PBXBuildFile; fileRef = 9B56058F2D9691ED00FCE33E /* NoVirtualDestructorBase.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		9BC70F05176C379D00101DEC /* AtomStringTable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9BC70F04176C379D00101DEC /* AtomStringTable.cpp */; };
@@ -1436,6 +1437,7 @@
 		93F1993D19D7958D00C2390B /* StringView.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StringView.cpp; sourceTree = "<group>"; };
 		941C64A62CA5A29400A63214 /* RetainReleaseSwift.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RetainReleaseSwift.h; sourceTree = "<group>"; };
 		974CFC8D16A4F327006D5404 /* WeakPtr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WeakPtr.h; sourceTree = "<group>"; };
+		9758E8EF2DDCA639004434FD /* SwiftBridging.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SwiftBridging.h; sourceTree = "<group>"; };
 		9785729829FAC2BB00350CBA /* ReferenceWrapperVector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ReferenceWrapperVector.h; sourceTree = "<group>"; };
 		996B17841EBA441C007E10EB /* DebugUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DebugUtilities.h; sourceTree = "<group>"; };
 		9B56058F2D9691ED00FCE33E /* NoVirtualDestructorBase.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NoVirtualDestructorBase.h; sourceTree = "<group>"; };
@@ -2628,6 +2630,7 @@
 				E3260E972DA0E508003FC93F /* StructDump.h */,
 				93B07ED726B8715B00A09B34 /* SuspendableWorkQueue.cpp */,
 				93B07ED626B86BB500A09B34 /* SuspendableWorkQueue.h */,
+				9758E8EF2DDCA639004434FD /* SwiftBridging.h */,
 				5C12460D2DC25A130077D423 /* SwiftCXXThunk.h */,
 				5597F82C1D94B9970066BC21 /* SynchronizedFixedQueue.h */,
 				E3E158251EADA53C004A079D /* SystemFree.h */,
@@ -3761,6 +3764,7 @@
 				FF8CB4012A88C0D3004AF498 /* SuperFastHash.h in Headers */,
 				DD3DC89A27A4BF8E007E5B61 /* SuspendableWorkQueue.h in Headers */,
 				E396C11E2BE885D9000CBAE1 /* sve.h in Headers */,
+				9758E8F02DDCA639004434FD /* SwiftBridging.h in Headers */,
 				5C12460E2DC25A130077D423 /* SwiftCXXThunk.h in Headers */,
 				DDF307DA27C086DF006A526F /* SymbolImpl.h in Headers */,
 				DDF307EC27C086DF006A526F /* SymbolRegistry.h in Headers */,

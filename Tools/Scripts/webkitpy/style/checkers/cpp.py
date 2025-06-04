@@ -134,6 +134,9 @@ _AUTO_GENERATED_FILES = [
     # VisualStudio resource files
     'Tools/MiniBrowser/win/MiniBrowserLibResource.h',
 
+    # Swift bridging header
+    'Source/WTF/wtf/SwiftBridging.h',
+
     # Generated Test Results
     'Source/WebCore/css/scripts/test/TestCSSPropertiesResults/CSSPropertyNames.gperf',
     'Source/WebCore/css/scripts/test/TestCSSPropertiesResults/CSSPropertyNames.h',
