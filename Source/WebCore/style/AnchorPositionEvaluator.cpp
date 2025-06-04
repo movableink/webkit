@@ -1207,4 +1207,14 @@ AnchorPositionedKey AnchorPositionEvaluator::keyForElementOrPseudoElement(const 
     return { &element, { } };
 }
 
+bool AnchorPositionEvaluator::isAnchor(const RenderStyle& style)
+{
+    if (!style.anchorNames().isEmpty())
+        return true;
+
+    // FIXME: Implicit anchors.
+    return false;
+}
+
+
 } // namespace WebCore::Style

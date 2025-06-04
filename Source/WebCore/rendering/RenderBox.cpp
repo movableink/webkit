@@ -299,11 +299,6 @@ void RenderBox::styleWillChange(StyleDifference diff, const RenderStyle& newStyl
     else if (oldStyle && oldStyle->containerType() != ContainerType::Normal)
         view().unregisterContainerQueryBox(*this);
 
-    if (!newStyle.anchorNames().isEmpty())
-        view().registerAnchor(*this);
-    else if (oldStyle && !oldStyle->anchorNames().isEmpty())
-        view().unregisterAnchor(*this);
-
     if (!newStyle.positionTryFallbacks().isEmpty() && newStyle.hasOutOfFlowPosition())
         view().registerPositionTryBox(*this);
     else if (oldStyle && !oldStyle->positionTryFallbacks().isEmpty() && oldStyle->hasOutOfFlowPosition())

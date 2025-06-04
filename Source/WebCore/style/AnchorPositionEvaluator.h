@@ -118,6 +118,8 @@ public:
     static bool overflowsInsetModifiedContainingBlock(const RenderBox& anchoredBox);
     static bool isDefaultAnchorInvisibleOrClippedByInterveningBoxes(const RenderBox& anchoredBox);
 
+    static bool isAnchor(const RenderStyle&);
+
 private:
     static AnchorElements findAnchorsForAnchorPositionedElement(const Element&, const UncheckedKeyHashSet<ResolvedScopedName>& anchorNames, const AnchorsForAnchorName&);
     static RefPtr<const Element> anchorPositionedElementOrPseudoElement(BuilderState&);

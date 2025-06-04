@@ -141,9 +141,9 @@ void RenderBoxModelObject::styleWillChange(StyleDifference diff, const RenderSty
 {
     const RenderStyle* oldStyle = hasInitializedStyle() ? &style() : nullptr;
 
-    if (!style().anchorNames().isEmpty())
+    if (Style::AnchorPositionEvaluator::isAnchor(newStyle))
         view().registerAnchor(*this);
-    else if (oldStyle && !oldStyle->anchorNames().isEmpty())
+    else if (oldStyle && Style::AnchorPositionEvaluator::isAnchor(*oldStyle))
         view().unregisterAnchor(*this);
 
     RenderLayerModelObject::styleWillChange(diff, newStyle);
