@@ -232,7 +232,7 @@ public:
 private:
     explicit WebResourceLoadStatisticsStore(NetworkSession&, const String&, ShouldIncludeLocalhost, WebCore::ResourceLoadStatistics::IsEphemeral);
 
-    void postTask(WTF::Function<void()>&&);
+    void postTask(WTF::Function<void(WebResourceLoadStatisticsStore&)>&&);
     static void postTaskReply(WTF::Function<void()>&&);
 
     void performDailyTasks();
