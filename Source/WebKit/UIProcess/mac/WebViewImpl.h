@@ -794,6 +794,7 @@ public:
     void unregisterViewAboveTopContentInsetArea(NSView *);
     void updateTopContentInsetFillDueToScrolling();
     void updateTopContentInsetFillCaptureColor();
+    void updateTopContentInsetFillStyle();
 #endif
 
 private:

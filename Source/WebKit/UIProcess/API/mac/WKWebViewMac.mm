@@ -1568,6 +1568,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _usesAutomaticContentInsetBackgroundFill = value;
 
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    _impl->updateTopContentInsetFillStyle();
     _impl->updateTopContentInsetFillDueToScrolling();
 #endif
 }
