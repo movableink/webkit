@@ -59,8 +59,6 @@ class JSGlobalObject;
     v(makeTypeError, nullptr) \
     v(AggregateError, nullptr) \
     v(typedArrayLength, nullptr) \
-    v(typedArrayContentType, nullptr) \
-    v(typedArrayGetOriginalConstructor, nullptr) \
     v(toIntegerOrInfinity, nullptr) \
     v(toLength, nullptr) \
     v(isTypedArrayView, nullptr) \
