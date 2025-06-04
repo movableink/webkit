@@ -25,6 +25,9 @@
 
 #pragma once
 
+#if PLATFORM(COCOA) && ENABLE(MEDIA_RECORDER)
+#include "MediaRecorderPrivateWriter.h"
+#endif
 #include "NativeImage.h"
 #include "NowPlayingManager.h"
 #include <wtf/CompletionHandler.h>
@@ -35,8 +38,6 @@ namespace WebCore {
 class AudioDestination;
 class AudioIOCallback;
 class CDMFactory;
-class MediaRecorderPrivateWriter;
-class MediaRecorderPrivateWriterListener;
 class NowPlayingManager;
 class VideoFrame;
 
@@ -56,7 +57,7 @@ public:
     static void addMockMediaSourceEngine();
 #endif
 #if PLATFORM(COCOA) && ENABLE(MEDIA_RECORDER)
-    virtual std::unique_ptr<MediaRecorderPrivateWriter> createMediaRecorderPrivateWriter(const String&, MediaRecorderPrivateWriterListener&) const;
+    virtual std::unique_ptr<MediaRecorderPrivateWriter> createMediaRecorderPrivateWriter(MediaRecorderContainerType, MediaRecorderPrivateWriterListener&) const;
 #endif
 
 #if ENABLE(VIDEO)

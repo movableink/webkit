@@ -51,7 +51,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteMediaRecorderPrivateWriterManager);
 class RemoteMediaRecorderPrivateWriterProxy : public WebCore::MediaRecorderPrivateWriterListener {
     WTF_MAKE_TZONE_ALLOCATED(RemoteMediaRecorderPrivateWriterProxy);
 public:
-    static Ref<RemoteMediaRecorderPrivateWriterProxy> create(const String& mimeType) { return adoptRef(*new RemoteMediaRecorderPrivateWriterProxy(mimeType)); }
+    static Ref<RemoteMediaRecorderPrivateWriterProxy> create() { return adoptRef(*new RemoteMediaRecorderPrivateWriterProxy()); }
 
     std::optional<uint8_t> addAudioTrack(const AudioInfo& description)
     {
@@ -85,8 +85,8 @@ public:
     }
 
 private:
-    RemoteMediaRecorderPrivateWriterProxy(const String& mimeType)
-        : m_writer(makeUniqueRefFromNonNullUniquePtr(MediaRecorderPrivateWriter::create(mimeType, *this)))
+    RemoteMediaRecorderPrivateWriterProxy()
+        : m_writer(makeUniqueRefFromNonNullUniquePtr(MediaRecorderPrivateWriter::create(MediaRecorderContainerType::Mp4, *this)))
     {
     }
 
@@ -120,11 +120,11 @@ void RemoteMediaRecorderPrivateWriterManager::deref() const
     m_gpuConnectionToWebProcess.get()->deref();
 }
 
-void RemoteMediaRecorderPrivateWriterManager::create(RemoteMediaRecorderPrivateWriterIdentifier identifier, const String& mimeType)
+void RemoteMediaRecorderPrivateWriterManager::create(RemoteMediaRecorderPrivateWriterIdentifier identifier)
 {
     MESSAGE_CHECK(!m_remoteMediaRecorderPrivateWriters.contains(identifier));
 
-    m_remoteMediaRecorderPrivateWriters.add(identifier, Writer { RemoteMediaRecorderPrivateWriterProxy::create(mimeType) });
+    m_remoteMediaRecorderPrivateWriters.add(identifier, Writer { RemoteMediaRecorderPrivateWriterProxy::create() });
 }
 
 void RemoteMediaRecorderPrivateWriterManager::addAudioTrack(RemoteMediaRecorderPrivateWriterIdentifier identifier, RemoteAudioInfo info, CompletionHandler<void(std::optional<uint8_t>)>&& completionHandler)

@@ -123,12 +123,16 @@ void WebMediaStrategy::enableMockMediaSource()
 #endif
 
 #if PLATFORM(COCOA) && ENABLE(MEDIA_RECORDER)
-std::unique_ptr<MediaRecorderPrivateWriter> WebMediaStrategy::createMediaRecorderPrivateWriter(const String& type, WebCore::MediaRecorderPrivateWriterListener& listener) const
+std::unique_ptr<MediaRecorderPrivateWriter> WebMediaStrategy::createMediaRecorderPrivateWriter(MediaRecorderContainerType type, WebCore::MediaRecorderPrivateWriterListener& listener) const
 {
     ASSERT(isMainRunLoop());
 #if ENABLE(GPU_PROCESS)
-    if (m_useGPUProcess && (equalLettersIgnoringASCIICase(type, "video/mp4"_s) || equalLettersIgnoringASCIICase(type, "audio/mp4"_s)))
-        return RemoteMediaRecorderPrivateWriter::create(WebProcess::singleton().ensureProtectedGPUProcessConnection(), type, listener);
+    if (type != MediaRecorderContainerType::Mp4)
+        return nullptr;
+    if (m_useGPUProcess) {
+        Ref connection = WebProcess::singleton().ensureGPUProcessConnection();
+        return RemoteMediaRecorderPrivateWriter::create(connection, listener);
+    }
 #else
     UNUSED_PARAM(type);
     UNUSED_PARAM(listener);
