@@ -1748,6 +1748,7 @@
     task_get_special_port_from_user
     task_info_from_user
     task_policy_set
+    task_restartable_ranges_register
     task_restartable_ranges_synchronize
     thread_get_state_to_user
     thread_resume
@@ -1805,12 +1806,11 @@
     (with-filter (lockdown-mode)
         (deny syscall-mig (with telemetry) (kernel-mig-routines-blocked-in-lockdown-mode)))
     (allow syscall-mig (kernel-mig-routines-in-use))
-    (with-filter (require-not (webcontent-process-launched))
 #if HAVE(MACH_RANGE_CREATE)
+    (with-filter (require-not (webcontent-process-launched))
         (when (defined? 'mach_vm_range_create)
-            (allow syscall-mig (kernel-mig-routine mach_vm_range_create)))
+            (allow syscall-mig (kernel-mig-routine mach_vm_range_create))))
 #endif
-        (allow syscall-mig (kernel-mig-routine task_restartable_ranges_register)))
     (with-filter (require-not (state-flag "BlockIOKitInWebContentSandbox"))
         (allow syscall-mig (kernel-mig-routines-downlevels))
         (allow syscall-mig (kernel-mig-routines-iokit))
