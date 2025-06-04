@@ -37,28 +37,19 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::List);
 
-// FIXME: This shouldn't need LegacyInlineIterator
-static bool generatesLineBoxesForInlineChild(RenderBlock& current, RenderObject* inlineObj)
+static std::pair<RenderBlock*, RenderBlock*> findParentOfEmptyOrFirstLineBox(RenderBlock& blockContainer, const RenderListMarker& marker)
 {
-    LegacyInlineIterator it(&current, inlineObj, 0);
-    while (!it.atEnd() && !requiresLineBox(it))
-        it.increment();
-    return !it.atEnd();
-}
-
-static std::pair<RenderBlock*, RenderBlock*> findParentOfEmptyOrFirstLineBox(RenderBlock& current, const RenderListMarker& marker)
-{
-    auto inQuirksMode = current.document().inQuirksMode();
+    auto inQuirksMode = blockContainer.document().inQuirksMode();
     RenderBlock* fallbackParent = { };
 
-    for (auto& child : childrenOfType<RenderObject>(current)) {
+    for (auto& child : childrenOfType<RenderObject>(blockContainer)) {
         if (&child == &marker)
             continue;
 
         if (child.isInline()) {
-            if (!is<RenderInline>(child) || generatesLineBoxesForInlineChild(current, &child))
-                return { &current, { } };
-            fallbackParent = &current;
+            if (!is<RenderInline>(child) || !isEmptyInline(downcast<RenderInline>(child)))
+                return { &blockContainer, { } };
+            fallbackParent = &blockContainer;
         }
 
         if (child.isFloating() || child.isOutOfFlowPositioned() || is<RenderMenuList>(child))
@@ -67,7 +58,7 @@ static std::pair<RenderBlock*, RenderBlock*> findParentOfEmptyOrFirstLineBox(Ren
         if (auto* renderBox = dynamicDowncast<RenderBox>(child); renderBox && renderBox->isWritingModeRoot())
             break;
 
-        if (is<RenderListItem>(current) && inQuirksMode && child.node() && isHTMLListElement(*child.node()))
+        if (is<RenderListItem>(blockContainer) && inQuirksMode && child.node() && isHTMLListElement(*child.node()))
             break;
 
         if (!is<RenderBlock>(child) || is<RenderTable>(child))
@@ -89,9 +80,9 @@ static std::pair<RenderBlock*, RenderBlock*> findParentOfEmptyOrFirstLineBox(Ren
     return { { }, fallbackParent };
 }
 
-static RenderBlock* parentCandidateForMarker(RenderBlock& current, const RenderListMarker& marker)
+static RenderBlock* parentCandidateForMarker(RenderBlock& blockContainer, const RenderListMarker& marker)
 {
-    auto [parentCandidate, fallbackParent ] = findParentOfEmptyOrFirstLineBox(current, marker);
+    auto [parentCandidate, fallbackParent ] = findParentOfEmptyOrFirstLineBox(blockContainer, marker);
     return parentCandidate ? parentCandidate : fallbackParent;
 }
 
