@@ -999,8 +999,8 @@ bool Scope::invalidateForAnchorDependencies(LayoutDependencyUpdateContext& conte
     if (!m_document->renderView())
         return false;
 
-    auto previousAnchorRects = WTFMove(m_anchorRectsOnLastUpdate);
-    m_anchorRectsOnLastUpdate.clear();
+    auto previousAnchorPositions = WTFMove(m_anchorPositionsOnLastUpdate);
+    m_anchorPositionsOnLastUpdate.clear();
 
     Vector<CheckedRef<Element>> anchoredElementsToInvalidate;
 
@@ -1009,13 +1009,24 @@ bool Scope::invalidateForAnchorDependencies(LayoutDependencyUpdateContext& conte
 
     auto anchorMap = AnchorPositionEvaluator::makeAnchorPositionedForAnchorMap(m_anchorPositionedToAnchorMap);
 
+    auto makeAnchorPosition = [&](const RenderBoxModelObject& anchorRenderer) {
+        AnchorPosition result;
+        result.absoluteRect = anchorRenderer.absoluteBoundingBoxRect();
+        // Include containing block sizes as anchor function insets may be computed against any side and if they change
+        // we need to invalidate.
+        for (auto* containingBlock = anchorRenderer.containingBlock(); containingBlock; containingBlock = containingBlock->containingBlock()) {
+            if (containingBlock->canContainAbsolutelyPositionedObjects())
+                result.containingBlockSizes.append(containingBlock->contentBoxSize());
+        }
+        return result;
+    };
+
     for (auto& anchorRenderer : m_document->renderView()->anchors()) {
-        auto rect = anchorRenderer.absoluteBoundingBoxRect();
+        auto anchorPosition = makeAnchorPosition(anchorRenderer);
+        m_anchorPositionsOnLastUpdate.add(anchorRenderer, anchorPosition);
 
-        m_anchorRectsOnLastUpdate.add(anchorRenderer, rect);
-
-        auto it = previousAnchorRects.find(anchorRenderer);
-        bool changed = it == previousAnchorRects.end() || it->value != rect;
+        auto it = previousAnchorPositions.find(anchorRenderer);
+        bool changed = it == previousAnchorPositions.end() || it->value != anchorPosition;
         if (!changed)
             continue;
 

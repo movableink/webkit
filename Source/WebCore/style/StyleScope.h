@@ -28,6 +28,7 @@
 #pragma once
 
 #include "AnchorPositionEvaluator.h"
+#include "LayoutRect.h"
 #include "LayoutSize.h"
 #include "StyleScopeIdentifier.h"
 #include "StyleScopeOrdinal.h"
@@ -259,7 +260,13 @@ private:
     std::optional<MediaQueryViewportState> m_viewportStateOnPreviousMediaQueryEvaluation;
     WeakHashMap<Element, LayoutSize, WeakPtrImplWithEventTargetData> m_queryContainerDimensionsOnLastUpdate;
 
-    SingleThreadWeakHashMap<const RenderBoxModelObject, LayoutRect> m_anchorRectsOnLastUpdate;
+    struct AnchorPosition {
+        LayoutRect absoluteRect;
+        Vector<LayoutSize, 2> containingBlockSizes;
+
+        bool operator==(const AnchorPosition&) const = default;
+    };
+    SingleThreadWeakHashMap<const RenderBoxModelObject, AnchorPosition> m_anchorPositionsOnLastUpdate;
 
     std::unique_ptr<MatchResultCache> m_matchResultCache;
 
