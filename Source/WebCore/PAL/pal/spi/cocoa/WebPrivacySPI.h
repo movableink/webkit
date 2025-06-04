@@ -171,13 +171,13 @@ typedef void (^WPRestrictedOpenerDomainsCompletionHandler)(NSArray<WPRestrictedO
 typedef void (^WKWPResourcesPrepareCompletionHandler)(WKContentRuleList *, bool, NSError *);
 
 @interface WPResources (Staging_141646051)
-- (void)prepareResouceMonitorRulesForStore:(WKContentRuleListStore *)store completionHandler:(WKWPResourcesPrepareCompletionHandler)completionHandler;
+- (void)prepareResourceMonitorRulesForStore:(WKContentRuleListStore *)store completionHandler:(WKWPResourcesPrepareCompletionHandler)completionHandler;
 @end
 
 typedef void (^WKWPResourcesGetSourceCompletionHandler)(NSString *, NSError *);
 
 @interface WPResources (Staging_146076707)
-- (void)requestResouceMonitorRulesSource:(WPResourceRequestOptions *)options completionHandler:(WKWPResourcesGetSourceCompletionHandler)completion;
+- (void)requestResourceMonitorRulesSource:(WPResourceRequestOptions *)options completionHandler:(WKWPResourcesGetSourceCompletionHandler)completion;
 @end
 
 WTF_EXTERN_C_BEGIN

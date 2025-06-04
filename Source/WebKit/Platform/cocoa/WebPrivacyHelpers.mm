@@ -415,7 +415,7 @@ ResourceMonitorURLsController& ResourceMonitorURLsController::singleton()
 void ResourceMonitorURLsController::prepare(CompletionHandler<void(WKContentRuleList*, bool)>&& completionHandler)
 {
     ASSERT(RunLoop::isMain());
-    if (!PAL::isWebPrivacyFrameworkAvailable() || ![PAL::getWPResourcesClass() instancesRespondToSelector:@selector(prepareResouceMonitorRulesForStore:completionHandler:)]) {
+    if (!PAL::isWebPrivacyFrameworkAvailable() || ![PAL::getWPResourcesClass() instancesRespondToSelector:@selector(prepareResourceMonitorRulesForStore:completionHandler:)]) {
         completionHandler(nullptr, false);
         return;
     }
@@ -427,7 +427,7 @@ void ResourceMonitorURLsController::prepare(CompletionHandler<void(WKContentRule
 
     WKContentRuleListStore *store = [WKContentRuleListStore defaultStore];
 
-    [[PAL::getWPResourcesClass() sharedInstance] prepareResouceMonitorRulesForStore:store completionHandler:^(WKContentRuleList *list, bool updated, NSError *error) {
+    [[PAL::getWPResourcesClass() sharedInstance] prepareResourceMonitorRulesForStore:store completionHandler:^(WKContentRuleList *list, bool updated, NSError *error) {
         if (error)
             RELEASE_LOG_ERROR(ResourceMonitoring, "Failed to request resource monitor urls from WebPrivacy: %@", error);
 
@@ -439,7 +439,7 @@ void ResourceMonitorURLsController::prepare(CompletionHandler<void(WKContentRule
 void ResourceMonitorURLsController::getSource(CompletionHandler<void(String&&)>&& completionHandler)
 {
     ASSERT(RunLoop::isMain());
-    if (!PAL::isWebPrivacyFrameworkAvailable() || ![PAL::getWPResourcesClass() instancesRespondToSelector:@selector(requestResouceMonitorRulesSource:completionHandler:)]) {
+    if (!PAL::isWebPrivacyFrameworkAvailable() || ![PAL::getWPResourcesClass() instancesRespondToSelector:@selector(requestResourceMonitorRulesSource:completionHandler:)]) {
         completionHandler({ });
         return;
     }
@@ -449,7 +449,7 @@ void ResourceMonitorURLsController::getSource(CompletionHandler<void(String&&)>&
     if (lookupCompletionHandlers->size() > 1)
         return;
 
-    [[PAL::getWPResourcesClass() sharedInstance] requestResouceMonitorRulesSource:nil completionHandler:^(NSString *source, NSError *error) {
+    [[PAL::getWPResourcesClass() sharedInstance] requestResourceMonitorRulesSource:nil completionHandler:^(NSString *source, NSError *error) {
         if (error)
             RELEASE_LOG_ERROR(ResourceMonitoring, "Failed to request resource monitor urls source from WebPrivacy");
 
