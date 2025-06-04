@@ -39,7 +39,6 @@
 #if PLATFORM(COCOA)
 #include "SharedCARingBuffer.h"
 #include <WebCore/AudioOutputUnitAdaptor.h>
-#include <WebCore/AudioSampleBufferList.h>
 #include <WebCore/CAAudioStreamDescription.h>
 #include <WebCore/CARingBuffer.h>
 #include <WebCore/WebAudioBufferList.h>
@@ -187,15 +186,14 @@ private:
         ASSERT(!isMainRunLoop());
 
         OSStatus status = -1;
-        if (!m_ringBuffer || !ioData)
+        if (!m_ringBuffer)
             return status;
 
-        if (m_ringBuffer->fetchIfHasEnoughData(ioData, numberOfFrames, m_startFrame))
+        if (m_ringBuffer->fetchIfHasEnoughData(ioData, numberOfFrames, m_startFrame)) {
+            m_startFrame += numberOfFrames;
             status = noErr;
-        else
-            WebCore::AudioSampleBufferList::zeroABL(*ioData, numberOfFrames);
+        }
 
-        m_startFrame += numberOfFrames;
         incrementTotalFrameCount(numberOfFrames);
         m_renderSemaphore.signal();
 
