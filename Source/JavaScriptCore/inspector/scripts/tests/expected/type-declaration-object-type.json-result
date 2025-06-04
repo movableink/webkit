@@ -363,6 +363,7 @@ class OptionalParameterBundle;
 class ParameterBundle;
 class ObjectWithPropertyNameConflicts;
 class DummyObject;
+class ObjectWithNullableProperties;
 enum class MouseButton;
 } // Database
 
@@ -835,6 +836,90 @@ public:
     static Builder<NoFieldsSet> create()
     {
         return Builder<NoFieldsSet>(JSON::Object::create());
+    }
+};
+
+/* An object with properties that can be null. */
+class ObjectWithNullableProperties final : public JSON::ObjectBase {
+public:
+    enum {
+        NoFieldsSet = 0,
+        NullableObjectSet = 1 << 0,
+        AllFieldsSet = (NullableObjectSet)
+    };
+
+    template<int STATE>
+    class Builder {
+    private:
+        RefPtr<JSON::Object> m_result;
+
+        template<int STEP> Builder<STATE | STEP>& castState()
+        {
+            return *reinterpret_cast<Builder<STATE | STEP>*>(this);
+        }
+
+        Builder(Ref</*ObjectWithNullableProperties*/JSON::Object>&& object)
+            : m_result(WTFMove(object))
+        {
+            static_assert(STATE == NoFieldsSet, "builder created in non init state");
+        }
+        friend class ObjectWithNullableProperties;
+    public:
+
+        Builder<STATE | NullableObjectSet>& setNullableObject(Ref<Protocol::Database::DummyObject>&& in_nullableObject)
+        {
+            static_assert(!(STATE & NullableObjectSet), "property nullableObject already set");
+            m_result->setObject("nullableObject"_s, WTFMove(in_nullableObject));
+            return castState<NullableObjectSet>();
+        }
+
+        Builder<STATE | NullableObjectSet>& setNullableObjectIsNull()
+        {
+            static_assert(!(STATE & NullableObjectSet), "property nullableObject already set");
+            m_result->setValue("nullableObject"_s, JSON::Value::null());
+            return castState<NullableObjectSet>();
+        }
+
+        Ref<ObjectWithNullableProperties> release()
+        {
+            static_assert(STATE == AllFieldsSet, "result is not ready");
+            static_assert(sizeof(ObjectWithNullableProperties) == sizeof(JSON::Object), "cannot cast");
+
+            Ref<JSON::Object> jsonResult = m_result.releaseNonNull();
+            auto result = WTFMove(*reinterpret_cast<Ref<ObjectWithNullableProperties>*>(&jsonResult));
+            return result;
+        }
+    };
+
+    /*
+     * Synthetic constructor:
+     * Ref<ObjectWithNullableProperties> result = ObjectWithNullableProperties::create()
+     *     .setNullableObject(...)
+     *     .release();
+     */
+    static Builder<NoFieldsSet> create()
+    {
+        return Builder<NoFieldsSet>(JSON::Object::create());
+    }
+
+    void setNullableObject(Ref<Protocol::Database::DummyObject>&& in_opt_nullableObject)
+    {
+        JSON::ObjectBase::setObject("nullableObject"_s, WTFMove(in_opt_nullableObject));
+    }
+
+    void setNullableObjectIsNull()
+    {
+        JSON::ObjectBase::setValue("nullableObject"_s, JSON::Value::null());
+    }
+
+    void setNullableOptionalObject(Ref<Protocol::Database::DummyObject>&& in_opt_nullableOptionalObject)
+    {
+        JSON::ObjectBase::setObject("nullableOptionalObject"_s, WTFMove(in_opt_nullableOptionalObject));
+    }
+
+    void setNullableOptionalObjectIsNull()
+    {
+        JSON::ObjectBase::setValue("nullableOptionalObject"_s, JSON::Value::null());
     }
 };
 
@@ -1390,6 +1475,7 @@ using namespace Inspector;
 @class TestProtocolDatabaseParameterBundle;
 @class TestProtocolDatabaseObjectWithPropertyNameConflicts;
 @class TestProtocolDatabaseDummyObject;
+@class TestProtocolDatabaseObjectWithNullableProperties;
 @class TestProtocolTestParameterBundle;
 
 typedef NS_ENUM(NSInteger, TestProtocolDatabaseMouseButton) {
@@ -1469,6 +1555,15 @@ __attribute__((visibility ("default")))
 @interface TestProtocolDatabaseDummyObject : RWIProtocolJSONObject
 - (instancetype)initWithPayload:(NSDictionary<NSString *, id> *)payload;
 - (instancetype)initWithProtocolObject:(RWIProtocolJSONObject *)jsonObject;
+@end
+
+__attribute__((visibility ("default")))
+@interface TestProtocolDatabaseObjectWithNullableProperties : RWIProtocolJSONObject
+- (instancetype)initWithPayload:(NSDictionary<NSString *, id> *)payload;
+- (instancetype)initWithProtocolObject:(RWIProtocolJSONObject *)jsonObject;
+- (instancetype)initWithNullableObject:(TestProtocolDatabaseDummyObject *)nullableObject;
+/* required */ @property (nonatomic, retain) TestProtocolDatabaseDummyObject *nullableObject;
+/* optional */ @property (nonatomic, retain) TestProtocolDatabaseDummyObject *nullableOptionalObject;
 @end
 __attribute__((visibility ("default")))
 @interface TestProtocolTestParameterBundle : RWIProtocolJSONObject
@@ -1722,6 +1817,7 @@ using namespace Inspector;
 + (void)_parseParameterBundle:(TestProtocolDatabaseParameterBundle **)outValue fromPayload:(id)payload;
 + (void)_parseObjectWithPropertyNameConflicts:(TestProtocolDatabaseObjectWithPropertyNameConflicts **)outValue fromPayload:(id)payload;
 + (void)_parseDummyObject:(TestProtocolDatabaseDummyObject **)outValue fromPayload:(id)payload;
++ (void)_parseObjectWithNullableProperties:(TestProtocolDatabaseObjectWithNullableProperties **)outValue fromPayload:(id)payload;
 
 @end
 @interface TestProtocolTypeConversions (TestDomain)
@@ -1774,6 +1870,12 @@ using namespace Inspector;
 {
     THROW_EXCEPTION_FOR_BAD_TYPE(payload, [NSDictionary class]);
     *outValue = [[TestProtocolDatabaseDummyObject alloc] initWithPayload:payload];
+}
+
++ (void)_parseObjectWithNullableProperties:(TestProtocolDatabaseObjectWithNullableProperties **)outValue fromPayload:(id)payload
+{
+    THROW_EXCEPTION_FOR_BAD_TYPE(payload, [NSDictionary class]);
+    *outValue = [[TestProtocolDatabaseObjectWithNullableProperties alloc] initWithPayload:payload];
 }
 
 @end
@@ -2319,6 +2421,68 @@ using namespace Inspector;
         return nil;
 
     return self;
+}
+
+@end
+
+@implementation TestProtocolDatabaseObjectWithNullableProperties
+
+- (instancetype)initWithPayload:(nonnull NSDictionary<NSString *, id> *)payload
+{
+    if (!(self = [super init]))
+        return nil;
+
+    THROW_EXCEPTION_FOR_REQUIRED_PROPERTY(payload[@"nullableObject"], @"nullableObject");
+    self.nullableObject = [[TestProtocolDatabaseDummyObject alloc] initWithPayload:payload[@"nullableObject"]];
+
+    self.nullableOptionalObject = [[TestProtocolDatabaseDummyObject alloc] initWithPayload:payload[@"nullableOptionalObject"]];
+
+    return self;
+}
+- (instancetype)initWithProtocolObject:(RWIProtocolJSONObject *)object
+{
+    if (!(self = [super initWithJSONObject:[object toJSONObject].get()]))
+        return nil;
+
+    return self;
+}
+
+- (instancetype)initWithNullableObject:(TestProtocolDatabaseDummyObject *)nullableObject
+{
+    if (!(self = [super init]))
+        return nil;
+
+    THROW_EXCEPTION_FOR_REQUIRED_PROPERTY(nullableObject, @"nullableObject");
+
+    self.nullableObject = nullableObject;
+
+    return self;
+}
+
+- (void)setNullableObject:(TestProtocolDatabaseDummyObject *)nullableObject
+{
+    [super setObject:nullableObject forKey:@"nullableObject"];
+}
+
+- (TestProtocolDatabaseDummyObject *)nullableObject
+{
+    RWIProtocolJSONObject *object = [super objectForKey:@"nullableObject"];
+    if (!object)
+        return nil;
+    return [[TestProtocolDatabaseDummyObject alloc] initWithJSONObject:[[super objectForKey:@"nullableObject"] toJSONObject].get()];
+}
+
+- (void)setNullableOptionalObject:(TestProtocolDatabaseDummyObject *)nullableOptionalObject
+{
+    [super setObject:nullableOptionalObject forKey:@"nullableOptionalObject"];
+}
+
+- (TestProtocolDatabaseDummyObject *)nullableOptionalObject
+{
+    RWIProtocolJSONObject *object = [super objectForKey:@"nullableOptionalObject"];
+    if (!object)
+        return nil;
+    return [[TestProtocolDatabaseDummyObject alloc] initWithJSONObject:[[super objectForKey:@"nullableOptionalObject"] toJSONObject].get()];
 }
 
 @end

@@ -455,7 +455,7 @@ class Protocol:
         log.debug("parse type member %s" % json['name'])
 
         type_ref = TypeReference(json.get('type'), json.get('$ref'), json.get('enum'), json.get('items'))
-        return TypeMember(json['name'], type_ref, json.get('optional', False), json.get('description', ""))
+        return TypeMember(json['name'], type_ref, json.get('optional', False), json.get('nullable', False), json.get('description', ""))
 
     def parse_command(self, json, debuggable_types):
         check_for_required_properties(['name'], json, "command")
@@ -693,10 +693,11 @@ class TypeDeclaration:
 
 
 class TypeMember:
-    def __init__(self, member_name, type_ref, is_optional, description):
+    def __init__(self, member_name, type_ref, is_optional, is_nullable, description):
         self.member_name = member_name
         self.type_ref = type_ref
         self.is_optional = is_optional
+        self.is_nullable = is_nullable
         self.description = description
 
         if not isinstance(self.is_optional, bool):
