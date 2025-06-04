@@ -92,7 +92,8 @@ private:
     void setPreload(MediaPlayer::Preload) final;
     void doPreload();
     void load(const URL&, const LoadOptions&) final;
-    bool createResourceClient();
+    bool needsResourceClient() const;
+    bool createResourceClientIfNeeded();
 
     RefPtr<VideoMediaSampleRenderer> protectedVideoRenderer() const;
 
@@ -329,6 +330,7 @@ private:
     RefPtr<NativeImage> m_lastImage;
     std::unique_ptr<PixelBufferConformerCV> m_rgbConformer;
     RefPtr<WebMResourceClient> m_resourceClient;
+    bool m_needsResourceClient { true };
 
     Vector<RefPtr<VideoTrackPrivateWebM>> m_videoTracks;
     Vector<RefPtr<AudioTrackPrivateWebM>> m_audioTracks;

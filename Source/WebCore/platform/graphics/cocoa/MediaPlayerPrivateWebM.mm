@@ -214,8 +214,8 @@ void MediaPlayerPrivateWebM::doPreload()
         return;
     }
 
-    if (m_preload >= MediaPlayer::Preload::MetaData && !m_resourceClient) {
-        if (!createResourceClient()) {
+    if (m_preload >= MediaPlayer::Preload::MetaData && needsResourceClient()) {
+        if (!createResourceClientIfNeeded()) {
             ERROR_LOG(LOGIDENTIFIER, "could not create resource client");
             setNetworkState(MediaPlayer::NetworkState::NetworkError);
             setReadyState(MediaPlayer::ReadyState::HaveNothing);
@@ -242,9 +242,17 @@ void MediaPlayerPrivateWebM::load(const URL& url, const LoadOptions& options)
     doPreload();
 }
 
-bool MediaPlayerPrivateWebM::createResourceClient()
+bool MediaPlayerPrivateWebM::needsResourceClient() const
+{
+    return !m_resourceClient && m_needsResourceClient;
+}
+
+bool MediaPlayerPrivateWebM::createResourceClientIfNeeded()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
+
+    ASSERT(needsResourceClient());
+
     RefPtr player = m_player.get();
     if (!player)
         return false;
@@ -252,8 +260,12 @@ bool MediaPlayerPrivateWebM::createResourceClient()
     ResourceRequest request(URL { m_assetURL });
     request.setAllowCookies(true);
     if (m_contentReceived) {
-        if (m_contentLength <= m_contentReceived)
+        if (!m_contentLength)
             return false;
+        if (m_contentLength <= m_contentReceived) {
+            m_needsResourceClient = false;
+            return true;
+        }
         request.addHTTPHeaderField(HTTPHeaderName::Range, makeString("bytes="_s, m_contentReceived, '-', m_contentLength));
     }
 
@@ -1173,7 +1185,7 @@ void MediaPlayerPrivateWebM::didParseInitializationData(InitializationSegment&& 
 {
     ALWAYS_LOG(LOGIDENTIFIER);
 
-    if (m_preload == MediaPlayer::Preload::MetaData)
+    if (m_preload == MediaPlayer::Preload::MetaData && !m_loadFinished)
         cancelLoad();
 
     clearTracks();
