@@ -100,17 +100,8 @@ extension WKIntelligenceSmartReplyTextEffectCoordinator {
         self.delegate = delegate
     }
 
-    // FIXME: Remove this and the other shims when upgrading WKS to Swift 6.
     @objc(startAnimationForRange:completion:)
-    func startAnimation(for range: NSRange, completion: @MainActor @Sendable @escaping () -> Void) {
-        Task {
-            await startAnimationAsync(for: range)
-            completion()
-        }
-    }
-
-    @nonobjc
-    private final func startAnimationAsync(for range: NSRange) async {
+    func startAnimation(for range: NSRange) async {
         self.viewManager.assertPonderingEffectIsInactive()
         self.viewManager.assertReplacementEffectIsInactive()
 
@@ -125,26 +116,8 @@ extension WKIntelligenceSmartReplyTextEffectCoordinator {
         await self.viewManager.setActivePonderingEffect(effect)
     }
 
+    @objc(requestReplacementWithProcessedRange:finished:characterDelta:operation:completion:)
     func requestReplacement(
-        withProcessedRange processedRange: NSRange,
-        finished: Bool,
-        characterDelta: Int,
-        operation: @MainActor @Sendable @escaping (@MainActor @Sendable @escaping () -> Void) -> Void,
-        completion: @MainActor @Sendable @escaping () -> Void
-    ) {
-        Task {
-            await requestReplacementAsync(
-                withProcessedRange: processedRange,
-                finished: finished,
-                characterDelta: characterDelta,
-                operation: operation
-            )
-            completion()
-        }
-    }
-
-    @nonobjc
-    private final func requestReplacementAsync(
         withProcessedRange processedRange: NSRange,
         finished: Bool,
         characterDelta: Int,
