@@ -1939,7 +1939,7 @@ void AXObjectCache::onInertOrVisibilityChange(RenderElement& renderer)
 #endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 
 #else // !ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
-    if (CheckedPtr parent = renderer.checkedParent())
+    if (CheckedPtr parent = renderer.parent())
         childrenChanged(*parent, &renderer);
 #endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
 }

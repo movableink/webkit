@@ -188,7 +188,7 @@ private:
 
     void updateDocumentForPluginSizingBehavior();
 
-    CheckedPtr<WebCore::RenderEmbeddedObject> checkedRenderer() const;
+    WebCore::RenderEmbeddedObject* renderer() const;
 
     // WebCore::PluginViewBase
     WebCore::PluginLayerHostingStrategy layerHostingStrategy() const final;

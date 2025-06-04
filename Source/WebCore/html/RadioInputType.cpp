@@ -108,7 +108,7 @@ void RadioInputType::willUpdateCheckedness(bool nowChecked, WasSetByJavaScript)
         // Buttons in RadioButtonGroups are handled in HTMLInputElement::setChecked().
         return;
     }
-    if (auto input = element->checkedRadioButtonForGroup())
+    if (RefPtr input = element->checkedRadioButtonForGroup())
         input->setChecked(false);
 }
 

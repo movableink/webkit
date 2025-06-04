@@ -1916,7 +1916,7 @@ LayoutPoint LocalFrameView::scrollPositionForFixedPosition(const LayoutRect& vis
 
 static bool isHiddenOrNearlyTransparent(const RenderBox& box)
 {
-    if (CheckedPtr layer = box.checkedLayer(); layer && layer->isVisibilityHiddenOrOpacityZero())
+    if (CheckedPtr layer = box.layer(); layer && layer->isVisibilityHiddenOrOpacityZero())
         return true;
 
     if (box.opacity() < PageColorSampler::nearlyTransparentAlphaThreshold)

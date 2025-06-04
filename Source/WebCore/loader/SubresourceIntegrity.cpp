@@ -224,7 +224,7 @@ void reportHashesIfNeeded(const CachedResource& resource)
     if (!document)
         return;
 
-    auto csp = document->checkedContentSecurityPolicy();
+    CheckedRef csp = *document->contentSecurityPolicy();
     URL documentURL = document->url();
 
     auto& hashesToReport = csp->hashesToReport();

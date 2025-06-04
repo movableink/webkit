@@ -825,7 +825,7 @@ static bool isTargetCandidate(Element& element, const HTMLElement* onlyMainEleme
 
 static inline std::optional<IntRect> inflatedClientRectForAdjustmentRegionTracking(Element& element, float viewportArea)
 {
-    CheckedPtr renderer = element.checkedRenderer();
+    CheckedPtr renderer = element.renderer();
     if (!renderer)
         return { };
 

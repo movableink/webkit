@@ -4400,7 +4400,7 @@ void Editor::selectionStartSetMarkerForTesting(DocumentMarkerType markerType, in
     if (!text)
         return;
 
-    CheckedRef markers = document().checkedMarkers();
+    CheckedRef markers = document().markers();
 
     unsigned unsignedFrom = static_cast<unsigned>(from);
     unsigned unsignedLength = static_cast<unsigned>(length);

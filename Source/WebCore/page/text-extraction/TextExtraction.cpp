@@ -337,7 +337,7 @@ static inline Variant<SkipExtraction, ItemData, URL, Editable> extractItemData(N
     }
 
     if (CheckedPtr box = dynamicDowncast<RenderBox>(node.renderer()); box && box->canBeScrolledAndHasScrollableArea()) {
-        if (auto layer = box->checkedLayer(); layer && layer->scrollableArea())
+        if (CheckedPtr layer = box->layer(); layer && layer->scrollableArea())
             return { ScrollableItemData { layer->scrollableArea()->totalContentsSize() } };
     }
 

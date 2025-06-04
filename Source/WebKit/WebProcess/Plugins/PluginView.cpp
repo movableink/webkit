@@ -990,7 +990,7 @@ void PluginView::redeliverManualStream()
         manualLoadDidFinishLoading();
 }
 
-CheckedPtr<RenderEmbeddedObject> PluginView::checkedRenderer() const
+RenderEmbeddedObject* PluginView::renderer() const
 {
     return dynamicDowncast<RenderEmbeddedObject>(m_pluginElement->renderer());
 }
@@ -1005,7 +1005,7 @@ void PluginView::invalidateRect(const IntRect& dirtyRect)
         return;
 #endif
 
-    CheckedPtr renderer = checkedRenderer();
+    CheckedPtr renderer = this->renderer();
     if (!renderer)
         return;
 

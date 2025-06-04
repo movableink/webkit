@@ -168,7 +168,7 @@ ExceptionOr<String> trustedTypeCompliantString(TrustedType expectedType, ScriptE
     if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext))
         requireTrustedTypes = document->requiresTrustedTypes();
     else {
-        CheckedPtr contentSecurityPolicy = scriptExecutionContext.checkedContentSecurityPolicy();
+        CheckedPtr contentSecurityPolicy = scriptExecutionContext.contentSecurityPolicy();
 
         requireTrustedTypes = contentSecurityPolicy && contentSecurityPolicy->requireTrustedTypesForSinkGroup("script"_s);
     }
@@ -187,8 +187,7 @@ ExceptionOr<String> trustedTypeCompliantString(TrustedType expectedType, ScriptE
     }
 
     if (std::holds_alternative<std::monostate>(convertedInput)) {
-        CheckedPtr contentSecurityPolicy = scriptExecutionContext.checkedContentSecurityPolicy();
-        auto allowMissingTrustedTypes = contentSecurityPolicy->allowMissingTrustedTypesForSinkGroup(trustedTypeToString(expectedType), sink, "script"_s, stringValue);
+        auto allowMissingTrustedTypes = scriptExecutionContext.checkedContentSecurityPolicy()->allowMissingTrustedTypesForSinkGroup(trustedTypeToString(expectedType), sink, "script"_s, stringValue);
 
         if (!allowMissingTrustedTypes)
             return Exception { ExceptionCode::TypeError, makeString("This assignment requires a "_s, trustedTypeToString(expectedType)) };
@@ -278,7 +277,7 @@ ExceptionOr<String> requireTrustedTypesForPreNavigationCheckPasses(ScriptExecuti
     auto sink = "Location href"_s;
     auto expectedType = TrustedType::TrustedScript;
 
-    auto contentSecurityPolicy = scriptExecutionContext.contentSecurityPolicy();
+    CheckedPtr contentSecurityPolicy = scriptExecutionContext.contentSecurityPolicy();
 
     auto requireTrustedTypes = contentSecurityPolicy && contentSecurityPolicy->requireTrustedTypesForSinkGroup(sinkGroup);
 

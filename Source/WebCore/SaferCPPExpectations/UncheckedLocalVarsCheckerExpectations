@@ -147,7 +147,6 @@ dom/Text.cpp
 dom/TextNodeTraversal.cpp
 dom/TextNodeTraversal.h
 dom/TreeScope.cpp
-dom/TrustedType.cpp
 dom/TypedElementDescendantIteratorInlines.h
 dom/ViewTransition.cpp
 dom/mac/ImageControlsMac.cpp
