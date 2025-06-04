@@ -46,21 +46,23 @@ static bool generatesLineBoxesForInlineChild(RenderBlock& current, RenderObject*
     return !it.atEnd();
 }
 
-static RenderBlock* getParentOfFirstLineBox(RenderBlock& current, const RenderObject& marker)
+static std::pair<RenderBlock*, RenderBlock*> findParentOfEmptyOrFirstLineBox(RenderBlock& current, const RenderListMarker& marker)
 {
-    bool inQuirksMode = current.document().inQuirksMode();
+    auto inQuirksMode = current.document().inQuirksMode();
+    RenderBlock* fallbackParent = { };
+
     for (auto& child : childrenOfType<RenderObject>(current)) {
         if (&child == &marker)
             continue;
 
-        if (child.isInline() && (!is<RenderInline>(child) || generatesLineBoxesForInlineChild(current, &child)))
-            return &current;
+        if (child.isInline()) {
+            if (!is<RenderInline>(child) || generatesLineBoxesForInlineChild(current, &child))
+                return { &current, { } };
+            fallbackParent = &current;
+        }
 
         if (child.isFloating() || child.isOutOfFlowPositioned() || is<RenderMenuList>(child))
             continue;
-
-        if (!is<RenderBlock>(child) || is<RenderTable>(child))
-            break;
 
         if (auto* renderBox = dynamicDowncast<RenderBox>(child); renderBox && renderBox->isWritingModeRoot())
             break;
@@ -68,11 +70,29 @@ static RenderBlock* getParentOfFirstLineBox(RenderBlock& current, const RenderOb
         if (is<RenderListItem>(current) && inQuirksMode && child.node() && isHTMLListElement(*child.node()))
             break;
 
-        if (RenderBlock* lineBox = getParentOfFirstLineBox(downcast<RenderBlock>(child), marker))
-            return lineBox;
+        if (!is<RenderBlock>(child) || is<RenderTable>(child))
+            break;
+
+        auto& blockChild = downcast<RenderBlock>(child);
+        auto [ nestedParent, nestedFallbackParent ] = findParentOfEmptyOrFirstLineBox(blockChild, marker);
+        if (nestedParent)
+            return { nestedParent, { } };
+
+        if (!fallbackParent) {
+            if (nestedFallbackParent)
+                fallbackParent = nestedFallbackParent;
+            else if (auto* firstInFlowChild = blockChild.firstInFlowChild(); !firstInFlowChild || firstInFlowChild == &marker)
+                fallbackParent = &blockChild;
+        }
     }
 
-    return nullptr;
+    return { { }, fallbackParent };
+}
+
+static RenderBlock* parentCandidateForMarker(RenderBlock& current, const RenderListMarker& marker)
+{
+    auto [parentCandidate, fallbackParent ] = findParentOfEmptyOrFirstLineBox(current, marker);
+    return parentCandidate ? parentCandidate : fallbackParent;
 }
 
 static RenderObject* firstNonMarkerChild(RenderBlock& parent)
@@ -107,7 +127,7 @@ void RenderTreeBuilder::List::updateItemMarker(RenderListItem& listItemRenderer)
             return;
         }
 
-        auto* newParent = getParentOfFirstLineBox(listItemRenderer, *markerRenderer);
+        auto* newParent = parentCandidateForMarker(listItemRenderer, *markerRenderer);
         if (!newParent) {
             if (currentParent->isAnonymousBlock()) {
                 // If the marker is currently contained inside an anonymous box. then we are the only item in that anonymous box
@@ -132,7 +152,7 @@ void RenderTreeBuilder::List::updateItemMarker(RenderListItem& listItemRenderer)
     RenderPtr<RenderListMarker> newMarkerRenderer = WebCore::createRenderer<RenderListMarker>(listItemRenderer, WTFMove(newStyle));
     newMarkerRenderer->initializeStyle();
     listItemRenderer.setMarkerRenderer(*newMarkerRenderer);
-    auto* newParent = getParentOfFirstLineBox(listItemRenderer, *newMarkerRenderer);
+    auto* newParent = parentCandidateForMarker(listItemRenderer, *newMarkerRenderer);
     if (!newParent) {
         // If the marker is currently contained inside an anonymous box,
         // then we are the only item in that anonymous box (since no line box
