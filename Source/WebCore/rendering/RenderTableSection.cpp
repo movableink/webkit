@@ -986,8 +986,8 @@ void RenderTableSection::paintCell(RenderTableCell* cell, PaintInfo& paintInfo, 
         // Note that we deliberately ignore whether or not the cell has a layer, since these backgrounds paint "behind" the
         // cell.
         if (RenderTableCol* column = table()->colElement(cell->col())) {
-            if (CheckedPtr columnGroup = column->enclosingColumnGroup())
-                cell->paintBackgroundsBehindCell(paintInfo, cellPoint, columnGroup.get(), cellPoint);
+            if (RenderTableCol* columnGroup = column->enclosingColumnGroup())
+                cell->paintBackgroundsBehindCell(paintInfo, cellPoint, columnGroup, cellPoint);
             cell->paintBackgroundsBehindCell(paintInfo, cellPoint, column, cellPoint);
         }
 

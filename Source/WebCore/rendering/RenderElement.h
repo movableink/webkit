@@ -27,7 +27,6 @@
 #include "RenderObject.h"
 #include "RenderPtr.h"
 #include "RenderStyle.h"
-#include <wtf/CheckedRef.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/Packed.h>
 
@@ -69,7 +68,6 @@ public:
     bool hasInitializedStyle() const { return m_hasInitializedStyle; }
 
     const RenderStyle& style() const { return m_style; }
-    CheckedRef<const RenderStyle> protectedStyle() const { return m_style; }
     const RenderStyle* parentStyle() const { return !m_parent ? nullptr : &m_parent->style(); }
     const RenderStyle& firstLineStyle() const;
 

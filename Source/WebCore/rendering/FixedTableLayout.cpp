@@ -27,7 +27,6 @@
 #include "RenderTableCol.h"
 #include "RenderTableInlines.h"
 #include "RenderTableSection.h"
-#include <wtf/CheckedPtr.h>
 
 /*
   The text below is from the CSS 2.1 specs.
@@ -88,7 +87,7 @@ float FixedTableLayout::calcWidthArray()
     m_width.fill(Length(LengthType::Auto));
 
     unsigned currentEffectiveColumn = 0;
-    for (CheckedPtr col = m_table->firstColumn(); col; col = col->nextColumn()) {
+    for (RenderTableCol* col = m_table->firstColumn(); col; col = col->nextColumn()) {
         // RenderTableCols don't have the concept of preferred logical width, but we need to clear their dirty bits
         // so that if we call setPreferredWidthsDirty(true) on a col or one of its descendants, we'll mark it's
         // ancestors as dirty.

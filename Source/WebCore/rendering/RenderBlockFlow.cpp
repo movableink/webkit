@@ -710,7 +710,7 @@ void RenderBlockFlow::dirtyForLayoutFromPercentageHeightDescendants()
 
         for (CheckedPtr<RenderElement> renderer = &descendant; renderer && renderer != this && !renderer->normalChildNeedsLayout(); renderer = renderer->container()) {
             renderer->setChildNeedsLayout(MarkOnlyThis);
-            if (CheckedPtr renderBox = dynamicDowncast<RenderBox>(renderer)) {
+            if (CheckedPtr renderBox = dynamicDowncast<RenderBox>(renderer.get())) {
                 // If the width of an image is affected by the height of a child (e.g., an image with an aspect ratio),
                 // then we have to dirty preferred widths, since even enclosing blocks can become dirty as a result.
                 // (A horizontal flexbox that contains an inline image wrapped in an anonymous block for example.)

@@ -32,7 +32,6 @@
 #include "RenderTableInlines.h"
 #include "RenderTableSection.h"
 #include "RenderView.h"
-#include <wtf/CheckedPtr.h>
 
 namespace WebCore {
 
@@ -158,7 +157,7 @@ void AutoTableLayout::fullRecalc()
 
     Length groupLogicalWidth;
     unsigned currentColumn = 0;
-    for (CheckedPtr column = m_table->firstColumn(); column; column = column->nextColumn()) {
+    for (RenderTableCol* column = m_table->firstColumn(); column; column = column->nextColumn()) {
         if (column->isTableColumnGroupWithColumnChildren())
             groupLogicalWidth = column->style().logicalWidth();
         else {

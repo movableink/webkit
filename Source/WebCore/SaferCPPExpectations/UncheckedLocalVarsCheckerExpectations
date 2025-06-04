@@ -477,6 +477,7 @@ rendering/RenderTable.cpp
 rendering/RenderTableCaption.cpp
 rendering/RenderTableCell.cpp
 rendering/RenderTableCellInlines.h
+rendering/RenderTableCol.cpp
 rendering/RenderTableRow.cpp
 rendering/RenderTableSection.cpp
 rendering/RenderText.cpp

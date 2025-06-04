@@ -704,6 +704,7 @@ rendering/RenderTable.h
 rendering/RenderTableCaption.cpp
 rendering/RenderTableCell.cpp
 rendering/RenderTableCellInlines.h
+rendering/RenderTableCol.cpp
 rendering/RenderTableRow.cpp
 rendering/RenderTableRowInlines.h
 rendering/RenderTableSection.cpp
