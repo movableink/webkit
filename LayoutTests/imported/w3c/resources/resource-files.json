@@ -10933,6 +10933,7 @@
         "web-platform-tests/html/semantics/embedded-content/the-iframe-element/support/standalone-fail.htm",
         "web-platform-tests/html/semantics/embedded-content/the-iframe-element/support/standalone-iframe-content.htm",
         "web-platform-tests/html/semantics/embedded-content/the-iframe-element/support/standalone-pass.htm",
+        "web-platform-tests/html/semantics/embedded-content/the-img-element/animated-image-update-ref.tentative.html",
         "web-platform-tests/html/semantics/embedded-content/the-img-element/available-images-ref.html",
         "web-platform-tests/html/semantics/embedded-content/the-img-element/document-base-url-ref.html",
         "web-platform-tests/html/semantics/embedded-content/the-img-element/environment-changes/iframed.sub.html",
