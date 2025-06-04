@@ -79,7 +79,7 @@ namespace WebKit {
 class CoordinatedSceneState;
 class WebPage;
 
-class LayerTreeHost final : public CanMakeCheckedPtr<LayerTreeHost>, public WebCore::GraphicsLayerClient, public WebCore::GraphicsLayerFactory, public WebCore::CoordinatedPlatformLayer::Client
+class LayerTreeHost final : public CanMakeCheckedPtr<LayerTreeHost>, public WebCore::GraphicsLayerFactory, public WebCore::CoordinatedPlatformLayer::Client
 #if !HAVE(DISPLAY_LINK)
     , public ThreadedDisplayRefreshMonitor::Client
 #endif
