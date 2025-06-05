@@ -220,6 +220,10 @@ TEST(URLExtras, URLExtras_NotSpoofed)
 
     // Arabic
     EXPECT_STREQ("https://\u0620\u065Babc/", userVisibleString(literalURL("https://\u0620\u065Babc/")));
+    EXPECT_STREQ("https://app\u08AD\u0652e.com", userVisibleString(literalURL("https://app\u08AD\u0652e.com")));
+    EXPECT_STREQ("https://\u10F3Ddee", userVisibleString(literalURL("https://\u10F3Ddee")));
+    EXPECT_STREQ("https://\u0638\u0644\u0651\u0874\u0654", userVisibleString(literalURL("https://\u0638\u0644\u0651\u0874\u0654")));
+    EXPECT_STREQ("https://\u08AE\u064E", userVisibleString(literalURL("https://\u08AE\u064E")));
 
     // Latin
     EXPECT_STREQ("https://\u00ED\u00CDabc/", userVisibleString(literalURL("https://\u00ED\u00CDabc/")));

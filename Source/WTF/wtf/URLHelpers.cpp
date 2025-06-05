@@ -186,7 +186,8 @@ bool isLookalikeSequence<USCRIPT_ARABIC>(const std::optional<char32_t>& previous
     auto isArabicCodePoint = [](const std::optional<char32_t>& codePoint) {
         if (!codePoint)
             return false;
-        return ublock_getCode(*codePoint) == UBLOCK_ARABIC;
+        UErrorCode err = U_ZERO_ERROR;
+        return uscript_getScript(*codePoint, &err) == USCRIPT_ARABIC && U_SUCCESS(err);
     };
     return isArabicDiacritic(codePoint) && !isArabicCodePoint(previousCodePoint);
 }
