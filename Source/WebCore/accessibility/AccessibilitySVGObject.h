@@ -56,7 +56,7 @@ private:
     template <typename ChildrenType>
     Element* childElementWithMatchingLanguage(ChildrenType&) const;
 
-    WeakPtr<AXObjectCache> m_axObjectCache;
+    const WeakPtr<AXObjectCache> m_axObjectCache;
 };
 
 } // namespace WebCore

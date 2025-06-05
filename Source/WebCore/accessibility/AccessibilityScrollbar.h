@@ -55,7 +55,7 @@ private:
     bool setValue(float) final;
     float valueForRange() const final;
 
-    Ref<Scrollbar> m_scrollbar;
+    const Ref<Scrollbar> m_scrollbar;
 };
 
 } // namespace WebCore

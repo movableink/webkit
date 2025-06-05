@@ -240,15 +240,12 @@ accessibility/AccessibilityObject.h
 accessibility/AccessibilityRenderObject.cpp
 accessibility/AccessibilitySVGObject.cpp
 accessibility/AccessibilityScrollView.cpp
-accessibility/AccessibilityScrollbar.cpp
 accessibility/AccessibilitySlider.cpp
 accessibility/AccessibilitySpinButton.cpp
 accessibility/AccessibilityTable.cpp
 accessibility/AccessibilityTableCell.cpp
 accessibility/AccessibilityTableColumn.cpp
 accessibility/AccessibilityTableHeaderContainer.cpp
-accessibility/isolatedtree/AXIsolatedObject.cpp
-accessibility/isolatedtree/AXIsolatedObject.h
 accessibility/isolatedtree/AXIsolatedTree.cpp
 accessibility/mac/AXObjectCacheMac.mm
 accessibility/mac/AccessibilityObjectMac.mm

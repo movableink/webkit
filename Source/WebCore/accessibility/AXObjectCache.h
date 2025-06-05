@@ -832,7 +832,7 @@ private:
     Ref<AccessibilityRenderObject> createObjectFromRenderer(RenderObject&);
     Ref<AccessibilityNodeObject> createFromNode(Node&);
 
-    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
+    const WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     const std::optional<PageIdentifier> m_pageID; // constant for object's lifetime.
     OptionSet<ActivityState> m_pageActivityState;
     HashMap<AXID, Ref<AccessibilityObject>> m_objects;
@@ -920,7 +920,7 @@ private:
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     Timer m_buildIsolatedTreeTimer;
     bool m_deferredRegenerateIsolatedTree { false };
-    Ref<AXGeometryManager> m_geometryManager;
+    const Ref<AXGeometryManager> m_geometryManager;
     DeferrableOneShotTimer m_selectedTextRangeTimer;
     Markable<AXID> m_lastDebouncedTextRangeObject;
 

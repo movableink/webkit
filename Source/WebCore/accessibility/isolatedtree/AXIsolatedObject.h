@@ -592,7 +592,7 @@ private:
     AXPropertyVector m_properties;
 
     // FIXME: Make this a ThreadSafeWeakPtr<AXIsolatedTree>.
-    Ref<AXIsolatedTree> m_tree;
+    const Ref<AXIsolatedTree> m_tree;
     Markable<AXID> m_parentID;
 
     OptionSet<AXPropertyFlag> m_propertyFlags;

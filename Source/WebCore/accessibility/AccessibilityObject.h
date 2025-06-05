@@ -873,7 +873,7 @@ public:
 
         RefPtr<const AccessibilityObject> m_current;
         // If the original object had a display:contents parent, it is stored here. This is nullptr otherwise.
-        RefPtr<const AccessibilityObject> m_displayContentsParent { nullptr };
+        const RefPtr<const AccessibilityObject> m_displayContentsParent { nullptr };
     }; // class iterator
 
 protected:
@@ -1017,7 +1017,7 @@ public:
         return AccessibilityObject::iterator { };
     }
 private:
-    Ref<const AccessibilityObject> m_parent;
+    const Ref<const AccessibilityObject> m_parent;
 }; // class AXChildIterator
 
 #if PLATFORM(COCOA)

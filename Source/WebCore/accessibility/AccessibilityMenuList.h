@@ -55,7 +55,7 @@ private:
     void setNeedsToUpdateChildren() final { };
 
     // FIXME: Nothing calls AXObjectCache::remove for m_popup.
-    Ref<AccessibilityMenuListPopup> m_popup;
+    const Ref<AccessibilityMenuListPopup> m_popup;
 };
 
 } // namespace WebCore

@@ -577,7 +577,7 @@ private:
     void objectChangedIgnoredState(const AccessibilityObject&);
 
     const ProcessID m_processID { legacyPresentingApplicationPID() };
-    WeakPtr<AXObjectCache> m_axObjectCache;
+    const WeakPtr<AXObjectCache> m_axObjectCache;
     OptionSet<ActivityState> m_pageActivityState;
     RefPtr<AXGeometryManager> m_geometryManager;
     bool m_isEmptyContentTree { false };

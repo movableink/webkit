@@ -67,7 +67,7 @@ private:
     void scheduleRenderingUpdate();
 
     // The cache that owns this instance.
-    WeakPtr<AXObjectCache> m_cache;
+    const WeakPtr<AXObjectCache> m_cache;
     HashMap<AXID, IntRect> m_cachedRects;
     Timer m_updateObjectRegionsTimer;
 
