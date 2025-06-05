@@ -3950,9 +3950,10 @@ void GL_APIENTRY glGetTranslatedShaderSourceANGLE(GLuint shader,
 }
 
 // GL_ANGLE_variable_rasterization_rate_metal
-void GL_APIENTRY glBindMetalRasterizationRateMapANGLE(GLuint renderbuffer, GLMTLRasterizationRateMapANGLE map)
+void GL_APIENTRY glBindMetalRasterizationRateMapANGLE(GLuint framebuffer,
+                                                      GLMTLRasterizationRateMapANGLE map)
 {
-    return GL_BindMetalRasterizationRateMapANGLE(renderbuffer, map);
+    return GL_BindMetalRasterizationRateMapANGLE(framebuffer, map);
 }
 
 // GL_ANGLE_vulkan_image

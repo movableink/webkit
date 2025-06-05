@@ -10661,7 +10661,7 @@ class TextureLimitsTest : public ANGLETest<>
         initTextures(vertexTextureCount + fragmentTextureCount, 0);
 
         glUseProgram(mProgram);
-        RGBA8 expectedSum {};
+        RGBA8 expectedSum{};
         for (GLint texIndex = 0; texIndex < vertexTextureCount; ++texIndex)
         {
             std::stringstream uniformNameStr;

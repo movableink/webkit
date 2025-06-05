@@ -1010,6 +1010,7 @@ angle::CallCapture CaptureGetTranslatedShaderSourceANGLE(const State &glState,
 // GL_ANGLE_variable_rasterization_rate_metal
 angle::CallCapture CaptureBindMetalRasterizationRateMapANGLE(const State &glState,
                                                              bool isCallValid,
+                                                             GLuint framebuffer,
                                                              GLMTLRasterizationRateMapANGLE map);
 
 // GL_ANGLE_vulkan_image

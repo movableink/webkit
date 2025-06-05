@@ -191,7 +191,7 @@ class GenMetalTraverser : public TIntermTraverser
     const PipelineStructs &mPipelineStructs;
     SymbolEnv &mSymbolEnv;
     IdGen &mIdGen;
-    int mForwardProgressStoreNestingCount  = -1; // Negative means forward progress is not ensured.
+    int mForwardProgressStoreNestingCount = -1;  // Negative means forward progress is not ensured.
     int mIndentLevel                  = -1;
     int mLastIndentationPos           = -1;
     int mOpenPointerParenCount        = 0;
@@ -211,14 +211,15 @@ class GenMetalTraverser : public TIntermTraverser
 
 class ScopedForwardProgressStore
 {
-public:
-    ScopedForwardProgressStore(GenMetalTraverser& traverser);
+  public:
+    ScopedForwardProgressStore(GenMetalTraverser &traverser);
     ~ScopedForwardProgressStore();
-private:
-    GenMetalTraverser& mTraverser;
+
+  private:
+    GenMetalTraverser &mTraverser;
 };
 
-ScopedForwardProgressStore::ScopedForwardProgressStore(GenMetalTraverser& traverser)
+ScopedForwardProgressStore::ScopedForwardProgressStore(GenMetalTraverser &traverser)
     : mTraverser(traverser)
 {
     if (mTraverser.shouldEnsureForwardProgress())
@@ -272,7 +273,9 @@ GenMetalTraverser::GenMetalTraverser(const TCompiler &compiler,
                                   ShFragmentSynchronizationType::RasterOrderGroups_Metal)
 {
     if (compileOptions.metal.injectAsmStatementIntoLoopBodies)
+    {
         mForwardProgressStoreNestingCount = 0;
+    }
 }
 
 void GenMetalTraverser::emitIndentation()
@@ -2304,9 +2307,13 @@ bool GenMetalTraverser::visitAggregate(Visit, TIntermAggregate *aggregateNode)
             bool isFtoi = [&]() {
                 if ((!retType.isScalar() && !retType.isVector()) ||
                     !IsInteger(retType.getBasicType()))
+                {
                     return false;
+                }
                 if (aggregateNode->getChildCount() != 1)
+                {
                     return false;
+                }
                 auto &argType = aggregateNode->getChildNode(0)->getAsTyped()->getType();
                 return (argType.isScalar() || argType.isVector()) &&
                        argType.getBasicType() == EbtFloat;

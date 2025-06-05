@@ -1009,6 +1009,7 @@ bool ValidateGetTranslatedShaderSourceANGLE(const Context *context,
 // GL_ANGLE_variable_rasterization_rate_metal
 bool ValidateBindMetalRasterizationRateMapANGLE(const Context *context,
                                                 angle::EntryPoint entryPoint,
+                                                GLuint framebuffer,
                                                 GLMTLRasterizationRateMapANGLE map);
 
 // GL_ANGLE_vulkan_image

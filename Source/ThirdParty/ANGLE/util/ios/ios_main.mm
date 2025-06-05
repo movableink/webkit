@@ -12,9 +12,9 @@
 #include <stdio.h>
 
 static int original_argc;
-static char * _Nullable * _Nullable original_argv = nullptr;
+static char *_Nullable *_Nullable original_argv = nullptr;
 
-int main(int argc, char * _Nullable * _Nullable argv);
+int main(int argc, char *_Nullable *_Nullable argv);
 
 @interface AngleUtilAppDelegate : UIResponder <UIApplicationDelegate>
 
@@ -31,8 +31,8 @@ int main(int argc, char * _Nullable * _Nullable argv);
     exit(main(original_argc, original_argv));
 }
 
-- (BOOL)application:(UIApplication * _Nonnull)application
-    didFinishLaunchingWithOptions:(NSDictionary * _Nullable)launchOptions
+- (BOOL)application:(UIApplication *_Nonnull)application
+    didFinishLaunchingWithOptions:(NSDictionary *_Nullable)launchOptions
 {
     self.window                    = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
     self.window.rootViewController = [[UIViewController alloc] initWithNibName:nil bundle:nil];
@@ -49,7 +49,7 @@ int main(int argc, char * _Nullable * _Nullable argv);
 
 @end
 
-extern "C" int ios_main(int argc, char * _Nonnull * _Nonnull argv)
+extern "C" int ios_main(int argc, char *_Nonnull *_Nonnull argv)
 {
     original_argc = argc;
     original_argv = argv;

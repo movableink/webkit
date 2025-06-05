@@ -186,7 +186,8 @@ FramebufferStatus CheckResolveTargetMatchesForCompleteness(
 
     if (checkAttachment.getSamples() != 0)
     {
-        return FramebufferStatus::Incomplete(GL_FRAMEBUFFER_UNSUPPORTED,
+        return FramebufferStatus::Incomplete(
+            GL_FRAMEBUFFER_UNSUPPORTED,
             "Framebuffer is incomplete: Resolve attachments have multiple samples.");
     }
 

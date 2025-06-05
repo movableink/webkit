@@ -1755,7 +1755,8 @@ angle::Result FramebufferMtl::readPixelsToPBO(const gl::Context *context,
     ContextMtl *contextMtl = mtl::GetImpl(context);
 
     ANGLE_CHECK_GL_MATH(contextMtl,
-                        static_cast<std::make_unsigned_t<decltype(packPixelsParams.offset)>>(packPixelsParams.offset) <= std::numeric_limits<uint32_t>::max());
+                        static_cast<std::make_unsigned_t<decltype(packPixelsParams.offset)>>(
+                            packPixelsParams.offset) <= std::numeric_limits<uint32_t>::max());
     uint32_t offset = static_cast<uint32_t>(packPixelsParams.offset);
 
     BufferMtl *packBufferMtl = mtl::GetImpl(packPixelsParams.packBuffer);
@@ -1903,8 +1904,7 @@ angle::Result FramebufferMtl::unresolveIfNeeded(const gl::Context *context,
         const mtl::RenderPassColorAttachmentDesc &colorAttachment =
             renderPassDesc.colorAttachments[colorIndexGL];
 
-        if (colorAttachment.loadAction != MTLLoadActionLoad ||
-            !colorAttachment.texture ||
+        if (colorAttachment.loadAction != MTLLoadActionLoad || !colorAttachment.texture ||
             !colorAttachment.texture->shouldNotLoadStore())
         {
             continue;

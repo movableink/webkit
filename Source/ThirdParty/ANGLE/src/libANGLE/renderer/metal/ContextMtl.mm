@@ -1670,14 +1670,15 @@ angle::Result ContextMtl::bindMetalRasterizationRateMap(gl::Context *context,
         return angle::Result::Stop;
     }
 
-    if (auto *metalRenderbuffer = static_cast<RenderbufferMtl*>(renderbuffer))
+    if (auto *metalRenderbuffer = static_cast<RenderbufferMtl *>(renderbuffer))
     {
         FramebufferAttachmentRenderTarget *rtOut = nullptr;
         gl::ImageIndex index;
         GLenum binding = 0;
-        if (angle::Result::Continue == metalRenderbuffer->getAttachmentRenderTarget(context, binding, index, 1, &rtOut))
+        if (angle::Result::Continue ==
+            metalRenderbuffer->getAttachmentRenderTarget(context, binding, index, 1, &rtOut))
         {
-            if (auto *renderTargetMetal = static_cast<RenderTargetMtl*>(rtOut))
+            if (auto *renderTargetMetal = static_cast<RenderTargetMtl *>(rtOut))
             {
                 mtl::RenderPassAttachmentDesc desc;
                 renderTargetMetal->toRenderPassAttachmentDesc(&desc);
@@ -2662,10 +2663,14 @@ angle::Result ContextMtl::setupDrawImpl(const gl::Context *context,
                     mState.getBlendColor().blue, mState.getBlendColor().alpha);
                 break;
             case DIRTY_BIT_VIEWPORT:
-                mRenderEncoder.setViewport(mViewport, mRenderEncoder.rasterizationRateMapForPass(mRasterizationRateMap, mRasterizationRateMapTexture));
+                mRenderEncoder.setViewport(
+                    mViewport, mRenderEncoder.rasterizationRateMapForPass(
+                                   mRasterizationRateMap, mRasterizationRateMapTexture));
                 break;
             case DIRTY_BIT_SCISSOR:
-                mRenderEncoder.setScissorRect(mScissorRect, mRenderEncoder.rasterizationRateMapForPass(mRasterizationRateMap, mRasterizationRateMapTexture));
+                mRenderEncoder.setScissorRect(
+                    mScissorRect, mRenderEncoder.rasterizationRateMapForPass(
+                                      mRasterizationRateMap, mRasterizationRateMapTexture));
                 break;
             case DIRTY_BIT_DRAW_FRAMEBUFFER:
                 // Already handled.
@@ -2691,9 +2696,12 @@ angle::Result ContextMtl::setupDrawImpl(const gl::Context *context,
                 // Already handled.
                 break;
             case DIRTY_BIT_VARIABLE_RASTERIZATION_RATE:
-                if (getState().privateState().isVariableRasterizationRateEnabled() && mRasterizationRateMap)
+                if (getState().privateState().isVariableRasterizationRateEnabled() &&
+                    mRasterizationRateMap)
                 {
-                    mRenderEncoder.setRasterizationRateMap(mRenderEncoder.rasterizationRateMapForPass(mRasterizationRateMap, mRasterizationRateMapTexture));
+                    mRenderEncoder.setRasterizationRateMap(
+                        mRenderEncoder.rasterizationRateMapForPass(mRasterizationRateMap,
+                                                                   mRasterizationRateMapTexture));
                 }
                 break;
             default:

@@ -56,7 +56,8 @@ void main()
     drawQuad(program, essl1_shaders::PositionAttrib(), 0.5f);
     glFinish();
     EXPECT_GL_ERROR(GL_CONTEXT_LOST);
-    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::transparentBlack);  // Should read through client buffer since context should be lost.
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::transparentBlack);  // Should read through client buffer
+                                                             // since context should be lost.
 }
 
 // Tests that trivial infinite loops in fragment shaders hang instead of progress.
@@ -72,12 +73,13 @@ void main()
     drawQuad(program, essl1_shaders::PositionAttrib(), 0.5f);
     glFinish();
     EXPECT_GL_ERROR(GL_CONTEXT_LOST);
-    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::transparentBlack);  // Should read through client buffer since context should be lost.
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::transparentBlack);  // Should read through client buffer
+                                                             // since context should be lost.
 }
 
-
-// Tests that infinite loops based on user-supplied values in vertex shaders hang instead of progress.
-// Otherwise optimizer would be able to assume something about the domain of the user-supplied value.
+// Tests that infinite loops based on user-supplied values in vertex shaders hang instead of
+// progress. Otherwise optimizer would be able to assume something about the domain of the
+// user-supplied value.
 TEST_P(TimeoutDrawTest, DynamicInfiniteLoopVS)
 {
     constexpr char kVS[] = R"(precision highp float;
@@ -96,12 +98,14 @@ void main()
 
     drawQuad(program, essl1_shaders::PositionAttrib(), 0.5f);
     glFinish();
-    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::transparentBlack);  // Should read through client buffer since context should be lost.
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::transparentBlack);  // Should read through client buffer
+                                                             // since context should be lost.
     EXPECT_GL_ERROR(GL_CONTEXT_LOST);
 }
 
-// Tests that infinite loops based on user-supplied values in fragment shaders hang instead of progress.
-// Otherwise optimizer would be able to assume something about the domain of the user-supplied value.
+// Tests that infinite loops based on user-supplied values in fragment shaders hang instead of
+// progress. Otherwise optimizer would be able to assume something about the domain of the
+// user-supplied value.
 TEST_P(TimeoutDrawTest, DynamicInfiniteLoopFS)
 {
     constexpr char kFS[] = R"(precision mediump float;
@@ -119,12 +123,13 @@ void main()
     drawQuad(program, essl1_shaders::PositionAttrib(), 0.5f);
     glFinish();
     EXPECT_GL_ERROR(GL_CONTEXT_LOST);
-    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::transparentBlack);  // Should read through client buffer since context should be lost.
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::transparentBlack);  // Should read through client buffer
+                                                             // since context should be lost.
 }
 
-// Tests that infinite loops based on user-supplied values in vertex shaders hang instead of progress.
-// Otherwise optimizer would be able to assume something about the domain of the user-supplied value.
-// Explicit value break variant.
+// Tests that infinite loops based on user-supplied values in vertex shaders hang instead of
+// progress. Otherwise optimizer would be able to assume something about the domain of the
+// user-supplied value. Explicit value break variant.
 TEST_P(TimeoutDrawTest, DynamicInfiniteLoop2VS)
 {
     constexpr char kVS[] = R"(precision highp float;
@@ -143,12 +148,13 @@ void main()
     drawQuad(program, essl1_shaders::PositionAttrib(), 0.5f);
     glFinish();
     EXPECT_GL_ERROR(GL_CONTEXT_LOST);
-    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::transparentBlack);  // Should read through client buffer since context should be lost.
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::transparentBlack);  // Should read through client buffer
+                                                             // since context should be lost.
 }
 
-// Tests that infinite loops based on user-supplied values in fragment shaders hang instead of progress.
-// Otherwise optimizer would be able to assume something about the domain of the user-supplied value.
-// Explicit value break variant.
+// Tests that infinite loops based on user-supplied values in fragment shaders hang instead of
+// progress. Otherwise optimizer would be able to assume something about the domain of the
+// user-supplied value. Explicit value break variant.
 TEST_P(TimeoutDrawTest, DynamicInfiniteLoop2FS)
 {
     constexpr char kFS[] = R"(precision mediump float;
@@ -166,11 +172,13 @@ void main()
     drawQuad(program, essl1_shaders::PositionAttrib(), 0.5f);
     glFinish();
     EXPECT_GL_ERROR(GL_CONTEXT_LOST);
-    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::transparentBlack);  // Should read through client buffer since context should be lost.
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::transparentBlack);  // Should read through client buffer
+                                                             // since context should be lost.
 }
 
-}
+}  // namespace
 
-ANGLE_INSTANTIATE_TEST(TimeoutDrawTest,
-                       WithRobustness(ES2_METAL().enable(Feature::InjectAsmStatementIntoLoopBodies)),
-                       WithRobustness(ES3_METAL().enable(Feature::InjectAsmStatementIntoLoopBodies)));
+ANGLE_INSTANTIATE_TEST(
+    TimeoutDrawTest,
+    WithRobustness(ES2_METAL().enable(Feature::InjectAsmStatementIntoLoopBodies)),
+    WithRobustness(ES3_METAL().enable(Feature::InjectAsmStatementIntoLoopBodies)));

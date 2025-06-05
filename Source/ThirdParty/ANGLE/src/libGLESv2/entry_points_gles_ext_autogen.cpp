@@ -6829,24 +6829,45 @@ void GL_APIENTRY GL_GetTranslatedShaderSourceANGLE(GLuint shader,
 }
 
 // GL_ANGLE_variable_rasterization_rate_metal
-void GL_APIENTRY GL_BindMetalRasterizationRateMapANGLE(GLuint renderbuffer, GLMTLRasterizationRateMapANGLE map)
+void GL_APIENTRY GL_BindMetalRasterizationRateMapANGLE(GLuint framebuffer,
+                                                       GLMTLRasterizationRateMapANGLE map)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
-    EVENT(context, GLBindMetalRasterizationRateMapANGLE, "context = %d, map = 0x%016" PRIxPTR "",
-          CID(context), (uintptr_t)map);
+    EVENT(context, GLBindMetalRasterizationRateMapANGLE,
+          "context = %d, framebuffer = %u, map = 0x%016" PRIxPTR "", CID(context), framebuffer,
+          (uintptr_t)map);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-              ValidateBindMetalRasterizationRateMapANGLE(
-                  context, angle::EntryPoint::GLBindMetalRasterizationRateMapANGLE, map));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
         {
-            context->bindMetalRasterizationRateMap(renderbuffer, map);
+            if (ANGLE_LIKELY(context->getExtensions().variableRasterizationRateMetalANGLE))
+            {
+#if defined(ANGLE_ENABLE_ASSERTS)
+                const uint32_t errorCount = context->getPushedErrorCount();
+#endif
+                isCallValid = ValidateBindMetalRasterizationRateMapANGLE(
+                    context, angle::EntryPoint::GLBindMetalRasterizationRateMapANGLE, framebuffer,
+                    map);
+#if defined(ANGLE_ENABLE_ASSERTS)
+                ASSERT(context->getPushedErrorCount() - errorCount == (isCallValid ? 0 : 1));
+#endif
+            }
+            else
+            {
+                RecordVersionErrorESEXT(context,
+                                        angle::EntryPoint::GLBindMetalRasterizationRateMapANGLE);
+            }
         }
-        ANGLE_CAPTURE_GL(BindMetalRasterizationRateMapANGLE, isCallValid, context, map);
+        if (ANGLE_LIKELY(isCallValid))
+        {
+            context->bindMetalRasterizationRateMap(framebuffer, map);
+        }
+        ANGLE_CAPTURE_GL(BindMetalRasterizationRateMapANGLE, isCallValid, context, framebuffer,
+                         map);
     }
     else
     {
@@ -20263,6 +20284,7 @@ void GL_APIENTRY GL_FramebufferResolveRenderbufferWEBKIT(GLenum target,
                                                          GLenum renderbuffertarget,
                                                          GLuint renderbuffer)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLFramebufferResolveRenderbufferWEBKIT,
           "context = %d, target = %s, attachment = %s, renderbuffertarget = %s, renderbuffer = %u",
@@ -20270,16 +20292,32 @@ void GL_APIENTRY GL_FramebufferResolveRenderbufferWEBKIT(GLenum target,
           GLenumToString(GLESEnum::AllEnums, attachment),
           GLenumToString(GLESEnum::AllEnums, renderbuffertarget), renderbuffer);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         RenderbufferID renderbufferPacked = PackParam<RenderbufferID>(renderbuffer);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-              ValidateFramebufferResolveRenderbufferWEBKIT(
-                  context, angle::EntryPoint::GLFramebufferResolveRenderbufferWEBKIT, target,
-                  attachment, renderbuffertarget, renderbufferPacked));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getExtensions().explicitResolveTargetWEBKIT))
+            {
+#if defined(ANGLE_ENABLE_ASSERTS)
+                const uint32_t errorCount = context->getPushedErrorCount();
+#endif
+                isCallValid = ValidateFramebufferResolveRenderbufferWEBKIT(
+                    context, angle::EntryPoint::GLFramebufferResolveRenderbufferWEBKIT, target,
+                    attachment, renderbuffertarget, renderbufferPacked);
+#if defined(ANGLE_ENABLE_ASSERTS)
+                ASSERT(context->getPushedErrorCount() - errorCount == (isCallValid ? 0 : 1));
+#endif
+            }
+            else
+            {
+                RecordVersionErrorESEXT(context,
+                                        angle::EntryPoint::GLFramebufferResolveRenderbufferWEBKIT);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->framebufferResolveRenderbufferWEBKIT(target, attachment, renderbuffertarget,
                                                           renderbufferPacked);
@@ -20289,7 +20327,8 @@ void GL_APIENTRY GL_FramebufferResolveRenderbufferWEBKIT(GLenum target,
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLFramebufferResolveRenderbufferWEBKIT);
+        GenerateContextLostErrorOnCurrentGlobalContext(
+            angle::EntryPoint::GLFramebufferResolveRenderbufferWEBKIT);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }

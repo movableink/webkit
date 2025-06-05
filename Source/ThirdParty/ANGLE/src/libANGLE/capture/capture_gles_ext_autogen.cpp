@@ -5223,10 +5223,12 @@ CallCapture CaptureGetTranslatedShaderSourceANGLE(const State &glState,
 
 CallCapture CaptureBindMetalRasterizationRateMapANGLE(const State &glState,
                                                       bool isCallValid,
+                                                      GLuint framebuffer,
                                                       GLMTLRasterizationRateMapANGLE map)
 {
     ParamBuffer paramBuffer;
 
+    paramBuffer.addValueParam("framebuffer", ParamType::TGLuint, framebuffer);
     paramBuffer.addValueParam("map", ParamType::TGLMTLRasterizationRateMapANGLE, map);
 
     return CallCapture(angle::EntryPoint::GLBindMetalRasterizationRateMapANGLE,

@@ -645,7 +645,7 @@
     /* GL_ANGLE_texture_multisample */                                                             \
     /* GL_ANGLE_texture_rectangle */                                                               \
     /* GL_ANGLE_variable_rasterization_rate_metal */                                               \
-    void bindMetalRasterizationRateMap(GLuint renderbuffer, GLMTLRasterizationRateMapANGLE map);   \
+    void bindMetalRasterizationRateMap(GLuint framebuffer, GLMTLRasterizationRateMapANGLE map);    \
     /* GL_ANGLE_vulkan_image */                                                                    \
     void acquireTextures(GLuint numTextures, const TextureID *texturesPacked,                      \
                          const GLenum *layouts);                                                   \

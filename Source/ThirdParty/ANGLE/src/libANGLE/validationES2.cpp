@@ -5887,6 +5887,7 @@ bool ValidateMaxShaderCompilerThreadsKHR(const Context *context,
 
 bool ValidateBindMetalRasterizationRateMapANGLE(const Context *context,
                                                 angle::EntryPoint entryPoint,
+                                                GLuint framebuffer,
                                                 GLMTLRasterizationRateMapANGLE map)
 {
     if (!context->getExtensions().variableRasterizationRateMetalANGLE)

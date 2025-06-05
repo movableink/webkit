@@ -26,17 +26,16 @@
 #include "common/platform.h"
 
 #if ANGLE_PLATFORM_MACOS
+#    import "tests/test_expectations/GPUTestConfig_mac.mm"
 #    import "util/osx/OSXPixmap.mm"
 #    import "util/osx/OSXWindow.mm"
-#    import "tests/test_expectations/GPUTestConfig_mac.mm"
 #else
-#    import "util/ios/ios_main.mm"
+#    import "tests/test_expectations/GPUTestConfig_ios.mm"
 #    import "util/ios/IOSPixmap.mm"
 #    import "util/ios/IOSWindow.mm"
-#    import "tests/test_expectations/GPUTestConfig_ios.mm"
+#    import "util/ios/ios_main.mm"
 #endif
 
 #if ANGLE_PLATFORM_MACOS || ANGLE_PLATFORM_MACCATALYST
 #    import "src/gpu_info_util/SystemInfo_macos.mm"
 #endif
-

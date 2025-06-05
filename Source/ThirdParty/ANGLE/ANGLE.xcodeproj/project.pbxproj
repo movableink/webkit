@@ -462,6 +462,8 @@
 		7B81955C28CF63D800C7ABCD /* MemoryShaderCache.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B81955A28CF63D800C7ABCD /* MemoryShaderCache.h */; };
 		7B820C562DE992CD00DAC5E4 /* libtranslator.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7BF5549B2C81EDE0002B101E /* libtranslator.a */; };
 		7B820C792DE9956000DAC5E4 /* End2EndTestsSourcesPlatform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B820C762DE9956000DAC5E4 /* End2EndTestsSourcesPlatform.cpp */; };
+		7B8EC8402DF1BC9100105EB6 /* ImageTestMetal.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7B8EC83F2DF1BC9100105EB6 /* ImageTestMetal.mm */; };
+		7B8EC8412DF1BC9100105EB6 /* GLSLUBTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B8EC83E2DF1BC9100105EB6 /* GLSLUBTest.cpp */; };
 		7B9A99BA2DDC685100160B6E /* ReduceInterfaceBlocks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B9A99B92DDC685100160B6E /* ReduceInterfaceBlocks.cpp */; };
 		7B9A99BB2DDC685100160B6E /* ReduceInterfaceBlocks.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B9A99B82DDC685100160B6E /* ReduceInterfaceBlocks.h */; };
 		7B9A99BC2DDC685100160B6E /* ReduceInterfaceBlocks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B9A99B92DDC685100160B6E /* ReduceInterfaceBlocks.cpp */; };
@@ -905,7 +907,6 @@
 		7BFAF5BC2DE59E0900327F7F /* MultithreadingTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7BFAF5782DE59E0900327F7F /* MultithreadingTest.cpp */; };
 		7BFAF5BD2DE59E0900327F7F /* SwizzleTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7BFAF5A72DE59E0900327F7F /* SwizzleTest.cpp */; };
 		7BFAF5BE2DE59E0900327F7F /* TimeoutDrawTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7BFAF5B02DE59E0900327F7F /* TimeoutDrawTest.cpp */; };
-		7BFAF5BF2DE59E0900327F7F /* SyncQueriesTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7BFAF5A82DE59E0900327F7F /* SyncQueriesTest.cpp */; };
 		7BFAF5C02DE59E0900327F7F /* SimpleOperationTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7BFAF5A22DE59E0900327F7F /* SimpleOperationTest.cpp */; };
 		7BFAF5C12DE59E0900327F7F /* UniformTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7BFAF5B42DE59E0900327F7F /* UniformTest.cpp */; };
 		7BFAF5C22DE59E0900327F7F /* PackUnpackTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7BFAF57C2DE59E0900327F7F /* PackUnpackTest.cpp */; };
@@ -2140,6 +2141,8 @@
 		7B81955928CF63D800C7ABCD /* MemoryShaderCache.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MemoryShaderCache.cpp; sourceTree = "<group>"; };
 		7B81955A28CF63D800C7ABCD /* MemoryShaderCache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MemoryShaderCache.h; sourceTree = "<group>"; };
 		7B820C762DE9956000DAC5E4 /* End2EndTestsSourcesPlatform.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = End2EndTestsSourcesPlatform.cpp; path = WebKit/End2EndTestsSourcesPlatform.cpp; sourceTree = "<group>"; };
+		7B8EC83E2DF1BC9100105EB6 /* GLSLUBTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = GLSLUBTest.cpp; sourceTree = "<group>"; };
+		7B8EC83F2DF1BC9100105EB6 /* ImageTestMetal.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ImageTestMetal.mm; sourceTree = "<group>"; };
 		7B9A99B82DDC685100160B6E /* ReduceInterfaceBlocks.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ReduceInterfaceBlocks.h; sourceTree = "<group>"; };
 		7B9A99B92DDC685100160B6E /* ReduceInterfaceBlocks.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ReduceInterfaceBlocks.cpp; sourceTree = "<group>"; };
 		7B9BB4472D563C4A00E39E4C /* ObjCPtr.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ObjCPtr.h; sourceTree = "<group>"; };
@@ -2366,7 +2369,6 @@
 		7BFAF5A52DE59E0900327F7F /* SRGBTextureTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SRGBTextureTest.cpp; sourceTree = "<group>"; };
 		7BFAF5A62DE59E0900327F7F /* StateChangeTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = StateChangeTest.cpp; sourceTree = "<group>"; };
 		7BFAF5A72DE59E0900327F7F /* SwizzleTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SwizzleTest.cpp; sourceTree = "<group>"; };
-		7BFAF5A82DE59E0900327F7F /* SyncQueriesTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SyncQueriesTest.cpp; sourceTree = "<group>"; };
 		7BFAF5A92DE59E0900327F7F /* TextureExternalUpdateTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TextureExternalUpdateTest.cpp; sourceTree = "<group>"; };
 		7BFAF5AA2DE59E0900327F7F /* TextureFixedRateCompressionTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TextureFixedRateCompressionTest.cpp; sourceTree = "<group>"; };
 		7BFAF5AB2DE59E0900327F7F /* TextureMultisampleTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TextureMultisampleTest.cpp; sourceTree = "<group>"; };
@@ -3930,7 +3932,9 @@
 				7BFAF5502DE59DCD00327F7F /* GeometryShaderTest.cpp */,
 				7BFAF5522DE59DCD00327F7F /* GetTexLevelParameterTest.cpp */,
 				7BFAF5632DE59E0900327F7F /* GLSLTest.cpp */,
+				7B8EC83E2DF1BC9100105EB6 /* GLSLUBTest.cpp */,
 				7BFAF5642DE59E0900327F7F /* ImageTest.cpp */,
+				7B8EC83F2DF1BC9100105EB6 /* ImageTestMetal.mm */,
 				7BFAF5662DE59E0900327F7F /* IncompatibleTextureTest.cpp */,
 				7BFAF5672DE59E0900327F7F /* IncompleteTextureTest.cpp */,
 				7BFAF5682DE59E0900327F7F /* IndexBufferOffsetTest.cpp */,
@@ -3995,7 +3999,6 @@
 				7BFAF5A52DE59E0900327F7F /* SRGBTextureTest.cpp */,
 				7BFAF5A62DE59E0900327F7F /* StateChangeTest.cpp */,
 				7BFAF5A72DE59E0900327F7F /* SwizzleTest.cpp */,
-				7BFAF5A82DE59E0900327F7F /* SyncQueriesTest.cpp */,
 				7BFAF5A92DE59E0900327F7F /* TextureExternalUpdateTest.cpp */,
 				7BFAF5AA2DE59E0900327F7F /* TextureFixedRateCompressionTest.cpp */,
 				7BFAF5AB2DE59E0900327F7F /* TextureMultisampleTest.cpp */,
@@ -5899,10 +5902,12 @@
 				7BFAF6712DE5AA3500327F7F /* gl_enum_utils.cpp in Sources */,
 				7BFAF6702DE5AA3500327F7F /* gl_enum_utils_autogen.cpp in Sources */,
 				7BFAF5BA2DE59E0900327F7F /* GLSLTest.cpp in Sources */,
+				7B8EC8412DF1BC9100105EB6 /* GLSLUBTest.cpp in Sources */,
 				7BFAF4E02DE49CE200327F7F /* GPUTestConfig.cpp in Sources */,
 				7BFAF4E12DE49CE200327F7F /* GPUTestExpectationsParser.cpp in Sources */,
 				7BFAF4ED2DE59D5700327F7F /* GPUTestExpectationsTest.cpp in Sources */,
 				7BFAF5DA2DE59E0900327F7F /* ImageTest.cpp in Sources */,
+				7B8EC8402DF1BC9100105EB6 /* ImageTestMetal.mm in Sources */,
 				7BFAF5C32DE59E0900327F7F /* IncompatibleTextureTest.cpp in Sources */,
 				7BFAF5F32DE59E0900327F7F /* IncompleteTextureTest.cpp in Sources */,
 				7BFAF5EE2DE59E0900327F7F /* IndexBufferOffsetTest.cpp in Sources */,
@@ -5973,7 +5978,6 @@
 				7BFAF5C72DE59E0900327F7F /* SRGBTextureTest.cpp in Sources */,
 				7BFAF5E22DE59E0900327F7F /* StateChangeTest.cpp in Sources */,
 				7BFAF5BD2DE59E0900327F7F /* SwizzleTest.cpp in Sources */,
-				7BFAF5BF2DE59E0900327F7F /* SyncQueriesTest.cpp in Sources */,
 				7BFAF6672DE5A7A200327F7F /* system_info_util.cpp in Sources */,
 				7BFAF5C92DE59E0900327F7F /* TextureExternalUpdateTest.cpp in Sources */,
 				7BFAF6042DE59E0900327F7F /* TextureFixedRateCompressionTest.cpp in Sources */,

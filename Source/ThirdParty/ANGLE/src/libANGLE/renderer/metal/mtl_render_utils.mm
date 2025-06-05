@@ -2322,7 +2322,7 @@ angle::Result MipmapUtils::generateMipmapCS(ContextMtl *contextMtl,
     MipmapNativeLevel batchSrcLevel = kZeroNativeMipLevel;
     options.srcLevel                = batchSrcLevel.get();
     options.sRGB                    = sRGBMipmap;
-    
+
     cmdEncoder->setTexture(srcTexture, 0);
     cmdEncoder->markResourceBeingWrittenByGPU(srcTexture);
     while (remainMips)

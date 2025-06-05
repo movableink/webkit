@@ -2227,8 +2227,8 @@ TEST_P(UniformTestES3, MatrixUniformUpload)
         matrixValues[i] = static_cast<GLfloat>(i);
     }
 
-    using UniformMatrixCxRfv = decltype(glUniformMatrix2fv);
-    UniformMatrixCxRfv* uniformMatrixCxRfv[kMaxDims + 1][kMaxDims + 1] = {
+    using UniformMatrixCxRfv = GL_APIENTRY void (*)(GLint, GLsizei, GLboolean, const GLfloat *);
+    UniformMatrixCxRfv uniformMatrixCxRfv[kMaxDims + 1][kMaxDims + 1] = {
         {nullptr, nullptr, nullptr, nullptr, nullptr},
         {nullptr, nullptr, nullptr, nullptr, nullptr},
         {nullptr, nullptr, glUniformMatrix2fv, glUniformMatrix2x3fv, glUniformMatrix2x4fv},

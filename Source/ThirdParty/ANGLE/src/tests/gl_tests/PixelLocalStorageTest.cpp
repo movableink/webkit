@@ -6,9 +6,9 @@
 
 #include <sstream>
 #include <string>
+#include "common/string_utils.h"
 #include "test_utils/ANGLETest.h"
 #include "test_utils/gl_raii.h"
-#include "common/string_utils.h"
 
 using namespace angle;
 

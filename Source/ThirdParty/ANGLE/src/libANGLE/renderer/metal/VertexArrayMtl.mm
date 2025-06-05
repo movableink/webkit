@@ -1089,8 +1089,10 @@ angle::Result VertexArrayMtl::convertVertexBufferGPU(const gl::Context *glContex
     GLintptr bindingOffset = binding.getOffset();
 
     if constexpr (sizeof(bindingOffset) > sizeof(uint32_t))
+    {
         ANGLE_CHECK_GL_MATH(contextMtl, static_cast<std::make_unsigned_t<decltype(bindingOffset)>>(
                                             bindingOffset) <= std::numeric_limits<uint32_t>::max());
+    }
     ANGLE_CHECK_GL_MATH(contextMtl, newBufferOffset <= std::numeric_limits<uint32_t>::max());
     ANGLE_CHECK_GL_MATH(contextMtl, numVertices <= std::numeric_limits<uint32_t>::max());
 
@@ -1098,8 +1100,10 @@ angle::Result VertexArrayMtl::convertVertexBufferGPU(const gl::Context *glContex
     VertexConversionBufferMtl *vertexConversion =
         static_cast<VertexConversionBufferMtl *>(conversion);
     if constexpr (sizeof(vertexConversion->offset) > sizeof(uint32_t))
+    {
         ANGLE_CHECK_GL_MATH(contextMtl,
                             vertexConversion->offset <= std::numeric_limits<uint32_t>::max());
+    }
     params.srcBuffer            = srcBuffer->getCurrentBuffer();
     params.srcBufferStartOffset = std::min(static_cast<uint32_t>(vertexConversion->offset),
                                            static_cast<uint32_t>(bindingOffset));

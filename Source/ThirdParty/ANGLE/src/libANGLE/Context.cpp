@@ -9856,10 +9856,12 @@ void Context::blobCacheCallbacks(GLSETBLOBPROCANGLE set,
     mState.getBlobCacheCallbacks() = {set, get, userParam};
 }
 
-void Context::bindMetalRasterizationRateMap(GLuint renderbufferHandle, GLMTLRasterizationRateMapANGLE map)
+void Context::bindMetalRasterizationRateMap(GLuint renderbufferHandle,
+                                            GLMTLRasterizationRateMapANGLE map)
 {
     Renderbuffer *renderbuffer = getRenderbuffer({renderbufferHandle});
-    rx::RenderbufferImpl *renderbufferImpl = renderbuffer ? renderbuffer->getImplementation() : nullptr;
+    rx::RenderbufferImpl *renderbufferImpl =
+        renderbuffer ? renderbuffer->getImplementation() : nullptr;
     ANGLE_CONTEXT_TRY(mImplementation->bindMetalRasterizationRateMap(this, renderbufferImpl, map));
     getMutablePrivateState()->setVariableRasterizationRateMap(map);
 }

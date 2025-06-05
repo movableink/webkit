@@ -2528,6 +2528,7 @@ angle::Result StateManagerGL::syncState(const gl::Context *context,
                             break;
                         case gl::state::EXTENDED_DIRTY_BIT_BLEND_ADVANCED_COHERENT:
                             setBlendAdvancedCoherent(state.isBlendAdvancedCoherentEnabled());
+                            break;
                         case gl::state::EXTENDED_DIRTY_BIT_VARIABLE_RASTERIZATION_RATE:
                             // Unimplemented extensions.
                             break;

@@ -100,8 +100,8 @@ enum class ParamType
     TGLDEBUGPROC,
     TGLDEBUGPROCKHR,
     TGLGETBLOBPROCANGLE,
-    TGLSETBLOBPROCANGLE,
     TGLMTLRasterizationRateMapANGLE,
+    TGLSETBLOBPROCANGLE,
     TGLbitfield,
     TGLboolean,
     TGLbooleanPointer,
@@ -272,7 +272,7 @@ enum class ParamType
     TvoidPointerPointer,
 };
 
-constexpr uint32_t kParamTypeCount = 164;
+constexpr uint32_t kParamTypeCount = 235;
 
 union ParamValue
 {
@@ -335,8 +335,8 @@ union ParamValue
     GLDEBUGPROC GLDEBUGPROCVal;
     GLDEBUGPROCKHR GLDEBUGPROCKHRVal;
     GLGETBLOBPROCANGLE GLGETBLOBPROCANGLEVal;
-    GLSETBLOBPROCANGLE GLSETBLOBPROCANGLEVal;
     GLMTLRasterizationRateMapANGLE GLMTLRasterizationRateMapANGLEVal;
+    GLSETBLOBPROCANGLE GLSETBLOBPROCANGLEVal;
     GLbitfield GLbitfieldVal;
     GLboolean GLbooleanVal;
     GLboolean *GLbooleanPointerVal;
@@ -894,18 +894,18 @@ inline GLGETBLOBPROCANGLE GetParamVal<ParamType::TGLGETBLOBPROCANGLE, GLGETBLOBP
 }
 
 template <>
-inline GLSETBLOBPROCANGLE GetParamVal<ParamType::TGLSETBLOBPROCANGLE, GLSETBLOBPROCANGLE>(
-    const ParamValue &value)
-{
-    return value.GLSETBLOBPROCANGLEVal;
-}
-
-template <>
 inline GLMTLRasterizationRateMapANGLE
 GetParamVal<ParamType::TGLMTLRasterizationRateMapANGLE, GLMTLRasterizationRateMapANGLE>(
     const ParamValue &value)
 {
     return value.GLMTLRasterizationRateMapANGLEVal;
+}
+
+template <>
+inline GLSETBLOBPROCANGLE GetParamVal<ParamType::TGLSETBLOBPROCANGLE, GLSETBLOBPROCANGLE>(
+    const ParamValue &value)
+{
+    return value.GLSETBLOBPROCANGLEVal;
 }
 
 template <>
@@ -2221,10 +2221,10 @@ T AccessParamValue(ParamType paramType, const ParamValue &value)
             return GetParamVal<ParamType::TGLDEBUGPROCKHR, T>(value);
         case ParamType::TGLGETBLOBPROCANGLE:
             return GetParamVal<ParamType::TGLGETBLOBPROCANGLE, T>(value);
-        case ParamType::TGLSETBLOBPROCANGLE:
-            return GetParamVal<ParamType::TGLSETBLOBPROCANGLE, T>(value);
         case ParamType::TGLMTLRasterizationRateMapANGLE:
             return GetParamVal<ParamType::TGLMTLRasterizationRateMapANGLE, T>(value);
+        case ParamType::TGLSETBLOBPROCANGLE:
+            return GetParamVal<ParamType::TGLSETBLOBPROCANGLE, T>(value);
         case ParamType::TGLbitfield:
             return GetParamVal<ParamType::TGLbitfield, T>(value);
         case ParamType::TGLboolean:
@@ -2930,18 +2930,18 @@ inline void SetParamVal<ParamType::TGLGETBLOBPROCANGLE>(GLGETBLOBPROCANGLE value
 }
 
 template <>
-inline void SetParamVal<ParamType::TGLSETBLOBPROCANGLE>(GLSETBLOBPROCANGLE valueIn,
-                                                        ParamValue *valueOut)
-{
-    valueOut->GLSETBLOBPROCANGLEVal = valueIn;
-}
-
-template <>
 inline void SetParamVal<ParamType::TGLMTLRasterizationRateMapANGLE>(
     GLMTLRasterizationRateMapANGLE valueIn,
     ParamValue *valueOut)
 {
     valueOut->GLMTLRasterizationRateMapANGLEVal = valueIn;
+}
+
+template <>
+inline void SetParamVal<ParamType::TGLSETBLOBPROCANGLE>(GLSETBLOBPROCANGLE valueIn,
+                                                        ParamValue *valueOut)
+{
+    valueOut->GLSETBLOBPROCANGLEVal = valueIn;
 }
 
 template <>
@@ -4296,11 +4296,11 @@ void InitParamValue(ParamType paramType, T valueIn, ParamValue *valueOut)
         case ParamType::TGLGETBLOBPROCANGLE:
             SetParamVal<ParamType::TGLGETBLOBPROCANGLE>(valueIn, valueOut);
             break;
-        case ParamType::TGLSETBLOBPROCANGLE:
-            SetParamVal<ParamType::TGLSETBLOBPROCANGLE>(valueIn, valueOut);
-            break;
         case ParamType::TGLMTLRasterizationRateMapANGLE:
             SetParamVal<ParamType::TGLMTLRasterizationRateMapANGLE>(valueIn, valueOut);
+            break;
+        case ParamType::TGLSETBLOBPROCANGLE:
+            SetParamVal<ParamType::TGLSETBLOBPROCANGLE>(valueIn, valueOut);
             break;
         case ParamType::TGLbitfield:
             SetParamVal<ParamType::TGLbitfield>(valueIn, valueOut);

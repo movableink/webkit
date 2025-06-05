@@ -28,4 +28,3 @@
 #if ANGLE_PLATFORM_MACOS
 #    include "tests/egl_tests/EGLPowerPreferenceTest.cpp"
 #endif
-
