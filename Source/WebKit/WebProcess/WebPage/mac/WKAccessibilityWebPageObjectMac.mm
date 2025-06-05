@@ -170,7 +170,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
             if (WebCore::AXObjectCache::isIsolatedTreeEnabled())
-                WebCore::AXObjectCache::initializeAXThreadIfNeeded();
+                [protectedSelf _buildIsolatedTreeIfNeeded];
 #endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 
             float roundedHeight = std::round(WebCore::screenRectForPrimaryScreen().size().height());

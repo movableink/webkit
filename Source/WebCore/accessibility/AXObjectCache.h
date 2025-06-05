@@ -304,7 +304,7 @@ public:
     // Returns the root object for a specific frame.
     WEBCORE_EXPORT AXCoreObject* rootObjectForFrame(LocalFrame&);
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    WEBCORE_EXPORT void buildAccessibilityTreeIfNeeded();
+    WEBCORE_EXPORT void buildIsolatedTreeIfNeeded();
 #endif
 
     // Creation/retrieval of AX objects associated with a DOM or RenderTree object.

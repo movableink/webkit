@@ -118,7 +118,7 @@ namespace ax = WebCore::Accessibility;
             // isolated objects are able to be attached to those text annotation object wrappers.
             // If they aren't, we never have a backing object to serve any requests from.
             if (auto cache = protectedSelf.get().axObjectCache)
-                cache->buildAccessibilityTreeIfNeeded();
+                cache->buildIsolatedTreeIfNeeded();
 #endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
             return protectedSelf.get().accessibilityPluginObject;
         }
@@ -187,12 +187,18 @@ namespace ax = WebCore::Accessibility;
 - (void)setWindow:(id)window
 {
     ASSERT(isMainRunLoop());
-#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     Locker lock { m_windowLock };
-#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     m_window = window;
 }
-#endif
+
+- (void)_buildIsolatedTreeIfNeeded
+{
+    ensureOnMainThread([protectedSelf = RetainPtr { self }] {
+        if (auto cache = protectedSelf.get().axObjectCache)
+            cache->buildIsolatedTreeIfNeeded();
+    });
+}
+#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 
 - (void)setHasMainFramePlugin:(bool)hasPlugin
 {

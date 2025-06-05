@@ -1097,7 +1097,7 @@ AXCoreObject* AXObjectCache::rootObjectForFrame(LocalFrame& frame)
 }
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-void AXObjectCache::buildAccessibilityTreeIfNeeded()
+void AXObjectCache::buildIsolatedTreeIfNeeded()
 {
     if (!gAccessibilityEnabled)
         return;

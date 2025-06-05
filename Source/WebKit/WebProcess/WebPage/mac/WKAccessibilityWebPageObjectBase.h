@@ -68,6 +68,7 @@ class AXIsolatedTree;
 - (void)setSize:(const WebCore::IntSize&)size;
 - (void)setIsolatedTree:(Ref<WebCore::AXIsolatedTree>&&)tree;
 - (void)setWindow:(id)window;
+- (void)_buildIsolatedTreeIfNeeded;
 #endif
 - (void)setRemoteParent:(id)parent;
 - (void)setRemoteFrameOffset:(WebCore::IntPoint)offset;
