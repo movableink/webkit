@@ -1446,10 +1446,9 @@ NetworkSessionCocoa::NetworkSessionCocoa(NetworkProcess& networkProcess, const N
     if (parameters.useNetworkLoader) {
         RELEASE_LOG_IF(*parameters.useNetworkLoader, NetworkSession, "Using experimental network loader.");
 // FIXME: rdar://152673570 Stop using `_usesNWLoader` as it is deprecated
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         configuration.get()._usesNWLoader = *parameters.useNetworkLoader;
-#pragma clang diagnostic pop
+ALLOW_DEPRECATED_DECLARATIONS_END
     }
 #endif
 
