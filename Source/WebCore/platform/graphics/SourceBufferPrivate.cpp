@@ -827,8 +827,8 @@ bool SourceBufferPrivate::processMediaSample(SourceBufferPrivateClient& client, 
     // 1.1. Loop Top
 
     do {
-        MediaTime presentationTimestamp;
-        MediaTime decodeTimestamp;
+        MediaTime presentationTimestamp = MediaTime::zeroTime();
+        MediaTime decodeTimestamp = MediaTime::zeroTime();
 
         // NOTE: this is out-of-order, but we need the timescale from the
         // sample's duration for timestamp generation.
@@ -839,12 +839,14 @@ bool SourceBufferPrivate::processMediaSample(SourceBufferPrivateClient& client, 
         if (m_shouldGenerateTimestamps) {
             // ↳ If generate timestamps flag equals true:
             // 1. Let presentation timestamp equal 0.
-            // NOTE: Use the duration timscale for the presentation timestamp, as this will eliminate
-            // timescale rounding when generating timestamps.
-            presentationTimestamp = { 0, frameDuration.timeScale() };
+            if (frameDuration.isValid()) {
+                // NOTE: Use the duration timscale for the presentation timestamp, as this will eliminate
+                // timescale rounding when generating timestamps.
+                presentationTimestamp = { 0, frameDuration.timeScale() };
 
-            // 2. Let decode timestamp equal 0.
-            decodeTimestamp = { 0, frameDuration.timeScale() };
+                // 2. Let decode timestamp equal 0.
+                decodeTimestamp = { 0, frameDuration.timeScale() };
+            }
         } else {
             // ↳ Otherwise:
             // 1. Let presentation timestamp be a double precision floating point representation of
@@ -855,6 +857,7 @@ bool SourceBufferPrivate::processMediaSample(SourceBufferPrivateClient& client, 
             // decode timestamp in seconds.
             decodeTimestamp = sample->decodeTime();
         }
+        ERROR_LOG_IF(presentationTimestamp.isInvalid(), LOGIDENTIFIER, "invalid sample time encountered:", sample.get());
 
         // 1.3 If mode equals "sequence" and group start timestamp is set, then run the following steps:
         if (m_appendMode == SourceBufferAppendMode::Sequence && m_groupStartTimestamp.isValid()) {
@@ -893,7 +896,9 @@ bool SourceBufferPrivate::processMediaSample(SourceBufferPrivateClient& client, 
 
         // 1.4 If timestampOffset is not 0, then run the following steps:
         if (m_timestampOffset) {
-            if (!trackBuffer.roundedTimestampOffset().isValid() || presentationTimestamp.timeScale() != trackBuffer.lastFrameTimescale()) {
+            if (!trackBuffer.roundedTimestampOffset().isValid())
+                trackBuffer.setRoundedTimestampOffset(m_timestampOffset);
+            if (presentationTimestamp.isValid() && presentationTimestamp.timeScale() != trackBuffer.lastFrameTimescale()) {
                 trackBuffer.setLastFrameTimescale(presentationTimestamp.timeScale());
                 trackBuffer.setRoundedTimestampOffset(m_timestampOffset, trackBuffer.lastFrameTimescale(), microsecond);
             }
@@ -953,7 +958,7 @@ bool SourceBufferPrivate::processMediaSample(SourceBufferPrivateClient& client, 
         // 1.9 If frame end timestamp is greater than appendWindowEnd, then set the need random access
         // point flag to true, drop the coded frame, and jump to the top of the loop to start processing
         // the next coded frame.
-        if (presentationTimestamp < m_appendWindowStart || frameEndTimestamp > m_appendWindowEnd) {
+        if (presentationTimestamp.isInvalid() || presentationTimestamp < m_appendWindowStart || frameEndTimestamp > m_appendWindowEnd) {
             // 1.8 Note.
             // Some implementations MAY choose to collect some of these coded frames with presentation
             // timestamp less than appendWindowStart and use them to generate a splice at the first coded

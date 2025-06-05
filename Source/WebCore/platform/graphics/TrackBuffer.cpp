@@ -42,6 +42,9 @@ static constexpr size_t MaximumSlidingWindowLength = 16;
 
 static inline MediaTime roundTowardsTimeScaleWithRoundingMargin(const MediaTime& time, uint32_t timeScale, const MediaTime& roundingMargin)
 {
+    ASSERT(timeScale);
+    if (!timeScale)
+        return time;
     while (true) {
         MediaTime roundedTime = time.toTimeScale(timeScale);
         if (abs(roundedTime - time) < roundingMargin || timeScale >= MediaTime::MaximumTimeScale)
