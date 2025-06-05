@@ -26,6 +26,8 @@ const CalleeSaveSpaceAsVirtualRegisters = constexpr Wasm::numberOfLLIntCalleeSav
 const CalleeSaveSpaceStackAligned = (CalleeSaveSpaceAsVirtualRegisters * SlotSize + StackAlignment - 1) & ~StackAlignmentMask
 const WasmEntryPtrTag = constexpr WasmEntryPtrTag
 const UnboxedWasmCalleeStackSlot = CallerFrame - constexpr Wasm::numberOfLLIntCalleeSaveRegisters * SlotSize - MachineRegisterSize
+const WasmToJSScratchSpaceSize = constexpr Wasm::WasmToJSScratchSpaceSize
+const WasmToJSCallableFunctionSlot = constexpr Wasm::WasmToJSCallableFunctionSlot
 
 if HAVE_FAST_TLS
     const WTF_WASM_CONTEXT_KEY = constexpr WTF_WASM_CONTEXT_KEY
@@ -983,31 +985,11 @@ op(wasm_to_js_wrapper_entry, macro()
     tagReturnAddress sp
     preserveCallerPCAndCFR()
 
-    loadp (CodeBlock)[sp], ws0
-    loadp (Callee)[sp], ws1
-
-    const ScratchSpaceSize = 0x8 * 3 + 0x8 # alignment
-    const CalleeScratch = -0x10
-    const WasmInstanceScratch = -0x8
-    const WasmCallableFunctionScratch = -0x18
-
-    subp ScratchSpaceSize, sp
-
-if ARM64 or ARM64E
-    storepairq ws1, wasmInstance, CalleeScratch[cfr]
-elsif JSVALUE64
-    storeq ws1, CalleeScratch[cfr]
-    storeq wasmInstance, WasmInstanceScratch[cfr]
-else
-    storep ws1, CalleeScratch+PayloadOffset[cfr]
-    move constexpr JSValue::NativeCalleeTag, ws1
-    storep ws1, CalleeScratch+TagOffset[cfr]
-    storep wasmInstance, WasmInstanceScratch[cfr]
-end
-    storep ws0, WasmCallableFunctionScratch[cfr]
-
     const RegisterSpaceScratchSize = 0x80
-    subp RegisterSpaceScratchSize, sp
+    subp (WasmToJSScratchSpaceSize + RegisterSpaceScratchSize), sp
+
+    loadp CodeBlock[cfr], ws0
+    storep ws0, WasmToJSCallableFunctionSlot[cfr]
 
     # Store all the registers here
 
@@ -1059,7 +1041,7 @@ end
     break
 
 .safe:
-    loadp WasmCallableFunctionScratch[cfr], t2
+    loadp WasmToJSCallableFunctionSlot[cfr], t2
     loadp JSC::Wasm::WasmOrJSImportableFunctionCallLinkInfo::importFunction[t2], t0
 if not JSVALUE64
     move (constexpr JSValue::CellTag), t1
@@ -1093,13 +1075,12 @@ end
     call t5, JSEntryPtrTag
 
 .postcall:
-    subp RegisterSpaceScratchSize, sp
     storep r0, [sp]
 if not JSVALUE64
     storep r1, TagOffset[sp]
 end
 
-    loadp WasmCallableFunctionScratch[cfr], a0
+    loadp WasmToJSCallableFunctionSlot[cfr], a0
     call _operationWasmToJSExitNeedToUnpack
     btpnz r0, .unpack
 
@@ -1170,9 +1151,7 @@ else
     end)
 end
 
-    loadp WasmInstanceScratch[cfr], wasmInstance
-    addp (ScratchSpaceSize + RegisterSpaceScratchSize), sp
-
+    loadp CodeBlock[cfr], wasmInstance
     restoreCallerPCAndCFR()
     ret
 
