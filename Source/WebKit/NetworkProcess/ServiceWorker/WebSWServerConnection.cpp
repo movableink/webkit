@@ -393,7 +393,7 @@ void WebSWServerConnection::postMessageToServiceWorker(ServiceWorkerIdentifier d
 
 void WebSWServerConnection::scheduleJobInServer(ServiceWorkerJobData&& jobData)
 {
-    MESSAGE_CHECK(protectedNetworkProcess()->allowsFirstPartyForCookies(identifier(), WebCore::RegistrableDomain::uncheckedCreateFromHost(jobData.topOrigin.host())) != NetworkProcess::AllowCookieAccess::Terminate);
+    checkTopOrigin(jobData.topOrigin);
 
     ASSERT(!jobData.scopeURL.isNull());
     if (jobData.scopeURL.isNull()) {
@@ -467,6 +467,8 @@ void WebSWServerConnection::postMessageToServiceWorkerClient(ScriptExecutionCont
 
 void WebSWServerConnection::matchRegistration(const SecurityOriginData& topOrigin, const URL& clientURL, CompletionHandler<void(std::optional<ServiceWorkerRegistrationData>&&)>&& callback)
 {
+    checkTopOrigin(topOrigin);
+
     if (RefPtr registration = doRegistrationMatching(topOrigin, clientURL)) {
         callback(registration->data());
         return;
@@ -474,8 +476,17 @@ void WebSWServerConnection::matchRegistration(const SecurityOriginData& topOrigi
     callback({ });
 }
 
+void WebSWServerConnection::whenRegistrationReady(const WebCore::SecurityOriginData& topOrigin, const URL& clientURL, CompletionHandler<void(std::optional<WebCore::ServiceWorkerRegistrationData>&&)>&& callback)
+{
+    checkTopOrigin(topOrigin);
+
+    SWServer::Connection::whenRegistrationReady(topOrigin, clientURL, WTFMove(callback));
+}
+
 void WebSWServerConnection::getRegistrations(const SecurityOriginData& topOrigin, const URL& clientURL, CompletionHandler<void(const Vector<ServiceWorkerRegistrationData>&)>&& callback)
 {
+    checkTopOrigin(topOrigin);
+
     if (RefPtr server = this->server())
         callback(server->getRegistrations(topOrigin, clientURL));
     else
@@ -485,7 +496,7 @@ void WebSWServerConnection::getRegistrations(const SecurityOriginData& topOrigin
 void WebSWServerConnection::registerServiceWorkerClient(WebCore::ClientOrigin&& clientOrigin, ServiceWorkerClientData&& data, const std::optional<ServiceWorkerRegistrationIdentifier>& controllingServiceWorkerRegistrationIdentifier, String&& userAgent)
 {
     MESSAGE_CHECK(data.identifier.processIdentifier() == identifier());
-    MESSAGE_CHECK(!clientOrigin.topOrigin.isNull());
+    checkTopOrigin(clientOrigin.topOrigin);
 
     registerServiceWorkerClientInternal(WTFMove(clientOrigin), WTFMove(data), controllingServiceWorkerRegistrationIdentifier, WTFMove(userAgent), SWServer::IsBeingCreatedClient::No);
 }
@@ -977,6 +988,17 @@ void WebSWServerConnection::reportNetworkUsageToWorkerClient(WebCore::ScriptExec
     send(Messages::WebSWClientConnection::ReportNetworkUsageToWorkerClient(identifier, bytesTransferredOverNetworkDelta));
 }
 #endif
+
+void WebSWServerConnection::checkTopOrigin(const WebCore::SecurityOriginData& origin)
+{
+    MESSAGE_CHECK(!origin.isNull());
+    RefPtr networkConnectionToWebProcess = m_networkConnectionToWebProcess.get();
+    if (!networkConnectionToWebProcess)
+        return;
+
+    Ref networkProcess = networkConnectionToWebProcess->networkProcess();
+    MESSAGE_CHECK(networkProcess->allowsFirstPartyForCookies(networkConnectionToWebProcess->webProcessIdentifier(), WebCore::RegistrableDomain::uncheckedCreateFromHost(origin.host())) != NetworkProcess::AllowCookieAccess::Terminate);
+}
 
 } // namespace WebKit
 
