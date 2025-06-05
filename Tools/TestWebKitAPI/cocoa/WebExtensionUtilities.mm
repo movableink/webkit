@@ -786,6 +786,8 @@ static WKUserContentController *userContentController(BOOL usingPrivateBrowsing)
 
 - (TestWebExtensionTab *)openNewTabAtIndex:(NSUInteger)index
 {
+    index = std::min(index, _tabs.count);
+
     ASSERT(index <= _tabs.count);
 
     auto *newTab = [[TestWebExtensionTab alloc] initWithWindow:self extensionController:_extensionController];
@@ -809,7 +811,6 @@ static WKUserContentController *userContentController(BOOL usingPrivateBrowsing)
     if (!_activeTab)
         _activeTab = newTab;
 
-    index = std::min(index, _tabs.count);
 
     [_tabs insertObject:newTab atIndex:index];
     [_extensionController didOpenTab:newTab];
