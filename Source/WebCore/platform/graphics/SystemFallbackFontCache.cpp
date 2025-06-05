@@ -46,7 +46,7 @@ SystemFallbackFontCache& SystemFallbackFontCache::forCurrentThread()
 
 SystemFallbackFontCache* SystemFallbackFontCache::forCurrentThreadIfExists()
 {
-    auto* cache = FontCache::forCurrentThreadIfExists();
+    CheckedPtr cache = FontCache::forCurrentThreadIfExists();
     if (!cache)
         return nullptr;
 
