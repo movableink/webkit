@@ -210,7 +210,6 @@ RefPtr<VideoFrame> CanvasCaptureMediaStreamTrack::Source::grabFrame()
 void CanvasCaptureMediaStreamTrack::Source::captureCanvas()
 {
     ASSERT(m_canvas);
-
     RefPtr canvas = m_canvas.get();
     if (!canvas || !isProducingData())
         return;
@@ -224,7 +223,13 @@ void CanvasCaptureMediaStreamTrack::Source::captureCanvas()
     if (!canvas->originClean())
         return;
 
-    RefPtr videoFrame = grabFrame();
+    RefPtr videoFrame = [&]() -> RefPtr<VideoFrame> {
+#if ENABLE(WEBGL)
+        if (auto* gl = dynamicDowncast<WebGLRenderingContextBase>(canvas->renderingContext()))
+            return gl->surfaceBufferToVideoFrame(CanvasRenderingContext::SurfaceBuffer::DisplayBuffer);
+#endif
+        return canvas->toVideoFrame();
+    }();
     if (!videoFrame)
         return;
 
