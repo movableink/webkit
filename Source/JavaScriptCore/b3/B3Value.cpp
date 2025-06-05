@@ -732,6 +732,8 @@ Effects Value::effects() const
     case VectorAddSat:
     case VectorSubSat:
     case VectorMul:
+    case VectorMulHigh:
+    case VectorMulLow:
     case VectorDotProduct:
     case VectorDiv:
     case VectorMin:
@@ -1016,6 +1018,8 @@ ValueKey Value::key() const
     case VectorAddSat:
     case VectorSubSat:
     case VectorMul:
+    case VectorMulHigh:
+    case VectorMulLow:
     case VectorDotProduct:
     case VectorDiv:
     case VectorMin:

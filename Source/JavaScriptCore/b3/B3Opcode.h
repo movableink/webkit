@@ -382,6 +382,8 @@ enum Opcode : uint8_t {
     VectorAddSat,
     VectorSubSat,
     VectorMul,
+    VectorMulHigh,
+    VectorMulLow,
     VectorDotProduct,
     VectorDiv,
     VectorMin,
@@ -636,13 +638,4 @@ inline Opcode signExtendOpcode(Width width)
 JS_EXPORT_PRIVATE Opcode storeOpcode(Bank bank, Width width);
 
 } } // namespace JSC::B3
-
-namespace WTF {
-
-class PrintStream;
-
-JS_EXPORT_PRIVATE void printInternal(PrintStream&, JSC::B3::Opcode);
-
-} // namespace WTF
-
 #endif // ENABLE(B3_JIT)

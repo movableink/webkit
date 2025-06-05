@@ -384,6 +384,7 @@ set(WTF_PUBLIC_HEADERS
     WTFProcess.h
     WTFSemaphore.h
     WallTime.h
+    WasmSIMD128.h
     WeakHashCountedSet.h
     WeakHashMap.h
     WeakHashSet.h

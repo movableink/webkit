@@ -7771,6 +7771,106 @@ public:
         }
     }
 
+    void vectorMulHigh(SIMDInfo simdInfo, FPRegisterID left, FPRegisterID right, FPRegisterID dest, FPRegisterID scratch)
+    {
+        RELEASE_ASSERT(supportsAVX());
+        ASSERT(!scalarTypeIsFloatingPoint(simdInfo.lane));
+        ASSERT(simdInfo.signMode != SIMDSignMode::None);
+
+        switch (simdInfo.lane) {
+        case SIMDLane::i16x8: {
+            if (simdInfo.signMode == SIMDSignMode::Signed) {
+                m_assembler.vpunpckhbw_rrr(left, left, scratch);
+                m_assembler.vpsraw_i8rr(8, scratch, scratch);
+                m_assembler.vpunpckhbw_rrr(right, right, dest);
+                m_assembler.vpsraw_i8rr(8, dest, dest);
+                m_assembler.vpmullw_rrr(scratch, dest, dest);
+            } else {
+                moveZeroToVector(scratch);
+                if (left == right) {
+                    m_assembler.vpunpckhbw_rrr(scratch, right, dest);
+                    m_assembler.vpmullw_rrr(dest, dest, dest);
+                } else {
+                    if (dest == left) {
+                        m_assembler.vpunpckhbw_rrr(scratch, left, dest);
+                        m_assembler.vpunpckhbw_rrr(scratch, right, scratch);
+                    } else {
+                        m_assembler.vpunpckhbw_rrr(scratch, right, dest);
+                        m_assembler.vpunpckhbw_rrr(scratch, left, scratch);
+                    }
+                    m_assembler.vpmullw_rrr(dest, scratch, dest);
+                }
+            }
+            break;
+        }
+        case SIMDLane::i32x4: {
+            m_assembler.vpmullw_rrr(right, left, scratch);
+            if (simdInfo.signMode == SIMDSignMode::Signed)
+                m_assembler.vpmulhw_rrr(right, left, dest);
+            else
+                m_assembler.vpmulhuw_rrr(right, left, dest);
+            m_assembler.vpunpckhwd_rrr(dest, scratch, dest);
+            break;
+        }
+        case SIMDLane::i64x2: {
+            m_assembler.vpunpckhdq_rrr(left, left, scratch);
+            m_assembler.vpunpckhdq_rrr(right, right, dest);
+            if (simdInfo.signMode == SIMDSignMode::Signed)
+                m_assembler.vpmuldq_rrr(scratch, dest, dest);
+            else
+                m_assembler.vpmuludq_rrr(scratch, dest, dest);
+            break;
+        }
+        case SIMDLane::f32x4:
+        case SIMDLane::f64x2:
+        default:
+            RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("Invalid SIMD lane for vector multiply.");
+        }
+    }
+
+    void vectorMulLow(SIMDInfo simdInfo, FPRegisterID left, FPRegisterID right, FPRegisterID dest, FPRegisterID scratch)
+    {
+        RELEASE_ASSERT(supportsAVX());
+        ASSERT(!scalarTypeIsFloatingPoint(simdInfo.lane));
+        ASSERT(simdInfo.signMode != SIMDSignMode::None);
+
+        switch (simdInfo.lane) {
+        case SIMDLane::i16x8: {
+            if (simdInfo.signMode == SIMDSignMode::Signed) {
+                m_assembler.vpmovsxbw_rr(left, scratch);
+                m_assembler.vpmovsxbw_rr(right, dest);
+            } else {
+                m_assembler.vpmovzxbw_rr(left, scratch);
+                m_assembler.vpmovzxbw_rr(right, dest);
+            }
+            m_assembler.vpmullw_rrr(scratch, dest, dest);
+            break;
+        }
+        case SIMDLane::i32x4: {
+            m_assembler.vpmullw_rrr(right, left, scratch);
+            if (simdInfo.signMode == SIMDSignMode::Signed)
+                m_assembler.vpmulhw_rrr(right, left, dest);
+            else
+                m_assembler.vpmulhuw_rrr(right, left, dest);
+            m_assembler.vpunpcklwd_rrr(dest, scratch, dest);
+            break;
+        }
+        case SIMDLane::i64x2: {
+            m_assembler.vpunpckldq_rrr(left, left, scratch);
+            m_assembler.vpunpckldq_rrr(right, right, dest);
+            if (simdInfo.signMode == SIMDSignMode::Signed)
+                m_assembler.vpmuldq_rrr(scratch, dest, dest);
+            else
+                m_assembler.vpmuludq_rrr(scratch, dest, dest);
+            break;
+        }
+        case SIMDLane::f32x4:
+        case SIMDLane::f64x2:
+        default:
+            RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("Invalid SIMD lane for vector multiply.");
+        }
+    }
+
     void vectorFusedMulAdd(SIMDInfo simdInfo, FPRegisterID mul1, FPRegisterID mul2, FPRegisterID addend, FPRegisterID dest, FPRegisterID scratch)
     {
         ASSERT(scalarTypeIsFloatingPoint(simdInfo.lane));
@@ -8425,13 +8525,13 @@ public:
 
         // Unpack and zero-extend low input bytes.
         m_assembler.vxorps_rrr(tmp2, tmp2, tmp2);
-        m_assembler.vpunpcklbw_rrr(input, tmp2, tmp1);
+        m_assembler.vpunpcklbw_rrr(tmp2, input, tmp1);
 
         // Word-wise shift low input bytes into tmp1.
         m_assembler.vpsllw_rrr(shift, tmp1, tmp1);
 
         // Unpack and zero-extend high input bytes.
-        m_assembler.vpunpckhbw_rrr(input, tmp2, tmp2);
+        m_assembler.vpunpckhbw_rrr(tmp2, input, tmp2);
 
         // Word-wise shift high input bytes into tmp2.
         m_assembler.vpsllw_rrr(shift, tmp2, tmp2);
@@ -8452,13 +8552,13 @@ public:
 
         // Unpack and zero-extend low input bytes.
         m_assembler.vxorps_rrr(tmp2, tmp2, tmp2);
-        m_assembler.vpunpcklbw_rrr(input, tmp2, tmp1);
+        m_assembler.vpunpcklbw_rrr(tmp2, input, tmp1);
 
         // Word-wise shift low input bytes into tmp1.
         m_assembler.vpsrlw_rrr(shift, tmp1, tmp1);
 
         // Unpack and zero-extend high input bytes.
-        m_assembler.vpunpckhbw_rrr(input, tmp2, tmp2);
+        m_assembler.vpunpckhbw_rrr(tmp2, input, tmp2);
 
         // Word-wise shift high input bytes into tmp2.
         m_assembler.vpsrlw_rrr(shift, tmp2, tmp2);

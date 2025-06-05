@@ -3984,18 +3984,10 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDExtmul(SIMDLaneOperation op, SIM
 
     LOG_INSTRUCTION("Vector", op, left, leftLocation, right, rightLocation, RESULT(result));
 
-    ScratchScope<0, 1> scratches(*this, leftLocation, rightLocation, resultLocation);
-    FPRReg scratchFPR = scratches.fpr(0);
-    if (op == SIMDLaneOperation::ExtmulLow) {
-        m_jit.vectorExtendLow(info, leftLocation.asFPR(), scratchFPR);
-        m_jit.vectorExtendLow(info, rightLocation.asFPR(), resultLocation.asFPR());
-    } else {
-        ASSERT(op == SIMDLaneOperation::ExtmulHigh);
-        m_jit.vectorExtendHigh(info, leftLocation.asFPR(), scratchFPR);
-        m_jit.vectorExtendHigh(info, rightLocation.asFPR(), resultLocation.asFPR());
-    }
-    emitVectorMul(info, Location::fromFPR(scratchFPR), resultLocation, resultLocation);
-
+    if (op == SIMDLaneOperation::ExtmulLow)
+        m_jit.vectorMulLow(info, leftLocation.asFPR(), rightLocation.asFPR(), resultLocation.asFPR(), wasmScratchFPR);
+    else
+        m_jit.vectorMulHigh(info, leftLocation.asFPR(), rightLocation.asFPR(), resultLocation.asFPR(), wasmScratchFPR);
     return { };
 }
 

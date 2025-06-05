@@ -3870,12 +3870,7 @@ auto OMGIRGenerator::addSIMDShift(SIMDLaneOperation op, SIMDInfo info, Expressio
 auto OMGIRGenerator::addSIMDExtmul(SIMDLaneOperation op, SIMDInfo info, ExpressionType lhs, ExpressionType rhs, ExpressionType& result) -> PartialResult
 {
     ASSERT(info.signMode != SIMDSignMode::None);
-
-    auto extOp = op == SIMDLaneOperation::ExtmulLow ? VectorExtendLow : VectorExtendHigh;
-    Value* extLhs = m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), extOp, B3::V128, info, get(lhs));
-    Value* extRhs = m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), extOp, B3::V128, info, get(rhs));
-    result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), VectorMul, B3::V128, info, extLhs, extRhs));
-
+    result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), op == SIMDLaneOperation::ExtmulLow ? VectorMulLow : VectorMulHigh, B3::V128, info, get(lhs), get(rhs)));
     return { };
 }
 

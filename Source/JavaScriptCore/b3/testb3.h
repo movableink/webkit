@@ -1378,6 +1378,8 @@ void testVectorFmulByElementFloat();
 void testVectorFmulByElementDouble();
 void testVectorExtractLane0Float();
 void testVectorExtractLane0Double();
+void testVectorMulHigh();
+void testVectorMulLow();
 
 void testConstDoubleMove();
 void testConstFloatMove();

@@ -55,6 +55,7 @@ public:
     static constexpr RegisterID memoryTempRegister = ARM64Registers::ip1;
 
     static constexpr RegisterID InvalidGPRReg = ARM64Registers::InvalidGPRReg;
+    static constexpr FPRegisterID InvalidFPRReg = ARM64Registers::InvalidFPRReg;
 
     static constexpr ARM64Registers::FPRegisterID fpTempRegister = ARM64Registers::q31;
 
@@ -5923,6 +5924,26 @@ public:
     void vectorMulByElementFloat64(FPRegisterID left, FPRegisterID right, TrustedImm32 lane, FPRegisterID dest)
     {
         m_assembler.vectorFmulByElement(dest, left, right, SIMDLane::f64x2, lane.m_value);
+    }
+
+    void vectorMulHigh(SIMDInfo simdInfo, FPRegisterID left, FPRegisterID right, FPRegisterID dest, FPRegisterID = InvalidFPRReg)
+    {
+        ASSERT(!scalarTypeIsFloatingPoint(simdInfo.lane));
+        ASSERT(simdInfo.signMode != SIMDSignMode::None);
+        if (simdInfo.signMode == SIMDSignMode::Signed)
+            m_assembler.smull2v(dest, left, right, narrowedLane(simdInfo.lane));
+        else
+            m_assembler.umull2v(dest, left, right, narrowedLane(simdInfo.lane));
+    }
+
+    void vectorMulLow(SIMDInfo simdInfo, FPRegisterID left, FPRegisterID right, FPRegisterID dest, FPRegisterID = InvalidFPRReg)
+    {
+        ASSERT(!scalarTypeIsFloatingPoint(simdInfo.lane));
+        ASSERT(simdInfo.signMode != SIMDSignMode::None);
+        if (simdInfo.signMode == SIMDSignMode::Signed)
+            m_assembler.smullv(dest, left, right, narrowedLane(simdInfo.lane));
+        else
+            m_assembler.umullv(dest, left, right, narrowedLane(simdInfo.lane));
     }
 
     void vectorFusedMulAdd(SIMDInfo simdInfo, FPRegisterID mul1, FPRegisterID mul2, FPRegisterID addend, FPRegisterID dest, FPRegisterID scratch)

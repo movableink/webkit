@@ -198,6 +198,8 @@ namespace JSC { namespace B3 {
     case VectorAddSat: \
     case VectorSubSat: \
     case VectorMul: \
+    case VectorMulHigh: \
+    case VectorMulLow: \
     case VectorDotProduct: \
     case VectorDiv: \
     case VectorMin: \

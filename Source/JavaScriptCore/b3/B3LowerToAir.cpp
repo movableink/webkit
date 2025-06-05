@@ -4406,6 +4406,12 @@ private:
         case B3::VectorMul:
             emitSIMDBinaryOp(Air::VectorMul);
             return;
+        case B3::VectorMulHigh:
+            emitSIMDBinaryOp(Air::VectorMulHigh);
+            return;
+        case B3::VectorMulLow:
+            emitSIMDBinaryOp(Air::VectorMulLow);
+            return;
         case B3::VectorDotProduct:
             emitSIMDMonomorphicBinaryOp(Air::VectorDotProduct);
             return;

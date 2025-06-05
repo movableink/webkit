@@ -894,6 +894,7 @@
 		E361DB69289115D000B2A2B8 /* bigint.h in Headers */ = {isa = PBXBuildFile; fileRef = E361DB60289115D000B2A2B8 /* bigint.h */; };
 		E36BA9DE29E275DB00300057 /* WTFProcess.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E36BA9DC29E275DB00300057 /* WTFProcess.cpp */; };
 		E36BA9DF29E275DB00300057 /* WTFProcess.h in Headers */ = {isa = PBXBuildFile; fileRef = E36BA9DD29E275DB00300057 /* WTFProcess.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		E36DC1762DF0F9C20091549D /* WasmSIMD128.h in Headers */ = {isa = PBXBuildFile; fileRef = E36DC1752DF0F9C20091549D /* WasmSIMD128.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		E37E96542702AD0B00E1C36A /* ApproximateTime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E37E96522702AD0700E1C36A /* ApproximateTime.cpp */; };
 		E383AAC92B6C730B00058E60 /* AdaptiveStringSearcher.h in Headers */ = {isa = PBXBuildFile; fileRef = E383AAC82B6C730B00058E60 /* AdaptiveStringSearcher.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		E388886F20C9095100E632BC /* WorkerPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E388886D20C9095100E632BC /* WorkerPool.cpp */; };
@@ -1927,6 +1928,7 @@
 		E36895CC23A445EE008DD4C8 /* PackedRefPtr.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PackedRefPtr.h; sourceTree = "<group>"; };
 		E36BA9DC29E275DB00300057 /* WTFProcess.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WTFProcess.cpp; sourceTree = "<group>"; };
 		E36BA9DD29E275DB00300057 /* WTFProcess.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WTFProcess.h; sourceTree = "<group>"; };
+		E36DC1752DF0F9C20091549D /* WasmSIMD128.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WasmSIMD128.h; sourceTree = "<group>"; };
 		E37E96522702AD0700E1C36A /* ApproximateTime.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ApproximateTime.cpp; sourceTree = "<group>"; };
 		E37E96532702AD0700E1C36A /* ApproximateTime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ApproximateTime.h; sourceTree = "<group>"; };
 		E38020DB2401C0930037CA9E /* CompactRefPtrTuple.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CompactRefPtrTuple.h; sourceTree = "<group>"; };
@@ -2699,6 +2701,7 @@
 				A8A47372151A825B004123FF /* VMTags.h */,
 				0F66B2881DC97BAB004A1D3F /* WallTime.cpp */,
 				0F66B2891DC97BAB004A1D3F /* WallTime.h */,
+				E36DC1752DF0F9C20091549D /* WasmSIMD128.h */,
 				46449E8A2822E5670005A8BC /* WeakHashCountedSet.h */,
 				9BE153352671F00F00C7D096 /* WeakHashMap.h */,
 				9B67F3F12228D5310030DE9C /* WeakHashSet.h */,
@@ -3844,6 +3847,7 @@
 				DD3DC95327A4BF8E007E5B61 /* VectorTraits.h in Headers */,
 				DD3DC95127A4BF8E007E5B61 /* VMTags.h in Headers */,
 				DD3DC8EE27A4BF8E007E5B61 /* WallTime.h in Headers */,
+				E36DC1762DF0F9C20091549D /* WasmSIMD128.h in Headers */,
 				46449E8B2822E5680005A8BC /* WeakHashCountedSet.h in Headers */,
 				DD3DC8E527A4BF8E007E5B61 /* WeakHashMap.h in Headers */,
 				DD3DC85E27A4BF8E007E5B61 /* WeakHashSet.h in Headers */,

@@ -535,6 +535,8 @@ protected:
         case VectorAddSat:
         case VectorSubSat:
         case VectorMul:
+        case VectorMulHigh:
+        case VectorMulLow:
         case VectorDotProduct:
         case VectorDiv:
         case VectorMin:
@@ -771,6 +773,8 @@ private:
         case VectorAddSat:
         case VectorSubSat:
         case VectorMul:
+        case VectorMulHigh:
+        case VectorMulLow:
         case VectorDotProduct:
         case VectorDiv:
         case VectorMin:
