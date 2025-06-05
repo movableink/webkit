@@ -39,7 +39,7 @@ def generate_log_client_declarations_file(log_messages, log_client_declarations_
             function_name = log_message[0]
             parameters = log_message[2]
             arguments_string = log_declarations_module.get_arguments_string(parameters, log_declarations_module.PARAMETER_LIST_INCLUDE_TYPE | log_declarations_module.PARAMETER_LIST_INCLUDE_NAME | log_declarations_module.PARAMETER_LIST_MODIFY_CSTRING)
-            file.write("    virtual void " + function_name + "(" + arguments_string + ")\n")
+            file.write("    void " + function_name + "(" + arguments_string + ")\n")
             file.write("    {\n")
             file.write("#if ENABLE(STREAMING_IPC_IN_LOG_FORWARDING)\n")
             file.write("        Locker locker { m_logStreamLock };\n")

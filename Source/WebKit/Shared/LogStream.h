@@ -38,7 +38,7 @@ struct StreamServerConnectionHandle;
 
 namespace WebKit {
 
-class LogStream
+class LogStream final
 #if ENABLE(STREAMING_IPC_IN_LOG_FORWARDING)
 : public IPC::StreamMessageReceiver {
 #else
