@@ -581,7 +581,6 @@ platform/graphics/ca/TileCoverageMap.cpp
 platform/graphics/ca/TileGrid.cpp
 platform/graphics/ca/cocoa/WebTiledBackingLayer.mm
 platform/graphics/cg/CGSubimageCacheWithTimer.cpp
-platform/graphics/coretext/ComplexTextControllerCoreText.mm
 platform/ios/PlaybackSessionInterfaceIOS.mm
 platform/ios/WebAVPlayerController.mm
 platform/mac/PlaybackSessionInterfaceMac.mm
