@@ -1302,6 +1302,7 @@ fast/css/resize-rtl.html [ Skip ]
 fast/css/resize-single-axis.html [ Skip ]
 fast/css/resize-textarea-align-content.html [ Skip ]
 fast/events/mouse-events-on-textarea-resize.html [ Skip ]
+fast/events/mouse_resizer_mousedown.html [ Skip ]
 
 # The file-wrapper part of <attachment> is not yet working on iOS
 fast/attachment/attachment-type-attribute.html [ Skip ]

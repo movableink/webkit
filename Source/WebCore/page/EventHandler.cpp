@@ -2039,6 +2039,7 @@ HandleUserInputEventResult EventHandler::handleMousePressEvent(const PlatformMou
         layer->setInResizeMode(true);
         m_resizeLayer = *layer;
         m_offsetFromResizeCorner = layer->offsetFromResizeCorner(localPoint);
+        dispatchMouseEvent(eventNames().mousedownEvent, mouseEvent.protectedTargetNode().get(), m_clickCount, platformMouseEvent, FireMouseOverOut::Yes);
         return true;
     }
 
