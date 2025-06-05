@@ -569,16 +569,17 @@ void JSWebAssemblyInstance::initElementSegment(uint32_t tableIndex, const Elemen
             initValue = JSValue::decode(result);
         }
 
-        if (jsTable->table()->isExternrefTable())
-            jsTable->set(dstIndex, initValue);
-        else {
+#if ASSERT_ENABLED
+        if (jsTable->table()->isFuncrefTable()) {
             // Validation should guarantee that the table is for funcs, and the value is a func as well.
-            ASSERT(jsTable->table()->isFuncrefTable());
-            ASSERT(initValue.getObject());
-            WebAssemblyFunctionBase* func = jsDynamicCast<WebAssemblyFunctionBase*>(initValue.getObject());
-            ASSERT(func);
-            jsTable->set(dstIndex, func);
-        }
+            if (initValue.isObject())
+                ASSERT(jsDynamicCast<WebAssemblyFunctionBase*>(asObject(initValue)));
+            else
+                ASSERT(initValue.isNull());
+        } else
+            ASSERT(jsTable->table()->isExternrefTable());
+#endif
+        jsTable->set(dstIndex, initValue);
     }
 }
 
