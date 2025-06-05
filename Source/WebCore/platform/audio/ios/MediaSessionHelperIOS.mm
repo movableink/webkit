@@ -53,8 +53,8 @@ WEBCORE_EXPORT NSString *WebUIApplicationDidEnterBackgroundNotification = @"WebU
 #if HAVE(MEDIAEXPERIENCE_AVSYSTEMCONTROLLER)
 SOFT_LINK_PRIVATE_FRAMEWORK_OPTIONAL(MediaExperience)
 SOFT_LINK_CLASS_OPTIONAL(MediaExperience, AVSystemController)
-SOFT_LINK_CONSTANT_MAY_FAIL(MediaExperience, AVSystemController_PIDToInheritApplicationStateFrom, NSString *)
-SOFT_LINK_CONSTANT_MAY_FAIL(MediaExperience, AVSystemController_ServerConnectionDiedNotification, NSString *)
+SOFT_LINK_CONSTANT(MediaExperience, AVSystemController_PIDToInheritApplicationStateFrom, NSString *)
+SOFT_LINK_CONSTANT(MediaExperience, AVSystemController_ServerConnectionDiedNotification, NSString *)
 #endif
 
 using namespace WebCore;
@@ -271,15 +271,14 @@ void MediaSessionHelperIOS::providePresentingApplicationPID(int pid, ShouldOverr
     if (m_presentedApplicationPID && (*m_presentedApplicationPID == pid || shouldOverride == ShouldOverride::No))
         return;
 
-    m_presentedApplicationPID = pid;
+    RELEASE_LOG(Media, "Setting AVSystemController_PIDToInheritApplicationStateFrom to %d", pid);
 
-    if (!canLoadAVSystemController_PIDToInheritApplicationStateFrom())
-        return;
+    m_presentedApplicationPID = pid;
 
     NSError *error = nil;
     [[getAVSystemControllerClass() sharedAVSystemController] setAttribute:@(pid) forKey:getAVSystemController_PIDToInheritApplicationStateFrom() error:&error];
     if (error)
-        WTFLogAlways("Failed to set up PID proxying: %s", error.localizedDescription.UTF8String);
+        RELEASE_LOG_ERROR(Media, "Failed to set AVSystemController_PIDToInheritApplicationStateFrom: %@", error.localizedDescription);
 #else
     UNUSED_PARAM(pid);
     UNUSED_PARAM(shouldOverride);
@@ -384,8 +383,7 @@ void MediaSessionHelperIOS::externalOutputDeviceAvailableDidChange()
     [center addObserver:self selector:@selector(spatialPlaybackCapabilitiesChanged:) name:PAL::get_AVFoundation_AVAudioSessionSpatialPlaybackCapabilitiesChangedNotification() object:nil];
 
 #if HAVE(MEDIAEXPERIENCE_AVSYSTEMCONTROLLER)
-    if (canLoadAVSystemController_ServerConnectionDiedNotification())
-        [center addObserver:self selector:@selector(mediaServerConnectionDied:) name:getAVSystemController_ServerConnectionDiedNotification() object:nil];
+    [center addObserver:self selector:@selector(mediaServerConnectionDied:) name:getAVSystemController_ServerConnectionDiedNotification() object:nil];
 #endif
 
     // Now playing won't work unless we turn on the delivery of remote control events.
