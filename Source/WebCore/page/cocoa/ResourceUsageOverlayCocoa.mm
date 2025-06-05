@@ -125,7 +125,7 @@ private:
 static RetainPtr<CGColorRef> createColor(float r, float g, float b, float a)
 {
     CGFloat components[4] = { r, g, b, a };
-    return adoptCF(CGColorCreate(sRGBColorSpaceRef(), components));
+    return adoptCF(CGColorCreate(sRGBColorSpaceSingleton(), components));
 }
 
 struct HistoricMemoryCategoryInfo {

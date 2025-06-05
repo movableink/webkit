@@ -80,7 +80,7 @@ void SliderTrackMac::draw(GraphicsContext& context, const FloatRoundedRect& bord
     static constexpr IntSize sliderRadius(sliderTrackRadius, sliderTrackRadius);
 
     CGContextRef cgContext = context.platformContext();
-    CGColorSpaceRef cspace = sRGBColorSpaceRef();
+    CGColorSpaceRef cspace = sRGBColorSpaceSingleton();
 
     auto& sliderTrackPart = owningSliderTrackPart();
 

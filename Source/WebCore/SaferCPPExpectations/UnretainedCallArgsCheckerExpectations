@@ -59,7 +59,6 @@ loader/cocoa/PrivateClickMeasurementCocoa.mm
 page/CaptionUserPreferencesMediaAF.cpp
 page/cocoa/MemoryReleaseCocoa.mm
 page/cocoa/PageCocoa.mm
-page/cocoa/ResourceUsageOverlayCocoa.mm
 page/cocoa/WebTextIndicatorLayer.mm
 page/mac/EventHandlerMac.mm
 page/mac/ImageOverlayControllerMac.mm
@@ -140,10 +139,8 @@ platform/graphics/ca/TileCoverageMap.cpp
 platform/graphics/ca/cocoa/PlatformCAAnimationCocoa.mm
 platform/graphics/ca/cocoa/PlatformCAFiltersCocoa.mm
 platform/graphics/ca/cocoa/PlatformCALayerCocoa.mm
-platform/graphics/ca/cocoa/WebSystemBackdropLayer.mm
 platform/graphics/cg/CGSubimageCacheWithTimer.cpp
 platform/graphics/cg/ColorCG.cpp
-platform/graphics/cg/ColorSpaceCG.cpp
 platform/graphics/cg/GradientCG.cpp
 platform/graphics/cg/GradientRendererCG.cpp
 platform/graphics/cg/GraphicsContextCG.cpp
@@ -152,7 +149,6 @@ platform/graphics/cg/ImageBufferCGBitmapBackend.cpp
 platform/graphics/cg/ImageBufferCGPDFDocumentBackend.cpp
 platform/graphics/cg/ImageBufferIOSurfaceBackend.cpp
 platform/graphics/cg/ImageBufferUtilitiesCG.cpp
-platform/graphics/cg/NativeImageCG.cpp
 platform/graphics/cg/PathCG.cpp
 platform/graphics/cg/ShareableBitmapCG.mm
 platform/graphics/cocoa/CMUtilities.mm

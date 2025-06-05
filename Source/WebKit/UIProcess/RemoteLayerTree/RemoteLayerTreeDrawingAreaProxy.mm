@@ -551,7 +551,7 @@ void RemoteLayerTreeDrawingAreaProxy::initializeDebugIndicator()
     [m_tileMapHostLayer setMasksToBounds:YES];
     [m_tileMapHostLayer setBorderWidth:2];
 
-    RetainPtr colorSpace = sRGBColorSpaceRef();
+    RetainPtr colorSpace = sRGBColorSpaceSingleton();
     {
         const CGFloat components[] = { 1, 1, 1, 0.6 };
         RetainPtr<CGColorRef> color = adoptCF(CGColorCreate(colorSpace.get(), components));

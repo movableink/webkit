@@ -106,7 +106,7 @@ static void drawMenuListBackground(GraphicsContext& context, const FloatRect& re
 
     bool useDarkAppearance = style.states.contains(ControlStyle::State::DarkAppearance);
 
-    CGColorSpaceRef cspace = sRGBColorSpaceRef();
+    CGColorSpaceRef cspace = sRGBColorSpaceSingleton();
 
     FloatRect topGradient(rect.x(), rect.y(), rect.width(), rect.height() / 2.0f);
     struct CGFunctionCallbacks topCallbacks = { 0, useDarkAppearance ? darkTopGradientInterpolate : topGradientInterpolate, NULL };
