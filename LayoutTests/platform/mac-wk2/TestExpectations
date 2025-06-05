@@ -2187,3 +2187,5 @@ webkit.org/b/293804 [ Debug ] pdf/annotations/checkbox-set-active.html [ Pass Ti
 # webkit.org/b/293827 [macOS] 2x tests in webgl are constant failures (flaky in EWS)
 [ Sequoia ] webgl/1.0.x/conformance/textures/misc/gl-teximage.html [ Failure ]
 [ Sequoia ] webgl/2.0.y/conformance/textures/misc/gl-teximage.html [ Failure ]
+
+webkit.org/b/294087 [ Sequoia ] svg/zoom/page/text-with-non-scaling-stroke.html [ ImageOnlyFailure ]
