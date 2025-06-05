@@ -201,6 +201,24 @@ index 706852242b5579629b6156f27d330209b6701a1a..77f70f55532d461556fc105213424e5e
  namespace gl
  {
  
+diff --git a/src/common/debug.h b/src/common/debug.h
+index 48a1979e5edb3165d659c000c789f9a705809923..28b65f43d24304fcdf3f6c0cf35e3229880a422c 100644
+--- a/src/common/debug.h
++++ b/src/common/debug.h
+@@ -177,4 +177,13 @@ angle::SimpleMutex &GetDebugMutex();
+ #    define ANGLE_REENABLE_UNUSED_FUNCTION_WARNING
+ #endif
+ 
++#if defined(__clang__)
++#    define ANGLE_DISABLE_NONLITERAL_FORMAT_WARNING \
++        _Pragma("clang diagnostic push") _Pragma("clang diagnostic ignored \"-Wformat-nonliteral\"")
++#    define ANGLE_REENABLE_NONLITERAL_FORMAT_WARNING _Pragma("clang diagnostic pop")
++#else
++#    define ANGLE_DISABLE_SHADOWING_WARNING
++#    define ANGLE_REENABLE_SHADOWING_WARNING
++#endif
++
+ #endif  // COMMON_DEBUG_H_
 diff --git a/src/common/entry_points_enum_autogen.cpp b/src/common/entry_points_enum_autogen.cpp
 index 63a19ed02e59e81861d8e49bd650241efcebcd5c..f8f12f1fd5f895a0185c04061b797477b38683aa 100644
 --- a/src/common/entry_points_enum_autogen.cpp
@@ -1158,6 +1176,32 @@ index b193973b20b3b3dfc184bd316e178999e333d2af..199d9bd340f39447afecd762f18ed96c
 +                                              RenderbufferID renderbufferPacked);
  
  #endif  // ANGLE_CONTEXT_API_EXT_AUTOGEN_H_
+diff --git a/src/libANGLE/Display.cpp b/src/libANGLE/Display.cpp
+index 739f3ca4c3d9e6c4c00b194f2ab02999959f0fc4..87255a5fa88eada042cb7bd6130ec9101a6f6166 100644
+--- a/src/libANGLE/Display.cpp
++++ b/src/libANGLE/Display.cpp
+@@ -2289,7 +2289,7 @@ Error Display::validateImageClientBuffer(const gl::Context *context,
+     return mImplementation->validateImageClientBuffer(context, target, clientBuffer, attribs);
+ }
+ 
+-Error Display::valdiatePixmap(const Config *config,
++Error Display::validatePixmap(const Config *config,
+                               EGLNativePixmapType pixmap,
+                               const AttributeMap &attributes) const
+ {
+diff --git a/src/libANGLE/Display.h b/src/libANGLE/Display.h
+index aea0acc7cb8b630ee9092ffde7bfae8e46503b4b..5c6ff476f4f7328a806d159dac0a531b8b5f6431 100644
+--- a/src/libANGLE/Display.h
++++ b/src/libANGLE/Display.h
+@@ -217,7 +217,7 @@ class Display final : public LabeledObject,
+                                     EGLenum target,
+                                     EGLClientBuffer clientBuffer,
+                                     const egl::AttributeMap &attribs) const;
+-    Error valdiatePixmap(const Config *config,
++    Error validatePixmap(const Config *config,
+                          EGLNativePixmapType pixmap,
+                          const AttributeMap &attributes) const;
+ 
 diff --git a/src/libANGLE/Framebuffer.cpp b/src/libANGLE/Framebuffer.cpp
 index 6641ac2a2b925b8d3ec8cf1e3be0efca45fd379c..d2798e78f571297747e0a938fe5de04e599d6d56 100644
 --- a/src/libANGLE/Framebuffer.cpp
@@ -1880,6 +1924,19 @@ index dbfd9c5600f402d462564e4f4f447a82d9482d18..a7e3fa9132f5297bbe2ade4eed37716d
    protected:
      const gl::State &mState;
      gl::MemoryProgramCache *mMemoryProgramCache;
+diff --git a/src/libANGLE/renderer/DisplayImpl.cpp b/src/libANGLE/renderer/DisplayImpl.cpp
+index 6deb8709420e8f0ac9b8f8331856033992b1f6bc..1b94d64d332bf5b98138f0715c8572b4eaaa5186 100644
+--- a/src/libANGLE/renderer/DisplayImpl.cpp
++++ b/src/libANGLE/renderer/DisplayImpl.cpp
+@@ -102,7 +102,7 @@ egl::Error DisplayImpl::validatePixmap(const egl::Config *config,
+                                        const egl::AttributeMap &attributes) const
+ {
+     UNREACHABLE();
+-    return egl::Error(EGL_BAD_DISPLAY, "DisplayImpl::valdiatePixmap unimplemented.");
++    return egl::Error(EGL_BAD_DISPLAY, "DisplayImpl::validatePixmap unimplemented.");
+ }
+ 
+ const egl::Caps &DisplayImpl::getCaps() const
 diff --git a/src/libANGLE/renderer/gl/FunctionsGL.cpp b/src/libANGLE/renderer/gl/FunctionsGL.cpp
 index 7b6aa2a7a1f66dd8c06353959823d23dd17ae9c4..23f87a74c739e2af999d0e51e58ebb62eb24be10 100644
 --- a/src/libANGLE/renderer/gl/FunctionsGL.cpp
@@ -2618,6 +2675,19 @@ index 04bff707a1088897091e646c0c885f892548e639..d633949e2bcf45831388b552db674256
  
          // Now we have to resize depth stencil buffers if required.
          ANGLE_TRY(ensureCompanionTexturesSizeCorrect(context));
+diff --git a/src/libANGLE/renderer/metal/TextureMtl.h b/src/libANGLE/renderer/metal/TextureMtl.h
+index 7593d5c591583213ebae9e655ec6ecd82eafa0bc..cc75417723848e9719cfbc4b77400ed3d72b9b9b 100644
+--- a/src/libANGLE/renderer/metal/TextureMtl.h
++++ b/src/libANGLE/renderer/metal/TextureMtl.h
+@@ -313,7 +313,7 @@ class TextureMtl : public TextureImpl
+                                       const uint8_t *pixels,
+                                       const mtl::TextureRef &image);
+ 
+-    // Convert pixels to suported format before uploading to texture
++    // Convert pixels to supported format before uploading to texture.
+     angle::Result convertAndSetPerSliceSubImage(const gl::Context *context,
+                                                 int slice,
+                                                 const MTLRegion &mtlArea,
 diff --git a/src/libANGLE/renderer/metal/VertexArrayMtl.mm b/src/libANGLE/renderer/metal/VertexArrayMtl.mm
 index fefa460e446f7b627ab223e1405fe1b14a2c33b4..8fee2645cafbda42efb3407d765cda548052d367 100644
 --- a/src/libANGLE/renderer/metal/VertexArrayMtl.mm
@@ -3347,6 +3417,37 @@ index 1f6538dc06917e6193c7f223ffcf61a99ee6f543..fc87fc51bd9d1755761b1b832d4b11fb
                          default:
                              UNREACHABLE();
                      }
+diff --git a/src/libANGLE/renderer/vulkan/vk_format_utils.cpp b/src/libANGLE/renderer/vulkan/vk_format_utils.cpp
+index 01136131aa33732d5c1421e95456d73cc4aaddaa..5a7cd43b2d3bdd1653a25248186b1b3e6d96b38e 100644
+--- a/src/libANGLE/renderer/vulkan/vk_format_utils.cpp
++++ b/src/libANGLE/renderer/vulkan/vk_format_utils.cpp
+@@ -341,7 +341,7 @@ angle::FormatID ExternalFormatTable::getOrAllocExternalFormatID(uint64_t externa
+ 
+     if (mExternalYuvFormats.size() >= kMaxExternalFormatCountSupported)
+     {
+-        ERR() << "ANGLE only suports maximum " << kMaxExternalFormatCountSupported
++        ERR() << "ANGLE only supports maximum " << kMaxExternalFormatCountSupported
+               << " external renderable formats";
+         return angle::FormatID::NONE;
+     }
+diff --git a/src/libANGLE/validationEGL.cpp b/src/libANGLE/validationEGL.cpp
+index d1bc7fcd98951fe1e23a43440776665534bf6c6d..1cf4bedb4e60e4ac9f4e5bfaf7424d9e7cfd904d 100644
+--- a/src/libANGLE/validationEGL.cpp
++++ b/src/libANGLE/validationEGL.cpp
+@@ -3459,11 +3459,11 @@ bool ValidateCreatePixmapSurface(const ValidationContext *val,
+ 
+     if (!(config->surfaceType & EGL_PIXMAP_BIT))
+     {
+-        val->setError(EGL_BAD_MATCH, "Congfig does not suport pixmaps.");
++        val->setError(EGL_BAD_MATCH, "Config does not support pixmaps.");
+         return false;
+     }
+ 
+-    ANGLE_EGL_TRY_RETURN(val->eglThread, display->valdiatePixmap(config, pixmap, attributes),
++    ANGLE_EGL_TRY_RETURN(val->eglThread, display->validatePixmap(config, pixmap, attributes),
+                          val->entryPoint, val->labeledObject, false);
+ 
+     return true;
 diff --git a/src/libANGLE/validationES2.cpp b/src/libANGLE/validationES2.cpp
 index 95adc0c69f656056fed4e13f9778965d13611a8c..53747392118184c6a4353f2966090d4a6f7797af 100644
 --- a/src/libANGLE/validationES2.cpp
@@ -3750,11 +3851,103 @@ index a886245fb8459dc9374ceb119ab7626fb127d26b..a46514a9f1da9eabcd6aa3911494469b
  ]
  angle_end2end_tests_win_sources = [
    "egl_tests/EGLDeviceTest.cpp",
+diff --git a/src/tests/angle_unittest_main.cpp b/src/tests/angle_unittest_main.cpp
+index 1356dceac33eb8ff7056822826701b0269b522a2..8c217637b79e486faf1ffb0958de61196e2839f6 100644
+--- a/src/tests/angle_unittest_main.cpp
++++ b/src/tests/angle_unittest_main.cpp
+@@ -6,7 +6,9 @@
+ 
+ #include "GLSLANG/ShaderLang.h"
+ #include "gtest/gtest.h"
+-#include "test_utils/runner/TestSuite.h"
++#if defined(ANGLE_HAS_RAPIDJSON)
++#    include "test_utils/runner/TestSuite.h"
++#endif
+ 
+ class CompilerTestEnvironment : public testing::Environment
+ {
+@@ -40,8 +42,13 @@ int main(int argc, char **argv)
+             gVerbose = true;
+         }
+     }
+-
++#if defined(ANGLE_HAS_RAPIDJSON)
+     angle::TestSuite testSuite(&argc, argv);
+     testing::AddGlobalTestEnvironment(new CompilerTestEnvironment());
+     return testSuite.run();
++#else
++    testing::AddGlobalTestEnvironment(new CompilerTestEnvironment());
++    ::testing::InitGoogleTest(&argc, argv);
++    return RUN_ALL_TESTS();
++#endif  // defined(ANGLE_HAS_RAPIDJSON)
+ }
+diff --git a/src/tests/egl_tests/EGLContextCompatibilityTest.cpp b/src/tests/egl_tests/EGLContextCompatibilityTest.cpp
+index eac20d2294f4485728a9f9ac4d76bf1ddecad7ec..10264796728c43afb04eb8cdc6861e648c5b9165 100644
+--- a/src/tests/egl_tests/EGLContextCompatibilityTest.cpp
++++ b/src/tests/egl_tests/EGLContextCompatibilityTest.cpp
+@@ -173,8 +173,9 @@ class EGLContextCompatibilityTest : public ANGLETestBase, public testing::Test
+     void SetUp() final
+     {
+         ANGLETestBase::ANGLETestSetUp();
++#if !defined(EGL_EGL_PROTOTYPES) || !EGL_EGL_PROTOTYPES
+         ASSERT_TRUE(eglGetPlatformDisplay != nullptr);
+-
++#endif
+         EGLAttrib dispattrs[] = {EGL_PLATFORM_ANGLE_TYPE_ANGLE, mRenderer, EGL_NONE};
+         mDisplay              = eglGetPlatformDisplay(EGL_PLATFORM_ANGLE_ANGLE,
+                                                       reinterpret_cast<void *>(EGL_DEFAULT_DISPLAY), dispattrs);
+@@ -490,11 +491,13 @@ void RegisterContextCompatibilityTests()
+ 
+     LoadEntryPointsWithUtilLoader(angle::GLESDriverType::AngleEGL);
+ 
++#if !defined(EGL_EGL_PROTOTYPES) || !EGL_EGL_PROTOTYPES
+     if (eglGetPlatformDisplay == nullptr)
+     {
+         std::cerr << "EGLContextCompatibilityTest: missing eglGetPlatformDisplay\n";
+         return;
+     }
++#endif
+ 
+     for (EGLint renderer : renderers)
+     {
+diff --git a/src/tests/egl_tests/EGLDisplayTest.cpp b/src/tests/egl_tests/EGLDisplayTest.cpp
+index b4278a5a226eb3e42f4b879e27c6d16d65ae10c3..8d92c9637db17be1f3659c5b1199b703ba69fcc5 100644
+--- a/src/tests/egl_tests/EGLDisplayTest.cpp
++++ b/src/tests/egl_tests/EGLDisplayTest.cpp
+@@ -182,7 +182,9 @@ TEST_P(EGLDisplayTest, GetPlatformDisplayEXT)
+     // eglGetPlatformDisplayEXT() requires EGL_EXT_platform_base.
+     ANGLE_SKIP_TEST_IF(!IsEGLClientExtensionEnabled("EGL_EXT_platform_base"));
+ 
++#if !defined(EGL_EGLEXT_PROTOTYPES) || !EGL_EGLEXT_PROTOTYPES
+     ASSERT_TRUE(eglGetPlatformDisplayEXT != nullptr);
++#endif
+ 
+     EGLint dispattrs[] = {EGL_PLATFORM_ANGLE_TYPE_ANGLE, GetParam().getRenderer(), EGL_NONE};
+     EGLDisplay display = eglGetPlatformDisplayEXT(
+diff --git a/src/tests/gl_tests/CopyCompressedTextureTest.cpp b/src/tests/gl_tests/CopyCompressedTextureTest.cpp
+index 1ba6b5562469f4c8ed4cf8d9a1d810c334e4a83a..c8cef82a027c71c84233dc7491f9e2ec8d706c8f 100644
+--- a/src/tests/gl_tests/CopyCompressedTextureTest.cpp
++++ b/src/tests/gl_tests/CopyCompressedTextureTest.cpp
+@@ -66,12 +66,13 @@ class CopyCompressedTextureTest : public ANGLETest<>
+             return false;
+         }
+ 
++#if !defined(GL_GLEXT_PROTOTYPES) || !GL_GLEXT_PROTOTYPES
+         EXPECT_NE(nullptr, glCompressedCopyTextureCHROMIUM);
+         if (glCompressedCopyTextureCHROMIUM == nullptr)
+         {
+             return false;
+         }
+-
++#endif
+         return true;
+     }
+ 
 diff --git a/src/tests/gl_tests/GLSLTest.cpp b/src/tests/gl_tests/GLSLTest.cpp
-index 603dbb81abbced23769f7f2d545b4c0b451605e2..c56e5fdf7a1f0ecbe377f273b9fec717ba9d8297 100644
+index f04fc2458887d0c647bcadf0e16a6f6a4ef8128e..9c27dc54a7518afa64d572774035927ddb59c5a2 100644
 --- a/src/tests/gl_tests/GLSLTest.cpp
 +++ b/src/tests/gl_tests/GLSLTest.cpp
-@@ -21046,6 +21046,816 @@ void main() {
+@@ -21075,6 +21075,816 @@ void main() {
  
      EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::transparentBlack);
  }
@@ -4571,6 +4764,18 @@ index 603dbb81abbced23769f7f2d545b4c0b451605e2..c56e5fdf7a1f0ecbe377f273b9fec717
  }  // anonymous namespace
  
  ANGLE_INSTANTIATE_TEST_ES2_AND_ES3_AND(
+diff --git a/src/tests/gl_tests/ImageTestMetal.mm b/src/tests/gl_tests/ImageTestMetal.mm
+index 170879bf90a74256ced4f403eb8895705592f6ed..28141cb7dcad9ebd2d76ad98d8265dfcf869158e 100644
+--- a/src/tests/gl_tests/ImageTestMetal.mm
++++ b/src/tests/gl_tests/ImageTestMetal.mm
+@@ -15,7 +15,6 @@
+ 
+ #include <CoreFoundation/CoreFoundation.h>
+ #include <Metal/Metal.h>
+-#include <gmock/gmock.h>
+ #include <span>
+ 
+ namespace angle
 diff --git a/src/tests/gl_tests/PbufferTest.cpp b/src/tests/gl_tests/PbufferTest.cpp
 index 4a3409a407b16df54f085a5ccc3d63fb6f808a9f..dead2f816e3fb7f93eb5dce24d9491b752884fcd 100644
 --- a/src/tests/gl_tests/PbufferTest.cpp
@@ -4591,6 +4796,148 @@ index 4a3409a407b16df54f085a5ccc3d63fb6f808a9f..dead2f816e3fb7f93eb5dce24d9491b7
      EGLWindow *window = getEGLWindow();
      window->makeCurrent();
  
+diff --git a/src/tests/gl_tests/PixelLocalStorageTest.cpp b/src/tests/gl_tests/PixelLocalStorageTest.cpp
+index 795d843d5604e56f73e735b280d164cd11473b2c..3a80ddd7c621358e2a75e414750bb92b20dd7086 100644
+--- a/src/tests/gl_tests/PixelLocalStorageTest.cpp
++++ b/src/tests/gl_tests/PixelLocalStorageTest.cpp
+@@ -8,6 +8,7 @@
+ #include <string>
+ #include "test_utils/ANGLETest.h"
+ #include "test_utils/gl_raii.h"
++#include "common/string_utils.h"
+ 
+ using namespace angle;
+ 
+@@ -8557,7 +8558,6 @@ TEST_P(PixelLocalStorageCompilerTest, BlendEquationAdvanced_illegal_with_PLS)
+     layout(binding=0, rgba8i) uniform lowp ipixelLocalANGLE pls;)";
+     EXPECT_TRUE(log.compileFragmentShader(kRequireBlendAdvanced));
+ 
+-    bool before = true;
+     for (const char *layoutQualifier : {
+              "blend_support_multiply",
+              "blend_support_screen",
+@@ -8577,44 +8577,34 @@ TEST_P(PixelLocalStorageCompilerTest, BlendEquationAdvanced_illegal_with_PLS)
+              "blend_support_all_equations",
+          })
+     {
+-        constexpr char kRequireBlendAdvancedBeforePLS[] = R"(#version 300 es
+-        #extension GL_ANGLE_shader_pixel_local_storage : require
+-        #extension GL_KHR_blend_equation_advanced : require
+-        layout(%s) out;
+-        void main()
+-        {}
+-        layout(binding=0, rgba8i) uniform lowp ipixelLocalANGLE pls;)";
+-
+-        constexpr char kRequireBlendAdvancedAfterPLS[] = R"(#version 300 es
+-        #extension GL_ANGLE_shader_pixel_local_storage : require
+-        #extension GL_KHR_blend_equation_advanced : require
+-        layout(binding=0, rgba8i) uniform lowp ipixelLocalANGLE pls;
+-        layout(%s) out;
+-        void main()
+-        {})";
++        std::string shaderBefore = R"(#version 300 es
++#extension GL_ANGLE_shader_pixel_local_storage : require
++#extension GL_KHR_blend_equation_advanced : require
++layout(%s) out;
++void main()
++{}
++layout(binding=0, rgba8i) uniform lowp ipixelLocalANGLE pls;)";
++        ReplaceSubstring(&shaderBefore, "%s", layoutQualifier);
+ 
+-        const char *formatStr =
+-            before ? kRequireBlendAdvancedBeforePLS : kRequireBlendAdvancedAfterPLS;
+-        size_t buffSize =
+-            snprintf(nullptr, 0, formatStr, layoutQualifier) + 1;  // Extra space for '\0'
+-        std::unique_ptr<char[]> shader(new char[buffSize]);
+-        std::snprintf(shader.get(), buffSize, formatStr, layoutQualifier);
+-        EXPECT_FALSE(log.compileFragmentShader(shader.get()));
+-        if (before)
+-        {
++        EXPECT_FALSE(log.compileFragmentShader(shaderBefore.c_str()));
+         EXPECT_TRUE(
+             log.has("ERROR: 0:4: 'layout' : illegal advanced blend equation when pixel local "
+                     "storage is declared"));
+-        }
+-        else
+-        {
++
++        std::string shaderAfter = R"(#version 300 es
++#extension GL_ANGLE_shader_pixel_local_storage : require
++#extension GL_KHR_blend_equation_advanced : require
++layout(binding=0, rgba8i) uniform lowp ipixelLocalANGLE pls;
++layout(%s) out;
++void main()
++{})";
++        ReplaceSubstring(&shaderAfter, "%s", layoutQualifier);
++
++        EXPECT_FALSE(log.compileFragmentShader(shaderAfter.c_str()));
+         EXPECT_TRUE(
+             log.has("ERROR: 0:5: 'layout' : illegal advanced blend equation when pixel local "
+                     "storage is declared"));
+     }
+-
+-        before = !before;
+-    }
+ }
+ 
+ // Check proper validation of PLS function arguments.
+diff --git a/src/tests/gl_tests/ProvokingVertexTest.cpp b/src/tests/gl_tests/ProvokingVertexTest.cpp
+index 739499b04e28e44f9b771d3cf21aa7f785e88df8..db2e5a6b328a1ee84cdb1eb92b30b546729ccd42 100644
+--- a/src/tests/gl_tests/ProvokingVertexTest.cpp
++++ b/src/tests/gl_tests/ProvokingVertexTest.cpp
+@@ -12,7 +12,6 @@
+ #include "GLES2/gl2.h"
+ #include "test_utils/ANGLETest.h"
+ #include "test_utils/gl_raii.h"
+-#include "util/gles_loader_autogen.h"
+ 
+ using namespace angle;
+ 
+diff --git a/src/tests/gl_tests/RobustResourceInitTest.cpp b/src/tests/gl_tests/RobustResourceInitTest.cpp
+index 7452b1e56577f205d476ad52bd6c5be13b314352..7fe056ab39eb78ad330a4c52814a217db4d08586 100644
+--- a/src/tests/gl_tests/RobustResourceInitTest.cpp
++++ b/src/tests/gl_tests/RobustResourceInitTest.cpp
+@@ -9,7 +9,6 @@
+ 
+ #include "test_utils/gl_raii.h"
+ #include "util/EGLWindow.h"
+-#include "util/gles_loader_autogen.h"
+ 
+ namespace angle
+ {
+diff --git a/src/tests/gl_tests/SamplersTest.cpp b/src/tests/gl_tests/SamplersTest.cpp
+index bdd785436212f7ededd0b36be63a1b2b56de54dc..501a3f10c75339f6833e6fc0c652958ad84e0626 100644
+--- a/src/tests/gl_tests/SamplersTest.cpp
++++ b/src/tests/gl_tests/SamplersTest.cpp
+@@ -11,7 +11,6 @@
+ 
+ #include "test_utils/angle_test_configs.h"
+ #include "test_utils/gl_raii.h"
+-#include "util/gles_loader_autogen.h"
+ #include "util/shader_utils.h"
+ 
+ namespace angle
+diff --git a/src/tests/gl_tests/TextureTest.cpp b/src/tests/gl_tests/TextureTest.cpp
+index 627f4e830a346dda2cc813a9ca6a8d9e5fe55294..2a01b231ddd268e1f6d60bab5dcd3928cc63b007 100644
+--- a/src/tests/gl_tests/TextureTest.cpp
++++ b/src/tests/gl_tests/TextureTest.cpp
+@@ -2001,6 +2001,7 @@ void Texture2DDepthStencilTestES3::TestSampleWithDepthStencilMode(GLenum format,
+             break;
+         default:
+             UNREACHABLE();
++            return;
+     }
+ 
+     // Set up a color texture.
+@@ -10660,7 +10661,7 @@ class TextureLimitsTest : public ANGLETest<>
+         initTextures(vertexTextureCount + fragmentTextureCount, 0);
+ 
+         glUseProgram(mProgram);
+-        RGBA8 expectedSum = {0};
++        RGBA8 expectedSum {};
+         for (GLint texIndex = 0; texIndex < vertexTextureCount; ++texIndex)
+         {
+             std::stringstream uniformNameStr;
 diff --git a/src/tests/gl_tests/TimeoutDrawTest.cpp b/src/tests/gl_tests/TimeoutDrawTest.cpp
 new file mode 100644
 index 0000000000000000000000000000000000000000..0320255d8d6340e9d5a7a4dd0543c0053e8f59ea
@@ -4773,6 +5120,39 @@ index 0000000000000000000000000000000000000000..0320255d8d6340e9d5a7a4dd0543c005
 +ANGLE_INSTANTIATE_TEST(TimeoutDrawTest,
 +                       WithRobustness(ES2_METAL().enable(Feature::InjectAsmStatementIntoLoopBodies)),
 +                       WithRobustness(ES3_METAL().enable(Feature::InjectAsmStatementIntoLoopBodies)));
+diff --git a/src/tests/gl_tests/TransformFeedbackTest.cpp b/src/tests/gl_tests/TransformFeedbackTest.cpp
+index 1b1a168949a1a9b573895f7b82b8fdc2bdb9b115..063053a732cd589db8738fbbccd6ff916d26610c 100644
+--- a/src/tests/gl_tests/TransformFeedbackTest.cpp
++++ b/src/tests/gl_tests/TransformFeedbackTest.cpp
+@@ -7,7 +7,6 @@
+ #include "test_utils/ANGLETest.h"
+ #include "test_utils/gl_raii.h"
+ #include "util/EGLWindow.h"
+-#include "util/gles_loader_autogen.h"
+ #include "util/random_utils.h"
+ #include "util/test_utils.h"
+ 
+diff --git a/src/tests/gl_tests/UniformTest.cpp b/src/tests/gl_tests/UniformTest.cpp
+index 3ce294a3f51d672019a5200fd3a3c682bed71033..337e58e1cdccfc889517cd3c47eb7642411d9acf 100644
+--- a/src/tests/gl_tests/UniformTest.cpp
++++ b/src/tests/gl_tests/UniformTest.cpp
+@@ -9,7 +9,6 @@
+ #include "test_utils/angle_test_configs.h"
+ #include "test_utils/angle_test_instantiate.h"
+ #include "test_utils/gl_raii.h"
+-#include "util/gles_loader_autogen.h"
+ #include "util/shader_utils.h"
+ 
+ #include <array>
+@@ -2229,7 +2228,7 @@ TEST_P(UniformTestES3, MatrixUniformUpload)
+     }
+ 
+     using UniformMatrixCxRfv = decltype(glUniformMatrix2fv);
+-    UniformMatrixCxRfv uniformMatrixCxRfv[kMaxDims + 1][kMaxDims + 1] = {
++    UniformMatrixCxRfv* uniformMatrixCxRfv[kMaxDims + 1][kMaxDims + 1] = {
+         {nullptr, nullptr, nullptr, nullptr, nullptr},
+         {nullptr, nullptr, nullptr, nullptr, nullptr},
+         {nullptr, nullptr, glUniformMatrix2fv, glUniformMatrix2x3fv, glUniformMatrix2x4fv},
 diff --git a/util/autogen/angle_features_autogen.cpp b/util/autogen/angle_features_autogen.cpp
 index afead501106c9506e14f35bce66a258ae30ecfa2..7736ab34dd57c77f0780bac249e8a7665243a6d8 100644
 --- a/util/autogen/angle_features_autogen.cpp
@@ -5016,3 +5396,53 @@ index 6989307cb6c4eea5f25701dfbe33a7e498fc24ae..03a297c3de7b68445d37a0792d86be7b
  ANGLE_UTIL_EXPORT extern PFNGLDRAWTEXFOESPROC l_glDrawTexfOES;
  ANGLE_UTIL_EXPORT extern PFNGLDRAWTEXFVOESPROC l_glDrawTexfvOES;
  ANGLE_UTIL_EXPORT extern PFNGLDRAWTEXIOESPROC l_glDrawTexiOES;
+diff --git a/util/ios/ios_main.mm b/util/ios/ios_main.mm
+index 6df44200413599cbee17741ac8d74380f694bdff..01e89d0da7abec35de755b6d302622b18fc1aeb0 100644
+--- a/util/ios/ios_main.mm
++++ b/util/ios/ios_main.mm
+@@ -12,9 +12,9 @@
+ #include <stdio.h>
+ 
+ static int original_argc;
+-static char **original_argv;
++static char * _Nullable * _Nullable original_argv = nullptr;
+ 
+-int main(int argc, char **argv);
++int main(int argc, char * _Nullable * _Nullable argv);
+ 
+ @interface AngleUtilAppDelegate : UIResponder <UIApplicationDelegate>
+ 
+@@ -31,8 +31,8 @@ int main(int argc, char **argv);
+     exit(main(original_argc, original_argv));
+ }
+ 
+-- (BOOL)application:(UIApplication *)application
+-    didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
++- (BOOL)application:(UIApplication * _Nonnull)application
++    didFinishLaunchingWithOptions:(NSDictionary * _Nullable)launchOptions
+ {
+     self.window                    = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+     self.window.rootViewController = [[UIViewController alloc] initWithNibName:nil bundle:nil];
+@@ -49,7 +49,7 @@ int main(int argc, char **argv);
+ 
+ @end
+ 
+-extern "C" int ios_main(int argc, char **argv)
++extern "C" int ios_main(int argc, char * _Nonnull * _Nonnull argv)
+ {
+     original_argc = argc;
+     original_argv = argv;
+diff --git a/util/posix/test_utils_posix.cpp b/util/posix/test_utils_posix.cpp
+index 27c4440ed7eece68bdd936f9e36f561e897291e9..c33dc73a9c5982f60a8c118793ab41d8538a94ed 100644
+--- a/util/posix/test_utils_posix.cpp
++++ b/util/posix/test_utils_posix.cpp
+@@ -354,7 +354,9 @@ void WriteDebugMessage(const char *format, ...)
+ {
+     va_list vararg;
+     va_start(vararg, format);
++ANGLE_DISABLE_NONLITERAL_FORMAT_WARNING
+     vfprintf(stderr, format, vararg);
++ANGLE_REENABLE_NONLITERAL_FORMAT_WARNING
+     va_end(vararg);
+ }
+ 
