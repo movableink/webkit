@@ -241,7 +241,8 @@ public:
     public:
         enum CleanupTaskTag { CleanupTask };
 
-        template<typename T, typename = typename std::enable_if<!std::is_base_of<Task, T>::value && std::is_convertible<T, Function<void(ScriptExecutionContext&)>>::value>::type>
+        template<typename T>
+            requires (!std::derived_from<T, Task> && std::convertible_to<T, Function<void(ScriptExecutionContext&)>>)
         Task(T task)
             : m_task(WTFMove(task))
             , m_isCleanupTask(false)
@@ -254,7 +255,8 @@ public:
         {
         }
 
-        template<typename T, typename = typename std::enable_if<std::is_convertible<T, Function<void(ScriptExecutionContext&)>>::value>::type>
+        template<typename T>
+            requires std::convertible_to<T, Function<void(ScriptExecutionContext&)>>
         Task(CleanupTaskTag, T task)
             : m_task(WTFMove(task))
             , m_isCleanupTask(true)
