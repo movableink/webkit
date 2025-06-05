@@ -1,6 +1,5 @@
 NetworkProcess/BackgroundFetchLoad.cpp
 NetworkProcess/Classifier/ResourceLoadStatisticsStore.cpp
-NetworkProcess/Classifier/WebResourceLoadStatisticsStore.cpp
 NetworkProcess/Cookies/WebCookieManager.cpp
 NetworkProcess/Cookies/mac/WebCookieManagerMac.mm
 NetworkProcess/Downloads/cocoa/DownloadCocoa.mm

@@ -232,8 +232,8 @@ void WebResourceLoadStatisticsStore::setResourceLoadStatisticsDebugMode(bool val
         return;
     }
 
-    if (m_networkSession) {
-        if (auto* storageSession = m_networkSession->networkStorageSession())
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession())
             storageSession->setTrackingPreventionDebugLoggingEnabled(value);
     }
 
@@ -326,8 +326,8 @@ void WebResourceLoadStatisticsStore::hasStorageAccess(RegistrableDomain&& subFra
         return hasStorageAccessEphemeral(WTFMove(subFrameDomain), WTFMove(topFrameDomain), frameID, pageID, WTFMove(completionHandler));
 
     CanRequestStorageAccessWithoutUserInteraction canRequestStorageAccessWithoutUserInteraction { CanRequestStorageAccessWithoutUserInteraction::No };
-    if (m_networkSession) {
-        if (auto* storageSession = m_networkSession->networkStorageSession())
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession())
             canRequestStorageAccessWithoutUserInteraction = storageSession->canRequestStorageAccessForLoginOrCompatibilityPurposesWithoutPriorUserInteraction(subFrameDomain, topFrameDomain) ? CanRequestStorageAccessWithoutUserInteraction::Yes : CanRequestStorageAccessWithoutUserInteraction::No;
     }
 
@@ -352,8 +352,8 @@ void WebResourceLoadStatisticsStore::hasStorageAccessEphemeral(const Registrable
 {
     ASSERT(isEphemeral());
 
-    if (m_networkSession) {
-        if (auto* storageSession = m_networkSession->networkStorageSession()) {
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession()) {
             completionHandler(storageSession->hasStorageAccess(subFrameDomain, topFrameDomain, frameID, pageID));
             return;
         }
@@ -365,11 +365,10 @@ bool WebResourceLoadStatisticsStore::hasStorageAccessForFrame(const RegistrableD
 {
     ASSERT(RunLoop::isMain());
 
-    if (!m_networkSession)
-        return false;
-
-    if (auto* storageSession = m_networkSession->networkStorageSession())
-        return storageSession->hasStorageAccess(resourceDomain, firstPartyDomain, frameID, pageID);
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession())
+            return storageSession->hasStorageAccess(resourceDomain, firstPartyDomain, frameID, pageID);
+    }
 
     return false;
 }
@@ -378,8 +377,8 @@ void WebResourceLoadStatisticsStore::callHasStorageAccessForFrameHandler(const R
 {
     ASSERT(RunLoop::isMain());
 
-    if (m_networkSession) {
-        if (auto* storageSession = m_networkSession->networkStorageSession()) {
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession()) {
             callback(storageSession->hasStorageAccess(resourceDomain, firstPartyDomain, frameID, pageID));
             return;
         }
@@ -399,8 +398,8 @@ void WebResourceLoadStatisticsStore::requestStorageAccess(RegistrableDomain&& su
 
     CanRequestStorageAccessWithoutUserInteraction canRequestStorageAccessWithoutUserInteraction { CanRequestStorageAccessWithoutUserInteraction::No };
     std::optional<OrganizationStorageAccessPromptQuirk> storageAccessQuirk;
-    if (m_networkSession) {
-        if (auto* storageSession = m_networkSession->networkStorageSession()) {
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession()) {
             canRequestStorageAccessWithoutUserInteraction = storageSession->canRequestStorageAccessForLoginOrCompatibilityPurposesWithoutPriorUserInteraction(subFrameDomain, topFrameDomain) ? CanRequestStorageAccessWithoutUserInteraction::Yes : CanRequestStorageAccessWithoutUserInteraction::No;
             storageAccessQuirk = storageSession->storageAccessQuirkForDomainPair(topFrameDomain, subFrameDomain);
         }
@@ -501,8 +500,8 @@ void WebResourceLoadStatisticsStore::requestStorageAccessUnderOpener(Registrable
         return requestStorageAccessUnderOpenerEphemeral(WTFMove(domainInNeedOfStorageAccess), openerPageID, WTFMove(openerDomain));
 
     CanRequestStorageAccessWithoutUserInteraction canRequestStorageAccessWithoutUserInteraction { CanRequestStorageAccessWithoutUserInteraction::No };
-    if (m_networkSession) {
-        if (auto* storageSession = m_networkSession->networkStorageSession())
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession())
             canRequestStorageAccessWithoutUserInteraction = storageSession->canRequestStorageAccessForLoginOrCompatibilityPurposesWithoutPriorUserInteraction(domainInNeedOfStorageAccess, openerDomain) ? CanRequestStorageAccessWithoutUserInteraction::Yes : CanRequestStorageAccessWithoutUserInteraction::No;
     }
 
@@ -519,8 +518,8 @@ void WebResourceLoadStatisticsStore::requestStorageAccessUnderOpenerEphemeral(Re
 {
     ASSERT(isEphemeral());
 
-    if (m_networkSession) {
-        if (auto* storageSession = m_networkSession->networkStorageSession())
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession())
             storageSession->grantStorageAccess(WTFMove(domainInNeedOfStorageAccess), WTFMove(openerDomain), std::nullopt, openerPageID);
     }
 }
@@ -554,8 +553,8 @@ void WebResourceLoadStatisticsStore::grantStorageAccessEphemeral(const Registrab
 {
     ASSERT(isEphemeral());
 
-    if (m_networkSession) {
-        if (auto* storageSession = m_networkSession->networkStorageSession()) {
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession()) {
             storageSession->grantStorageAccess(subFrameDomain, topFrameDomain, frameID, pageID);
             completionHandler({ storageAccessWasGrantedValueForFrame(frameID, subFrameDomain), promptWasShown, scope, topFrameDomain, subFrameDomain });
             return;
@@ -570,8 +569,8 @@ StorageAccessWasGranted WebResourceLoadStatisticsStore::grantStorageAccessInStor
 
     bool isStorageGranted = false;
 
-    if (m_networkSession) {
-        if (auto* storageSession = m_networkSession->networkStorageSession()) {
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession()) {
             storageSession->grantStorageAccess(resourceDomain, firstPartyDomain, (scope == StorageAccessScope::PerFrame ? frameID : std::nullopt), pageID);
             ASSERT(storageSession->hasStorageAccess(resourceDomain, firstPartyDomain, frameID, pageID));
             isStorageGranted = true;
@@ -598,8 +597,8 @@ void WebResourceLoadStatisticsStore::hasCookies(const RegistrableDomain& domain,
 {
     ASSERT(RunLoop::isMain());
 
-    if (m_networkSession) {
-        if (auto* storageSession = m_networkSession->networkStorageSession()) {
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession()) {
             storageSession->hasCookies(domain, WTFMove(completionHandler));
             return;
         }
@@ -612,8 +611,8 @@ void WebResourceLoadStatisticsStore::setThirdPartyCookieBlockingMode(ThirdPartyC
 {
     ASSERT(RunLoop::isMain());
 
-    if (m_networkSession) {
-        if (auto* storageSession = m_networkSession->networkStorageSession())
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession())
             storageSession->setThirdPartyCookieBlockingMode(blockingMode);
         else
             ASSERT_NOT_REACHED();
@@ -707,8 +706,8 @@ void WebResourceLoadStatisticsStore::setAppBoundDomains(HashSet<RegistrableDomai
 
     auto domainsCopy = crossThreadCopy(domains);
 
-    if (m_networkSession) {
-        if (auto* storageSession = m_networkSession->networkStorageSession()) {
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession()) {
             storageSession->setAppBoundDomains(WTFMove(domains));
             storageSession->setThirdPartyCookieBlockingMode(ThirdPartyCookieBlockingMode::AllExceptBetweenAppBoundDomains);
         }
@@ -736,8 +735,8 @@ void WebResourceLoadStatisticsStore::setManagedDomains(HashSet<RegistrableDomain
 
     auto domainsCopy = crossThreadCopy(domains);
 
-    if (m_networkSession) {
-        if (auto* storageSession = m_networkSession->networkStorageSession()) {
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession()) {
             storageSession->setManagedDomains(WTFMove(domains));
             storageSession->setThirdPartyCookieBlockingMode(ThirdPartyCookieBlockingMode::AllExceptManagedDomains);
         }
@@ -767,8 +766,8 @@ void WebResourceLoadStatisticsStore::removeAllStorageAccess(CompletionHandler<vo
 {
     ASSERT(RunLoop::isMain());
 
-    if (m_networkSession) {
-        if (auto* storageSession = m_networkSession->networkStorageSession())
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession())
             storageSession->removeAllStorageAccess();
     }
 
@@ -1237,9 +1236,12 @@ void WebResourceLoadStatisticsStore::scheduleClearInMemoryAndPersistent(WallTime
 void WebResourceLoadStatisticsStore::clearInMemoryEphemeral(CompletionHandler<void()>&& completionHandler)
 {
     m_domainsWithEphemeralUserInteraction.clear();
-    if (auto* storageSession = m_networkSession->networkStorageSession())
-        storageSession->removeAllStorageAccess();
-    
+
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession())
+            storageSession->removeAllStorageAccess();
+    }
+
     completionHandler();
 }
 
@@ -1297,8 +1299,8 @@ void WebResourceLoadStatisticsStore::setCacheMaxAgeCap(Seconds seconds, Completi
     ASSERT(RunLoop::isMain());
     ASSERT(seconds >= 0_s);
     
-    if (m_networkSession) {
-        if (auto* storageSession = m_networkSession->networkStorageSession())
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession())
             storageSession->setCacheMaxAgeCapForPrevalentResources(seconds);
     }
 
@@ -1322,7 +1324,7 @@ void WebResourceLoadStatisticsStore::callUpdatePrevalentDomainsToBlockCookiesFor
     ASSERT(RunLoop::isMain());
 
     if (CheckedPtr networkSession = m_networkSession.get()) {
-        if (auto* storageSession = networkSession->networkStorageSession()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession()) {
             storageSession->setPrevalentDomainsToBlockAndDeleteCookiesFor(domainsToBlock.domainsToBlockAndDeleteCookiesFor);
             storageSession->setPrevalentDomainsToBlockButKeepCookiesFor(domainsToBlock.domainsToBlockButKeepCookiesFor);
             storageSession->setDomainsWithUserInteractionAsFirstParty(domainsToBlock.domainsWithUserInteractionAsFirstParty);
@@ -1348,7 +1350,7 @@ void WebResourceLoadStatisticsStore::callUpdatePrevalentDomainsToBlockCookiesFor
         }
 
         if (m_domainsWithCrossPageStorageAccessQuirk != domainsWithStorageAccessQuirk) {
-            if (auto* storageSession = networkSession->networkStorageSession())
+            if (CheckedPtr storageSession = networkSession->networkStorageSession())
                 storageSession->setDomainsWithCrossPageStorageAccess(domainsWithStorageAccessQuirk);
             networkSession->protectedNetworkProcess()->protectedParentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::SetDomainsWithCrossPageStorageAccess(domainsWithStorageAccessQuirk), [this, protectedThis = Ref { *this }, domainsWithStorageAccessQuirk] () mutable {
                 m_domainsWithCrossPageStorageAccessQuirk = domainsWithStorageAccessQuirk;
@@ -1392,15 +1394,15 @@ void WebResourceLoadStatisticsStore::resetParametersToDefaultValues(CompletionHa
     }
 
 #if ENABLE(APP_BOUND_DOMAINS)
-    if (m_networkSession) {
-        if (auto* storageSession = m_networkSession->networkStorageSession())
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession())
             storageSession->resetAppBoundDomains();
     }
 #endif
 
 #if ENABLE(MANAGED_DOMAINS)
-    if (m_networkSession) {
-        if (auto* storageSession = m_networkSession->networkStorageSession())
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        if (CheckedPtr storageSession = networkSession->networkStorageSession())
             storageSession->resetManagedDomains();
     }
 #endif
@@ -1504,8 +1506,8 @@ void WebResourceLoadStatisticsStore::deleteAndRestrictWebsiteDataForRegistrableD
 {
     ASSERT(RunLoop::isMain());
     
-    if (m_networkSession) {
-        m_networkSession->deleteAndRestrictWebsiteDataForRegistrableDomains(dataTypes, WTFMove(domainsToDeleteAndRestrictWebsiteDataFor), WTFMove(completionHandler));
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        networkSession->deleteAndRestrictWebsiteDataForRegistrableDomains(dataTypes, WTFMove(domainsToDeleteAndRestrictWebsiteDataFor), WTFMove(completionHandler));
         return;
     }
 
@@ -1516,8 +1518,8 @@ void WebResourceLoadStatisticsStore::registrableDomainsWithWebsiteData(OptionSet
 {
     ASSERT(RunLoop::isMain());
     
-    if (m_networkSession) {
-        m_networkSession->registrableDomainsWithWebsiteData(dataTypes, WTFMove(completionHandler));
+    if (CheckedPtr networkSession = m_networkSession.get()) {
+        networkSession->registrableDomainsWithWebsiteData(dataTypes, WTFMove(completionHandler));
         return;
     }
 

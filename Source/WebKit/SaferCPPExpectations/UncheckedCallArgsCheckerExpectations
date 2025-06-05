@@ -1,6 +1,5 @@
 EventDispatcherMessages.h
 NetworkProcess/Classifier/ResourceLoadStatisticsStore.cpp
-NetworkProcess/Classifier/WebResourceLoadStatisticsStore.cpp
 NetworkProcess/CustomProtocols/LegacyCustomProtocolManager.cpp
 NetworkProcess/DatabaseUtilities.cpp
 NetworkProcess/NetworkConnectionToWebProcess.cpp
