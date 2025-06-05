@@ -579,11 +579,21 @@ void GradientRendererCG::Shading::shadingFunction(void* info, const CGFloat* raw
     float offset = (stop1.offset == stop0.offset) ? 0.0f : (requestedOffset - stop0.offset) / (stop1.offset - stop0.offset);
 
     // 3. Interpolate the two stops' colors by the computed offset.
-    // FIXME: We don't want to due hue fixup for each call, so we should figure out how to precompute that.
-    auto interpolatedColor = interpolateColorComponents<alphaPremultiplication>(
-        std::get<InterpolationSpace>(data->colorInterpolationMethod().colorSpace),
-        makeFromComponents<InterpolationSpaceColorType>(stop0.colorComponents), 1.0f - offset,
-        makeFromComponents<InterpolationSpaceColorType>(stop1.colorComponents), offset);
+    // Synthetic color stops are added to extend the author-provided gradient out to 0 and 1
+    // with a solid color, if necessary. These need special handling because `longer hue` gradients
+    // would otherwise rotate through 360° of hue in these segments.
+    auto interpolatedColor = [&]() {
+        if (stop0.offset == 0.0f && data->firstStopIsSynthetic())
+            return makeFromComponents<InterpolationSpaceColorType>(stop0.colorComponents);
+
+        if (stop1.offset == 1.0f && data->lastStopIsSynthetic())
+            return makeFromComponents<InterpolationSpaceColorType>(stop1.colorComponents);
+
+        return interpolateColorComponents<alphaPremultiplication>(
+            std::get<InterpolationSpace>(data->colorInterpolationMethod().colorSpace),
+            makeFromComponents<InterpolationSpaceColorType>(stop0.colorComponents), 1.0f - offset,
+            makeFromComponents<InterpolationSpaceColorType>(stop1.colorComponents), offset);
+    }();
 
     // 4. Convert to the output color space.
     auto interpolatedColorConvertedToOutputSpace = asColorComponents(convertColor<OutputSpaceColorType>(interpolatedColor).resolved());
@@ -647,7 +657,7 @@ GradientRendererCG::Strategy GradientRendererCG::makeShading(ColorInterpolationM
         if (!hasZero)
             convertedStops[0].colorComponents = convertedStops[1].colorComponents;
 
-        return Shading::Data::create(colorInterpolationMethod, WTFMove(convertedStops));
+        return Shading::Data::create(colorInterpolationMethod, WTFMove(convertedStops), !hasZero, !hasOne);
     };
 
     auto makeFunction = [&] (auto colorInterpolationMethod, auto& data) {
