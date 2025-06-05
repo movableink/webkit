@@ -41,6 +41,7 @@
 #import "WebExtensionAPIScripting.h"
 #import "WebExtensionContextProxy.h"
 #import "WebExtensionContextProxyMessages.h"
+#import "WebExtensionPermission.h"
 #import "WebExtensionRegisteredScriptParameters.h"
 #import "WebExtensionScriptInjectionParameters.h"
 #import "WebExtensionTab.h"
@@ -57,9 +58,9 @@ namespace WebKit {
 
 using namespace WebExtensionDynamicScripts;
 
-bool WebExtensionContext::isScriptingMessageAllowed()
+bool WebExtensionContext::isScriptingMessageAllowed(IPC::Decoder& message)
 {
-    return isLoaded() && hasPermission(WKWebExtensionPermissionScripting);
+    return isLoadedAndPrivilegedMessage(message) && hasPermission(WebExtensionPermission::scripting());
 }
 
 void WebExtensionContext::scriptingExecuteScript(const WebExtensionScriptInjectionParameters& parameters, CompletionHandler<void(Expected<InjectionResults, WebExtensionError>&&)>&& completionHandler)

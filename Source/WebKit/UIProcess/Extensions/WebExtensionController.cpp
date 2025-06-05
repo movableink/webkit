@@ -82,13 +82,15 @@ WebExtensionController::~WebExtensionController()
     unloadAll();
 }
 
-WebExtensionControllerParameters WebExtensionController::parameters() const
+WebExtensionControllerParameters WebExtensionController::parameters(const API::PageConfiguration& pageConfiguration) const
 {
     return {
         .identifier = identifier(),
         .testingMode = inTestingMode(),
-        .contextParameters = WTF::map(extensionContexts(), [](auto& context) {
-            return context->parameters();
+        .contextParameters = WTF::map(extensionContexts(), [&](auto& context) {
+            bool isForThisExtension = context->isURLForThisExtension(pageConfiguration.requiredWebExtensionBaseURL());
+            auto includePrivilegedIdentifier = isForThisExtension ? WebExtensionContext::IncludePrivilegedIdentifier::Yes : WebExtensionContext::IncludePrivilegedIdentifier::No;
+            return context->parameters(includePrivilegedIdentifier);
         })
     };
 }

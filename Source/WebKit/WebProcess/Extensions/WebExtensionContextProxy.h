@@ -73,7 +73,10 @@ public:
     using WeakPageTabWindowMap = WeakHashMap<WebPage, TabWindowIdentifierPair>;
     using PermissionsMap = WebExtensionContext::PermissionsMap;
 
-    WebExtensionContextIdentifier identifier() const { return m_identifier; }
+    WebExtensionContextIdentifier identifier() const { return m_privilegedIdentifier ? *m_privilegedIdentifier : m_unprivilegedIdentifier; }
+    WebExtensionContextIdentifier unprivilegedIdentifier() const { return m_unprivilegedIdentifier; }
+    Markable<WebExtensionContextIdentifier> privilegedIdentifier() const { return m_privilegedIdentifier; }
+
     WebExtensionControllerProxy* extensionControllerProxy() const;
 
     bool operator==(const WebExtensionContextProxy& other) const { return (this == &other); }
@@ -225,7 +228,8 @@ private:
     // IPC::MessageReceiver
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
 
-    WebExtensionContextIdentifier m_identifier;
+    WebExtensionContextIdentifier m_unprivilegedIdentifier;
+    Markable<WebExtensionContextIdentifier> m_privilegedIdentifier;
     WeakPtr<WebExtensionControllerProxy> m_extensionControllerProxy;
     URL m_baseURL;
     String m_uniqueIdentifier;

@@ -299,8 +299,10 @@ bool WebExtensionController::load(WebExtensionContext& extensionContext, NSError
         return false;
     }
 
-    for (Ref processPool : m_processPools)
+    for (Ref processPool : m_processPools) {
         processPool->addMessageReceiver(Messages::WebExtensionContext::messageReceiverName(), extensionContext.identifier(), extensionContext);
+        processPool->addMessageReceiver(Messages::WebExtensionContext::messageReceiverName(), extensionContext.privilegedIdentifier(), extensionContext);
+    }
 
     auto scheme = extensionContext.baseURL().protocol().toString();
     m_registeredSchemeHandlers.ensure(scheme, [&]() {
@@ -320,13 +322,15 @@ bool WebExtensionController::load(WebExtensionContext& extensionContext, NSError
         m_extensionContexts.remove(extensionContext);
         m_extensionContextBaseURLMap.remove(extensionContext.baseURL().protocolHostAndPort());
 
-        for (Ref processPool : m_processPools)
+        for (Ref processPool : m_processPools) {
             processPool->removeMessageReceiver(Messages::WebExtensionContext::messageReceiverName(), extensionContext.identifier());
+            processPool->removeMessageReceiver(Messages::WebExtensionContext::messageReceiverName(), extensionContext.privilegedIdentifier());
+        }
 
         return false;
     }
 
-    sendToAllProcesses(Messages::WebExtensionControllerProxy::Load(extensionContext.parameters()), identifier());
+    sendToAllProcesses(Messages::WebExtensionControllerProxy::Load(extensionContext.parameters(WebExtensionContext::IncludePrivilegedIdentifier::No)), identifier());
 
     return true;
 }
@@ -351,8 +355,10 @@ bool WebExtensionController::unload(WebExtensionContext& extensionContext, NSErr
 
     sendToAllProcesses(Messages::WebExtensionControllerProxy::Unload(extensionContext.identifier()), identifier());
 
-    for (Ref processPool : m_processPools)
+    for (Ref processPool : m_processPools) {
         processPool->removeMessageReceiver(Messages::WebExtensionContext::messageReceiverName(), extensionContext.identifier());
+        processPool->removeMessageReceiver(Messages::WebExtensionContext::messageReceiverName(), extensionContext.privilegedIdentifier());
+    }
 
     if (!extensionContext.unload(outError))
         return false;
@@ -416,8 +422,10 @@ void WebExtensionController::addProcessPool(WebProcessPool& processPool)
 
     processPool.addMessageReceiver(Messages::WebExtensionController::messageReceiverName(), identifier(), *this);
 
-    for (Ref context : m_extensionContexts)
+    for (Ref context : m_extensionContexts) {
         processPool.addMessageReceiver(Messages::WebExtensionContext::messageReceiverName(), context->identifier(), context);
+        processPool.addMessageReceiver(Messages::WebExtensionContext::messageReceiverName(), context->privilegedIdentifier(), context);
+    }
 }
 
 void WebExtensionController::removeProcessPool(WebProcessPool& processPool)
@@ -430,8 +438,10 @@ void WebExtensionController::removeProcessPool(WebProcessPool& processPool)
 
     processPool.removeMessageReceiver(Messages::WebExtensionController::messageReceiverName(), identifier());
 
-    for (Ref context : m_extensionContexts)
+    for (Ref context : m_extensionContexts) {
         processPool.removeMessageReceiver(Messages::WebExtensionContext::messageReceiverName(), context->identifier());
+        processPool.removeMessageReceiver(Messages::WebExtensionContext::messageReceiverName(), context->privilegedIdentifier());
+    }
 
     m_processPools.remove(processPool);
 }

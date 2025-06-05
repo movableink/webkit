@@ -822,7 +822,7 @@ def async_message_statement(receiver, message):
             result.append('            return decoder.markInvalid();\n')
             result.append('        }\n')
         if message.validator:
-            result.append('        if (!%s()) {\n' % message.validator)
+            result.append('        if (!%s(decoder)) {\n' % message.validator)
             result.append('            RELEASE_LOG_ERROR(IPC, "Message %s fails validation", IPC::description(decoder.messageName()).characters());\n')
             result.append('            return decoder.markInvalid();\n')
             result.append('        }\n')

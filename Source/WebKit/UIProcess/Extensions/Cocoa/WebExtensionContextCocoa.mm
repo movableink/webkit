@@ -409,6 +409,8 @@ bool WebExtensionContext::unload(NSError **outError)
     invalidateStorage();
     unloadDeclarativeNetRequestState();
 
+    m_privilegedIdentifier = std::nullopt;
+
     m_actionsToPerformAfterBackgroundContentLoads.clear();
     m_backgroundContentEventListeners.clear();
     m_eventListenerFrames.clear();
@@ -4143,9 +4145,9 @@ bool WebExtensionContext::isInspectorBackgroundPage(WKWebView *webView) const
     return false;
 }
 
-bool WebExtensionContext::isDevToolsMessageAllowed()
+bool WebExtensionContext::isDevToolsMessageAllowed(IPC::Decoder& message)
 {
-    return isLoaded() && protectedExtension()->hasInspectorBackgroundPage();
+    return isLoadedAndPrivilegedMessage(message) && protectedExtension()->hasInspectorBackgroundPage();
 }
 
 void WebExtensionContext::loadInspectorBackgroundPagesDuringLoad()
