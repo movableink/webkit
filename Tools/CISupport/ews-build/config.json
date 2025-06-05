@@ -290,14 +290,14 @@
       "factory": "macOSWK1Factory", "platform": "mac-sonoma",
       "configuration": "release",
       "triggered_by": ["macos-sonoma-release-build-ews"],
-      "workernames": ["ews116", "ews112", "ews117", "ews144", "ews145", "ews146", "ews147", "ews148"]
+      "workernames": ["ews116", "ews112", "ews117", "ews145", "ews147", "ews148"]
     },
     {
       "name": "macOS-Sonoma-Release-WK2-Tests-EWS", "shortname": "mac-wk2", "icon": "testOnly",
       "factory": "macOSWK2Factory", "platform": "mac-sonoma",
       "configuration": "release",
       "triggered_by": ["macos-sonoma-release-build-ews"],
-      "workernames": ["ews104", "ews106", "ews107", "ews113", "ews115", "ews149", "ews169", "ews186", "ews187", "ews188", "ews189"]
+      "workernames": ["ews104", "ews106", "ews107", "ews113", "ews115", "ews144", "ews146", "ews149", "ews169", "ews186", "ews187", "ews188", "ews189"]
     },
     {
       "name": "macOS-Sonoma-Release-WK2-Intel-Tests-EWS", "shortname": "mac-intel-wk2", "icon": "testOnly",
