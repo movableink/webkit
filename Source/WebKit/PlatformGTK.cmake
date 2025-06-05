@@ -598,6 +598,7 @@ GI_INTROSPECT(WebKit${WEBKITGTK_API_INFIX} ${WEBKITGTK_API_VERSION} webkit${WEBK
 GI_DOCGEN(WebKit${WEBKITGTK_API_INFIX} gtk/gtk${GTK_API_VERSION}-webkitgtk.toml.in
     CONTENT_TEMPLATES
         gtk/gtk${GTK_API_VERSION}-urlmap.js
+        glib/contributing.md
         glib/environment-variables.md
         glib/profiling.md
         glib/remote-inspector.md
