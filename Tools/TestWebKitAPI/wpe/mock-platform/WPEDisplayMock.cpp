@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WPEDisplayMock.h"
 
+#include "WPEViewMock.h"
 #include <gio/gio.h>
 #include <gmodule.h>
 
@@ -57,7 +58,7 @@ static gboolean wpeDisplayMockConnect(WPEDisplay* display, GError** error)
 
 static WPEView* wpeDisplayMockCreateView(WPEDisplay* display)
 {
-    return nullptr;
+    return WPE_VIEW(g_object_new(WPE_TYPE_VIEW_MOCK, "display", display, nullptr));
 }
 
 static WPEInputMethodContext* wpeDisplayMockCreateInputMethodContext(WPEDisplay* display, WPEView*)

@@ -187,6 +187,50 @@ static void testWebViewWebBackend(Test* test, gconstpointer)
     webView = nullptr;
     g_assert_false(hasInstance);
 }
+
+#if ENABLE(WPE_PLATFORM)
+static void testWebViewDisplay(WebViewTest* test, gconstpointer)
+{
+    if (!test->m_display) {
+        g_test_skip(nullptr);
+        return;
+    }
+
+    // Tests are created with a headless display.
+    auto* display = webkit_web_view_get_display(test->webView());
+    g_assert_true(WPE_IS_DISPLAY_HEADLESS(display));
+
+    // A web view created without a display uses the default one (mock display for the tests).
+    GRefPtr<WebKitWebView> webView = adoptGRef(webkit_web_view_new(nullptr));
+    test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(webView.get()));
+    display = webkit_web_view_get_display(webView.get());
+    g_assert_true(WPE_IS_DISPLAY(display));
+    g_assert_cmpstr(G_OBJECT_TYPE_NAME(display), ==, "WPEDisplayMock");
+    g_assert_true(display == wpe_display_get_default());
+}
+
+static void testWebViewWPEView(WebViewTest* test, gconstpointer)
+{
+    if (!test->m_display) {
+        g_test_skip(nullptr);
+        return;
+    }
+
+    // Tests are created with a headless display.
+    auto* view = webkit_web_view_get_wpe_view(test->webView());
+    g_assert_true(WPE_IS_VIEW_HEADLESS(view));
+    g_assert_true(wpe_view_get_display(view) == test->m_display.get());
+
+    // A web view created without a display uses the default one (mock display for the tests).
+    GRefPtr<WebKitWebView> webView = adoptGRef(webkit_web_view_new(nullptr));
+    test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(webView.get()));
+    view = webkit_web_view_get_wpe_view(webView.get());
+    test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(view));
+    g_assert_true(WPE_IS_VIEW(view));
+    g_assert_cmpstr(G_OBJECT_TYPE_NAME(view), ==, "WPEViewMock");
+    g_assert_true(wpe_view_get_display(view) == wpe_display_get_default());
+}
+#endif
 #endif // PLATFORM(WPE)
 
 static void ephemeralViewloadChanged(WebKitWebView* webView, WebKitLoadEvent loadEvent, WebViewTest* test)
@@ -2035,6 +2079,10 @@ void beforeAll()
     WebViewTest::add("WebKitWebView", "close-quickly", testWebViewCloseQuickly);
 #if PLATFORM(WPE)
     Test::add("WebKitWebView", "backend", testWebViewWebBackend);
+#if ENABLE(WPE_PLATFORM)
+    WebViewTest::add("WebKitWebView", "display", testWebViewDisplay);
+    WebViewTest::add("WebKitWebView", "wpe-view", testWebViewWPEView);
+#endif
 #endif
     WebViewTest::add("WebKitWebView", "ephemeral", testWebViewEphemeral);
     WebViewTest::add("WebKitWebView", "custom-charset", testWebViewCustomCharset);
