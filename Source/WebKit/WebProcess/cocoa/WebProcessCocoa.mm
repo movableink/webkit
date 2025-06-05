@@ -237,19 +237,34 @@ id WebProcess::accessibilityFocusedUIElement()
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     if (!isMainRunLoop()) {
+        RefPtr<AXIsolatedTree> fallbackTree = nullptr;
         // Avoid hitting the main thread by getting the focused object from the focused isolated tree.
-        auto tree = findAXTree([] (AXTreePtr tree) -> bool {
-            OptionSet<ActivityState> state;
+        auto tree = findAXTree([&fallbackTree] (AXTreePtr tree) -> bool {
+            bool foundValidTree = false;
             switchOn(tree,
-                [&state] (RefPtr<AXIsolatedTree>& typedTree) {
-                    if (typedTree)
-                        state = typedTree->lockedPageActivityState();
+                [&] (RefPtr<AXIsolatedTree>& typedTree) {
+                    if (typedTree) {
+                        OptionSet<ActivityState> state = typedTree->lockedPageActivityState();
+                        if (state.containsAll({ ActivityState::IsVisible, ActivityState::IsFocused, ActivityState::WindowIsActive }))
+                            foundValidTree = true;
+                        else if (state.containsAll({ ActivityState::IsVisible, ActivityState::WindowIsActive })) {
+                            // When initially loading a page, or when VoiceOver switches from another app back to web
+                            // content, it's possible for the is-focused state to not be synced to the accessibility
+                            // thread in time for the first accessibilityFocusedUIElement request. If this tree is at
+                            // least visible and active, let's assume it will gain official focused status soon and
+                            // use it as a fallback if we don't find some other focused tree.
+                            fallbackTree = typedTree;
+                        }
+                    }
                 }
                 , [] (auto&) { }
             );
-            return state.containsAll({ ActivityState::IsVisible, ActivityState::IsFocused, ActivityState::WindowIsActive });
+            return foundValidTree;
         });
         auto* isolatedTree = std::get_if<RefPtr<AXIsolatedTree>>(&tree);
+        if (!isolatedTree && fallbackTree)
+            isolatedTree = &fallbackTree;
+
         if (!isolatedTree) {
             // There is no isolated tree that has focus. This may be because none has been created yet, or because the one previously focused is being destroyed.
             // In any case, get the focus from the main thread.
